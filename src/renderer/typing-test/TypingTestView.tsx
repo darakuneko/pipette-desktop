@@ -149,6 +149,14 @@ export function TypingTestView({
     () => ({ '--tt-font': fontSize, '--tt-lines': displayLines } as CSSProperties),
     [fontSize, displayLines],
   )
+  // Romaji guide row's own font-size override (Romaji Settings modal). Falls
+  // back to the same reading-window font when unset ("linked") — the
+  // reading window's own multilineStyle is left untouched either way.
+  const romajiGuideFontSize = (config.mode === 'words' || config.mode === 'time') ? config.romaji?.fontSize : undefined
+  const romajiGuideStyle = useMemo(
+    () => ({ '--tt-font': romajiGuideFontSize ?? fontSize, '--tt-lines': displayLines } as CSSProperties),
+    [romajiGuideFontSize, fontSize, displayLines],
+  )
 
   // Char-progress modes (imported fileImport text; Tatoeba sentences) count
   // progress by character (spaces included): each word-gap is one separator
@@ -364,7 +372,7 @@ export function TypingTestView({
           --tt-font var as the reading window; the IME hint stays a fixed
           small size since it's a hint, not reading content. */}
       {romajiGuide && (
-        <div data-testid="typing-test-romaji-guide" className="flex w-full max-w-4xl flex-col items-start gap-1 font-mono" style={multilineStyle}>
+        <div data-testid="typing-test-romaji-guide" className="flex w-full max-w-4xl flex-col items-start gap-1 font-mono" style={romajiGuideStyle}>
           <p className="typing-romaji-guide-text break-all">
             <span className="text-success">{romajiGuide.typed}</span>
             <span className="text-content-muted">{romajiGuide.remaining}</span>

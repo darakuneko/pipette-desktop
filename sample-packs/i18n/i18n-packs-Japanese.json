@@ -307,6 +307,28 @@
         "toggle": "ローマ字",
         "imeHint": "ローマ字入力モードでは OS の IME をオフにしてください"
       },
+      "romajiSettings": {
+        "title": "ローマ字詳細設定",
+        "caseLabel": "表示する文字列",
+        "case": {
+          "upper": "ROMAJI",
+          "capital": "Romaji",
+          "lower": "romaji"
+        },
+        "fontLinked": "Settings の Font と連動",
+        "guideLabel": "表示パターン",
+        "guideAuto": "自動",
+        "guideHint": "表示のみです。他の受理パターンで入力しても正解になります",
+        "inputLabel": "入力パターン",
+        "inputHint": "オフにしたパターンは入力として拒否されます。標準の綴りは常に有効です",
+        "style": {
+          "kunrei": "訓令式 (si/ti)",
+          "cq": "C/Q表記 (ca/qu)",
+          "digraph": "二重字 (jya)",
+          "xSmall": "小文字x (xa/xtu)",
+          "lSmall": "小文字l (la/ltu)"
+        }
+      },
       "quoteLength": {
         "short": "短い",
         "medium": "普通",

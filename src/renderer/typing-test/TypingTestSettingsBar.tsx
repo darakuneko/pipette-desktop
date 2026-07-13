@@ -4,10 +4,11 @@
 // gates on mode). Extracted from TypingTestView so the config controls live
 // with the Mode / Base Layer row rather than above the reading area.
 
-import { useRef, useCallback } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { TypingTestConfig, TypingTestMode, QuoteLength } from './types'
-import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS, ROMAJI_INPUT_LANGUAGES } from './types'
+import type { TypingTestConfig, TypingTestMode, QuoteLength, RomajiDetailSettings } from './types'
+import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS, ROMAJI_INPUT_LANGUAGES, DEFAULT_FONT_SIZE } from './types'
+import { RomajiSettingsModal } from './RomajiSettingsModal'
 
 const MODES: TypingTestMode[] = ['words', 'time', 'quote']
 const QUOTE_LENGTHS: QuoteLength[] = ['short', 'medium', 'long', 'all']
@@ -27,28 +28,41 @@ const LABEL = 'text-sm text-content-muted'
 interface Props {
   config: TypingTestConfig
   onConfigChange: (config: TypingTestConfig) => void
-  /** Currently selected word-language pack. Gates the Romaji toggle, which
+  /** Currently selected word-language pack. Gates the Romaji button, which
    *  only applies to the kana packs (see `ROMAJI_INPUT_LANGUAGES`). */
   language: string
+  /** The reading-window font size (Settings > Font), used by the Romaji
+   *  Settings modal as the "linked" default for its own font-size field. */
+  fontSize?: number
 }
 
-export function TypingTestSettingsBar({ config, onConfigChange, language }: Props) {
+export function TypingTestSettingsBar({ config, onConfigChange, language, fontSize = DEFAULT_FONT_SIZE }: Props) {
   const { t } = useTranslation()
+  const [showRomajiModal, setShowRomajiModal] = useState(false)
 
-  // Remember toggle state so it persists through quote modes (which have no toggles).
-  const togglesRef = useRef({ punctuation: false, numbers: false, romajiInput: false })
+  // Remember toggle state (incl. the Romaji Settings detail fields) so it
+  // persists through quote mode (which has no toggles at all).
+  const togglesRef = useRef<{ punctuation: boolean; numbers: boolean; romajiInput: boolean; romaji?: RomajiDetailSettings }>(
+    { punctuation: false, numbers: false, romajiInput: false },
+  )
   if (config.mode === 'words' || config.mode === 'time') {
-    togglesRef.current = { punctuation: config.punctuation, numbers: config.numbers, romajiInput: config.romajiInput === true }
+    togglesRef.current = {
+      punctuation: config.punctuation,
+      numbers: config.numbers,
+      romajiInput: config.romajiInput === true,
+      romaji: config.romaji,
+    }
   }
 
   const handleModeChange = useCallback((mode: TypingTestMode) => {
-    const { punctuation, numbers, romajiInput } = togglesRef.current
+    const { punctuation, numbers, romajiInput, romaji } = togglesRef.current
+    const romajiDetail = romaji ? { romaji } : {}
     switch (mode) {
       case 'words':
-        onConfigChange({ mode: 'words', wordCount: config.mode === 'words' ? config.wordCount : 30, punctuation, numbers, romajiInput })
+        onConfigChange({ mode: 'words', wordCount: config.mode === 'words' ? config.wordCount : 30, punctuation, numbers, romajiInput, ...romajiDetail })
         break
       case 'time':
-        onConfigChange({ mode: 'time', duration: config.mode === 'time' ? config.duration : 30, punctuation, numbers, romajiInput })
+        onConfigChange({ mode: 'time', duration: config.mode === 'time' ? config.duration : 30, punctuation, numbers, romajiInput, ...romajiDetail })
         break
       case 'quote':
         onConfigChange({ mode: 'quote', quoteLength: config.mode === 'quote' ? config.quoteLength : 'medium' })
@@ -160,18 +174,37 @@ export function TypingTestSettingsBar({ config, onConfigChange, language }: Prop
             >
               {t('editor.typingTest.numbers')}
             </button>
-            {showRomajiToggle && (
-              <button
-                type="button"
-                data-testid="toggle-romaji"
-                className={optionButtonClass(config.romajiInput === true, 'px-2.5')}
-                onClick={() => onConfigChange({ ...config, romajiInput: !config.romajiInput })}
-              >
-                {t('editor.typingTest.romaji.toggle')}
-              </button>
-            )}
           </div>
+          {/* Romaji — a dialog trigger (opens the detail settings modal),
+              not a stateful toggle, so it keeps the full-width DATA-section
+              button convention (see HistoryToggle) rather than the compact
+              option buttons above. Active (accent) whenever romajiInput is
+              on, so the state is visible without opening the modal. */}
+          {showRomajiToggle && (
+            <button
+              type="button"
+              data-testid="romaji-settings-toggle"
+              className={`flex h-8 w-full items-center justify-center rounded-md border px-3 text-sm transition-colors ${
+                config.romajiInput === true
+                  ? 'border-accent bg-accent/10 font-semibold text-accent'
+                  : 'border-edge text-content-secondary hover:text-content'
+              }`}
+              onClick={() => setShowRomajiModal(true)}
+              aria-haspopup="dialog"
+              aria-expanded={showRomajiModal}
+            >
+              {t('editor.typingTest.romaji.toggle')}
+            </button>
+          )}
         </div>
+      )}
+      {showRomajiModal && hasPunctuationNumbers && (
+        <RomajiSettingsModal
+          config={config}
+          onConfigChange={onConfigChange}
+          linkedFontSize={fontSize}
+          onClose={() => setShowRomajiModal(false)}
+        />
       )}
     </div>
   )

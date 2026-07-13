@@ -307,6 +307,28 @@
         "toggle": "Romaji",
         "imeHint": "Turn off your OS IME to type in romaji input mode"
       },
+      "romajiSettings": {
+        "title": "Romaji Settings",
+        "caseLabel": "Displayed case",
+        "case": {
+          "upper": "ROMAJI",
+          "capital": "Romaji",
+          "lower": "romaji"
+        },
+        "fontLinked": "Linked to Settings Font",
+        "guideLabel": "Guide spelling pattern",
+        "guideAuto": "Auto",
+        "guideHint": "Display only — typing any accepted pattern is still correct",
+        "inputLabel": "Accepted input patterns",
+        "inputHint": "Turned-off patterns are rejected as input; the standard spelling is always accepted",
+        "style": {
+          "kunrei": "Kunrei (si/ti)",
+          "cq": "C/Q (ca/qu)",
+          "digraph": "Digraph (jya)",
+          "xSmall": "Small x (xa/xtu)",
+          "lSmall": "Small l (la/ltu)"
+        }
+      },
       "quoteLength": {
         "short": "short",
         "medium": "medium",

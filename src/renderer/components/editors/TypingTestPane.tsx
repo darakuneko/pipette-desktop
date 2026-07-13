@@ -607,7 +607,7 @@ export function TypingTestPane({
           </div>
         </div>
         {typingTest.config.mode !== 'fileImport' && typingTest.config.mode !== 'tatoeba' && (
-          <TypingTestSettingsBar config={typingTest.config} onConfigChange={onConfigChange} language={typingTest.language} />
+          <TypingTestSettingsBar config={typingTest.config} onConfigChange={onConfigChange} language={typingTest.language} fontSize={fontSize ?? DEFAULT_FONT_SIZE} />
         )}
       </PanelSection>
 

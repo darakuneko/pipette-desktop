@@ -1,14 +1,40 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import type { RomajiStyle } from './romaji-engine'
+
 export type TypingTestMode = 'words' | 'time' | 'quote' | 'fileImport' | 'tatoeba'
 export type QuoteLength = 'short' | 'medium' | 'long' | 'all'
+
+// Display-only case transform for the romaji guide row (Romaji Settings
+// modal). Never affects acceptance — see `applyRomajiCaseStyle`.
+export type RomajiCaseStyle = 'lower' | 'capital' | 'upper'
+
+/** Romaji Settings modal fields (words/time modes only, kana packs only).
+ *  Every field is optional and undefined means "default behaviour" — the
+ *  modal omits a field entirely rather than persisting an explicit default
+ *  value, so a stored config always shows exactly what the user changed. */
+export interface RomajiDetailSettings {
+  /** Display-only case transform for the guide row. Default: 'lower'. */
+  caseStyle?: RomajiCaseStyle
+  /** Guide-row font size (px), overriding the linked Settings > Font value.
+   *  Undefined means "linked" (tracks the reading-window font). */
+  fontSize?: number
+  /** Preferred spelling style for the guide's displayed representative.
+   *  Passed straight through to `createRomajiMatcher`'s `guideStyle` opt. */
+  guideStyle?: RomajiStyle | 'auto'
+  /** Alternate-spelling families excluded from acceptance. Passed straight
+   *  through to `createRomajiMatcher`'s `disabledStyles` opt. */
+  disabledStyles?: RomajiStyle[]
+}
 
 export type TypingTestConfig =
   // `romajiInput` opts into sequential romaji-keystroke judging for kana
   // packs (japanese_hiragana / japanese_katakana); undefined/false keeps
-  // the existing verbatim-string matching behaviour.
-  | { mode: 'words'; wordCount: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean }
-  | { mode: 'time'; duration: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean }
+  // the existing verbatim-string matching behaviour. `romaji` holds the
+  // Romaji Settings modal's detail fields and is only ever read while
+  // `romajiInput` is honored (see `isRomajiInputActive`).
+  | { mode: 'words'; wordCount: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean; romaji?: RomajiDetailSettings }
+  | { mode: 'time'; duration: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean; romaji?: RomajiDetailSettings }
   | { mode: 'quote'; quoteLength: QuoteLength }
   // Imported user text, played verbatim in order via the quote rendering
   // path. `textId` references an entry in the typing-test-texts store.
@@ -49,6 +75,27 @@ export interface RomajiGuide {
   typed: string
   remaining: string
   kanaCompleted: number
+}
+
+/** Applies the Romaji Settings modal's display-only case transform to a
+ *  guide's typed/remaining strings. Never touches acceptance/matching —
+ *  `createRomajiMatcher` always works in lowercase; this only changes what
+ *  `TypingTestView`'s guide row renders. 'upper' uppercases the whole
+ *  string; 'capital' uppercases only the first character of the word as a
+ *  whole (the first char of `typed` once anything is typed, otherwise the
+ *  first char of `remaining`); 'lower'/undefined is a no-op. */
+export function applyRomajiCaseStyle(guide: RomajiGuide, caseStyle: RomajiCaseStyle | undefined): RomajiGuide {
+  if (!caseStyle || caseStyle === 'lower') return guide
+  if (caseStyle === 'upper') {
+    return { ...guide, typed: guide.typed.toUpperCase(), remaining: guide.remaining.toUpperCase() }
+  }
+  if (guide.typed.length > 0) {
+    return { ...guide, typed: guide.typed[0].toUpperCase() + guide.typed.slice(1) }
+  }
+  if (guide.remaining.length > 0) {
+    return { ...guide, remaining: guide.remaining[0].toUpperCase() + guide.remaining.slice(1) }
+  }
+  return guide
 }
 
 // Imported file-import-text display preferences (fileImport mode only).

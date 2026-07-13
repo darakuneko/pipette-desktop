@@ -775,6 +775,126 @@ describe('useDevicePrefs', () => {
         romajiInput: true,
       })
     })
+
+    it('preserves a fully valid romaji detail block on a words config restored from IPC', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romajiInput: true,
+          romaji: { caseStyle: 'capital', fontSize: 28, guideStyle: 'kunrei', disabledStyles: ['cq', 'digraph'] },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romajiInput: true,
+        romaji: { caseStyle: 'capital', fontSize: 28, guideStyle: 'kunrei', disabledStyles: ['cq', 'digraph'] },
+      })
+    })
+
+    it('drops individually invalid romaji fields but keeps the ones that validate', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romaji: { caseStyle: 'sideways', fontSize: -4, guideStyle: 'kunrei', disabledStyles: ['cq', 'not-a-style', 123] },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        // caseStyle and fontSize were malformed and dropped; guideStyle and
+        // the one known entry in disabledStyles survived.
+        romaji: { guideStyle: 'kunrei', disabledStyles: ['cq'] },
+      })
+    })
+
+    it('drops the whole romaji block when every field is invalid', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'time',
+          duration: 60,
+          punctuation: false,
+          numbers: false,
+          romaji: { caseStyle: 'nope', fontSize: 'big', guideStyle: 'nope', disabledStyles: 'cq' },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'time',
+        duration: 60,
+        punctuation: false,
+        numbers: false,
+      })
+    })
+
+    it('drops a non-object romaji value but keeps the rest of the config', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romaji: 'lower' },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+      })
+    })
   })
 
   describe('splitKeyMode', () => {

@@ -129,45 +129,62 @@ describe('TypingTestSettingsBar toggles', () => {
   })
 })
 
-describe('TypingTestSettingsBar romaji toggle', () => {
-  it('hides the romaji toggle for a non-kana language', () => {
+describe('TypingTestSettingsBar romaji settings button', () => {
+  it('hides the romaji button for a non-kana language', () => {
     renderBar({ language: 'english' })
-    expect(screen.queryByTestId('toggle-romaji')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('romaji-settings-toggle')).not.toBeInTheDocument()
   })
 
-  it('hides the romaji toggle for an empty language string', () => {
+  it('hides the romaji button for an empty language string', () => {
     renderBar({ language: '' })
-    expect(screen.queryByTestId('toggle-romaji')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('romaji-settings-toggle')).not.toBeInTheDocument()
   })
 
-  it('shows the romaji toggle for japanese_hiragana in words mode', () => {
+  it('shows the romaji button for japanese_hiragana in words mode', () => {
     renderBar({ language: 'japanese_hiragana' })
-    expect(screen.getByTestId('toggle-romaji')).toBeInTheDocument()
+    expect(screen.getByTestId('romaji-settings-toggle')).toBeInTheDocument()
   })
 
-  it('shows the romaji toggle for japanese_katakana in time mode', () => {
+  it('shows the romaji button for japanese_katakana in time mode', () => {
     const config: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false }
     renderBar({ config, language: 'japanese_katakana' })
-    expect(screen.getByTestId('toggle-romaji')).toBeInTheDocument()
+    expect(screen.getByTestId('romaji-settings-toggle')).toBeInTheDocument()
   })
 
-  it('hides the romaji toggle in quote mode even for a kana language', () => {
+  it('hides the romaji button in quote mode even for a kana language', () => {
     const config: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }
     renderBar({ config, language: 'japanese_hiragana' })
-    expect(screen.queryByTestId('toggle-romaji')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('romaji-settings-toggle')).not.toBeInTheDocument()
   })
 
-  it('highlights the romaji toggle when active', () => {
+  it('highlights the romaji button when romajiInput is active', () => {
     const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
     renderBar({ config, language: 'japanese_hiragana' })
-    expect(screen.getByTestId('toggle-romaji').className).toContain('text-accent')
+    expect(screen.getByTestId('romaji-settings-toggle').className).toContain('text-accent')
   })
 
-  it('calls onConfigChange with romajiInput toggled on click', () => {
+  it('does not highlight the romaji button when romajiInput is inactive', () => {
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+    renderBar({ config, language: 'japanese_hiragana' })
+    expect(screen.getByTestId('romaji-settings-toggle').className).not.toContain('text-accent')
+  })
+
+  it('opens the Romaji Settings modal on click instead of toggling directly', () => {
     const onConfigChange = vi.fn()
     const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
     renderBar({ config, language: 'japanese_hiragana', onConfigChange })
-    fireEvent.click(screen.getByTestId('toggle-romaji'))
+    expect(screen.queryByTestId('romaji-settings-modal')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('romaji-settings-toggle'))
+    expect(onConfigChange).not.toHaveBeenCalled()
+    expect(screen.getByTestId('romaji-settings-modal')).toBeInTheDocument()
+  })
+
+  it('toggles romajiInput via the modal master enable switch', () => {
+    const onConfigChange = vi.fn()
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+    renderBar({ config, language: 'japanese_hiragana', onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-settings-toggle'))
+    fireEvent.click(screen.getByTestId('romaji-settings-enabled'))
     expect(onConfigChange).toHaveBeenCalledTimes(1)
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
     if (arg.mode === 'words') {
@@ -250,6 +267,62 @@ describe('TypingTestSettingsBar toggle preservation', () => {
     expect(wordsConfig.mode).toBe('words')
     if (wordsConfig.mode === 'words') {
       expect(wordsConfig.romajiInput).toBe(true)
+    }
+  })
+
+  it('preserves the romaji detail settings when switching words -> time', () => {
+    const onConfigChange = vi.fn()
+    const config: TypingTestConfig = {
+      mode: 'words',
+      wordCount: 30,
+      punctuation: false,
+      numbers: false,
+      romajiInput: true,
+      romaji: { caseStyle: 'capital', disabledStyles: ['cq'] },
+    }
+    renderBar({ config, language: 'japanese_hiragana', onConfigChange })
+
+    fireEvent.click(screen.getByTestId('mode-time'))
+
+    const timeConfig = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    expect(timeConfig.mode).toBe('time')
+    if (timeConfig.mode === 'time') {
+      expect(timeConfig.romaji).toEqual({ caseStyle: 'capital', disabledStyles: ['cq'] })
+    }
+  })
+
+  it('preserves the romaji detail settings through quote mode', () => {
+    const onConfigChange = vi.fn()
+    const config: TypingTestConfig = {
+      mode: 'words',
+      wordCount: 30,
+      punctuation: false,
+      numbers: false,
+      romajiInput: true,
+      romaji: { guideStyle: 'kunrei' },
+    }
+    const { rerender } = render(
+      <I18nextProvider i18n={i18n}>
+        <TypingTestSettingsBar config={config} onConfigChange={onConfigChange} language="japanese_hiragana" />
+      </I18nextProvider>,
+    )
+
+    fireEvent.click(screen.getByTestId('mode-quote'))
+    const quoteConfig = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    expect(quoteConfig.mode).toBe('quote')
+
+    onConfigChange.mockClear()
+    rerender(
+      <I18nextProvider i18n={i18n}>
+        <TypingTestSettingsBar config={quoteConfig} onConfigChange={onConfigChange} language="japanese_hiragana" />
+      </I18nextProvider>,
+    )
+
+    fireEvent.click(screen.getByTestId('mode-words'))
+    const wordsConfig = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    expect(wordsConfig.mode).toBe('words')
+    if (wordsConfig.mode === 'words') {
+      expect(wordsConfig.romaji).toEqual({ guideStyle: 'kunrei' })
     }
   })
 })
