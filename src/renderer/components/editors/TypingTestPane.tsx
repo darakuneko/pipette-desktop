@@ -754,7 +754,7 @@ export function TypingTestPane({
               data-testid="typing-test-heatmap-legend"
               className="mt-1 text-center text-xs text-content-muted"
             >
-              {t('editor.typingTest.heatmap.legend')}
+              {t('editor.typingTest.heatmap.legend', { minutes: heatmapWindowMin ?? 5 })}
             </p>
           )}
           {/* Layer-tracking note describes the keymap, so hide it with the keymap. */}
