@@ -16,9 +16,6 @@ export type RomajiCaseStyle = 'lower' | 'capital' | 'upper'
 export interface RomajiDetailSettings {
   /** Display-only case transform for the guide row. Default: 'lower'. */
   caseStyle?: RomajiCaseStyle
-  /** Guide-row font size (px), overriding the linked Settings > Font value.
-   *  Undefined means "linked" (tracks the reading-window font). */
-  fontSize?: number
   /** Preferred spelling styles for the guide's displayed representative —
    *  any combination may be selected at once. Empty/undefined shows the
    *  canonical Hepburn-based spelling. Passed straight through to

@@ -315,7 +315,6 @@
           "capital": "Romaji",
           "lower": "romaji"
         },
-        "fontLinked": "Linked to Settings Font",
         "guideLabel": "Guide spelling pattern",
         "guideHint": "Display only — typing any accepted pattern is still correct",
         "inputLabel": "Accepted input patterns",

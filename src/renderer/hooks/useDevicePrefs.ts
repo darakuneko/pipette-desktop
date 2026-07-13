@@ -27,10 +27,6 @@ function isFinitePositiveInt(n: unknown): n is number {
   return typeof n === 'number' && Number.isFinite(n) && n > 0 && Number.isInteger(n)
 }
 
-function isFinitePositiveNumber(n: unknown): n is number {
-  return typeof n === 'number' && Number.isFinite(n) && n > 0
-}
-
 function hasBooleanFields(obj: Record<string, unknown>, ...keys: string[]): boolean {
   return keys.every((k) => typeof obj[k] === 'boolean')
 }
@@ -49,12 +45,9 @@ function validateRomajiDetailSettings(raw: unknown): RomajiDetailSettings | unde
   if (typeof obj.caseStyle === 'string' && VALID_ROMAJI_CASE_STYLES.has(obj.caseStyle)) {
     result.caseStyle = obj.caseStyle as RomajiCaseStyle
   }
-  if (isFinitePositiveNumber(obj.fontSize)) {
-    // Clamp rather than drop: an out-of-range persisted value (e.g. a
-    // corrupted 9999) still resolves to a valid, in-range font size instead
-    // of silently sailing through unclamped.
-    result.fontSize = clampFontSize(obj.fontSize)
-  }
+  // A persisted `fontSize` (from a build that still had the per-guide font
+  // control) is intentionally not read here — it silently falls through to
+  // "not set" now that the guide always tracks Settings > Font.
   if (Array.isArray(obj.guideStyles)) {
     // 'hepburn' is dropped here (unlike disabledStyles below, which keeps
     // it): the Guide row's Base selection is single-select, and hepburn is

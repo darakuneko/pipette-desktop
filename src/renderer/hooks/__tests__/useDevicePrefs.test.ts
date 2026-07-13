@@ -789,7 +789,7 @@ describe('useDevicePrefs', () => {
           punctuation: false,
           numbers: false,
           romajiInput: true,
-          romaji: { caseStyle: 'capital', fontSize: 28, guideStyles: ['kunrei'], disabledStyles: ['c', 'digraph'] },
+          romaji: { caseStyle: 'capital', guideStyles: ['kunrei'], disabledStyles: ['c', 'digraph'] },
         },
       } as never)
 
@@ -805,11 +805,11 @@ describe('useDevicePrefs', () => {
         punctuation: false,
         numbers: false,
         romajiInput: true,
-        romaji: { caseStyle: 'capital', fontSize: 28, guideStyles: ['kunrei'], disabledStyles: ['c', 'digraph'] },
+        romaji: { caseStyle: 'capital', guideStyles: ['kunrei'], disabledStyles: ['c', 'digraph'] },
       })
     })
 
-    it('clamps an out-of-range romaji fontSize from IPC instead of dropping it', async () => {
+    it('silently drops a persisted romaji fontSize (the guide always tracks Settings > Font now)', async () => {
       setupMocks()
       mockPipetteSettingsGet.mockResolvedValue({
         _rev: 1,
@@ -821,7 +821,9 @@ describe('useDevicePrefs', () => {
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          romaji: { fontSize: 9999 },
+          // Left over from a build that still had the per-guide font
+          // control; must not resurface anywhere on the restored config.
+          romaji: { fontSize: 40, caseStyle: 'capital' },
         },
       } as never)
 
@@ -836,7 +838,7 @@ describe('useDevicePrefs', () => {
         wordCount: 30,
         punctuation: false,
         numbers: false,
-        romaji: { fontSize: 48 },
+        romaji: { caseStyle: 'capital' },
       })
     })
 
@@ -852,7 +854,7 @@ describe('useDevicePrefs', () => {
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          romaji: { caseStyle: 'sideways', fontSize: -4, guideStyles: ['kunrei'], disabledStyles: ['c', 'not-a-style', 123] },
+          romaji: { caseStyle: 'sideways', guideStyles: ['kunrei'], disabledStyles: ['c', 'not-a-style', 123] },
         },
       } as never)
 
@@ -867,8 +869,8 @@ describe('useDevicePrefs', () => {
         wordCount: 30,
         punctuation: false,
         numbers: false,
-        // caseStyle and fontSize were malformed and dropped; guideStyles and
-        // the one known entry in disabledStyles survived.
+        // caseStyle was malformed and dropped; guideStyles and the one
+        // known entry in disabledStyles survived.
         romaji: { guideStyles: ['kunrei'], disabledStyles: ['c'] },
       })
     })

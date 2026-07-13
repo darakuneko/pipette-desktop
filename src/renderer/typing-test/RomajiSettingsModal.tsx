@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Detail settings for romaji-keystroke judging (kana word packs): the
-// master enable, the guide row's display case, its font size, which
-// spelling the guide prefers to show, and which alternate-spelling
-// families are accepted as input. Opened from the Option section's
+// master enable, the guide row's display case, which spelling the guide
+// prefers to show, and which alternate-spelling families are accepted as
+// input. The guide row's font size always tracks the shared Settings >
+// Font size — no separate control here. Opened from the Option section's
 // full-width Romaji button in TypingTestSettingsBar, shown only while a
 // kana pack (words/time mode) is selected — see ROMAJI_INPUT_LANGUAGES.
 
@@ -11,11 +12,10 @@ import { useTranslation } from 'react-i18next'
 import { useEscapeClose } from '../hooks/useEscapeClose'
 import { ModalCloseButton } from '../components/editors/ModalCloseButton'
 import { MODAL_LG } from '../components/editors/store-modal-shared'
-import { ROW_CLASS, ToggleRow } from '../components/editors/modal-controls'
+import { ToggleRow } from '../components/editors/modal-controls'
 import { Tooltip } from '../components/ui/Tooltip'
 import { BASE_STYLES, type RomajiStyle } from './romaji-engine'
 import type { RomajiCaseStyle, RomajiDetailSettings, TypingTestConfig } from './types'
-import { FONT_OPTIONS } from './types'
 import { optionButtonClass } from './TypingTestSettingsBar'
 
 // Display order matches the plan's spec ("大文字・先頭大文字・小文字"); the
@@ -54,7 +54,6 @@ const STYLE_GRID_CLASS = 'grid grid-cols-4 gap-1'
 function pruneRomaji(next: RomajiDetailSettings): RomajiDetailSettings | undefined {
   const pruned: RomajiDetailSettings = {}
   if (next.caseStyle !== undefined && next.caseStyle !== 'lower') pruned.caseStyle = next.caseStyle
-  if (next.fontSize !== undefined) pruned.fontSize = next.fontSize
   if (next.guideStyles !== undefined && next.guideStyles.length > 0) pruned.guideStyles = next.guideStyles
   if (next.disabledStyles !== undefined && next.disabledStyles.length > 0) pruned.disabledStyles = next.disabledStyles
   return Object.keys(pruned).length > 0 ? pruned : undefined
@@ -63,13 +62,10 @@ function pruneRomaji(next: RomajiDetailSettings): RomajiDetailSettings | undefin
 interface Props {
   config: TypingTestConfig & { mode: 'words' | 'time' }
   onConfigChange: (config: TypingTestConfig) => void
-  /** The linked Settings > Font value (reading-window font size). Used as
-   *  the starting point when the "linked to Font" switch is turned off. */
-  linkedFontSize: number
   onClose: () => void
 }
 
-export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, onClose }: Props) {
+export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) {
   const { t } = useTranslation()
   const backdropRef = useRef<HTMLDivElement>(null)
   useEscapeClose(onClose)
@@ -83,8 +79,6 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
   const caseStyle = romaji.caseStyle ?? 'lower'
   const guideStyles = new Set(romaji.guideStyles ?? [])
   const disabledStyles = new Set(romaji.disabledStyles ?? [])
-  const fontLinked = romaji.fontSize === undefined
-  const fontValue = romaji.fontSize ?? linkedFontSize
 
   const applyRomaji = useCallback((patch: Partial<RomajiDetailSettings>) => {
     const merged = pruneRomaji({ ...romaji, ...patch })
@@ -178,41 +172,6 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
                   {t(`editor.typingTest.romajiSettings.case.${value}`)}
                 </button>
               ))}
-            </div>
-          </section>
-
-          {/* Font size — linked to Settings > Font by default. The toggle
-              card and the size select sit on one row, but the select stays
-              outside the card: while linked it shows the linked value but
-              stays disabled; unlinking hands control over to it. */}
-          <section className="flex flex-col gap-1.5">
-            <span className="text-sm text-content-muted">{t('editor.typingTest.fontSize')}:</span>
-            {/* items-stretch equalises the two card frames' heights (the
-                toggle knob and the h-8 select have different natural
-                heights, which showed as mismatched borders). */}
-            <div className="flex items-stretch gap-2">
-              <div className="flex min-w-0 flex-1 flex-col justify-stretch [&>div]:h-full">
-                <ToggleRow
-                  testid="romaji-font-linked"
-                  label={t('editor.typingTest.romajiSettings.fontLinked')}
-                  on={fontLinked}
-                  onToggle={() => applyRomaji({ fontSize: fontLinked ? linkedFontSize : undefined })}
-                />
-              </div>
-              {/* Same card frame as the linked row so the pair reads as one
-                  control group; the select keeps the sidebar Font styling. */}
-              <div className={`${ROW_CLASS} shrink-0`}>
-                <select
-                  data-testid="romaji-settings-font-size"
-                  aria-label={t('editor.typingTest.fontSize')}
-                  value={fontValue}
-                  disabled={fontLinked}
-                  onChange={(e) => applyRomaji({ fontSize: Number(e.target.value) })}
-                  className="h-8 w-14 rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {FONT_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </div>
             </div>
           </section>
 

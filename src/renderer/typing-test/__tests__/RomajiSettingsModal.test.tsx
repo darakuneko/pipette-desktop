@@ -19,7 +19,6 @@ function renderModal(props: Partial<Parameters<typeof RomajiSettingsModal>[0]> =
   const defaults = {
     config: BASE_CONFIG,
     onConfigChange: vi.fn(),
-    linkedFontSize: 24,
     onClose: vi.fn(),
   }
   const merged = { ...defaults, ...props }
@@ -67,14 +66,6 @@ describe('RomajiSettingsModal defaults', () => {
     }
   })
 
-  it('defaults the font size to linked, showing the Settings value in a disabled select', () => {
-    renderModal({ linkedFontSize: 24 })
-    expect(screen.getByTestId('romaji-font-linked')).toHaveAttribute('aria-checked', 'true')
-    const select = screen.getByTestId('romaji-settings-font-size') as HTMLSelectElement
-    expect(select).toBeDisabled()
-    expect(select.value).toBe('24')
-  })
-
   // Base and Options share the same grid-cols-4 container so every button
   // (Base's 2 and Options' 11) lands in an identically wide column, instead
   // of sizing to its own label's content width.
@@ -116,37 +107,6 @@ describe('RomajiSettingsModal edits', () => {
     fireEvent.click(screen.getByTestId('romaji-case-capital'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
     if (arg.mode === 'words') expect(arg.romaji).toEqual({ caseStyle: 'capital' })
-  })
-
-  it('enables the font-size select once romaji.fontSize is set, seeded with that value', () => {
-    renderModal({ config: { ...BASE_CONFIG, romaji: { fontSize: 32 } } })
-    const select = screen.getByTestId('romaji-settings-font-size') as HTMLSelectElement
-    expect(select).not.toBeDisabled()
-    expect(select.value).toBe('32')
-  })
-
-  it('turning off the linked switch sets fontSize to the linked Settings Font value', () => {
-    const onConfigChange = vi.fn()
-    renderModal({ onConfigChange, linkedFontSize: 32 })
-    fireEvent.click(screen.getByTestId('romaji-font-linked'))
-    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    if (arg.mode === 'words') expect(arg.romaji).toEqual({ fontSize: 32 })
-  })
-
-  it('sets an explicit fontSize once unlinked and a value picked', () => {
-    const onConfigChange = vi.fn()
-    renderModal({ config: { ...BASE_CONFIG, romaji: { fontSize: 24 } }, onConfigChange })
-    fireEvent.change(screen.getByTestId('romaji-settings-font-size'), { target: { value: '30' } })
-    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    if (arg.mode === 'words') expect(arg.romaji).toEqual({ fontSize: 30 })
-  })
-
-  it('re-linking the font drops fontSize from the config', () => {
-    const onConfigChange = vi.fn()
-    renderModal({ config: { ...BASE_CONFIG, romaji: { fontSize: 30 } }, onConfigChange })
-    fireEvent.click(screen.getByTestId('romaji-font-linked'))
-    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
   })
 
   it('selecting Kunrei as the guide Base adds kunrei to guideStyles', () => {

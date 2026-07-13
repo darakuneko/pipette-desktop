@@ -7,7 +7,7 @@
 import { useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingTestConfig, TypingTestMode, QuoteLength, RomajiDetailSettings } from './types'
-import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS, ROMAJI_INPUT_LANGUAGES, DEFAULT_FONT_SIZE } from './types'
+import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS, ROMAJI_INPUT_LANGUAGES } from './types'
 import { RomajiSettingsModal } from './RomajiSettingsModal'
 
 const MODES: TypingTestMode[] = ['words', 'time', 'quote']
@@ -31,12 +31,9 @@ interface Props {
   /** Currently selected word-language pack. Gates the Romaji button, which
    *  only applies to the kana packs (see `ROMAJI_INPUT_LANGUAGES`). */
   language: string
-  /** The reading-window font size (Settings > Font), used by the Romaji
-   *  Settings modal as the "linked" default for its own font-size field. */
-  fontSize?: number
 }
 
-export function TypingTestSettingsBar({ config, onConfigChange, language, fontSize = DEFAULT_FONT_SIZE }: Props) {
+export function TypingTestSettingsBar({ config, onConfigChange, language }: Props) {
   const { t } = useTranslation()
   const [showRomajiModal, setShowRomajiModal] = useState(false)
 
@@ -198,7 +195,6 @@ export function TypingTestSettingsBar({ config, onConfigChange, language, fontSi
         <RomajiSettingsModal
           config={config}
           onConfigChange={onConfigChange}
-          linkedFontSize={fontSize}
           onClose={() => setShowRomajiModal(false)}
         />
       )}

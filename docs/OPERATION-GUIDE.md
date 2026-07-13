@@ -1103,10 +1103,9 @@ With the **hiragana** or **katakana** language pack selected, the Option row als
 
 ![Typing Test — Romaji settings](screenshots/typing-test-romaji-settings.png)
 
-The modal has four settings, in addition to the Romaji input master switch:
+The modal has three settings, in addition to the Romaji input master switch. The guide row's font size always tracks the shared **Settings > Font** size — there is no separate control for it.
 
 - **Displayed case**: how the guide row's romaji is rendered — **ROMAJI** (upper case), **Romaji** (capitalized), or **romaji** (lower case, default). Display only; it never changes which keystrokes are accepted.
-- **Guide font size**: linked to the shared **Settings > Font** size by default; turn off the link to pick a custom size for the guide row only — the reading-window text itself is unaffected.
 - **Guide spelling pattern**: split into two rows, mirroring Accepted input patterns below.
   - **Base**: a single-select choice between **Hepburn** (shi/chi) and **Kunrei** (si/ti) — exactly one is always active, and it picks which base system's spelling the guide line shows for kana with multiple accepted spellings. **Hepburn is the default.**
   - **Options**: **C** (ca), **Q** (qu), **Digraph** (jya), **Small x** (xa), **Small l** (la), **W** (wi), **V** (va), **F** (fa), **YE** (ye), **Nasal x** (xn), and **N separator** (n') — independent alternate-spelling preferences layered on top of the selected Base, off by default. Multiple can be selected at once — e.g. selecting both Small x and the Kunrei base applies each preference to whichever kana it matches, in the same guide. Each button's label shows one example spelling; hover it for the full spelling list it covers.

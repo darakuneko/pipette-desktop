@@ -315,7 +315,6 @@
           "capital": "Romaji",
           "lower": "romaji"
         },
-        "fontLinked": "Settings の Font と連動してるよん☆",
         "guideLabel": "表示パターンっしょ",
         "guideHint": "表示だけだから、他の入力パターンでも正解になるよん☆",
         "inputLabel": "入力パターンっしょ",

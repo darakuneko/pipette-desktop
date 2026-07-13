@@ -522,18 +522,6 @@ describe('TypingTestView romaji guide', () => {
     expect(guide.querySelector('[data-testid="typing-test-romaji-ime-hint"]')).toBeNull()
   })
 
-  it('overrides --tt-font with config.romaji.fontSize, leaving the reading window untouched', () => {
-    renderView({
-      fontSize: 24,
-      config: { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true, romaji: { fontSize: 40 } },
-      state: makeState({ status: 'running', words: ['あい'] }),
-      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0 },
-    })
-    const guide = screen.getByTestId('typing-test-romaji-guide')
-    expect(guide.style.getPropertyValue('--tt-font')).toBe('40')
-    const readingWindow = screen.getByTestId('typing-test-words')
-    expect(readingWindow.style.getPropertyValue('--tt-font')).toBe('24')
-  })
 })
 
 describe('TypingTestView paused overlay', () => {
