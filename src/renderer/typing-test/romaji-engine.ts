@@ -29,8 +29,19 @@ import { toHiragana } from './kana-script'
 // Spelling-style groups used to let the Romaji settings modal (Step 2)
 // selectively disable alternate spellings while keeping every word
 // completable. See SPELLING_STYLES below for the invariant that makes that
-// possible.
-export type RomajiStyle = 'kunrei' | 'cq' | 'digraph' | 'xSmall' | 'lSmall'
+// possible. 'hepburn' and 'kunrei' are the two base systems: either one
+// alone can spell every kana in the table, so the settings modal only lets
+// the last enabled base be turned off together with the other (see
+// BASE_STYLES). The rest are independent options layered on top.
+export type RomajiStyle = 'hepburn' | 'kunrei' | 'cq' | 'digraph' | 'xSmall' | 'lSmall'
+
+// The two base spelling systems. Every kana in KANA_TABLE is typable using
+// only one of these (plus the untagged spellings shared by both), so the
+// settings modal treats them as a pair where at least one must stay
+// enabled — unlike the option styles below, which may all be disabled at
+// once. Exported so the modal and the persisted-config validator share this
+// list instead of re-deriving it.
+export const BASE_STYLES: readonly RomajiStyle[] = ['hepburn', 'kunrei']
 
 // Kana segment -> valid romaji spellings, ordered with the canonical
 // (preferred / guide-representative) spelling first. Pure data: ん and っ
@@ -250,17 +261,31 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
 // that collide across different kana (e.g. "ji" is both じ's canonical and
 // ぢ's alternate) resolve independently per entry.
 //
-// Two tagging regimes coexist here:
-// - kunrei / cq / digraph tag only non-canonical alternates, so disabling
-//   them can never empty an entry's spelling set.
+// Three tagging regimes coexist here:
+// - cq / digraph tag only non-canonical alternates, so disabling them can
+//   never empty an entry's spelling set.
+// - hepburn / kunrei tag *both* sides of the syllables where the two base
+//   systems actually diverge (shi/si, chi/ti, tsu/tu, fu/hu, ji/zi and
+//   their sha/sya-family compounds) — including the canonical Hepburn
+//   forms, which used to be left untagged before 'hepburn' existed as a
+//   style. Spellings the two systems already agree on (ka, mi, ...) stay
+//   untagged, as do IME-specific alternates that don't fit either system's
+//   own rules (ぢ's "di"/づ's "du" are the canonical, untagged forms; their
+//   "ji"/"zu" alternates keep the pre-existing 'kunrei' tag rather than
+//   gaining a 'hepburn' counterpart, since modern-pronunciation-based IMEs
+//   offer "ji"/"zu" independently of which base system is selected).
 // - xSmall / lSmall tag *both* spelling families of the standalone
 //   small-kana entries — including the canonical x-forms — because each
 //   toggle must be able to remove its whole family ("only type small kana
-//   the l-way" is a real preference). Typability is then guaranteed not by
-//   leaving the canonical untagged but by `filterByStyle`'s dynamic guard:
-//   whenever filtering would empty an entry's spelling set, the canonical
-//   (first-listed) spelling is kept regardless of its tag. See the
-//   canonical-sweep test for the resulting invariant.
+//   the l-way" is a real preference).
+// For the both-tagged regimes (hepburn/kunrei, xSmall/lSmall), typability
+// is guaranteed not by leaving one side untagged but by `filterByStyle`'s
+// dynamic guard: whenever filtering would empty an entry's spelling set,
+// the canonical (first-listed) spelling is kept regardless of its tag. The
+// Romaji Settings modal additionally never lets both hepburn and kunrei be
+// disabled at once (see BASE_STYLES), so that guard is a safety net here
+// rather than the primary mechanism. See the canonical-sweep test for the
+// resulting invariant.
 // Exported for the SPELLING_STYLES referential-integrity sweep test only
 // (romaji-engine-styles.test.ts) — not part of the matcher's public API.
 export const SPELLING_STYLES: Record<string, RomajiStyle> = {
@@ -274,6 +299,23 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'ちゃ|cya': 'cq',
   'ちゅ|cyu': 'cq',
   'ちょ|cyo': 'cq',
+
+  // -- hepburn: canonical Hepburn spellings, paired one-for-one with the
+  // kunrei-shiki alternates directly below --
+  'し|shi': 'hepburn',
+  'じ|ji': 'hepburn',
+  'ち|chi': 'hepburn',
+  'つ|tsu': 'hepburn',
+  'ふ|fu': 'hepburn',
+  'しゃ|sha': 'hepburn',
+  'しゅ|shu': 'hepburn',
+  'しょ|sho': 'hepburn',
+  'じゃ|ja': 'hepburn',
+  'じゅ|ju': 'hepburn',
+  'じょ|jo': 'hepburn',
+  'ちゃ|cha': 'hepburn',
+  'ちゅ|chu': 'hepburn',
+  'ちょ|cho': 'hepburn',
 
   // -- kunrei: kunrei-shiki-style alternates --
   'し|si': 'kunrei',
@@ -679,10 +721,13 @@ interface ConsumeResult {
 
 export interface RomajiMatcherOptions {
   /** Styles to exclude from acceptance. Every word remains completable
-   *  regardless of the combination chosen: kunrei/cq/digraph tag only
-   *  non-canonical alternates, and where xSmall/lSmall could empty a
-   *  small-kana entry's spelling set, `filterByStyle`'s dynamic guard
-   *  keeps that entry's canonical spelling alive. */
+   *  regardless of the combination chosen: cq/digraph tag only
+   *  non-canonical alternates; hepburn/kunrei and xSmall/lSmall tag both
+   *  sides of their respective pair, so disabling one side still leaves
+   *  the other (still tagged, still accepted) sufficient on its own, and
+   *  where disabling both at once would empty an entry's spelling set,
+   *  `filterByStyle`'s dynamic guard keeps that entry's canonical spelling
+   *  alive as a last resort. */
   disabledStyles?: readonly RomajiStyle[]
   /** Preferred styles for `remainingGuide()`'s displayed spelling. Any
    *  combination may be selected simultaneously — e.g. `['xSmall',

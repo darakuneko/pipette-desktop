@@ -48,17 +48,20 @@ describe('RomajiSettingsModal defaults', () => {
     expect(screen.getByTestId('romaji-case-upper').className).not.toContain('text-accent')
   })
 
-  it('defaults the guide selector to Hepburn, with no style toggled on', () => {
+  it('defaults the guide selector to Base, with no style toggled on', () => {
     renderModal()
-    expect(screen.getByTestId('romaji-guide-hepburn').className).toContain('text-accent')
+    expect(screen.getByTestId('romaji-guide-base').className).toContain('text-accent')
     for (const style of ['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']) {
       expect(screen.getByTestId(`romaji-guide-${style}`)).toHaveAttribute('aria-pressed', 'false')
     }
   })
 
-  it('defaults every input pattern to enabled (pressed)', () => {
+  it('defaults every input pattern to enabled (pressed), both bases and every option', () => {
     renderModal()
-    for (const style of ['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']) {
+    for (const style of ['hepburn', 'kunrei']) {
+      expect(screen.getByTestId(`romaji-base-${style}`)).toHaveAttribute('aria-pressed', 'true')
+    }
+    for (const style of ['cq', 'digraph', 'xSmall', 'lSmall']) {
       expect(screen.getByTestId(`romaji-input-${style}`)).toHaveAttribute('aria-pressed', 'true')
     }
   })
@@ -163,10 +166,10 @@ describe('RomajiSettingsModal edits', () => {
     if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
   })
 
-  it('clicking Hepburn clears every selected guide style', () => {
+  it('clicking Base clears every selected guide style', () => {
     const onConfigChange = vi.fn()
     renderModal({ config: { ...BASE_CONFIG, romaji: { guideStyles: ['kunrei', 'xSmall'] } }, onConfigChange })
-    fireEvent.click(screen.getByTestId('romaji-guide-hepburn'))
+    fireEvent.click(screen.getByTestId('romaji-guide-base'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
     if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
   })
@@ -187,6 +190,31 @@ describe('RomajiSettingsModal edits', () => {
     // Re-enabling the only disabled style empties the array, which is
     // pruned back to "field unset" rather than persisted as [].
     if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
+  })
+
+  it('disables kunrei on click, same as any other toggle, while hepburn stays the sole enabled base', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-base-kunrei'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') expect(arg.romaji).toEqual({ disabledStyles: ['kunrei'] })
+  })
+
+  it('the last enabled base is rendered disabled and ignores clicks', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ config: { ...BASE_CONFIG, romaji: { disabledStyles: ['kunrei'] } }, onConfigChange })
+    const hepburnButton = screen.getByTestId('romaji-base-hepburn')
+    expect(hepburnButton).toBeDisabled()
+    expect(hepburnButton).toHaveAttribute('aria-disabled', 'true')
+    fireEvent.click(hepburnButton)
+    expect(onConfigChange).not.toHaveBeenCalled()
+  })
+
+  it('re-enabling kunrei clears aria-disabled from hepburn again', () => {
+    renderModal({ config: { ...BASE_CONFIG, romaji: { disabledStyles: [] } } })
+    const hepburnButton = screen.getByTestId('romaji-base-hepburn')
+    expect(hepburnButton).not.toBeDisabled()
+    expect(hepburnButton).not.toHaveAttribute('aria-disabled')
   })
 
   it('closes on backdrop click', () => {

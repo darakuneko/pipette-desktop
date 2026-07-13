@@ -231,6 +231,79 @@ describe('canonical-sweep: every word stays completable with all styles disabled
   })
 })
 
+describe('base toggle: hepburn OFF leaves kunrei-shiki a complete, self-sufficient system', () => {
+  const opts = { disabledStyles: ['hepburn'] as const }
+
+  it('rejects the Hepburn-specific alternates but accepts their kunrei-shiki counterparts', () => {
+    const pairs: ReadonlyArray<[kana: string, hepburn: string, kunrei: string]> = [
+      ['し', 'shi', 'si'],
+      ['ち', 'chi', 'ti'],
+      ['つ', 'tsu', 'tu'],
+      ['ふ', 'fu', 'hu'],
+      ['じ', 'ji', 'zi'],
+      ['しゃ', 'sha', 'sya'],
+      ['しゅ', 'shu', 'syu'],
+      ['しょ', 'sho', 'syo'],
+      ['ちゃ', 'cha', 'tya'],
+      ['ちゅ', 'chu', 'tyu'],
+      ['ちょ', 'cho', 'tyo'],
+      ['じゃ', 'ja', 'zya'],
+      ['じゅ', 'ju', 'zyu'],
+      ['じょ', 'jo', 'zyo'],
+    ]
+    for (const [kana, hepburnSpelling, kunreiSpelling] of pairs) {
+      // Some hepburn/kunrei spellings share a leading letter with a
+      // still-live alternate (e.g. "shi" and "si" both start with "s"), so
+      // a stray keystroke can resync into completing a *different* valid
+      // pattern rather than dead-ending outright — same prefix-collision
+      // shape as the pre-existing jya/ja and whi/wi cases above. Asserting
+      // a 'reject' shows up somewhere, and that the full hepburn spelling
+      // was never actually typed, is what proves the alternate is gone.
+      const rejected = type(kana, hepburnSpelling, opts)
+      expect(rejected.results).toContain('reject')
+      expect(rejected.matcher.typedRomaji()).not.toBe(hepburnSpelling)
+
+      expect(type(kana, kunreiSpelling, opts).results.at(-1)).toBe('complete')
+    }
+  })
+
+  it('gemination derived from a hepburn-filtered consonant spelling disappears along with it (hepburn OFF removes the cchi-from-chi derivative of っちゃ, keeps ttya-from-tya)', () => {
+    expect(type('いっちゃ', 'iccha', opts).results.at(-1)).toBe('reject')
+    expect(type('いっちゃ', 'ittya', opts).results.at(-1)).toBe('complete')
+  })
+
+  it.each(Object.entries(KANA_TABLE))('every KANA_TABLE entry stays completable via a non-Hepburn spelling with hepburn disabled (%s)', (kana, patterns) => {
+    const spelling = patterns.find((p) => SPELLING_STYLES[`${kana}|${p}`] !== 'hepburn') ?? patterns[0]
+    const { matcher, results } = type(kana, spelling, opts)
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe(spelling)
+  })
+
+  const contextWordsKunrei: ReadonlyArray<[word: string, kunreiKeys: string]> = [
+    ['きって', 'kitte'], // っ via gemination, no hepburn/kunrei kana involved
+    ['あっ', 'axtu'], // っ via explicit tap at word end
+    ['かんじ', 'kanzi'], // ん single tap before a non-na-row kana, kunrei じ
+    ['ほん', 'honn'], // ん double tap at word end
+    ['しんにゅう', 'sinnnyuu'], // ん forced double tap before a na-row kana, kunrei し
+    ['まんな', 'mannna'], // ん forced double tap, three literal n's
+    ['まっちゃ', 'mattya'], // っ doubling a youon digraph, kunrei ちゃ
+    ['でぃなーにいく', 'dhina-niiku'], // digraph entry with no alternate spelling
+  ]
+
+  it.each(contextWordsKunrei)('"%s" completes via a kunrei-shiki spelling (%s) with hepburn disabled', (word, keys) => {
+    const { matcher, results } = type(word, keys, opts)
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe(keys)
+  })
+
+  it('remainingGuide naturally falls back to a kunrei-shiki spelling once hepburn is disabled, with no guideStyles override needed', () => {
+    const matcher = createRomajiMatcher('しゃちょう', { disabledStyles: ['hepburn'] })
+    expect(matcher.remainingGuide()).toBe('syatyou')
+  })
+})
+
 describe('guideStyles: display-only, never affects acceptance', () => {
   it('guideStyles does not change which keystrokes are accepted (dexi still completes でぃ with guideStyles=[digraph])', () => {
     const { matcher, results } = type('でぃなーにいく', 'dexina-niiku', { guideStyles: ['digraph'] })

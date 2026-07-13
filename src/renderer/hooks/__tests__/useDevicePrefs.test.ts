@@ -873,6 +873,40 @@ describe('useDevicePrefs', () => {
       })
     })
 
+    it('sanitizes a persisted disabledStyles that disables both base systems by dropping kunrei from it', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          // Should never happen via the modal (it blocks disabling the last
+          // enabled base), but a hand-edited or corrupted config could still
+          // carry both disabled — at least one base must survive validation.
+          romaji: { disabledStyles: ['hepburn', 'kunrei', 'cq'] },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { disabledStyles: ['hepburn', 'cq'] },
+      })
+    })
+
     it('drops the whole romaji block when every field is invalid', async () => {
       setupMocks()
       mockPipetteSettingsGet.mockResolvedValue({

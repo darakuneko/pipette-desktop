@@ -12,7 +12,7 @@ import { useEscapeClose } from '../hooks/useEscapeClose'
 import { ModalCloseButton } from '../components/editors/ModalCloseButton'
 import { MODAL_LG } from '../components/editors/store-modal-shared'
 import { ROW_CLASS, ToggleRow } from '../components/editors/modal-controls'
-import type { RomajiStyle } from './romaji-engine'
+import { BASE_STYLES, type RomajiStyle } from './romaji-engine'
 import type { RomajiCaseStyle, RomajiDetailSettings, TypingTestConfig } from './types'
 import { FONT_OPTIONS } from './types'
 import { optionButtonClass } from './TypingTestSettingsBar'
@@ -22,10 +22,13 @@ import { optionButtonClass } from './TypingTestSettingsBar'
 // / romaji, identical in every locale (see english.json + the Japanese pack).
 const CASE_STYLES: readonly RomajiCaseStyle[] = ['upper', 'capital', 'lower']
 
-// The guide row's Hepburn button (clears every selected guide style) is
+// The guide row's Base button (clears every selected guide style) is
 // rendered separately from this list — see the render section below.
 const GUIDE_STYLES: readonly RomajiStyle[] = ['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']
-const INPUT_STYLES: readonly RomajiStyle[] = ['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']
+// Accepted input patterns split into two rows: BASE_STYLES (hepburn/kunrei
+// — at least one always stays enabled, see toggleBaseStyle) and the
+// independent options below, which may all be disabled at once.
+const OPTION_STYLES: readonly RomajiStyle[] = ['cq', 'digraph', 'xSmall', 'lSmall']
 
 /** Drops fields set back to their default value so a persisted config only
  *  ever carries what the user actually changed. The single source of truth
@@ -81,6 +84,15 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
     else next.add(style)
     applyRomaji({ disabledStyles: [...next] })
   }, [disabledStyles, applyRomaji])
+
+  // hepburn/kunrei are peer base systems, each capable of spelling every
+  // kana on its own — but at least one must stay enabled, so the last
+  // remaining enabled base is not clickable-off (see the Base row below).
+  const enabledBaseCount = BASE_STYLES.filter((style) => !disabledStyles.has(style)).length
+  const toggleBaseStyle = useCallback((style: RomajiStyle) => {
+    if (!disabledStyles.has(style) && enabledBaseCount <= 1) return
+    toggleInputStyle(style)
+  }, [disabledStyles, enabledBaseCount, toggleInputStyle])
 
   const toggleGuideStyle = useCallback((style: RomajiStyle) => {
     const next = new Set(guideStyles)
@@ -170,21 +182,22 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
             </div>
           </section>
 
-          {/* Guide display pattern — multi-select, display only. Hepburn
+          {/* Guide display pattern — multi-select, display only. Base
               clears every selected style and shows the canonical
-              Hepburn-based spelling; the other five toggle independently,
-              same behaviour/look as Accepted input patterns below. */}
+              representative for whichever base system is active; the
+              other five toggle independently, same behaviour/look as
+              Accepted input patterns below. */}
           <section className="flex flex-col gap-1.5">
             <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.guideLabel')}:</span>
             <div className="flex flex-wrap gap-1">
               <button
                 type="button"
-                data-testid="romaji-guide-hepburn"
+                data-testid="romaji-guide-base"
                 aria-pressed={guideStyles.size === 0}
                 className={optionButtonClass(guideStyles.size === 0, 'px-2.5')}
                 onClick={() => applyRomaji({ guideStyles: [] })}
               >
-                {t('editor.typingTest.romajiSettings.guideHepburn')}
+                {t('editor.typingTest.romajiSettings.guideBase')}
               </button>
               {GUIDE_STYLES.map((style) => (
                 <button
@@ -202,23 +215,54 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
             <p className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.guideHint')}</p>
           </section>
 
-          {/* Accepted input patterns — multi-toggle, default all on. */}
+          {/* Accepted input patterns — split into Base (hepburn/kunrei,
+              at least one always on) and Options (default all on, may all
+              be turned off at once). */}
           <section className="flex flex-col gap-1.5">
             <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.inputLabel')}:</span>
-            <div className="flex flex-wrap gap-1">
-              {INPUT_STYLES.map((style) => (
-                <button
-                  key={style}
-                  type="button"
-                  data-testid={`romaji-input-${style}`}
-                  aria-pressed={!disabledStyles.has(style)}
-                  className={optionButtonClass(!disabledStyles.has(style), 'px-2.5')}
-                  onClick={() => toggleInputStyle(style)}
-                >
-                  {t(`editor.typingTest.romajiSettings.style.${style}`)}
-                </button>
-              ))}
+
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputBaseLabel')}:</span>
+              <div className="flex flex-wrap gap-1">
+                {BASE_STYLES.map((style) => {
+                  const baseEnabled = !disabledStyles.has(style)
+                  const isLastEnabledBase = baseEnabled && enabledBaseCount <= 1
+                  return (
+                    <button
+                      key={style}
+                      type="button"
+                      data-testid={`romaji-base-${style}`}
+                      aria-pressed={baseEnabled}
+                      aria-disabled={isLastEnabledBase || undefined}
+                      disabled={isLastEnabledBase}
+                      className={`${optionButtonClass(baseEnabled, 'px-2.5')} disabled:cursor-not-allowed disabled:opacity-50`}
+                      onClick={() => toggleBaseStyle(style)}
+                    >
+                      {t(`editor.typingTest.romajiSettings.style.${style}`)}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputOptionsLabel')}:</span>
+              <div className="flex flex-wrap gap-1">
+                {OPTION_STYLES.map((style) => (
+                  <button
+                    key={style}
+                    type="button"
+                    data-testid={`romaji-input-${style}`}
+                    aria-pressed={!disabledStyles.has(style)}
+                    className={optionButtonClass(!disabledStyles.has(style), 'px-2.5')}
+                    onClick={() => toggleInputStyle(style)}
+                  >
+                    {t(`editor.typingTest.romajiSettings.style.${style}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <p className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputHint')}</p>
           </section>
         </div>

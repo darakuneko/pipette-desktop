@@ -17,7 +17,7 @@ import { clampZoomFactor } from '../../shared/types/app-config'
 export type { KeyboardLayoutId, AutoLockMinutes, BasicViewType, SplitKeyMode }
 
 const VALID_QUOTE_LENGTHS: ReadonlySet<string> = new Set(['short', 'medium', 'long', 'all'])
-const VALID_ROMAJI_STYLES: ReadonlySet<string> = new Set(['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall'])
+const VALID_ROMAJI_STYLES: ReadonlySet<string> = new Set(['hepburn', 'kunrei', 'cq', 'digraph', 'xSmall', 'lSmall'])
 const VALID_ROMAJI_CASE_STYLES: ReadonlySet<string> = new Set(['lower', 'capital', 'upper'])
 
 function isFinitePositiveInt(n: unknown): n is number {
@@ -59,9 +59,18 @@ function validateRomajiDetailSettings(raw: unknown): RomajiDetailSettings | unde
     if (styles.length > 0) result.guideStyles = styles
   }
   if (Array.isArray(obj.disabledStyles)) {
-    const styles = obj.disabledStyles.filter(
+    let styles = obj.disabledStyles.filter(
       (s): s is RomajiStyle => typeof s === 'string' && VALID_ROMAJI_STYLES.has(s),
     )
+    // At least one base system (hepburn/kunrei) must stay enabled — the
+    // Romaji Settings modal enforces this on the way in, but a persisted
+    // config could still carry both disabled (e.g. hand-edited, or written
+    // by a future version with looser rules). Sanitize deterministically
+    // by dropping 'kunrei' from the disabled set rather than rejecting the
+    // whole field, so kunrei-shiki wins and stays enabled.
+    if (styles.includes('hepburn') && styles.includes('kunrei')) {
+      styles = styles.filter((s) => s !== 'kunrei')
+    }
     if (styles.length > 0) result.disabledStyles = styles
   }
   return Object.keys(result).length > 0 ? result : undefined
