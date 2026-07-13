@@ -199,29 +199,39 @@ describe('RomajiSettingsModal edits', () => {
     if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
   })
 
-  it('disables kunrei on click, same as any other toggle, while hepburn stays the sole enabled base', () => {
+  it('clicking an enabled base while both are on keeps only that base (kunrei alone is one click)', () => {
     const onConfigChange = vi.fn()
     renderModal({ onConfigChange })
     fireEvent.click(screen.getByTestId('romaji-base-kunrei'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') expect(arg.romaji).toEqual({ disabledStyles: ['hepburn'] })
+  })
+
+  it('clicking hepburn while both are on keeps hepburn alone', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-base-hepburn'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
     if (arg.mode === 'words') expect(arg.romaji).toEqual({ disabledStyles: ['kunrei'] })
   })
 
-  it('the last enabled base is rendered disabled and ignores clicks', () => {
+  it('clicking a disabled base joins it back in (both bases on)', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ config: { ...BASE_CONFIG, romaji: { disabledStyles: ['hepburn'] } }, onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-base-hepburn'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    // Re-enabling the only disabled style empties the array, which prunes
+    // the romaji block back to unset.
+    if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
+  })
+
+  it('clicking the sole enabled base is a no-op and the button never renders disabled', () => {
     const onConfigChange = vi.fn()
     renderModal({ config: { ...BASE_CONFIG, romaji: { disabledStyles: ['kunrei'] } }, onConfigChange })
     const hepburnButton = screen.getByTestId('romaji-base-hepburn')
-    expect(hepburnButton).toBeDisabled()
-    expect(hepburnButton).toHaveAttribute('aria-disabled', 'true')
+    expect(hepburnButton).not.toBeDisabled()
     fireEvent.click(hepburnButton)
     expect(onConfigChange).not.toHaveBeenCalled()
-  })
-
-  it('re-enabling kunrei clears aria-disabled from hepburn again', () => {
-    renderModal({ config: { ...BASE_CONFIG, romaji: { disabledStyles: [] } } })
-    const hepburnButton = screen.getByTestId('romaji-base-hepburn')
-    expect(hepburnButton).not.toBeDisabled()
-    expect(hepburnButton).not.toHaveAttribute('aria-disabled')
   })
 
   it('closes on backdrop click', () => {

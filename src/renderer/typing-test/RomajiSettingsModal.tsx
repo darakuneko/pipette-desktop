@@ -87,13 +87,20 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
   }, [disabledStyles, applyRomaji])
 
   // hepburn/kunrei are peer base systems, each capable of spelling every
-  // kana on its own — but at least one must stay enabled, so the last
-  // remaining enabled base is not clickable-off (see the Base row below).
-  const enabledBaseCount = BASE_STYLES.filter((style) => !disabledStyles.has(style)).length
+  // kana on its own — but at least one must stay enabled. Clicks are
+  // selection-first, not plain toggles: clicking an enabled base while
+  // both are on keeps *only* that base (turning the other off — with two
+  // bases, "use kunrei alone" is the intent behind clicking Kunrei), an
+  // off base joins back in, and the sole enabled base is a no-op.
   const toggleBaseStyle = useCallback((style: RomajiStyle) => {
-    if (!disabledStyles.has(style) && enabledBaseCount <= 1) return
-    toggleInputStyle(style)
-  }, [disabledStyles, enabledBaseCount, toggleInputStyle])
+    const other = BASE_STYLES.find((s) => s !== style)
+    if (other === undefined) return
+    const next = new Set(disabledStyles)
+    if (next.has(style)) next.delete(style)
+    else if (!next.has(other)) next.add(other)
+    else return
+    applyRomaji({ disabledStyles: [...next] })
+  }, [disabledStyles, applyRomaji])
 
   const toggleGuideStyle = useCallback((style: RomajiStyle) => {
     const next = new Set(guideStyles)
@@ -255,16 +262,13 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
               <div className="flex flex-wrap gap-1">
                 {BASE_STYLES.map((style) => {
                   const baseEnabled = !disabledStyles.has(style)
-                  const isLastEnabledBase = baseEnabled && enabledBaseCount <= 1
                   return (
                     <button
                       key={style}
                       type="button"
                       data-testid={`romaji-base-${style}`}
                       aria-pressed={baseEnabled}
-                      aria-disabled={isLastEnabledBase || undefined}
-                      disabled={isLastEnabledBase}
-                      className={`${optionButtonClass(baseEnabled, 'px-2.5')} disabled:cursor-not-allowed disabled:opacity-50`}
+                      className={optionButtonClass(baseEnabled, 'px-2.5')}
                       onClick={() => toggleBaseStyle(style)}
                     >
                       {t(`editor.typingTest.romajiSettings.style.${style}`)}
