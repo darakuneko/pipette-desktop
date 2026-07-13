@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { useEscapeClose } from '../hooks/useEscapeClose'
 import { ModalCloseButton } from '../components/editors/ModalCloseButton'
 import { MODAL_MD } from '../components/editors/store-modal-shared'
-import { ToggleRow } from '../components/editors/modal-controls'
+import { ROW_CLASS, ToggleRow } from '../components/editors/modal-controls'
 import type { RomajiStyle } from './romaji-engine'
 import type { RomajiCaseStyle, RomajiDetailSettings, TypingTestConfig } from './types'
 import { FONT_OPTIONS } from './types'
@@ -125,26 +125,36 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
             </div>
           </section>
 
-          {/* Font size — linked to Settings > Font by default. */}
+          {/* Font size — linked to Settings > Font by default. The toggle
+              card and the size select sit on one row, but the select stays
+              outside the card: while linked it shows the linked value but
+              stays disabled; unlinking hands control over to it. */}
           <section className="flex flex-col gap-1.5">
             <span className="text-sm text-content-muted">{t('editor.typingTest.fontSize')}:</span>
-            <ToggleRow
-              testid="romaji-font-linked"
-              label={t('editor.typingTest.romajiSettings.fontLinked')}
-              on={fontLinked}
-              onToggle={() => applyRomaji({ fontSize: fontLinked ? linkedFontSize : undefined })}
-            />
-            {!fontLinked && (
-              <select
-                data-testid="romaji-font-size-select"
-                aria-label={t('editor.typingTest.fontSize')}
-                value={fontValue}
-                onChange={(e) => applyRomaji({ fontSize: Number(e.target.value) })}
-                className="h-8 w-20 rounded-md border border-edge bg-surface px-2 text-sm text-content focus:border-accent focus:outline-none"
-              >
-                {FONT_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
-            )}
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <ToggleRow
+                  testid="romaji-font-linked"
+                  label={t('editor.typingTest.romajiSettings.fontLinked')}
+                  on={fontLinked}
+                  onToggle={() => applyRomaji({ fontSize: fontLinked ? linkedFontSize : undefined })}
+                />
+              </div>
+              {/* Same card frame as the linked row so the pair reads as one
+                  control group; the select keeps the sidebar Font styling. */}
+              <div className={`${ROW_CLASS} shrink-0`}>
+                <select
+                  data-testid="romaji-settings-font-size"
+                  aria-label={t('editor.typingTest.fontSize')}
+                  value={fontValue}
+                  disabled={fontLinked}
+                  onChange={(e) => applyRomaji({ fontSize: Number(e.target.value) })}
+                  className="h-8 w-14 rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {FONT_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+            </div>
           </section>
 
           {/* Guide display pattern — single-select, display only. */}

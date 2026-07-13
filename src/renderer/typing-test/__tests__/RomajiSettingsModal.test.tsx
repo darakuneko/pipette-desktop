@@ -60,10 +60,12 @@ describe('RomajiSettingsModal defaults', () => {
     }
   })
 
-  it('defaults the font size to linked (no size select shown)', () => {
-    renderModal()
+  it('defaults the font size to linked, showing the Settings value in a disabled select', () => {
+    renderModal({ linkedFontSize: 24 })
     expect(screen.getByTestId('romaji-font-linked')).toHaveAttribute('aria-checked', 'true')
-    expect(screen.queryByTestId('romaji-font-size-select')).not.toBeInTheDocument()
+    const select = screen.getByTestId('romaji-settings-font-size') as HTMLSelectElement
+    expect(select).toBeDisabled()
+    expect(select.value).toBe('24')
   })
 })
 
@@ -95,9 +97,10 @@ describe('RomajiSettingsModal edits', () => {
     if (arg.mode === 'words') expect(arg.romaji).toEqual({ caseStyle: 'capital' })
   })
 
-  it('shows the font-size select once romaji.fontSize is set, seeded with that value', () => {
+  it('enables the font-size select once romaji.fontSize is set, seeded with that value', () => {
     renderModal({ config: { ...BASE_CONFIG, romaji: { fontSize: 32 } } })
-    const select = screen.getByTestId('romaji-font-size-select') as HTMLSelectElement
+    const select = screen.getByTestId('romaji-settings-font-size') as HTMLSelectElement
+    expect(select).not.toBeDisabled()
     expect(select.value).toBe('32')
   })
 
@@ -112,7 +115,7 @@ describe('RomajiSettingsModal edits', () => {
   it('sets an explicit fontSize once unlinked and a value picked', () => {
     const onConfigChange = vi.fn()
     renderModal({ config: { ...BASE_CONFIG, romaji: { fontSize: 24 } }, onConfigChange })
-    fireEvent.change(screen.getByTestId('romaji-font-size-select'), { target: { value: '30' } })
+    fireEvent.change(screen.getByTestId('romaji-settings-font-size'), { target: { value: '30' } })
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
     if (arg.mode === 'words') expect(arg.romaji).toEqual({ fontSize: 30 })
   })
