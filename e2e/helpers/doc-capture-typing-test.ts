@@ -127,10 +127,20 @@ async function captureRomajiInputScreenshot(page: Page): Promise<void> {
   await selectMonkeytypePack(page, 'japanese_hiragana')
 
   // The language switch preserves whatever pattern was active; force words
-  // mode so the Romaji toggle (words/time only) is available.
+  // mode so the Romaji button (words/time only) is available.
   await page.locator('[data-testid="mode-words"]').click()
   await page.waitForTimeout(300)
-  await page.locator('[data-testid="toggle-romaji"]').click()
+
+  // The Romaji button opens the Romaji Settings modal rather than toggling
+  // judging directly (see RomajiSettingsModal.tsx) — open it, capture the
+  // modal itself with its default (all-styles-enabled) state, enable the
+  // master switch, then close it before typing.
+  await page.locator('[data-testid="romaji-settings-toggle"]').click()
+  await page.locator('[data-testid="romaji-settings-modal"]').waitFor({ state: 'visible', timeout: 5_000 })
+  await page.locator('[data-testid="romaji-settings-enabled"]').click()
+  await page.waitForTimeout(300)
+  await capture(page, 'typing-test-romaji-settings')
+  await page.locator('[data-testid="romaji-settings-modal-close"]').click()
   await page.waitForTimeout(300)
 
   // "dhina-" commits でぃ + な + ー (the '-' key types the ー long-vowel mark
