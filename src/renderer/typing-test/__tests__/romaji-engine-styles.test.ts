@@ -7,6 +7,7 @@
 // behaviour that must stay byte-for-byte unchanged.
 
 import { describe, it, expect } from 'vitest'
+import english from '../../i18n/locales/english.json'
 import {
   createRomajiMatcher,
   KANA_TABLE,
@@ -605,6 +606,27 @@ describe('SPELLING_STYLES referential integrity', () => {
       expect(validSpellings, `unknown scope "${scope}" (from key "${key}")`).toBeDefined()
       expect(validSpellings, `"${spelling}" is not a valid spelling for scope "${scope}" (key "${key}")`).toContain(spelling)
     }
+  })
+})
+
+describe('styleTip i18n content matches SPELLING_STYLES exactly, per family', () => {
+  // Sweeps every family that actually appears in SPELLING_STYLES (the base
+  // pair hepburn/kunrei included) and checks the Romaji Settings modal's
+  // tooltip text against it, so a future SPELLING_STYLES edit (adding or
+  // dropping a tagged spelling) can't silently drift from what the tooltip
+  // tells the user.
+  const familiesInUse = [...new Set(Object.values(SPELLING_STYLES))] as RomajiStyle[]
+  const styleTip = english.editor.typingTest.romajiSettings.styleTip as Record<string, string>
+
+  it.each(familiesInUse)('styleTip.%s lists exactly the kana:spelling pairs SPELLING_STYLES tags with that family', (style) => {
+    const expected = Object.entries(SPELLING_STYLES)
+      .filter(([, tag]) => tag === style)
+      .map(([key]) => key.replace('|', ':'))
+      .sort()
+
+    const actual = (styleTip[style] ?? '').split(/\s+/).filter(Boolean).sort()
+
+    expect(actual).toEqual(expected)
   })
 })
 
