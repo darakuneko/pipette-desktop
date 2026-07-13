@@ -73,6 +73,11 @@ export interface AppConfig {
   /** UI zoom level as a percentage (50–200). Applied to the renderer
    * via webContents.setZoomFactor(zoomFactor / 100). */
   zoomFactor: number
+  /** Start the app automatically when the user signs in to the OS. */
+  autoLaunch: boolean
+  /** Keep the app running in the system tray when the main window is
+   * closed, instead of quitting. */
+  trayResident: boolean
 }
 
 export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
@@ -95,6 +100,8 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'typingRecordingConsentAccepted',
   'typingMonitorAppEnabled',
   'zoomFactor',
+  'autoLaunch',
+  'trayResident',
 ])
 
 export const DEFAULT_APP_CONFIG: AppConfig = {
@@ -115,4 +122,6 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   typingRecordingConsentAccepted: false,
   typingMonitorAppEnabled: true,
   zoomFactor: ZOOM_FACTOR_DEFAULT,
+  autoLaunch: false,
+  trayResident: false,
 }

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.7",
+  "version": "0.1.8",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -741,7 +741,11 @@
       "licenseValue": "GPL-3.0-or-later"
     },
     "zoomLevel": "ズーム",
-    "zoomLevelWarning": "表示が崩れることがありますえ。自己責任でお願いしますえ。"
+    "zoomLevelWarning": "表示が崩れることがありますえ。自己責任でお願いしますえ。",
+    "autoLaunch": "自動起動どすえ",
+    "autoLaunchDescription": "サインインしはったら自動で Pipette を起動しますえ",
+    "trayResident": "トレイに常駐どすえ",
+    "trayResidentDescription": "ウィンドウを閉じてもトレイに常駐して動き続けますえ"
   },
   "analyze": {
     "noKeyboards": "まだ打鍵データがおへんなぁ",

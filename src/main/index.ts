@@ -24,6 +24,7 @@ import { log, logHidPacket } from './logger'
 import type { LogLevel } from './logger'
 import { loadWindowState, saveWindowState, setupAppConfigIpc, loadAppConfig, onAppConfigChange, MIN_WIDTH, MIN_HEIGHT } from './app-config'
 import { clampZoomFactor } from '../shared/types/app-config'
+import { applyAutoLaunch, setupTray, destroyTray, isTrayActive, appIconPath } from './app-behavior'
 import {
   setupTypingAnalytics,
   setupTypingAnalyticsIpc,
@@ -38,6 +39,14 @@ import { isVirtualDeviceEnabled, getVirtualDeviceController } from './virtual-de
 const isDev = !!process.env.ELECTRON_RENDERER_URL
 
 app.setDesktopName('pipette')
+
+// Distinguishes a user-initiated quit from a plain window close so the
+// tray-resident close handler knows whether to hide the window instead of
+// letting it (and the app) close.
+let isQuitting = false
+app.on('before-quit', () => {
+  isQuitting = true
+})
 
 // Linux: disable GPU sandbox only when chrome-sandbox lacks SUID root.
 // Packaged builds with correct permissions keep the GPU sandbox enabled.
@@ -83,7 +92,7 @@ function createWindow(): void {
     height: saved.height,
     minWidth: MIN_WIDTH,
     minHeight: MIN_HEIGHT,
-    icon: join(__dirname, '../../build/icon.png'),
+    icon: appIconPath(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.cjs'),
       contextIsolation: true,
@@ -97,12 +106,21 @@ function createWindow(): void {
   }
   const win = new BrowserWindow(winOpts)
 
-  win.on('close', () => {
+  win.on('close', (e) => {
     if (normalWindowSize) {
       const bounds = win.getBounds()
       saveWindowState({ ...bounds, width: normalWindowSize.width, height: normalWindowSize.height })
     } else {
       saveWindowState(win.getBounds())
+    }
+    // Gate on the live tray resource, not the trayResident config flag:
+    // the config-change listener keeps the tray in sync (so mid-session
+    // toggles apply without a restart), and if Tray construction ever
+    // failed we must not hide the only window with nothing to restore it.
+    // Also avoids electron-store's per-access file read on every close.
+    if (isTrayActive() && !isQuitting) {
+      e.preventDefault()
+      win.hide()
     }
   })
 
@@ -347,11 +365,31 @@ app.whenReady().then(() => {
     }
   })
 
+  const getFirstWindow = (): BrowserWindow | null => BrowserWindow.getAllWindows()[0] ?? null
+
+  onAppConfigChange((key, value) => {
+    if (key === 'autoLaunch') {
+      applyAutoLaunch(Boolean(value))
+    } else if (key === 'trayResident') {
+      if (value) {
+        setupTray(getFirstWindow)
+      } else {
+        destroyTray()
+      }
+    }
+  })
+
   setupTypingAnalytics().catch((err: unknown) => {
     const detail = err instanceof Error ? (err.stack ?? err.message) : String(err)
     log('error', `Failed to initialize typing analytics: ${detail}`)
   })
   createWindow()
+
+  const behaviorConfig = loadAppConfig()
+  applyAutoLaunch(behaviorConfig.autoLaunch)
+  if (behaviorConfig.trayResident) {
+    setupTray(getFirstWindow)
+  }
 
   // Best-effort: refresh Hub-linked i18n packs in the background. This
   // never blocks startup — if Hub is unreachable or a single pack fails
@@ -372,7 +410,10 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  // With trayResident on, the close handler hides the window via
+  // preventDefault() instead of letting it close, so this rarely fires —
+  // isTrayActive() is a safety net in case a window closes some other way.
+  if (process.platform !== 'darwin' && !isTrayActive()) {
     app.quit()
   }
 })

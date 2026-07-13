@@ -1,5 +1,5 @@
 {
-  "version": "0.1.7",
+  "version": "0.1.8",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -741,7 +741,11 @@
       "licenseValue": "GPL-3.0-or-later"
     },
     "zoomLevel": "ズーム☆",
-    "zoomLevelWarning": "表示崩れてもウチらは知らないっしょ！自己責任で変えてね☆"
+    "zoomLevelWarning": "表示崩れてもウチらは知らないっしょ！自己責任で変えてね☆",
+    "autoLaunch": "自動起動っしょ☆",
+    "autoLaunchDescription": "サインインしたら自動で Pipette 起きるよ☆",
+    "trayResident": "トレイ常駐っしょ",
+    "trayResidentDescription": "ウィンドウ閉じてもトレイでずっと動いてるからね☆"
   },
   "analyze": {
     "noKeyboards": "データまだなくね？",

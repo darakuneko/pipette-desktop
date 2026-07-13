@@ -671,6 +671,36 @@ describe('SettingsModal', () => {
     })
   })
 
+  describe('Auto launch / Tray resident section (Tools tab)', () => {
+    it('renders auto launch toggle off by default', () => {
+      renderAndSwitchToTools()
+      const toggle = screen.getByTestId('settings-auto-launch-toggle')
+      expect(toggle).toBeInTheDocument()
+      expect(toggle.getAttribute('aria-checked')).toBe('false')
+    })
+
+    it('renders tray resident toggle off by default', () => {
+      renderAndSwitchToTools()
+      const toggle = screen.getByTestId('settings-tray-resident-toggle')
+      expect(toggle).toBeInTheDocument()
+      expect(toggle.getAttribute('aria-checked')).toBe('false')
+    })
+
+    it('calls appConfig.set with autoLaunch true when auto launch toggle is clicked', () => {
+      renderAndSwitchToTools()
+
+      fireEvent.click(screen.getByTestId('settings-auto-launch-toggle'))
+      expect(mockAppConfigSet).toHaveBeenCalledWith('autoLaunch', true)
+    })
+
+    it('calls appConfig.set with trayResident true when tray resident toggle is clicked', () => {
+      renderAndSwitchToTools()
+
+      fireEvent.click(screen.getByTestId('settings-tray-resident-toggle'))
+      expect(mockAppConfigSet).toHaveBeenCalledWith('trayResident', true)
+    })
+  })
+
   describe('Security section (Tools tab)', () => {
     it('renders auto lock time selector with default value', () => {
       renderAndSwitchToTools()
