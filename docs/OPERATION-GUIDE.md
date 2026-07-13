@@ -1763,12 +1763,14 @@ The Tools tab shows a **Zoom** row below Theme Packs. This setting scales the en
 
 ### 6.6 Launch at Login / Stay in System Tray
 
-The Tools tab shows two toggles below the Theme Packs and Zoom rows:
+The Tools tab shows four toggles below the Theme Packs and Zoom rows:
 
 - **Launch at Login**: Start Pipette automatically when you sign in to the OS. On Windows and macOS this registers a login item; on Linux it manages an XDG autostart entry (`~/.config/autostart/pipette.desktop`). This works in installed (packaged) builds only — the toggle has no effect when running from source.
 - **Stay in System Tray**: While ON, closing the window hides Pipette to the system tray and the app keeps running. Click the tray icon to show the window again, or choose **Quit** from the tray icon menu to exit. The tray menu offers **Show** and **Quit** (English-only labels for now).
+- **Restore Last Session**: While ON, Pipette remembers the last keyboard you connected and automatically reconnects it the next time the app starts. Because the screen you were on is already remembered per keyboard, reconnecting also brings back the last screen you used with that keyboard. If the keyboard is not found within about 10 seconds of launch, Pipette gives up silently — no warning is shown, and the device selection screen stays as usual. Disconnecting a keyboard manually clears the remembered device.
+- **Start Hidden in Tray**: While ON, Pipette launches resident in the system tray without opening the window. This requires **Stay in System Tray** — the toggle is disabled while Stay in System Tray is OFF, and turning Stay in System Tray OFF also turns this toggle OFF. If a session restore (see above) needs the Unlock dialog, the window appears just for that dialog and hides again once it is resolved. Once you show the window yourself (e.g. from the tray icon), it stays open — Pipette never auto-hides a window you opened.
 
-Both are machine-local settings — they are not synced to other devices via Cloud Sync.
+All four are machine-local settings — they are not synced to other devices via Cloud Sync.
 
 ---
 
