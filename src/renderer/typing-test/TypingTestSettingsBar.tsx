@@ -85,15 +85,15 @@ export function TypingTestSettingsBar({ config, onConfigChange, language, fontSi
   return (
     <div className="flex w-full flex-col items-start gap-3">
       {/* Pattern — words / time / quote */}
-      <div className="flex flex-col items-start gap-1">
+      <div className="flex w-full flex-col items-start gap-1">
         <span className={LABEL}>{t('editor.typingTest.pattern')}:</span>
-        <div className="flex h-8 items-center gap-1 rounded-lg bg-surface-alt/50 px-1">
+        <div className="flex h-8 w-full items-center gap-1 rounded-lg bg-surface-alt/50 px-1">
           {MODES.map((mode) => (
             <button
               key={mode}
               type="button"
               data-testid={`mode-${mode}`}
-              className={optionButtonClass(config.mode === mode)}
+              className={`${optionButtonClass(config.mode === mode)} flex-1 justify-center`}
               onClick={() => handleModeChange(mode)}
             >
               {t(`editor.typingTest.mode.${mode}`)}
@@ -104,16 +104,16 @@ export function TypingTestSettingsBar({ config, onConfigChange, language, fontSi
 
       {/* Units — the unit (words / sec) is shown on the label, so the value
           buttons stay compact numbers. Quote mode uses named lengths. */}
-      <div className="flex flex-col items-start gap-1">
+      <div className="flex w-full flex-col items-start gap-1">
         <span className={LABEL}>{unitsLabel}:</span>
         {config.mode === 'words' && (
-          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+          <div className="flex w-full items-center gap-1">
             {WORD_COUNT_OPTIONS.map((count) => (
               <button
                 key={count}
                 type="button"
                 data-testid={`word-count-${count}`}
-                className={optionButtonClass(config.wordCount === count)}
+                className={`${optionButtonClass(config.wordCount === count)} flex-1 justify-center`}
                 onClick={() => onConfigChange({ ...config, wordCount: count })}
               >
                 {count}
@@ -122,13 +122,13 @@ export function TypingTestSettingsBar({ config, onConfigChange, language, fontSi
           </div>
         )}
         {config.mode === 'time' && (
-          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+          <div className="flex w-full items-center gap-1">
             {TIME_DURATION_OPTIONS.map((dur) => (
               <button
                 key={dur}
                 type="button"
                 data-testid={`duration-${dur}`}
-                className={optionButtonClass(config.duration === dur)}
+                className={`${optionButtonClass(config.duration === dur)} flex-1 justify-center`}
                 onClick={() => onConfigChange({ ...config, duration: dur })}
               >
                 {dur}
@@ -137,13 +137,13 @@ export function TypingTestSettingsBar({ config, onConfigChange, language, fontSi
           </div>
         )}
         {config.mode === 'quote' && (
-          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+          <div className="flex w-full items-center gap-1">
             {QUOTE_LENGTHS.map((len) => (
               <button
                 key={len}
                 type="button"
                 data-testid={`quote-${len}`}
-                className={optionButtonClass(config.quoteLength === len)}
+                className={`${optionButtonClass(config.quoteLength === len)} flex-1 justify-center`}
                 onClick={() => onConfigChange({ ...config, quoteLength: len })}
               >
                 {t(`editor.typingTest.quoteLength.${len}`)}
@@ -157,11 +157,11 @@ export function TypingTestSettingsBar({ config, onConfigChange, language, fontSi
       {hasPunctuationNumbers && (
         <div className="flex w-full flex-col items-start gap-1">
           <span className={LABEL}>{t('editor.typingTest.optionLabel')}:</span>
-          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+          <div className="flex w-full items-center gap-1">
             <button
               type="button"
               data-testid="toggle-punctuation"
-              className={optionButtonClass(config.punctuation, 'px-2.5')}
+              className={`${optionButtonClass(config.punctuation, 'px-2.5')} flex-1 justify-center`}
               onClick={() => onConfigChange({ ...config, punctuation: !config.punctuation })}
             >
               {t('editor.typingTest.punctuation')}
@@ -169,7 +169,7 @@ export function TypingTestSettingsBar({ config, onConfigChange, language, fontSi
             <button
               type="button"
               data-testid="toggle-numbers"
-              className={optionButtonClass(config.numbers, 'px-2.5')}
+              className={`${optionButtonClass(config.numbers, 'px-2.5')} flex-1 justify-center`}
               onClick={() => onConfigChange({ ...config, numbers: !config.numbers })}
             >
               {t('editor.typingTest.numbers')}

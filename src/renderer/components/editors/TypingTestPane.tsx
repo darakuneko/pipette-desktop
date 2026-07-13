@@ -483,11 +483,11 @@ export function TypingTestPane({
   const configSidebar = viewOnly ? null : (
     <div
       className="flex shrink-0 flex-col self-stretch overflow-hidden rounded-xl border border-edge bg-picker-bg transition-width duration-200 ease-out"
-      style={{ width: settingsCollapsed ? PANEL_COLLAPSED_WIDTH : '15rem' }}
+      style={{ width: settingsCollapsed ? PANEL_COLLAPSED_WIDTH : '18rem' }}
       data-testid={settingsCollapsed ? 'typing-settings-panel-collapsed' : 'typing-settings-panel'}
     >
       {!settingsCollapsed && (
-      <div className="flex min-h-0 w-60 flex-1 flex-col gap-4 overflow-y-auto p-3">
+      <div className="flex min-h-0 w-72 flex-1 flex-col gap-4 overflow-y-auto p-3">
       {/* Settings — language/mode, base layer, pattern / units / options. */}
       <PanelSection title={t('editor.typingTest.section.settings')}>
         {/* Mode / language — shown for every mode (words / time / quote /
@@ -533,16 +533,16 @@ export function TypingTestPane({
         )}
         {/* Base Layer / Lines / Font side by side. Lines + Font are the shared
             reading-window display settings (every mode); wraps if too narrow. */}
-        <div className="flex flex-wrap items-start gap-2">
+        <div className="flex w-full items-start gap-2">
           {layers > 1 && (
-            <div className="flex flex-col items-start gap-1">
+            <div className="flex flex-1 flex-col items-start gap-1">
               <span className="text-sm text-content-muted">{t('editor.typingTest.baseLayer')}:</span>
               <select
                 data-testid="base-layer-select"
                 aria-label={t('editor.typingTest.baseLayer')}
                 value={typingTest.baseLayer}
                 onChange={(e) => typingTest.setBaseLayer(Number(e.target.value))}
-                className="h-8 w-14 rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none"
+                className="h-8 w-full rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none"
               >
                 {Array.from({ length: layers }, (_, i) => (
                   <option key={i} value={i}>{layerNames?.[i] || i}</option>
@@ -550,26 +550,26 @@ export function TypingTestPane({
               </select>
             </div>
           )}
-          <div className="flex flex-col items-start gap-1">
+          <div className="flex flex-1 flex-col items-start gap-1">
             <span className="text-sm text-content-muted">{t('editor.typingTest.lines')}:</span>
             <select
               data-testid="display-lines-select"
               aria-label={t('editor.typingTest.lines')}
               value={displayLines ?? DEFAULT_DISPLAY_LINES}
               onChange={(e) => onDisplayLinesChange?.(Number(e.target.value))}
-              className="h-8 w-14 rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none"
+              className="h-8 w-full rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none"
             >
               {LINE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           </div>
-          <div className="flex flex-col items-start gap-1">
+          <div className="flex flex-1 flex-col items-start gap-1">
             <span className="text-sm text-content-muted">{t('editor.typingTest.fontSize')}:</span>
             <select
               data-testid="font-size-select"
               aria-label={t('editor.typingTest.fontSize')}
               value={fontSize ?? DEFAULT_FONT_SIZE}
               onChange={(e) => onFontSizeChange?.(Number(e.target.value))}
-              className="h-8 w-14 rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none"
+              className="h-8 w-full rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none"
             >
               {FONT_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
