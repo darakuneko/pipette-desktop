@@ -12,6 +12,7 @@ import { useEscapeClose } from '../hooks/useEscapeClose'
 import { ModalCloseButton } from '../components/editors/ModalCloseButton'
 import { MODAL_LG } from '../components/editors/store-modal-shared'
 import { ROW_CLASS, ToggleRow } from '../components/editors/modal-controls'
+import { Tooltip } from '../components/ui/Tooltip'
 import { BASE_STYLES, type RomajiStyle } from './romaji-engine'
 import type { RomajiCaseStyle, RomajiDetailSettings, TypingTestConfig } from './types'
 import { FONT_OPTIONS } from './types'
@@ -30,8 +31,8 @@ const CASE_STYLES: readonly RomajiCaseStyle[] = ['upper', 'capital', 'lower']
 // row is a toggle pair where at least one must stay enabled (see
 // toggleBaseStyle). Both rows' Options are always a multi-select toggle.
 // Each button shows a short label (system + one example spelling); the
-// full example list lives in the native `title` tooltip, the same
-// convention used elsewhere in the app (e.g. BigramsChart's SortHeader).
+// full example list lives in the shared Tooltip bubble (components/ui/
+// Tooltip), the same affordance used by DeviceSelector / KeycodeField.
 const OPTION_STYLES: readonly RomajiStyle[] =
   ['c', 'q', 'digraph', 'xSmall', 'lSmall', 'w', 'v', 'f', 'ye', 'xn', 'nApos']
 
@@ -238,17 +239,17 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
               <span className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputOptionsLabel')}:</span>
               <div className="flex flex-wrap gap-1">
                 {OPTION_STYLES.map((style) => (
-                  <button
-                    key={style}
-                    type="button"
-                    data-testid={`romaji-guide-${style}`}
-                    aria-pressed={guideStyles.has(style)}
-                    title={t(`editor.typingTest.romajiSettings.styleTip.${style}`)}
-                    className={optionButtonClass(guideStyles.has(style), 'px-2.5')}
-                    onClick={() => toggleGuideStyle(style)}
-                  >
-                    {t(`editor.typingTest.romajiSettings.style.${style}`)}
-                  </button>
+                  <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top">
+                    <button
+                      type="button"
+                      data-testid={`romaji-guide-${style}`}
+                      aria-pressed={guideStyles.has(style)}
+                      className={optionButtonClass(guideStyles.has(style), 'px-2.5')}
+                      onClick={() => toggleGuideStyle(style)}
+                    >
+                      {t(`editor.typingTest.romajiSettings.style.${style}`)}
+                    </button>
+                  </Tooltip>
                 ))}
               </div>
             </div>
@@ -287,17 +288,17 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
               <span className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputOptionsLabel')}:</span>
               <div className="flex flex-wrap gap-1">
                 {OPTION_STYLES.map((style) => (
-                  <button
-                    key={style}
-                    type="button"
-                    data-testid={`romaji-input-${style}`}
-                    aria-pressed={!disabledStyles.has(style)}
-                    title={t(`editor.typingTest.romajiSettings.styleTip.${style}`)}
-                    className={optionButtonClass(!disabledStyles.has(style), 'px-2.5')}
-                    onClick={() => toggleInputStyle(style)}
-                  >
-                    {t(`editor.typingTest.romajiSettings.style.${style}`)}
-                  </button>
+                  <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top">
+                    <button
+                      type="button"
+                      data-testid={`romaji-input-${style}`}
+                      aria-pressed={!disabledStyles.has(style)}
+                      className={optionButtonClass(!disabledStyles.has(style), 'px-2.5')}
+                      onClick={() => toggleInputStyle(style)}
+                    >
+                      {t(`editor.typingTest.romajiSettings.style.${style}`)}
+                    </button>
+                  </Tooltip>
                 ))}
               </div>
             </div>
