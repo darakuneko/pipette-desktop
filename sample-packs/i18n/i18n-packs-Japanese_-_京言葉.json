@@ -318,7 +318,7 @@
         "fontLinked": "Settings の Font と連動してますえ",
         "guideLabel": "表示パターン",
         "guideAuto": "自動",
-        "guideHint": "表示だけどすえ。他の受理パターンで入力しても正解になりますえ",
+        "guideHint": "表示だけどすえ。他の入力パターンでも正解になりますえ",
         "inputLabel": "入力パターン",
         "inputHint": "オフにしたパターンは入力として受け付けまへん。標準の綴りはいつでも有効どす",
         "style": {

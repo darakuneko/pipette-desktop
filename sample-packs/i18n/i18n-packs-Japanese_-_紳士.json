@@ -318,7 +318,7 @@
         "fontLinked": "Settings の Font と連動いたします",
         "guideLabel": "表示する綴りの型",
         "guideAuto": "自動",
-        "guideHint": "表示のみにございます。他の受理される型で打っても正解となります",
+        "guideHint": "表示のみにございます。他の入力パターンでも正解となります",
         "inputLabel": "受理する入力の型",
         "inputHint": "外した型は入力として認められません。標準の綴りは常に受理されます",
         "style": {

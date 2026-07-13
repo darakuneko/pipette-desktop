@@ -318,7 +318,7 @@
         "fontLinked": "Settings の Font と連動してるよん☆",
         "guideLabel": "表示パターンっしょ",
         "guideAuto": "自動っしょ",
-        "guideHint": "表示だけだから、他の受理パターンで打っても正解になるよん☆",
+        "guideHint": "表示だけだから、他の入力パターンでも正解になるよん☆",
         "inputLabel": "入力パターンっしょ",
         "inputHint": "オフにしたパターンは入力としてハネられるよん。標準の綴りはいつでもOKね☆",
         "style": {
