@@ -396,7 +396,7 @@
       "units": "Units",
       "unitsWords": "Units(Words)",
       "unitsSec": "Units(Sec)",
-      "unitsLines": "Lines",
+      "unitsLines": "Units(Lines)",
       "optionLabel": "Option",
       "baseLayerShort": "Base",
       "heatmapWindow": "Heatmap window (minutes)",
