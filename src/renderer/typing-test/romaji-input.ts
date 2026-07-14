@@ -9,18 +9,53 @@ import type { TypingTestConfig, RomajiDetailSettings } from './types'
 import { ROMAJI_INPUT_LANGUAGES } from './types'
 import { type TypingTestState, isSubmitKey, advanceAfterWord } from './run-state'
 
+/** True when the romaji-keystroke matcher can operate at all for the given
+ *  config, independent of whether the user has actually opted in via
+ *  `romajiInput`. Per mode:
+ *  - words/time: the active word-language pack is a kana pack (see
+ *    `ROMAJI_INPUT_LANGUAGES`).
+ *  - tatoeba: the selected pack's `language` id is a kana pack — same set,
+ *    since Tatoeba kana packs reuse the monkeytype language ids.
+ *  - fileImport: the loaded text's content is pure kana. This can't be
+ *    derived from `config` alone (a `textId` says nothing about its
+ *    content), so the caller passes in `textRomajiCapable` — sourced from
+ *    the typing-test-texts store's computed `romajiCapable` meta field for
+ *    the text currently loaded into the run (see `TypingTestState.romajiCapable`
+ *    in run-state.ts).
+ *  - quote: never capable — quotes are plain-language prose, not kana.
+ *  Used both to gate the SettingsBar's Romaji button and, via
+ *  `isRomajiInputActive`, to decide whether a persisted `romajiInput: true`
+ *  is actually honored. */
+export function isRomajiCapable(config: TypingTestConfig, language: string, textRomajiCapable: boolean | undefined): boolean {
+  switch (config.mode) {
+    case 'words':
+    case 'time':
+      return ROMAJI_INPUT_LANGUAGES.has(language)
+    case 'tatoeba':
+      return ROMAJI_INPUT_LANGUAGES.has(config.language)
+    case 'fileImport':
+      return textRomajiCapable === true
+    case 'quote':
+      return false
+  }
+}
+
 /** True when the config opts into sequential romaji-keystroke judging AND
- *  the active language is one of the kana packs the matcher supports (see
- *  `ROMAJI_INPUT_LANGUAGES` in types.ts). `romajiInput` is persisted as-is
- *  regardless of language — same as `punctuation`/`numbers` — and is simply
- *  not honored while a non-kana language is active. This keeps the flag
- *  intact across any config/language sync order (e.g. a persisted config
- *  landing before the persisted language on mount), and it comes back into
- *  effect automatically once a kana pack is selected again, without the
- *  user needing to re-toggle it. */
-export function isRomajiInputActive(config: TypingTestConfig, language: string): boolean {
-  return (config.mode === 'words' || config.mode === 'time') && config.romajiInput === true
-    && ROMAJI_INPUT_LANGUAGES.has(language)
+ *  the mode/content combination is actually capable of it (see
+ *  `isRomajiCapable`). `romajiInput` is persisted as-is regardless of
+ *  capability — same as `punctuation`/`numbers` on words/time — and is
+ *  simply not honored while its mode isn't currently capable (a non-kana
+ *  language for words/time/tatoeba, or a non-kana-pure text for
+ *  fileImport). This keeps the flag intact across any config/language/text
+ *  sync order (e.g. a persisted config landing before the persisted
+ *  language on mount), and it comes back into effect automatically once a
+ *  capable language/text is selected again, without the user needing to
+ *  re-toggle it. `config.mode === 'quote'` is checked first (rather than
+ *  folded into `isRomajiCapable`'s boolean result) so the compiler can
+ *  narrow `config` to the branches that actually carry `romajiInput`. */
+export function isRomajiInputActive(config: TypingTestConfig, language: string, textRomajiCapable: boolean | undefined): boolean {
+  if (config.mode === 'quote') return false
+  return config.romajiInput === true && isRomajiCapable(config, language, textRomajiCapable)
 }
 
 /** Rebuilds a matcher for `word` by replaying every keystroke accepted so
@@ -39,14 +74,14 @@ export function buildRomajiMatcher(word: string, keystrokes: string, opts?: Roma
 /** Romaji Settings modal detail fields (disabledStyles / guideStyles /
  *  caseStyle), read only while `romajiInput` is honored (see
  *  `isRomajiInputActive`) — the config shape guarantees `romaji` only
- *  exists on words/time configs, so this is undefined for every other mode.
- *  Passed straight through as `buildRomajiMatcher`'s opts: its
+ *  exists on words/time/tatoeba/fileImport configs, so this is undefined
+ *  for quote. Passed straight through as `buildRomajiMatcher`'s opts: its
  *  disabledStyles/guideStyles fields structurally satisfy
  *  `RomajiMatcherOptions`, and `createRomajiMatcher` itself already
  *  normalizes an empty disabledStyles/guideStyles array, so there's
  *  nothing left to prune here. */
 export function romajiDetail(config: TypingTestConfig): RomajiDetailSettings | undefined {
-  return config.mode === 'words' || config.mode === 'time' ? config.romaji : undefined
+  return config.mode === 'quote' ? undefined : config.romaji
 }
 
 /** Romaji-mode key semantics, dispatched once from `processKeyEvent`'s

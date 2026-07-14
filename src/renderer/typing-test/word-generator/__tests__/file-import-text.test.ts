@@ -34,7 +34,7 @@ describe('getFileImportTextData', () => {
 
     const first = await getFileImportTextData('t1')
     // "one two" then a newline then "three four": break after word index 1.
-    expect(first).toEqual({ name: 'My Text', words: ['one', 'two', 'three', 'four'], lineBreaks: [1], indents: ['', ''] })
+    expect(first).toEqual({ name: 'My Text', words: ['one', 'two', 'three', 'four'], lineBreaks: [1], indents: ['', ''], romajiCapable: false })
     expect(mockGet).toHaveBeenCalledTimes(1)
 
     // Second call served from cache — no extra IPC.
@@ -52,7 +52,16 @@ describe('getFileImportTextData', () => {
       data: { meta: { id: 't2' }, data: { name: 'Flat', text: 'one two three' } },
     })
     const data = await getFileImportTextData('t2')
-    expect(data).toEqual({ name: 'Flat', words: ['one', 'two', 'three'], lineBreaks: [], indents: [''] })
+    expect(data).toEqual({ name: 'Flat', words: ['one', 'two', 'three'], lineBreaks: [], indents: [''], romajiCapable: false })
+  })
+
+  it('carries romajiCapable through from the store meta', async () => {
+    mockGet.mockResolvedValue({
+      success: true,
+      data: { meta: { id: 't3', romajiCapable: true }, data: { name: 'Kana', text: 'こんにちは' } },
+    })
+    const data = await getFileImportTextData('t3')
+    expect(data?.romajiCapable).toBe(true)
   })
 
   it('returns undefined for a missing entry and does not cache', async () => {

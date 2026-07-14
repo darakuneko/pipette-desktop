@@ -28,6 +28,13 @@ export interface TypingTestTextMeta {
    *  entry's `name` path, used to detect already-imported works and avoid
    *  duplicate imports. Absent for user file imports. */
   source?: { provider: string; workId: string }
+  /** Whether this text's content is pure kana, so the romaji input can be
+   *  enabled for it. Computed locally from the stored text on every list /
+   *  get call (see kana-purity.ts) — it is never written to the index or
+   *  entry file, so it does not need to be part of the synced record and
+   *  cannot drift from the content it describes. Only present on values
+   *  returned by the store's list/get APIs, not on values passed in. */
+  romajiCapable?: boolean
 }
 
 export interface TypingTestTextIndex {

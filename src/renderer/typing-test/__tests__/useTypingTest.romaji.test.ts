@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useTypingTest } from '../useTypingTest'
-import { clearLanguageCache, getLanguageData } from '../word-generator'
+import { clearLanguageCache, getLanguageData, clearFileImportTextCache } from '../word-generator'
 import type { TypingTestConfig } from '../types'
 
 // A real kana pack id (see ROMAJI_INPUT_LANGUAGES) is required everywhere a
@@ -16,20 +16,24 @@ import type { TypingTestConfig } from '../types'
 const KANA_LANGUAGE = 'japanese_hiragana'
 
 const mockLangGet = vi.fn()
+const mockTypingTestTextStoreGet = vi.fn()
 const originalVialAPI = window.vialAPI
 
 beforeEach(() => {
   vi.clearAllMocks()
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2025-01-01T00:00:00.000Z'))
+  clearFileImportTextCache()
   window.vialAPI = {
     ...(window.vialAPI ?? {}),
     langGet: mockLangGet,
+    typingTestTextStoreGet: mockTypingTestTextStoreGet,
   } as unknown as typeof window.vialAPI
 })
 
 afterEach(() => {
   window.vialAPI = originalVialAPI
+  clearFileImportTextCache()
 })
 
 type Pressable = { current: { processKeyEvent: (key: string, ctrlKey: boolean, altKey: boolean, metaKey: boolean) => void } }
@@ -414,5 +418,52 @@ describe('useTypingTest — config.romaji wiring', () => {
     expect(result.current.state.romajiKeystrokes).toBe('')
     expect(result.current.state.currentWordIndex).toBe(0)
     expect(result.current.state.status).toBe('waiting')
+  })
+})
+
+// Plan-romaji-capability Phase 2: romaji judging extended beyond monkeytype
+// words/time to a fileImport text, gated on the text's own kana-pure
+// content (`textRomajiCapable`, threaded from the store's computed
+// `romajiCapable` meta field) rather than the active word-language pack.
+describe('useTypingTest — romaji input mode (fileImport)', () => {
+  it('judges keystrokes through the romaji matcher for a kana-pure fileImport text', async () => {
+    mockTypingTestTextStoreGet.mockResolvedValue({
+      success: true,
+      data: { meta: { id: 't1', romajiCapable: true }, data: { name: 'Kana Text', text: 'か' } },
+    })
+    const { result } = renderHook(() => useTypingTest(undefined, 'english'))
+
+    await act(async () => {
+      await result.current.setConfig({ mode: 'fileImport', textId: 't1', romajiInput: true })
+    })
+
+    expect(result.current.state.words).toEqual(['か'])
+    expect(result.current.romajiGuide).not.toBeNull()
+
+    type(result, 'ka')
+
+    expect(result.current.state.status).toBe('finished')
+    expect(result.current.state.correctChars).toBe('ka'.length)
+    expect(result.current.state.incorrectChars).toBe(0)
+  })
+
+  it('stays in verbatim mode for a fileImport text whose content is not kana-pure, even with romajiInput true', async () => {
+    mockTypingTestTextStoreGet.mockResolvedValue({
+      success: true,
+      data: { meta: { id: 't2', romajiCapable: false }, data: { name: 'Mixed Text', text: 'hello' } },
+    })
+    const { result } = renderHook(() => useTypingTest(undefined, 'english'))
+
+    await act(async () => {
+      await result.current.setConfig({ mode: 'fileImport', textId: 't2', romajiInput: true })
+    })
+
+    expect(result.current.state.words).toEqual(['hello'])
+    expect(result.current.romajiGuide).toBeNull()
+
+    type(result, 'hello')
+
+    expect(result.current.state.status).toBe('finished')
+    expect(result.current.state.wordResults).toEqual([{ word: 'hello', typed: 'hello', correct: true }])
   })
 })

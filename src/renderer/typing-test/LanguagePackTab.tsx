@@ -7,7 +7,8 @@ import { ICON_SM } from '../constants/ui-tokens'
 import { clearTatoebaPackCache } from './word-generator'
 import { useTypingDatasetUpdate } from './useTypingDatasetUpdate'
 import { DatasetUpdateBanner } from './DatasetUpdateBanner'
-import { SectionHeader, RowDeleteButton } from './list-parts'
+import { SectionHeader, RowDeleteButton, RomajiBadge } from './list-parts'
+import { ROMAJI_INPUT_LANGUAGES } from './types'
 import type { LanguageListEntry } from '../../shared/types/language-store'
 
 function formatName(name: string): string {
@@ -193,6 +194,7 @@ function LanguageRow({ lang, isCurrent, isDownloading, onSelect, onDownload, onD
         {lang.rightToLeft && (
           <span className="shrink-0 rounded bg-surface-alt px-1 py-0.5 text-2xs text-content-muted">RTL</span>
         )}
+        {ROMAJI_INPUT_LANGUAGES.has(lang.name) && <RomajiBadge />}
       </div>
 
       <span className="shrink-0 text-xs text-content-muted">

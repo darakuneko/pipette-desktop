@@ -10,6 +10,7 @@ import { buildResultNameChips } from '../../typing-test/result-builder'
 import { PauseResumeModal } from '../../typing-test/PauseResumeModal'
 import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
 import { TypingRecordingConsentModal } from '../../typing-test/TypingRecordingConsentModal'
+import { isRomajiCapable } from '../../typing-test/romaji-input'
 import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
 import { TYPING_HEATMAP_WINDOW_OPTIONS } from '../../../shared/types/app-config'
 import { KeyboardPane } from './KeyboardPane'
@@ -603,8 +604,18 @@ export function TypingTestPane({
             </select>
           </div>
         </div>
-        {typingTest.config.mode !== 'fileImport' && typingTest.config.mode !== 'tatoeba' && (
-          <TypingTestSettingsBar config={typingTest.config} onConfigChange={onConfigChange} language={typingTest.language} />
+        {/* words/time/quote always get the full bar; tatoeba/fileImport only
+            get it (Option row only, see TypingTestSettingsBar) once their
+            content is actually romaji-capable — otherwise there is nothing
+            for the bar to show, same as before this mode's romaji support. */}
+        {(typingTest.config.mode !== 'fileImport' && typingTest.config.mode !== 'tatoeba'
+          || isRomajiCapable(typingTest.config, typingTest.language, typingTest.state.romajiCapable)) && (
+          <TypingTestSettingsBar
+            config={typingTest.config}
+            onConfigChange={onConfigChange}
+            language={typingTest.language}
+            textRomajiCapable={typingTest.state.romajiCapable}
+          />
         )}
       </PanelSection>
 

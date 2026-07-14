@@ -1088,7 +1088,7 @@ The **MonkeyType** and **Tatoeba** tabs share the same language-pack list:
 
 - A search box filters the list by name
 - Packs are split into **Downloaded** and **Available** sections
-- Each row shows the pack name and its word count; right-to-left languages also show an **RTL** badge
+- Each row shows the pack name and its word count; right-to-left languages also show an **RTL** badge, and kana packs (hiragana / katakana) that support Romaji input show a **Romaji** badge (see **Romaji Input** below)
 - Click the download icon on an Available row to download it. Rows you downloaded yourself show a trash icon to delete them; packs bundled with the app (such as MonkeyType's english) are also listed under Downloaded but cannot be deleted
 - If a newer dataset manifest is available, a banner reading "An update is available for the word lists." appears above the list with an **Update** button. This check runs automatically each time the tab is opened (a successful check is cached for the app session, so it won't repeatedly hit the network; a failed check — e.g. while offline — is not cached, and reopening the tab retries). Nothing downloads until you click **Update**
 - Applying an update replaces the pack manifest and also removes that provider's previously downloaded packs, since they belong to the old dataset version — download them again from the refreshed list as needed
@@ -1133,7 +1133,7 @@ The Option row is hidden in the quote pattern (which uses the original text as-i
 
 ![Typing Test — Romaji input](screenshots/typing-test-romaji.png)
 
-With the **hiragana** or **katakana** language pack selected, the Option row also gains a full-width **Romaji** button (words and time patterns only). Clicking it opens the **Romaji Settings** modal instead of toggling judging directly; the button turns accent-colored once Romaji input is enabled from inside the modal.
+Romaji input is not limited to the MonkeyType tab: with a romaji-capable source loaded — a **hiragana** or **katakana** MonkeyType language pack (words/time patterns), a kana **Tatoeba** pack, or a kana-only **File Import** / **Aozora Bunko** text — the Option row gains a full-width **Romaji** button. Capable language packs and imported texts are marked with a **Romaji** badge wherever they're listed (see the shared language-pack list above, and the File Import / Aozora Bunko sections below), so you can spot them before selecting one. For an imported text, capability is computed locally from the text's own content the moment it's listed — it is never stored or synced, so it can't drift from the content it describes. Clicking the Romaji button opens the **Romaji Settings** modal instead of toggling judging directly; the button turns accent-colored once Romaji input is enabled from inside the modal.
 
 ![Typing Test — Romaji settings](screenshots/typing-test-romaji-settings.png)
 
@@ -1168,6 +1168,7 @@ Pick a downloaded language pack from the **Tatoeba** tab (download it first if n
 - Each sampled sentence renders on its own line
 - A **⏎** marker appears at the end of every line except the last; press **Enter** (not Space) there to advance to the next sentence. Elsewhere, Space still advances between words as usual
 - Attribution and license details for the Tatoeba packs are shown on the About / legal screen
+- The **japanese_hiragana** and **japanese_katakana** Tatoeba packs are kana-pure and marked with a **Romaji** badge in the pack list — see **Romaji Input** under MonkeyType above for how it works
 
 #### Aozora Bunko
 
@@ -1184,6 +1185,7 @@ Browse and import public-domain Japanese literary works from the [Aozora Bunko](
 - A downloaded work plays back exactly like an imported File Import text, including the per-line Enter-to-advance behavior, but it is only listed and deleted from this **Aozora Bunko** tab — it does not appear in the **File Import** tab
 - Click the trash icon on a Downloaded row to remove it; it returns to Available and can be re-imported later
 - The dataset-update banner described under **Mode** also applies here — updating refreshes the catalog listing itself, not any already-imported works
+- Once imported, a work whose content turns out to be pure kana (rare — most Aozora Bunko literature mixes kanji and kana) shows a **Romaji** badge in the Downloaded section, same as a kana File Import text — see **Romaji Input** under MonkeyType above
 
 #### File Import
 
@@ -1197,6 +1199,7 @@ Import your own plain-text `.txt` file (UTF-8 only) to type against it — usefu
 - Importing a file whose name matches an existing entry prompts for confirmation before overwriting it
 - Each row shows the text's name and word count; click a row to select it, or click the trash icon to delete it
 - This list only shows texts you imported directly here — Aozora Bunko imports are managed from the **Aozora Bunko** tab instead
+- A text whose content is pure kana shows a **Romaji** badge and unlocks Romaji input for it — see **Romaji Input** under MonkeyType above. This is checked locally from the text's own content each time it's listed, not stored or synced
 
 #### During a Test
 

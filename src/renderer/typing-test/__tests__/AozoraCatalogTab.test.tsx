@@ -215,6 +215,40 @@ describe('AozoraCatalogTab', () => {
     expect(onSelect).toHaveBeenCalledWith('existing-id')
   })
 
+  it('shows the Romaji badge on an imported row whose text is kana-pure, and not on others', async () => {
+    window.vialAPI.typingTestTextStoreList = vi.fn().mockResolvedValue({
+      success: true,
+      data: [
+        {
+          id: 'kana-id',
+          name: 'Work Title 0（Distinctive Author）',
+          wordCount: 1000,
+          filename: 'f0.json',
+          savedAt: '',
+          updatedAt: '',
+          source: { provider: 'aozora', workId: 'works/0.zip' },
+          romajiCapable: true,
+        },
+        {
+          id: 'kanji-id',
+          name: 'Work Title 1（Author 1）',
+          wordCount: 1000,
+          filename: 'f1.json',
+          savedAt: '',
+          updatedAt: '',
+          source: { provider: 'aozora', workId: 'works/1.zip' },
+          romajiCapable: false,
+        },
+      ],
+    })
+
+    renderWithI18n(<AozoraCatalogTab onSelect={vi.fn()} />)
+
+    await waitFor(() => expect(screen.getByTestId('aozora-row-works/0.zip')).toBeInTheDocument())
+    expect(screen.getByTestId('aozora-row-works/0.zip')).toHaveTextContent('Romaji')
+    expect(screen.getByTestId('aozora-row-works/1.zip')).not.toHaveTextContent('Romaji')
+  })
+
   it('marks no row as current when no fileImport text is selected', async () => {
     // Regression: unimported rows have no textId, and outside fileImport mode
     // there is no currentTextId — undefined === undefined must not mark every

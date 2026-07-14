@@ -45,6 +45,11 @@ export interface WordsForConfig {
   lineBreaks: number[]
   /** Per-line leading whitespace (fileImport mode only); empty otherwise. */
   lineIndents: string[]
+  /** Whether this text is romaji-capable (fileImport mode only — see
+   *  `isRomajiCapable` in romaji-input.ts). Always false for every other
+   *  mode, which derive capability from `language`/`config.language`
+   *  instead and never consult this field. */
+  romajiCapable: boolean
 }
 
 /** Build the verbatim quote shell for an imported fileImport text so the
@@ -57,6 +62,7 @@ function fileImportTextToWords(data: FileImportTextData): WordsForConfig {
     quote: { id: 0, text, source: data.name, length: text.length },
     lineBreaks: data.lineBreaks,
     lineIndents: data.indents,
+    romajiCapable: data.romajiCapable,
   }
 }
 
@@ -66,20 +72,20 @@ function fileImportTextToWords(data: FileImportTextData): WordsForConfig {
  *  sampled sentence renders on its own line, same as imported fileImport
  *  text. */
 function tatoebaWordsForConfig(pack: { name: string; words: string[] } | undefined): WordsForConfig {
-  if (!pack) return { words: [], quote: null, lineBreaks: [], lineIndents: [] }
-  return { ...tatoebaRun(pack), lineIndents: [] }
+  if (!pack) return { words: [], quote: null, lineBreaks: [], lineIndents: [], romajiCapable: false }
+  return { ...tatoebaRun(pack), lineIndents: [], romajiCapable: false }
 }
 
 export function createWordsForConfigSync(config: TypingTestConfig, language: string): WordsForConfig {
   if (config.mode === 'quote') {
     const quote = selectQuote(config.quoteLength)
-    return { words: quoteToWords(quote), quote, lineBreaks: [], lineIndents: [] }
+    return { words: quoteToWords(quote), quote, lineBreaks: [], lineIndents: [], romajiCapable: false }
   }
   if (config.mode === 'fileImport') {
     const data = getFileImportTextDataSync(config.textId)
     // Cache miss — the async setConfig path fills words once the store
     // round-trip resolves. Return empty (never call sampleWords on []).
-    return data ? fileImportTextToWords(data) : { words: [], quote: null, lineBreaks: [], lineIndents: [] }
+    return data ? fileImportTextToWords(data) : { words: [], quote: null, lineBreaks: [], lineIndents: [], romajiCapable: false }
   }
   if (config.mode === 'tatoeba') {
     // Cache miss — the async path fills words once langGet resolves.
@@ -87,22 +93,22 @@ export function createWordsForConfigSync(config: TypingTestConfig, language: str
   }
   const { count, opts } = wordGenParams(config)
   const { words } = generateWordsSync(count, opts, language)
-  return { words, quote: null, lineBreaks: [], lineIndents: [] }
+  return { words, quote: null, lineBreaks: [], lineIndents: [], romajiCapable: false }
 }
 
 export async function createWordsForConfig(config: TypingTestConfig, language: string): Promise<WordsForConfig> {
   if (config.mode === 'quote') {
     const quote = selectQuote(config.quoteLength)
-    return { words: quoteToWords(quote), quote, lineBreaks: [], lineIndents: [] }
+    return { words: quoteToWords(quote), quote, lineBreaks: [], lineIndents: [], romajiCapable: false }
   }
   if (config.mode === 'fileImport') {
     const data = await getFileImportTextData(config.textId)
-    return data ? fileImportTextToWords(data) : { words: [], quote: null, lineBreaks: [], lineIndents: [] }
+    return data ? fileImportTextToWords(data) : { words: [], quote: null, lineBreaks: [], lineIndents: [], romajiCapable: false }
   }
   if (config.mode === 'tatoeba') {
     return tatoebaWordsForConfig(await getTatoebaPack(config.language))
   }
   const { count, opts } = wordGenParams(config)
   const { words } = await generateWords(count, opts, language)
-  return { words, quote: null, lineBreaks: [], lineIndents: [] }
+  return { words, quote: null, lineBreaks: [], lineIndents: [], romajiCapable: false }
 }

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.12",
+  "version": "0.1.13",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -453,7 +453,8 @@
         "catalogLoadFailed": "カタログの読み込みがあきまへんでした。つながりを確かめてもういっぺんお試しやす。",
         "kanaRowLabel": "行",
         "kanaRowGroupAriaLabel": "著者名の読みの行で絞り込みますえ",
-        "kanaColumnGroupAriaLabel": "著者名の読みの段で絞り込みますえ"
+        "kanaColumnGroupAriaLabel": "著者名の読みの段で絞り込みますえ",
+        "romajiBadge": "Romaji"
       },
       "memory": {
         "pause": "一時停止どすえ",

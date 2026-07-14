@@ -1,5 +1,5 @@
 {
-  "version": "0.1.12",
+  "version": "0.1.13",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -453,7 +453,8 @@
         "catalogLoadFailed": "書目の読み込みに失敗いたしました。つながりをお確かめのうえ、今一度お試しください。",
         "kanaRowLabel": "行",
         "kanaRowGroupAriaLabel": "著者名の読みの行にて絞り込む",
-        "kanaColumnGroupAriaLabel": "著者名の読みの段にて絞り込む"
+        "kanaColumnGroupAriaLabel": "著者名の読みの段にて絞り込む",
+        "romajiBadge": "ローマ字"
       },
       "memory": {
         "pause": "小休止",

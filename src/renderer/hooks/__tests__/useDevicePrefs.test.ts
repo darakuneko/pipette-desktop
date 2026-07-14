@@ -1024,6 +1024,83 @@ describe('useDevicePrefs', () => {
         numbers: false,
       })
     })
+
+    it('preserves romajiInput + romaji on a tatoeba config restored from IPC', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'tatoeba',
+          language: 'japanese_hiragana',
+          romajiInput: true,
+          romaji: { caseStyle: 'capital' },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'tatoeba',
+        language: 'japanese_hiragana',
+        romajiInput: true,
+        romaji: { caseStyle: 'capital' },
+      })
+    })
+
+    it('preserves romajiInput + romaji on a fileImport config restored from IPC', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'fileImport',
+          textId: 'text-1',
+          romajiInput: true,
+          romaji: { guideStyles: ['kunrei'] },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'fileImport',
+        textId: 'text-1',
+        romajiInput: true,
+        romaji: { guideStyles: ['kunrei'] },
+      })
+    })
+
+    it('drops a non-boolean romajiInput on a tatoeba config but keeps the rest', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: { mode: 'tatoeba', language: 'english', romajiInput: 'yes' },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({ mode: 'tatoeba', language: 'english' })
+    })
   })
 
   describe('splitKeyMode', () => {

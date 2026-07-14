@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Detail settings for romaji-keystroke judging (kana word packs): the
-// master enable, the guide row's display case, which spelling the guide
-// prefers to show, and which alternate-spelling families are accepted as
-// input. The guide row's font size always tracks the shared Settings >
-// Font size — no separate control here. Opened from the Option section's
-// full-width Romaji button in TypingTestSettingsBar, shown only while a
-// kana pack (words/time mode) is selected — see ROMAJI_INPUT_LANGUAGES.
+// Detail settings for romaji-keystroke judging: the master enable, the
+// guide row's display case, which spelling the guide prefers to show, and
+// which alternate-spelling families are accepted as input. The guide row's
+// font size always tracks the shared Settings > Font size — no separate
+// control here. Opened from the Option section's full-width Romaji button
+// in TypingTestSettingsBar, shown only while the current mode/content is
+// romaji-capable — words/time by kana word pack, tatoeba by the pack's
+// kana language id, fileImport by the loaded text's own kana-pure content
+// — see isRomajiCapable in romaji-input.ts.
 
 import { useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -60,7 +62,8 @@ function pruneRomaji(next: RomajiDetailSettings): RomajiDetailSettings | undefin
 }
 
 interface Props {
-  config: TypingTestConfig & { mode: 'words' | 'time' }
+  // Every mode but 'quote' carries romajiInput/romaji — see TypingTestConfig.
+  config: TypingTestConfig & { mode: 'words' | 'time' | 'tatoeba' | 'fileImport' }
   onConfigChange: (config: TypingTestConfig) => void
   onClose: () => void
 }

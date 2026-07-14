@@ -10,7 +10,7 @@ import { Check, Loader2, FileUp } from 'lucide-react'
 import { ICON_SM } from '../constants/ui-tokens'
 import { LanguagePackTab } from './LanguagePackTab'
 import { AozoraCatalogTab } from './AozoraCatalogTab'
-import { RowDeleteButton } from './list-parts'
+import { RowDeleteButton, RomajiBadge } from './list-parts'
 import type { TypingTestTextMeta } from '../../shared/types/typing-test-text-store'
 
 type Tab = 'existing' | 'tatoeba' | 'import' | 'aozora'
@@ -352,6 +352,7 @@ function ImportRow({ meta, isCurrent, onSelect, onDelete }: ImportRowProps) {
       <div className="flex min-w-0 flex-1 items-center gap-2">
         {isCurrent && <Check size={ICON_SM} className="shrink-0 text-accent" aria-hidden="true" />}
         <span className={`truncate ${isCurrent ? 'font-semibold text-accent' : 'text-content'}`}>{meta.name}</span>
+        {meta.romajiCapable === true && <RomajiBadge />}
       </div>
       <span className="shrink-0 text-xs text-content-muted">
         {t('editor.typingTest.language.words', { count: meta.wordCount })}

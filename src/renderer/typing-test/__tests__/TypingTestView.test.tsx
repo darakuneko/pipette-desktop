@@ -26,6 +26,7 @@ function makeState(overrides: Partial<TypingTestState> = {}): TypingTestState {
     wpmHistory: [],
     lineBreaks: new Set(),
     lineIndents: [],
+    romajiCapable: false,
     ...overrides,
   }
 }
