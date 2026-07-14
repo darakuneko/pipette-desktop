@@ -1177,10 +1177,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                   drive this mode's own multi-selection). */}
               {viewMatrixMode.active && (
                 <div className="flex flex-col items-center gap-1">
+                  <p className="text-xs text-content-muted">{t('editor.keymap.pickerHint')}</p>
                   <div className="flex items-center gap-1">
                     {zoomControls}
                   </div>
-                  <p className="text-xs text-content-muted">{t('editor.keymap.pickerHint')}</p>
                 </div>
               )}
             </>
