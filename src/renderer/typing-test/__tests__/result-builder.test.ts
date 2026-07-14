@@ -182,6 +182,7 @@ describe('buildTypingTestResult', () => {
       config,
       language: 'english',
       wpmHistory: [55, 58, 60, 62],
+      romajiActive: false,
     })
 
     expect(result.wpm).toBe(60)
@@ -201,20 +202,35 @@ describe('buildTypingTestResult', () => {
     expect(result.date).toBeTruthy()
   })
 
-  it('stores romajiInput for words/time modes, and omits it for quote', () => {
+  it('records romajiInput from the romajiActive input, not the raw config flag', () => {
     const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
     const withRomaji = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
-      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [],
+      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: true,
     })
     expect(withRomaji.romajiInput).toBe(true)
+
+    const notActive = buildTypingTestResult({
+      correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
+      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: false,
+    })
+    expect(notActive.romajiInput).toBeUndefined()
 
     const quoteConfig: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }
     const quoteResult = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
-      config: quoteConfig, language: 'english', wpmHistory: [],
+      config: quoteConfig, language: 'english', wpmHistory: [], romajiActive: false,
     })
     expect(quoteResult.romajiInput).toBeUndefined()
+  })
+
+  it('records romajiInput for tatoeba/fileImport runs too, now that recording follows romajiActive', () => {
+    const tatoebaCfg: TypingTestConfig = { mode: 'tatoeba', language: 'japanese_hiragana' }
+    const result = buildTypingTestResult({
+      correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
+      config: tatoebaCfg, language: 'english', wpmHistory: [], romajiActive: true,
+    })
+    expect(result.romajiInput).toBe(true)
   })
 
   it('derives mode2 from time config', () => {
@@ -229,6 +245,7 @@ describe('buildTypingTestResult', () => {
       config,
       language: 'english',
       wpmHistory: [],
+      romajiActive: false,
     })
     expect(result.mode).toBe('time')
     expect(result.mode2).toBe(60)
@@ -246,6 +263,7 @@ describe('buildTypingTestResult', () => {
       config,
       language: 'english',
       wpmHistory: [],
+      romajiActive: false,
     })
     expect(result.mode).toBe('quote')
     expect(result.mode2).toBe('medium')
@@ -264,6 +282,7 @@ describe('buildTypingTestResult', () => {
       // The top-level (MonkeyType) language is irrelevant for tatoeba.
       language: 'german',
       wpmHistory: [],
+      romajiActive: false,
     })
     expect(result.mode).toBe('tatoeba')
     expect(result.mode2).toBe('english')

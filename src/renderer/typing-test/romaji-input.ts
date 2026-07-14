@@ -24,8 +24,8 @@ import { type TypingTestState, isSubmitKey, advanceAfterWord } from './run-state
  *    in run-state.ts).
  *  - quote: never capable — quotes are plain-language prose, not kana.
  *  Used both to gate the SettingsBar's Romaji button and, via
- *  `isRomajiInputActive`, to decide whether a persisted `romajiInput: true`
- *  is actually honored. */
+ *  `isRomajiInputActive`, to decide whether the (default-on) `romajiInput`
+ *  choice is actually honored. */
 export function isRomajiCapable(config: TypingTestConfig, language: string, textRomajiCapable: boolean | undefined): boolean {
   switch (config.mode) {
     case 'words':
@@ -40,22 +40,51 @@ export function isRomajiCapable(config: TypingTestConfig, language: string, text
   }
 }
 
-/** True when the config opts into sequential romaji-keystroke judging AND
- *  the mode/content combination is actually capable of it (see
- *  `isRomajiCapable`). `romajiInput` is persisted as-is regardless of
- *  capability — same as `punctuation`/`numbers` on words/time — and is
- *  simply not honored while its mode isn't currently capable (a non-kana
- *  language for words/time/tatoeba, or a non-kana-pure text for
- *  fileImport). This keeps the flag intact across any config/language/text
- *  sync order (e.g. a persisted config landing before the persisted
- *  language on mount), and it comes back into effect automatically once a
- *  capable language/text is selected again, without the user needing to
- *  re-toggle it. `config.mode === 'quote'` is checked first (rather than
- *  folded into `isRomajiCapable`'s boolean result) so the compiler can
- *  narrow `config` to the branches that actually carry `romajiInput`. */
+/** True when the config has opted into sequential romaji-keystroke judging,
+ *  independent of whether the mode/content combination is actually capable
+ *  of it (see `isRomajiCapable`) — the pure "user opted in" predicate, not
+ *  capability-gated. Defaults ON: `romajiInput === undefined` is treated as
+ *  opted-in, and only an explicit `false` opts out — mirroring how the
+ *  Romaji Settings modal's master toggle writes `false` rather than
+ *  deleting the field when the user turns it off (see `RomajiSettingsModal`).
+ *  `romajiInput` is persisted as-is regardless of capability — same as
+ *  `punctuation`/`numbers` on words/time — so this stays true across any
+ *  config/language/text sync order (e.g. a persisted config landing before
+ *  the persisted language on mount); capability gating happens separately
+ *  in `isRomajiInputActive`. `quote` never carries the field and is always
+ *  off. */
+export function isRomajiInputEnabled(config: TypingTestConfig): boolean {
+  return config.mode === 'quote' ? false : config.romajiInput !== false
+}
+
+/** True when the config opts into sequential romaji-keystroke judging
+ *  (`isRomajiInputEnabled`) AND the mode/content combination is actually
+ *  capable of it (`isRomajiCapable`). This is what actually gates whether
+ *  keystrokes are judged romaji-style — the flag itself is never stripped
+ *  while incapable (see `isRomajiInputEnabled`), and comes back into effect
+ *  automatically once a capable language/text is selected again, without
+ *  the user needing to re-toggle it. */
 export function isRomajiInputActive(config: TypingTestConfig, language: string, textRomajiCapable: boolean | undefined): boolean {
-  if (config.mode === 'quote') return false
-  return config.romajiInput === true && isRomajiCapable(config, language, textRomajiCapable)
+  return isRomajiInputEnabled(config) && isRomajiCapable(config, language, textRomajiCapable)
+}
+
+/** Carries a config's `romajiInput`/`romaji` choice into a freshly built
+ *  config of a different mode — used when switching tatoeba language or
+ *  importing a new file (`TypingTestPane`'s language selector), which each
+ *  build a brand-new config object from scratch rather than spreading the
+ *  previous one (unlike the Pattern row's mode switch, which already
+ *  carries these fields via `TypingTestSettingsBar`'s `togglesRef`).
+ *  Without this, the user's explicit opt-out (`romajiInput: false`) or
+ *  detail settings would silently reset to the default on every such
+ *  switch. Returns `{}` for `quote` (which has no romaji fields at all) or
+ *  when the source config never set them. */
+export function carryRomajiFields(config: TypingTestConfig): { romajiInput?: boolean; romaji?: RomajiDetailSettings } {
+  if (config.mode === 'quote') return {}
+  const fields: { romajiInput?: boolean; romaji?: RomajiDetailSettings } = {}
+  if (typeof config.romajiInput === 'boolean') fields.romajiInput = config.romajiInput
+  const romaji = romajiDetail(config)
+  if (romaji) fields.romaji = romaji
+  return fields
 }
 
 /** Rebuilds a matcher for `word` by replaying every keystroke accepted so

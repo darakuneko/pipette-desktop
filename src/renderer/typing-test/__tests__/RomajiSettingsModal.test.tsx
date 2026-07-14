@@ -31,14 +31,19 @@ function renderModal(props: Partial<Parameters<typeof RomajiSettingsModal>[0]> =
 }
 
 describe('RomajiSettingsModal defaults', () => {
-  it('shows the master enable off when romajiInput is not set', () => {
+  it('shows the master enable on by default when romajiInput is not set', () => {
     renderModal()
-    expect(screen.getByTestId('romaji-settings-enabled')).toHaveAttribute('aria-checked', 'false')
+    expect(screen.getByTestId('romaji-settings-enabled')).toHaveAttribute('aria-checked', 'true')
   })
 
   it('shows the master enable on when romajiInput is true', () => {
     renderModal({ config: { ...BASE_CONFIG, romajiInput: true } })
     expect(screen.getByTestId('romaji-settings-enabled')).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('shows the master enable off when romajiInput is explicitly false', () => {
+    renderModal({ config: { ...BASE_CONFIG, romajiInput: false } })
+    expect(screen.getByTestId('romaji-settings-enabled')).toHaveAttribute('aria-checked', 'false')
   })
 
   it('defaults the case selector to lower', () => {
@@ -82,9 +87,18 @@ describe('RomajiSettingsModal defaults', () => {
 })
 
 describe('RomajiSettingsModal edits', () => {
-  it('toggles the master enable', () => {
+  it('toggles the master enable off from the default-on state (writes an explicit false)', () => {
     const onConfigChange = vi.fn()
     renderModal({ onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-settings-enabled'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    expect(arg.mode).toBe('words')
+    if (arg.mode === 'words') expect(arg.romajiInput).toBe(false)
+  })
+
+  it('toggles the master enable back on from an explicit false', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ config: { ...BASE_CONFIG, romajiInput: false }, onConfigChange })
     fireEvent.click(screen.getByTestId('romaji-settings-enabled'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
     expect(arg.mode).toBe('words')

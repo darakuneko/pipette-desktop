@@ -2,7 +2,8 @@
 
 import { describe, it, expect } from 'vitest'
 import { computeComparison, matchingResults, conditionKey, resultConditionKey } from '../comparison'
-import { buildTypingTestResult } from '../result-builder'
+import { buildTypingTestResult, configKey } from '../result-builder'
+import { isRomajiInputActive } from '../romaji-input'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../types'
 
@@ -99,8 +100,12 @@ describe('conditionKey', () => {
   })
 
   it('distinguishes a romaji run from a verbatim run of the same kana pack', () => {
+    // romajiInput defaults ON for a capable (kana) language, so a genuine
+    // "verbatim" run needs the explicit opt-out — an unset romajiInput on a
+    // kana language is itself the (default-active) romaji run.
+    const verbatimConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: false }
     const romajiConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
-    const a = conditionKey(wordsConfig, 'japanese_hiragana')
+    const a = conditionKey(verbatimConfig, 'japanese_hiragana')
     const b = conditionKey(romajiConfig, 'japanese_hiragana')
     expect(a).not.toBe(b)
   })
@@ -161,6 +166,11 @@ describe('conditionKey / resultConditionKey agreement', () => {
     language: 'english',
     wpmHistory: [60],
     fileImportTextName: 'novel.txt',
+    // Mirrors the real call site (useInputModes.ts): romajiActive is always
+    // the effective isRomajiInputActive state, not the raw config flag — a
+    // config with an explicit `romajiInput: true` on a non-capable language
+    // (as below) is still inactive, and conditionKey must agree.
+    romajiActive: isRomajiInputActive(config, 'english', undefined),
   })
 
   it('agrees for every mode', () => {
@@ -177,6 +187,30 @@ describe('conditionKey / resultConditionKey agreement', () => {
       const result = buildTypingTestResult(buildInput(config))
       expect(conditionKey(config, 'english')).toBe(resultConditionKey(result))
     }
+  })
+
+  it('groups a default-ON kana words run with its own saved result (regression)', () => {
+    // romajiInput is left unset — default-ON — on a kana-capable language.
+    // The live conditionKey must land on the same key as the result this
+    // exact run produces, or a fresh PB/comparison never finds its own history.
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+    const language = 'japanese_hiragana'
+    const romajiActive = isRomajiInputActive(config, language, undefined)
+    expect(romajiActive).toBe(true)
+    const result = buildTypingTestResult({
+      correctChars: 100,
+      incorrectChars: 5,
+      wordCount: 20,
+      wpm: 60,
+      accuracy: 95,
+      elapsedMs: 20_000,
+      config,
+      language,
+      wpmHistory: [60],
+      romajiActive,
+    })
+    expect(conditionKey(config, language)).toBe(resultConditionKey(result))
+    expect(conditionKey(config, language)).toBe(configKey(result))
   })
 })
 

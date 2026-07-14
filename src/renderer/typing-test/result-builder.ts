@@ -118,12 +118,19 @@ export interface BuildTypingTestResultInput {
   fileImportTextName?: string
   /** Run id of the finished run, linking History to analytics keystrokes. */
   runId?: string
+  /** Whether romaji-keystroke judging was actually in effect for this run
+   *  (see `isRomajiInputActive`) — not the raw `config.romajiInput` flag,
+   *  since that now defaults to on and must still be gated by capability.
+   *  Recorded verbatim as `romajiInput` below, so a run under every mode
+   *  (including tatoeba/fileImport, which never recorded this before) is
+   *  now grouped/labeled consistently with words/time runs. */
+  romajiActive: boolean
 }
 
 /** Narrows to the 'words' / 'time' config variants — the only ones carrying
- * punctuation/numbers/romajiInput toggles. A plain `mode === 'words' ||
- * mode === 'time'` boolean stored in a separate variable doesn't narrow
- * `config` itself at the read site, so this needs to be a real type guard. */
+ * punctuation/numbers toggles. A plain `mode === 'words' || mode === 'time'`
+ * boolean stored in a separate variable doesn't narrow `config` itself at
+ * the read site, so this needs to be a real type guard. */
 function hasWordTimeToggles(
   config: TypingTestConfig,
 ): config is Extract<TypingTestConfig, { mode: 'words' | 'time' }> {
@@ -138,7 +145,6 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
   const wordTimeConfig = hasWordTimeToggles(config) ? config : undefined
   const hasPunctuation = wordTimeConfig?.punctuation
   const hasNumbers = wordTimeConfig?.numbers
-  const hasRomajiInput = wordTimeConfig?.romajiInput
 
   return {
     date: new Date().toISOString(),
@@ -158,7 +164,7 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
     language: input.config.mode === 'tatoeba' ? input.config.language : input.language,
     punctuation: hasPunctuation,
     numbers: hasNumbers,
-    romajiInput: hasRomajiInput,
+    romajiInput: input.romajiActive ? true : undefined,
     consistency,
     wpmHistory: input.wpmHistory,
   }

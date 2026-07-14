@@ -185,14 +185,20 @@ describe('TypingTestSettingsBar romaji settings button', () => {
     expect(screen.queryByTestId('romaji-settings-toggle')).not.toBeInTheDocument()
   })
 
-  it('highlights the romaji button when romajiInput is active', () => {
+  it('highlights the romaji button when romajiInput is explicitly true', () => {
     const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
     renderBar({ config, language: 'japanese_hiragana' })
     expect(screen.getByTestId('romaji-settings-toggle').className).toContain('text-accent')
   })
 
-  it('does not highlight the romaji button when romajiInput is inactive', () => {
+  it('highlights the romaji button by default (romajiInput undefined = on)', () => {
     const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+    renderBar({ config, language: 'japanese_hiragana' })
+    expect(screen.getByTestId('romaji-settings-toggle').className).toContain('text-accent')
+  })
+
+  it('does not highlight the romaji button when romajiInput is explicitly false', () => {
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: false }
     renderBar({ config, language: 'japanese_hiragana' })
     expect(screen.getByTestId('romaji-settings-toggle').className).not.toContain('text-accent')
   })
@@ -207,9 +213,22 @@ describe('TypingTestSettingsBar romaji settings button', () => {
     expect(screen.getByTestId('romaji-settings-modal')).toBeInTheDocument()
   })
 
-  it('toggles romajiInput via the modal master enable switch', () => {
+  it('toggles romajiInput off via the modal master enable switch, from the default-on state', () => {
     const onConfigChange = vi.fn()
     const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+    renderBar({ config, language: 'japanese_hiragana', onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-settings-toggle'))
+    fireEvent.click(screen.getByTestId('romaji-settings-enabled'))
+    expect(onConfigChange).toHaveBeenCalledTimes(1)
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') {
+      expect(arg.romajiInput).toBe(false)
+    }
+  })
+
+  it('toggles romajiInput back on via the modal master enable switch, from an explicit false', () => {
+    const onConfigChange = vi.fn()
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: false }
     renderBar({ config, language: 'japanese_hiragana', onConfigChange })
     fireEvent.click(screen.getByTestId('romaji-settings-toggle'))
     fireEvent.click(screen.getByTestId('romaji-settings-enabled'))

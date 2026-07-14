@@ -28,10 +28,12 @@ export interface RomajiDetailSettings {
 
 export type TypingTestConfig =
   // `romajiInput` opts into sequential romaji-keystroke judging for kana
-  // packs (japanese_hiragana / japanese_katakana); undefined/false keeps
-  // the existing verbatim-string matching behaviour. `romaji` holds the
-  // Romaji Settings modal's detail fields and is only ever read while
-  // `romajiInput` is honored (see `isRomajiInputActive`).
+  // packs (japanese_hiragana / japanese_katakana). Defaults ON when unset:
+  // an undefined value is treated as opted-in (subject to capability —
+  // see `isRomajiCapable`), and only an explicit `false` falls back to the
+  // verbatim-string matching behaviour. `romaji` holds the Romaji Settings
+  // modal's detail fields and is only ever read while `romajiInput` is
+  // honored (see `isRomajiInputActive`).
   | { mode: 'words'; wordCount: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean; romaji?: RomajiDetailSettings }
   | { mode: 'time'; duration: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean; romaji?: RomajiDetailSettings }
   | { mode: 'quote'; quoteLength: QuoteLength }
@@ -60,14 +62,14 @@ export const DEFAULT_LANGUAGE = 'english'
 
 /** Word-language packs the romaji-keystroke matcher supports (kana word
  *  lists only). Drives the SettingsBar toggle's visibility, and — via
- *  `isRomajiCapable` / `isRomajiInputActive` in romaji-input.ts — whether a
- *  persisted `romajiInput: true` is actually honored for words/time (by
- *  the active language) and tatoeba (by the pack's `language` id). The flag
- *  itself is never stripped from the config (same as `punctuation`/
- *  `numbers`): it stays saved across language switches, mount, and
- *  `setConfig` calls, and is simply inert whenever the relevant language
- *  isn't in this set. Selecting a kana pack again picks it back up
- *  automatically. */
+ *  `isRomajiCapable` / `isRomajiInputActive` in romaji-input.ts — whether the
+ *  (default-on, unless explicitly `false`) `romajiInput` choice is actually
+ *  honored for words/time (by the active language) and tatoeba (by the
+ *  pack's `language` id). The flag itself is never stripped from the config
+ *  (same as `punctuation`/`numbers`): it stays saved across language
+ *  switches, mount, and `setConfig` calls, and is simply inert whenever the
+ *  relevant language isn't in this set. Selecting a kana pack again picks it
+ *  back up automatically. */
 export const ROMAJI_INPUT_LANGUAGES = new Set(['japanese_hiragana', 'japanese_katakana'])
 
 /** Current word's confirmed romaji + canonical remaining spelling, plus the

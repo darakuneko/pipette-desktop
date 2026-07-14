@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTypingTest } from '../../typing-test/useTypingTest'
 import { buildTypingTestResult, isPbForConfig, materialLabel } from '../../typing-test/result-builder'
+import { isRomajiInputActive } from '../../typing-test/romaji-input'
 import type { TypingTestConfig } from '../../typing-test/types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from '../../typing-test/types'
 import type { TypingTestResult, TypingTestMemory } from '../../../shared/types/pipette-settings'
@@ -404,6 +405,7 @@ export function useInputModes({
         wpmHistory: typingTest.state.wpmHistory,
         fileImportTextName: typingTest.config.mode === 'fileImport' ? typingTest.state.currentQuote?.source : undefined,
         runId: typingTest.state.runId,
+        romajiActive: isRomajiInputActive(typingTest.config, typingTest.language, typingTest.state.romajiCapable),
       })
       result.isPb = isPbForConfig(result, typingTestHistory ?? [])
       if (saveUnnamed) {
@@ -429,7 +431,7 @@ export function useInputModes({
   }, [typingTest.state.status, typingTest.state.startTime, typingTest.state.endTime,
     typingTest.state.correctChars, typingTest.state.incorrectChars,
     typingTest.state.currentWordIndex, typingTest.state.wpmHistory,
-    typingTest.state.currentQuote, typingTest.state.runId,
+    typingTest.state.currentQuote, typingTest.state.runId, typingTest.state.romajiCapable,
     typingTest.wpm, typingTest.accuracy,
     typingTest.config, typingTest.language,
     typingTestHistory, onSaveTypingTestResult, saveUnnamed, pendingUnnamedResult])
