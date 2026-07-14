@@ -50,13 +50,21 @@ export interface TypingTestState {
    *  a live matcher instance, so state transitions stay pure — see
    *  `buildRomajiMatcher`. Reset to '' whenever the word advances. */
   romajiKeystrokes: string
+  /** Whether the currently loaded text is romaji-capable (fileImport mode
+   *  only — false for every other mode, which derive capability from
+   *  `language`/`config.language` instead; see `isRomajiCapable`). Sourced
+   *  from the typing-test-texts store's computed `romajiCapable` meta field
+   *  and carried on `WordsForConfig` so it always reflects the text that
+   *  produced `words`, never a stale value from a config/text mismatch
+   *  mid-load. */
+  romajiCapable: boolean
 }
 
 export function createInitialState(config: TypingTestConfig, language: string, status: TypingTestStatus = 'waiting'): TypingTestState {
   return freshState(createWordsForConfigSync(config, language), status)
 }
 
-export function freshState({ words, quote, lineBreaks, lineIndents }: WordsForConfig, status: TypingTestStatus = 'waiting'): TypingTestState {
+export function freshState({ words, quote, lineBreaks, lineIndents, romajiCapable }: WordsForConfig, status: TypingTestStatus = 'waiting'): TypingTestState {
   return {
     status,
     runId: crypto.randomUUID(),
@@ -74,6 +82,7 @@ export function freshState({ words, quote, lineBreaks, lineIndents }: WordsForCo
     lineBreaks: new Set(lineBreaks),
     lineIndents,
     romajiKeystrokes: '',
+    romajiCapable,
   }
 }
 

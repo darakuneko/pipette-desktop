@@ -14,10 +14,11 @@ import { ICON_SM } from '../constants/ui-tokens'
 import { useTypingTestTexts } from '../hooks/useTypingTestTexts'
 import { useTypingDatasetUpdate } from './useTypingDatasetUpdate'
 import { DatasetUpdateBanner } from './DatasetUpdateBanner'
-import { SectionHeader, RowDeleteButton } from './list-parts'
+import { SectionHeader, RowDeleteButton, RomajiBadge } from './list-parts'
 import { KANA_ROWS, KANA_ROW_COLUMNS, KANA_COLUMN_TO_ROW, normalizeKanaInitial, type KanaRow } from './kana-initial'
 import type { LanguageListEntry } from '../../shared/types/language-store'
 import type { AozoraImportErrorCode } from '../../shared/types/aozora-import'
+import type { TypingTestTextMeta } from '../../shared/types/typing-test-text-store'
 
 const PAGE_SIZE = 50
 const AOZORA_PROVIDER = 'aozora'
@@ -137,14 +138,16 @@ export function AozoraCatalogTab({ currentTextId, onSelect, onDeleted }: Props) 
     }
   }, [applyUpdate])
 
-  // workId (catalog entry `name`) -> the text id it was imported as. Soft-
-  // deleted texts don't count as imported.
-  const importedTextIdByWorkId = useMemo(() => {
-    const map = new Map<string, string>()
+  // workId (catalog entry `name`) -> the meta it was imported as. Soft-
+  // deleted texts don't count as imported. Keeps the full meta (not just the
+  // id) so the row can also show the Romaji badge for kana-pure imports —
+  // `romajiCapable` is computed by the store from the entry's own content.
+  const importedMetaByWorkId = useMemo(() => {
+    const map = new Map<string, TypingTestTextMeta>()
     for (const meta of metas) {
       if (meta.deletedAt) continue
       if (meta.source?.provider === AOZORA_PROVIDER && meta.source.workId) {
-        map.set(meta.source.workId, meta.id)
+        map.set(meta.source.workId, meta)
       }
     }
     return map
@@ -184,14 +187,14 @@ export function AozoraCatalogTab({ currentTextId, onSelect, onDeleted }: Props) 
       } else if (selectedRow) {
         if (!kanaInitial || KANA_COLUMN_TO_ROW[kanaInitial] !== selectedRow) continue
       }
-      if (importedTextIdByWorkId.has(entry.name)) {
+      if (importedMetaByWorkId.has(entry.name)) {
         imported.push(entry)
       } else {
         available.push(entry)
       }
     }
     return { imported, available }
-  }, [searchIndex, query, importedTextIdByWorkId, selectedRow, selectedColumn])
+  }, [searchIndex, query, importedMetaByWorkId, selectedRow, selectedColumn])
 
   // Pagination only applies to the Available list — imported works are few
   // enough (per-user) to render in full.
@@ -256,15 +259,16 @@ export function AozoraCatalogTab({ currentTextId, onSelect, onDeleted }: Props) 
   // button inside AozoraRow (see `imported` there), so passing the same
   // importing/error lookups to both sections is behavior-identical.
   const renderRow = useCallback((entry: LanguageListEntry) => {
-    const textId = importedTextIdByWorkId.get(entry.name)
+    const meta = importedMetaByWorkId.get(entry.name)
     return (
       <AozoraRow
         key={entry.name}
         entry={entry}
-        textId={textId}
+        textId={meta?.id}
+        romajiCapable={meta?.romajiCapable === true}
         // Guard against undefined === undefined: an unimported row has no
         // textId, and outside fileImport mode there is no currentTextId.
-        isCurrent={textId !== undefined && textId === currentTextId}
+        isCurrent={meta !== undefined && meta.id === currentTextId}
         isImporting={importing.has(entry.name)}
         error={errors[entry.name]}
         onSelect={onSelect}
@@ -272,7 +276,7 @@ export function AozoraCatalogTab({ currentTextId, onSelect, onDeleted }: Props) 
         onDelete={handleDelete}
       />
     )
-  }, [importedTextIdByWorkId, currentTextId, importing, errors, onSelect, handleImport, handleDelete])
+  }, [importedMetaByWorkId, currentTextId, importing, errors, onSelect, handleImport, handleDelete])
 
   return (
     <>
@@ -359,6 +363,10 @@ interface AozoraRowProps {
   entry: LanguageListEntry
   /** Id of the text this catalog entry was imported as, if any. */
   textId?: string
+  /** Whether the imported text's content is pure kana (romaji-input
+   *  capable). Only meaningful once imported — an unimported entry's
+   *  content hasn't been fetched yet, so this is always false for it. */
+  romajiCapable: boolean
   isCurrent: boolean
   isImporting: boolean
   error?: string
@@ -367,7 +375,7 @@ interface AozoraRowProps {
   onDelete: (textId: string) => void
 }
 
-function AozoraRow({ entry, textId, isCurrent, isImporting, error, onSelect, onImport, onDelete }: AozoraRowProps) {
+function AozoraRow({ entry, textId, romajiCapable, isCurrent, isImporting, error, onSelect, onImport, onDelete }: AozoraRowProps) {
   const { t } = useTranslation()
   const imported = textId !== undefined
 
@@ -391,6 +399,7 @@ function AozoraRow({ entry, textId, isCurrent, isImporting, error, onSelect, onI
             <span className={`truncate ${isCurrent ? 'font-semibold text-accent' : 'text-content'}`}>
               {entry.title ?? entry.name}
             </span>
+            {romajiCapable && <RomajiBadge />}
           </div>
           {entry.author && <span className="truncate text-xs text-content-muted">{entry.author}</span>}
         </div>

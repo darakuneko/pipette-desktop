@@ -19,6 +19,19 @@ export function SectionHeader({ label }: SectionHeaderProps) {
   )
 }
 
+/** "Romaji" badge chip appended after a language/text name wherever a
+ *  romaji-input-capable entry is listed (LanguagePackTab's monkeytype/
+ *  tatoeba rows, the file-import list, the Aozora catalog's imported rows).
+ *  Reuses the accent label-chip idiom from FavoriteStoreModal's type badge. */
+export function RomajiBadge() {
+  const { t } = useTranslation()
+  return (
+    <span className="shrink-0 rounded bg-accent/20 px-2 py-0.5 text-xs text-accent">
+      {t('editor.typingTest.language.romajiBadge')}
+    </span>
+  )
+}
+
 interface RowDeleteButtonProps {
   testId: string
   onClick: () => void

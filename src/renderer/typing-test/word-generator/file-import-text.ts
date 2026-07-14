@@ -14,6 +14,12 @@ export interface FileImportTextData {
   lineBreaks: number[]
   /** Leading whitespace per line (display only, preserves code indentation). */
   indents: string[]
+  /** Whether this text's content is pure kana, so the romaji input can be
+   *  enabled for it (see `isRomajiCapable` in romaji-input.ts). Sourced
+   *  from the store's computed `TypingTestTextMeta.romajiCapable` field
+   *  rather than recomputed here, so the renderer and the store never
+   *  disagree on what counts as kana-pure. */
+  romajiCapable: boolean
 }
 
 const fileImportTextCache = new Map<string, FileImportTextData>()
@@ -33,7 +39,8 @@ export async function getFileImportTextData(textId: string): Promise<FileImportT
   // Shares parseFileImportText with the main-process import path so playback
   // and storage agree on word boundaries AND line breaks.
   const { words, lineBreaks, indents } = parseFileImportText(text)
-  const data: FileImportTextData = { name, words, lineBreaks, indents }
+  const romajiCapable = result.data.meta.romajiCapable === true
+  const data: FileImportTextData = { name, words, lineBreaks, indents, romajiCapable }
   fileImportTextCache.set(textId, data)
   return data
 }

@@ -229,7 +229,7 @@ export function useTypingTest(
     setConfigState(cfg)
     configRef.current = cfg
     const seq = ++seqRef.current
-    const { words, quote, lineBreaks, lineIndents } = await createWordsForConfig(cfg, languageRef.current)
+    const { words, quote, lineBreaks, lineIndents, romajiCapable } = await createWordsForConfig(cfg, languageRef.current)
     if (seqRef.current !== seq) return false
     if (words.length === 0) return false
     const idx = Math.min(Math.max(0, memory.currentWordIndex), words.length - 1)
@@ -254,6 +254,7 @@ export function useTypingTest(
       lineBreaks: new Set(lineBreaks),
       lineIndents,
       romajiKeystrokes: '',
+      romajiCapable,
     })
     return true
   }, [])
@@ -399,7 +400,9 @@ export function useTypingTest(
       // Romaji mode has its own key semantics for every key kind — see
       // processRomajiKeyEvent's doc comment in romaji-input.ts. Dispatch
       // once here instead of re-checking isRomajiInputActive per branch.
-      if (isRomajiInputActive(configRef.current, languageRef.current)) {
+      // `s.romajiCapable` (not a ref) so the capability read matches the
+      // text that actually produced `s.words`, even mid-async-load.
+      if (isRomajiInputActive(configRef.current, languageRef.current, s.romajiCapable)) {
         return processRomajiKeyEvent(s, key, configRef.current, languageRef.current)
       }
 
@@ -462,7 +465,7 @@ export function useTypingTest(
       // Romaji mode is direct-keystroke only; IME composition input (which
       // implies IME is on, contrary to the mode's requirement) is ignored
       // entirely rather than fed into currentInput.
-      if (isRomajiInputActive(configRef.current, languageRef.current)) return s
+      if (isRomajiInputActive(configRef.current, languageRef.current, s.romajiCapable)) return s
       if (!data) {
         return { ...s, compositionText: '' }
       }
@@ -554,14 +557,14 @@ export function useTypingTest(
   // the accepted keystroke history on every change rather than stored on
   // state directly — see `buildRomajiMatcher`.
   const romajiGuide = useMemo(() => {
-    if (!isRomajiInputActive(config, language)) return null
+    if (!isRomajiInputActive(config, language, state.romajiCapable)) return null
     if (state.currentWordIndex >= state.words.length) return null
     const word = state.words[state.currentWordIndex]
     const detail = romajiDetail(config)
     const matcher = buildRomajiMatcher(word, state.romajiKeystrokes, detail)
     const guide: RomajiGuide = { typed: matcher.typedRomaji(), remaining: matcher.remainingGuide(), kanaCompleted: matcher.completedKanaCount() }
     return applyRomajiCaseStyle(guide, detail?.caseStyle)
-  }, [config, language, state.words, state.currentWordIndex, state.romajiKeystrokes])
+  }, [config, language, state.words, state.currentWordIndex, state.romajiKeystrokes, state.romajiCapable])
 
   return {
     state,

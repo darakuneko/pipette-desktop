@@ -14,6 +14,7 @@ function renderBar(props: Partial<Parameters<typeof TypingTestSettingsBar>[0]> =
     config: DEFAULT_CONFIG,
     onConfigChange: vi.fn(),
     language: 'english',
+    textRomajiCapable: false,
   }
   return render(
     <I18nextProvider i18n={i18n}>
@@ -157,6 +158,33 @@ describe('TypingTestSettingsBar romaji settings button', () => {
     expect(screen.queryByTestId('romaji-settings-toggle')).not.toBeInTheDocument()
   })
 
+  it('shows the romaji button (Option row only, no Pattern/Units) for a tatoeba kana pack', () => {
+    const config: TypingTestConfig = { mode: 'tatoeba', language: 'japanese_hiragana' }
+    renderBar({ config })
+    expect(screen.getByTestId('romaji-settings-toggle')).toBeInTheDocument()
+    expect(screen.queryByTestId('mode-words')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('toggle-punctuation')).not.toBeInTheDocument()
+  })
+
+  it('hides the romaji button for a tatoeba non-kana pack', () => {
+    const config: TypingTestConfig = { mode: 'tatoeba', language: 'english' }
+    renderBar({ config })
+    expect(screen.queryByTestId('romaji-settings-toggle')).not.toBeInTheDocument()
+  })
+
+  it('shows the romaji button for a romaji-capable fileImport text', () => {
+    const config: TypingTestConfig = { mode: 'fileImport', textId: 't1' }
+    renderBar({ config, textRomajiCapable: true })
+    expect(screen.getByTestId('romaji-settings-toggle')).toBeInTheDocument()
+    expect(screen.queryByTestId('mode-words')).not.toBeInTheDocument()
+  })
+
+  it('hides the romaji button for a fileImport text that is not romaji-capable', () => {
+    const config: TypingTestConfig = { mode: 'fileImport', textId: 't1' }
+    renderBar({ config, textRomajiCapable: false })
+    expect(screen.queryByTestId('romaji-settings-toggle')).not.toBeInTheDocument()
+  })
+
   it('highlights the romaji button when romajiInput is active', () => {
     const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
     renderBar({ config, language: 'japanese_hiragana' })
@@ -200,7 +228,7 @@ describe('TypingTestSettingsBar toggle preservation', () => {
     const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: true, numbers: true }
     const { rerender } = render(
       <I18nextProvider i18n={i18n}>
-        <TypingTestSettingsBar config={config} onConfigChange={onConfigChange} language="english" />
+        <TypingTestSettingsBar config={config} onConfigChange={onConfigChange} language="english" textRomajiCapable={false} />
       </I18nextProvider>,
     )
 
@@ -212,7 +240,7 @@ describe('TypingTestSettingsBar toggle preservation', () => {
     onConfigChange.mockClear()
     rerender(
       <I18nextProvider i18n={i18n}>
-        <TypingTestSettingsBar config={quoteConfig} onConfigChange={onConfigChange} language="english" />
+        <TypingTestSettingsBar config={quoteConfig} onConfigChange={onConfigChange} language="english" textRomajiCapable={false} />
       </I18nextProvider>,
     )
 
@@ -245,7 +273,7 @@ describe('TypingTestSettingsBar toggle preservation', () => {
     const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
     const { rerender } = render(
       <I18nextProvider i18n={i18n}>
-        <TypingTestSettingsBar config={config} onConfigChange={onConfigChange} language="japanese_hiragana" />
+        <TypingTestSettingsBar config={config} onConfigChange={onConfigChange} language="japanese_hiragana" textRomajiCapable={false} />
       </I18nextProvider>,
     )
 
@@ -257,7 +285,7 @@ describe('TypingTestSettingsBar toggle preservation', () => {
     onConfigChange.mockClear()
     rerender(
       <I18nextProvider i18n={i18n}>
-        <TypingTestSettingsBar config={quoteConfig} onConfigChange={onConfigChange} language="japanese_hiragana" />
+        <TypingTestSettingsBar config={quoteConfig} onConfigChange={onConfigChange} language="japanese_hiragana" textRomajiCapable={false} />
       </I18nextProvider>,
     )
 
@@ -303,7 +331,7 @@ describe('TypingTestSettingsBar toggle preservation', () => {
     }
     const { rerender } = render(
       <I18nextProvider i18n={i18n}>
-        <TypingTestSettingsBar config={config} onConfigChange={onConfigChange} language="japanese_hiragana" />
+        <TypingTestSettingsBar config={config} onConfigChange={onConfigChange} language="japanese_hiragana" textRomajiCapable={false} />
       </I18nextProvider>,
     )
 
@@ -314,7 +342,7 @@ describe('TypingTestSettingsBar toggle preservation', () => {
     onConfigChange.mockClear()
     rerender(
       <I18nextProvider i18n={i18n}>
-        <TypingTestSettingsBar config={quoteConfig} onConfigChange={onConfigChange} language="japanese_hiragana" />
+        <TypingTestSettingsBar config={quoteConfig} onConfigChange={onConfigChange} language="japanese_hiragana" textRomajiCapable={false} />
       </I18nextProvider>,
     )
 

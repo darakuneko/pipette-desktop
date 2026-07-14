@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Labeled test-config bar (Pattern / Units / Option) shown below the Mode row
-// in editor typing-test mode. Hidden for imported custom text (the parent
-// gates on mode). Extracted from TypingTestView so the config controls live
-// with the Mode / Base Layer row rather than above the reading area.
+// in editor typing-test mode. Pattern/Units only render for words/time/quote
+// (the parent gates the whole bar on mode + romaji capability — tatoeba and
+// fileImport only ever see this bar's Option row, and only once their
+// content is romaji-capable, see isRomajiCapable). Extracted from
+// TypingTestView so the config controls live with the Mode / Base Layer row
+// rather than above the reading area.
 
 import { useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingTestConfig, TypingTestMode, QuoteLength, RomajiDetailSettings } from './types'
-import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS, ROMAJI_INPUT_LANGUAGES } from './types'
+import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS } from './types'
+import { isRomajiCapable } from './romaji-input'
 import { RomajiSettingsModal } from './RomajiSettingsModal'
 
 const MODES: TypingTestMode[] = ['words', 'time', 'quote']
@@ -28,26 +32,35 @@ const LABEL = 'text-sm text-content-muted'
 interface Props {
   config: TypingTestConfig
   onConfigChange: (config: TypingTestConfig) => void
-  /** Currently selected word-language pack. Gates the Romaji button, which
-   *  only applies to the kana packs (see `ROMAJI_INPUT_LANGUAGES`). */
+  /** Currently selected word-language pack (words/time mode) or Tatoeba
+   *  pack id (tatoeba mode). Together with `textRomajiCapable`, gates the
+   *  Romaji button — see `isRomajiCapable`. */
   language: string
+  /** Whether the currently loaded fileImport text is kana-pure (see
+   *  `TypingTestState.romajiCapable`); ignored for every other mode. */
+  textRomajiCapable: boolean
 }
 
-export function TypingTestSettingsBar({ config, onConfigChange, language }: Props) {
+export function TypingTestSettingsBar({ config, onConfigChange, language, textRomajiCapable }: Props) {
   const { t } = useTranslation()
   const [showRomajiModal, setShowRomajiModal] = useState(false)
 
   // Remember toggle state (incl. the Romaji Settings detail fields) so it
-  // persists through quote mode (which has no toggles at all).
+  // persists through quote mode (which has no toggles at all). punctuation/
+  // numbers only ever come from words/time (the only modes that have them);
+  // romajiInput/romaji are carried from every mode but quote, since tatoeba
+  // and fileImport carry those fields too now (see TypingTestConfig).
   const togglesRef = useRef<{ punctuation: boolean; numbers: boolean; romajiInput: boolean; romaji?: RomajiDetailSettings }>(
     { punctuation: false, numbers: false, romajiInput: false },
   )
-  if (config.mode === 'words' || config.mode === 'time') {
+  if (config.mode !== 'quote') {
     togglesRef.current = {
-      punctuation: config.punctuation,
-      numbers: config.numbers,
+      ...togglesRef.current,
       romajiInput: config.romajiInput === true,
       romaji: config.romaji,
+      ...(config.mode === 'words' || config.mode === 'time'
+        ? { punctuation: config.punctuation, numbers: config.numbers }
+        : {}),
     }
   }
 
@@ -67,10 +80,19 @@ export function TypingTestSettingsBar({ config, onConfigChange, language }: Prop
     }
   }, [config, onConfigChange])
 
+  // Pattern (mode tabs) and Units (word count / duration / quote length) only
+  // apply to the three modes this bar's own mode-switch can reach — tatoeba
+  // and fileImport are switched from the Language selector instead (see
+  // TypingTestPane), so this bar renders only their Option row for those two.
+  const isPatternMode = config.mode === 'words' || config.mode === 'time' || config.mode === 'quote'
   const hasPunctuationNumbers = config.mode === 'words' || config.mode === 'time'
-  // Romaji input only judges kana word packs — hidden for every other
-  // language, and for quote mode (no toggles row at all).
-  const showRomajiToggle = hasPunctuationNumbers && ROMAJI_INPUT_LANGUAGES.has(language)
+  // Aliased so the RomajiSettingsModal render below can narrow `config`
+  // away from 'quote' (its Props require a mode that carries romajiInput).
+  const isNotQuote = config.mode !== 'quote'
+  // Romaji input judges kana content — words/time by language, tatoeba by
+  // its pack's language id, fileImport by the loaded text's own content
+  // (see isRomajiCapable). Never available in quote mode.
+  const showRomajiToggle = isRomajiCapable(config, language, textRomajiCapable)
 
   // The unit lives on the label so the buttons stay compact numbers.
   const unitsLabel = config.mode === 'words'
@@ -81,103 +103,112 @@ export function TypingTestSettingsBar({ config, onConfigChange, language }: Prop
 
   return (
     <div className="flex w-full flex-col items-start gap-3">
-      {/* Pattern — words / time / quote */}
-      <div className="flex w-full flex-col items-start gap-1">
-        <span className={LABEL}>{t('editor.typingTest.pattern')}</span>
-        <div className="flex h-8 w-full items-center gap-1 rounded-lg bg-surface-alt/50 px-1">
-          {MODES.map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              data-testid={`mode-${mode}`}
-              className={`${optionButtonClass(config.mode === mode)} flex-1 justify-center`}
-              onClick={() => handleModeChange(mode)}
-            >
-              {t(`editor.typingTest.mode.${mode}`)}
-            </button>
-          ))}
+      {/* Pattern — words / time / quote. Not shown for tatoeba / fileImport:
+          those modes switch via the Language selector instead. */}
+      {isPatternMode && (
+        <div className="flex w-full flex-col items-start gap-1">
+          <span className={LABEL}>{t('editor.typingTest.pattern')}</span>
+          <div className="flex h-8 w-full items-center gap-1 rounded-lg bg-surface-alt/50 px-1">
+            {MODES.map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                data-testid={`mode-${mode}`}
+                className={`${optionButtonClass(config.mode === mode)} flex-1 justify-center`}
+                onClick={() => handleModeChange(mode)}
+              >
+                {t(`editor.typingTest.mode.${mode}`)}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Units — the unit (words / sec) is shown on the label, so the value
           buttons stay compact numbers. Quote mode uses named lengths. */}
-      <div className="flex w-full flex-col items-start gap-1">
-        <span className={LABEL}>{unitsLabel}</span>
-        {config.mode === 'words' && (
-          <div className="flex w-full items-center gap-1">
-            {WORD_COUNT_OPTIONS.map((count) => (
-              <button
-                key={count}
-                type="button"
-                data-testid={`word-count-${count}`}
-                className={`${optionButtonClass(config.wordCount === count)} flex-1 justify-center`}
-                onClick={() => onConfigChange({ ...config, wordCount: count })}
-              >
-                {count}
-              </button>
-            ))}
-          </div>
-        )}
-        {config.mode === 'time' && (
-          <div className="flex w-full items-center gap-1">
-            {TIME_DURATION_OPTIONS.map((dur) => (
-              <button
-                key={dur}
-                type="button"
-                data-testid={`duration-${dur}`}
-                className={`${optionButtonClass(config.duration === dur)} flex-1 justify-center`}
-                onClick={() => onConfigChange({ ...config, duration: dur })}
-              >
-                {dur}
-              </button>
-            ))}
-          </div>
-        )}
-        {config.mode === 'quote' && (
-          <div className="flex w-full items-center gap-1">
-            {QUOTE_LENGTHS.map((len) => (
-              <button
-                key={len}
-                type="button"
-                data-testid={`quote-${len}`}
-                className={`${optionButtonClass(config.quoteLength === len)} flex-1 justify-center`}
-                onClick={() => onConfigChange({ ...config, quoteLength: len })}
-              >
-                {t(`editor.typingTest.quoteLength.${len}`)}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      {isPatternMode && (
+        <div className="flex w-full flex-col items-start gap-1">
+          <span className={LABEL}>{unitsLabel}</span>
+          {config.mode === 'words' && (
+            <div className="flex w-full items-center gap-1">
+              {WORD_COUNT_OPTIONS.map((count) => (
+                <button
+                  key={count}
+                  type="button"
+                  data-testid={`word-count-${count}`}
+                  className={`${optionButtonClass(config.wordCount === count)} flex-1 justify-center`}
+                  onClick={() => onConfigChange({ ...config, wordCount: count })}
+                >
+                  {count}
+                </button>
+              ))}
+            </div>
+          )}
+          {config.mode === 'time' && (
+            <div className="flex w-full items-center gap-1">
+              {TIME_DURATION_OPTIONS.map((dur) => (
+                <button
+                  key={dur}
+                  type="button"
+                  data-testid={`duration-${dur}`}
+                  className={`${optionButtonClass(config.duration === dur)} flex-1 justify-center`}
+                  onClick={() => onConfigChange({ ...config, duration: dur })}
+                >
+                  {dur}
+                </button>
+              ))}
+            </div>
+          )}
+          {config.mode === 'quote' && (
+            <div className="flex w-full items-center gap-1">
+              {QUOTE_LENGTHS.map((len) => (
+                <button
+                  key={len}
+                  type="button"
+                  data-testid={`quote-${len}`}
+                  className={`${optionButtonClass(config.quoteLength === len)} flex-1 justify-center`}
+                  onClick={() => onConfigChange({ ...config, quoteLength: len })}
+                >
+                  {t(`editor.typingTest.quoteLength.${len}`)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Option — punctuation / numbers (words & time only) */}
-      {hasPunctuationNumbers && (
+      {/* Option — punctuation / numbers (words & time only) plus the Romaji
+          trigger, shown whenever the current mode/content is romaji-capable
+          (words/time/tatoeba by language, fileImport by content). */}
+      {(hasPunctuationNumbers || showRomajiToggle) && (
         <div className="flex w-full flex-col items-start gap-1">
           <span className={LABEL}>{t('editor.typingTest.optionLabel')}</span>
-          <div className="flex w-full items-center gap-1">
-            <button
-              type="button"
-              data-testid="toggle-punctuation"
-              className={`${optionButtonClass(config.punctuation, 'px-2.5')} flex-1 justify-center`}
-              onClick={() => onConfigChange({ ...config, punctuation: !config.punctuation })}
-            >
-              {t('editor.typingTest.punctuation')}
-            </button>
-            <button
-              type="button"
-              data-testid="toggle-numbers"
-              className={`${optionButtonClass(config.numbers, 'px-2.5')} flex-1 justify-center`}
-              onClick={() => onConfigChange({ ...config, numbers: !config.numbers })}
-            >
-              {t('editor.typingTest.numbers')}
-            </button>
-          </div>
+          {hasPunctuationNumbers && (
+            <div className="flex w-full items-center gap-1">
+              <button
+                type="button"
+                data-testid="toggle-punctuation"
+                className={`${optionButtonClass(config.punctuation, 'px-2.5')} flex-1 justify-center`}
+                onClick={() => onConfigChange({ ...config, punctuation: !config.punctuation })}
+              >
+                {t('editor.typingTest.punctuation')}
+              </button>
+              <button
+                type="button"
+                data-testid="toggle-numbers"
+                className={`${optionButtonClass(config.numbers, 'px-2.5')} flex-1 justify-center`}
+                onClick={() => onConfigChange({ ...config, numbers: !config.numbers })}
+              >
+                {t('editor.typingTest.numbers')}
+              </button>
+            </div>
+          )}
           {/* Romaji — a dialog trigger (opens the detail settings modal),
               not a stateful toggle, so it keeps the full-width DATA-section
               button convention (see HistoryToggle) rather than the compact
               option buttons above. Active (accent) whenever romajiInput is
               on, so the state is visible without opening the modal. */}
-          {showRomajiToggle && (
+          {showRomajiToggle && isNotQuote && (
             <button
               type="button"
               data-testid="romaji-settings-toggle"
@@ -191,7 +222,7 @@ export function TypingTestSettingsBar({ config, onConfigChange, language }: Prop
           )}
         </div>
       )}
-      {showRomajiModal && hasPunctuationNumbers && (
+      {showRomajiModal && showRomajiToggle && isNotQuote && (
         <RomajiSettingsModal
           config={config}
           onConfigChange={onConfigChange}

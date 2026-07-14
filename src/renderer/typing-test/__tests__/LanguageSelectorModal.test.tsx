@@ -2,15 +2,26 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { I18nextProvider } from 'react-i18next'
+import i18n from '../../i18n'
 import { LanguageSelectorModal } from '../LanguageSelectorModal'
 import { clearAozoraCatalogCache } from '../AozoraCatalogTab'
 import type { LanguageListEntry } from '../../../shared/types/language-store'
+
+// Most tests in this file assert on testids/structure and don't need
+// resolved i18n text, so the shared `render` is left as-is. The Romaji
+// badge tests below check the badge's rendered label, which requires a
+// real i18n instance (the default `render` leaves `t()` returning raw keys).
+function renderWithI18n(ui: React.ReactElement) {
+  return render(<I18nextProvider i18n={i18n}>{ui}</I18nextProvider>)
+}
 
 const mockLanguages: LanguageListEntry[] = [
   { name: 'english', wordCount: 200, rightToLeft: false, fileSize: 5000, status: 'bundled' },
   { name: 'english_1k', wordCount: 1000, rightToLeft: false, fileSize: 15000, status: 'downloaded' },
   { name: 'german', wordCount: 5000, rightToLeft: false, fileSize: 50000, status: 'not-downloaded' },
   { name: 'arabic', wordCount: 3000, rightToLeft: true, fileSize: 30000, status: 'not-downloaded' },
+  { name: 'japanese_hiragana', wordCount: 500, rightToLeft: false, fileSize: 8000, status: 'downloaded' },
 ]
 
 beforeEach(() => {
@@ -334,6 +345,43 @@ describe('LanguageSelectorModal', () => {
     expect(arabicRow.textContent).toContain('RTL')
   })
 
+  it('shows the Romaji badge for a kana word-language pack but not for a non-kana one', async () => {
+    renderWithI18n(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('language-row-japanese_hiragana')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('language-row-japanese_hiragana').textContent).toContain('Romaji')
+    expect(screen.getByTestId('language-row-english').textContent).not.toContain('Romaji')
+  })
+
+  it('shows the Romaji badge for a kana tatoeba pack', async () => {
+    renderWithI18n(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('language-tab-tatoeba'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('language-row-japanese_hiragana')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('language-row-japanese_hiragana').textContent).toContain('Romaji')
+  })
+
   it('deleting the selected imported text then closing fires onCurrentTextDeleted', async () => {
     window.vialAPI = {
       ...window.vialAPI,
@@ -521,6 +569,34 @@ describe('LanguageSelectorModal', () => {
 
     await waitFor(() => expect(screen.getByTestId('typing-text-row-file-id')).toBeInTheDocument())
     expect(screen.queryByTestId('typing-text-row-catalog-id')).not.toBeInTheDocument()
+  })
+
+  it('shows the Romaji badge only for a kana-pure imported text', async () => {
+    window.vialAPI = {
+      ...window.vialAPI,
+      typingTestTextStoreList: vi.fn().mockResolvedValue({
+        success: true,
+        data: [
+          { id: 'kana-id', name: 'Kana Text', wordCount: 5, filename: 'k.json', savedAt: '', updatedAt: '', romajiCapable: true },
+          { id: 'mixed-id', name: 'Mixed Text', wordCount: 5, filename: 'm.json', savedAt: '', updatedAt: '', romajiCapable: false },
+        ],
+      }),
+    } as unknown as typeof window.vialAPI
+
+    renderWithI18n(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('language-tab-import'))
+
+    await waitFor(() => expect(screen.getByTestId('typing-text-row-kana-id')).toBeInTheDocument())
+    expect(screen.getByTestId('typing-text-row-kana-id').textContent).toContain('Romaji')
+    expect(screen.getByTestId('typing-text-row-mixed-id').textContent).not.toContain('Romaji')
   })
 
   it('does not fire onCurrentTextDeleted when nothing was deleted', async () => {

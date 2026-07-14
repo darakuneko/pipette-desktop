@@ -37,11 +37,15 @@ export type TypingTestConfig =
   | { mode: 'quote'; quoteLength: QuoteLength }
   // Imported user text, played verbatim in order via the quote rendering
   // path. `textId` references an entry in the typing-test-texts store.
-  | { mode: 'fileImport'; textId: string }
+  // `romajiInput`/`romaji` are only meaningful when the loaded text is
+  // kana-pure — see `isRomajiCapable` in romaji-input.ts.
+  | { mode: 'fileImport'; textId: string; romajiInput?: boolean; romaji?: RomajiDetailSettings }
   // Tatoeba sentence pack (Hub-distributed). Sentences are played verbatim
   // in order via the same char-count/word-flow path as fileImport. `language`
-  // selects the downloaded pack (e.g. 'english').
-  | { mode: 'tatoeba'; language: string }
+  // selects the downloaded pack (e.g. 'english'). `romajiInput`/`romaji` are
+  // only meaningful when `language` is one of the kana packs — see
+  // `isRomajiCapable` in romaji-input.ts.
+  | { mode: 'tatoeba'; language: string; romajiInput?: boolean; romaji?: RomajiDetailSettings }
 
 export interface Quote {
   id: number
@@ -56,12 +60,14 @@ export const DEFAULT_LANGUAGE = 'english'
 
 /** Word-language packs the romaji-keystroke matcher supports (kana word
  *  lists only). Drives the SettingsBar toggle's visibility, and — via
- *  `isRomajiInputActive` in `useTypingTest` — whether a persisted
- *  `romajiInput: true` is actually honored. The flag itself is never
- *  stripped from the config (same as `punctuation`/`numbers`): it stays
- *  saved across language switches, mount, and `setConfig` calls, and is
- *  simply inert whenever the active language isn't in this set. Selecting
- *  a kana pack again picks it back up automatically. */
+ *  `isRomajiCapable` / `isRomajiInputActive` in romaji-input.ts — whether a
+ *  persisted `romajiInput: true` is actually honored for words/time (by
+ *  the active language) and tatoeba (by the pack's `language` id). The flag
+ *  itself is never stripped from the config (same as `punctuation`/
+ *  `numbers`): it stays saved across language switches, mount, and
+ *  `setConfig` calls, and is simply inert whenever the relevant language
+ *  isn't in this set. Selecting a kana pack again picks it back up
+ *  automatically. */
 export const ROMAJI_INPUT_LANGUAGES = new Set(['japanese_hiragana', 'japanese_katakana'])
 
 /** Current word's confirmed romaji + canonical remaining spelling, plus the

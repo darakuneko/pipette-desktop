@@ -84,10 +84,10 @@ function validateTypingTestConfig(raw: unknown): TypingTestConfig | undefined {
   if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return undefined
   const obj = raw as Record<string, unknown>
   // Optional carry-through: keep a persisted boolean romajiInput on
-  // words/time configs, drop any other type silently (the field is
-  // optional, so a malformed value degrades to "not set" rather than
-  // rejecting the whole config). Same treatment for the nested `romaji`
-  // detail settings.
+  // words/time/tatoeba/fileImport configs (every mode but quote), drop any
+  // other type silently (the field is optional, so a malformed value
+  // degrades to "not set" rather than rejecting the whole config). Same
+  // treatment for the nested `romaji` detail settings.
   const romajiInput = typeof obj.romajiInput === 'boolean' ? { romajiInput: obj.romajiInput } : {}
   const romaji = validateRomajiDetailSettings(obj.romaji)
   const romajiDetail = romaji ? { romaji } : {}
@@ -103,10 +103,10 @@ function validateTypingTestConfig(raw: unknown): TypingTestConfig | undefined {
       return { mode: 'quote', quoteLength: obj.quoteLength as 'short' | 'medium' | 'long' | 'all' }
     case 'fileImport':
       if (typeof obj.textId !== 'string' || obj.textId.length === 0) return undefined
-      return { mode: 'fileImport', textId: obj.textId }
+      return { mode: 'fileImport', textId: obj.textId, ...romajiInput, ...romajiDetail }
     case 'tatoeba':
       if (typeof obj.language !== 'string' || obj.language.length === 0) return undefined
-      return { mode: 'tatoeba', language: obj.language }
+      return { mode: 'tatoeba', language: obj.language, ...romajiInput, ...romajiDetail }
     default:
       return undefined
   }
