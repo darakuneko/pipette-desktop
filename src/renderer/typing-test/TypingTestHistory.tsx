@@ -9,6 +9,7 @@ import { buildCsv } from '../../shared/csv-export'
 import { computeStats } from './history-stats'
 import { WpmSparkline } from './WpmSparkline'
 import { AccuracyTrendSection } from './AccuracyTrendSection'
+import { MistakeRankingSection } from './MistakeRankingSection'
 import { formatDate, ACTION_BTN, DELETE_BTN, CONFIRM_DELETE_BTN, FILTER_SELECT_CLASS } from '../components/editors/store-modal-shared'
 import { resultKpm, buildResultNameChips } from './result-builder'
 import { formatConditionLabel } from './condition-label'
@@ -272,6 +273,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
       )}
 
       <AccuracyTrendSection results={tabResults} />
+      <MistakeRankingSection results={tabResults} />
 
       {/* Results table — fills remaining height */}
       <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-edge">

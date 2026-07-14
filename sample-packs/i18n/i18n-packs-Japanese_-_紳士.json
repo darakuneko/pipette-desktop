@@ -1,5 +1,5 @@
 {
-  "version": "0.1.18",
+  "version": "0.1.19",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -494,7 +494,9 @@
         "conditionPunctuation": "+句読点",
         "conditionNumbers": "+数字",
         "conditionRomaji": "+ローマ字入力",
-        "conditionTatoeba": "Tatoeba"
+        "conditionTatoeba": "Tatoeba",
+        "mistakeRankingTitle": "苦手とする文字",
+        "mistakeRankingEmpty": "過ちの記録はまだございません"
       },
       "results": {
         "mistakesLabel": "過ちの文字"
