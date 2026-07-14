@@ -301,6 +301,15 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     onViewMatrixChange?.(applyViewMatrixAxisToSelection(viewMatrix, viewMatrixSelectedPositions, axis, value))
   }, [viewMatrixSelectedPositions, viewMatrix, onViewMatrixChange])
 
+  // View positions are logical, not physical — they only need to sort keys
+  // into a 2D grid, not mirror the firmware's electrical matrix. Direct-pin
+  // keyboards declare degenerate physical matrices (1×N or N×1, one row/col
+  // per GPIO pin with no real electrical grid), so capping each select to
+  // its own physical dimension would collapse one axis to a single option
+  // and make 2D view ordering impossible. Both selects therefore share the
+  // same option count: the larger of the two physical dimensions.
+  const viewMatrixAxisOptionCount = Math.max(rows ?? 0, cols ?? 0)
+
   // One pass over the layout builds both mode legend artifacts — they
   // share the same inputs and always recompute together: the per-key R/C
   // label override showing each non-decal, non-encoder key's effective
@@ -1083,8 +1092,8 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             selectionCount={viewMatrixSelectedPositions.length}
             effectiveRow={viewMatrixEffectiveSingle?.row ?? 0}
             effectiveCol={viewMatrixEffectiveSingle?.col ?? 0}
-            matrixRows={rows ?? 0}
-            matrixCols={cols ?? 0}
+            matrixRows={viewMatrixAxisOptionCount}
+            matrixCols={viewMatrixAxisOptionCount}
             onAxisChange={handleViewMatrixAxisChange}
           />
         )}

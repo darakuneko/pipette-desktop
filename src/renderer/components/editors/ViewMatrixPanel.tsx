@@ -17,8 +17,9 @@ interface AxisSelectProps {
   /** Effective value of the single selected key — ignored (blank
    *  placeholder shown) unless `showValue` is true. */
   value: number
-  /** Number of options: `0 .. optionCount - 1`, from the keyboard
-   *  definition's Vial matrix dimension for this axis. */
+  /** Number of options: `0 .. optionCount - 1`. View positions are logical,
+   *  not physical, so both axes share the same range — see `matrixRows` /
+   *  `matrixCols` on `ViewMatrixPanelProps` for why. */
   optionCount: number
   disabled: boolean
   showValue: boolean
@@ -62,8 +63,13 @@ export interface ViewMatrixPanelProps {
    *  selected, the selects fall back to a blank placeholder instead. */
   effectiveRow: number
   effectiveCol: number
-  /** Row/Col select option ranges, from the keyboard definition's Vial
-   *  matrix dimensions (`0 .. count - 1`). */
+  /** Row/Col select option ranges (`0 .. count - 1`). Both are set to the
+   *  same value by the caller — the larger of the keyboard definition's
+   *  physical matrix dimensions — because view positions are logical
+   *  ordering, not a physical grid readout. Direct-pin keyboards declare
+   *  degenerate 1×N or N×1 matrices, so capping each axis to its own
+   *  physical dimension would collapse one axis to a single option and
+   *  make 2D view ordering impossible. */
   matrixRows: number
   matrixCols: number
   /** Saves the picked value on one axis for the whole selection —

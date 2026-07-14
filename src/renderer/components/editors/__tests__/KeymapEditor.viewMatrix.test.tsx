@@ -247,15 +247,29 @@ describe('KeymapEditor — View Matrix mode', () => {
     expect(screen.getByTestId('view-matrix-col-select')).toHaveValue('')
   })
 
-  it('the Row/Col select options span the definition matrix dimensions (rows/cols props)', () => {
+  it('the Row/Col select options both span the larger of the definition matrix dimensions (view positions are logical, not physical)', () => {
     enterMode()
     act(() => capturedOnKeyClick?.({ row: 0, col: 0, decal: false, encoderIdx: -1 }))
 
     const rowOptions = screen.getByTestId('view-matrix-row-select').querySelectorAll('option')
     const colOptions = screen.getByTestId('view-matrix-col-select').querySelectorAll('option')
-    // rows=3, cols=5 in defaultProps — independent of the 3-key layout.
-    expect(Array.from(rowOptions).map((o) => o.textContent)).toEqual(['0', '1', '2'])
+    // rows=3, cols=5 in defaultProps — both selects offer max(3, 5) = 5
+    // options, independent of the 3-key layout.
+    expect(Array.from(rowOptions).map((o) => o.textContent)).toEqual(['0', '1', '2', '3', '4'])
     expect(Array.from(colOptions).map((o) => o.textContent)).toEqual(['0', '1', '2', '3', '4'])
+  })
+
+  it('direct-pin keyboards with a degenerate physical matrix (rows=1) still get a full 2D option range on both axes', () => {
+    render(<KeymapEditor {...defaultProps} rows={1} cols={6} />)
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0, decal: false, encoderIdx: -1 }))
+
+    const rowOptions = screen.getByTestId('view-matrix-row-select').querySelectorAll('option')
+    const colOptions = screen.getByTestId('view-matrix-col-select').querySelectorAll('option')
+    // rows=1, cols=6 — without the fix the Row select would collapse to a
+    // single '0' option, making 2D view ordering impossible.
+    expect(Array.from(rowOptions).map((o) => o.textContent)).toEqual(['0', '1', '2', '3', '4', '5'])
+    expect(Array.from(colOptions).map((o) => o.textContent)).toEqual(['0', '1', '2', '3', '4', '5'])
   })
 
   it('key click in the mode selects it — the key gets the selected highlight and selects show its effective position', () => {
