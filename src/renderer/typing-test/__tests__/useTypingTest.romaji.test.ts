@@ -377,6 +377,58 @@ describe('useTypingTest — romaji input mode', () => {
   })
 })
 
+// Plan-typing-mistake-analysis Phase 1: a rejected keystroke marks the
+// in-progress kana segment as erred; once that segment completes, one
+// mistake is tallied (keyed by the segment's canonical romaji spelling),
+// regardless of how many rejected keystrokes it took to get there.
+describe('useTypingTest — romaji mistake tracking', () => {
+  it('records exactly 1 mistake for a segment typed with a wrong key then corrected', async () => {
+    await seedKanaLanguage(KANA_LANGUAGE, ['か'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
+
+    press(result, 'x') // not a valid start for か (ka/ca)
+    expect(result.current.state.incorrectChars).toBe(1)
+    type(result, 'ka')
+
+    expect(result.current.state.status).toBe('finished')
+    expect(result.current.state.mistakes).toEqual({ ka: 1 })
+  })
+
+  it('records nothing for a clean segment', async () => {
+    await seedKanaLanguage(KANA_LANGUAGE, ['か'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
+
+    type(result, 'ka')
+
+    expect(result.current.state.status).toBe('finished')
+    expect(result.current.state.mistakes).toEqual({})
+  })
+
+  it('records 2 distinct keys for two separately erred segments', async () => {
+    await seedKanaLanguage(KANA_LANGUAGE, ['かき'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
+
+    press(result, 'x') // not a valid start for か
+    type(result, 'ka')
+    press(result, 'x') // not a valid start for き (only ki)
+    type(result, 'ki')
+
+    expect(result.current.state.status).toBe('finished')
+    expect(result.current.state.mistakes).toEqual({ ka: 1, ki: 1 })
+  })
+
+  it('tallies only 1 mistake per segment regardless of how many keystrokes inside it were rejected', async () => {
+    await seedKanaLanguage(KANA_LANGUAGE, ['か'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
+
+    press(result, 'x')
+    press(result, 'z')
+    type(result, 'ka')
+
+    expect(result.current.state.mistakes).toEqual({ ka: 1 })
+  })
+})
+
 // Plan-typing-romaji-settings-modal Step 2: `config.romaji`'s disabledStyles
 // / guideStyles wired into the matcher (via `romajiMatcherOptions`), and
 // caseStyle applied as a display-only transform to the guide row.

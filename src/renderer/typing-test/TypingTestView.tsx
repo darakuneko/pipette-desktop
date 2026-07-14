@@ -61,6 +61,12 @@ interface Props {
   hasSavedMemory?: boolean
 }
 
+// Completion screen's "missed characters" list (Phase 1 of mistake
+// analysis — see TypingTestState.mistakes) caps how many distinct
+// mistake keys are shown, so a run with many small errors doesn't turn
+// the results row into an unbounded wall of text.
+const MAX_MISTAKE_ENTRIES = 12
+
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
@@ -165,6 +171,17 @@ export function TypingTestView({
     sum += Math.min(state.currentWordIndex, Math.max(0, state.words.length - 1)) // separators passed
     return Math.min(sum, totalChars)
   }, [charProgress, state.words, state.currentWordIndex, state.currentInput, totalChars])
+
+  // Completion screen's missed-characters list: sorted by count DESC then
+  // key ASC (ties break deterministically instead of on object insertion
+  // order), capped to the top MAX_MISTAKE_ENTRIES.
+  const mistakeEntries = useMemo(
+    () =>
+      Object.entries(state.mistakes)
+        .sort(([keyA, countA], [keyB, countB]) => countB - countA || keyA.localeCompare(keyB))
+        .slice(0, MAX_MISTAKE_ENTRIES),
+    [state.mistakes],
+  )
 
   function clearImeInput(): void {
     if (imeInputRef.current) imeInputRef.current.value = ''
@@ -513,6 +530,16 @@ export function TypingTestView({
             </span>
           )}
         </div>
+        {state.status === 'finished' && mistakeEntries.length > 0 && (
+          <div data-testid="typing-test-mistakes" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-content-muted">
+            <span>{t('editor.typingTest.results.mistakesLabel')}:</span>
+            {mistakeEntries.map(([key, count]) => (
+              <span key={key} data-testid={`typing-test-mistake-${key}`} className="font-mono">
+                {key}:{count}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       )}
 

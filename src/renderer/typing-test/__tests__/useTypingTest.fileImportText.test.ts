@@ -78,6 +78,50 @@ describe('useTypingTest — imported fileImport text (line breaks)', () => {
   })
 })
 
+// Plan-typing-mistake-analysis Phase 1: verbatim-mode mistake tracking
+// end-to-end through processKeyEvent (Backspace / Space), not just the
+// run-state reducers directly (see run-state.test.ts for the reducer-level
+// coverage of the same rules).
+describe('useTypingTest — verbatim mistake tracking', () => {
+  it('records a mistake for a wrong char typed then deleted, and does not double-count on resubmit', async () => {
+    mockGet.mockResolvedValue({
+      success: true,
+      data: { meta: { id: 't' }, data: { name: 'T', text: 'cat' } },
+    })
+    await getFileImportTextData('t')
+    const { result } = renderHook(() => useTypingTest({ mode: 'fileImport', textId: 't' }, 'english'))
+
+    type(result, 'c')
+    type(result, 'x') // wrong ('a' expected)
+    expect(result.current.state.mistakes).toEqual({})
+    type(result, 'Backspace')
+    expect(result.current.state.mistakes).toEqual({ a: 1 })
+
+    type(result, 'a')
+    type(result, 't')
+    expect(result.current.state.status).toBe('finished')
+    // Retyping correctly and finishing must not add a second tally for
+    // the same position.
+    expect(result.current.state.mistakes).toEqual({ a: 1 })
+  })
+
+  it('records nothing for correct typing', async () => {
+    mockGet.mockResolvedValue({
+      success: true,
+      data: { meta: { id: 't' }, data: { name: 'T', text: 'cat' } },
+    })
+    await getFileImportTextData('t')
+    const { result } = renderHook(() => useTypingTest({ mode: 'fileImport', textId: 't' }, 'english'))
+
+    type(result, 'c')
+    type(result, 'a')
+    type(result, 't')
+
+    expect(result.current.state.status).toBe('finished')
+    expect(result.current.state.mistakes).toEqual({})
+  })
+})
+
 describe('useTypingTest — memory mode (pause / capture / restore)', () => {
   const setupFileImport = async () => {
     mockGet.mockResolvedValue({

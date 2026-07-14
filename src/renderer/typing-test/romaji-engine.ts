@@ -867,6 +867,18 @@ function canonicalGuideFrom(
   return winner.pattern + canonicalGuideFrom(kana, index + winner.length, disabledStyles, guideStyles)
 }
 
+/** Canonical romaji spelling of a kana substring (e.g. a single completed
+ *  segment sliced from a word via `completedKanaCount()`'s before/after
+ *  positions) — the same first-listed/longest-match spelling
+ *  `canonicalGuideFrom` would show as the guide with no style preference
+ *  selected. Used to key mistake-tracking so the same kana always tallies
+ *  under one spelling regardless of which alternate the user actually
+ *  typed. Always lowercase, since `KANA_TABLE`'s spellings are. */
+export function canonicalRomaji(kana: string): string {
+  const kanaArr = [...kana].map(toHiragana)
+  return canonicalGuideFrom(kanaArr, 0, undefined, undefined)
+}
+
 /** The winning pattern that exactly matches `buffer` as a full spelling at
  *  `index`, or null when nothing does. Shared by the retroactive-commit
  *  path in `stepAt`/`tryConsume` and by `isComplete`, both of which need to

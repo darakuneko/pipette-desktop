@@ -29,6 +29,9 @@ function makeState(overrides: Partial<TypingTestState> = {}): TypingTestState {
     lineIndents: [],
     romajiKeystrokes: '',
     romajiCapable: false,
+    mistakes: {},
+    romajiSegmentErred: false,
+    missedPositions: [],
     ...overrides,
   }
 }
@@ -280,6 +283,59 @@ describe('TypingTestView quote mode display', () => {
     })
     expect(screen.getByTestId('typing-test-results')).toBeInTheDocument()
     expect(screen.getByTestId('typing-test-quote-source').textContent).toContain('Test Book')
+  })
+})
+
+// Plan-typing-mistake-analysis Phase 1: the completion screen's "missed
+// characters" list, sourced from the just-finished run's state.mistakes.
+describe('TypingTestView mistakes list', () => {
+  it('renders the mistakes list, sorted by count DESC then key ASC, when the run finished with mistakes', () => {
+    renderView({
+      state: makeState({
+        status: 'finished',
+        mistakes: { a: 1, shi: 3, b: 3 },
+      }),
+      wpm: 50,
+      accuracy: 90,
+    })
+    const block = screen.getByTestId('typing-test-mistakes')
+    expect(block).toBeInTheDocument()
+    // count DESC first (shi/b tie at 3, broken by key ASC), then a (1).
+    expect(screen.getByTestId('typing-test-mistake-b').textContent).toBe('b:3')
+    expect(screen.getByTestId('typing-test-mistake-shi').textContent).toBe('shi:3')
+    expect(screen.getByTestId('typing-test-mistake-a').textContent).toBe('a:1')
+    const order = [...block.querySelectorAll('[data-testid^="typing-test-mistake-"]')].map((el) => el.getAttribute('data-testid'))
+    expect(order).toEqual(['typing-test-mistake-b', 'typing-test-mistake-shi', 'typing-test-mistake-a'])
+  })
+
+  it('renders nothing when the finished run had no mistakes', () => {
+    renderView({
+      state: makeState({ status: 'finished', mistakes: {} }),
+      wpm: 50,
+      accuracy: 100,
+    })
+    expect(screen.queryByTestId('typing-test-mistakes')).toBeNull()
+  })
+
+  it('does not render the mistakes list before the run finishes, even if mistakes were already tallied', () => {
+    renderView({
+      state: makeState({ status: 'running', mistakes: { a: 1 } }),
+      wpm: 50,
+      accuracy: 90,
+    })
+    expect(screen.queryByTestId('typing-test-mistakes')).toBeNull()
+  })
+
+  it('caps the list to the top 12 entries', () => {
+    const mistakes: Record<string, number> = {}
+    for (let i = 0; i < 20; i++) mistakes[`k${String(i).padStart(2, '0')}`] = 20 - i
+    renderView({
+      state: makeState({ status: 'finished', mistakes }),
+      wpm: 50,
+      accuracy: 90,
+    })
+    const block = screen.getByTestId('typing-test-mistakes')
+    expect(block.querySelectorAll('[data-testid^="typing-test-mistake-"]')).toHaveLength(12)
   })
 })
 

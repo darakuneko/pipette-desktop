@@ -186,6 +186,36 @@ function isValidTypingTestResult(item: unknown): item is TypingTestResult {
   return typeof r.date === 'string' && typeof r.wpm === 'number' && typeof r.accuracy === 'number'
 }
 
+/** Validates a result's optional `mistakes` field: a plain object mapping
+ *  every key to a finite number. Returns `undefined` for anything else
+ *  (absent, wrong shape, non-numeric/non-finite values) so a malformed
+ *  field degrades to "not set" rather than rejecting the whole result —
+ *  same treatment as the other optional fields on `TypingTestResult`. */
+function sanitizeMistakes(raw: unknown): Record<string, number> | undefined {
+  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return undefined
+  const entries = Object.entries(raw as Record<string, unknown>)
+  if (entries.length === 0) return undefined
+  const mistakes: Record<string, number> = {}
+  for (const [key, value] of entries) {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return undefined
+    mistakes[key] = value
+  }
+  return mistakes
+}
+
+/** Drops a malformed `mistakes` field without discarding the rest of an
+ *  already-`isValidTypingTestResult`-checked result. Applied after the
+ *  filter above so a persisted result with a corrupted `mistakes` blob
+ *  still survives (minus that one field) instead of vanishing from
+ *  History entirely. */
+function sanitizeTypingTestResult(result: TypingTestResult): TypingTestResult {
+  const mistakes = sanitizeMistakes(result.mistakes)
+  if (mistakes) return { ...result, mistakes }
+  if (result.mistakes === undefined) return result
+  const { mistakes: _dropped, ...rest } = result
+  return rest
+}
+
 const VALID_BASIC_VIEW_TYPES: ReadonlySet<string> = new Set(['ansi', 'iso', 'jis', 'list'])
 const LEGACY_BASIC_VIEW_MAP: Record<string, string> = { keyboard: 'ansi' }
 const VALID_SPLIT_KEY_MODES: ReadonlySet<string> = new Set(['split', 'flat'])
@@ -263,7 +293,7 @@ function validateIpcPrefs(
     ? data.layerNames.filter((n): n is string => typeof n === 'string')
     : []
   const typingTestResults = Array.isArray(data.typingTestResults)
-    ? data.typingTestResults.filter(isValidTypingTestResult)
+    ? data.typingTestResults.filter(isValidTypingTestResult).map(sanitizeTypingTestResult)
     : []
 
   // Legacy migration: { mode: 'viewOnly' } → separate boolean
