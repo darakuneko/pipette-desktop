@@ -6,7 +6,7 @@ import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import type { MacroAction } from '../../../preload/macro'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry, DeviceInfo } from '../../../shared/types/protocol'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
-import type { TypingTestResult, TypingViewMenuTab, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../../shared/types/pipette-settings'
+import type { TypingTestResult, TypingViewMenuTab, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 
@@ -88,6 +88,11 @@ export interface KeymapEditorProps {
   onSettingsUpdate?: (qsid: number, data: number[]) => void
   autoAdvance?: boolean
   onAutoAdvanceChange?: (enabled: boolean) => void
+  /** Auto Move order override, keyed by physical `"row,col"` — see
+   *  `PipetteSettings.viewMatrix`. Also drives View Matrix mode's
+   *  effective-position display and edit modal. */
+  viewMatrix?: Record<string, ViewMatrixCell>
+  onViewMatrixChange?: (next: Record<string, ViewMatrixCell> | undefined) => void
   basicViewType?: BasicViewType
   onBasicViewTypeChange?: (type: BasicViewType) => void
   splitKeyMode?: SplitKeyMode

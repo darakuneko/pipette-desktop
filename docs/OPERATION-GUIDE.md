@@ -21,6 +21,7 @@ Screenshots were taken using the software-emulated GPK60-63R keyboard, displayed
   - [2.3 Layer Switching](#23-layer-switching)
   - [2.4 Key Popover](#24-key-popover)
   - [2.5 Layout Options](#25-layout-options)
+  - [2.6 View Matrix](#26-view-matrix)
 - [3. Keycode Palette](#3-keycode-palette)
   - [3.1 Basic](#31-basic)
   - [3.2 Layers](#32-layers)
@@ -714,6 +715,37 @@ Some keyboards support multiple physical layouts (e.g., split backspace, ISO ent
 
 > **Note**: The Layout Options button only appears for keyboards that define multiple layout variants. Most keyboards with a single fixed layout do not show this button. Screenshots in this section were taken using a dummy JSON definition loaded via "Load from JSON file".
 
+### 2.6 View Matrix
+
+When **Auto Move** is enabled (§3.14), assigning a keycode automatically advances the selection to the next key. Keys are visited in order of their matrix position (sorted by row, then by column) — by default the physical matrix defined by the keyboard, which gives a natural left-to-right, top-to-bottom walk even on keyboards whose definition lists keys in a scrambled order. The View Matrix lets you customize this order per keyboard by assigning each key a custom view position.
+
+To edit the View Matrix, open the Keycodes Overlay Panel (§3.14) and click **Edit** in the **View Matrix** row. While the mode is active:
+
+![View Matrix Mode](screenshots/view-matrix-mode.png)
+
+- The keymap display goes blank — instead of keycodes, each key shows its effective view position as two lines: `R` (row) and `C` (column)
+- All keymap operations are disabled: layer switching, key assignment, the key popover, and the Key Tester (turned off automatically on entry). The keycode picker area (tabs, tiles, and menu) is hidden entirely, leaving a two-pane view: the **View Matrix** panel on the left and the keymap on the right (zoom and scrolling keep working)
+- The layer panel is replaced by the **View Matrix** panel: the **Done** toggle, **Row** / **Col** selects for the currently selected key(s), and — at the bottom — the **Reset View Matrix** button. Click Reset and confirm (**Reset?**) to delete all custom positions and return to the physical matrix order
+- Click a key to select it — it's highlighted on the keymap, and the **Row** / **Col** selects immediately show its effective position. Both selects offer the same range, `0` up to one less than the larger of the keyboard's matrix row/column counts — view positions are a logical ordering, not a readout of each axis's physical size, so direct-pin keyboards (whose physical matrix collapses to a single row or column) still get a full 2D range on both axes. Changing either select saves instantly; there is no separate Save step. Choosing the value equal to the key's own physical position removes its custom position instead
+- Ctrl-click (or Cmd-click on macOS) adds or removes a key from the selection; Shift-click selects a contiguous range. All selected keys stay highlighted. With 2 or more keys selected, the **Row** / **Col** selects show a blank placeholder — picking a value bulk-applies that row (or column) to every selected key in one step, each key keeping its own value on the other axis. A reminder of these Ctrl-click / Shift-click shortcuts is shown below the keymap, just above the relocated zoom controls
+- If two or more keys resolve to the same effective view position, those keys are flagged with a shared highlight color on the keymap until the collision is resolved. Editing isn't blocked, but the Auto Move order between those keys becomes ambiguous
+- The layer label normally shown below the keymap is hidden while the mode is active — the View Matrix has no layer concept
+- Click **Done** in the **View Matrix** panel to exit the mode (it also exits automatically when switching or disconnecting the keyboard)
+
+![View Matrix — Key Selected](screenshots/view-matrix-selected.png)
+
+- Clicking a key highlights it and populates the **Row** / **Col** selects with its effective position
+
+![View Matrix — Duplicate Positions](screenshots/view-matrix-duplicate.png)
+
+- Here two keys resolve to the same view position (`R 0` / `C 1`), so both are flagged with the shared highlight color
+
+![View Matrix on a Direct-Pin Keyboard](screenshots/view-matrix-direct-pin.png)
+
+- On a direct-pin keyboard the physical matrix is a single row or column (here 1×6), yet both axes still span the larger matrix dimension — the **Row** and **Col** selects each offer `0`–`5`
+
+Only keys you change are stored — every other key keeps its physical matrix position in the ordering. Encoders and decorative keys are not part of the Auto Move order and cannot be edited in this mode. The View Matrix is saved per keyboard and included in cloud sync (§6.1).
+
 ---
 
 ## 3. Keycode Palette
@@ -966,7 +998,8 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 ![Overlay Panel — Settings](screenshots/overlay-tools.png)
 
 - **Key Editor Zoom**: Set the UI zoom level (50–200%) applied while in key editor mode. Defaults to the global UI zoom (§6.5) when not configured. Saved and synced per keyboard
-- **Auto Advance**: Toggle automatic advancement to the next key after assigning a keycode
+- **Auto Move**: Toggle automatic advancement to the next key after assigning a keycode
+- **View Matrix**: Enter or leave View Matrix mode (**Edit** / **Done**) to customize the Auto Move key order (see §2.6)
 - **Instant Key Selection**: Toggle instant key selection mode (see §2.2 for behavior details)
 - **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
 - **Key Tester**: Toggle Matrix Tester mode (supported keyboards only)
@@ -1507,7 +1540,7 @@ Troubleshooting and data management functions are available in the **Data** pane
 The Tools tab in the Settings modal includes a **Defaults** section for setting initial preferences for new keyboard connections:
 
 - **Keyboard Layout**: Default key labels for new keyboards. The dropdown lists every entry currently installed in the **Key Labels** store (see §6.2). QWERTY ships built-in; install more from Pipette Hub or import a `.json` via **Key Labels Manage**. The drop-down preserves the manual order set in the modal — drag a row up or down there and the dropdown follows
-- **Auto Advance**: Default auto-advance behavior
+- **Auto Move**: Default auto-advance behavior
 - **Instant Key Selection**: Default instant key selection behavior (see §2.2)
 - **Layer Panel Open**: Whether the layer panel starts expanded or collapsed
 - **Basic View Type**: Default view type for the Basic tab (ANSI/ISO/JIS/List)
@@ -1933,7 +1966,7 @@ The status bar at the bottom of the screen shows connection information and acti
 
 - **Device name**: Shows the name of the connected keyboard
 - **Loaded label**: The label of the loaded snapshot (shown only when a snapshot is loaded)
-- **Auto Advance**: Status of automatic key advancement after assigning a keycode (shown only when enabled)
+- **Auto Move**: Status of automatic key advancement after assigning a keycode (shown only when enabled)
 - **Locked / Unlocked**: Keyboard lock status (prevents accidental changes to dangerous keycodes)
 - **Sync status**: Cloud sync status (shown only when sync is configured)
 - **Hub connection**: Pipette Hub connection status (shown only when Hub is configured)

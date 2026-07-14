@@ -1,5 +1,5 @@
 {
-  "version": "0.1.9",
+  "version": "0.1.12",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -66,6 +66,15 @@
   },
   "editor": {
     "autoAdvance": "自動移動☆",
+    "viewMatrix": {
+      "label": "ビューマトリクスっしょ☆",
+      "edit": "編集っしょ",
+      "done": "完了っしょ☆",
+      "rowLabel": "行",
+      "colLabel": "列",
+      "blankOption": "—",
+      "reset": "ビューマトリクスをリセットっしょ☆"
+    },
     "keymap": {
       "title": "キーマップっしょ",
       "layer": "レイヤー {{number}}",

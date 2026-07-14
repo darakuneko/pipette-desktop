@@ -16,6 +16,10 @@ import { TapDanceJsonEditor } from './TapDanceJsonEditor'
 import { JsonEditorModal } from './JsonEditorModal'
 import { comboToJson, parseCombo, keyOverrideToJson, parseKeyOverride, altRepeatKeyToJson, parseAltRepeatKey, macroToJson, parseMacro } from './json-entry-serializers'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
+import { useViewMatrixMode } from './useViewMatrixMode'
+import { ViewMatrixPanel } from './ViewMatrixPanel'
+import { applyViewMatrixAxisToSelection, effectiveViewPos } from './view-matrix'
+import { KEY_DUPLICATE_COLOR } from '../keyboard/constants'
 import { ZoomIn, ZoomOut, SlidersHorizontal, Undo2, Redo2 } from 'lucide-react'
 import { ICON_SM, ICON_MD } from '../../constants/ui-tokens'
 import { parseKle } from '../../../shared/kle/kle-parser'
@@ -94,7 +98,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   tapHoldSupported, mouseKeysSupported, magicSupported, graveEscapeSupported,
   autoShiftSupported, oneShotKeysSupported, comboSettingsSupported,
   supportedQsids, qmkSettingsGet, qmkSettingsSet, qmkSettingsReset, onSettingsUpdate,
-  autoAdvance = true, onAutoAdvanceChange,
+  autoAdvance = true, onAutoAdvanceChange, viewMatrix, onViewMatrixChange,
   basicViewType, onBasicViewTypeChange, splitKeyMode, onSplitKeyModeChange,
   quickSelect, onQuickSelectChange, keyboardLayout: _keyboardLayout = 'qwerty', onKeyboardLayoutChange: _onKeyboardLayoutChange,
   onLock, onMatrixModeChange, onOpenLighting,
@@ -200,15 +204,19 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const { config: appCfg } = useAppConfig()
   const history = useKeymapHistory(appCfg.maxKeymapHistory)
 
-  // Clear history on keyboard/context switch or disconnect
+  // --- View Matrix mode ---
+  const viewMatrixMode = useViewMatrixMode()
+
+  // Clear history and exit View Matrix mode on keyboard/context switch or disconnect
   const prevUidRef = useRef(keyboardUid)
   const keymapSize = keymap.size
   useEffect(() => {
     if (keyboardUid !== prevUidRef.current || keymapSize === 0) {
       prevUidRef.current = keyboardUid
       history.clear()
+      viewMatrixMode.exit()
     }
-  }, [keyboardUid, keymapSize, history.clear])
+  }, [keyboardUid, keymapSize, history.clear, viewMatrixMode.exit])
 
   // --- Selection + handlers ---
   const {
@@ -223,7 +231,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     tdModalIndex, macroModalIndex, handleTdModalSave, handleTdModalClose, handleMacroModalClose,
   } = useKeymapSelectionHandlers({
     layout, keymap, encoderLayout, currentLayer,
-    selectableKeys, autoAdvance,
+    selectableKeys, autoAdvance, viewMatrix,
     onSetKey, onSetKeysBulk, onSetEncoder, unlocked, onUnlock,
     multiSelect, history,
     tapDanceEntries, onSetTapDanceEntry,
@@ -232,6 +240,118 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   hasActiveSingleSelectionRef.current = !!(selectedKey || selectedEncoder)
   const { multiSelectedKeys, pickerSelectedIndices, handlePickerMultiSelect } = multiSelect
+
+  // --- View Matrix mode: entry/exit + per-key gating ---
+  // Entering the mode forces the matrix (Key Tester) tool off and clears
+  // any lingering selection so the blank R/C legend view starts clean.
+  const handleToggleViewMatrixMode = useCallback(() => {
+    if (!viewMatrixMode.active) {
+      if (matrixMode) handleMatrixToggle()
+      handleDeselect()
+    }
+    viewMatrixMode.toggle()
+    // Depend on the stable members, not the wrapper object (a fresh
+    // literal every render) — the object identity would churn this
+    // callback per render.
+  }, [viewMatrixMode.active, viewMatrixMode.toggle, matrixMode, handleMatrixToggle, handleDeselect])
+
+  // Clicking a key in the mode selects it for the panel's Row/Col selects
+  // — encoders and decals have no physical row/col to override, so they
+  // stay inert (unaffected) rather than gaining a click handler. Ctrl/Cmd
+  // toggles the key in/out of a multi-selection, Shift extends a
+  // contiguous range (mirrors the normal-mode keymap multi-select's
+  // modifier conventions — see `useKeymapMultiSelect`).
+  const handleViewMatrixKeyClick = useCallback((
+    key: import('../../../shared/kle/types').KleKey,
+    _maskClicked: boolean,
+    event?: { ctrlKey: boolean; shiftKey: boolean },
+  ) => {
+    if (key.decal || key.encoderIdx >= 0) return
+    if (event?.ctrlKey) { viewMatrixMode.toggleKeySelection(key.row, key.col); return }
+    if (event?.shiftKey) { viewMatrixMode.extendSelection(key.row, key.col, selectableKeys); return }
+    viewMatrixMode.selectKey(key.row, key.col)
+    // The hook's setters are useCallback-stable; depending on the wrapper
+    // object would defeat KeyboardWidget's memo on every render while the
+    // mode is active (80+ KeyWidget re-renders).
+  }, [viewMatrixMode.toggleKeySelection, viewMatrixMode.extendSelection, viewMatrixMode.selectKey, selectableKeys])
+
+  // Physical positions of the currently selected keys, parsed from the
+  // hook's "row,col" string set into the shape `applyViewMatrixAxisToSelection`
+  // expects.
+  const viewMatrixSelectedPositions = useMemo(() => [...viewMatrixMode.selectedKeys].map((pos) => {
+    const [row, col] = pos.split(',').map(Number)
+    return { row, col }
+  }), [viewMatrixMode.selectedKeys])
+
+  // Effective position of the single selected key — null with 0 or 2+ keys
+  // selected, where the panel's selects show a blank placeholder instead
+  // since a multi-selection's members may not share the same position.
+  const viewMatrixEffectiveSingle = useMemo(() => {
+    if (viewMatrixSelectedPositions.length !== 1) return null
+    const { row, col } = viewMatrixSelectedPositions[0]
+    return effectiveViewPos(viewMatrix, row, col)
+  }, [viewMatrixSelectedPositions, viewMatrix])
+
+  // Row/Col select handler — a single selected key writes just that key's
+  // override; 2+ selected keys bulk-apply the axis across the whole
+  // selection in one `onViewMatrixChange` write, each key keeping its own
+  // value on the other axis (see `applyViewMatrixAxisToSelection`).
+  const handleViewMatrixAxisChange = useCallback((axis: 'row' | 'col', value: number) => {
+    if (viewMatrixSelectedPositions.length === 0) return
+    onViewMatrixChange?.(applyViewMatrixAxisToSelection(viewMatrix, viewMatrixSelectedPositions, axis, value))
+  }, [viewMatrixSelectedPositions, viewMatrix, onViewMatrixChange])
+
+  // View positions are logical, not physical — they only need to sort keys
+  // into a 2D grid, not mirror the firmware's electrical matrix. Direct-pin
+  // keyboards declare degenerate physical matrices (1×N or N×1, one row/col
+  // per GPIO pin with no real electrical grid), so capping each select to
+  // its own physical dimension would collapse one axis to a single option
+  // and make 2D view ordering impossible. Both selects therefore share the
+  // same option count: the larger of the two physical dimensions.
+  const viewMatrixAxisOptionCount = Math.max(rows ?? 0, cols ?? 0)
+
+  // One pass over the layout builds both mode legend artifacts — they
+  // share the same inputs and always recompute together: the per-key R/C
+  // label override showing each non-decal, non-encoder key's effective
+  // position, and the fill colour map that flags keys whose effective
+  // position collides with another key's (the Auto Move order between
+  // colliding keys is ambiguous until resolved). The collision grouping
+  // happens in this same loop (rather than a second pass over the keys)
+  // so `effectiveViewPos` is computed once per key.
+  const { viewMatrixLabelOverrides, viewMatrixDuplicateKeyColors } = useMemo(() => {
+    if (!viewMatrixMode.active || !layout) {
+      return { viewMatrixLabelOverrides: undefined, viewMatrixDuplicateKeyColors: undefined }
+    }
+    const overrides = new Map<string, { outer: string; inner: string; masked: boolean }>()
+    // Effective position -> physical "row,col" keys resolving to it, used
+    // below to find every key involved in a collision (group size > 1).
+    const groups = new Map<string, string[]>()
+    for (const key of layout.keys) {
+      if (key.decal || key.encoderIdx >= 0) continue
+      const physPos = posKey(key.row, key.col)
+      const effective = effectiveViewPos(viewMatrix, key.row, key.col)
+      overrides.set(physPos, { outer: `R ${effective.row}\nC ${effective.col}`, inner: '', masked: false })
+      const effPos = posKey(effective.row, effective.col)
+      const group = groups.get(effPos)
+      if (group) group.push(physPos)
+      else groups.set(effPos, [physPos])
+    }
+    const duplicateKeyColors = new Map<string, string>()
+    for (const group of groups.values()) {
+      if (group.length <= 1) continue
+      for (const physPos of group) duplicateKeyColors.set(physPos, KEY_DUPLICATE_COLOR)
+    }
+    return {
+      viewMatrixLabelOverrides: overrides,
+      viewMatrixDuplicateKeyColors: duplicateKeyColors.size > 0 ? duplicateKeyColors : undefined,
+    }
+  }, [viewMatrixMode.active, layout, viewMatrix])
+
+  // Keycode palette selection is a no-op while in the mode — nothing is
+  // ever selected (selectedKey/selectedEncoder stay null), so this mostly
+  // guards TD/Macro tile clicks, which otherwise still open their modals.
+  const noopKeycodeSelect = useCallback(() => {}, [])
+  const gatedHandleKeycodeSelect = viewMatrixMode.active ? noopKeycodeSelect : handleKeycodeSelect
 
   // --- Notify parent when device list browsing state changes ---
   useEffect(() => {
@@ -680,7 +800,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const tabContentOverride = useTileContentOverride({
     tapDanceEntries,
     deserializedMacros,
-    onSelect: handleKeycodeSelect,
+    onSelect: gatedHandleKeycodeSelect,
     settings: { comboEntries, onOpenCombo, keyOverrideEntries, onOpenKeyOverride, altRepeatKeyEntries, onOpenAltRepeatKey },
   })
 
@@ -736,6 +856,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     }`
 
   const pickerBrowseMode = (pickerSource === 'device' && deviceBrowsing) || (pickerSource === 'file' && !pickerFileData)
+
+  // Ghost-style zoom button shared by the picker Keyboard tab and the
+  // View Matrix zoom row (kept identical so the two arrangements match).
+  const ghostZoomButtonClass = 'rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none'
 
   const layoutPickerContent = (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -853,7 +977,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         <div className={`flex items-center gap-1 ${pickerBrowseMode ? 'invisible' : ''}`}>
           <Tooltip content={t('editor.keymap.zoomOut')}>
             <button type="button" aria-label={t('editor.keymap.zoomOut')}
-              className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
+              className={ghostZoomButtonClass}
               disabled={pickerEffectiveScale <= MIN_SCALE}
               onClick={() => { if (pickerFileData) setPickerScale(Math.max(MIN_SCALE, +(pickerEffectiveScale - 0.1).toFixed(1))); else onScaleChange?.(-0.1) }}>
               <ZoomOut size={ICON_SM} aria-hidden="true" />
@@ -865,7 +989,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           }} />
           <Tooltip content={t('editor.keymap.zoomIn')}>
             <button type="button" aria-label={t('editor.keymap.zoomIn')}
-              className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
+              className={ghostZoomButtonClass}
               disabled={pickerEffectiveScale >= MAX_SCALE}
               onClick={() => { if (pickerFileData) setPickerScale(Math.min(MAX_SCALE, +(pickerEffectiveScale + 0.1).toFixed(1))); else onScaleChange?.(0.1) }}>
               <ZoomIn size={ICON_SM} aria-hidden="true" />
@@ -891,9 +1015,32 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   const zoomButtonClass = `${toggleButtonClass(false)} disabled:opacity-30 disabled:pointer-events-none`
 
+  // Zoom controls are shared between two placements: the side toolbar in
+  // normal editing, and a row under the keymap pane while View Matrix mode
+  // is active (see the mode's layout below). Same elements/props/testids
+  // either way — only the wrapping layout differs.
+  const zoomControls = !typingTestMode && onScaleChange && (
+    <>
+      <Tooltip content={t('editor.keymap.zoomIn')} side="right">
+        <button type="button" data-testid="zoom-in-button" aria-label={t('editor.keymap.zoomIn')} className={zoomButtonClass} disabled={scaleProp >= MAX_SCALE} onClick={() => onScaleChange(0.1)}>
+          <ZoomIn size={ICON_MD} aria-hidden="true" />
+        </button>
+      </Tooltip>
+      <ScaleInput scale={scaleProp} onScaleChange={onScaleChange} />
+      <Tooltip content={t('editor.keymap.zoomOut')} side="right">
+        <button type="button" data-testid="zoom-out-button" aria-label={t('editor.keymap.zoomOut')} className={zoomButtonClass} disabled={scaleProp <= MIN_SCALE} onClick={() => onScaleChange(-0.1)}>
+          <ZoomOut size={ICON_MD} aria-hidden="true" />
+        </button>
+      </Tooltip>
+    </>
+  )
+
+  // Undo/redo act on keymap edits, which View Matrix mode disables for its
+  // duration — hide them while the mode is active rather than leave dead
+  // disabled buttons in the toolbar.
   const toolbar = (
     <div className="flex shrink-0 flex-col items-center gap-3 self-stretch" style={{ width: PANEL_COLLAPSED_WIDTH }}>
-      {!typingTestMode && (
+      {!typingTestMode && !viewMatrixMode.active && (
         <>
           <Tooltip content={t('editor.keymap.undo')} side="right">
             <button type="button" data-testid="undo-button" aria-label={t('editor.keymap.undo')} className={zoomButtonClass} disabled={!history.canUndo} onClick={() => void handleUndo()}>
@@ -908,21 +1055,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         </>
       )}
       <div className="flex-1" />
-      {!typingTestMode && onScaleChange && (
-        <>
-          <Tooltip content={t('editor.keymap.zoomIn')} side="right">
-            <button type="button" data-testid="zoom-in-button" aria-label={t('editor.keymap.zoomIn')} className={zoomButtonClass} disabled={scaleProp >= MAX_SCALE} onClick={() => onScaleChange(0.1)}>
-              <ZoomIn size={ICON_MD} aria-hidden="true" />
-            </button>
-          </Tooltip>
-          <ScaleInput scale={scaleProp} onScaleChange={onScaleChange} />
-          <Tooltip content={t('editor.keymap.zoomOut')} side="right">
-            <button type="button" data-testid="zoom-out-button" aria-label={t('editor.keymap.zoomOut')} className={zoomButtonClass} disabled={scaleProp <= MIN_SCALE} onClick={() => onScaleChange(-0.1)}>
-              <ZoomOut size={ICON_MD} aria-hidden="true" />
-            </button>
-          </Tooltip>
-        </>
-      )}
+      {!viewMatrixMode.active && zoomControls}
       <div className="flex-1" />
     </div>
   )
@@ -930,14 +1063,46 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   return (
     <div className={`flex min-h-0 flex-1 flex-col ${typingTestMode && typingTestViewOnly ? '' : 'gap-3'}`}>
       <div
-        className={typingTestMode ? (typingTestViewOnly ? 'flex flex-1 items-stretch gap-2' : 'flex min-h-0 flex-1 items-stretch gap-2 overflow-auto') : 'flex items-start gap-2 overflow-auto'}
+        className={typingTestMode
+          ? (typingTestViewOnly ? 'flex flex-1 items-stretch gap-2' : 'flex min-h-0 flex-1 items-stretch gap-2 overflow-auto')
+          // View Matrix mode hides the keycode picker row entirely (see
+          // below), so this row alone must fill the remaining vertical
+          // space it would otherwise have shared with the picker.
+          : viewMatrixMode.active ? 'flex min-h-0 flex-1 items-start gap-2 overflow-auto' : 'flex items-start gap-2 overflow-auto'}
         style={!typingTestMode && keyboardAreaMinHeight ? { minHeight: keyboardAreaMinHeight } : undefined}
         onClick={!typingTestMode ? handleDeselectClick : undefined}
       >
         {/* The toolbar (undo/redo/zoom) is empty in typing-test mode — all its
-            controls are editor-only — so drop the whole 50px column there. */}
-        {!typingTestMode && toolbar}
-        <div className={typingTestMode ? 'flex min-h-0 min-w-0 flex-1 flex-col gap-3' : 'flex min-w-0 flex-1 items-center justify-center gap-4 overflow-auto'}>
+            controls are editor-only — so drop the whole 50px column there.
+            View Matrix mode also drops it: undo/redo are hidden (keymap
+            edits are disabled for the mode's duration) and zoom relocates
+            to a row under the keymap pane (see below), so nothing would be
+            left in the column. */}
+        {!typingTestMode && !viewMatrixMode.active && toolbar}
+        {/* View Matrix mode's left pane — replaces the layer selector slot
+            that normally sits below, since this row is now the only one
+            rendered (the keycode picker row is hidden for the mode's
+            duration). Its Edit toggle (rendered ON) is the sole way back
+            to normal editing now that the overlay panel's own toggle is
+            hidden along with the rest of the picker. */}
+        {!typingTestMode && viewMatrixMode.active && (
+          <ViewMatrixPanel
+            onReset={() => onViewMatrixChange?.(undefined)}
+            onToggle={handleToggleViewMatrixMode}
+            selectionCount={viewMatrixSelectedPositions.length}
+            effectiveRow={viewMatrixEffectiveSingle?.row ?? 0}
+            effectiveCol={viewMatrixEffectiveSingle?.col ?? 0}
+            matrixRows={viewMatrixAxisOptionCount}
+            matrixCols={viewMatrixAxisOptionCount}
+            onAxisChange={handleViewMatrixAxisChange}
+          />
+        )}
+        <div className={typingTestMode
+          ? 'flex min-h-0 min-w-0 flex-1 flex-col gap-3'
+          // View Matrix mode stacks the keymap above its relocated zoom
+          // row (sketch: "keymap" over "zoom controls" in the right
+          // column); normal mode keeps the single-child centered row.
+          : viewMatrixMode.active ? 'flex min-w-0 flex-1 flex-col items-center justify-center gap-2 overflow-auto' : 'flex min-w-0 flex-1 items-center justify-center gap-4 overflow-auto'}>
           {typingTestMode ? (
             <TypingTestPane
               typingTest={typingTest}
@@ -1001,17 +1166,53 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               keyboardUid={keyboardUid}
             />
           ) : (
-            <KeyboardPane
-              paneId="primary" isActive={true}              keys={layout.keys} keycodes={layerKeycodes} encoderKeycodes={layerEncoderKeycodes}
-              selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
-              pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
-              remappedKeys={remappedKeys} multiSelectedKeys={multiSelectedKeys}
-              layoutOptions={effectiveLayoutOptions} scale={scaleProp}
-              layerLabel={layerLabel(currentLayer)} layerLabelTestId="layer-label"
-              onKeyClick={handleKeyClick} onKeyDoubleClick={handleKeyDoubleClick}
-              onEncoderClick={handleEncoderClick} onEncoderDoubleClick={handleEncoderDoubleClick}
-              onDeselect={handleDeselect} contentRef={keyboardContentRef}
-            />
+            <>
+              <KeyboardPane
+                paneId="primary" isActive={true}              keys={layout.keys} keycodes={layerKeycodes} encoderKeycodes={layerEncoderKeycodes}
+                selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
+                pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
+                remappedKeys={remappedKeys} multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
+                layoutOptions={effectiveLayoutOptions} scale={scaleProp}
+                labelOverrides={viewMatrixLabelOverrides} keyColors={viewMatrixDuplicateKeyColors}
+                layerLabel={viewMatrixMode.active ? undefined : layerLabel(currentLayer)} layerLabelTestId="layer-label"
+                onKeyClick={viewMatrixMode.active ? handleViewMatrixKeyClick : handleKeyClick}
+                onKeyDoubleClick={viewMatrixMode.active ? undefined : handleKeyDoubleClick}
+                onEncoderClick={viewMatrixMode.active ? undefined : handleEncoderClick}
+                onEncoderDoubleClick={viewMatrixMode.active ? undefined : handleEncoderDoubleClick}
+                onDeselect={viewMatrixMode.active ? viewMatrixMode.clearSelection : handleDeselect} contentRef={keyboardContentRef}
+              />
+              {/* View Matrix mode's relocated zoom row — same controls as
+                  the normal-mode toolbar, moved below the keymap pane —
+                  plus the same Ctrl/Shift multi-select hint the keycode
+                  picker shows in normal mode (reused key: the picker is
+                  hidden entirely for the mode's duration, but the
+                  Ctrl+click / Shift+click gestures it describes still
+                  drive this mode's own multi-selection). */}
+              {viewMatrixMode.active && (
+                <div className="flex flex-col items-center gap-1">
+                  <p className="text-xs text-content-muted">{t('editor.keymap.pickerHint')}</p>
+                  {/* Same arrangement as the picker Keyboard tab's zoom
+                      row: ZoomOut, scale, ZoomIn in ghost styling. */}
+                  {onScaleChange && (
+                    <div className="flex items-center gap-1">
+                      <Tooltip content={t('editor.keymap.zoomOut')}>
+                        <button type="button" data-testid="zoom-out-button" aria-label={t('editor.keymap.zoomOut')}
+                          className={ghostZoomButtonClass} disabled={scaleProp <= MIN_SCALE} onClick={() => onScaleChange(-0.1)}>
+                          <ZoomOut size={ICON_SM} aria-hidden="true" />
+                        </button>
+                      </Tooltip>
+                      <ScaleInput scale={scaleProp} onScaleChange={onScaleChange} />
+                      <Tooltip content={t('editor.keymap.zoomIn')}>
+                        <button type="button" data-testid="zoom-in-button" aria-label={t('editor.keymap.zoomIn')}
+                          className={ghostZoomButtonClass} disabled={scaleProp >= MAX_SCALE} onClick={() => onScaleChange(0.1)}>
+                          <ZoomIn size={ICON_SM} aria-hidden="true" />
+                        </button>
+                      </Tooltip>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
         {!typingTestMode && <div style={{ width: PANEL_COLLAPSED_WIDTH }} className="shrink-0" />}
@@ -1030,7 +1231,12 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         />
       )}
 
-      {!typingTestMode && (
+      {/* The entire keycode picker area — tabs, tiles, and the overlay panel
+          (incl. its own View Matrix Edit/Done button) — is hidden while
+          View Matrix mode is active; ViewMatrixPanel above is the mode's
+          only surface, and its own toggle is the sole way back to normal
+          editing. */}
+      {!typingTestMode && !viewMatrixMode.active && (
         <div className="flex min-h-0 flex-1 gap-2">
           {onLayerChange && layers > 1 && (
             <LayerListPanel layers={layers} currentLayer={currentLayer} onLayerChange={onLayerChange}
@@ -1038,7 +1244,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           )}
           <TabbedKeycodes
             keyboardPickerContent={layoutPickerContent}
-            onKeycodeSelect={handleKeycodeSelect} onKeycodeMultiSelect={handlePickerMultiSelect}
+            onKeycodeSelect={gatedHandleKeycodeSelect} onKeycodeMultiSelect={handlePickerMultiSelect}
             pickerSelectedIndices={pickerSelectedIndices}
             pickerMultiSelectEnabled={!selectedKey && !selectedEncoder}
             onBackgroundClick={handleDeselect}
@@ -1065,9 +1271,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                 <KeycodesOverlayPanel
                   hasLayoutOptions={hasLayoutOptions} layoutOptions={parsedOptions} layoutValues={layoutValues}
                   onLayoutOptionChange={handleLayoutOptionChange} autoAdvance={autoAdvance} onAutoAdvanceChange={onAutoAdvanceChange}
+                  viewMatrixActive={viewMatrixMode.active} onToggleViewMatrixMode={handleToggleViewMatrixMode}
                   splitKeyMode={splitKeyMode} onSplitKeyModeChange={onSplitKeyModeChange}
                   quickSelect={quickSelect} onQuickSelectChange={onQuickSelectChange}
-                  matrixMode={matrixMode} hasMatrixTester={hasMatrixTester} onToggleMatrix={handleMatrixToggle}
+                  matrixMode={matrixMode} hasMatrixTester={hasMatrixTester} onToggleMatrix={viewMatrixMode.active ? undefined : handleMatrixToggle}
                   unlocked={unlocked ?? false} onLock={onLock} isDummy={isDummy}
                   toolsExtra={toolsExtra} dataPanel={dataPanel}
                   keyEditorZoom={keyEditorZoom} onKeyEditorZoomChange={onKeyEditorZoomChange}
@@ -1170,6 +1377,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           qmkSettingsSet={qmkSettingsSet} qmkSettingsReset={qmkSettingsReset}
           onSettingsUpdate={onSettingsUpdate} visibleModals={visibleModals} onCloseModal={closeSettings} />
       )}
+
     </div>
   )
 })

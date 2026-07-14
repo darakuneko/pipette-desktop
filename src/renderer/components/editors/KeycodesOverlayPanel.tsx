@@ -28,6 +28,9 @@ interface Props {
   // Tools
   autoAdvance: boolean
   onAutoAdvanceChange?: (enabled: boolean) => void
+  // View Matrix mode toggle (Edit / Done)
+  viewMatrixActive?: boolean
+  onToggleViewMatrixMode?: () => void
   splitKeyMode?: SplitKeyMode
   onSplitKeyModeChange?: (mode: SplitKeyMode) => void
   quickSelect?: boolean
@@ -56,6 +59,8 @@ export function KeycodesOverlayPanel({
   onLayoutOptionChange,
   autoAdvance,
   onAutoAdvanceChange,
+  viewMatrixActive,
+  onToggleViewMatrixMode,
   splitKeyMode,
   onSplitKeyModeChange,
   quickSelect,
@@ -231,6 +236,24 @@ export function KeycodesOverlayPanel({
                 <span className={toggleKnobClass(autoAdvance)} />
               </button>
             </div>
+
+            {/* View Matrix mode toggle */}
+            {onToggleViewMatrixMode && (
+              <div className={ROW_CLASS} data-testid="overlay-view-matrix-row">
+                <span className="text-sm font-medium text-content">
+                  {t('editor.viewMatrix.label')}
+                </span>
+                <button
+                  type="button"
+                  aria-pressed={!!viewMatrixActive}
+                  className="rounded border border-edge px-3 py-1.5 text-sm text-content-secondary hover:bg-surface-dim"
+                  onClick={onToggleViewMatrixMode}
+                  data-testid="overlay-view-matrix-edit-button"
+                >
+                  {viewMatrixActive ? t('editor.viewMatrix.done') : t('editor.viewMatrix.edit')}
+                </button>
+              </div>
+            )}
 
             {/* Split key toggle */}
             {splitKeyMode != null && onSplitKeyModeChange && (

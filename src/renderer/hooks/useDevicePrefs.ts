@@ -5,7 +5,7 @@ import type { KeyboardLayoutId } from '../data/keyboard-layouts'
 import { useKeyLabelLookup } from './useKeyLabelLookup'
 import { useAppConfig } from './useAppConfig'
 import { MIN_SCALE, MAX_SCALE } from '../components/editors/keymap-editor-types'
-import type { TypingTestResult, TypingViewMenuTab, ViewMode, TypingTestMemory, TypingTestMemoryWord, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../shared/types/pipette-settings'
+import type { TypingTestResult, TypingViewMenuTab, ViewMode, TypingTestMemory, TypingTestMemoryWord, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
 import { VIEW_MODES, isTypingViewMenuTab, isTypingTestComparisonBaselines } from '../../shared/types/pipette-settings'
 import { trimResults } from '../typing-test/result-builder'
 import type { TypingTestConfig, RomajiDetailSettings, RomajiCaseStyle } from '../typing-test/types'
@@ -204,10 +204,11 @@ interface ValidatedPrefs {
   typingViewMenuTab: TypingViewMenuTab
   viewMode: ViewMode
   keyEditorZoom?: number
+  viewMatrix?: Record<string, ViewMatrixCell>
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestMonkeytypeConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestMonkeytypeConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown; viewMatrix?: Record<string, ViewMatrixCell> } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
@@ -294,6 +295,10 @@ function validateIpcPrefs(
     typingViewMenuTab: isTypingViewMenuTab(data.typingViewMenuTab) ? data.typingViewMenuTab : 'window',
     viewMode,
     keyEditorZoom: typeof data.keyEditorZoom === 'number' ? clampZoomFactor(data.keyEditorZoom) : undefined,
+    // Trusted as-is: the main process (pipette-settings-store's
+    // isValidViewMatrix) is the single validator for this shape, same as
+    // the other store-validated per-keyboard fields.
+    viewMatrix: data.viewMatrix,
   }
 }
 
@@ -333,6 +338,7 @@ export interface UseDevicePrefsReturn {
   typingRecordEnabled: boolean
   typingViewMenuTab: TypingViewMenuTab
   viewMode: ViewMode
+  viewMatrix: Record<string, ViewMatrixCell> | undefined
   appliedUid: string | null
   setLayout: (id: KeyboardLayoutId) => void
   setAutoAdvance: (enabled: boolean) => void
@@ -362,6 +368,7 @@ export interface UseDevicePrefsReturn {
   setTypingRecordEnabled: (enabled: boolean) => void
   setTypingViewMenuTab: (tab: TypingViewMenuTab) => void
   setViewMode: (mode: ViewMode) => void
+  setViewMatrix: (next: Record<string, ViewMatrixCell> | undefined) => void
   defaultLayout: KeyboardLayoutId
   defaultAutoAdvance: boolean
   defaultLayerPanelOpen: boolean
@@ -439,6 +446,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   const [typingViewMenuTab, updateTypingViewMenuTab, typingViewMenuTabRef] = useStateRef<TypingViewMenuTab>('window')
   const [viewMode, updateViewMode, viewModeRef] = useStateRef<ViewMode>('editor')
   const [keyEditorZoom, updateKeyEditorZoom, keyEditorZoomRef] = useStateRef<number | undefined>(undefined)
+  const [viewMatrix, updateViewMatrix, viewMatrixRef] = useStateRef<Record<string, ViewMatrixCell> | undefined>(undefined)
   const [appliedUid, setAppliedUid] = useState<string | null>(null)
 
   const uidRef = useRef('')
@@ -480,6 +488,10 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingRecordEnabled: typingRecordEnabledRef.current,
       typingViewMenuTab: typingViewMenuTabRef.current,
       viewMode: viewModeRef.current,
+      // `null` clears the persisted overrides when the ref holds `undefined`
+      // (reset), mirroring `typingTestMemory` above — a bare `undefined`
+      // would leave a stale map on disk instead of clearing it.
+      viewMatrix: viewMatrixRef.current ?? null,
     }).catch(() => {
       // IPC failure — best-effort save
     })
@@ -666,6 +678,12 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateViewMode])
 
+  /** `undefined` resets to physical matrix order — clears every override. */
+  const setViewMatrix = useCallback((next: Record<string, ViewMatrixCell> | undefined) => {
+    updateViewMatrix(next)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateViewMatrix])
+
   const setKeyEditorZoom = useCallback((zoom: number) => {
     const clamped = clampZoomFactor(zoom)
     if (keyEditorZoomRef.current === clamped) return
@@ -768,6 +786,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateTypingViewMenuTab(resolved.typingViewMenuTab)
     updateViewMode(resolved.viewMode)
     updateKeyEditorZoom(resolved.keyEditorZoom)
+    updateViewMatrix(resolved.viewMatrix)
     setAppliedUid(uid)
 
     if (!prefs) {
@@ -833,6 +852,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     typingViewMenuTab,
     viewMode,
     keyEditorZoom,
+    viewMatrix,
     appliedUid,
     setLayout,
     setAutoAdvance,
@@ -862,6 +882,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setTypingRecordEnabled,
     setTypingViewMenuTab,
     setViewMode,
+    setViewMatrix,
     setKeyEditorZoom,
     defaultLayout,
     defaultAutoAdvance,

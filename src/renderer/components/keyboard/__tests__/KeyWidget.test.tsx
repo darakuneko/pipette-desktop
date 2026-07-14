@@ -13,6 +13,7 @@ import {
   KEY_BORDER_COLOR,
   KEY_MASK_RECT_COLOR,
   KEY_TEXT_COLOR,
+  KEY_DUPLICATE_COLOR,
 } from '../constants'
 import type { KleKey } from '../../../../shared/kle/types'
 
@@ -135,6 +136,26 @@ describe('KeyWidget', () => {
     const { container } = render(
       <svg>
         <KeyWidget kleKey={makeKey()} keycode="KC_A" everPressed />
+      </svg>,
+    )
+    const rect = container.querySelector('rect')!
+    expect(rect.getAttribute('fill')).toBe(KEY_EVER_PRESSED_COLOR)
+  })
+
+  it('renders customFill (e.g. the View Matrix duplicate-position fill) when no higher-priority state is active', () => {
+    const { container } = render(
+      <svg>
+        <KeyWidget kleKey={makeKey()} keycode="KC_A" customFill={KEY_DUPLICATE_COLOR} />
+      </svg>,
+    )
+    const rect = container.querySelector('rect')!
+    expect(rect.getAttribute('fill')).toBe(KEY_DUPLICATE_COLOR)
+  })
+
+  it('renders everPressed color over customFill (everPressed takes priority)', () => {
+    const { container } = render(
+      <svg>
+        <KeyWidget kleKey={makeKey()} keycode="KC_A" everPressed customFill={KEY_DUPLICATE_COLOR} />
       </svg>,
     )
     const rect = container.querySelector('rect')!

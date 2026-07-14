@@ -853,6 +853,8 @@ export function App() {
             tappingTermMs={resolveTappingTermMs(keyboard.qmkSettingsValues)}
             autoAdvance={devicePrefs.autoAdvance}
             onAutoAdvanceChange={devicePrefs.setAutoAdvance}
+            viewMatrix={devicePrefs.viewMatrix}
+            onViewMatrixChange={devicePrefs.setViewMatrix}
             basicViewType={devicePrefs.basicViewType}
             onBasicViewTypeChange={devicePrefs.setBasicViewType}
             splitKeyMode={devicePrefs.splitKeyMode}

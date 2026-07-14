@@ -26,12 +26,23 @@ export interface KeyboardPaneProps {
   remappedKeys: Set<string>
   multiSelectedKeys?: Set<string>
   layoutOptions: Map<number, number>
+  /** Optional per-key label override keyed by `"row,col"` — used by View
+   *  Matrix mode to blank out keycode legends and show each key's
+   *  effective (row, col) instead. See `KeyboardWidget`'s `labelOverrides`. */
+  labelOverrides?: Map<string, { outer: string; inner: string; masked: boolean }>
+  /** Optional per-key background fill keyed by `"row,col"`. See
+   *  `KeyboardWidget`'s `keyColors` — used by View Matrix mode to flag
+   *  keys whose effective position collides with another key's. */
+  keyColors?: Map<string, string>
   heatmapCells?: Map<string, TypingHeatmapCell> | null
   heatmapMaxTotal?: number
   heatmapMaxTap?: number
   heatmapMaxHold?: number
   scale: number
-  layerLabel: string
+  /** Current-layer label shown below the keymap. Omitted in View Matrix
+   *  mode, which has no layer concept (layer switching is disabled for
+   *  the mode's duration). */
+  layerLabel?: string
   layerLabelTestId: string
   onKeyClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onKeyDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
@@ -58,6 +69,8 @@ export function KeyboardPane({
   remappedKeys,
   multiSelectedKeys,
   layoutOptions,
+  labelOverrides,
+  keyColors,
   heatmapCells,
   heatmapMaxTotal,
   heatmapMaxTap,
@@ -97,6 +110,8 @@ export function KeyboardPane({
           remappedKeys={remappedKeys}
           multiSelectedKeys={multiSelectedKeys}
           layoutOptions={layoutOptions}
+          labelOverrides={labelOverrides}
+          keyColors={keyColors}
           heatmapCells={heatmapCells}
           heatmapMaxTotal={heatmapMaxTotal}
           heatmapMaxTap={heatmapMaxTap}
@@ -111,9 +126,11 @@ export function KeyboardPane({
         />
       </div>
       <div className="flex items-center justify-between px-keyboard-px text-xs leading-none text-content-muted">
-        <span data-testid={layerLabelTestId} className="text-content-muted">
-          {layerLabel}
-        </span>
+        {layerLabel !== undefined && (
+          <span data-testid={layerLabelTestId} className="text-content-muted">
+            {layerLabel}
+          </span>
+        )}
         <span className="flex items-center gap-1.5">
           {isActive && selectedKeycode && (
             <>

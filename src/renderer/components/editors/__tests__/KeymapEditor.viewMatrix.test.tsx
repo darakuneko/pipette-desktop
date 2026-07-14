@@ -1,0 +1,422 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// @vitest-environment jsdom
+
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import type { ReactNode } from 'react'
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: Record<string, unknown>) => {
+      const map: Record<string, string> = {
+        'common.loading': 'Loading...',
+        'common.save': 'Save',
+        'common.cancel': 'Cancel',
+        'common.confirmReset': 'Reset?',
+        'editor.keymap.selectKey': 'Click a key to edit',
+        'editor.viewMatrix.label': 'View Matrix',
+        'editor.viewMatrix.edit': 'Edit',
+        'editor.viewMatrix.done': 'Done',
+        'editor.viewMatrix.reset': 'Reset View Matrix',
+        'editor.viewMatrix.rowLabel': 'Row',
+        'editor.viewMatrix.colLabel': 'Col',
+        'editor.viewMatrix.blankOption': '—',
+        'editor.keymap.pickerHint': 'Ctrl+click: multi-select / Shift+click: range select → click a key to paste',
+      }
+      if (key === 'editor.keymap.layer' && opts) return `Layer ${opts.number ?? ''}`
+      if (key === 'editor.keymap.layerN' && opts) return `Layer ${opts.n ?? ''}`
+      return map[key] ?? key
+    },
+  }),
+}))
+
+vi.mock('../../../hooks/useAppConfig', () => ({
+  useAppConfig: () => ({ config: { maxKeymapHistory: 100 }, loading: false, set: () => {} }),
+}))
+
+type CapturedKey = { row: number; col: number; decal?: boolean; encoderIdx?: number }
+type CapturedEvent = { ctrlKey: boolean; shiftKey: boolean }
+
+let capturedOnKeyClick: ((key: CapturedKey, maskClicked?: boolean, event?: CapturedEvent) => void) | undefined
+let capturedMultiSelectedKeys: Set<string> | undefined
+let capturedKeyColors: Map<string, string> | undefined
+
+vi.mock('../../keyboard/KeyboardWidget', () => ({
+  KeyboardWidget: (props: {
+    onKeyClick?: (key: CapturedKey, maskClicked?: boolean, event?: CapturedEvent) => void
+    multiSelectedKeys?: Set<string>
+    keyColors?: Map<string, string>
+  }) => {
+    capturedOnKeyClick = props.onKeyClick
+    capturedMultiSelectedKeys = props.multiSelectedKeys
+    capturedKeyColors = props.keyColors
+    return <div data-testid="keyboard-widget">KeyboardWidget</div>
+  },
+}))
+
+// Renders the real overlay (panelOverlay) so the View Matrix Edit/Done
+// button and Reset panel can be interacted with, unlike the lighter
+// TabbedKeycodes stub used by the autoAdvance test suite.
+vi.mock('../../keycodes/TabbedKeycodes', () => ({
+  TabbedKeycodes: (props: { panelOverlay?: ReactNode; onKeycodeSelect?: (kc: { qmkId: string }) => void }) => (
+    <div data-testid="tabbed-keycodes">
+      <button data-testid="kc-a" onClick={() => props.onKeycodeSelect?.({ qmkId: 'KC_A' })}>A</button>
+      {props.panelOverlay}
+    </div>
+  ),
+}))
+
+vi.mock('../../keycodes/KeyPopover', () => ({
+  KeyPopover: () => <div data-testid="key-popover" />,
+}))
+
+vi.mock('../../../../shared/keycodes/keycodes', () => ({
+  serialize: (code: number) => `KC_${code}`,
+  deserialize: (val: string) => (val === 'KC_A' ? 4 : 0),
+  isMask: () => false,
+  isLMKeycode: () => false,
+  resolve: () => 0,
+  isTapDanceKeycode: () => false,
+  getTapDanceIndex: () => -1,
+  isMacroKeycode: () => false,
+  getMacroIndex: () => -1,
+  keycodeLabel: (qmkId: string) => qmkId,
+  keycodeTooltip: (qmkId: string) => qmkId,
+  isResetKeycode: () => false,
+  isModifiableKeycode: () => false,
+  extractModMask: () => 0,
+  extractBasicKey: (code: number) => code & 0xff,
+  buildModMaskKeycode: (mask: number, key: number) => (mask << 8) | key,
+  findKeycode: (qmkId: string) => ({ qmkId, label: qmkId }),
+}))
+
+vi.mock('../../keycodes/ModifierCheckboxStrip', () => ({
+  ModifierCheckboxStrip: () => null,
+}))
+
+vi.mock('../../../../preload/macro', () => ({
+  deserializeAllMacros: () => [],
+}))
+
+vi.mock('../TapDanceModal', () => ({ TapDanceModal: () => null }))
+vi.mock('../MacroModal', () => ({ MacroModal: () => null }))
+
+import { KeymapEditor } from '../KeymapEditor'
+import { KEY_DUPLICATE_COLOR } from '../../keyboard/constants'
+
+const makeLayout = () => ({
+  keys: [
+    { x: 0, y: 0, w: 1, h: 1, row: 0, col: 0, encoderIdx: -1, decal: false, labels: [] },
+    { x: 1, y: 0, w: 1, h: 1, row: 0, col: 1, encoderIdx: -1, decal: false, labels: [] },
+    { x: 2, y: 0, w: 1, h: 1, row: 0, col: 2, encoderIdx: -1, decal: false, labels: [] },
+  ],
+})
+
+describe('KeymapEditor — View Matrix mode', () => {
+  const onSetKey = vi.fn().mockResolvedValue(undefined)
+  const onSetEncoder = vi.fn().mockResolvedValue(undefined)
+  const onLayerChange = vi.fn()
+  const onViewMatrixChange = vi.fn()
+
+  const defaultProps = {
+    layout: makeLayout(),
+    layers: 2,
+    currentLayer: 0,
+    onLayerChange,
+    keymap: new Map([
+      ['0,0,0', 4],
+      ['0,0,1', 5],
+      ['0,0,2', 6],
+    ]),
+    encoderLayout: new Map<string, number>(),
+    encoderCount: 0,
+    layoutOptions: new Map<number, number>(),
+    onSetKey,
+    onSetKeysBulk: vi.fn().mockResolvedValue(undefined),
+    onSetEncoder,
+    onViewMatrixChange,
+    // Matrix dimensions independent of the 3-key layout above, so the
+    // select-option-range test can tell them apart from key count.
+    rows: 3,
+    cols: 5,
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    capturedOnKeyClick = undefined
+    capturedMultiSelectedKeys = undefined
+    capturedKeyColors = undefined
+  })
+
+  function enterMode() {
+    render(<KeymapEditor {...defaultProps} />)
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+  }
+
+  it('starts with normal editing: layer list and keycode picker shown, Edit button present', () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    expect(screen.getByTestId('layer-list-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('tabbed-keycodes')).toBeInTheDocument()
+    expect(screen.queryByTestId('view-matrix-reset-panel')).not.toBeInTheDocument()
+    expect(screen.getByTestId('overlay-view-matrix-edit-button')).toHaveTextContent('Edit')
+  })
+
+  it('entering the mode hides the layer selector and the entire keycode picker, and shows the panel', () => {
+    enterMode()
+
+    // The picker (tabs, tiles, overlay panel incl. its own Edit/Done button)
+    // is unmounted entirely — nothing of it should remain in the DOM.
+    expect(screen.queryByTestId('tabbed-keycodes')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('overlay-view-matrix-edit-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('layer-list-panel')).not.toBeInTheDocument()
+
+    // The left pane shows the ON-state toggle + the keyboard is still shown.
+    expect(screen.getByTestId('view-matrix-reset-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('view-matrix-mode-toggle')).toHaveTextContent('Done')
+    expect(screen.getByTestId('keyboard-widget')).toBeInTheDocument()
+  })
+
+  it('shows the current-layer label in normal mode and hides it while the mode is active — the mode has no layer concept', () => {
+    render(<KeymapEditor {...defaultProps} />)
+    expect(screen.getByTestId('layer-label')).toHaveTextContent('Layer 0')
+
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+    expect(screen.queryByTestId('layer-label')).not.toBeInTheDocument()
+  })
+
+  it('clicking the mode toggle in the left pane exits back to normal mode and the picker returns', () => {
+    enterMode()
+    expect(screen.getByTestId('view-matrix-reset-panel')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('view-matrix-mode-toggle'))
+
+    expect(screen.queryByTestId('view-matrix-reset-panel')).not.toBeInTheDocument()
+    expect(screen.getByTestId('tabbed-keycodes')).toBeInTheDocument()
+    expect(screen.getByTestId('layer-list-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('overlay-view-matrix-edit-button')).toHaveTextContent('Edit')
+  })
+
+  it('relocates the zoom controls under the keymap pane and keeps them functional while the mode is active', () => {
+    const onScaleChange = vi.fn()
+    render(<KeymapEditor {...defaultProps} scale={1} onScaleChange={onScaleChange} />)
+
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+
+    const zoomInButton = screen.getByTestId('zoom-in-button')
+    expect(zoomInButton).toBeInTheDocument()
+    fireEvent.click(zoomInButton)
+    expect(onScaleChange).toHaveBeenCalledWith(0.1)
+
+    // Relocated below the keymap pane, not in the side toolbar: the zoom
+    // controls now follow the keyboard widget in document order.
+    const keyboardWidget = screen.getByTestId('keyboard-widget')
+    const followsKeyboard = Boolean(keyboardWidget.compareDocumentPosition(zoomInButton) & Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(followsKeyboard).toBe(true)
+  })
+
+  it('shows the reused Ctrl/Shift multi-select hint under the keymap while the mode is active', () => {
+    enterMode()
+
+    expect(screen.getByText('Ctrl+click: multi-select / Shift+click: range select → click a key to paste')).toBeInTheDocument()
+  })
+
+  it('hides undo/redo while the mode is active and restores them on exit', () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    expect(screen.getByTestId('undo-button')).toBeInTheDocument()
+    expect(screen.getByTestId('redo-button')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+
+    expect(screen.queryByTestId('undo-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('redo-button')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('view-matrix-mode-toggle'))
+
+    expect(screen.getByTestId('undo-button')).toBeInTheDocument()
+    expect(screen.getByTestId('redo-button')).toBeInTheDocument()
+  })
+
+  it('selects are disabled with a blank value when no key is selected', () => {
+    enterMode()
+
+    expect(screen.getByTestId('view-matrix-row-select')).toBeDisabled()
+    expect(screen.getByTestId('view-matrix-col-select')).toBeDisabled()
+    expect(screen.getByTestId('view-matrix-row-select')).toHaveValue('')
+    expect(screen.getByTestId('view-matrix-col-select')).toHaveValue('')
+  })
+
+  it('the Row/Col select options both span the larger of the definition matrix dimensions (view positions are logical, not physical)', () => {
+    enterMode()
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0, decal: false, encoderIdx: -1 }))
+
+    const rowOptions = screen.getByTestId('view-matrix-row-select').querySelectorAll('option')
+    const colOptions = screen.getByTestId('view-matrix-col-select').querySelectorAll('option')
+    // rows=3, cols=5 in defaultProps — both selects offer max(3, 5) = 5
+    // options, independent of the 3-key layout.
+    expect(Array.from(rowOptions).map((o) => o.textContent)).toEqual(['0', '1', '2', '3', '4'])
+    expect(Array.from(colOptions).map((o) => o.textContent)).toEqual(['0', '1', '2', '3', '4'])
+  })
+
+  it('direct-pin keyboards with a degenerate physical matrix (rows=1) still get a full 2D option range on both axes', () => {
+    render(<KeymapEditor {...defaultProps} rows={1} cols={6} />)
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0, decal: false, encoderIdx: -1 }))
+
+    const rowOptions = screen.getByTestId('view-matrix-row-select').querySelectorAll('option')
+    const colOptions = screen.getByTestId('view-matrix-col-select').querySelectorAll('option')
+    // rows=1, cols=6 — without the fix the Row select would collapse to a
+    // single '0' option, making 2D view ordering impossible.
+    expect(Array.from(rowOptions).map((o) => o.textContent)).toEqual(['0', '1', '2', '3', '4', '5'])
+    expect(Array.from(colOptions).map((o) => o.textContent)).toEqual(['0', '1', '2', '3', '4', '5'])
+  })
+
+  it('key click in the mode selects it — the key gets the selected highlight and selects show its effective position', () => {
+    enterMode()
+
+    act(() => capturedOnKeyClick?.({ row: 0, col: 1, decal: false, encoderIdx: -1 }))
+
+    expect(capturedMultiSelectedKeys).toEqual(new Set(['0,1']))
+    expect(screen.getByTestId('view-matrix-row-select')).not.toBeDisabled()
+    expect(screen.getByTestId('view-matrix-row-select')).toHaveValue('0')
+    expect(screen.getByTestId('view-matrix-col-select')).toHaveValue('1')
+  })
+
+  it('changing the Row select saves immediately through the sparse-override semantics', () => {
+    enterMode()
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0, decal: false, encoderIdx: -1 }))
+
+    fireEvent.change(screen.getByTestId('view-matrix-row-select'), { target: { value: '2' } })
+
+    expect(onViewMatrixChange).toHaveBeenCalledWith({ '0,0': { row: 2, col: 0 } })
+  })
+
+  it('reflects the override value, not the physical position, when a key with a saved override is selected', () => {
+    render(<KeymapEditor {...defaultProps} viewMatrix={{ '0,0': { row: 2, col: 4 } }} />)
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0, decal: false, encoderIdx: -1 }))
+
+    expect(screen.getByTestId('view-matrix-row-select')).toHaveValue('2')
+    expect(screen.getByTestId('view-matrix-col-select')).toHaveValue('4')
+  })
+
+  it('picking the value equal to the physical position removes the override (no Save button)', () => {
+    // Col already matches the key's physical col — only Row carries an
+    // override, so setting Row back to its physical value drops it.
+    render(<KeymapEditor {...defaultProps} viewMatrix={{ '0,0': { row: 2, col: 0 } }} />)
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0, decal: false, encoderIdx: -1 }))
+
+    fireEvent.change(screen.getByTestId('view-matrix-row-select'), { target: { value: '0' } })
+
+    expect(onViewMatrixChange).toHaveBeenCalledWith(undefined)
+  })
+
+  it('reset requires a 2-step confirm before calling onViewMatrixChange(undefined)', () => {
+    enterMode()
+
+    fireEvent.click(screen.getByTestId('view-matrix-reset-button'))
+    expect(onViewMatrixChange).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByTestId('view-matrix-reset-confirm-button'))
+    expect(onViewMatrixChange).toHaveBeenCalledWith(undefined)
+  })
+
+  it('exiting the mode restores the layer selector and normal key click selection', () => {
+    enterMode()
+    // The overlay's own toggle is hidden along with the rest of the picker
+    // once the mode is active — exit through the left pane's toggle instead.
+    fireEvent.click(screen.getByTestId('view-matrix-mode-toggle'))
+
+    expect(screen.getByTestId('overlay-view-matrix-edit-button')).toHaveTextContent('Edit')
+    expect(screen.getByTestId('layer-list-panel')).toBeInTheDocument()
+    expect(screen.queryByTestId('view-matrix-reset-panel')).not.toBeInTheDocument()
+
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0, decal: false, encoderIdx: -1 }))
+    expect(screen.getByText('[0,0]')).toBeInTheDocument()
+  })
+
+  it('does not select a decal or encoder position', () => {
+    enterMode()
+
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0, decal: true, encoderIdx: -1 }))
+    expect(capturedMultiSelectedKeys).toEqual(new Set())
+
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0, decal: false, encoderIdx: 0 }))
+    expect(capturedMultiSelectedKeys).toEqual(new Set())
+  })
+
+  it('Ctrl-click adds a second key to the selection and both selects go blank', () => {
+    enterMode()
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0, decal: false, encoderIdx: -1 }))
+    act(() => capturedOnKeyClick?.({ row: 0, col: 1, decal: false, encoderIdx: -1 }, false, { ctrlKey: true, shiftKey: false }))
+
+    expect(capturedMultiSelectedKeys).toEqual(new Set(['0,0', '0,1']))
+    expect(screen.getByTestId('view-matrix-row-select')).toHaveValue('')
+    expect(screen.getByTestId('view-matrix-col-select')).toHaveValue('')
+    // Blank while multi-selected, but still interactive (not disabled).
+    expect(screen.getByTestId('view-matrix-row-select')).not.toBeDisabled()
+  })
+
+  it('Shift-click extends a contiguous range across the visible key order', () => {
+    enterMode()
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0, decal: false, encoderIdx: -1 }))
+    act(() => capturedOnKeyClick?.({ row: 0, col: 2, decal: false, encoderIdx: -1 }, false, { ctrlKey: false, shiftKey: true }))
+
+    expect(capturedMultiSelectedKeys).toEqual(new Set(['0,0', '0,1', '0,2']))
+  })
+
+  it('choosing a Row value bulk-applies it to every selected key in one save, each keeping its own col', () => {
+    enterMode()
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0, decal: false, encoderIdx: -1 }))
+    act(() => capturedOnKeyClick?.({ row: 0, col: 1, decal: false, encoderIdx: -1 }, false, { ctrlKey: true, shiftKey: false }))
+
+    fireEvent.change(screen.getByTestId('view-matrix-row-select'), { target: { value: '2' } })
+
+    expect(onViewMatrixChange).toHaveBeenCalledTimes(1)
+    expect(onViewMatrixChange).toHaveBeenCalledWith({
+      '0,0': { row: 2, col: 0 },
+      '0,1': { row: 2, col: 1 },
+    })
+  })
+
+  it('choosing a Col value bulk-applies it to every selected key, each keeping its own row', () => {
+    enterMode()
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0, decal: false, encoderIdx: -1 }))
+    act(() => capturedOnKeyClick?.({ row: 0, col: 1, decal: false, encoderIdx: -1 }, false, { ctrlKey: true, shiftKey: false }))
+
+    fireEvent.change(screen.getByTestId('view-matrix-col-select'), { target: { value: '4' } })
+
+    expect(onViewMatrixChange).toHaveBeenCalledWith({
+      '0,0': { row: 0, col: 4 },
+      '0,1': { row: 0, col: 4 },
+    })
+  })
+
+  it('does not pass a key fill when no keys collide', () => {
+    enterMode()
+
+    expect(capturedKeyColors).toBeUndefined()
+  })
+
+  it('flags both colliding physical keys with the duplicate fill, leaving the rest untouched', () => {
+    // (0,1)'s override collides with (0,0)'s physical position; (0,2) is
+    // unaffected.
+    render(<KeymapEditor {...defaultProps} viewMatrix={{ '0,1': { row: 0, col: 0 } }} />)
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+
+    expect(capturedKeyColors?.get('0,0')).toBe(KEY_DUPLICATE_COLOR)
+    expect(capturedKeyColors?.get('0,1')).toBe(KEY_DUPLICATE_COLOR)
+    expect(capturedKeyColors?.has('0,2')).toBe(false)
+  })
+
+  it('clears the duplicate fill once the collision is resolved', () => {
+    const { rerender } = render(<KeymapEditor {...defaultProps} viewMatrix={{ '0,1': { row: 0, col: 0 } }} />)
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+    expect(capturedKeyColors?.size).toBe(2)
+
+    rerender(<KeymapEditor {...defaultProps} viewMatrix={undefined} />)
+    expect(capturedKeyColors).toBeUndefined()
+  })
+})

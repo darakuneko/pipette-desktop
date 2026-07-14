@@ -8,10 +8,12 @@ import type { Keycode } from '../../../shared/keycodes/keycodes'
 import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
+import type { ViewMatrixCell } from '../../../shared/types/pipette-settings'
 import { hasModifierKey } from './KeyboardPane'
 import type { PopoverState } from './keymap-editor-types'
 import type { UseKeymapMultiSelectReturn } from './useKeymapMultiSelect'
 import type { UseKeymapHistoryReturn, SingleHistoryEntry, HistoryEntry } from './useKeymapHistory'
+import { sortKeysByViewMatrix } from './view-matrix'
 
 /** Match a history entry against the current popover position, returning the keycode if matched. */
 function matchPopoverEntry(
@@ -35,6 +37,10 @@ export interface UseKeymapSelectionOptions {
   selectableKeys: KleKey[]
   // Key operations
   autoAdvance: boolean
+  /** Auto Move order override — see `PipetteSettings.viewMatrix`. Sorts
+   *  `advancableKeys` by each key's effective (override ?? physical)
+   *  position instead of raw definition order. */
+  viewMatrix?: Record<string, ViewMatrixCell>
   onSetKey: (layer: number, row: number, col: number, keycode: number) => Promise<void>
   onSetKeysBulk: (entries: BulkKeyEntry[]) => Promise<void>
   onSetEncoder: (layer: number, idx: number, dir: number, keycode: number) => Promise<void>
@@ -61,6 +67,7 @@ export function useKeymapSelectionHandlers({
   currentLayer,
   selectableKeys,
   autoAdvance,
+  viewMatrix,
   onSetKey,
   onSetKeysBulk,
   onSetEncoder,
@@ -168,8 +175,9 @@ export function useKeymapSelectionHandlers({
   // --- Auto-advance ---
   const advancableKeys = useMemo(() => {
     if (!layout) return []
-    return layout.keys.filter((k) => !k.decal && k.encoderIdx < 0)
-  }, [layout])
+    const filtered = layout.keys.filter((k) => !k.decal && k.encoderIdx < 0)
+    return sortKeysByViewMatrix(filtered, viewMatrix)
+  }, [layout, viewMatrix])
 
   const advanceToNextKey = useCallback(() => {
     if (!autoAdvance || !selectedKey || advancableKeys.length === 0) return

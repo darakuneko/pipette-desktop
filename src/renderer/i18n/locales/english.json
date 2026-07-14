@@ -1,5 +1,5 @@
 {
-  "version": "0.1.9",
+  "version": "0.1.12",
   "name": "English",
   "common": {
     "save": "Save",
@@ -66,6 +66,15 @@
   },
   "editor": {
     "autoAdvance": "Auto Move",
+    "viewMatrix": {
+      "label": "View Matrix",
+      "edit": "Edit",
+      "done": "Done",
+      "rowLabel": "Row",
+      "colLabel": "Col",
+      "blankOption": "—",
+      "reset": "Reset View Matrix"
+    },
     "keymap": {
       "title": "Keymap",
       "layer": "Layer {{number}}",

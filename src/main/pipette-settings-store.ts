@@ -57,6 +57,23 @@ function isValidAnalyzeSettings(value: unknown): boolean {
   return true
 }
 
+/** Validates `viewMatrix`: an object keyed by physical `"row,col"` mapping
+ *  to a `{ row, col }` logical override. Any malformed entry rejects the
+ *  whole map, matching the defensive style used for `typingTestMemory`
+ *  (an untrustworthy map is dropped entirely rather than partially kept). */
+function isValidViewMatrix(value: unknown): boolean {
+  if (value == null) return true
+  if (typeof value !== 'object' || Array.isArray(value)) return false
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    if (!KEY_POS_RE.test(k)) return false
+    if (typeof v !== 'object' || v === null || Array.isArray(v)) return false
+    const cell = v as Record<string, unknown>
+    if (!Number.isInteger(cell.row) || (cell.row as number) < 0) return false
+    if (!Number.isInteger(cell.col) || (cell.col as number) < 0) return false
+  }
+  return true
+}
+
 function isSafePathSegment(segment: string): boolean {
   if (!segment || segment === '.' || segment === '..') return false
   return !/[/\\]/.test(segment)
@@ -104,6 +121,7 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
   if ('typingViewMenuTab' in obj && obj.typingViewMenuTab != null && !isTypingViewMenuTab(obj.typingViewMenuTab)) return false
   if ('viewMode' in obj && obj.viewMode != null && !VIEW_MODES.includes(obj.viewMode as ViewMode)) return false
   if ('analyze' in obj && !isValidAnalyzeSettings(obj.analyze)) return false
+  if ('viewMatrix' in obj && !isValidViewMatrix(obj.viewMatrix)) return false
   if ('_rev' in obj && obj._rev !== 1) return false
   return true
 }
@@ -160,6 +178,7 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       typingViewMenuTab: parsed.typingViewMenuTab,
       viewMode: parsed.viewMode,
       analyze: parsed.analyze,
+      viewMatrix: parsed.viewMatrix,
     }
   } catch {
     return null

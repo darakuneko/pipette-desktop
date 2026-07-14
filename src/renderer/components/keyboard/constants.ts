@@ -31,6 +31,8 @@ export const KEY_MULTI_SELECTED_COLOR = 'var(--key-bg-multi-selected)'
 export const KEY_PRESSED_COLOR = 'var(--success)'
 export const KEY_EVER_PRESSED_COLOR = '#ccffcc'
 export const KEY_HIGHLIGHT_COLOR = 'var(--accent-alt)'
+// View Matrix mode's duplicate-effective-position warning fill.
+export const KEY_DUPLICATE_COLOR = 'var(--key-bg-duplicate)'
 export const KEY_TEXT_COLOR = 'var(--key-label)'
 export const KEY_INVERTED_TEXT_COLOR = 'var(--content-inverse)'
 export const KEY_REMAP_COLOR = 'var(--key-label-remap)'

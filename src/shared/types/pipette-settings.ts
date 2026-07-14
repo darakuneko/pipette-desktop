@@ -152,6 +152,14 @@ export interface AnalyzeSettings {
 export const DEFAULT_GOAL_KEYSTROKES = 1000
 export const DEFAULT_GOAL_DAYS = 10
 
+/** One key's user-assigned position in the View Matrix — the logical
+ * (row, col) the keymap editor's Auto Move (auto-advance) walk should use
+ * instead of the key's physical Vial matrix position. */
+export interface ViewMatrixCell {
+  row: number
+  col: number
+}
+
 /** Minimum-valid `PipetteSettings` used to bootstrap the settings
  * file when `pipetteSettingsGet` resolves to `null` (brand-new
  * keyboard, no prior write). Consumers spread their own `analyze` /
@@ -248,6 +256,12 @@ export interface PipetteSettings {
   keymapScale?: number
   keyEditorZoom?: number
   viewMode?: ViewMode
+  /** Auto Move (auto-advance) order override, keyed by the key's PHYSICAL
+   * matrix position (`"row,col"`). Sparse — only overridden keys are
+   * stored here; a key absent from this map falls back to its physical
+   * Vial matrix row/col for ordering purposes. The value is the logical
+   * (row, col) the key should sort by instead. */
+  viewMatrix?: Record<string, ViewMatrixCell>
   analyze?: AnalyzeSettings
   _updatedAt?: string // ISO 8601 — last update time
 }

@@ -1382,6 +1382,102 @@ describe('useDevicePrefs', () => {
   })
 
 
+  describe('viewMatrix', () => {
+    it('defaults to undefined when not in storage', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.viewMatrix).toBeUndefined()
+    })
+
+    it('restores a valid viewMatrix from IPC', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        viewMatrix: { '0,0': { row: 0, col: 5 }, '1,2': { row: 0, col: 0 } },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.viewMatrix).toEqual({
+        '0,0': { row: 0, col: 5 },
+        '1,2': { row: 0, col: 0 },
+      })
+    })
+
+    it('setViewMatrix saves via IPC and updates state (round trip through save/apply)', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      mockPipetteSettingsPatch.mockClear()
+
+      const next = { '0,0': { row: 2, col: 3 } }
+      act(() => {
+        result.current.setViewMatrix(next)
+      })
+
+      expect(result.current.viewMatrix).toEqual(next)
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+        viewMatrix: next,
+      }))
+
+      // Simulate reload: the last patch payload is what IPC would persist
+      // and return on the next `pipetteSettingsGet`.
+      const lastPatch = mockPipetteSettingsPatch.mock.calls[mockPipetteSettingsPatch.mock.calls.length - 1][1]
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        viewMatrix: lastPatch.viewMatrix,
+      } as never)
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.viewMatrix).toEqual(next)
+    })
+
+    it('setViewMatrix(undefined) clears the field by sending null in the patch', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        viewMatrix: { '0,0': { row: 2, col: 3 } },
+      } as never)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.viewMatrix).toEqual({ '0,0': { row: 2, col: 3 } })
+      mockPipetteSettingsPatch.mockClear()
+
+      act(() => {
+        result.current.setViewMatrix(undefined)
+      })
+
+      expect(result.current.viewMatrix).toBeUndefined()
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+        viewMatrix: null,
+      }))
+    })
+
+  })
+
   describe('remapLabel and isRemapped', () => {
     it('remapLabel delegates to remapKeycode with current layout', async () => {
       setupMocks()

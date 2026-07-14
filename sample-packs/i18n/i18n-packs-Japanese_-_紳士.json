@@ -1,5 +1,5 @@
 {
-  "version": "0.1.9",
+  "version": "0.1.12",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -66,6 +66,15 @@
   },
   "editor": {
     "autoAdvance": "自動巡回",
+    "viewMatrix": {
+      "label": "座標表",
+      "edit": "推敲",
+      "done": "完了",
+      "rowLabel": "行",
+      "colLabel": "列",
+      "blankOption": "—",
+      "reset": "座標表を初期化"
+    },
     "keymap": {
       "title": "地図",
       "layer": "階層 {{number}}",
