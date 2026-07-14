@@ -5,7 +5,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useTypingTest } from '../useTypingTest'
 import { clearLanguageCache, getLanguageData, clearFileImportTextCache } from '../word-generator'
-import type { TypingTestConfig } from '../types'
+import type { TypingTestConfig, RomajiGuide } from '../types'
+import { applyRomajiCaseStyle } from '../types'
 
 // A real kana pack id (see ROMAJI_INPUT_LANGUAGES) is required everywhere a
 // test wants the romaji matcher actually active: `romajiInput: true` alone
@@ -197,12 +198,34 @@ describe('useTypingTest — romaji input mode', () => {
     await seedKanaLanguage(KANA_LANGUAGE, ['でぃなー'])
     const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
 
-    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'dhina-', kanaCompleted: 0 })
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'dhina-', kanaCompleted: 0, lookahead: [] })
 
     press(result, 'd')
     press(result, 'h')
     press(result, 'i') // commits でぃ as one 2-kana digraph segment
-    expect(result.current.romajiGuide).toEqual({ typed: 'dhi', remaining: 'na-', kanaCompleted: 2 })
+    expect(result.current.romajiGuide).toEqual({ typed: 'dhi', remaining: 'na-', kanaCompleted: 2, lookahead: [] })
+  })
+
+  it('previews the next up-to-two words\' canonical romaji as lookahead, shrinking near the end of the run', async () => {
+    // Single-word lists sample deterministically (see sampleWords), so a
+    // 3-word run against the same word gives full control over the queue
+    // without needing to control random word selection.
+    await seedKanaLanguage(KANA_LANGUAGE, ['あい'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(3), KANA_LANGUAGE))
+    expect(result.current.state.words).toEqual(['あい', 'あい', 'あい'])
+
+    // At word 0: both word 1 and word 2 are upcoming.
+    expect(result.current.romajiGuide?.lookahead).toEqual(['ai', 'ai'])
+
+    type(result, 'ai')
+    expect(result.current.state.currentWordIndex).toBe(1)
+    // At word 1: only word 2 remains upcoming.
+    expect(result.current.romajiGuide?.lookahead).toEqual(['ai'])
+
+    type(result, 'ai')
+    expect(result.current.state.currentWordIndex).toBe(2)
+    // At the last word: nothing left to preview.
+    expect(result.current.romajiGuide?.lookahead).toEqual([])
   })
 
   it('keeps romajiInput saved but inactive once the language switches off a kana pack', async () => {
@@ -363,7 +386,7 @@ describe('useTypingTest — config.romaji wiring', () => {
       KANA_LANGUAGE,
     ))
 
-    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'si', kanaCompleted: 0 })
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'si', kanaCompleted: 0, lookahead: [] })
 
     // The canonical spelling is still accepted even though the guide shows 'si'.
     type(result, 'shi')
@@ -378,9 +401,9 @@ describe('useTypingTest — config.romaji wiring', () => {
       KANA_LANGUAGE,
     ))
 
-    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'AI', kanaCompleted: 0 })
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'AI', kanaCompleted: 0, lookahead: [] })
     press(result, 'a')
-    expect(result.current.romajiGuide).toEqual({ typed: 'A', remaining: 'I', kanaCompleted: 1 })
+    expect(result.current.romajiGuide).toEqual({ typed: 'A', remaining: 'I', kanaCompleted: 1, lookahead: [] })
     // Lowercase 'a' is still what's accepted — the transform never reaches acceptance.
     expect(result.current.state.incorrectChars).toBe(0)
   })
@@ -393,12 +416,28 @@ describe('useTypingTest — config.romaji wiring', () => {
     ))
 
     // Nothing typed yet — the capital lands on the first char of `remaining`.
-    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'Ai', kanaCompleted: 0 })
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'Ai', kanaCompleted: 0, lookahead: [] })
 
     press(result, 'a')
     // Once something is typed, the capital moves onto `typed`'s first char
     // and `remaining` goes back to lowercase.
-    expect(result.current.romajiGuide).toEqual({ typed: 'A', remaining: 'i', kanaCompleted: 1 })
+    expect(result.current.romajiGuide).toEqual({ typed: 'A', remaining: 'i', kanaCompleted: 1, lookahead: [] })
+  })
+
+  it('applies caseStyle to lookahead entries too, upper and capital alike', async () => {
+    await seedKanaLanguage(KANA_LANGUAGE, ['あい'])
+    const { result: upperResult } = renderHook(() => useTypingTest(
+      { mode: 'words', wordCount: 3, punctuation: false, numbers: false, romajiInput: true, romaji: { caseStyle: 'upper' } },
+      KANA_LANGUAGE,
+    ))
+    expect(upperResult.current.romajiGuide?.lookahead).toEqual(['AI', 'AI'])
+
+    await seedKanaLanguage(KANA_LANGUAGE, ['あい'])
+    const { result: capitalResult } = renderHook(() => useTypingTest(
+      { mode: 'words', wordCount: 3, punctuation: false, numbers: false, romajiInput: true, romaji: { caseStyle: 'capital' } },
+      KANA_LANGUAGE,
+    ))
+    expect(capitalResult.current.romajiGuide?.lookahead).toEqual(['Ai', 'Ai'])
   })
 
   it('changing config.romaji via setConfig restarts the test, same as any other config field change', async () => {
@@ -420,6 +459,28 @@ describe('useTypingTest — config.romaji wiring', () => {
     expect(result.current.state.romajiKeystrokes).toBe('')
     expect(result.current.state.currentWordIndex).toBe(0)
     expect(result.current.state.status).toBe('waiting')
+  })
+})
+
+describe('applyRomajiCaseStyle — lookahead entries', () => {
+  const baseGuide: RomajiGuide = { typed: '', remaining: 'a', kanaCompleted: 0, lookahead: ['ai', 'ka'] }
+
+  it('leaves lookahead untouched for lower/undefined', () => {
+    expect(applyRomajiCaseStyle(baseGuide, undefined).lookahead).toEqual(['ai', 'ka'])
+    expect(applyRomajiCaseStyle(baseGuide, 'lower').lookahead).toEqual(['ai', 'ka'])
+  })
+
+  it('uppercases every lookahead word in full for upper', () => {
+    expect(applyRomajiCaseStyle(baseGuide, 'upper').lookahead).toEqual(['AI', 'KA'])
+  })
+
+  it('capitalizes only the first character of each lookahead word for capital', () => {
+    expect(applyRomajiCaseStyle(baseGuide, 'capital').lookahead).toEqual(['Ai', 'Ka'])
+  })
+
+  it('capitalizes lookahead even when the current word itself has nothing to capitalize', () => {
+    const emptyWordGuide: RomajiGuide = { typed: '', remaining: '', kanaCompleted: 0, lookahead: ['ai'] }
+    expect(applyRomajiCaseStyle(emptyWordGuide, 'capital').lookahead).toEqual(['Ai'])
   })
 })
 

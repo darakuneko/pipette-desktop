@@ -353,20 +353,24 @@ export function TypingTestView({
       </div>
 
       {/* Romaji guide — the current word's confirmed/remaining romaji
-          spelling, plus an IME-on hint once a composition event proves
-          direct keystrokes aren't reaching the matcher. Rendered as its own
-          row below the reading window rather than inline per-word: the
-          words row is a single flex-wrap flow (word-flow modes have no
+          spelling, a fainter look-ahead preview of the next up-to-two
+          words' full spelling, plus an IME-on hint once a composition event
+          proves direct keystrokes aren't reaching the matcher. Rendered as
+          its own row below the reading window rather than inline per-word:
+          the words row is a single flex-wrap flow (word-flow modes have no
           per-line rows to anchor an inline guide under), so a fixed row
           here avoids overlapping whatever wraps below the current word.
-          The typed/remaining line tracks the Font setting via the same
-          --tt-font var as the reading window; the IME hint stays a fixed
-          small size since it's a hint, not reading content. */}
+          The typed/remaining/lookahead line tracks the Font setting via the
+          same --tt-font var as the reading window; the IME hint stays a
+          fixed small size since it's a hint, not reading content. */}
       {romajiGuide && (
         <div data-testid="typing-test-romaji-guide" className="flex w-full max-w-4xl flex-col items-start gap-1 font-mono" style={multilineStyle}>
           <p className="typing-romaji-guide-text break-all">
             <span className="text-success">{romajiGuide.typed}</span>
             <span className="text-content-muted">{romajiGuide.remaining}</span>
+            {romajiGuide.lookahead.map((word, i) => (
+              <span key={i} data-testid="typing-test-romaji-lookahead" className="text-content-muted/40">{' ' + word}</span>
+            ))}
           </p>
           {imeDetected && (
             <p data-testid="typing-test-romaji-ime-hint" className="text-xs text-warning">
