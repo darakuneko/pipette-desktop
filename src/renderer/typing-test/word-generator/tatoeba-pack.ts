@@ -69,9 +69,11 @@ export interface TatoebaRun {
  *  (Japanese, Cyrillic, accented Latin, etc. — most of the 72 Tatoeba
  *  languages). `quote` folds every sampled sentence into one string so the
  *  finished screen can label the source and char-based progress counting is
- *  reused verbatim. */
-export function tatoebaRun(pack: TatoebaPack): TatoebaRun {
-  const sentences = sampleSentences(pack.words, TATOEBA_SENTENCE_COUNT)
+ *  reused verbatim. `count` defaults to `TATOEBA_SENTENCE_COUNT` for
+ *  back-compat; callers with their own Pattern/Units (Lines pattern's
+ *  `lineCount`, Time pattern's batch size) pass it explicitly. */
+export function tatoebaRun(pack: TatoebaPack, count: number = TATOEBA_SENTENCE_COUNT): TatoebaRun {
+  const sentences = sampleSentences(pack.words, count)
   const { words, lineBreaks } = parseFileImportText(sentences.join('\n'))
   const text = words.join(' ')
   return { words, lineBreaks, quote: { id: 0, text, source: pack.name, length: text.length } }

@@ -11,6 +11,10 @@ import type { TypingTestConfig, Quote } from './types'
 
 const TIME_MODE_BATCH_SIZE = 60
 const TIME_MODE_EXTEND_THRESHOLD = 10
+/** Sentences sampled for the tatoeba Time pattern's initial batch and every
+ *  refill — larger than a Lines-pattern run since a running clock chews
+ *  through many short sentences before the next low-water refill check. */
+const TATOEBA_TIME_BATCH_SIZE = 20
 
 /** Return the word count and generation options for word-based modes (words/time). */
 function wordGenParams(config: TypingTestConfig & { mode: 'words' | 'time' }): { count: number; opts: { punctuation: boolean; numbers: boolean } } {
@@ -20,21 +24,53 @@ function wordGenParams(config: TypingTestConfig & { mode: 'words' | 'time' }): {
   }
 }
 
-/** Time-mode word refill: when the untyped tail of `words` runs low,
- *  returns the list extended by one more generated batch (same
- *  punctuation/numbers opts as the initial supply); returns null when no
- *  refill is due, so the caller can keep its state object untouched. Keeps
- *  the batch/threshold policy private to this module. */
+/** Result of a time-bounded refill: `words` is the extended list; `lineBreaks`
+ *  are the NEW line-break indices (absolute, into the returned `words`)
+ *  contributed by this refill. Empty for monkeytype time mode (no line
+ *  concept); the caller merges these into the run's existing `lineBreaks`
+ *  set (see `advanceAfterWord`). */
+export interface WordsRefill {
+  words: string[]
+  lineBreaks: number[]
+}
+
+/** Time-bounded word refill — monkeytype time mode, or the tatoeba Time
+ *  pattern (see `isTimeBoundedRun`). Self-contained: every non-time-bounded
+ *  config (including tatoeba's Lines pattern) returns null on its own,
+ *  rather than trusting the caller to only invoke this once time-bounded.
+ *  When the untyped tail of `words` runs low, returns the list extended by
+ *  one more batch; returns null when no refill is due, or (tatoeba) the
+ *  pack isn't cached / sampled empty, so the caller can keep its state
+ *  object untouched. Keeps the batch/threshold policy private to this
+ *  module. */
 export function refillTimeModeWords(
   words: readonly string[],
   nextIndex: number,
-  config: TypingTestConfig & { mode: 'time' },
+  config: TypingTestConfig,
   language: string,
-): string[] | null {
+): WordsRefill | null {
   if (words.length - nextIndex >= TIME_MODE_EXTEND_THRESHOLD) return null
+
+  if (config.mode === 'tatoeba' && config.pattern === 'time') {
+    const pack = getTatoebaPackSync(config.language)
+    if (!pack) return null
+    const { words: moreWords, lineBreaks } = tatoebaRun(pack, TATOEBA_TIME_BATCH_SIZE)
+    if (moreWords.length === 0) return null
+    const offset = words.length
+    // The previous batch's final sentence never got a trailing break
+    // recorded (nothing followed it yet, by tatoebaRun's own convention) —
+    // the seam between it and this batch's first sentence needs one now,
+    // so Enter (not Space) still advances between them.
+    return {
+      words: [...words, ...moreWords],
+      lineBreaks: [offset - 1, ...lineBreaks.map((b) => b + offset)],
+    }
+  }
+
+  if (config.mode !== 'time') return null
   const { opts } = wordGenParams(config)
   const { words: moreWords } = generateWordsSync(TIME_MODE_BATCH_SIZE, opts, language)
-  return [...words, ...moreWords]
+  return { words: [...words, ...moreWords], lineBreaks: [] }
 }
 
 export interface WordsForConfig {
@@ -70,10 +106,18 @@ function fileImportTextToWords(data: FileImportTextData): WordsForConfig {
  *  is uncached / not downloaded). Reuses the quote path's char-based
  *  counting and carries the run's per-sentence `lineBreaks` through so each
  *  sampled sentence renders on its own line, same as imported fileImport
- *  text. */
-function tatoebaWordsForConfig(pack: { name: string; words: string[] } | undefined): WordsForConfig {
+ *  text. `count` is the Lines pattern's `lineCount`, or the Time pattern's
+ *  initial batch size — see the two `createWordsForConfig*` call sites. */
+function tatoebaWordsForConfig(pack: { name: string; words: string[] } | undefined, count: number): WordsForConfig {
   if (!pack) return { words: [], quote: null, lineBreaks: [], lineIndents: [], romajiCapable: false }
-  return { ...tatoebaRun(pack), lineIndents: [], romajiCapable: false }
+  return { ...tatoebaRun(pack, count), lineIndents: [], romajiCapable: false }
+}
+
+/** Sentence count to sample for a tatoeba config: the Lines pattern's own
+ *  `lineCount`, or the Time pattern's fixed initial batch (matching the
+ *  refill batch size — see `refillTimeModeWords`). */
+function tatoebaSampleCount(config: TypingTestConfig & { mode: 'tatoeba' }): number {
+  return config.pattern === 'time' ? TATOEBA_TIME_BATCH_SIZE : config.lineCount
 }
 
 export function createWordsForConfigSync(config: TypingTestConfig, language: string): WordsForConfig {
@@ -89,7 +133,7 @@ export function createWordsForConfigSync(config: TypingTestConfig, language: str
   }
   if (config.mode === 'tatoeba') {
     // Cache miss — the async path fills words once langGet resolves.
-    return tatoebaWordsForConfig(getTatoebaPackSync(config.language))
+    return tatoebaWordsForConfig(getTatoebaPackSync(config.language), tatoebaSampleCount(config))
   }
   const { count, opts } = wordGenParams(config)
   const { words } = generateWordsSync(count, opts, language)
@@ -106,7 +150,7 @@ export async function createWordsForConfig(config: TypingTestConfig, language: s
     return data ? fileImportTextToWords(data) : { words: [], quote: null, lineBreaks: [], lineIndents: [], romajiCapable: false }
   }
   if (config.mode === 'tatoeba') {
-    return tatoebaWordsForConfig(await getTatoebaPack(config.language))
+    return tatoebaWordsForConfig(await getTatoebaPack(config.language), tatoebaSampleCount(config))
   }
   const { count, opts } = wordGenParams(config)
   const { words } = await generateWords(count, opts, language)

@@ -27,7 +27,7 @@ function makeResult(overrides: Partial<TypingTestResult> = {}): TypingTestResult
 
 const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false } as TypingTestConfig
 const fileImportConfig: TypingTestConfig = { mode: 'fileImport', textId: 't1' } as TypingTestConfig
-const tatoebaConfig: TypingTestConfig = { mode: 'tatoeba', language: 'english' } as TypingTestConfig
+const tatoebaConfig: TypingTestConfig = { mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30 }
 
 describe('matchingResults', () => {
   it('matches normal runs on mode + params + language + toggles', () => {
@@ -181,7 +181,7 @@ describe('conditionKey / resultConditionKey agreement', () => {
       { mode: 'time', duration: 30, punctuation: false, numbers: false },
       { mode: 'quote', quoteLength: 'medium' },
       { mode: 'fileImport', textId: 't1' },
-      { mode: 'tatoeba', language: 'japanese' },
+      { mode: 'tatoeba', language: 'japanese', pattern: 'lines', lineCount: 5, duration: 30 },
     ]
     for (const config of configs) {
       const result = buildTypingTestResult(buildInput(config))

@@ -139,6 +139,7 @@ export function LanguagePackTab({ provider, currentSelected, onSelect }: Props) 
               <LanguageRow
                 key={lang.name}
                 lang={lang}
+                provider={provider}
                 isCurrent={lang.name === currentSelected}
                 isDownloading={downloading.has(lang.name)}
                 onSelect={onSelect}
@@ -155,6 +156,7 @@ export function LanguagePackTab({ provider, currentSelected, onSelect }: Props) 
               <LanguageRow
                 key={lang.name}
                 lang={lang}
+                provider={provider}
                 isCurrent={false}
                 isDownloading={downloading.has(lang.name)}
                 onSelect={onSelect}
@@ -170,6 +172,10 @@ export function LanguagePackTab({ provider, currentSelected, onSelect }: Props) 
 
 interface LanguageRowProps {
   lang: LanguageListEntry
+  /** Dataset provider this row belongs to — the tatoeba provider's
+   *  `wordCount` is a sentence (line) count, not a word count, so it's
+   *  shown with the "lines" unit label instead of "words". */
+  provider: string
   isCurrent: boolean
   isDownloading: boolean
   onSelect: (name: string) => void
@@ -177,7 +183,7 @@ interface LanguageRowProps {
   onDelete?: (name: string) => void
 }
 
-function LanguageRow({ lang, isCurrent, isDownloading, onSelect, onDownload, onDelete }: LanguageRowProps) {
+function LanguageRow({ lang, provider, isCurrent, isDownloading, onSelect, onDownload, onDelete }: LanguageRowProps) {
   const { t } = useTranslation()
   const canSelect = lang.status !== 'not-downloaded'
 
@@ -206,7 +212,9 @@ function LanguageRow({ lang, isCurrent, isDownloading, onSelect, onDownload, onD
       </div>
 
       <span className="shrink-0 text-xs text-content-muted">
-        {t('editor.typingTest.language.words', { count: lang.wordCount })}
+        {provider === 'tatoeba'
+          ? t('editor.typingTest.language.lines', { count: lang.wordCount })
+          : t('editor.typingTest.language.words', { count: lang.wordCount })}
       </span>
 
       {lang.status === 'not-downloaded' && onDownload && (

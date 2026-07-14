@@ -44,10 +44,14 @@ export type TypingTestConfig =
   | { mode: 'fileImport'; textId: string; romajiInput?: boolean; romaji?: RomajiDetailSettings }
   // Tatoeba sentence pack (Hub-distributed). Sentences are played verbatim
   // in order via the same char-count/word-flow path as fileImport. `language`
-  // selects the downloaded pack (e.g. 'english'). `romajiInput`/`romaji` are
-  // only meaningful when `language` is one of the kana packs — see
-  // `isRomajiCapable` in romaji-input.ts.
-  | { mode: 'tatoeba'; language: string; romajiInput?: boolean; romaji?: RomajiDetailSettings }
+  // selects the downloaded pack (e.g. 'english'). Like words/time, Tatoeba
+  // has its own Pattern (Lines / Time) with its own Units — `lineCount` and
+  // `duration` are both always stored (not just the active pattern's field)
+  // so switching Pattern preserves each independently, same as words/time
+  // keep their own counts. `romajiInput`/`romaji` are only meaningful when
+  // `language` is one of the kana packs — see `isRomajiCapable` in
+  // romaji-input.ts.
+  | { mode: 'tatoeba'; language: string; pattern: 'lines' | 'time'; lineCount: number; duration: number; romajiInput?: boolean; romaji?: RomajiDetailSettings }
 
 export interface Quote {
   id: number
@@ -58,7 +62,31 @@ export interface Quote {
 
 export const WORD_COUNT_OPTIONS = [15, 30, 60, 120] as const
 export const TIME_DURATION_OPTIONS = [15, 30, 60, 120] as const
+// Tatoeba's Lines pattern reuses the same 15/30/60/120 TIME_DURATION_OPTIONS
+// for its Time pattern — only Lines needs its own option set.
+export const TATOEBA_LINE_OPTIONS = [5, 10, 20, 40] as const
 export const DEFAULT_LANGUAGE = 'english'
+
+/** True for every "time-bounded" run — monkeytype time mode, or the tatoeba
+ *  Time pattern — the two config shapes whose word supply is an
+ *  ever-extending stream (see `refillTimeModeWords`) rather than a fixed
+ *  count, and whose run finishes on a countdown rather than on running out
+ *  of words (see `advanceAfterWord`). Centralizes the check so tatoeba+time
+ *  slots into the existing time logic without scattering
+ *  `mode === 'time' || (mode === 'tatoeba' && pattern === 'time')`
+ *  conditionals across run-state.ts / useTypingTest.ts. */
+export function isTimeBoundedRun(
+  config: TypingTestConfig,
+): config is Extract<TypingTestConfig, { mode: 'time' }> | (Extract<TypingTestConfig, { mode: 'tatoeba' }> & { pattern: 'time' }) {
+  return config.mode === 'time' || (config.mode === 'tatoeba' && config.pattern === 'time')
+}
+
+/** The configured duration (seconds) for a time-bounded run (see
+ *  `isTimeBoundedRun`), or null for every other mode/pattern. Derived from
+ *  the predicate so the two never disagree. */
+export function runDurationSeconds(config: TypingTestConfig): number | null {
+  return isTimeBoundedRun(config) ? config.duration : null
+}
 
 /** Word-language packs the romaji-keystroke matcher supports (kana word
  *  lists only). Drives the SettingsBar toggle's visibility, and — via

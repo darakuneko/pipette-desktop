@@ -552,7 +552,16 @@ export function TypingTestPane({
               void onLanguageChange(name)
             }}
             onSelectImport={(textId) => onConfigChange({ mode: 'fileImport', textId, ...carryRomajiFields(typingTest.config) })}
-            onSelectTatoeba={(language) => onConfigChange({ mode: 'tatoeba', language, ...carryRomajiFields(typingTest.config) })}
+            onSelectTatoeba={(language) => {
+              // Carry the previous tatoeba Pattern/Units forward (switching
+              // pack language shouldn't reset Lines/Time or their counts);
+              // default to Lines/5/30 when not already in tatoeba mode.
+              const cfg = typingTest.config
+              const { pattern, lineCount, duration } = cfg.mode === 'tatoeba'
+                ? cfg
+                : { pattern: 'lines' as const, lineCount: 5, duration: 30 }
+              onConfigChange({ mode: 'tatoeba', language, pattern, lineCount, duration, ...carryRomajiFields(cfg) })
+            }}
             onCurrentTextDeleted={() => {
               // The selected imported text was deleted — fall back to
               // the default (words mode, English).
@@ -606,11 +615,12 @@ export function TypingTestPane({
             </select>
           </div>
         </div>
-        {/* words/time/quote always get the full bar; tatoeba/fileImport only
-            get it (Option row only, see TypingTestSettingsBar) once their
-            content is actually romaji-capable — otherwise there is nothing
-            for the bar to show, same as before this mode's romaji support. */}
-        {(typingTest.config.mode !== 'fileImport' && typingTest.config.mode !== 'tatoeba'
+        {/* words/time/quote/tatoeba always get the full bar (tatoeba has its
+            own Pattern/Units, see TypingTestSettingsBar); fileImport only
+            gets it (Option row only) once its content is actually
+            romaji-capable — otherwise there is nothing for the bar to show,
+            same as before this mode's romaji support. */}
+        {(typingTest.config.mode !== 'fileImport'
           || isRomajiCapable(typingTest.config, typingTest.language, typingTest.state.romajiCapable)) && (
           <TypingTestSettingsBar
             config={typingTest.config}

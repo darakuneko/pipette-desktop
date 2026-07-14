@@ -1,5 +1,5 @@
 {
-  "version": "0.1.15",
+  "version": "0.1.16",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -307,7 +307,8 @@
         "words": "単語っしょ",
         "time": "タイム☆",
         "quote": "引用っしょ",
-        "fileImport": "テキストっしょ"
+        "fileImport": "テキストっしょ",
+        "lines": "行っしょ"
       },
       "punctuation": "句読点☆",
       "numbers": "数字っしょ",
@@ -395,6 +396,7 @@
       "units": "単位っしょ",
       "unitsWords": "単位(単語)☆",
       "unitsSec": "単位(秒)☆",
+      "unitsLines": "単位(行)☆",
       "optionLabel": "オプションっしょ",
       "baseLayerShort": "Base",
       "heatmapWindow": "ヒートマップ表示（分）☆",
@@ -426,6 +428,7 @@
         "available": "いけるっしょ",
         "noResults": "そんな言語なくね？",
         "words": "{{count}} 単語☆",
+        "lines": "{{count}} 行☆",
         "loadingLanguage": "言語読み込みちう…",
         "downloadFailed": "ダウンロード失敗…サゲ。。",
         "tabMonkeytype": "MonkeyType",

@@ -158,16 +158,17 @@ describe('TypingTestSettingsBar romaji settings button', () => {
     expect(screen.queryByTestId('romaji-settings-toggle')).not.toBeInTheDocument()
   })
 
-  it('shows the romaji button (Option row only, no Pattern/Units) for a tatoeba kana pack', () => {
-    const config: TypingTestConfig = { mode: 'tatoeba', language: 'japanese_hiragana' }
+  it('shows the romaji button (plus its own Pattern/Units, no words/time toggles) for a tatoeba kana pack', () => {
+    const config: TypingTestConfig = { mode: 'tatoeba', language: 'japanese_hiragana', pattern: 'lines', lineCount: 5, duration: 30 }
     renderBar({ config })
     expect(screen.getByTestId('romaji-settings-toggle')).toBeInTheDocument()
+    expect(screen.getByTestId('tatoeba-pattern-lines')).toBeInTheDocument()
     expect(screen.queryByTestId('mode-words')).not.toBeInTheDocument()
     expect(screen.queryByTestId('toggle-punctuation')).not.toBeInTheDocument()
   })
 
   it('hides the romaji button for a tatoeba non-kana pack', () => {
-    const config: TypingTestConfig = { mode: 'tatoeba', language: 'english' }
+    const config: TypingTestConfig = { mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30 }
     renderBar({ config })
     expect(screen.queryByTestId('romaji-settings-toggle')).not.toBeInTheDocument()
   })
@@ -371,5 +372,55 @@ describe('TypingTestSettingsBar toggle preservation', () => {
     if (wordsConfig.mode === 'words') {
       expect(wordsConfig.romaji).toEqual({ guideStyles: ['kunrei'] })
     }
+  })
+})
+
+describe('TypingTestSettingsBar tatoeba Pattern/Units', () => {
+  const linesConfig: TypingTestConfig = { mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 10, duration: 60 }
+  const timeConfig: TypingTestConfig = { mode: 'tatoeba', language: 'english', pattern: 'time', lineCount: 10, duration: 60 }
+
+  it('shows the Lines/Time Pattern row and highlights the active pattern', () => {
+    renderBar({ config: linesConfig })
+    expect(screen.getByTestId('tatoeba-pattern-lines')).toBeInTheDocument()
+    expect(screen.getByTestId('tatoeba-pattern-time')).toBeInTheDocument()
+    expect(screen.getByTestId('tatoeba-pattern-lines').className).toContain('text-accent')
+    expect(screen.getByTestId('tatoeba-pattern-time').className).not.toContain('text-accent')
+  })
+
+  it('shows the line-count Units row (and not the seconds row) in Lines pattern', () => {
+    renderBar({ config: linesConfig })
+    expect(screen.getByTestId('tatoeba-line-5')).toBeInTheDocument()
+    expect(screen.getByTestId('tatoeba-line-40')).toBeInTheDocument()
+    expect(screen.getByTestId('tatoeba-line-10').className).toContain('text-accent')
+    expect(screen.queryByTestId('tatoeba-sec-30')).not.toBeInTheDocument()
+  })
+
+  it('shows the seconds Units row (and not the line-count row) in Time pattern', () => {
+    renderBar({ config: timeConfig })
+    expect(screen.getByTestId('tatoeba-sec-15')).toBeInTheDocument()
+    expect(screen.getByTestId('tatoeba-sec-120')).toBeInTheDocument()
+    expect(screen.getByTestId('tatoeba-sec-60').className).toContain('text-accent')
+    expect(screen.queryByTestId('tatoeba-line-10')).not.toBeInTheDocument()
+  })
+
+  it('clicking the Time pattern button switches config.pattern, preserving lineCount/duration', () => {
+    const onConfigChange = vi.fn()
+    renderBar({ config: linesConfig, onConfigChange })
+    fireEvent.click(screen.getByTestId('tatoeba-pattern-time'))
+    expect(onConfigChange).toHaveBeenCalledWith({ ...linesConfig, pattern: 'time' })
+  })
+
+  it('clicking a line-count option updates config.lineCount', () => {
+    const onConfigChange = vi.fn()
+    renderBar({ config: linesConfig, onConfigChange })
+    fireEvent.click(screen.getByTestId('tatoeba-line-40'))
+    expect(onConfigChange).toHaveBeenCalledWith({ ...linesConfig, lineCount: 40 })
+  })
+
+  it('clicking a duration option updates config.duration', () => {
+    const onConfigChange = vi.fn()
+    renderBar({ config: timeConfig, onConfigChange })
+    fireEvent.click(screen.getByTestId('tatoeba-sec-15'))
+    expect(onConfigChange).toHaveBeenCalledWith({ ...timeConfig, duration: 15 })
   })
 })

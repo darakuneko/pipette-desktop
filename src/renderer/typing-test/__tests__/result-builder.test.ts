@@ -225,7 +225,7 @@ describe('buildTypingTestResult', () => {
   })
 
   it('records romajiInput for tatoeba/fileImport runs too, now that recording follows romajiActive', () => {
-    const tatoebaCfg: TypingTestConfig = { mode: 'tatoeba', language: 'japanese_hiragana' }
+    const tatoebaCfg: TypingTestConfig = { mode: 'tatoeba', language: 'japanese_hiragana', pattern: 'lines', lineCount: 5, duration: 30 }
     const result = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
       config: tatoebaCfg, language: 'english', wpmHistory: [], romajiActive: true,
@@ -270,7 +270,7 @@ describe('buildTypingTestResult', () => {
   })
 
   it('stores the tatoeba pack language as language + mode2, not the input language', () => {
-    const config: TypingTestConfig = { mode: 'tatoeba', language: 'english' }
+    const config: TypingTestConfig = { mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30 }
     const result = buildTypingTestResult({
       correctChars: 120,
       incorrectChars: 4,

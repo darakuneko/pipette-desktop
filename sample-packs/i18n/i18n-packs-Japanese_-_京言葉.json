@@ -1,5 +1,5 @@
 {
-  "version": "0.1.15",
+  "version": "0.1.16",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -307,7 +307,8 @@
         "words": "単語",
         "time": "時間",
         "quote": "引用",
-        "fileImport": "テキスト"
+        "fileImport": "テキスト",
+        "lines": "行"
       },
       "punctuation": "句読点",
       "numbers": "数字",
@@ -395,6 +396,7 @@
       "units": "単位",
       "unitsWords": "単位(単語)",
       "unitsSec": "単位(秒)",
+      "unitsLines": "単位(行)",
       "optionLabel": "オプション",
       "baseLayerShort": "Base",
       "heatmapWindow": "ヒートマップの表示期間（分）",
@@ -426,6 +428,7 @@
         "available": "使えますえ",
         "noResults": "合うのんがおへんなぁ",
         "words": "{{count}} 単語どすえ",
+        "lines": "{{count}} 行どすえ",
         "loadingLanguage": "言語を読み込んでますえ…",
         "downloadFailed": "ダウンロードがあきまへんでしたえ",
         "tabMonkeytype": "MonkeyType",

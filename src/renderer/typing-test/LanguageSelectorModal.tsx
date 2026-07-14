@@ -351,6 +351,14 @@ interface ImportRowProps {
 
 function ImportRow({ meta, isCurrent, onSelect, onDelete }: ImportRowProps) {
   const { t } = useTranslation()
+  // Space-separated (English-like) content has more whitespace-delimited
+  // words than lines → show words. No-space content (e.g. Japanese) has
+  // wordCount === lineCount (one "word" per line) → show lines instead,
+  // where a word count would be meaningless. Older metas saved before
+  // `lineCount` existed (undefined) fall back to the words display.
+  const unit = meta.lineCount == null || meta.wordCount > meta.lineCount
+    ? t('editor.typingTest.language.words', { count: meta.wordCount })
+    : t('editor.typingTest.language.lines', { count: meta.lineCount })
   return (
     <div
       data-testid={`typing-text-row-${meta.id}`}
@@ -362,9 +370,7 @@ function ImportRow({ meta, isCurrent, onSelect, onDelete }: ImportRowProps) {
         <span className={`truncate ${isCurrent ? 'font-semibold text-accent' : 'text-content'}`}>{meta.name}</span>
         {meta.romajiCapable === true && <RomajiBadge />}
       </div>
-      <span className="shrink-0 text-xs text-content-muted">
-        {t('editor.typingTest.language.words', { count: meta.wordCount })}
-      </span>
+      <span className="shrink-0 text-xs text-content-muted">{unit}</span>
       <RowDeleteButton testId={`typing-text-delete-${meta.id}`} onClick={() => { void onDelete(meta.id) }} />
     </div>
   )

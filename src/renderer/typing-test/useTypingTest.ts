@@ -5,7 +5,7 @@ import { isTapKeycode } from './keycode-char-map'
 import { getLanguageData } from './word-generator'
 import { DEFAULT_TAPPING_TERM_MS } from '../../shared/qmk-settings-tapping-term'
 import type { TypingTestConfig, RomajiGuide } from './types'
-import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, applyRomajiCaseStyle } from './types'
+import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, applyRomajiCaseStyle, isTimeBoundedRun, runDurationSeconds } from './types'
 import type { TypingTestMemory } from '../../shared/types/pipette-settings'
 import type { TypingAnalyticsEventPayload, TypingMatrixAction } from '../../shared/types/typing-analytics'
 import { createWordsForConfig } from './word-supply'
@@ -434,8 +434,9 @@ export function useTypingTest(
           current = { ...current, status: 'running', startTime: Date.now() }
         }
         current = handleChar(current, key)
-        // Auto-finish when last char of last word is typed (words/quote modes only)
-        if (configRef.current.mode !== 'time') {
+        // Auto-finish when last char of last word is typed (words/quote modes,
+        // and tatoeba's Lines pattern — every mode but a time-bounded run).
+        if (!isTimeBoundedRun(configRef.current)) {
           return tryFinishLastWord(current) ?? current
         }
         return current
@@ -475,7 +476,7 @@ export function useTypingTest(
         current = { ...current, status: 'running', startTime: Date.now() }
       }
       current = { ...current, currentInput: current.currentInput + data, compositionText: '' }
-      if (configRef.current.mode !== 'time') {
+      if (!isTimeBoundedRun(configRef.current)) {
         return tryFinishLastWord(current) ?? current
       }
       return current
@@ -501,14 +502,17 @@ export function useTypingTest(
     return () => clearInterval(id)
   }, [state.status])
 
-  // Time mode countdown - finish when remaining reaches 0
+  // Time-bounded countdown (monkeytype time mode, or tatoeba's Time
+  // pattern) - finish when remaining reaches 0
   useEffect(() => {
     if (state.status !== 'running') return
-    if (config.mode !== 'time') return
+    if (!isTimeBoundedRun(config)) return
     if (!state.startTime) return
 
+    const duration = runDurationSeconds(config)
+    if (duration == null) return
     const elapsed = Math.floor((Date.now() - state.startTime) / 1000)
-    if (elapsed >= config.duration) {
+    if (elapsed >= duration) {
       setState((s) => {
         if (s.status !== 'running') return s
         return { ...s, status: 'finished', endTime: Date.now() }
@@ -547,11 +551,12 @@ export function useTypingTest(
   }, [state.startTime, state.endTime, tick])
 
   const remainingSeconds = useMemo(() => {
-    if (config.mode !== 'time') return null
-    if (!state.startTime) return config.duration
+    const duration = runDurationSeconds(config)
+    if (duration == null) return null
+    if (!state.startTime) return duration
     if (state.endTime) return 0
     const elapsed = Math.floor((Date.now() - state.startTime) / 1000)
-    return Math.max(0, config.duration - elapsed)
+    return Math.max(0, duration - elapsed)
   }, [config, state.startTime, state.endTime, tick])
 
   // Current word's romaji progress (romajiInput mode only), re-derived from

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.15",
+  "version": "0.1.16",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -307,7 +307,8 @@
         "words": "単語",
         "time": "時間",
         "quote": "引用",
-        "fileImport": "テキスト"
+        "fileImport": "テキスト",
+        "lines": "行"
       },
       "punctuation": "句読点",
       "numbers": "数字",
@@ -395,6 +396,7 @@
       "units": "単位",
       "unitsWords": "単位(単語)",
       "unitsSec": "単位(秒)",
+      "unitsLines": "単位(行)",
       "optionLabel": "オプション",
       "baseLayerShort": "Base",
       "heatmapWindow": "ヒートマップの表示期間（分）",
@@ -426,6 +428,7 @@
         "available": "利用可能",
         "noResults": "一致する言語がありません",
         "words": "{{count}} 単語",
+        "lines": "{{count}} 行",
         "loadingLanguage": "言語を読み込み中...",
         "downloadFailed": "ダウンロードに失敗しました",
         "tabMonkeytype": "MonkeyType",

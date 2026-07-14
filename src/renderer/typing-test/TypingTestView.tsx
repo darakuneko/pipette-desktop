@@ -8,7 +8,7 @@ import { ICON_SM, ICON_LG } from '../constants/ui-tokens'
 import type { TypingTestState } from './useTypingTest'
 import type { RomajiGuide, TypingTestConfig } from './types'
 import type { ComparisonStats } from './comparison'
-import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE } from './types'
+import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, isTimeBoundedRun } from './types'
 import { WordDisplay } from './WordDisplay'
 import { ResultNameModal } from './ResultNameModal'
 
@@ -238,7 +238,7 @@ export function TypingTestView({
     // Font/line changes resize the window, so re-snap the scroll position.
   }, [state.currentWordIndex, state.lineBreaks, lines, fontSize, displayLines])
 
-  const displayTime = config.mode === 'time' && remainingSeconds !== null
+  const displayTime = isTimeBoundedRun(config) && remainingSeconds !== null
     ? formatTime(remainingSeconds)
     : formatTime(elapsedSeconds)
 
