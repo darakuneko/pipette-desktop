@@ -15,6 +15,12 @@ export interface DisconnectConfirmButtonProps {
   cancelTestId: string
   warningKey?: string
   warningTestId?: string
+  /** Stacks the confirm-state buttons vertically (full width) instead of the
+   *  default side-by-side layout. Needed by narrow hosts — e.g. `ViewMatrixPanel`'s
+   *  11rem left pane — where side-by-side buttons wrap long i18n labels to
+   *  three lines. Also widens the single trigger button to full width for the
+   *  same reason. */
+  stacked?: boolean
 }
 
 export function DisconnectConfirmButton({
@@ -29,16 +35,18 @@ export function DisconnectConfirmButton({
   cancelTestId,
   warningKey,
   warningTestId,
+  stacked = false,
 }: DisconnectConfirmButtonProps) {
   const { t } = useTranslation()
+  const btnClass = (base: string): string => (stacked ? `${base} w-full` : base)
 
   if (confirming) {
     return (
       <div>
-        <div className="flex items-center gap-2 justify-end">
+        <div className={stacked ? 'flex flex-col gap-2' : 'flex items-center gap-2 justify-end'}>
           <button
             type="button"
-            className={BTN_DANGER_OUTLINE}
+            className={btnClass(BTN_DANGER_OUTLINE)}
             onClick={onConfirm}
             data-testid={confirmTestId}
           >
@@ -46,7 +54,7 @@ export function DisconnectConfirmButton({
           </button>
           <button
             type="button"
-            className={BTN_SECONDARY}
+            className={btnClass(BTN_SECONDARY)}
             onClick={onCancelConfirm}
             data-testid={cancelTestId}
           >
@@ -65,7 +73,7 @@ export function DisconnectConfirmButton({
   return (
     <button
       type="button"
-      className={BTN_SECONDARY}
+      className={btnClass(BTN_SECONDARY)}
       onClick={onRequestConfirm}
       data-testid={disconnectTestId}
     >

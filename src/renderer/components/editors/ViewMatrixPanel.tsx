@@ -84,9 +84,10 @@ export interface ViewMatrixPanelProps {
  * this panel becomes the mode's whole left pane: the mode label, the Edit
  * toggle that exits the mode, Row/Col selects that edit the current
  * selection's view position immediately (no Save step), and — at the
- * bottom — a 2-step confirm (mirrors `DisconnectConfirmButton`'s existing
- * pattern) to clear the saved position overrides and fall back to the
- * physical Vial matrix. Keys whose effective view position collides with
+ * bottom — a 2-step confirm (`DisconnectConfirmButton` in its `stacked`
+ * layout, since the panel's 11rem width wraps side-by-side i18n labels) to
+ * clear the saved position overrides and fall back to the physical Vial
+ * matrix. Keys whose effective view position collides with
  * another key's are flagged directly on the keymap via a shared fill
  * colour (see `KeymapEditor`'s duplicate detection pass) instead of a
  * separate warning here.
@@ -146,6 +147,7 @@ export function ViewMatrixPanel({
           disconnectTestId="view-matrix-reset-button"
           confirmTestId="view-matrix-reset-confirm-button"
           cancelTestId="view-matrix-reset-cancel-button"
+          stacked
         />
       </div>
     </div>
