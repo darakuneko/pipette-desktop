@@ -24,6 +24,10 @@ export interface RomajiDetailSettings {
   /** Alternate-spelling families excluded from acceptance. Passed straight
    *  through to `createRomajiMatcher`'s `disabledStyles` opt. */
   disabledStyles?: RomajiStyle[]
+  /** Total number of words shown in the guide row, 0-3: 0 hides the row
+   *  entirely, 1 shows only the current word, 2 shows the current word plus
+   *  the next one, 3 shows the current word plus the next two. Default: 2. */
+  guideWordCount?: number
 }
 
 export type TypingTestConfig =
@@ -102,9 +106,13 @@ export const ROMAJI_INPUT_LANGUAGES = new Set(['japanese_hiragana', 'japanese_ka
 
 /** Current word's confirmed romaji + canonical remaining spelling, plus the
  *  count of kana characters fully confirmed so far (romajiInput mode only).
- *  `lookahead` holds the full canonical romaji spelling of up to the next
- *  two upcoming words (empty entries once fewer remain), letting the guide
- *  row preview what's coming after the current word. Produced by
+ *  `lookahead` holds the full canonical romaji spelling of up to
+ *  `guideWordCount − 1` (default 1) upcoming words (fewer entries once fewer
+ *  remain), letting the guide row preview what's coming after the current
+ *  word. `showRow` is false when `guideWordCount` is 0 — the guide row
+ *  (typed/remaining/lookahead spelling) is hidden entirely, though
+ *  `kanaCompleted` still drives the current word's kana coloring and the
+ *  IME-on hint still shows independently of `showRow`. Produced by
  *  `useTypingTest`'s `romajiGuide` selector from a `RomajiMatcher` (see
  *  romaji-engine.ts), consumed by `WordDisplay` (kana coloring) and
  *  `TypingTestView` (the guide line below the reading window). */
@@ -113,6 +121,7 @@ export interface RomajiGuide {
   remaining: string
   kanaCompleted: number
   lookahead: string[]
+  showRow: boolean
 }
 
 /** Capitalizes only the first character of a whole word (used for

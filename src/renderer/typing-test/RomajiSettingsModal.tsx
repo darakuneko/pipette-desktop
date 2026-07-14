@@ -26,6 +26,13 @@ import { isRomajiInputEnabled } from './romaji-input'
 // / romaji, identical in every locale (see english.json + the Japanese pack).
 const CASE_STYLES: readonly RomajiCaseStyle[] = ['upper', 'capital', 'lower']
 
+// Total word count offered by the guide row (current word included), 0-3:
+// 0 hides the row, 1 shows only the current word, 2/3 add one/two upcoming
+// words. Default 2 (see pruneRomaji) — one fewer than the fixed behaviour
+// before this setting existed (which always showed the current word plus
+// two upcoming).
+const GUIDE_WORD_OPTIONS = [0, 1, 2, 3] as const
+
 // Both the Guide and the Accepted input patterns sections share the same
 // Base/Options row split: BASE_STYLES (hepburn/kunrei) picks which base
 // spelling system is represented, and OPTION_STYLES are the independent
@@ -59,6 +66,7 @@ function pruneRomaji(next: RomajiDetailSettings): RomajiDetailSettings | undefin
   if (next.caseStyle !== undefined && next.caseStyle !== 'lower') pruned.caseStyle = next.caseStyle
   if (next.guideStyles !== undefined && next.guideStyles.length > 0) pruned.guideStyles = next.guideStyles
   if (next.disabledStyles !== undefined && next.disabledStyles.length > 0) pruned.disabledStyles = next.disabledStyles
+  if (next.guideWordCount !== undefined && next.guideWordCount !== 2) pruned.guideWordCount = next.guideWordCount
   return Object.keys(pruned).length > 0 ? pruned : undefined
 }
 
@@ -85,6 +93,7 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
   // it back on persists `true`.
   const enabled = isRomajiInputEnabled(config)
   const caseStyle = romaji.caseStyle ?? 'lower'
+  const guideWordCount = romaji.guideWordCount ?? 2
   const guideStyles = new Set(romaji.guideStyles ?? [])
   const disabledStyles = new Set(romaji.disabledStyles ?? [])
 
@@ -178,6 +187,27 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
                   onClick={() => applyRomaji({ caseStyle: value })}
                 >
                   {t(`editor.typingTest.romajiSettings.case.${value}`)}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Guide word count — the total number of words shown in the
+              guide row, current word included (see useTypingTest's
+              romajiGuide selector). Same button-row pattern as Display case
+              above. */}
+          <section className="flex flex-col gap-1.5">
+            <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.guideWordsLabel')}</span>
+            <div className="flex flex-wrap gap-1">
+              {GUIDE_WORD_OPTIONS.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  data-testid={`romaji-guide-words-${n}`}
+                  className={optionButtonClass(guideWordCount === n, 'px-2.5')}
+                  onClick={() => applyRomaji({ guideWordCount: n })}
+                >
+                  {n}
                 </button>
               ))}
             </div>

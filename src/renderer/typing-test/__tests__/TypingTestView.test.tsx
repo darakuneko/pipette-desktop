@@ -468,7 +468,7 @@ describe('TypingTestView romaji guide', () => {
   it('renders typed and remaining romaji, and rewrites on prop changes', () => {
     const { rerender } = renderView({
       state: makeState({ status: 'running', words: ['あい'] }),
-      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [] },
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [], showRow: true },
     })
     let guide = screen.getByTestId('typing-test-romaji-guide')
     expect(guide.textContent).toBe('ai')
@@ -483,7 +483,7 @@ describe('TypingTestView romaji guide', () => {
           remainingSeconds={null}
           config={DEFAULT_CONFIG}
           paused={false}
-          romajiGuide={{ typed: 'a', remaining: 'i', kanaCompleted: 1, lookahead: [] }}
+          romajiGuide={{ typed: 'a', remaining: 'i', kanaCompleted: 1, lookahead: [], showRow: true }}
         />
       </I18nextProvider>,
     )
@@ -496,7 +496,7 @@ describe('TypingTestView romaji guide', () => {
   it('renders the lookahead words, space-separated, after typed/remaining', () => {
     renderView({
       state: makeState({ status: 'running', words: ['あい', 'かめ', 'いぬ'] }),
-      romajiGuide: { typed: 'a', remaining: 'i', kanaCompleted: 1, lookahead: ['kame', 'inu'] },
+      romajiGuide: { typed: 'a', remaining: 'i', kanaCompleted: 1, lookahead: ['kame', 'inu'], showRow: true },
     })
     const guide = screen.getByTestId('typing-test-romaji-guide')
     const lookaheadSpans = screen.getAllByTestId('typing-test-romaji-lookahead')
@@ -509,7 +509,7 @@ describe('TypingTestView romaji guide', () => {
   it('does not render any lookahead span when lookahead is empty', () => {
     renderView({
       state: makeState({ status: 'running', words: ['あい'] }),
-      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [] },
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [], showRow: true },
     })
     expect(screen.queryByTestId('typing-test-romaji-lookahead')).toBeNull()
   })
@@ -517,7 +517,7 @@ describe('TypingTestView romaji guide', () => {
   it('shows the IME hint once a composition event fires in romaji mode', () => {
     renderView({
       state: makeState({ status: 'running', words: ['あい'] }),
-      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [] },
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [], showRow: true },
     })
     expect(screen.queryByTestId('typing-test-romaji-ime-hint')).toBeNull()
     const textarea = screen.getByLabelText('IME input') as HTMLTextAreaElement
@@ -536,7 +536,7 @@ describe('TypingTestView romaji guide', () => {
     renderView({
       fontSize: 40,
       state: makeState({ status: 'running', words: ['あい'] }),
-      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [] },
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [], showRow: true },
     })
     const guide = screen.getByTestId('typing-test-romaji-guide')
     expect(guide.style.getPropertyValue('--tt-font')).toBe('40')
@@ -544,6 +544,26 @@ describe('TypingTestView romaji guide', () => {
     expect(typedRemaining).not.toBeNull()
     // The IME hint stays a fixed small size, not tied to --tt-font.
     expect(guide.querySelector('[data-testid="typing-test-romaji-ime-hint"]')).toBeNull()
+  })
+
+  it('hides the guide row entirely when showRow is false and no IME hint is active', () => {
+    renderView({
+      state: makeState({ status: 'running', words: ['あい'] }),
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [], showRow: false },
+    })
+    expect(screen.queryByTestId('typing-test-romaji-guide')).toBeNull()
+  })
+
+  it('shows only the IME hint (no spelling row) when showRow is false but the IME is detected', () => {
+    renderView({
+      state: makeState({ status: 'running', words: ['あい'] }),
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [], showRow: false },
+    })
+    const textarea = screen.getByLabelText('IME input') as HTMLTextAreaElement
+    fireEvent.compositionStart(textarea)
+    const guide = screen.getByTestId('typing-test-romaji-guide')
+    expect(screen.getByTestId('typing-test-romaji-ime-hint')).toBeInTheDocument()
+    expect(guide.querySelector('.typing-romaji-guide-text')).toBeNull()
   })
 
 })

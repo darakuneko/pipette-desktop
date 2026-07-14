@@ -52,6 +52,20 @@ describe('RomajiSettingsModal defaults', () => {
     expect(screen.getByTestId('romaji-case-upper').className).not.toContain('text-accent')
   })
 
+  it('defaults the guide word count selector to 2', () => {
+    renderModal()
+    expect(screen.getByTestId('romaji-guide-words-2').className).toContain('text-accent')
+    for (const n of [0, 1, 3]) {
+      expect(screen.getByTestId(`romaji-guide-words-${n}`).className).not.toContain('text-accent')
+    }
+  })
+
+  it('highlights the persisted guideWordCount instead of the default', () => {
+    renderModal({ config: { ...BASE_CONFIG, romaji: { guideWordCount: 0 } } })
+    expect(screen.getByTestId('romaji-guide-words-0').className).toContain('text-accent')
+    expect(screen.getByTestId('romaji-guide-words-2').className).not.toContain('text-accent')
+  })
+
   it('defaults the guide Base selector to Hepburn, with every Option off', () => {
     renderModal()
     expect(screen.getByTestId('romaji-guide-base-hepburn')).toHaveAttribute('aria-pressed', 'true')
@@ -121,6 +135,30 @@ describe('RomajiSettingsModal edits', () => {
     fireEvent.click(screen.getByTestId('romaji-case-capital'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
     if (arg.mode === 'words') expect(arg.romaji).toEqual({ caseStyle: 'capital' })
+  })
+
+  it('setting guideWordCount to 0 persists it explicitly', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-guide-words-0'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') expect(arg.romaji).toEqual({ guideWordCount: 0 })
+  })
+
+  it('setting guideWordCount to 3 persists it explicitly', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-guide-words-3'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') expect(arg.romaji).toEqual({ guideWordCount: 3 })
+  })
+
+  it('re-selecting the default guideWordCount of 2 prunes the field back to unset', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ config: { ...BASE_CONFIG, romaji: { guideWordCount: 0 } }, onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-guide-words-2'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
   })
 
   it('selecting Kunrei as the guide Base adds kunrei to guideStyles', () => {

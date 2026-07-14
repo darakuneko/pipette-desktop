@@ -1,5 +1,5 @@
 {
-  "version": "0.1.16",
+  "version": "0.1.17",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -324,6 +324,7 @@
           "capital": "Romaji",
           "lower": "romaji"
         },
+        "guideWordsLabel": "表示語数どす",
         "guideLabel": "表示パターン",
         "guideHint": "表示だけどすえ。他の入力パターンでも正解になりますえ",
         "inputLabel": "入力パターン",

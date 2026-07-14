@@ -198,15 +198,15 @@ describe('useTypingTest — romaji input mode', () => {
     await seedKanaLanguage(KANA_LANGUAGE, ['でぃなー'])
     const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
 
-    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'dhina-', kanaCompleted: 0, lookahead: [] })
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'dhina-', kanaCompleted: 0, lookahead: [], showRow: true })
 
     press(result, 'd')
     press(result, 'h')
     press(result, 'i') // commits でぃ as one 2-kana digraph segment
-    expect(result.current.romajiGuide).toEqual({ typed: 'dhi', remaining: 'na-', kanaCompleted: 2, lookahead: [] })
+    expect(result.current.romajiGuide).toEqual({ typed: 'dhi', remaining: 'na-', kanaCompleted: 2, lookahead: [], showRow: true })
   })
 
-  it('previews the next up-to-two words\' canonical romaji as lookahead, shrinking near the end of the run', async () => {
+  it('previews the next word as lookahead by default (guideWordCount 2 = current + 1), shrinking near the end of the run', async () => {
     // Single-word lists sample deterministically (see sampleWords), so a
     // 3-word run against the same word gives full control over the queue
     // without needing to control random word selection.
@@ -214,18 +214,50 @@ describe('useTypingTest — romaji input mode', () => {
     const { result } = renderHook(() => useTypingTest(wordsConfig(3), KANA_LANGUAGE))
     expect(result.current.state.words).toEqual(['あい', 'あい', 'あい'])
 
-    // At word 0: both word 1 and word 2 are upcoming.
-    expect(result.current.romajiGuide?.lookahead).toEqual(['ai', 'ai'])
+    // At word 0: only word 1 is upcoming (default guideWordCount 2 = current + 1 next).
+    expect(result.current.romajiGuide?.lookahead).toEqual(['ai'])
+    expect(result.current.romajiGuide?.showRow).toBe(true)
 
     type(result, 'ai')
     expect(result.current.state.currentWordIndex).toBe(1)
-    // At word 1: only word 2 remains upcoming.
+    // At word 1: word 2 remains upcoming.
     expect(result.current.romajiGuide?.lookahead).toEqual(['ai'])
 
     type(result, 'ai')
     expect(result.current.state.currentWordIndex).toBe(2)
     // At the last word: nothing left to preview.
     expect(result.current.romajiGuide?.lookahead).toEqual([])
+  })
+
+  it('hides the guide row and shows no lookahead when guideWordCount is 0', async () => {
+    await seedKanaLanguage(KANA_LANGUAGE, ['あい'])
+    const config = { ...wordsConfig(3), romaji: { guideWordCount: 0 } }
+    const { result } = renderHook(() => useTypingTest(config, KANA_LANGUAGE))
+
+    expect(result.current.romajiGuide?.lookahead).toEqual([])
+    expect(result.current.romajiGuide?.showRow).toBe(false)
+    // kanaCompleted still tracks progress even with the row hidden — the
+    // coloring in WordDisplay must keep working at guideWordCount 0.
+    expect(result.current.romajiGuide?.kanaCompleted).toBe(0)
+  })
+
+  it('shows the row with only the current word (no lookahead) when guideWordCount is 1', async () => {
+    await seedKanaLanguage(KANA_LANGUAGE, ['あい'])
+    const config = { ...wordsConfig(3), romaji: { guideWordCount: 1 } }
+    const { result } = renderHook(() => useTypingTest(config, KANA_LANGUAGE))
+
+    expect(result.current.romajiGuide?.lookahead).toEqual([])
+    expect(result.current.romajiGuide?.showRow).toBe(true)
+  })
+
+  it('previews up to 2 upcoming words when guideWordCount is 3 (current + next two)', async () => {
+    await seedKanaLanguage(KANA_LANGUAGE, ['あい'])
+    const config = { ...wordsConfig(4), romaji: { guideWordCount: 3 } }
+    const { result } = renderHook(() => useTypingTest(config, KANA_LANGUAGE))
+    expect(result.current.state.words).toEqual(['あい', 'あい', 'あい', 'あい'])
+
+    expect(result.current.romajiGuide?.lookahead).toEqual(['ai', 'ai'])
+    expect(result.current.romajiGuide?.showRow).toBe(true)
   })
 
   it('keeps romajiInput saved but inactive once the language switches off a kana pack', async () => {
@@ -386,7 +418,7 @@ describe('useTypingTest — config.romaji wiring', () => {
       KANA_LANGUAGE,
     ))
 
-    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'si', kanaCompleted: 0, lookahead: [] })
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'si', kanaCompleted: 0, lookahead: [], showRow: true })
 
     // The canonical spelling is still accepted even though the guide shows 'si'.
     type(result, 'shi')
@@ -401,9 +433,9 @@ describe('useTypingTest — config.romaji wiring', () => {
       KANA_LANGUAGE,
     ))
 
-    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'AI', kanaCompleted: 0, lookahead: [] })
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'AI', kanaCompleted: 0, lookahead: [], showRow: true })
     press(result, 'a')
-    expect(result.current.romajiGuide).toEqual({ typed: 'A', remaining: 'I', kanaCompleted: 1, lookahead: [] })
+    expect(result.current.romajiGuide).toEqual({ typed: 'A', remaining: 'I', kanaCompleted: 1, lookahead: [], showRow: true })
     // Lowercase 'a' is still what's accepted — the transform never reaches acceptance.
     expect(result.current.state.incorrectChars).toBe(0)
   })
@@ -416,28 +448,30 @@ describe('useTypingTest — config.romaji wiring', () => {
     ))
 
     // Nothing typed yet — the capital lands on the first char of `remaining`.
-    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'Ai', kanaCompleted: 0, lookahead: [] })
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'Ai', kanaCompleted: 0, lookahead: [], showRow: true })
 
     press(result, 'a')
     // Once something is typed, the capital moves onto `typed`'s first char
     // and `remaining` goes back to lowercase.
-    expect(result.current.romajiGuide).toEqual({ typed: 'A', remaining: 'i', kanaCompleted: 1, lookahead: [] })
+    expect(result.current.romajiGuide).toEqual({ typed: 'A', remaining: 'i', kanaCompleted: 1, lookahead: [], showRow: true })
   })
 
   it('applies caseStyle to lookahead entries too, upper and capital alike', async () => {
+    // Default guideWordCount (2 = current + 1 next), so at word 0 only one
+    // upcoming word is previewed even with a 3-word run.
     await seedKanaLanguage(KANA_LANGUAGE, ['あい'])
     const { result: upperResult } = renderHook(() => useTypingTest(
       { mode: 'words', wordCount: 3, punctuation: false, numbers: false, romajiInput: true, romaji: { caseStyle: 'upper' } },
       KANA_LANGUAGE,
     ))
-    expect(upperResult.current.romajiGuide?.lookahead).toEqual(['AI', 'AI'])
+    expect(upperResult.current.romajiGuide?.lookahead).toEqual(['AI'])
 
     await seedKanaLanguage(KANA_LANGUAGE, ['あい'])
     const { result: capitalResult } = renderHook(() => useTypingTest(
       { mode: 'words', wordCount: 3, punctuation: false, numbers: false, romajiInput: true, romaji: { caseStyle: 'capital' } },
       KANA_LANGUAGE,
     ))
-    expect(capitalResult.current.romajiGuide?.lookahead).toEqual(['Ai', 'Ai'])
+    expect(capitalResult.current.romajiGuide?.lookahead).toEqual(['Ai'])
   })
 
   it('changing config.romaji via setConfig restarts the test, same as any other config field change', async () => {
@@ -463,7 +497,7 @@ describe('useTypingTest — config.romaji wiring', () => {
 })
 
 describe('applyRomajiCaseStyle — lookahead entries', () => {
-  const baseGuide: RomajiGuide = { typed: '', remaining: 'a', kanaCompleted: 0, lookahead: ['ai', 'ka'] }
+  const baseGuide: RomajiGuide = { typed: '', remaining: 'a', kanaCompleted: 0, lookahead: ['ai', 'ka'], showRow: true }
 
   it('leaves lookahead untouched for lower/undefined', () => {
     expect(applyRomajiCaseStyle(baseGuide, undefined).lookahead).toEqual(['ai', 'ka'])
@@ -479,7 +513,7 @@ describe('applyRomajiCaseStyle — lookahead entries', () => {
   })
 
   it('capitalizes lookahead even when the current word itself has nothing to capitalize', () => {
-    const emptyWordGuide: RomajiGuide = { typed: '', remaining: '', kanaCompleted: 0, lookahead: ['ai'] }
+    const emptyWordGuide: RomajiGuide = { typed: '', remaining: '', kanaCompleted: 0, lookahead: ['ai'], showRow: true }
     expect(applyRomajiCaseStyle(emptyWordGuide, 'capital').lookahead).toEqual(['Ai'])
   })
 })
