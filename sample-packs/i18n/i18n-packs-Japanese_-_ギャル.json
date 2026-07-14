@@ -1,5 +1,5 @@
 {
-  "version": "0.1.13",
+  "version": "0.1.14",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -72,8 +72,7 @@
       "done": "完了っしょ☆",
       "rowLabel": "行",
       "colLabel": "列",
-      "blankOption": "—",
-      "reset": "ビューマトリクスをリセットっしょ☆"
+      "blankOption": "—"
     },
     "keymap": {
       "title": "キーマップっしょ",
