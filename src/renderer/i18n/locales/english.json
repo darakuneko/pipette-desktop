@@ -1,5 +1,5 @@
 {
-  "version": "0.1.14",
+  "version": "0.1.15",
   "name": "English",
   "common": {
     "save": "Save",
@@ -390,7 +390,7 @@
       "resetSize": "Default Size",
       "fitSize": "Fit Size",
       "baseLayer": "Layer",
-      "modeLabel": "Mode",
+      "modeLabel": "Data Source",
       "pattern": "Pattern",
       "units": "Units",
       "unitsWords": "Units(Words)",
@@ -420,7 +420,7 @@
       "paused": "Window lost focus",
       "layerNote": "Only MO / LT / LM layer switches are tracked. Other layer keys and advanced features may not be reflected.",
       "language": {
-        "title": "Mode",
+        "title": "Data Source",
         "searchPlaceholder": "Search languages...",
         "downloaded": "Downloaded",
         "available": "Available",
@@ -453,7 +453,8 @@
         "kanaRowLabel": "row",
         "kanaRowGroupAriaLabel": "Filter by author reading, gojuon row",
         "kanaColumnGroupAriaLabel": "Filter by author reading, gojuon column",
-        "romajiBadge": "Romaji"
+        "romajiBadge": "Romaji",
+        "romajiFilter": "Show romaji-input entries only"
       },
       "memory": {
         "pause": "Pause",

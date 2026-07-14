@@ -371,6 +371,109 @@ describe('LanguageSelectorModal', () => {
     expect(arabicRow.textContent).toContain('RTL')
   })
 
+  it('filters to romaji-capable languages when the romaji filter toggle is active', async () => {
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('language-row-japanese_hiragana')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('language-row-english')).toBeInTheDocument()
+
+    const toggle = screen.getByTestId('romaji-filter-toggle')
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+
+    expect(screen.getByTestId('language-row-japanese_hiragana')).toBeInTheDocument()
+    expect(screen.queryByTestId('language-row-english')).not.toBeInTheDocument()
+
+    // Toggling back off restores the full list.
+    fireEvent.click(toggle)
+    expect(screen.getByTestId('language-row-english')).toBeInTheDocument()
+  })
+
+  it('filters to romaji-capable tatoeba packs when the romaji filter toggle is active', async () => {
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('language-tab-tatoeba'))
+    await waitFor(() => {
+      expect(screen.getByTestId('language-row-japanese_hiragana')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('language-row-english')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('romaji-filter-toggle'))
+
+    expect(screen.getByTestId('language-row-japanese_hiragana')).toBeInTheDocument()
+    expect(screen.queryByTestId('language-row-english')).not.toBeInTheDocument()
+  })
+
+  it('does not show the romaji filter toggle on the Aozora tab', async () => {
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('language-tab-aozora'))
+    await waitFor(() => {
+      expect(window.vialAPI.langList).toHaveBeenCalledWith('aozora')
+    })
+
+    expect(screen.queryByTestId('romaji-filter-toggle')).not.toBeInTheDocument()
+  })
+
+  it('filters the File Import tab to romaji-capable texts when the romaji filter toggle is active', async () => {
+    window.vialAPI = {
+      ...window.vialAPI,
+      typingTestTextStoreList: vi.fn().mockResolvedValue({
+        success: true,
+        data: [
+          { id: 'kana-id', name: 'Kana Text', wordCount: 5, filename: 'k.json', savedAt: '', updatedAt: '', romajiCapable: true },
+          { id: 'mixed-id', name: 'Mixed Text', wordCount: 5, filename: 'm.json', savedAt: '', updatedAt: '', romajiCapable: false },
+        ],
+      }),
+    } as unknown as typeof window.vialAPI
+
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('language-tab-import'))
+    await waitFor(() => expect(screen.getByTestId('typing-text-row-kana-id')).toBeInTheDocument())
+    expect(screen.getByTestId('typing-text-row-mixed-id')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('romaji-filter-toggle'))
+
+    expect(screen.getByTestId('typing-text-row-kana-id')).toBeInTheDocument()
+    expect(screen.queryByTestId('typing-text-row-mixed-id')).not.toBeInTheDocument()
+  })
+
   it('shows the Romaji badge for a kana word-language pack but not for a non-kana one', async () => {
     renderWithI18n(
       <LanguageSelectorModal

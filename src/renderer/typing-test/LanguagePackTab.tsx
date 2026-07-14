@@ -7,7 +7,7 @@ import { ICON_SM } from '../constants/ui-tokens'
 import { clearTatoebaPackCache } from './word-generator'
 import { useTypingDatasetUpdate } from './useTypingDatasetUpdate'
 import { DatasetUpdateBanner } from './DatasetUpdateBanner'
-import { SectionHeader, RowDeleteButton, RomajiBadge } from './list-parts'
+import { SectionHeader, RowDeleteButton, RomajiBadge, RomajiFilterToggle } from './list-parts'
 import { ROMAJI_INPUT_LANGUAGES } from './types'
 import type { LanguageListEntry } from '../../shared/types/language-store'
 
@@ -35,6 +35,7 @@ export function LanguagePackTab({ provider, currentSelected, onSelect }: Props) 
   const { t } = useTranslation()
   const [languages, setLanguages] = useState<LanguageListEntry[]>([])
   const [search, setSearch] = useState('')
+  const [romajiOnly, setRomajiOnly] = useState(false)
   const [downloading, setDownloading] = useState<Set<string>>(new Set())
   const { updateAvailable, updating, applyUpdate } = useTypingDatasetUpdate(provider)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -95,10 +96,13 @@ export function LanguagePackTab({ provider, currentSelected, onSelect }: Props) 
   }, [provider])
 
   const filtered = useMemo(() => {
-    if (!search) return languages
     const q = search.toLowerCase()
-    return languages.filter((l) => formatName(l.name).toLowerCase().includes(q))
-  }, [languages, search])
+    return languages.filter((l) => {
+      if (romajiOnly && !ROMAJI_INPUT_LANGUAGES.has(l.name)) return false
+      if (q && !formatName(l.name).toLowerCase().includes(q)) return false
+      return true
+    })
+  }, [languages, search, romajiOnly])
 
   const downloaded = useMemo(() => filtered.filter((l) => l.status !== 'not-downloaded'), [filtered])
   const available = useMemo(() => filtered.filter((l) => l.status === 'not-downloaded'), [filtered])
@@ -115,6 +119,10 @@ export function LanguagePackTab({ provider, currentSelected, onSelect }: Props) 
           onChange={(e) => setSearch(e.target.value)}
           data-testid="language-search"
         />
+
+        <div className="mt-2 flex flex-wrap items-center gap-1">
+          <RomajiFilterToggle active={romajiOnly} onToggle={() => setRomajiOnly((v) => !v)} />
+        </div>
       </div>
 
       <DatasetUpdateBanner updateAvailable={updateAvailable} updating={updating} onUpdate={handleUpdateDataset} />

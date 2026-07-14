@@ -1,5 +1,5 @@
 {
-  "version": "0.1.14",
+  "version": "0.1.15",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -390,7 +390,7 @@
       "resetSize": "元の大きさに",
       "fitSize": "丁度よく",
       "baseLayer": "Base Layer",
-      "modeLabel": "形式",
+      "modeLabel": "資料元",
       "pattern": "様式",
       "units": "単位",
       "unitsWords": "単位(語)",
@@ -420,7 +420,7 @@
       "paused": "注意が他へ向かわれたようです",
       "layerNote": "階層の移ろいは一部の術のみ対応しております。他は反映されぬやもしれませぬ、ご容赦を。",
       "language": {
-        "title": "お言葉",
+        "title": "資料元",
         "searchPlaceholder": "言葉を探します...",
         "downloaded": "お手元にございます",
         "available": "入手可能",
@@ -453,7 +453,8 @@
         "kanaRowLabel": "行",
         "kanaRowGroupAriaLabel": "著者名の読みの行にて絞り込む",
         "kanaColumnGroupAriaLabel": "著者名の読みの段にて絞り込む",
-        "romajiBadge": "ローマ字"
+        "romajiBadge": "ローマ字",
+        "romajiFilter": "ローマ字入力に対応せし項目のみを示す"
       },
       "memory": {
         "pause": "小休止",

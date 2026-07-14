@@ -3,6 +3,7 @@
 import { useTranslation } from 'react-i18next'
 import { Trash2 } from 'lucide-react'
 import { ICON_SM } from '../constants/ui-tokens'
+import { optionButtonClass } from './TypingTestSettingsBar'
 
 interface SectionHeaderProps {
   label: string
@@ -29,6 +30,34 @@ export function RomajiBadge() {
     <span className="shrink-0 rounded bg-accent/20 px-2 py-0.5 text-xs text-accent">
       {t('editor.typingTest.language.romajiBadge')}
     </span>
+  )
+}
+
+interface RomajiFilterToggleProps {
+  active: boolean
+  onToggle: () => void
+}
+
+/** Filter toggle shown alongside the search box / Import button on the
+ *  MonkeyType, Tatoeba, and File Import tabs — narrows the list to
+ *  romaji-badged (Romaji-input-capable) entries only. Not offered on the
+ *  Aozora tab, whose catalog entries aren't judged for romaji capability
+ *  the same way. Reuses the accent toggle idiom from TypingTestSettingsBar
+ *  (also shared by RomajiSettingsModal). */
+export function RomajiFilterToggle({ active, onToggle }: RomajiFilterToggleProps) {
+  const { t } = useTranslation()
+  return (
+    <button
+      type="button"
+      data-testid="romaji-filter-toggle"
+      aria-pressed={active}
+      title={t('editor.typingTest.language.romajiFilter')}
+      aria-label={t('editor.typingTest.language.romajiFilter')}
+      onClick={onToggle}
+      className={`${optionButtonClass(active, 'px-2.5')} shrink-0`}
+    >
+      {t('editor.typingTest.language.romajiBadge')}
+    </button>
   )
 }
 
