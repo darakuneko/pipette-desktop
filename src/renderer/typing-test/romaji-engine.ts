@@ -38,6 +38,7 @@
 // sweep against that table.
 
 import { toHiragana } from './kana-script'
+import { ROMAJI_PUNCTUATION, isRomajiPunctuation } from '../../shared/kana-purity'
 
 // Spelling-style groups used to let the Romaji settings modal (Step 2)
 // selectively disable alternate spellings while keeping every word
@@ -350,8 +351,10 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
 // KANA_TABLE gains a non-kana key). mozc's own romaji table maps "."/","
 // to 。/、; ？/！ aren't part of that kana table, but "?"/"!" are their
 // natural direct-keystroke spelling. One canonical ASCII spelling each, no
-// style variants — see .claude/docs/ROMAJI-ENGINE.md.
-export const PUNCTUATION_TABLE: Record<string, readonly string[]> = {
+// style variants — see .claude/docs/ROMAJI-ENGINE.md. Keys are type-locked
+// to ROMAJI_PUNCTUATION (shared with isKanaOnlyText in shared/kana-purity)
+// so the two lists can't drift apart.
+export const PUNCTUATION_TABLE: Record<(typeof ROMAJI_PUNCTUATION)[number], readonly string[]> = {
   '。': ['.'],
   '、': [','],
   '？': ['?'],
@@ -774,9 +777,8 @@ function getSegmentOptions(
   const single = KANA_TABLE[current]
   if (single) options.push({ length: 1, patterns: filterByStyle(current, single, disabledStyles), scope: current })
 
-  if (options.length === 0) {
-    const punct = PUNCTUATION_TABLE[current]
-    if (punct) options.push({ length: 1, patterns: punct, scope: current })
+  if (options.length === 0 && isRomajiPunctuation(current)) {
+    options.push({ length: 1, patterns: PUNCTUATION_TABLE[current], scope: current })
   }
   if (options.length === 0) options.push({ length: 1, patterns: [current], scope: current })
   return options
