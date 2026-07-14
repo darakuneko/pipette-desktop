@@ -104,9 +104,17 @@ function validateTypingTestConfig(raw: unknown): TypingTestConfig | undefined {
     case 'fileImport':
       if (typeof obj.textId !== 'string' || obj.textId.length === 0) return undefined
       return { mode: 'fileImport', textId: obj.textId, ...romajiInput, ...romajiDetail }
-    case 'tatoeba':
+    case 'tatoeba': {
       if (typeof obj.language !== 'string' || obj.language.length === 0) return undefined
-      return { mode: 'tatoeba', language: obj.language, ...romajiInput, ...romajiDetail }
+      // Older configs (saved before Tatoeba gained its own Pattern/Units)
+      // lack pattern/lineCount/duration — default them rather than reject
+      // the whole config, same treatment as every other optional-carry-
+      // through field on this type.
+      const pattern = obj.pattern === 'time' ? 'time' : 'lines'
+      const lineCount = isFinitePositiveInt(obj.lineCount) ? obj.lineCount : 5
+      const duration = isFinitePositiveInt(obj.duration) ? obj.duration : 30
+      return { mode: 'tatoeba', language: obj.language, pattern, lineCount, duration, ...romajiInput, ...romajiDetail }
+    }
     default:
       return undefined
   }

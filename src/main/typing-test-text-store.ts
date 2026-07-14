@@ -208,7 +208,7 @@ export async function saveRecord(input: SaveTextInput): Promise<TypingTestTextSt
   }
   const name = validated.data
 
-  const { text, wordCount } = normalizeFileImportText(typeof input.text === 'string' ? input.text : '')
+  const { text, wordCount, lineCount } = normalizeFileImportText(typeof input.text === 'string' ? input.text : '')
   if (wordCount === 0) return fail('EMPTY_TEXT', 'Text has no typeable words')
 
   try {
@@ -226,6 +226,7 @@ export async function saveRecord(input: SaveTextInput): Promise<TypingTestTextSt
       id,
       name,
       wordCount,
+      lineCount,
       filename,
       savedAt: now.toISOString(),
       updatedAt: now.toISOString(),

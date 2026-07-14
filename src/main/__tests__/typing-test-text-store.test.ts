@@ -78,16 +78,25 @@ describe('typing-test-text-store', () => {
 
   describe('normalizeFileImportText', () => {
     it('canonicalizes with single spaces in a line and newline at breaks', () => {
-      expect(normalizeFileImportText('the  quick\nbrown   fox')).toEqual({ text: 'the quick\nbrown fox', wordCount: 4 })
+      expect(normalizeFileImportText('the  quick\nbrown   fox')).toEqual({ text: 'the quick\nbrown fox', wordCount: 4, lineCount: 2 })
     })
 
     it('preserves leading indentation per line (code structure)', () => {
-      expect(normalizeFileImportText('def f() {\n  val x = 1\n}')).toEqual({ text: 'def f() {\n  val x = 1\n}', wordCount: 8 })
+      expect(normalizeFileImportText('def f() {\n  val x = 1\n}')).toEqual({ text: 'def f() {\n  val x = 1\n}', wordCount: 8, lineCount: 3 })
     })
 
     it('round-trips through parseFileImportText', () => {
       const { text } = normalizeFileImportText('a b\nc\n\nd e f')
       expect(parseFileImportText(text)).toEqual(parseFileImportText('a b\nc\n\nd e f'))
+    })
+
+    it('counts non-empty lines, dropping blank lines from the count', () => {
+      // 3 non-blank lines; the blank line between "c" and "d e f" is dropped.
+      expect(normalizeFileImportText('a b\nc\n\nd e f').lineCount).toBe(3)
+    })
+
+    it('a single-line, no-space text has lineCount === wordCount (one "word" per line)', () => {
+      expect(normalizeFileImportText('こんにちは')).toEqual({ text: 'こんにちは', wordCount: 1, lineCount: 1 })
     })
   })
 
@@ -96,12 +105,14 @@ describe('typing-test-text-store', () => {
       const result = await saveRecord({ name: 'My Novel', text: 'the quick brown fox' })
       expect(result.success).toBe(true)
       expect(result.data?.wordCount).toBe(4)
+      expect(result.data?.lineCount).toBe(1)
       expect(result.data?.id).toBeTruthy()
       expect(notifyChange).toHaveBeenCalledWith(TYPING_TEST_TEXT_SYNC_UNIT)
 
       const metas = await listMetas()
       expect(metas).toHaveLength(1)
       expect(metas[0].name).toBe('My Novel')
+      expect(metas[0].lineCount).toBe(1)
     })
 
     it('rejects empty / whitespace-only text', async () => {

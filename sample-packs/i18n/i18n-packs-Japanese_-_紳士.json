@@ -1,5 +1,5 @@
 {
-  "version": "0.1.15",
+  "version": "0.1.16",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -307,7 +307,8 @@
         "words": "単語数",
         "time": "時間制限",
         "quote": "名句",
-        "fileImport": "文言"
+        "fileImport": "文言",
+        "lines": "行数"
       },
       "punctuation": "句読点",
       "numbers": "数字",
@@ -395,6 +396,7 @@
       "units": "単位",
       "unitsWords": "単位(語)",
       "unitsSec": "単位(秒)",
+      "unitsLines": "単位(行)",
       "optionLabel": "選択",
       "baseLayerShort": "Base",
       "heatmapWindow": "熱分布の期間（分）",
@@ -426,6 +428,7 @@
         "available": "入手可能",
         "noResults": "そのような言葉は見当たりません",
         "words": "{{count}} 語",
+        "lines": "{{count}} 行",
         "loadingLanguage": "言葉を紐解いております...",
         "downloadFailed": "お取り寄せに失敗いたしました",
         "tabMonkeytype": "MonkeyType",

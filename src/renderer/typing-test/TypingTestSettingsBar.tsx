@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Labeled test-config bar (Pattern / Units / Option) shown below the Mode row
-// in editor typing-test mode. Pattern/Units only render for words/time/quote
-// (the parent gates the whole bar on mode + romaji capability — tatoeba and
-// fileImport only ever see this bar's Option row, and only once their
-// content is romaji-capable, see isRomajiCapable). Extracted from
-// TypingTestView so the config controls live with the Mode / Base Layer row
-// rather than above the reading area.
+// in editor typing-test mode. The shared words/time/quote Pattern/Units
+// render for those three modes; tatoeba gets its own Pattern (Lines / Time)
+// + Units section (below, gated separately since it doesn't share the
+// words/time/quote mode-switch). fileImport has neither — the parent gates
+// the whole bar on mode + romaji capability, so fileImport only ever sees
+// this bar's Option row, and only once its content is romaji-capable (see
+// isRomajiCapable). Extracted from TypingTestView so the config controls
+// live with the Mode / Base Layer row rather than above the reading area.
 
 import { useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingTestConfig, TypingTestMode, QuoteLength, RomajiDetailSettings } from './types'
-import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS } from './types'
+import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS, TATOEBA_LINE_OPTIONS } from './types'
 import { isRomajiCapable, isRomajiInputEnabled } from './romaji-input'
 import { RomajiSettingsModal } from './RomajiSettingsModal'
 
@@ -176,6 +178,66 @@ export function TypingTestSettingsBar({ config, onConfigChange, language, textRo
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Tatoeba's own Pattern (Lines / Time) — separate from the shared
+          words/time/quote Pattern row above since tatoeba switches via the
+          Language selector, not this bar's mode-switch (see handleModeChange). */}
+      {config.mode === 'tatoeba' && (
+        <div className="flex w-full flex-col items-start gap-1">
+          <span className={LABEL}>{t('editor.typingTest.pattern')}</span>
+          <div className="flex h-8 w-full items-center gap-1 rounded-lg bg-surface-alt/50 px-1">
+            <button
+              type="button"
+              data-testid="tatoeba-pattern-lines"
+              className={`${optionButtonClass(config.pattern === 'lines')} flex-1 justify-center`}
+              onClick={() => onConfigChange({ ...config, pattern: 'lines' })}
+            >
+              {t('editor.typingTest.mode.lines')}
+            </button>
+            <button
+              type="button"
+              data-testid="tatoeba-pattern-time"
+              className={`${optionButtonClass(config.pattern === 'time')} flex-1 justify-center`}
+              onClick={() => onConfigChange({ ...config, pattern: 'time' })}
+            >
+              {t('editor.typingTest.mode.time')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Tatoeba's own Units — Lines pattern picks the sampled sentence
+          count, Time pattern reuses TIME_DURATION_OPTIONS (same as the
+          monkeytype Time mode's Units row). */}
+      {config.mode === 'tatoeba' && (
+        <div className="flex w-full flex-col items-start gap-1">
+          <span className={LABEL}>{config.pattern === 'lines' ? t('editor.typingTest.unitsLines') : t('editor.typingTest.unitsSec')}</span>
+          <div className="flex w-full items-center gap-1">
+            {config.pattern === 'lines' && TATOEBA_LINE_OPTIONS.map((count) => (
+              <button
+                key={count}
+                type="button"
+                data-testid={`tatoeba-line-${count}`}
+                className={`${optionButtonClass(config.lineCount === count)} flex-1 justify-center`}
+                onClick={() => onConfigChange({ ...config, lineCount: count })}
+              >
+                {count}
+              </button>
+            ))}
+            {config.pattern === 'time' && TIME_DURATION_OPTIONS.map((dur) => (
+              <button
+                key={dur}
+                type="button"
+                data-testid={`tatoeba-sec-${dur}`}
+                className={`${optionButtonClass(config.duration === dur)} flex-1 justify-center`}
+                onClick={() => onConfigChange({ ...config, duration: dur })}
+              >
+                {dur}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

@@ -13,7 +13,7 @@ const wordsConfig = (romajiInput?: boolean, romaji?: RomajiDetailSettings): Typi
 const timeConfig = (romajiInput?: boolean, romaji?: RomajiDetailSettings): TypingTestConfig =>
   ({ mode: 'time', duration: 30, punctuation: false, numbers: false, romajiInput, romaji })
 const tatoebaConfig = (language: string, romajiInput?: boolean, romaji?: RomajiDetailSettings): TypingTestConfig =>
-  ({ mode: 'tatoeba', language, romajiInput, romaji })
+  ({ mode: 'tatoeba', language, pattern: 'lines', lineCount: 5, duration: 30, romajiInput, romaji })
 const fileImportConfig = (romajiInput?: boolean, romaji?: RomajiDetailSettings): TypingTestConfig =>
   ({ mode: 'fileImport', textId: 't1', romajiInput, romaji })
 const quoteConfig = (): TypingTestConfig => ({ mode: 'quote', quoteLength: 'medium' })

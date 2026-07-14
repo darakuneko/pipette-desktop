@@ -1,5 +1,5 @@
 {
-  "version": "0.1.15",
+  "version": "0.1.16",
   "name": "English",
   "common": {
     "save": "Save",
@@ -307,7 +307,8 @@
         "words": "words",
         "time": "time",
         "quote": "quote",
-        "fileImport": "text"
+        "fileImport": "text",
+        "lines": "Lines"
       },
       "punctuation": "punctuation",
       "numbers": "numbers",
@@ -395,6 +396,7 @@
       "units": "Units",
       "unitsWords": "Units(Words)",
       "unitsSec": "Units(Sec)",
+      "unitsLines": "Units(Lines)",
       "optionLabel": "Option",
       "baseLayerShort": "Base",
       "heatmapWindow": "Heatmap window (minutes)",
@@ -426,6 +428,7 @@
         "available": "Available",
         "noResults": "No matching languages",
         "words": "{{count}} words",
+        "lines": "{{count}} lines",
         "loadingLanguage": "Loading language...",
         "downloadFailed": "Download failed",
         "tabMonkeytype": "MonkeyType",

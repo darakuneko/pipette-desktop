@@ -4,6 +4,7 @@
  *  advance it on keystrokes, backspace, and word submits. */
 
 import type { TypingTestConfig, Quote } from './types'
+import { isTimeBoundedRun } from './types'
 import { type WordsForConfig, createWordsForConfigSync, refillTimeModeWords } from './word-supply'
 
 export type TypingTestStatus = 'countdown' | 'waiting' | 'running' | 'finished' | 'paused'
@@ -124,10 +125,15 @@ export function tryFinishLastWord(state: TypingTestState): TypingTestState | nul
 export function advanceAfterWord(base: TypingTestState, config: TypingTestConfig, language: string): TypingTestState {
   const nextIndex = base.currentWordIndex
 
-  // Time mode: extend words if running low, never finish from words
-  if (config.mode === 'time') {
+  // Time-bounded runs (monkeytype time mode, or tatoeba's Time pattern):
+  // extend words if running low, never finish from words.
+  if (isTimeBoundedRun(config)) {
     const refilled = refillTimeModeWords(base.words, nextIndex, config, language)
-    return refilled ? { ...base, words: refilled } : base
+    if (!refilled) return base
+    if (refilled.lineBreaks.length === 0) return { ...base, words: refilled.words }
+    const lineBreaks = new Set(base.lineBreaks)
+    for (const b of refilled.lineBreaks) lineBreaks.add(b)
+    return { ...base, words: refilled.words, lineBreaks }
   }
 
   // Words and quote modes: finish when all words typed

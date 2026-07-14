@@ -11,6 +11,7 @@ import { WpmSparkline } from './WpmSparkline'
 import { AccuracyTrendSection } from './AccuracyTrendSection'
 import { formatDate, ACTION_BTN, DELETE_BTN, CONFIRM_DELETE_BTN, FILTER_SELECT_CLASS } from '../components/editors/store-modal-shared'
 import { resultKpm, buildResultNameChips } from './result-builder'
+import { formatConditionLabel } from './condition-label'
 import { ResultNameModal } from './ResultNameModal'
 import { Tooltip } from '../components/ui/Tooltip'
 
@@ -49,7 +50,10 @@ function formatDuration(seconds: number): string {
 
 /** Mode-column detail. FileImport (imported-text) runs show the snapshotted text
  *  name (falling back to the stable textId for legacy rows saved before the
- *  name was captured); every other mode shows its `mode2` value. */
+ *  name was captured); words/time/quote show their `mode2` value verbatim.
+ *  Tatoeba is NOT handled here — its `mode2` is a composite
+ *  `language|pattern|count` (see `deriveMode2`), so the Mode column renders
+ *  it via `formatConditionLabel` instead of this raw value. */
 function modeDetail(r: TypingTestResult): string {
   if (r.mode === 'fileImport') return r.fileImportTextName ?? (r.mode2 != null ? String(r.mode2) : '')
   return r.mode2 != null ? String(r.mode2) : ''
@@ -300,7 +304,12 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
                   <td className="whitespace-nowrap px-3 py-1.5 text-content-muted">
                     {isText
                       ? (modeDetail(r) || t('editor.typingTest.history.unnamed'))
-                      : `${t(`editor.typingTest.mode.${r.mode ?? 'words'}`)}${modeDetail(r) ? ` ${modeDetail(r)}` : ''}`}
+                      // Tatoeba's mode2 is a composite (language|pattern|count, see
+                      // deriveMode2) — formatConditionLabel already knows how to
+                      // render it (e.g. "Tatoeba 5 Lines (english)").
+                      : (r.mode === 'tatoeba'
+                        ? formatConditionLabel(r, t)
+                        : `${t(`editor.typingTest.mode.${r.mode ?? 'words'}`)}${modeDetail(r) ? ` ${modeDetail(r)}` : ''}`)}
                   </td>
                   <td className="whitespace-nowrap px-3 py-1.5 font-mono text-content-muted">
                     {formatDuration(r.durationSeconds)}

@@ -513,6 +513,27 @@ describe('LanguageSelectorModal', () => {
     expect(screen.getByTestId('language-row-japanese_hiragana').textContent).toContain('Romaji')
   })
 
+  it('shows a word count for the monkeytype provider but a line count for the tatoeba provider', async () => {
+    renderWithI18n(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('language-row-english').textContent).toContain('200 words')
+    })
+
+    fireEvent.click(screen.getByTestId('language-tab-tatoeba'))
+    await waitFor(() => {
+      expect(screen.getByTestId('language-row-english').textContent).toContain('200 lines')
+    })
+  })
+
   it('deleting the selected imported text then closing fires onCurrentTextDeleted', async () => {
     window.vialAPI = {
       ...window.vialAPI,
@@ -734,6 +755,40 @@ describe('LanguageSelectorModal', () => {
     await waitFor(() => expect(screen.getByTestId('typing-text-row-kana-id')).toBeInTheDocument())
     expect(screen.getByTestId('typing-text-row-kana-id').textContent).toContain('Romaji')
     expect(screen.getByTestId('typing-text-row-mixed-id').textContent).not.toContain('Romaji')
+  })
+
+  it('shows words for a spaced (English-like) import and lines for a no-space (e.g. Japanese) import', async () => {
+    window.vialAPI = {
+      ...window.vialAPI,
+      typingTestTextStoreList: vi.fn().mockResolvedValue({
+        success: true,
+        data: [
+          // Spaced content: more whitespace-delimited words than lines → words.
+          { id: 'spaced-id', name: 'Spaced Text', wordCount: 12, lineCount: 3, filename: 's.json', savedAt: '', updatedAt: '' },
+          // No-space content: one "word" per line (wordCount === lineCount) → lines.
+          { id: 'nospace-id', name: 'No Space Text', wordCount: 5, lineCount: 5, filename: 'n.json', savedAt: '', updatedAt: '' },
+          // Legacy meta saved before lineCount existed → falls back to words.
+          { id: 'legacy-id', name: 'Legacy Text', wordCount: 8, filename: 'l.json', savedAt: '', updatedAt: '' },
+        ],
+      }),
+    } as unknown as typeof window.vialAPI
+
+    renderWithI18n(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('language-tab-import'))
+
+    await waitFor(() => expect(screen.getByTestId('typing-text-row-spaced-id')).toBeInTheDocument())
+    expect(screen.getByTestId('typing-text-row-spaced-id').textContent).toContain('12 words')
+    expect(screen.getByTestId('typing-text-row-nospace-id').textContent).toContain('5 lines')
+    expect(screen.getByTestId('typing-text-row-legacy-id').textContent).toContain('8 words')
   })
 
   it('does not fire onCurrentTextDeleted when nothing was deleted', async () => {

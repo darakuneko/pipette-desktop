@@ -15,6 +15,13 @@ export interface TypingTestTextMeta {
   /** Number of whitespace-separated words stored (post word-cap). Shown
    *  in the Import list. */
   wordCount: number
+  /** Number of non-empty lines stored (post word-cap) — see
+   *  `parseFileImportText`'s line-break convention. Shown in the Import
+   *  list instead of `wordCount` for no-space content (e.g. Japanese),
+   *  where a word count is meaningless — see `ImportRow` in
+   *  LanguageSelectorModal.tsx. Optional so metas persisted before this
+   *  field existed fall back to the words display. */
+  lineCount?: number
   /** Internal filename (`{id}_{timestamp}.json`). */
   filename: string
   /** First save time (ISO 8601). */
@@ -136,7 +143,7 @@ export function parseFileImportText(text: string, maxWords: number = TYPING_TEST
  * space within a line and a newline at each line break. Round-trips
  * through `parseFileImportText` so storage and playback agree exactly.
  */
-export function normalizeFileImportText(raw: string, maxWords: number = TYPING_TEST_TEXT_MAX_WORDS): { text: string; wordCount: number } {
+export function normalizeFileImportText(raw: string, maxWords: number = TYPING_TEST_TEXT_MAX_WORDS): { text: string; wordCount: number; lineCount: number } {
   const { words, lineBreaks, indents } = parseFileImportText(raw, maxWords)
   const breakSet = new Set(lineBreaks)
   let text = ''
@@ -151,5 +158,7 @@ export function normalizeFileImportText(raw: string, maxWords: number = TYPING_T
     text += words[i]
     if (i < words.length - 1) text += breakSet.has(i) ? '\n' : ' '
   }
-  return { text, wordCount: words.length }
+  // `indents` has one entry per kept (non-empty, pre-cap) line — the same
+  // count `lineIdx` reaches once the loop above has walked every word.
+  return { text, wordCount: words.length, lineCount: indents.length }
 }

@@ -225,7 +225,7 @@ describe('buildTypingTestResult', () => {
   })
 
   it('records romajiInput for tatoeba/fileImport runs too, now that recording follows romajiActive', () => {
-    const tatoebaCfg: TypingTestConfig = { mode: 'tatoeba', language: 'japanese_hiragana' }
+    const tatoebaCfg: TypingTestConfig = { mode: 'tatoeba', language: 'japanese_hiragana', pattern: 'lines', lineCount: 5, duration: 30 }
     const result = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
       config: tatoebaCfg, language: 'english', wpmHistory: [], romajiActive: true,
@@ -269,8 +269,8 @@ describe('buildTypingTestResult', () => {
     expect(result.mode2).toBe('medium')
   })
 
-  it('stores the tatoeba pack language as language + mode2, not the input language', () => {
-    const config: TypingTestConfig = { mode: 'tatoeba', language: 'english' }
+  it('stores the tatoeba pack language as language, and a composite language|pattern|unit as mode2, not the input language', () => {
+    const config: TypingTestConfig = { mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30 }
     const result = buildTypingTestResult({
       correctChars: 120,
       incorrectChars: 4,
@@ -285,9 +285,26 @@ describe('buildTypingTestResult', () => {
       romajiActive: false,
     })
     expect(result.mode).toBe('tatoeba')
-    expect(result.mode2).toBe('english')
+    expect(result.mode2).toBe('english|lines|5')
     expect(result.language).toBe('english')
     expect(typingTestResultMaterialLabel(result)).toBe('tatoeba-english')
+  })
+
+  it('derives the tatoeba mode2 unit from duration when pattern is time', () => {
+    const config: TypingTestConfig = { mode: 'tatoeba', language: 'japanese', pattern: 'time', lineCount: 5, duration: 30 }
+    const result = buildTypingTestResult({
+      correctChars: 120,
+      incorrectChars: 4,
+      wordCount: 20,
+      wpm: 65,
+      accuracy: 97,
+      elapsedMs: 40000,
+      config,
+      language: 'japanese',
+      wpmHistory: [],
+      romajiActive: false,
+    })
+    expect(result.mode2).toBe('japanese|time|30')
   })
 })
 

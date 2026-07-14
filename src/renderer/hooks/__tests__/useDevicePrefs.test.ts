@@ -439,7 +439,9 @@ describe('useDevicePrefs', () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
 
-      expect(result.current.typingTestConfig).toEqual({ mode: 'tatoeba', language: 'english' })
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30,
+      })
     })
 
     it('rejects a stale tatoeba value persisted in the MonkeyType fallback', async () => {
@@ -477,10 +479,12 @@ describe('useDevicePrefs', () => {
       })
       // Switch to tatoeba → the fallback must stay the last normal config.
       act(() => {
-        result.current.setTypingTestConfig({ mode: 'tatoeba', language: 'english' })
+        result.current.setTypingTestConfig({ mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30 })
       })
 
-      expect(result.current.typingTestConfig).toEqual({ mode: 'tatoeba', language: 'english' })
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30,
+      })
       expect(result.current.typingTestMonkeytypeConfig).toEqual({ mode: 'words', wordCount: 60, punctuation: false, numbers: false })
     })
 
@@ -1049,6 +1053,9 @@ describe('useDevicePrefs', () => {
       expect(result.current.typingTestConfig).toEqual({
         mode: 'tatoeba',
         language: 'japanese_hiragana',
+        pattern: 'lines',
+        lineCount: 5,
+        duration: 30,
         romajiInput: true,
         romaji: { caseStyle: 'capital' },
       })
@@ -1099,7 +1106,52 @@ describe('useDevicePrefs', () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
 
-      expect(result.current.typingTestConfig).toEqual({ mode: 'tatoeba', language: 'english' })
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30,
+      })
+    })
+
+    it('defaults pattern/lineCount/duration on an old tatoeba config that predates them', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        // Pre-Pattern/Units tatoeba config, as saved by an older build.
+        typingTestConfig: { mode: 'tatoeba', language: 'french' },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'tatoeba', language: 'french', pattern: 'lines', lineCount: 5, duration: 30,
+      })
+    })
+
+    it('round-trips explicit pattern/lineCount/duration on a tatoeba config', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: { mode: 'tatoeba', language: 'french', pattern: 'time', lineCount: 20, duration: 120 },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'tatoeba', language: 'french', pattern: 'time', lineCount: 20, duration: 120,
+      })
     })
   })
 

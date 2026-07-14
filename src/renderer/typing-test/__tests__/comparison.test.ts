@@ -27,7 +27,7 @@ function makeResult(overrides: Partial<TypingTestResult> = {}): TypingTestResult
 
 const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false } as TypingTestConfig
 const fileImportConfig: TypingTestConfig = { mode: 'fileImport', textId: 't1' } as TypingTestConfig
-const tatoebaConfig: TypingTestConfig = { mode: 'tatoeba', language: 'english' } as TypingTestConfig
+const tatoebaConfig: TypingTestConfig = { mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30 }
 
 describe('matchingResults', () => {
   it('matches normal runs on mode + params + language + toggles', () => {
@@ -52,12 +52,14 @@ describe('matchingResults', () => {
     expect(out.map((r) => r.wpm).sort()).toEqual([40, 45])
   })
 
-  it('matches tatoeba runs on the pack language (mode2), independent of word language', () => {
+  it('matches tatoeba runs on the pack language + pattern + unit (mode2), independent of word language', () => {
     const pool = [
-      makeResult({ wpm: 40, mode: 'tatoeba', mode2: 'english', language: 'english' }),  // match
-      makeResult({ wpm: 45, mode: 'tatoeba', mode2: 'english', language: 'german' }),   // same pack, stray lang → still match
-      makeResult({ wpm: 99, mode: 'tatoeba', mode2: 'french' }),                        // different pack
-      makeResult({ wpm: 12, mode: 'words', mode2: 'english' }),                         // different mode
+      makeResult({ wpm: 40, mode: 'tatoeba', mode2: 'english|lines|5', language: 'english' }),  // match
+      makeResult({ wpm: 45, mode: 'tatoeba', mode2: 'english|lines|5', language: 'german' }),   // same pack+pattern+count, stray lang → still match
+      makeResult({ wpm: 99, mode: 'tatoeba', mode2: 'english|lines|10' }),                       // different line count
+      makeResult({ wpm: 33, mode: 'tatoeba', mode2: 'english|time|30' }),                        // different pattern
+      makeResult({ wpm: 77, mode: 'tatoeba', mode2: 'french|lines|5' }),                         // different pack
+      makeResult({ wpm: 12, mode: 'words', mode2: 'english' }),                                  // different mode
     ]
     const out = matchingResults(pool, tatoebaConfig, 'german')
     expect(out.map((r) => r.wpm).sort((a, b) => a - b)).toEqual([40, 45])
@@ -86,9 +88,20 @@ describe('conditionKey', () => {
     expect(conditionKey(fileImportConfig, 'japanese')).toBe('fileImport|t1')
   })
 
-  it('keys tatoeba on the pack language only (word-language-independent)', () => {
-    expect(conditionKey(tatoebaConfig, 'german')).toBe('tatoeba|english')
-    expect(conditionKey(tatoebaConfig, 'japanese')).toBe('tatoeba|english')
+  it('keys tatoeba on the pack language + pattern + unit (word-language-independent)', () => {
+    expect(conditionKey(tatoebaConfig, 'german')).toBe('tatoeba|english|lines|5')
+    expect(conditionKey(tatoebaConfig, 'japanese')).toBe('tatoeba|english|lines|5')
+  })
+
+  it('distinguishes tatoeba configs that differ only in pattern or line count/duration', () => {
+    const lines5: TypingTestConfig = { mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30 }
+    const lines10: TypingTestConfig = { mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 10, duration: 30 }
+    const time30: TypingTestConfig = { mode: 'tatoeba', language: 'english', pattern: 'time', lineCount: 5, duration: 30 }
+    const lines5Again: TypingTestConfig = { mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 60 }
+    const keys = [lines5, lines10, time30].map((c) => conditionKey(c, 'english'))
+    expect(new Set(keys).size).toBe(3)
+    // Same language + pattern + lineCount → same key, even if the unused duration field differs.
+    expect(conditionKey(lines5, 'english')).toBe(conditionKey(lines5Again, 'english'))
   })
 
   it('distinguishes different conditions', () => {
@@ -134,11 +147,11 @@ describe('resultConditionKey', () => {
     expect(resultConditionKey(r1)).toBe('fileImport|t1')
   })
 
-  it('keys tatoeba on the pack language (mode2) only', () => {
-    const r1 = makeResult({ mode: 'tatoeba', mode2: 'japanese', language: 'japanese' })
-    const r2 = makeResult({ mode: 'tatoeba', mode2: 'japanese', language: 'german' })
+  it('keys tatoeba on the pack language + pattern + unit (mode2) only', () => {
+    const r1 = makeResult({ mode: 'tatoeba', mode2: 'japanese|lines|5', language: 'japanese' })
+    const r2 = makeResult({ mode: 'tatoeba', mode2: 'japanese|lines|5', language: 'german' })
     expect(resultConditionKey(r1)).toBe(resultConditionKey(r2))
-    expect(resultConditionKey(r1)).toBe('tatoeba|japanese')
+    expect(resultConditionKey(r1)).toBe('tatoeba|japanese|lines|5')
   })
 
   it('falls back sensibly for legacy rows missing mode/mode2/language', () => {
@@ -181,7 +194,7 @@ describe('conditionKey / resultConditionKey agreement', () => {
       { mode: 'time', duration: 30, punctuation: false, numbers: false },
       { mode: 'quote', quoteLength: 'medium' },
       { mode: 'fileImport', textId: 't1' },
-      { mode: 'tatoeba', language: 'japanese' },
+      { mode: 'tatoeba', language: 'japanese', pattern: 'lines', lineCount: 5, duration: 30 },
     ]
     for (const config of configs) {
       const result = buildTypingTestResult(buildInput(config))
