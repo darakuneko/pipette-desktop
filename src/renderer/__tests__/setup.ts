@@ -22,7 +22,7 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 // Object.defineProperty(window, 'vialAPI', { value: ..., writable: true }).
 if (typeof window !== 'undefined') {
   const noopOk = async <T>(value?: T): Promise<{ success: true; data?: T }> => ({ success: true, data: value })
-  const existing = (window as { vialAPI?: Record<string, unknown> }).vialAPI ?? {}
+  const existing = (window as unknown as { vialAPI?: Record<string, unknown> }).vialAPI ?? {}
   const stub = {
     hubGetOrigin: async () => 'https://pipette-hub-test.example',
     openExternal: async () => undefined,

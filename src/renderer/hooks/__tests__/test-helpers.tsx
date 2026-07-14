@@ -9,6 +9,11 @@ import { vi } from 'vitest'
 const mockAppConfigGetAll = vi.fn<() => Promise<AppConfig>>()
 const mockAppConfigSet = vi.fn<(key: string, value: unknown) => Promise<void>>()
 
+/** Double cast: Window doesn't structurally overlap Record<string, unknown>. */
+export function vialAPIMock(): Record<string, unknown> {
+  return (window as unknown as Record<string, unknown>).vialAPI as Record<string, unknown>
+}
+
 export function setupAppConfigMock(overrides: Partial<AppConfig> = {}): {
   mockAppConfigGetAll: typeof mockAppConfigGetAll
   mockAppConfigSet: typeof mockAppConfigSet
@@ -17,7 +22,7 @@ export function setupAppConfigMock(overrides: Partial<AppConfig> = {}): {
   mockAppConfigGetAll.mockResolvedValue(config)
   mockAppConfigSet.mockResolvedValue(undefined)
 
-  const existing = (window as Record<string, unknown>).vialAPI as Record<string, unknown> | undefined
+  const existing = vialAPIMock()
   Object.defineProperty(window, 'vialAPI', {
     value: {
       ...existing,

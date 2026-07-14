@@ -119,7 +119,10 @@ export interface UseKeymapJsonEditorsOptions {
   comboSettingsSupported?: boolean
 }
 
-export interface VisibleQmkModals {
+// Type alias (not interface) so it stays assignable to the
+// `Record<string, boolean>` prop QmkSettingsModals declares — object type
+// aliases get an implicit index signature, interfaces do not.
+export type VisibleQmkModals = {
   tapHold: boolean
   mouseKeys: boolean
   magic: boolean

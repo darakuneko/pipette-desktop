@@ -338,6 +338,7 @@ export interface UseDevicePrefsReturn {
   typingRecordEnabled: boolean
   typingViewMenuTab: TypingViewMenuTab
   viewMode: ViewMode
+  keyEditorZoom: number | undefined
   viewMatrix: Record<string, ViewMatrixCell> | undefined
   appliedUid: string | null
   setLayout: (id: KeyboardLayoutId) => void
@@ -368,6 +369,7 @@ export interface UseDevicePrefsReturn {
   setTypingRecordEnabled: (enabled: boolean) => void
   setTypingViewMenuTab: (tab: TypingViewMenuTab) => void
   setViewMode: (mode: ViewMode) => void
+  setKeyEditorZoom: (zoom: number) => void
   setViewMatrix: (next: Record<string, ViewMatrixCell> | undefined) => void
   defaultLayout: KeyboardLayoutId
   defaultAutoAdvance: boolean

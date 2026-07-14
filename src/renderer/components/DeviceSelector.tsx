@@ -169,7 +169,10 @@ export function DeviceSelector({
           </button>
           <button
             type="button"
-            className={`${TAB_CLASS} ${tab === 'analyze' ? TAB_ACTIVE : TAB_INACTIVE}`}
+            // The analyze tab replaces this whole selector via the early
+            // return above, so by the time this button renders `tab` can
+            // only be 'keyboard' | 'file' — the active style never applies.
+            className={`${TAB_CLASS} ${TAB_INACTIVE}`}
             onClick={() => { setTab('analyze'); onClearError?.() }}
             data-testid="tab-analyze"
           >

@@ -32,6 +32,14 @@ function wrapResponse(notifications: unknown[]): { notifications: unknown[] } {
   return { notifications }
 }
 
+/** `net.fetch` resolves a full DOM-like `Response` with many members this
+ * suite never touches (headers, clone, body stream, ...) — only `ok` /
+ * `status` / `json()` matter to `fetchNotifications`, so build a minimal
+ * mock and widen it at the boundary instead of stubbing the whole interface. */
+function mockResponse(partial: { ok: boolean; status?: number; json?: () => Promise<unknown> }): Response {
+  return partial as unknown as Response
+}
+
 describe('fetchNotifications', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -39,10 +47,10 @@ describe('fetchNotifications', () => {
   })
 
   it('sends POST request with query payload and timeout signal', async () => {
-    mockFetch.mockResolvedValue({
+    mockFetch.mockResolvedValue(mockResponse({
       ok: true,
       json: () => Promise.resolve(wrapResponse([])),
-    })
+    }))
 
     await fetchNotifications()
 
@@ -54,7 +62,7 @@ describe('fetchNotifications', () => {
         signal: expect.any(AbortSignal),
       }),
     )
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+    const body = JSON.parse(mockFetch.mock.calls[0][1]?.body as string)
     expect(body.collection).toBe('pipette-notification')
     expect(body.orderBy).toEqual({ field: 'publishedAt', direction: 'desc' })
     expect(body.limit).toBe(10)
@@ -65,10 +73,10 @@ describe('fetchNotifications', () => {
       { title: 'Update', body: 'New version', type: 'Info', publishedAt: '2025-01-01T00:00:00Z' },
       { title: 'Maintenance', body: 'Scheduled', type: 'Warning', publishedAt: '2025-01-02T00:00:00Z' },
     ]
-    mockFetch.mockResolvedValue({
+    mockFetch.mockResolvedValue(mockResponse({
       ok: true,
       json: () => Promise.resolve(wrapResponse(notifications)),
-    })
+    }))
 
     const result = await fetchNotifications()
     expect(result.success).toBe(true)
@@ -79,10 +87,10 @@ describe('fetchNotifications', () => {
     const notifications = [
       { title: 'TS', body: 'Body', type: 'Info', publishedAt: { _seconds: 1735689600, _nanoseconds: 0 } },
     ]
-    mockFetch.mockResolvedValue({
+    mockFetch.mockResolvedValue(mockResponse({
       ok: true,
       json: () => Promise.resolve(wrapResponse(notifications)),
-    })
+    }))
 
     const result = await fetchNotifications()
     expect(result.success).toBe(true)
@@ -91,10 +99,10 @@ describe('fetchNotifications', () => {
   })
 
   it('returns empty array for empty response', async () => {
-    mockFetch.mockResolvedValue({
+    mockFetch.mockResolvedValue(mockResponse({
       ok: true,
       json: () => Promise.resolve(wrapResponse([])),
-    })
+    }))
 
     const result = await fetchNotifications()
     expect(result.success).toBe(true)
@@ -102,10 +110,10 @@ describe('fetchNotifications', () => {
   })
 
   it('returns failure on HTTP error', async () => {
-    mockFetch.mockResolvedValue({
+    mockFetch.mockResolvedValue(mockResponse({
       ok: false,
       status: 500,
-    })
+    }))
 
     const result = await fetchNotifications()
     expect(result.success).toBe(false)
@@ -128,10 +136,10 @@ describe('fetchNotifications', () => {
       'not an object',
       { title: 123, body: 'Body', type: 'Info', publishedAt: '2025-01-01T00:00:00Z' },
     ]
-    mockFetch.mockResolvedValue({
+    mockFetch.mockResolvedValue(mockResponse({
       ok: true,
       json: () => Promise.resolve(wrapResponse(data)),
-    })
+    }))
 
     const result = await fetchNotifications()
     expect(result.success).toBe(true)
@@ -140,10 +148,10 @@ describe('fetchNotifications', () => {
   })
 
   it('returns failure when response.notifications is not an array', async () => {
-    mockFetch.mockResolvedValue({
+    mockFetch.mockResolvedValue(mockResponse({
       ok: true,
       json: () => Promise.resolve({ message: 'not wrapped' }),
-    })
+    }))
 
     const result = await fetchNotifications()
     expect(result.success).toBe(false)
@@ -156,10 +164,10 @@ describe('fetchNotifications', () => {
       { title: 'Str', body: 'Body', type: 'Info', publishedAt: '2025-01-01T00:00:00Z' },
       { title: 'Bad', body: 'Body', type: 'Info', publishedAt: 12345 },
     ]
-    mockFetch.mockResolvedValue({
+    mockFetch.mockResolvedValue(mockResponse({
       ok: true,
       json: () => Promise.resolve(wrapResponse(data)),
-    })
+    }))
 
     const result = await fetchNotifications()
     expect(result.success).toBe(true)
@@ -172,10 +180,10 @@ describe('fetchNotifications', () => {
       { title: 'Invalid', body: 'Body', type: 'Info', publishedAt: 'not-a-date' },
       { title: 'Empty', body: 'Body', type: 'Info', publishedAt: '' },
     ]
-    mockFetch.mockResolvedValue({
+    mockFetch.mockResolvedValue(mockResponse({
       ok: true,
       json: () => Promise.resolve(wrapResponse(data)),
-    })
+    }))
 
     const result = await fetchNotifications()
     expect(result.success).toBe(true)
@@ -196,10 +204,10 @@ describe('setupNotificationStore', () => {
   })
 
   it('IPC handler returns fetch result', async () => {
-    mockFetch.mockResolvedValue({
+    mockFetch.mockResolvedValue(mockResponse({
       ok: true,
       json: () => Promise.resolve(wrapResponse([])),
-    })
+    }))
 
     setupNotificationStore()
     const handler = mockHandlers.get('notification:fetch')!

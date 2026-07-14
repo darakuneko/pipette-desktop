@@ -90,8 +90,20 @@ const makeLayout = () => ({
   keys: [makeKey(0, 0), makeKey(1, 1), makeKey(2, 2), makeKey(3, 3)],
 })
 
+// Structural stand-in for the Keycode class instances the picker consumes.
 function makeKeycode(qmkId: string, label?: string): Keycode {
-  return { qmkId, label: label ?? qmkId, hidden: false }
+  return {
+    qmkId,
+    cExportId: undefined,
+    label: label ?? qmkId,
+    tooltip: undefined,
+    masked: false,
+    printable: undefined,
+    alias: [qmkId],
+    requiresFeature: undefined,
+    hidden: false,
+    isSupportedBy: () => true,
+  }
 }
 
 const TAB_KEYCODES = [

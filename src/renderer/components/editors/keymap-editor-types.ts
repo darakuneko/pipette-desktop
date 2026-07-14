@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import type { KeyboardLayout } from '../../../shared/kle/types'
+import type { KeyboardLayout, KleKey } from '../../../shared/kle/types'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import type { MacroAction } from '../../../preload/macro'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry, DeviceInfo } from '../../../shared/types/protocol'
+import type { FavoriteType } from '../../../shared/types/favorite-store'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
 import type { TypingTestResult, TypingViewMenuTab, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
@@ -213,9 +214,9 @@ export interface KeymapEditorProps {
   favHubNeedsDisplayName?: boolean
   favHubUploading?: string | null
   favHubUploadResult?: FavHubEntryResult | null
-  onFavUploadToHub?: (type: string, entryId: string) => void
-  onFavUpdateOnHub?: (type: string, entryId: string) => void
-  onFavRemoveFromHub?: (type: string, entryId: string) => void
+  onFavUploadToHub?: (type: FavoriteType, entryId: string) => void
+  onFavUpdateOnHub?: (type: FavoriteType, entryId: string) => void
+  onFavRemoveFromHub?: (type: FavoriteType, entryId: string) => void
   onFavRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
   /** List of currently detected HID devices (for device probe picker) */
   devices?: DeviceInfo[]

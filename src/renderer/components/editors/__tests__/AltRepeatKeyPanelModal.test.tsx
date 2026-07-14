@@ -85,7 +85,7 @@ describe('AltRepeatKeyPanelModal', () => {
 
   it('shows editor and favorites panel directly', () => {
     render(
-      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.getByText('Alt Repeat Key - 0')).toBeInTheDocument()
     expect(screen.getAllByTestId('keycode-field')).toHaveLength(2)
@@ -95,21 +95,21 @@ describe('AltRepeatKeyPanelModal', () => {
 
   it('shows enabled checkbox disabled when lastKey is 0', () => {
     render(
-      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.getByTestId('ar-enabled')).toBeDisabled()
   })
 
   it('shows enabled checkbox enabled when lastKey is nonzero', () => {
     render(
-      <AltRepeatKeyPanelModal entries={[makeEntry({ lastKey: 4 })]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <AltRepeatKeyPanelModal entries={[makeEntry({ lastKey: 4 })]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.getByTestId('ar-enabled')).not.toBeDisabled()
   })
 
   it('shows TabbedKeycodes when a keycode field is clicked', () => {
     render(
-      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.queryByTestId('tabbed-keycodes')).not.toBeInTheDocument()
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
@@ -119,7 +119,7 @@ describe('AltRepeatKeyPanelModal', () => {
 
   it('hides advanced fields when picker is open', () => {
     render(
-      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.getByTestId('ar-advanced-fields')).toBeInTheDocument()
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
@@ -129,14 +129,14 @@ describe('AltRepeatKeyPanelModal', () => {
 
   it('Save button is disabled when no changes', () => {
     render(
-      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.getByTestId('ar-modal-save')).toBeDisabled()
   })
 
   it('Save button enables after editing lastKey', () => {
     render(
-      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     act(() => { vi.advanceTimersByTime(300) })
@@ -147,7 +147,7 @@ describe('AltRepeatKeyPanelModal', () => {
 
   it('calls onSetEntry and closes modal on Save', async () => {
     render(
-      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     act(() => { vi.advanceTimersByTime(300) })
@@ -163,7 +163,7 @@ describe('AltRepeatKeyPanelModal', () => {
 
   it('calls onClose when close button is clicked', () => {
     render(
-      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     fireEvent.click(screen.getByTestId('ar-modal-close'))
     expect(onClose).toHaveBeenCalledTimes(1)
@@ -171,7 +171,7 @@ describe('AltRepeatKeyPanelModal', () => {
 
   it('calls onClose when backdrop is clicked', () => {
     render(
-      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     fireEvent.click(screen.getByTestId('ar-modal-backdrop'))
     expect(onClose).toHaveBeenCalledTimes(1)
@@ -179,7 +179,7 @@ describe('AltRepeatKeyPanelModal', () => {
 
   it('closes modal on Escape key', () => {
     render(
-      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(onClose).toHaveBeenCalled()
@@ -187,7 +187,7 @@ describe('AltRepeatKeyPanelModal', () => {
 
   it('hides favorites panel when picker is open', () => {
     render(
-      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <AltRepeatKeyPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.getByTestId('ar-favorites-panel').className).not.toContain('hidden')
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])

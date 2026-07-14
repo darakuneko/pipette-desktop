@@ -210,7 +210,9 @@ async function writeRecord(meta: KeyLabelMeta, data: KeyLabelEntryFile): Promise
 
 export async function saveRecord(input: SaveRecordInput): Promise<KeyLabelStoreResult<KeyLabelMeta>> {
   const validated = validateName(input.name)
-  if (!validated.success || validated.data === undefined) return validated as KeyLabelStoreResult<KeyLabelMeta>
+  if (!validated.success || validated.data === undefined) {
+    return fail(validated.errorCode ?? 'INVALID_NAME', validated.error ?? 'Invalid name')
+  }
   const name = validated.data
   if (!isLabelMap(input.map)) return fail('INVALID_FILE', 'map must be an object of strings')
   if (input.compositeLabels && !isLabelMap(input.compositeLabels)) {
@@ -276,7 +278,9 @@ export async function saveRecord(input: SaveRecordInput): Promise<KeyLabelStoreR
 
 export async function renameRecord(id: string, newName: string): Promise<KeyLabelStoreResult<KeyLabelMeta>> {
   const validated = validateName(newName)
-  if (!validated.success || validated.data === undefined) return validated as KeyLabelStoreResult<KeyLabelMeta>
+  if (!validated.success || validated.data === undefined) {
+    return fail(validated.errorCode ?? 'INVALID_NAME', validated.error ?? 'Invalid name')
+  }
   const name = validated.data
 
   try {
@@ -481,7 +485,9 @@ export async function exportToDialog(
 ): Promise<KeyLabelStoreResult<{ filePath: string }>> {
   try {
     const record = await getRecord(id)
-    if (!record.success || !record.data) return record as KeyLabelStoreResult<{ filePath: string }>
+    if (!record.success || !record.data) {
+      return { success: record.success, errorCode: record.errorCode, error: record.error }
+    }
 
     const { meta, data } = record.data
     const safeName = safeFilename(meta.name, 'key-label')

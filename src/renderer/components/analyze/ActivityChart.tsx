@@ -41,6 +41,7 @@ import type { ActivityCalendarFilters } from '../../../shared/types/analyze-filt
 import type { ActivityMetric, ActivityView, DeviceScope, RangeMs } from './analyze-types'
 import { ActivityCalendarChart } from './ActivityCalendarChart'
 import { CHART_TICK_FONT_SIZE } from '../../utils/chart-palette'
+import { localeCount } from '../../utils/i18n-count'
 
 interface Props {
   uid: string
@@ -237,7 +238,7 @@ function ActivityGridChart({ uid, range, deviceScope, appScopes, typingTestScope
         <span>
           {metric === 'wpm'
             ? t('analyze.activity.legendHighWpm', { wpm: formatWpm(peak) })
-            : t('analyze.activity.legendHigh', { count: peak.toLocaleString() })}
+            : t('analyze.activity.legendHigh', { count: localeCount(peak) })}
         </span>
       </div>
       {summaryItems !== null && (
@@ -339,7 +340,7 @@ function SessionDistributionChart({ uid, range, deviceScope }: SessionChartProps
                 const s = Number(entry?.payload?.share ?? 0)
                 return [
                   boldValue(t('analyze.activity.sessions.tooltipValue', {
-                    count: c.toLocaleString(),
+                    count: localeCount(c),
                     share: formatSharePercent(s),
                   })),
                   t('analyze.activity.sessions.tooltipLabel'),

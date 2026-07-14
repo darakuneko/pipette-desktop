@@ -88,7 +88,7 @@ import {
   getWindowStartedHidden,
   updateTrayStatus,
 } from '../app-behavior'
-import type { TrayStatus } from '../app-behavior'
+import type { TrayStatus } from '../../shared/types/vial-api'
 
 const DISCONNECTED_STATUS: TrayStatus = { keyboardName: null, recording: false, count: 0, kpm: 0 }
 

@@ -52,6 +52,8 @@ describe('LanguageSelectorModal', () => {
       <LanguageSelectorModal
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -70,6 +72,8 @@ describe('LanguageSelectorModal', () => {
       <LanguageSelectorModal
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -90,6 +94,8 @@ describe('LanguageSelectorModal', () => {
       <LanguageSelectorModal
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -107,6 +113,8 @@ describe('LanguageSelectorModal', () => {
       <LanguageSelectorModal
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -123,6 +131,8 @@ describe('LanguageSelectorModal', () => {
       <LanguageSelectorModal
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -138,6 +148,8 @@ describe('LanguageSelectorModal', () => {
       <LanguageSelectorModal
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -160,6 +172,8 @@ describe('LanguageSelectorModal', () => {
       <LanguageSelectorModal
         currentLanguage="english"
         onSelectLanguage={onSelect}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={onClose}
       />,
     )
@@ -181,6 +195,8 @@ describe('LanguageSelectorModal', () => {
       <LanguageSelectorModal
         currentLanguage="english"
         onSelectLanguage={onSelect}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -199,6 +215,8 @@ describe('LanguageSelectorModal', () => {
       <LanguageSelectorModal
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -276,6 +294,8 @@ describe('LanguageSelectorModal', () => {
       <LanguageSelectorModal
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -295,6 +315,8 @@ describe('LanguageSelectorModal', () => {
       <LanguageSelectorModal
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={onClose}
       />,
     )
@@ -316,6 +338,8 @@ describe('LanguageSelectorModal', () => {
       <LanguageSelectorModal
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -333,6 +357,8 @@ describe('LanguageSelectorModal', () => {
       <LanguageSelectorModal
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -350,6 +376,8 @@ describe('LanguageSelectorModal', () => {
       <LanguageSelectorModal
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -400,6 +428,7 @@ describe('LanguageSelectorModal', () => {
         currentFileImportTextId="x"
         onSelectLanguage={vi.fn()}
         onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onCurrentTextDeleted={onCurrentTextDeleted}
         onClose={onClose}
       />,
@@ -426,6 +455,7 @@ describe('LanguageSelectorModal', () => {
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
         onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -471,6 +501,7 @@ describe('LanguageSelectorModal', () => {
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
         onSelectImport={onSelectImport}
+        onSelectTatoeba={vi.fn()}
         onClose={onClose}
       />,
     )
@@ -519,6 +550,7 @@ describe('LanguageSelectorModal', () => {
         currentFileImportTextId="some-other-id"
         onSelectLanguage={vi.fn()}
         onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onCurrentTextDeleted={onCurrentTextDeleted}
         onClose={onClose}
       />,
@@ -561,6 +593,7 @@ describe('LanguageSelectorModal', () => {
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
         onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -588,6 +621,7 @@ describe('LanguageSelectorModal', () => {
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
         onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -607,6 +641,7 @@ describe('LanguageSelectorModal', () => {
         currentLanguage="english"
         onSelectLanguage={vi.fn()}
         onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onCurrentTextDeleted={onCurrentTextDeleted}
         onClose={onClose}
       />,
@@ -628,6 +663,7 @@ describe('LanguageSelectorModal', () => {
         currentFileImportTextId="az-1"
         onSelectLanguage={vi.fn()}
         onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )
@@ -648,6 +684,7 @@ describe('LanguageSelectorModal', () => {
         currentFileImportTextId="file-1"
         onSelectLanguage={vi.fn()}
         onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
         onClose={vi.fn()}
       />,
     )

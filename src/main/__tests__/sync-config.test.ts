@@ -63,6 +63,8 @@ import { ipcMain } from 'electron'
 import { loadAppConfig, saveAppConfig, setupAppConfigIpc, onAppConfigChange } from '../app-config'
 import { DEFAULT_APP_CONFIG, type AppConfig } from '../../shared/types/app-config'
 
+const fakeEvent = {} as Electron.IpcMainInvokeEvent
+
 describe('app-config (electron-store)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -102,26 +104,28 @@ describe('app-config (electron-store)', () => {
   })
 
   describe('setupAppConfigIpc', () => {
-    let handlers: Map<string, (...args: unknown[]) => unknown>
+    let handlers: Map<string, (event: Electron.IpcMainInvokeEvent, ...args: unknown[]) => unknown>
 
     beforeEach(() => {
       handlers = new Map()
-      vi.mocked(ipcMain.handle).mockImplementation((channel: string, handler: (...args: unknown[]) => unknown) => {
-        handlers.set(channel, handler)
-        return undefined as unknown as Electron.IpcMain
-      })
+      vi.mocked(ipcMain.handle).mockImplementation(
+        (channel: string, handler: (event: Electron.IpcMainInvokeEvent, ...args: unknown[]) => unknown) => {
+          handlers.set(channel, handler)
+          return undefined as unknown as Electron.IpcMain
+        },
+      )
       setupAppConfigIpc()
     })
 
     it('rejects invalid config keys', () => {
       const setHandler = handlers.get('app-config:set')!
-      setHandler({}, 'windowState', { x: 0, y: 0, width: 100, height: 100 })
+      setHandler(fakeEvent, 'windowState', { x: 0, y: 0, width: 100, height: 100 })
       expect(mockStoreData.windowState).toBeUndefined()
     })
 
     it('accepts valid config keys', () => {
       const setHandler = handlers.get('app-config:set')!
-      setHandler({}, 'theme', 'dark')
+      setHandler(fakeEvent, 'theme', 'dark')
       expect(mockStoreData.theme).toBe('dark')
     })
 
@@ -129,7 +133,7 @@ describe('app-config (electron-store)', () => {
       const callback = vi.fn()
       onAppConfigChange(callback)
       const setHandler = handlers.get('app-config:set')!
-      setHandler({}, 'autoSync', true)
+      setHandler(fakeEvent, 'autoSync', true)
       expect(callback).toHaveBeenCalledWith('autoSync', true)
     })
 
@@ -137,7 +141,7 @@ describe('app-config (electron-store)', () => {
       const callback = vi.fn()
       onAppConfigChange(callback)
       const setHandler = handlers.get('app-config:set')!
-      setHandler({}, 'windowState', { x: 0, y: 0, width: 100, height: 100 })
+      setHandler(fakeEvent, 'windowState', { x: 0, y: 0, width: 100, height: 100 })
       expect(callback).not.toHaveBeenCalled()
     })
   })

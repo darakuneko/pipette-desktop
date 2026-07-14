@@ -123,7 +123,7 @@ export function useInputModes({
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set())
   const [everPressedKeys, setEverPressedKeys] = useState<Set<string>>(new Set())
   const pollingRef = useRef(true)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const hasMatrixTester = (getMatrixState != null && rows != null && cols != null) || matrixMode
 

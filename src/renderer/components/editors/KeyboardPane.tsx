@@ -18,7 +18,7 @@ export interface KeyboardPaneProps {
   keycodes: Map<string, string>
   encoderKeycodes: Map<string, [string, string]>
   selectedKey: { row: number; col: number } | null
-  selectedEncoder: { idx: number; dir: number } | null
+  selectedEncoder: { idx: number; dir: 0 | 1 } | null
   selectedMaskPart: boolean
   selectedKeycode: string | null
   pressedKeys?: Set<string>

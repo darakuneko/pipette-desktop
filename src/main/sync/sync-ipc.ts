@@ -423,7 +423,13 @@ export function setupSyncIpc(): void {
         if (!bundle) continue
         const category = bundleTypeToCategory[bundle.type]
         if (!category) continue // typing-analytics / keyboard-meta not in export contract yet
-        categories[category][bundle.key] = { index: bundle.index, files: bundle.files }
+        // bundleTypeToCategory only maps 'favorite' / 'layout' / 'settings',
+        // so bundle.index is always a FavoriteIndex or SnapshotIndex here —
+        // SyncBundle['index'] just isn't discriminated by ['type'] in the type system.
+        categories[category][bundle.key] = {
+          index: bundle.index as FavoriteIndex | SnapshotIndex,
+          files: bundle.files,
+        }
       }
 
       const dialogOpts = {

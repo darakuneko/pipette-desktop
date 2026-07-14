@@ -4,7 +4,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useAppConfig } from '../useAppConfig'
-import { setupAppConfigMock, renderHookWithConfig } from './test-helpers'
+import { setupAppConfigMock, renderHookWithConfig, vialAPIMock } from './test-helpers'
 import { DEFAULT_APP_CONFIG } from '../../../shared/types/app-config'
 
 describe('useAppConfig', () => {
@@ -61,7 +61,7 @@ describe('useAppConfig', () => {
     setupAppConfigMock()
     Object.defineProperty(window, 'vialAPI', {
       value: {
-        ...((window as Record<string, unknown>).vialAPI as Record<string, unknown>),
+        ...vialAPIMock(),
         appConfigSet: mockSet,
       },
       writable: true,

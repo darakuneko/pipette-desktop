@@ -24,7 +24,7 @@ export interface KeycodeFieldDescriptor<TEntry> {
   labelOpts?: Record<string, unknown>
 }
 
-export interface KeycodeEntryModalAdapter<TEntry extends Record<string, unknown>> {
+export interface KeycodeEntryModalAdapter<TEntry> {
   /** data-testid prefix, e.g. "combo", "ko", "ar", "td" */
   testIdPrefix: string
   /** data-testid for the body container, e.g. "editor-combo". Defaults to `editor-${testIdPrefix}` */
@@ -60,7 +60,7 @@ export interface KeycodeEntryModalAdapter<TEntry extends Record<string, unknown>
 // Options — passed by the modal component that uses the hook
 // ---------------------------------------------------------------------------
 
-export interface KeycodeEntryModalOptions<TEntry extends Record<string, unknown>> {
+export interface KeycodeEntryModalOptions<TEntry> {
   entry: TEntry | undefined
   index: number
   onSave: (index: number, entry: TEntry) => Promise<void>
@@ -82,7 +82,7 @@ export interface KeycodeEntryModalOptions<TEntry extends Record<string, unknown>
 // Return type
 // ---------------------------------------------------------------------------
 
-export interface KeycodeEntryModalReturn<TEntry extends Record<string, unknown>> {
+export interface KeycodeEntryModalReturn<TEntry> {
   // State
   editedEntry: TEntry | null
   setEditedEntry: React.Dispatch<React.SetStateAction<TEntry | null>>
@@ -124,7 +124,7 @@ export interface KeycodeEntryModalReturn<TEntry extends Record<string, unknown>>
 // Hook implementation
 // ---------------------------------------------------------------------------
 
-export function useKeycodeEntryModal<TEntry extends Record<string, unknown>>(
+export function useKeycodeEntryModal<TEntry>(
   adapter: KeycodeEntryModalAdapter<TEntry>,
   options: KeycodeEntryModalOptions<TEntry>,
 ): KeycodeEntryModalReturn<TEntry> {
@@ -196,7 +196,10 @@ export function useKeycodeEntryModal<TEntry extends Record<string, unknown>>(
   const updateField = useCallback((field: string & keyof TEntry, code: number) => {
     setEditedEntry((prev) => {
       if (!prev) return prev
-      let next = { ...prev, [field]: code }
+      // The computed-property spread widens the inferred type to
+      // `TEntry & { [x: string]: number }`; pin it back to TEntry so
+      // reassigning from `normalizeEntry`'s `TEntry` return type checks.
+      let next: TEntry = { ...prev, [field]: code } as TEntry
       if (adapter.normalizeEntry) {
         next = adapter.normalizeEntry(next)
       }
@@ -225,7 +228,7 @@ export function useKeycodeEntryModal<TEntry extends Record<string, unknown>>(
       if (!selectedField) return false
       setEditedEntry((prev) => {
         if (!prev) return prev
-        let next = { ...prev, [selectedField]: code }
+        let next: TEntry = { ...prev, [selectedField]: code } as TEntry
         if (adapter.normalizeEntry) {
           next = adapter.normalizeEntry(next)
         }
@@ -237,7 +240,9 @@ export function useKeycodeEntryModal<TEntry extends Record<string, unknown>>(
       setSelectedField(null)
     },
     resetKey: selectedField,
-    initialValue: selectedField && editedEntry ? editedEntry[selectedField] as number : undefined,
+    initialValue: selectedField && editedEntry
+      ? (editedEntry as Record<string, unknown>)[selectedField] as number
+      : undefined,
     quickSelect,
   })
 
@@ -382,7 +387,7 @@ export function useEnabledEntryCallbacks<TEntry extends EnabledEntryFields>(
   const updateEntry = useCallback((field: keyof TEntry, value: number) => {
     setEditedEntry((prev) => {
       if (!prev) return prev
-      const next = { ...prev, [field]: value }
+      const next: TEntry = { ...prev, [field]: value } as TEntry
       if (!isConfigured(next)) (next as EnabledEntryFields).enabled = false
       return next
     })

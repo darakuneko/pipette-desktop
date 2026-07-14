@@ -91,12 +91,12 @@ Object.defineProperty(window, 'vialAPI', {
 const FULLY_CONFIGURED: Partial<UseSyncReturn> = {
   authStatus: { authenticated: true },
   hasPassword: true,
-  config: { autoSync: false },
+  config: { ...DEFAULT_APP_CONFIG, autoSync: false },
 }
 
 const SYNC_ENABLED: Partial<UseSyncReturn> = {
   ...FULLY_CONFIGURED,
-  config: { autoSync: true },
+  config: { ...DEFAULT_APP_CONFIG, autoSync: true },
 }
 
 function makeSyncMock(overrides?: Partial<UseSyncReturn>): UseSyncReturn {
@@ -112,6 +112,7 @@ function makeSyncMock(overrides?: Partial<UseSyncReturn>): UseSyncReturn {
     hasRemotePassword: null,
     checkingRemotePassword: false,
     syncUnavailable: false,
+    syncReadinessReason: null,
     retryRemoteCheck: vi.fn(),
     startAuth: vi.fn().mockResolvedValue(undefined),
     signOut: vi.fn().mockResolvedValue(undefined),
@@ -136,11 +137,23 @@ const defaultProps = {
   onDefaultLayoutChange: vi.fn(),
   defaultAutoAdvance: true,
   onDefaultAutoAdvanceChange: vi.fn(),
+  defaultLayerPanelOpen: false,
+  onDefaultLayerPanelOpenChange: vi.fn(),
+  defaultBasicViewType: 'ansi' as const,
+  onDefaultBasicViewTypeChange: vi.fn(),
+  defaultSplitKeyMode: 'split' as const,
+  onDefaultSplitKeyModeChange: vi.fn(),
+  defaultQuickSelect: false,
+  onDefaultQuickSelectChange: vi.fn(),
   autoLockTime: 10 as const,
   onAutoLockTimeChange: vi.fn(),
+  maxKeymapHistory: 10,
+  onMaxKeymapHistoryChange: vi.fn(),
   hubEnabled: true,
   onHubEnabledChange: vi.fn(),
   hubAuthenticated: false,
+  hubDisplayName: null,
+  onHubDisplayNameChange: vi.fn().mockResolvedValue({ success: true }),
 }
 
 describe('SettingsModal', () => {
@@ -379,7 +392,7 @@ describe('SettingsModal', () => {
   })
 
   it('allows disabling auto-sync even when not authenticated', async () => {
-    const sync = makeSyncMock({ config: { autoSync: true } })
+    const sync = makeSyncMock({ config: { ...DEFAULT_APP_CONFIG, autoSync: true } })
     renderAndSwitchToData({ sync })
 
     const stopBtn = screen.getByTestId('sync-auto-off')

@@ -41,7 +41,7 @@ interface Options {
   viaProtocol: number
   rows: number
   cols: number
-  qmkSettingsValues: Record<string, number>
+  qmkSettingsValues: Record<string, number[]>
   dynamicCountsFeatureFlags: number
   layoutStoreEntries: SnapshotMeta[]
   deviceName: string

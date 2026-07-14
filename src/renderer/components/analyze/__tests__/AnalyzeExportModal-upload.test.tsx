@@ -54,6 +54,7 @@ const CTX: AnalyzeExportContext = {
     aggregateMode: 'cell',
     normalization: 'absolute',
     keyGroupFilter: 'all',
+    mode: 'count',
   },
   wpm: { granularity: 'auto', viewMode: 'timeSeries', minActiveMs: 60_000 },
   interval: { viewMode: 'timeSeries', granularity: 'auto' },
@@ -111,7 +112,7 @@ describe('AnalyzeExportModal (upload mode)', () => {
   })
 
   it('forwards the user category selection to onConfirm', async () => {
-    const onConfirm = vi.fn(async () => ({ ok: true }))
+    const onConfirm = vi.fn<AnalyzeUploadCallbacks['onConfirm']>(async () => ({ ok: true }))
     renderModal({
       upload: { isUploading: false, uploadResult: null, isExisting: false, onConfirm },
     })
@@ -119,7 +120,7 @@ describe('AnalyzeExportModal (upload mode)', () => {
     fireEvent.click(screen.getByTestId('analyze-export-toggle-wpm'))
     fireEvent.click(screen.getByTestId('analyze-export-confirm'))
     await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1))
-    const picked = onConfirm.mock.calls[0][0] as Set<string>
+    const picked = onConfirm.mock.calls[0][0]
     expect(picked.has('wpm')).toBe(false)
     expect(picked.has('heatmap')).toBe(true)
     // Layout Comparison is intentionally never available in upload

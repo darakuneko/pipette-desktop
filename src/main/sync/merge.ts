@@ -7,7 +7,7 @@ import type { AnalyzeFilterSnapshotMeta } from '../../shared/types/analyze-filte
 import type { KeyLabelMeta } from '../../shared/types/key-label-store'
 import type { TypingTestTextMeta } from '../../shared/types/typing-test-text-store'
 
-type EntryMeta = SavedFavoriteMeta | SnapshotMeta | AnalyzeFilterSnapshotMeta | KeyLabelMeta | TypingTestTextMeta
+export type EntryMeta = SavedFavoriteMeta | SnapshotMeta | AnalyzeFilterSnapshotMeta | KeyLabelMeta | TypingTestTextMeta
 
 const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 

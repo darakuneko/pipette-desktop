@@ -24,7 +24,7 @@ function SettingsNote() {
   return <p className="mt-2 text-xs text-content-muted text-right">{t('keycodes.settingsNote')}</p>
 }
 
-interface SettingsTileGridProps<T extends Record<string, unknown>> {
+interface SettingsTileGridProps<T> {
   entries: T[]
   fields: ReadonlyArray<{ key: keyof T & string; prefix: string }>
   isConfigured: (entry: T) => boolean
@@ -40,7 +40,7 @@ function tileStyle(configured: boolean, enabled?: boolean): string {
   return TILE_ENABLED
 }
 
-function SettingsTileGrid<T extends Record<string, unknown>>({ entries, fields, isConfigured, isEnabled, onOpen, testIdPrefix }: SettingsTileGridProps<T>) {
+function SettingsTileGrid<T>({ entries, fields, isConfigured, isEnabled, onOpen, testIdPrefix }: SettingsTileGridProps<T>) {
   const { t } = useTranslation()
   return (
     <div>

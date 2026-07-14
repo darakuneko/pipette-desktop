@@ -35,7 +35,7 @@ export interface UseLayoutPickerOptions {
   onDeviceListActiveChange?: (active: boolean) => void
   selectedKey: { row: number; col: number } | null
   selectedEncoder: { idx: number; dir: number } | null
-  handleKeycodeSelect: (kc: Keycode) => Promise<void>
+  handleKeycodeSelect: (kc: Pick<Keycode, 'qmkId'>) => Promise<void>
   handlePickerMultiSelect?: (
     index: number,
     keycode: number,

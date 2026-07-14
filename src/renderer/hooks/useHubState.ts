@@ -20,7 +20,7 @@ interface Options {
   layoutStoreEntries: SnapshotMeta[]
   layoutStoreRefreshEntries: () => Promise<void>
   layoutStoreDeleteEntry: (id: string) => Promise<boolean>
-  layoutStoreSaveLayout: (label: string) => Promise<string | undefined>
+  layoutStoreSaveLayout: (label: string) => Promise<string | null>
   layoutStoreRenameEntry: (id: string, label: string) => Promise<boolean>
   deviceName: string
   effectiveIsDummy: boolean

@@ -25,7 +25,7 @@ export interface UseViewMatrixEditingOptions {
   matrixMode: boolean
   handleMatrixToggle: () => void
   handleDeselect: () => void
-  handleKeycodeSelect: (kc: Keycode) => Promise<void>
+  handleKeycodeSelect: (kc: Pick<Keycode, 'qmkId'>) => Promise<void>
 }
 
 export interface UseViewMatrixEditingReturn {

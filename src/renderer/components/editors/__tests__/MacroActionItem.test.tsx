@@ -50,6 +50,7 @@ describe('MacroActionItem', () => {
     onKeycodeClick: vi.fn(),
     onKeycodeDoubleClick: vi.fn(),
     onKeycodeAdd: vi.fn(),
+    onKeycodeAddDoubleClick: vi.fn(),
   }
 
   beforeEach(() => {

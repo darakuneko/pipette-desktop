@@ -266,7 +266,9 @@ export function TypingTestPane({
   // pool), so the picked result resolves from the full pool.
   const comparison = useMemo(() => {
     const pool = comparisonBaselineValue.kind === 'pinned' ? comparisonPool : (typingTestHistory ?? [])
-    return computeComparison(pool, typingTest.config, typingTest.language, comparisonBaselineValue, typingTest.state.startTime)
+    // startTime is null before the first run; computeComparison's `beforeMs`
+    // guard (`!= null`) treats null and undefined identically.
+    return computeComparison(pool, typingTest.config, typingTest.language, comparisonBaselineValue, typingTest.state.startTime ?? undefined)
   }, [comparisonPool, typingTestHistory, typingTest.config, typingTest.language, comparisonBaselineValue, typingTest.state.startTime])
   // Same-condition results only — the choices for a pinned baseline. No
   // `beforeMs`: the user is pinning a past result, not measuring a live run.

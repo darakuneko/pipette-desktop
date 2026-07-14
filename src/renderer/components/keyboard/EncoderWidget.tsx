@@ -71,7 +71,7 @@ function EncoderWidgetInner({
   if (!masked) {
     const labelLines = keycodeLabel(keycode).split('\n')
     return (
-      <g transform={groupTransform} onClick={handleClick} onDoubleClick={handleDoubleClick} style={{ cursor: handleClick ? 'pointer' : 'default' }}>
+      <g transform={groupTransform} onClick={handleClick} onDoubleClick={handleDoubleClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
         <circle cx={cx} cy={cy} r={r} fill={fillColor}
           stroke={outerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR} strokeWidth={outerBorderActive ? 2 : 1} />
         {labelLines.map((line, i) => (
@@ -112,7 +112,7 @@ function EncoderWidgetInner({
   }
 
   return (
-    <g transform={groupTransform} onClick={handleClick} onDoubleClick={handleDoubleClick} style={{ cursor: handleClick ? 'pointer' : 'default' }}>
+    <g transform={groupTransform} onClick={handleClick} onDoubleClick={handleDoubleClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
       <defs>
         <clipPath id={clipId}>
           <circle cx={cx} cy={cy} r={r - 1} />
@@ -127,7 +127,7 @@ function EncoderWidgetInner({
         fill={KEY_MASK_RECT_COLOR}
         stroke={innerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR} strokeWidth={innerBorderActive ? 2 : 1}
         clipPath={`url(#${clipId})`}
-        onClick={handleInnerClick} onDoubleClick={handleInnerDoubleClick} style={{ cursor: handleClick ? 'pointer' : 'default' }} />
+        onClick={handleInnerClick} onDoubleClick={handleInnerDoubleClick} style={{ cursor: onClick ? 'pointer' : 'default' }} />
       {/* Outer label (modifier) */}
       <text x={cx} y={outerLabelY} textAnchor="middle" dominantBaseline="central"
         fill={labelColor} fontSize={fontSize * 0.85} fontFamily="sans-serif" style={{ pointerEvents: 'none' }}>

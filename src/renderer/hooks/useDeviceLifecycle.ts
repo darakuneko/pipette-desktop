@@ -17,7 +17,7 @@ interface Options {
   isPipetteFile: boolean
   // Keyboard
   keyboardUid: string | undefined
-  keyboardReload: () => Promise<string | undefined>
+  keyboardReload: () => Promise<string | null>
   keyboardReset: () => void
   keyboardLoadDummy: (def: KeyboardDefinition) => void
   keyboardLoadPipetteFile: (vil: VilFile) => void

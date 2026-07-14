@@ -1,22 +1,16 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "lib": ["ESNext"],
     "types": ["node"],
     "strict": true,
-    "composite": true,
-    "outDir": "./out/main",
-    "rootDir": "./src",
+    "noEmit": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true
+    "resolveJsonModule": true
   },
-  "include": ["src/main/**/*", "src/shared/**/*", "src/preload/**/*"],
-  "references": [{ "path": "./tsconfig.shared.json" }]
+  "include": ["src/main/**/*", "src/shared/**/*", "src/preload/**/*"]
 }

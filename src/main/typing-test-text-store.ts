@@ -203,7 +203,9 @@ async function writeRecord(meta: TypingTestTextMeta, data: TypingTestTextEntryFi
 
 export async function saveRecord(input: SaveTextInput): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> {
   const validated = validateName(input.name)
-  if (!validated.success || validated.data === undefined) return validated as TypingTestTextStoreResult<TypingTestTextMeta>
+  if (!validated.success || validated.data === undefined) {
+    return fail(validated.errorCode ?? 'INVALID_NAME', validated.error ?? 'Invalid name')
+  }
   const name = validated.data
 
   const { text, wordCount } = normalizeFileImportText(typeof input.text === 'string' ? input.text : '')
@@ -262,7 +264,9 @@ export async function saveRecord(input: SaveTextInput): Promise<TypingTestTextSt
 
 export async function renameRecord(id: string, newName: string): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> {
   const validated = validateName(newName)
-  if (!validated.success || validated.data === undefined) return validated as TypingTestTextStoreResult<TypingTestTextMeta>
+  if (!validated.success || validated.data === undefined) {
+    return fail(validated.errorCode ?? 'INVALID_NAME', validated.error ?? 'Invalid name')
+  }
   const name = validated.data
 
   try {

@@ -396,6 +396,10 @@ export type LayoutComparisonRowKey = RowCategory
  * resolver needs, so the main process stays data-agnostic. */
 export interface LayoutComparisonInputLayout {
   id: string
+  /** Display name for the layout. Renderer sends this for `targets`
+   * entries (Hub analytics export uses it to label the comparison
+   * table); `source` entries typically omit it. */
+  name?: string
   map: Record<string, string>
 }
 

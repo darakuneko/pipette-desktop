@@ -6,17 +6,11 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "strict": true,
-    "composite": true,
-    "outDir": "./out/renderer",
-    "rootDir": "./src",
+    "noEmit": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true
+    "resolveJsonModule": true
   },
-  "include": ["src/renderer/**/*", "src/shared/**/*"],
-  "references": [{ "path": "./tsconfig.shared.json" }]
+  "include": ["src/renderer/**/*", "src/shared/**/*"]
 }

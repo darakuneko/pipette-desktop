@@ -148,8 +148,11 @@ describe('useKeymapHistory', () => {
     let entry: HistoryEntry | null = null
     act(() => { entry = result.current.undo() })
     expect(entry).toEqual(batch)
-    if (entry && entry.kind === 'batch') {
-      expect(entry.entries).toHaveLength(3)
+    // Widen back to the declared type: TS cannot see the assignment inside
+    // the act() callback and would otherwise narrow `entry` to null here.
+    const undone = entry as HistoryEntry | null
+    if (undone && undone.kind === 'batch') {
+      expect(undone.entries).toHaveLength(3)
     }
   })
 

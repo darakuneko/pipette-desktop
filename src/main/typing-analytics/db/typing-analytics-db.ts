@@ -16,6 +16,20 @@ import {
   type JsonlTrigramMinutePayload,
 } from '../jsonl/jsonl-row'
 import { emptyTombstoneResult, TYPING_APP_UNKNOWN_NAME } from '../../../shared/types/typing-analytics'
+import type {
+  TypingKeyboardSummary,
+  TypingDailySummary,
+  TypingIntervalDailySummary,
+  TypingActivityCell,
+  TypingLayerUsageRow,
+  TypingMatrixCellRow,
+  TypingMatrixCellDailyRow,
+  TypingMinuteStatsRow,
+  TypingSessionRow,
+  TypingBksMinuteRow,
+  PeakRecords,
+  TypingTombstoneResult,
+} from '../../../shared/types/typing-analytics'
 
 export interface TypingScopeRow {
   id: string
@@ -403,6 +417,12 @@ function prepareNgramStatements(
     `),
   }
 }
+
+// isDeleted is stored as a SQLite integer (0/1); Omit the row type's own
+// boolean isDeleted before intersecting with the raw numeric column so
+// the two conflicting property types don't collapse the whole
+// intersection to `never`.
+type WithDeletedFlag<T> = Omit<T, 'isDeleted'> & { isDeleted: number }
 
 export class TypingAnalyticsDB {
   private readonly db: DatabaseType
@@ -2595,7 +2615,7 @@ export class TypingAnalyticsDB {
 
   exportScopesForUid(uid: string, tombstoneSinceMs: number): TypingScopeRow[] {
     const rows = this.selectScopesForUidStmt.all({ uid, tombstoneSinceMs }) as Array<
-      TypingScopeRow & { isDeleted: number }
+      WithDeletedFlag<TypingScopeRow>
     >
     return rows.map((r) => ({ ...r, isDeleted: r.isDeleted === 1 }))
   }
@@ -2606,7 +2626,7 @@ export class TypingAnalyticsDB {
     tombstoneSinceMs: number,
   ): CharMinuteExportRow[] {
     const rows = this.selectCharMinutesForUidStmt.all({ uid, liveSinceMinuteMs, tombstoneSinceMs }) as Array<
-      CharMinuteExportRow & { isDeleted: number }
+      WithDeletedFlag<CharMinuteExportRow>
     >
     return rows.map((r) => ({ ...r, isDeleted: r.isDeleted === 1 }))
   }
@@ -2617,7 +2637,7 @@ export class TypingAnalyticsDB {
     tombstoneSinceMs: number,
   ): MatrixMinuteExportRow[] {
     const rows = this.selectMatrixMinutesForUidStmt.all({ uid, liveSinceMinuteMs, tombstoneSinceMs }) as Array<
-      MatrixMinuteExportRow & { isDeleted: number }
+      WithDeletedFlag<MatrixMinuteExportRow>
     >
     return rows.map((r) => ({ ...r, isDeleted: r.isDeleted === 1 }))
   }
@@ -2628,7 +2648,7 @@ export class TypingAnalyticsDB {
     tombstoneSinceMs: number,
   ): MinuteStatsExportRow[] {
     const rows = this.selectMinuteStatsForUidStmt.all({ uid, liveSinceMinuteMs, tombstoneSinceMs }) as Array<
-      MinuteStatsExportRow & { isDeleted: number }
+      WithDeletedFlag<MinuteStatsExportRow>
     >
     return rows.map((r) => ({ ...r, isDeleted: r.isDeleted === 1 }))
   }
@@ -2639,7 +2659,7 @@ export class TypingAnalyticsDB {
     tombstoneSinceMs: number,
   ): SessionExportRow[] {
     const rows = this.selectSessionsForUidStmt.all({ uid, liveSinceStartMs, tombstoneSinceMs }) as Array<
-      SessionExportRow & { isDeleted: number }
+      WithDeletedFlag<SessionExportRow>
     >
     return rows.map((r) => ({ ...r, isDeleted: r.isDeleted === 1 }))
   }

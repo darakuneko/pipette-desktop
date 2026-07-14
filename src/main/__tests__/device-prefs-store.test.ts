@@ -292,7 +292,7 @@ describe('pipette-settings-store', () => {
         autoAdvance: true,
         layerNames: [],
         typingTestComparisonBaselines: { 'words|30': { kind: 'bogus' } },
-      })
+      }) as { success: boolean }
       expect(result.success).toBe(false)
     })
 

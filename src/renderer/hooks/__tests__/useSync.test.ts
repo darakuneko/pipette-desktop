@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { waitFor, act } from '@testing-library/react'
 import { useSync } from '../useSync'
-import { setupAppConfigMock, renderHookWithConfig } from './test-helpers'
+import { setupAppConfigMock, renderHookWithConfig, vialAPIMock } from './test-helpers'
 import { DEFAULT_APP_CONFIG } from '../../../shared/types/app-config'
 
 const RETRY_DELAY_MS = 2000
@@ -29,7 +29,7 @@ beforeEach(() => {
   const mocks = setupAppConfigMock()
   Object.defineProperty(window, 'vialAPI', {
     value: {
-      ...((window as Record<string, unknown>).vialAPI as Record<string, unknown>),
+      ...vialAPIMock(),
       ...mockVialAPI,
     },
     writable: true,
@@ -486,7 +486,7 @@ describe('useSync', () => {
         setupAppConfigMock({ autoSync: overrides.autoSync })
         Object.defineProperty(window, 'vialAPI', {
           value: {
-            ...((window as Record<string, unknown>).vialAPI as Record<string, unknown>),
+            ...vialAPIMock(),
             ...mockVialAPI,
           },
           writable: true,

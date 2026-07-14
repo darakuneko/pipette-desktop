@@ -82,7 +82,7 @@ describe('hub-ipc private uploads', () => {
     vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
     vi.mocked(authenticateWithHub).mockResolvedValueOnce({
       token: 'hub-jwt',
-      user: { id: 'u1', email: 't@e.c', display_name: null },
+      user: { id: 'u1', email: 't@e.c', display_name: null, role: 'user' },
     })
   }
 

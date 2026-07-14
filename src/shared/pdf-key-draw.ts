@@ -2,6 +2,7 @@
 // Shared PDF key-drawing helpers extracted from pdf-export.ts
 
 import { jsPDF } from 'jspdf'
+import type { Matrix } from 'jspdf'
 import type { KleKey } from './kle/types'
 import { hasSecondaryRect } from './kle/filter-keys'
 import { computeUnionPolygon, insetAxisAlignedPolygon } from './kle/rect-union'
@@ -173,7 +174,12 @@ export function applyKeyRotation(
     rcx * (1 - cos) + rcy * sin,
     rcy * (1 - cos) - rcx * sin,
   )
-  doc.setCurrentTransformationMatrix(matrix)
+  // `PdfMatrix` is a deliberately minimal duck-type for jsPDF's internal,
+  // undocumented `doc.Matrix` constructor (jsPDF doesn't export it) — it
+  // only needs `toString()` for how this module uses it, whereas the
+  // public `Matrix` interface setCurrentTransformationMatrix expects has
+  // many more (internally-managed) fields.
+  doc.setCurrentTransformationMatrix(matrix as unknown as Matrix)
 }
 
 /**

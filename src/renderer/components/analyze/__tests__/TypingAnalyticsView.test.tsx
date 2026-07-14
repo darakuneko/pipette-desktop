@@ -5,7 +5,7 @@
 // switching, and the datetime/device selects without dragging recharts
 // or real DB data into jsdom.
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import type { TypingKeyboardSummary, TypingKeymapSnapshot, TypingKeymapSnapshotSummary } from '../../../../shared/types/typing-analytics'
 import { formatRunDateLabel } from '../../../hooks/useRunLabels'
@@ -94,8 +94,8 @@ vi.mock('../SummaryView', () => ({
 
 const mockListKeyboards = vi.fn<() => Promise<TypingKeyboardSummary[]>>()
 const mockGetSnapshot = vi.fn<() => Promise<TypingKeymapSnapshot | null>>()
-let typingAnalyticsListKeyboardsSpy: ReturnType<typeof vi.spyOn>
-let typingAnalyticsGetSnapshotSpy: ReturnType<typeof vi.spyOn>
+let typingAnalyticsListKeyboardsSpy: MockInstance<typeof window.vialAPI.typingAnalyticsListKeyboards>
+let typingAnalyticsGetSnapshotSpy: MockInstance<typeof window.vialAPI.typingAnalyticsGetKeymapSnapshotForRange>
 
 const emptyPeakRecords = {
   peakWpm: null,
@@ -695,7 +695,7 @@ describe('TypingAnalyticsView', () => {
     })
     const runsSpy = vi
       .spyOn(window.vialAPI, 'typingAnalyticsListTypingTestRunsForRange')
-      .mockResolvedValue([{ runId: 'acb0f4e9-0000-4000-8000-000000000000', firstMs }])
+      .mockResolvedValue([{ runId: 'acb0f4e9-0000-4000-8000-000000000000', keystrokes: 100, firstMs }])
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
     await waitFor(() => {

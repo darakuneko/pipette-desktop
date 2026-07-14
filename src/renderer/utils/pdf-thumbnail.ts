@@ -27,7 +27,7 @@ export async function generatePdfThumbnail(pdfBase64: string): Promise<string> {
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('Canvas 2D context unavailable')
 
-    await page.render({ canvasContext: ctx, viewport }).promise
+    await page.render({ canvas, canvasContext: ctx, viewport }).promise
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
     return dataUrl.replace(/^data:image\/jpeg;base64,/, '')

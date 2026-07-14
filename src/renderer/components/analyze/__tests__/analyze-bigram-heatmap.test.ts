@@ -8,7 +8,7 @@ import {
 import type { TypingBigramTopEntry } from '../../../../shared/types/typing-analytics'
 
 function entry(ngramId: string, count: number, hist: number[] = [0, 0, 0, 0, 0, 0, 0, 0]): TypingBigramTopEntry {
-  return { ngramId, count, hist, avgIki: null }
+  return { ngramId, count, hist, avgIki: null, sd: null }
 }
 
 describe('aggregateKeyHeatmap', () => {

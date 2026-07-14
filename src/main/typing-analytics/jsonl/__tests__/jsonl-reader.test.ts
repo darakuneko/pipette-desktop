@@ -13,7 +13,7 @@ import { readRows } from '../jsonl-reader'
 
 function row(char: string, count: number, updatedAt: number): JsonlRow {
   return {
-    id: charMinuteRowId('scope-1', 60_000, char),
+    id: charMinuteRowId('scope-1', 60_000, '', char),
     kind: 'char-minute',
     updated_at: updatedAt,
     payload: { scopeId: 'scope-1', minuteTs: 60_000, char, count },

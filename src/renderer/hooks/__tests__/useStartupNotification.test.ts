@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from '@testing-library/react'
 import { useStartupNotification } from '../useStartupNotification'
-import { setupAppConfigMock, renderHookWithConfig } from './test-helpers'
+import { setupAppConfigMock, renderHookWithConfig, vialAPIMock } from './test-helpers'
 import type { NotificationFetchResult } from '../../../shared/types/notification'
 
 const mockNotificationFetch = vi.fn<() => Promise<NotificationFetchResult>>()
@@ -17,7 +17,7 @@ function setupMocks(
     fetchResult ?? { success: true, notifications: [] },
   )
 
-  const existing = (window as Record<string, unknown>).vialAPI as Record<string, unknown>
+  const existing = vialAPIMock()
   Object.defineProperty(window, 'vialAPI', {
     value: {
       ...existing,

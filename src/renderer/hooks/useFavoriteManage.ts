@@ -18,6 +18,11 @@ export interface UseFavoriteManageReturn {
   importFavorites: () => Promise<boolean>
 }
 
+// The Data modal has no connected keyboard, so use the same fallback
+// vial protocol the snapshot exports use (see useSnapshotActions). The
+// value only stamps the export file's `vial_protocol` header field.
+const FALLBACK_VIAL_PROTOCOL = 9
+
 export function useFavoriteManage(favoriteType: FavoriteType): UseFavoriteManageReturn {
   const { t } = useTranslation()
   const [entries, setEntries] = useState<SavedFavoriteMeta[]>([])
@@ -62,8 +67,8 @@ export function useFavoriteManage(favoriteType: FavoriteType): UseFavoriteManage
     setExporting(true)
     try {
       const result = entryId !== undefined
-        ? await window.vialAPI.favoriteStoreExport(favoriteType, entryId)
-        : await window.vialAPI.favoriteStoreExport(favoriteType)
+        ? await window.vialAPI.favoriteStoreExport(favoriteType, FALLBACK_VIAL_PROTOCOL, entryId)
+        : await window.vialAPI.favoriteStoreExport(favoriteType, FALLBACK_VIAL_PROTOCOL)
       if (!result.success) return false
       return true
     } catch {

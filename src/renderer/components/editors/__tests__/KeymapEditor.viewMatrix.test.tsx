@@ -103,13 +103,20 @@ vi.mock('../MacroModal', () => ({ MacroModal: () => null }))
 
 import { KeymapEditor } from '../KeymapEditor'
 import { KEY_DUPLICATE_COLOR } from '../../keyboard/constants'
+import type { KleKey } from '../../../../shared/kle/types'
+
+const KEY_DEFAULTS: KleKey = {
+  x: 0, y: 0, width: 1, height: 1, row: 0, col: 0,
+  encoderIdx: -1, encoderDir: -1, layoutIndex: -1, layoutOption: -1,
+  decal: false, labels: [], x2: 0, y2: 0, width2: 1, height2: 1,
+  rotation: 0, rotationX: 0, rotationY: 0, color: '',
+  textColor: [], textSize: [], nub: false, stepped: false, ghost: false,
+}
+
+const makeKey = (x: number, col: number): KleKey => ({ ...KEY_DEFAULTS, x, col })
 
 const makeLayout = () => ({
-  keys: [
-    { x: 0, y: 0, w: 1, h: 1, row: 0, col: 0, encoderIdx: -1, decal: false, labels: [] },
-    { x: 1, y: 0, w: 1, h: 1, row: 0, col: 1, encoderIdx: -1, decal: false, labels: [] },
-    { x: 2, y: 0, w: 1, h: 1, row: 0, col: 2, encoderIdx: -1, decal: false, labels: [] },
-  ],
+  keys: [makeKey(0, 0), makeKey(1, 1), makeKey(2, 2)],
 })
 
 describe('KeymapEditor — View Matrix mode', () => {

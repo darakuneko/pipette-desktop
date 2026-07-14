@@ -664,33 +664,34 @@ export function App() {
 
   const toolsExtra = (
     <>
-      {(fileHandlers.handleImportVil || (!device.isDummy && sideload.sideloadJson)) && (
-        <div className={ROW_CLASS} data-testid="overlay-import-row">
-          <span className="text-sm font-medium text-content">{t('layoutStore.import')}</span>
-          <div className="flex gap-2">
+      {/* handleImportVil / sideloadJson are always-defined functions, so the
+          old function-reference guards were constant-true — the row always
+          renders and only the sideload button is gated (on !isDummy). */}
+      <div className={ROW_CLASS} data-testid="overlay-import-row">
+        <span className="text-sm font-medium text-content">{t('layoutStore.import')}</span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className={IMPORT_BTN}
+            onClick={fileHandlers.handleImportVil}
+            disabled={fileIO.saving || fileIO.loading}
+            data-testid="overlay-import-vil"
+          >
+            {t('fileIO.loadLayout')}
+          </button>
+          {!device.isDummy && (
             <button
               type="button"
               className={IMPORT_BTN}
-              onClick={fileHandlers.handleImportVil}
+              onClick={sideload.sideloadJson}
               disabled={fileIO.saving || fileIO.loading}
-              data-testid="overlay-import-vil"
+              data-testid="overlay-sideload-json"
             >
-              {t('fileIO.loadLayout')}
+              {t('fileIO.sideloadJson')}
             </button>
-            {!device.isDummy && sideload.sideloadJson && (
-              <button
-                type="button"
-                className={IMPORT_BTN}
-                onClick={sideload.sideloadJson}
-                disabled={fileIO.saving || fileIO.loading}
-                data-testid="overlay-sideload-json"
-              >
-                {t('fileIO.sideloadJson')}
-              </button>
-            )}
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </>
   )
 

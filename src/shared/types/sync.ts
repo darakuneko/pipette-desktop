@@ -8,6 +8,7 @@ import type { KeyboardMetaIndex, KeyboardMetaSyncUnit } from './keyboard-meta'
 import type { KeyLabelIndex } from './key-label-store'
 import type { TypingTestTextIndex } from './typing-test-text-store'
 import type { I18nPackIndex, I18nIndexSyncUnit, I18nPackSyncUnit } from './i18n-store'
+import type { ThemePackIndex } from './theme-store'
 
 export type { AppConfig }
 export { DEFAULT_APP_CONFIG } from './app-config'
@@ -24,7 +25,7 @@ export interface SyncEnvelope {
 export interface SyncBundle {
   type: 'favorite' | 'layout' | 'analyze-filter' | 'settings' | 'keyboard-meta' | 'typing-analytics-device' | 'key-label' | 'typing-test-text' | 'i18n-index' | 'i18n-pack' | 'theme-index' | 'theme-pack'
   key: string // FavoriteType, UID, 'keyboard-names' for meta, `${uid}|${machineHash}` for device, 'key-labels', 'typing-test-texts', 'i18n-index', or packId for i18n-pack
-  index: FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyboardMetaIndex | KeyLabelIndex | TypingTestTextIndex | I18nPackIndex
+  index: FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyboardMetaIndex | KeyLabelIndex | TypingTestTextIndex | I18nPackIndex | ThemePackIndex
   files: Record<string, string> // filename -> content (empty for meta / i18n-index)
 }
 

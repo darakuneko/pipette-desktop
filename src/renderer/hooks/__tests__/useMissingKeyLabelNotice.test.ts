@@ -63,7 +63,7 @@ describe('useMissingKeyLabelNotice', () => {
 
     const { result, rerender } = renderHook(
       ({ uid }: { uid: string | null }) => useMissingKeyLabelNotice(uid),
-      { initialProps: { uid: 'uid-1' } },
+      { initialProps: { uid: 'uid-1' as string | null } },
     )
     await waitFor(() => expect(result.current.missingName).toBe('brazilian'))
 
@@ -88,7 +88,7 @@ describe('useMissingKeyLabelNotice', () => {
 
     const { result, rerender } = renderHook(
       ({ uid }: { uid: string | null }) => useMissingKeyLabelNotice(uid),
-      { initialProps: { uid: 'uid-1' } },
+      { initialProps: { uid: 'uid-1' as string | null } },
     )
     await waitFor(() => expect(result.current.missingName).toBe('brazilian'))
 
