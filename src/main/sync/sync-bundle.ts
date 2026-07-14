@@ -4,7 +4,7 @@
 import { app } from 'electron'
 import { join } from 'node:path'
 import { readFile, readdir, access } from 'node:fs/promises'
-import { gcTombstones } from './merge'
+import { gcTombstones, type EntryMeta } from './merge'
 import { keyboardMetaFilePath, readKeyboardMetaIndex } from './keyboard-meta'
 import { FAVORITE_TYPES } from '../../shared/favorite-data'
 import type { FavoriteIndex } from '../../shared/types/favorite-store'
@@ -153,7 +153,11 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
   const index = await readIndexFile(basePath)
   if (!index) return null
 
-  const gcEntries = gcTombstones(index.entries)
+  // `index.entries`'s static type is a union of each possible index's own
+  // array type (rather than a single array-of-union type), which a generic
+  // function call can't unify against. Every constituent is an EntryMeta[]
+  // at runtime, so widen through that shared alias.
+  const gcEntries = gcTombstones(index.entries as EntryMeta[])
   index.entries = gcEntries as typeof index.entries
 
   const files: Record<string, string> = {}

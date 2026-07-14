@@ -297,7 +297,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, typingTestS
           />
           <Tooltip
             {...ANALYZE_TOOLTIP_DEFAULTS}
-            labelFormatter={(v: number) => formatBucketAxisLabel(v, bucketMs)}
+            labelFormatter={(v) => formatBucketAxisLabel(v as number, bucketMs)}
             formatter={(value) => {
               const n = typeof value === 'number' ? value : Number(value)
               if (!Number.isFinite(n)) return boldValue(String(value))

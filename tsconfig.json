@@ -1,8 +1,9 @@
 {
+  // Solution-style root: no files of its own, only points editors at the
+  // real projects below. electron-vite handles the actual build (esbuild),
+  // so these projects are noEmit — run `pnpm typecheck` to check them.
+  // src/shared is intentionally included by both main and renderer projects
+  // so it is checked against both runtime environments.
   "files": [],
-  "references": [
-    { "path": "./tsconfig.main.json" },
-    { "path": "./tsconfig.renderer.json" },
-    { "path": "./tsconfig.shared.json" }
-  ]
+  "references": [{ "path": "./tsconfig.main.json" }, { "path": "./tsconfig.renderer.json" }]
 }

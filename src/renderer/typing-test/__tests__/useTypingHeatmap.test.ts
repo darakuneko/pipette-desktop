@@ -175,7 +175,7 @@ describe('useTypingHeatmap', () => {
   })
 
   it('does not set state after unmount', async () => {
-    let resolveFetch: ((v: TypingHeatmapByCell) => void) | null = null
+    let resolveFetch: (v: TypingHeatmapByCell) => void
     const api = vi.fn<HeatmapFn>().mockImplementationOnce(
       () => new Promise((resolve) => { resolveFetch = resolve }),
     )
@@ -184,7 +184,7 @@ describe('useTypingHeatmap', () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { unmount } = renderHook(() => useTypingHeatmap({ uid: '0xAABB', layer: 0, enabled: true }))
     unmount()
-    resolveFetch?.({ '1,2': cell(99) })
+    resolveFetch!({ '1,2': cell(99) })
     await act(async () => { await Promise.resolve() })
 
     expect(errors).not.toHaveBeenCalled()

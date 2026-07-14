@@ -74,6 +74,8 @@ function renderView(overrides: {
       range={range}
       deviceScopes={['own']}
       appScopes={[]}
+      typingTestScopes={[]}
+      runIdScopes={[]}
       snapshot={snapshot}
       filter={{ ...DEFAULT_FILTER, ...filter }}
       onSkipPercentChange={onSkipPercentChange}

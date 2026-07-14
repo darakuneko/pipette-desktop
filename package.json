@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "dev:linux": "electron-vite dev --noSandbox",
+    "typecheck": "tsc -p tsconfig.main.json && tsc -p tsconfig.renderer.json",
     "build": "rm -rf out && electron-vite build",
     "build:win": "if exist out (rd /s /q \"out\") && electron-vite build",
     "dist": "rm -rf out dist && electron-vite build && electron-builder",

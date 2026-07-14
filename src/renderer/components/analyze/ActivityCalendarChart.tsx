@@ -45,6 +45,7 @@ import type {
   ActivityMetric,
 } from '../../../shared/types/analyze-filters'
 import type { DeviceScope } from './analyze-types'
+import { localeCount } from '../../utils/i18n-count'
 
 const CELL_GAP_PX = 3
 const ROW_HEADER_WIDTH_PX = 32
@@ -60,8 +61,11 @@ interface Props {
   deviceScope: DeviceScope
   /** App filter — see WpmChart.Props.appScopes. */
   appScopes: string[]
-  typingTestScopes: string[]
-  runIdScopes: string[]
+  /** Optional because the ActivityChart calendar branch does not forward
+   * these two filters — the calendar has always fetched unfiltered daily
+   * summaries (useDailySummary defaults absent scopes to "no filter"). */
+  typingTestScopes?: string[]
+  runIdScopes?: string[]
   /** Outer Activity metric — drives both the cell value and (when
    * `'sessions'`) the dedicated sessions IPC fetch. */
   metric: ActivityMetric
@@ -278,7 +282,9 @@ export function ActivityCalendarChart({
         <span>
           {metric === 'wpm'
             ? t('analyze.activity.legendHighWpm', { wpm: formatWpm(grid.summary.peakValue) })
-            : t('analyze.activity.legendHigh', { count: Math.round(grid.summary.peakValue).toLocaleString() })}
+            : t('analyze.activity.legendHigh', {
+                count: localeCount(Math.round(grid.summary.peakValue)),
+              })}
         </span>
       </div>
       {summaryItems !== null && (
@@ -358,7 +364,7 @@ function formatCellTooltip(
   if (metric === 'sessions') {
     return t('analyze.activity.calendar.cellTooltipSessions', {
       date,
-      count: cell.value.toLocaleString(),
+      count: localeCount(cell.value),
     })
   }
   return t('analyze.activity.calendar.cellTooltipKeystrokes', {

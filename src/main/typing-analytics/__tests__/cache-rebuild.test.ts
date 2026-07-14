@@ -56,7 +56,7 @@ function scope(machineHash: string, updatedAt = 1_000): JsonlRow {
 function char(machineHash: string, char: string, count: number, updatedAt = 1_000): JsonlRow {
   const scopeId = `${machineHash}|linux|${UID_A}`
   return {
-    id: charMinuteRowId(scopeId, 60_000, char),
+    id: charMinuteRowId(scopeId, 60_000, '', char),
     kind: 'char-minute',
     updated_at: updatedAt,
     payload: { scopeId, minuteTs: 60_000, char, count },
@@ -66,7 +66,7 @@ function char(machineHash: string, char: string, count: number, updatedAt = 1_00
 function stats(machineHash: string, keystrokes: number, updatedAt = 1_000): JsonlRow {
   const scopeId = `${machineHash}|linux|${UID_A}`
   return {
-    id: minuteStatsRowId(scopeId, 60_000),
+    id: minuteStatsRowId(scopeId, 60_000, ''),
     kind: 'minute-stats',
     updated_at: updatedAt,
     payload: {

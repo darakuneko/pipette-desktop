@@ -82,7 +82,7 @@ describe('ComboPanelModal', () => {
 
   it('shows editor and favorites panel directly', () => {
     render(
-      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.getByText('Combo - 0')).toBeInTheDocument()
     expect(screen.getAllByTestId('keycode-field')).toHaveLength(5)
@@ -92,7 +92,7 @@ describe('ComboPanelModal', () => {
 
   it('shows TabbedKeycodes when a keycode field is clicked', () => {
     render(
-      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.queryByTestId('tabbed-keycodes')).not.toBeInTheDocument()
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
@@ -102,14 +102,14 @@ describe('ComboPanelModal', () => {
 
   it('Save button is disabled when no changes', () => {
     render(
-      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.getByTestId('combo-modal-save')).toBeDisabled()
   })
 
   it('Save button enables after editing key1', () => {
     render(
-      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     act(() => { vi.advanceTimersByTime(300) })
@@ -120,7 +120,7 @@ describe('ComboPanelModal', () => {
 
   it('calls onSetEntry and closes modal on Save', async () => {
     render(
-      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     act(() => { vi.advanceTimersByTime(300) })
@@ -137,7 +137,7 @@ describe('ComboPanelModal', () => {
 
   it('calls onClose when close button is clicked', () => {
     render(
-      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     fireEvent.click(screen.getByTestId('combo-modal-close'))
     expect(onClose).toHaveBeenCalledTimes(1)
@@ -145,7 +145,7 @@ describe('ComboPanelModal', () => {
 
   it('calls onClose when backdrop is clicked', () => {
     render(
-      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     fireEvent.click(screen.getByTestId('combo-modal-backdrop'))
     expect(onClose).toHaveBeenCalledTimes(1)
@@ -153,7 +153,7 @@ describe('ComboPanelModal', () => {
 
   it('closes modal on Escape key', () => {
     render(
-      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(onClose).toHaveBeenCalled()
@@ -161,7 +161,7 @@ describe('ComboPanelModal', () => {
 
   it('hides favorites panel when picker is open', () => {
     render(
-      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.getByTestId('combo-favorites-panel').className).not.toContain('hidden')
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])

@@ -4,11 +4,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from '@testing-library/react'
 import { useDevicePrefs } from '../useDevicePrefs'
-import { setupAppConfigMock, renderHookWithConfig } from './test-helpers'
+import { setupAppConfigMock, renderHookWithConfig, vialAPIMock } from './test-helpers'
 
 // Mock vialAPI for IPC calls
 const mockPipetteSettingsGet = vi.fn<(uid: string) => Promise<{ _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] } | null>>()
-const mockPipetteSettingsPatch = vi.fn<(uid: string, prefs: { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] }) => Promise<{ success: boolean }>>()
+const mockPipetteSettingsPatch = vi.fn<(uid: string, prefs: { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[]; viewMatrix?: Record<string, { row: number; col: number }> | null }) => Promise<{ success: boolean }>>()
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -22,7 +22,7 @@ function setupMocks(configOverrides: Parameters<typeof setupAppConfigMock>[0] = 
   const mocks = setupAppConfigMock(configOverrides)
   Object.defineProperty(window, 'vialAPI', {
     value: {
-      ...((window as Record<string, unknown>).vialAPI as Record<string, unknown>),
+      ...vialAPIMock(),
       pipetteSettingsGet: mockPipetteSettingsGet,
       pipetteSettingsPatch: mockPipetteSettingsPatch,
     },

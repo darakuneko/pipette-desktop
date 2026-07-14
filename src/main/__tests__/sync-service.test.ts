@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
 import { access, mkdtemp, readFile, rm, writeFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
+import type { DriveFile } from '../sync/google-drive'
 
 // --- Mock electron ---
 let mockUserDataPath = ''
@@ -38,10 +39,12 @@ vi.mock('electron', () => ({
   },
 }))
 
-const mockListFiles = vi.fn(async () => [])
-const mockDownloadFile = vi.fn(async () => ({}))
-const mockUploadFile = vi.fn(async () => 'file-id')
-const mockDeleteFile = vi.fn(async () => {})
+const mockListFiles = vi.fn(async (..._args: unknown[]): Promise<DriveFile[]> => [])
+const mockDownloadFile = vi.fn(async (_fileId: string): Promise<Record<string, unknown>> => ({}))
+const mockUploadFile = vi.fn(
+  async (_name: string, _envelope?: unknown, _existingFileId?: string): Promise<string> => 'file-id',
+)
+const mockDeleteFile = vi.fn(async (_fileId: string): Promise<void> => {})
 const mockDriveFileName = vi.fn((syncUnit: string) => syncUnit.replaceAll('/', '_') + '.enc')
 const mockSyncUnitFromFileName = vi.fn((name: string) => {
   const dayMatch = name.match(/^keyboards_(.+?)_devices_(.+?)_days_(\d{4}-\d{2}-\d{2})\.enc$/)
@@ -57,14 +60,15 @@ const mockSyncUnitFromFileName = vi.fn((name: string) => {
 
 vi.mock('../sync/google-drive', () => ({
   listFiles: (...args: unknown[]) => mockListFiles(...args),
-  downloadFile: (...args: unknown[]) => mockDownloadFile(...args),
-  uploadFile: (...args: unknown[]) => mockUploadFile(...args),
-  deleteFile: (...args: unknown[]) => mockDeleteFile(...args),
-  driveFileName: (...args: unknown[]) => mockDriveFileName(...args),
-  syncUnitFromFileName: (...args: unknown[]) => mockSyncUnitFromFileName(...args),
+  downloadFile: (...args: unknown[]) => mockDownloadFile(...(args as Parameters<typeof mockDownloadFile>)),
+  uploadFile: (...args: unknown[]) => mockUploadFile(...(args as Parameters<typeof mockUploadFile>)),
+  deleteFile: (...args: unknown[]) => mockDeleteFile(...(args as Parameters<typeof mockDeleteFile>)),
+  driveFileName: (...args: unknown[]) => mockDriveFileName(...(args as Parameters<typeof mockDriveFileName>)),
+  syncUnitFromFileName: (...args: unknown[]) =>
+    mockSyncUnitFromFileName(...(args as Parameters<typeof mockSyncUnitFromFileName>)),
 }))
 
-const mockGetAuthStatus = vi.fn(async () => ({ authenticated: true }))
+const mockGetAuthStatus = vi.fn(async (..._args: unknown[]) => ({ authenticated: true }))
 
 vi.mock('../sync/google-auth', () => ({
   getAuthStatus: (...args: unknown[]) => mockGetAuthStatus(...args),
@@ -108,20 +112,42 @@ vi.mock('../typing-analytics/sync', () => ({
   },
 }))
 
-const mockApplyRowsToCache = vi.fn(() => ({ scopes: 0, charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }))
+const mockApplyRowsToCache = vi.fn((..._args: unknown[]) => ({
+  scopes: 0,
+  charMinutes: 0,
+  matrixMinutes: 0,
+  minuteStats: 0,
+  sessions: 0,
+}))
 vi.mock('../typing-analytics/jsonl/apply-to-cache', () => ({
   applyRowsToCache: (...args: unknown[]) => mockApplyRowsToCache(...args),
 }))
 
-const mockReadRows = vi.fn(async () => ({ rows: [], lastId: null, partialLineSkipped: false }))
+// Loosely-typed test double for a JSONL row — the consumer of these rows
+// (applyRowsToCache) is itself mocked above, so the fixtures here only need
+// to match what sync-service.ts reads directly (id/kind/updated_at), not the
+// full discriminated JsonlRow union's per-kind payload shape.
+interface MockJsonlRow {
+  id: string
+  kind: string
+  updated_at: number
+  payload: Record<string, unknown>
+}
+const mockReadRows = vi.fn(async (..._args: unknown[]) => ({
+  rows: [] as MockJsonlRow[],
+  lastId: null as string | null,
+  partialLineSkipped: false,
+}))
 vi.mock('../typing-analytics/jsonl/jsonl-reader', () => ({
   readRows: (...args: unknown[]) => mockReadRows(...args),
 }))
 
 const mockListLocalKeyboardUids = vi.fn(() => [] as string[])
-const mockTombstoneRowsForUidHashInRange = vi.fn(() => ({
-  charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0,
-}))
+const mockTombstoneRowsForUidHashInRange = vi.fn(
+  (_uid: string, _machineHash: string, _startMs: number, _endMs: number, _updatedAt: number) => ({
+    charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0,
+  }),
+)
 vi.mock('../typing-analytics/db/typing-analytics-db', () => ({
   getTypingAnalyticsDB: vi.fn(() => ({
     listLocalKeyboardUids: mockListLocalKeyboardUids,
@@ -141,7 +167,7 @@ interface MockTypingSyncState {
   last_synced_at: number
 }
 let mockSyncState: MockTypingSyncState | null = null
-const mockLoadSyncState = vi.fn(async () => mockSyncState ? { ...mockSyncState } : null)
+const mockLoadSyncState = vi.fn(async (_userData: string) => (mockSyncState ? { ...mockSyncState } : null))
 const mockSaveSyncState = vi.fn(async (_userData: string, state: MockTypingSyncState) => {
   mockSyncState = state
 })
@@ -194,8 +220,8 @@ import { app } from 'electron'
 
 const POLL_INTERVAL_MS = 3 * 60 * 1000
 
-const FAKE_TIMER_OPTS = {
-  toFake: ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'Date'] as const,
+const FAKE_TIMER_OPTS: Parameters<typeof vi.useFakeTimers>[0] = {
+  toFake: ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'Date'],
 }
 
 async function flushIO(): Promise<void> {
@@ -1792,7 +1818,10 @@ describe('sync-service', () => {
     function captureBeforeQuitHandler(): (e: { preventDefault: () => void }) => void {
       setupBeforeQuitHandler()
       const mockOn = vi.mocked(app.on)
-      const match = mockOn.mock.calls.find(([event]) => event === 'before-quit')
+      // `app.on` is overloaded per Electron event name, so TS narrows the mock's
+      // inferred call-tuple type to whichever overload it picked first. Cast to
+      // string for the comparison since at runtime this is always a plain event name.
+      const match = mockOn.mock.calls.find(([event]) => (event as string) === 'before-quit')
       if (!match) throw new Error('before-quit handler not registered')
       return match[1] as (e: { preventDefault: () => void }) => void
     }

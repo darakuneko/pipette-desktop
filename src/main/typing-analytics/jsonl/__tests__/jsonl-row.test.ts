@@ -81,13 +81,13 @@ describe('serializeRow / parseRow round-trip', () => {
     const rows: JsonlRow[] = [
       scope,
       {
-        id: charMinuteRowId('scope-1', 60_000, 'a'),
+        id: charMinuteRowId('scope-1', 60_000, '', 'a'),
         kind: 'char-minute',
         updated_at: 2_000,
         payload: { scopeId: 'scope-1', minuteTs: 60_000, char: 'a', count: 3 },
       },
       {
-        id: matrixMinuteRowId('scope-1', 60_000, 1, 2, 0),
+        id: matrixMinuteRowId('scope-1', 60_000, '', 1, 2, 0),
         kind: 'matrix-minute',
         updated_at: 2_000,
         payload: {
@@ -103,7 +103,7 @@ describe('serializeRow / parseRow round-trip', () => {
         },
       },
       {
-        id: minuteStatsRowId('scope-1', 60_000),
+        id: minuteStatsRowId('scope-1', 60_000, ''),
         kind: 'minute-stats',
         updated_at: 2_000,
         payload: {
@@ -162,7 +162,7 @@ describe('serializeRow / parseRow round-trip', () => {
     // size === 0), but the parser must accept it cleanly so a manual
     // edit / migration tooling doesn't trip the validator.
     const empty: JsonlRow = {
-      id: bigramMinuteRowId('scope-1', 60_000),
+      id: bigramMinuteRowId('scope-1', 60_000, ''),
       kind: 'bigram-minute',
       updated_at: 1,
       payload: { scopeId: 'scope-1', minuteTs: 60_000, bigrams: {} },
@@ -172,7 +172,7 @@ describe('serializeRow / parseRow round-trip', () => {
 
   it('preserves is_deleted when set', () => {
     const tombstoned: JsonlRow = {
-      id: charMinuteRowId('scope-1', 60_000, 'a'),
+      id: charMinuteRowId('scope-1', 60_000, '', 'a'),
       kind: 'char-minute',
       updated_at: 9_000,
       is_deleted: true,

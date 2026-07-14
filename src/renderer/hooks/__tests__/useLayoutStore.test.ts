@@ -54,6 +54,7 @@ function createHookOptions(overrides?: Partial<UseLayoutStoreOptions>) {
     deviceName: 'Test Keyboard',
     serialize: vi.fn(() => VALID_VIL),
     applyVilFile: vi.fn(async () => {}),
+    currentDefinition: null,
     ...overrides,
   }
 }
@@ -135,7 +136,7 @@ describe('useLayoutStore – saveLayout', () => {
 
     expect(result.current.saving).toBe(false)
 
-    let promise: Promise<boolean>
+    let promise: Promise<string | null>
     act(() => {
       promise = result.current.saveLayout('test')
     })

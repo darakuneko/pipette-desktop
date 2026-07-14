@@ -614,7 +614,7 @@ export function setupTypingAnalyticsIpc(): void {
         }
         return await saveKeymapSnapshotIfChanged(app.getPath('userData'), full)
       } catch (err) {
-        log.warn('[typing-analytics] saveKeymapSnapshot failed', err)
+        log('warn', `[typing-analytics] saveKeymapSnapshot failed: ${String(err)}`)
         return { saved: false, savedAt: null }
       }
     },

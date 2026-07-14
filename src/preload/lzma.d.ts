@@ -14,5 +14,5 @@ declare module 'lzma' {
     ): void
   }
   const LZMA: LZMA
-  export default LZMA
+  export = LZMA
 }

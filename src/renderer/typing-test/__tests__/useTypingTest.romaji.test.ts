@@ -66,7 +66,9 @@ async function seedKanaLanguage(name: string, words: string[]): Promise<void> {
   await getLanguageData(name)
 }
 
-const wordsConfig = (wordCount: number): TypingTestConfig => ({
+// Narrowed to the words variant so spreads like `{ ...wordsConfig(1), romaji }`
+// stay a single discriminated member instead of the whole config union.
+const wordsConfig = (wordCount: number): Extract<TypingTestConfig, { mode: 'words' }> => ({
   mode: 'words',
   wordCount,
   punctuation: false,

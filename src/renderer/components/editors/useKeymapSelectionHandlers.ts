@@ -9,6 +9,7 @@ import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import type { ViewMatrixCell } from '../../../shared/types/pipette-settings'
+import type { MacroAction } from '../../../preload/macro'
 import { hasModifierKey } from './KeyboardPane'
 import type { PopoverState } from './keymap-editor-types'
 import type { UseKeymapMultiSelectReturn } from './useKeymapMultiSelect'
@@ -57,7 +58,7 @@ export interface UseKeymapSelectionOptions {
   macroCount?: number
   macroBufferSize?: number
   macroBuffer?: number[]
-  onSaveMacros?: (buffer: number[], parsedMacros?: unknown) => Promise<void>
+  onSaveMacros?: (buffer: number[], parsedMacros?: MacroAction[][]) => Promise<void>
 }
 
 export function useKeymapSelectionHandlers({
@@ -86,8 +87,8 @@ export function useKeymapSelectionHandlers({
   const {
     multiSelectedKeys, setMultiSelectedKeys,
     selectionAnchor, setSelectionAnchor,
-    _selectionSourcePane, setSelectionSourcePane,
-    _selectionMode, setSelectionMode,
+    selectionSourcePane: _selectionSourcePane, setSelectionSourcePane,
+    selectionMode: _selectionMode, setSelectionMode,
     pickerSelected,
     clearMultiSelection,
     clearPickerSelection,
@@ -290,7 +291,12 @@ export function useKeymapSelectionHandlers({
   }, [handleDeselect])
 
   // --- Keycode handlers ---
-  const handleKeycodeSelect = useCallback(async (kc: Keycode) => {
+  // Only `.qmkId` is read below, so accept the picker's ad-hoc fallback
+  // shape too (findKeycode(qmkId) ?? { qmkId, label, keycode } in
+  // useLayoutPicker.tsx) — that fallback deliberately isn't a real
+  // `Keycode` instance since constructing one would register it in the
+  // class's global qmkId lookup maps for what may be a one-off/custom code.
+  const handleKeycodeSelect = useCallback(async (kc: Pick<Keycode, 'qmkId'>) => {
     clearPickerSelection(); clearPending()
     const code = deserialize(kc.qmkId)
     if (selectedKey) {

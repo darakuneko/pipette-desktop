@@ -168,7 +168,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   // StatusBar "View Analytics" button mid-run (it lives in the footer, not
   // this component). False whenever the test isn't running or mode is off.
   useEffect(() => {
-    onTypingTestRunningChange?.(typingTestMode && typingTest.state.status === 'running')
+    onTypingTestRunningChange?.(!!typingTestMode && typingTest.state.status === 'running')
   }, [typingTestMode, typingTest.state.status, onTypingTestRunningChange])
 
   // --- Escape clears picker selection ---

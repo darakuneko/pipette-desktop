@@ -40,7 +40,7 @@ function scopeRow(updatedAt: number, productName = 'Pipette'): JsonlRow {
 
 function charRow(updatedAt: number, count: number, char = 'a'): JsonlRow {
   return {
-    id: charMinuteRowId(SCOPE_ID, 60_000, char),
+    id: charMinuteRowId(SCOPE_ID, 60_000, '', char),
     kind: 'char-minute',
     updated_at: updatedAt,
     payload: { scopeId: SCOPE_ID, minuteTs: 60_000, char, count },
@@ -49,7 +49,7 @@ function charRow(updatedAt: number, count: number, char = 'a'): JsonlRow {
 
 function matrixRow(updatedAt: number, count: number, tap = 0, hold = 0): JsonlRow {
   return {
-    id: matrixMinuteRowId(SCOPE_ID, 60_000, 1, 2, 0),
+    id: matrixMinuteRowId(SCOPE_ID, 60_000, '', 1, 2, 0),
     kind: 'matrix-minute',
     updated_at: updatedAt,
     payload: {
@@ -68,7 +68,7 @@ function matrixRow(updatedAt: number, count: number, tap = 0, hold = 0): JsonlRo
 
 function statsRow(updatedAt: number, keystrokes: number): JsonlRow {
   return {
-    id: minuteStatsRowId(SCOPE_ID, 60_000),
+    id: minuteStatsRowId(SCOPE_ID, 60_000, ''),
     kind: 'minute-stats',
     updated_at: updatedAt,
     payload: {

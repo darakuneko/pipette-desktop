@@ -1327,6 +1327,7 @@ describe('LayoutStoreModal', () => {
       render(
         <LayoutStoreContent
           entries={MOCK_ENTRIES}
+          keyboardName="TestKeyboard"
           onSave={vi.fn()}
           onLoad={vi.fn()}
           onRename={vi.fn()}
@@ -1344,6 +1345,7 @@ describe('LayoutStoreModal', () => {
       render(
         <LayoutStoreContent
           entries={MOCK_ENTRIES}
+          keyboardName="TestKeyboard"
           onSave={vi.fn()}
           onLoad={vi.fn()}
           onRename={vi.fn()}
@@ -1358,6 +1360,7 @@ describe('LayoutStoreModal', () => {
       render(
         <LayoutStoreContent
           entries={MOCK_ENTRIES}
+          keyboardName="TestKeyboard"
           onSave={vi.fn()}
           onLoad={vi.fn()}
           onRename={vi.fn()}
@@ -1374,6 +1377,7 @@ describe('LayoutStoreModal', () => {
       render(
         <LayoutStoreContent
           entries={MOCK_ENTRIES}
+          keyboardName="TestKeyboard"
           onSave={vi.fn()}
           onLoad={vi.fn()}
           onRename={vi.fn()}
@@ -1394,6 +1398,7 @@ describe('LayoutStoreModal', () => {
       render(
         <LayoutStoreContent
           entries={MOCK_ENTRIES}
+          keyboardName="TestKeyboard"
           onSave={vi.fn()}
           onLoad={vi.fn()}
           onRename={vi.fn()}

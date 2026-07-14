@@ -87,7 +87,7 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
     // LM inner: show modifier keycodes instead of basic keycodes
     if (lmMode) {
       for (const kc of getAvailableLMMods()) {
-        const searchParts = [stripPrefix(kc.qmkId), kc.label, kc.tooltip].filter(Boolean)
+        const searchParts = [stripPrefix(kc.qmkId), kc.label, kc.tooltip].filter((p): p is string => Boolean(p))
         const tokens = searchParts.map((p) => p.toLowerCase())
         entries.push({
           keycode: kc,
@@ -110,8 +110,8 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
           kc.label,
           ...kc.alias.map(stripPrefix),
           kc.tooltip,
-        ].filter(Boolean)
-        const detailParts = [kc.qmkId, kc.tooltip, ...extraAliases].filter(Boolean)
+        ].filter((p): p is string => Boolean(p))
+        const detailParts = [kc.qmkId, kc.tooltip, ...extraAliases].filter((p): p is string => Boolean(p))
         const tokens = searchParts.map((p) => p.toLowerCase())
         entries.push({
           keycode: kc,

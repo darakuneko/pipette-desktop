@@ -120,7 +120,7 @@ export function useKeyboardLoaders(
     }
 
     // Derive layer count from keymap data
-    newState.layers = deriveLayerCount(vil.keymap, newState.rows, newState.cols)
+    newState.layers = deriveLayerCount(vil.keymap)
     newState.layerNames = Array.from({ length: newState.layers }, (_, i) =>
       vil.layerNames && i < vil.layerNames.length ? vil.layerNames[i] : '',
     )

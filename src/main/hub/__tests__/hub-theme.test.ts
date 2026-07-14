@@ -76,7 +76,7 @@ function samplePack(overrides?: Partial<HubThemePackBody>): HubThemePackBody {
   return {
     name: 'Nord',
     version: '1.0.0',
-    colorScheme: 'both',
+    colorScheme: 'dark',
     colors: { '--bg': '#2e3440', '--fg': '#eceff4' },
     ...overrides,
   }

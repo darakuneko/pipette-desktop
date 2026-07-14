@@ -60,6 +60,7 @@ function makeOptions(overrides?: Partial<KeycodeEntryModalOptions<TestEntry>>): 
     index: 0,
     onSave: vi.fn().mockResolvedValue(undefined),
     onClose: vi.fn(),
+    vialProtocol: 6,
     ...overrides,
   }
 }

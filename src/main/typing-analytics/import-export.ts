@@ -93,7 +93,7 @@ export async function exportTypingDataForKeyboard(
       return 0
     }
   })))
-  return { written: results.reduce((sum, n) => sum + n, 0), destinationDir }
+  return { written: results.reduce<number>((sum, n) => sum + n, 0), destinationDir }
 }
 
 export type ImportRejectReason =

@@ -317,7 +317,7 @@ export function WpmChart({ uid, range, deviceScopes, appScopes, typingTestScopes
             )}
             <Tooltip
               {...ANALYZE_TOOLTIP_DEFAULTS}
-              labelFormatter={(v: number) => formatBucketAxisLabel(v, bucketMs)}
+              labelFormatter={(v) => formatBucketAxisLabel(v as number, bucketMs)}
               formatter={(value, _name, item) => {
                 if (item?.dataKey === 'bksPercent') {
                   if (value === null || value === undefined) return [boldValue('—'), t('analyze.wpm.errorProxy.legend')]

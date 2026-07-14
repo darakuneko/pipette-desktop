@@ -369,6 +369,20 @@ function extractError(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback
 }
 
+/** Rebuilds a failed lookup result under a different `T` — `getRecord`
+ * resolves `KeyLabelStoreResult<KeyLabelRecord>`, but the handler needs to
+ * return `KeyLabelStoreResult<KeyLabelMeta>`, and the two `T`s don't share
+ * a `data` shape, so `record as KeyLabelStoreResult<KeyLabelMeta>` would be
+ * an unsound cast. Only the failure fields (`success`/`errorCode`/`error`)
+ * carry over. */
+function toKeyLabelLookupFailure(record: {
+  success: boolean
+  errorCode?: KeyLabelStoreResult<unknown>['errorCode']
+  error?: string
+}): KeyLabelStoreResult<KeyLabelMeta> {
+  return { success: record.success, errorCode: record.errorCode, error: record.error }
+}
+
 function toPrivateResult(res: { id: string; url: string; expires_at: string | null }): HubPrivateUploadResult {
   return { success: true, id: res.id, url: res.url, expiresAt: res.expires_at }
 }
@@ -1222,7 +1236,9 @@ export function setupHubIpc(): void {
         return { success: false, errorCode: 'NOT_FOUND', error: 'Invalid id' }
       }
       const record = await getRecord(localId)
-      if (!record.success || !record.data) return record as KeyLabelStoreResult<KeyLabelMeta>
+      if (!record.success || !record.data) {
+        return toKeyLabelLookupFailure(record)
+      }
       const input: HubKeyLabelInput = {
         name: record.data.meta.name,
         map: record.data.data.map,
@@ -1252,7 +1268,9 @@ export function setupHubIpc(): void {
         return { success: false, errorCode: 'NOT_FOUND', error: 'Invalid id' }
       }
       const record = await getRecord(localId)
-      if (!record.success || !record.data) return record as KeyLabelStoreResult<KeyLabelMeta>
+      if (!record.success || !record.data) {
+        return toKeyLabelLookupFailure(record)
+      }
       const hubPostId = record.data.meta.hubPostId
       if (!hubPostId) {
         return { success: false, errorCode: 'NOT_FOUND', error: 'Entry has no hub post' }
@@ -1284,7 +1302,9 @@ export function setupHubIpc(): void {
         return { success: false, errorCode: 'NOT_FOUND', error: 'Invalid id' }
       }
       const record = await getRecord(localId)
-      if (!record.success || !record.data) return record as KeyLabelStoreResult<KeyLabelMeta>
+      if (!record.success || !record.data) {
+        return toKeyLabelLookupFailure(record)
+      }
       const hubPostId = record.data.meta.hubPostId
       if (!hubPostId) {
         return { success: false, errorCode: 'NOT_FOUND', error: 'Entry has no hub post' }

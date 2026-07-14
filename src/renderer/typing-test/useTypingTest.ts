@@ -48,6 +48,7 @@ const MAX_WPM_HISTORY = 300
 export interface UseTypingTestReturn {
   state: TypingTestState
   wpm: number
+  kpm: number
   accuracy: number
   /** Current word's romaji progress (romajiInput mode only); null otherwise
    *  or once all words are done. */

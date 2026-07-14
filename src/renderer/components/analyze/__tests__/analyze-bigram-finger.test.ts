@@ -15,7 +15,7 @@ function entry(
   count: number,
   hist: number[] = [0, 0, 0, 0, 0, 0, 0, 0],
 ): TypingBigramTopEntry {
-  return { ngramId, count, hist, avgIki: null }
+  return { ngramId, count, hist, avgIki: null, sd: null }
 }
 
 /** Resolve `qmkId` to its numeric code under a specific protocol,

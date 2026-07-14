@@ -58,6 +58,8 @@ import type {
   TypingBigramAggregateOptions,
   TypingBigramAggregateResult,
   TypingBigramAggregateView,
+  LayoutComparisonOptions,
+  LayoutComparisonResult,
 } from './typing-analytics'
 import type { LanguageListEntry } from './language-store'
 import type { AozoraImportResult } from './aozora-import'
@@ -143,6 +145,9 @@ export interface VialAPI {
   exportKeymapC(content: string, deviceName?: string): Promise<{ success: boolean; filePath?: string; error?: string }>
   exportPdf(base64Data: string, deviceName?: string): Promise<{ success: boolean; filePath?: string; error?: string }>
   exportCsv(content: string, defaultName?: string): Promise<{ success: boolean; filePath?: string; error?: string }>
+  exportCsvBundle(
+    files: ReadonlyArray<{ name: string; content: string }>,
+  ): Promise<{ success: boolean; dirPath?: string; files?: string[]; error?: string }>
   exportJson(content: string, defaultName?: string): Promise<{ success: boolean; filePath?: string; error?: string }>
   sideloadJson(title?: string): Promise<{ success: boolean; data?: unknown; error?: string }>
 
@@ -291,6 +296,7 @@ export interface VialAPI {
   typingAnalyticsListKeymapSnapshots(uid: string): Promise<TypingKeymapSnapshotSummary[]>
   typingAnalyticsGetMatrixHeatmapForRange(uid: string, layer: number, sinceMs: number, untilMs: number, scope: DeviceScope, appScopes?: string[], typingTestScopes?: string[], runIdScopes?: string[]): Promise<TypingHeatmapByCell>
   typingAnalyticsGetBigramAggregateForRange(uid: string, sinceMs: number, untilMs: number, view: TypingBigramAggregateView, scope: DeviceScope, options?: TypingBigramAggregateOptions, appScopes?: string[], typingTestScopes?: string[], runIdScopes?: string[]): Promise<TypingBigramAggregateResult>
+  typingAnalyticsGetLayoutComparisonForRange(uid: string, sinceMs: number, untilMs: number, scope: DeviceScope, options: LayoutComparisonOptions, appScopes?: string[], typingTestScopes?: string[], runIdScopes?: string[]): Promise<LayoutComparisonResult | null>
   typingAnalyticsListLocalDeviceDays(uid: string, machineHash: string): Promise<string[]>
   typingAnalyticsHasRemote(): Promise<boolean>
   typingAnalyticsListRemoteCloudHashes(uid: string): Promise<string[]>

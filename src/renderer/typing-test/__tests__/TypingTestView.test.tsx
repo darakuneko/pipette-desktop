@@ -13,6 +13,7 @@ import { DEFAULT_CONFIG } from '../types'
 function makeState(overrides: Partial<TypingTestState> = {}): TypingTestState {
   return {
     status: 'waiting',
+    runId: 'test-run',
     words: ['the', 'quick', 'brown'],
     currentWordIndex: 0,
     currentInput: '',
@@ -26,6 +27,7 @@ function makeState(overrides: Partial<TypingTestState> = {}): TypingTestState {
     wpmHistory: [],
     lineBreaks: new Set(),
     lineIndents: [],
+    romajiKeystrokes: '',
     romajiCapable: false,
     ...overrides,
   }

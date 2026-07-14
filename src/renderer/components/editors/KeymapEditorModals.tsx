@@ -7,6 +7,7 @@
 
 import { useTranslation } from 'react-i18next'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../../shared/types/protocol'
+import type { FavoriteType } from '../../../shared/types/favorite-store'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import type { MacroAction } from '../../../preload/macro'
 import { TapDanceModal } from './TapDanceModal'
@@ -50,9 +51,9 @@ export interface KeymapEditorModalsProps {
   favHubNeedsDisplayName?: boolean
   favHubUploading?: string | null
   favHubUploadResult?: FavHubEntryResult | null
-  onFavUploadToHub?: (type: string, entryId: string) => void
-  onFavUpdateOnHub?: (type: string, entryId: string) => void
-  onFavRemoveFromHub?: (type: string, entryId: string) => void
+  onFavUploadToHub?: (type: FavoriteType, entryId: string) => void
+  onFavUpdateOnHub?: (type: FavoriteType, entryId: string) => void
+  onFavRemoveFromHub?: (type: FavoriteType, entryId: string) => void
   onFavRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
 
   // --- "Edit JSON" modals ---

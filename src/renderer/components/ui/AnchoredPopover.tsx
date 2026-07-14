@@ -74,9 +74,13 @@ export function AnchoredPopover({
         ? { right: window.innerWidth - rect.right }
         : { left: rect.left }
       const widthHint = matchAnchorWidth ? { minWidth: rect.width } : {}
-      const next = placement === 'top'
-        ? { top: 0, bottom: window.innerHeight - rect.top + offset, ...x, ...widthHint }
-        : { top: rect.bottom + offset, ...x, ...widthHint }
+      // Annotated so both placement branches share one shape — otherwise
+      // the spread-built union lacks `bottom` on the non-'top' branch and
+      // the prev-equals check below can't read it.
+      const next: { top: number; left?: number; right?: number; bottom?: number; minWidth?: number } =
+        placement === 'top'
+          ? { top: 0, bottom: window.innerHeight - rect.top + offset, ...x, ...widthHint }
+          : { top: rect.bottom + offset, ...x, ...widthHint }
       setPosition((prev) =>
         prev.top === next.top && prev.left === next.left && prev.right === next.right && prev.bottom === next.bottom && prev.minWidth === next.minWidth ? prev : next,
       )

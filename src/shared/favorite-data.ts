@@ -29,7 +29,10 @@ export const FAV_KEYCODE_FIELDS: Record<FavoriteType, readonly string[]> = {
 }
 
 export function isValidFavoriteType(v: unknown): v is FavoriteType {
-  return typeof v === 'string' && FAVORITE_TYPES.includes(v)
+  // `.includes` on a `readonly FavoriteType[]` only accepts a FavoriteType,
+  // but this guard's whole job is checking an arbitrary string against that
+  // set — widen the array view for the membership check.
+  return typeof v === 'string' && (FAVORITE_TYPES as readonly string[]).includes(v)
 }
 
 export function isValidVialProtocol(v: unknown): v is number {

@@ -91,7 +91,7 @@ describe('KeyOverridePanelModal', () => {
 
   it('shows editor and favorites panel directly', () => {
     render(
-      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.getByText('Key Override - 0')).toBeInTheDocument()
     expect(screen.getAllByTestId('keycode-field')).toHaveLength(2)
@@ -101,21 +101,21 @@ describe('KeyOverridePanelModal', () => {
 
   it('shows enabled checkbox disabled when triggerKey and triggerMods are 0', () => {
     render(
-      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.getByTestId('ko-enabled')).toBeDisabled()
   })
 
   it('shows enabled checkbox enabled when triggerKey is nonzero', () => {
     render(
-      <KeyOverridePanelModal entries={[makeEntry({ triggerKey: 4 })]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <KeyOverridePanelModal entries={[makeEntry({ triggerKey: 4 })]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.getByTestId('ko-enabled')).not.toBeDisabled()
   })
 
   it('shows TabbedKeycodes when a keycode field is clicked', () => {
     render(
-      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.queryByTestId('tabbed-keycodes')).not.toBeInTheDocument()
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
@@ -125,7 +125,7 @@ describe('KeyOverridePanelModal', () => {
 
   it('hides advanced fields when picker is open', () => {
     render(
-      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.getByTestId('ko-advanced-fields')).toBeInTheDocument()
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
@@ -135,14 +135,14 @@ describe('KeyOverridePanelModal', () => {
 
   it('Save button is disabled when no changes', () => {
     render(
-      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.getByTestId('ko-modal-save')).toBeDisabled()
   })
 
   it('Save button enables after editing triggerKey', () => {
     render(
-      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     act(() => { vi.advanceTimersByTime(300) })
@@ -153,7 +153,7 @@ describe('KeyOverridePanelModal', () => {
 
   it('calls onSetEntry and closes modal on Save', async () => {
     render(
-      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     act(() => { vi.advanceTimersByTime(300) })
@@ -169,7 +169,7 @@ describe('KeyOverridePanelModal', () => {
 
   it('calls onClose when close button is clicked', () => {
     render(
-      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     fireEvent.click(screen.getByTestId('ko-modal-close'))
     expect(onClose).toHaveBeenCalledTimes(1)
@@ -177,7 +177,7 @@ describe('KeyOverridePanelModal', () => {
 
   it('calls onClose when backdrop is clicked', () => {
     render(
-      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     fireEvent.click(screen.getByTestId('ko-modal-backdrop'))
     expect(onClose).toHaveBeenCalledTimes(1)
@@ -185,7 +185,7 @@ describe('KeyOverridePanelModal', () => {
 
   it('closes modal on Escape key', () => {
     render(
-      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(onClose).toHaveBeenCalled()
@@ -193,7 +193,7 @@ describe('KeyOverridePanelModal', () => {
 
   it('hides favorites panel when picker is open', () => {
     render(
-      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
+      <KeyOverridePanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} vialProtocol={9} />,
     )
     expect(screen.getByTestId('ko-favorites-panel').className).not.toContain('hidden')
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])

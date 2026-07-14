@@ -5,10 +5,12 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { SplitKey, type SplitKeyProps } from '../SplitKey'
 import { computeSplitSelectedPart } from '../KeycodeGrid'
-import type { Keycode } from '../../../../shared/keycodes/keycodes'
+import { findKeycode, type Keycode } from '../../../../shared/keycodes/keycodes'
 
-const BASE: Keycode = { qmkId: 'KC_1', label: '1', keycode: 0x001e, hidden: false }
-const SHIFTED: Keycode = { qmkId: 'KC_EXLM', label: '!', keycode: 0x021e, hidden: false }
+// Real registry entries: KC_1 renders its base label '1' (from '!\n1'),
+// KC_EXLM renders '!'.
+const BASE = findKeycode('KC_1') as Keycode
+const SHIFTED = findKeycode('KC_EXLM') as Keycode
 
 function renderSplitKey(overrides: Partial<SplitKeyProps> = {}) {
   const defaults: SplitKeyProps = {

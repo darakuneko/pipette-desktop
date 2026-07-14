@@ -11,6 +11,7 @@ import { avgIkiFromHist, foldHist, HIST_BUCKETS, parseBigramId } from './analyze
 import { PALETTE_MIN_T, paletteColorFromIntensity } from '../../utils/chart-palette'
 import type { EffectiveTheme } from '../../hooks/useEffectiveTheme'
 import type { HeatmapNormalization, RangeMs } from './analyze-types'
+import type { AggregateMode, KeyGroupFilter } from '../../../shared/types/analyze-filters'
 import { withSnapshotProtocol } from './analyze-protocol'
 
 export { AGGREGATE_MODES, KEY_GROUPS, HEATMAP_MODES } from '../../../shared/types/analyze-filters'

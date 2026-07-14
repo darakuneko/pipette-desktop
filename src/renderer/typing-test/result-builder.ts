@@ -120,14 +120,25 @@ export interface BuildTypingTestResultInput {
   runId?: string
 }
 
+/** Narrows to the 'words' / 'time' config variants — the only ones carrying
+ * punctuation/numbers/romajiInput toggles. A plain `mode === 'words' ||
+ * mode === 'time'` boolean stored in a separate variable doesn't narrow
+ * `config` itself at the read site, so this needs to be a real type guard. */
+function hasWordTimeToggles(
+  config: TypingTestConfig,
+): config is Extract<TypingTestConfig, { mode: 'words' | 'time' }> {
+  return config.mode === 'words' || config.mode === 'time'
+}
+
 export function buildTypingTestResult(input: BuildTypingTestResultInput): TypingTestResult {
   const totalChars = input.correctChars + input.incorrectChars
   const rawWpm = computeRawWpm(totalChars, input.elapsedMs)
   const consistency = computeConsistency(input.wpmHistory)
-  const hasToggles = input.config.mode === 'words' || input.config.mode === 'time'
-  const hasPunctuation = hasToggles ? input.config.punctuation : undefined
-  const hasNumbers = hasToggles ? input.config.numbers : undefined
-  const hasRomajiInput = hasToggles ? input.config.romajiInput : undefined
+  const config = input.config
+  const wordTimeConfig = hasWordTimeToggles(config) ? config : undefined
+  const hasPunctuation = wordTimeConfig?.punctuation
+  const hasNumbers = wordTimeConfig?.numbers
+  const hasRomajiInput = wordTimeConfig?.romajiInput
 
   return {
     date: new Date().toISOString(),

@@ -60,7 +60,7 @@ function AccuracyTrendChartInner({ results }: Props) {
           />
           <Tooltip
             {...ANALYZE_TOOLTIP_DEFAULTS}
-            labelFormatter={(v: number) => formatDate(v)}
+            labelFormatter={(v) => formatDate(v as number)}
             formatter={(value) => [boldValue(`${String(value)}%`), t('editor.typingTest.accuracy')]}
           />
           <Line

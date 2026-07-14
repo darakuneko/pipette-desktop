@@ -59,6 +59,11 @@ describe('validate.ts', () => {
 
     it('flags prototype-pollution keys', () => {
       const pack = validPack()
+      // Intentionally assigning a non-Function to `constructor` to exercise
+      // the prototype-pollution guard — `Object.prototype.constructor` is
+      // typed as `Function` regardless of the Record<string, unknown> index
+      // signature, so this deliberately violates that type.
+      // @ts-expect-error -- malicious payload for the pollution-guard test
       pack.constructor = { polluted: 'true' }
       const result = validatePack(pack)
       expect(result.ok).toBe(false)

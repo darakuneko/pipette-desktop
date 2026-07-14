@@ -26,7 +26,7 @@ function deserializeUnderProtocol(qmkId: string, protocol: number): number {
 }
 
 function entry(ngramId: string, count: number, hist: number[] = [0, 0, 0, 0, 0, 0, 0, 0]): TypingBigramTopEntry {
-  return { ngramId, count, hist, avgIki: null }
+  return { ngramId, count, hist, avgIki: null, sd: null }
 }
 
 function layerKeycodes(pairs: Record<string, string>): LayerKeycodes {

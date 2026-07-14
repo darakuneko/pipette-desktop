@@ -233,7 +233,11 @@ function mergeDefined(base: PipetteSettings, partial: PipetteSettingsPatch): Pip
       merged[k] = v
     }
   }
-  return merged as PipetteSettings
+  // merged is built up dynamically from PipetteSettings's own fields plus
+  // the patch, so it satisfies the shape at runtime; the untyped Record
+  // accumulator just doesn't retain enough literal-key info for `as` to
+  // see the overlap directly.
+  return merged as unknown as PipetteSettings
 }
 
 export function setupPipetteSettingsStore(): void {

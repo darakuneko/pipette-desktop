@@ -423,6 +423,13 @@ export interface HubPreviewAnalyticsPostParams {
   keyboard: { productName: string; vendorId: number; productId: number }
   fingerOverrides: Record<string, string>
   layoutComparisonInputs: HubAnalyticsLayoutComparisonInputs | null
+  /** See {@link HubUploadAnalyticsPostParams.categories}. Currently
+   * unset for every preview call site — kept optional so
+   * `prepareAnalyticsExport`'s shared param union can read it
+   * defensively for both the upload and preview shapes. */
+  categories?: HubAnalyticsCategoryId[]
+  /** See {@link HubUploadAnalyticsPostParams.appDataApps}. */
+  appDataApps?: string[]
 }
 
 /** Renderer-side preview shown before the user confirms the upload —

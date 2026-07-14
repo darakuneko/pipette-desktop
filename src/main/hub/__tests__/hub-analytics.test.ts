@@ -75,7 +75,7 @@ import {
 } from '../../typing-analytics/bigram-aggregate'
 import { computeLayoutComparison } from '../../typing-analytics/compute-layout-comparison'
 import type { TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
-import type { HubAnalyticsFilters } from '../../../shared/types/hub'
+import type { HubAnalyticsFilters, HubAnalyticsExportV1 } from '../../../shared/types/hub'
 
 function emptyPeakRecords(): {
   peakWpm: null
@@ -250,7 +250,9 @@ describe('buildAnalyticsExport', () => {
 })
 
 describe('validateAnalyticsExport', () => {
-  function makeExport(overrides: Partial<{ totalKeystrokes: number; fromMs: number; toMs: number }> = {}) {
+  function makeExport(
+    overrides: Partial<{ totalKeystrokes: number; fromMs: number; toMs: number }> = {},
+  ): HubAnalyticsExportV1 {
     return {
       version: 1,
       kind: 'analytics',
@@ -271,7 +273,7 @@ describe('validateAnalyticsExport', () => {
         peakRecords: emptyPeakRecords(),
         layoutComparison: null,
       },
-    } as const
+    }
   }
 
   it('accepts a payload at the threshold', () => {

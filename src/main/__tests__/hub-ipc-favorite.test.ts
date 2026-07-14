@@ -156,7 +156,7 @@ describe('hub-ipc favorite handlers', () => {
     vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
     vi.mocked(authenticateWithHub).mockResolvedValueOnce({
       token: 'hub-jwt',
-      user: { id: 'u1', email: 'test@example.com', display_name: null },
+      user: { id: 'u1', email: 'test@example.com', display_name: null, role: 'user' },
     })
   }
 
@@ -169,7 +169,7 @@ describe('hub-ipc favorite handlers', () => {
     index: FavoriteIndex = MOCK_INDEX,
     data: unknown = MOCK_TAP_DANCE_DATA,
   ): void {
-    vi.mocked(readFile).mockImplementation(async (path: string | URL) => {
+    vi.mocked(readFile).mockImplementation(async (path: Parameters<typeof readFile>[0]) => {
       const p = String(path)
       if (p.endsWith(`/${type}/index.json`)) return JSON.stringify(index)
       if (p.includes(`/${type}/`)) return JSON.stringify(data)
@@ -349,7 +349,6 @@ describe('hub-ipc favorite handlers', () => {
       mockFavoriteFs()
       vi.mocked(updateFeaturePostOnHub).mockResolvedValueOnce({
         id: 'fav-post-1',
-        vialProtocol: 6,
         title: 'Updated Tap Dance',
       })
 
