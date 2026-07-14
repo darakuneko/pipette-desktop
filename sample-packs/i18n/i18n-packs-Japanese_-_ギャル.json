@@ -1,5 +1,5 @@
 {
-  "version": "0.1.12",
+  "version": "0.1.13",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -453,7 +453,8 @@
         "catalogLoadFailed": "カタログ読み込めなかったっしょ…ネット確認してもっかい試して☆",
         "kanaRowLabel": "行",
         "kanaRowGroupAriaLabel": "著者名の読みの行で絞り込むっしょ",
-        "kanaColumnGroupAriaLabel": "著者名の読みの段で絞り込むっしょ"
+        "kanaColumnGroupAriaLabel": "著者名の読みの段で絞り込むっしょ",
+        "romajiBadge": "Romaji☆"
       },
       "memory": {
         "pause": "一時停止っしょ",

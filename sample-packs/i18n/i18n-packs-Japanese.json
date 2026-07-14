@@ -1,5 +1,5 @@
 {
-  "version": "0.1.12",
+  "version": "0.1.13",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -453,7 +453,8 @@
         "catalogLoadFailed": "カタログの読み込みに失敗しました。接続を確認して再度お試しください。",
         "kanaRowLabel": "行",
         "kanaRowGroupAriaLabel": "著者名の読みの行で絞り込む",
-        "kanaColumnGroupAriaLabel": "著者名の読みの段で絞り込む"
+        "kanaColumnGroupAriaLabel": "著者名の読みの段で絞り込む",
+        "romajiBadge": "Romaji"
       },
       "memory": {
         "pause": "一時停止",
