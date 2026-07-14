@@ -39,14 +39,17 @@ type CapturedEvent = { ctrlKey: boolean; shiftKey: boolean }
 
 let capturedOnKeyClick: ((key: CapturedKey, maskClicked?: boolean, event?: CapturedEvent) => void) | undefined
 let capturedMultiSelectedKeys: Set<string> | undefined
+let capturedKeyColors: Map<string, string> | undefined
 
 vi.mock('../../keyboard/KeyboardWidget', () => ({
   KeyboardWidget: (props: {
     onKeyClick?: (key: CapturedKey, maskClicked?: boolean, event?: CapturedEvent) => void
     multiSelectedKeys?: Set<string>
+    keyColors?: Map<string, string>
   }) => {
     capturedOnKeyClick = props.onKeyClick
     capturedMultiSelectedKeys = props.multiSelectedKeys
+    capturedKeyColors = props.keyColors
     return <div data-testid="keyboard-widget">KeyboardWidget</div>
   },
 }))
@@ -99,6 +102,7 @@ vi.mock('../TapDanceModal', () => ({ TapDanceModal: () => null }))
 vi.mock('../MacroModal', () => ({ MacroModal: () => null }))
 
 import { KeymapEditor } from '../KeymapEditor'
+import { KEY_DUPLICATE_COLOR } from '../../keyboard/constants'
 
 const makeLayout = () => ({
   keys: [
@@ -141,6 +145,7 @@ describe('KeymapEditor — View Matrix mode', () => {
     vi.clearAllMocks()
     capturedOnKeyClick = undefined
     capturedMultiSelectedKeys = undefined
+    capturedKeyColors = undefined
   })
 
   function enterMode() {
@@ -184,7 +189,7 @@ describe('KeymapEditor — View Matrix mode', () => {
     expect(screen.getByTestId('overlay-view-matrix-edit-button')).toHaveTextContent('Edit')
   })
 
-  it('keeps the zoom toolbar mounted and functional while the mode is active', () => {
+  it('relocates the zoom controls under the keymap pane and keeps them functional while the mode is active', () => {
     const onScaleChange = vi.fn()
     render(<KeymapEditor {...defaultProps} scale={1} onScaleChange={onScaleChange} />)
 
@@ -194,6 +199,29 @@ describe('KeymapEditor — View Matrix mode', () => {
     expect(zoomInButton).toBeInTheDocument()
     fireEvent.click(zoomInButton)
     expect(onScaleChange).toHaveBeenCalledWith(0.1)
+
+    // Relocated below the keymap pane, not in the side toolbar: the zoom
+    // controls now follow the keyboard widget in document order.
+    const keyboardWidget = screen.getByTestId('keyboard-widget')
+    const followsKeyboard = Boolean(keyboardWidget.compareDocumentPosition(zoomInButton) & Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(followsKeyboard).toBe(true)
+  })
+
+  it('hides undo/redo while the mode is active and restores them on exit', () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    expect(screen.getByTestId('undo-button')).toBeInTheDocument()
+    expect(screen.getByTestId('redo-button')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+
+    expect(screen.queryByTestId('undo-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('redo-button')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('view-matrix-mode-toggle'))
+
+    expect(screen.getByTestId('undo-button')).toBeInTheDocument()
+    expect(screen.getByTestId('redo-button')).toBeInTheDocument()
   })
 
   it('selects are disabled with a blank value when no key is selected', () => {
@@ -359,5 +387,31 @@ describe('KeymapEditor — View Matrix mode', () => {
 
     rerender(<KeymapEditor {...defaultProps} viewMatrix={undefined} />)
     expect(screen.queryByTestId('view-matrix-duplicate-warning')).not.toBeInTheDocument()
+  })
+
+  it('does not pass a key fill when no keys collide', () => {
+    enterMode()
+
+    expect(capturedKeyColors).toBeUndefined()
+  })
+
+  it('flags both colliding physical keys with the duplicate fill, leaving the rest untouched', () => {
+    // (0,1)'s override collides with (0,0)'s physical position; (0,2) is
+    // unaffected.
+    render(<KeymapEditor {...defaultProps} viewMatrix={{ '0,1': { row: 0, col: 0 } }} />)
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+
+    expect(capturedKeyColors?.get('0,0')).toBe(KEY_DUPLICATE_COLOR)
+    expect(capturedKeyColors?.get('0,1')).toBe(KEY_DUPLICATE_COLOR)
+    expect(capturedKeyColors?.has('0,2')).toBe(false)
+  })
+
+  it('clears the duplicate fill once the collision is resolved', () => {
+    const { rerender } = render(<KeymapEditor {...defaultProps} viewMatrix={{ '0,1': { row: 0, col: 0 } }} />)
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+    expect(capturedKeyColors?.size).toBe(2)
+
+    rerender(<KeymapEditor {...defaultProps} viewMatrix={undefined} />)
+    expect(capturedKeyColors).toBeUndefined()
   })
 })

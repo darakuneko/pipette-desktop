@@ -30,6 +30,10 @@ export interface KeyboardPaneProps {
    *  Matrix mode to blank out keycode legends and show each key's
    *  effective (row, col) instead. See `KeyboardWidget`'s `labelOverrides`. */
   labelOverrides?: Map<string, { outer: string; inner: string; masked: boolean }>
+  /** Optional per-key background fill keyed by `"row,col"`. See
+   *  `KeyboardWidget`'s `keyColors` — used by View Matrix mode to flag
+   *  keys whose effective position collides with another key's. */
+  keyColors?: Map<string, string>
   heatmapCells?: Map<string, TypingHeatmapCell> | null
   heatmapMaxTotal?: number
   heatmapMaxTap?: number
@@ -63,6 +67,7 @@ export function KeyboardPane({
   multiSelectedKeys,
   layoutOptions,
   labelOverrides,
+  keyColors,
   heatmapCells,
   heatmapMaxTotal,
   heatmapMaxTap,
@@ -103,6 +108,7 @@ export function KeyboardPane({
           multiSelectedKeys={multiSelectedKeys}
           layoutOptions={layoutOptions}
           labelOverrides={labelOverrides}
+          keyColors={keyColors}
           heatmapCells={heatmapCells}
           heatmapMaxTotal={heatmapMaxTotal}
           heatmapMaxTap={heatmapMaxTap}

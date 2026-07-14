@@ -70,7 +70,9 @@ export interface ViewMatrixPanelProps {
    *  immediately, there is no separate Save step. */
   onAxisChange: (axis: ViewMatrixAxis, value: number) => void
   /** Count of keys whose effective view position collides with another
-   *  key's — 0 hides the warning. See `countViewMatrixDuplicates`. */
+   *  key's — 0 hides the warning. Computed by `KeymapEditor`'s duplicate
+   *  detection pass, which also drives the matching key fill on the
+   *  keymap itself (see `view-matrix.ts`'s `effectiveViewPos`). */
   duplicateCount: number
 }
 
@@ -100,7 +102,7 @@ export function ViewMatrixPanel({
 
   return (
     <div
-      className="flex w-44 shrink-0 flex-col gap-2 rounded-xl border border-edge bg-picker-bg p-3"
+      className="flex w-44 shrink-0 self-stretch flex-col gap-2 rounded-xl border border-edge bg-picker-bg p-3"
       data-testid="view-matrix-reset-panel"
     >
       <div className="flex items-center justify-between gap-2">
@@ -131,17 +133,23 @@ export function ViewMatrixPanel({
         </p>
       )}
 
-      <DisconnectConfirmButton
-        confirming={confirming}
-        onRequestConfirm={() => setConfirming(true)}
-        onCancelConfirm={() => setConfirming(false)}
-        onConfirm={() => { setConfirming(false); onReset() }}
-        disconnectLabelKey="editor.viewMatrix.reset"
-        confirmLabelKey="common.confirmReset"
-        disconnectTestId="view-matrix-reset-button"
-        confirmTestId="view-matrix-reset-confirm-button"
-        cancelTestId="view-matrix-reset-cancel-button"
-      />
+      {/* Separated from the Row/Col controls above — pinned to the panel's
+          bottom edge (mt-auto on the self-stretch column) so Reset reads as
+          a distinct, deliberate action rather than sitting in the same
+          cluster as the everyday selects. */}
+      <div className="mt-auto">
+        <DisconnectConfirmButton
+          confirming={confirming}
+          onRequestConfirm={() => setConfirming(true)}
+          onCancelConfirm={() => setConfirming(false)}
+          onConfirm={() => { setConfirming(false); onReset() }}
+          disconnectLabelKey="editor.viewMatrix.reset"
+          confirmLabelKey="common.confirmReset"
+          disconnectTestId="view-matrix-reset-button"
+          confirmTestId="view-matrix-reset-confirm-button"
+          cancelTestId="view-matrix-reset-cancel-button"
+        />
+      </div>
     </div>
   )
 }

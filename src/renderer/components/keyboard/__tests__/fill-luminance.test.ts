@@ -35,6 +35,11 @@ describe('shouldInvertText — registered fills', () => {
     expect(shouldInvertText('#ccffcc', 'light')).toBe(false)
     expect(shouldInvertText('#ccffcc', 'dark')).toBe(true)
   })
+
+  it('flips the View Matrix duplicate-position fill only in dark theme', () => {
+    expect(shouldInvertText('var(--key-bg-duplicate)', 'light')).toBe(false)
+    expect(shouldInvertText('var(--key-bg-duplicate)', 'dark')).toBe(true)
+  })
 })
 
 describe('shouldInvertText — heatmap HSL fills', () => {

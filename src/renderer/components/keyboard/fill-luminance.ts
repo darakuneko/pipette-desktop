@@ -41,6 +41,12 @@ const FILL_INVERT_TABLE: Record<string, Record<EffectiveTheme, boolean>> = {
   // Ever-pressed is a fixed very-light green; same deal — dark theme's
   // light label disappears on it.
   '#ccffcc': { light: false, dark: true },
+
+  // View Matrix's duplicate-position warning fill (warning/key-bg mix).
+  // Light theme's mix stays bright enough for the default dark label;
+  // dark theme's mix lands at a medium brightness where the near-black
+  // inverse label reads with more contrast than the default light one.
+  'var(--key-bg-duplicate)': { light: false, dark: true },
 }
 
 /** Parse the hue + lightness components out of an `hsl(h, s%, l%)`
