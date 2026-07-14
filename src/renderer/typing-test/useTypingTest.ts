@@ -561,20 +561,30 @@ export function useTypingTest(
 
   // Current word's romaji progress (romajiInput mode only), re-derived from
   // the accepted keystroke history on every change rather than stored on
-  // state directly — see `buildRomajiMatcher`. `lookahead` previews the
-  // full canonical spelling of up to the next two words (empty keystrokes
-  // -> remainingGuide() returns the whole word) so the guide row can show
-  // what's coming after the current word.
+  // state directly — see `buildRomajiMatcher`. `guideWordCount` is the total
+  // number of words shown in the guide row (current word included), so the
+  // look-ahead word count is one fewer; the slice's end <= start for counts
+  // 0 and 1 naturally yields an empty `lookahead`. `showRow` is false only
+  // at count 0 — kanaCompleted (for WordDisplay's coloring) is always
+  // computed regardless, since it must keep working even when the row
+  // itself is hidden.
   const romajiGuide = useMemo(() => {
     if (!isRomajiInputActive(config, language, state.romajiCapable)) return null
     if (state.currentWordIndex >= state.words.length) return null
     const word = state.words[state.currentWordIndex]
     const detail = romajiDetail(config)
     const matcher = buildRomajiMatcher(word, state.romajiKeystrokes, detail)
+    const guideWordCount = detail?.guideWordCount ?? 2
     const lookahead = state.words
-      .slice(state.currentWordIndex + 1, state.currentWordIndex + 3)
+      .slice(state.currentWordIndex + 1, state.currentWordIndex + guideWordCount)
       .map((w) => buildRomajiMatcher(w, '', detail).remainingGuide())
-    const guide: RomajiGuide = { typed: matcher.typedRomaji(), remaining: matcher.remainingGuide(), kanaCompleted: matcher.completedKanaCount(), lookahead }
+    const guide: RomajiGuide = {
+      typed: matcher.typedRomaji(),
+      remaining: matcher.remainingGuide(),
+      kanaCompleted: matcher.completedKanaCount(),
+      lookahead,
+      showRow: guideWordCount > 0,
+    }
     return applyRomajiCaseStyle(guide, detail?.caseStyle)
   }, [config, language, state.words, state.currentWordIndex, state.romajiKeystrokes, state.romajiCapable])
 

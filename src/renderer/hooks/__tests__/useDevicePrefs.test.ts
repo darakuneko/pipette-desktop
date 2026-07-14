@@ -846,6 +846,68 @@ describe('useDevicePrefs', () => {
       })
     })
 
+    it.each([0, 1, 2, 3])('round-trips a valid guideWordCount of %i', async (guideWordCount) => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romaji: { guideWordCount },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { guideWordCount },
+      })
+    })
+
+    it.each([4, -1, 1.5, 'two'])('drops an out-of-range/non-integer guideWordCount (%p) but keeps the rest of romaji', async (guideWordCount) => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romaji: { caseStyle: 'capital', guideWordCount },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { caseStyle: 'capital' },
+      })
+    })
+
     it('drops individually invalid romaji fields but keeps the ones that validate', async () => {
       setupMocks()
       mockPipetteSettingsGet.mockResolvedValue({

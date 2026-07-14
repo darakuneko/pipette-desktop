@@ -77,6 +77,14 @@ function validateRomajiDetailSettings(raw: unknown): RomajiDetailSettings | unde
     }
     if (styles.length > 0) result.disabledStyles = styles
   }
+  if (
+    typeof obj.guideWordCount === 'number'
+    && Number.isInteger(obj.guideWordCount)
+    && obj.guideWordCount >= 0
+    && obj.guideWordCount <= 3
+  ) {
+    result.guideWordCount = obj.guideWordCount
+  }
   return Object.keys(result).length > 0 ? result : undefined
 }
 

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.16",
+  "version": "0.1.17",
   "name": "English",
   "common": {
     "save": "Save",
@@ -324,6 +324,7 @@
           "capital": "Romaji",
           "lower": "romaji"
         },
+        "guideWordsLabel": "Words shown",
         "guideLabel": "Guide spelling pattern",
         "guideHint": "Display only — typing any accepted pattern is still correct",
         "inputLabel": "Accepted input patterns",
