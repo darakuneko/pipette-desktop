@@ -6,6 +6,7 @@ import type { SplitKeyMode } from '../../../shared/types/app-config'
 import { ZOOM_FACTOR_MIN, ZOOM_FACTOR_MAX, clampZoomFactor } from '../../../shared/types/app-config'
 import type { LayoutOption } from '../../../shared/layout-options'
 import { LayoutOptionsPanel } from './LayoutOptionsPanel'
+import { IMPORT_BTN } from './layout-store-types'
 import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from './modal-controls'
 
 type OverlayTab = 'layout' | 'tools' | 'data'
@@ -246,7 +247,7 @@ export function KeycodesOverlayPanel({
                 <button
                   type="button"
                   aria-pressed={!!viewMatrixActive}
-                  className="rounded border border-edge px-3 py-1.5 text-sm text-content-secondary hover:bg-surface-dim"
+                  className={IMPORT_BTN}
                   onClick={onToggleViewMatrixMode}
                   data-testid="overlay-view-matrix-edit-button"
                 >
@@ -332,7 +333,7 @@ export function KeycodesOverlayPanel({
                 <button
                   type="button"
                   disabled={!unlocked}
-                  className={`rounded border border-edge px-3 py-1.5 text-sm ${unlocked ? 'text-content-secondary hover:bg-surface-dim' : 'text-content-muted opacity-50'}`}
+                  className={`${IMPORT_BTN} disabled:opacity-50`}
                   onClick={onLock}
                   data-testid="overlay-lock-button"
                 >

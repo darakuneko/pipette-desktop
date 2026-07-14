@@ -993,9 +993,9 @@ When clicking a composite key (e.g., `LT1(KC_SPC)`) in the picker, the full keyc
 
 The Keycodes Overlay Panel provides quick access to editor tools and save functions. Toggle it with the panel button at the right end of the keycode tab bar.
 
-**Settings Tab**
+**Settings / Import Tab**
 
-![Overlay Panel — Settings](screenshots/overlay-tools.png)
+![Overlay Panel — Settings / Import](screenshots/overlay-tools.png)
 
 - **Key Editor Zoom**: Set the UI zoom level (50–200%) applied while in key editor mode. Defaults to the global UI zoom (§6.5) when not configured. Saved and synced per keyboard
 - **Auto Move**: Toggle automatic advancement to the next key after assigning a keycode
