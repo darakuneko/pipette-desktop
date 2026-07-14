@@ -74,35 +74,53 @@ export const ROMAJI_INPUT_LANGUAGES = new Set(['japanese_hiragana', 'japanese_ka
 
 /** Current word's confirmed romaji + canonical remaining spelling, plus the
  *  count of kana characters fully confirmed so far (romajiInput mode only).
- *  Produced by `useTypingTest`'s `romajiGuide` selector from a
- *  `RomajiMatcher` (see romaji-engine.ts), consumed by `WordDisplay` (kana
- *  coloring) and `TypingTestView` (the guide line below the reading
- *  window). */
+ *  `lookahead` holds the full canonical romaji spelling of up to the next
+ *  two upcoming words (empty entries once fewer remain), letting the guide
+ *  row preview what's coming after the current word. Produced by
+ *  `useTypingTest`'s `romajiGuide` selector from a `RomajiMatcher` (see
+ *  romaji-engine.ts), consumed by `WordDisplay` (kana coloring) and
+ *  `TypingTestView` (the guide line below the reading window). */
 export interface RomajiGuide {
   typed: string
   remaining: string
   kanaCompleted: number
+  lookahead: string[]
+}
+
+/** Capitalizes only the first character of a whole word (used for
+ *  lookahead entries, which have no typed/remaining split of their own). */
+function capitalizeWord(word: string): string {
+  return word.length > 0 ? word[0].toUpperCase() + word.slice(1) : word
 }
 
 /** Applies the Romaji Settings modal's display-only case transform to a
- *  guide's typed/remaining strings. Never touches acceptance/matching —
- *  `createRomajiMatcher` always works in lowercase; this only changes what
- *  `TypingTestView`'s guide row renders. 'upper' uppercases the whole
- *  string; 'capital' uppercases only the first character of the word as a
- *  whole (the first char of `typed` once anything is typed, otherwise the
- *  first char of `remaining`); 'lower'/undefined is a no-op. */
+ *  guide's typed/remaining strings, and to each `lookahead` entry. Never
+ *  touches acceptance/matching — `createRomajiMatcher` always works in
+ *  lowercase; this only changes what `TypingTestView`'s guide row renders.
+ *  'upper' uppercases the whole string (and each lookahead word in full);
+ *  'capital' uppercases only the first character of the word as a whole
+ *  (the first char of `typed` once anything is typed, otherwise the first
+ *  char of `remaining`; each lookahead word gets its own first character
+ *  capitalized, since each is a whole word with no typed portion);
+ *  'lower'/undefined is a no-op. */
 export function applyRomajiCaseStyle(guide: RomajiGuide, caseStyle: RomajiCaseStyle | undefined): RomajiGuide {
   if (!caseStyle || caseStyle === 'lower') return guide
   if (caseStyle === 'upper') {
-    return { ...guide, typed: guide.typed.toUpperCase(), remaining: guide.remaining.toUpperCase() }
+    return {
+      ...guide,
+      typed: guide.typed.toUpperCase(),
+      remaining: guide.remaining.toUpperCase(),
+      lookahead: guide.lookahead.map((word) => word.toUpperCase()),
+    }
   }
+  const lookahead = guide.lookahead.map(capitalizeWord)
   if (guide.typed.length > 0) {
-    return { ...guide, typed: guide.typed[0].toUpperCase() + guide.typed.slice(1) }
+    return { ...guide, typed: capitalizeWord(guide.typed), lookahead }
   }
   if (guide.remaining.length > 0) {
-    return { ...guide, remaining: guide.remaining[0].toUpperCase() + guide.remaining.slice(1) }
+    return { ...guide, remaining: capitalizeWord(guide.remaining), lookahead }
   }
-  return guide
+  return { ...guide, lookahead }
 }
 
 // Imported file-import-text display preferences (fileImport mode only).

@@ -468,7 +468,7 @@ describe('TypingTestView romaji guide', () => {
   it('renders typed and remaining romaji, and rewrites on prop changes', () => {
     const { rerender } = renderView({
       state: makeState({ status: 'running', words: ['あい'] }),
-      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0 },
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [] },
     })
     let guide = screen.getByTestId('typing-test-romaji-guide')
     expect(guide.textContent).toBe('ai')
@@ -483,7 +483,7 @@ describe('TypingTestView romaji guide', () => {
           remainingSeconds={null}
           config={DEFAULT_CONFIG}
           paused={false}
-          romajiGuide={{ typed: 'a', remaining: 'i', kanaCompleted: 1 }}
+          romajiGuide={{ typed: 'a', remaining: 'i', kanaCompleted: 1, lookahead: [] }}
         />
       </I18nextProvider>,
     )
@@ -493,10 +493,31 @@ describe('TypingTestView romaji guide', () => {
     expect(guide.querySelector('.text-content-muted')?.textContent).toBe('i')
   })
 
+  it('renders the lookahead words, space-separated, after typed/remaining', () => {
+    renderView({
+      state: makeState({ status: 'running', words: ['あい', 'かめ', 'いぬ'] }),
+      romajiGuide: { typed: 'a', remaining: 'i', kanaCompleted: 1, lookahead: ['kame', 'inu'] },
+    })
+    const guide = screen.getByTestId('typing-test-romaji-guide')
+    const lookaheadSpans = screen.getAllByTestId('typing-test-romaji-lookahead')
+    expect(lookaheadSpans).toHaveLength(2)
+    expect(lookaheadSpans[0].textContent).toBe(' kame')
+    expect(lookaheadSpans[1].textContent).toBe(' inu')
+    expect(guide.textContent).toBe('ai kame inu')
+  })
+
+  it('does not render any lookahead span when lookahead is empty', () => {
+    renderView({
+      state: makeState({ status: 'running', words: ['あい'] }),
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [] },
+    })
+    expect(screen.queryByTestId('typing-test-romaji-lookahead')).toBeNull()
+  })
+
   it('shows the IME hint once a composition event fires in romaji mode', () => {
     renderView({
       state: makeState({ status: 'running', words: ['あい'] }),
-      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0 },
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [] },
     })
     expect(screen.queryByTestId('typing-test-romaji-ime-hint')).toBeNull()
     const textarea = screen.getByLabelText('IME input') as HTMLTextAreaElement
@@ -515,7 +536,7 @@ describe('TypingTestView romaji guide', () => {
     renderView({
       fontSize: 40,
       state: makeState({ status: 'running', words: ['あい'] }),
-      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0 },
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [] },
     })
     const guide = screen.getByTestId('typing-test-romaji-guide')
     expect(guide.style.getPropertyValue('--tt-font')).toBe('40')

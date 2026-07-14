@@ -556,14 +556,20 @@ export function useTypingTest(
 
   // Current word's romaji progress (romajiInput mode only), re-derived from
   // the accepted keystroke history on every change rather than stored on
-  // state directly — see `buildRomajiMatcher`.
+  // state directly — see `buildRomajiMatcher`. `lookahead` previews the
+  // full canonical spelling of up to the next two words (empty keystrokes
+  // -> remainingGuide() returns the whole word) so the guide row can show
+  // what's coming after the current word.
   const romajiGuide = useMemo(() => {
     if (!isRomajiInputActive(config, language, state.romajiCapable)) return null
     if (state.currentWordIndex >= state.words.length) return null
     const word = state.words[state.currentWordIndex]
     const detail = romajiDetail(config)
     const matcher = buildRomajiMatcher(word, state.romajiKeystrokes, detail)
-    const guide: RomajiGuide = { typed: matcher.typedRomaji(), remaining: matcher.remainingGuide(), kanaCompleted: matcher.completedKanaCount() }
+    const lookahead = state.words
+      .slice(state.currentWordIndex + 1, state.currentWordIndex + 3)
+      .map((w) => buildRomajiMatcher(w, '', detail).remainingGuide())
+    const guide: RomajiGuide = { typed: matcher.typedRomaji(), remaining: matcher.remainingGuide(), kanaCompleted: matcher.completedKanaCount(), lookahead }
     return applyRomajiCaseStyle(guide, detail?.caseStyle)
   }, [config, language, state.words, state.currentWordIndex, state.romajiKeystrokes, state.romajiCapable])
 
