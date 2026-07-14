@@ -848,6 +848,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   const pickerBrowseMode = (pickerSource === 'device' && deviceBrowsing) || (pickerSource === 'file' && !pickerFileData)
 
+  // Ghost-style zoom button shared by the picker Keyboard tab and the
+  // View Matrix zoom row (kept identical so the two arrangements match).
+  const ghostZoomButtonClass = 'rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none'
+
   const layoutPickerContent = (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
@@ -964,7 +968,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         <div className={`flex items-center gap-1 ${pickerBrowseMode ? 'invisible' : ''}`}>
           <Tooltip content={t('editor.keymap.zoomOut')}>
             <button type="button" aria-label={t('editor.keymap.zoomOut')}
-              className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
+              className={ghostZoomButtonClass}
               disabled={pickerEffectiveScale <= MIN_SCALE}
               onClick={() => { if (pickerFileData) setPickerScale(Math.max(MIN_SCALE, +(pickerEffectiveScale - 0.1).toFixed(1))); else onScaleChange?.(-0.1) }}>
               <ZoomOut size={ICON_SM} aria-hidden="true" />
@@ -976,7 +980,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           }} />
           <Tooltip content={t('editor.keymap.zoomIn')}>
             <button type="button" aria-label={t('editor.keymap.zoomIn')}
-              className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
+              className={ghostZoomButtonClass}
               disabled={pickerEffectiveScale >= MAX_SCALE}
               onClick={() => { if (pickerFileData) setPickerScale(Math.min(MAX_SCALE, +(pickerEffectiveScale + 0.1).toFixed(1))); else onScaleChange?.(0.1) }}>
               <ZoomIn size={ICON_SM} aria-hidden="true" />
@@ -1178,9 +1182,25 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               {viewMatrixMode.active && (
                 <div className="flex flex-col items-center gap-1">
                   <p className="text-xs text-content-muted">{t('editor.keymap.pickerHint')}</p>
-                  <div className="flex items-center gap-1">
-                    {zoomControls}
-                  </div>
+                  {/* Same arrangement as the picker Keyboard tab's zoom
+                      row: ZoomOut, scale, ZoomIn in ghost styling. */}
+                  {onScaleChange && (
+                    <div className="flex items-center gap-1">
+                      <Tooltip content={t('editor.keymap.zoomOut')}>
+                        <button type="button" data-testid="zoom-out-button" aria-label={t('editor.keymap.zoomOut')}
+                          className={ghostZoomButtonClass} disabled={scaleProp <= MIN_SCALE} onClick={() => onScaleChange(-0.1)}>
+                          <ZoomOut size={ICON_SM} aria-hidden="true" />
+                        </button>
+                      </Tooltip>
+                      <ScaleInput scale={scaleProp} onScaleChange={onScaleChange} />
+                      <Tooltip content={t('editor.keymap.zoomIn')}>
+                        <button type="button" data-testid="zoom-in-button" aria-label={t('editor.keymap.zoomIn')}
+                          className={ghostZoomButtonClass} disabled={scaleProp >= MAX_SCALE} onClick={() => onScaleChange(0.1)}>
+                          <ZoomIn size={ICON_SM} aria-hidden="true" />
+                        </button>
+                      </Tooltip>
+                    </div>
+                  )}
                 </div>
               )}
             </>
