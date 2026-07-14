@@ -25,7 +25,9 @@ beforeEach(() => {
   windowStartedHidden = vi.fn().mockResolvedValue(true)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(window as any).vialAPI = { windowShow, windowHide, windowStartedHidden }
-  setVisibilityState('visible')
+  // A boot-hidden launch means the BrowserWindow actually starts hidden,
+  // so document.visibilityState reports 'hidden' until this hook shows it.
+  setVisibilityState('hidden')
 })
 
 afterEach(() => {
@@ -92,6 +94,62 @@ describe('useBootHiddenWindow', () => {
     rerender({ visible: false })
 
     expect(windowShow).not.toHaveBeenCalled()
+    expect(windowHide).not.toHaveBeenCalled()
+  })
+
+  it('never hides the window when an unlock dialog rises and falls during normal use after the window is already visible', async () => {
+    // The window started hidden, but by the time the hook learns this the
+    // window is already visible (e.g. the tray click happened first).
+    setVisibilityState('visible')
+
+    const { rerender } = renderHook(({ visible }) => useBootHiddenWindow(visible), {
+      initialProps: { visible: false },
+    })
+    await flushMicrotasks()
+
+    // An unlock dialog cycles during normal use — must not hide the window
+    // the user is actively looking at.
+    rerender({ visible: true })
+    expect(windowShow).not.toHaveBeenCalled()
+
+    rerender({ visible: false })
+    expect(windowHide).not.toHaveBeenCalled()
+
+    // Nor on a later cycle, since the phase already ended.
+    rerender({ visible: true })
+    rerender({ visible: false })
+    expect(windowShow).not.toHaveBeenCalled()
+    expect(windowHide).not.toHaveBeenCalled()
+  })
+
+  it('never hides the window when it is revealed before windowStartedHidden resolves (async race)', async () => {
+    // Simulate the race: windowStartedHidden() has not resolved yet, but
+    // the user reveals the window (tray click → visibilitychange) first.
+    let resolveStartedHidden: (hidden: boolean) => void = () => {}
+    windowStartedHidden.mockImplementation(
+      () => new Promise<boolean>((resolve) => { resolveStartedHidden = resolve }),
+    )
+
+    const { rerender } = renderHook(({ visible }) => useBootHiddenWindow(visible), {
+      initialProps: { visible: false },
+    })
+
+    // The user reveals the window before windowStartedHidden() resolves.
+    setVisibilityState('visible')
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+
+    // Now the promise resolves with hidden=true — this must not re-arm the
+    // boot-hidden phase, since the window is already visible.
+    resolveStartedHidden(true)
+    await flushMicrotasks()
+
+    // A later unlock dialog cycle during normal use must not hide the window.
+    rerender({ visible: true })
+    expect(windowShow).not.toHaveBeenCalled()
+
+    rerender({ visible: false })
     expect(windowHide).not.toHaveBeenCalled()
   })
 })
