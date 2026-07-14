@@ -218,3 +218,28 @@ export interface KeymapEditorProps {
   /** Notify parent when device list browsing state changes (for polling control) */
   onDeviceListActiveChange?: (active: boolean) => void
 }
+
+// Layout picker (the picker "Keyboard" tab) data shapes — hoisted here so
+// LayoutPickerContent and useLayoutPicker share them without a type-only
+// import cycle between the two sibling modules.
+export interface PickerFileDataShape {
+  layout: KeyboardLayout
+  keymap: Map<string, number>
+  layers: number
+  encoderKeycodes: Map<string, [string, string]>
+  layoutOptions: Map<number, number>
+  name: string
+  layerNames?: string[]
+  uid?: string
+}
+export type PickerFileData = PickerFileDataShape | null
+
+export interface PickerData {
+  keys: KleKey[]
+  keycodes: Map<string, string>
+  encoderKeycodes: Map<string, [string, string]>
+  remapped: Set<string>
+  layoutOpts: Map<number, number>
+  totalLayers: number
+  names?: string[]
+}

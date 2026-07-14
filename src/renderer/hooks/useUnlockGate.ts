@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useMemo } from 'react'
 import { isResetKeycode } from '../../shared/keycodes/keycodes'
 
 interface UnlockGateOptions {
@@ -85,5 +85,8 @@ export function useUnlockGate({ unlocked, onUnlock }: UnlockGateOptions): Unlock
     [deferOrRun],
   )
 
-  return { guard, guardAll, clearPending }
+  // Stable wrapper identity: consumers list the gate object (or callbacks
+  // derived from it) in memo/callback deps, so a fresh literal per render
+  // would silently defeat their memoization.
+  return useMemo(() => ({ guard, guardAll, clearPending }), [guard, guardAll, clearPending])
 }
