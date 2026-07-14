@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MacroAction } from '../../../preload/macro'
-import { findByRecorderAlias } from '../../../shared/keycodes/keycodes'
+import { findByRecorderAlias, deserialize } from '../../../shared/keycodes/keycodes'
 
 interface Props {
   onRecordComplete: (actions: MacroAction[]) => void
@@ -47,13 +47,16 @@ export function MacroRecorder({ onRecordComplete, onRecordingChange }: Props) {
         }
         actionsRef.current.push({ type: 'text', text: keycode.printable })
       } else if (keycode) {
-        actionsRef.current.push({ type: 'tap', keycode: keycode.qmkId })
+        // MacroAction tap/down/up entries carry numeric keycodes in a
+        // `keycodes` array (see preload/macro.ts) — the serializer and
+        // MacroActionItem both iterate `action.keycodes`.
+        actionsRef.current.push({ type: 'tap', keycodes: [deserialize(keycode.qmkId)] })
       }
     } else {
       // Long press = down + up
       if (keycode) {
-        actionsRef.current.push({ type: 'down', keycode: keycode.qmkId })
-        actionsRef.current.push({ type: 'up', keycode: keycode.qmkId })
+        actionsRef.current.push({ type: 'down', keycodes: [deserialize(keycode.qmkId)] })
+        actionsRef.current.push({ type: 'up', keycodes: [deserialize(keycode.qmkId)] })
       }
     }
   }, [])

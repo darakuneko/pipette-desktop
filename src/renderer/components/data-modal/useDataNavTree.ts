@@ -48,11 +48,14 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
     try {
       // Merge cache-known hashes (immediate) with cloud-discovered
       // hashes (authoritative) so a device we've never fetched from
-      // still appears in the Sync > Typing tree.
-      const [local, cloud] = await Promise.all([
-        window.vialAPI.typingAnalyticsListRemoteHashes(uid),
+      // still appears in the Sync > Typing tree. Cache-known hashes come
+      // from the device-info bundle (the dedicated remote-hash IPC was
+      // dropped when the Analyze device filter moved to labelled infos).
+      const [infoBundle, cloud] = await Promise.all([
+        window.vialAPI.typingAnalyticsListDeviceInfos(uid),
         window.vialAPI.typingAnalyticsListRemoteCloudHashes(uid),
       ])
+      const local = infoBundle ? infoBundle.remotes.map((r) => r.machineHash) : []
       const merged = Array.from(new Set<string>([...local, ...cloud])).sort()
       setRemoteTypingHashes((prev) => ({ ...prev, [uid]: merged }))
     } catch {

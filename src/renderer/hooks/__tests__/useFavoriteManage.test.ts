@@ -83,7 +83,8 @@ describe('useFavoriteManage', () => {
       await result.current.exportAll()
     })
 
-    expect(mockFavoriteStoreExport).toHaveBeenCalledWith('tapDance')
+    // The hook always passes the Data modal's fallback vial protocol (9).
+    expect(mockFavoriteStoreExport).toHaveBeenCalledWith('tapDance', 9)
   })
 
   it('exportEntry calls favoriteStoreExport with entryId', async () => {
@@ -93,7 +94,7 @@ describe('useFavoriteManage', () => {
       await result.current.exportEntry('e1')
     })
 
-    expect(mockFavoriteStoreExport).toHaveBeenCalledWith('tapDance', 'e1')
+    expect(mockFavoriteStoreExport).toHaveBeenCalledWith('tapDance', 9, 'e1')
   })
 
   it('importFavorites calls favoriteStoreImport and sets result', async () => {
