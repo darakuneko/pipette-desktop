@@ -128,6 +128,9 @@ export interface BuildTypingTestResultInput {
    *  (including tatoeba/fileImport, which never recorded this before) is
    *  now grouped/labeled consistently with words/time runs. */
   romajiActive: boolean
+  /** Per-run mistake tally (see `TypingTestState.mistakes`). Stored on the
+   *  result only when non-empty — see `buildTypingTestResult`. */
+  mistakes: Record<string, number>
 }
 
 /** Narrows to the 'words' / 'time' config variants — the only ones carrying
@@ -170,5 +173,6 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
     romajiInput: input.romajiActive ? true : undefined,
     consistency,
     wpmHistory: input.wpmHistory,
+    mistakes: Object.keys(input.mistakes).length > 0 ? input.mistakes : undefined,
   }
 }

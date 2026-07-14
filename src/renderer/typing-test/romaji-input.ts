@@ -4,7 +4,7 @@
  *  active for the current config/language, matcher construction/replay,
  *  and the key-event handler that dispatches into it. */
 
-import { createRomajiMatcher, type RomajiMatcher, type RomajiMatcherOptions } from './romaji-engine'
+import { createRomajiMatcher, canonicalRomaji, type RomajiMatcher, type RomajiMatcherOptions } from './romaji-engine'
 import type { TypingTestConfig, RomajiDetailSettings } from './types'
 import { ROMAJI_INPUT_LANGUAGES } from './types'
 import { type TypingTestState, isSubmitKey, advanceAfterWord } from './run-state'
@@ -140,19 +140,40 @@ export function processRomajiKeyEvent(state: TypingTestState, key: string, confi
  *  matcher's position untouched (nothing is appended to currentInput or
  *  the keystroke buffer). Completing the whole word auto-advances — the
  *  submit key is blocked in this mode (see `processKeyEvent`), so there is
- *  no separate Space-triggered finalize path to keep in sync. */
+ *  no separate Space-triggered finalize path to keep in sync.
+ *
+ *  Mistake tracking (romaji mode): a rejected keystroke marks
+ *  `romajiSegmentErred` true for the kana segment currently in progress,
+ *  without touching `mistakes` itself. Once that segment actually completes
+ *  (detected via `completedKanaCount()` advancing across the keystroke),
+ *  the flag decides whether to tally one mistake — keyed by the canonical
+ *  romaji spelling of the just-completed kana slice — before resetting the
+ *  flag for the next segment. This counts one mistake per erred segment
+ *  regardless of how many keystrokes inside it were rejected. */
 function handleRomajiChar(state: TypingTestState, char: string, config: TypingTestConfig, language: string): TypingTestState {
   if (state.currentWordIndex >= state.words.length) return state
 
   const word = state.words[state.currentWordIndex]
   const matcher = buildRomajiMatcher(word, state.romajiKeystrokes, romajiDetail(config))
+  const kanaBefore = matcher.completedKanaCount()
   const result = matcher.acceptChar(char)
 
   if (result === 'reject') {
-    return { ...state, incorrectChars: state.incorrectChars + 1 }
+    return { ...state, incorrectChars: state.incorrectChars + 1, romajiSegmentErred: true }
   }
 
   const correctChars = state.correctChars + 1
+  const kanaAfter = matcher.completedKanaCount()
+
+  let mistakes = state.mistakes
+  let romajiSegmentErred = state.romajiSegmentErred
+  if (kanaAfter > kanaBefore) {
+    if (romajiSegmentErred) {
+      const key = canonicalRomaji(word.slice(kanaBefore, kanaAfter))
+      mistakes = { ...mistakes, [key]: (mistakes[key] ?? 0) + 1 }
+    }
+    romajiSegmentErred = false
+  }
 
   if (result === 'complete' && matcher.isComplete()) {
     const base: TypingTestState = {
@@ -160,11 +181,14 @@ function handleRomajiChar(state: TypingTestState, char: string, config: TypingTe
       currentWordIndex: state.currentWordIndex + 1,
       currentInput: '',
       romajiKeystrokes: '',
+      romajiSegmentErred,
+      missedPositions: [],
       wordResults: [...state.wordResults, { word, typed: matcher.typedRomaji(), correct: true }],
       correctChars,
+      mistakes,
     }
     return advanceAfterWord(base, config, language)
   }
 
-  return { ...state, romajiKeystrokes: state.romajiKeystrokes + char, correctChars }
+  return { ...state, romajiKeystrokes: state.romajiKeystrokes + char, correctChars, mistakes, romajiSegmentErred }
 }

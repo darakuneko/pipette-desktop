@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { createRomajiMatcher, KANA_TABLE, type RomajiAcceptResult } from '../romaji-engine'
+import { createRomajiMatcher, canonicalRomaji, KANA_TABLE, type RomajiAcceptResult } from '../romaji-engine'
 
 /** Types every character of `keys` into a fresh matcher for `word` and
  *  returns the matcher plus the per-keystroke result sequence. */
@@ -524,5 +524,29 @@ describe('ねっこ — full pattern enumeration', () => {
       ].sort(),
     )
     expect(completions).toHaveLength(10)
+  })
+})
+
+// Plan-typing-mistake-analysis Phase 1: mistake tracking keys a mistyped
+// kana segment by its canonical romaji spelling, independent of which
+// alternate spelling the user actually typed.
+describe('canonicalRomaji', () => {
+  it('returns the canonical (first-listed) single-kana spelling', () => {
+    expect(canonicalRomaji('し')).toBe('shi')
+    expect(canonicalRomaji('き')).toBe('ki')
+  })
+
+  it('returns the canonical 2-kana digraph spelling', () => {
+    expect(canonicalRomaji('ぎゃ')).toBe('gya')
+    expect(canonicalRomaji('きょ')).toBe('kyo')
+  })
+
+  it('handles katakana input the same as its hiragana equivalent', () => {
+    expect(canonicalRomaji('シ')).toBe('shi')
+    expect(canonicalRomaji('ギャ')).toBe('gya')
+  })
+
+  it('handles a multi-kana word by concatenating each segment\'s canonical spelling', () => {
+    expect(canonicalRomaji('あい')).toBe('ai')
   })
 })

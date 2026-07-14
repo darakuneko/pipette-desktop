@@ -59,6 +59,22 @@ export interface TypingTestState {
    *  produced `words`, never a stale value from a config/text mismatch
    *  mid-load. */
   romajiCapable: boolean
+  /** Per-run tally of mistyped characters, keyed by the target character
+   *  (verbatim mode — see `handleBackspace`/`handleSpace`) or the canonical
+   *  romaji spelling of the mistyped kana segment (romaji mode — see
+   *  `handleRomajiChar` in romaji-input.ts). Accumulates across the whole
+   *  run and is never reset on word advance, only on a fresh/restarted run.
+   *  Merged immutably (a new object is spread on every update). */
+  mistakes: Record<string, number>
+  /** Romaji mode only: true once any keystroke within the CURRENT kana
+   *  segment has been rejected, until that segment completes (at which
+   *  point it is tallied into `mistakes` and this resets to false). Reset
+   *  on word advance / new run alongside `romajiKeystrokes`. */
+  romajiSegmentErred: boolean
+  /** Verbatim mode only: positions within the CURRENT word already tallied
+   *  into `mistakes` via Backspace, so the word-submit pass doesn't
+   *  double-count them. Reset on word advance / new run. */
+  missedPositions: number[]
 }
 
 export function createInitialState(config: TypingTestConfig, language: string, status: TypingTestStatus = 'waiting'): TypingTestState {
@@ -84,6 +100,9 @@ export function freshState({ words, quote, lineBreaks, lineIndents, romajiCapabl
     lineIndents,
     romajiKeystrokes: '',
     romajiCapable,
+    mistakes: {},
+    romajiSegmentErred: false,
+    missedPositions: [],
   }
 }
 
@@ -114,6 +133,12 @@ export function tryFinishLastWord(state: TypingTestState): TypingTestState | nul
     incorrectChars: state.incorrectChars,
     status: 'finished',
     endTime: Date.now(),
+    // currentInput === currentWord here (checked above), so there is
+    // nothing left to tally at submit — mistakes already recorded via
+    // Backspace (if any) are carried through unchanged. Reset both
+    // word-scoped mistake flags at the boundary defensively.
+    missedPositions: [],
+    romajiSegmentErred: false,
   }
 }
 
@@ -150,6 +175,7 @@ export function handleSpace(state: TypingTestState, config: TypingTestConfig, la
   const typed = state.currentInput
   const isCorrect = typed === currentWord
   const charCounts = computeWordCharCounts(currentWord, typed)
+  const mistakes = applyWordMistakes(currentWord, typed, state.missedPositions, state.mistakes)
 
   const nextIndex = state.currentWordIndex + 1
 
@@ -160,16 +186,63 @@ export function handleSpace(state: TypingTestState, config: TypingTestConfig, la
     wordResults: [...state.wordResults, { word: currentWord, typed, correct: isCorrect }],
     correctChars: state.correctChars + charCounts.correct,
     incorrectChars: state.incorrectChars + charCounts.incorrect,
+    mistakes,
+    missedPositions: [],
+    romajiSegmentErred: false,
   }
 
   return advanceAfterWord(base, config, language)
 }
 
+/** Verbatim mode's word-submit mistake pass: for every position `i` in
+ *  `word` where `typed[i] !== word[i]` (a wrong char, or a char never
+ *  typed at all when `typed` is shorter) and `i` is not already in
+ *  `missedPositions` (already tallied at Backspace time — see
+ *  `handleBackspace`), tallies one mistake keyed by the target char
+ *  `word[i]`. Never counts positions beyond `word.length` (extra typed
+ *  chars have no target char to attribute to). Returns `mistakes`
+ *  unchanged (no allocation) when nothing new is found. */
+function applyWordMistakes(
+  word: string,
+  typed: string,
+  missedPositions: readonly number[],
+  mistakes: Record<string, number>,
+): Record<string, number> {
+  let result = mistakes
+  for (let i = 0; i < word.length; i++) {
+    if (typed[i] === word[i]) continue
+    if (missedPositions.includes(i)) continue
+    if (result === mistakes) result = { ...mistakes }
+    const key = word[i]
+    result[key] = (result[key] ?? 0) + 1
+  }
+  return result
+}
+
+/** Verbatim mode: a Backspace that deletes a wrong character (one not
+ *  matching the target word at that position) tallies one mistake keyed by
+ *  the target char, immediately rather than waiting for word submit — and
+ *  marks the position in `missedPositions` so the eventual submit pass
+ *  (`applyWordMistakes`) doesn't double-count it even if the same wrong
+ *  char is retyped and deleted again, or the word is submitted with the
+ *  position still wrong. Deleting a correct char, or a char typed past the
+ *  end of the word, tallies nothing. */
 export function handleBackspace(state: TypingTestState): TypingTestState {
   if (state.currentInput.length === 0) return state
+  const pos = state.currentInput.length - 1
+  const word = state.words[state.currentWordIndex]
+  let mistakes = state.mistakes
+  let missedPositions = state.missedPositions
+  if (word !== undefined && pos < word.length && state.currentInput[pos] !== word[pos] && !missedPositions.includes(pos)) {
+    const key = word[pos]
+    mistakes = { ...mistakes, [key]: (mistakes[key] ?? 0) + 1 }
+    missedPositions = [...missedPositions, pos]
+  }
   return {
     ...state,
     currentInput: state.currentInput.slice(0, -1),
+    mistakes,
+    missedPositions,
   }
 }
 

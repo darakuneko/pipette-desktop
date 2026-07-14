@@ -302,6 +302,63 @@ describe('useDevicePrefs', () => {
       expect(result.current.typingTestResults[1].wpm).toBe(80)
     })
 
+    it('round-trips a valid typingTestResults.mistakes field', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestResults: [
+          {
+            date: '2024-01-01', wpm: 60, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 5, durationSeconds: 30,
+            mistakes: { a: 2, shi: 1 },
+          },
+        ],
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestResults).toHaveLength(1)
+      expect(result.current.typingTestResults[0].mistakes).toEqual({ a: 2, shi: 1 })
+    })
+
+    it('drops a malformed typingTestResults.mistakes field but keeps the rest of the result', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestResults: [
+          {
+            date: '2024-01-01', wpm: 60, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 5, durationSeconds: 30,
+            mistakes: { a: 'not-a-number' },
+          },
+          {
+            date: '2024-01-02', wpm: 70, accuracy: 96, wordCount: 30, correctChars: 110, incorrectChars: 4, durationSeconds: 28,
+            mistakes: ['not', 'an', 'object'],
+          },
+        ],
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestResults).toHaveLength(2)
+      expect(result.current.typingTestResults[0].wpm).toBe(60)
+      expect(result.current.typingTestResults[0].mistakes).toBeUndefined()
+      expect(result.current.typingTestResults[1].wpm).toBe(70)
+      expect(result.current.typingTestResults[1].mistakes).toBeUndefined()
+    })
+
     it('falls back to defaults when IPC fails', async () => {
       setupMocks({ defaultKeyboardLayout: 'dvorak' })
       mockPipetteSettingsGet.mockRejectedValue(new Error('IPC error'))

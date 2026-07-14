@@ -1,5 +1,5 @@
 {
-  "version": "0.1.17",
+  "version": "0.1.19",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -494,7 +494,12 @@
         "conditionPunctuation": "+句読点",
         "conditionNumbers": "+数字",
         "conditionRomaji": "+ローマ字入力",
-        "conditionTatoeba": "Tatoeba"
+        "conditionTatoeba": "Tatoeba",
+        "mistakeRankingTitle": "苦手な文字どすえ",
+        "mistakeRankingEmpty": "ミスの記録はまだおへんなぁ"
+      },
+      "results": {
+        "mistakesLabel": "ミス文字どすえ"
       }
     }
   },

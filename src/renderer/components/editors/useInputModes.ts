@@ -406,6 +406,7 @@ export function useInputModes({
         fileImportTextName: typingTest.config.mode === 'fileImport' ? typingTest.state.currentQuote?.source : undefined,
         runId: typingTest.state.runId,
         romajiActive: isRomajiInputActive(typingTest.config, typingTest.language, typingTest.state.romajiCapable),
+        mistakes: typingTest.state.mistakes,
       })
       result.isPb = isPbForConfig(result, typingTestHistory ?? [])
       if (saveUnnamed) {

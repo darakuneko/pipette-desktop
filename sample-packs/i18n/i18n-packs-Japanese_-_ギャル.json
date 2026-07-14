@@ -1,5 +1,5 @@
 {
-  "version": "0.1.17",
+  "version": "0.1.19",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -494,7 +494,12 @@
         "conditionPunctuation": "+句読点☆",
         "conditionNumbers": "+数字っしょ",
         "conditionRomaji": "+ローマ字入力☆",
-        "conditionTatoeba": "Tatoeba"
+        "conditionTatoeba": "Tatoeba",
+        "mistakeRankingTitle": "苦手な文字☆",
+        "mistakeRankingEmpty": "まだミスってないっしょ"
+      },
+      "results": {
+        "mistakesLabel": "ミスった文字ｗ"
       }
     }
   },

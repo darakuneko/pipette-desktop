@@ -182,7 +182,7 @@ describe('buildTypingTestResult', () => {
       config,
       language: 'english',
       wpmHistory: [55, 58, 60, 62],
-      romajiActive: false,
+      romajiActive: false, mistakes: {},
     })
 
     expect(result.wpm).toBe(60)
@@ -202,24 +202,38 @@ describe('buildTypingTestResult', () => {
     expect(result.date).toBeTruthy()
   })
 
+  it('includes mistakes when non-empty, and omits it entirely when empty', () => {
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+    const baseInput = {
+      correctChars: 20, incorrectChars: 2, wordCount: 5, wpm: 40, accuracy: 90, elapsedMs: 20000,
+      config, language: 'english', wpmHistory: [], romajiActive: false,
+    }
+
+    const withMistakes = buildTypingTestResult({ ...baseInput, mistakes: { a: 2, t: 1 } })
+    expect(withMistakes.mistakes).toEqual({ a: 2, t: 1 })
+
+    const withoutMistakes = buildTypingTestResult({ ...baseInput, mistakes: {} })
+    expect(withoutMistakes.mistakes).toBeUndefined()
+  })
+
   it('records romajiInput from the romajiActive input, not the raw config flag', () => {
     const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
     const withRomaji = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
-      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: true,
+      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: true, mistakes: {},
     })
     expect(withRomaji.romajiInput).toBe(true)
 
     const notActive = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
-      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: false,
+      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: false, mistakes: {},
     })
     expect(notActive.romajiInput).toBeUndefined()
 
     const quoteConfig: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }
     const quoteResult = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
-      config: quoteConfig, language: 'english', wpmHistory: [], romajiActive: false,
+      config: quoteConfig, language: 'english', wpmHistory: [], romajiActive: false, mistakes: {},
     })
     expect(quoteResult.romajiInput).toBeUndefined()
   })
@@ -228,7 +242,7 @@ describe('buildTypingTestResult', () => {
     const tatoebaCfg: TypingTestConfig = { mode: 'tatoeba', language: 'japanese_hiragana', pattern: 'lines', lineCount: 5, duration: 30 }
     const result = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
-      config: tatoebaCfg, language: 'english', wpmHistory: [], romajiActive: true,
+      config: tatoebaCfg, language: 'english', wpmHistory: [], romajiActive: true, mistakes: {},
     })
     expect(result.romajiInput).toBe(true)
   })
@@ -245,7 +259,7 @@ describe('buildTypingTestResult', () => {
       config,
       language: 'english',
       wpmHistory: [],
-      romajiActive: false,
+      romajiActive: false, mistakes: {},
     })
     expect(result.mode).toBe('time')
     expect(result.mode2).toBe(60)
@@ -263,7 +277,7 @@ describe('buildTypingTestResult', () => {
       config,
       language: 'english',
       wpmHistory: [],
-      romajiActive: false,
+      romajiActive: false, mistakes: {},
     })
     expect(result.mode).toBe('quote')
     expect(result.mode2).toBe('medium')
@@ -282,7 +296,7 @@ describe('buildTypingTestResult', () => {
       // The top-level (MonkeyType) language is irrelevant for tatoeba.
       language: 'german',
       wpmHistory: [],
-      romajiActive: false,
+      romajiActive: false, mistakes: {},
     })
     expect(result.mode).toBe('tatoeba')
     expect(result.mode2).toBe('english|lines|5')
@@ -302,7 +316,7 @@ describe('buildTypingTestResult', () => {
       config,
       language: 'japanese',
       wpmHistory: [],
-      romajiActive: false,
+      romajiActive: false, mistakes: {},
     })
     expect(result.mode2).toBe('japanese|time|30')
   })

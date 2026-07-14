@@ -37,6 +37,13 @@ export interface TypingTestResult {
   consistency?: number
   isPb?: boolean
   wpmHistory?: number[]
+  /** Per-run tally of mistyped characters, keyed by the target character
+   *  (verbatim mode) or the canonical romaji spelling of the mistyped kana
+   *  segment (romaji mode — see `TypingTestState.mistakes` in run-state.ts
+   *  for the counting rules). Omitted when the run had no mistakes. Phase 1
+   *  of mistake analysis: stored on the result for the completion screen's
+   *  "missed characters" list; not yet surfaced in Analyze. */
+  mistakes?: Record<string, number>
 }
 
 /** A saved result tagged with the keyboard it belongs to. Returned by the
