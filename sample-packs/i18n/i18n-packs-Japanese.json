@@ -1,5 +1,5 @@
 {
-  "version": "0.1.13",
+  "version": "0.1.14",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -9,7 +9,7 @@
     "confirmDelete": "削除しますか？",
     "close": "閉じる",
     "reset": "リセット",
-    "confirmReset": "リセットする？",
+    "confirmReset": "リセット？",
     "revert": "復元",
     "confirmRevert": "復元？",
     "clear": "クリア",
@@ -72,8 +72,7 @@
       "done": "完了",
       "rowLabel": "行",
       "colLabel": "列",
-      "blankOption": "—",
-      "reset": "ビューマトリクスをリセット"
+      "blankOption": "—"
     },
     "keymap": {
       "title": "キーマップ",

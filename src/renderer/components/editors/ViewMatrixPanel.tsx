@@ -142,7 +142,7 @@ export function ViewMatrixPanel({
           onRequestConfirm={() => setConfirming(true)}
           onCancelConfirm={() => setConfirming(false)}
           onConfirm={() => { setConfirming(false); onReset() }}
-          disconnectLabelKey="editor.viewMatrix.reset"
+          disconnectLabelKey="common.reset"
           confirmLabelKey="common.confirmReset"
           disconnectTestId="view-matrix-reset-button"
           confirmTestId="view-matrix-reset-confirm-button"
