@@ -181,6 +181,12 @@ export interface KeymapEditorProps {
    * where data collection begins. */
   typingMonitorAppEnabled?: boolean
   onTypingMonitorAppEnabledChange?: (enabled: boolean) => void
+  /** AppConfig fields for the REC tab's tray toggles — same source and
+   * linked-clear semantics as Settings > Tools (SettingsToolsTab). */
+  typingTrayResident?: boolean
+  onTypingTrayResidentChange?: (enabled: boolean) => void
+  typingStartInTray?: boolean
+  onTypingStartInTrayChange?: (enabled: boolean) => void
   typingViewMenuTab?: TypingViewMenuTab
   onTypingViewMenuTabChange?: (tab: TypingViewMenuTab) => void
   /** Called when "View Analytics" is triggered, from either the compact
