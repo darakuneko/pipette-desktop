@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { isRomajiCapable, isRomajiInputActive, romajiDetail } from '../romaji-input'
+import { isRomajiCapable, isRomajiInputEnabled, isRomajiInputActive, romajiDetail, carryRomajiFields } from '../romaji-input'
 import type { RomajiDetailSettings, TypingTestConfig } from '../types'
 
 // Each helper takes `romaji` directly (rather than spreading its return
@@ -45,21 +45,46 @@ describe('isRomajiCapable', () => {
   })
 })
 
+describe('isRomajiInputEnabled', () => {
+  it('defaults to enabled when romajiInput is unset, regardless of capability', () => {
+    expect(isRomajiInputEnabled(wordsConfig())).toBe(true)
+    expect(isRomajiInputEnabled(timeConfig())).toBe(true)
+    expect(isRomajiInputEnabled(tatoebaConfig('english'))).toBe(true)
+    expect(isRomajiInputEnabled(fileImportConfig())).toBe(true)
+  })
+
+  it('an explicit false opts out, an explicit true stays opted in', () => {
+    expect(isRomajiInputEnabled(wordsConfig(false))).toBe(false)
+    expect(isRomajiInputEnabled(wordsConfig(true))).toBe(true)
+  })
+
+  it('quote never carries the field and is always disabled', () => {
+    expect(isRomajiInputEnabled(quoteConfig())).toBe(false)
+  })
+})
+
 describe('isRomajiInputActive', () => {
-  it('words/time: active only when romajiInput is true AND the language is capable', () => {
+  it('words/time: defaults to active (romajiInput undefined) when the language is capable, inactive when not capable', () => {
+    expect(isRomajiInputActive(wordsConfig(), 'japanese_hiragana', undefined)).toBe(true)
+    expect(isRomajiInputActive(wordsConfig(), 'english', undefined)).toBe(false)
+    expect(isRomajiInputActive(timeConfig(), 'japanese_hiragana', undefined)).toBe(true)
+  })
+
+  it('words/time: an explicit true stays active, an explicit false opts out, for a capable language', () => {
     expect(isRomajiInputActive(wordsConfig(true), 'japanese_hiragana', undefined)).toBe(true)
     expect(isRomajiInputActive(wordsConfig(true), 'english', undefined)).toBe(false)
     expect(isRomajiInputActive(wordsConfig(false), 'japanese_hiragana', undefined)).toBe(false)
-    expect(isRomajiInputActive(wordsConfig(), 'japanese_hiragana', undefined)).toBe(false)
   })
 
-  it('tatoeba: active only when romajiInput is true AND the pack language is a kana pack', () => {
+  it('tatoeba: defaults to active for a kana pack, and an explicit false opts out', () => {
+    expect(isRomajiInputActive(tatoebaConfig('japanese_hiragana'), 'english', undefined)).toBe(true)
     expect(isRomajiInputActive(tatoebaConfig('japanese_hiragana', true), 'english', undefined)).toBe(true)
     expect(isRomajiInputActive(tatoebaConfig('english', true), 'english', undefined)).toBe(false)
     expect(isRomajiInputActive(tatoebaConfig('japanese_hiragana', false), 'english', undefined)).toBe(false)
   })
 
-  it('fileImport: active only when romajiInput is true AND the loaded text is kana-pure', () => {
+  it('fileImport: defaults to active for a kana-pure text, and an explicit false opts out', () => {
+    expect(isRomajiInputActive(fileImportConfig(), 'english', true)).toBe(true)
     expect(isRomajiInputActive(fileImportConfig(true), 'english', true)).toBe(true)
     expect(isRomajiInputActive(fileImportConfig(true), 'english', false)).toBe(false)
     expect(isRomajiInputActive(fileImportConfig(false), 'english', true)).toBe(false)
@@ -67,6 +92,30 @@ describe('isRomajiInputActive', () => {
 
   it('quote: never active, even with romajiInput somehow set and a kana language active', () => {
     expect(isRomajiInputActive(quoteConfig(), 'japanese_hiragana', true)).toBe(false)
+  })
+})
+
+describe('carryRomajiFields', () => {
+  it('carries romajiInput and romaji from words/time/tatoeba/fileImport configs', () => {
+    const romaji = { caseStyle: 'capital' as const }
+    expect(carryRomajiFields(wordsConfig(false, romaji))).toEqual({ romajiInput: false, romaji })
+    expect(carryRomajiFields(timeConfig(true, romaji))).toEqual({ romajiInput: true, romaji })
+    expect(carryRomajiFields(tatoebaConfig('japanese_hiragana', true, romaji))).toEqual({ romajiInput: true, romaji })
+    expect(carryRomajiFields(fileImportConfig(false, romaji))).toEqual({ romajiInput: false, romaji })
+  })
+
+  it('returns {} for quote (no romaji fields at all)', () => {
+    expect(carryRomajiFields(quoteConfig())).toEqual({})
+  })
+
+  it('returns {} when the source config never set romajiInput/romaji', () => {
+    expect(carryRomajiFields(wordsConfig())).toEqual({})
+    expect(carryRomajiFields(tatoebaConfig('japanese_hiragana'))).toEqual({})
+    expect(carryRomajiFields(fileImportConfig())).toEqual({})
+  })
+
+  it('carries only romajiInput when romaji detail settings are absent', () => {
+    expect(carryRomajiFields(wordsConfig(true))).toEqual({ romajiInput: true })
   })
 })
 

@@ -3,6 +3,7 @@
 import type { TypingTestResult, TypingTestComparisonBaseline } from '../../shared/types/pipette-settings'
 import type { TypingTestConfig } from './types'
 import { configKey, deriveMode2, resultKpm } from './result-builder'
+import { isRomajiInputActive } from './romaji-input'
 
 /** Headline metrics of the chosen baseline, compared against the live run. */
 export interface ComparisonStats {
@@ -37,13 +38,18 @@ export function resultConditionKey(result: TypingTestResult): string {
 export function conditionKey(config: TypingTestConfig, language: string): string {
   const hasToggles = config.mode === 'words' || config.mode === 'time'
   // resultConditionKey only reads these 5 fields, so a config-shaped partial is enough.
+  // romajiInput must be the effective active state (isRomajiInputActive), not the raw
+  // config flag — buildTypingTestResult records romajiActive (also isRomajiInputActive-
+  // derived), and the two need to land on the same key for a default-ON kana run to
+  // group with its own saved result. `undefined` for textRomajiCapable is exact here:
+  // hasToggles restricts this to words/time, whose isRomajiCapable branch never reads it.
   return resultConditionKey({
     mode: config.mode,
     mode2: deriveMode2(config),
     language,
     punctuation: hasToggles ? config.punctuation : undefined,
     numbers: hasToggles ? config.numbers : undefined,
-    romajiInput: hasToggles ? config.romajiInput : undefined,
+    romajiInput: hasToggles ? isRomajiInputActive(config, language, undefined) : undefined,
   } as TypingTestResult)
 }
 

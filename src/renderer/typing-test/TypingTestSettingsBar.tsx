@@ -11,7 +11,7 @@ import { useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingTestConfig, TypingTestMode, QuoteLength, RomajiDetailSettings } from './types'
 import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS } from './types'
-import { isRomajiCapable } from './romaji-input'
+import { isRomajiCapable, isRomajiInputEnabled } from './romaji-input'
 import { RomajiSettingsModal } from './RomajiSettingsModal'
 
 const MODES: TypingTestMode[] = ['words', 'time', 'quote']
@@ -51,12 +51,14 @@ export function TypingTestSettingsBar({ config, onConfigChange, language, textRo
   // romajiInput/romaji are carried from every mode but quote, since tatoeba
   // and fileImport carry those fields too now (see TypingTestConfig).
   const togglesRef = useRef<{ punctuation: boolean; numbers: boolean; romajiInput: boolean; romaji?: RomajiDetailSettings }>(
-    { punctuation: false, numbers: false, romajiInput: false },
+    { punctuation: false, numbers: false, romajiInput: true },
   )
   if (config.mode !== 'quote') {
     togglesRef.current = {
       ...togglesRef.current,
-      romajiInput: config.romajiInput === true,
+      // Default ON: an undefined (not-yet-touched) romajiInput carries as
+      // true through a mode switch, matching isRomajiInputEnabled's default.
+      romajiInput: isRomajiInputEnabled(config),
       romaji: config.romaji,
       ...(config.mode === 'words' || config.mode === 'time'
         ? { punctuation: config.punctuation, numbers: config.numbers }
@@ -212,7 +214,7 @@ export function TypingTestSettingsBar({ config, onConfigChange, language, textRo
             <button
               type="button"
               data-testid="romaji-settings-toggle"
-              className={`${optionButtonClass(config.romajiInput === true)} w-full justify-center`}
+              className={`${optionButtonClass(isRomajiInputEnabled(config))} w-full justify-center`}
               onClick={() => setShowRomajiModal(true)}
               aria-haspopup="dialog"
               aria-expanded={showRomajiModal}

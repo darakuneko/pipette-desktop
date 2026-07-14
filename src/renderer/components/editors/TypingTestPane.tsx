@@ -10,7 +10,7 @@ import { buildResultNameChips } from '../../typing-test/result-builder'
 import { PauseResumeModal } from '../../typing-test/PauseResumeModal'
 import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
 import { TypingRecordingConsentModal } from '../../typing-test/TypingRecordingConsentModal'
-import { isRomajiCapable } from '../../typing-test/romaji-input'
+import { isRomajiCapable, carryRomajiFields } from '../../typing-test/romaji-input'
 import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
 import { TYPING_HEATMAP_WINDOW_OPTIONS } from '../../../shared/types/app-config'
 import { KeyboardPane } from './KeyboardPane'
@@ -551,8 +551,8 @@ export function TypingTestPane({
               }
               void onLanguageChange(name)
             }}
-            onSelectImport={(textId) => onConfigChange({ mode: 'fileImport', textId })}
-            onSelectTatoeba={(language) => onConfigChange({ mode: 'tatoeba', language })}
+            onSelectImport={(textId) => onConfigChange({ mode: 'fileImport', textId, ...carryRomajiFields(typingTest.config) })}
+            onSelectTatoeba={(language) => onConfigChange({ mode: 'tatoeba', language, ...carryRomajiFields(typingTest.config) })}
             onCurrentTextDeleted={() => {
               // The selected imported text was deleted — fall back to
               // the default (words mode, English).

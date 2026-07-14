@@ -19,6 +19,7 @@ import { Tooltip } from '../components/ui/Tooltip'
 import { BASE_STYLES, type RomajiStyle } from './romaji-engine'
 import type { RomajiCaseStyle, RomajiDetailSettings, TypingTestConfig } from './types'
 import { optionButtonClass } from './TypingTestSettingsBar'
+import { isRomajiInputEnabled } from './romaji-input'
 
 // Display order matches the plan's spec ("大文字・先頭大文字・小文字"); the
 // i18n values for these keys are the fixed sample spellings ROMAJI / Romaji
@@ -78,7 +79,11 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
   }, [onClose])
 
   const romaji = config.romaji ?? {}
-  const enabled = config.romajiInput === true
+  // Default ON: undefined counts as opted-in, only an explicit false is off
+  // (see isRomajiInputEnabled). The toggle below writes the opposite boolean
+  // back — so turning a default-on config off persists `false`, and turning
+  // it back on persists `true`.
+  const enabled = isRomajiInputEnabled(config)
   const caseStyle = romaji.caseStyle ?? 'lower'
   const guideStyles = new Set(romaji.guideStyles ?? [])
   const disabledStyles = new Set(romaji.disabledStyles ?? [])
