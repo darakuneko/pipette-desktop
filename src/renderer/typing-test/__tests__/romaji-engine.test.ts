@@ -431,6 +431,53 @@ describe('ん — mozc consonant-lookahead retroactive commit', () => {
   })
 })
 
+describe('punctuation — 。、？！ typed via their ASCII spelling', () => {
+  it('completes 。 via "."', () => {
+    const { matcher, results } = type('。', '.')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe('.')
+  })
+
+  it('completes 、 via ","', () => {
+    const { matcher, results } = type('、', ',')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe(',')
+  })
+
+  it('completes ？ via "?"', () => {
+    const { matcher, results } = type('？', '?')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe('?')
+  })
+
+  it('completes ！ via "!"', () => {
+    const { matcher, results } = type('！', '!')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe('!')
+  })
+
+  it('completes a mixed word end-to-end (はい、そうです。 as hai,soudesu.)', () => {
+    const { matcher, results } = type('はい、そうです。', 'hai,soudesu.')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe('hai,soudesu.')
+  })
+
+  it('remainingGuide shows the ASCII spelling for a word starting with punctuation, not the literal kana', () => {
+    const matcher = createRomajiMatcher('。です')
+    expect(matcher.remainingGuide()).toBe('.desu')
+  })
+
+  it('remainingGuide shows the ASCII spelling for punctuation mid-word', () => {
+    const matcher = createRomajiMatcher('はい、そうです。')
+    expect(matcher.remainingGuide()).toBe('hai,soudesu.')
+  })
+})
+
 describe('ねっこ — full pattern enumeration', () => {
   // Exhaustively walks every keystroke sequence the matcher accepts for
   // ねっこ (via DFS over a-z plus '-'), pruning as soon as a keystroke is

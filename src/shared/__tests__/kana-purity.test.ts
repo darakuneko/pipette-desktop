@@ -28,12 +28,40 @@ describe('isKanaOnlyText', () => {
     expect(isKanaOnlyText('hello world')).toBe(false)
   })
 
-  it('rejects kana mixed with a full-width period', () => {
-    expect(isKanaOnlyText('こんにちは。')).toBe(false)
+  it('accepts kana mixed with a full-width period', () => {
+    expect(isKanaOnlyText('こんにちは。')).toBe(true)
   })
 
-  it('rejects kana mixed with a full-width comma', () => {
-    expect(isKanaOnlyText('こんにちは、げんきですか')).toBe(false)
+  it('accepts kana mixed with a full-width comma', () => {
+    expect(isKanaOnlyText('こんにちは、げんきですか')).toBe(true)
+  })
+
+  it('accepts kana mixed with a full-width question mark', () => {
+    expect(isKanaOnlyText('ですか？')).toBe(true)
+  })
+
+  it('accepts kana mixed with a full-width exclamation mark', () => {
+    expect(isKanaOnlyText('すごい！')).toBe(true)
+  })
+
+  it('rejects punctuation-only text', () => {
+    expect(isKanaOnlyText('。。。')).toBe(false)
+  })
+
+  it('rejects a single punctuation mark with no kana', () => {
+    expect(isKanaOnlyText('、')).toBe(false)
+  })
+
+  it('rejects punctuation and whitespace with no kana', () => {
+    expect(isKanaOnlyText('？ ！')).toBe(false)
+  })
+
+  it('rejects kana mixed with punctuation outside the allowed set (brackets)', () => {
+    expect(isKanaOnlyText('こんにちは「せかい」')).toBe(false)
+  })
+
+  it('rejects kana mixed with punctuation outside the allowed set (interpunct)', () => {
+    expect(isKanaOnlyText('あ・い')).toBe(false)
   })
 
   it('rejects empty text', () => {
