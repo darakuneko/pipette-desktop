@@ -301,19 +301,17 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     onViewMatrixChange?.(applyViewMatrixAxisToSelection(viewMatrix, viewMatrixSelectedPositions, axis, value))
   }, [viewMatrixSelectedPositions, viewMatrix, onViewMatrixChange])
 
-  // One pass over the layout builds all three mode legend artifacts — they
+  // One pass over the layout builds both mode legend artifacts — they
   // share the same inputs and always recompute together: the per-key R/C
   // label override showing each non-decal, non-encoder key's effective
-  // position, the count of keys whose effective position collides with
-  // another key's (drives the panel's persistent duplicate warning; the
-  // Auto Move order between colliding keys is ambiguous until resolved),
-  // and the fill colour map that flags those same colliding keys on the
-  // keymap itself. The collision grouping happens in this same loop
-  // (rather than a second pass over the keys) so `effectiveViewPos` is
-  // computed once per key.
-  const { viewMatrixLabelOverrides, viewMatrixDuplicateCount, viewMatrixDuplicateKeyColors } = useMemo(() => {
+  // position, and the fill colour map that flags keys whose effective
+  // position collides with another key's (the Auto Move order between
+  // colliding keys is ambiguous until resolved). The collision grouping
+  // happens in this same loop (rather than a second pass over the keys)
+  // so `effectiveViewPos` is computed once per key.
+  const { viewMatrixLabelOverrides, viewMatrixDuplicateKeyColors } = useMemo(() => {
     if (!viewMatrixMode.active || !layout) {
-      return { viewMatrixLabelOverrides: undefined, viewMatrixDuplicateCount: 0, viewMatrixDuplicateKeyColors: undefined }
+      return { viewMatrixLabelOverrides: undefined, viewMatrixDuplicateKeyColors: undefined }
     }
     const overrides = new Map<string, { outer: string; inner: string; masked: boolean }>()
     // Effective position -> physical "row,col" keys resolving to it, used
@@ -329,16 +327,13 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       if (group) group.push(physPos)
       else groups.set(effPos, [physPos])
     }
-    let duplicateCount = 0
     const duplicateKeyColors = new Map<string, string>()
     for (const group of groups.values()) {
       if (group.length <= 1) continue
-      duplicateCount += group.length
       for (const physPos of group) duplicateKeyColors.set(physPos, KEY_DUPLICATE_COLOR)
     }
     return {
       viewMatrixLabelOverrides: overrides,
-      viewMatrixDuplicateCount: duplicateCount,
       viewMatrixDuplicateKeyColors: duplicateKeyColors.size > 0 ? duplicateKeyColors : undefined,
     }
   }, [viewMatrixMode.active, layout, viewMatrix])
@@ -1087,7 +1082,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             matrixRows={rows ?? 0}
             matrixCols={cols ?? 0}
             onAxisChange={handleViewMatrixAxisChange}
-            duplicateCount={viewMatrixDuplicateCount}
           />
         )}
         <div className={typingTestMode
@@ -1167,7 +1161,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                 remappedKeys={remappedKeys} multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
                 layoutOptions={effectiveLayoutOptions} scale={scaleProp}
                 labelOverrides={viewMatrixLabelOverrides} keyColors={viewMatrixDuplicateKeyColors}
-                layerLabel={layerLabel(currentLayer)} layerLabelTestId="layer-label"
+                layerLabel={viewMatrixMode.active ? undefined : layerLabel(currentLayer)} layerLabelTestId="layer-label"
                 onKeyClick={viewMatrixMode.active ? handleViewMatrixKeyClick : handleKeyClick}
                 onKeyDoubleClick={viewMatrixMode.active ? undefined : handleKeyDoubleClick}
                 onEncoderClick={viewMatrixMode.active ? undefined : handleEncoderClick}
@@ -1175,10 +1169,18 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                 onDeselect={viewMatrixMode.active ? viewMatrixMode.clearSelection : handleDeselect} contentRef={keyboardContentRef}
               />
               {/* View Matrix mode's relocated zoom row — same controls as
-                  the normal-mode toolbar, moved below the keymap pane. */}
+                  the normal-mode toolbar, moved below the keymap pane —
+                  plus the same Ctrl/Shift multi-select hint the keycode
+                  picker shows in normal mode (reused key: the picker is
+                  hidden entirely for the mode's duration, but the
+                  Ctrl+click / Shift+click gestures it describes still
+                  drive this mode's own multi-selection). */}
               {viewMatrixMode.active && (
-                <div className="flex items-center gap-1">
-                  {zoomControls}
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-1">
+                    {zoomControls}
+                  </div>
+                  <p className="text-xs text-content-muted">{t('editor.keymap.pickerHint')}</p>
                 </div>
               )}
             </>

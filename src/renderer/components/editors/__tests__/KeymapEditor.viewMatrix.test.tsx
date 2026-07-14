@@ -21,10 +21,10 @@ vi.mock('react-i18next', () => ({
         'editor.viewMatrix.rowLabel': 'Row',
         'editor.viewMatrix.colLabel': 'Col',
         'editor.viewMatrix.blankOption': '—',
+        'editor.keymap.pickerHint': 'Ctrl+click: multi-select / Shift+click: range select → click a key to paste',
       }
       if (key === 'editor.keymap.layer' && opts) return `Layer ${opts.number ?? ''}`
       if (key === 'editor.keymap.layerN' && opts) return `Layer ${opts.n ?? ''}`
-      if (key === 'editor.viewMatrix.duplicateWarning' && opts) return `${opts.count} key(s) share the same view position.`
       return map[key] ?? key
     },
   }),
@@ -177,6 +177,14 @@ describe('KeymapEditor — View Matrix mode', () => {
     expect(screen.getByTestId('keyboard-widget')).toBeInTheDocument()
   })
 
+  it('shows the current-layer label in normal mode and hides it while the mode is active — the mode has no layer concept', () => {
+    render(<KeymapEditor {...defaultProps} />)
+    expect(screen.getByTestId('layer-label')).toHaveTextContent('Layer 0')
+
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+    expect(screen.queryByTestId('layer-label')).not.toBeInTheDocument()
+  })
+
   it('clicking the mode toggle in the left pane exits back to normal mode and the picker returns', () => {
     enterMode()
     expect(screen.getByTestId('view-matrix-reset-panel')).toBeInTheDocument()
@@ -205,6 +213,12 @@ describe('KeymapEditor — View Matrix mode', () => {
     const keyboardWidget = screen.getByTestId('keyboard-widget')
     const followsKeyboard = Boolean(keyboardWidget.compareDocumentPosition(zoomInButton) & Node.DOCUMENT_POSITION_FOLLOWING)
     expect(followsKeyboard).toBe(true)
+  })
+
+  it('shows the reused Ctrl/Shift multi-select hint under the keymap while the mode is active', () => {
+    enterMode()
+
+    expect(screen.getByText('Ctrl+click: multi-select / Shift+click: range select → click a key to paste')).toBeInTheDocument()
   })
 
   it('hides undo/redo while the mode is active and restores them on exit', () => {
@@ -364,29 +378,6 @@ describe('KeymapEditor — View Matrix mode', () => {
       '0,0': { row: 0, col: 4 },
       '0,1': { row: 0, col: 4 },
     })
-  })
-
-  it('shows no duplicate warning when every key has a distinct view position', () => {
-    enterMode()
-
-    expect(screen.queryByTestId('view-matrix-duplicate-warning')).not.toBeInTheDocument()
-  })
-
-  it('shows a persistent duplicate warning while two keys resolve to the same view position', () => {
-    // (0,1)'s override collides with (0,0)'s physical position.
-    render(<KeymapEditor {...defaultProps} viewMatrix={{ '0,1': { row: 0, col: 0 } }} />)
-    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
-
-    expect(screen.getByTestId('view-matrix-duplicate-warning')).toHaveTextContent('2 key(s) share the same view position.')
-  })
-
-  it('clears the duplicate warning once the collision is resolved', () => {
-    const { rerender } = render(<KeymapEditor {...defaultProps} viewMatrix={{ '0,1': { row: 0, col: 0 } }} />)
-    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
-    expect(screen.getByTestId('view-matrix-duplicate-warning')).toBeInTheDocument()
-
-    rerender(<KeymapEditor {...defaultProps} viewMatrix={undefined} />)
-    expect(screen.queryByTestId('view-matrix-duplicate-warning')).not.toBeInTheDocument()
   })
 
   it('does not pass a key fill when no keys collide', () => {

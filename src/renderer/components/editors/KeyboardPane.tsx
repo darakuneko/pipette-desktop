@@ -39,7 +39,10 @@ export interface KeyboardPaneProps {
   heatmapMaxTap?: number
   heatmapMaxHold?: number
   scale: number
-  layerLabel: string
+  /** Current-layer label shown below the keymap. Omitted in View Matrix
+   *  mode, which has no layer concept (layer switching is disabled for
+   *  the mode's duration). */
+  layerLabel?: string
   layerLabelTestId: string
   onKeyClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onKeyDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
@@ -123,9 +126,11 @@ export function KeyboardPane({
         />
       </div>
       <div className="flex items-center justify-between px-keyboard-px text-xs leading-none text-content-muted">
-        <span data-testid={layerLabelTestId} className="text-content-muted">
-          {layerLabel}
-        </span>
+        {layerLabel !== undefined && (
+          <span data-testid={layerLabelTestId} className="text-content-muted">
+            {layerLabel}
+          </span>
+        )}
         <span className="flex items-center gap-1.5">
           {isActive && selectedKeycode && (
             <>

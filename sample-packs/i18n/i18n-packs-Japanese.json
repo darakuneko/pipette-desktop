@@ -1,5 +1,5 @@
 {
-  "version": "0.1.11",
+  "version": "0.1.12",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -73,7 +73,6 @@
       "rowLabel": "行",
       "colLabel": "列",
       "blankOption": "—",
-      "duplicateWarning": "{{count}} 件のキーが同じ表示位置を共有しています。",
       "reset": "ビューマトリクスをリセット"
     },
     "keymap": {

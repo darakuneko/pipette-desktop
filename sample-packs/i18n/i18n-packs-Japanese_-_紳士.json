@@ -1,5 +1,5 @@
 {
-  "version": "0.1.11",
+  "version": "0.1.12",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -73,7 +73,6 @@
       "rowLabel": "行",
       "colLabel": "列",
       "blankOption": "—",
-      "duplicateWarning": "{{count}} 箇所、座標が重複しております。",
       "reset": "座標表を初期化"
     },
     "keymap": {

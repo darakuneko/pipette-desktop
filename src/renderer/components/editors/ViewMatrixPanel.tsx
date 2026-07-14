@@ -69,11 +69,6 @@ export interface ViewMatrixPanelProps {
   /** Saves the picked value on one axis for the whole selection —
    *  immediately, there is no separate Save step. */
   onAxisChange: (axis: ViewMatrixAxis, value: number) => void
-  /** Count of keys whose effective view position collides with another
-   *  key's — 0 hides the warning. Computed by `KeymapEditor`'s duplicate
-   *  detection pass, which also drives the matching key fill on the
-   *  keymap itself (see `view-matrix.ts`'s `effectiveViewPos`). */
-  duplicateCount: number
 }
 
 /**
@@ -82,14 +77,17 @@ export interface ViewMatrixPanelProps {
  * `useViewMatrixMode`), and the keycode picker area is hidden entirely, so
  * this panel becomes the mode's whole left pane: the mode label, the Edit
  * toggle that exits the mode, Row/Col selects that edit the current
- * selection's view position immediately (no Save step), an optional
- * duplicate-position warning, and — at the bottom — a 2-step confirm
- * (mirrors `DisconnectConfirmButton`'s existing pattern) to clear the saved
- * position overrides and fall back to the physical Vial matrix.
+ * selection's view position immediately (no Save step), and — at the
+ * bottom — a 2-step confirm (mirrors `DisconnectConfirmButton`'s existing
+ * pattern) to clear the saved position overrides and fall back to the
+ * physical Vial matrix. Keys whose effective view position collides with
+ * another key's are flagged directly on the keymap via a shared fill
+ * colour (see `KeymapEditor`'s duplicate detection pass) instead of a
+ * separate warning here.
  */
 export function ViewMatrixPanel({
   onReset, onToggle, selectionCount, effectiveRow, effectiveCol,
-  matrixRows, matrixCols, onAxisChange, duplicateCount,
+  matrixRows, matrixCols, onAxisChange,
 }: ViewMatrixPanelProps) {
   const { t } = useTranslation()
   const [confirming, setConfirming] = useState(false)
@@ -126,12 +124,6 @@ export function ViewMatrixPanel({
         label={t('editor.viewMatrix.colLabel')} axis="col" value={effectiveCol} optionCount={matrixCols}
         disabled={!hasSelection} showValue={showValue} blankLabel={blankLabel} onChange={onAxisChange}
       />
-
-      {duplicateCount > 0 && (
-        <p className="text-xs text-warning" data-testid="view-matrix-duplicate-warning">
-          {t('editor.viewMatrix.duplicateWarning', { count: duplicateCount })}
-        </p>
-      )}
 
       {/* Separated from the Row/Col controls above — pinned to the panel's
           bottom edge (mt-auto on the self-stretch column) so Reset reads as
