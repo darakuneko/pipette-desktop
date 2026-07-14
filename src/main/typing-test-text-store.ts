@@ -7,6 +7,7 @@ import { join, basename } from 'node:path'
 import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { notifyChange } from './sync/sync-service'
+import { isKanaOnlyText } from '../shared/kana-purity'
 import type {
   TypingTestTextMeta,
   TypingTestTextIndex,
@@ -22,6 +23,23 @@ import {
 
 export const TYPING_TEST_TEXT_SYNC_UNIT = 'typing-test-texts'
 const MAX_NAME_LENGTH = 100
+
+// `romajiCapable` is computed from content, not persisted (see the field's
+// doc comment in shared/types/typing-test-text-store.ts). Scanning every
+// entry's file on each list call would mean an extra disk read per text, so
+// results are cached in-process keyed by id + the record's `updatedAt`
+// (already bumped on every content-changing write). A stale cache entry —
+// wrong id, or same id with a newer `updatedAt` — is simply recomputed.
+const romajiCapableCache = new Map<string, { updatedAt: string; capable: boolean }>()
+
+function getCachedRomajiCapable(meta: TypingTestTextMeta): boolean | undefined {
+  const cached = romajiCapableCache.get(meta.id)
+  return cached && cached.updatedAt === meta.updatedAt ? cached.capable : undefined
+}
+
+function setCachedRomajiCapable(meta: TypingTestTextMeta, capable: boolean): void {
+  romajiCapableCache.set(meta.id, { updatedAt: meta.updatedAt, capable })
+}
 
 // An import that collided with an existing name, parsed but not yet saved.
 // Held here so confirmImportOverwrite() can commit it without re-picking the
@@ -113,9 +131,31 @@ function normalizeFile(parsed: unknown): TypingTestTextEntryFile | null {
   return { name: obj.name, text: obj.text }
 }
 
+// Attaches the computed `romajiCapable` field to a meta for an API response.
+// Uses the cache when the entry's content hasn't changed since it was last
+// scanned; otherwise reads the entry file and scans its text. A read/parse
+// failure (e.g. a tombstoned entry whose file was since removed) is not
+// romaji-capable rather than a hard error, since this is a best-effort
+// display flag, not the record's source of truth.
+async function withRomajiCapable(meta: TypingTestTextMeta): Promise<TypingTestTextMeta> {
+  const cached = getCachedRomajiCapable(meta)
+  if (cached !== undefined) return { ...meta, romajiCapable: cached }
+  let capable = false
+  try {
+    const raw = await readFile(getEntryPath(meta.filename), 'utf-8')
+    const parsed = normalizeFile(JSON.parse(raw))
+    capable = parsed !== null && isKanaOnlyText(parsed.text)
+  } catch {
+    // Missing/corrupt entry file — treat as not romaji-capable.
+  }
+  setCachedRomajiCapable(meta, capable)
+  return { ...meta, romajiCapable: capable }
+}
+
 async function listInternal(includeDeleted: boolean): Promise<TypingTestTextMeta[]> {
   const { entries } = await readIndex()
-  return includeDeleted ? entries : entries.filter((e) => !e.deletedAt)
+  const filtered = includeDeleted ? entries : entries.filter((e) => !e.deletedAt)
+  return Promise.all(filtered.map(withRomajiCapable))
 }
 
 export async function listMetas(): Promise<TypingTestTextMeta[]> {
@@ -134,7 +174,12 @@ export async function getRecord(id: string): Promise<TypingTestTextStoreResult<T
     const raw = await readFile(getEntryPath(meta.filename), 'utf-8')
     const parsed = normalizeFile(JSON.parse(raw))
     if (!parsed) return fail('INVALID_FILE', 'Stored file is malformed')
-    return ok({ meta, data: parsed })
+    // Content is already in hand here, so scan directly instead of going
+    // through withRomajiCapable (which would re-read the file on a cache miss).
+    const cached = getCachedRomajiCapable(meta)
+    const romajiCapable = cached ?? isKanaOnlyText(parsed.text)
+    if (cached === undefined) setCachedRomajiCapable(meta, romajiCapable)
+    return ok({ meta: { ...meta, romajiCapable }, data: parsed })
   } catch (err) {
     return fail('IO_ERROR', String(err))
   }
@@ -186,6 +231,10 @@ export async function saveRecord(input: SaveTextInput): Promise<TypingTestTextSt
     }
 
     await writeRecord(meta, data)
+    // Prime the romajiCapable cache from the text already in hand, so the
+    // next list/get call is a cache hit instead of re-reading the file we
+    // just wrote.
+    setCachedRomajiCapable(meta, isKanaOnlyText(text))
 
     // Overwrite path: drop the previous JSON so the entry keeps a single
     // file on disk. Best-effort — a missing file should not abort.
@@ -235,6 +284,10 @@ export async function renameRecord(id: string, newName: string): Promise<TypingT
     meta.name = name
     meta.updatedAt = nowIso()
     await writeIndex(index)
+    // Content (parsed.text) is unchanged by a rename — carry the scan
+    // forward under the new updatedAt instead of forcing a re-read on the
+    // next list/get call.
+    setCachedRomajiCapable(meta, isKanaOnlyText(parsed.text))
 
     notifyChange(TYPING_TEST_TEXT_SYNC_UNIT)
     return ok(meta)

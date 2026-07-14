@@ -333,4 +333,52 @@ describe('typing-test-text-store', () => {
     const parsed = JSON.parse(raw) as { entries: unknown[] }
     expect(parsed.entries).toHaveLength(1)
   })
+
+  describe('romajiCapable', () => {
+    it('is true for listMetas/listAllMetas entries whose content is pure kana', async () => {
+      await saveRecord({ name: 'Kana', text: 'こんにちは せかい' })
+      const metas = await listMetas()
+      expect(metas[0].romajiCapable).toBe(true)
+      const all = await listAllMetas()
+      expect(all[0].romajiCapable).toBe(true)
+    })
+
+    it('is false for entries with non-kana content (kanji, latin, punctuation)', async () => {
+      await saveRecord({ name: 'Mixed', text: 'hello 世界' })
+      const metas = await listMetas()
+      expect(metas[0].romajiCapable).toBe(false)
+    })
+
+    it('is included on the single-record getRecord response too', async () => {
+      const saved = await saveRecord({ name: 'KanaGet', text: 'ありがとう' })
+      const rec = await getRecord(saved.data!.id)
+      expect(rec.data?.meta.romajiCapable).toBe(true)
+
+      const saved2 = await saveRecord({ name: 'NotKanaGet', text: 'thanks' })
+      const rec2 = await getRecord(saved2.data!.id)
+      expect(rec2.data?.meta.romajiCapable).toBe(false)
+    })
+
+    it('never appears in the persisted index.json or entry file on disk', async () => {
+      const saved = await saveRecord({ name: 'DiskCheck', text: 'ひらがな' })
+      await renameRecord(saved.data!.id, 'DiskCheckRenamed')
+
+      const indexRaw = await readFile(join(mockUserDataPath, 'sync', TYPING_TEST_TEXT_SYNC_UNIT, 'index.json'), 'utf-8')
+      expect(indexRaw).not.toContain('romajiCapable')
+
+      const indexParsed = JSON.parse(indexRaw) as { entries: Record<string, unknown>[] }
+      const entryPath = join(mockUserDataPath, 'sync', TYPING_TEST_TEXT_SYNC_UNIT, indexParsed.entries[0].filename as string)
+      const entryRaw = await readFile(entryPath, 'utf-8')
+      expect(entryRaw).not.toContain('romajiCapable')
+    })
+
+    it('flips when saved content changes (cache invalidates on updatedAt)', async () => {
+      const saved = await saveRecord({ name: 'Flip', text: 'かな' })
+      expect((await listMetas())[0].romajiCapable).toBe(true)
+
+      const updated = await saveRecord({ id: saved.data!.id, name: 'Flip', text: 'kanji 漢字' })
+      expect(updated.success).toBe(true)
+      expect((await listMetas())[0].romajiCapable).toBe(false)
+    })
+  })
 })
