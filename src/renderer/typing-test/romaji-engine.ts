@@ -343,6 +343,21 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
   ずぉ: ['zwo'],
 }
 
+// Punctuation that appears in the Tatoeba japanese word packs and in kana
+// file-import texts, but is not kana — so it lives outside KANA_TABLE rather
+// than as a table entry, keeping KANA_TABLE in exact set correspondence
+// with mozc's kana rows (see the mozc compliance test, which fails if
+// KANA_TABLE gains a non-kana key). mozc's own romaji table maps "."/","
+// to 。/、; ？/！ aren't part of that kana table, but "?"/"!" are their
+// natural direct-keystroke spelling. One canonical ASCII spelling each, no
+// style variants — see .claude/docs/ROMAJI-ENGINE.md.
+export const PUNCTUATION_TABLE: Record<string, readonly string[]> = {
+  '。': ['.'],
+  '、': [','],
+  '？': ['?'],
+  '！': ['!'],
+}
+
 // Style tag per spelling, keyed by "<tableKey>|<spelling>" so spellings
 // that collide across different kana (e.g. "ji" is both じ's canonical and
 // ぢ's alternate) resolve independently per entry.
@@ -723,10 +738,11 @@ function sokuonOptions(
 }
 
 /** Every (kana-length, spellings) group that could start at `index`. Always
- *  returns at least one option while `index` is within the word (falling
- *  back to typing the raw character itself for anything outside the
- *  table, per the passthrough rule for未対応文字). `disabledStyles` prunes
- *  tagged alternate spellings out of each option's pattern list; canonical
+ *  returns at least one option while `index` is within the word: a
+ *  PUNCTUATION_TABLE entry (。、？！) is consulted before the final
+ *  passthrough, which falls back to typing the raw character itself for
+ *  anything still outside both tables. `disabledStyles` prunes tagged
+ *  alternate spellings out of each option's pattern list; canonical
  *  spellings are never tagged, so they always survive. */
 function getSegmentOptions(
   kana: readonly string[],
@@ -758,6 +774,10 @@ function getSegmentOptions(
   const single = KANA_TABLE[current]
   if (single) options.push({ length: 1, patterns: filterByStyle(current, single, disabledStyles), scope: current })
 
+  if (options.length === 0) {
+    const punct = PUNCTUATION_TABLE[current]
+    if (punct) options.push({ length: 1, patterns: punct, scope: current })
+  }
   if (options.length === 0) options.push({ length: 1, patterns: [current], scope: current })
   return options
 }
