@@ -533,6 +533,8 @@ Some events can't be mapped onto a candidate — for example, when the source ch
 - **No target picked** — the empty hint stays until you pick a comparison layout from the dropdown
 - **Fetch error** — generic "failed to compute the layout comparison" message; reload or pick a smaller range and retry
 
+#### Layer
+
 The Layer tab breaks usage down by keyboard layer.
 
 **View Mode**
@@ -1063,12 +1065,14 @@ Click the **Typing Test** button in the status bar to enter typing test mode.
 
 The left side of the typing-test screen is a collapsible **Settings** panel. The chevron button at its bottom collapses it to a thin rail and expands it again; the state is saved per keyboard. The panel groups the test controls into three sections:
 
-- **Settings** — the **Data Source** row (see below); **Layer** (the base layer used by the on-screen keymap, shown when the keyboard has more than one layer); and **Lines** / **Font** (line count and font size of the reading window — these two apply in every mode). With a MonkeyType language active, the **Pattern** / **Units** / **Option** rows described under **MonkeyType** also appear here
+- **Settings** — the **Data Source** row (see below); **Layer** (the base layer used by the on-screen keymap, shown when the keyboard has more than one layer); and **Lines** / **Font** (line count and font size of the reading window — these two apply in every mode). With a MonkeyType language active, the **Pattern** / **Units** / **Option** rows described under **MonkeyType** also appear here; with a Tatoeba pack active, Tatoeba's own **Pattern** / **Units** rows appear instead (see **Tatoeba** below)
 - **Data** — **History** opens the saved-results modal: results are split into **MonkeyType** and **File Import** tabs, with a mode filter dropdown on the MonkeyType tab and a text filter dropdown on the File Import tab; the stats row (Best / Avg / Last 10 / Tests / Avg Acc), the sparkline, and **Export CSV** all follow the current filter, and each row can be renamed (via the same naming modal as the finished screen) or deleted. **Compare** picks the comparison baseline — **Previous**, **Best**, **Average**, a pinned **Result**, or **Off**; while a baseline is set, colored ▲ / ▼ deltas appear next to WPM / KPM / Accuracy in the stats row. The baseline choice is remembered per test condition (mode + settings + language, or per imported text). **Save Unnamed** (default on) auto-saves finished results even without a name; switched off, only named results are kept
 
   Below the sparkline, an **Accuracy Trend** chart plots accuracy over time for a single test condition, picked from the dropdown next to it (e.g. "50 words (english) +punct" or "30s (english)"; the label format varies by mode). This condition picker is independent of the mode/text filter above it — it always lists every condition present in the active tab's full history — and defaults to the condition of the most recent run. The chart appears once the selected condition has 2 or more saved runs
 
   ![Typing Test — Accuracy trend](screenshots/typing-test-accuracy-trend.png)
+
+  Below the Accuracy Trend chart, a **Most missed** ranking lists up to the top 15 missed characters (or, in Romaji mode, the missed kana's romaji, e.g. "shi") as proportional bars, ranked by mistake count. Unlike the Accuracy Trend, it isn't scoped to one condition — it aggregates every result in the active tab. It stays hidden when the tab has no results at all, and shows a brief empty message when there are results but none of them recorded a mistake
 - **View** — three switches: **Operation** (the controls row below the reading window), **Measurement** (the live stats row), and **Keymap** (the keyboard pane). Each hides its area when switched off; a finished test always shows the controls and the results regardless
 
 #### Data Source
@@ -1087,6 +1091,7 @@ The modal opens on the tab matching the currently active mode. An Aozora Bunko i
 The **MonkeyType** and **Tatoeba** tabs share the same language-pack list:
 
 - A search box filters the list by name
+- Below the search box, a **Romaji** filter toggle narrows the list to Romaji-input-capable entries only (see **Romaji Input** under **MonkeyType** below). The **File Import** tab has the same toggle below its import button; the **Aozora Bunko** tab keeps its kana-row filter instead (see **Aozora Bunko** below)
 - Packs are split into **Downloaded** and **Available** sections
 - Each row shows the pack name and its word count; right-to-left languages also show an **RTL** badge, and kana packs (hiragana / katakana) that support Romaji input show a **Romaji** badge (see **Romaji Input** below)
 - Click the download icon on an Available row to download it. Rows you downloaded yourself show a trash icon to delete them; packs bundled with the app (such as MonkeyType's english) are also listed under Downloaded but cannot be deleted
@@ -1133,13 +1138,16 @@ The Option row is hidden in the quote pattern (which uses the original text as-i
 
 ![Typing Test — Romaji input](screenshots/typing-test-romaji.png)
 
-Romaji input is not limited to the MonkeyType tab: with a romaji-capable source loaded — a **hiragana** or **katakana** MonkeyType language pack (words/time patterns), a kana **Tatoeba** pack, or a kana-only **File Import** / **Aozora Bunko** text — the Option row gains a full-width **Romaji** button. Capable language packs and imported texts are marked with a **Romaji** badge wherever they're listed (see the shared language-pack list above, and the File Import / Aozora Bunko sections below), so you can spot them before selecting one. For an imported text, capability is computed locally from the text's own content the moment it's listed — it is never stored or synced, so it can't drift from the content it describes. Clicking the Romaji button opens the **Romaji Settings** modal instead of toggling judging directly; the button turns accent-colored once Romaji input is enabled from inside the modal.
+Romaji input is not limited to the MonkeyType tab: with a romaji-capable source loaded — a **hiragana** or **katakana** MonkeyType language pack (words/time patterns), a kana **Tatoeba** pack, or a kana-only **File Import** / **Aozora Bunko** text — the Option row gains a full-width **Romaji** button. Romaji input **defaults on** for any capable source, so the button is already accent-colored the first time you load one — you don't need to turn it on yourself. Capable language packs and imported texts are marked with a **Romaji** badge wherever they're listed (see the shared language-pack list above, and the File Import / Aozora Bunko sections below), so you can spot them before selecting one. For an imported text, capability is computed locally from the text's own content the moment it's listed — it is never stored or synced, so it can't drift from the content it describes. Clicking the Romaji button opens the **Romaji Settings** modal rather than toggling judging directly; turning off the modal's master switch is the only way to opt out, and that choice persists across language and import switches until you turn it back on.
+
+Japanese punctuation is typeable in Romaji mode too: 。、？！ map to `.` `,` `?` `!`, and a kana text containing them alongside kana is still counted as Romaji-capable.
 
 ![Typing Test — Romaji settings](screenshots/typing-test-romaji-settings.png)
 
-The modal has three settings, in addition to the Romaji input master switch. The guide row's font size always tracks the shared **Settings > Font** size — there is no separate control for it.
+The modal has four settings, in addition to the Romaji input master switch. The guide row's font size always tracks the shared **Settings > Font** size — there is no separate control for it.
 
 - **Displayed case**: how the guide row's romaji is rendered — **ROMAJI** (upper case), **Romaji** (capitalized), or **romaji** (lower case, default). Display only; it never changes which keystrokes are accepted.
+- **Words shown**: how many words of romaji the guide row displays, current word included — `0` hides the guide row entirely, `1` shows only the current word, `2` (default) adds the next word, and `3` adds two upcoming words. Upcoming (not-yet-current) words render fainter than the current word's guide.
 - **Guide spelling pattern**: split into two rows, mirroring Accepted input patterns below.
   - **Base**: a single-select choice between **Hepburn** (shi/chi) and **Kunrei** (si/ti) — exactly one is always active, and it picks which base system's spelling the guide line shows for kana with multiple accepted spellings. **Hepburn is the default.**
   - **Options**: **C** (ca), **Q** (qu), **Digraph** (jya), **Small x** (xa), **Small l** (la), **W** (wi), **V** (va), **F** (fa), **YE** (ye), **Nasal x** (xn), and **N separator** (n') — independent alternate-spelling preferences layered on top of the selected Base, off by default. Multiple can be selected at once — e.g. selecting both Small x and the Kunrei base applies each preference to whichever kana it matches, in the same guide. Each button's label shows one example spelling; hover it for the full spelling list it covers.
@@ -1161,7 +1169,9 @@ Turning on Romaji input switches judging from literal text matching to sequentia
 
 ![Typing Test — Data Source Modal (Tatoeba)](screenshots/typing-test-mode-tatoeba.png)
 
-Pick a downloaded language pack from the **Tatoeba** tab (download it first if needed — see **Data Source** above) to type real sentences sampled from the [Tatoeba Project](https://tatoeba.org). Each run samples 5 sentences.
+Pick a downloaded language pack from the **Tatoeba** tab (download it first if needed — see **Data Source** above) to type real sentences sampled from the [Tatoeba Project](https://tatoeba.org). Like MonkeyType, Tatoeba gets its own **Pattern** and **Units** rows in the Settings panel: **Pattern** picks **Lines** or **Time**. **Lines** samples a fixed batch of sentences per run — **Units** picks 5 / 10 / 20 / 40 sentences. **Time** runs for a set duration instead — **Units** picks 15 / 30 / 60 / 120 seconds — resampling another batch of sentences as you go so the run never runs out of material before time is up.
+
+Personal bests, History, and the Accuracy Trend group Tatoeba runs by language + pattern + unit, so a 5-line run and a 30-second run of the same pack are tracked separately. The History condition label reflects this — e.g. **"Tatoeba 5 Lines (english)"** for a Lines run, **"Tatoeba 30s (english)"** for a Time run.
 
 ![Typing Test — Tatoeba Running](screenshots/typing-test-tatoeba-running.png)
 
@@ -1197,7 +1207,7 @@ Import your own plain-text `.txt` file (UTF-8 only) to type against it — usefu
 - Text is capped at 5,000 words; anything beyond the cap is silently truncated on import
 - Non-empty line boundaries in the source file are preserved: a **⏎** marker appears at the end of every line except the last, and Enter (not Space) advances past it. Import normalizes the text — empty lines are dropped and runs of spaces or tabs within a line collapse to a single space. Leading indentation on each line is shown for reference but is not itself typed
 - Importing a file whose name matches an existing entry prompts for confirmation before overwriting it
-- Each row shows the text's name and word count; click a row to select it, or click the trash icon to delete it
+- Each row shows the text's name and length — **words** for space-separated text (e.g. English), or **lines** for text with no spaces to count words by (e.g. Japanese prose); click a row to select it, or click the trash icon to delete it
 - This list only shows texts you imported directly here — Aozora Bunko imports are managed from the **Aozora Bunko** tab instead
 - A text whose content is pure kana shows a **Romaji** badge and unlocks Romaji input for it — see **Romaji Input** under MonkeyType above. This is checked locally from the text's own content each time it's listed, not stored or synced
 
@@ -1221,7 +1231,7 @@ The controls row below the reading window changes with the test state:
 
 - **Before a run starts**: **Next Test** generates a fresh test. When a paused File Import run is saved, a **Resume** button appears beside it
 - **While running or paused**: **Restart** starts the test over. In File Import mode a **Pause** (running) or **Resume** (paused) button joins it — pausing saves the run, and resuming asks whether to continue from the saved position or start over
-- **When finished**: a result-name field opens the naming modal, with quick-insert chips for the keyboard name, the test material, a timestamp, and the run's WPM / KPM / Accuracy; **Next Test** starts the next run
+- **When finished**: a result-name field opens the naming modal, with quick-insert chips for the keyboard name, the test material, a timestamp, and the run's WPM / KPM / Accuracy; **Next Test** starts the next run. If the run had any mistakes, a **Missed** row appears below the stats, listing each missed character (or, in Romaji mode, each missed kana's romaji, e.g. "shi") with its count — counted when a wrong character is deleted with Backspace or left wrong when the word is submitted
 
 Additional notes:
 
@@ -1296,6 +1306,10 @@ When the Monitor App toggle is on (and REC is in the Stop / recording state), Pi
 - **Linux / Wayland**: requires the FocusedWindow GNOME Shell extension (see README). Without it, every minute is recorded as `null`
 - **macOS**: requires the Accessibility permission (see README). Without it, every minute is recorded as `null`
 - Turning Monitor App off keeps existing tags in the database; only newly recorded minutes go untagged
+
+**Tray toggles**
+
+Directly below Monitor App, the REC tab also has **Stay in System Tray** and **Start Hidden in Tray** toggles — the same settings as Settings → Tools (§6.6), with the same linked-disable behavior (Start Hidden in Tray is disabled while Stay in System Tray is off, and turning Stay in System Tray off also turns Start Hidden in Tray off). They're surfaced here too since the Typing View window is often the last one open before you reach for the tray.
 
 **View Analytics**
 
@@ -1802,7 +1816,7 @@ The Tools tab shows a **Zoom** row below Theme Packs. This setting scales the en
 The Tools tab shows four toggles below the Theme Packs and Zoom rows:
 
 - **Launch at Login**: Start Pipette automatically when you sign in to the OS. On Windows and macOS this registers a login item; on Linux it manages an XDG autostart entry (`~/.config/autostart/pipette.desktop`). This works in installed (packaged) builds only — the toggle has no effect when running from source.
-- **Stay in System Tray**: While ON, closing the window hides Pipette to the system tray and the app keeps running. Click the tray icon to show the window again, or choose **Quit** from the tray icon menu to exit. The tray menu offers **Show** and **Quit** (English-only labels for now).
+- **Stay in System Tray**: While ON, closing the window hides Pipette to the system tray and the app keeps running. Click the tray icon, or choose **Show** from its menu, to bring the window back. Hovering the tray icon shows a live tooltip: just `Pipette` when idle, `Pipette — {keyboard name}` once a keyboard is connected, and `Pipette — {keyboard name} — Cnt: X · KPM: Y` while the REC tab (§4.3) is recording. The tray menu itself is **Show**, a separator, the connected keyboard's name (when one is connected) — with **Recording** / **Cnt: N** / **KPM: N** rows added while recording — another separator, then **Quit**. Menu and tooltip labels are fixed English text for now, not translated.
 - **Restore Last Session** (default ON): While ON, Pipette remembers the last keyboard you connected and automatically reconnects it the next time the app starts. Toggling this in Settings only affects the *next* launch — it never triggers a reconnect during the current session. Because the screen you were on is already remembered per keyboard, reconnecting also brings back the last screen you used with that keyboard. If the keyboard is not found within about 10 seconds of launch, Pipette gives up silently — no warning is shown, and the device selection screen stays as usual. Disconnecting a keyboard manually clears the remembered device.
 - **Start Hidden in Tray**: While ON, Pipette launches resident in the system tray without opening the window. This requires **Stay in System Tray** — the toggle is disabled while Stay in System Tray is OFF, and turning Stay in System Tray OFF also turns this toggle OFF. If a session restore (see above) needs the Unlock dialog, the window appears just for that dialog and hides again once it is resolved. Once you show the window yourself (e.g. from the tray icon), it stays open — Pipette never auto-hides a window you opened.
 
