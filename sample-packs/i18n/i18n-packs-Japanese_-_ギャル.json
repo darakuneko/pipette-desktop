@@ -1,5 +1,5 @@
 {
-  "version": "0.1.10",
+  "version": "0.1.11",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -70,10 +70,10 @@
       "label": "ビューマトリクスっしょ☆",
       "edit": "編集っしょ",
       "done": "完了っしょ☆",
-      "modalTitle": "表示位置編集っしょ☆",
-      "physicalLabel": "マトリクス",
       "rowLabel": "行",
       "colLabel": "列",
+      "blankOption": "—",
+      "duplicateWarning": "{{count}} 件のキー、位置かぶってるっしょ☆",
       "reset": "ビューマトリクスをリセットっしょ☆"
     },
     "keymap": {

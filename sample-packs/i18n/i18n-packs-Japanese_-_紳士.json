@@ -1,5 +1,5 @@
 {
-  "version": "0.1.10",
+  "version": "0.1.11",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -70,10 +70,10 @@
       "label": "座標表",
       "edit": "推敲",
       "done": "完了",
-      "modalTitle": "表示位置の推敲",
-      "physicalLabel": "行列",
       "rowLabel": "行",
       "colLabel": "列",
+      "blankOption": "—",
+      "duplicateWarning": "{{count}} 箇所、座標が重複しております。",
       "reset": "座標表を初期化"
     },
     "keymap": {

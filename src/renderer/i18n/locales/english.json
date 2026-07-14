@@ -1,5 +1,5 @@
 {
-  "version": "0.1.10",
+  "version": "0.1.11",
   "name": "English",
   "common": {
     "save": "Save",
@@ -70,10 +70,10 @@
       "label": "View Matrix",
       "edit": "Edit",
       "done": "Done",
-      "modalTitle": "Edit View Position",
-      "physicalLabel": "Matrix",
       "rowLabel": "Row",
       "colLabel": "Col",
+      "blankOption": "—",
+      "duplicateWarning": "{{count}} key(s) share the same view position.",
       "reset": "Reset View Matrix"
     },
     "keymap": {

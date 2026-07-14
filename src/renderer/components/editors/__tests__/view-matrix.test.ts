@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { sortKeysByViewMatrix, applyViewMatrixOverride, type ViewMatrixKeyRef } from '../view-matrix'
+import {
+  sortKeysByViewMatrix, applyViewMatrixOverride, applyViewMatrixAxisToSelection,
+  countViewMatrixDuplicates, effectiveViewPos, type ViewMatrixKeyRef,
+} from '../view-matrix'
 
 interface TestKey extends ViewMatrixKeyRef {
   id: string
@@ -10,6 +13,17 @@ interface TestKey extends ViewMatrixKeyRef {
 function key(id: string, row: number, col: number): TestKey {
   return { id, row, col }
 }
+
+describe('effectiveViewPos', () => {
+  it('returns the override position when one exists for the key', () => {
+    expect(effectiveViewPos({ '1,2': { row: 5, col: 7 } }, 1, 2)).toEqual({ row: 5, col: 7 })
+  })
+
+  it('falls back to the physical position when there is no override', () => {
+    expect(effectiveViewPos(undefined, 3, 4)).toEqual({ row: 3, col: 4 })
+    expect(effectiveViewPos({ '9,9': { row: 0, col: 0 } }, 3, 4)).toEqual({ row: 3, col: 4 })
+  })
+})
 
 describe('sortKeysByViewMatrix', () => {
   it('orders by physical row-major position when there is no viewMatrix', () => {
@@ -120,5 +134,84 @@ describe('applyViewMatrixOverride', () => {
     const current = { '0,0': { row: 5, col: 5 } }
     applyViewMatrixOverride(current, 1, 1, 2, 2)
     expect(current).toEqual({ '0,0': { row: 5, col: 5 } })
+  })
+})
+
+describe('applyViewMatrixAxisToSelection', () => {
+  it('applies the same row to every key in the selection, keeping each own col', () => {
+    const selection = [key('a', 0, 0), key('b', 1, 1), key('c', 2, 2)]
+    const result = applyViewMatrixAxisToSelection(undefined, selection, 'row', 9)
+    expect(result).toEqual({
+      '0,0': { row: 9, col: 0 },
+      '1,1': { row: 9, col: 1 },
+      '2,2': { row: 9, col: 2 },
+    })
+  })
+
+  it('applies the same col to every key in the selection, keeping each own row', () => {
+    const selection = [key('a', 0, 0), key('b', 1, 1)]
+    const result = applyViewMatrixAxisToSelection(undefined, selection, 'col', 7)
+    expect(result).toEqual({
+      '0,0': { row: 0, col: 7 },
+      '1,1': { row: 1, col: 7 },
+    })
+  })
+
+  it('starts from each key\'s existing override, not its physical position', () => {
+    const current = { '0,0': { row: 5, col: 5 } }
+    const selection = [key('a', 0, 0)]
+    const result = applyViewMatrixAxisToSelection(current, selection, 'col', 8)
+    expect(result).toEqual({ '0,0': { row: 5, col: 8 } })
+  })
+
+  it('drops an entry back to sparse when the bulk value resolves to the physical position', () => {
+    const current = { '0,0': { row: 5, col: 5 } }
+    const selection = [key('a', 0, 0)]
+    const result = applyViewMatrixAxisToSelection(current, selection, 'row', 0)
+    const result2 = applyViewMatrixAxisToSelection(result, selection, 'col', 0)
+    expect(result2).toBeUndefined()
+  })
+
+  it('leaves entries for keys outside the selection untouched', () => {
+    const current = { '9,9': { row: 1, col: 1 } }
+    const selection = [key('a', 0, 0)]
+    const result = applyViewMatrixAxisToSelection(current, selection, 'row', 3)
+    expect(result).toEqual({ '9,9': { row: 1, col: 1 }, '0,0': { row: 3, col: 0 } })
+  })
+
+  it('returns the input unchanged for an empty selection', () => {
+    const current = { '0,0': { row: 5, col: 5 } }
+    const result = applyViewMatrixAxisToSelection(current, [], 'row', 1)
+    expect(result).toEqual(current)
+  })
+})
+
+describe('countViewMatrixDuplicates', () => {
+  it('returns 0 when every key resolves to a distinct effective position', () => {
+    const keys = [key('a', 0, 0), key('b', 0, 1)]
+    expect(countViewMatrixDuplicates(keys, undefined)).toBe(0)
+  })
+
+  it('counts both keys when two collide via an override', () => {
+    const keys = [key('a', 0, 0), key('b', 0, 1)]
+    const viewMatrix = { '0,1': { row: 0, col: 0 } }
+    expect(countViewMatrixDuplicates(keys, viewMatrix)).toBe(2)
+  })
+
+  it('sums across multiple independent collision groups', () => {
+    const keys = [key('a', 0, 0), key('b', 0, 1), key('c', 1, 0), key('d', 1, 1)]
+    const viewMatrix = { '0,1': { row: 0, col: 0 }, '1,1': { row: 1, col: 0 } }
+    expect(countViewMatrixDuplicates(keys, viewMatrix)).toBe(4)
+  })
+
+  it('counts all members of a larger collision group, not just the first pair', () => {
+    const keys = [key('a', 0, 0), key('b', 0, 1), key('c', 0, 2)]
+    const viewMatrix = { '0,1': { row: 0, col: 0 }, '0,2': { row: 0, col: 0 } }
+    expect(countViewMatrixDuplicates(keys, viewMatrix)).toBe(3)
+  })
+
+  it('resolves back to 0 once the colliding override is removed', () => {
+    const keys = [key('a', 0, 0), key('b', 0, 1)]
+    expect(countViewMatrixDuplicates(keys, undefined)).toBe(0)
   })
 })

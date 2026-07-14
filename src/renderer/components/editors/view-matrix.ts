@@ -11,6 +11,20 @@ export interface ViewMatrixKeyRef {
 }
 
 /**
+ * Effective (override ?? physical) view position of the key at physical
+ * `(row, col)` — the single fallback rule every View Matrix consumer
+ * (ordering, bulk edit, duplicate detection, panel display) shares.
+ */
+export function effectiveViewPos(
+  viewMatrix: Record<string, ViewMatrixCell> | undefined,
+  row: number,
+  col: number,
+): ViewMatrixCell {
+  const override = viewMatrix?.[posKey(row, col)]
+  return { row: override?.row ?? row, col: override?.col ?? col }
+}
+
+/**
  * Orders `keys` for the keymap editor's Auto Move (auto-advance) walk.
  *
  * This replaces the old definition-order walk (no vial-gui reference — this
@@ -32,17 +46,12 @@ export function sortKeysByViewMatrix<K extends ViewMatrixKeyRef>(
 ): K[] {
   return keys
     .map((key, index) => {
-      const override = viewMatrix?.[posKey(key.row, key.col)]
-      return {
-        key,
-        index,
-        effectiveRow: override?.row ?? key.row,
-        effectiveCol: override?.col ?? key.col,
-      }
+      const effective = effectiveViewPos(viewMatrix, key.row, key.col)
+      return { key, index, effective }
     })
     .sort((a, b) => {
-      if (a.effectiveRow !== b.effectiveRow) return a.effectiveRow - b.effectiveRow
-      if (a.effectiveCol !== b.effectiveCol) return a.effectiveCol - b.effectiveCol
+      if (a.effective.row !== b.effective.row) return a.effective.row - b.effective.row
+      if (a.effective.col !== b.effective.col) return a.effective.col - b.effective.col
       if (a.key.row !== b.key.row) return a.key.row - b.key.row
       if (a.key.col !== b.key.col) return a.key.col - b.key.col
       return a.index - b.index
@@ -50,9 +59,24 @@ export function sortKeysByViewMatrix<K extends ViewMatrixKeyRef>(
     .map((entry) => entry.key)
 }
 
+/** Writes one key's view position into a mutable map draft, deleting the
+ *  entry instead when the position equals the key's own physical position —
+ *  the sparse "absent means physical" contract shared by every writer. */
+function writeOverride(
+  draft: Record<string, ViewMatrixCell>,
+  physRow: number,
+  physCol: number,
+  row: number,
+  col: number,
+): void {
+  const key = posKey(physRow, physCol)
+  if (row === physRow && col === physCol) delete draft[key]
+  else draft[key] = { row, col }
+}
+
 /**
- * Computes the next `viewMatrix` map after the View Matrix edit modal saves
- * a position for the key at physical `(physRow, physCol)`.
+ * Computes the next `viewMatrix` map after saving a view position for the
+ * key at physical `(physRow, physCol)`.
  *
  * When the entered `(row, col)` equals the key's own physical position, the
  * override entry is deleted instead of written — this keeps the map sparse,
@@ -68,12 +92,52 @@ export function applyViewMatrixOverride(
   row: number,
   col: number,
 ): Record<string, ViewMatrixCell> | undefined {
-  const key = posKey(physRow, physCol)
   const next = { ...current }
-  if (row === physRow && col === physCol) {
-    delete next[key]
-  } else {
-    next[key] = { row, col }
+  writeOverride(next, physRow, physCol, row, col)
+  return Object.keys(next).length > 0 ? next : undefined
+}
+
+/**
+ * Bulk-applies a single value across one axis (row or col) to every key in
+ * `selection`, in one pass — each key keeps its own value on the other
+ * axis. Used by the View Matrix panel's Row/Col selects when 2+ keys are
+ * selected, so the whole selection is folded into one next map and the
+ * caller issues a single `setViewMatrix` write instead of one per key.
+ */
+export function applyViewMatrixAxisToSelection<K extends ViewMatrixKeyRef>(
+  current: Record<string, ViewMatrixCell> | undefined,
+  selection: readonly K[],
+  axis: 'row' | 'col',
+  value: number,
+): Record<string, ViewMatrixCell> | undefined {
+  if (selection.length === 0) return current
+  const next = { ...current }
+  for (const { row, col } of selection) {
+    const effective = effectiveViewPos(next, row, col)
+    writeOverride(next, row, col, axis === 'row' ? value : effective.row, axis === 'col' ? value : effective.col)
   }
   return Object.keys(next).length > 0 ? next : undefined
+}
+
+/**
+ * Counts keys whose effective (override ?? physical) position collides
+ * with at least one other key's effective position. Returns the total
+ * number of keys involved in a collision (0 when every key resolves to a
+ * distinct position) — used by the View Matrix panel to show a persistent
+ * duplicate-position warning, since a collision makes the Auto Move order
+ * between those keys ambiguous.
+ */
+export function countViewMatrixDuplicates<K extends ViewMatrixKeyRef>(
+  keys: readonly K[],
+  viewMatrix: Record<string, ViewMatrixCell> | undefined,
+): number {
+  const groupSizes = new Map<string, number>()
+  for (const key of keys) {
+    const effective = effectiveViewPos(viewMatrix, key.row, key.col)
+    const pos = posKey(effective.row, effective.col)
+    groupSizes.set(pos, (groupSizes.get(pos) ?? 0) + 1)
+  }
+  let count = 0
+  for (const size of groupSizes.values()) if (size > 1) count += size
+  return count
 }

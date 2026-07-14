@@ -1,5 +1,5 @@
 {
-  "version": "0.1.10",
+  "version": "0.1.11",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -70,10 +70,10 @@
       "label": "ビューマトリクス",
       "edit": "編集",
       "done": "完了",
-      "modalTitle": "表示位置を編集",
-      "physicalLabel": "マトリクス",
       "rowLabel": "行",
       "colLabel": "列",
+      "blankOption": "—",
+      "duplicateWarning": "{{count}} 件のキーが同じ表示位置を共有しています。",
       "reset": "ビューマトリクスをリセット"
     },
     "keymap": {

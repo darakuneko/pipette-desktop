@@ -17,9 +17,8 @@ import { JsonEditorModal } from './JsonEditorModal'
 import { comboToJson, parseCombo, keyOverrideToJson, parseKeyOverride, altRepeatKeyToJson, parseAltRepeatKey, macroToJson, parseMacro } from './json-entry-serializers'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
 import { useViewMatrixMode } from './useViewMatrixMode'
-import { ViewMatrixModal } from './ViewMatrixModal'
 import { ViewMatrixPanel } from './ViewMatrixPanel'
-import { applyViewMatrixOverride } from './view-matrix'
+import { applyViewMatrixAxisToSelection, countViewMatrixDuplicates, effectiveViewPos } from './view-matrix'
 import { ZoomIn, ZoomOut, SlidersHorizontal, Undo2, Redo2 } from 'lucide-react'
 import { ICON_SM, ICON_MD } from '../../constants/ui-tokens'
 import { parseKle } from '../../../shared/kle/kle-parser'
@@ -255,30 +254,69 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     // callback per render.
   }, [viewMatrixMode.active, viewMatrixMode.toggle, matrixMode, handleMatrixToggle, handleDeselect])
 
-  // Clicking a key in the mode only opens its View Matrix edit modal —
-  // encoders and decals have no physical row/col to override, so they stay
-  // inert (unaffected) rather than gaining a click handler.
-  const handleViewMatrixKeyClick = useCallback((key: import('../../../shared/kle/types').KleKey) => {
+  // Clicking a key in the mode selects it for the panel's Row/Col selects
+  // — encoders and decals have no physical row/col to override, so they
+  // stay inert (unaffected) rather than gaining a click handler. Ctrl/Cmd
+  // toggles the key in/out of a multi-selection, Shift extends a
+  // contiguous range (mirrors the normal-mode keymap multi-select's
+  // modifier conventions — see `useKeymapMultiSelect`).
+  const handleViewMatrixKeyClick = useCallback((
+    key: import('../../../shared/kle/types').KleKey,
+    _maskClicked: boolean,
+    event?: { ctrlKey: boolean; shiftKey: boolean },
+  ) => {
     if (key.decal || key.encoderIdx >= 0) return
-    viewMatrixMode.openEditor(key.row, key.col)
-    // openEditor is useCallback-stable inside the hook; depending on the
-    // wrapper object would defeat KeyboardWidget's memo on every render
-    // while the mode is active (80+ KeyWidget re-renders).
-  }, [viewMatrixMode.openEditor])
+    if (event?.ctrlKey) { viewMatrixMode.toggleKeySelection(key.row, key.col); return }
+    if (event?.shiftKey) { viewMatrixMode.extendSelection(key.row, key.col, selectableKeys); return }
+    viewMatrixMode.selectKey(key.row, key.col)
+    // The hook's setters are useCallback-stable; depending on the wrapper
+    // object would defeat KeyboardWidget's memo on every render while the
+    // mode is active (80+ KeyWidget re-renders).
+  }, [viewMatrixMode.toggleKeySelection, viewMatrixMode.extendSelection, viewMatrixMode.selectKey, selectableKeys])
 
-  // Per-key R/C legend override for every non-decal, non-encoder key,
-  // reflecting each key's effective (override ?? physical) position.
-  const viewMatrixLabelOverrides = useMemo(() => {
-    if (!viewMatrixMode.active || !layout) return undefined
+  // Physical positions of the currently selected keys, parsed from the
+  // hook's "row,col" string set into the shape `applyViewMatrixAxisToSelection`
+  // and `countViewMatrixDuplicates` expect.
+  const viewMatrixSelectedPositions = useMemo(() => [...viewMatrixMode.selectedKeys].map((pos) => {
+    const [row, col] = pos.split(',').map(Number)
+    return { row, col }
+  }), [viewMatrixMode.selectedKeys])
+
+  // Effective position of the single selected key — null with 0 or 2+ keys
+  // selected, where the panel's selects show a blank placeholder instead
+  // since a multi-selection's members may not share the same position.
+  const viewMatrixEffectiveSingle = useMemo(() => {
+    if (viewMatrixSelectedPositions.length !== 1) return null
+    const { row, col } = viewMatrixSelectedPositions[0]
+    return effectiveViewPos(viewMatrix, row, col)
+  }, [viewMatrixSelectedPositions, viewMatrix])
+
+  // Row/Col select handler — a single selected key writes just that key's
+  // override; 2+ selected keys bulk-apply the axis across the whole
+  // selection in one `onViewMatrixChange` write, each key keeping its own
+  // value on the other axis (see `applyViewMatrixAxisToSelection`).
+  const handleViewMatrixAxisChange = useCallback((axis: 'row' | 'col', value: number) => {
+    if (viewMatrixSelectedPositions.length === 0) return
+    onViewMatrixChange?.(applyViewMatrixAxisToSelection(viewMatrix, viewMatrixSelectedPositions, axis, value))
+  }, [viewMatrixSelectedPositions, viewMatrix, onViewMatrixChange])
+
+  // One pass over the layout builds both mode legend artifacts — they share
+  // the same inputs and always recompute together: the per-key R/C label
+  // override showing each non-decal, non-encoder key's effective position,
+  // and the count of keys whose effective position collides with another
+  // key's (drives the panel's persistent duplicate warning; the Auto Move
+  // order between colliding keys is ambiguous until resolved).
+  const { viewMatrixLabelOverrides, viewMatrixDuplicateCount } = useMemo(() => {
+    if (!viewMatrixMode.active || !layout) return { viewMatrixLabelOverrides: undefined, viewMatrixDuplicateCount: 0 }
     const overrides = new Map<string, { outer: string; inner: string; masked: boolean }>()
+    const editableKeys: { row: number; col: number }[] = []
     for (const key of layout.keys) {
       if (key.decal || key.encoderIdx >= 0) continue
-      const override = viewMatrix?.[posKey(key.row, key.col)]
-      const effRow = override?.row ?? key.row
-      const effCol = override?.col ?? key.col
-      overrides.set(posKey(key.row, key.col), { outer: `R ${effRow}\nC ${effCol}`, inner: '', masked: false })
+      editableKeys.push(key)
+      const effective = effectiveViewPos(viewMatrix, key.row, key.col)
+      overrides.set(posKey(key.row, key.col), { outer: `R ${effective.row}\nC ${effective.col}`, inner: '', masked: false })
     }
-    return overrides
+    return { viewMatrixLabelOverrides: overrides, viewMatrixDuplicateCount: countViewMatrixDuplicates(editableKeys, viewMatrix) }
   }, [viewMatrixMode.active, layout, viewMatrix])
 
   // Keycode palette selection is a no-op while in the mode — nothing is
@@ -943,11 +981,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     </div>
   )
 
-  // View Matrix edit modal — physical position of the key currently open,
-  // and its existing override (if any) to prefill the effective row/col.
-  const editingKeyPos = viewMatrixMode.editingKey
-  const editingOverride = editingKeyPos ? viewMatrix?.[posKey(editingKeyPos.row, editingKeyPos.col)] : undefined
-
   const zoomButtonClass = `${toggleButtonClass(false)} disabled:opacity-30 disabled:pointer-events-none`
 
   const toolbar = (
@@ -1012,6 +1045,13 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           <ViewMatrixPanel
             onReset={() => onViewMatrixChange?.(undefined)}
             onToggle={handleToggleViewMatrixMode}
+            selectionCount={viewMatrixSelectedPositions.length}
+            effectiveRow={viewMatrixEffectiveSingle?.row ?? 0}
+            effectiveCol={viewMatrixEffectiveSingle?.col ?? 0}
+            matrixRows={rows ?? 0}
+            matrixCols={cols ?? 0}
+            onAxisChange={handleViewMatrixAxisChange}
+            duplicateCount={viewMatrixDuplicateCount}
           />
         )}
         <div className={typingTestMode ? 'flex min-h-0 min-w-0 flex-1 flex-col gap-3' : 'flex min-w-0 flex-1 items-center justify-center gap-4 overflow-auto'}>
@@ -1082,7 +1122,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               paneId="primary" isActive={true}              keys={layout.keys} keycodes={layerKeycodes} encoderKeycodes={layerEncoderKeycodes}
               selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
               pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
-              remappedKeys={remappedKeys} multiSelectedKeys={multiSelectedKeys}
+              remappedKeys={remappedKeys} multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
               layoutOptions={effectiveLayoutOptions} scale={scaleProp}
               labelOverrides={viewMatrixLabelOverrides}
               layerLabel={layerLabel(currentLayer)} layerLabelTestId="layer-label"
@@ -1090,7 +1130,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               onKeyDoubleClick={viewMatrixMode.active ? undefined : handleKeyDoubleClick}
               onEncoderClick={viewMatrixMode.active ? undefined : handleEncoderClick}
               onEncoderDoubleClick={viewMatrixMode.active ? undefined : handleEncoderDoubleClick}
-              onDeselect={viewMatrixMode.active ? undefined : handleDeselect} contentRef={keyboardContentRef}
+              onDeselect={viewMatrixMode.active ? viewMatrixMode.clearSelection : handleDeselect} contentRef={keyboardContentRef}
             />
           )}
         </div>
@@ -1257,16 +1297,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onSettingsUpdate={onSettingsUpdate} visibleModals={visibleModals} onCloseModal={closeSettings} />
       )}
 
-      {editingKeyPos && (
-        <ViewMatrixModal
-          physRow={editingKeyPos.row}
-          physCol={editingKeyPos.col}
-          effectiveRow={editingOverride?.row ?? editingKeyPos.row}
-          effectiveCol={editingOverride?.col ?? editingKeyPos.col}
-          onSave={(row, col) => onViewMatrixChange?.(applyViewMatrixOverride(viewMatrix, editingKeyPos.row, editingKeyPos.col, row, col))}
-          onClose={viewMatrixMode.closeEditor}
-        />
-      )}
     </div>
   )
 })
