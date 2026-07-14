@@ -43,6 +43,7 @@ import type { AnalyticsOrigin } from './components/editors/keymap-editor-types'
 import { AnalyzePage } from './components/analyze/AnalyzePage'
 import { buildKeymapSnapshot } from './components/analyze/keymap-snapshot-builder'
 import { LayoutStoreContent } from './components/editors/LayoutStoreModal'
+import { IMPORT_BTN } from './components/editors/layout-store-types'
 import { ROW_CLASS } from './components/editors/modal-controls'
 import { ModalCloseButton } from './components/editors/ModalCloseButton'
 import { decodeLayoutOptions } from '../shared/kle/layout-options'
@@ -661,8 +662,6 @@ export function App() {
   // --- Connected view ---
   const api = window.vialAPI
 
-  const importBtnClass = 'rounded-lg border border-edge bg-surface/30 px-3 py-1.5 text-xs font-semibold text-content-muted hover:text-content hover:border-content-muted'
-
   const toolsExtra = (
     <>
       {(fileHandlers.handleImportVil || (!device.isDummy && sideload.sideloadJson)) && (
@@ -671,7 +670,7 @@ export function App() {
           <div className="flex gap-2">
             <button
               type="button"
-              className={importBtnClass}
+              className={IMPORT_BTN}
               onClick={fileHandlers.handleImportVil}
               disabled={fileIO.saving || fileIO.loading}
               data-testid="overlay-import-vil"
@@ -681,7 +680,7 @@ export function App() {
             {!device.isDummy && sideload.sideloadJson && (
               <button
                 type="button"
-                className={importBtnClass}
+                className={IMPORT_BTN}
                 onClick={sideload.sideloadJson}
                 disabled={fileIO.saving || fileIO.loading}
                 data-testid="overlay-sideload-json"
