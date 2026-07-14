@@ -33,7 +33,22 @@ export function formatConditionLabel(result: TypingTestResult, t: (key: string) 
       // Text name takes priority; falls back to the stable textId for
       // legacy rows saved before the name was captured.
       return result.fileImportTextName || String(result.mode2 ?? '')
-    case 'tatoeba':
-      return `${t('editor.typingTest.history.conditionTatoeba')} (${String(result.mode2 ?? language)})`
+    case 'tatoeba': {
+      // mode2 is now a composite `language|pattern|lineCount-or-duration`
+      // (see deriveMode2) so the label distinguishes a 5-line run from a
+      // 120s run of the same pack. Legacy rows saved before this change
+      // stored the bare language in mode2 — fall back to the old label.
+      const raw = String(result.mode2 ?? language)
+      const parts = raw.split('|')
+      const tatoeba = t('editor.typingTest.history.conditionTatoeba')
+      if (parts.length === 3) {
+        const [lang, pattern, count] = parts
+        const unit = pattern === 'lines'
+          ? `${count} ${t('editor.typingTest.mode.lines')}`
+          : `${count}s`
+        return `${tatoeba} ${unit} (${lang})`
+      }
+      return `${tatoeba} (${raw})`
+    }
   }
 }

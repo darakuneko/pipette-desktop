@@ -17,7 +17,8 @@ export interface ComparisonStats {
  *  — no dedicated field needed, and it works for legacy rows too. This is
  *  the single source of truth for condition grouping:
  *  - fileImport: the imported text id (`mode2`), language-independent
- *  - tatoeba: the sentence-pack language (`mode2`), word-language-independent
+ *  - tatoeba: the sentence-pack language + pattern + active unit (`mode2`,
+ *    see `deriveMode2`), word-language-independent
  *  - normal (words/time/quote): mode + params + language + toggles (`configKey`)
  *  Rows missing some of these fields fall back the same way `configKey`
  *  already does for PB grouping, so old history entries group sensibly

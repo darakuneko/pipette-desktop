@@ -60,7 +60,17 @@ describe('formatConditionLabel', () => {
       .toBe('t1')
   })
 
-  it('formats tatoeba with the pack language', () => {
+  it('formats tatoeba with the pack language + line count', () => {
+    expect(formatConditionLabel(makeResult({ mode: 'tatoeba', mode2: 'japanese|lines|5', language: 'japanese' }), identityT))
+      .toBe('editor.typingTest.history.conditionTatoeba 5 editor.typingTest.mode.lines (japanese)')
+  })
+
+  it('formats tatoeba with the pack language + duration', () => {
+    expect(formatConditionLabel(makeResult({ mode: 'tatoeba', mode2: 'japanese|time|30', language: 'japanese' }), identityT))
+      .toBe('editor.typingTest.history.conditionTatoeba 30s (japanese)')
+  })
+
+  it('falls back to the legacy bare-language label for rows saved before the composite mode2', () => {
     expect(formatConditionLabel(makeResult({ mode: 'tatoeba', mode2: 'japanese', language: 'japanese' }), identityT))
       .toBe('editor.typingTest.history.conditionTatoeba (japanese)')
   })

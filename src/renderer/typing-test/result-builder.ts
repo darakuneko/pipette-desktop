@@ -99,8 +99,11 @@ export function deriveMode2(config: TypingTestConfig): number | string {
       // Group PBs per imported text via its id.
       return config.textId
     case 'tatoeba':
-      // Group PBs per sentence-pack language.
-      return config.language
+      // Group PBs per sentence-pack language + pattern + active unit (line
+      // count or duration), mirroring how words/time bake their count/duration
+      // into mode2 — otherwise a 5-line run and a 120s run of the same pack
+      // would share one PB pool and condition label.
+      return `${config.language}|${config.pattern}|${config.pattern === 'lines' ? config.lineCount : config.duration}`
   }
 }
 
