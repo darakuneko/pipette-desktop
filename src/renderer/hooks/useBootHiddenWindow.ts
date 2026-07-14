@@ -7,22 +7,26 @@ import { useEffect, useRef } from 'react'
  * the window for the Unlock dialog." The main process starts the window
  * hidden (windowStartedHidden()); this hook shows it only while the
  * Unlock dialog opened during session restore is visible, then hides it
- * again once the dialog resolves — unless the user has already shown the
- * window themselves (e.g. a tray click), in which case the boot-hidden
- * phase ends and the window is left alone.
+ * again once the dialog resolves — but only if this hook is the one that
+ * showed it. If the window is already visible (the user showed it
+ * themselves, or the boot-hidden phase never really applied), later
+ * unlock dialogs during normal use are left alone: the phase ends without
+ * showing or hiding anything.
  */
 export function useBootHiddenWindow(unlockDialogVisible: boolean): void {
   const bootHiddenRef = useRef(false)
   const weShowedRef = useRef(false)
   const prevVisibleRef = useRef(unlockDialogVisible)
 
-  // Learn whether this launch started hidden. Runs once; a failure (or a
-  // launch that did not start hidden) simply leaves the phase off, so the
-  // rest of this hook never touches the window.
+  // Learn whether this launch started hidden. Runs once; only arm the
+  // phase if the window is still actually hidden by the time this
+  // resolves — if the user (or the OS) already revealed it, the
+  // boot-hidden phase is already over and must never re-arm. A failure
+  // (or a launch that did not start hidden) also leaves the phase off.
   useEffect(() => {
     let cancelled = false
     window.vialAPI.windowStartedHidden().then((hidden) => {
-      if (!cancelled) bootHiddenRef.current = hidden
+      if (!cancelled) bootHiddenRef.current = hidden && document.visibilityState !== 'visible'
     }).catch(() => { /* best-effort — stay non-boot-hidden on failure */ })
     return () => { cancelled = true }
   }, [])
@@ -33,20 +37,27 @@ export function useBootHiddenWindow(unlockDialogVisible: boolean): void {
     if (!bootHiddenRef.current) return
 
     if (unlockDialogVisible && !wasVisible) {
-      // Rising edge: the unlock dialog just opened during the boot-hidden
-      // phase. Show the window for it and remember that we did so, so the
-      // visibilitychange listener below does not mistake this for the
-      // user showing the window themselves.
+      if (document.visibilityState === 'visible') {
+        // The window is already visible (the user is actively using it) —
+        // this is not the boot-hidden dialog. End the phase without
+        // touching the window; later dialogs must not hide it either.
+        bootHiddenRef.current = false
+        return
+      }
+      // Rising edge on a genuinely hidden window: show it for the dialog
+      // and remember that we did so, so the falling edge only hides what
+      // we showed.
       weShowedRef.current = true
       void window.vialAPI.windowShow().catch(() => {})
     } else if (!unlockDialogVisible && wasVisible) {
       // Falling edge: the dialog resolved (unlocked, or cancelled/
-      // disconnected). Hide the window again and end the boot-hidden
-      // phase — later dialogs in this session no longer auto-show/hide.
-      // (weShowedRef needs no reset: every read is gated on the
-      // boot-hidden flag that just went false for good.)
+      // disconnected). End the boot-hidden phase — later dialogs in this
+      // session no longer auto-show/hide — and hide the window again only
+      // if this hook is the one that showed it for this dialog.
       bootHiddenRef.current = false
-      void window.vialAPI.windowHide().catch(() => {})
+      if (weShowedRef.current) {
+        void window.vialAPI.windowHide().catch(() => {})
+      }
     }
   }, [unlockDialogVisible])
 
