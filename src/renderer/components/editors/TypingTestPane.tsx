@@ -128,6 +128,18 @@ export interface TypingTestPaneProps {
    * controls one switch at a time. */
   monitorAppEnabled?: boolean
   onMonitorAppEnabledChange?: (enabled: boolean) => void
+  /** AppConfig flag — keeps Pipette running in the tray after the last
+   * window closes. Mirrors Settings > Tools; surfaced here too since the
+   * view-only window is often the last one open. */
+  trayResident?: boolean
+  onTrayResidentChange?: (enabled: boolean) => void
+  /** AppConfig flag — launch resident in the tray without opening a
+   * window. Disabled while trayResident is off; turning trayResident off
+   * also clears this when set, since a hidden window with no tray icon
+   * to reopen it would be unreachable. Same linked-clear logic as
+   * SettingsToolsTab — keep both in sync. */
+  startInTray?: boolean
+  onStartInTrayChange?: (enabled: boolean) => void
   /** Which tab of the view-only menu is currently open. Window shows
    * size / always-on-top controls; REC shows the recording toggle and
    * the entry point to the analytics page; Monitor App shows the
@@ -201,6 +213,10 @@ export function TypingTestPane({
   onHeatmapWindowMinChange,
   monitorAppEnabled,
   onMonitorAppEnabledChange,
+  trayResident,
+  onTrayResidentChange,
+  startInTray,
+  onStartInTrayChange,
   menuTab = 'window',
   onMenuTabChange,
   onViewAnalytics,
@@ -279,6 +295,18 @@ export function TypingTestPane({
     }
     onRecordEnabledChange(true)
   }, [onRecordEnabledChange, recordEnabled, recordingConsentAccepted])
+
+  const handleTrayResidentToggle = useCallback(() => {
+    if (!onTrayResidentChange) return
+    const next = !trayResident
+    onTrayResidentChange(next)
+    // Mirrors SettingsToolsTab: a hidden window with no tray icon to
+    // reopen it would be unreachable, so turning tray residency off
+    // also clears startInTray when it was on.
+    if (!next && startInTray) {
+      onStartInTrayChange?.(false)
+    }
+  }, [onTrayResidentChange, trayResident, startInTray, onStartInTrayChange])
 
   const handleConsentAccept = useCallback(() => {
     onRecordingConsentAccepted?.()
@@ -816,9 +844,10 @@ export function TypingTestPane({
 
             {/* Each tab body is wrapped in its own flex column so we can
                 pin a shared min-h. REC currently has the most controls
-                (Start/Stop, View Analytics, HeatMap window), so the
-                other tabs match its natural height. Keep this in sync
-                if any tab grows/shrinks meaningfully. */}
+                (Start/Stop, Monitor App, tray toggles, View Analytics,
+                HeatMap window), so the other tabs match its natural
+                height. Keep this in sync if any tab grows/shrinks
+                meaningfully. */}
             {menuTab === 'window' && (
               <div className="flex min-h-word-list flex-col gap-1.5">
                 <button
@@ -905,6 +934,42 @@ export function TypingTestPane({
                     }}
                   >
                     {t('editor.typingTest.monitorApp.label')}
+                  </button>
+                )}
+                {/* Tray toggles — same AppConfig fields and linked-clear
+                    semantics as Settings > Tools, surfaced here since the
+                    view-only window is often the last one open before the
+                    user reaches for the tray. */}
+                {onTrayResidentChange && (
+                  <button
+                    type="button"
+                    role="menuitemcheckbox"
+                    aria-checked={trayResident ?? false}
+                    data-testid="typing-tray-resident-toggle"
+                    className={`whitespace-nowrap ${trayResident ? BTN_TOGGLE_ACTIVE : BTN_TOGGLE_INACTIVE}`}
+                    onClick={handleTrayResidentToggle}
+                  >
+                    {t('settings.trayResident')}
+                  </button>
+                )}
+                {onStartInTrayChange && (
+                  <button
+                    type="button"
+                    role="menuitemcheckbox"
+                    aria-checked={startInTray ?? false}
+                    aria-disabled={!trayResident}
+                    data-testid="typing-start-in-tray-toggle"
+                    className={
+                      !trayResident
+                        ? 'whitespace-nowrap rounded border border-edge px-2 py-1 text-content-muted opacity-60 cursor-not-allowed'
+                        : `whitespace-nowrap ${startInTray ? BTN_TOGGLE_ACTIVE : BTN_TOGGLE_INACTIVE}`
+                    }
+                    onClick={() => {
+                      if (!trayResident) return
+                      onStartInTrayChange(!startInTray)
+                    }}
+                  >
+                    {t('settings.startInTray')}
                   </button>
                 )}
                 {onViewAnalytics && (

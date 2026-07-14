@@ -939,6 +939,10 @@ export function App() {
             onTypingRecordingConsentAccepted={() => appConfig.set('typingRecordingConsentAccepted', true)}
             typingMonitorAppEnabled={appConfig.config.typingMonitorAppEnabled}
             onTypingMonitorAppEnabledChange={(enabled) => appConfig.set('typingMonitorAppEnabled', enabled)}
+            typingTrayResident={appConfig.config.trayResident}
+            onTypingTrayResidentChange={(enabled) => appConfig.set('trayResident', enabled)}
+            typingStartInTray={appConfig.config.startInTray}
+            onTypingStartInTrayChange={(enabled) => appConfig.set('startInTray', enabled)}
             typingViewMenuTab={devicePrefs.typingViewMenuTab}
             onTypingViewMenuTabChange={devicePrefs.setTypingViewMenuTab}
             onViewAnalytics={handleViewAnalytics}
