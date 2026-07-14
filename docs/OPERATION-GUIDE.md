@@ -1063,7 +1063,7 @@ Click the **Typing Test** button in the status bar to enter typing test mode.
 
 The left side of the typing-test screen is a collapsible **Settings** panel. The chevron button at its bottom collapses it to a thin rail and expands it again; the state is saved per keyboard. The panel groups the test controls into three sections:
 
-- **Settings** — the **Mode** row (see below); **Layer** (the base layer used by the on-screen keymap, shown when the keyboard has more than one layer); and **Lines** / **Font** (line count and font size of the reading window — these two apply in every mode). With a MonkeyType language active, the **Pattern** / **Units** / **Option** rows described under **MonkeyType** also appear here
+- **Settings** — the **Data Source** row (see below); **Layer** (the base layer used by the on-screen keymap, shown when the keyboard has more than one layer); and **Lines** / **Font** (line count and font size of the reading window — these two apply in every mode). With a MonkeyType language active, the **Pattern** / **Units** / **Option** rows described under **MonkeyType** also appear here
 - **Data** — **History** opens the saved-results modal: results are split into **MonkeyType** and **File Import** tabs, with a mode filter dropdown on the MonkeyType tab and a text filter dropdown on the File Import tab; the stats row (Best / Avg / Last 10 / Tests / Avg Acc), the sparkline, and **Export CSV** all follow the current filter, and each row can be renamed (via the same naming modal as the finished screen) or deleted. **Compare** picks the comparison baseline — **Previous**, **Best**, **Average**, a pinned **Result**, or **Off**; while a baseline is set, colored ▲ / ▼ deltas appear next to WPM / KPM / Accuracy in the stats row. The baseline choice is remembered per test condition (mode + settings + language, or per imported text). **Save Unnamed** (default on) auto-saves finished results even without a name; switched off, only named results are kept
 
   Below the sparkline, an **Accuracy Trend** chart plots accuracy over time for a single test condition, picked from the dropdown next to it (e.g. "50 words (english) +punct" or "30s (english)"; the label format varies by mode). This condition picker is independent of the mode/text filter above it — it always lists every condition present in the active tab's full history — and defaults to the condition of the most recent run. The chart appears once the selected condition has 2 or more saved runs
@@ -1071,11 +1071,11 @@ The left side of the typing-test screen is a collapsible **Settings** panel. The
   ![Typing Test — Accuracy trend](screenshots/typing-test-accuracy-trend.png)
 - **View** — three switches: **Operation** (the controls row below the reading window), **Measurement** (the live stats row), and **Keymap** (the keyboard pane). Each hides its area when switched off; a finished test always shows the controls and the results regardless
 
-#### Mode
+#### Data Source
 
-![Typing Test — Mode Modal (MonkeyType)](screenshots/typing-test-mode-monkeytype.png)
+![Typing Test — Data Source Modal (MonkeyType)](screenshots/typing-test-mode-monkeytype.png)
 
-The **Mode** row in the left Settings panel shows the active mode type and source (a MonkeyType language, a Tatoeba pack, or an imported text) — click the row to open the Mode modal. Four tabs select what you type against:
+The **Data Source** row in the left Settings panel shows the active mode type and source (a MonkeyType language, a Tatoeba pack, or an imported text) — click the row to open the Data Source modal. Four tabs select what you type against:
 
 - **MonkeyType** — random words, timed word bursts, or real-world quotes generated from a downloaded language pack
 - **Tatoeba** — real sentences sampled from a downloaded Tatoeba language pack
@@ -1159,9 +1159,9 @@ Turning on Romaji input switches judging from literal text matching to sequentia
 
 #### Tatoeba
 
-![Typing Test — Mode Modal (Tatoeba)](screenshots/typing-test-mode-tatoeba.png)
+![Typing Test — Data Source Modal (Tatoeba)](screenshots/typing-test-mode-tatoeba.png)
 
-Pick a downloaded language pack from the **Tatoeba** tab (download it first if needed — see **Mode** above) to type real sentences sampled from the [Tatoeba Project](https://tatoeba.org). Each run samples 5 sentences.
+Pick a downloaded language pack from the **Tatoeba** tab (download it first if needed — see **Data Source** above) to type real sentences sampled from the [Tatoeba Project](https://tatoeba.org). Each run samples 5 sentences.
 
 ![Typing Test — Tatoeba Running](screenshots/typing-test-tatoeba-running.png)
 
@@ -1172,7 +1172,7 @@ Pick a downloaded language pack from the **Tatoeba** tab (download it first if n
 
 #### Aozora Bunko
 
-![Typing Test — Mode Modal (Aozora Bunko)](screenshots/typing-test-mode-aozora.png)
+![Typing Test — Data Source Modal (Aozora Bunko)](screenshots/typing-test-mode-aozora.png)
 
 Browse and import public-domain Japanese literary works from the [Aozora Bunko](https://www.aozora.gr.jp/) catalog (roughly 10,500 works, sourced via the aozorabunko GitHub mirror).
 
@@ -1184,12 +1184,12 @@ Browse and import public-domain Japanese literary works from the [Aozora Bunko](
 - A downloaded work is stored through the same normalization and 5,000-word cap as File Import texts (see below). Words are counted by whitespace, so in Japanese prose — which contains no spaces — each paragraph counts as one word, and the cap effectively allows around 5,000 paragraphs
 - A downloaded work plays back exactly like an imported File Import text, including the per-line Enter-to-advance behavior, but it is only listed and deleted from this **Aozora Bunko** tab — it does not appear in the **File Import** tab
 - Click the trash icon on a Downloaded row to remove it; it returns to Available and can be re-imported later
-- The dataset-update banner described under **Mode** also applies here — updating refreshes the catalog listing itself, not any already-imported works
+- The dataset-update banner described under **Data Source** also applies here — updating refreshes the catalog listing itself, not any already-imported works
 - Once imported, a work whose content turns out to be pure kana (rare — most Aozora Bunko literature mixes kanji and kana) shows a **Romaji** badge in the Downloaded section, same as a kana File Import text — see **Romaji Input** under MonkeyType above
 
 #### File Import
 
-![Typing Test — Mode Modal (File Import)](screenshots/typing-test-mode-import.png)
+![Typing Test — Data Source Modal (File Import)](screenshots/typing-test-mode-import.png)
 
 Import your own plain-text `.txt` file (UTF-8 only) to type against it — useful for practicing code snippets, prose, or any custom text.
 

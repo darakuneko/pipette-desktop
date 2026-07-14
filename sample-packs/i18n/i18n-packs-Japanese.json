@@ -1,5 +1,5 @@
 {
-  "version": "0.1.14",
+  "version": "0.1.15",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -390,7 +390,7 @@
       "resetSize": "初期サイズ",
       "fitSize": "フィット",
       "baseLayer": "Layer",
-      "modeLabel": "Mode",
+      "modeLabel": "データ元",
       "pattern": "パターン",
       "units": "単位",
       "unitsWords": "単位(単語)",
@@ -420,7 +420,7 @@
       "paused": "ウィンドウがフォーカスを失いました",
       "layerNote": "レイヤー切替の追随は MO / LT / LM のみ対応しています。その他のレイヤーキーや特殊機能は反映されない場合があります。",
       "language": {
-        "title": "Mode",
+        "title": "データ元",
         "searchPlaceholder": "言語を検索...",
         "downloaded": "ダウンロード済み",
         "available": "利用可能",
@@ -453,7 +453,8 @@
         "kanaRowLabel": "行",
         "kanaRowGroupAriaLabel": "著者名の読みの行で絞り込む",
         "kanaColumnGroupAriaLabel": "著者名の読みの段で絞り込む",
-        "romajiBadge": "Romaji"
+        "romajiBadge": "Romaji",
+        "romajiFilter": "ローマ字入力に対応した項目のみ表示"
       },
       "memory": {
         "pause": "一時停止",

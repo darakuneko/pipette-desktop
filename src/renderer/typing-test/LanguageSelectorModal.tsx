@@ -10,7 +10,7 @@ import { Check, Loader2, FileUp } from 'lucide-react'
 import { ICON_SM } from '../constants/ui-tokens'
 import { LanguagePackTab } from './LanguagePackTab'
 import { AozoraCatalogTab } from './AozoraCatalogTab'
-import { RowDeleteButton, RomajiBadge } from './list-parts'
+import { RowDeleteButton, RomajiBadge, RomajiFilterToggle } from './list-parts'
 import type { TypingTestTextMeta } from '../../shared/types/typing-test-text-store'
 
 type Tab = 'existing' | 'tatoeba' | 'import' | 'aozora'
@@ -219,6 +219,7 @@ function ImportTab({ currentFileImportTextId, onSelect, onDeleted }: ImportTabPr
   const { metas, importFromFile, confirmImport, remove } = useTypingTestTexts()
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [romajiOnly, setRomajiOnly] = useState(false)
   // Name of an import awaiting overwrite confirmation (null = none pending).
   const [overwriteName, setOverwriteName] = useState<string | null>(null)
 
@@ -227,6 +228,10 @@ function ImportTab({ currentFileImportTextId, onSelect, onDeleted }: ImportTabPr
   // presence of `source` rather than a specific provider name, so any
   // future catalog provider is excluded the same way.
   const fileImportMetas = useMemo(() => metas.filter((meta) => !meta.source), [metas])
+  const visibleMetas = useMemo(
+    () => (romajiOnly ? fileImportMetas.filter((meta) => meta.romajiCapable === true) : fileImportMetas),
+    [fileImportMetas, romajiOnly],
+  )
 
   const handleRemove = useCallback(async (id: string) => {
     // Optimistic: report before the IPC round-trip so closing the modal
@@ -313,13 +318,16 @@ function ImportTab({ currentFileImportTextId, onSelect, onDeleted }: ImportTabPr
         {error && (
           <p className="mt-1 text-center text-xs text-danger" data-testid="typing-text-import-error">{error}</p>
         )}
+        <div className="mt-2 flex flex-wrap items-center gap-1">
+          <RomajiFilterToggle active={romajiOnly} onToggle={() => setRomajiOnly((v) => !v)} />
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {fileImportMetas.length === 0 ? (
+        {visibleMetas.length === 0 ? (
           <p className="px-4 py-6 text-center text-sm text-content-muted">{t('editor.typingTest.language.importEmpty')}</p>
         ) : (
-          fileImportMetas.map((meta) => (
+          visibleMetas.map((meta) => (
             <ImportRow
               key={meta.id}
               meta={meta}

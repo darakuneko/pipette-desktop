@@ -482,8 +482,8 @@ export function TypingTestPane({
     }
   }, [viewOnly, viewOnlyWindowSize, getDefaultCompactSize, onViewOnlyChange, typingTest])
 
-  // Mode / language. The mode kind (FileImport / Normal) goes in the label —
-  // "Mode(FileImport):" — and the button shows just the source (file name or
+  // Data Source / language. The mode kind (FileImport / Normal) goes in the label —
+  // "Data Source(FileImport)" — and the button shows just the source (file name or
   // language), truncated to one line; the full text is on the title.
   let modeType: string
   if (typingTest.config.mode === 'fileImport') {

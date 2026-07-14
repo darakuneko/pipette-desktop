@@ -1,5 +1,5 @@
 {
-  "version": "0.1.14",
+  "version": "0.1.15",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -390,7 +390,7 @@
       "resetSize": "初期サイズ☆",
       "fitSize": "フィット！",
       "baseLayer": "Base Layer",
-      "modeLabel": "Mode",
+      "modeLabel": "データ元っしょ",
       "pattern": "パターンっしょ",
       "units": "単位っしょ",
       "unitsWords": "単位(単語)☆",
@@ -420,7 +420,7 @@
       "paused": "ウィンドウどこ行った？ｗ",
       "layerNote": "レイヤー追随は MO/LT/LM だけおけ☆他は反映されないワンチャンあるから！",
       "language": {
-        "title": "言語っしょ",
+        "title": "データ元☆",
         "searchPlaceholder": "言語を検索☆...",
         "downloaded": "入れたよん！",
         "available": "いけるっしょ",
@@ -453,7 +453,8 @@
         "kanaRowLabel": "行",
         "kanaRowGroupAriaLabel": "著者名の読みの行で絞り込むっしょ",
         "kanaColumnGroupAriaLabel": "著者名の読みの段で絞り込むっしょ",
-        "romajiBadge": "Romaji☆"
+        "romajiBadge": "Romaji☆",
+        "romajiFilter": "ローマ字入力できるやつだけ表示するっしょ☆"
       },
       "memory": {
         "pause": "一時停止っしょ",
