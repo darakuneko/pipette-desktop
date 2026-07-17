@@ -758,12 +758,21 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.WINDOW_IS_ALWAYS_ON_TOP_SUPPORTED),
   setWindowZoom: (zoom: number): Promise<void> =>
     ipcRenderer.invoke(IpcChannels.WINDOW_SET_ZOOM, zoom),
-  windowShow: (): Promise<void> =>
+  windowShow: (): Promise<boolean> =>
     ipcRenderer.invoke(IpcChannels.WINDOW_SHOW),
   windowHide: (): Promise<void> =>
     ipcRenderer.invoke(IpcChannels.WINDOW_HIDE),
   windowStartedHidden: (): Promise<boolean> =>
     ipcRenderer.invoke(IpcChannels.WINDOW_STARTED_HIDDEN),
+  windowIsVisible: (): Promise<boolean> =>
+    ipcRenderer.invoke(IpcChannels.WINDOW_IS_VISIBLE),
+  onWindowVisibilityChanged: (callback: (visible: boolean) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, visible: boolean): void => {
+      callback(visible)
+    }
+    ipcRenderer.on(IpcChannels.WINDOW_VISIBILITY_CHANGED, handler)
+    return () => ipcRenderer.removeListener(IpcChannels.WINDOW_VISIBILITY_CHANGED, handler)
+  },
 
   // --- Tray status ---
   trayStatusUpdate: (status: TrayStatus): Promise<void> =>

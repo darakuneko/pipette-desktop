@@ -85,12 +85,17 @@ let trayInstance: Tray | null = null
 
 /** Show and focus the given window. Shared by the tray menu/click
  * handlers and the WINDOW_SHOW IPC handler so a hidden (start-in-tray)
- * window and the tray icon reveal it the same way. */
-export function showWindow(getWindow: () => BrowserWindow | null): void {
+ * window and the tray icon reveal it the same way. Returns whether the
+ * window actually transitioned from hidden to shown, so callers that only
+ * want to act on a genuine hidden→visible edge (e.g. the boot-hidden Unlock
+ * dialog flow) can tell that apart from a window that was already visible. */
+export function showWindow(getWindow: () => BrowserWindow | null): boolean {
   const win = getWindow()
-  if (!win) return
+  if (!win) return false
+  const wasVisible = win.isVisible()
   win.show()
   win.focus()
+  return !wasVisible
 }
 
 const DEFAULT_TRAY_STATUS: TrayStatus = { keyboardName: null, recording: false, count: 0, kpm: 0 }

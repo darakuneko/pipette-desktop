@@ -214,7 +214,7 @@ describe('tray', () => {
   })
 
   it('Show menu item shows and focuses the window', () => {
-    const win = { show: vi.fn(), focus: vi.fn() }
+    const win = { show: vi.fn(), focus: vi.fn(), isVisible: vi.fn().mockReturnValue(false) }
     setupTray(() => win as unknown as Electron.BrowserWindow)
 
     const template = mockBuildFromTemplate.mock.calls[0][0]
@@ -243,7 +243,7 @@ describe('tray', () => {
   })
 
   it('tray click event shows and focuses the window, same as Show', () => {
-    const win = { show: vi.fn(), focus: vi.fn() }
+    const win = { show: vi.fn(), focus: vi.fn(), isVisible: vi.fn().mockReturnValue(false) }
     setupTray(() => win as unknown as Electron.BrowserWindow)
 
     const clickHandler = trayInstances[0].handlers.get('click')
@@ -328,7 +328,7 @@ describe('updateTrayStatus', () => {
   })
 
   it('the rebuilt Show item still shows and focuses the window', () => {
-    const win = { show: vi.fn(), focus: vi.fn() }
+    const win = { show: vi.fn(), focus: vi.fn(), isVisible: vi.fn().mockReturnValue(false) }
     const getWindow = () => win as unknown as Electron.BrowserWindow
     setupTray(getWindow)
     updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 1, kpm: 1 }, getWindow)
@@ -344,7 +344,7 @@ describe('updateTrayStatus', () => {
 
 describe('showWindow', () => {
   it('shows and focuses the window when one exists', () => {
-    const win = { show: vi.fn(), focus: vi.fn() }
+    const win = { show: vi.fn(), focus: vi.fn(), isVisible: vi.fn().mockReturnValue(false) }
     showWindow(() => win as unknown as Electron.BrowserWindow)
     expect(win.show).toHaveBeenCalled()
     expect(win.focus).toHaveBeenCalled()
@@ -352,6 +352,20 @@ describe('showWindow', () => {
 
   it('is a no-op when there is no window', () => {
     expect(() => showWindow(() => null)).not.toThrow()
+  })
+
+  it('returns false when there is no window', () => {
+    expect(showWindow(() => null)).toBe(false)
+  })
+
+  it('returns true when the window transitions from hidden to shown', () => {
+    const win = { show: vi.fn(), focus: vi.fn(), isVisible: vi.fn().mockReturnValue(false) }
+    expect(showWindow(() => win as unknown as Electron.BrowserWindow)).toBe(true)
+  })
+
+  it('returns false when the window was already visible', () => {
+    const win = { show: vi.fn(), focus: vi.fn(), isVisible: vi.fn().mockReturnValue(true) }
+    expect(showWindow(() => win as unknown as Electron.BrowserWindow)).toBe(false)
   })
 })
 

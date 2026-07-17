@@ -166,4 +166,25 @@ describe('UnlockDialog', () => {
     expect(warning).toBeInTheDocument()
     expect(screen.getByText('Click the macro key again after unlocking.')).toBeInTheDocument()
   })
+
+  it('calls onDisconnect when unlockStart rejects', async () => {
+    unlockStart.mockRejectedValue(new Error('failed to start unlock'))
+    const onDisconnect = vi.fn()
+
+    await act(async () => {
+      render(
+        <UnlockDialog
+          keys={keys}
+          unlockKeys={unlockKeys}
+          unlockStart={unlockStart}
+          unlockPoll={unlockPoll}
+          onComplete={onComplete}
+          onDisconnect={onDisconnect}
+        />,
+      )
+    })
+
+    expect(onDisconnect).toHaveBeenCalledTimes(1)
+    expect(unlockPoll).not.toHaveBeenCalled()
+  })
 })

@@ -169,7 +169,7 @@ export function useKeyboardPersistence(
   const refreshUnlockStatus = useCallback(async () => {
     try {
       const unlockStatus = await window.vialAPI.getUnlockStatus()
-      setState((s) => ({ ...s, unlockStatus }))
+      setState((s) => ({ ...s, unlockStatus, unlockStatusKnown: true }))
     } catch (err) {
       console.error('[KB] unlock status refresh failed:', err)
     }

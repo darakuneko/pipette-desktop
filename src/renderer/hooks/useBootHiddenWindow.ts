@@ -1,77 +1,179 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+
+interface BootHiddenWindowOptions {
+  unlockDialogVisible: boolean
+  /**
+   * Whether the connected keyboard is currently locked, once known:
+   * true = confirmed locked, false = confirmed unlocked, null = not yet
+   * determined (still loading, no device, or unlock status unknown).
+   */
+  keyboardLocked: boolean | null
+  onRequestUnlockDialog: () => void
+}
 
 /**
  * Manages the window-visibility side of "start hidden in tray, but show
  * the window for the Unlock dialog." The main process starts the window
  * hidden (windowStartedHidden()); this hook shows it only while the
- * Unlock dialog opened during session restore is visible, then hides it
+ * Unlock dialog is visible during that boot-hidden phase, then hides it
  * again once the dialog resolves — but only if this hook is the one that
  * showed it. If the window is already visible (the user showed it
  * themselves, or the boot-hidden phase never really applied), later
  * unlock dialogs during normal use are left alone: the phase ends without
  * showing or hiding anything.
+ *
+ * It also owns opening the dialog in the first place: if session restore
+ * reconnects a keyboard that is still locked and nothing has opened the
+ * dialog yet (e.g. the plain keymap-editor restore path, as opposed to
+ * the typingView restore path which opens it itself), this hook requests
+ * it once per launch via onRequestUnlockDialog. If the keyboard turns out
+ * to already be unlocked, the boot-hidden phase ends without ever
+ * touching the window.
+ *
+ * Window visibility truth comes from the main process (windowIsVisible /
+ * onWindowVisibilityChanged), not from document.visibilityState: a
+ * BrowserWindow created with show: false can still report
+ * document.visibilityState === 'visible' on some platforms (observed on
+ * Linux Electron), which would silently prevent the boot-hidden phase
+ * from ever arming.
  */
-export function useBootHiddenWindow(unlockDialogVisible: boolean): void {
-  const bootHiddenRef = useRef(false)
+export function useBootHiddenWindow(opts: BootHiddenWindowOptions): void {
+  const { unlockDialogVisible, keyboardLocked, onRequestUnlockDialog } = opts
+
+  // Arming is reactive state, not a ref: windowStartedHidden() resolves
+  // asynchronously, and by the time it does, keyboardLocked may already be
+  // known or the dialog may already be visible (typingView restore path).
+  // Effects keyed on `armed` re-run when it flips true and pick up the
+  // current props, so none of those already-set signals are lost.
+  const [armed, setArmed] = useState(false)
+
   const weShowedRef = useRef(false)
-  const prevVisibleRef = useRef(unlockDialogVisible)
+  // Tracks unlockDialogVisible only while armed, starting at false so that
+  // a dialog already visible at the moment arming resolves is treated as
+  // a rising edge instead of being missed.
+  const prevVisibleRef = useRef(false)
+  // One-shot per launch: once we ask for the dialog, never ask again
+  // (disconnect → reconnect must not re-prompt).
+  const promptedRef = useRef(false)
+  const onRequestUnlockDialogRef = useRef(onRequestUnlockDialog)
+  onRequestUnlockDialogRef.current = onRequestUnlockDialog
+
+  // Live main-process window visibility, kept current by the
+  // onWindowVisibilityChanged subscription below. Read synchronously by
+  // the arming effect and the rising-edge check instead of the DOM's
+  // visibilityState.
+  const windowVisibleRef = useRef(false)
+  // True once a live onWindowVisibilityChanged push has updated
+  // windowVisibleRef — lets the arming effect know its own
+  // windowIsVisible() snapshot may already be stale by the time it
+  // resolves (e.g. the user revealed the window via the tray in the gap
+  // between the query being sent and it resolving) and defer to the ref
+  // instead of overwriting it with outdated data.
+  const windowVisibilityKnownRef = useRef(false)
+
+  // Subscribe to live visibility pushes once per mount. Two jobs: keep
+  // windowVisibleRef current, and end the boot-hidden phase the moment the
+  // user reveals the window themselves (tray Show / OS restore) rather
+  // than via our own windowShow() call. `armed` is not read from this
+  // effect's closure (it would be stale — this effect has no deps) so
+  // setArmed(false) is called unconditionally; that is a harmless no-op
+  // when the phase is already off.
+  useEffect(() => {
+    const unsubscribe = window.vialAPI.onWindowVisibilityChanged((visible) => {
+      windowVisibleRef.current = visible
+      windowVisibilityKnownRef.current = true
+      if (visible && !weShowedRef.current) {
+        setArmed(false)
+      }
+    })
+    return unsubscribe
+  }, [])
 
   // Learn whether this launch started hidden. Runs once; only arm the
   // phase if the window is still actually hidden by the time this
   // resolves — if the user (or the OS) already revealed it, the
-  // boot-hidden phase is already over and must never re-arm. A failure
-  // (or a launch that did not start hidden) also leaves the phase off.
+  // boot-hidden phase is already over and must never arm. A failure (or a
+  // launch that did not start hidden) also leaves the phase off.
   useEffect(() => {
     let cancelled = false
-    window.vialAPI.windowStartedHidden().then((hidden) => {
-      if (!cancelled) bootHiddenRef.current = hidden && document.visibilityState !== 'visible'
+    Promise.all([window.vialAPI.windowStartedHidden(), window.vialAPI.windowIsVisible()]).then(([hidden, visible]) => {
+      if (cancelled) return
+      // A live push may have already updated windowVisibleRef with more
+      // current data than this query's own snapshot — trust that over a
+      // possibly-stale `visible` value.
+      if (!windowVisibilityKnownRef.current) {
+        windowVisibleRef.current = visible
+      }
+      setArmed(hidden && !windowVisibleRef.current)
     }).catch(() => { /* best-effort — stay non-boot-hidden on failure */ })
     return () => { cancelled = true }
   }, [])
 
+  // Show/hide the window around the Unlock dialog's visible lifetime.
   useEffect(() => {
+    if (!armed) return
     const wasVisible = prevVisibleRef.current
     prevVisibleRef.current = unlockDialogVisible
-    if (!bootHiddenRef.current) return
 
     if (unlockDialogVisible && !wasVisible) {
-      if (document.visibilityState === 'visible') {
+      if (windowVisibleRef.current) {
         // The window is already visible (the user is actively using it) —
         // this is not the boot-hidden dialog. End the phase without
         // touching the window; later dialogs must not hide it either.
-        bootHiddenRef.current = false
+        setArmed(false)
         return
       }
       // Rising edge on a genuinely hidden window: show it for the dialog
       // and remember that we did so, so the falling edge only hides what
-      // we showed.
+      // we showed. weShowedRef must be set synchronously (not after the
+      // invoke resolves): Electron emits win 'show' from within win.show(),
+      // so the WINDOW_VISIBILITY_CHANGED push reaches the visibility
+      // subscription above BEFORE this invoke's promise resolves. If
+      // weShowedRef were still false at that point, that push would read as
+      // a foreign reveal and disarm the phase, breaking this very show.
+      //
+      // That leaves a window-ownership race: the user may have shown the
+      // window via the tray in the gap between the WINDOW_IS_VISIBLE
+      // snapshot (arming effect) and this call. windowShow() resolves with
+      // whether main actually transitioned the window from hidden to
+      // shown — false means the user beat us to it. Roll back ownership in
+      // that case so the falling edge does not hide a window the user
+      // opened themselves.
       weShowedRef.current = true
-      void window.vialAPI.windowShow().catch(() => {})
+      void window.vialAPI.windowShow().then((transitioned) => {
+        if (!transitioned) {
+          weShowedRef.current = false
+          setArmed(false)
+        }
+      }).catch(() => {})
     } else if (!unlockDialogVisible && wasVisible) {
-      // Falling edge: the dialog resolved (unlocked, or cancelled/
-      // disconnected). End the boot-hidden phase — later dialogs in this
-      // session no longer auto-show/hide — and hide the window again only
-      // if this hook is the one that showed it for this dialog.
-      bootHiddenRef.current = false
+      // Falling edge: the dialog resolved (unlocked, or disconnected).
+      // End the boot-hidden phase — later dialogs in this session no
+      // longer auto-show/hide — and hide the window again only if this
+      // hook is the one that showed it for this dialog.
+      setArmed(false)
       if (weShowedRef.current) {
         void window.vialAPI.windowHide().catch(() => {})
       }
     }
-  }, [unlockDialogVisible])
+  }, [armed, unlockDialogVisible])
 
+  // Auto-open the Unlock dialog once, if session restore reconnects a
+  // still-locked keyboard and nothing else has opened it yet. If the
+  // keyboard turns out to be unlocked instead, end the boot-hidden phase —
+  // this is startup-only behavior, so a later lock transition or
+  // reconnect must not reveal the window.
   useEffect(() => {
-    function handleVisibilityChange() {
-      if (!bootHiddenRef.current) return
-      if (document.visibilityState === 'visible' && !weShowedRef.current) {
-        // The user showed the window themselves (tray Show / OS restore)
-        // before we ever showed it for a dialog. Never auto-hide a window
-        // the user opened — just end the boot-hidden phase.
-        bootHiddenRef.current = false
-      }
+    if (!armed) return
+    if (unlockDialogVisible) return
+    if (promptedRef.current) return
+    if (keyboardLocked === true) {
+      promptedRef.current = true
+      onRequestUnlockDialogRef.current()
+    } else if (keyboardLocked === false) {
+      setArmed(false)
     }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [])
+  }, [armed, keyboardLocked, unlockDialogVisible])
 }
