@@ -52,6 +52,13 @@ const isDev = !!process.env.ELECTRON_RENDERER_URL
 
 app.setDesktopName('pipette')
 
+// Single-instance guard: a second launch exits immediately and silently
+// (app.exit skips before-quit/will-quit — nothing is set up yet at this
+// point); the running instance is left untouched.
+if (!app.requestSingleInstanceLock()) {
+  app.exit(0)
+}
+
 // Distinguishes a user-initiated quit from a plain window close so the
 // tray-resident close handler knows whether to hide the window instead of
 // letting it (and the app) close.
