@@ -90,7 +90,8 @@
     },
     "files": [
       "out/**/*",
-      "package.json"
+      "package.json",
+      "build/icon.png"
     ],
     "artifactName": "${productName}-${os}-${arch}.${ext}",
     "generateUpdatesFilesForAllChannels": false,
