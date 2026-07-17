@@ -108,7 +108,11 @@ export function UnlockDialog({
         if (cancelled) return
         intervalId = setInterval(() => void pollOnce(), UNLOCK_POLL_INTERVAL)
       } catch {
-        // failed to start unlock
+        // Failed to start unlock — clean up via the parent's disconnect
+        // handler so the dialog does not stay mounted with no poll loop
+        // ever running (e.g. this leaves a boot-hidden launch stuck with
+        // a hidden window otherwise).
+        if (!cancelled) onDisconnectRef.current?.()
       }
     }
 

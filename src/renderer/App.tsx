@@ -263,10 +263,28 @@ export function App() {
     connect: lifecycle.handleConnect,
   })
 
+  // Whether the connected keyboard is confirmed locked, for the
+  // boot-hidden auto-unlock prompt below. Stays null (undetermined) until
+  // a real device is fully loaded with a known unlock status — a
+  // getUnlockStatus() failure must never be mistaken for "locked".
+  const bootKeyboardLocked: boolean | null =
+    (!device.connectedDevice || device.isDummy
+      || keyboard.loading || keyboard.uid === EMPTY_UID
+      || !keyboard.unlockStatusKnown)
+      ? null
+      : !keyboard.unlockStatus.unlocked
+
   // Show the window only for the Unlock dialog while a hidden launch
   // (startInTray) is restoring the last session; hide it again once the
-  // dialog resolves. No-ops entirely once the boot-hidden phase ends.
-  useBootHiddenWindow(editorUI.showUnlockDialog)
+  // dialog resolves. Also opens the dialog automatically, once per launch,
+  // if session restore reconnects a keyboard that is still locked (the
+  // typingView restore path below opens it itself, so this is idempotent
+  // with that path). No-ops entirely once the boot-hidden phase ends.
+  useBootHiddenWindow({
+    unlockDialogVisible: editorUI.showUnlockDialog,
+    keyboardLocked: bootKeyboardLocked,
+    onRequestUnlockDialog: () => editorUI.setShowUnlockDialog(true),
+  })
 
   const missingKeyLabel = useMissingKeyLabelNotice(keyboard.uid || null)
 
@@ -523,10 +541,12 @@ export function App() {
     } else if (mode === 'typingView') {
       if (keyboard.unlockStatus.unlocked) {
         enterTypingViewOnly()
-      } else {
+      } else if (keyboard.unlockStatusKnown) {
         pendingViewOnlyRef.current = true
         editorUI.setShowUnlockDialog(true)
       }
+      // Unknown unlock status (getUnlockStatus failed) — skip the restore
+      // rather than prompting for an unlock that may not be needed.
     }
   }, [
     device.connectedDevice,
@@ -534,6 +554,7 @@ export function App() {
     keyboard.loading,
     keyboard.uid,
     keyboard.unlockStatus.unlocked,
+    keyboard.unlockStatusKnown,
     devicePrefs.appliedUid,
     devicePrefs.viewMode,
     enterTypingViewOnly,

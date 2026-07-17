@@ -331,12 +331,14 @@ export function useKeyboardReload(
       if (newState.vialProtocol >= 0) {
         try {
           newState.unlockStatus = await api.getUnlockStatus()
+          newState.unlockStatusKnown = true
         } catch (err) {
           console.error('[KB] unlock status fetch failed:', err)
         }
       } else {
         // VIA-only keyboards are always unlocked
         newState.unlockStatus = { unlocked: true, inProgress: false, keys: [] }
+        newState.unlockStatusKnown = true
       }
 
       newState.loading = false

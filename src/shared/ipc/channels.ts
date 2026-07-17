@@ -306,6 +306,10 @@ export const IpcChannels = {
   WINDOW_SHOW: 'window:show',
   WINDOW_HIDE: 'window:hide',
   WINDOW_STARTED_HIDDEN: 'window:started-hidden',
+  WINDOW_IS_VISIBLE: 'window:is-visible',
+
+  // Window visibility (main → renderer)
+  WINDOW_VISIBILITY_CHANGED: 'window:visibility-changed',
 
   // Tray status (renderer → main)
   TRAY_STATUS_UPDATE: 'tray:status-update',

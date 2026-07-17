@@ -41,6 +41,7 @@ export function useKeyboardLoaders(
     newState.cols = definition.matrix.cols
     newState.layoutOptions = 0
     newState.unlockStatus = { unlocked: true, inProgress: false, keys: [] }
+    newState.unlockStatusKnown = true
 
     // Parse KLE layout
     const { layout, encoderCount } = parseDefinitionLayout(definition)
@@ -94,6 +95,7 @@ export function useKeyboardLoaders(
     newState.cols = definition.matrix.cols
     newState.layoutOptions = vil.layoutOptions
     newState.unlockStatus = { unlocked: true, inProgress: false, keys: [] }
+    newState.unlockStatusKnown = true
 
     // Parse KLE layout
     const { layout, encoderCount } = parseDefinitionLayout(definition)

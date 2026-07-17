@@ -135,6 +135,16 @@ function createWindow(): void {
   setWindowStartedHidden(startHidden)
   const win = new BrowserWindow(winOpts)
 
+  // document.visibilityState is unreliable for windows created with
+  // show: false (notably on Linux, it still reports 'visible'), so the
+  // renderer needs main-process visibility truth pushed to it directly.
+  win.on('show', () => {
+    win.webContents.send(IpcChannels.WINDOW_VISIBILITY_CHANGED, true)
+  })
+  win.on('hide', () => {
+    win.webContents.send(IpcChannels.WINDOW_VISIBILITY_CHANGED, false)
+  })
+
   win.on('close', (e) => {
     if (normalWindowSize) {
       const bounds = win.getBounds()
@@ -337,8 +347,8 @@ function setupWindowIpc(): void {
     },
   )
 
-  secureHandle(IpcChannels.WINDOW_SHOW, () => {
-    showWindow(getFirstWindow)
+  secureHandle(IpcChannels.WINDOW_SHOW, (): boolean => {
+    return showWindow(getFirstWindow)
   })
 
   secureHandle(IpcChannels.WINDOW_HIDE, () => {
@@ -346,6 +356,8 @@ function setupWindowIpc(): void {
   })
 
   secureHandle(IpcChannels.WINDOW_STARTED_HIDDEN, (): boolean => getWindowStartedHidden())
+
+  secureHandle(IpcChannels.WINDOW_IS_VISIBLE, (): boolean => getFirstWindow()?.isVisible() ?? false)
 
   secureHandle(IpcChannels.TRAY_STATUS_UPDATE, (_event, status: unknown) => {
     if (!isValidTrayStatus(status)) return

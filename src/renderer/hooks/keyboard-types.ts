@@ -48,6 +48,11 @@ export interface KeyboardState {
   keyOverrideEntries: KeyOverrideEntry[]
   altRepeatKeyEntries: AltRepeatKeyEntry[]
   unlockStatus: UnlockStatus
+  // True once unlockStatus reflects a real device answer (or a forced
+  // VIA-only/dummy/pipette-file unlocked state) rather than the initial
+  // placeholder. A failed getUnlockStatus() leaves this false, so callers
+  // must never treat "not known" as "confirmed locked".
+  unlockStatusKnown: boolean
   // QMK Backlight
   backlightBrightness: number
   backlightEffect: number
@@ -102,6 +107,7 @@ export function emptyState(): KeyboardState {
     keyOverrideEntries: [],
     altRepeatKeyEntries: [],
     unlockStatus: { unlocked: false, inProgress: false, keys: [] },
+    unlockStatusKnown: false,
     backlightBrightness: 0,
     backlightEffect: 0,
     rgblightBrightness: 0,

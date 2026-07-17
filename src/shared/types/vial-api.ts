@@ -447,9 +447,11 @@ export interface VialAPI {
   setWindowMinSize(width: number, height: number): Promise<void>
   isAlwaysOnTopSupported(): Promise<boolean>
   setWindowZoom(zoom: number): Promise<void>
-  windowShow(): Promise<void>
+  windowShow(): Promise<boolean>
   windowHide(): Promise<void>
   windowStartedHidden(): Promise<boolean>
+  windowIsVisible(): Promise<boolean>
+  onWindowVisibilityChanged(callback: (visible: boolean) => void): () => void
 
   // Tray status
   trayStatusUpdate(status: TrayStatus): Promise<void>
