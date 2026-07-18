@@ -156,6 +156,41 @@ describe('useKeymapHistory', () => {
     }
   })
 
+  it('carries appliedLayoutBefore/appliedLayoutAfter on a rewrite batch through undo/redo (Plan-key-label-keymap-apply)', () => {
+    const { result } = renderHook(() => useKeymapHistory(100))
+    const rewriteBatch: HistoryEntry = {
+      kind: 'batch',
+      entries: [keyEntry(5, 4, 0, 0)],
+      appliedLayoutBefore: 'qwerty',
+      appliedLayoutAfter: 'colemak-id',
+    }
+    act(() => result.current.push(rewriteBatch))
+
+    let undone: HistoryEntry | null = null
+    act(() => { undone = result.current.undo() })
+    expect(undone).toEqual(rewriteBatch)
+    if (undone && (undone as HistoryEntry).kind === 'batch') {
+      const batch = undone as Extract<HistoryEntry, { kind: 'batch' }>
+      expect(batch.appliedLayoutBefore).toBe('qwerty')
+      expect(batch.appliedLayoutAfter).toBe('colemak-id')
+    }
+
+    let redone: HistoryEntry | null = null
+    act(() => { redone = result.current.redo() })
+    expect(redone).toEqual(rewriteBatch)
+  })
+
+  it('a plain (non-rewrite) batch has neither appliedLayoutBefore nor appliedLayoutAfter', () => {
+    const { result } = renderHook(() => useKeymapHistory(100))
+    const plainBatch: HistoryEntry = { kind: 'batch', entries: [keyEntry(1, 2, 0, 0)] }
+    act(() => result.current.push(plainBatch))
+    expect(result.current.peekUndo).toEqual(plainBatch)
+    if (result.current.peekUndo && result.current.peekUndo.kind === 'batch') {
+      expect(result.current.peekUndo.appliedLayoutBefore).toBeUndefined()
+      expect(result.current.peekUndo.appliedLayoutAfter).toBeUndefined()
+    }
+  })
+
   it('supports maskPart on key entries', () => {
     const { result } = renderHook(() => useKeymapHistory(100))
     const entry: SingleHistoryEntry = {

@@ -7,6 +7,10 @@ export interface HubKeyLabelItem {
   name: string
   map: Record<string, string>
   composite_labels: Record<string, string> | null
+  /** Opt-in "applicable to keymap" marker. Absent on posts uploaded
+   *  before this field existed, so callers should treat it as falsy
+   *  when missing rather than requiring it. */
+  keymap_applicable?: boolean
   uploaded_by: string | null
   uploader_name: string | null
   created_at: string

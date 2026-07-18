@@ -223,6 +223,11 @@ const VALID_VIEW_MODES: ReadonlySet<string> = new Set(VIEW_MODES)
 
 interface ValidatedPrefs {
   keyboardLayout: KeyboardLayoutId
+  /** `PipetteSettings.appliedKeymapLayout` — id of the Key Label arrangement
+   *  last actually rewritten into the device keymap (or the built-in QWERTY
+   *  id), absent when this keyboard has never had a Rewrite applied
+   *  (追加要求 2026-07-18). Independent of `keyboardLayout` above. */
+  appliedKeymapLayout?: string
   autoAdvance: boolean
   layerPanelOpen: boolean
   basicViewType: BasicViewType
@@ -254,7 +259,7 @@ interface ValidatedPrefs {
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestMonkeytypeConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown; viewMatrix?: Record<string, ViewMatrixCell> } | null,
+  data: { keyboardLayout: string; appliedKeymapLayout?: unknown; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestMonkeytypeConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown; viewMatrix?: Record<string, ViewMatrixCell> } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
@@ -311,8 +316,13 @@ function validateIpcPrefs(
     ? data.viewMode as ViewMode
     : 'editor'
 
+  const appliedKeymapLayout = typeof data.appliedKeymapLayout === 'string' && data.appliedKeymapLayout.length > 0
+    ? data.appliedKeymapLayout
+    : undefined
+
   return {
     keyboardLayout: layout ?? defaultLayout,
+    appliedKeymapLayout,
     autoAdvance: autoAdvance ?? defaultAutoAdvance,
     layerPanelOpen,
     basicViewType,
@@ -434,6 +444,13 @@ export interface UseDevicePrefsReturn {
   applyDevicePrefs: (uid: string) => Promise<void>
   remapLabel: (qmkId: string) => string
   isRemapped: (qmkId: string) => boolean
+  /** `PipetteSettings.appliedKeymapLayout` — see `ValidatedPrefs` above. */
+  appliedKeymapLayout: string | undefined
+  /** Persists `appliedKeymapLayout`. Called only by the Key Label
+   *  "apply to keymap" Rewrite flow (KeymapEditor's `applyKeymapRewrite`,
+   *  and undo/redo of that rewrite's batch history entry) — never by the
+   *  display-only `setLayout` path (追加要求 2026-07-18). */
+  setAppliedKeymapLayout: (id: string) => void
 }
 
 /**
@@ -467,6 +484,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   const defaultQuickSelect = config.defaultQuickSelect ?? false
 
   const [layout, updateLayout, layoutRef] = useStateRef<KeyboardLayoutId>(defaultLayout)
+  const [appliedKeymapLayout, updateAppliedKeymapLayout, appliedKeymapLayoutRef] = useStateRef<string | undefined>(undefined)
   const [autoAdvance, updateAutoAdvance, autoAdvanceRef] = useStateRef<boolean>(defaultAutoAdvance)
   const [layerPanelOpen, updateLayerPanelOpen, layerPanelOpenRef] = useStateRef<boolean>(defaultLayerPanelOpen)
   const [basicViewType, updateBasicViewType, basicViewTypeRef] = useStateRef<BasicViewType>(defaultBasicViewType)
@@ -506,6 +524,12 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     window.vialAPI.pipetteSettingsPatch(uid, {
       _rev: 1,
       keyboardLayout: layoutRef.current,
+      // `undefined` here means "never applied on this keyboard" and is
+      // intentionally sent as-is (not `?? null`): the field-level PATCH
+      // treats `undefined` as "leave untouched", which is correct since a
+      // field that was never set has nothing to clear. Once a Rewrite runs
+      // it's always a concrete id from then on (see setAppliedKeymapLayout).
+      appliedKeymapLayout: appliedKeymapLayoutRef.current,
       autoAdvance: autoAdvanceRef.current,
       layerPanelOpen: layerPanelOpenRef.current,
       basicViewType: basicViewTypeRef.current,
@@ -549,6 +573,11 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateLayout(id)
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateLayout])
+
+  const setAppliedKeymapLayout = useCallback((id: string) => {
+    updateAppliedKeymapLayout(id)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateAppliedKeymapLayout])
 
   const setAutoAdvance = useCallback((enabled: boolean) => {
     updateAutoAdvance(enabled)
@@ -807,6 +836,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       viewMode: 'editor',
     }
     updateLayout(resolved.keyboardLayout)
+    updateAppliedKeymapLayout(resolved.appliedKeymapLayout)
     updateAutoAdvance(resolved.autoAdvance)
     updateLayerPanelOpen(resolved.layerPanelOpen)
     updateBasicViewType(resolved.basicViewType)
@@ -873,6 +903,8 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
 
   return {
     layout,
+    appliedKeymapLayout,
+    setAppliedKeymapLayout,
     autoAdvance,
     layerPanelOpen,
     basicViewType,

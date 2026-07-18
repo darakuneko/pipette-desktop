@@ -884,6 +884,7 @@ export function App() {
             onQuickSelectChange={devicePrefs.setQuickSelect}
             keyboardLayout={devicePrefs.layout}
             onKeyboardLayoutChange={devicePrefs.setLayout}
+            onAppliedKeymapLayoutChange={devicePrefs.setAppliedKeymapLayout}
             onLock={lifecycle.handleLock}
             onMatrixModeChange={editorUI.handleMatrixModeChange}
             onOpenLighting={editorUI.lightingSupported ? () => editorUI.setShowLightingModal(true) : undefined}
@@ -1044,6 +1045,10 @@ export function App() {
             hubCanWrite: hub.hubCanUpload,
             keyboardLayout: devicePrefs.layout,
             onKeyboardLayoutChange: devicePrefs.setLayout,
+            keymapEditable: keyboard.keymap.size > 0,
+            appliedKeymapLayout: devicePrefs.appliedKeymapLayout,
+            onApplyKeymapRewrite: (table, layoutIds) =>
+              keymapEditorRef.current?.applyKeymapRewrite(table, layoutIds) ?? Promise.resolve({ appliedCount: 0 }),
           }}
         />
       )}

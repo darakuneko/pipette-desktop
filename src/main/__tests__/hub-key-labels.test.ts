@@ -110,6 +110,32 @@ describe('hub-key-labels', () => {
       expect(body.map.KC_A).toBe('A')
     })
 
+    it('passes through keymap_applicable when the server sends it', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ name: 'Colemak', map: { KC_E: 'F' }, composite_labels: null, keymap_applicable: true }),
+        text: async () => '',
+        headers: new Headers(),
+      })
+
+      const body = await downloadKeyLabel('hub-2')
+      expect(body.keymap_applicable).toBe(true)
+    })
+
+    it('leaves keymap_applicable undefined for posts uploaded before the field existed', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ name: 'Legacy', map: {}, composite_labels: null }),
+        text: async () => '',
+        headers: new Headers(),
+      })
+
+      const body = await downloadKeyLabel('hub-3')
+      expect(body.keymap_applicable).toBeUndefined()
+    })
+
     it('throws Hub429Error on rate-limited response', async () => {
       mockFetch.mockResolvedValueOnce(failResponse(429, 'too many', '999'))
       await expect(downloadKeyLabel('hub-1')).rejects.toBeInstanceOf(Hub429Error)
@@ -142,6 +168,42 @@ describe('hub-key-labels', () => {
       const init = mockFetch.mock.calls[0][1] as { body: string }
       const body = JSON.parse(init.body) as Record<string, unknown>
       expect(body.composite_labels).toBeNull()
+    })
+
+    it('always sends keymap_applicable, true when set', async () => {
+      mockFetch.mockResolvedValueOnce(okJson({
+        id: 'new-id-2',
+        name: 'Colemak',
+        map: { KC_E: 'F' },
+        composite_labels: null,
+        uploaded_by: 'user',
+        uploader_name: 'me',
+        created_at: 'now',
+        updated_at: 'now',
+      }))
+
+      await uploadKeyLabel('jwt', { name: 'Colemak', map: { KC_E: 'F' }, keymapApplicable: true })
+      const init = mockFetch.mock.calls[0][1] as { body: string }
+      const body = JSON.parse(init.body) as Record<string, unknown>
+      expect(body.keymap_applicable).toBe(true)
+    })
+
+    it('always sends keymap_applicable, false when omitted', async () => {
+      mockFetch.mockResolvedValueOnce(okJson({
+        id: 'new-id-3',
+        name: 'X',
+        map: {},
+        composite_labels: null,
+        uploaded_by: 'user',
+        uploader_name: 'me',
+        created_at: 'now',
+        updated_at: 'now',
+      }))
+
+      await uploadKeyLabel('jwt', { name: 'X', map: {} })
+      const init = mockFetch.mock.calls[0][1] as { body: string }
+      const body = JSON.parse(init.body) as Record<string, unknown>
+      expect(body.keymap_applicable).toBe(false)
     })
 
     it('translates 409 into Hub409Error', async () => {

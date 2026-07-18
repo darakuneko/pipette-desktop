@@ -20,6 +20,8 @@ export interface HubKeyLabelDownload {
   name: string
   map: Record<string, string>
   composite_labels: Record<string, string> | null
+  /** Absent on posts uploaded before this field existed. */
+  keymap_applicable?: boolean
 }
 
 /** Request body for `POST /api/key-labels` and `PUT /api/key-labels/:id`. */
@@ -27,6 +29,7 @@ export interface HubKeyLabelInput {
   name: string
   map: Record<string, string>
   compositeLabels?: Record<string, string> | null
+  keymapApplicable?: boolean
 }
 
 interface HubApiResponse<T> {
@@ -137,6 +140,11 @@ function buildBody(input: HubKeyLabelInput): string {
   if (input.compositeLabels !== undefined) {
     body.composite_labels = input.compositeLabels ?? null
   }
+  // Always sent (not conditional like compositeLabels above) — the
+  // current Hub server ignores unknown fields, so this is safe to
+  // ship ahead of the Hub-side schema update, and always sending
+  // `false` lets a re-upload clear a previously-true flag.
+  body.keymap_applicable = Boolean(input.keymapApplicable)
   return JSON.stringify(body)
 }
 

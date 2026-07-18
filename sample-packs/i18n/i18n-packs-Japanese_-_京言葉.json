@@ -1,5 +1,5 @@
 {
-  "version": "0.1.19",
+  "version": "0.1.21",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -1644,7 +1644,16 @@
     "missingTitle": "Key Label が見つかりまへんなぁ",
     "missingMessage": "Key Label「{{name}}」が入ってまへんさかい、QWERTY ラベルで表示しますえ。",
     "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}}、またはキーピッカー右上の Edit ボタンから入れられますえ。",
-    "missingClose": "閉じますえ"
+    "missingClose": "閉じますえ",
+    "keymapApply": {
+      "title": "「{{name}}」をキーマップにも適用しますか？",
+      "message": "この Key Label は純粋な QWERTY の入れ替えどすさかい、キーマップ本体が書き換えられますえ。",
+      "rewriteNote": "書き換えますと、キーマップが「{{name}}」の配列になりますえ。表示ラベルは QWERTY のままどすさかい、各キーが実際に送る文字とちゃんと合うてますえ。",
+      "undoNote": "Undo ひとつでまとめて元に戻せますえ。",
+      "apply": "書き換えますえ",
+      "displayOnly": "表示だけ変えますえ",
+      "errorPartial": "一部のキーが書き換えられまへんでしたえ。ここで止めときますよって、Undo で適用分を戻しておくれやす。"
+    }
   },
   "i18n": {
     "edit": "編集しますえ",

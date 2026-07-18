@@ -1624,6 +1624,7 @@ In the example above, `"KC_GRAVE": "KC_LALT"` makes the editor render whichever 
 | `name` | Yes | Display name shown in the modal, in the Settings → Defaults dropdown, and in the Keycodes Overlay Panel |
 | `map` | Yes | `QMK keycode id → label string`. Used as the keycap legend in the Keymap Editor whenever this label set is active |
 | `compositeLabels` | No | Same shape as `map`, but for composite keycodes (e.g. `LSFT(KC_2)`, `LT(0,KC_A)`, `MT(MOD_LCTL,KC_ESC)`). Used to override the inner / outer text of the composite key. Omit the field if you don't need any composite override |
+| `keymapApplicable` | No | Optional boolean. Opt-in marker meaning this label set is a pure QWERTY-keycode permutation (e.g. Colemak, Dvorak) and can also be used to bulk-rewrite the actual keymap, not just the display legends — see **Applying a Key Label to the Keymap** below. Omit or set `false` for label sets that aren't a clean 1:1 character swap (multi-line shift/altgr legends, keycode-passthrough values, non-Latin layouts, …) |
 
 A value can also be a plain QMK keycode id — the editor passes it through `keycodeLabel()` so something like `"LALT(KC_L)": "KC_LALT"` resolves to the canonical "LAlt" label without you having to spell the legend out by hand. The same shortcut works in `map`, so `"KC_8": "KC_LALT"` would render the cap as "LAlt".
 
@@ -1648,6 +1649,36 @@ An empty string between separators leaves the corresponding slot blank, so `"1\n
 Composite keycodes (LT, MT, modifier+key, …) render the inner key inside an inset rectangle that occupies the lower half of the cap, so only the first two `\n` parts of the outer label are honoured. Parts 3 and 4 are silently dropped to avoid colliding with the inner rect.
 
 `name` is also the uniqueness key inside the local store: importing a `.json` whose name already exists overwrites the matching entry in place (the Hub post link, if any, is preserved). To start a brand-new entry, change the `name` before importing.
+
+**Applying a Key Label to the Keymap**
+
+Switching the **Keyboard Layout** dropdown in the footer normally just changes which legends are shown on the keycaps — the underlying keymap is untouched. For label sets marked `keymapApplicable`, the dropdown offers to rewrite the keymap itself so the physical keys actually produce the labelled characters.
+
+When you pick a `keymapApplicable` entry (and a keymap is loaded on the connected keyboard), a confirmation dialog appears with three choices:
+
+![Apply Key Label to Keymap](screenshots/key-label-keymap-apply-modal.png)
+
+- **Rewrite Keymap** — bulk-rewrites every layer's keycodes (and encoders, where applicable) to match the label set. The whole rewrite lands as a single Undo step in the Keymap Editor's normal history — one Undo reverts every key it touched
+- **Display Only** — switches only the legends, same as today's behaviour
+- **Cancel** — closes the dialog without changing the current selection
+
+**The display stays on QWERTY legends after a Rewrite.** Once the keymap physically holds an arrangement's keycodes, the Keyboard Layout dropdown shows the *built-in QWERTY* legends, not the arrangement you just applied — the legends are meant to be read against the keys' actual QWERTY-baseline positions, and each key now sends the character its cap already shows. Selecting the same arrangement's own legends afterward would translate an already-rewritten keycode a second time (see the limitation below).
+
+The dropdown remembers which arrangement was last actually rewritten into the keymap, separately from which legends are currently displayed. That means:
+
+- **Picking QWERTY later offers a restore rewrite.** If the keymap currently holds e.g. Colemak's keycodes, selecting QWERTY from the dropdown re-opens the confirmation dialog — Rewrite Keymap converts the keys back to their original QWERTY characters.
+- **Switching between two `keymapApplicable` arrangements converts directly.** Picking Dvorak while Colemak is the one actually applied rewrites straight from Colemak's current keycodes to Dvorak's — it does not assume the keymap is still raw QWERTY, so the keys end up with the correct Dvorak characters in one step.
+- Picking **Display Only** at any point never changes which arrangement is considered "applied" — only a **Rewrite Keymap** confirmation does.
+
+The desktop app always re-validates the map itself before offering the rewrite, even when `keymapApplicable` is set in the file — a label set with shift-pair legends, non-Latin characters, keycode-passthrough values (like the `"KC_GRAVE": "KC_LALT"` example above), or a map that isn't **closed** (every replacement character's key must itself remap somewhere, even if only back to itself — a map that sends key A's character to key B but never says what key B should now send would duplicate one character and lose another) fails validation and the dropdown falls back to a silent Display Only switch, same as a label set that has no flag at all. The same re-validation applies to whichever arrangement is currently applied — if that pack has since been removed or edited to fail validation, the dropdown logs the reason and falls back to a plain Display Only switch instead of guessing at a conversion.
+
+**Limitations**
+
+- Manually re-selecting the display legends for the arrangement that's already applied (e.g. choosing Colemak's own legends while the keymap is already Colemak-rewritten) intentionally looks double-translated — label sets assume the keys underneath are still QWERTY keycodes, so this is expected, not a bug.
+- Manual per-key edits made after a Rewrite are skipped by the next Rewrite's safety check: it only touches a position whose keycode still matches what that arrangement's table expects to find there, so a key you've since edited by hand is left alone.
+- If a Rewrite fails partway through (e.g. a device write error), Undo still reverts exactly the keys that were changed before the failure — but the Keyboard Layout dropdown's displayed legends are left exactly as they were and the arrangement is not recorded as newly "applied", since the keymap is now a mix of old and new characters that doesn't match either arrangement.
+
+On Pipette Hub, the flag round-trips as `keymap_applicable` in the upload / download body alongside `map` and `composite_labels`.
 
 ### 6.3 Language Packs Manage
 

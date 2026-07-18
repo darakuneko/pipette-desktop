@@ -1,5 +1,5 @@
 {
-  "version": "0.1.19",
+  "version": "0.1.21",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -1654,7 +1654,16 @@
     "missingTitle": "Key Label が見つかりません",
     "missingMessage": "Key Label「{{name}}」がインストールされていないため、QWERTY ラベルで表示します。",
     "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}}、またはキーピッカー右上の Edit ボタンからダウンロードできます。",
-    "missingClose": "閉じる"
+    "missingClose": "閉じる",
+    "keymapApply": {
+      "title": "「{{name}}」をキーマップにも適用しますか？",
+      "message": "この Key Label は純粋な QWERTY の文字入れ替えなので、キーマップ自体が書き換えられます。",
+      "rewriteNote": "書き換えるとキーマップが「{{name}}」の配列になります。表示ラベルは QWERTY のまま変わらず、各キーが実際に送る文字と一致します。",
+      "undoNote": "Undo 1回でまとめて元に戻せます。",
+      "apply": "キーマップを書き換える",
+      "displayOnly": "表示のみ変更",
+      "errorPartial": "一部のキーは書き換えられませんでした。ここで処理を止めています。Undo で適用済みの分を元に戻せます。"
+    }
   },
   "i18n": {
     "edit": "編集",

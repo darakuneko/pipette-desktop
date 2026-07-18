@@ -10,6 +10,7 @@ import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
 import type { TypingTestResult, TypingViewMenuTab, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { FavHubEntryResult } from './FavoriteHubActions'
+import type { KeymapRewriteTable, KeymapRewriteLayoutIds } from '../../../shared/keymap/keymap-apply'
 
 export const MIN_SCALE = 0.3
 export const MAX_SCALE = 2.0
@@ -37,11 +38,30 @@ export type PopoverState =
   | { anchorRect: DOMRect; kind: 'key'; row: number; col: number; maskClicked: boolean }
   | { anchorRect: DOMRect; kind: 'encoder'; idx: number; dir: 0 | 1; maskClicked: boolean }
 
+/** Result of `KeymapEditorHandle.applyKeymapRewrite`. */
+export interface KeymapApplyResult {
+  /** Number of keymap/encoder positions actually rewritten before any failure. */
+  appliedCount: number
+  /** Set when a write failed partway through. Positions already written
+   *  (and already folded into the one undo-able batch entry) are not
+   *  rolled back — Undo reverts them like any other edit. */
+  error?: string
+}
+
 export interface KeymapEditorHandle {
   toggleMatrix: () => void
   toggleTypingTest: () => void
   matrixMode: boolean
   hasMatrixTester: boolean
+  /** Bulk-rewrite every keymap/encoder position via `table`, as ONE
+   *  `{kind:'batch'}` entry on the same undo stack the editor's own
+   *  per-key edits use (Plan-key-label-keymap-apply Phase 3). When
+   *  `layoutIds` is passed (the footer's composed-rewrite flow, 追加要求
+   *  2026-07-18), the batch also records `appliedLayoutBefore`/
+   *  `appliedLayoutAfter` for undo/redo bookkeeping, and — on a
+   *  successfully-applied batch — `onAppliedKeymapLayoutChange` fires
+   *  immediately with `layoutIds.after`. */
+  applyKeymapRewrite: (table: KeymapRewriteTable, layoutIds?: KeymapRewriteLayoutIds) => Promise<KeymapApplyResult>
 }
 
 export interface KeymapEditorProps {
@@ -102,6 +122,11 @@ export interface KeymapEditorProps {
   onQuickSelectChange?: (enabled: boolean) => void
   keyboardLayout?: KeyboardLayoutId
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
+  /** Persists `PipetteSettings.appliedKeymapLayout` (Plan-key-label-keymap-apply,
+   *  追加要求 2026-07-18). Fired by `applyKeymapRewrite` on a successful
+   *  rewrite and by undo/redo of that rewrite's batch history entry — never
+   *  by the display-only `onKeyboardLayoutChange` path. */
+  onAppliedKeymapLayoutChange?: (id: string) => void
   onLock?: () => void
   onMatrixModeChange?: (matrixMode: boolean, hasMatrixTester: boolean) => void
   onOpenLighting?: () => void
