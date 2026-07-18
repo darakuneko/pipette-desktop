@@ -282,7 +282,7 @@ export function SettingsToolsTab({
         <div className="grid grid-cols-2 gap-3">
           <div className={ROW_CLASS} data-testid="settings-default-basic-view-type-row">
             <label htmlFor="settings-default-basic-view-type-selector" className="text-sm font-medium text-content">
-              {t('settings.defaultBasicViewType')}
+              {t('editorSettings.basicViewType')}
             </label>
             <select
               id="settings-default-basic-view-type-selector"
