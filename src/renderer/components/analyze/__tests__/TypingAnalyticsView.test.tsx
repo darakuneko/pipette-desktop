@@ -57,21 +57,12 @@ vi.mock('../IntervalChart', () => ({ IntervalChart: mockSummary('mock-interval')
 vi.mock('../ActivityChart', () => ({ ActivityChart: mockSummary('mock-activity') }))
 vi.mock('../KeyHeatmapChart', () => ({ KeyHeatmapChart: mockSummary('mock-keyheatmap') }))
 vi.mock('../ErgonomicsChart', () => ({
-  // Surface the finger-assignment open callback as a button so the
-  // modal-open test can drive it; the button now lives inside the real
-  // chart's title row instead of the AnalyzePane filter bar.
-  ErgonomicsChart: (props: MockChartProps & { onOpenFingerAssignment?: () => void }) => (
+  // The finger-assignment button now renders in AnalyzePane's Row 2
+  // filter row (not inside the chart), so the mock only needs the
+  // usual identity/range probe — no callback forwarding here.
+  ErgonomicsChart: (props: MockChartProps) => (
     <div data-testid="mock-ergonomics">
       {`${props.uid}:${scopeText(primaryScope(props))}:range=${props.range.fromMs}-${props.range.toMs}`}
-      {props.onOpenFingerAssignment ? (
-        <button
-          type="button"
-          data-testid="analyze-finger-assignment-open"
-          onClick={props.onOpenFingerAssignment}
-        >
-          open
-        </button>
-      ) : null}
     </div>
   ),
 }))

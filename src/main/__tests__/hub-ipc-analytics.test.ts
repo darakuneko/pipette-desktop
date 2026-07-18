@@ -70,6 +70,10 @@ vi.mock('../hub/hub-analytics', () => ({
   buildAnalyticsExport: vi.fn(),
   validateAnalyticsExport: vi.fn(),
   estimateAnalyticsExportSizeBytes: vi.fn(),
+  // Passthrough so `prepareAnalyticsExport`'s
+  // `sanitizeFingerOverrides(params.fingerOverrides)` call doesn't
+  // throw — these tests don't assert on the sanitized shape itself.
+  sanitizeFingerOverrides: vi.fn((v: Record<string, string> | undefined) => v ?? {}),
 }))
 
 vi.mock('../analyze-filter-store', () => ({

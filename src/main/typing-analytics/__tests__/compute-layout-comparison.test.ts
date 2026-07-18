@@ -253,6 +253,53 @@ describe('computeLayoutComparison', () => {
     expect(result.targets[0].cellCounts).toBeUndefined()
   })
 
+  it('applies a fingerOverride at the target position, moving both fingerLoad and handBalance', () => {
+    // Same fixture as "computes finger / hand / row distributions on a
+    // 4×4 grid": QWERTY R (row 0, col 3) resolves to the Colemak S
+    // position, which lives at (1, 1) — home row, right side by the
+    // grid's geometry (col 1 of 4 is left-of-center, so this actually
+    // lands on the LEFT hand per estimateHandFromX; the override below
+    // flips it to a right-hand finger to prove override wins over the
+    // geometry estimate for both finger AND hand).
+    const snapshot = makeSnapshot([
+      ['KC_Q', 'KC_W', 'KC_E', 'KC_R'],
+      ['KC_A', 'KC_S', 'KC_D', 'KC_F'],
+      ['KC_Z', 'KC_X', 'KC_C', 'KC_V'],
+      ['KC_NO', 'KC_NO', 'KC_SPACE', 'KC_NO'],
+    ])
+    const baseline = computeLayoutComparison({
+      matrixCounts: counts([['0,3', 10]]),
+      snapshot,
+      kleKeys: FOUR_ROW_KEYS,
+      source: QWERTY,
+      targets: [COLEMAK],
+      metrics: ['fingerLoad', 'handBalance'],
+    })
+    const baselineTarget = baseline.targets[0]
+    // Confirm the geometry estimate landed on the left hand so the
+    // override assertion below has a real flip to demonstrate.
+    expect(baselineTarget.handBalance).toEqual({ left: 1, right: 0 })
+
+    const overridden = computeLayoutComparison({
+      matrixCounts: counts([['0,3', 10]]),
+      snapshot,
+      kleKeys: FOUR_ROW_KEYS,
+      source: QWERTY,
+      targets: [COLEMAK],
+      metrics: ['fingerLoad', 'handBalance'],
+      // Target physical position is (1, 1) — see the comment above.
+      fingerOverrides: { '1,1': 'right-index' },
+    })
+    const overriddenTarget = overridden.targets[0]
+    // fingerLoad bucket moves entirely to the override's finger.
+    expect(overriddenTarget.fingerLoad).toEqual({ 'right-index': 1 })
+    // hand flips from left to right along with the finger.
+    expect(overriddenTarget.handBalance).toEqual({ left: 0, right: 1 })
+    // Totals / skip counts are untouched by the override.
+    expect(overriddenTarget.totalEvents).toBe(baselineTarget.totalEvents)
+    expect(overriddenTarget.skippedEvents).toBe(baselineTarget.skippedEvents)
+  })
+
   it('skips zero-count cells without affecting metrics', () => {
     const result = computeLayoutComparison({
       matrixCounts: counts([

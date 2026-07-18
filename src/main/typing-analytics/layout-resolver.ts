@@ -26,6 +26,7 @@
 import { findInnerKeycode } from '../../shared/keycodes/keycodes'
 import {
   buildErgonomicsByPos,
+  HAND_OF_FINGER,
   type FingerType,
   type HandType,
   type RowCategory,
@@ -51,6 +52,13 @@ export interface LayoutResolverInput {
   targetLayout: LayoutShape
   /** Layer to resolve against. Phase 1 reads layer 0 only. */
   layer?: number
+  /** Per-cell finger overrides, keyed by the TARGET physical position's
+   * posKey — same physical-key rule as the Ergonomics chart's
+   * `aggregateErgonomics`. Wins over the geometry estimate when set;
+   * `hand` is re-derived from the override finger so the two stay
+   * consistent. `rowCategory` is never overridden — it is a physical-
+   * layout property. */
+  fingerOverrides?: Record<string, FingerType>
 }
 
 export type SkipReason =
@@ -140,7 +148,9 @@ export function buildLayoutResolver(input: LayoutResolverInput): LayoutResolver 
       posToResult.set(pos, SKIP_NO_TARGET_POSITION)
       continue
     }
-    const ergon = ergonomicsByPos.get(posKey(targetPos[0], targetPos[1]))
+    const targetPosKey = posKey(targetPos[0], targetPos[1])
+    const ergon = ergonomicsByPos.get(targetPosKey)
+    const override = input.fingerOverrides?.[targetPosKey]
     posToResult.set(pos, {
       skipped: false,
       char,
@@ -148,8 +158,8 @@ export function buildLayoutResolver(input: LayoutResolverInput): LayoutResolver 
       targetKeycode,
       targetRow: targetPos[0],
       targetCol: targetPos[1],
-      finger: ergon?.finger,
-      hand: ergon?.hand,
+      finger: override ?? ergon?.finger,
+      hand: override ? HAND_OF_FINGER[override] : ergon?.hand,
       rowCategory: ergon?.row,
     })
   }
