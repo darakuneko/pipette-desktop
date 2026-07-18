@@ -1,0 +1,26 @@
+{
+  "name": "Eucalyn",
+  "keymap_applicable": true,
+  "map": {
+    "KC_E": ",",
+    "KC_R": ".",
+    "KC_T": ";",
+    "KC_Y": "M",
+    "KC_U": "R",
+    "KC_I": "D",
+    "KC_O": "Y",
+    "KC_S": "O",
+    "KC_D": "E",
+    "KC_F": "I",
+    "KC_G": "U",
+    "KC_H": "G",
+    "KC_J": "T",
+    "KC_L": "S",
+    "KC_SCOLON": "N",
+    "KC_B": "F",
+    "KC_N": "B",
+    "KC_M": "H",
+    "KC_COMMA": "J",
+    "KC_DOT": "L"
+  }
+}

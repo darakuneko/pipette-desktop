@@ -1,0 +1,29 @@
+{
+  "name": "Eucalyn Kai (Eucalyn改配列)",
+  "keymap_applicable": true,
+  "map": {
+    "KC_Q": ";",
+    "KC_W": ",",
+    "KC_E": ".",
+    "KC_R": "P",
+    "KC_T": "Q",
+    "KC_U": "G",
+    "KC_I": "D",
+    "KC_O": "M",
+    "KC_P": "F",
+    "KC_S": "O",
+    "KC_D": "E",
+    "KC_F": "I",
+    "KC_G": "U",
+    "KC_H": "B",
+    "KC_J": "N",
+    "KC_K": "T",
+    "KC_L": "R",
+    "KC_SCOLON": "S",
+    "KC_B": "W",
+    "KC_N": "H",
+    "KC_M": "J",
+    "KC_COMMA": "K",
+    "KC_DOT": "L"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "Onishi (大西配列)",
+  "keymap_applicable": true,
+  "map": {
+    "KC_W": "L",
+    "KC_E": "U",
+    "KC_R": ",",
+    "KC_T": ".",
+    "KC_Y": "F",
+    "KC_U": "W",
+    "KC_I": "R",
+    "KC_O": "Y",
+    "KC_A": "E",
+    "KC_S": "I",
+    "KC_D": "A",
+    "KC_F": "O",
+    "KC_G": "-",
+    "KC_H": "K",
+    "KC_J": "T",
+    "KC_K": "N",
+    "KC_L": "S",
+    "KC_SCOLON": "H",
+    "KC_B": ";",
+    "KC_N": "G",
+    "KC_M": "D",
+    "KC_COMMA": "M",
+    "KC_DOT": "J",
+    "KC_SLASH": "B",
+    "KC_MINUS": "/"
+  }
+}
