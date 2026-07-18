@@ -1,5 +1,5 @@
 {
-  "version": "0.1.19",
+  "version": "0.1.21",
   "name": "English",
   "common": {
     "save": "Save",
@@ -1654,7 +1654,16 @@
     "missingTitle": "Key Label not found",
     "missingMessage": "The key label \"{{name}}\" is not installed. Showing keymap with QWERTY labels.",
     "missingHint": "You can download \"{{name}}\" from {{settings}} > {{tools}} > {{keyLabels}}, or from the keypicker overlay's Edit button.",
-    "missingClose": "Close"
+    "missingClose": "Close",
+    "keymapApply": {
+      "title": "Apply {{name}} to the Keymap?",
+      "message": "This key label set is a pure QWERTY letter swap, so the keymap itself can be rewritten.",
+      "rewriteNote": "Rewriting sets the keymap to {{name}}'s arrangement. The display stays on QWERTY labels, matching what each key now actually sends.",
+      "undoNote": "One Undo reverts the whole rewrite.",
+      "apply": "Rewrite Keymap",
+      "displayOnly": "Display Only",
+      "errorPartial": "Some keys could not be rewritten. The change stops here — Undo reverts what was applied."
+    }
   },
   "i18n": {
     "modalTitle": "Language Packs",

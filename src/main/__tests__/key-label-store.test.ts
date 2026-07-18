@@ -346,6 +346,93 @@ describe('key-label-store', () => {
     })
   })
 
+  describe('keymapApplicable flag', () => {
+    it('round-trips through save -> get -> export', async () => {
+      const created = await saveRecord({
+        name: 'Colemak',
+        uploaderName: 'me',
+        map: { KC_E: 'F' },
+        keymapApplicable: true,
+      })
+      expect(created.success).toBe(true)
+      expect(created.data?.name).toBe('Colemak')
+
+      const record = await getRecord(created.data!.id)
+      expect(record.success).toBe(true)
+      expect(record.data?.data.keymapApplicable).toBe(true)
+
+      const exportPath = join(mockUserDataPath, 'colemak-exported.json')
+      vi.mocked(dialog.showSaveDialog).mockResolvedValue({
+        canceled: false,
+        filePath: exportPath,
+      })
+      const win = { id: 20 } as unknown as Electron.BrowserWindow
+      const exported = await exportToDialog(win, created.data!.id)
+      expect(exported.success).toBe(true)
+
+      const raw = await readFile(exportPath, 'utf-8')
+      const parsed = JSON.parse(raw) as { keymap_applicable: boolean }
+      expect(parsed.keymap_applicable).toBe(true)
+    })
+
+    it('omits the flag by default', async () => {
+      const created = await saveRecord({ name: 'Plain', uploaderName: 'me', map: { KC_A: 'A' } })
+      const record = await getRecord(created.data!.id)
+      expect(record.data?.data.keymapApplicable).toBeUndefined()
+    })
+
+    it('accepts the snake_case alias on import', async () => {
+      const dir = join(mockUserDataPath, 'tmp-import-snake')
+      await mkdir(dir, { recursive: true })
+      const importPath = join(dir, 'snake.json')
+      await writeFile(
+        importPath,
+        JSON.stringify({
+          name: 'SnakeFlag',
+          map: { KC_E: 'F' },
+          keymap_applicable: true,
+        }),
+        'utf-8',
+      )
+
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({
+        canceled: false,
+        filePaths: [importPath],
+      })
+      const win = { id: 21 } as unknown as Electron.BrowserWindow
+      const result = await importFromDialog(win)
+      expect(result.success).toBe(true)
+
+      const record = await getRecord(result.data!.id)
+      expect(record.data?.data.keymapApplicable).toBe(true)
+    })
+
+    it.each([
+      ['non-boolean', 'yes', 'BadFlag'],
+      ['literal false', false, 'FalseFlag'],
+    ])('drops a %s value without failing the whole file', async (_label, rawValue, name) => {
+      const dir = join(mockUserDataPath, `tmp-import-${name}`)
+      await mkdir(dir, { recursive: true })
+      const importPath = join(dir, 'flag.json')
+      await writeFile(
+        importPath,
+        JSON.stringify({ name, map: { KC_E: 'F' }, keymapApplicable: rawValue }),
+        'utf-8',
+      )
+
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({
+        canceled: false,
+        filePaths: [importPath],
+      })
+      const win = { id: 22 } as unknown as Electron.BrowserWindow
+      const result = await importFromDialog(win)
+      expect(result.success).toBe(true)
+
+      const record = await getRecord(result.data!.id)
+      expect(record.data?.data.keymapApplicable).toBeUndefined()
+    })
+  })
+
   describe('exportToDialog', () => {
     it('writes correct JSON to the chosen path', async () => {
       const created = await saveRecord({

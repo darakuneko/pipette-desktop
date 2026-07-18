@@ -1,5 +1,5 @@
 {
-  "version": "0.1.19",
+  "version": "0.1.21",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -1644,7 +1644,16 @@
     "missingTitle": "銘が見当たりません",
     "missingMessage": "銘「{{name}}」が見当たらないため、標準の銘で表示いたします。",
     "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}}、またはキーピッカーの Edit ボタンよりお取り寄せいただけます。",
-    "missingClose": "閉じる"
+    "missingClose": "閉じる",
+    "keymapApply": {
+      "title": "「{{name}}」をキーマップにも適用いたしますか？",
+      "message": "この銘は純然たる QWERTY の文字の入れ替えにございますゆえ、キーマップそのものを書き換えることが叶います。",
+      "rewriteNote": "書き換えを行いますと、キーマップは「{{name}}」の配列となります。表示の銘は QWERTY のままにございますゆえ、各鍵が実際に送る文字とよく合いまする。",
+      "undoNote": "Undo 一度にてまとめて元へお戻しいただけます。",
+      "apply": "キーマップを書き換える",
+      "displayOnly": "表示のみ変更いたす",
+      "errorPartial": "一部の鍵は書き換えが叶いませんでした。ここで処理を止めておりますゆえ、Undo にて適用済みの分をお戻しくださいませ。"
+    }
   },
   "i18n": {
     "edit": "推敲",

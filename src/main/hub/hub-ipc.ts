@@ -72,7 +72,8 @@ import type { HubKeyLabelInput } from './hub-key-labels'
 import type { HubKeyLabelItem, HubKeyLabelListResponse, HubKeyLabelListParams, HubKeyLabelTimestamp, HubKeyLabelTimestampsResponse } from '../../shared/types/hub-key-label'
 import { HUB_ERROR_KEY_LABEL_DUPLICATE, HUB_KEY_LABEL_TIMESTAMPS_BATCH_LIMIT } from '../../shared/types/hub-key-label'
 import { getRecord, saveRecord, setHubPostId } from '../key-label-store'
-import type { KeyLabelMeta, KeyLabelStoreResult } from '../../shared/types/key-label-store'
+import type { SaveRecordInput } from '../key-label-store'
+import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult } from '../../shared/types/key-label-store'
 import { isValidFavoriteType, isValidVialProtocol, FAV_TYPE_TO_EXPORT_KEY, serializeFavData, buildFavExportFile } from '../../shared/favorite-data'
 import { serialize as serializeKeycode } from '../../shared/keycodes/keycodes'
 import type { FavoriteType, FavoriteIndex } from '../../shared/types/favorite-store'
@@ -495,7 +496,12 @@ async function fetchHubKeyLabelPayload(
   fallbackUploader?: string,
   fallbackHubUpdatedAt?: string,
 ): Promise<{
-  body: { name: string; map: Record<string, string>; composite_labels: Record<string, string> | null }
+  body: {
+    name: string
+    map: Record<string, string>
+    composite_labels: Record<string, string> | null
+    keymap_applicable?: boolean
+  }
   uploaderName: string | undefined
   hubUpdatedAt: string | undefined
 }> {
@@ -510,6 +516,43 @@ async function fetchHubKeyLabelPayload(
     // best-effort; keep the fallback values
   }
   return { body, uploaderName, hubUpdatedAt }
+}
+
+/**
+ * `HubKeyLabelInput` shared by upload/update — the local record's name,
+ * map and compositeLabels, plus `keymapApplicable` (always sent, even
+ * `false`, so a re-upload can clear a previously-true flag; see the
+ * `buildBody` comment in hub-key-labels.ts).
+ */
+function buildHubKeyLabelInput(record: KeyLabelRecord): HubKeyLabelInput {
+  return {
+    name: record.meta.name,
+    map: record.data.map,
+    ...(record.data.compositeLabels ? { compositeLabels: record.data.compositeLabels } : {}),
+    keymapApplicable: record.data.keymapApplicable ?? false,
+  }
+}
+
+/**
+ * `saveRecord()` fields shared by download/sync — the Hub body's map,
+ * compositeLabels and keymapApplicable, plus the cached uploader /
+ * hub-updated metadata. Callers still supply `id`/`name`/`hubPostId`
+ * since those differ (download seeds from the Hub body, sync keeps the
+ * local id/name and only refreshes the payload).
+ */
+function hubBodyToSaveRecordFields(
+  body: { map: Record<string, string>; composite_labels: Record<string, string> | null; keymap_applicable?: boolean },
+  uploaderName: string | undefined,
+  hubUpdatedAt: string | undefined,
+): Pick<SaveRecordInput, 'map' | 'uploaderName' | 'compositeLabels' | 'keymapApplicable' | 'hubUpdatedAt'> {
+  const composite = body.composite_labels ?? undefined
+  return {
+    map: body.map,
+    ...(uploaderName ? { uploaderName } : {}),
+    ...(composite ? { compositeLabels: composite } : {}),
+    ...(body.keymap_applicable ? { keymapApplicable: true } : {}),
+    ...(hubUpdatedAt ? { hubUpdatedAt } : {}),
+  }
 }
 
 export function setupHubIpc(): void {
@@ -1211,7 +1254,6 @@ export function setupHubIpc(): void {
           return { success: false, errorCode: 'NOT_FOUND', error: 'Invalid hub post id' }
         }
         const { body, uploaderName, hubUpdatedAt } = await fetchHubKeyLabelPayload(hubPostId)
-        const composite = body.composite_labels ?? undefined
         // Use the Hub post id as the local id so the saved
         // `keyboardLayout` can be matched against Hub later (e.g. the
         // Missing Key Label dialog needs to look up the human name
@@ -1219,11 +1261,8 @@ export function setupHubIpc(): void {
         return await saveRecord({
           id: hubPostId,
           name: body.name,
-          ...(uploaderName ? { uploaderName } : {}),
-          map: body.map,
-          ...(composite ? { compositeLabels: composite } : {}),
           hubPostId,
-          ...(hubUpdatedAt ? { hubUpdatedAt } : {}),
+          ...hubBodyToSaveRecordFields(body, uploaderName, hubUpdatedAt),
         })
       } catch (err) {
         return { success: false, errorCode: 'IO_ERROR', error: extractError(err, 'Hub download failed') }
@@ -1241,11 +1280,7 @@ export function setupHubIpc(): void {
       if (!record.success || !record.data) {
         return toKeyLabelLookupFailure(record)
       }
-      const input: HubKeyLabelInput = {
-        name: record.data.meta.name,
-        map: record.data.data.map,
-        ...(record.data.data.compositeLabels ? { compositeLabels: record.data.data.compositeLabels } : {}),
-      }
+      const input = buildHubKeyLabelInput(record.data)
       try {
         const result = await withTokenRetry((jwt) => uploadKeyLabel(jwt, input))
         // Carry the response's uploader_name and updated_at into the
@@ -1277,11 +1312,7 @@ export function setupHubIpc(): void {
       if (!hubPostId) {
         return { success: false, errorCode: 'NOT_FOUND', error: 'Entry has no hub post' }
       }
-      const input: HubKeyLabelInput = {
-        name: record.data.meta.name,
-        map: record.data.data.map,
-        ...(record.data.data.compositeLabels ? { compositeLabels: record.data.data.compositeLabels } : {}),
-      }
+      const input = buildHubKeyLabelInput(record.data)
       try {
         const result = await withTokenRetry((jwt) => updateKeyLabel(jwt, hubPostId, input))
         // Persist the new Hub-side updated_at so the Updated column
@@ -1317,18 +1348,14 @@ export function setupHubIpc(): void {
           record.data.meta.uploaderName,
           record.data.meta.hubUpdatedAt,
         )
-        const composite = body.composite_labels ?? undefined
         // Preserve the local id, name (drag/rename), and hubPostId; only
-        // refresh the payload (map / compositeLabels), uploaderName,
-        // and hubUpdatedAt.
+        // refresh the payload (map / compositeLabels / keymapApplicable),
+        // uploaderName, and hubUpdatedAt.
         return await saveRecord({
           id: localId,
           name: record.data.meta.name,
-          ...(uploaderName ? { uploaderName } : {}),
-          map: body.map,
-          ...(composite ? { compositeLabels: composite } : {}),
           hubPostId,
-          ...(hubUpdatedAt ? { hubUpdatedAt } : {}),
+          ...hubBodyToSaveRecordFields(body, uploaderName, hubUpdatedAt),
         })
       } catch (err) {
         return { success: false, errorCode: 'IO_ERROR', error: extractError(err, 'Hub sync failed') }

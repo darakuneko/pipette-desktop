@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { LanguagePacksModal } from './i18n-packs/LanguagePacksModal'
 import { ThemePacksModal } from './theme-packs/ThemePacksModal'
 import { KeyLabelsModal } from './key-labels/KeyLabelsModal'
+import { KeymapApplyConfirmModal } from './key-labels/KeymapApplyConfirmModal'
 import { UpwardSelect } from './UpwardSelect'
 import { useAppConfig } from '../hooks/useAppConfig'
 import { useI18nPackStore } from '../hooks/useI18nPackStore'
@@ -12,8 +13,11 @@ import { useThemePackStore } from '../hooks/useThemePackStore'
 import { useKeyLabels } from '../hooks/useKeyLabels'
 import { useLanguageOptions } from '../hooks/useLanguageOptions'
 import { useLayoutOptions } from '../hooks/useLayoutOptions'
+import { useKeymapApplyPrompt } from '../hooks/useKeymapApplyPrompt'
+import type { KeymapRewriteTable, KeymapRewriteLayoutIds } from '../../shared/keymap/keymap-apply'
 import type { ThemeSelection } from '../hooks/useTheme'
 import type { KeyboardLayoutId } from '../hooks/useKeyboardLayout'
+import type { KeymapApplyResult } from './editors/keymap-editor-types'
 
 const BUTTON_CLASS =
   'flex items-center justify-center rounded border border-edge px-2.5 py-1 text-xs leading-none text-content-secondary transition-colors hover:text-content focus:border-accent focus:outline-none'
@@ -26,6 +30,16 @@ export interface QuickSettingsSelectsProps {
   hubCanWrite?: boolean
   keyboardLayout?: KeyboardLayoutId
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
+  /** True when the connected device has a loaded keymap to rewrite
+   *  (Plan-key-label-keymap-apply Phase 3). Without it, a flagged pack
+   *  always falls back to today's display-only switch. */
+  keymapEditable?: boolean
+  /** `PipetteSettings.appliedKeymapLayout` — id of the arrangement last
+   *  actually rewritten into the device keymap (or the built-in QWERTY id),
+   *  absent treated as identity/QWERTY (追加要求 2026-07-18). */
+  appliedKeymapLayout?: string
+  /** Bulk-rewrite the live keymap via `KeymapEditorHandle.applyKeymapRewrite`. */
+  onApplyKeymapRewrite?: (table: KeymapRewriteTable, layoutIds: KeymapRewriteLayoutIds) => Promise<KeymapApplyResult>
 }
 
 export function QuickSettingsSelects({
@@ -34,6 +48,9 @@ export function QuickSettingsSelects({
   hubCanWrite = false,
   keyboardLayout,
   onKeyboardLayoutChange,
+  keymapEditable = false,
+  appliedKeymapLayout,
+  onApplyKeymapRewrite,
 }: QuickSettingsSelectsProps) {
   const { t, i18n } = useTranslation()
   const appConfig = useAppConfig()
@@ -43,6 +60,15 @@ export function QuickSettingsSelects({
 
   const [editMode, setEditMode] = useState(false)
   const [activeModal, setActiveModal] = useState<ActiveModal>(null)
+
+  const {
+    handleKeyboardLayoutChange,
+    pendingApply,
+    handleApplyCancel,
+    handleApplyDisplayOnly,
+    handleApplyConfirm,
+    applyError,
+  } = useKeymapApplyPrompt({ keymapEditable, appliedKeymapLayout, onKeyboardLayoutChange, onApplyKeymapRewrite })
 
   const languageOptions = useLanguageOptions(i18nPacks.metas)
   const layoutOptions = useLayoutOptions(keyLabels.metas)
@@ -68,10 +94,6 @@ export function QuickSettingsSelects({
   const handleThemeChange = useCallback((v: string) => {
     onThemeChange(v as ThemeSelection)
   }, [onThemeChange])
-
-  const handleKeyboardLayoutChange = useCallback((v: string) => {
-    onKeyboardLayoutChange?.(v as KeyboardLayoutId)
-  }, [onKeyboardLayoutChange])
 
   const closeModal = useCallback(() => setActiveModal(null), [])
 
@@ -115,6 +137,11 @@ export function QuickSettingsSelects({
                 onChange={handleKeyboardLayoutChange}
               />
             )}
+            {applyError && (
+              <span className="text-xs text-danger" data-testid="keymap-apply-error">
+                {t('keyLabels.keymapApply.errorPartial')}
+              </span>
+            )}
           </>
         )}
         <button
@@ -146,6 +173,13 @@ export function QuickSettingsSelects({
         onClose={closeModal}
         currentDisplayName={hubDisplayName}
         hubCanWrite={hubCanWrite}
+      />
+      <KeymapApplyConfirmModal
+        open={pendingApply !== null}
+        labelName={pendingApply?.name ?? ''}
+        onApply={handleApplyConfirm}
+        onDisplayOnly={handleApplyDisplayOnly}
+        onCancel={handleApplyCancel}
       />
     </>
   )

@@ -35,6 +35,19 @@ vi.mock('../key-label-store', () => ({
   setHubPostId: vi.fn().mockResolvedValue({ success: true, data: {} }),
 }))
 
+// Stub the key-label Hub client; this suite exercises the hub-ipc
+// handlers' mapping logic (keymapApplicable <-> keymap_applicable), not
+// the actual fetch() calls (those are covered in hub-key-labels.test.ts).
+vi.mock('../hub/hub-key-labels', () => ({
+  fetchKeyLabelList: vi.fn(),
+  fetchKeyLabelDetail: vi.fn().mockRejectedValue(new Error('not configured for this test')),
+  fetchKeyLabelTimestamps: vi.fn(),
+  downloadKeyLabel: vi.fn(),
+  uploadKeyLabel: vi.fn(),
+  updateKeyLabel: vi.fn(),
+  deleteKeyLabel: vi.fn(),
+}))
+
 // Mock google-auth
 vi.mock('../sync/google-auth', () => ({
   getIdToken: vi.fn(),
@@ -91,6 +104,8 @@ import { getIdToken } from '../sync/google-auth'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
 import { Hub401Error, Hub403Error, Hub409Error, Hub429Error, authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin } from '../hub/hub-client'
 import { setupHubIpc, clearHubTokenCache } from '../hub/hub-ipc'
+import { getRecord, saveRecord } from '../key-label-store'
+import { downloadKeyLabel, uploadKeyLabel } from '../hub/hub-key-labels'
 
 describe('hub-ipc', () => {
   beforeEach(() => {
@@ -1379,6 +1394,90 @@ describe('hub-ipc', () => {
         success: false,
         error: HUB_ERROR_RATE_LIMITED,
       })
+    })
+  })
+
+  describe('KEY_LABEL_HUB_DOWNLOAD keymapApplicable mapping', () => {
+    it('maps keymap_applicable: true from the download body into saveRecord', async () => {
+      vi.mocked(downloadKeyLabel).mockResolvedValueOnce({
+        name: 'Colemak',
+        map: { KC_E: 'F' },
+        composite_labels: null,
+        keymap_applicable: true,
+      })
+
+      const handler = getHandlerFor('key-label-hub:download')
+      await handler({}, 'hub-post-1')
+
+      expect(saveRecord).toHaveBeenCalledWith(expect.objectContaining({ keymapApplicable: true }))
+    })
+
+    it('omits keymapApplicable when the download body has no flag', async () => {
+      vi.mocked(downloadKeyLabel).mockResolvedValueOnce({
+        name: 'Legacy',
+        map: {},
+        composite_labels: null,
+      })
+
+      const handler = getHandlerFor('key-label-hub:download')
+      await handler({}, 'hub-post-2')
+
+      const calls = vi.mocked(saveRecord).mock.calls
+      expect(calls[calls.length - 1][0].keymapApplicable).toBeUndefined()
+    })
+  })
+
+  describe('KEY_LABEL_HUB_UPLOAD keymapApplicable mapping', () => {
+    it('sends keymapApplicable: true when the local record has the flag', async () => {
+      mockHubAuth()
+      vi.mocked(getRecord).mockResolvedValueOnce({
+        success: true,
+        data: {
+          meta: { id: 'local-1', name: 'Colemak', filename: 'f.json', savedAt: 'now', updatedAt: 'now' },
+          data: { name: 'Colemak', map: { KC_E: 'F' }, keymapApplicable: true },
+        },
+      })
+      vi.mocked(uploadKeyLabel).mockResolvedValueOnce({
+        id: 'hub-new',
+        name: 'Colemak',
+        map: { KC_E: 'F' },
+        composite_labels: null,
+        uploaded_by: 'u1',
+        uploader_name: 'me',
+        created_at: 'now',
+        updated_at: 'now',
+      })
+
+      const handler = getHandlerFor('key-label-hub:upload')
+      await handler({}, 'local-1')
+
+      expect(uploadKeyLabel).toHaveBeenCalledWith('hub-jwt', expect.objectContaining({ keymapApplicable: true }))
+    })
+
+    it('sends keymapApplicable: false when the local record has no flag', async () => {
+      mockHubAuth()
+      vi.mocked(getRecord).mockResolvedValueOnce({
+        success: true,
+        data: {
+          meta: { id: 'local-2', name: 'Plain', filename: 'f.json', savedAt: 'now', updatedAt: 'now' },
+          data: { name: 'Plain', map: { KC_A: 'A' } },
+        },
+      })
+      vi.mocked(uploadKeyLabel).mockResolvedValueOnce({
+        id: 'hub-new-2',
+        name: 'Plain',
+        map: { KC_A: 'A' },
+        composite_labels: null,
+        uploaded_by: 'u1',
+        uploader_name: 'me',
+        created_at: 'now',
+        updated_at: 'now',
+      })
+
+      const handler = getHandlerFor('key-label-hub:upload')
+      await handler({}, 'local-2')
+
+      expect(uploadKeyLabel).toHaveBeenCalledWith('hub-jwt', expect.objectContaining({ keymapApplicable: false }))
     })
   })
 })

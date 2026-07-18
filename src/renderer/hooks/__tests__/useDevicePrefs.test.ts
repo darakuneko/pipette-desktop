@@ -7,7 +7,7 @@ import { useDevicePrefs } from '../useDevicePrefs'
 import { setupAppConfigMock, renderHookWithConfig, vialAPIMock } from './test-helpers'
 
 // Mock vialAPI for IPC calls
-const mockPipetteSettingsGet = vi.fn<(uid: string) => Promise<{ _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] } | null>>()
+const mockPipetteSettingsGet = vi.fn<(uid: string) => Promise<{ _rev: 1; keyboardLayout: string; appliedKeymapLayout?: string; autoAdvance: boolean; layerNames: string[] } | null>>()
 const mockPipetteSettingsPatch = vi.fn<(uid: string, prefs: { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[]; viewMatrix?: Record<string, { row: number; col: number }> | null }) => Promise<{ success: boolean }>>()
 
 beforeEach(() => {
@@ -163,6 +163,66 @@ describe('useDevicePrefs', () => {
         _rev: 1,
         keyboardLayout: 'french',
       }))
+    })
+
+    it('setAppliedKeymapLayout saves per-device prefs via IPC after applyDevicePrefs (Plan-key-label-keymap-apply)', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.appliedKeymapLayout).toBeUndefined()
+      mockPipetteSettingsPatch.mockClear()
+      act(() => {
+        result.current.setAppliedKeymapLayout('colemak-id')
+      })
+
+      expect(result.current.appliedKeymapLayout).toBe('colemak-id')
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+        _rev: 1,
+        appliedKeymapLayout: 'colemak-id',
+      }))
+    })
+
+    it('reads a persisted appliedKeymapLayout on applyDevicePrefs', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        appliedKeymapLayout: 'dvorak-id',
+        autoAdvance: true,
+        layerNames: [],
+      })
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.appliedKeymapLayout).toBe('dvorak-id')
+    })
+
+    it('resets appliedKeymapLayout to undefined when switching to a keyboard that never set it', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValueOnce({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        appliedKeymapLayout: 'colemak-id',
+        autoAdvance: true,
+        layerNames: [],
+      })
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.appliedKeymapLayout).toBe('colemak-id')
+
+      mockPipetteSettingsGet.mockResolvedValueOnce(null)
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xCCDD')
+      })
+      expect(result.current.appliedKeymapLayout).toBeUndefined()
     })
 
     it('setAutoAdvance saves per-device prefs via IPC after applyDevicePrefs', async () => {

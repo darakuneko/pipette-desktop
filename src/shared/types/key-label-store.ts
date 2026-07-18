@@ -42,6 +42,16 @@ export interface KeyLabelEntryFile {
   name: string
   map: Record<string, string>
   compositeLabels?: Record<string, string>
+  /**
+   * Opt-in marker set by the label author: this label set is a pure
+   * QWERTY-keycode permutation (e.g. Colemak, Dvorak) and can be used
+   * to bulk-rewrite the actual keymap, not just the display labels.
+   * The flag alone is not sufficient proof — the rewrite-table builder
+   * (`buildKeymapRewriteTable` in `src/shared/keymap/keymap-apply.ts`)
+   * is the final authority and will refuse to apply a map that fails
+   * its validation even when this flag is set.
+   */
+  keymapApplicable?: boolean
 }
 
 /** Combined meta + entry payload returned by `get`. */

@@ -24,16 +24,24 @@ export interface KeyboardLayoutDef {
   compositeLabels?: Record<string, string>
 }
 
+export type KeyboardLayoutId = string
+
+/** Canonical id of the built-in QWERTY entry — the identity arrangement
+ *  every Key Label rewrite table is expressed relative to. Reference this
+ *  instead of a bare `'qwerty'` string literal so callers never have to
+ *  string-match the (localizable) display name to detect "no relabeling".
+ *  Defined independently of `KEYBOARD_LAYOUTS`' entry order (below) so
+ *  reordering that list can never silently repoint the identity baseline. */
+export const BUILTIN_QWERTY_LAYOUT_ID: KeyboardLayoutId = 'qwerty'
+
 /**
  * Built-in QWERTY entry. The display name is shown in the layout
  * dropdown; the empty `map` lets `remapLabel` fall through to the
  * default qmkId-derived label.
  */
 export const KEYBOARD_LAYOUTS: KeyboardLayoutDef[] = [
-  { id: 'qwerty', name: 'QWERTY', map: {} },
+  { id: BUILTIN_QWERTY_LAYOUT_ID, name: 'QWERTY', map: {} },
 ]
-
-export type KeyboardLayoutId = string
 
 /** Pre-built index for O(1) layout lookup by id */
 export const LAYOUT_BY_ID = new Map(KEYBOARD_LAYOUTS.map((l) => [l.id, l]))

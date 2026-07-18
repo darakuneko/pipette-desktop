@@ -113,10 +113,24 @@ function normalizeFile(parsed: unknown): KeyLabelEntryFile | null {
     return null
   }
 
+  // Deliberately more lenient than `compositeLabels` above: a malformed
+  // `compositeLabels` rejects the whole file because there is no other
+  // validator downstream to catch a bad shape. `keymapApplicable` gets
+  // the opposite treatment — only a literal `true` is kept, anything
+  // else (missing, `false`, a stray string/number) quietly becomes
+  // absent — because `buildKeymapRewriteTable` (keymap-apply.ts) always
+  // re-derives applicability from the map itself before anything acts
+  // on the flag. A malformed flag can therefore fall back to "not
+  // applicable" instead of blocking import/download of an otherwise
+  // valid label set.
+  const keymapApplicableRaw = obj.keymapApplicable ?? obj.keymap_applicable
+  const keymapApplicable = keymapApplicableRaw === true ? true : undefined
+
   return {
     name: obj.name,
     map: obj.map,
     ...(compositeLabels ? { compositeLabels } : {}),
+    ...(keymapApplicable ? { keymapApplicable } : {}),
   }
 }
 
@@ -198,6 +212,9 @@ export interface SaveRecordInput {
   uploaderName?: string
   map: Record<string, string>
   compositeLabels?: Record<string, string>
+  /** Opt-in marker that this map is a pure QWERTY-keycode permutation
+   *  applicable to bulk keymap rewrite. See `KeyLabelEntryFile.keymapApplicable`. */
+  keymapApplicable?: boolean
   hubPostId?: string | null
   /** Hub-side `updated_at` cached for the Updated column. Optional. */
   hubUpdatedAt?: string
@@ -232,6 +249,7 @@ export async function saveRecord(input: SaveRecordInput): Promise<KeyLabelStoreR
       name,
       map: input.map,
       ...(input.compositeLabels ? { compositeLabels: input.compositeLabels } : {}),
+      ...(input.keymapApplicable ? { keymapApplicable: true } : {}),
     }
 
     const meta: KeyLabelMeta = {
@@ -421,6 +439,7 @@ export async function importFromDialog(
       name: parsed.name,
       map: parsed.map,
       compositeLabels: parsed.compositeLabels,
+      keymapApplicable: parsed.keymapApplicable,
     })
   } catch (err) {
     return fail('IO_ERROR', String(err))
@@ -508,6 +527,7 @@ export async function exportToDialog(
       name: data.name,
       map: data.map,
       composite_labels: data.compositeLabels ?? null,
+      keymap_applicable: data.keymapApplicable ?? false,
     }
     await writeFile(result.filePath, JSON.stringify(body, null, 2), 'utf-8')
     return ok({ filePath: result.filePath })

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.19",
+  "version": "0.1.21",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -1644,7 +1644,16 @@
     "missingTitle": "ラベル見つかんないじゃん",
     "missingMessage": "「{{name}}」がないからQWERTYでいくっしょ☆",
     "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}} か、キーピッカーの Edit ボタンから落とせるよん☆",
-    "missingClose": "閉じるっしょ"
+    "missingClose": "閉じるっしょ",
+    "keymapApply": {
+      "title": "「{{name}}」キーマップも書き換えちゃう？",
+      "message": "このラベル、QWERTYの文字入れ替えだけだから、キーマップ本体もガチで書き換えられるっしょ☆",
+      "rewriteNote": "書き換えたらキーマップが「{{name}}」の配列になるっしょ。表示ラベルはQWERTYのままだから、実際に送られる文字とズレないから安心して♡",
+      "undoNote": "Undo1発でぜんぶ元通りにできるから安心っしょ♡",
+      "apply": "書き換えるっしょ☆",
+      "displayOnly": "表示だけ変えるっしょ",
+      "errorPartial": "一部のキー書き換え失敗…マジサゲ。。そこでストップしたから、Undoで戻せるっしょ"
+    }
   },
   "themePacks": {
     "title": "テーマパック☆",

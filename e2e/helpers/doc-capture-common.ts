@@ -176,6 +176,50 @@ export function restoreHubEnabledConfig(backup: HubEnabledBackup): void {
   writeFileSync(backup.path, JSON.stringify(config, null, '\t'), 'utf-8')
 }
 
+/** Snapshot of the `lastDevice` key in userData/config.json (electron-store). */
+export interface LastDeviceBackup {
+  path: string
+  hadKey: boolean
+  original: unknown
+}
+
+/**
+ * Null out `lastDevice` in the electron-store config file before launching
+ * a capture app. Connecting to any device persists `lastDevice` (App.tsx)
+ * into this same userData, and with the default `restoreLastSession: true`
+ * the *next* launch — another doc-capture run, or a real `pnpm dev` —
+ * auto-connects straight into the editor on boot, skipping the
+ * device-selection screen entirely ("Timed out waiting for device list",
+ * every phase that depends on that screen breaks). Call this once userData
+ * is resolved, before the capture app itself launches, and pass the result
+ * to `restoreLastDeviceConfig` in a `finally` block after the app closes so
+ * a real developer's own last-session state isn't destroyed by a capture
+ * run — only the run's own connection is kept from leaking forward.
+ */
+export function nullifyLastDeviceConfig(userDataPath: string): LastDeviceBackup {
+  const path = join(userDataPath, 'config.json')
+  if (!existsSync(path)) return { path, hadKey: false, original: undefined }
+  const config = JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>
+  const backup: LastDeviceBackup = { path, hadKey: 'lastDevice' in config, original: config.lastDevice }
+  config.lastDevice = null
+  writeFileSync(path, JSON.stringify(config, null, '\t'), 'utf-8')
+  return backup
+}
+
+/** Restore the original `lastDevice` value snapshotted by
+ *  `nullifyLastDeviceConfig`. Call after the app has closed (window-state
+ *  saves on quit rewrite config.json) so those late writes are preserved. */
+export function restoreLastDeviceConfig(backup: LastDeviceBackup): void {
+  if (!existsSync(backup.path)) return
+  const config = JSON.parse(readFileSync(backup.path, 'utf-8')) as Record<string, unknown>
+  if (!backup.hadKey) {
+    delete config.lastDevice
+  } else {
+    config.lastDevice = backup.original
+  }
+  writeFileSync(backup.path, JSON.stringify(config, null, '\t'), 'utf-8')
+}
+
 /** Snapshot of the virtual device's saved-layout store, taken before a
  *  run that creates entries (Save + Hub upload flows). */
 export interface VirtualDeviceSnapshotsBackup {

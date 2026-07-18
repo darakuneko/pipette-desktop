@@ -19,7 +19,20 @@ export type SingleHistoryEntry =
 
 export type HistoryEntry =
   | SingleHistoryEntry
-  | { kind: 'batch'; entries: SingleHistoryEntry[] }
+  | {
+      kind: 'batch'
+      entries: SingleHistoryEntry[]
+      /** Set only on a Key Label "apply to keymap" rewrite batch
+       *  (Plan-key-label-keymap-apply, 追加要求 2026-07-18): the
+       *  `appliedKeymapLayout` id (or `'qwerty'`) in effect before/after
+       *  this batch, so undo/redo can keep that bookkeeping in sync with
+       *  the keymap it actually restores. Both fields are always present
+       *  together — a plain (non-rewrite) batch like a picker-paste bulk
+       *  edit omits both, and every existing consumer that doesn't know
+       *  about them just ignores the extra optional fields. */
+      appliedLayoutBefore?: string
+      appliedLayoutAfter?: string
+    }
 
 export interface UseKeymapHistoryReturn {
   /** Push a new entry onto the undo stack. Clears the redo stack. */

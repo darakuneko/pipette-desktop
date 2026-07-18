@@ -23,6 +23,10 @@ import { useKeymapMultiSelect } from './useKeymapMultiSelect'
 import { useLayoutOptionsPanel } from './useLayoutOptionsPanel'
 import { useKeymapSelectionHandlers } from './useKeymapSelectionHandlers'
 import { useKeymapHistory } from './useKeymapHistory'
+import type { SingleHistoryEntry } from './useKeymapHistory'
+import { rewriteNumericKeycode } from '../../../shared/keymap/keymap-apply'
+import type { KeymapRewriteTable, KeymapRewriteLayoutIds } from '../../../shared/keymap/keymap-apply'
+import type { KeymapApplyResult } from './keymap-editor-types'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { TypingTestPane } from './TypingTestPane'
 import { useLayoutPicker } from './useLayoutPicker'
@@ -45,6 +49,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   autoAdvance = true, onAutoAdvanceChange, viewMatrix, onViewMatrixChange,
   basicViewType, onBasicViewTypeChange, splitKeyMode, onSplitKeyModeChange,
   quickSelect, onQuickSelectChange, keyboardLayout: _keyboardLayout = 'qwerty', onKeyboardLayoutChange: _onKeyboardLayoutChange,
+  onAppliedKeymapLayoutChange,
   onLock, onMatrixModeChange, onOpenLighting,
   comboEntries, onOpenCombo, onSetComboEntry,
   keyOverrideEntries, onOpenKeyOverride, onSetKeyOverrideEntry,
@@ -135,6 +140,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     selectableKeys, autoAdvance, viewMatrix,
     onSetKey, onSetKeysBulk, onSetEncoder, unlocked, onUnlock,
     multiSelect, history,
+    onAppliedKeymapLayoutChange,
     tapDanceEntries, onSetTapDanceEntry,
     macroCount, macroBufferSize, macroBuffer, onSaveMacros,
   })
@@ -199,10 +205,107 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const layerPanelCollapsed = layerPanelOpenProp === false
   const toggleLayerPanel = useCallback(() => { onLayerPanelOpenChange?.(!layerPanelOpenProp) }, [onLayerPanelOpenChange, layerPanelOpenProp])
 
+  // --- Key Label "apply to keymap" bulk rewrite (Plan-key-label-keymap-apply
+  // Phase 3). Reachable from the footer's layout select via the imperative
+  // handle below, so the write lands on this same `history` instance
+  // instead of a second undo stack. Writes go through `onSetKey` /
+  // `onSetEncoder` sequentially (not `onSetKeysBulk`) so a mid-way failure
+  // leaves both the local keymap state and the pushed history entry
+  // containing only the positions that actually succeeded.
+  //
+  // Same "ref mirrors the latest prop for use inside a stable callback"
+  // idiom as `hasActiveSingleSelectionRef` above: `keymap`/`encoderLayout`
+  // are re-read fresh from these refs before every single write below, so a
+  // concurrent edit that lands on a position between two `await`s (or
+  // during a re-render triggered by one of this function's own writes) is
+  // detected instead of silently clobbered.
+  const keymapRef = useRef(keymap)
+  keymapRef.current = keymap
+  const encoderLayoutRef = useRef(encoderLayout)
+  encoderLayoutRef.current = encoderLayout
+  const isApplyingRewriteRef = useRef(false)
+
+  const applyKeymapRewrite = useCallback(async (
+    table: KeymapRewriteTable,
+    layoutIds?: KeymapRewriteLayoutIds,
+  ): Promise<KeymapApplyResult> => {
+    // Re-entrancy guard: a double Apply click (or any other concurrent
+    // caller) must never interleave two rewrite passes against the same
+    // undo stack. No-op rather than throwing — the in-flight call already
+    // owns the operation.
+    if (isApplyingRewriteRef.current) return { appliedCount: 0 }
+    isApplyingRewriteRef.current = true
+
+    try {
+      const keyChanges: { layer: number; row: number; col: number; oldKeycode: number; newKeycode: number }[] = []
+      for (const [posKey, code] of keymap) {
+        const newKeycode = rewriteNumericKeycode(code, table)
+        if (newKeycode === code) continue
+        const [layer, row, col] = posKey.split(',').map(Number)
+        keyChanges.push({ layer, row, col, oldKeycode: code, newKeycode })
+      }
+      const encoderChanges: { layer: number; idx: number; dir: number; oldKeycode: number; newKeycode: number }[] = []
+      for (const [posKey, code] of encoderLayout) {
+        const newKeycode = rewriteNumericKeycode(code, table)
+        if (newKeycode === code) continue
+        const [layer, idx, dir] = posKey.split(',').map(Number)
+        encoderChanges.push({ layer, idx, dir, oldKeycode: code, newKeycode })
+      }
+
+      const applied: SingleHistoryEntry[] = []
+      let error: string | undefined
+      try {
+        for (const c of keyChanges) {
+          // Freshness check: skip this position if a concurrent edit
+          // already moved it away from the value this rewrite was
+          // computed against, instead of overwriting whatever that edit
+          // just wrote.
+          const current = keymapRef.current.get(`${c.layer},${c.row},${c.col}`) ?? 0
+          if (current !== c.oldKeycode) continue
+          await onSetKey(c.layer, c.row, c.col, c.newKeycode)
+          applied.push({ kind: 'key', layer: c.layer, row: c.row, col: c.col, oldKeycode: c.oldKeycode, newKeycode: c.newKeycode })
+        }
+        for (const c of encoderChanges) {
+          const current = encoderLayoutRef.current.get(`${c.layer},${c.idx},${c.dir}`) ?? 0
+          if (current !== c.oldKeycode) continue
+          await onSetEncoder(c.layer, c.idx, c.dir, c.newKeycode)
+          applied.push({ kind: 'encoder', layer: c.layer, idx: c.idx, dir: c.dir as 0 | 1, oldKeycode: c.oldKeycode, newKeycode: c.newKeycode })
+        }
+      } catch (err) {
+        error = err instanceof Error ? err.message : String(err)
+      }
+
+      if (applied.length > 0) {
+        // Only attach appliedKeymapLayout bookkeeping when the rewrite
+        // completed without error. A partial failure leaves the keymap in
+        // a MIXED state (some positions rewritten, some not) — it's
+        // neither still `layoutIds.before` nor fully `layoutIds.after`, so
+        // claiming either would be wrong. Push a plain batch instead: undo
+        // needs no bookkeeping to correctly return the keymap (and
+        // appliedKeymapLayout, left untouched) to its prior state.
+        const bookkeepable = error === undefined ? layoutIds : undefined
+        history.push(
+          bookkeepable
+            ? { kind: 'batch', entries: applied, appliedLayoutBefore: bookkeepable.before, appliedLayoutAfter: bookkeepable.after }
+            : { kind: 'batch', entries: applied },
+        )
+        // Persist PipetteSettings.appliedKeymapLayout immediately on a
+        // successful rewrite (Plan-key-label-keymap-apply, 追加要求
+        // 2026-07-18) — undo/redo of the batch entry just pushed keeps it
+        // in sync afterwards via the same callback (useKeymapSelectionHandlers).
+        if (bookkeepable) onAppliedKeymapLayoutChange?.(bookkeepable.after)
+      }
+      return { appliedCount: applied.length, error }
+    } finally {
+      isApplyingRewriteRef.current = false
+    }
+  }, [keymap, encoderLayout, onSetKey, onSetEncoder, history, onAppliedKeymapLayoutChange])
+
   useImperativeHandle(ref, () => ({
     toggleMatrix: handleMatrixToggle, toggleTypingTest: handleTypingTestToggle,
     matrixMode, hasMatrixTester,
-  }), [handleMatrixToggle, handleTypingTestToggle, matrixMode, hasMatrixTester])
+    applyKeymapRewrite,
+  }), [handleMatrixToggle, handleTypingTestToggle, matrixMode, hasMatrixTester, applyKeymapRewrite])
 
   // --- Layer keycode builders (current layer / typing test / picker) ---
   const {
