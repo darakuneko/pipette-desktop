@@ -326,6 +326,7 @@ function pickBuilders(
       ...scope,
       sourceLayoutId: ctx.layoutComparison.sourceLayoutId,
       targetLayoutId: ctx.layoutComparison.targetLayoutId,
+      fingerOverrides: ctx.fingerOverrides,
       t,
     }))
   }

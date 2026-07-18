@@ -4,7 +4,7 @@
 // (see shared/kle/kle-ergonomics); users can override the defaults
 // in the separate finger-assignment page.
 
-import { memo, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Bar,
@@ -55,9 +55,6 @@ interface Props {
   period?: ErgonomicsLearningPeriod
   /** Threshold for marking a Learning Curve bucket as qualified. */
   learningMinSampleKeystrokes?: number
-  /** Snapshot-mode only: invoked from the finger-load chart's title
-   * action to open the per-key finger assignment modal. */
-  onOpenFingerAssignment?: () => void
 }
 
 type BarDatum = { label: string; value: number }
@@ -153,11 +150,6 @@ interface HandPyramidChartProps {
   height: number
   yAxisWidth: number
   testId: string
-  /** Optional right-aligned action in the title row. Used by the
-   * finger-load chart to surface the "open finger assignment" button
-   * inside the chart it actually affects, instead of in the global
-   * filter bar. */
-  titleAction?: ReactNode
 }
 
 /** Population-pyramid bar chart for left vs. right keystrokes against
@@ -171,7 +163,6 @@ const HandPyramidChart = memo(function HandPyramidChart({
   height,
   yAxisWidth,
   testId,
-  titleAction,
 }: HandPyramidChartProps) {
   const maxAbs = Math.max(
     ...data.map((d) => Math.max(Math.abs(d.left), d.right)),
@@ -181,7 +172,6 @@ const HandPyramidChart = memo(function HandPyramidChart({
     <div data-testid={testId}>
       <div className="mb-1 flex items-center justify-between gap-2">
         <h4 className="text-sm font-semibold text-content-secondary">{title}</h4>
-        {titleAction}
       </div>
       <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -279,7 +269,6 @@ export function ErgonomicsChart({
   viewMode = 'snapshot',
   period = 'week',
   learningMinSampleKeystrokes,
-  onOpenFingerAssignment,
 }: Props) {
   if (viewMode === 'learning') {
     return (
@@ -306,7 +295,6 @@ export function ErgonomicsChart({
       runIdScopes={runIdScopes}
       snapshot={snapshot}
       fingerOverrides={fingerOverrides}
-      onOpenFingerAssignment={onOpenFingerAssignment}
     />
   )
 }
@@ -320,7 +308,6 @@ interface SnapshotViewProps {
   runIdScopes: string[]
   snapshot: TypingKeymapSnapshot
   fingerOverrides?: Record<string, FingerType>
-  onOpenFingerAssignment?: () => void
 }
 
 function ErgonomicsSnapshotView({
@@ -332,7 +319,6 @@ function ErgonomicsSnapshotView({
   runIdScopes,
   snapshot,
   fingerOverrides,
-  onOpenFingerAssignment,
 }: SnapshotViewProps) {
   const { t } = useTranslation()
   const [layerCells, setLayerCells] = useState<Record<number, TypingHeatmapByCell>>({})
@@ -447,18 +433,6 @@ function ErgonomicsSnapshotView({
             height={280}
             yAxisWidth={64}
             testId="analyze-ergonomics-finger"
-            titleAction={
-              onOpenFingerAssignment ? (
-                <button
-                  type="button"
-                  className="rounded-md border border-edge bg-surface px-3 py-1 text-xs text-content-secondary transition-colors hover:border-accent hover:text-content"
-                  onClick={onOpenFingerAssignment}
-                  data-testid="analyze-finger-assignment-open"
-                >
-                  {t('analyze.fingerAssignment.button')}
-                </button>
-              ) : undefined
-            }
           />
         </div>
       </div>

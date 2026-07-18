@@ -68,6 +68,7 @@ import {
   deleteTypingDailySummaries,
   deleteAllTypingForKeyboard,
   getMatrixHeatmap,
+  parseLayoutComparisonOptionsForTests,
 } from '../typing-analytics-service'
 import {
   deviceDayDir,
@@ -759,6 +760,61 @@ describe('typing-analytics-service', () => {
       await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: { uid: '', vendorId: 0, productId: 0, productName: '' } })
 
       expect(getMinuteBufferForTests().isEmpty()).toBe(true)
+    })
+  })
+
+  describe('parseLayoutComparisonOptions (fingerOverrides validation)', () => {
+    const validBase = {
+      source: { id: 'qwerty', map: {} },
+      targets: [{ id: 'colemak', map: {} }],
+      metrics: [] as string[],
+    }
+
+    it('accepts a valid fingerOverrides map', () => {
+      const result = parseLayoutComparisonOptionsForTests({
+        ...validBase,
+        fingerOverrides: { '0,0': 'left-index', '1,3': 'right-pinky' },
+      })
+      expect(result).not.toBeNull()
+      expect(result?.fingerOverrides).toEqual({ '0,0': 'left-index', '1,3': 'right-pinky' })
+    })
+
+    it('accepts options without fingerOverrides (backward compatible)', () => {
+      const result = parseLayoutComparisonOptionsForTests(validBase)
+      expect(result).not.toBeNull()
+      expect(result?.fingerOverrides).toBeUndefined()
+    })
+
+    it('rejects a fingerOverrides key that is not a "row,col" position', () => {
+      const result = parseLayoutComparisonOptionsForTests({
+        ...validBase,
+        fingerOverrides: { 'not-a-pos': 'left-index' },
+      })
+      expect(result).toBeNull()
+    })
+
+    it('rejects a fingerOverrides value that is not one of the 10 finger names', () => {
+      const result = parseLayoutComparisonOptionsForTests({
+        ...validBase,
+        fingerOverrides: { '0,0': 'left-elbow' },
+      })
+      expect(result).toBeNull()
+    })
+
+    it('rejects a non-object fingerOverrides', () => {
+      const result = parseLayoutComparisonOptionsForTests({
+        ...validBase,
+        fingerOverrides: 'left-index',
+      })
+      expect(result).toBeNull()
+    })
+
+    it('rejects a fingerOverrides array (Array.isArray guard)', () => {
+      const result = parseLayoutComparisonOptionsForTests({
+        ...validBase,
+        fingerOverrides: ['left-index'],
+      })
+      expect(result).toBeNull()
     })
   })
 

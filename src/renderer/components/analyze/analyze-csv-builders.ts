@@ -434,9 +434,10 @@ export async function buildBigramsCsv(args: ScopeArgs & {
 export async function buildLayoutComparisonCsv(args: ScopeArgs & {
   sourceLayoutId: string
   targetLayoutId: string
+  fingerOverrides: Record<string, FingerType>
   t: TFunction
 }): Promise<CsvBundleEntry> {
-  const { uid, range, deviceScope, appScopes = [], typingTestScopes = [], runIdScopes = [], sourceLayoutId, targetLayoutId, t } = args
+  const { uid, range, deviceScope, appScopes = [], typingTestScopes = [], runIdScopes = [], sourceLayoutId, targetLayoutId, fingerOverrides, t } = args
   const header = ['layout_id', 'layout_label', 'metric', 'key', 'label', 'value']
   const [source, target] = await Promise.all([
     resolveComparisonInput(sourceLayoutId),
@@ -446,7 +447,7 @@ export async function buildLayoutComparisonCsv(args: ScopeArgs & {
     return { slug: SLUG.layoutComparison, content: buildCsv(header, []) }
   }
   const result = await fetchLayoutComparisonForRange(uid, deviceScope, range.fromMs, range.toMs, {
-    source, targets: [source, target], metrics: [...LAYOUT_COMPARISON_PHASE_1_METRICS],
+    source, targets: [source, target], metrics: [...LAYOUT_COMPARISON_PHASE_1_METRICS], fingerOverrides,
   }, appScopes, typingTestScopes, runIdScopes).catch(() => null)
 
   const rows: unknown[][] = []

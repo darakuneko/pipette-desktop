@@ -26,6 +26,7 @@ import type {
   TypingBigramAggregateView,
 } from '../../shared/types/typing-analytics'
 import type { KleKey } from '../../shared/kle/types'
+import { isFingerType, isPosKey, type FingerType } from '../../shared/kle/kle-ergonomics'
 import { canonicalScopeKey, emptyTombstoneResult } from '../../shared/types/typing-analytics'
 import { isHashScope, isOwnScope, normalizeAppScopes, parseDeviceScope } from '../../shared/types/analyze-filters'
 import { log } from '../logger'
@@ -851,6 +852,7 @@ export function setupTypingAnalyticsIpc(): void {
         source: opts.source,
         targets: opts.targets,
         metrics: opts.metrics,
+        fingerOverrides: opts.fingerOverrides,
       })
     },
   )
@@ -1485,6 +1487,19 @@ function isLayoutInputLayout(value: unknown): value is LayoutComparisonInputLayo
   return true
 }
 
+// Strict reject-whole-map policy (unlike hub-analytics.ts's
+// sanitizeFingerOverrides, which drops invalid entries instead): a
+// malformed fingerOverrides here fails the whole IPC call the same way
+// a malformed source/targets does.
+function isValidFingerOverrides(value: unknown): value is Record<string, FingerType> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+  for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+    if (!isPosKey(key)) return false
+    if (!isFingerType(v)) return false
+  }
+  return true
+}
+
 function parseLayoutComparisonOptions(value: unknown): LayoutComparisonOptions | null {
   if (typeof value !== 'object' || value === null) return null
   const o = value as Record<string, unknown>
@@ -1497,7 +1512,12 @@ function parseLayoutComparisonOptions(value: unknown): LayoutComparisonOptions |
       metrics.push(m as LayoutComparisonMetric)
     }
   }
-  return { source: o.source, targets: o.targets, metrics }
+  let fingerOverrides: Record<string, FingerType> | undefined
+  if (o.fingerOverrides !== undefined) {
+    if (!isValidFingerOverrides(o.fingerOverrides)) return null
+    fingerOverrides = o.fingerOverrides
+  }
+  return { source: o.source, targets: o.targets, metrics, fingerOverrides }
 }
 
 /** snapshot.layout is wire-shaped (`{ keys: KleKey[] }` from the
@@ -1891,4 +1911,12 @@ export function getMinuteBufferForTests(): MinuteBuffer {
 
 export function flushTypingAnalyticsNowForTests(): Promise<void> {
   return flushNow({ final: true })
+}
+
+/** Test-only escape hatch so the Layout Comparison options parser's
+ * validation rules (key / value shape of `fingerOverrides` in
+ * particular) can be unit-tested without wiring a full IPC handler +
+ * keymap snapshot fixture. */
+export function parseLayoutComparisonOptionsForTests(value: unknown): LayoutComparisonOptions | null {
+  return parseLayoutComparisonOptions(value)
 }

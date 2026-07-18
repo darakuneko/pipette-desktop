@@ -14,10 +14,7 @@ import { getTypingAnalyticsDB } from './typing-analytics/db/typing-analytics-db'
 import type { PipetteSettings, PipetteSettingsPatch, ViewMode, PooledTypingTestResult } from '../shared/types/pipette-settings'
 import { VIEW_MODES, DEFAULT_PIPETTE_SETTINGS, isTypingSyncSpanDays, isTypingViewMenuTab, isTypingTestComparisonBaselines } from '../shared/types/pipette-settings'
 import { isPositiveInt, isValidAnalyzeFilterSettings } from '../shared/types/analyze-filters'
-import { FINGER_LIST, type FingerType } from '../shared/kle/kle-ergonomics'
-
-const FINGER_SET = new Set<FingerType>(FINGER_LIST)
-const KEY_POS_RE = /^\d+,\d+$/
+import { isFingerType, isPosKey } from '../shared/kle/kle-ergonomics'
 
 function isValidIsoTimestamp(v: unknown): v is string {
   if (typeof v !== 'string' || v.length === 0) return false
@@ -42,8 +39,8 @@ function isValidAnalyzeSettings(value: unknown): boolean {
     const fa = obj.fingerAssignments
     if (typeof fa !== 'object' || Array.isArray(fa)) return false
     for (const [k, v] of Object.entries(fa as Record<string, unknown>)) {
-      if (!KEY_POS_RE.test(k)) return false
-      if (typeof v !== 'string' || !FINGER_SET.has(v as FingerType)) return false
+      if (!isPosKey(k)) return false
+      if (!isFingerType(v)) return false
     }
   }
   if ('goalDays' in obj && obj.goalDays != null && !isPositiveInt(obj.goalDays)) return false
@@ -65,7 +62,7 @@ function isValidViewMatrix(value: unknown): boolean {
   if (value == null) return true
   if (typeof value !== 'object' || Array.isArray(value)) return false
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-    if (!KEY_POS_RE.test(k)) return false
+    if (!isPosKey(k)) return false
     if (typeof v !== 'object' || v === null || Array.isArray(v)) return false
     const cell = v as Record<string, unknown>
     if (!Number.isInteger(cell.row) || (cell.row as number) < 0) return false

@@ -410,6 +410,13 @@ export interface LayoutComparisonOptions {
   /** Subset of metrics to compute. Empty array yields just the
    * total / skipped event counts. */
   metrics: LayoutComparisonMetric[]
+  /** Per-cell finger assignments the live Ergonomics / Bigrams charts
+   * already use. Applied at the TARGET physical position's posKey —
+   * same physical-key rule as the Ergonomics chart — so a user
+   * override reclassifies fingerLoad / handBalance the same way
+   * whether the chart is comparing layouts or just showing the
+   * current one. Absent / empty means "use the geometry estimate". */
+  fingerOverrides?: Record<string, FingerType>
 }
 
 export interface LayoutComparisonTargetResult {

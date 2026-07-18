@@ -18,6 +18,7 @@ import { Hub401Error, Hub403Error, Hub404Error, Hub409Error, Hub429Error, authen
 import {
   buildAnalyticsExport,
   estimateAnalyticsExportSizeBytes,
+  sanitizeFingerOverrides,
   validateAnalyticsExport,
   type BuildAnalyticsExportInput,
   type DeviceScope,
@@ -227,6 +228,7 @@ async function prepareAnalyticsExport(
     appScopes,
     filters,
     layoutComparisonInputs,
+    fingerOverrides: sanitizeFingerOverrides(params.fingerOverrides),
     categories,
     appDataApps,
   })

@@ -60,6 +60,27 @@ export const HAND_OF_FINGER: Record<FingerType, HandType> = {
   'right-pinky': 'right',
 }
 
+/** Matches the `"row,col"` shape every finger-override key uses
+ * (`pipetteSettingsGet(uid).analyze.fingerAssignments`, the Layout
+ * Comparison IPC's `fingerOverrides`, and the Hub export's sanitizer).
+ * Shared so the three validators can't drift on what counts as a
+ * position key. */
+export const POS_KEY_RE = /^\d+,\d+$/
+
+export function isPosKey(value: string): boolean {
+  return POS_KEY_RE.test(value)
+}
+
+const FINGER_TYPE_SET = new Set<FingerType>(FINGER_LIST)
+
+/** Whether `v` is one of the 10 finger names. Backs every
+ * finger-override validator (pipette-settings-store's write-time gate,
+ * the Layout Comparison options parser, the Hub export sanitizer) so
+ * they can't drift on what counts as a valid finger. */
+export function isFingerType(v: unknown): v is FingerType {
+  return typeof v === 'string' && FINGER_TYPE_SET.has(v as FingerType)
+}
+
 // -------- Internal helpers --------
 
 interface Bounds {

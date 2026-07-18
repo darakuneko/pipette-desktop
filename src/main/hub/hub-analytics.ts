@@ -23,6 +23,7 @@ import type {
   LayoutComparisonResult,
   TypingKeymapSnapshot,
 } from '../../shared/types/typing-analytics'
+import { isFingerType, isPosKey, type FingerType } from '../../shared/kle/kle-ergonomics'
 import { aggregatePairTotals, rankBigramsByCount, rankBigramsBySlow } from '../typing-analytics/bigram-aggregate'
 import { computeLayoutComparison } from '../typing-analytics/compute-layout-comparison'
 import { getMachineHash } from '../typing-analytics/machine-hash'
@@ -106,6 +107,12 @@ export interface BuildAnalyticsExportInput {
      * uses layer 0; pass through whatever the live chart used. */
     layer?: number
   } | null
+  /** Per-cell finger assignments the live Ergonomics chart uses,
+   * sanitized via `sanitizeFingerOverrides` before it reaches this
+   * input. Threaded into the Layout Comparison computation so the
+   * Hub upload's fingerLoad / handBalance numbers agree with what the
+   * user sees locally. Undefined / empty behaves like "no override". */
+  fingerOverrides?: Record<string, FingerType>
   /** Optional category picker — only the listed sections get fetched.
    * Sections not in the set ship as empty arrays so the Hub-side
    * validator still accepts the payload. Undefined / empty fetches
@@ -329,6 +336,7 @@ async function collectData(
         appScopes,
         input.layoutComparisonInputs,
         input.snapshot,
+        input.fingerOverrides,
       )
     : null
 
@@ -360,6 +368,7 @@ async function computeLayoutComparisonForExport(
   appScopes: string[],
   inputs: BuildAnalyticsExportInput['layoutComparisonInputs'],
   snapshot: TypingKeymapSnapshot,
+  fingerOverrides: Record<string, FingerType> | undefined,
 ): Promise<LayoutComparisonResult | null> {
   if (inputs === null) return null
   // Layer 0 is the Phase 1 default; the IPC handler does the same thing
@@ -387,6 +396,7 @@ async function computeLayoutComparisonForExport(
     targets: inputs.targets,
     metrics: inputs.metrics,
     layer,
+    fingerOverrides,
   })
   const nameById = new Map(inputs.targets.map((t) => [t.id, t.name]))
   for (const target of result.targets) {
@@ -397,6 +407,27 @@ async function computeLayoutComparisonForExport(
     }
   }
   return result
+}
+
+/** Drops any entry whose key isn't a `"row,col"` position or whose
+ * value isn't one of the 10 finger names (see `isPosKey` / `isFingerType`
+ * in kle-ergonomics.ts). The source (`pipetteSettingsGet(uid).analyze.
+ * fingerAssignments`) is already validated at write time by
+ * `pipette-settings-store.ts`, so this is defense-in-depth rather than
+ * the primary gate — invalid entries are silently dropped instead of
+ * rejecting the whole upload, matching "best-effort mirror of the
+ * user's current mapping" rather than a hard validation boundary. */
+export function sanitizeFingerOverrides(
+  value: Record<string, string> | undefined,
+): Record<string, FingerType> | undefined {
+  if (!value) return undefined
+  const out: Record<string, FingerType> = {}
+  for (const [key, v] of Object.entries(value)) {
+    if (!isPosKey(key)) continue
+    if (!isFingerType(v)) continue
+    out[key] = v
+  }
+  return Object.keys(out).length > 0 ? out : undefined
 }
 
 const FINGER_KEY_TO_HUB: Record<string, string> = {

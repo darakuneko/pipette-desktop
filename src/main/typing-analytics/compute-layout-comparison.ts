@@ -42,6 +42,9 @@ export interface ComputeLayoutComparisonInput {
   metrics: LayoutComparisonMetric[]
   /** Layer to read from `snapshot.keymap`. Phase 1 reads layer 0. */
   layer?: number
+  /** Per-cell finger overrides forwarded to `buildLayoutResolver` —
+   * see `LayoutResolverInput.fingerOverrides` for the exact rule. */
+  fingerOverrides?: Record<string, FingerType>
 }
 
 interface TargetAccumulator {
@@ -155,6 +158,7 @@ export function computeLayoutComparison(input: ComputeLayoutComparisonInput): La
       sourceLayout: input.source,
       targetLayout: target,
       layer,
+      fingerOverrides: input.fingerOverrides,
     })
     const acc = newAccumulator()
     for (const [pos, cell] of input.matrixCounts) {

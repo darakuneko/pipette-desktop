@@ -229,4 +229,51 @@ describe('buildLayoutResolver', () => {
     expect(result.rowCategory).toBe('top')
     expect(result.hand).toBeDefined()
   })
+
+  it('lets a fingerOverride at the target position win over the geometry estimate for finger AND hand, but not row', () => {
+    const kleKeys: KleKey[] = [
+      emptyKleKey(0, 0, 0, 0),
+      emptyKleKey(0, 1, 1, 0),
+      emptyKleKey(0, 2, 2, 0),
+      emptyKleKey(0, 3, 3, 0),
+      emptyKleKey(1, 0, 0, 1),
+      emptyKleKey(1, 1, 1, 1),
+      emptyKleKey(1, 2, 2, 1),
+      emptyKleKey(1, 3, 3, 1),
+      emptyKleKey(2, 0, 0, 2),
+      emptyKleKey(2, 1, 1, 2),
+      emptyKleKey(2, 2, 2, 2),
+      emptyKleKey(2, 3, 3, 2),
+      emptyKleKey(3, 0, 0, 3),
+      emptyKleKey(3, 1, 1, 3),
+      emptyKleKey(3, 2, 2, 3),
+      emptyKleKey(3, 3, 3, 3),
+    ]
+    const snapshot = makeSnapshot([
+      ['KC_Q', 'KC_W', 'KC_E', 'KC_R'],
+      ['KC_A', 'KC_S', 'KC_D', 'KC_F'],
+      ['KC_Z', 'KC_X', 'KC_C', 'KC_V'],
+      ['KC_NO', 'KC_NO', 'KC_SPACE', 'KC_NO'],
+    ])
+    // Same target as the test above: QWERTY F → Colemak "f" = KC_E,
+    // which lives at (0, 2) — the top row, estimated on whichever hand
+    // its x-position falls on.
+    const withoutOverride = buildLayoutResolver({
+      snapshot, kleKeys, sourceLayout: QWERTY, targetLayout: COLEMAK,
+    }).resolve(1, 3)
+    expect(withoutOverride.skipped).toBe(false)
+    if (withoutOverride.skipped) return
+
+    const withOverride = buildLayoutResolver({
+      snapshot, kleKeys, sourceLayout: QWERTY, targetLayout: COLEMAK,
+      fingerOverrides: { '0,2': 'left-pinky' },
+    }).resolve(1, 3)
+    expect(withOverride.skipped).toBe(false)
+    if (withOverride.skipped) return
+    expect(withOverride.finger).toBe('left-pinky')
+    expect(withOverride.hand).toBe('left')
+    // Row category is a physical-layout property — override never
+    // touches it, even though the finger source hand may disagree.
+    expect(withOverride.rowCategory).toBe(withoutOverride.rowCategory)
+  })
 })

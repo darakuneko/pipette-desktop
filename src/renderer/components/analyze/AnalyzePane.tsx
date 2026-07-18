@@ -129,6 +129,14 @@ const ANALYSIS_TABS: AnalysisTabKey[] = [
   'keyHeatmap', 'ergonomics', 'bigrams', 'layer',
   'layoutComparison',
 ]
+
+/** Tabs whose chart consumes `fingerAssignments` (Summary's peak-record
+ * finger stat, Ergonomics, Bigrams' finger quadrant, and Layout
+ * Comparison's finger-load metric). The Row 2 finger-assignment button
+ * shows on all four so the user can jump to the editor from wherever
+ * they're looking at finger-derived data, not just Ergonomics. */
+const FINGER_ASSIGNMENT_TABS = new Set<AnalysisTabKey>(['summary', 'ergonomics', 'bigrams', 'layoutComparison'])
+
 const DAY_MS = 86_400_000
 /** Default analyze window: most keyboards generate enough data in a
  * week for the charts to feel populated without the user needing to
@@ -1100,8 +1108,12 @@ export function AnalyzePane({
           {/* Row 2: tab-specific filters, unchanged by the chip/modal
            * restructure. Its own 10-column max-content grid keeps every
            * row's labels left and values right as the per-tab filter set
-           * changes shape across tabs. */}
+           * changes shape across tabs. `min-w-max` on the outer flex
+           * keeps the finger-assignment button from squeezing into (or
+           * overlapping) the grid when this row's ancestor scrolls
+           * horizontally (`overflow-x-auto` above). */}
           {selected && (
+            <div className="flex w-full min-w-max items-center">
             <div
               className="grid min-w-0 items-center gap-x-3 gap-y-2"
               style={{ gridTemplateColumns: 'repeat(10, max-content)' }}
@@ -1243,6 +1255,17 @@ export function AnalyzePane({
                * the base-layer select rides next to the activations
                * heading instead of in this global filter row. */}
             </div>
+            {FINGER_ASSIGNMENT_TABS.has(analysisTab) && effectiveSnapshot !== null && (
+              <button
+                type="button"
+                className="ml-auto shrink-0 rounded-md border border-edge bg-surface px-3 py-1 text-xs text-content-secondary transition-colors hover:border-accent hover:text-content"
+                onClick={() => setFingerModalOpen(true)}
+                data-testid="analyze-finger-assignment-open"
+              >
+                {t('analyze.fingerAssignment.button')}
+              </button>
+            )}
+            </div>
           )}
         </div>
 
@@ -1330,7 +1353,6 @@ export function AnalyzePane({
                     viewMode={ergonomicsFilter.viewMode}
                     period={ergonomicsFilter.period}
                     learningMinSampleKeystrokes={ergonomicsFilter.minSampleKeystrokes}
-                    onOpenFingerAssignment={() => setFingerModalOpen(true)}
                   />
                 ) : (
                   <div className="py-4 text-center text-sm text-content-muted" data-testid={tid("analyze-ergonomics-no-snapshot")}>
@@ -1368,6 +1390,7 @@ export function AnalyzePane({
                   runIdScopes={runIdScopes}
                   snapshot={effectiveSnapshot}
                   filter={layoutComparisonFilter}
+                  fingerOverrides={fingerAssignments}
                   onSkipPercentChange={onSkipPercentChange}
                 />
               ) : analysisTab === 'layer' ? (

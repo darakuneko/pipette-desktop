@@ -9,6 +9,7 @@ import type {
   TypingKeymapSnapshot,
 } from '../../../../shared/types/typing-analytics'
 import type { LayoutComparisonFilters } from '../../../../shared/types/analyze-filters'
+import type { FingerType } from '../../../../shared/kle/kle-ergonomics'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -62,13 +63,16 @@ function makeSnapshot(): TypingKeymapSnapshot {
   }
 }
 
-function renderView(overrides: {
+interface RenderOverrides {
   filter?: Partial<Required<LayoutComparisonFilters>>
   snapshot?: TypingKeymapSnapshot | null
+  fingerOverrides?: Record<string, FingerType>
   onSkipPercentChange?: (percent: number | null) => void
-} = {}): void {
-  const { filter, snapshot = makeSnapshot(), onSkipPercentChange } = overrides
-  render(
+}
+
+function buildElement(overrides: RenderOverrides = {}): JSX.Element {
+  const { filter, snapshot = makeSnapshot(), fingerOverrides = {}, onSkipPercentChange } = overrides
+  return (
     <LayoutComparisonView
       uid="0xAABB"
       range={range}
@@ -78,9 +82,15 @@ function renderView(overrides: {
       runIdScopes={[]}
       snapshot={snapshot}
       filter={{ ...DEFAULT_FILTER, ...filter }}
+      fingerOverrides={fingerOverrides}
       onSkipPercentChange={onSkipPercentChange}
-    />,
+    />
   )
+}
+
+function renderView(overrides: RenderOverrides = {}): { rerenderView: (next: RenderOverrides) => void } {
+  const { rerender } = render(buildElement(overrides))
+  return { rerenderView: (next) => rerender(buildElement(next)) }
 }
 
 function makeResult(overrides: Partial<LayoutComparisonResult> = {}): LayoutComparisonResult {
@@ -165,5 +175,22 @@ describe('LayoutComparisonView', () => {
     })
     expect(screen.getByTestId('analyze-layout-comparison-finger-diff')).toBeTruthy()
     expect(screen.getByTestId('analyze-layout-comparison-metric-table')).toBeTruthy()
+  })
+
+  it('forwards fingerOverrides to the fetch options', async () => {
+    fetchSpy.mockResolvedValue(makeResult())
+    const fingerOverrides: Record<string, FingerType> = { '0,0': 'left-index' }
+    renderView({ filter: { targetLayoutId: 'colemak' }, fingerOverrides })
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1))
+    const options = fetchSpy.mock.calls[0]?.[4] as { fingerOverrides?: Record<string, FingerType> }
+    expect(options.fingerOverrides).toEqual(fingerOverrides)
+  })
+
+  it('re-fetches when fingerOverrides changes (e.g. after saving the finger-assignment modal)', async () => {
+    fetchSpy.mockResolvedValue(makeResult())
+    const { rerenderView } = renderView({ filter: { targetLayoutId: 'colemak' }, fingerOverrides: {} })
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1))
+    rerenderView({ filter: { targetLayoutId: 'colemak' }, fingerOverrides: { '0,0': 'left-index' } })
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2))
   })
 })
