@@ -410,6 +410,18 @@ export function App() {
   // the StatusBar's "View Analytics" button can be disabled mid-run.
   const [typingTestRunning, setTypingTestRunning] = useState(false)
 
+  // Whether a Key Label "apply to keymap" rewrite is currently mid-flight —
+  // it runs unawaited from the footer's layout select and drives a sequence
+  // of `await`ed device writes that can take seconds. While it's running,
+  // the footer's Analyze button must stay disabled: opening AnalyzePage
+  // unmounts KeymapEditor (and its `history`/undo stack) out from under the
+  // in-flight rewrite, which would otherwise land the batch history push in
+  // an unmounted component (making it un-undoable after Back) and fire the
+  // post-apply flash timer's setState after unmount. Typing View / Typing
+  // Test don't unmount the editor, so they're unaffected; Disconnect has the
+  // same mid-apply hazard but that's pre-existing and out of scope here.
+  const [keymapApplyInFlight, setKeymapApplyInFlight] = useState(false)
+
   const handleViewAnalytics = useCallback((origin: AnalyticsOrigin) => {
     // Each entry point states its own origin so Back returns there.
     analyticsOriginRef.current = origin
@@ -451,6 +463,10 @@ export function App() {
       // that fires after the editor remounts (see below).
       devicePrefs.setViewMode('typingTest')
       pendingTypingTestReentryRef.current = true
+    } else if (analyticsOriginRef.current === 'editor') {
+      // Opened straight from the editor's own footer — there is no compact
+      // window or typing test to re-enter, just return to the plain editor.
+      devicePrefs.setViewMode('editor')
     } else {
       enterTypingViewOnly()
       devicePrefs.setViewMode('typingView')
@@ -1036,6 +1052,8 @@ export function App() {
             }
             keymapEditorRef.current?.toggleTypingTest()
           }}
+          onOpenAnalyze={() => handleViewAnalytics('editor')}
+          analyzeDisabled={keymapApplyInFlight}
           onViewAnalytics={() => handleViewAnalytics('typingTest')}
           viewAnalyticsDisabled={typingTestRunning}
           onDisconnect={editorUI.typingTestMode ? undefined : lifecycle.handleDisconnect}
@@ -1047,8 +1065,14 @@ export function App() {
             onKeyboardLayoutChange: devicePrefs.setLayout,
             keymapEditable: keyboard.keymap.size > 0,
             appliedKeymapLayout: devicePrefs.appliedKeymapLayout,
-            onApplyKeymapRewrite: (table, layoutIds) =>
-              keymapEditorRef.current?.applyKeymapRewrite(table, layoutIds) ?? Promise.resolve({ appliedCount: 0 }),
+            onApplyKeymapRewrite: async (table, layoutIds) => {
+              setKeymapApplyInFlight(true)
+              try {
+                return await (keymapEditorRef.current?.applyKeymapRewrite(table, layoutIds) ?? Promise.resolve({ appliedCount: 0 }))
+              } finally {
+                setKeymapApplyInFlight(false)
+              }
+            },
           }}
         />
       )}

@@ -1006,7 +1006,7 @@ export function TypingTestPane({
                       onViewAnalytics('typingView')
                     }}
                   >
-                    {t('editor.typingTest.viewAnalytics')}
+                    {t('app.analyzeTab')}
                   </button>
                 )}
                 {onHeatmapWindowMinChange && (

@@ -185,7 +185,7 @@ The Analyze page shows how you actually type — per-key heatmaps, WPM trends, i
 There are two entry points:
 
 - **Analyze tab** on the device selection screen — open the page without connecting a keyboard. Useful for reviewing data from keyboards that are currently unplugged
-- **View Analytics** button in the Typing Test pane — jumps to Analyze for the keyboard you are currently using, then returns to the typing view when you go back
+- **Analyze** button in the Typing Test pane — jumps to Analyze for the keyboard you are currently using, then returns to the typing view when you go back
 
 **Keyboard selector**
 
@@ -1313,7 +1313,7 @@ When the Monitor App toggle is on (and REC is in the Stop / recording state), Pi
 
 Directly below Monitor App, the REC tab also has **Stay in System Tray** and **Start Hidden in Tray** toggles — the same settings as Settings → Tools (§6.6), with the same linked-disable behavior (Start Hidden in Tray is disabled while Stay in System Tray is off, and turning Stay in System Tray off also turns Start Hidden in Tray off). They're surfaced here too since the Typing View window is often the last one open before you reach for the tray.
 
-**View Analytics**
+**Analyze**
 
 Jumps directly to the Analyze page for this keyboard so you can review the stream you just recorded. Going back returns you to Typing View.
 
@@ -2035,6 +2035,7 @@ Inline selectors for common per-session preferences. A `|` separator divides the
 **Action buttons** (right side)
 
 - **Key Tester**: Toggle button for Matrix Tester mode (requires matrix tester support; hidden when Typing Test is active)
+- **Analyze**: Jumps straight to the Analyze page (§1.4) for the connected keyboard; hidden when Typing Test is active. Back returns to the editor
 - **Typing View**: Toggle button to enter view-only mode — a compact window showing only the keyboard layout (see §4.3). Requires matrix tester support; hidden when Typing Test is active
 - **Typing Test**: Toggle button for Typing Test mode (requires matrix tester support)
 - **Disconnect button**: Disconnects from the keyboard and returns to the device selection screen (hidden while Typing Test is active)

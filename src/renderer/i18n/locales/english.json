@@ -376,7 +376,6 @@
       "alwaysOnTop": "top",
       "recordStart": "Start",
       "recordStop": "Stop",
-      "viewAnalytics": "View Analytics",
       "tab": {
         "window": "Window",
         "rec": "REC"

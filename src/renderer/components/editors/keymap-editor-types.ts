@@ -17,7 +17,7 @@ export const MAX_SCALE = 2.0
 
 /** Where a "View Analytics" action was triggered, so the analytics page's
  * Back can return the user to the same place. */
-export type AnalyticsOrigin = 'typingView' | 'typingTest'
+export type AnalyticsOrigin = 'typingView' | 'typingTest' | 'editor'
 
 /** Collapsed width of the layer list panel / toolbar column (3.125rem). */
 export const PANEL_COLLAPSED_WIDTH = '3.125rem'
