@@ -25,6 +25,14 @@ interface Props {
   viewOnly?: boolean
   onViewOnlyChange?: () => void
   onTypingTestModeChange?: () => void
+  /** Opens the Analyze view straight from the editor footer (independent of
+   *  Typing View / Typing Test). Hidden while Typing Test is active — the
+   *  in-run "View Analytics" button below covers that case instead. */
+  onOpenAnalyze?: () => void
+  /** Disables the Analyze button while a Key Label "apply to keymap" rewrite
+   *  is mid-flight — opening AnalyzePage would unmount KeymapEditor out from
+   *  under the in-flight sequential device writes. */
+  analyzeDisabled?: boolean
   /** Opens the Analyze view from the typing test. Shown only in typing-test
    *  mode, beside "Exit Typing Test"; disabled mid-run so the user can't
    *  navigate away from an in-progress test. */
@@ -50,12 +58,19 @@ export function StatusBar({
   viewOnly,
   onViewOnlyChange,
   onTypingTestModeChange,
+  onOpenAnalyze,
+  analyzeDisabled,
   onViewAnalytics,
   viewAnalyticsDisabled,
   onDisconnect,
   quickSettings,
 }: Props) {
   const { t } = useTranslation()
+
+  const showAnalyzeButton = !!onOpenAnalyze && !typingTestMode
+  const showViewOnlyButton = !!onViewOnlyChange && !!hasMatrixTester && !typingTestMode
+  const showTypingTestButton = !!onTypingTestModeChange && !!hasMatrixTester
+  const hasLeadingButtons = showAnalyzeButton || showViewOnlyButton || showTypingTestButton
 
   return (
     <div className="flex items-center justify-between border-t border-edge bg-surface-alt px-4 py-1.5 text-xs leading-none text-content-secondary" data-testid="status-bar">
@@ -124,11 +139,21 @@ export function StatusBar({
       </div>
       <div className="flex items-center gap-3">
         {quickSettings && <QuickSettingsSelects {...quickSettings} />}
-        {quickSettings && hasMatrixTester &&
-          (onTypingTestModeChange || (onViewOnlyChange && !typingTestMode)) && (
+        {quickSettings && hasLeadingButtons && (
           <span className="text-edge">|</span>
         )}
-        {onViewOnlyChange && hasMatrixTester && !typingTestMode && (
+        {showAnalyzeButton && (
+          <button
+            type="button"
+            data-testid="status-analyze-button"
+            className={`${TYPING_TEST_INACTIVE} disabled:cursor-not-allowed disabled:opacity-40`}
+            disabled={analyzeDisabled}
+            onClick={onOpenAnalyze}
+          >
+            {t('app.analyzeTab')}
+          </button>
+        )}
+        {showViewOnlyButton && (
           <button
             type="button"
             data-testid="view-only-button"
@@ -147,10 +172,10 @@ export function StatusBar({
             disabled={viewAnalyticsDisabled}
             onClick={onViewAnalytics}
           >
-            {t('editor.typingTest.viewAnalytics')}
+            {t('app.analyzeTab')}
           </button>
         )}
-        {onTypingTestModeChange && hasMatrixTester && (
+        {showTypingTestButton && (
           <button
             type="button"
             data-testid="typing-test-button"
@@ -162,8 +187,7 @@ export function StatusBar({
             {typingTestMode ? t('editor.typingTest.exitTypingMode') : t('editor.typingTest.switchToTypingMode')}
           </button>
         )}
-        {onDisconnect && hasMatrixTester &&
-          (onTypingTestModeChange || (onViewOnlyChange && !typingTestMode)) && (
+        {onDisconnect && hasLeadingButtons && (
           <span className="text-edge">|</span>
         )}
         {onDisconnect && (

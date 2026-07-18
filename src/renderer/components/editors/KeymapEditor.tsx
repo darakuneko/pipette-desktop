@@ -226,6 +226,18 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const encoderLayoutRef = useRef(encoderLayout)
   encoderLayoutRef.current = encoderLayout
   const isApplyingRewriteRef = useRef(false)
+  // Belt-and-braces unmount guard: the editor-footer Analyze button can open
+  // AnalyzePage (unmounting this component) while a rewrite's sequential
+  // `await`ed device writes are still in flight — the caller-side guard in
+  // App.tsx disables that button while a rewrite is running, but this ref
+  // is the last line of defense so a rewrite already past that guard still
+  // stops cleanly instead of pushing history / firing callbacks / setting
+  // state on an unmounted component.
+  const isMountedRef = useRef(true)
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => { isMountedRef.current = false }
+  }, [])
 
   // Post-apply "flash" — briefly paints the just-rewritten positions in
   // the selection colour (KeyWidget's `flashed`, a `key-flash` CSS
@@ -280,6 +292,9 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       let error: string | undefined
       try {
         for (const c of keyChanges) {
+          // Stop immediately once the component has unmounted (e.g. the
+          // Analyze button navigated away mid-rewrite) — no further writes.
+          if (!isMountedRef.current) break
           // Freshness check: skip this position if a concurrent edit
           // already moved it away from the value this rewrite was
           // computed against, instead of overwriting whatever that edit
@@ -290,6 +305,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           applied.push({ kind: 'key', layer: c.layer, row: c.row, col: c.col, oldKeycode: c.oldKeycode, newKeycode: c.newKeycode })
         }
         for (const c of encoderChanges) {
+          if (!isMountedRef.current) break
           const current = encoderLayoutRef.current.get(`${c.layer},${c.idx},${c.dir}`) ?? 0
           if (current !== c.oldKeycode) continue
           await onSetEncoder(c.layer, c.idx, c.dir, c.newKeycode)
@@ -299,7 +315,13 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         error = err instanceof Error ? err.message : String(err)
       }
 
-      if (applied.length > 0) {
+      // Unmounted mid-rewrite: skip ALL bookkeeping below (history push,
+      // appliedKeymapLayout persistence, post-apply flash state/timer) —
+      // the component is gone, so there is nothing left to flash and no
+      // history stack of this instance to push onto. The device is left
+      // mid-rewrite exactly like a partial-failure apply; the counts are
+      // still returned to the caller for its own error surfacing.
+      if (applied.length > 0 && isMountedRef.current) {
         // Only attach appliedKeymapLayout bookkeeping when the rewrite
         // completed without error. A partial failure leaves the keymap in
         // a MIXED state (some positions rewritten, some not) — it's

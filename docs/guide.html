@@ -636,7 +636,7 @@ header {
 <p>The Analyze page shows how you actually type — per-key heatmaps, WPM trends, inter-keystroke intervals, hour-by-day activity, per-finger load, key-pair (bigram) timing, and per-layer usage. Data comes from two sources feeding the same stream: typing tests run in the editor are always recorded (each keystroke tagged with the test material and run), while ambient typing is recorded only while you are in Typing View (the compact window opened from the status bar) with the REC toggle set to Start — the REC toggle gates the Typing View stream only, not typing tests.</p>
 <p><strong>Access</strong></p>
 <p>There are two entry points:</p>
-<ul><li><strong>Analyze tab</strong> on the device selection screen — open the page without connecting a keyboard. Useful for reviewing data from keyboards that are currently unplugged</li><li><strong>View Analytics</strong> button in the Typing Test pane — jumps to Analyze for the keyboard you are currently using, then returns to the typing view when you go back</li></ul>
+<ul><li><strong>Analyze tab</strong> on the device selection screen — open the page without connecting a keyboard. Useful for reviewing data from keyboards that are currently unplugged</li><li><strong>Analyze</strong> button in the Typing Test pane — jumps to Analyze for the keyboard you are currently using, then returns to the typing view when you go back</li></ul>
 <p><strong>Keyboard selector</strong></p>
 <p>The <strong>Keyboard</strong> row inside the filter conditions modal (see <strong>Filter conditions modal</strong> below) lists every keyboard that has recorded typing data — pick one to populate the charts. Keyboards with no data never appear in the list. Switching keyboards there resets the Device / Source / Keymap / Period rows below it to that keyboard's own defaults, since a device or app picked for the previous keyboard may not even apply to the new one. The Back button at the bottom of the page returns to the previous view (e.g. the device selector).</p>
 <p><strong>Analysis tabs</strong></p>
@@ -1073,7 +1073,7 @@ header {
 <ul><li>The button is greyed out while REC is <strong>Start</strong> (not recording) state — turning it on without REC has no effect, so the UI funnels you through Start first</li><li>The on/off state is global (AppConfig), not per-keyboard, and is <strong>not</strong> synced to other machines</li><li><strong>Linux / Wayland</strong>: requires the FocusedWindow GNOME Shell extension (see README). Without it, every minute is recorded as <code class="ic">null</code></li><li><strong>macOS</strong>: requires the Accessibility permission (see README). Without it, every minute is recorded as <code class="ic">null</code></li><li>Turning Monitor App off keeps existing tags in the database; only newly recorded minutes go untagged</li></ul>
 <p><strong>Tray toggles</strong></p>
 <p>Directly below Monitor App, the REC tab also has <strong>Stay in System Tray</strong> and <strong>Start Hidden in Tray</strong> toggles — the same settings as Settings → Tools (§6.6), with the same linked-disable behavior (Start Hidden in Tray is disabled while Stay in System Tray is off, and turning Stay in System Tray off also turns Start Hidden in Tray off). They're surfaced here too since the Typing View window is often the last one open before you reach for the tray.</p>
-<p><strong>View Analytics</strong></p>
+<p><strong>Analyze</strong></p>
 <p>Jumps directly to the Analyze page for this keyboard so you can review the stream you just recorded. Going back returns you to Typing View.</p>
 <h4 id="view-mode-memory-and-auto-restore">View Mode Memory and Auto-Restore</h4>
 <p>The last view mode (Editor / Typing Test / Typing View) is remembered per keyboard and automatically restored the next time you connect that keyboard:</p>
@@ -1395,7 +1395,7 @@ header {
 <p>Inline selectors for common per-session preferences. A <code class="ic">|</code> separator divides them from the mode buttons.</p>
 <ul><li><strong>Language</strong>: Switch the UI language. Opens a dropdown of built-in languages and installed language packs (see §6.3)</li><li><strong>Theme</strong>: Switch the color theme. Options include System, Light, Dark, and any installed theme packs (see §6.4)</li><li><strong>Key Labels</strong>: Switch the key label set for the current keyboard. Options reflect the installed Key Labels store in drag order (see §6.2)</li><li><strong>Edit / Done</strong>: Toggle edit mode. Replaces the selectors with <strong>Language Packs</strong>, <strong>Theme Packs</strong>, and <strong>Key Labels</strong> management modal buttons for installing, syncing, or reordering entries</li></ul>
 <p><strong>Action buttons</strong> (right side)</p>
-<ul><li><strong>Key Tester</strong>: Toggle button for Matrix Tester mode (requires matrix tester support; hidden when Typing Test is active)</li><li><strong>Typing View</strong>: Toggle button to enter view-only mode — a compact window showing only the keyboard layout (see §4.3). Requires matrix tester support; hidden when Typing Test is active</li><li><strong>Typing Test</strong>: Toggle button for Typing Test mode (requires matrix tester support)</li><li><strong>Disconnect button</strong>: Disconnects from the keyboard and returns to the device selection screen (hidden while Typing Test is active)</li></ul>
+<ul><li><strong>Key Tester</strong>: Toggle button for Matrix Tester mode (requires matrix tester support; hidden when Typing Test is active)</li><li><strong>Analyze</strong>: Jumps straight to the Analyze page (§1.4) for the connected keyboard; hidden when Typing Test is active. Back returns to the editor</li><li><strong>Typing View</strong>: Toggle button to enter view-only mode — a compact window showing only the keyboard layout (see §4.3). Requires matrix tester support; hidden when Typing Test is active</li><li><strong>Typing Test</strong>: Toggle button for Typing Test mode (requires matrix tester support)</li><li><strong>Disconnect button</strong>: Disconnects from the keyboard and returns to the device selection screen (hidden while Typing Test is active)</li></ul>
 </article>
     <article id="doc-ja" class="doc" lang="ja">
 <h1 id="pipette-操作ガイド">Pipette 操作ガイド</h1>
@@ -1438,7 +1438,7 @@ header {
 <p>分析ページは実際の打鍵の内訳を可視化する。キーごとのヒートマップ、WPM 推移、打鍵間隔、時間帯別アクティビティ、指ごとの負荷、キーペア (バイグラム) 間隔、レイヤー別使用状況などを表示する。データは 2 つのソースから同じストリームに記録される: エディタで実行したタイピングテストは常に記録され（各打鍵にテスト素材とランがタグ付けされる）、それ以外の日常の打鍵はタイピングビュー（ステータスバーから開くコンパクトウィンドウ）で REC トグルが「開始」になっている間だけ記録される — REC トグルが制御するのはタイピングビューのストリームのみで、タイピングテストの記録には影響しない。</p>
 <p><strong>アクセス方法</strong></p>
 <p>入口は 2 つある:</p>
-<ul><li>デバイス選択画面の <strong>「分析」タブ</strong> — キーボードを接続せずに開ける。いま繋がっていないキーボードのデータを見るときに便利</li><li>タイピングテストペインの <strong>「分析ビュー」ボタン</strong> — 現在使用中のキーボードの分析ページに飛び、戻るとタイピングビューに戻る</li></ul>
+<ul><li>デバイス選択画面の <strong>「分析」タブ</strong> — キーボードを接続せずに開ける。いま繋がっていないキーボードのデータを見るときに便利</li><li>タイピングテストペインの <strong>「分析」ボタン</strong> — 現在使用中のキーボードの分析ページに飛び、戻るとタイピングビューに戻る</li></ul>
 <p><strong>キーボードセレクタ</strong></p>
 <p>検索条件モーダル（後述の <strong>検索条件モーダル</strong> 参照）内の <strong>キーボード</strong> 行には、打鍵データが記録されているキーボードが一覧表示される。どれかを選ぶとチャートが埋まる。データが無いキーボードはリストに表示されない。ここでキーボードを切り替えると、下にあるデバイス / ソース / キーマップ / 期間の各行はそのキーボード自身のデフォルトにリセットされる（前のキーボードで選んでいたデバイスやアプリが新しいキーボードには当てはまらないことがあるため）。ページ下部の <strong>戻る</strong> ボタンで前の画面（例: デバイス選択画面）に戻れる。</p>
 <p><strong>分析タブ</strong></p>
@@ -1875,7 +1875,7 @@ header {
 <ul><li>REC が <strong>開始</strong>（記録未スタート）状態のときはトグルが薄く表示される。REC を先に開始する流れに UI を寄せている</li><li>on/off 状態は AppConfig で管理（このマシン限定）。他のマシンには同期 <strong>されない</strong></li><li><strong>Linux / Wayland</strong>: FocusedWindow GNOME Shell 拡張が必要（README 参照）。未導入だと毎分 <code class="ic">null</code> で記録される</li><li><strong>macOS</strong>: アクセシビリティ権限が必要（README 参照）。未付与だと毎分 <code class="ic">null</code> で記録される</li><li>Monitor App をオフにしても既存タグはデータベースに残る。オフにした後の minute だけがタグなしになる</li></ul>
 <p><strong>タスクトレイのトグル</strong></p>
 <p>Monitor App の直下に、REC タブにも <strong>タスクトレイ常駐 (Stay in System Tray)</strong> と <strong>トレイ常駐で起動 (Start Hidden in Tray)</strong> のトグルがあります — 設定 → Tools（§6.6）と同じ設定項目で、連動する無効化の挙動も同じです（タスクトレイ常駐が OFF の間は「トレイ常駐で起動」が無効化され、タスクトレイ常駐を OFF にすると「トレイ常駐で起動」も連動して OFF になります）。Typing View ウィンドウは最後に開いたままのウィンドウになることが多いため、ここにも用意されています。</p>
-<p><strong>View Analytics</strong></p>
+<p><strong>分析</strong></p>
 <p>そのキーボードの分析ページに直接ジャンプする。記録したストリームを即確認できる。戻ると Typing View に戻る。</p>
 <h4 id="表示モードの記憶と自動復元">表示モードの記憶と自動復元</h4>
 <p>キーボードごとに最後の表示モード（Editor / Typing Test / Typing View）が記憶され、次回同じキーボードに接続したときに自動で復元されます:</p>
@@ -2197,7 +2197,7 @@ header {
 <p>セッションごとの共通設定をインラインで変更できるセレクターです。<code class="ic">|</code> セパレーターで操作ボタンと区切られます。</p>
 <ul><li><strong>Language</strong>: UI 言語を切り替え。組み込み言語とインストール済み言語パックのドロップダウンが開きます (§6.3 参照)</li><li><strong>Theme</strong>: カラーテーマを切り替え。System / Light / Dark とインストール済みテーマパックが選択肢として表示されます (§6.4 参照)</li><li><strong>Key Labels</strong>: 現在のキーボードのキーラベルセットを切り替え。Key Labels ストアのインストール済みエントリがドラッグ順で表示されます (§6.2 参照)</li><li><strong>Edit / Done</strong>: 編集モードの切替。編集モードではセレクターが <strong>Language Packs</strong>・<strong>Theme Packs</strong>・<strong>Key Labels</strong> 管理モーダルのボタンに切り替わり、エントリのインストール・同期・並び替えができます</li></ul>
 <p><strong>操作ボタン</strong> (右側)</p>
-<ul><li><strong>Key Tester</strong>: Matrix Tester モードの切替ボタン (マトリクステスター対応時のみ。タイピングテストがアクティブ時は非表示)</li><li><strong>Typing View</strong>: ビューオンリーモードの切替ボタン — キーボードレイアウトのみをコンパクトウィンドウに表示 (§4.3 参照)。マトリクステスター対応時のみ。タイピングテストがアクティブ時は非表示</li><li><strong>Typing Test</strong>: タイピングテストモードの切替ボタン (マトリクステスター対応時のみ)</li><li><strong>Disconnect ボタン</strong>: キーボードとの接続を切断し、デバイス選択画面に戻ります（タイピングテスト中は非表示）</li></ul>
+<ul><li><strong>Key Tester</strong>: Matrix Tester モードの切替ボタン (マトリクステスター対応時のみ。タイピングテストがアクティブ時は非表示)</li><li><strong>Analyze</strong>: 接続中のキーボードの分析ページ (§1.4) に直接ジャンプします。タイピングテストがアクティブ時は非表示。戻るとエディタに戻ります</li><li><strong>Typing View</strong>: ビューオンリーモードの切替ボタン — キーボードレイアウトのみをコンパクトウィンドウに表示 (§4.3 参照)。マトリクステスター対応時のみ。タイピングテストがアクティブ時は非表示</li><li><strong>Typing Test</strong>: タイピングテストモードの切替ボタン (マトリクステスター対応時のみ)</li><li><strong>Disconnect ボタン</strong>: キーボードとの接続を切断し、デバイス選択画面に戻ります（タイピングテスト中は非表示）</li></ul>
 </article>
     <article id="doc-data" class="doc" lang="en">
 <h1 id="data-guide">Data Guide</h1>

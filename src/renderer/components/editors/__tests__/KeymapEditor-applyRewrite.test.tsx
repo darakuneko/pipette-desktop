@@ -228,6 +228,49 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
     expect(onSetEncoder).toHaveBeenCalledTimes(1)
   })
 
+  it('unmounting mid-apply stops further writes and skips history/flash bookkeeping without warning', async () => {
+    // Simulates the editor-footer Analyze button opening AnalyzePage (which
+    // unmounts KeymapEditor) while a Key Label "apply to keymap" rewrite is
+    // still mid-flight, sequentially awaiting device writes.
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    let releaseFirstWrite: (() => void) | undefined
+    onSetKey.mockImplementation(() => new Promise<void>((resolve) => { releaseFirstWrite = resolve }))
+
+    const ref = createRef<KeymapEditorHandle>()
+    const { unmount } = render(<KeymapEditor ref={ref} {...defaultProps} />)
+
+    const table = new Map([
+      ['KC_5', 'KC_50'],
+      ['KC_6', 'KC_60'],
+    ])
+
+    // Deliberately not wrapped in `act()` — the loop suspends on the first
+    // `await onSetKey` (whose promise we control above) before any state
+    // update happens, so there's nothing for act() to flush yet.
+    const resultPromise = ref.current!.applyKeymapRewrite(table)
+    await act(async () => {}) // flush microtasks so the loop reaches the pending await
+    expect(onSetKey).toHaveBeenCalledTimes(1)
+
+    unmount()
+
+    // Resolve the pending write now that the component is gone — the loop
+    // must notice `isMountedRef` flipped and stop instead of issuing the
+    // second write (to [0,0,1]).
+    releaseFirstWrite?.()
+    const result = await resultPromise
+
+    expect(result).toEqual({ appliedCount: 1 })
+    expect(onSetKey).toHaveBeenCalledTimes(1)
+    expect(onSetEncoder).not.toHaveBeenCalled()
+
+    // No React warning about setting state (the post-apply flash) on an
+    // unmounted component — the guard this test exists to prove.
+    const postUnmountWarning = consoleErrorSpy.mock.calls.some(([msg]) =>
+      typeof msg === 'string' && msg.includes('unmounted component'))
+    expect(postUnmountWarning).toBe(false)
+    consoleErrorSpy.mockRestore()
+  })
+
   it('skips a position a concurrent edit already moved, and excludes it from the batch entry', async () => {
     const ref = createRef<KeymapEditorHandle>()
     const { rerender } = render(<KeymapEditor ref={ref} {...defaultProps} />)

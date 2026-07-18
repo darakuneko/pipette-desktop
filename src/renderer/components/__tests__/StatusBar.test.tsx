@@ -11,6 +11,7 @@ const TRANSLATIONS: Record<string, string> = {
   'statusBar.locked': 'Locked',
   'statusBar.unlocked': 'Unlocked',
   'statusBar.keyTester': 'Key Tester',
+  'app.analyzeTab': 'Analyze',
   'statusBar.sync.pending': 'Pending',
   'statusBar.sync.syncing': 'Syncing...',
   'statusBar.sync.synced': 'Synced',
@@ -162,6 +163,86 @@ describe('StatusBar', () => {
       const syncIdx = items.findIndex(el => el.getAttribute('data-testid') === 'sync-status')
       expect(matrixIdx).toBeLessThan(lockIdx)
       expect(lockIdx).toBeLessThan(syncIdx)
+    })
+  })
+
+  describe('analyze button', () => {
+    it('renders when onOpenAnalyze is provided and typing test mode is off', () => {
+      render(<StatusBar {...defaultProps} onOpenAnalyze={vi.fn()} />)
+      const button = screen.getByTestId('status-analyze-button')
+      expect(button).toBeInTheDocument()
+      expect(button).toHaveTextContent('Analyze')
+    })
+
+    it('is hidden when typing test mode is active', () => {
+      render(<StatusBar {...defaultProps} onOpenAnalyze={vi.fn()} typingTestMode={true} />)
+      expect(screen.queryByTestId('status-analyze-button')).not.toBeInTheDocument()
+    })
+
+    it('is not rendered when onOpenAnalyze is not provided', () => {
+      render(<StatusBar {...defaultProps} />)
+      expect(screen.queryByTestId('status-analyze-button')).not.toBeInTheDocument()
+    })
+
+    it('calls onOpenAnalyze when clicked', () => {
+      const onOpenAnalyze = vi.fn()
+      render(<StatusBar {...defaultProps} onOpenAnalyze={onOpenAnalyze} />)
+      fireEvent.click(screen.getByTestId('status-analyze-button'))
+      expect(onOpenAnalyze).toHaveBeenCalledOnce()
+    })
+
+    it('is disabled while a keymap rewrite is in flight (analyzeDisabled) and does not fire on click', () => {
+      const onOpenAnalyze = vi.fn()
+      render(<StatusBar {...defaultProps} onOpenAnalyze={onOpenAnalyze} analyzeDisabled={true} />)
+      const button = screen.getByTestId('status-analyze-button')
+      expect(button).toBeDisabled()
+      fireEvent.click(button)
+      expect(onOpenAnalyze).not.toHaveBeenCalled()
+    })
+
+    it('is enabled when analyzeDisabled is not set', () => {
+      render(<StatusBar {...defaultProps} onOpenAnalyze={vi.fn()} />)
+      expect(screen.getByTestId('status-analyze-button')).not.toBeDisabled()
+    })
+
+    it('renders before the view-only button (Analyze | Typing View | Typing Test order)', () => {
+      render(
+        <StatusBar
+          {...defaultProps}
+          onOpenAnalyze={vi.fn()}
+          onViewOnlyChange={vi.fn()}
+          onTypingTestModeChange={vi.fn()}
+          hasMatrixTester={true}
+        />
+      )
+      const rightSection = screen.getByTestId('status-bar').lastElementChild!
+      const items = Array.from(rightSection.children)
+      const analyzeIdx = items.findIndex(el => el.getAttribute('data-testid') === 'status-analyze-button')
+      const viewOnlyIdx = items.findIndex(el => el.getAttribute('data-testid') === 'view-only-button')
+      const typingTestIdx = items.findIndex(el => el.getAttribute('data-testid') === 'typing-test-button')
+      expect(analyzeIdx).toBeGreaterThanOrEqual(0)
+      expect(analyzeIdx).toBeLessThan(viewOnlyIdx)
+      expect(viewOnlyIdx).toBeLessThan(typingTestIdx)
+    })
+
+    it('shows a separator between quick settings and the Analyze button even without matrix tester support', () => {
+      render(
+        <StatusBar
+          {...defaultProps}
+          onOpenAnalyze={vi.fn()}
+          quickSettings={{
+            onThemeChange: vi.fn(),
+            keymapEditable: true,
+            onApplyKeymapRewrite: vi.fn(),
+          }}
+        />
+      )
+      const rightSection = screen.getByTestId('status-bar').lastElementChild!
+      const items = Array.from(rightSection.children)
+      const separatorIdx = items.findIndex(el => el.tagName === 'SPAN' && el.textContent === '|')
+      const analyzeIdx = items.findIndex(el => el.getAttribute('data-testid') === 'status-analyze-button')
+      expect(separatorIdx).toBeGreaterThanOrEqual(0)
+      expect(separatorIdx).toBeLessThan(analyzeIdx)
     })
   })
 
