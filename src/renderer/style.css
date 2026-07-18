@@ -380,3 +380,17 @@ label:has(> input[type="radio"]:not(:disabled)) {
 .confirm-flash {
   animation: confirm-flash 1.2s ease-out;
 }
+
+/* Keymap Editor: post-rewrite key flash overlay (KeyWidget's `flashed`,
+   `.key-flash-overlay`). Holds full opacity for ~1s so the just-rewritten
+   keys register, then eases out over the last ~300ms — expressed as
+   percentage stops over the 1300ms total so KeymapEditor's clear timer
+   (same duration) never unmounts the overlay mid-fade. */
+@keyframes key-flash {
+  0%, 77% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.key-flash-overlay {
+  animation: key-flash 1300ms ease-out forwards;
+}

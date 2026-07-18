@@ -1662,6 +1662,8 @@ When you pick a `keymapApplicable` entry (and a keymap is loaded on the connecte
 - **Display Only** — switches only the legends, same as today's behaviour
 - **Cancel** — closes the dialog without changing the current selection
 
+After a successful Rewrite, the keys that were actually changed briefly flash the same blue used for key selection before fading back, so you can see at a glance what changed.
+
 **The display stays on QWERTY legends after a Rewrite.** Once the keymap physically holds an arrangement's keycodes, the Keyboard Layout dropdown shows the *built-in QWERTY* legends, not the arrangement you just applied — the legends are meant to be read against the keys' actual QWERTY-baseline positions, and each key now sends the character its cap already shows. Selecting the same arrangement's own legends afterward would translate an already-rewritten keycode a second time (see the limitation below).
 
 The dropdown remembers which arrangement was last actually rewritten into the keymap, separately from which legends are currently displayed. That means:

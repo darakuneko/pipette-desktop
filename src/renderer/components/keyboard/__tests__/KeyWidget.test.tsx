@@ -7,6 +7,7 @@ import { KeyWidget } from '../KeyWidget'
 import {
   KEY_BG_COLOR,
   KEY_SELECTED_COLOR,
+  KEY_MULTI_SELECTED_COLOR,
   KEY_PRESSED_COLOR,
   KEY_EVER_PRESSED_COLOR,
   KEY_HIGHLIGHT_COLOR,
@@ -160,6 +161,179 @@ describe('KeyWidget', () => {
     )
     const rect = container.querySelector('rect')!
     expect(rect.getAttribute('fill')).toBe(KEY_EVER_PRESSED_COLOR)
+  })
+
+  describe('flashed (post-rewrite flash)', () => {
+    it('does not render a flash overlay when flashed is unset', () => {
+      const { container } = render(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="KC_A" />
+        </svg>,
+      )
+      expect(container.querySelector('[data-testid="flash-overlay"]')).toBeNull()
+    })
+
+    it('renders a flash overlay with the selected fill and the key-flash animation class when flashed=true', () => {
+      const { container } = render(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="KC_A" flashed />
+        </svg>,
+      )
+      const overlay = container.querySelector('[data-testid="flash-overlay"]')!
+      expect(overlay).not.toBeNull()
+      expect(overlay.getAttribute('fill')).toBe(KEY_SELECTED_COLOR)
+      expect(overlay.classList.contains('key-flash-overlay')).toBe(true)
+    })
+
+    it('removes the flash overlay once the caller clears flashed', () => {
+      const { container, rerender } = render(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="KC_A" flashed />
+        </svg>,
+      )
+      expect(container.querySelector('[data-testid="flash-overlay"]')).not.toBeNull()
+
+      rerender(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="KC_A" />
+        </svg>,
+      )
+      expect(container.querySelector('[data-testid="flash-overlay"]')).toBeNull()
+    })
+
+    it('leaves the key face fill untouched by flashed (no priority branch — the overlay paints on top)', () => {
+      const { container } = render(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="KC_A" flashed />
+        </svg>,
+      )
+      const rect = container.querySelector('rect')!
+      expect(rect.getAttribute('fill')).toBe(KEY_BG_COLOR)
+    })
+
+    it('inverts label text when flashed, same as selected', () => {
+      const { container } = render(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="KC_A" flashed />
+        </svg>,
+      )
+      const text = container.querySelector('text')!
+      expect(text.getAttribute('fill')).toBe('var(--content-inverse)')
+    })
+
+    it('still renders the flash overlay alongside other states (independent of the fill-priority chain)', () => {
+      const { container } = render(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="KC_A" flashed everPressed multiSelected />
+        </svg>,
+      )
+      const overlay = container.querySelector('[data-testid="flash-overlay"]')!
+      expect(overlay).not.toBeNull()
+      expect(overlay.getAttribute('fill')).toBe(KEY_SELECTED_COLOR)
+      // The base fill still resolves through its own priority chain,
+      // unaffected by `flashed` — multiSelected wins here as normal.
+      const rect = container.querySelector('rect')!
+      expect(rect.getAttribute('fill')).toBe(KEY_MULTI_SELECTED_COLOR)
+    })
+
+    it('does not let the flash overlay intercept clicks meant for the key', () => {
+      const { container } = render(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="KC_A" flashed />
+        </svg>,
+      )
+      const overlay = container.querySelector('[data-testid="flash-overlay"]')! as SVGElement
+      expect(overlay.style.pointerEvents).toBe('none')
+    })
+
+    it('remounts the overlay (restarting its animation) when flashGeneration bumps on a re-apply', () => {
+      const { container, rerender } = render(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="KC_A" flashed flashGeneration={1} />
+        </svg>,
+      )
+      const firstOverlay = container.querySelector('[data-testid="flash-overlay"]')!
+      expect(firstOverlay).not.toBeNull()
+
+      // Same `flashed=true` the whole time (position still flashing) but a
+      // new apply bumped the generation — this must force a fresh DOM
+      // node so the CSS animation restarts instead of reusing one whose
+      // `forwards` fill-mode may already have settled at opacity 0.
+      rerender(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="KC_A" flashed flashGeneration={2} />
+        </svg>,
+      )
+      const secondOverlay = container.querySelector('[data-testid="flash-overlay"]')!
+      expect(secondOverlay).not.toBeNull()
+      expect(secondOverlay).not.toBe(firstOverlay)
+    })
+
+    it('computes a negative animation-delay from flashStartedAt for a late-mounted overlay', () => {
+      const now = Date.now()
+      vi.useFakeTimers()
+      vi.setSystemTime(now + 500)
+      try {
+        const { container } = render(
+          <svg>
+            <KeyWidget kleKey={makeKey()} keycode="KC_A" flashed flashStartedAt={now} />
+          </svg>,
+        )
+        const overlay = container.querySelector('[data-testid="flash-overlay"]')! as SVGElement
+        expect(overlay.style.animationDelay).toBe('-500ms')
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('clamps animation-delay to the full animation length for a stale flashStartedAt', () => {
+      const now = Date.now()
+      vi.useFakeTimers()
+      vi.setSystemTime(now + 5000)
+      try {
+        const { container } = render(
+          <svg>
+            <KeyWidget kleKey={makeKey()} keycode="KC_A" flashed flashStartedAt={now} />
+          </svg>,
+        )
+        const overlay = container.querySelector('[data-testid="flash-overlay"]')! as SVGElement
+        expect(overlay.style.animationDelay).toBe('-1300ms')
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('renders a stroke-only border copy on top of the overlay while flashed, matching the outer border', () => {
+      const { container } = render(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="KC_A" flashed selected />
+        </svg>,
+      )
+      const borderCopy = container.querySelector('[data-testid="flash-overlay-border"]')!
+      expect(borderCopy).not.toBeNull()
+      expect(borderCopy.getAttribute('fill')).toBe('none')
+      // `selected` also drives the outer rect's own stroke — the border
+      // copy must match it so the accent border reads unbroken through
+      // the overlay.
+      expect(borderCopy.getAttribute('stroke')).toBe(KEY_SELECTED_COLOR)
+      expect(borderCopy.getAttribute('stroke-width')).toBe('2')
+    })
+
+    it('removes the border copy once the caller clears flashed', () => {
+      const { container, rerender } = render(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="KC_A" flashed />
+        </svg>,
+      )
+      expect(container.querySelector('[data-testid="flash-overlay-border"]')).not.toBeNull()
+
+      rerender(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="KC_A" />
+        </svg>,
+      )
+      expect(container.querySelector('[data-testid="flash-overlay-border"]')).toBeNull()
+    })
   })
 
   describe('masked key split-click', () => {

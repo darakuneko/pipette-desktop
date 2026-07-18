@@ -30,6 +30,12 @@ import { shouldInvertText } from './fill-luminance'
 import type { EffectiveTheme } from '../../hooks/useEffectiveTheme'
 import { computeUnionPath } from '../../../shared/kle/rect-union'
 
+/** Must match the `key-flash` keyframe's total animation length in
+ *  style.css — used to clamp the computed `animation-delay` so a stale
+ *  `flashStartedAt` (e.g. a very late render) never produces a delay
+ *  larger than the animation itself. */
+const FLASH_ANIMATION_DURATION_MS = 1300
+
 interface Props {
   kleKey: KleKey
   keycode: string
@@ -39,6 +45,27 @@ interface Props {
   selectedMaskPart?: boolean
   pressed?: boolean
   highlighted?: boolean
+  /** True for one beat right after a bulk keymap rewrite (Key Label
+   *  "apply to keymap") lands on this position. Renders an extra overlay
+   *  (same fill as `selected`, `KEY_SELECTED_COLOR`) on top of the key's
+   *  normal fill so the user can see what changed, then fades via the
+   *  declarative `key-flash` CSS keyframe (see `style.css`) once the
+   *  caller clears the flag — independent of `selected`/`multiSelected`/
+   *  `highlighted`/`everPressed`, which the base fill still resolves on
+   *  its own regardless of this flag. */
+  flashed?: boolean
+  /** Bumped by the caller on every successful apply (`KeyFlashState.generation`
+   *  in `KeyboardWidget`). Used as the overlay element's React `key` so a
+   *  re-apply mid-flash forces a fresh DOM node — remounting restarts the
+   *  CSS animation instead of reusing a node whose animation may already
+   *  be sitting at opacity 0 (`animation-fill-mode: forwards`). */
+  flashGeneration?: number
+  /** `Date.now()` at the apply that produced this flash (`KeyFlashState.startedAt`).
+   *  Used to compute a negative `animation-delay` so an overlay that
+   *  mounts after the flash already started (e.g. a layer switch reveals
+   *  a different rewritten position mid-window) joins the SAME global
+   *  fade timeline instead of restarting from full opacity. */
+  flashStartedAt?: number
   everPressed?: boolean
   remapped?: boolean
   /** Heatmap fill for the outer rect (or the whole key on non-masked
@@ -86,6 +113,9 @@ function KeyWidgetInner({
   selectedMaskPart,
   pressed,
   highlighted,
+  flashed,
+  flashGeneration,
+  flashStartedAt,
   everPressed,
   remapped,
   heatmapOuterFill,
@@ -125,6 +155,10 @@ function KeyWidgetInner({
   // Heatmap sits below every interactive state so the typing-view
   // overlay can never mask immediate user feedback (pressed, selection).
   // For masked keys with inner selected, use default fill (stroke-only selection)
+  // `flashed` deliberately has no branch here — it's painted as a separate
+  // overlay below (the `key-flash-overlay` element) on top of whatever
+  // this chain resolves to, animated by a declarative CSS keyframe
+  // instead of participating in this priority chain.
   const masked = labelOverride?.masked ?? isMask(keycode)
   const innerSelected = selected && selectedMaskPart && masked
   let fillColor = KEY_BG_COLOR
@@ -139,8 +173,11 @@ function KeyWidgetInner({
 
   // Label text color: invert when the fill is light enough to wash out
   // the default label (see `fill-luminance.ts`); otherwise pick the
-  // remap tint for remapped keys and fall back to the default.
-  const invertText = shouldInvertText(fillColor, effectiveTheme)
+  // remap tint for remapped keys and fall back to the default. While
+  // flashed, the overlay covers the base fill with `KEY_SELECTED_COLOR`
+  // (below the label, see the render below), so the invert decision is
+  // made against that colour instead — the same visual `selected` gets.
+  const invertText = shouldInvertText(flashed ? KEY_SELECTED_COLOR : fillColor, effectiveTheme)
   let labelColor = KEY_TEXT_COLOR
   if (invertText) labelColor = KEY_INVERTED_TEXT_COLOR
   else if (remapped) labelColor = KEY_REMAP_COLOR
@@ -252,6 +289,20 @@ function KeyWidgetInner({
     ? `translate(${rotX}, ${rotY}) rotate(${kleKey.rotation}) translate(${-rotX}, ${-rotY})`
     : undefined
 
+  // How far into the shared `key-flash` timeline this overlay is joining.
+  // Computed once at render (a re-render is guaranteed at mount; the
+  // animation runs off CSS afterwards, so no ticking timer is needed).
+  // Fed to `animation-delay` as a NEGATIVE value below — that starts the
+  // CSS animation already partway through, so an overlay mounted late
+  // (e.g. a layer switch revealing a different rewritten position
+  // mid-window) shows the correct mid-fade opacity immediately and
+  // finishes at the same wall-clock moment as every other overlay from
+  // this same flash, instead of restarting its own fade from full
+  // opacity.
+  const flashElapsedMs = flashed && flashStartedAt !== undefined
+    ? Math.min(FLASH_ANIMATION_DURATION_MS, Math.max(0, Date.now() - flashStartedAt))
+    : 0
+
   return (
     <g
       transform={groupTransform}
@@ -292,6 +343,80 @@ function KeyWidgetInner({
           stroke={outerStroke}
           strokeWidth={outerStrokeWidth}
         />
+      )}
+
+      {/* Post-rewrite flash overlay (Key Label "apply to keymap" bulk
+          rewrite): painted on top of the outer fill/stroke above but
+          below the inner mask rect and label text (both rendered later
+          in this group), matching its geometry (including the union path
+          for stepped/ISO keys) so it never leaks past the key's own
+          face. Opacity is driven purely by the `key-flash` CSS keyframe
+          (style.css) — mounted only while `flashed` is true; KeymapEditor
+          keeps it mounted for the keyframe's full duration before
+          clearing the flag. `key={flashGeneration}` forces a fresh DOM
+          node (and thus a restarted animation) on a re-apply that lands
+          while this position is already flashing. The negative
+          `animation-delay` (see `flashElapsedMs` above) syncs a
+          late-mounted overlay to the SAME fade as everyone else's. */}
+      {flashed && (
+        unionPath ? (
+          <path
+            key={flashGeneration}
+            data-testid="flash-overlay"
+            className="key-flash-overlay"
+            d={unionPath}
+            fill={KEY_SELECTED_COLOR}
+            style={{ pointerEvents: 'none', animationDelay: `-${flashElapsedMs}ms` }}
+          />
+        ) : (
+          <rect
+            key={flashGeneration}
+            data-testid="flash-overlay"
+            className="key-flash-overlay"
+            x={x}
+            y={y}
+            width={w}
+            height={h}
+            rx={corner}
+            ry={corner}
+            fill={KEY_SELECTED_COLOR}
+            style={{ pointerEvents: 'none', animationDelay: `-${flashElapsedMs}ms` }}
+          />
+        )
+      )}
+
+      {/* Flash overlay's border redraw: the overlay above paints its full
+          opaque fill on top of the outer stroke too, so without this the
+          key's border would look "cut" wherever the overlay covers its
+          inner half. A stroke-only copy of the SAME outer shape (no
+          fill, same stroke/width) redrawn immediately on top keeps the
+          border crisp for the whole flash without needing separate inset
+          math for the union-path (stepped/ISO) case. */}
+      {flashed && (
+        unionPath ? (
+          <path
+            data-testid="flash-overlay-border"
+            d={unionPath}
+            fill="none"
+            stroke={outerStroke}
+            strokeWidth={outerStrokeWidth}
+            style={{ pointerEvents: 'none' }}
+          />
+        ) : (
+          <rect
+            data-testid="flash-overlay-border"
+            x={x}
+            y={y}
+            width={w}
+            height={h}
+            rx={corner}
+            ry={corner}
+            fill="none"
+            stroke={outerStroke}
+            strokeWidth={outerStrokeWidth}
+            style={{ pointerEvents: 'none' }}
+          />
+        )
       )}
 
       {/* Inner rect for masked keys */}

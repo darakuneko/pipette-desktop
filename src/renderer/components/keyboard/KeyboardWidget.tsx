@@ -11,6 +11,28 @@ import { innerHeatmapFillForCell, outerHeatmapFillForCell } from './heatmap-fill
 import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
 
+/** Post-rewrite key flash state (Key Label "apply to keymap" bulk
+ *  rewrite). Bundles the flashed positions with the generation/start-time
+ *  every `KeyWidget` overlay needs to stay synced to the SAME CSS-keyframe
+ *  timeline (see `KeyWidget`'s `key-flash-overlay` element) — one prop
+ *  instead of three loose ones so it threads cleanly through
+ *  `KeyboardPane` -> `KeyboardWidget`. */
+export interface KeyFlashState {
+  /** Positions to flash, pos-keyed like `highlightedKeys`. */
+  keys: Set<string>
+  /** Bumped on every successful apply. Forwarded to `KeyWidget` as
+   *  `flashGeneration` so a re-apply mid-flash remounts (and thus
+   *  restarts) the overlay instead of reusing a DOM node whose CSS
+   *  animation may already be finished. */
+  generation: number
+  /** `Date.now()` at the apply that produced this batch. Forwarded to
+   *  `KeyWidget` as `flashStartedAt` so it can compute a negative
+   *  `animation-delay` — overlays that mount late (e.g. a layer switch
+   *  mid-window) join the same global timeline instead of restarting
+   *  the fade from full opacity. */
+  startedAt: number
+}
+
 /** Rotate point (px, py) by `angle` degrees around center (cx, cy). */
 export function rotatePoint(
   px: number,
@@ -71,6 +93,11 @@ interface Props {
   selectedEncoder?: { idx: number; dir: 0 | 1 } | null
   pressedKeys?: Set<string>
   highlightedKeys?: Set<string>
+  /** Post-rewrite flash state (Key Label "apply to keymap"). Not threaded
+   *  to `EncoderWidget`: it has no highlight-priority fill logic at all
+   *  today, so wiring flash there would mean redesigning its render path
+   *  rather than adding one prop. Encoders are skipped. */
+  flash?: KeyFlashState
   everPressedKeys?: Set<string>
   remappedKeys?: Set<string>
   multiSelectedKeys?: Set<string>
@@ -118,6 +145,7 @@ function KeyboardWidgetInner({
   selectedMaskPart,
   pressedKeys,
   highlightedKeys,
+  flash,
   everPressedKeys,
   remappedKeys,
   multiSelectedKeys,
@@ -220,6 +248,9 @@ function KeyboardWidgetInner({
             multiSelected={multiSelectedKeys?.has(pos)}
             pressed={pressedKeys?.has(pos)}
             highlighted={highlightedKeys?.has(pos)}
+            flashed={flash?.keys.has(pos)}
+            flashGeneration={flash?.generation}
+            flashStartedAt={flash?.startedAt}
             everPressed={everPressedKeys?.has(pos)}
             remapped={remappedKeys?.has(pos)}
             heatmapOuterFill={outerHeatmapFillForCell(heatmapCells, heatmapMaxHold, heatmapMaxTotal, pos, effectiveTheme)}
@@ -273,6 +304,9 @@ function KeyboardWidgetInner({
             selectedMaskPart={selectedMaskPart}
             pressed={pressedKeys?.has(pos)}
             highlighted={highlightedKeys?.has(pos)}
+            flashed={flash?.keys.has(pos)}
+            flashGeneration={flash?.generation}
+            flashStartedAt={flash?.startedAt}
             everPressed={everPressedKeys?.has(pos)}
             remapped={remappedKeys?.has(pos)}
             heatmapOuterFill={outerHeatmapFillForCell(heatmapCells, heatmapMaxHold, heatmapMaxTotal, pos, effectiveTheme)}
