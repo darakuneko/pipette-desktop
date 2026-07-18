@@ -619,7 +619,6 @@
     "autoAdvance": "自動移動",
     "locked": "ロック中",
     "unlocked": "アンロック",
-    "keyTester": "キーテスター",
     "sync": {
       "pending": "同期待ち",
       "syncing": "同期中...",
@@ -749,7 +748,6 @@
     "defaultLayout": "キーラベル",
     "defaultAutoAdvance": "自動移動",
     "defaultLayerPanelOpen": "レイヤーリスト展開",
-    "defaultBasicViewType": "Basic タブ表示",
     "defaultSplitKeyMode": "キーピッカーでShiftキーを分離",
     "defaultQuickSelect": "キーの即時選択",
     "basicViewTypeList": "LIST",

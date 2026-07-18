@@ -109,7 +109,7 @@ export function StatusBar({
         )}
         {matrixMode && !typingTestMode && (
           <>
-            <span data-testid="matrix-status">{t('statusBar.keyTester')}</span>
+            <span data-testid="matrix-status">{t('editor.keyTester.title')}</span>
             <span className="text-edge">|</span>
           </>
         )}

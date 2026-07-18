@@ -619,7 +619,6 @@
     "autoAdvance": "Auto Move",
     "locked": "Locked",
     "unlocked": "Unlocked",
-    "keyTester": "Key Tester",
     "sync": {
       "pending": "Pending",
       "syncing": "Syncing...",
@@ -749,7 +748,6 @@
     "defaultLayout": "Key Labels",
     "defaultAutoAdvance": "Auto Move",
     "defaultLayerPanelOpen": "Layer List Open",
-    "defaultBasicViewType": "Basic Tab View",
     "defaultSplitKeyMode": "Separate Shift in Key Picker",
     "defaultQuickSelect": "Instant Key Selection",
     "basicViewTypeList": "LIST",

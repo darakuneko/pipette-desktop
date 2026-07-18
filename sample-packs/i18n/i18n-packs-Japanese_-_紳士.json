@@ -619,7 +619,6 @@
     "autoAdvance": "自動巡回",
     "locked": "封印中",
     "unlocked": "開放済み",
-    "keyTester": "試打室",
     "sync": {
       "pending": "足並みの待ち",
       "syncing": "足並みを揃えております...",
@@ -739,7 +738,6 @@
     "defaultLayout": "名札",
     "defaultAutoAdvance": "自動巡回",
     "defaultLayerPanelOpen": "階層一覧の展開",
-    "defaultBasicViewType": "Basic の見栄え",
     "defaultSplitKeyMode": "Shift を別々に",
     "defaultQuickSelect": "即座の選択",
     "basicViewTypeList": "一覧",

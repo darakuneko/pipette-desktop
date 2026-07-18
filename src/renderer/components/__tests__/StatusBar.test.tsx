@@ -10,7 +10,7 @@ const TRANSLATIONS: Record<string, string> = {
   'statusBar.autoAdvance': 'Auto Move',
   'statusBar.locked': 'Locked',
   'statusBar.unlocked': 'Unlocked',
-  'statusBar.keyTester': 'Key Tester',
+  'editor.keyTester.title': 'Key Tester',
   'app.analyzeTab': 'Analyze',
   'statusBar.sync.pending': 'Pending',
   'statusBar.sync.syncing': 'Syncing...',
