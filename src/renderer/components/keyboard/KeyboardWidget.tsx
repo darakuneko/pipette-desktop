@@ -3,14 +3,14 @@
 import { useMemo, memo } from 'react'
 import type { KleKey } from '../../../shared/kle/types'
 import { filterVisibleKeys, repositionLayoutKeys } from '../../../shared/kle/filter-keys'
-import { posKey } from '../../../shared/kle/pos-key'
+import { posKey, encoderPosKey } from '../../../shared/kle/pos-key'
 import { KeyWidget } from './KeyWidget'
 import { EncoderWidget } from './EncoderWidget'
 import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from './constants'
 import { innerHeatmapFillForCell, outerHeatmapFillForCell } from './heatmap-fill'
 import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
-import type { KeyFlashState } from './key-flash'
+import { flashPropsFor, type KeyFlashState } from './key-flash'
 
 /** Rotate point (px, py) by `angle` degrees around center (cx, cy). */
 export function rotatePoint(
@@ -215,9 +215,7 @@ function KeyboardWidgetInner({
               kleKey={key}
               keycode={kc}
               selected={false}
-              flashed={flash?.encoders.has(`${key.encoderIdx},${key.encoderDir}`)}
-              flashGeneration={flash?.generation}
-              flashStartedAt={flash?.startedAt}
+              {...flashPropsFor(flash, 'encoders', encoderPosKey(key.encoderIdx, key.encoderDir))}
               onClick={readOnly ? undefined : onEncoderClick}
               onDoubleClick={readOnly ? undefined : onEncoderDoubleClick}
               scale={scale}
@@ -236,9 +234,7 @@ function KeyboardWidgetInner({
             multiSelected={multiSelectedKeys?.has(pos)}
             pressed={pressedKeys?.has(pos)}
             highlighted={highlightedKeys?.has(pos)}
-            flashed={flash?.keys.has(pos)}
-            flashGeneration={flash?.generation}
-            flashStartedAt={flash?.startedAt}
+            {...flashPropsFor(flash, 'keys', pos)}
             everPressed={everPressedKeys?.has(pos)}
             remapped={remappedKeys?.has(pos)}
             heatmapOuterFill={outerHeatmapFillForCell(heatmapCells, heatmapMaxHold, heatmapMaxTotal, pos, effectiveTheme)}
@@ -274,9 +270,7 @@ function KeyboardWidgetInner({
               keycode={kc}
               selected
               selectedMaskPart={selectedMaskPart}
-              flashed={flash?.encoders.has(`${key.encoderIdx},${key.encoderDir}`)}
-              flashGeneration={flash?.generation}
-              flashStartedAt={flash?.startedAt}
+              {...flashPropsFor(flash, 'encoders', encoderPosKey(key.encoderIdx, key.encoderDir))}
               onClick={readOnly ? undefined : onEncoderClick}
               onDoubleClick={readOnly ? undefined : onEncoderDoubleClick}
               scale={scale}
@@ -296,9 +290,7 @@ function KeyboardWidgetInner({
             selectedMaskPart={selectedMaskPart}
             pressed={pressedKeys?.has(pos)}
             highlighted={highlightedKeys?.has(pos)}
-            flashed={flash?.keys.has(pos)}
-            flashGeneration={flash?.generation}
-            flashStartedAt={flash?.startedAt}
+            {...flashPropsFor(flash, 'keys', pos)}
             everPressed={everPressedKeys?.has(pos)}
             remapped={remappedKeys?.has(pos)}
             heatmapOuterFill={outerHeatmapFillForCell(heatmapCells, heatmapMaxHold, heatmapMaxTotal, pos, effectiveTheme)}

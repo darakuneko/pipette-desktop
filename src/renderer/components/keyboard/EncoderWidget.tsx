@@ -95,39 +95,41 @@ function EncoderWidgetInner({
     ? flashAnimationDelayMs(flashStartedAt)
     : 0
 
+  // Flash overlay + border redraw (Key Label "apply to keymap" rewrite /
+  // undo/redo): shared by both the masked and non-masked branches below —
+  // painted on top of the outer fill/stroke but below the label text /
+  // inner mask rect, mirroring `KeyWidget`'s `key-flash-overlay`. The
+  // second circle redraws a stroke-only border on top since the overlay's
+  // opaque fill paints over the outer stroke too, keeping the border crisp
+  // for the whole flash (mirrors `KeyWidget`'s `flash-overlay-border`).
+  const flashOverlay = flashed ? (
+    <>
+      <circle
+        key={flashGeneration}
+        cx={cx} cy={cy} r={r}
+        data-testid="flash-overlay"
+        className="key-flash-overlay"
+        fill={KEY_SELECTED_COLOR}
+        style={{ pointerEvents: 'none', animationDelay: `-${flashElapsedMs}ms` }}
+      />
+      <circle
+        cx={cx} cy={cy} r={r}
+        data-testid="flash-overlay-border"
+        fill="none"
+        stroke={outerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR}
+        strokeWidth={outerBorderActive ? 2 : 1}
+        style={{ pointerEvents: 'none' }}
+      />
+    </>
+  ) : null
+
   if (!masked) {
     const labelLines = keycodeLabel(keycode).split('\n')
     return (
       <g transform={groupTransform} onClick={handleClick} onDoubleClick={handleDoubleClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
         <circle cx={cx} cy={cy} r={r} fill={fillColor}
           stroke={outerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR} strokeWidth={outerBorderActive ? 2 : 1} />
-        {/* Flash overlay (Key Label "apply to keymap" rewrite / undo/redo):
-            painted on top of the outer fill/stroke above but below the
-            label text, mirroring `KeyWidget`'s `key-flash-overlay`. */}
-        {flashed && (
-          <circle
-            key={flashGeneration}
-            cx={cx} cy={cy} r={r}
-            data-testid="flash-overlay"
-            className="key-flash-overlay"
-            fill={KEY_SELECTED_COLOR}
-            style={{ pointerEvents: 'none', animationDelay: `-${flashElapsedMs}ms` }}
-          />
-        )}
-        {/* Border redraw: the overlay above paints its opaque fill on top
-            of the outer stroke too, so redraw a stroke-only copy on top to
-            keep the border crisp for the whole flash (mirrors `KeyWidget`'s
-            `flash-overlay-border`). */}
-        {flashed && (
-          <circle
-            cx={cx} cy={cy} r={r}
-            data-testid="flash-overlay-border"
-            fill="none"
-            stroke={outerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR}
-            strokeWidth={outerBorderActive ? 2 : 1}
-            style={{ pointerEvents: 'none' }}
-          />
-        )}
+        {flashOverlay}
         {labelLines.map((line, i) => (
           <text key={i} x={cx} y={cy + (i - (labelLines.length - 1) / 2) * (fontSize + 2)}
             textAnchor="middle" dominantBaseline="central" fill={labelColor} fontSize={fontSize} fontFamily="sans-serif">
@@ -175,30 +177,11 @@ function EncoderWidgetInner({
       {/* Outer circle */}
       <circle cx={cx} cy={cy} r={r} fill={fillColor}
         stroke={outerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR} strokeWidth={outerBorderActive ? 2 : 1} />
-      {/* Flash overlay + border redraw: painted above the outer circle but
-          below the inner mask rect and labels (both rendered below), same
-          stacking as the non-masked branch and `KeyWidget`'s masked keys —
-          the inner rect and its label stay visible on top of the overlay. */}
-      {flashed && (
-        <circle
-          key={flashGeneration}
-          cx={cx} cy={cy} r={r}
-          data-testid="flash-overlay"
-          className="key-flash-overlay"
-          fill={KEY_SELECTED_COLOR}
-          style={{ pointerEvents: 'none', animationDelay: `-${flashElapsedMs}ms` }}
-        />
-      )}
-      {flashed && (
-        <circle
-          cx={cx} cy={cy} r={r}
-          data-testid="flash-overlay-border"
-          fill="none"
-          stroke={outerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR}
-          strokeWidth={outerBorderActive ? 2 : 1}
-          style={{ pointerEvents: 'none' }}
-        />
-      )}
+      {/* Flash overlay: painted above the outer circle but below the inner
+          mask rect and labels (both rendered below), same stacking as the
+          non-masked branch and `KeyWidget`'s masked keys — the inner rect
+          and its label stay visible on top of the overlay. */}
+      {flashOverlay}
       {/* Inner rect clipped to circle — same style as KeyWidget (stroke-only selection) */}
       <rect x={innerRectX} y={innerRectY} width={innerRectW} height={innerRectH}
         rx={innerCorner} ry={innerCorner}

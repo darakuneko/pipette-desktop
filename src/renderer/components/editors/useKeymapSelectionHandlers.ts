@@ -430,19 +430,21 @@ export function useKeymapSelectionHandlers({
     const entry = isUndo ? history.peekUndo : history.peekRedo
     if (!entry) return
     undoRedoInFlightRef.current = true
-    let applied = false
     try {
       await applyHistoryEntry(entry, isUndo)
       // Commit only after successful apply.
       if (isUndo) history.undo()
       else history.redo()
-      applied = true
     } finally { undoRedoInFlightRef.current = false }
     setPopoverState(null)
-    // Fire outside the try/finally above: `onHistoryApplied` only runs once
-    // the apply + commit are already done, so a throw from it can no
-    // longer un-commit the undo/redo or leave the in-flight guard stuck.
-    if (applied) onHistoryApplied?.(entry.kind === 'batch' ? entry.entries : [entry])
+    // Fire outside the try/finally above: a throw from `applyHistoryEntry`
+    // or the commit call propagates out of the `try` (after `finally`
+    // resets the in-flight guard) and skips everything below, so reaching
+    // this line already guarantees the apply + commit succeeded — no flag
+    // needed to gate it. Placement after the commit is what guarantees
+    // `onHistoryApplied` can no longer un-commit the undo/redo or leave the
+    // in-flight guard stuck.
+    onHistoryApplied?.(entry.kind === 'batch' ? entry.entries : [entry])
   }, [history, applyHistoryEntry, onHistoryApplied])
 
   const handleUndo = useCallback(() => runHistoryStep(true), [runHistoryStep])

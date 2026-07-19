@@ -46,3 +46,21 @@ export interface KeyFlashState {
 export function flashAnimationDelayMs(startedAt: number): number {
   return Math.min(KEY_FLASH_DURATION_MS, Math.max(0, Date.now() - startedAt))
 }
+
+/** Resolves the `flashed`/`flashGeneration`/`flashStartedAt` prop triple for
+ *  one `KeyWidget`/`EncoderWidget` instance from the shared `flash` state.
+ *  Non-members get back `{ flashed: false }` (the other two fields omitted,
+ *  i.e. `undefined`) instead of `flash.generation`/`flash.startedAt` passed
+ *  through unconditionally — `KeyboardWidget` renders 80+ of these widgets,
+ *  and threading the same `generation`/`startedAt` numbers to every one of
+ *  them regardless of membership would flip those props undefined<->number
+ *  for the WHOLE board every time a flash window opens or closes, busting
+ *  `React.memo` on every widget instead of just the flashed ones. */
+export function flashPropsFor(
+  flash: KeyFlashState | undefined,
+  member: 'keys' | 'encoders',
+  pos: string,
+): { flashed: boolean; flashGeneration?: number; flashStartedAt?: number } {
+  if (!flash || !flash[member].has(pos)) return { flashed: false }
+  return { flashed: true, flashGeneration: flash.generation, flashStartedAt: flash.startedAt }
+}

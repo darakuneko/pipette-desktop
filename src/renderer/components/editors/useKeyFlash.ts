@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { KEY_FLASH_DURATION_MS } from '../keyboard/key-flash'
 import type { KeyFlashState } from '../keyboard/key-flash'
-import { posKey } from '../../../shared/kle/pos-key'
+import { posKey, encoderPosKey } from '../../../shared/kle/pos-key'
 import type { SingleHistoryEntry } from './useKeymapHistory'
 
 export interface UseKeyFlashReturn {
@@ -83,7 +83,7 @@ export function useKeyFlash(currentLayer: number): UseKeyFlashReturn {
     for (const entry of flashBatch.entries) {
       if (entry.layer !== currentLayer) continue
       if (entry.kind === 'key') positions.add(posKey(entry.row, entry.col))
-      else encoderPositions.add(`${entry.idx},${entry.dir}`)
+      else encoderPositions.add(encoderPosKey(entry.idx, entry.dir))
     }
     // Either set alone is enough to open a flash window — an encoder-only
     // undo/redo or rewrite must still flash even though `keys` is empty.
