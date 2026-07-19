@@ -23,6 +23,9 @@ export interface UseThemePackStoreReturn {
   refresh(): Promise<void>
   rename(id: string, newName: string): Promise<{ success: boolean; error?: string }>
   remove(id: string): Promise<{ success: boolean; error?: string }>
+  /** Persist a manual drag/sort order. The built-in System/Light/Dark
+   *  bar is never included — it is not a store entry. */
+  reorder(orderedIds: string[]): Promise<{ success: boolean; error?: string }>
   importFromDialog(): Promise<ThemePackImportDialogResult>
   applyImport(raw: unknown, options?: ThemePackImportApplyOptions): Promise<{ success: boolean; meta?: ThemePackMeta; error?: string }>
   exportPack(id: string): Promise<{ success: boolean; error?: string }>
@@ -80,6 +83,15 @@ export function useThemePackStore(): UseThemePackStoreReturn {
     return { success: false, error: result.error }
   }, [])
 
+  // Unlike `rename`/`remove`, no manual `refresh()` call is needed here:
+  // the main-side handler calls `broadcastChanged()` on success, which
+  // reaches this same window's `themePackOnChanged` listener above.
+  const reorder = useCallback(async (orderedIds: string[]) => {
+    const result = await window.vialAPI.themePackReorder(orderedIds)
+    if (result.success) return { success: true }
+    return { success: false, error: result.error }
+  }, [])
+
   const importFromDialog = useCallback(async () => {
     return window.vialAPI.themePackImport()
   }, [])
@@ -104,6 +116,7 @@ export function useThemePackStore(): UseThemePackStoreReturn {
     refresh,
     rename,
     remove,
+    reorder,
     importFromDialog,
     applyImport,
     exportPack,

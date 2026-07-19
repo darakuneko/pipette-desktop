@@ -34,6 +34,7 @@ const removeFn = vi.fn()
 const importFromDialog = vi.fn()
 const applyImport = vi.fn()
 const exportPack = vi.fn()
+const reorderFn = vi.fn()
 
 let metas: Array<{
   id: string
@@ -57,6 +58,7 @@ vi.mock('../../../hooks/useThemePackStore', () => ({
     importFromDialog,
     applyImport,
     exportPack,
+    reorder: reorderFn,
   }),
 }))
 
@@ -113,6 +115,7 @@ function meta(over: Partial<{
   version: string
   hubPostId: string
   hubUpdatedAt: string
+  uploaderName: string
   deletedAt: string
 }> = {}) {
   return {
@@ -124,6 +127,7 @@ function meta(over: Partial<{
     updatedAt: 'now',
     ...(over.hubPostId ? { hubPostId: over.hubPostId } : {}),
     ...(over.hubUpdatedAt ? { hubUpdatedAt: over.hubUpdatedAt } : {}),
+    ...(over.uploaderName ? { uploaderName: over.uploaderName } : {}),
     ...(over.deletedAt ? { deletedAt: over.deletedAt } : {}),
   }
 }
@@ -142,6 +146,7 @@ describe('ThemePacksModal', () => {
     importFromDialog.mockResolvedValue({ canceled: true })
     applyImport.mockResolvedValue({ success: true, meta: meta() })
     exportPack.mockResolvedValue({ success: true })
+    reorderFn.mockResolvedValue({ success: true })
     vialAPI.hubGetOrigin.mockResolvedValue('https://hub.example.com')
     vialAPI.hubListThemePosts.mockResolvedValue({ success: true, data: { items: [] } })
     vialAPI.hubDownloadThemePost.mockResolvedValue({ success: true, data: { name: 'DL', version: '1', colorScheme: 'dark', colors: {} } })
@@ -229,6 +234,30 @@ describe('ThemePacksModal', () => {
     )
     expect(screen.getByTestId('theme-packs-row-p1')).toBeTruthy()
     expect(screen.getByText('My Theme')).toBeTruthy()
+  })
+
+  it('Author column shows the cached uploaderName for a hub-linked pack', () => {
+    metas = [meta({ id: 'auth1', name: 'Authored', hubPostId: 'hp-auth1', uploaderName: 'alice' })]
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+    expect(screen.getByTestId('theme-packs-author-auth1').textContent).toBe('alice')
+  })
+
+  it('Author column is blank for a never-uploaded local pack (no uploaderName)', () => {
+    metas = [meta({ id: 'local1', name: 'Local Only' })]
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+    expect(screen.getByTestId('theme-packs-author-local1').textContent).toBe('')
+  })
+
+  it('Updated column shows the Hub-side hubUpdatedAt, not the local updatedAt', () => {
+    metas = [meta({ id: 'hu1', name: 'Hub Updated', hubPostId: 'hp-hu1', hubUpdatedAt: '2026-05-01T00:00:00.000Z' })]
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+    expect(screen.getByTestId('theme-packs-timestamp-hu1').textContent).not.toBe('')
+  })
+
+  it('Updated column is blank for a pack with no hubUpdatedAt (legacy row or never uploaded)', () => {
+    metas = [meta({ id: 'legacy1', name: 'Legacy' })]
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+    expect(screen.getByTestId('theme-packs-timestamp-legacy1').textContent).toBe('')
   })
 
   it('selects a pack theme via the select button', () => {
@@ -487,9 +516,9 @@ describe('ThemePacksModal', () => {
   })
 
   it('update action calls hubUpdateThemePost', async () => {
-    metas = [meta({ id: 'up1', name: 'Update Me', hubPostId: 'hp-up1' })]
+    metas = [meta({ id: 'up1', name: 'Update Me', hubPostId: 'hp-up1', uploaderName: 'me' })]
     render(
-      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} hubCanWrite />,
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} hubCanWrite currentDisplayName="me" />,
     )
     fireEvent.click(screen.getByTestId('theme-packs-update-up1'))
     await waitFor(() => expect(vialAPI.themePackGet).toHaveBeenCalledWith('up1'))
@@ -506,10 +535,31 @@ describe('ThemePacksModal', () => {
     await waitFor(() => expect(applyImport).toHaveBeenCalled())
   })
 
-  it('remove action asks for confirmation', async () => {
-    metas = [meta({ id: 'rm1', name: 'Remove Me', hubPostId: 'hp-rm1' })]
+  it('sync refreshes uploaderName/hubUpdatedAt via a name-matched Hub list lookup (Phase 3)', async () => {
+    metas = [meta({ id: 'sy2', name: 'Sync Me', hubPostId: 'hp-sy2' })]
+    vialAPI.hubDownloadThemePost.mockResolvedValueOnce({
+      success: true,
+      data: { name: 'Sync Me', version: '1', colorScheme: 'dark', colors: {} },
+    })
+    vialAPI.hubListThemePosts.mockResolvedValueOnce({
+      success: true,
+      data: { items: [{ id: 'hp-sy2', name: 'Sync Me', version: '1', uploaderName: 'alice', updatedAt: '2026-05-02T00:00:00.000Z' }] },
+    })
     render(
-      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} hubCanWrite />,
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} hubCanWrite={false} />,
+    )
+    fireEvent.click(screen.getByTestId('theme-packs-sync-sy2'))
+    await waitFor(() => expect(vialAPI.hubListThemePosts).toHaveBeenCalledWith({ name: 'Sync Me' }))
+    await waitFor(() => expect(applyImport).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ uploaderName: 'alice', hubUpdatedAt: '2026-05-02T00:00:00.000Z' }),
+    ))
+  })
+
+  it('remove action asks for confirmation', async () => {
+    metas = [meta({ id: 'rm1', name: 'Remove Me', hubPostId: 'hp-rm1', uploaderName: 'me' })]
+    render(
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} hubCanWrite currentDisplayName="me" />,
     )
     fireEvent.click(screen.getByTestId('theme-packs-remove-rm1'))
     expect(screen.getByTestId('theme-packs-confirm-remove-rm1')).toBeTruthy()
@@ -517,9 +567,9 @@ describe('ThemePacksModal', () => {
   })
 
   it('confirmed remove calls hubDeleteThemePost', async () => {
-    metas = [meta({ id: 'rm2', name: 'Remove Me', hubPostId: 'hp-rm2' })]
+    metas = [meta({ id: 'rm2', name: 'Remove Me', hubPostId: 'hp-rm2', uploaderName: 'me' })]
     render(
-      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} hubCanWrite />,
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} hubCanWrite currentDisplayName="me" />,
     )
     fireEvent.click(screen.getByTestId('theme-packs-remove-rm2'))
     fireEvent.click(screen.getByTestId('theme-packs-confirm-remove-rm2'))
@@ -527,9 +577,9 @@ describe('ThemePacksModal', () => {
   })
 
   it('cancel remove hides the confirmation', () => {
-    metas = [meta({ id: 'rm3', name: 'Remove Me', hubPostId: 'hp-rm3' })]
+    metas = [meta({ id: 'rm3', name: 'Remove Me', hubPostId: 'hp-rm3', uploaderName: 'me' })]
     render(
-      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} hubCanWrite />,
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} hubCanWrite currentDisplayName="me" />,
     )
     fireEvent.click(screen.getByTestId('theme-packs-remove-rm3'))
     fireEvent.click(screen.getByTestId('theme-packs-cancel-remove-rm3'))
@@ -596,14 +646,24 @@ describe('ThemePacksModal', () => {
     expect(screen.getByTestId('theme-packs-sync-nw2')).toBeTruthy()
   })
 
-  it('update and remove buttons are visible when hubCanWrite is true for hub-linked row', () => {
-    metas = [meta({ id: 'w1', name: 'Write Hub', hubPostId: 'hp-w1' })]
+  it('update and remove buttons are visible when hubCanWrite is true and the row is mine (isMine gate, Phase 3)', () => {
+    metas = [meta({ id: 'w1', name: 'Write Hub', hubPostId: 'hp-w1', uploaderName: 'me' })]
     render(
-      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} hubCanWrite />,
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} hubCanWrite currentDisplayName="me" />,
     )
     expect(screen.getByTestId('theme-packs-update-w1')).toBeTruthy()
     expect(screen.getByTestId('theme-packs-remove-w1')).toBeTruthy()
     expect(screen.queryByTestId('theme-packs-sync-w1')).toBeNull()
+  })
+
+  it('shows Sync instead of Update/Remove for a hub-linked row uploaded by someone else, even with hubCanWrite (isMine gate, Phase 3)', () => {
+    metas = [meta({ id: 'foreign1', name: 'Foreign Pack', hubPostId: 'hp-foreign1', uploaderName: 'someone-else' })]
+    render(
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} hubCanWrite currentDisplayName="me" />,
+    )
+    expect(screen.queryByTestId('theme-packs-update-foreign1')).toBeNull()
+    expect(screen.queryByTestId('theme-packs-remove-foreign1')).toBeNull()
+    expect(screen.getByTestId('theme-packs-sync-foreign1')).toBeTruthy()
   })
 
   it('backdrop click calls onClose', () => {
@@ -633,6 +693,22 @@ describe('ThemePacksModal', () => {
     fireEvent.click(screen.getByTestId('theme-packs-confirm-delete-hd1'))
     await waitFor(() => expect(vialAPI.hubDeleteThemePost).toHaveBeenCalledWith('hp-hd1', 'hd1'))
     await waitFor(() => expect(removeFn).toHaveBeenCalledWith('hd1'))
+  })
+
+  it('blocks the local delete and surfaces an error when hubDeleteThemePost fails, leaving the entry intact', async () => {
+    metas = [meta({ id: 'hd2', name: 'Hub Delete Fail', hubPostId: 'hp-hd2' })]
+    vialAPI.hubDeleteThemePost.mockResolvedValueOnce({ success: false, error: 'Hub rejected the delete' })
+    render(
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
+    )
+    fireEvent.click(screen.getByTestId('theme-packs-delete-hd2'))
+    fireEvent.click(screen.getByTestId('theme-packs-confirm-delete-hd2'))
+    await waitFor(() => expect(vialAPI.hubDeleteThemePost).toHaveBeenCalledWith('hp-hd2', 'hd2'))
+    await waitFor(() => expect(screen.getByTestId('theme-packs-result-hd2').textContent).toBe('Hub rejected the delete'))
+    // A failed cascade must not proceed to the local delete — otherwise
+    // the Hub post is orphaned under a name nobody can re-upload.
+    expect(removeFn).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('theme-packs-confirm-delete-hd2')).toBeNull()
   })
 
   it('does not fall back to system when deleting a non-active pack', async () => {
@@ -667,5 +743,44 @@ describe('ThemePacksModal', () => {
     fireEvent.click(screen.getByTestId('theme-packs-search-button'))
     await waitFor(() => expect(screen.getByTestId('theme-packs-hub-row-hp-del1')).toBeTruthy())
     expect(screen.getByTestId('theme-packs-hub-download-hp-del1')).toBeTruthy()
+  })
+
+  // --- Phase 2: drag reorder + Name sort -----------------------------------
+
+  it('renders a drag grip for every installed pack row', () => {
+    metas = [meta({ id: 'p1', name: 'My Theme' })]
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+    expect(screen.getByTestId('theme-packs-grip-p1')).toBeTruthy()
+    const row = screen.getByTestId('theme-packs-row-p1')
+    expect(row.getAttribute('draggable')).toBe('true')
+  })
+
+  it('dragging a pack row persists the new order via store.reorder', async () => {
+    metas = [meta({ id: 'p1', name: 'Alpha' }), meta({ id: 'p2', name: 'Beta' })]
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+    const rowA = screen.getByTestId('theme-packs-row-p1')
+    const rowB = screen.getByTestId('theme-packs-row-p2')
+
+    fireEvent.dragStart(rowA, { dataTransfer: { effectAllowed: '', setData: vi.fn() } })
+    fireEvent.dragOver(rowB)
+    fireEvent.dragEnd(rowA)
+
+    await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['p2', 'p1']))
+  })
+
+  it('the Name sort button sorts installed packs ascending on first click', async () => {
+    metas = [meta({ id: 'z', name: 'Zeta' }), meta({ id: 'a', name: 'Alpha' })]
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('theme-packs-sort-button'))
+    await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['a', 'z']))
+  })
+
+  it('a second click on the Name sort button reverses the order', async () => {
+    metas = [meta({ id: 'z', name: 'Zeta' }), meta({ id: 'a', name: 'Alpha' })]
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('theme-packs-sort-button'))
+    await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['a', 'z']))
+    fireEvent.click(screen.getByTestId('theme-packs-sort-button'))
+    await waitFor(() => expect(reorderFn).toHaveBeenLastCalledWith(['z', 'a']))
   })
 })

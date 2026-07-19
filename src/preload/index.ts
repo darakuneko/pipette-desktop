@@ -332,10 +332,12 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_SET_ENABLED, id, enabled),
   i18nPackDelete: (id: string): Promise<I18nPackStoreResult<void>> =>
     ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_DELETE, id),
-  i18nPackSetHubPostId: (id: string, hubPostId: string | null): Promise<I18nPackStoreResult<I18nPackMeta>> =>
-    ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_SET_HUB_POST_ID, id, hubPostId),
+  i18nPackSetHubPostId: (id: string, hubPostId: string | null, uploaderName?: string, hubUpdatedAt?: string): Promise<I18nPackStoreResult<I18nPackMeta>> =>
+    ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_SET_HUB_POST_ID, id, hubPostId, uploaderName, hubUpdatedAt),
   i18nPackHasName: (name: string, excludeId?: string): Promise<I18nPackStoreResult<boolean>> =>
     ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_HAS_NAME, name, excludeId),
+  i18nPackReorder: (orderedIds: string[]): Promise<I18nPackStoreResult<void>> =>
+    ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_REORDER, orderedIds),
   i18nPackImport: (): Promise<I18nPackImportDialogResult> =>
     ipcRenderer.invoke(IpcChannels.I18N_PACK_IMPORT),
   i18nPackImportApply: (raw: unknown, options?: I18nPackImportApplyOptions): Promise<I18nPackStoreResult<I18nPackMeta>> =>
@@ -359,10 +361,12 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.THEME_PACK_STORE_RENAME, id, newName),
   themePackDelete: (id: string): Promise<ThemePackStoreResult<void>> =>
     ipcRenderer.invoke(IpcChannels.THEME_PACK_STORE_DELETE, id),
-  themePackSetHubPostId: (id: string, hubPostId: string | null): Promise<ThemePackStoreResult<ThemePackMeta>> =>
-    ipcRenderer.invoke(IpcChannels.THEME_PACK_STORE_SET_HUB_POST_ID, id, hubPostId),
+  themePackSetHubPostId: (id: string, hubPostId: string | null, uploaderName?: string, hubUpdatedAt?: string): Promise<ThemePackStoreResult<ThemePackMeta>> =>
+    ipcRenderer.invoke(IpcChannels.THEME_PACK_STORE_SET_HUB_POST_ID, id, hubPostId, uploaderName, hubUpdatedAt),
   themePackHasName: (name: string, excludeId?: string): Promise<ThemePackStoreResult<boolean>> =>
     ipcRenderer.invoke(IpcChannels.THEME_PACK_STORE_HAS_NAME, name, excludeId),
+  themePackReorder: (orderedIds: string[]): Promise<ThemePackStoreResult<void>> =>
+    ipcRenderer.invoke(IpcChannels.THEME_PACK_STORE_REORDER, orderedIds),
   themePackImport: (): Promise<ThemePackImportDialogResult> =>
     ipcRenderer.invoke(IpcChannels.THEME_PACK_IMPORT),
   themePackImportApply: (raw: unknown, options?: ThemePackImportApplyOptions): Promise<ThemePackStoreResult<ThemePackMeta>> =>

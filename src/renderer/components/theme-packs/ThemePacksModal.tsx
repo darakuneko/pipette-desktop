@@ -6,28 +6,38 @@
 //   - Import button in the Installed tab toolbar
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { Trans, useTranslation } from 'react-i18next'
+import { useTranslation } from 'react-i18next'
 import { Circle, CheckCircle2, Monitor, Sun, Moon } from 'lucide-react'
-import { BTN_PRIMARY, ICON_MD } from '../../constants/ui-tokens'
-import { ModalCloseButton } from '../editors/ModalCloseButton'
+import { ICON_MD } from '../../constants/ui-tokens'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { useThemePackStore } from '../../hooks/useThemePackStore'
 import { applyPackColors, clearPackColors, isPackTheme, extractPackId } from '../../hooks/useTheme'
 import type { ThemeColorScheme, ThemePackColors } from '../../../shared/types/theme-store'
 import type { HubThemePostListItem, HubThemePackBody } from '../../../shared/types/hub'
-import { buildHubCategoryUrl, HUB_CATEGORY } from '../../../shared/hub-urls'
+import { HUB_CATEGORY } from '../../../shared/hub-urls'
 import { useHubFreshness } from '../../hooks/useHubFreshness'
 import type { ThemeMode, ThemeSelection } from '../../../shared/types/app-config'
 import { PackRow } from './ThemePackRow'
-
-type TabId = 'installed' | 'hub'
+import { PackManagerModal } from '../pack-modal/PackManagerModal'
+import { PackHubTab } from '../pack-modal/PackHubTab'
+import { PackHubResultRow } from '../pack-modal/PackHubResultRow'
+import { PackSortButton } from '../pack-modal/PackSortButton'
+import { useHubOrigin } from '../pack-modal/useHubOrigin'
+import { useHubSearchList } from '../pack-modal/useHubSearchList'
+import { useDragReorder } from '../pack-modal/useDragReorder'
+import { applyDragOrder } from '../pack-modal/drag-order'
+import { useNameSort } from '../pack-modal/useNameSort'
+import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
+import { fetchHubPackMeta } from '../pack-modal/fetch-hub-pack-meta'
+import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
 
 export interface ThemePacksModalProps {
   open: boolean
   onClose: () => void
   onThemeChange: (mode: ThemeSelection) => void
+  /** Hub display name of the signed-in user, or null when not signed in. */
+  currentDisplayName?: string | null
   hubCanWrite?: boolean
 }
 
@@ -41,6 +51,7 @@ export function ThemePacksModal({
   open,
   onClose,
   onThemeChange,
+  currentDisplayName = null,
   hubCanWrite = false,
 }: ThemePacksModalProps): JSX.Element | null {
   const { t } = useTranslation()
@@ -48,34 +59,47 @@ export function ThemePacksModal({
   const rename = useInlineRename<string>()
   const appConfig = useAppConfig()
 
-  const [activeTab, setActiveTab] = useState<TabId>('installed')
+  const [activeTab, setActiveTab] = useState<PackManagerTabId>('installed')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [pendingId, setPendingId] = useState<string | null>(null)
-  const [lastResult, setLastResult] = useState<{ id: string; kind: 'success' | 'error'; message: string } | null>(null)
-  const [search, setSearch] = useState('')
-  const [hubResults, setHubResults] = useState<HubThemePostListItem[]>([])
-  const [hubDefaultResults, setHubDefaultResults] = useState<HubThemePostListItem[]>([])
-  const [hubSearched, setHubSearched] = useState(false)
-  const [hubSearching, setHubSearching] = useState(false)
-  const [hubOrigin, setHubOrigin] = useState('')
+  const [lastResult, setLastResult] = useState<PackActionResult | null>(null)
   const [previewPostId, setPreviewPostId] = useState<string | null>(null)
   const previewSeqRef = useRef(0)
   const hubPreviewCacheRef = useRef(new Map<string, HubThemePackBody>())
   const activePackCacheRef = useRef<{ id: string; colors: ThemePackColors; colorScheme: ThemeColorScheme } | null>(null)
 
   const activeTheme = appConfig.config.theme
+  const hubOrigin = useHubOrigin(open)
 
-  useEffect(() => {
-    if (!open) return
-    void window.vialAPI.hubGetOrigin().then((origin) => { if (origin) setHubOrigin(origin) }).catch(() => null)
-  }, [open])
-
-  const installedHubPostIds = useMemo(
-    () => new Set(store.metas.filter((m) => !m.deletedAt && m.hubPostId).map((m) => m.hubPostId as string)),
+  // hubPostId-first + name-fallback (unified with Language Packs / Key
+  // Labels — see installed-detection.ts).
+  const installedEntries = useMemo<InstalledDetectionEntry[]>(
+    () => store.metas.filter((m) => !m.deletedAt).map((m) => ({ hubPostId: m.hubPostId, name: m.name })),
     [store.metas],
   )
+
+  // Drag reorder + Name sort. The built-in System/Light/Dark selector
+  // bar is a separate UI block above this list (not a PackListRow),
+  // so every entry here is a real, draggable/sortable store pack.
+  const dragReorderIds = useMemo(() => store.metas.map((meta) => meta.id), [store.metas])
+  const drag = useDragReorder({
+    ids: dragReorderIds,
+    reorder: store.reorder,
+    onError: (error) => setActionError(error ?? t('themePacks.parseError')),
+  })
+  const displayedMetas = useMemo(
+    () => applyDragOrder(store.metas, drag.dragOrder, (meta) => meta.id),
+    [store.metas, drag.dragOrder],
+  )
+  const nameSort = useNameSort({
+    reorder: store.reorder,
+    onError: (error) => setActionError(error ?? t('themePacks.parseError')),
+  })
+  const handleSortByName = useCallback((): void => {
+    void nameSort.toggle(store.metas.map((meta) => ({ id: meta.id, name: meta.name })))
+  }, [nameSort, store.metas])
 
   const freshnessCandidates = useMemo(
     () => store.metas
@@ -95,50 +119,23 @@ export function ThemePacksModal({
     fetchTimestamps,
   })
 
+  const { search, setSearch, hubResults, hubSearched, hubSearching, runSearch } = useHubSearchList<HubThemePostListItem>({
+    open,
+    activeTab,
+    hubTabId: 'hub',
+    fetchPage: (query) => window.vialAPI.hubListThemePosts({ q: query }),
+    errorMessage: (error) => error ?? t('themePacks.hubEmpty'),
+    onSearchStart: () => setActionError(null),
+    onError: setActionError,
+  })
+
   const hubRows = useMemo(() => hubResults.map((item) => ({
     hubPostId: item.id,
     name: item.name,
     version: item.version,
     uploaderName: item.uploaderName ?? '',
-    alreadyInstalled: installedHubPostIds.has(item.id),
-  })), [hubResults, installedHubPostIds])
-
-  const runSearch = useCallback(async (query: string): Promise<void> => {
-    setHubSearching(true)
-    setActionError(null)
-    try {
-      const result = await window.vialAPI.hubListThemePosts({ q: query })
-      if (result.success && result.data) {
-        setHubResults(result.data.items)
-        setHubSearched(true)
-        if (!query.trim()) setHubDefaultResults(result.data.items)
-      } else {
-        setActionError(result.error ?? t('themePacks.hubEmpty'))
-      }
-    } finally {
-      setHubSearching(false)
-    }
-  }, [t])
-
-  // Auto-fetch Hub list when the hub tab becomes active.
-  // Re-fetches each time the modal is opened so results stay fresh.
-  useEffect(() => {
-    if (!open || activeTab !== 'hub' || hubSearched) return
-    void runSearch('')
-  }, [open, activeTab, hubSearched, runSearch])
-
-  // Debounced search: fire once the user has typed 2+ characters.
-  // Below the threshold restore the initial results instead of clearing.
-  useEffect(() => {
-    if (!open || activeTab !== 'hub') return
-    const query = search.trim()
-    if (query.length < 2) {
-      if (hubDefaultResults.length > 0) setHubResults(hubDefaultResults)
-      return
-    }
-    const handle = window.setTimeout(() => { void runSearch(query) }, 300)
-    return () => { window.clearTimeout(handle) }
-  }, [open, activeTab, search, runSearch, hubDefaultResults])
+    alreadyInstalled: isHubItemInstalled(item, installedEntries),
+  })), [hubResults, installedEntries])
 
   const restoreActiveTheme = useCallback(() => {
     clearPackColors()
@@ -192,10 +189,6 @@ export function ThemePacksModal({
       setConfirmRemoveId(null)
       hubPreviewCacheRef.current.clear()
       activePackCacheRef.current = null
-      setHubSearched(false)
-      setHubResults([])
-      setHubDefaultResults([])
-      setSearch('')
     }
   }, [open, previewPostId, restoreActiveTheme])
 
@@ -223,9 +216,9 @@ export function ThemePacksModal({
     return { success: false, error: res.error ?? t('hub.updateFailed') }
   }, [store, t])
 
-  const handleTabInstalled = useCallback(() => {
-    if (previewPostId) restoreActiveTheme()
-    setActiveTab('installed')
+  const handleTabChange = useCallback((tab: PackManagerTabId) => {
+    if (tab === 'installed' && previewPostId) restoreActiveTheme()
+    setActiveTab(tab)
   }, [previewPostId, restoreActiveTheme])
 
   const handleSelectTheme = useCallback((selection: ThemeSelection) => {
@@ -252,7 +245,16 @@ export function ThemePacksModal({
     try {
       const meta = store.metas.find((m) => m.id === id)
       if (meta?.hubPostId) {
-        await window.vialAPI.hubDeleteThemePost(meta.hubPostId, id).catch(() => null)
+        // If the Hub deletion fails, abort the cascade — proceeding to
+        // a local-only delete would strand an orphan post whose name
+        // can never be re-uploaded, exactly what the cascade is meant
+        // to avoid.
+        const hubResult = await window.vialAPI.hubDeleteThemePost(meta.hubPostId, id)
+          .catch((err) => ({ success: false, error: err instanceof Error ? err.message : String(err) }))
+        if (!hubResult.success) {
+          setLastResult({ id, kind: 'error', message: hubResult.error ?? t('themePacks.parseError') })
+          return
+        }
       }
       const result = await store.remove(id)
       if (!result.success && result.error) setActionError(result.error)
@@ -263,7 +265,7 @@ export function ThemePacksModal({
       setPendingId(null)
       setConfirmDeleteId(null)
     }
-  }, [store, activeTheme, onThemeChange])
+  }, [store, activeTheme, onThemeChange, t])
 
   const handleImportFile = useCallback(async () => {
     setActionError(null)
@@ -376,7 +378,16 @@ export function ThemePacksModal({
         setLastResult({ id, kind: 'error', message: result.error ?? t('themePacks.parseError') })
         return
       }
-      const apply = await store.applyImport(result.data, { id, hubPostId: meta.hubPostId })
+      // Refresh the Author/Updated cache the same way upload/update do —
+      // the download body carries no metadata, so look the post back up
+      // by its (possibly just-changed) name via the Hub list endpoint.
+      const enriched = await fetchHubPackMeta(window.vialAPI.hubListThemePosts, result.data.name, meta.hubPostId)
+      const apply = await store.applyImport(result.data, {
+        id,
+        hubPostId: meta.hubPostId,
+        hubUpdatedAt: enriched.hubUpdatedAt,
+        uploaderName: enriched.uploaderName,
+      })
       if (apply.success) {
         setLastResult({ id, kind: 'success', message: t('common.synced') })
         await store.refresh()
@@ -417,7 +428,8 @@ export function ThemePacksModal({
         setActionError(result.error ?? t('themePacks.hubEmpty'))
         return
       }
-      await store.applyImport(result.data, { hubPostId: postId })
+      const enriched = await fetchHubPackMeta(window.vialAPI.hubListThemePosts, result.data.name, postId)
+      await store.applyImport(result.data, { hubPostId: postId, hubUpdatedAt: enriched.hubUpdatedAt, uploaderName: enriched.uploaderName })
     } finally {
       setPendingId(null)
     }
@@ -433,133 +445,114 @@ export function ThemePacksModal({
     }
   }
 
-  if (!open) return null
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      data-testid="theme-packs-backdrop"
-      onClick={onClose}
+  return (
+    <PackManagerModal
+      open={open}
+      onClose={onClose}
+      title={t('themePacks.title')}
+      testids={{
+        backdrop: 'theme-packs-backdrop',
+        modal: 'theme-packs-modal',
+        closeButton: 'theme-packs-close',
+        tabsContainer: 'theme-packs-tabs',
+        tabInstalled: 'theme-packs-tab-installed',
+        tabHub: 'theme-packs-tab-hub',
+        searchInput: 'theme-packs-search-input',
+        searchButton: 'theme-packs-search-button',
+        importButton: 'theme-packs-import-button',
+        errorBanner: 'theme-packs-error',
+      }}
+      activeTab={activeTab}
+      onTabChange={handleTabChange}
+      installedLabel={t('common.installed')}
+      hubLabel={t('common.findOnHub')}
+      search={search}
+      onSearchChange={setSearch}
+      onSearchEnter={() => void runSearch(search)}
+      onSearchClick={() => void runSearch(search.trim())}
+      searchPlaceholder={t('common.searchPlaceholder')}
+      searchButtonLabel={hubSearching ? t('keyLabels.searching') : t('i18n.search')}
+      searchDisabled={hubSearching || search.trim().length < 2}
+      importLabel={t('i18n.import')}
+      onImport={() => void handleImportFile()}
+      sortButton={(
+        <PackSortButton
+          direction={nameSort.direction}
+          onClick={handleSortByName}
+          disabled={nameSort.pending}
+          testid="theme-packs-sort-button"
+        />
+      )}
+      actionError={actionError}
     >
-      <div
-        className="w-modal-lg max-w-modal-vw h-modal-80vh flex flex-col rounded-lg bg-surface shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-        data-testid="theme-packs-modal"
-      >
-        <div className="flex items-center justify-between border-b border-edge px-4 py-3">
-          <h2 className="text-base font-semibold text-content">{t('themePacks.title')}</h2>
-          <ModalCloseButton testid="theme-packs-close" onClick={onClose} />
-        </div>
+      {activeTab === 'installed' ? (
+        <div className="space-y-2">
+          <div className="flex rounded border border-edge bg-surface p-1 gap-0.5">
+            {BUILTIN_THEMES.map(({ mode, icon: Icon }) => {
+              const isActive = activeTheme === mode
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-label={t('themePacks.selectTheme', { name: t(`theme.${mode}`) })}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-accent/15 text-accent'
+                      : 'text-content-secondary hover:text-content'
+                  }`}
+                  onClick={() => handleSelectTheme(mode)}
+                  data-testid={`theme-packs-builtin-${mode}`}
+                >
+                  {isActive ? (
+                    <CheckCircle2 size={ICON_MD} className="text-accent" aria-hidden="true" />
+                  ) : (
+                    <Circle size={ICON_MD} aria-hidden="true" />
+                  )}
+                  <Icon size={ICON_MD} aria-hidden="true" />
+                  {t(`theme.${mode}`)}
+                </button>
+              )
+            })}
+          </div>
 
-        <div className="flex border-b border-edge" data-testid="theme-packs-tabs">
-          <TabButton id="installed" label={t('common.installed')} active={activeTab === 'installed'} onClick={handleTabInstalled} />
-          <TabButton id="hub" label={t('common.findOnHub')} active={activeTab === 'hub'} onClick={() => setActiveTab('hub')} />
-        </div>
-
-        {activeTab === 'hub' && (
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-edge">
-            <input
-              type="text"
-              value={search}
-              placeholder={t('common.searchPlaceholder')}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') void runSearch(search) }}
-              className="flex-1 rounded border border-edge bg-surface px-3 py-1.5 text-sm text-content focus:border-accent focus:outline-none"
-              data-testid="theme-packs-search-input"
+          {displayedMetas.map((meta) => (
+            <PackRow
+              key={meta.id}
+              meta={meta}
+              isActive={activeTheme === `pack:${meta.id}`}
+              pendingId={pendingId}
+              confirmDeleteId={confirmDeleteId}
+              setConfirmDeleteId={setConfirmDeleteId}
+              rename={rename}
+              onRenameKey={handleRenameKey}
+              onRenameCommit={handleRenameCommit}
+              onSelect={handleSelectTheme}
+              onExport={handleExport}
+              onDelete={handleDelete}
+              hubOrigin={hubOrigin}
+              currentDisplayName={currentDisplayName}
+              hubCanWrite={hubCanWrite}
+              hubFreshness={hubFreshness}
+              lastResult={lastResult}
+              confirmRemoveId={confirmRemoveId}
+              setConfirmRemoveId={setConfirmRemoveId}
+              onUpload={handleUpload}
+              onUpdate={handleUpdate}
+              onSync={handleSync}
+              onRemove={handleRemove}
+              onDragStart={() => drag.onDragStart(meta.id)}
+              onDragOver={() => drag.onDragOver(meta.id)}
+              onDragEnd={() => { void drag.onDragEnd() }}
             />
-            <button
-              type="button"
-              disabled={hubSearching || search.trim().length < 2}
-              onClick={() => void runSearch(search.trim())}
-              className={BTN_PRIMARY}
-              data-testid="theme-packs-search-button"
-            >
-              {hubSearching ? t('keyLabels.searching') : t('i18n.search')}
-            </button>
-          </div>
-        )}
-
-        {activeTab === 'installed' && (
-          <div className="flex items-center justify-end px-4 py-3 border-b border-edge">
-            <button
-              type="button"
-              onClick={() => void handleImportFile()}
-              className="rounded border border-edge bg-surface px-3 py-1.5 text-sm font-medium text-content hover:bg-surface-hover"
-              data-testid="theme-packs-import-button"
-            >
-              {t('i18n.import')}
-            </button>
-          </div>
-        )}
-
-        {actionError && (
-          <div className="mx-4 my-2 rounded border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-700" data-testid="theme-packs-error">
-            {actionError}
-          </div>
-        )}
-
-        <div className="flex-1 overflow-y-auto px-4 py-2">
-          {activeTab === 'installed' ? (
-            <div className="space-y-2">
-              <div className="flex rounded border border-edge bg-surface p-1 gap-0.5">
-                {BUILTIN_THEMES.map(({ mode, icon: Icon }) => {
-                  const isActive = activeTheme === mode
-                  return (
-                    <button
-                      key={mode}
-                      type="button"
-                      aria-label={t('themePacks.selectTheme', { name: t(`theme.${mode}`) })}
-                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                        isActive
-                          ? 'bg-accent/15 text-accent'
-                          : 'text-content-secondary hover:text-content'
-                      }`}
-                      onClick={() => handleSelectTheme(mode)}
-                      data-testid={`theme-packs-builtin-${mode}`}
-                    >
-                      {isActive ? (
-                        <CheckCircle2 size={ICON_MD} className="text-accent" aria-hidden="true" />
-                      ) : (
-                        <Circle size={ICON_MD} aria-hidden="true" />
-                      )}
-                      <Icon size={ICON_MD} aria-hidden="true" />
-                      {t(`theme.${mode}`)}
-                    </button>
-                  )
-                })}
-              </div>
-
-              {store.metas.map((meta) => (
-                <PackRow
-                  key={meta.id}
-                  meta={meta}
-                  isActive={activeTheme === `pack:${meta.id}`}
-                  pendingId={pendingId}
-                  confirmDeleteId={confirmDeleteId}
-                  setConfirmDeleteId={setConfirmDeleteId}
-                  rename={rename}
-                  onRenameKey={handleRenameKey}
-                  onRenameCommit={handleRenameCommit}
-                  onSelect={handleSelectTheme}
-                  onExport={handleExport}
-                  onDelete={handleDelete}
-                  hubOrigin={hubOrigin}
-                  hubCanWrite={hubCanWrite}
-                  hubFreshness={hubFreshness}
-                  lastResult={lastResult}
-                  confirmRemoveId={confirmRemoveId}
-                  setConfirmRemoveId={setConfirmRemoveId}
-                  onUpload={handleUpload}
-                  onUpdate={handleUpdate}
-                  onSync={handleSync}
-                  onRemove={handleRemove}
-                />
-              ))}
-            </div>
-          ) : (
-            <HubTable
-              rows={hubRows}
-              hubSearched={hubSearched}
+          ))}
+        </div>
+      ) : (
+        <PackHubTab
+          rows={hubRows}
+          renderRow={(row) => (
+            <ThemeHubRow
+              key={row.hubPostId}
+              row={row}
               pendingId={pendingId}
               hubOrigin={hubOrigin}
               previewPostId={previewPostId}
@@ -567,41 +560,21 @@ export function ThemePacksModal({
               onDownload={(postId) => void handleHubDownload(postId)}
             />
           )}
-        </div>
-      </div>
-    </div>,
-    document.body,
+          hubSearched={hubSearched}
+          emptyText={t('themePacks.hubEmpty')}
+          emptyTestid="theme-packs-hub-empty"
+          hubOrigin={hubOrigin}
+          category={HUB_CATEGORY.THEME_PACKS}
+          initialLinkTestid="theme-packs-hub-initial-link"
+        />
+      )}
+    </PackManagerModal>
   )
 }
 
 /* ------------------------------------------------------------------ */
 
-interface TabButtonProps {
-  id: TabId
-  label: string
-  active: boolean
-  onClick: () => void
-}
-
-function TabButton({ id, label, active, onClick }: TabButtonProps): JSX.Element {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-        active ? 'border-b-2 border-accent text-accent' : 'text-content-secondary hover:text-content'
-      }`}
-      data-testid={`theme-packs-tab-${id}`}
-      aria-pressed={active}
-    >
-      {label}
-    </button>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-
-interface HubRow {
+interface ThemeHubRowData {
   hubPostId: string
   name: string
   version: string
@@ -609,9 +582,8 @@ interface HubRow {
   alreadyInstalled: boolean
 }
 
-interface HubTableProps {
-  rows: HubRow[]
-  hubSearched: boolean
+interface ThemeHubRowProps {
+  row: ThemeHubRowData
   pendingId: string | null
   hubOrigin: string
   previewPostId: string | null
@@ -619,78 +591,32 @@ interface HubTableProps {
   onDownload: (postId: string) => void
 }
 
-function HubTable({ rows, hubSearched, pendingId, hubOrigin, previewPostId, onPreview, onDownload }: HubTableProps): JSX.Element {
+function ThemeHubRow({ row, pendingId, previewPostId, onPreview, onDownload }: ThemeHubRowProps): JSX.Element {
   const { t } = useTranslation()
-  if (rows.length === 0) {
-    return (
-      <p className="py-4 text-center text-sm text-content-muted" data-testid="theme-packs-hub-empty">
-        {hubSearched ? (
-          t('themePacks.hubEmpty')
-        ) : (
-          <Trans
-            i18nKey="common.findOnHubHint"
-            components={{
-              hub: hubOrigin ? (
-                <a
-                  href={buildHubCategoryUrl(hubOrigin, HUB_CATEGORY.THEME_PACKS)}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    void window.vialAPI.openExternal(buildHubCategoryUrl(hubOrigin, HUB_CATEGORY.THEME_PACKS))
-                  }}
-                  className="text-accent hover:underline"
-                  data-testid="theme-packs-hub-initial-link"
-                />
-              ) : (
-                <span />
-              ),
-            }}
-          />
-        )}
-      </p>
-    )
-  }
+  const busy = pendingId === row.hubPostId
   return (
-    <div className="space-y-2">
-      {rows.map((row) => (
-        <div
-          key={row.hubPostId}
-          className="flex items-center gap-3 rounded border border-edge bg-surface px-3 py-2"
-          data-testid={`theme-packs-hub-row-${row.hubPostId}`}
+    <PackHubResultRow
+      hubPostId={row.hubPostId}
+      testidPrefix="theme-packs"
+      name={row.name}
+      version={row.version}
+      uploaderName={row.uploaderName}
+      alreadyInstalled={row.alreadyInstalled}
+      busy={busy}
+      onDownload={() => onDownload(row.hubPostId)}
+      leadingActions={
+        <button
+          type="button"
+          className={`text-xs font-medium hover:underline disabled:opacity-50 ${
+            previewPostId === row.hubPostId ? 'text-success' : 'text-content-secondary'
+          }`}
+          onClick={() => onPreview(row.hubPostId)}
+          disabled={busy}
+          data-testid={`theme-packs-hub-preview-${row.hubPostId}`}
         >
-          <div className="flex-1 min-w-0">
-            <div className="truncate text-sm font-medium text-content">{row.name}</div>
-            <div className="text-xs text-content-muted">
-              v{row.version}{row.uploaderName ? ` · ${row.uploaderName}` : ''}
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              className={`text-xs font-medium hover:underline disabled:opacity-50 ${
-                previewPostId === row.hubPostId ? 'text-success' : 'text-content-secondary'
-              }`}
-              onClick={() => onPreview(row.hubPostId)}
-              disabled={pendingId === row.hubPostId}
-              data-testid={`theme-packs-hub-preview-${row.hubPostId}`}
-            >
-              {previewPostId === row.hubPostId ? t('themePacks.previewing') : t('themePacks.preview')}
-            </button>
-            {row.alreadyInstalled ? (
-              <span className="text-xs text-content-muted">{t('common.installed')}</span>
-            ) : (
-              <button
-                type="button"
-                className="text-xs font-medium text-accent hover:underline disabled:opacity-50"
-                onClick={() => onDownload(row.hubPostId)}
-                disabled={pendingId === row.hubPostId}
-                data-testid={`theme-packs-hub-download-${row.hubPostId}`}
-              >
-                {t('keyLabels.actionDownload')}
-              </button>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
+          {previewPostId === row.hubPostId ? t('themePacks.previewing') : t('themePacks.preview')}
+        </button>
+      }
+    />
   )
 }

@@ -18,6 +18,7 @@ import {
   setHubPostId,
   hasActiveName,
   exportPackToDialog,
+  reorderActive,
 } from './theme-pack-store'
 import type {
   ThemePackMeta,
@@ -92,6 +93,18 @@ export function setupThemePackStore(): void {
   )
 
   secureHandle(
+    IpcChannels.THEME_PACK_STORE_REORDER,
+    async (_event, orderedIds: unknown): Promise<ThemePackStoreResult<void>> => {
+      if (!Array.isArray(orderedIds) || !orderedIds.every((id) => typeof id === 'string')) {
+        return { success: false, errorCode: 'INVALID_FILE', error: 'Invalid order list' }
+      }
+      const result = await reorderActive(orderedIds as string[])
+      if (result.success) broadcastChanged()
+      return result
+    },
+  )
+
+  secureHandle(
     IpcChannels.THEME_PACK_STORE_DELETE,
     async (_event, id: unknown): Promise<ThemePackStoreResult<void>> => {
       if (typeof id !== 'string') {
@@ -109,6 +122,8 @@ export function setupThemePackStore(): void {
       _event,
       id: unknown,
       hubPostId: unknown,
+      uploaderName: unknown,
+      hubUpdatedAt: unknown,
     ): Promise<ThemePackStoreResult<ThemePackMeta>> => {
       if (typeof id !== 'string') {
         return { success: false, errorCode: 'NOT_FOUND', error: 'Invalid id' }
@@ -116,7 +131,12 @@ export function setupThemePackStore(): void {
       const normalized = hubPostId == null
         ? null
         : (typeof hubPostId === 'string' ? hubPostId : null)
-      const result = await setHubPostId(id, normalized)
+      const result = await setHubPostId(
+        id,
+        normalized,
+        typeof uploaderName === 'string' ? uploaderName : undefined,
+        typeof hubUpdatedAt === 'string' ? hubUpdatedAt : undefined,
+      )
       if (result.success) broadcastChanged()
       return result
     },
@@ -176,6 +196,8 @@ export function setupThemePackStore(): void {
         raw,
         id: typeof opts.id === 'string' ? opts.id : undefined,
         hubPostId: typeof opts.hubPostId === 'string' ? opts.hubPostId : undefined,
+        hubUpdatedAt: typeof opts.hubUpdatedAt === 'string' ? opts.hubUpdatedAt : undefined,
+        uploaderName: typeof opts.uploaderName === 'string' ? opts.uploaderName : undefined,
       })
       if (result.success) broadcastChanged()
       return result

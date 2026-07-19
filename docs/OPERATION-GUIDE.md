@@ -1572,11 +1572,13 @@ The Tools tab also exposes a **Key Labels Manage** row (next to the Language Pac
 
 QWERTY is built-in; every other label set (Dvorak, Colemak, French, Brazilian, …) is downloaded from Pipette Hub or imported from a local `.json` file. Installed entries sync across devices via Cloud Sync, so the same drag order and selection appear on every machine signed into the same account.
 
+**Delete removes the Hub post too.** If the entry you delete is linked to a Hub post, Delete also takes that post down from Hub — the local copy and the shared upload disappear together, in one action. If the Hub side fails (for example, no network), the local entry is **not** deleted either — an error is shown under the row and the entry stays put so you can try Delete again. Use **Remove** (in the Hub actions row) instead if you only want to detach the local copy from Hub while keeping both the local entry and the Hub post — Remove never touches the local copy.
+
 **Installed tab**
 
 ![Key Labels — Installed](screenshots/key-labels-installed.png)
 
-Lists every label set already on this device. Each row shows the label name, the uploader name (when the entry came from Hub), the Hub-side last-update time (`YYYY-MM-DD HH:mm`, mirrors what the Hub website displays), an `.json` export shortcut, and a Delete button. Drag the grip handle on the left to reorder rows — the order is propagated to the Settings dropdown and to every Key Labels picker in the editor.
+Lists every label set already on this device. Each row shows the label name, the uploader name (when the entry came from Hub), the Hub-side last-update time (`YYYY-MM-DD HH:mm`, mirrors what the Hub website displays), an `.json` export shortcut, and a Delete button. Drag the grip handle on the left to reorder rows — the order is propagated to the Settings dropdown and to every Key Labels picker in the editor. A **Name** button at the left of the toolbar (opposite Import) sorts the list alphabetically instead — click once for ascending, click again for descending; each click applies the new order immediately, the same way a manual drag would, so drag, dropdowns, and sync all stay consistent.
 
 A second line under each row exposes the Hub actions:
 
@@ -1594,7 +1596,7 @@ QWERTY shows no Hub actions and cannot be deleted, but it can be reordered like 
 
 ![Key Labels — Find on Hub](screenshots/key-labels-hub.png)
 
-Searches Pipette Hub for label sets. Type 2 or more characters to start an automatic search (debounced); the **Search** button and **Enter** still work as manual triggers. Results show the label name, the uploader, and either a **Download** action or an **Installed** marker when the same name is already present locally. Re-importing a file with a name that already exists overwrites the local entry in place (`.json` content replaced, the Hub link is preserved).
+Searches Pipette Hub for label sets. Type 2 or more characters to start an automatic search (debounced); the **Search** button and **Enter** still work as manual triggers. Results are listed alphabetically by name. Results show the label name, the uploader, and either a **Download** action or an **Installed** marker when the same name is already present locally. Re-importing a file with a name that already exists overwrites the local entry in place (`.json` content replaced, the Hub link is preserved).
 
 **Authoring a Key Label**
 
@@ -1692,17 +1694,20 @@ English is built-in; every other language is imported from a local `.json` file 
 
 ![Language Packs — Installed](screenshots/language-packs-installed.png)
 
-Lists every language pack on this device. Each row has a **check circle** on the left — click it to switch the active UI language immediately. The active row is highlighted with an accent border.
+Lists every language pack on this device. Each row has a **check circle** on the left — click it to switch the active UI language immediately. The active row is highlighted with an accent border. A drag grip sits at the left edge of every imported-pack row; built-in English is pinned at the top of the list and is not draggable (it ships with the app rather than living in the pack store).
 
 Each row shows:
 
 - **Name** (click to rename inline)
-- **Updated timestamp** (`YYYY-MM-DD HH:mm`)
+- **Author** — the uploader's name when the pack came from Hub, blank for local-only packs. Built-in English always shows "pipette"
+- **Updated timestamp** (`YYYY-MM-DD HH:mm`) — the Hub-side last-update time, mirroring what the Hub website displays; blank until the pack has been uploaded. Built-in English shows its own build date instead, since it isn't a Hub-linked pack
 - **Version** chip when the pack covers every key of the current English baseline, or a **not set keys** button that opens a modal listing the missing translation keys
 - **Export** / **Delete** actions on the first line
-- **Open** / **Upload** / **Update** / **Sync** / **Remove** Hub actions on the second line (same pattern as Key Labels §6.2)
+- **Open** / **Upload** / **Update** / **Sync** / **Remove** Hub actions on the second line (same pattern as Key Labels §6.2, including Delete's Hub-post cascade and the owner-only gating on Update/Remove)
 
 A **pulsing green dot** next to the Sync button indicates that the Hub-side post is newer than the local copy (freshness check runs once per 5 minutes when the modal is open).
+
+Drag the grip handle to reorder imported packs — the order syncs across devices and is reflected anywhere the pack list is used. A **Name** button at the left of the toolbar (opposite Import) sorts the imported packs alphabetically instead — click once for ascending, click again for descending — leaving built-in English pinned at the top.
 
 The **Import** button in the toolbar opens a file dialog to import a `.json` language pack. Re-importing a pack with the same `name` overwrites the existing entry.
 
@@ -1710,7 +1715,7 @@ The **Import** button in the toolbar opens a file dialog to import a `.json` lan
 
 ![Language Packs — Find on Hub](screenshots/language-packs-hub.png)
 
-Searches Pipette Hub for language packs. Type 2 or more characters to start an automatic search (debounced). Results show the pack name, version, uploader, and either a **Download** action or an **Installed** marker.
+Searches Pipette Hub for language packs. Type 2 or more characters to start an automatic search (debounced). Results are listed alphabetically by name. Results show the pack name, version, uploader, and either a **Download** action or an **Installed** marker.
 
 **Authoring a Language Pack**
 
@@ -1752,17 +1757,20 @@ Theme packs override the application's colour palette. The built-in Light / Dark
 
 ![Theme Packs — Installed](screenshots/theme-packs-installed.png)
 
-Lists every theme pack on this device. Each row has a **radio circle** on the left — click it to apply that theme pack immediately. Click the active row again to deselect it and revert to the built-in theme. The three built-in options (Light / Dark / System) appear at the top.
+Lists every theme pack on this device. Each row has a **radio circle** on the left — click it to apply that theme pack immediately. Click the active row again to deselect it and revert to the built-in theme. The three built-in options (Light / Dark / System) appear as a separate selector bar above the list, not as rows in it, so they have no drag grip of their own.
 
 Each row shows:
 
 - **Name** (click to rename inline)
-- **Updated timestamp** (`YYYY-MM-DD HH:mm`)
+- **Author** — the uploader's name when the pack came from Hub, blank for local-only packs
+- **Updated timestamp** (`YYYY-MM-DD HH:mm`) — the Hub-side last-update time, mirroring what the Hub website displays; blank until the pack has been uploaded
 - **Version** chip
 - **.json** export shortcut and **Delete** button on the first line
-- **Open** / **Upload** / **Update** / **Sync** / **Remove** Hub actions on the second line (same pattern as Key Labels §6.2)
+- **Open** / **Upload** / **Update** / **Sync** / **Remove** Hub actions on the second line (same pattern as Key Labels §6.2, including Delete's Hub-post cascade and the owner-only gating on Update/Remove)
 
 A **pulsing green dot** next to the Sync button indicates that the Hub-side post is newer than the local copy (freshness check runs once per 5 minutes when the modal is open).
+
+Drag the grip handle on the left of each row to reorder theme packs — the order syncs across devices. A **Name** button at the left of the toolbar (opposite Import) sorts the list alphabetically instead — click once for ascending, click again for descending.
 
 The **Import** button in the toolbar opens a file dialog to import a `.json` theme pack. Re-importing a pack with the same `name` overwrites the existing entry.
 
@@ -1770,7 +1778,7 @@ The **Import** button in the toolbar opens a file dialog to import a `.json` the
 
 ![Theme Packs — Find on Hub](screenshots/theme-packs-hub.png)
 
-Searches Pipette Hub for theme packs. Type 2 or more characters to start an automatic search (debounced). Each result shows the pack name, version, uploader, a **Preview** button, and either a **Download** action or an **Installed** marker.
+Searches Pipette Hub for theme packs. Type 2 or more characters to start an automatic search (debounced). Results are listed alphabetically by name. Each result shows the pack name, version, uploader, a **Preview** button, and either a **Download** action or an **Installed** marker.
 
 Click **Preview** to temporarily apply the theme's colours without installing. The preview resets when you close the modal, switch to the Installed tab, or click **Preview** again to toggle it off.
 

@@ -34,6 +34,7 @@ import {
   setHubPostId,
   hasActiveName,
   purgeExpiredTombstones,
+  reorderActive,
   __testing,
 } from '../theme-pack-store'
 import {
@@ -464,6 +465,43 @@ describe('theme-pack-store', () => {
     })
   })
 
+  describe('uploaderName (Phase 3)', () => {
+    it('savePack persists uploaderName on the meta', async () => {
+      const saved = await savePack({ raw: makeValidPack({ name: 'Authored' }), uploaderName: 'alice' })
+      expect(saved.data!.uploaderName).toBe('alice')
+    })
+
+    it('legacy metas (saved before this field existed) have no uploaderName', async () => {
+      const saved = await savePack({ raw: makeValidPack({ name: 'Legacy' }) })
+      expect(saved.data!.uploaderName).toBeUndefined()
+    })
+
+    it('setHubPostId sets uploaderName and hubUpdatedAt when both are provided (Upload)', async () => {
+      const saved = await savePack({ raw: makeValidPack({ name: 'Upload Me' }) })
+      const result = await setHubPostId(saved.data!.id, 'hub-1', 'alice', '2026-05-01T00:00:00.000Z')
+      expect(result.data!.hubPostId).toBe('hub-1')
+      expect(result.data!.uploaderName).toBe('alice')
+      expect(result.data!.hubUpdatedAt).toBe('2026-05-01T00:00:00.000Z')
+    })
+
+    it('setHubPostId leaves uploaderName untouched when omitted (Update)', async () => {
+      const saved = await savePack({ raw: makeValidPack({ name: 'Update Me' }) })
+      await setHubPostId(saved.data!.id, 'hub-2', 'alice', '2026-05-01T00:00:00.000Z')
+      const updated = await setHubPostId(saved.data!.id, 'hub-2', undefined, '2026-06-01T00:00:00.000Z')
+      expect(updated.data!.uploaderName).toBe('alice')
+      expect(updated.data!.hubUpdatedAt).toBe('2026-06-01T00:00:00.000Z')
+    })
+
+    it('detaching (hubPostId: null) drops hubUpdatedAt but keeps uploaderName', async () => {
+      const saved = await savePack({ raw: makeValidPack({ name: 'Detach Me' }) })
+      await setHubPostId(saved.data!.id, 'hub-3', 'alice', '2026-05-01T00:00:00.000Z')
+      const detached = await setHubPostId(saved.data!.id, null)
+      expect(detached.data!.hubPostId).toBeUndefined()
+      expect(detached.data!.hubUpdatedAt).toBeUndefined()
+      expect(detached.data!.uploaderName).toBe('alice')
+    })
+  })
+
   describe('hasActiveName', () => {
     it('returns true for existing active name (case-insensitive)', async () => {
       await savePack({ raw: makeValidPack({ name: 'Monokai' }) })
@@ -503,6 +541,81 @@ describe('theme-pack-store', () => {
       const result = await hasActiveName('Deleted Theme')
       expect(result.success).toBe(true)
       expect(result.data).toBe(false)
+    })
+  })
+
+  describe('reorderActive', () => {
+    it('reorders active metas by the given ID array', async () => {
+      const a = await savePack({ raw: makeValidPack({ name: 'Alpha' }) })
+      const b = await savePack({ raw: makeValidPack({ name: 'Beta' }) })
+      const c = await savePack({ raw: makeValidPack({ name: 'Gamma' }) })
+
+      await reorderActive([c.data!.id, a.data!.id, b.data!.id])
+
+      const metas = await listMetas()
+      const names = metas.map((m) => m.name)
+      expect(names.indexOf('Gamma')).toBeLessThan(names.indexOf('Alpha'))
+      expect(names.indexOf('Alpha')).toBeLessThan(names.indexOf('Beta'))
+    })
+
+    it('keeps tombstones in the tail after reordered active metas', async () => {
+      const a = await savePack({ raw: makeValidPack({ name: 'Keep' }) })
+      const b = await savePack({ raw: makeValidPack({ name: 'Remove' }) })
+      await deletePack(b.data!.id)
+
+      await reorderActive([a.data!.id])
+
+      const all = await listAllMetas()
+      const tombstoned = all.find((m) => m.id === b.data!.id)
+      expect(tombstoned).toBeDefined()
+      expect(tombstoned!.deletedAt).toBeTruthy()
+
+      const activeIds = all.filter((m) => !m.deletedAt).map((m) => m.id)
+      const tombIdx = all.findIndex((m) => m.id === b.data!.id)
+      const lastActiveIdx = all.findIndex((m) => m.id === activeIds[activeIds.length - 1])
+      expect(tombIdx).toBeGreaterThan(lastActiveIdx)
+    })
+
+    it('appends unlisted active IDs at the end', async () => {
+      const a = await savePack({ raw: makeValidPack({ name: 'Listed' }) })
+      await savePack({ raw: makeValidPack({ name: 'Unlisted' }) })
+
+      await reorderActive([a.data!.id])
+
+      const metas = await listMetas()
+      const names = metas.map((m) => m.name)
+      expect(names.indexOf('Listed')).toBeLessThan(names.indexOf('Unlisted'))
+    })
+
+    it('bumps updatedAt on all reordered metas', async () => {
+      const a = await savePack({ raw: makeValidPack({ name: 'TimestampA' }) })
+      const b = await savePack({ raw: makeValidPack({ name: 'TimestampB' }) })
+      const origA = a.data!.updatedAt
+      const origB = b.data!.updatedAt
+
+      try {
+        vi.useFakeTimers()
+        vi.setSystemTime(Date.parse(origB) + 1000)
+        await reorderActive([b.data!.id, a.data!.id])
+      } finally {
+        vi.useRealTimers()
+      }
+
+      const metas = await listMetas()
+      const metaA = metas.find((m) => m.id === a.data!.id)!
+      const metaB = metas.find((m) => m.id === b.data!.id)!
+      expect(metaA.updatedAt).not.toBe(origA)
+      expect(metaB.updatedAt).not.toBe(origB)
+    })
+
+    it('only bumps THEME_INDEX_SYNC_UNIT — pack bodies are untouched', async () => {
+      await savePack({ raw: makeValidPack({ name: 'Notify' }) })
+      vi.mocked(notifyChange).mockClear()
+
+      await reorderActive([])
+
+      expect(notifyChange).toHaveBeenCalledWith(THEME_INDEX_SYNC_UNIT)
+      expect(notifyChange).toHaveBeenCalledTimes(1)
     })
   })
 

@@ -166,6 +166,7 @@ export function QuickSettingsSelects({
         open={activeModal === 'theme'}
         onClose={closeModal}
         onThemeChange={onThemeChange}
+        currentDisplayName={hubDisplayName}
         hubCanWrite={hubCanWrite}
       />
       <KeyLabelsModal
