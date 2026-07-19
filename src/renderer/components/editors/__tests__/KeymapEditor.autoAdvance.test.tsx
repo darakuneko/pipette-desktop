@@ -108,6 +108,7 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   extractBasicKey: (code: number) => code & 0xff,
   buildModMaskKeycode: (mask: number, key: number) => (mask << 8) | key,
   findKeycode: (qmkId: string) => ({ qmkId, label: qmkId }),
+  findInnerKeycode: () => undefined,
 }))
 
 vi.mock('../../keycodes/ModifierCheckboxStrip', () => ({

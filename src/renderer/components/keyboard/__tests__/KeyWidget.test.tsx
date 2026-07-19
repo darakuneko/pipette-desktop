@@ -15,16 +15,18 @@ import {
   KEY_MASK_RECT_COLOR,
   KEY_TEXT_COLOR,
   KEY_DUPLICATE_COLOR,
+  KEY_REMAP_COLOR,
 } from '../constants'
 import type { KleKey } from '../../../../shared/kle/types'
 
 let mockIsMask = false
+let mockInnerKeycode: { qmkId: string } = { qmkId: 'KC_A' }
 
 vi.mock('../../../../shared/keycodes/keycodes', () => ({
   keycodeLabel: (kc: string) => kc,
   isMask: () => mockIsMask,
   findOuterKeycode: () => ({ qmkId: 'LT0' }),
-  findInnerKeycode: () => ({ qmkId: 'KC_A' }),
+  findInnerKeycode: () => mockInnerKeycode,
 }))
 
 function makeKey(overrides: Partial<KleKey> = {}): KleKey {
@@ -61,6 +63,7 @@ function makeKey(overrides: Partial<KleKey> = {}): KleKey {
 describe('KeyWidget', () => {
   beforeEach(() => {
     mockIsMask = false
+    mockInnerKeycode = { qmkId: 'KC_A' }
   })
 
   it('renders default fill when no state props set', () => {
@@ -504,5 +507,108 @@ describe('KeyWidget', () => {
       expect(outerRect.getAttribute('stroke')).toBe(KEY_SELECTED_COLOR)
       expect(outerRect.getAttribute('stroke-width')).toBe('2')
     })
+  })
+})
+
+// --- issue #295/#296: composite (masked) key inner label honors the
+// active Key Label pack's remap, and a two-part inner label (shift +
+// base) renders stacked instead of crammed onto one line. ---
+
+describe('KeyWidget — inner label remap resolution (issue #295)', () => {
+  it('resolves the inner label via remapLabel when the pack remaps the inner basic keycode', () => {
+    mockIsMask = true
+    mockInnerKeycode = { qmkId: 'KC_8' }
+    const remapLabel = (id: string) => (id === 'KC_8' ? '(\n8' : id)
+    const { container } = render(
+      <svg>
+        <KeyWidget kleKey={makeKey()} keycode="LSFT(KC_8)" remapLabel={remapLabel} />
+      </svg>,
+    )
+    const texts = Array.from(container.querySelectorAll('text')).map((t) => t.textContent)
+    expect(texts).toContain('(')
+    expect(texts).toContain('8')
+  })
+
+  it('falls back to the default inner label when the pack does not remap this inner keycode', () => {
+    mockIsMask = true
+    mockInnerKeycode = { qmkId: 'KC_9' }
+    const remapLabel = (id: string) => (id === 'KC_8' ? '(\n8' : id)
+    const { container } = render(
+      <svg>
+        <KeyWidget kleKey={makeKey()} keycode="LSFT(KC_9)" remapLabel={remapLabel} />
+      </svg>,
+    )
+    const texts = Array.from(container.querySelectorAll('text')).map((t) => t.textContent)
+    expect(texts).toContain('KC_9')
+    expect(texts).not.toContain('(')
+  })
+
+  it('renders the default inner label unchanged when no pack is active (no remapLabel prop) — no-pack regression check', () => {
+    mockIsMask = true
+    mockInnerKeycode = { qmkId: 'KC_A' }
+    const { container } = render(
+      <svg>
+        <KeyWidget kleKey={makeKey()} keycode="LT1(KC_A)" />
+      </svg>,
+    )
+    const texts = Array.from(container.querySelectorAll('text')).map((t) => t.textContent)
+    expect(texts).toContain('KC_A')
+  })
+})
+
+describe('KeyWidget — stacked shift/base inner label (issue #296)', () => {
+  it('renders a two-part inner label as two stacked text elements, shifted char above base', () => {
+    mockIsMask = true
+    mockInnerKeycode = { qmkId: 'KC_8' }
+    const remapLabel = (id: string) => (id === 'KC_8' ? '(\n8' : id)
+    const { container } = render(
+      <svg>
+        <KeyWidget kleKey={makeKey()} keycode="LSFT(KC_8)" remapLabel={remapLabel} />
+      </svg>,
+    )
+    const texts = Array.from(container.querySelectorAll('text'))
+    const shiftText = texts.find((t) => t.textContent === '(')!
+    const baseText = texts.find((t) => t.textContent === '8')!
+    expect(shiftText).toBeTruthy()
+    expect(baseText).toBeTruthy()
+    expect(Number(shiftText.getAttribute('y'))).toBeLessThan(Number(baseText.getAttribute('y')))
+  })
+
+  it('renders a single-part inner label as one centered text element (unchanged)', () => {
+    mockIsMask = true
+    mockInnerKeycode = { qmkId: 'KC_A' }
+    const { container } = render(
+      <svg>
+        <KeyWidget kleKey={makeKey()} keycode="LT1(KC_A)" />
+      </svg>,
+    )
+    const innerTexts = Array.from(container.querySelectorAll('text')).filter((t) => t.textContent === 'KC_A')
+    expect(innerTexts).toHaveLength(1)
+  })
+})
+
+describe('KeyWidget — remap tint applies to the inner label too (consistency with #294)', () => {
+  it('tints the inner label with the remap color when remapped=true', () => {
+    mockIsMask = true
+    mockInnerKeycode = { qmkId: 'KC_9' }
+    const { container } = render(
+      <svg>
+        <KeyWidget kleKey={makeKey()} keycode="LSFT(KC_9)" remapped />
+      </svg>,
+    )
+    const innerText = Array.from(container.querySelectorAll('text')).find((t) => t.textContent === 'KC_9')!
+    expect(innerText.getAttribute('fill')).toBe(KEY_REMAP_COLOR)
+  })
+
+  it('does not tint the inner label when remapped is false/unset', () => {
+    mockIsMask = true
+    mockInnerKeycode = { qmkId: 'KC_9' }
+    const { container } = render(
+      <svg>
+        <KeyWidget kleKey={makeKey()} keycode="LSFT(KC_9)" />
+      </svg>,
+    )
+    const innerText = Array.from(container.querySelectorAll('text')).find((t) => t.textContent === 'KC_9')!
+    expect(innerText.getAttribute('fill')).not.toBe(KEY_REMAP_COLOR)
   })
 })

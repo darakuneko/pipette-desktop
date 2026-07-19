@@ -38,6 +38,9 @@ export interface KeyboardPaneProps {
    *  `KeyboardWidget`'s `keyColors` — used by View Matrix mode to flag
    *  keys whose effective position collides with another key's. */
   keyColors?: Map<string, string>
+  /** Active Key Label pack's per-key legend override — see
+   *  `KeyboardWidget`'s `remapLabel`. */
+  remapLabel?: (qmkId: string) => string
   heatmapCells?: Map<string, TypingHeatmapCell> | null
   heatmapMaxTotal?: number
   heatmapMaxTap?: number
@@ -76,6 +79,7 @@ export function KeyboardPane({
   layoutOptions,
   labelOverrides,
   keyColors,
+  remapLabel,
   heatmapCells,
   heatmapMaxTotal,
   heatmapMaxTap,
@@ -118,6 +122,7 @@ export function KeyboardPane({
           layoutOptions={layoutOptions}
           labelOverrides={labelOverrides}
           keyColors={keyColors}
+          remapLabel={remapLabel}
           heatmapCells={heatmapCells}
           heatmapMaxTotal={heatmapMaxTotal}
           heatmapMaxTap={heatmapMaxTap}

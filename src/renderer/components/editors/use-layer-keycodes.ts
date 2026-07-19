@@ -7,7 +7,7 @@
 // highlight in the keycode palette.
 
 import { useCallback, useMemo } from 'react'
-import { serialize, isMask } from '../../../shared/keycodes/keycodes'
+import { serialize, isMask, findInnerKeycode } from '../../../shared/keycodes/keycodes'
 import { posKey } from '../../../shared/kle/pos-key'
 import { deserializeAllMacros, type MacroAction } from '../../../preload/macro'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
@@ -89,7 +89,22 @@ export function useLayerKeycodes({
         const pos = posKey(Number(r), Number(c))
         const qmkId = serialize(code)
         keycodes.set(pos, remap(qmkId))
-        if (!isMask(qmkId) && checkRemapped(qmkId)) remapped.add(pos)
+        if (isMask(qmkId)) {
+          // A pack rarely remaps the full composite string itself (only
+          // an explicit compositeLabels override would, and that already
+          // replaces the label wholesale via `remap()` above) — the
+          // common case is the pack remapping the INNER basic keycode's
+          // legend (e.g. LSFT(KC_8) with KC_8 -> "(\n8"), which
+          // `checkRemapped(qmkId)` alone can't see since it only ever
+          // checks the composite string. Check both so a masked key
+          // whose tap/base symbol the pack affects gets the same blue
+          // remap tint as a plain remapped key (KeyWidget's `remapped`
+          // prop), matching the picker's row-level tinting (#294).
+          const innerQmkId = findInnerKeycode(qmkId)?.qmkId
+          if (checkRemapped(qmkId) || (innerQmkId && checkRemapped(innerQmkId))) remapped.add(pos)
+        } else if (checkRemapped(qmkId)) {
+          remapped.add(pos)
+        }
       }
     }
     return { keycodes, remapped }
