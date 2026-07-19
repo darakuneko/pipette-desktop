@@ -26,6 +26,7 @@ import { useDragReorder } from '../pack-modal/useDragReorder'
 import { applyDragOrder } from '../pack-modal/drag-order'
 import { useImportPlacement } from '../pack-modal/useImportPlacement'
 import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
+import { isOwnPack } from '../pack-modal/ownership'
 import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
 import {
   InstalledTable,
@@ -330,19 +331,29 @@ export function KeyLabelsModal({
             setConfirmRemoveId(null)
           }}
           onDelete={async (id) => {
-            // Delete cascades to Hub, aligning with Language/Theme
-            // Packs: Hub rejects same-name re-uploads, so a local-only
-            // delete would strand an orphan post nobody can remove.
-            // Attempt the Hub delete whenever a post is linked
-            // (regardless of isMine; a foreign/downloaded post's
-            // delete just fails auth-side). If the Hub deletion does
-            // not succeed, the cascade is aborted: the local entry is
-            // left intact, the confirm state closes, and the error is
-            // surfaced inline so the user can retry (a swallowed
-            // failure here would proceed to strand exactly the
-            // unclaimable-name orphan the cascade exists to prevent).
+            // Delete cascades to Hub only for posts *we* own, aligning
+            // with Language/Theme Packs: Hub rejects same-name
+            // re-uploads, so a local-only delete would strand an
+            // orphan post nobody can remove — but that argument only
+            // holds for a post the user could actually re-upload
+            // themselves. A downloaded (foreign) entry also carries
+            // `hubPostId` (for Sync/freshness linkage), so cascading
+            // regardless of ownership attempts — and fails — a Hub
+            // delete the user has no rights to (foreign post /
+            // deactivated uploader account), and the failure then
+            // blocked the local delete too, leaving the user unable to
+            // remove a downloaded entry at all. Not-owned entries
+            // delete locally only, no Hub call, same as Update/Remove's
+            // `isMine` gating (`isOwnPack`). If the Hub deletion of an
+            // *owned* post does not succeed, the cascade is aborted:
+            // the local entry is left intact, the confirm state
+            // closes, and the error is surfaced inline so the user can
+            // retry (a swallowed failure here would proceed to strand
+            // exactly the unclaimable-name orphan the cascade exists
+            // to prevent).
             const meta = labels.metas.find((m) => m.id === id)
-            if (meta?.hubPostId) {
+            const owned = meta?.hubPostId && isOwnPack(meta.hubPostId, meta.uploaderName ?? '', currentDisplayName)
+            if (owned) {
               setPendingId(id)
               setActionError(null)
               setLastResult(null)

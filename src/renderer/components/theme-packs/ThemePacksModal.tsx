@@ -31,6 +31,7 @@ import { useNameSort } from '../pack-modal/useNameSort'
 import { useImportPlacement } from '../pack-modal/useImportPlacement'
 import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
 import { fetchHubPackMeta } from '../pack-modal/fetch-hub-pack-meta'
+import { isOwnPack } from '../pack-modal/ownership'
 import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
 
 export interface ThemePacksModalProps {
@@ -260,7 +261,16 @@ export function ThemePacksModal({
     setPendingId(id)
     try {
       const meta = store.metas.find((m) => m.id === id)
-      if (meta?.hubPostId) {
+      // Cascade to Hub only for posts *we* own — the orphan-post
+      // prevention argument (a local-only delete would strand a name
+      // nobody can re-upload) only holds for a post the user could
+      // actually re-upload themselves. A downloaded (foreign) pack
+      // also carries `hubPostId` (for Sync/freshness linkage), so
+      // gating on presence alone would attempt — and fail — a Hub
+      // delete the user has no rights to, then block the local delete
+      // on that failure. Not-owned entries delete locally only, no
+      // Hub call, same as Update/Remove's `isMine` gating.
+      if (meta?.hubPostId && isOwnPack(meta.hubPostId, meta.uploaderName ?? '', currentDisplayName)) {
         // If the Hub deletion fails, abort the cascade — proceeding to
         // a local-only delete would strand an orphan post whose name
         // can never be re-uploaded, exactly what the cascade is meant
@@ -281,7 +291,7 @@ export function ThemePacksModal({
       setPendingId(null)
       setConfirmDeleteId(null)
     }
-  }, [store, activeTheme, onThemeChange, t])
+  }, [store, activeTheme, onThemeChange, t, currentDisplayName])
 
   const handleImportFile = useCallback(async () => {
     setActionError(null)

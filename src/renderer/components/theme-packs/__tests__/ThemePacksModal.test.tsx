@@ -787,10 +787,10 @@ describe('ThemePacksModal', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('delete also calls hubDeleteThemePost for hub-linked pack', async () => {
-    metas = [meta({ id: 'hd1', name: 'Hub Delete', hubPostId: 'hp-hd1' })]
+  it('delete cascades to Hub for a pack the user owns', async () => {
+    metas = [meta({ id: 'hd1', name: 'Hub Delete', hubPostId: 'hp-hd1', uploaderName: 'me' })]
     render(
-      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} currentDisplayName="me" />,
     )
     fireEvent.click(screen.getByTestId('theme-packs-delete-hd1'))
     fireEvent.click(screen.getByTestId('theme-packs-confirm-delete-hd1'))
@@ -798,11 +798,11 @@ describe('ThemePacksModal', () => {
     await waitFor(() => expect(removeFn).toHaveBeenCalledWith('hd1'))
   })
 
-  it('blocks the local delete and surfaces an error when hubDeleteThemePost fails, leaving the entry intact', async () => {
-    metas = [meta({ id: 'hd2', name: 'Hub Delete Fail', hubPostId: 'hp-hd2' })]
+  it('blocks the local delete and surfaces an error when hubDeleteThemePost fails for an owned pack, leaving the entry intact', async () => {
+    metas = [meta({ id: 'hd2', name: 'Hub Delete Fail', hubPostId: 'hp-hd2', uploaderName: 'me' })]
     vialAPI.hubDeleteThemePost.mockResolvedValueOnce({ success: false, error: 'Hub rejected the delete' })
     render(
-      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} currentDisplayName="me" />,
     )
     fireEvent.click(screen.getByTestId('theme-packs-delete-hd2'))
     fireEvent.click(screen.getByTestId('theme-packs-confirm-delete-hd2'))
@@ -812,6 +812,37 @@ describe('ThemePacksModal', () => {
     // the Hub post is orphaned under a name nobody can re-upload.
     expect(removeFn).not.toHaveBeenCalled()
     expect(screen.queryByTestId('theme-packs-confirm-delete-hd2')).toBeNull()
+  })
+
+  // --- regression: Delete must not cascade to Hub for packs the user
+  // does not own (fix/delete-ownership-gate). A downloaded pack also
+  // carries hubPostId (for Sync/freshness linkage) but is never
+  // deletable on Hub by this user — the old code attempted the Hub
+  // delete regardless of ownership, which failed for a foreign post
+  // (or a deactivated uploader account) and then blocked the local
+  // delete too, leaving the user unable to remove a downloaded pack at
+  // all. See KeyLabelsModal / LanguagePacksModal for the same pattern. ---
+
+  it('a pack downloaded from someone else deletes locally only — no Hub call at all (THE regression)', async () => {
+    metas = [meta({ id: 'foreign-del', name: 'Foreign Pack', hubPostId: 'hp-foreign-del', uploaderName: 'pipette' })]
+    render(
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} currentDisplayName="me" />,
+    )
+    fireEvent.click(screen.getByTestId('theme-packs-delete-foreign-del'))
+    fireEvent.click(screen.getByTestId('theme-packs-confirm-delete-foreign-del'))
+    await waitFor(() => expect(removeFn).toHaveBeenCalledWith('foreign-del'))
+    expect(vialAPI.hubDeleteThemePost).not.toHaveBeenCalled()
+  })
+
+  it('a legacy hub-linked pack with no cached uploaderName deletes locally only (conservative default, matches Update/Remove gating)', async () => {
+    metas = [meta({ id: 'legacy-del', name: 'Legacy Hub Pack', hubPostId: 'hp-legacy-del' })]
+    render(
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} currentDisplayName="me" />,
+    )
+    fireEvent.click(screen.getByTestId('theme-packs-delete-legacy-del'))
+    fireEvent.click(screen.getByTestId('theme-packs-confirm-delete-legacy-del'))
+    await waitFor(() => expect(removeFn).toHaveBeenCalledWith('legacy-del'))
+    expect(vialAPI.hubDeleteThemePost).not.toHaveBeenCalled()
   })
 
   it('does not fall back to system when deleting a non-active pack', async () => {

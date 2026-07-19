@@ -39,6 +39,7 @@ import { useNameSort } from '../pack-modal/useNameSort'
 import { useImportPlacement } from '../pack-modal/useImportPlacement'
 import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
 import { fetchHubPackMeta } from '../pack-modal/fetch-hub-pack-meta'
+import { isOwnPack } from '../pack-modal/ownership'
 import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
 import {
   LanguageInstalledRow,
@@ -303,17 +304,25 @@ export function LanguagePacksModal({
   const handleDelete = useCallback(async (row: InstalledRow): Promise<void> => {
     if (!row.packId) return
     // Delete is the strongest action: tombstone locally and, if the
-    // pack mirrors a Hub post, drop the post too so the user does not
-    // need to click Remove + Delete in sequence to fully clean up.
-    // If the Hub deletion fails, abort the cascade — proceeding to a
-    // local-only delete would strand an orphan post whose name can
-    // never be re-uploaded, exactly what the cascade is meant to avoid.
+    // pack mirrors a Hub post *we own*, drop the post too so the user
+    // does not need to click Remove + Delete in sequence to fully
+    // clean up. If the Hub deletion fails, abort the cascade —
+    // proceeding to a local-only delete would strand an orphan post
+    // whose name can never be re-uploaded, exactly what the cascade is
+    // meant to avoid. That argument only holds for a post the user
+    // could actually re-upload themselves, though — a downloaded
+    // (foreign) pack also carries `hubPostId` (for Sync/freshness
+    // linkage), so gating on presence alone would attempt — and fail —
+    // a Hub delete the user has no rights to, then block the local
+    // delete on that failure. Not-owned entries delete locally only,
+    // no Hub call, same as Update/Remove's `isMine` gating.
+    const owned = row.hubPostId && isOwnPack(row.hubPostId, row.uploaderName, currentDisplayName ?? null)
     setPendingId(row.packId)
     setActionError(null)
     setLastResult(null)
     try {
-      if (row.hubPostId) {
-        const hubResult = await window.vialAPI.hubDeleteI18nPost(row.hubPostId, row.packId)
+      if (owned) {
+        const hubResult = await window.vialAPI.hubDeleteI18nPost(row.hubPostId as string, row.packId)
           .catch((err) => ({ success: false, error: err instanceof Error ? err.message : String(err) }))
         if (!hubResult.success) {
           setLastResult({ id: row.packId, kind: 'error', message: hubResult.error ?? t('i18n.errorGeneric') })
@@ -330,7 +339,7 @@ export function LanguagePacksModal({
       setPendingId(null)
       setConfirmDeleteId(null)
     }
-  }, [store, t])
+  }, [store, t, currentDisplayName])
 
   // Push the local pack body to its existing Hub post. Used by the
   // explicit "Update" action and by the auto-sync paths below
