@@ -1,5 +1,5 @@
 {
-  "version": "0.1.21",
+  "version": "0.1.22",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -35,7 +35,8 @@
     "installed": "入れてありますえ",
     "searchPlaceholder": "Pipette Hub を検索しますえ（2文字以上で）…",
     "done": "完了しましたえ",
-    "edit": "編集しますえ"
+    "edit": "編集しますえ",
+    "sortByName": "お名前どすえ"
   },
   "app": {
     "title": "Pipette",

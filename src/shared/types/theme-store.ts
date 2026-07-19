@@ -7,6 +7,11 @@ export interface ThemePackMeta {
   version: string
   hubPostId?: string
   hubUpdatedAt?: string
+  /** Hub-side `uploader_name` cached for the Author column and the
+   *  `isMine` check. See `I18nPackMeta.uploaderName` for the full
+   *  refresh-point contract (upload/download/sync, not Update). Absent
+   *  for never-uploaded local entries and legacy rows. */
+  uploaderName?: string
   savedAt: string
   updatedAt: string
   deletedAt?: string
@@ -83,4 +88,9 @@ export interface ThemePackImportDialogResult {
 export interface ThemePackImportApplyOptions {
   id?: string
   hubPostId?: string
+  /** Hub-side `updated_at` for the pack just downloaded/synced; see
+   *  `I18nPackImportApplyOptions.hubUpdatedAt`. */
+  hubUpdatedAt?: string
+  /** Hub-side `uploader_name`, forwarded the same way as `hubUpdatedAt`. */
+  uploaderName?: string
 }

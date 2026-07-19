@@ -1,14 +1,21 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
-import { Circle, CheckCircle2 } from 'lucide-react'
-import { ICON_XL } from '../../constants/ui-tokens'
+import { Circle, CheckCircle2, GripVertical } from 'lucide-react'
+import { ICON_SM, ICON_XL } from '../../constants/ui-tokens'
 import type { useInlineRename } from '../../hooks/useInlineRename'
 import type { ThemePackMeta } from '../../../shared/types/theme-store'
 import { formatTimestamp } from '../../utils/format-timestamp'
 import { buildHubThemePackUrl } from '../../../shared/hub-urls'
 import { hasUpdate, type HubFreshnessEntry } from '../../hooks/useHubFreshness'
 import type { ThemeSelection } from '../../../shared/types/app-config'
+import { PackListRow } from '../pack-modal/PackListRow'
+import { PackNameCell } from '../pack-modal/PackNameCell'
+import { PackResultBadge } from '../pack-modal/PackResultBadge'
+import { PackDeleteActions } from '../pack-modal/PackDeleteActions'
+import { PackHubActions } from '../pack-modal/PackHubActions'
+import { isOwnPack } from '../pack-modal/ownership'
+import type { PackActionResult } from '../pack-modal/pack-modal-types'
 
 export interface PackRowProps {
   meta: ThemePackMeta
@@ -23,15 +30,19 @@ export interface PackRowProps {
   onExport: (id: string) => void
   onDelete: (id: string) => void
   hubOrigin: string
+  currentDisplayName: string | null
   hubCanWrite: boolean
   hubFreshness: Map<string, HubFreshnessEntry>
-  lastResult: { id: string; kind: 'success' | 'error'; message: string } | null
+  lastResult: PackActionResult | null
   confirmRemoveId: string | null
   setConfirmRemoveId: (id: string | null) => void
   onUpload: (id: string) => void
   onUpdate: (id: string) => void
   onSync: (id: string) => void
   onRemove: (id: string) => void
+  onDragStart: () => void
+  onDragOver: () => void
+  onDragEnd: () => void
 }
 
 export function PackRow({
@@ -47,6 +58,7 @@ export function PackRow({
   onExport,
   onDelete,
   hubOrigin,
+  currentDisplayName,
   hubCanWrite,
   hubFreshness,
   lastResult,
@@ -56,53 +68,43 @@ export function PackRow({
   onUpdate,
   onSync,
   onRemove,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
 }: PackRowProps): JSX.Element {
   const { t } = useTranslation()
   const busy = pendingId === meta.id
   const editing = rename.editingId === meta.id
   const isConfirmingDelete = confirmDeleteId === meta.id
-  const linkClass = 'text-xs font-medium hover:underline disabled:opacity-50'
 
   const freshness = hubFreshness.get(meta.id)
   const hasUpdateAvailable = hasUpdate(freshness, meta.hubUpdatedAt)
   const hubRemoved = !!freshness && freshness.removed
+  const showOpen = Boolean(meta.hubPostId && hubOrigin)
+  const isMine = isOwnPack(meta.hubPostId, meta.uploaderName ?? '', currentDisplayName)
   const showUpload = !meta.hubPostId && hubCanWrite
   const showHubPair = Boolean(meta.hubPostId)
-  const showUpdateRemove = showHubPair && hubCanWrite
-
-  const renderName = (): JSX.Element => {
-    if (editing) {
-      return (
-        <input
-          autoFocus
-          type="text"
-          value={rename.editLabel}
-          onChange={(e) => rename.setEditLabel(e.target.value)}
-          onBlur={() => void onRenameCommit(meta.id)}
-          onKeyDown={(e) => onRenameKey(e, meta.id)}
-          maxLength={64}
-          className="w-full border-b border-edge bg-transparent px-1 text-sm text-content focus:outline-none focus:border-accent"
-          data-testid={`theme-packs-rename-input-${meta.id}`}
-        />
-      )
-    }
-    return (
-      <span
-        className="block w-full truncate text-content cursor-pointer"
-        onClick={() => rename.startRename(meta.id, meta.name)}
-        data-testid={`theme-packs-name-${meta.id}`}
-      >
-        {meta.name}
-      </span>
-    )
-  }
+  const showUpdateRemove = showHubPair && isMine && hubCanWrite
+  const showSync = showHubPair && !showUpdateRemove
 
   return (
-    <div
-      className={`flex flex-col rounded border bg-surface ${isActive ? 'border-accent' : 'border-edge'}`}
-      data-testid={`theme-packs-row-${meta.id}`}
-    >
-      <div className="flex items-center gap-3 px-3 py-2">
+    <PackListRow
+      testid={`theme-packs-row-${meta.id}`}
+      active={isActive}
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragEnd={onDragEnd}
+      sideColumn={
+        <span
+          className="flex w-7 shrink-0 items-center justify-center cursor-grab"
+          aria-hidden="true"
+          data-testid={`theme-packs-grip-${meta.id}`}
+        >
+          <GripVertical className="text-content-muted" size={ICON_SM} />
+        </span>
+      }
+      leadingControl={
         <button
           type="button"
           aria-label={t('themePacks.selectTheme', { name: meta.name })}
@@ -116,157 +118,80 @@ export function PackRow({
             <Circle size={ICON_XL} aria-hidden="true" />
           )}
         </button>
-        <div className="flex-1 min-w-0 text-sm font-medium">{renderName()}</div>
-        <div
-          className={`shrink-0 whitespace-nowrap text-xs ${hubRemoved ? 'text-rose-600' : 'text-content-muted'}`}
-          data-testid={`theme-packs-timestamp-${meta.id}`}
-        >
-          {hubRemoved ? t('keyLabels.hubRemoved') : formatTimestamp(meta.updatedAt)}
-        </div>
-        <div className="shrink-0 whitespace-nowrap text-xs text-content-muted">
-          {meta.version ? `v${meta.version}` : ''}
-        </div>
+      }
+      name={
+        <PackNameCell
+          name={meta.name}
+          editing={editing}
+          canRename
+          editLabel={rename.editLabel}
+          onEditLabelChange={rename.setEditLabel}
+          onBlur={() => void onRenameCommit(meta.id)}
+          onKeyDown={(e) => onRenameKey(e, meta.id)}
+          onStartRename={() => rename.startRename(meta.id, meta.name)}
+          maxLength={64}
+          inputTestid={`theme-packs-rename-input-${meta.id}`}
+          nameTestid={`theme-packs-name-${meta.id}`}
+        />
+      }
+      columns={
+        <>
+          <span
+            className="w-32 truncate text-xs text-content-secondary"
+            data-testid={`theme-packs-author-${meta.id}`}
+          >
+            {meta.uploaderName ?? ''}
+          </span>
+          <div
+            className={`shrink-0 whitespace-nowrap text-xs ${hubRemoved ? 'text-rose-600' : 'text-content-muted'}`}
+            data-testid={`theme-packs-timestamp-${meta.id}`}
+          >
+            {/* Hub-side timestamp, not the local modification time —
+                blank for never-uploaded local entries and legacy rows
+                that predate this field, matching Key Labels. */}
+            {hubRemoved ? t('keyLabels.hubRemoved') : (meta.hubUpdatedAt ? formatTimestamp(meta.hubUpdatedAt) : '')}
+          </div>
+          <div className="shrink-0 whitespace-nowrap text-xs text-content-muted">
+            {meta.version ? `v${meta.version}` : ''}
+          </div>
+        </>
+      }
+      actions={
         <div className="flex shrink-0 items-center gap-2">
-          {isConfirmingDelete ? (
-            <span className="inline-flex items-center gap-3">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={(e) => { e.stopPropagation(); void onDelete(meta.id) }}
-                className={`${linkClass} text-danger`}
-                data-testid={`theme-packs-confirm-delete-${meta.id}`}
-              >
-                {t('common.confirmDelete')}
-              </button>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null) }}
-                className={`${linkClass} text-content-muted`}
-                data-testid={`theme-packs-cancel-delete-${meta.id}`}
-              >
-                {t('common.cancel')}
-              </button>
-            </span>
-          ) : (
-            <>
-              <button
-                type="button"
-                className={`${linkClass} text-content-muted`}
-                onClick={(e) => { e.stopPropagation(); void onExport(meta.id) }}
-                disabled={busy}
-                data-testid={`theme-packs-export-${meta.id}`}
-              >
-                {t('keyLabels.actionExport')}
-              </button>
-              <button
-                type="button"
-                className={`${linkClass} text-danger`}
-                onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(meta.id) }}
-                disabled={busy}
-                data-testid={`theme-packs-delete-${meta.id}`}
-              >
-                {t('common.delete')}
-              </button>
-            </>
-          )}
+          <PackDeleteActions
+            id={meta.id}
+            testidPrefix="theme-packs"
+            busy={busy}
+            confirming={isConfirmingDelete}
+            deleteLabel={t('common.delete')}
+            onExport={() => onExport(meta.id)}
+            onAskDelete={() => setConfirmDeleteId(meta.id)}
+            onCancelDelete={() => setConfirmDeleteId(null)}
+            onConfirmDelete={() => onDelete(meta.id)}
+          />
         </div>
-      </div>
-      <div className="flex items-center gap-3 px-3 pb-2">
-        <span className="flex-1 min-w-0">
-          {lastResult && lastResult.id === meta.id && (
-            <span
-              className={`text-xs font-medium ${lastResult.kind === 'success' ? 'text-accent' : 'text-rose-600'}`}
-              data-testid={`theme-packs-result-${meta.id}`}
-            >
-              {lastResult.message}
-            </span>
-          )}
-        </span>
-        {meta.hubPostId && hubOrigin && (
-          <button
-            type="button"
-            className={`${linkClass} text-accent`}
-            onClick={() => void window.vialAPI.openExternal(buildHubThemePackUrl(hubOrigin.replace(/\/$/, ''), meta.hubPostId as string))}
-            disabled={busy}
-            data-testid={`theme-packs-open-${meta.id}`}
-          >
-            {t('hub.openInBrowser')}
-          </button>
-        )}
-        {showUpload && (
-          <button
-            type="button"
-            className={`${linkClass} text-accent`}
-            onClick={() => onUpload(meta.id)}
-            disabled={busy}
-            data-testid={`theme-packs-upload-${meta.id}`}
-          >
-            {t('keyLabels.actionUpload')}
-          </button>
-        )}
-        {showHubPair && !showUpdateRemove && (
-          <button
-            type="button"
-            className={`${linkClass} text-accent inline-flex items-center gap-1`}
-            onClick={() => onSync(meta.id)}
-            disabled={busy}
-            data-testid={`theme-packs-sync-${meta.id}`}
-          >
-            {hasUpdateAvailable && (
-              <span
-                aria-hidden="true"
-                className="h-1.5 w-1.5 rounded-full bg-success animate-pulse"
-                data-testid={`theme-packs-update-available-${meta.id}`}
-              />
-            )}
-            {t('keyLabels.actionSync')}
-          </button>
-        )}
-        {showUpdateRemove && (
-          confirmRemoveId === meta.id ? (
-            <>
-              <button
-                type="button"
-                className={`${linkClass} text-danger`}
-                onClick={() => onRemove(meta.id)}
-                disabled={busy}
-                data-testid={`theme-packs-confirm-remove-${meta.id}`}
-              >
-                {t('hub.confirmRemove')}
-              </button>
-              <button
-                type="button"
-                className={`${linkClass} text-content-muted`}
-                onClick={() => setConfirmRemoveId(null)}
-                data-testid={`theme-packs-cancel-remove-${meta.id}`}
-              >
-                {t('common.cancel')}
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                className={`${linkClass} text-accent`}
-                onClick={() => onUpdate(meta.id)}
-                disabled={busy}
-                data-testid={`theme-packs-update-${meta.id}`}
-              >
-                {t('keyLabels.actionUpdate')}
-              </button>
-              <button
-                type="button"
-                className={`${linkClass} text-danger`}
-                onClick={() => setConfirmRemoveId(meta.id)}
-                disabled={busy}
-                data-testid={`theme-packs-remove-${meta.id}`}
-              >
-                {t('keyLabels.actionRemove')}
-              </button>
-            </>
-          )
-        )}
-      </div>
-    </div>
+      }
+      badge={<PackResultBadge result={lastResult} rowId={meta.id} testid={`theme-packs-result-${meta.id}`} />}
+      hubActions={
+        <PackHubActions
+          id={meta.id}
+          testidPrefix="theme-packs"
+          busy={busy}
+          showOpen={showOpen}
+          onOpen={() => void window.vialAPI.openExternal(buildHubThemePackUrl(hubOrigin.replace(/\/$/, ''), meta.hubPostId as string))}
+          showUpload={showUpload}
+          onUpload={() => onUpload(meta.id)}
+          showSync={showSync}
+          hasUpdateAvailable={hasUpdateAvailable}
+          onSync={() => onSync(meta.id)}
+          showUpdateRemove={showUpdateRemove}
+          confirmingRemove={confirmRemoveId === meta.id}
+          onUpdate={() => onUpdate(meta.id)}
+          onAskRemove={() => setConfirmRemoveId(meta.id)}
+          onCancelRemove={() => setConfirmRemoveId(null)}
+          onConfirmRemove={() => onRemove(meta.id)}
+        />
+      }
+    />
   )
 }

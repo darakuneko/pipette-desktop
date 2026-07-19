@@ -176,6 +176,8 @@ export async function savePack(input: {
   id?: string
   hubPostId?: string | null
   hubUpdatedAt?: string | null
+  /** Hub-side `uploader_name`. Same three-state semantics as `hubUpdatedAt`. */
+  uploaderName?: string | null
 }): Promise<ThemePackStoreResult<ThemePackMeta>> {
   const validation = validateThemePack(input.raw)
   if (!validation.ok || !validation.header) {
@@ -211,8 +213,12 @@ export async function savePack(input: {
     const hubUpdatedAtInput = typeof input.hubUpdatedAt === 'string'
       ? (input.hubUpdatedAt.trim() || null)
       : input.hubUpdatedAt
+    const uploaderNameInput = typeof input.uploaderName === 'string'
+      ? (input.uploaderName.trim() || null)
+      : input.uploaderName
     const nextHubPostId = resolveOptionalField(input.hubPostId, existing?.hubPostId)
     const nextHubUpdatedAt = resolveOptionalField(hubUpdatedAtInput, existing?.hubUpdatedAt)
+    const nextUploaderName = resolveOptionalField(uploaderNameInput, existing?.uploaderName)
     const meta: ThemePackMeta = {
       id,
       filename: `${PACKS_DIRNAME}/${id}.json`,
@@ -220,6 +226,7 @@ export async function savePack(input: {
       version,
       ...(nextHubPostId ? { hubPostId: nextHubPostId } : {}),
       ...(nextHubUpdatedAt ? { hubUpdatedAt: nextHubUpdatedAt } : {}),
+      ...(nextUploaderName ? { uploaderName: nextUploaderName } : {}),
       savedAt: existing?.savedAt ?? now,
       updatedAt: now,
     }
@@ -291,9 +298,14 @@ export async function deletePack(id: string): Promise<ThemePackStoreResult<void>
   }
 }
 
+/** `uploaderName` / `hubUpdatedAt` mirror `key-label-store.ts`'s
+ * `setHubPostId` — see the i18n-pack-store.ts equivalent for the full
+ * three-state contract. */
 export async function setHubPostId(
   id: string,
   hubPostId: string | null,
+  uploaderName?: string | null,
+  hubUpdatedAt?: string | null,
 ): Promise<ThemePackStoreResult<ThemePackMeta>> {
   try {
     const index = await readIndex()
@@ -309,6 +321,22 @@ export async function setHubPostId(
     } else {
       meta.hubPostId = normalized
     }
+    if (uploaderName !== undefined) {
+      const trimmed = uploaderName?.trim() ?? ''
+      if (trimmed) {
+        meta.uploaderName = trimmed
+      } else {
+        delete meta.uploaderName
+      }
+    }
+    if (hubUpdatedAt !== undefined) {
+      const trimmed = hubUpdatedAt?.trim() ?? ''
+      if (trimmed) {
+        meta.hubUpdatedAt = trimmed
+      } else {
+        delete meta.hubUpdatedAt
+      }
+    }
     meta.updatedAt = nowIso()
     await writeIndex(index)
     notifyChange(THEME_INDEX_SYNC_UNIT)
@@ -322,6 +350,53 @@ export async function hasActiveName(name: string, excludeId?: string): Promise<T
   try {
     const index = await readIndex()
     return ok(Boolean(findActiveByName(index.metas, name, excludeId)))
+  } catch (err) {
+    return fail('IO_ERROR', String(err))
+  }
+}
+
+/**
+ * Apply a manual order to the active metas. Mirrors
+ * `key-label-store.ts`'s `reorderActive`: tombstones and any ids not
+ * listed in `orderedIds` keep their relative position behind the
+ * sorted prefix, so a stale renderer view never silently drops an
+ * entry. Only the index changes — pack bodies are untouched — so only
+ * `THEME_INDEX_SYNC_UNIT` is bumped, matching `setHubPostId`.
+ *
+ * Known limitation (pre-existing store property, not a Phase 2
+ * regression): unlike `key-labels` — a single sync unit with
+ * entry-level LWW merge — `themes/index` has no merge logic wired into
+ * `sync-service.ts` yet. `notifyChange` marks the unit dirty for
+ * upload, but a remote index downloaded during sync is not merged
+ * against this reordered one, so the manual order (drag or Name sort)
+ * is effectively machine-local until index-merge lands. Tracked as
+ * future work in the unification plan, not addressed here.
+ */
+export async function reorderActive(orderedIds: string[]): Promise<ThemePackStoreResult<void>> {
+  try {
+    const index = await readIndex()
+    const byId = new Map<string, ThemePackMeta>()
+    for (const meta of index.metas) byId.set(meta.id, meta)
+
+    const seen = new Set<string>()
+    const reordered: ThemePackMeta[] = []
+    const now = nowIso()
+    for (const id of orderedIds) {
+      const meta = byId.get(id)
+      if (!meta || meta.deletedAt || seen.has(id)) continue
+      meta.updatedAt = now
+      reordered.push(meta)
+      seen.add(id)
+    }
+
+    for (const meta of index.metas) {
+      if (seen.has(meta.id)) continue
+      reordered.push(meta)
+    }
+
+    await writeIndex({ metas: reordered })
+    notifyChange(THEME_INDEX_SYNC_UNIT)
+    return ok()
   } catch (err) {
     return fail('IO_ERROR', String(err))
   }

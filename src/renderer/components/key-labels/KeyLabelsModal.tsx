@@ -9,28 +9,31 @@
 // Wording (Upload/Update/Remove/Synced/Delete) mirrors the
 // favorite-store editors so the hub-aware modals stay consistent.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { Trans, useTranslation } from 'react-i18next'
-import { GripVertical } from 'lucide-react'
-import { BTN_PRIMARY, ICON_SM } from '../../constants/ui-tokens'
+import { useCallback, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { useKeyLabels } from '../../hooks/useKeyLabels'
-import { formatDateTime } from '../editors/store-modal-shared'
-import { ModalCloseButton } from '../editors/ModalCloseButton'
-import { HUB_ERROR_KEY_LABEL_DUPLICATE } from '../../../shared/types/hub-key-label'
-import { buildHubKeyLabelUrl, buildHubCategoryUrl, HUB_CATEGORY } from '../../../shared/hub-urls'
-import type {
-  HubKeyLabelItem,
-  HubKeyLabelListResponse,
-} from '../../../shared/types/hub-key-label'
+import { HUB_ERROR_KEY_LABEL_DUPLICATE, type HubKeyLabelItem } from '../../../shared/types/hub-key-label'
 import type { KeyLabelMeta } from '../../../shared/types/key-label-store'
-import { useHubFreshness, hasUpdate, type HubFreshnessEntry } from '../../hooks/useHubFreshness'
+import { useHubFreshness } from '../../hooks/useHubFreshness'
+import { PackManagerModal } from '../pack-modal/PackManagerModal'
+import { PackSortButton } from '../pack-modal/PackSortButton'
+import { useHubOrigin } from '../pack-modal/useHubOrigin'
+import { useHubSearchList } from '../pack-modal/useHubSearchList'
+import { useNameSort } from '../pack-modal/useNameSort'
+import { useDragReorder } from '../pack-modal/useDragReorder'
+import { applyDragOrder } from '../pack-modal/drag-order'
+import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
+import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
+import {
+  InstalledTable,
+  HubTable,
+  type InstalledRow,
+  type HubRow,
+} from './KeyLabelsInstalledTable'
 
 const QWERTY_ID = 'qwerty'
-
-type TabId = 'installed' | 'hub'
 
 interface KeyLabelsModalProps {
   open: boolean
@@ -39,25 +42,6 @@ interface KeyLabelsModalProps {
   currentDisplayName: string | null
   /** True when the user is signed into the Hub and can perform write ops. */
   hubCanWrite: boolean
-}
-
-interface InstalledRow {
-  reactKey: string
-  localId: string
-  hubPostId: string | null
-  name: string
-  author: string
-  isQwerty: boolean
-  meta?: KeyLabelMeta
-}
-
-interface HubRow {
-  reactKey: string
-  hubPostId: string
-  name: string
-  author: string
-  /** True when a local entry already covers this hub item (by name, case-insensitive). */
-  alreadyInstalled: boolean
 }
 
 export function KeyLabelsModal({
@@ -70,12 +54,7 @@ export function KeyLabelsModal({
   const labels = useKeyLabels()
   const rename = useInlineRename<string>()
 
-  const [activeTab, setActiveTab] = useState<TabId>('installed')
-  const [search, setSearch] = useState('')
-  const [hubResults, setHubResults] = useState<HubKeyLabelItem[]>([])
-  const [hubDefaultResults, setHubDefaultResults] = useState<HubKeyLabelItem[]>([])
-  const [hubSearched, setHubSearched] = useState(false)
-  const [hubSearching, setHubSearching] = useState(false)
+  const [activeTab, setActiveTab] = useState<PackManagerTabId>('installed')
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
@@ -87,20 +66,11 @@ export function KeyLabelsModal({
    * under the affected row instead of hunting for a toast. Cleared at
    * the start of the next operation.
    */
-  const [lastResult, setLastResult] = useState<{
-    id: string
-    kind: 'success' | 'error'
-    message: string
-  } | null>(null)
-  /**
-   * Optional override for the installed-row order. While the user is
-   * dragging we manipulate this list directly; on drop we persist it
-   * via `useKeyLabels.reorder` and clear the override so subsequent
-   * `metas` updates from sync take over again.
-   */
-  const [dragOrder, setDragOrder] = useState<string[] | null>(null)
-  const dragIdRef = useRef<string | null>(null)
-  const [hubOrigin, setHubOrigin] = useState('')
+  const [lastResult, setLastResult] = useState<PackActionResult | null>(null)
+
+  // Key Labels fetches the Hub origin once on first mount, unlike the
+  // i18n/theme pack modals which re-fetch each time the modal opens.
+  const hubOrigin = useHubOrigin(open, { onlyOnce: true })
 
   const freshnessCandidates = useMemo(
     () => labels.metas
@@ -120,99 +90,58 @@ export function KeyLabelsModal({
     fetchTimestamps,
   })
 
-  // The Hub origin powers the "Open in browser" links; fetched once on
-  // mount and reused across all rows.
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      try {
-        const origin = await window.vialAPI.hubGetOrigin()
-        if (!cancelled) setHubOrigin(origin)
-      } catch {
-        // best-effort; the Open link simply hides when origin stays empty
-      }
-    })()
-    return () => { cancelled = true }
-  }, [])
-
   useEscapeClose(onClose, open)
 
-  const installedRows = useMemo<InstalledRow[]>(
-    () => applyDragOrder(buildInstalledRows(labels.metas), dragOrder),
-    [labels.metas, dragOrder],
+  const rawInstalledRows = useMemo<InstalledRow[]>(
+    () => buildInstalledRows(labels.metas),
+    [labels.metas],
   )
+
+  // Drag reorder scope includes QWERTY — unlike Language/Theme Packs'
+  // synthesized built-in rows, QWERTY is a real store entry that can be
+  // dragged like any other row (the main-side reorder handler skips
+  // ids that are not in the store, so 'qwerty' is harmless to send
+  // through even if it were ever absent).
+  const dragReorderIds = useMemo(() => rawInstalledRows.map((r) => r.localId), [rawInstalledRows])
+  const drag = useDragReorder({
+    ids: dragReorderIds,
+    reorder: labels.reorder,
+    onError: (error) => setActionError(translateError(t, undefined, error)),
+  })
+  const installedRows = useMemo<InstalledRow[]>(
+    () => applyDragOrder(rawInstalledRows, drag.dragOrder, (r) => r.localId),
+    [rawInstalledRows, drag.dragOrder],
+  )
+
+  // Name sort scope includes QWERTY — unlike Language/Theme Packs'
+  // synthesized built-in rows, QWERTY is a real store entry that
+  // already participates in drag reorder.
+  const nameSort = useNameSort({
+    reorder: labels.reorder,
+    onError: (error) => setActionError(translateError(t, undefined, error)),
+  })
+  const handleSortByName = useCallback((): void => {
+    void nameSort.toggle(labels.metas.map((meta) => ({ id: meta.id, name: meta.name })))
+  }, [nameSort, labels.metas])
+
+  const { search, setSearch, hubResults, hubSearched, hubSearching, runSearch } = useHubSearchList<HubKeyLabelItem>({
+    open,
+    activeTab,
+    hubTabId: 'hub',
+    fetchPage: (query) => labels.hubSearch({ q: query, perPage: 50 }),
+    errorMessage: (error) => error ?? t('keyLabels.errorSearchFailed'),
+    onSearchStart: () => setActionError(null),
+    onError: setActionError,
+    clearResultsOnError: true,
+    // Key Labels marks a row searched even on failure (no auto-retry
+    // when the user leaves and re-enters the Hub tab), unlike i18n/theme.
+    markSearchedOnFailure: true,
+  })
 
   const hubRows = useMemo<HubRow[]>(
     () => buildHubRows(hubResults, labels.metas),
     [hubResults, labels.metas],
   )
-
-  // Keep the latest values in refs so the auto-search effect can
-  // depend only on the inputs that should re-arm the timer
-  // (activeTab + search). Otherwise the effect would re-run on every
-  // render that recreates `labels` / `t`, causing an infinite update
-  // loop via setState inside the effect.
-  const labelsRef = useRef(labels)
-  const tRef = useRef(t)
-  useEffect(() => { labelsRef.current = labels }, [labels])
-  useEffect(() => { tRef.current = t }, [t])
-
-  const runSearch = useCallback(async (query: string): Promise<void> => {
-    setHubSearching(true)
-    setActionError(null)
-    const res = await labelsRef.current.hubSearch({ q: query, perPage: 50 })
-    setHubSearching(false)
-    setHubSearched(true)
-    if (!res.success || !res.data) {
-      setActionError(res.error ?? tRef.current('keyLabels.errorSearchFailed'))
-      setHubResults([])
-      return
-    }
-    const items = (res.data as HubKeyLabelListResponse).items
-    setHubResults(items)
-    if (!query.trim()) setHubDefaultResults(items)
-  }, [])
-
-  const triggerSearch = useCallback((): void => {
-    void runSearch(search.trim())
-  }, [runSearch, search])
-
-  // Auto-fetch Hub list when the hub tab becomes active.
-  // Re-fetches each time the modal is opened so results stay fresh.
-  useEffect(() => {
-    if (!open || activeTab !== 'hub' || hubSearched) return
-    void runSearch('')
-  }, [open, activeTab, hubSearched, runSearch])
-
-  // Reset hub state when modal closes so next open re-fetches fresh data.
-  useEffect(() => {
-    if (!open) {
-      setHubSearched(false)
-      setHubResults([])
-      setHubDefaultResults([])
-      setSearch('')
-    }
-  }, [open])
-
-  // Debounced search: fire once the user has typed 2+ characters.
-  // Below the threshold restore the initial results instead of clearing.
-  useEffect(() => {
-    if (activeTab !== 'hub') return
-    const query = search.trim()
-    if (query.length < 2) {
-      if (hubDefaultResults.length > 0) setHubResults(hubDefaultResults)
-      return
-    }
-    const handle = window.setTimeout(() => { void runSearch(query) }, 300)
-    return () => { window.clearTimeout(handle) }
-  }, [activeTab, search, runSearch, hubDefaultResults])
-
-  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      void triggerSearch()
-    }
-  }
 
   const handleImport = useCallback(async () => {
     setActionError(null)
@@ -305,753 +234,126 @@ export function KeyLabelsModal({
     }
   }
 
-  const handleDragStart = (id: string): void => {
-    dragIdRef.current = id
-    if (dragOrder === null) {
-      // QWERTY is included so it can be dragged like any other row.
-      // The main-side reorder handler skips ids that are not in the
-      // store, so 'qwerty' is harmless to send through.
-      setDragOrder(installedRows.map((r) => r.localId))
-    }
-  }
-
-  const handleDragOver = (overId: string): void => {
-    const dragId = dragIdRef.current
-    if (!dragId || dragId === overId) return
-    const baseline = dragOrder ?? installedRows.map((r) => r.localId)
-    const fromIdx = baseline.indexOf(dragId)
-    const toIdx = baseline.indexOf(overId)
-    if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return
-    const next = baseline.slice()
-    next.splice(fromIdx, 1)
-    next.splice(toIdx, 0, dragId)
-    setDragOrder(next)
-  }
-
-  const handleDragEnd = async (): Promise<void> => {
-    const order = dragOrder
-    dragIdRef.current = null
-    if (!order) {
-      setDragOrder(null)
-      return
-    }
-    setActionError(null)
-    // Keep `dragOrder` applied while the reorder IPC + refresh round
-    // trip is in flight; otherwise the rows snap back to the stale
-    // `metas` order before the new index lands. Clearing happens after
-    // the refresh has already replaced `metas` with the saved order.
-    const result = await labels.reorder(order)
-    setDragOrder(null)
-    if (!result.success) setActionError(translateError(t, result.errorCode, result.error))
-  }
-
-  if (!open) return null
-
-  // Render via portal to document.body so the modal escapes any
-  // transformed ancestor (the keypicker overlay panel slides via
-  // `translate-x-full`, which traps `position: fixed` descendants
-  // inside its bounding box).
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      data-testid="key-labels-modal-backdrop"
-      onClick={onClose}
-    >
-      <div
-        className="w-modal-lg max-w-modal-vw h-modal-80vh flex flex-col rounded-lg bg-surface shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-        data-testid="key-labels-modal"
-      >
-        <div className="flex items-center justify-between border-b border-edge px-4 py-3">
-          <h2 className="text-base font-semibold text-content">{t('keyLabels.title')}</h2>
-          <ModalCloseButton testid="key-labels-modal-close" onClick={onClose} />
-        </div>
-
-        <div className="flex border-b border-edge" data-testid="key-labels-tabs">
-          <TabButton
-            id="installed"
-            label={t('common.installed')}
-            active={activeTab === 'installed'}
-            onClick={() => setActiveTab('installed')}
-          />
-          <TabButton
-            id="hub"
-            label={t('common.findOnHub')}
-            active={activeTab === 'hub'}
-            onClick={() => setActiveTab('hub')}
-          />
-        </div>
-
-        {activeTab === 'hub' && (
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-edge">
-            <input
-              type="text"
-              value={search}
-              placeholder={t('common.searchPlaceholder')}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              className="flex-1 rounded border border-edge bg-surface px-3 py-1.5 text-sm text-content focus:border-accent focus:outline-none"
-              data-testid="key-labels-search-input"
-            />
-            <button
-              type="button"
-              disabled={hubSearching || search.trim().length < 2}
-              onClick={() => void triggerSearch()}
-              className={BTN_PRIMARY}
-              data-testid="key-labels-search-button"
-            >
-              {hubSearching ? t('keyLabels.searching') : t('keyLabels.search')}
-            </button>
-          </div>
-        )}
-
-        {activeTab === 'installed' && (
-          <div className="flex items-center justify-end px-4 py-3 border-b border-edge">
-            <button
-              type="button"
-              onClick={() => void handleImport()}
-              className="rounded border border-edge bg-surface px-3 py-1.5 text-sm font-medium text-content hover:bg-surface-hover"
-              data-testid="key-labels-import-button"
-            >
-              {t('keyLabels.import')}
-            </button>
-          </div>
-        )}
-
-        {actionError && (
-          <div className="mx-4 my-2 rounded border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-            {actionError}
-          </div>
-        )}
-
-        <div className="flex-1 overflow-y-auto px-4 py-2">
-          {activeTab === 'installed' ? (
-            <InstalledTable
-              rows={installedRows}
-              pendingId={pendingId}
-              confirmDeleteId={confirmDeleteId}
-              setConfirmDeleteId={setConfirmDeleteId}
-              confirmRemoveId={confirmRemoveId}
-              setConfirmRemoveId={setConfirmRemoveId}
-              lastResult={lastResult}
-              rename={rename}
-              currentDisplayName={currentDisplayName}
-              hubCanWrite={hubCanWrite}
-              onRenameKey={handleRenameKey}
-              onRenameCommit={handleRenameCommit}
-              onUpload={(id) => runWithPending(id, () => labels.hubUpload(id), 'hub.uploadSuccess', 'hub.uploadFailed')}
-              onUpdate={(id) => runWithPending(id, () => labels.hubUpdate(id), 'hub.updateSuccess', 'hub.updateFailed')}
-              onSync={(id) => runWithPending(id, () => labels.hubSync(id), 'hub.syncSuccess', 'hub.syncFailed')}
-              onRemove={async (id) => {
-                await runWithPending(id, () => labels.hubDelete(id), 'hub.removeSuccess', 'hub.removeFailed')
-                setConfirmRemoveId(null)
-              }}
-              onDelete={async (id) => {
-                // No success badge for Delete — the row tombstones away
-                // immediately, leaving the badge nowhere to render.
-                await runWithPending(id, () => labels.remove(id))
-                setConfirmDeleteId(null)
-              }}
-              onExport={(id) => runWithPending(id, () => labels.exportEntry(id))}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDragEnd={handleDragEnd}
-              hubOrigin={hubOrigin}
-              hubFreshness={hubFreshness}
-            />
-          ) : (
-            <HubTable
-              rows={hubRows}
-              hubSearched={hubSearched}
-              pendingId={pendingId}
-              hubOrigin={hubOrigin}
-              onDownload={(hubPostId) =>
-                // The download IPC saves the entry locally with id =
-                // hubPostId, so anchoring the badge on the same id
-                // surfaces a "Saved" badge under the new row when the
-                // user flips back to the Installed tab.
-                runWithPending(hubPostId, () => labels.hubDownload(hubPostId), 'common.saved')
-              }
-            />
-          )}
-        </div>
-      </div>
-    </div>,
-    document.body,
-  )
-}
-
-interface TabButtonProps {
-  id: TabId
-  label: string
-  active: boolean
-  onClick: () => void
-}
-
-function TabButton({ id, label, active, onClick }: TabButtonProps): JSX.Element {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-        active
-          ? 'border-b-2 border-accent text-accent'
-          : 'text-content-secondary hover:text-content'
-      }`}
-      data-testid={`key-labels-tab-${id}`}
-      aria-pressed={active}
-    >
-      {label}
-    </button>
-  )
-}
-
-interface InstalledTableProps {
-  rows: InstalledRow[]
-  pendingId: string | null
-  confirmDeleteId: string | null
-  setConfirmDeleteId: (id: string | null) => void
-  confirmRemoveId: string | null
-  setConfirmRemoveId: (id: string | null) => void
-  lastResult: { id: string; kind: 'success' | 'error'; message: string } | null
-  rename: ReturnType<typeof useInlineRename<string>>
-  currentDisplayName: string | null
-  hubCanWrite: boolean
-  hubOrigin: string
-  hubFreshness: Map<string, HubFreshnessEntry>
-  onRenameKey: (e: React.KeyboardEvent<HTMLInputElement>, id: string) => void
-  onRenameCommit: (id: string) => void | Promise<void>
-  onUpload: (id: string) => void | Promise<void>
-  onUpdate: (id: string) => void | Promise<void>
-  onSync: (id: string) => void | Promise<void>
-  onRemove: (id: string) => void | Promise<void>
-  onDelete: (id: string) => void | Promise<void>
-  onExport: (id: string) => void | Promise<void>
-  onDragStart: (id: string) => void
-  onDragOver: (overId: string) => void
-  onDragEnd: () => void | Promise<void>
-}
-
-function InstalledTable(props: InstalledTableProps): JSX.Element {
-  const { t } = useTranslation()
-  const { rows } = props
-  return (
-    <div className="space-y-2 text-sm">
-      {rows.map((row) => (
-        <InstalledRowView key={row.reactKey} row={row} {...props} />
-      ))}
-      {rows.length === 0 && (
-        <div className="py-6 text-center text-content-secondary">
-          {t('keyLabels.empty')}
-        </div>
-      )}
-    </div>
-  )
-}
-
-interface InstalledRowViewProps extends InstalledTableProps {
-  row: InstalledRow
-}
-
-function InstalledRowView({
-  row,
-  pendingId,
-  confirmDeleteId,
-  setConfirmDeleteId,
-  confirmRemoveId,
-  setConfirmRemoveId,
-  lastResult,
-  rename,
-  currentDisplayName,
-  hubCanWrite,
-  onRenameKey,
-  onRenameCommit,
-  onUpload,
-  onUpdate,
-  onSync,
-  onRemove,
-  onDelete,
-  onExport,
-  onDragStart,
-  onDragOver,
-  onDragEnd,
-  hubOrigin,
-  hubFreshness,
-}: InstalledRowViewProps): JSX.Element {
-  const { t } = useTranslation()
-  const isMine = !row.hubPostId || row.author === currentDisplayName
-  // QWERTY shows the same drag handle as the other rows; only its
-  // action column stays empty (no rename / delete / hub ops).
-  const isDraggable = true
-  const editing = rename.editingId === row.localId
-  const busy = pendingId !== null && pendingId === row.localId
-  const freshness = hubFreshness.get(row.localId)
-  const hasUpdateAvailable = hasUpdate(freshness, row.meta?.hubUpdatedAt)
-  const hubRemoved = !!freshness && freshness.removed
-
-  const canRename = isMine && !row.isQwerty
-  const renderName = (): JSX.Element => {
-    if (editing) {
-      return (
-        <input
-          autoFocus
-          type="text"
-          value={rename.editLabel}
-          onChange={(e) => rename.setEditLabel(e.target.value)}
-          onBlur={() => void onRenameCommit(row.localId)}
-          onKeyDown={(e) => onRenameKey(e, row.localId)}
-          maxLength={100}
-          className="w-full border-b border-edge bg-transparent px-1 text-sm text-content focus:outline-none focus:border-accent"
-          data-testid={`key-labels-rename-input-${row.localId}`}
+    <PackManagerModal
+      open={open}
+      onClose={onClose}
+      title={t('keyLabels.title')}
+      testids={{
+        backdrop: 'key-labels-modal-backdrop',
+        modal: 'key-labels-modal',
+        closeButton: 'key-labels-modal-close',
+        tabsContainer: 'key-labels-tabs',
+        tabInstalled: 'key-labels-tab-installed',
+        tabHub: 'key-labels-tab-hub',
+        searchInput: 'key-labels-search-input',
+        searchButton: 'key-labels-search-button',
+        importButton: 'key-labels-import-button',
+      }}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      installedLabel={t('common.installed')}
+      hubLabel={t('common.findOnHub')}
+      search={search}
+      onSearchChange={setSearch}
+      onSearchEnter={() => void runSearch(search.trim())}
+      onSearchClick={() => void runSearch(search.trim())}
+      searchPlaceholder={t('common.searchPlaceholder')}
+      searchButtonLabel={hubSearching ? t('keyLabels.searching') : t('keyLabels.search')}
+      searchDisabled={hubSearching || search.trim().length < 2}
+      importLabel={t('keyLabels.import')}
+      onImport={() => void handleImport()}
+      sortButton={(
+        <PackSortButton
+          direction={nameSort.direction}
+          onClick={handleSortByName}
+          disabled={nameSort.pending}
+          testid="key-labels-sort-button"
         />
-      )
-    }
-    if (canRename) {
-      // Click-to-edit pattern matches FavoriteStoreContent: clicking
-      // the label name itself opens the inline editor; no extra
-      // Rename button is needed. The span fills the parent column so
-      // the click target also covers the empty space to the right of
-      // short names.
-      return (
-        <span
-          className="block w-full truncate text-content cursor-pointer"
-          onClick={() => rename.startRename(row.localId, row.name)}
-          data-testid={`key-labels-name-${row.localId}`}
-        >
-          {row.name}
-        </span>
-      )
-    }
-    return <span className="text-content">{row.name}</span>
-  }
-
-  const hubPostUrl = row.hubPostId && hubOrigin
-    ? buildHubKeyLabelUrl(hubOrigin, row.hubPostId)
-    : null
-  const hasHubPost = !!row.hubPostId
-  // Mirror FavoriteHubActions: show the Hub line for any row that has
-  // a Hub affordance — uploaded posts (Open / Update / Remove for the
-  // owner, Open-only for foreign downloads) and never-uploaded local
-  // entries the user can push.
-  const showHubLine = !row.isQwerty && (hasHubPost || isMine)
-
-  return (
-    <div
-      className="flex rounded border border-edge bg-surface"
-      draggable={isDraggable}
-      onDragOver={isDraggable ? (e) => { e.preventDefault(); onDragOver(row.localId) } : undefined}
-      onDrop={isDraggable ? (e) => { e.preventDefault() } : undefined}
-      onDragStart={isDraggable ? (e) => {
-        e.dataTransfer.effectAllowed = 'move'
-        e.dataTransfer.setData('text/plain', '')
-        onDragStart(row.localId)
-      } : undefined}
-      onDragEnd={isDraggable ? () => { void onDragEnd() } : undefined}
-      data-testid={`key-labels-row-${row.localId}`}
+      )}
+      actionError={actionError}
     >
-      {/* Grip column spans the full card height so the user can grab
-          the row anywhere along the left edge — not just the icon. */}
-      <span
-        className={`flex w-7 shrink-0 items-center justify-center ${
-          isDraggable ? 'cursor-grab' : ''
-        }`}
-        aria-hidden="true"
-      >
-        {isDraggable
-          ? <GripVertical className="text-content-muted" size={ICON_SM} />
-          : null}
-      </span>
-      <div className="flex-1 min-w-0 px-1 py-2">
-        <div className="flex items-center gap-3">
-          <span className="flex-1 min-w-0 truncate">{renderName()}</span>
-          <span className="w-32 truncate text-content-secondary">{row.author}</span>
-          {/* Show Hub-side `updated_at` so the column matches Hub's
-              own display. Blank for QWERTY, never-uploaded local
-              entries, and legacy rows that predate this field. The
-              "(removed)" overrides the timestamp when the bulk
-              freshness check confirms the post is gone from Hub. */}
-          <span
-            className={`w-32 text-xs whitespace-nowrap ${hubRemoved ? 'text-rose-600' : 'text-content-secondary'}`}
-            data-testid={`key-labels-updated-at-${row.localId}`}
-          >
-            {renderUpdatedCell({ hubRemoved, hubUpdatedAt: row.meta?.hubUpdatedAt, t })}
-          </span>
-          {/* Fixed-width slot keeps the Author column aligned across
-              every row — without it the QWERTY row's empty actions
-              area collapses to 0 px and the "pipette" label drifts
-              right relative to the other rows. */}
-          <span className="min-w-24 text-right whitespace-nowrap">
-            {row.isQwerty ? null : (
-              <InstalledActions
-                localId={row.localId}
-                busy={busy}
-                confirming={confirmDeleteId === row.localId}
-                onExport={() => void onExport(row.localId)}
-                onAskDelete={() => setConfirmDeleteId(row.localId)}
-                onCancelDelete={() => setConfirmDeleteId(null)}
-                onConfirmDelete={() => void onDelete(row.localId)}
-              />
-            )}
-          </span>
-        </div>
-        {showHubLine ? (
-          <div
-            className="mt-2 flex items-center gap-3 pr-1"
-            data-testid={`key-labels-hub-row-${row.localId}`}
-          >
-            {/* Left slot is always present (even when the badge is
-                null) so HubLineActions stays anchored to the right
-                edge. Without `flex-1` here a foreign-download row
-                with only the Open link would collapse left. */}
-            <span className="flex-1 min-w-0">
-              <ResultBadge result={lastResult} rowId={row.localId} />
-            </span>
-            <HubLineActions
-              localId={row.localId}
-              hubPostUrl={hubPostUrl}
-              hasHubPost={hasHubPost}
-              isMine={isMine}
-              busy={busy}
-              hubCanWrite={hubCanWrite}
-              confirmingRemove={confirmRemoveId === row.localId}
-              hasUpdateAvailable={hasUpdateAvailable}
-              onOpenInBrowser={() => {
-                if (hubPostUrl) void window.vialAPI.openExternal(hubPostUrl)
-              }}
-              onUpload={() => void onUpload(row.localId)}
-              onUpdate={() => void onUpdate(row.localId)}
-              onSync={() => void onSync(row.localId)}
-              onAskRemove={() => setConfirmRemoveId(row.localId)}
-              onCancelRemove={() => setConfirmRemoveId(null)}
-              onConfirmRemove={() => void onRemove(row.localId)}
-            />
-          </div>
-        ) : (
-          // QWERTY (and any other no-action rows): keep the spacer so
-          // the card height matches Hub-aware rows, and surface the
-          // result badge on the left edge when one applies.
-          <div className="mt-2 flex h-4.5 items-center pr-1">
-            <ResultBadge result={lastResult} rowId={row.localId} />
-          </div>
-        )}
-      </div>
-    </div>
+      {activeTab === 'installed' ? (
+        <InstalledTable
+          rows={installedRows}
+          pendingId={pendingId}
+          confirmDeleteId={confirmDeleteId}
+          setConfirmDeleteId={setConfirmDeleteId}
+          confirmRemoveId={confirmRemoveId}
+          setConfirmRemoveId={setConfirmRemoveId}
+          lastResult={lastResult}
+          rename={rename}
+          currentDisplayName={currentDisplayName}
+          hubCanWrite={hubCanWrite}
+          onRenameKey={handleRenameKey}
+          onRenameCommit={handleRenameCommit}
+          onUpload={(id) => runWithPending(id, () => labels.hubUpload(id), 'hub.uploadSuccess', 'hub.uploadFailed')}
+          onUpdate={(id) => runWithPending(id, () => labels.hubUpdate(id), 'hub.updateSuccess', 'hub.updateFailed')}
+          onSync={(id) => runWithPending(id, () => labels.hubSync(id), 'hub.syncSuccess', 'hub.syncFailed')}
+          onRemove={async (id) => {
+            await runWithPending(id, () => labels.hubDelete(id), 'hub.removeSuccess', 'hub.removeFailed')
+            setConfirmRemoveId(null)
+          }}
+          onDelete={async (id) => {
+            // Delete cascades to Hub, aligning with Language/Theme
+            // Packs: Hub rejects same-name re-uploads, so a local-only
+            // delete would strand an orphan post nobody can remove.
+            // Attempt the Hub delete whenever a post is linked
+            // (regardless of isMine; a foreign/downloaded post's
+            // delete just fails auth-side). If the Hub deletion does
+            // not succeed, the cascade is aborted: the local entry is
+            // left intact, the confirm state closes, and the error is
+            // surfaced inline so the user can retry (a swallowed
+            // failure here would proceed to strand exactly the
+            // unclaimable-name orphan the cascade exists to prevent).
+            const meta = labels.metas.find((m) => m.id === id)
+            if (meta?.hubPostId) {
+              setPendingId(id)
+              setActionError(null)
+              setLastResult(null)
+              let hubResult: { success: boolean; errorCode?: string; error?: string }
+              try {
+                hubResult = await labels.hubDelete(id)
+              } catch (err) {
+                hubResult = { success: false, error: err instanceof Error ? err.message : String(err) }
+              } finally {
+                setPendingId(null)
+              }
+              if (!hubResult.success) {
+                setLastResult({ id, kind: 'error', message: translateError(t, hubResult.errorCode, hubResult.error) })
+                setConfirmDeleteId(null)
+                return
+              }
+            }
+            await runWithPending(id, () => labels.remove(id))
+            setConfirmDeleteId(null)
+          }}
+          onExport={(id) => runWithPending(id, () => labels.exportEntry(id))}
+          onDragStart={drag.onDragStart}
+          onDragOver={drag.onDragOver}
+          onDragEnd={drag.onDragEnd}
+          hubOrigin={hubOrigin}
+          hubFreshness={hubFreshness}
+        />
+      ) : (
+        <HubTable
+          rows={hubRows}
+          hubSearched={hubSearched}
+          pendingId={pendingId}
+          hubOrigin={hubOrigin}
+          onDownload={(hubPostId) =>
+            // The download IPC saves the entry locally with id =
+            // hubPostId, so anchoring the badge on the same id
+            // surfaces a "Saved" badge under the new row when the
+            // user flips back to the Installed tab.
+            runWithPending(hubPostId, () => labels.hubDownload(hubPostId), 'common.saved')
+          }
+        />
+      )}
+    </PackManagerModal>
   )
 }
 
-interface ResultBadgeProps {
-  result: { id: string; kind: 'success' | 'error'; message: string } | null
-  rowId: string
-}
-
-/**
- * Inline confirmation badge: "Saved" / "Uploaded" / "Updated" /
- * "Removed" or the localized error message after a Hub or local
- * mutation completes. Mirrors the favorite/layout-store hub-result
- * pill so feedback is consistent across stores.
- */
-function ResultBadge({ result, rowId }: ResultBadgeProps): JSX.Element | null {
-  if (!result || result.id !== rowId) return null
-  return (
-    <span
-      className={`text-xs font-medium ${result.kind === 'success' ? 'text-accent' : 'text-rose-600'}`}
-      data-testid={`key-labels-result-${rowId}`}
-    >
-      {result.message}
-    </span>
-  )
-}
-
-interface HubLineActionsProps {
-  localId: string
-  hubPostUrl: string | null
-  hasHubPost: boolean
-  isMine: boolean
-  busy: boolean
-  hubCanWrite: boolean
-  /** True when this row is in the inline "Confirm Remove? Cancel" state. */
-  confirmingRemove: boolean
-  /** True when the bulk freshness check shows Hub has a newer post. */
-  hasUpdateAvailable: boolean
-  onOpenInBrowser: () => void
-  onUpload: () => void
-  onUpdate: () => void
-  onSync: () => void
-  onAskRemove: () => void
-  onCancelRemove: () => void
-  onConfirmRemove: () => void
-}
-
-function HubLineActions({
-  localId,
-  hubPostUrl,
-  hasHubPost,
-  isMine,
-  busy,
-  hubCanWrite,
-  confirmingRemove,
-  hasUpdateAvailable,
-  onOpenInBrowser,
-  onUpload,
-  onUpdate,
-  onSync,
-  onAskRemove,
-  onCancelRemove,
-  onConfirmRemove,
-}: HubLineActionsProps): JSX.Element {
-  const { t } = useTranslation()
-  // Inline confirm pattern matches FavoriteHubActions / LayoutStoreHubActions:
-  // first click on Remove swaps the row's actions for "Confirm | Cancel".
-  // Wording is shared via the existing `hub.confirmRemove` / `common.cancel`
-  // keys so all three Hub-aware editors stay in lockstep.
-  if (confirmingRemove && hasHubPost && isMine) {
-    return (
-      <span className="inline-flex items-center gap-3">
-        <button
-          type="button"
-          disabled={busy || !hubCanWrite}
-          onClick={onConfirmRemove}
-          className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50"
-          data-testid={`key-labels-confirm-remove-${localId}`}
-        >
-          {t('hub.confirmRemove')}
-        </button>
-        <button
-          type="button"
-          onClick={onCancelRemove}
-          className="text-xs text-content-secondary hover:underline"
-          data-testid={`key-labels-cancel-remove-${localId}`}
-        >
-          {t('common.cancel')}
-        </button>
-      </span>
-    )
-  }
-  return (
-    <span className="inline-flex items-center gap-3">
-      {hasHubPost && hubPostUrl && (
-        <a
-          href={hubPostUrl}
-          onClick={(e) => { e.preventDefault(); onOpenInBrowser() }}
-          className="text-xs font-medium text-accent hover:underline"
-          data-testid={`key-labels-open-${localId}`}
-        >
-          {t('hub.openInBrowser')}
-        </a>
-      )}
-      {hasHubPost && !isMine && (
-        // Pull-direction refresh; download is anonymous so no
-        // hubCanWrite gate. The red dot signals that the Hub-side
-        // updated_at is newer than the local cache (set by the bulk
-        // POST /api/key-labels/timestamps check on Installed mount).
-        <button
-          type="button"
-          disabled={busy}
-          onClick={onSync}
-          className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline disabled:opacity-50"
-          data-testid={`key-labels-sync-${localId}`}
-        >
-          {hasUpdateAvailable && (
-            <span
-              aria-hidden="true"
-              className="h-1.5 w-1.5 rounded-full bg-success animate-pulse"
-              data-testid={`key-labels-update-available-${localId}`}
-            />
-          )}
-          {t('keyLabels.actionSync')}
-        </button>
-      )}
-      {hasHubPost && isMine && (
-        <button
-          type="button"
-          disabled={busy || !hubCanWrite}
-          onClick={onUpdate}
-          className="text-xs font-medium text-accent hover:underline disabled:opacity-50"
-          data-testid={`key-labels-update-${localId}`}
-        >
-          {t('keyLabels.actionUpdate')}
-        </button>
-      )}
-      {hasHubPost && isMine && (
-        <button
-          type="button"
-          disabled={busy || !hubCanWrite}
-          onClick={onAskRemove}
-          className="text-xs font-medium text-accent hover:underline disabled:opacity-50"
-          data-testid={`key-labels-remove-${localId}`}
-        >
-          {t('keyLabels.actionRemove')}
-        </button>
-      )}
-      {!hasHubPost && isMine && (
-        <button
-          type="button"
-          disabled={busy || !hubCanWrite}
-          onClick={onUpload}
-          className="text-xs font-medium text-accent hover:underline disabled:opacity-50"
-          data-testid={`key-labels-upload-${localId}`}
-        >
-          {t('keyLabels.actionUpload')}
-        </button>
-      )}
-    </span>
-  )
-}
-
-interface InstalledActionsProps {
-  localId: string
-  busy: boolean
-  confirming: boolean
-  onExport: () => void
-  onAskDelete: () => void
-  onCancelDelete: () => void
-  onConfirmDelete: () => void
-}
-
-function InstalledActions({
-  localId,
-  busy,
-  confirming,
-  onExport,
-  onAskDelete,
-  onCancelDelete,
-  onConfirmDelete,
-}: InstalledActionsProps): JSX.Element {
-  const { t } = useTranslation()
-  if (confirming) {
-    return (
-      <span className="inline-flex items-center gap-2">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={onConfirmDelete}
-          className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50"
-          data-testid={`key-labels-confirm-delete-${localId}`}
-        >
-          {t('common.confirmDelete')}
-        </button>
-        <button
-          type="button"
-          onClick={onCancelDelete}
-          className="text-xs text-content-secondary hover:underline"
-        >
-          {t('common.cancel')}
-        </button>
-      </span>
-    )
-  }
-  return (
-    <span className="inline-flex items-center gap-3">
-      <button
-        type="button"
-        disabled={busy}
-        onClick={onExport}
-        className="text-xs text-content-secondary hover:underline disabled:opacity-50"
-        data-testid={`key-labels-export-${localId}`}
-      >
-        {t('keyLabels.actionExport')}
-      </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={onAskDelete}
-        className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50"
-        data-testid={`key-labels-delete-${localId}`}
-      >
-        {t('keyLabels.actionDelete')}
-      </button>
-    </span>
-  )
-}
-
-interface HubTableProps {
-  rows: HubRow[]
-  hubSearched: boolean
-  pendingId: string | null
-  hubOrigin: string
-  onDownload: (hubPostId: string) => void | Promise<void>
-}
-
-function HubTable({ rows, hubSearched, pendingId, hubOrigin, onDownload }: HubTableProps): JSX.Element {
-  const { t } = useTranslation()
-  return (
-    <div className="space-y-2 text-sm">
-      {rows.map((row) => {
-        const busy = pendingId === row.hubPostId
-        const openUrl = hubOrigin ? buildHubKeyLabelUrl(hubOrigin, row.hubPostId) : null
-        return (
-          <div
-            key={row.reactKey}
-            className="flex items-center gap-3 rounded border border-edge bg-surface px-3 py-2"
-          >
-            <span className="flex-1 min-w-0 truncate text-content">{row.name}</span>
-            <span className="w-40 truncate text-content-secondary">{row.author}</span>
-            {/* Fixed-width slot keeps the Author column anchored across rows
-                — without it the "Open Download" vs "Open Installed" width
-                difference (different glyph widths + font-medium vs regular)
-                shifts the uploader name horizontally between rows. */}
-            <span className="inline-flex w-32 items-center justify-end gap-3 whitespace-nowrap">
-              {openUrl && (
-                <a
-                  href={openUrl}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    void window.vialAPI.openExternal(openUrl)
-                  }}
-                  className="text-xs font-medium text-accent hover:underline"
-                  data-testid={`key-labels-hub-open-${row.hubPostId}`}
-                >
-                  {t('hub.openInBrowser')}
-                </a>
-              )}
-              {row.alreadyInstalled ? (
-                <span className="text-xs text-content-muted">
-                  {t('common.installed')}
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void onDownload(row.hubPostId)}
-                  className="text-xs font-medium text-accent hover:underline disabled:opacity-50"
-                  data-testid={`key-labels-download-${row.hubPostId}`}
-                >
-                  {t('keyLabels.actionDownload')}
-                </button>
-              )}
-            </span>
-          </div>
-        )
-      })}
-      {rows.length === 0 && (
-        <div className="py-6 text-center text-content-secondary">
-          {hubSearched ? (
-            t('keyLabels.hubEmpty')
-          ) : (
-            <Trans
-              i18nKey="common.findOnHubHint"
-              components={{
-                hub: hubOrigin ? (
-                  <a
-                    href={buildHubCategoryUrl(hubOrigin, HUB_CATEGORY.KEY_LABELS)}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      void window.vialAPI.openExternal(buildHubCategoryUrl(hubOrigin, HUB_CATEGORY.KEY_LABELS))
-                    }}
-                    className="text-accent hover:underline"
-                    data-testid="key-labels-hub-initial-link"
-                  />
-                ) : (
-                  <span />
-                ),
-              }}
-            />
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
 
 /**
  * Build rows directly from the store metas. The main-side
@@ -1074,44 +376,18 @@ function buildInstalledRows(metas: KeyLabelMeta[]): InstalledRow[] {
   }))
 }
 
-/**
- * Re-order rows according to the live drag order. QWERTY is treated
- * the same as any other row (the user can drag it anywhere). Any row
- * that is not in the override list — typically a label that arrived
- * mid-drag from a remote sync — keeps its underlying meta position
- * behind the explicitly-ordered prefix so we never silently drop one.
- */
-function applyDragOrder(rows: InstalledRow[], order: string[] | null): InstalledRow[] {
-  if (!order) return rows
-  const byId = new Map<string, InstalledRow>()
-  for (const row of rows) byId.set(row.localId, row)
-  const out: InstalledRow[] = []
-  for (const id of order) {
-    const row = byId.get(id)
-    if (!row) continue
-    out.push(row)
-    byId.delete(id)
-  }
-  for (const row of rows) {
-    if (byId.has(row.localId)) out.push(row)
-  }
-  return out
-}
-
 function buildHubRows(items: HubKeyLabelItem[], metas: KeyLabelMeta[]): HubRow[] {
-  const localNames = new Set<string>(['qwerty'])
-  for (const m of metas) localNames.add(m.name.toLowerCase())
-  return items
-    .map((item) => ({
-      reactKey: `hub:${item.id}`,
-      hubPostId: item.id,
-      name: item.name,
-      author: item.uploader_name ?? '',
-      alreadyInstalled: localNames.has(item.name.toLowerCase()),
-    }))
-    .sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
-    )
+  // hubPostId-first + name-fallback (unified with Language/Theme Packs
+  // — see installed-detection.ts). Sorting now happens upstream in
+  // useHubSearchList, shared by all three modals.
+  const installedEntries: InstalledDetectionEntry[] = metas.map((m) => ({ hubPostId: m.hubPostId, name: m.name }))
+  return items.map((item) => ({
+    reactKey: `hub:${item.id}`,
+    hubPostId: item.id,
+    name: item.name,
+    author: item.uploader_name ?? '',
+    alreadyInstalled: isHubItemInstalled(item, installedEntries),
+  }))
 }
 
 function translateError(
@@ -1127,18 +403,3 @@ function translateError(
   return error ?? t('keyLabels.errorGeneric')
 }
 
-/**
- * Picks the text shown in the Updated column. The three states are
- * mutually exclusive: removed > has-timestamp > unknown. Extracted
- * from the row JSX so the column is one expression and the precedence
- * is explicit.
- */
-function renderUpdatedCell(args: {
-  hubRemoved: boolean
-  hubUpdatedAt: string | undefined
-  t: (key: string) => string
-}): string {
-  if (args.hubRemoved) return args.t('keyLabels.hubRemoved')
-  if (args.hubUpdatedAt) return formatDateTime(args.hubUpdatedAt)
-  return ''
-}

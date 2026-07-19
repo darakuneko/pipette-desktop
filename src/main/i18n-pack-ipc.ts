@@ -20,6 +20,7 @@ import {
   setHubPostId,
   hasActiveName,
   exportPackToDialog,
+  reorderActive,
 } from './i18n-pack-store'
 import type {
   I18nPackMeta,
@@ -104,6 +105,24 @@ export function setupI18nPackStore(): void {
   )
 
   secureHandle(
+    IpcChannels.I18N_PACK_STORE_REORDER,
+    // Unlike THEME_PACK_STORE_REORDER's handler, this does not broadcast
+    // an *_PACK_CHANGED event — matches every other i18n-pack-store
+    // handler (i18n has no broadcast mechanism; the renderer's own
+    // CustomEvent covers same-window multi-hook-instance sync). If a
+    // second renderer window for the same store ever lands, this
+    // handler (and its rename/delete/etc. siblings) would need a
+    // broadcast added so the other window's `metas` picks up the
+    // reordered result without a manual refresh.
+    async (_event, orderedIds: unknown): Promise<I18nPackStoreResult<void>> => {
+      if (!Array.isArray(orderedIds) || !orderedIds.every((id) => typeof id === 'string')) {
+        return { success: false, errorCode: 'INVALID_FILE', error: 'Invalid order list' }
+      }
+      return reorderActive(orderedIds as string[])
+    },
+  )
+
+  secureHandle(
     IpcChannels.I18N_PACK_STORE_DELETE,
     async (_event, id: unknown): Promise<I18nPackStoreResult<void>> => {
       if (typeof id !== 'string') {
@@ -119,6 +138,8 @@ export function setupI18nPackStore(): void {
       _event,
       id: unknown,
       hubPostId: unknown,
+      uploaderName: unknown,
+      hubUpdatedAt: unknown,
     ): Promise<I18nPackStoreResult<I18nPackMeta>> => {
       if (typeof id !== 'string') {
         return { success: false, errorCode: 'NOT_FOUND', error: 'Invalid id' }
@@ -126,7 +147,12 @@ export function setupI18nPackStore(): void {
       const normalized = hubPostId == null
         ? null
         : (typeof hubPostId === 'string' ? hubPostId : null)
-      return setHubPostId(id, normalized)
+      return setHubPostId(
+        id,
+        normalized,
+        typeof uploaderName === 'string' ? uploaderName : undefined,
+        typeof hubUpdatedAt === 'string' ? hubUpdatedAt : undefined,
+      )
     },
   )
 
@@ -202,6 +228,8 @@ export function setupI18nPackStore(): void {
         pack: raw,
         enabled: typeof opts.enabled === 'boolean' ? opts.enabled : true,
         hubPostId: typeof opts.hubPostId === 'string' ? opts.hubPostId : undefined,
+        hubUpdatedAt: typeof opts.hubUpdatedAt === 'string' ? opts.hubUpdatedAt : undefined,
+        uploaderName: typeof opts.uploaderName === 'string' ? opts.uploaderName : undefined,
         appVersionAtImport: typeof opts.appVersionAtImport === 'string' ? opts.appVersionAtImport : undefined,
         id: typeof opts.id === 'string' ? opts.id : undefined,
         matchedBaseVersion,

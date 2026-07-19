@@ -184,6 +184,9 @@ export interface SavePackInput {
    *  compare against `POST /api/i18n-packs/timestamps` later. `null`
    *  explicitly clears any inherited value (e.g. detach from Hub). */
   hubUpdatedAt?: string | null
+  /** Hub-side `uploader_name`. Same three-state (`null` clears,
+   *  `undefined` inherits, string adopts) as `hubUpdatedAt`. */
+  uploaderName?: string | null
   appVersionAtImport?: string
   /** English baseline version this pack covered at save time, or null
    * when coverage was partial. Persisted on the meta and surfaced in
@@ -239,8 +242,13 @@ export async function savePack(input: SavePackInput): Promise<I18nPackStoreResul
     const hubUpdatedAtInput = typeof input.hubUpdatedAt === 'string'
       ? (input.hubUpdatedAt.trim() || null)
       : input.hubUpdatedAt
+    // uploaderName follows the same empty-string-as-clear rule as hubUpdatedAt.
+    const uploaderNameInput = typeof input.uploaderName === 'string'
+      ? (input.uploaderName.trim() || null)
+      : input.uploaderName
     const nextHubPostId = resolveOptionalField(input.hubPostId, existing?.hubPostId)
     const nextHubUpdatedAt = resolveOptionalField(hubUpdatedAtInput, existing?.hubUpdatedAt)
+    const nextUploaderName = resolveOptionalField(uploaderNameInput, existing?.uploaderName)
     const nextMatchedBaseVersion = resolveOptionalField(input.matchedBaseVersion, existing?.matchedBaseVersion)
     const nextCoverage = resolveOptionalField(input.coverage, existing?.coverage)
     const nextDangerousKeyCount = resolveOptionalField(input.dangerousKeyCount, existing?.dangerousKeyCount)
@@ -252,6 +260,7 @@ export async function savePack(input: SavePackInput): Promise<I18nPackStoreResul
       enabled: input.enabled ?? existing?.enabled ?? true,
       hubPostId: nextHubPostId,
       ...(nextHubUpdatedAt ? { hubUpdatedAt: nextHubUpdatedAt } : {}),
+      ...(nextUploaderName ? { uploaderName: nextUploaderName } : {}),
       savedAt: existing?.savedAt ?? now,
       updatedAt: now,
       ...(input.appVersionAtImport ? { appVersionAtImport: input.appVersionAtImport } : {}),
@@ -345,9 +354,20 @@ export async function deletePack(id: string): Promise<I18nPackStoreResult<void>>
   }
 }
 
+/**
+ * `uploaderName` / `hubUpdatedAt` mirror `key-label-store.ts`'s
+ * `setHubPostId`: `undefined` leaves the cached value alone (Update
+ * intentionally passes `undefined` for uploaderName — the owner is
+ * assumed unchanged), a string adopts the new value, and an
+ * empty/whitespace string clears it. Detaching (`hubPostId: null`)
+ * always drops `hubUpdatedAt` (meaningless once unlinked) but keeps
+ * `uploaderName` unless the caller explicitly clears it too.
+ */
 export async function setHubPostId(
   id: string,
   hubPostId: string | null,
+  uploaderName?: string | null,
+  hubUpdatedAt?: string | null,
 ): Promise<I18nPackStoreResult<I18nPackMeta>> {
   try {
     const index = await readIndex()
@@ -363,6 +383,22 @@ export async function setHubPostId(
     } else {
       meta.hubPostId = normalized
     }
+    if (uploaderName !== undefined) {
+      const trimmed = uploaderName?.trim() ?? ''
+      if (trimmed) {
+        meta.uploaderName = trimmed
+      } else {
+        delete meta.uploaderName
+      }
+    }
+    if (hubUpdatedAt !== undefined) {
+      const trimmed = hubUpdatedAt?.trim() ?? ''
+      if (trimmed) {
+        meta.hubUpdatedAt = trimmed
+      } else {
+        delete meta.hubUpdatedAt
+      }
+    }
     meta.updatedAt = nowIso()
     await writeIndex(index)
     notifyChange(I18N_INDEX_SYNC_UNIT)
@@ -375,6 +411,53 @@ export async function setHubPostId(
 export async function hasActiveName(name: string, excludeId?: string): Promise<boolean> {
   const index = await readIndex()
   return Boolean(findActiveByName(index.metas, name, excludeId))
+}
+
+/**
+ * Apply a manual order to the active metas. Mirrors
+ * `key-label-store.ts`'s `reorderActive`: tombstones and any ids not
+ * listed in `orderedIds` keep their relative position behind the
+ * sorted prefix, so a stale renderer view never silently drops an
+ * entry. Only the index changes — pack bodies are untouched — so only
+ * `I18N_INDEX_SYNC_UNIT` is bumped, matching `setEnabled`/`setHubPostId`.
+ *
+ * Known limitation (pre-existing store property, not a Phase 2
+ * regression): unlike `key-labels` — a single sync unit with
+ * entry-level LWW merge — `i18n/index` has no merge logic wired into
+ * `sync-service.ts` yet. `notifyChange` marks the unit dirty for
+ * upload, but a remote index downloaded during sync is not merged
+ * against this reordered one, so the manual order (drag or Name sort)
+ * is effectively machine-local until index-merge lands. Tracked as
+ * future work in the unification plan, not addressed here.
+ */
+export async function reorderActive(orderedIds: string[]): Promise<I18nPackStoreResult<void>> {
+  try {
+    const index = await readIndex()
+    const byId = new Map<string, I18nPackMeta>()
+    for (const meta of index.metas) byId.set(meta.id, meta)
+
+    const seen = new Set<string>()
+    const reordered: I18nPackMeta[] = []
+    const now = nowIso()
+    for (const id of orderedIds) {
+      const meta = byId.get(id)
+      if (!meta || meta.deletedAt || seen.has(id)) continue
+      meta.updatedAt = now
+      reordered.push(meta)
+      seen.add(id)
+    }
+
+    for (const meta of index.metas) {
+      if (seen.has(meta.id)) continue
+      reordered.push(meta)
+    }
+
+    await writeIndex({ metas: reordered })
+    notifyChange(I18N_INDEX_SYNC_UNIT)
+    return ok()
+  } catch (err) {
+    return fail('IO_ERROR', String(err))
+  }
 }
 
 /** Save a single pack body to a user-chosen file. The exported JSON

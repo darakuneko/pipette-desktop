@@ -555,6 +555,67 @@ function hubBodyToSaveRecordFields(
   }
 }
 
+/**
+ * i18n/theme upload responses only carry `{ id, title }` (`HubPostResponse`)
+ * — unlike Key Labels' upload/update responses, which return the full
+ * `HubKeyLabelItem` including `uploader_name`/`updated_at` directly.
+ * Neither `/api/i18n-packs` nor `/api/theme-packs` expose a single-item
+ * detail GET to fill that gap, so this re-uses the existing exact-name
+ * list filter (`?name=`) to find the just-created/updated item and read
+ * its `uploaderName`/`updatedAt` off the list response instead. Matches
+ * `fetchHubKeyLabelPayload`'s best-effort contract: on any failure (or if
+ * the id is not found in that name's results) both fields come back
+ * `undefined` and the caller's `setHubPostId` call simply leaves the
+ * previously-cached values alone.
+ *
+ * Upload is the only caller: a freshly created post needs `uploaderName`
+ * (the Author column has nothing else to key off yet). Update deliberately
+ * uses the narrower `enrichHubUpdatedAt` below instead of this — Update
+ * never changes `uploaderName`, so paying for the name-filtered list
+ * lookup (paginated, larger body, and — in the pathological case of two
+ * packs sharing a name — order-dependent) would buy nothing over the
+ * id-keyed timestamps endpoint. Both helpers cost the same +1 Hub
+ * request per action either way; the split is about which endpoint
+ * shape fits what the caller actually needs, not request count.
+ */
+async function enrichHubPackMeta(
+  listByName: (params: { name: string }) => Promise<{ items: { id: string; uploaderName?: string | null; updatedAt?: string }[] }>,
+  name: string,
+  postId: string,
+): Promise<{ uploaderName?: string; hubUpdatedAt?: string }> {
+  try {
+    const list = await listByName({ name })
+    const item = list.items.find((i) => i.id === postId)
+    return {
+      uploaderName: item?.uploaderName ?? undefined,
+      hubUpdatedAt: item?.updatedAt ?? undefined,
+    }
+  } catch {
+    return {}
+  }
+}
+
+/**
+ * Update-only counterpart to `enrichHubPackMeta`: since Update never
+ * touches `uploaderName` (see the i18n/theme Update handlers below), it
+ * only ever needs `hubUpdatedAt`. The id-keyed `/timestamps` endpoint is
+ * the better fit for that — no pagination, no name-collision ambiguity,
+ * and a much smaller response body than the full list lookup. Same
+ * best-effort contract as `enrichHubPackMeta`: any failure returns `{}`
+ * and the caller's `setHubPostId` leaves the cached `hubUpdatedAt` alone.
+ */
+async function enrichHubUpdatedAt(
+  fetchTimestamps: (ids: string[]) => Promise<{ items: { id: string; updated_at: string }[] }>,
+  postId: string,
+): Promise<{ hubUpdatedAt?: string }> {
+  try {
+    const res = await fetchTimestamps([postId])
+    return { hubUpdatedAt: res.items.find((i) => i.id === postId)?.updated_at }
+  } catch {
+    return {}
+  }
+}
+
 export function setupHubIpc(): void {
   secureHandle(
     IpcChannels.HUB_UPLOAD_POST,
@@ -954,7 +1015,12 @@ export function setupHubIpc(): void {
       try {
         if (!params || typeof params !== 'object') return { success: false, error: 'Invalid params' }
         const result = await withTokenRetry((jwt) => uploadI18nPostToHub(jwt, params.pack))
-        await setI18nPackHubPostId(params.entryId, result.id)
+        // Carry the response's uploader/updated_at into the local meta
+        // (via a name-matched list lookup — see enrichHubPackMeta) so
+        // the Author/Updated columns and the isMine gate populate
+        // immediately without waiting for a sync.
+        const enriched = await enrichHubPackMeta(fetchI18nPostList, params.pack.name, result.id)
+        await setI18nPackHubPostId(params.entryId, result.id, enriched.uploaderName, enriched.hubUpdatedAt)
         return { success: true, postId: result.id }
       } catch (err) {
         return { success: false, error: extractError(err, 'i18n upload failed') }
@@ -969,7 +1035,13 @@ export function setupHubIpc(): void {
         if (!params || typeof params !== 'object') return { success: false, error: 'Invalid params' }
         validatePostId(params.postId)
         const result = await withTokenRetry((jwt) => updateI18nPostOnHub(jwt, params.postId, params.pack))
-        await setI18nPackHubPostId(params.entryId, result.id)
+        // Refresh hubUpdatedAt only — mirrors Key Labels' Update, which
+        // deliberately leaves uploaderName alone (the owner performing
+        // an update is assumed unchanged). Uses the id-keyed timestamps
+        // endpoint rather than enrichHubPackMeta's name-filtered list
+        // lookup, since uploaderName isn't needed here.
+        const enriched = await enrichHubUpdatedAt(fetchI18nPackTimestamps, result.id)
+        await setI18nPackHubPostId(params.entryId, result.id, undefined, enriched.hubUpdatedAt)
         return { success: true, postId: result.id }
       } catch (err) {
         return { success: false, error: extractError(err, 'i18n update failed') }
@@ -1070,7 +1142,8 @@ export function setupHubIpc(): void {
       try {
         if (!params || typeof params !== 'object') return { success: false, error: 'Invalid params' }
         const result = await withTokenRetry((jwt) => uploadThemePostToHub(jwt, params.pack))
-        await setThemePackHubPostId(params.entryId, result.id)
+        const enriched = await enrichHubPackMeta(fetchThemePostList, params.pack.name, result.id)
+        await setThemePackHubPostId(params.entryId, result.id, enriched.uploaderName, enriched.hubUpdatedAt)
         return { success: true, postId: result.id }
       } catch (err) {
         return { success: false, error: extractError(err, 'theme upload failed') }
@@ -1085,7 +1158,10 @@ export function setupHubIpc(): void {
         if (!params || typeof params !== 'object') return { success: false, error: 'Invalid params' }
         validatePostId(params.postId)
         const result = await withTokenRetry((jwt) => updateThemePostOnHub(jwt, params.postId, params.pack))
-        await setThemePackHubPostId(params.entryId, result.id)
+        // hubUpdatedAt only, via the id-keyed timestamps endpoint —
+        // see the i18n Update handler's comment.
+        const enriched = await enrichHubUpdatedAt(fetchThemePackTimestamps, result.id)
+        await setThemePackHubPostId(params.entryId, result.id, undefined, enriched.hubUpdatedAt)
         return { success: true, postId: result.id }
       } catch (err) {
         return { success: false, error: extractError(err, 'theme update failed') }

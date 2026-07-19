@@ -270,6 +270,57 @@ describe('KeyLabelsModal', () => {
     await waitFor(() => expect(remove).toHaveBeenCalledWith('mine'))
   })
 
+  // --- Phase 3: Delete = Hub cascade (aligns Key Labels with Language/Theme Packs) ---
+
+  it('Delete on a hub-linked entry cascades to hubDelete before the local remove', async () => {
+    metas = [meta({ id: 'linked', name: 'Linked', uploaderName: 'me', hubPostId: 'hub-1' })]
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    fireEvent.click(screen.getByTestId('key-labels-delete-linked'))
+    const confirm = await screen.findByTestId('key-labels-confirm-delete-linked')
+    fireEvent.click(confirm)
+    await waitFor(() => expect(hubDelete).toHaveBeenCalledWith('linked'))
+    await waitFor(() => expect(remove).toHaveBeenCalledWith('linked'))
+  })
+
+  it('Delete on a local-only entry (no hubPostId) does not call hubDelete', async () => {
+    metas = [meta({ id: 'localonly', name: 'Local Only', uploaderName: 'me' })]
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    fireEvent.click(screen.getByTestId('key-labels-delete-localonly'))
+    const confirm = await screen.findByTestId('key-labels-confirm-delete-localonly')
+    fireEvent.click(confirm)
+    await waitFor(() => expect(remove).toHaveBeenCalledWith('localonly'))
+    expect(hubDelete).not.toHaveBeenCalled()
+  })
+
+  it('blocks the local delete and surfaces an error when the Hub delete rejects, leaving the entry intact', async () => {
+    metas = [meta({ id: 'linked2', name: 'Linked2', uploaderName: 'me', hubPostId: 'hub-2' })]
+    hubDelete.mockRejectedValueOnce(new Error('network error'))
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    fireEvent.click(screen.getByTestId('key-labels-delete-linked2'))
+    const confirm = await screen.findByTestId('key-labels-confirm-delete-linked2')
+    fireEvent.click(confirm)
+    await waitFor(() => expect(hubDelete).toHaveBeenCalledWith('linked2'))
+    await waitFor(() => expect(screen.getByTestId('key-labels-result-linked2').textContent).toBe('network error'))
+    // A failed cascade must not proceed to the local delete — otherwise
+    // the Hub post is orphaned under a name nobody can re-upload.
+    expect(remove).not.toHaveBeenCalled()
+    // Confirm state closed — retrying just means clicking Delete again.
+    expect(screen.queryByTestId('key-labels-confirm-delete-linked2')).toBeNull()
+    expect(screen.getByTestId('key-labels-delete-linked2')).toBeTruthy()
+  })
+
+  it('blocks the local delete when the Hub delete resolves with success: false', async () => {
+    metas = [meta({ id: 'linked3', name: 'Linked3', uploaderName: 'me', hubPostId: 'hub-3' })]
+    hubDelete.mockResolvedValueOnce({ success: false, error: 'Hub rejected the delete' })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    fireEvent.click(screen.getByTestId('key-labels-delete-linked3'))
+    const confirm = await screen.findByTestId('key-labels-confirm-delete-linked3')
+    fireEvent.click(confirm)
+    await waitFor(() => expect(hubDelete).toHaveBeenCalledWith('linked3'))
+    await waitFor(() => expect(screen.getByTestId('key-labels-result-linked3').textContent).toBe('Hub rejected the delete'))
+    expect(remove).not.toHaveBeenCalled()
+  })
+
   it('Export action triggers exportEntry for the row', async () => {
     metas = [meta({ id: 'mine', name: 'Mine', uploaderName: 'me' })]
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
@@ -331,5 +382,27 @@ describe('KeyLabelsModal', () => {
     await waitFor(() => {
       expect(screen.getByText('network error')).toBeTruthy()
     })
+  })
+
+  // --- Phase 2: Name sort (drag reorder itself predates this phase) -------
+
+  it('the Name sort button sorts installed labels ascending on first click, including QWERTY', async () => {
+    metas = [
+      meta({ id: 'qwerty', name: 'QWERTY', uploaderName: 'pipette' }),
+      meta({ id: 'z', name: 'Zeta' }),
+      meta({ id: 'a', name: 'Alpha' }),
+    ]
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    fireEvent.click(screen.getByTestId('key-labels-sort-button'))
+    await waitFor(() => expect(reorder).toHaveBeenCalledWith(['a', 'qwerty', 'z']))
+  })
+
+  it('a second click on the Name sort button reverses the order', async () => {
+    metas = [meta({ id: 'z', name: 'Zeta' }), meta({ id: 'a', name: 'Alpha' })]
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    fireEvent.click(screen.getByTestId('key-labels-sort-button'))
+    await waitFor(() => expect(reorder).toHaveBeenCalledWith(['a', 'z']))
+    fireEvent.click(screen.getByTestId('key-labels-sort-button'))
+    await waitFor(() => expect(reorder).toHaveBeenLastCalledWith(['z', 'a']))
   })
 })

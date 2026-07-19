@@ -419,6 +419,7 @@ export function SettingsToolsTab({
       open={themePacksOpen}
       onClose={() => setThemePacksOpen(false)}
       onThemeChange={onThemeChange}
+      currentDisplayName={hubDisplayName}
       hubCanWrite={hubCanWrite}
     />
     </>

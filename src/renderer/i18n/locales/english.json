@@ -1,5 +1,5 @@
 {
-  "version": "0.1.21",
+  "version": "0.1.22",
   "name": "English",
   "common": {
     "save": "Save",
@@ -35,7 +35,8 @@
     "done": "Done",
     "findOnHub": "Find on Hub",
     "searchPlaceholder": "Search Pipette Hub (type 2 or more characters)...",
-    "findOnHubHint": "Browse uploaded files on <hub>Pipette Hub</hub>."
+    "findOnHubHint": "Browse uploaded files on <hub>Pipette Hub</hub>.",
+    "sortByName": "Name"
   },
   "app": {
     "title": "Pipette",

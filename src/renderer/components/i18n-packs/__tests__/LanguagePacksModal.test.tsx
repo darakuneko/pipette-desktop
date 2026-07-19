@@ -34,6 +34,7 @@ const removeFn = vi.fn()
 const importFromDialog = vi.fn()
 const applyImport = vi.fn()
 const setEnabled = vi.fn()
+const reorderFn = vi.fn()
 
 let storeMetas: Array<{
   id: string
@@ -62,6 +63,7 @@ vi.mock('../../../hooks/useI18nPackStore', () => ({
     importFromDialog,
     applyImport,
     setEnabled,
+    reorder: reorderFn,
     packRemovedNotice: null,
     dismissPackRemovedNotice: vi.fn(),
   }),
@@ -165,6 +167,7 @@ function meta(over: Partial<{
   enabled: boolean
   hubPostId: string
   hubUpdatedAt: string
+  uploaderName: string
   deletedAt: string
   matchedBaseVersion: string
   coverage: { totalKeys: number; coveredKeys: number }
@@ -179,6 +182,7 @@ function meta(over: Partial<{
     updatedAt: 'now',
     ...(over.hubPostId ? { hubPostId: over.hubPostId } : {}),
     ...(over.hubUpdatedAt ? { hubUpdatedAt: over.hubUpdatedAt } : {}),
+    ...(over.uploaderName ? { uploaderName: over.uploaderName } : {}),
     ...(over.deletedAt ? { deletedAt: over.deletedAt } : {}),
     ...(over.matchedBaseVersion !== undefined ? { matchedBaseVersion: over.matchedBaseVersion } : {}),
     ...(over.coverage ? { coverage: over.coverage } : {}),
@@ -197,6 +201,7 @@ describe('LanguagePacksModal', () => {
     mockLanguage = 'builtin:en'
     removeFn.mockResolvedValue({ success: true })
     renameFn.mockResolvedValue({ success: true })
+    reorderFn.mockResolvedValue({ success: true })
     importFromDialog.mockResolvedValue({ canceled: true })
     applyImport.mockResolvedValue({ success: true, meta: meta() })
     vialAPI.hubGetOrigin.mockResolvedValue('https://hub.example.com')
@@ -415,6 +420,22 @@ describe('LanguagePacksModal', () => {
     await waitFor(() => expect(removeFn).toHaveBeenCalledWith('hd1'))
   })
 
+  it('blocks the local delete and surfaces an error when hubDeleteI18nPost fails, leaving the entry intact', async () => {
+    storeMetas = [meta({ id: 'hd2', name: 'Hub Delete Fail', hubPostId: 'hp-hd2' })]
+    vialAPI.hubDeleteI18nPost.mockResolvedValueOnce({ success: false, error: 'Hub rejected the delete' })
+    render(
+      <LanguagePacksModal open onClose={vi.fn()} />,
+    )
+    fireEvent.click(screen.getByTestId('language-packs-delete-hd2'))
+    fireEvent.click(screen.getByTestId('language-packs-confirm-delete-hd2'))
+    await waitFor(() => expect(vialAPI.hubDeleteI18nPost).toHaveBeenCalledWith('hp-hd2', 'hd2'))
+    await waitFor(() => expect(screen.getByTestId('language-packs-result-hd2').textContent).toBe('Hub rejected the delete'))
+    // A failed cascade must not proceed to the local delete — otherwise
+    // the Hub post is orphaned under a name nobody can re-upload.
+    expect(removeFn).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('language-packs-confirm-delete-hd2')).toBeNull()
+  })
+
   it('export action triggers i18nPackExport for imported rows', async () => {
     storeMetas = [meta({ id: 'p1', name: 'Pack' })]
     render(
@@ -451,23 +472,33 @@ describe('LanguagePacksModal', () => {
   })
 
   it('update action calls pushPackToHub', async () => {
-    storeMetas = [meta({ id: 'up1', name: 'Update Me', hubPostId: 'hp-up1' })]
+    storeMetas = [meta({ id: 'up1', name: 'Update Me', hubPostId: 'hp-up1', uploaderName: 'me' })]
     render(
-      <LanguagePacksModal open onClose={vi.fn()} hubCanWrite />,
+      <LanguagePacksModal open onClose={vi.fn()} hubCanWrite currentDisplayName="me" />,
     )
     fireEvent.click(screen.getByTestId('language-packs-update-up1'))
     await waitFor(() => expect(vialAPI.i18nPackGet).toHaveBeenCalledWith('up1'))
     await waitFor(() => expect(vialAPI.hubUpdateI18nPost).toHaveBeenCalled())
   })
 
-  it('update and remove buttons are visible when hubCanWrite is true for hub-linked row', () => {
-    storeMetas = [meta({ id: 'w1', name: 'Write Hub', hubPostId: 'hp-w1' })]
+  it('update and remove buttons are visible when hubCanWrite is true and the row is mine (isMine gate, Phase 3)', () => {
+    storeMetas = [meta({ id: 'w1', name: 'Write Hub', hubPostId: 'hp-w1', uploaderName: 'me' })]
     render(
-      <LanguagePacksModal open onClose={vi.fn()} hubCanWrite />,
+      <LanguagePacksModal open onClose={vi.fn()} hubCanWrite currentDisplayName="me" />,
     )
     expect(screen.getByTestId('language-packs-update-w1')).toBeTruthy()
     expect(screen.getByTestId('language-packs-remove-w1')).toBeTruthy()
     expect(screen.queryByTestId('language-packs-sync-w1')).toBeNull()
+  })
+
+  it('shows Sync instead of Update/Remove for a hub-linked row uploaded by someone else, even with hubCanWrite (isMine gate, Phase 3)', () => {
+    storeMetas = [meta({ id: 'foreign1', name: 'Foreign Pack', hubPostId: 'hp-foreign1', uploaderName: 'someone-else' })]
+    render(
+      <LanguagePacksModal open onClose={vi.fn()} hubCanWrite currentDisplayName="me" />,
+    )
+    expect(screen.queryByTestId('language-packs-update-foreign1')).toBeNull()
+    expect(screen.queryByTestId('language-packs-remove-foreign1')).toBeNull()
+    expect(screen.getByTestId('language-packs-sync-foreign1')).toBeTruthy()
   })
 
   it('update and remove buttons are hidden when hubCanWrite is false for hub-linked row', () => {
@@ -490,10 +521,31 @@ describe('LanguagePacksModal', () => {
     await waitFor(() => expect(applyImport).toHaveBeenCalled())
   })
 
-  it('remove action asks for confirmation', () => {
-    storeMetas = [meta({ id: 'rm1', name: 'Remove Me', hubPostId: 'hp-rm1' })]
+  it('sync refreshes uploaderName/hubUpdatedAt via a name-matched Hub list lookup (Phase 3)', async () => {
+    storeMetas = [meta({ id: 'sy2', name: 'Sync Me', hubPostId: 'hp-sy2' })]
+    vialAPI.hubDownloadI18nPost.mockResolvedValueOnce({
+      success: true,
+      data: { pack: { name: 'Sync Me', version: '0.1.0', common: {} } },
+    })
+    vialAPI.hubListI18nPosts.mockResolvedValueOnce({
+      success: true,
+      data: { items: [{ id: 'hp-sy2', name: 'Sync Me', version: '0.1.0', uploaderName: 'alice', updatedAt: '2026-05-02T00:00:00.000Z' }] },
+    })
     render(
-      <LanguagePacksModal open onClose={vi.fn()} hubCanWrite />,
+      <LanguagePacksModal open onClose={vi.fn()} hubCanWrite={false} />,
+    )
+    fireEvent.click(screen.getByTestId('language-packs-sync-sy2'))
+    await waitFor(() => expect(vialAPI.hubListI18nPosts).toHaveBeenCalledWith({ name: 'Sync Me' }))
+    await waitFor(() => expect(applyImport).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ uploaderName: 'alice', hubUpdatedAt: '2026-05-02T00:00:00.000Z' }),
+    ))
+  })
+
+  it('remove action asks for confirmation', () => {
+    storeMetas = [meta({ id: 'rm1', name: 'Remove Me', hubPostId: 'hp-rm1', uploaderName: 'me' })]
+    render(
+      <LanguagePacksModal open onClose={vi.fn()} hubCanWrite currentDisplayName="me" />,
     )
     fireEvent.click(screen.getByTestId('language-packs-remove-rm1'))
     expect(screen.getByTestId('language-packs-confirm-remove-rm1')).toBeTruthy()
@@ -501,9 +553,9 @@ describe('LanguagePacksModal', () => {
   })
 
   it('confirmed remove calls hubDeleteI18nPost', async () => {
-    storeMetas = [meta({ id: 'rm2', name: 'Remove Me', hubPostId: 'hp-rm2' })]
+    storeMetas = [meta({ id: 'rm2', name: 'Remove Me', hubPostId: 'hp-rm2', uploaderName: 'me' })]
     render(
-      <LanguagePacksModal open onClose={vi.fn()} hubCanWrite />,
+      <LanguagePacksModal open onClose={vi.fn()} hubCanWrite currentDisplayName="me" />,
     )
     fireEvent.click(screen.getByTestId('language-packs-remove-rm2'))
     fireEvent.click(screen.getByTestId('language-packs-confirm-remove-rm2'))
@@ -511,9 +563,9 @@ describe('LanguagePacksModal', () => {
   })
 
   it('cancel remove hides the confirmation', () => {
-    storeMetas = [meta({ id: 'rm3', name: 'Remove Me', hubPostId: 'hp-rm3' })]
+    storeMetas = [meta({ id: 'rm3', name: 'Remove Me', hubPostId: 'hp-rm3', uploaderName: 'me' })]
     render(
-      <LanguagePacksModal open onClose={vi.fn()} hubCanWrite />,
+      <LanguagePacksModal open onClose={vi.fn()} hubCanWrite currentDisplayName="me" />,
     )
     fireEvent.click(screen.getByTestId('language-packs-remove-rm3'))
     fireEvent.click(screen.getByTestId('language-packs-cancel-remove-rm3'))
@@ -726,6 +778,35 @@ describe('LanguagePacksModal', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
+  it('Author column shows the cached uploaderName for a hub-linked pack', () => {
+    storeMetas = [meta({ id: 'auth1', name: 'Authored', hubPostId: 'hp-auth1', uploaderName: 'alice' })]
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+    expect(screen.getByTestId('language-packs-author-auth1').textContent).toBe('alice')
+  })
+
+  it('Author column is blank for a never-uploaded local pack (no uploaderName)', () => {
+    storeMetas = [meta({ id: 'local1', name: 'Local Only' })]
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+    expect(screen.getByTestId('language-packs-author-local1').textContent).toBe('')
+  })
+
+  it('Author column shows "pipette" for built-in English', () => {
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+    expect(screen.getByTestId('language-packs-author-builtin:en').textContent).toBe('pipette')
+  })
+
+  it('Updated column shows the Hub-side hubUpdatedAt, not the local updatedAt', () => {
+    storeMetas = [meta({ id: 'hu1', name: 'Hub Updated', hubPostId: 'hp-hu1', hubUpdatedAt: '2026-05-01T00:00:00.000Z' })]
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+    expect(screen.getByTestId('language-packs-timestamp-hu1').textContent).toBe('2026-05-01T00:00:00.000Z')
+  })
+
+  it('Updated column is blank for a pack with no hubUpdatedAt (legacy row or never uploaded)', () => {
+    storeMetas = [meta({ id: 'legacy1', name: 'Legacy' })]
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+    expect(screen.getByTestId('language-packs-timestamp-legacy1').textContent).toBe('')
+  })
+
   it('shows version badge for complete packs', () => {
     storeMetas = [meta({ id: 'c1', name: 'Complete', matchedBaseVersion: '0.1.0' })]
     render(
@@ -797,5 +878,52 @@ describe('LanguagePacksModal', () => {
     rerender(<LanguagePacksModal open={false} onClose={onClose} />)
     rerender(<LanguagePacksModal open onClose={onClose} />)
     expect(screen.queryByTestId('language-packs-error')).toBeNull()
+  })
+
+  // --- Phase 2: drag reorder + Name sort -----------------------------------
+
+  it('renders a drag grip for imported packs but not for built-in English', () => {
+    storeMetas = [meta({ id: 'p1', name: 'Japanese' })]
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+    expect(screen.getByTestId('language-packs-grip-p1')).toBeTruthy()
+    expect(screen.queryByTestId('language-packs-grip-builtin:en')).toBeNull()
+  })
+
+  it('built-in English is not draggable', () => {
+    storeMetas = [meta({ id: 'p1', name: 'Japanese' })]
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+    const builtinRow = screen.getByTestId('language-packs-row-builtin:en')
+    expect(builtinRow.getAttribute('draggable')).toBeNull()
+    const packRow = screen.getByTestId('language-packs-row-p1')
+    expect(packRow.getAttribute('draggable')).toBe('true')
+  })
+
+  it('dragging a pack row persists the new order via store.reorder, excluding built-in English', async () => {
+    storeMetas = [meta({ id: 'p1', name: 'Alpha' }), meta({ id: 'p2', name: 'Beta' })]
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+    const rowA = screen.getByTestId('language-packs-row-p1')
+    const rowB = screen.getByTestId('language-packs-row-p2')
+
+    fireEvent.dragStart(rowA, { dataTransfer: { effectAllowed: '', setData: vi.fn() } })
+    fireEvent.dragOver(rowB)
+    fireEvent.dragEnd(rowA)
+
+    await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['p2', 'p1']))
+  })
+
+  it('the Name sort button sorts imported packs ascending on first click, built-ins excluded', async () => {
+    storeMetas = [meta({ id: 'z', name: 'Zeta' }), meta({ id: 'a', name: 'Alpha' })]
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('language-packs-sort-button'))
+    await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['a', 'z']))
+  })
+
+  it('a second click on the Name sort button reverses the order', async () => {
+    storeMetas = [meta({ id: 'z', name: 'Zeta' }), meta({ id: 'a', name: 'Alpha' })]
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('language-packs-sort-button'))
+    await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['a', 'z']))
+    fireEvent.click(screen.getByTestId('language-packs-sort-button'))
+    await waitFor(() => expect(reorderFn).toHaveBeenLastCalledWith(['z', 'a']))
   })
 })

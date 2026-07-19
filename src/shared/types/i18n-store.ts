@@ -26,6 +26,14 @@ export interface I18nPackMeta {
    *  `POST /api/i18n-packs/timestamps`. Absent for never-uploaded
    *  local entries and legacy rows that predate this field. */
   hubUpdatedAt?: string
+  /** Hub-side `uploader_name` cached for the Author column and the
+   *  `isMine` check (Update/Remove only shown when this equals the
+   *  signed-in user's display name). Refreshed on upload/download/sync
+   *  (mirrors `KeyLabelMeta.uploaderName`); intentionally *not*
+   *  refreshed on Update, matching Key Labels' assumption that the
+   *  owner does not change between updates. Absent for never-uploaded
+   *  local entries and legacy rows that predate this field. */
+  uploaderName?: string
   /** ISO 8601 timestamp of the first import. */
   savedAt: string
   /** ISO 8601 timestamp of the most recent enable / rename / overwrite. */
@@ -119,6 +127,13 @@ export interface I18nPackImportDialogResult {
 export interface I18nPackImportApplyOptions {
   enabled?: boolean
   hubPostId?: string
+  /** Hub-side `updated_at` for the pack just downloaded/synced. Renderer
+   *  fetches this via a name-matched Hub list lookup (the download body
+   *  itself carries no metadata) and forwards it here so the Updated
+   *  column reflects Hub's own timestamp. */
+  hubUpdatedAt?: string
+  /** Hub-side `uploader_name`, forwarded the same way as `hubUpdatedAt`. */
+  uploaderName?: string
   appVersionAtImport?: string
   id?: string
   /** English version the renderer measured the pack against. Set
