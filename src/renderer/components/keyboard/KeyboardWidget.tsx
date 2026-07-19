@@ -125,6 +125,12 @@ interface Props {
    *  still win. Used by the Finger Assignment modal to paint each key
    *  with its finger colour. */
   keyColors?: Map<string, string>
+  /** Active Key Label pack's per-key legend override — threaded straight
+   *  to `KeyWidget` for masked (composite) keys' inner label (issue
+   *  #295). The outer/plain label for non-masked keys is already
+   *  remapped upstream in the `keycodes` map itself (`use-layer-
+   *  keycodes.ts`), so this is only ever consulted for the inner path. */
+  remapLabel?: (qmkId: string) => string
   onKeyClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onKeyDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
   onEncoderClick?: (key: KleKey, direction: number, maskClicked: boolean) => void
@@ -156,6 +162,7 @@ function KeyboardWidgetInner({
   heatmapMaxHold = 0,
   labelOverrides,
   keyColors,
+  remapLabel,
   onKeyClick,
   onKeyDoubleClick,
   onEncoderClick,
@@ -258,6 +265,7 @@ function KeyboardWidgetInner({
             effectiveTheme={effectiveTheme}
             customFill={keyColors?.get(pos) ?? null}
             labelOverride={labelOverrides?.get(pos)}
+            remapLabel={remapLabel}
             onClick={readOnly ? undefined : onKeyClick}
             onDoubleClick={readOnly ? undefined : onKeyDoubleClick}
             onHover={onKeyHover}
@@ -314,6 +322,7 @@ function KeyboardWidgetInner({
             effectiveTheme={effectiveTheme}
             customFill={keyColors?.get(pos) ?? null}
             labelOverride={labelOverrides?.get(pos)}
+            remapLabel={remapLabel}
             onClick={readOnly ? undefined : onKeyClick}
             onDoubleClick={readOnly ? undefined : onKeyDoubleClick}
             onHover={onKeyHover}

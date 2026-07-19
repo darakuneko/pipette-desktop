@@ -1631,6 +1631,8 @@ In the example above, `"KC_GRAVE": "KC_LALT"` makes the editor render whichever 
 | `compositeLabels` | No | Same shape as `map`, but for composite keycodes (e.g. `LSFT(KC_2)`, `LT(0,KC_A)`, `MT(MOD_LCTL,KC_ESC)`). Used to override the inner / outer text of the composite key. Omit the field if you don't need any composite override |
 | `keymapApplicable` | No | Optional boolean. Opt-in marker meaning this label set is a pure QWERTY-keycode permutation (e.g. Colemak, Dvorak) and can also be used to bulk-rewrite the actual keymap, not just the display legends — see **Applying a Key Label to the Keymap** below. Omit or set `false` for label sets that aren't a clean 1:1 character swap (multi-line shift/altgr legends, keycode-passthrough values, non-Latin layouts, …) |
 
+You don't need a `compositeLabels` entry just to have a composite key's inner (tap/base) symbol reflect your pack: a plain `map` entry for the inner basic keycode already applies there too — `"KC_8": "(\n8"` shows `(` over `8` both for a plain `KC_8` key **and** for the tap/base half of `LSFT(KC_8)`, `LT1(KC_8)`, etc. `compositeLabels` is only needed when the composite as a whole should show something different from that automatic inner substitution (e.g. a custom combined legend, or overriding just the outer/modifier half).
+
 A value can also be a plain QMK keycode id — the editor passes it through `keycodeLabel()` so something like `"LALT(KC_L)": "KC_LALT"` resolves to the canonical "LAlt" label without you having to spell the legend out by hand. The same shortcut works in `map`, so `"KC_8": "KC_LALT"` would render the cap as "LAlt".
 
 The label string controls how the legend is rendered. Lines are separated by `\n` and the layout is chosen by part count:

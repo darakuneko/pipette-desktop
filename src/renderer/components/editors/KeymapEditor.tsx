@@ -516,6 +516,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               keycodes={typingTestKeycodes}
               encoderKeycodes={typingTestEncoderKeycodes}
               remappedKeys={typingTestRemapped}
+              remapLabel={remapLabel}
               layoutOptions={effectiveLayoutOptions}
               scale={scaleProp}
               keys={layout.keys}
@@ -574,7 +575,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                 pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
                 remappedKeys={remappedKeys} flash={flash} multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
                 layoutOptions={effectiveLayoutOptions} scale={scaleProp}
-                labelOverrides={viewMatrixLabelOverrides} keyColors={viewMatrixDuplicateKeyColors}
+                labelOverrides={viewMatrixLabelOverrides} keyColors={viewMatrixDuplicateKeyColors} remapLabel={remapLabel}
                 layerLabel={viewMatrixMode.active ? undefined : layerLabel(currentLayer)} layerLabelTestId="layer-label"
                 onKeyClick={viewMatrixMode.active ? handleViewMatrixKeyClick : handleKeyClick}
                 onKeyDoubleClick={viewMatrixMode.active ? undefined : handleKeyDoubleClick}

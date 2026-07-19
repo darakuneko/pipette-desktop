@@ -7,6 +7,7 @@ import {
   findOuterKeycode,
   findInnerKeycode,
 } from '../../../shared/keycodes/keycodes'
+import { getRemapDisplayLabel } from '../keycodes/KeycodeGrid'
 import type { KleKey } from '../../../shared/kle/types'
 import {
   KEY_UNIT,
@@ -89,6 +90,17 @@ interface Props {
    *  get pretty multi-part labels. `masked` also dictates which render
    *  branch (plain vs. tap/hold-split) the widget takes. */
   labelOverride?: { outer: string; inner: string; masked: boolean }
+  /** Active Key Label pack's per-key legend override — same source
+   *  `KeycodeGrid`/`BasicKeyboardView` already receive (see
+   *  `useDevicePrefs`/`useKeyboardLayout`). A masked (composite) key's
+   *  inner (tap/base) label falls back to `remap()`'d automatically
+   *  upstream via `use-layer-keycodes.ts`'s `keycodes` map for the
+   *  composite string as a whole — but a pack practically only ever
+   *  remaps the plain inner basic keycode, not the full composite
+   *  string, so this is threaded here to resolve that specifically
+   *  (issue #295). Ignored for `labelOverride`/`maskKeycode` callers,
+   *  which already bypass keycode-table lookups entirely. */
+  remapLabel?: (qmkId: string) => string
   onClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
   onHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
@@ -122,6 +134,7 @@ function KeyWidgetInner({
   heatmapInnerFill,
   customFill,
   labelOverride,
+  remapLabel,
   onClick,
   onDoubleClick,
   onHover,
@@ -184,23 +197,39 @@ function KeyWidgetInner({
 
   // Inner rect fill + matching label colour for masked keys. The inner
   // rect's fill picks up hover/heatmap just like the outer, so its
-  // label runs through the same invert decision.
+  // label runs through the same invert decision. Remap tint mirrors the
+  // outer label's priority (invert wins over remap) — `remapped` is set
+  // upstream (`use-layer-keycodes.ts`) whenever either the composite
+  // string itself or its inner basic keycode is affected by the active
+  // pack, so this key's tap symbol getting the blue tint here stays
+  // consistent with the picker's row-level tinting (#294).
   const innerFillColor =
     hoverMaskParts && hoveredPart === 'inner'
       ? KEY_HOVER_COLOR
       : heatmapInnerFill ?? KEY_MASK_RECT_COLOR
-  const innerLabelColor = shouldInvertText(innerFillColor, effectiveTheme)
-    ? KEY_INVERTED_TEXT_COLOR
-    : KEY_TEXT_COLOR
+  const innerInvertText = shouldInvertText(innerFillColor, effectiveTheme)
+  let innerLabelColor = KEY_TEXT_COLOR
+  if (innerInvertText) innerLabelColor = KEY_INVERTED_TEXT_COLOR
+  else if (remapped) innerLabelColor = KEY_REMAP_COLOR
 
   // Label
   const outerLabel = labelOverride?.outer ?? keycodeLabel(keycode)
+  // A pack practically only ever remaps the plain inner basic keycode,
+  // not the full composite string (that would take an explicit
+  // compositeLabels override, which already wins upstream by replacing
+  // `keycode` itself with non-mask-shaped text before this component
+  // ever sees it — see `use-layer-keycodes.ts`). So this only needs to
+  // resolve the inner basic keycode's own remap; `getRemapDisplayLabel`
+  // (same helper the picker/grid already use, not re-derived) falls
+  // back to the current unremapped behaviour whenever `remapLabel` is
+  // absent or the inner keycode isn't affected by the pack (issue #295).
+  const innerQmkId = findInnerKeycode(keycode)?.qmkId ?? ''
   const innerLabel = maskKeycode
     ? keycodeLabel(maskKeycode)
     : labelOverride
       ? labelOverride.inner
       : masked
-        ? keycodeLabel(findInnerKeycode(keycode)?.qmkId ?? '')
+        ? getRemapDisplayLabel(innerQmkId, remapLabel) ?? keycodeLabel(innerQmkId)
         : ''
 
   // Text rendering: split by \n. Layout is part-count driven —
@@ -484,19 +513,48 @@ function KeyWidgetInner({
             )
           })()}
           {/* Inner (base) label - inverts when the inner rect fill is
-              light enough to wash the default label out. */}
-          <text
-            x={x + w / 2}
-            y={innerY + innerH / 2}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill={innerLabelColor}
-            fontSize={fontSize * 0.85}
-            fontFamily="sans-serif"
-            style={{ pointerEvents: 'none' }}
-          >
-            {innerLabel}
-          </text>
+              light enough to wash the default label out. A shift+base
+              pair ("(\n8") stacks vertically — shifted char on top,
+              base below — matching Vial's convention (and `SplitKey`'s
+              own base/shifted split elsewhere in the picker) instead of
+              cramming both onto one line ("issue #296"). A single part
+              renders centered as before; parts beyond 2 are dropped —
+              same "excess parts have no slot" convention the outer
+              label's own 2-part branch above already documents. */}
+          {(() => {
+            const innerParts = innerLabel.split('\n').slice(0, 2)
+            if (innerParts.length === 2) {
+              return innerParts.map((part, i) => (
+                <text
+                  key={i}
+                  x={x + w / 2}
+                  y={innerY + innerH * (i === 0 ? 0.3 : 0.7)}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fill={innerLabelColor}
+                  fontSize={fontSize * 0.7}
+                  fontFamily="sans-serif"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {part}
+                </text>
+              ))
+            }
+            return (
+              <text
+                x={x + w / 2}
+                y={innerY + innerH / 2}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fill={innerLabelColor}
+                fontSize={fontSize * 0.85}
+                fontFamily="sans-serif"
+                style={{ pointerEvents: 'none' }}
+              >
+                {innerParts[0] ?? ''}
+              </text>
+            )
+          })()}
         </>
       ) : labelLines.length === 4 ? (
         // 2 × 2 quadrant layout. Empty strings leave the slot blank so
