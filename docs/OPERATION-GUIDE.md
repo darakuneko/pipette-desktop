@@ -1696,7 +1696,7 @@ English is built-in; every other language is imported from a local `.json` file 
 
 ![Language Packs — Installed](screenshots/language-packs-installed.png)
 
-Lists every language pack on this device. Each row has a **check circle** on the left — click it to switch the active UI language immediately. The active row is highlighted with an accent border. A drag grip sits at the left edge of every imported-pack row; built-in English is pinned at the top of the list and is not draggable (it ships with the app rather than living in the pack store).
+Lists every language pack on this device. Each row has a **check circle** on the left — click it to switch the active UI language immediately. The active row is highlighted with an accent border. A drag grip sits at the left edge of every row, including built-in English — it can be dragged and reordered like any imported pack (its translations still ship with the app; only its position in the list lives in the pack store).
 
 Each row shows:
 
@@ -1709,7 +1709,7 @@ Each row shows:
 
 A **pulsing green dot** next to the Sync button indicates that the Hub-side post is newer than the local copy (freshness check runs once per 5 minutes when the modal is open).
 
-Drag the grip handle to reorder imported packs — the order syncs across devices and is reflected anywhere the pack list is used. A **Name** button at the left of the toolbar (opposite Import) sorts the imported packs alphabetically instead — click once for ascending, click again for descending — leaving built-in English pinned at the top.
+Drag the grip handle to reorder the list, including built-in English — the order syncs across devices and is reflected anywhere the pack list is used. A **Name** button at the left of the toolbar (opposite Import) sorts every row alphabetically instead, English included — click once for ascending, click again for descending.
 
 The Name button's three states (ascending/descending triangle, or a plain "Name" once you drag a row by hand) and what happens on import — new packs are inserted at their correct alphabetical position while a triangle is showing, an overwrite of an existing pack keeps its position, and a brief "Imported {name}" / "Updated {name}" message appears next to the Name button with the row scrolled into view — work exactly as described for Key Labels (§6.2); downloading from Hub follows the same placement rule.
 

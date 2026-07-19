@@ -62,6 +62,20 @@ export interface I18nPackIndex {
   metas: I18nPackMeta[]
 }
 
+/**
+ * Stable id for the built-in English entry so drag/sort order and rename
+ * history survive sync — mirrors `key-label-store.ts`'s
+ * `QWERTY_ENTRY_ID` precedent, promoted from a renderer-synthesized row
+ * to a real store entry (`ensureBuiltinEnglishEntry` in
+ * `main/i18n-pack-store.ts`) so English can participate in drag reorder
+ * and Name sort like any imported pack. Its on-disk pack body is a
+ * trivial placeholder (`{ name, version }`, no translation keys) —
+ * unlike an imported pack, the renderer always renders English from the
+ * bundled `src/renderer/i18n/locales/english.json`, never from this
+ * entry's body, so the placeholder is never actually read.
+ */
+export const BUILTIN_ENGLISH_PACK_ID = 'builtin-english' as const
+
 /** On-disk representation of a single pack file. The translations live
  * alongside `name` / `version` at the top level — these
  * three keys are stripped before passing the body to i18next. */

@@ -1039,14 +1039,20 @@ describe('LanguagePacksModal', () => {
 
   // --- Phase 2: drag reorder + Name sort -----------------------------------
 
-  it('renders a drag grip for imported packs but not for built-in English', () => {
+  // These two only exercise the pre-load fallback: `storeMetas` here has
+  // no real `builtin-english` entry (the mocked store never runs
+  // `ensureBuiltinEnglishEntry`), so the modal falls back to a
+  // synthesized, non-draggable row — same as the brief window before a
+  // real store's metas have arrived. See the "real builtin-english
+  // entry" block below for the now-orderable case.
+  it('pre-load fallback: renders a drag grip for imported packs but not for the not-yet-loaded built-in English row', () => {
     storeMetas = [meta({ id: 'p1', name: 'Japanese' })]
     render(<LanguagePacksModal open onClose={vi.fn()} />)
     expect(screen.getByTestId('language-packs-grip-p1')).toBeTruthy()
     expect(screen.queryByTestId('language-packs-grip-builtin:en')).toBeNull()
   })
 
-  it('built-in English is not draggable', () => {
+  it('pre-load fallback: built-in English is not draggable before ensureBuiltinEnglishEntry has materialized it', () => {
     storeMetas = [meta({ id: 'p1', name: 'Japanese' })]
     render(<LanguagePacksModal open onClose={vi.fn()} />)
     const builtinRow = screen.getByTestId('language-packs-row-builtin:en')
@@ -1055,7 +1061,7 @@ describe('LanguagePacksModal', () => {
     expect(packRow.getAttribute('draggable')).toBe('true')
   })
 
-  it('dragging a pack row persists the new order via store.reorder, excluding built-in English', async () => {
+  it('dragging a pack row persists the new order via store.reorder', async () => {
     storeMetas = [meta({ id: 'p1', name: 'Alpha' }), meta({ id: 'p2', name: 'Beta' })]
     render(<LanguagePacksModal open onClose={vi.fn()} />)
     const rowA = screen.getByTestId('language-packs-row-p1')
@@ -1068,7 +1074,7 @@ describe('LanguagePacksModal', () => {
     await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['p2', 'p1']))
   })
 
-  it('the Name sort button sorts imported packs ascending on first click, built-ins excluded', async () => {
+  it('the Name sort button sorts imported packs ascending on first click', async () => {
     storeMetas = [meta({ id: 'z', name: 'Zeta' }), meta({ id: 'a', name: 'Alpha' })]
     render(<LanguagePacksModal open onClose={vi.fn()} />)
     fireEvent.click(screen.getByTestId('language-packs-sort-button'))
@@ -1082,5 +1088,64 @@ describe('LanguagePacksModal', () => {
     await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['a', 'z']))
     fireEvent.click(screen.getByTestId('language-packs-sort-button'))
     await waitFor(() => expect(reorderFn).toHaveBeenLastCalledWith(['z', 'a']))
+  })
+
+  // --- Built-in English as a real, orderable store entry -------------------
+  // (ensureBuiltinEnglishEntry materializes id 'builtin-english'; see
+  // main/i18n-pack-store.ts. These mock it directly in `storeMetas` the
+  // way the real main-side store always does once ensured.)
+
+  it('shows a drag grip and is draggable once built-in English is a real store entry', () => {
+    storeMetas = [meta({ id: 'builtin-english', name: 'English' }), meta({ id: 'p1', name: 'Japanese' })]
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+    expect(screen.getByTestId('language-packs-grip-builtin:en')).toBeTruthy()
+    const builtinRow = screen.getByTestId('language-packs-row-builtin:en')
+    expect(builtinRow.getAttribute('draggable')).toBe('true')
+  })
+
+  it('dragging built-in English persists its new position via store.reorder using its real store id', async () => {
+    storeMetas = [
+      meta({ id: 'builtin-english', name: 'English' }),
+      meta({ id: 'p1', name: 'Japanese' }),
+      meta({ id: 'p2', name: 'French' }),
+    ]
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+    const builtinRow = screen.getByTestId('language-packs-row-builtin:en')
+    const rowP2 = screen.getByTestId('language-packs-row-p2')
+
+    fireEvent.dragStart(builtinRow, { dataTransfer: { effectAllowed: '', setData: vi.fn() } })
+    fireEvent.dragOver(rowP2)
+    fireEvent.dragEnd(builtinRow)
+
+    await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['p1', 'p2', 'builtin-english']))
+  })
+
+  it('the Name sort button sorts built-in English alphabetically alongside imported packs', async () => {
+    storeMetas = [
+      meta({ id: 'z', name: 'Zeta' }),
+      meta({ id: 'builtin-english', name: 'English' }),
+      meta({ id: 'a', name: 'Alpha' }),
+    ]
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('language-packs-sort-button'))
+    // Alpha < English < Zeta
+    await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['a', 'builtin-english', 'z']))
+  })
+
+  it('a new import is inserted at its sorted position relative to built-in English', async () => {
+    // Already ascending (Alpha, English, Zeta) — detected 'asc' on open.
+    storeMetas = [
+      meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' }),
+      meta({ id: 'builtin-english', name: 'English' }),
+      meta({ id: 'z', name: 'Zeta', matchedBaseVersion: '0.1.0' }),
+    ]
+    const raw = { name: 'Charlie', version: '0.1.0', common: {} }
+    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'c', name: 'Charlie' }) })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    // Alpha < Charlie < English < Zeta
+    await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['a', 'c', 'builtin-english', 'z']))
   })
 })

@@ -7,7 +7,10 @@
 //                  installed locally are tagged "Installed" rather than
 //                  exposing Download (avoids duplicate-name conflicts).
 // Mirrors KeyLabelsModal so users can predict behaviour across the
-// two manage modals.
+// two manage modals — including built-in English's real-store-entry
+// treatment, which mirrors Key Labels' built-in QWERTY: both drag
+// reorder and Name sort include it like any imported entry (see
+// `ensureBuiltinEnglishEntry` in main/i18n-pack-store.ts).
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -19,6 +22,7 @@ import { validatePack } from '../../../shared/i18n/validate'
 import { computeCoverage } from '../../../shared/i18n/coverage'
 import { BASE_REVISION, ENGLISH_PACK_BODY } from '../../i18n/coverage-cache'
 import english from '../../i18n/locales/english.json'
+import { BUILTIN_ENGLISH_PACK_ID } from '../../../shared/types/i18n-store'
 import type { HubI18nPostListItem } from '../../../shared/types/hub'
 import { MissingKeysModal } from './MissingKeysModal'
 import { downloadJson } from '../../utils/download-json'
@@ -82,7 +86,13 @@ export function LanguagePacksModal({
 
   useEffect(() => {
     if (!open) return
-    const stale = store.metas.filter((m) => !m.deletedAt && m.matchedBaseVersion !== BASE_REVISION)
+    // Built-in English is excluded: it never carries a `matchedBaseVersion`
+    // (that field only ever gets stamped on an *imported* pack whose
+    // coverage was measured against the baseline), so it would
+    // otherwise always show up "stale" here and cost a wasted
+    // i18nPackGet + coverage compute every time the modal opens, for a
+    // recheck that can never actually apply to it.
+    const stale = store.metas.filter((m) => !m.deletedAt && m.id !== BUILTIN_ENGLISH_PACK_ID && m.matchedBaseVersion !== BASE_REVISION)
     if (stale.length === 0) return
     let cancelled = false
     void (async () => {
@@ -109,22 +119,39 @@ export function LanguagePacksModal({
 
   const activeLanguageId = appConfig.config.language ?? 'builtin:en'
 
+  // Built-in English's row shape is always this — hardcoded rather than
+  // read from the store meta, since the meta's own name/version/body is
+  // just a trivial placeholder (see `ensureBuiltinEnglishEntry`'s doc in
+  // main/i18n-pack-store.ts). Only `packId` varies: the real store id
+  // once `ensureBuiltinEnglishEntry` has run (normal case), or `null`
+  // during the brief pre-load window before `store.metas` has arrived —
+  // `null` also intentionally covers older/mocked stores in tests that
+  // don't include the entry, so this row's appearance never depends on
+  // the caller remembering to add it.
+  const builtinRow = useCallback((packId: string | null): InstalledRow => ({
+    reactKey: BUILTIN_INTERNAL_ID,
+    internalId: BUILTIN_INTERNAL_ID,
+    packId,
+    hubPostId: null,
+    name: builtinName,
+    version: builtinVersion,
+    updatedAt: __BUILD_TIME__,
+    uploaderName: 'pipette',
+    isBuiltin: true,
+    active: activeLanguageId === BUILTIN_INTERNAL_ID,
+    isComplete: true,
+  }), [builtinName, builtinVersion, activeLanguageId])
+
   const installedRows: InstalledRow[] = useMemo(() => {
-    const rows: InstalledRow[] = [{
-      reactKey: BUILTIN_INTERNAL_ID,
-      internalId: BUILTIN_INTERNAL_ID,
-      packId: null,
-      hubPostId: null,
-      name: builtinName,
-      version: builtinVersion,
-      updatedAt: __BUILD_TIME__,
-      uploaderName: 'pipette',
-      isBuiltin: true,
-      active: activeLanguageId === BUILTIN_INTERNAL_ID,
-      isComplete: true,
-    }]
+    const rows: InstalledRow[] = []
+    let sawBuiltin = false
     for (const meta of store.metas) {
       if (meta.deletedAt) continue
+      if (meta.id === BUILTIN_ENGLISH_PACK_ID) {
+        sawBuiltin = true
+        rows.push(builtinRow(meta.id))
+        continue
+      }
       const internalId = `pack:${meta.id}`
       // A pack is "complete" only when its matchedBaseVersion equals
       // the *current* English baseline. A stale match for an older
@@ -154,8 +181,9 @@ export function LanguagePacksModal({
         meta,
       })
     }
+    if (!sawBuiltin) rows.unshift(builtinRow(null))
     return rows
-  }, [store.metas, builtinName, builtinVersion, activeLanguageId])
+  }, [store.metas, activeLanguageId, builtinRow])
 
   const handleSelectLanguage = useCallback((internalId: string) => {
     if (internalId === activeLanguageId) return
@@ -163,10 +191,12 @@ export function LanguagePacksModal({
     void i18n.changeLanguage(internalId)
   }, [appConfig, activeLanguageId])
 
-  // Drag reorder + Name sort apply only to real store entries — the
-  // synthesized built-in English row is not a store entry and is
-  // never draggable, sortable, or part of the persisted order.
-  const draggableRows = useMemo(() => installedRows.filter((row) => !row.isBuiltin), [installedRows])
+  // Drag reorder + Name sort apply to every row with a real store id —
+  // now including built-in English once `ensureBuiltinEnglishEntry` has
+  // materialised it (see `installedRows` above). Only the transient
+  // pre-load fallback row (`packId === null`) is excluded, since there
+  // is no real id yet to persist an order against.
+  const draggableRows = useMemo(() => installedRows.filter((row) => row.packId !== null), [installedRows])
   const dragReorderIds = useMemo(() => draggableRows.map((row) => row.packId as string), [draggableRows])
   const drag = useDragReorder({
     ids: dragReorderIds,
@@ -174,9 +204,12 @@ export function LanguagePacksModal({
     onError: (error) => setActionError(error ?? t('i18n.errorGeneric')),
   })
   const displayedRows = useMemo<InstalledRow[]>(() => {
-    const builtin = installedRows.find((row) => row.isBuiltin)
     const ordered = applyDragOrder(draggableRows, drag.dragOrder, (row) => row.packId as string)
-    return builtin ? [builtin, ...ordered] : ordered
+    // Only the pre-load fallback (no real builtin id yet) needs
+    // prepending by hand — the real entry already sits at its correct
+    // position within `draggableRows`/`drag.dragOrder`.
+    const fallbackBuiltin = installedRows.find((row) => row.isBuiltin && row.packId === null)
+    return fallbackBuiltin ? [fallbackBuiltin, ...ordered] : ordered
   }, [installedRows, draggableRows, drag.dragOrder])
 
   const nameSortEntries = useMemo(
@@ -205,10 +238,15 @@ export function LanguagePacksModal({
   // hubPostId-first + name-fallback (unified with Theme Packs / Key
   // Labels — see installed-detection.ts). Built-in English counts as
   // an "installed" name too, so a Hub pack literally named "English"
-  // shows Installed instead of a misleading Download.
+  // shows Installed instead of a misleading Download. Sourced from
+  // `builtinName` (the authoritative bundled name), not the store
+  // meta's own (placeholder) `name` field — the real builtin-english
+  // meta is explicitly excluded below to avoid listing it twice.
   const installedEntries = useMemo<InstalledDetectionEntry[]>(() => [
     { name: builtinName },
-    ...store.metas.filter((m) => !m.deletedAt).map((m) => ({ hubPostId: m.hubPostId, name: m.name })),
+    ...store.metas
+      .filter((m) => !m.deletedAt && m.id !== BUILTIN_ENGLISH_PACK_ID)
+      .map((m) => ({ hubPostId: m.hubPostId, name: m.name })),
   ], [store.metas, builtinName])
 
   const { search, setSearch, hubResults, hubSearched, hubSearching, runSearch } = useHubSearchList<HubI18nPostListItem>({
