@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { KeyboardWidget } from '../keyboard/KeyboardWidget'
-import type { KeyFlashState } from '../keyboard/KeyboardWidget'
+import type { KeyFlashState } from '../keyboard/key-flash'
 import type { KleKey } from '../../../shared/kle/types'
 import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 
@@ -25,8 +25,8 @@ export interface KeyboardPaneProps {
   pressedKeys?: Set<string>
   everPressedKeys?: Set<string>
   remappedKeys: Set<string>
-  /** Post-rewrite flash state after a bulk keymap rewrite — see
-   *  `KeyboardWidget`'s `flash`. */
+  /** Flash state after a bulk keymap rewrite or a successful undo/redo —
+   *  see `KeyboardWidget`'s `flash`. */
   flash?: KeyFlashState
   multiSelectedKeys?: Set<string>
   layoutOptions: Map<number, number>

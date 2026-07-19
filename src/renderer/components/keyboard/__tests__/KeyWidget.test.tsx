@@ -300,7 +300,7 @@ describe('KeyWidget', () => {
           </svg>,
         )
         const overlay = container.querySelector('[data-testid="flash-overlay"]')! as SVGElement
-        expect(overlay.style.animationDelay).toBe('-1300ms')
+        expect(overlay.style.animationDelay).toBe('-700ms')
       } finally {
         vi.useRealTimers()
       }

@@ -11,3 +11,9 @@
 export function posKey(row: number, col: number): string {
   return `${row},${col}`
 }
+
+/** Format `(idx, dir)` as the project-wide `"idx,dir"` encoder position key
+ *  (the encoder analogue of `posKey`). */
+export function encoderPosKey(idx: number, dir: number): string {
+  return `${idx},${dir}`
+}

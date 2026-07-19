@@ -30,12 +30,7 @@ import {
 import { shouldInvertText } from './fill-luminance'
 import type { EffectiveTheme } from '../../hooks/useEffectiveTheme'
 import { computeUnionPath } from '../../../shared/kle/rect-union'
-
-/** Must match the `key-flash` keyframe's total animation length in
- *  style.css — used to clamp the computed `animation-delay` so a stale
- *  `flashStartedAt` (e.g. a very late render) never produces a delay
- *  larger than the animation itself. */
-const FLASH_ANIMATION_DURATION_MS = 1300
+import { flashAnimationDelayMs } from './key-flash'
 
 interface Props {
   kleKey: KleKey
@@ -47,7 +42,7 @@ interface Props {
   pressed?: boolean
   highlighted?: boolean
   /** True for one beat right after a bulk keymap rewrite (Key Label
-   *  "apply to keymap") lands on this position. Renders an extra overlay
+   *  "apply to keymap") or an undo/redo lands on this position. Renders an extra overlay
    *  (same fill as `selected`, `KEY_SELECTED_COLOR`) on top of the key's
    *  normal fill so the user can see what changed, then fades via the
    *  declarative `key-flash` CSS keyframe (see `style.css`) once the
@@ -329,7 +324,7 @@ function KeyWidgetInner({
   // this same flash, instead of restarting its own fade from full
   // opacity.
   const flashElapsedMs = flashed && flashStartedAt !== undefined
-    ? Math.min(FLASH_ANIMATION_DURATION_MS, Math.max(0, Date.now() - flashStartedAt))
+    ? flashAnimationDelayMs(flashStartedAt)
     : 0
 
   return (

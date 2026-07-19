@@ -382,15 +382,16 @@ label:has(> input[type="radio"]:not(:disabled)) {
 }
 
 /* Keymap Editor: post-rewrite key flash overlay (KeyWidget's `flashed`,
-   `.key-flash-overlay`). Holds full opacity for ~1s so the just-rewritten
-   keys register, then eases out over the last ~300ms — expressed as
-   percentage stops over the 1300ms total so KeymapEditor's clear timer
-   (same duration) never unmounts the overlay mid-fade. */
+   `.key-flash-overlay`). Holds full opacity for 500ms so the just-rewritten
+   keys register, then eases out over the last 200ms — expressed as
+   percentage stops over the 700ms total (`KEY_FLASH_DURATION_MS` in
+   `key-flash.ts`) so KeymapEditor's clear timer (same duration) never
+   unmounts the overlay mid-fade. */
 @keyframes key-flash {
-  0%, 77% { opacity: 1; }
+  0%, 71.4% { opacity: 1; }
   100% { opacity: 0; }
 }
 
 .key-flash-overlay {
-  animation: key-flash 1300ms ease-out forwards;
+  animation: key-flash 700ms ease-out forwards;
 }

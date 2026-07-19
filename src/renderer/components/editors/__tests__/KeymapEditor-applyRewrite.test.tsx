@@ -23,6 +23,33 @@ vi.mock('../../keyboard/KeyboardWidget', () => ({
   },
 }))
 
+// Captures the toolbar's `onUndo`/`onRedo` (== `handleUndo`/`handleRedo`
+// from useKeymapSelectionHandlers) directly so the undo/redo-failure tests
+// below can `await` the call themselves. The real buttons wire these up as
+// `onClick={() => void onUndo()}` — fire-and-forget — so triggering a
+// rejection through a click or the Ctrl+Z window shortcut would leave an
+// unhandled rejection behind once the mocked device write rejects. Calling
+// the captured function directly and awaiting it here keeps the rejection
+// inside this test's own control flow instead.
+let capturedOnUndo: (() => Promise<void>) | undefined
+let capturedOnRedo: (() => Promise<void>) | undefined
+let capturedCanUndo = false
+let capturedCanRedo = false
+
+vi.mock('../keymap-editor-toolbar', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../keymap-editor-toolbar')>()
+  return {
+    ...actual,
+    KeymapToolbar: (props: { canUndo: boolean; canRedo: boolean; onUndo: () => Promise<void>; onRedo: () => Promise<void> }) => {
+      capturedOnUndo = props.onUndo
+      capturedOnRedo = props.onRedo
+      capturedCanUndo = props.canUndo
+      capturedCanRedo = props.canRedo
+      return <div data-testid="keymap-toolbar" />
+    },
+  }
+})
+
 vi.mock('../../keycodes/TabbedKeycodes', () => ({
   TabbedKeycodes: () => <div data-testid="tabbed-keycodes">TabbedKeycodes</div>,
 }))
@@ -110,9 +137,13 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
     onSetKeysBulk.mockResolvedValue(undefined)
     onSetEncoder.mockResolvedValue(undefined)
     capturedWidgetProps = []
+    capturedOnUndo = undefined
+    capturedOnRedo = undefined
+    capturedCanUndo = false
+    capturedCanRedo = false
   })
 
-  interface CapturedFlash { keys: Set<string>; generation: number; startedAt: number }
+  interface CapturedFlash { keys: Set<string>; encoders: Set<string>; generation: number; startedAt: number }
 
   function lastFlash(): CapturedFlash | undefined {
     const widget = capturedWidgetProps[capturedWidgetProps.length - 1]
@@ -429,7 +460,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       vi.useRealTimers()
     })
 
-    it('flashes the rewritten key positions on the current layer, then clears after the key-flash keyframe duration (1300ms)', async () => {
+    it('flashes the rewritten key AND encoder positions on the current layer, then clears after the key-flash keyframe duration (700ms)', async () => {
       vi.useFakeTimers()
       const ref = createRef<KeymapEditorHandle>()
       render(<KeymapEditor ref={ref} {...defaultProps} />)
@@ -443,15 +474,30 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
         await ref.current!.applyKeymapRewrite(table)
       })
 
-      // [0,0,0] was rewritten — flash carries its "row,col" position.
-      // The encoder rewrite at [0,0,0] is NOT reflected here: flash isn't
-      // threaded to EncoderWidget (see KeyboardWidget's `KeyFlashState` doc).
+      // [0,0] key and the idx=0/dir=0 encoder were both rewritten.
       expect(lastFlashKeys()).toEqual(new Set(['0,0']))
+      expect(lastFlash()?.encoders).toEqual(new Set(['0,0']))
 
-      // Matches style.css's `key-flash` keyframe (1300ms total) exactly,
+      // Matches style.css's `key-flash` keyframe (700ms total) exactly,
       // so the overlay is never unmounted mid-fade.
-      act(() => { vi.advanceTimersByTime(1300) })
+      act(() => { vi.advanceTimersByTime(700) })
       expect(lastFlash()).toBeUndefined()
+    })
+
+    it('flashes only the encoder position (keys empty) when the rewrite touches an encoder alone', async () => {
+      vi.useFakeTimers()
+      const ref = createRef<KeymapEditorHandle>()
+      render(<KeymapEditor ref={ref} {...defaultProps} />)
+
+      await act(async () => {
+        await ref.current!.applyKeymapRewrite(new Map([['KC_7', 'KC_70']]))
+      })
+
+      // An encoder-only rewrite must still open a flash window — `keys`
+      // staying empty must not suppress it.
+      expect(lastFlash()).not.toBeUndefined()
+      expect(lastFlashKeys()).toEqual(new Set())
+      expect(lastFlash()?.encoders).toEqual(new Set(['0,0']))
     })
 
     it('does not populate flash when the rewrite matches nothing', async () => {
@@ -508,7 +554,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       expect(lastFlash()).toBeUndefined()
 
       rerender(<KeymapEditor ref={ref} {...defaultProps} layers={2} currentLayer={0} />)
-      expect(lastFlash()).toEqual({ keys: new Set(['0,0']), generation, startedAt })
+      expect(lastFlash()).toEqual({ keys: new Set(['0,0']), encoders: new Set(), generation, startedAt })
     })
 
     it('bumps the generation and refreshes startedAt on a second successful apply', async () => {
@@ -527,7 +573,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       // Let the first flash's timer fire, then advance the clock and
       // apply again — a fresh apply event must get its own generation
       // and its own wall-clock start time, not reuse the first one's.
-      act(() => { vi.advanceTimersByTime(1300) })
+      act(() => { vi.advanceTimersByTime(700) })
       expect(lastFlash()).toBeUndefined()
 
       // The mocked `onSetKey` doesn't mutate the `keymap` prop (this test
@@ -542,6 +588,199 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       const second = lastFlash()!
       expect(second.generation).toBe(2)
       expect(second.startedAt).toBe(1_010_000)
+    })
+  })
+
+  // --- Undo/redo flash (onHistoryApplied → triggerFlash, useKeyFlash) ---
+  // Reuses this file's rewrite harness to build a one-entry history batch
+  // (via `applyKeymapRewrite`) rather than driving the keycode picker —
+  // `KeymapEditor.undo.test.tsx`'s `KeyboardWidget` mock doesn't capture
+  // `flash`, so these live here alongside the rest of the flash coverage.
+
+  describe('undo/redo flash (onHistoryApplied → triggerFlash)', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    // Shared setup for every test below: mount the editor, apply a
+    // single-key rewrite (KC_5 at [0,0] -> KC_50), and let its own
+    // post-apply flash elapse — each test then starts from a clean flash
+    // state with exactly one entry sitting on the undo stack. Requires
+    // `vi.useFakeTimers()` to already be active (each test sets its own,
+    // since one needs `vi.setSystemTime` first).
+    async function renderWithRewrittenKey() {
+      const ref = createRef<KeymapEditorHandle>()
+      render(<KeymapEditor ref={ref} {...defaultProps} />)
+      await act(async () => {
+        await ref.current!.applyKeymapRewrite(new Map([['KC_5', 'KC_50']]))
+      })
+      act(() => { vi.advanceTimersByTime(700) })
+      return ref
+    }
+
+    // Same shape as `renderWithRewrittenKey` above but rewrites only the
+    // idx=0/dir=0 encoder (KC_7 at defaultProps' `encoderLayout`), leaving
+    // no key entry on the pushed batch — proving an encoder-only undo/redo
+    // still opens a flash window (`keys` stays empty, `encoders` doesn't).
+    async function renderWithRewrittenEncoder() {
+      const ref = createRef<KeymapEditorHandle>()
+      render(<KeymapEditor ref={ref} {...defaultProps} />)
+      await act(async () => {
+        await ref.current!.applyKeymapRewrite(new Map([['KC_7', 'KC_70']]))
+      })
+      act(() => { vi.advanceTimersByTime(700) })
+      return ref
+    }
+
+    it('encoder-only undo flashes the encoder position (keys stays empty), then clears after 700ms', async () => {
+      vi.useFakeTimers()
+      await renderWithRewrittenEncoder()
+      expect(lastFlash()).toBeUndefined()
+
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+
+      expect(lastFlashKeys()).toEqual(new Set())
+      expect(lastFlash()?.encoders).toEqual(new Set(['0,0']))
+
+      act(() => { vi.advanceTimersByTime(700) })
+      expect(lastFlash()).toBeUndefined()
+    })
+
+    it('encoder-only redo flashes the encoder position likewise', async () => {
+      vi.useFakeTimers()
+      await renderWithRewrittenEncoder()
+
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+      act(() => { vi.advanceTimersByTime(700) })
+      expect(lastFlash()).toBeUndefined()
+
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true }) })
+
+      expect(lastFlashKeys()).toEqual(new Set())
+      expect(lastFlash()?.encoders).toEqual(new Set(['0,0']))
+
+      act(() => { vi.advanceTimersByTime(700) })
+      expect(lastFlash()).toBeUndefined()
+    })
+
+    it('undo flashes the affected key position(s) on the current layer, then clears after 700ms', async () => {
+      vi.useFakeTimers()
+      await renderWithRewrittenKey()
+      expect(lastFlash()).toBeUndefined()
+
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+
+      expect(lastFlashKeys()).toEqual(new Set(['0,0']))
+
+      act(() => { vi.advanceTimersByTime(700) })
+      expect(lastFlash()).toBeUndefined()
+    })
+
+    it('redo flashes the affected key position(s) likewise', async () => {
+      vi.useFakeTimers()
+      await renderWithRewrittenKey()
+
+      // Undo, then let its own flash window elapse before checking redo.
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+      act(() => { vi.advanceTimersByTime(700) })
+      expect(lastFlash()).toBeUndefined()
+
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true }) })
+
+      expect(lastFlashKeys()).toEqual(new Set(['0,0']))
+
+      act(() => { vi.advanceTimersByTime(700) })
+      expect(lastFlash()).toBeUndefined()
+    })
+
+    it('a failed undo does not flash and does not advance history', async () => {
+      vi.useFakeTimers()
+      await renderWithRewrittenKey()
+      expect(lastFlash()).toBeUndefined()
+      expect(capturedCanUndo).toBe(true)
+      expect(capturedCanRedo).toBe(false)
+
+      // The batch's single key entry is applied via `onSetKeysBulk` inside
+      // `applyHistoryEntry` — reject just that one call.
+      onSetKeysBulk.mockRejectedValueOnce(new Error('device write failed'))
+
+      // Call the toolbar's captured `onUndo` (== `handleUndo`) directly and
+      // await it ourselves — the real button/keyboard-shortcut paths both
+      // fire it as `void onUndo()`, which would otherwise leave this
+      // rejection as an unhandled promise once the mock rejects.
+      await act(async () => {
+        await expect(capturedOnUndo!()).rejects.toThrow('device write failed')
+      })
+
+      // The write failed before the history commit — nothing to flash.
+      expect(lastFlash()).toBeUndefined()
+      // History wasn't advanced: still undo-able, still nothing to redo.
+      expect(capturedCanUndo).toBe(true)
+      expect(capturedCanRedo).toBe(false)
+
+      // A retried undo (this time the write succeeds) still reverts the
+      // ORIGINAL entry — proving the failed attempt didn't silently pop it.
+      onSetKeysBulk.mockClear()
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+      expect(onSetKeysBulk).toHaveBeenCalledWith([{ layer: 0, row: 0, col: 0, keycode: 5 }])
+      expect(lastFlashKeys()).toEqual(new Set(['0,0']))
+    })
+
+    it('a failed redo does not flash and does not advance history', async () => {
+      vi.useFakeTimers()
+      await renderWithRewrittenKey()
+
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+      act(() => { vi.advanceTimersByTime(700) })
+      expect(lastFlash()).toBeUndefined()
+      expect(capturedCanUndo).toBe(false)
+      expect(capturedCanRedo).toBe(true)
+
+      onSetKeysBulk.mockRejectedValueOnce(new Error('device write failed'))
+
+      await act(async () => {
+        await expect(capturedOnRedo!()).rejects.toThrow('device write failed')
+      })
+
+      expect(lastFlash()).toBeUndefined()
+      // History wasn't advanced: still redo-able, still nothing to undo.
+      expect(capturedCanUndo).toBe(false)
+      expect(capturedCanRedo).toBe(true)
+
+      onSetKeysBulk.mockClear()
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true }) })
+      expect(onSetKeysBulk).toHaveBeenCalledWith([{ layer: 0, row: 0, col: 0, keycode: 50 }])
+      expect(lastFlashKeys()).toEqual(new Set(['0,0']))
+    })
+
+    it('undo followed quickly by redo within the flash window bumps the generation instead of the stale timer wiping the new flash', async () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(2_000_000)
+      await renderWithRewrittenKey()
+      expect(lastFlash()).toBeUndefined()
+
+      // Undo starts a flash window at T0.
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+      const afterUndo = lastFlash()!
+      expect(afterUndo.keys).toEqual(new Set(['0,0']))
+
+      // Redo fires 200ms later — well within the undo's 700ms window.
+      act(() => { vi.advanceTimersByTime(200) })
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true }) })
+      const afterRedo = lastFlash()!
+      expect(afterRedo.generation).toBeGreaterThan(afterUndo.generation)
+      expect(afterRedo.keys).toEqual(new Set(['0,0']))
+
+      // 500ms later lands at T0+700 — exactly when the undo's OWN timer
+      // would have cleared the flash had the redo's trigger not cancelled
+      // it. The redo's flash must still be showing, unchanged.
+      act(() => { vi.advanceTimersByTime(500) })
+      expect(lastFlash()).toEqual(afterRedo)
+
+      // The redo's own 700ms window (started at T0+200) ends at T0+900 —
+      // 200ms further from here.
+      act(() => { vi.advanceTimersByTime(200) })
+      expect(lastFlash()).toBeUndefined()
     })
   })
 })
