@@ -32,6 +32,7 @@ import { useHubSearchList } from '../pack-modal/useHubSearchList'
 import { useDragReorder } from '../pack-modal/useDragReorder'
 import { applyDragOrder } from '../pack-modal/drag-order'
 import { useNameSort } from '../pack-modal/useNameSort'
+import { useImportPlacement } from '../pack-modal/useImportPlacement'
 import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
 import { fetchHubPackMeta } from '../pack-modal/fetch-hub-pack-meta'
 import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
@@ -178,13 +179,28 @@ export function LanguagePacksModal({
     return builtin ? [builtin, ...ordered] : ordered
   }, [installedRows, draggableRows, drag.dragOrder])
 
+  const nameSortEntries = useMemo(
+    () => draggableRows.map((row) => ({ id: row.packId as string, name: row.name })),
+    [draggableRows],
+  )
   const nameSort = useNameSort({
+    open,
+    ready: !store.loading,
+    entries: nameSortEntries,
     reorder: store.reorder,
     onError: (error) => setActionError(error ?? t('i18n.errorGeneric')),
   })
   const handleSortByName = useCallback((): void => {
     void nameSort.toggle(draggableRows.map((row) => ({ id: row.packId as string, name: row.name })))
   }, [nameSort, draggableRows])
+  const placement = useImportPlacement({
+    open,
+    entries: nameSortEntries,
+    direction: nameSort.direction,
+    reorder: store.reorder,
+    rowTestidPrefix: 'language-packs',
+    onReorderError: (error) => setActionError(error ?? t('i18n.errorGeneric')),
+  })
 
   // hubPostId-first + name-fallback (unified with Theme Packs / Key
   // Labels — see installed-detection.ts). Built-in English counts as
@@ -511,6 +527,7 @@ export function LanguagePacksModal({
       setActionError(t('i18n.preview.dangerousWarning'))
       return
     }
+    const beforeIds = placement.snapshotBeforeIds()
     const coverage = computeCoverage(raw, ENGLISH_PACK_BODY)
     const result = await store.applyImport(raw, {
       enabled: true,
@@ -525,6 +542,8 @@ export function LanguagePacksModal({
     }
     setLastResult({ id: result.meta.id, kind: 'success', message: t('common.saved') })
     handleSelectLanguage(`pack:${result.meta.id}`)
+    await placement.place({ id: result.meta.id, name: result.meta.name }, { beforeIds })
+
     if (extra.hubPostId) {
       // Same Author/Updated enrichment as handleSync — the download
       // body itself has no metadata, so look the post back up by name.
@@ -546,7 +565,7 @@ export function LanguagePacksModal({
         setActionError(upd.error ?? t('hub.updateFailed'))
       }
     }
-  }, [store, t, pushPackToHub, handleSelectLanguage])
+  }, [store, t, pushPackToHub, handleSelectLanguage, placement])
 
   const handleImportFile = useCallback(async (): Promise<void> => {
     setActionError(null)
@@ -591,6 +610,7 @@ export function LanguagePacksModal({
         searchButton: 'language-packs-search-button',
         importButton: 'language-packs-import-button',
         errorBanner: 'language-packs-error',
+        importFeedback: 'language-packs-import-feedback',
       }}
       activeTab={activeTab}
       onTabChange={setActiveTab}
@@ -613,6 +633,7 @@ export function LanguagePacksModal({
           testid="language-packs-sort-button"
         />
       )}
+      importFeedback={placement.feedback}
       actionError={actionError}
       afterContent={(
         <MissingKeysModal
@@ -653,7 +674,12 @@ export function LanguagePacksModal({
               onNotSetKeys={handleNotSetKeys}
               onDragStart={() => drag.onDragStart(row.packId as string)}
               onDragOver={() => drag.onDragOver(row.packId as string)}
-              onDragEnd={() => { void drag.onDragEnd() }}
+              onDragEnd={() => {
+                void (async () => {
+                  const moved = await drag.onDragEnd()
+                  if (moved) nameSort.markFree()
+                })()
+              }}
             />
           ))}
         </div>

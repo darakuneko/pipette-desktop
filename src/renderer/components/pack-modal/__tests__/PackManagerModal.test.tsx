@@ -22,6 +22,7 @@ const TESTIDS: PackManagerModalProps['testids'] = {
   searchButton: 'test-search-button',
   importButton: 'test-import-button',
   errorBanner: 'test-error',
+  importFeedback: 'test-import-feedback',
 }
 
 function renderShell(overrides: Partial<PackManagerModalProps> = {}) {
@@ -44,6 +45,7 @@ function renderShell(overrides: Partial<PackManagerModalProps> = {}) {
     importLabel: 'Import',
     onImport: vi.fn(),
     sortButton: <button data-testid="test-sort-button">Name</button>,
+    importFeedback: null,
     actionError: null,
     children: <div data-testid="body-content">body</div>,
     ...overrides,
@@ -131,6 +133,16 @@ describe('PackManagerModal', () => {
     renderShell({ actionError: 'oops', testids: testidsNoBanner })
     expect(screen.queryByTestId('test-error')).toBeNull()
     expect(screen.getByText('oops')).toBeTruthy()
+  })
+
+  it('shows the import feedback text next to the Name sort button when set', () => {
+    renderShell({ importFeedback: 'Imported Foo' })
+    expect(screen.getByTestId('test-import-feedback').textContent).toBe('Imported Foo')
+  })
+
+  it('renders no import feedback element when importFeedback is null', () => {
+    renderShell({ importFeedback: null })
+    expect(screen.queryByTestId('test-import-feedback')).toBeNull()
   })
 
   it('renders afterContent as a portal sibling (Language Packs MissingKeysModal slot)', () => {

@@ -1580,6 +1580,8 @@ QWERTY is built-in; every other label set (Dvorak, Colemak, French, Brazilian, �
 
 Lists every label set already on this device. Each row shows the label name, the uploader name (when the entry came from Hub), the Hub-side last-update time (`YYYY-MM-DD HH:mm`, mirrors what the Hub website displays), an `.json` export shortcut, and a Delete button. Drag the grip handle on the left to reorder rows — the order is propagated to the Settings dropdown and to every Key Labels picker in the editor. A **Name** button at the left of the toolbar (opposite Import) sorts the list alphabetically instead — click once for ascending, click again for descending; each click applies the new order immediately, the same way a manual drag would, so drag, dropdowns, and sync all stay consistent.
 
+The Name button has three states: ascending (▲) and descending (▼) each show a triangle for as long as that sort still matches the list's order, and a plain "Name" with no triangle once the order no longer matches either sort — which happens the moment you drag a row by hand. There is no button click that returns to a triangled state; only another click (re-applying asc/desc from scratch) or reopening the modal does. While a triangle is showing, importing a `.json` file or downloading a label from Hub inserts the new entry at its correct alphabetical position instead of adding it to the bottom of the list; re-importing over an existing label (same name) is treated as an update and keeps that label's current position. Either way, a brief "Imported {name}" / "Updated {name}" message appears next to the Name button for a few seconds, and the affected row scrolls into view.
+
 A second line under each row exposes the Hub actions:
 
 - **Open**: open the entry's Hub page in the system browser (only when the row is linked to a Hub post)
@@ -1709,6 +1711,8 @@ A **pulsing green dot** next to the Sync button indicates that the Hub-side post
 
 Drag the grip handle to reorder imported packs — the order syncs across devices and is reflected anywhere the pack list is used. A **Name** button at the left of the toolbar (opposite Import) sorts the imported packs alphabetically instead — click once for ascending, click again for descending — leaving built-in English pinned at the top.
 
+The Name button's three states (ascending/descending triangle, or a plain "Name" once you drag a row by hand) and what happens on import — new packs are inserted at their correct alphabetical position while a triangle is showing, an overwrite of an existing pack keeps its position, and a brief "Imported {name}" / "Updated {name}" message appears next to the Name button with the row scrolled into view — work exactly as described for Key Labels (§6.2); downloading from Hub follows the same placement rule.
+
 The **Import** button in the toolbar opens a file dialog to import a `.json` language pack. Re-importing a pack with the same `name` overwrites the existing entry.
 
 **Find on Hub tab**
@@ -1771,6 +1775,8 @@ Each row shows:
 A **pulsing green dot** next to the Sync button indicates that the Hub-side post is newer than the local copy (freshness check runs once per 5 minutes when the modal is open).
 
 Drag the grip handle on the left of each row to reorder theme packs — the order syncs across devices. A **Name** button at the left of the toolbar (opposite Import) sorts the list alphabetically instead — click once for ascending, click again for descending.
+
+The Name button's three states (ascending/descending triangle, or a plain "Name" once you drag a row by hand) and what happens on import — new packs are inserted at their correct alphabetical position while a triangle is showing, an overwrite of an existing pack keeps its position, and a brief "Imported {name}" / "Updated {name}" message appears next to the Name button with the row scrolled into view — work exactly as described for Key Labels (§6.2); downloading from Hub follows the same placement rule.
 
 The **Import** button in the toolbar opens a file dialog to import a `.json` theme pack. Re-importing a pack with the same `name` overwrites the existing entry.
 

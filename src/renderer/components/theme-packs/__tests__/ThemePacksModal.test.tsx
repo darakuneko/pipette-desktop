@@ -355,6 +355,109 @@ describe('ThemePacksModal', () => {
     await waitFor(() => expect(vialAPI.hubUpdateThemePost).toHaveBeenCalled())
   })
 
+  // --- Import/download placement + toolbar feedback + auto-scroll ---
+
+  it('asc state: a new import is inserted at its sorted position via reorder', async () => {
+    // Already ascending — detected as 'asc' on open, no click needed.
+    metas = [meta({ id: 'a', name: 'Alpha' }), meta({ id: 'z', name: 'Zeta' })]
+    const raw = { name: 'Mu', version: '1', colorScheme: 'dark', colors: {} }
+    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'm', name: 'Mu' }) })
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('theme-packs-import-button'))
+    await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['a', 'm', 'z']))
+  })
+
+  it('desc state: a new import is inserted at its sorted position via reorder', async () => {
+    // Already descending — detected as 'desc' on open, no click needed.
+    metas = [meta({ id: 'z', name: 'Zeta' }), meta({ id: 'a', name: 'Alpha' })]
+    const raw = { name: 'Mu', version: '1', colorScheme: 'dark', colors: {} }
+    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'm', name: 'Mu' }) })
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('theme-packs-import-button'))
+    await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['z', 'm', 'a']))
+  })
+
+  it('free state (shuffled list): a new import does not call reorder — the store appends it at the bottom on its own', async () => {
+    metas = [meta({ id: 'm', name: 'Mu' }), meta({ id: 'z', name: 'Zeta' }), meta({ id: 'a', name: 'Alpha' })]
+    const raw = { name: 'Beta', version: '1', colorScheme: 'dark', colors: {} }
+    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'b', name: 'Beta' }) })
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('theme-packs-import-button'))
+    await waitFor(() => expect(applyImport).toHaveBeenCalled())
+    expect(reorderFn).not.toHaveBeenCalled()
+  })
+
+  it('overwrite (same id already installed) keeps its position — no reorder call, "Updated" feedback', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha' }), meta({ id: 'z', name: 'Zeta' })]
+    const raw = { name: 'Alpha', version: '1', colorScheme: 'dark', colors: {} }
+    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    // Overwrite: the store reuses the existing 'a' id.
+    applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'a', name: 'Alpha' }) })
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('theme-packs-import-button'))
+    await waitFor(() => expect(applyImport).toHaveBeenCalled())
+    expect(reorderFn).not.toHaveBeenCalled()
+    expect(screen.getByTestId('theme-packs-import-feedback').textContent).toBe('common.updatedNamed:Alpha')
+  })
+
+  it('new import shows "Imported {{name}}" feedback next to the Name button', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha' })]
+    const raw = { name: 'Beta', version: '1', colorScheme: 'dark', colors: {} }
+    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'b', name: 'Beta' }) })
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('theme-packs-import-button'))
+    await waitFor(() => expect(screen.getByTestId('theme-packs-import-feedback').textContent).toBe('common.importedNamed:Beta'))
+  })
+
+  it('scrolls the imported row into view', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha' })]
+    const raw = { name: 'Beta', version: '1', colorScheme: 'dark', colors: {} }
+    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    const newMeta = meta({ id: 'b', name: 'Beta' })
+    applyImport.mockImplementationOnce(async () => {
+      metas = [...metas, newMeta]
+      return { success: true, meta: newMeta }
+    })
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+
+    await waitFor(() => expect(screen.getByTestId('theme-packs-row-a')).toBeTruthy())
+    const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {})
+    try {
+      fireEvent.click(screen.getByTestId('theme-packs-import-button'))
+      await waitFor(() => expect(screen.getByTestId('theme-packs-row-b')).toBeTruthy())
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' }))
+    } finally {
+      scrollIntoView.mockRestore()
+    }
+  })
+
+  it('hub download parity: a new Hub download is inserted at its sorted position via reorder', async () => {
+    // Already ascending — detected as 'asc' on open, no click needed.
+    metas = [meta({ id: 'a', name: 'Alpha' }), meta({ id: 'z', name: 'Zeta' })]
+    vialAPI.hubDownloadThemePost.mockResolvedValueOnce({ success: true, data: { name: 'Mu', version: '1', colorScheme: 'dark', colors: {} } })
+    applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'm', name: 'Mu' }) })
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('theme-packs-tab-hub'))
+    await waitFor(() => expect(screen.getByTestId('theme-packs-search-input')).toBeTruthy())
+    fireEvent.change(screen.getByTestId('theme-packs-search-input'), { target: { value: 'mu' } })
+    vialAPI.hubListThemePosts.mockResolvedValueOnce({ success: true, data: { items: [{ id: 'hub-m', name: 'Mu', version: '1', uploaderName: 'someone' }] } })
+    fireEvent.click(screen.getByTestId('theme-packs-search-button'))
+    await waitFor(() => expect(screen.getByTestId('theme-packs-hub-download-hub-m')).toBeTruthy())
+
+    fireEvent.click(screen.getByTestId('theme-packs-hub-download-hub-m'))
+    await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['a', 'm', 'z']))
+  })
+
   it('Hub search button is disabled when query is less than 2 chars', () => {
     render(
       <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,

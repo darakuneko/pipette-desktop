@@ -389,6 +389,163 @@ describe('LanguagePacksModal', () => {
     expect(screen.getByTestId('language-packs-cancel-delete-p1')).toBeTruthy()
   })
 
+  // --- Import/download placement + toolbar feedback + auto-scroll ---
+
+  it('asc state: a new import is inserted at its sorted position via reorder', async () => {
+    // Already ascending — detected as 'asc' on open, no click needed.
+    storeMetas = [
+      meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' }),
+      meta({ id: 'z', name: 'Zeta', matchedBaseVersion: '0.1.0' }),
+    ]
+    const raw = { name: 'Mu', version: '0.1.0', common: {} }
+    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'm', name: 'Mu' }) })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['a', 'm', 'z']))
+  })
+
+  it('desc state: a new import is inserted at its sorted position via reorder', async () => {
+    // Already descending — detected as 'desc' on open, no click needed.
+    storeMetas = [
+      meta({ id: 'z', name: 'Zeta', matchedBaseVersion: '0.1.0' }),
+      meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' }),
+    ]
+    const raw = { name: 'Mu', version: '0.1.0', common: {} }
+    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'm', name: 'Mu' }) })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['z', 'm', 'a']))
+  })
+
+  it('free state (shuffled list): a new import does not call reorder — the store appends it at the bottom on its own', async () => {
+    storeMetas = [
+      meta({ id: 'm', name: 'Mu', matchedBaseVersion: '0.1.0' }),
+      meta({ id: 'z', name: 'Zeta', matchedBaseVersion: '0.1.0' }),
+      meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' }),
+    ]
+    const raw = { name: 'Beta', version: '0.1.0', common: {} }
+    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'b', name: 'Beta' }) })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => expect(applyImport).toHaveBeenCalled())
+    expect(reorderFn).not.toHaveBeenCalled()
+  })
+
+  it('overwrite (same id already installed) keeps its position — no reorder call, "Updated" feedback', async () => {
+    storeMetas = [
+      meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' }),
+      meta({ id: 'z', name: 'Zeta', matchedBaseVersion: '0.1.0' }),
+    ]
+    const raw = { name: 'Alpha', version: '0.1.0', common: {} }
+    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    // Overwrite: the store reuses the existing 'a' id.
+    applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'a', name: 'Alpha' }) })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => expect(applyImport).toHaveBeenCalled())
+    expect(reorderFn).not.toHaveBeenCalled()
+    expect(screen.getByTestId('language-packs-import-feedback').textContent).toBe('common.updatedNamed:Alpha')
+  })
+
+  it('new import shows "Imported {{name}}" feedback next to the Name button, and it auto-clears after ~5s', async () => {
+    // `waitFor`'s own internal polling relies on real timers, so this
+    // uses `vi.advanceTimersByTimeAsync` (which flushes pending
+    // microtasks/promises between ticks) instead of `waitFor` once fake
+    // timers are active — the auto-clear timer itself is already
+    // exercised precisely in useImportFeedback.test.ts.
+    vi.useFakeTimers()
+    try {
+      storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
+      const raw = { name: 'Beta', version: '0.1.0', common: {} }
+      importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+      applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'b', name: 'Beta' }) })
+      render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+      fireEvent.click(screen.getByTestId('language-packs-import-button'))
+      await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+      expect(screen.getByTestId('language-packs-import-feedback').textContent).toBe('common.importedNamed:Beta')
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
+      expect(screen.queryByTestId('language-packs-import-feedback')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('a second import replaces the feedback message immediately instead of stacking', async () => {
+    storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
+    importFromDialog
+      .mockResolvedValueOnce({ canceled: false, raw: { name: 'Beta', version: '0.1.0', common: {} } })
+      .mockResolvedValueOnce({ canceled: false, raw: { name: 'Gamma', version: '0.1.0', common: {} } })
+    applyImport
+      .mockResolvedValueOnce({ success: true, meta: meta({ id: 'b', name: 'Beta' }) })
+      .mockResolvedValueOnce({ success: true, meta: meta({ id: 'g', name: 'Gamma' }) })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => expect(screen.getByTestId('language-packs-import-feedback').textContent).toBe('common.importedNamed:Beta'))
+
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => expect(screen.getByTestId('language-packs-import-feedback').textContent).toBe('common.importedNamed:Gamma'))
+  })
+
+  it('scrolls the imported row into view', async () => {
+    storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
+    const raw = { name: 'Beta', version: '0.1.0', common: {} }
+    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    // The mocked store doesn't simulate a metas re-fetch on its own —
+    // append the new meta to `storeMetas` here so the row actually
+    // renders (and can be found by testid) on the next render, the way
+    // a real `refresh()` would.
+    const newMeta = meta({ id: 'b', name: 'Beta' })
+    applyImport.mockImplementationOnce(async () => {
+      storeMetas = [...storeMetas, newMeta]
+      return { success: true, meta: newMeta }
+    })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    await waitFor(() => expect(screen.getByTestId('language-packs-row-a')).toBeTruthy())
+    // Row for 'b' does not exist until after the import; spy on the
+    // shared prototype method so it's stubbed for whatever row appears
+    // with that testid once the import lands.
+    const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {})
+    try {
+      fireEvent.click(screen.getByTestId('language-packs-import-button'))
+      await waitFor(() => expect(screen.getByTestId('language-packs-row-b')).toBeTruthy())
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' }))
+    } finally {
+      scrollIntoView.mockRestore()
+    }
+  })
+
+  it('hub download parity: a new Hub download is inserted at its sorted position via reorder', async () => {
+    // Already ascending — detected as 'asc' on open, no click needed.
+    storeMetas = [
+      meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' }),
+      meta({ id: 'z', name: 'Zeta', matchedBaseVersion: '0.1.0' }),
+    ]
+    vialAPI.hubDownloadI18nPost.mockResolvedValueOnce({ success: true, data: { pack: { name: 'Mu', version: '0.1.0', common: {} } } })
+    applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'm', name: 'Mu' }) })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('language-packs-tab-hub'))
+    await waitFor(() => expect(screen.getByTestId('language-packs-search-input')).toBeTruthy())
+    fireEvent.change(screen.getByTestId('language-packs-search-input'), { target: { value: 'mu' } })
+    vialAPI.hubListI18nPosts.mockResolvedValueOnce({ success: true, data: { items: [{ id: 'hub-m', name: 'Mu', version: '0.1.0', uploader_name: 'someone' }] } })
+    fireEvent.click(screen.getByTestId('language-packs-search-button'))
+    await waitFor(() => expect(screen.getByTestId('language-packs-hub-download-hub-m')).toBeTruthy())
+
+    fireEvent.click(screen.getByTestId('language-packs-hub-download-hub-m'))
+    await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['a', 'm', 'z']))
+  })
+
   it('confirmed delete calls store.remove', async () => {
     storeMetas = [meta({ id: 'p1', name: 'Pack' })]
     render(

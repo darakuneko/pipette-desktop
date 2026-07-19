@@ -24,6 +24,7 @@ import { useHubSearchList } from '../pack-modal/useHubSearchList'
 import { useNameSort } from '../pack-modal/useNameSort'
 import { useDragReorder } from '../pack-modal/useDragReorder'
 import { applyDragOrder } from '../pack-modal/drag-order'
+import { useImportPlacement } from '../pack-modal/useImportPlacement'
 import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
 import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
 import {
@@ -116,13 +117,28 @@ export function KeyLabelsModal({
   // Name sort scope includes QWERTY — unlike Language/Theme Packs'
   // synthesized built-in rows, QWERTY is a real store entry that
   // already participates in drag reorder.
+  const nameSortEntries = useMemo(
+    () => labels.metas.map((meta) => ({ id: meta.id, name: meta.name })),
+    [labels.metas],
+  )
   const nameSort = useNameSort({
+    open,
+    ready: !labels.loading,
+    entries: nameSortEntries,
     reorder: labels.reorder,
     onError: (error) => setActionError(translateError(t, undefined, error)),
   })
   const handleSortByName = useCallback((): void => {
     void nameSort.toggle(labels.metas.map((meta) => ({ id: meta.id, name: meta.name })))
   }, [nameSort, labels.metas])
+  const placement = useImportPlacement({
+    open,
+    entries: nameSortEntries,
+    direction: nameSort.direction,
+    reorder: labels.reorder,
+    rowTestidPrefix: 'key-labels',
+    onReorderError: (error) => setActionError(translateError(t, undefined, error)),
+  })
 
   const { search, setSearch, hubResults, hubSearched, hubSearching, runSearch } = useHubSearchList<HubKeyLabelItem>({
     open,
@@ -146,6 +162,7 @@ export function KeyLabelsModal({
   const handleImport = useCallback(async () => {
     setActionError(null)
     setLastResult(null)
+    const beforeIds = placement.snapshotBeforeIds()
     const res = await labels.importFromFile()
     if (res.success && res.data) {
       // The store returns the (possibly overwritten) entry meta —
@@ -164,19 +181,20 @@ export function KeyLabelsModal({
           setActionError(translateError(t, upd.errorCode, upd.error))
         }
       }
+      await placement.place({ id: res.data.id, name: res.data.name }, { beforeIds })
     } else if (res.error && res.error !== 'cancelled') {
       setActionError(translateError(t, res.errorCode, res.error))
     }
-  }, [labels, t])
+  }, [labels, t, placement])
 
-  const runWithPending = useCallback(async (
+  const runWithPending = useCallback(async <T,>(
     id: string,
-    op: () => Promise<{ success: boolean; errorCode?: string; error?: string }>,
+    op: () => Promise<{ success: boolean; errorCode?: string; error?: string; data?: T }>,
     /** i18n key for the inline success badge under the row. */
     successKey?: string,
     /** i18n key used when no `error` string was returned by the op. */
     failKey?: string,
-  ): Promise<void> => {
+  ): Promise<{ success: boolean; errorCode?: string; error?: string; data?: T }> => {
     setPendingId(id)
     setActionError(null)
     setLastResult(null)
@@ -191,10 +209,25 @@ export function KeyLabelsModal({
           || (failKey ? t(failKey) : t('keyLabels.errorGeneric'))
         setLastResult({ id, kind: 'error', message })
       }
+      return res
     } finally {
       setPendingId(null)
     }
   }, [t])
+
+  const handleHubDownload = useCallback(async (hubPostId: string): Promise<void> => {
+    // The DUPLICATE_NAME guard (main-side) already rejects any name
+    // collision before this can succeed, so every successful Hub
+    // download here is a brand-new entry — no overwrite branch to
+    // consider, unlike file import (`alwaysInsert` below).
+    const res = await runWithPending(hubPostId, () => labels.hubDownload(hubPostId), 'common.saved')
+    if (res.success && res.data) {
+      // The download IPC saves the entry locally with id = hubPostId,
+      // so anchoring the badge on the same id surfaces a "Saved" badge
+      // under the new row when the user flips back to the Installed tab.
+      await placement.place({ id: res.data.id, name: res.data.name }, { alwaysInsert: true })
+    }
+  }, [labels, runWithPending, placement])
 
   const handleRenameCommit = useCallback(async (id: string) => {
     const newName = rename.commitRename(id)
@@ -249,6 +282,7 @@ export function KeyLabelsModal({
         searchInput: 'key-labels-search-input',
         searchButton: 'key-labels-search-button',
         importButton: 'key-labels-import-button',
+        importFeedback: 'key-labels-import-feedback',
       }}
       activeTab={activeTab}
       onTabChange={setActiveTab}
@@ -271,6 +305,7 @@ export function KeyLabelsModal({
           testid="key-labels-sort-button"
         />
       )}
+      importFeedback={placement.feedback}
       actionError={actionError}
     >
       {activeTab === 'installed' ? (
@@ -287,9 +322,9 @@ export function KeyLabelsModal({
           hubCanWrite={hubCanWrite}
           onRenameKey={handleRenameKey}
           onRenameCommit={handleRenameCommit}
-          onUpload={(id) => runWithPending(id, () => labels.hubUpload(id), 'hub.uploadSuccess', 'hub.uploadFailed')}
-          onUpdate={(id) => runWithPending(id, () => labels.hubUpdate(id), 'hub.updateSuccess', 'hub.updateFailed')}
-          onSync={(id) => runWithPending(id, () => labels.hubSync(id), 'hub.syncSuccess', 'hub.syncFailed')}
+          onUpload={(id) => { void runWithPending(id, () => labels.hubUpload(id), 'hub.uploadSuccess', 'hub.uploadFailed') }}
+          onUpdate={(id) => { void runWithPending(id, () => labels.hubUpdate(id), 'hub.updateSuccess', 'hub.updateFailed') }}
+          onSync={(id) => { void runWithPending(id, () => labels.hubSync(id), 'hub.syncSuccess', 'hub.syncFailed') }}
           onRemove={async (id) => {
             await runWithPending(id, () => labels.hubDelete(id), 'hub.removeSuccess', 'hub.removeFailed')
             setConfirmRemoveId(null)
@@ -328,10 +363,15 @@ export function KeyLabelsModal({
             await runWithPending(id, () => labels.remove(id))
             setConfirmDeleteId(null)
           }}
-          onExport={(id) => runWithPending(id, () => labels.exportEntry(id))}
+          onExport={(id) => { void runWithPending(id, () => labels.exportEntry(id)) }}
           onDragStart={drag.onDragStart}
           onDragOver={drag.onDragOver}
-          onDragEnd={drag.onDragEnd}
+          onDragEnd={() => {
+            void (async () => {
+              const moved = await drag.onDragEnd()
+              if (moved) nameSort.markFree()
+            })()
+          }}
           hubOrigin={hubOrigin}
           hubFreshness={hubFreshness}
         />
@@ -341,13 +381,7 @@ export function KeyLabelsModal({
           hubSearched={hubSearched}
           pendingId={pendingId}
           hubOrigin={hubOrigin}
-          onDownload={(hubPostId) =>
-            // The download IPC saves the entry locally with id =
-            // hubPostId, so anchoring the badge on the same id
-            // surfaces a "Saved" badge under the new row when the
-            // user flips back to the Installed tab.
-            runWithPending(hubPostId, () => labels.hubDownload(hubPostId), 'common.saved')
-          }
+          onDownload={(hubPostId) => handleHubDownload(hubPostId)}
         />
       )}
     </PackManagerModal>
