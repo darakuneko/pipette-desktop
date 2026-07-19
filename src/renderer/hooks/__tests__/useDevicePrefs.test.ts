@@ -225,6 +225,33 @@ describe('useDevicePrefs', () => {
       expect(result.current.appliedKeymapLayout).toBeUndefined()
     })
 
+    it('setAppliedKeymapLayout(undefined) clears the field by sending null in the patch (Plan-qwerty-select-no-rewrite restore reset)', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        appliedKeymapLayout: 'colemak-id',
+        autoAdvance: true,
+        layerNames: [],
+      })
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.appliedKeymapLayout).toBe('colemak-id')
+      mockPipetteSettingsPatch.mockClear()
+
+      act(() => {
+        result.current.setAppliedKeymapLayout(undefined)
+      })
+
+      expect(result.current.appliedKeymapLayout).toBeUndefined()
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+        appliedKeymapLayout: null,
+      }))
+    })
+
     it('setAutoAdvance saves per-device prefs via IPC after applyDevicePrefs', async () => {
       setupMocks()
       const { result } = renderHookWithConfig(() => useDevicePrefs())

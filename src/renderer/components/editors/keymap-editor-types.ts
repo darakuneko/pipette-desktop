@@ -62,6 +62,14 @@ export interface KeymapEditorHandle {
    *  successfully-applied batch — `onAppliedKeymapLayoutChange` fires
    *  immediately with `layoutIds.after`. */
   applyKeymapRewrite: (table: KeymapRewriteTable, layoutIds?: KeymapRewriteLayoutIds) => Promise<KeymapApplyResult>
+  /** Wipes the undo/redo stack in place, without touching the keymap itself.
+   *  Called by the host (App.tsx) after a snapshot/layout-store restore or
+   *  `.vil` import replaces the whole keymap out from under this same
+   *  mounted editor instance (Plan-qwerty-select-no-rewrite §snapshot/.vil
+   *  復元時のクリーンアップ) — those flows keep the same uid and never empty
+   *  the keymap, so KeymapEditor's own uid/keymap-size clear effect never
+   *  fires on its own. */
+  clearHistory: () => void
 }
 
 export interface KeymapEditorProps {

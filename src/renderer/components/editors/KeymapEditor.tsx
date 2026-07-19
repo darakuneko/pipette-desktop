@@ -313,6 +313,15 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         // needs no bookkeeping to correctly return the keymap (and
         // appliedKeymapLayout, left untouched) to its prior state.
         const bookkeepable = error === undefined ? layoutIds : undefined
+        // One-revert history (Plan-qwerty-select-no-rewrite §one-revert 履歴):
+        // a rewrite — clean or partial-failure alike — invalidates every
+        // prior undo/redo entry (they'd restore stale, pre-rewrite
+        // keycodes), so wipe both stacks before pushing this batch. Post-
+        // rewrite history holds exactly one entry: Undo always reverts the
+        // whole rewrite in one step, and there is nothing further back to
+        // accidentally restore. Manual edits made afterwards stack on top
+        // of it normally.
+        history.clear()
         history.push(
           bookkeepable
             ? { kind: 'batch', entries: applied, appliedLayoutBefore: bookkeepable.before, appliedLayoutAfter: bookkeepable.after }
@@ -340,7 +349,8 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     toggleMatrix: handleMatrixToggle, toggleTypingTest: handleTypingTestToggle,
     matrixMode, hasMatrixTester,
     applyKeymapRewrite,
-  }), [handleMatrixToggle, handleTypingTestToggle, matrixMode, hasMatrixTester, applyKeymapRewrite])
+    clearHistory: history.clear,
+  }), [handleMatrixToggle, handleTypingTestToggle, matrixMode, hasMatrixTester, applyKeymapRewrite, history.clear])
 
   // --- Layer keycode builders (current layer / typing test / picker) ---
   const {

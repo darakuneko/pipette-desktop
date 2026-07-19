@@ -457,11 +457,16 @@ export interface UseDevicePrefsReturn {
   isRemapped: (qmkId: string) => boolean
   /** `PipetteSettings.appliedKeymapLayout` — see `ValidatedPrefs` above. */
   appliedKeymapLayout: string | undefined
-  /** Persists `appliedKeymapLayout`. Called only by the Key Label
-   *  "apply to keymap" Rewrite flow (KeymapEditor's `applyKeymapRewrite`,
-   *  and undo/redo of that rewrite's batch history entry) — never by the
-   *  display-only `setLayout` path (追加要求 2026-07-18). */
-  setAppliedKeymapLayout: (id: string) => void
+  /** Persists `appliedKeymapLayout`. Called by the Key Label "apply to
+   *  keymap" Rewrite flow (KeymapEditor's `applyKeymapRewrite`, and
+   *  undo/redo of that rewrite's batch history entry — 追加要求
+   *  2026-07-18) — never by the display-only `setLayout` path. Also called
+   *  with `undefined` by App.tsx's restore-cleanup effect after a
+   *  snapshot/.vil restore, to reset the field back to its "never applied"
+   *  convention (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時のクリー
+   *  ンアップ) — `saveCurrentPrefs` below sends that as an explicit `null`
+   *  patch so it actually clears on disk instead of leaving the prior id. */
+  setAppliedKeymapLayout: (id: string | undefined) => void
 }
 
 /**
@@ -535,12 +540,15 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     window.vialAPI.pipetteSettingsPatch(uid, {
       _rev: 1,
       keyboardLayout: layoutRef.current,
-      // `undefined` here means "never applied on this keyboard" and is
-      // intentionally sent as-is (not `?? null`): the field-level PATCH
-      // treats `undefined` as "leave untouched", which is correct since a
-      // field that was never set has nothing to clear. Once a Rewrite runs
-      // it's always a concrete id from then on (see setAppliedKeymapLayout).
-      appliedKeymapLayout: appliedKeymapLayoutRef.current,
+      // `null` clears the persisted field when the ref holds `undefined` —
+      // either "never applied on this keyboard" (no-op, there's nothing to
+      // clear) or a restore's explicit reset (Plan-qwerty-select-no-rewrite
+      // §snapshot/.vil 復元時のクリーンアップ), which DOES need to remove a
+      // stale concrete id already on disk. Same idiom as `typingTestMemory`
+      // / `viewMatrix` below — a bare `undefined` would leave that stale
+      // value in place instead (the field-level PATCH treats `undefined`
+      // as "leave untouched").
+      appliedKeymapLayout: appliedKeymapLayoutRef.current ?? null,
       autoAdvance: autoAdvanceRef.current,
       layerPanelOpen: layerPanelOpenRef.current,
       basicViewType: basicViewTypeRef.current,
@@ -585,7 +593,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateLayout])
 
-  const setAppliedKeymapLayout = useCallback((id: string) => {
+  const setAppliedKeymapLayout = useCallback((id: string | undefined) => {
     updateAppliedKeymapLayout(id)
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateAppliedKeymapLayout])

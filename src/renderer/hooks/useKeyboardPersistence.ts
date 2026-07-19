@@ -158,6 +158,12 @@ export function useKeyboardPersistence(
       altRepeatKeyEntries: vil.altRepeatKey,
       qmkSettingsValues: vil.qmkSettings,
       layerNames,
+      // Snapshot/layout-store restore and .vil import both converge here —
+      // bump so App.tsx's restore-cleanup effect (Plan-qwerty-select-no-rewrite
+      // §snapshot/.vil 復元時のクリーンアップ) notices even though uid and
+      // keymap size are unchanged (the two things KeymapEditor's own clear
+      // effect keys off of).
+      keymapRestoreSeq: s.keymapRestoreSeq + 1,
     }))
   }, [setState, stateRef, saveLayerNamesRef])
 

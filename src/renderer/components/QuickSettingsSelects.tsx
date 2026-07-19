@@ -41,6 +41,10 @@ export interface QuickSettingsSelectsProps {
   appliedKeymapLayout?: string
   /** Bulk-rewrite the live keymap via `KeymapEditorHandle.applyKeymapRewrite`. */
   onApplyKeymapRewrite?: (table: KeymapRewriteTable, layoutIds: KeymapRewriteLayoutIds) => Promise<KeymapApplyResult>
+  /** Forwarded to `useKeymapApplyPrompt` — see its own doc for what an
+   *  increase does (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時の
+   *  クリーンアップ, D3). */
+  keymapRestoreSeq?: number
 }
 
 export function QuickSettingsSelects({
@@ -52,6 +56,7 @@ export function QuickSettingsSelects({
   keymapEditable = false,
   appliedKeymapLayout,
   onApplyKeymapRewrite,
+  keymapRestoreSeq,
 }: QuickSettingsSelectsProps) {
   const { t, i18n } = useTranslation()
   const appConfig = useAppConfig()
@@ -79,6 +84,7 @@ export function QuickSettingsSelects({
     appliedKeymapLayout,
     onKeyboardLayoutChange,
     onApplyKeymapRewrite,
+    keymapRestoreSeq,
   })
 
   const languageOptions = useLanguageOptions(i18nPacks.metas)

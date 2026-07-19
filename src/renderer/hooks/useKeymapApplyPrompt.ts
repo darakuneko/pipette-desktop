@@ -18,7 +18,7 @@
 // the display, never touches the keymap or opens a modal, regardless of
 // what is currently applied.
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useKeyLabelLookup } from './useKeyLabelLookup'
 import { buildKeymapRewriteTable, type KeymapRewriteTable, type KeymapRewriteLayoutIds } from '../../shared/keymap/keymap-apply'
 import { BUILTIN_QWERTY_LAYOUT_ID } from '../data/keyboard-layouts'
@@ -44,6 +44,13 @@ export interface UseKeymapApplyPromptOptions {
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
   /** Bulk-rewrite the live keymap via `KeymapEditorHandle.applyKeymapRewrite`. */
   onApplyKeymapRewrite?: (table: KeymapRewriteTable, layoutIds: KeymapRewriteLayoutIds) => Promise<KeymapApplyResult>
+  /** `KeyboardState.keymapRestoreSeq` — bumped by `applyVilFile` on every
+   *  successful snapshot/layout-store restore or `.vil` import
+   *  (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時のクリーンアップ).
+   *  An increase closes an open confirm modal defensively: the restore
+   *  just replaced the whole keymap this modal's pending Apply/Display Only
+   *  would otherwise act against. */
+  keymapRestoreSeq?: number
 }
 
 export interface UseKeymapApplyPromptReturn {
@@ -81,10 +88,24 @@ export function useKeymapApplyPrompt({
   appliedKeymapLayout,
   onKeyboardLayoutChange,
   onApplyKeymapRewrite,
+  keymapRestoreSeq,
 }: UseKeymapApplyPromptOptions): UseKeymapApplyPromptReturn {
   const keyLabelLookup = useKeyLabelLookup()
   const [pendingApply, setPendingApply] = useState<{ id: string; name: string; table: KeymapRewriteTable } | null>(null)
   const [applyError, setApplyError] = useState<string | null>(null)
+
+  // Defensive close (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時の
+  // クリーンアップ, D3): only an actual INCREASE means a new restore landed —
+  // guards against a stray decrease (e.g. disconnect resetting the counter
+  // back to 0 on a fresh KeyboardState) being mistaken for one.
+  const keymapRestoreSeqRef = useRef(keymapRestoreSeq)
+  useEffect(() => {
+    const prev = keymapRestoreSeqRef.current
+    keymapRestoreSeqRef.current = keymapRestoreSeq
+    if (keymapRestoreSeq === undefined || prev === undefined || keymapRestoreSeq <= prev) return
+    setPendingApply(null)
+  }, [keymapRestoreSeq])
+
   // Bumped on every invocation; the async lookups below re-check it after
   // each `await` so a newer selection always wins over a slower older one
   // (selection race — two quick picks where the first's lookups resolve

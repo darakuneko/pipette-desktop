@@ -271,6 +271,38 @@ describe('useKeymapApplyPrompt — WYSIWYG select semantics (Plan-qwerty-select-
     expect(onKeyboardLayoutChange).not.toHaveBeenCalled()
   })
 
+  // --- D3: keymapRestoreSeq defensively closes an open confirm modal ---
+  // (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時のクリーンアップ) ---
+
+  describe('keymapRestoreSeq (restore cleanup, D3)', () => {
+    it('an increase closes an open confirm modal', async () => {
+      const { result, rerender } = setup({ keyboardLayout: 'qwerty', keymapRestoreSeq: 1 })
+      act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
+      await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
+
+      rerender({ keyboardLayout: 'qwerty', keymapRestoreSeq: 2 })
+      expect(result.current.pendingApply).toBeNull()
+    })
+
+    it('a decrease (e.g. disconnect resetting the counter back to 0) does not close the modal', async () => {
+      const { result, rerender } = setup({ keyboardLayout: 'qwerty', keymapRestoreSeq: 3 })
+      act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
+      await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
+
+      rerender({ keyboardLayout: 'qwerty', keymapRestoreSeq: 0 })
+      expect(result.current.pendingApply).not.toBeNull()
+    })
+
+    it('an unchanged value does not close the modal', async () => {
+      const { result, rerender } = setup({ keyboardLayout: 'qwerty', keymapRestoreSeq: 1 })
+      act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
+      await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
+
+      rerender({ keyboardLayout: 'qwerty', keymapRestoreSeq: 1 })
+      expect(result.current.pendingApply).not.toBeNull()
+    })
+  })
+
   // --- keymap not editable falls through unchanged ---
 
   it('falls straight through to a display-only switch when the keymap is not editable', async () => {

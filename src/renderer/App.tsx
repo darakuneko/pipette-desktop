@@ -593,6 +593,28 @@ export function App() {
     appConfig.config.zoomFactor,
   ])
 
+  // Restore cleanup (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時の
+  // クリーンアップ, D1-D3): snapshot/layout-store restore and .vil import
+  // both converge on `applyVilFile`, which bumps `keymapRestoreSeq` on
+  // success. Reacting here (rather than inside KeymapEditor) is what
+  // reaches the two other pieces of bookkeeping a restore leaves stale —
+  // `appliedKeymapLayout` in devicePrefs and the Keyboard Layout select's
+  // confirm modal in QuickSettingsSelects (see its own `keymapRestoreSeq`
+  // prop below) — both of which live outside KeymapEditor. Only an actual
+  // INCREASE means a restore landed; `keyboard.reset()` on disconnect resets
+  // the counter back to 0, which must NOT be mistaken for one (it would
+  // otherwise wipe the just-disconnected keyboard's still-current
+  // `appliedKeymapLayout` on disk, since `devicePrefs`'s uid ref only moves
+  // forward on the NEXT connect's `applyDevicePrefs`).
+  const prevKeymapRestoreSeqRef = useRef(keyboard.keymapRestoreSeq)
+  useEffect(() => {
+    const prev = prevKeymapRestoreSeqRef.current
+    prevKeymapRestoreSeqRef.current = keyboard.keymapRestoreSeq
+    if (keyboard.keymapRestoreSeq <= prev) return
+    keymapEditorRef.current?.clearHistory()
+    devicePrefs.setAppliedKeymapLayout(undefined)
+  }, [keyboard.keymapRestoreSeq, devicePrefs.setAppliedKeymapLayout])
+
   const handleLoadEntry = useCallback(async (entryId: string) => {
     const entry = layoutStore.entries.find((e) => e.id === entryId)
     const ok = await layoutStore.loadLayout(entryId)
@@ -1065,6 +1087,7 @@ export function App() {
             onKeyboardLayoutChange: devicePrefs.setLayout,
             keymapEditable: keyboard.keymap.size > 0,
             appliedKeymapLayout: devicePrefs.appliedKeymapLayout,
+            keymapRestoreSeq: keyboard.keymapRestoreSeq,
             onApplyKeymapRewrite: async (table, layoutIds) => {
               setKeymapApplyInFlight(true)
               try {
