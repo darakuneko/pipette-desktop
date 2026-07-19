@@ -531,7 +531,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       expect(capturedCanRedo).toBe(true)
     })
 
-    it('B1: a partial-failure rewrite also wipes prior history before pushing its own (partial) batch', async () => {
+    it('C1: a partial-failure rewrite pushes on top of existing history instead of wiping it (current behavior preserved)', async () => {
       const ref = createRef<KeymapEditorHandle>()
       render(<KeymapEditor ref={ref} {...defaultProps} />)
 
@@ -557,16 +557,24 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       })
       expect(result).toEqual({ appliedCount: 1, error: 'device write failed' })
 
-      // The prior manual-edit undo/redo pair is gone; only the partial
-      // batch (one successful write) sits on the undo stack.
+      // Unlike a clean rewrite (B1 above), a partial-failure batch does NOT
+      // wipe prior history — it pushes on top like any other edit, which
+      // still clears the redo stack as a normal `history.push` always does.
       expect(capturedCanUndo).toBe(true)
       expect(capturedCanRedo).toBe(false)
 
       onSetKeysBulk.mockClear()
       await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
-      // Reverts the partial batch's one successful write ([0,0,0]) — not
-      // the manual edits that were wiped.
+      // First Undo reverts the partial batch's one successful write ([0,0,0])...
       expect(onSetKeysBulk).toHaveBeenCalledWith([{ layer: 0, row: 0, col: 0, keycode: 5 }])
+      // ...and the pre-existing manual edit is still sitting beneath it —
+      // proof it was never wiped.
+      expect(capturedCanUndo).toBe(true)
+
+      onSetKey.mockClear()
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+      // Second Undo reaches the manual edit made before the rewrite.
+      expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 5)
       expect(capturedCanUndo).toBe(false)
     })
 

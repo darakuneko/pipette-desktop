@@ -94,18 +94,6 @@ export function useKeymapApplyPrompt({
   const [pendingApply, setPendingApply] = useState<{ id: string; name: string; table: KeymapRewriteTable } | null>(null)
   const [applyError, setApplyError] = useState<string | null>(null)
 
-  // Defensive close (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時の
-  // クリーンアップ, D3): the counter is monotonic for the session (disconnect
-  // carries it forward rather than zeroing it, see keyboard-types.ts), so
-  // any change here means a new restore landed.
-  const keymapRestoreSeqRef = useRef(keymapRestoreSeq)
-  useEffect(() => {
-    const prev = keymapRestoreSeqRef.current
-    keymapRestoreSeqRef.current = keymapRestoreSeq
-    if (keymapRestoreSeq === undefined || prev === undefined || keymapRestoreSeq === prev) return
-    setPendingApply(null)
-  }, [keymapRestoreSeq])
-
   // Bumped on every invocation; the async lookups below re-check it after
   // each `await` so a newer selection always wins over a slower older one
   // (selection race — two quick picks where the first's lookups resolve
@@ -115,6 +103,24 @@ export function useKeymapApplyPrompt({
   // prior (non-QWERTY) selection so a slower lookup can never open a
   // modal after the user has already moved on to QWERTY.
   const requestSeqRef = useRef(0)
+
+  // Defensive close (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時の
+  // クリーンアップ, D3): the counter is monotonic for the session (disconnect
+  // carries it forward rather than zeroing it, see keyboard-types.ts), so
+  // any change here means a new restore landed. Also bump `requestSeqRef`
+  // so a pack lookup already in flight from BEFORE the restore (started on
+  // a selection, still awaiting `resolveRewriteTable`) fails its own
+  // `requestSeqRef.current !== seq` check when it resolves — otherwise it
+  // would re-open the modal via `setPendingApply` against the keymap the
+  // restore just replaced (restore race).
+  const keymapRestoreSeqRef = useRef(keymapRestoreSeq)
+  useEffect(() => {
+    const prev = keymapRestoreSeqRef.current
+    keymapRestoreSeqRef.current = keymapRestoreSeq
+    if (keymapRestoreSeq === undefined || prev === undefined || keymapRestoreSeq === prev) return
+    ++requestSeqRef.current
+    setPendingApply(null)
+  }, [keymapRestoreSeq])
 
   const handleKeyboardLayoutChange = useCallback((v: string) => {
     setApplyError(null)

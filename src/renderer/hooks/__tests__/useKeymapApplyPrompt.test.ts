@@ -297,6 +297,26 @@ describe('useKeymapApplyPrompt — WYSIWYG select semantics (Plan-qwerty-select-
       rerender({ keyboardLayout: 'qwerty', keymapRestoreSeq: 1 })
       expect(result.current.pendingApply).not.toBeNull()
     })
+
+    it('restore race: a pack lookup already in flight before the restore must not re-open the modal once it resolves', async () => {
+      let resolveEnsure!: () => void
+      lookup.ensure.mockImplementationOnce(() => new Promise<void>((res) => { resolveEnsure = res }))
+
+      const { result, rerender } = setup({ keyboardLayout: 'qwerty', keymapRestoreSeq: 1 })
+      act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
+
+      // The restore lands while the selection above is still awaiting its
+      // pack lookup — nothing is pending yet either way.
+      rerender({ keyboardLayout: 'qwerty', keymapRestoreSeq: 2 })
+      expect(result.current.pendingApply).toBeNull()
+
+      // The stale lookup (started BEFORE the restore) resolves after — it
+      // must not open the modal against the keymap the restore just
+      // replaced.
+      resolveEnsure()
+      await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve() })
+      expect(result.current.pendingApply).toBeNull()
+    })
   })
 
   // --- keymap not editable falls through unchanged ---
