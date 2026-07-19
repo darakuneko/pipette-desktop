@@ -1572,7 +1572,7 @@ The Tools tab also exposes a **Key Labels Manage** row (next to the Language Pac
 
 QWERTY is built-in; every other label set (Dvorak, Colemak, French, Brazilian, …) is downloaded from Pipette Hub or imported from a local `.json` file. Installed entries sync across devices via Cloud Sync, so the same drag order and selection appear on every machine signed into the same account.
 
-**Delete removes the Hub post too.** If the entry you delete is linked to a Hub post, Delete also takes that post down from Hub — the local copy and the shared upload disappear together, in one action. If the Hub side fails (for example, no network), the local entry is **not** deleted either — an error is shown under the row and the entry stays put so you can try Delete again. Use **Remove** (in the Hub actions row) instead if you only want to detach the local copy from Hub while keeping both the local entry and the Hub post — Remove never touches the local copy.
+**Delete removes the Hub post too, for entries you uploaded.** If the entry you delete is linked to a Hub post you own, Delete also takes that post down from Hub — the local copy and the shared upload disappear together, in one action. If the Hub side fails (for example, no network), the local entry is **not** deleted either — an error is shown under the row and the entry stays put so you can try Delete again. A **downloaded** entry (someone else's upload) deletes locally only, even though it still shows Author/Sync — there's no Hub post of yours to remove, so Delete never makes a Hub call for it. Use **Remove** (in the Hub actions row) instead if you only want to detach your own local copy from Hub while keeping both the local entry and the Hub post — Remove never touches the local copy.
 
 **Installed tab**
 
@@ -1705,7 +1705,7 @@ Each row shows:
 - **Updated timestamp** (`YYYY-MM-DD HH:mm`) — the Hub-side last-update time, mirroring what the Hub website displays; blank until the pack has been uploaded. Built-in English shows its own build date instead, since it isn't a Hub-linked pack
 - **Version** chip when the pack covers every key of the current English baseline, or a **not set keys** button that opens a modal listing the missing translation keys
 - **Export** / **Delete** actions on the first line
-- **Open** / **Upload** / **Update** / **Sync** / **Remove** Hub actions on the second line (same pattern as Key Labels §6.2, including Delete's Hub-post cascade and the owner-only gating on Update/Remove)
+- **Open** / **Upload** / **Update** / **Sync** / **Remove** Hub actions on the second line (same pattern as Key Labels §6.2, including owner-only gating on Delete's Hub-post cascade as well as on Update/Remove)
 
 A **pulsing green dot** next to the Sync button indicates that the Hub-side post is newer than the local copy (freshness check runs once per 5 minutes when the modal is open).
 
@@ -1770,7 +1770,7 @@ Each row shows:
 - **Updated timestamp** (`YYYY-MM-DD HH:mm`) — the Hub-side last-update time, mirroring what the Hub website displays; blank until the pack has been uploaded
 - **Version** chip
 - **.json** export shortcut and **Delete** button on the first line
-- **Open** / **Upload** / **Update** / **Sync** / **Remove** Hub actions on the second line (same pattern as Key Labels §6.2, including Delete's Hub-post cascade and the owner-only gating on Update/Remove)
+- **Open** / **Upload** / **Update** / **Sync** / **Remove** Hub actions on the second line (same pattern as Key Labels §6.2, including owner-only gating on Delete's Hub-post cascade as well as on Update/Remove)
 
 A **pulsing green dot** next to the Sync button indicates that the Hub-side post is newer than the local copy (freshness check runs once per 5 minutes when the modal is open).
 

@@ -321,6 +321,35 @@ describe('KeyLabelsModal', () => {
     expect(remove).not.toHaveBeenCalled()
   })
 
+  // --- regression: Delete must not cascade to Hub for entries the user
+  // does not own (fix/delete-ownership-gate). A downloaded label also
+  // carries hubPostId (for Sync/freshness linkage) but is never
+  // deletable on Hub by this user — the old code attempted the Hub
+  // delete regardless of ownership, which failed for a foreign post
+  // (or a deactivated uploader account, e.g. "Brazilian (QWERTY)" by
+  // pipette) and then blocked the local delete too, leaving the user
+  // unable to remove a downloaded label at all. ---
+
+  it('a label downloaded from someone else deletes locally only — no Hub call at all (THE regression)', async () => {
+    metas = [meta({ id: 'foreign-del', name: 'Foreign Label', uploaderName: 'pipette', hubPostId: 'hub-foreign' })]
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    fireEvent.click(screen.getByTestId('key-labels-delete-foreign-del'))
+    const confirm = await screen.findByTestId('key-labels-confirm-delete-foreign-del')
+    fireEvent.click(confirm)
+    await waitFor(() => expect(remove).toHaveBeenCalledWith('foreign-del'))
+    expect(hubDelete).not.toHaveBeenCalled()
+  })
+
+  it('a legacy hub-linked label with no cached uploaderName deletes locally only (conservative default, matches Update/Remove gating)', async () => {
+    metas = [meta({ id: 'legacy-del', name: 'Legacy Label', hubPostId: 'hub-legacy' })]
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    fireEvent.click(screen.getByTestId('key-labels-delete-legacy-del'))
+    const confirm = await screen.findByTestId('key-labels-confirm-delete-legacy-del')
+    fireEvent.click(confirm)
+    await waitFor(() => expect(remove).toHaveBeenCalledWith('legacy-del'))
+    expect(hubDelete).not.toHaveBeenCalled()
+  })
+
   it('Export action triggers exportEntry for the row', async () => {
     metas = [meta({ id: 'mine', name: 'Mine', uploaderName: 'me' })]
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)

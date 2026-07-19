@@ -566,10 +566,10 @@ describe('LanguagePacksModal', () => {
     expect(screen.queryByTestId('language-packs-confirm-delete-p1')).toBeNull()
   })
 
-  it('delete also calls hubDeleteI18nPost for hub-linked pack', async () => {
-    storeMetas = [meta({ id: 'hd1', name: 'Hub Delete', hubPostId: 'hp-hd1' })]
+  it('delete cascades to Hub for a pack the user owns', async () => {
+    storeMetas = [meta({ id: 'hd1', name: 'Hub Delete', hubPostId: 'hp-hd1', uploaderName: 'me' })]
     render(
-      <LanguagePacksModal open onClose={vi.fn()} />,
+      <LanguagePacksModal open onClose={vi.fn()} currentDisplayName="me" />,
     )
     fireEvent.click(screen.getByTestId('language-packs-delete-hd1'))
     fireEvent.click(screen.getByTestId('language-packs-confirm-delete-hd1'))
@@ -577,11 +577,11 @@ describe('LanguagePacksModal', () => {
     await waitFor(() => expect(removeFn).toHaveBeenCalledWith('hd1'))
   })
 
-  it('blocks the local delete and surfaces an error when hubDeleteI18nPost fails, leaving the entry intact', async () => {
-    storeMetas = [meta({ id: 'hd2', name: 'Hub Delete Fail', hubPostId: 'hp-hd2' })]
+  it('blocks the local delete and surfaces an error when hubDeleteI18nPost fails for an owned pack, leaving the entry intact', async () => {
+    storeMetas = [meta({ id: 'hd2', name: 'Hub Delete Fail', hubPostId: 'hp-hd2', uploaderName: 'me' })]
     vialAPI.hubDeleteI18nPost.mockResolvedValueOnce({ success: false, error: 'Hub rejected the delete' })
     render(
-      <LanguagePacksModal open onClose={vi.fn()} />,
+      <LanguagePacksModal open onClose={vi.fn()} currentDisplayName="me" />,
     )
     fireEvent.click(screen.getByTestId('language-packs-delete-hd2'))
     fireEvent.click(screen.getByTestId('language-packs-confirm-delete-hd2'))
@@ -591,6 +591,37 @@ describe('LanguagePacksModal', () => {
     // the Hub post is orphaned under a name nobody can re-upload.
     expect(removeFn).not.toHaveBeenCalled()
     expect(screen.queryByTestId('language-packs-confirm-delete-hd2')).toBeNull()
+  })
+
+  // --- regression: Delete must not cascade to Hub for packs the user
+  // does not own (fix/delete-ownership-gate). A downloaded pack also
+  // carries hubPostId (for Sync/freshness linkage) but is never
+  // deletable on Hub by this user — the old code attempted the Hub
+  // delete regardless of ownership, which failed for a foreign post
+  // (or a deactivated uploader account) and then blocked the local
+  // delete too, leaving the user unable to remove a downloaded pack at
+  // all. See KeyLabelsModal / ThemePacksModal for the same pattern. ---
+
+  it('a pack downloaded from someone else deletes locally only — no Hub call at all (THE regression)', async () => {
+    storeMetas = [meta({ id: 'foreign-del', name: 'Foreign Pack', hubPostId: 'hp-foreign-del', uploaderName: 'pipette' })]
+    render(
+      <LanguagePacksModal open onClose={vi.fn()} currentDisplayName="me" />,
+    )
+    fireEvent.click(screen.getByTestId('language-packs-delete-foreign-del'))
+    fireEvent.click(screen.getByTestId('language-packs-confirm-delete-foreign-del'))
+    await waitFor(() => expect(removeFn).toHaveBeenCalledWith('foreign-del'))
+    expect(vialAPI.hubDeleteI18nPost).not.toHaveBeenCalled()
+  })
+
+  it('a legacy hub-linked pack with no cached uploaderName deletes locally only (conservative default, matches Update/Remove gating)', async () => {
+    storeMetas = [meta({ id: 'legacy-del', name: 'Legacy Hub Pack', hubPostId: 'hp-legacy-del' })]
+    render(
+      <LanguagePacksModal open onClose={vi.fn()} currentDisplayName="me" />,
+    )
+    fireEvent.click(screen.getByTestId('language-packs-delete-legacy-del'))
+    fireEvent.click(screen.getByTestId('language-packs-confirm-delete-legacy-del'))
+    await waitFor(() => expect(removeFn).toHaveBeenCalledWith('legacy-del'))
+    expect(vialAPI.hubDeleteI18nPost).not.toHaveBeenCalled()
   })
 
   it('export action triggers i18nPackExport for imported rows', async () => {
