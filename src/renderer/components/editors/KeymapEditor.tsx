@@ -26,7 +26,7 @@ import { useKeymapHistory } from './useKeymapHistory'
 import type { SingleHistoryEntry } from './useKeymapHistory'
 import { useKeyFlash } from './useKeyFlash'
 import { rewriteNumericKeycode } from '../../../shared/keymap/keymap-apply'
-import type { KeymapRewriteTable, KeymapRewriteLayoutIds } from '../../../shared/keymap/keymap-apply'
+import type { KeymapRewriteTable } from '../../../shared/keymap/keymap-apply'
 import type { KeymapApplyResult } from './keymap-editor-types'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { TypingTestPane } from './TypingTestPane'
@@ -50,7 +50,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   autoAdvance = true, onAutoAdvanceChange, viewMatrix, onViewMatrixChange,
   basicViewType, onBasicViewTypeChange, splitKeyMode, onSplitKeyModeChange,
   quickSelect, onQuickSelectChange, keyboardLayout: _keyboardLayout = 'qwerty', onKeyboardLayoutChange: _onKeyboardLayoutChange,
-  onAppliedKeymapLayoutChange,
   onLock, onMatrixModeChange, onOpenLighting,
   comboEntries, onOpenCombo, onSetComboEntry,
   keyOverrideEntries, onOpenKeyOverride, onSetKeyOverrideEntry,
@@ -146,7 +145,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     selectableKeys, autoAdvance, viewMatrix,
     onSetKey, onSetKeysBulk, onSetEncoder, unlocked, onUnlock,
     multiSelect, history,
-    onAppliedKeymapLayoutChange,
     onHistoryApplied: triggerFlash,
     tapDanceEntries, onSetTapDanceEntry,
     macroCount, macroBufferSize, macroBuffer, onSaveMacros,
@@ -246,7 +244,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   const applyKeymapRewrite = useCallback(async (
     table: KeymapRewriteTable,
-    layoutIds?: KeymapRewriteLayoutIds,
   ): Promise<KeymapApplyResult> => {
     // Re-entrancy guard: a double Apply click (or any other concurrent
     // caller) must never interleave two rewrite passes against the same
@@ -298,45 +295,26 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         error = err instanceof Error ? err.message : String(err)
       }
 
-      // Unmounted mid-rewrite: skip ALL bookkeeping below (history push,
-      // appliedKeymapLayout persistence, post-apply flash state/timer) —
-      // the component is gone, so there is nothing left to flash and no
-      // history stack of this instance to push onto. The device is left
-      // mid-rewrite exactly like a partial-failure apply; the counts are
-      // still returned to the caller for its own error surfacing.
+      // Unmounted mid-rewrite: skip ALL bookkeeping below (history clear,
+      // post-apply flash state/timer) — the component is gone, so there is
+      // nothing left to flash and no history stack of this instance to
+      // touch. The device is left mid-rewrite exactly like a
+      // partial-failure apply; the counts are still returned to the caller
+      // for its own error surfacing.
+      //
+      // Rewrite is a destructive one-shot (Plan-qwerty-select-no-rewrite v5
+      // 最終仕様), same class of operation as a snapshot/.vil restore: the
+      // moment ANY write actually landed, both undo/redo stacks are wiped
+      // rather than gaining a revertible batch entry — no history entry is
+      // ever pushed for a rewrite, success or partial failure alike.
+      // Recovery from a bad or partial rewrite is the user's own
+      // .vil/snapshot backup (the confirm modal recommends saving before
+      // applying), not Undo. A rewrite that touched nothing (table matched
+      // no live keycode, or the very first write itself failed) leaves
+      // history untouched — nothing was destroyed, so there's nothing to
+      // protect the user from.
       if (applied.length > 0 && isMountedRef.current) {
-        // Only attach appliedKeymapLayout bookkeeping when the rewrite
-        // completed without error. A partial failure leaves the keymap in
-        // a MIXED state (some positions rewritten, some not) — it's
-        // neither still `layoutIds.before` nor fully `layoutIds.after`, so
-        // claiming either would be wrong. Push a plain batch instead: undo
-        // needs no bookkeeping to correctly return the keymap (and
-        // appliedKeymapLayout, left untouched) to its prior state.
-        const bookkeepable = error === undefined ? layoutIds : undefined
-        // One-revert history (Plan-qwerty-select-no-rewrite §one-revert 履歴):
-        // a CLEAN rewrite invalidates every prior undo/redo entry (they'd
-        // restore stale, pre-rewrite keycodes), so wipe both stacks before
-        // pushing this batch. Post-rewrite history then holds exactly one
-        // entry: Undo always reverts the whole rewrite in one step, and
-        // there is nothing further back to accidentally restore. Manual
-        // edits made afterwards stack on top of it normally. A
-        // partial-failure batch does NOT get this treatment (pattern C1,
-        // "current behavior preserved") — the keymap is only partly
-        // rewritten, so wiping older history would needlessly destroy
-        // recovery options the user may still want; it pushes on top of
-        // whatever history already existed, same as any other batch edit.
-        if (error === undefined) history.clear()
-        history.push(
-          bookkeepable
-            ? { kind: 'batch', entries: applied, appliedLayoutBefore: bookkeepable.before, appliedLayoutAfter: bookkeepable.after }
-            : { kind: 'batch', entries: applied },
-        )
-        // Persist PipetteSettings.appliedKeymapLayout immediately on a
-        // successful rewrite (Plan-key-label-keymap-apply, 追加要求
-        // 2026-07-18) — undo/redo of the batch entry just pushed keeps it
-        // in sync afterwards via the same callback (useKeymapSelectionHandlers).
-        if (bookkeepable) onAppliedKeymapLayoutChange?.(bookkeepable.after)
-
+        history.clear()
         // Flash the rewritten positions (see `useKeyFlash`) — only for a
         // clean, error-free pass. A partial failure leaves the keymap
         // mixed, which isn't the "here's what changed" story this visual
@@ -347,7 +325,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     } finally {
       isApplyingRewriteRef.current = false
     }
-  }, [keymap, encoderLayout, onSetKey, onSetEncoder, history, onAppliedKeymapLayoutChange, triggerFlash])
+  }, [keymap, encoderLayout, onSetKey, onSetEncoder, history, triggerFlash])
 
   useImperativeHandle(ref, () => ({
     toggleMatrix: handleMatrixToggle, toggleTypingTest: handleTypingTestToggle,

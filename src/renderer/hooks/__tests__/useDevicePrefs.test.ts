@@ -7,7 +7,7 @@ import { useDevicePrefs } from '../useDevicePrefs'
 import { setupAppConfigMock, renderHookWithConfig, vialAPIMock } from './test-helpers'
 
 // Mock vialAPI for IPC calls
-const mockPipetteSettingsGet = vi.fn<(uid: string) => Promise<{ _rev: 1; keyboardLayout: string; appliedKeymapLayout?: string; autoAdvance: boolean; layerNames: string[] } | null>>()
+const mockPipetteSettingsGet = vi.fn<(uid: string) => Promise<{ _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] } | null>>()
 const mockPipetteSettingsPatch = vi.fn<(uid: string, prefs: { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[]; viewMatrix?: Record<string, { row: number; col: number }> | null }) => Promise<{ success: boolean }>>()
 
 beforeEach(() => {
@@ -162,93 +162,6 @@ describe('useDevicePrefs', () => {
       expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
         _rev: 1,
         keyboardLayout: 'french',
-      }))
-    })
-
-    it('setAppliedKeymapLayout saves per-device prefs via IPC after applyDevicePrefs (Plan-key-label-keymap-apply)', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.appliedKeymapLayout).toBeUndefined()
-      mockPipetteSettingsPatch.mockClear()
-      act(() => {
-        result.current.setAppliedKeymapLayout('colemak-id')
-      })
-
-      expect(result.current.appliedKeymapLayout).toBe('colemak-id')
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        _rev: 1,
-        appliedKeymapLayout: 'colemak-id',
-      }))
-    })
-
-    it('reads a persisted appliedKeymapLayout on applyDevicePrefs', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        appliedKeymapLayout: 'dvorak-id',
-        autoAdvance: true,
-        layerNames: [],
-      })
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.appliedKeymapLayout).toBe('dvorak-id')
-    })
-
-    it('resets appliedKeymapLayout to undefined when switching to a keyboard that never set it', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValueOnce({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        appliedKeymapLayout: 'colemak-id',
-        autoAdvance: true,
-        layerNames: [],
-      })
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.appliedKeymapLayout).toBe('colemak-id')
-
-      mockPipetteSettingsGet.mockResolvedValueOnce(null)
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xCCDD')
-      })
-      expect(result.current.appliedKeymapLayout).toBeUndefined()
-    })
-
-    it('setAppliedKeymapLayout(undefined) clears the field by sending null in the patch (Plan-qwerty-select-no-rewrite restore reset)', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        appliedKeymapLayout: 'colemak-id',
-        autoAdvance: true,
-        layerNames: [],
-      })
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.appliedKeymapLayout).toBe('colemak-id')
-      mockPipetteSettingsPatch.mockClear()
-
-      act(() => {
-        result.current.setAppliedKeymapLayout(undefined)
-      })
-
-      expect(result.current.appliedKeymapLayout).toBeUndefined()
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        appliedKeymapLayout: null,
       }))
     })
 
@@ -1837,23 +1750,19 @@ describe('useDevicePrefs', () => {
     })
   })
 
-  // Plan-qwerty-select-no-rewrite Phase 2: `remapLabel`/`isRemapped` must
-  // switch behavior depending on whether the select value matches the
-  // arrangement actually burned into the keymap (`appliedKeymapLayout`),
-  // centralized here so every consumer downstream (outer legends,
-  // composite inner legends via KeyWidget, the key picker/popover search,
-  // the palette) flips together. Same fixture as
+  // Plan-qwerty-select-no-rewrite v5 最終仕様: Display Only is the sole
+  // remap-rendering mode — there is no more "applied mode" gate to switch
+  // between (a Rewrite resets the select to QWERTY on success, so it never
+  // leaves anything for `remapLabel`/`isRemapped` to simulate). Both
+  // functions always resolve through the active Key Label pack's own
+  // compositeLabels -> map lookup order. Same fixture as
   // `shared/keymap/__tests__/keymap-apply.test.ts` (real Colemak data).
-  describe('applied-mode rendering gate (Plan-qwerty-select-no-rewrite Phase 2)', () => {
+  describe('remap-rendering (Plan-qwerty-select-no-rewrite v5, single mode)', () => {
     const COLEMAK: Record<string, string> = {
       KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
       KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
       KC_L: 'I', KC_SCOLON: 'O', KC_N: 'K',
     }
-    // Shift-pair labels (mirrors sample-packs/key-labels/japanese_qwerty_ej.json)
-    // — a display-only pack that `buildKeymapRewriteTable` refuses to turn
-    // into a table, used to exercise the "invalid table" degrade path.
-    const NOT_A_PERMUTATION: Record<string, string> = { KC_LBRACKET: '`\n@' }
 
     function mockKeyLabelPack(id: string, map: Record<string, string>, compositeLabels?: Record<string, string>): void {
       const existing = vialAPIMock()
@@ -1876,68 +1785,8 @@ describe('useDevicePrefs', () => {
       })
     }
 
-    it('applied mode (select === applied): remapLabel is raw/identity even for a key the pack would otherwise relabel', async () => {
+    it('remapLabel returns the pack\'s own label, and isRemapped marks both a map source key and a compositeLabels-only entry', async () => {
       setupMocks()
-      mockKeyLabelPack('colemak-id', COLEMAK)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('colemak-id')
-        result.current.setAppliedKeymapLayout('colemak-id')
-      })
-      await act(async () => {}) // flush the ensure() IPC fetch
-      expect(result.current.remapLabel('KC_E')).toBe('KC_E')
-    })
-
-    it('applied mode: isRemapped marks a keycode that is a Rewrite TARGET (KC_F, from KC_E -> KC_F), not an untouched key', async () => {
-      setupMocks()
-      mockKeyLabelPack('colemak-id', COLEMAK)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('colemak-id')
-        result.current.setAppliedKeymapLayout('colemak-id')
-      })
-      await act(async () => {})
-      expect(result.current.isRemapped('KC_F')).toBe(true)
-      expect(result.current.isRemapped('KC_A')).toBe(false)
-    })
-
-    it('applied mode: a composite outer qmkId string is never itself a target — only the resolved inner basic keycode is (mirrors use-layer-keycodes\' findInnerKeycode resolution)', async () => {
-      setupMocks()
-      mockKeyLabelPack('colemak-id', COLEMAK)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('colemak-id')
-        result.current.setAppliedKeymapLayout('colemak-id')
-      })
-      await act(async () => {})
-      // A caller checks both the full composite string and the resolved
-      // inner qmkId (see use-layer-keycodes.ts) — the table only ever
-      // contains plain basic keycodes, so the composite string itself
-      // must never match.
-      expect(result.current.isRemapped('LSFT(KC_E)')).toBe(false)
-      expect(result.current.isRemapped('KC_F')).toBe(true)
-    })
-
-    it('simulation mode is pinned (select !== applied): remapLabel returns the pack\'s own label, and isRemapped checks the pack\'s own map/compositeLabels rather than the Rewrite target set', async () => {
-      setupMocks()
-      // A compositeLabels-only entry (a display alias, e.g. "show LAlt's
-      // own legend on LALT(KC_L)") is never fed into
-      // `buildKeymapRewriteTable` (only `map` is) — so it can only ever
-      // mark `isRemapped` in simulation mode, never in applied mode. This
-      // is the sharpest illustration of the two isRemapped sources
-      // actually being different code paths, not just different data.
       mockKeyLabelPack('colemak-id', COLEMAK, { 'LALT(KC_L)': 'KC_LALT' })
       const { result } = renderHookWithConfig(() => useDevicePrefs())
       await act(async () => {})
@@ -1946,114 +1795,20 @@ describe('useDevicePrefs', () => {
       })
       act(() => {
         result.current.setLayout('colemak-id')
-        // appliedKeymapLayout stays undefined — never Rewritten on this
-        // keyboard, so the select is a display-only "preview" of the pack.
       })
-      await act(async () => {})
+      await act(async () => {}) // flush the ensure() IPC fetch
       expect(result.current.remapLabel('KC_E')).toBe('F')
       expect(result.current.isRemapped('KC_E')).toBe(true) // KC_E is a pack SOURCE key
       expect(result.current.isRemapped('LALT(KC_L)')).toBe(true) // compositeLabels-only entry
       expect(result.current.isRemapped('KC_A')).toBe(false) // untouched key
     })
 
-    it('applied mode does not honor a compositeLabels-only entry as remapped (it never reaches buildKeymapRewriteTable)', async () => {
-      setupMocks()
-      mockKeyLabelPack('colemak-id', COLEMAK, { 'LALT(KC_L)': 'KC_LALT' })
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('colemak-id')
-        result.current.setAppliedKeymapLayout('colemak-id')
-      })
-      await act(async () => {})
-      expect(result.current.isRemapped('LALT(KC_L)')).toBe(false)
-    })
-
-    it('reactivity: undoing a Rewrite (appliedKeymapLayout reverts while select stays put) flips applied mode back to simulation automatically', async () => {
-      setupMocks()
-      mockKeyLabelPack('colemak-id', COLEMAK)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('colemak-id')
-        result.current.setAppliedKeymapLayout('colemak-id')
-      })
-      await act(async () => {})
-      expect(result.current.remapLabel('KC_E')).toBe('KC_E') // applied mode: raw
-
-      // Simulate undo: KeymapEditor's history entry reverts the applied
-      // stamp back to what it was before the Rewrite batch, while the
-      // select value (`keyboardLayout`) is untouched by undo/redo.
-      act(() => {
-        result.current.setAppliedKeymapLayout('qwerty')
-      })
-      expect(result.current.remapLabel('KC_E')).toBe('F') // back to simulation
-      expect(result.current.isRemapped('KC_E')).toBe(true)
-
-      // Simulate redo: the stamp comes back to the applied pack.
-      act(() => {
-        result.current.setAppliedKeymapLayout('colemak-id')
-      })
-      expect(result.current.remapLabel('KC_E')).toBe('KC_E') // applied again
-    })
-
-    it('degrades to "no markers" (but still raw) when the applied pack\'s map no longer builds a valid Rewrite table', async () => {
-      setupMocks()
-      mockKeyLabelPack('japanese-id', NOT_A_PERMUTATION)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('japanese-id')
-        result.current.setAppliedKeymapLayout('japanese-id')
-      })
-      await act(async () => {})
-      expect(result.current.remapLabel('KC_LBRACKET')).toBe('KC_LBRACKET')
-      expect(result.current.isRemapped('KC_LBRACKET')).toBe(false)
-    })
-
-    // Bug fix: `buildKeymapRewriteTable` returns a CLOSED permutation,
-    // which includes identity entries (source === target) for keys a pack
-    // maps to their own letter just to satisfy closure. Only entries that
-    // actually change value are Rewrite TARGETS.
-    it('applied mode: an identity entry (pack maps a key to its own letter) is not marked, but a genuinely changed target still is', async () => {
-      setupMocks()
-      const COLEMAK_WITH_IDENTITY: Record<string, string> = { ...COLEMAK, KC_A: 'A' }
-      mockKeyLabelPack('colemak-identity-id', COLEMAK_WITH_IDENTITY)
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('colemak-identity-id')
-        result.current.setAppliedKeymapLayout('colemak-identity-id')
-      })
-      await act(async () => {})
-      // KC_A -> KC_A is a real, closed identity entry in the rewrite
-      // table — the key was never actually changed, so it must stay
-      // unmarked (matches the picker, which never marks an untouched key).
-      expect(result.current.isRemapped('KC_A')).toBe(false)
-      // KC_F is still a genuine Rewrite TARGET (from KC_E -> KC_F).
-      expect(result.current.isRemapped('KC_F')).toBe(true)
-    })
-
-    // Bug fix: simulation-mode `isRemapped` used to test membership
-    // (`qmkId in map`) instead of the value-difference rule every
-    // picker/palette consumer applies via `remapLabel(x) !== x`. A pack
-    // entry whose value is a passthrough identical to its own qmkId (a
-    // no-op entry, distinct from the rewrite-table's keycode-level
-    // identity above) is present in the map but never actually changes
-    // the label — it must not be marked either.
-    it('simulation mode: an identity passthrough entry (map value equal to its own qmkId) is not marked, matching remapLabel(x) === x', async () => {
+    // Bug fix: `isRemapped` used to test membership (`qmkId in map`)
+    // instead of the value-difference rule every picker/palette consumer
+    // applies via `remapLabel(x) !== x`. A pack entry whose value is a
+    // passthrough identical to its own qmkId (present in the map but never
+    // actually changing the label) must not be marked either.
+    it('an identity passthrough entry (map value equal to its own qmkId) is not marked, matching remapLabel(x) === x', async () => {
       setupMocks()
       const PACK_WITH_PASSTHROUGH: Record<string, string> = { ...COLEMAK, KC_A: 'KC_A' }
       mockKeyLabelPack('colemak-passthrough-id', PACK_WITH_PASSTHROUGH)
@@ -2064,8 +1819,6 @@ describe('useDevicePrefs', () => {
       })
       act(() => {
         result.current.setLayout('colemak-passthrough-id')
-        // appliedKeymapLayout stays undefined — never Rewritten, so this
-        // stays in simulation mode.
       })
       await act(async () => {})
       expect(result.current.remapLabel('KC_A')).toBe('KC_A')
@@ -2075,7 +1828,7 @@ describe('useDevicePrefs', () => {
       expect(result.current.isRemapped('KC_E')).toBe(true)
     })
 
-    it('simulation mode: isRemapped and remapLabel always agree (isRemapped(x) === (remapLabel(x) !== x))', async () => {
+    it('isRemapped and remapLabel always agree (isRemapped(x) === (remapLabel(x) !== x))', async () => {
       setupMocks()
       const PACK_WITH_PASSTHROUGH: Record<string, string> = { ...COLEMAK, KC_A: 'KC_A' }
       mockKeyLabelPack('colemak-passthrough-id', PACK_WITH_PASSTHROUGH)
@@ -2091,6 +1844,14 @@ describe('useDevicePrefs', () => {
       for (const qmkId of ['KC_A', 'KC_E', 'KC_Z']) {
         expect(result.current.isRemapped(qmkId)).toBe(result.current.remapLabel(qmkId) !== qmkId)
       }
+    })
+
+    it('QWERTY resolves to identity (empty builtin map) — raw label, no remap tint', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      expect(result.current.remapLabel('KC_E')).toBe('KC_E')
+      expect(result.current.isRemapped('KC_E')).toBe(false)
     })
   })
 })

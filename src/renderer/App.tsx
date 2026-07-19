@@ -594,24 +594,21 @@ export function App() {
   ])
 
   // Restore cleanup (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時の
-  // クリーンアップ, D1-D3): snapshot/layout-store restore and .vil import
-  // both converge on `applyVilFile`, which bumps `keymapRestoreSeq` on
-  // success. Reacting here (rather than inside KeymapEditor) is what
-  // reaches the two other pieces of bookkeeping a restore leaves stale —
-  // `appliedKeymapLayout` in devicePrefs and the Keyboard Layout select's
-  // confirm modal in QuickSettingsSelects (see its own `keymapRestoreSeq`
-  // prop below) — both of which live outside KeymapEditor. The counter is
-  // monotonic for the session (disconnect carries it forward instead of
-  // zeroing it, see keyboard-types.ts), so any change here means a restore
-  // landed.
+  // クリーンアップ): snapshot/layout-store restore and .vil import both
+  // converge on `applyVilFile`, which bumps `keymapRestoreSeq` on success.
+  // Reacting here (rather than inside KeymapEditor) is what reaches the
+  // Keyboard Layout select's confirm modal in QuickSettingsSelects (see its
+  // own `keymapRestoreSeq` prop below), which lives outside KeymapEditor.
+  // The counter is monotonic for the session (disconnect carries it forward
+  // instead of zeroing it, see keyboard-types.ts), so any change here means
+  // a restore landed.
   const prevKeymapRestoreSeqRef = useRef(keyboard.keymapRestoreSeq)
   useEffect(() => {
     const prev = prevKeymapRestoreSeqRef.current
     prevKeymapRestoreSeqRef.current = keyboard.keymapRestoreSeq
     if (keyboard.keymapRestoreSeq === prev) return
     keymapEditorRef.current?.clearHistory()
-    devicePrefs.setAppliedKeymapLayout(undefined)
-  }, [keyboard.keymapRestoreSeq, devicePrefs.setAppliedKeymapLayout])
+  }, [keyboard.keymapRestoreSeq])
 
   const handleLoadEntry = useCallback(async (entryId: string) => {
     const entry = layoutStore.entries.find((e) => e.id === entryId)
@@ -920,7 +917,6 @@ export function App() {
             onQuickSelectChange={devicePrefs.setQuickSelect}
             keyboardLayout={devicePrefs.layout}
             onKeyboardLayoutChange={devicePrefs.setLayout}
-            onAppliedKeymapLayoutChange={devicePrefs.setAppliedKeymapLayout}
             onLock={lifecycle.handleLock}
             onMatrixModeChange={editorUI.handleMatrixModeChange}
             onOpenLighting={editorUI.lightingSupported ? () => editorUI.setShowLightingModal(true) : undefined}
@@ -1084,12 +1080,11 @@ export function App() {
             keyboardLayout: devicePrefs.layout,
             onKeyboardLayoutChange: devicePrefs.setLayout,
             keymapEditable: keyboard.keymap.size > 0,
-            appliedKeymapLayout: devicePrefs.appliedKeymapLayout,
             keymapRestoreSeq: keyboard.keymapRestoreSeq,
-            onApplyKeymapRewrite: async (table, layoutIds) => {
+            onApplyKeymapRewrite: async (table) => {
               setKeymapApplyInFlight(true)
               try {
-                return await (keymapEditorRef.current?.applyKeymapRewrite(table, layoutIds) ?? Promise.resolve({ appliedCount: 0 }))
+                return await (keymapEditorRef.current?.applyKeymapRewrite(table) ?? Promise.resolve({ appliedCount: 0 }))
               } finally {
                 setKeymapApplyInFlight(false)
               }

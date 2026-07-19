@@ -15,7 +15,7 @@ import { useLanguageOptions } from '../hooks/useLanguageOptions'
 import { useLayoutOptions } from '../hooks/useLayoutOptions'
 import { useKeymapApplyPrompt } from '../hooks/useKeymapApplyPrompt'
 import { BUILTIN_QWERTY_LAYOUT_ID } from '../data/keyboard-layouts'
-import type { KeymapRewriteTable, KeymapRewriteLayoutIds } from '../../shared/keymap/keymap-apply'
+import type { KeymapRewriteTable } from '../../shared/keymap/keymap-apply'
 import type { ThemeSelection } from '../hooks/useTheme'
 import type { KeyboardLayoutId } from '../hooks/useKeyboardLayout'
 import type { KeymapApplyResult } from './editors/keymap-editor-types'
@@ -35,12 +35,8 @@ export interface QuickSettingsSelectsProps {
    *  (Plan-key-label-keymap-apply Phase 3). Without it, a flagged pack
    *  always falls back to today's display-only switch. */
   keymapEditable?: boolean
-  /** `PipetteSettings.appliedKeymapLayout` — id of the arrangement last
-   *  actually rewritten into the device keymap (or the built-in QWERTY id),
-   *  absent treated as identity/QWERTY (追加要求 2026-07-18). */
-  appliedKeymapLayout?: string
   /** Bulk-rewrite the live keymap via `KeymapEditorHandle.applyKeymapRewrite`. */
-  onApplyKeymapRewrite?: (table: KeymapRewriteTable, layoutIds: KeymapRewriteLayoutIds) => Promise<KeymapApplyResult>
+  onApplyKeymapRewrite?: (table: KeymapRewriteTable) => Promise<KeymapApplyResult>
   /** Forwarded to `useKeymapApplyPrompt` — see its own doc for what an
    *  increase does (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時の
    *  クリーンアップ, D3). */
@@ -54,7 +50,6 @@ export function QuickSettingsSelects({
   keyboardLayout,
   onKeyboardLayoutChange,
   keymapEditable = false,
-  appliedKeymapLayout,
   onApplyKeymapRewrite,
   keymapRestoreSeq,
 }: QuickSettingsSelectsProps) {
@@ -81,7 +76,6 @@ export function QuickSettingsSelects({
     // own "no layout selected" convention) — the hook's sole guard is
     // comparing a new selection against this exact value.
     keyboardLayout: keyboardLayout ?? BUILTIN_QWERTY_LAYOUT_ID,
-    appliedKeymapLayout,
     onKeyboardLayoutChange,
     onApplyKeymapRewrite,
     keymapRestoreSeq,

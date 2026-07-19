@@ -10,7 +10,7 @@ import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
 import type { TypingTestResult, TypingViewMenuTab, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { FavHubEntryResult } from './FavoriteHubActions'
-import type { KeymapRewriteTable, KeymapRewriteLayoutIds } from '../../../shared/keymap/keymap-apply'
+import type { KeymapRewriteTable } from '../../../shared/keymap/keymap-apply'
 
 export const MIN_SCALE = 0.3
 export const MAX_SCALE = 2.0
@@ -53,15 +53,12 @@ export interface KeymapEditorHandle {
   toggleTypingTest: () => void
   matrixMode: boolean
   hasMatrixTester: boolean
-  /** Bulk-rewrite every keymap/encoder position via `table`, as ONE
-   *  `{kind:'batch'}` entry on the same undo stack the editor's own
-   *  per-key edits use (Plan-key-label-keymap-apply Phase 3). When
-   *  `layoutIds` is passed (the footer's direct Rewrite flow, 追加要求
-   *  2026-07-18), the batch also records `appliedLayoutBefore`/
-   *  `appliedLayoutAfter` for undo/redo bookkeeping, and — on a
-   *  successfully-applied batch — `onAppliedKeymapLayoutChange` fires
-   *  immediately with `layoutIds.after`. */
-  applyKeymapRewrite: (table: KeymapRewriteTable, layoutIds?: KeymapRewriteLayoutIds) => Promise<KeymapApplyResult>
+  /** Bulk-rewrite every keymap/encoder position via `table` (Plan-key-
+   *  label-keymap-apply Phase 3). Destructive one-shot (Plan-qwerty-
+   *  select-no-rewrite v5 最終仕様): the moment any write actually lands,
+   *  the undo/redo stacks are wiped instead of gaining a revertible batch
+   *  entry — recovery is the user's own .vil/snapshot backup, not Undo. */
+  applyKeymapRewrite: (table: KeymapRewriteTable) => Promise<KeymapApplyResult>
   /** Wipes the undo/redo stack in place, without touching the keymap itself.
    *  Called by the host (App.tsx) after a snapshot/layout-store restore or
    *  `.vil` import replaces the whole keymap out from under this same
@@ -130,11 +127,6 @@ export interface KeymapEditorProps {
   onQuickSelectChange?: (enabled: boolean) => void
   keyboardLayout?: KeyboardLayoutId
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
-  /** Persists `PipetteSettings.appliedKeymapLayout` (Plan-key-label-keymap-apply,
-   *  追加要求 2026-07-18). Fired by `applyKeymapRewrite` on a successful
-   *  rewrite and by undo/redo of that rewrite's batch history entry — never
-   *  by the display-only `onKeyboardLayoutChange` path. */
-  onAppliedKeymapLayoutChange?: (id: string) => void
   onLock?: () => void
   onMatrixModeChange?: (matrixMode: boolean, hasMatrixTester: boolean) => void
   onOpenLighting?: () => void

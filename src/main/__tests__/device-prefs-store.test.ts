@@ -595,7 +595,11 @@ describe('pipette-settings-store', () => {
       expect(result.error).toContain('Invalid prefs')
     })
 
-    it('round-trips appliedKeymapLayout field (Plan-key-label-keymap-apply)', async () => {
+    it('drops a stale on-disk appliedKeymapLayout on the next PATCH write (field removed, Plan-qwerty-select-no-rewrite v5)', async () => {
+      // Simulates a settings file written by an older build that still had
+      // the field — the store no longer validates or projects it, so it
+      // silently drops out of the object returned to the renderer, and out
+      // of what gets written back on the next full-prefs PATCH.
       const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await setter(fakeEvent, 'uid-1', {
         _rev: 1,
@@ -608,34 +612,7 @@ describe('pipette-settings-store', () => {
 
       const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
       const prefs = await getter(fakeEvent, 'uid-1') as { appliedKeymapLayout?: string }
-      expect(prefs.appliedKeymapLayout).toBe('colemak-id')
-    })
-
-    it('leaves appliedKeymapLayout absent when never set', async () => {
-      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
-      await setter(fakeEvent, 'uid-1', {
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-      })
-
-      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
-      const prefs = await getter(fakeEvent, 'uid-1') as { appliedKeymapLayout?: string }
       expect(prefs.appliedKeymapLayout).toBeUndefined()
-    })
-
-    it('rejects prefs with non-string appliedKeymapLayout', async () => {
-      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
-      const result = await handler(fakeEvent, 'uid-1', {
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        appliedKeymapLayout: 123,
-      }) as { success: boolean; error: string }
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Invalid prefs')
     })
   })
 

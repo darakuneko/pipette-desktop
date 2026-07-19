@@ -52,11 +52,6 @@ export interface UseKeymapSelectionOptions {
   multiSelect: UseKeymapMultiSelectReturn
   // History
   history: UseKeymapHistoryReturn
-  /** Persists `PipetteSettings.appliedKeymapLayout` (Plan-key-label-keymap-apply,
-   *  追加要求 2026-07-18). Called only when undoing/redoing a rewrite batch
-   *  (one carrying `appliedLayoutBefore`/`appliedLayoutAfter`) — every other
-   *  batch/single entry has neither field, so this never fires for them. */
-  onAppliedKeymapLayoutChange?: (id: string) => void
   /** Fires the "flash" visual (see `useKeyFlash`) for the positions an
    *  undo/redo just touched. Contract: called only after ALL of that
    *  entry's device writes have succeeded AND the history stack has been
@@ -91,7 +86,6 @@ export function useKeymapSelectionHandlers({
   onUnlock,
   multiSelect,
   history,
-  onAppliedKeymapLayoutChange,
   onHistoryApplied,
   tapDanceEntries,
   onSetTapDanceEntry,
@@ -402,22 +396,12 @@ export function useKeymapSelectionHandlers({
       }
       if (keyEntries.length > 0) await onSetKeysBulk(keyEntries)
       for (const op of encoderOps) await onSetEncoder(op.layer, op.idx, op.dir, op.code)
-      // Rewrite batch bookkeeping (Plan-key-label-keymap-apply, 追加要求
-      // 2026-07-18): only a Key Label "apply to keymap" batch carries these
-      // fields (always both together), so this is a no-op for every other
-      // batch (e.g. picker paste). Checking `appliedLayoutAfter` alone is
-      // enough — the producer (KeymapEditor.applyKeymapRewrite) never sets
-      // one without the other.
-      const { appliedLayoutBefore, appliedLayoutAfter } = entry
-      if (appliedLayoutAfter !== undefined) {
-        onAppliedKeymapLayoutChange?.(isUndo ? appliedLayoutBefore! : appliedLayoutAfter)
-      }
     } else {
       const code = isUndo ? entry.oldKeycode : entry.newKeycode
       if (entry.kind === 'key') await onSetKey(entry.layer, entry.row, entry.col, code)
       else await onSetEncoder(entry.layer, entry.idx, entry.dir, code)
     }
-  }, [onSetKey, onSetKeysBulk, onSetEncoder, onAppliedKeymapLayoutChange])
+  }, [onSetKey, onSetKeysBulk, onSetEncoder])
 
   // In-flight guard to prevent concurrent undo/redo
   const undoRedoInFlightRef = useRef(false)

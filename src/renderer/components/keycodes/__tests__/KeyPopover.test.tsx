@@ -413,13 +413,11 @@ describe('PopoverTabKey — Key Label pack remap in search (issue #294)', () => 
     expect(screen.getByTestId('popover-result-KC_8')).toHaveTextContent('( 8')
   })
 
-  // Plan-qwerty-select-no-rewrite Phase 2: when the Keyboard Layout select
-  // matches what's actually Rewritten into the keymap, `useDevicePrefs`
-  // supplies an identity `remapLabel` (see its applied-mode gate) instead
-  // of omitting the prop — this pins that an identity function produces
-  // the exact same "no pack" search behavior as no `remapLabel` at all,
-  // so the picker doesn't need its own separate applied-mode branch.
-  it('an identity remapLabel (applied mode: select === appliedKeymapLayout) behaves exactly like no pack — raw label, no remap styling', () => {
+  // The picker's search results treat an identity `remapLabel` (one that
+  // returns its input unchanged, e.g. QWERTY's always-empty map) exactly
+  // like having no pack at all — raw label, no remap styling — without a
+  // separate "no pack" branch of its own.
+  it('an identity remapLabel behaves exactly like no pack — raw label, no remap styling', () => {
     const identityRemapLabel = (qmkId: string) => qmkId
     render(<PopoverTabKey currentKeycode={4} remapLabel={identityRemapLabel} onKeycodeSelect={onSelect} />)
     fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: '(' } })
@@ -429,14 +427,12 @@ describe('PopoverTabKey — Key Label pack remap in search (issue #294)', () => 
     expect(kc9Label?.className).not.toContain('text-key-label-remap')
   })
 
-  // Plan-qwerty-select-no-rewrite Phase 2 follow-up: once a Rewrite is
-  // actually APPLIED, `useDevicePrefs` supplies an identity `remapLabel`
-  // (as above) but a NON-identity `isRemapped` that flags the keycodes the
-  // Rewrite table actually touched. The picker must color by `isRemapped`
-  // in that case — raw label, but still tinted for a changed keycode —
-  // instead of falling back to "no styling" like the identity-remapLabel-
-  // alone case above.
-  it('applied mode (identity remapLabel + target-set isRemapped): a Rewrite TARGET keycode is tinted with its RAW label', () => {
+  // The picker colors by `isRemapped` independently of `remapLabel` — a
+  // caller can pass an identity `remapLabel` (raw label) alongside a
+  // non-identity `isRemapped` and the picker still tints the flagged
+  // keycode, instead of falling back to "no styling" like the plain
+  // identity-remapLabel case above.
+  it('identity remapLabel + independent isRemapped: a flagged keycode is tinted with its RAW label', () => {
     const identityRemapLabel = (qmkId: string) => qmkId
     const appliedTargetIsRemapped = (qmkId: string) => qmkId === 'KC_9'
     render(
@@ -456,7 +452,7 @@ describe('PopoverTabKey — Key Label pack remap in search (issue #294)', () => 
     expect(kc9Label?.className).toContain('text-key-label-remap')
   })
 
-  it('applied mode: a keycode isRemapped does NOT flag stays untinted, even with identity remapLabel', () => {
+  it('a keycode isRemapped does NOT flag stays untinted, even with identity remapLabel', () => {
     const identityRemapLabel = (qmkId: string) => qmkId
     const appliedTargetIsRemapped = (qmkId: string) => qmkId === 'KC_9'
     render(

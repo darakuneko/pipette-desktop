@@ -36,16 +36,6 @@ import {
 /** Source qmkId -> replacement qmkId. Guaranteed injective by `buildKeymapRewriteTable`. */
 export type KeymapRewriteTable = ReadonlyMap<string, string>
 
-/** Ids identifying the arrangement in effect before/after a Rewrite batch —
- *  passed through `applyKeymapRewrite` so it can record them on the undo
- *  batch entry (see `useKeymapHistory.HistoryEntry`'s `appliedLayoutBefore`/
- *  `appliedLayoutAfter`) and persist the new value on success
- *  (Plan-key-label-keymap-apply, 追加要求 2026-07-18). */
-export interface KeymapRewriteLayoutIds {
-  before: string
-  after: string
-}
-
 export type BuildKeymapRewriteTableResult =
   | { ok: true; table: KeymapRewriteTable }
   | { ok: false; error: string }

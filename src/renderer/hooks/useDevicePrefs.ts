@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
 import { useKeyLabelLookup } from './useKeyLabelLookup'
-import { buildKeymapRewriteTable } from '../../shared/keymap/keymap-apply'
 import { useAppConfig } from './useAppConfig'
 import { MIN_SCALE, MAX_SCALE } from '../components/editors/keymap-editor-types'
 import type { TypingTestResult, TypingViewMenuTab, ViewMode, TypingTestMemory, TypingTestMemoryWord, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
@@ -224,11 +223,6 @@ const VALID_VIEW_MODES: ReadonlySet<string> = new Set(VIEW_MODES)
 
 interface ValidatedPrefs {
   keyboardLayout: KeyboardLayoutId
-  /** `PipetteSettings.appliedKeymapLayout` — id of the Key Label arrangement
-   *  last actually rewritten into the device keymap (or the built-in QWERTY
-   *  id), absent when this keyboard has never had a Rewrite applied
-   *  (追加要求 2026-07-18). Independent of `keyboardLayout` above. */
-  appliedKeymapLayout?: string
   autoAdvance: boolean
   layerPanelOpen: boolean
   basicViewType: BasicViewType
@@ -260,7 +254,7 @@ interface ValidatedPrefs {
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; appliedKeymapLayout?: unknown; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestMonkeytypeConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown; viewMatrix?: Record<string, ViewMatrixCell> } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestMonkeytypeConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown; viewMatrix?: Record<string, ViewMatrixCell> } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
@@ -317,13 +311,8 @@ function validateIpcPrefs(
     ? data.viewMode as ViewMode
     : 'editor'
 
-  const appliedKeymapLayout = typeof data.appliedKeymapLayout === 'string' && data.appliedKeymapLayout.length > 0
-    ? data.appliedKeymapLayout
-    : undefined
-
   return {
     keyboardLayout: layout ?? defaultLayout,
-    appliedKeymapLayout,
     autoAdvance: autoAdvance ?? defaultAutoAdvance,
     layerPanelOpen,
     basicViewType,
@@ -443,30 +432,17 @@ export interface UseDevicePrefsReturn {
   autoLockTime: AutoLockMinutes
   setAutoLockTime: (m: AutoLockMinutes) => void
   applyDevicePrefs: (uid: string) => Promise<void>
-  /** Display label for a qmkId, gated by the WYSIWYG rendering rule
-   *  (Plan-qwerty-select-no-rewrite §表示ルール): identity (raw keycode
-   *  label) while `layout` is the arrangement actually Rewritten into
-   *  the keymap, otherwise the active Key Label pack's own label —
-   *  see the gate comment above `remapLabel`'s definition below. */
+  /** Display label for a qmkId: the active Key Label pack's own label
+   *  (via `compositeLabels` -> `map`), falling back to the qmkId itself
+   *  when neither has an entry. Display Only is the sole remap-rendering
+   *  mode (Plan-qwerty-select-no-rewrite v5 最終仕様) — a Rewrite never
+   *  leaves anything for this to simulate, since it resets `layout` back
+   *  to QWERTY (raw/no-color) on success. */
   remapLabel: (qmkId: string) => string
-  /** Same gate as `remapLabel` — the blue "remapped" tint source flips
-   *  from "this pack's own map/compositeLabels" (display simulation)
-   *  to "this qmkId is a target the applied Rewrite table sent
-   *  characters to" once `layout` matches what's actually burned into
-   *  the keymap. */
+  /** The blue "remapped" tint source: true whenever `remapLabel(qmkId)`
+   *  differs from `qmkId` itself — same rule every picker/palette consumer
+   *  applies. */
   isRemapped: (qmkId: string) => boolean
-  /** `PipetteSettings.appliedKeymapLayout` — see `ValidatedPrefs` above. */
-  appliedKeymapLayout: string | undefined
-  /** Persists `appliedKeymapLayout`. Called by the Key Label "apply to
-   *  keymap" Rewrite flow (KeymapEditor's `applyKeymapRewrite`, and
-   *  undo/redo of that rewrite's batch history entry — 追加要求
-   *  2026-07-18) — never by the display-only `setLayout` path. Also called
-   *  with `undefined` by App.tsx's restore-cleanup effect after a
-   *  snapshot/.vil restore, to reset the field back to its "never applied"
-   *  convention (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時のクリー
-   *  ンアップ) — `saveCurrentPrefs` below sends that as an explicit `null`
-   *  patch so it actually clears on disk instead of leaving the prior id. */
-  setAppliedKeymapLayout: (id: string | undefined) => void
 }
 
 /**
@@ -500,7 +476,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   const defaultQuickSelect = config.defaultQuickSelect ?? false
 
   const [layout, updateLayout, layoutRef] = useStateRef<KeyboardLayoutId>(defaultLayout)
-  const [appliedKeymapLayout, updateAppliedKeymapLayout, appliedKeymapLayoutRef] = useStateRef<string | undefined>(undefined)
   const [autoAdvance, updateAutoAdvance, autoAdvanceRef] = useStateRef<boolean>(defaultAutoAdvance)
   const [layerPanelOpen, updateLayerPanelOpen, layerPanelOpenRef] = useStateRef<boolean>(defaultLayerPanelOpen)
   const [basicViewType, updateBasicViewType, basicViewTypeRef] = useStateRef<BasicViewType>(defaultBasicViewType)
@@ -540,15 +515,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     window.vialAPI.pipetteSettingsPatch(uid, {
       _rev: 1,
       keyboardLayout: layoutRef.current,
-      // `null` clears the persisted field when the ref holds `undefined` —
-      // either "never applied on this keyboard" (no-op, there's nothing to
-      // clear) or a restore's explicit reset (Plan-qwerty-select-no-rewrite
-      // §snapshot/.vil 復元時のクリーンアップ), which DOES need to remove a
-      // stale concrete id already on disk. Same idiom as `typingTestMemory`
-      // / `viewMatrix` below — a bare `undefined` would leave that stale
-      // value in place instead (the field-level PATCH treats `undefined`
-      // as "leave untouched").
-      appliedKeymapLayout: appliedKeymapLayoutRef.current ?? null,
       autoAdvance: autoAdvanceRef.current,
       layerPanelOpen: layerPanelOpenRef.current,
       basicViewType: basicViewTypeRef.current,
@@ -592,11 +558,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateLayout(id)
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateLayout])
-
-  const setAppliedKeymapLayout = useCallback((id: string | undefined) => {
-    updateAppliedKeymapLayout(id)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateAppliedKeymapLayout])
 
   const setAutoAdvance = useCallback((enabled: boolean) => {
     updateAutoAdvance(enabled)
@@ -855,7 +816,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       viewMode: 'editor',
     }
     updateLayout(resolved.keyboardLayout)
-    updateAppliedKeymapLayout(resolved.appliedKeymapLayout)
     updateAutoAdvance(resolved.autoAdvance)
     updateLayerPanelOpen(resolved.layerPanelOpen)
     updateBasicViewType(resolved.basicViewType)
@@ -899,57 +859,16 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     void lookup.ensure(layout)
   }, [lookup, layout])
 
-  // WYSIWYG rendering gate (Plan-qwerty-select-no-rewrite §表示ルール): once
-  // the Keyboard Layout select matches the arrangement a Rewrite actually
-  // burned into the keymap, the keymap itself already embodies that
-  // arrangement — running its own labels back through the pack's map would
-  // double-convert the display versus what the physical key really sends
-  // (e.g. a Colemak Rewrite must show "QWFPGJ...", not Colemak's own
-  // labels applied on top of the already-rewritten QWERTY-baseline
-  // keycodes). QWERTY is unaffected either way since its map/compositeLabels
-  // are always empty (`BUILTIN_QWERTY_LAYOUT_ID` in keyboard-layouts.ts).
-  // `layout` (KeyboardLayoutId) is always a defined string, so comparing
-  // directly against `appliedKeymapLayout` already excludes the undefined
-  // ("never applied") case without a separate guard.
-  const layoutIsApplied = appliedKeymapLayout === layout
-
-  // The rewrite table actually applied, used only to mark which keycodes
-  // are Rewrite TARGETS (so the blue "remapped" tint can still show which
-  // keys changed even though the legend itself goes raw). Sourced from the
-  // same cached pack map `remapLabel`/`isRemapped` already read below — no
-  // extra IPC fetch beyond the `ensure(layout)` effect above, since
-  // `layout === appliedKeymapLayout` whenever this is non-undefined.
-  // Memoized on the map's own object reference (stable per cache entry, see
-  // `useKeyLabelLookup.getMap`) rather than on `lookup` itself (a fresh
-  // object literal every render), so this only rebuilds when the pack data
-  // actually changes.
-  const appliedMap = layoutIsApplied ? lookup.getMap(layout) : undefined
-  const appliedRewriteTargets = useMemo(() => {
-    if (!appliedMap) return undefined
-    const result = buildKeymapRewriteTable(appliedMap)
-    // An invalid/missing table (pack uninstalled locally, or its map no
-    // longer passes validation) degrades to "no markers" — the legend
-    // stays raw (remapLabel below never depends on this), it simply loses
-    // the blue tint rather than showing something wrong.
-    if (!result.ok) return undefined
-    // `buildKeymapRewriteTable` returns a CLOSED permutation, which
-    // includes identity entries (e.g. KC_A -> KC_A) for keys the pack
-    // leaves untouched. Only entries that actually change value count as
-    // "this key was remapped" (Plan-qwerty-select-no-rewrite §表示ルール,
-    // pattern A4) — an identity entry must stay unmarked, same as a
-    // picker/palette consumer would show via `remapLabel(x) !== x`.
-    return new Set(
-      [...result.table].filter(([source, target]) => source !== target).map(([, target]) => target),
-    )
-  }, [appliedMap])
-
-  // Resolves qmkId through the pack's compositeLabels -> map lookup order,
-  // falling back to qmkId itself when neither has an entry. `remapLabel`
-  // (simulation-mode display) and `isRemapped` (simulation-mode blue tint)
-  // both call this SAME helper so the two decisions can never diverge —
-  // blue means "this key's rendered label differs from its own qmkId",
-  // exactly the `remapLabel(x) !== x` rule every picker/palette consumer
-  // (KeycodeGrid.getRemapDisplayLabel) already uses.
+  // Display Only is the sole remap-rendering mode (Plan-qwerty-select-
+  // no-rewrite v5 最終仕様): both the keymap and the key picker always show
+  // the active Key Label pack's own labels, resolved through its
+  // compositeLabels -> map lookup order and falling back to qmkId itself
+  // when neither has an entry. QWERTY's map/compositeLabels are always
+  // empty (`BUILTIN_QWERTY_LAYOUT_ID` in keyboard-layouts.ts), so it
+  // resolves to identity without a separate guard. A Rewrite never leaves
+  // anything for this to simulate — it resets `layout` back to QWERTY on
+  // success (raw characters, no color), the same clean state a
+  // snapshot/.vil restore leaves.
   const resolveSimulatedLabel = useCallback(
     (qmkId: string): string => {
       const composite = lookup.getCompositeLabels(layout)?.[qmkId]
@@ -961,29 +880,18 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     [lookup, layout],
   )
 
-  const remapLabel = useCallback(
-    (qmkId: string): string => {
-      if (layoutIsApplied) return qmkId
-      return resolveSimulatedLabel(qmkId)
-    },
-    [layoutIsApplied, resolveSimulatedLabel],
-  )
+  const remapLabel = resolveSimulatedLabel
 
+  // The blue "remapped" tint: true whenever the resolved label differs from
+  // the qmkId itself — the same `remapLabel(x) !== x` rule every picker/
+  // palette consumer (KeycodeGrid.getRemapDisplayLabel) already uses.
   const isRemapped = useCallback(
-    (qmkId: string): boolean => {
-      // Applied mode stays on the (now identity-filtered) target-set path
-      // above — `remapLabel` is identity here, so a value-difference check
-      // against `resolveSimulatedLabel` would never match anything.
-      if (layoutIsApplied) return appliedRewriteTargets?.has(qmkId) ?? false
-      return resolveSimulatedLabel(qmkId) !== qmkId
-    },
-    [layoutIsApplied, appliedRewriteTargets, resolveSimulatedLabel],
+    (qmkId: string): boolean => resolveSimulatedLabel(qmkId) !== qmkId,
+    [resolveSimulatedLabel],
   )
 
   return {
     layout,
-    appliedKeymapLayout,
-    setAppliedKeymapLayout,
     autoAdvance,
     layerPanelOpen,
     basicViewType,

@@ -168,6 +168,16 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
     await act(async () => { await capturedOnKeycodeSelect!({ qmkId }) })
   }
 
+  // Same idea as `editKeyViaPicker` above but for an encoder: click via the
+  // last-captured `KeyboardWidget.onEncoderClick`, then pick a keycode.
+  // Pushes one plain `{kind:'encoder'}` entry onto the undo stack.
+  async function editEncoderViaPicker(dir: 0 | 1, qmkId: string) {
+    const widget = capturedWidgetProps[capturedWidgetProps.length - 1]
+    const encoderKey: KleKey = { ...KEY_DEFAULTS, encoderIdx: 0 }
+    act(() => { (widget.onEncoderClick as (k: KleKey, dir: number, maskClicked: boolean) => void)(encoderKey, dir, false) })
+    await act(async () => { await capturedOnKeycodeSelect!({ qmkId }) })
+  }
+
   interface CapturedFlash { keys: Set<string>; encoders: Set<string>; generation: number; startedAt: number }
 
   function lastFlash(): CapturedFlash | undefined {
@@ -179,7 +189,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
     return lastFlash()?.keys
   }
 
-  it('rewrites only the keys/encoders present in the table and pushes one batch history entry', async () => {
+  it('rewrites only the keys/encoders present in the table, and leaves nothing undo-able (destructive one-shot)', async () => {
     const ref = createRef<KeymapEditorHandle>()
     render(<KeymapEditor ref={ref} {...defaultProps} />)
 
@@ -198,17 +208,17 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
     expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 50)
     expect(onSetEncoder).toHaveBeenCalledWith(0, 0, 0, 70)
 
-    // The rewrite lands on the SAME undo stack as manual edits: Ctrl+Z
-    // reverts through the editor's own batch-undo path (onSetKeysBulk for
-    // keys, onSetEncoder loop for encoders) exactly like a copy/paste batch.
+    // A Rewrite is a destructive one-shot, like a snapshot restore — no
+    // history entry is pushed, so Ctrl+Z has nothing to revert.
+    expect(capturedCanUndo).toBe(false)
     onSetKey.mockClear()
     onSetKeysBulk.mockClear()
     onSetEncoder.mockClear()
 
     await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
 
-    expect(onSetKeysBulk).toHaveBeenCalledWith([{ layer: 0, row: 0, col: 0, keycode: 5 }])
-    expect(onSetEncoder).toHaveBeenCalledWith(0, 0, 0, 7)
+    expect(onSetKeysBulk).not.toHaveBeenCalled()
+    expect(onSetEncoder).not.toHaveBeenCalled()
   })
 
   it('returns a no-op result when nothing in the table matches the current keymap', async () => {
@@ -225,7 +235,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
     expect(onSetEncoder).not.toHaveBeenCalled()
   })
 
-  it('stops at the first failing write and keeps only the successful entries in history', async () => {
+  it('stops at the first failing write, and the one write that DID land is not undo-able either', async () => {
     let calls = 0
     onSetKey.mockImplementation(async () => {
       calls++
@@ -249,12 +259,13 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
     // Encoder write never runs — the loop stops as soon as the key write throws.
     expect(onSetEncoder).not.toHaveBeenCalled()
 
+    // A partial-failure rewrite is treated the same as a clean one — the
+    // one write that landed still wiped history rather than becoming
+    // undo-able.
+    expect(capturedCanUndo).toBe(false)
     onSetKeysBulk.mockClear()
     await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
-
-    // Only the one successful write ([0,0,0]) is undo-able — [0,0,1] never
-    // made it into the batch entry because its write threw.
-    expect(onSetKeysBulk).toHaveBeenCalledWith([{ layer: 0, row: 0, col: 0, keycode: 5 }])
+    expect(onSetKeysBulk).not.toHaveBeenCalled()
   })
 
   it('no-ops a re-entrant Apply instead of interleaving with an in-flight one', async () => {
@@ -327,7 +338,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
     consoleErrorSpy.mockRestore()
   })
 
-  it('skips a position a concurrent edit already moved, and excludes it from the batch entry', async () => {
+  it('skips a position a concurrent edit already moved', async () => {
     const ref = createRef<KeymapEditorHandle>()
     const { rerender } = render(<KeymapEditor ref={ref} {...defaultProps} />)
 
@@ -364,130 +375,33 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
     expect(onSetKey).toHaveBeenCalledTimes(1)
     expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 50)
 
-    // Flush the re-render `history.push`'s internal `setVersion` bump
-    // scheduled (skipped above by deliberately not wrapping the call in
-    // `act()`) before reading history back out via Ctrl+Z.
+    // Flush the re-render and the internal `history.clear()`'s `setVersion`
+    // bump (skipped above by deliberately not wrapping the call in `act()`)
+    // before reading history back out via Ctrl+Z.
     await act(async () => {})
 
+    // The rewrite wiped history rather than pushing an undo-able entry —
+    // Ctrl+Z is a no-op, so it cannot clobber the concurrent edit sitting
+    // at [0,0,1].
+    expect(capturedCanUndo).toBe(false)
     onSetKeysBulk.mockClear()
     await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
-
-    // The batch entry contains only [0,0,0] — the skipped [0,0,1] never
-    // entered history, so undo cannot clobber the concurrent edit sitting there.
-    expect(onSetKeysBulk).toHaveBeenCalledWith([{ layer: 0, row: 0, col: 0, keycode: 5 }])
+    expect(onSetKeysBulk).not.toHaveBeenCalled()
   })
 
-  // --- 追加要求 (2026-07-18): appliedKeymapLayout bookkeeping ---
+  // --- destructive one-shot history (Plan-qwerty-select-no-rewrite v5
+  // 最終仕様): a Rewrite never pushes an undoable entry, success or partial
+  // failure alike — the moment any write actually lands, both undo/redo
+  // stacks are wiped instead. Recovery is the user's own .vil/snapshot
+  // backup, not Undo. ---
 
-  describe('layoutIds bookkeeping (appliedKeymapLayout)', () => {
-    it('persists appliedKeymapLayout immediately on a successful rewrite, and reverts/reapplies on undo/redo', async () => {
-      const onAppliedKeymapLayoutChange = vi.fn()
-      const ref = createRef<KeymapEditorHandle>()
-      render(<KeymapEditor ref={ref} {...defaultProps} onAppliedKeymapLayoutChange={onAppliedKeymapLayoutChange} />)
-
-      const table = new Map([
-        ['KC_5', 'KC_50'],
-        ['KC_7', 'KC_70'],
-      ])
-
-      let result
-      await act(async () => {
-        result = await ref.current!.applyKeymapRewrite(table, { before: 'qwerty', after: 'colemak-id' })
-      })
-      expect(result).toEqual({ appliedCount: 2 })
-      // Fired immediately by the initial apply — not by undo/redo yet.
-      expect(onAppliedKeymapLayoutChange).toHaveBeenCalledTimes(1)
-      expect(onAppliedKeymapLayoutChange).toHaveBeenLastCalledWith('colemak-id')
-
-      onAppliedKeymapLayoutChange.mockClear()
-      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
-      // Undo of the rewrite batch reverts appliedKeymapLayout to "before".
-      expect(onAppliedKeymapLayoutChange).toHaveBeenCalledWith('qwerty')
-
-      onAppliedKeymapLayoutChange.mockClear()
-      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true }) })
-      // Redo re-applies the batch, moving appliedKeymapLayout forward again.
-      expect(onAppliedKeymapLayoutChange).toHaveBeenCalledWith('colemak-id')
-    })
-
-    it('does not call onAppliedKeymapLayoutChange when applyKeymapRewrite is called without layoutIds', async () => {
-      const onAppliedKeymapLayoutChange = vi.fn()
-      const ref = createRef<KeymapEditorHandle>()
-      render(<KeymapEditor ref={ref} {...defaultProps} onAppliedKeymapLayoutChange={onAppliedKeymapLayoutChange} />)
-
-      await act(async () => {
-        await ref.current!.applyKeymapRewrite(new Map([['KC_5', 'KC_50']]))
-      })
-      expect(onAppliedKeymapLayoutChange).not.toHaveBeenCalled()
-
-      onAppliedKeymapLayoutChange.mockClear()
-      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
-      // The plain batch that was undone carries neither appliedLayoutBefore
-      // nor appliedLayoutAfter, so undo must not touch the callback either.
-      expect(onAppliedKeymapLayoutChange).not.toHaveBeenCalled()
-    })
-
-    it('does not persist appliedKeymapLayout when the rewrite matches nothing (no batch pushed)', async () => {
-      const onAppliedKeymapLayoutChange = vi.fn()
-      const ref = createRef<KeymapEditorHandle>()
-      render(<KeymapEditor ref={ref} {...defaultProps} onAppliedKeymapLayoutChange={onAppliedKeymapLayoutChange} />)
-
-      let result
-      await act(async () => {
-        result = await ref.current!.applyKeymapRewrite(new Map([['KC_999', 'KC_1']]), { before: 'qwerty', after: 'colemak-id' })
-      })
-      expect(result).toEqual({ appliedCount: 0 })
-      expect(onAppliedKeymapLayoutChange).not.toHaveBeenCalled()
-    })
-
-    it('partial-failure rewrite (some writes succeeded before an error): the pushed batch omits appliedLayoutBefore/After and onAppliedKeymapLayoutChange is never fired', async () => {
-      const onAppliedKeymapLayoutChange = vi.fn()
-      let calls = 0
-      onSetKey.mockImplementation(async () => {
-        calls++
-        if (calls === 2) throw new Error('device write failed')
-      })
-
-      const ref = createRef<KeymapEditorHandle>()
-      render(<KeymapEditor ref={ref} {...defaultProps} onAppliedKeymapLayoutChange={onAppliedKeymapLayoutChange} />)
-
-      const table = new Map([
-        ['KC_5', 'KC_50'],
-        ['KC_6', 'KC_60'],
-      ])
-
-      let result
-      await act(async () => {
-        result = await ref.current!.applyKeymapRewrite(table, { before: 'qwerty', after: 'colemak-id' })
-      })
-      // One write succeeded before the second one threw — a batch IS
-      // pushed (there's something to undo), but it must not claim the
-      // keymap now matches 'colemak-id': it's a mix of old and new keys.
-      expect(result).toEqual({ appliedCount: 1, error: 'device write failed' })
-      expect(onAppliedKeymapLayoutChange).not.toHaveBeenCalled()
-
-      onSetKeysBulk.mockClear()
-      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
-      // Undo still correctly reverts the one successful write via the
-      // plain (non-bookkept) batch path...
-      expect(onSetKeysBulk).toHaveBeenCalledWith([{ layer: 0, row: 0, col: 0, keycode: 5 }])
-      // ...and, because that batch carries neither appliedLayoutBefore nor
-      // appliedLayoutAfter, undoing it never touches appliedKeymapLayout —
-      // it's left at whatever it was before this failed rewrite attempt.
-      expect(onAppliedKeymapLayoutChange).not.toHaveBeenCalled()
-    })
-  })
-
-  // --- one-revert history (Plan-qwerty-select-no-rewrite §one-revert 履歴, B1/B4) ---
-
-  describe('one-revert history', () => {
-    it('B1: a successful rewrite wipes pre-existing undo AND redo entries, leaving exactly the rewrite batch', async () => {
+  describe('destructive one-shot history (no batch push, ever)', () => {
+    it('a successful rewrite wipes pre-existing undo AND redo entries, and pushes nothing itself — Undo has nothing left to revert', async () => {
       const ref = createRef<KeymapEditorHandle>()
       render(<KeymapEditor ref={ref} {...defaultProps} />)
 
       // Build up two ordinary (non-rewrite) edits, then undo one — leaving
-      // ONE entry on each stack, neither of which is the rewrite about to
-      // be applied below.
+      // ONE entry on each stack, both of which the rewrite below must wipe.
       await editKeyViaPicker(makeKey(0, 0), 'KC_1')
       await editKeyViaPicker(makeKey(1, 1), 'KC_2')
       await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
@@ -508,30 +422,23 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       })
       expect(result).toEqual({ appliedCount: 2 })
 
-      // Exactly one entry remains: the rewrite batch. Both the leftover
-      // manual-edit undo entry and its sibling redo entry are gone.
-      expect(capturedCanUndo).toBe(true)
+      // Both stacks are empty — the rewrite itself was never pushed, and
+      // it wiped whatever manual-edit history came before it.
+      expect(capturedCanUndo).toBe(false)
       expect(capturedCanRedo).toBe(false)
 
-      // One Undo reverts the WHOLE rewrite in a single step...
-      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
-      expect(onSetKeysBulk).toHaveBeenCalledWith([{ layer: 0, row: 0, col: 0, keycode: 5 }])
-      expect(onSetEncoder).toHaveBeenCalledWith(0, 0, 0, 7)
-      expect(capturedCanUndo).toBe(false)
-      expect(capturedCanRedo).toBe(true)
-
-      // ...and there is nothing older left to reach — a second Undo is a
-      // pure no-op (no further device writes, nothing to revert to).
+      // Undo is a pure no-op — there is nothing left to revert the rewrite
+      // with; recovery is the user's own .vil/snapshot backup.
       onSetKeysBulk.mockClear()
       onSetEncoder.mockClear()
       await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
       expect(onSetKeysBulk).not.toHaveBeenCalled()
       expect(onSetEncoder).not.toHaveBeenCalled()
       expect(capturedCanUndo).toBe(false)
-      expect(capturedCanRedo).toBe(true)
+      expect(capturedCanRedo).toBe(false)
     })
 
-    it('C1: a partial-failure rewrite pushes on top of existing history instead of wiping it (current behavior preserved)', async () => {
+    it('a partial-failure rewrite ALSO wipes pre-existing history — the one successful write is not revertible either', async () => {
       const ref = createRef<KeymapEditorHandle>()
       render(<KeymapEditor ref={ref} {...defaultProps} />)
 
@@ -557,28 +464,66 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       })
       expect(result).toEqual({ appliedCount: 1, error: 'device write failed' })
 
-      // Unlike a clean rewrite (B1 above), a partial-failure batch does NOT
-      // wipe prior history — it pushes on top like any other edit, which
-      // still clears the redo stack as a normal `history.push` always does.
-      expect(capturedCanUndo).toBe(true)
+      // Unlike a normal batch edit, a partial-failure rewrite is treated the
+      // same as a clean one — ANY successful write wipes history rather
+      // than pushing a revertible entry on top.
+      expect(capturedCanUndo).toBe(false)
       expect(capturedCanRedo).toBe(false)
 
       onSetKeysBulk.mockClear()
-      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
-      // First Undo reverts the partial batch's one successful write ([0,0,0])...
-      expect(onSetKeysBulk).toHaveBeenCalledWith([{ layer: 0, row: 0, col: 0, keycode: 5 }])
-      // ...and the pre-existing manual edit is still sitting beneath it —
-      // proof it was never wiped.
-      expect(capturedCanUndo).toBe(true)
-
       onSetKey.mockClear()
       await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
-      // Second Undo reaches the manual edit made before the rewrite.
-      expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 5)
-      expect(capturedCanUndo).toBe(false)
+      expect(onSetKeysBulk).not.toHaveBeenCalled()
+      expect(onSetKey).not.toHaveBeenCalled()
     })
 
-    it('B4: a manual edit made after a rewrite stacks on top of it normally', async () => {
+    it('a rewrite that matches nothing (appliedCount: 0) leaves history untouched', async () => {
+      const ref = createRef<KeymapEditorHandle>()
+      render(<KeymapEditor ref={ref} {...defaultProps} />)
+
+      await editKeyViaPicker(makeKey(0, 0), 'KC_1')
+      expect(capturedCanUndo).toBe(true)
+
+      let result
+      await act(async () => {
+        result = await ref.current!.applyKeymapRewrite(new Map([['KC_999', 'KC_1']]))
+      })
+      expect(result).toEqual({ appliedCount: 0 })
+
+      // Nothing was destroyed — the prior manual edit is still undo-able.
+      expect(capturedCanUndo).toBe(true)
+      onSetKey.mockClear()
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+      expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 5)
+    })
+
+    it('a rewrite whose very first write fails (nothing applied) leaves history untouched', async () => {
+      const ref = createRef<KeymapEditorHandle>()
+      render(<KeymapEditor ref={ref} {...defaultProps} />)
+
+      await editKeyViaPicker(makeKey(1, 1), 'KC_2')
+      expect(capturedCanUndo).toBe(true)
+      onSetKey.mockClear()
+
+      // Only the rewrite's OWN write (not the manual edit above) fails.
+      onSetKey.mockRejectedValueOnce(new Error('device write failed'))
+
+      const table = new Map([['KC_5', 'KC_50']])
+      let result
+      await act(async () => {
+        result = await ref.current!.applyKeymapRewrite(table)
+      })
+      expect(result).toEqual({ appliedCount: 0, error: 'device write failed' })
+
+      // The pre-existing manual edit survives — the failed rewrite applied
+      // nothing, so there was nothing to protect the user from.
+      expect(capturedCanUndo).toBe(true)
+      onSetKey.mockClear()
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+      expect(onSetKey).toHaveBeenCalledWith(0, 0, 1, 6)
+    })
+
+    it('a manual edit made after a rewrite behaves like the first edit on a clean editor (the rewrite left nothing behind it)', async () => {
       const ref = createRef<KeymapEditorHandle>()
       render(<KeymapEditor ref={ref} {...defaultProps} />)
 
@@ -586,27 +531,17 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       await act(async () => {
         await ref.current!.applyKeymapRewrite(table)
       })
+      expect(capturedCanUndo).toBe(false)
+
+      // Manual edit on the OTHER key, made after the rewrite.
+      await editKeyViaPicker(makeKey(1, 1), 'KC_2')
       expect(capturedCanUndo).toBe(true)
 
-      // Manual edit on the OTHER key, made after the rewrite — must stack
-      // on top rather than being folded into (or wiped by) the rewrite's
-      // one-revert entry.
-      await editKeyViaPicker(makeKey(1, 1), 'KC_2')
-
-      onSetKeysBulk.mockClear()
       onSetKey.mockClear()
-      onSetEncoder.mockClear()
-
-      // First Undo reverts the manual edit (the most recent entry)...
+      // Undo reverts only the manual edit — there is no rewrite entry
+      // beneath it to reach afterwards.
       await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
       expect(onSetKey).toHaveBeenCalledWith(0, 0, 1, 6)
-      expect(onSetKeysBulk).not.toHaveBeenCalled()
-      expect(capturedCanUndo).toBe(true) // the rewrite batch is still there beneath it
-
-      // ...and a second Undo reverts the rewrite itself.
-      onSetKey.mockClear()
-      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
-      expect(onSetKeysBulk).toHaveBeenCalledWith([{ layer: 0, row: 0, col: 0, keycode: 5 }])
       expect(capturedCanUndo).toBe(false)
     })
   })
@@ -780,49 +715,45 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
   })
 
   // --- Undo/redo flash (onHistoryApplied → triggerFlash, useKeyFlash) ---
-  // Reuses this file's rewrite harness to build a one-entry history batch
-  // (via `applyKeymapRewrite`) rather than driving the keycode picker —
-  // `KeymapEditor.undo.test.tsx`'s `KeyboardWidget` mock doesn't capture
-  // `flash`, so these live here alongside the rest of the flash coverage.
+  // Builds a one-entry undo stack via an ordinary (non-rewrite) edit rather
+  // than `applyKeymapRewrite` — a Rewrite is a destructive one-shot (v5
+  // 最終仕様) that never leaves anything on the undo stack, so it can no
+  // longer serve as this fixture. `KeymapEditor.undo.test.tsx`'s
+  // `KeyboardWidget` mock doesn't capture `flash`, so this coverage lives
+  // here instead.
 
   describe('undo/redo flash (onHistoryApplied → triggerFlash)', () => {
     afterEach(() => {
       vi.useRealTimers()
     })
 
-    // Shared setup for every test below: mount the editor, apply a
-    // single-key rewrite (KC_5 at [0,0] -> KC_50), and let its own
-    // post-apply flash elapse — each test then starts from a clean flash
-    // state with exactly one entry sitting on the undo stack. Requires
-    // `vi.useFakeTimers()` to already be active (each test sets its own,
-    // since one needs `vi.setSystemTime` first).
-    async function renderWithRewrittenKey() {
+    // Shared setup for every test below: mount the editor and make a single
+    // manual key edit (KC_5 at [0,0] -> KC_50) — each test then starts from
+    // a clean flash state with exactly one entry sitting on the undo stack.
+    // A plain edit never itself flashes (only `applyKeymapRewrite` and
+    // undo/redo do), so there is no post-apply flash window to wait out
+    // here, unlike the old rewrite-based fixture.
+    async function renderWithEditedKey() {
       const ref = createRef<KeymapEditorHandle>()
       render(<KeymapEditor ref={ref} {...defaultProps} />)
-      await act(async () => {
-        await ref.current!.applyKeymapRewrite(new Map([['KC_5', 'KC_50']]))
-      })
-      act(() => { vi.advanceTimersByTime(700) })
+      await editKeyViaPicker(makeKey(0, 0), 'KC_50')
       return ref
     }
 
-    // Same shape as `renderWithRewrittenKey` above but rewrites only the
-    // idx=0/dir=0 encoder (KC_7 at defaultProps' `encoderLayout`), leaving
-    // no key entry on the pushed batch — proving an encoder-only undo/redo
-    // still opens a flash window (`keys` stays empty, `encoders` doesn't).
-    async function renderWithRewrittenEncoder() {
+    // Same shape as `renderWithEditedKey` above but edits only the
+    // idx=0/dir=0 encoder (KC_7 at defaultProps' `encoderLayout`), proving
+    // an encoder-only undo/redo still opens a flash window (`keys` stays
+    // empty, `encoders` doesn't).
+    async function renderWithEditedEncoder() {
       const ref = createRef<KeymapEditorHandle>()
       render(<KeymapEditor ref={ref} {...defaultProps} />)
-      await act(async () => {
-        await ref.current!.applyKeymapRewrite(new Map([['KC_7', 'KC_70']]))
-      })
-      act(() => { vi.advanceTimersByTime(700) })
+      await editEncoderViaPicker(0, 'KC_70')
       return ref
     }
 
     it('encoder-only undo flashes the encoder position (keys stays empty), then clears after 700ms', async () => {
       vi.useFakeTimers()
-      await renderWithRewrittenEncoder()
+      await renderWithEditedEncoder()
       expect(lastFlash()).toBeUndefined()
 
       await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
@@ -836,7 +767,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
 
     it('encoder-only redo flashes the encoder position likewise', async () => {
       vi.useFakeTimers()
-      await renderWithRewrittenEncoder()
+      await renderWithEditedEncoder()
 
       await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
       act(() => { vi.advanceTimersByTime(700) })
@@ -853,7 +784,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
 
     it('undo flashes the affected key position(s) on the current layer, then clears after 700ms', async () => {
       vi.useFakeTimers()
-      await renderWithRewrittenKey()
+      await renderWithEditedKey()
       expect(lastFlash()).toBeUndefined()
 
       await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
@@ -866,7 +797,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
 
     it('redo flashes the affected key position(s) likewise', async () => {
       vi.useFakeTimers()
-      await renderWithRewrittenKey()
+      await renderWithEditedKey()
 
       // Undo, then let its own flash window elapse before checking redo.
       await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
@@ -883,14 +814,14 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
 
     it('a failed undo does not flash and does not advance history', async () => {
       vi.useFakeTimers()
-      await renderWithRewrittenKey()
+      await renderWithEditedKey()
       expect(lastFlash()).toBeUndefined()
       expect(capturedCanUndo).toBe(true)
       expect(capturedCanRedo).toBe(false)
 
-      // The batch's single key entry is applied via `onSetKeysBulk` inside
+      // A single (non-batch) key entry is applied via `onSetKey` inside
       // `applyHistoryEntry` — reject just that one call.
-      onSetKeysBulk.mockRejectedValueOnce(new Error('device write failed'))
+      onSetKey.mockRejectedValueOnce(new Error('device write failed'))
 
       // Call the toolbar's captured `onUndo` (== `handleUndo`) directly and
       // await it ourselves — the real button/keyboard-shortcut paths both
@@ -908,15 +839,15 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
 
       // A retried undo (this time the write succeeds) still reverts the
       // ORIGINAL entry — proving the failed attempt didn't silently pop it.
-      onSetKeysBulk.mockClear()
+      onSetKey.mockClear()
       await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
-      expect(onSetKeysBulk).toHaveBeenCalledWith([{ layer: 0, row: 0, col: 0, keycode: 5 }])
+      expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 5)
       expect(lastFlashKeys()).toEqual(new Set(['0,0']))
     })
 
     it('a failed redo does not flash and does not advance history', async () => {
       vi.useFakeTimers()
-      await renderWithRewrittenKey()
+      await renderWithEditedKey()
 
       await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
       act(() => { vi.advanceTimersByTime(700) })
@@ -924,7 +855,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       expect(capturedCanUndo).toBe(false)
       expect(capturedCanRedo).toBe(true)
 
-      onSetKeysBulk.mockRejectedValueOnce(new Error('device write failed'))
+      onSetKey.mockRejectedValueOnce(new Error('device write failed'))
 
       await act(async () => {
         await expect(capturedOnRedo!()).rejects.toThrow('device write failed')
@@ -935,16 +866,16 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       expect(capturedCanUndo).toBe(false)
       expect(capturedCanRedo).toBe(true)
 
-      onSetKeysBulk.mockClear()
+      onSetKey.mockClear()
       await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true }) })
-      expect(onSetKeysBulk).toHaveBeenCalledWith([{ layer: 0, row: 0, col: 0, keycode: 50 }])
+      expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 50)
       expect(lastFlashKeys()).toEqual(new Set(['0,0']))
     })
 
     it('undo followed quickly by redo within the flash window bumps the generation instead of the stale timer wiping the new flash', async () => {
       vi.useFakeTimers()
       vi.setSystemTime(2_000_000)
-      await renderWithRewrittenKey()
+      await renderWithEditedKey()
       expect(lastFlash()).toBeUndefined()
 
       // Undo starts a flash window at T0.

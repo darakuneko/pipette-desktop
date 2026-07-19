@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import type { KeyLabelMeta } from '../../../shared/types/key-label-store'
-import type { KeymapRewriteLayoutIds } from '../../../shared/keymap/keymap-apply'
+import { BUILTIN_QWERTY_LAYOUT_ID } from '../../data/keyboard-layouts'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -153,7 +153,7 @@ describe('QuickSettingsSelects — keyboard layout apply-to-keymap branching', (
     expect(capturedApplyModalProps?.open).toBe(false)
   })
 
-  it('after confirming Rewrite, the applied arrangement stays selected (no forced QWERTY reset)', async () => {
+  it('after confirming Rewrite, the select resets to QWERTY on clean success (destructive one-shot)', async () => {
     lookup.getKeymapApplicable.mockReturnValue(true)
     buildKeymapRewriteTable.mockReturnValue({ ok: true, table: new Map([['KC_E', 'KC_F']]) })
 
@@ -164,14 +164,13 @@ describe('QuickSettingsSelects — keyboard layout apply-to-keymap branching', (
     await act(async () => { capturedApplyModalProps!.onApply() })
 
     expect(onApplyKeymapRewrite).toHaveBeenCalledTimes(1)
-    const [, layoutIds] = onApplyKeymapRewrite.mock.calls[0] as [unknown, KeymapRewriteLayoutIds]
-    // No appliedKeymapLayout prop was passed to QuickSettingsSelects, so
-    // "before" defaults to the built-in QWERTY id.
-    expect(layoutIds).toEqual({ before: 'qwerty', after: 'colemak-id' })
-    // The select stays on the arrangement actually burned into the
-    // keymap — it is never force-reset back to QWERTY.
-    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id')
-    expect(onKeyboardLayoutChange).not.toHaveBeenCalledWith('qwerty')
+    const [table] = onApplyKeymapRewrite.mock.calls[0] as [Map<string, string>]
+    expect(table).toEqual(new Map([['KC_E', 'KC_F']]))
+    // Clean success resets the select back to QWERTY — the rewrite is a
+    // destructive one-shot (v5 最終仕様), never left on the just-applied
+    // arrangement.
+    expect(onKeyboardLayoutChange).toHaveBeenCalledWith(BUILTIN_QWERTY_LAYOUT_ID)
+    expect(onKeyboardLayoutChange).not.toHaveBeenCalledWith('colemak-id')
   })
 
   it('handleApplyDisplayOnly still switches display straight to the target id', async () => {
