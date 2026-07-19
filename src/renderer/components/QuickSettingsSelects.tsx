@@ -14,6 +14,7 @@ import { useKeyLabels } from '../hooks/useKeyLabels'
 import { useLanguageOptions } from '../hooks/useLanguageOptions'
 import { useLayoutOptions } from '../hooks/useLayoutOptions'
 import { useKeymapApplyPrompt } from '../hooks/useKeymapApplyPrompt'
+import { BUILTIN_QWERTY_LAYOUT_ID } from '../data/keyboard-layouts'
 import type { KeymapRewriteTable, KeymapRewriteLayoutIds } from '../../shared/keymap/keymap-apply'
 import type { ThemeSelection } from '../hooks/useTheme'
 import type { KeyboardLayoutId } from '../hooks/useKeyboardLayout'
@@ -68,7 +69,17 @@ export function QuickSettingsSelects({
     handleApplyDisplayOnly,
     handleApplyConfirm,
     applyError,
-  } = useKeymapApplyPrompt({ keymapEditable, appliedKeymapLayout, onKeyboardLayoutChange, onApplyKeymapRewrite })
+  } = useKeymapApplyPrompt({
+    keymapEditable,
+    // Same value the select itself renders (falls back to QWERTY when the
+    // footer hasn't been given a layout yet, matching useKeyboardLayout's
+    // own "no layout selected" convention) — the hook's sole guard is
+    // comparing a new selection against this exact value.
+    keyboardLayout: keyboardLayout ?? BUILTIN_QWERTY_LAYOUT_ID,
+    appliedKeymapLayout,
+    onKeyboardLayoutChange,
+    onApplyKeymapRewrite,
+  })
 
   const languageOptions = useLanguageOptions(i18nPacks.metas)
   const layoutOptions = useLayoutOptions(keyLabels.metas)

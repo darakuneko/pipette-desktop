@@ -1,24 +1,26 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Owns the "does this Key Label pack want a keymap rewrite?" decision for
-// the footer's Keyboard Layout select (Plan-key-label-keymap-apply Phase 3,
-// generalized by the 追加要求 2026-07-18 section): fetches the target's
-// (and, when needed, the currently-applied arrangement's) full payload,
-// checks `keymapApplicable`, and validates each with
-// `buildKeymapRewriteTable` before deciding whether to prompt with
-// KeymapApplyConfirmModal or fall through to today's direct display-only
-// switch. Extracted out of QuickSettingsSelects so the footer component only
-// owns rendering, not this validation/orchestration.
+// the footer's Keyboard Layout select (Plan-qwerty-select-no-rewrite,
+// WYSIWYG select semantics): fetches the target's full payload, checks
+// `keymapApplicable`, and validates it with `buildKeymapRewriteTable`
+// before deciding whether to prompt with KeymapApplyConfirmModal or fall
+// through to today's direct display-only switch. Extracted out of
+// QuickSettingsSelects so the footer component only owns rendering, not
+// this validation/orchestration.
 //
-// The keymap is not assumed to still be raw QWERTY: the prompt composes the
-// currently-applied arrangement's table with the target's
-// (`composeRewriteTables`) so a switch away from a previously-rewritten
-// keymap (including back to QWERTY itself) produces the correct incremental
-// rewrite instead of re-applying the target table against stale keycodes.
+// The select value is WYSIWYG: it is the last thing the user actually
+// picked, never force-reset. There is no compose/inverse machinery — a
+// Rewrite always applies the target's own table directly against
+// whatever the keymap currently holds (the user is warned to save first;
+// a mis-timed rewrite is a single Undo away, see the plan's one-revert
+// history section). QWERTY is always inert: selecting it only switches
+// the display, never touches the keymap or opens a modal, regardless of
+// what is currently applied.
 
 import { useCallback, useRef, useState } from 'react'
 import { useKeyLabelLookup } from './useKeyLabelLookup'
-import { buildKeymapRewriteTable, composeRewriteTables, type KeymapRewriteTable, type KeymapRewriteLayoutIds } from '../../shared/keymap/keymap-apply'
+import { buildKeymapRewriteTable, type KeymapRewriteTable, type KeymapRewriteLayoutIds } from '../../shared/keymap/keymap-apply'
 import { BUILTIN_QWERTY_LAYOUT_ID } from '../data/keyboard-layouts'
 import type { KeyboardLayoutId } from './useKeyboardLayout'
 import type { KeymapApplyResult } from '../components/editors/keymap-editor-types'
@@ -27,11 +29,17 @@ export interface UseKeymapApplyPromptOptions {
   /** True when the connected device has a loaded keymap to rewrite. Without
    *  it, a flagged pack always falls back to today's display-only switch. */
   keymapEditable: boolean
+  /** The Keyboard Layout select's current value (same as what the select
+   *  renders) — the sole guard for the "nothing to do" case: re-picking
+   *  this exact value is always display-only, no modal. */
+  keyboardLayout: string
   /** `PipetteSettings.appliedKeymapLayout` — id of the arrangement last
    *  actually rewritten into the device keymap (or the built-in QWERTY id).
    *  Absent is treated as identity/QWERTY, matching the field's own
-   *  "never applied" convention. Independent of `keyboardLayout`
-   *  (the display-only selection), which never updates this. */
+   *  "never applied" convention. No longer used to guard or compose a
+   *  rewrite table (the table is always the target's own) — its only
+   *  remaining role here is undo/redo bookkeeping, recorded as `before`
+   *  on the applied batch at Confirm time. */
   appliedKeymapLayout?: string
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
   /** Bulk-rewrite the live keymap via `KeymapEditorHandle.applyKeymapRewrite`. */
@@ -50,16 +58,16 @@ export interface UseKeymapApplyPromptReturn {
   applyError: string | null
 }
 
-/** Resolve `id`'s rewrite table: identity (empty map) for the built-in
- *  QWERTY entry, otherwise the entry's own table when it's flagged
- *  `keymapApplicable` and its map actually builds. Returns `null` when
- *  `id` isn't rewrite-eligible at all (flag-less pack, failed build, or a
- *  pack that's missing/not yet loaded locally). */
+/** Resolve `id`'s own rewrite table when it's flagged `keymapApplicable`
+ *  and its map actually builds. Returns `null` when `id` isn't
+ *  rewrite-eligible at all (flag-less pack, failed build, or a pack
+ *  that's missing/not yet loaded locally). QWERTY is never passed in here
+ *  — it's handled as an early return in `handleKeyboardLayoutChange`
+ *  before any lookup happens. */
 async function resolveRewriteTable(
   id: string,
   keyLabelLookup: ReturnType<typeof useKeyLabelLookup>,
 ): Promise<KeymapRewriteTable | null> {
-  if (id === BUILTIN_QWERTY_LAYOUT_ID) return new Map()
   await keyLabelLookup.ensure(id)
   const map = keyLabelLookup.getMap(id)
   if (!map || !keyLabelLookup.getKeymapApplicable(id)) return null
@@ -69,45 +77,50 @@ async function resolveRewriteTable(
 
 export function useKeymapApplyPrompt({
   keymapEditable,
+  keyboardLayout,
   appliedKeymapLayout,
   onKeyboardLayoutChange,
   onApplyKeymapRewrite,
 }: UseKeymapApplyPromptOptions): UseKeymapApplyPromptReturn {
   const keyLabelLookup = useKeyLabelLookup()
-  // `before` is captured at SELECTION time (the appliedId the composed
-  // `table` was actually built from) and carried inside pendingApply so
-  // Confirm always uses the base it composed against — not whatever
-  // `appliedKeymapLayout` happens to be when the user clicks Apply. Without
-  // this, appliedKeymapLayout changing while the modal is open (e.g. an
-  // undo/redo of an unrelated rewrite batch) would record a mismatched
-  // {before, after} pair on the new batch.
-  const [pendingApply, setPendingApply] = useState<{ id: string; name: string; table: KeymapRewriteTable; before: string } | null>(null)
+  const [pendingApply, setPendingApply] = useState<{ id: string; name: string; table: KeymapRewriteTable } | null>(null)
   const [applyError, setApplyError] = useState<string | null>(null)
   // Bumped on every invocation; the async lookups below re-check it after
   // each `await` so a newer selection always wins over a slower older one
   // (selection race — two quick picks where the first's lookups resolve
   // after the second's must never let the first overwrite the second's
-  // prompt or fire a stale display-only switch).
+  // prompt or fire a stale display-only switch). The QWERTY early return
+  // also relies on this bump: it invalidates any in-flight lookup from a
+  // prior (non-QWERTY) selection so a slower lookup can never open a
+  // modal after the user has already moved on to QWERTY.
   const requestSeqRef = useRef(0)
 
   const handleKeyboardLayoutChange = useCallback((v: string) => {
     setApplyError(null)
-    const seq = ++requestSeqRef.current
+    ++requestSeqRef.current
+    const seq = requestSeqRef.current
+    // QWERTY is always inert: it only switches the display, never touches
+    // the keymap and never opens the confirm modal, regardless of what's
+    // currently applied or what's already pending.
+    if (v === BUILTIN_QWERTY_LAYOUT_ID) {
+      setPendingApply(null)
+      onKeyboardLayoutChange?.(v as KeyboardLayoutId)
+      return
+    }
     if (!keymapEditable || !onApplyKeymapRewrite) {
       onKeyboardLayoutChange?.(v as KeyboardLayoutId)
       return
     }
-    const appliedId = appliedKeymapLayout ?? BUILTIN_QWERTY_LAYOUT_ID
-    // Re-selecting the arrangement that's already burned into the keymap
-    // has nothing left to rewrite (composing a table with itself is always
-    // empty) — switch display only. This is also the documented case where
-    // choosing that same pack's display label re-introduces the
-    // double-translated look, since the keymap already holds its keycodes.
-    if (appliedId === v) {
+    // Re-selecting the value already shown in the select is a no-op —
+    // display-only, no modal (pattern A2). This is the only guard: unlike
+    // `appliedKeymapLayout`, `keyboardLayout` is exactly what the select
+    // currently renders, so this is the one case where there is genuinely
+    // nothing new to do.
+    if (v === keyboardLayout) {
       onKeyboardLayoutChange?.(v as KeyboardLayoutId)
       return
     }
-    // Flag + table-build check requires each entry's full payload, which
+    // Flag + table-build check requires the entry's full payload, which
     // the layout dropdown only has name/id for — fetch (or hit cache)
     // before deciding whether to prompt. Flag-less packs and packs that
     // fail the rewrite-table build fall through to today's direct
@@ -119,25 +132,9 @@ export function useKeymapApplyPrompt({
         onKeyboardLayoutChange?.(v as KeyboardLayoutId)
         return
       }
-      const appliedTable = await resolveRewriteTable(appliedId, keyLabelLookup)
-      if (requestSeqRef.current !== seq) return // superseded by a newer selection
-      if (!appliedTable) {
-        // The pack actually burned into the keymap is no longer installed
-        // (or no longer builds — e.g. re-imported without the flag) —
-        // composing from it would be a guess about the keymap's real
-        // state, so fall back to a plain display-only switch instead.
-        console.warn(`useKeymapApplyPrompt: applied layout "${appliedId}" is no longer rewrite-eligible, skipping the composed rewrite prompt`)
-        onKeyboardLayoutChange?.(v as KeyboardLayoutId)
-        return
-      }
-      const composed = composeRewriteTables(appliedTable, targetTable)
-      if (composed.size === 0) {
-        onKeyboardLayoutChange?.(v as KeyboardLayoutId)
-        return
-      }
-      setPendingApply({ id: v, name: keyLabelLookup.getName(v) ?? v, table: composed, before: appliedId })
+      setPendingApply({ id: v, name: keyLabelLookup.getName(v) ?? v, table: targetTable })
     })()
-  }, [onKeyboardLayoutChange, keymapEditable, onApplyKeymapRewrite, keyLabelLookup, appliedKeymapLayout])
+  }, [onKeyboardLayoutChange, keymapEditable, keyboardLayout, onApplyKeymapRewrite, keyLabelLookup])
 
   const handleApplyCancel = useCallback(() => setPendingApply(null), [])
 
@@ -149,7 +146,12 @@ export function useKeymapApplyPrompt({
 
   const handleApplyConfirm = useCallback(() => {
     if (!pendingApply || !onApplyKeymapRewrite) return
-    const { id, table, before } = pendingApply
+    const { id, table } = pendingApply
+    // `before` is read at CONFIRM time (not captured at selection time):
+    // with a direct target table there is no composed base to keep in
+    // sync with, so the freshest `appliedKeymapLayout` is simply the most
+    // accurate bookkeeping value to record for undo/redo.
+    const before = appliedKeymapLayout ?? BUILTIN_QWERTY_LAYOUT_ID
     void (async () => {
       const result = await onApplyKeymapRewrite(table, { before, after: id })
       setPendingApply(null)
@@ -163,16 +165,13 @@ export function useKeymapApplyPrompt({
         setApplyError(result.error)
         return
       }
-      // Display double-remap fix (2026-07-18 real-hardware finding): the
-      // keymap now physically holds the target arrangement's keycodes, so
-      // the display must stay on QWERTY labels — switching display to the
-      // target would re-translate already-rewritten keycodes through its
-      // own label map, looking "double applied" for a genuinely correct
-      // single rewrite. Display Only (handleApplyDisplayOnly above) is
-      // unaffected and still switches to the target as before.
-      onKeyboardLayoutChange?.(BUILTIN_QWERTY_LAYOUT_ID as KeyboardLayoutId)
+      // The applied layout stays selected — no forced reset to QWERTY.
+      // The footer's legend rendering (not this hook) is responsible for
+      // showing the plain/undecorated legend once the select matches the
+      // arrangement actually burned into the keymap.
+      onKeyboardLayoutChange?.(id as KeyboardLayoutId)
     })()
-  }, [pendingApply, onApplyKeymapRewrite, onKeyboardLayoutChange])
+  }, [pendingApply, appliedKeymapLayout, onApplyKeymapRewrite, onKeyboardLayoutChange])
 
   return {
     handleKeyboardLayoutChange,

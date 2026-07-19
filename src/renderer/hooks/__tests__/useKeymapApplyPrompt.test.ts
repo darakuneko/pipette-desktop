@@ -3,25 +3,22 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { useKeymapApplyPrompt } from '../useKeymapApplyPrompt'
-import type { KeymapRewriteLayoutIds } from '../../../shared/keymap/keymap-apply'
+import { useKeymapApplyPrompt, type UseKeymapApplyPromptOptions } from '../useKeymapApplyPrompt'
+import { buildKeymapRewriteTable, type KeymapRewriteLayoutIds } from '../../../shared/keymap/keymap-apply'
+import { BUILTIN_QWERTY_LAYOUT_ID } from '../../data/keyboard-layouts'
 
 // Real rewrite-table engine (not mocked) — this suite exercises the
-// composition/eligibility branching added for the 追加要求 (2026-07-18)
-// section of Plan-key-label-keymap-apply, so it needs real
-// buildKeymapRewriteTable / composeRewriteTables behavior, not a stub.
-// Real Colemak / Dvorak fixtures, same as shared/keymap/__tests__/keymap-apply.test.ts.
-// Dvorak must be a CLOSED map (every target is also a source, see the
-// closure check in buildKeymapRewriteTable) — this is pipette-hub's real
-// "Dvorak" pack (data/key-labels-seed.json) plus the two entries
-// (KC_MINUS -> "[", KC_EQUAL -> "]") its closure-fix plan adds; the
-// unfixed 33-entry pack is intentionally non-closed and covered by its
-// own dedicated test in keymap-apply.test.ts, not here.
+// WYSIWYG select semantics from Plan-qwerty-select-no-rewrite: the target
+// table is always the selected pack's own table, never composed with
+// whatever is currently applied. Real Colemak / Dvorak fixtures, same as
+// shared/keymap/__tests__/keymap-apply.test.ts.
 const COLEMAK: Record<string, string> = {
   KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
   KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
   KC_L: 'I', KC_SCOLON: 'O', KC_N: 'K',
 }
+// Closed Dvorak map (see shared/keymap/__tests__/keymap-apply.test.ts for
+// why the two extra entries vs. the raw Hub pack are required).
 const DVORAK: Record<string, string> = {
   KC_Q: "'", KC_W: ',', KC_E: '.', KC_R: 'P', KC_T: 'Y', KC_Y: 'F', KC_U: 'G',
   KC_I: 'C', KC_O: 'R', KC_P: 'L', KC_LBRACKET: '/', KC_RBRACKET: '=',
@@ -55,7 +52,19 @@ vi.mock('../useKeyLabelLookup', () => ({
   useKeyLabelLookup: () => lookup,
 }))
 
-describe('useKeymapApplyPrompt — composed eligibility (追加要求 2026-07-18)', () => {
+function colemakTable() {
+  const result = buildKeymapRewriteTable(COLEMAK)
+  if (!result.ok) throw new Error('fixture map failed to build')
+  return result.table
+}
+
+function dvorakTable() {
+  const result = buildKeymapRewriteTable(DVORAK)
+  if (!result.ok) throw new Error('fixture map failed to build')
+  return result.table
+}
+
+describe('useKeymapApplyPrompt — WYSIWYG select semantics (Plan-qwerty-select-no-rewrite)', () => {
   const onKeyboardLayoutChange = vi.fn()
   const onApplyKeymapRewrite = vi.fn().mockResolvedValue({ appliedCount: 2 })
 
@@ -68,93 +77,175 @@ describe('useKeymapApplyPrompt — composed eligibility (追加要求 2026-07-18
     onApplyKeymapRewrite.mockResolvedValue({ appliedCount: 2 })
   })
 
-  function setup(appliedKeymapLayout?: string) {
-    return renderHook(() => useKeymapApplyPrompt({
+  function setup(opts: Partial<UseKeymapApplyPromptOptions> & { keyboardLayout: string }) {
+    return renderHook((props: Partial<UseKeymapApplyPromptOptions> & { keyboardLayout: string }) => useKeymapApplyPrompt({
       keymapEditable: true,
-      appliedKeymapLayout,
       onKeyboardLayoutChange,
       onApplyKeymapRewrite,
-    }))
+      ...props,
+    }), { initialProps: opts })
   }
 
-  it('QWERTY -> Colemak (nothing applied yet): prompts with the plain Colemak table', async () => {
-    const { result } = setup(undefined)
-    act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
-    await waitFor(() => expect(result.current.pendingApply).toEqual({ id: 'colemak-id', name: 'Colemak' }))
-    expect(onKeyboardLayoutChange).not.toHaveBeenCalled()
+  // --- A1: QWERTY is always inert ---
+
+  it('A1: selecting QWERTY switches display only, even with a different arrangement applied', async () => {
+    const { result } = setup({ keyboardLayout: 'colemak-id', appliedKeymapLayout: 'colemak-id' })
+    act(() => result.current.handleKeyboardLayoutChange(BUILTIN_QWERTY_LAYOUT_ID))
+    await waitFor(() => expect(onKeyboardLayoutChange).toHaveBeenCalledWith(BUILTIN_QWERTY_LAYOUT_ID))
+    expect(result.current.pendingApply).toBeNull()
+    expect(onApplyKeymapRewrite).not.toHaveBeenCalled()
+    expect(lookup.ensure).not.toHaveBeenCalled()
   })
 
-  it('Colemak applied -> QWERTY: composes to the inverse Colemak table (non-empty) and prompts', async () => {
-    const { result } = setup('colemak-id')
-    act(() => result.current.handleKeyboardLayoutChange('qwerty'))
-    await waitFor(() => expect(result.current.pendingApply).toEqual({ id: 'qwerty', name: 'qwerty' }))
-  })
-
-  it('Colemak applied -> Dvorak: composes a direct table and prompts (fixes the latent double-rewrite bug)', async () => {
-    const { result } = setup('colemak-id')
+  it('A1: selecting QWERTY closes an already-open confirm modal instead of applying it', async () => {
+    const { result } = setup({ keyboardLayout: 'qwerty', appliedKeymapLayout: 'colemak-id' })
     act(() => result.current.handleKeyboardLayoutChange('dvorak-id'))
-    await waitFor(() => expect(result.current.pendingApply).toEqual({ id: 'dvorak-id', name: 'Dvorak' }))
+    await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
+
+    act(() => result.current.handleKeyboardLayoutChange(BUILTIN_QWERTY_LAYOUT_ID))
+    expect(result.current.pendingApply).toBeNull()
+    expect(onKeyboardLayoutChange).toHaveBeenCalledWith(BUILTIN_QWERTY_LAYOUT_ID)
+    expect(onApplyKeymapRewrite).not.toHaveBeenCalled()
   })
 
-  it('re-selecting the already-applied arrangement switches display only (no modal)', async () => {
-    const { result } = setup('colemak-id')
+  // --- A2: same-value re-selection is the only guard ---
+
+  it('A2: re-selecting the current select value is display-only, no modal, no lookup', async () => {
+    const { result } = setup({ keyboardLayout: 'colemak-id', appliedKeymapLayout: 'colemak-id' })
     act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
     await waitFor(() => expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id'))
     expect(result.current.pendingApply).toBeNull()
+    expect(lookup.ensure).not.toHaveBeenCalled()
   })
 
-  it('target not keymapApplicable: falls back to display-only switch', async () => {
-    const { result } = setup(undefined)
+  // --- A3: non-eligible pack falls through to a plain display switch ---
+
+  it('A3: a pack that is not keymapApplicable falls back to a display-only switch', async () => {
+    const { result } = setup({ keyboardLayout: 'qwerty' })
     act(() => result.current.handleKeyboardLayoutChange('not-applicable-id'))
     await waitFor(() => expect(onKeyboardLayoutChange).toHaveBeenCalledWith('not-applicable-id'))
     expect(result.current.pendingApply).toBeNull()
   })
 
-  it('applied pack no longer installed/eligible: logs and falls back to display-only switch', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const { result } = setup('missing-id')
-    act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
-    await waitFor(() => expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id'))
-    expect(result.current.pendingApply).toBeNull()
-    expect(warnSpy).toHaveBeenCalled()
-    warnSpy.mockRestore()
+  // --- A4: applicable pack prompts, Confirm applies its own (uncomposed) table ---
+
+  it('A4: an applicable pack different from the current select prompts, and Confirm applies its own table', async () => {
+    const { result } = setup({ keyboardLayout: 'qwerty', appliedKeymapLayout: 'colemak-id' })
+    act(() => result.current.handleKeyboardLayoutChange('dvorak-id'))
+    await waitFor(() => expect(result.current.pendingApply).toEqual({ id: 'dvorak-id', name: 'Dvorak' }))
+    expect(onKeyboardLayoutChange).not.toHaveBeenCalled()
+
+    act(() => { result.current.handleApplyConfirm() })
+    await waitFor(() => expect(onApplyKeymapRewrite).toHaveBeenCalledTimes(1))
+    const [table, layoutIds] = onApplyKeymapRewrite.mock.calls[0] as [Map<string, string>, KeymapRewriteLayoutIds]
+    // The applied table is Dvorak's own table, unmodified by whatever is
+    // (or was) applied — no compose with the Colemak base.
+    expect(table).toEqual(dvorakTable())
+    expect(layoutIds).toEqual({ before: 'colemak-id', after: 'dvorak-id' })
+    // The applied arrangement stays selected — no forced QWERTY reset.
+    await waitFor(() => expect(onKeyboardLayoutChange).toHaveBeenCalledWith('dvorak-id'))
+    expect(onKeyboardLayoutChange).not.toHaveBeenCalledWith(BUILTIN_QWERTY_LAYOUT_ID)
   })
 
-  it('handleApplyConfirm passes {before, after} layoutIds and switches display to qwerty, not the target (double-remap fix)', async () => {
-    const { result } = setup('colemak-id')
+  it('A4: `before` is read at Confirm time from the latest appliedKeymapLayout', async () => {
+    const { result, rerender } = setup({ keyboardLayout: 'qwerty', appliedKeymapLayout: 'colemak-id' })
     act(() => result.current.handleKeyboardLayoutChange('dvorak-id'))
     await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
 
-    act(() => { result.current.handleApplyConfirm() })
+    // appliedKeymapLayout changes (e.g. an undo/redo elsewhere) while the
+    // modal is still open, before the user clicks Apply.
+    rerender({ keyboardLayout: 'qwerty', appliedKeymapLayout: BUILTIN_QWERTY_LAYOUT_ID })
 
-    await waitFor(() => expect(onKeyboardLayoutChange).toHaveBeenCalledWith('qwerty'))
-    expect(onApplyKeymapRewrite).toHaveBeenCalledTimes(1)
+    act(() => { result.current.handleApplyConfirm() })
+    await waitFor(() => expect(onApplyKeymapRewrite).toHaveBeenCalledTimes(1))
     const [, layoutIds] = onApplyKeymapRewrite.mock.calls[0] as [unknown, KeymapRewriteLayoutIds]
-    expect(layoutIds).toEqual({ before: 'colemak-id', after: 'dvorak-id' })
-    // Display switches to the built-in QWERTY id, never to 'dvorak-id' —
-    // the keymap now holds Dvorak's keycodes directly, so displaying
-    // Dvorak's labels on top would re-translate them (double-applied look).
-    expect(onKeyboardLayoutChange).not.toHaveBeenCalledWith('dvorak-id')
+    expect(layoutIds).toEqual({ before: BUILTIN_QWERTY_LAYOUT_ID, after: 'dvorak-id' })
   })
 
-  it('handleApplyDisplayOnly still switches display straight to the target id (unaffected by the fix)', async () => {
-    const { result } = setup(undefined)
+  // --- A5 / A6: Display Only / Cancel are unaffected ---
+
+  it('A5: Display Only switches display straight to the target id without rewriting', async () => {
+    const { result } = setup({ keyboardLayout: 'qwerty' })
     act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
     await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
 
     act(() => result.current.handleApplyDisplayOnly())
     expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id')
     expect(onApplyKeymapRewrite).not.toHaveBeenCalled()
+    expect(result.current.pendingApply).toBeNull()
   })
 
-  // --- codex focused review: selection race, stale `before`, partial failure ---
+  it('A6: Cancel closes the modal without touching the select or the keymap', async () => {
+    const { result } = setup({ keyboardLayout: 'qwerty' })
+    act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
+    await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
 
-  it('selection race: a newer selection wins even if the OLDER one\'s lookups resolve later', async () => {
-    // Queue two one-shot `ensure` implementations in call order: the first
-    // selection (colemak-id) triggers the first `ensure` call, the second
-    // selection (dvorak-id) triggers the second. Resolving them out of
-    // order (second first) simulates the older request's network/IPC
-    // round-trip finishing after the newer one's.
+    act(() => result.current.handleApplyCancel())
+    expect(result.current.pendingApply).toBeNull()
+    expect(onKeyboardLayoutChange).not.toHaveBeenCalled()
+    expect(onApplyKeymapRewrite).not.toHaveBeenCalled()
+  })
+
+  // --- A7: appliedKeymapLayout matching the target no longer blocks the prompt ---
+
+  it('A7: appliedKeymapLayout === target but keyboardLayout !== target still offers the modal (direct re-apply)', async () => {
+    const { result } = setup({ keyboardLayout: 'qwerty', appliedKeymapLayout: 'colemak-id' })
+    act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
+    await waitFor(() => expect(result.current.pendingApply).toEqual({ id: 'colemak-id', name: 'Colemak' }))
+
+    act(() => { result.current.handleApplyConfirm() })
+    await waitFor(() => expect(onApplyKeymapRewrite).toHaveBeenCalledTimes(1))
+    const [table] = onApplyKeymapRewrite.mock.calls[0] as [Map<string, string>, KeymapRewriteLayoutIds]
+    expect(table).toEqual(colemakTable())
+  })
+
+  // --- C1 / C2: apply-result handling is unchanged ---
+
+  it('C1: partial failure leaves the select untouched and surfaces the error', async () => {
+    onApplyKeymapRewrite.mockResolvedValueOnce({ appliedCount: 1, error: 'device write failed' })
+    const { result } = setup({ keyboardLayout: 'qwerty', appliedKeymapLayout: 'colemak-id' })
+    act(() => result.current.handleKeyboardLayoutChange('dvorak-id'))
+    await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
+
+    act(() => { result.current.handleApplyConfirm() })
+    await waitFor(() => expect(result.current.applyError).toBe('device write failed'))
+    // The keymap is now a mix of old and new characters that matches
+    // neither arrangement, so the display selection is left as-is.
+    expect(onKeyboardLayoutChange).not.toHaveBeenCalled()
+    expect(result.current.pendingApply).toBeNull()
+  })
+
+  it('C2: a zero-count success (nothing actually needed rewriting) still switches the select — count-gating is KeymapEditor\'s job, not this hook\'s', async () => {
+    onApplyKeymapRewrite.mockResolvedValueOnce({ appliedCount: 0 })
+    const { result } = setup({ keyboardLayout: 'qwerty', appliedKeymapLayout: 'colemak-id' })
+    act(() => result.current.handleKeyboardLayoutChange('dvorak-id'))
+    await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
+
+    act(() => { result.current.handleApplyConfirm() })
+    await waitFor(() => expect(onKeyboardLayoutChange).toHaveBeenCalledWith('dvorak-id'))
+    expect(result.current.applyError).toBeNull()
+  })
+
+  // --- Selection race ---
+
+  it('race: selecting QWERTY while an applicable pack lookup is still in flight never opens a modal', async () => {
+    let resolveEnsure!: () => void
+    lookup.ensure.mockImplementationOnce(() => new Promise<void>((res) => { resolveEnsure = res }))
+
+    const { result } = setup({ keyboardLayout: 'qwerty' })
+    act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
+    act(() => result.current.handleKeyboardLayoutChange(BUILTIN_QWERTY_LAYOUT_ID))
+
+    // The stale colemak-id lookup resolves after the user has already
+    // moved on to QWERTY — it must not open the modal retroactively.
+    resolveEnsure()
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve() })
+    expect(result.current.pendingApply).toBeNull()
+    expect(onKeyboardLayoutChange).toHaveBeenCalledTimes(1)
+    expect(onKeyboardLayoutChange).toHaveBeenCalledWith(BUILTIN_QWERTY_LAYOUT_ID)
+  })
+
+  it('selection race: a newer non-QWERTY selection wins even if the OLDER one\'s lookup resolves later', async () => {
     let resolveFirst!: () => void
     let resolveSecond!: () => void
     const firstEnsure = new Promise<void>((res) => { resolveFirst = res })
@@ -163,7 +254,7 @@ describe('useKeymapApplyPrompt — composed eligibility (追加要求 2026-07-18
       .mockImplementationOnce(() => firstEnsure)
       .mockImplementationOnce(() => secondEnsure)
 
-    const { result } = setup(undefined)
+    const { result } = setup({ keyboardLayout: 'qwerty' })
     act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
     act(() => result.current.handleKeyboardLayoutChange('dvorak-id'))
 
@@ -180,44 +271,17 @@ describe('useKeymapApplyPrompt — composed eligibility (追加要求 2026-07-18
     expect(onKeyboardLayoutChange).not.toHaveBeenCalled()
   })
 
-  it('captures {before} at SELECTION time — a later appliedKeymapLayout change while the modal is open does not affect Confirm', async () => {
-    const { result, rerender } = renderHook(
-      (props: { appliedKeymapLayout?: string }) => useKeymapApplyPrompt({
-        keymapEditable: true,
-        appliedKeymapLayout: props.appliedKeymapLayout,
-        onKeyboardLayoutChange,
-        onApplyKeymapRewrite,
-      }),
-      { initialProps: { appliedKeymapLayout: 'colemak-id' } },
-    )
+  // --- keymap not editable falls through unchanged ---
 
-    act(() => result.current.handleKeyboardLayoutChange('dvorak-id'))
-    await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
-
-    // appliedKeymapLayout changes (e.g. an undo/redo elsewhere) while the
-    // modal is still open, before the user clicks Apply.
-    rerender({ appliedKeymapLayout: 'qwerty' })
-
-    act(() => { result.current.handleApplyConfirm() })
-    await waitFor(() => expect(onApplyKeymapRewrite).toHaveBeenCalledTimes(1))
-    const [, layoutIds] = onApplyKeymapRewrite.mock.calls[0] as [unknown, KeymapRewriteLayoutIds]
-    // `before` is 'colemak-id' — what the composed table was actually built
-    // against at selection time — not the 'qwerty' the prop changed to.
-    expect(layoutIds).toEqual({ before: 'colemak-id', after: 'dvorak-id' })
-  })
-
-  it('partial-failure result: does not switch display (neither target nor qwerty), but still surfaces the error and closes the modal', async () => {
-    onApplyKeymapRewrite.mockResolvedValueOnce({ appliedCount: 1, error: 'device write failed' })
-    const { result } = setup('colemak-id')
-    act(() => result.current.handleKeyboardLayoutChange('dvorak-id'))
-    await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
-
-    act(() => { result.current.handleApplyConfirm() })
-    await waitFor(() => expect(result.current.applyError).toBe('device write failed'))
-    // Neither the display-double-remap qwerty switch nor a target switch
-    // happens — the keymap is now a mix of old and new characters that
-    // matches neither arrangement, so the display selection is left as-is.
-    expect(onKeyboardLayoutChange).not.toHaveBeenCalled()
-    expect(result.current.pendingApply).toBeNull()
+  it('falls straight through to a display-only switch when the keymap is not editable', async () => {
+    const { result } = renderHook(() => useKeymapApplyPrompt({
+      keymapEditable: false,
+      keyboardLayout: 'qwerty',
+      onKeyboardLayoutChange,
+      onApplyKeymapRewrite,
+    }))
+    act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
+    expect(lookup.ensure).not.toHaveBeenCalled()
+    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id')
   })
 })

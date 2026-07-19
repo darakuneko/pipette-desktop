@@ -115,15 +115,15 @@ export function buildKeymapRewriteTable(map: Record<string, string>): BuildKeyma
 
   // Closure check: every replacement TARGET must itself be a SOURCE key —
   // i.e. the map must be a true permutation of its own key set, not just a
-  // one-directional set of swaps. `composeRewriteTables` (and the identity
-  // assumption `applied.get(q) ?? q` it relies on) treats any key outside
-  // a table's source domain as untouched — so a target that isn't also a
-  // source is a key nothing ever routes traffic *away* from: two different
-  // source keys can end up sending its old character (nothing moved it),
-  // while the character that key itself used to send disappears entirely
-  // (a real Hub Dvorak defect: `KC_RBRACKET -> "="` and `KC_QUOTE -> "-"`
-  // with no entries for `KC_EQUAL`/`KC_MINUS` loses `[`/`]` and duplicates
-  // `-`/`=`). Reject the whole build rather than silently applying a subset.
+  // one-directional set of swaps. A table applied directly against the
+  // live keymap treats any key outside its source domain as untouched —
+  // so a target that isn't also a source is a key nothing ever routes
+  // traffic *away* from: two different source keys can end up sending its
+  // old character (nothing moved it), while the character that key itself
+  // used to send disappears entirely (a real Hub Dvorak defect:
+  // `KC_RBRACKET -> "="` and `KC_QUOTE -> "-"` with no entries for
+  // `KC_EQUAL`/`KC_MINUS` loses `[`/`]` and duplicates `-`/`=`). Reject the
+  // whole build rather than silently applying a subset.
   for (const target of table.values()) {
     if (!table.has(target)) {
       return { ok: false, error: `Map is not closed: target keycode ${target} has no source entry of its own (add one, even if it maps back to itself)` }
@@ -131,42 +131,6 @@ export function buildKeymapRewriteTable(map: Record<string, string>): BuildKeyma
   }
 
   return { ok: true, table }
-}
-
-/**
- * Compose two rewrite tables that both assume the same QWERTY baseline —
- * `applied` is the table already burned into the keymap (empty/identity
- * for the built-in QWERTY layout), `target` is the table for the layout
- * being switched to. Returns one table that rewrites the *current* keymap
- * (as `applied` left it) directly to `target`'s arrangement, instead of
- * assuming the keymap is still in raw QWERTY form (Plan-key-label-keymap-apply,
- * 追加要求 2026-07-18).
- *
- * For every QWERTY-space qmkId `q` in the union of both domains: the code
- * *currently* sitting at that logical position is `applied.get(q) ?? q`
- * (identity outside `applied`'s domain); the code that position should
- * hold under `target` is `target.get(q) ?? q`. Mapping the former to the
- * latter — and dropping the resulting identity pairs — is exactly the
- * composed rewrite table `applyKeymapRewrite` needs.
- *
- * Passing an empty map for `applied` composes to plain `target`; passing
- * an empty map for `target` composes to the inverse of `applied`
- * (`composeRewriteTables(applied, new Map())`); composing a table with
- * itself always yields the empty table.
- */
-export function composeRewriteTables(
-  applied: KeymapRewriteTable,
-  target: KeymapRewriteTable,
-): KeymapRewriteTable {
-  const composed = new Map<string, string>()
-  const domain = new Set<string>([...applied.keys(), ...target.keys()])
-  for (const q of domain) {
-    const from = applied.get(q) ?? q
-    const to = target.get(q) ?? q
-    if (from === to) continue
-    composed.set(from, to)
-  }
-  return composed
 }
 
 /** Look up a plain (non-composite) keycode's replacement, qmkId-side. */

@@ -58,10 +58,6 @@ vi.mock('../../hooks/useKeyLabelLookup', () => ({
   useKeyLabelLookup: () => lookup,
 }))
 
-// composeRewriteTables is real (not mocked) so this suite also exercises
-// the appliedKeymapLayout-aware composition wiring, not just the
-// single-table branch — the composition math itself has its own dedicated
-// coverage in shared/keymap/__tests__/keymap-apply.test.ts.
 const buildKeymapRewriteTable = vi.fn()
 vi.mock('../../../shared/keymap/keymap-apply', async () => {
   const actual = await vi.importActual<typeof import('../../../shared/keymap/keymap-apply')>('../../../shared/keymap/keymap-apply')
@@ -157,7 +153,7 @@ describe('QuickSettingsSelects — keyboard layout apply-to-keymap branching', (
     expect(capturedApplyModalProps?.open).toBe(false)
   })
 
-  it('after confirming Rewrite, switches display to qwerty (not the target) — display double-remap fix', async () => {
+  it('after confirming Rewrite, the applied arrangement stays selected (no forced QWERTY reset)', async () => {
     lookup.getKeymapApplicable.mockReturnValue(true)
     buildKeymapRewriteTable.mockReturnValue({ ok: true, table: new Map([['KC_E', 'KC_F']]) })
 
@@ -172,11 +168,10 @@ describe('QuickSettingsSelects — keyboard layout apply-to-keymap branching', (
     // No appliedKeymapLayout prop was passed to QuickSettingsSelects, so
     // "before" defaults to the built-in QWERTY id.
     expect(layoutIds).toEqual({ before: 'qwerty', after: 'colemak-id' })
-    // The keymap now holds Colemak's keycodes directly — display must stay
-    // on QWERTY labels, not switch to 'colemak-id' (which would re-translate
-    // them and look double-applied).
-    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('qwerty')
-    expect(onKeyboardLayoutChange).not.toHaveBeenCalledWith('colemak-id')
+    // The select stays on the arrangement actually burned into the
+    // keymap — it is never force-reset back to QWERTY.
+    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id')
+    expect(onKeyboardLayoutChange).not.toHaveBeenCalledWith('qwerty')
   })
 
   it('handleApplyDisplayOnly still switches display straight to the target id', async () => {
