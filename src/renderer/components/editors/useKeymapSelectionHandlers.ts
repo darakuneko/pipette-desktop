@@ -443,8 +443,16 @@ export function useKeymapSelectionHandlers({
     // this line already guarantees the apply + commit succeeded — no flag
     // needed to gate it. Placement after the commit is what guarantees
     // `onHistoryApplied` can no longer un-commit the undo/redo or leave the
-    // in-flight guard stuck.
-    onHistoryApplied?.(entry.kind === 'batch' ? entry.entries : [entry])
+    // in-flight guard stuck. The flash it triggers is purely cosmetic, so a
+    // throw from the callback itself is swallowed here rather than
+    // rejecting `runHistoryStep`'s promise — the undo/redo already
+    // succeeded and must not be reported as failed just because the flash
+    // visual couldn't be shown.
+    try {
+      onHistoryApplied?.(entry.kind === 'batch' ? entry.entries : [entry])
+    } catch {
+      // Intentionally ignored — see comment above.
+    }
   }, [history, applyHistoryEntry, onHistoryApplied])
 
   const handleUndo = useCallback(() => runHistoryStep(true), [runHistoryStep])
