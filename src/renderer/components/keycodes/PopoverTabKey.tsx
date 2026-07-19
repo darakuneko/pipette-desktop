@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useLayoutEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { type Keycode, getKeycodeRevision, serialize, isMask, findInnerKeycode, isBasic, isLMKeycode, getAvailableLMMods, extractBasicKey } from '../../../shared/keycodes/keycodes'
 import { KEYCODE_CATEGORIES } from './categories'
+import { getRemapDisplayLabel } from './KeycodeGrid'
 
 interface SearchEntry {
   keycode: Keycode
@@ -12,6 +13,20 @@ interface SearchEntry {
   /** Individual lowercased tokens for exact-match ranking */
   tokens: string[]
   detail: string
+  /** Set when the active Key Label pack remaps this keycode's legend —
+   *  same value `KeycodeGrid`/`KeyWidget` render on the keycap itself.
+   *  `undefined` means "not remapped", not merely "unset". */
+  displayLabel?: string
+}
+
+/**
+ * Flatten a possibly multi-line label ("(\n8") into a single display
+ * line ("( 8") — mirrors how the keycap grid stacks `\n`-separated
+ * parts visually; the search-result row has no room for that layout,
+ * so it reads left-to-right instead.
+ */
+function flattenLabel(label: string): string {
+  return label.split('\n').map((line) => line.trim()).filter(Boolean).join(' ')
 }
 
 interface DetailTooltipState {
@@ -44,11 +59,16 @@ interface Props {
   basicKeyOnly?: boolean
   onKeycodeSelect: (kc: Keycode) => void
   onClose?: () => void
+  /** Active Key Label pack's per-key legend override, threaded from
+   *  the same source `KeycodeGrid`/`BasicKeyboardView` already use
+   *  (see `useDevicePrefs`/`useKeyboardLayout`) so the picker's search
+   *  index and result rows agree with what the keymap grid shows. */
+  remapLabel?: (qmkId: string) => string
 }
 
 const MAX_RESULTS = 50
 
-export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask = 0, lmMode: lmModeProp, basicKeyOnly, onKeycodeSelect, onClose }: Props) {
+export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask = 0, lmMode: lmModeProp, basicKeyOnly, onKeycodeSelect, onClose, remapLabel }: Props) {
   const hasModMask = modMask > 0
   const { t } = useTranslation()
   const initialQuery = useMemo(() => {
@@ -105,6 +125,7 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
         if (kc.hidden) continue
         if ((maskOnly || hasModMask || basicKeyOnly) && !isBasic(kc.qmkId)) continue
         const extraAliases = kc.alias.slice(1)
+        const displayLabel = getRemapDisplayLabel(kc.qmkId, remapLabel)
         const searchParts = [
           stripPrefix(kc.qmkId),
           kc.label,
@@ -112,18 +133,36 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
           kc.tooltip,
         ].filter((p): p is string => Boolean(p))
         const detailParts = [kc.qmkId, kc.tooltip, ...extraAliases].filter((p): p is string => Boolean(p))
-        const tokens = searchParts.map((p) => p.toLowerCase())
+        // Surface the default label in the detail line for a remapped
+        // entry so the underlying key stays identifiable even though
+        // the headline label now shows the pack's text.
+        if (displayLabel) detailParts.push(flattenLabel(kc.label))
+        // A pack-remapped label (e.g. "(\n8") must be searchable by its
+        // own text, not just the default label/qmkId/tooltip \u2014
+        // otherwise a search that only matches the *default* label of a
+        // DIFFERENT keycode (e.g. default "( 9" for KC_9) can shadow
+        // the actually-relabeled key the user is looking for (issue
+        // #294). Each line of a multi-line remap becomes its own token
+        // so an exact match on either line (e.g. "(" or "8") ranks this
+        // entry in the "exact" bucket, same as any other exact token
+        // match \u2014 default label/qmkId/tooltip tokens are kept as-is so
+        // searching by the default name still works too.
+        const remapTokens = displayLabel
+          ? displayLabel.split('\n').map((line) => line.trim()).filter(Boolean)
+          : []
+        const tokens = [...searchParts, ...remapTokens].map((p) => p.toLowerCase())
         entries.push({
           keycode: kc,
           categoryId: cat.id,
           searchText: tokens.join(' '),
           tokens,
           detail: detailParts.join(' \u00b7 '),
+          displayLabel,
         })
       }
     }
     return entries
-  }, [lmMode, maskOnly, hasModMask, basicKeyOnly, getKeycodeRevision()])
+  }, [lmMode, maskOnly, hasModMask, basicKeyOnly, remapLabel, getKeycodeRevision()])
 
   const results = useMemo(() => {
     if (suppressResults) return []
@@ -200,26 +239,34 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
             </div>
           )
         )}
-        {results.map((entry) => (
-          <button
-            key={`${entry.categoryId}-${entry.keycode.qmkId}`}
-            type="button"
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-surface-dim"
-            onClick={() => { setTooltip(null); onKeycodeSelect(entry.keycode); setSuppressResults(true); setQuery(entry.keycode.label || stripPrefix(entry.keycode.qmkId)) }}
-            data-testid={`popover-result-${entry.keycode.qmkId}`}
-          >
-            <span className="min-w-keycode font-mono text-xs font-medium">
-              {entry.keycode.label}
-            </span>
-            <span
-              className="truncate text-content-secondary text-xs"
-              onMouseEnter={handleDetailMouseEnter}
-              onMouseLeave={handleDetailMouseLeave}
+        {results.map((entry) => {
+          // Same treatment as the keymap grid: a remapped key's legend
+          // (from the active Key Label pack) replaces the default label
+          // and is colored the same as `KeycodeButton`'s own remapped
+          // keys (`text-key-label-remap`), so a pack-driven result is
+          // visually identifiable as such at a glance.
+          const displayText = flattenLabel(entry.displayLabel ?? entry.keycode.label)
+          return (
+            <button
+              key={`${entry.categoryId}-${entry.keycode.qmkId}`}
+              type="button"
+              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-surface-dim"
+              onClick={() => { setTooltip(null); onKeycodeSelect(entry.keycode); setSuppressResults(true); setQuery(entry.keycode.label || stripPrefix(entry.keycode.qmkId)) }}
+              data-testid={`popover-result-${entry.keycode.qmkId}`}
             >
-              {entry.detail}
-            </span>
-          </button>
-        ))}
+              <span className={`min-w-keycode font-mono text-xs font-medium ${entry.displayLabel != null ? 'text-key-label-remap' : ''}`}>
+                {displayText}
+              </span>
+              <span
+                className="truncate text-content-secondary text-xs"
+                onMouseEnter={handleDetailMouseEnter}
+                onMouseLeave={handleDetailMouseLeave}
+              >
+                {entry.detail}
+              </span>
+            </button>
+          )
+        })}
       </div>
       {tooltip && (
         <div

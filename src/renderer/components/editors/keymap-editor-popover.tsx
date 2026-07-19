@@ -26,13 +26,14 @@ interface PopoverForStateProps {
   onUndo?: () => void
   nextKeycode?: number
   onRedo?: () => void
+  remapLabel?: (qmkId: string) => string
 }
 
 export function PopoverForState({
   popoverState, keymap, encoderLayout, currentLayer, layers,
   onLayerChange, layerNames,
   onKeycodeSelect, onRawKeycodeSelect, onModMaskChange, onClose,
-  quickSelect, previousKeycode, onUndo, nextKeycode, onRedo,
+  quickSelect, previousKeycode, onUndo, nextKeycode, onRedo, remapLabel,
 }: PopoverForStateProps) {
   const currentKeycode = popoverState.kind === 'key'
     ? keymap.get(`${currentLayer},${popoverState.row},${popoverState.col}`) ?? 0
@@ -44,7 +45,7 @@ export function PopoverForState({
       currentLayer={currentLayer} onLayerChange={onLayerChange} layerNames={layerNames}
       onKeycodeSelect={onKeycodeSelect} onRawKeycodeSelect={onRawKeycodeSelect} onModMaskChange={onModMaskChange}
       onClose={onClose} quickSelect={quickSelect} previousKeycode={previousKeycode} onUndo={onUndo}
-      nextKeycode={nextKeycode} onRedo={onRedo}
+      nextKeycode={nextKeycode} onRedo={onRedo} remapLabel={remapLabel}
     />
   )
 }

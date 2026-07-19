@@ -35,6 +35,12 @@ const mockKeycodes = [
   { qmkId: 'KC_B', label: 'B', tooltip: 'b', hidden: false, alias: ['KC_B'], masked: false },
   { qmkId: 'KC_ENTER', label: 'Enter', tooltip: 'Return', hidden: false, alias: ['KC_ENTER', 'KC_ENT'], masked: false },
   { qmkId: 'KC_SPACE', label: 'Space', tooltip: 'space', hidden: false, alias: ['KC_SPACE', 'KC_SPC'], masked: false },
+  // Mirrors the real KC_8/KC_9 default legends (issue #294 repro): KC_9's
+  // *unrelated* default label already contains "(", which is exactly the
+  // substring collision a Key Label pack remapping KC_8 -> "(\n8" must
+  // not be shadowed by.
+  { qmkId: 'KC_8', label: '*\n8', tooltip: '8 and *', hidden: false, alias: ['KC_8'], masked: false },
+  { qmkId: 'KC_9', label: '(\n9', tooltip: '9 and (', hidden: false, alias: ['KC_9'], masked: false },
 ]
 
 const mockLayerKeycodes = [
@@ -127,6 +133,11 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   extractBasicKey: (code: number) => code & 0xff,
   buildModMaskKeycode: (mask: number, key: number) => (mask === 0 ? key & 0xff : ((mask & 0x1f) << 8) | (key & 0xff)),
   buildModTapKeycode: (mask: number, key: number) => (mask === 0 ? key & 0xff : 0x6000 | ((mask & 0x1f) << 8) | (key & 0xff)),
+  // Mirrors the real `keycodeLabel`: resolves a remap value that is
+  // itself another keycode id to that keycode's own label, otherwise
+  // returns the input unchanged (arbitrary pack text like "(\n8" passes
+  // straight through, same as the real implementation).
+  keycodeLabel: (qmkId: string) => mockKeycodes.find((kc) => kc.qmkId === qmkId)?.label ?? qmkId,
 }))
 
 vi.mock('../ModifierCheckboxStrip', () => ({
@@ -328,6 +339,78 @@ describe('PopoverTabKey — search', () => {
     renderAndSearch('a')
     const results = screen.getAllByTestId(/^popover-result-/)
     expect(results[0]).toHaveAttribute('data-testid', 'popover-result-KC_A')
+  })
+})
+
+describe('PopoverTabKey — Key Label pack remap in search (issue #294)', () => {
+  const onSelect = vi.fn()
+  // Mirrors the reported bug: a Japanese (QWERTY)-style pack remaps
+  // KC_8's legend to "(\n8". KC_9's own *unrelated* default label is
+  // "(\n9" — before the fix, searching "(" only ever matched KC_9 (the
+  // remapped KC_8 was invisible to search and rendered its stale
+  // default legend), so the wrong keycode got applied.
+  const remapLabel = (qmkId: string) => (qmkId === 'KC_8' ? '(\n8' : qmkId)
+
+  beforeEach(() => { onSelect.mockClear() })
+
+  it('without a pack (no remapLabel), searching "(" only finds KC_9 via its own default label', () => {
+    render(<PopoverTabKey currentKeycode={4} onKeycodeSelect={onSelect} />)
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: '(' } })
+    expect(screen.getByTestId('popover-result-KC_9')).toBeInTheDocument()
+    expect(screen.queryByTestId('popover-result-KC_8')).not.toBeInTheDocument()
+  })
+
+  it('with the pack active, searching "(" also finds the remapped KC_8, displaying its remapped label', () => {
+    render(<PopoverTabKey currentKeycode={4} remapLabel={remapLabel} onKeycodeSelect={onSelect} />)
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: '(' } })
+    const kc8Row = screen.getByTestId('popover-result-KC_8')
+    expect(kc8Row).toBeInTheDocument()
+    expect(kc8Row).toHaveTextContent('( 8')
+    // KC_9's own unrelated default-label match is unaffected.
+    expect(screen.getByTestId('popover-result-KC_9')).toBeInTheDocument()
+  })
+
+  it('searching "8" (the remap\'s second line) also finds the remapped KC_8', () => {
+    render(<PopoverTabKey currentKeycode={4} remapLabel={remapLabel} onKeycodeSelect={onSelect} />)
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: '8' } })
+    expect(screen.getByTestId('popover-result-KC_8')).toBeInTheDocument()
+  })
+
+  it('searching the default qmkId alias ("KC_9") still finds KC_9 while the pack is active', () => {
+    render(<PopoverTabKey currentKeycode={4} remapLabel={remapLabel} onKeycodeSelect={onSelect} />)
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: '9' } })
+    expect(screen.getByTestId('popover-result-KC_9')).toBeInTheDocument()
+  })
+
+  it('applies the same remap color styling as the keymap grid (text-key-label-remap) to a remapped result row only', () => {
+    render(<PopoverTabKey currentKeycode={4} remapLabel={remapLabel} onKeycodeSelect={onSelect} />)
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: '(' } })
+    const kc8Label = screen.getByTestId('popover-result-KC_8').querySelector('span')
+    expect(kc8Label?.className).toContain('text-key-label-remap')
+    const kc9Label = screen.getByTestId('popover-result-KC_9').querySelector('span')
+    expect(kc9Label?.className).not.toContain('text-key-label-remap')
+  })
+
+  it('appends the default label to the detail line for a remapped entry so the underlying key stays identifiable', () => {
+    render(<PopoverTabKey currentKeycode={4} remapLabel={remapLabel} onKeycodeSelect={onSelect} />)
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: '(' } })
+    const kc8Row = screen.getByTestId('popover-result-KC_8')
+    expect(kc8Row).toHaveTextContent('KC_8')
+    expect(kc8Row).toHaveTextContent('* 8')
+  })
+
+  it('without a pack, an unmapped key never gets the remap color or a displayLabel', () => {
+    render(<PopoverTabKey currentKeycode={4} onKeycodeSelect={onSelect} />)
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: '(' } })
+    const kc9Label = screen.getByTestId('popover-result-KC_9').querySelector('span')
+    expect(kc9Label?.className).not.toContain('text-key-label-remap')
+  })
+
+  it('KeyPopover forwards remapLabel through to the Key tab search results (wiring)', () => {
+    render(<KeyPopover {...defaultProps} remapLabel={remapLabel} />)
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: '(' } })
+    expect(screen.getByTestId('popover-result-KC_8')).toBeInTheDocument()
+    expect(screen.getByTestId('popover-result-KC_8')).toHaveTextContent('( 8')
   })
 })
 
