@@ -15,6 +15,7 @@ import {
   launchCaptureApp,
   nullifyLastDeviceConfig,
   resetToEditorMode,
+  resetVirtualDeviceKeyboardLayout,
   restoreLastDeviceConfig,
   restoreVirtualDeviceSettings,
   selectKeyboardViaFilterModal,
@@ -1847,6 +1848,11 @@ async function main(): Promise<void> {
   // default userData and would otherwise auto-restore that leaked mode on
   // its next connect. Snapshot it now and restore in the finally below.
   const virtualDeviceSettingsBackup = backupVirtualDeviceSettings(userDataPath)
+  // Reset a stale Keyboard Layout selection left over from a manual
+  // `pnpm dev` session against the virtual device (see the doc comment on
+  // `resetVirtualDeviceKeyboardLayout`) — must run after the backup above so
+  // the original content still restores in the `finally` block below.
+  resetVirtualDeviceKeyboardLayout(userDataPath)
 
   let favBackups: Map<string, string | null> | null = null
   let snapBackups: Map<string, string | null> | null = null

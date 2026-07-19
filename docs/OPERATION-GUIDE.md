@@ -1054,7 +1054,7 @@ The keymap editor automatically records a history of keycode changes. You can na
 | **Toolbar buttons** | Full history | Undo / Redo buttons in the left toolbar |
 | **Popover buttons** | Last single change only (must match the open key) | Undo / Redo buttons in the popover footer (see §2.4) |
 
-- History is cleared when switching keyboards or disconnecting
+- History is cleared when switching keyboards, disconnecting, or restoring a snapshot / loading a saved layout / importing a `.vil` file — a restore replaces the whole keymap, so there is nothing left in the old history that still applies
 - The maximum history size can be configured in Settings → Defaults → **Max Keymap History** (see §6.1)
 - All keymap mutation paths are tracked: single key edits, popover selections, mod-mask changes, paste, and copy-layer operations
 
@@ -1665,27 +1665,27 @@ When you pick a `keymapApplicable` entry (and a keymap is loaded on the connecte
 
 ![Apply Key Label to Keymap](screenshots/key-label-keymap-apply-modal.png)
 
-- **Rewrite Keymap** — bulk-rewrites every layer's keycodes (and encoders, where applicable) to match the label set. The whole rewrite lands as a single Undo step in the Keymap Editor's normal history — one Undo reverts every key it touched
+- **Rewrite Keymap** — bulk-rewrites every layer's keycodes (and encoders, where applicable) to match the label set. The whole rewrite lands as a single Undo step, and it replaces the entire undo/redo history rather than stacking onto it: after a Rewrite there is exactly one entry to undo, with nothing further back that could restore stale keycodes
 - **Display Only** — switches only the legends, same as today's behaviour
 - **Cancel** — closes the dialog without changing the current selection
 
+The dialog also shows a save recommendation: back up the current keymap first — export a `.vil` file or save a snapshot from the Save panel (§3.14/§6) — before confirming. A Rewrite replaces keycodes on every layer, and since the resulting undo history only keeps this one revert (see above), a backup is the only way back to the pre-Rewrite keymap once that single Undo is gone (see **Limitations** below).
+
 After a successful Rewrite, the keys that were actually changed briefly flash the same blue used for key selection before fading back, so you can see at a glance what changed.
 
-**The display stays on QWERTY legends after a Rewrite.** Once the keymap physically holds an arrangement's keycodes, the Keyboard Layout dropdown shows the *built-in QWERTY* legends, not the arrangement you just applied — the legends are meant to be read against the keys' actual QWERTY-baseline positions, and each key now sends the character its cap already shows. Selecting the same arrangement's own legends afterward would translate an already-rewritten keycode a second time (see the limitation below).
+**The Keyboard Layout dropdown stays on the arrangement you just applied — it is never reset back to QWERTY.** The keycap legends switch to the raw keycode each key now actually sends (not translated through any label set's map), and the keys that were rewritten stay marked with the same colour Pipette uses elsewhere for a pack's remapped keycaps, so you can still see at a glance which keys changed. Picking that same arrangement again from the dropdown afterward is then a no-op — display-only, no dialog — since it's already both the selected legend set and what the keymap physically holds.
 
-The dropdown remembers which arrangement was last actually rewritten into the keymap, separately from which legends are currently displayed. That means:
+**QWERTY is always display-only.** Selecting QWERTY from the dropdown never opens the confirmation dialog and never touches the keymap, no matter what arrangement is currently applied — it only switches which legends are shown. There is no "restore rewrite" offered by picking QWERTY; the only way back to the arrangement that was in place before a Rewrite is Undo (see **Limitations** below).
 
-- **Picking QWERTY later offers a restore rewrite.** If the keymap currently holds e.g. Colemak's keycodes, selecting QWERTY from the dropdown re-opens the confirmation dialog — Rewrite Keymap converts the keys back to their original QWERTY characters.
-- **Switching between two `keymapApplicable` arrangements converts directly.** Picking Dvorak while Colemak is the one actually applied rewrites straight from Colemak's current keycodes to Dvorak's — it does not assume the keymap is still raw QWERTY, so the keys end up with the correct Dvorak characters in one step.
-- Picking **Display Only** at any point never changes which arrangement is considered "applied" — only a **Rewrite Keymap** confirmation does.
+**Switching directly between two `keymapApplicable` arrangements applies the newly picked one's own table as-is.** Picking Dvorak while Colemak's keycodes are currently in the keymap rewrites straight from whatever the keymap currently holds, using Dvorak's own QWERTY-baseline table — it does not compose against what Colemak previously did. If the keymap isn't actually still QWERTY underneath (for example it already holds a different rewritten arrangement, or has hand-edited keys), the result can be wrong. **Restore to QWERTY first — via Undo in the same session, or by reloading a saved backup — before rewriting to a different arrangement**, so the target table is always applied against the QWERTY baseline it was designed for.
 
-The desktop app always re-validates the map itself before offering the rewrite, even when `keymapApplicable` is set in the file — a label set with shift-pair legends, non-Latin characters, keycode-passthrough values (like the `"KC_GRAVE": "KC_LALT"` example above), or a map that isn't **closed** (every replacement character's key must itself remap somewhere, even if only back to itself — a map that sends key A's character to key B but never says what key B should now send would duplicate one character and lose another) fails validation and the dropdown falls back to a silent Display Only switch, same as a label set that has no flag at all. The same re-validation applies to whichever arrangement is currently applied — if that pack has since been removed or edited to fail validation, the dropdown logs the reason and falls back to a plain Display Only switch instead of guessing at a conversion.
+The desktop app always re-validates the map itself before offering the rewrite, even when `keymapApplicable` is set in the file — a label set with shift-pair legends, non-Latin characters, keycode-passthrough values (like the `"KC_GRAVE": "KC_LALT"` example above), or a map that isn't **closed** (every replacement character's key must itself remap somewhere, even if only back to itself — a map that sends key A's character to key B but never says what key B should now send would duplicate one character and lose another) fails validation and the dropdown falls back to a silent Display Only switch, same as a label set that has no flag at all.
 
 **Limitations**
 
-- Manually re-selecting the display legends for the arrangement that's already applied (e.g. choosing Colemak's own legends while the keymap is already Colemak-rewritten) intentionally looks double-translated — label sets assume the keys underneath are still QWERTY keycodes, so this is expected, not a bug.
-- Manual per-key edits made after a Rewrite are skipped by the next Rewrite's safety check: it only touches a position whose keycode still matches what that arrangement's table expects to find there, so a key you've since edited by hand is left alone.
-- If a Rewrite fails partway through (e.g. a device write error), Undo still reverts exactly the keys that were changed before the failure — but the Keyboard Layout dropdown's displayed legends are left exactly as they were and the arrangement is not recorded as newly "applied", since the keymap is now a mix of old and new characters that doesn't match either arrangement.
+- **Undo only works within the current session.** History is cleared on disconnect, on app restart, and on a snapshot / `.vil` restore (§4.2) — a restore also resets which arrangement is recorded as "applied". Once any of those happens, the pre-Rewrite keymap can only be recovered from a backup, not from Undo — this is exactly why the confirm dialog recommends saving one first.
+- Manual per-key edits made after a Rewrite are skipped by the next Rewrite's safety check: it only touches a position whose keycode is still part of the arrangement's own QWERTY-baseline permutation, so a key you've since edited by hand to something outside that set is left alone.
+- If a Rewrite fails partway through (e.g. a device write error), Undo still reverts exactly the keys that were changed before the failure — but the Keyboard Layout dropdown's selection is left exactly as it was and the arrangement is not recorded as newly "applied", since the keymap is now a mix of old and new characters that doesn't match either arrangement.
 
 On Pipette Hub, the flag round-trips as `keymap_applicable` in the upload / download body alongside `map` and `composite_labels`.
 

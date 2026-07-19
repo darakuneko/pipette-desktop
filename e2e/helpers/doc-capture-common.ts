@@ -120,6 +120,32 @@ export function restoreVirtualDeviceSettings(backup: VirtualDeviceSettingsBackup
   restoreFile(backup)
 }
 
+/**
+ * Reset `keyboardLayout` / `appliedKeymapLayout` in the virtual device's
+ * PipetteSettings file back to the built-in QWERTY default before a capture
+ * run starts. The Keyboard Layout select is now WYSIWYG (Plan-qwerty-select-
+ * no-rewrite): nothing forces it back to QWERTY, so any earlier manual
+ * `pnpm dev` session against the virtual device that picked (or Rewrote to)
+ * another Key Label pack leaves that pack's id persisted here indefinitely.
+ * On the next capture run the renderer boots straight into
+ * `MissingKeyLabelDialog` for a pack this run never seeded (its full-screen
+ * backdrop then blocks every subsequent click, failing phases that have
+ * nothing to do with Key Labels). Call this once userData is resolved and
+ * `backupVirtualDeviceSettings` has already snapshotted the original
+ * (possibly stale) content for `restoreVirtualDeviceSettings` to bring back
+ * afterward — this function only edits the on-disk file for the run in
+ * between, it does not touch the backup itself.
+ */
+export function resetVirtualDeviceKeyboardLayout(userDataPath: string): void {
+  const path = join(userDataPath, 'sync', 'keyboards', VIRTUAL_DEVICE_UID, 'pipette_settings.json')
+  if (!existsSync(path)) return
+  const settings = JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>
+  if (settings.keyboardLayout === undefined && settings.appliedKeymapLayout === undefined) return
+  delete settings.keyboardLayout
+  delete settings.appliedKeymapLayout
+  writeFileSync(path, JSON.stringify(settings, null, 2), 'utf-8')
+}
+
 // --- Local Hub test mode ----------------------------------------------------
 
 /** Default URL of a local Hub started with `pnpm run dev:test`. */
