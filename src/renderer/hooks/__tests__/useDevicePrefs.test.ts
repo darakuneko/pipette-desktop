@@ -2019,5 +2019,78 @@ describe('useDevicePrefs', () => {
       expect(result.current.remapLabel('KC_LBRACKET')).toBe('KC_LBRACKET')
       expect(result.current.isRemapped('KC_LBRACKET')).toBe(false)
     })
+
+    // Bug fix: `buildKeymapRewriteTable` returns a CLOSED permutation,
+    // which includes identity entries (source === target) for keys a pack
+    // maps to their own letter just to satisfy closure. Only entries that
+    // actually change value are Rewrite TARGETS.
+    it('applied mode: an identity entry (pack maps a key to its own letter) is not marked, but a genuinely changed target still is', async () => {
+      setupMocks()
+      const COLEMAK_WITH_IDENTITY: Record<string, string> = { ...COLEMAK, KC_A: 'A' }
+      mockKeyLabelPack('colemak-identity-id', COLEMAK_WITH_IDENTITY)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setLayout('colemak-identity-id')
+        result.current.setAppliedKeymapLayout('colemak-identity-id')
+      })
+      await act(async () => {})
+      // KC_A -> KC_A is a real, closed identity entry in the rewrite
+      // table — the key was never actually changed, so it must stay
+      // unmarked (matches the picker, which never marks an untouched key).
+      expect(result.current.isRemapped('KC_A')).toBe(false)
+      // KC_F is still a genuine Rewrite TARGET (from KC_E -> KC_F).
+      expect(result.current.isRemapped('KC_F')).toBe(true)
+    })
+
+    // Bug fix: simulation-mode `isRemapped` used to test membership
+    // (`qmkId in map`) instead of the value-difference rule every
+    // picker/palette consumer applies via `remapLabel(x) !== x`. A pack
+    // entry whose value is a passthrough identical to its own qmkId (a
+    // no-op entry, distinct from the rewrite-table's keycode-level
+    // identity above) is present in the map but never actually changes
+    // the label — it must not be marked either.
+    it('simulation mode: an identity passthrough entry (map value equal to its own qmkId) is not marked, matching remapLabel(x) === x', async () => {
+      setupMocks()
+      const PACK_WITH_PASSTHROUGH: Record<string, string> = { ...COLEMAK, KC_A: 'KC_A' }
+      mockKeyLabelPack('colemak-passthrough-id', PACK_WITH_PASSTHROUGH)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setLayout('colemak-passthrough-id')
+        // appliedKeymapLayout stays undefined — never Rewritten, so this
+        // stays in simulation mode.
+      })
+      await act(async () => {})
+      expect(result.current.remapLabel('KC_A')).toBe('KC_A')
+      expect(result.current.isRemapped('KC_A')).toBe(false)
+      // A genuinely changed entry is still marked.
+      expect(result.current.remapLabel('KC_E')).toBe('F')
+      expect(result.current.isRemapped('KC_E')).toBe(true)
+    })
+
+    it('simulation mode: isRemapped and remapLabel always agree (isRemapped(x) === (remapLabel(x) !== x))', async () => {
+      setupMocks()
+      const PACK_WITH_PASSTHROUGH: Record<string, string> = { ...COLEMAK, KC_A: 'KC_A' }
+      mockKeyLabelPack('colemak-passthrough-id', PACK_WITH_PASSTHROUGH)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setLayout('colemak-passthrough-id')
+      })
+      await act(async () => {})
+      for (const qmkId of ['KC_A', 'KC_E', 'KC_Z']) {
+        expect(result.current.isRemapped(qmkId)).toBe(result.current.remapLabel(qmkId) !== qmkId)
+      }
+    })
   })
 })

@@ -931,30 +931,53 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     // longer passes validation) degrades to "no markers" — the legend
     // stays raw (remapLabel below never depends on this), it simply loses
     // the blue tint rather than showing something wrong.
-    return result.ok ? new Set(result.table.values()) : undefined
+    if (!result.ok) return undefined
+    // `buildKeymapRewriteTable` returns a CLOSED permutation, which
+    // includes identity entries (e.g. KC_A -> KC_A) for keys the pack
+    // leaves untouched. Only entries that actually change value count as
+    // "this key was remapped" (Plan-qwerty-select-no-rewrite §表示ルール,
+    // pattern A4) — an identity entry must stay unmarked, same as a
+    // picker/palette consumer would show via `remapLabel(x) !== x`.
+    return new Set(
+      [...result.table].filter(([source, target]) => source !== target).map(([, target]) => target),
+    )
   }, [appliedMap])
 
-  const remapLabel = useCallback(
+  // Resolves qmkId through the pack's compositeLabels -> map lookup order,
+  // falling back to qmkId itself when neither has an entry. `remapLabel`
+  // (simulation-mode display) and `isRemapped` (simulation-mode blue tint)
+  // both call this SAME helper so the two decisions can never diverge —
+  // blue means "this key's rendered label differs from its own qmkId",
+  // exactly the `remapLabel(x) !== x` rule every picker/palette consumer
+  // (KeycodeGrid.getRemapDisplayLabel) already uses.
+  const resolveSimulatedLabel = useCallback(
     (qmkId: string): string => {
-      if (layoutIsApplied) return qmkId
       const composite = lookup.getCompositeLabels(layout)?.[qmkId]
       if (composite !== undefined) return composite
       const mapped = lookup.getMap(layout)?.[qmkId]
       if (mapped !== undefined) return mapped
       return qmkId
     },
-    [lookup, layout, layoutIsApplied],
+    [lookup, layout],
+  )
+
+  const remapLabel = useCallback(
+    (qmkId: string): string => {
+      if (layoutIsApplied) return qmkId
+      return resolveSimulatedLabel(qmkId)
+    },
+    [layoutIsApplied, resolveSimulatedLabel],
   )
 
   const isRemapped = useCallback(
     (qmkId: string): boolean => {
+      // Applied mode stays on the (now identity-filtered) target-set path
+      // above — `remapLabel` is identity here, so a value-difference check
+      // against `resolveSimulatedLabel` would never match anything.
       if (layoutIsApplied) return appliedRewriteTargets?.has(qmkId) ?? false
-      const composite = lookup.getCompositeLabels(layout)
-      if (composite && qmkId in composite) return true
-      const map = lookup.getMap(layout)
-      return Boolean(map && qmkId in map)
+      return resolveSimulatedLabel(qmkId) !== qmkId
     },
-    [lookup, layout, layoutIsApplied, appliedRewriteTargets],
+    [layoutIsApplied, appliedRewriteTargets, resolveSimulatedLabel],
   )
 
   return {
