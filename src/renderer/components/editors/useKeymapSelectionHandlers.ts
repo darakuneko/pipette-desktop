@@ -57,6 +57,16 @@ export interface UseKeymapSelectionOptions {
    *  (one carrying `appliedLayoutBefore`/`appliedLayoutAfter`) — every other
    *  batch/single entry has neither field, so this never fires for them. */
   onAppliedKeymapLayoutChange?: (id: string) => void
+  /** Fires the "flash" visual (see `useKeyFlash`) for the positions an
+   *  undo/redo just touched. Contract: called only after ALL of that
+   *  entry's device writes have succeeded AND the history stack has been
+   *  committed (`history.undo()` / `history.redo()`) — never on a failed
+   *  apply, and never before the commit. An exception thrown by this
+   *  callback must not retroactively mark the undo/redo as failed, so it
+   *  is invoked after `handleUndo`/`handleRedo`'s own try/finally has
+   *  already run to completion. Receives the normalized entry list
+   *  (`entry.kind === 'batch' ? entry.entries : [entry]`). */
+  onHistoryApplied?: (entries: SingleHistoryEntry[]) => void
   // TD/Macro
   tapDanceEntries?: TapDanceEntry[]
   onSetTapDanceEntry?: (index: number, entry: TapDanceEntry) => Promise<void>
@@ -82,6 +92,7 @@ export function useKeymapSelectionHandlers({
   multiSelect,
   history,
   onAppliedKeymapLayoutChange,
+  onHistoryApplied,
   tapDanceEntries,
   onSetTapDanceEntry,
   macroCount,
@@ -411,29 +422,31 @@ export function useKeymapSelectionHandlers({
   // In-flight guard to prevent concurrent undo/redo
   const undoRedoInFlightRef = useRef(false)
 
-  const handleUndo = useCallback(async () => {
+  // Undo and redo differ only in direction (which stack to peek/commit,
+  // and which side of the entry `applyHistoryEntry` restores) — shared here
+  // instead of duplicating the guard/apply/commit/notify sequence twice.
+  const runHistoryStep = useCallback(async (isUndo: boolean) => {
     if (undoRedoInFlightRef.current) return
-    const entry = history.peekUndo
+    const entry = isUndo ? history.peekUndo : history.peekRedo
     if (!entry) return
     undoRedoInFlightRef.current = true
+    let applied = false
     try {
-      await applyHistoryEntry(entry, true)
-      history.undo() // commit only after successful apply
+      await applyHistoryEntry(entry, isUndo)
+      // Commit only after successful apply.
+      if (isUndo) history.undo()
+      else history.redo()
+      applied = true
     } finally { undoRedoInFlightRef.current = false }
     setPopoverState(null)
-  }, [history, applyHistoryEntry])
+    // Fire outside the try/finally above: `onHistoryApplied` only runs once
+    // the apply + commit are already done, so a throw from it can no
+    // longer un-commit the undo/redo or leave the in-flight guard stuck.
+    if (applied) onHistoryApplied?.(entry.kind === 'batch' ? entry.entries : [entry])
+  }, [history, applyHistoryEntry, onHistoryApplied])
 
-  const handleRedo = useCallback(async () => {
-    if (undoRedoInFlightRef.current) return
-    const entry = history.peekRedo
-    if (!entry) return
-    undoRedoInFlightRef.current = true
-    try {
-      await applyHistoryEntry(entry, false)
-      history.redo() // commit only after successful apply
-    } finally { undoRedoInFlightRef.current = false }
-    setPopoverState(null)
-  }, [history, applyHistoryEntry])
+  const handleUndo = useCallback(() => runHistoryStep(true), [runHistoryStep])
+  const handleRedo = useCallback(() => runHistoryStep(false), [runHistoryStep])
 
   const handlePopoverUndo = useCallback(() => {
     if (popoverUndoKeycode == null) return
