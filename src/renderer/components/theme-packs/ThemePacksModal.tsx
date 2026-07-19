@@ -28,6 +28,7 @@ import { useHubSearchList } from '../pack-modal/useHubSearchList'
 import { useDragReorder } from '../pack-modal/useDragReorder'
 import { applyDragOrder } from '../pack-modal/drag-order'
 import { useNameSort } from '../pack-modal/useNameSort'
+import { useImportPlacement } from '../pack-modal/useImportPlacement'
 import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
 import { fetchHubPackMeta } from '../pack-modal/fetch-hub-pack-meta'
 import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
@@ -93,13 +94,28 @@ export function ThemePacksModal({
     () => applyDragOrder(store.metas, drag.dragOrder, (meta) => meta.id),
     [store.metas, drag.dragOrder],
   )
+  const nameSortEntries = useMemo(
+    () => store.metas.map((meta) => ({ id: meta.id, name: meta.name })),
+    [store.metas],
+  )
   const nameSort = useNameSort({
+    open,
+    ready: !store.loading,
+    entries: nameSortEntries,
     reorder: store.reorder,
     onError: (error) => setActionError(error ?? t('themePacks.parseError')),
   })
   const handleSortByName = useCallback((): void => {
     void nameSort.toggle(store.metas.map((meta) => ({ id: meta.id, name: meta.name })))
   }, [nameSort, store.metas])
+  const placement = useImportPlacement({
+    open,
+    entries: nameSortEntries,
+    direction: nameSort.direction,
+    reorder: store.reorder,
+    rowTestidPrefix: 'theme-packs',
+    onReorderError: (error) => { if (error) setActionError(error) },
+  })
 
   const freshnessCandidates = useMemo(
     () => store.metas
@@ -278,6 +294,7 @@ export function ThemePacksModal({
         return
       }
       if (!dialogResult.raw) return
+      const beforeIds = placement.snapshotBeforeIds()
       const result = await store.applyImport(dialogResult.raw)
       if (!result.success || !result.meta) {
         if (result.error) setActionError(result.error)
@@ -285,6 +302,8 @@ export function ThemePacksModal({
       }
       setLastResult({ id: result.meta.id, kind: 'success', message: t('common.saved') })
       handleSelectTheme(`pack:${result.meta.id}`)
+      await placement.place({ id: result.meta.id, name: result.meta.name }, { beforeIds })
+
       if (result.meta.hubPostId) {
         const upd = await pushPackToHub(result.meta.id, result.meta.hubPostId)
         if (upd.success) {
@@ -296,7 +315,7 @@ export function ThemePacksModal({
     } catch {
       setActionError(t('themePacks.parseError'))
     }
-  }, [store, t, pushPackToHub, handleSelectTheme])
+  }, [store, t, pushPackToHub, handleSelectTheme, placement])
 
   const handleRenameCommit = useCallback(async (id: string) => {
     const newName = rename.commitRename(id)
@@ -428,12 +447,15 @@ export function ThemePacksModal({
         setActionError(result.error ?? t('themePacks.hubEmpty'))
         return
       }
+      const beforeIds = placement.snapshotBeforeIds()
       const enriched = await fetchHubPackMeta(window.vialAPI.hubListThemePosts, result.data.name, postId)
-      await store.applyImport(result.data, { hubPostId: postId, hubUpdatedAt: enriched.hubUpdatedAt, uploaderName: enriched.uploaderName })
+      const apply = await store.applyImport(result.data, { hubPostId: postId, hubUpdatedAt: enriched.hubUpdatedAt, uploaderName: enriched.uploaderName })
+      if (!apply.success || !apply.meta) return
+      await placement.place({ id: apply.meta.id, name: apply.meta.name }, { beforeIds })
     } finally {
       setPendingId(null)
     }
-  }, [store, t])
+  }, [store, t, placement])
 
   const handleRenameKey = (event: React.KeyboardEvent<HTMLInputElement>, id: string): void => {
     if (event.key === 'Enter') {
@@ -461,6 +483,7 @@ export function ThemePacksModal({
         searchButton: 'theme-packs-search-button',
         importButton: 'theme-packs-import-button',
         errorBanner: 'theme-packs-error',
+        importFeedback: 'theme-packs-import-feedback',
       }}
       activeTab={activeTab}
       onTabChange={handleTabChange}
@@ -483,6 +506,7 @@ export function ThemePacksModal({
           testid="theme-packs-sort-button"
         />
       )}
+      importFeedback={placement.feedback}
       actionError={actionError}
     >
       {activeTab === 'installed' ? (
@@ -542,7 +566,12 @@ export function ThemePacksModal({
               onRemove={handleRemove}
               onDragStart={() => drag.onDragStart(meta.id)}
               onDragOver={() => drag.onDragOver(meta.id)}
-              onDragEnd={() => { void drag.onDragEnd() }}
+              onDragEnd={() => {
+                void (async () => {
+                  const moved = await drag.onDragEnd()
+                  if (moved) nameSort.markFree()
+                })()
+              }}
             />
           ))}
         </div>

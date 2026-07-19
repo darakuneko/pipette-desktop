@@ -1,5 +1,5 @@
 {
-  "version": "0.1.22",
+  "version": "0.1.23",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -36,7 +36,9 @@
     "searchPlaceholder": "Pipette Hub で検索っしょ（2文字以上で♡）…",
     "done": "完了っしょ☆",
     "edit": "編集っしょ",
-    "sortByName": "名前っ♡"
+    "sortByName": "名前っ♡",
+    "importedNamed": "{{name}} 入れたよん☆",
+    "updatedNamed": "{{name}} 更新したよん☆"
   },
   "app": {
     "title": "Pipette☆",

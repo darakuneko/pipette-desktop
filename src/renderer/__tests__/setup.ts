@@ -15,6 +15,14 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   } as unknown as typeof ResizeObserver
 }
 
+// jsdom doesn't implement Element.scrollIntoView either — needed by the
+// pack modals' post-import/download auto-scroll (useImportPlacement).
+// Tests that want to assert it was called override it per-element with
+// their own vi.fn(), same pattern as elsewhere in this file.
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView(): void {}
+}
+
 // Default vialAPI shim so renderer tests that mount components which
 // call into the Key Label store (Settings → Tools, KeymapEditor toolbox,
 // LayoutComparisonView, …) do not need to repeat the mock per file.

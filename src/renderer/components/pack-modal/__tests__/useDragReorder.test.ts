@@ -36,35 +36,41 @@ describe('useDragReorder', () => {
     expect(result.current.dragOrder).toEqual(['b', 'c', 'a'])
   })
 
-  it('drag end persists the final order via `reorder` and clears the override', async () => {
+  it('drag end persists the final order via `reorder`, clears the override, and resolves true', async () => {
     const reorder = vi.fn().mockResolvedValue({ success: true })
     const { result } = renderHook(() => useDragReorder({ ids: ['a', 'b', 'c'], reorder, onError: vi.fn() }))
     act(() => { result.current.onDragStart('a') })
     act(() => { result.current.onDragOver('c') })
 
-    await act(async () => { await result.current.onDragEnd() })
+    let moved: boolean | undefined
+    await act(async () => { moved = await result.current.onDragEnd() })
 
     expect(reorder).toHaveBeenCalledWith(['b', 'c', 'a'])
     expect(result.current.dragOrder).toBeNull()
+    expect(moved).toBe(true)
   })
 
-  it('surfaces the error via onError when reorder fails, and still clears the override', async () => {
+  it('surfaces the error via onError when reorder fails, still clears the override, and resolves false', async () => {
     const reorder = vi.fn().mockResolvedValue({ success: false, error: 'nope' })
     const onError = vi.fn()
     const { result } = renderHook(() => useDragReorder({ ids: ['a', 'b'], reorder, onError }))
     act(() => { result.current.onDragStart('a') })
     act(() => { result.current.onDragOver('b') })
 
-    await act(async () => { await result.current.onDragEnd() })
+    let moved: boolean | undefined
+    await act(async () => { moved = await result.current.onDragEnd() })
 
     expect(onError).toHaveBeenCalledWith('nope')
     expect(result.current.dragOrder).toBeNull()
+    expect(moved).toBe(false)
   })
 
-  it('drag end without a preceding drag is a no-op', async () => {
+  it('drag end without a preceding drag is a no-op and resolves false', async () => {
     const reorder = vi.fn()
     const { result } = renderHook(() => useDragReorder({ ids: ['a', 'b'], reorder, onError: vi.fn() }))
-    await act(async () => { await result.current.onDragEnd() })
+    let moved: boolean | undefined
+    await act(async () => { moved = await result.current.onDragEnd() })
     expect(reorder).not.toHaveBeenCalled()
+    expect(moved).toBe(false)
   })
 })

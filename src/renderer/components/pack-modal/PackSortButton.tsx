@@ -5,9 +5,12 @@
 // exactly (same classes) so the two toolbar buttons read as a pair.
 //
 // `direction` (from `useNameSort`) describes the sort *last applied*
-// (or about to be applied by the very first click) — `aria-pressed`
-// here follows the same "describes current state" convention as the
-// neighboring `PackTabButton`'s `aria-pressed={active}`.
+// (or about to be applied by the very first click from 'free') —
+// `aria-pressed` here follows the same "describes current state"
+// convention as the neighboring `PackTabButton`'s `aria-pressed={active}`,
+// mapped to the natural toggle-button meaning "is a sort currently
+// applied" (true for 'asc'/'desc', false for 'free' — free has no
+// triangle and reads as the neutral/unpressed state).
 
 import { useTranslation } from 'react-i18next'
 import type { SortDirection } from './useNameSort'
@@ -19,8 +22,11 @@ export interface PackSortButtonProps {
   testid: string
 }
 
-const ASC_INDICATOR = '▲'
-const DESC_INDICATOR = '▼'
+const INDICATOR: Record<SortDirection, string> = {
+  asc: ' ▲',
+  desc: ' ▼',
+  free: '',
+}
 
 export function PackSortButton({ direction, onClick, disabled, testid }: PackSortButtonProps): JSX.Element {
   const { t } = useTranslation()
@@ -30,12 +36,12 @@ export function PackSortButton({ direction, onClick, disabled, testid }: PackSor
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-pressed={direction === 'desc'}
+      aria-pressed={direction !== 'free'}
       aria-label={label}
       className="rounded border border-edge bg-surface px-3 py-1.5 text-sm font-medium text-content hover:bg-surface-hover disabled:opacity-50"
       data-testid={testid}
     >
-      {label} {direction === 'asc' ? ASC_INDICATOR : DESC_INDICATOR}
+      {label}{INDICATOR[direction]}
     </button>
   )
 }

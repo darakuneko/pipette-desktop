@@ -53,7 +53,12 @@ export interface UseKeyLabelsReturn {
 
 export function useKeyLabels(): UseKeyLabelsReturn {
   const [metas, setMetas] = useState<KeyLabelMeta[]>([])
-  const [loading, setLoading] = useState(false)
+  // Starts true: the initial `refresh()` below fires from an effect
+  // (after this first render commits), so `loading` must already read
+  // true on that very first render for consumers that gate on it (e.g.
+  // Key Labels' Name-sort `ready` flag) to correctly treat "not yet
+  // fetched" as not-ready, rather than racing the effect.
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {

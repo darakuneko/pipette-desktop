@@ -26,6 +26,9 @@ export interface PackManagerModalTestIds {
   importButton: string
   /** Key Labels' error banner does not carry a testid; the other two do. */
   errorBanner?: string
+  /** Toolbar "Imported {{name}}" / "Updated {{name}}" feedback, shown
+   *  next to the Name sort button. All three modals set this. */
+  importFeedback: string
 }
 
 export interface PackManagerModalProps {
@@ -51,6 +54,9 @@ export interface PackManagerModalProps {
   /** "Name" sort toggle rendered at the left end of the Installed
    *  toolbar, opposite Import. Required — all three modals have one. */
   sortButton: ReactNode
+  /** "Imported {{name}}" / "Updated {{name}}" text rendered next to
+   *  `sortButton`, or `null` when there is nothing to show. */
+  importFeedback: string | null
   actionError: string | null
   children: ReactNode
   /** Language Packs renders MissingKeysModal as a portal sibling after
@@ -77,6 +83,7 @@ export function PackManagerModal({
   importLabel,
   onImport,
   sortButton,
+  importFeedback,
   actionError,
   children,
   afterContent,
@@ -139,11 +146,21 @@ export function PackManagerModal({
 
         {activeTab === 'installed' && (
           <div className="flex items-center justify-between px-4 py-3 border-b border-edge">
-            {sortButton}
+            <div className="flex items-center gap-3 min-w-0">
+              {sortButton}
+              {importFeedback && (
+                <span
+                  className="truncate text-xs font-medium text-accent"
+                  data-testid={testids.importFeedback}
+                >
+                  {importFeedback}
+                </span>
+              )}
+            </div>
             <button
               type="button"
               onClick={onImport}
-              className="rounded border border-edge bg-surface px-3 py-1.5 text-sm font-medium text-content hover:bg-surface-hover"
+              className="shrink-0 rounded border border-edge bg-surface px-3 py-1.5 text-sm font-medium text-content hover:bg-surface-hover"
               data-testid={testids.importButton}
             >
               {importLabel}

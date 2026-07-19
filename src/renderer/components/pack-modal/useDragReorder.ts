@@ -34,7 +34,14 @@ export interface UseDragReorderResult {
   dragOrder: string[] | null
   onDragStart: (id: string) => void
   onDragOver: (overId: string) => void
-  onDragEnd: () => Promise<void>
+  /** Resolves `true` only when a drag actually happened and its
+   *  `reorder` call succeeded — callers use this to know the list is
+   *  now in a genuinely new, user-arranged order (e.g. to flip the
+   *  Name sort button to its 'free' state via `useNameSort.markFree`).
+   *  Resolves `false` for a no-op end (no preceding drag) or a failed
+   *  `reorder` call, in which case the list reverts to its prior order
+   *  and nothing about the persisted order actually changed. */
+  onDragEnd: () => Promise<boolean>
 }
 
 export function useDragReorder({ ids, reorder, onError }: UseDragReorderOptions): UseDragReorderResult {
@@ -62,19 +69,23 @@ export function useDragReorder({ ids, reorder, onError }: UseDragReorderOptions)
     setDragOrder(next)
   }
 
-  const onDragEnd = async (): Promise<void> => {
+  const onDragEnd = async (): Promise<boolean> => {
     const order = dragOrder
     dragIdRef.current = null
     if (!order) {
       setDragOrder(null)
-      return
+      return false
     }
     // Keep the optimistic order applied while the reorder IPC +
     // refresh round trip is in flight; otherwise the rows would snap
     // back to the stale pre-drag order before the new index lands.
     const result = await reorder(order)
     setDragOrder(null)
-    if (!result.success) onError(result.error)
+    if (!result.success) {
+      onError(result.error)
+      return false
+    }
+    return true
   }
 
   return { dragOrder, onDragStart, onDragOver, onDragEnd }

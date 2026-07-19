@@ -334,6 +334,97 @@ describe('KeyLabelsModal', () => {
     await waitFor(() => expect(importFromFile).toHaveBeenCalled())
   })
 
+  // --- Import/download placement + toolbar feedback + auto-scroll ---
+
+  it('asc state: a new import is inserted at its sorted position via reorder, including QWERTY in scope', async () => {
+    // Already ascending (QWERTY sorts between Alpha and Zeta) — detected
+    // as 'asc' on open, no click needed.
+    metas = [
+      meta({ id: 'a', name: 'Alpha', uploaderName: 'me' }),
+      meta({ id: 'qwerty', name: 'QWERTY', uploaderName: 'pipette' }),
+      meta({ id: 'z', name: 'Zeta', uploaderName: 'me' }),
+    ]
+    importFromFile.mockResolvedValueOnce({ success: true, data: meta({ id: 'm', name: 'Mu' }) })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+
+    fireEvent.click(screen.getByTestId('key-labels-import-button'))
+    await waitFor(() => expect(reorder).toHaveBeenCalledWith(['a', 'm', 'qwerty', 'z']))
+  })
+
+  it('free state (shuffled list): a new import does not call reorder — the store appends it at the bottom on its own', async () => {
+    metas = [
+      meta({ id: 'm', name: 'Mu', uploaderName: 'me' }),
+      meta({ id: 'z', name: 'Zeta', uploaderName: 'me' }),
+      meta({ id: 'a', name: 'Alpha', uploaderName: 'me' }),
+    ]
+    importFromFile.mockResolvedValueOnce({ success: true, data: meta({ id: 'b', name: 'Beta' }) })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+
+    fireEvent.click(screen.getByTestId('key-labels-import-button'))
+    await waitFor(() => expect(importFromFile).toHaveBeenCalled())
+    expect(reorder).not.toHaveBeenCalled()
+  })
+
+  it('overwrite (same id already installed) keeps its position — no reorder call, "Updated" feedback', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha', uploaderName: 'me' }), meta({ id: 'z', name: 'Zeta', uploaderName: 'me' })]
+    // Overwrite: the store reuses the existing 'a' id.
+    importFromFile.mockResolvedValueOnce({ success: true, data: meta({ id: 'a', name: 'Alpha' }) })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+
+    fireEvent.click(screen.getByTestId('key-labels-import-button'))
+    await waitFor(() => expect(importFromFile).toHaveBeenCalled())
+    expect(reorder).not.toHaveBeenCalled()
+    expect(screen.getByTestId('key-labels-import-feedback').textContent).toBe('common.updatedNamed:Alpha')
+  })
+
+  it('new import shows "Imported {{name}}" feedback next to the Name button', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha', uploaderName: 'me' })]
+    importFromFile.mockResolvedValueOnce({ success: true, data: meta({ id: 'b', name: 'Beta' }) })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+
+    fireEvent.click(screen.getByTestId('key-labels-import-button'))
+    await waitFor(() => expect(screen.getByTestId('key-labels-import-feedback').textContent).toBe('common.importedNamed:Beta'))
+  })
+
+  it('scrolls the imported row into view', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha', uploaderName: 'me' })]
+    const newMeta = meta({ id: 'b', name: 'Beta' })
+    importFromFile.mockImplementationOnce(async () => {
+      metas = [...metas, newMeta]
+      return { success: true, data: newMeta }
+    })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+
+    await waitFor(() => expect(screen.getByTestId('key-labels-row-a')).toBeTruthy())
+    const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {})
+    try {
+      fireEvent.click(screen.getByTestId('key-labels-import-button'))
+      await waitFor(() => expect(screen.getByTestId('key-labels-row-b')).toBeTruthy())
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' }))
+    } finally {
+      scrollIntoView.mockRestore()
+    }
+  })
+
+  it('hub download parity: DUPLICATE_NAME guard aside, a new Hub download is always an insert (never an overwrite), placed at its sorted position via reorder', async () => {
+    // Already ascending — detected as 'asc' on open, no click needed.
+    metas = [meta({ id: 'a', name: 'Alpha', uploaderName: 'me' }), meta({ id: 'z', name: 'Zeta', uploaderName: 'me' })]
+    hubDownload.mockResolvedValueOnce({ success: true, data: meta({ id: 'hub-m', name: 'Mu' }) })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+
+    fireEvent.click(screen.getByTestId('key-labels-tab-hub'))
+    fireEvent.change(screen.getByTestId('key-labels-search-input'), { target: { value: 'mu' } })
+    hubSearch.mockResolvedValueOnce({
+      success: true,
+      data: { items: [{ id: 'hub-m', name: 'Mu', map: {}, composite_labels: null, uploaded_by: null, uploader_name: 'someone', created_at: '', updated_at: '' }], total: 1, page: 1, per_page: 50 },
+    })
+    fireEvent.click(screen.getByTestId('key-labels-search-button'))
+    await waitFor(() => expect(screen.getByTestId('key-labels-download-hub-m')).toBeTruthy())
+
+    fireEvent.click(screen.getByTestId('key-labels-download-hub-m'))
+    await waitFor(() => expect(reorder).toHaveBeenCalledWith(['a', 'hub-m', 'z']))
+  })
+
   it('shows duplicate-name error when import fails with DUPLICATE_NAME', async () => {
     importFromFile.mockResolvedValueOnce({
       success: false,
