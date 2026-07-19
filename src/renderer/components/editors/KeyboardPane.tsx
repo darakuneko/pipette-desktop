@@ -25,6 +25,9 @@ export interface KeyboardPaneProps {
   pressedKeys?: Set<string>
   everPressedKeys?: Set<string>
   remappedKeys: Set<string>
+  /** Encoder analogue of `remappedKeys` — see `KeyboardWidget`'s
+   *  `remappedEncoders`. */
+  remappedEncoders?: Set<string>
   /** Flash state after a bulk keymap rewrite or a successful undo/redo —
    *  see `KeyboardWidget`'s `flash`. */
   flash?: KeyFlashState
@@ -74,6 +77,7 @@ export function KeyboardPane({
   pressedKeys,
   everPressedKeys,
   remappedKeys,
+  remappedEncoders,
   flash,
   multiSelectedKeys,
   layoutOptions,
@@ -117,6 +121,7 @@ export function KeyboardPane({
           pressedKeys={pressedKeys}
           everPressedKeys={everPressedKeys}
           remappedKeys={remappedKeys}
+          remappedEncoders={remappedEncoders}
           flash={flash}
           multiSelectedKeys={multiSelectedKeys}
           layoutOptions={layoutOptions}

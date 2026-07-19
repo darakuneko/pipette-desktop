@@ -34,7 +34,7 @@ export interface UseKeyLabelLookupReturn {
 }
 
 export function useKeyLabelLookup(): UseKeyLabelLookupReturn {
-  const [, setVersion] = useState(0)
+  const [version, setVersion] = useState(0)
   const cacheRef = useRef<Map<string, KeyLabelEntryFile>>(new Map())
   const inflightRef = useRef<Map<string, Promise<void>>>(new Map())
   const missingRef = useRef<Set<string>>(new Set())
@@ -109,9 +109,22 @@ export function useKeyLabelLookup(): UseKeyLabelLookupReturn {
   // itself was not — consumers that list the whole return value in a dep
   // array (e.g. `remapLabel`/`isRemapped` in useDevicePrefs) would rebuild
   // every render, cascading into a full keymap/KeyWidget re-render. Memoize
-  // on the members so the identity only changes if one of them ever does.
+  // on the members so the identity is stable across ordinary renders.
+  //
+  // `version` is ALSO a dep, even though every member above is already
+  // stable: the members are plain `useCallback`s that close over `cacheRef`
+  // (a ref, not state), so calling one directly after a lazy `ensure(id)`
+  // resolves already returns the fresh data — but a downstream consumer
+  // that memoizes on THIS object's identity (or on a callback derived from
+  // it, e.g. `useDevicePrefs`'s `remapLabel`/`isRemapped`) never recomputes
+  // unless that identity actually changes. Without `version` here, the
+  // lazy-loaded pack's map/compositeLabels would arrive in `cacheRef` but
+  // the keymap legends and key picker would stay frozen on the
+  // pre-fetch fallback until some unrelated prop forced a rebuild.
+  // Including `version` makes the identity change exactly once per fetch
+  // (or store-change event) — still stable across every other render.
   return useMemo(
     () => ({ ensure, getName, getMap, getCompositeLabels, getKeymapApplicable }),
-    [ensure, getName, getMap, getCompositeLabels, getKeymapApplicable],
+    [ensure, getName, getMap, getCompositeLabels, getKeymapApplicable, version],
   )
 }

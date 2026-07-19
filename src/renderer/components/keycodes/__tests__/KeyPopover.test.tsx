@@ -428,6 +428,60 @@ describe('PopoverTabKey — Key Label pack remap in search (issue #294)', () => 
     const kc9Label = screen.getByTestId('popover-result-KC_9').querySelector('span')
     expect(kc9Label?.className).not.toContain('text-key-label-remap')
   })
+
+  // Plan-qwerty-select-no-rewrite Phase 2 follow-up: once a Rewrite is
+  // actually APPLIED, `useDevicePrefs` supplies an identity `remapLabel`
+  // (as above) but a NON-identity `isRemapped` that flags the keycodes the
+  // Rewrite table actually touched. The picker must color by `isRemapped`
+  // in that case — raw label, but still tinted for a changed keycode —
+  // instead of falling back to "no styling" like the identity-remapLabel-
+  // alone case above.
+  it('applied mode (identity remapLabel + target-set isRemapped): a Rewrite TARGET keycode is tinted with its RAW label', () => {
+    const identityRemapLabel = (qmkId: string) => qmkId
+    const appliedTargetIsRemapped = (qmkId: string) => qmkId === 'KC_9'
+    render(
+      <PopoverTabKey
+        currentKeycode={4}
+        remapLabel={identityRemapLabel}
+        isRemapped={appliedTargetIsRemapped}
+        onKeycodeSelect={onSelect}
+      />,
+    )
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: '9' } })
+    const kc9Row = screen.getByTestId('popover-result-KC_9')
+    // Raw label (identity remapLabel) ...
+    expect(kc9Row).toHaveTextContent('( 9')
+    // ... but tinted because isRemapped flags it as a Rewrite target.
+    const kc9Label = kc9Row.querySelector('span')
+    expect(kc9Label?.className).toContain('text-key-label-remap')
+  })
+
+  it('applied mode: a keycode isRemapped does NOT flag stays untinted, even with identity remapLabel', () => {
+    const identityRemapLabel = (qmkId: string) => qmkId
+    const appliedTargetIsRemapped = (qmkId: string) => qmkId === 'KC_9'
+    render(
+      <PopoverTabKey
+        currentKeycode={4}
+        remapLabel={identityRemapLabel}
+        isRemapped={appliedTargetIsRemapped}
+        onKeycodeSelect={onSelect}
+      />,
+    )
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: '8' } })
+    const kc8Row = screen.getByTestId('popover-result-KC_8')
+    const kc8Label = kc8Row.querySelector('span')
+    expect(kc8Label?.className).not.toContain('text-key-label-remap')
+  })
+
+  it('KeyPopover forwards isRemapped through to the Key tab search results (wiring)', () => {
+    const identityRemapLabel = (qmkId: string) => qmkId
+    const appliedTargetIsRemapped = (qmkId: string) => qmkId === 'KC_9'
+    render(<KeyPopover {...defaultProps} remapLabel={identityRemapLabel} isRemapped={appliedTargetIsRemapped} />)
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: '9' } })
+    const kc9Row = screen.getByTestId('popover-result-KC_9')
+    expect(kc9Row).toHaveTextContent('( 9')
+    expect(kc9Row.querySelector('span')?.className).toContain('text-key-label-remap')
+  })
 })
 
 describe('PopoverTabCode — hex input', () => {

@@ -125,6 +125,11 @@ interface Props {
   onBasicViewTypeChange?: (v: BasicViewType) => void
   splitKeyMode?: SplitKeyMode // 'split' (default) or 'flat' for individual buttons
   remapLabel?: (qmkId: string) => string
+  /** Gated remap-tint predicate — see `KeymapEditor`'s `isRemapped`.
+   *  Threaded through to `KeycodeGrid`/`BasicKeyboardView` so the picker
+   *  colors by the same rule as the keymap grid (Plan-qwerty-select-no-
+   *  rewrite: raw label + target-set tint in applied mode). */
+  isRemapped?: (qmkId: string) => boolean
 }
 
 export function TabbedKeycodes({
@@ -150,6 +155,7 @@ export function TabbedKeycodes({
   onBasicViewTypeChange,
   splitKeyMode,
   remapLabel,
+  isRemapped,
 }: Props) {
   const { t } = useTranslation()
   const { config } = useAppConfig()
@@ -371,6 +377,7 @@ export function TabbedKeycodes({
         isVisible={isVisible}
         splitKeyMode={maskOnly ? 'flat' : resolvedSplitKeyMode}
         remapLabel={remapLabel}
+        isRemapped={isRemapped}
         keycodeIndexMap={keycodeIndexMap}
       />
     )
@@ -413,6 +420,7 @@ export function TabbedKeycodes({
           pickerSelectedIndices={isActive ? pickerSelectedIndices : undefined}
           isVisible={isVisible}
           remapLabel={remapLabel}
+          isRemapped={isRemapped}
           keycodeIndexMap={keycodeIndexMap}
         />
       )

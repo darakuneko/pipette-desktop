@@ -360,8 +360,8 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const {
     deserializedMacros, configuredKeycodes,
     buildKeycodesForLayer, buildEncoderKeycodesForLayer,
-    layerKeycodes, remappedKeys, layerEncoderKeycodes,
-    typingTestKeycodes, typingTestRemapped, typingTestEncoderKeycodes,
+    layerKeycodes, remappedKeys, layerEncoderKeycodes, layerEncoderRemapped,
+    typingTestKeycodes, typingTestRemapped, typingTestEncoderKeycodes, typingTestEncoderRemapped,
   } = useLayerKeycodes({
     parsedMacros, macroBuffer, macroCount, vialProtocol, tapDanceEntries,
     remapLabel, isRemapped, keymap, encoderLayout, encoderCount, currentLayer,
@@ -489,6 +489,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               keycodes={typingTestKeycodes}
               encoderKeycodes={typingTestEncoderKeycodes}
               remappedKeys={typingTestRemapped}
+              remappedEncoders={typingTestEncoderRemapped}
               remapLabel={remapLabel}
               layoutOptions={effectiveLayoutOptions}
               scale={scaleProp}
@@ -546,7 +547,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                 paneId="primary" isActive={true}              keys={layout.keys} keycodes={layerKeycodes} encoderKeycodes={layerEncoderKeycodes}
                 selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
                 pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
-                remappedKeys={remappedKeys} flash={flash} multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
+                remappedKeys={remappedKeys} remappedEncoders={layerEncoderRemapped} flash={flash} multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
                 layoutOptions={effectiveLayoutOptions} scale={scaleProp}
                 labelOverrides={viewMatrixLabelOverrides} keyColors={viewMatrixDuplicateKeyColors} remapLabel={remapLabel}
                 layerLabel={viewMatrixMode.active ? undefined : layerLabel(currentLayer)} layerLabelTestId="layer-label"
@@ -603,7 +604,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onClose={() => setPopoverState(null)} quickSelect={quickSelect}
           previousKeycode={popoverUndoKeycode} onUndo={handlePopoverUndo}
           nextKeycode={popoverRedoKeycode} onRedo={handlePopoverRedo}
-          remapLabel={remapLabel}
+          remapLabel={remapLabel} isRemapped={isRemapped}
         />
       )}
 
@@ -627,7 +628,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             onTabChange={() => { multiSelect.clearPickerSelection() }}
             highlightedKeycodes={configuredKeycodes} maskOnly={isMaskKey} lmMode={isLMMask} showHint={!isMaskKey}
             tabFooterContent={tabFooterContent} tabContentOverride={tabContentOverride}
-            basicViewType={basicViewType} onBasicViewTypeChange={onBasicViewTypeChange} splitKeyMode={splitKeyMode} remapLabel={remapLabel}
+            basicViewType={basicViewType} onBasicViewTypeChange={onBasicViewTypeChange} splitKeyMode={splitKeyMode} remapLabel={remapLabel} isRemapped={isRemapped}
             tabBarRight={
               <Tooltip content={t('editorSettings.title')}>
                 <button ref={layoutButtonRef} type="button" aria-label={t('editorSettings.title')}

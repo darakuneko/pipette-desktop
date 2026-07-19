@@ -119,4 +119,42 @@ describe('KeycodeButton', () => {
     // Should NOT have the highlighted-only style
     expect(btn.className).not.toContain('bg-accent/10')
   })
+
+  // Plan-qwerty-select-no-rewrite: `remapped` decides the tint independently
+  // of `displayLabel` — applied-mode Rewrite targets show a raw (untouched)
+  // label but still need the blue tint, and conversely a caller could in
+  // principle pass a `displayLabel` without `remapped` (e.g. some other
+  // override) and get no tint. Neither direction should read the other.
+  describe('remapped (decoupled from displayLabel)', () => {
+    it('tints the label when remapped is true, even without a displayLabel', () => {
+      render(<KeycodeButton keycode={makeKeycode({ qmkId: 'KC_A', label: 'A' })} remapped />)
+      const btn = screen.getByRole('button')
+      expect(btn.className).toContain('text-key-label-remap')
+      // Raw label text — displayLabel was never provided.
+      expect(screen.getByText('A')).toBeInTheDocument()
+    })
+
+    it('does not tint when displayLabel is set but remapped is false/absent', () => {
+      render(<KeycodeButton keycode={makeKeycode({ qmkId: 'KC_A', label: 'A' })} displayLabel="Custom A" />)
+      const btn = screen.getByRole('button')
+      expect(btn.className).not.toContain('text-key-label-remap')
+      expect(btn.className).toContain('text-picker-item-text')
+      // displayLabel still drives the rendered text.
+      expect(screen.getByText('Custom A')).toBeInTheDocument()
+    })
+
+    it('tints AND shows the custom label when both displayLabel and remapped are set (simulation mode)', () => {
+      render(<KeycodeButton keycode={makeKeycode({ qmkId: 'KC_A', label: 'A' })} displayLabel="Custom A" remapped />)
+      const btn = screen.getByRole('button')
+      expect(btn.className).toContain('text-key-label-remap')
+      expect(screen.getByText('Custom A')).toBeInTheDocument()
+    })
+
+    it('selected/highlighted still take precedence over remapped', () => {
+      render(<KeycodeButton keycode={makeKeycode({ qmkId: 'KC_A', label: 'A' })} remapped selected />)
+      const btn = screen.getByRole('button')
+      expect(btn.className).toContain('bg-accent/20')
+      expect(btn.className).not.toContain('text-key-label-remap')
+    })
+  })
 })
