@@ -72,10 +72,9 @@ interface Props {
   selectedEncoder?: { idx: number; dir: 0 | 1 } | null
   pressedKeys?: Set<string>
   highlightedKeys?: Set<string>
-  /** Post-rewrite flash state (Key Label "apply to keymap"). Not threaded
-   *  to `EncoderWidget`: it has no highlight-priority fill logic at all
-   *  today, so wiring flash there would mean redesigning its render path
-   *  rather than adding one prop. Encoders are skipped. */
+  /** Flash state after a Key Label "apply to keymap" bulk rewrite or a
+   *  successful undo/redo — threaded to both `KeyWidget` (`keys`) and
+   *  `EncoderWidget` (`encoders`). */
   flash?: KeyFlashState
   everPressedKeys?: Set<string>
   remappedKeys?: Set<string>
@@ -216,6 +215,9 @@ function KeyboardWidgetInner({
               kleKey={key}
               keycode={kc}
               selected={false}
+              flashed={flash?.encoders.has(`${key.encoderIdx},${key.encoderDir}`)}
+              flashGeneration={flash?.generation}
+              flashStartedAt={flash?.startedAt}
               onClick={readOnly ? undefined : onEncoderClick}
               onDoubleClick={readOnly ? undefined : onEncoderDoubleClick}
               scale={scale}
@@ -272,6 +274,9 @@ function KeyboardWidgetInner({
               keycode={kc}
               selected
               selectedMaskPart={selectedMaskPart}
+              flashed={flash?.encoders.has(`${key.encoderIdx},${key.encoderDir}`)}
+              flashGeneration={flash?.generation}
+              flashStartedAt={flash?.startedAt}
               onClick={readOnly ? undefined : onEncoderClick}
               onDoubleClick={readOnly ? undefined : onEncoderDoubleClick}
               scale={scale}

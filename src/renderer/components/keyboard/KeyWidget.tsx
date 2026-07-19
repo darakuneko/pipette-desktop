@@ -42,7 +42,7 @@ interface Props {
   pressed?: boolean
   highlighted?: boolean
   /** True for one beat right after a bulk keymap rewrite (Key Label
-   *  "apply to keymap") lands on this position. Renders an extra overlay
+   *  "apply to keymap") or an undo/redo lands on this position. Renders an extra overlay
    *  (same fill as `selected`, `KEY_SELECTED_COLOR`) on top of the key's
    *  normal fill so the user can see what changed, then fades via the
    *  declarative `key-flash` CSS keyframe (see `style.css`) once the

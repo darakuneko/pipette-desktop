@@ -210,3 +210,38 @@ it('KEY_SPACING matches Python vial-gui ratio', () => {
   expect(KEY_SPACING).toBeCloseTo(expected)
   expect(KEY_SPACING / KEY_UNIT).toBeCloseTo(0.0588, 3)
 })
+
+describe('KeyboardWidget flash threading', () => {
+  const keys: KleKey[] = [
+    makeKey({ x: 0, y: 0, row: 0, col: 0 }),
+    makeKey({ x: 1, y: 0, row: -1, col: -1, encoderIdx: 0, encoderDir: 0 }),
+  ]
+  const keycodes = new Map([['0,0', 'KC_A']])
+  const encoderKeycodes = new Map<string, [string, string]>([['0', ['KC_B', 'KC_NO']]])
+
+  it('flashes the encoder when its "idx,dir" position is in flash.encoders', () => {
+    const { container } = render(
+      <KeyboardWidget
+        keys={keys}
+        keycodes={keycodes}
+        encoderKeycodes={encoderKeycodes}
+        flash={{ keys: new Set(), encoders: new Set(['0,0']), generation: 1, startedAt: Date.now() }}
+      />,
+    )
+    expect(container.querySelector('[data-testid="flash-overlay"]')).not.toBeNull()
+  })
+
+  it('does not flash the encoder when its position is absent from flash.encoders', () => {
+    const { container } = render(
+      <KeyboardWidget
+        keys={keys}
+        keycodes={keycodes}
+        encoderKeycodes={encoderKeycodes}
+        // `1,0` doesn't match the rendered encoder's own `idx=0,dir=0` —
+        // a non-empty `encoders` set that just doesn't cover this position.
+        flash={{ keys: new Set(), encoders: new Set(['1,0']), generation: 1, startedAt: Date.now() }}
+      />,
+    )
+    expect(container.querySelector('[data-testid="flash-overlay"]')).toBeNull()
+  })
+})

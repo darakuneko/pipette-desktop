@@ -70,22 +70,25 @@ export function useKeyFlash(currentLayer: number): UseKeyFlashReturn {
     }, KEY_FLASH_DURATION_MS)
   }, [])
 
-  // Re-slice the raw flash batch down to the current layer's key positions
-  // on every layer change — switching layers during the window is
-  // intended to flash whatever the newly-visible layer had changed,
-  // rather than freezing the set at trigger time. Encoder entries are
-  // omitted: flash isn't threaded to EncoderWidget (see KeyboardWidget's
-  // `KeyFlashState` comment). `generation`/`startedAt` pass through
-  // unchanged from the batch — they describe the trigger event itself,
-  // not the per-layer position set.
+  // Re-slice the raw flash batch down to the current layer's key/encoder
+  // positions on every layer change — switching layers during the window
+  // is intended to flash whatever the newly-visible layer had changed,
+  // rather than freezing the set at trigger time. `generation`/`startedAt`
+  // pass through unchanged from the batch — they describe the trigger
+  // event itself, not the per-layer position set.
   const flash = useMemo<KeyFlashState | undefined>(() => {
     if (!flashBatch) return undefined
     const positions = new Set<string>()
+    const encoderPositions = new Set<string>()
     for (const entry of flashBatch.entries) {
-      if (entry.kind === 'key' && entry.layer === currentLayer) positions.add(posKey(entry.row, entry.col))
+      if (entry.layer !== currentLayer) continue
+      if (entry.kind === 'key') positions.add(posKey(entry.row, entry.col))
+      else encoderPositions.add(`${entry.idx},${entry.dir}`)
     }
-    if (positions.size === 0) return undefined
-    return { keys: positions, generation: flashBatch.generation, startedAt: flashBatch.startedAt }
+    // Either set alone is enough to open a flash window — an encoder-only
+    // undo/redo or rewrite must still flash even though `keys` is empty.
+    if (positions.size === 0 && encoderPositions.size === 0) return undefined
+    return { keys: positions, encoders: encoderPositions, generation: flashBatch.generation, startedAt: flashBatch.startedAt }
   }, [flashBatch, currentLayer])
 
   return { flash, triggerFlash }

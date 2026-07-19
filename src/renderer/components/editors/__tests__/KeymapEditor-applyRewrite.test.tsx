@@ -143,7 +143,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
     capturedCanRedo = false
   })
 
-  interface CapturedFlash { keys: Set<string>; generation: number; startedAt: number }
+  interface CapturedFlash { keys: Set<string>; encoders: Set<string>; generation: number; startedAt: number }
 
   function lastFlash(): CapturedFlash | undefined {
     const widget = capturedWidgetProps[capturedWidgetProps.length - 1]
@@ -460,7 +460,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       vi.useRealTimers()
     })
 
-    it('flashes the rewritten key positions on the current layer, then clears after the key-flash keyframe duration (700ms)', async () => {
+    it('flashes the rewritten key AND encoder positions on the current layer, then clears after the key-flash keyframe duration (700ms)', async () => {
       vi.useFakeTimers()
       const ref = createRef<KeymapEditorHandle>()
       render(<KeymapEditor ref={ref} {...defaultProps} />)
@@ -474,15 +474,30 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
         await ref.current!.applyKeymapRewrite(table)
       })
 
-      // [0,0,0] was rewritten — flash carries its "row,col" position.
-      // The encoder rewrite at [0,0,0] is NOT reflected here: flash isn't
-      // threaded to EncoderWidget (see KeyboardWidget's `KeyFlashState` doc).
+      // [0,0] key and the idx=0/dir=0 encoder were both rewritten.
       expect(lastFlashKeys()).toEqual(new Set(['0,0']))
+      expect(lastFlash()?.encoders).toEqual(new Set(['0,0']))
 
       // Matches style.css's `key-flash` keyframe (700ms total) exactly,
       // so the overlay is never unmounted mid-fade.
       act(() => { vi.advanceTimersByTime(700) })
       expect(lastFlash()).toBeUndefined()
+    })
+
+    it('flashes only the encoder position (keys empty) when the rewrite touches an encoder alone', async () => {
+      vi.useFakeTimers()
+      const ref = createRef<KeymapEditorHandle>()
+      render(<KeymapEditor ref={ref} {...defaultProps} />)
+
+      await act(async () => {
+        await ref.current!.applyKeymapRewrite(new Map([['KC_7', 'KC_70']]))
+      })
+
+      // An encoder-only rewrite must still open a flash window — `keys`
+      // staying empty must not suppress it.
+      expect(lastFlash()).not.toBeUndefined()
+      expect(lastFlashKeys()).toEqual(new Set())
+      expect(lastFlash()?.encoders).toEqual(new Set(['0,0']))
     })
 
     it('does not populate flash when the rewrite matches nothing', async () => {
@@ -539,7 +554,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       expect(lastFlash()).toBeUndefined()
 
       rerender(<KeymapEditor ref={ref} {...defaultProps} layers={2} currentLayer={0} />)
-      expect(lastFlash()).toEqual({ keys: new Set(['0,0']), generation, startedAt })
+      expect(lastFlash()).toEqual({ keys: new Set(['0,0']), encoders: new Set(), generation, startedAt })
     })
 
     it('bumps the generation and refreshes startedAt on a second successful apply', async () => {
@@ -602,6 +617,51 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       act(() => { vi.advanceTimersByTime(700) })
       return ref
     }
+
+    // Same shape as `renderWithRewrittenKey` above but rewrites only the
+    // idx=0/dir=0 encoder (KC_7 at defaultProps' `encoderLayout`), leaving
+    // no key entry on the pushed batch — proving an encoder-only undo/redo
+    // still opens a flash window (`keys` stays empty, `encoders` doesn't).
+    async function renderWithRewrittenEncoder() {
+      const ref = createRef<KeymapEditorHandle>()
+      render(<KeymapEditor ref={ref} {...defaultProps} />)
+      await act(async () => {
+        await ref.current!.applyKeymapRewrite(new Map([['KC_7', 'KC_70']]))
+      })
+      act(() => { vi.advanceTimersByTime(700) })
+      return ref
+    }
+
+    it('encoder-only undo flashes the encoder position (keys stays empty), then clears after 700ms', async () => {
+      vi.useFakeTimers()
+      await renderWithRewrittenEncoder()
+      expect(lastFlash()).toBeUndefined()
+
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+
+      expect(lastFlashKeys()).toEqual(new Set())
+      expect(lastFlash()?.encoders).toEqual(new Set(['0,0']))
+
+      act(() => { vi.advanceTimersByTime(700) })
+      expect(lastFlash()).toBeUndefined()
+    })
+
+    it('encoder-only redo flashes the encoder position likewise', async () => {
+      vi.useFakeTimers()
+      await renderWithRewrittenEncoder()
+
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+      act(() => { vi.advanceTimersByTime(700) })
+      expect(lastFlash()).toBeUndefined()
+
+      await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true }) })
+
+      expect(lastFlashKeys()).toEqual(new Set())
+      expect(lastFlash()?.encoders).toEqual(new Set(['0,0']))
+
+      act(() => { vi.advanceTimersByTime(700) })
+      expect(lastFlash()).toBeUndefined()
+    })
 
     it('undo flashes the affected key position(s) on the current layer, then clears after 700ms', async () => {
       vi.useFakeTimers()

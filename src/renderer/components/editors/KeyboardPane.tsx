@@ -25,8 +25,8 @@ export interface KeyboardPaneProps {
   pressedKeys?: Set<string>
   everPressedKeys?: Set<string>
   remappedKeys: Set<string>
-  /** Post-rewrite flash state after a bulk keymap rewrite — see
-   *  `KeyboardWidget`'s `flash`. */
+  /** Flash state after a bulk keymap rewrite or a successful undo/redo —
+   *  see `KeyboardWidget`'s `flash`. */
   flash?: KeyFlashState
   multiSelectedKeys?: Set<string>
   layoutOptions: Map<number, number>
