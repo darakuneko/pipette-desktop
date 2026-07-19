@@ -412,6 +412,22 @@ describe('PopoverTabKey — Key Label pack remap in search (issue #294)', () => 
     expect(screen.getByTestId('popover-result-KC_8')).toBeInTheDocument()
     expect(screen.getByTestId('popover-result-KC_8')).toHaveTextContent('( 8')
   })
+
+  // Plan-qwerty-select-no-rewrite Phase 2: when the Keyboard Layout select
+  // matches what's actually Rewritten into the keymap, `useDevicePrefs`
+  // supplies an identity `remapLabel` (see its applied-mode gate) instead
+  // of omitting the prop — this pins that an identity function produces
+  // the exact same "no pack" search behavior as no `remapLabel` at all,
+  // so the picker doesn't need its own separate applied-mode branch.
+  it('an identity remapLabel (applied mode: select === appliedKeymapLayout) behaves exactly like no pack — raw label, no remap styling', () => {
+    const identityRemapLabel = (qmkId: string) => qmkId
+    render(<PopoverTabKey currentKeycode={4} remapLabel={identityRemapLabel} onKeycodeSelect={onSelect} />)
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: '(' } })
+    expect(screen.getByTestId('popover-result-KC_9')).toBeInTheDocument()
+    expect(screen.queryByTestId('popover-result-KC_8')).not.toBeInTheDocument()
+    const kc9Label = screen.getByTestId('popover-result-KC_9').querySelector('span')
+    expect(kc9Label?.className).not.toContain('text-key-label-remap')
+  })
 })
 
 describe('PopoverTabCode — hex input', () => {

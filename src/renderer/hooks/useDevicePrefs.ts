@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
 import { useKeyLabelLookup } from './useKeyLabelLookup'
+import { buildKeymapRewriteTable } from '../../shared/keymap/keymap-apply'
 import { useAppConfig } from './useAppConfig'
 import { MIN_SCALE, MAX_SCALE } from '../components/editors/keymap-editor-types'
 import type { TypingTestResult, TypingViewMenuTab, ViewMode, TypingTestMemory, TypingTestMemoryWord, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
@@ -442,7 +443,17 @@ export interface UseDevicePrefsReturn {
   autoLockTime: AutoLockMinutes
   setAutoLockTime: (m: AutoLockMinutes) => void
   applyDevicePrefs: (uid: string) => Promise<void>
+  /** Display label for a qmkId, gated by the WYSIWYG rendering rule
+   *  (Plan-qwerty-select-no-rewrite §表示ルール): identity (raw keycode
+   *  label) while `layout` is the arrangement actually Rewritten into
+   *  the keymap, otherwise the active Key Label pack's own label —
+   *  see the gate comment above `remapLabel`'s definition below. */
   remapLabel: (qmkId: string) => string
+  /** Same gate as `remapLabel` — the blue "remapped" tint source flips
+   *  from "this pack's own map/compositeLabels" (display simulation)
+   *  to "this qmkId is a target the applied Rewrite table sent
+   *  characters to" once `layout` matches what's actually burned into
+   *  the keymap. */
   isRemapped: (qmkId: string) => boolean
   /** `PipetteSettings.appliedKeymapLayout` — see `ValidatedPrefs` above. */
   appliedKeymapLayout: string | undefined
@@ -880,25 +891,59 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     void lookup.ensure(layout)
   }, [lookup, layout])
 
+  // WYSIWYG rendering gate (Plan-qwerty-select-no-rewrite §表示ルール): once
+  // the Keyboard Layout select matches the arrangement a Rewrite actually
+  // burned into the keymap, the keymap itself already embodies that
+  // arrangement — running its own labels back through the pack's map would
+  // double-convert the display versus what the physical key really sends
+  // (e.g. a Colemak Rewrite must show "QWFPGJ...", not Colemak's own
+  // labels applied on top of the already-rewritten QWERTY-baseline
+  // keycodes). QWERTY is unaffected either way since its map/compositeLabels
+  // are always empty (`BUILTIN_QWERTY_LAYOUT_ID` in keyboard-layouts.ts).
+  const layoutIsApplied = appliedKeymapLayout !== undefined && appliedKeymapLayout === layout
+
+  // The rewrite table actually applied, used only to mark which keycodes
+  // are Rewrite TARGETS (so the blue "remapped" tint can still show which
+  // keys changed even though the legend itself goes raw). Sourced from the
+  // same cached pack map `remapLabel`/`isRemapped` already read below — no
+  // extra IPC fetch beyond the `ensure(layout)` effect above, since
+  // `layout === appliedKeymapLayout` whenever this is non-undefined.
+  // Memoized on the map's own object reference (stable per cache entry, see
+  // `useKeyLabelLookup.getMap`) rather than on `lookup` itself (a fresh
+  // object literal every render), so this only rebuilds when the pack data
+  // actually changes.
+  const appliedMap = layoutIsApplied ? lookup.getMap(layout) : undefined
+  const appliedRewriteTargets = useMemo(() => {
+    if (!appliedMap) return undefined
+    const result = buildKeymapRewriteTable(appliedMap)
+    // An invalid/missing table (pack uninstalled locally, or its map no
+    // longer passes validation) degrades to "no markers" — the legend
+    // stays raw (remapLabel below never depends on this), it simply loses
+    // the blue tint rather than showing something wrong.
+    return result.ok ? new Set(result.table.values()) : undefined
+  }, [appliedMap])
+
   const remapLabel = useCallback(
     (qmkId: string): string => {
+      if (layoutIsApplied) return qmkId
       const composite = lookup.getCompositeLabels(layout)?.[qmkId]
       if (composite !== undefined) return composite
       const mapped = lookup.getMap(layout)?.[qmkId]
       if (mapped !== undefined) return mapped
       return qmkId
     },
-    [lookup, layout],
+    [lookup, layout, layoutIsApplied],
   )
 
   const isRemapped = useCallback(
     (qmkId: string): boolean => {
+      if (layoutIsApplied) return appliedRewriteTargets?.has(qmkId) ?? false
       const composite = lookup.getCompositeLabels(layout)
       if (composite && qmkId in composite) return true
       const map = lookup.getMap(layout)
       return Boolean(map && qmkId in map)
     },
-    [lookup, layout],
+    [lookup, layout, layoutIsApplied, appliedRewriteTargets],
   )
 
   return {
