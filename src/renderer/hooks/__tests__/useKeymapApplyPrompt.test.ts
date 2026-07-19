@@ -275,7 +275,7 @@ describe('useKeymapApplyPrompt — WYSIWYG select semantics (Plan-qwerty-select-
   // (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時のクリーンアップ) ---
 
   describe('keymapRestoreSeq (restore cleanup, D3)', () => {
-    it('an increase closes an open confirm modal', async () => {
+    it('a change closes an open confirm modal', async () => {
       const { result, rerender } = setup({ keyboardLayout: 'qwerty', keymapRestoreSeq: 1 })
       act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
       await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
@@ -284,14 +284,10 @@ describe('useKeymapApplyPrompt — WYSIWYG select semantics (Plan-qwerty-select-
       expect(result.current.pendingApply).toBeNull()
     })
 
-    it('a decrease (e.g. disconnect resetting the counter back to 0) does not close the modal', async () => {
-      const { result, rerender } = setup({ keyboardLayout: 'qwerty', keymapRestoreSeq: 3 })
-      act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
-      await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
-
-      rerender({ keyboardLayout: 'qwerty', keymapRestoreSeq: 0 })
-      expect(result.current.pendingApply).not.toBeNull()
-    })
+    // The counter is monotonic for the session (a disconnect carries it
+    // forward instead of zeroing it, see keyboard-types.ts / reset()), so
+    // this hook only needs a plain "did it change" check — it does not
+    // need to special-case a decrease itself.
 
     it('an unchanged value does not close the modal', async () => {
       const { result, rerender } = setup({ keyboardLayout: 'qwerty', keymapRestoreSeq: 1 })

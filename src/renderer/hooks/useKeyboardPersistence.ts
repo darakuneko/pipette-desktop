@@ -168,7 +168,10 @@ export function useKeyboardPersistence(
   }, [setState, stateRef, saveLayerNamesRef])
 
   const reset = useCallback(() => {
-    setState(emptyState())
+    // `keymapRestoreSeq` is monotonic for the whole session (see
+    // keyboard-types.ts) so a disconnect must not zero it back out from
+    // under a consumer that is only watching for changes.
+    setState((s) => ({ ...emptyState(), keymapRestoreSeq: s.keymapRestoreSeq }))
     qmkSettingsBaselineRef.current = {}
   }, [setState, qmkSettingsBaselineRef])
 

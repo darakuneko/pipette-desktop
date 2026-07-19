@@ -908,7 +908,10 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   // labels applied on top of the already-rewritten QWERTY-baseline
   // keycodes). QWERTY is unaffected either way since its map/compositeLabels
   // are always empty (`BUILTIN_QWERTY_LAYOUT_ID` in keyboard-layouts.ts).
-  const layoutIsApplied = appliedKeymapLayout !== undefined && appliedKeymapLayout === layout
+  // `layout` (KeyboardLayoutId) is always a defined string, so comparing
+  // directly against `appliedKeymapLayout` already excludes the undefined
+  // ("never applied") case without a separate guard.
+  const layoutIsApplied = appliedKeymapLayout === layout
 
   // The rewrite table actually applied, used only to mark which keycodes
   // are Rewrite TARGETS (so the blue "remapped" tint can still show which

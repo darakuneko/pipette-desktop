@@ -56,7 +56,7 @@ export interface KeymapEditorHandle {
   /** Bulk-rewrite every keymap/encoder position via `table`, as ONE
    *  `{kind:'batch'}` entry on the same undo stack the editor's own
    *  per-key edits use (Plan-key-label-keymap-apply Phase 3). When
-   *  `layoutIds` is passed (the footer's composed-rewrite flow, 追加要求
+   *  `layoutIds` is passed (the footer's direct Rewrite flow, 追加要求
    *  2026-07-18), the batch also records `appliedLayoutBefore`/
    *  `appliedLayoutAfter` for undo/redo bookkeeping, and — on a
    *  successfully-applied batch — `onAppliedKeymapLayoutChange` fires

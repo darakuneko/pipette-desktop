@@ -95,14 +95,14 @@ export function useKeymapApplyPrompt({
   const [applyError, setApplyError] = useState<string | null>(null)
 
   // Defensive close (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時の
-  // クリーンアップ, D3): only an actual INCREASE means a new restore landed —
-  // guards against a stray decrease (e.g. disconnect resetting the counter
-  // back to 0 on a fresh KeyboardState) being mistaken for one.
+  // クリーンアップ, D3): the counter is monotonic for the session (disconnect
+  // carries it forward rather than zeroing it, see keyboard-types.ts), so
+  // any change here means a new restore landed.
   const keymapRestoreSeqRef = useRef(keymapRestoreSeq)
   useEffect(() => {
     const prev = keymapRestoreSeqRef.current
     keymapRestoreSeqRef.current = keymapRestoreSeq
-    if (keymapRestoreSeq === undefined || prev === undefined || keymapRestoreSeq <= prev) return
+    if (keymapRestoreSeq === undefined || prev === undefined || keymapRestoreSeq === prev) return
     setPendingApply(null)
   }, [keymapRestoreSeq])
 
@@ -118,8 +118,7 @@ export function useKeymapApplyPrompt({
 
   const handleKeyboardLayoutChange = useCallback((v: string) => {
     setApplyError(null)
-    ++requestSeqRef.current
-    const seq = requestSeqRef.current
+    const seq = ++requestSeqRef.current
     // QWERTY is always inert: it only switches the display, never touches
     // the keymap and never opens the confirm modal, regardless of what's
     // currently applied or what's already pending.

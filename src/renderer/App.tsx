@@ -600,17 +600,15 @@ export function App() {
   // reaches the two other pieces of bookkeeping a restore leaves stale —
   // `appliedKeymapLayout` in devicePrefs and the Keyboard Layout select's
   // confirm modal in QuickSettingsSelects (see its own `keymapRestoreSeq`
-  // prop below) — both of which live outside KeymapEditor. Only an actual
-  // INCREASE means a restore landed; `keyboard.reset()` on disconnect resets
-  // the counter back to 0, which must NOT be mistaken for one (it would
-  // otherwise wipe the just-disconnected keyboard's still-current
-  // `appliedKeymapLayout` on disk, since `devicePrefs`'s uid ref only moves
-  // forward on the NEXT connect's `applyDevicePrefs`).
+  // prop below) — both of which live outside KeymapEditor. The counter is
+  // monotonic for the session (disconnect carries it forward instead of
+  // zeroing it, see keyboard-types.ts), so any change here means a restore
+  // landed.
   const prevKeymapRestoreSeqRef = useRef(keyboard.keymapRestoreSeq)
   useEffect(() => {
     const prev = prevKeymapRestoreSeqRef.current
     prevKeymapRestoreSeqRef.current = keyboard.keymapRestoreSeq
-    if (keyboard.keymapRestoreSeq <= prev) return
+    if (keyboard.keymapRestoreSeq === prev) return
     keymapEditorRef.current?.clearHistory()
     devicePrefs.setAppliedKeymapLayout(undefined)
   }, [keyboard.keymapRestoreSeq, devicePrefs.setAppliedKeymapLayout])

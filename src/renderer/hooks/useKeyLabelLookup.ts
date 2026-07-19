@@ -9,7 +9,7 @@
 //   - `LayoutComparisonView` / analyze-csv-builders (Layout Comparison
 //     map-vs-map source / target inputs)
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LAYOUT_BY_ID } from '../data/keyboard-layouts'
 import type { KeyLabelEntryFile } from '../../shared/types/key-label-store'
 
@@ -105,5 +105,13 @@ export function useKeyLabelLookup(): UseKeyLabelLookupReturn {
     return cacheRef.current.get(id)?.keymapApplicable === true
   }, [])
 
-  return { ensure, getName, getMap, getCompositeLabels, getKeymapApplicable }
+  // Each member is already a stable useCallback, but the object literal
+  // itself was not — consumers that list the whole return value in a dep
+  // array (e.g. `remapLabel`/`isRemapped` in useDevicePrefs) would rebuild
+  // every render, cascading into a full keymap/KeyWidget re-render. Memoize
+  // on the members so the identity only changes if one of them ever does.
+  return useMemo(
+    () => ({ ensure, getName, getMap, getCompositeLabels, getKeymapApplicable }),
+    [ensure, getName, getMap, getCompositeLabels, getKeymapApplicable],
+  )
 }

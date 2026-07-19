@@ -77,4 +77,20 @@ describe('useKeyboardPersistence — applyVilFile keymapRestoreSeq bump', () => 
     expect(result.current.state.encoderLayout.get('0,0,0')).toBe(0x81)
     expect(result.current.state.keymapRestoreSeq).toBe(1)
   })
+
+  it('reset() (disconnect) carries the counter forward instead of zeroing it, so it does not look like a fresh restore to consumers watching for a change', async () => {
+    const { result } = renderHook(() => useHarness())
+
+    await act(async () => {
+      await result.current.applyVilFile(VALID_VIL)
+    })
+    expect(result.current.state.keymapRestoreSeq).toBe(1)
+
+    act(() => {
+      result.current.reset()
+    })
+    expect(result.current.state.keymapRestoreSeq).toBe(1)
+    // Everything else is wiped back to the empty-state defaults.
+    expect(result.current.state.keymap.size).toBe(0)
+  })
 })

@@ -84,6 +84,9 @@ export interface KeyboardState {
   // close a stray Keyboard Layout apply-confirm modal — all things that
   // KeymapEditor's own uid/keymap-size clear effect misses because a
   // restore keeps the same uid and never empties the keymap.
+  // Monotonic for the whole app session: `reset()` (disconnect) carries
+  // the current value forward instead of zeroing it via `emptyState()`,
+  // so consumers can watch for a plain change rather than an increase.
   keymapRestoreSeq: number
 }
 
