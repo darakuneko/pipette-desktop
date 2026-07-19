@@ -59,6 +59,12 @@ export function KeymapApplyConfirmModal({
         <p className="text-sm text-content">{t('keyLabels.keymapApply.message')}</p>
         <p className="mt-2 text-sm text-content-secondary">{t('keyLabels.keymapApply.rewriteNote', { name: labelName })}</p>
         <p className="mt-2 text-sm text-content-secondary">{t('keyLabels.keymapApply.undoNote')}</p>
+        <p
+          className="mt-4 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-content-secondary"
+          data-testid="keymap-apply-confirm-save-recommendation"
+        >
+          {t('keyLabels.keymapApply.saveRecommendation')}
+        </p>
 
         <div className="mt-6 flex justify-end gap-2">
           <button

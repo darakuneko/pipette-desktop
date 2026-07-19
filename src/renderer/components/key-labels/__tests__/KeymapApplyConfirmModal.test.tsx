@@ -68,6 +68,21 @@ describe('KeymapApplyConfirmModal', () => {
     expect(screen.getByText('keyLabels.keymapApply.rewriteNote:Colemak')).toBeTruthy()
   })
 
+  it('shows the save-recommendation notice before rewriting', () => {
+    render(
+      <KeymapApplyConfirmModal
+        open
+        labelName="Colemak"
+        onApply={vi.fn()}
+        onDisplayOnly={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
+    expect(screen.getByTestId('keymap-apply-confirm-save-recommendation')).toHaveTextContent(
+      'keyLabels.keymapApply.saveRecommendation',
+    )
+  })
+
   it('Apply button fires onApply', () => {
     const onApply = vi.fn()
     render(

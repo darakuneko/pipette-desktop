@@ -1,5 +1,5 @@
 {
-  "version": "0.1.23",
+  "version": "0.1.24",
   "name": "English",
   "common": {
     "save": "Save",
@@ -1660,6 +1660,7 @@
       "message": "This key label set is a pure QWERTY letter swap, so the keymap itself can be rewritten.",
       "rewriteNote": "Rewriting sets the keymap to {{name}}'s arrangement. The display stays on QWERTY labels, matching what each key now actually sends.",
       "undoNote": "One Undo reverts the whole rewrite.",
+      "saveRecommendation": "Save your current keymap first — export a .vil file or a snapshot from the File tab. Rewrite replaces keycodes on every layer, and the undo history only keeps this one revert.",
       "apply": "Rewrite Keymap",
       "displayOnly": "Display Only",
       "errorPartial": "Some keys could not be rewritten. The change stops here — Undo reverts what was applied."
