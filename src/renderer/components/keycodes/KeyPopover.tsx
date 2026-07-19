@@ -51,6 +51,11 @@ interface KeyPopoverProps {
   onUndo?: () => void      // Revert to previousKeycode and close
   nextKeycode?: number     // Next keycode for redo (undefined = no redo available)
   onRedo?: () => void      // Re-apply nextKeycode and close
+  /** Active Key Label pack's per-key legend override — same source
+   *  `KeycodeGrid`/`BasicKeyboardView` already receive, threaded here
+   *  so the Key tab's search index and result rows agree with what
+   *  the keymap grid shows (issue #294). */
+  remapLabel?: (qmkId: string) => string
 }
 
 function detectWrapperMode(keycode: number, maskOnly?: boolean): WrapperMode {
@@ -86,6 +91,7 @@ export function KeyPopover({
   onUndo,
   nextKeycode,
   onRedo,
+  remapLabel,
 }: KeyPopoverProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<Tab>('key')
@@ -481,6 +487,7 @@ export function KeyPopover({
             basicKeyOnly={wrapperMode === 'lt' || wrapperMode === 'shT'}
             onKeycodeSelect={handleKeycodeSelect}
             onClose={confirmAndClose}
+            remapLabel={remapLabel}
           />
         )}
         {activeTab === 'code' && (

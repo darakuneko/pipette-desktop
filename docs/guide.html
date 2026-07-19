@@ -826,7 +826,7 @@ header {
 <p>A vertical layer sidebar appears on the left side of the popover, matching the layer panel buttons. Click a layer number to switch layers without closing the popover. If the number of layers exceeds the popover height, the sidebar scrolls independently.</p>
 <p><strong>Key Tab</strong></p>
 <div class="img-wrap"><img src="screenshots/key-popover-key.png" alt="Key Popover — Key Tab" class="doc-img" loading="lazy"></div>
-<ul><li>The search input is pre-filled with the current keycode name</li><li>Type to search by name, keycode name, or alias — results are ranked by relevance</li><li>Click a result to assign it immediately</li><li>The popover also appears when double-clicking key fields in detail editors (Tap Dance, Combo, Key Override, etc.)</li></ul>
+<ul><li>The search input is pre-filled with the current keycode name</li><li>Type to search by name, keycode name, or alias — results are ranked by relevance</li><li>With a Key Label pack active, a result whose legend the pack overrides shows that pack's text (colored the same as its remapped keycap in the grid) and is also searchable by it — e.g. searching a symbol the pack draws on a key finds that key even if its default keycode name doesn't contain it</li><li>Click a result to assign it immediately</li><li>The popover also appears when double-clicking key fields in detail editors (Tap Dance, Combo, Key Override, etc.) — those pickers are not Key Label pack-aware</li></ul>
 <p><strong>Code Tab</strong></p>
 <div class="img-wrap"><img src="screenshots/key-popover-code.png" alt="Key Popover — Code Tab" class="doc-img" loading="lazy"></div>
 <ul><li>Enter a keycode value directly in hexadecimal (e.g., <code class="ic">0x0029</code> for Escape)</li><li>The resolved keycode name is displayed below the hex input</li><li>Click <strong>Apply</strong> to assign the entered keycode</li></ul>
@@ -1634,7 +1634,7 @@ header {
 <p>ポップオーバーの左側に縦並びのレイヤーサイドバーが表示されます。レイヤーパネルのボタンと同じスタイルで、レイヤー番号をクリックするとポップオーバーを閉じずにレイヤーを切り替えられます。レイヤー数がポップオーバーの高さを超える場合、サイドバーは独立してスクロールします。</p>
 <p><strong>Key タブ</strong></p>
 <div class="img-wrap"><img src="screenshots/key-popover-key.png" alt="キーポップオーバー — Key タブ" class="doc-img" loading="lazy"></div>
-<ul><li>検索入力には現在のキーコード名がプリセットされます</li><li>名前、キーコード名、エイリアスで検索でき、関連度順に結果が表示されます</li><li>検索結果をクリックするとすぐに割り当てられます</li><li>詳細エディタ (Tap Dance、Combo、Key Override など) のキーフィールドをダブルクリックしても同様にポップオーバーが表示されます</li></ul>
+<ul><li>検索入力には現在のキーコード名がプリセットされます</li><li>名前、キーコード名、エイリアスで検索でき、関連度順に結果が表示されます</li><li>Key Label パックが有効な場合、パックがラベルを上書きしている結果はそのパックのテキストで表示され (グリッド上の書き換えキーと同じ色)、そのテキストでも検索できます — 例えばパックがキーに描いている記号で検索すると、デフォルトのキーコード名にその文字が含まれていなくても該当のキーが見つかります</li><li>検索結果をクリックするとすぐに割り当てられます</li><li>詳細エディタ (Tap Dance、Combo、Key Override など) のキーフィールドをダブルクリックしても同様にポップオーバーが表示されます — これらのピッカーは Key Label パックに対応していません</li></ul>
 <p><strong>Code タブ</strong></p>
 <div class="img-wrap"><img src="screenshots/key-popover-code.png" alt="キーポップオーバー — Code タブ" class="doc-img" loading="lazy"></div>
 <ul><li>16進数でキーコード値を直接入力できます (例: <code class="ic">0x0029</code> で Escape)</li><li>入力欄の下に対応するキーコード名が表示されます</li><li><strong>Apply</strong> ボタンをクリックして割り当てます</li></ul>

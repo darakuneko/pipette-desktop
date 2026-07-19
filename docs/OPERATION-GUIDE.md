@@ -663,8 +663,9 @@ A vertical layer sidebar appears on the left side of the popover, matching the l
 
 - The search input is pre-filled with the current keycode name
 - Type to search by name, keycode name, or alias — results are ranked by relevance
+- With a Key Label pack active, a result whose legend the pack overrides shows that pack's text (colored the same as its remapped keycap in the grid) and is also searchable by it — e.g. searching a symbol the pack draws on a key finds that key even if its default keycode name doesn't contain it
 - Click a result to assign it immediately
-- The popover also appears when double-clicking key fields in detail editors (Tap Dance, Combo, Key Override, etc.)
+- The popover also appears when double-clicking key fields in detail editors (Tap Dance, Combo, Key Override, etc.) — those pickers are not Key Label pack-aware
 
 **Code Tab**
 

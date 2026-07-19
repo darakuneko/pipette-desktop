@@ -629,6 +629,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onClose={() => setPopoverState(null)} quickSelect={quickSelect}
           previousKeycode={popoverUndoKeycode} onUndo={handlePopoverUndo}
           nextKeycode={popoverRedoKeycode} onRedo={handlePopoverRedo}
+          remapLabel={remapLabel}
         />
       )}
 
