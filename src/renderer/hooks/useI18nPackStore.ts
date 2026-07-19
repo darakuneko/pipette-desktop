@@ -23,10 +23,11 @@ import {
   invalidateCoverage,
   refreshCoverageFromIpc,
 } from '../i18n/coverage-cache'
-import type {
-  I18nPackImportApplyOptions,
-  I18nPackImportDialogResult,
-  I18nPackMeta,
+import {
+  BUILTIN_ENGLISH_PACK_ID,
+  type I18nPackImportApplyOptions,
+  type I18nPackImportDialogResult,
+  type I18nPackMeta,
 } from '../../shared/types/i18n-store'
 
 const I18N_CHANGED_EVENT = 'pipette:i18n-changed'
@@ -115,6 +116,12 @@ export function useI18nPackStore(): UseI18nPackStoreReturn {
           invalidateCoverage(meta.id)
           return false
         }
+        // Built-in English's coverage is trivially 100% by definition
+        // (it *is* the baseline) and its placeholder body carries no
+        // translation keys to diff — the modal hardcodes `isComplete:
+        // true` for its row rather than reading computed coverage, so
+        // recomputing here would only cost an unneeded IPC round trip.
+        if (meta.id === BUILTIN_ENGLISH_PACK_ID) return false
         return true
       })
       await Promise.all(refreshTargets.map((meta) => {

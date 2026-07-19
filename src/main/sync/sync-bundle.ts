@@ -16,7 +16,7 @@ import type { SyncBundle } from '../../shared/types/sync'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
 import { TYPING_TEST_TEXT_SYNC_UNIT } from '../typing-test-text-store'
-import { I18N_INDEX_SYNC_UNIT, type I18nPackIndex } from '../../shared/types/i18n-store'
+import { BUILTIN_ENGLISH_PACK_ID, I18N_INDEX_SYNC_UNIT, type I18nPackIndex } from '../../shared/types/i18n-store'
 import { THEME_INDEX_SYNC_UNIT, type ThemePackIndex } from '../../shared/types/theme-store'
 import {
   deviceDayJsonlPath,
@@ -64,9 +64,14 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
 
   // Handle "i18n/packs/{packId}" — single-file bundle carrying one
   // pack's translations. Each pack rides its own sync unit so editing
-  // one pack does not bump every other pack's LWW timestamp.
+  // one pack does not bump every other pack's LWW timestamp. The
+  // built-in English body is refused defensively even if somehow
+  // requested (collectAllSyncUnits already never enumerates it, and
+  // the store's own notifyPackChange never dirty-marks it — this is
+  // belt-and-suspenders against a stale/future call site).
   if (parts.length === 3 && parts[0] === 'i18n' && parts[1] === 'packs') {
     const packId = parts[2]
+    if (packId === BUILTIN_ENGLISH_PACK_ID) return null
     const filePath = join(userData, 'sync', 'i18n', 'packs', `${packId}.json`)
     try {
       const content = await readFile(filePath, 'utf-8')
@@ -247,7 +252,10 @@ export async function collectAllSyncUnits(): Promise<string[]> {
 
   // i18n: emit "i18n/index" plus one "i18n/packs/{packId}" per known
   // meta (including tombstones — the tombstone needs to propagate to
-  // remote machines until it expires from purge).
+  // remote machines until it expires from purge). The built-in English
+  // entry is excluded: its body is a trivial placeholder every machine
+  // ensures identically, so syncing it is pure waste (its *position* in
+  // the index still syncs normally via I18N_INDEX_SYNC_UNIT above).
   try {
     const i18nIndexPath = join(userData, 'sync', 'i18n', 'index.json')
     const raw = await readFile(i18nIndexPath, 'utf-8')
@@ -255,6 +263,7 @@ export async function collectAllSyncUnits(): Promise<string[]> {
     if (Array.isArray(index?.metas)) {
       units.push(I18N_INDEX_SYNC_UNIT)
       for (const meta of index.metas) {
+        if (meta.id === BUILTIN_ENGLISH_PACK_ID) continue
         units.push(`i18n/packs/${meta.id}`)
       }
     }

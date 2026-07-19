@@ -128,20 +128,22 @@ export function LanguageInstalledRow({
   const showUpdateRemove = showHubPair && isMine && hubCanWrite
   const showSync = showHubPair && !showUpdateRemove
 
+  // Built-in English is a real store entry (see `ensureBuiltinEnglishEntry`
+  // in main/i18n-pack-store.ts) and drags like any other row — except
+  // during the brief pre-load window before the store has materialised
+  // it, when `row.packId` is still null and there is no real id yet to
+  // persist an order against.
+  const canDrag = row.packId !== null
+
   return (
     <PackListRow
       testid={`language-packs-row-${row.reactKey}`}
       active={row.active}
-      draggable={!row.isBuiltin}
+      draggable={canDrag}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
-      sideColumn={row.isBuiltin ? (
-        // Built-in English is not a store entry and cannot be
-        // dragged — an inert spacer keeps the name column aligned
-        // with the draggable pack rows below it.
-        <span className="w-7 shrink-0" aria-hidden="true" />
-      ) : (
+      sideColumn={canDrag ? (
         <span
           className="flex w-7 shrink-0 items-center justify-center cursor-grab"
           aria-hidden="true"
@@ -149,6 +151,10 @@ export function LanguageInstalledRow({
         >
           <GripVertical className="text-content-muted" size={ICON_SM} />
         </span>
+      ) : (
+        // Pre-load fallback only: no real id yet, so an inert spacer
+        // keeps the name column aligned with the draggable rows below it.
+        <span className="w-7 shrink-0" aria-hidden="true" />
       )}
       leadingControl={
         <button
