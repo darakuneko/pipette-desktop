@@ -10,28 +10,7 @@ import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from './constants'
 import { innerHeatmapFillForCell, outerHeatmapFillForCell } from './heatmap-fill'
 import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
-
-/** Post-rewrite key flash state (Key Label "apply to keymap" bulk
- *  rewrite). Bundles the flashed positions with the generation/start-time
- *  every `KeyWidget` overlay needs to stay synced to the SAME CSS-keyframe
- *  timeline (see `KeyWidget`'s `key-flash-overlay` element) — one prop
- *  instead of three loose ones so it threads cleanly through
- *  `KeyboardPane` -> `KeyboardWidget`. */
-export interface KeyFlashState {
-  /** Positions to flash, pos-keyed like `highlightedKeys`. */
-  keys: Set<string>
-  /** Bumped on every successful apply. Forwarded to `KeyWidget` as
-   *  `flashGeneration` so a re-apply mid-flash remounts (and thus
-   *  restarts) the overlay instead of reusing a DOM node whose CSS
-   *  animation may already be finished. */
-  generation: number
-  /** `Date.now()` at the apply that produced this batch. Forwarded to
-   *  `KeyWidget` as `flashStartedAt` so it can compute a negative
-   *  `animation-delay` — overlays that mount late (e.g. a layer switch
-   *  mid-window) join the same global timeline instead of restarting
-   *  the fade from full opacity. */
-  startedAt: number
-}
+import type { KeyFlashState } from './key-flash'
 
 /** Rotate point (px, py) by `angle` degrees around center (cx, cy). */
 export function rotatePoint(

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { KeyboardWidget } from '../keyboard/KeyboardWidget'
-import type { KeyFlashState } from '../keyboard/KeyboardWidget'
+import type { KeyFlashState } from '../keyboard/key-flash'
 import type { KleKey } from '../../../shared/kle/types'
 import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 

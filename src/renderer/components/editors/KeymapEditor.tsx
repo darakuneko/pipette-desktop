@@ -14,7 +14,8 @@ import type { KeymapEditorProps as Props } from './keymap-editor-types'
 import { MIN_SCALE, MAX_SCALE, PANEL_COLLAPSED_WIDTH } from './keymap-editor-types'
 export type { KeymapEditorHandle } from './keymap-editor-types'
 import { KeyboardPane } from './KeyboardPane'
-import type { KeyFlashState } from '../keyboard/KeyboardWidget'
+import { KEY_FLASH_DURATION_MS } from '../keyboard/key-flash'
+import type { KeyFlashState } from '../keyboard/key-flash'
 import { LayerListPanel } from './LayerListPanel'
 import { ScaleInput, ghostZoomButtonClass, KeymapToolbar } from './keymap-editor-toolbar'
 import { PopoverForState } from './keymap-editor-popover'
@@ -252,8 +253,8 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   // timeline instead of restarting their own fade. `flashTimeoutRef` is
   // the single in-flight clear timer; a second successful apply (or
   // unmount) always clears it before scheduling/leaving so two windows
-  // never race. The 1300ms duration matches `key-flash`'s total animation
-  // length exactly, so the overlay is never unmounted mid-fade.
+  // never race. `KEY_FLASH_DURATION_MS` matches `key-flash`'s total
+  // animation length exactly, so the overlay is never unmounted mid-fade.
   const [flashBatch, setFlashBatch] = useState<{ entries: SingleHistoryEntry[]; generation: number; startedAt: number } | null>(null)
   const flashGenerationRef = useRef(0)
   const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -350,7 +351,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           flashTimeoutRef.current = setTimeout(() => {
             setFlashBatch(null)
             flashTimeoutRef.current = null
-          }, 1300)
+          }, KEY_FLASH_DURATION_MS)
         }
       }
       return { appliedCount: applied.length, error }

@@ -429,7 +429,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       vi.useRealTimers()
     })
 
-    it('flashes the rewritten key positions on the current layer, then clears after the key-flash keyframe duration (1300ms)', async () => {
+    it('flashes the rewritten key positions on the current layer, then clears after the key-flash keyframe duration (700ms)', async () => {
       vi.useFakeTimers()
       const ref = createRef<KeymapEditorHandle>()
       render(<KeymapEditor ref={ref} {...defaultProps} />)
@@ -448,9 +448,9 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       // threaded to EncoderWidget (see KeyboardWidget's `KeyFlashState` doc).
       expect(lastFlashKeys()).toEqual(new Set(['0,0']))
 
-      // Matches style.css's `key-flash` keyframe (1300ms total) exactly,
+      // Matches style.css's `key-flash` keyframe (700ms total) exactly,
       // so the overlay is never unmounted mid-fade.
-      act(() => { vi.advanceTimersByTime(1300) })
+      act(() => { vi.advanceTimersByTime(700) })
       expect(lastFlash()).toBeUndefined()
     })
 
@@ -527,7 +527,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
       // Let the first flash's timer fire, then advance the clock and
       // apply again — a fresh apply event must get its own generation
       // and its own wall-clock start time, not reuse the first one's.
-      act(() => { vi.advanceTimersByTime(1300) })
+      act(() => { vi.advanceTimersByTime(700) })
       expect(lastFlash()).toBeUndefined()
 
       // The mocked `onSetKey` doesn't mutate the `keymap` prop (this test
