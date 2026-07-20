@@ -7,12 +7,27 @@
 // (simulation, read-only); bottom button = "Base" (the real keymap, fully
 // editable). Styled like a paper file-divider index tab: narrow, attached
 // flush to the keymap pane's edge (see the `flex items-stretch` wrapper in
-// `KeymapEditor`), with the label rotated 90° via `writing-mode`. Reuses
-// the existing tab color/weight rule (`border-accent text-accent` active
-// vs `text-content-secondary` inactive — see `PackTabButton`/
-// `modal-tabs.tsx`), with the connecting border moved onto each tab's
-// LEADING (left) edge since the tabs sit to the RIGHT of the content they
-// select.
+// `KeymapEditor`), with the label rotated 90° via `writing-mode`.
+//
+// Outline: every tab's outer (top/right/bottom) sides borrow the keymap
+// pane's own `border-2 border-edge-subtle` (see `KeyboardPane`'s
+// `PANE_CLASS`) so the "ear" sticking out past the pane reads as one
+// continuous stroke rather than a second, competing outline. Both tabs
+// (active AND inactive) drop their inner (left) border entirely and
+// overlap the pane's border by the same 2px via `-ml-0.5` — this is what
+// keeps requirement 1 (one unbroken stroke, never a doubled/thicker line)
+// true regardless of active state: the pane's own right border, for the
+// vertical span a tab covers, is painted over by that tab's background
+// (later in DOM order) rather than sitting beside a second border of its
+// own. The two states differ ONLY in fill: the active tab's
+// `bg-surface-alt` matches the pane's interior, so the overlap is
+// invisible and the tab reads as a literal extension of the panel; the
+// inactive tab's dimmer `bg-surface-dim` still covers the same border
+// line cleanly, just with a visible color step — reading as a separate,
+// recessed sticky rather than a doubled outline. `text-accent` is the
+// sole remaining active-state indicator now that the border itself is
+// identical in both states (same convention as `PackTabButton`/
+// `modal-tabs.tsx`).
 
 import { useTranslation } from 'react-i18next'
 
@@ -31,11 +46,15 @@ function tabButtonClass(active: boolean): string {
   // CJK) — the real look of a paper index tab's sideways label. Width is
   // sized to the rotated text alone (`w-7` = 28px), not stretched to fill
   // the pane's height, so each tab reads as its own small sticky rather
-  // than one continuous column.
-  const base = 'flex w-7 items-center justify-center whitespace-nowrap rounded-r-md border-l-2 px-1 py-2 text-center text-xs font-medium transition-colors [writing-mode:vertical-rl]'
+  // than one continuous column. No left border on either state — `-ml-0.5`
+  // (2px, matching the pane's `border-2`) overlaps the pane's own right
+  // border instead of drawing a second one beside it, which is what keeps
+  // the junction a single stroke in both states (see the file-level
+  // comment for the full merge rationale).
+  const base = 'flex w-7 -ml-0.5 items-center justify-center whitespace-nowrap rounded-r-md border-t-2 border-r-2 border-b-2 border-edge-subtle px-1 py-2 text-center text-xs font-medium transition-colors [writing-mode:vertical-rl]'
   return active
-    ? `${base} border-l-accent bg-surface-alt text-accent`
-    : `${base} border-l-transparent bg-surface-dim text-content-secondary hover:text-content`
+    ? `${base} bg-surface-alt text-accent`
+    : `${base} bg-surface-dim text-content-secondary hover:text-content`
 }
 
 export function KeymapPackTabs({ activeTab, onTabChange, packName }: KeymapPackTabsProps): JSX.Element {
