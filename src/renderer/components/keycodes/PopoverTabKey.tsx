@@ -17,12 +17,6 @@ interface SearchEntry {
    *  same value `KeycodeGrid`/`KeyWidget` render on the keycap itself.
    *  `undefined` means "not remapped", not merely "unset". */
   displayLabel?: string
-  /** Gated remap-tint decision for this row (Plan-qwerty-select-no-rewrite):
-   *  usually `displayLabel != null`, but diverges from it once a Rewrite is
-   *  applied — the legend goes raw (`displayLabel` undefined) while the
-   *  keycodes the Rewrite actually changed still need the blue tint. See
-   *  the `isRemapped` prop below. */
-  remapped: boolean
 }
 
 /**
@@ -70,17 +64,11 @@ interface Props {
    *  (see `useDevicePrefs`/`useKeyboardLayout`) so the picker's search
    *  index and result rows agree with what the keymap grid shows. */
   remapLabel?: (qmkId: string) => string
-  /** Gated remap-tint predicate — same source `KeycodeGrid` receives.
-   *  Decides row color instead of `displayLabel != null` when present, so
-   *  applied-mode Rewrite targets stay tinted even though their legend is
-   *  raw. Falls back to `displayLabel != null` (the old behavior) when
-   *  absent, so callers that only pass `remapLabel` are unaffected. */
-  isRemapped?: (qmkId: string) => boolean
 }
 
 const MAX_RESULTS = 50
 
-export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask = 0, lmMode: lmModeProp, basicKeyOnly, onKeycodeSelect, onClose, remapLabel, isRemapped }: Props) {
+export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask = 0, lmMode: lmModeProp, basicKeyOnly, onKeycodeSelect, onClose, remapLabel }: Props) {
   const hasModMask = modMask > 0
   const { t } = useTranslation()
   const initialQuery = useMemo(() => {
@@ -127,7 +115,6 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
           searchText: tokens.join(' '),
           tokens,
           detail: [kc.qmkId, kc.tooltip].filter(Boolean).join(' \u00b7 '),
-          remapped: false,
         })
       }
       return entries
@@ -139,13 +126,6 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
         if ((maskOnly || hasModMask || basicKeyOnly) && !isBasic(kc.qmkId)) continue
         const extraAliases = kc.alias.slice(1)
         const displayLabel = getRemapDisplayLabel(kc.qmkId, remapLabel)
-        // Falls back to `displayLabel != null` (the pre-Rewrite behavior)
-        // when `isRemapped` is absent, so callers that only pass
-        // `remapLabel` see the exact same coloring as before. When present,
-        // `isRemapped` is the source of truth — in applied mode the legend
-        // goes raw (`displayLabel` undefined) but a Rewrite TARGET keycode
-        // must still show the tint.
-        const remapped = isRemapped ? isRemapped(kc.qmkId) : displayLabel != null
         const searchParts = [
           stripPrefix(kc.qmkId),
           kc.label,
@@ -178,12 +158,11 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
           tokens,
           detail: detailParts.join(' \u00b7 '),
           displayLabel,
-          remapped,
         })
       }
     }
     return entries
-  }, [lmMode, maskOnly, hasModMask, basicKeyOnly, remapLabel, isRemapped, getKeycodeRevision()])
+  }, [lmMode, maskOnly, hasModMask, basicKeyOnly, remapLabel, getKeycodeRevision()])
 
   const results = useMemo(() => {
     if (suppressResults) return []
@@ -275,7 +254,7 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
               onClick={() => { setTooltip(null); onKeycodeSelect(entry.keycode); setSuppressResults(true); setQuery(entry.keycode.label || stripPrefix(entry.keycode.qmkId)) }}
               data-testid={`popover-result-${entry.keycode.qmkId}`}
             >
-              <span className={`min-w-keycode font-mono text-xs font-medium ${entry.remapped ? 'text-key-label-remap' : ''}`}>
+              <span className={`min-w-keycode font-mono text-xs font-medium ${entry.displayLabel != null ? 'text-key-label-remap' : ''}`}>
                 {displayText}
               </span>
               <span

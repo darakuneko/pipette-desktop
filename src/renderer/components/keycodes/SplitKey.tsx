@@ -65,15 +65,6 @@ export interface SplitKeyProps {
   shiftedIndex: number
   baseDisplayLabel?: string
   shiftedDisplayLabel?: string
-  /** Gated remap-tint predicate result for the BASE keycode (Plan-qwerty-
-   *  select-no-rewrite) — decoupled from `baseDisplayLabel`/
-   *  `shiftedDisplayLabel`: usually the two agree, but once a Key Label
-   *  Rewrite has been applied the legends go raw while the pair still
-   *  needs the tint if the base keycode is a Rewrite target. Applied to
-   *  both halves — like `getSplitRemapProps`, the pack's remap decision is
-   *  keyed by the base qmkId alone; the shifted half is just the other
-   *  virtual label sharing this same physical tile. */
-  remapped?: boolean
 }
 
 function splitHalfClass(highlighted?: boolean, selected?: boolean, remapped?: boolean): string {
@@ -97,7 +88,6 @@ function SplitKeyInner({
   shiftedIndex,
   baseDisplayLabel,
   shiftedDisplayLabel,
-  remapped,
 }: SplitKeyProps) {
   const baseHighlighted = highlightedKeycodes?.has(base.qmkId)
   const baseSelected = selectedPart === 'base' || selectedPart === 'both'
@@ -123,7 +113,7 @@ function SplitKeyInner({
     <div className={`flex h-full w-full flex-col rounded border ${outerBorder} ${outerBg}`}>
       <button
         type="button"
-        className={`${SPLIT_HALF_BASE} rounded-t ${splitHalfClass(shiftHighlighted, shiftSelected, remapped)}`}
+        className={`${SPLIT_HALF_BASE} rounded-t ${splitHalfClass(shiftHighlighted, shiftSelected, shiftedDisplayLabel != null)}`}
         onClick={(e) => onClick?.(shifted, e, shiftedIndex)}
         onDoubleClick={() => onDoubleClick?.(shifted)}
         onMouseEnter={(e) => onHover?.(hoverShifted, e.currentTarget.getBoundingClientRect())}
@@ -133,7 +123,7 @@ function SplitKeyInner({
       </button>
       <button
         type="button"
-        className={`${SPLIT_HALF_BASE} rounded-b ${splitHalfClass(baseHighlighted, baseSelected, remapped)}`}
+        className={`${SPLIT_HALF_BASE} rounded-b ${splitHalfClass(baseHighlighted, baseSelected, baseDisplayLabel != null)}`}
         onClick={(e) => onClick?.(base, e, index)}
         onDoubleClick={() => onDoubleClick?.(base)}
         onMouseEnter={(e) => onHover?.(hoverBase, e.currentTarget.getBoundingClientRect())}

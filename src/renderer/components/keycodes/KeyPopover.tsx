@@ -56,11 +56,6 @@ interface KeyPopoverProps {
    *  so the Key tab's search index and result rows agree with what
    *  the keymap grid shows (issue #294). */
   remapLabel?: (qmkId: string) => string
-  /** Gated remap-tint predicate — same source `KeycodeGrid` receives.
-   *  Diverges from `remapLabel(x) !== x` once a Key Label Rewrite has been
-   *  applied (Plan-qwerty-select-no-rewrite): the legend goes raw but the
-   *  keycodes the Rewrite actually changed still need the blue tint. */
-  isRemapped?: (qmkId: string) => boolean
 }
 
 function detectWrapperMode(keycode: number, maskOnly?: boolean): WrapperMode {
@@ -97,7 +92,6 @@ export function KeyPopover({
   nextKeycode,
   onRedo,
   remapLabel,
-  isRemapped,
 }: KeyPopoverProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<Tab>('key')
@@ -494,7 +488,6 @@ export function KeyPopover({
             onKeycodeSelect={handleKeycodeSelect}
             onClose={confirmAndClose}
             remapLabel={remapLabel}
-            isRemapped={isRemapped}
           />
         )}
         {activeTab === 'code' && (

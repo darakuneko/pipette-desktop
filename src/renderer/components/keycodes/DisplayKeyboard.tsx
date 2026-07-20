@@ -60,8 +60,6 @@ interface Props {
   pickerSelectedIndices?: Set<number>
   splitKeyMode?: SplitKeyMode
   remapLabel?: (qmkId: string) => string
-  /** Gated remap-tint predicate — see `KeycodeGrid`'s `isRemapped`. */
-  isRemapped?: (qmkId: string) => boolean
   isVisible?: (kc: Keycode) => boolean
   keycodeIndexMap?: Map<string, { baseIdx: number; shiftedIdx?: number }>
 }
@@ -90,7 +88,6 @@ export function DisplayKeyboard({
   pickerSelectedIndices,
   splitKeyMode,
   remapLabel,
-  isRemapped,
   isVisible,
   keycodeIndexMap,
 }: Props) {
@@ -165,7 +162,6 @@ export function DisplayKeyboard({
             selectedPart={computeSplitSelectedPart(pickerSelectedIndices, gk.originalIndex, gk.shiftedOriginalIndex)}
             index={gk.originalIndex}
             shiftedIndex={gk.shiftedOriginalIndex}
-            remapped={isRemapped?.(gk.keycode.qmkId) ?? false}
             {...getSplitRemapProps(gk.keycode.qmkId, remapLabel)}
           />
         ) : (
@@ -179,7 +175,6 @@ export function DisplayKeyboard({
             selected={isSelected}
             sizeClass="w-full h-full"
             displayLabel={getRemapDisplayLabel(gk.keycode.qmkId, remapLabel)}
-            remapped={isRemapped?.(gk.keycode.qmkId) ?? false}
           />
         )
 

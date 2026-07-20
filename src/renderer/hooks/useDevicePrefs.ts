@@ -869,7 +869,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   // anything for this to simulate — it resets `layout` back to QWERTY on
   // success (raw characters, no color), the same clean state a
   // snapshot/.vil restore leaves.
-  const resolveSimulatedLabel = useCallback(
+  const remapLabel = useCallback(
     (qmkId: string): string => {
       const composite = lookup.getCompositeLabels(layout)?.[qmkId]
       if (composite !== undefined) return composite
@@ -880,14 +880,17 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     [lookup, layout],
   )
 
-  const remapLabel = resolveSimulatedLabel
-
   // The blue "remapped" tint: true whenever the resolved label differs from
   // the qmkId itself — the same `remapLabel(x) !== x` rule every picker/
-  // palette consumer (KeycodeGrid.getRemapDisplayLabel) already uses.
+  // palette consumer (KeycodeGrid.getRemapDisplayLabel) already uses. With
+  // applied mode gone, this is now definitionally derived from `remapLabel`
+  // rather than a second gated channel — the picker no longer receives its
+  // own `isRemapped` prop (it derives the same result locally from
+  // `displayLabel != null`); only the keymap grid (`useLayerKeycodes`) and
+  // the encoder tint path still consume this directly.
   const isRemapped = useCallback(
-    (qmkId: string): boolean => resolveSimulatedLabel(qmkId) !== qmkId,
-    [resolveSimulatedLabel],
+    (qmkId: string): boolean => remapLabel(qmkId) !== qmkId,
+    [remapLabel],
   )
 
   return {

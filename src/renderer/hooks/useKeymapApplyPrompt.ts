@@ -174,7 +174,9 @@ export function useKeymapApplyPrompt({
         // target arrangement, so the display selection is deliberately
         // left untouched. The errorPartial message tells the user to
         // restore from a previously saved .vil/snapshot if needed — the
-        // rewrite already wiped the undo/redo stacks for whatever DID land.
+        // rewrite already wiped the undo/redo stacks for whatever DID land
+        // (`KeymapEditor.applyKeymapRewrite`'s `history.clear()` fires on
+        // ANY landed write, unconditional on `error` — see its own comment).
         setApplyError(result.error)
         return
       }
@@ -182,7 +184,12 @@ export function useKeymapApplyPrompt({
       // select resets to QWERTY, the same clean state a snapshot/.vil
       // restore leaves. The keymap now embodies the target arrangement
       // directly (raw characters, no color); there is nothing left to
-      // display-simulate.
+      // display-simulate. This reset is the OTHER half of the destructive
+      // one-shot contract from `KeymapEditor.applyKeymapRewrite`'s
+      // `history.clear()` — that one fires on any landed write (incl.
+      // partial failure), this one fires ONLY on clean success. Shared
+      // invariant: a rewrite leaves no undo trail; only a clean success
+      // returns the select to QWERTY.
       onKeyboardLayoutChange?.(BUILTIN_QWERTY_LAYOUT_ID as KeyboardLayoutId)
     })()
   }, [pendingApply, onApplyKeymapRewrite, onKeyboardLayoutChange])

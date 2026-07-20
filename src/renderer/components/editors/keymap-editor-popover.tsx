@@ -27,18 +27,13 @@ interface PopoverForStateProps {
   nextKeycode?: number
   onRedo?: () => void
   remapLabel?: (qmkId: string) => string
-  /** Gated remap-tint predicate — see `KeymapEditor`'s `isRemapped`.
-   *  Threaded through to `KeyPopover`'s Key tab so search results color
-   *  by the same rule as the keymap grid (Plan-qwerty-select-no-rewrite:
-   *  raw label + target-set tint in applied mode). */
-  isRemapped?: (qmkId: string) => boolean
 }
 
 export function PopoverForState({
   popoverState, keymap, encoderLayout, currentLayer, layers,
   onLayerChange, layerNames,
   onKeycodeSelect, onRawKeycodeSelect, onModMaskChange, onClose,
-  quickSelect, previousKeycode, onUndo, nextKeycode, onRedo, remapLabel, isRemapped,
+  quickSelect, previousKeycode, onUndo, nextKeycode, onRedo, remapLabel,
 }: PopoverForStateProps) {
   const currentKeycode = popoverState.kind === 'key'
     ? keymap.get(`${currentLayer},${popoverState.row},${popoverState.col}`) ?? 0
@@ -50,7 +45,7 @@ export function PopoverForState({
       currentLayer={currentLayer} onLayerChange={onLayerChange} layerNames={layerNames}
       onKeycodeSelect={onKeycodeSelect} onRawKeycodeSelect={onRawKeycodeSelect} onModMaskChange={onModMaskChange}
       onClose={onClose} quickSelect={quickSelect} previousKeycode={previousKeycode} onUndo={onUndo}
-      nextKeycode={nextKeycode} onRedo={onRedo} remapLabel={remapLabel} isRemapped={isRemapped}
+      nextKeycode={nextKeycode} onRedo={onRedo} remapLabel={remapLabel}
     />
   )
 }

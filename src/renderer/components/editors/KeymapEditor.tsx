@@ -313,6 +313,15 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       // no live keycode, or the very first write itself failed) leaves
       // history untouched — nothing was destroyed, so there's nothing to
       // protect the user from.
+      //
+      // This clear fires on ANY landed write, including a partial failure —
+      // it is unconditional on `error`. The OTHER half of the destructive
+      // one-shot contract — resetting the footer's select back to QWERTY —
+      // lives one layer up, in `useKeymapApplyPrompt.handleApplyConfirm`,
+      // and fires ONLY on a clean (error-free) success; a partial failure
+      // leaves the select untouched there. Shared invariant: a rewrite
+      // leaves no undo trail; only a clean success returns the select to
+      // QWERTY.
       if (applied.length > 0 && isMountedRef.current) {
         history.clear()
         // Flash the rewritten positions (see `useKeyFlash`) — only for a
@@ -582,7 +591,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onClose={() => setPopoverState(null)} quickSelect={quickSelect}
           previousKeycode={popoverUndoKeycode} onUndo={handlePopoverUndo}
           nextKeycode={popoverRedoKeycode} onRedo={handlePopoverRedo}
-          remapLabel={remapLabel} isRemapped={isRemapped}
+          remapLabel={remapLabel}
         />
       )}
 
@@ -606,7 +615,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             onTabChange={() => { multiSelect.clearPickerSelection() }}
             highlightedKeycodes={configuredKeycodes} maskOnly={isMaskKey} lmMode={isLMMask} showHint={!isMaskKey}
             tabFooterContent={tabFooterContent} tabContentOverride={tabContentOverride}
-            basicViewType={basicViewType} onBasicViewTypeChange={onBasicViewTypeChange} splitKeyMode={splitKeyMode} remapLabel={remapLabel} isRemapped={isRemapped}
+            basicViewType={basicViewType} onBasicViewTypeChange={onBasicViewTypeChange} splitKeyMode={splitKeyMode} remapLabel={remapLabel}
             tabBarRight={
               <Tooltip content={t('editorSettings.title')}>
                 <button ref={layoutButtonRef} type="button" aria-label={t('editorSettings.title')}

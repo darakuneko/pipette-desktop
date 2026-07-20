@@ -13,16 +13,9 @@ interface Props {
   selected?: boolean
   sizeClass?: string
   displayLabel?: string
-  /** Gated remap-tint predicate result (Plan-qwerty-select-no-rewrite) —
-   *  decoupled from `displayLabel`: usually the two agree (a pack-remapped
-   *  label is also tinted), but once a Key Label Rewrite has been applied
-   *  the legend goes raw (`displayLabel` unset) while a Rewrite TARGET
-   *  keycode still needs the tint. `displayLabel` stays purely about label
-   *  TEXT; this prop alone decides the color. */
-  remapped?: boolean
 }
 
-function KeycodeButtonInner({ keycode, onClick, onDoubleClick, onHover, onHoverEnd, highlighted, selected, sizeClass, displayLabel, remapped }: Props) {
+function KeycodeButtonInner({ keycode, onClick, onDoubleClick, onHover, onHoverEnd, highlighted, selected, sizeClass, displayLabel }: Props) {
   if (keycode.hidden) return null
 
   const label = displayLabel ?? keycode.label
@@ -52,7 +45,7 @@ function KeycodeButtonInner({ keycode, onClick, onDoubleClick, onHover, onHoverE
     variant = 'bg-accent/20 text-accent'
   } else if (highlighted) {
     variant = 'bg-accent/10 text-accent'
-  } else if (remapped) {
+  } else if (displayLabel != null) {
     variant = 'bg-picker-item-bg text-key-label-remap'
   } else {
     variant = 'bg-picker-item-bg text-picker-item-text'

@@ -17,12 +17,6 @@ interface Props {
   isVisible?: (kc: Keycode) => boolean
   splitKeyMode?: SplitKeyMode
   remapLabel?: (qmkId: string) => string
-  /** Gated remap-tint predicate (Plan-qwerty-select-no-rewrite): usually
-   *  equivalent to `remapLabel(x) !== x`, but diverges from it once a Key
-   *  Label Rewrite has been applied — the legend goes raw while the
-   *  keycodes the Rewrite actually changed still need the blue tint.
-   *  Falls back to no tint when absent. */
-  isRemapped?: (qmkId: string) => boolean
   /** Global index map: base qmkId → { baseIdx, shiftedIdx } */
   keycodeIndexMap?: Map<string, { baseIdx: number; shiftedIdx?: number }>
 }
@@ -78,7 +72,6 @@ export function KeycodeGrid({
   isVisible,
   splitKeyMode,
   remapLabel,
-  isRemapped,
   keycodeIndexMap,
 }: Props): React.ReactNode {
   const visible = isVisible ? keycodes.filter(isVisible) : keycodes
@@ -94,7 +87,6 @@ export function KeycodeGrid({
 
         if (shifted && shiftedIdx != null) {
           const splitRemap = getSplitRemapProps(kc.qmkId, remapLabel)
-          const remapped = isRemapped?.(kc.qmkId) ?? false
           return (
             <div key={`${baseIdx}-${kc.qmkId}`} className="w-key h-key">
               <SplitKey
@@ -108,14 +100,12 @@ export function KeycodeGrid({
                 selectedPart={computeSplitSelectedPart(pickerSelectedIndices, baseIdx, shiftedIdx)}
                 index={baseIdx}
                 shiftedIndex={shiftedIdx}
-                remapped={remapped}
                 {...splitRemap}
               />
             </div>
           )
         }
         const displayLabel = getRemapDisplayLabel(kc.qmkId, remapLabel)
-        const remapped = isRemapped?.(kc.qmkId) ?? false
         return (
           <KeycodeButton
             key={`${baseIdx}-${kc.qmkId}`}
@@ -127,7 +117,6 @@ export function KeycodeGrid({
             highlighted={highlightedKeycodes?.has(kc.qmkId)}
             selected={pickerSelectedIndices?.has(baseIdx)}
             displayLabel={displayLabel}
-            remapped={remapped}
           />
         )
       })}

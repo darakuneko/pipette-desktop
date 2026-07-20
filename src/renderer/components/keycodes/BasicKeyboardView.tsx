@@ -30,8 +30,6 @@ interface Props {
   pickerSelectedIndices?: Set<number>
   isVisible?: (kc: Keycode) => boolean
   remapLabel?: (qmkId: string) => string
-  /** Gated remap-tint predicate — see `KeycodeGrid`'s `isRemapped`. */
-  isRemapped?: (qmkId: string) => boolean
   keycodeIndexMap?: Map<string, { baseIdx: number; shiftedIdx?: number }>
 }
 
@@ -83,7 +81,6 @@ export function BasicKeyboardView({
   pickerSelectedIndices,
   isVisible,
   remapLabel,
-  isRemapped,
   keycodeIndexMap,
 }: Props) {
   const { t } = useTranslation()
@@ -136,7 +133,6 @@ export function BasicKeyboardView({
         isVisible={visCheck}
         splitKeyMode={splitKeyMode}
         remapLabel={remapLabel}
-        isRemapped={isRemapped}
         keycodeIndexMap={keycodeIndexMap}
       />
     )
@@ -156,7 +152,6 @@ export function BasicKeyboardView({
             pickerSelectedIndices={pickerSelectedIndices}
             splitKeyMode={splitKeyMode}
             remapLabel={remapLabel}
-            isRemapped={isRemapped}
             isVisible={visCheck}
             keycodeIndexMap={keycodeIndexMap}
           />
