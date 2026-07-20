@@ -7,9 +7,10 @@
 
 import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Locator, Page } from '@playwright/test'
-import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { join, resolve } from 'node:path'
+import type { ChildProcess } from 'node:child_process'
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
+import { basename, join, resolve } from 'node:path'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 
@@ -248,63 +249,145 @@ export function restoreLastDeviceConfig(backup: LastDeviceBackup): void {
 }
 
 /**
- * Default userData path for the real (non-isolated) installed-app profile,
- * used by capture helpers that launch Electron directly via `spawn()`
- * (doc-capture-key-labels.ts, doc-capture-theme-packs.ts) rather than
- * through `launchCaptureApp`'s Playwright-managed, always-fresh profile.
- * Linux-only, matching how these dev-only doc-capture scripts are actually
- * run (see e2e/helpers/wpm-screenshot.ts's `SRC_USER_DATA` for the same
- * hardcoded path). Honors `PIPETTE_CAPTURE_USER_DATA_DIR` so a caller that
- * opted into an isolated profile (see doc-capture-key-labels.ts's
- * `launchElectronApp`) resolves to that same directory instead.
+ * Entry names to skip when cloning a real userData profile for
+ * `cloneUserDataForCapture`. Two unrelated reasons to exclude something
+ * here:
+ *  - Chromium/Electron's own disk caches, which are gigabytes on a real
+ *    dev machine (`Cache` + `Code Cache` alone were ~1.7GB when this was
+ *    measured) and contribute nothing to a Key Labels / Theme Packs
+ *    Installed-tab screenshot. Excluding them is what keeps the clone
+ *    fast (tens of MB instead of ~2GB).
+ *  - `SingletonLock` / `SingletonSocket` / `SingletonCookie`: Chromium's
+ *    own single-instance-lock artifacts, written directly in userData
+ *    root (undotted — a plain dotfile filter does not catch these). If a
+ *    real Pipette session happens to be running when a capture script
+ *    starts, copying these into the clone could make the freshly-launched
+ *    clone-pointed instance see (or try to dial into) the REAL running
+ *    instance's lock/socket and refuse to open a window, or otherwise
+ *    misbehave — excluding them by name is required, not just defensive.
+ *
+ * See `cloneUserDataForCapture`'s own doc comment for why the clone
+ * exists at all.
  */
-export function resolveCaptureUserDataPath(): string {
-  return process.env.PIPETTE_CAPTURE_USER_DATA_DIR ?? join(homedir(), '.config', 'pipette-desktop')
-}
+const CAPTURE_CLONE_EXCLUDE_NAMES: ReadonlySet<string> = new Set([
+  'Cache', 'Code Cache', 'GPUCache', 'DawnGraphiteCache', 'DawnWebGPUCache', 'Crashpad', 'blob_storage',
+  'SingletonLock', 'SingletonSocket', 'SingletonCookie',
+])
 
-/** Snapshot of the `language` key in userData/config.json (electron-store). */
-export interface LanguageConfigBackup {
-  path: string
-  hadKey: boolean
-  original: unknown
+/** Result of `cloneUserDataForCapture`: where the clone lives, and how to
+ *  discard it once the capture run is done. */
+export interface ClonedUserData {
+  userDataDir: string
+  /** Deletes the clone. Idempotent — safe to call even if the clone was
+   *  never fully populated (e.g. an earlier step in the same run threw). */
+  cleanup: () => void
 }
 
 /**
- * Force `language: 'builtin:en'` in the electron-store config file for the
- * duration of a capture run. Helpers that launch Electron directly against
- * the real userData profile (rather than through `launchCaptureApp`'s
- * isolated, always-English profile) would otherwise render every captured
- * screenshot in whatever i18n pack the developer's own app is set to.
- * Pass the result to `restoreLanguageConfig` in a `finally` block once the
- * Electron process has fully exited.
+ * Clone the real installed-app userData profile into a fresh, uniquely
+ * named temp directory and return its path plus a cleanup callback.
+ *
+ * WHY a clone instead of touching the real profile directly: an earlier
+ * version of `doc-capture-key-labels.ts` / `doc-capture-theme-packs.ts`
+ * launched Electron with `--user-data-dir` pointed straight at the real
+ * profile (needed for a *representative* Installed tab — see below) and
+ * patched `config.json`'s `language` key in place, restoring it
+ * afterward. That backup/restore was never actually safe for the user's
+ * real data: a SIGKILL/crash skips the `finally` that restores it, two
+ * concurrent runs would back up each other's already-forced value, and
+ * even the graceful path raced the still-shutting-down Electron process
+ * rewriting `config.json` after the restore already ran. A clone sidesteps
+ * all three at once — every write this run makes (including forcing
+ * `language: 'builtin:en'`) lands on the disposable copy, so the real
+ * profile is physically unwritable by this run and there is nothing left
+ * to back up or restore.
+ *
+ * The clone still needs to start from a copy of the real profile (not an
+ * empty directory, unlike `launchCaptureApp`'s Playwright-managed profile)
+ * because these two scripts' whole point is a screenshot that reflects
+ * actual locally-installed Key Label / Theme packs, and — for
+ * `doc-capture-key-labels.ts` — an existing Hub-authenticated session
+ * (Google OAuth token lives at `local/auth/` under userData, encrypted via
+ * `safeStorage`; excluded from `CAPTURE_CLONE_EXCLUDE_NAMES` on purpose so
+ * it copies along with everything else that isn't a disk cache or a
+ * singleton-lock artifact). Mirrors `e2e/helpers/wpm-screenshot.ts`'s own
+ * copy-before-launch idiom, plus the exclusions so this doesn't take
+ * multiple minutes / gigabytes, or clash with a real running session.
+ *
+ * Excludes dotfile entries too (in addition to the explicit Singleton*
+ * names in `CAPTURE_CLONE_EXCLUDE_NAMES` — those are undotted, so the
+ * dotfile filter does not cover them on its own): other lock/IPC-socket-
+ * style artifacts on Linux live as hidden files directly under userData.
+ *
+ * `PIPETTE_CAPTURE_USER_DATA_DIR` overrides which profile to clone FROM
+ * (e.g. a curated fixture profile instead of the live developer one) — the
+ * destination is always a fresh temp dir regardless, so unlike the old
+ * design this env var is no longer needed to dodge the single-instance
+ * lock (a temp dir can never collide with a running real session).
  */
-export function forceEnglishLanguage(userDataPath: string): LanguageConfigBackup {
-  const path = join(userDataPath, 'config.json')
+export function cloneUserDataForCapture(label: string): ClonedUserData {
+  const sourceDir = process.env.PIPETTE_CAPTURE_USER_DATA_DIR ?? join(homedir(), '.config', 'pipette-desktop')
+  const userDataDir = join(tmpdir(), `pipette-doc-capture-${label}-${process.pid}-${Date.now()}`)
+  if (existsSync(sourceDir)) {
+    cpSync(sourceDir, userDataDir, {
+      recursive: true,
+      filter: (src) => {
+        const name = basename(src)
+        if (name.startsWith('.')) return false
+        return !CAPTURE_CLONE_EXCLUDE_NAMES.has(name)
+      },
+    })
+  } else {
+    mkdirSync(userDataDir, { recursive: true })
+  }
+  return {
+    userDataDir,
+    cleanup: () => { rmSync(userDataDir, { recursive: true, force: true }) },
+  }
+}
+
+/**
+ * Force `language: 'builtin:en'` in `userDataDir`'s `config.json`. No
+ * backup/restore needed — `userDataDir` is always a disposable clone from
+ * `cloneUserDataForCapture`, never the real profile, so there is nothing
+ * to preserve. A plain read-modify-write (not a raw-bytes round trip) is
+ * fine here for the exact same reason.
+ */
+export function forceEnglishLanguageInClone(userDataDir: string): void {
+  const path = join(userDataDir, 'config.json')
   const config = existsSync(path)
     ? (JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>)
     : {}
-  const backup: LanguageConfigBackup = { path, hadKey: 'language' in config, original: config.language }
   config.language = 'builtin:en'
   writeFileSync(path, JSON.stringify(config, null, '\t'), 'utf-8')
-  return backup
 }
 
 /**
- * Restore the original `language` value snapshotted by
- * `forceEnglishLanguage`. Call only after the Electron process has fully
- * exited — the app can rewrite config.json on its own (window-state save
- * on quit, settings changes during the run), and restoring before that
- * would get clobbered by one of those late writes racing this one.
+ * Kill `child` and wait for it to actually exit before resolving — never
+ * assumes exit from a timeout alone (an earlier version of this helper,
+ * duplicated in doc-capture-key-labels.ts / doc-capture-theme-packs.ts,
+ * raced ahead after `graceMs` even if the process was still alive, which
+ * could let it rewrite files after a caller's own cleanup already ran).
+ * Escalates from SIGTERM to SIGKILL if the process hasn't exited within
+ * `graceMs`, then waits — unbounded — for the actual `'exit'` event; SIGKILL
+ * cannot be ignored on Linux, so that final wait is guaranteed to resolve.
+ * Clears the grace-period timer as soon as the race settles either way —
+ * left running, it would hold the event loop open (delaying the script's
+ * own exit by up to `graceMs`) even on the common path where the process
+ * already exited well before the timer fired.
  */
-export function restoreLanguageConfig(backup: LanguageConfigBackup): void {
-  if (!existsSync(backup.path)) return
-  const config = JSON.parse(readFileSync(backup.path, 'utf-8')) as Record<string, unknown>
-  if (!backup.hadKey) {
-    delete config.language
-  } else {
-    config.language = backup.original
-  }
-  writeFileSync(backup.path, JSON.stringify(config, null, '\t'), 'utf-8')
+export async function killAndWaitForExit(child: ChildProcess, graceMs = 5000): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) return
+  const exited = new Promise<void>((res) => { child.once('exit', () => res()) })
+  child.kill('SIGTERM')
+  let timer!: ReturnType<typeof setTimeout>
+  const timedOut = await Promise.race([
+    exited.then(() => false),
+    new Promise<boolean>((res) => { timer = setTimeout(() => res(true), graceMs) }),
+  ])
+  clearTimeout(timer)
+  if (timedOut) child.kill('SIGKILL')
+  await exited
 }
 
 /** Snapshot of the virtual device's saved-layout store, taken before a

@@ -112,9 +112,10 @@ export function useKeymapApplyPrompt({
   const [isApplying, setIsApplying] = useState(false)
 
   // Bumped on every `requestApply`/`handleKeyboardLayoutChange` call and on
-  // every observed `keyboardLayout` change (see the watch effect below —
-  // the sibling `keymapRestoreSeq` watcher further down only needs to close
-  // the modal, not bump this, see its own comment). `handleApplyConfirm`
+  // every observed `keyboardLayout`/`activeRewriteTable` change (see the two
+  // watch effects below — the sibling `keymapRestoreSeq` watcher further
+  // down only needs to close the modal, not bump this, see its own
+  // comment). `handleApplyConfirm`
   // snapshots it at Confirm time and re-checks it after `onApplyKeymapRewrite`
   // settles, so a layout change mid-apply (the user picks a DIFFERENT pack,
   // or QWERTY, before the stale apply resolves) discards that apply's
@@ -142,6 +143,28 @@ export function useKeymapApplyPrompt({
     ++requestSeqRef.current
     setPendingApply(null)
   }, [keyboardLayout])
+
+  // Defensive close (external review finding): the active pack's OWN data
+  // can change out from under an open modal without `keyboardLayout`
+  // itself changing — e.g. the same pack is edited or deleted (via the
+  // Key Labels modal, a Hub sync, or another window) while its confirm
+  // modal is still open. `useDevicePrefs.activeRewriteTable` recomputes
+  // to a new object (or `undefined`) whenever that happens, even though
+  // `keyboardLayout` still names the same id — the `keyboardLayout`
+  // watcher above only fires on an actual id change, not a same-id data
+  // edit, so it can't catch this on its own. Comparing THIS value's own
+  // identity is what does. Bumps `requestSeqRef` too, same as the
+  // `keyboardLayout` watcher, so an in-flight Confirm built against the
+  // now-stale table is likewise superseded rather than driving the
+  // QWERTY-reset / error-surfacing branch once it settles.
+  const activeRewriteTableRef = useRef(activeRewriteTable)
+  useEffect(() => {
+    const prev = activeRewriteTableRef.current
+    activeRewriteTableRef.current = activeRewriteTable
+    if (activeRewriteTable === prev) return
+    ++requestSeqRef.current
+    setPendingApply(null)
+  }, [activeRewriteTable])
 
   // Defensive close (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時の
   // クリーンアップ, D3): the counter is monotonic for the session (disconnect

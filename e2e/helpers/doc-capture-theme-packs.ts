@@ -17,12 +17,12 @@ import { spawn } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
+  cloneUserDataForCapture,
   dismissNotificationModal,
   dismissOverlay,
-  forceEnglishLanguage,
+  forceEnglishLanguageInClone,
   isAvailable,
-  resolveCaptureUserDataPath,
-  restoreLanguageConfig,
+  killAndWaitForExit,
 } from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
@@ -188,19 +188,21 @@ async function captureFindOnHubTab(page: Page): Promise<void> {
   await capture(page, 'theme-packs-hub')
 }
 
-function launchElectronApp(): ReturnType<typeof spawn> {
+function launchElectronApp(userDataDir: string): ReturnType<typeof spawn> {
   const electronPath = resolve(PROJECT_ROOT, 'node_modules/.bin/electron')
   const args = [
     '.',
     '--no-sandbox',
     '--disable-gpu-sandbox',
     `--remote-debugging-port=${DEBUG_PORT}`,
+    // Always a disposable clone from `cloneUserDataForCapture` (see
+    // `main` below) — see doc-capture-key-labels.ts's `launchElectronApp`
+    // for the full rationale (this used to touch the real profile
+    // directly, with an env-var escape hatch for the unconditional
+    // single-instance lock from #278 — no longer needed once the
+    // destination is always a fresh temp dir).
+    `--user-data-dir=${userDataDir}`,
   ]
-  // See doc-capture-key-labels.ts's `launchElectronApp` for why this
-  // escape hatch exists (the unconditional single-instance lock from #278).
-  if (process.env.PIPETTE_CAPTURE_USER_DATA_DIR) {
-    args.push(`--user-data-dir=${process.env.PIPETTE_CAPTURE_USER_DATA_DIR}`)
-  }
   return spawn(electronPath, args, {
     cwd: PROJECT_ROOT,
     stdio: 'ignore',
@@ -241,9 +243,9 @@ async function waitForDebugPort(port: number, timeoutMs = 15_000): Promise<void>
  * of a second launch cycle. See doc-capture-key-labels.ts's
  * `runPhaseInFreshSession` for the fuller investigation notes.
  */
-async function runPhaseInFreshSession(phase: (page: Page) => Promise<void>): Promise<void> {
+async function runPhaseInFreshSession(userDataDir: string, phase: (page: Page) => Promise<void>): Promise<void> {
   console.log('Launching Electron app with remote debugging...')
-  const child = launchElectronApp()
+  const child = launchElectronApp(userDataDir)
 
   let browser: Awaited<ReturnType<typeof chromium.connectOverCDP>> | undefined
   try {
@@ -268,40 +270,26 @@ async function runPhaseInFreshSession(phase: (page: Page) => Promise<void>): Pro
     await phase(page)
   } finally {
     await browser?.close()
+    // Waits for the process to actually be gone (not just signaled) —
+    // see doc-capture-key-labels.ts's `runPhaseInFreshSession` for why.
     await killAndWaitForExit(child)
   }
-}
-
-/** See doc-capture-key-labels.ts's `killAndWaitForExit` for why this exists. */
-async function killAndWaitForExit(child: ReturnType<typeof spawn>, timeoutMs = 5000): Promise<void> {
-  if (child.exitCode !== null || child.killed) return
-  await new Promise<void>((resolve) => {
-    const timer = setTimeout(resolve, timeoutMs)
-    child.once('exit', () => {
-      clearTimeout(timer)
-      resolve()
-    })
-    child.kill()
-  })
 }
 
 async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
-  // This helper launches Electron directly against the real userData
-  // profile (see `launchElectronApp` below) rather than through
-  // `launchCaptureApp`'s isolated, always-English profile — force English
-  // for the run so a developer's own i18n pack setting can't leak into
-  // the captured screenshots.
-  const languageBackup = forceEnglishLanguage(resolveCaptureUserDataPath())
+  // Clone the real profile into a disposable temp dir and point every
+  // launch at the CLONE — see `cloneUserDataForCapture`'s doc comment
+  // (doc-capture-common.ts) for why. Force English in the clone — no
+  // backup/restore needed since the clone is thrown away afterward.
+  const { userDataDir, cleanup } = cloneUserDataForCapture('theme-packs')
   try {
-    await runPhaseInFreshSession(captureInstalledTab)
-    await runPhaseInFreshSession(captureFindOnHubTab)
+    forceEnglishLanguageInClone(userDataDir)
+    await runPhaseInFreshSession(userDataDir, captureInstalledTab)
+    await runPhaseInFreshSession(userDataDir, captureFindOnHubTab)
   } finally {
-    // Both phases above already wait for their Electron process to fully
-    // exit (`killAndWaitForExit`) before returning, so by the time this
-    // runs there's no running app left to race the restore.
-    restoreLanguageConfig(languageBackup)
+    cleanup()
   }
 
   console.log(`\nTheme Packs screenshots saved to: ${SCREENSHOT_DIR}`)
