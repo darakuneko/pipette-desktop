@@ -257,6 +257,18 @@ describe('KeymapEditor — LayerListPanel', () => {
       expect(onSetLayerName).not.toHaveBeenCalled()
     })
 
+    it('saves an empty name on Enter when clearing a named layer', () => {
+      render(<KeymapEditor {...defaultProps} layerNames={['XXXXXX', 'Nav', '', 'Num']} />)
+
+      fireEvent.click(screen.getByTestId('layer-panel-layer-name-box-0'))
+
+      const input = screen.getByTestId('layer-panel-layer-name-input-0')
+      fireEvent.change(input, { target: { value: '' } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+
+      expect(onSetLayerName).toHaveBeenCalledWith(0, '')
+    })
+
     it('shows confirm flash after Enter rename', () => {
       vi.useFakeTimers()
       render(<KeymapEditor {...defaultProps} />)

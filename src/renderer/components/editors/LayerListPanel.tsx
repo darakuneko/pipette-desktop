@@ -51,7 +51,10 @@ function LayerNumButton({ index, active, onLayerChange }: {
 
 export function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSetLayerName, collapsed, onToggleCollapse }: LayerListPanelProps) {
   const { t } = useTranslation()
-  const layerRename = useInlineRename<number>()
+  // Layer names fall back to a computed "Layer N" label when empty, so
+  // clearing the field is a valid rename (unlike stored layouts/packs/
+  // favorites, which require a non-empty name).
+  const layerRename = useInlineRename<number>({ allowEmpty: true })
 
   function commitLayerRename(layerIndex: number): void {
     const trimmed = layerRename.commitRename(layerIndex)
