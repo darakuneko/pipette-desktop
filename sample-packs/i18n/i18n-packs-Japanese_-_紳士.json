@@ -1,5 +1,5 @@
 {
-  "version": "0.1.28",
+  "version": "0.1.29",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -1645,9 +1645,6 @@
     "missingMessage": "銘「{{name}}」が見当たらないため、標準の銘で表示いたします。",
     "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}}、またはキーピッカーの Edit ボタンよりお取り寄せいただけます。",
     "missingClose": "閉じる",
-    "select": {
-      "writtenSuffix": " - 書換済"
-    },
     "keymapApply": {
       "title": "「{{name}}」をキーマップにも適用いたしますか？",
       "saveRecommendation": "書き換えを行う前に、現在のキーマップを保存しておかれることをお勧めいたします（ファイルタブの .vil 書き出し、またはスナップショット）。書き換えは全レイヤーのキーコードを置き換え、Undo・Redo の履歴も消去いたしますゆえ、お戻しになる道は保存されたファイルより復元する他ございません。",

@@ -312,36 +312,6 @@ describe('pipette-settings-store', () => {
       expect(prefs.typingTestMonkeytypeConfig).toEqual(monkeytypeConfig)
     })
 
-    it('round-trips keymapWritten field (Plan-qwerty-select-no-rewrite Phase K)', async () => {
-      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
-      await setter(fakeEvent, 'uid-1', {
-        _rev: 1,
-        keyboardLayout: 'eucalyn-id',
-        autoAdvance: true,
-        layerNames: [],
-        keymapWritten: true,
-      })
-
-      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
-      const prefs = await getter(fakeEvent, 'uid-1') as { keyboardLayout: string; keymapWritten?: boolean }
-      expect(prefs.keyboardLayout).toBe('eucalyn-id')
-      expect(prefs.keymapWritten).toBe(true)
-    })
-
-    it('omits keymapWritten when not present (absent = false, per the field\'s own doc)', async () => {
-      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
-      await setter(fakeEvent, 'uid-1', {
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-      })
-
-      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
-      const prefs = await getter(fakeEvent, 'uid-1') as { keymapWritten?: boolean }
-      expect(prefs.keymapWritten).toBeUndefined()
-    })
-
     it('defaults layerNames to [] when not present', async () => {
       const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       await setter(fakeEvent, 'uid-1', {
@@ -494,19 +464,6 @@ describe('pipette-settings-store', () => {
         keyboardLayout: 'qwerty',
         autoAdvance: 'yes',
         layerNames: [],
-      }) as { success: boolean; error: string }
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Invalid prefs')
-    })
-
-    it('rejects prefs with non-boolean keymapWritten', async () => {
-      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
-      const result = await handler(fakeEvent, 'uid-1', {
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        keymapWritten: 'yes',
       }) as { success: boolean; error: string }
       expect(result.success).toBe(false)
       expect(result.error).toContain('Invalid prefs')

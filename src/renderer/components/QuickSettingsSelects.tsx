@@ -30,11 +30,7 @@ export interface QuickSettingsSelectsProps {
   hubDisplayName?: string | null
   hubCanWrite?: boolean
   keyboardLayout?: KeyboardLayoutId
-  /** See `PipetteSettings.keymapWritten` (Plan-qwerty-select-no-rewrite
-   *  Phase K) — the select's trigger label appends a "- Written" suffix
-   *  while true. */
-  keymapWritten?: boolean
-  onKeyboardLayoutChange?: (layout: KeyboardLayoutId, written: boolean) => void
+  onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
   /** True when the connected device has a loaded keymap to rewrite
    *  (Plan-key-label-keymap-apply Phase 3). Without it, a flagged pack
    *  always falls back to today's display-only switch. */
@@ -52,7 +48,6 @@ export function QuickSettingsSelects({
   hubDisplayName = null,
   hubCanWrite = false,
   keyboardLayout,
-  keymapWritten = false,
   onKeyboardLayoutChange,
   keymapEditable = false,
   onApplyKeymapRewrite,
@@ -89,15 +84,6 @@ export function QuickSettingsSelects({
 
   const languageOptions = useLanguageOptions(i18nPacks.metas)
   const layoutOptions = useLayoutOptions(keyLabels.metas)
-
-  // Plan-qwerty-select-no-rewrite Phase K: while `keymapWritten` is true,
-  // the select's closed trigger appends a " - Written"-style suffix (see
-  // `UpwardSelect`'s `triggerSuffix` prop, which appends this to its OWN
-  // resolved option name — no need to re-derive the pack's name here too)
-  // so the WYSIWYG select visibly reflects that the keymap is showing raw
-  // characters, not just changing which pack's legends the dropdown
-  // remembers.
-  const layoutTriggerSuffix = keymapWritten ? t('keyLabels.select.writtenSuffix') : undefined
 
   const themeOptions = useMemo(() => {
     const opts: { id: string; name: string }[] = [
@@ -161,7 +147,6 @@ export function QuickSettingsSelects({
                 value={keyboardLayout}
                 options={layoutOptions}
                 onChange={handleKeyboardLayoutChange}
-                triggerSuffix={layoutTriggerSuffix}
               />
             )}
             {applyError && (

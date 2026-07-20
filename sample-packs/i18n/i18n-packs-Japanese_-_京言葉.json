@@ -1,5 +1,5 @@
 {
-  "version": "0.1.28",
+  "version": "0.1.29",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -1645,9 +1645,6 @@
     "missingMessage": "キーラベル「{{name}}」が入ってまへんさかい、QWERTY ラベルで表示しますえ。",
     "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}}、またはキーピッカー右上の Edit ボタンから入れられますえ。",
     "missingClose": "閉じますえ",
-    "select": {
-      "writtenSuffix": " - 書き換え済みどすえ"
-    },
     "keymapApply": {
       "title": "「{{name}}」をキーマップにも適用しますか？",
       "saveRecommendation": "書き換えるまえに、いまのキーマップを保存しておかはるのがよろしおすえ（ファイルタブの .vil 書き出しかスナップショットで）。書き換えは全レイヤーのキーコードを変えてしまいますし、Undo と Redo の履歴も消えてしまいますよって、戻したいときは保存しといたファイルから復元するしかおへんえ。",

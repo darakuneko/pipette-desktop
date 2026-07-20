@@ -1,5 +1,5 @@
 {
-  "version": "0.1.28",
+  "version": "0.1.29",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -1655,9 +1655,6 @@
     "missingMessage": "キーラベル「{{name}}」がインストールされていないため、QWERTY ラベルで表示します。",
     "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}}、またはキーピッカー右上の Edit ボタンからダウンロードできます。",
     "missingClose": "閉じる",
-    "select": {
-      "writtenSuffix": " - 書き換え済み"
-    },
     "keymapApply": {
       "title": "「{{name}}」をキーマップにも適用しますか？",
       "saveRecommendation": "書き換える前に、現在のキーマップを保存しておくことをおすすめします（ファイルタブの .vil 書き出しやスナップショット）。書き換えは全レイヤーのキーコードを置き換え、Undo/Redo の履歴も消去します。元に戻す方法は保存したファイルの復元のみです。",

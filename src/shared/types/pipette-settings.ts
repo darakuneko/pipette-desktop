@@ -212,15 +212,6 @@ export interface TypingTestMemory {
 export interface PipetteSettings {
   _rev: 1
   keyboardLayout: string
-  /** True once a keymap Rewrite has landed cleanly for `keyboardLayout`
-   *  (Plan-qwerty-select-no-rewrite Phase K). Gates rendering only — never
-   *  the rewrite table's own contents: when true, the Keymap Editor shows
-   *  the keymap's raw actual characters (no pack label translation, since
-   *  the keymap already embodies them) with only the keys the rewrite
-   *  actually changed tinted. Absent/false is the pre-Phase-K Display Only
-   *  behavior. Reset to false by a snapshot/.vil restore (the keymap the
-   *  flag described is gone) and by any other layout switch. */
-  keymapWritten?: boolean
   autoAdvance: boolean
   layerNames: string[]
   typingTestResults?: TypingTestResult[]

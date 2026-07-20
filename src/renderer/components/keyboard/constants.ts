@@ -41,8 +41,8 @@ export const KEY_HOVER_COLOR = 'var(--key-bg-hover)'
 
 /** Which remap tint the active keymap surface uses. `'actual'` (the
  *  default) is the existing `key-label-remap` tint — JIS-type display
- *  remaps, written-mode changed keys, and the key picker: the shown
- *  legend is truthful, the physical key really produces that character.
+ *  remaps and the key picker: the shown legend is truthful, the physical
+ *  key really produces that character.
  *  `'simulated'` is a permutation pack's Display Only legend on the
  *  keymap surface: the label shows what a Rewrite WOULD produce, but
  *  pressing the key still types the pre-Rewrite character.
