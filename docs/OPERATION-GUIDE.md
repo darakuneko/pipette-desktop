@@ -1666,6 +1666,8 @@ Switching the **Keyboard Layout** dropdown in the footer never opens a dialog by
 
 The simulation tab is selected by default whenever the tabs appear. Switching keyboards resets the selection back to the simulation tab; switching only layers or picking a different pack does not.
 
+![Simulation and Base Tabs](screenshots/key-label-simulation-tabs.png)
+
 **Apply lives on the simulation tab's layer-indicator row.** Next to the current layer number, an **Apply** button opens the Rewrite confirmation dialog:
 
 ![Apply Key Label to Keymap](screenshots/key-label-keymap-apply-modal.png)

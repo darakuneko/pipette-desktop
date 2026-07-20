@@ -1470,6 +1470,13 @@ async function captureKeyLabelKeymapApply(page: Page): Promise<void> {
     console.log('  [skip] simulation tab\'s Apply button not found (keymapEditable — keyboard.keymap.size > 0 — was likely false)')
     return
   }
+
+  // Capture the tab strip itself, undimmed, before the confirm modal opens.
+  // The modal shot below dims this same background, which is enough for
+  // spatial context but not for judging the simulated-colour key tint the
+  // guide's prose describes — this shot gives that a clean reference.
+  await captureNamed(page, 'key-label-simulation-tabs', { fullPage: true })
+
   await applyButton.click()
   await page.waitForTimeout(300)
 
