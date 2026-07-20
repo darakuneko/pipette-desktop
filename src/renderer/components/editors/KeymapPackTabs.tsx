@@ -4,8 +4,16 @@
 // whenever a permutation Key Label pack is active (Plan-qwerty-select-
 // no-rewrite v7 — シミュレーションタブ方式, gated by `remapKind ===
 // 'simulated'` in `KeymapEditor`). Top button = the pack's own name
-// (simulation, read-only); bottom button = "Base" (the real keymap, fully
-// editable). Styled like a paper file-divider index tab: narrow, attached
+// (simulation, read-only); bottom button = the real keymap, fully
+// editable — same neutral/no-remap layout as the footer Keyboard Layout
+// select's built-in QWERTY option, but labeled with the SHORT form
+// (`keyLabels.qwertyDefaultShort`, e.g. "Default") rather than the
+// select's full `keyLabels.qwertyDefaultName` ("QWERTY (Default)"): this
+// tab is a ~28px vertical strip (see `tabButtonClass`'s `w-7`) that the
+// full name doesn't fit, so it gets the same long/short treatment as the
+// type labels (`typeKeymapWrite`/`typeKeymapWriteShort`) — a
+// space-constrained variant of the identical concept, not a different
+// one. Styled like a paper file-divider index tab: narrow, attached
 // flush to the keymap pane's edge (see the `flex items-stretch` wrapper in
 // `KeymapEditor`), with the label rotated 90° via `writing-mode`.
 //
@@ -84,7 +92,7 @@ export function KeymapPackTabs({ activeTab, onTabChange, packName }: KeymapPackT
         onClick={() => onTabChange('base')}
         data-testid="keymap-pack-tab-base"
       >
-        {t('keyLabels.keymapApply.baseTab')}
+        {t('keyLabels.qwertyDefaultShort')}
       </button>
     </div>
   )

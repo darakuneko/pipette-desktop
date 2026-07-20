@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import { useTranslation } from 'react-i18next'
 import { KeyboardWidget } from '../keyboard/KeyboardWidget'
 import type { KeyFlashState } from '../keyboard/key-flash'
 import type { KleKey } from '../../../shared/kle/types'
@@ -51,9 +52,21 @@ export interface KeyboardPaneProps {
   scale: number
   /** Current-layer label shown below the keymap. Omitted in View Matrix
    *  mode, which has no layer concept (layer switching is disabled for
-   *  the mode's duration). */
+   *  the mode's duration). Always the plain label (e.g. "Layer 0") — the
+   *  "Preview - " prefix is composed internally from `preview`, not baked
+   *  in by the caller, so every call site keeps computing the same raw
+   *  string regardless of which pane it feeds. */
   layerLabel?: string
   layerLabelTestId: string
+  /** True only for the simulation tab's pane: the keymap shown is a
+   *  read-only preview of the selected Key Label pack's arrangement, not
+   *  the real keymap (see `readOnly`, which this is deliberately kept
+   *  separate from — `readOnly` also covers View Matrix and other
+   *  non-editable states that are NOT a pack preview and must not get
+   *  this label). Prefixes `layerLabel` with a localized "Preview - "
+   *  via `editor.keymap.layerPreview` so the footer makes the distinction
+   *  obvious without the user having to notice which tab is active. */
+  preview?: boolean
   /** Extra content rendered next to `layerLabel` in the footer row — the
    *  simulation tab's Apply button (Plan-qwerty-select-no-rewrite v7). */
   footerExtra?: React.ReactNode
@@ -101,6 +114,7 @@ export function KeyboardPane({
   scale,
   layerLabel,
   layerLabelTestId,
+  preview = false,
   footerExtra,
   readOnly = false,
   onKeyClick,
@@ -112,6 +126,7 @@ export function KeyboardPane({
   onDeselect,
   contentRef,
 }: KeyboardPaneProps) {
+  const { t } = useTranslation()
   return (
     <div
       ref={contentRef}
@@ -154,24 +169,29 @@ export function KeyboardPane({
           onKeyHoverEnd={onKeyHoverEnd}
         />
       </div>
-      <div className="grid grid-cols-3 items-center px-keyboard-px text-xs leading-none text-content-muted">
-        <span className="flex items-center gap-2 justify-self-start">
+      {/* Two cells, not three: `footerExtra` (the simulation tab's Apply
+          button) and the selected-keycode info never render at the same
+          time — the pack-tab `KeyboardPane` that passes `footerExtra`
+          always passes `selectedKeycode={null}` (no selection props at
+          all on that read-only pane), and the normal/base-tab pane that
+          has a live selection never passes `footerExtra`. So they share
+          the right-hand cell rather than each owning a separate grid
+          column; whichever is present renders flush against the right
+          edge, matching the empty space that cell has whenever the other
+          isn't there. `justify-between` reproduces the old left/right
+          grid edges with plain flex, and the row's height still grows to
+          fully contain the button — no overflow past the panel's border
+          (Plan-qwerty-select-no-rewrite v7 UI refinement). */}
+      <div className="flex items-center justify-between px-keyboard-px text-xs leading-none text-content-muted">
+        <span className="flex items-center gap-2">
           {layerLabel !== undefined && (
             <span data-testid={layerLabelTestId} className="text-content-muted">
-              {layerLabel}
+              {preview ? t('editor.keymap.layerPreview', { label: layerLabel }) : layerLabel}
             </span>
           )}
         </span>
-        {/* Centered grid cell so it stays centered regardless of how wide
-            the layer label or the selected-keycode info on either side
-            happen to be, without disturbing either side's position. Plain
-            grid flow (not absolute positioning) so the row's own height
-            grows to fully contain the button — no overflow past the
-            panel's border (Plan-qwerty-select-no-rewrite v7 UI refinement). */}
-        <span className="flex items-center justify-self-center">
+        <span className="flex items-center gap-1.5">
           {footerExtra}
-        </span>
-        <span className="flex items-center gap-1.5 justify-self-end">
           {isActive && selectedKeycode && (
             <>
               <span>

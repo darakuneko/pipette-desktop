@@ -35,3 +35,11 @@ export const SEGMENT_TOGGLE_INACTIVE = 'rounded px-1.5 py-0.5 text-xs text-conte
 
 // Accent-outline button — non-destructive secondary CTA on accent color
 export const BTN_ACCENT_OUTLINE = 'rounded border border-accent bg-accent/10 px-3 py-1.5 text-sm text-accent hover:bg-accent/20 disabled:opacity-50 disabled:cursor-not-allowed'
+
+// Footer-sized primary button — BTN_PRIMARY's accent-fill color at the
+// footer/status-bar action buttons' size (rounded, px-2.5 py-1, text-xs,
+// leading-none — see StatusBar.tsx's TYPING_TEST_BASE and
+// QuickSettingsSelects.tsx's BUTTON_CLASS). For primary actions that sit
+// in a footer row and must not dominate it the way BTN_PRIMARY's text-sm
+// py-1.5 would.
+export const BTN_PRIMARY_FOOTER = 'rounded bg-accent px-2.5 py-1 text-xs leading-none font-medium text-content-inverse hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed'

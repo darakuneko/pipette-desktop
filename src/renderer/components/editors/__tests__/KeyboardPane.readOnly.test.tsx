@@ -19,6 +19,18 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   findInnerKeycode: () => undefined,
 }))
 
+// KeyboardPane's only i18n usage is the `preview` prop's "Preview - "
+// prefix (`editor.keymap.layerPreview`) — mocked the same way
+// KeymapEditor.packTabs.test.tsx mocks it, since this file otherwise
+// renders the real (unmocked) KeyboardWidget/KeyWidget tree and has no
+// I18nextProvider in scope.
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: Record<string, unknown>) =>
+      key === 'editor.keymap.layerPreview' ? `Preview - ${String(opts?.label ?? '')}` : key,
+  }),
+}))
+
 const KEY: KleKey = {
   x: 0, y: 0, width: 1, height: 1, row: 0, col: 0,
   encoderIdx: -1, encoderDir: -1, layoutIndex: -1, layoutOption: -1,
@@ -92,5 +104,35 @@ describe('KeyboardPane — readOnly (Plan-qwerty-select-no-rewrite v7)', () => {
     )
     expect(getByTestId('apply-btn')).toBeTruthy()
     expect(getByTestId('layer-label')).toHaveTextContent('Layer 0')
+  })
+
+  it('places footerExtra in the right-hand cell, not centered between the layer label and the selected-keycode info', () => {
+    const { getByTestId } = render(
+      <KeyboardPane {...baseProps()} layerLabel="Layer 0" footerExtra={<button data-testid="apply-btn">Apply</button>} />,
+    )
+    const footerRow = getByTestId('layer-label').parentElement!.parentElement!
+    // Two cells now, not three — the middle "centered" column is gone
+    // (see KeyboardPane.tsx's comment: footerExtra and the
+    // selected-keycode info never render at once, so they share the
+    // right-hand cell instead of each owning a separate grid column).
+    expect(footerRow.children).toHaveLength(2)
+    const rightCell = footerRow.children[1]
+    expect(rightCell.contains(getByTestId('apply-btn'))).toBe(true)
+    expect(rightCell.contains(getByTestId('layer-label'))).toBe(false)
+  })
+
+  it('prefixes the layer label with "Preview - " when `preview` is set — the simulation tab\'s pane', () => {
+    const { getByTestId } = render(
+      <KeyboardPane {...baseProps()} layerLabel="Layer 0" preview readOnly footerExtra={<button data-testid="apply-btn">Apply</button>} />,
+    )
+    expect(getByTestId('layer-label')).toHaveTextContent('Preview - Layer 0')
+  })
+
+  it('leaves the layer label plain when `preview` is omitted, even though the pane is readOnly (e.g. View Matrix mode)', () => {
+    const { getByTestId } = render(
+      <KeyboardPane {...baseProps()} layerLabel="Layer 0" readOnly />,
+    )
+    expect(getByTestId('layer-label')).toHaveTextContent('Layer 0')
+    expect(getByTestId('layer-label')).not.toHaveTextContent('Preview')
   })
 })

@@ -9,13 +9,17 @@
 // Wording (Upload/Update/Remove/Synced/Delete) mirrors the
 // favorite-store editors so the hub-aware modals stay consistent.
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { useKeyLabels } from '../../hooks/useKeyLabels'
+import { useKeyLabelLookup } from '../../hooks/useKeyLabelLookup'
+import { resolveLayoutDisplayName } from '../../hooks/useLayoutOptions'
 import { HUB_ERROR_KEY_LABEL_DUPLICATE, type HubKeyLabelItem } from '../../../shared/types/hub-key-label'
 import type { KeyLabelMeta } from '../../../shared/types/key-label-store'
+import { buildKeymapRewriteTable } from '../../../shared/keymap/keymap-apply'
 import { useHubFreshness } from '../../hooks/useHubFreshness'
 import { PackManagerModal } from '../pack-modal/PackManagerModal'
 import { PackSortButton } from '../pack-modal/PackSortButton'
@@ -94,9 +98,39 @@ export function KeyLabelsModal({
 
   useEscapeClose(onClose, open)
 
+  const keyLabelLookup = useKeyLabelLookup()
+
+  // Resolve each installed pack's own entry file so the list can show a
+  // "Keymap Write" vs "View Only" type label per row — the same
+  // `keymapApplicable && buildKeymapRewriteTable(map).ok` predicate
+  // `useDevicePrefs.remapKind` computes for the single ACTIVE pack (see
+  // its own doc comment), re-derived here for every installed row
+  // instead of just the one currently selected as the keyboard layout.
+  // Gated on the Installed tab being visible, mirroring `hubFreshness`'s
+  // own `enabled` gate above, so switching to Find on Hub (or closing
+  // the modal) does not keep firing IPC fetches for packs nobody is
+  // looking at. `ensure` itself is a no-op once a pack is cached or
+  // already known-missing, so re-running this on every metas/tab change
+  // is cheap.
+  useEffect(() => {
+    if (!open || activeTab !== 'installed') return
+    labels.metas.forEach((m) => { void keyLabelLookup.ensure(m.id) })
+  }, [open, activeTab, labels.metas, keyLabelLookup])
+
+  // `keymapApplicable` alone is only the pack author's own claim (see
+  // `KeyLabelEntryFile.keymapApplicable`'s doc comment) — combining it
+  // with `buildKeymapRewriteTable(map).ok` re-validates the map actually
+  // builds a closed permutation, matching the authority `useDevicePrefs`
+  // and `useKeymapApplyPrompt` already use for Apply eligibility.
+  const isKeymapWritable = useCallback((id: string): boolean => {
+    const map = keyLabelLookup.getMap(id)
+    if (!map || !keyLabelLookup.getKeymapApplicable(id)) return false
+    return buildKeymapRewriteTable(map).ok
+  }, [keyLabelLookup])
+
   const rawInstalledRows = useMemo<InstalledRow[]>(
-    () => buildInstalledRows(labels.metas),
-    [labels.metas],
+    () => buildInstalledRows(labels.metas, isKeymapWritable, t),
+    [labels.metas, isKeymapWritable, t],
   )
 
   // Drag reorder scope includes QWERTY — unlike Language/Theme Packs'
@@ -406,17 +440,27 @@ export function KeyLabelsModal({
  * participates in the same drag / sync ordering as every other label.
  * Newly downloaded labels arrive at the end of `metas` (saveRecord
  * appends), drag reorders persist via `KEY_LABEL_STORE_REORDER`.
+ *
+ * `name` goes through `resolveLayoutDisplayName` — the same override
+ * `useLayoutOptions` applies for the footer/Settings dropdowns — so the
+ * built-in QWERTY row reads "QWERTY (Default)" here too, instead of the
+ * raw `meta.name` string persisted on disk.
  */
-function buildInstalledRows(metas: KeyLabelMeta[]): InstalledRow[] {
+function buildInstalledRows(
+  metas: KeyLabelMeta[],
+  isKeymapWritable: (id: string) => boolean,
+  t: TFunction,
+): InstalledRow[] {
   return metas.map((meta) => ({
     reactKey: `local:${meta.id}`,
     localId: meta.id,
     hubPostId: meta.hubPostId ?? null,
-    name: meta.name,
+    name: resolveLayoutDisplayName(meta.id, meta.name, t),
     // The Author column shows the cached Hub `uploader_name`. Empty
     // for never-uploaded local imports.
     author: meta.uploaderName ?? '',
     isQwerty: meta.id === QWERTY_ID,
+    keymapWritable: isKeymapWritable(meta.id),
     meta,
   }))
 }

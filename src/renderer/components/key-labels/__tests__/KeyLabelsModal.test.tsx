@@ -70,6 +70,24 @@ vi.mock('../../../hooks/useKeyLabels', () => ({
   }),
 }))
 
+// Entry-file registry for the "Keymap Write" / "View Only" type label —
+// mirrors the fake `useKeyLabelLookup` in useKeymapApplyPrompt.test.ts so
+// this suite doesn't have to round-trip through the real IPC-backed
+// cache. Empty by default: every row falls back to "View Only" unless a
+// test seeds an entry, same as a not-yet-loaded/missing pack does in
+// production.
+const keyLabelRegistry = new Map<string, { map: Record<string, string>; keymapApplicable: boolean }>()
+
+vi.mock('../../../hooks/useKeyLabelLookup', () => ({
+  useKeyLabelLookup: () => ({
+    ensure: vi.fn(async () => {}),
+    getName: vi.fn((id: string) => id),
+    getMap: vi.fn((id: string) => keyLabelRegistry.get(id)?.map),
+    getCompositeLabels: vi.fn(() => undefined),
+    getKeymapApplicable: vi.fn((id: string) => keyLabelRegistry.get(id)?.keymapApplicable === true),
+  }),
+}))
+
 import { KeyLabelsModal } from '../KeyLabelsModal'
 
 function meta(over: Partial<{ id: string; name: string; uploaderName: string; hubPostId: string }> = {}) {
@@ -88,6 +106,7 @@ describe('KeyLabelsModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     metas = []
+    keyLabelRegistry.clear()
     importFromFile.mockResolvedValue({ success: true, data: meta() })
     exportEntry.mockResolvedValue({ success: true, data: { filePath: '/tmp/x.json' } })
     reorder.mockResolvedValue({ success: true })
@@ -115,11 +134,40 @@ describe('KeyLabelsModal', () => {
   it('shows qwerty row without actions', () => {
     metas = [meta({ id: 'qwerty', name: 'QWERTY', uploaderName: 'pipette' })]
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
-    expect(screen.getByText('QWERTY')).toBeTruthy()
+    // The row's display name is overridden to the shared
+    // `keyLabels.qwertyDefaultName` string (`resolveLayoutDisplayName`),
+    // not the raw stored "QWERTY" — under the identity `t` mock that
+    // renders literally as the key itself.
+    expect(screen.getByText('keyLabels.qwertyDefaultName')).toBeTruthy()
     // No upload/rename/delete buttons for qwerty
     expect(screen.queryByTestId('key-labels-upload-qwerty')).toBeNull()
     expect(screen.queryByTestId('key-labels-rename-qwerty')).toBeNull()
     expect(screen.queryByTestId('key-labels-delete-qwerty')).toBeNull()
+  })
+
+  // --- Keymap Write / View Only type label ---------------------------
+
+  it('shows the "Keymap Write" type label for a pack flagged keymapApplicable whose map builds a clean permutation', () => {
+    metas = [meta({ id: 'colemak', name: 'Colemak', uploaderName: 'me' })]
+    keyLabelRegistry.set('colemak', { map: { KC_A: 'b', KC_B: 'a' }, keymapApplicable: true })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    expect(screen.getByTestId('key-labels-type-colemak').textContent).toBe('keyLabels.typeKeymapWrite')
+  })
+
+  it('shows the "View Only" type label for a display-only pack (e.g. a Japanese QWERTY label with no rewrite table)', () => {
+    metas = [meta({ id: 'japanese', name: 'Japanese (QWERTY)', uploaderName: 'pipette' })]
+    // A shift-pair display map (not a permutation) — fails
+    // buildKeymapRewriteTable the same way the Hub's actual Japanese
+    // QWERTY packs do, even though it opts in via keymapApplicable.
+    keyLabelRegistry.set('japanese', { map: { KC_2: '"\n2' }, keymapApplicable: true })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    expect(screen.getByTestId('key-labels-type-japanese').textContent).toBe('keyLabels.typeViewOnly')
+  })
+
+  it('shows the "View Only" type label for the built-in QWERTY row', () => {
+    metas = [meta({ id: 'qwerty', name: 'QWERTY', uploaderName: 'pipette' })]
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    expect(screen.getByTestId('key-labels-type-qwerty').textContent).toBe('keyLabels.typeViewOnly')
   })
 
   it('shows Upload + clickable rename name + Delete for own local row without hub post', () => {

@@ -7,7 +7,7 @@ import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
 import { ViewMatrixPanel } from './ViewMatrixPanel'
 import { ZoomIn, ZoomOut, SlidersHorizontal } from 'lucide-react'
-import { ICON_SM, ICON_MD, BTN_PRIMARY } from '../../constants/ui-tokens'
+import { ICON_SM, ICON_MD, BTN_PRIMARY_FOOTER } from '../../constants/ui-tokens'
 
 // Extracted modules
 import type { KeymapEditorProps as Props } from './keymap-editor-types'
@@ -50,7 +50,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   supportedQsids, qmkSettingsGet, qmkSettingsSet, qmkSettingsReset, onSettingsUpdate,
   autoAdvance = true, onAutoAdvanceChange, viewMatrix, onViewMatrixChange,
   basicViewType, onBasicViewTypeChange, splitKeyMode, onSplitKeyModeChange,
-  quickSelect, onQuickSelectChange, keyboardLayout: _keyboardLayout = 'qwerty', onKeyboardLayoutChange: _onKeyboardLayoutChange,
+  quickSelect, onQuickSelectChange, keyboardLayout = 'qwerty', onKeyboardLayoutChange: _onKeyboardLayoutChange,
   keymapPackName, onRequestKeymapApply,
   keymapApplyOpen, keymapApplyLabelName, keymapApplyBusy, onKeymapApplyConfirm, onKeymapApplyCancel, keymapApplyError,
   onLock, onMatrixModeChange, onOpenLighting,
@@ -200,6 +200,27 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       setPackTab('pack')
     }
   }, [keyboardUid, keymapSize, history.clear, viewMatrixMode.exit])
+
+  // Reset to the simulation tab whenever the selected Key Label / layout
+  // changes (the footer's Keyboard Layout select — `keyboardLayout` here is
+  // the exact same value `useDevicePrefs.layout` feeds into `remapKind`'s
+  // own derivation). Without this, a user parked on the Base tab who then
+  // picks a different pack sees no visible change: the newly selected
+  // pack's simulated keymap only ever renders on the pack tab, and
+  // `remapKind` alone can't signal the switch since it stays `'simulated'`
+  // across two different permutation packs. Same prev-value-ref idiom as
+  // the uid reset above (own ref, not folded into it — that effect also
+  // clears history/View Matrix, which a same-uid layout change must not
+  // trigger) — only acts on an actual change, not on mount or every
+  // render, so a manual tab click right after a layout change isn't
+  // immediately undone by a stray re-render.
+  const prevKeyboardLayoutRef = useRef(keyboardLayout)
+  useEffect(() => {
+    if (keyboardLayout !== prevKeyboardLayoutRef.current) {
+      prevKeyboardLayoutRef.current = keyboardLayout
+      setPackTab('pack')
+    }
+  }, [keyboardLayout])
 
   // Surface the editor test's run state so the host can disable the
   // StatusBar "View Analytics" button mid-run (it lives in the footer, not
@@ -495,12 +516,12 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     <span className="flex items-center gap-2">
       <button
         type="button"
-        className={BTN_PRIMARY}
+        className={BTN_PRIMARY_FOOTER}
         onClick={onRequestKeymapApply}
         disabled={!!keymapApplyBusy}
         data-testid="keymap-pack-apply-button"
       >
-        {t('keyLabels.keymapApply.applyButton')}
+        {t('common.apply')}
       </button>
       {keymapApplyError && (
         <span className="text-xs text-danger" data-testid="keymap-apply-error">
@@ -693,6 +714,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                     layoutOptions={effectiveLayoutOptions} scale={scaleProp}
                     remapLabel={remapLabel}
                     layerLabel={layerLabel(currentLayer)} layerLabelTestId="layer-label"
+                    preview
                     footerExtra={applyButtonNode}
                     readOnly
                     contentRef={keyboardContentRef}

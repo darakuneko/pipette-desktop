@@ -34,6 +34,13 @@ export interface InstalledRow {
   name: string
   author: string
   isQwerty: boolean
+  /** True when this pack can bulk-rewrite the keymap — the same
+   *  `keymapApplicable && buildKeymapRewriteTable(map).ok` predicate
+   *  `useDevicePrefs.remapKind` uses for the active pack, re-derived
+   *  per row here (see `KeyLabelsModal.isKeymapWritable`). Drives the
+   *  "Keymap Write" / "View Only" type label at the left end of the
+   *  second line. */
+  keymapWritable: boolean
   meta?: KeyLabelMeta
 }
 
@@ -142,6 +149,24 @@ function InstalledRowView({
   const showUpdateRemove = hasHubPost && isMine
   const showSync = hasHubPost && !isMine
 
+  // Type label: "Keymap Write" for a pack that can bulk-rewrite the
+  // keymap, "View Only" for a display-only pack (including QWERTY,
+  // whose map is never `keymapApplicable`). Lives at the left end of
+  // the second line rather than under the name, so it reads alongside
+  // the row's other per-pack metadata (badge/Hub actions) instead of
+  // stretching the name block to two lines. View Only uses
+  // `text-content-secondary` ("Secondary / label text" per DESIGN.md),
+  // not `-muted` — `-muted` is reserved for placeholder/disabled text
+  // and a display-only pack is neither.
+  const typeLabelNode = (
+    <span
+      className={`shrink-0 whitespace-nowrap text-xs ${row.keymapWritable ? 'font-medium text-accent' : 'text-content-secondary'}`}
+      data-testid={`key-labels-type-${row.localId}`}
+    >
+      {row.keymapWritable ? t('keyLabels.typeKeymapWrite') : t('keyLabels.typeViewOnly')}
+    </span>
+  )
+
   return (
     <PackListRow
       testid={`key-labels-row-${row.localId}`}
@@ -219,6 +244,7 @@ function InstalledRowView({
             className="mt-2 flex items-center gap-3"
             data-testid={`key-labels-hub-row-${row.localId}`}
           >
+            {typeLabelNode}
             {/* Left slot is always present (even when the badge is
                 null) so PackHubActions stays anchored to the right
                 edge. Without `flex-1` here a foreign-download row
@@ -250,8 +276,9 @@ function InstalledRowView({
         ) : (
           // QWERTY (and any other no-action rows): keep the spacer so
           // the card height matches Hub-aware rows, and surface the
-          // result badge on the left edge when one applies.
-          <div className="mt-2 flex h-4.5 items-center">
+          // type label and result badge on the left edge.
+          <div className="mt-2 flex h-4.5 items-center gap-3">
+            {typeLabelNode}
             <PackResultBadge result={lastResult} rowId={row.localId} testid={`key-labels-result-${row.localId}`} />
           </div>
         )

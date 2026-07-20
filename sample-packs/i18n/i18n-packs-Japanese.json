@@ -1,5 +1,5 @@
 {
-  "version": "0.1.30",
+  "version": "0.1.39",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -18,7 +18,7 @@
     "refreshing": "更新中...",
     "disconnect": "切断",
     "loading": "読み込み中...",
-    "apply": "適用",
+    "apply": "適用する",
     "notConfigured": "未設定",
     "settingsLabel": "設定:",
     "configuration": "Configuration",
@@ -101,6 +101,7 @@
       "previousLayers": "前のレイヤー",
       "nextLayers": "次のレイヤー",
       "layerN": "Layer {{n}}",
+      "layerPreview": "プレビュー - {{label}}",
       "undo": "元に戻す",
       "redo": "やり直し",
       "zoomIn": "拡大",
@@ -1645,6 +1646,12 @@
     "actionDownload": "ダウンロード",
     "actionDelete": "削除",
     "actionExport": ".json",
+    "typeKeymapWrite": "キーマップ書き換え可",
+    "typeViewOnly": "表示のみ",
+    "typeKeymapWriteShort": "書換可",
+    "typeViewOnlyShort": "表示のみ",
+    "qwertyDefaultName": "QWERTY（デフォルト）",
+    "qwertyDefaultShort": "デフォルト",
     "hubRemoved": "(削除済み)",
     "errorDuplicate": "同じ名前のラベルがすでに存在します",
     "errorImportFailed": "キーラベルのインポートに失敗しました",
@@ -1657,10 +1664,8 @@
     "missingClose": "閉じる",
     "keymapApply": {
       "title": "「{{name}}」をキーマップにも適用しますか？",
-      "saveRecommendation": "書き換える前に、現在のキーマップを保存しておくことをおすすめします（ファイルタブの .vil 書き出しやスナップショット）。書き換えは全レイヤーのキーコードを置き換え、Undo/Redo の履歴も消去します。元に戻す方法は保存したファイルの復元のみです。",
-      "apply": "キーマップを書き換える",
-      "applyButton": "適用",
-      "baseTab": "ベース",
+      "saveRecommendation": "書き換える前に、現在のキーマップを保存しておくことをおすすめします。書き換えは全レイヤーのキーコードを置き換え、Undo/Redo の履歴も消去します。元に戻す方法は保存したファイルの復元のみです。",
+      "confirmApply": "適用しますか？",
       "tabsLabel": "キーマップ表示",
       "errorPartial": "一部のキーは書き換えられませんでした。ここで処理を止めています。必要であれば、以前保存した .vil ファイルやスナップショットから復元してください。"
     }

@@ -82,7 +82,7 @@ export function KeymapApplyConfirmModal({
             disabled={busy}
             data-testid="keymap-apply-confirm-apply"
           >
-            {t('keyLabels.keymapApply.apply')}
+            {t('keyLabels.keymapApply.confirmApply')}
           </button>
         </div>
       </div>

@@ -53,6 +53,25 @@ vi.mock('../../hooks/useKeyLabels', () => ({
   useKeyLabels: () => ({ metas: [KEY_LABEL_META] }),
 }))
 
+// Entry-file registry backing the "Write"/"View" tag on the Keyboard
+// Layout select's options — mirrors the fake `useKeyLabelLookup` in
+// KeyLabelsModal.test.tsx so this suite reuses the same predicate
+// contract (`keymapApplicable && buildKeymapRewriteTable(map).ok`)
+// without round-tripping through the real IPC-backed cache. Empty by
+// default: a pack with no seeded entry is "not yet resolved" and gets
+// no tag, matching production behavior before `ensure()`'s fetch lands.
+const keyLabelRegistry = new Map<string, { map: Record<string, string>; keymapApplicable: boolean }>()
+
+vi.mock('../../hooks/useKeyLabelLookup', () => ({
+  useKeyLabelLookup: () => ({
+    ensure: vi.fn(async () => {}),
+    getName: vi.fn((id: string) => id),
+    getMap: vi.fn((id: string) => keyLabelRegistry.get(id)?.map),
+    getCompositeLabels: vi.fn(() => undefined),
+    getKeymapApplicable: vi.fn((id: string) => keyLabelRegistry.get(id)?.keymapApplicable === true),
+  }),
+}))
+
 vi.mock('../i18n-packs/LanguagePacksModal', () => ({ LanguagePacksModal: () => null }))
 vi.mock('../theme-packs/ThemePacksModal', () => ({ ThemePacksModal: () => null }))
 vi.mock('../key-labels/KeyLabelsModal', () => ({ KeyLabelsModal: () => null }))
@@ -64,6 +83,7 @@ describe('QuickSettingsSelects — Keyboard Layout select passthrough (Plan-qwer
 
   beforeEach(() => {
     vi.clearAllMocks()
+    keyLabelRegistry.clear()
   })
 
   function renderComponent() {
@@ -88,5 +108,43 @@ describe('QuickSettingsSelects — Keyboard Layout select passthrough (Plan-qwer
   it('does not render the select at all when the layout/onChange props are absent', () => {
     render(<QuickSettingsSelects onThemeChange={vi.fn()} />)
     expect(screen.queryByRole('button', { name: 'keyLabels.title' })).toBeNull()
+  })
+
+  describe('Keyboard Layout select — per-pack Write/View tag', () => {
+    function findOption(startingWith: string) {
+      return screen.getAllByRole('option').find((o) => o.textContent?.startsWith(startingWith))
+    }
+
+    it('shows the short Write tag for a pack whose map builds a clean rewrite permutation', () => {
+      keyLabelRegistry.set('colemak-id', { map: { KC_A: 'b', KC_B: 'a' }, keymapApplicable: true })
+      renderComponent()
+      fireEvent.click(screen.getByRole('button', { name: 'keyLabels.title' }))
+      expect(findOption('Colemak')?.textContent).toBe('Colemak' + 'keyLabels.typeKeymapWriteShort')
+    })
+
+    it('shows the short View tag for a resolved pack that is not keymap-writable', () => {
+      keyLabelRegistry.set('colemak-id', { map: { KC_A: 'b' }, keymapApplicable: false })
+      renderComponent()
+      fireEvent.click(screen.getByRole('button', { name: 'keyLabels.title' }))
+      expect(findOption('Colemak')?.textContent).toBe('Colemak' + 'keyLabels.typeViewOnlyShort')
+    })
+
+    it('shows no tag for a pack whose entry has not resolved yet — avoids flashing a wrong tag before ensure() lands', () => {
+      renderComponent()
+      fireEvent.click(screen.getByRole('button', { name: 'keyLabels.title' }))
+      expect(findOption('Colemak')?.textContent).toBe('Colemak')
+    })
+
+    it('shows no tag for the built-in QWERTY option, even when the store somehow reports it writable', () => {
+      keyLabelRegistry.set('qwerty', { map: { KC_A: 'b', KC_B: 'a' }, keymapApplicable: true })
+      renderComponent()
+      fireEvent.click(screen.getByRole('button', { name: 'keyLabels.title' }))
+      // The option's display name is overridden by `useLayoutOptions` to
+      // the shared `keyLabels.qwertyDefaultName` string (same key the
+      // simulation tab's "QWERTY (Default)" pane uses) rather than the
+      // raw stored "QWERTY" — under the identity `t` mock that renders
+      // literally as the key itself.
+      expect(findOption('keyLabels.qwertyDefaultName')?.textContent).toBe('keyLabels.qwertyDefaultName')
+    })
   })
 })

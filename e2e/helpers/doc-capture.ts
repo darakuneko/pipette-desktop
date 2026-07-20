@@ -1494,16 +1494,16 @@ async function captureKeyLabelKeymapApply(page: Page): Promise<void> {
   await page.locator('[data-testid="keymap-apply-confirm-cancel"]').click()
   await page.waitForTimeout(300)
 
-  // Reset the select back to QWERTY — every capture after this phase
-  // assumes the untabbed, unremapped state.
+  // Reset the select back to QWERTY (Default) — every capture after this
+  // phase assumes the untabbed, unremapped state.
   await layoutTrigger.click()
   await page.waitForTimeout(300)
-  const qwertyOption = page.getByRole('option', { name: 'QWERTY' })
+  const qwertyOption = page.getByRole('option', { name: 'QWERTY (Default)' })
   if (await isAvailable(qwertyOption)) {
     await qwertyOption.click()
     await page.waitForTimeout(300)
   } else {
-    console.log('  [warn] could not find the QWERTY option to reset the layout select — later captures may run against Colemak')
+    console.log('  [warn] could not find the QWERTY (Default) option to reset the layout select — later captures may run against Colemak')
   }
 }
 

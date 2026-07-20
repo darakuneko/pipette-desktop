@@ -3,8 +3,9 @@
 
 // Plan-qwerty-select-no-rewrite v7 — シミュレーションタブ方式: tab visibility
 // (gated by the SINGLE `remapKind === 'simulated'` predicate), default tab,
-// UID-change reset, read-only enforcement on the simulation tab, full
-// editability on Base, and the Apply button / confirm modal wiring.
+// UID-change reset, layout-change reset, read-only enforcement on the
+// simulation tab, full editability on Base, and the Apply button / confirm
+// modal wiring.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, act } from '@testing-library/react'
@@ -15,16 +16,18 @@ vi.mock('react-i18next', () => ({
       const map: Record<string, string> = {
         'common.loading': 'Loading...',
         'common.cancel': 'Cancel',
+        'common.apply': 'Apply',
         'editor.keymap.layer': `Layer ${opts?.number ?? ''}`,
         'editor.keymap.layerN': `Layer ${opts?.n ?? ''}`,
+        'editor.keymap.layerPreview': `Preview - ${String(opts?.label ?? '')}`,
         'editor.keymap.selectKey': 'Click a key to edit',
-        'keyLabels.keymapApply.applyButton': 'Apply',
-        'keyLabels.keymapApply.baseTab': 'Base',
+        'keyLabels.qwertyDefaultName': 'QWERTY (Default)',
+        'keyLabels.qwertyDefaultShort': 'Default',
         'keyLabels.keymapApply.tabsLabel': 'Keymap view',
         'keyLabels.keymapApply.errorPartial': 'Some keys could not be rewritten.',
         'keyLabels.keymapApply.title': `Apply ${String(opts?.name ?? '')}?`,
         'keyLabels.keymapApply.saveRecommendation': 'Save first.',
-        'keyLabels.keymapApply.apply': 'Rewrite Keymap',
+        'keyLabels.keymapApply.confirmApply': 'Apply?',
       }
       return map[key] ?? key
     },
@@ -158,7 +161,9 @@ describe('KeymapEditor — pack tabs (Plan-qwerty-select-no-rewrite v7)', () => 
       )
       expect(getByTestId('keymap-pack-tabs')).toBeTruthy()
       expect(getByTestId('keymap-pack-tab-simulation')).toHaveTextContent('Dvorak')
-      expect(getByTestId('keymap-pack-tab-base')).toHaveTextContent('Base')
+      // Short form here (`qwertyDefaultShort`) — the ~28px vertical strip
+      // doesn't fit the footer select's full "QWERTY (Default)" name.
+      expect(getByTestId('keymap-pack-tab-base')).toHaveTextContent('Default')
     })
 
     // FIX C (external review): `requestApply` already no-ops when the
@@ -208,6 +213,40 @@ describe('KeymapEditor — pack tabs (Plan-qwerty-select-no-rewrite v7)', () => 
       expect(queryByTestId('keymap-pack-apply-button')).toBeTruthy()
       expect(container.querySelector('[data-testid="keymap-surface"]')).toHaveClass('remap-simulated')
       expect(lastWidgetProps().readOnly).toBe(true)
+    })
+  })
+
+  describe('layout-change reset', () => {
+    it('switching to Base and then changing the selected layout (keyboardLayout) switches back to the pack tab', () => {
+      const { getByTestId, rerender } = render(
+        <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" />,
+      )
+      fireEvent.click(getByTestId('keymap-pack-tab-base'))
+      expect(lastWidgetProps().readOnly).toBe(false)
+
+      // Picking a different permutation pack from the footer's Keyboard
+      // Layout select — this must switch back to the pack tab so the
+      // newly selected pack's simulated keymap is immediately visible,
+      // instead of silently staying on the (now stale-looking) Base tab.
+      rerender(
+        <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Colemak" keyboardLayout="colemak" />,
+      )
+      expect(lastWidgetProps().readOnly).toBe(true)
+    })
+
+    it('a manual click to Base still works and persists across a rerender with an unchanged layout', () => {
+      const { getByTestId, rerender } = render(
+        <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" />,
+      )
+      fireEvent.click(getByTestId('keymap-pack-tab-base'))
+      expect(lastWidgetProps().readOnly).toBe(false)
+
+      // Same `keyboardLayout` value on rerender (e.g. an unrelated prop
+      // changed) — must NOT reset the tab back to the pack/simulation one.
+      rerender(
+        <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" currentLayer={0} />,
+      )
+      expect(lastWidgetProps().readOnly).toBe(false)
     })
   })
 
@@ -311,6 +350,30 @@ describe('KeymapEditor — pack tabs (Plan-qwerty-select-no-rewrite v7)', () => 
       )
       await act(async () => {})
       expect(queryByTestId('keymap-pack-tabs')).toBeNull()
+    })
+  })
+
+  describe('simulation-tab layer label gets the "Preview - " prefix', () => {
+    it('prefixes the layer label on the simulation (pack) tab — the keymap shown is the pack\'s simulated arrangement, not the real keymap', () => {
+      const { getByTestId } = render(
+        <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" />,
+      )
+      expect(getByTestId('layer-label')).toHaveTextContent('Preview - Layer 0')
+    })
+
+    it('shows the plain label on the QWERTY (Default) tab — this pane is the real, editable keymap', () => {
+      const { getByTestId } = render(
+        <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" />,
+      )
+      fireEvent.click(getByTestId('keymap-pack-tab-base'))
+      expect(getByTestId('layer-label')).toHaveTextContent('Layer 0')
+      expect(getByTestId('layer-label')).not.toHaveTextContent('Preview')
+    })
+
+    it('shows the plain label in the no-tabs case (remapKind omitted)', () => {
+      const { getByTestId } = render(<KeymapEditor {...defaultProps()} />)
+      expect(getByTestId('layer-label')).toHaveTextContent('Layer 0')
+      expect(getByTestId('layer-label')).not.toHaveTextContent('Preview')
     })
   })
 })
