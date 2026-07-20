@@ -39,7 +39,9 @@ import { KeyOverridePanelModal } from './components/editors/KeyOverridePanelModa
 import { RGBConfigurator } from './components/editors/RGBConfigurator'
 import { UnlockDialog } from './components/editors/UnlockDialog'
 import { KeymapEditor, type KeymapEditorHandle } from './components/editors/KeymapEditor'
-import type { AnalyticsOrigin } from './components/editors/keymap-editor-types'
+import type { AnalyticsOrigin, KeymapApplyResult } from './components/editors/keymap-editor-types'
+import { useKeymapApplyPrompt } from './hooks/useKeymapApplyPrompt'
+import type { KeymapRewriteTable } from '../shared/keymap/keymap-apply'
 import { AnalyzePage } from './components/analyze/AnalyzePage'
 import { buildKeymapSnapshot } from './components/analyze/keymap-snapshot-builder'
 import { LayoutStoreContent } from './components/editors/LayoutStoreModal'
@@ -421,6 +423,38 @@ export function App() {
   // Test don't unmount the editor, so they're unaffected; Disconnect has the
   // same mid-apply hazard but that's pre-existing and out of scope here.
   const [keymapApplyInFlight, setKeymapApplyInFlight] = useState(false)
+
+  const handleApplyKeymapRewrite = useCallback(async (table: KeymapRewriteTable): Promise<KeymapApplyResult> => {
+    setKeymapApplyInFlight(true)
+    try {
+      return await (keymapEditorRef.current?.applyKeymapRewrite(table) ?? Promise.resolve({ appliedCount: 0 }))
+    } finally {
+      setKeymapApplyInFlight(false)
+    }
+  }, [])
+
+  // Plan-qwerty-select-no-rewrite v7 — シミュレーションタブ方式: lifted out of
+  // QuickSettingsSelects (the footer's Keyboard Layout select) because the
+  // Apply button that now opens this modal lives on KeymapEditor's
+  // simulation tab instead — both need the same pending/apply state, so it
+  // is owned here and threaded down to each. `handleKeyboardLayoutChange`
+  // still goes to the select as a plain display switch; `requestApply` goes
+  // to KeymapEditor's Apply button.
+  const {
+    handleKeyboardLayoutChange: handleKeyboardLayoutSelectChange,
+    requestApply: requestKeymapApply,
+    pendingApply: pendingKeymapApply,
+    handleApplyCancel: handleKeymapApplyCancel,
+    handleApplyConfirm: handleKeymapApplyConfirm,
+    applyError: keymapApplyError,
+    isApplying: keymapApplyBusy,
+  } = useKeymapApplyPrompt({
+    keymapEditable: keyboard.keymap.size > 0,
+    keyboardLayout: devicePrefs.layout,
+    onKeyboardLayoutChange: devicePrefs.setLayout,
+    onApplyKeymapRewrite: handleApplyKeymapRewrite,
+    keymapRestoreSeq: keyboard.keymapRestoreSeq,
+  })
 
   const handleViewAnalytics = useCallback((origin: AnalyticsOrigin) => {
     // Each entry point states its own origin so Back returns there.
@@ -919,6 +953,14 @@ export function App() {
             onQuickSelectChange={devicePrefs.setQuickSelect}
             keyboardLayout={devicePrefs.layout}
             onKeyboardLayoutChange={devicePrefs.setLayout}
+            keymapPackName={devicePrefs.activeLayoutName}
+            onRequestKeymapApply={requestKeymapApply}
+            keymapApplyOpen={pendingKeymapApply !== null}
+            keymapApplyLabelName={pendingKeymapApply?.name}
+            keymapApplyBusy={keymapApplyBusy}
+            onKeymapApplyConfirm={handleKeymapApplyConfirm}
+            onKeymapApplyCancel={handleKeymapApplyCancel}
+            keymapApplyError={keymapApplyError}
             onLock={lifecycle.handleLock}
             onMatrixModeChange={editorUI.handleMatrixModeChange}
             onOpenLighting={editorUI.lightingSupported ? () => editorUI.setShowLightingModal(true) : undefined}
@@ -1080,17 +1122,7 @@ export function App() {
             hubDisplayName: hub.hubDisplayName,
             hubCanWrite: hub.hubCanUpload,
             keyboardLayout: devicePrefs.layout,
-            onKeyboardLayoutChange: devicePrefs.setLayout,
-            keymapEditable: keyboard.keymap.size > 0,
-            keymapRestoreSeq: keyboard.keymapRestoreSeq,
-            onApplyKeymapRewrite: async (table) => {
-              setKeymapApplyInFlight(true)
-              try {
-                return await (keymapEditorRef.current?.applyKeymapRewrite(table) ?? Promise.resolve({ appliedCount: 0 }))
-              } finally {
-                setKeymapApplyInFlight(false)
-              }
-            },
+            onKeyboardLayoutChange: handleKeyboardLayoutSelectChange,
           }}
         />
       )}

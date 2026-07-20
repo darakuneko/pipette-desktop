@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 import { LanguagePacksModal } from './i18n-packs/LanguagePacksModal'
 import { ThemePacksModal } from './theme-packs/ThemePacksModal'
 import { KeyLabelsModal } from './key-labels/KeyLabelsModal'
-import { KeymapApplyConfirmModal } from './key-labels/KeymapApplyConfirmModal'
 import { UpwardSelect } from './UpwardSelect'
 import { useAppConfig } from '../hooks/useAppConfig'
 import { useI18nPackStore } from '../hooks/useI18nPackStore'
@@ -13,12 +12,8 @@ import { useThemePackStore } from '../hooks/useThemePackStore'
 import { useKeyLabels } from '../hooks/useKeyLabels'
 import { useLanguageOptions } from '../hooks/useLanguageOptions'
 import { useLayoutOptions } from '../hooks/useLayoutOptions'
-import { useKeymapApplyPrompt } from '../hooks/useKeymapApplyPrompt'
-import { BUILTIN_QWERTY_LAYOUT_ID } from '../data/keyboard-layouts'
-import type { KeymapRewriteTable } from '../../shared/keymap/keymap-apply'
 import type { ThemeSelection } from '../hooks/useTheme'
 import type { KeyboardLayoutId } from '../hooks/useKeyboardLayout'
-import type { KeymapApplyResult } from './editors/keymap-editor-types'
 
 const BUTTON_CLASS =
   'flex items-center justify-center rounded border border-edge px-2.5 py-1 text-xs leading-none text-content-secondary transition-colors hover:text-content focus:border-accent focus:outline-none'
@@ -30,17 +25,12 @@ export interface QuickSettingsSelectsProps {
   hubDisplayName?: string | null
   hubCanWrite?: boolean
   keyboardLayout?: KeyboardLayoutId
+  /** Plain display switch (Plan-qwerty-select-no-rewrite v7): the select
+   *  never opens the Rewrite confirm modal itself anymore — that lives on
+   *  `KeymapEditor`'s simulation tab Apply button instead. Callers
+   *  typically pass `useKeymapApplyPrompt().handleKeyboardLayoutChange`
+   *  straight through. */
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
-  /** True when the connected device has a loaded keymap to rewrite
-   *  (Plan-key-label-keymap-apply Phase 3). Without it, a flagged pack
-   *  always falls back to today's display-only switch. */
-  keymapEditable?: boolean
-  /** Bulk-rewrite the live keymap via `KeymapEditorHandle.applyKeymapRewrite`. */
-  onApplyKeymapRewrite?: (table: KeymapRewriteTable) => Promise<KeymapApplyResult>
-  /** Forwarded to `useKeymapApplyPrompt` — see its own doc for what an
-   *  increase does (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時の
-   *  クリーンアップ, D3). */
-  keymapRestoreSeq?: number
 }
 
 export function QuickSettingsSelects({
@@ -49,9 +39,6 @@ export function QuickSettingsSelects({
   hubCanWrite = false,
   keyboardLayout,
   onKeyboardLayoutChange,
-  keymapEditable = false,
-  onApplyKeymapRewrite,
-  keymapRestoreSeq,
 }: QuickSettingsSelectsProps) {
   const { t, i18n } = useTranslation()
   const appConfig = useAppConfig()
@@ -61,26 +48,6 @@ export function QuickSettingsSelects({
 
   const [editMode, setEditMode] = useState(false)
   const [activeModal, setActiveModal] = useState<ActiveModal>(null)
-
-  const {
-    handleKeyboardLayoutChange,
-    pendingApply,
-    handleApplyCancel,
-    handleApplyDisplayOnly,
-    handleApplyConfirm,
-    applyError,
-    isApplying,
-  } = useKeymapApplyPrompt({
-    keymapEditable,
-    // Same value the select itself renders (falls back to QWERTY when the
-    // footer hasn't been given a layout yet, matching useKeyboardLayout's
-    // own "no layout selected" convention) — the hook's sole guard is
-    // comparing a new selection against this exact value.
-    keyboardLayout: keyboardLayout ?? BUILTIN_QWERTY_LAYOUT_ID,
-    onKeyboardLayoutChange,
-    onApplyKeymapRewrite,
-    keymapRestoreSeq,
-  })
 
   const languageOptions = useLanguageOptions(i18nPacks.metas)
   const layoutOptions = useLayoutOptions(keyLabels.metas)
@@ -146,13 +113,8 @@ export function QuickSettingsSelects({
                 aria-label={t('keyLabels.title')}
                 value={keyboardLayout}
                 options={layoutOptions}
-                onChange={handleKeyboardLayoutChange}
+                onChange={onKeyboardLayoutChange}
               />
-            )}
-            {applyError && (
-              <span className="text-xs text-danger" data-testid="keymap-apply-error">
-                {t('keyLabels.keymapApply.errorPartial')}
-              </span>
             )}
           </>
         )}
@@ -186,14 +148,6 @@ export function QuickSettingsSelects({
         onClose={closeModal}
         currentDisplayName={hubDisplayName}
         hubCanWrite={hubCanWrite}
-      />
-      <KeymapApplyConfirmModal
-        open={pendingApply !== null}
-        labelName={pendingApply?.name ?? ''}
-        onApply={handleApplyConfirm}
-        onDisplayOnly={handleApplyDisplayOnly}
-        onCancel={handleApplyCancel}
-        busy={isApplying}
       />
     </>
   )

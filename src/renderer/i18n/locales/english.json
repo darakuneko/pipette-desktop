@@ -1,5 +1,5 @@
 {
-  "version": "0.1.29",
+  "version": "0.1.30",
   "name": "English",
   "common": {
     "save": "Save",
@@ -1659,7 +1659,9 @@
       "title": "Apply {{name}} to the Keymap?",
       "saveRecommendation": "Save your current keymap first — export a .vil file or a snapshot from the File tab. Rewrite replaces keycodes on every layer and clears the undo/redo history; restoring your saved file is the only way back.",
       "apply": "Rewrite Keymap",
-      "displayOnly": "Display Only",
+      "applyButton": "Apply",
+      "baseTab": "Base",
+      "tabsLabel": "Keymap view",
       "errorPartial": "Some keys could not be rewritten. The change stops here — restore from a previously saved .vil file or snapshot if needed."
     }
   },

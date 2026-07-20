@@ -145,6 +145,28 @@ export interface KeymapEditorProps {
   onQuickSelectChange?: (enabled: boolean) => void
   keyboardLayout?: KeyboardLayoutId
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
+  /** Display name of the active Key Label pack — labels the simulation
+   *  tab's top button. Only read while `remapKind === 'simulated'`
+   *  (Plan-qwerty-select-no-rewrite v7). */
+  keymapPackName?: string
+  /** Opens the Rewrite confirm modal for the pack currently active in
+   *  `keyboardLayout` — wired to `useKeymapApplyPrompt().requestApply`.
+   *  Called by the simulation tab's Apply button (layer-indicator row). */
+  onRequestKeymapApply?: () => void
+  /** Non-null while the Rewrite confirm modal should be open — mirrors
+   *  `useKeymapApplyPrompt().pendingApply !== null`. */
+  keymapApplyOpen?: boolean
+  /** Display name shown in the confirm modal's title — mirrors
+   *  `useKeymapApplyPrompt().pendingApply?.name`. */
+  keymapApplyLabelName?: string
+  /** True while the confirm apply is in flight — mirrors
+   *  `useKeymapApplyPrompt().isApplying`. Disables the modal's buttons. */
+  keymapApplyBusy?: boolean
+  onKeymapApplyConfirm?: () => void
+  onKeymapApplyCancel?: () => void
+  /** Set after a partial-failure apply — mirrors
+   *  `useKeymapApplyPrompt().applyError`. Shown near the Apply button. */
+  keymapApplyError?: string | null
   onLock?: () => void
   onMatrixModeChange?: (matrixMode: boolean, hasMatrixTester: boolean) => void
   onOpenLighting?: () => void

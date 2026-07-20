@@ -1967,7 +1967,7 @@ describe('useDevicePrefs', () => {
       KC_2: '"\n2',
     }
 
-    function mockKeyLabelPack(id: string, map: Record<string, string>): void {
+    function mockKeyLabelPack(id: string, map: Record<string, string>, keymapApplicable = true): void {
       const existing = vialAPIMock()
       Object.defineProperty(window, 'vialAPI', {
         value: {
@@ -1978,7 +1978,7 @@ describe('useDevicePrefs', () => {
               success: true,
               data: {
                 meta: { id, name: id, filename: `${id}.json`, savedAt: '', updatedAt: '' },
-                data: { name: id, map },
+                data: { name: id, map, keymapApplicable },
               },
             }
           },
@@ -2034,6 +2034,26 @@ describe('useDevicePrefs', () => {
       })
       act(() => {
         result.current.setLayout('missing-pack-id')
+      })
+      await act(async () => {})
+      expect(result.current.remapKind).toBe('actual')
+    })
+
+    // Plan-qwerty-select-no-rewrite v7 SINGLE PREDICATE: a structurally
+    // pure permutation the author did NOT flag `keymapApplicable` must
+    // render with the actual tint (no simulation to offer, since nothing
+    // downstream will ever build an Apply table for it either) — the old
+    // `.ok`-only check would have wrongly returned 'simulated' here.
+    it('is "actual" for a pure permutation pack not flagged keymapApplicable (author opt-out)', async () => {
+      setupMocks()
+      mockKeyLabelPack('colemak-id', COLEMAK, false)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setLayout('colemak-id')
       })
       await act(async () => {})
       expect(result.current.remapKind).toBe('actual')

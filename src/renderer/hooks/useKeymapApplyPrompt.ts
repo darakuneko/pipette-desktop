@@ -1,24 +1,27 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Owns the "does this Key Label pack want a keymap rewrite?" decision for
-// the footer's Keyboard Layout select (Plan-qwerty-select-no-rewrite,
-// WYSIWYG select semantics): fetches the target's full payload, checks
+// the simulation tab's Apply button (Plan-qwerty-select-no-rewrite v7 —
+// シミュレーションタブ方式): fetches the target's full payload, checks
 // `keymapApplicable`, and validates it with `buildKeymapRewriteTable`
-// before deciding whether to prompt with KeymapApplyConfirmModal or fall
-// through to today's direct display-only switch. Extracted out of
-// QuickSettingsSelects so the footer component only owns rendering, not
-// this validation/orchestration.
+// before deciding whether to prompt with KeymapApplyConfirmModal.
 //
-// The select value is WYSIWYG: it is the last thing the user actually
-// picked, never force-reset EXCEPT after a successful Rewrite, which is a
-// destructive one-shot (v5 最終仕様) — it resets the select back to QWERTY
-// on success, the same clean state a snapshot/.vil restore leaves. There is
-// no compose/inverse machinery — a Rewrite always applies the target's own
-// table directly against whatever the keymap currently holds (the user is
-// warned to save first; recovery from a mis-timed rewrite is the user's own
-// .vil/snapshot backup, not Undo — the rewrite wipes the undo/redo stacks).
-// QWERTY is always inert: selecting it only switches the display, never
-// touches the keymap or opens a modal.
+// The footer's Keyboard Layout select never opens this modal itself
+// anymore — `handleKeyboardLayoutChange` is a plain display switch for
+// EVERY value, including QWERTY (no more per-value branching). Selecting a
+// pack that supports a rewrite instead surfaces `KeymapEditor`'s
+// simulation/Base tabs (gated by `useDevicePrefs.remapKind ===
+// 'simulated'`, the SAME `keymapApplicable && buildKeymapRewriteTable(map)
+// .ok` predicate this hook re-derives below) — the Apply button living on
+// the simulation tab's layer row is what calls `requestApply()`, the only
+// entry point left into this modal.
+//
+// A Rewrite is still a destructive one-shot: undo/redo history is wiped
+// the moment any write lands, and recovery is the user's own .vil/snapshot
+// backup (the modal recommends saving first), not Undo. On a clean success
+// the select resets to QWERTY, the same clean state a snapshot/.vil
+// restore leaves — which also makes the simulation tabs disappear, since
+// `remapKind` reverts to 'actual' for QWERTY.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useKeyLabelLookup } from './useKeyLabelLookup'
@@ -29,11 +32,12 @@ import type { KeymapApplyResult } from '../components/editors/keymap-editor-type
 
 export interface UseKeymapApplyPromptOptions {
   /** True when the connected device has a loaded keymap to rewrite. Without
-   *  it, a flagged pack always falls back to today's display-only switch. */
+   *  it, `requestApply` never opens the modal — there's nothing to write. */
   keymapEditable: boolean
-  /** The Keyboard Layout select's current value (same as what the select
-   *  renders) — the sole guard for the "nothing to do" case: re-picking
-   *  this exact value is a true no-op (see `handleKeyboardLayoutChange`). */
+  /** The Keyboard Layout select's current value — `requestApply` builds its
+   *  rewrite table from this id, and the race-guard effect below watches it
+   *  to close a stale pending modal the instant it changes out from under
+   *  the request that opened it. */
   keyboardLayout: string
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
   /** Bulk-rewrite the live keymap via `KeymapEditorHandle.applyKeymapRewrite`. */
@@ -42,20 +46,24 @@ export interface UseKeymapApplyPromptOptions {
    *  successful snapshot/layout-store restore or `.vil` import
    *  (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時のクリーンアップ).
    *  An increase closes an open confirm modal defensively: the restore
-   *  just replaced the whole keymap this modal's pending Apply/Display Only
-   *  would otherwise act against. */
+   *  just replaced the whole keymap this modal's pending Apply would
+   *  otherwise act against. */
   keymapRestoreSeq?: number
 }
 
 export interface UseKeymapApplyPromptReturn {
-  /** Pass straight through as the Keyboard Layout select's `onChange`. */
+  /** Pass straight through as the Keyboard Layout select's `onChange` — a
+   *  plain display switch for every value now, never a lookup/modal. */
   handleKeyboardLayoutChange: (v: string) => void
+  /** Start the "does the current selection want a Rewrite?" lookup and, if
+   *  so, open the confirm modal. Called by the simulation tab's Apply
+   *  button — see `KeymapEditor`'s `onRequestKeymapApply`. */
+  requestApply: () => void
   /** Non-null while the confirm modal should be open. */
   pendingApply: { id: string; name: string } | null
   handleApplyCancel: () => void
-  handleApplyDisplayOnly: () => void
   handleApplyConfirm: () => void
-  /** Set after a partial-failure apply; cleared on the next selection. */
+  /** Set after a partial-failure apply; cleared on the next request. */
   applyError: string | null
   /** True from the moment `handleApplyConfirm` starts its (awaited)
    *  `onApplyKeymapRewrite` call until it settles. Drives the modal's
@@ -69,11 +77,13 @@ export interface UseKeymapApplyPromptReturn {
 }
 
 /** Resolve `id`'s own rewrite table when it's flagged `keymapApplicable`
- *  and its map actually builds. Returns `null` when `id` isn't
- *  rewrite-eligible at all (flag-less pack, failed build, or a pack
- *  that's missing/not yet loaded locally). QWERTY is never passed in here
- *  — it's handled as an early return in `handleKeyboardLayoutChange`
- *  before any lookup happens. */
+ *  and its map actually builds — the same
+ *  `keymapApplicable && buildKeymapRewriteTable(map).ok` predicate
+ *  `useDevicePrefs.remapKind` uses to decide whether the simulation tabs
+ *  (and thus the Apply button that calls this) are even showing. Returns
+ *  `null` when `id` isn't rewrite-eligible at all (flag-less pack, failed
+ *  build, or a pack that's missing/not yet loaded locally) — defensive
+ *  only, since the Apply button shouldn't be reachable in that state. */
 async function resolveRewriteTable(
   id: string,
   keyLabelLookup: ReturnType<typeof useKeyLabelLookup>,
@@ -106,22 +116,39 @@ export function useKeymapApplyPrompt({
   const applyInFlightRef = useRef(false)
   const [isApplying, setIsApplying] = useState(false)
 
-  // Bumped on every invocation; the async lookups below re-check it after
-  // each `await` so a newer selection always wins over a slower older one
-  // (selection race — two quick picks where the first's lookups resolve
-  // after the second's must never let the first overwrite the second's
-  // prompt or fire a stale display-only switch). The QWERTY early return
-  // also relies on this bump: it invalidates any in-flight lookup from a
-  // prior (non-QWERTY) selection so a slower lookup can never open a
-  // modal after the user has already moved on to QWERTY.
+  // Bumped on every `requestApply`/`handleKeyboardLayoutChange` call and on
+  // every observed `keyboardLayout` change (see the watch effect below); the
+  // async lookup in `requestApply` re-checks it after each `await` so a
+  // superseded request can never open a modal after the user has already
+  // moved on.
   const requestSeqRef = useRef(0)
+
+  // RACE (Plan-qwerty-select-no-rewrite v7, new/mandatory): the select no
+  // longer routes through this hook's own onChange-time lookup — a value
+  // change can now land at any time, including while `requestApply`'s own
+  // lookup is in flight or while the confirm modal for a DIFFERENT pack is
+  // already open (e.g. open Colemak's warning, then pick Dvorak from the
+  // select before confirming — the pending modal would otherwise go on to
+  // rewrite Colemak's table against a keymap the user has already moved
+  // away from). Watching the value itself — rather than only closing the
+  // modal inline inside `handleKeyboardLayoutChange` — catches every path
+  // that can change it, not just this hook's own setter call. Mirrors the
+  // `keymapRestoreSeq` watcher below exactly.
+  const keyboardLayoutRef = useRef(keyboardLayout)
+  useEffect(() => {
+    const prev = keyboardLayoutRef.current
+    keyboardLayoutRef.current = keyboardLayout
+    if (keyboardLayout === prev) return
+    ++requestSeqRef.current
+    setPendingApply(null)
+  }, [keyboardLayout])
 
   // Defensive close (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時の
   // クリーンアップ, D3): the counter is monotonic for the session (disconnect
   // carries it forward rather than zeroing it, see keyboard-types.ts), so
   // any change here means a new restore landed. Also bump `requestSeqRef`
-  // so a pack lookup already in flight from BEFORE the restore (started on
-  // a selection, still awaiting `resolveRewriteTable`) fails its own
+  // so a lookup already in flight from BEFORE the restore (started by
+  // `requestApply`, still awaiting `resolveRewriteTable`) fails its own
   // `requestSeqRef.current !== seq` check when it resolves — otherwise it
   // would re-open the modal via `setPendingApply` against the keymap the
   // restore just replaced (restore race).
@@ -146,58 +173,47 @@ export function useKeymapApplyPrompt({
     setPendingApply(null)
   }, [keymapRestoreSeq])
 
+  // Plain display switch for every value — QWERTY included, no more
+  // per-value branching. The layout-watch effect above independently
+  // closes any pending modal / invalidates any in-flight lookup once
+  // `keyboardLayout` actually changes as a result of this call; the
+  // explicit reset here is belt-and-braces so the modal never flashes open
+  // for a single tick between this call and that effect's next run.
   const handleKeyboardLayoutChange = useCallback((v: string) => {
     setApplyError(null)
+    ++requestSeqRef.current
+    setPendingApply(null)
+    onKeyboardLayoutChange?.(v as KeyboardLayoutId)
+  }, [onKeyboardLayoutChange])
+
+  // Entry point for the simulation tab's Apply button. Only meaningful
+  // while `keyboardLayout` is a rewrite-eligible pack — i.e. exactly the
+  // state in which `useDevicePrefs.remapKind === 'simulated'` and
+  // `KeymapEditor` renders the tabs/button in the first place — but stays
+  // defensive (falls through to a no-op) so a stray call against QWERTY or
+  // an ineligible pack can't open a bogus modal.
+  const requestApply = useCallback(() => {
+    setApplyError(null)
+    const v = keyboardLayout
+    if (v === BUILTIN_QWERTY_LAYOUT_ID || !keymapEditable || !onApplyKeymapRewrite) return
     const seq = ++requestSeqRef.current
-    // QWERTY is always inert: it only switches the display, never touches
-    // the keymap and never opens the confirm modal, regardless of what's
-    // currently applied or what's already pending.
-    if (v === BUILTIN_QWERTY_LAYOUT_ID) {
-      setPendingApply(null)
-      onKeyboardLayoutChange?.(v as KeyboardLayoutId)
-      return
-    }
-    if (!keymapEditable || !onApplyKeymapRewrite) {
-      onKeyboardLayoutChange?.(v as KeyboardLayoutId)
-      return
-    }
-    // Re-selecting the value already shown in the select is a true no-op
-    // (pattern A2, 同値再選択=何もしない): `keyboardLayout` is exactly what
-    // the select currently renders, so there is genuinely nothing to do —
-    // no setter call at all.
-    if (v === keyboardLayout) return
-    // Flag + table-build check requires the entry's full payload, which
-    // the layout dropdown only has name/id for — fetch (or hit cache)
-    // before deciding whether to prompt. Flag-less packs and packs that
-    // fail the rewrite-table build fall through to today's direct
-    // display-only switch, same as before this feature existed.
     void (async () => {
       const targetTable = await resolveRewriteTable(v, keyLabelLookup)
-      if (requestSeqRef.current !== seq) return // superseded by a newer selection
-      if (!targetTable) {
-        onKeyboardLayoutChange?.(v as KeyboardLayoutId)
-        return
-      }
+      if (requestSeqRef.current !== seq) return // superseded by a newer request/selection
+      if (!targetTable) return // not (or no longer) rewrite-eligible — nothing to prompt
       setPendingApply({ id: v, name: keyLabelLookup.getName(v) ?? v, table: targetTable })
     })()
-  }, [onKeyboardLayoutChange, keymapEditable, keyboardLayout, onApplyKeymapRewrite, keyLabelLookup])
+  }, [keyboardLayout, keymapEditable, onApplyKeymapRewrite, keyLabelLookup])
 
-  // Cancel/Display Only are no-ops while an apply is in flight — the modal
-  // disables their buttons (via `isApplying`) as the primary defense, but
-  // this ref check is the actual guard: Escape (`useEscapeClose`) and the
-  // backdrop click both route through `onCancel` regardless of button
-  // `disabled` state, so it must be safe to call at any time.
+  // Cancel is a no-op while an apply is in flight — the modal disables its
+  // button (via `isApplying`) as the primary defense, but this ref check is
+  // the actual guard: Escape (`useEscapeClose`) and the backdrop click both
+  // route through `onCancel` regardless of button `disabled` state, so it
+  // must be safe to call at any time.
   const handleApplyCancel = useCallback(() => {
     if (applyInFlightRef.current) return
     setPendingApply(null)
   }, [])
-
-  const handleApplyDisplayOnly = useCallback(() => {
-    if (applyInFlightRef.current) return
-    if (!pendingApply) return
-    onKeyboardLayoutChange?.(pendingApply.id as KeyboardLayoutId)
-    setPendingApply(null)
-  }, [pendingApply, onKeyboardLayoutChange])
 
   const handleApplyConfirm = useCallback(() => {
     if (!pendingApply || !onApplyKeymapRewrite) return
@@ -234,16 +250,13 @@ export function useKeymapApplyPrompt({
           setApplyError(result.error)
           return
         }
-        // Clean success: Rewrite is a destructive one-shot (v5 最終仕様) — the
-        // select resets to QWERTY, the same clean state a snapshot/.vil
-        // restore leaves. The keymap now embodies the target arrangement
-        // directly (raw characters, no color); there is nothing left to
-        // display-simulate. This reset is the OTHER half of the destructive
-        // one-shot contract from `KeymapEditor.applyKeymapRewrite`'s
-        // `history.clear()` — that one fires on any landed write (incl.
-        // partial failure), this one fires ONLY on clean success. Shared
-        // invariant: a rewrite leaves no undo trail; only a clean success
-        // returns the select to QWERTY.
+        // Clean success (and a zero-count success alike — Plan-kaw-v7-tabs
+        // point 6: an appliedCount of 0 means the keymap already matched the
+        // target arrangement, so the Apply intent is already satisfied):
+        // Rewrite is a destructive one-shot (v5 最終仕様) — the select resets
+        // to QWERTY, the same clean state a snapshot/.vil restore leaves.
+        // `useDevicePrefs.remapKind` reverts to 'actual' for QWERTY, so the
+        // simulation/Base tabs disappear along with it.
         onKeyboardLayoutChange?.(BUILTIN_QWERTY_LAYOUT_ID as KeyboardLayoutId)
       } finally {
         // Always clears, even if a restore landed mid-apply and already
@@ -258,9 +271,9 @@ export function useKeymapApplyPrompt({
 
   return {
     handleKeyboardLayoutChange,
+    requestApply,
     pendingApply: pendingApply ? { id: pendingApply.id, name: pendingApply.name } : null,
     handleApplyCancel,
-    handleApplyDisplayOnly,
     handleApplyConfirm,
     applyError,
     isApplying,

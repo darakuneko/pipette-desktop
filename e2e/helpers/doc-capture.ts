@@ -1417,15 +1417,20 @@ async function captureStatusBar(page: Page): Promise<void> {
   }
 }
 
-// --- Phase 8b: Key Label "Apply to Keymap" confirm modal ---
+// --- Phase 8b: Simulation/Base tabs + Key Label "Apply to Keymap" confirm
+// modal (Plan-qwerty-select-no-rewrite v7 — シミュレーションタブ方式) ---
 
 // Drives the footer's Keyboard Layout select to the seeded `keymapApplicable`
-// Colemak entry (see seedDummyKeyLabel above) and captures the confirm modal
-// that offers to bulk-rewrite the keymap vs. switching the display labels
-// only (Plan-key-label-keymap-apply Phase 3). Dismisses with Cancel so the
-// keyboard layout selection and the live keymap are both left untouched.
+// Colemak entry (see seedDummyKeyLabel above). Selecting it no longer opens
+// any modal by itself — it switches the display and reveals the vertical
+// simulation/Base tabs on the keymap. This waits for the simulation tab,
+// clicks the Apply button on its layer-indicator row (the only way left to
+// reach the Rewrite confirm modal), and captures it. Dismisses with Cancel,
+// then resets the select back to QWERTY so every capture AFTER this one
+// (Favorites, Key Popover, Basic View variants, ...) runs against the same
+// untabbed QWERTY state every other phase assumes.
 async function captureKeyLabelKeymapApply(page: Page): Promise<void> {
-  console.log('\n--- Phase 8b: Key Label Apply-to-Keymap Modal ---')
+  console.log('\n--- Phase 8b: Simulation/Base Tabs + Apply-to-Keymap Modal ---')
 
   const layoutTrigger = page.getByRole('button', { name: 'Key Labels' })
   const triggerCount = await layoutTrigger.count()
@@ -1449,16 +1454,30 @@ async function captureKeyLabelKeymapApply(page: Page): Promise<void> {
   await option.click()
   await page.waitForTimeout(300)
 
+  const simulationTab = page.locator('[data-testid="keymap-pack-tab-simulation"]')
+  try {
+    await simulationTab.waitFor({ state: 'visible', timeout: 3000 })
+  } catch {
+    // No tabs within the timeout means `remapKind` never became 'simulated'
+    // for the seeded entry — either `keymapApplicable` or the map's own
+    // `buildKeymapRewriteTable` build failed.
+    console.log('  [skip] simulation tab did not appear within 3s (remapKind never became "simulated" — check keymapApplicable and buildKeymapRewriteTable on the seeded entry)')
+    return
+  }
+
+  const applyButton = page.locator('[data-testid="keymap-pack-apply-button"]')
+  if (!(await isAvailable(applyButton))) {
+    console.log('  [skip] simulation tab\'s Apply button not found (keymapEditable — keyboard.keymap.size > 0 — was likely false)')
+    return
+  }
+  await applyButton.click()
+  await page.waitForTimeout(300)
+
   const modal = page.locator('[data-testid="keymap-apply-confirm-modal"]')
   try {
     await modal.waitFor({ state: 'visible', timeout: 3000 })
   } catch {
-    // No modal within the timeout means the footer fell back to switching
-    // the display label directly instead of prompting — either
-    // `keymapEditable` (keyboard.keymap.size > 0) was false when the
-    // select changed, or the seeded entry's keymapApplicable flag / map
-    // failed buildKeymapRewriteTable.
-    console.log('  [skip] apply-to-keymap confirm modal did not open within 3s (fell back to a direct display-only switch — check keymapEditable and buildKeymapRewriteTable on the seeded entry)')
+    console.log('  [skip] apply-to-keymap confirm modal did not open within 3s of clicking Apply')
     return
   }
 
@@ -1467,6 +1486,18 @@ async function captureKeyLabelKeymapApply(page: Page): Promise<void> {
 
   await page.locator('[data-testid="keymap-apply-confirm-cancel"]').click()
   await page.waitForTimeout(300)
+
+  // Reset the select back to QWERTY — every capture after this phase
+  // assumes the untabbed, unremapped state.
+  await layoutTrigger.click()
+  await page.waitForTimeout(300)
+  const qwertyOption = page.getByRole('option', { name: 'QWERTY' })
+  if (await isAvailable(qwertyOption)) {
+    await qwertyOption.click()
+    await page.waitForTimeout(300)
+  } else {
+    console.log('  [warn] could not find the QWERTY option to reset the layout select — later captures may run against Colemak')
+  }
 }
 
 // --- Phase 9: Inline Favorites ---

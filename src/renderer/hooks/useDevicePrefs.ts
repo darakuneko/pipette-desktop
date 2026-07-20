@@ -456,6 +456,9 @@ export interface UseDevicePrefsReturn {
    *  pack (irrelevant since no key is ever tinted there), and
    *  non-permutation deviation packs. */
   remapKind: RemapKind
+  /** Display name of the active layout/pack — see `remapKind`'s sibling
+   *  doc comment on `activeLayoutName` in the hook body for what feeds it. */
+  activeLayoutName: string
   /** Display label for a qmkId, but ONLY for the key PICKER surface
    *  (`TabbedKeycodes` / `KeyPopover` → `PopoverTabKey`) — the keymap
    *  legend itself (`useLayerKeycodes`, `KeyWidget`'s masked-inner label)
@@ -923,6 +926,18 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   // regardless of this flag.
   const packIsPurePermutation = !rewriteTableResult || rewriteTableResult.ok
 
+  // Author-supplied "wants a keymap rewrite" hint (Plan-key-label-keymap-
+  // apply) — `false` for built-in QWERTY and for any pack not yet loaded.
+  // Combined with `packIsPurePermutation` below (the structural `.ok`
+  // verdict) into the single Plan-qwerty-select-no-rewrite v7 predicate:
+  // `keymapApplicable && buildKeymapRewriteTable(map).ok`. That predicate —
+  // not `.ok` alone — is what `remapKind` now gates on, so it doubles as
+  // the simulation-tab / Apply-eligibility signal `KeymapEditor` consumes
+  // via `remapKind === 'simulated'` (tab visibility, Apply button, and the
+  // simulated tint all read the exact same boolean, never three separately
+  // maintained checks).
+  const keymapApplicable = !!activeMap && lookup.getKeymapApplicable(layout)
+
   // Which remap tint `isRemapped`-tinted keys use on the keymap surface
   // (see the `remapKind` field's own doc comment on the return type).
   // "An active pack map is loaded" is checked directly against `activeMap`
@@ -931,11 +946,21 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   // "non-empty" here avoids relying on `rewriteTableResult`'s undefined-
   // ness to mean "no pack" (it doesn't for QWERTY, which is why
   // `packIsPurePermutation`'s own doc comment calls that state out
-  // separately).
+  // separately). `keymapApplicable` is the addition over the old
+  // `.ok`-only check: a pack that structurally permutes but was never
+  // flagged applicable (the author's own opt-out) now renders with the
+  // ACTUAL tint in place, same as a JIS-type deviation pack, instead of
+  // simulating a Rewrite nothing downstream will actually offer.
   const remapKind: RemapKind = useMemo(() => {
     const hasActivePackMap = !!activeMap && Object.keys(activeMap).length > 0
-    return hasActivePackMap && packIsPurePermutation ? 'simulated' : 'actual'
-  }, [activeMap, packIsPurePermutation])
+    return hasActivePackMap && keymapApplicable && packIsPurePermutation ? 'simulated' : 'actual'
+  }, [activeMap, keymapApplicable, packIsPurePermutation])
+
+  // Display name for the active pack — used by `KeymapEditor`'s simulation
+  // tab label when `remapKind === 'simulated'`. Falls back to the raw id
+  // (same fallback `useKeyLabelLookup.getName` documents) so a not-yet-
+  // loaded pack never renders an empty tab.
+  const activeLayoutName = lookup.getName(layout) ?? layout
 
   // Display Only is the sole remap-rendering mode (Plan-qwerty-select-
   // no-rewrite v5 最終仕様): both the keymap and the key picker always show
@@ -1054,6 +1079,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     remapLabel,
     isRemapped,
     remapKind,
+    activeLayoutName,
     pickerRemapLabel,
   }
 }

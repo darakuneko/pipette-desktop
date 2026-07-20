@@ -54,6 +54,16 @@ export interface KeyboardPaneProps {
    *  the mode's duration). */
   layerLabel?: string
   layerLabelTestId: string
+  /** Extra content rendered next to `layerLabel` in the footer row — the
+   *  simulation tab's Apply button (Plan-qwerty-select-no-rewrite v7). */
+  footerExtra?: React.ReactNode
+  /** Blocks every edit path into this pane: no key/encoder click or
+   *  double-click handlers reach `KeyboardWidget` regardless of what's
+   *  passed in `onKeyClick`/etc below (see `KeyboardWidget`'s own
+   *  `readOnly`). Used by the simulation tab, which must stay completely
+   *  view-only — clicks, the popover, and multi-select all route through
+   *  those same handlers, so gating them here is the single choke point. */
+  readOnly?: boolean
   onKeyClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onKeyDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
   onEncoderClick?: (key: KleKey, dir: number, maskClicked: boolean) => void
@@ -91,6 +101,8 @@ export function KeyboardPane({
   scale,
   layerLabel,
   layerLabelTestId,
+  footerExtra,
+  readOnly = false,
   onKeyClick,
   onKeyDoubleClick,
   onEncoderClick,
@@ -107,7 +119,7 @@ export function KeyboardPane({
       className={PANE_CLASS}
       onClick={(e) => {
         e.stopPropagation()
-        if (isActive && !hasModifierKey(e)) onDeselect?.()
+        if (isActive && !readOnly && !hasModifierKey(e)) onDeselect?.()
       }}
     >
       <div className="flex justify-center">
@@ -133,6 +145,7 @@ export function KeyboardPane({
           heatmapMaxTap={heatmapMaxTap}
           heatmapMaxHold={heatmapMaxHold}
           scale={scale}
+          readOnly={readOnly}
           onKeyClick={isActive ? onKeyClick : undefined}
           onKeyDoubleClick={isActive ? onKeyDoubleClick : undefined}
           onEncoderClick={isActive ? onEncoderClick : undefined}
@@ -142,11 +155,14 @@ export function KeyboardPane({
         />
       </div>
       <div className="flex items-center justify-between px-keyboard-px text-xs leading-none text-content-muted">
-        {layerLabel !== undefined && (
-          <span data-testid={layerLabelTestId} className="text-content-muted">
-            {layerLabel}
-          </span>
-        )}
+        <span className="flex items-center gap-2">
+          {layerLabel !== undefined && (
+            <span data-testid={layerLabelTestId} className="text-content-muted">
+              {layerLabel}
+            </span>
+          )}
+          {footerExtra}
+        </span>
         <span className="flex items-center gap-1.5">
           {isActive && selectedKeycode && (
             <>

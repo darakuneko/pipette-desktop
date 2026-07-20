@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
+// Plan-qwerty-select-no-rewrite v7: the Rewrite confirm modal and its
+// lookup/validation live in `useKeymapApplyPrompt`, lifted to App.tsx now
+// that the Apply button is on KeymapEditor's simulation tab — see
+// `useKeymapApplyPrompt.test.ts` for that coverage. This component's own
+// contract shrank to a plain passthrough: the Keyboard Layout select's
+// onChange is called with the raw selection, nothing more.
+
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import type { KeyLabelMeta } from '../../../shared/types/key-label-store'
-import { BUILTIN_QWERTY_LAYOUT_ID } from '../../data/keyboard-layouts'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -47,58 +53,17 @@ vi.mock('../../hooks/useKeyLabels', () => ({
   useKeyLabels: () => ({ metas: [KEY_LABEL_META] }),
 }))
 
-const lookup = {
-  ensure: vi.fn().mockResolvedValue(undefined),
-  getName: vi.fn().mockReturnValue('Colemak'),
-  getMap: vi.fn().mockReturnValue({ KC_E: 'F' }),
-  getCompositeLabels: vi.fn().mockReturnValue(undefined),
-  getKeymapApplicable: vi.fn().mockReturnValue(false),
-}
-vi.mock('../../hooks/useKeyLabelLookup', () => ({
-  useKeyLabelLookup: () => lookup,
-}))
-
-const buildKeymapRewriteTable = vi.fn()
-vi.mock('../../../shared/keymap/keymap-apply', async () => {
-  const actual = await vi.importActual<typeof import('../../../shared/keymap/keymap-apply')>('../../../shared/keymap/keymap-apply')
-  return {
-    ...actual,
-    buildKeymapRewriteTable: (map: Record<string, string>) => buildKeymapRewriteTable(map),
-  }
-})
-
 vi.mock('../i18n-packs/LanguagePacksModal', () => ({ LanguagePacksModal: () => null }))
 vi.mock('../theme-packs/ThemePacksModal', () => ({ ThemePacksModal: () => null }))
 vi.mock('../key-labels/KeyLabelsModal', () => ({ KeyLabelsModal: () => null }))
 
-interface CapturedApplyModalProps {
-  open: boolean
-  labelName: string
-  onApply: () => void
-  onDisplayOnly: () => void
-  onCancel: () => void
-}
-let capturedApplyModalProps: CapturedApplyModalProps | null = null
-vi.mock('../key-labels/KeymapApplyConfirmModal', () => ({
-  KeymapApplyConfirmModal: (props: CapturedApplyModalProps) => {
-    capturedApplyModalProps = props
-    return null
-  },
-}))
-
 import { QuickSettingsSelects } from '../QuickSettingsSelects'
 
-describe('QuickSettingsSelects — keyboard layout apply-to-keymap branching', () => {
+describe('QuickSettingsSelects — Keyboard Layout select passthrough (Plan-qwerty-select-no-rewrite v7)', () => {
   const onKeyboardLayoutChange = vi.fn()
-  const onApplyKeymapRewrite = vi.fn().mockResolvedValue({ appliedCount: 1 })
 
   beforeEach(() => {
     vi.clearAllMocks()
-    capturedApplyModalProps = null
-    lookup.ensure.mockResolvedValue(undefined)
-    lookup.getName.mockReturnValue('Colemak')
-    lookup.getMap.mockReturnValue({ KC_E: 'F' })
-    lookup.getKeymapApplicable.mockReturnValue(false)
   })
 
   function renderComponent() {
@@ -107,96 +72,21 @@ describe('QuickSettingsSelects — keyboard layout apply-to-keymap branching', (
         onThemeChange={vi.fn()}
         keyboardLayout="qwerty"
         onKeyboardLayoutChange={onKeyboardLayoutChange}
-        keymapEditable
-        onApplyKeymapRewrite={onApplyKeymapRewrite}
       />,
     )
   }
 
-  async function selectColemak() {
+  it('calls onKeyboardLayoutChange with the raw selection — no modal, no lookup', async () => {
+    renderComponent()
     fireEvent.click(screen.getByRole('button', { name: 'keyLabels.title' }))
     await act(async () => {
       fireEvent.mouseDown(screen.getByRole('option', { name: 'Colemak' }))
     })
-  }
-
-  it('opens the confirm modal when the flag is set and the table builds', async () => {
-    lookup.getKeymapApplicable.mockReturnValue(true)
-    buildKeymapRewriteTable.mockReturnValue({ ok: true, table: new Map([['KC_E', 'KC_F']]) })
-
-    renderComponent()
-    await selectColemak()
-
-    expect(onKeyboardLayoutChange).not.toHaveBeenCalled()
-    expect(capturedApplyModalProps).toMatchObject({ open: true, labelName: 'Colemak' })
-  })
-
-  it('switches directly when keymapApplicable is not set', async () => {
-    lookup.getKeymapApplicable.mockReturnValue(false)
-
-    renderComponent()
-    await selectColemak()
-
-    expect(buildKeymapRewriteTable).not.toHaveBeenCalled()
     expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id')
-    expect(capturedApplyModalProps?.open).toBe(false)
   })
 
-  it('switches directly when the flag is set but the table build fails', async () => {
-    lookup.getKeymapApplicable.mockReturnValue(true)
-    buildKeymapRewriteTable.mockReturnValue({ ok: false, error: 'not a permutation' })
-
-    renderComponent()
-    await selectColemak()
-
-    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id')
-    expect(capturedApplyModalProps?.open).toBe(false)
-  })
-
-  it('after confirming Rewrite, the select resets to QWERTY (destructive one-shot, v5 最終仕様)', async () => {
-    lookup.getKeymapApplicable.mockReturnValue(true)
-    buildKeymapRewriteTable.mockReturnValue({ ok: true, table: new Map([['KC_E', 'KC_F']]) })
-
-    renderComponent()
-    await selectColemak()
-    expect(capturedApplyModalProps?.open).toBe(true)
-
-    await act(async () => { capturedApplyModalProps!.onApply() })
-
-    expect(onApplyKeymapRewrite).toHaveBeenCalledTimes(1)
-    const [table] = onApplyKeymapRewrite.mock.calls[0] as [Map<string, string>]
-    expect(table).toEqual(new Map([['KC_E', 'KC_F']]))
-    // Clean success resets the select back to QWERTY — never left on the
-    // just-applied arrangement.
-    expect(onKeyboardLayoutChange).toHaveBeenCalledWith(BUILTIN_QWERTY_LAYOUT_ID)
-  })
-
-  it('handleApplyDisplayOnly still switches display straight to the target id, without rewriting', async () => {
-    lookup.getKeymapApplicable.mockReturnValue(true)
-    buildKeymapRewriteTable.mockReturnValue({ ok: true, table: new Map([['KC_E', 'KC_F']]) })
-
-    renderComponent()
-    await selectColemak()
-
-    act(() => { capturedApplyModalProps!.onDisplayOnly() })
-    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id')
-    expect(onApplyKeymapRewrite).not.toHaveBeenCalled()
-  })
-
-  it('switches directly without fetching the map when the keymap is not editable', async () => {
-    render(
-      <QuickSettingsSelects
-        onThemeChange={vi.fn()}
-        keyboardLayout="qwerty"
-        onKeyboardLayoutChange={onKeyboardLayoutChange}
-        keymapEditable={false}
-        onApplyKeymapRewrite={onApplyKeymapRewrite}
-      />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'keyLabels.title' }))
-    fireEvent.mouseDown(screen.getByRole('option', { name: 'Colemak' }))
-
-    expect(lookup.ensure).not.toHaveBeenCalled()
-    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id')
+  it('does not render the select at all when the layout/onChange props are absent', () => {
+    render(<QuickSettingsSelects onThemeChange={vi.fn()} />)
+    expect(screen.queryByRole('button', { name: 'keyLabels.title' })).toBeNull()
   })
 })
