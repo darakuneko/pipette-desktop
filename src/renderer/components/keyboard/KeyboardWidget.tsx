@@ -78,6 +78,11 @@ interface Props {
   flash?: KeyFlashState
   everPressedKeys?: Set<string>
   remappedKeys?: Set<string>
+  /** Encoder analogue of `remappedKeys`, keyed by `encoderPosKey(idx, dir)` —
+   *  see `use-layer-keycodes.ts`'s `buildEncoderRemappedForLayer`. Colors
+   *  the CW/CCW legend the pack's Rewrite touched (`EncoderWidget`'s
+   *  `remapped` prop). */
+  remappedEncoders?: Set<string>
   multiSelectedKeys?: Set<string>
   layoutOptions?: Map<number, number>
   selectedMaskPart?: boolean
@@ -132,6 +137,7 @@ function KeyboardWidgetInner({
   flash,
   everPressedKeys,
   remappedKeys,
+  remappedEncoders,
   multiSelectedKeys,
   layoutOptions,
   heatmapCells,
@@ -215,6 +221,7 @@ function KeyboardWidgetInner({
               kleKey={key}
               keycode={kc}
               selected={false}
+              remapped={remappedEncoders?.has(encoderPosKey(key.encoderIdx, key.encoderDir))}
               {...flashPropsFor(flash, 'encoders', encoderPosKey(key.encoderIdx, key.encoderDir))}
               onClick={readOnly ? undefined : onEncoderClick}
               onDoubleClick={readOnly ? undefined : onEncoderDoubleClick}
@@ -270,6 +277,7 @@ function KeyboardWidgetInner({
               keycode={kc}
               selected
               selectedMaskPart={selectedMaskPart}
+              remapped={remappedEncoders?.has(encoderPosKey(key.encoderIdx, key.encoderDir))}
               {...flashPropsFor(flash, 'encoders', encoderPosKey(key.encoderIdx, key.encoderDir))}
               onClick={readOnly ? undefined : onEncoderClick}
               onDoubleClick={readOnly ? undefined : onEncoderDoubleClick}

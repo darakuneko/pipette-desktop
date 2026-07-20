@@ -232,8 +232,6 @@ describe('StatusBar', () => {
           onOpenAnalyze={vi.fn()}
           quickSettings={{
             onThemeChange: vi.fn(),
-            keymapEditable: true,
-            onApplyKeymapRewrite: vi.fn(),
           }}
         />
       )

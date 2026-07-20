@@ -270,17 +270,6 @@ export interface PipetteSettings {
    * (row, col) the key should sort by instead. */
   viewMatrix?: Record<string, ViewMatrixCell>
   analyze?: AnalyzeSettings
-  /** Key Label entry id (or `'qwerty'` for the built-in layout) whose
-   *  `keymapApplicable` rewrite was last actually burned into the device
-   *  keymap by the footer's "apply to keymap" flow (Plan-key-label-keymap-apply).
-   *  Independent of `keyboardLayout`, which only controls which pack's
-   *  legends are *displayed* — switching `keyboardLayout` via "Display
-   *  Only" never touches this field. Absent means no rewrite has ever been
-   *  applied (or it predates this feature) — treated as identity/QWERTY.
-   *  Updated only by the rewrite flow itself (KeymapEditor's
-   *  `applyKeymapRewrite`, and by undo/redo of that rewrite's batch history
-   *  entry), never by the display-only selection path. */
-  appliedKeymapLayout?: string
   _updatedAt?: string // ISO 8601 — last update time
 }
 

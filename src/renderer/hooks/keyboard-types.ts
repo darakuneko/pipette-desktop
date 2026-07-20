@@ -77,6 +77,17 @@ export interface KeyboardState {
   qmkSettingsValues: Record<string, number[]>
   // Layer names (persisted per-UID, synced)
   layerNames: string[]
+  // Bumped by `applyVilFile` on every successful restore (snapshot / layout
+  // store / .vil import all converge there — Plan-qwerty-select-no-rewrite
+  // §snapshot/.vil 復元時のクリーンアップ). App.tsx watches this counter to
+  // clear the keymap undo/redo history and close a stray Keyboard Layout
+  // apply-confirm modal — both things that KeymapEditor's own uid/keymap-size
+  // clear effect misses because a restore keeps the same uid and never
+  // empties the keymap.
+  // Monotonic for the whole app session: `reset()` (disconnect) carries
+  // the current value forward instead of zeroing it via `emptyState()`,
+  // so consumers can watch for a plain change rather than an increase.
+  keymapRestoreSeq: number
 }
 
 export function emptyState(): KeyboardState {
@@ -126,6 +137,7 @@ export function emptyState(): KeyboardState {
     supportedQsids: new Set(),
     qmkSettingsValues: {},
     layerNames: [],
+    keymapRestoreSeq: 0,
   }
 }
 

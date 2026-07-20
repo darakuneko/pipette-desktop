@@ -9,8 +9,9 @@
 //   - `LayoutComparisonView` / analyze-csv-builders (Layout Comparison
 //     map-vs-map source / target inputs)
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LAYOUT_BY_ID } from '../data/keyboard-layouts'
+import { buildKeymapRewriteTable } from '../../shared/keymap/keymap-apply'
 import type { KeyLabelEntryFile } from '../../shared/types/key-label-store'
 
 // Same event name `useKeyLabels` dispatches whenever the store
@@ -22,6 +23,10 @@ const REFRESH_EVENT = 'pipette:key-labels-changed'
 export interface UseKeyLabelLookupReturn {
   /** Trigger a fetch for `id` if it is not already cached or built-in. */
   ensure: (id: string) => Promise<void>
+  /** Fire-and-forget `ensure` for every id in `ids`. For callers that just
+   *  want to warm the cache for a whole list (installed rows, select
+   *  options) and don't need to await individual fetches. */
+  ensureAll: (ids: string[]) => void
   /** Display name. Falls back to the id when the entry has not loaded yet. */
   getName: (id: string) => string | undefined
   /** qmkId → label map (basic keys). Empty object for built-in QWERTY. */
@@ -31,10 +36,19 @@ export interface UseKeyLabelLookupReturn {
   /** Opt-in "applicable to keymap" marker (Plan-key-label-keymap-apply).
    *  Always `false` for built-in `KEYBOARD_LAYOUTS` entries. */
   getKeymapApplicable: (id: string) => boolean
+  /** True when `id` can bulk-rewrite the keymap: `keymapApplicable` is the
+   *  pack author's own claim, re-validated here against
+   *  `buildKeymapRewriteTable(map).ok` so a map that doesn't actually build
+   *  a closed permutation can't claim writability. Same rule
+   *  `useDevicePrefs.remapKind` and `useKeymapApplyPrompt` use to gate the
+   *  simulation tabs and Apply button for the active pack — this member
+   *  lets any other id-keyed list (Key Labels modal rows, the footer
+   *  select's per-option tag) ask the identical question. */
+  isKeymapWritable: (id: string) => boolean
 }
 
 export function useKeyLabelLookup(): UseKeyLabelLookupReturn {
-  const [, setVersion] = useState(0)
+  const [version, setVersion] = useState(0)
   const cacheRef = useRef<Map<string, KeyLabelEntryFile>>(new Map())
   const inflightRef = useRef<Map<string, Promise<void>>>(new Map())
   const missingRef = useRef<Set<string>>(new Set())
@@ -82,6 +96,10 @@ export function useKeyLabelLookup(): UseKeyLabelLookupReturn {
     return promise
   }, [])
 
+  const ensureAll = useCallback((ids: string[]): void => {
+    ids.forEach((id) => { void ensure(id) })
+  }, [ensure])
+
   const getName = useCallback((id: string): string | undefined => {
     const builtin = LAYOUT_BY_ID.get(id)
     if (builtin) return builtin.name
@@ -105,5 +123,31 @@ export function useKeyLabelLookup(): UseKeyLabelLookupReturn {
     return cacheRef.current.get(id)?.keymapApplicable === true
   }, [])
 
-  return { ensure, getName, getMap, getCompositeLabels, getKeymapApplicable }
+  const isKeymapWritable = useCallback((id: string): boolean => {
+    const map = getMap(id)
+    return !!map && getKeymapApplicable(id) && buildKeymapRewriteTable(map).ok
+  }, [getMap, getKeymapApplicable])
+
+  // Each member is already a stable useCallback, but the object literal
+  // itself was not — consumers that list the whole return value in a dep
+  // array (e.g. `remapLabel`/`isRemapped` in useDevicePrefs) would rebuild
+  // every render, cascading into a full keymap/KeyWidget re-render. Memoize
+  // on the members so the identity is stable across ordinary renders.
+  //
+  // `version` is ALSO a dep, even though every member above is already
+  // stable: the members are plain `useCallback`s that close over `cacheRef`
+  // (a ref, not state), so calling one directly after a lazy `ensure(id)`
+  // resolves already returns the fresh data — but a downstream consumer
+  // that memoizes on THIS object's identity (or on a callback derived from
+  // it, e.g. `useDevicePrefs`'s `remapLabel`/`isRemapped`) never recomputes
+  // unless that identity actually changes. Without `version` here, the
+  // lazy-loaded pack's map/compositeLabels would arrive in `cacheRef` but
+  // the keymap legends and key picker would stay frozen on the
+  // pre-fetch fallback until some unrelated prop forced a rebuild.
+  // Including `version` makes the identity change exactly once per fetch
+  // (or store-change event) — still stable across every other render.
+  return useMemo(
+    () => ({ ensure, ensureAll, getName, getMap, getCompositeLabels, getKeymapApplicable, isKeymapWritable }),
+    [ensure, ensureAll, getName, getMap, getCompositeLabels, getKeymapApplicable, isKeymapWritable, version],
+  )
 }

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.23",
+  "version": "0.1.39",
   "name": "English",
   "common": {
     "save": "Save",
@@ -101,6 +101,7 @@
       "previousLayers": "Previous layers",
       "nextLayers": "Next layers",
       "layerN": "Layer {{n}}",
+      "layerPreview": "Preview - {{label}}",
       "undo": "Undo",
       "redo": "Redo",
       "zoomIn": "Zoom In",
@@ -1645,6 +1646,12 @@
     "actionDownload": "Download",
     "actionDelete": "Delete",
     "actionExport": ".json",
+    "typeKeymapWrite": "Keymap Write",
+    "typeViewOnly": "View Only",
+    "typeKeymapWriteShort": "Write",
+    "typeViewOnlyShort": "View",
+    "qwertyDefaultName": "QWERTY (Default)",
+    "qwertyDefaultShort": "Default",
     "hubRemoved": "(removed)",
     "errorDuplicate": "A label with the same name already exists",
     "errorImportFailed": "Failed to import key label",
@@ -1657,12 +1664,10 @@
     "missingClose": "Close",
     "keymapApply": {
       "title": "Apply {{name}} to the Keymap?",
-      "message": "This key label set is a pure QWERTY letter swap, so the keymap itself can be rewritten.",
-      "rewriteNote": "Rewriting sets the keymap to {{name}}'s arrangement. The display stays on QWERTY labels, matching what each key now actually sends.",
-      "undoNote": "One Undo reverts the whole rewrite.",
-      "apply": "Rewrite Keymap",
-      "displayOnly": "Display Only",
-      "errorPartial": "Some keys could not be rewritten. The change stops here — Undo reverts what was applied."
+      "saveRecommendation": "Save your current keymap first. Rewrite replaces keycodes on every layer and clears the undo/redo history; restoring your saved file is the only way back.",
+      "confirmApply": "Apply?",
+      "tabsLabel": "Keymap view",
+      "errorPartial": "Some keys could not be rewritten. The change stops here — restore from a previously saved .vil file or snapshot if needed."
     }
   },
   "i18n": {

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
 import { useKeyLabelLookup } from './useKeyLabelLookup'
+import { buildKeymapRewriteTable } from '../../shared/keymap/keymap-apply'
+import type { RemapKind } from '../components/keyboard/constants'
 import { useAppConfig } from './useAppConfig'
 import { MIN_SCALE, MAX_SCALE } from '../components/editors/keymap-editor-types'
 import type { TypingTestResult, TypingViewMenuTab, ViewMode, TypingTestMemory, TypingTestMemoryWord, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
@@ -223,11 +225,6 @@ const VALID_VIEW_MODES: ReadonlySet<string> = new Set(VIEW_MODES)
 
 interface ValidatedPrefs {
   keyboardLayout: KeyboardLayoutId
-  /** `PipetteSettings.appliedKeymapLayout` — id of the Key Label arrangement
-   *  last actually rewritten into the device keymap (or the built-in QWERTY
-   *  id), absent when this keyboard has never had a Rewrite applied
-   *  (追加要求 2026-07-18). Independent of `keyboardLayout` above. */
-  appliedKeymapLayout?: string
   autoAdvance: boolean
   layerPanelOpen: boolean
   basicViewType: BasicViewType
@@ -259,7 +256,7 @@ interface ValidatedPrefs {
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; appliedKeymapLayout?: unknown; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestMonkeytypeConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown; viewMatrix?: Record<string, ViewMatrixCell> } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestMonkeytypeConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown; viewMatrix?: Record<string, ViewMatrixCell> } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
@@ -316,13 +313,8 @@ function validateIpcPrefs(
     ? data.viewMode as ViewMode
     : 'editor'
 
-  const appliedKeymapLayout = typeof data.appliedKeymapLayout === 'string' && data.appliedKeymapLayout.length > 0
-    ? data.appliedKeymapLayout
-    : undefined
-
   return {
     keyboardLayout: layout ?? defaultLayout,
-    appliedKeymapLayout,
     autoAdvance: autoAdvance ?? defaultAutoAdvance,
     layerPanelOpen,
     basicViewType,
@@ -442,15 +434,56 @@ export interface UseDevicePrefsReturn {
   autoLockTime: AutoLockMinutes
   setAutoLockTime: (m: AutoLockMinutes) => void
   applyDevicePrefs: (uid: string) => Promise<void>
+  /** Display label for a qmkId: the active Key Label pack's own label
+   *  (via `compositeLabels` -> `map`), falling back to the qmkId itself
+   *  when neither has an entry. This is what feeds the keymap surface
+   *  regardless of which of `KeymapEditor`'s tabs is showing (Plan-qwerty-
+   *  select-no-rewrite v7 — シミュレーションタブ方式): the simulation tab
+   *  renders it as-is, while the Base tab bypasses it entirely (its own
+   *  raw/identity keycode builder — see `KeymapEditor`'s `baseLayerKeycodes`
+   *  — never calls this at all). A Rewrite never leaves anything for this
+   *  to simulate either way, since it resets `layout` back to QWERTY
+   *  (raw/no-color) on success, which also makes the tabs disappear. */
   remapLabel: (qmkId: string) => string
+  /** The blue "remapped" tint source: true whenever `remapLabel(qmkId)`
+   *  differs from `qmkId` itself — same rule every picker/palette consumer
+   *  applies. */
   isRemapped: (qmkId: string) => boolean
-  /** `PipetteSettings.appliedKeymapLayout` — see `ValidatedPrefs` above. */
-  appliedKeymapLayout: string | undefined
-  /** Persists `appliedKeymapLayout`. Called only by the Key Label
-   *  "apply to keymap" Rewrite flow (KeymapEditor's `applyKeymapRewrite`,
-   *  and undo/redo of that rewrite's batch history entry) — never by the
-   *  display-only `setLayout` path (追加要求 2026-07-18). */
-  setAppliedKeymapLayout: (id: string) => void
+  /** Which remap tint `isRemapped`-tinted keys use on the keymap surface
+   *  (keymap pane + typing-test pane; the picker is untouched — see
+   *  `pickerRemapLabel` below). `'simulated'` iff an active (non-empty)
+   *  pack map is loaded and it's a pure permutation (same `.ok` verdict
+   *  `rewriteTableResult` already computes for the Rewrite gate) — the
+   *  "labels show what a Rewrite WOULD produce, pressing still types the
+   *  old character" case. `'actual'` otherwise: JIS-type display remaps
+   *  (truthful — the OS/IME really produces the shown char), QWERTY/no
+   *  pack (irrelevant since no key is ever tinted there), and
+   *  non-permutation deviation packs. */
+  remapKind: RemapKind
+  /** Display name of the active layout/pack — see `remapKind`'s sibling
+   *  doc comment on `activeLayoutName` in the hook body for what feeds it. */
+  activeLayoutName: string
+  /** Display label for a qmkId, but ONLY for the key PICKER surface
+   *  (`TabbedKeycodes` / `KeyPopover` → `PopoverTabKey`) — the keymap
+   *  legend itself (`useLayerKeycodes`, `KeyWidget`'s masked-inner label)
+   *  keeps using `remapLabel` above unconditionally.
+   *
+   *  Plan-qwerty-select-no-rewrite v6: the picker should only ever change
+   *  for a pack that deviates from ANSI (a symbol/label the picker can't
+   *  already show as-is — JIS shift pairs, kana, ...). A pure QWERTY-
+   *  keycode permutation (Colemak, Eucalyn, Dvorak, ...) swaps WHICH key
+   *  sends a character, but every character it swaps in already exists
+   *  somewhere in the picker — remapping the picker's own legends for
+   *  that case would just be noise (and would desync the picker's
+   *  legend from the keycode it actually inserts). So this identity-
+   *  passes for a permutation pack and only forwards to `remapLabel` once
+   *  the active pack fails the same `buildKeymapRewriteTable` check the
+   *  Key Label "apply to keymap" rewrite itself uses to decide
+   *  applicability — a deviation pack behaves exactly like `remapLabel`.
+   *  QWERTY/no pack has an empty map, which trivially passes the check
+   *  (nothing to permute), so it already resolves to identity without a
+   *  separate guard. */
+  pickerRemapLabel: (qmkId: string) => string
 }
 
 /**
@@ -484,7 +517,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   const defaultQuickSelect = config.defaultQuickSelect ?? false
 
   const [layout, updateLayout, layoutRef] = useStateRef<KeyboardLayoutId>(defaultLayout)
-  const [appliedKeymapLayout, updateAppliedKeymapLayout, appliedKeymapLayoutRef] = useStateRef<string | undefined>(undefined)
   const [autoAdvance, updateAutoAdvance, autoAdvanceRef] = useStateRef<boolean>(defaultAutoAdvance)
   const [layerPanelOpen, updateLayerPanelOpen, layerPanelOpenRef] = useStateRef<boolean>(defaultLayerPanelOpen)
   const [basicViewType, updateBasicViewType, basicViewTypeRef] = useStateRef<BasicViewType>(defaultBasicViewType)
@@ -524,12 +556,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     window.vialAPI.pipetteSettingsPatch(uid, {
       _rev: 1,
       keyboardLayout: layoutRef.current,
-      // `undefined` here means "never applied on this keyboard" and is
-      // intentionally sent as-is (not `?? null`): the field-level PATCH
-      // treats `undefined` as "leave untouched", which is correct since a
-      // field that was never set has nothing to clear. Once a Rewrite runs
-      // it's always a concrete id from then on (see setAppliedKeymapLayout).
-      appliedKeymapLayout: appliedKeymapLayoutRef.current,
       autoAdvance: autoAdvanceRef.current,
       layerPanelOpen: layerPanelOpenRef.current,
       basicViewType: basicViewTypeRef.current,
@@ -573,11 +599,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateLayout(id)
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateLayout])
-
-  const setAppliedKeymapLayout = useCallback((id: string) => {
-    updateAppliedKeymapLayout(id)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateAppliedKeymapLayout])
 
   const setAutoAdvance = useCallback((enabled: boolean) => {
     updateAutoAdvance(enabled)
@@ -836,7 +857,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       viewMode: 'editor',
     }
     updateLayout(resolved.keyboardLayout)
-    updateAppliedKeymapLayout(resolved.appliedKeymapLayout)
     updateAutoAdvance(resolved.autoAdvance)
     updateLayerPanelOpen(resolved.layerPanelOpen)
     updateBasicViewType(resolved.basicViewType)
@@ -880,6 +900,85 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     void lookup.ensure(layout)
   }, [lookup, layout])
 
+  // Single source of truth for "does this pack's map build a rewrite
+  // table" — `packIsPurePermutation` (Phase P, picker gate) needs the same
+  // `.ok` verdict `buildKeymapRewriteTable` computes for the Key Label
+  // "apply to keymap" rewrite.
+  //
+  // Memoized on the pack map's own object reference (stable per cache
+  // entry, see `useKeyLabelLookup.getMap`) rather than on `lookup` itself
+  // (a fresh object literal every render), so this only rebuilds when the
+  // pack data actually changes. QWERTY/no pack: `map` is `undefined` (not
+  // yet loaded) or an empty object (built-in QWERTY, or an uninstalled
+  // pack that never resolves) — an empty map trivially passes
+  // `buildKeymapRewriteTable` (there is nothing to permute).
+  const activeMap = lookup.getMap(layout)
+  const rewriteTableResult = useMemo(
+    () => (activeMap ? buildKeymapRewriteTable(activeMap) : undefined),
+    [activeMap],
+  )
+
+  // Picker-only gate (Plan-qwerty-select-no-rewrite v6, Phase P): a pure
+  // QWERTY-keycode permutation pack (Colemak, Eucalyn, Dvorak, ...) must
+  // leave the key PICKER raw — see `pickerRemapLabel`'s doc comment below.
+  // Re-derives the same `.ok` verdict `buildKeymapRewriteTable` already
+  // computes for the Key Label "apply to keymap" rewrite, rather than
+  // consulting `getKeymapApplicable` (an author-supplied hint the rewrite
+  // path deliberately treats as advisory only, not authoritative). An
+  // undefined `rewriteTableResult` (no pack loaded) defaults to "pure
+  // permutation" too since `remapLabel` is already identity in that state
+  // regardless of this flag.
+  const packIsPurePermutation = !rewriteTableResult || rewriteTableResult.ok
+
+  // Author-supplied "wants a keymap rewrite" hint (Plan-key-label-keymap-
+  // apply) — `false` for built-in QWERTY and for any pack not yet loaded.
+  // Combined with `packIsPurePermutation` below (the structural `.ok`
+  // verdict) into the single Plan-qwerty-select-no-rewrite v7 predicate:
+  // `keymapApplicable && buildKeymapRewriteTable(map).ok`. That predicate —
+  // not `.ok` alone — is what `remapKind` now gates on, so it doubles as
+  // the simulation-tab / Apply-eligibility signal `KeymapEditor` consumes
+  // via `remapKind === 'simulated'` (tab visibility, Apply button, and the
+  // simulated tint all read the exact same boolean, never three separately
+  // maintained checks).
+  const keymapApplicable = !!activeMap && lookup.getKeymapApplicable(layout)
+
+  // Which remap tint `isRemapped`-tinted keys use on the keymap surface
+  // (see the `remapKind` field's own doc comment on the return type).
+  // "An active pack map is loaded" is checked directly against `activeMap`
+  // rather than `rewriteTableResult` — QWERTY's map is `{}` (truthy,
+  // trivially a pure permutation) but has nothing to tint, so gating on
+  // "non-empty" here avoids relying on `rewriteTableResult`'s undefined-
+  // ness to mean "no pack" (it doesn't for QWERTY, which is why
+  // `packIsPurePermutation`'s own doc comment calls that state out
+  // separately). `keymapApplicable` is the addition over the old
+  // `.ok`-only check: a pack that structurally permutes but was never
+  // flagged applicable (the author's own opt-out) now renders with the
+  // ACTUAL tint in place, same as a JIS-type deviation pack, instead of
+  // simulating a Rewrite nothing downstream will actually offer.
+  const remapKind: RemapKind = useMemo(() => {
+    const hasActivePackMap = !!activeMap && Object.keys(activeMap).length > 0
+    return hasActivePackMap && keymapApplicable && packIsPurePermutation ? 'simulated' : 'actual'
+  }, [activeMap, keymapApplicable, packIsPurePermutation])
+
+  // Display name for the active pack — used by `KeymapEditor`'s simulation
+  // tab label when `remapKind === 'simulated'`. Falls back to the raw id
+  // (same fallback `useKeyLabelLookup.getName` documents) so a not-yet-
+  // loaded pack never renders an empty tab.
+  const activeLayoutName = lookup.getName(layout) ?? layout
+
+  // The active Key Label pack's own labels, resolved through its
+  // compositeLabels -> map lookup order and falling back to qmkId itself
+  // when neither has an entry. QWERTY's map/compositeLabels are always
+  // empty (`BUILTIN_QWERTY_LAYOUT_ID` in keyboard-layouts.ts), so it
+  // resolves to identity without a separate guard. Feeds the key picker
+  // unconditionally, and the keymap surface too EXCEPT `KeymapEditor`'s
+  // Base tab, which reads its own raw/identity keycode builder instead of
+  // calling this at all (Plan-qwerty-select-no-rewrite v7 — シミュレーション
+  // タブ方式: the simulation tab shows exactly what this resolves to, Base
+  // shows the real keymap regardless of it). A Rewrite never leaves
+  // anything for this to simulate — it resets `layout` back to QWERTY on
+  // success (raw characters, no color, no tabs), the same clean state a
+  // snapshot/.vil restore leaves.
   const remapLabel = useCallback(
     (qmkId: string): string => {
       const composite = lookup.getCompositeLabels(layout)?.[qmkId]
@@ -891,20 +990,25 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     [lookup, layout],
   )
 
+  // The blue "remapped" tint: true whenever the resolved label differs from
+  // the qmkId itself — the same `remapLabel(x) !== x` rule every picker/
+  // palette consumer (KeycodeGrid.getRemapDisplayLabel) already uses.
   const isRemapped = useCallback(
-    (qmkId: string): boolean => {
-      const composite = lookup.getCompositeLabels(layout)
-      if (composite && qmkId in composite) return true
-      const map = lookup.getMap(layout)
-      return Boolean(map && qmkId in map)
-    },
-    [lookup, layout],
+    (qmkId: string): boolean => remapLabel(qmkId) !== qmkId,
+    [remapLabel],
+  )
+
+  // Delegates to `remapLabel` itself for the deviation-pack branch (rather
+  // than re-resolving compositeLabels/map independently) so the picker and
+  // keymap legend can never disagree on what a deviation pack's label is —
+  // only WHETHER it's shown differs between the two surfaces.
+  const pickerRemapLabel = useCallback(
+    (qmkId: string): string => (packIsPurePermutation ? qmkId : remapLabel(qmkId)),
+    [packIsPurePermutation, remapLabel],
   )
 
   return {
     layout,
-    appliedKeymapLayout,
-    setAppliedKeymapLayout,
     autoAdvance,
     layerPanelOpen,
     basicViewType,
@@ -981,5 +1085,8 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     applyDevicePrefs,
     remapLabel,
     isRemapped,
+    remapKind,
+    activeLayoutName,
+    pickerRemapLabel,
   }
 }

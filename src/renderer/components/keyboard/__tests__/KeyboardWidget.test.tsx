@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { rotatePoint, KeyboardWidget } from '../KeyboardWidget'
-import { KEY_UNIT, KEY_SPACING, KEY_SIZE_RATIO, KEY_SPACING_RATIO, KEYBOARD_PADDING } from '../constants'
+import { KEY_UNIT, KEY_SPACING, KEY_SIZE_RATIO, KEY_SPACING_RATIO, KEYBOARD_PADDING, KEY_TEXT_COLOR, KEY_REMAP_COLOR } from '../constants'
 import { parseKle } from '../../../../shared/kle/kle-parser'
 import type { KleKey } from '../../../../shared/kle/types'
 
@@ -243,5 +243,48 @@ describe('KeyboardWidget flash threading', () => {
       />,
     )
     expect(container.querySelector('[data-testid="flash-overlay"]')).toBeNull()
+  })
+})
+
+// Plan-qwerty-select-no-rewrite "also" follow-up: encoder CW/CCW legends
+// gained the same remap tint keymap keys already have.
+describe('KeyboardWidget remappedEncoders threading', () => {
+  const keys: KleKey[] = [
+    makeKey({ x: 0, y: 0, row: -1, col: -1, encoderIdx: 0, encoderDir: 0 }),
+  ]
+  const encoderKeycodes = new Map<string, [string, string]>([['0', ['KC_B', 'KC_NO']]])
+
+  it('tints the encoder label when its "idx,dir" position is in remappedEncoders', () => {
+    const { container } = render(
+      <KeyboardWidget
+        keys={keys}
+        keycodes={new Map()}
+        encoderKeycodes={encoderKeycodes}
+        remappedEncoders={new Set(['0,0'])}
+      />,
+    )
+    const text = container.querySelector('text')!
+    expect(text.getAttribute('fill')).toBe(KEY_REMAP_COLOR)
+  })
+
+  it('does not tint the encoder label when its position is absent from remappedEncoders', () => {
+    const { container } = render(
+      <KeyboardWidget
+        keys={keys}
+        keycodes={new Map()}
+        encoderKeycodes={encoderKeycodes}
+        remappedEncoders={new Set(['1,0'])}
+      />,
+    )
+    const text = container.querySelector('text')!
+    expect(text.getAttribute('fill')).toBe(KEY_TEXT_COLOR)
+  })
+
+  it('does not tint when remappedEncoders is absent', () => {
+    const { container } = render(
+      <KeyboardWidget keys={keys} keycodes={new Map()} encoderKeycodes={encoderKeycodes} />,
+    )
+    const text = container.querySelector('text')!
+    expect(text.getAttribute('fill')).toBe(KEY_TEXT_COLOR)
   })
 })

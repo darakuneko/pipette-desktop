@@ -3,11 +3,22 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ChevronUp } from 'lucide-react'
 import { AnchoredPopover } from './ui/AnchoredPopover'
-import { ICON_XS } from '../constants/ui-tokens'
+import { ICON_XS, PACK_TYPE_TAG_WRITABLE, PACK_TYPE_TAG_VIEW } from '../constants/ui-tokens'
 
 export interface UpwardSelectOption {
   id: string
   name: string
+  /**
+   * Optional short trailing tag rendered right-aligned next to the name
+   * (e.g. "Write" / "View" for Key Label packs — see
+   * `useKeyLabelLookup.isKeymapWritable`). Absent for options that carry
+   * no such metadata; the row then renders exactly as it did before this
+   * field existed (name only).
+   *
+   * Colors come from `PACK_TYPE_TAG_WRITABLE`/`PACK_TYPE_TAG_VIEW`
+   * (ui-tokens.ts), shared with the Key Labels modal's row type label.
+   */
+  tag?: { label: string; variant: 'accent' | 'secondary' }
 }
 
 interface Props {
@@ -23,6 +34,13 @@ export function UpwardSelect({ value, onChange, options, 'aria-label': ariaLabel
   const handleClose = useCallback(() => setOpen(false), [])
 
   const currentName = useMemo(() => options.find((o) => o.id === value)?.name ?? value, [options, value])
+
+  // A tagged list caps its width so long names truncate instead of
+  // pushing the tag column out of alignment (see UpwardSelect.test.tsx
+  // and the Keyboard Layout select in QuickSettingsSelects.tsx). Left
+  // untouched for every other call site (language/theme/basic-view
+  // selects) so their existing grow-to-fit sizing is unaffected.
+  const hasTags = useMemo(() => options.some((o) => o.tag != null), [options])
 
   return (
     <>
@@ -45,7 +63,7 @@ export function UpwardSelect({ value, onChange, options, 'aria-label': ariaLabel
         placement="top"
         align="right"
         matchAnchorWidth
-        className="z-50 max-h-60 overflow-y-auto rounded border border-edge bg-surface py-0.5 shadow-lg"
+        className={`z-50 max-h-60 overflow-y-auto rounded border border-edge bg-surface py-0.5 shadow-lg ${hasTags ? 'max-w-64' : ''}`}
         role="listbox"
         aria-label={ariaLabel}
       >
@@ -54,7 +72,7 @@ export function UpwardSelect({ value, onChange, options, 'aria-label': ariaLabel
             key={o.id}
             role="option"
             aria-selected={o.id === value}
-            className={`cursor-pointer whitespace-nowrap px-2.5 py-1 text-xs ${
+            className={`flex cursor-pointer items-center gap-2 px-2.5 py-1 text-xs ${
               o.id === value ? 'bg-accent/10 text-accent' : 'text-content hover:bg-surface-hover'
             }`}
             onMouseDown={(e) => {
@@ -63,7 +81,16 @@ export function UpwardSelect({ value, onChange, options, 'aria-label': ariaLabel
               setOpen(false)
             }}
           >
-            {o.name}
+            <span className="min-w-0 flex-1 truncate">{o.name}</span>
+            {o.tag && (
+              <span
+                className={`shrink-0 whitespace-nowrap text-right ${
+                  o.tag.variant === 'accent' ? PACK_TYPE_TAG_WRITABLE : PACK_TYPE_TAG_VIEW
+                }`}
+              >
+                {o.tag.label}
+              </span>
+            )}
           </div>
         ))}
       </AnchoredPopover>

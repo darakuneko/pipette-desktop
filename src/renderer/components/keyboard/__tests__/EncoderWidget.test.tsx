@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 import { EncoderWidget } from '../EncoderWidget'
-import { KEY_SELECTED_COLOR, KEY_BG_COLOR } from '../constants'
+import { KEY_SELECTED_COLOR, KEY_BG_COLOR, KEY_TEXT_COLOR, KEY_REMAP_COLOR, KEY_INVERTED_TEXT_COLOR } from '../constants'
 import type { KleKey } from '../../../../shared/kle/types'
 
 let mockIsMask = false
@@ -221,6 +221,59 @@ describe('EncoderWidget', () => {
           </svg>,
         )
         expect(container.querySelector('[data-testid="flash-overlay"]')).toBeNull()
+      })
+    })
+  })
+
+  // Plan-qwerty-select-no-rewrite "also" follow-up: encoder CW/CCW legends
+  // gained the same remap tint keymap keys already have (label color only —
+  // encoders have no inner-remap label path like masked KeyWidget keys).
+  describe('remapped (label color only)', () => {
+    it('uses the default label color when remapped is unset', () => {
+      const { container } = render(
+        <svg>
+          <EncoderWidget kleKey={makeKey()} keycode="KC_A" />
+        </svg>,
+      )
+      const text = container.querySelector('text')!
+      expect(text.getAttribute('fill')).toBe(KEY_TEXT_COLOR)
+    })
+
+    it('uses the remap tint color when remapped is true', () => {
+      const { container } = render(
+        <svg>
+          <EncoderWidget kleKey={makeKey()} keycode="KC_A" remapped />
+        </svg>,
+      )
+      const text = container.querySelector('text')!
+      expect(text.getAttribute('fill')).toBe(KEY_REMAP_COLOR)
+    })
+
+    it('selected still wins over remapped (inverted text color)', () => {
+      const { container } = render(
+        <svg>
+          <EncoderWidget kleKey={makeKey()} keycode="KC_A" remapped selected />
+        </svg>,
+      )
+      const text = container.querySelector('text')!
+      expect(text.getAttribute('fill')).toBe(KEY_INVERTED_TEXT_COLOR)
+    })
+
+    describe('masked encoder (isMask=true)', () => {
+      beforeEach(() => {
+        mockIsMask = true
+      })
+
+      it('tints only the outer (modifier) label; the inner (basic key) label stays the default color', () => {
+        const { container } = render(
+          <svg>
+            <EncoderWidget kleKey={makeKey()} keycode="LT0(KC_A)" remapped />
+          </svg>,
+        )
+        const texts = container.querySelectorAll('text')
+        expect(texts).toHaveLength(2)
+        expect(texts[0].getAttribute('fill')).toBe(KEY_REMAP_COLOR)
+        expect(texts[1].getAttribute('fill')).toBe(KEY_TEXT_COLOR)
       })
     })
   })

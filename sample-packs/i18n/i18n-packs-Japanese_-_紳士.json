@@ -1,5 +1,5 @@
 {
-  "version": "0.1.23",
+  "version": "0.1.39",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -18,7 +18,7 @@
     "refreshing": "ただいま再点検中でございます…",
     "disconnect": "お別れ",
     "loading": "ただいま準備を整えております…",
-    "apply": "反映",
+    "apply": "反映する",
     "notConfigured": "未設定でございます",
     "settingsLabel": "設定項目:",
     "configuration": "構成案",
@@ -101,6 +101,7 @@
       "previousLayers": "前の階層",
       "nextLayers": "次の階層",
       "layerN": "階層 {{n}}",
+      "layerPreview": "下見 - {{label}}",
       "undo": "時を戻す",
       "redo": "やはり進める",
       "zoomIn": "拡大して拝見",
@@ -1635,6 +1636,12 @@
     "actionDownload": "取り寄せ",
     "actionDelete": "抹消",
     "actionExport": ".json",
+    "typeKeymapWrite": "書き換え可能",
+    "typeViewOnly": "拝見のみ",
+    "typeKeymapWriteShort": "書換可",
+    "typeViewOnlyShort": "拝見",
+    "qwertyDefaultName": "QWERTY（定石）",
+    "qwertyDefaultShort": "定石",
     "hubRemoved": "(抹消済み)",
     "errorDuplicate": "同じお名前の銘が既にございます",
     "errorImportFailed": "取り込みに失敗いたしました",
@@ -1647,12 +1654,10 @@
     "missingClose": "閉じる",
     "keymapApply": {
       "title": "「{{name}}」をキーマップにも適用いたしますか？",
-      "message": "この銘は純然たる QWERTY の文字の入れ替えにございますゆえ、キーマップそのものを書き換えることが叶います。",
-      "rewriteNote": "書き換えを行いますと、キーマップは「{{name}}」の配列となります。表示の銘は QWERTY のままにございますゆえ、各鍵が実際に送る文字とよく合いまする。",
-      "undoNote": "Undo 一度にてまとめて元へお戻しいただけます。",
-      "apply": "キーマップを書き換える",
-      "displayOnly": "表示のみ変更いたす",
-      "errorPartial": "一部の鍵は書き換えが叶いませんでした。ここで処理を止めておりますゆえ、Undo にて適用済みの分をお戻しくださいませ。"
+      "saveRecommendation": "書き換えを行う前に、現在のキーマップを保存しておかれることをお勧めいたします。書き換えは全レイヤーのキーコードを置き換え、Undo・Redo の履歴も消去いたしますゆえ、お戻しになる道は保存されたファイルより復元する他ございません。",
+      "confirmApply": "反映いたしますか？",
+      "tabsLabel": "キーマップの表示",
+      "errorPartial": "一部の鍵は書き換えが叶いませんでした。ここで処理を止めておりますゆえ、必要とあらば以前保存された .vil ファイルやスナップショットより復元くださいませ。"
     }
   },
   "i18n": {

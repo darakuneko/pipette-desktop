@@ -412,6 +412,21 @@ describe('PopoverTabKey — Key Label pack remap in search (issue #294)', () => 
     expect(screen.getByTestId('popover-result-KC_8')).toBeInTheDocument()
     expect(screen.getByTestId('popover-result-KC_8')).toHaveTextContent('( 8')
   })
+
+  // The picker's search results treat an identity `remapLabel` (one that
+  // returns its input unchanged, e.g. QWERTY's always-empty map) exactly
+  // like having no pack at all — raw label, no remap styling — without a
+  // separate "no pack" branch of its own.
+  it('an identity remapLabel behaves exactly like no pack — raw label, no remap styling', () => {
+    const identityRemapLabel = (qmkId: string) => qmkId
+    render(<PopoverTabKey currentKeycode={4} remapLabel={identityRemapLabel} onKeycodeSelect={onSelect} />)
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: '(' } })
+    expect(screen.getByTestId('popover-result-KC_9')).toBeInTheDocument()
+    expect(screen.queryByTestId('popover-result-KC_8')).not.toBeInTheDocument()
+    const kc9Label = screen.getByTestId('popover-result-KC_9').querySelector('span')
+    expect(kc9Label?.className).not.toContain('text-key-label-remap')
+  })
+
 })
 
 describe('PopoverTabCode — hex input', () => {

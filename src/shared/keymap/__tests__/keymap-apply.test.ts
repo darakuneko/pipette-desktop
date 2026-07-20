@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { buildKeymapRewriteTable, composeRewriteTables, rewriteNumericKeycode } from '../keymap-apply'
+import { buildKeymapRewriteTable, rewriteNumericKeycode } from '../keymap-apply'
 import { deserialize, resolve } from '../../keycodes/keycodes'
 
 // Same fixture as layout-parse.test.ts (real Colemak data).
@@ -265,69 +265,5 @@ describe('rewriteNumericKeycode', () => {
     const zeroMaskModTap = modTapBase | deserialize('KC_E')
     const table = new Map([['KC_E', 'KC_F']])
     expect(rewriteNumericKeycode(zeroMaskModTap, table)).toBe(zeroMaskModTap)
-  })
-})
-
-// --- 追加要求 (2026-07-18): composeRewriteTables ---
-
-function buildOrThrow(map: Record<string, string>): Map<string, string> {
-  const result = buildKeymapRewriteTable(map)
-  if (!result.ok) throw new Error(`fixture map failed to build: ${result.error}`)
-  return new Map(result.table)
-}
-
-const colemakTable = buildOrThrow(COLEMAK)
-const dvorakTable = buildOrThrow(DVORAK_CLOSED)
-
-describe('composeRewriteTables', () => {
-  it('composing with an empty target inverts the applied table (swaps source <-> target for every entry)', () => {
-    const inverted = composeRewriteTables(colemakTable, new Map())
-    expect(inverted.size).toBe(colemakTable.size)
-    for (const [source, target] of colemakTable) {
-      expect(inverted.get(target)).toBe(source)
-    }
-  })
-
-  it('composing an empty-target inverse twice returns the original table', () => {
-    const inverted = composeRewriteTables(colemakTable, new Map())
-    const roundTripped = composeRewriteTables(inverted, new Map())
-    expect(roundTripped).toEqual(colemakTable)
-  })
-
-  it('identity (QWERTY) -> Colemak composition equals the plain Colemak table', () => {
-    const composed = composeRewriteTables(new Map(), colemakTable)
-    expect(composed).toEqual(colemakTable)
-  })
-
-  it('composing a table with itself is always empty', () => {
-    expect(composeRewriteTables(colemakTable, colemakTable).size).toBe(0)
-    expect(composeRewriteTables(dvorakTable, dvorakTable).size).toBe(0)
-  })
-
-  it('Colemak -> Dvorak composition matches hand-derived expectations', () => {
-    // Hand-derived from the public Colemak / Dvorak layout definitions
-    // (which physical QWERTY position shows which letter), independent of
-    // buildKeymapRewriteTable's own output:
-    //   - Colemak's E-position key currently emits 'F' (E -> F); Dvorak's
-    //     E-position shows '.': the key holding KC_F must become KC_DOT.
-    //   - Colemak's F-position emits 'T' (F -> T); Dvorak's F-position
-    //     shows 'U': the key holding KC_T must become KC_U.
-    //   - Colemak's S-position emits 'R' (S -> R); Dvorak's S-position
-    //     shows 'O': the key holding KC_R must become KC_O.
-    //   - Colemak's P-position emits ';' (P -> KC_SCOLON); Dvorak's
-    //     P-position shows 'L': the key holding KC_SCOLON must become KC_L.
-    //   - Colemak's D-position emits 'S' (D -> S); Dvorak's D-position
-    //     shows 'E': the key holding KC_S must become KC_E.
-    const composed = composeRewriteTables(colemakTable, dvorakTable)
-    expect(composed.get('KC_F')).toBe('KC_DOT')
-    expect(composed.get('KC_T')).toBe('KC_U')
-    expect(composed.get('KC_R')).toBe('KC_O')
-    expect(composed.get('KC_SCOLON')).toBe('KC_L')
-    expect(composed.get('KC_S')).toBe('KC_E')
-
-    // Both Colemak and Dvorak happen to put 'P' at the physical R position
-    // (a real coincidence between the two layouts) — the identity pair
-    // this produces (KC_P -> KC_P) must be dropped from the composition.
-    expect(composed.has('KC_P')).toBe(false)
   })
 })

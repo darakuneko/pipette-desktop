@@ -34,7 +34,23 @@ export const THEME_COLOR_KEYS = [
 
 export type ThemeColorKey = (typeof THEME_COLOR_KEYS)[number]
 
-export type ThemePackColors = Record<ThemeColorKey, string>
+/** Optional color tokens: a theme pack may omit these entirely without
+ *  failing validation. `key-label-simulated` (the permutation-pack
+ *  "Display Only" tint, distinct from the `key-label-remap` "actual"
+ *  tint) falls back to an automatic complement of `key-label-remap` when
+ *  absent — see `deriveSimulatedColor` in `simulated-color.ts` and
+ *  `applyPackColors` in `useTheme.ts`. */
+export const OPTIONAL_THEME_COLOR_KEYS = ['key-label-simulated'] as const
+
+export type OptionalThemeColorKey = (typeof OPTIONAL_THEME_COLOR_KEYS)[number]
+
+/** Every color key a theme pack's `colors` object may contain, required
+ *  and optional combined — used for "unknown key" validation warnings. */
+export const ALL_THEME_COLOR_KEYS = [...THEME_COLOR_KEYS, ...OPTIONAL_THEME_COLOR_KEYS] as const
+
+export type AnyThemeColorKey = ThemeColorKey | OptionalThemeColorKey
+
+export type ThemePackColors = Record<ThemeColorKey, string> & Partial<Record<OptionalThemeColorKey, string>>
 
 export type ThemeColorScheme = 'light' | 'dark'
 

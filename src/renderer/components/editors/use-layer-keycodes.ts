@@ -8,10 +8,34 @@
 
 import { useCallback, useMemo } from 'react'
 import { serialize, isMask, findInnerKeycode } from '../../../shared/keycodes/keycodes'
-import { posKey } from '../../../shared/kle/pos-key'
+import { posKey, encoderPosKey } from '../../../shared/kle/pos-key'
 import { deserializeAllMacros, type MacroAction } from '../../../preload/macro'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { EMPTY_KEYCODES, EMPTY_REMAPPED, EMPTY_ENCODER_KEYCODES } from './keymap-editor-types'
+
+/** True when the active Key Label pack's remap tint applies to `qmkId` —
+ *  checks the keycode itself and, for a masked/composite keycode, its
+ *  INNER basic keycode too. A pack rarely remaps the full composite string
+ *  itself (only an explicit compositeLabels override would, and that
+ *  already replaces the label wholesale via `remap()` upstream) — the
+ *  common case is the pack remapping the inner tap/base keycode's own
+ *  legend (e.g. LSFT(KC_8) with KC_8 -> "(\n8"), which checking the
+ *  composite string alone can't see. Shared by the key and encoder
+ *  builders below so encoder CW/CCW legends get the same tint rule as
+ *  keymap keys (#294/#295 follow-up). */
+function isQmkIdRemapped(qmkId: string, checkRemapped: (qmkId: string) => boolean): boolean {
+  if (!isMask(qmkId)) return checkRemapped(qmkId)
+  const innerQmkId = findInnerKeycode(qmkId)?.qmkId
+  return checkRemapped(qmkId) || (!!innerQmkId && checkRemapped(innerQmkId))
+}
+
+// Module-level so `remapLabel ?? IDENTITY` is the SAME function reference
+// every render when `remapLabel` is omitted (the Base-tab call site always
+// omits it) — a fresh `(id) => id` literal here would invalidate
+// `buildKeycodesForLayer`/`buildEncoderKeycodesForLayer`'s `useCallback`s
+// (and everything memoized off them) on every single render, rebuilding
+// the full multi-layer keymap each time and defeating `memo(KeyboardWidget)`.
+const IDENTITY = (id: string): string => id
 
 export interface UseLayerKeycodesOptions {
   parsedMacros?: MacroAction[][] | null
@@ -27,6 +51,14 @@ export interface UseLayerKeycodesOptions {
   currentLayer: number
   typingTestMode?: boolean
   typingTestEffectiveLayer: number
+  /** Short-circuits `layerKeycodes`/`layerEncoderKeycodes`/
+   *  `layerEncoderRemapped` to their empty constants (and skips the
+   *  `deserializeAllMacros` parse) when `false` — same idea as the
+   *  `typingTestMode` gating below, generalized so a second call site that
+   *  isn't always needed (Plan-qwerty-select-no-rewrite v7's Base-tab raw
+   *  keycodes in `KeymapEditor.tsx`) can skip the O(keymap size) build
+   *  entirely while its output isn't being shown. Defaults to `true`. */
+  enabled?: boolean
 }
 
 export interface LayerKeycodes {
@@ -41,23 +73,32 @@ export interface UseLayerKeycodesReturn {
   configuredKeycodes?: Set<string>
   buildKeycodesForLayer: (layer: number) => LayerKeycodes
   buildEncoderKeycodesForLayer: (layer: number) => Map<string, [string, string]>
+  /** Encoder analogue of `buildKeycodesForLayer`'s `remapped` set, keyed by
+   *  `encoderPosKey(idx, dir)` (the `"idx,dir"` format `KeyboardWidget`
+   *  already uses for its flash lookups). Kept as a separate builder
+   *  (rather than folded into `buildEncoderKeycodesForLayer`'s return
+   *  shape) so `useLayoutPicker`'s unrelated preview-layout consumer of
+   *  that callback is untouched. */
+  buildEncoderRemappedForLayer: (layer: number) => Set<string>
   layerKeycodes: Map<string, string>
   remappedKeys: Set<string>
   layerEncoderKeycodes: Map<string, [string, string]>
+  layerEncoderRemapped: Set<string>
   typingTestKeycodes: Map<string, string>
   typingTestRemapped: Set<string>
   typingTestEncoderKeycodes: Map<string, [string, string]>
+  typingTestEncoderRemapped: Set<string>
 }
 
 export function useLayerKeycodes({
   parsedMacros, macroBuffer, macroCount, vialProtocol, tapDanceEntries,
   remapLabel, isRemapped, keymap, encoderLayout, encoderCount, currentLayer,
-  typingTestMode, typingTestEffectiveLayer,
+  typingTestMode, typingTestEffectiveLayer, enabled = true,
 }: UseLayerKeycodesOptions): UseLayerKeycodesReturn {
   // --- Macros ---
   const deserializedMacros = useMemo(
-    () => parsedMacros ?? (macroBuffer && macroCount ? deserializeAllMacros(macroBuffer, vialProtocol ?? 0, macroCount) : undefined),
-    [parsedMacros, macroBuffer, macroCount, vialProtocol],
+    () => (enabled ? (parsedMacros ?? (macroBuffer && macroCount ? deserializeAllMacros(macroBuffer, vialProtocol ?? 0, macroCount) : undefined)) : undefined),
+    [enabled, parsedMacros, macroBuffer, macroCount, vialProtocol],
   )
 
   const configuredKeycodes = useMemo(() => {
@@ -76,7 +117,7 @@ export function useLayerKeycodes({
     return set.size > 0 ? set : undefined
   }, [tapDanceEntries, deserializedMacros])
 
-  const remap = remapLabel ?? ((id: string) => id)
+  const remap = remapLabel ?? IDENTITY
 
   // --- Build keycodes for layers ---
   const buildKeycodesForLayer = useCallback((layer: number) => {
@@ -89,22 +130,7 @@ export function useLayerKeycodes({
         const pos = posKey(Number(r), Number(c))
         const qmkId = serialize(code)
         keycodes.set(pos, remap(qmkId))
-        if (isMask(qmkId)) {
-          // A pack rarely remaps the full composite string itself (only
-          // an explicit compositeLabels override would, and that already
-          // replaces the label wholesale via `remap()` above) — the
-          // common case is the pack remapping the INNER basic keycode's
-          // legend (e.g. LSFT(KC_8) with KC_8 -> "(\n8"), which
-          // `checkRemapped(qmkId)` alone can't see since it only ever
-          // checks the composite string. Check both so a masked key
-          // whose tap/base symbol the pack affects gets the same blue
-          // remap tint as a plain remapped key (KeyWidget's `remapped`
-          // prop), matching the picker's row-level tinting (#294).
-          const innerQmkId = findInnerKeycode(qmkId)?.qmkId
-          if (checkRemapped(qmkId) || (innerQmkId && checkRemapped(innerQmkId))) remapped.add(pos)
-        } else if (checkRemapped(qmkId)) {
-          remapped.add(pos)
-        }
+        if (isQmkIdRemapped(qmkId, checkRemapped)) remapped.add(pos)
       }
     }
     return { keycodes, remapped }
@@ -120,8 +146,27 @@ export function useLayerKeycodes({
     return map
   }, [encoderLayout, encoderCount, remap])
 
-  const { keycodes: layerKeycodes, remapped: remappedKeys } = useMemo(() => buildKeycodesForLayer(currentLayer), [buildKeycodesForLayer, currentLayer])
-  const layerEncoderKeycodes = useMemo(() => buildEncoderKeycodesForLayer(currentLayer), [buildEncoderKeycodesForLayer, currentLayer])
+  const buildEncoderRemappedForLayer = useCallback((layer: number) => {
+    const remapped = new Set<string>()
+    const checkRemapped = isRemapped ?? (() => false)
+    for (let i = 0; i < encoderCount; i++) {
+      const cw = encoderLayout.get(`${layer},${i},0`) ?? 0
+      const ccw = encoderLayout.get(`${layer},${i},1`) ?? 0
+      if (isQmkIdRemapped(serialize(cw), checkRemapped)) remapped.add(encoderPosKey(i, 0))
+      if (isQmkIdRemapped(serialize(ccw), checkRemapped)) remapped.add(encoderPosKey(i, 1))
+    }
+    return remapped
+  }, [encoderLayout, encoderCount, isRemapped])
+
+  const { keycodes: layerKeycodes, remapped: remappedKeys } = useMemo(
+    () => (enabled ? buildKeycodesForLayer(currentLayer) : { keycodes: EMPTY_KEYCODES, remapped: EMPTY_REMAPPED }),
+    [enabled, buildKeycodesForLayer, currentLayer])
+  const layerEncoderKeycodes = useMemo(
+    () => (enabled ? buildEncoderKeycodesForLayer(currentLayer) : EMPTY_ENCODER_KEYCODES),
+    [enabled, buildEncoderKeycodesForLayer, currentLayer])
+  const layerEncoderRemapped = useMemo(
+    () => (enabled ? buildEncoderRemappedForLayer(currentLayer) : EMPTY_REMAPPED),
+    [enabled, buildEncoderRemappedForLayer, currentLayer])
 
   const { keycodes: typingTestKeycodes, remapped: typingTestRemapped } = useMemo(
     () => typingTestMode ? buildKeycodesForLayer(typingTestEffectiveLayer) : { keycodes: EMPTY_KEYCODES, remapped: EMPTY_REMAPPED },
@@ -129,11 +174,14 @@ export function useLayerKeycodes({
   const typingTestEncoderKeycodes = useMemo(
     () => typingTestMode ? buildEncoderKeycodesForLayer(typingTestEffectiveLayer) : EMPTY_ENCODER_KEYCODES,
     [buildEncoderKeycodesForLayer, typingTestEffectiveLayer, typingTestMode])
+  const typingTestEncoderRemapped = useMemo(
+    () => typingTestMode ? buildEncoderRemappedForLayer(typingTestEffectiveLayer) : EMPTY_REMAPPED,
+    [buildEncoderRemappedForLayer, typingTestEffectiveLayer, typingTestMode])
 
   return {
     deserializedMacros, configuredKeycodes,
-    buildKeycodesForLayer, buildEncoderKeycodesForLayer,
-    layerKeycodes, remappedKeys, layerEncoderKeycodes,
-    typingTestKeycodes, typingTestRemapped, typingTestEncoderKeycodes,
+    buildKeycodesForLayer, buildEncoderKeycodesForLayer, buildEncoderRemappedForLayer,
+    layerKeycodes, remappedKeys, layerEncoderKeycodes, layerEncoderRemapped,
+    typingTestKeycodes, typingTestRemapped, typingTestEncoderKeycodes, typingTestEncoderRemapped,
   }
 }

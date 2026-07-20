@@ -119,4 +119,25 @@ describe('KeycodeButton', () => {
     // Should NOT have the highlighted-only style
     expect(btn.className).not.toContain('bg-accent/10')
   })
+
+  it('tints the label when displayLabel is set (a pack-remapped label)', () => {
+    render(<KeycodeButton keycode={makeKeycode({ qmkId: 'KC_A', label: 'A' })} displayLabel="Custom A" />)
+    const btn = screen.getByRole('button')
+    expect(btn.className).toContain('text-key-label-remap')
+    expect(screen.getByText('Custom A')).toBeInTheDocument()
+  })
+
+  it('does not tint when displayLabel is absent', () => {
+    render(<KeycodeButton keycode={makeKeycode({ qmkId: 'KC_A', label: 'A' })} />)
+    const btn = screen.getByRole('button')
+    expect(btn.className).not.toContain('text-key-label-remap')
+    expect(btn.className).toContain('text-picker-item-text')
+  })
+
+  it('selected/highlighted still take precedence over the displayLabel tint', () => {
+    render(<KeycodeButton keycode={makeKeycode({ qmkId: 'KC_A', label: 'A' })} displayLabel="Custom A" selected />)
+    const btn = screen.getByRole('button')
+    expect(btn.className).toContain('bg-accent/20')
+    expect(btn.className).not.toContain('text-key-label-remap')
+  })
 })

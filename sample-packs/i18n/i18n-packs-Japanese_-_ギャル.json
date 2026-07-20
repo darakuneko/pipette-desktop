@@ -1,5 +1,5 @@
 {
-  "version": "0.1.23",
+  "version": "0.1.39",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -18,7 +18,7 @@
     "refreshing": "アプデなう…",
     "disconnect": "バイバイ☆",
     "loading": "読み込みちう…",
-    "apply": "おけまる☆",
+    "apply": "適用しちゃう☆",
     "notConfigured": "まだっしょ",
     "settingsLabel": "セッティング☆:",
     "configuration": "コンフィグっしょ",
@@ -101,6 +101,7 @@
       "previousLayers": "前のレイヤーっしょ",
       "nextLayers": "次のレイヤー☆",
       "layerN": "レイヤー {{n}}",
+      "layerPreview": "プレビューっしょ☆ - {{label}}",
       "undo": "巻き戻し☆",
       "redo": "やり直しっしょ！",
       "zoomIn": "デカくする☆",
@@ -1635,6 +1636,12 @@
     "actionDownload": "落とすっしょ",
     "actionDelete": "ポイっちょ☆",
     "actionExport": ".json",
+    "typeKeymapWrite": "書き換えOKっしょ☆",
+    "typeViewOnly": "見るだけっしょ",
+    "typeKeymapWriteShort": "書換OK☆",
+    "typeViewOnlyShort": "見るだけ",
+    "qwertyDefaultName": "QWERTY（デフォっしょ☆）",
+    "qwertyDefaultShort": "デフォっしょ",
     "hubRemoved": "(消されたｗ)",
     "errorDuplicate": "名前かぶってるんだけど！",
     "errorImportFailed": "キーラベルのインポート失敗…サゲ。。",
@@ -1647,12 +1654,10 @@
     "missingClose": "閉じるっしょ",
     "keymapApply": {
       "title": "「{{name}}」キーマップも書き換えちゃう？",
-      "message": "このキーラベル、QWERTYの文字入れ替えだけだから、キーマップ本体もガチで書き換えられるっしょ☆",
-      "rewriteNote": "書き換えたらキーマップが「{{name}}」の配列になるっしょ。表示ラベルはQWERTYのままだから、実際に送られる文字とズレないから安心して♡",
-      "undoNote": "Undo1発でぜんぶ元通りにできるから安心っしょ♡",
-      "apply": "書き換えるっしょ☆",
-      "displayOnly": "表示だけ変えるっしょ",
-      "errorPartial": "一部のキー書き換え失敗…マジサゲ。。そこでストップしたから、Undoで戻せるっしょ"
+      "saveRecommendation": "書き換える前に今のキーマップ保存しとくのがマジ安心っしょ。書き換えは全レイヤーのキーコードがガラッと変わっちゃうし、Undo/Redoの履歴も消えちゃうから、戻したいなら保存したファイルから復元するしかないっしょ！",
+      "confirmApply": "適用しちゃう？☆",
+      "tabsLabel": "見え方っしょ",
+      "errorPartial": "一部のキー書き換え失敗…マジサゲ。。そこでストップしたから、必要なら前に保存した.vilファイルかスナップショットから復元してっしょ"
     }
   },
   "themePacks": {

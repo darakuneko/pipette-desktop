@@ -1,5 +1,5 @@
 {
-  "version": "0.1.23",
+  "version": "0.1.39",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -101,6 +101,7 @@
       "previousLayers": "前のレイヤーどすえ",
       "nextLayers": "次のレイヤーどすえ",
       "layerN": "Layer {{n}}",
+      "layerPreview": "プレビューどすえ - {{label}}",
       "undo": "元に戻しますえ",
       "redo": "やり直しますえ",
       "zoomIn": "大きゅうしますえ",
@@ -1635,6 +1636,12 @@
     "actionDownload": "ダウンロード",
     "actionDelete": "消しますえ",
     "actionExport": ".json",
+    "typeKeymapWrite": "書き換えできますえ",
+    "typeViewOnly": "見るだけどす",
+    "typeKeymapWriteShort": "書換どす",
+    "typeViewOnlyShort": "拝見どす",
+    "qwertyDefaultName": "QWERTY（デフォルトどす）",
+    "qwertyDefaultShort": "デフォルトどす",
     "hubRemoved": "（消されましたえ）",
     "errorDuplicate": "同じ名前のラベルがもうありますえ",
     "errorImportFailed": "キーラベルのインポートがあきまへんでしたえ",
@@ -1647,12 +1654,10 @@
     "missingClose": "閉じますえ",
     "keymapApply": {
       "title": "「{{name}}」をキーマップにも適用しますか？",
-      "message": "このキーラベルは純粋な QWERTY の入れ替えどすさかい、キーマップ本体が書き換えられますえ。",
-      "rewriteNote": "書き換えますと、キーマップが「{{name}}」の配列になりますえ。表示ラベルは QWERTY のままどすさかい、各キーが実際に送る文字とちゃんと合うてますえ。",
-      "undoNote": "Undo ひとつでまとめて元に戻せますえ。",
-      "apply": "書き換えますえ",
-      "displayOnly": "表示だけ変えますえ",
-      "errorPartial": "一部のキーが書き換えられまへんでしたえ。ここで止めときますよって、Undo で適用分を戻しておくれやす。"
+      "saveRecommendation": "書き換えるまえに、いまのキーマップを保存しておかはるのがよろしおすえ。書き換えは全レイヤーのキーコードを変えてしまいますし、Undo と Redo の履歴も消えてしまいますよって、戻したいときは保存しといたファイルから復元するしかおへんえ。",
+      "confirmApply": "適用してもよろしおすか？",
+      "tabsLabel": "見た目の切り替えどす",
+      "errorPartial": "一部のキーが書き換えられまへんでしたえ。ここで止めときますよって、要りようなら前に保存した .vil ファイルかスナップショットから復元しておくれやす。"
     }
   },
   "i18n": {

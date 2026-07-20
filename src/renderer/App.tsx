@@ -39,7 +39,9 @@ import { KeyOverridePanelModal } from './components/editors/KeyOverridePanelModa
 import { RGBConfigurator } from './components/editors/RGBConfigurator'
 import { UnlockDialog } from './components/editors/UnlockDialog'
 import { KeymapEditor, type KeymapEditorHandle } from './components/editors/KeymapEditor'
-import type { AnalyticsOrigin } from './components/editors/keymap-editor-types'
+import type { AnalyticsOrigin, KeymapApplyResult } from './components/editors/keymap-editor-types'
+import { useKeymapApplyPrompt } from './hooks/useKeymapApplyPrompt'
+import type { KeymapRewriteTable } from '../shared/keymap/keymap-apply'
 import { AnalyzePage } from './components/analyze/AnalyzePage'
 import { buildKeymapSnapshot } from './components/analyze/keymap-snapshot-builder'
 import { LayoutStoreContent } from './components/editors/LayoutStoreModal'
@@ -410,17 +412,37 @@ export function App() {
   // the StatusBar's "View Analytics" button can be disabled mid-run.
   const [typingTestRunning, setTypingTestRunning] = useState(false)
 
-  // Whether a Key Label "apply to keymap" rewrite is currently mid-flight —
-  // it runs unawaited from the footer's layout select and drives a sequence
-  // of `await`ed device writes that can take seconds. While it's running,
-  // the footer's Analyze button must stay disabled: opening AnalyzePage
-  // unmounts KeymapEditor (and its `history`/undo stack) out from under the
-  // in-flight rewrite, which would otherwise land the batch history push in
-  // an unmounted component (making it un-undoable after Back) and fire the
-  // post-apply flash timer's setState after unmount. Typing View / Typing
-  // Test don't unmount the editor, so they're unaffected; Disconnect has the
-  // same mid-apply hazard but that's pre-existing and out of scope here.
-  const [keymapApplyInFlight, setKeymapApplyInFlight] = useState(false)
+  const handleApplyKeymapRewrite = useCallback(async (table: KeymapRewriteTable): Promise<KeymapApplyResult> => {
+    return await (keymapEditorRef.current?.applyKeymapRewrite(table) ?? Promise.resolve({ appliedCount: 0 }))
+  }, [])
+
+  // Plan-qwerty-select-no-rewrite v7 — シミュレーションタブ方式: lifted out of
+  // QuickSettingsSelects (the footer's Keyboard Layout select) because the
+  // Apply button that now opens this modal lives on KeymapEditor's
+  // simulation tab instead — both need the same pending/apply state, so it
+  // is owned here and threaded down to each. `handleKeyboardLayoutChange`
+  // still goes to the select as a plain display switch; `requestApply` goes
+  // to KeymapEditor's Apply button. `isApplying` (aliased `keymapApplyBusy`
+  // below) is also what gates the footer's Analyze button while a rewrite
+  // is mid-flight (see its own comment at the `analyzeDisabled` prop) — its
+  // true window fully contains the actual `applyKeymapRewrite` call (it
+  // flips true just before `onApplyKeymapRewrite` is invoked and clears
+  // only once that call settles), so no separate in-flight flag is needed.
+  const {
+    handleKeyboardLayoutChange: handleKeyboardLayoutSelectChange,
+    requestApply: requestKeymapApply,
+    pendingApply: pendingKeymapApply,
+    handleApplyCancel: handleKeymapApplyCancel,
+    handleApplyConfirm: handleKeymapApplyConfirm,
+    applyError: keymapApplyError,
+    isApplying: keymapApplyBusy,
+  } = useKeymapApplyPrompt({
+    keymapEditable: keyboard.keymap.size > 0,
+    keyboardLayout: devicePrefs.layout,
+    onKeyboardLayoutChange: devicePrefs.setLayout,
+    onApplyKeymapRewrite: handleApplyKeymapRewrite,
+    keymapRestoreSeq: keyboard.keymapRestoreSeq,
+  })
 
   const handleViewAnalytics = useCallback((origin: AnalyticsOrigin) => {
     // Each entry point states its own origin so Back returns there.
@@ -592,6 +614,23 @@ export function App() {
     devicePrefs.keyEditorZoom,
     appConfig.config.zoomFactor,
   ])
+
+  // Restore cleanup (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時の
+  // クリーンアップ): snapshot/layout-store restore and .vil import both
+  // converge on `applyVilFile`, which bumps `keymapRestoreSeq` on success.
+  // Reacting here (rather than inside KeymapEditor) is what reaches the
+  // Keyboard Layout select's confirm modal in QuickSettingsSelects (see its
+  // own `keymapRestoreSeq` prop below), which lives outside KeymapEditor.
+  // The counter is monotonic for the session (disconnect carries it forward
+  // instead of zeroing it, see keyboard-types.ts), so any change here means
+  // a restore landed.
+  const prevKeymapRestoreSeqRef = useRef(keyboard.keymapRestoreSeq)
+  useEffect(() => {
+    const prev = prevKeymapRestoreSeqRef.current
+    prevKeymapRestoreSeqRef.current = keyboard.keymapRestoreSeq
+    if (keyboard.keymapRestoreSeq === prev) return
+    keymapEditorRef.current?.clearHistory()
+  }, [keyboard.keymapRestoreSeq])
 
   const handleLoadEntry = useCallback(async (entryId: string) => {
     const entry = layoutStore.entries.find((e) => e.id === entryId)
@@ -856,6 +895,8 @@ export function App() {
             onSetLayoutOptions={keyboard.setLayoutOptions}
             remapLabel={devicePrefs.remapLabel}
             isRemapped={devicePrefs.isRemapped}
+            remapKind={devicePrefs.remapKind}
+            pickerRemapLabel={devicePrefs.pickerRemapLabel}
             onSetKey={keyboard.setKey}
             onSetKeysBulk={keyboard.setKeysBulk}
             onSetEncoder={keyboard.setEncoder}
@@ -900,7 +941,14 @@ export function App() {
             onQuickSelectChange={devicePrefs.setQuickSelect}
             keyboardLayout={devicePrefs.layout}
             onKeyboardLayoutChange={devicePrefs.setLayout}
-            onAppliedKeymapLayoutChange={devicePrefs.setAppliedKeymapLayout}
+            keymapPackName={devicePrefs.activeLayoutName}
+            onRequestKeymapApply={requestKeymapApply}
+            keymapApplyOpen={pendingKeymapApply !== null}
+            keymapApplyLabelName={pendingKeymapApply?.name}
+            keymapApplyBusy={keymapApplyBusy}
+            onKeymapApplyConfirm={handleKeymapApplyConfirm}
+            onKeymapApplyCancel={handleKeymapApplyCancel}
+            keymapApplyError={keymapApplyError}
             onLock={lifecycle.handleLock}
             onMatrixModeChange={editorUI.handleMatrixModeChange}
             onOpenLighting={editorUI.lightingSupported ? () => editorUI.setShowLightingModal(true) : undefined}
@@ -1053,7 +1101,16 @@ export function App() {
             keymapEditorRef.current?.toggleTypingTest()
           }}
           onOpenAnalyze={() => handleViewAnalytics('editor')}
-          analyzeDisabled={keymapApplyInFlight}
+          // Disabled while a Key Label "apply to keymap" rewrite is mid-
+          // flight: opening AnalyzePage unmounts KeymapEditor (and its
+          // `history`/undo stack) out from under the in-flight rewrite,
+          // which would otherwise land the batch history push in an
+          // unmounted component (making it un-undoable after Back) and
+          // fire the post-apply flash timer's setState after unmount.
+          // Typing View / Typing Test don't unmount the editor, so they're
+          // unaffected; Disconnect has the same mid-apply hazard but
+          // that's pre-existing and out of scope here.
+          analyzeDisabled={keymapApplyBusy}
           onViewAnalytics={() => handleViewAnalytics('typingTest')}
           viewAnalyticsDisabled={typingTestRunning}
           onDisconnect={editorUI.typingTestMode ? undefined : lifecycle.handleDisconnect}
@@ -1062,17 +1119,7 @@ export function App() {
             hubDisplayName: hub.hubDisplayName,
             hubCanWrite: hub.hubCanUpload,
             keyboardLayout: devicePrefs.layout,
-            onKeyboardLayoutChange: devicePrefs.setLayout,
-            keymapEditable: keyboard.keymap.size > 0,
-            appliedKeymapLayout: devicePrefs.appliedKeymapLayout,
-            onApplyKeymapRewrite: async (table, layoutIds) => {
-              setKeymapApplyInFlight(true)
-              try {
-                return await (keymapEditorRef.current?.applyKeymapRewrite(table, layoutIds) ?? Promise.resolve({ appliedCount: 0 }))
-              } finally {
-                setKeymapApplyInFlight(false)
-              }
-            },
+            onKeyboardLayoutChange: handleKeyboardLayoutSelectChange,
           }}
         />
       )}

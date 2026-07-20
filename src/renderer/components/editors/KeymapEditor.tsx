@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useCallback, useEffect, useMemo, useRef, useImperativeHandle, forwardRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useImperativeHandle, forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
 import { ViewMatrixPanel } from './ViewMatrixPanel'
 import { ZoomIn, ZoomOut, SlidersHorizontal } from 'lucide-react'
-import { ICON_SM, ICON_MD } from '../../constants/ui-tokens'
+import { ICON_SM, ICON_MD, BTN_PRIMARY_FOOTER } from '../../constants/ui-tokens'
 
 // Extracted modules
 import type { KeymapEditorProps as Props } from './keymap-editor-types'
-import { MIN_SCALE, MAX_SCALE, PANEL_COLLAPSED_WIDTH } from './keymap-editor-types'
+import { MIN_SCALE, MAX_SCALE, PANEL_COLLAPSED_WIDTH, EMPTY_REMAPPED } from './keymap-editor-types'
 export type { KeymapEditorHandle } from './keymap-editor-types'
 import { KeyboardPane } from './KeyboardPane'
 import { LayerListPanel } from './LayerListPanel'
@@ -26,7 +26,7 @@ import { useKeymapHistory } from './useKeymapHistory'
 import type { SingleHistoryEntry } from './useKeymapHistory'
 import { useKeyFlash } from './useKeyFlash'
 import { rewriteNumericKeycode } from '../../../shared/keymap/keymap-apply'
-import type { KeymapRewriteTable, KeymapRewriteLayoutIds } from '../../../shared/keymap/keymap-apply'
+import type { KeymapRewriteTable } from '../../../shared/keymap/keymap-apply'
 import type { KeymapApplyResult } from './keymap-editor-types'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { TypingTestPane } from './TypingTestPane'
@@ -35,12 +35,13 @@ import { useKeymapJsonEditors } from './useKeymapJsonEditors'
 import { useViewMatrixEditing } from './useViewMatrixEditing'
 import { KeymapEditorModals } from './KeymapEditorModals'
 import { useLayerKeycodes } from './use-layer-keycodes'
-
+import { KeymapPackTabs, type KeymapPackTab } from './KeymapPackTabs'
+import { KeymapApplyConfirmModal } from '../key-labels/KeymapApplyConfirmModal'
 
 export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEditorHandle, Props>(function KeymapEditor({
   keyboardUid, layout, layers, currentLayer, onLayerChange, keymap, encoderLayout, encoderCount,
   layoutOptions, layoutLabels, packedLayoutOptions, onSetLayoutOptions,
-  remapLabel, isRemapped, onSetKey, onSetKeysBulk, onSetEncoder,
+  remapLabel, isRemapped, remapKind, pickerRemapLabel, onSetKey, onSetKeysBulk, onSetEncoder,
   rows, cols, getMatrixState, unlocked, onUnlock,
   tapDanceEntries, onSetTapDanceEntry,
   macroCount, macroBufferSize, macroBuffer, vialProtocol, parsedMacros, onSaveMacros,
@@ -49,8 +50,9 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   supportedQsids, qmkSettingsGet, qmkSettingsSet, qmkSettingsReset, onSettingsUpdate,
   autoAdvance = true, onAutoAdvanceChange, viewMatrix, onViewMatrixChange,
   basicViewType, onBasicViewTypeChange, splitKeyMode, onSplitKeyModeChange,
-  quickSelect, onQuickSelectChange, keyboardLayout: _keyboardLayout = 'qwerty', onKeyboardLayoutChange: _onKeyboardLayoutChange,
-  onAppliedKeymapLayoutChange,
+  quickSelect, onQuickSelectChange, keyboardLayout = 'qwerty', onKeyboardLayoutChange: _onKeyboardLayoutChange,
+  keymapPackName, onRequestKeymapApply,
+  keymapApplyOpen, keymapApplyLabelName, keymapApplyBusy, onKeymapApplyConfirm, onKeymapApplyCancel, keymapApplyError,
   onLock, onMatrixModeChange, onOpenLighting,
   comboEntries, onOpenCombo, onSetComboEntry,
   keyOverrideEntries, onOpenKeyOverride, onSetKeyOverrideEntry,
@@ -146,7 +148,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     selectableKeys, autoAdvance, viewMatrix,
     onSetKey, onSetKeysBulk, onSetEncoder, unlocked, onUnlock,
     multiSelect, history,
-    onAppliedKeymapLayoutChange,
     onHistoryApplied: triggerFlash,
     tapDanceEntries, onSetTapDanceEntry,
     macroCount, macroBufferSize, macroBuffer, onSaveMacros,
@@ -166,6 +167,28 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     matrixMode, handleMatrixToggle, handleDeselect, handleKeycodeSelect,
   })
 
+  // --- Simulation/Base tab (Plan-qwerty-select-no-rewrite v7 — シミュレー
+  // ションタブ方式). Local to this component: which of the two vertical
+  // tabs (pack-name simulation vs. the real "Base" keymap) is showing when
+  // `remapKind === 'simulated'` shows them at all — see `showPackTabs`
+  // below. Defaults to the simulation tab; a user switch to Base persists
+  // only until the next uid change (see the reset in the effect below), not
+  // across a select change or a re-render. ---
+  const [packTab, setPackTab] = useState<KeymapPackTab>('pack')
+  // Switching TO the simulation tab also drops any live selection/multi-
+  // select/picker-selection state — belt-and-braces on top of that pane's
+  // own `readOnly` (which already blocks every click/dblclick path into
+  // it): without this, a key selected on Base right before switching tabs
+  // would stay selected in the (invisible) shared selection state, and a
+  // picker click while viewing the simulation tab would still paste into
+  // it. handleDeselect is defined further below (useKeymapSelectionHandlers)
+  // but is stable across renders, so referencing it from this callback
+  // (declared after) is safe — see its own useCallback deps.
+  const handlePackTabChange = useCallback((tab: KeymapPackTab) => {
+    setPackTab(tab)
+    if (tab === 'pack') handleDeselect()
+  }, [handleDeselect])
+
   // Clear history and exit View Matrix mode on keyboard/context switch or disconnect
   const prevUidRef = useRef(keyboardUid)
   const keymapSize = keymap.size
@@ -174,8 +197,30 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       prevUidRef.current = keyboardUid
       history.clear()
       viewMatrixMode.exit()
+      setPackTab('pack')
     }
   }, [keyboardUid, keymapSize, history.clear, viewMatrixMode.exit])
+
+  // Reset to the simulation tab whenever the selected Key Label / layout
+  // changes (the footer's Keyboard Layout select — `keyboardLayout` here is
+  // the exact same value `useDevicePrefs.layout` feeds into `remapKind`'s
+  // own derivation). Without this, a user parked on the Base tab who then
+  // picks a different pack sees no visible change: the newly selected
+  // pack's simulated keymap only ever renders on the pack tab, and
+  // `remapKind` alone can't signal the switch since it stays `'simulated'`
+  // across two different permutation packs. Same prev-value-ref idiom as
+  // the uid reset above (own ref, not folded into it — that effect also
+  // clears history/View Matrix, which a same-uid layout change must not
+  // trigger) — only acts on an actual change, not on mount or every
+  // render, so a manual tab click right after a layout change isn't
+  // immediately undone by a stray re-render.
+  const prevKeyboardLayoutRef = useRef(keyboardLayout)
+  useEffect(() => {
+    if (keyboardLayout !== prevKeyboardLayoutRef.current) {
+      prevKeyboardLayoutRef.current = keyboardLayout
+      setPackTab('pack')
+    }
+  }, [keyboardLayout])
 
   // Surface the editor test's run state so the host can disable the
   // StatusBar "View Analytics" button mid-run (it lives in the footer, not
@@ -246,7 +291,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   const applyKeymapRewrite = useCallback(async (
     table: KeymapRewriteTable,
-    layoutIds?: KeymapRewriteLayoutIds,
   ): Promise<KeymapApplyResult> => {
     // Re-entrancy guard: a double Apply click (or any other concurrent
     // caller) must never interleave two rewrite passes against the same
@@ -298,32 +342,35 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         error = err instanceof Error ? err.message : String(err)
       }
 
-      // Unmounted mid-rewrite: skip ALL bookkeeping below (history push,
-      // appliedKeymapLayout persistence, post-apply flash state/timer) —
-      // the component is gone, so there is nothing left to flash and no
-      // history stack of this instance to push onto. The device is left
-      // mid-rewrite exactly like a partial-failure apply; the counts are
-      // still returned to the caller for its own error surfacing.
+      // Unmounted mid-rewrite: skip ALL bookkeeping below (history clear,
+      // post-apply flash state/timer) — the component is gone, so there is
+      // nothing left to flash and no history stack of this instance to
+      // touch. The device is left mid-rewrite exactly like a
+      // partial-failure apply; the counts are still returned to the caller
+      // for its own error surfacing.
+      //
+      // Rewrite is a destructive one-shot (Plan-qwerty-select-no-rewrite v5
+      // 最終仕様), same class of operation as a snapshot/.vil restore: the
+      // moment ANY write actually landed, both undo/redo stacks are wiped
+      // rather than gaining a revertible batch entry — no history entry is
+      // ever pushed for a rewrite, success or partial failure alike.
+      // Recovery from a bad or partial rewrite is the user's own
+      // .vil/snapshot backup (the confirm modal recommends saving before
+      // applying), not Undo. A rewrite that touched nothing (table matched
+      // no live keycode, or the very first write itself failed) leaves
+      // history untouched — nothing was destroyed, so there's nothing to
+      // protect the user from.
+      //
+      // This clear fires on ANY landed write, including a partial failure —
+      // it is unconditional on `error`. The OTHER half of the destructive
+      // one-shot contract — resetting the footer's select back to QWERTY —
+      // lives one layer up, in `useKeymapApplyPrompt.handleApplyConfirm`,
+      // and fires ONLY on a clean (error-free) success; a partial failure
+      // leaves the select untouched there. Shared invariant: a rewrite
+      // leaves no undo trail; only a clean success returns the select to
+      // QWERTY.
       if (applied.length > 0 && isMountedRef.current) {
-        // Only attach appliedKeymapLayout bookkeeping when the rewrite
-        // completed without error. A partial failure leaves the keymap in
-        // a MIXED state (some positions rewritten, some not) — it's
-        // neither still `layoutIds.before` nor fully `layoutIds.after`, so
-        // claiming either would be wrong. Push a plain batch instead: undo
-        // needs no bookkeeping to correctly return the keymap (and
-        // appliedKeymapLayout, left untouched) to its prior state.
-        const bookkeepable = error === undefined ? layoutIds : undefined
-        history.push(
-          bookkeepable
-            ? { kind: 'batch', entries: applied, appliedLayoutBefore: bookkeepable.before, appliedLayoutAfter: bookkeepable.after }
-            : { kind: 'batch', entries: applied },
-        )
-        // Persist PipetteSettings.appliedKeymapLayout immediately on a
-        // successful rewrite (Plan-key-label-keymap-apply, 追加要求
-        // 2026-07-18) — undo/redo of the batch entry just pushed keeps it
-        // in sync afterwards via the same callback (useKeymapSelectionHandlers).
-        if (bookkeepable) onAppliedKeymapLayoutChange?.(bookkeepable.after)
-
+        history.clear()
         // Flash the rewritten positions (see `useKeyFlash`) — only for a
         // clean, error-free pass. A partial failure leaves the keymap
         // mixed, which isn't the "here's what changed" story this visual
@@ -334,32 +381,87 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     } finally {
       isApplyingRewriteRef.current = false
     }
-  }, [keymap, encoderLayout, onSetKey, onSetEncoder, history, onAppliedKeymapLayoutChange, triggerFlash])
+  }, [keymap, encoderLayout, onSetKey, onSetEncoder, history, triggerFlash])
 
   useImperativeHandle(ref, () => ({
     toggleMatrix: handleMatrixToggle, toggleTypingTest: handleTypingTestToggle,
     matrixMode, hasMatrixTester,
     applyKeymapRewrite,
-  }), [handleMatrixToggle, handleTypingTestToggle, matrixMode, hasMatrixTester, applyKeymapRewrite])
+    clearHistory: history.clear,
+  }), [handleMatrixToggle, handleTypingTestToggle, matrixMode, hasMatrixTester, applyKeymapRewrite, history.clear])
 
   // --- Layer keycode builders (current layer / typing test / picker) ---
   const {
     deserializedMacros, configuredKeycodes,
     buildKeycodesForLayer, buildEncoderKeycodesForLayer,
-    layerKeycodes, remappedKeys, layerEncoderKeycodes,
-    typingTestKeycodes, typingTestRemapped, typingTestEncoderKeycodes,
+    layerKeycodes, remappedKeys, layerEncoderKeycodes, layerEncoderRemapped,
+    typingTestKeycodes, typingTestRemapped, typingTestEncoderKeycodes, typingTestEncoderRemapped,
   } = useLayerKeycodes({
     parsedMacros, macroBuffer, macroCount, vialProtocol, tapDanceEntries,
     remapLabel, isRemapped, keymap, encoderLayout, encoderCount, currentLayer,
     typingTestMode, typingTestEffectiveLayer: typingTest.effectiveLayer,
   })
 
+  // FIX C (external review): a keymap must actually be loaded for a
+  // Rewrite to mean anything — `useKeymapApplyPrompt.requestApply` already
+  // no-ops when `keymapEditable` is false (App.tsx passes `keyboard.keymap
+  // .size > 0` into that hook), but nothing here previously folded that
+  // into tab/button VISIBILITY, so a permutation pack could show a
+  // tabs+Apply UI that silently did nothing when clicked. Derived straight
+  // from this component's own `keymap` prop — the exact same `Map` App.tsx
+  // reads `.size` off of for the hook — rather than a second prop that
+  // could drift out of sync with it.
+  const keymapEditable = keymap.size > 0
+
+  // SINGLE PREDICATE (Plan-qwerty-select-no-rewrite v7): `remapKind` is
+  // ALREADY the unified "does the active pack want a keymap rewrite"
+  // signal (see `useDevicePrefs.ts` — it's gated on `keymapApplicable &&
+  // buildKeymapRewriteTable(map).ok`, not `.ok` alone); combined with
+  // `keymapEditable` above, this is the SAME condition `requestApply`
+  // itself requires, so tab AND Apply-button visibility (the button only
+  // ever renders nested inside the tabs branch below, never standalone)
+  // both collapse onto this one boolean rather than needing separate
+  // checks that could disagree. Suppressed during typing test / View
+  // Matrix mode too, neither of which has a concept of a second (Base)
+  // keymap surface to switch to.
+  const showPackTabs = remapKind === 'simulated' && keymapEditable && !typingTestMode && !viewMatrixMode.active
+  // True exactly while the visible pane is the read-only simulation tab —
+  // gates both `KeyboardPane`'s own `readOnly` and every picker edit path
+  // (TabbedKeycodes/tabContentOverride below), belt-and-braces on top of
+  // `handlePackTabChange` already clearing any live selection when this
+  // becomes true.
+  const packTabReadOnly = showPackTabs && packTab === 'pack'
+
+  // Raw (never remapped) keycodes for the Base tab — same underlying
+  // keymap/macro data as `layerKeycodes` above, built with `remapLabel`/
+  // `isRemapped` omitted so `useLayerKeycodes` falls back to identity (see
+  // its own `remap`/`checkRemapped` defaults). `enabled` skips the whole
+  // O(keymap size) build (and the duplicate macro parse) whenever this
+  // instance's output isn't actually being shown — tabs hidden, or the
+  // simulation tab active — rather than paying for it every render.
+  const { layerKeycodes: baseLayerKeycodes, layerEncoderKeycodes: baseLayerEncoderKeycodes } = useLayerKeycodes({
+    parsedMacros, macroBuffer, macroCount, vialProtocol, tapDanceEntries,
+    keymap, encoderLayout, encoderCount, currentLayer,
+    typingTestMode: false, typingTestEffectiveLayer: 0,
+    enabled: showPackTabs && packTab === 'base',
+  })
+
   // --- Layout picker (device browse / file browse / probe / keyboard view) ---
+  // The Keyboard tab's keyboard-as-picker (`LayoutPickerContent`'s
+  // secondary `<KeyboardPane>`) has its OWN click handler
+  // (`handlePickerKeyClick`), entirely separate from `TabbedKeycodes`'
+  // `onKeycodeSelect`/`onKeycodeMultiSelect` gated below — gating those
+  // alone left this surface fully live during the simulation tab (it can
+  // paste into whatever `selectedKey`/`selectedEncoder` the shared state
+  // holds, or start a picker multi-select, regardless of what's selected
+  // on THIS surface). Same `packTabReadOnly` gate as every other edit path.
   const { layoutPickerContent } = useLayoutPicker({
     layout, layers, layerNames, keymap, effectiveLayoutOptions, remapLabel,
     scale: scaleProp, onScaleChange,
     devices, connectedDevice, onDeviceListActiveChange,
-    selectedKey, selectedEncoder, handleKeycodeSelect, handlePickerMultiSelect,
+    selectedKey, selectedEncoder,
+    handleKeycodeSelect: packTabReadOnly ? undefined : handleKeycodeSelect,
+    handlePickerMultiSelect: packTabReadOnly ? undefined : handlePickerMultiSelect,
     pickerSelectedIndices, clearPickerSelection: multiSelect.clearPickerSelection,
     buildKeycodesForLayer, buildEncoderKeycodesForLayer,
   })
@@ -399,15 +501,53 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const tabContentOverride = useTileContentOverride({
     tapDanceEntries,
     deserializedMacros,
-    onSelect: gatedHandleKeycodeSelect,
+    // Same simulation-tab read-only gate as the picker's own
+    // onKeycodeSelect below — the "configured" tile overlay is another
+    // click-driven edit entry point into the shared selection state.
+    // `useTileContentOverride`'s own `onSelect` is optional, so `undefined`
+    // is enough (it falls back to its own internal no-op).
+    onSelect: packTabReadOnly ? undefined : gatedHandleKeycodeSelect,
     settings: { comboEntries, onOpenCombo, keyOverrideEntries, onOpenKeyOverride, altRepeatKeyEntries, onOpenAltRepeatKey },
   })
 
   if (!layout) return <div className="p-4 text-content-muted">{t('common.loading')}</div>
 
+  const applyButtonNode = onRequestKeymapApply ? (
+    <span className="flex items-center gap-2">
+      <button
+        type="button"
+        className={BTN_PRIMARY_FOOTER}
+        onClick={onRequestKeymapApply}
+        disabled={!!keymapApplyBusy}
+        data-testid="keymap-pack-apply-button"
+      >
+        {t('common.apply')}
+      </button>
+      {keymapApplyError && (
+        <span className="text-xs text-danger" data-testid="keymap-apply-error">
+          {t('keyLabels.keymapApply.errorPartial')}
+        </span>
+      )}
+    </span>
+  ) : undefined
+
   function layerLabel(layer: number): string {
     return layerNames?.[layer] || t('editor.keymap.layerN', { n: layer })
   }
+
+  // Base tab's data source (Plan-qwerty-select-no-rewrite v7): the SAME
+  // "no tabs" `<KeyboardPane>` JSX below renders both the plain (no-tabs)
+  // state and `showPackTabs && packTab === 'base'` — only these source
+  // variables differ between the two. Raw/identity (`baseLayer*`,
+  // `EMPTY_REMAPPED`, `undefined` remapLabel) while on the Base tab;
+  // otherwise the normal `remapLabel`/`isRemapped`-driven values every
+  // other state (JIS, QWERTY, View Matrix, ...) already used.
+  const onBaseTab = showPackTabs && packTab === 'base'
+  const primaryKeycodes = onBaseTab ? baseLayerKeycodes : layerKeycodes
+  const primaryEncoderKeycodes = onBaseTab ? baseLayerEncoderKeycodes : layerEncoderKeycodes
+  const primaryRemappedKeys = onBaseTab ? EMPTY_REMAPPED : remappedKeys
+  const primaryRemappedEncoders = onBaseTab ? EMPTY_REMAPPED : layerEncoderRemapped
+  const primaryRemapLabel = onBaseTab ? undefined : remapLabel
 
   return (
     <div className={`flex min-h-0 flex-1 flex-col ${typingTestMode && typingTestViewOnly ? '' : 'gap-3'}`}>
@@ -453,12 +593,27 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             onAxisChange={handleViewMatrixAxisChange}
           />
         )}
-        <div className={typingTestMode
-          ? 'flex min-h-0 min-w-0 flex-1 flex-col gap-3'
-          // View Matrix mode stacks the keymap above its relocated zoom
-          // row (sketch: "keymap" over "zoom controls" in the right
-          // column); normal mode keeps the single-child centered row.
-          : viewMatrixMode.active ? 'flex min-w-0 flex-1 flex-col items-center justify-center gap-2 overflow-auto' : 'flex min-w-0 flex-1 items-center justify-center gap-4 overflow-auto'}>
+        {/* Single container for the active keymap surface (TypingTestPane OR
+            KeyboardPane — only one renders at a time). `remap-simulated`
+            (style.css) overrides `--key-label-remap` for every descendant
+            KeyWidget/EncoderWidget, so a permutation pack's Display Only
+            tint is a pure CSS cascade override rather than a `remapKind`
+            prop threaded through KeyboardPane/TypingTestPane/KeyboardWidget/
+            KeyWidget/EncoderWidget. The key picker and popover render as
+            siblings further down (or in the sibling `TabbedKeycodes` block),
+            never inside this container, so their "actual" tint is
+            unaffected — see `useDevicePrefs.ts`'s `remapKind` doc comment
+            for the simulated/actual decision itself. */}
+        <div
+          data-testid="keymap-surface"
+          className={`${typingTestMode
+            ? 'flex min-h-0 min-w-0 flex-1 flex-col gap-3'
+            // View Matrix mode stacks the keymap above its relocated zoom
+            // row (sketch: "keymap" over "zoom controls" in the right
+            // column); normal mode keeps the single-child centered row.
+            : viewMatrixMode.active ? 'flex min-w-0 flex-1 flex-col items-center justify-center gap-2 overflow-auto' : 'flex min-w-0 flex-1 items-center justify-center gap-4 overflow-auto'
+          }${remapKind === 'simulated' && (!showPackTabs || packTab === 'pack') ? ' remap-simulated' : ''}`}
+        >
           {typingTestMode ? (
             <TypingTestPane
               typingTest={typingTest}
@@ -475,6 +630,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               keycodes={typingTestKeycodes}
               encoderKeycodes={typingTestEncoderKeycodes}
               remappedKeys={typingTestRemapped}
+              remappedEncoders={typingTestEncoderRemapped}
               remapLabel={remapLabel}
               layoutOptions={effectiveLayoutOptions}
               scale={scaleProp}
@@ -528,20 +684,66 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             />
           ) : (
             <>
-              <KeyboardPane
-                paneId="primary" isActive={true}              keys={layout.keys} keycodes={layerKeycodes} encoderKeycodes={layerEncoderKeycodes}
-                selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
-                pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
-                remappedKeys={remappedKeys} flash={flash} multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
-                layoutOptions={effectiveLayoutOptions} scale={scaleProp}
-                labelOverrides={viewMatrixLabelOverrides} keyColors={viewMatrixDuplicateKeyColors} remapLabel={remapLabel}
-                layerLabel={viewMatrixMode.active ? undefined : layerLabel(currentLayer)} layerLabelTestId="layer-label"
-                onKeyClick={viewMatrixMode.active ? handleViewMatrixKeyClick : handleKeyClick}
-                onKeyDoubleClick={viewMatrixMode.active ? undefined : handleKeyDoubleClick}
-                onEncoderClick={viewMatrixMode.active ? undefined : handleEncoderClick}
-                onEncoderDoubleClick={viewMatrixMode.active ? undefined : handleEncoderDoubleClick}
-                onDeselect={viewMatrixMode.active ? viewMatrixMode.clearSelection : handleDeselect} contentRef={keyboardContentRef}
-              />
+              {/* Simulation/Base tabs (Plan-qwerty-select-no-rewrite v7):
+                  the vertical tab strip sits to the RIGHT of the keymap
+                  pane, attached flush to its edge (index/sticky-note style
+                  — see `KeymapPackTabs`). The wrapping `flex items-stretch`
+                  div with no gap is what keeps the strip touching the pane
+                  regardless of this row's own `gap-4` (which only spaces
+                  this pane+tabs unit from its own siblings, e.g. the
+                  overlay-panel spacer). View Matrix mode is excluded from
+                  `showPackTabs` above, so it can never overlap with either
+                  tab. */}
+              <div className="flex items-stretch">
+                {showPackTabs && packTab === 'pack' ? (
+                  // Simulation pane: display data only — no selection props,
+                  // no click/double-click/deselect handlers at all. `readOnly`
+                  // (always `true` here, not a ternary) already makes
+                  // `KeyboardWidget` null out every handler it's given
+                  // regardless, and `KeyboardPane`'s own deselect-on-
+                  // background-click checks `!readOnly` too — omitting the
+                  // handlers here as well means read-only holds by
+                  // construction, not by three separate `packTab === 'pack'`
+                  // checks that could drift out of sync.
+                  <KeyboardPane
+                    paneId="primary" isActive={true}
+                    keys={layout.keys} keycodes={layerKeycodes} encoderKeycodes={layerEncoderKeycodes}
+                    selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
+                    pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
+                    remappedKeys={remappedKeys} remappedEncoders={layerEncoderRemapped}
+                    layoutOptions={effectiveLayoutOptions} scale={scaleProp}
+                    remapLabel={remapLabel}
+                    layerLabel={layerLabel(currentLayer)} layerLabelTestId="layer-label"
+                    preview
+                    footerExtra={applyButtonNode}
+                    readOnly
+                    contentRef={keyboardContentRef}
+                  />
+                ) : (
+                  // Also the "no tabs" pane (JIS/QWERTY/typing-test-adjacent
+                  // states) — the `showPackTabs && packTab === 'base'`
+                  // case reuses this exact block rather than a second copy,
+                  // swapping only the keycode/remap source variables below
+                  // (`primaryKeycodes` etc.) for the Base tab's raw data.
+                  <KeyboardPane
+                    paneId="primary" isActive={true}              keys={layout.keys} keycodes={primaryKeycodes} encoderKeycodes={primaryEncoderKeycodes}
+                    selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
+                    pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
+                    remappedKeys={primaryRemappedKeys} remappedEncoders={primaryRemappedEncoders} flash={flash} multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
+                    layoutOptions={effectiveLayoutOptions} scale={scaleProp}
+                    labelOverrides={viewMatrixLabelOverrides} keyColors={viewMatrixDuplicateKeyColors} remapLabel={primaryRemapLabel}
+                    layerLabel={viewMatrixMode.active ? undefined : layerLabel(currentLayer)} layerLabelTestId="layer-label"
+                    onKeyClick={viewMatrixMode.active ? handleViewMatrixKeyClick : handleKeyClick}
+                    onKeyDoubleClick={viewMatrixMode.active ? undefined : handleKeyDoubleClick}
+                    onEncoderClick={viewMatrixMode.active ? undefined : handleEncoderClick}
+                    onEncoderDoubleClick={viewMatrixMode.active ? undefined : handleEncoderDoubleClick}
+                    onDeselect={viewMatrixMode.active ? viewMatrixMode.clearSelection : handleDeselect} contentRef={keyboardContentRef}
+                  />
+                )}
+                {showPackTabs && (
+                  <KeymapPackTabs activeTab={packTab} onTabChange={handlePackTabChange} packName={keymapPackName ?? ''} />
+                )}
+              </div>
               {/* View Matrix mode's relocated zoom row — same controls as
                   the normal-mode toolbar, moved below the keymap pane —
                   plus the same Ctrl/Shift multi-select hint the keycode
@@ -589,7 +791,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onClose={() => setPopoverState(null)} quickSelect={quickSelect}
           previousKeycode={popoverUndoKeycode} onUndo={handlePopoverUndo}
           nextKeycode={popoverRedoKeycode} onRedo={handlePopoverRedo}
-          remapLabel={remapLabel}
+          remapLabel={pickerRemapLabel}
         />
       )}
 
@@ -606,14 +808,20 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           )}
           <TabbedKeycodes
             keyboardPickerContent={layoutPickerContent}
-            onKeycodeSelect={gatedHandleKeycodeSelect} onKeycodeMultiSelect={handlePickerMultiSelect}
+            // Simulation tab is completely read-only (Plan-qwerty-select-
+            // no-rewrite v7): no picker click can paste into the shared
+            // selection state, and no picker multi-select can accumulate a
+            // selection that would still be sitting there — pasteable —
+            // once the user switches back to Base.
+            onKeycodeSelect={packTabReadOnly ? undefined : gatedHandleKeycodeSelect}
+            onKeycodeMultiSelect={packTabReadOnly ? undefined : handlePickerMultiSelect}
             pickerSelectedIndices={pickerSelectedIndices}
-            pickerMultiSelectEnabled={!selectedKey && !selectedEncoder}
+            pickerMultiSelectEnabled={!packTabReadOnly && !selectedKey && !selectedEncoder}
             onBackgroundClick={handleDeselect}
             onTabChange={() => { multiSelect.clearPickerSelection() }}
             highlightedKeycodes={configuredKeycodes} maskOnly={isMaskKey} lmMode={isLMMask} showHint={!isMaskKey}
             tabFooterContent={tabFooterContent} tabContentOverride={tabContentOverride}
-            basicViewType={basicViewType} onBasicViewTypeChange={onBasicViewTypeChange} splitKeyMode={splitKeyMode} remapLabel={remapLabel}
+            basicViewType={basicViewType} onBasicViewTypeChange={onBasicViewTypeChange} splitKeyMode={splitKeyMode} remapLabel={pickerRemapLabel}
             tabBarRight={
               <Tooltip content={t('editorSettings.title')}>
                 <button ref={layoutButtonRef} type="button" aria-label={t('editorSettings.title')}
@@ -668,6 +876,13 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         visibleModals={visibleModals} closeSettings={closeSettings}
       />
 
+      <KeymapApplyConfirmModal
+        open={!!keymapApplyOpen}
+        labelName={keymapApplyLabelName ?? ''}
+        onApply={() => onKeymapApplyConfirm?.()}
+        onCancel={() => onKeymapApplyCancel?.()}
+        busy={!!keymapApplyBusy}
+      />
     </div>
   )
 })

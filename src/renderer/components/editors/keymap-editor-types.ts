@@ -10,7 +10,8 @@ import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
 import type { TypingTestResult, TypingViewMenuTab, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { FavHubEntryResult } from './FavoriteHubActions'
-import type { KeymapRewriteTable, KeymapRewriteLayoutIds } from '../../../shared/keymap/keymap-apply'
+import type { KeymapRewriteTable } from '../../../shared/keymap/keymap-apply'
+import type { RemapKind } from '../keyboard/constants'
 
 export const MIN_SCALE = 0.3
 export const MAX_SCALE = 2.0
@@ -53,15 +54,20 @@ export interface KeymapEditorHandle {
   toggleTypingTest: () => void
   matrixMode: boolean
   hasMatrixTester: boolean
-  /** Bulk-rewrite every keymap/encoder position via `table`, as ONE
-   *  `{kind:'batch'}` entry on the same undo stack the editor's own
-   *  per-key edits use (Plan-key-label-keymap-apply Phase 3). When
-   *  `layoutIds` is passed (the footer's composed-rewrite flow, 追加要求
-   *  2026-07-18), the batch also records `appliedLayoutBefore`/
-   *  `appliedLayoutAfter` for undo/redo bookkeeping, and — on a
-   *  successfully-applied batch — `onAppliedKeymapLayoutChange` fires
-   *  immediately with `layoutIds.after`. */
-  applyKeymapRewrite: (table: KeymapRewriteTable, layoutIds?: KeymapRewriteLayoutIds) => Promise<KeymapApplyResult>
+  /** Bulk-rewrite every keymap/encoder position via `table` (Plan-key-
+   *  label-keymap-apply Phase 3). Destructive one-shot (Plan-qwerty-
+   *  select-no-rewrite v5 最終仕様): the moment any write actually lands,
+   *  the undo/redo stacks are wiped instead of gaining a revertible batch
+   *  entry — recovery is the user's own .vil/snapshot backup, not Undo. */
+  applyKeymapRewrite: (table: KeymapRewriteTable) => Promise<KeymapApplyResult>
+  /** Wipes the undo/redo stack in place, without touching the keymap itself.
+   *  Called by the host (App.tsx) after a snapshot/layout-store restore or
+   *  `.vil` import replaces the whole keymap out from under this same
+   *  mounted editor instance (Plan-qwerty-select-no-rewrite §snapshot/.vil
+   *  復元時のクリーンアップ) — those flows keep the same uid and never empty
+   *  the keymap, so KeymapEditor's own uid/keymap-size clear effect never
+   *  fires on its own. */
+  clearHistory: () => void
 }
 
 export interface KeymapEditorProps {
@@ -79,6 +85,23 @@ export interface KeymapEditorProps {
   onSetLayoutOptions?: (options: number) => Promise<void>
   remapLabel?: (qmkId: string) => string
   isRemapped?: (qmkId: string) => boolean
+  /** Which remap tint `isRemapped`-tinted keys use on the keymap surface
+   *  (keymap pane + typing-test pane) — see `RemapKind` in
+   *  `components/keyboard/constants.ts` and `useDevicePrefs.ts`'s
+   *  `remapKind` for the gating logic. Applied as a pure CSS override
+   *  (the `remap-simulated` class in `style.css`) on the single container
+   *  that wraps the active keymap surface — it does NOT thread further
+   *  into KeyboardPane/TypingTestPane/KeyboardWidget/KeyWidget/
+   *  EncoderWidget, which only ever know `--key-label-remap` via
+   *  `KEY_REMAP_COLOR`. Defaults to `'actual'`. */
+  remapKind?: RemapKind
+  /** Picker-only variant of `remapLabel` (Plan-qwerty-select-no-rewrite
+   *  v6, Phase P) — identity for a pure QWERTY-permutation pack, same as
+   *  `remapLabel` otherwise. Threaded ONLY to the picker surface
+   *  (`TabbedKeycodes`, the key popover); the keymap legend itself keeps
+   *  using `remapLabel` unconditionally. See `useDevicePrefs.ts` for the
+   *  full rationale. */
+  pickerRemapLabel?: (qmkId: string) => string
   onSetKey: (layer: number, row: number, col: number, keycode: number) => Promise<void>
   onSetKeysBulk: (entries: BulkKeyEntry[]) => Promise<void>
   onSetEncoder: (layer: number, idx: number, dir: number, keycode: number) => Promise<void>
@@ -122,11 +145,28 @@ export interface KeymapEditorProps {
   onQuickSelectChange?: (enabled: boolean) => void
   keyboardLayout?: KeyboardLayoutId
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
-  /** Persists `PipetteSettings.appliedKeymapLayout` (Plan-key-label-keymap-apply,
-   *  追加要求 2026-07-18). Fired by `applyKeymapRewrite` on a successful
-   *  rewrite and by undo/redo of that rewrite's batch history entry — never
-   *  by the display-only `onKeyboardLayoutChange` path. */
-  onAppliedKeymapLayoutChange?: (id: string) => void
+  /** Display name of the active Key Label pack — labels the simulation
+   *  tab's top button. Only read while `remapKind === 'simulated'`
+   *  (Plan-qwerty-select-no-rewrite v7). */
+  keymapPackName?: string
+  /** Opens the Rewrite confirm modal for the pack currently active in
+   *  `keyboardLayout` — wired to `useKeymapApplyPrompt().requestApply`.
+   *  Called by the simulation tab's Apply button (layer-indicator row). */
+  onRequestKeymapApply?: () => void
+  /** Non-null while the Rewrite confirm modal should be open — mirrors
+   *  `useKeymapApplyPrompt().pendingApply !== null`. */
+  keymapApplyOpen?: boolean
+  /** Display name shown in the confirm modal's title — mirrors
+   *  `useKeymapApplyPrompt().pendingApply?.name`. */
+  keymapApplyLabelName?: string
+  /** True while the confirm apply is in flight — mirrors
+   *  `useKeymapApplyPrompt().isApplying`. Disables the modal's buttons. */
+  keymapApplyBusy?: boolean
+  onKeymapApplyConfirm?: () => void
+  onKeymapApplyCancel?: () => void
+  /** Set after a partial-failure apply — mirrors
+   *  `useKeymapApplyPrompt().applyError`. Shown near the Apply button. */
+  keymapApplyError?: string | null
   onLock?: () => void
   onMatrixModeChange?: (matrixMode: boolean, hasMatrixTester: boolean) => void
   onOpenLighting?: () => void

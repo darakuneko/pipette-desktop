@@ -286,18 +286,18 @@
 <body>
 
 <h1>Theme Pack Authoring Guide <small>Pipette Desktop</small></h1>
-<p class="subtitle">A complete reference for creating custom colour themes. All 34 colour tokens explained with visual examples, default values, and design tips.</p>
+<p class="subtitle">A complete reference for creating custom colour themes. 35 required colour tokens plus 1 optional token explained with visual examples, default values, and design tips.</p>
 
 <!-- ======================================== -->
 <h2>1. Token Categories</h2>
-<p>Theme packs define 34 colour tokens grouped into 7 categories. Every token is required.</p>
+<p>Theme packs define 35 required colour tokens grouped into 7 categories, plus 1 optional token (<code>key-label-simulated</code>, in the Key category) that falls back to an automatic value when omitted.</p>
 
 <div class="section-grid">
   <span class="section-chip" style="background:#e0e7ff;border-color:#a5b4fc;color:#3730a3;">Surface (4)</span>
   <span class="section-chip" style="background:#fce7f3;border-color:#f9a8d4;color:#9d174d;">Content (4)</span>
   <span class="section-chip" style="background:#d1fae5;border-color:#6ee7b7;color:#065f46;">Edge (3)</span>
-  <span class="section-chip" style="background:#fef3c7;border-color:#fcd34d;color:#92400e;">Semantic (6)</span>
-  <span class="section-chip" style="background:#e0f2fe;border-color:#7dd3fc;color:#0c4a6e;">Key (9)</span>
+  <span class="section-chip" style="background:#fef3c7;border-color:#fcd34d;color:#92400e;">Semantic (7)</span>
+  <span class="section-chip" style="background:#e0f2fe;border-color:#7dd3fc;color:#0c4a6e;">Key (10, 1 optional)</span>
   <span class="section-chip" style="background:#f3e8ff;border-color:#c4b5fd;color:#5b21b6;">Tab (3)</span>
   <span class="section-chip" style="background:#ecfdf5;border-color:#86efac;color:#14532d;">Picker (5)</span>
 </div>
@@ -429,7 +429,7 @@
 
 <!-- ======================================== -->
 <h2>3. Complete Token Reference</h2>
-<p>All 34 tokens with their default values in the built-in Light and Dark themes. When a theme pack is active, your single set of values replaces both columns — there is no per-mode split.</p>
+<p>All 36 tokens (35 required + 1 optional) with their default values in the built-in Light and Dark themes. When a theme pack is active, your single set of values replaces both columns — there is no per-mode split.</p>
 
 <div class="card" style="padding:0;overflow:hidden;">
 <table class="color-table">
@@ -607,10 +607,16 @@
       <td class="swatch-cell"><span class="swatch" style="background:#7a839a;"></span><span class="swatch-value">#7a839a</span></td>
     </tr>
     <tr>
-      <td><span class="token-name">key-label-remap</span><br><span class="token-usage">Remapped key label highlight</span></td>
-      <td class="token-desc">Label colour for keys that have been remapped from their default assignment. Draws attention to customised keys.</td>
+      <td><span class="token-name">key-label-remap</span><br><span class="token-usage">Remapped key label highlight ("actual")</span></td>
+      <td class="token-desc">Label colour for keys whose shown legend is truthful — JIS-type display remaps, keys a Rewrite has actually changed, and the key picker. Draws attention to customised keys.</td>
       <td class="swatch-cell"><span class="swatch" style="background:#0000ff;"></span><span class="swatch-value">#0000ff</span></td>
       <td class="swatch-cell"><span class="swatch" style="background:#f7a948;"></span><span class="swatch-value">#f7a948</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">key-label-simulated</span><br><span class="token-usage">Simulated key label highlight ("simulated") — <em>optional</em></span></td>
+      <td class="token-desc">Label colour for a permutation Key Label pack's Display Only legends — the label shows what a Rewrite would produce, but the key still types the pre-Rewrite character. <strong>Optional:</strong> if omitted, Pipette derives it automatically from <code>key-label-remap</code> (hue rotated 180°, lightness clamped for readability against this pack's <code>colorScheme</code>).</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#9333ea;"></span><span class="swatch-value">#9333ea</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#c084fc;"></span><span class="swatch-value">#c084fc</span></td>
     </tr>
     <tr>
       <td><span class="token-name">key-bg-multi-selected</span><br><span class="token-usage">Multi-select / batch selection</span></td>
@@ -684,7 +690,7 @@
 </div>
 
 <div class="tip">
-  <strong>One palette for everything.</strong> A theme pack overrides both light and dark built-in colours with a single set of 34 values — there is no separate light/dark split. Your palette is always applied as-is regardless of the system appearance setting.
+  <strong>One palette for everything.</strong> A theme pack overrides both light and dark built-in colours with a single set of 35 required values (plus the optional <code>key-label-simulated</code>) — there is no separate light/dark split. Your palette is always applied as-is regardless of the system appearance setting.
 </div>
 
 <div class="warn">
@@ -753,7 +759,7 @@
 
 <!-- ======================================== -->
 <h2>5. JSON Template</h2>
-<p>Copy this template and replace the colour values with your own. All 34 tokens are required.</p>
+<p>Copy this template and replace the colour values with your own. All tokens shown are required, except <code>key-label-simulated</code> (marked optional below) — omit it and Pipette derives it automatically from <code>key-label-remap</code>.</p>
 
 <div class="json-block" id="json-template">
 <button class="copy-btn" onclick="copyTemplate()">Copy</button>
@@ -796,6 +802,8 @@
     <span class="jk">"key-label"</span>:         <span class="jv">"#1f2937"</span>,
     <span class="jk">"key-sublabel"</span>:      <span class="jv">"#7c8598"</span>,
     <span class="jk">"key-label-remap"</span>:   <span class="jv">"#0000ff"</span>,
+    <span class="jc">// key-label-simulated is OPTIONAL — omit to auto-derive from key-label-remap</span>
+    <span class="jk">"key-label-simulated"</span>: <span class="jv">"#9333ea"</span>,
     <span class="jk">"key-bg-multi-selected"</span>: <span class="jv">"#93bbfd"</span>,
 
     <span class="jc">// Tab — navigation tabs</span>
@@ -845,6 +853,7 @@ function copyTemplate() {
     "key-label": "#1f2937",
     "key-sublabel": "#7c8598",
     "key-label-remap": "#0000ff",
+    "key-label-simulated": "#9333ea",
     "key-bg-multi-selected": "#93bbfd",
     "tab-bg-active": "#2563eb",
     "tab-text": "#6b7280",

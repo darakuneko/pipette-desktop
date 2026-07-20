@@ -663,7 +663,7 @@ A vertical layer sidebar appears on the left side of the popover, matching the l
 
 - The search input is pre-filled with the current keycode name
 - Type to search by name, keycode name, or alias — results are ranked by relevance
-- With a Key Label pack active, a result whose legend the pack overrides shows that pack's text (colored the same as its remapped keycap in the grid) and is also searchable by it — e.g. searching a symbol the pack draws on a key finds that key even if its default keycode name doesn't contain it
+- With a Key Label pack active that doesn't qualify as a clean, closed QWERTY permutation — the same eligibility check that decides whether a pack can be Rewritten at all (JIS shift-pair legends, kana, and any partial/non-closed swap are common examples), a result whose legend the pack overrides shows that pack's text (colored the same as its remapped keycap in the grid) and is also searchable by it — e.g. searching a symbol the pack draws on a key finds that key even if its default keycode name doesn't contain it. A pack that does qualify as a clean closed permutation (Colemak, Dvorak, Eucalyn, …) leaves these results on their standard legends, same as the keycode grid
 - Click a result to assign it immediately
 - The popover also appears when double-clicking key fields in detail editors (Tap Dance, Combo, Key Override, etc.) — those pickers are not Key Label pack-aware
 
@@ -1054,7 +1054,7 @@ The keymap editor automatically records a history of keycode changes. You can na
 | **Toolbar buttons** | Full history | Undo / Redo buttons in the left toolbar |
 | **Popover buttons** | Last single change only (must match the open key) | Undo / Redo buttons in the popover footer (see §2.4) |
 
-- History is cleared when switching keyboards or disconnecting
+- History is cleared when switching keyboards, disconnecting, restoring a snapshot / loading a saved layout / importing a `.vil` file, or rewriting the keymap from a Key Label (see **Applying a Key Label to the Keymap** in §6.2) — each of these replaces some or all of the keymap, so there is nothing left in the old history that still applies. A keymap Rewrite is the one case where nothing is pushed back onto the (now-empty) stack afterward — see **Limitations** there
 - The maximum history size can be configured in Settings → Defaults → **Max Keymap History** (see §6.1)
 - All keymap mutation paths are tracked: single key edits, popover selections, mod-mask changes, paste, and copy-layer operations
 
@@ -1559,7 +1559,7 @@ Troubleshooting and data management functions are available in the **Data** pane
 
 The Tools tab in the Settings modal includes a **Defaults** section for setting initial preferences for new keyboard connections:
 
-- **Keyboard Layout**: Default key labels for new keyboards. The dropdown lists every entry currently installed in the **Key Labels** store (see §6.2). QWERTY ships built-in; install more from Pipette Hub or import a `.json` via **Key Labels Manage**. The drop-down preserves the manual order set in the modal — drag a row up or down there and the dropdown follows
+- **Keyboard Layout**: Default key labels for new keyboards. The dropdown lists every entry currently installed in the **Key Labels** store (see §6.2). **QWERTY (Default)** ships built-in; install more from Pipette Hub or import a `.json` via **Key Labels Manage**. The drop-down preserves the manual order set in the modal — drag a row up or down there and the dropdown follows
 - **Auto Move**: Default auto-advance behavior
 - **Instant Key Selection**: Default instant key selection behavior (see §2.2)
 - **Layer Panel Open**: Whether the layer panel starts expanded or collapsed
@@ -1583,8 +1583,9 @@ Lists every label set already on this device. Each row shows the label name, the
 
 The Name button has three states: ascending (▲) and descending (▼) each show a triangle for as long as that sort still matches the list's order, and a plain "Name" with no triangle once the order no longer matches either sort — which happens the moment you drag a row by hand. There is no button click that returns to a triangled state; only another click (re-applying asc/desc from scratch) or reopening the modal does. While a triangle is showing, importing a `.json` file or downloading a label from Hub inserts the new entry at its correct alphabetical position instead of adding it to the bottom of the list; re-importing over an existing label (same name) is treated as an update and keeps that label's current position. Either way, a brief "Imported {name}" / "Updated {name}" message appears next to the Name button for a few seconds, and the affected row scrolls into view.
 
-A second line under each row exposes the Hub actions:
+A second line under each row starts with a **Keymap Write** / **View Only** type label, then the Hub actions:
 
+- **Keymap Write** / **View Only**: whether this label set also qualifies to bulk-rewrite the keymap (see **Applying a Key Label to the Keymap** below) — the same eligibility check the footer's Keyboard Layout select tags each option with. QWERTY always shows **View Only**, since its map is never `keymapApplicable`
 - **Open**: open the entry's Hub page in the system browser (only when the row is linked to a Hub post)
 - **Upload**: publish a new Hub post from this local entry (only for entries that have not been uploaded yet)
 - **Update**: push the current local content to the existing Hub post (owner only)
@@ -1593,7 +1594,7 @@ A second line under each row exposes the Hub actions:
 
 If the Hub freshness check finds a row whose post has been deleted upstream, the Updated column reads **`(removed)`** in red instead of a timestamp; clicking Sync on such a row will fail because the Hub no longer serves it.
 
-QWERTY shows no Hub actions and cannot be deleted, but it can be reordered like any other row.
+QWERTY shows its **View Only** type label but no Hub actions, and cannot be deleted — though it can still be reordered like any other row.
 
 **Find on Hub tab**
 
@@ -1659,33 +1660,43 @@ Composite keycodes (LT, MT, modifier+key, …) render the inner key inside an in
 
 **Applying a Key Label to the Keymap**
 
-Switching the **Keyboard Layout** dropdown in the footer normally just changes which legends are shown on the keycaps — the underlying keymap is untouched. For label sets marked `keymapApplicable`, the dropdown offers to rewrite the keymap itself so the physical keys actually produce the labelled characters.
+Switching the **Keyboard Layout** dropdown in the footer never opens a dialog by itself — it always just changes the display. For a label set marked `keymapApplicable` whose map is a clean, closed QWERTY permutation (Colemak, Dvorak, Eucalyn, …), picking it also reveals two vertical index tabs attached to the right edge of the Keymap Editor:
 
-When you pick a `keymapApplicable` entry (and a keymap is loaded on the connected keyboard), a confirmation dialog appears with three choices:
+- **The pack's own name** (top) — a read-only *simulation* of that pack's legends, with the changed keys tinted the **simulated** colour (`key-label-simulated`). Nothing here is clickable: no key selection, no popover, no multi-select, no picker paste — this tab exists purely to preview what a Rewrite would produce
+- **QWERTY (Default)** (bottom) — the real keymap, unaffected by the selected pack, fully editable exactly as before
+
+The simulation tab is selected by default whenever the tabs appear. Switching keyboards resets the selection back to the simulation tab; switching only layers or picking a different pack does not.
+
+![Simulation and Default Tabs](screenshots/key-label-simulation-tabs.png)
+
+**The layer-indicator row reads "Preview - Layer N" while the simulation tab is active** (e.g. "Preview - Layer 0"), so it stays visually distinct from the plain "Layer N" label the Default tab and every other keymap view use. **Apply lives at the right end of that same row** — an **Apply** button that opens the Rewrite confirmation dialog:
 
 ![Apply Key Label to Keymap](screenshots/key-label-keymap-apply-modal.png)
 
-- **Rewrite Keymap** — bulk-rewrites every layer's keycodes (and encoders, where applicable) to match the label set. The whole rewrite lands as a single Undo step in the Keymap Editor's normal history — one Undo reverts every key it touched
-- **Display Only** — switches only the legends, same as today's behaviour
-- **Cancel** — closes the dialog without changing the current selection
+- **Apply?** — a destructive one-shot: bulk-rewrites every layer's keycodes (and encoders, where applicable) to match the label set, then clears the undo/redo history outright. It is not recorded as an Undo step — there is nothing to revert afterward, on the same undo/redo stack or any other
+- **Cancel** — closes the dialog without changing anything; the simulation/QWERTY (Default) tabs stay exactly as they were
+
+The dialog also shows a save recommendation: back up the current keymap first, before confirming. Rewrite replaces keycodes on every layer and clears the undo/redo history in the same stroke, so a previously saved backup is the only way back to the pre-Rewrite keymap (see **Limitations** below).
 
 After a successful Rewrite, the keys that were actually changed briefly flash the same blue used for key selection before fading back, so you can see at a glance what changed.
 
-**The display stays on QWERTY legends after a Rewrite.** Once the keymap physically holds an arrangement's keycodes, the Keyboard Layout dropdown shows the *built-in QWERTY* legends, not the arrangement you just applied — the legends are meant to be read against the keys' actual QWERTY-baseline positions, and each key now sends the character its cap already shows. Selecting the same arrangement's own legends afterward would translate an already-rewritten keycode a second time (see the limitation below).
+**A successful Rewrite (or one that finds nothing left to change) resets the Keyboard Layout dropdown back to QWERTY (Default), and the tabs disappear.** The keycap legends switch to the raw, untranslated keycode each key now actually sends, with no remap colouring — the same clean, undecorated state a snapshot / `.vil` restore leaves. Picking that same arrangement again afterward brings the tabs right back, since the dropdown no longer has any record of what was last rewritten.
 
-The dropdown remembers which arrangement was last actually rewritten into the keymap, separately from which legends are currently displayed. That means:
+**The picker only follows the active label set for JIS-type/deviation packs.** A label set that qualifies as a clean, closed QWERTY permutation (the same eligibility check that gates the simulation tabs above) only swaps *which* key sends a given character, and every one of those characters already appears somewhere in the picker — so the picker intentionally keeps its standard legends regardless of which tab is active. A label set that doesn't qualify (JIS shift-pair legends, kana, any partial/non-closed swap) has no tabs at all: picking it converts both the Keymap Editor and the key picker's legends in place, tinted the **actual** colour (`key-label-remap`) — a truthful legend, since the key really does produce what's shown. A theme pack can define its own `key-label-simulated`; if it doesn't, Pipette derives one automatically from that pack's `key-label-remap` (see §6.4 below).
 
-- **Picking QWERTY later offers a restore rewrite.** If the keymap currently holds e.g. Colemak's keycodes, selecting QWERTY from the dropdown re-opens the confirmation dialog — Rewrite Keymap converts the keys back to their original QWERTY characters.
-- **Switching between two `keymapApplicable` arrangements converts directly.** Picking Dvorak while Colemak is the one actually applied rewrites straight from Colemak's current keycodes to Dvorak's — it does not assume the keymap is still raw QWERTY, so the keys end up with the correct Dvorak characters in one step.
-- Picking **Display Only** at any point never changes which arrangement is considered "applied" — only a **Rewrite Keymap** confirmation does.
+**QWERTY (Default) is always display-only.** Selecting it from the dropdown never touches the keymap and never shows any tabs — it only switches which legends are shown, back to raw and uncoloured. There is no "restore rewrite" offered by picking it; once a Rewrite has landed, only a previously saved `.vil` file or snapshot can bring back the keymap it replaced (see **Limitations** below).
 
-The desktop app always re-validates the map itself before offering the rewrite, even when `keymapApplicable` is set in the file — a label set with shift-pair legends, non-Latin characters, keycode-passthrough values (like the `"KC_GRAVE": "KC_LALT"` example above), or a map that isn't **closed** (every replacement character's key must itself remap somewhere, even if only back to itself — a map that sends key A's character to key B but never says what key B should now send would duplicate one character and lose another) fails validation and the dropdown falls back to a silent Display Only switch, same as a label set that has no flag at all. The same re-validation applies to whichever arrangement is currently applied — if that pack has since been removed or edited to fail validation, the dropdown logs the reason and falls back to a plain Display Only switch instead of guessing at a conversion.
+**Rewriting directly from a keymap that already holds a different rewritten arrangement applies the newly picked table as-is, without composing against what came before.** Because a Rewrite always applies the target's own QWERTY-baseline table directly against whatever keycodes the keymap currently holds, rewriting a second time onto a keymap that isn't actually still QWERTY underneath (for example because an earlier Rewrite, or hand edits, already changed it) can produce the wrong result — and there is no Undo left to fall back on once it lands, since a Rewrite already clears the undo/redo history in the same step. **Reload a saved QWERTY backup before rewriting to a different arrangement**, so the target table is always applied against the QWERTY baseline it was designed for; this is exactly what the confirm dialog's save recommendation is for.
+
+The desktop app always re-validates the map itself before offering the tabs/Apply, even when `keymapApplicable` is set in the file — a label set with shift-pair legends, non-Latin characters, keycode-passthrough values (like the `"KC_GRAVE": "KC_LALT"` example above), or a map that isn't **closed** (every replacement character's key must itself remap somewhere, even if only back to itself — a map that sends key A's character to key B but never says what key B should now send would duplicate one character and lose another) fails validation, and picking it behaves exactly like a JIS-type deviation pack (or a plain unflagged label set): a truthful in-place conversion, no tabs, no Apply.
+
+**Selecting a different pack — or picking QWERTY (Default) — while the confirm dialog is open closes the dialog instead of letting it act on a keymap you've already moved away from.** The dialog always concerns the pack that was active when Apply was pressed; changing the selection underneath it discards the pending request.
 
 **Limitations**
 
-- Manually re-selecting the display legends for the arrangement that's already applied (e.g. choosing Colemak's own legends while the keymap is already Colemak-rewritten) intentionally looks double-translated — label sets assume the keys underneath are still QWERTY keycodes, so this is expected, not a bug.
-- Manual per-key edits made after a Rewrite are skipped by the next Rewrite's safety check: it only touches a position whose keycode still matches what that arrangement's table expects to find there, so a key you've since edited by hand is left alone.
-- If a Rewrite fails partway through (e.g. a device write error), Undo still reverts exactly the keys that were changed before the failure — but the Keyboard Layout dropdown's displayed legends are left exactly as they were and the arrangement is not recorded as newly "applied", since the keymap is now a mix of old and new characters that doesn't match either arrangement.
+- **Rewrite cannot be undone.** The moment any key is actually rewritten, Pipette clears the undo/redo history instead of adding a revertible step — there is no Undo entry for a Rewrite, clean or partial, and manual edits made afterward simply start a fresh history from scratch. The only way back to the pre-Rewrite keymap is a previously saved `.vil` file or snapshot; this is exactly why the confirm dialog recommends saving one first.
+- Manual per-key edits made before a Rewrite are skipped by its safety check: it only touches a position whose keycode is still part of the arrangement's own QWERTY-baseline permutation, so a key you've already edited by hand to something outside that set is left alone.
+- If a Rewrite fails partway through (e.g. a device write error), the keymap is left in a mixed state — some positions rewritten, some not — and the Keyboard Layout dropdown's selection (and the tabs) are left exactly as they were (it does not reset to QWERTY (Default), since the keymap now matches neither arrangement). The undo/redo history is still cleared if any key was actually written before the failure, so recovery is again a previously saved backup, not Undo.
 
 On Pipette Hub, the flag round-trips as `keymap_applicable` in the upload / download body alongside `map` and `composite_labels`.
 
@@ -1827,6 +1838,7 @@ A theme pack `.json` defines a `name`, `version`, and a `colors` object mapping 
     "key-label": "#eceff4",
     "key-sublabel": "#d8dee9",
     "key-label-remap": "#88c0d0",
+    "key-label-simulated": "#b48ead",
     "key-bg-multi-selected": "#434c5e",
     "tab-bg-active": "#3b4252",
     "tab-text": "#7b88a1",
@@ -1845,9 +1857,9 @@ A theme pack `.json` defines a `name`, `version`, and a `colors` object mapping 
 | `name` | Yes | Display name and uniqueness key for overwrite-on-import |
 | `version` | Yes | Semver string (e.g. `1.0.0`) |
 | `colorScheme` | Yes | `"light"` or `"dark"` — declares the intended brightness of the pack |
-| `colors` | Yes | Object mapping all 35 colour tokens to CSS colour values (`#hex`, `rgb()`, or `hsl()`) |
+| `colors` | Yes | Object mapping colour tokens to CSS colour values (`#hex`, `rgb()`, or `hsl()`) |
 
-All 35 colour tokens are required. Export any installed pack (row → `.json`) to get a complete template. Ready-to-use example theme packs (Kanagawa Wave / Dragon / Lotus and Solarized Light / Dark) are also available in the [`sample-packs/themes/`](../sample-packs/themes/) directory in the repository.
+35 colour tokens are required — export any installed pack (row → `.json`) to get a complete template. One additional token, `key-label-simulated` (the permutation-pack Display Only tint — see §6.2 above), is **optional**: if a pack omits it, Pipette automatically derives one from that pack's `key-label-remap` (a hue-rotated complement, clamped for readability against the pack's own `colorScheme`) so every pack still gets a distinct simulated tint even without authoring one by hand. Ready-to-use example theme packs (Kanagawa Wave / Dragon / Lotus and Solarized Light / Dark) are also available in the [`sample-packs/themes/`](../sample-packs/themes/) directory in the repository — every sample pack defines its own `key-label-simulated` explicitly.
 
 ### 6.5 Zoom (UI Scale)
 
@@ -2046,7 +2058,7 @@ Inline selectors for common per-session preferences. A `|` separator divides the
 
 - **Language**: Switch the UI language. Opens a dropdown of built-in languages and installed language packs (see §6.3)
 - **Theme**: Switch the color theme. Options include System, Light, Dark, and any installed theme packs (see §6.4)
-- **Key Labels**: Switch the key label set for the current keyboard. Options reflect the installed Key Labels store in drag order (see §6.2)
+- **Key Labels**: Switch the key label set for the current keyboard. Options reflect the installed Key Labels store in drag order (see §6.2). Each option in the open dropdown carries a trailing **Write** / **View** tag — the short form of the Key Labels modal's **Keymap Write** / **View Only** type label — so you can tell which sets can bulk-rewrite the keymap before picking one
 - **Edit / Done**: Toggle edit mode. Replaces the selectors with **Language Packs**, **Theme Packs**, and **Key Labels** management modal buttons for installing, syncing, or reordering entries
 
 **Action buttons** (right side)

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Confirmation shown when the footer's Key Label select switches to a
-// pack whose map has been validated as a pure QWERTY-keycode permutation
-// (see `buildKeymapRewriteTable` in shared/keymap/keymap-apply.ts). The
-// user can additionally rewrite the actual keymap instead of only
-// changing the display labels.
+// Confirmation opened by the simulation tab's Apply button (Plan-qwerty-
+// select-no-rewrite v7 — シミュレーションタブ方式) once the active Key Label
+// pack's map has been validated as a pure QWERTY-keycode permutation (see
+// `buildKeymapRewriteTable` in shared/keymap/keymap-apply.ts). Rewrite is
+// the only affirmative action left here — simulated viewing is the tabs'
+// job now, not a modal button, so this is a plain Cancel / Rewrite choice.
 
 import { useTranslation } from 'react-i18next'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
@@ -17,18 +18,22 @@ interface KeymapApplyConfirmModalProps {
   labelName: string
   /** Rewrite the keymap and switch the display label. */
   onApply: () => void
-  /** Switch the display label only, keeping the keymap unchanged (today's behavior). */
-  onDisplayOnly: () => void
   /** Close without changing the selection. */
   onCancel: () => void
+  /** True while a Confirm apply is in flight (`useKeymapApplyPrompt`'s
+   *  `isApplying`). Disables both footer buttons so a double-click on
+   *  Apply can't fire a second rewrite while the first is still awaiting
+   *  `onApplyKeymapRewrite` — the hook itself also guards against this
+   *  (its own no-op re-entrancy check), this is the visible half. */
+  busy?: boolean
 }
 
 export function KeymapApplyConfirmModal({
   open,
   labelName,
   onApply,
-  onDisplayOnly,
   onCancel,
+  busy = false,
 }: KeymapApplyConfirmModalProps): JSX.Element | null {
   const { t } = useTranslation()
   useEscapeClose(onCancel, open)
@@ -56,34 +61,28 @@ export function KeymapApplyConfirmModal({
           <ModalCloseButton testid="keymap-apply-confirm-close" onClick={onCancel} />
         </div>
 
-        <p className="text-sm text-content">{t('keyLabels.keymapApply.message')}</p>
-        <p className="mt-2 text-sm text-content-secondary">{t('keyLabels.keymapApply.rewriteNote', { name: labelName })}</p>
-        <p className="mt-2 text-sm text-content-secondary">{t('keyLabels.keymapApply.undoNote')}</p>
+        <p className="text-sm text-content" data-testid="keymap-apply-confirm-save-recommendation">
+          {t('keyLabels.keymapApply.saveRecommendation')}
+        </p>
 
         <div className="mt-6 flex justify-end gap-2">
           <button
             type="button"
             className={BTN_SECONDARY}
             onClick={onCancel}
+            disabled={busy}
             data-testid="keymap-apply-confirm-cancel"
           >
             {t('common.cancel')}
           </button>
           <button
             type="button"
-            className={BTN_SECONDARY}
-            onClick={onDisplayOnly}
-            data-testid="keymap-apply-confirm-display-only"
-          >
-            {t('keyLabels.keymapApply.displayOnly')}
-          </button>
-          <button
-            type="button"
             className={BTN_PRIMARY}
             onClick={onApply}
+            disabled={busy}
             data-testid="keymap-apply-confirm-apply"
           >
-            {t('keyLabels.keymapApply.apply')}
+            {t('keyLabels.keymapApply.confirmApply')}
           </button>
         </div>
       </div>
