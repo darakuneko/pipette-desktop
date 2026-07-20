@@ -143,4 +143,57 @@ describe('KeymapApplyConfirmModal', () => {
     fireEvent.click(screen.getByTestId('keymap-apply-confirm-backdrop'))
     expect(onCancel).toHaveBeenCalledTimes(2)
   })
+
+  // `busy` (fed from `useKeymapApplyPrompt`'s `isApplying`) disables all
+  // three footer buttons while a Confirm apply is in flight — the visible
+  // half of the double-click guard (the hook itself is the actual guard,
+  // since Escape/backdrop route around `disabled` entirely).
+  describe('busy (apply in flight)', () => {
+    it('disables all three footer buttons when busy', () => {
+      render(
+        <KeymapApplyConfirmModal
+          open
+          labelName="Colemak"
+          onApply={vi.fn()}
+          onDisplayOnly={vi.fn()}
+          onCancel={vi.fn()}
+          busy
+        />,
+      )
+      expect(screen.getByTestId('keymap-apply-confirm-cancel')).toBeDisabled()
+      expect(screen.getByTestId('keymap-apply-confirm-display-only')).toBeDisabled()
+      expect(screen.getByTestId('keymap-apply-confirm-apply')).toBeDisabled()
+    })
+
+    it('leaves all three footer buttons enabled when not busy (default)', () => {
+      render(
+        <KeymapApplyConfirmModal
+          open
+          labelName="Colemak"
+          onApply={vi.fn()}
+          onDisplayOnly={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      )
+      expect(screen.getByTestId('keymap-apply-confirm-cancel')).not.toBeDisabled()
+      expect(screen.getByTestId('keymap-apply-confirm-display-only')).not.toBeDisabled()
+      expect(screen.getByTestId('keymap-apply-confirm-apply')).not.toBeDisabled()
+    })
+
+    it('a disabled Apply button does not fire onApply when clicked', () => {
+      const onApply = vi.fn()
+      render(
+        <KeymapApplyConfirmModal
+          open
+          labelName="Colemak"
+          onApply={onApply}
+          onDisplayOnly={vi.fn()}
+          onCancel={vi.fn()}
+          busy
+        />,
+      )
+      fireEvent.click(screen.getByTestId('keymap-apply-confirm-apply'))
+      expect(onApply).not.toHaveBeenCalled()
+    })
+  })
 })

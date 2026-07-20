@@ -21,6 +21,12 @@ interface KeymapApplyConfirmModalProps {
   onDisplayOnly: () => void
   /** Close without changing the selection. */
   onCancel: () => void
+  /** True while a Confirm apply is in flight (`useKeymapApplyPrompt`'s
+   *  `isApplying`). Disables all three footer buttons so a double-click on
+   *  Apply can't fire a second rewrite while the first is still awaiting
+   *  `onApplyKeymapRewrite` — the hook itself also guards against this
+   *  (its own no-op re-entrancy check), this is the visible half. */
+  busy?: boolean
 }
 
 export function KeymapApplyConfirmModal({
@@ -29,6 +35,7 @@ export function KeymapApplyConfirmModal({
   onApply,
   onDisplayOnly,
   onCancel,
+  busy = false,
 }: KeymapApplyConfirmModalProps): JSX.Element | null {
   const { t } = useTranslation()
   useEscapeClose(onCancel, open)
@@ -71,6 +78,7 @@ export function KeymapApplyConfirmModal({
             type="button"
             className={BTN_SECONDARY}
             onClick={onCancel}
+            disabled={busy}
             data-testid="keymap-apply-confirm-cancel"
           >
             {t('common.cancel')}
@@ -79,6 +87,7 @@ export function KeymapApplyConfirmModal({
             type="button"
             className={BTN_SECONDARY}
             onClick={onDisplayOnly}
+            disabled={busy}
             data-testid="keymap-apply-confirm-display-only"
           >
             {t('keyLabels.keymapApply.displayOnly')}
@@ -87,6 +96,7 @@ export function KeymapApplyConfirmModal({
             type="button"
             className={BTN_PRIMARY}
             onClick={onApply}
+            disabled={busy}
             data-testid="keymap-apply-confirm-apply"
           >
             {t('keyLabels.keymapApply.apply')}

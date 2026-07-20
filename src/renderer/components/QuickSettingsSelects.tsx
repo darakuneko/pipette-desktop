@@ -69,6 +69,7 @@ export function QuickSettingsSelects({
     handleApplyDisplayOnly,
     handleApplyConfirm,
     applyError,
+    isApplying,
   } = useKeymapApplyPrompt({
     keymapEditable,
     // Same value the select itself renders (falls back to QWERTY when the
@@ -192,6 +193,7 @@ export function QuickSettingsSelects({
         onApply={handleApplyConfirm}
         onDisplayOnly={handleApplyDisplayOnly}
         onCancel={handleApplyCancel}
+        busy={isApplying}
       />
     </>
   )

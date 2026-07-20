@@ -210,6 +210,99 @@ describe('useKeymapApplyPrompt — WYSIWYG select semantics (Plan-qwerty-select-
     expect(result.current.applyError).toBeNull()
   })
 
+  // --- Double-Confirm re-entrancy guard ---
+  // A double-clicked Apply must never fire a second `onApplyKeymapRewrite`
+  // while the first is still in flight: `KeymapEditor.applyKeymapRewrite`'s
+  // own re-entrancy guard would answer that second call with
+  // `{ appliedCount: 0 }` and NO error, which this hook would otherwise read
+  // as a clean success and reset the select to QWERTY even though the real
+  // (first) apply may later end in a partial failure whose contract is
+  // "select untouched".
+
+  describe('double-Confirm re-entrancy guard', () => {
+    function pendingApplyResult() {
+      let resolve!: (result: { appliedCount: number; error?: string }) => void
+      const promise = new Promise<{ appliedCount: number; error?: string }>((res) => { resolve = res })
+      return { promise, resolve: (r: { appliedCount: number; error?: string }) => resolve(r) }
+    }
+
+    it('double-Confirm while the first apply is pending: onApplyKeymapRewrite fires once, and a later partial-failure resolution leaves the select untouched', async () => {
+      const { promise, resolve } = pendingApplyResult()
+      onApplyKeymapRewrite.mockImplementationOnce(() => promise)
+
+      const { result } = setup({ keyboardLayout: 'qwerty' })
+      act(() => result.current.handleKeyboardLayoutChange('dvorak-id'))
+      await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
+
+      act(() => { result.current.handleApplyConfirm() })
+      expect(result.current.isApplying).toBe(true)
+
+      // Second click lands while the first is still awaiting
+      // onApplyKeymapRewrite — must be a pure no-op, not a second call.
+      act(() => { result.current.handleApplyConfirm() })
+      expect(onApplyKeymapRewrite).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        resolve({ appliedCount: 1, error: 'device write failed' })
+        await promise.catch(() => {})
+      })
+
+      expect(onApplyKeymapRewrite).toHaveBeenCalledTimes(1)
+      expect(result.current.applyError).toBe('device write failed')
+      // Partial failure: the select must stay untouched, not reset to
+      // QWERTY — the second click's no-op result must never have driven this.
+      expect(onKeyboardLayoutChange).not.toHaveBeenCalled()
+      expect(result.current.isApplying).toBe(false)
+    })
+
+    it('double-Confirm where the first apply resolves cleanly: still applies exactly once and resets the select exactly once', async () => {
+      const { promise, resolve } = pendingApplyResult()
+      onApplyKeymapRewrite.mockImplementationOnce(() => promise)
+
+      const { result } = setup({ keyboardLayout: 'qwerty' })
+      act(() => result.current.handleKeyboardLayoutChange('dvorak-id'))
+      await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
+
+      act(() => { result.current.handleApplyConfirm() })
+      act(() => { result.current.handleApplyConfirm() })
+      expect(onApplyKeymapRewrite).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        resolve({ appliedCount: 2 })
+        await promise
+      })
+
+      expect(onApplyKeymapRewrite).toHaveBeenCalledTimes(1)
+      expect(onKeyboardLayoutChange).toHaveBeenCalledTimes(1)
+      expect(onKeyboardLayoutChange).toHaveBeenCalledWith(BUILTIN_QWERTY_LAYOUT_ID)
+      expect(result.current.isApplying).toBe(false)
+    })
+
+    it('Cancel and Display Only are no-ops while an apply is in flight', async () => {
+      const { promise, resolve } = pendingApplyResult()
+      onApplyKeymapRewrite.mockImplementationOnce(() => promise)
+
+      const { result } = setup({ keyboardLayout: 'qwerty' })
+      act(() => result.current.handleKeyboardLayoutChange('dvorak-id'))
+      await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
+
+      act(() => { result.current.handleApplyConfirm() })
+      expect(result.current.isApplying).toBe(true)
+
+      act(() => result.current.handleApplyCancel())
+      expect(result.current.pendingApply).not.toBeNull() // modal must stay open
+
+      act(() => result.current.handleApplyDisplayOnly())
+      expect(onKeyboardLayoutChange).not.toHaveBeenCalled()
+
+      await act(async () => {
+        resolve({ appliedCount: 2 })
+        await promise
+      })
+      expect(result.current.isApplying).toBe(false)
+    })
+  })
+
   // --- Selection race ---
 
   it('race: selecting QWERTY while an applicable pack lookup is still in flight never opens a modal', async () => {

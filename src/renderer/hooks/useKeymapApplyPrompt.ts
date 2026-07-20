@@ -57,6 +57,15 @@ export interface UseKeymapApplyPromptReturn {
   handleApplyConfirm: () => void
   /** Set after a partial-failure apply; cleared on the next selection. */
   applyError: string | null
+  /** True from the moment `handleApplyConfirm` starts its (awaited)
+   *  `onApplyKeymapRewrite` call until it settles. Drives the modal's
+   *  buttons disabled — a double-click on Apply must never fire a second
+   *  rewrite: `KeymapEditor.applyKeymapRewrite`'s own re-entrancy guard
+   *  would answer the second call with `{ appliedCount: 0 }` and NO error,
+   *  which this hook would otherwise read as a clean success and reset the
+   *  select to QWERTY even if the real (first) apply later ends in a
+   *  partial failure whose contract is "select untouched". */
+  isApplying: boolean
 }
 
 /** Resolve `id`'s own rewrite table when it's flagged `keymapApplicable`
@@ -87,6 +96,16 @@ export function useKeymapApplyPrompt({
   const [pendingApply, setPendingApply] = useState<{ id: string; name: string; table: KeymapRewriteTable } | null>(null)
   const [applyError, setApplyError] = useState<string | null>(null)
 
+  // In-flight latch for the Confirm apply, checked synchronously (a ref,
+  // not just the mirrored `isApplying` state below) so a double-click that
+  // lands before React re-renders the modal's now-disabled buttons still
+  // can't slip a second `onApplyKeymapRewrite` call through. Only the FIRST
+  // invocation's result may drive the select reset / error state; the
+  // second click is a plain no-op rather than a call KeymapEditor's own
+  // re-entrancy guard would answer with a misleading "clean" result.
+  const applyInFlightRef = useRef(false)
+  const [isApplying, setIsApplying] = useState(false)
+
   // Bumped on every invocation; the async lookups below re-check it after
   // each `await` so a newer selection always wins over a slower older one
   // (selection race — two quick picks where the first's lookups resolve
@@ -106,6 +125,14 @@ export function useKeymapApplyPrompt({
   // `requestSeqRef.current !== seq` check when it resolves — otherwise it
   // would re-open the modal via `setPendingApply` against the keymap the
   // restore just replaced (restore race).
+  //
+  // Deliberately does NOT touch `applyInFlightRef`/`isApplying`: if a
+  // restore lands while a Confirm apply is still awaiting
+  // `onApplyKeymapRewrite` (unusual — the button is disabled — but not
+  // impossible via a stray call), this just closes the modal early; the
+  // in-flight apply's own `try/finally` in `handleApplyConfirm` is what
+  // guarantees the latch clears once it settles, regardless of whether
+  // `pendingApply` was already nulled out from under it.
   const keymapRestoreSeqRef = useRef(keymapRestoreSeq)
   useEffect(() => {
     const prev = keymapRestoreSeqRef.current
@@ -154,9 +181,18 @@ export function useKeymapApplyPrompt({
     })()
   }, [onKeyboardLayoutChange, keymapEditable, keyboardLayout, onApplyKeymapRewrite, keyLabelLookup])
 
-  const handleApplyCancel = useCallback(() => setPendingApply(null), [])
+  // Cancel/Display Only are no-ops while an apply is in flight — the modal
+  // disables their buttons (via `isApplying`) as the primary defense, but
+  // this ref check is the actual guard: Escape (`useEscapeClose`) and the
+  // backdrop click both route through `onCancel` regardless of button
+  // `disabled` state, so it must be safe to call at any time.
+  const handleApplyCancel = useCallback(() => {
+    if (applyInFlightRef.current) return
+    setPendingApply(null)
+  }, [])
 
   const handleApplyDisplayOnly = useCallback(() => {
+    if (applyInFlightRef.current) return
     if (!pendingApply) return
     onKeyboardLayoutChange?.(pendingApply.id as KeyboardLayoutId)
     setPendingApply(null)
@@ -164,33 +200,48 @@ export function useKeymapApplyPrompt({
 
   const handleApplyConfirm = useCallback(() => {
     if (!pendingApply || !onApplyKeymapRewrite) return
+    // Re-entrancy guard: a double-clicked Apply (or any other concurrent
+    // caller) must never fire a second `onApplyKeymapRewrite` while the
+    // first is still in flight — see the ref's own doc comment above.
+    if (applyInFlightRef.current) return
+    applyInFlightRef.current = true
+    setIsApplying(true)
     const { table } = pendingApply
     void (async () => {
-      const result = await onApplyKeymapRewrite(table)
-      setPendingApply(null)
-      if (result.error) {
-        // Partial failure: the keymap is now a MIXED state (some positions
-        // rewritten, some not) — it is neither still QWERTY nor fully the
-        // target arrangement, so the display selection is deliberately
-        // left untouched. The errorPartial message tells the user to
-        // restore from a previously saved .vil/snapshot if needed — the
-        // rewrite already wiped the undo/redo stacks for whatever DID land
-        // (`KeymapEditor.applyKeymapRewrite`'s `history.clear()` fires on
-        // ANY landed write, unconditional on `error` — see its own comment).
-        setApplyError(result.error)
-        return
+      try {
+        const result = await onApplyKeymapRewrite(table)
+        setPendingApply(null)
+        if (result.error) {
+          // Partial failure: the keymap is now a MIXED state (some positions
+          // rewritten, some not) — it is neither still QWERTY nor fully the
+          // target arrangement, so the display selection is deliberately
+          // left untouched. The errorPartial message tells the user to
+          // restore from a previously saved .vil/snapshot if needed — the
+          // rewrite already wiped the undo/redo stacks for whatever DID land
+          // (`KeymapEditor.applyKeymapRewrite`'s `history.clear()` fires on
+          // ANY landed write, unconditional on `error` — see its own comment).
+          setApplyError(result.error)
+          return
+        }
+        // Clean success: Rewrite is a destructive one-shot (v5 最終仕様) — the
+        // select resets to QWERTY, the same clean state a snapshot/.vil
+        // restore leaves. The keymap now embodies the target arrangement
+        // directly (raw characters, no color); there is nothing left to
+        // display-simulate. This reset is the OTHER half of the destructive
+        // one-shot contract from `KeymapEditor.applyKeymapRewrite`'s
+        // `history.clear()` — that one fires on any landed write (incl.
+        // partial failure), this one fires ONLY on clean success. Shared
+        // invariant: a rewrite leaves no undo trail; only a clean success
+        // returns the select to QWERTY.
+        onKeyboardLayoutChange?.(BUILTIN_QWERTY_LAYOUT_ID as KeyboardLayoutId)
+      } finally {
+        // Always clears, even if a restore landed mid-apply and already
+        // nulled `pendingApply` out from under this closure (the `table`
+        // captured above is independent of that state) — the latch must
+        // never wedge `isApplying`/the modal's buttons in the disabled state.
+        applyInFlightRef.current = false
+        setIsApplying(false)
       }
-      // Clean success: Rewrite is a destructive one-shot (v5 最終仕様) — the
-      // select resets to QWERTY, the same clean state a snapshot/.vil
-      // restore leaves. The keymap now embodies the target arrangement
-      // directly (raw characters, no color); there is nothing left to
-      // display-simulate. This reset is the OTHER half of the destructive
-      // one-shot contract from `KeymapEditor.applyKeymapRewrite`'s
-      // `history.clear()` — that one fires on any landed write (incl.
-      // partial failure), this one fires ONLY on clean success. Shared
-      // invariant: a rewrite leaves no undo trail; only a clean success
-      // returns the select to QWERTY.
-      onKeyboardLayoutChange?.(BUILTIN_QWERTY_LAYOUT_ID as KeyboardLayoutId)
     })()
   }, [pendingApply, onApplyKeymapRewrite, onKeyboardLayoutChange])
 
@@ -201,5 +252,6 @@ export function useKeymapApplyPrompt({
     handleApplyDisplayOnly,
     handleApplyConfirm,
     applyError,
+    isApplying,
   }
 }
