@@ -42,7 +42,11 @@ export function KeymapPackTabs({ activeTab, onTabChange, packName }: KeymapPackT
   const { t } = useTranslation()
 
   return (
-    <div role="tablist" aria-label={t('keyLabels.keymapApply.tabsLabel')} className="flex w-7 shrink-0 flex-col gap-2 self-start" data-testid="keymap-pack-tabs">
+    // `pt-3` (12px) clears the keymap pane's `rounded-xl` (12px) top-right
+    // corner so the top tab starts below the curve instead of colliding
+    // with it. No `gap-*` between the two buttons — they sit flush against
+    // each other, like real stacked index tabs.
+    <div role="tablist" aria-label={t('keyLabels.keymapApply.tabsLabel')} className="flex w-7 shrink-0 flex-col self-start pt-3" data-testid="keymap-pack-tabs">
       <button
         type="button"
         role="tab"
