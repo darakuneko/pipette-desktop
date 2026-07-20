@@ -37,6 +37,21 @@ interface InlineRenameActions<TId extends string | number> {
 
 export type InlineRename<TId extends string | number> = InlineRenameState<TId> & InlineRenameActions<TId>
 
+export interface UseInlineRenameOptions {
+  /**
+   * When true, clearing the input to an empty string counts as a real
+   * change and `commitRename` returns `''` instead of `null`.
+   *
+   * Defaults to false because most rename targets (stored layouts, packs,
+   * favorites, key labels) require a non-empty name — an empty trimmed
+   * value there just means "the user gave up on editing", so it should be
+   * treated as no change. Opt in only for targets that have a meaningful
+   * empty state with a computed fallback display (e.g. keymap layer names,
+   * which fall back to "Layer N" when empty).
+   */
+  allowEmpty?: boolean
+}
+
 /**
  * Encapsulates the inline-rename + confirm-flash pattern used by
  * LayoutStoreContent, FavoriteStoreModal, FavoriteTabContent, and HubPostRow.
@@ -44,7 +59,8 @@ export type InlineRename<TId extends string | number> = InlineRenameState<TId> &
  * The caller is responsible for actually performing the rename (sync or async)
  * when `commitRename` returns a non-null trimmed label.
  */
-export function useInlineRename<TId extends string | number>(): InlineRename<TId> {
+export function useInlineRename<TId extends string | number>(options?: UseInlineRenameOptions): InlineRename<TId> {
+  const allowEmpty = options?.allowEmpty ?? false
   const [editingId, setEditingId] = useState<TId | null>(null)
   const [editLabel, setEditLabel] = useState('')
   const [confirmedId, setConfirmedId] = useState<TId | null>(null)
@@ -86,7 +102,9 @@ export function useInlineRename<TId extends string | number>(): InlineRename<TId
       return null
     }
     const trimmed = editLabel.trim()
-    const changed = !!(trimmed && trimmed !== originalLabelRef.current)
+    const changed = allowEmpty
+      ? trimmed !== originalLabelRef.current
+      : !!(trimmed && trimmed !== originalLabelRef.current)
     closingRef.current = true
     setEditingId(null)
     if (changed) {
