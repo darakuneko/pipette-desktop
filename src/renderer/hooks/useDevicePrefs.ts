@@ -436,10 +436,14 @@ export interface UseDevicePrefsReturn {
   applyDevicePrefs: (uid: string) => Promise<void>
   /** Display label for a qmkId: the active Key Label pack's own label
    *  (via `compositeLabels` -> `map`), falling back to the qmkId itself
-   *  when neither has an entry. Display Only is the sole remap-rendering
-   *  mode (Plan-qwerty-select-no-rewrite v5 最終仕様) — a Rewrite never
-   *  leaves anything for this to simulate, since it resets `layout` back
-   *  to QWERTY (raw/no-color) on success. */
+   *  when neither has an entry. This is what feeds the keymap surface
+   *  regardless of which of `KeymapEditor`'s tabs is showing (Plan-qwerty-
+   *  select-no-rewrite v7 — シミュレーションタブ方式): the simulation tab
+   *  renders it as-is, while the Base tab bypasses it entirely (its own
+   *  raw/identity keycode builder — see `KeymapEditor`'s `baseLayerKeycodes`
+   *  — never calls this at all). A Rewrite never leaves anything for this
+   *  to simulate either way, since it resets `layout` back to QWERTY
+   *  (raw/no-color) on success, which also makes the tabs disappear. */
   remapLabel: (qmkId: string) => string
   /** The blue "remapped" tint source: true whenever `remapLabel(qmkId)`
    *  differs from `qmkId` itself — same rule every picker/palette consumer
@@ -962,15 +966,18 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   // loaded pack never renders an empty tab.
   const activeLayoutName = lookup.getName(layout) ?? layout
 
-  // Display Only is the sole remap-rendering mode (Plan-qwerty-select-
-  // no-rewrite v5 最終仕様): both the keymap and the key picker always show
-  // the active Key Label pack's own labels, resolved through its
+  // The active Key Label pack's own labels, resolved through its
   // compositeLabels -> map lookup order and falling back to qmkId itself
   // when neither has an entry. QWERTY's map/compositeLabels are always
   // empty (`BUILTIN_QWERTY_LAYOUT_ID` in keyboard-layouts.ts), so it
-  // resolves to identity without a separate guard. A Rewrite never leaves
+  // resolves to identity without a separate guard. Feeds the key picker
+  // unconditionally, and the keymap surface too EXCEPT `KeymapEditor`'s
+  // Base tab, which reads its own raw/identity keycode builder instead of
+  // calling this at all (Plan-qwerty-select-no-rewrite v7 — シミュレーション
+  // タブ方式: the simulation tab shows exactly what this resolves to, Base
+  // shows the real keymap regardless of it). A Rewrite never leaves
   // anything for this to simulate — it resets `layout` back to QWERTY on
-  // success (raw characters, no color), the same clean state a
+  // success (raw characters, no color, no tabs), the same clean state a
   // snapshot/.vil restore leaves.
   const remapLabel = useCallback(
     (qmkId: string): string => {

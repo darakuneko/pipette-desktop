@@ -15,10 +15,21 @@ interface SettingsTabOptions {
   onOpenAltRepeatKey?: (index: number) => void
 }
 
+// Stable fallback when the caller omits `onSelect` (Plan-qwerty-select-no-
+// rewrite v7: the simulation tab is read-only, so `KeymapEditor` passes no
+// handler at all rather than threading a `packTabReadOnly` ternary down
+// into this hook) — `TdTileGrid`/`MacroTileGrid` both require a real
+// function, so this is what actually lands on the tile's click instead of
+// `gatedHandleKeycodeSelect`.
+function noopSelect(): void {}
+
 interface UseTileContentOverrideOptions {
   tapDanceEntries?: TapDanceEntry[]
   deserializedMacros?: MacroAction[][]
-  onSelect: (keycode: Keycode) => void
+  /** Omit to make every TD/Macro tile in the override non-interactive
+   *  (falls back to `noopSelect` below) rather than threading a read-only
+   *  flag through this hook. */
+  onSelect?: (keycode: Keycode) => void
   /** Picker modals pass `pickerDoubleClick` to enable double-click / Enter
    * commit on TD and Macro tiles. The keymap editor omits it because single
    * click there already commits. */
@@ -40,12 +51,13 @@ export function useTileContentOverride({
     const hasSettings = settings?.comboEntries?.length || settings?.keyOverrideEntries?.length || settings?.altRepeatKeyEntries?.length
     if (!tapDanceEntries?.length && !deserializedMacros && !hasSettings) return undefined
 
+    const handleSelect = onSelect ?? noopSelect
     const overrides: Record<string, React.ReactNode> = {}
     if (tapDanceEntries?.length) {
-      overrides.tapDance = <TdTileGrid entries={tapDanceEntries} onSelect={onSelect} onDoubleClick={onDoubleClick} />
+      overrides.tapDance = <TdTileGrid entries={tapDanceEntries} onSelect={handleSelect} onDoubleClick={onDoubleClick} />
     }
     if (deserializedMacros) {
-      overrides.macro = <MacroTileGrid macros={deserializedMacros} onSelect={onSelect} onDoubleClick={onDoubleClick} />
+      overrides.macro = <MacroTileGrid macros={deserializedMacros} onSelect={handleSelect} onDoubleClick={onDoubleClick} />
     }
     if (settings?.comboEntries?.length && settings.onOpenCombo) {
       overrides.combo = <ComboTileGrid entries={settings.comboEntries} onOpenCombo={settings.onOpenCombo} />

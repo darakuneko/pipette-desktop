@@ -37,13 +37,6 @@ import { KeymapEditorModals } from './KeymapEditorModals'
 import { useLayerKeycodes } from './use-layer-keycodes'
 import { KeymapPackTabs, type KeymapPackTab } from './KeymapPackTabs'
 import { KeymapApplyConfirmModal } from '../key-labels/KeymapApplyConfirmModal'
-import type { Keycode } from '../../../shared/keycodes/keycodes'
-
-// Stable no-op stand-in for the "configured tile" overlay's onSelect while
-// the simulation tab is showing (Plan-qwerty-select-no-rewrite v7) — the
-// hook's own `onSelect` is required, not optional, so this replaces
-// `gatedHandleKeycodeSelect` rather than being passed as `undefined`.
-function noopKeycodeSelect(_keycode: Keycode): void {}
 
 export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEditorHandle, Props>(function KeymapEditor({
   keyboardUid, layout, layers, currentLayer, onLayerChange, keymap, encoderLayout, encoderCount,
@@ -388,18 +381,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     typingTestMode, typingTestEffectiveLayer: typingTest.effectiveLayer,
   })
 
-  // Raw (never remapped) keycodes for the Base tab — same underlying
-  // keymap/macro data as `layerKeycodes` above, built with `remapLabel`/
-  // `isRemapped` omitted so `useLayerKeycodes` falls back to identity (see
-  // its own `remap`/`checkRemapped` defaults). Only rendered while
-  // `showPackTabs` is true (below), but computed unconditionally like every
-  // other memoized keycode builder here — cheap relative to a re-render.
-  const { layerKeycodes: baseLayerKeycodes, layerEncoderKeycodes: baseLayerEncoderKeycodes } = useLayerKeycodes({
-    parsedMacros, macroBuffer, macroCount, vialProtocol, tapDanceEntries,
-    keymap, encoderLayout, encoderCount, currentLayer,
-    typingTestMode: false, typingTestEffectiveLayer: 0,
-  })
-
   // SINGLE PREDICATE (Plan-qwerty-select-no-rewrite v7): `remapKind` is
   // ALREADY the unified "does the active pack want a keymap rewrite"
   // signal (see `useDevicePrefs.ts` — it's gated on `keymapApplicable &&
@@ -414,6 +395,20 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   // `handlePackTabChange` already clearing any live selection when this
   // becomes true.
   const packTabReadOnly = showPackTabs && packTab === 'pack'
+
+  // Raw (never remapped) keycodes for the Base tab — same underlying
+  // keymap/macro data as `layerKeycodes` above, built with `remapLabel`/
+  // `isRemapped` omitted so `useLayerKeycodes` falls back to identity (see
+  // its own `remap`/`checkRemapped` defaults). `enabled` skips the whole
+  // O(keymap size) build (and the duplicate macro parse) whenever this
+  // instance's output isn't actually being shown — tabs hidden, or the
+  // simulation tab active — rather than paying for it every render.
+  const { layerKeycodes: baseLayerKeycodes, layerEncoderKeycodes: baseLayerEncoderKeycodes } = useLayerKeycodes({
+    parsedMacros, macroBuffer, macroCount, vialProtocol, tapDanceEntries,
+    keymap, encoderLayout, encoderCount, currentLayer,
+    typingTestMode: false, typingTestEffectiveLayer: 0,
+    enabled: showPackTabs && packTab === 'base',
+  })
 
   // --- Layout picker (device browse / file browse / probe / keyboard view) ---
   const { layoutPickerContent } = useLayoutPicker({
@@ -463,7 +458,9 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     // Same simulation-tab read-only gate as the picker's own
     // onKeycodeSelect below — the "configured" tile overlay is another
     // click-driven edit entry point into the shared selection state.
-    onSelect: packTabReadOnly ? noopKeycodeSelect : gatedHandleKeycodeSelect,
+    // `useTileContentOverride`'s own `onSelect` is optional, so `undefined`
+    // is enough (it falls back to its own internal no-op).
+    onSelect: packTabReadOnly ? undefined : gatedHandleKeycodeSelect,
     settings: { comboEntries, onOpenCombo, keyOverrideEntries, onOpenKeyOverride, altRepeatKeyEntries, onOpenAltRepeatKey },
   })
 
@@ -491,6 +488,20 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   function layerLabel(layer: number): string {
     return layerNames?.[layer] || t('editor.keymap.layerN', { n: layer })
   }
+
+  // Base tab's data source (Plan-qwerty-select-no-rewrite v7): the SAME
+  // "no tabs" `<KeyboardPane>` JSX below renders both the plain (no-tabs)
+  // state and `showPackTabs && packTab === 'base'` — only these source
+  // variables differ between the two. Raw/identity (`baseLayer*`,
+  // `EMPTY_REMAPPED`, `undefined` remapLabel) while on the Base tab;
+  // otherwise the normal `remapLabel`/`isRemapped`-driven values every
+  // other state (JIS, QWERTY, View Matrix, ...) already used.
+  const onBaseTab = showPackTabs && packTab === 'base'
+  const primaryKeycodes = onBaseTab ? baseLayerKeycodes : layerKeycodes
+  const primaryEncoderKeycodes = onBaseTab ? baseLayerEncoderKeycodes : layerEncoderKeycodes
+  const primaryRemappedKeys = onBaseTab ? EMPTY_REMAPPED : remappedKeys
+  const primaryRemappedEncoders = onBaseTab ? EMPTY_REMAPPED : layerEncoderRemapped
+  const primaryRemapLabel = onBaseTab ? undefined : remapLabel
 
   return (
     <div className={`flex min-h-0 flex-1 flex-col ${typingTestMode && typingTestViewOnly ? '' : 'gap-3'}`}>
@@ -555,7 +566,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             // row (sketch: "keymap" over "zoom controls" in the right
             // column); normal mode keeps the single-child centered row.
             : viewMatrixMode.active ? 'flex min-w-0 flex-1 flex-col items-center justify-center gap-2 overflow-auto' : 'flex min-w-0 flex-1 items-center justify-center gap-4 overflow-auto'
-          }${(showPackTabs ? packTab === 'pack' : remapKind === 'simulated') ? ' remap-simulated' : ''}`}
+          }${remapKind === 'simulated' && (!showPackTabs || packTab === 'pack') ? ' remap-simulated' : ''}`}
         >
           {typingTestMode ? (
             <TypingTestPane
@@ -625,57 +636,61 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               onViewAnalytics={onViewAnalytics}
               keyboardUid={keyboardUid}
             />
-          ) : showPackTabs ? (
-            // Simulation/Base tabs (Plan-qwerty-select-no-rewrite v7): the
-            // vertical tab strip sits to the LEFT of the keymap pane, which
-            // switches its entire data source (remapped-simulation vs. raw
-            // Base) and edit surface by `packTab` alone — View Matrix mode
-            // is excluded from `showPackTabs` above, so this branch never
-            // needs the ViewMatrix click/selection variants the other
-            // branch below still carries.
-            <>
-              <KeymapPackTabs activeTab={packTab} onTabChange={handlePackTabChange} packName={keymapPackName ?? ''} />
-              <KeyboardPane
-                paneId="primary" isActive={true}
-                keys={layout.keys}
-                keycodes={packTab === 'pack' ? layerKeycodes : baseLayerKeycodes}
-                encoderKeycodes={packTab === 'pack' ? layerEncoderKeycodes : baseLayerEncoderKeycodes}
-                selectedKey={packTab === 'base' ? selectedKey : null}
-                selectedEncoder={packTab === 'base' ? selectedEncoder : null}
-                selectedMaskPart={packTab === 'base' && selectedMaskPart} selectedKeycode={packTab === 'base' ? selectedKeycode : null}
-                pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
-                remappedKeys={packTab === 'pack' ? remappedKeys : EMPTY_REMAPPED}
-                remappedEncoders={packTab === 'pack' ? layerEncoderRemapped : EMPTY_REMAPPED}
-                flash={packTab === 'base' ? flash : undefined}
-                multiSelectedKeys={packTab === 'base' ? multiSelectedKeys : undefined}
-                layoutOptions={effectiveLayoutOptions} scale={scaleProp}
-                remapLabel={packTab === 'pack' ? remapLabel : undefined}
-                layerLabel={layerLabel(currentLayer)} layerLabelTestId="layer-label"
-                footerExtra={packTab === 'pack' ? applyButtonNode : undefined}
-                readOnly={packTabReadOnly}
-                onKeyClick={packTab === 'base' ? handleKeyClick : undefined}
-                onKeyDoubleClick={packTab === 'base' ? handleKeyDoubleClick : undefined}
-                onEncoderClick={packTab === 'base' ? handleEncoderClick : undefined}
-                onEncoderDoubleClick={packTab === 'base' ? handleEncoderDoubleClick : undefined}
-                onDeselect={packTab === 'base' ? handleDeselect : undefined} contentRef={keyboardContentRef}
-              />
-            </>
           ) : (
             <>
-              <KeyboardPane
-                paneId="primary" isActive={true}              keys={layout.keys} keycodes={layerKeycodes} encoderKeycodes={layerEncoderKeycodes}
-                selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
-                pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
-                remappedKeys={remappedKeys} remappedEncoders={layerEncoderRemapped} flash={flash} multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
-                layoutOptions={effectiveLayoutOptions} scale={scaleProp}
-                labelOverrides={viewMatrixLabelOverrides} keyColors={viewMatrixDuplicateKeyColors} remapLabel={remapLabel}
-                layerLabel={viewMatrixMode.active ? undefined : layerLabel(currentLayer)} layerLabelTestId="layer-label"
-                onKeyClick={viewMatrixMode.active ? handleViewMatrixKeyClick : handleKeyClick}
-                onKeyDoubleClick={viewMatrixMode.active ? undefined : handleKeyDoubleClick}
-                onEncoderClick={viewMatrixMode.active ? undefined : handleEncoderClick}
-                onEncoderDoubleClick={viewMatrixMode.active ? undefined : handleEncoderDoubleClick}
-                onDeselect={viewMatrixMode.active ? viewMatrixMode.clearSelection : handleDeselect} contentRef={keyboardContentRef}
-              />
+              {/* Simulation/Base tabs (Plan-qwerty-select-no-rewrite v7):
+                  the vertical tab strip sits to the LEFT of the keymap
+                  pane. View Matrix mode is excluded from `showPackTabs`
+                  above, so it can never overlap with either tab. */}
+              {showPackTabs && (
+                <KeymapPackTabs activeTab={packTab} onTabChange={handlePackTabChange} packName={keymapPackName ?? ''} />
+              )}
+              {showPackTabs && packTab === 'pack' ? (
+                // Simulation pane: display data only — no selection props,
+                // no click/double-click/deselect handlers at all. `readOnly`
+                // (always `true` here, not a ternary) already makes
+                // `KeyboardWidget` null out every handler it's given
+                // regardless, and `KeyboardPane`'s own deselect-on-
+                // background-click checks `!readOnly` too — omitting the
+                // handlers here as well means read-only holds by
+                // construction, not by three separate `packTab === 'pack'`
+                // checks that could drift out of sync.
+                <KeyboardPane
+                  paneId="primary" isActive={true}
+                  keys={layout.keys} keycodes={layerKeycodes} encoderKeycodes={layerEncoderKeycodes}
+                  selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
+                  pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
+                  remappedKeys={remappedKeys} remappedEncoders={layerEncoderRemapped}
+                  layoutOptions={effectiveLayoutOptions} scale={scaleProp}
+                  remapLabel={remapLabel}
+                  layerLabel={layerLabel(currentLayer)} layerLabelTestId="layer-label"
+                  footerExtra={applyButtonNode}
+                  readOnly
+                  contentRef={keyboardContentRef}
+                />
+              ) : (
+                <>
+                  {/* Also the "no tabs" pane (JIS/QWERTY/typing-test-adjacent
+                      states) — the `showPackTabs && packTab === 'base'`
+                      case reuses this exact block rather than a second copy,
+                      swapping only the keycode/remap source variables below
+                      (`primaryKeycodes` etc.) for the Base tab's raw data. */}
+                  <KeyboardPane
+                    paneId="primary" isActive={true}              keys={layout.keys} keycodes={primaryKeycodes} encoderKeycodes={primaryEncoderKeycodes}
+                    selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
+                    pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
+                    remappedKeys={primaryRemappedKeys} remappedEncoders={primaryRemappedEncoders} flash={flash} multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
+                    layoutOptions={effectiveLayoutOptions} scale={scaleProp}
+                    labelOverrides={viewMatrixLabelOverrides} keyColors={viewMatrixDuplicateKeyColors} remapLabel={primaryRemapLabel}
+                    layerLabel={viewMatrixMode.active ? undefined : layerLabel(currentLayer)} layerLabelTestId="layer-label"
+                    onKeyClick={viewMatrixMode.active ? handleViewMatrixKeyClick : handleKeyClick}
+                    onKeyDoubleClick={viewMatrixMode.active ? undefined : handleKeyDoubleClick}
+                    onEncoderClick={viewMatrixMode.active ? undefined : handleEncoderClick}
+                    onEncoderDoubleClick={viewMatrixMode.active ? undefined : handleEncoderDoubleClick}
+                    onDeselect={viewMatrixMode.active ? viewMatrixMode.clearSelection : handleDeselect} contentRef={keyboardContentRef}
+                  />
+                </>
+              )}
               {/* View Matrix mode's relocated zoom row — same controls as
                   the normal-mode toolbar, moved below the keymap pane —
                   plus the same Ctrl/Shift multi-select hint the keycode

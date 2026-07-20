@@ -412,25 +412,8 @@ export function App() {
   // the StatusBar's "View Analytics" button can be disabled mid-run.
   const [typingTestRunning, setTypingTestRunning] = useState(false)
 
-  // Whether a Key Label "apply to keymap" rewrite is currently mid-flight —
-  // it runs unawaited from the footer's layout select and drives a sequence
-  // of `await`ed device writes that can take seconds. While it's running,
-  // the footer's Analyze button must stay disabled: opening AnalyzePage
-  // unmounts KeymapEditor (and its `history`/undo stack) out from under the
-  // in-flight rewrite, which would otherwise land the batch history push in
-  // an unmounted component (making it un-undoable after Back) and fire the
-  // post-apply flash timer's setState after unmount. Typing View / Typing
-  // Test don't unmount the editor, so they're unaffected; Disconnect has the
-  // same mid-apply hazard but that's pre-existing and out of scope here.
-  const [keymapApplyInFlight, setKeymapApplyInFlight] = useState(false)
-
   const handleApplyKeymapRewrite = useCallback(async (table: KeymapRewriteTable): Promise<KeymapApplyResult> => {
-    setKeymapApplyInFlight(true)
-    try {
-      return await (keymapEditorRef.current?.applyKeymapRewrite(table) ?? Promise.resolve({ appliedCount: 0 }))
-    } finally {
-      setKeymapApplyInFlight(false)
-    }
+    return await (keymapEditorRef.current?.applyKeymapRewrite(table) ?? Promise.resolve({ appliedCount: 0 }))
   }, [])
 
   // Plan-qwerty-select-no-rewrite v7 — シミュレーションタブ方式: lifted out of
@@ -439,7 +422,12 @@ export function App() {
   // simulation tab instead — both need the same pending/apply state, so it
   // is owned here and threaded down to each. `handleKeyboardLayoutChange`
   // still goes to the select as a plain display switch; `requestApply` goes
-  // to KeymapEditor's Apply button.
+  // to KeymapEditor's Apply button. `isApplying` (aliased `keymapApplyBusy`
+  // below) is also what gates the footer's Analyze button while a rewrite
+  // is mid-flight (see its own comment at the `analyzeDisabled` prop) — its
+  // true window fully contains the actual `applyKeymapRewrite` call (it
+  // flips true just before `onApplyKeymapRewrite` is invoked and clears
+  // only once that call settles), so no separate in-flight flag is needed.
   const {
     handleKeyboardLayoutChange: handleKeyboardLayoutSelectChange,
     requestApply: requestKeymapApply,
@@ -1113,7 +1101,16 @@ export function App() {
             keymapEditorRef.current?.toggleTypingTest()
           }}
           onOpenAnalyze={() => handleViewAnalytics('editor')}
-          analyzeDisabled={keymapApplyInFlight}
+          // Disabled while a Key Label "apply to keymap" rewrite is mid-
+          // flight: opening AnalyzePage unmounts KeymapEditor (and its
+          // `history`/undo stack) out from under the in-flight rewrite,
+          // which would otherwise land the batch history push in an
+          // unmounted component (making it un-undoable after Back) and
+          // fire the post-apply flash timer's setState after unmount.
+          // Typing View / Typing Test don't unmount the editor, so they're
+          // unaffected; Disconnect has the same mid-apply hazard but
+          // that's pre-existing and out of scope here.
+          analyzeDisabled={keymapApplyBusy}
           onViewAnalytics={() => handleViewAnalytics('typingTest')}
           viewAnalyticsDisabled={typingTestRunning}
           onDisconnect={editorUI.typingTestMode ? undefined : lifecycle.handleDisconnect}
