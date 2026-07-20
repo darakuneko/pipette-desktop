@@ -1854,4 +1854,97 @@ describe('useDevicePrefs', () => {
       expect(result.current.isRemapped('KC_E')).toBe(false)
     })
   })
+
+  // Plan-qwerty-select-no-rewrite v6 (Phase P): the key PICKER only ever
+  // changes for a pack that deviates from ANSI — a pure QWERTY-keycode
+  // permutation pack (Colemak et al.) leaves the picker raw in every mode,
+  // since every character it swaps in already exists in the picker
+  // somewhere. `pickerRemapLabel` is the gated variant; `remapLabel`
+  // (the keymap-legend source) is unaffected either way.
+  describe('pickerRemapLabel (Plan-qwerty-select-no-rewrite v6, Phase P)', () => {
+    const COLEMAK: Record<string, string> = {
+      KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
+      KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
+      KC_L: 'I', KC_SCOLON: 'O', KC_N: 'K',
+    }
+
+    // Real sample-packs/key-labels/japanese_qwerty_ej.json-style data — a
+    // QWERTY physical layout with shift-pair display labels. Fails
+    // `buildKeymapRewriteTable` (a shift pair can't flatten to one
+    // keycode), so it counts as an "ANSI-deviation" pack the picker must
+    // still remap — same fixture shape as
+    // `shared/keymap/__tests__/keymap-apply.test.ts`.
+    const JAPANESE_QWERTY: Record<string, string> = {
+      KC_LBRACKET: '`\n@',
+      KC_RBRACKET: '{\n[',
+      KC_2: '"\n2',
+    }
+
+    function mockKeyLabelPack(id: string, map: Record<string, string>): void {
+      const existing = vialAPIMock()
+      Object.defineProperty(window, 'vialAPI', {
+        value: {
+          ...existing,
+          keyLabelStoreGet: async (reqId: string) => {
+            if (reqId !== id) return { success: false, errorCode: 'NOT_FOUND' }
+            return {
+              success: true,
+              data: {
+                meta: { id, name: id, filename: `${id}.json`, savedAt: '', updatedAt: '' },
+                data: { name: id, map },
+              },
+            }
+          },
+        },
+        writable: true,
+        configurable: true,
+      })
+    }
+
+    it('is identity for a pure permutation pack (Colemak) while remapLabel/isRemapped still remap', async () => {
+      setupMocks()
+      mockKeyLabelPack('colemak-id', COLEMAK)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setLayout('colemak-id')
+      })
+      await act(async () => {}) // flush the ensure() IPC fetch
+
+      // Picker stays raw...
+      expect(result.current.pickerRemapLabel('KC_E')).toBe('KC_E')
+      // ...while the keymap-legend source keeps remapping and tinting.
+      expect(result.current.remapLabel('KC_E')).toBe('F')
+      expect(result.current.isRemapped('KC_E')).toBe(true)
+    })
+
+    it('matches remapLabel for a deviation pack that fails buildKeymapRewriteTable (JIS shift pairs)', async () => {
+      setupMocks()
+      mockKeyLabelPack('jis-id', JAPANESE_QWERTY)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setLayout('jis-id')
+      })
+      await act(async () => {})
+
+      expect(result.current.pickerRemapLabel('KC_LBRACKET')).toBe(result.current.remapLabel('KC_LBRACKET'))
+      expect(result.current.pickerRemapLabel('KC_LBRACKET')).toBe('`\n@')
+      expect(result.current.pickerRemapLabel('KC_2')).toBe('"\n2')
+    })
+
+    it('is identity for QWERTY, matching remapLabel', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      expect(result.current.pickerRemapLabel('KC_E')).toBe('KC_E')
+      expect(result.current.pickerRemapLabel('KC_E')).toBe(result.current.remapLabel('KC_E'))
+    })
+  })
 })

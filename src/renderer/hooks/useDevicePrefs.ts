@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
 import { useKeyLabelLookup } from './useKeyLabelLookup'
+import { buildKeymapRewriteTable } from '../../shared/keymap/keymap-apply'
 import { useAppConfig } from './useAppConfig'
 import { MIN_SCALE, MAX_SCALE } from '../components/editors/keymap-editor-types'
 import type { TypingTestResult, TypingViewMenuTab, ViewMode, TypingTestMemory, TypingTestMemoryWord, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
@@ -443,6 +444,27 @@ export interface UseDevicePrefsReturn {
    *  differs from `qmkId` itself — same rule every picker/palette consumer
    *  applies. */
   isRemapped: (qmkId: string) => boolean
+  /** Display label for a qmkId, but ONLY for the key PICKER surface
+   *  (`TabbedKeycodes` / `KeyPopover` → `PopoverTabKey`) — the keymap
+   *  legend itself (`useLayerKeycodes`, `KeyWidget`'s masked-inner label)
+   *  keeps using `remapLabel` above unconditionally.
+   *
+   *  Plan-qwerty-select-no-rewrite v6: the picker should only ever change
+   *  for a pack that deviates from ANSI (a symbol/label the picker can't
+   *  already show as-is — JIS shift pairs, kana, ...). A pure QWERTY-
+   *  keycode permutation (Colemak, Eucalyn, Dvorak, ...) swaps WHICH key
+   *  sends a character, but every character it swaps in already exists
+   *  somewhere in the picker — remapping the picker's own legends for
+   *  that case would just be noise (and would desync the picker's
+   *  legend from the keycode it actually inserts). So this identity-
+   *  passes for a permutation pack and only forwards to `remapLabel` once
+   *  the active pack fails the same `buildKeymapRewriteTable` check the
+   *  Key Label "apply to keymap" rewrite itself uses to decide
+   *  applicability — a deviation pack behaves exactly like `remapLabel`.
+   *  QWERTY/no pack has an empty map, which trivially passes the check
+   *  (nothing to permute), so it already resolves to identity without a
+   *  separate guard. */
+  pickerRemapLabel: (qmkId: string) => string
 }
 
 /**
@@ -893,6 +915,39 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     [remapLabel],
   )
 
+  // Picker-only gate (Plan-qwerty-select-no-rewrite v6, Phase P): a pure
+  // QWERTY-keycode permutation pack (Colemak, Eucalyn, Dvorak, ...) must
+  // leave the key PICKER raw — see `pickerRemapLabel`'s doc comment above.
+  // Re-derives the same `.ok` verdict `buildKeymapRewriteTable` already
+  // computes for the Key Label "apply to keymap" rewrite, rather than
+  // consulting `getKeymapApplicable` (an author-supplied hint the rewrite
+  // path deliberately treats as advisory only, not authoritative).
+  //
+  // Memoized on the pack map's own object reference (stable per cache
+  // entry, see `useKeyLabelLookup.getMap`) — same pattern the removed
+  // `appliedRewriteTargets` memo used (see git history) — rather than on
+  // `lookup` itself (a fresh object literal every render), so this only
+  // rebuilds when the pack data actually changes. QWERTY/no pack: `map`
+  // is `undefined` (not yet loaded) or an empty object (built-in QWERTY,
+  // or an uninstalled pack that never resolves) — an empty map trivially
+  // passes `buildKeymapRewriteTable` (there is nothing to permute), and
+  // an undefined map defaults to "pure permutation" too since `remapLabel`
+  // is already identity in that state regardless of this flag.
+  const activeMap = lookup.getMap(layout)
+  const packIsPurePermutation = useMemo(
+    () => !activeMap || buildKeymapRewriteTable(activeMap).ok,
+    [activeMap],
+  )
+
+  // Delegates to `remapLabel` itself for the deviation-pack branch (rather
+  // than re-resolving compositeLabels/map independently) so the picker and
+  // keymap legend can never disagree on what a deviation pack's label is —
+  // only WHETHER it's shown differs between the two surfaces.
+  const pickerRemapLabel = useCallback(
+    (qmkId: string): string => (packIsPurePermutation ? qmkId : remapLabel(qmkId)),
+    [packIsPurePermutation, remapLabel],
+  )
+
   return {
     layout,
     autoAdvance,
@@ -971,5 +1026,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     applyDevicePrefs,
     remapLabel,
     isRemapped,
+    pickerRemapLabel,
   }
 }

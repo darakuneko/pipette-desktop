@@ -40,7 +40,7 @@ import { useLayerKeycodes } from './use-layer-keycodes'
 export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEditorHandle, Props>(function KeymapEditor({
   keyboardUid, layout, layers, currentLayer, onLayerChange, keymap, encoderLayout, encoderCount,
   layoutOptions, layoutLabels, packedLayoutOptions, onSetLayoutOptions,
-  remapLabel, isRemapped, onSetKey, onSetKeysBulk, onSetEncoder,
+  remapLabel, isRemapped, pickerRemapLabel, onSetKey, onSetKeysBulk, onSetEncoder,
   rows, cols, getMatrixState, unlocked, onUnlock,
   tapDanceEntries, onSetTapDanceEntry,
   macroCount, macroBufferSize, macroBuffer, vialProtocol, parsedMacros, onSaveMacros,
@@ -591,7 +591,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onClose={() => setPopoverState(null)} quickSelect={quickSelect}
           previousKeycode={popoverUndoKeycode} onUndo={handlePopoverUndo}
           nextKeycode={popoverRedoKeycode} onRedo={handlePopoverRedo}
-          remapLabel={remapLabel}
+          remapLabel={pickerRemapLabel}
         />
       )}
 
@@ -615,7 +615,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             onTabChange={() => { multiSelect.clearPickerSelection() }}
             highlightedKeycodes={configuredKeycodes} maskOnly={isMaskKey} lmMode={isLMMask} showHint={!isMaskKey}
             tabFooterContent={tabFooterContent} tabContentOverride={tabContentOverride}
-            basicViewType={basicViewType} onBasicViewTypeChange={onBasicViewTypeChange} splitKeyMode={splitKeyMode} remapLabel={remapLabel}
+            basicViewType={basicViewType} onBasicViewTypeChange={onBasicViewTypeChange} splitKeyMode={splitKeyMode} remapLabel={pickerRemapLabel}
             tabBarRight={
               <Tooltip content={t('editorSettings.title')}>
                 <button ref={layoutButtonRef} type="button" aria-label={t('editorSettings.title')}

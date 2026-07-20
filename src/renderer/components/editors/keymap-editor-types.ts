@@ -84,6 +84,13 @@ export interface KeymapEditorProps {
   onSetLayoutOptions?: (options: number) => Promise<void>
   remapLabel?: (qmkId: string) => string
   isRemapped?: (qmkId: string) => boolean
+  /** Picker-only variant of `remapLabel` (Plan-qwerty-select-no-rewrite
+   *  v6, Phase P) — identity for a pure QWERTY-permutation pack, same as
+   *  `remapLabel` otherwise. Threaded ONLY to the picker surface
+   *  (`TabbedKeycodes`, the key popover); the keymap legend itself keeps
+   *  using `remapLabel` unconditionally. See `useDevicePrefs.ts` for the
+   *  full rationale. */
+  pickerRemapLabel?: (qmkId: string) => string
   onSetKey: (layer: number, row: number, col: number, keycode: number) => Promise<void>
   onSetKeysBulk: (entries: BulkKeyEntry[]) => Promise<void>
   onSetEncoder: (layer: number, idx: number, dir: number, keycode: number) => Promise<void>
