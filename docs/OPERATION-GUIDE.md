@@ -1583,8 +1583,9 @@ Lists every label set already on this device. Each row shows the label name, the
 
 The Name button has three states: ascending (▲) and descending (▼) each show a triangle for as long as that sort still matches the list's order, and a plain "Name" with no triangle once the order no longer matches either sort — which happens the moment you drag a row by hand. There is no button click that returns to a triangled state; only another click (re-applying asc/desc from scratch) or reopening the modal does. While a triangle is showing, importing a `.json` file or downloading a label from Hub inserts the new entry at its correct alphabetical position instead of adding it to the bottom of the list; re-importing over an existing label (same name) is treated as an update and keeps that label's current position. Either way, a brief "Imported {name}" / "Updated {name}" message appears next to the Name button for a few seconds, and the affected row scrolls into view.
 
-A second line under each row exposes the Hub actions:
+A second line under each row starts with a **Keymap Write** / **View Only** type label, then the Hub actions:
 
+- **Keymap Write** / **View Only**: whether this label set also qualifies to bulk-rewrite the keymap (see **Applying a Key Label to the Keymap** below) — the same eligibility check the footer's Keyboard Layout select tags each option with. QWERTY always shows **View Only**, since its map is never `keymapApplicable`
 - **Open**: open the entry's Hub page in the system browser (only when the row is linked to a Hub post)
 - **Upload**: publish a new Hub post from this local entry (only for entries that have not been uploaded yet)
 - **Update**: push the current local content to the existing Hub post (owner only)
@@ -1593,7 +1594,7 @@ A second line under each row exposes the Hub actions:
 
 If the Hub freshness check finds a row whose post has been deleted upstream, the Updated column reads **`(removed)`** in red instead of a timestamp; clicking Sync on such a row will fail because the Hub no longer serves it.
 
-QWERTY shows no Hub actions and cannot be deleted, but it can be reordered like any other row.
+QWERTY shows its **View Only** type label but no Hub actions, and cannot be deleted — though it can still be reordered like any other row.
 
 **Find on Hub tab**
 
@@ -1666,9 +1667,9 @@ Switching the **Keyboard Layout** dropdown in the footer never opens a dialog by
 
 The simulation tab is selected by default whenever the tabs appear. Switching keyboards resets the selection back to the simulation tab; switching only layers or picking a different pack does not.
 
-![Simulation and Base Tabs](screenshots/key-label-simulation-tabs.png)
+![Simulation and Default Tabs](screenshots/key-label-simulation-tabs.png)
 
-**Apply lives on the simulation tab's layer-indicator row.** At the right end of that row, an **Apply** button opens the Rewrite confirmation dialog:
+**The layer-indicator row reads "Preview - Layer N" while the simulation tab is active** (e.g. "Preview - Layer 0"), so it stays visually distinct from the plain "Layer N" label the Default tab and every other keymap view use. **Apply lives at the right end of that same row** — an **Apply** button that opens the Rewrite confirmation dialog:
 
 ![Apply Key Label to Keymap](screenshots/key-label-keymap-apply-modal.png)
 
@@ -2057,7 +2058,7 @@ Inline selectors for common per-session preferences. A `|` separator divides the
 
 - **Language**: Switch the UI language. Opens a dropdown of built-in languages and installed language packs (see §6.3)
 - **Theme**: Switch the color theme. Options include System, Light, Dark, and any installed theme packs (see §6.4)
-- **Key Labels**: Switch the key label set for the current keyboard. Options reflect the installed Key Labels store in drag order (see §6.2)
+- **Key Labels**: Switch the key label set for the current keyboard. Options reflect the installed Key Labels store in drag order (see §6.2). Each option in the open dropdown carries a trailing **Write** / **View** tag — the short form of the Key Labels modal's **Keymap Write** / **View Only** type label — so you can tell which sets can bulk-rewrite the keymap before picking one
 - **Edit / Done**: Toggle edit mode. Replaces the selectors with **Language Packs**, **Theme Packs**, and **Key Labels** management modal buttons for installing, syncing, or reordering entries
 
 **Action buttons** (right side)
