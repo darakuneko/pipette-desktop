@@ -121,15 +121,38 @@ function parseRgbFunction(value: string): Hsl | null {
   return rgbToHsl(r, g, b)
 }
 
+const HUE_TOKEN_REGEX = /^(-?[\d.]+(?:e-?\d+)?)(deg|grad|rad|turn)?$/i
+
+/** Parses an `hsl()` hue token into degrees, honoring the CSS `<angle>`
+ *  unit suffixes the shared `CSS_FN_COLOR_REGEX` validator already admits
+ *  (`deg` or unitless, `turn`, `rad`, `grad`). Misreading `turn`/`rad`/
+ *  `grad` as bare degrees would silently mis-rotate the hue (e.g.
+ *  `0.5turn` == 180° read as literal `0.5°`), so an unrecognized unit
+ *  falls back to null (same as unparseable) rather than guessing. */
+function parseHueDegrees(token: string): number | null {
+  const match = token.match(HUE_TOKEN_REGEX)
+  if (!match) return null
+  const value = parseFloat(match[1])
+  if (Number.isNaN(value)) return null
+  switch ((match[2] ?? 'deg').toLowerCase()) {
+    case 'deg': return value
+    case 'turn': return value * 360
+    case 'rad': return value * (180 / Math.PI)
+    case 'grad': return value * 0.9
+    default: return null
+  }
+}
+
 function parseHslFunction(value: string): Hsl | null {
   const match = value.match(/^hsla?\(([^)]+)\)$/i)
   if (!match) return null
   const parts = splitFunctionArgs(match[1])
   if (parts.length < 3) return null
-  const h = parseFloat(parts[0])
+  const h = parseHueDegrees(parts[0])
+  if (h === null) return null
   const s = parseFloat(parts[1])
   const l = parseFloat(parts[2])
-  if ([h, s, l].some((n) => Number.isNaN(n))) return null
+  if ([s, l].some((n) => Number.isNaN(n))) return null
   return { h: ((h % 360) + 360) % 360, s, l }
 }
 

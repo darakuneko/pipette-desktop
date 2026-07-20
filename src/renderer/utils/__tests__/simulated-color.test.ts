@@ -70,4 +70,32 @@ describe('deriveSimulatedColor', () => {
     const result = deriveSimulatedColor('#1a2b8f', 'dark')
     expect(result).toMatch(/^#[0-9a-f]{6}$/)
   })
+
+  describe('hsl() hue unit suffixes', () => {
+    // All four cases below describe a cyan-ish h=180 source (S=100 L=50);
+    // rotating +180 lands on red (h=0/360) — clamp light is min(l,50), a
+    // no-op here since l is already 50. Misreading the unit (treating
+    // `turn`/`rad`/`grad` as bare degrees) would instead read these as a
+    // ~0-1° hue, producing a result nowhere near red.
+    it('converts turn units (0.5turn == 180deg)', () => {
+      expect(deriveSimulatedColor('hsl(.5turn, 100%, 50%)', 'light')).toBe('#ff0000')
+    })
+
+    it('converts rad units (~3.14159rad == 180deg)', () => {
+      expect(deriveSimulatedColor('hsl(3.14159rad, 100%, 50%)', 'light')).toBe('#ff0000')
+    })
+
+    it('converts grad units (200grad == 180deg)', () => {
+      expect(deriveSimulatedColor('hsl(200grad, 100%, 50%)', 'light')).toBe('#ff0000')
+    })
+
+    it('treats a bare/unitless hue as degrees', () => {
+      expect(deriveSimulatedColor('hsl(180, 100%, 50%)', 'light')).toBe('#ff0000')
+    })
+
+    it('falls back to the built-in default for an unrecognized hue unit', () => {
+      expect(deriveSimulatedColor('hsl(180xyz, 100%, 50%)', 'light')).toBe(DEFAULT_SIMULATED_COLOR.light)
+      expect(deriveSimulatedColor('hsl(180xyz, 100%, 50%)', 'dark')).toBe(DEFAULT_SIMULATED_COLOR.dark)
+    })
+  })
 })
