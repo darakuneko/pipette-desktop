@@ -6,7 +6,7 @@ import { filterVisibleKeys, repositionLayoutKeys } from '../../../shared/kle/fil
 import { posKey, encoderPosKey } from '../../../shared/kle/pos-key'
 import { KeyWidget } from './KeyWidget'
 import { EncoderWidget } from './EncoderWidget'
-import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING, type RemapKind } from './constants'
+import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from './constants'
 import { innerHeatmapFillForCell, outerHeatmapFillForCell } from './heatmap-fill'
 import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
@@ -83,12 +83,6 @@ interface Props {
    *  the CW/CCW legend the pack's Rewrite touched (`EncoderWidget`'s
    *  `remapped` prop). */
   remappedEncoders?: Set<string>
-  /** Which remap tint `remappedKeys`/`remappedEncoders` use for every key
-   *  on this pane — see `RemapKind` in `constants.ts`. Defaults to
-   *  `'actual'` (the pre-existing tint) so callers that don't thread the
-   *  active pack's kind (device-browse picker, key popover previews, …)
-   *  keep their current appearance. */
-  remapKind?: RemapKind
   multiSelectedKeys?: Set<string>
   layoutOptions?: Map<number, number>
   selectedMaskPart?: boolean
@@ -144,7 +138,6 @@ function KeyboardWidgetInner({
   everPressedKeys,
   remappedKeys,
   remappedEncoders,
-  remapKind = 'actual',
   multiSelectedKeys,
   layoutOptions,
   heatmapCells,
@@ -229,7 +222,6 @@ function KeyboardWidgetInner({
               keycode={kc}
               selected={false}
               remapped={remappedEncoders?.has(encoderPosKey(key.encoderIdx, key.encoderDir))}
-              remapKind={remapKind}
               {...flashPropsFor(flash, 'encoders', encoderPosKey(key.encoderIdx, key.encoderDir))}
               onClick={readOnly ? undefined : onEncoderClick}
               onDoubleClick={readOnly ? undefined : onEncoderDoubleClick}
@@ -252,7 +244,6 @@ function KeyboardWidgetInner({
             {...flashPropsFor(flash, 'keys', pos)}
             everPressed={everPressedKeys?.has(pos)}
             remapped={remappedKeys?.has(pos)}
-            remapKind={remapKind}
             heatmapOuterFill={outerHeatmapFillForCell(heatmapCells, heatmapMaxHold, heatmapMaxTotal, pos, effectiveTheme)}
             heatmapInnerFill={innerHeatmapFillForCell(heatmapCells, heatmapMaxTap, pos, effectiveTheme)}
             effectiveTheme={effectiveTheme}
@@ -287,7 +278,6 @@ function KeyboardWidgetInner({
               selected
               selectedMaskPart={selectedMaskPart}
               remapped={remappedEncoders?.has(encoderPosKey(key.encoderIdx, key.encoderDir))}
-              remapKind={remapKind}
               {...flashPropsFor(flash, 'encoders', encoderPosKey(key.encoderIdx, key.encoderDir))}
               onClick={readOnly ? undefined : onEncoderClick}
               onDoubleClick={readOnly ? undefined : onEncoderDoubleClick}
@@ -311,7 +301,6 @@ function KeyboardWidgetInner({
             {...flashPropsFor(flash, 'keys', pos)}
             everPressed={everPressedKeys?.has(pos)}
             remapped={remappedKeys?.has(pos)}
-            remapKind={remapKind}
             heatmapOuterFill={outerHeatmapFillForCell(heatmapCells, heatmapMaxHold, heatmapMaxTotal, pos, effectiveTheme)}
             heatmapInnerFill={innerHeatmapFillForCell(heatmapCells, heatmapMaxTap, pos, effectiveTheme)}
             effectiveTheme={effectiveTheme}

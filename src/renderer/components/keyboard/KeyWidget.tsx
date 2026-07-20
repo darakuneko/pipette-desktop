@@ -24,10 +24,8 @@ import {
   KEY_TEXT_COLOR,
   KEY_INVERTED_TEXT_COLOR,
   KEY_REMAP_COLOR,
-  KEY_SIMULATED_COLOR,
   KEY_MASK_RECT_COLOR,
   KEY_HOVER_COLOR,
-  type RemapKind,
 } from './constants'
 import { shouldInvertText } from './fill-luminance'
 import type { EffectiveTheme } from '../../hooks/useEffectiveTheme'
@@ -66,11 +64,6 @@ interface Props {
   flashStartedAt?: number
   everPressed?: boolean
   remapped?: boolean
-  /** Which remap tint `remapped` uses — see `RemapKind` in `constants.ts`.
-   *  Defaults to `'actual'` (the pre-existing tint) so every caller that
-   *  doesn't thread a pack-level kind (key popover previews, Macro chips,
-   *  the device-browse picker, …) keeps its current appearance. */
-  remapKind?: RemapKind
   /** Heatmap fill for the outer rect (or the whole key on non-masked
    * keys). Lives below the pressed / selected / multi / highlighted /
    * everPressed priority levels so the immediate feedback colours are
@@ -132,7 +125,6 @@ function KeyWidgetInner({
   flashStartedAt,
   everPressed,
   remapped,
-  remapKind = 'actual',
   heatmapOuterFill,
   heatmapInnerFill,
   customFill,
@@ -194,10 +186,9 @@ function KeyWidgetInner({
   // (below the label, see the render below), so the invert decision is
   // made against that colour instead — the same visual `selected` gets.
   const invertText = shouldInvertText(flashed ? KEY_SELECTED_COLOR : fillColor, effectiveTheme)
-  const remapTintColor = remapKind === 'simulated' ? KEY_SIMULATED_COLOR : KEY_REMAP_COLOR
   let labelColor = KEY_TEXT_COLOR
   if (invertText) labelColor = KEY_INVERTED_TEXT_COLOR
-  else if (remapped) labelColor = remapTintColor
+  else if (remapped) labelColor = KEY_REMAP_COLOR
 
   // Inner rect fill + matching label colour for masked keys. The inner
   // rect's fill picks up hover/heatmap just like the outer, so its
@@ -214,7 +205,7 @@ function KeyWidgetInner({
   const innerInvertText = shouldInvertText(innerFillColor, effectiveTheme)
   let innerLabelColor = KEY_TEXT_COLOR
   if (innerInvertText) innerLabelColor = KEY_INVERTED_TEXT_COLOR
-  else if (remapped) innerLabelColor = remapTintColor
+  else if (remapped) innerLabelColor = KEY_REMAP_COLOR
 
   // Label
   const outerLabel = labelOverride?.outer ?? keycodeLabel(keycode)

@@ -14,7 +14,6 @@ import { isRomajiCapable, carryRomajiFields } from '../../typing-test/romaji-inp
 import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
 import { TYPING_HEATMAP_WINDOW_OPTIONS } from '../../../shared/types/app-config'
 import { KeyboardPane } from './KeyboardPane'
-import type { RemapKind } from '../keyboard/constants'
 import { HistoryToggle } from './HistoryToggle'
 import { ComparisonToggle } from './ComparisonToggle'
 import { computeComparison, matchingResults, conditionKey } from '../../typing-test/comparison'
@@ -64,9 +63,6 @@ export interface TypingTestPaneProps {
   /** Encoder analogue of `remappedKeys` — see `KeyboardWidget`'s
    *  `remappedEncoders`. */
   remappedEncoders?: Set<string>
-  /** Which remap tint `remappedKeys`/`remappedEncoders` use — see
-   *  `KeyboardWidget`'s `remapKind`. Defaults to `'actual'`. */
-  remapKind?: RemapKind
   /** Active Key Label pack's per-key legend override — see
    *  `KeyboardWidget`'s `remapLabel`. */
   remapLabel?: (qmkId: string) => string
@@ -182,7 +178,6 @@ export function TypingTestPane({
   encoderKeycodes,
   remappedKeys,
   remappedEncoders,
-  remapKind,
   remapLabel,
   layoutOptions,
   scale,
@@ -800,7 +795,6 @@ export function TypingTestPane({
               everPressedKeys={undefined}
               remappedKeys={remappedKeys}
               remappedEncoders={remappedEncoders}
-              remapKind={remapKind}
               remapLabel={remapLabel}
               layoutOptions={layoutOptions}
               heatmapCells={heatmapCells}

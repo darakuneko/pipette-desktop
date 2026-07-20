@@ -241,6 +241,18 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --key-bg-multi-selected: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
+/* Permutation-pack Display Only keymap surface: every KeyWidget/EncoderWidget
+   underneath resolves its remap tint from `--key-label-remap` (see
+   constants.ts's KEY_REMAP_COLOR) — overriding that one custom property here
+   redirects the whole subtree to the "simulated" tint without threading a
+   remapKind prop through every intermediate component. Applied by
+   KeymapEditor on the single container that wraps the active keymap surface
+   (KeyboardPane or TypingTestPane) — never on the key picker or popover, so
+   their "actual" tint (JIS-type remaps, the key picker) is unaffected. */
+.remap-simulated {
+  --key-label-remap: var(--key-label-simulated);
+}
+
 @theme {
   /* Background */
   --color-surface: var(--surface);

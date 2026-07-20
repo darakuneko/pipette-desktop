@@ -2,7 +2,6 @@
 
 import { KeyboardWidget } from '../keyboard/KeyboardWidget'
 import type { KeyFlashState } from '../keyboard/key-flash'
-import type { RemapKind } from '../keyboard/constants'
 import type { KleKey } from '../../../shared/kle/types'
 import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 
@@ -29,9 +28,6 @@ export interface KeyboardPaneProps {
   /** Encoder analogue of `remappedKeys` — see `KeyboardWidget`'s
    *  `remappedEncoders`. */
   remappedEncoders?: Set<string>
-  /** Which remap tint `remappedKeys`/`remappedEncoders` use — see
-   *  `KeyboardWidget`'s `remapKind`. Defaults to `'actual'`. */
-  remapKind?: RemapKind
   /** Flash state after a bulk keymap rewrite or a successful undo/redo —
    *  see `KeyboardWidget`'s `flash`. */
   flash?: KeyFlashState
@@ -82,7 +78,6 @@ export function KeyboardPane({
   everPressedKeys,
   remappedKeys,
   remappedEncoders,
-  remapKind,
   flash,
   multiSelectedKeys,
   layoutOptions,
@@ -127,7 +122,6 @@ export function KeyboardPane({
           everPressedKeys={everPressedKeys}
           remappedKeys={remappedKeys}
           remappedEncoders={remappedEncoders}
-          remapKind={remapKind}
           flash={flash}
           multiSelectedKeys={multiSelectedKeys}
           layoutOptions={layoutOptions}

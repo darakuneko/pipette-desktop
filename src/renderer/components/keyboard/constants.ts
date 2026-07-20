@@ -36,17 +36,24 @@ export const KEY_DUPLICATE_COLOR = 'var(--key-bg-duplicate)'
 export const KEY_TEXT_COLOR = 'var(--key-label)'
 export const KEY_INVERTED_TEXT_COLOR = 'var(--content-inverse)'
 export const KEY_REMAP_COLOR = 'var(--key-label-remap)'
-// Permutation-pack "Display Only" tint — see `RemapKind` below.
-export const KEY_SIMULATED_COLOR = 'var(--key-label-simulated)'
 export const KEY_MASK_RECT_COLOR = 'var(--key-mask-bg)'
 export const KEY_HOVER_COLOR = 'var(--key-bg-hover)'
 
-/** Which remap tint a `remapped` key/encoder label uses. `'actual'` (the
+/** Which remap tint the active keymap surface uses. `'actual'` (the
  *  default) is the existing `key-label-remap` tint — JIS-type display
  *  remaps, written-mode changed keys, and the key picker: the shown
  *  legend is truthful, the physical key really produces that character.
- *  `'simulated'` is `key-label-simulated` — a permutation pack's Display
- *  Only legend on the keymap surface: the label shows what a Rewrite
- *  WOULD produce, but pressing the key still types the pre-Rewrite
- *  character. See `useDevicePrefs.ts`'s `remapKind` for the gating logic. */
+ *  `'simulated'` is a permutation pack's Display Only legend on the
+ *  keymap surface: the label shows what a Rewrite WOULD produce, but
+ *  pressing the key still types the pre-Rewrite character.
+ *
+ *  This is NOT threaded as a prop down to KeyWidget/EncoderWidget — every
+ *  key/encoder always resolves its tint from `KEY_REMAP_COLOR` (`--key-
+ *  label-remap`) unconditionally. `'simulated'` mode is applied as a pure
+ *  CSS cascade override instead: `KeymapEditor` puts the `remap-simulated`
+ *  class (style.css) on the single container wrapping the active keymap
+ *  surface, which redefines `--key-label-remap` to `--key-label-simulated`
+ *  for every descendant — the picker/popover render outside that
+ *  container and are unaffected. See `useDevicePrefs.ts`'s `remapKind`
+ *  for the simulated/actual decision itself. */
 export type RemapKind = 'actual' | 'simulated'

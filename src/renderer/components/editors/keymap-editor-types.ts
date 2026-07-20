@@ -88,7 +88,12 @@ export interface KeymapEditorProps {
   /** Which remap tint `isRemapped`-tinted keys use on the keymap surface
    *  (keymap pane + typing-test pane) — see `RemapKind` in
    *  `components/keyboard/constants.ts` and `useDevicePrefs.ts`'s
-   *  `remapKind` for the gating logic. Defaults to `'actual'`. */
+   *  `remapKind` for the gating logic. Applied as a pure CSS override
+   *  (the `remap-simulated` class in `style.css`) on the single container
+   *  that wraps the active keymap surface — it does NOT thread further
+   *  into KeyboardPane/TypingTestPane/KeyboardWidget/KeyWidget/
+   *  EncoderWidget, which only ever know `--key-label-remap` via
+   *  `KEY_REMAP_COLOR`. Defaults to `'actual'`. */
   remapKind?: RemapKind
   /** Picker-only variant of `remapLabel` (Plan-qwerty-select-no-rewrite
    *  v6, Phase P) — identity for a pure QWERTY-permutation pack, same as

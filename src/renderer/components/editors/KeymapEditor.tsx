@@ -456,12 +456,27 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             onAxisChange={handleViewMatrixAxisChange}
           />
         )}
-        <div className={typingTestMode
-          ? 'flex min-h-0 min-w-0 flex-1 flex-col gap-3'
-          // View Matrix mode stacks the keymap above its relocated zoom
-          // row (sketch: "keymap" over "zoom controls" in the right
-          // column); normal mode keeps the single-child centered row.
-          : viewMatrixMode.active ? 'flex min-w-0 flex-1 flex-col items-center justify-center gap-2 overflow-auto' : 'flex min-w-0 flex-1 items-center justify-center gap-4 overflow-auto'}>
+        {/* Single container for the active keymap surface (TypingTestPane OR
+            KeyboardPane — only one renders at a time). `remap-simulated`
+            (style.css) overrides `--key-label-remap` for every descendant
+            KeyWidget/EncoderWidget, so a permutation pack's Display Only
+            tint is a pure CSS cascade override rather than a `remapKind`
+            prop threaded through KeyboardPane/TypingTestPane/KeyboardWidget/
+            KeyWidget/EncoderWidget. The key picker and popover render as
+            siblings further down (or in the sibling `TabbedKeycodes` block),
+            never inside this container, so their "actual" tint is
+            unaffected — see `useDevicePrefs.ts`'s `remapKind` doc comment
+            for the simulated/actual decision itself. */}
+        <div
+          data-testid="keymap-surface"
+          className={`${typingTestMode
+            ? 'flex min-h-0 min-w-0 flex-1 flex-col gap-3'
+            // View Matrix mode stacks the keymap above its relocated zoom
+            // row (sketch: "keymap" over "zoom controls" in the right
+            // column); normal mode keeps the single-child centered row.
+            : viewMatrixMode.active ? 'flex min-w-0 flex-1 flex-col items-center justify-center gap-2 overflow-auto' : 'flex min-w-0 flex-1 items-center justify-center gap-4 overflow-auto'
+          }${remapKind === 'simulated' ? ' remap-simulated' : ''}`}
+        >
           {typingTestMode ? (
             <TypingTestPane
               typingTest={typingTest}
@@ -479,7 +494,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               encoderKeycodes={typingTestEncoderKeycodes}
               remappedKeys={typingTestRemapped}
               remappedEncoders={typingTestEncoderRemapped}
-              remapKind={remapKind}
               remapLabel={remapLabel}
               layoutOptions={effectiveLayoutOptions}
               scale={scaleProp}
@@ -537,7 +551,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                 paneId="primary" isActive={true}              keys={layout.keys} keycodes={layerKeycodes} encoderKeycodes={layerEncoderKeycodes}
                 selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
                 pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
-                remappedKeys={remappedKeys} remappedEncoders={layerEncoderRemapped} remapKind={remapKind} flash={flash} multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
+                remappedKeys={remappedKeys} remappedEncoders={layerEncoderRemapped} flash={flash} multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
                 layoutOptions={effectiveLayoutOptions} scale={scaleProp}
                 labelOverrides={viewMatrixLabelOverrides} keyColors={viewMatrixDuplicateKeyColors} remapLabel={remapLabel}
                 layerLabel={viewMatrixMode.active ? undefined : layerLabel(currentLayer)} layerLabelTestId="layer-label"
