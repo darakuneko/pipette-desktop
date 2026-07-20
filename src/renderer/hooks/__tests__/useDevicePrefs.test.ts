@@ -226,6 +226,105 @@ describe('useDevicePrefs', () => {
     })
   })
 
+  // Plan-qwerty-select-no-rewrite Phase K: `keyboardLayout` and
+  // `keymapWritten` are always written in the SAME patch via the atomic
+  // `setKeyboardLayoutState` setter, so no intermediate render (or
+  // persisted file) ever holds a mismatched pair.
+  describe('keymapWritten / setKeyboardLayoutState (Plan-qwerty-select-no-rewrite Phase K)', () => {
+    it('setKeyboardLayoutState persists keyboardLayout and keymapWritten together in one PATCH', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      mockPipetteSettingsPatch.mockClear()
+      act(() => {
+        result.current.setKeyboardLayoutState('eucalyn-id', true)
+      })
+
+      expect(result.current.layout).toBe('eucalyn-id')
+      expect(result.current.keymapWritten).toBe(true)
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledTimes(1)
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+        keyboardLayout: 'eucalyn-id',
+        keymapWritten: true,
+      }))
+    })
+
+    it('setLayout (compat wrapper) always persists keymapWritten=false, even overriding a previously-true value', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setKeyboardLayoutState('eucalyn-id', true)
+      })
+      expect(result.current.keymapWritten).toBe(true)
+
+      mockPipetteSettingsPatch.mockClear()
+      act(() => {
+        result.current.setLayout('dvorak-id')
+      })
+
+      expect(result.current.layout).toBe('dvorak-id')
+      expect(result.current.keymapWritten).toBe(false)
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+        keyboardLayout: 'dvorak-id',
+        keymapWritten: false,
+      }))
+    })
+
+    it('round-trips keymapWritten=true from IPC on applyDevicePrefs', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValueOnce({
+        _rev: 1,
+        keyboardLayout: 'eucalyn-id',
+        keymapWritten: true,
+        autoAdvance: true,
+        layerNames: [],
+      } as never)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.layout).toBe('eucalyn-id')
+      expect(result.current.keymapWritten).toBe(true)
+    })
+
+    it('defaults keymapWritten to false when absent from IPC data (older prefs file, or a plain display switch)', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValueOnce({
+        _rev: 1,
+        keyboardLayout: 'dvorak',
+        autoAdvance: true,
+        layerNames: [],
+      })
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.layout).toBe('dvorak')
+      expect(result.current.keymapWritten).toBe(false)
+    })
+
+    it('defaults keymapWritten to false for a brand-new device with no stored prefs', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.keymapWritten).toBe(false)
+    })
+  })
+
   describe('invalid data fallback', () => {
     // After the Key Labels migration any non-empty id is accepted; the
     // store may still load it asynchronously after a hub download. Tests
@@ -1945,6 +2044,145 @@ describe('useDevicePrefs', () => {
       await act(async () => {})
       expect(result.current.pickerRemapLabel('KC_E')).toBe('KC_E')
       expect(result.current.pickerRemapLabel('KC_E')).toBe(result.current.remapLabel('KC_E'))
+    })
+  })
+
+  // Plan-qwerty-select-no-rewrite Phase K: once `keymapWritten` is true for
+  // the active `layout`, the KEYMAP surface (remapLabel/isRemapped) must
+  // show raw legends (no pack-label translation — the keymap already holds
+  // the rewritten characters as real keycodes) and color ONLY the keys the
+  // rewrite table actually changed. `setKeyboardLayoutState` is used
+  // directly here (rather than `setLayout`, which always forces
+  // written=false) to enter written mode without going through
+  // `useKeymapApplyPrompt`'s own transition logic (covered separately).
+  describe('written-mode rendering gate (Plan-qwerty-select-no-rewrite Phase K)', () => {
+    const COLEMAK: Record<string, string> = {
+      KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
+      KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
+      KC_L: 'I', KC_SCOLON: 'O', KC_N: 'K',
+    }
+    // Real sample-packs/key-labels/japanese_qwerty_ej.json-style data — fails
+    // buildKeymapRewriteTable (a shift pair can't flatten to one keycode).
+    const JAPANESE_QWERTY: Record<string, string> = {
+      KC_LBRACKET: '`\n@',
+      KC_RBRACKET: '{\n[',
+      KC_2: '"\n2',
+    }
+
+    function mockKeyLabelPack(id: string, map: Record<string, string>): void {
+      const existing = vialAPIMock()
+      Object.defineProperty(window, 'vialAPI', {
+        value: {
+          ...existing,
+          keyLabelStoreGet: async (reqId: string) => {
+            if (reqId !== id) return { success: false, errorCode: 'NOT_FOUND' }
+            return {
+              success: true,
+              data: {
+                meta: { id, name: id, filename: `${id}.json`, savedAt: '', updatedAt: '' },
+                data: { name: id, map },
+              },
+            }
+          },
+        },
+        writable: true,
+        configurable: true,
+      })
+    }
+
+    it('written=true shows raw legends (no pack translation) and colors only the rewrite table\'s non-identity targets', async () => {
+      setupMocks()
+      mockKeyLabelPack('colemak-id', COLEMAK)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setKeyboardLayoutState('colemak-id', true)
+      })
+      await act(async () => {}) // flush the ensure() IPC fetch
+
+      // Raw legend despite the pack mapping KC_E -> 'F' — the keymap
+      // already embodies the rewrite, so no label translation happens.
+      expect(result.current.remapLabel('KC_E')).toBe('KC_E')
+      expect(result.current.remapLabel('KC_A')).toBe('KC_A')
+      // KC_E is a rewrite-table TARGET (KC_K -> KC_E) — colored.
+      expect(result.current.isRemapped('KC_E')).toBe(true)
+      // KC_A never appears in the table — not colored.
+      expect(result.current.isRemapped('KC_A')).toBe(false)
+    })
+
+    it('written=true excludes identity entries from color, same as Display Only', async () => {
+      setupMocks()
+      const PACK_WITH_PASSTHROUGH: Record<string, string> = { ...COLEMAK, KC_A: 'KC_A' }
+      mockKeyLabelPack('colemak-passthrough-id', PACK_WITH_PASSTHROUGH)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setKeyboardLayoutState('colemak-passthrough-id', true)
+      })
+      await act(async () => {})
+
+      // KC_A -> KC_A is an identity entry in the built table (source ===
+      // target) — it must stay unmarked even though it's technically
+      // present in the map.
+      expect(result.current.isRemapped('KC_A')).toBe(false)
+      expect(result.current.remapLabel('KC_A')).toBe('KC_A')
+    })
+
+    it('degrades to no color (but keeps raw legends) when the pack is missing/not yet loaded', async () => {
+      setupMocks() // no keyLabelStoreGet override — the pack never resolves
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setKeyboardLayoutState('missing-pack-id', true)
+      })
+      await act(async () => {})
+
+      expect(result.current.remapLabel('KC_E')).toBe('KC_E')
+      expect(result.current.isRemapped('KC_E')).toBe(false)
+      expect(result.current.isRemapped('KC_A')).toBe(false)
+    })
+
+    it('degrades to no color (but keeps raw legends) when buildKeymapRewriteTable fails (e.g. the pack was re-imported with shift-pair content)', async () => {
+      setupMocks()
+      mockKeyLabelPack('jis-id', JAPANESE_QWERTY)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setKeyboardLayoutState('jis-id', true)
+      })
+      await act(async () => {})
+
+      expect(result.current.remapLabel('KC_LBRACKET')).toBe('KC_LBRACKET')
+      expect(result.current.isRemapped('KC_LBRACKET')).toBe(false)
+    })
+
+    it('written=false is unaffected — Display Only behavior continues to apply', async () => {
+      setupMocks()
+      mockKeyLabelPack('colemak-id', COLEMAK)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setKeyboardLayoutState('colemak-id', false)
+      })
+      await act(async () => {})
+
+      expect(result.current.remapLabel('KC_E')).toBe('F')
+      expect(result.current.isRemapped('KC_E')).toBe(true)
     })
   })
 })

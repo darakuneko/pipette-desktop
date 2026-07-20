@@ -1079,7 +1079,8 @@ export function App() {
             hubDisplayName: hub.hubDisplayName,
             hubCanWrite: hub.hubCanUpload,
             keyboardLayout: devicePrefs.layout,
-            onKeyboardLayoutChange: devicePrefs.setLayout,
+            keymapWritten: devicePrefs.keymapWritten,
+            onKeyboardLayoutChange: devicePrefs.setKeyboardLayoutState,
             keymapEditable: keyboard.keymap.size > 0,
             keymapRestoreSeq: keyboard.keymapRestoreSeq,
             onApplyKeymapRewrite: async (table) => {

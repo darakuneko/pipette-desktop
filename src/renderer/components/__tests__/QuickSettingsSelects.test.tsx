@@ -138,7 +138,7 @@ describe('QuickSettingsSelects — keyboard layout apply-to-keymap branching', (
     await selectColemak()
 
     expect(buildKeymapRewriteTable).not.toHaveBeenCalled()
-    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id')
+    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id', false)
     expect(capturedApplyModalProps?.open).toBe(false)
   })
 
@@ -149,11 +149,11 @@ describe('QuickSettingsSelects — keyboard layout apply-to-keymap branching', (
     renderComponent()
     await selectColemak()
 
-    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id')
+    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id', false)
     expect(capturedApplyModalProps?.open).toBe(false)
   })
 
-  it('after confirming Rewrite, the select resets to QWERTY on clean success (destructive one-shot)', async () => {
+  it('after confirming Rewrite, the select STAYS on the rewritten arrangement and is marked written (Phase K — no more QWERTY reset)', async () => {
     lookup.getKeymapApplicable.mockReturnValue(true)
     buildKeymapRewriteTable.mockReturnValue({ ok: true, table: new Map([['KC_E', 'KC_F']]) })
 
@@ -166,14 +166,13 @@ describe('QuickSettingsSelects — keyboard layout apply-to-keymap branching', (
     expect(onApplyKeymapRewrite).toHaveBeenCalledTimes(1)
     const [table] = onApplyKeymapRewrite.mock.calls[0] as [Map<string, string>]
     expect(table).toEqual(new Map([['KC_E', 'KC_F']]))
-    // Clean success resets the select back to QWERTY — the rewrite is a
-    // destructive one-shot (v5 最終仕様), never left on the just-applied
-    // arrangement.
-    expect(onKeyboardLayoutChange).toHaveBeenCalledWith(BUILTIN_QWERTY_LAYOUT_ID)
-    expect(onKeyboardLayoutChange).not.toHaveBeenCalledWith('colemak-id')
+    // Clean success (appliedCount: 1 > 0) keeps the select on the rewritten
+    // arrangement and marks it written — it no longer resets to QWERTY.
+    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id', true)
+    expect(onKeyboardLayoutChange).not.toHaveBeenCalledWith(BUILTIN_QWERTY_LAYOUT_ID, expect.anything())
   })
 
-  it('handleApplyDisplayOnly still switches display straight to the target id', async () => {
+  it('handleApplyDisplayOnly still switches display straight to the target id, never written', async () => {
     lookup.getKeymapApplicable.mockReturnValue(true)
     buildKeymapRewriteTable.mockReturnValue({ ok: true, table: new Map([['KC_E', 'KC_F']]) })
 
@@ -181,7 +180,7 @@ describe('QuickSettingsSelects — keyboard layout apply-to-keymap branching', (
     await selectColemak()
 
     act(() => { capturedApplyModalProps!.onDisplayOnly() })
-    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id')
+    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id', false)
     expect(onApplyKeymapRewrite).not.toHaveBeenCalled()
   })
 
@@ -199,6 +198,32 @@ describe('QuickSettingsSelects — keyboard layout apply-to-keymap branching', (
     fireEvent.mouseDown(screen.getByRole('option', { name: 'Colemak' }))
 
     expect(lookup.ensure).not.toHaveBeenCalled()
-    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id')
+    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id', false)
+  })
+
+  // --- Phase K: select trigger visualization ---
+
+  describe('keymapWritten trigger label (Plan-qwerty-select-no-rewrite Phase K)', () => {
+    it('shows the written-suffix trigger label when keymapWritten is true', () => {
+      render(
+        <QuickSettingsSelects
+          onThemeChange={vi.fn()}
+          keyboardLayout="colemak-id"
+          keymapWritten
+          onKeyboardLayoutChange={onKeyboardLayoutChange}
+          keymapEditable
+          onApplyKeymapRewrite={onApplyKeymapRewrite}
+        />,
+      )
+      // This suite's t() mock returns the key itself rather than
+      // interpolating {{name}} — real interpolation is exercised by the
+      // i18n resource files/coverage, not this component test.
+      expect(screen.getByRole('button', { name: 'keyLabels.title' })).toHaveTextContent('keyLabels.select.writtenSuffix')
+    })
+
+    it('shows the plain pack name (no suffix) when keymapWritten is false', () => {
+      renderComponent()
+      expect(screen.getByRole('button', { name: 'keyLabels.title' })).not.toHaveTextContent('keyLabels.select.writtenSuffix')
+    })
   })
 })

@@ -84,6 +84,7 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
   if (typeof value !== 'object' || value === null) return false
   const obj = value as Record<string, unknown>
   if (typeof obj.keyboardLayout !== 'string') return false
+  if ('keymapWritten' in obj && obj.keymapWritten != null && typeof obj.keymapWritten !== 'boolean') return false
   if (typeof obj.autoAdvance !== 'boolean') return false
   if ('layerNames' in obj && !Array.isArray(obj.layerNames)) return false
   if (Array.isArray(obj.layerNames) && (obj.layerNames as unknown[]).some((n) => typeof n !== 'string')) return false
@@ -146,6 +147,7 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
     return {
       _rev: 1,
       keyboardLayout: parsed.keyboardLayout,
+      keymapWritten: parsed.keymapWritten,
       autoAdvance: parsed.autoAdvance,
       layerPanelOpen: parsed.layerPanelOpen,
       basicViewType: parsed.basicViewType,
