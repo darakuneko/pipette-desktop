@@ -154,13 +154,19 @@ export function KeyboardPane({
           onKeyHoverEnd={onKeyHoverEnd}
         />
       </div>
-      <div className="flex items-center justify-between px-keyboard-px text-xs leading-none text-content-muted">
+      <div className="relative flex items-center justify-between px-keyboard-px text-xs leading-none text-content-muted">
         <span className="flex items-center gap-2">
           {layerLabel !== undefined && (
             <span data-testid={layerLabelTestId} className="text-content-muted">
               {layerLabel}
             </span>
           )}
+        </span>
+        {/* Absolutely centered within the row so it stays centered
+            regardless of how wide the layer label or the selected-keycode
+            info on either side happen to be, without disturbing either
+            side's position (Plan-qwerty-select-no-rewrite v7 UI refinement). */}
+        <span className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center">
           {footerExtra}
         </span>
         <span className="flex items-center gap-1.5">

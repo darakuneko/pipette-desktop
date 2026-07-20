@@ -1659,7 +1659,7 @@ Composite keycodes (LT, MT, modifier+key, …) render the inner key inside an in
 
 **Applying a Key Label to the Keymap**
 
-Switching the **Keyboard Layout** dropdown in the footer never opens a dialog by itself — it always just changes the display. For a label set marked `keymapApplicable` whose map is a clean, closed QWERTY permutation (Colemak, Dvorak, Eucalyn, …), picking it also reveals two vertical tabs on the left of the Keymap Editor:
+Switching the **Keyboard Layout** dropdown in the footer never opens a dialog by itself — it always just changes the display. For a label set marked `keymapApplicable` whose map is a clean, closed QWERTY permutation (Colemak, Dvorak, Eucalyn, …), picking it also reveals two vertical index tabs attached to the right edge of the Keymap Editor:
 
 - **The pack's own name** (top) — a read-only *simulation* of that pack's legends, with the changed keys tinted the **simulated** colour (`key-label-simulated`). Nothing here is clickable: no key selection, no popover, no multi-select, no picker paste — this tab exists purely to preview what a Rewrite would produce
 - **Base** (bottom) — the real keymap, unaffected by the selected pack, fully editable exactly as before
@@ -1668,7 +1668,7 @@ The simulation tab is selected by default whenever the tabs appear. Switching ke
 
 ![Simulation and Base Tabs](screenshots/key-label-simulation-tabs.png)
 
-**Apply lives on the simulation tab's layer-indicator row.** Next to the current layer number, an **Apply** button opens the Rewrite confirmation dialog:
+**Apply lives on the simulation tab's layer-indicator row.** Centered in that row, an **Apply** button opens the Rewrite confirmation dialog:
 
 ![Apply Key Label to Keymap](screenshots/key-label-keymap-apply-modal.png)
 

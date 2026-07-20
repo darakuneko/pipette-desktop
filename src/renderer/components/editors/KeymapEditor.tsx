@@ -7,7 +7,7 @@ import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
 import { ViewMatrixPanel } from './ViewMatrixPanel'
 import { ZoomIn, ZoomOut, SlidersHorizontal } from 'lucide-react'
-import { ICON_SM, ICON_MD } from '../../constants/ui-tokens'
+import { ICON_SM, ICON_MD, BTN_PRIMARY } from '../../constants/ui-tokens'
 
 // Extracted modules
 import type { KeymapEditorProps as Props } from './keymap-editor-types'
@@ -495,7 +495,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     <span className="flex items-center gap-2">
       <button
         type="button"
-        className="rounded border border-edge px-2 py-0.5 text-xs text-content-secondary transition-colors hover:bg-surface-dim hover:text-content disabled:pointer-events-none disabled:opacity-50"
+        className={BTN_PRIMARY}
         onClick={onRequestKeymapApply}
         disabled={!!keymapApplyBusy}
         data-testid="keymap-pack-apply-button"
@@ -664,42 +664,45 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           ) : (
             <>
               {/* Simulation/Base tabs (Plan-qwerty-select-no-rewrite v7):
-                  the vertical tab strip sits to the LEFT of the keymap
-                  pane. View Matrix mode is excluded from `showPackTabs`
-                  above, so it can never overlap with either tab. */}
-              {showPackTabs && (
-                <KeymapPackTabs activeTab={packTab} onTabChange={handlePackTabChange} packName={keymapPackName ?? ''} />
-              )}
-              {showPackTabs && packTab === 'pack' ? (
-                // Simulation pane: display data only — no selection props,
-                // no click/double-click/deselect handlers at all. `readOnly`
-                // (always `true` here, not a ternary) already makes
-                // `KeyboardWidget` null out every handler it's given
-                // regardless, and `KeyboardPane`'s own deselect-on-
-                // background-click checks `!readOnly` too — omitting the
-                // handlers here as well means read-only holds by
-                // construction, not by three separate `packTab === 'pack'`
-                // checks that could drift out of sync.
-                <KeyboardPane
-                  paneId="primary" isActive={true}
-                  keys={layout.keys} keycodes={layerKeycodes} encoderKeycodes={layerEncoderKeycodes}
-                  selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
-                  pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
-                  remappedKeys={remappedKeys} remappedEncoders={layerEncoderRemapped}
-                  layoutOptions={effectiveLayoutOptions} scale={scaleProp}
-                  remapLabel={remapLabel}
-                  layerLabel={layerLabel(currentLayer)} layerLabelTestId="layer-label"
-                  footerExtra={applyButtonNode}
-                  readOnly
-                  contentRef={keyboardContentRef}
-                />
-              ) : (
-                <>
-                  {/* Also the "no tabs" pane (JIS/QWERTY/typing-test-adjacent
-                      states) — the `showPackTabs && packTab === 'base'`
-                      case reuses this exact block rather than a second copy,
-                      swapping only the keycode/remap source variables below
-                      (`primaryKeycodes` etc.) for the Base tab's raw data. */}
+                  the vertical tab strip sits to the RIGHT of the keymap
+                  pane, attached flush to its edge (index/sticky-note style
+                  — see `KeymapPackTabs`). The wrapping `flex items-stretch`
+                  div with no gap is what keeps the strip touching the pane
+                  regardless of this row's own `gap-4` (which only spaces
+                  this pane+tabs unit from its own siblings, e.g. the
+                  overlay-panel spacer). View Matrix mode is excluded from
+                  `showPackTabs` above, so it can never overlap with either
+                  tab. */}
+              <div className="flex items-stretch">
+                {showPackTabs && packTab === 'pack' ? (
+                  // Simulation pane: display data only — no selection props,
+                  // no click/double-click/deselect handlers at all. `readOnly`
+                  // (always `true` here, not a ternary) already makes
+                  // `KeyboardWidget` null out every handler it's given
+                  // regardless, and `KeyboardPane`'s own deselect-on-
+                  // background-click checks `!readOnly` too — omitting the
+                  // handlers here as well means read-only holds by
+                  // construction, not by three separate `packTab === 'pack'`
+                  // checks that could drift out of sync.
+                  <KeyboardPane
+                    paneId="primary" isActive={true}
+                    keys={layout.keys} keycodes={layerKeycodes} encoderKeycodes={layerEncoderKeycodes}
+                    selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
+                    pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
+                    remappedKeys={remappedKeys} remappedEncoders={layerEncoderRemapped}
+                    layoutOptions={effectiveLayoutOptions} scale={scaleProp}
+                    remapLabel={remapLabel}
+                    layerLabel={layerLabel(currentLayer)} layerLabelTestId="layer-label"
+                    footerExtra={applyButtonNode}
+                    readOnly
+                    contentRef={keyboardContentRef}
+                  />
+                ) : (
+                  // Also the "no tabs" pane (JIS/QWERTY/typing-test-adjacent
+                  // states) — the `showPackTabs && packTab === 'base'`
+                  // case reuses this exact block rather than a second copy,
+                  // swapping only the keycode/remap source variables below
+                  // (`primaryKeycodes` etc.) for the Base tab's raw data.
                   <KeyboardPane
                     paneId="primary" isActive={true}              keys={layout.keys} keycodes={primaryKeycodes} encoderKeycodes={primaryEncoderKeycodes}
                     selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
@@ -714,8 +717,11 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                     onEncoderDoubleClick={viewMatrixMode.active ? undefined : handleEncoderDoubleClick}
                     onDeselect={viewMatrixMode.active ? viewMatrixMode.clearSelection : handleDeselect} contentRef={keyboardContentRef}
                   />
-                </>
-              )}
+                )}
+                {showPackTabs && (
+                  <KeymapPackTabs activeTab={packTab} onTabChange={handlePackTabChange} packName={keymapPackName ?? ''} />
+                )}
+              </div>
               {/* View Matrix mode's relocated zoom row — same controls as
                   the normal-mode toolbar, moved below the keymap pane —
                   plus the same Ctrl/Shift multi-select hint the keycode
