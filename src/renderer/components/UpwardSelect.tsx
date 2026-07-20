@@ -3,23 +3,20 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ChevronUp } from 'lucide-react'
 import { AnchoredPopover } from './ui/AnchoredPopover'
-import { ICON_XS } from '../constants/ui-tokens'
+import { ICON_XS, PACK_TYPE_TAG_WRITABLE, PACK_TYPE_TAG_VIEW } from '../constants/ui-tokens'
 
 export interface UpwardSelectOption {
   id: string
   name: string
   /**
    * Optional short trailing tag rendered right-aligned next to the name
-   * (e.g. "Write" / "View" for Key Label packs — see the
-   * `keymapApplicable && buildKeymapRewriteTable(map).ok` predicate
-   * `KeyLabelsModal.tsx` already uses for the same distinction). Absent
-   * for options that carry no such metadata; the row then renders
-   * exactly as it did before this field existed (name only).
+   * (e.g. "Write" / "View" for Key Label packs — see
+   * `useKeyLabelLookup.isKeymapWritable`). Absent for options that carry
+   * no such metadata; the row then renders exactly as it did before this
+   * field existed (name only).
    *
-   * `'secondary'` maps to `text-content-secondary` (DESIGN.md: "Secondary
-   * / label text") — deliberately not named `'muted'`, since that token
-   * is reserved for placeholder/disabled text and a View-only pack is
-   * neither.
+   * Colors come from `PACK_TYPE_TAG_WRITABLE`/`PACK_TYPE_TAG_VIEW`
+   * (ui-tokens.ts), shared with the Key Labels modal's row type label.
    */
   tag?: { label: string; variant: 'accent' | 'secondary' }
 }
@@ -88,7 +85,7 @@ export function UpwardSelect({ value, onChange, options, 'aria-label': ariaLabel
             {o.tag && (
               <span
                 className={`shrink-0 whitespace-nowrap text-right ${
-                  o.tag.variant === 'accent' ? 'font-medium text-accent' : 'text-content-secondary'
+                  o.tag.variant === 'accent' ? PACK_TYPE_TAG_WRITABLE : PACK_TYPE_TAG_VIEW
                 }`}
               >
                 {o.tag.label}

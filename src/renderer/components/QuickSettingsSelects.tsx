@@ -14,7 +14,6 @@ import { useKeyLabelLookup, type UseKeyLabelLookupReturn } from '../hooks/useKey
 import { useLanguageOptions } from '../hooks/useLanguageOptions'
 import { useLayoutOptions } from '../hooks/useLayoutOptions'
 import { LAYOUT_BY_ID } from '../data/keyboard-layouts'
-import { buildKeymapRewriteTable } from '../../shared/keymap/keymap-apply'
 import type { ThemeSelection } from '../hooks/useTheme'
 import type { KeyboardLayoutId } from '../hooks/useKeyboardLayout'
 
@@ -57,22 +56,30 @@ export function QuickSettingsSelects({
   const languageOptions = useLanguageOptions(i18nPacks.metas)
   const layoutOptions = useLayoutOptions(keyLabels.metas)
 
+  // True exactly when the Keyboard Layout select renders below (the
+  // `!editMode` branch, with both `keyboardLayout` and
+  // `onKeyboardLayoutChange` supplied) — shared by the ensure-sweep effect
+  // and the JSX so the two can't drift apart again (they used to: the
+  // effect ignored `editMode` and kept sweeping every pack while the
+  // select was hidden behind the edit-mode buttons).
+  const showLayoutSelect = keyboardLayout != null && !!onKeyboardLayoutChange && !editMode
+
   // Kick off a lazy fetch for every pack the select can currently show,
   // mirroring KeyLabelsModal's own `ensure` sweep over `labels.metas`.
   // `ensure` is a no-op for ids already cached/known-missing/built-in, so
   // re-running this whenever the option list or lookup identity changes
-  // is cheap. Gated on the select actually being rendered (device
-  // connected) so the footer bar doesn't fetch every pack before a
-  // keyboard is even selected.
+  // is cheap. Gated on `showLayoutSelect` so the footer bar doesn't fetch
+  // every pack before a keyboard is even selected, or while edit mode
+  // hides the select behind the settings buttons.
   useEffect(() => {
-    if (keyboardLayout == null || !onKeyboardLayoutChange) return
-    layoutOptions.forEach((o) => { void keyLabelLookup.ensure(o.id) })
-  }, [keyboardLayout, onKeyboardLayoutChange, layoutOptions, keyLabelLookup])
+    if (!showLayoutSelect) return
+    keyLabelLookup.ensureAll(layoutOptions.map((o) => o.id))
+  }, [showLayoutSelect, layoutOptions, keyLabelLookup])
 
-  // Right-hand "Write"/"View" tag per pack — same
-  // `keymapApplicable && buildKeymapRewriteTable(map).ok` predicate
-  // KeyLabelsModal.isKeymapWritable uses, so a pack never disagrees with
-  // itself between the modal and this footer select. The built-in QWERTY
+  // Right-hand "Write"/"View" tag per pack — uses
+  // `useKeyLabelLookup.isKeymapWritable` (the same predicate the Key
+  // Labels modal's rows use), so a pack never disagrees with itself
+  // between the modal and this footer select. The built-in QWERTY
   // baseline gets no tag at all (neutral default, nothing to compare it
   // against). A pack whose entry has not resolved yet also gets no tag —
   // showing "View" first and flipping to "Write" once the fetch lands
@@ -140,7 +147,7 @@ export function QuickSettingsSelects({
               options={themeOptions}
               onChange={handleThemeChange}
             />
-            {keyboardLayout != null && onKeyboardLayoutChange && (
+            {showLayoutSelect && keyboardLayout != null && onKeyboardLayoutChange && (
               <UpwardSelect
                 aria-label={t('keyLabels.title')}
                 value={keyboardLayout}
@@ -198,11 +205,14 @@ function keyLabelTag(
   lookup: UseKeyLabelLookupReturn,
   t: (key: string) => string,
 ): UpwardSelectOption['tag'] {
+  // `LAYOUT_BY_ID.has(id)` (not `id === BUILTIN_QWERTY_LAYOUT_ID`) on
+  // purpose: this mirrors `useKeyLabelLookup.getKeymapApplicable`'s own
+  // "is this any built-in entry" guard, so a future second built-in in
+  // `KEYBOARD_LAYOUTS` gets no tag here either, instead of falling through
+  // to a "View Only" tag for a pack that was never Hub-sourced.
   if (LAYOUT_BY_ID.has(id)) return undefined
-  const map = lookup.getMap(id)
-  if (!map) return undefined
-  const writable = lookup.getKeymapApplicable(id) && buildKeymapRewriteTable(map).ok
-  return writable
+  if (!lookup.getMap(id)) return undefined
+  return lookup.isKeymapWritable(id)
     ? { label: t('keyLabels.typeKeymapWriteShort'), variant: 'accent' }
     : { label: t('keyLabels.typeViewOnlyShort'), variant: 'secondary' }
 }

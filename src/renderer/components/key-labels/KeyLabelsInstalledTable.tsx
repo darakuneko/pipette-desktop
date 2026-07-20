@@ -12,7 +12,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { GripVertical } from 'lucide-react'
-import { ICON_SM } from '../../constants/ui-tokens'
+import { ICON_SM, PACK_TYPE_TAG_WRITABLE, PACK_TYPE_TAG_VIEW } from '../../constants/ui-tokens'
 import type { useInlineRename } from '../../hooks/useInlineRename'
 import { formatDateTime } from '../editors/store-modal-shared'
 import { buildHubKeyLabelUrl, HUB_CATEGORY } from '../../../shared/hub-urls'
@@ -154,13 +154,12 @@ function InstalledRowView({
   // whose map is never `keymapApplicable`). Lives at the left end of
   // the second line rather than under the name, so it reads alongside
   // the row's other per-pack metadata (badge/Hub actions) instead of
-  // stretching the name block to two lines. View Only uses
-  // `text-content-secondary` ("Secondary / label text" per DESIGN.md),
-  // not `-muted` — `-muted` is reserved for placeholder/disabled text
-  // and a display-only pack is neither.
+  // stretching the name block to two lines. Colors come from
+  // `PACK_TYPE_TAG_WRITABLE`/`PACK_TYPE_TAG_VIEW` (ui-tokens.ts), shared
+  // with the footer select's own tag (UpwardSelect.tsx).
   const typeLabelNode = (
     <span
-      className={`shrink-0 whitespace-nowrap text-xs ${row.keymapWritable ? 'font-medium text-accent' : 'text-content-secondary'}`}
+      className={`shrink-0 whitespace-nowrap text-xs ${row.keymapWritable ? PACK_TYPE_TAG_WRITABLE : PACK_TYPE_TAG_VIEW}`}
       data-testid={`key-labels-type-${row.localId}`}
     >
       {row.keymapWritable ? t('keyLabels.typeKeymapWrite') : t('keyLabels.typeViewOnly')}

@@ -11,6 +11,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import type { KeyLabelMeta } from '../../../shared/types/key-label-store'
+import { buildKeymapRewriteTable } from '../../../shared/keymap/keymap-apply'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -65,10 +66,16 @@ const keyLabelRegistry = new Map<string, { map: Record<string, string>; keymapAp
 vi.mock('../../hooks/useKeyLabelLookup', () => ({
   useKeyLabelLookup: () => ({
     ensure: vi.fn(async () => {}),
+    ensureAll: vi.fn(() => {}),
     getName: vi.fn((id: string) => id),
     getMap: vi.fn((id: string) => keyLabelRegistry.get(id)?.map),
     getCompositeLabels: vi.fn(() => undefined),
     getKeymapApplicable: vi.fn((id: string) => keyLabelRegistry.get(id)?.keymapApplicable === true),
+    isKeymapWritable: vi.fn((id: string) => {
+      const entry = keyLabelRegistry.get(id)
+      if (!entry || !entry.keymapApplicable) return false
+      return buildKeymapRewriteTable(entry.map).ok
+    }),
   }),
 }))
 
