@@ -442,6 +442,8 @@ export function App() {
     onKeyboardLayoutChange: devicePrefs.setLayout,
     onApplyKeymapRewrite: handleApplyKeymapRewrite,
     keymapRestoreSeq: keyboard.keymapRestoreSeq,
+    activeRewriteTable: devicePrefs.activeRewriteTable,
+    activeLayoutName: devicePrefs.activeLayoutName,
   })
 
   const handleViewAnalytics = useCallback((origin: AnalyticsOrigin) => {

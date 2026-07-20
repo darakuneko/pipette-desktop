@@ -8,6 +8,7 @@
 import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Locator, Page } from '@playwright/test'
 import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
@@ -242,6 +243,66 @@ export function restoreLastDeviceConfig(backup: LastDeviceBackup): void {
     delete config.lastDevice
   } else {
     config.lastDevice = backup.original
+  }
+  writeFileSync(backup.path, JSON.stringify(config, null, '\t'), 'utf-8')
+}
+
+/**
+ * Default userData path for the real (non-isolated) installed-app profile,
+ * used by capture helpers that launch Electron directly via `spawn()`
+ * (doc-capture-key-labels.ts, doc-capture-theme-packs.ts) rather than
+ * through `launchCaptureApp`'s Playwright-managed, always-fresh profile.
+ * Linux-only, matching how these dev-only doc-capture scripts are actually
+ * run (see e2e/helpers/wpm-screenshot.ts's `SRC_USER_DATA` for the same
+ * hardcoded path). Honors `PIPETTE_CAPTURE_USER_DATA_DIR` so a caller that
+ * opted into an isolated profile (see doc-capture-key-labels.ts's
+ * `launchElectronApp`) resolves to that same directory instead.
+ */
+export function resolveCaptureUserDataPath(): string {
+  return process.env.PIPETTE_CAPTURE_USER_DATA_DIR ?? join(homedir(), '.config', 'pipette-desktop')
+}
+
+/** Snapshot of the `language` key in userData/config.json (electron-store). */
+export interface LanguageConfigBackup {
+  path: string
+  hadKey: boolean
+  original: unknown
+}
+
+/**
+ * Force `language: 'builtin:en'` in the electron-store config file for the
+ * duration of a capture run. Helpers that launch Electron directly against
+ * the real userData profile (rather than through `launchCaptureApp`'s
+ * isolated, always-English profile) would otherwise render every captured
+ * screenshot in whatever i18n pack the developer's own app is set to.
+ * Pass the result to `restoreLanguageConfig` in a `finally` block once the
+ * Electron process has fully exited.
+ */
+export function forceEnglishLanguage(userDataPath: string): LanguageConfigBackup {
+  const path = join(userDataPath, 'config.json')
+  const config = existsSync(path)
+    ? (JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>)
+    : {}
+  const backup: LanguageConfigBackup = { path, hadKey: 'language' in config, original: config.language }
+  config.language = 'builtin:en'
+  writeFileSync(path, JSON.stringify(config, null, '\t'), 'utf-8')
+  return backup
+}
+
+/**
+ * Restore the original `language` value snapshotted by
+ * `forceEnglishLanguage`. Call only after the Electron process has fully
+ * exited — the app can rewrite config.json on its own (window-state save
+ * on quit, settings changes during the run), and restoring before that
+ * would get clobbered by one of those late writes racing this one.
+ */
+export function restoreLanguageConfig(backup: LanguageConfigBackup): void {
+  if (!existsSync(backup.path)) return
+  const config = JSON.parse(readFileSync(backup.path, 'utf-8')) as Record<string, unknown>
+  if (!backup.hadKey) {
+    delete config.language
+  } else {
+    config.language = backup.original
   }
   writeFileSync(backup.path, JSON.stringify(config, null, '\t'), 'utf-8')
 }

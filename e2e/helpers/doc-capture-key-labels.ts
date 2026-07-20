@@ -19,7 +19,14 @@ import type { Page } from '@playwright/test'
 import { spawn } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { dismissNotificationModal, dismissOverlay, isAvailable } from './doc-capture-common'
+import {
+  dismissNotificationModal,
+  dismissOverlay,
+  forceEnglishLanguage,
+  isAvailable,
+  resolveCaptureUserDataPath,
+  restoreLanguageConfig,
+} from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
@@ -360,8 +367,21 @@ async function killAndWaitForExit(child: ReturnType<typeof spawn>, timeoutMs = 5
 async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
-  await runPhaseInFreshSession(captureInstalledTab)
-  await runPhaseInFreshSession(captureFindOnHubTab)
+  // This helper launches Electron directly against the real userData
+  // profile (see `launchElectronApp` below) rather than through
+  // `launchCaptureApp`'s isolated, always-English profile — force English
+  // for the run so a developer's own i18n pack setting can't leak into
+  // the captured screenshots.
+  const languageBackup = forceEnglishLanguage(resolveCaptureUserDataPath())
+  try {
+    await runPhaseInFreshSession(captureInstalledTab)
+    await runPhaseInFreshSession(captureFindOnHubTab)
+  } finally {
+    // Both phases above already wait for their Electron process to fully
+    // exit (`killAndWaitForExit`) before returning, so by the time this
+    // runs there's no running app left to race the restore.
+    restoreLanguageConfig(languageBackup)
+  }
 
   console.log(`\nKey Labels screenshots saved to: ${SCREENSHOT_DIR}`)
 }
