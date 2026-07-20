@@ -128,6 +128,10 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --key-label: #1f2937;
   --key-sublabel: #7c8598;
   --key-label-remap: #0000ff;
+  /* Permutation-pack "Display Only" tint — distinct from the "actual"
+     remap tint above. Theme packs may omit this and fall back to an
+     automatic complement of key-label-remap (see simulated-color.ts). */
+  --key-label-simulated: #9333ea;
   --key-bg-multi-selected: #93bbfd;
   --key-mask-bg: color-mix(in srgb, var(--key-bg) 70%, var(--surface) 30%);
   /* View Matrix's duplicate-position warning fill — derived from the
@@ -179,6 +183,7 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --key-label: #d4d8e3;
   --key-sublabel: #7a839a;
   --key-label-remap: #f7a948;
+  --key-label-simulated: #c084fc;
   --key-bg-multi-selected: #3a6fcf;
   --key-mask-bg: color-mix(in srgb, var(--key-bg) 70%, var(--surface) 30%);
   --key-bg-duplicate: color-mix(in srgb, var(--warning) 45%, var(--key-bg) 55%);
@@ -273,6 +278,7 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --color-key-label: var(--key-label);
   --color-key-sublabel: var(--key-sublabel);
   --color-key-label-remap: var(--key-label-remap);
+  --color-key-label-simulated: var(--key-label-simulated);
   --color-key-bg-multi-selected: var(--key-bg-multi-selected);
   --color-key-bg-duplicate: var(--key-bg-duplicate);
 

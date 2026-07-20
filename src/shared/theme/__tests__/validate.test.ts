@@ -216,6 +216,36 @@ describe('validateThemePack', () => {
     })
   })
 
+  describe('optional key-label-simulated', () => {
+    it('validates without key-label-simulated (optional key absent)', () => {
+      const result = validateThemePack(validPack())
+      expect(result.ok).toBe(true)
+      expect(result.errors).toHaveLength(0)
+      expect(result.warnings).toHaveLength(0)
+    })
+
+    it('accepts a valid key-label-simulated value', () => {
+      const colors = validColors()
+      colors['key-label-simulated'] = '#9333ea'
+      const result = validateThemePack(validPack({ colors }))
+      expect(result.ok).toBe(true)
+      expect(result.warnings).toHaveLength(0)
+    })
+
+    it('rejects an invalid key-label-simulated CSS value', () => {
+      const colors = validColors()
+      colors['key-label-simulated'] = 'not-a-color'
+      const result = validateThemePack(validPack({ colors }))
+      expect(result.ok).toBe(false)
+      expect(result.errors).toContain('Color "key-label-simulated" has invalid CSS color value: "not-a-color"')
+    })
+
+    it('does not report key-label-simulated as missing when absent', () => {
+      const result = validateThemePack(validPack())
+      expect(result.errors).not.toContain('Missing required color: "key-label-simulated"')
+    })
+  })
+
   describe('unknown color keys', () => {
     it('produces warnings for unknown keys but still succeeds', () => {
       const colors = validColors()

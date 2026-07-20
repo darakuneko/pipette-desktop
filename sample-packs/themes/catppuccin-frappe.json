@@ -29,6 +29,7 @@
     "key-label": "#c6d0f5",
     "key-sublabel": "#838ba7",
     "key-label-remap": "#ef9f76",
+    "key-label-simulated": "#8caaee",
     "key-bg-multi-selected": "#4d5071",
     "tab-bg-active": "#ca9ee6",
     "tab-text": "#737994",

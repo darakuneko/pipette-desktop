@@ -1,13 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { THEME_COLOR_KEYS, THEME_COLOR_SCHEMES, THEME_PACK_LIMITS, type ThemeColorKey } from '../types/theme-store'
+import {
+  THEME_COLOR_KEYS, ALL_THEME_COLOR_KEYS, THEME_COLOR_SCHEMES, THEME_PACK_LIMITS,
+  type AnyThemeColorKey,
+} from '../types/theme-store'
 
 const MAX_NAME_LENGTH = THEME_PACK_LIMITS.MAX_NAME_LENGTH
 const SEMVER_REGEX = /^\d+\.\d+\.\d+(-[\w.]+)?$/
 const HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 const CSS_FN_COLOR_REGEX = /^(?:rgb|hsl)a?\([^)]+\)$/i
 const DANGEROUS_KEYS: ReadonlySet<string> = new Set(['__proto__', 'constructor', 'prototype'])
-const REQUIRED_KEYS = new Set<ThemeColorKey>(THEME_COLOR_KEYS)
+// Required + optional keys are both "known" (no unknown-key warning) and
+// both get their CSS color value format checked when present. Only the
+// REQUIRED set (below, at the missing-key check) can produce a "missing"
+// error — an absent optional key is a supported, silent fallback.
+const KNOWN_KEYS = new Set<AnyThemeColorKey>(ALL_THEME_COLOR_KEYS)
 
 export interface ValidateThemePackResult {
   ok: boolean
@@ -80,12 +87,12 @@ export function validateThemePack(raw: unknown): ValidateThemePackResult {
   }
 
   for (const key of presentKeys) {
-    if (!REQUIRED_KEYS.has(key as ThemeColorKey)) {
+    if (!KNOWN_KEYS.has(key as AnyThemeColorKey)) {
       warnings.push(`Unknown color key "${key}" will be ignored`)
     }
   }
 
-  for (const key of THEME_COLOR_KEYS) {
+  for (const key of ALL_THEME_COLOR_KEYS) {
     const value = colors[key]
     if (value === undefined) continue
     if (typeof value !== 'string') {

@@ -40,7 +40,7 @@ import { useLayerKeycodes } from './use-layer-keycodes'
 export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEditorHandle, Props>(function KeymapEditor({
   keyboardUid, layout, layers, currentLayer, onLayerChange, keymap, encoderLayout, encoderCount,
   layoutOptions, layoutLabels, packedLayoutOptions, onSetLayoutOptions,
-  remapLabel, isRemapped, pickerRemapLabel, onSetKey, onSetKeysBulk, onSetEncoder,
+  remapLabel, isRemapped, remapKind, pickerRemapLabel, onSetKey, onSetKeysBulk, onSetEncoder,
   rows, cols, getMatrixState, unlocked, onUnlock,
   tapDanceEntries, onSetTapDanceEntry,
   macroCount, macroBufferSize, macroBuffer, vialProtocol, parsedMacros, onSaveMacros,
@@ -479,6 +479,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               encoderKeycodes={typingTestEncoderKeycodes}
               remappedKeys={typingTestRemapped}
               remappedEncoders={typingTestEncoderRemapped}
+              remapKind={remapKind}
               remapLabel={remapLabel}
               layoutOptions={effectiveLayoutOptions}
               scale={scaleProp}
@@ -536,7 +537,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                 paneId="primary" isActive={true}              keys={layout.keys} keycodes={layerKeycodes} encoderKeycodes={layerEncoderKeycodes}
                 selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
                 pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
-                remappedKeys={remappedKeys} remappedEncoders={layerEncoderRemapped} flash={flash} multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
+                remappedKeys={remappedKeys} remappedEncoders={layerEncoderRemapped} remapKind={remapKind} flash={flash} multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
                 layoutOptions={effectiveLayoutOptions} scale={scaleProp}
                 labelOverrides={viewMatrixLabelOverrides} keyColors={viewMatrixDuplicateKeyColors} remapLabel={remapLabel}
                 layerLabel={viewMatrixMode.active ? undefined : layerLabel(currentLayer)} layerLabelTestId="layer-label"

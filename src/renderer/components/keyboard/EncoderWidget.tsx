@@ -12,7 +12,9 @@ import {
   KEY_TEXT_COLOR,
   KEY_INVERTED_TEXT_COLOR,
   KEY_REMAP_COLOR,
+  KEY_SIMULATED_COLOR,
   KEY_MASK_RECT_COLOR,
+  type RemapKind,
 } from './constants'
 import { flashAnimationDelayMs } from './key-flash'
 
@@ -43,6 +45,9 @@ interface Props {
    *  Colors the label only — encoders have no inner-remap label path like
    *  masked `KeyWidget` keys, so this is intentionally minimal. */
   remapped?: boolean
+  /** Which remap tint `remapped` uses — see `RemapKind` in `constants.ts`
+   *  and `KeyWidget`'s own doc comment for the same prop. */
+  remapKind?: RemapKind
   onClick?: (key: KleKey, direction: number, maskClicked: boolean) => void
   onDoubleClick?: (key: KleKey, direction: number, rect: DOMRect, maskClicked: boolean) => void
   scale?: number
@@ -57,6 +62,7 @@ function EncoderWidgetInner({
   flashGeneration,
   flashStartedAt,
   remapped,
+  remapKind = 'actual',
   onClick,
   onDoubleClick,
   scale = 1,
@@ -78,7 +84,7 @@ function EncoderWidgetInner({
   const fillColor = selected && !innerSelected ? KEY_SELECTED_COLOR : KEY_BG_COLOR
   const labelColor = selected && !innerSelected
     ? KEY_INVERTED_TEXT_COLOR
-    : remapped ? KEY_REMAP_COLOR : KEY_TEXT_COLOR
+    : remapped ? (remapKind === 'simulated' ? KEY_SIMULATED_COLOR : KEY_REMAP_COLOR) : KEY_TEXT_COLOR
   const fontSize = Math.max(8, Math.min(12, 12 * scale))
   const outerBorderActive = selected && !innerSelected
 

@@ -11,6 +11,7 @@ import type { TypingTestResult, TypingViewMenuTab, TypingTestMemory, TypingTestC
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 import type { KeymapRewriteTable } from '../../../shared/keymap/keymap-apply'
+import type { RemapKind } from '../keyboard/constants'
 
 export const MIN_SCALE = 0.3
 export const MAX_SCALE = 2.0
@@ -84,6 +85,11 @@ export interface KeymapEditorProps {
   onSetLayoutOptions?: (options: number) => Promise<void>
   remapLabel?: (qmkId: string) => string
   isRemapped?: (qmkId: string) => boolean
+  /** Which remap tint `isRemapped`-tinted keys use on the keymap surface
+   *  (keymap pane + typing-test pane) — see `RemapKind` in
+   *  `components/keyboard/constants.ts` and `useDevicePrefs.ts`'s
+   *  `remapKind` for the gating logic. Defaults to `'actual'`. */
+  remapKind?: RemapKind
   /** Picker-only variant of `remapLabel` (Plan-qwerty-select-no-rewrite
    *  v6, Phase P) — identity for a pure QWERTY-permutation pack, same as
    *  `remapLabel` otherwise. Threaded ONLY to the picker surface

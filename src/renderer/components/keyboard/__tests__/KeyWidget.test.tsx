@@ -16,6 +16,7 @@ import {
   KEY_TEXT_COLOR,
   KEY_DUPLICATE_COLOR,
   KEY_REMAP_COLOR,
+  KEY_SIMULATED_COLOR,
 } from '../constants'
 import type { KleKey } from '../../../../shared/kle/types'
 
@@ -610,5 +611,62 @@ describe('KeyWidget — remap tint applies to the inner label too (consistency w
     )
     const innerText = Array.from(container.querySelectorAll('text')).find((t) => t.textContent === 'KC_9')!
     expect(innerText.getAttribute('fill')).not.toBe(KEY_REMAP_COLOR)
+  })
+})
+
+describe('KeyWidget — remapKind selects which tint color is used', () => {
+  beforeEach(() => { mockIsMask = false })
+
+  it('defaults to the actual (key-label-remap) tint when remapKind is omitted', () => {
+    const { container } = render(
+      <svg>
+        <KeyWidget kleKey={makeKey()} keycode="KC_A" remapped />
+      </svg>,
+    )
+    const text = container.querySelector('text')!
+    expect(text.getAttribute('fill')).toBe(KEY_REMAP_COLOR)
+  })
+
+  it('uses the actual tint when remapKind is "actual"', () => {
+    const { container } = render(
+      <svg>
+        <KeyWidget kleKey={makeKey()} keycode="KC_A" remapped remapKind="actual" />
+      </svg>,
+    )
+    const text = container.querySelector('text')!
+    expect(text.getAttribute('fill')).toBe(KEY_REMAP_COLOR)
+  })
+
+  it('uses the simulated tint when remapKind is "simulated"', () => {
+    const { container } = render(
+      <svg>
+        <KeyWidget kleKey={makeKey()} keycode="KC_A" remapped remapKind="simulated" />
+      </svg>,
+    )
+    const text = container.querySelector('text')!
+    expect(text.getAttribute('fill')).toBe(KEY_SIMULATED_COLOR)
+  })
+
+  it('ignores remapKind entirely when remapped is false', () => {
+    const { container } = render(
+      <svg>
+        <KeyWidget kleKey={makeKey()} keycode="KC_A" remapKind="simulated" />
+      </svg>,
+    )
+    const text = container.querySelector('text')!
+    expect(text.getAttribute('fill')).not.toBe(KEY_SIMULATED_COLOR)
+    expect(text.getAttribute('fill')).toBe(KEY_TEXT_COLOR)
+  })
+
+  it('tints the masked inner label with the simulated color when remapKind is "simulated"', () => {
+    mockIsMask = true
+    mockInnerKeycode = { qmkId: 'KC_9' }
+    const { container } = render(
+      <svg>
+        <KeyWidget kleKey={makeKey()} keycode="LSFT(KC_9)" remapped remapKind="simulated" />
+      </svg>,
+    )
+    const innerText = Array.from(container.querySelectorAll('text')).find((t) => t.textContent === 'KC_9')!
+    expect(innerText.getAttribute('fill')).toBe(KEY_SIMULATED_COLOR)
   })
 })

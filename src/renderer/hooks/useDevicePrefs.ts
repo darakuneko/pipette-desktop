@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
 import { useKeyLabelLookup } from './useKeyLabelLookup'
 import { buildKeymapRewriteTable } from '../../shared/keymap/keymap-apply'
+import type { RemapKind } from '../components/keyboard/constants'
 import { useAppConfig } from './useAppConfig'
 import { MIN_SCALE, MAX_SCALE } from '../components/editors/keymap-editor-types'
 import type { TypingTestResult, TypingViewMenuTab, ViewMode, TypingTestMemory, TypingTestMemoryWord, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
@@ -470,6 +471,18 @@ export interface UseDevicePrefsReturn {
    *  differs from `qmkId` itself — same rule every picker/palette consumer
    *  applies. */
   isRemapped: (qmkId: string) => boolean
+  /** Which remap tint `isRemapped`-tinted keys use on the keymap surface
+   *  (keymap pane + typing-test pane; the picker is untouched — see
+   *  `pickerRemapLabel` below). `'simulated'` iff an active (non-empty)
+   *  pack map is loaded, it's a pure permutation (same `.ok` verdict
+   *  `rewriteTableResult` already computes for the Rewrite gate), and the
+   *  keymap hasn't been Rewritten onto it (`keymapWritten` false) — this
+   *  is the "labels show what a Rewrite WOULD produce, pressing still
+   *  types the old character" case. `'actual'` otherwise: JIS-type
+   *  display remaps (truthful — the OS/IME really produces the shown
+   *  char), written-mode changed keys, QWERTY/no pack (irrelevant since
+   *  no key is ever tinted there), and non-permutation deviation packs. */
+  remapKind: RemapKind
   /** Display label for a qmkId, but ONLY for the key PICKER surface
    *  (`TabbedKeycodes` / `KeyPopover` → `PopoverTabKey`) — the keymap
    *  legend itself (`useLayerKeycodes`, `KeyWidget`'s masked-inner label)
@@ -952,6 +965,20 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   // regardless of this flag.
   const packIsPurePermutation = !rewriteTableResult || rewriteTableResult.ok
 
+  // Which remap tint `isRemapped`-tinted keys use on the keymap surface
+  // (see the `remapKind` field's own doc comment on the return type).
+  // "An active pack map is loaded" is checked directly against `activeMap`
+  // rather than `rewriteTableResult` — QWERTY's map is `{}` (truthy,
+  // trivially a pure permutation) but has nothing to tint, so gating on
+  // "non-empty" here avoids relying on `rewriteTableResult`'s undefined-
+  // ness to mean "no pack" (it doesn't for QWERTY, which is why
+  // `packIsPurePermutation`'s own doc comment calls that state out
+  // separately).
+  const remapKind: RemapKind = useMemo(() => {
+    const hasActivePackMap = !!activeMap && Object.keys(activeMap).length > 0
+    return hasActivePackMap && packIsPurePermutation && !keymapWritten ? 'simulated' : 'actual'
+  }, [activeMap, packIsPurePermutation, keymapWritten])
+
   // Phase K (Plan-qwerty-select-no-rewrite): once a Rewrite has landed
   // cleanly, `keymapWritten` stays true for the `layout` it wrote. The keys
   // it actually changed are exactly the rewrite table's NON-identity
@@ -1101,6 +1128,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     applyDevicePrefs,
     remapLabel,
     isRemapped,
+    remapKind,
     pickerRemapLabel,
   }
 }

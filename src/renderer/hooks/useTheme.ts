@@ -6,6 +6,7 @@ import type { ThemeMode, ThemeSelection } from '../../shared/types/app-config'
 import { THEME_COLOR_KEYS } from '../../shared/types/theme-store'
 import type { ThemeColorScheme, ThemePackColors, ThemePackEntryFile } from '../../shared/types/theme-store'
 import { useEffectiveTheme, type EffectiveTheme } from './useEffectiveTheme'
+import { deriveSimulatedColor } from '../utils/simulated-color'
 
 export type { ThemeMode, ThemeSelection }
 export type { EffectiveTheme }
@@ -39,6 +40,11 @@ export function applyPackColors(colors: ThemePackColors, colorScheme: ThemeColor
   for (const key of THEME_COLOR_KEYS) {
     root.style.setProperty(`--${key}`, colors[key])
   }
+  // Optional key-label-simulated: use the pack's own value when it
+  // defined one, otherwise auto-derive a complement of key-label-remap
+  // clamped for the pack's own colorScheme (see simulated-color.ts).
+  const simulatedColor = colors['key-label-simulated'] ?? deriveSimulatedColor(colors['key-label-remap'], colorScheme)
+  root.style.setProperty('--key-label-simulated', simulatedColor)
   root.style.setProperty('color-scheme', colorScheme)
 }
 
@@ -47,6 +53,7 @@ export function clearPackColors(): void {
   for (const key of THEME_COLOR_KEYS) {
     root.style.removeProperty(`--${key}`)
   }
+  root.style.removeProperty('--key-label-simulated')
   root.style.removeProperty('color-scheme')
 }
 

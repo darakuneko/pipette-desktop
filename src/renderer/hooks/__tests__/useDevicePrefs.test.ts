@@ -2187,4 +2187,112 @@ describe('useDevicePrefs', () => {
       expect(result.current.isRemapped('KC_E')).toBe(true)
     })
   })
+
+  // Task-kaw-sim-color: `remapKind` picks WHICH remap tint the keymap
+  // surface uses — 'simulated' (the permutation-pack Display Only case:
+  // labels show what a Rewrite would produce, pressing still types the
+  // old character) iff a non-empty pack map is loaded, it's a pure
+  // permutation, and the keymap hasn't been Rewritten onto it; 'actual'
+  // otherwise (JIS-type deviation packs, written mode, QWERTY/no pack).
+  describe('remapKind (Task-kaw-sim-color)', () => {
+    const COLEMAK: Record<string, string> = {
+      KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
+      KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
+      KC_L: 'I', KC_SCOLON: 'O', KC_N: 'K',
+    }
+    // Fails buildKeymapRewriteTable (a shift pair can't flatten to one
+    // keycode) — same fixture shape used throughout this file.
+    const JAPANESE_QWERTY: Record<string, string> = {
+      KC_LBRACKET: '`\n@',
+      KC_RBRACKET: '{\n[',
+      KC_2: '"\n2',
+    }
+
+    function mockKeyLabelPack(id: string, map: Record<string, string>): void {
+      const existing = vialAPIMock()
+      Object.defineProperty(window, 'vialAPI', {
+        value: {
+          ...existing,
+          keyLabelStoreGet: async (reqId: string) => {
+            if (reqId !== id) return { success: false, errorCode: 'NOT_FOUND' }
+            return {
+              success: true,
+              data: {
+                meta: { id, name: id, filename: `${id}.json`, savedAt: '', updatedAt: '' },
+                data: { name: id, map },
+              },
+            }
+          },
+        },
+        writable: true,
+        configurable: true,
+      })
+    }
+
+    it('is "actual" for QWERTY (no pack loaded)', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      expect(result.current.remapKind).toBe('actual')
+    })
+
+    it('is "simulated" for a pure permutation pack (Colemak) in Display Only mode', async () => {
+      setupMocks()
+      mockKeyLabelPack('colemak-id', COLEMAK)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setLayout('colemak-id')
+      })
+      await act(async () => {}) // flush the ensure() IPC fetch
+      expect(result.current.remapKind).toBe('simulated')
+    })
+
+    it('is "actual" once the same permutation pack has been Rewritten (keymapWritten=true)', async () => {
+      setupMocks()
+      mockKeyLabelPack('colemak-id', COLEMAK)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setKeyboardLayoutState('colemak-id', true)
+      })
+      await act(async () => {})
+      expect(result.current.remapKind).toBe('actual')
+    })
+
+    it('is "actual" for a JIS-type deviation pack that fails buildKeymapRewriteTable', async () => {
+      setupMocks()
+      mockKeyLabelPack('jis-id', JAPANESE_QWERTY)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setLayout('jis-id')
+      })
+      await act(async () => {})
+      expect(result.current.remapKind).toBe('actual')
+    })
+
+    it('is "actual" when the pack is missing/not yet loaded', async () => {
+      setupMocks() // no keyLabelStoreGet override — the pack never resolves
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setLayout('missing-pack-id')
+      })
+      await act(async () => {})
+      expect(result.current.remapKind).toBe('actual')
+    })
+  })
 })

@@ -36,5 +36,17 @@ export const KEY_DUPLICATE_COLOR = 'var(--key-bg-duplicate)'
 export const KEY_TEXT_COLOR = 'var(--key-label)'
 export const KEY_INVERTED_TEXT_COLOR = 'var(--content-inverse)'
 export const KEY_REMAP_COLOR = 'var(--key-label-remap)'
+// Permutation-pack "Display Only" tint — see `RemapKind` below.
+export const KEY_SIMULATED_COLOR = 'var(--key-label-simulated)'
 export const KEY_MASK_RECT_COLOR = 'var(--key-mask-bg)'
 export const KEY_HOVER_COLOR = 'var(--key-bg-hover)'
+
+/** Which remap tint a `remapped` key/encoder label uses. `'actual'` (the
+ *  default) is the existing `key-label-remap` tint — JIS-type display
+ *  remaps, written-mode changed keys, and the key picker: the shown
+ *  legend is truthful, the physical key really produces that character.
+ *  `'simulated'` is `key-label-simulated` — a permutation pack's Display
+ *  Only legend on the keymap surface: the label shows what a Rewrite
+ *  WOULD produce, but pressing the key still types the pre-Rewrite
+ *  character. See `useDevicePrefs.ts`'s `remapKind` for the gating logic. */
+export type RemapKind = 'actual' | 'simulated'

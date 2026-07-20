@@ -33,6 +33,7 @@
     "key-label":         "#ABB2BF",
     "key-sublabel":      "#5C6370",
     "key-label-remap":   "#D19A66",
+    "key-label-simulated": "#c678dd",
     "key-bg-multi-selected": "#264F78",
 
     "tab-bg-active":     "#61AFEF",

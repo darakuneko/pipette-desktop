@@ -873,6 +873,7 @@ export function App() {
             onSetLayoutOptions={keyboard.setLayoutOptions}
             remapLabel={devicePrefs.remapLabel}
             isRemapped={devicePrefs.isRemapped}
+            remapKind={devicePrefs.remapKind}
             pickerRemapLabel={devicePrefs.pickerRemapLabel}
             onSetKey={keyboard.setKey}
             onSetKeysBulk={keyboard.setKeysBulk}

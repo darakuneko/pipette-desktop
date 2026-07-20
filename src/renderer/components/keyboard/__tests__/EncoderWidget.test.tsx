@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 import { EncoderWidget } from '../EncoderWidget'
-import { KEY_SELECTED_COLOR, KEY_BG_COLOR, KEY_TEXT_COLOR, KEY_REMAP_COLOR, KEY_INVERTED_TEXT_COLOR } from '../constants'
+import { KEY_SELECTED_COLOR, KEY_BG_COLOR, KEY_TEXT_COLOR, KEY_REMAP_COLOR, KEY_SIMULATED_COLOR, KEY_INVERTED_TEXT_COLOR } from '../constants'
 import type { KleKey } from '../../../../shared/kle/types'
 
 let mockIsMask = false
@@ -275,6 +275,38 @@ describe('EncoderWidget', () => {
         expect(texts[0].getAttribute('fill')).toBe(KEY_REMAP_COLOR)
         expect(texts[1].getAttribute('fill')).toBe(KEY_TEXT_COLOR)
       })
+    })
+  })
+
+  describe('remapKind selects which tint color is used', () => {
+    it('defaults to the actual (key-label-remap) tint when remapKind is omitted', () => {
+      const { container } = render(
+        <svg>
+          <EncoderWidget kleKey={makeKey()} keycode="KC_A" remapped />
+        </svg>,
+      )
+      const text = container.querySelector('text')!
+      expect(text.getAttribute('fill')).toBe(KEY_REMAP_COLOR)
+    })
+
+    it('uses the simulated tint when remapKind is "simulated"', () => {
+      const { container } = render(
+        <svg>
+          <EncoderWidget kleKey={makeKey()} keycode="KC_A" remapped remapKind="simulated" />
+        </svg>,
+      )
+      const text = container.querySelector('text')!
+      expect(text.getAttribute('fill')).toBe(KEY_SIMULATED_COLOR)
+    })
+
+    it('ignores remapKind entirely when remapped is false', () => {
+      const { container } = render(
+        <svg>
+          <EncoderWidget kleKey={makeKey()} keycode="KC_A" remapKind="simulated" />
+        </svg>,
+      )
+      const text = container.querySelector('text')!
+      expect(text.getAttribute('fill')).toBe(KEY_TEXT_COLOR)
     })
   })
 })
