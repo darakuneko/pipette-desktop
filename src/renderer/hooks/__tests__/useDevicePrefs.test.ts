@@ -1849,14 +1849,16 @@ describe('useDevicePrefs', () => {
     })
   })
 
-  // Plan-qwerty-select-no-rewrite v5 最終仕様: Display Only is the sole
-  // remap-rendering mode — there is no more "applied mode" gate to switch
-  // between (a Rewrite resets the select to QWERTY on success, so it never
-  // leaves anything for `remapLabel`/`isRemapped` to simulate). Both
-  // functions always resolve through the active Key Label pack's own
-  // compositeLabels -> map lookup order. Same fixture as
+  // Plan-qwerty-select-no-rewrite v5 最終仕様: Display Only (`keymapWritten`
+  // false — `setLayout` below always sets it false) is the remap-rendering
+  // mode this block covers — `remapLabel`/`isRemapped` resolve through the
+  // active Key Label pack's own compositeLabels -> map lookup order. Phase
+  // K later reintroduced a SEPARATE written-mode gate for `keymapWritten`
+  // true (raw legend + changed-key-only tint, no pack label at all) — see
+  // the "written-mode rendering gate (Plan-qwerty-select-no-rewrite Phase
+  // K)" describe block further down for that path. Same fixture as
   // `shared/keymap/__tests__/keymap-apply.test.ts` (real Colemak data).
-  describe('remap-rendering (Plan-qwerty-select-no-rewrite v5, single mode)', () => {
+  describe('remap-rendering (Plan-qwerty-select-no-rewrite v5, Display Only mode)', () => {
     const COLEMAK: Record<string, string> = {
       KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
       KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',

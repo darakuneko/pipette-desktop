@@ -316,12 +316,14 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       //
       // This clear fires on ANY landed write, including a partial failure —
       // it is unconditional on `error`. The OTHER half of the destructive
-      // one-shot contract — resetting the footer's select back to QWERTY —
-      // lives one layer up, in `useKeymapApplyPrompt.handleApplyConfirm`,
-      // and fires ONLY on a clean (error-free) success; a partial failure
-      // leaves the select untouched there. Shared invariant: a rewrite
-      // leaves no undo trail; only a clean success returns the select to
-      // QWERTY.
+      // one-shot contract — marking the footer's select as written (Phase K:
+      // it STAYS on the rewritten arrangement, tagged "- Written", rather
+      // than resetting to QWERTY) — lives one layer up, in
+      // `useKeymapApplyPrompt.handleApplyConfirm`, and fires ONLY on a clean
+      // (error-free) success with `appliedCount > 0`; a partial failure
+      // leaves the select/written flag untouched there. Shared invariant: a
+      // rewrite leaves no undo trail; only a clean success with something
+      // actually applied marks the select written.
       if (applied.length > 0 && isMountedRef.current) {
         history.clear()
         // Flash the rewritten positions (see `useKeyFlash`) — only for a

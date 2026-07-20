@@ -2,13 +2,13 @@
 // @vitest-environment jsdom
 //
 // Coverage for `KeycodeGrid`'s remap tint: the color decision is driven
-// purely by `remapLabel`'s own label-diff (`getRemapDisplayLabel`'s
-// `displayLabel != null`) — there is no separate gated `isRemapped`
-// channel. Applied mode (which used to need one) no longer exists —
-// Rewrite is a destructive one-shot that resets the select back to
-// QWERTY, so Display Only is the only remap-rendering mode, and the
-// picker derives its tint locally from the same label-diff. Covers both
-// the plain (`KeycodeButton`) and split (`SplitKey`) render paths.
+// purely by whatever `remapLabel` function it's given — its own label-diff
+// (`getRemapDisplayLabel`'s `displayLabel != null`) — there is no separate
+// gated `isRemapped` channel; each test below supplies its own inline
+// `remapLabel` rather than the real app wiring, so this is agnostic to
+// which of useDevicePrefs's `remapLabel`/`pickerRemapLabel` a given caller
+// actually passes in. Covers both the plain (`KeycodeButton`) and split
+// (`SplitKey`) render paths.
 
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'

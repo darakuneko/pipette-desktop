@@ -73,9 +73,10 @@ export interface UseKeymapApplyPromptReturn {
    *  buttons disabled — a double-click on Apply must never fire a second
    *  rewrite: `KeymapEditor.applyKeymapRewrite`'s own re-entrancy guard
    *  would answer the second call with `{ appliedCount: 0 }` and NO error,
-   *  which this hook would otherwise read as a clean success and reset the
-   *  select to QWERTY even if the real (first) apply later ends in a
-   *  partial failure whose contract is "select untouched". */
+   *  which this hook would otherwise read as a (landed-but-empty) clean
+   *  success and switch the select to the target id — never written, since
+   *  `appliedCount` is 0 — even though the real (first) apply may later end
+   *  in a partial failure whose contract is "select/written untouched". */
   isApplying: boolean
 }
 
