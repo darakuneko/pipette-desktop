@@ -89,6 +89,15 @@ describe('useKeymapApplyPrompt — simulation tab Apply flow (Plan-qwerty-select
     }), { initialProps: opts })
   }
 
+  // Shared by the double-Confirm and layout-change-race suites below — both
+  // need to hold `onApplyKeymapRewrite`'s promise open to land assertions
+  // mid-flight before resolving it.
+  function pendingApplyResult() {
+    let resolve!: (result: { appliedCount: number; error?: string }) => void
+    const promise = new Promise<{ appliedCount: number; error?: string }>((res) => { resolve = res })
+    return { promise, resolve: (r: { appliedCount: number; error?: string }) => resolve(r) }
+  }
+
   // --- handleKeyboardLayoutChange: plain display switch for EVERY value ---
 
   it('handleKeyboardLayoutChange never opens the modal or performs a lookup, for any value including a rewrite-eligible pack', async () => {
@@ -217,12 +226,6 @@ describe('useKeymapApplyPrompt — simulation tab Apply flow (Plan-qwerty-select
   // --- Double-Confirm re-entrancy guard ---
 
   describe('double-Confirm re-entrancy guard', () => {
-    function pendingApplyResult() {
-      let resolve!: (result: { appliedCount: number; error?: string }) => void
-      const promise = new Promise<{ appliedCount: number; error?: string }>((res) => { resolve = res })
-      return { promise, resolve: (r: { appliedCount: number; error?: string }) => resolve(r) }
-    }
-
     it('double-Confirm while the first apply is pending: onApplyKeymapRewrite fires once, and a later partial-failure resolution leaves the select untouched', async () => {
       const { promise, resolve } = pendingApplyResult()
       onApplyKeymapRewrite.mockImplementationOnce(() => promise)
@@ -334,6 +337,72 @@ describe('useKeymapApplyPrompt — simulation tab Apply flow (Plan-qwerty-select
 
       rerender({ keyboardLayout: 'dvorak-id' })
       expect(result.current.pendingApply).not.toBeNull()
+    })
+
+    // --- FIX B (external review): a layout change WHILE Confirm's own
+    // onApplyKeymapRewrite is still awaiting must discard that apply's
+    // result entirely, not just close the (already-closed) modal — a clean
+    // success arriving after the user has already moved on to a different
+    // pack must never clobber that new selection back to QWERTY. ---
+
+    it('FIX B: a layout change mid-apply discards a later clean success — no QWERTY reset, the new selection stands', async () => {
+      const { promise, resolve } = pendingApplyResult()
+      onApplyKeymapRewrite.mockImplementationOnce(() => promise)
+
+      const { result } = setup({ keyboardLayout: 'dvorak-id' })
+      act(() => { result.current.requestApply() })
+      await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
+
+      act(() => { result.current.handleApplyConfirm() })
+      expect(result.current.isApplying).toBe(true)
+
+      // The user picks a different pack (Colemak) while Dvorak's apply is
+      // still in flight — same call the footer select's onChange makes.
+      act(() => { result.current.handleKeyboardLayoutChange('colemak-id') })
+      expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id')
+      onKeyboardLayoutChange.mockClear()
+
+      // The STALE Dvorak apply now resolves cleanly.
+      await act(async () => {
+        resolve({ appliedCount: 2 })
+        await promise
+      })
+
+      // Must NOT reset to QWERTY — that would clobber the Colemak selection
+      // the user already made.
+      expect(onKeyboardLayoutChange).not.toHaveBeenCalled()
+      expect(result.current.isApplying).toBe(false)
+      expect(result.current.applyError).toBeNull()
+    })
+
+    it('FIX B: a layout change mid-apply also discards a later partial failure — no stray error surfaced against the abandoned pack', async () => {
+      const { promise, resolve } = pendingApplyResult()
+      onApplyKeymapRewrite.mockImplementationOnce(() => promise)
+
+      const { result } = setup({ keyboardLayout: 'dvorak-id' })
+      act(() => { result.current.requestApply() })
+      await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
+
+      act(() => { result.current.handleApplyConfirm() })
+      act(() => { result.current.handleKeyboardLayoutChange(BUILTIN_QWERTY_LAYOUT_ID) })
+      onKeyboardLayoutChange.mockClear()
+
+      await act(async () => {
+        resolve({ appliedCount: 1, error: 'device write failed' })
+        await promise.catch(() => {})
+      })
+
+      expect(result.current.applyError).toBeNull()
+      expect(onKeyboardLayoutChange).not.toHaveBeenCalled()
+    })
+
+    it('FIX B control: an unchanged layout still resets to QWERTY on clean success (baseline, unaffected by the new guard)', async () => {
+      const { result } = setup({ keyboardLayout: 'dvorak-id' })
+      act(() => { result.current.requestApply() })
+      await waitFor(() => expect(result.current.pendingApply).not.toBeNull())
+
+      act(() => { result.current.handleApplyConfirm() })
+      await waitFor(() => expect(onKeyboardLayoutChange).toHaveBeenCalledWith(BUILTIN_QWERTY_LAYOUT_ID))
     })
   })
 

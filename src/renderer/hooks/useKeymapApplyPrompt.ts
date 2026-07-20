@@ -117,10 +117,14 @@ export function useKeymapApplyPrompt({
   const [isApplying, setIsApplying] = useState(false)
 
   // Bumped on every `requestApply`/`handleKeyboardLayoutChange` call and on
-  // every observed `keyboardLayout` change (see the watch effect below); the
-  // async lookup in `requestApply` re-checks it after each `await` so a
-  // superseded request can never open a modal after the user has already
-  // moved on.
+  // every observed `keyboardLayout`/`keymapRestoreSeq` change (see the two
+  // watch effects below); the async lookup in `requestApply` re-checks it
+  // after each `await` so a superseded request can never open a modal after
+  // the user has already moved on. `handleApplyConfirm` also snapshots it at
+  // Confirm time and re-checks it after `onApplyKeymapRewrite` settles, so a
+  // layout change mid-apply (the user picks a DIFFERENT pack, or QWERTY,
+  // before the stale apply resolves) discards that apply's result instead
+  // of clobbering the new selection back to QWERTY.
   const requestSeqRef = useRef(0)
 
   // RACE (Plan-qwerty-select-no-rewrite v7, new/mandatory): the select no
@@ -232,12 +236,23 @@ export function useKeymapApplyPrompt({
     // entirely, rather than resetting the select on top of a keymap the
     // restore already replaced.
     const restoreSeqAtStart = keymapRestoreSeqRef.current
+    // Layout race (external review finding): the select is no longer
+    // locked while this apply is in flight — the user can pick a
+    // DIFFERENT pack (or QWERTY) before this Confirm's own
+    // `onApplyKeymapRewrite` settles. `requestSeqRef` is bumped by the
+    // layout-watch effect on every OBSERVED `keyboardLayout` change (and
+    // by the restore effect too, so this single snapshot doubles as a
+    // second, redundant-but-harmless restore-race check) — comparing it
+    // after the await is what stops a stale apply for the OLD pack from
+    // clobbering the NEW selection back to QWERTY on a clean success.
+    const requestSeqAtStart = requestSeqRef.current
     void (async () => {
       try {
         const result = await onApplyKeymapRewrite(table)
         const supersededByRestore = keymapRestoreSeqRef.current !== restoreSeqAtStart
+        const supersededByLayoutChange = requestSeqRef.current !== requestSeqAtStart
         setPendingApply(null)
-        if (supersededByRestore) return
+        if (supersededByRestore || supersededByLayoutChange) return
         if (result.error) {
           // Partial failure: the keymap is now a MIXED state (some positions
           // rewritten, some not) — it is neither still QWERTY nor fully the

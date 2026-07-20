@@ -381,14 +381,29 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     typingTestMode, typingTestEffectiveLayer: typingTest.effectiveLayer,
   })
 
+  // FIX C (external review): a keymap must actually be loaded for a
+  // Rewrite to mean anything — `useKeymapApplyPrompt.requestApply` already
+  // no-ops when `keymapEditable` is false (App.tsx passes `keyboard.keymap
+  // .size > 0` into that hook), but nothing here previously folded that
+  // into tab/button VISIBILITY, so a permutation pack could show a
+  // tabs+Apply UI that silently did nothing when clicked. Derived straight
+  // from this component's own `keymap` prop — the exact same `Map` App.tsx
+  // reads `.size` off of for the hook — rather than a second prop that
+  // could drift out of sync with it.
+  const keymapEditable = keymap.size > 0
+
   // SINGLE PREDICATE (Plan-qwerty-select-no-rewrite v7): `remapKind` is
   // ALREADY the unified "does the active pack want a keymap rewrite"
   // signal (see `useDevicePrefs.ts` — it's gated on `keymapApplicable &&
-  // buildKeymapRewriteTable(map).ok`, not `.ok` alone), so tab visibility
-  // reuses it directly rather than a second parallel flag. Suppressed
-  // during typing test / View Matrix mode, neither of which has a concept
-  // of a second (Base) keymap surface to switch to.
-  const showPackTabs = remapKind === 'simulated' && !typingTestMode && !viewMatrixMode.active
+  // buildKeymapRewriteTable(map).ok`, not `.ok` alone); combined with
+  // `keymapEditable` above, this is the SAME condition `requestApply`
+  // itself requires, so tab AND Apply-button visibility (the button only
+  // ever renders nested inside the tabs branch below, never standalone)
+  // both collapse onto this one boolean rather than needing separate
+  // checks that could disagree. Suppressed during typing test / View
+  // Matrix mode too, neither of which has a concept of a second (Base)
+  // keymap surface to switch to.
+  const showPackTabs = remapKind === 'simulated' && keymapEditable && !typingTestMode && !viewMatrixMode.active
   // True exactly while the visible pane is the read-only simulation tab —
   // gates both `KeyboardPane`'s own `readOnly` and every picker edit path
   // (TabbedKeycodes/tabContentOverride below), belt-and-braces on top of
@@ -411,11 +426,21 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   })
 
   // --- Layout picker (device browse / file browse / probe / keyboard view) ---
+  // The Keyboard tab's keyboard-as-picker (`LayoutPickerContent`'s
+  // secondary `<KeyboardPane>`) has its OWN click handler
+  // (`handlePickerKeyClick`), entirely separate from `TabbedKeycodes`'
+  // `onKeycodeSelect`/`onKeycodeMultiSelect` gated below — gating those
+  // alone left this surface fully live during the simulation tab (it can
+  // paste into whatever `selectedKey`/`selectedEncoder` the shared state
+  // holds, or start a picker multi-select, regardless of what's selected
+  // on THIS surface). Same `packTabReadOnly` gate as every other edit path.
   const { layoutPickerContent } = useLayoutPicker({
     layout, layers, layerNames, keymap, effectiveLayoutOptions, remapLabel,
     scale: scaleProp, onScaleChange,
     devices, connectedDevice, onDeviceListActiveChange,
-    selectedKey, selectedEncoder, handleKeycodeSelect, handlePickerMultiSelect,
+    selectedKey, selectedEncoder,
+    handleKeycodeSelect: packTabReadOnly ? undefined : handleKeycodeSelect,
+    handlePickerMultiSelect: packTabReadOnly ? undefined : handlePickerMultiSelect,
     pickerSelectedIndices, clearPickerSelection: multiSelect.clearPickerSelection,
     buildKeycodesForLayer, buildEncoderKeycodesForLayer,
   })

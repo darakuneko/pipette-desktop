@@ -160,6 +160,22 @@ describe('KeymapEditor — pack tabs (Plan-qwerty-select-no-rewrite v7)', () => 
       expect(getByTestId('keymap-pack-tab-simulation')).toHaveTextContent('Dvorak')
       expect(getByTestId('keymap-pack-tab-base')).toHaveTextContent('Base')
     })
+
+    // FIX C (external review): `requestApply` already no-ops when the
+    // keymap isn't editable (`keymapEditable` false) — tab/Apply-button
+    // VISIBILITY must fold in the same condition, or the UI offers a
+    // tabs+Apply surface that silently does nothing when clicked.
+    it('renders no tabs and no Apply button when the keymap is empty (not editable), even though remapKind is "simulated"', () => {
+      const onRequestKeymapApply = vi.fn()
+      const { queryByTestId } = render(
+        <KeymapEditor
+          {...defaultProps({ keymap: new Map<string, number>() })}
+          remapKind="simulated" keymapPackName="Dvorak" onRequestKeymapApply={onRequestKeymapApply}
+        />,
+      )
+      expect(queryByTestId('keymap-pack-tabs')).toBeNull()
+      expect(queryByTestId('keymap-pack-apply-button')).toBeNull()
+    })
   })
 
   describe('default tab + UID reset', () => {
