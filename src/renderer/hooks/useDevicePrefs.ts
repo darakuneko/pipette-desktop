@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
 import { useKeyLabelLookup } from './useKeyLabelLookup'
-import { buildKeymapRewriteTable } from '../../shared/keymap/keymap-apply'
+import { buildKeymapRewriteTable, type KeymapRewriteTable } from '../../shared/keymap/keymap-apply'
 import type { RemapKind } from '../components/keyboard/constants'
 import { useAppConfig } from './useAppConfig'
 import { MIN_SCALE, MAX_SCALE } from '../components/editors/keymap-editor-types'
@@ -460,6 +460,12 @@ export interface UseDevicePrefsReturn {
    *  pack (irrelevant since no key is ever tinted there), and
    *  non-permutation deviation packs. */
   remapKind: RemapKind
+  /** The active pack's own rewrite table, already resolved and validated —
+   *  `undefined` unless `remapKind === 'simulated'`. Lets
+   *  `useKeymapApplyPrompt.requestApply` skip a second async lookup for
+   *  the exact table `remapKind` itself already required to build. See
+   *  the hook body's own doc comment for the full rationale. */
+  activeRewriteTable?: KeymapRewriteTable
   /** Display name of the active layout/pack — see `remapKind`'s sibling
    *  doc comment on `activeLayoutName` in the hook body for what feeds it. */
   activeLayoutName: string
@@ -960,6 +966,21 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     return hasActivePackMap && keymapApplicable && packIsPurePermutation ? 'simulated' : 'actual'
   }, [activeMap, keymapApplicable, packIsPurePermutation])
 
+  // The active pack's own rewrite table, exposed ONLY while it's actually
+  // eligible for a keymap Rewrite (`remapKind === 'simulated'` — the exact
+  // state `KeymapEditor` requires before it ever renders the simulation
+  // tab / Apply button in the first place). `useKeymapApplyPrompt
+  // .requestApply` reads this directly instead of re-resolving the same
+  // map through its own `useKeyLabelLookup` instance: by the time the
+  // Apply button is reachable at all, `rewriteTableResult` above has
+  // already built successfully for this exact `layout`, so there is
+  // nothing left to look up. `undefined` (not `remapKind !== 'simulated'`
+  // alone) is the guard `requestApply` no-ops on, mirroring the old
+  // resolver's own null-return contract.
+  const activeRewriteTable = remapKind === 'simulated' && rewriteTableResult?.ok
+    ? rewriteTableResult.table
+    : undefined
+
   // Display name for the active pack — used by `KeymapEditor`'s simulation
   // tab label when `remapKind === 'simulated'`. Falls back to the raw id
   // (same fallback `useKeyLabelLookup.getName` documents) so a not-yet-
@@ -1086,6 +1107,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     remapLabel,
     isRemapped,
     remapKind,
+    activeRewriteTable,
     activeLayoutName,
     pickerRemapLabel,
   }

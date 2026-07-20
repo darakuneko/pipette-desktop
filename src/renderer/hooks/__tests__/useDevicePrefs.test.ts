@@ -2059,4 +2059,99 @@ describe('useDevicePrefs', () => {
       expect(result.current.remapKind).toBe('actual')
     })
   })
+
+  // Task-kaw-requestApply-reuse: `activeRewriteTable` lets
+  // `useKeymapApplyPrompt.requestApply` skip its own async lookup/build —
+  // it must mirror `remapKind` exactly: defined (and matching
+  // `buildKeymapRewriteTable`'s own table) iff `remapKind === 'simulated'`,
+  // `undefined` in every 'actual' case.
+  describe('activeRewriteTable', () => {
+    const COLEMAK: Record<string, string> = {
+      KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
+      KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
+      KC_L: 'I', KC_SCOLON: 'O', KC_N: 'K',
+    }
+    const JAPANESE_QWERTY: Record<string, string> = {
+      KC_LBRACKET: '`\n@',
+      KC_RBRACKET: '{\n[',
+      KC_2: '"\n2',
+    }
+
+    function mockKeyLabelPack(id: string, map: Record<string, string>, keymapApplicable = true): void {
+      const existing = vialAPIMock()
+      Object.defineProperty(window, 'vialAPI', {
+        value: {
+          ...existing,
+          keyLabelStoreGet: async (reqId: string) => {
+            if (reqId !== id) return { success: false, errorCode: 'NOT_FOUND' }
+            return {
+              success: true,
+              data: {
+                meta: { id, name: id, filename: `${id}.json`, savedAt: '', updatedAt: '' },
+                data: { name: id, map, keymapApplicable },
+              },
+            }
+          },
+        },
+        writable: true,
+        configurable: true,
+      })
+    }
+
+    it('is undefined for QWERTY (no pack loaded)', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      expect(result.current.activeRewriteTable).toBeUndefined()
+    })
+
+    it('mirrors remapKind === "simulated": the resolved table for a pure permutation pack (Colemak)', async () => {
+      setupMocks()
+      mockKeyLabelPack('colemak-id', COLEMAK)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setLayout('colemak-id')
+      })
+      await act(async () => {})
+      expect(result.current.remapKind).toBe('simulated')
+      expect(result.current.activeRewriteTable).toBeDefined()
+      expect(result.current.activeRewriteTable?.get('KC_E')).toBe('KC_F')
+    })
+
+    it('is undefined for a JIS-type deviation pack that fails buildKeymapRewriteTable', async () => {
+      setupMocks()
+      mockKeyLabelPack('jis-id', JAPANESE_QWERTY)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setLayout('jis-id')
+      })
+      await act(async () => {})
+      expect(result.current.remapKind).toBe('actual')
+      expect(result.current.activeRewriteTable).toBeUndefined()
+    })
+
+    it('is undefined for a pure permutation pack not flagged keymapApplicable (author opt-out)', async () => {
+      setupMocks()
+      mockKeyLabelPack('colemak-id', COLEMAK, false)
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      act(() => {
+        result.current.setLayout('colemak-id')
+      })
+      await act(async () => {})
+      expect(result.current.remapKind).toBe('actual')
+      expect(result.current.activeRewriteTable).toBeUndefined()
+    })
+  })
 })

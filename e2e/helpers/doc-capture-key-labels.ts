@@ -19,7 +19,14 @@ import type { Page } from '@playwright/test'
 import { spawn } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { dismissNotificationModal, dismissOverlay, isAvailable } from './doc-capture-common'
+import {
+  cloneUserDataForCapture,
+  dismissNotificationModal,
+  dismissOverlay,
+  forceEnglishLanguageInClone,
+  isAvailable,
+  killAndWaitForExit,
+} from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
@@ -247,25 +254,21 @@ async function captureFindOnHubTab(page: Page): Promise<void> {
   await capture(page, 'key-labels-hub')
 }
 
-function launchElectronApp(): ReturnType<typeof spawn> {
+function launchElectronApp(userDataDir: string): ReturnType<typeof spawn> {
   const electronPath = resolve(PROJECT_ROOT, 'node_modules/.bin/electron')
   const args = [
     '.',
     '--no-sandbox',
     '--disable-gpu-sandbox',
     `--remote-debugging-port=${DEBUG_PORT}`,
+    // Always a disposable clone from `cloneUserDataForCapture` (see
+    // `main` below) — never the real profile. That also means the
+    // unconditional single-instance lock (since #278,
+    // `requestSingleInstanceLock` in src/main/index.ts) can no longer
+    // collide with an already-running real Pipette session; a fresh temp
+    // dir is never the same directory a live session owns.
+    `--user-data-dir=${userDataDir}`,
   ]
-  // Opt-in escape hatch for the (unconditional, since #278) single-instance
-  // lock: if a real Pipette session is already running against the default
-  // userData path, this helper's own launch silently no-ops instead of
-  // opening a window (see `requestSingleInstanceLock` in src/main/index.ts).
-  // Pass a copy of the real profile via this env var to capture against an
-  // isolated path instead — not the default, since the whole point of using
-  // the real userData path here (unlike doc-capture-language-packs.ts's
-  // isolated virtual-device profile) is a *representative* Installed tab.
-  if (process.env.PIPETTE_CAPTURE_USER_DATA_DIR) {
-    args.push(`--user-data-dir=${process.env.PIPETTE_CAPTURE_USER_DATA_DIR}`)
-  }
   return spawn(electronPath, args, {
     cwd: PROJECT_ROOT,
     stdio: 'ignore',
@@ -307,9 +310,9 @@ async function waitForDebugPort(port: number, timeoutMs = 15_000): Promise<void>
  * each phase its own process sidesteps the accumulation entirely,
  * at the cost of a second ~launch+relogin cycle.
  */
-async function runPhaseInFreshSession(phase: (page: Page) => Promise<void>): Promise<void> {
+async function runPhaseInFreshSession(userDataDir: string, phase: (page: Page) => Promise<void>): Promise<void> {
   console.log('Launching Electron app with remote debugging...')
-  const child = launchElectronApp()
+  const child = launchElectronApp(userDataDir)
 
   let browser: Awaited<ReturnType<typeof chromium.connectOverCDP>> | undefined
   try {
@@ -334,34 +337,31 @@ async function runPhaseInFreshSession(phase: (page: Page) => Promise<void>): Pro
     await phase(page)
   } finally {
     await browser?.close()
+    // Waits for the process to actually be gone (not just signaled) —
+    // without this, the next `runPhaseInFreshSession()` call can race the
+    // still-shutting-down previous instance and fail to bind
+    // `DEBUG_PORT` (`connectOverCDP: socket hang up`).
     await killAndWaitForExit(child)
   }
-}
-
-/**
- * `child.kill()` only sends the signal — it doesn't wait for the process
- * to actually exit and release `DEBUG_PORT`. Without waiting here, the
- * next `runPhaseInFreshSession()` call can race the still-shutting-down
- * previous instance and fail to bind the port (`connectOverCDP: socket
- * hang up`). Falls back to a fixed wait if 'exit' doesn't fire in time.
- */
-async function killAndWaitForExit(child: ReturnType<typeof spawn>, timeoutMs = 5000): Promise<void> {
-  if (child.exitCode !== null || child.killed) return
-  await new Promise<void>((resolve) => {
-    const timer = setTimeout(resolve, timeoutMs)
-    child.once('exit', () => {
-      clearTimeout(timer)
-      resolve()
-    })
-    child.kill()
-  })
 }
 
 async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
-  await runPhaseInFreshSession(captureInstalledTab)
-  await runPhaseInFreshSession(captureFindOnHubTab)
+  // Clone the real profile into a disposable temp dir and point every
+  // launch at the CLONE — see `cloneUserDataForCapture`'s doc comment for
+  // why (this used to patch the real config.json's `language` key in
+  // place with a backup/restore that could not fully protect the user's
+  // real data on a crash or concurrent run). Force English in the clone
+  // — no backup/restore needed since the clone is thrown away afterward.
+  const { userDataDir, cleanup } = cloneUserDataForCapture('key-labels')
+  try {
+    forceEnglishLanguageInClone(userDataDir)
+    await runPhaseInFreshSession(userDataDir, captureInstalledTab)
+    await runPhaseInFreshSession(userDataDir, captureFindOnHubTab)
+  } finally {
+    cleanup()
+  }
 
   console.log(`\nKey Labels screenshots saved to: ${SCREENSHOT_DIR}`)
 }
