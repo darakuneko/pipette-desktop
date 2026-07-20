@@ -15,20 +15,22 @@ interface Props {
   onChange: (value: string) => void
   options: UpwardSelectOption[]
   'aria-label': string
-  /** Overrides the closed trigger's text only — the dropdown's own option
-   *  list keeps showing each option's plain `name` (Plan-qwerty-select-
-   *  no-rewrite Phase K: e.g. a "{{name}} - Written" suffix applied while
-   *  a keymap Rewrite's raw-legend rendering is active). Falls back to the
-   *  selected option's own name (or the raw value) when omitted. */
-  triggerLabel?: string
+  /** Appended to the closed trigger's own resolved name only — the
+   *  dropdown's option list is unaffected (Plan-qwerty-select-no-rewrite
+   *  Phase K: e.g. a " - Written" suffix while a keymap Rewrite's raw-
+   *  legend rendering is active). The caller passes just the suffix text;
+   *  this component still owns resolving which option's name it's
+   *  appended to, so there is only one place that does that lookup. */
+  triggerSuffix?: string
 }
 
-export function UpwardSelect({ value, onChange, options, 'aria-label': ariaLabel, triggerLabel }: Props) {
+export function UpwardSelect({ value, onChange, options, 'aria-label': ariaLabel, triggerSuffix }: Props) {
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const handleClose = useCallback(() => setOpen(false), [])
 
   const currentName = useMemo(() => options.find((o) => o.id === value)?.name ?? value, [options, value])
+  const triggerText = triggerSuffix ? `${currentName}${triggerSuffix}` : currentName
 
   return (
     <>
@@ -41,7 +43,7 @@ export function UpwardSelect({ value, onChange, options, 'aria-label': ariaLabel
         className="flex items-center gap-1 rounded border border-edge bg-surface-alt px-1.5 py-0.5 text-xs text-content-secondary transition-colors hover:text-content focus:border-accent focus:outline-none"
         onClick={() => setOpen((v) => !v)}
       >
-        <span>{triggerLabel ?? currentName}</span>
+        <span>{triggerText}</span>
         <ChevronUp size={ICON_XS} className={open ? 'opacity-100' : 'opacity-50'} />
       </button>
       <AnchoredPopover

@@ -215,9 +215,10 @@ describe('QuickSettingsSelects — keyboard layout apply-to-keymap branching', (
           onApplyKeymapRewrite={onApplyKeymapRewrite}
         />,
       )
-      // This suite's t() mock returns the key itself rather than
-      // interpolating {{name}} — real interpolation is exercised by the
-      // i18n resource files/coverage, not this component test.
+      // This suite's t() mock returns the key itself rather than the real
+      // suffix text — UpwardSelect appends whatever this resolves to onto
+      // its own resolved option name, so the trigger text still contains
+      // this key string as a substring.
       expect(screen.getByRole('button', { name: 'keyLabels.title' })).toHaveTextContent('keyLabels.select.writtenSuffix')
     })
 

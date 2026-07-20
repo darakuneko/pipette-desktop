@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Plan-qwerty-select-no-rewrite Phase K: the "{{name}} - Written" select
+// Plan-qwerty-select-no-rewrite Phase K: the " - Written" select trigger
 // suffix is a new i18n key that must exist in the built-in English locale
 // AND every sample-packs/i18n persona pack (coding-ui.md's "add to every
 // pack, not just the standard one" rule) — a pack missing the key falls
 // back to English via i18next, which is a silent inconsistency this test
 // guards against. Also guards the "bump every file's version together"
-// rule (coding-ui.md) for this feature's key addition.
+// rule (coding-ui.md) for this feature's key addition. The key is
+// suffix-only (no {{name}} placeholder) — `UpwardSelect` appends it to its
+// own resolved option name (see `triggerSuffix` prop) rather than the
+// caller re-deriving the pack's name to interpolate into a full label.
 
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync } from 'node:fs'
@@ -38,20 +41,21 @@ describe('keyLabels.select.writtenSuffix (Plan-qwerty-select-no-rewrite Phase K)
     expect(packFiles.length).toBeGreaterThanOrEqual(4)
   })
 
-  it('english.json has a non-empty writtenSuffix with a {{name}} placeholder', () => {
+  it('english.json has a non-empty, suffix-only writtenSuffix (no {{name}} placeholder)', () => {
     const suffix = english.keyLabels?.select?.writtenSuffix
     expect(typeof suffix).toBe('string')
-    expect(suffix).toContain('{{name}}')
+    expect(suffix).not.toContain('{{name}}')
     expect(suffix).toContain('Written')
   })
 
   it.each(readdirSync(SAMPLE_PACKS_DIR).filter((f) => f.endsWith('.json')))(
-    '%s has a non-empty writtenSuffix with a {{name}} placeholder',
+    '%s has a non-empty, suffix-only writtenSuffix (no {{name}} placeholder)',
     (filename) => {
       const pack = loadJson(join(SAMPLE_PACKS_DIR, filename))
       const suffix = pack.keyLabels?.select?.writtenSuffix
       expect(typeof suffix).toBe('string')
-      expect(suffix).toContain('{{name}}')
+      expect(suffix?.length).toBeGreaterThan(0)
+      expect(suffix).not.toContain('{{name}}')
     },
   )
 

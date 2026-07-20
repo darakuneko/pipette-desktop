@@ -80,7 +80,6 @@ describe('useKeymapApplyPrompt — WYSIWYG select semantics (Plan-qwerty-select-
   function setup(opts: Partial<UseKeymapApplyPromptOptions> & { keyboardLayout: string }) {
     return renderHook((props: Partial<UseKeymapApplyPromptOptions> & { keyboardLayout: string }) => useKeymapApplyPrompt({
       keymapEditable: true,
-      keymapWritten: false,
       onKeyboardLayoutChange,
       onApplyKeymapRewrite,
       ...props,
@@ -109,22 +108,17 @@ describe('useKeymapApplyPrompt — WYSIWYG select semantics (Plan-qwerty-select-
     expect(onApplyKeymapRewrite).not.toHaveBeenCalled()
   })
 
-  // --- A2: same-value re-selection is the only guard, and it must never
-  // flip `keymapWritten` (nothing actually changed) ---
+  // --- A2: same-value re-selection is a true no-op — the hook must not
+  // call the setter at all, so whatever `keymapWritten` currently holds
+  // (owned entirely by the caller, not by this hook) survives untouched
+  // for free. This also means the hook has no need to know its value. ---
 
-  it('A2: re-selecting the current select value is display-only, no modal, no lookup, and passes keymapWritten=false through unchanged', async () => {
-    const { result } = setup({ keyboardLayout: 'colemak-id', keymapWritten: false })
+  it('A2: re-selecting the current select value is a true no-op — no setter call, no modal, no lookup', async () => {
+    const { result } = setup({ keyboardLayout: 'colemak-id' })
     act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
-    await waitFor(() => expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id', false))
+    expect(onKeyboardLayoutChange).not.toHaveBeenCalled()
     expect(result.current.pendingApply).toBeNull()
     expect(lookup.ensure).not.toHaveBeenCalled()
-  })
-
-  it('A2 guard: re-selecting the current select value while keymapWritten=true must NOT flip it to false', async () => {
-    const { result } = setup({ keyboardLayout: 'colemak-id', keymapWritten: true })
-    act(() => result.current.handleKeyboardLayoutChange('colemak-id'))
-    await waitFor(() => expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id', true))
-    expect(result.current.pendingApply).toBeNull()
   })
 
   // --- A3: non-eligible pack falls through to a plain display switch ---
@@ -377,8 +371,13 @@ describe('useKeymapApplyPrompt — WYSIWYG select semantics (Plan-qwerty-select-
     })
 
     it('restore cleanup resets written to false for a select that was already marked written, keeping the select value itself', async () => {
-      const { rerender } = setup({ keyboardLayout: 'colemak-id', keymapWritten: true, keymapRestoreSeq: 1 })
-      rerender({ keyboardLayout: 'colemak-id', keymapWritten: true, keymapRestoreSeq: 2 })
+      // The hook itself no longer tracks `keymapWritten` (removed — its
+      // only prior use was the same-value guard, now a true no-op instead)
+      // — the restore effect always forces `false` unconditionally for
+      // whatever `keyboardLayout` currently is, regardless of what the
+      // caller's own written flag happened to hold beforehand.
+      const { rerender } = setup({ keyboardLayout: 'colemak-id', keymapRestoreSeq: 1 })
+      rerender({ keyboardLayout: 'colemak-id', keymapRestoreSeq: 2 })
       expect(onKeyboardLayoutChange).toHaveBeenCalledWith('colemak-id', false)
     })
 
@@ -455,7 +454,6 @@ describe('useKeymapApplyPrompt — WYSIWYG select semantics (Plan-qwerty-select-
     const { result } = renderHook(() => useKeymapApplyPrompt({
       keymapEditable: false,
       keyboardLayout: 'qwerty',
-      keymapWritten: false,
       onKeyboardLayoutChange,
       onApplyKeymapRewrite,
     }))

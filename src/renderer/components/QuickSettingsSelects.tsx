@@ -82,7 +82,6 @@ export function QuickSettingsSelects({
     // own "no layout selected" convention) — the hook's sole guard is
     // comparing a new selection against this exact value.
     keyboardLayout: keyboardLayout ?? BUILTIN_QWERTY_LAYOUT_ID,
-    keymapWritten,
     onKeyboardLayoutChange,
     onApplyKeymapRewrite,
     keymapRestoreSeq,
@@ -92,14 +91,13 @@ export function QuickSettingsSelects({
   const layoutOptions = useLayoutOptions(keyLabels.metas)
 
   // Plan-qwerty-select-no-rewrite Phase K: while `keymapWritten` is true,
-  // the select's closed trigger reads "{{name}} - Written" so the WYSIWYG
-  // select visibly reflects that the keymap is showing raw characters, not
-  // just changing which pack's legends the dropdown remembers.
-  const layoutTriggerLabel = useMemo(() => {
-    if (!keymapWritten || keyboardLayout == null) return undefined
-    const name = layoutOptions.find((o) => o.id === keyboardLayout)?.name ?? keyboardLayout
-    return t('keyLabels.select.writtenSuffix', { name })
-  }, [keymapWritten, keyboardLayout, layoutOptions, t])
+  // the select's closed trigger appends a " - Written"-style suffix (see
+  // `UpwardSelect`'s `triggerSuffix` prop, which appends this to its OWN
+  // resolved option name — no need to re-derive the pack's name here too)
+  // so the WYSIWYG select visibly reflects that the keymap is showing raw
+  // characters, not just changing which pack's legends the dropdown
+  // remembers.
+  const layoutTriggerSuffix = keymapWritten ? t('keyLabels.select.writtenSuffix') : undefined
 
   const themeOptions = useMemo(() => {
     const opts: { id: string; name: string }[] = [
@@ -163,7 +161,7 @@ export function QuickSettingsSelects({
                 value={keyboardLayout}
                 options={layoutOptions}
                 onChange={handleKeyboardLayoutChange}
-                triggerLabel={layoutTriggerLabel}
+                triggerSuffix={layoutTriggerSuffix}
               />
             )}
             {applyError && (

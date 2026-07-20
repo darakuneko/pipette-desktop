@@ -35,14 +35,10 @@ export interface UseKeymapApplyPromptOptions {
   keymapEditable: boolean
   /** The Keyboard Layout select's current value (same as what the select
    *  renders) — the sole guard for the "nothing to do" case: re-picking
-   *  this exact value is always display-only, no modal. */
+   *  this exact value is a true no-op (see `handleKeyboardLayoutChange`),
+   *  so whatever `keymapWritten` currently holds survives untouched
+   *  without this hook needing to know its value at all. */
   keyboardLayout: string
-  /** The select's current persisted `keymapWritten` flag (Plan-qwerty-
-   *  select-no-rewrite Phase K) — read ONLY by the same-value reselect
-   *  guard below, so re-picking the current value passes it straight back
-   *  through instead of accidentally clearing it via `onKeyboardLayoutChange`
-   *  (nothing actually changed, so nothing should be reset). */
-  keymapWritten: boolean
   /** Atomic (layout, written) setter — Phase K. Every call site here passes
    *  `written` explicitly per the transition it represents; see each call
    *  below for which one applies. */
@@ -103,7 +99,6 @@ async function resolveRewriteTable(
 export function useKeymapApplyPrompt({
   keymapEditable,
   keyboardLayout,
-  keymapWritten,
   onKeyboardLayoutChange,
   onApplyKeymapRewrite,
   keymapRestoreSeq,
@@ -194,17 +189,13 @@ export function useKeymapApplyPrompt({
       onKeyboardLayoutChange?.(v as KeyboardLayoutId, false)
       return
     }
-    // Re-selecting the value already shown in the select is a no-op —
-    // display-only, no modal (pattern A2). This is the only guard:
-    // `keyboardLayout` is exactly what the select currently renders, so
-    // this is the one case where there is genuinely nothing new to do.
-    // `keymapWritten` is passed straight back through (not forced false):
-    // nothing actually changed, so the persisted written flag must survive
-    // this no-op untouched.
-    if (v === keyboardLayout) {
-      onKeyboardLayoutChange?.(v as KeyboardLayoutId, keymapWritten)
-      return
-    }
+    // Re-selecting the value already shown in the select is a true no-op
+    // (pattern A2, 同値再選択=何もしない): `keyboardLayout` is exactly what
+    // the select currently renders, so there is genuinely nothing to do —
+    // no setter call at all, which means `keymapWritten` (owned entirely by
+    // the caller) survives untouched for free, without this hook needing to
+    // know its current value.
+    if (v === keyboardLayout) return
     // Flag + table-build check requires the entry's full payload, which
     // the layout dropdown only has name/id for — fetch (or hit cache)
     // before deciding whether to prompt. Flag-less packs and packs that
@@ -220,7 +211,7 @@ export function useKeymapApplyPrompt({
       }
       setPendingApply({ id: v, name: keyLabelLookup.getName(v) ?? v, table: targetTable })
     })()
-  }, [onKeyboardLayoutChange, keymapEditable, keyboardLayout, keymapWritten, onApplyKeymapRewrite, keyLabelLookup])
+  }, [onKeyboardLayoutChange, keymapEditable, keyboardLayout, onApplyKeymapRewrite, keyLabelLookup])
 
   // Cancel/Display Only are no-ops while an apply is in flight — the modal
   // disables their buttons (via `isApplying`) as the primary defense, but

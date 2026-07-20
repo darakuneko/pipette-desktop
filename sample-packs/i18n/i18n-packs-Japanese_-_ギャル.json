@@ -1,5 +1,5 @@
 {
-  "version": "0.1.26",
+  "version": "0.1.27",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -1646,7 +1646,7 @@
     "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}} か、キーピッカーの Edit ボタンから落とせるよん☆",
     "missingClose": "閉じるっしょ",
     "select": {
-      "writtenSuffix": "{{name}} - 書き換え済みっしょ☆"
+      "writtenSuffix": " - 書き換え済みっしょ☆"
     },
     "keymapApply": {
       "title": "「{{name}}」キーマップも書き換えちゃう？",

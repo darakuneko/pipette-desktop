@@ -1,5 +1,5 @@
 {
-  "version": "0.1.26",
+  "version": "0.1.27",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -1646,7 +1646,7 @@
     "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}}、またはキーピッカー右上の Edit ボタンから入れられますえ。",
     "missingClose": "閉じますえ",
     "select": {
-      "writtenSuffix": "{{name}} - 書き換え済みどすえ"
+      "writtenSuffix": " - 書き換え済みどすえ"
     },
     "keymapApply": {
       "title": "「{{name}}」をキーマップにも適用しますか？",

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.26",
+  "version": "0.1.27",
   "name": "English",
   "common": {
     "save": "Save",
@@ -1656,7 +1656,7 @@
     "missingHint": "You can download \"{{name}}\" from {{settings}} > {{tools}} > {{keyLabels}}, or from the keypicker overlay's Edit button.",
     "missingClose": "Close",
     "select": {
-      "writtenSuffix": "{{name}} - Written"
+      "writtenSuffix": " - Written"
     },
     "keymapApply": {
       "title": "Apply {{name}} to the Keymap?",

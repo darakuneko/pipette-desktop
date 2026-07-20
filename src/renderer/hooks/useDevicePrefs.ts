@@ -456,12 +456,15 @@ export interface UseDevicePrefsReturn {
   autoLockTime: AutoLockMinutes
   setAutoLockTime: (m: AutoLockMinutes) => void
   applyDevicePrefs: (uid: string) => Promise<void>
-  /** Display label for a qmkId: the active Key Label pack's own label
-   *  (via `compositeLabels` -> `map`), falling back to the qmkId itself
-   *  when neither has an entry. Display Only is the sole remap-rendering
-   *  mode (Plan-qwerty-select-no-rewrite v5 最終仕様) — a Rewrite never
-   *  leaves anything for this to simulate, since it resets `layout` back
-   *  to QWERTY (raw/no-color) on success. */
+  /** Display label for a qmkId. Two modes, gated on `keymapWritten` (Plan-
+   *  qwerty-select-no-rewrite Phase K):
+   *  - `keymapWritten` true: identity (the qmkId itself) unconditionally —
+   *    the keymap already holds the rewritten arrangement as real
+   *    keycodes, so resolving through the pack's label map again would
+   *    render a translation of a translation.
+   *  - `keymapWritten` false (Display Only, the pre-Phase-K default): the
+   *    active Key Label pack's own label (via `compositeLabels` -> `map`),
+   *    falling back to the qmkId itself when neither has an entry. */
   remapLabel: (qmkId: string) => string
   /** The blue "remapped" tint source: true whenever `remapLabel(qmkId)`
    *  differs from `qmkId` itself — same rule every picker/palette consumer
@@ -918,48 +921,53 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     void lookup.ensure(layout)
   }, [lookup, layout])
 
+  // Single source of truth for "does this pack's map build a rewrite
+  // table, and what does it contain" — both `packIsPurePermutation`
+  // (Phase P, picker gate) and `writtenTargets` (Phase K, keymap color
+  // gate) need the same `.ok` verdict on the same input, so this is
+  // computed once here instead of twice.
+  //
+  // Memoized on the pack map's own object reference (stable per cache
+  // entry, see `useKeyLabelLookup.getMap`) rather than on `lookup` itself
+  // (a fresh object literal every render), so this only rebuilds when the
+  // pack data actually changes. QWERTY/no pack: `map` is `undefined` (not
+  // yet loaded) or an empty object (built-in QWERTY, or an uninstalled
+  // pack that never resolves) — an empty map trivially passes
+  // `buildKeymapRewriteTable` (there is nothing to permute).
+  const activeMap = lookup.getMap(layout)
+  const rewriteTableResult = useMemo(
+    () => (activeMap ? buildKeymapRewriteTable(activeMap) : undefined),
+    [activeMap],
+  )
+
   // Picker-only gate (Plan-qwerty-select-no-rewrite v6, Phase P): a pure
   // QWERTY-keycode permutation pack (Colemak, Eucalyn, Dvorak, ...) must
   // leave the key PICKER raw — see `pickerRemapLabel`'s doc comment below.
   // Re-derives the same `.ok` verdict `buildKeymapRewriteTable` already
   // computes for the Key Label "apply to keymap" rewrite, rather than
   // consulting `getKeymapApplicable` (an author-supplied hint the rewrite
-  // path deliberately treats as advisory only, not authoritative).
-  //
-  // Memoized on the pack map's own object reference (stable per cache
-  // entry, see `useKeyLabelLookup.getMap`) — same pattern `writtenTargets`
-  // below uses — rather than on `lookup` itself (a fresh object literal
-  // every render), so this only rebuilds when the pack data actually
-  // changes. QWERTY/no pack: `map` is `undefined` (not yet loaded) or an
-  // empty object (built-in QWERTY, or an uninstalled pack that never
-  // resolves) — an empty map trivially passes `buildKeymapRewriteTable`
-  // (there is nothing to permute), and an undefined map defaults to "pure
+  // path deliberately treats as advisory only, not authoritative). An
+  // undefined `rewriteTableResult` (no pack loaded) defaults to "pure
   // permutation" too since `remapLabel` is already identity in that state
   // regardless of this flag.
-  const activeMap = lookup.getMap(layout)
-  const packIsPurePermutation = useMemo(
-    () => !activeMap || buildKeymapRewriteTable(activeMap).ok,
-    [activeMap],
-  )
+  const packIsPurePermutation = !rewriteTableResult || rewriteTableResult.ok
 
   // Phase K (Plan-qwerty-select-no-rewrite): once a Rewrite has landed
   // cleanly, `keymapWritten` stays true for the `layout` it wrote. The keys
   // it actually changed are exactly the rewrite table's NON-identity
   // targets (`buildKeymapRewriteTable` returns a CLOSED permutation, which
   // includes identity entries for keys the pack leaves untouched — those
-  // must stay unmarked). Missing pack data (`activeMap` undefined, not yet
-  // loaded/uninstalled) or a table that no longer builds (the pack was
-  // edited/re-imported since the Rewrite) can only ever DEGRADE this to "no
-  // color" — `remapLabel` below never consults this at all, so the raw-
-  // legend guarantee holds unconditionally regardless of pack validity.
+  // must stay unmarked). Missing pack data (`rewriteTableResult` undefined,
+  // not yet loaded/uninstalled) or a table that no longer builds (the pack
+  // was edited/re-imported since the Rewrite) can only ever DEGRADE this to
+  // "no color" — `remapLabel` below never consults this at all, so the
+  // raw-legend guarantee holds unconditionally regardless of pack validity.
   const writtenTargets = useMemo(() => {
-    if (!keymapWritten || !activeMap) return undefined
-    const result = buildKeymapRewriteTable(activeMap)
-    if (!result.ok) return undefined
+    if (!keymapWritten || !rewriteTableResult?.ok) return undefined
     return new Set(
-      [...result.table].filter(([source, target]) => source !== target).map(([, target]) => target),
+      [...rewriteTableResult.table].filter(([source, target]) => source !== target).map(([, target]) => target),
     )
-  }, [keymapWritten, activeMap])
+  }, [keymapWritten, rewriteTableResult])
 
   // Display Only is the pre-Phase-K remap-rendering mode (Plan-qwerty-
   // select-no-rewrite v5 最終仕様): both the keymap and the key picker show

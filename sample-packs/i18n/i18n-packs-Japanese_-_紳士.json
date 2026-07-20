@@ -1,5 +1,5 @@
 {
-  "version": "0.1.26",
+  "version": "0.1.27",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -1646,7 +1646,7 @@
     "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}}、またはキーピッカーの Edit ボタンよりお取り寄せいただけます。",
     "missingClose": "閉じる",
     "select": {
-      "writtenSuffix": "{{name}} - 書換済"
+      "writtenSuffix": " - 書換済"
     },
     "keymapApply": {
       "title": "「{{name}}」をキーマップにも適用いたしますか？",

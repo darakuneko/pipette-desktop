@@ -1,5 +1,5 @@
 {
-  "version": "0.1.26",
+  "version": "0.1.27",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -1656,7 +1656,7 @@
     "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}}、またはキーピッカー右上の Edit ボタンからダウンロードできます。",
     "missingClose": "閉じる",
     "select": {
-      "writtenSuffix": "{{name}} - 書き換え済み"
+      "writtenSuffix": " - 書き換え済み"
     },
     "keymapApply": {
       "title": "「{{name}}」をキーマップにも適用しますか？",
