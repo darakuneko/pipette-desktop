@@ -1,5 +1,5 @@
 {
-  "version": "0.1.27",
+  "version": "0.1.28",
   "name": "English",
   "common": {
     "save": "Save",
@@ -1660,9 +1660,6 @@
     },
     "keymapApply": {
       "title": "Apply {{name}} to the Keymap?",
-      "message": "This key label set is a pure QWERTY letter swap, so the keymap itself can be rewritten.",
-      "rewriteNote": "Rewriting sets the keymap to {{name}}'s arrangement. The Keyboard Layout select keeps showing \"{{name}} - Written\", and the keymap displays the real characters each key now sends, with the keys that changed highlighted.",
-      "undoNote": "This rewrite cannot be undone — it clears the undo/redo history.",
       "saveRecommendation": "Save your current keymap first — export a .vil file or a snapshot from the File tab. Rewrite replaces keycodes on every layer and clears the undo/redo history; restoring your saved file is the only way back.",
       "apply": "Rewrite Keymap",
       "displayOnly": "Display Only",

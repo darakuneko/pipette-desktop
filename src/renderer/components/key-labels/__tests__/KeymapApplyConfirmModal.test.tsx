@@ -55,7 +55,7 @@ describe('KeymapApplyConfirmModal', () => {
     expect(screen.getByText('keyLabels.keymapApply.title:Colemak')).toBeTruthy()
   })
 
-  it('shows the rewrite-consequence note with the pack name (display stays QWERTY)', () => {
+  it('shows the save-recommendation notice as plain body text (no warning-box styling)', () => {
     render(
       <KeymapApplyConfirmModal
         open
@@ -65,22 +65,9 @@ describe('KeymapApplyConfirmModal', () => {
         onCancel={vi.fn()}
       />,
     )
-    expect(screen.getByText('keyLabels.keymapApply.rewriteNote:Colemak')).toBeTruthy()
-  })
-
-  it('shows the save-recommendation notice before rewriting', () => {
-    render(
-      <KeymapApplyConfirmModal
-        open
-        labelName="Colemak"
-        onApply={vi.fn()}
-        onDisplayOnly={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    )
-    expect(screen.getByTestId('keymap-apply-confirm-save-recommendation')).toHaveTextContent(
-      'keyLabels.keymapApply.saveRecommendation',
-    )
+    const note = screen.getByTestId('keymap-apply-confirm-save-recommendation')
+    expect(note).toHaveTextContent('keyLabels.keymapApply.saveRecommendation')
+    expect(note.className).not.toMatch(/warning/)
   })
 
   it('Apply button fires onApply', () => {
