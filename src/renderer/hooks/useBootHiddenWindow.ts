@@ -4,13 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 
 interface BootHiddenWindowOptions {
   unlockDialogVisible: boolean
-  /**
-   * Whether the connected keyboard is currently locked, once known:
-   * true = confirmed locked, false = confirmed unlocked, null = not yet
-   * determined (still loading, no device, or unlock status unknown).
-   */
-  keyboardLocked: boolean | null
-  onRequestUnlockDialog: () => void
 }
 
 /**
@@ -24,13 +17,13 @@ interface BootHiddenWindowOptions {
  * unlock dialogs during normal use are left alone: the phase ends without
  * showing or hiding anything.
  *
- * It also owns opening the dialog in the first place: if session restore
- * reconnects a keyboard that is still locked and nothing has opened the
- * dialog yet (e.g. the plain keymap-editor restore path, as opposed to
- * the typingView restore path which opens it itself), this hook requests
- * it once per launch via onRequestUnlockDialog. If the keyboard turns out
- * to already be unlocked, the boot-hidden phase ends without ever
- * touching the window.
+ * This hook does not decide whether the dialog should open — that is
+ * owned by the view-restore effects (App.tsx's typingView restore,
+ * useInputModes' typingTest/matrix-test entry), which are view-mode
+ * aware. This hook only reacts to `unlockDialogVisible` once something
+ * else has opened it, so a boot-hidden restore into a view that does not
+ * require unlocking (e.g. the plain keymap editor) never forces a
+ * prompt.
  *
  * Window visibility truth comes from the main process (windowIsVisible /
  * onWindowVisibilityChanged), not from document.visibilityState: a
@@ -40,13 +33,13 @@ interface BootHiddenWindowOptions {
  * from ever arming.
  */
 export function useBootHiddenWindow(opts: BootHiddenWindowOptions): void {
-  const { unlockDialogVisible, keyboardLocked, onRequestUnlockDialog } = opts
+  const { unlockDialogVisible } = opts
 
   // Arming is reactive state, not a ref: windowStartedHidden() resolves
-  // asynchronously, and by the time it does, keyboardLocked may already be
-  // known or the dialog may already be visible (typingView restore path).
-  // Effects keyed on `armed` re-run when it flips true and pick up the
-  // current props, so none of those already-set signals are lost.
+  // asynchronously, and by the time it does, the dialog may already be
+  // visible (typingView restore path). The reveal effect is keyed on
+  // `armed` and re-runs when it flips true, so an already-visible dialog
+  // at that moment is not lost.
   const [armed, setArmed] = useState(false)
 
   const weShowedRef = useRef(false)
@@ -54,11 +47,6 @@ export function useBootHiddenWindow(opts: BootHiddenWindowOptions): void {
   // a dialog already visible at the moment arming resolves is treated as
   // a rising edge instead of being missed.
   const prevVisibleRef = useRef(false)
-  // One-shot per launch: once we ask for the dialog, never ask again
-  // (disconnect → reconnect must not re-prompt).
-  const promptedRef = useRef(false)
-  const onRequestUnlockDialogRef = useRef(onRequestUnlockDialog)
-  onRequestUnlockDialogRef.current = onRequestUnlockDialog
 
   // Live main-process window visibility, kept current by the
   // onWindowVisibilityChanged subscription below. Read synchronously by
@@ -159,21 +147,4 @@ export function useBootHiddenWindow(opts: BootHiddenWindowOptions): void {
       }
     }
   }, [armed, unlockDialogVisible])
-
-  // Auto-open the Unlock dialog once, if session restore reconnects a
-  // still-locked keyboard and nothing else has opened it yet. If the
-  // keyboard turns out to be unlocked instead, end the boot-hidden phase —
-  // this is startup-only behavior, so a later lock transition or
-  // reconnect must not reveal the window.
-  useEffect(() => {
-    if (!armed) return
-    if (unlockDialogVisible) return
-    if (promptedRef.current) return
-    if (keyboardLocked === true) {
-      promptedRef.current = true
-      onRequestUnlockDialogRef.current()
-    } else if (keyboardLocked === false) {
-      setArmed(false)
-    }
-  }, [armed, keyboardLocked, unlockDialogVisible])
 }

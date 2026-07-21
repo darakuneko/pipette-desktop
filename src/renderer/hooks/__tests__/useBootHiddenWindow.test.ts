@@ -56,28 +56,21 @@ afterEach(() => {
 
 interface Props {
   visible: boolean
-  keyboardLocked: boolean | null
-  onRequestUnlockDialog: () => void
 }
 
 function renderBootHiddenWindow(initialProps: Partial<Props> = {}) {
-  const onRequestUnlockDialog = initialProps.onRequestUnlockDialog ?? vi.fn()
   const utils = renderHook(
     (props: Props) => useBootHiddenWindow({
       unlockDialogVisible: props.visible,
-      keyboardLocked: props.keyboardLocked,
-      onRequestUnlockDialog: props.onRequestUnlockDialog,
     }),
     {
       initialProps: {
         visible: false,
-        keyboardLocked: null,
-        onRequestUnlockDialog,
         ...initialProps,
       },
     },
   )
-  return { ...utils, onRequestUnlockDialog }
+  return utils
 }
 
 describe('useBootHiddenWindow', () => {
@@ -85,7 +78,7 @@ describe('useBootHiddenWindow', () => {
     const { rerender } = renderBootHiddenWindow()
     await flushMicrotasks()
 
-    rerender({ visible: true, keyboardLocked: null, onRequestUnlockDialog: vi.fn() })
+    rerender({ visible: true })
 
     expect(windowShow).toHaveBeenCalledTimes(1)
     expect(windowHide).not.toHaveBeenCalled()
@@ -95,14 +88,14 @@ describe('useBootHiddenWindow', () => {
     const { rerender } = renderBootHiddenWindow()
     await flushMicrotasks()
 
-    rerender({ visible: true, keyboardLocked: null, onRequestUnlockDialog: vi.fn() })
+    rerender({ visible: true })
     expect(windowShow).toHaveBeenCalledTimes(1)
 
-    rerender({ visible: false, keyboardLocked: null, onRequestUnlockDialog: vi.fn() })
+    rerender({ visible: false })
     expect(windowHide).toHaveBeenCalledTimes(1)
 
     // A later dialog must not trigger auto-show again — the phase already ended.
-    rerender({ visible: true, keyboardLocked: null, onRequestUnlockDialog: vi.fn() })
+    rerender({ visible: true })
     expect(windowShow).toHaveBeenCalledTimes(1)
   })
 
@@ -115,7 +108,7 @@ describe('useBootHiddenWindow', () => {
     expect(windowHide).not.toHaveBeenCalled()
 
     // The boot-hidden phase already ended, so a later dialog does not auto-show.
-    rerender({ visible: true, keyboardLocked: null, onRequestUnlockDialog: vi.fn() })
+    rerender({ visible: true })
     expect(windowShow).not.toHaveBeenCalled()
   })
 
@@ -128,13 +121,13 @@ describe('useBootHiddenWindow', () => {
     const { rerender } = renderBootHiddenWindow()
     await flushMicrotasks()
 
-    rerender({ visible: true, keyboardLocked: null, onRequestUnlockDialog: vi.fn() })
+    rerender({ visible: true })
     await flushMicrotasks()
     expect(windowShow).toHaveBeenCalledTimes(1)
 
     // The dialog resolves — ownership was rolled back, so this must not
     // hide the window the user opened themselves.
-    rerender({ visible: false, keyboardLocked: null, onRequestUnlockDialog: vi.fn() })
+    rerender({ visible: false })
     expect(windowHide).not.toHaveBeenCalled()
   })
 
@@ -144,8 +137,8 @@ describe('useBootHiddenWindow', () => {
     const { rerender } = renderBootHiddenWindow()
     await flushMicrotasks()
 
-    rerender({ visible: true, keyboardLocked: null, onRequestUnlockDialog: vi.fn() })
-    rerender({ visible: false, keyboardLocked: null, onRequestUnlockDialog: vi.fn() })
+    rerender({ visible: true })
+    rerender({ visible: false })
 
     expect(windowShow).not.toHaveBeenCalled()
     expect(windowHide).not.toHaveBeenCalled()
@@ -161,15 +154,15 @@ describe('useBootHiddenWindow', () => {
 
     // An unlock dialog cycles during normal use — must not hide the window
     // the user is actively looking at.
-    rerender({ visible: true, keyboardLocked: null, onRequestUnlockDialog: vi.fn() })
+    rerender({ visible: true })
     expect(windowShow).not.toHaveBeenCalled()
 
-    rerender({ visible: false, keyboardLocked: null, onRequestUnlockDialog: vi.fn() })
+    rerender({ visible: false })
     expect(windowHide).not.toHaveBeenCalled()
 
     // Nor on a later cycle, since the phase already ended.
-    rerender({ visible: true, keyboardLocked: null, onRequestUnlockDialog: vi.fn() })
-    rerender({ visible: false, keyboardLocked: null, onRequestUnlockDialog: vi.fn() })
+    rerender({ visible: true })
+    rerender({ visible: false })
     expect(windowShow).not.toHaveBeenCalled()
     expect(windowHide).not.toHaveBeenCalled()
   })
@@ -194,41 +187,11 @@ describe('useBootHiddenWindow', () => {
     await flushMicrotasks()
 
     // A later unlock dialog cycle during normal use must not hide the window.
-    rerender({ visible: true, keyboardLocked: null, onRequestUnlockDialog: vi.fn() })
+    rerender({ visible: true })
     expect(windowShow).not.toHaveBeenCalled()
 
-    rerender({ visible: false, keyboardLocked: null, onRequestUnlockDialog: vi.fn() })
+    rerender({ visible: false })
     expect(windowHide).not.toHaveBeenCalled()
-  })
-
-  it('requests the unlock dialog once when a boot-hidden launch reconnects a locked keyboard', async () => {
-    const { rerender, onRequestUnlockDialog } = renderBootHiddenWindow({ keyboardLocked: null })
-    await flushMicrotasks()
-
-    rerender({ visible: false, keyboardLocked: true, onRequestUnlockDialog })
-    expect(onRequestUnlockDialog).toHaveBeenCalledTimes(1)
-
-    // Further rerenders (even with locked still true) must not re-call it.
-    rerender({ visible: false, keyboardLocked: true, onRequestUnlockDialog })
-    expect(onRequestUnlockDialog).toHaveBeenCalledTimes(1)
-  })
-
-  it('requests the unlock dialog even if keyboardLocked becomes true before windowStartedHidden resolves', async () => {
-    let resolveStartedHidden: (hidden: boolean) => void = () => {}
-    windowStartedHidden.mockImplementation(
-      () => new Promise<boolean>((resolve) => { resolveStartedHidden = resolve }),
-    )
-
-    const { rerender, onRequestUnlockDialog } = renderBootHiddenWindow({ keyboardLocked: null })
-
-    // keyboardLocked resolves to true before windowStartedHidden() does.
-    rerender({ visible: false, keyboardLocked: true, onRequestUnlockDialog })
-    expect(onRequestUnlockDialog).not.toHaveBeenCalled()
-
-    resolveStartedHidden(true)
-    await flushMicrotasks()
-
-    expect(onRequestUnlockDialog).toHaveBeenCalledTimes(1)
   })
 
   it('shows the window for a dialog already visible when arming resolves, and hides it on the falling edge', async () => {
@@ -237,82 +200,32 @@ describe('useBootHiddenWindow', () => {
       () => new Promise<boolean>((resolve) => { resolveStartedHidden = resolve }),
     )
 
-    // The typingView restore path opens the dialog before arming resolves.
-    const { rerender, onRequestUnlockDialog } = renderBootHiddenWindow({
-      visible: true,
-      keyboardLocked: true,
-    })
+    // The typingView restore path (or a locked-mode entry in useInputModes)
+    // opens the dialog before arming resolves.
+    const { rerender } = renderBootHiddenWindow({ visible: true })
 
     resolveStartedHidden(true)
     await flushMicrotasks()
 
     expect(windowShow).toHaveBeenCalledTimes(1)
-    // The dialog was already visible, so this hook must not also request it.
-    expect(onRequestUnlockDialog).not.toHaveBeenCalled()
 
-    rerender({ visible: false, keyboardLocked: false, onRequestUnlockDialog })
+    rerender({ visible: false })
     expect(windowHide).toHaveBeenCalledTimes(1)
   })
 
-  it('never requests the unlock dialog when windowStartedHidden resolves false', async () => {
-    windowStartedHidden.mockResolvedValue(false)
-
-    const { rerender, onRequestUnlockDialog } = renderBootHiddenWindow({ keyboardLocked: null })
+  it('never calls windowShow for a boot-hidden launch with a locked keyboard when nothing opens the dialog', async () => {
+    // Regression guard: restoring a view that does not require unlocking
+    // (e.g. the plain keymap editor) must leave the window hidden — this
+    // hook must not infer a prompt from a locked keyboard on its own.
+    const { rerender } = renderBootHiddenWindow()
     await flushMicrotasks()
 
-    rerender({ visible: false, keyboardLocked: true, onRequestUnlockDialog })
-    expect(onRequestUnlockDialog).not.toHaveBeenCalled()
-  })
+    // Simulate time passing / re-renders with the dialog never opening.
+    rerender({ visible: false })
+    rerender({ visible: false })
 
-  it('never requests the unlock dialog when the user reveals the window first', async () => {
-    const { rerender, onRequestUnlockDialog } = renderBootHiddenWindow({ keyboardLocked: null })
-    await flushMicrotasks()
-
-    pushWindowVisibility(true)
-
-    rerender({ visible: false, keyboardLocked: true, onRequestUnlockDialog })
-    expect(onRequestUnlockDialog).not.toHaveBeenCalled()
-  })
-
-  it('ends the phase on confirmed-unlocked without prompting, and ignores a later lock transition', async () => {
-    const { rerender, onRequestUnlockDialog } = renderBootHiddenWindow({ keyboardLocked: null })
-    await flushMicrotasks()
-
-    rerender({ visible: false, keyboardLocked: false, onRequestUnlockDialog })
-    expect(onRequestUnlockDialog).not.toHaveBeenCalled()
-
-    // Startup-only: a later lock transition must not prompt or reveal.
-    rerender({ visible: false, keyboardLocked: true, onRequestUnlockDialog })
-    expect(onRequestUnlockDialog).not.toHaveBeenCalled()
-
-    rerender({ visible: true, keyboardLocked: true, onRequestUnlockDialog })
     expect(windowShow).not.toHaveBeenCalled()
-  })
-
-  it('never requests the unlock dialog while keyboardLocked stays unknown', async () => {
-    const { rerender, onRequestUnlockDialog } = renderBootHiddenWindow({ keyboardLocked: null })
-    await flushMicrotasks()
-
-    rerender({ visible: false, keyboardLocked: null, onRequestUnlockDialog })
-    rerender({ visible: false, keyboardLocked: null, onRequestUnlockDialog })
-
-    expect(onRequestUnlockDialog).not.toHaveBeenCalled()
-  })
-
-  it('does not re-prompt on reconnect (locked → unknown → locked again)', async () => {
-    const { rerender, onRequestUnlockDialog } = renderBootHiddenWindow({ keyboardLocked: null })
-    await flushMicrotasks()
-
-    rerender({ visible: false, keyboardLocked: true, onRequestUnlockDialog })
-    expect(onRequestUnlockDialog).toHaveBeenCalledTimes(1)
-
-    // Disconnect: keyboardLocked goes back to unknown.
-    rerender({ visible: false, keyboardLocked: null, onRequestUnlockDialog })
-    expect(onRequestUnlockDialog).toHaveBeenCalledTimes(1)
-
-    // Reconnect: locked is confirmed true again — must not re-prompt.
-    rerender({ visible: false, keyboardLocked: true, onRequestUnlockDialog })
-    expect(onRequestUnlockDialog).toHaveBeenCalledTimes(1)
+    expect(windowHide).not.toHaveBeenCalled()
   })
 
   it('unsubscribes from window visibility changes on unmount', async () => {

@@ -5,8 +5,10 @@
 // keyboard must (a) show the hidden window with the Unlock dialog instead
 // of staying tray-resident, and (b) hide the window back to the tray once
 // unlocked. Exercises both restore paths — typingView (dialog opened by
-// the view-mode restore in App.tsx) and plain editor (dialog auto-opened
-// by useBootHiddenWindow).
+// the view-mode restore in App.tsx, which is unlock-gated) and plain
+// editor (no view-mode restore requires unlocking, so the window must
+// stay hidden and no dialog must appear — useBootHiddenWindow no longer
+// opens the dialog on its own).
 //
 // Uses the virtual device (PIPETTE_VIRTUAL_DEVICE='only'), which relocks
 // on every launch so the Unlock dialog is guaranteed to appear on each
@@ -180,10 +182,12 @@ test.describe.serial('tray start-in-tray unlock reveal', () => {
     app = null
   })
 
-  test('editor restore path: relaunch reveals the Unlock dialog then hides back to tray', async () => {
+  test('editor restore path: relaunch stays tray-resident with no Unlock dialog', async () => {
     // Rewrite the persisted view mode to plain editor so this session
-    // exercises useBootHiddenWindow's auto-open path instead of the
-    // typingView restore effect in App.tsx.
+    // restores into a view that does not require unlocking. Only the
+    // typingView (and typingTest/matrix-test) restore paths are allowed to
+    // open the Unlock dialog — a boot-hidden restore of the plain editor
+    // must leave the window hidden and never show the dialog at all.
     const prefs = readJson(SETTINGS_PATH)
     expect(prefs).not.toBeNull()
     if (prefs) {
@@ -195,23 +199,18 @@ test.describe.serial('tray start-in-tray unlock reveal', () => {
     app = launched.app
     const page = launched.page
 
-    let dialogSeenVisible = false
-    await expect.poll(async () => {
+    // Sample repeatedly over a window long enough for the fixed bug to have
+    // resurfaced (it used to fire this reveal shortly after the keyboard's
+    // unlock status resolved) — the window must stay hidden and the dialog
+    // must never appear.
+    for (let sample = 0; sample < 10; sample++) {
       const winVisible = await app!.evaluate(({ BrowserWindow }) =>
         BrowserWindow.getAllWindows().map((w) => w.isVisible()))
       const dialogUp = (await unlockDialogHeading(page).count()) > 0
-      if (dialogUp && winVisible.some(Boolean)) dialogSeenVisible = true
-      return dialogSeenVisible
-    }, { message: 'expected the Unlock dialog to appear in a visible window', timeout: 25_000, intervals: [1000] }).toBe(true)
-
-    await waitForUnlockDialog(app, page)
-
-    await expect.poll(async () => {
-      const winVisible = await app!.evaluate(({ BrowserWindow }) =>
-        BrowserWindow.getAllWindows().map((w) => w.isVisible()))
-      return winVisible.some(Boolean)
-    }, { message: 'expected the window to hide back to the tray after unlock', timeout: 15_000, intervals: [1000] }).toBe(false)
-    await expect(unlockDialogHeading(page)).toHaveCount(0)
+      expect(winVisible.some(Boolean), `window became visible on sample ${sample}`).toBe(false)
+      expect(dialogUp, `Unlock dialog appeared on sample ${sample}`).toBe(false)
+      await page.waitForTimeout(1000)
+    }
 
     await quitApp(app)
     app = null

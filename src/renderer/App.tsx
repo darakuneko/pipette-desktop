@@ -265,27 +265,15 @@ export function App() {
     connect: lifecycle.handleConnect,
   })
 
-  // Whether the connected keyboard is confirmed locked, for the
-  // boot-hidden auto-unlock prompt below. Stays null (undetermined) until
-  // a real device is fully loaded with a known unlock status — a
-  // getUnlockStatus() failure must never be mistaken for "locked".
-  const bootKeyboardLocked: boolean | null =
-    (!device.connectedDevice || device.isDummy
-      || keyboard.loading || keyboard.uid === EMPTY_UID
-      || !keyboard.unlockStatusKnown)
-      ? null
-      : !keyboard.unlockStatus.unlocked
-
   // Show the window only for the Unlock dialog while a hidden launch
   // (startInTray) is restoring the last session; hide it again once the
-  // dialog resolves. Also opens the dialog automatically, once per launch,
-  // if session restore reconnects a keyboard that is still locked (the
-  // typingView restore path below opens it itself, so this is idempotent
-  // with that path). No-ops entirely once the boot-hidden phase ends.
+  // dialog resolves. Opening the dialog itself is owned solely by the
+  // view-restore effects below (typingView restore, typingTest/matrix-test
+  // entry) — they are view-mode aware, so a boot-hidden restore into a
+  // view that does not require unlocking (e.g. the plain keymap editor)
+  // never forces a prompt. No-ops entirely once the boot-hidden phase ends.
   useBootHiddenWindow({
     unlockDialogVisible: editorUI.showUnlockDialog,
-    keyboardLocked: bootKeyboardLocked,
-    onRequestUnlockDialog: () => editorUI.setShowUnlockDialog(true),
   })
 
   const missingKeyLabel = useMissingKeyLabelNotice(keyboard.uid || null)
