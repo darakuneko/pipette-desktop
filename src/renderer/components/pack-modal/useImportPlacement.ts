@@ -85,6 +85,21 @@
 // an `open` ref at the moment it would actually display something, not
 // when the placement started; the auto-clear timer is also torn down
 // immediately on close so it cannot fire into a since-reopened session.
+//
+// DIRECTION RACE (batch): `placeMany`'s merge computation must not read
+// `directionRef.current` at execution time either — a batch's file-save
+// loop can take a while (several IPC round trips), and the user is free
+// to click the Name-sort toggle (asc <-> desc) while it runs. Reading
+// live direction there would merge `toInsert` against one direction
+// while `beforeEntries` (captured at batch start) reflects the other,
+// producing a persisted order that is sorted in neither direction.
+// `snapshotEntries()` therefore captures direction alongside entries in
+// one `BatchSnapshot`, and `placeMany` uses only that frozen value —
+// the whole batch is placed consistently against the state that existed
+// when it began, exactly like `beforeEntries` already was. `place()`
+// (single-item) is untouched and keeps reading live direction: those
+// are separate user-triggered actions with no long-running loop for a
+// toggle to land inside of.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -110,6 +125,16 @@ export interface UseImportPlacementOptions {
   onReorderError: (error: string | undefined) => void
 }
 
+/** Frozen pre-batch state for `placeMany`: both the entries list and the
+ *  sort direction as they stood when the batch started, captured
+ *  together by `snapshotEntries()` so neither can drift independently
+ *  while the batch's file-save loop runs (see the DIRECTION RACE note
+ *  in the module doc). */
+export interface BatchSnapshot {
+  entries: NameSortEntry[]
+  direction: SortDirection
+}
+
 export interface PlacementOptions {
   /** From `snapshotBeforeIds()`, called before the store operation.
    *  Omit only when `alwaysInsert` is set. */
@@ -129,13 +154,14 @@ export interface UseImportPlacementResult {
   snapshotBeforeIds: () => Set<string>
   /**
    * Call synchronously once, right before starting a multi-file import
-   * batch's store calls. Returns the full entries list (not just ids)
-   * as it stood before any file in the batch was saved — pass it to
-   * `placeMany` as `beforeEntries` so the batch's merge computation
-   * never depends on `entriesRef` (which can drift mid-batch; see the
-   * RAPID-INSERT RACE note in the module doc).
+   * batch's store calls. Returns the entries list AND sort direction
+   * (not just ids) as they stood before any file in the batch was saved
+   * — pass the result to `placeMany` so the batch's merge computation
+   * never depends on `entriesRef`/`directionRef` (which can drift
+   * mid-batch; see the RAPID-INSERT RACE and DIRECTION RACE notes in
+   * the module doc).
    */
-  snapshotEntries: () => NameSortEntry[]
+  snapshotEntries: () => BatchSnapshot
   /**
    * Call after the store operation resolves with the placed entry's
    * `{ id, name }`. Serialized — queues behind any in-flight placement
@@ -146,14 +172,15 @@ export interface UseImportPlacementResult {
   /**
    * Batch-aware counterpart to `place()` for a multi-file import: pass
    * every processed result (successes only — the caller already
-   * dedupes by id and skips failures) plus the `beforeEntries` snapshot
-   * captured via `snapshotEntries()` before the batch started. Positions
-   * every newly-inserted result as a group in one pure computation and
-   * issues at most one `reorder` call for the whole batch — see the
-   * RAPID-INSERT RACE note in the module doc for why this differs from
-   * calling `place()` once per result.
+   * dedupes by id and skips failures) plus the `BatchSnapshot` captured
+   * via `snapshotEntries()` before the batch started. Positions every
+   * newly-inserted result as a group in one pure computation — against
+   * the snapshot's frozen entries AND direction, never live state — and
+   * issues at most one `reorder` call for the whole batch. See the
+   * RAPID-INSERT RACE and DIRECTION RACE notes in the module doc for why
+   * this differs from calling `place()` once per result.
    */
-  placeMany: (results: NameSortEntry[], beforeEntries: NameSortEntry[]) => Promise<void>
+  placeMany: (results: NameSortEntry[], snapshot: BatchSnapshot) => Promise<void>
 }
 
 export function useImportPlacement({
@@ -241,8 +268,8 @@ export function useImportPlacement({
     return new Set(entriesRef.current.map((entry) => entry.id))
   }, [])
 
-  const snapshotEntries = useCallback((): NameSortEntry[] => {
-    return entriesRef.current
+  const snapshotEntries = useCallback((): BatchSnapshot => {
+    return { entries: entriesRef.current, direction: directionRef.current }
   }, [])
 
   // Serializes placements so a second one's order computation always
@@ -279,18 +306,21 @@ export function useImportPlacement({
 
   const placeMany = useCallback((
     results: NameSortEntry[],
-    beforeEntries: NameSortEntry[],
+    snapshot: BatchSnapshot,
   ): Promise<void> => {
     const run = async (): Promise<void> => {
       if (results.length === 0) return
+      const { entries: beforeEntries, direction: beforeDirection } = snapshot
       const beforeIds = new Set(beforeEntries.map((entry) => entry.id))
       const toInsert = results.filter((r) => !beforeIds.has(r.id))
       if (toInsert.length > 0) {
-        // Merged purely from `beforeEntries` + `toInsert` — never from
-        // `entriesRef.current` — so this cannot be corrupted by a
-        // background refresh landing partway through the batch (see the
-        // RAPID-INSERT RACE note in the module doc).
-        const orderedIds = computeSortedInsertOrderMany(beforeEntries, toInsert, directionRef.current)
+        // Merged purely from `beforeEntries` + `toInsert` + the
+        // snapshot's own `beforeDirection` — never from
+        // `entriesRef.current`/`directionRef.current` — so this cannot
+        // be corrupted by a background refresh, or a Name-sort toggle,
+        // landing partway through the batch (see the RAPID-INSERT RACE
+        // and DIRECTION RACE notes in the module doc).
+        const orderedIds = computeSortedInsertOrderMany(beforeEntries, toInsert, beforeDirection)
         if (orderedIds) {
           const reorderResult = await reorderRef.current(orderedIds)
           if (!reorderResult.success) onReorderErrorRef.current(reorderResult.error)

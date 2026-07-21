@@ -346,6 +346,60 @@ describe('useImportPlacement', () => {
     expect(result.current.feedback).toBeNull()
   })
 
+  it('DIRECTION RACE fix: a Name-sort toggle (asc -> desc) landing mid-batch does not affect the batch\'s frozen placement', async () => {
+    let resolveReorder!: (value: { success: boolean }) => void
+    const reorder = vi.fn().mockImplementation(() => new Promise<{ success: boolean }>((resolve) => { resolveReorder = resolve }))
+    const onReorderError = vi.fn()
+
+    const { result, rerender } = renderHook(
+      ({ direction }: { direction: 'asc' | 'desc' | 'free' }) => useImportPlacement({
+        open: true,
+        entries: [{ id: 'a', name: 'Alpha' }, { id: 'z', name: 'Zeta' }],
+        direction,
+        reorder,
+        rowTestidPrefix: 'test-packs',
+        onReorderError,
+      }),
+      { initialProps: { direction: 'asc' as const } },
+    )
+
+    let placeManyPromise!: Promise<void>
+    await act(async () => {
+      // Freezes direction='asc' into the snapshot, before anything else
+      // can change it.
+      const snapshot = result.current.snapshotEntries()
+      placeManyPromise = result.current.placeMany(
+        [{ id: 'b', name: 'Beta' }, { id: 'c', name: 'Charlie' }],
+        snapshot,
+      )
+      // Let placeMany's queued `run()` actually start (a microtask hop
+      // off `queueRef.current.then(...)`) so it reaches its `await
+      // reorder(...)` call and captures `resolveReorder` below.
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(resolveReorder).toBeDefined()
+
+    // The Name-sort toggle flips to descending WHILE the batch's own
+    // reorder call is still in flight — e.g. the user clicked it, or a
+    // concurrent op changed it, before this batch's save loop finished.
+    act(() => { rerender({ direction: 'desc' }) })
+
+    await act(async () => {
+      resolveReorder({ success: true })
+      await placeManyPromise
+    })
+
+    // Still fully ascending — frozen to the 'asc' snapshot taken at
+    // batch start, not the live 'desc' direction that landed mid-flight.
+    // Without the fix, merging `toInsert` against the live direction
+    // while `beforeEntries` reflects the old one would produce a
+    // garbled, neither-direction order (e.g. ['c', 'b', 'a', 'z']).
+    expect(reorder).toHaveBeenCalledTimes(1)
+    expect(reorder).toHaveBeenCalledWith(['a', 'b', 'c', 'z'])
+    expect(onReorderError).not.toHaveBeenCalled()
+  })
+
   it('single-file place() still behaves identically after placeMany was added (unaffected by the batch fix)', async () => {
     const reorder = vi.fn().mockResolvedValue({ success: true })
     const onReorderError = vi.fn()

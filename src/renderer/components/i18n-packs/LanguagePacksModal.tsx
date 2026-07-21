@@ -632,11 +632,13 @@ export function LanguagePacksModal({
 
   // Multi-file import batch: every selected file is parsed and saved
   // independently, but the actual list placement happens in ONE call at
-  // the end via `placement.placeMany` — see the RAPID-INSERT RACE note
-  // in useImportPlacement.ts for why calling `place()` once per file
-  // (the original approach) could compute a later file's position from
-  // a stale snapshot and silently drop an earlier file's id from the
-  // persisted order. Two files resolving to the same pack (same name,
+  // the end via `placement.placeMany` — see the RAPID-INSERT RACE and
+  // DIRECTION RACE notes in useImportPlacement.ts for why calling
+  // `place()` once per file (the original approach) could compute a
+  // later file's position from a stale/inconsistent snapshot and
+  // silently drop an earlier file's id from the persisted order, or
+  // merge against a sort direction that changed mid-batch. Two files
+  // resolving to the same pack (same name,
   // so main's auto-overwrite reuses the same id) are deduped, keeping
   // only the last file's outcome — that's what actually ended up on
   // disk — so hub-sync and the row badge only run/appear once per id.
@@ -653,7 +655,7 @@ export function LanguagePacksModal({
     setLastResult(null)
     const dialogResult = await store.importFromDialog()
     if (dialogResult.canceled) return
-    const beforeEntries = placement.snapshotEntries()
+    const beforeSnapshot = placement.snapshotEntries()
     const failures: ImportBatchFailure[] = []
     const rawSuccesses: { fileName: string; meta: I18nPackMeta }[] = []
     for (const file of dialogResult.files) {
@@ -695,7 +697,7 @@ export function LanguagePacksModal({
     if (deduped.length > 0) {
       await placement.placeMany(
         deduped.map(({ meta }) => ({ id: meta.id, name: meta.name })),
-        beforeEntries,
+        beforeSnapshot,
       )
       setLastResult(successBadges)
       // Mirror the single-file behaviour of switching the active

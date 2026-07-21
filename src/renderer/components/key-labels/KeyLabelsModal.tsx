@@ -181,22 +181,25 @@ export function KeyLabelsModal({
   )
 
   // Multi-file import batch. All of the batch's writes already land on
-  // disk in one `importFromFile()` IPC round trip, so `beforeEntries`
-  // captured once up front is the correct "before the user's action"
-  // baseline for every result regardless of processing order. The
-  // actual list placement happens in ONE `placement.placeMany` call at
-  // the end — see the RAPID-INSERT RACE note in useImportPlacement.ts
-  // for why calling `place()` once per file (the original approach)
-  // could compute a later file's position from a stale snapshot and
-  // silently drop an earlier file's id from the persisted order. Two
-  // files resolving to the same label (main's overwrite-by-name reuses
-  // the same id) are deduped, keeping only the last file's outcome —
-  // that's what actually ended up on disk — so hub-sync and the row
-  // badge only run/appear once per id, not once per file.
+  // disk in one `importFromFile()` IPC round trip, so `beforeSnapshot`
+  // (entries + sort direction) captured once up front is the correct
+  // "before the user's action" baseline for every result regardless of
+  // processing order — even if the user flips the Name-sort toggle
+  // while the batch is running. The actual list placement happens in
+  // ONE `placement.placeMany` call at the end — see the RAPID-INSERT
+  // RACE and DIRECTION RACE notes in useImportPlacement.ts for why
+  // calling `place()` once per file (the original approach) could
+  // compute a later file's position from a stale/inconsistent snapshot
+  // and silently drop an earlier file's id from the persisted order, or
+  // merge against the wrong direction. Two files resolving to the same
+  // label (main's overwrite-by-name reuses the same id) are deduped,
+  // keeping only the last file's outcome — that's what actually ended
+  // up on disk — so hub-sync and the row badge only run/appear once
+  // per id, not once per file.
   const handleImport = useCallback(async () => {
     setActionError(null)
     setLastResult(null)
-    const beforeEntries = placement.snapshotEntries()
+    const beforeSnapshot = placement.snapshotEntries()
     const res = await labels.importFromFile()
     if (res.success && res.data) {
       const failures: ImportBatchFailure[] = res.data.rejections.map((r) => ({
@@ -235,7 +238,7 @@ export function KeyLabelsModal({
       if (deduped.length > 0) {
         await placement.placeMany(
           deduped.map(({ meta }) => ({ id: meta.id, name: meta.name })),
-          beforeEntries,
+          beforeSnapshot,
         )
         setLastResult(successBadges)
       }
