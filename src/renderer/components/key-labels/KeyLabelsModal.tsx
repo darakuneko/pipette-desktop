@@ -29,7 +29,8 @@ import { useNameSort } from '../pack-modal/useNameSort'
 import { useDragReorder } from '../pack-modal/useDragReorder'
 import { applyDragOrder } from '../pack-modal/drag-order'
 import { useImportPlacement } from '../pack-modal/useImportPlacement'
-import { buildImportBatchFailureSummary, type ImportBatchFailure } from '../pack-modal/import-batch-summary'
+import { useImportBatch, type CollectedImportBatch } from '../pack-modal/useImportBatch'
+import type { ImportBatchFailure } from '../pack-modal/import-batch-summary'
 import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
 import { isOwnPack } from '../pack-modal/ownership'
 import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
@@ -181,73 +182,65 @@ export function KeyLabelsModal({
   )
 
   // Multi-file import batch. All of the batch's writes already land on
-  // disk in one `importFromFile()` IPC round trip, so `beforeSnapshot`
-  // (entries + sort direction) captured once up front is the correct
-  // "before the user's action" baseline for every result regardless of
-  // processing order — even if the user flips the Name-sort toggle
-  // while the batch is running. The actual list placement happens in
-  // ONE `placement.placeMany` call at the end — see the RAPID-INSERT
-  // RACE and DIRECTION RACE notes in useImportPlacement.ts for why
-  // calling `place()` once per file (the original approach) could
-  // compute a later file's position from a stale/inconsistent snapshot
-  // and silently drop an earlier file's id from the persisted order, or
-  // merge against the wrong direction. Two files resolving to the same
-  // label (main's overwrite-by-name reuses the same id) are deduped,
-  // keeping only the last file's outcome — that's what actually ended
-  // up on disk — so hub-sync and the row badge only run/appear once
-  // per id, not once per file.
-  const handleImport = useCallback(async () => {
-    setActionError(null)
-    setLastResult(null)
-    const beforeSnapshot = placement.snapshotEntries()
+  // disk in one `importFromFile()` IPC round trip, so the snapshot
+  // captured immediately before that call is the correct "before the
+  // user's action" baseline for every result regardless of processing
+  // order — even if the user flips the Name-sort toggle while the
+  // batch is running. Dedupe, hub-sync, placement and the toolbar
+  // summary/failure banner are handled by the shared `useImportBatch`
+  // hook below (see its module doc for the extraction rationale).
+  const collectImportResults = useCallback(async (): Promise<CollectedImportBatch<KeyLabelMeta> | null> => {
+    const snapshot = placement.snapshotEntries()
     const res = await labels.importFromFile()
     if (res.success && res.data) {
-      const failures: ImportBatchFailure[] = res.data.rejections.map((r) => ({
+      // Kept separate from the hook's own hub-sync failures: these are
+      // files that never actually landed on disk (main-side
+      // rejections), which is what the toolbar headline's "failure"
+      // count means — see `buildImportSummary`'s doc in
+      // import-batch-summary.ts.
+      const notSavedFailures: ImportBatchFailure[] = res.data.rejections.map((r) => ({
         fileName: r.fileName,
         reason: translateError(t, r.errorCode, r.error),
       }))
-
-      const dedupedById = new Map<string, { fileName: string; meta: KeyLabelMeta }>()
-      for (const success of res.data.imported) {
-        dedupedById.delete(success.meta.id)
-        dedupedById.set(success.meta.id, success)
-      }
-      const deduped = [...dedupedById.values()]
-
-      const successBadges: PackActionResult[] = []
-      for (const { fileName, meta } of deduped) {
-        let message = t('common.saved')
-        // Auto-sync overwrites of an already-uploaded entry so the Hub
-        // post stays consistent with the user's local edit. Promote the
-        // badge from "Saved" to "Synced" on success; a sync failure is
-        // folded into the same failure summary as import rejections
-        // (the file itself imported fine, only the Hub push failed) —
-        // reported against the originating filename, not the label's
-        // internal name.
-        if (meta.hubPostId) {
-          const upd = await labels.hubUpdate(meta.id)
-          if (upd.success) {
-            message = t('common.synced')
-          } else {
-            failures.push({ fileName, reason: translateError(t, upd.errorCode, upd.error) })
-          }
-        }
-        successBadges.push({ id: meta.id, kind: 'success', message })
-      }
-
-      if (deduped.length > 0) {
-        await placement.placeMany(
-          deduped.map(({ meta }) => ({ id: meta.id, name: meta.name })),
-          beforeSnapshot,
-        )
-        setLastResult(successBadges)
-      }
-      const summary = buildImportBatchFailureSummary(t, failures)
-      if (summary) setActionError(summary)
-    } else if (res.error && res.error !== 'cancelled') {
+      return { successes: res.data.imported, notSavedFailures, snapshot }
+    }
+    if (res.error && res.error !== 'cancelled') {
       setActionError(translateError(t, res.errorCode, res.error))
     }
+    return null
   }, [labels, t, placement])
+
+  const { importing, importSummary, runImport, isImportingRef } = useImportBatch<KeyLabelMeta>({
+    open,
+    placement,
+    setLastResult,
+    setActionError,
+    t,
+    collectResults: collectImportResults,
+    // Auto-sync overwrites of an already-uploaded entry so the Hub post
+    // stays consistent with the user's local edit. A sync failure is
+    // folded into the same failure summary as import rejections (the
+    // file itself imported fine, only the Hub push failed) — reported
+    // against the originating filename, not the label's internal name.
+    hubSync: async (meta) => {
+      const upd = await labels.hubUpdate(meta.id)
+      return upd.success ? { success: true } : { success: false, error: translateError(t, upd.errorCode, upd.error) }
+    },
+  })
+
+  // Closes any inline rename that was already open the moment a batch
+  // starts, so its input unmounts instead of sitting there interactive
+  // (and committable) for the whole duration of the import — see
+  // `handleRenameCommit`'s own `isImportingRef` guard below for the one
+  // race this cannot cover (a rename input's blur, and the click that
+  // starts the batch, are the same user click; the blur's commit is
+  // already in flight before `importing` ever flips true).
+  useEffect(() => {
+    if (importing) rename.cancelRename()
+    // `rename.cancelRename` is a stable (`useCallback([])`) identity —
+    // intentionally not in the deps array so this only re-fires when
+    // `importing` itself flips, not on every unrelated render.
+  }, [importing])
 
   const runWithPending = useCallback(async <T,>(
     id: string,
@@ -292,6 +285,23 @@ export function KeyLabelsModal({
   }, [labels, runWithPending, placement])
 
   const handleRenameCommit = useCallback(async (id: string) => {
+    // Guards on `useImportBatch`'s own re-entrancy ref rather than a
+    // locally-mirrored one — written only inside an event handler
+    // (`runImport`), never during render, so it can't go stale under a
+    // discarded/interrupted concurrent render. Referencing
+    // `isImportingRef` here, defined further up via `useImportBatch`,
+    // is safe regardless: this callback's body only runs later, on a
+    // real blur/Enter event, well after the full render has finished.
+    //
+    // A rename already committed its `store.rename` call the instant
+    // the underlying input blurred — including the blur a click on the
+    // Import button itself triggers, which fires before that click's
+    // own handler runs — so this check cannot intercept that exact
+    // call. It DOES catch every other path: a rename input left open
+    // when a batch was already running, and any stray commit that
+    // slips through after the cancel-on-import-start effect above has
+    // already reset the editor for this render.
+    if (isImportingRef.current) return
     const newName = rename.commitRename(id)
     if (!newName) return
     setActionError(null)
@@ -359,22 +369,24 @@ export function KeyLabelsModal({
       searchButtonLabel={hubSearching ? t('keyLabels.searching') : t('keyLabels.search')}
       searchDisabled={hubSearching || search.trim().length < 2}
       importLabel={t('keyLabels.import')}
-      onImport={() => void handleImport()}
+      onImport={() => void runImport()}
+      importDisabled={importing}
       sortButton={(
         <PackSortButton
           direction={nameSort.direction}
           onClick={handleSortByName}
-          disabled={nameSort.pending}
+          disabled={nameSort.pending || importing}
           testid="key-labels-sort-button"
         />
       )}
-      importFeedback={placement.feedback}
+      importFeedback={importSummary ?? placement.feedback}
       actionError={actionError}
     >
       {activeTab === 'installed' ? (
         <InstalledTable
           rows={installedRows}
           pendingId={pendingId}
+          importing={importing}
           confirmDeleteId={confirmDeleteId}
           setConfirmDeleteId={setConfirmDeleteId}
           confirmRemoveId={confirmRemoveId}
@@ -453,6 +465,7 @@ export function KeyLabelsModal({
           rows={hubRows}
           hubSearched={hubSearched}
           pendingId={pendingId}
+          importing={importing}
           hubOrigin={hubOrigin}
           onDownload={(hubPostId) => handleHubDownload(hubPostId)}
         />

@@ -7,6 +7,12 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, params?: Record<string, unknown>) => {
       if (params && 'name' in params) return `${key}:${String(params.name)}`
+      // Surfaces the toolbar import summary's success/failure counts so
+      // tests can assert on them without a real i18next pluralization
+      // pipeline.
+      if (params && 'success' in params && 'failure' in params) {
+        return `${key}:${String(params.count)}:${String(params.success)}:${String(params.failure)}`
+      }
       return key
     },
   }),
@@ -562,6 +568,115 @@ describe('LanguagePacksModal', () => {
     expect(screen.getByTestId('language-packs-result-c').textContent).toBe('common.saved')
   })
 
+  it('multi-file import (2+ files): does not auto-scroll, does not auto-select, and shows the toolbar summary instead of per-name feedback', async () => {
+    storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
+    const rawB = { name: 'Beta', version: '0.1.0', common: {} }
+    const rawC = { name: 'Gamma', version: '0.1.0', common: {} }
+    importFromDialog.mockResolvedValueOnce({
+      canceled: false,
+      files: [
+        { filePath: 'beta.json', raw: rawB },
+        { filePath: 'gamma.json', raw: rawC },
+      ],
+    })
+    const metaB = meta({ id: 'b', name: 'Beta' })
+    const metaC = meta({ id: 'c', name: 'Gamma' })
+    applyImport
+      .mockImplementationOnce(async () => {
+        storeMetas = [...storeMetas, metaB]
+        return { success: true, meta: metaB }
+      })
+      .mockImplementationOnce(async () => {
+        storeMetas = [...storeMetas, metaC]
+        return { success: true, meta: metaC }
+      })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {})
+    try {
+      fireEvent.click(screen.getByTestId('language-packs-import-button'))
+      await waitFor(() => expect(screen.getByTestId('language-packs-result-c').textContent).toBe('common.saved'))
+
+      // 2+ batch: no auto-scroll to an arbitrary one of the new rows.
+      expect(scrollIntoView).not.toHaveBeenCalled()
+      // 2+ batch: no auto-activation of an arbitrary one of the new packs.
+      expect(mockAppConfigSet).not.toHaveBeenCalled()
+      // The toolbar headline supersedes the per-name "Imported {{name}}"
+      // feedback for a 2+ batch: 2 processed, both saved, none failed.
+      expect(screen.getByTestId('language-packs-import-feedback').textContent).toBe('common.importSummary:2:2:0')
+    } finally {
+      scrollIntoView.mockRestore()
+    }
+  })
+
+  it('partial-failure batch: a hub-sync failure still counts as a success in the summary headline, but appears in the failure banner', async () => {
+    storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
+    // `__invalid` triggers the mocked `validatePack`'s failure branch —
+    // this file never reaches `applyImport`, so it counts toward the
+    // headline's "failure" (not saved).
+    const rawBad = { name: 'Bad Pack', version: 'not-semver', __invalid: true }
+    const rawGood = { name: 'Existing Pack', version: '0.1.0', common: {} }
+    importFromDialog.mockResolvedValueOnce({
+      canceled: false,
+      files: [
+        { filePath: 'bad.json', raw: rawBad },
+        { filePath: 'my-upload.json', raw: rawGood },
+      ],
+    })
+    const savedMeta = meta({ id: 'e', name: 'Existing Pack', hubPostId: 'hub-1', matchedBaseVersion: '0.1.0' })
+    applyImport.mockImplementationOnce(async () => {
+      storeMetas = [...storeMetas, savedMeta]
+      return { success: true, meta: savedMeta }
+    })
+    vialAPI.hubUpdateI18nPost.mockResolvedValueOnce({ success: false, error: 'network error' })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => expect(screen.getByTestId('language-packs-result-e').textContent).toBe('common.saved'))
+
+    // Headline: 1 saved (the hub-sync failure doesn't reduce this — the
+    // file itself landed on disk) and 1 not-saved (the parse/validate
+    // failure) — 2 processed total.
+    expect(screen.getByTestId('language-packs-import-feedback').textContent).toBe('common.importSummary:2:1:1')
+
+    // The hub-sync failure still shows up in the failure banner text,
+    // alongside the parse failure.
+    const banner = screen.getByTestId('language-packs-error')
+    expect(banner.textContent).toContain('bad.json')
+    expect(banner.textContent).toContain('my-upload.json')
+    expect(banner.textContent).toContain('network error')
+  })
+
+  it('locks the Import button and existing row actions while a batch import is in flight', async () => {
+    storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
+    let resolveDialog!: (value: { canceled: boolean; files: Array<{ filePath: string; raw?: unknown; parseError?: string }> }) => void
+    importFromDialog.mockImplementationOnce(() => new Promise((resolve) => { resolveDialog = resolve }))
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => expect(importFromDialog).toHaveBeenCalled())
+
+    // Mid-batch: the toolbar Import button and every existing row's
+    // controls lock via the `importing` prop propagating into `busy`.
+    expect((screen.getByTestId('language-packs-import-button') as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByTestId('language-packs-sort-button') as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByTestId('language-packs-select-a') as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByTestId('language-packs-export-a') as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByTestId('language-packs-delete-a') as HTMLButtonElement).disabled).toBe(true)
+    // `draggable={false}` renders with no `draggable` attribute at all
+    // (see `PackListRow`'s `dragProps`), same as the pre-load fallback's
+    // non-draggable row.
+    expect(screen.getByTestId('language-packs-row-a').getAttribute('draggable')).toBeNull()
+
+    // A second click while in flight is a no-op (the in-flight ref
+    // guard) — the dialog is not opened a second time.
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    expect(importFromDialog).toHaveBeenCalledTimes(1)
+
+    resolveDialog({ canceled: true, files: [] })
+    await waitFor(() => expect((screen.getByTestId('language-packs-import-button') as HTMLButtonElement).disabled).toBe(false))
+  })
+
   it('partial-failure batch: the good file keeps its badge while the bad file is aggregated into one banner', async () => {
     storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
     const rawGood = { name: 'Good Pack', version: '0.1.0', common: {} }
@@ -1057,6 +1172,37 @@ describe('LanguagePacksModal', () => {
     fireEvent.change(input, { target: { value: 'New Name' } })
     fireEvent.blur(input)
     await waitFor(() => expect(renameFn).toHaveBeenCalledWith('r1', 'New Name'))
+  })
+
+  it('P1-b: starting a rename then triggering an import cancels the edit instead of letting it commit mid-batch', async () => {
+    storeMetas = [meta({ id: 'r2', name: 'Old Name', matchedBaseVersion: '0.1.0' })]
+    let resolveDialog!: (value: { canceled: boolean; files: Array<{ filePath: string; raw?: unknown; parseError?: string }> }) => void
+    importFromDialog.mockImplementationOnce(() => new Promise((resolve) => { resolveDialog = resolve }))
+    render(
+      <LanguagePacksModal open onClose={vi.fn()} />,
+    )
+
+    fireEvent.click(screen.getByTestId('language-packs-name-r2'))
+    const input = screen.getByTestId('language-packs-rename-input-r2')
+    fireEvent.change(input, { target: { value: 'New Name' } })
+
+    // Trigger the import batch WITHOUT ever blurring the rename input —
+    // jsdom does not auto-blur an unrelated element on click the way a
+    // real browser does, so this specifically exercises the
+    // cancel-on-import-start effect rather than the (unpreventable)
+    // same-click blur race.
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => expect(importFromDialog).toHaveBeenCalled())
+
+    // The edit was canceled, not left open and interactive for the
+    // duration of the batch.
+    expect(screen.queryByTestId('language-packs-rename-input-r2')).toBeNull()
+    expect(renameFn).not.toHaveBeenCalled()
+
+    resolveDialog({ canceled: true, files: [] })
+    await waitFor(() => expect((screen.getByTestId('language-packs-import-button') as HTMLButtonElement).disabled).toBe(false))
+    // Still never committed, even after the batch finished.
+    expect(renameFn).not.toHaveBeenCalled()
   })
 
   it('open in browser calls openExternal for hub-linked row', async () => {

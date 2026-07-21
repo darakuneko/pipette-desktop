@@ -401,6 +401,88 @@ describe('useImportPlacement', () => {
     expect(onReorderError).not.toHaveBeenCalled()
   })
 
+  it('placeMany does not scroll for a 2+ result batch, but still scrolls when the batch collapses to a single result', async () => {
+    const reorder = vi.fn().mockResolvedValue({ success: true })
+    const { result } = renderHook(() => useImportPlacement({
+      open: true,
+      entries: [{ id: 'a', name: 'Alpha' }],
+      direction: 'asc',
+      reorder,
+      rowTestidPrefix: 'test-packs',
+      onReorderError: vi.fn(),
+    }))
+
+    // The scroll effect looks these up by testid via
+    // `document.querySelector` — stand in for the real rows a modal
+    // would render.
+    const rowB = document.createElement('div')
+    rowB.setAttribute('data-testid', 'test-packs-row-b')
+    const rowC = document.createElement('div')
+    rowC.setAttribute('data-testid', 'test-packs-row-c')
+    const rowD = document.createElement('div')
+    rowD.setAttribute('data-testid', 'test-packs-row-d')
+    document.body.append(rowB, rowC, rowD)
+
+    const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {})
+    try {
+      // 2-result batch: no scroll, even though the last result's row exists.
+      await act(async () => {
+        const snapshot = result.current.snapshotEntries()
+        await result.current.placeMany(
+          [{ id: 'b', name: 'Bravo' }, { id: 'c', name: 'Charlie' }],
+          snapshot,
+        )
+      })
+      expect(scrollIntoView).not.toHaveBeenCalled()
+
+      // A batch that collapses to a single result behaves like place():
+      // it does scroll.
+      await act(async () => {
+        const snapshot = result.current.snapshotEntries()
+        await result.current.placeMany([{ id: 'd', name: 'Delta' }], snapshot)
+      })
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' })
+    } finally {
+      scrollIntoView.mockRestore()
+      rowB.remove()
+      rowC.remove()
+      rowD.remove()
+    }
+  })
+
+  it('P1-a fix: an explicit originalCount overrides results.length for scroll suppression — a lone deduped result from a 2-file selection does not scroll', async () => {
+    const reorder = vi.fn().mockResolvedValue({ success: true })
+    const { result } = renderHook(() => useImportPlacement({
+      open: true,
+      entries: [{ id: 'a', name: 'Alpha' }],
+      direction: 'asc',
+      reorder,
+      rowTestidPrefix: 'test-packs',
+      onReorderError: vi.fn(),
+    }))
+
+    const rowD = document.createElement('div')
+    rowD.setAttribute('data-testid', 'test-packs-row-d')
+    document.body.append(rowD)
+
+    const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {})
+    try {
+      // `results` has collapsed to a single entry (e.g. two files both
+      // overwrote the same existing pack), but the caller passes the
+      // true pre-dedupe count (2) explicitly — this must suppress the
+      // scroll that a bare `results.length <= 1` inference would
+      // otherwise trigger (see useImportBatch.ts's P1 fix note).
+      await act(async () => {
+        const snapshot = result.current.snapshotEntries()
+        await result.current.placeMany([{ id: 'd', name: 'Delta' }], snapshot, 2)
+      })
+      expect(scrollIntoView).not.toHaveBeenCalled()
+    } finally {
+      scrollIntoView.mockRestore()
+      rowD.remove()
+    }
+  })
+
   it('single-file place() still behaves identically after placeMany was added (unaffected by the batch fix)', async () => {
     const reorder = vi.fn().mockResolvedValue({ success: true })
     const onReorderError = vi.fn()

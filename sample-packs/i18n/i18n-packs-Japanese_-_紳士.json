@@ -1,5 +1,5 @@
 {
-  "version": "0.1.41",
+  "version": "0.1.42",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -41,7 +41,9 @@
     "importedNamed": "{{name}} をお受け取りいたしました",
     "updatedNamed": "{{name}} を更新いたしました",
     "importBatchFailed_one": "誠に恐縮ながら、{{count}} 件のファイルをお受け取りできませんでした。",
-    "importBatchFailed_other": "誠に恐縮ながら、{{count}} 件のファイルをお受け取りできませんでした。"
+    "importBatchFailed_other": "誠に恐縮ながら、{{count}} 件のファイルをお受け取りできませんでした。",
+    "importSummary_one": "{{count}} 件のファイルをお受け取りいたしました (成功 {{success}} 件、失敗 {{failure}} 件)。",
+    "importSummary_other": "{{count}} 件のファイルをお受け取りいたしました (成功 {{success}} 件、失敗 {{failure}} 件)。"
   },
   "app": {
     "title": "Pipette",

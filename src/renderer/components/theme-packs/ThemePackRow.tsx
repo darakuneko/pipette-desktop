@@ -21,6 +21,11 @@ export interface PackRowProps {
   meta: ThemePackMeta
   isActive: boolean
   pendingId: string | null
+  /** True while a multi-file import batch is in flight — locks every
+   *  row action, rename, drag and the select control so the list can't
+   *  be mutated out from under the batch's own placement/reorder call.
+   *  Wired the same way `pendingId` already gates a single op. */
+  importing: boolean
   confirmDeleteId: string | null
   setConfirmDeleteId: (id: string | null) => void
   rename: ReturnType<typeof useInlineRename<string>>
@@ -49,6 +54,7 @@ export function PackRow({
   meta,
   isActive,
   pendingId,
+  importing,
   confirmDeleteId,
   setConfirmDeleteId,
   rename,
@@ -73,7 +79,7 @@ export function PackRow({
   onDragEnd,
 }: PackRowProps): JSX.Element {
   const { t } = useTranslation()
-  const busy = pendingId === meta.id
+  const busy = pendingId === meta.id || importing
   const editing = rename.editingId === meta.id
   const isConfirmingDelete = confirmDeleteId === meta.id
 
@@ -91,7 +97,7 @@ export function PackRow({
     <PackListRow
       testid={`theme-packs-row-${meta.id}`}
       active={isActive}
-      draggable
+      draggable={!importing}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
@@ -108,8 +114,9 @@ export function PackRow({
         <button
           type="button"
           aria-label={t('themePacks.selectTheme', { name: meta.name })}
-          className="shrink-0 text-content-muted hover:text-accent transition-colors"
+          className="shrink-0 text-content-muted hover:text-accent transition-colors disabled:opacity-50"
           onClick={() => onSelect(`pack:${meta.id}`)}
+          disabled={busy}
           data-testid={`theme-packs-select-${meta.id}`}
         >
           {isActive ? (
@@ -123,7 +130,8 @@ export function PackRow({
         <PackNameCell
           name={meta.name}
           editing={editing}
-          canRename
+          canRename={!importing}
+          locked={importing}
           editLabel={rename.editLabel}
           onEditLabelChange={rename.setEditLabel}
           onBlur={() => void onRenameCommit(meta.id)}

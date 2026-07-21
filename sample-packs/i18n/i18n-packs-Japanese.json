@@ -1,5 +1,5 @@
 {
-  "version": "0.1.41",
+  "version": "0.1.42",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -41,7 +41,9 @@
     "importedNamed": "{{name}} をインポートしました",
     "updatedNamed": "{{name}} を更新しました",
     "importBatchFailed_one": "{{count}} 件のファイルをインポートできませんでした：",
-    "importBatchFailed_other": "{{count}} 件のファイルをインポートできませんでした："
+    "importBatchFailed_other": "{{count}} 件のファイルをインポートできませんでした：",
+    "importSummary_one": "{{count}} 件インポートしました (成功 {{success}}, 失敗 {{failure}})",
+    "importSummary_other": "{{count}} 件インポートしました (成功 {{success}}, 失敗 {{failure}})"
   },
   "app": {
     "title": "Pipette",

@@ -56,6 +56,11 @@ export interface HubRow {
 export interface InstalledTableProps {
   rows: InstalledRow[]
   pendingId: string | null
+  /** True while a multi-file import batch is in flight — locks every
+   *  row action, rename and drag so the list can't be mutated out from
+   *  under the batch's own placement/reorder call. Wired the same way
+   *  `pendingId` already gates a single op. */
+  importing: boolean
   confirmDeleteId: string | null
   setConfirmDeleteId: (id: string | null) => void
   confirmRemoveId: string | null
@@ -103,6 +108,7 @@ interface InstalledRowViewProps extends InstalledTableProps {
 function InstalledRowView({
   row,
   pendingId,
+  importing,
   confirmDeleteId,
   setConfirmDeleteId,
   confirmRemoveId,
@@ -128,12 +134,12 @@ function InstalledRowView({
   const { t } = useTranslation()
   const isMine = isOwnPack(row.hubPostId, row.author, currentDisplayName)
   const editing = rename.editingId === row.localId
-  const busy = pendingId !== null && pendingId === row.localId
+  const busy = (pendingId !== null && pendingId === row.localId) || importing
   const freshness = hubFreshness.get(row.localId)
   const hasUpdateAvailable = hasUpdate(freshness, row.meta?.hubUpdatedAt)
   const hubRemoved = !!freshness && freshness.removed
 
-  const canRename = isMine && !row.isQwerty
+  const canRename = isMine && !row.isQwerty && !importing
 
   const hubPostUrl = row.hubPostId && hubOrigin
     ? buildHubKeyLabelUrl(hubOrigin, row.hubPostId)
@@ -170,7 +176,7 @@ function InstalledRowView({
     <PackListRow
       testid={`key-labels-row-${row.localId}`}
       shape="sideColumn"
-      draggable
+      draggable={!importing}
       onDragStart={() => onDragStart(row.localId)}
       onDragOver={() => onDragOver(row.localId)}
       onDragEnd={() => { void onDragEnd() }}
@@ -187,6 +193,7 @@ function InstalledRowView({
             name={row.name}
             editing={editing}
             canRename={canRename}
+            locked={importing}
             editLabel={rename.editLabel}
             onEditLabelChange={rename.setEditLabel}
             onBlur={() => void onRenameCommit(row.localId)}
@@ -290,16 +297,20 @@ export interface HubTableProps {
   rows: HubRow[]
   hubSearched: boolean
   pendingId: string | null
+  /** Defensive: the Hub tab isn't meant to be operable mid-import
+   *  either, even though its own actions don't touch the Installed
+   *  list directly. */
+  importing: boolean
   hubOrigin: string
   onDownload: (hubPostId: string) => void | Promise<void>
 }
 
-export function HubTable({ rows, hubSearched, pendingId, hubOrigin, onDownload }: HubTableProps): JSX.Element {
+export function HubTable({ rows, hubSearched, pendingId, importing, hubOrigin, onDownload }: HubTableProps): JSX.Element {
   const { t } = useTranslation()
   return (
     <div className="space-y-2 text-sm">
       {rows.map((row) => {
-        const busy = pendingId === row.hubPostId
+        const busy = pendingId === row.hubPostId || importing
         const openUrl = hubOrigin ? buildHubKeyLabelUrl(hubOrigin, row.hubPostId) : null
         return (
           <div

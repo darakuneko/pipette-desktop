@@ -1,5 +1,5 @@
 {
-  "version": "0.1.41",
+  "version": "0.1.42",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -41,7 +41,9 @@
     "importedNamed": "{{name}} を入れましたえ",
     "updatedNamed": "{{name}} を更新しましたえ",
     "importBatchFailed_one": "{{count}} 件、インポートできまへんでしたわ",
-    "importBatchFailed_other": "{{count}} 件、インポートできまへんでしたわ"
+    "importBatchFailed_other": "{{count}} 件、インポートできまへんでしたわ",
+    "importSummary_one": "{{count}} 件インポートしましたえ (成功{{success}}、失敗{{failure}})",
+    "importSummary_other": "{{count}} 件インポートしましたえ (成功{{success}}、失敗{{failure}})"
   },
   "app": {
     "title": "Pipette",

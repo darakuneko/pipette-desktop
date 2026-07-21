@@ -29,7 +29,8 @@ import { useDragReorder } from '../pack-modal/useDragReorder'
 import { applyDragOrder } from '../pack-modal/drag-order'
 import { useNameSort } from '../pack-modal/useNameSort'
 import { useImportPlacement } from '../pack-modal/useImportPlacement'
-import { buildImportBatchFailureSummary, basenameOf, type ImportBatchFailure } from '../pack-modal/import-batch-summary'
+import { useImportBatch, type CollectedImportBatch, type ImportBatchItem } from '../pack-modal/useImportBatch'
+import { basenameOf, type ImportBatchFailure } from '../pack-modal/import-batch-summary'
 import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
 import { fetchHubPackMeta } from '../pack-modal/fetch-hub-pack-meta'
 import { isOwnPack } from '../pack-modal/ownership'
@@ -295,90 +296,83 @@ export function ThemePacksModal({
   }, [store, activeTheme, onThemeChange, t, currentDisplayName])
 
   // Multi-file import batch: every selected file is saved independently
-  // (theme pack validation lives entirely main-side in `savePack`, so
-  // there is no renderer-side pre-check to run first, unlike Language
-  // Packs), but the actual list placement happens in ONE call at the
-  // end via `placement.placeMany` — see the RAPID-INSERT RACE and
-  // DIRECTION RACE notes in useImportPlacement.ts for why calling
-  // `place()` once per file (the original approach) could compute a
-  // later file's position from a stale/inconsistent snapshot and
-  // silently drop an earlier file's id from the persisted order, or
-  // merge against a sort direction that changed mid-batch. Two files
-  // resolving to the same pack (same name,
-  // so main's auto-overwrite reuses the same id) are deduped, keeping
-  // only the last file's outcome — that's what actually ended up on
-  // disk — so hub-sync and the row badge only run/appear once per id.
-  // Successes each get their own row badge (accumulated into an array —
-  // `PackResultBadge` looks up its row's own entry); failures (parse
-  // errors + save failures + failed Hub auto-syncs) are aggregated into
-  // one banner, mirroring the typing-analytics import precedent, and
-  // always report the ACTUAL selected filename (never the pack's own
-  // internal `name`) plus the real underlying reason (never a generic
-  // placeholder when a real message is available).
-  const handleImportFile = useCallback(async () => {
-    setActionError(null)
-    setLastResult(null)
+  // here (theme pack validation lives entirely main-side in `savePack`,
+  // so there is no renderer-side pre-check to run first, unlike
+  // Language Packs); dedupe, hub-sync, placement and the toolbar
+  // summary/failure banner are handled by the shared `useImportBatch`
+  // hook below (see its module doc for the extraction rationale). The
+  // snapshot is taken right after the "canceled" check — before any
+  // per-file save runs — matching `placement.snapshotEntries()`'s
+  // "before the batch's own mutations begin" contract.
+  const collectImportResults = useCallback(async (): Promise<CollectedImportBatch<ThemePackMeta> | null> => {
     const dialogResult = await store.importFromDialog()
-    if (dialogResult.canceled) return
-    const beforeSnapshot = placement.snapshotEntries()
-    const failures: ImportBatchFailure[] = []
-    const rawSuccesses: { fileName: string; meta: ThemePackMeta }[] = []
+    if (dialogResult.canceled) return null
+    const snapshot = placement.snapshotEntries()
+    const notSavedFailures: ImportBatchFailure[] = []
+    const successes: ImportBatchItem<ThemePackMeta>[] = []
     for (const file of dialogResult.files) {
       const fileName = basenameOf(file.filePath)
       if (file.parseError || file.raw === undefined) {
-        failures.push({ fileName, reason: file.parseError ?? t('themePacks.parseError') })
+        notSavedFailures.push({ fileName, reason: file.parseError ?? t('themePacks.parseError') })
         continue
       }
       try {
         const result = await store.applyImport(file.raw)
         if (!result.success || !result.meta) {
-          failures.push({ fileName, reason: result.error ?? t('themePacks.parseError') })
+          notSavedFailures.push({ fileName, reason: result.error ?? t('themePacks.parseError') })
           continue
         }
-        rawSuccesses.push({ fileName, meta: result.meta })
+        successes.push({ fileName, meta: result.meta })
       } catch {
-        failures.push({ fileName, reason: t('themePacks.parseError') })
+        notSavedFailures.push({ fileName, reason: t('themePacks.parseError') })
       }
     }
+    return { successes, notSavedFailures, snapshot }
+  }, [store, t, placement])
 
-    // Dedupe by pack id, keeping the last file's outcome (see doc above).
-    const dedupedById = new Map<string, { fileName: string; meta: ThemePackMeta }>()
-    for (const success of rawSuccesses) {
-      dedupedById.delete(success.meta.id)
-      dedupedById.set(success.meta.id, success)
-    }
-    const deduped = [...dedupedById.values()]
+  const { importing, importSummary, runImport, isImportingRef } = useImportBatch<ThemePackMeta>({
+    open,
+    placement,
+    setLastResult,
+    setActionError,
+    t,
+    collectResults: collectImportResults,
+    hubSync: (meta) => pushPackToHub(meta.id, meta.hubPostId!),
+    onCollapsedToOne: (meta) => handleSelectTheme(`pack:${meta.id}`),
+  })
 
-    const successBadges: PackActionResult[] = []
-    for (const { fileName, meta } of deduped) {
-      let message = t('common.saved')
-      if (meta.hubPostId) {
-        const upd = await pushPackToHub(meta.id, meta.hubPostId)
-        if (upd.success) {
-          message = t('common.synced')
-        } else {
-          failures.push({ fileName, reason: upd.error ?? t('hub.updateFailed') })
-        }
-      }
-      successBadges.push({ id: meta.id, kind: 'success', message })
-    }
-
-    if (deduped.length > 0) {
-      await placement.placeMany(
-        deduped.map(({ meta }) => ({ id: meta.id, name: meta.name })),
-        beforeSnapshot,
-      )
-      setLastResult(successBadges)
-      // Mirror the single-file behaviour of switching the active theme
-      // to the freshly imported pack, anchored on the last successfully
-      // imported (post-dedupe) file for a deterministic final state.
-      handleSelectTheme(`pack:${deduped[deduped.length - 1].meta.id}`)
-    }
-    const summary = buildImportBatchFailureSummary(t, failures)
-    if (summary) setActionError(summary)
-  }, [store, t, pushPackToHub, handleSelectTheme, placement])
+  // Closes any inline rename that was already open the moment a batch
+  // starts, so its input unmounts instead of sitting there interactive
+  // (and committable) for the whole duration of the import — see
+  // `handleRenameCommit`'s own `isImportingRef` guard below for the one
+  // race this cannot cover (a rename input's blur, and the click that
+  // starts the batch, are the same user click; the blur's commit is
+  // already in flight before `importing` ever flips true).
+  useEffect(() => {
+    if (importing) rename.cancelRename()
+    // `rename.cancelRename` is a stable (`useCallback([])`) identity —
+    // intentionally not in the deps array so this only re-fires when
+    // `importing` itself flips, not on every unrelated render.
+  }, [importing])
 
   const handleRenameCommit = useCallback(async (id: string) => {
+    // Guards on `useImportBatch`'s own re-entrancy ref rather than a
+    // locally-mirrored one — written only inside an event handler
+    // (`runImport`), never during render, so it can't go stale under a
+    // discarded/interrupted concurrent render. Referencing
+    // `isImportingRef` here, defined further up via `useImportBatch`,
+    // is safe regardless: this callback's body only runs later, on a
+    // real blur/Enter event, well after the full render has finished.
+    //
+    // A rename already committed its `store.rename` call the instant
+    // the underlying input blurred — including the blur a click on the
+    // Import button itself triggers, which fires before that click's
+    // own handler runs — so this check cannot intercept that exact
+    // call. It DOES catch every other path: a rename input left open
+    // when a batch was already running, and any stray commit that
+    // slips through after the cancel-on-import-start effect above has
+    // already reset the editor for this render.
+    if (isImportingRef.current) return
     const newName = rename.commitRename(id)
     if (!newName) return
     setActionError(null)
@@ -558,16 +552,17 @@ export function ThemePacksModal({
       searchButtonLabel={hubSearching ? t('keyLabels.searching') : t('i18n.search')}
       searchDisabled={hubSearching || search.trim().length < 2}
       importLabel={t('i18n.import')}
-      onImport={() => void handleImportFile()}
+      onImport={() => void runImport()}
+      importDisabled={importing}
       sortButton={(
         <PackSortButton
           direction={nameSort.direction}
           onClick={handleSortByName}
-          disabled={nameSort.pending}
+          disabled={nameSort.pending || importing}
           testid="theme-packs-sort-button"
         />
       )}
-      importFeedback={placement.feedback}
+      importFeedback={importSummary ?? placement.feedback}
       actionError={actionError}
     >
       {activeTab === 'installed' ? (
@@ -580,12 +575,13 @@ export function ThemePacksModal({
                   key={mode}
                   type="button"
                   aria-label={t('themePacks.selectTheme', { name: t(`theme.${mode}`) })}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
                     isActive
                       ? 'bg-accent/15 text-accent'
                       : 'text-content-secondary hover:text-content'
                   }`}
                   onClick={() => handleSelectTheme(mode)}
+                  disabled={importing}
                   data-testid={`theme-packs-builtin-${mode}`}
                 >
                   {isActive ? (
@@ -606,6 +602,7 @@ export function ThemePacksModal({
               meta={meta}
               isActive={activeTheme === `pack:${meta.id}`}
               pendingId={pendingId}
+              importing={importing}
               confirmDeleteId={confirmDeleteId}
               setConfirmDeleteId={setConfirmDeleteId}
               rename={rename}
@@ -644,6 +641,7 @@ export function ThemePacksModal({
               key={row.hubPostId}
               row={row}
               pendingId={pendingId}
+              importing={importing}
               hubOrigin={hubOrigin}
               previewPostId={previewPostId}
               onPreview={(postId) => void handlePreview(postId)}
@@ -675,15 +673,19 @@ interface ThemeHubRowData {
 interface ThemeHubRowProps {
   row: ThemeHubRowData
   pendingId: string | null
+  /** Defensive: the Hub tab isn't meant to be operable mid-import
+   *  either, even though its own actions don't touch the Installed
+   *  list directly. */
+  importing: boolean
   hubOrigin: string
   previewPostId: string | null
   onPreview: (postId: string) => void
   onDownload: (postId: string) => void
 }
 
-function ThemeHubRow({ row, pendingId, previewPostId, onPreview, onDownload }: ThemeHubRowProps): JSX.Element {
+function ThemeHubRow({ row, pendingId, importing, previewPostId, onPreview, onDownload }: ThemeHubRowProps): JSX.Element {
   const { t } = useTranslation()
-  const busy = pendingId === row.hubPostId
+  const busy = pendingId === row.hubPostId || importing
   return (
     <PackHubResultRow
       hubPostId={row.hubPostId}

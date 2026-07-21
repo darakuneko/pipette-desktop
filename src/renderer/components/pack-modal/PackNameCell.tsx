@@ -8,6 +8,15 @@ export interface PackNameCellProps {
   /** True when this row supports the click-to-rename interaction
    * (false for built-in / QWERTY / not-mine rows). */
   canRename: boolean
+  /** True while a multi-file import batch is running. `canRename`
+   *  already stops a NEW rename from starting during import (each call
+   *  site ANDs its own condition with `!importing`), but an edit that
+   *  was already open when the batch started stays mounted — this
+   *  makes ITS input read-only for the duration, on top of the
+   *  modal-level guards that stop its commit from reaching the store
+   *  (see `handleRenameCommit`'s `importingRef` check and the
+   *  cancel-on-import-start effect in each pack modal). */
+  locked: boolean
   editLabel: string
   onEditLabelChange: (value: string) => void
   onBlur: () => void
@@ -27,6 +36,7 @@ export function PackNameCell({
   name,
   editing,
   canRename,
+  locked,
   editLabel,
   onEditLabelChange,
   onBlur,
@@ -46,6 +56,7 @@ export function PackNameCell({
         onBlur={onBlur}
         onKeyDown={onKeyDown}
         maxLength={maxLength}
+        readOnly={locked}
         className="w-full border-b border-edge bg-transparent px-1 text-sm text-content focus:outline-none focus:border-accent"
         data-testid={inputTestid}
       />
