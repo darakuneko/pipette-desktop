@@ -33,6 +33,7 @@ import { useImportBatch, type CollectedImportBatch } from '../pack-modal/useImpo
 import type { ImportBatchFailure } from '../pack-modal/import-batch-summary'
 import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
 import { isOwnPack } from '../pack-modal/ownership'
+import { localizeHubError } from '../../utils/hub-error-i18n'
 import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
 import {
   InstalledTable,
@@ -521,7 +522,7 @@ function buildHubRows(items: HubKeyLabelItem[], metas: KeyLabelMeta[]): HubRow[]
 }
 
 function translateError(
-  t: (key: string) => string,
+  t: TFunction,
   code: string | undefined,
   error: string | undefined,
 ): string {
@@ -530,6 +531,10 @@ function translateError(
   }
   if (code === 'INVALID_FILE') return t('keyLabels.errorImportFailed')
   if (code === 'INVALID_NAME') return t('keyLabels.errorInvalidName')
-  return error ?? t('keyLabels.errorGeneric')
+  // Falls through to the shared Hub error mapper — covers RATE_LIMITED
+  // (429) and the other bare sentinels/HubHttpError shapes that a
+  // main-side hub call (upload/update/sync/delete) can surface, none of
+  // which the codes above account for.
+  return localizeHubError(error, 'keyLabels.errorGeneric', t)
 }
 

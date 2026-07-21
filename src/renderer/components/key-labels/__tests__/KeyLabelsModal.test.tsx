@@ -102,6 +102,7 @@ vi.mock('../../../hooks/useKeyLabelLookup', () => ({
 }))
 
 import { KeyLabelsModal } from '../KeyLabelsModal'
+import { HUB_ERROR_RATE_LIMITED } from '../../../../shared/types/hub'
 
 function meta(over: Partial<{ id: string; name: string; uploaderName: string; hubPostId: string }> = {}) {
   return {
@@ -353,15 +354,17 @@ describe('KeyLabelsModal', () => {
     expect(hubDelete).not.toHaveBeenCalled()
   })
 
-  it('blocks the local delete and surfaces an error when the Hub delete rejects, leaving the entry intact', async () => {
+  it('blocks the local delete and surfaces a localized error when the Hub delete rejects, leaving the entry intact', async () => {
     metas = [meta({ id: 'linked2', name: 'Linked2', uploaderName: 'me', hubPostId: 'hub-2' })]
-    hubDelete.mockRejectedValueOnce(new Error('network error'))
+    // A 429 from the Hub — surfaced as the bare `RATE_LIMITED` sentinel,
+    // which must reach the row as the localized message, not raw text.
+    hubDelete.mockRejectedValueOnce(new Error(HUB_ERROR_RATE_LIMITED))
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
     fireEvent.click(screen.getByTestId('key-labels-delete-linked2'))
     const confirm = await screen.findByTestId('key-labels-confirm-delete-linked2')
     fireEvent.click(confirm)
     await waitFor(() => expect(hubDelete).toHaveBeenCalledWith('linked2'))
-    await waitFor(() => expect(screen.getByTestId('key-labels-result-linked2').textContent).toBe('network error'))
+    await waitFor(() => expect(screen.getByTestId('key-labels-result-linked2').textContent).toBe('hub.rateLimited'))
     // A failed cascade must not proceed to the local delete — otherwise
     // the Hub post is orphaned under a name nobody can re-upload.
     expect(remove).not.toHaveBeenCalled()
@@ -372,13 +375,15 @@ describe('KeyLabelsModal', () => {
 
   it('blocks the local delete when the Hub delete resolves with success: false', async () => {
     metas = [meta({ id: 'linked3', name: 'Linked3', uploaderName: 'me', hubPostId: 'hub-3' })]
+    // An unrecognized raw error string falls back to the generic
+    // localized error copy rather than leaking backend text.
     hubDelete.mockResolvedValueOnce({ success: false, error: 'Hub rejected the delete' })
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
     fireEvent.click(screen.getByTestId('key-labels-delete-linked3'))
     const confirm = await screen.findByTestId('key-labels-confirm-delete-linked3')
     fireEvent.click(confirm)
     await waitFor(() => expect(hubDelete).toHaveBeenCalledWith('linked3'))
-    await waitFor(() => expect(screen.getByTestId('key-labels-result-linked3').textContent).toBe('Hub rejected the delete'))
+    await waitFor(() => expect(screen.getByTestId('key-labels-result-linked3').textContent).toBe('keyLabels.errorGeneric'))
     expect(remove).not.toHaveBeenCalled()
   })
 
@@ -640,7 +645,10 @@ describe('KeyLabelsModal', () => {
         rejections: [{ fileName: 'broken.json', errorCode: 'INVALID_FILE', error: 'Invalid key label file' }],
       },
     })
-    hubUpdate.mockResolvedValueOnce({ success: false, error: 'network error' })
+    // A 429 from the Hub during the batch's hub-sync loop — surfaced as
+    // the bare `RATE_LIMITED` sentinel, exactly as the localization
+    // fix's target case arrives from main.
+    hubUpdate.mockResolvedValueOnce({ success: false, error: HUB_ERROR_RATE_LIMITED })
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
 
     fireEvent.click(screen.getByTestId('key-labels-import-button'))
@@ -651,10 +659,13 @@ describe('KeyLabelsModal', () => {
     // rejection) — 2 processed total.
     await waitFor(() => expect(screen.getByTestId('key-labels-import-feedback').textContent).toBe('common.importSummary:2:1:1'))
 
+    // The hub-sync failure shows up in the failure banner localized —
+    // the raw `RATE_LIMITED` sentinel must never reach the user.
     const banner = screen.getByTestId('key-labels-error')
     expect(banner.textContent).toContain('broken.json')
     expect(banner.textContent).toContain('existing.json')
-    expect(banner.textContent).toContain('network error')
+    expect(banner.textContent).toContain('hub.rateLimited')
+    expect(banner.textContent).not.toContain('RATE_LIMITED')
   })
 
   it('locks the Import button and existing row actions while a batch import is in flight', async () => {
@@ -800,12 +811,14 @@ describe('KeyLabelsModal', () => {
   it('shows error when hub auto-sync fails after import, reported against the originating filename (P2a)', async () => {
     const importedMeta = meta({ id: 'existing', name: 'Existing', hubPostId: 'hub-55' })
     importFromFile.mockResolvedValueOnce({ success: true, data: { imported: [{ fileName: 'existing.json', meta: importedMeta }], rejections: [] } })
+    // An unrecognized raw error string falls back to the generic
+    // localized error copy rather than leaking backend text.
     hubUpdate.mockResolvedValueOnce({ success: false, error: 'network error' })
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
     fireEvent.click(screen.getByTestId('key-labels-import-button'))
     await waitFor(() => expect(hubUpdate).toHaveBeenCalledWith('existing'))
     await waitFor(() => {
-      expect(screen.getByTestId('key-labels-error').textContent).toContain('network error')
+      expect(screen.getByTestId('key-labels-error').textContent).toContain('keyLabels.errorGeneric')
     })
     // P2a: the failure line reports the file the user picked, not the
     // label's internal display name (both happen to differ in this test).

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import type { TFunction } from 'i18next'
 import { useImportBatch, type CollectedImportBatch } from '../useImportBatch'
@@ -308,5 +308,127 @@ describe('useImportBatch', () => {
 
     act(() => { rerender({ open: false }) })
     expect(result.current.importSummary).toBeNull()
+  })
+
+  describe('hub-sync pacing', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('adds no delay when nothing in the batch has a hubPostId (zero hub-syncs)', async () => {
+      vi.useFakeTimers()
+      const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+      const placement = makePlacement()
+      const hubSync = vi.fn().mockResolvedValue({ success: true })
+      const collectResults = vi.fn().mockResolvedValue({
+        successes: [
+          { fileName: 'a.json', meta: { id: 'a', name: 'A' } },
+          { fileName: 'b.json', meta: { id: 'b', name: 'B' } },
+        ],
+        notSavedFailures: [],
+        snapshot: { entries: [], direction: 'asc' },
+      } satisfies CollectedImportBatch<FakeMeta>)
+
+      const { result } = renderHook(() => useImportBatch<FakeMeta>({
+        open: true,
+        placement,
+        setLastResult: vi.fn(),
+        setActionError: vi.fn(),
+        t,
+        collectResults,
+        hubSync,
+      }))
+
+      await act(async () => {
+        const p = result.current.runImport()
+        await vi.runAllTimersAsync()
+        await p
+      })
+
+      expect(hubSync).not.toHaveBeenCalled()
+      expect(setTimeoutSpy.mock.calls.filter(([, ms]) => ms === 1100)).toHaveLength(0)
+    })
+
+    it('adds no delay for a batch that hub-syncs exactly once', async () => {
+      vi.useFakeTimers()
+      const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+      const placement = makePlacement()
+      const hubSync = vi.fn().mockResolvedValue({ success: true })
+      const collectResults = vi.fn().mockResolvedValue({
+        successes: [{ fileName: 'a.json', meta: { id: 'a', name: 'A', hubPostId: 'hp-a' } }],
+        notSavedFailures: [],
+        snapshot: { entries: [], direction: 'asc' },
+      } satisfies CollectedImportBatch<FakeMeta>)
+
+      const { result } = renderHook(() => useImportBatch<FakeMeta>({
+        open: true,
+        placement,
+        setLastResult: vi.fn(),
+        setActionError: vi.fn(),
+        t,
+        collectResults,
+        hubSync,
+      }))
+
+      await act(async () => {
+        const p = result.current.runImport()
+        await vi.runAllTimersAsync()
+        await p
+      })
+
+      expect(hubSync).toHaveBeenCalledTimes(1)
+      expect(setTimeoutSpy.mock.calls.filter(([, ms]) => ms === 1100)).toHaveLength(0)
+    })
+
+    it('spaces three consecutive hub-syncs by 1100ms each, with no delay before the first or after the last', async () => {
+      vi.useFakeTimers()
+      const placement = makePlacement()
+      const hubSync = vi.fn().mockResolvedValue({ success: true })
+      const collectResults = vi.fn().mockResolvedValue({
+        successes: [
+          { fileName: 'a.json', meta: { id: 'a', name: 'A', hubPostId: 'hp-a' } },
+          { fileName: 'b.json', meta: { id: 'b', name: 'B', hubPostId: 'hp-b' } },
+          { fileName: 'c.json', meta: { id: 'c', name: 'C', hubPostId: 'hp-c' } },
+        ],
+        notSavedFailures: [],
+        snapshot: { entries: [], direction: 'asc' },
+      } satisfies CollectedImportBatch<FakeMeta>)
+
+      const { result } = renderHook(() => useImportBatch<FakeMeta>({
+        open: true,
+        placement,
+        setLastResult: vi.fn(),
+        setActionError: vi.fn(),
+        t,
+        collectResults,
+        hubSync,
+      }))
+
+      let runPromise!: Promise<void>
+      await act(async () => {
+        runPromise = result.current.runImport()
+        // Let collectResults resolve and the first, undelayed hub-sync
+        // fire — no timer has been scheduled yet at this point.
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(hubSync).toHaveBeenCalledTimes(1)
+
+      // Just under the delay window: the second hub-sync must not have
+      // fired yet.
+      await act(async () => { await vi.advanceTimersByTimeAsync(1099) })
+      expect(hubSync).toHaveBeenCalledTimes(1)
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+      expect(hubSync).toHaveBeenCalledTimes(2)
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(1099) })
+      expect(hubSync).toHaveBeenCalledTimes(2)
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+      expect(hubSync).toHaveBeenCalledTimes(3)
+
+      await act(async () => { await runPromise })
+      expect(result.current.importing).toBe(false)
+    })
   })
 })

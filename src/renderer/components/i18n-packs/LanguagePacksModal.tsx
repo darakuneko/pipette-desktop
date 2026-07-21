@@ -28,6 +28,7 @@ import { MissingKeysModal } from './MissingKeysModal'
 import { downloadJson } from '../../utils/download-json'
 import { buildHubI18nPackUrl, HUB_CATEGORY } from '../../../shared/hub-urls'
 import { useHubFreshness } from '../../hooks/useHubFreshness'
+import { localizeHubError } from '../../utils/hub-error-i18n'
 import { PackManagerModal } from '../pack-modal/PackManagerModal'
 import { PackHubTab } from '../pack-modal/PackHubTab'
 import { PackSortButton } from '../pack-modal/PackSortButton'
@@ -364,7 +365,7 @@ export function LanguagePacksModal({
       await store.refresh()
       return { success: true }
     }
-    return { success: false, error: res.error ?? t('hub.updateFailed') }
+    return { success: false, error: localizeHubError(res.error, 'hub.updateFailed', t) }
   }, [store, t])
 
   const handleRenameCommit = useCallback(async (id: string): Promise<void> => {
