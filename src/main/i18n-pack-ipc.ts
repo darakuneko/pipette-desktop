@@ -6,10 +6,10 @@
 // process can keep treating pack JSON as opaque blobs that round-trip
 // via the dialog.
 
-import { BrowserWindow, dialog } from 'electron'
-import { readFile } from 'node:fs/promises'
+import { BrowserWindow } from 'electron'
 import { IpcChannels } from '../shared/ipc/channels'
 import { secureHandle } from './ipc-guard'
+import { readSelectedImportFiles } from './pack-import-dialog'
 import {
   listMetas,
   getPack,
@@ -27,25 +27,7 @@ import type {
   I18nPackRecord,
   I18nPackStoreResult,
   I18nPackImportDialogResult,
-  I18nPackImportFile,
 } from '../shared/types/i18n-store'
-
-/** Read + parse a single file selected via the multi-select import dialog.
- *  Never throws — a read or parse failure is reported via `parseError` so
- *  one bad file in the batch does not abort the rest. */
-async function readOneImportFile(filePath: string): Promise<I18nPackImportFile> {
-  try {
-    const raw = await readFile(filePath, 'utf-8')
-    try {
-      const parsed: unknown = JSON.parse(raw)
-      return { filePath, raw: parsed, fileSizeBytes: Buffer.byteLength(raw, 'utf-8') }
-    } catch (err) {
-      return { filePath, fileSizeBytes: Buffer.byteLength(raw, 'utf-8'), parseError: String(err) }
-    }
-  } catch (err) {
-    return { filePath, parseError: String(err) }
-  }
-}
 
 export function setupI18nPackStore(): void {
   secureHandle(
@@ -182,22 +164,14 @@ export function setupI18nPackStore(): void {
     IpcChannels.I18N_PACK_IMPORT,
     async (event): Promise<I18nPackImportDialogResult> => {
       const win = BrowserWindow.fromWebContents(event.sender)
-      if (!win) return { canceled: true, files: [] }
-      const result = await dialog.showOpenDialog(win, {
+      const files = await readSelectedImportFiles(win, {
         title: 'Import Language Pack',
         filters: [
           { name: 'JSON', extensions: ['json'] },
           { name: 'All Files', extensions: ['*'] },
         ],
-        properties: ['openFile', 'multiSelections'],
       })
-      if (result.canceled || result.filePaths.length === 0) {
-        return { canceled: true, files: [] }
-      }
-      const files: I18nPackImportFile[] = []
-      for (const filePath of result.filePaths) {
-        files.push(await readOneImportFile(filePath))
-      }
+      if (!files) return { canceled: true, files: [] }
       return { canceled: false, files }
     },
   )

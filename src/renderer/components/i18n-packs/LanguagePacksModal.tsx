@@ -585,11 +585,11 @@ export function LanguagePacksModal({
     return { ok: true, meta: result.meta, validation }
   }, [store, t])
 
-  // Single-item import path: local file import via the toolbar (single
-  // selection legacy call sites/tests) and Hub download both funnel
-  // through here. Failures surface through `setActionError` (the same
-  // banner KeyLabels uses) instead of opening a separate confirmation
-  // modal.
+  // Single-item import path: Hub download funnels through here (the
+  // toolbar's own multi-file import now goes through `importOnePack`
+  // directly — see `handleImportFile` below). Failures surface through
+  // `setActionError` (the same banner KeyLabels uses) instead of
+  // opening a separate confirmation modal.
   const persistImportedPack = useCallback(async (
     raw: unknown,
     extra: { hubPostId?: string } = {},

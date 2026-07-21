@@ -128,22 +128,13 @@ export interface I18nPackRecord {
   pack: unknown
 }
 
-/** One file selected via the multi-select I18N_PACK_IMPORT dialog. Parsing
- *  happens per-file in main; `parseError` is set instead of `raw` when the
- *  file could not be read or was not valid JSON. */
-export interface I18nPackImportFile {
-  filePath: string
-  raw?: unknown
-  fileSizeBytes?: number
-  parseError?: string
-}
-
-/** Shape returned by the I18N_PACK_IMPORT IPC handler. `files` is empty
- *  when `canceled` is true. */
-export interface I18nPackImportDialogResult {
-  canceled: boolean
-  files: I18nPackImportFile[]
-}
+/** Structurally identical to Theme Packs' `ThemePackImportFile` /
+ *  `ThemePackImportDialogResult` — both alias the shared shape in
+ *  `pack-import.ts` (see `readSelectedImportFiles` in
+ *  `src/main/pack-import-dialog.ts`, which both IPC handlers call).
+ *  Aliased (not just re-exported) under the domain-specific name so
+ *  existing call sites don't need to change what they import. */
+export type { PackImportFile as I18nPackImportFile, PackImportDialogResult as I18nPackImportDialogResult } from './pack-import'
 
 /** Optional flags forwarded with I18N_PACK_IMPORT_APPLY. */
 export interface I18nPackImportApplyOptions {
