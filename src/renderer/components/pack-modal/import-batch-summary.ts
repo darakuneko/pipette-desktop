@@ -59,21 +59,26 @@ export function buildImportBatchFailureSummary(
  * headline shown for a multi-file import batch, or `null` below the
  * 2-file threshold — mirroring its sibling `buildImportBatchFailureSummary`'s
  * self-gating null return, so call sites no longer need their own
- * `totalCount >= 2` check. `deduped` is the batch's already-deduped
- * successes (post-dedupe, one per saved id); `notSavedFailures` is the
- * files that never got saved (parse/validate/store failures) — a saved
- * file whose Hub auto-sync later failed still counts toward success
- * here (its failure is a separate concern surfaced by
+ * `totalCount >= 2` check.
+ *
+ * `successCount` MUST be the original, pre-dedupe count of files that
+ * actually saved — never the post-dedupe count. Two files that both
+ * overwrote the same existing pack are still 2 successes here even
+ * though they collapse to a single placed entry (see the P1
+ * "count/scroll uses deduped set" fix note in useImportBatch.ts, the
+ * one caller of this function). `notSavedFailures` is the files that
+ * never got saved (parse/validate/store failures) — a saved file whose
+ * Hub auto-sync later failed still counts toward `successCount` (its
+ * failure is a separate concern surfaced by
  * `buildImportBatchFailureSummary`'s banner, not this headline).
  */
-export function buildImportSummary<T>(
+export function buildImportSummary(
   t: TFunction,
-  deduped: T[],
+  successCount: number,
   notSavedFailures: ImportBatchFailure[],
 ): string | null {
-  const success = deduped.length
   const failure = notSavedFailures.length
-  const total = success + failure
+  const total = successCount + failure
   if (total < 2) return null
-  return t('common.importSummary', { count: total, success, failure })
+  return t('common.importSummary', { count: total, success: successCount, failure })
 }

@@ -179,8 +179,20 @@ export interface UseImportPlacementResult {
    * issues at most one `reorder` call for the whole batch. See the
    * RAPID-INSERT RACE and DIRECTION RACE notes in the module doc for why
    * this differs from calling `place()` once per result.
+   *
+   * `originalCount` drives ONLY the auto-scroll suppression below — it
+   * is the true number of files the batch selected/processed BEFORE any
+   * same-id dedupe collapsed `results`, so a 2-file selection that
+   * happens to dedupe down to one placed result (both files overwrote
+   * the same existing pack) still reads as a batch and does not scroll.
+   * Defaults to `results.length` — a caller with no dedupe step of its
+   * own (there is currently only one caller, `useImportBatch`, and it
+   * always passes this explicitly) sees identical behavior to before
+   * this parameter existed. Never affects the reorder computation or
+   * the last-result feedback anchor, both of which still operate on the
+   * actual (deduped) `results`.
    */
-  placeMany: (results: NameSortEntry[], snapshot: BatchSnapshot) => Promise<void>
+  placeMany: (results: NameSortEntry[], snapshot: BatchSnapshot, originalCount?: number) => Promise<void>
 }
 
 export function useImportPlacement({
@@ -307,6 +319,7 @@ export function useImportPlacement({
   const placeMany = useCallback((
     results: NameSortEntry[],
     snapshot: BatchSnapshot,
+    originalCount: number = results.length,
   ): Promise<void> => {
     const run = async (): Promise<void> => {
       if (results.length === 0) return
@@ -338,8 +351,13 @@ export function useImportPlacement({
       // for a 2+ file batch there is no single "the" imported row to
       // jump to (see the multi-import UX plan's no-auto-scroll
       // requirement), so leave the user's scroll position alone rather
-      // than jumping to an arbitrary one of several new rows.
-      if (results.length <= 1) {
+      // than jumping to an arbitrary one of several new rows. Gated on
+      // `originalCount`, NOT `results.length`: two files that both
+      // overwrote the same existing pack still collapse `results` to a
+      // single entry, but the user genuinely selected 2 files, so this
+      // must still read as a batch (see the P1 "count/scroll uses
+      // deduped set" fix note in useImportBatch.ts).
+      if (originalCount <= 1) {
         scheduleScroll(`${rowTestidPrefixRef.current}-row-${last.id}`)
       }
     }

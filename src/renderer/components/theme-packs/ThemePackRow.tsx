@@ -131,6 +131,7 @@ export function PackRow({
           name={meta.name}
           editing={editing}
           canRename={!importing}
+          locked={importing}
           editLabel={rename.editLabel}
           onEditLabelChange={rename.setEditLabel}
           onBlur={() => void onRenameCommit(meta.id)}

@@ -151,23 +151,36 @@ export function useImportBatch<TMeta extends ImportBatchMeta>({
         successBadges.push({ id: meta.id, kind: 'success', message })
       }
 
+      // The "collapsed to one" decision (auto-select + auto-scroll) and
+      // the toolbar summary's success count both MUST read the original,
+      // pre-dedupe count of files that saved — never `deduped.length`.
+      // Two files that both overwrote the same existing pack are a
+      // genuine 2-file batch (no auto-select, no auto-scroll, summary
+      // shown) even though `deduped` collapses them to a single entry
+      // to place. `deduped` itself is still exactly right for the
+      // hub-sync loop, the row badges and what gets placed/reordered —
+      // syncing or placing the same id twice would be wrong regardless.
       if (deduped.length > 0) {
         await placement.placeMany(
           deduped.map(({ meta }) => ({ id: meta.id, name: meta.name })),
           snapshot,
+          successes.length,
         )
         setLastResult(successBadges)
         // Mirror the single-file behaviour of activating the freshly
         // imported pack — only when the batch collapsed to a single
         // result; a 2+ batch has no single "the" import to activate.
-        if (deduped.length === 1) onCollapsedToOne?.(deduped[0].meta)
+        // `successes.length === 1` implies `deduped.length === 1` too
+        // (a single success can never need deduping), so indexing
+        // `deduped[0]` here is always safe.
+        if (successes.length === 1) onCollapsedToOne?.(deduped[0].meta)
       }
 
       // Toolbar headline for a 2+ file batch only — a single-file
       // import keeps its existing per-name "Imported {{name}}" /
       // "Updated {{name}}" feedback via `placement.feedback` untouched.
       // `buildImportSummary` self-gates below that threshold.
-      const summary = buildImportSummary(t, deduped, notSavedFailures)
+      const summary = buildImportSummary(t, successes.length, notSavedFailures)
       if (summary) setImportSummary(summary)
 
       const failureSummary = buildImportBatchFailureSummary(t, [...notSavedFailures, ...hubSyncFailures])

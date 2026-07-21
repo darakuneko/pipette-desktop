@@ -1174,6 +1174,37 @@ describe('LanguagePacksModal', () => {
     await waitFor(() => expect(renameFn).toHaveBeenCalledWith('r1', 'New Name'))
   })
 
+  it('P1-b: starting a rename then triggering an import cancels the edit instead of letting it commit mid-batch', async () => {
+    storeMetas = [meta({ id: 'r2', name: 'Old Name', matchedBaseVersion: '0.1.0' })]
+    let resolveDialog!: (value: { canceled: boolean; files: Array<{ filePath: string; raw?: unknown; parseError?: string }> }) => void
+    importFromDialog.mockImplementationOnce(() => new Promise((resolve) => { resolveDialog = resolve }))
+    render(
+      <LanguagePacksModal open onClose={vi.fn()} />,
+    )
+
+    fireEvent.click(screen.getByTestId('language-packs-name-r2'))
+    const input = screen.getByTestId('language-packs-rename-input-r2')
+    fireEvent.change(input, { target: { value: 'New Name' } })
+
+    // Trigger the import batch WITHOUT ever blurring the rename input —
+    // jsdom does not auto-blur an unrelated element on click the way a
+    // real browser does, so this specifically exercises the
+    // cancel-on-import-start effect rather than the (unpreventable)
+    // same-click blur race.
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => expect(importFromDialog).toHaveBeenCalled())
+
+    // The edit was canceled, not left open and interactive for the
+    // duration of the batch.
+    expect(screen.queryByTestId('language-packs-rename-input-r2')).toBeNull()
+    expect(renameFn).not.toHaveBeenCalled()
+
+    resolveDialog({ canceled: true, files: [] })
+    await waitFor(() => expect((screen.getByTestId('language-packs-import-button') as HTMLButtonElement).disabled).toBe(false))
+    // Still never committed, even after the batch finished.
+    expect(renameFn).not.toHaveBeenCalled()
+  })
+
   it('open in browser calls openExternal for hub-linked row', async () => {
     storeMetas = [meta({ id: 'o1', name: 'Open Me', hubPostId: 'hp-o1' })]
     render(

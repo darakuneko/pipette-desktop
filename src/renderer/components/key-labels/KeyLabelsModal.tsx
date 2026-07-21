@@ -9,7 +9,7 @@
 // Wording (Upload/Update/Remove/Synced/Delete) mirrors the
 // favorite-store editors so the hub-aware modals stay consistent.
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
@@ -73,6 +73,14 @@ export function KeyLabelsModal({
    * the start of the next operation.
    */
   const [lastResult, setLastResult] = useState<PackActionResult | PackActionResult[] | null>(null)
+  // Mirrors `importing` (from `useImportBatch`, defined further below)
+  // into a ref so `handleRenameCommit` can read its latest value the
+  // same way in all three pack modals — some of them define the rename
+  // handler before the `useImportBatch` call, where the `importing`
+  // state itself isn't in scope yet. Kept current via a plain
+  // assignment during render (the same "adjust a ref during render"
+  // pattern `useImportPlacement.ts` uses for its own always-latest refs).
+  const importingRef = useRef(false)
 
   // Key Labels fetches the Hub origin once on first mount, unlike the
   // i18n/theme pack modals which re-fetch each time the modal opens.
@@ -227,6 +235,21 @@ export function KeyLabelsModal({
       return upd.success ? { success: true } : { success: false, error: translateError(t, upd.errorCode, upd.error) }
     },
   })
+  importingRef.current = importing
+
+  // Closes any inline rename that was already open the moment a batch
+  // starts, so its input unmounts instead of sitting there interactive
+  // (and committable) for the whole duration of the import — see
+  // `handleRenameCommit`'s own `importingRef` guard below for the one
+  // race this cannot cover (a rename input's blur, and the click that
+  // starts the batch, are the same user click; the blur's commit is
+  // already in flight before `importing` ever flips true).
+  useEffect(() => {
+    if (importing) rename.cancelRename()
+    // `rename.cancelRename` is a stable (`useCallback([])`) identity —
+    // intentionally not in the deps array so this only re-fires when
+    // `importing` itself flips, not on every unrelated render.
+  }, [importing])
 
   const runWithPending = useCallback(async <T,>(
     id: string,
@@ -271,6 +294,14 @@ export function KeyLabelsModal({
   }, [labels, runWithPending, placement])
 
   const handleRenameCommit = useCallback(async (id: string) => {
+    // See the note above `importingRef`'s declaration: this cannot
+    // intercept a commit whose blur fired as part of the very click
+    // that started the batch (already in flight before `importing`
+    // flips true), but it does catch a rename left open from an
+    // already-running batch, and any stray commit that slips through
+    // after the cancel-on-import-start effect above has already reset
+    // the editor for this render.
+    if (importingRef.current) return
     const newName = rename.commitRename(id)
     if (!newName) return
     setActionError(null)

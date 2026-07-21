@@ -450,6 +450,39 @@ describe('useImportPlacement', () => {
     }
   })
 
+  it('P1-a fix: an explicit originalCount overrides results.length for scroll suppression — a lone deduped result from a 2-file selection does not scroll', async () => {
+    const reorder = vi.fn().mockResolvedValue({ success: true })
+    const { result } = renderHook(() => useImportPlacement({
+      open: true,
+      entries: [{ id: 'a', name: 'Alpha' }],
+      direction: 'asc',
+      reorder,
+      rowTestidPrefix: 'test-packs',
+      onReorderError: vi.fn(),
+    }))
+
+    const rowD = document.createElement('div')
+    rowD.setAttribute('data-testid', 'test-packs-row-d')
+    document.body.append(rowD)
+
+    const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {})
+    try {
+      // `results` has collapsed to a single entry (e.g. two files both
+      // overwrote the same existing pack), but the caller passes the
+      // true pre-dedupe count (2) explicitly — this must suppress the
+      // scroll that a bare `results.length <= 1` inference would
+      // otherwise trigger (see useImportBatch.ts's P1 fix note).
+      await act(async () => {
+        const snapshot = result.current.snapshotEntries()
+        await result.current.placeMany([{ id: 'd', name: 'Delta' }], snapshot, 2)
+      })
+      expect(scrollIntoView).not.toHaveBeenCalled()
+    } finally {
+      scrollIntoView.mockRestore()
+      rowD.remove()
+    }
+  })
+
   it('single-file place() still behaves identically after placeMany was added (unaffected by the batch fix)', async () => {
     const reorder = vi.fn().mockResolvedValue({ success: true })
     const onReorderError = vi.fn()

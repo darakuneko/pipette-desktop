@@ -327,6 +327,37 @@ describe('ThemePacksModal', () => {
     await waitFor(() => expect(importFromDialog).toHaveBeenCalled())
   })
 
+  it('P1-b: starting a rename then triggering an import cancels the edit instead of letting it commit mid-batch', async () => {
+    metas = [meta({ id: 'r2', name: 'Old Name' })]
+    let resolveDialog!: (value: { canceled: boolean; files: Array<{ filePath: string; raw?: unknown; parseError?: string }> }) => void
+    importFromDialog.mockImplementationOnce(() => new Promise((resolve) => { resolveDialog = resolve }))
+    render(
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
+    )
+
+    fireEvent.click(screen.getByTestId('theme-packs-name-r2'))
+    const input = screen.getByTestId('theme-packs-rename-input-r2')
+    fireEvent.change(input, { target: { value: 'New Name' } })
+
+    // Trigger the import batch WITHOUT ever blurring the rename input —
+    // jsdom does not auto-blur an unrelated element on click the way a
+    // real browser does, so this specifically exercises the
+    // cancel-on-import-start effect rather than the (unpreventable)
+    // same-click blur race.
+    fireEvent.click(screen.getByTestId('theme-packs-import-button'))
+    await waitFor(() => expect(importFromDialog).toHaveBeenCalled())
+
+    // The edit was canceled, not left open and interactive for the
+    // duration of the batch.
+    expect(screen.queryByTestId('theme-packs-rename-input-r2')).toBeNull()
+    expect(renameFn).not.toHaveBeenCalled()
+
+    resolveDialog({ canceled: true, files: [] })
+    await waitFor(() => expect((screen.getByTestId('theme-packs-import-button') as HTMLButtonElement).disabled).toBe(false))
+    // Still never committed, even after the batch finished.
+    expect(renameFn).not.toHaveBeenCalled()
+  })
+
   it('import applies the raw data when dialog returns a file', async () => {
     const raw = { name: 'Imported', version: '1', colorScheme: 'dark', colors: {} }
     importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })

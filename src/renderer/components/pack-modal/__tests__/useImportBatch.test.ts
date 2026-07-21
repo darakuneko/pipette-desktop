@@ -61,9 +61,13 @@ describe('useImportBatch', () => {
     await act(async () => { await result.current.runImport() })
 
     expect(hubSync).toHaveBeenCalledWith({ id: 'a', name: 'Alpha', hubPostId: 'hp1' })
+    // Third arg is the pre-dedupe original success count (1 here) — see
+    // the P1 fix note: it drives `placeMany`'s own scroll suppression
+    // and must never be inferred from the deduped `results` array.
     expect(placement.placeMany).toHaveBeenCalledWith(
       [{ id: 'a', name: 'Alpha' }],
       { entries: [], direction: 'asc' },
+      1,
     )
     expect(setLastResult).toHaveBeenCalledWith([{ id: 'a', kind: 'success', message: 'common.synced' }])
     expect(onCollapsedToOne).toHaveBeenCalledWith({ id: 'a', name: 'Alpha', hubPostId: 'hp1' })
@@ -74,7 +78,7 @@ describe('useImportBatch', () => {
     expect(result.current.importing).toBe(false)
   })
 
-  it('dedupes same-id results keeping the last file, shows the 2+ batch summary, and skips onCollapsedToOne', async () => {
+  it('dedupes same-id results keeping the last file for placement/hub-sync, but the summary and scroll signal still use the original pre-dedupe count', async () => {
     const placement = makePlacement()
     const setLastResult = vi.fn()
     const onCollapsedToOne = vi.fn()
@@ -82,7 +86,7 @@ describe('useImportBatch', () => {
       successes: [
         { fileName: 'first.json', meta: { id: 'x', name: 'First' } },
         // Same id as above (e.g. same name auto-overwrite) — only this
-        // later outcome should survive.
+        // later outcome should survive in `deduped`.
         { fileName: 'second.json', meta: { id: 'x', name: 'Second' } },
         { fileName: 'third.json', meta: { id: 'y', name: 'Third' } },
       ],
@@ -102,15 +106,64 @@ describe('useImportBatch', () => {
 
     await act(async () => { await result.current.runImport() })
 
+    // Placement/reorder still operates on the deduped, one-per-id list
+    // — but the 3rd arg (originalCount) is 3, the true pre-dedupe file
+    // count, not `deduped.length` (2).
     expect(placement.placeMany).toHaveBeenCalledWith(
       [{ id: 'x', name: 'Second' }, { id: 'y', name: 'Third' }],
       { entries: [], direction: 'asc' },
+      3,
     )
     expect(setLastResult).toHaveBeenCalledWith([
       { id: 'x', kind: 'success', message: 'common.saved' },
       { id: 'y', kind: 'success', message: 'common.saved' },
     ])
     expect(onCollapsedToOne).not.toHaveBeenCalled()
+    // 3 successes (pre-dedupe), 0 failures — not "2:2:0" from
+    // `deduped.length`.
+    expect(result.current.importSummary).toBe('common.importSummary:3:3:0')
+  })
+
+  it('P1-a regression: two files that both overwrite the SAME existing pack still read as a genuine 2-file batch — summary shown, no auto-select, scroll suppressed via originalCount', async () => {
+    const placement = makePlacement()
+    const setLastResult = vi.fn()
+    const onCollapsedToOne = vi.fn()
+    const collectResults = vi.fn().mockResolvedValue({
+      // Both files independently overwrite the same pre-existing id 'x'
+      // — 2 real, successful saves that just happen to dedupe to 1
+      // placed entry.
+      successes: [
+        { fileName: 'first.json', meta: { id: 'x', name: 'Existing' } },
+        { fileName: 'second.json', meta: { id: 'x', name: 'Existing' } },
+      ],
+      notSavedFailures: [],
+      snapshot: { entries: [], direction: 'asc' },
+    } satisfies CollectedImportBatch<FakeMeta>)
+
+    const { result } = renderHook(() => useImportBatch<FakeMeta>({
+      open: true,
+      placement,
+      setLastResult,
+      setActionError: vi.fn(),
+      t,
+      collectResults,
+      onCollapsedToOne,
+    }))
+
+    await act(async () => { await result.current.runImport() })
+
+    // `deduped` is a single entry, but originalCount (3rd arg) is 2 —
+    // this is what makes `placeMany` suppress the scroll it would
+    // otherwise do for a lone result.
+    expect(placement.placeMany).toHaveBeenCalledWith(
+      [{ id: 'x', name: 'Existing' }],
+      { entries: [], direction: 'asc' },
+      2,
+    )
+    // No single "the" import to activate — a 2-file batch, even one
+    // that collapses to one id, must not auto-select.
+    expect(onCollapsedToOne).not.toHaveBeenCalled()
+    // success 2, failure 0 — never "success 1" from `deduped.length`.
     expect(result.current.importSummary).toBe('common.importSummary:2:2:0')
   })
 

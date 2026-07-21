@@ -424,6 +424,35 @@ describe('KeyLabelsModal', () => {
     await waitFor(() => expect(importFromFile).toHaveBeenCalled())
   })
 
+  it('P1-b: starting a rename then triggering an import cancels the edit instead of letting it commit mid-batch', async () => {
+    metas = [meta({ id: 'r2', name: 'Old Name', uploaderName: 'me' })]
+    let resolveImport!: (value: { success: boolean; data?: { imported: unknown[]; rejections: unknown[] } }) => void
+    importFromFile.mockImplementationOnce(() => new Promise((resolve) => { resolveImport = resolve }))
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+
+    fireEvent.click(screen.getByTestId('key-labels-name-r2'))
+    const input = screen.getByTestId('key-labels-rename-input-r2')
+    fireEvent.change(input, { target: { value: 'New Name' } })
+
+    // Trigger the import batch WITHOUT ever blurring the rename input —
+    // jsdom does not auto-blur an unrelated element on click the way a
+    // real browser does, so this specifically exercises the
+    // cancel-on-import-start effect rather than the (unpreventable)
+    // same-click blur race.
+    fireEvent.click(screen.getByTestId('key-labels-import-button'))
+    await waitFor(() => expect(importFromFile).toHaveBeenCalled())
+
+    // The edit was canceled, not left open and interactive for the
+    // duration of the batch.
+    expect(screen.queryByTestId('key-labels-rename-input-r2')).toBeNull()
+    expect(renameFn).not.toHaveBeenCalled()
+
+    resolveImport({ success: false, data: undefined })
+    await waitFor(() => expect((screen.getByTestId('key-labels-import-button') as HTMLButtonElement).disabled).toBe(false))
+    // Still never committed, even after the batch finished.
+    expect(renameFn).not.toHaveBeenCalled()
+  })
+
   // --- Import/download placement + toolbar feedback + auto-scroll ---
 
   it('asc state: a new import is inserted at its sorted position via reorder, including QWERTY in scope', async () => {

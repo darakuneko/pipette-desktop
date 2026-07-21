@@ -193,6 +193,7 @@ function InstalledRowView({
             name={row.name}
             editing={editing}
             canRename={canRename}
+            locked={importing}
             editLabel={rename.editLabel}
             onEditLabelChange={rename.setEditLabel}
             onBlur={() => void onRenameCommit(row.localId)}
