@@ -49,17 +49,20 @@ interface KeymapPackTabsProps {
 }
 
 function tabButtonClass(active: boolean): string {
-  // `[writing-mode:vertical-rl]` flows the label top-to-bottom with each
-  // glyph rotated 90° (default `text-orientation: mixed` upright-only for
-  // CJK) — the real look of a paper index tab's sideways label. Width is
-  // sized to the rotated text alone (`w-7` = 28px), not stretched to fill
-  // the pane's height, so each tab reads as its own small sticky rather
-  // than one continuous column. No left border on either state — `-ml-0.5`
-  // (2px, matching the pane's `border-2`) overlaps the pane's own right
-  // border instead of drawing a second one beside it, which is what keeps
-  // the junction a single stroke in both states (see the file-level
+  // `[writing-mode:vertical-rl]` flows the label top-to-bottom;
+  // `[text-orientation:sideways]` then rotates every glyph 90° clockwise —
+  // including CJK, which `writing-mode: vertical-rl`'s default
+  // `text-orientation: mixed` would otherwise leave upright — so mixed
+  // JA/EN labels (e.g. a pack name like "Eucalyn 改配列") rotate as one
+  // uniform string, the real look of a paper index tab's sideways label.
+  // Width is sized to the rotated text alone (`w-7` = 28px), not stretched
+  // to fill the pane's height, so each tab reads as its own small sticky
+  // rather than one continuous column. No left border on either state —
+  // `-ml-0.5` (2px, matching the pane's `border-2`) overlaps the pane's own
+  // right border instead of drawing a second one beside it, which is what
+  // keeps the junction a single stroke in both states (see the file-level
   // comment for the full merge rationale).
-  const base = 'flex w-7 -ml-0.5 items-center justify-center whitespace-nowrap rounded-r-md border-t-2 border-r-2 border-b-2 border-edge-subtle px-1 py-2 text-center text-xs font-medium transition-colors [writing-mode:vertical-rl]'
+  const base = 'flex w-7 -ml-0.5 items-center justify-center whitespace-nowrap rounded-r-md border-t-2 border-r-2 border-b-2 border-edge-subtle px-1 py-2 text-center text-xs font-medium transition-colors [writing-mode:vertical-rl] [text-orientation:sideways]'
   return active
     ? `${base} bg-surface-alt text-accent`
     : `${base} bg-surface-dim text-content-secondary hover:text-content`
