@@ -12,7 +12,7 @@
 // reorder and Name sort include it like any imported entry (see
 // `ensureBuiltinEnglishEntry` in main/i18n-pack-store.ts).
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { useInlineRename } from '../../hooks/useInlineRename'
@@ -37,7 +37,7 @@ import { useDragReorder } from '../pack-modal/useDragReorder'
 import { applyDragOrder } from '../pack-modal/drag-order'
 import { useNameSort } from '../pack-modal/useNameSort'
 import { useImportPlacement } from '../pack-modal/useImportPlacement'
-import { buildImportBatchFailureSummary, basenameOf, type ImportBatchFailure } from '../pack-modal/import-batch-summary'
+import { buildImportBatchFailureSummary, buildImportSummary, basenameOf, type ImportBatchFailure } from '../pack-modal/import-batch-summary'
 import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
 import { fetchHubPackMeta } from '../pack-modal/fetch-hub-pack-meta'
 import { isOwnPack } from '../pack-modal/ownership'
@@ -80,6 +80,22 @@ export function LanguagePacksModal({
   const [actionError, setActionError] = useState<string | null>(null)
   const [lastResult, setLastResult] = useState<PackActionResult | PackActionResult[] | null>(null)
   const [missingKeysFor, setMissingKeysFor] = useState<{ name: string; keys: string[] } | null>(null)
+  // Locks the Installed list (rows, drag, rename, the Import/Sort
+  // buttons) while a multi-file import batch is running, so nothing can
+  // mutate the list out from under `placement.placeMany`'s own reorder
+  // call. `importInFlightRef` is the actual re-entrancy guard (checked
+  // synchronously, mirroring the keymap-apply latch) — `importing` just
+  // mirrors it into render so the disabled UI reflects it a frame
+  // sooner than a double-click could slip through.
+  const [importing, setImporting] = useState(false)
+  const importInFlightRef = useRef(false)
+  // Toolbar headline shown only for a 2+ file batch (see
+  // `handleImportFile`) — supersedes `placement.feedback`'s per-name
+  // "Imported {{name}}" text via the `??` in the `importFeedback` prop
+  // below. Cleared at the start of the next import and on modal close;
+  // no auto-clear timer (unlike `placement.feedback`) since it is meant
+  // to persist as the batch's final word until the user acts again.
+  const [importSummary, setImportSummary] = useState<string | null>(null)
 
   const builtinName = (english as Record<string, unknown>).name as string ?? 'English'
   const builtinVersion = (english as Record<string, unknown>).version as string ?? '0.1.0'
@@ -294,6 +310,7 @@ export function LanguagePacksModal({
       setLastResult(null)
       setConfirmDeleteId(null)
       setConfirmRemoveId(null)
+      setImportSummary(null)
     }
   }, [open])
 
@@ -651,63 +668,91 @@ export function LanguagePacksModal({
   // real underlying reason (never a generic placeholder when a real
   // message is available).
   const handleImportFile = useCallback(async (): Promise<void> => {
-    setActionError(null)
-    setLastResult(null)
-    const dialogResult = await store.importFromDialog()
-    if (dialogResult.canceled) return
-    const beforeSnapshot = placement.snapshotEntries()
-    const failures: ImportBatchFailure[] = []
-    const rawSuccesses: { fileName: string; meta: I18nPackMeta }[] = []
-    for (const file of dialogResult.files) {
-      const fileName = basenameOf(file.filePath)
-      if (file.parseError || file.raw === undefined) {
-        failures.push({ fileName, reason: file.parseError ?? t('i18n.errorInvalidJson') })
-        continue
+    // Re-entrancy guard (mirrors the keymap-apply latch): a double-click
+    // on Import before React re-renders the now-disabled button must
+    // not queue a second concurrent batch on top of the first.
+    if (importInFlightRef.current) return
+    importInFlightRef.current = true
+    setImporting(true)
+    try {
+      setActionError(null)
+      setLastResult(null)
+      setImportSummary(null)
+      const dialogResult = await store.importFromDialog()
+      if (dialogResult.canceled) return
+      const beforeSnapshot = placement.snapshotEntries()
+      // Kept separate from `hubSyncFailures` below: these are files that
+      // never actually landed on disk (parse/validate/store failure),
+      // which is what the toolbar headline's "failure" count means —
+      // see `buildImportSummary`'s doc in import-batch-summary.ts.
+      const notSavedFailures: ImportBatchFailure[] = []
+      const rawSuccesses: { fileName: string; meta: I18nPackMeta }[] = []
+      for (const file of dialogResult.files) {
+        const fileName = basenameOf(file.filePath)
+        if (file.parseError || file.raw === undefined) {
+          notSavedFailures.push({ fileName, reason: file.parseError ?? t('i18n.errorInvalidJson') })
+          continue
+        }
+        const imported = await importOnePack(file.raw)
+        if (!imported.ok) {
+          notSavedFailures.push({ fileName, reason: imported.error })
+          continue
+        }
+        rawSuccesses.push({ fileName, meta: imported.meta })
       }
-      const imported = await importOnePack(file.raw)
-      if (!imported.ok) {
-        failures.push({ fileName, reason: imported.error })
-        continue
+
+      // Dedupe by pack id, keeping the last file's outcome (see doc above).
+      const dedupedById = new Map<string, { fileName: string; meta: I18nPackMeta }>()
+      for (const success of rawSuccesses) {
+        dedupedById.delete(success.meta.id)
+        dedupedById.set(success.meta.id, success)
       }
-      rawSuccesses.push({ fileName, meta: imported.meta })
-    }
+      const deduped = [...dedupedById.values()]
 
-    // Dedupe by pack id, keeping the last file's outcome (see doc above).
-    const dedupedById = new Map<string, { fileName: string; meta: I18nPackMeta }>()
-    for (const success of rawSuccesses) {
-      dedupedById.delete(success.meta.id)
-      dedupedById.set(success.meta.id, success)
-    }
-    const deduped = [...dedupedById.values()]
+      const hubSyncFailures: ImportBatchFailure[] = []
+      const successBadges: PackActionResult[] = []
+      for (const { fileName, meta } of deduped) {
+        let message = t('common.saved')
+        if (meta.hubPostId) {
+          const upd = await pushPackToHub(meta.id, meta.hubPostId)
+          if (upd.success) {
+            message = t('common.synced')
+          } else {
+            hubSyncFailures.push({ fileName, reason: upd.error ?? t('hub.updateFailed') })
+          }
+        }
+        successBadges.push({ id: meta.id, kind: 'success', message })
+      }
 
-    const successBadges: PackActionResult[] = []
-    for (const { fileName, meta } of deduped) {
-      let message = t('common.saved')
-      if (meta.hubPostId) {
-        const upd = await pushPackToHub(meta.id, meta.hubPostId)
-        if (upd.success) {
-          message = t('common.synced')
-        } else {
-          failures.push({ fileName, reason: upd.error ?? t('hub.updateFailed') })
+      if (deduped.length > 0) {
+        await placement.placeMany(
+          deduped.map(({ meta }) => ({ id: meta.id, name: meta.name })),
+          beforeSnapshot,
+        )
+        setLastResult(successBadges)
+        // Mirror the single-file behaviour of switching the active
+        // language to the freshly imported pack — only when the batch
+        // collapsed to a single result; a 2+ batch has no single "the"
+        // import to activate, so the active language is left untouched.
+        if (deduped.length === 1) {
+          handleSelectLanguage(`pack:${deduped[0].meta.id}`)
         }
       }
-      successBadges.push({ id: meta.id, kind: 'success', message })
-    }
 
-    if (deduped.length > 0) {
-      await placement.placeMany(
-        deduped.map(({ meta }) => ({ id: meta.id, name: meta.name })),
-        beforeSnapshot,
-      )
-      setLastResult(successBadges)
-      // Mirror the single-file behaviour of switching the active
-      // language to the freshly imported pack, anchored on the last
-      // successfully imported (post-dedupe) file for a deterministic
-      // final state.
-      handleSelectLanguage(`pack:${deduped[deduped.length - 1].meta.id}`)
+      // Toolbar headline for a 2+ file batch only — a single-file
+      // import keeps its existing per-name "Imported {{name}}" /
+      // "Updated {{name}}" feedback via `placement.feedback` untouched.
+      const totalCount = deduped.length + notSavedFailures.length
+      if (totalCount >= 2) {
+        setImportSummary(buildImportSummary(t, deduped.length, notSavedFailures.length))
+      }
+
+      const summary = buildImportBatchFailureSummary(t, [...notSavedFailures, ...hubSyncFailures])
+      if (summary) setActionError(summary)
+    } finally {
+      importInFlightRef.current = false
+      setImporting(false)
     }
-    const summary = buildImportBatchFailureSummary(t, failures)
-    if (summary) setActionError(summary)
   }, [store, t, placement, importOnePack, pushPackToHub, handleSelectLanguage])
 
   const handleHubDownload = useCallback(async (postId: string): Promise<void> => {
@@ -757,15 +802,16 @@ export function LanguagePacksModal({
       searchDisabled={hubSearching || search.trim().length < 2}
       importLabel={t('i18n.import')}
       onImport={() => void handleImportFile()}
+      importDisabled={importing}
       sortButton={(
         <PackSortButton
           direction={nameSort.direction}
           onClick={handleSortByName}
-          disabled={nameSort.pending}
+          disabled={nameSort.pending || importing}
           testid="language-packs-sort-button"
         />
       )}
-      importFeedback={placement.feedback}
+      importFeedback={importSummary ?? placement.feedback}
       actionError={actionError}
       afterContent={(
         <MissingKeysModal
@@ -784,6 +830,7 @@ export function LanguagePacksModal({
               key={row.reactKey}
               row={row}
               pendingId={pendingId}
+              importing={importing}
               confirmDeleteId={confirmDeleteId}
               setConfirmDeleteId={setConfirmDeleteId}
               confirmRemoveId={confirmRemoveId}
@@ -823,6 +870,7 @@ export function LanguagePacksModal({
               key={row.reactKey}
               row={row}
               pendingId={pendingId}
+              importing={importing}
               onDownload={(postId) => void handleHubDownload(postId)}
             />
           )}

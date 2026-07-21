@@ -9,6 +9,12 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, params?: Record<string, unknown>) => {
       if (params && 'name' in params) return `${key}:${String(params.name)}`
+      // Surfaces the toolbar import summary's success/failure counts so
+      // tests can assert on them without a real i18next pluralization
+      // pipeline.
+      if (params && 'success' in params && 'failure' in params) {
+        return `${key}:${String(params.count)}:${String(params.success)}:${String(params.failure)}`
+      }
       return key
     },
   }),
@@ -559,6 +565,91 @@ describe('KeyLabelsModal', () => {
     fireEvent.click(screen.getByTestId('key-labels-import-button'))
     await waitFor(() => expect(screen.getByTestId('key-labels-result-b').textContent).toBe('common.saved'))
     expect(screen.getByTestId('key-labels-result-c').textContent).toBe('common.saved')
+  })
+
+  it('multi-file import (2+ files): does not auto-scroll and shows the toolbar summary instead of per-name feedback', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha', uploaderName: 'me' })]
+    const newMetaB = meta({ id: 'b', name: 'Beta' })
+    const newMetaC = meta({ id: 'c', name: 'Gamma' })
+    importFromFile.mockImplementationOnce(async () => {
+      metas = [...metas, newMetaB, newMetaC]
+      return {
+        success: true,
+        data: {
+          imported: [
+            { fileName: 'beta.json', meta: newMetaB },
+            { fileName: 'gamma.json', meta: newMetaC },
+          ],
+          rejections: [],
+        },
+      }
+    })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+
+    const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {})
+    try {
+      fireEvent.click(screen.getByTestId('key-labels-import-button'))
+      await waitFor(() => expect(screen.getByTestId('key-labels-result-c').textContent).toBe('common.saved'))
+
+      // 2+ batch: no auto-scroll to an arbitrary one of the new rows.
+      expect(scrollIntoView).not.toHaveBeenCalled()
+      // The toolbar headline supersedes the per-name "Imported {{name}}"
+      // feedback for a 2+ batch: 2 processed, both saved, none rejected.
+      expect(screen.getByTestId('key-labels-import-feedback').textContent).toBe('common.importSummary:2:2:0')
+    } finally {
+      scrollIntoView.mockRestore()
+    }
+  })
+
+  it('partial-failure batch: a hub-sync failure still counts as a success in the summary headline, but appears in the failure banner', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha', uploaderName: 'me' })]
+    const savedMeta = meta({ id: 'existing', name: 'Existing', hubPostId: 'hub-55' })
+    importFromFile.mockResolvedValueOnce({
+      success: true,
+      data: {
+        imported: [{ fileName: 'existing.json', meta: savedMeta }],
+        rejections: [{ fileName: 'broken.json', errorCode: 'INVALID_FILE', error: 'Invalid key label file' }],
+      },
+    })
+    hubUpdate.mockResolvedValueOnce({ success: false, error: 'network error' })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+
+    fireEvent.click(screen.getByTestId('key-labels-import-button'))
+    await waitFor(() => expect(hubUpdate).toHaveBeenCalledWith('existing'))
+
+    // Headline: 1 saved (the hub-sync failure doesn't reduce this — the
+    // file itself landed on disk) and 1 not-saved (the main-side
+    // rejection) — 2 processed total.
+    await waitFor(() => expect(screen.getByTestId('key-labels-import-feedback').textContent).toBe('common.importSummary:2:1:1'))
+
+    const banner = screen.getByTestId('key-labels-error')
+    expect(banner.textContent).toContain('broken.json')
+    expect(banner.textContent).toContain('existing.json')
+    expect(banner.textContent).toContain('network error')
+  })
+
+  it('locks the Import button and existing row actions while a batch import is in flight', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha', uploaderName: 'me' })]
+    let resolveImport!: (value: { success: boolean; data?: { imported: unknown[]; rejections: unknown[] } }) => void
+    importFromFile.mockImplementationOnce(() => new Promise((resolve) => { resolveImport = resolve }))
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+
+    fireEvent.click(screen.getByTestId('key-labels-import-button'))
+    await waitFor(() => expect(importFromFile).toHaveBeenCalled())
+
+    expect((screen.getByTestId('key-labels-import-button') as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByTestId('key-labels-sort-button') as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByTestId('key-labels-upload-a') as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByTestId('key-labels-delete-a') as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByTestId('key-labels-row-a').getAttribute('draggable')).toBeNull()
+
+    // A second click while in flight is a no-op (the in-flight ref
+    // guard) — the import dialog is not opened a second time.
+    fireEvent.click(screen.getByTestId('key-labels-import-button'))
+    expect(importFromFile).toHaveBeenCalledTimes(1)
+
+    resolveImport({ success: false, data: undefined })
+    await waitFor(() => expect((screen.getByTestId('key-labels-import-button') as HTMLButtonElement).disabled).toBe(false))
   })
 
   it('P1 fix: importing files that interleave with existing rows (existing A,D; import B,C) lands fully sorted A,B,C,D in one reorder call', async () => {

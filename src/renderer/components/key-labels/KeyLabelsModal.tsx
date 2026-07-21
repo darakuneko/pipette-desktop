@@ -9,7 +9,7 @@
 // Wording (Upload/Update/Remove/Synced/Delete) mirrors the
 // favorite-store editors so the hub-aware modals stay consistent.
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
@@ -29,7 +29,7 @@ import { useNameSort } from '../pack-modal/useNameSort'
 import { useDragReorder } from '../pack-modal/useDragReorder'
 import { applyDragOrder } from '../pack-modal/drag-order'
 import { useImportPlacement } from '../pack-modal/useImportPlacement'
-import { buildImportBatchFailureSummary, type ImportBatchFailure } from '../pack-modal/import-batch-summary'
+import { buildImportBatchFailureSummary, buildImportSummary, type ImportBatchFailure } from '../pack-modal/import-batch-summary'
 import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
 import { isOwnPack } from '../pack-modal/ownership'
 import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
@@ -72,10 +72,30 @@ export function KeyLabelsModal({
    * the start of the next operation.
    */
   const [lastResult, setLastResult] = useState<PackActionResult | PackActionResult[] | null>(null)
+  // Locks the Installed list (rows, drag, rename, the Import/Sort
+  // buttons) while a multi-file import batch is running, so nothing can
+  // mutate the list out from under `placement.placeMany`'s own reorder
+  // call. `importInFlightRef` is the actual re-entrancy guard (checked
+  // synchronously, mirroring the keymap-apply latch) — `importing` just
+  // mirrors it into render so the disabled UI reflects it a frame
+  // sooner than a double-click could slip through.
+  const [importing, setImporting] = useState(false)
+  const importInFlightRef = useRef(false)
+  // Toolbar headline shown only for a 2+ file batch (see
+  // `handleImport`) — supersedes `placement.feedback`'s per-name
+  // "Imported {{name}}" text via the `??` in the `importFeedback` prop
+  // below. Cleared at the start of the next import and on modal close;
+  // no auto-clear timer (unlike `placement.feedback`) since it is meant
+  // to persist as the batch's final word until the user acts again.
+  const [importSummary, setImportSummary] = useState<string | null>(null)
 
   // Key Labels fetches the Hub origin once on first mount, unlike the
   // i18n/theme pack modals which re-fetch each time the modal opens.
   const hubOrigin = useHubOrigin(open, { onlyOnce: true })
+
+  useEffect(() => {
+    if (!open) setImportSummary(null)
+  }, [open])
 
   const freshnessCandidates = useMemo(
     () => labels.metas
@@ -197,55 +217,81 @@ export function KeyLabelsModal({
   // up on disk — so hub-sync and the row badge only run/appear once
   // per id, not once per file.
   const handleImport = useCallback(async () => {
-    setActionError(null)
-    setLastResult(null)
-    const beforeSnapshot = placement.snapshotEntries()
-    const res = await labels.importFromFile()
-    if (res.success && res.data) {
-      const failures: ImportBatchFailure[] = res.data.rejections.map((r) => ({
-        fileName: r.fileName,
-        reason: translateError(t, r.errorCode, r.error),
-      }))
+    // Re-entrancy guard (mirrors the keymap-apply latch): a double-click
+    // on Import before React re-renders the now-disabled button must
+    // not queue a second concurrent batch on top of the first.
+    if (importInFlightRef.current) return
+    importInFlightRef.current = true
+    setImporting(true)
+    try {
+      setActionError(null)
+      setLastResult(null)
+      setImportSummary(null)
+      const beforeSnapshot = placement.snapshotEntries()
+      const res = await labels.importFromFile()
+      if (res.success && res.data) {
+        // Kept separate from `hubSyncFailures` below: these are files
+        // that never actually landed on disk (main-side rejections),
+        // which is what the toolbar headline's "failure" count means —
+        // see `buildImportSummary`'s doc in import-batch-summary.ts.
+        const notSavedFailures: ImportBatchFailure[] = res.data.rejections.map((r) => ({
+          fileName: r.fileName,
+          reason: translateError(t, r.errorCode, r.error),
+        }))
 
-      const dedupedById = new Map<string, { fileName: string; meta: KeyLabelMeta }>()
-      for (const success of res.data.imported) {
-        dedupedById.delete(success.meta.id)
-        dedupedById.set(success.meta.id, success)
-      }
-      const deduped = [...dedupedById.values()]
-
-      const successBadges: PackActionResult[] = []
-      for (const { fileName, meta } of deduped) {
-        let message = t('common.saved')
-        // Auto-sync overwrites of an already-uploaded entry so the Hub
-        // post stays consistent with the user's local edit. Promote the
-        // badge from "Saved" to "Synced" on success; a sync failure is
-        // folded into the same failure summary as import rejections
-        // (the file itself imported fine, only the Hub push failed) —
-        // reported against the originating filename, not the label's
-        // internal name.
-        if (meta.hubPostId) {
-          const upd = await labels.hubUpdate(meta.id)
-          if (upd.success) {
-            message = t('common.synced')
-          } else {
-            failures.push({ fileName, reason: translateError(t, upd.errorCode, upd.error) })
-          }
+        const dedupedById = new Map<string, { fileName: string; meta: KeyLabelMeta }>()
+        for (const success of res.data.imported) {
+          dedupedById.delete(success.meta.id)
+          dedupedById.set(success.meta.id, success)
         }
-        successBadges.push({ id: meta.id, kind: 'success', message })
-      }
+        const deduped = [...dedupedById.values()]
 
-      if (deduped.length > 0) {
-        await placement.placeMany(
-          deduped.map(({ meta }) => ({ id: meta.id, name: meta.name })),
-          beforeSnapshot,
-        )
-        setLastResult(successBadges)
+        const hubSyncFailures: ImportBatchFailure[] = []
+        const successBadges: PackActionResult[] = []
+        for (const { fileName, meta } of deduped) {
+          let message = t('common.saved')
+          // Auto-sync overwrites of an already-uploaded entry so the Hub
+          // post stays consistent with the user's local edit. Promote the
+          // badge from "Saved" to "Synced" on success; a sync failure is
+          // folded into the same failure summary as import rejections
+          // (the file itself imported fine, only the Hub push failed) —
+          // reported against the originating filename, not the label's
+          // internal name.
+          if (meta.hubPostId) {
+            const upd = await labels.hubUpdate(meta.id)
+            if (upd.success) {
+              message = t('common.synced')
+            } else {
+              hubSyncFailures.push({ fileName, reason: translateError(t, upd.errorCode, upd.error) })
+            }
+          }
+          successBadges.push({ id: meta.id, kind: 'success', message })
+        }
+
+        if (deduped.length > 0) {
+          await placement.placeMany(
+            deduped.map(({ meta }) => ({ id: meta.id, name: meta.name })),
+            beforeSnapshot,
+          )
+          setLastResult(successBadges)
+        }
+
+        // Toolbar headline for a 2+ file batch only — a single-file
+        // import keeps its existing per-name "Imported {{name}}" /
+        // "Updated {{name}}" feedback via `placement.feedback` untouched.
+        const totalCount = deduped.length + notSavedFailures.length
+        if (totalCount >= 2) {
+          setImportSummary(buildImportSummary(t, deduped.length, notSavedFailures.length))
+        }
+
+        const summary = buildImportBatchFailureSummary(t, [...notSavedFailures, ...hubSyncFailures])
+        if (summary) setActionError(summary)
+      } else if (res.error && res.error !== 'cancelled') {
+        setActionError(translateError(t, res.errorCode, res.error))
       }
-      const summary = buildImportBatchFailureSummary(t, failures)
-      if (summary) setActionError(summary)
-    } else if (res.error && res.error !== 'cancelled') {
-      setActionError(translateError(t, res.errorCode, res.error))
+    } finally {
+      importInFlightRef.current = false
+      setImporting(false)
     }
   }, [labels, t, placement])
 
@@ -360,21 +406,23 @@ export function KeyLabelsModal({
       searchDisabled={hubSearching || search.trim().length < 2}
       importLabel={t('keyLabels.import')}
       onImport={() => void handleImport()}
+      importDisabled={importing}
       sortButton={(
         <PackSortButton
           direction={nameSort.direction}
           onClick={handleSortByName}
-          disabled={nameSort.pending}
+          disabled={nameSort.pending || importing}
           testid="key-labels-sort-button"
         />
       )}
-      importFeedback={placement.feedback}
+      importFeedback={importSummary ?? placement.feedback}
       actionError={actionError}
     >
       {activeTab === 'installed' ? (
         <InstalledTable
           rows={installedRows}
           pendingId={pendingId}
+          importing={importing}
           confirmDeleteId={confirmDeleteId}
           setConfirmDeleteId={setConfirmDeleteId}
           confirmRemoveId={confirmRemoveId}
@@ -453,6 +501,7 @@ export function KeyLabelsModal({
           rows={hubRows}
           hubSearched={hubSearched}
           pendingId={pendingId}
+          importing={importing}
           hubOrigin={hubOrigin}
           onDownload={(hubPostId) => handleHubDownload(hubPostId)}
         />

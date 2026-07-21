@@ -123,6 +123,16 @@ describe('PackManagerModal', () => {
     expect(onImport).toHaveBeenCalled()
   })
 
+  it('disables the Import button when importDisabled is set (locks the toolbar mid-batch)', () => {
+    renderShell({ activeTab: 'installed', importDisabled: true })
+    expect((screen.getByTestId('test-import-button') as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('leaves the Import button enabled when importDisabled is omitted', () => {
+    renderShell({ activeTab: 'installed' })
+    expect((screen.getByTestId('test-import-button') as HTMLButtonElement).disabled).toBe(false)
+  })
+
   it('shows the error banner with its testid when actionError is set', () => {
     renderShell({ actionError: 'Something broke' })
     expect(screen.getByTestId('test-error').textContent).toBe('Something broke')

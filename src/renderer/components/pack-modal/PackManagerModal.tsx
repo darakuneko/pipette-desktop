@@ -51,6 +51,10 @@ export interface PackManagerModalProps {
   searchDisabled: boolean
   importLabel: string
   onImport: () => void
+  /** Disables the Import button while a batch import is already in
+   *  flight — every modal passes its own `importing` state so a
+   *  double-click can't queue a second concurrent batch. */
+  importDisabled?: boolean
   /** "Name" sort toggle rendered at the left end of the Installed
    *  toolbar, opposite Import. Required — all three modals have one. */
   sortButton: ReactNode
@@ -82,6 +86,7 @@ export function PackManagerModal({
   searchDisabled,
   importLabel,
   onImport,
+  importDisabled,
   sortButton,
   importFeedback,
   actionError,
@@ -160,7 +165,8 @@ export function PackManagerModal({
             <button
               type="button"
               onClick={onImport}
-              className="shrink-0 rounded border border-edge bg-surface px-3 py-1.5 text-sm font-medium text-content hover:bg-surface-hover"
+              disabled={importDisabled}
+              className="shrink-0 rounded border border-edge bg-surface px-3 py-1.5 text-sm font-medium text-content hover:bg-surface-hover disabled:opacity-50"
               data-testid={testids.importButton}
             >
               {importLabel}

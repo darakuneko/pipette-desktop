@@ -56,6 +56,11 @@ export interface HubRow {
 export interface LanguageInstalledRowProps {
   row: InstalledRow
   pendingId: string | null
+  /** True while a multi-file import batch is in flight — locks every
+   *  row action, rename, drag and the select control so the list can't
+   *  be mutated out from under the batch's own placement/reorder call.
+   *  Wired the same way `pendingId` already gates a single op. */
+  importing: boolean
   confirmDeleteId: string | null
   setConfirmDeleteId: (id: string | null) => void
   confirmRemoveId: string | null
@@ -84,6 +89,7 @@ export interface LanguageInstalledRowProps {
 export function LanguageInstalledRow({
   row,
   pendingId,
+  importing,
   confirmDeleteId,
   setConfirmDeleteId,
   confirmRemoveId,
@@ -109,12 +115,12 @@ export function LanguageInstalledRow({
   onDragEnd,
 }: LanguageInstalledRowProps): JSX.Element {
   const { t } = useTranslation()
-  const busy = pendingId !== null && (pendingId === row.packId || pendingId === row.hubPostId)
+  const busy = (pendingId !== null && (pendingId === row.packId || pendingId === row.hubPostId)) || importing
   const freshness = row.packId ? hubFreshness.get(row.packId) : undefined
   const hasUpdateAvailable = hasUpdate(freshness, row.meta?.hubUpdatedAt)
   const hubRemoved = !!freshness && freshness.removed
   const editing = !!row.packId && rename.editingId === row.packId
-  const canRename = !row.isBuiltin && !!row.packId
+  const canRename = !row.isBuiltin && !!row.packId && !importing
   const updatedAt = row.updatedAt ? formatTimestamp(row.updatedAt) : ''
   const linkClass = 'text-xs font-medium hover:underline disabled:opacity-50'
 
@@ -139,7 +145,7 @@ export function LanguageInstalledRow({
     <PackListRow
       testid={`language-packs-row-${row.reactKey}`}
       active={row.active}
-      draggable={canDrag}
+      draggable={canDrag && !importing}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
@@ -160,8 +166,9 @@ export function LanguageInstalledRow({
         <button
           type="button"
           aria-label={t('i18n.selectLanguage', { name: row.name })}
-          className="shrink-0 text-content-muted hover:text-accent transition-colors"
+          className="shrink-0 text-content-muted hover:text-accent transition-colors disabled:opacity-50"
           onClick={() => onSelectLanguage(row.internalId)}
+          disabled={busy}
           data-testid={`language-packs-select-${row.reactKey}`}
         >
           {row.active ? (
@@ -284,10 +291,14 @@ export function LanguageInstalledRow({
 export interface LanguageHubRowProps {
   row: HubRow
   pendingId: string | null
+  /** Defensive: the Hub tab isn't meant to be operable mid-import
+   *  either, even though its own actions don't touch the Installed
+   *  list directly. */
+  importing: boolean
   onDownload: (postId: string) => void
 }
 
-export function LanguageHubRow({ row, pendingId, onDownload }: LanguageHubRowProps): JSX.Element {
+export function LanguageHubRow({ row, pendingId, importing, onDownload }: LanguageHubRowProps): JSX.Element {
   return (
     <PackHubResultRow
       hubPostId={row.hubPostId}
@@ -296,7 +307,7 @@ export function LanguageHubRow({ row, pendingId, onDownload }: LanguageHubRowPro
       version={row.version}
       uploaderName={row.uploaderName}
       alreadyInstalled={row.alreadyInstalled}
-      busy={pendingId === row.hubPostId}
+      busy={pendingId === row.hubPostId || importing}
       onDownload={() => onDownload(row.hubPostId)}
     />
   )

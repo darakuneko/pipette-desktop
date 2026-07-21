@@ -1,5 +1,5 @@
 {
-  "version": "0.1.41",
+  "version": "0.1.42",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -41,7 +41,9 @@
     "importedNamed": "{{name}} 入れたよん☆",
     "updatedNamed": "{{name}} 更新したよん☆",
     "importBatchFailed_one": "{{count}}個、入れられんかったよ…",
-    "importBatchFailed_other": "{{count}}個、入れられんかったよ…"
+    "importBatchFailed_other": "{{count}}個、入れられんかったよ…",
+    "importSummary_one": "{{count}}個入れたよん☆(成功{{success}}、失敗{{failure}})",
+    "importSummary_other": "{{count}}個入れたよん☆(成功{{success}}、失敗{{failure}})"
   },
   "app": {
     "title": "Pipette☆",

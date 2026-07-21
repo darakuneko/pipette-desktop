@@ -326,15 +326,22 @@ export function useImportPlacement({
           if (!reorderResult.success) onReorderErrorRef.current(reorderResult.error)
         }
       }
-      // Feedback/scroll anchor on the last result processed — same
-      // "last one wins" convention the calling modals already use for
-      // e.g. switching the active language/theme after a batch import.
+      // Feedback anchors on the last result processed — same "last one
+      // wins" convention the calling modals already use for e.g.
+      // switching the active language/theme after a batch import.
       const last = results[results.length - 1]
       const lastIsInsert = !beforeIds.has(last.id)
       showFeedback(lastIsInsert
         ? tRef.current('common.importedNamed', { name: last.name })
         : tRef.current('common.updatedNamed', { name: last.name }))
-      scheduleScroll(`${rowTestidPrefixRef.current}-row-${last.id}`)
+      // Auto-scroll only when the batch collapsed to a single result —
+      // for a 2+ file batch there is no single "the" imported row to
+      // jump to (see the multi-import UX plan's no-auto-scroll
+      // requirement), so leave the user's scroll position alone rather
+      // than jumping to an arbitrary one of several new rows.
+      if (results.length <= 1) {
+        scheduleScroll(`${rowTestidPrefixRef.current}-row-${last.id}`)
+      }
     }
     const settled = queueRef.current.then(run, run)
     queueRef.current = settled.then(() => undefined, () => undefined)
