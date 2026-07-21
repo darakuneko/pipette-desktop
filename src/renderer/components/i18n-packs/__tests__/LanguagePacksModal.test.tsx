@@ -333,8 +333,8 @@ describe('LanguagePacksModal', () => {
     await waitFor(() => expect(applyImport).toHaveBeenCalled())
   })
 
-  it('import shows error on parse failure', async () => {
-    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'bad.json', parseError: 'Bad format' }] })
+  it('import shows error on parse failure, using the actual parseError message (P2b)', async () => {
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'bad.json', parseError: 'EACCES: permission denied' }] })
     render(
       <LanguagePacksModal open onClose={vi.fn()} />,
     )
@@ -342,6 +342,11 @@ describe('LanguagePacksModal', () => {
     await waitFor(() => {
       expect(screen.getByTestId('language-packs-error')).toBeTruthy()
     })
+    // The real read/parse error is surfaced verbatim — not replaced by
+    // the generic "invalid JSON" placeholder, which would be wrong for
+    // e.g. a permission error.
+    expect(screen.getByTestId('language-packs-error').textContent).toContain('EACCES: permission denied')
+    expect(screen.getByTestId('language-packs-error').textContent).toContain('bad.json')
   })
 
   it('import shows error for invalid pack validation', async () => {
@@ -588,6 +593,57 @@ describe('LanguagePacksModal', () => {
     expect(applyImport).toHaveBeenCalledTimes(1)
     const banner = screen.getByTestId('language-packs-error')
     expect(banner.textContent).toContain('bad.json')
+  })
+
+  it('P1 fix: importing files that interleave with existing rows (existing A,D; import B,C) lands fully sorted A,B,C,D in one reorder call', async () => {
+    storeMetas = [
+      meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' }),
+      meta({ id: 'd', name: 'Delta', matchedBaseVersion: '0.1.0' }),
+    ]
+    const rawB = { name: 'Beta', version: '0.1.0', common: {} }
+    const rawC = { name: 'Charlie', version: '0.1.0', common: {} }
+    importFromDialog.mockResolvedValueOnce({
+      canceled: false,
+      files: [
+        { filePath: 'beta.json', raw: rawB },
+        { filePath: 'charlie.json', raw: rawC },
+      ],
+    })
+    const metaB = meta({ id: 'b', name: 'Beta' })
+    const metaC = meta({ id: 'c', name: 'Charlie' })
+    applyImport
+      .mockResolvedValueOnce({ success: true, meta: metaB })
+      .mockResolvedValueOnce({ success: true, meta: metaC })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => expect(reorderFn).toHaveBeenCalled())
+    // Without the fix, Charlie's position would be computed against a
+    // stale [Alpha, Delta] snapshot that never saw Beta's insert,
+    // persisting ['a', 'c', 'd'] and silently dropping Beta.
+    expect(reorderFn).toHaveBeenCalledTimes(1)
+    expect(reorderFn).toHaveBeenCalledWith(['a', 'b', 'c', 'd'])
+  })
+
+  it('hub-sync failure after import is reported against the originating filename, not the pack name (P2a)', async () => {
+    storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
+    const raw = { name: 'Existing Pack', version: '0.1.0', common: {} }
+    importFromDialog.mockResolvedValueOnce({
+      canceled: false,
+      files: [{ filePath: 'my-upload.json', raw }],
+    })
+    const savedMeta = meta({ id: 'e', name: 'Existing Pack', hubPostId: 'hub-1', matchedBaseVersion: '0.1.0' })
+    applyImport.mockResolvedValueOnce({ success: true, meta: savedMeta })
+    vialAPI.hubUpdateI18nPost.mockResolvedValueOnce({ success: false, error: 'network error' })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => {
+      expect(screen.getByTestId('language-packs-error')).toBeTruthy()
+    })
+    const banner = screen.getByTestId('language-packs-error')
+    expect(banner.textContent).toContain('my-upload.json')
+    expect(banner.textContent).toContain('network error')
   })
 
   it('hub download parity: a new Hub download is inserted at its sorted position via reorder', async () => {

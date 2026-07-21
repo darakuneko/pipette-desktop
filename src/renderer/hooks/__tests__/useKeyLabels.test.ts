@@ -53,7 +53,7 @@ describe('useKeyLabels', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockList.mockResolvedValue({ success: true, data: [meta({ id: 'b', name: 'B' }), meta({ id: 'a', name: 'A' })] })
-    mockImport.mockResolvedValue({ success: true, data: { imported: [meta({ id: 'c', name: 'C' })], rejections: [] } })
+    mockImport.mockResolvedValue({ success: true, data: { imported: [{ fileName: 'c.json', meta: meta({ id: 'c', name: 'C' }) }], rejections: [] } })
     mockExport.mockResolvedValue({ success: true, data: { filePath: '/tmp/c.json' } })
     mockReorder.mockResolvedValue({ success: true })
     mockRename.mockResolvedValue({ success: true, data: meta({ id: 'a', name: 'A2' }) })
@@ -289,7 +289,9 @@ describe('useKeyLabels', () => {
     })
 
     expect(res!.success).toBe(true)
-    expect(res!.data?.imported).toEqual([expect.objectContaining({ id: 'c', name: 'C' })])
+    expect(res!.data?.imported).toEqual([
+      { fileName: 'c.json', meta: expect.objectContaining({ id: 'c', name: 'C' }) },
+    ])
     expect(res!.data?.rejections).toEqual([])
   })
 })

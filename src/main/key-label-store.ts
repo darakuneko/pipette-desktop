@@ -16,6 +16,7 @@ import type {
   KeyLabelStoreErrorCode,
   KeyLabelImportBatchResult,
   KeyLabelImportRejection,
+  KeyLabelImportSuccess,
 } from '../shared/types/key-label-store'
 
 export const KEY_LABEL_SYNC_UNIT = 'key-labels'
@@ -428,7 +429,7 @@ export async function importFromDialog(
       return fail('IO_ERROR', 'cancelled')
     }
 
-    const imported: KeyLabelMeta[] = []
+    const imported: KeyLabelImportSuccess[] = []
     const rejections: KeyLabelImportRejection[] = []
 
     for (const filePath of result.filePaths) {
@@ -463,7 +464,10 @@ export async function importFromDialog(
           keymapApplicable: parsed.keymapApplicable,
         })
         if (saved.success && saved.data) {
-          imported.push(saved.data)
+          // Carries the originating filename alongside the saved meta —
+          // the renderer needs it to report e.g. a Hub-sync failure
+          // against the file the user picked, not the label's name.
+          imported.push({ fileName, meta: saved.data })
         } else {
           rejections.push({
             fileName,

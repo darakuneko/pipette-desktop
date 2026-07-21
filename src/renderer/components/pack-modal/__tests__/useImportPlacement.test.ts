@@ -250,6 +250,124 @@ describe('useImportPlacement', () => {
     expect(result.current.feedback).toBeNull()
   })
 
+  it('placeMany (P1 batch race fix): existing A,D; importing B then C lands fully sorted A,B,C,D in one reorder call, with no rerender in between', async () => {
+    const reorder = vi.fn().mockResolvedValue({ success: true })
+    const onReorderError = vi.fn()
+    const { result } = renderHook(() => useImportPlacement({
+      open: true,
+      entries: [{ id: 'a', name: 'Alpha' }, { id: 'd', name: 'Delta' }],
+      direction: 'asc',
+      reorder,
+      rowTestidPrefix: 'test-packs',
+      onReorderError,
+    }))
+
+    await act(async () => {
+      const beforeEntries = result.current.snapshotEntries()
+      // Deliberately no rerender() between "processing" B and C — the
+      // whole point of placeMany is that it does not need one.
+      await result.current.placeMany(
+        [{ id: 'b', name: 'Bravo' }, { id: 'c', name: 'Charlie' }],
+        beforeEntries,
+      )
+    })
+
+    expect(reorder).toHaveBeenCalledTimes(1)
+    expect(reorder).toHaveBeenCalledWith(['a', 'b', 'c', 'd'])
+    expect(onReorderError).not.toHaveBeenCalled()
+    expect(result.current.feedback).toBe('Imported Charlie')
+  })
+
+  it('placeMany: an id already present in beforeEntries is treated as an overwrite (no position change), last-result feedback reflects that', async () => {
+    const reorder = vi.fn().mockResolvedValue({ success: true })
+    const { result } = renderHook(() => useImportPlacement({
+      open: true,
+      entries: [{ id: 'a', name: 'Alpha' }, { id: 'd', name: 'Delta' }],
+      direction: 'asc',
+      reorder,
+      rowTestidPrefix: 'test-packs',
+      onReorderError: vi.fn(),
+    }))
+
+    await act(async () => {
+      const beforeEntries = result.current.snapshotEntries()
+      // 'b' is a new insert; 'a' is an overwrite (already in beforeEntries).
+      await result.current.placeMany(
+        [{ id: 'b', name: 'Bravo' }, { id: 'a', name: 'Alpha' }],
+        beforeEntries,
+      )
+    })
+
+    // Only the genuinely-new 'b' is merged into the persisted order.
+    expect(reorder).toHaveBeenCalledWith(['a', 'b', 'd'])
+    expect(result.current.feedback).toBe('Updated Alpha')
+  })
+
+  it('placeMany: a free (unsorted) direction skips reorder entirely but still shows feedback for the last result', async () => {
+    const reorder = vi.fn().mockResolvedValue({ success: true })
+    const { result } = renderHook(() => useImportPlacement({
+      open: true,
+      entries: [{ id: 'a', name: 'Alpha' }],
+      direction: 'free',
+      reorder,
+      rowTestidPrefix: 'test-packs',
+      onReorderError: vi.fn(),
+    }))
+
+    await act(async () => {
+      const beforeEntries = result.current.snapshotEntries()
+      await result.current.placeMany(
+        [{ id: 'b', name: 'Bravo' }, { id: 'c', name: 'Charlie' }],
+        beforeEntries,
+      )
+    })
+
+    expect(reorder).not.toHaveBeenCalled()
+    expect(result.current.feedback).toBe('Imported Charlie')
+  })
+
+  it('placeMany: an empty results array is a no-op', async () => {
+    const reorder = vi.fn().mockResolvedValue({ success: true })
+    const { result } = renderHook(() => useImportPlacement({
+      open: true,
+      entries: [{ id: 'a', name: 'Alpha' }],
+      direction: 'asc',
+      reorder,
+      rowTestidPrefix: 'test-packs',
+      onReorderError: vi.fn(),
+    }))
+
+    await act(async () => {
+      const beforeEntries = result.current.snapshotEntries()
+      await result.current.placeMany([], beforeEntries)
+    })
+
+    expect(reorder).not.toHaveBeenCalled()
+    expect(result.current.feedback).toBeNull()
+  })
+
+  it('single-file place() still behaves identically after placeMany was added (unaffected by the batch fix)', async () => {
+    const reorder = vi.fn().mockResolvedValue({ success: true })
+    const onReorderError = vi.fn()
+    const { result } = renderHook(() => useImportPlacement({
+      open: true,
+      entries: [{ id: 'a', name: 'Alpha' }, { id: 'z', name: 'Zeta' }],
+      direction: 'asc',
+      reorder,
+      rowTestidPrefix: 'test-packs',
+      onReorderError,
+    }))
+
+    await act(async () => {
+      const beforeIds = result.current.snapshotBeforeIds()
+      await result.current.place({ id: 'm', name: 'Mu' }, { beforeIds })
+    })
+
+    expect(reorder).toHaveBeenCalledWith(['a', 'm', 'z'])
+    expect(onReorderError).not.toHaveBeenCalled()
+    expect(result.current.feedback).toBe('Imported Mu')
+  })
+
   it('auto-clears feedback after the timeout while still open', async () => {
     const reorder = vi.fn().mockResolvedValue({ success: true })
     const { result } = renderHook(() => useImportPlacement({

@@ -499,6 +499,54 @@ describe('ThemePacksModal', () => {
     expect(banner.textContent).toContain('Invalid theme colors')
   })
 
+  it('P1 fix: importing files that interleave with existing rows (existing A,D; import B,C) lands fully sorted A,B,C,D in one reorder call', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha' }), meta({ id: 'd', name: 'Delta' })]
+    const rawB = { name: 'Beta', version: '1', colorScheme: 'dark', colors: {} }
+    const rawC = { name: 'Charlie', version: '1', colorScheme: 'dark', colors: {} }
+    importFromDialog.mockResolvedValueOnce({
+      canceled: false,
+      files: [
+        { filePath: 'beta.json', raw: rawB },
+        { filePath: 'charlie.json', raw: rawC },
+      ],
+    })
+    const metaB = meta({ id: 'b', name: 'Beta' })
+    const metaC = meta({ id: 'c', name: 'Charlie' })
+    applyImport
+      .mockResolvedValueOnce({ success: true, meta: metaB })
+      .mockResolvedValueOnce({ success: true, meta: metaC })
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('theme-packs-import-button'))
+    await waitFor(() => expect(reorderFn).toHaveBeenCalled())
+    // Without the fix, Charlie's position would be computed against a
+    // stale [Alpha, Delta] snapshot that never saw Beta's insert,
+    // persisting ['a', 'c', 'd'] and silently dropping Beta.
+    expect(reorderFn).toHaveBeenCalledTimes(1)
+    expect(reorderFn).toHaveBeenCalledWith(['a', 'b', 'c', 'd'])
+  })
+
+  it('hub-sync failure after import is reported against the originating filename, not the pack name (P2a)', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha' })]
+    const raw = { name: 'Existing Pack', version: '1', colorScheme: 'dark', colors: {} }
+    importFromDialog.mockResolvedValueOnce({
+      canceled: false,
+      files: [{ filePath: 'my-upload.json', raw }],
+    })
+    const savedMeta = meta({ id: 'e', name: 'Existing Pack', hubPostId: 'hub-1' })
+    applyImport.mockResolvedValueOnce({ success: true, meta: savedMeta })
+    vialAPI.hubUpdateThemePost.mockResolvedValueOnce({ success: false, error: 'network error' })
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('theme-packs-import-button'))
+    await waitFor(() => {
+      expect(screen.getByTestId('theme-packs-error')).toBeTruthy()
+    })
+    const banner = screen.getByTestId('theme-packs-error')
+    expect(banner.textContent).toContain('my-upload.json')
+    expect(banner.textContent).toContain('network error')
+  })
+
   it('hub download parity: a new Hub download is inserted at its sorted position via reorder', async () => {
     // Already ascending — detected as 'asc' on open, no click needed.
     metas = [meta({ id: 'a', name: 'Alpha' }), meta({ id: 'z', name: 'Zeta' })]

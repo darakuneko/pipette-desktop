@@ -114,7 +114,7 @@ describe('KeyLabelsModal', () => {
     vi.clearAllMocks()
     metas = []
     keyLabelRegistry.clear()
-    importFromFile.mockResolvedValue({ success: true, data: { imported: [meta()], rejections: [] } })
+    importFromFile.mockResolvedValue({ success: true, data: { imported: [{ fileName: 'a.json', meta: meta() }], rejections: [] } })
     exportEntry.mockResolvedValue({ success: true, data: { filePath: '/tmp/x.json' } })
     reorder.mockResolvedValue({ success: true })
     renameFn.mockResolvedValue({ success: true, data: meta() })
@@ -428,7 +428,7 @@ describe('KeyLabelsModal', () => {
       meta({ id: 'qwerty', name: 'QWERTY', uploaderName: 'pipette' }),
       meta({ id: 'z', name: 'Zeta', uploaderName: 'me' }),
     ]
-    importFromFile.mockResolvedValueOnce({ success: true, data: { imported: [meta({ id: 'm', name: 'Mu' })], rejections: [] } })
+    importFromFile.mockResolvedValueOnce({ success: true, data: { imported: [{ fileName: 'mu.json', meta: meta({ id: 'm', name: 'Mu' }) }], rejections: [] } })
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
 
     fireEvent.click(screen.getByTestId('key-labels-import-button'))
@@ -441,7 +441,7 @@ describe('KeyLabelsModal', () => {
       meta({ id: 'z', name: 'Zeta', uploaderName: 'me' }),
       meta({ id: 'a', name: 'Alpha', uploaderName: 'me' }),
     ]
-    importFromFile.mockResolvedValueOnce({ success: true, data: { imported: [meta({ id: 'b', name: 'Beta' })], rejections: [] } })
+    importFromFile.mockResolvedValueOnce({ success: true, data: { imported: [{ fileName: 'beta.json', meta: meta({ id: 'b', name: 'Beta' }) }], rejections: [] } })
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
 
     fireEvent.click(screen.getByTestId('key-labels-import-button'))
@@ -452,7 +452,7 @@ describe('KeyLabelsModal', () => {
   it('overwrite (same id already installed) keeps its position — no reorder call, "Updated" feedback', async () => {
     metas = [meta({ id: 'a', name: 'Alpha', uploaderName: 'me' }), meta({ id: 'z', name: 'Zeta', uploaderName: 'me' })]
     // Overwrite: the store reuses the existing 'a' id.
-    importFromFile.mockResolvedValueOnce({ success: true, data: { imported: [meta({ id: 'a', name: 'Alpha' })], rejections: [] } })
+    importFromFile.mockResolvedValueOnce({ success: true, data: { imported: [{ fileName: 'alpha.json', meta: meta({ id: 'a', name: 'Alpha' }) }], rejections: [] } })
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
 
     fireEvent.click(screen.getByTestId('key-labels-import-button'))
@@ -463,7 +463,7 @@ describe('KeyLabelsModal', () => {
 
   it('new import shows "Imported {{name}}" feedback next to the Name button', async () => {
     metas = [meta({ id: 'a', name: 'Alpha', uploaderName: 'me' })]
-    importFromFile.mockResolvedValueOnce({ success: true, data: { imported: [meta({ id: 'b', name: 'Beta' })], rejections: [] } })
+    importFromFile.mockResolvedValueOnce({ success: true, data: { imported: [{ fileName: 'beta.json', meta: meta({ id: 'b', name: 'Beta' }) }], rejections: [] } })
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
 
     fireEvent.click(screen.getByTestId('key-labels-import-button'))
@@ -475,7 +475,7 @@ describe('KeyLabelsModal', () => {
     const newMeta = meta({ id: 'b', name: 'Beta' })
     importFromFile.mockImplementationOnce(async () => {
       metas = [...metas, newMeta]
-      return { success: true, data: { imported: [newMeta], rejections: [] } }
+      return { success: true, data: { imported: [{ fileName: 'beta.json', meta: newMeta }], rejections: [] } }
     })
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
 
@@ -543,13 +543,76 @@ describe('KeyLabelsModal', () => {
     // into view" test's pattern above.
     importFromFile.mockImplementationOnce(async () => {
       metas = [...metas, newMetaB, newMetaC]
-      return { success: true, data: { imported: [newMetaB, newMetaC], rejections: [] } }
+      return {
+        success: true,
+        data: {
+          imported: [
+            { fileName: 'beta.json', meta: newMetaB },
+            { fileName: 'gamma.json', meta: newMetaC },
+          ],
+          rejections: [],
+        },
+      }
     })
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
 
     fireEvent.click(screen.getByTestId('key-labels-import-button'))
     await waitFor(() => expect(screen.getByTestId('key-labels-result-b').textContent).toBe('common.saved'))
     expect(screen.getByTestId('key-labels-result-c').textContent).toBe('common.saved')
+  })
+
+  it('P1 fix: importing files that interleave with existing rows (existing A,D; import B,C) lands fully sorted A,B,C,D in one reorder call', async () => {
+    metas = [
+      meta({ id: 'a', name: 'Alpha', uploaderName: 'me' }),
+      meta({ id: 'd', name: 'Delta', uploaderName: 'me' }),
+    ]
+    const newMetaB = meta({ id: 'b', name: 'Beta' })
+    const newMetaC = meta({ id: 'c', name: 'Charlie' })
+    importFromFile.mockResolvedValueOnce({
+      success: true,
+      data: {
+        imported: [
+          { fileName: 'beta.json', meta: newMetaB },
+          { fileName: 'charlie.json', meta: newMetaC },
+        ],
+        rejections: [],
+      },
+    })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+
+    fireEvent.click(screen.getByTestId('key-labels-import-button'))
+    await waitFor(() => expect(reorder).toHaveBeenCalled())
+    // Without the fix (per-file `place()` calls hoping a re-render lands
+    // between them), this could compute Charlie's position from a stale
+    // pre-batch [A,D] snapshot and persist ['a','c','d'] — silently
+    // dropping Beta. `placeMany` merges both in one pure pass instead.
+    expect(reorder).toHaveBeenCalledTimes(1)
+    expect(reorder).toHaveBeenCalledWith(['a', 'b', 'c', 'd'])
+  })
+
+  it('dedupes a batch where two files resolve to the same id: hub-sync and badge run only once', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha', uploaderName: 'me' })]
+    // Two files sharing a name both overwrite the same entry — main
+    // resolves this in file-list order (see key-label-store.ts's
+    // importFromDialog), so `imported` legitimately contains the same
+    // id twice.
+    const overwritten = meta({ id: 'dup', name: 'Duplicate', hubPostId: 'hub-1' })
+    importFromFile.mockResolvedValueOnce({
+      success: true,
+      data: {
+        imported: [
+          { fileName: 'first.json', meta: overwritten },
+          { fileName: 'second.json', meta: overwritten },
+        ],
+        rejections: [],
+      },
+    })
+    hubUpdate.mockResolvedValue({ success: true, data: overwritten })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+
+    fireEvent.click(screen.getByTestId('key-labels-import-button'))
+    await waitFor(() => expect(hubUpdate).toHaveBeenCalledWith('dup'))
+    expect(hubUpdate).toHaveBeenCalledTimes(1)
   })
 
   it('partial-failure batch: good files keep their badges while bad files are aggregated into one banner', async () => {
@@ -560,7 +623,7 @@ describe('KeyLabelsModal', () => {
       return {
         success: true,
         data: {
-          imported: [newMetaB],
+          imported: [{ fileName: 'beta.json', meta: newMetaB }],
           rejections: [
             { fileName: 'broken.json', errorCode: 'INVALID_FILE', error: 'Invalid key label file' },
             { fileName: 'dup.json', errorCode: 'DUPLICATE_NAME', error: 'A label with the same name already exists' },
@@ -598,16 +661,16 @@ describe('KeyLabelsModal', () => {
 
   it('auto-pushes to Hub when importing over an entry with hubPostId', async () => {
     const importedMeta = meta({ id: 'existing', name: 'Existing', hubPostId: 'hub-55' })
-    importFromFile.mockResolvedValueOnce({ success: true, data: { imported: [importedMeta], rejections: [] } })
+    importFromFile.mockResolvedValueOnce({ success: true, data: { imported: [{ fileName: 'existing.json', meta: importedMeta }], rejections: [] } })
     hubUpdate.mockResolvedValueOnce({ success: true, data: importedMeta })
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
     fireEvent.click(screen.getByTestId('key-labels-import-button'))
     await waitFor(() => expect(hubUpdate).toHaveBeenCalledWith('existing'))
   })
 
-  it('shows error when hub auto-sync fails after import', async () => {
+  it('shows error when hub auto-sync fails after import, reported against the originating filename (P2a)', async () => {
     const importedMeta = meta({ id: 'existing', name: 'Existing', hubPostId: 'hub-55' })
-    importFromFile.mockResolvedValueOnce({ success: true, data: { imported: [importedMeta], rejections: [] } })
+    importFromFile.mockResolvedValueOnce({ success: true, data: { imported: [{ fileName: 'existing.json', meta: importedMeta }], rejections: [] } })
     hubUpdate.mockResolvedValueOnce({ success: false, error: 'network error' })
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
     fireEvent.click(screen.getByTestId('key-labels-import-button'))
@@ -615,6 +678,9 @@ describe('KeyLabelsModal', () => {
     await waitFor(() => {
       expect(screen.getByTestId('key-labels-error').textContent).toContain('network error')
     })
+    // P2a: the failure line reports the file the user picked, not the
+    // label's internal display name (both happen to differ in this test).
+    expect(screen.getByTestId('key-labels-error').textContent).toContain('existing.json')
   })
 
   // --- Phase 2: Name sort (drag reorder itself predates this phase) -------

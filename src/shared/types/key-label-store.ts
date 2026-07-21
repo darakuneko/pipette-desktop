@@ -82,10 +82,21 @@ export interface KeyLabelImportRejection {
   error: string
 }
 
+/** One file's success within a multi-file `importFromDialog` batch.
+ *  Carries the originating filename alongside the saved meta so the
+ *  renderer can report a failure (e.g. a Hub-sync failure after the
+ *  save itself succeeded) against the file the user picked, not the
+ *  label's internal display name — the main process is the only side
+ *  that knows which `filePaths[i]` produced a given saved entry. */
+export interface KeyLabelImportSuccess {
+  fileName: string
+  meta: KeyLabelMeta
+}
+
 /** Result of importing a batch of files selected via the multi-select
  *  file dialog. Every selected file is processed independently — a bad
  *  file is recorded in `rejections` rather than aborting the rest. */
 export interface KeyLabelImportBatchResult {
-  imported: KeyLabelMeta[]
+  imported: KeyLabelImportSuccess[]
   rejections: KeyLabelImportRejection[]
 }

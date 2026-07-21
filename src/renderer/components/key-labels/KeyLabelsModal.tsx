@@ -180,45 +180,65 @@ export function KeyLabelsModal({
     [hubResults, labels.metas],
   )
 
+  // Multi-file import batch. All of the batch's writes already land on
+  // disk in one `importFromFile()` IPC round trip, so `beforeEntries`
+  // captured once up front is the correct "before the user's action"
+  // baseline for every result regardless of processing order. The
+  // actual list placement happens in ONE `placement.placeMany` call at
+  // the end — see the RAPID-INSERT RACE note in useImportPlacement.ts
+  // for why calling `place()` once per file (the original approach)
+  // could compute a later file's position from a stale snapshot and
+  // silently drop an earlier file's id from the persisted order. Two
+  // files resolving to the same label (main's overwrite-by-name reuses
+  // the same id) are deduped, keeping only the last file's outcome —
+  // that's what actually ended up on disk — so hub-sync and the row
+  // badge only run/appear once per id, not once per file.
   const handleImport = useCallback(async () => {
     setActionError(null)
     setLastResult(null)
-    // Single snapshot for the whole batch: every file's writes already
-    // landed on disk in one `importFromFile()` IPC round trip, so
-    // "was this id present before the user picked files" is the same
-    // answer for every result regardless of processing order within
-    // the batch.
-    const beforeIds = placement.snapshotBeforeIds()
+    const beforeEntries = placement.snapshotEntries()
     const res = await labels.importFromFile()
     if (res.success && res.data) {
-      const successBadges: PackActionResult[] = []
       const failures: ImportBatchFailure[] = res.data.rejections.map((r) => ({
         fileName: r.fileName,
         reason: translateError(t, r.errorCode, r.error),
       }))
-      // Sequential await: each `place()` call is internally queued and
-      // reads the latest `entries` ref, so processing one at a time
-      // lets a later file's sorted-insert position see the earlier
-      // file's already-placed row instead of racing it.
-      for (const meta of res.data.imported) {
+
+      const dedupedById = new Map<string, { fileName: string; meta: KeyLabelMeta }>()
+      for (const success of res.data.imported) {
+        dedupedById.delete(success.meta.id)
+        dedupedById.set(success.meta.id, success)
+      }
+      const deduped = [...dedupedById.values()]
+
+      const successBadges: PackActionResult[] = []
+      for (const { fileName, meta } of deduped) {
         let message = t('common.saved')
         // Auto-sync overwrites of an already-uploaded entry so the Hub
         // post stays consistent with the user's local edit. Promote the
         // badge from "Saved" to "Synced" on success; a sync failure is
         // folded into the same failure summary as import rejections
-        // (the file itself imported fine, only the Hub push failed).
+        // (the file itself imported fine, only the Hub push failed) —
+        // reported against the originating filename, not the label's
+        // internal name.
         if (meta.hubPostId) {
           const upd = await labels.hubUpdate(meta.id)
           if (upd.success) {
             message = t('common.synced')
           } else {
-            failures.push({ fileName: meta.name, reason: translateError(t, upd.errorCode, upd.error) })
+            failures.push({ fileName, reason: translateError(t, upd.errorCode, upd.error) })
           }
         }
         successBadges.push({ id: meta.id, kind: 'success', message })
-        await placement.place({ id: meta.id, name: meta.name }, { beforeIds })
       }
-      if (successBadges.length > 0) setLastResult(successBadges)
+
+      if (deduped.length > 0) {
+        await placement.placeMany(
+          deduped.map(({ meta }) => ({ id: meta.id, name: meta.name })),
+          beforeEntries,
+        )
+        setLastResult(successBadges)
+      }
       const summary = buildImportBatchFailureSummary(t, failures)
       if (summary) setActionError(summary)
     } else if (res.error && res.error !== 'cancelled') {

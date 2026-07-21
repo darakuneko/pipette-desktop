@@ -236,7 +236,8 @@ describe('key-label-store', () => {
       const result = await importFromDialog(win)
       expect(result.success).toBe(true)
       expect(result.data?.imported).toHaveLength(1)
-      expect(result.data?.imported[0].name).toBe('Hebrew')
+      expect(result.data?.imported[0].fileName).toBe('sample.json')
+      expect(result.data?.imported[0].meta.name).toBe('Hebrew')
       expect(result.data?.rejections).toEqual([])
     })
 
@@ -302,7 +303,8 @@ describe('key-label-store', () => {
       const result = await importFromDialog(win)
 
       expect(result.success).toBe(true)
-      expect(result.data?.imported.map((m) => m.name).sort()).toEqual(['Multi A', 'Multi B'])
+      expect(result.data?.imported.map((s) => s.meta.name).sort()).toEqual(['Multi A', 'Multi B'])
+      expect(result.data?.imported.map((s) => s.fileName).sort()).toEqual(['a.json', 'b.json'])
       expect(result.data?.rejections).toEqual([])
     })
 
@@ -324,7 +326,8 @@ describe('key-label-store', () => {
 
       expect(result.success).toBe(true)
       expect(result.data?.imported).toHaveLength(1)
-      expect(result.data?.imported[0].name).toBe('Good Label')
+      expect(result.data?.imported[0].fileName).toBe('good.json')
+      expect(result.data?.imported[0].meta.name).toBe('Good Label')
       expect(result.data?.rejections).toEqual([
         { fileName: 'bad.json', errorCode: 'INVALID_FILE', error: 'Invalid key label file' },
       ])
@@ -350,8 +353,11 @@ describe('key-label-store', () => {
       expect(result.data?.imported).toHaveLength(2)
       // Both entries resolve to the same id — the second overwrote the
       // first in file-list order, which is the documented/acceptable
-      // behaviour for duplicate names within a single batch.
-      expect(result.data?.imported[0].id).toBe(result.data?.imported[1].id)
+      // behaviour for duplicate names within a single batch. Each still
+      // carries its own originating filename.
+      expect(result.data?.imported[0].meta.id).toBe(result.data?.imported[1].meta.id)
+      expect(result.data?.imported[0].fileName).toBe('first.json')
+      expect(result.data?.imported[1].fileName).toBe('second.json')
 
       const metas = await listMetas()
       const dup = metas.filter((m) => m.name === 'Duplicate')
@@ -497,7 +503,7 @@ describe('key-label-store', () => {
       const result = await importFromDialog(win)
       expect(result.success).toBe(true)
 
-      const record = await getRecord(result.data!.imported[0].id)
+      const record = await getRecord(result.data!.imported[0].meta.id)
       expect(record.data?.data.keymapApplicable).toBe(true)
     })
 
@@ -522,7 +528,7 @@ describe('key-label-store', () => {
       const result = await importFromDialog(win)
       expect(result.success).toBe(true)
 
-      const record = await getRecord(result.data!.imported[0].id)
+      const record = await getRecord(result.data!.imported[0].meta.id)
       expect(record.data?.data.keymapApplicable).toBeUndefined()
     })
   })
