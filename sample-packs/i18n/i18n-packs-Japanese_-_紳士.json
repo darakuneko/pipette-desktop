@@ -1,5 +1,5 @@
 {
-  "version": "0.1.42",
+  "version": "0.1.43",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -38,6 +38,7 @@
     "done": "完了",
     "edit": "推敲",
     "sortByName": "御名前",
+    "importing": "ただいまお取り込み中でございます…",
     "importedNamed": "{{name}} をお受け取りいたしました",
     "updatedNamed": "{{name}} を更新いたしました",
     "importBatchFailed_one": "誠に恐縮ながら、{{count}} 件のファイルをお受け取りできませんでした。",

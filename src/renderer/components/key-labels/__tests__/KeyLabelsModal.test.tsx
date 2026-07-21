@@ -666,6 +666,11 @@ describe('KeyLabelsModal', () => {
     fireEvent.click(screen.getByTestId('key-labels-import-button'))
     await waitFor(() => expect(importFromFile).toHaveBeenCalled())
 
+    // Mid-batch: the toolbar feedback slot shows "Importing…", superseding
+    // both the post-batch summary and the per-name feedback for the
+    // duration of the import.
+    expect(screen.getByTestId('key-labels-import-feedback').textContent).toBe('common.importing')
+
     expect((screen.getByTestId('key-labels-import-button') as HTMLButtonElement).disabled).toBe(true)
     expect((screen.getByTestId('key-labels-sort-button') as HTMLButtonElement).disabled).toBe(true)
     expect((screen.getByTestId('key-labels-upload-a') as HTMLButtonElement).disabled).toBe(true)
@@ -679,6 +684,10 @@ describe('KeyLabelsModal', () => {
 
     resolveImport({ success: false, data: undefined })
     await waitFor(() => expect((screen.getByTestId('key-labels-import-button') as HTMLButtonElement).disabled).toBe(false))
+    // The "Importing…" text goes away with nothing left to show — a
+    // failed-with-no-data batch never produced a summary or per-name
+    // feedback.
+    expect(screen.queryByTestId('key-labels-import-feedback')).toBeNull()
   })
 
   it('P1 fix: importing files that interleave with existing rows (existing A,D; import B,C) lands fully sorted A,B,C,D in one reorder call', async () => {

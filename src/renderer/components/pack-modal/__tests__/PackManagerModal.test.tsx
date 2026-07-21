@@ -155,6 +155,11 @@ describe('PackManagerModal', () => {
     expect(screen.queryByTestId('test-import-feedback')).toBeNull()
   })
 
+  it('renders the "Importing…" text when the caller passes the importing feedback string (each modal supersedes its summary/per-name feedback with this while a batch is in flight)', () => {
+    renderShell({ importFeedback: 'common.importing' })
+    expect(screen.getByTestId('test-import-feedback').textContent).toBe('common.importing')
+  })
+
   it('renders afterContent as a portal sibling (Language Packs MissingKeysModal slot)', () => {
     renderShell({ afterContent: <div data-testid="after-content">extra</div> })
     expect(screen.getByTestId('after-content')).toBeTruthy()

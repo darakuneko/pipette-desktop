@@ -379,7 +379,7 @@ export function KeyLabelsModal({
           testid="key-labels-sort-button"
         />
       )}
-      importFeedback={importSummary ?? placement.feedback}
+      importFeedback={importing ? t('common.importing') : (importSummary ?? placement.feedback)}
       actionError={actionError}
     >
       {activeTab === 'installed' ? (
