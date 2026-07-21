@@ -70,10 +70,16 @@ interface ImportBatchMeta {
 /** Client-side pacing between consecutive Hub write requests fired by
  *  the multi-file import batch's hub-sync loop. The Hub's IP-layer
  *  rate limit allows roughly 120 requests per 60s (~500ms/request)
- *  before returning 429/RATE_LIMITED — spacing hub-sync calls by that
- *  same interval keeps a large batch under the limit instead of
- *  bursting one request per imported pack back-to-back. */
-const HUB_SYNC_DELAY_MS = 500
+ *  before returning 429/RATE_LIMITED. I18n and Theme pack updates each
+ *  fire TWO Hub requests per hub-sync call — the update PUT plus a
+ *  follow-up `/timestamps` call (see `src/main/hub/hub-ipc.ts` around
+ *  the i18n update handler and the theme update handler) — so a batch
+ *  of those effectively doubles the request rate per hub-sync
+ *  iteration. Spacing hub-sync calls by ~1100ms rather than ~500ms
+ *  keeps that worst case under the limit with a small safety margin
+ *  (Key Labels' single-request update stays comfortably under the
+ *  limit too at this spacing). */
+const HUB_SYNC_DELAY_MS = 1100
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))

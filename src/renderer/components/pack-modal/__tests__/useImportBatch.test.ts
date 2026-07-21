@@ -346,7 +346,7 @@ describe('useImportBatch', () => {
       })
 
       expect(hubSync).not.toHaveBeenCalled()
-      expect(setTimeoutSpy.mock.calls.filter(([, ms]) => ms === 500)).toHaveLength(0)
+      expect(setTimeoutSpy.mock.calls.filter(([, ms]) => ms === 1100)).toHaveLength(0)
     })
 
     it('adds no delay for a batch that hub-syncs exactly once', async () => {
@@ -377,10 +377,10 @@ describe('useImportBatch', () => {
       })
 
       expect(hubSync).toHaveBeenCalledTimes(1)
-      expect(setTimeoutSpy.mock.calls.filter(([, ms]) => ms === 500)).toHaveLength(0)
+      expect(setTimeoutSpy.mock.calls.filter(([, ms]) => ms === 1100)).toHaveLength(0)
     })
 
-    it('spaces three consecutive hub-syncs by 500ms each, with no delay before the first or after the last', async () => {
+    it('spaces three consecutive hub-syncs by 1100ms each, with no delay before the first or after the last', async () => {
       vi.useFakeTimers()
       const placement = makePlacement()
       const hubSync = vi.fn().mockResolvedValue({ success: true })
@@ -415,13 +415,13 @@ describe('useImportBatch', () => {
 
       // Just under the delay window: the second hub-sync must not have
       // fired yet.
-      await act(async () => { await vi.advanceTimersByTimeAsync(499) })
+      await act(async () => { await vi.advanceTimersByTimeAsync(1099) })
       expect(hubSync).toHaveBeenCalledTimes(1)
 
       await act(async () => { await vi.advanceTimersByTimeAsync(1) })
       expect(hubSync).toHaveBeenCalledTimes(2)
 
-      await act(async () => { await vi.advanceTimersByTimeAsync(499) })
+      await act(async () => { await vi.advanceTimersByTimeAsync(1099) })
       expect(hubSync).toHaveBeenCalledTimes(2)
 
       await act(async () => { await vi.advanceTimersByTimeAsync(1) })
