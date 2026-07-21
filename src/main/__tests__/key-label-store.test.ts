@@ -210,7 +210,7 @@ describe('key-label-store', () => {
   })
 
   describe('importFromDialog', () => {
-    it('imports a valid .json and returns the saved meta', async () => {
+    it('imports a valid .json and returns the saved meta in `imported`', async () => {
       const dir = join(mockUserDataPath, 'tmp-import')
       await mkdir(dir, { recursive: true })
       const importPath = join(dir, 'sample.json')
@@ -235,10 +235,25 @@ describe('key-label-store', () => {
 
       const result = await importFromDialog(win)
       expect(result.success).toBe(true)
-      expect(result.data?.name).toBe('Hebrew')
+      expect(result.data?.imported).toHaveLength(1)
+      expect(result.data?.imported[0].name).toBe('Hebrew')
+      expect(result.data?.rejections).toEqual([])
     })
 
-    it('rejects an invalid file shape', async () => {
+    it('requests multiSelections from the open dialog', async () => {
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({
+        canceled: true,
+        filePaths: [],
+      })
+      const win = { id: 99 } as unknown as Electron.BrowserWindow
+      await importFromDialog(win)
+      expect(dialog.showOpenDialog).toHaveBeenCalledWith(
+        win,
+        expect.objectContaining({ properties: expect.arrayContaining(['multiSelections']) }),
+      )
+    })
+
+    it('rejects an invalid file shape without failing the batch', async () => {
       const dir = join(mockUserDataPath, 'tmp-import')
       await mkdir(dir, { recursive: true })
       const importPath = join(dir, 'bad.json')
@@ -251,8 +266,11 @@ describe('key-label-store', () => {
 
       const win = { id: 2 } as unknown as Electron.BrowserWindow
       const result = await importFromDialog(win)
-      expect(result.success).toBe(false)
-      expect(result.errorCode).toBe('INVALID_FILE')
+      expect(result.success).toBe(true)
+      expect(result.data?.imported).toEqual([])
+      expect(result.data?.rejections).toEqual([
+        { fileName: 'bad.json', errorCode: 'INVALID_FILE', error: 'Invalid key label file' },
+      ])
     })
 
     it('returns IO_ERROR on cancel', async () => {
@@ -265,6 +283,82 @@ describe('key-label-store', () => {
       const result = await importFromDialog(win)
       expect(result.success).toBe(false)
       expect(result.error).toBe('cancelled')
+    })
+
+    it('imports every file in a multi-select batch', async () => {
+      const dir = join(mockUserDataPath, 'tmp-import-multi')
+      await mkdir(dir, { recursive: true })
+      const pathA = join(dir, 'a.json')
+      const pathB = join(dir, 'b.json')
+      await writeFile(pathA, JSON.stringify({ name: 'Multi A', map: { KC_A: 'A' } }), 'utf-8')
+      await writeFile(pathB, JSON.stringify({ name: 'Multi B', map: { KC_B: 'B' } }), 'utf-8')
+
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({
+        canceled: false,
+        filePaths: [pathA, pathB],
+      })
+
+      const win = { id: 4 } as unknown as Electron.BrowserWindow
+      const result = await importFromDialog(win)
+
+      expect(result.success).toBe(true)
+      expect(result.data?.imported.map((m) => m.name).sort()).toEqual(['Multi A', 'Multi B'])
+      expect(result.data?.rejections).toEqual([])
+    })
+
+    it('imports the good files and reports the bad ones in a mixed batch', async () => {
+      const dir = join(mockUserDataPath, 'tmp-import-mixed')
+      await mkdir(dir, { recursive: true })
+      const goodPath = join(dir, 'good.json')
+      const badPath = join(dir, 'bad.json')
+      await writeFile(goodPath, JSON.stringify({ name: 'Good Label', map: { KC_A: 'A' } }), 'utf-8')
+      await writeFile(badPath, JSON.stringify({ notAValidShape: true }), 'utf-8')
+
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({
+        canceled: false,
+        filePaths: [goodPath, badPath],
+      })
+
+      const win = { id: 5 } as unknown as Electron.BrowserWindow
+      const result = await importFromDialog(win)
+
+      expect(result.success).toBe(true)
+      expect(result.data?.imported).toHaveLength(1)
+      expect(result.data?.imported[0].name).toBe('Good Label')
+      expect(result.data?.rejections).toEqual([
+        { fileName: 'bad.json', errorCode: 'INVALID_FILE', error: 'Invalid key label file' },
+      ])
+    })
+
+    it('overwrites the same entry when two files in one batch share a name', async () => {
+      const dir = join(mockUserDataPath, 'tmp-import-dup')
+      await mkdir(dir, { recursive: true })
+      const firstPath = join(dir, 'first.json')
+      const secondPath = join(dir, 'second.json')
+      await writeFile(firstPath, JSON.stringify({ name: 'Duplicate', map: { KC_A: 'A' } }), 'utf-8')
+      await writeFile(secondPath, JSON.stringify({ name: 'Duplicate', map: { KC_B: 'B' } }), 'utf-8')
+
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({
+        canceled: false,
+        filePaths: [firstPath, secondPath],
+      })
+
+      const win = { id: 6 } as unknown as Electron.BrowserWindow
+      const result = await importFromDialog(win)
+
+      expect(result.success).toBe(true)
+      expect(result.data?.imported).toHaveLength(2)
+      // Both entries resolve to the same id — the second overwrote the
+      // first in file-list order, which is the documented/acceptable
+      // behaviour for duplicate names within a single batch.
+      expect(result.data?.imported[0].id).toBe(result.data?.imported[1].id)
+
+      const metas = await listMetas()
+      const dup = metas.filter((m) => m.name === 'Duplicate')
+      expect(dup).toHaveLength(1)
+
+      const record = await getRecord(dup[0].id)
+      expect(record.data?.data.map).toEqual({ KC_B: 'B' })
     })
   })
 
@@ -403,7 +497,7 @@ describe('key-label-store', () => {
       const result = await importFromDialog(win)
       expect(result.success).toBe(true)
 
-      const record = await getRecord(result.data!.id)
+      const record = await getRecord(result.data!.imported[0].id)
       expect(record.data?.data.keymapApplicable).toBe(true)
     })
 
@@ -428,7 +522,7 @@ describe('key-label-store', () => {
       const result = await importFromDialog(win)
       expect(result.success).toBe(true)
 
-      const record = await getRecord(result.data!.id)
+      const record = await getRecord(result.data!.imported[0].id)
       expect(record.data?.data.keymapApplicable).toBeUndefined()
     })
   })

@@ -93,12 +93,21 @@ export interface ThemePackStoreResult<T> {
   error?: string
 }
 
-export interface ThemePackImportDialogResult {
-  canceled: boolean
+/** One file selected via the multi-select THEME_PACK_IMPORT dialog. Parsing
+ *  happens per-file in main; `parseError` is set instead of `raw` when the
+ *  file could not be read or was not valid JSON. */
+export interface ThemePackImportFile {
+  filePath: string
   raw?: unknown
   fileSizeBytes?: number
-  filePath?: string
   parseError?: string
+}
+
+/** Shape returned by the THEME_PACK_IMPORT IPC handler. `files` is empty
+ *  when `canceled` is true. */
+export interface ThemePackImportDialogResult {
+  canceled: boolean
+  files: ThemePackImportFile[]
 }
 
 export interface ThemePackImportApplyOptions {

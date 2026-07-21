@@ -29,6 +29,7 @@ import { useNameSort } from '../pack-modal/useNameSort'
 import { useDragReorder } from '../pack-modal/useDragReorder'
 import { applyDragOrder } from '../pack-modal/drag-order'
 import { useImportPlacement } from '../pack-modal/useImportPlacement'
+import { buildImportBatchFailureSummary, type ImportBatchFailure } from '../pack-modal/import-batch-summary'
 import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
 import { isOwnPack } from '../pack-modal/ownership'
 import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
@@ -70,7 +71,7 @@ export function KeyLabelsModal({
    * under the affected row instead of hunting for a toast. Cleared at
    * the start of the next operation.
    */
-  const [lastResult, setLastResult] = useState<PackActionResult | null>(null)
+  const [lastResult, setLastResult] = useState<PackActionResult | PackActionResult[] | null>(null)
 
   // Key Labels fetches the Hub origin once on first mount, unlike the
   // i18n/theme pack modals which re-fetch each time the modal opens.
@@ -182,26 +183,44 @@ export function KeyLabelsModal({
   const handleImport = useCallback(async () => {
     setActionError(null)
     setLastResult(null)
+    // Single snapshot for the whole batch: every file's writes already
+    // landed on disk in one `importFromFile()` IPC round trip, so
+    // "was this id present before the user picked files" is the same
+    // answer for every result regardless of processing order within
+    // the batch.
     const beforeIds = placement.snapshotBeforeIds()
     const res = await labels.importFromFile()
     if (res.success && res.data) {
-      // The store returns the (possibly overwritten) entry meta —
-      // anchor the inline "Saved" badge on whatever id ended up on
-      // disk so a re-import of the same name lights up the existing
-      // row instead of orphaning the message.
-      setLastResult({ id: res.data.id, kind: 'success', message: t('common.saved') })
-      // Auto-sync overwrites of an already-uploaded entry so the Hub
-      // post stays consistent with the user's local edit. Promote the
-      // inline badge from "Saved" to "Synced" on success.
-      if (res.data.hubPostId) {
-        const upd = await labels.hubUpdate(res.data.id)
-        if (upd.success) {
-          setLastResult({ id: res.data.id, kind: 'success', message: t('common.synced') })
-        } else {
-          setActionError(translateError(t, upd.errorCode, upd.error))
+      const successBadges: PackActionResult[] = []
+      const failures: ImportBatchFailure[] = res.data.rejections.map((r) => ({
+        fileName: r.fileName,
+        reason: translateError(t, r.errorCode, r.error),
+      }))
+      // Sequential await: each `place()` call is internally queued and
+      // reads the latest `entries` ref, so processing one at a time
+      // lets a later file's sorted-insert position see the earlier
+      // file's already-placed row instead of racing it.
+      for (const meta of res.data.imported) {
+        let message = t('common.saved')
+        // Auto-sync overwrites of an already-uploaded entry so the Hub
+        // post stays consistent with the user's local edit. Promote the
+        // badge from "Saved" to "Synced" on success; a sync failure is
+        // folded into the same failure summary as import rejections
+        // (the file itself imported fine, only the Hub push failed).
+        if (meta.hubPostId) {
+          const upd = await labels.hubUpdate(meta.id)
+          if (upd.success) {
+            message = t('common.synced')
+          } else {
+            failures.push({ fileName: meta.name, reason: translateError(t, upd.errorCode, upd.error) })
+          }
         }
+        successBadges.push({ id: meta.id, kind: 'success', message })
+        await placement.place({ id: meta.id, name: meta.name }, { beforeIds })
       }
-      await placement.place({ id: res.data.id, name: res.data.name }, { beforeIds })
+      if (successBadges.length > 0) setLastResult(successBadges)
+      const summary = buildImportBatchFailureSummary(t, failures)
+      if (summary) setActionError(summary)
     } else if (res.error && res.error !== 'cancelled') {
       setActionError(translateError(t, res.errorCode, res.error))
     }
@@ -303,6 +322,7 @@ export function KeyLabelsModal({
         searchButton: 'key-labels-search-button',
         importButton: 'key-labels-import-button',
         importFeedback: 'key-labels-import-feedback',
+        errorBanner: 'key-labels-error',
       }}
       activeTab={activeTab}
       onTabChange={setActiveTab}

@@ -13,7 +13,7 @@ import type { TrayStatus } from '../shared/types/vial-api'
 import type { SnapshotMeta } from '../shared/types/snapshot-store'
 import type { AnalyzeFilterSnapshotMeta } from '../shared/types/analyze-filter-store'
 import type { SavedFavoriteMeta, FavoriteImportResult } from '../shared/types/favorite-store'
-import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult } from '../shared/types/key-label-store'
+import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult, KeyLabelImportBatchResult } from '../shared/types/key-label-store'
 import type { TypingTestTextMeta, TypingTestTextRecord, TypingTestTextStoreResult } from '../shared/types/typing-test-text-store'
 import type { HubKeyLabelItem, HubKeyLabelListResponse, HubKeyLabelListParams, HubKeyLabelTimestampsResponse } from '../shared/types/hub-key-label'
 import type {
@@ -278,7 +278,7 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_RENAME, id, newName),
   keyLabelStoreDelete: (id: string): Promise<KeyLabelStoreResult<void>> =>
     ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_DELETE, id),
-  keyLabelStoreImport: (): Promise<KeyLabelStoreResult<KeyLabelMeta>> =>
+  keyLabelStoreImport: (): Promise<KeyLabelStoreResult<KeyLabelImportBatchResult>> =>
     ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_IMPORT),
   keyLabelStoreExport: (id: string): Promise<KeyLabelStoreResult<{ filePath: string }>> =>
     ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_EXPORT, id),

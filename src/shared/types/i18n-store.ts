@@ -128,13 +128,21 @@ export interface I18nPackRecord {
   pack: unknown
 }
 
-/** Shape returned by the I18N_PACK_IMPORT IPC handler. */
-export interface I18nPackImportDialogResult {
-  canceled: boolean
+/** One file selected via the multi-select I18N_PACK_IMPORT dialog. Parsing
+ *  happens per-file in main; `parseError` is set instead of `raw` when the
+ *  file could not be read or was not valid JSON. */
+export interface I18nPackImportFile {
+  filePath: string
   raw?: unknown
   fileSizeBytes?: number
-  filePath?: string
   parseError?: string
+}
+
+/** Shape returned by the I18N_PACK_IMPORT IPC handler. `files` is empty
+ *  when `canceled` is true. */
+export interface I18nPackImportDialogResult {
+  canceled: boolean
+  files: I18nPackImportFile[]
 }
 
 /** Optional flags forwarded with I18N_PACK_IMPORT_APPLY. */

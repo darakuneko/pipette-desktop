@@ -29,6 +29,7 @@ import { useDragReorder } from '../pack-modal/useDragReorder'
 import { applyDragOrder } from '../pack-modal/drag-order'
 import { useNameSort } from '../pack-modal/useNameSort'
 import { useImportPlacement } from '../pack-modal/useImportPlacement'
+import { buildImportBatchFailureSummary, basenameOf, type ImportBatchFailure } from '../pack-modal/import-batch-summary'
 import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
 import { fetchHubPackMeta } from '../pack-modal/fetch-hub-pack-meta'
 import { isOwnPack } from '../pack-modal/ownership'
@@ -66,7 +67,7 @@ export function ThemePacksModal({
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [pendingId, setPendingId] = useState<string | null>(null)
-  const [lastResult, setLastResult] = useState<PackActionResult | null>(null)
+  const [lastResult, setLastResult] = useState<PackActionResult | PackActionResult[] | null>(null)
   const [previewPostId, setPreviewPostId] = useState<string | null>(null)
   const previewSeqRef = useRef(0)
   const hubPreviewCacheRef = useRef(new Map<string, HubThemePackBody>())
@@ -293,38 +294,66 @@ export function ThemePacksModal({
     }
   }, [store, activeTheme, onThemeChange, t, currentDisplayName])
 
+  // Multi-file import batch: every selected file is processed
+  // independently (theme pack validation lives entirely main-side in
+  // `savePack`, so there is no renderer-side pre-check to run first,
+  // unlike Language Packs). Successes each get their own row badge
+  // (accumulated into an array — `PackResultBadge` looks up its row's
+  // own entry); failures (parse errors + save failures + failed Hub
+  // auto-syncs) are aggregated into one banner, mirroring the
+  // typing-analytics import precedent.
   const handleImportFile = useCallback(async () => {
     setActionError(null)
     setLastResult(null)
-    try {
-      const dialogResult = await store.importFromDialog()
-      if (dialogResult.canceled) return
-      if (dialogResult.parseError) {
-        setActionError(dialogResult.parseError)
-        return
+    const dialogResult = await store.importFromDialog()
+    if (dialogResult.canceled) return
+    const successBadges: PackActionResult[] = []
+    const failures: ImportBatchFailure[] = []
+    let lastImportedPackId: string | null = null
+    for (const file of dialogResult.files) {
+      const fileName = basenameOf(file.filePath)
+      if (file.parseError || file.raw === undefined) {
+        failures.push({ fileName, reason: file.parseError ?? t('themePacks.parseError') })
+        continue
       }
-      if (!dialogResult.raw) return
-      const beforeIds = placement.snapshotBeforeIds()
-      const result = await store.applyImport(dialogResult.raw)
-      if (!result.success || !result.meta) {
-        if (result.error) setActionError(result.error)
-        return
-      }
-      setLastResult({ id: result.meta.id, kind: 'success', message: t('common.saved') })
-      handleSelectTheme(`pack:${result.meta.id}`)
-      await placement.place({ id: result.meta.id, name: result.meta.name }, { beforeIds })
-
-      if (result.meta.hubPostId) {
-        const upd = await pushPackToHub(result.meta.id, result.meta.hubPostId)
-        if (upd.success) {
-          setLastResult({ id: result.meta.id, kind: 'success', message: t('common.synced') })
-        } else {
-          setActionError(upd.error ?? t('hub.updateFailed'))
+      try {
+        // Snapshot right before this file's own save rather than once
+        // for the whole batch: `applyImport` below is its own IPC round
+        // trip that lands immediately, so an earlier file already
+        // placed in this same loop is reflected in `nameSortEntries` by
+        // the time a later file's insert position is computed.
+        const beforeIds = placement.snapshotBeforeIds()
+        const result = await store.applyImport(file.raw)
+        if (!result.success || !result.meta) {
+          failures.push({ fileName, reason: result.error ?? t('themePacks.parseError') })
+          continue
         }
+        const meta = result.meta
+        let message = t('common.saved')
+        if (meta.hubPostId) {
+          const upd = await pushPackToHub(meta.id, meta.hubPostId)
+          if (upd.success) {
+            message = t('common.synced')
+          } else {
+            failures.push({ fileName: meta.name, reason: upd.error ?? t('hub.updateFailed') })
+          }
+        }
+        successBadges.push({ id: meta.id, kind: 'success', message })
+        lastImportedPackId = meta.id
+        await placement.place({ id: meta.id, name: meta.name }, { beforeIds })
+      } catch {
+        failures.push({ fileName, reason: t('themePacks.parseError') })
       }
-    } catch {
-      setActionError(t('themePacks.parseError'))
     }
+    if (successBadges.length > 0) {
+      setLastResult(successBadges)
+      // Mirror the single-file behaviour of switching the active theme
+      // to the freshly imported pack, anchored on the last successfully
+      // imported file for a deterministic final state.
+      if (lastImportedPackId) handleSelectTheme(`pack:${lastImportedPackId}`)
+    }
+    const summary = buildImportBatchFailureSummary(t, failures)
+    if (summary) setActionError(summary)
   }, [store, t, pushPackToHub, handleSelectTheme, placement])
 
   const handleRenameCommit = useCallback(async (id: string) => {

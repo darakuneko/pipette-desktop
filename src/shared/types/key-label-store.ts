@@ -74,3 +74,18 @@ export interface KeyLabelStoreResult<T> {
   errorCode?: KeyLabelStoreErrorCode
   error?: string
 }
+
+/** One file's failure within a multi-file `importFromDialog` batch. */
+export interface KeyLabelImportRejection {
+  fileName: string
+  errorCode: KeyLabelStoreErrorCode
+  error: string
+}
+
+/** Result of importing a batch of files selected via the multi-select
+ *  file dialog. Every selected file is processed independently — a bad
+ *  file is recorded in `rejections` rather than aborting the rest. */
+export interface KeyLabelImportBatchResult {
+  imported: KeyLabelMeta[]
+  rejections: KeyLabelImportRejection[]
+}

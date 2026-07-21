@@ -60,7 +60,7 @@ export interface InstalledTableProps {
   setConfirmDeleteId: (id: string | null) => void
   confirmRemoveId: string | null
   setConfirmRemoveId: (id: string | null) => void
-  lastResult: PackActionResult | null
+  lastResult: PackActionResult | PackActionResult[] | null
   rename: ReturnType<typeof useInlineRename<string>>
   currentDisplayName: string | null
   hubCanWrite: boolean

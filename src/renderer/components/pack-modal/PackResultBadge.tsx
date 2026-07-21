@@ -3,7 +3,10 @@
 import type { PackActionResult } from './pack-modal-types'
 
 export interface PackResultBadgeProps {
-  result: PackActionResult | null
+  /** A single-row action (rename, upload, delete, ...) sets one result.
+   *  A multi-file import batch sets an array so every successfully
+   *  imported row can show its own badge at the same time. */
+  result: PackActionResult | PackActionResult[] | null
   /** Row (or hub post) id this badge is anchored to — matches `result.id`. */
   rowId: string
   testid: string
@@ -16,13 +19,16 @@ export interface PackResultBadgeProps {
  * Key Labels so the feedback stays visually identical.
  */
 export function PackResultBadge({ result, rowId, testid }: PackResultBadgeProps): JSX.Element | null {
-  if (!result || result.id !== rowId) return null
+  const match = Array.isArray(result)
+    ? result.find((r) => r.id === rowId)
+    : (result && result.id === rowId ? result : null)
+  if (!match) return null
   return (
     <span
-      className={`text-xs font-medium ${result.kind === 'success' ? 'text-accent' : 'text-rose-600'}`}
+      className={`text-xs font-medium ${match.kind === 'success' ? 'text-accent' : 'text-rose-600'}`}
       data-testid={testid}
     >
-      {result.message}
+      {match.message}
     </span>
   )
 }

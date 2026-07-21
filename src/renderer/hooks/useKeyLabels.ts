@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type {
   KeyLabelMeta,
   KeyLabelStoreResult,
+  KeyLabelImportBatchResult,
 } from '../../shared/types/key-label-store'
 import type {
   HubKeyLabelListParams,
@@ -36,7 +37,7 @@ export interface UseKeyLabelsReturn {
   error: string | null
   refresh: () => Promise<void>
 
-  importFromFile: () => Promise<KeyLabelStoreResult<KeyLabelMeta>>
+  importFromFile: () => Promise<KeyLabelStoreResult<KeyLabelImportBatchResult>>
   exportEntry: (id: string) => Promise<KeyLabelStoreResult<{ filePath: string }>>
   reorder: (orderedIds: string[]) => Promise<KeyLabelStoreResult<void>>
   rename: (id: string, newName: string) => Promise<KeyLabelStoreResult<KeyLabelMeta>>
@@ -97,7 +98,7 @@ export function useKeyLabels(): UseKeyLabelsReturn {
     return () => window.removeEventListener(REFRESH_EVENT, handler)
   }, [refresh])
 
-  const importFromFile = useCallback(async (): Promise<KeyLabelStoreResult<KeyLabelMeta>> => {
+  const importFromFile = useCallback(async (): Promise<KeyLabelStoreResult<KeyLabelImportBatchResult>> => {
     const result = await window.vialAPI.keyLabelStoreImport()
     if (result.success) {
       await refresh()

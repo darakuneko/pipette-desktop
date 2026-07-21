@@ -25,11 +25,29 @@ import type {
   ThemePackRecord,
   ThemePackStoreResult,
   ThemePackImportDialogResult,
+  ThemePackImportFile,
 } from '../shared/types/theme-store'
 
 function broadcastChanged(): void {
   for (const win of BrowserWindow.getAllWindows()) {
     win.webContents.send(IpcChannels.THEME_PACK_CHANGED)
+  }
+}
+
+/** Read + parse a single file selected via the multi-select import dialog.
+ *  Never throws — a read or parse failure is reported via `parseError` so
+ *  one bad file in the batch does not abort the rest. */
+async function readOneImportFile(filePath: string): Promise<ThemePackImportFile> {
+  try {
+    const raw = await readFile(filePath, 'utf-8')
+    try {
+      const parsed: unknown = JSON.parse(raw)
+      return { filePath, raw: parsed, fileSizeBytes: Buffer.byteLength(raw, 'utf-8') }
+    } catch (err) {
+      return { filePath, fileSizeBytes: Buffer.byteLength(raw, 'utf-8'), parseError: String(err) }
+    }
+  } catch (err) {
+    return { filePath, parseError: String(err) }
   }
 }
 
@@ -146,41 +164,23 @@ export function setupThemePackStore(): void {
     IpcChannels.THEME_PACK_IMPORT,
     async (event): Promise<ThemePackImportDialogResult> => {
       const win = BrowserWindow.fromWebContents(event.sender)
-      if (!win) return { canceled: true }
+      if (!win) return { canceled: true, files: [] }
       const result = await dialog.showOpenDialog(win, {
         title: 'Import Theme Pack',
         filters: [
           { name: 'JSON', extensions: ['json'] },
           { name: 'All Files', extensions: ['*'] },
         ],
-        properties: ['openFile'],
+        properties: ['openFile', 'multiSelections'],
       })
       if (result.canceled || result.filePaths.length === 0) {
-        return { canceled: true }
+        return { canceled: true, files: [] }
       }
-      const filePath = result.filePaths[0]
-      try {
-        const raw = await readFile(filePath, 'utf-8')
-        let parsed: unknown
-        try {
-          parsed = JSON.parse(raw)
-        } catch (err) {
-          return {
-            canceled: false,
-            filePath,
-            fileSizeBytes: Buffer.byteLength(raw, 'utf-8'),
-            parseError: String(err),
-          }
-        }
-        return {
-          canceled: false,
-          raw: parsed,
-          filePath,
-          fileSizeBytes: Buffer.byteLength(raw, 'utf-8'),
-        }
-      } catch (err) {
-        return { canceled: false, filePath, parseError: String(err) }
+      const files: ThemePackImportFile[] = []
+      for (const filePath of result.filePaths) {
+        files.push(await readOneImportFile(filePath))
       }
+      return { canceled: false, files }
     },
   )
 

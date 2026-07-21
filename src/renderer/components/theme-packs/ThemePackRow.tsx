@@ -33,7 +33,7 @@ export interface PackRowProps {
   currentDisplayName: string | null
   hubCanWrite: boolean
   hubFreshness: Map<string, HubFreshnessEntry>
-  lastResult: PackActionResult | null
+  lastResult: PackActionResult | PackActionResult[] | null
   confirmRemoveId: string | null
   setConfirmRemoveId: (id: string | null) => void
   onUpload: (id: string) => void
