@@ -76,8 +76,9 @@ describe('LayoutStoreModal', () => {
       />,
     )
 
-    // Click load
+    // Click load — initial button is accent-styled too, matching its confirm step
     const loadButtons = screen.getAllByTestId('layout-store-load-btn')
+    expect(loadButtons[0].className).toContain('text-accent')
     fireEvent.click(loadButtons[0])
 
     // Confirm — accent-styled (not danger/red), unlike the delete confirm

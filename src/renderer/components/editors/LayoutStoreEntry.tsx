@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { FORMAT_BTN } from './layout-store-types'
 import type { HubEntryResult } from './layout-store-types'
 import { LayoutStoreHubRow } from './LayoutStoreHubActions'
-import { ACTION_BTN, CONFIRM_ACCENT_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, formatDate } from './store-modal-shared'
+import { ACTION_BTN, CONFIRM_ACCENT_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, LOAD_BTN, formatDate } from './store-modal-shared'
 import type { SnapshotMeta } from '../../../shared/types/snapshot-store'
 import type { HubMyPost } from '../../../shared/types/hub'
 
@@ -210,7 +210,7 @@ export function LayoutStoreEntry({
               {onLoad && (
                 <button
                   type="button"
-                  className={ACTION_BTN}
+                  className={LOAD_BTN}
                   onClick={() => setConfirmLoadId(entry.id)}
                   data-testid="layout-store-load-btn"
                 >
