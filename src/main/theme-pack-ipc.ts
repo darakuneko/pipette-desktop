@@ -5,10 +5,10 @@
 // and the main process treats pack JSON as opaque blobs that round-trip
 // via the dialog.
 
-import { BrowserWindow, dialog } from 'electron'
-import { readFile } from 'node:fs/promises'
+import { BrowserWindow } from 'electron'
 import { IpcChannels } from '../shared/ipc/channels'
 import { secureHandle } from './ipc-guard'
+import { readSelectedImportFiles } from './pack-import-dialog'
 import {
   listMetas,
   getPack,
@@ -146,41 +146,15 @@ export function setupThemePackStore(): void {
     IpcChannels.THEME_PACK_IMPORT,
     async (event): Promise<ThemePackImportDialogResult> => {
       const win = BrowserWindow.fromWebContents(event.sender)
-      if (!win) return { canceled: true }
-      const result = await dialog.showOpenDialog(win, {
+      const files = await readSelectedImportFiles(win, {
         title: 'Import Theme Pack',
         filters: [
           { name: 'JSON', extensions: ['json'] },
           { name: 'All Files', extensions: ['*'] },
         ],
-        properties: ['openFile'],
       })
-      if (result.canceled || result.filePaths.length === 0) {
-        return { canceled: true }
-      }
-      const filePath = result.filePaths[0]
-      try {
-        const raw = await readFile(filePath, 'utf-8')
-        let parsed: unknown
-        try {
-          parsed = JSON.parse(raw)
-        } catch (err) {
-          return {
-            canceled: false,
-            filePath,
-            fileSizeBytes: Buffer.byteLength(raw, 'utf-8'),
-            parseError: String(err),
-          }
-        }
-        return {
-          canceled: false,
-          raw: parsed,
-          filePath,
-          fileSizeBytes: Buffer.byteLength(raw, 'utf-8'),
-        }
-      } catch (err) {
-        return { canceled: false, filePath, parseError: String(err) }
-      }
+      if (!files) return { canceled: true, files: [] }
+      return { canceled: false, files }
     },
   )
 

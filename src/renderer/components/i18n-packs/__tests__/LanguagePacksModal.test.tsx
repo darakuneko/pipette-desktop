@@ -202,7 +202,7 @@ describe('LanguagePacksModal', () => {
     removeFn.mockResolvedValue({ success: true })
     renameFn.mockResolvedValue({ success: true })
     reorderFn.mockResolvedValue({ success: true })
-    importFromDialog.mockResolvedValue({ canceled: true })
+    importFromDialog.mockResolvedValue({ canceled: true, files: [] })
     applyImport.mockResolvedValue({ success: true, meta: meta() })
     vialAPI.hubGetOrigin.mockResolvedValue('https://hub.example.com')
     vialAPI.hubListI18nPosts.mockResolvedValue({ success: true, data: { items: [] } })
@@ -324,7 +324,7 @@ describe('LanguagePacksModal', () => {
 
   it('import applies the raw data when dialog returns a file', async () => {
     const raw = { name: 'Imported', version: '0.1.0', common: { ok: 'OK' } }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'imp1', name: 'Imported' }) })
     render(
       <LanguagePacksModal open onClose={vi.fn()} />,
@@ -333,8 +333,8 @@ describe('LanguagePacksModal', () => {
     await waitFor(() => expect(applyImport).toHaveBeenCalled())
   })
 
-  it('import shows error on parse failure', async () => {
-    importFromDialog.mockResolvedValueOnce({ canceled: false, parseError: 'Bad format' })
+  it('import shows error on parse failure, using the actual parseError message (P2b)', async () => {
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'bad.json', parseError: 'EACCES: permission denied' }] })
     render(
       <LanguagePacksModal open onClose={vi.fn()} />,
     )
@@ -342,11 +342,16 @@ describe('LanguagePacksModal', () => {
     await waitFor(() => {
       expect(screen.getByTestId('language-packs-error')).toBeTruthy()
     })
+    // The real read/parse error is surfaced verbatim — not replaced by
+    // the generic "invalid JSON" placeholder, which would be wrong for
+    // e.g. a permission error.
+    expect(screen.getByTestId('language-packs-error').textContent).toContain('EACCES: permission denied')
+    expect(screen.getByTestId('language-packs-error').textContent).toContain('bad.json')
   })
 
   it('import shows error for invalid pack validation', async () => {
     const raw = { name: 'Bad', version: 'not-semver', __invalid: true }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     render(
       <LanguagePacksModal open onClose={vi.fn()} />,
     )
@@ -358,7 +363,7 @@ describe('LanguagePacksModal', () => {
 
   it('import shows error for dangerous keys', async () => {
     const raw = { name: 'Danger', version: '0.1.0', __dangerous: true }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     render(
       <LanguagePacksModal open onClose={vi.fn()} />,
     )
@@ -370,7 +375,7 @@ describe('LanguagePacksModal', () => {
 
   it('overwrite import with hubPostId auto-syncs to Hub', async () => {
     const raw = { name: 'Synced', version: '0.1.0', common: {} }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 's1', name: 'Synced', hubPostId: 'hp1' }) })
     render(
       <LanguagePacksModal open onClose={vi.fn()} />,
@@ -398,7 +403,7 @@ describe('LanguagePacksModal', () => {
       meta({ id: 'z', name: 'Zeta', matchedBaseVersion: '0.1.0' }),
     ]
     const raw = { name: 'Mu', version: '0.1.0', common: {} }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'm', name: 'Mu' }) })
     render(<LanguagePacksModal open onClose={vi.fn()} />)
 
@@ -413,7 +418,7 @@ describe('LanguagePacksModal', () => {
       meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' }),
     ]
     const raw = { name: 'Mu', version: '0.1.0', common: {} }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'm', name: 'Mu' }) })
     render(<LanguagePacksModal open onClose={vi.fn()} />)
 
@@ -428,7 +433,7 @@ describe('LanguagePacksModal', () => {
       meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' }),
     ]
     const raw = { name: 'Beta', version: '0.1.0', common: {} }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'b', name: 'Beta' }) })
     render(<LanguagePacksModal open onClose={vi.fn()} />)
 
@@ -443,7 +448,7 @@ describe('LanguagePacksModal', () => {
       meta({ id: 'z', name: 'Zeta', matchedBaseVersion: '0.1.0' }),
     ]
     const raw = { name: 'Alpha', version: '0.1.0', common: {} }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     // Overwrite: the store reuses the existing 'a' id.
     applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'a', name: 'Alpha' }) })
     render(<LanguagePacksModal open onClose={vi.fn()} />)
@@ -464,7 +469,7 @@ describe('LanguagePacksModal', () => {
     try {
       storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
       const raw = { name: 'Beta', version: '0.1.0', common: {} }
-      importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+      importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
       applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'b', name: 'Beta' }) })
       render(<LanguagePacksModal open onClose={vi.fn()} />)
 
@@ -482,8 +487,8 @@ describe('LanguagePacksModal', () => {
   it('a second import replaces the feedback message immediately instead of stacking', async () => {
     storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
     importFromDialog
-      .mockResolvedValueOnce({ canceled: false, raw: { name: 'Beta', version: '0.1.0', common: {} } })
-      .mockResolvedValueOnce({ canceled: false, raw: { name: 'Gamma', version: '0.1.0', common: {} } })
+      .mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'beta.json', raw: { name: 'Beta', version: '0.1.0', common: {} } }] })
+      .mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'gamma.json', raw: { name: 'Gamma', version: '0.1.0', common: {} } }] })
     applyImport
       .mockResolvedValueOnce({ success: true, meta: meta({ id: 'b', name: 'Beta' }) })
       .mockResolvedValueOnce({ success: true, meta: meta({ id: 'g', name: 'Gamma' }) })
@@ -499,7 +504,7 @@ describe('LanguagePacksModal', () => {
   it('scrolls the imported row into view', async () => {
     storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
     const raw = { name: 'Beta', version: '0.1.0', common: {} }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     // The mocked store doesn't simulate a metas re-fetch on its own —
     // append the new meta to `storeMetas` here so the row actually
     // renders (and can be found by testid) on the next render, the way
@@ -523,6 +528,122 @@ describe('LanguagePacksModal', () => {
     } finally {
       scrollIntoView.mockRestore()
     }
+  })
+
+  it('multi-file import: every selected file is saved and each row gets its own "Saved" badge', async () => {
+    storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
+    const rawB = { name: 'Beta', version: '0.1.0', common: {} }
+    const rawC = { name: 'Gamma', version: '0.1.0', common: {} }
+    importFromDialog.mockResolvedValueOnce({
+      canceled: false,
+      files: [
+        { filePath: 'beta.json', raw: rawB },
+        { filePath: 'gamma.json', raw: rawC },
+      ],
+    })
+    const metaB = meta({ id: 'b', name: 'Beta' })
+    const metaC = meta({ id: 'c', name: 'Gamma' })
+    // The mocked store doesn't simulate a metas re-fetch on its own —
+    // append each new meta by hand so both rows actually render, the
+    // way a real `refresh()` would after each `applyImport` call.
+    applyImport
+      .mockImplementationOnce(async () => {
+        storeMetas = [...storeMetas, metaB]
+        return { success: true, meta: metaB }
+      })
+      .mockImplementationOnce(async () => {
+        storeMetas = [...storeMetas, metaC]
+        return { success: true, meta: metaC }
+      })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => expect(screen.getByTestId('language-packs-result-b').textContent).toBe('common.saved'))
+    expect(screen.getByTestId('language-packs-result-c').textContent).toBe('common.saved')
+  })
+
+  it('partial-failure batch: the good file keeps its badge while the bad file is aggregated into one banner', async () => {
+    storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
+    const rawGood = { name: 'Good Pack', version: '0.1.0', common: {} }
+    // `__invalid` triggers the mocked `validatePack`'s failure branch —
+    // this file never reaches `applyImport`.
+    const rawBad = { name: 'Bad Pack', version: 'not-semver', __invalid: true }
+    importFromDialog.mockResolvedValueOnce({
+      canceled: false,
+      files: [
+        { filePath: 'bad.json', raw: rawBad },
+        { filePath: 'good.json', raw: rawGood },
+      ],
+    })
+    // `matchedBaseVersion` matching BASE_REVISION keeps this pack out of
+    // the "stale pack auto-update" effect above — otherwise its own
+    // background `applyImport` call would double-count against the
+    // assertion below, which is unrelated to what this test verifies.
+    const goodMeta = meta({ id: 'g', name: 'Good Pack', matchedBaseVersion: '0.1.0' })
+    applyImport.mockImplementationOnce(async () => {
+      storeMetas = [...storeMetas, goodMeta]
+      return { success: true, meta: goodMeta }
+    })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => expect(screen.getByTestId('language-packs-result-g').textContent).toBe('common.saved'))
+
+    // Only the good file ever reached the store.
+    expect(applyImport).toHaveBeenCalledTimes(1)
+    const banner = screen.getByTestId('language-packs-error')
+    expect(banner.textContent).toContain('bad.json')
+  })
+
+  it('P1 fix: importing files that interleave with existing rows (existing A,D; import B,C) lands fully sorted A,B,C,D in one reorder call', async () => {
+    storeMetas = [
+      meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' }),
+      meta({ id: 'd', name: 'Delta', matchedBaseVersion: '0.1.0' }),
+    ]
+    const rawB = { name: 'Beta', version: '0.1.0', common: {} }
+    const rawC = { name: 'Charlie', version: '0.1.0', common: {} }
+    importFromDialog.mockResolvedValueOnce({
+      canceled: false,
+      files: [
+        { filePath: 'beta.json', raw: rawB },
+        { filePath: 'charlie.json', raw: rawC },
+      ],
+    })
+    const metaB = meta({ id: 'b', name: 'Beta' })
+    const metaC = meta({ id: 'c', name: 'Charlie' })
+    applyImport
+      .mockResolvedValueOnce({ success: true, meta: metaB })
+      .mockResolvedValueOnce({ success: true, meta: metaC })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => expect(reorderFn).toHaveBeenCalled())
+    // Without the fix, Charlie's position would be computed against a
+    // stale [Alpha, Delta] snapshot that never saw Beta's insert,
+    // persisting ['a', 'c', 'd'] and silently dropping Beta.
+    expect(reorderFn).toHaveBeenCalledTimes(1)
+    expect(reorderFn).toHaveBeenCalledWith(['a', 'b', 'c', 'd'])
+  })
+
+  it('hub-sync failure after import is reported against the originating filename, not the pack name (P2a)', async () => {
+    storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
+    const raw = { name: 'Existing Pack', version: '0.1.0', common: {} }
+    importFromDialog.mockResolvedValueOnce({
+      canceled: false,
+      files: [{ filePath: 'my-upload.json', raw }],
+    })
+    const savedMeta = meta({ id: 'e', name: 'Existing Pack', hubPostId: 'hub-1', matchedBaseVersion: '0.1.0' })
+    applyImport.mockResolvedValueOnce({ success: true, meta: savedMeta })
+    vialAPI.hubUpdateI18nPost.mockResolvedValueOnce({ success: false, error: 'network error' })
+    render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('language-packs-import-button'))
+    await waitFor(() => {
+      expect(screen.getByTestId('language-packs-error')).toBeTruthy()
+    })
+    const banner = screen.getByTestId('language-packs-error')
+    expect(banner.textContent).toContain('my-upload.json')
+    expect(banner.textContent).toContain('network error')
   })
 
   it('hub download parity: a new Hub download is inserted at its sorted position via reorder', async () => {
@@ -1171,7 +1292,7 @@ describe('LanguagePacksModal', () => {
       meta({ id: 'z', name: 'Zeta', matchedBaseVersion: '0.1.0' }),
     ]
     const raw = { name: 'Charlie', version: '0.1.0', common: {} }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'c', name: 'Charlie' }) })
     render(<LanguagePacksModal open onClose={vi.fn()} />)
 

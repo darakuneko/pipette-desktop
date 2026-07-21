@@ -38,3 +38,43 @@ export function computeSortedInsertOrder(
   ids.splice(insertAt, 0, newEntry.id)
   return ids
 }
+
+/**
+ * Batch variant of `computeSortedInsertOrder` for a multi-file import:
+ * positions every entry in `newEntries` into its sorted slot among
+ * `existingEntries` AND each other, in one pure pass over the two input
+ * arrays. This is deliberately NOT "call `computeSortedInsertOrder` once
+ * per new entry, feeding each result back into `existingEntries`" done by
+ * the *caller* across separate async steps — see `placeMany` in
+ * `useImportPlacement.ts` for why a real caller can't safely do that
+ * (the "existing" list a later step would read may not yet reflect an
+ * earlier step's insert, or may already reflect it from an unrelated
+ * background refresh, either of which corrupts the merge). Here the
+ * fold happens synchronously across `newEntries` with no I/O and no
+ * React state in between, so it can't observe anything but its own
+ * arguments.
+ *
+ * `newEntries` must not overlap `existingEntries`' ids (same "genuinely
+ * new, not overwrite" contract as `computeSortedInsertOrder`) and must
+ * not contain duplicate ids itself — callers dedupe a batch's results
+ * before calling this. Returns `null` when `direction` is 'free' or
+ * there is nothing to insert.
+ */
+export function computeSortedInsertOrderMany(
+  existingEntries: NameSortEntry[],
+  newEntries: NameSortEntry[],
+  direction: SortDirection,
+): string[] | null {
+  if (direction === 'free' || newEntries.length === 0) return null
+  let current: NameSortEntry[] = existingEntries
+  for (const entry of newEntries) {
+    // `direction` is never 'free' here, so `computeSortedInsertOrder`
+    // always returns a real list — the fallback only exists to satisfy
+    // the compiler's `string[] | null` return type.
+    const ids = computeSortedInsertOrder(current, entry, direction) ?? [...current.map((e) => e.id), entry.id]
+    const byId = new Map(current.map((e) => [e.id, e] as const))
+    byId.set(entry.id, entry)
+    current = ids.map((id) => byId.get(id) as NameSortEntry)
+  }
+  return current.map((e) => e.id)
+}

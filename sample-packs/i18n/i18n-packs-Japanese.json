@@ -1,5 +1,5 @@
 {
-  "version": "0.1.40",
+  "version": "0.1.41",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -39,7 +39,9 @@
     "searchPlaceholder": "Pipette Hub を検索 (2 文字以上で入力)…",
     "sortByName": "名前",
     "importedNamed": "{{name}} をインポートしました",
-    "updatedNamed": "{{name}} を更新しました"
+    "updatedNamed": "{{name}} を更新しました",
+    "importBatchFailed_one": "{{count}} 件のファイルをインポートできませんでした：",
+    "importBatchFailed_other": "{{count}} 件のファイルをインポートできませんでした："
   },
   "app": {
     "title": "Pipette",

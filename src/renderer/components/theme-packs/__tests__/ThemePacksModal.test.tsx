@@ -143,7 +143,7 @@ describe('ThemePacksModal', () => {
     mockTheme = 'system'
     removeFn.mockResolvedValue({ success: true })
     renameFn.mockResolvedValue({ success: true })
-    importFromDialog.mockResolvedValue({ canceled: true })
+    importFromDialog.mockResolvedValue({ canceled: true, files: [] })
     applyImport.mockResolvedValue({ success: true, meta: meta() })
     exportPack.mockResolvedValue({ success: true })
     reorderFn.mockResolvedValue({ success: true })
@@ -323,7 +323,7 @@ describe('ThemePacksModal', () => {
 
   it('import applies the raw data when dialog returns a file', async () => {
     const raw = { name: 'Imported', version: '1', colorScheme: 'dark', colors: {} }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'new1', name: 'Imported' }) })
     render(
       <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
@@ -333,20 +333,19 @@ describe('ThemePacksModal', () => {
   })
 
   it('import shows error on parse failure', async () => {
-    importFromDialog.mockResolvedValueOnce({ canceled: false, parseError: 'Bad format' })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'bad.json', parseError: 'Bad format' }] })
     render(
       <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
     )
     fireEvent.click(screen.getByTestId('theme-packs-import-button'))
     await waitFor(() => {
-      expect(screen.getByTestId('theme-packs-error')).toBeTruthy()
-      expect(screen.getByText('Bad format')).toBeTruthy()
+      expect(screen.getByTestId('theme-packs-error').textContent).toContain('Bad format')
     })
   })
 
   it('import with hubPostId auto-syncs to hub', async () => {
     const raw = { name: 'Synced', version: '1', colorScheme: 'dark', colors: {} }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 's1', name: 'Synced', hubPostId: 'hp1' }) })
     render(
       <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
@@ -361,7 +360,7 @@ describe('ThemePacksModal', () => {
     // Already ascending — detected as 'asc' on open, no click needed.
     metas = [meta({ id: 'a', name: 'Alpha' }), meta({ id: 'z', name: 'Zeta' })]
     const raw = { name: 'Mu', version: '1', colorScheme: 'dark', colors: {} }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'm', name: 'Mu' }) })
     render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
 
@@ -373,7 +372,7 @@ describe('ThemePacksModal', () => {
     // Already descending — detected as 'desc' on open, no click needed.
     metas = [meta({ id: 'z', name: 'Zeta' }), meta({ id: 'a', name: 'Alpha' })]
     const raw = { name: 'Mu', version: '1', colorScheme: 'dark', colors: {} }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'm', name: 'Mu' }) })
     render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
 
@@ -384,7 +383,7 @@ describe('ThemePacksModal', () => {
   it('free state (shuffled list): a new import does not call reorder — the store appends it at the bottom on its own', async () => {
     metas = [meta({ id: 'm', name: 'Mu' }), meta({ id: 'z', name: 'Zeta' }), meta({ id: 'a', name: 'Alpha' })]
     const raw = { name: 'Beta', version: '1', colorScheme: 'dark', colors: {} }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'b', name: 'Beta' }) })
     render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
 
@@ -396,7 +395,7 @@ describe('ThemePacksModal', () => {
   it('overwrite (same id already installed) keeps its position — no reorder call, "Updated" feedback', async () => {
     metas = [meta({ id: 'a', name: 'Alpha' }), meta({ id: 'z', name: 'Zeta' })]
     const raw = { name: 'Alpha', version: '1', colorScheme: 'dark', colors: {} }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     // Overwrite: the store reuses the existing 'a' id.
     applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'a', name: 'Alpha' }) })
     render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
@@ -410,7 +409,7 @@ describe('ThemePacksModal', () => {
   it('new import shows "Imported {{name}}" feedback next to the Name button', async () => {
     metas = [meta({ id: 'a', name: 'Alpha' })]
     const raw = { name: 'Beta', version: '1', colorScheme: 'dark', colors: {} }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     applyImport.mockResolvedValueOnce({ success: true, meta: meta({ id: 'b', name: 'Beta' }) })
     render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
 
@@ -421,7 +420,7 @@ describe('ThemePacksModal', () => {
   it('scrolls the imported row into view', async () => {
     metas = [meta({ id: 'a', name: 'Alpha' })]
     const raw = { name: 'Beta', version: '1', colorScheme: 'dark', colors: {} }
-    importFromDialog.mockResolvedValueOnce({ canceled: false, raw })
+    importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'test.json', raw }] })
     const newMeta = meta({ id: 'b', name: 'Beta' })
     applyImport.mockImplementationOnce(async () => {
       metas = [...metas, newMeta]
@@ -438,6 +437,114 @@ describe('ThemePacksModal', () => {
     } finally {
       scrollIntoView.mockRestore()
     }
+  })
+
+  it('multi-file import: every selected file is saved and each row gets its own "Saved" badge', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha' })]
+    const rawB = { name: 'Beta', version: '1', colorScheme: 'dark', colors: {} }
+    const rawC = { name: 'Gamma', version: '1', colorScheme: 'dark', colors: {} }
+    importFromDialog.mockResolvedValueOnce({
+      canceled: false,
+      files: [
+        { filePath: 'beta.json', raw: rawB },
+        { filePath: 'gamma.json', raw: rawC },
+      ],
+    })
+    const metaB = meta({ id: 'b', name: 'Beta' })
+    const metaC = meta({ id: 'c', name: 'Gamma' })
+    // The mocked store doesn't simulate a metas re-fetch on its own —
+    // append each new meta by hand so both rows actually render, the
+    // way a real `refresh()` would after each `applyImport` call.
+    applyImport
+      .mockImplementationOnce(async () => {
+        metas = [...metas, metaB]
+        return { success: true, meta: metaB }
+      })
+      .mockImplementationOnce(async () => {
+        metas = [...metas, metaC]
+        return { success: true, meta: metaC }
+      })
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('theme-packs-import-button'))
+    await waitFor(() => expect(screen.getByTestId('theme-packs-result-b').textContent).toBe('common.saved'))
+    expect(screen.getByTestId('theme-packs-result-c').textContent).toBe('common.saved')
+  })
+
+  it('partial-failure batch: the good file keeps its badge while the bad file is aggregated into one banner', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha' })]
+    const rawGood = { name: 'Good Theme', version: '1', colorScheme: 'dark', colors: {} }
+    const rawBad = { name: 'Bad Theme', version: '1', colorScheme: 'dark', colors: {} }
+    importFromDialog.mockResolvedValueOnce({
+      canceled: false,
+      files: [
+        { filePath: 'bad.json', raw: rawBad },
+        { filePath: 'good.json', raw: rawGood },
+      ],
+    })
+    const goodMeta = meta({ id: 'g', name: 'Good Theme' })
+    applyImport
+      .mockResolvedValueOnce({ success: false, error: 'Invalid theme colors' })
+      .mockImplementationOnce(async () => {
+        metas = [...metas, goodMeta]
+        return { success: true, meta: goodMeta }
+      })
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('theme-packs-import-button'))
+    await waitFor(() => expect(screen.getByTestId('theme-packs-result-g').textContent).toBe('common.saved'))
+
+    const banner = screen.getByTestId('theme-packs-error')
+    expect(banner.textContent).toContain('bad.json')
+    expect(banner.textContent).toContain('Invalid theme colors')
+  })
+
+  it('P1 fix: importing files that interleave with existing rows (existing A,D; import B,C) lands fully sorted A,B,C,D in one reorder call', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha' }), meta({ id: 'd', name: 'Delta' })]
+    const rawB = { name: 'Beta', version: '1', colorScheme: 'dark', colors: {} }
+    const rawC = { name: 'Charlie', version: '1', colorScheme: 'dark', colors: {} }
+    importFromDialog.mockResolvedValueOnce({
+      canceled: false,
+      files: [
+        { filePath: 'beta.json', raw: rawB },
+        { filePath: 'charlie.json', raw: rawC },
+      ],
+    })
+    const metaB = meta({ id: 'b', name: 'Beta' })
+    const metaC = meta({ id: 'c', name: 'Charlie' })
+    applyImport
+      .mockResolvedValueOnce({ success: true, meta: metaB })
+      .mockResolvedValueOnce({ success: true, meta: metaC })
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('theme-packs-import-button'))
+    await waitFor(() => expect(reorderFn).toHaveBeenCalled())
+    // Without the fix, Charlie's position would be computed against a
+    // stale [Alpha, Delta] snapshot that never saw Beta's insert,
+    // persisting ['a', 'c', 'd'] and silently dropping Beta.
+    expect(reorderFn).toHaveBeenCalledTimes(1)
+    expect(reorderFn).toHaveBeenCalledWith(['a', 'b', 'c', 'd'])
+  })
+
+  it('hub-sync failure after import is reported against the originating filename, not the pack name (P2a)', async () => {
+    metas = [meta({ id: 'a', name: 'Alpha' })]
+    const raw = { name: 'Existing Pack', version: '1', colorScheme: 'dark', colors: {} }
+    importFromDialog.mockResolvedValueOnce({
+      canceled: false,
+      files: [{ filePath: 'my-upload.json', raw }],
+    })
+    const savedMeta = meta({ id: 'e', name: 'Existing Pack', hubPostId: 'hub-1' })
+    applyImport.mockResolvedValueOnce({ success: true, meta: savedMeta })
+    vialAPI.hubUpdateThemePost.mockResolvedValueOnce({ success: false, error: 'network error' })
+    render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+
+    fireEvent.click(screen.getByTestId('theme-packs-import-button'))
+    await waitFor(() => {
+      expect(screen.getByTestId('theme-packs-error')).toBeTruthy()
+    })
+    const banner = screen.getByTestId('theme-packs-error')
+    expect(banner.textContent).toContain('my-upload.json')
+    expect(banner.textContent).toContain('network error')
   })
 
   it('hub download parity: a new Hub download is inserted at its sorted position via reorder', async () => {

@@ -18,11 +18,11 @@ import { useAppConfig } from '../../hooks/useAppConfig'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { useI18nPackStore } from '../../hooks/useI18nPackStore'
 import i18n from '../../i18n'
-import { validatePack } from '../../../shared/i18n/validate'
+import { validatePack, type ValidatePackResult } from '../../../shared/i18n/validate'
 import { computeCoverage } from '../../../shared/i18n/coverage'
 import { BASE_REVISION, ENGLISH_PACK_BODY } from '../../i18n/coverage-cache'
 import english from '../../i18n/locales/english.json'
-import { BUILTIN_ENGLISH_PACK_ID } from '../../../shared/types/i18n-store'
+import { BUILTIN_ENGLISH_PACK_ID, type I18nPackMeta } from '../../../shared/types/i18n-store'
 import type { HubI18nPostListItem } from '../../../shared/types/hub'
 import { MissingKeysModal } from './MissingKeysModal'
 import { downloadJson } from '../../utils/download-json'
@@ -37,6 +37,7 @@ import { useDragReorder } from '../pack-modal/useDragReorder'
 import { applyDragOrder } from '../pack-modal/drag-order'
 import { useNameSort } from '../pack-modal/useNameSort'
 import { useImportPlacement } from '../pack-modal/useImportPlacement'
+import { buildImportBatchFailureSummary, basenameOf, type ImportBatchFailure } from '../pack-modal/import-batch-summary'
 import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
 import { fetchHubPackMeta } from '../pack-modal/fetch-hub-pack-meta'
 import { isOwnPack } from '../pack-modal/ownership'
@@ -77,7 +78,7 @@ export function LanguagePacksModal({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [lastResult, setLastResult] = useState<PackActionResult | null>(null)
+  const [lastResult, setLastResult] = useState<PackActionResult | PackActionResult[] | null>(null)
   const [missingKeysFor, setMissingKeysFor] = useState<{ name: string; keys: string[] } | null>(null)
 
   const builtinName = (english as Record<string, unknown>).name as string ?? 'English'
@@ -555,26 +556,21 @@ export function LanguagePacksModal({
     }
   }, [t])
 
-  // Inline import path: validate locally, compute coverage, then ask
-  // the store to persist. Failures surface through `setActionError`
-  // (the same banner KeyLabels uses) instead of opening a separate
-  // confirmation modal.
-  const persistImportedPack = useCallback(async (
+  // Core validate + coverage + persist step, shared by the single-item
+  // Hub-download path (`persistImportedPack` below) and the multi-file
+  // import batch (`handleImportFile`). Returns the outcome instead of
+  // touching state so each caller decides how to surface it (single
+  // banner vs. an accumulated batch summary).
+  const importOnePack = useCallback(async (
     raw: unknown,
-    extra: { hubPostId?: string } = {},
-  ): Promise<void> => {
-    setActionError(null)
-    setLastResult(null)
+  ): Promise<{ ok: true; meta: I18nPackMeta; validation: ValidatePackResult } | { ok: false; error: string }> => {
     const validation = validatePack(raw)
     if (!validation.ok) {
-      setActionError(validation.errors[0] ?? t('i18n.errorGeneric'))
-      return
+      return { ok: false, error: validation.errors[0] ?? t('i18n.errorGeneric') }
     }
     if (validation.dangerousKeys.length > 0) {
-      setActionError(t('i18n.preview.dangerousWarning'))
-      return
+      return { ok: false, error: t('i18n.preview.dangerousWarning') }
     }
-    const beforeIds = placement.snapshotBeforeIds()
     const coverage = computeCoverage(raw, ENGLISH_PACK_BODY)
     const result = await store.applyImport(raw, {
       enabled: true,
@@ -584,12 +580,32 @@ export function LanguagePacksModal({
       dangerousKeyCount: validation.dangerousKeys.length,
     })
     if (!result.success || !result.meta) {
-      setActionError(result.error ?? t('i18n.errorGeneric'))
+      return { ok: false, error: result.error ?? t('i18n.errorGeneric') }
+    }
+    return { ok: true, meta: result.meta, validation }
+  }, [store, t])
+
+  // Single-item import path: Hub download funnels through here (the
+  // toolbar's own multi-file import now goes through `importOnePack`
+  // directly — see `handleImportFile` below). Failures surface through
+  // `setActionError` (the same banner KeyLabels uses) instead of
+  // opening a separate confirmation modal.
+  const persistImportedPack = useCallback(async (
+    raw: unknown,
+    extra: { hubPostId?: string } = {},
+  ): Promise<void> => {
+    setActionError(null)
+    setLastResult(null)
+    const beforeIds = placement.snapshotBeforeIds()
+    const imported = await importOnePack(raw)
+    if (!imported.ok) {
+      setActionError(imported.error)
       return
     }
-    setLastResult({ id: result.meta.id, kind: 'success', message: t('common.saved') })
-    handleSelectLanguage(`pack:${result.meta.id}`)
-    await placement.place({ id: result.meta.id, name: result.meta.name }, { beforeIds })
+    const { meta, validation } = imported
+    setLastResult({ id: meta.id, kind: 'success', message: t('common.saved') })
+    handleSelectLanguage(`pack:${meta.id}`)
+    await placement.place({ id: meta.id, name: meta.name }, { beforeIds })
 
     if (extra.hubPostId) {
       // Same Author/Updated enrichment as handleSync — the download
@@ -597,33 +613,102 @@ export function LanguagePacksModal({
       const enriched = validation.header
         ? await fetchHubPackMeta(window.vialAPI.hubListI18nPosts, validation.header.name, extra.hubPostId)
         : {}
-      void window.vialAPI.i18nPackSetHubPostId(result.meta.id, extra.hubPostId, enriched.uploaderName, enriched.hubUpdatedAt)
+      void window.vialAPI.i18nPackSetHubPostId(meta.id, extra.hubPostId, enriched.uploaderName, enriched.hubUpdatedAt)
       return
     }
     // Auto-sync to Hub when this overwrite landed on an entry that
     // already mirrors a Hub post. Promote the inline badge from
     // "Saved" to "Synced" so the user can see the second step
     // completed; failure surfaces inline without rolling back local.
-    if (result.meta.hubPostId) {
-      const upd = await pushPackToHub(result.meta.id, result.meta.hubPostId)
+    if (meta.hubPostId) {
+      const upd = await pushPackToHub(meta.id, meta.hubPostId)
       if (upd.success) {
-        setLastResult({ id: result.meta.id, kind: 'success', message: t('common.synced') })
+        setLastResult({ id: meta.id, kind: 'success', message: t('common.synced') })
       } else {
         setActionError(upd.error ?? t('hub.updateFailed'))
       }
     }
-  }, [store, t, pushPackToHub, handleSelectLanguage, placement])
+  }, [importOnePack, t, pushPackToHub, handleSelectLanguage, placement])
 
+  // Multi-file import batch: every selected file is parsed and saved
+  // independently, but the actual list placement happens in ONE call at
+  // the end via `placement.placeMany` — see the RAPID-INSERT RACE and
+  // DIRECTION RACE notes in useImportPlacement.ts for why calling
+  // `place()` once per file (the original approach) could compute a
+  // later file's position from a stale/inconsistent snapshot and
+  // silently drop an earlier file's id from the persisted order, or
+  // merge against a sort direction that changed mid-batch. Two files
+  // resolving to the same pack (same name,
+  // so main's auto-overwrite reuses the same id) are deduped, keeping
+  // only the last file's outcome — that's what actually ended up on
+  // disk — so hub-sync and the row badge only run/appear once per id.
+  // Successes each get their own row badge (accumulated into an array —
+  // `PackResultBadge` looks up its row's own entry); failures (parse
+  // errors + save failures + failed Hub auto-syncs) are aggregated into
+  // one banner via `buildImportBatchFailureSummary`, mirroring the
+  // typing-analytics import precedent, and always report the ACTUAL
+  // selected filename (never the pack's own internal `name`) plus the
+  // real underlying reason (never a generic placeholder when a real
+  // message is available).
   const handleImportFile = useCallback(async (): Promise<void> => {
     setActionError(null)
+    setLastResult(null)
     const dialogResult = await store.importFromDialog()
     if (dialogResult.canceled) return
-    if (dialogResult.parseError || dialogResult.raw === undefined) {
-      setActionError(t('i18n.errorInvalidJson'))
-      return
+    const beforeSnapshot = placement.snapshotEntries()
+    const failures: ImportBatchFailure[] = []
+    const rawSuccesses: { fileName: string; meta: I18nPackMeta }[] = []
+    for (const file of dialogResult.files) {
+      const fileName = basenameOf(file.filePath)
+      if (file.parseError || file.raw === undefined) {
+        failures.push({ fileName, reason: file.parseError ?? t('i18n.errorInvalidJson') })
+        continue
+      }
+      const imported = await importOnePack(file.raw)
+      if (!imported.ok) {
+        failures.push({ fileName, reason: imported.error })
+        continue
+      }
+      rawSuccesses.push({ fileName, meta: imported.meta })
     }
-    await persistImportedPack(dialogResult.raw)
-  }, [persistImportedPack, store, t])
+
+    // Dedupe by pack id, keeping the last file's outcome (see doc above).
+    const dedupedById = new Map<string, { fileName: string; meta: I18nPackMeta }>()
+    for (const success of rawSuccesses) {
+      dedupedById.delete(success.meta.id)
+      dedupedById.set(success.meta.id, success)
+    }
+    const deduped = [...dedupedById.values()]
+
+    const successBadges: PackActionResult[] = []
+    for (const { fileName, meta } of deduped) {
+      let message = t('common.saved')
+      if (meta.hubPostId) {
+        const upd = await pushPackToHub(meta.id, meta.hubPostId)
+        if (upd.success) {
+          message = t('common.synced')
+        } else {
+          failures.push({ fileName, reason: upd.error ?? t('hub.updateFailed') })
+        }
+      }
+      successBadges.push({ id: meta.id, kind: 'success', message })
+    }
+
+    if (deduped.length > 0) {
+      await placement.placeMany(
+        deduped.map(({ meta }) => ({ id: meta.id, name: meta.name })),
+        beforeSnapshot,
+      )
+      setLastResult(successBadges)
+      // Mirror the single-file behaviour of switching the active
+      // language to the freshly imported pack, anchored on the last
+      // successfully imported (post-dedupe) file for a deterministic
+      // final state.
+      handleSelectLanguage(`pack:${deduped[deduped.length - 1].meta.id}`)
+    }
+    const summary = buildImportBatchFailureSummary(t, failures)
+    if (summary) setActionError(summary)
+  }, [store, t, placement, importOnePack, pushPackToHub, handleSelectLanguage])
 
   const handleHubDownload = useCallback(async (postId: string): Promise<void> => {
     setPendingId(postId)

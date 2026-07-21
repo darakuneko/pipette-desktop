@@ -29,6 +29,7 @@ import { useNameSort } from '../pack-modal/useNameSort'
 import { useDragReorder } from '../pack-modal/useDragReorder'
 import { applyDragOrder } from '../pack-modal/drag-order'
 import { useImportPlacement } from '../pack-modal/useImportPlacement'
+import { buildImportBatchFailureSummary, type ImportBatchFailure } from '../pack-modal/import-batch-summary'
 import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
 import { isOwnPack } from '../pack-modal/ownership'
 import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
@@ -70,7 +71,7 @@ export function KeyLabelsModal({
    * under the affected row instead of hunting for a toast. Cleared at
    * the start of the next operation.
    */
-  const [lastResult, setLastResult] = useState<PackActionResult | null>(null)
+  const [lastResult, setLastResult] = useState<PackActionResult | PackActionResult[] | null>(null)
 
   // Key Labels fetches the Hub origin once on first mount, unlike the
   // i18n/theme pack modals which re-fetch each time the modal opens.
@@ -179,29 +180,70 @@ export function KeyLabelsModal({
     [hubResults, labels.metas],
   )
 
+  // Multi-file import batch. All of the batch's writes already land on
+  // disk in one `importFromFile()` IPC round trip, so `beforeSnapshot`
+  // (entries + sort direction) captured once up front is the correct
+  // "before the user's action" baseline for every result regardless of
+  // processing order — even if the user flips the Name-sort toggle
+  // while the batch is running. The actual list placement happens in
+  // ONE `placement.placeMany` call at the end — see the RAPID-INSERT
+  // RACE and DIRECTION RACE notes in useImportPlacement.ts for why
+  // calling `place()` once per file (the original approach) could
+  // compute a later file's position from a stale/inconsistent snapshot
+  // and silently drop an earlier file's id from the persisted order, or
+  // merge against the wrong direction. Two files resolving to the same
+  // label (main's overwrite-by-name reuses the same id) are deduped,
+  // keeping only the last file's outcome — that's what actually ended
+  // up on disk — so hub-sync and the row badge only run/appear once
+  // per id, not once per file.
   const handleImport = useCallback(async () => {
     setActionError(null)
     setLastResult(null)
-    const beforeIds = placement.snapshotBeforeIds()
+    const beforeSnapshot = placement.snapshotEntries()
     const res = await labels.importFromFile()
     if (res.success && res.data) {
-      // The store returns the (possibly overwritten) entry meta —
-      // anchor the inline "Saved" badge on whatever id ended up on
-      // disk so a re-import of the same name lights up the existing
-      // row instead of orphaning the message.
-      setLastResult({ id: res.data.id, kind: 'success', message: t('common.saved') })
-      // Auto-sync overwrites of an already-uploaded entry so the Hub
-      // post stays consistent with the user's local edit. Promote the
-      // inline badge from "Saved" to "Synced" on success.
-      if (res.data.hubPostId) {
-        const upd = await labels.hubUpdate(res.data.id)
-        if (upd.success) {
-          setLastResult({ id: res.data.id, kind: 'success', message: t('common.synced') })
-        } else {
-          setActionError(translateError(t, upd.errorCode, upd.error))
-        }
+      const failures: ImportBatchFailure[] = res.data.rejections.map((r) => ({
+        fileName: r.fileName,
+        reason: translateError(t, r.errorCode, r.error),
+      }))
+
+      const dedupedById = new Map<string, { fileName: string; meta: KeyLabelMeta }>()
+      for (const success of res.data.imported) {
+        dedupedById.delete(success.meta.id)
+        dedupedById.set(success.meta.id, success)
       }
-      await placement.place({ id: res.data.id, name: res.data.name }, { beforeIds })
+      const deduped = [...dedupedById.values()]
+
+      const successBadges: PackActionResult[] = []
+      for (const { fileName, meta } of deduped) {
+        let message = t('common.saved')
+        // Auto-sync overwrites of an already-uploaded entry so the Hub
+        // post stays consistent with the user's local edit. Promote the
+        // badge from "Saved" to "Synced" on success; a sync failure is
+        // folded into the same failure summary as import rejections
+        // (the file itself imported fine, only the Hub push failed) —
+        // reported against the originating filename, not the label's
+        // internal name.
+        if (meta.hubPostId) {
+          const upd = await labels.hubUpdate(meta.id)
+          if (upd.success) {
+            message = t('common.synced')
+          } else {
+            failures.push({ fileName, reason: translateError(t, upd.errorCode, upd.error) })
+          }
+        }
+        successBadges.push({ id: meta.id, kind: 'success', message })
+      }
+
+      if (deduped.length > 0) {
+        await placement.placeMany(
+          deduped.map(({ meta }) => ({ id: meta.id, name: meta.name })),
+          beforeSnapshot,
+        )
+        setLastResult(successBadges)
+      }
+      const summary = buildImportBatchFailureSummary(t, failures)
+      if (summary) setActionError(summary)
     } else if (res.error && res.error !== 'cancelled') {
       setActionError(translateError(t, res.errorCode, res.error))
     }
@@ -303,6 +345,7 @@ export function KeyLabelsModal({
         searchButton: 'key-labels-search-button',
         importButton: 'key-labels-import-button',
         importFeedback: 'key-labels-import-feedback',
+        errorBanner: 'key-labels-error',
       }}
       activeTab={activeTab}
       onTabChange={setActiveTab}

@@ -16,7 +16,7 @@ import type {
 import type { SnapshotMeta } from './snapshot-store'
 import type { AnalyzeFilterSnapshotMeta } from './analyze-filter-store'
 import type { FavoriteType, SavedFavoriteMeta, FavoriteImportResult } from './favorite-store'
-import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult } from './key-label-store'
+import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult, KeyLabelImportBatchResult } from './key-label-store'
 import type { TypingTestTextMeta, TypingTestTextRecord, TypingTestTextStoreResult } from './typing-test-text-store'
 import type { HubKeyLabelItem, HubKeyLabelListResponse, HubKeyLabelListParams, HubKeyLabelTimestampsResponse } from './hub-key-label'
 import type {
@@ -184,7 +184,7 @@ export interface VialAPI {
   keyLabelStoreGet(id: string): Promise<KeyLabelStoreResult<KeyLabelRecord>>
   keyLabelStoreRename(id: string, newName: string): Promise<KeyLabelStoreResult<KeyLabelMeta>>
   keyLabelStoreDelete(id: string): Promise<KeyLabelStoreResult<void>>
-  keyLabelStoreImport(): Promise<KeyLabelStoreResult<KeyLabelMeta>>
+  keyLabelStoreImport(): Promise<KeyLabelStoreResult<KeyLabelImportBatchResult>>
   keyLabelStoreExport(id: string): Promise<KeyLabelStoreResult<{ filePath: string }>>
   keyLabelStoreReorder(orderedIds: string[]): Promise<KeyLabelStoreResult<void>>
   keyLabelStoreSetHubPostId(id: string, hubPostId: string | null): Promise<KeyLabelStoreResult<KeyLabelMeta>>

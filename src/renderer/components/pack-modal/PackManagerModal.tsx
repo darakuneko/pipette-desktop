@@ -170,7 +170,7 @@ export function PackManagerModal({
 
         {actionError && (
           <div
-            className="mx-4 my-2 rounded border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-700"
+            className="mx-4 my-2 whitespace-pre-wrap rounded border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-700"
             data-testid={testids.errorBanner}
           >
             {actionError}

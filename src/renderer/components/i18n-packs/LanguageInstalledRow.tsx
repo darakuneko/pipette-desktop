@@ -60,7 +60,7 @@ export interface LanguageInstalledRowProps {
   setConfirmDeleteId: (id: string | null) => void
   confirmRemoveId: string | null
   setConfirmRemoveId: (id: string | null) => void
-  lastResult: PackActionResult | null
+  lastResult: PackActionResult | PackActionResult[] | null
   currentDisplayName: string | null
   hubCanWrite: boolean
   hubFreshness: Map<string, HubFreshnessEntry>

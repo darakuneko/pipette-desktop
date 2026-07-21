@@ -48,8 +48,27 @@
 // every render — never the closure captured when `place` itself was
 // created — and placements are serialized through an internal promise
 // chain (`queueRef`) so the second one's order computation only runs
-// after the first's `reorder` call has resolved and the caller has
+// after the first's `reorder` call has resolved AND the caller has
 // re-rendered with the refreshed entries.
+//
+// That second half of the guarantee is the part `place()` cannot
+// actually make on its own: the store's `reorder`/`refresh` functions
+// resolve once `setState` has been *called*, not once the component has
+// *re-rendered* with the new state — React schedules that separately,
+// on its own timer. A multi-file import batch that calls `place()` once
+// per file in a tight loop has no guarantee a render lands between
+// iterations, so a later file's sorted-insert position can be computed
+// against a snapshot that is missing an earlier file's insert (or, if
+// some unrelated background refresh raced in, one that already contains
+// an id the caller is about to insert a second time). `placeMany` below
+// exists for exactly this case: it takes every result in a batch at
+// once and positions them as a group with a single pure computation
+// (`computeSortedInsertOrderMany`) against a snapshot taken once before
+// the batch started — no dependency on any render happening in between,
+// and at most one `reorder` call for the whole batch. `place()` itself
+// is untouched and still used for every single-item flow (Hub download,
+// rename auto-sync, etc.), where the race does not apply in practice —
+// those are separate user-triggered actions with real time between them.
 //
 // REORDER-FAILURE VISIBILITY (P2): a failed sorted-insert `reorder`
 // call is surfaced via `onReorderError` (each site's existing
@@ -66,11 +85,26 @@
 // an `open` ref at the moment it would actually display something, not
 // when the placement started; the auto-clear timer is also torn down
 // immediately on close so it cannot fire into a since-reopened session.
+//
+// DIRECTION RACE (batch): `placeMany`'s merge computation must not read
+// `directionRef.current` at execution time either — a batch's file-save
+// loop can take a while (several IPC round trips), and the user is free
+// to click the Name-sort toggle (asc <-> desc) while it runs. Reading
+// live direction there would merge `toInsert` against one direction
+// while `beforeEntries` (captured at batch start) reflects the other,
+// producing a persisted order that is sorted in neither direction.
+// `snapshotEntries()` therefore captures direction alongside entries in
+// one `BatchSnapshot`, and `placeMany` uses only that frozen value —
+// the whole batch is placed consistently against the state that existed
+// when it began, exactly like `beforeEntries` already was. `place()`
+// (single-item) is untouched and keeps reading live direction: those
+// are separate user-triggered actions with no long-running loop for a
+// toggle to land inside of.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NameSortEntry, SortDirection } from './useNameSort'
-import { computeSortedInsertOrder } from './sorted-insert'
+import { computeSortedInsertOrder, computeSortedInsertOrderMany } from './sorted-insert'
 
 const AUTO_CLEAR_MS = 5000
 
@@ -91,6 +125,16 @@ export interface UseImportPlacementOptions {
   onReorderError: (error: string | undefined) => void
 }
 
+/** Frozen pre-batch state for `placeMany`: both the entries list and the
+ *  sort direction as they stood when the batch started, captured
+ *  together by `snapshotEntries()` so neither can drift independently
+ *  while the batch's file-save loop runs (see the DIRECTION RACE note
+ *  in the module doc). */
+export interface BatchSnapshot {
+  entries: NameSortEntry[]
+  direction: SortDirection
+}
+
 export interface PlacementOptions {
   /** From `snapshotBeforeIds()`, called before the store operation.
    *  Omit only when `alwaysInsert` is set. */
@@ -109,12 +153,34 @@ export interface UseImportPlacementResult {
    *  import/download store call. */
   snapshotBeforeIds: () => Set<string>
   /**
+   * Call synchronously once, right before starting a multi-file import
+   * batch's store calls. Returns the entries list AND sort direction
+   * (not just ids) as they stood before any file in the batch was saved
+   * — pass the result to `placeMany` so the batch's merge computation
+   * never depends on `entriesRef`/`directionRef` (which can drift
+   * mid-batch; see the RAPID-INSERT RACE and DIRECTION RACE notes in
+   * the module doc).
+   */
+  snapshotEntries: () => BatchSnapshot
+  /**
    * Call after the store operation resolves with the placed entry's
    * `{ id, name }`. Serialized — queues behind any in-flight placement
    * so both compute their sorted-insert position against up-to-date
    * data (see the P1 note in the module doc).
    */
   place: (result: NameSortEntry, opts?: PlacementOptions) => Promise<void>
+  /**
+   * Batch-aware counterpart to `place()` for a multi-file import: pass
+   * every processed result (successes only — the caller already
+   * dedupes by id and skips failures) plus the `BatchSnapshot` captured
+   * via `snapshotEntries()` before the batch started. Positions every
+   * newly-inserted result as a group in one pure computation — against
+   * the snapshot's frozen entries AND direction, never live state — and
+   * issues at most one `reorder` call for the whole batch. See the
+   * RAPID-INSERT RACE and DIRECTION RACE notes in the module doc for why
+   * this differs from calling `place()` once per result.
+   */
+  placeMany: (results: NameSortEntry[], snapshot: BatchSnapshot) => Promise<void>
 }
 
 export function useImportPlacement({
@@ -202,6 +268,10 @@ export function useImportPlacement({
     return new Set(entriesRef.current.map((entry) => entry.id))
   }, [])
 
+  const snapshotEntries = useCallback((): BatchSnapshot => {
+    return { entries: entriesRef.current, direction: directionRef.current }
+  }, [])
+
   // Serializes placements so a second one's order computation always
   // sees the first's already-settled insert. `queueRef` holds a
   // "settle regardless" tail so one placement's failure never wedges
@@ -234,5 +304,42 @@ export function useImportPlacement({
     return settled
   }, [showFeedback, scheduleScroll])
 
-  return { feedback, snapshotBeforeIds, place }
+  const placeMany = useCallback((
+    results: NameSortEntry[],
+    snapshot: BatchSnapshot,
+  ): Promise<void> => {
+    const run = async (): Promise<void> => {
+      if (results.length === 0) return
+      const { entries: beforeEntries, direction: beforeDirection } = snapshot
+      const beforeIds = new Set(beforeEntries.map((entry) => entry.id))
+      const toInsert = results.filter((r) => !beforeIds.has(r.id))
+      if (toInsert.length > 0) {
+        // Merged purely from `beforeEntries` + `toInsert` + the
+        // snapshot's own `beforeDirection` — never from
+        // `entriesRef.current`/`directionRef.current` — so this cannot
+        // be corrupted by a background refresh, or a Name-sort toggle,
+        // landing partway through the batch (see the RAPID-INSERT RACE
+        // and DIRECTION RACE notes in the module doc).
+        const orderedIds = computeSortedInsertOrderMany(beforeEntries, toInsert, beforeDirection)
+        if (orderedIds) {
+          const reorderResult = await reorderRef.current(orderedIds)
+          if (!reorderResult.success) onReorderErrorRef.current(reorderResult.error)
+        }
+      }
+      // Feedback/scroll anchor on the last result processed — same
+      // "last one wins" convention the calling modals already use for
+      // e.g. switching the active language/theme after a batch import.
+      const last = results[results.length - 1]
+      const lastIsInsert = !beforeIds.has(last.id)
+      showFeedback(lastIsInsert
+        ? tRef.current('common.importedNamed', { name: last.name })
+        : tRef.current('common.updatedNamed', { name: last.name }))
+      scheduleScroll(`${rowTestidPrefixRef.current}-row-${last.id}`)
+    }
+    const settled = queueRef.current.then(run, run)
+    queueRef.current = settled.then(() => undefined, () => undefined)
+    return settled
+  }, [showFeedback, scheduleScroll])
+
+  return { feedback, snapshotBeforeIds, snapshotEntries, place, placeMany }
 }

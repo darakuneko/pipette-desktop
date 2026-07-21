@@ -2,7 +2,7 @@
 // Local store for Key Labels — mirrors favorite-store's index + per-entry layout.
 
 import { app, dialog, BrowserWindow } from 'electron'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { notifyChange } from './sync/sync-service'
@@ -14,6 +14,9 @@ import type {
   KeyLabelRecord,
   KeyLabelStoreResult,
   KeyLabelStoreErrorCode,
+  KeyLabelImportBatchResult,
+  KeyLabelImportRejection,
+  KeyLabelImportSuccess,
 } from '../shared/types/key-label-store'
 
 export const KEY_LABEL_SYNC_UNIT = 'key-labels'
@@ -399,9 +402,19 @@ export async function setHubPostId(
   }
 }
 
+/**
+ * Import every file selected via the multi-select dialog. Each path is
+ * processed independently — a bad file (unreadable / invalid JSON / fails
+ * `saveRecord` validation) is recorded in `rejections` rather than aborting
+ * the rest of the batch, mirroring `importTypingDataFiles`'s
+ * per-file-independent contract. Two same-named files within one batch
+ * resolve in file-list order: the second finds the first's just-saved
+ * entry via `findActiveByName` and overwrites it — acceptable, since the
+ * user picked both files together.
+ */
 export async function importFromDialog(
   win: BrowserWindow,
-): Promise<KeyLabelStoreResult<KeyLabelMeta>> {
+): Promise<KeyLabelStoreResult<KeyLabelImportBatchResult>> {
   try {
     const result = await dialog.showOpenDialog(win, {
       title: 'Import Key Label',
@@ -409,38 +422,65 @@ export async function importFromDialog(
         { name: 'JSON', extensions: ['json'] },
         { name: 'All Files', extensions: ['*'] },
       ],
-      properties: ['openFile'],
+      properties: ['openFile', 'multiSelections'],
     })
 
     if (result.canceled || result.filePaths.length === 0) {
       return fail('IO_ERROR', 'cancelled')
     }
 
-    const raw = await readFile(result.filePaths[0], 'utf-8')
-    const parsed = normalizeFile(JSON.parse(raw))
-    if (!parsed) return fail('INVALID_FILE', 'Invalid key label file')
+    const imported: KeyLabelImportSuccess[] = []
+    const rejections: KeyLabelImportRejection[] = []
 
-    // Treat re-import of an entry with an existing name as an
-    // overwrite: the user explicitly opted in by picking the same
-    // file name back. We carry the existing id, uploaderName and
-    // hubPostId across so the entry stays linked to its Hub post
-    // (the user can detach via Remove if they want a fresh post).
-    const index = await readIndex()
-    const existing = findActiveByName(index.entries, parsed.name)
-    return saveRecord({
-      ...(existing
-        ? {
-          id: existing.id,
-          ...(existing.uploaderName ? { uploaderName: existing.uploaderName } : {}),
-          ...(existing.hubPostId ? { hubPostId: existing.hubPostId } : {}),
-          ...(existing.hubUpdatedAt ? { hubUpdatedAt: existing.hubUpdatedAt } : {}),
+    for (const filePath of result.filePaths) {
+      const fileName = basename(filePath)
+      try {
+        const raw = await readFile(filePath, 'utf-8')
+        const parsed = normalizeFile(JSON.parse(raw))
+        if (!parsed) {
+          rejections.push({ fileName, errorCode: 'INVALID_FILE', error: 'Invalid key label file' })
+          continue
         }
-        : {}),
-      name: parsed.name,
-      map: parsed.map,
-      compositeLabels: parsed.compositeLabels,
-      keymapApplicable: parsed.keymapApplicable,
-    })
+
+        // Treat re-import of an entry with an existing name as an
+        // overwrite: the user explicitly opted in by picking the same
+        // file name back. We carry the existing id, uploaderName and
+        // hubPostId across so the entry stays linked to its Hub post
+        // (the user can detach via Remove if they want a fresh post).
+        const index = await readIndex()
+        const existing = findActiveByName(index.entries, parsed.name)
+        const saved = await saveRecord({
+          ...(existing
+            ? {
+              id: existing.id,
+              ...(existing.uploaderName ? { uploaderName: existing.uploaderName } : {}),
+              ...(existing.hubPostId ? { hubPostId: existing.hubPostId } : {}),
+              ...(existing.hubUpdatedAt ? { hubUpdatedAt: existing.hubUpdatedAt } : {}),
+            }
+            : {}),
+          name: parsed.name,
+          map: parsed.map,
+          compositeLabels: parsed.compositeLabels,
+          keymapApplicable: parsed.keymapApplicable,
+        })
+        if (saved.success && saved.data) {
+          // Carries the originating filename alongside the saved meta —
+          // the renderer needs it to report e.g. a Hub-sync failure
+          // against the file the user picked, not the label's name.
+          imported.push({ fileName, meta: saved.data })
+        } else {
+          rejections.push({
+            fileName,
+            errorCode: saved.errorCode ?? 'IO_ERROR',
+            error: saved.error ?? 'Import failed',
+          })
+        }
+      } catch (err) {
+        rejections.push({ fileName, errorCode: 'IO_ERROR', error: String(err) })
+      }
+    }
+
+    return ok({ imported, rejections })
   } catch (err) {
     return fail('IO_ERROR', String(err))
   }

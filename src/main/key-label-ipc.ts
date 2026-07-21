@@ -20,6 +20,7 @@ import type {
   KeyLabelMeta,
   KeyLabelRecord,
   KeyLabelStoreResult,
+  KeyLabelImportBatchResult,
 } from '../shared/types/key-label-store'
 
 export function setupKeyLabelStore(): void {
@@ -97,7 +98,7 @@ export function setupKeyLabelStore(): void {
 
   secureHandle(
     IpcChannels.KEY_LABEL_STORE_IMPORT,
-    async (event): Promise<KeyLabelStoreResult<KeyLabelMeta>> => {
+    async (event): Promise<KeyLabelStoreResult<KeyLabelImportBatchResult>> => {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (!win) return { success: false, errorCode: 'IO_ERROR', error: 'No window' }
       return importFromDialog(win)

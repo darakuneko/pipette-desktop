@@ -128,14 +128,13 @@ export interface I18nPackRecord {
   pack: unknown
 }
 
-/** Shape returned by the I18N_PACK_IMPORT IPC handler. */
-export interface I18nPackImportDialogResult {
-  canceled: boolean
-  raw?: unknown
-  fileSizeBytes?: number
-  filePath?: string
-  parseError?: string
-}
+/** Structurally identical to Theme Packs' `ThemePackImportFile` /
+ *  `ThemePackImportDialogResult` — both alias the shared shape in
+ *  `pack-import.ts` (see `readSelectedImportFiles` in
+ *  `src/main/pack-import-dialog.ts`, which both IPC handlers call).
+ *  Aliased (not just re-exported) under the domain-specific name so
+ *  existing call sites don't need to change what they import. */
+export type { PackImportFile as I18nPackImportFile, PackImportDialogResult as I18nPackImportDialogResult } from './pack-import'
 
 /** Optional flags forwarded with I18N_PACK_IMPORT_APPLY. */
 export interface I18nPackImportApplyOptions {
