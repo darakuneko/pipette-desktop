@@ -594,6 +594,11 @@ describe('ThemePacksModal', () => {
     fireEvent.click(screen.getByTestId('theme-packs-import-button'))
     await waitFor(() => expect(importFromDialog).toHaveBeenCalled())
 
+    // Mid-batch: the toolbar feedback slot shows "Importing…", superseding
+    // both the post-batch summary and the per-name feedback for the
+    // duration of the import.
+    expect(screen.getByTestId('theme-packs-import-feedback').textContent).toBe('common.importing')
+
     expect((screen.getByTestId('theme-packs-import-button') as HTMLButtonElement).disabled).toBe(true)
     expect((screen.getByTestId('theme-packs-sort-button') as HTMLButtonElement).disabled).toBe(true)
     expect((screen.getByTestId('theme-packs-builtin-system') as HTMLButtonElement).disabled).toBe(true)
@@ -609,6 +614,9 @@ describe('ThemePacksModal', () => {
 
     resolveDialog({ canceled: true, files: [] })
     await waitFor(() => expect((screen.getByTestId('theme-packs-import-button') as HTMLButtonElement).disabled).toBe(false))
+    // The "Importing…" text goes away with nothing left to show — a
+    // canceled batch never produced a summary or per-name feedback.
+    expect(screen.queryByTestId('theme-packs-import-feedback')).toBeNull()
   })
 
   it('partial-failure batch: the good file keeps its badge while the bad file is aggregated into one banner', async () => {

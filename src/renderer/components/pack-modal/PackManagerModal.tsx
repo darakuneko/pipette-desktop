@@ -59,7 +59,11 @@ export interface PackManagerModalProps {
    *  toolbar, opposite Import. Required — all three modals have one. */
   sortButton: ReactNode
   /** "Imported {{name}}" / "Updated {{name}}" text rendered next to
-   *  `sortButton`, or `null` when there is nothing to show. */
+   *  `sortButton`, or `null` when there is nothing to show. Every modal
+   *  supersedes this with "Importing..." for the duration of a batch
+   *  (`importing ? t('common.importing') : ...`), so the slot always
+   *  reflects an in-flight import before falling back to the
+   *  post-batch summary or per-name feedback. */
   importFeedback: string | null
   actionError: string | null
   children: ReactNode

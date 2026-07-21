@@ -1,5 +1,5 @@
 {
-  "version": "0.1.42",
+  "version": "0.1.43",
   "name": "English",
   "common": {
     "save": "Save",
@@ -38,6 +38,7 @@
     "searchPlaceholder": "Search Pipette Hub (type 2 or more characters)...",
     "findOnHubHint": "Browse uploaded files on <hub>Pipette Hub</hub>.",
     "sortByName": "Name",
+    "importing": "Importing...",
     "importedNamed": "Imported {{name}}",
     "updatedNamed": "Updated {{name}}",
     "importBatchFailed_one": "{{count}} file could not be imported:",

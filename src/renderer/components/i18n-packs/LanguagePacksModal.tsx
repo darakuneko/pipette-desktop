@@ -760,7 +760,7 @@ export function LanguagePacksModal({
           testid="language-packs-sort-button"
         />
       )}
-      importFeedback={importSummary ?? placement.feedback}
+      importFeedback={importing ? t('common.importing') : (importSummary ?? placement.feedback)}
       actionError={actionError}
       afterContent={(
         <MissingKeysModal

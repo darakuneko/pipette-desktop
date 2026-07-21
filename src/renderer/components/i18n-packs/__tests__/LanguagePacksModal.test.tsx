@@ -656,6 +656,11 @@ describe('LanguagePacksModal', () => {
     fireEvent.click(screen.getByTestId('language-packs-import-button'))
     await waitFor(() => expect(importFromDialog).toHaveBeenCalled())
 
+    // Mid-batch: the toolbar feedback slot shows "Importing…", superseding
+    // both the post-batch summary and the per-name feedback for the
+    // duration of the import.
+    expect(screen.getByTestId('language-packs-import-feedback').textContent).toBe('common.importing')
+
     // Mid-batch: the toolbar Import button and every existing row's
     // controls lock via the `importing` prop propagating into `busy`.
     expect((screen.getByTestId('language-packs-import-button') as HTMLButtonElement).disabled).toBe(true)
@@ -675,6 +680,9 @@ describe('LanguagePacksModal', () => {
 
     resolveDialog({ canceled: true, files: [] })
     await waitFor(() => expect((screen.getByTestId('language-packs-import-button') as HTMLButtonElement).disabled).toBe(false))
+    // The "Importing…" text goes away with nothing left to show — a
+    // canceled batch never produced a summary or per-name feedback.
+    expect(screen.queryByTestId('language-packs-import-feedback')).toBeNull()
   })
 
   it('partial-failure batch: the good file keeps its badge while the bad file is aggregated into one banner', async () => {
