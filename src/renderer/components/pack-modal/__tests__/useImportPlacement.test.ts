@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import '../../../i18n'
 import { useImportPlacement } from '../useImportPlacement'
+import type { SortDirection } from '../useNameSort'
 
 describe('useImportPlacement', () => {
   beforeEach(() => {
@@ -352,7 +353,7 @@ describe('useImportPlacement', () => {
     const onReorderError = vi.fn()
 
     const { result, rerender } = renderHook(
-      ({ direction }: { direction: 'asc' | 'desc' | 'free' }) => useImportPlacement({
+      ({ direction }: { direction: SortDirection }) => useImportPlacement({
         open: true,
         entries: [{ id: 'a', name: 'Alpha' }, { id: 'z', name: 'Zeta' }],
         direction,
@@ -360,7 +361,7 @@ describe('useImportPlacement', () => {
         rowTestidPrefix: 'test-packs',
         onReorderError,
       }),
-      { initialProps: { direction: 'asc' as const } },
+      { initialProps: { direction: 'asc' as SortDirection } },
     )
 
     let placeManyPromise!: Promise<void>
