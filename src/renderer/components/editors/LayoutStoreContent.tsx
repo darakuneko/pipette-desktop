@@ -87,8 +87,21 @@ export function LayoutStoreContent({
   const exportedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const rename = useInlineRename<string>()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [confirmLoadId, setConfirmLoadId] = useState<string | null>(null)
   const [confirmHubRemoveId, setConfirmHubRemoveId] = useState<string | null>(null)
   const [confirmOverwriteId, setConfirmOverwriteId] = useState<string | null>(null)
+
+  // Delete and Load confirms are mutually exclusive within a row: opening one
+  // clears the other so a row never shows two confirm prompts at once.
+  function openDeleteConfirm(id: string | null): void {
+    setConfirmDeleteId(id)
+    if (id !== null) setConfirmLoadId(null)
+  }
+
+  function openLoadConfirm(id: string | null): void {
+    setConfirmLoadId(id)
+    if (id !== null) setConfirmDeleteId(null)
+  }
 
   function flashSaved(): void {
     setShowSaved(true)
@@ -335,7 +348,9 @@ export function LayoutStoreContent({
                     entryHubPostId={entryHubPostId}
                     rename={rename}
                     confirmDeleteId={confirmDeleteId}
-                    setConfirmDeleteId={setConfirmDeleteId}
+                    setConfirmDeleteId={openDeleteConfirm}
+                    confirmLoadId={confirmLoadId}
+                    setConfirmLoadId={openLoadConfirm}
                     onCommitRename={commitRename}
                     onHandleRenameKeyDown={handleRenameKeyDown}
                     onLoad={onLoad}

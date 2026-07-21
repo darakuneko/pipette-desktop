@@ -1,5 +1,5 @@
 {
-  "version": "0.1.39",
+  "version": "0.1.40",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -27,6 +27,7 @@
     "exported": "書き出しましたえ",
     "imported": "入れましたえ",
     "load": "読み込みますえ",
+    "confirmLoad": "読み込んでもよろしおすか？",
     "labelPlaceholder": "ラベル",
     "noLabel": "（ラベルおへん）",
     "synced": "同期しましたえ",

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.39",
+  "version": "0.1.40",
   "name": "English",
   "common": {
     "save": "Save",
@@ -27,6 +27,7 @@
     "exported": "Exported",
     "imported": "Imported",
     "load": "Load",
+    "confirmLoad": "Load?",
     "labelPlaceholder": "Label",
     "noLabel": "(No label)",
     "synced": "Synced",

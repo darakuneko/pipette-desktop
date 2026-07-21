@@ -27,6 +27,11 @@ export const DELETE_BTN =
   'text-xs font-medium text-danger hover:text-danger cursor-pointer bg-transparent border-none px-2 py-1 rounded'
 export const CONFIRM_DELETE_BTN =
   'text-xs font-medium text-danger hover:bg-danger/10 px-2 py-1 rounded cursor-pointer bg-transparent border-none'
+// Accent-colored twin of CONFIRM_DELETE_BTN — same compact row-button shape,
+// for confirm-style actions that apply/overwrite rather than delete (e.g.
+// the Load confirm), so they read as distinct from the red delete confirm.
+export const CONFIRM_ACCENT_BTN =
+  'text-xs font-medium text-accent hover:bg-accent/10 px-2 py-1 rounded cursor-pointer bg-transparent border-none'
 
 function pad2(n: number): string {
   return String(n).padStart(2, '0')
