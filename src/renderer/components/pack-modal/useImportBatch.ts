@@ -34,8 +34,18 @@
 // synchronously; `importing` just mirrors it into render so the
 // disabled UI reflects it a frame sooner than a double-click could
 // slip through.
+//
+// This same ref is exposed as `isImportingRef` for callers that need a
+// concurrent-safe "is a batch in flight" read outside of render — e.g.
+// each pack modal's `handleRenameCommit` guards on it to stop an
+// in-progress rename from committing mid-batch. It is written ONLY
+// inside `runImport` (an event-handler-triggered async function), never
+// during render, so — unlike a ref kept in sync via a plain assignment
+// in the component body (`someRef.current = someState`) — an
+// interrupted/discarded React 19 concurrent render can never leave it
+// holding a value that doesn't match reality.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react'
 import type { TFunction } from 'i18next'
 import type { BatchSnapshot, UseImportPlacementResult } from './useImportPlacement'
 import { buildImportBatchFailureSummary, buildImportSummary, dedupeByIdKeepLast, type ImportBatchFailure } from './import-batch-summary'
@@ -97,6 +107,12 @@ export interface UseImportBatchResult {
    *  `importFeedback={importSummary ?? placement.feedback}`. */
   importSummary: string | null
   runImport: () => Promise<void>
+  /** The same ref `runImport` uses for its own re-entrancy latch,
+   *  exposed read-only-in-spirit for callers that need to know "is a
+   *  batch in flight right now" from outside of render — see the
+   *  RE-ENTRANCY note above for why this is concurrent-safe where a
+   *  render-time `ref.current = someState` assignment is not. */
+  isImportingRef: MutableRefObject<boolean>
 }
 
 export function useImportBatch<TMeta extends ImportBatchMeta>({
@@ -191,5 +207,5 @@ export function useImportBatch<TMeta extends ImportBatchMeta>({
     }
   }, [collectResults, hubSync, onCollapsedToOne, placement, setActionError, setLastResult, t])
 
-  return { importing, importSummary, runImport }
+  return { importing, importSummary, runImport, isImportingRef: importInFlightRef }
 }

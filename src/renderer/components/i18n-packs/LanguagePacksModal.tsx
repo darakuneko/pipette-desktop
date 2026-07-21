@@ -12,7 +12,7 @@
 // reorder and Name sort include it like any imported entry (see
 // `ensureBuiltinEnglishEntry` in main/i18n-pack-store.ts).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { useInlineRename } from '../../hooks/useInlineRename'
@@ -81,13 +81,6 @@ export function LanguagePacksModal({
   const [actionError, setActionError] = useState<string | null>(null)
   const [lastResult, setLastResult] = useState<PackActionResult | PackActionResult[] | null>(null)
   const [missingKeysFor, setMissingKeysFor] = useState<{ name: string; keys: string[] } | null>(null)
-  // Mirrors `importing` (from `useImportBatch`, defined further below)
-  // into a ref so `handleRenameCommit` — defined earlier in this file,
-  // before the hook call — can read its latest value without a
-  // definition-order dependency. Kept current via a plain assignment
-  // during render (the same "adjust a ref during render" pattern
-  // `useImportPlacement.ts` uses for its own always-latest refs).
-  const importingRef = useRef(false)
 
   const builtinName = (english as Record<string, unknown>).name as string ?? 'English'
   const builtinVersion = (english as Record<string, unknown>).version as string ?? '0.1.0'
@@ -375,16 +368,25 @@ export function LanguagePacksModal({
   }, [store, t])
 
   const handleRenameCommit = useCallback(async (id: string): Promise<void> => {
+    // Guards on `useImportBatch`'s own re-entrancy ref (destructured as
+    // `isImportingRef` below) rather than a locally-mirrored ref — a
+    // ref written only inside an event handler (`runImport`), never
+    // during render, so it can't go stale under a discarded/interrupted
+    // concurrent render the way `someRef.current = someState` could.
+    // Referencing `isImportingRef` here, even though it is destructured
+    // further down in this file, is safe: this callback's body only
+    // runs later, in response to a real blur/Enter event, by which time
+    // the whole render (including that destructure) has long finished.
+    //
     // A rename already committed its `store.rename` call the instant
     // the underlying input blurred — including the blur a click on the
     // Import button itself triggers, which fires before that click's
     // own handler runs — so this check cannot intercept that exact
     // call. It DOES catch every other path: a rename input left open
-    // when a batch was already running (this same check, read fresh
-    // every call via the ref) and any stray commit that slips through
-    // after the cancel-on-import-start effect below has already reset
-    // the editor for this render.
-    if (importingRef.current) return
+    // when a batch was already running, and any stray commit that
+    // slips through after the cancel-on-import-start effect below has
+    // already reset the editor for this render.
+    if (isImportingRef.current) return
     const newName = rename.commitRename(id)
     if (!newName) return
     setActionError(null)
@@ -677,7 +679,7 @@ export function LanguagePacksModal({
     return { successes, notSavedFailures, snapshot }
   }, [store, t, placement, importOnePack])
 
-  const { importing, importSummary, runImport } = useImportBatch<I18nPackMeta>({
+  const { importing, importSummary, runImport, isImportingRef } = useImportBatch<I18nPackMeta>({
     open,
     placement,
     setLastResult,
@@ -687,12 +689,11 @@ export function LanguagePacksModal({
     hubSync: (meta) => pushPackToHub(meta.id, meta.hubPostId!),
     onCollapsedToOne: (meta) => handleSelectLanguage(`pack:${meta.id}`),
   })
-  importingRef.current = importing
 
   // Closes any inline rename that was already open the moment a batch
   // starts, so its input unmounts instead of sitting there interactive
   // (and committable) for the whole duration of the import — see
-  // `handleRenameCommit`'s own `importingRef` guard above for the one
+  // `handleRenameCommit`'s own `isImportingRef` guard above for the one
   // race this cannot cover (a rename input's blur, and the click that
   // starts the batch, are the same user click; the blur's commit is
   // already in flight before `importing` ever flips true).
