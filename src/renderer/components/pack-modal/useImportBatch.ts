@@ -67,6 +67,18 @@ interface ImportBatchMeta {
   hubPostId?: string
 }
 
+/** Client-side pacing between consecutive Hub write requests fired by
+ *  the multi-file import batch's hub-sync loop. The Hub's IP-layer
+ *  rate limit allows roughly 120 requests per 60s (~500ms/request)
+ *  before returning 429/RATE_LIMITED — spacing hub-sync calls by that
+ *  same interval keeps a large batch under the limit instead of
+ *  bursting one request per imported pack back-to-back. */
+const HUB_SYNC_DELAY_MS = 500
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 export interface CollectedImportBatch<TMeta> {
   successes: ImportBatchItem<TMeta>[]
   /** Files that never actually landed on disk (parse/validate/store
@@ -154,9 +166,18 @@ export function useImportBatch<TMeta extends ImportBatchMeta>({
 
       const hubSyncFailures: ImportBatchFailure[] = []
       const successBadges: PackActionResult[] = []
+      // Only actual Hub writes need spacing — a batch with zero
+      // hub-syncs (no `hubPostId` anywhere) or exactly one must add no
+      // delay at all. Tracking "did a previous hub-sync already fire"
+      // rather than the loop index means the delay lands strictly
+      // *between* real requests: never before the first one, never
+      // trailing after the last.
+      let hubSyncedBefore = false
       for (const { fileName, meta } of deduped) {
         let message = t('common.saved')
         if (meta.hubPostId && hubSync) {
+          if (hubSyncedBefore) await sleep(HUB_SYNC_DELAY_MS)
+          hubSyncedBefore = true
           const upd = await hubSync(meta)
           if (upd.success) {
             message = t('common.synced')

@@ -114,6 +114,7 @@ const vialAPI = {
 Object.defineProperty(window, 'vialAPI', { value: vialAPI, writable: true })
 
 import { ThemePacksModal } from '../ThemePacksModal'
+import { HUB_ERROR_RATE_LIMITED } from '../../../../shared/types/hub'
 
 function meta(over: Partial<{
   id: string
@@ -568,7 +569,10 @@ describe('ThemePacksModal', () => {
         metas = [...metas, savedMeta]
         return { success: true, meta: savedMeta }
       })
-    vialAPI.hubUpdateThemePost.mockResolvedValueOnce({ success: false, error: 'network error' })
+    // A 429 from the Hub during the batch's hub-sync loop — surfaced as
+    // the bare `RATE_LIMITED` sentinel, exactly as the localization
+    // fix's target case arrives from main.
+    vialAPI.hubUpdateThemePost.mockResolvedValueOnce({ success: false, error: HUB_ERROR_RATE_LIMITED })
     render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
 
     fireEvent.click(screen.getByTestId('theme-packs-import-button'))
@@ -579,10 +583,13 @@ describe('ThemePacksModal', () => {
     // validation failure) — 2 processed total.
     expect(screen.getByTestId('theme-packs-import-feedback').textContent).toBe('common.importSummary:2:1:1')
 
+    // The hub-sync failure shows up in the failure banner localized —
+    // the raw `RATE_LIMITED` sentinel must never reach the user.
     const banner = screen.getByTestId('theme-packs-error')
     expect(banner.textContent).toContain('bad.json')
     expect(banner.textContent).toContain('my-upload.json')
-    expect(banner.textContent).toContain('network error')
+    expect(banner.textContent).toContain('hub.rateLimited')
+    expect(banner.textContent).not.toContain('RATE_LIMITED')
   })
 
   it('locks the Import button and existing row actions while a batch import is in flight', async () => {
@@ -683,6 +690,8 @@ describe('ThemePacksModal', () => {
     })
     const savedMeta = meta({ id: 'e', name: 'Existing Pack', hubPostId: 'hub-1' })
     applyImport.mockResolvedValueOnce({ success: true, meta: savedMeta })
+    // An unrecognized raw error string falls back to the generic
+    // localized "update failed" copy rather than leaking backend text.
     vialAPI.hubUpdateThemePost.mockResolvedValueOnce({ success: false, error: 'network error' })
     render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
 
@@ -692,7 +701,7 @@ describe('ThemePacksModal', () => {
     })
     const banner = screen.getByTestId('theme-packs-error')
     expect(banner.textContent).toContain('my-upload.json')
-    expect(banner.textContent).toContain('network error')
+    expect(banner.textContent).toContain('hub.updateFailed')
   })
 
   it('hub download parity: a new Hub download is inserted at its sorted position via reorder', async () => {

@@ -17,6 +17,7 @@ import type { ThemeColorScheme, ThemePackColors, ThemePackMeta } from '../../../
 import type { HubThemePostListItem, HubThemePackBody } from '../../../shared/types/hub'
 import { HUB_CATEGORY } from '../../../shared/hub-urls'
 import { useHubFreshness } from '../../hooks/useHubFreshness'
+import { localizeHubError } from '../../utils/hub-error-i18n'
 import type { ThemeMode, ThemeSelection } from '../../../shared/types/app-config'
 import { PackRow } from './ThemePackRow'
 import { PackManagerModal } from '../pack-modal/PackManagerModal'
@@ -232,7 +233,7 @@ export function ThemePacksModal({
       await store.refresh()
       return { success: true }
     }
-    return { success: false, error: res.error ?? t('hub.updateFailed') }
+    return { success: false, error: localizeHubError(res.error, 'hub.updateFailed', t) }
   }, [store, t])
 
   const handleTabChange = useCallback((tab: PackManagerTabId) => {
