@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { FORMAT_BTN } from './layout-store-types'
 import type { HubEntryResult } from './layout-store-types'
 import { LayoutStoreHubRow } from './LayoutStoreHubActions'
-import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, formatDate } from './store-modal-shared'
+import { ACTION_BTN, CONFIRM_ACCENT_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, LOAD_BTN, formatDate } from './store-modal-shared'
 import type { SnapshotMeta } from '../../../shared/types/snapshot-store'
 import type { HubMyPost } from '../../../shared/types/hub'
 
@@ -74,6 +74,8 @@ interface LayoutStoreEntryProps {
   }
   confirmDeleteId: string | null
   setConfirmDeleteId: (id: string | null) => void
+  confirmLoadId?: string | null
+  setConfirmLoadId?: (id: string | null) => void
   onCommitRename?: (entryId: string) => void
   onHandleRenameKeyDown?: (e: React.KeyboardEvent, entryId: string) => void
   onLoad?: (entryId: string) => void
@@ -105,6 +107,8 @@ export function LayoutStoreEntry({
   rename,
   confirmDeleteId,
   setConfirmDeleteId,
+  confirmLoadId = null,
+  setConfirmLoadId = () => {},
   onCommitRename,
   onHandleRenameKeyDown,
   onLoad,
@@ -182,13 +186,32 @@ export function LayoutStoreEntry({
                 {t('common.cancel')}
               </button>
             </>
+          ) : confirmLoadId === entry.id ? (
+            <>
+              <button
+                type="button"
+                className={CONFIRM_ACCENT_BTN}
+                onClick={() => { onLoad?.(entry.id); setConfirmLoadId(null) }}
+                data-testid="layout-store-load-confirm"
+              >
+                {t('common.confirmLoad')}
+              </button>
+              <button
+                type="button"
+                className={ACTION_BTN}
+                onClick={() => setConfirmLoadId(null)}
+                data-testid="layout-store-load-cancel"
+              >
+                {t('common.cancel')}
+              </button>
+            </>
           ) : (
             <>
               {onLoad && (
                 <button
                   type="button"
-                  className={ACTION_BTN}
-                  onClick={() => onLoad(entry.id)}
+                  className={LOAD_BTN}
+                  onClick={() => setConfirmLoadId(entry.id)}
                   data-testid="layout-store-load-btn"
                 >
                   {t('common.load')}

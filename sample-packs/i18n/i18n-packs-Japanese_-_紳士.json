@@ -1,5 +1,5 @@
 {
-  "version": "0.1.39",
+  "version": "0.1.40",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -27,6 +27,7 @@
     "exported": "お届けいたしました",
     "imported": "お受け取りいたしました",
     "load": "拝読",
+    "confirmLoad": "こちらを読み込んでもよろしいでしょうか？",
     "labelPlaceholder": "名札",
     "noLabel": "（名札がございません）",
     "synced": "足並みが揃いました",

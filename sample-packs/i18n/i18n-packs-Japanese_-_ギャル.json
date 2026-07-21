@@ -1,5 +1,5 @@
 {
-  "version": "0.1.39",
+  "version": "0.1.40",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -27,6 +27,7 @@
     "exported": "書き出したよん！",
     "imported": "入れたよん！",
     "load": "読み込み☆",
+    "confirmLoad": "読み込んじゃう？",
     "labelPlaceholder": "ラベル",
     "noLabel": "（ラベルなし）",
     "synced": "同期おけ！",

@@ -66,7 +66,7 @@ describe('LayoutStoreModal', () => {
     expect(labels[1].textContent).toBe('common.noLabel')
   })
 
-  it('calls onLoad when load button clicked', () => {
+  it('shows load confirmation and calls onLoad', () => {
     const onLoad = vi.fn()
     render(
       <LayoutStoreModal
@@ -76,10 +76,65 @@ describe('LayoutStoreModal', () => {
       />,
     )
 
+    // Click load — initial button is accent-styled too, matching its confirm step
+    const loadButtons = screen.getAllByTestId('layout-store-load-btn')
+    expect(loadButtons[0].className).toContain('text-accent')
+    fireEvent.click(loadButtons[0])
+
+    // Confirm — accent-styled (not danger/red), unlike the delete confirm
+    const confirmBtn = screen.getByTestId('layout-store-load-confirm')
+    expect(confirmBtn.className).toContain('text-accent')
+    expect(confirmBtn.className).not.toContain('text-danger')
+    fireEvent.click(confirmBtn)
+
+    expect(onLoad).toHaveBeenCalledWith('entry-1')
+  })
+
+  it('cancels load confirmation', () => {
+    const onLoad = vi.fn()
+    render(
+      <LayoutStoreModal
+        entries={MOCK_ENTRIES}
+        {...DEFAULT_PROPS}
+        onLoad={onLoad}
+      />,
+    )
+
+    // Click load
     const loadButtons = screen.getAllByTestId('layout-store-load-btn')
     fireEvent.click(loadButtons[0])
 
-    expect(onLoad).toHaveBeenCalledWith('entry-1')
+    // Cancel
+    const cancelBtn = screen.getByTestId('layout-store-load-cancel')
+    fireEvent.click(cancelBtn)
+
+    expect(onLoad).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('layout-store-load-confirm')).not.toBeInTheDocument()
+  })
+
+  it('opening load confirm closes an open delete confirm on the same row, and vice versa', () => {
+    render(
+      <LayoutStoreModal
+        entries={MOCK_ENTRIES}
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    // Open delete confirm on entry 1
+    const deleteButtons = screen.getAllByTestId('layout-store-delete-btn')
+    fireEvent.click(deleteButtons[0])
+    expect(screen.getByTestId('layout-store-delete-confirm')).toBeInTheDocument()
+
+    // Opening load confirm on the same row closes the delete confirm
+    const loadButtons = screen.getAllByTestId('layout-store-load-btn')
+    fireEvent.click(loadButtons[0])
+    expect(screen.queryByTestId('layout-store-delete-confirm')).not.toBeInTheDocument()
+    expect(screen.getByTestId('layout-store-load-confirm')).toBeInTheDocument()
+
+    // Opening delete confirm again closes the load confirm
+    fireEvent.click(screen.getAllByTestId('layout-store-delete-btn')[0])
+    expect(screen.queryByTestId('layout-store-load-confirm')).not.toBeInTheDocument()
+    expect(screen.getByTestId('layout-store-delete-confirm')).toBeInTheDocument()
   })
 
   it('enters rename mode and submits on Enter', () => {
