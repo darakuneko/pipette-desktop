@@ -5,6 +5,7 @@ out/
 *.tsbuildinfo
 test-results/
 playwright-report/
+e2e/screenshots/
 .playwright-cli/
 CLAUDE.md
 .claude/

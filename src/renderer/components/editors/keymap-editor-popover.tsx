@@ -66,6 +66,7 @@ export function PopoverForState({
       // `useKeymapSelectionHandlers`'s popover handlers and the prop doc
       // on `KeyPopover.closeOnSelect`.
       closeOnSelect={false}
+      targetKey={popoverInstanceKey(popoverState)}
     />
   )
 }

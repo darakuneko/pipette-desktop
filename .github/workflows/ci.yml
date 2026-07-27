@@ -26,8 +26,8 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - name: Install Linux build dependencies for native modules
-        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev
+      - name: Install Linux build dependencies for native modules and Xvfb for the Electron E2E specs
+        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev xvfb
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
@@ -35,6 +35,16 @@ jobs:
       - run: npx tsx scripts/check-hook-deps-tdz.ts
       - run: pnpm test
       - run: pnpm build
+
+      - name: Install Playwright OS dependencies for the Electron E2E specs
+        run: npx playwright install-deps
+
+      # Only specs tagged @virtual run in CI — they're self-contained against
+      # the software-emulated Virtual Keyboard device. Other e2e specs assume
+      # real hardware or a local Hub instance and can't run on a CI runner.
+      - name: Run @virtual-tagged E2E specs against the virtual device
+        run: xvfb-run -a npx playwright test --grep @virtual
+
       - run: pnpm run doc:guide
       - name: Verify docs/guide.html is up to date
         run: git diff --exit-code docs/guide.html || (echo "docs/guide.html is stale — run 'pnpm run doc:guide' and commit the result." && exit 1)
