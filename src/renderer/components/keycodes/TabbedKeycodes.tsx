@@ -236,8 +236,26 @@ export function TabbedKeycodes({
     [lmMode, isVisible, revision],
   )
 
+  // Whether the special "keyboard" tab is currently shown at all. Kept as a
+  // plain boolean (not the keyboardPickerContent node itself) so effectiveTab
+  // below only recomputes when availability actually flips, not on every
+  // parent re-render that hands us a fresh JSX reference.
+  const keyboardTabAvailable = Boolean(keyboardPickerContent) && !maskOnly
+
+  // activeTab records only the tab the user last explicitly picked; it is
+  // never rewritten by availability changes. effectiveTab is the derived
+  // value actually used for rendering: if activeTab is temporarily
+  // unavailable (e.g. maskOnly narrowing categories, or the keyboard tab
+  // disappearing), it falls back to the first category, and automatically
+  // snaps back to activeTab once that tab becomes available again.
+  const effectiveTab = useMemo(() => {
+    const available = activeTab === 'keyboard' ? keyboardTabAvailable : categories.some((c) => c.id === activeTab)
+    if (available) return activeTab
+    return categories[0]?.id ?? activeTab
+  }, [activeTab, categories, keyboardTabAvailable])
+
   const { activeTabKeycodes, keycodeIndexMap } = useMemo(() => {
-    const cat = categories.find((c) => c.id === activeTab)
+    const cat = categories.find((c) => c.id === effectiveTab)
     if (!cat) return { activeTabKeycodes: [] as Keycode[], keycodeIndexMap: new Map<string, KeycodeIndexEntry>() }
 
     const indexMap = new Map<string, KeycodeIndexEntry>()
@@ -308,16 +326,22 @@ export function TabbedKeycodes({
 
     keycodes.forEach((kc, i) => indexMap.set(kc.qmkId, { baseIdx: i }))
     return { activeTabKeycodes: keycodes, keycodeIndexMap: indexMap }
-  }, [categories, activeTab, isVisible, revision, resolvedBasicViewType, maskOnly, lmMode, useSplit])
+  }, [categories, effectiveTab, isVisible, revision, resolvedBasicViewType, maskOnly, lmMode, useSplit])
 
-  // Reset active tab if it no longer exists in the filtered categories
+  // Clear any open tooltip whenever the rendered tab changes, whether from a
+  // user click or an automatic fallback/restore driven by effectiveTab.
   useEffect(() => {
-    const keyboardHidden = activeTab === 'keyboard' && maskOnly
-    if (categories.length > 0 && (keyboardHidden || (activeTab !== 'keyboard' && !categories.some((c) => c.id === activeTab)))) {
-      setActiveTab(categories[0].id)
+    setTooltip(null)
+  }, [effectiveTab])
+
+  const selectTab = useCallback(
+    (id: string) => {
+      onTabChange?.()
+      setActiveTab(id)
       setTooltip(null)
-    }
-  }, [categories, activeTab, maskOnly])
+    },
+    [onTabChange],
+  )
 
   const handleKeycodeHover = useCallback(
     (kc: Keycode, rect: DOMRect) => {
@@ -358,7 +382,7 @@ export function TabbedKeycodes({
   )
 
   function renderKeycodeGrid(keycodes: Keycode[], tabId?: string): React.ReactNode {
-    const isActive = !tabId || tabId === activeTab
+    const isActive = !tabId || tabId === effectiveTab
     return (
       <KeycodeGrid
         keycodes={keycodes}
@@ -398,7 +422,7 @@ export function TabbedKeycodes({
   }
 
   function renderCategoryContent(category: KeycodeCategory): React.ReactNode {
-    const isActive = category.id === activeTab
+    const isActive = category.id === effectiveTab
     // Keyboard view for basic tab (ANSI, ISO, or JIS)
     if (category.id === 'basic' && resolvedBasicViewType !== 'list' && resolvedBasicViewType != null && !lmMode) {
       return (
@@ -460,11 +484,11 @@ export function TabbedKeycodes({
               key={cat.id}
               type="button"
               className={`whitespace-nowrap px-3 py-1.5 text-xs transition-colors border-b-2 ${
-                activeTab === cat.id
+                effectiveTab === cat.id
                   ? 'border-b-accent text-accent font-semibold'
                   : 'border-b-transparent text-content-secondary hover:text-content'
               }`}
-              onClick={() => { onTabChange?.(); setActiveTab(cat.id); setTooltip(null) }}
+              onClick={() => selectTab(cat.id)}
             >
               {t(cat.labelKey)}
             </button>
@@ -474,11 +498,11 @@ export function TabbedKeycodes({
               key="keyboard"
               type="button"
               className={`whitespace-nowrap px-3 py-1.5 text-xs transition-colors border-b-2 ${
-                activeTab === 'keyboard'
+                effectiveTab === 'keyboard'
                   ? 'border-b-accent text-accent font-semibold'
                   : 'border-b-transparent text-content-secondary hover:text-content'
               }`}
-              onClick={() => { onTabChange?.(); setActiveTab('keyboard'); setTooltip(null) }}
+              onClick={() => selectTab('keyboard')}
             >
               {t('editor.keymap.keyboardTab')}
             </button>
@@ -511,7 +535,7 @@ export function TabbedKeycodes({
           {categories.map((cat) => (
             <div
               key={cat.id}
-              className={`col-start-1 row-start-1 overflow-y-auto ${cat.id === activeTab ? '' : 'invisible'}`}
+              className={`col-start-1 row-start-1 overflow-y-auto ${cat.id === effectiveTab ? '' : 'invisible'}`}
             >
               {renderCategoryContent(cat)}
             </div>
@@ -519,25 +543,25 @@ export function TabbedKeycodes({
           {keyboardPickerContent && !maskOnly && (
             <div
               key="keyboard"
-              className={`col-start-1 row-start-1 flex min-h-0 flex-col ${activeTab === 'keyboard' ? '' : 'invisible'}`}
+              className={`col-start-1 row-start-1 flex min-h-0 flex-col ${effectiveTab === 'keyboard' ? '' : 'invisible'}`}
             >
               {keyboardPickerContent}
             </div>
           )}
         </div>
 
-        {tabFooterContent?.[activeTab] && (
+        {tabFooterContent?.[effectiveTab] && (
           <div className="border-t border-edge-subtle px-3 py-2">
-            {tabFooterContent[activeTab]}
+            {tabFooterContent[effectiveTab]}
           </div>
         )}
 
-        {(showHint || (activeTab === 'basic' && onBasicViewTypeChange)) && (
+        {(showHint || (effectiveTab === 'basic' && onBasicViewTypeChange)) && (
           <div className="flex items-center justify-between px-3 pb-1.5">
             {showHint && (
               <p className="text-xs text-content-muted">{t('editor.keymap.pickerHint')}</p>
             )}
-            {activeTab === 'basic' && onBasicViewTypeChange && (
+            {effectiveTab === 'basic' && onBasicViewTypeChange && (
               <UpwardSelect
                 aria-label={t('editorSettings.basicViewType')}
                 value={resolvedBasicViewType}

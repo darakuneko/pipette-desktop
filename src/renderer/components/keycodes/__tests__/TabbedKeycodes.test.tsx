@@ -161,4 +161,74 @@ describe('TabbedKeycodes', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
     expect(onConfirm).toHaveBeenCalledTimes(1)
   })
+
+  // Tab selection survives transient unavailability (issue #311). The
+  // "behavior" category stands in for a real "Modifiers" tab: it only
+  // contains QK_BOOT, which is non-basic, so it disappears entirely under
+  // maskOnly — exactly like a real category being narrowed out during mask
+  // inner-key selection. activeTab is derived (effectiveTab), so these tests
+  // only assert on what's visible, not on any internal stash/restore state.
+  describe('tab selection survives maskOnly toggling', () => {
+    it('falls back to Basic while the selected category is unavailable, and returns to it once available again', () => {
+      const { rerender } = render(<TabbedKeycodes maskOnly={false} />)
+      fireEvent.click(screen.getByText('Behavior'))
+      expect(screen.getByText('Behavior').className).toContain('text-accent')
+
+      // maskOnly removes "Behavior" from the filtered categories -> falls back to Basic
+      rerender(<TabbedKeycodes maskOnly />)
+      expect(screen.getByText('Basic').className).toContain('text-accent')
+      expect(screen.queryByText('Behavior')).not.toBeInTheDocument()
+
+      // maskOnly clears -> "Behavior" reappears -> back to it, with no extra click
+      rerender(<TabbedKeycodes maskOnly={false} />)
+      expect(screen.getByText('Behavior').className).toContain('text-accent')
+    })
+
+    it('falls back to Basic while the keyboard tab is unavailable, and returns to it once available again', () => {
+      const kb = <div>Keyboard Content</div>
+      const { rerender } = render(<TabbedKeycodes keyboardPickerContent={kb} maskOnly={false} />)
+      fireEvent.click(screen.getByText('editor.keymap.keyboardTab'))
+      expect(screen.getByText('editor.keymap.keyboardTab').className).toContain('text-accent')
+
+      // maskOnly hides the keyboard tab entirely -> falls back to Basic
+      rerender(<TabbedKeycodes keyboardPickerContent={kb} maskOnly />)
+      expect(screen.getByText('Basic').className).toContain('text-accent')
+      expect(screen.queryByText('editor.keymap.keyboardTab')).not.toBeInTheDocument()
+
+      // maskOnly clears -> keyboard tab reappears -> back to it
+      rerender(<TabbedKeycodes keyboardPickerContent={kb} maskOnly={false} />)
+      expect(screen.getByText('editor.keymap.keyboardTab').className).toContain('text-accent')
+    })
+
+    it('keeps a tab picked during maskOnly selected after maskOnly clears', () => {
+      const { rerender } = render(<TabbedKeycodes maskOnly={false} />)
+      fireEvent.click(screen.getByText('Behavior'))
+
+      // "Behavior" disappears under maskOnly -> falls back to Basic
+      rerender(<TabbedKeycodes maskOnly />)
+      expect(screen.getByText('Basic').className).toContain('text-accent')
+
+      // User deliberately picks another tab while maskOnly is still active
+      fireEvent.click(screen.getByText('System'))
+      expect(screen.getByText('System').className).toContain('text-accent')
+
+      // maskOnly clears -> "Behavior" becomes available again, but the
+      // user's later choice ("System") must not be overridden
+      rerender(<TabbedKeycodes maskOnly={false} />)
+      expect(screen.getByText('System').className).toContain('text-accent')
+    })
+
+    it('does not crash when categories is empty', () => {
+      // Hide every mock keycode so all categories are filtered out entirely
+      // (mirrors a real device exposing no visible keycodes at all).
+      const allKeycodes = [...mockBasicKeycodes, ...mockBehaviorKeycodes, ...mockSystemKeycodes]
+      allKeycodes.forEach((kc) => { kc.hidden = true })
+      try {
+        render(<TabbedKeycodes />)
+        expect(screen.queryByText('Basic')).not.toBeInTheDocument()
+      } finally {
+        allKeycodes.forEach((kc) => { kc.hidden = false })
+      }
+    })
+  })
 })
