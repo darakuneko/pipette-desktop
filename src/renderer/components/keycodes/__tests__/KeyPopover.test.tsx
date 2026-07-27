@@ -454,7 +454,7 @@ describe('PopoverTabCode — hex input', () => {
   it('calls onRawKeycodeSelect when apply is clicked (popover stays open)', () => {
     renderCodeTab('0005')
     fireEvent.click(screen.getByTestId('popover-code-apply'))
-    expect(onRawKeycodeSelect).toHaveBeenCalledWith(5)
+    expect(onRawKeycodeSelect).toHaveBeenCalledWith(5, true)
     expect(onClose).not.toHaveBeenCalled()
   })
 
@@ -516,7 +516,7 @@ describe('KeyPopover — maskOnly mode', () => {
     })
     fireEvent.click(screen.getByTestId('popover-code-apply'))
     // Should apply full code: 0x5100 | 0x2C = 0x512C (LT0(KC_SPACE))
-    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x512c)
+    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x512c, true)
     expect(onClose).not.toHaveBeenCalled()
   })
 
@@ -537,7 +537,7 @@ describe('KeyPopover — maskOnly mode', () => {
       target: { value: '2c' },
     })
     fireEvent.click(screen.getByTestId('popover-code-apply'))
-    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x512c)
+    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x512c, true)
   })
 })
 
@@ -680,7 +680,7 @@ describe('KeyPopover — LT/SH_T/LM wrapper modes', () => {
     // Switch to LM mode
     fireEvent.click(screen.getByTestId('popover-mode-lm'))
     // buildLMKeycode(0, 0) = 0x7000
-    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x7000)
+    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x7000, false)
     // Search should be hidden, layer selector should appear
     expect(screen.queryByTestId('popover-search-input')).not.toBeInTheDocument()
     expect(screen.getByTestId('layer-selector')).toBeInTheDocument()
@@ -692,7 +692,7 @@ describe('KeyPopover — LT/SH_T/LM wrapper modes', () => {
     fireEvent.click(screen.getByTestId('popover-mode-lm'))
     // LM keycodes store modifiers in lower bits, not basic keys.
     // Toggling off should produce KC_NO (0), not the modifier value.
-    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0)
+    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0, false)
   })
 
   it('clears search when switching from LM to another mode', () => {
@@ -709,28 +709,28 @@ describe('KeyPopover — LT/SH_T/LM wrapper modes', () => {
     render(<KeyPopover {...defaultProps} currentKeycode={0x7002} layers={4} />)
     fireEvent.click(screen.getByTestId('popover-mode-lt'))
     // buildLTKeycode(0, 0) = 0x4000 — basicKey must be 0, not the modifier mask
-    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x4000)
+    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x4000, false)
   })
 
   it('does not leak LM modifier bits as basic key when switching to SH_T', () => {
     render(<KeyPopover {...defaultProps} currentKeycode={0x7002} />)
     fireEvent.click(screen.getByTestId('popover-mode-sh-t'))
     // buildSHTKeycode(0) = 0x5600
-    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x5600)
+    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x5600, false)
   })
 
   it('does not leak LM modifier bits as basic key when switching to modTap', () => {
     render(<KeyPopover {...defaultProps} currentKeycode={0x7002} />)
     fireEvent.click(screen.getByTestId('popover-mode-mod-tap'))
     // buildModTapKeycode(0, 0) = 0 (mask 0 returns basic key in mock)
-    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0)
+    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0, false)
   })
 
   it('does not leak LM modifier bits as basic key when switching to modMask', () => {
     render(<KeyPopover {...defaultProps} currentKeycode={0x7002} />)
     fireEvent.click(screen.getByTestId('popover-mode-mod-mask'))
     // buildModMaskKeycode(0, 0) = 0 (mask 0 returns basic key in mock)
-    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0)
+    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0, false)
   })
 
   it('builds LT keycode when selecting a key in LT mode', () => {
@@ -739,7 +739,7 @@ describe('KeyPopover — LT/SH_T/LM wrapper modes', () => {
     fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: 'B' } })
     fireEvent.click(screen.getByTestId('popover-result-KC_B'))
     // buildLTKeycode(0, 5) = 0x4000 | (0 << 8) | 5 = 0x4005
-    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x4005)
+    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x4005, true)
   })
 
   it('changes layer in LT mode and rebuilds keycode', () => {
@@ -747,7 +747,7 @@ describe('KeyPopover — LT/SH_T/LM wrapper modes', () => {
     // Click layer 2 button
     fireEvent.click(screen.getByTestId('layer-btn-2'))
     // buildLTKeycode(2, 4) = 0x4000 | (2 << 8) | 4 = 0x4204
-    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x4204)
+    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x4204, false)
   })
 
   it('builds SH_T keycode when selecting a key in SH_T mode', () => {
@@ -755,7 +755,7 @@ describe('KeyPopover — LT/SH_T/LM wrapper modes', () => {
     render(<KeyPopover {...defaultProps} currentKeycode={4} />)
     fireEvent.click(screen.getByTestId('popover-mode-sh-t'))
     // Switching to SH_T mode: buildSHTKeycode(4) = 0x5600 | 4 = 0x5604
-    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x5604)
+    expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x5604, false)
   })
 
   it('reverts to basic key when toggling mode off', () => {
@@ -763,7 +763,7 @@ describe('KeyPopover — LT/SH_T/LM wrapper modes', () => {
     // LT mode is auto-detected. Click LT button to toggle off
     fireEvent.click(screen.getByTestId('popover-mode-lt'))
     // Should revert to basic key: extractBasicKey(0x4004) = 4
-    expect(onRawKeycodeSelect).toHaveBeenCalledWith(4)
+    expect(onRawKeycodeSelect).toHaveBeenCalledWith(4, false)
   })
 
   it('resets modifier mask to 0 when switching from LT to modTap', () => {
@@ -773,7 +773,7 @@ describe('KeyPopover — LT/SH_T/LM wrapper modes', () => {
     fireEvent.click(screen.getByTestId('popover-mode-mod-tap'))
     // Should build modTap with mask=0 (not extracting layer bits as mods)
     // buildModTapKeycode(0, 4) = 4 (mask 0 returns basic key)
-    expect(onRawKeycodeSelect).toHaveBeenCalledWith(4)
+    expect(onRawKeycodeSelect).toHaveBeenCalledWith(4, false)
   })
 
   it('resets modifier mask to 0 when switching from SH_T to modMask', () => {
@@ -783,6 +783,6 @@ describe('KeyPopover — LT/SH_T/LM wrapper modes', () => {
     fireEvent.click(screen.getByTestId('popover-mode-mod-mask'))
     // Should build modMask with mask=0 (not extracting SH_T prefix as mods)
     // buildModMaskKeycode(0, 4) = 4 (mask 0 returns basic key)
-    expect(onRawKeycodeSelect).toHaveBeenCalledWith(4)
+    expect(onRawKeycodeSelect).toHaveBeenCalledWith(4, false)
   })
 })

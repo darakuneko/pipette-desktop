@@ -240,12 +240,17 @@ describe('KeymapEditor — undo after single-click selection', () => {
     // No undo initially
     expect(screen.queryByTestId('popover-undo')).not.toBeInTheDocument()
 
-    // Select keycode via popover — triggers handlePopoverKeycodeSelect
+    // Select keycode via popover — triggers handlePopoverKeycodeSelect.
+    // Auto Move is off here, so a genuine confirm closes the popover
+    // (same as every popover confirm before Auto Move follow-along).
     await act(async () => {
       fireEvent.click(screen.getByTestId('popover-kc-a'))
     })
+    expect(screen.queryByTestId('key-popover')).not.toBeInTheDocument()
 
-    // Popover should still be open and now show undo
+    // Re-opening the popover on the same key shows undo for the entry
+    // the popover selection just recorded.
+    act(() => capturedOnKeyDoubleClick?.({ row: 0, col: 0 }, mockRect))
     expect(screen.getByTestId('key-popover')).toBeInTheDocument()
     expect(screen.getByTestId('popover-undo')).toBeInTheDocument()
     expect(capturedPreviousKeycode).toBe(5)

@@ -42,11 +42,25 @@ interface KeyPopoverProps {
   onLayerChange?: (layer: number) => void
   layerNames?: string[]
   onKeycodeSelect: (kc: Keycode) => void
-  onRawKeycodeSelect: (code: number) => void
+  /** `advance` distinguishes a genuine keycode confirm (Code tab Apply,
+   *  or a Key tab pick while a wrapper mode like LT/SH_T/LM/Mod-Tap/Mod-
+   *  Mask is active) from a raw call that merely reconfigures the
+   *  wrapper itself (mode-button switch, LT/LM layer change, modifier-
+   *  checkbox-strip change) — see the call sites below. Callers that
+   *  don't care (MacroEditor, KeycodeEntryModalShell) can ignore it. */
+  onRawKeycodeSelect: (code: number, advance: boolean) => void
   onModMaskChange?: (newMask: number) => void
   onClose: () => void
   onConfirm?: () => void // Enter / click-to-close: confirm and close the picker
   quickSelect?: boolean  // true: click applies + closes; false: buffer until Enter
+  /** When false, a confirmed keycode selection (quickSelect-immediate
+   *  apply, or Enter/close-hint confirming a buffered pick) does not call
+   *  onClose/onConfirm itself — the caller decides whether to close or
+   *  move the popover elsewhere instead (the keymap editor's Auto Move
+   *  follow-along). Defaults to true, matching every other caller's
+   *  existing "confirm closes" contract. Does not affect Escape/outside-
+   *  click/resize/the close button, which always close regardless. */
+  closeOnSelect?: boolean
   previousKeycode?: number // Previous keycode for undo (undefined = no undo available)
   onUndo?: () => void      // Revert to previousKeycode and close
   nextKeycode?: number     // Next keycode for redo (undefined = no redo available)
@@ -87,6 +101,7 @@ export function KeyPopover({
   onClose,
   onConfirm,
   quickSelect,
+  closeOnSelect = true,
   previousKeycode,
   onUndo,
   nextKeycode,
@@ -189,18 +204,18 @@ export function KeyPopover({
     return () => window.removeEventListener('resize', onClose)
   }, [onClose])
 
-  // Handle modifier strip changes — immediate keymap update
+  // Handle modifier strip changes — immediate keymap update, not a confirm (see the prop doc on `onRawKeycodeSelect`).
   const handleModStripChange = useCallback(
     (newMask: number) => {
       const basicKey = extractBasicKey(currentKeycode)
       if (wrapperMode === 'lm') {
-        onRawKeycodeSelect(buildLMKeycode(selectedLayer, newMask))
+        onRawKeycodeSelect(buildLMKeycode(selectedLayer, newMask), false)
       } else if (wrapperMode === 'modTap') {
-        onRawKeycodeSelect(buildModTapKeycode(newMask, basicKey))
+        onRawKeycodeSelect(buildModTapKeycode(newMask, basicKey), false)
       } else if (onModMaskChange) {
         onModMaskChange(newMask)
       } else {
-        onRawKeycodeSelect(buildModMaskKeycode(newMask, basicKey))
+        onRawKeycodeSelect(buildModMaskKeycode(newMask, basicKey), false)
       }
     },
     [wrapperMode, currentKeycode, selectedLayer, onRawKeycodeSelect, onModMaskChange],
@@ -222,11 +237,15 @@ export function KeyPopover({
     [currentModMask, selectedLayer, wrapperMode],
   )
 
-  // Apply a PendingAction to the keymap
+  // Apply a PendingAction to the keymap. Both branches represent a
+  // genuine keycode confirm (a plain pick, or a wrapper-mode pick whose
+  // inner key `wrapKeycode` folded into a raw build) — see the prop doc
+  // on `onRawKeycodeSelect` for the contrast with the non-confirm raw
+  // calls elsewhere in this file.
   const applyAction = useCallback(
     (action: PendingAction) => {
       if (action.kind === 'kc') onKeycodeSelect(action.kc)
-      else onRawKeycodeSelect(action.code)
+      else onRawKeycodeSelect(action.code, true)
     },
     [onKeycodeSelect, onRawKeycodeSelect],
   )
@@ -238,18 +257,20 @@ export function KeyPopover({
         setPendingAction(action)
       } else {
         applyAction(action)
-        // Auto-close after immediate apply when quickSelect is on
-        ;(onConfirm ?? onClose)()
+        // Auto-close after immediate apply when quickSelect is on — unless
+        // the caller wants to decide for itself (see `closeOnSelect`).
+        if (closeOnSelect) (onConfirm ?? onClose)()
       }
     },
-    [quickSelect, wrapKeycode, applyAction, onConfirm, onClose],
+    [quickSelect, wrapKeycode, applyAction, onConfirm, onClose, closeOnSelect],
   )
 
-  // Apply any buffered pending action then close the popover
+  // Apply any buffered pending action then close the popover (unless
+  // `closeOnSelect` is false — see its prop doc).
   const confirmAndClose = useCallback(() => {
     if (pendingAction) applyAction(pendingAction)
-    ;(onConfirm ?? onClose)()
-  }, [pendingAction, applyAction, onConfirm, onClose])
+    if (closeOnSelect) (onConfirm ?? onClose)()
+  }, [pendingAction, applyAction, onConfirm, onClose, closeOnSelect])
 
   // Refs so the keydown handler always sees latest values without re-subscribing
   const pendingRef = useRef(pendingAction)
@@ -275,21 +296,21 @@ export function KeyPopover({
     return () => window.removeEventListener('keydown', handler, true)
   }, [onClose])
 
-  // Handle layer selector changes — immediate keycode rebuild
+  // Handle layer selector changes — immediate keycode rebuild, not a confirm (see the prop doc on `onRawKeycodeSelect`).
   const handleLayerChange = useCallback(
     (layer: number) => {
       setSelectedLayer(layer)
       const basicKey = extractBasicKey(currentKeycode)
       if (wrapperMode === 'lt') {
-        onRawKeycodeSelect(buildLTKeycode(layer, basicKey))
+        onRawKeycodeSelect(buildLTKeycode(layer, basicKey), false)
       } else if (wrapperMode === 'lm') {
-        onRawKeycodeSelect(buildLMKeycode(layer, currentModMask))
+        onRawKeycodeSelect(buildLMKeycode(layer, currentModMask), false)
       }
     },
     [wrapperMode, currentKeycode, currentModMask, onRawKeycodeSelect],
   )
 
-  // Switching modes converts the keycode format (preserving basic key)
+  // Switching modes converts the keycode format (preserving basic key) — reconfigures the wrapper only, not a confirm (see the prop doc on `onRawKeycodeSelect`).
   const handleModeSwitch = useCallback(
     (newMode: WrapperMode) => {
       // Toggle off if clicking the active mode
@@ -301,29 +322,29 @@ export function KeyPopover({
       if (target === 'none') {
         // Turning off: revert to basic key
         if (basicKey !== currentKeycode) {
-          onRawKeycodeSelect(basicKey)
+          onRawKeycodeSelect(basicKey, false)
         }
       } else {
         // Switching to a new mode: rebuild keycode
         switch (target) {
           case 'lt':
-            onRawKeycodeSelect(buildLTKeycode(selectedLayer, basicKey))
+            onRawKeycodeSelect(buildLTKeycode(selectedLayer, basicKey), false)
             break
           case 'shT':
-            onRawKeycodeSelect(buildSHTKeycode(basicKey))
+            onRawKeycodeSelect(buildSHTKeycode(basicKey), false)
             break
           case 'lm':
-            onRawKeycodeSelect(buildLMKeycode(selectedLayer, 0))
+            onRawKeycodeSelect(buildLMKeycode(selectedLayer, 0), false)
             break
           case 'modTap': {
             // Only preserve mod mask when switching from another mod-based mode
             const mask = (wrapperMode === 'modMask' || wrapperMode === 'modTap') ? extractModMask(currentKeycode) : 0
-            onRawKeycodeSelect(buildModTapKeycode(mask, basicKey))
+            onRawKeycodeSelect(buildModTapKeycode(mask, basicKey), false)
             break
           }
           case 'modMask': {
             const mask = (wrapperMode === 'modMask' || wrapperMode === 'modTap') ? extractModMask(currentKeycode) : 0
-            onRawKeycodeSelect(buildModMaskKeycode(mask, basicKey))
+            onRawKeycodeSelect(buildModMaskKeycode(mask, basicKey), false)
             break
           }
         }
@@ -494,7 +515,8 @@ export function KeyPopover({
           <PopoverTabCode
             currentKeycode={currentKeycode}
             maskOnly={maskOnly}
-            onRawKeycodeSelect={onRawKeycodeSelect}
+            // Code tab Apply is a genuine confirm, same as a Key tab pick.
+            onRawKeycodeSelect={(code) => onRawKeycodeSelect(code, true)}
           />
         )}
       </div>
