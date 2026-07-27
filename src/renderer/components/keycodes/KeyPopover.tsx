@@ -63,6 +63,16 @@ interface KeyPopoverProps {
    *  so the Key tab's search index and result rows agree with what
    *  the keymap grid shows (issue #294). */
   remapLabel?: (qmkId: string) => string
+  /** Edit target identity, exposed as the `data-popover-target-key`
+   *  attribute on the root element so e2e tests can observe which
+   *  key/encoder is currently being edited. This is `popoverInstanceKey`
+   *  (`keymap-editor-popover.tsx`) itself — the same string that tells
+   *  React to remount this component — so the attribute answers exactly
+   *  "did the edit target change" rather than reimplementing that
+   *  identity separately. Only `KeymapEditor`'s `PopoverForState` passes
+   *  this; `MacroEditor` and `KeycodeEntryModalShell` have no edit-target
+   *  concept, so the attribute is omitted for them. */
+  targetKey?: string
 }
 
 const POPOVER_WIDTH = 320
@@ -90,6 +100,7 @@ export function KeyPopover({
   nextKeycode,
   onRedo,
   remapLabel,
+  targetKey,
 }: KeyPopoverProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<Tab>('key')
@@ -211,6 +222,8 @@ export function KeyPopover({
         paddingLeft: showLayerSidebar ? LAYER_SIDEBAR_WIDTH : undefined,
       }}
       data-testid="key-popover"
+      data-popover-target-key={targetKey}
+      data-popover-target-layer={targetKey != null ? currentLayer : undefined}
     >
       {showLayerSidebar && (
         <div
