@@ -9,6 +9,21 @@ import { serialize, isMask } from '../../../shared/keycodes/keycodes'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
 import type { PopoverState } from './keymap-editor-types'
 
+/** Builds the `key` KeymapEditor assigns to `<PopoverForState>` so Auto
+ *  Move's follow-along (same call site, new target) remounts KeyPopover
+ *  like a close+reopen — see the contract on `KeyPopoverProps`.
+ *
+ *  `currentLayer` is excluded on purpose: a layer switch keeps the same
+ *  key/encoder open, so it's handled by `usePopoverKeycodeWorkflow`'s own
+ *  effect instead of a remount, which is what lets `activeTab` survive it.
+ *  `currentKeycode`/`anchorRect` are excluded too — mid-edit churn, not
+ *  target identity. */
+export function popoverInstanceKey(popoverState: NonNullable<PopoverState>): string {
+  return popoverState.kind === 'key'
+    ? `key:${popoverState.row},${popoverState.col}:${popoverState.maskClicked}`
+    : `encoder:${popoverState.idx},${popoverState.dir}:${popoverState.maskClicked}`
+}
+
 interface PopoverForStateProps {
   popoverState: NonNullable<PopoverState>
   keymap: Map<string, number>

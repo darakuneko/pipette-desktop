@@ -12,6 +12,18 @@ import { usePopoverKeycodeWorkflow, type WrapperMode } from './use-popover-keyco
 
 type Tab = 'key' | 'code'
 
+/** Contract for callers that keep the same `<KeyPopover>` call site across
+ *  edit-target changes (e.g. `KeymapEditor`'s Auto Move follow-along, which
+ *  advances this same popover to a new key/encoder instead of unmounting
+ *  it): the caller must pass a React `key` derived from the new target
+ *  (kind, position, mask side — see `KeymapEditor`'s `popoverInstanceKey`)
+ *  so React remounts this component and its internal state (wrapper mode,
+ *  buffered pick, active tab, search box) resets like a close+reopen.
+ *  `currentLayer` changes are the one exception, handled internally instead
+ *  (see `usePopoverKeycodeWorkflow`'s `currentLayer` effect) so that
+ *  `activeTab` survives a layer-sidebar switch. `MacroEditor` and
+ *  `KeycodeEntryModalShell` don't need this — they mount a fresh instance
+ *  per open. */
 interface KeyPopoverProps {
   anchorRect: DOMRect
   currentKeycode: number

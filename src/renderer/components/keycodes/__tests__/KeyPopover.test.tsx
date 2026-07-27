@@ -786,3 +786,112 @@ describe('KeyPopover — LT/SH_T/LM wrapper modes', () => {
     expect(onRawKeycodeSelect).toHaveBeenCalledWith(4, false)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Auto Move advance: KeymapEditor keeps the same call site but changes the
+// `key` it hands `<KeyPopover>` (via `popoverInstanceKey`) as the edit target
+// moves — layer is *not* part of that key (see the next describe block for
+// that case). These tests simulate the same `key` change directly on
+// `KeyPopover` and check the popover's own internal state — the regression
+// this closes left `wrapperMode`/`selectedLayer`/`pendingAction`/`activeTab`/
+// the search box behind on the previous target.
+// ---------------------------------------------------------------------------
+
+describe('KeyPopover — remount on Auto Move advance (key prop change)', () => {
+  it('shows the moved-to key\'s current value, not the previous key\'s — matches closing and reopening', () => {
+    const { rerender } = render(<KeyPopover key="0,0" {...defaultProps} currentKeycode={4} />)
+    expect((screen.getByTestId('popover-search-input') as HTMLInputElement).value).toBe('A')
+
+    // Auto Move advances to a key currently holding KC_B.
+    rerender(<KeyPopover key="0,1" {...defaultProps} currentKeycode={5} />)
+    expect((screen.getByTestId('popover-search-input') as HTMLInputElement).value).toBe('B')
+  })
+
+  it('re-detects wrapper mode for the moved-to key instead of keeping the previous key\'s mode', () => {
+    // Start on a plain basic key — no wrapper mode, no layer selector.
+    const { rerender } = render(<KeyPopover key="0,0" {...defaultProps} currentKeycode={4} layers={4} />)
+    expect(screen.queryByTestId('layer-selector')).not.toBeInTheDocument()
+
+    // Auto Move advances to a key that already holds an LT-wrapped keycode —
+    // LT mode must be auto-detected for it, not left at the previous key's 'none'.
+    rerender(<KeyPopover key="0,1" {...defaultProps} currentKeycode={0x4104} layers={4} />)
+    expect(screen.getByTestId('layer-selector')).toBeInTheDocument()
+  })
+
+  it('does not carry over a buffered pending action from the previous key', () => {
+    const { rerender } = render(<KeyPopover key="0,0" {...defaultProps} currentKeycode={4} quickSelect={false} />)
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: 'B' } })
+    fireEvent.click(screen.getByTestId('popover-result-KC_B'))
+    // Buffered (quickSelect off), not applied yet.
+    expect(onKeycodeSelect).not.toHaveBeenCalled()
+
+    // Advance to the next key without confirming — the old key's buffered
+    // pick must not survive into the new instance.
+    rerender(<KeyPopover key="0,1" {...defaultProps} currentKeycode={4} quickSelect={false} />)
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    })
+    // Enter at the new key, with nothing picked there yet, must not apply
+    // the stale KC_B pick from the previous key.
+    expect(onKeycodeSelect).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('resets the active tab to Key after advance even if the Code tab was left open on the previous key', () => {
+    const { rerender } = render(<KeyPopover key="0,0" {...defaultProps} currentKeycode={4} />)
+    fireEvent.click(screen.getByTestId('popover-tab-code'))
+    expect(screen.getByTestId('popover-hex-input')).toBeInTheDocument()
+
+    rerender(<KeyPopover key="0,1" {...defaultProps} currentKeycode={5} />)
+    expect(screen.queryByTestId('popover-hex-input')).not.toBeInTheDocument()
+    expect(screen.getByTestId('popover-search-input')).toBeInTheDocument()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Layer sidebar click (`currentLayer` prop change, same `key` — no remount):
+// this is the existing "view another layer's value while the popover stays
+// open" workflow. Unlike an Auto Move advance, this must NOT reset
+// `activeTab` — that's the whole point of the layer sidebar. It still must
+// re-derive wrapper mode / selected layer / any buffered pick for the new
+// layer's keycode, via `usePopoverKeycodeWorkflow`'s own `currentLayer` effect.
+// ---------------------------------------------------------------------------
+
+describe('KeyPopover — layer sidebar change (currentLayer prop, same instance)', () => {
+  it('keeps the active tab on Code across a layer change', () => {
+    const { rerender } = render(
+      <KeyPopover {...defaultProps} currentKeycode={4} layers={4} currentLayer={0} onLayerChange={() => {}} />,
+    )
+    fireEvent.click(screen.getByTestId('popover-tab-code'))
+    expect(screen.getByTestId('popover-hex-input')).toBeInTheDocument()
+
+    // Same instance (no `key` change) — only `currentLayer` changes.
+    rerender(
+      <KeyPopover {...defaultProps} currentKeycode={5} layers={4} currentLayer={1} onLayerChange={() => {}} />,
+    )
+    expect(screen.getByTestId('popover-hex-input')).toBeInTheDocument()
+  })
+
+  it('re-detects wrapper mode and clears any buffered pick for the new layer\'s keycode', () => {
+    // LT1(KC_A) auto-detects LT mode with the layer selector shown.
+    const { rerender } = render(
+      <KeyPopover {...defaultProps} currentKeycode={0x4104} layers={4} currentLayer={0} onLayerChange={() => {}} quickSelect={false} />,
+    )
+    expect(screen.getByTestId('layer-selector')).toBeInTheDocument()
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: 'B' } })
+    fireEvent.click(screen.getByTestId('popover-result-KC_B'))
+    expect(onKeycodeSelect).not.toHaveBeenCalled()
+
+    // Switch layer sidebar to a layer whose same position holds a plain
+    // basic key — wrapper mode must reset to 'none', not keep 'lt', and the
+    // buffered KC_B pick from the previous layer must not survive.
+    rerender(
+      <KeyPopover {...defaultProps} currentKeycode={4} layers={4} currentLayer={1} onLayerChange={() => {}} quickSelect={false} />,
+    )
+    expect(screen.queryByTestId('layer-selector')).not.toBeInTheDocument()
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    })
+    expect(onKeycodeSelect).not.toHaveBeenCalled()
+  })
+})
