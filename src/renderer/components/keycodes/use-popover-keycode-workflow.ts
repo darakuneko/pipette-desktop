@@ -38,6 +38,13 @@ function detectWrapperMode(keycode: number, maskOnly?: boolean): WrapperMode {
 export interface UsePopoverKeycodeWorkflowOptions {
   currentKeycode: number
   maskOnly?: boolean
+  /** Layer shown in `KeyPopover`'s layer sidebar. A layer switch reuses the
+   *  same `KeyPopover` instance (unlike an edit-target change, which
+   *  remounts via `KeymapEditor`'s `popoverInstanceKey`) so that `activeTab`
+   *  survives it — but this hook's own picker state (wrapper mode, layer,
+   *  buffered pick, search) still needs to catch up to the new layer's
+   *  keycode. That catch-up is this hook's own effect below, not the
+   *  remount — see that effect for why the two are kept separate. */
   currentLayer?: number
   onKeycodeSelect: (kc: Keycode) => void
   /** `advance` distinguishes a genuine keycode confirm (Code tab Apply,
@@ -116,6 +123,11 @@ export function usePopoverKeycodeWorkflow({
   })()
 
   const prevCurrentLayerRef = useRef(currentLayer)
+  // Re-derives the picker state a remount would reset, without remounting —
+  // deliberately *not* folded into `popoverInstanceKey`'s target-change
+  // remount, because that would also reset `activeTab`, and the layer
+  // sidebar's whole point is viewing another layer's value without losing
+  // which tab you were on.
   useEffect(() => {
     if (currentLayer == null || currentLayer === prevCurrentLayerRef.current) return
     prevCurrentLayerRef.current = currentLayer

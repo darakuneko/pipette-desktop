@@ -16,7 +16,7 @@ export type { KeymapEditorHandle } from './keymap-editor-types'
 import { KeyboardPane } from './KeyboardPane'
 import { LayerListPanel } from './LayerListPanel'
 import { ScaleInput, ghostZoomButtonClass, KeymapToolbar } from './keymap-editor-toolbar'
-import { PopoverForState } from './keymap-editor-popover'
+import { PopoverForState, popoverInstanceKey } from './keymap-editor-popover'
 import { Tooltip } from '../ui/Tooltip'
 import { useInputModes } from './useInputModes'
 import { useKeymapMultiSelect } from './useKeymapMultiSelect'
@@ -783,6 +783,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
       {!typingTestMode && popoverState && (
         <PopoverForState
+          key={popoverInstanceKey(popoverState)}
           popoverState={popoverState} keymap={keymap} encoderLayout={encoderLayout}
           currentLayer={currentLayer} layers={layers}
           onLayerChange={onLayerChange} layerNames={layerNames}
