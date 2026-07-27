@@ -18,7 +18,7 @@ interface PopoverForStateProps {
   onLayerChange?: (layer: number) => void
   layerNames?: string[]
   onKeycodeSelect: (kc: Keycode) => void
-  onRawKeycodeSelect: (code: number) => void
+  onRawKeycodeSelect: (code: number, advance: boolean) => void
   onModMaskChange?: (newMask: number) => void
   onClose: () => void
   quickSelect?: boolean
@@ -46,6 +46,11 @@ export function PopoverForState({
       onKeycodeSelect={onKeycodeSelect} onRawKeycodeSelect={onRawKeycodeSelect} onModMaskChange={onModMaskChange}
       onClose={onClose} quickSelect={quickSelect} previousKeycode={previousKeycode} onUndo={onUndo}
       nextKeycode={nextKeycode} onRedo={onRedo} remapLabel={remapLabel}
+      // The keymap editor decides close-vs-advance itself (Auto Move
+      // follow-along) instead of letting a confirm auto-close — see
+      // `useKeymapSelectionHandlers`'s popover handlers and the prop doc
+      // on `KeyPopover.closeOnSelect`.
+      closeOnSelect={false}
     />
   )
 }

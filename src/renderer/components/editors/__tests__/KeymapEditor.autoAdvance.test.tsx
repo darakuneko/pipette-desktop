@@ -61,7 +61,7 @@ vi.mock('../../keycodes/TabbedKeycodes', () => ({
 vi.mock('../../keycodes/KeyPopover', () => ({
   KeyPopover: (props: {
     onKeycodeSelect?: (kc: { qmkId: string }) => void
-    onRawKeycodeSelect?: (code: number) => void
+    onRawKeycodeSelect?: (code: number, advance: boolean) => void
     onClose?: () => void
   }) => {
     return (
@@ -74,7 +74,10 @@ vi.mock('../../keycodes/KeyPopover', () => ({
         </button>
         <button
           data-testid="popover-raw-5"
-          onClick={() => props.onRawKeycodeSelect?.(5)}
+          // `advance: true` mirrors a genuine confirm (Code tab Apply, or
+          // a wrapped inner-key pick) — see `KeyPopover`'s `onRawKeycodeSelect`
+          // prop doc.
+          onClick={() => props.onRawKeycodeSelect?.(5, true)}
         >
           Popover Raw 5
         </button>
@@ -239,7 +242,16 @@ describe('KeymapEditor — auto advance', () => {
     expect(screen.getByText('[0,1]')).toBeInTheDocument()
   })
 
-  it('does NOT advance when keycode is selected via popover (onKeycodeSelect)', async () => {
+  it('closes the popover instead of advancing past a key with no on-screen element (onKeycodeSelect)', async () => {
+    // `KeyboardWidget` is mocked out above (a plain placeholder div), so no
+    // real `data-key-pos` element ever exists under `keyboardContentRef` in
+    // this file — the popover follow-along's next-key rect lookup always
+    // comes up empty here, which is exactly the "next key has no on-screen
+    // element" case: a genuine confirm that can't advance closes the
+    // popover instead of leaving it stranded open. `selectedKey` itself is
+    // untouched by that close. See
+    // `useKeymapSelectionHandlers.popoverAdvance.test.ts` for the real
+    // advance-with-a-live-DOM behavior.
     render(<KeymapEditor {...defaultProps} autoAdvance={true} />)
 
     // Double-click to open popover
@@ -252,11 +264,16 @@ describe('KeymapEditor — auto advance', () => {
       fireEvent.click(screen.getByTestId('popover-kc-a'))
     })
 
-    // Should NOT advance — popover is an intentional edit mode
+    // selectedKey never moves off [0,0] — there's no next-key element to
+    // measure a rect from — and the popover closes rather than staying open.
     expect(screen.getByText('[0,0]')).toBeInTheDocument()
+    expect(screen.queryByTestId('key-popover')).not.toBeInTheDocument()
   })
 
-  it('does NOT advance when raw keycode is selected via popover (onRawKeycodeSelect)', async () => {
+  it('closes the popover instead of advancing past a key with no on-screen element (onRawKeycodeSelect)', async () => {
+    // Same DOM-less setup as the onKeycodeSelect case above — a raw confirm
+    // (advance=true) also closes instead of advancing when the next key
+    // has no element to anchor to.
     render(<KeymapEditor {...defaultProps} autoAdvance={true} />)
 
     // Double-click to open popover
@@ -268,8 +285,9 @@ describe('KeymapEditor — auto advance', () => {
       fireEvent.click(screen.getByTestId('popover-raw-5'))
     })
 
-    // Should NOT advance
+    // Should NOT advance, and the popover should close.
     expect(screen.getByText('[0,0]')).toBeInTheDocument()
+    expect(screen.queryByTestId('key-popover')).not.toBeInTheDocument()
   })
 
   it('does NOT advance to next key when masked keycode is assigned with autoAdvance', async () => {

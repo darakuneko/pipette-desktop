@@ -134,7 +134,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   // --- Selection + handlers ---
   const {
-    selectedKey, selectedEncoder, selectedMaskPart, popoverState, setPopoverState,
+    selectedKey, selectedEncoder, selectedMaskPart, popoverState, closePopover,
     selectedKeycode, isMaskKey, isLMMask,
     handleKeyClick, handleEncoderClick, handleKeyDoubleClick, handleEncoderDoubleClick,
     handleKeycodeSelect, handlePopoverKeycodeSelect, handlePopoverRawKeycodeSelect,
@@ -146,7 +146,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   } = useKeymapSelectionHandlers({
     keymap, encoderLayout, currentLayer,
     selectableKeys, autoAdvance, viewMatrix,
-    onSetKey, onSetKeysBulk, onSetEncoder, unlocked, onUnlock,
+    onSetKey, onSetKeysBulk, onSetEncoder, keyboardContentRef, unlocked, onUnlock,
     multiSelect, history,
     onHistoryApplied: triggerFlash,
     tapDanceEntries, onSetTapDanceEntry,
@@ -788,7 +788,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onLayerChange={onLayerChange} layerNames={layerNames}
           onKeycodeSelect={handlePopoverKeycodeSelect} onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
           onModMaskChange={handlePopoverModMaskChange}
-          onClose={() => setPopoverState(null)} quickSelect={quickSelect}
+          onClose={closePopover} quickSelect={quickSelect}
           previousKeycode={popoverUndoKeycode} onUndo={handlePopoverUndo}
           nextKeycode={popoverRedoKeycode} onRedo={handlePopoverRedo}
           remapLabel={pickerRemapLabel}
