@@ -20,6 +20,8 @@ import {
   isAvailable,
   isLocalHubUp,
   launchCaptureApp,
+  openOverlayTab,
+  overlayTabNotFoundMessage,
   resetToEditorMode,
   restoreHubEnabledConfig,
   restoreVirtualDeviceSnapshots,
@@ -296,29 +298,6 @@ async function waitForUploadButton(page: Page): Promise<{ available: boolean; lo
   }
 }
 
-async function ensureOverlayOpen(page: Page): Promise<boolean> {
-  const toggle = page.locator('button[aria-controls="keycodes-overlay-panel"]')
-  if (!(await isAvailable(toggle))) return false
-
-  const isExpanded = await toggle.getAttribute('aria-expanded')
-  if (isExpanded !== 'true') {
-    await toggle.click()
-    await page.waitForTimeout(500)
-  }
-  return true
-}
-
-async function switchOverlayTab(page: Page, tabTestId: string): Promise<boolean> {
-  const tab = page.locator(`[data-testid="${tabTestId}"]`)
-  if (!(await isAvailable(tab))) {
-    console.log(`  [skip] ${tabTestId} not found`)
-    return false
-  }
-  await tab.click()
-  await page.waitForTimeout(300)
-  return true
-}
-
 async function captureEditorDataTab(page: Page): Promise<void> {
   console.log('\n--- Phase 5: Overlay Panel -> Data tab (Save & Upload) ---')
 
@@ -333,13 +312,8 @@ async function captureEditorDataTab(page: Page): Promise<void> {
     await page.waitForTimeout(300)
   }
 
-  if (!(await ensureOverlayOpen(page))) {
-    console.log('  [skip] overlay toggle not found')
-    return
-  }
-
-  if (!(await switchOverlayTab(page, 'overlay-tab-data'))) {
-    console.log('  [skip] data tab not found in overlay')
+  if (!(await openOverlayTab(page, 'data'))) {
+    console.log(`  [skip] ${overlayTabNotFoundMessage('data')}`)
     return
   }
 

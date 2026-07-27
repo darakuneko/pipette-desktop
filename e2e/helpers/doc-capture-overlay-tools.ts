@@ -21,14 +21,15 @@
 // environments even though the page is fully interactive (see
 // doc-capture-language-packs.ts for the same workaround and rationale).
 
-import type { ElectronApplication, Page } from '@playwright/test'
+import type { ElectronApplication } from '@playwright/test'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
   connectToDevice,
   dismissNotificationModal,
-  isAvailable,
   launchCaptureApp,
+  openOverlayTab,
+  overlayTabNotFoundMessage,
   VIRTUAL_DEVICE_DISPLAY_NAME,
 } from './doc-capture-common'
 
@@ -52,17 +53,6 @@ async function capture(app: ElectronApplication, name: string): Promise<void> {
   const path = resolve(SCREENSHOT_DIR, `${name}.png`)
   writeFileSync(path, Buffer.from(dataUrl.replace(/^data:image\/png;base64,/, ''), 'base64'))
   console.log(`Saved: ${path}`)
-}
-
-async function ensureOverlayOpen(page: Page): Promise<boolean> {
-  const toggle = page.locator('button[aria-controls="keycodes-overlay-panel"]')
-  if (!(await isAvailable(toggle))) return false
-  const isExpanded = await toggle.getAttribute('aria-expanded')
-  if (isExpanded !== 'true') {
-    await toggle.click()
-    await page.waitForTimeout(500)
-  }
-  return true
 }
 
 async function main(): Promise<void> {
@@ -90,15 +80,9 @@ async function main(): Promise<void> {
 
     // The Tools overlay tab isn't unlock-gated, so no clickThroughUnlock is
     // needed here — just open the keycodes overlay and select the tab.
-    if (!(await ensureOverlayOpen(page))) {
-      console.log('[skip] overlay toggle not found')
+    if (!(await openOverlayTab(page, 'tools'))) {
+      console.log(`  [skip] ${overlayTabNotFoundMessage('tools')}`)
       return
-    }
-
-    const tab = page.locator('[data-testid="overlay-tab-tools"]')
-    if (await isAvailable(tab)) {
-      await tab.click()
-      await page.waitForTimeout(300)
     }
 
     await capture(app, 'overlay-tools')

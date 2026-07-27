@@ -20,6 +20,7 @@ import {
   HUB_LOCAL_START_HINT,
   HUB_LOCAL_URL,
   isLocalHubUp,
+  openOverlayTab,
   resetToEditorMode,
   restoreHubEnabledConfig,
   restoreVirtualDeviceSnapshots,
@@ -143,11 +144,7 @@ test('connects the virtual device and reaches the hub upload UI', async () => {
   await resetToEditorMode(page)
 
   // Open the overlay panel's Data tab where saved layouts live.
-  const overlayToggle = page.locator('button[aria-controls="keycodes-overlay-panel"]')
-  if ((await overlayToggle.getAttribute('aria-expanded')) !== 'true') {
-    await overlayToggle.click()
-  }
-  await page.locator('[data-testid="overlay-tab-data"]').click()
+  expect(await openOverlayTab(page, 'data')).toBe(true)
 
   // Save a snapshot; its entry must expose the hub upload button.
   await page.locator('[data-testid="layout-store-save-input"]').fill(PUBLIC_LABEL)

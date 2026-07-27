@@ -10,7 +10,7 @@ import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { dismissNotificationModal } from './doc-capture-common'
+import { dismissNotificationModal, openOverlayTab } from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
@@ -32,15 +32,6 @@ async function interceptFileDialog(app: ElectronApplication): Promise<void> {
     },
     FIXTURE_PATH,
   )
-}
-
-async function ensureOverlayOpen(page: Page): Promise<void> {
-  const toggle = page.locator('button[aria-controls="keycodes-overlay-panel"]')
-  const isExpanded = await toggle.getAttribute('aria-expanded')
-  if (isExpanded !== 'true') {
-    await toggle.click()
-    await page.waitForTimeout(500)
-  }
 }
 
 async function main(): Promise<void> {
@@ -77,13 +68,13 @@ async function main(): Promise<void> {
     await dismissNotificationModal(page)
 
     // Open overlay panel and switch to Layout tab
-    await ensureOverlayOpen(page)
-    const layoutTab = page.locator('[data-testid="overlay-tab-layout"]')
-    if ((await layoutTab.count()) === 0) {
+    if (!(await openOverlayTab(page, 'layout'))) {
       throw new Error('Layout tab not found — keyboard definition may not have layout options')
     }
-    await layoutTab.click()
-    await page.waitForTimeout(500)
+    // Carried over from the pre-refactor capture, which waited 500ms here
+    // specifically for Layout (other tabs used the shorter default) — the
+    // reason Layout needed the longer wait isn't recorded anywhere.
+    await page.waitForTimeout(200)
     await capture(page, 'layout-options-open')
 
     // Change first visible option to capture the changed state.

@@ -653,6 +653,70 @@ export async function dismissOverlay(
   await page.waitForTimeout(500)
 }
 
+/** Selector for the keycode picker's Menu-overlay toggle button, shared by
+ *  every function below that opens/closes/inspects that overlay. */
+const KEYCODES_OVERLAY_TOGGLE_SELECTOR = 'button[aria-controls="keycodes-overlay-panel"]'
+
+/**
+ * Open the keycode picker's Menu overlay (`keycodes-overlay-panel`) if it's
+ * currently closed. Reads `aria-expanded` first so this is idempotent —
+ * the toggle button has no separate open/close affordance, just one button
+ * that flips state, so calling this on an already-open overlay must be a
+ * no-op rather than close it again. Returns false without throwing if the
+ * toggle isn't in the DOM at all: Typing Test and View Matrix mode unmount
+ * the whole keycode picker, overlay included (see KeymapEditor.tsx).
+ */
+export async function openKeycodesOverlay(page: Page): Promise<boolean> {
+  const toggle = page.locator(KEYCODES_OVERLAY_TOGGLE_SELECTOR)
+  if (!(await isAvailable(toggle))) return false
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') {
+    await toggle.click()
+    await page.waitForTimeout(500)
+  }
+  return true
+}
+
+/** Close the Menu overlay opened by `openKeycodesOverlay`, if it's open.
+ *  Same idempotent toggle-button read, mirrored for the close direction. */
+export async function closeKeycodesOverlay(page: Page): Promise<void> {
+  const toggle = page.locator(KEYCODES_OVERLAY_TOGGLE_SELECTOR)
+  if (!(await isAvailable(toggle))) return
+  if ((await toggle.getAttribute('aria-expanded')) === 'true') {
+    await toggle.click()
+    await page.waitForTimeout(300)
+  }
+}
+
+/** Standard "the overlay tab wasn't there" message body, shared by every
+ *  doc-capture call site that skips (log + return) or aborts (throw) when
+ *  `openOverlayTab` returns false. */
+export function overlayTabNotFoundMessage(tab: 'layout' | 'tools' | 'data'): string {
+  return `overlay-tab-${tab} not found`
+}
+
+/**
+ * Open the Menu overlay and switch to `tab`. Returns false immediately —
+ * without waiting out a timeout — when the toggle or the tab isn't
+ * available, so a misconfigured capture (e.g. a keyboard without layout
+ * options) fails fast instead of hanging on a locator that will never
+ * appear.
+ */
+export async function openOverlayTab(page: Page, tab: 'layout' | 'tools' | 'data'): Promise<boolean> {
+  if (!(await openKeycodesOverlay(page))) return false
+
+  const tabBtn = page.locator(`[data-testid="overlay-tab-${tab}"]`)
+  // The panel only renders a tab *bar* (and with it, `overlay-tab-tools`)
+  // once there are 2+ tabs. With `tools` as the sole tab there's no button
+  // to click, but its content is already the active one.
+  if ((await tabBtn.count()) === 0) return tab === 'tools'
+  // Already selected: skip the click (and its settle wait) so repeat calls
+  // in the same session don't re-trigger the tab's mount effects.
+  if ((await tabBtn.getAttribute('aria-selected')) === 'true') return true
+  await tabBtn.click()
+  await page.waitForTimeout(300)
+  return true
+}
+
 /**
  * Select a specific keyboard (by uid) through the Analyze staged filter
  * modal (chip -> Keyboard row -> Apply). Polls for the option's `<select>`

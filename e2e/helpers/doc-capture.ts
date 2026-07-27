@@ -8,12 +8,15 @@ import { resolve, join } from 'node:path'
 import {
   backupVirtualDeviceSettings,
   clickThroughUnlock,
+  closeKeycodesOverlay,
   connectToDevice,
   dismissNotificationModal,
   escapeRegex,
   isAvailable,
   launchCaptureApp,
   nullifyLastDeviceConfig,
+  openOverlayTab,
+  overlayTabNotFoundMessage,
   resetToEditorMode,
   resetVirtualDeviceKeyboardLayout,
   restoreLastDeviceConfig,
@@ -125,40 +128,6 @@ async function captureSegmentVariant(
     await offToggle.click()
     await page.waitForTimeout(500)
   }
-}
-
-async function ensureOverlayOpen(page: Page): Promise<boolean> {
-  const toggle = page.locator('button[aria-controls="keycodes-overlay-panel"]')
-  if (!(await isAvailable(toggle))) return false
-
-  const isExpanded = await toggle.getAttribute('aria-expanded')
-  if (isExpanded !== 'true') {
-    await toggle.click()
-    await page.waitForTimeout(500)
-  }
-  return true
-}
-
-async function closeOverlay(page: Page): Promise<void> {
-  const toggle = page.locator('button[aria-controls="keycodes-overlay-panel"]')
-  if (await isAvailable(toggle)) {
-    const isExpanded = await toggle.getAttribute('aria-expanded')
-    if (isExpanded === 'true') {
-      await toggle.click()
-      await page.waitForTimeout(300)
-    }
-  }
-}
-
-async function switchOverlayTab(page: Page, tabTestId: string): Promise<boolean> {
-  const tab = page.locator(`[data-testid="${tabTestId}"]`)
-  if (!(await isAvailable(tab))) {
-    console.log(`  [skip] ${tabTestId} not found`)
-    return false
-  }
-  await tab.click()
-  await page.waitForTimeout(300)
-  return true
 }
 
 async function connectDevice(app: ElectronApplication, page: Page): Promise<boolean> {
@@ -1373,14 +1342,11 @@ async function captureJsonEditors(page: Page): Promise<void> {
 async function captureEditorSettings(page: Page): Promise<void> {
   console.log('\n--- Phase 7: Editor Settings (Save Panel) ---')
 
-  if (!(await ensureOverlayOpen(page))) {
-    console.log('  [skip] overlay toggle not found')
+  if (!(await openOverlayTab(page, 'data'))) {
+    console.log(`  [skip] ${overlayTabNotFoundMessage('data')}`)
     return
   }
-
-  if (await switchOverlayTab(page, 'overlay-tab-data')) {
-    await captureNamed(page, 'editor-settings-save', { fullPage: true })
-  }
+  await captureNamed(page, 'editor-settings-save', { fullPage: true })
 }
 
 // --- Phase 7.5: Overlay Panel ---
@@ -1388,20 +1354,20 @@ async function captureEditorSettings(page: Page): Promise<void> {
 async function captureOverlayPanel(page: Page): Promise<void> {
   console.log('\n--- Phase 7.5: Overlay Panel ---')
 
-  if (!(await ensureOverlayOpen(page))) {
-    console.log('  [skip] overlay toggle not found')
-    return
+  const tabs = [
+    ['tools', 'overlay-tools'],
+    ['data', 'overlay-save'],
+  ] as const
+
+  for (const [tab, shotName] of tabs) {
+    if (await openOverlayTab(page, tab)) {
+      await captureNamed(page, shotName, { fullPage: true })
+    } else {
+      console.log(`  [skip] ${overlayTabNotFoundMessage(tab)}`)
+    }
   }
 
-  if (await switchOverlayTab(page, 'overlay-tab-tools')) {
-    await captureNamed(page, 'overlay-tools', { fullPage: true })
-  }
-
-  if (await switchOverlayTab(page, 'overlay-tab-data')) {
-    await captureNamed(page, 'overlay-save', { fullPage: true })
-  }
-
-  await closeOverlay(page)
+  await closeKeycodesOverlay(page)
 }
 
 // --- Phase 8: Status Bar ---
