@@ -139,6 +139,20 @@ const makeLayout = () => ({
   keys: [makeKey(0, 0), makeKey(1, 1), makeKey(2, 2)],
 })
 
+// A layout option at layoutIndex 0 with two choices (0/1), each providing a
+// distinct key at col 1 — only one of the pair is ever visible at a time,
+// mirroring an ISO/ANSI-style split key. Col 0/2 keys have no layoutIndex
+// and are always shown.
+const makeVariantKey = (col: number, layoutOption: number): KleKey => ({
+  ...KEY_DEFAULTS, x: col, col, layoutIndex: 0, layoutOption,
+})
+
+const makeLayoutWithVariant = () => ({
+  keys: [makeKey(0, 0), makeVariantKey(1, 0), makeVariantKey(2, 1), makeKey(3, 3)],
+})
+
+const LAYOUT_LABELS = [['Split', 'Regular', 'Split']]
+
 // Column order a(0,0) < b(0,1) < c(0,2). Overriding c to logical (0,0) ties
 // it with a; the physical (row, col) tiebreak in sortKeysByViewMatrix then
 // keeps a first, pulling c ahead of the untouched b — see
@@ -359,5 +373,79 @@ describe('KeymapEditor — auto advance', () => {
     // Physical order would advance to (0,1); the view matrix override pulls
     // (0,2) ahead of it, so the walk lands there instead.
     expect(screen.getByText('[0,2]')).toBeInTheDocument()
+  })
+
+  it('skips a layout-option variant hidden by the current selection', async () => {
+    render(
+      <KeymapEditor
+        {...defaultProps}
+        layout={makeLayoutWithVariant()}
+        layoutLabels={LAYOUT_LABELS}
+        packedLayoutOptions={1}
+        autoAdvance={true}
+      />,
+    )
+
+    // Select the always-visible key at (0,0)
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
+    expect(screen.getByText('[0,0]')).toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('kc-a'))
+    })
+
+    // Option 1 is selected, so the variant at col 1 (option 0) is not
+    // rendered; Auto Move must skip it and land on the variant at col 2
+    // (option 1) instead.
+    expect(screen.getByText('[0,2]')).toBeInTheDocument()
+    expect(screen.queryByText('[0,1]')).not.toBeInTheDocument()
+  })
+
+  it('includes the currently visible layout-option variant in the walk', async () => {
+    render(
+      <KeymapEditor
+        {...defaultProps}
+        layout={makeLayoutWithVariant()}
+        layoutLabels={LAYOUT_LABELS}
+        packedLayoutOptions={0}
+        autoAdvance={true}
+      />,
+    )
+
+    // Select the always-visible key at (0,0)
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
+    expect(screen.getByText('[0,0]')).toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('kc-a'))
+    })
+
+    // Option 0 is selected, so the variant at col 1 is the visible one and
+    // is the very next key in the walk.
+    expect(screen.getByText('[0,1]')).toBeInTheDocument()
+  })
+
+  it('keeps decal and encoder keys excluded from the walk', async () => {
+    const layout = {
+      keys: [
+        makeKey(0, 0),
+        { ...KEY_DEFAULTS, x: 1, col: 1, decal: true },
+        { ...KEY_DEFAULTS, x: 2, col: 2, encoderIdx: 0 },
+        makeKey(3, 3),
+      ],
+    }
+
+    render(<KeymapEditor {...defaultProps} layout={layout} autoAdvance={true} />)
+
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
+    expect(screen.getByText('[0,0]')).toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('kc-a'))
+    })
+
+    // The decal (col 1) and encoder (col 2) keys are never selectable — the
+    // walk jumps straight to the next real key at col 3.
+    expect(screen.getByText('[0,3]')).toBeInTheDocument()
   })
 })
