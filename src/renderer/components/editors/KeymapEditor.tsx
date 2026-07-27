@@ -144,7 +144,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     handleDeselect, handleDeselectClick,
     tdModalIndex, macroModalIndex, handleTdModalSave, handleTdModalClose, handleMacroModalClose,
   } = useKeymapSelectionHandlers({
-    layout, keymap, encoderLayout, currentLayer,
+    keymap, encoderLayout, currentLayer,
     selectableKeys, autoAdvance, viewMatrix,
     onSetKey, onSetKeysBulk, onSetEncoder, unlocked, onUnlock,
     multiSelect, history,

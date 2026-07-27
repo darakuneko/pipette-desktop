@@ -31,7 +31,6 @@ function matchPopoverEntry(
 
 export interface UseKeymapSelectionOptions {
   // Core data
-  layout: { keys: KleKey[] } | null
   keymap: Map<string, number>
   encoderLayout: Map<string, number>
   currentLayer: number
@@ -72,7 +71,6 @@ export interface UseKeymapSelectionOptions {
 }
 
 export function useKeymapSelectionHandlers({
-  layout,
   keymap,
   encoderLayout,
   currentLayer,
@@ -185,11 +183,14 @@ export function useKeymapSelectionHandlers({
   }
 
   // --- Auto-advance ---
-  const advancableKeys = useMemo(() => {
-    if (!layout) return []
-    const filtered = layout.keys.filter((k) => !k.decal && k.encoderIdx < 0)
-    return sortKeysByViewMatrix(filtered, viewMatrix)
-  }, [layout, viewMatrix])
+  // Walk `selectableKeys` (already layout-option/decal/encoder filtered),
+  // not raw `layout.keys` — otherwise Auto Move can land on a key hidden by
+  // the current layout option (e.g. the unselected ISO/ANSI or split
+  // spacebar variant), leaving the selection highlight invisible.
+  const advancableKeys = useMemo(
+    () => sortKeysByViewMatrix(selectableKeys, viewMatrix),
+    [selectableKeys, viewMatrix],
+  )
 
   const advanceToNextKey = useCallback(() => {
     if (!autoAdvance || !selectedKey || advancableKeys.length === 0) return
