@@ -19,6 +19,8 @@ import {
   connectToDevice,
   dismissNotificationModal,
   launchCaptureApp,
+  openOverlayTab,
+  overlayTabNotFoundMessage,
   resetToEditorMode,
   restoreVirtualDeviceSettings,
   VIRTUAL_DEVICE_DISPLAY_NAME,
@@ -50,28 +52,15 @@ async function interceptFileDialog(app: ElectronApplication): Promise<void> {
   )
 }
 
-async function ensureOverlayOpen(page: Page): Promise<void> {
-  const toggle = page.locator('button[aria-controls="keycodes-overlay-panel"]')
-  const isExpanded = await toggle.getAttribute('aria-expanded')
-  if (isExpanded !== 'true') {
-    await toggle.click()
-    await page.waitForTimeout(500)
-  }
-}
-
 /** Open the Keycodes Overlay Panel and click the View Matrix row's Edit
  *  button, then wait for the mode's left pane to mount. Entering the mode
  *  unmounts the whole keycode picker (overlay included), so there is no
- *  panel to close afterwards. */
+ *  panel to close afterwards. The View Matrix row lives on the Tools tab;
+ *  openOverlayTab already handles the case where Tools is the panel's only
+ *  tab (tab bar absent, content already active). */
 async function enterViewMatrixMode(page: Page): Promise<void> {
-  await ensureOverlayOpen(page)
-  // The View Matrix row lives on the Tools tab; the panel may open on the
-  // Layout/Save tab instead when the keyboard has those (tab bar is absent
-  // when Tools is the only tab).
-  const toolsTab = page.locator('[data-testid="overlay-tab-tools"]')
-  if ((await toolsTab.count()) > 0) {
-    await toolsTab.click()
-    await page.waitForTimeout(300)
+  if (!(await openOverlayTab(page, 'tools'))) {
+    throw new Error(overlayTabNotFoundMessage('tools'))
   }
   await page.locator('[data-testid="overlay-view-matrix-edit-button"]').click()
   await page.locator('[data-testid="view-matrix-reset-panel"]').waitFor({ state: 'visible', timeout: 10_000 })

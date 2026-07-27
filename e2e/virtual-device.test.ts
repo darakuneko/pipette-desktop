@@ -12,7 +12,7 @@
 import { test, expect } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'
 import { launchApp } from './helpers/electron'
-import { dismissNotificationModal, escapeRegex, VIRTUAL_DEVICE_DISPLAY_NAME } from './helpers/doc-capture-common'
+import { dismissNotificationModal, escapeRegex, openOverlayTab, VIRTUAL_DEVICE_DISPLAY_NAME } from './helpers/doc-capture-common'
 import type { VirtualDeviceController } from './helpers/doc-capture-common'
 
 const VIRTUAL_DEVICE_NAME = VIRTUAL_DEVICE_DISPLAY_NAME
@@ -51,11 +51,7 @@ test('virtual device appears in the device list and connects to the editor', asy
 })
 
 test('enabling the matrix tester while locked prompts the unlock dialog, which clears after the combo is held', async () => {
-  const settingsButton = page.locator('[aria-controls="keycodes-overlay-panel"]')
-  await settingsButton.click()
-
-  const toolsTab = page.locator('[data-testid="overlay-tab-tools"]')
-  await toolsTab.click()
+  expect(await openOverlayTab(page, 'tools')).toBe(true)
 
   // Shorten the unlock countdown BEFORE the dialog's unlockStart() fires, so
   // the sequence completes in a few 200ms polls instead of the firmware's

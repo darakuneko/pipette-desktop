@@ -15,10 +15,12 @@ import { resolve } from 'node:path'
 import { launchApp } from './helpers/electron'
 import {
   backupVirtualDeviceSettings,
+  closeKeycodesOverlay,
   connectToDevice,
   dismissNotificationModal,
   isAvailable,
   nullifyLastDeviceConfig,
+  openOverlayTab,
   resetToEditorMode,
   restoreLastDeviceConfig,
   restoreVirtualDeviceSettings,
@@ -105,34 +107,11 @@ async function capture(name: string): Promise<void> {
   await page.screenshot({ path: resolve(SCREENSHOT_DIR, `${name}.png`), fullPage: true })
 }
 
-/** Opens the keycode picker's Menu overlay and switches to the Tools tab —
- *  same `aria-controls="keycodes-overlay-panel"` button doc-capture-overlay-
- *  tools.ts and virtual-device.test.ts already rely on for this panel. */
-async function openToolsTab(): Promise<void> {
-  const menuButton = page.locator('button[aria-controls="keycodes-overlay-panel"]')
-  const isExpanded = await menuButton.getAttribute('aria-expanded')
-  if (isExpanded !== 'true') {
-    await menuButton.click()
-    await page.waitForTimeout(300)
-  }
-  await page.locator('[data-testid="overlay-tab-tools"]').click()
-  await page.waitForTimeout(200)
-}
-
-async function closeMenuIfOpen(): Promise<void> {
-  const menuButton = page.locator('button[aria-controls="keycodes-overlay-panel"]')
-  const isExpanded = await menuButton.getAttribute('aria-expanded')
-  if (isExpanded === 'true') {
-    await menuButton.click()
-    await page.waitForTimeout(300)
-  }
-}
-
 /** Turns Auto Move on if it isn't already — never writes the settings file
  *  directly (virtual-device uid/userData layout is an implementation
  *  detail the test shouldn't depend on). */
 async function ensureAutoMoveOn(): Promise<void> {
-  await openToolsTab()
+  expect(await openOverlayTab(page, 'tools')).toBe(true)
   const toggle = page.locator('[data-testid="overlay-auto-advance-toggle"]')
   await expect(toggle).toBeVisible()
   const checked = await toggle.getAttribute('aria-checked')
@@ -140,7 +119,7 @@ async function ensureAutoMoveOn(): Promise<void> {
     await toggle.click()
     await expect(toggle).toHaveAttribute('aria-checked', 'true')
   }
-  await closeMenuIfOpen()
+  await closeKeycodesOverlay(page)
 }
 
 async function openPopoverOnFirstKey(): Promise<void> {
