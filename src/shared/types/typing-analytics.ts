@@ -62,8 +62,10 @@ export interface TypingAnalyticsKeyboard {
 
 /** How a physical press resolved for masked (tap-hold style) keys. The
  * heatmap uses this to colour the outer (hold) and inner (tap) rects
- * independently. `undefined` is reserved for non-masked keys and for
- * release-edge data that the press-edge pipeline dispatches eagerly.*/
+ * independently. Classified by release edge, or by the renderer's
+ * deferred-emit deadline if the key is still held when it fires,
+ * whichever comes first. `undefined` is reserved for non-masked keys and
+ * for a masked press the ordering queue hasn't classified yet. */
 export type TypingMatrixAction = 'tap' | 'hold'
 
 /** Partial event emitted by `useTypingTest` before the active keyboard is
@@ -92,10 +94,15 @@ export type TypingAnalyticsEventPayload =
       layer: number
       keycode: number
       ts: number
-      /** Only set for masked keys (LT/MT/etc.) after the release edge
-       * has been classified against TAPPING_TERM. Non-masked presses
-       * and presses that have not yet seen a release leave this
-       * undefined; the count still lands in the `count` total column. */
+      /** Only set for masked keys (LT/MT), once classified — by its
+       * release edge if that arrives first, or by the press-time
+       * deadline itself if the key is still held with no release yet.
+       * That deadline is TAPPING_TERM capped at MAX_TAP_HOLD_DEFER_MS
+       * (see `qmk-settings-tapping-term.ts`), so a press can resolve as
+       * `hold` before the keyboard's own TAPPING_TERM would have fired
+       * when the configured term exceeds the cap. Non-masked presses
+       * and masked presses not yet classified leave this undefined; the
+       * count still lands in the `count` total column. */
       action?: TypingMatrixAction
     })
 
@@ -292,8 +299,9 @@ export interface PeakRecords {
 
 /** One cell of the typing-view heatmap. `total` is the overall press
  * count for the cell; `tap` and `hold` are the portions of that total
- * that the release-edge classifier routed to the tap vs hold arm of
- * an LT/MT key. Non-tap-hold presses leave both at 0 and consumers
+ * that the tap/hold classifier (release edge, or the renderer's
+ * deferred-emit deadline if still held) routed to the tap vs hold arm
+ * of an LT/MT key. Non-tap-hold presses leave both at 0 and consumers
  * fall back to `total` as a single intensity. */
 export interface TypingHeatmapCell {
   total: number

@@ -7,7 +7,7 @@ import { DEFAULT_TAPPING_TERM_MS } from '../../shared/qmk-settings-tapping-term'
 import type { TypingTestConfig, RomajiGuide } from './types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, applyRomajiCaseStyle, isTimeBoundedRun, runDurationSeconds } from './types'
 import type { TypingTestMemory } from '../../shared/types/pipette-settings'
-import type { TypingAnalyticsEventPayload, TypingMatrixAction } from '../../shared/types/typing-analytics'
+import type { TypingAnalyticsEventPayload } from '../../shared/types/typing-analytics'
 import { createWordsForConfig } from './word-supply'
 import {
   type TypingTestState,
@@ -21,21 +21,39 @@ import {
 } from './run-state'
 import { isRomajiInputActive, buildRomajiMatcher, romajiDetail, processRomajiKeyEvent } from './romaji-input'
 import {
-  type PressStartRecord,
   parseMatrixKey,
   extractSwitchLayer,
   resolveEffectiveCode,
   resolveEffectiveCodeWithLayer,
 } from './matrix-layers'
+import { MatrixAnalyticsQueue } from './matrix-analytics-queue'
 
 export type { WordResult, TypingTestState, TypingTestStatus } from './run-state'
 
-export interface UseTypingTestOptions {
-  onAnalyticsEvent?: (event: TypingAnalyticsEventPayload) => void
+export interface UseTypingTestOptions<TPreparedEvent = unknown> {
+  /** Authorizes and tags a keystroke at the moment it is detected — before
+   * it may sit in the ordering queue for up to TAPPING_TERM waiting on a
+   * masked key ahead of it to resolve. `kind` distinguishes a matrix press
+   * from a typed char so the caller can apply kind-specific bookkeeping
+   * (e.g. the tray keystroke counter). Returns an opaque value that
+   * useTypingTest never inspects — it only carries it alongside the queued
+   * item to {@link onEmitAnalyticsEvent} — or null/undefined to drop the
+   * press: it is then never queued or emitted, so a later state change
+   * cannot retroactively authorize it. Called once per accepted keystroke,
+   * never re-invoked for the same press. */
+  onPrepareAnalyticsEvent?: (kind: 'matrix' | 'char') => TPreparedEvent | null | undefined
+  /** Ships an event that {@link onPrepareAnalyticsEvent} already authorized
+   * and tagged for this exact press. Called either immediately (empty
+   * queue) or once the item reaches the front of the ordering queue —
+   * must not re-read whatever live state produced `prepared`, since that
+   * state may have changed while the item was queued. */
+  onEmitAnalyticsEvent?: (prepared: TPreparedEvent, event: TypingAnalyticsEventPayload) => void
   /** TAPPING_TERM (ms) used to classify masked-key presses as tap vs
-   * hold on the release edge. Defaults to QMK's 200 ms; the KeymapEditor
-   * passes the live value pulled from the keyboard's QMK settings when
-   * available. */
+   * hold against a deadline fixed at press time (pressTs + this value,
+   * captured then — not re-read at release/deadline, so a setting change
+   * mid-press doesn't retroactively reclassify it). Defaults to QMK's
+   * 200 ms; the KeymapEditor passes the live value pulled from the
+   * keyboard's QMK settings when available. */
   tappingTermMs?: number
 }
 
@@ -62,7 +80,12 @@ export interface UseTypingTestReturn {
   effectiveLayer: number
   windowFocused: boolean
   processMatrixFrame: (pressed: Set<string>, keymap: Map<string, number>) => void
-  resetMatrixPressTracking: () => void
+  /** Returns a promise that resolves once every drained item's emit has
+   * settled — see {@link MatrixAnalyticsQueue.drainAll}. A caller that
+   * finalizes a session (record-off, test-finish) before requesting a
+   * flush must await it; a caller that just wants edge-tracking reset
+   * (e.g. a keymap change) can ignore the return value. */
+  resetMatrixPressTracking: () => Promise<void>
   processKeyEvent: (key: string, ctrlKey: boolean, altKey: boolean, metaKey: boolean) => void
   processCompositionStart: () => void
   processCompositionUpdate: (data: string) => void
@@ -78,10 +101,10 @@ export interface UseTypingTestReturn {
   restoreState: (memory: TypingTestMemory, resume: boolean) => Promise<boolean>
 }
 
-export function useTypingTest(
+export function useTypingTest<TPreparedEvent = unknown>(
   initialConfig?: TypingTestConfig,
   initialLanguage?: string,
-  options?: UseTypingTestOptions,
+  options?: UseTypingTestOptions<TPreparedEvent>,
 ): UseTypingTestReturn {
   // A persisted config/language pair (e.g. restored from device prefs) is
   // taken at face value — `romajiInput` is not paired with the language
@@ -100,12 +123,13 @@ export function useTypingTest(
   const languageRef = useRef(language)
   const baseLayerRef = useRef(baseLayer)
   const windowFocusedRef = useRef(windowFocused)
-  const analyticsSinkRef = useRef(options?.onAnalyticsEvent)
+  const prepareAnalyticsEventRef = useRef(options?.onPrepareAnalyticsEvent)
+  const emitAnalyticsEventRef = useRef(options?.onEmitAnalyticsEvent)
   const prevPressedRef = useRef<Set<string>>(new Set())
-  // Press-edge starts for masked keys awaiting a release-edge match. The
-  // key is `"row,col"` to mirror the Set used for pressed keys. Not used
-  // for non-masked presses, which fire on the press edge itself.
-  const pressStartMapRef = useRef<Map<string, PressStartRecord>>(new Map())
+  // Press-order emission queue for matrix analytics events. See
+  // matrix-analytics-queue.ts for why this exists instead of emitting
+  // non-masked keys unconditionally on press.
+  const matrixQueueRef = useRef(new MatrixAnalyticsQueue<TPreparedEvent>())
   const tappingTermMsRef = useRef(options?.tappingTermMs ?? DEFAULT_TAPPING_TERM_MS)
   const seqRef = useRef(0)
   const langLoadSeqRef = useRef(0)
@@ -114,7 +138,8 @@ export function useTypingTest(
   languageRef.current = language
   baseLayerRef.current = baseLayer
   windowFocusedRef.current = windowFocused
-  analyticsSinkRef.current = options?.onAnalyticsEvent
+  prepareAnalyticsEventRef.current = options?.onPrepareAnalyticsEvent
+  emitAnalyticsEventRef.current = options?.onEmitAnalyticsEvent
   tappingTermMsRef.current = options?.tappingTermMs ?? DEFAULT_TAPPING_TERM_MS
 
   const restartAsync = useCallback(async () => {
@@ -311,15 +336,26 @@ export function useTypingTest(
     // it's the caller's responsibility to stop calling processMatrixFrame
     // when recording should pause (e.g. record toggle off).
     //
-    // Non-masked keys emit on press — one event per physical press, no
-    // action field. Masked keys (LT/MT/TT etc.) defer to the release
-    // edge so the duration vs. TAPPING_TERM can classify them into
-    // tap vs hold before the event is emitted. If a release never
-    // arrives (record toggled off mid-hold) the corresponding entry
-    // is dropped via resetMatrixPressTracking / record gate.
-    const sink = analyticsSinkRef.current
-    if (sink) {
-      const starts = pressStartMapRef.current
+    // Non-masked keys carry no action field and are queued/emitted in
+    // press order like everything else. Masked keys (LT/MT) resolve to
+    // tap vs hold on a deadline fixed at press time (see
+    // matrix-analytics-queue.ts), by the release edge if it arrives first or by
+    // the deadline timer if the key is still held — so resolution can
+    // land later than physical presses that follow it. Emitting those
+    // later presses immediately would hand the main process a masked
+    // key's event stamped with an earlier timestamp than events already
+    // emitted for what came after it; its n-gram chain treats a
+    // non-increasing timestamp as out of order and silently drops it,
+    // losing the masked key from every pair around it (the motivating
+    // case: a thumb LT(1, KC_SPACE) overlapping the next letter in
+    // ordinary fast typing). Queuing every press behind an unresolved
+    // one and draining in order once it resolves keeps the emitted
+    // stream monotonic. See resetMatrixPressTracking for what happens
+    // to a press still unresolved when recording stops.
+    const prepare = prepareAnalyticsEventRef.current
+    if (prepare) {
+      const emit = emitAnalyticsEventRef.current
+      const queue = matrixQueueRef.current
       // Layer context for a NEW press is "what OTHER keys were already
       // holding us to" — i.e. layers activated by keys carried over
       // from the previous frame. A lone MO(1) press at base 0 must
@@ -342,46 +378,82 @@ export function useTypingTest(
         const resolved = resolveEffectiveCodeWithLayer(row, col, keymap, preExistingSortedLayers, bl)
         if (!resolved) continue
         const { code, layer: eventLayer } = resolved
+        // Authorize + tag at press time, not when this press eventually
+        // reaches the sink (which may be up to TAPPING_TERM later if it
+        // queues behind an unresolved masked key ahead of it). A press
+        // that isn't authorized right now is dropped for good — it never
+        // enters the queue, so it can't be "un-dropped" by a state change
+        // (e.g. recording toggling back on) while it would have waited.
+        const prepared = prepare('matrix')
+        if (prepared == null) continue
         // Only LT / MT style tap-hold keys need the deferred classify
         // pass. LSFT(kc) etc. are "masked" too but always fire the
         // modifier + base together, so the heatmap treats them as
         // regular presses.
         if (isTapKeycode(code)) {
-          starts.set(key, { tsMs: ts, row, col, layer: eventLayer, keycode: code })
+          queue.pushPending(prepared, { tsMs: ts, row, col, layer: eventLayer, keycode: code }, key, tappingTermMs, emit)
         } else {
-          sink({ kind: 'matrix', row, col, layer: eventLayer, keycode: code, ts })
+          const event: TypingAnalyticsEventPayload = { kind: 'matrix', row, col, layer: eventLayer, keycode: code, ts }
+          // An empty queue means nothing ahead is still unresolved, so
+          // this press can go straight out instead of paying for a
+          // round trip through the queue.
+          if (queue.isEmpty) {
+            emit?.(prepared, event)
+          } else {
+            queue.pushResolved(event, prepared)
+          }
         }
       }
 
       for (const key of prev) {
         if (pressed.has(key)) continue
-        const start = starts.get(key)
-        if (!start) continue
-        starts.delete(key)
-        const duration = ts - start.tsMs
-        const action: TypingMatrixAction = duration < tappingTermMs ? 'tap' : 'hold'
-        sink({
-          kind: 'matrix',
-          row: start.row,
-          col: start.col,
-          layer: start.layer,
-          keycode: start.keycode,
-          ts: start.tsMs,
-          action,
-        })
+        queue.resolveReleaseByKey(key, ts, emit)
       }
     }
     prevPressedRef.current = new Set(pressed)
   }, [])
 
   /** Reset press-edge tracking. Call on record toggle, device change, or
-   * keymap reload so the next frame doesn't emit stale "newly pressed" events.
-   * Also clears deferred masked-key press starts so a hold in progress
-   * when recording stops doesn't resurface the next time recording
-   * resumes. */
-  const resetMatrixPressTracking = useCallback(() => {
+   * keymap reload so the next frame doesn't emit stale "newly pressed"
+   * events.
+   *
+   * Also drains any in-flight masked-key press and the queue behind it:
+   * every unresolved press is finalized as `hold` (the keystroke must
+   * not vanish just because recording stopped mid-hold — a hold only
+   * breaks the n-gram chain downstream, it never fabricates a pair),
+   * then the whole queue is flushed in press order so ordinary keys
+   * queued behind it aren't dropped either. Simply clearing the maps,
+   * as before this queue existed, would have silently discarded more
+   * than just the pending press.
+   *
+   * Each item ships with the `prepared` context its own press already
+   * captured via onPrepareAnalyticsEvent — not whatever is live right
+   * now. resetMatrixPressTracking itself typically runs *because* that
+   * live state just changed (e.g. recording toggled off), so re-reading
+   * it here would gate or tag every drained item by state that arrived
+   * after the keystroke, which is exactly what this queue exists to
+   * avoid.
+   *
+   * Returns the promise {@link MatrixAnalyticsQueue.drainAll} hands back.
+   * A caller finalizing a session (record toggling off, a test
+   * finishing) must await it before requesting a flush for that session
+   * — see the promise's own doc comment for why firing the flush
+   * without waiting can lose or misplace exactly the events this drain
+   * just sent. */
+  const resetMatrixPressTracking = useCallback((): Promise<void> => {
+    const drained = matrixQueueRef.current.drainAll(emitAnalyticsEventRef.current)
     prevPressedRef.current = new Set()
-    pressStartMapRef.current = new Map()
+    return drained
+  }, [])
+
+  // Clear any still-armed deadline timer on unmount. Without this, a
+  // timer set by MatrixAnalyticsQueue.pushPending can outlive the
+  // component and fire against refs that are no longer meaningful — see
+  // MatrixAnalyticsQueue.dispose.
+  useEffect(() => {
+    return () => {
+      matrixQueueRef.current.dispose()
+    }
   }, [])
 
   const setWindowFocused = useCallback((focused: boolean) => {
@@ -398,9 +470,15 @@ export function useTypingTest(
     if (altKey && !ctrlKey) return
     if (IGNORED_KEYS.has(key)) return
 
-    const sink = analyticsSinkRef.current
-    if (sink && (key.length === 1 || key === 'Backspace')) {
-      sink({ kind: 'char', key, ts: Date.now() })
+    // Char events never queue (unlike matrix events, they have no tap-hold
+    // ambiguity to wait out), so prepare + emit happen back to back here,
+    // in the same call — no staleness window to guard against.
+    const prepare = prepareAnalyticsEventRef.current
+    if (prepare && (key.length === 1 || key === 'Backspace')) {
+      const prepared = prepare('char')
+      if (prepared != null) {
+        emitAnalyticsEventRef.current?.(prepared, { kind: 'char', key, ts: Date.now() })
+      }
     }
 
     setState((s) => {

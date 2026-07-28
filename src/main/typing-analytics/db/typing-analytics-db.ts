@@ -71,12 +71,14 @@ export interface MatrixMinuteRow {
   layer: number
   keycode: number
   count: number
-  /** Portion of `count` attributed to a tap on the release edge for
-   * LT/MT keys. Defaults to 0 when the row came from a non-tap-hold
-   * press (older ingestion path, test fixtures, or still-held keys). */
+  /** Portion of `count` attributed to a tap for LT/MT keys, classified
+   * by release edge or by the renderer's deferred-emit deadline,
+   * whichever comes first. Defaults to 0 when the row came from a
+   * non-tap-hold press (older ingestion path, test fixtures, or a press
+   * not yet classified). */
   tapCount?: number
-  /** Portion of `count` attributed to a hold on the release edge.
-   * Defaults to 0 for the same reasons as `tapCount`. */
+  /** Portion of `count` attributed to a hold, by the same classification
+   * as `tapCount`. Defaults to 0 for the same reasons as `tapCount`. */
   holdCount?: number
   /** See {@link CharMinuteRow.appName}. */
   appName?: string | null
@@ -2811,7 +2813,8 @@ export class TypingAnalyticsDB {
       )
     }
     // v1 -> v2: Add tap_count / hold_count columns to the matrix
-    // rollups so LT/MT release-edge classification has somewhere to
+    // rollups so LT/MT tap/hold classification (by release edge or by
+    // the renderer's deferred-emit deadline) has somewhere to
     // accumulate. Existing rows default to 0, meaning "unclassified" —
     // the heatmap falls back to the total `count` when both are zero.
     if (fromVersion < 2) {

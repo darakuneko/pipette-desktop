@@ -5,7 +5,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useTypingTest } from '../useTypingTest'
 import { deserialize } from '../../../shared/keycodes/keycodes'
+import { MAX_TAP_HOLD_DEFER_MS } from '../../../shared/qmk-settings-tapping-term'
 import type { TypingTestConfig } from '../types'
+import type { TypingAnalyticsEventPayload } from '../../../shared/types/typing-analytics'
 
 function buildMultiLayerKeymap(layers: Array<{ layer: number; entries: Array<[number, number, string]> }>): Map<string, number> {
   const m = new Map<string, number>()
@@ -19,6 +21,21 @@ function buildMultiLayerKeymap(layers: Array<{ layer: number; entries: Array<[nu
 
 function pressKeys(keys: string[]): Set<string> {
   return new Set(keys)
+}
+
+/** useTypingTest's analytics options now split gate/tag (prepare, at press
+ *  time) from shipping (emit, once the item is ready to leave the ordering
+ *  queue) — see UseTypingTestOptions. These tests only exercise
+ *  useTypingTest's own queueing/ordering/tap-hold logic, not the gating a
+ *  real caller (useInputModes) layers on top, so prepare here always
+ *  authorizes (opaque token `true`) and emit forwards the bare payload —
+ *  reproducing the single-argument `sink(payload)` shape these tests were
+ *  written against. */
+function analyticsOptions(sink: (payload: TypingAnalyticsEventPayload) => void) {
+  return {
+    onPrepareAnalyticsEvent: () => true,
+    onEmitAnalyticsEvent: (_prepared: unknown, event: TypingAnalyticsEventPayload) => sink(event),
+  }
 }
 
 describe('useTypingTest', () => {
@@ -970,7 +987,7 @@ describe('useTypingTest windowFocused', () => {
   describe('analytics sink', () => {
     it('emits a char event for printable keys when a sink is provided', () => {
       const sink = vi.fn()
-      const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink)))
 
       act(() => result.current.processKeyEvent('a', false, false, false))
 
@@ -980,7 +997,7 @@ describe('useTypingTest windowFocused', () => {
 
     it('emits a char event for Backspace', () => {
       const sink = vi.fn()
-      const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink)))
 
       act(() => result.current.processKeyEvent('a', false, false, false))
       act(() => result.current.processKeyEvent('Backspace', false, false, false))
@@ -990,7 +1007,7 @@ describe('useTypingTest windowFocused', () => {
 
     it('does not emit char events for modifier-only keys', () => {
       const sink = vi.fn()
-      const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink)))
 
       act(() => result.current.processKeyEvent('Shift', false, false, false))
       act(() => result.current.processKeyEvent('Control', false, false, false))
@@ -1001,7 +1018,7 @@ describe('useTypingTest windowFocused', () => {
 
     it('does not emit char events when the window is not focused', () => {
       const sink = vi.fn()
-      const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink)))
 
       act(() => result.current.setWindowFocused(false))
       act(() => result.current.processKeyEvent('a', false, false, false))
@@ -1014,7 +1031,7 @@ describe('useTypingTest windowFocused', () => {
       const keymap = buildMultiLayerKeymap([
         { layer: 0, entries: [[0, 0, 'KC_A'], [0, 1, 'KC_B']] },
       ])
-      const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink)))
 
       act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
       expect(sink).toHaveBeenCalledTimes(1)
@@ -1037,7 +1054,7 @@ describe('useTypingTest windowFocused', () => {
       const keymap = buildMultiLayerKeymap([
         { layer: 0, entries: [[0, 0, 'KC_A']] },
       ])
-      const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink)))
 
       act(() => result.current.setWindowFocused(false))
       act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
@@ -1050,7 +1067,7 @@ describe('useTypingTest windowFocused', () => {
       const keymap = buildMultiLayerKeymap([
         { layer: 0, entries: [[0, 0, 'KC_A']] },
       ])
-      const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink)))
 
       act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
       expect(sink).toHaveBeenCalledTimes(1)
@@ -1059,7 +1076,11 @@ describe('useTypingTest windowFocused', () => {
       act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
       expect(sink).toHaveBeenCalledTimes(1)
 
-      act(() => result.current.resetMatrixPressTracking())
+      // resetMatrixPressTracking now returns a promise (so a record-off
+      // caller can await the drain before flushing) — void it here since
+      // this test only cares about the synchronous reset of prevPressed,
+      // which happens before the promise settles.
+      act(() => { void result.current.resetMatrixPressTracking() })
       act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
       expect(sink).toHaveBeenCalledTimes(2)
     })
@@ -1071,13 +1092,13 @@ describe('useTypingTest windowFocused', () => {
     })
 
     describe('masked-key tap/hold classification', () => {
-      it('defers the matrix emit for masked keys until the release edge', () => {
+      it('defers the matrix emit for masked keys until they resolve (release or deadline)', () => {
         const sink = vi.fn()
         // LT1(KC_SPACE) on (0, 0), plain KC_A on (0, 1).
         const keymap = buildMultiLayerKeymap([
           { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)'], [0, 1, 'KC_A']] },
         ])
-        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink, tappingTermMs: 200 }))
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { ...analyticsOptions(sink), tappingTermMs: 200 }))
 
         vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
         act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
@@ -1090,7 +1111,7 @@ describe('useTypingTest windowFocused', () => {
         const keymap = buildMultiLayerKeymap([
           { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)']] },
         ])
-        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink, tappingTermMs: 200 }))
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { ...analyticsOptions(sink), tappingTermMs: 200 }))
 
         vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
         act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
@@ -1107,17 +1128,76 @@ describe('useTypingTest windowFocused', () => {
         }))
       })
 
-      it('classifies a long press as a hold on the release edge', () => {
+      it('classifies a still-held key as a hold once its deadline passes, without waiting for release', () => {
         const sink = vi.fn()
         const keymap = buildMultiLayerKeymap([
           { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)']] },
         ])
-        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink, tappingTermMs: 200 }))
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { ...analyticsOptions(sink), tappingTermMs: 200 }))
 
         vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
         act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
 
-        vi.advanceTimersByTime(500)
+        // Nothing releases the key — the deadline timer alone must fire the
+        // 'hold' classification while it's still held.
+        act(() => vi.advanceTimersByTime(500))
+
+        expect(sink).toHaveBeenCalledTimes(1)
+        expect(sink).toHaveBeenCalledWith(expect.objectContaining({
+          kind: 'matrix',
+          action: 'hold',
+        }))
+
+        // The eventual physical release must not re-emit — the deadline
+        // already resolved and removed this press.
+        act(() => result.current.processMatrixFrame(new Set(), keymap))
+        expect(sink).toHaveBeenCalledTimes(1)
+      })
+
+      it('resolves a still-held key as hold at MAX_TAP_HOLD_DEFER_MS even when TAPPING_TERM is configured larger', () => {
+        // A TAPPING_TERM above the cap is the accepted trade-off documented
+        // on MAX_TAP_HOLD_DEFER_MS: the deferred-emit deadline must never
+        // exceed the cap, so a genuine (if unusually long) tap held past
+        // the cap resolves as a hold before the keyboard's own TAPPING_TERM
+        // would have fired.
+        const sink = vi.fn()
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)']] },
+        ])
+        const largeTerm = MAX_TAP_HOLD_DEFER_MS + 2000
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { ...analyticsOptions(sink), tappingTermMs: largeTerm }))
+
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+
+        // Still unresolved just short of the cap.
+        act(() => vi.advanceTimersByTime(MAX_TAP_HOLD_DEFER_MS - 1))
+        expect(sink).not.toHaveBeenCalled()
+
+        // Crossing the cap resolves it as hold — well before largeTerm.
+        act(() => vi.advanceTimersByTime(1))
+        expect(sink).toHaveBeenCalledTimes(1)
+        expect(sink).toHaveBeenCalledWith(expect.objectContaining({
+          kind: 'matrix',
+          action: 'hold',
+        }))
+      })
+
+      it('resolves duration === tappingTermMs as hold (boundary matches the pre-queue duration < term comparison)', () => {
+        const sink = vi.fn()
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)']] },
+        ])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { ...analyticsOptions(sink), tappingTermMs: 200 }))
+
+        const pressAt = new Date('2026-04-18T10:00:00.000Z')
+        vi.setSystemTime(pressAt)
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+
+        // Move the clock to exactly the deadline WITHOUT advancing fake
+        // timers, so the deadline timer itself never fires — this exercises
+        // the release-edge duration comparison, not the timer fallback.
+        vi.setSystemTime(new Date(pressAt.getTime() + 200))
         act(() => result.current.processMatrixFrame(new Set(), keymap))
 
         expect(sink).toHaveBeenCalledTimes(1)
@@ -1132,7 +1212,7 @@ describe('useTypingTest windowFocused', () => {
         const keymap = buildMultiLayerKeymap([
           { layer: 0, entries: [[0, 0, 'KC_A']] },
         ])
-        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink, tappingTermMs: 200 }))
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { ...analyticsOptions(sink), tappingTermMs: 200 }))
 
         vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
         act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
@@ -1146,18 +1226,118 @@ describe('useTypingTest windowFocused', () => {
         expect(sink).toHaveBeenCalledTimes(1)
       })
 
-      it('resetMatrixPressTracking drops pending masked-key starts so no event fires on the next release', () => {
+      it('resetMatrixPressTracking finalizes a pending masked-key press as hold and flushes the queue behind it, losing nothing', () => {
+        const sink = vi.fn()
+        // LT1(KC_SPACE) on (0, 0), plain KC_A on (0, 1).
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)'], [0, 1, 'KC_A']] },
+        ])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { ...analyticsOptions(sink), tappingTermMs: 200 }))
+
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+        // A normal key pressed while the masked press is unresolved queues
+        // behind it instead of emitting — nothing has been sent yet.
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0', '0,1']), keymap))
+        expect(sink).not.toHaveBeenCalled()
+
+        // Recording stops mid-hold — both the masked press and the queued
+        // key behind it must still reach the sink, in press order. Void
+        // the returned promise — see the earlier reset test for why.
+        act(() => { void result.current.resetMatrixPressTracking() })
+
+        expect(sink).toHaveBeenCalledTimes(2)
+        expect(sink).toHaveBeenNthCalledWith(1, expect.objectContaining({
+          kind: 'matrix', row: 0, col: 0, action: 'hold',
+        }))
+        const [, letterPayload] = sink.mock.calls.map((c) => c[0] as { row: number; col: number; action?: string })
+        expect(letterPayload.row).toBe(0)
+        expect(letterPayload.col).toBe(1)
+        expect(letterPayload.action).toBeUndefined()
+
+        // The physical release that eventually arrives must not re-emit.
+        act(() => result.current.processMatrixFrame(new Set(), keymap))
+        expect(sink).toHaveBeenCalledTimes(2)
+      })
+
+      it('clears the pending deadline timer on unmount so it cannot fire against a torn-down hook', () => {
         const sink = vi.fn()
         const keymap = buildMultiLayerKeymap([
           { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)']] },
         ])
-        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink, tappingTermMs: 200 }))
+        const { result, unmount } = renderHook(() => useTypingTest(undefined, undefined, { ...analyticsOptions(sink), tappingTermMs: 200 }))
 
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
         act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
-        act(() => result.current.resetMatrixPressTracking())
-        act(() => result.current.processMatrixFrame(new Set(), keymap))
-
         expect(sink).not.toHaveBeenCalled()
+
+        unmount()
+
+        // The deadline timer that would have fired at +200ms must never
+        // call back into a hook that has already torn down.
+        act(() => vi.advanceTimersByTime(500))
+        expect(sink).not.toHaveBeenCalled()
+      })
+    })
+
+    describe('press-order emission across an unresolved tap-hold', () => {
+      it('emits a quickly-tapped masked key before a later letter, in press order', () => {
+        const sink = vi.fn()
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)'], [0, 1, 'KC_A']] },
+        ])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { ...analyticsOptions(sink), tappingTermMs: 200 }))
+
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+        vi.advanceTimersByTime(50)
+        act(() => result.current.processMatrixFrame(new Set(), keymap))
+        expect(sink).toHaveBeenCalledTimes(1)
+
+        vi.advanceTimersByTime(50)
+        act(() => result.current.processMatrixFrame(pressKeys(['0,1']), keymap))
+
+        expect(sink).toHaveBeenCalledTimes(2)
+        expect(sink).toHaveBeenNthCalledWith(1, expect.objectContaining({ row: 0, col: 0, action: 'tap' }))
+        const letterPayload = sink.mock.calls[1][0] as { row: number; col: number; action?: string }
+        expect(letterPayload.row).toBe(0)
+        expect(letterPayload.col).toBe(1)
+        expect(letterPayload.action).toBeUndefined()
+      })
+
+      it('a normal key pressed while a masked key is unresolved is not emitted before it, even when overlapping (rolled keys)', () => {
+        const sink = vi.fn()
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)'], [0, 1, 'KC_A']] },
+        ])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { ...analyticsOptions(sink), tappingTermMs: 200 }))
+
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+        // Thumb LT1(KC_SPACE) pressed first.
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+
+        // The next letter is pressed BEFORE the thumb key releases (an
+        // ordinary fast roll) — it must queue, not emit.
+        vi.advanceTimersByTime(30)
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0', '0,1']), keymap))
+        expect(sink).not.toHaveBeenCalled()
+
+        // The thumb key releases as a tap. Both events land now, still
+        // ordered by press time — the masked key (pressed first) before
+        // the letter (pressed second), even though the letter's release
+        // resolved earlier in wall-clock terms than nothing did (the
+        // letter itself never had a release edge, only a press).
+        vi.advanceTimersByTime(30)
+        act(() => result.current.processMatrixFrame(pressKeys(['0,1']), keymap))
+
+        expect(sink).toHaveBeenCalledTimes(2)
+        expect(sink).toHaveBeenNthCalledWith(1, expect.objectContaining({ row: 0, col: 0, action: 'tap' }))
+        const letterPayload = sink.mock.calls[1][0] as { row: number; col: number; action?: string; ts: number }
+        expect(letterPayload.row).toBe(0)
+        expect(letterPayload.col).toBe(1)
+        expect(letterPayload.action).toBeUndefined()
+        const tapHoldPayload = sink.mock.calls[0][0] as { ts: number }
+        expect(tapHoldPayload.ts).toBeLessThan(letterPayload.ts)
       })
     })
 
@@ -1169,7 +1349,7 @@ describe('useTypingTest windowFocused', () => {
           { layer: 0, entries: [[0, 0, 'MO(1)']] },
           { layer: 1, entries: [[0, 0, 'KC_TRNS']] },
         ])
-        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink)))
 
         vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
         act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
@@ -1190,7 +1370,7 @@ describe('useTypingTest windowFocused', () => {
           { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)']] },
           { layer: 1, entries: [[0, 0, 'KC_TRNS']] },
         ])
-        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink, tappingTermMs: 200 }))
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { ...analyticsOptions(sink), tappingTermMs: 200 }))
 
         vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
         act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
@@ -1210,7 +1390,7 @@ describe('useTypingTest windowFocused', () => {
           { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)']] },
           { layer: 1, entries: [[0, 0, 'KC_TRNS']] },
         ])
-        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink, tappingTermMs: 200 }))
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { ...analyticsOptions(sink), tappingTermMs: 200 }))
 
         vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
         act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
@@ -1235,7 +1415,7 @@ describe('useTypingTest windowFocused', () => {
           { layer: 0, entries: [[0, 0, 'MO(1)']] },
           { layer: 1, entries: [[0, 0, 'MO(1)']] },
         ])
-        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink)))
 
         vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
         act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
@@ -1255,7 +1435,7 @@ describe('useTypingTest windowFocused', () => {
           { layer: 0, entries: [[0, 0, 'MO(1)'], [1, 1, 'KC_TRNS']] },
           { layer: 1, entries: [[0, 0, 'KC_TRNS'], [1, 1, 'KC_A']] },
         ])
-        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink)))
 
         vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
         act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
