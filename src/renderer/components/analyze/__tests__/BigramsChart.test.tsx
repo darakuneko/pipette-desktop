@@ -532,10 +532,13 @@ describe('BigramsChart', () => {
       const table = screen.getByTestId('analyze-bigrams-classes-table')
       // Bucket center for index 2 is 125ms (see HIST_BUCKETS centers),
       // so the alternation row shows the folded-hist average, not the
-      // raw entry.avgIki from the wire payload.
-      expect(within(table).getByText('analyze.bigrams.classes.className.alternation')).toBeTruthy()
-      expect(within(table).getByText('125 ms')).toBeTruthy()
-      expect(within(table).getByText('2,000')).toBeTruthy()
+      // raw entry.avgIki from the wire payload. Scoped to the row (not
+      // the whole table) because the same pair also lands in the
+      // word-position in-word bucket with matching numbers.
+      const rows = table.querySelectorAll('tbody tr')
+      const alternationRow = Array.from(rows).find((r) => r.textContent?.includes('classes.className.alternation'))
+      expect(alternationRow?.textContent).toContain('125 ms')
+      expect(alternationRow?.textContent).toContain('2,000')
     })
 
     it('is exclusive: two keys sharing one finger classify as left, not repetition', async () => {
@@ -604,6 +607,71 @@ describe('BigramsChart', () => {
       await waitFor(() => {
         expect(screen.getByTestId('analyze-bigrams-classes-coverage')).toBeTruthy()
       })
+    })
+
+    it('renders the word-position section even without a snapshot', async () => {
+      const keSpace = deserialize('KC_SPACE')
+      fetchSpy.mockResolvedValue({
+        view: 'top',
+        entries: [{ ngramId: `${keSpace}_${keyA}`, count: 2000, hist: [0, 0, 2000, 0, 0, 0, 0, 0], avgIki: 125, sd: 10 }],
+        truncated: false,
+      })
+      renderChart({ gram: 2, snapshot: null })
+      await waitFor(() => {
+        expect(screen.getByTestId('analyze-bigrams-classes-table')).toBeTruthy()
+      })
+      const table = screen.getByTestId('analyze-bigrams-classes-table')
+      // No snapshot -> hand usage shows the no-snapshot row, but word
+      // position needs no snapshot and still resolves the pair.
+      expect(within(table).getByTestId('analyze-bigrams-classes-no-snapshot')).toBeTruthy()
+      const rows = table.querySelectorAll('tbody tr')
+      const initiationRow = Array.from(rows).find((r) => r.textContent?.includes('classes.className.initiation'))
+      expect(initiationRow?.textContent).toContain('125 ms')
+      expect(initiationRow?.textContent).toContain('2,000')
+    })
+
+    it('computes ΔInitiation from the initiation and in-word buckets', async () => {
+      fetchSpy.mockResolvedValue({
+        view: 'top',
+        entries: [
+          // space -> A: initiation, avgIki bucket center 400ms
+          { ngramId: `${deserialize('KC_SPACE')}_${keyA}`, count: 2000, hist: [0, 0, 0, 0, 0, 2000, 0, 0], avgIki: 400, sd: 10 },
+          // A -> B: in-word, avgIki bucket center 125ms
+          { ngramId: `${keyA}_${keyB}`, count: 2000, hist: [0, 0, 2000, 0, 0, 0, 0, 0], avgIki: 125, sd: 10 },
+        ],
+        truncated: false,
+      })
+      renderChart({ gram: 2, snapshot: buildSnapshot(), fingerOverrides: alternationOverrides })
+      await waitFor(() => {
+        expect(screen.getByTestId('analyze-bigrams-classes-delta')).toBeTruthy()
+      })
+      const delta = screen.getByTestId('analyze-bigrams-classes-delta')
+      expect(delta.textContent).toContain('+275 ms')
+    })
+
+    it('shows the excluded-pairs note only when a pair ends at a separator', async () => {
+      fetchSpy.mockResolvedValue({
+        view: 'top',
+        entries: [{ ngramId: `${keyA}_${deserialize('KC_SPACE')}`, count: 7, hist: [0, 0, 7, 0, 0, 0, 0, 0], avgIki: 125, sd: 10 }],
+        truncated: false,
+      })
+      renderChart({ gram: 2, snapshot: buildSnapshot(), fingerOverrides: alternationOverrides })
+      await waitFor(() => {
+        expect(screen.getByTestId('analyze-bigrams-classes-excluded-note')).toBeTruthy()
+      })
+    })
+
+    it('hides the excluded-pairs note when no pair ends at a separator', async () => {
+      fetchSpy.mockResolvedValue({
+        view: 'top',
+        entries: [{ ngramId: `${keyA}_${keyB}`, count: 2000, hist: [0, 0, 2000, 0, 0, 0, 0, 0], avgIki: 125, sd: 10 }],
+        truncated: false,
+      })
+      renderChart({ gram: 2, snapshot: buildSnapshot(), fingerOverrides: alternationOverrides })
+      await waitFor(() => {
+        expect(screen.getByTestId('analyze-bigrams-classes-table')).toBeTruthy()
+      })
+      expect(screen.queryByTestId('analyze-bigrams-classes-excluded-note')).toBeNull()
     })
   })
 })

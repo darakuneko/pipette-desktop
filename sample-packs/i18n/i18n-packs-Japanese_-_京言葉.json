@@ -1,5 +1,5 @@
 {
-  "version": "0.1.44",
+  "version": "0.1.45",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -1118,7 +1118,7 @@
         "top": "よう出るペア",
         "slow": "ペア間隔",
         "fingerIki": "指間隔",
-        "classes": "交互打鍵ベネフィット"
+        "classes": "打鍵パターン"
       },
       "cappedNotice": "頻度上位 {{limit}} 件のペアから出してますえ — 珍しいペアは入っとらんこともありますえ",
       "gramToggle": {
@@ -1144,17 +1144,25 @@
         }
       },
       "classes": {
-        "noSnapshot": "交互打鍵ベネフィットにはスナップショットが要りますえ。Record を始めるかスナップショットのある期間を選んでおくれやす",
+        "noSnapshot": "手の使用にもスナップショットが要りますえ。Record を始めるかスナップショットのある期間を選んでおくれやす",
+        "section": {
+          "handUsage": "手の使用どすえ",
+          "wordPosition": "単語内位置どすえ"
+        },
         "className": {
           "left": "左手どすえ",
           "right": "右手どすえ",
           "alternation": "交互打鍵どすえ",
-          "repetition": "同指連打どすえ"
+          "repetition": "同指連打どすえ",
+          "initiation": "語頭どすえ",
+          "inWord": "語中どすえ"
         },
         "coverage": "{{percent}}% のペアを分類できましたえ",
         "deltaLeft": "ΔLeft",
         "deltaRight": "ΔRight",
-        "deltaTooltip": "プラスやったら、片手だけよりも両手交互の方が速かったいうことどすえ"
+        "deltaInitiation": "ΔInitiation",
+        "deltaTooltip": "プラスやったら、先に書いてる方の分類が遅かったいうことどすえ",
+        "excludedNote": "{{count}} 件のペアは区切り文字で終わるさかい除外しましたえ"
       },
       "pairIntervalThreshold": {
         "label": "平均間隔",

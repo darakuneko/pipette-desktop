@@ -1,5 +1,5 @@
 {
-  "version": "0.1.44",
+  "version": "0.1.45",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -1128,7 +1128,7 @@
         "top": "頻出ペア",
         "slow": "ペア間隔",
         "fingerIki": "指間隔",
-        "classes": "交互打鍵ベネフィット"
+        "classes": "バイグラムパターン"
       },
       "cappedNotice": "頻度上位 {{limit}} 件のペアから算出しています — 低頻度のペアは含まれない場合があります",
       "gramToggle": {
@@ -1154,17 +1154,25 @@
         }
       },
       "classes": {
-        "noSnapshot": "交互打鍵ベネフィットには keymap snapshot が必要です。Record セッションを開始するか snapshot のある期間を選択してください",
+        "noSnapshot": "手の使用には keymap snapshot が必要です。Record セッションを開始するか snapshot のある期間を選択してください",
+        "section": {
+          "handUsage": "手の使用",
+          "wordPosition": "単語内位置"
+        },
         "className": {
           "left": "左手",
           "right": "右手",
           "alternation": "交互打鍵",
-          "repetition": "同指連打"
+          "repetition": "同指連打",
+          "initiation": "語頭",
+          "inWord": "語中"
         },
         "coverage": "{{percent}}% のペアを分類できました",
         "deltaLeft": "ΔLeft",
         "deltaRight": "ΔRight",
-        "deltaTooltip": "プラスなら、同じ手を使い続けるより手を交互に使う方が速かったことを示します"
+        "deltaInitiation": "ΔInitiation",
+        "deltaTooltip": "プラスなら、先に挙げた分類の方が遅かったことを示します",
+        "excludedNote": "{{count}} 件のペアは区切り文字で終わるため除外しました"
       },
       "pairIntervalThreshold": {
         "label": "平均間隔",

@@ -16,6 +16,7 @@ import type {
 import { fetchBigramAggregateForRange } from './analyze-fetch'
 import { useKeycodeFingerMap } from './use-keycode-finger-map'
 import { aggregateBigramClasses } from './analyze-bigram-classes'
+import { aggregateWordPosition } from './analyze-bigram-word-position'
 import { ALL_PAIRS_LIMIT } from './analyze-constants'
 import { FILTER_SELECT } from './analyze-filter-styles'
 import type { RangeMs } from './analyze-types'
@@ -167,6 +168,19 @@ export function BigramsChart({
     [classesEntries, classesFingerMap],
   )
 
+  // Word-position (initiation / in-word) aggregate — same "1
+  // calculation, N consumers" treatment as `classesAggregate` above,
+  // but with no finger map dependency: it only compares keycodes
+  // against a fixed separator set, so it doesn't need a snapshot.
+  // The snapshot is passed for its `vialProtocol` alone, not for a
+  // keymap: it decides whether dual-role (LT/MT/SH_T) space keys can be
+  // unwrapped safely. Without a snapshot the rows still render, just
+  // counting bare KC_SPACE / KC_ENTER — see `aggregateWordPosition`.
+  const wordPositionAggregate = useMemo(
+    () => aggregateWordPosition(classesEntries, snapshot?.vialProtocol),
+    [classesEntries, snapshot],
+  )
+
   const body = loading ? (
     <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-bigrams-loading">
       {t('analyze.bigrams.loading')}
@@ -267,7 +281,11 @@ export function BigramsChart({
             </>
           }
         >
-          <BigramClassesTable aggregate={classesAggregate} hasSnapshot={snapshot !== null} />
+          <BigramClassesTable
+            aggregate={classesAggregate}
+            wordPositionAggregate={wordPositionAggregate}
+            hasSnapshot={snapshot !== null}
+          />
         </Quadrant>
       )}
     </div>
