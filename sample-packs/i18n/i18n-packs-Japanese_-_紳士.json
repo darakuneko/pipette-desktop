@@ -1,5 +1,5 @@
 {
-  "version": "0.1.43",
+  "version": "0.1.44",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -1117,7 +1117,8 @@
       "quadrant": {
         "top": "頻出ペア",
         "slow": "ペア間隔",
-        "fingerIki": "指間隔"
+        "fingerIki": "指間隔",
+        "classes": "交互打鍵の恩恵"
       },
       "cappedNotice": "頻度上位 {{limit}} 件の組より算出しております — 稀な組は含まれぬこともございます",
       "gramToggle": {
@@ -1127,6 +1128,7 @@
       },
       "column": {
         "pair": "ペア",
+        "class": "分類",
         "count": "回数",
         "avgIki": "平均間隔",
         "avgIkiTrigramTooltip": "三つの打鍵の間にある二つの間隔の平均にございます。三つ全体の所要時間ではございません",
@@ -1140,6 +1142,19 @@
           "desc": "遅い順",
           "asc": "早い順"
         }
+      },
+      "classes": {
+        "noSnapshot": "交互打鍵の恩恵にも地図の写しが必要でございます",
+        "className": {
+          "left": "左手",
+          "right": "右手",
+          "alternation": "交互打鍵",
+          "repetition": "同指連打"
+        },
+        "coverage": "{{percent}}% の組を分類できましてございます",
+        "deltaLeft": "ΔLeft",
+        "deltaRight": "ΔRight",
+        "deltaTooltip": "正の値であれば、片手のみより両手を交互に用いた方が速かったことを意味いたします"
       },
       "pairIntervalThreshold": {
         "label": "平均間隔",

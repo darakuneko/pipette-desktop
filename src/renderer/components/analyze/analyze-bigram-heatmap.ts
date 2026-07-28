@@ -34,10 +34,30 @@ export function foldHist(target: number[], src: readonly number[]): void {
   for (let i = 0; i < HIST_BUCKETS; i += 1) target[i] += src[i] ?? 0
 }
 
-export interface BigramHeatmapCell {
+/** Running `{count, hist}` accumulator shared by every renderer
+ * aggregator that folds bigram entries into a bucket — finger pairs
+ * (`FingerPairTotal`), hand-usage classes (`BigramClassTotal`), and
+ * heatmap grid cells (`BigramHeatmapCell`) all use exactly this shape,
+ * just keyed differently (finger-pair string, class name, grid
+ * position). */
+export interface HistTotal {
   count: number
   hist: number[]
 }
+
+/** A fresh zero-valued `HistTotal`, `hist` sized to `HIST_BUCKETS`.
+ * Shared so every bucket-total aggregator below seeds identically
+ * instead of repeating the `new Array<number>(HIST_BUCKETS).fill(0)`
+ * literal. */
+export function emptyHistTotal(): HistTotal {
+  return { count: 0, hist: new Array<number>(HIST_BUCKETS).fill(0) }
+}
+
+/** Per-cell total in the heatmap's N × N grid. Kept as its own name
+ * (rather than exporting `HistTotal` directly) since callers address a
+ * cell by grid position, not by a class/finger-pair key — but the
+ * shape is identical, so it's an alias, not a re-declaration. */
+export type BigramHeatmapCell = HistTotal
 
 export interface BigramHeatmapResult {
   keys: number[]
@@ -84,7 +104,7 @@ export function aggregateKeyHeatmap(
     if (i === undefined || j === undefined) continue
     let cell = cells[i][j]
     if (!cell) {
-      cell = { count: 0, hist: new Array<number>(HIST_BUCKETS).fill(0) }
+      cell = emptyHistTotal()
       cells[i][j] = cell
     }
     cell.count += entry.count

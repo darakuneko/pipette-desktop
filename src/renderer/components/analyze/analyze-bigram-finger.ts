@@ -16,7 +16,7 @@ import type {
   TypingBigramTopEntry,
   TypingKeymapSnapshot,
 } from '../../../shared/types/typing-analytics'
-import { foldHist, HIST_BUCKETS, parseBigramId } from './analyze-bigram-heatmap'
+import { emptyHistTotal, foldHist, parseBigramId, type HistTotal } from './analyze-bigram-heatmap'
 import { withSnapshotProtocol } from './analyze-protocol'
 
 /** Build a numeric-keycode → finger lookup from the snapshot's layer-0
@@ -67,9 +67,32 @@ export function buildKeycodeFingerMap(
   })
 }
 
-export interface FingerPairTotal {
-  count: number
-  hist: number[]
+/** Per-finger-pair running total — see `HistTotal` (shared with
+ * `BigramClassTotal`, the hand-usage-class sibling) for the shape. */
+export type FingerPairTotal = HistTotal
+
+/** Resolves the (prev, curr) finger pair for a bigram id via the
+ * keycodeFinger map, plus whether the pair's two keycodes are the same
+ * key (needed by `classifyBigram` to detect a letter repeat). Either
+ * finger comes back `undefined` when the id is malformed or that
+ * half's keycode has no mapped finger; `sameKeycode` is `false` for a
+ * malformed id. Shared by every aggregator that needs a bigram's
+ * finger pair, so the parse-then-look-up pair isn't duplicated at each
+ * call site. */
+export function resolvePairFingers(
+  ngramId: string,
+  keycodeFinger: ReadonlyMap<number, FingerType>,
+): {
+  prevFinger: FingerType | undefined
+  currFinger: FingerType | undefined
+  sameKeycode: boolean
+} {
+  const pair = parseBigramId(ngramId)
+  return {
+    prevFinger: pair ? keycodeFinger.get(pair.prev) : undefined,
+    currFinger: pair ? keycodeFinger.get(pair.curr) : undefined,
+    sameKeycode: pair ? pair.prev === pair.curr : false,
+  }
 }
 
 /** Aggregate bigram entries into (prevFinger, currFinger) totals.
@@ -82,15 +105,12 @@ export function aggregateFingerPairs(
 ): Map<string, FingerPairTotal> {
   const totals = new Map<string, FingerPairTotal>()
   for (const entry of entries) {
-    const pair = parseBigramId(entry.ngramId)
-    if (!pair) continue
-    const f1 = keycodeFinger.get(pair.prev)
-    const f2 = keycodeFinger.get(pair.curr)
+    const { prevFinger: f1, currFinger: f2 } = resolvePairFingers(entry.ngramId, keycodeFinger)
     if (!f1 || !f2) continue
     const key = `${f1}_${f2}`
     let agg = totals.get(key)
     if (!agg) {
-      agg = { count: 0, hist: new Array<number>(HIST_BUCKETS).fill(0) }
+      agg = emptyHistTotal()
       totals.set(key, agg)
     }
     agg.count += entry.count
