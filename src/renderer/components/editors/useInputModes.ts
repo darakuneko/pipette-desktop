@@ -28,6 +28,16 @@ function typingTestAnalyticsLabel(
   return materialLabel(config.mode, effectiveLanguage, currentQuote?.source)
 }
 
+/** Context captured by prepareAnalyticsEvent at press time and carried
+ *  opaquely through useTypingTest's ordering queue to emitAnalyticsEvent.
+ *  `typingTest`/`runId` are null for ordinary REC input (untagged); an
+ *  editor typing-test keystroke always has both set together. */
+interface PreparedAnalyticsContext {
+  keyboard: TypingAnalyticsKeyboard
+  typingTest: string | null
+  runId: string | null
+}
+
 export interface UseInputModesOptions {
   rows?: number
   cols?: number
@@ -215,26 +225,59 @@ export function useInputModes({
   const testRunIdRef = useRef<string | null>(null)
   const onRecKeystrokeRef = useRef(onRecKeystroke)
   onRecKeystrokeRef.current = onRecKeystroke
-  const analyticsSink = useCallback((payload: TypingAnalyticsEventPayload) => {
+  // The sink used to read recordingActiveRef / testLabelRef / testRunIdRef
+  // at the moment an event was actually sent, but a matrix event can now
+  // sit in useTypingTest's ordering queue for up to the tapping term
+  // (waiting on an unresolved tap-hold press ahead of it) before it gets
+  // that far. Reading live state that late meant a press authorized and
+  // tagged at press time could be silently dropped, or mistagged, by
+  // whatever the state had become by the time it was flushed — most
+  // visibly, stopping the record toggle mid-hold discarded every queued
+  // event instead of just the one it was meant to finalize.
+  //
+  // Splitting into prepare (called once, at press time) + emit (called
+  // once the event is actually ready to ship, immediately or off the
+  // back of the queue) fixes that: prepare captures the gate + tag
+  // decision when the keystroke happens and hands back an opaque
+  // context; emit only ever ships what prepare already decided.
+  const prepareAnalyticsEvent = useCallback((kind: 'matrix' | 'char'): PreparedAnalyticsContext | null => {
     const keyboard = keyboardRef.current
-    if (!keyboard) return
+    if (!keyboard) return null
     const label = testLabelRef.current
-    if (!recordingActiveRef.current && !label) return
-    // A test keystroke carries both its material label and its run id; REC
-    // input carries neither (so it lands as the null run / null test).
-    const event = label
-      ? { ...payload, keyboard, typingTest: label, runId: testRunIdRef.current ?? undefined }
-      : { ...payload, keyboard }
+    if (!recordingActiveRef.current && !label) return null
     // Tray keystroke count tracks REC only (untagged matrix events), not
     // the editor typing-test practice mode — matches recordingActive's
     // narrower definition (typingRecordEnabled && typingTestViewOnly).
-    if (!label && payload.kind === 'matrix') {
+    // Counted here, at press time, rather than when the event eventually
+    // leaves the queue: the count is a live tray readout of physical
+    // keystrokes, and a masked key can otherwise sit unresolved for up to
+    // the tapping term before its emit — the user would see the tray lag
+    // behind their own typing. Firing once per authorized press here
+    // matches the previous call frequency (once per event that used to
+    // reach the sink) without that lag, and can't double-fire or fire for
+    // an unauthorized press since this whole branch is unreachable when
+    // this function returns null above.
+    if (!label && kind === 'matrix') {
       onRecKeystrokeRef.current?.()
     }
-    window.vialAPI.typingAnalyticsEvent(event).catch(() => { /* fire-and-forget */ })
+    // A test keystroke carries both its material label and its run id; REC
+    // input carries neither (so it lands as the null run / null test).
+    return { keyboard, typingTest: label, runId: label ? testRunIdRef.current : null }
+  }, [])
+  const emitAnalyticsEvent = useCallback((context: PreparedAnalyticsContext, payload: TypingAnalyticsEventPayload): Promise<void> => {
+    const event = context.typingTest
+      ? { ...payload, keyboard: context.keyboard, typingTest: context.typingTest, runId: context.runId ?? undefined }
+      : { ...payload, keyboard: context.keyboard }
+    // The return value is only ever awaited by a forced drain
+    // (MatrixAnalyticsQueue.drainAll, via resetMatrixPressTracking) — the
+    // ordinary press/release/deadline paths call this and ignore it,
+    // staying fire-and-forget same as before. Caught here (not left to
+    // the caller) so a drain's Promise.all never rejects on an IPC error.
+    return window.vialAPI.typingAnalyticsEvent(event).catch(() => { /* fire-and-forget */ })
   }, [])
   const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage, {
-    onAnalyticsEvent: analyticsSink,
+    onPrepareAnalyticsEvent: prepareAnalyticsEvent,
+    onEmitAnalyticsEvent: emitAnalyticsEvent,
     tappingTermMs,
   })
   const {
@@ -336,13 +379,23 @@ export function useInputModes({
 
   // Reset matrix press-edge tracking when keymap changes or recording toggles
   // so the next frame doesn't emit stale press events against an old state.
+  // The drain's completion promise is captured so the record-off effect
+  // below can await the *same* drain instead of triggering (and racing) a
+  // second one — see pendingDrainRef's use there.
+  const pendingDrainRef = useRef<Promise<void>>(Promise.resolve())
   useEffect(() => {
-    resetMatrixPressTracking()
+    pendingDrainRef.current = resetMatrixPressTracking()
   }, [keymap, recordingActive, resetMatrixPressTracking])
 
   // When recording transitions off (either the toggle flips or the user
   // leaves view-only mode), finalize the open session in main and flush
-  // its data for the active keyboard.
+  // its data for the active keyboard. Must wait for the drain the effect
+  // above just kicked off (same recordingActive dependency, so it always
+  // runs first in this commit) to actually land in main before asking it
+  // to flush — main's ingestEvent does a real await before an event
+  // reaches its minute buffer, so an unawaited flush can be serviced
+  // before a just-drained event arrives, landing that event in a fresh
+  // buffer entry after the session it belonged to was already finalized.
   const prevRecordingActiveRef = useRef(recordingActive)
   useEffect(() => {
     const wasOn = prevRecordingActiveRef.current
@@ -350,7 +403,10 @@ export function useInputModes({
     if (wasOn && !recordingActive) {
       const uid = typingRecordKeyboard?.uid
       if (uid) {
-        window.vialAPI.typingAnalyticsFlush(uid).catch(() => { /* fire-and-forget */ })
+        const drained = pendingDrainRef.current
+        void drained
+          .then(() => window.vialAPI.typingAnalyticsFlush(uid))
+          .catch(() => { /* fire-and-forget */ })
       }
     }
   }, [recordingActive, typingRecordKeyboard])
@@ -417,9 +473,18 @@ export function useInputModes({
       // Flush the test's analytics so the just-finished minute/session
       // lands in the cache promptly (Analyze can show it without waiting
       // for the minute-close / before-quit flush). Keystrokes are recorded
-      // regardless of whether the result row is saved.
+      // regardless of whether the result row is saved. Drain first (same
+      // reasoning as the record-off flush above): a masked key pressed
+      // near the end of the run may still be sitting unresolved in the
+      // ordering queue, and requesting the flush before it lands in main
+      // would land it in a fresh buffer entry after this run's session
+      // was already finalized.
       const uid = keyboardRef.current?.uid
-      if (uid) window.vialAPI.typingAnalyticsFlush(uid).catch(() => { /* fire-and-forget */ })
+      if (uid) {
+        resetMatrixPressTracking()
+          .then(() => window.vialAPI.typingAnalyticsFlush(uid))
+          .catch(() => { /* fire-and-forget */ })
+      }
       // A completed test makes any saved pause snapshot obsolete.
       if (savedMemoryRef.current) onMemoryChangeRef.current?.(undefined)
     }
@@ -435,7 +500,8 @@ export function useInputModes({
     typingTest.state.currentQuote, typingTest.state.runId, typingTest.state.romajiCapable,
     typingTest.wpm, typingTest.accuracy,
     typingTest.config, typingTest.language,
-    typingTestHistory, onSaveTypingTestResult, saveUnnamed, pendingUnnamedResult])
+    typingTestHistory, onSaveTypingTestResult, saveUnnamed, pendingUnnamedResult,
+    resetMatrixPressTracking])
 
   // The just-finished result, exposed so the pane can build name chips: the
   // held unsaved one (save-unnamed off) until named, else the saved latest.

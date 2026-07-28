@@ -6,9 +6,11 @@
 
 import { extractMOLayer, extractLTLayer, extractLMLayer } from './keycode-char-map'
 
-/** Press-edge record kept until the matching release edge is seen so
- * masked keys can classify the press as tap vs hold. Non-masked keys
- * are emitted immediately on press and never land in this map. */
+/** Press-edge record kept until the press resolves — by its matching
+ * release edge, or by the deferred-emit deadline if it is still held
+ * when that fires — so masked keys can classify the press as tap vs
+ * hold. Non-masked keys are emitted immediately on press and never land
+ * in this record. */
 export interface PressStartRecord {
   tsMs: number
   row: number

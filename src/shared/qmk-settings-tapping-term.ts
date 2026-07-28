@@ -25,3 +25,28 @@ export function resolveTappingTermMs(
   // which would flag every press as a hold. Treat it as "not configured".
   return value > 0 ? value : DEFAULT_TAPPING_TERM_MS
 }
+
+/** Hard ceiling (ms) on how long the renderer's typing-analytics queue
+ * (`matrix-analytics-queue.ts`) may defer classifying an LT/MT press as
+ * tap vs hold. TAPPING_TERM is read off the keyboard as a raw u16 (up to
+ * 65535), and nothing in the protocol stops a keyboard from reporting a
+ * value far larger than any sane typing cadence — but the analytics
+ * pipeline needs a *fixed* upper bound on how late a deferred press can
+ * arrive, not one that tracks whatever the keyboard happens to report.
+ * A press still unresolved this many ms after being pressed always
+ * settles as `hold`, even when the configured TAPPING_TERM is larger.
+ *
+ * Trade-off, deliberately accepted: with TAPPING_TERM configured above
+ * this cap, a genuine tap held past the cap is misclassified as a hold.
+ * That only breaks the n-gram chain at that one key — a hold is dropped
+ * from bigram/trigram pairing but never fabricates a pair that wasn't
+ * actually typed (see `MinuteBuffer.recordNgramChain`). The alternative
+ * — sizing the defer window to the live TAPPING_TERM instead of capping
+ * it — would let a single slow config defer a press long enough to land
+ * after its minute was already flushed, silently overwriting that
+ * minute's recorded totals instead of losing one keystroke's chain
+ * position (see `DRAIN_CLOSE_GRACE_MS` in `minute-buffer.ts`). A
+ * TAPPING_TERM this large is already well past the point where tap-hold
+ * behaves like ordinary typing, so the misclassification this trades
+ * for is the cheaper failure mode. */
+export const MAX_TAP_HOLD_DEFER_MS = 1000

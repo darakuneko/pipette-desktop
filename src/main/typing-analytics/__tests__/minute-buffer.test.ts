@@ -2,10 +2,12 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { MinuteBuffer, MINUTE_MS } from '../minute-buffer'
-import { NGRAM_MAX_IKI_MS } from '../minute-buffer'
+import { NGRAM_MAX_IKI_MS, DRAIN_CLOSE_GRACE_MS } from '../minute-buffer'
+import { MAX_TAP_HOLD_DEFER_MS } from '../../../shared/qmk-settings-tapping-term'
 import type {
   TypingAnalyticsEvent,
   TypingAnalyticsFingerprint,
+  TypingMatrixAction,
 } from '../../../shared/types/typing-analytics'
 import { canonicalScopeKey } from '../../../shared/types/typing-analytics'
 
@@ -27,7 +29,14 @@ function charEvent(key: string, ts: number): TypingAnalyticsEvent {
   return { kind: 'char', key, ts, keyboard: { uid: 'x', vendorId: 0, productId: 0, productName: '' } }
 }
 
-function matrixEvent(row: number, col: number, layer: number, keycode: number, ts: number): TypingAnalyticsEvent {
+function matrixEvent(
+  row: number,
+  col: number,
+  layer: number,
+  keycode: number,
+  ts: number,
+  action?: TypingMatrixAction,
+): TypingAnalyticsEvent {
   return {
     kind: 'matrix',
     row,
@@ -35,6 +44,7 @@ function matrixEvent(row: number, col: number, layer: number, keycode: number, t
     layer,
     keycode,
     ts,
+    ...(action ? { action } : {}),
     keyboard: { uid: 'x', vendorId: 0, productId: 0, productName: '' },
   }
 }
@@ -147,13 +157,16 @@ describe('MinuteBuffer', () => {
     expect(new Set(snapshots.map((s) => s.scopeId))).toEqual(new Set([scope1Id, scope2Id]))
   })
 
-  it('drainClosed only returns entries strictly older than the boundary', () => {
+  it('drainClosed only returns entries whose minute ended at least the grace period before the boundary', () => {
     const fp = fingerprint()
     buffer.addEvent(charEvent('a', 1_000), fp)                // minute 0
     buffer.addEvent(charEvent('a', MINUTE_MS + 1_000), fp)    // minute 1
     buffer.addEvent(charEvent('a', 2 * MINUTE_MS + 1_000), fp) // minute 2
 
-    const closed = buffer.drainClosed(2 * MINUTE_MS)
+    // 3 * MINUTE_MS comfortably clears minute 0 and minute 1's grace window
+    // (each ended well over DRAIN_CLOSE_GRACE_MS ago) while minute 2 has
+    // barely ended and must stay open.
+    const closed = buffer.drainClosed(3 * MINUTE_MS)
     expect(closed.map((s) => s.minuteTs).sort((a, b) => a - b)).toEqual([0, MINUTE_MS])
     // Minute 2 is still live.
     expect(buffer.isEmpty()).toBe(false)
@@ -281,7 +294,8 @@ describe('MinuteBuffer', () => {
       // no peer to pair against.
       const fp = fingerprint()
       buffer.addEvent(matrixEvent(0, 0, 0, 4, 30_000), fp) // minute 0
-      const closed = buffer.drainClosed(60_000)
+      // Past the grace window so minute 0 actually closes on this call.
+      const closed = buffer.drainClosed(MINUTE_MS + DRAIN_CLOSE_GRACE_MS)
       expect(closed).toHaveLength(1)
       expect(closed[0].bigrams.size).toBe(0) // single event in minute 0, no pair to record yet
 
@@ -441,7 +455,8 @@ describe('MinuteBuffer', () => {
       const fp = fingerprint()
       buffer.addEvent(matrixEvent(0, 0, 0, 4, 20_000), fp) // minute 0
       buffer.addEvent(matrixEvent(0, 1, 0, 11, 40_000), fp) // minute 0, chain=[4,11]
-      const closed = buffer.drainClosed(60_000)
+      // Past the grace window so minute 0 actually closes on this call.
+      const closed = buffer.drainClosed(MINUTE_MS + DRAIN_CLOSE_GRACE_MS)
       expect(closed).toHaveLength(1)
       expect(closed[0].trigrams.size).toBe(0) // only 2 events so far, no triple yet
 
@@ -544,6 +559,108 @@ describe('MinuteBuffer', () => {
     })
   })
 
+  describe('hold events break the n-gram chain', () => {
+    it('does not pair a hold with the event before it', () => {
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp) // letter
+      buffer.addEvent(matrixEvent(1, 0, 0, 0x4015, 1_100, 'hold'), fp) // LT hold
+
+      const [snap] = buffer.drainAll()
+      expect(snap.bigrams.size).toBe(0)
+    })
+
+    it('does not pair a hold with the event after it — the chain restarted', () => {
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(1, 0, 0, 0x4015, 1_000, 'hold'), fp) // LT hold
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_100), fp) // letter
+
+      const [snap] = buffer.drainAll()
+      expect(snap.bigrams.size).toBe(0)
+    })
+
+    it('does not join two letters into a pair across an intervening hold', () => {
+      // The naive "skip the hold and pair its neighbours" shortcut would
+      // record 4_7 here (120+180=300ms apart); the chain must instead
+      // treat the hold as a full reset so neither neighbour has anything
+      // to pair against yet.
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp) // letter A
+      buffer.addEvent(matrixEvent(1, 0, 0, 0x4015, 1_120, 'hold'), fp) // Ctrl/LT hold
+      buffer.addEvent(matrixEvent(0, 1, 0, 7, 1_300), fp) // letter B
+
+      const [snap] = buffer.drainAll()
+      expect(snap.bigrams.size).toBe(0)
+      expect(snap.bigrams.has('4_7')).toBe(false)
+    })
+
+    it('lets a tap event participate in the chain exactly like an unmarked event', () => {
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000, 'tap'), fp)
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_120, 'tap'), fp)
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.bigrams.entries()]).toEqual([['4_11', [120]]])
+    })
+
+    it('still counts a hold toward keystrokes and matrix holdCount', () => {
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(1, 0, 0, 0x4015, 1_000, 'hold'), fp)
+
+      const [snap] = buffer.drainAll()
+      expect(snap.keystrokes).toBe(1)
+      expect(snap.matrixCounts.get('1,0,0')).toEqual({
+        row: 1,
+        col: 0,
+        layer: 0,
+        keycode: 0x4015,
+        count: 1,
+        tapCount: 0,
+        holdCount: 1,
+      })
+    })
+
+    it('does not emit a trigram spanning a hold', () => {
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp) // A
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_100), fp) // B, chain=[4,11]
+      buffer.addEvent(matrixEvent(1, 0, 0, 0x4015, 1_200, 'hold'), fp) // hold resets chain
+      buffer.addEvent(matrixEvent(0, 2, 0, 7, 1_300), fp) // C, chain=[7] only
+
+      const [snap] = buffer.drainAll()
+      // Only the A-B pair survives; nothing pairs or triples through the hold.
+      expect([...snap.bigrams.entries()]).toEqual([['4_11', [100]]])
+      expect(snap.trigrams.size).toBe(0)
+    })
+  })
+
+  describe('drainClosed grace period', () => {
+    it('does not finalize a minute that ended less than the grace period ago', () => {
+      const fp = fingerprint()
+      buffer.addEvent(charEvent('a', 30_000), fp) // minute 0, ends at MINUTE_MS
+      // "Now" is just past the minute boundary, well inside the grace window.
+      const closed = buffer.drainClosed(MINUTE_MS + 500)
+      expect(closed).toHaveLength(0)
+      expect(buffer.isEmpty()).toBe(false)
+    })
+
+    it('finalizes a minute once it ended longer ago than the grace period', () => {
+      const fp = fingerprint()
+      buffer.addEvent(charEvent('a', 30_000), fp) // minute 0, ends at MINUTE_MS
+      const closed = buffer.drainClosed(MINUTE_MS + DRAIN_CLOSE_GRACE_MS + 1)
+      expect(closed).toHaveLength(1)
+      expect(closed[0].minuteTs).toBe(0)
+      expect(buffer.isEmpty()).toBe(true)
+    })
+
+    it('always exceeds MAX_TAP_HOLD_DEFER_MS, so a press deferred up to the cap always finds its minute still open', () => {
+      // Guards against the two constants drifting apart independently: the
+      // renderer never defers a press past MAX_TAP_HOLD_DEFER_MS, so the
+      // grace only needs to be strictly larger than that cap (plus jitter
+      // margin) — not sized off the keyboard's raw, unbounded TAPPING_TERM.
+      expect(DRAIN_CLOSE_GRACE_MS).toBeGreaterThan(MAX_TAP_HOLD_DEFER_MS)
+    })
+  })
+
   it('exposes an empty bigrams map when no matrix events arrived', () => {
     // Sanity check: the Map exists on every snapshot (downstream emit
     // layer relies on snapshot.bigrams.size, not optional access).
@@ -642,7 +759,8 @@ describe('MinuteBuffer', () => {
       buffer.addEvent(matrixEvent(0, 0, 0, 4, 500), fp) // minute 0
       buffer.addEvent(matrixEvent(0, 0, 0, 4, MINUTE_MS + 500), fp) // minute 1
       buffer.markAppName('VSCode')
-      const closed = buffer.drainClosed(MINUTE_MS)
+      // Past the grace window so minute 0 actually closes on this call.
+      const closed = buffer.drainClosed(MINUTE_MS + DRAIN_CLOSE_GRACE_MS)
       expect(closed).toHaveLength(1)
       expect(closed[0].appName).toBe('VSCode')
       // Open minute should still be available; tagging again should

@@ -1759,7 +1759,7 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
 
   const snapshots = options.final
     ? minuteBuffer.drainAll()
-    : minuteBuffer.drainClosed(Math.floor(Date.now() / MINUTE_MS) * MINUTE_MS)
+    : minuteBuffer.drainClosed(Date.now())
   const sessionsToWrite = pendingSessions.splice(0)
 
   if (snapshots.length === 0 && sessionsToWrite.length === 0) {

@@ -9,6 +9,7 @@ import type {
   TypingAnalyticsFingerprint,
 } from '../../shared/types/typing-analytics'
 import { canonicalScopeKey } from '../../shared/types/typing-analytics'
+import { MAX_TAP_HOLD_DEFER_MS } from '../../shared/qmk-settings-tapping-term'
 
 export const MINUTE_MS = 60_000
 
@@ -24,10 +25,38 @@ export const MINUTE_MS = 60_000
  * put multi-minute idles back into the interval statistics. */
 export const NGRAM_MAX_IKI_MS = 5000
 
+/** Margin added on top of {@link MAX_TAP_HOLD_DEFER_MS} to absorb IPC and
+ * timer scheduling jitter between the renderer's deadline firing and the
+ * event actually landing in this buffer (invoke round-trip, event-loop
+ * queueing, `resolveScope`'s cache-miss I/O). Not itself a bound on
+ * deferral — that's the cap; this only covers the trip after it fires. */
+const DRAIN_CLOSE_JITTER_MARGIN_MS = 1000
+
+/** Grace period `drainClosed` waits past a minute's wall-clock end before
+ * finalizing it. The renderer defers emitting an LT/MT press until it
+ * resolves as tap or hold — by its release edge, or by
+ * {@link MAX_TAP_HOLD_DEFER_MS} if the key is still held — so an event
+ * can still be in flight after its own minute has technically ended.
+ * Closing the buffer right at the boundary would land that event in a
+ * *second* snapshot for a minute already flushed. That second snapshot
+ * does not merge into the first: the flush path applies snapshots
+ * through the same last-writer-wins merge sync uses
+ * (`mergeMinuteStatsStmt`), so a late arrival *replaces* the minute's
+ * recorded totals instead of adding to them. Do not remove this margin
+ * to "close minutes sooner" — that reintroduces the overwrite.
+ *
+ * Derived from the cap (not chosen independently) so the two can never
+ * drift apart: the renderer is contractually bounded to
+ * MAX_TAP_HOLD_DEFER_MS regardless of the keyboard's configured
+ * TAPPING_TERM, so this only needs to cover that cap plus the jitter
+ * margin above — not the keyboard's raw (u16, up to 65535 ms) setting. */
+export const DRAIN_CLOSE_GRACE_MS = MAX_TAP_HOLD_DEFER_MS + DRAIN_CLOSE_JITTER_MARGIN_MS
+
 /** Per-cell aggregated counts. `count` is the total press count. `tapCount`
- * and `holdCount` break that down for LT/MT release-edge classifications;
- * non-tap-hold presses leave both at zero and the consumer treats
- * `count` as the fallback intensity. */
+ * and `holdCount` break that down for LT/MT presses, classified by
+ * release edge or by the renderer's deferred-emit deadline, whichever
+ * comes first; non-tap-hold presses leave both at zero and the consumer
+ * treats `count` as the fallback intensity. */
 export interface MatrixCellCounts {
   row: number
   col: number
@@ -174,7 +203,8 @@ export class MinuteBuffer {
   // recompute or re-check it — see recordNgramChain. Reset on minute
   // close so cross-minute pairs are dropped per the design (see
   // Plan-analyze-bigram.md — 0.3% loss accepted to keep the flush path
-  // simple).
+  // simple), and also reset on a tap-hold `hold` event so its neighbours
+  // are never joined into a pair through it (see addEvent).
   private k1Keycode: number | null = null
   private k2Keycode: number | null = null
   private k2Ts: number | null = null
@@ -227,7 +257,10 @@ export class MinuteBuffer {
     // lastEventMs backwards (which would corrupt activeMs) or leave
     // firstEventMs above the real outer window. Intervals from out-of-order
     // events are intentionally dropped — reconstructing them would require
-    // re-sorting every flush.
+    // re-sorting every flush. This guard is no longer expected to fire for
+    // tap-hold keys once the renderer emits in press order; it stays as the
+    // correct fallback for whatever genuinely out-of-order arrival still
+    // reaches here (e.g. IPC scheduling jitter), not as the normal path.
     if (event.ts > entry.lastEventMs) entry.lastEventMs = event.ts
     if (event.ts < entry.firstEventMs) entry.firstEventMs = event.ts
     entry.keystrokes += 1
@@ -249,7 +282,22 @@ export class MinuteBuffer {
         holdCount: (existing?.holdCount ?? 0) + holdDelta,
       })
 
-      this.recordNgramChain(entry, `${scopeId}|${runId}`, event.keycode, event.ts)
+      if (event.action === 'hold') {
+        // A hold is the user reaching for a layer or modifier, not a
+        // character in the typing stream — it must still count toward
+        // keystrokes/matrix/holdCount above, but it cannot become a link
+        // in the n-gram chain. The tempting shortcut is to just skip it
+        // and let its neighbours pair directly (letter -> letter across
+        // the hold), but that would fabricate a pair that was never
+        // typed consecutively: the user's actual sequence was
+        // letter -> [reach for Ctrl/Shift/LT] -> letter, not
+        // letter -> letter. So the chain resets to empty instead of
+        // skipping through — the next event starts a fresh chain with
+        // nothing to pair against yet.
+        this.resetBigramChain()
+      } else {
+        this.recordNgramChain(entry, `${scopeId}|${runId}`, event.keycode, event.ts)
+      }
     }
   }
 
@@ -335,13 +383,19 @@ export class MinuteBuffer {
     }
   }
 
-  /** Finalize and return every buffer entry whose minute is strictly older
-   * than the given boundary. Called on each event so closed minutes don't
-   * linger in memory. */
-  drainClosed(cutoffMinuteTs: number): MinuteSnapshot[] {
+  /** Finalize and return every buffer entry whose minute ended at least
+   * {@link DRAIN_CLOSE_GRACE_MS} ago. Called on each event so closed
+   * minutes don't linger in memory.
+   *
+   * `nowMs` is a real wall-clock timestamp, not a floored minute: the
+   * grace is a few seconds, so flooring it first would round the margin
+   * up to a whole extra minute and hold every minute in memory far
+   * longer than the deferred-emission window actually requires.
+   * Callers never add the grace themselves — they just pass `Date.now()`. */
+  drainClosed(nowMs: number): MinuteSnapshot[] {
     const closed: MinuteSnapshot[] = []
     for (const [key, entry] of this.buffers) {
-      if (entry.minuteTs < cutoffMinuteTs) {
+      if (entry.minuteTs + MINUTE_MS + DRAIN_CLOSE_GRACE_MS <= nowMs) {
         closed.push(finalize(entry))
         this.buffers.delete(key)
       }
