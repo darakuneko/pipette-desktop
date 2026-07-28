@@ -8,9 +8,10 @@
 import { BIGRAM_HIST_BUCKETS } from './jsonl/jsonl-row'
 
 /** Exclusive upper bounds of each histogram bucket in ms. The final
- * bucket has implicit positive-infinity upper bound; the aggregator
- * already filters IKI greater than SESSION_IDLE_GAP_MS so the open end
- * is bounded in practice. Exported so range aggregators can derive
+ * bucket has implicit positive-infinity upper bound; the recorder
+ * already discards any interval slower than NGRAM_MAX_IKI_MS, so the
+ * open end is bounded to that ceiling in practice rather than to a
+ * genuine multi-minute gap. Exported so range aggregators can derive
  * avg / median / p95 from a histogram without re-deriving the layout. */
 export const BIGRAM_BUCKET_UPPER_BOUNDS_MS: readonly number[] = [
   60,
@@ -25,11 +26,18 @@ export const BIGRAM_BUCKET_UPPER_BOUNDS_MS: readonly number[] = [
 
 /** Estimated bucket centers (ms) used to derive avg IKI / percentile
  * estimates from a packed histogram. Closed buckets use their
- * midpoint; the open-ended final bucket uses 1500 ms as a slow-tail
- * estimate (most >1s pairs are one-second hesitations rather than
- * multi-minute idles, since SESSION_IDLE_GAP_MS already filters those
- * upstream). Kept next to the upper-bound array so changes to either
- * stay in lockstep. */
+ * midpoint; the open-ended final bucket keeps a synthetic 1500 ms
+ * center rather than reflecting its real ceiling (most >1s pairs are
+ * one-second hesitations, and NGRAM_MAX_IKI_MS now bounds the
+ * bucket's true contents at 5000 ms instead of the 5-minute span it
+ * used to see). That synthetic center — and the POSITIVE_INFINITY
+ * upper bound above — are left alone on purpose even though the real
+ * ceiling tightened: giving the final bucket a genuine 5000 ms upper
+ * bound would stretch the percentile interpolation span from the
+ * synthetic [1000, 2000] this histogram was built against to
+ * [1000, 5000], silently reshaping every percentile already derived
+ * from data recorded under the old ceiling. Kept next to the
+ * upper-bound array so changes to either stay in lockstep. */
 export const BIGRAM_BUCKET_CENTERS_MS: readonly number[] = [
   30,    // bucket 0: < 60
   80,    // bucket 1: 60-100

@@ -445,6 +445,8 @@ The bold line is the composite **Overall** score (weighted mean of the three sub
 
 The Bigrams tab analyzes consecutive key-press sequences and the inter-key interval (IKI) between them. A toggle in the top-right corner switches the tab between **2-gram** (key pairs, the default) and **3-gram** (key triples) granularity. Both are aggregated per minute as the typing happens, so the tab works over any selected range without re-scanning raw events.
 
+An interval longer than **5 seconds** is not counted: a gap that long is a pause, not a typing interval, so the pair or triple spanning it is left out of the aggregate entirely. Keystrokes recorded before this rule took effect are not re-processed, so a range that straddles the change can show a small step in pair counts and averages.
+
 **Quadrant layout**
 
 At 2-gram the view is a 3-quadrant grid; each quadrant has its own list-size selector (10 / 20 / 30 / … / 100). Bars are rendered with recharts so tooltips track the cursor. At 3-gram the **Finger IKI** quadrant disappears — a finger-pair mapping isn't a defined concept for a 3-key sequence — and **Top pairs** / **Pair interval** expand to fill the freed row instead of leaving an empty cell.
