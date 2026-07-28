@@ -74,7 +74,10 @@ import {
   listMinuteStatsForScope,
 } from './analyze-fetch'
 import { classifyBigram } from './analyze-bigram-classes'
+import { classifyWordPosition } from './analyze-bigram-word-position'
 import { buildKeycodeFingerMap, resolvePairFingers } from './analyze-bigram-finger'
+import { parseBigramId } from './analyze-bigram-heatmap'
+import { withSnapshotProtocol } from './analyze-protocol'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { buildBksRateBuckets } from './analyze-error-proxy'
 import { buildHourOfDayWpm, computeWpm } from './analyze-wpm'
@@ -454,11 +457,27 @@ export async function buildBigramsCsv(args: ScopeArgs & {
   // (classification attempted, finger unresolved). See the `snapshot`
   // param doc above.
   const canClassify = gram === 2 && snapshot !== null
-  const rows = entries.map((e) => {
+  // Word position, unlike `class`, needs no snapshot to be computable —
+  // it's keycode equality against a fixed separator set — so it's gated
+  // on `gram` alone, never on `canClassify`. Trigram ids fail
+  // `parseBigramId` (which only accepts a `_`-joined pair) and so fall
+  // through to the blank default just like `class` does.
+  //
+  // The snapshot's protocol is still used when present: it's what makes
+  // unwrapping a dual-role (LT/MT/SH_T) space key safe, since those
+  // ranges move between v5 and v6. Without it the column falls back to
+  // bare separator codes rather than guessing — see `tapKeycodeOf`.
+  const unwrapTaps = snapshot?.vialProtocol !== undefined
+  const rows = withSnapshotProtocol(snapshot?.vialProtocol, () => entries.map((e) => {
     let cls = ''
     if (canClassify) {
       const { prevFinger, currFinger, sameKeycode } = resolvePairFingers(e.ngramId, keycodeFinger)
       cls = classifyBigram(prevFinger, currFinger, sameKeycode)
+    }
+    let wordPosition = ''
+    if (gram === 2) {
+      const pair = parseBigramId(e.ngramId)
+      if (pair) wordPosition = classifyWordPosition(pair.prev, pair.curr, unwrapTaps)
     }
     return [
       e.ngramId,
@@ -466,11 +485,15 @@ export async function buildBigramsCsv(args: ScopeArgs & {
       e.avgIki === null ? '' : Math.round(e.avgIki),
       e.sd === null ? '' : Math.round(e.sd),
       cls,
+      wordPosition,
     ]
-  })
+  }))
   return {
     slug: gram === 3 ? SLUG.trigrams : SLUG.bigrams,
-    content: buildCsv([gram === 3 ? 'trigram_id' : 'bigram_id', 'count', 'avg_iki_ms', 'sd_iki_ms', 'class'], rows),
+    content: buildCsv(
+      [gram === 3 ? 'trigram_id' : 'bigram_id', 'count', 'avg_iki_ms', 'sd_iki_ms', 'class', 'word_position'],
+      rows,
+    ),
   }
 }
 

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.44",
+  "version": "0.1.45",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -1118,7 +1118,7 @@
         "top": "頻出ペア☆",
         "slow": "ペア間隔っしょ",
         "fingerIki": "指間隔☆",
-        "classes": "交互打鍵ベネフィット☆"
+        "classes": "打鍵パターン☆"
       },
       "cappedNotice": "頻度上位 {{limit}} 件から出してるよん — レアなペアは入ってないかもっしょ",
       "gramToggle": {
@@ -1144,17 +1144,25 @@
         }
       },
       "classes": {
-        "noSnapshot": "交互打鍵ベネフィットもスナップショットないと無理っしょ☆REC開始して！",
+        "noSnapshot": "手の使用もスナップショットないと無理っしょ☆REC開始して！",
+        "section": {
+          "handUsage": "手の使用☆",
+          "wordPosition": "単語内位置☆"
+        },
         "className": {
           "left": "左手☆",
           "right": "右手☆",
           "alternation": "交互っしょ☆",
-          "repetition": "連打ｗ"
+          "repetition": "連打ｗ",
+          "initiation": "語頭ｗ",
+          "inWord": "語中っしょ"
         },
         "coverage": "{{percent}}%のペア分類できたっしょ☆",
         "deltaLeft": "ΔLeft",
         "deltaRight": "ΔRight",
-        "deltaTooltip": "プラスなら交互に手動かした方が速かったってことっしょ☆"
+        "deltaInitiation": "ΔInitiation",
+        "deltaTooltip": "プラスなら最初に書いてる方が遅かったってことっしょ☆",
+        "excludedNote": "{{count}}件は区切り文字で終わってるから除外したっしょ☆"
       },
       "pairIntervalThreshold": {
         "label": "平均間隔☆",

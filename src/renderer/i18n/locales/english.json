@@ -1,5 +1,5 @@
 {
-  "version": "0.1.44",
+  "version": "0.1.45",
   "name": "English",
   "common": {
     "save": "Save",
@@ -1128,7 +1128,7 @@
         "top": "Top pairs",
         "slow": "Pair interval",
         "fingerIki": "Finger IKI",
-        "classes": "Alternation benefit"
+        "classes": "Bigram patterns"
       },
       "cappedNotice": "Computed from the {{limit}} most frequent pairs — rare pairs may be missing.",
       "gramToggle": {
@@ -1154,17 +1154,25 @@
         }
       },
       "classes": {
-        "noSnapshot": "Alternation benefit needs a keymap snapshot. Start a record session or pick a range with one.",
+        "noSnapshot": "Hand usage needs a keymap snapshot. Start a record session or pick a range with one.",
+        "section": {
+          "handUsage": "Hand usage",
+          "wordPosition": "Word position"
+        },
         "className": {
           "left": "Left",
           "right": "Right",
           "alternation": "Alternation",
-          "repetition": "Repetition"
+          "repetition": "Repetition",
+          "initiation": "Initiation",
+          "inWord": "In-word"
         },
         "coverage": "{{percent}}% of pairs classified",
         "deltaLeft": "ΔLeft",
         "deltaRight": "ΔRight",
-        "deltaTooltip": "Positive means alternating hands was faster than staying on one hand."
+        "deltaInitiation": "ΔInitiation",
+        "deltaTooltip": "Positive means the first-named class was slower.",
+        "excludedNote": "{{count}} pairs ending at a separator excluded"
       },
       "pairIntervalThreshold": {
         "label": "Avg interval",
