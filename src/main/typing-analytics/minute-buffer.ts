@@ -9,9 +9,20 @@ import type {
   TypingAnalyticsFingerprint,
 } from '../../shared/types/typing-analytics'
 import { canonicalScopeKey } from '../../shared/types/typing-analytics'
-import { SESSION_IDLE_GAP_MS } from './session-detector'
 
 export const MINUTE_MS = 60_000
+
+/** The longest gap between two keystrokes that still counts as one
+ * recorded interval; anything slower never reaches the bigram/trigram
+ * accumulators. Mirrors the discard threshold used by the
+ * typing-behaviour research the n-gram statistics are modeled on.
+ *
+ * This replaces SESSION_IDLE_GAP_MS for n-gram eligibility only. That
+ * constant still decides when a *session* ends; this one decides which
+ * single interval may become an n-gram. They were once the same value
+ * and are no longer (5 min vs 5 s) — re-merging them would silently
+ * put multi-minute idles back into the interval statistics. */
+export const NGRAM_MAX_IKI_MS = 5000
 
 /** Per-cell aggregated counts. `count` is the total press count. `tapCount`
  * and `holdCount` break that down for LT/MT release-edge classifications;
@@ -248,7 +259,7 @@ export class MinuteBuffer {
    * (`curr`) closes the pair `k2_curr` and, when `k1` is also present,
    * the triple `k1_k2_curr`.
    *
-   * Eligibility (`0 < iki <= SESSION_IDLE_GAP_MS`) is checked once for
+   * Eligibility (`0 < iki <= NGRAM_MAX_IKI_MS`) is checked once for
    * the `k2 -> curr` interval and reused for both emissions — the
    * trigram value additionally needs `prevIki`, the already-validated
    * `k1 -> k2` interval cached from the previous call, so it never
@@ -256,11 +267,11 @@ export class MinuteBuffer {
    *
    * A tied/out-of-order event (`iki <= 0`) is discarded without
    * disturbing the chain. Otherwise the chain always advances on a
-   * strictly-forward event, even when the interval exceeds the session
-   * gap — a big gap just means `prevIki` (and therefore any trigram
-   * through it) reads as invalid until two consecutive eligible
-   * intervals rebuild it; the bigram side never depended on `k1` and is
-   * unaffected.
+   * strictly-forward event, even when the interval exceeds
+   * NGRAM_MAX_IKI_MS — too slow an interval just means `prevIki` (and
+   * therefore any trigram through it) reads as invalid until two
+   * consecutive eligible intervals rebuild it; the bigram side never
+   * depended on `k1` and is unaffected.
    *
    * `chainKey` scopes the chain to one `${scopeId}|${runId}` stream: an
    * event from a different keyboard or test run restarts the chain from
@@ -282,7 +293,7 @@ export class MinuteBuffer {
       // Tie / out-of-order: discard this event, chain unchanged.
       return
     }
-    const eligible = iki <= SESSION_IDLE_GAP_MS
+    const eligible = iki <= NGRAM_MAX_IKI_MS
     if (eligible) {
       const pairKey = `${this.k2Keycode}_${currKeycode}`
       let ikis = entry.bigrams.get(pairKey)

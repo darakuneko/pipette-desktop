@@ -2,6 +2,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { MinuteBuffer, MINUTE_MS } from '../minute-buffer'
+import { NGRAM_MAX_IKI_MS } from '../minute-buffer'
 import type {
   TypingAnalyticsEvent,
   TypingAnalyticsFingerprint,
@@ -227,9 +228,9 @@ describe('MinuteBuffer', () => {
       expect([...snap.bigrams.entries()]).toEqual([['4_11', [200]]])
     })
 
-    it('drops pairs whose IKI exceeds the session idle gap', () => {
-      // SESSION_IDLE_GAP_MS = 5 minutes. A 6-minute gap means the next
-      // event starts a fresh session and shouldn't pair with the prior.
+    it('drops pairs whose IKI exceeds NGRAM_MAX_IKI_MS', () => {
+      // NGRAM_MAX_IKI_MS = 5000ms. A 6-minute gap is far past that
+      // ceiling, so the pair must be discarded.
       const fp = fingerprint()
       buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
       buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_000 + 6 * 60 * 1_000), fp)
@@ -238,6 +239,39 @@ describe('MinuteBuffer', () => {
       // Two minutes were buffered; check the merged result has no bigrams.
       const allBigrams = new Map([...snapA.bigrams, ...snapB.bigrams])
       expect(allBigrams.size).toBe(0)
+    })
+
+    it('records a pair whose gap lands exactly on NGRAM_MAX_IKI_MS', () => {
+      // The comparison is `iki <= NGRAM_MAX_IKI_MS`, so the boundary
+      // itself is still eligible — only strictly-slower pairs are cut.
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_000 + NGRAM_MAX_IKI_MS), fp)
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.bigrams.entries()]).toEqual([['4_11', [NGRAM_MAX_IKI_MS]]])
+    })
+
+    it('drops a pair whose gap is one ms past NGRAM_MAX_IKI_MS', () => {
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_000 + NGRAM_MAX_IKI_MS + 1), fp)
+
+      const [snap] = buffer.drainAll()
+      expect(snap.bigrams.size).toBe(0)
+    })
+
+    it('advances the chain past an over-cap gap so the next pair forms against the skipped event, not the one before it', () => {
+      // B fails to pair with A (gap over the cap), but the chain still
+      // moves forward to B. When C then arrives in range, it must pair
+      // with B — the event the gap stranded — and not reach back to A.
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 0), fp) // A
+      buffer.addEvent(matrixEvent(0, 1, 0, 2, NGRAM_MAX_IKI_MS + 3_000), fp) // B, gap over cap: no pair
+      buffer.addEvent(matrixEvent(0, 2, 0, 3, NGRAM_MAX_IKI_MS + 3_100), fp) // C, gap=100: pairs with B
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.bigrams.entries()]).toEqual([['2_3', [100]]])
     })
 
     it('drops the cross-minute pair after drainClosed resets the chain', () => {
@@ -261,18 +295,21 @@ describe('MinuteBuffer', () => {
     it('attributes cross-minute pairs to the later minute when drainClosed has not run', () => {
       // Without drainClosed firing between events, the chain persists
       // across minutes, so the IKI-eligible pair lands in the snapshot
-      // belonging to the later event. This is acceptable per the design
-      // (cross-minute pairs are attributed to the new minute, ~0.3%
-      // misattribution at typical rates).
+      // belonging to the later event. Attributing cross-minute pairs to
+      // the new minute is the accepted design tradeoff. (A rate for how
+      // often this happens used to be quoted here; it was derived when
+      // an interval could span up to 5 minutes, so it no longer holds
+      // now that NGRAM_MAX_IKI_MS caps eligibility at 5 s. Left
+      // unquantified rather than carried forward as a stale number.)
       const fp = fingerprint()
-      buffer.addEvent(matrixEvent(0, 0, 0, 4, 30_000), fp) // minute 0
-      buffer.addEvent(matrixEvent(0, 1, 0, 11, 90_000), fp) // minute 1, IKI=60000 → still <= SESSION_IDLE_GAP_MS
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 58_000), fp) // minute 0
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 61_000), fp) // minute 1, IKI=3000 → still <= NGRAM_MAX_IKI_MS
 
       const snaps = buffer.drainAll()
       const minute0 = snaps.find((s) => s.minuteTs === 0)
       const minute1 = snaps.find((s) => s.minuteTs === 60_000)
       expect(minute0?.bigrams.size).toBe(0)
-      expect([...(minute1?.bigrams.entries() ?? [])]).toEqual([['4_11', [60_000]]])
+      expect([...(minute1?.bigrams.entries() ?? [])]).toEqual([['4_11', [3_000]]])
     })
 
     it('does not advance the chain on tied timestamps', () => {
@@ -338,12 +375,12 @@ describe('MinuteBuffer', () => {
       expect([...snap.trigrams.entries()]).toEqual([['4_11_7', [150]]]) // (100+200)/2
     })
 
-    it('drops the triple and resets the chain when the trailing interval exceeds the session gap', () => {
-      // SESSION_IDLE_GAP_MS = 5 minutes.
+    it('drops the triple and resets the chain when the trailing interval exceeds NGRAM_MAX_IKI_MS', () => {
+      // NGRAM_MAX_IKI_MS = 5000ms.
       const fp = fingerprint()
       buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
       buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_100), fp) // valid iki=100, chain=[4,11]
-      buffer.addEvent(matrixEvent(0, 2, 0, 7, 1_100 + 6 * 60_000), fp) // gap > 5min: no triple, chain resets to [7]
+      buffer.addEvent(matrixEvent(0, 2, 0, 7, 1_100 + 6 * 60_000), fp) // gap way past the cap: no triple, chain resets to [7]
       buffer.addEvent(matrixEvent(0, 3, 0, 5, 1_100 + 6 * 60_000 + 120), fp) // chain=[7,5], still no triple (only 2 deep)
 
       const snaps = buffer.drainAll()
@@ -352,8 +389,8 @@ describe('MinuteBuffer', () => {
     })
 
     it('drops the triple entirely when only the leading interval is too slow', () => {
-      // First interval spans a session gap; second interval (last->curr) is
-      // fine on its own, but the stale k1 must not feed a triple.
+      // First interval exceeds NGRAM_MAX_IKI_MS; second interval (last->curr)
+      // is fine on its own, but the stale k1 must not feed a triple.
       const fp = fingerprint()
       buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
       buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_000 + 6 * 60_000), fp) // gap too large -> chain resets to [11]
@@ -362,6 +399,29 @@ describe('MinuteBuffer', () => {
       const snaps = buffer.drainAll()
       const allTrigrams = new Map(snaps.flatMap((s) => [...s.trigrams]))
       expect(allTrigrams.size).toBe(0)
+    })
+
+    it('rebuilds the trigram chain only once two consecutive in-range intervals follow an over-cap gap', () => {
+      // A-B is in range and seeds the chain, then B-C blows past the cap:
+      // no bigram, no triple, and prevIki goes stale even though k1 (B)
+      // survives. C-D is the first in-range interval after the gap, but
+      // a triple still needs a *second* one — D-E supplies it, and only
+      // then does C_D_E emit.
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 1, 0), fp) // A
+      buffer.addEvent(matrixEvent(0, 1, 0, 2, 100), fp) // B, iki=100 (in range)
+      buffer.addEvent(matrixEvent(0, 2, 0, 3, 100 + NGRAM_MAX_IKI_MS + 3_000), fp) // C, gap over cap
+      const cTs = 100 + NGRAM_MAX_IKI_MS + 3_000
+      buffer.addEvent(matrixEvent(0, 3, 0, 4, cTs + 100), fp) // D, iki=100 (in range, but only 1 interval since the gap)
+      buffer.addEvent(matrixEvent(0, 4, 0, 5, cTs + 200), fp) // E, iki=100 (2nd consecutive in-range interval)
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.bigrams.entries()]).toEqual([
+        ['1_2', [100]],
+        ['3_4', [100]],
+        ['4_5', [100]],
+      ])
+      expect([...snap.trigrams.entries()]).toEqual([['3_4_5', [100]]])
     })
 
     it('does not advance the chain on tied timestamps', () => {
