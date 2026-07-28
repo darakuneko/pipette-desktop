@@ -5,9 +5,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { BigramsChart } from '../BigramsChart'
 import { ALL_PAIRS_LIMIT } from '../analyze-constants'
+import { deserialize } from '../../../../shared/keycodes/keycodes'
+import { parseKle } from '../../../../shared/kle/kle-parser'
+import type { FingerType } from '../../../../shared/kle/kle-ergonomics'
 import type {
   TypingBigramAggregateResult,
   TypingBigramTopEntry,
+  TypingKeymapSnapshot,
 } from '../../../../shared/types/typing-analytics'
 
 vi.mock('react-i18next', () => ({
@@ -454,6 +458,153 @@ describe('BigramsChart', () => {
     expect(screen.getByTestId('analyze-bigrams-slow-capped-notice')).toBeTruthy()
     expect(screen.queryByTestId('analyze-bigrams-finger-capped-notice')).toBeNull()
     expect(screen.queryByText('analyze.bigrams.quadrant.fingerIki')).toBeNull()
+  })
+
+  describe('classes quadrant (alternation benefit)', () => {
+    // Two single-key positions, "0,0" and "0,1", each explicitly
+    // overridden to a finger so the test doesn't depend on the
+    // geometry estimator. keyA/keyB resolve under whatever protocol
+    // is active when the suite runs, matching how the component itself
+    // resolves keycodes via `snapshot.vialProtocol`.
+    const layout = parseKle([['0,0', '0,1']])
+    const keyA = deserialize('KC_A')
+    const keyB = deserialize('KC_B')
+
+    function buildSnapshot(): TypingKeymapSnapshot {
+      return {
+        uid: '0x00',
+        machineHash: 'h',
+        productName: 'Test',
+        savedAt: 0,
+        layers: 1,
+        matrix: { rows: 1, cols: 2 },
+        keymap: [[['KC_A', 'KC_B']]],
+        layout,
+      }
+    }
+
+    const alternationOverrides: Record<string, FingerType> = {
+      '0,0': 'left-index',
+      '0,1': 'right-index',
+    }
+    // Two different keys sharing one finger — a same-finger bigram
+    // (SFB), not a letter repeat, so it classifies as `left`.
+    const sameFingerOverrides: Record<string, FingerType> = {
+      '0,0': 'left-index',
+      '0,1': 'left-index',
+    }
+
+    it('hides the classes quadrant for trigrams', async () => {
+      fetchSpy.mockResolvedValue({
+        view: 'top',
+        entries: [{ ngramId: `${keyA}_${keyB}_${keyA}`, count: 10, hist: [1, 2, 3, 1, 1, 1, 1, 0], avgIki: 100, sd: 25 }],
+        truncated: false,
+      })
+      renderChart({ gram: 3, snapshot: buildSnapshot(), fingerOverrides: alternationOverrides })
+      await waitFor(() => {
+        expect(screen.getByTestId('analyze-bigrams-content')).toBeTruthy()
+      })
+      expect(screen.queryByText('analyze.bigrams.quadrant.classes')).toBeNull()
+    })
+
+    it('shows the no-snapshot message when there is no keymap snapshot', async () => {
+      fetchSpy.mockResolvedValue({
+        view: 'top',
+        entries: [{ ngramId: `${keyA}_${keyB}`, count: 2000, hist: [0, 0, 2000, 0, 0, 0, 0, 0], avgIki: 125, sd: 10 }],
+        truncated: false,
+      })
+      renderChart({ gram: 2, snapshot: null })
+      await waitFor(() => {
+        expect(screen.getByTestId('analyze-bigrams-classes-no-snapshot')).toBeTruthy()
+      })
+    })
+
+    it('classifies an alternation pair and renders its avgIki + count', async () => {
+      fetchSpy.mockResolvedValue({
+        view: 'top',
+        entries: [{ ngramId: `${keyA}_${keyB}`, count: 2000, hist: [0, 0, 2000, 0, 0, 0, 0, 0], avgIki: 125, sd: 10 }],
+        truncated: false,
+      })
+      renderChart({ gram: 2, snapshot: buildSnapshot(), fingerOverrides: alternationOverrides })
+      await waitFor(() => {
+        expect(screen.getByTestId('analyze-bigrams-classes-table')).toBeTruthy()
+      })
+      const table = screen.getByTestId('analyze-bigrams-classes-table')
+      // Bucket center for index 2 is 125ms (see HIST_BUCKETS centers),
+      // so the alternation row shows the folded-hist average, not the
+      // raw entry.avgIki from the wire payload.
+      expect(within(table).getByText('analyze.bigrams.classes.className.alternation')).toBeTruthy()
+      expect(within(table).getByText('125 ms')).toBeTruthy()
+      expect(within(table).getByText('2,000')).toBeTruthy()
+    })
+
+    it('is exclusive: two keys sharing one finger classify as left, not repetition', async () => {
+      // keyA and keyB are different keycodes, so even though both are
+      // pinned to the same finger this is a same-finger bigram (SFB) —
+      // a same-hand pair — not a letter repeat.
+      fetchSpy.mockResolvedValue({
+        view: 'top',
+        entries: [{ ngramId: `${keyA}_${keyB}`, count: 2000, hist: [0, 0, 2000, 0, 0, 0, 0, 0], avgIki: 125, sd: 10 }],
+        truncated: false,
+      })
+      renderChart({ gram: 2, snapshot: buildSnapshot(), fingerOverrides: sameFingerOverrides })
+      await waitFor(() => {
+        expect(screen.getByTestId('analyze-bigrams-classes-table')).toBeTruthy()
+      })
+      const table = screen.getByTestId('analyze-bigrams-classes-table')
+      const rows = table.querySelectorAll('tbody tr')
+      const leftRow = Array.from(rows).find((r) => r.textContent?.includes('classes.className.left'))
+      const repetitionRow = Array.from(rows).find((r) => r.textContent?.includes('classes.className.repetition'))
+      expect(repetitionRow?.textContent).toContain('—')
+      expect(leftRow?.textContent).toContain('125 ms')
+      expect(leftRow?.textContent).toContain('2,000')
+    })
+
+    it('classifies a same-key repeat (letter repetition) as repetition', async () => {
+      fetchSpy.mockResolvedValue({
+        view: 'top',
+        entries: [{ ngramId: `${keyA}_${keyA}`, count: 2000, hist: [0, 0, 2000, 0, 0, 0, 0, 0], avgIki: 125, sd: 10 }],
+        truncated: false,
+      })
+      renderChart({ gram: 2, snapshot: buildSnapshot(), fingerOverrides: { '0,0': 'left-index', '0,1': 'left-index' } })
+      await waitFor(() => {
+        expect(screen.getByTestId('analyze-bigrams-classes-table')).toBeTruthy()
+      })
+      const table = screen.getByTestId('analyze-bigrams-classes-table')
+      const rows = table.querySelectorAll('tbody tr')
+      const repetitionRow = Array.from(rows).find((r) => r.textContent?.includes('classes.className.repetition'))
+      expect(repetitionRow?.textContent).toContain('125 ms')
+      expect(repetitionRow?.textContent).toContain('2,000')
+    })
+
+    it('shows "—" for a class whose sample is below BIGRAM_MIN_COUNT', async () => {
+      fetchSpy.mockResolvedValue({
+        view: 'top',
+        entries: [{ ngramId: `${keyA}_${keyB}`, count: 5, hist: [0, 0, 5, 0, 0, 0, 0, 0], avgIki: 125, sd: 10 }],
+        truncated: false,
+      })
+      renderChart({ gram: 2, snapshot: buildSnapshot(), fingerOverrides: alternationOverrides })
+      await waitFor(() => {
+        expect(screen.getByTestId('analyze-bigrams-classes-table')).toBeTruthy()
+      })
+      const table = screen.getByTestId('analyze-bigrams-classes-table')
+      const rows = table.querySelectorAll('tbody tr')
+      const alternationRow = Array.from(rows).find((r) => r.textContent?.includes('classes.className.alternation'))
+      expect(alternationRow?.textContent).toContain('—')
+      expect(alternationRow?.textContent).toContain('5')
+    })
+
+    it('shows classification coverage and hides it when there is no snapshot', async () => {
+      fetchSpy.mockResolvedValue({
+        view: 'top',
+        entries: [{ ngramId: `${keyA}_${keyB}`, count: 2000, hist: [0, 0, 2000, 0, 0, 0, 0, 0], avgIki: 125, sd: 10 }],
+        truncated: false,
+      })
+      renderChart({ gram: 2, snapshot: buildSnapshot(), fingerOverrides: alternationOverrides })
+      await waitFor(() => {
+        expect(screen.getByTestId('analyze-bigrams-classes-coverage')).toBeTruthy()
+      })
+    })
   })
 })
 

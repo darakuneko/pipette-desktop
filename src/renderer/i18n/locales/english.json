@@ -1,5 +1,5 @@
 {
-  "version": "0.1.43",
+  "version": "0.1.44",
   "name": "English",
   "common": {
     "save": "Save",
@@ -1127,7 +1127,8 @@
       "quadrant": {
         "top": "Top pairs",
         "slow": "Pair interval",
-        "fingerIki": "Finger IKI"
+        "fingerIki": "Finger IKI",
+        "classes": "Alternation benefit"
       },
       "cappedNotice": "Computed from the {{limit}} most frequent pairs — rare pairs may be missing.",
       "gramToggle": {
@@ -1137,6 +1138,7 @@
       },
       "column": {
         "pair": "Pair",
+        "class": "Class",
         "count": "Count",
         "avgIki": "Avg IKI",
         "avgIkiTrigramTooltip": "Average of the two intervals between the three keystrokes — not the total time across all three.",
@@ -1150,6 +1152,19 @@
           "desc": "Slowest first",
           "asc": "Fastest first"
         }
+      },
+      "classes": {
+        "noSnapshot": "Alternation benefit needs a keymap snapshot. Start a record session or pick a range with one.",
+        "className": {
+          "left": "Left",
+          "right": "Right",
+          "alternation": "Alternation",
+          "repetition": "Repetition"
+        },
+        "coverage": "{{percent}}% of pairs classified",
+        "deltaLeft": "ΔLeft",
+        "deltaRight": "ΔRight",
+        "deltaTooltip": "Positive means alternating hands was faster than staying on one hand."
       },
       "pairIntervalThreshold": {
         "label": "Avg interval",

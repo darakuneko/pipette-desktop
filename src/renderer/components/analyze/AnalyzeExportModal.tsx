@@ -319,7 +319,9 @@ function pickBuilders(
     out.push(buildByAppCsv(scope))
   }
   if (selected.bigrams) {
-    out.push(buildBigramsCsv({ ...scope, gram: ctx.bigrams.gram }))
+    out.push(buildBigramsCsv({
+      ...scope, gram: ctx.bigrams.gram, snapshot: ctx.snapshot, fingerOverrides: ctx.fingerOverrides,
+    }))
   }
   if (selected.layoutComparison && ctx.snapshot !== null && ctx.layoutComparison.targetLayoutId !== null) {
     out.push(buildLayoutComparisonCsv({

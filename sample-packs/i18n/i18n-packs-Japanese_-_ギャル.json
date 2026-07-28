@@ -1,5 +1,5 @@
 {
-  "version": "0.1.43",
+  "version": "0.1.44",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -1117,7 +1117,8 @@
       "quadrant": {
         "top": "頻出ペア☆",
         "slow": "ペア間隔っしょ",
-        "fingerIki": "指間隔☆"
+        "fingerIki": "指間隔☆",
+        "classes": "交互打鍵ベネフィット☆"
       },
       "cappedNotice": "頻度上位 {{limit}} 件から出してるよん — レアなペアは入ってないかもっしょ",
       "gramToggle": {
@@ -1127,6 +1128,7 @@
       },
       "column": {
         "pair": "ペア☆",
+        "class": "分類☆",
         "count": "回数っしょ",
         "avgIki": "平均間隔☆",
         "avgIkiTrigramTooltip": "3キー間にある2つの間隔の平均だよ。3キー全体の時間じゃないから注意っしょ",
@@ -1140,6 +1142,19 @@
           "desc": "遅い順ｗ",
           "asc": "速い順☆"
         }
+      },
+      "classes": {
+        "noSnapshot": "交互打鍵ベネフィットもスナップショットないと無理っしょ☆REC開始して！",
+        "className": {
+          "left": "左手☆",
+          "right": "右手☆",
+          "alternation": "交互っしょ☆",
+          "repetition": "連打ｗ"
+        },
+        "coverage": "{{percent}}%のペア分類できたっしょ☆",
+        "deltaLeft": "ΔLeft",
+        "deltaRight": "ΔRight",
+        "deltaTooltip": "プラスなら交互に手動かした方が速かったってことっしょ☆"
       },
       "pairIntervalThreshold": {
         "label": "平均間隔☆",

@@ -18,11 +18,19 @@ import type {
   TypingHeatmapCell,
   TypingKeymapSnapshot,
 } from '../../../shared/types/typing-analytics'
-import type { KeyboardLayout } from '../../../shared/kle/types'
+import type { KeyboardLayout, KleKey } from '../../../shared/kle/types'
 import type { HeatmapFilters } from '../../../shared/types/analyze-filters'
 import { distributionForcesOwnDevice, isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import { buildCsv } from '../../../shared/csv-export'
 import { LAYOUT_BY_ID } from '../../data/keyboard-layouts'
+
+/** Pulls the snapshot's KLE key list, or `[]` when there's no layout
+ * (or the layout has no keys). Shared by every builder that needs the
+ * raw key positions rather than `layoutPositions`'s matrix-label form. */
+function layoutKeysFromSnapshot(snapshot: TypingKeymapSnapshot): KleKey[] {
+  const layout = snapshot.layout as KeyboardLayout | null
+  return layout?.keys ?? []
+}
 
 /**
  * Async resolver that prefers the built-in `KEYBOARD_LAYOUTS` map and
@@ -65,6 +73,8 @@ import {
   listMatrixCellsForScope,
   listMinuteStatsForScope,
 } from './analyze-fetch'
+import { classifyBigram } from './analyze-bigram-classes'
+import { buildKeycodeFingerMap, resolvePairFingers } from './analyze-bigram-finger'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { buildBksRateBuckets } from './analyze-error-proxy'
 import { buildHourOfDayWpm, computeWpm } from './analyze-wpm'
@@ -375,8 +385,7 @@ export async function buildErgonomicsCsv(args: ScopeArgs & {
   t: TFunction
 }): Promise<CsvBundleEntry> {
   const { uid, range, deviceScope, appScopes = [], typingTestScopes = [], runIdScopes = [], snapshot, fingerOverrides, t } = args
-  const layout = snapshot.layout as KeyboardLayout | null
-  const keys = layout?.keys ?? []
+  const keys = layoutKeysFromSnapshot(snapshot)
   const layerCells = await fetchMatrixHeatmapAllLayers(uid, snapshot, range.fromMs, range.toMs, deviceScope, appScopes, typingTestScopes, runIdScopes)
   const merged = mergeLayerHeatmaps(layerCells)
   const aggregation = aggregateErgonomics(merged, keys, fingerOverrides)
@@ -407,25 +416,61 @@ const BIGRAMS_EXPORT_LIMIT = 5000
 export async function buildBigramsCsv(args: ScopeArgs & {
   /** 2 = bigram (default, matches the historical export shape), 3 =
    * trigram. Only changes the id column header and output filename —
-   * the row shape (id, count, avg, sd) is the same for both, since
-   * `ngramId` already carries however many `_`-joined key codes the
-   * selected gram produces. */
+   * the row shape (id, count, avg, sd, class) is the same for both,
+   * since `ngramId` already carries however many `_`-joined key codes
+   * the selected gram produces. */
   gram?: 2 | 3
+  /** Needed to resolve each pair's finger classification (see
+   * `class` column below). `null`/absent leaves every row's `class`
+   * blank rather than guessing. */
+  snapshot?: TypingKeymapSnapshot | null
+  fingerOverrides?: Record<string, FingerType>
 }): Promise<CsvBundleEntry> {
-  const { uid, range, deviceScope, appScopes = [], typingTestScopes = [], runIdScopes = [], gram = 2 } = args
+  const {
+    uid, range, deviceScope, appScopes = [], typingTestScopes = [], runIdScopes = [],
+    gram = 2, snapshot = null, fingerOverrides = {},
+  } = args
   const result = await fetchBigramAggregateForRange(
     uid, deviceScope, range.fromMs, range.toMs, 'top', { limit: BIGRAMS_EXPORT_LIMIT, gram }, appScopes, typingTestScopes, runIdScopes,
   ).catch(() => ({ view: 'top' as const, entries: [], truncated: false }))
   const entries = result.view === 'top' ? result.entries : []
-  const rows = entries.map((e) => [
-    e.ngramId,
-    e.count,
-    e.avgIki === null ? '' : Math.round(e.avgIki),
-    e.sd === null ? '' : Math.round(e.sd),
-  ])
+
+  // The Left/Right/Alternation/Repetition classification (CHI 2018
+  // Table 3) is only defined for 2-key pairs; trigram ids have no
+  // hand-usage class, so `class` stays blank for gram === 3 rather
+  // than reporting a resolved-vs-unresolved `unknown` that would imply
+  // the concept applies.
+  let keycodeFinger: ReadonlyMap<number, FingerType> = new Map()
+  if (gram === 2 && snapshot) {
+    const keys = layoutKeysFromSnapshot(snapshot)
+    if (keys.length > 0) {
+      keycodeFinger = buildKeycodeFingerMap(snapshot, keys, fingerOverrides, snapshot.vialProtocol)
+    }
+  }
+
+  // Only attempt classification when a snapshot was actually supplied —
+  // without one there's no keymap to resolve fingers from, so `class`
+  // stays blank (no classification attempted) rather than `unknown`
+  // (classification attempted, finger unresolved). See the `snapshot`
+  // param doc above.
+  const canClassify = gram === 2 && snapshot !== null
+  const rows = entries.map((e) => {
+    let cls = ''
+    if (canClassify) {
+      const { prevFinger, currFinger, sameKeycode } = resolvePairFingers(e.ngramId, keycodeFinger)
+      cls = classifyBigram(prevFinger, currFinger, sameKeycode)
+    }
+    return [
+      e.ngramId,
+      e.count,
+      e.avgIki === null ? '' : Math.round(e.avgIki),
+      e.sd === null ? '' : Math.round(e.sd),
+      cls,
+    ]
+  })
   return {
     slug: gram === 3 ? SLUG.trigrams : SLUG.bigrams,
-    content: buildCsv([gram === 3 ? 'trigram_id' : 'bigram_id', 'count', 'avg_iki_ms', 'sd_iki_ms'], rows),
+    content: buildCsv([gram === 3 ? 'trigram_id' : 'bigram_id', 'count', 'avg_iki_ms', 'sd_iki_ms', 'class'], rows),
   }
 }
 
