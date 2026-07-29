@@ -1596,6 +1596,148 @@ describe('TypingAnalyticsDB', () => {
     })
   })
 
+  describe('listRolloverMinutesInRange (Analyze > Interval rollover trend)', () => {
+    function bigramRowWithOverlap(
+      scopeId: string,
+      minuteTs: number,
+      bigramId: string,
+      overlap: { oc: number; on: number } | undefined,
+      overrides: { appName?: string | null; typingTest?: string | null; runId?: string } = {},
+    ): void {
+      db.mergeBigramMinute({
+        scopeId,
+        minuteTs,
+        bigrams: { [bigramId]: { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0], ...(overlap ? { oc: overlap.oc, on: overlap.on } : {}) } },
+        updatedAt: 1_000,
+        isDeleted: false,
+        ...overrides,
+      })
+    }
+
+    beforeEach(() => {
+      db.upsertScope(sampleScope({ id: 'scope-local', machineHash: MACHINE_HASH, keyboardUid: '0xAABB' }))
+      db.upsertScope(sampleScope({ id: 'scope-other-machine', machineHash: 'other', keyboardUid: '0xAABB' }))
+      db.upsertScope(sampleScope({ id: 'scope-other-uid', machineHash: MACHINE_HASH, keyboardUid: '0xCCDD' }))
+    })
+
+    it('sums oc/on across every pair contributing to the same minute', () => {
+      bigramRowWithOverlap('scope-local', 60_000, 'A_B', { oc: 1, on: 2 })
+      bigramRowWithOverlap('scope-local', 60_000, 'B_C', { oc: 2, on: 3 })
+      const rows = db.listRolloverMinutesInRange('0xAABB', null, 60_000, 120_000)
+      expect(rows).toEqual([{ minuteTs: 60_000, oc: 3, on: 5 }])
+    })
+
+    it('skips rows with no determined-overlap data instead of counting them as 0/0', () => {
+      bigramRowWithOverlap('scope-local', 60_000, 'observed', { oc: 1, on: 2 })
+      // No oc/on at all — pre-v8 row or a frame with undetermined overlap.
+      bigramRowWithOverlap('scope-local', 60_000, 'unobserved', undefined)
+      const rows = db.listRolloverMinutesInRange('0xAABB', null, 60_000, 120_000)
+      expect(rows).toEqual([{ minuteTs: 60_000, oc: 1, on: 2 }])
+    })
+
+    it('omits a minute entirely when every row in it lacks overlap data', () => {
+      bigramRowWithOverlap('scope-local', 60_000, 'unobserved', undefined)
+      const rows = db.listRolloverMinutesInRange('0xAABB', null, 60_000, 120_000)
+      expect(rows).toEqual([])
+    })
+
+    it('excludes a malformed row that has overlap_n but not overlap_count (broken all-or-nothing pair)', () => {
+      // Bypasses the JS-side helper's `overlap ? {oc, on} : {}` shape so
+      // the row can carry `on` without `oc` — the all-or-nothing pair
+      // contract should never actually produce this, but a synced or
+      // hand-crafted row could. SUM(overlap_count) would otherwise
+      // return NULL for the whole minute once this row mixes in,
+      // fabricating an `oc: null` the renderer would treat as 0.
+      db.mergeBigramMinute({
+        scopeId: 'scope-local', minuteTs: 60_000,
+        bigrams: { malformed: { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0], on: 5 } },
+        updatedAt: 1_000, isDeleted: false,
+      })
+      bigramRowWithOverlap('scope-local', 60_000, 'valid', { oc: 1, on: 2 })
+      const rows = db.listRolloverMinutesInRange('0xAABB', null, 60_000, 120_000)
+      expect(rows).toEqual([{ minuteTs: 60_000, oc: 1, on: 2 }])
+    })
+
+    it('respects the [since, until) boundary', () => {
+      bigramRowWithOverlap('scope-local', 59_999, 'before', { oc: 1, on: 1 }) // just before window
+      bigramRowWithOverlap('scope-local', 60_000, 'atStart', { oc: 1, on: 1 }) // inclusive lower bound
+      bigramRowWithOverlap('scope-local', 120_000, 'atEnd', { oc: 1, on: 1 }) // exclusive upper bound
+      const rows = db.listRolloverMinutesInRange('0xAABB', null, 60_000, 120_000)
+      expect(rows.map((r) => r.minuteTs)).toEqual([60_000])
+    })
+
+    it('groups separate minutes into separate rows, ordered ascending', () => {
+      bigramRowWithOverlap('scope-local', 120_000, 'later', { oc: 1, on: 4 })
+      bigramRowWithOverlap('scope-local', 60_000, 'earlier', { oc: 1, on: 2 })
+      const rows = db.listRolloverMinutesInRange('0xAABB', null, 60_000, 180_000)
+      expect(rows).toEqual([
+        { minuteTs: 60_000, oc: 1, on: 2 },
+        { minuteTs: 120_000, oc: 1, on: 4 },
+      ])
+    })
+
+    it('excludes other keyboards on the same machine', () => {
+      bigramRowWithOverlap('scope-local', 60_000, 'kept', { oc: 1, on: 2 })
+      bigramRowWithOverlap('scope-other-uid', 60_000, 'dropped', { oc: 9, on: 9 })
+      const rows = db.listRolloverMinutesInRange('0xAABB', null, 60_000, 120_000)
+      expect(rows).toEqual([{ minuteTs: 60_000, oc: 1, on: 2 }])
+    })
+
+    it('filters on the bigram row\'s own app_name column', () => {
+      bigramRowWithOverlap('scope-local', 60_000, 'coded', { oc: 1, on: 2 }, { appName: 'Code' })
+      bigramRowWithOverlap('scope-local', 60_000, 'chatted', { oc: 5, on: 5 }, { appName: 'Chat' })
+      const rows = db.listRolloverMinutesInRange('0xAABB', null, 60_000, 120_000, ['Code'])
+      expect(rows).toEqual([{ minuteTs: 60_000, oc: 1, on: 2 }])
+    })
+
+    it('restricts to one machine_hash when machineHash is given (not null)', () => {
+      bigramRowWithOverlap('scope-local', 60_000, 'kept', { oc: 1, on: 2 })
+      bigramRowWithOverlap('scope-other-machine', 60_000, 'remote', { oc: 9, on: 9 })
+      const rows = db.listRolloverMinutesInRange('0xAABB', MACHINE_HASH, 60_000, 120_000)
+      expect(rows).toEqual([{ minuteTs: 60_000, oc: 1, on: 2 }])
+    })
+  })
+
+  describe('listMinuteStatsInRangeForUid poll_p50_ms/poll_p95_ms projection', () => {
+    const baseStats = { keystrokes: 1, activeMs: 1, intervalAvgMs: 1, intervalMinMs: 1, intervalP25Ms: 1, intervalP50Ms: 1, intervalP75Ms: 1, intervalMaxMs: 1 }
+
+    beforeEach(() => {
+      db.upsertScope(sampleScope({ id: 'scope-local', machineHash: MACHINE_HASH, keyboardUid: '0xAABB' }))
+      db.upsertScope(sampleScope({ id: 'scope-local-b', machineHash: MACHINE_HASH, keyboardUid: '0xAABB' }))
+    })
+
+    it('averages poll_p50_ms/poll_p95_ms across same-minute rows (equal weight, ignoring NULLs)', () => {
+      db.mergeMinuteStats({ scopeId: 'scope-local', minuteTs: 60_000, ...baseStats, pollP50Ms: 10, pollP95Ms: 30, updatedAt: 1_000, isDeleted: false })
+      db.mergeMinuteStats({ scopeId: 'scope-local-b', minuteTs: 60_000, ...baseStats, pollP50Ms: 20, pollP95Ms: 50, updatedAt: 1_000, isDeleted: false })
+      const [row] = db.listMinuteStatsInRangeForUid('0xAABB', 60_000, 120_000)
+      expect(row.pollP50Ms).toBe(15)
+      expect(row.pollP95Ms).toBe(40)
+    })
+
+    it('returns null when no contributing row recorded a poll-gap sample this minute', () => {
+      db.mergeMinuteStats({ scopeId: 'scope-local', minuteTs: 60_000, ...baseStats, updatedAt: 1_000, isDeleted: false })
+      const [row] = db.listMinuteStatsInRangeForUid('0xAABB', 60_000, 120_000)
+      expect(row.pollP50Ms).toBeNull()
+      expect(row.pollP95Ms).toBeNull()
+    })
+
+    it('AVG ignores a NULL contributor instead of pulling the average toward it', () => {
+      db.mergeMinuteStats({ scopeId: 'scope-local', minuteTs: 60_000, ...baseStats, pollP50Ms: 10, pollP95Ms: 30, updatedAt: 1_000, isDeleted: false })
+      // Second row has no poll-gap sample at all this minute.
+      db.mergeMinuteStats({ scopeId: 'scope-local-b', minuteTs: 60_000, ...baseStats, updatedAt: 1_000, isDeleted: false })
+      const [row] = db.listMinuteStatsInRangeForUid('0xAABB', 60_000, 120_000)
+      expect(row.pollP50Ms).toBe(10)
+      expect(row.pollP95Ms).toBe(30)
+    })
+
+    it('listMinuteStatsInRangeForUidAndHash projects the same poll columns', () => {
+      db.mergeMinuteStats({ scopeId: 'scope-local', minuteTs: 60_000, ...baseStats, pollP50Ms: 12, pollP95Ms: 33, updatedAt: 1_000, isDeleted: false })
+      const [row] = db.listMinuteStatsInRangeForUidAndHash('0xAABB', MACHINE_HASH, 60_000, 120_000)
+      expect(row.pollP50Ms).toBe(12)
+      expect(row.pollP95Ms).toBe(33)
+    })
+  })
+
   describe('listTrigramMinutesInRangeForUid (Analyze > n-gram)', () => {
     function trigramRow(
       scopeId: string,

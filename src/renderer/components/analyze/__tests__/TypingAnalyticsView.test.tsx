@@ -54,6 +54,10 @@ function mockSummary(testId: string) {
 
 vi.mock('../WpmChart', () => ({ WpmChart: mockSummary('mock-wpm') }))
 vi.mock('../IntervalChart', () => ({ IntervalChart: mockSummary('mock-interval') }))
+// Mounted below IntervalChart in timeSeries mode — mocked shallow like
+// every other chart here so its own IPC fetch (not stubbed on this
+// file's vialAPI object) never runs during these shell-level tests.
+vi.mock('../RolloverSection', () => ({ RolloverSection: mockSummary('mock-rollover') }))
 vi.mock('../ActivityChart', () => ({ ActivityChart: mockSummary('mock-activity') }))
 vi.mock('../KeyHeatmapChart', () => ({ KeyHeatmapChart: mockSummary('mock-keyheatmap') }))
 vi.mock('../ErgonomicsChart', () => ({

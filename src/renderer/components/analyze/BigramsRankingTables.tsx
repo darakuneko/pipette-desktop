@@ -6,12 +6,16 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingBigramTopEntry } from '../../../shared/types/typing-analytics'
-import { bigramPairLabel } from './analyze-bigram-format'
+import { bigramPairLabel, rolloverRatioFromEntry } from './analyze-bigram-format'
 import { avgIkiAtOrAboveThreshold, percentileFromHist } from './analyze-bigram-heatmap'
-import { fmtMs } from './analyze-format'
+import { fmtMs, formatPercentLabel } from './analyze-format'
 import { EmptyQuadrant } from './bigrams-quadrant-ui'
 
-type SortKey = 'count' | 'avgIki' | 'sd' | 'p95'
+type SortKey = 'count' | 'avgIki' | 'sd' | 'p95' | 'rollover'
+/** Columns `TopRanking` sorts on. */
+type TopSortKey = 'count' | 'avgIki' | 'sd' | 'rollover'
+/** `TopSortKey` plus `p95`, the one extra column `SlowRanking` adds. */
+type SlowSortKey = TopSortKey | 'p95'
 interface SortState<K extends SortKey> {
   key: K
   dir: 'asc' | 'desc'
@@ -84,13 +88,23 @@ interface TopRankingProps {
   gram: 2 | 3
 }
 
+/** `TypingBigramTopEntry` plus the derived rollover fraction, so
+ * `compareBySortKey` can sort on it the same generic way it sorts on
+ * count/avgIki/sd — those are raw wire fields, `rollover` is computed
+ * once per row instead. */
+interface TopRow extends TypingBigramTopEntry {
+  rollover: number | null
+}
+
 function TopRanking({ entries, listLimit, gram }: TopRankingProps): JSX.Element {
   const { t } = useTranslation()
-  const [sort, setSort] = useState<SortState<'count' | 'avgIki' | 'sd'>>({ key: 'count', dir: 'desc' })
-  const toggle = (key: 'count' | 'avgIki' | 'sd'): void => setSort((prev) => toggleSort(prev, key))
+  const [sort, setSort] = useState<SortState<TopSortKey>>({ key: 'count', dir: 'desc' })
+  const toggle = (key: TopSortKey): void => setSort((prev) => toggleSort(prev, key))
 
-  const sliced = useMemo(() => {
-    const arr = [...entries].slice(0, Math.max(listLimit, 0))
+  const sliced = useMemo<TopRow[]>(() => {
+    const arr: TopRow[] = entries
+      .slice(0, Math.max(listLimit, 0))
+      .map((e) => ({ ...e, rollover: rolloverRatioFromEntry(e) }))
     arr.sort((a, b) => compareBySortKey(a, b, sort))
     return arr
   }, [entries, listLimit, sort])
@@ -126,6 +140,21 @@ function TopRanking({ entries, listLimit, gram }: TopRankingProps): JSX.Element 
             indicator={sortIndicator(sort, 'sd')}
             onClick={() => toggle('sd')}
           />
+          {/* Overlap sampling is bigram-only (see rolloverRatioFromEntry —
+           * aggregatePairTotals never populates trigram overlap
+           * accumulators), so the column would be all-"—" and inert at
+           * gram === 3. Gated the same way avgIkiTrigramTooltip already
+           * gates its own gram-specific behavior above. */}
+          {gram === 2 && (
+            <SortHeader
+              align="right"
+              label={t('analyze.bigrams.column.rollover')}
+              title={t('analyze.bigrams.column.rolloverTooltip')}
+              active={sort.key === 'rollover'}
+              indicator={sortIndicator(sort, 'rollover')}
+              onClick={() => toggle('rollover')}
+            />
+          )}
         </tr>
       </thead>
       <tbody>
@@ -136,6 +165,7 @@ function TopRanking({ entries, listLimit, gram }: TopRankingProps): JSX.Element 
             <td className="px-2 py-1 text-right tabular-nums">{entry.count.toLocaleString()}</td>
             <td className="px-2 py-1 text-right tabular-nums">{fmtMs(entry.avgIki)}</td>
             <td className="px-2 py-1 text-right tabular-nums">{fmtMs(entry.sd)}</td>
+            {gram === 2 && <td className="px-2 py-1 text-right tabular-nums">{formatPercentLabel(entry.rollover)}</td>}
           </tr>
         ))}
       </tbody>
@@ -150,6 +180,7 @@ interface SlowEntry {
   avgIki: number | null
   sd: number | null
   p95: number | null
+  rollover: number | null
 }
 
 interface SlowRankingProps {
@@ -163,8 +194,8 @@ interface SlowRankingProps {
 
 function SlowRanking({ entries, listLimit, minAvgIkiMs, gram }: SlowRankingProps): JSX.Element {
   const { t } = useTranslation()
-  const [sort, setSort] = useState<SortState<'count' | 'avgIki' | 'sd' | 'p95'>>({ key: 'avgIki', dir: 'desc' })
-  const toggle = (key: 'count' | 'avgIki' | 'sd' | 'p95'): void => setSort((prev) => toggleSort(prev, key))
+  const [sort, setSort] = useState<SortState<SlowSortKey>>({ key: 'avgIki', dir: 'desc' })
+  const toggle = (key: SlowSortKey): void => setSort((prev) => toggleSort(prev, key))
 
   const slowEntries = useMemo<SlowEntry[]>(() => {
     const eligible: SlowEntry[] = []
@@ -178,6 +209,7 @@ function SlowRanking({ entries, listLimit, minAvgIkiMs, gram }: SlowRankingProps
         avgIki: avg,
         sd: entry.sd,
         p95: percentileFromHist(entry.hist, 0.95),
+        rollover: rolloverRatioFromEntry(entry),
       })
     }
     eligible.sort((a, b) => compareBySortKey(a, b, sort))
@@ -222,6 +254,17 @@ function SlowRanking({ entries, listLimit, minAvgIkiMs, gram }: SlowRankingProps
             indicator={sortIndicator(sort, 'p95')}
             onClick={() => toggle('p95')}
           />
+          {/* Bigram-only column — see the matching comment in TopRanking. */}
+          {gram === 2 && (
+            <SortHeader
+              align="right"
+              label={t('analyze.bigrams.column.rollover')}
+              title={t('analyze.bigrams.column.rolloverTooltip')}
+              active={sort.key === 'rollover'}
+              indicator={sortIndicator(sort, 'rollover')}
+              onClick={() => toggle('rollover')}
+            />
+          )}
         </tr>
       </thead>
       <tbody>
@@ -233,6 +276,7 @@ function SlowRanking({ entries, listLimit, minAvgIkiMs, gram }: SlowRankingProps
             <td className="px-2 py-1 text-right tabular-nums">{fmtMs(entry.avgIki)}</td>
             <td className="px-2 py-1 text-right tabular-nums">{fmtMs(entry.sd)}</td>
             <td className="px-2 py-1 text-right tabular-nums">{fmtMs(entry.p95)}</td>
+            {gram === 2 && <td className="px-2 py-1 text-right tabular-nums">{formatPercentLabel(entry.rollover)}</td>}
           </tr>
         ))}
       </tbody>

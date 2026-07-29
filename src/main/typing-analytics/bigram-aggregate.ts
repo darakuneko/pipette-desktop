@@ -210,6 +210,18 @@ export function percentileFromHist(
   throw new Error('percentileFromHist: unreachable — total > 0 must consume target inside loop')
 }
 
+/** Per-pair overlapCount/overlapN projection shared by
+ * `rankBigramsByCount` and `rankBigramsBySlow` — see
+ * {@link TypingBigramTopEntry.overlapCount} for the null-pairing
+ * contract this enforces: `overlapN === 0` (no determined-overlap
+ * sample for this pair) collapses both fields to null; otherwise the
+ * raw accumulated counts pass through unchanged, including a real
+ * `overlapCount === 0` (an observed 0% for this pair). */
+function overlapProjection(entry: BigramPairTotal): { overlapCount: number | null; overlapN: number | null } {
+  if (entry.overlapN === 0) return { overlapCount: null, overlapN: null }
+  return { overlapCount: entry.overlapCount, overlapN: entry.overlapN }
+}
+
 /** Aliased from the IPC contract type so the ranker output is the
  * wire shape with no copy. */
 export type BigramRanked = TypingBigramTopEntry
@@ -229,6 +241,7 @@ export function rankBigramsByCount(
     hist: t.hist,
     avgIki: avgIkiFromHist(t.hist),
     sd: sdFromTotal(t),
+    ...overlapProjection(t),
   }))
 }
 
@@ -257,6 +270,7 @@ export function rankBigramsBySlow(
     avgIki: avg,
     p95: percentileFromHist(entry.hist, 0.95),
     sd: sdFromTotal(entry),
+    ...overlapProjection(entry),
   }))
 }
 

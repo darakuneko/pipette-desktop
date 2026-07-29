@@ -115,7 +115,7 @@ export function AnalyzeStatGrid({ items, ariaLabelKey, testId, tooltipSide }: Gr
             value={item.value}
             unit={item.unit}
             context={item.context}
-            description={item.descriptionKey ? t(item.descriptionKey) : undefined}
+            description={item.descriptionKey ? t(item.descriptionKey, item.descriptionParams) : undefined}
             tooltipAlign={tooltipAlign}
             tooltipSide={tooltipSide}
             action={item.action}

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.46",
+  "version": "0.1.47",
   "name": "English",
   "common": {
     "save": "Save",
@@ -960,6 +960,18 @@
         }
       }
     },
+    "rollover": {
+      "sectionTitle": "Observed rollover rate",
+      "ariaLabel": "Observed rollover rate summary",
+      "stat": {
+        "title": "Observed rollover rate",
+        "description": "Effective sampling period: median p50 {{p50}} / worst-case p95 {{p95}}. Overlaps shorter than the sampling period aren't observed, so this rate is an undercount, not a precise measurement."
+      },
+      "chart": {
+        "legend": "Observed rollover"
+      },
+      "underBiasNote": "This is structurally an undercount, not the true rollover rate — sitting below the population average line does not mean slower typing."
+    },
     "activity": {
       "tableLabel": "Hour × day-of-week activity",
       "tableLabelWpm": "Hour × day-of-week WPM",
@@ -1155,7 +1167,9 @@
         "avgIki": "Avg IKI",
         "avgIkiTrigramTooltip": "Average of the two intervals between the three keystrokes — not the total time across all three.",
         "sd": "SD",
-        "p95": "p95 IKI"
+        "p95": "p95 IKI",
+        "rollover": "Rollover",
+        "rolloverTooltip": "Share of this pair's presses where the previous key was still held down when this one was pressed. Sampled, so it's an undercount — see the Interval tab's Observed rollover rate for details."
       },
       "fingerIki": {
         "noSnapshot": "Finger interval needs a keymap snapshot. Start a record session or pick a range with one.",

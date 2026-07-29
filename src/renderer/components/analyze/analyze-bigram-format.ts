@@ -5,6 +5,8 @@
 // decode still surfaces actionable rows.
 
 import { codeToLabel } from '../../../shared/keycodes/keycodes'
+import type { TypingBigramTopEntry } from '../../../shared/types/typing-analytics'
+import { rolloverRatio } from './analyze-rollover'
 
 /** Convert a stored n-gram id — `"4_11"` (bigram) or `"4_11_42"`
  * (trigram) — into a display label such as `"A → H"` or
@@ -21,4 +23,23 @@ export function bigramPairLabel(bigramId: string): string {
   const codes = parts.map(Number)
   if (codes.some((n) => !Number.isFinite(n))) return bigramId
   return codes.map((n) => codeToLabel(n)).join(' → ')
+}
+
+/** This pair's own observed rollover rate — entry adapter over the
+ * canonical {@link rolloverRatio} contract (see that function's doc
+ * comment for the null-pairing rationale). Trigram entries always
+ * resolve to null here since `aggregatePairTotals` never populates
+ * their overlap accumulators. Shared by the ranking tables and the
+ * Bigrams CSV export so both surfaces agree on what counts as
+ * "unobserved".
+ *
+ * `overlapCount == null` short-circuits to null locally instead of
+ * coalescing to 0 and letting `rolloverRatio`'s own `on` check catch
+ * it: `?? 0` would silently manufacture a fake "0 overlaps observed"
+ * count whenever `overlapCount` is absent, correct today only because
+ * the wire contract happens to always pair it with `overlapN` — a
+ * guard this local removes the need to trust. */
+export function rolloverRatioFromEntry(entry: Pick<TypingBigramTopEntry, 'overlapCount' | 'overlapN'>): number | null {
+  if (entry.overlapCount == null) return null
+  return rolloverRatio(entry.overlapCount, entry.overlapN)
 }

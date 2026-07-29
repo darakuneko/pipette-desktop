@@ -71,6 +71,7 @@ import { AnalyzeExportModal, type AnalyzeExportContext } from './AnalyzeExportMo
 import { generateAnalyzeThumbnail } from './analyze-thumbnail'
 import { formatDateTime } from '../editors/store-modal-shared'
 import { IntervalChart } from './IntervalChart'
+import { RolloverSection } from './RolloverSection'
 import { KeyHeatmapChart } from './KeyHeatmapChart'
 import { LayerUsageChart } from './LayerUsageChart'
 import { SummaryView } from './SummaryView'
@@ -1336,18 +1337,44 @@ export function AnalyzePane({
                   showBenchmark={showBenchmark}
                 />
               ) : analysisTab === 'interval' ? (
-                <IntervalChart
-                  uid={selected.uid}
-                  range={range}
-                  deviceScopes={deviceScopes}
-                  appScopes={appScopes}
-                  typingTestScopes={typingTestScopes}
-                  runIdScopes={runIdScopes}
-                  unit={intervalFilter.unit}
-                  granularity={wpmFilter.granularity}
-                  viewMode={intervalFilter.viewMode}
-                  showBenchmark={showBenchmark}
-                />
+                // Flex column so IntervalChart and RolloverSection share
+                // the tab's height instead of IntervalChart's own
+                // `h-full` root claiming the whole viewport and pushing
+                // the section below the fold. `flex-1 min-h-0` lets the
+                // chart shrink to make room; `shrink-0` keeps the section
+                // at its natural height rather than getting squeezed.
+                // Distribution mode (no RolloverSection) still fills the
+                // column exactly as before — it's the sole flex item.
+                <div className="flex h-full min-h-0 flex-col gap-3">
+                  <div className="min-h-0 flex-1">
+                    <IntervalChart
+                      uid={selected.uid}
+                      range={range}
+                      deviceScopes={deviceScopes}
+                      appScopes={appScopes}
+                      typingTestScopes={typingTestScopes}
+                      runIdScopes={runIdScopes}
+                      unit={intervalFilter.unit}
+                      granularity={wpmFilter.granularity}
+                      viewMode={intervalFilter.viewMode}
+                      showBenchmark={showBenchmark}
+                    />
+                  </div>
+                  {intervalFilter.viewMode === 'timeSeries' && (
+                    <div className="shrink-0">
+                      <RolloverSection
+                        uid={selected.uid}
+                        range={range}
+                        deviceScopes={deviceScopes}
+                        appScopes={appScopes}
+                        typingTestScopes={typingTestScopes}
+                        runIdScopes={runIdScopes}
+                        granularity={wpmFilter.granularity}
+                        showBenchmark={showBenchmark}
+                      />
+                    </div>
+                  )}
+                </div>
               ) : analysisTab === 'activity' ? (
                 <ActivityChart
                   uid={selected.uid}

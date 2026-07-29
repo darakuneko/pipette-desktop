@@ -51,6 +51,7 @@ import type {
   TypingMatrixCellRow,
   TypingMatrixCellDailyRow,
   TypingMinuteStatsRow,
+  TypingRolloverMinuteRow,
   TypingSessionRow,
   TypingBksMinuteRow,
   TypingTombstoneResult,
@@ -296,6 +297,7 @@ export interface VialAPI {
   typingAnalyticsListKeymapSnapshots(uid: string): Promise<TypingKeymapSnapshotSummary[]>
   typingAnalyticsGetMatrixHeatmapForRange(uid: string, layer: number, sinceMs: number, untilMs: number, scope: DeviceScope, appScopes?: string[], typingTestScopes?: string[], runIdScopes?: string[]): Promise<TypingHeatmapByCell>
   typingAnalyticsGetBigramAggregateForRange(uid: string, sinceMs: number, untilMs: number, view: TypingBigramAggregateView, scope: DeviceScope, options?: TypingBigramAggregateOptions, appScopes?: string[], typingTestScopes?: string[], runIdScopes?: string[]): Promise<TypingBigramAggregateResult>
+  typingAnalyticsListRolloverMinutes(uid: string, scope: DeviceScope, sinceMs: number, untilMs: number, appScopes?: string[], typingTestScopes?: string[], runIdScopes?: string[]): Promise<TypingRolloverMinuteRow[]>
   typingAnalyticsGetLayoutComparisonForRange(uid: string, sinceMs: number, untilMs: number, scope: DeviceScope, options: LayoutComparisonOptions, appScopes?: string[], typingTestScopes?: string[], runIdScopes?: string[]): Promise<LayoutComparisonResult | null>
   typingAnalyticsListLocalDeviceDays(uid: string, machineHash: string): Promise<string[]>
   typingAnalyticsHasRemote(): Promise<boolean>

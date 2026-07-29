@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { bigramPairLabel } from '../analyze-bigram-format'
+import { bigramPairLabel, rolloverRatioFromEntry } from '../analyze-bigram-format'
 
 describe('bigramPairLabel', () => {
   it('decodes a numeric pair id into prev → curr labels', () => {
@@ -44,5 +44,29 @@ describe('bigramPairLabel', () => {
     expect(label).toContain(' → ')
     // Right-hand side is KC_A, which is always populated.
     expect(label.endsWith('A')).toBe(true)
+  })
+})
+
+describe('rolloverRatioFromEntry', () => {
+  it('delegates to the shared rolloverRatio contract (entry adapter only)', () => {
+    expect(rolloverRatioFromEntry({ overlapCount: 1, overlapN: 4 })).toBe(0.25)
+  })
+
+  it('returns null when overlapN is null, undefined, or 0 (no determined-overlap sample)', () => {
+    expect(rolloverRatioFromEntry({ overlapCount: null, overlapN: null })).toBeNull()
+    expect(rolloverRatioFromEntry({})).toBeNull()
+    expect(rolloverRatioFromEntry({ overlapCount: 0, overlapN: 0 })).toBeNull()
+  })
+
+  it('returns a real 0 when overlapCount is 0 but overlapN is positive', () => {
+    expect(rolloverRatioFromEntry({ overlapCount: 0, overlapN: 5 })).toBe(0)
+  })
+
+  it('returns null (not a fabricated 0) when overlapCount is missing but overlapN is positive', () => {
+    // A malformed/mismatched entry — `overlapCount ?? 0` would silently
+    // manufacture a fake 0% here; the local `== null` guard rejects it
+    // instead of relying on `rolloverRatio`'s `on` check to catch it.
+    expect(rolloverRatioFromEntry({ overlapCount: null, overlapN: 5 })).toBeNull()
+    expect(rolloverRatioFromEntry({ overlapN: 5 })).toBeNull()
   })
 })
