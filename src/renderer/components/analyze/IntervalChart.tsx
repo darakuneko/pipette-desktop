@@ -14,8 +14,10 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { PeakRecords, TypingMinuteStatsRow } from '../../../shared/types/typing-analytics'
+import { BENCHMARK_IKI_MS } from '../../../shared/typing-benchmarks'
+import { benchmarkReferenceLineProps } from './analyze-benchmark'
 import { distributionForcesOwnDevice, isHashScope, isOwnScope, primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, RangeMs } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
@@ -51,6 +53,9 @@ interface Props {
   unit: IntervalUnit
   granularity: GranularityChoice
   viewMode: IntervalViewMode
+  /** Show the population-average IKI reference line (timeSeries mode
+   * only — distribution has no counterpart in the source study). */
+  showBenchmark: boolean
 }
 
 const SERIES_KEYS = ['min', 'p25', 'p50', 'p75', 'max'] as const
@@ -89,7 +94,7 @@ function formatShare(v: number): string {
   return `${formatSharePercent(v)}%`
 }
 
-export function IntervalChart({ uid, range, deviceScopes, appScopes, typingTestScopes, runIdScopes, unit, granularity, viewMode }: Props) {
+export function IntervalChart({ uid, range, deviceScopes, appScopes, typingTestScopes, runIdScopes, unit, granularity, viewMode, showBenchmark }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [peakRecords, setPeakRecords] = useState<PeakRecords | null>(null)
@@ -295,6 +300,16 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, typingTestS
               style: { fontSize: CHART_TICK_FONT_SIZE, fill: 'var(--color-content-muted)' },
             }}
           />
+          {showBenchmark && (
+            // `unit` only swaps the axis tick-label formatter (ms vs. sec
+            // text) — `chartData` itself (and thus the chart's y domain)
+            // always stays in ms, so the reference value is the paper's
+            // raw ms mean regardless of `unit`. Converting it here would
+            // put the line 1000x off whenever `unit === 'sec'`.
+            <ReferenceLine
+              {...benchmarkReferenceLineProps(BENCHMARK_IKI_MS.mean, t('analyze.benchmark.referenceLineLabel'))}
+            />
+          )}
           <Tooltip
             {...ANALYZE_TOOLTIP_DEFAULTS}
             labelFormatter={(v) => formatBucketAxisLabel(v as number, bucketMs)}

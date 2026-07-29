@@ -1,5 +1,5 @@
 {
-  "version": "0.1.45",
+  "version": "0.1.46",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -845,6 +845,18 @@
     "unit": {
       "keys": "回",
       "activations": "回"
+    },
+    "benchmark": {
+      "populationAverage": "みなさんの平均は {{value}} WPMどすえ",
+      "position": {
+        "farBelow": "平均よりだいぶゆっくりどすなぁ",
+        "below": "平均より少しゆっくりどす",
+        "average": "平均的どす",
+        "above": "平均より少し速いどす",
+        "farAbove": "平均よりえろう速いどすなぁ"
+      },
+      "referenceLineLabel": "みなさんの平均",
+      "toggleAria": "みなさんの平均の基準線を表示しますえ"
     },
     "snapshotTimeline": {
       "title": "キーマップ履歴",

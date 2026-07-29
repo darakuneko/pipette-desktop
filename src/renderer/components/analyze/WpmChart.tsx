@@ -17,12 +17,14 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type {
   PeakRecords,
   TypingBksMinuteRow,
   TypingMinuteStatsRow,
 } from '../../../shared/types/typing-analytics'
+import { BENCHMARK_WPM } from '../../../shared/typing-benchmarks'
+import { benchmarkReferenceLineProps } from './analyze-benchmark'
 import { formatDateTime } from '../editors/store-modal-shared'
 import { isHashScope, isOwnScope, primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, GranularityChoice, RangeMs, WpmViewMode } from './analyze-types'
@@ -61,6 +63,9 @@ interface Props {
    * toward peak / lowest / weighted-median WPM. Does not gate the
    * chart itself — every bucket is still plotted. */
   minActiveMs: number
+  /** Show the population-average reference line (timeSeries mode
+   * only — timeOfDay has no counterpart in the source study). */
+  showBenchmark: boolean
 }
 
 const ERROR_PROXY_COLOR = 'var(--color-danger)'
@@ -73,7 +78,7 @@ function formatHourWithWpm(hour: number, wpm: number): string {
 
 type WpmLineKey = 'wpm' | 'bksPercent'
 
-export function WpmChart({ uid, range, deviceScopes, appScopes, typingTestScopes, runIdScopes, granularity, viewMode, minActiveMs }: Props) {
+export function WpmChart({ uid, range, deviceScopes, appScopes, typingTestScopes, runIdScopes, granularity, viewMode, minActiveMs, showBenchmark }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [bksRows, setBksRows] = useState<TypingBksMinuteRow[]>([])
@@ -313,6 +318,12 @@ export function WpmChart({ uid, range, deviceScopes, appScopes, typingTestScopes
                 stroke="var(--color-edge)"
                 tickFormatter={(v: number) => `${v}%`}
                 width={40}
+              />
+            )}
+            {showBenchmark && (
+              <ReferenceLine
+                yAxisId="wpm"
+                {...benchmarkReferenceLineProps(BENCHMARK_WPM.mean, t('analyze.benchmark.referenceLineLabel'))}
               />
             )}
             <Tooltip

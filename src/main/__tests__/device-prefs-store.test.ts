@@ -150,6 +150,7 @@ describe('pipette-settings-store', () => {
       await patch(fakeEvent, 'uid-a', { analyze: { filters: { deviceScopes: ['all'] } } })
       await patch(fakeEvent, 'uid-a', { analyze: { compareFilters: { deviceScopes: ['own'] } } })
       await patch(fakeEvent, 'uid-a', { analyze: { goalDays: 5, goalKeystrokes: 200 } })
+      await patch(fakeEvent, 'uid-a', { analyze: { showBenchmark: false } })
       await patch(fakeEvent, 'uid-a', { analyze: { fingerAssignments: { '0,0': 'left-index' } } })
 
       const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
@@ -160,6 +161,7 @@ describe('pipette-settings-store', () => {
           goalDays?: number
           goalKeystrokes?: number
           fingerAssignments?: Record<string, string>
+          showBenchmark?: boolean
         }
       }
       // every sub-field survives the others' writes
@@ -168,6 +170,7 @@ describe('pipette-settings-store', () => {
       expect(prefs.analyze?.goalDays).toBe(5)
       expect(prefs.analyze?.goalKeystrokes).toBe(200)
       expect(prefs.analyze?.fingerAssignments).toEqual({ '0,0': 'left-index' })
+      expect(prefs.analyze?.showBenchmark).toBe(false)
     })
 
     it('clears fingerAssignments with an empty map without touching siblings', async () => {

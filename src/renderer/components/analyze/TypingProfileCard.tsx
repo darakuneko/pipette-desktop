@@ -15,11 +15,13 @@ import type {
   TypingMinuteStatsRow,
 } from '../../../shared/types/typing-analytics'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
+import { BENCHMARK_WPM } from '../../../shared/typing-benchmarks'
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
 import { AnalyzeStatGrid } from './stat-card'
 import { EMPTY_STAT_VALUE } from './analyze-constants'
 import { fetchBigramAggregateForRange, listMinuteStatsForScope } from './analyze-fetch'
 import { aggregateFingerPairs } from './analyze-bigram-finger'
+import { benchmarkPosition } from './analyze-benchmark'
 import { filterDailyWindow, shiftLocalDate } from './analyze-streak-goal'
 import {
   classifyFatigue,
@@ -118,6 +120,14 @@ export function TypingProfileCard({
   )
 
   const speed = useMemo(() => classifySpeed(dailyWindow), [dailyWindow])
+  // Population reference for the speed cell only — the paper (see
+  // shared/typing-benchmarks.ts) has no counterpart stat for hand
+  // balance or SFB, so those cells stay as-is. `null` when the speed
+  // bucket itself is 'unknown' (not enough data to trust a WPM figure).
+  const speedBenchmark = useMemo(
+    () => (speed.label === 'unknown' ? null : benchmarkPosition(speed.wpm, BENCHMARK_WPM)),
+    [speed],
+  )
   const handBalance = useMemo(
     () => (keycodeFinger.size === 0
       ? { label: 'unknown' as HandBalanceLabel, leftRatio: null, leftCount: 0, rightCount: 0 }
@@ -140,7 +150,19 @@ export function TypingProfileCard({
         : t(`analyze.summary.profile.speed.${speed.label as Exclude<SpeedLabel, 'unknown'>}`),
       context: speed.label === 'unknown'
         ? t('analyze.summary.profile.insufficient')
-        : t('analyze.summary.profile.speedContext', { wpm: formatWpm(speed.wpm) }),
+        : (
+          <>
+            {t('analyze.summary.profile.speedContext', { wpm: formatWpm(speed.wpm) })}
+            {speedBenchmark && (
+              <>
+                <br />
+                {t('analyze.benchmark.populationAverage', { value: formatWpm(BENCHMARK_WPM.mean) })}
+                {' · '}
+                {t(`analyze.benchmark.position.${speedBenchmark.label}`)}
+              </>
+            )}
+          </>
+        ),
       descriptionKey: 'analyze.summary.profile.speedDesc',
     },
     {
@@ -176,7 +198,7 @@ export function TypingProfileCard({
         : t('analyze.summary.profile.fatigueContext', { pct: fatigue.dropPct.toFixed(1) }),
       descriptionKey: 'analyze.summary.profile.fatigueDesc',
     },
-  ], [speed, handBalance, sfb, fatigue, t])
+  ], [speed, speedBenchmark, handBalance, sfb, fatigue, t])
 
   return (
     <section className="flex flex-col gap-2" data-testid="analyze-typing-profile-section">

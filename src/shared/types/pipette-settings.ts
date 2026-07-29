@@ -153,6 +153,11 @@ export interface AnalyzeSettings {
    * panes have the same uid loaded. Optional so panes A and B start
    * from defaults on first use. */
   compareFilters?: AnalyzeFilterSettings
+  /** Show the population-benchmark reference line on the WPM / Interval
+   * time-series charts (see `src/shared/typing-benchmarks.ts`). Absent
+   * means shown — older settings files predate this field, and the
+   * overlay is meant to be on by default. */
+  showBenchmark?: boolean
 }
 
 /** Fallback used when no per-keyboard goal has been saved yet. */

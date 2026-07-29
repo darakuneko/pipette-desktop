@@ -51,6 +51,7 @@ function isValidAnalyzeSettings(value: unknown): boolean {
   }
   if ('filters' in obj && obj.filters != null && !isValidAnalyzeFilterSettings(obj.filters)) return false
   if ('compareFilters' in obj && obj.compareFilters != null && !isValidAnalyzeFilterSettings(obj.compareFilters)) return false
+  if ('showBenchmark' in obj && obj.showBenchmark != null && typeof obj.showBenchmark !== 'boolean') return false
   return true
 }
 

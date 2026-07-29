@@ -1,5 +1,5 @@
 {
-  "version": "0.1.45",
+  "version": "0.1.46",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -845,6 +845,18 @@
     "unit": {
       "keys": "回っしょ",
       "activations": "回☆"
+    },
+    "benchmark": {
+      "populationAverage": "みんなの平均 {{value}} WPMだよん☆",
+      "position": {
+        "farBelow": "平均よりかなりスローっしょ",
+        "below": "平均よりゆっくりめ",
+        "average": "ふつーくらい☆",
+        "above": "平均より速いじゃん",
+        "farAbove": "平均よりめっちゃ速い★"
+      },
+      "referenceLineLabel": "みんなの平均☆",
+      "toggleAria": "みんなの平均ラインを表示するよん"
     },
     "snapshotTimeline": {
       "title": "キーマップ履歴☆",
