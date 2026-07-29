@@ -1,5 +1,5 @@
 {
-  "version": "0.1.45",
+  "version": "0.1.46",
   "name": "English",
   "common": {
     "save": "Save",
@@ -855,6 +855,18 @@
     "unit": {
       "keys": "keys",
       "activations": "activations"
+    },
+    "benchmark": {
+      "populationAverage": "Population avg {{value}} WPM",
+      "position": {
+        "farBelow": "Far below average",
+        "below": "Below average",
+        "average": "Average",
+        "above": "Above average",
+        "farAbove": "Far above average"
+      },
+      "referenceLineLabel": "Population avg",
+      "toggleAria": "Show population average reference line"
     },
     "snapshotTimeline": {
       "title": "Keymap snapshots",

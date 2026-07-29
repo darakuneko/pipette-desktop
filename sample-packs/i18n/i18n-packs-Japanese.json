@@ -1,5 +1,5 @@
 {
-  "version": "0.1.45",
+  "version": "0.1.46",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -855,6 +855,18 @@
     "unit": {
       "keys": "回",
       "activations": "回"
+    },
+    "benchmark": {
+      "populationAverage": "全体平均 {{value}} WPM",
+      "position": {
+        "farBelow": "平均よりかなり低い",
+        "below": "平均より低い",
+        "average": "平均的",
+        "above": "平均より高い",
+        "farAbove": "平均よりかなり高い"
+      },
+      "referenceLineLabel": "全体平均",
+      "toggleAria": "全体平均の基準線を表示"
     },
     "snapshotTimeline": {
       "title": "キーマップ履歴",

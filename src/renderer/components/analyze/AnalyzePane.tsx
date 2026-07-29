@@ -295,6 +295,9 @@ export function AnalyzePane({
   const [selectedSnapshotSavedAt, setSelectedSnapshotSavedAt] = useState<number | null>(null)
   const [fingerAssignments, setFingerAssignments] = useState<Record<string, FingerType>>({})
   const [fingersLoading, setFingersLoading] = useState(false)
+  // Population-benchmark reference line toggle (WPM / Interval time-series
+  // charts). Absent settings mean "on" — see AnalyzeSettings.showBenchmark.
+  const [showBenchmark, setShowBenchmark] = useState(true)
   const [fingerModalOpen, setFingerModalOpen] = useState(false)
   // Staged filter editor (Plan-analyze-filter-modal) — Row 1 collapsed
   // to a summary chip; every filter row now lives behind this modal.
@@ -406,7 +409,7 @@ export function AnalyzePane({
   }, [keymapSnapshot, layerFilter.baseLayer, setLayer])
 
   useEffect(() => {
-    if (!selectedUid) { setFingerAssignments({}); setFingersLoading(false); return }
+    if (!selectedUid) { setFingerAssignments({}); setShowBenchmark(true); setFingersLoading(false); return }
     let cancelled = false
     setFingersLoading(true)
     void window.vialAPI
@@ -414,8 +417,9 @@ export function AnalyzePane({
       .then((prefs) => {
         if (cancelled) return
         setFingerAssignments(prefs?.analyze?.fingerAssignments ?? {})
+        setShowBenchmark(prefs?.analyze?.showBenchmark ?? true)
       })
-      .catch(() => { if (!cancelled) setFingerAssignments({}) })
+      .catch(() => { if (!cancelled) { setFingerAssignments({}); setShowBenchmark(true) } })
       .finally(() => { if (!cancelled) setFingersLoading(false) })
     return () => { cancelled = true }
   }, [selectedUid])
@@ -558,6 +562,23 @@ export function AnalyzePane({
         // absent key falls back to the geometry estimate).
         await window.vialAPI.pipetteSettingsPatch(selectedUid, {
           analyze: { fingerAssignments: next },
+        })
+      } catch {
+        // best-effort save
+      }
+    },
+    [selectedUid],
+  )
+
+  const handleShowBenchmarkChange = useCallback(
+    async (next: boolean) => {
+      setShowBenchmark(next)
+      if (!selectedUid) return
+      try {
+        // PATCH only this sub-field; the main-side deep merge on `analyze`
+        // preserves filters/goal/fingerAssignments owned by other writers.
+        await window.vialAPI.pipetteSettingsPatch(selectedUid, {
+          analyze: { showBenchmark: next },
         })
       } catch {
         // best-effort save
@@ -927,6 +948,23 @@ export function AnalyzePane({
   }, [uploadEntryForModal, filterStore, buildHubUploadInput,
     layoutComparisonFilter, layoutLookup, keymapSnapshot])
 
+  // Shared between the WPM and Interval controls rows — both charts'
+  // reference lines are bound to the one persisted flag, so flipping
+  // this checkbox in either tab affects both.
+  const benchmarkToggle = (
+    <label className={FILTER_LABEL}>
+      <span>{t('analyze.benchmark.referenceLineLabel')}</span>
+      <input
+        type="checkbox"
+        className="cursor-pointer"
+        checked={showBenchmark}
+        onChange={(e) => void handleShowBenchmarkChange(e.target.checked)}
+        aria-label={t('analyze.benchmark.toggleAria')}
+        data-testid={tid("analyze-filter-benchmark-toggle")}
+      />
+    </label>
+  )
+
   // Activity's per-tab filters render in two places: alongside Period
   // on Row 2 in split mode, or on Row 3 in single mode. Extracted so
   // the JSX stays in one place. Order: View → Range size + cursor
@@ -1150,6 +1188,7 @@ export function AnalyzePane({
                       ))}
                     </select>
                   </label>
+                  {wpmFilter.viewMode === 'timeSeries' && benchmarkToggle}
                 </>
               )}
               {analysisTab === 'activity' && activityFilters}
@@ -1185,6 +1224,7 @@ export function AnalyzePane({
                       ))}
                     </select>
                   </label>
+                  {intervalFilter.viewMode === 'timeSeries' && benchmarkToggle}
                 </>
               )}
               {analysisTab === 'ergonomics' && (
@@ -1293,6 +1333,7 @@ export function AnalyzePane({
                   granularity={wpmFilter.granularity}
                   viewMode={wpmFilter.viewMode}
                   minActiveMs={wpmFilter.minActiveMs}
+                  showBenchmark={showBenchmark}
                 />
               ) : analysisTab === 'interval' ? (
                 <IntervalChart
@@ -1305,6 +1346,7 @@ export function AnalyzePane({
                   unit={intervalFilter.unit}
                   granularity={wpmFilter.granularity}
                   viewMode={intervalFilter.viewMode}
+                  showBenchmark={showBenchmark}
                 />
               ) : analysisTab === 'activity' ? (
                 <ActivityChart

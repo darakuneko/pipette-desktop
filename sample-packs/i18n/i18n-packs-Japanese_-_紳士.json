@@ -1,5 +1,5 @@
 {
-  "version": "0.1.45",
+  "version": "0.1.46",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -845,6 +845,18 @@
     "unit": {
       "keys": "回",
       "activations": "回"
+    },
+    "benchmark": {
+      "populationAverage": "全体平均は {{value}} WPM でございます",
+      "position": {
+        "farBelow": "平均よりかなり低うございます",
+        "below": "平均より低めでございます",
+        "average": "平均的でございます",
+        "above": "平均より高めでございます",
+        "farAbove": "平均よりかなり高うございます"
+      },
+      "referenceLineLabel": "全体平均",
+      "toggleAria": "全体平均の基準線を表示いたします"
     },
     "snapshotTimeline": {
       "title": "地図の変遷",
