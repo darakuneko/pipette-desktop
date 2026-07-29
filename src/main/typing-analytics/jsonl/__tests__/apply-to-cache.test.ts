@@ -159,6 +159,92 @@ describe('applyRowsToCache', () => {
     expect(conn.prepare('SELECT COUNT(*) AS n FROM typing_sessions').get()).toEqual({ n: 1 })
   })
 
+  it('applies matrix-minute dh/ds/dq, bigram-minute oc/on, and minute-stats pollP50Ms/pollP95Ms through to their SQL columns', () => {
+    const rows: JsonlRow[] = [
+      scopeRow(1_000),
+      {
+        id: matrixMinuteRowId(SCOPE_ID, 60_000, '', 1, 2, 0),
+        kind: 'matrix-minute',
+        updated_at: 1_000,
+        payload: {
+          scopeId: SCOPE_ID, minuteTs: 60_000, row: 1, col: 2, layer: 0, keycode: 0x04,
+          count: 1, tapCount: 0, holdCount: 0,
+          dh: [0, 1, 0, 0, 0, 0, 0, 0], ds: 65, dq: 4_225,
+        },
+      },
+      {
+        id: bigramMinuteRowId(SCOPE_ID, 60_000, ''),
+        kind: 'bigram-minute',
+        updated_at: 1_000,
+        payload: {
+          scopeId: SCOPE_ID, minuteTs: 60_000,
+          bigrams: { '4_11': { c: 2, h: [0, 2, 0, 0, 0, 0, 0, 0], oc: 1, on: 2 } },
+        },
+      },
+      {
+        id: minuteStatsRowId(SCOPE_ID, 60_000, ''),
+        kind: 'minute-stats',
+        updated_at: 1_000,
+        payload: {
+          scopeId: SCOPE_ID, minuteTs: 60_000, keystrokes: 2, activeMs: 100,
+          intervalAvgMs: null, intervalMinMs: null, intervalP25Ms: null, intervalP50Ms: null, intervalP75Ms: null, intervalMaxMs: null,
+          pollP50Ms: 20, pollP95Ms: 45,
+        },
+      },
+    ]
+    applyRowsToCache(db, rows)
+    const conn = db.getConnection()
+
+    const matrix = conn.prepare('SELECT dur_hist, dur_sum, dur_sumsq FROM typing_matrix_minute').get() as {
+      dur_hist: Uint8Array
+      dur_sum: number
+      dur_sumsq: number
+    }
+    expect(matrix.dur_sum).toBe(65)
+    expect(matrix.dur_sumsq).toBe(4_225)
+    // Little-endian u32 histogram: bucket 1 (offset 4) should read 1.
+    expect(Buffer.from(matrix.dur_hist).readUInt32LE(4)).toBe(1)
+
+    const bigram = conn.prepare('SELECT overlap_count, overlap_n FROM typing_bigram_minute').get() as {
+      overlap_count: number
+      overlap_n: number
+    }
+    expect(bigram.overlap_count).toBe(1)
+    expect(bigram.overlap_n).toBe(2)
+
+    const stats = conn.prepare('SELECT poll_p50_ms, poll_p95_ms FROM typing_minute_stats').get() as {
+      poll_p50_ms: number
+      poll_p95_ms: number
+    }
+    expect(stats.poll_p50_ms).toBe(20)
+    expect(stats.poll_p95_ms).toBe(45)
+  })
+
+  it('leaves dh/ds/dq, oc/on, and pollP50Ms/pollP95Ms columns NULL for pre-v8 rows that omit them', () => {
+    applyRowsToCache(db, [scopeRow(1_000), matrixRow(1_000, 5, 3, 2), statsRow(1_000, 10), bigramRow(1_000, { '4_11': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } })])
+    const conn = db.getConnection()
+    const matrix = conn.prepare('SELECT dur_hist, dur_sum, dur_sumsq FROM typing_matrix_minute').get() as {
+      dur_hist: Buffer | null
+      dur_sum: number | null
+      dur_sumsq: number | null
+    }
+    expect(matrix.dur_hist).toBeNull()
+    expect(matrix.dur_sum).toBeNull()
+    expect(matrix.dur_sumsq).toBeNull()
+    const bigram = conn.prepare('SELECT overlap_count, overlap_n FROM typing_bigram_minute').get() as {
+      overlap_count: number | null
+      overlap_n: number | null
+    }
+    expect(bigram.overlap_count).toBeNull()
+    expect(bigram.overlap_n).toBeNull()
+    const stats = conn.prepare('SELECT poll_p50_ms, poll_p95_ms FROM typing_minute_stats').get() as {
+      poll_p50_ms: number | null
+      poll_p95_ms: number | null
+    }
+    expect(stats.poll_p50_ms).toBeNull()
+    expect(stats.poll_p95_ms).toBeNull()
+  })
+
   it('applies scope rows before dependent rows so FKs resolve', () => {
     const rows: JsonlRow[] = [charRow(1_000, 2), scopeRow(1_000)]
     expect(() => applyRowsToCache(db, rows)).not.toThrow()

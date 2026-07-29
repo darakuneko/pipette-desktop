@@ -49,24 +49,78 @@ export const BIGRAM_BUCKET_CENTERS_MS: readonly number[] = [
   1500,  // bucket 7: >= 1000 (slow-tail estimate)
 ] as const
 
-function bucketIndex(iki: number): number {
-  // Drive selection from the exported boundary array so downstream
-  // percentile / avg derivations stay consistent if boundaries change.
-  for (let i = 0; i < BIGRAM_BUCKET_UPPER_BOUNDS_MS.length; i += 1) {
-    if (iki < BIGRAM_BUCKET_UPPER_BOUNDS_MS[i]) return i
+/** Exclusive upper bounds of each keypress-duration histogram bucket, in
+ * ms. Deliberately a much tighter grid than {@link BIGRAM_BUCKET_UPPER_BOUNDS_MS}:
+ * the CHI 2018 typing-behaviour literature this project's benchmarks are
+ * modeled on (see `src/shared/typing-benchmarks.ts`) puts typical keypress
+ * durations in the 80-150 ms range — an order of magnitude narrower than
+ * inter-key intervals, which range from sub-60ms rolls to multi-second
+ * pauses. Reusing the IKI grid here would collapse almost every real
+ * duration sample into the first one or two buckets. */
+export const DURATION_BUCKET_UPPER_BOUNDS_MS: readonly number[] = [
+  50,
+  80,
+  110,
+  140,
+  180,
+  250,
+  400,
+  Number.POSITIVE_INFINITY,
+] as const
+
+/** Estimated bucket centers (ms) for the duration grid above — same
+ * midpoint-of-closed-bucket / synthetic-center-for-the-open-bucket
+ * convention as {@link BIGRAM_BUCKET_CENTERS_MS}. Not consumed yet — its
+ * reader arrives with the duration-UI task (Analyze view), same as how
+ * the histogram data itself isn't rendered anywhere until then. */
+export const DURATION_BUCKET_CENTERS_MS: readonly number[] = [
+  25,   // bucket 0: < 50
+  65,   // bucket 1: 50-80
+  95,   // bucket 2: 80-110
+  125,  // bucket 3: 110-140
+  160,  // bucket 4: 140-180
+  215,  // bucket 5: 180-250
+  325,  // bucket 6: 250-400
+  600,  // bucket 7: >= 400 (long-hold estimate)
+] as const
+
+/** Shared bucket-index lookup, generalized over any exclusive-upper-bound
+ * array so the IKI and duration grids don't need their own copy of the
+ * same linear scan. `bounds` must have exactly BIGRAM_HIST_BUCKETS - 1
+ * meaningful entries plus a POSITIVE_INFINITY tail (both exported bound
+ * arrays satisfy this) — a value that doesn't fall under any bound before
+ * the last one falls into the final (catch-all) bucket. */
+function bucketIndexFor(value: number, bounds: readonly number[]): number {
+  for (let i = 0; i < bounds.length; i += 1) {
+    if (value < bounds[i]) return i
   }
   return BIGRAM_HIST_BUCKETS - 1
+}
+
+/** Bucketize raw values into a fixed-size histogram against any grid —
+ * shared by {@link bucketizeIki} and {@link bucketizeDurations} below,
+ * which stay as distinctly-named one-liners so a call site reads which
+ * grid it means without chasing an extra argument. */
+function bucketize(values: readonly number[], bounds: readonly number[]): number[] {
+  const buckets = new Array<number>(BIGRAM_HIST_BUCKETS).fill(0)
+  for (const v of values) {
+    buckets[bucketIndexFor(v, bounds)] += 1
+  }
+  return buckets
 }
 
 /** Bucketize raw IKI values into a fixed-size histogram. Output array
  * length is always BIGRAM_HIST_BUCKETS; each entry is the count of
  * IKIs that fell into that bucket. */
 export function bucketizeIki(ikis: readonly number[]): number[] {
-  const buckets = new Array<number>(BIGRAM_HIST_BUCKETS).fill(0)
-  for (const iki of ikis) {
-    buckets[bucketIndex(iki)] += 1
-  }
-  return buckets
+  return bucketize(ikis, BIGRAM_BUCKET_UPPER_BOUNDS_MS)
+}
+
+/** Bucketize raw keypress-duration values (ms) into a fixed-size
+ * histogram using the tighter {@link DURATION_BUCKET_UPPER_BOUNDS_MS}
+ * grid. Same shape/semantics as {@link bucketizeIki} otherwise. */
+export function bucketizeDurations(durationsMs: readonly number[]): number[] {
+  return bucketize(durationsMs, DURATION_BUCKET_UPPER_BOUNDS_MS)
 }
 
 /** Sum and sum-of-squares of raw IKI values, persisted alongside the

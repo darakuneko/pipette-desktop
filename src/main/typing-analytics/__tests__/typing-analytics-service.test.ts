@@ -98,6 +98,7 @@ import {
 import { IpcChannels } from '../../../shared/ipc/channels'
 import type { TypingBigramAggregateResult } from '../../../shared/types/typing-analytics'
 import { DRAIN_CLOSE_GRACE_MS, MINUTE_MS, RETENTION_MS } from '../minute-buffer'
+import { OBSERVATION_HOLE_MS } from '../../../shared/typing-analytics-timing'
 
 type IpcHandler<R = unknown> = (event: unknown, ...args: unknown[]) => Promise<R>
 
@@ -654,6 +655,29 @@ describe('typing-analytics-service', () => {
         expect(result.entries.every((e: { count: number }) => e.count === 1)).toBe(true)
       })
 
+      it('computes observedRolloverRatio from overlap-tagged matrix events', async () => {
+        setupTypingAnalyticsIpc()
+        const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+        const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+        // 4->11 completes with overlap=true, 11->7 with overlap=false.
+        await ingest(handler, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
+        await ingest(handler, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 80, keyboard: sampleKeyboard, overlap: true })
+        await ingest(handler, { kind: 'matrix', row: 0, col: 2, layer: 0, keycode: 0x07, ts: ts + 280, keyboard: sampleKeyboard, overlap: false })
+        await flushTypingAnalyticsNowForTests()
+
+        const aggHandler = getHandler<TypingBigramAggregateResult>(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
+        const result = await aggHandler(fakeEvent, sampleKeyboard.uid, ts - 60_000, ts + 60_000, 'top', 'all', undefined)
+        expect(result.observedRolloverRatio).toBe(1 / 2)
+      })
+
+      it('returns null observedRolloverRatio when no ingested event carried a determined overlap', async () => {
+        const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+        await ingestThree(ts)
+        const handler = getHandler<TypingBigramAggregateResult>(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
+        const result = await handler(fakeEvent, sampleKeyboard.uid, ts - 60_000, ts + 60_000, 'top', 'all', undefined)
+        expect(result.observedRolloverRatio).toBeNull()
+      })
+
       it('returns slow entries with p95 for view=slow', async () => {
         const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
         await ingestThree(ts)
@@ -680,21 +704,21 @@ describe('typing-analytics-service', () => {
         setupTypingAnalyticsIpc()
         const handler = getHandler<TypingBigramAggregateResult>(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
         const result = await handler(fakeEvent, sampleKeyboard.uid, 0, 60_000, 'unknown', 'all', undefined)
-        expect(result).toEqual({ view: 'top', entries: [], truncated: false })
+        expect(result).toEqual({ view: 'top', entries: [], truncated: false, observedRolloverRatio: null })
       })
 
       it('returns an empty result when sinceMs >= untilMs', async () => {
         setupTypingAnalyticsIpc()
         const handler = getHandler<TypingBigramAggregateResult>(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
         const result = await handler(fakeEvent, sampleKeyboard.uid, 60_000, 60_000, 'top', 'all', undefined)
-        expect(result).toEqual({ view: 'top', entries: [], truncated: false })
+        expect(result).toEqual({ view: 'top', entries: [], truncated: false, observedRolloverRatio: null })
       })
 
       it('returns an empty result when uid is invalid', async () => {
         setupTypingAnalyticsIpc()
         const handler = getHandler<TypingBigramAggregateResult>(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
         const result = await handler(fakeEvent, '', 0, 60_000, 'top', 'all', undefined)
-        expect(result).toEqual({ view: 'top', entries: [], truncated: false })
+        expect(result).toEqual({ view: 'top', entries: [], truncated: false, observedRolloverRatio: null })
       })
 
       it('honours scope=own by filtering to the local machine_hash', async () => {
@@ -801,8 +825,160 @@ describe('typing-analytics-service', () => {
       await ingest(handler, { kind: 'matrix', row: -1, col: 0, layer: 0, keycode: 1, ts: 1_000, keyboard: sampleKeyboard })
       await ingest(handler, { kind: 'char', key: 'a', ts: 1_000 })
       await ingest(handler, { kind: 'char', key: 'a', ts: 1_000, keyboard: { uid: '', vendorId: 0, productId: 0, productName: '' } })
+      // Note: an invalid action/overlap/pollGapMs on an otherwise-valid
+      // matrix event does NOT drop the payload — see the sanitization
+      // tests below (isValidEvent strips the offending optional field
+      // instead of rejecting the whole keystroke).
+      // matrix-release requires row/col/layer/keycode plus a valid durationMs.
+      await ingest(handler, { kind: 'matrix-release', row: 0, col: 0, layer: 0, keycode: 1, ts: 1_000, keyboard: sampleKeyboard })
+      await ingest(handler, {
+        kind: 'matrix-release', row: 0, col: 0, layer: 0, keycode: 1, ts: 1_000, durationMs: 0, keyboard: sampleKeyboard,
+      })
+      await ingest(handler, {
+        kind: 'matrix-release', row: 0, col: 0, layer: 0, keycode: 1, ts: 1_000, durationMs: -10, keyboard: sampleKeyboard,
+      })
+      await ingest(handler, {
+        kind: 'matrix-release', row: 0, col: 0, layer: 0, keycode: 1, ts: 1_000, durationMs: 60_000, keyboard: sampleKeyboard,
+      })
 
       expect(getMinuteBufferForTests().isEmpty()).toBe(true)
+    })
+
+    it('accepts a matrix event with valid action/overlap/pollGapMs and a matrix-release event, and persists duration to SQLite', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+
+      await ingest(handler, {
+        kind: 'matrix', row: 0, col: 3, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard,
+        action: 'tap', overlap: true, pollGapMs: 20,
+      })
+      await ingest(handler, {
+        kind: 'matrix-release', row: 0, col: 3, layer: 0, keycode: 0x04, ts: ts + 90, durationMs: 90, keyboard: sampleKeyboard,
+      })
+      await flushTypingAnalyticsNowForTests()
+
+      const conn = getTypingAnalyticsDB().getConnection()
+      const row = conn.prepare('SELECT count, dur_hist, dur_sum, dur_sumsq FROM typing_matrix_minute WHERE row = 0 AND col = 3').get() as {
+        count: number
+        dur_hist: Uint8Array | null
+        dur_sum: number | null
+        dur_sumsq: number | null
+      }
+      expect(row.count).toBe(1)
+      expect(row.dur_hist).not.toBeNull()
+      expect(row.dur_sum).toBe(90)
+      expect(row.dur_sumsq).toBe(8_100)
+    })
+
+    it('sanitizes an invalid action/overlap/pollGapMs instead of dropping the keystroke', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+
+      await ingest(handler, {
+        kind: 'matrix', row: 0, col: 5, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard,
+        action: 'bogus', overlap: 'yes', pollGapMs: -5,
+      })
+      await flushTypingAnalyticsNowForTests()
+
+      const conn = getTypingAnalyticsDB().getConnection()
+      // The keystroke itself is still counted...
+      const row = conn.prepare('SELECT count, tap_count, hold_count FROM typing_matrix_minute WHERE row = 0 AND col = 5').get() as {
+        count: number
+        tap_count: number
+        hold_count: number
+      }
+      expect(row.count).toBe(1)
+      expect(row.tap_count).toBe(0)
+      expect(row.hold_count).toBe(0)
+
+      // ...but the invalid pollGapMs never reaches minute-stats.
+      const stats = conn.prepare('SELECT poll_p50_ms, poll_p95_ms FROM typing_minute_stats WHERE minute_ts = ?').get(Math.floor(ts / MINUTE_MS) * MINUTE_MS) as {
+        poll_p50_ms: number | null
+        poll_p95_ms: number | null
+      }
+      expect(stats.poll_p50_ms).toBeNull()
+      expect(stats.poll_p95_ms).toBeNull()
+    })
+
+    it('sanitizes an oversized pollGapMs (beyond OBSERVATION_HOLE_MS) without dropping the event', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+
+      await ingest(handler, {
+        kind: 'matrix', row: 0, col: 6, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard,
+        pollGapMs: OBSERVATION_HOLE_MS + 1,
+      })
+      await flushTypingAnalyticsNowForTests()
+
+      const conn = getTypingAnalyticsDB().getConnection()
+      const row = conn.prepare('SELECT count FROM typing_matrix_minute WHERE row = 0 AND col = 6').get() as { count: number }
+      expect(row.count).toBe(1)
+
+      const stats = conn.prepare('SELECT poll_p50_ms FROM typing_minute_stats WHERE minute_ts = ?').get(Math.floor(ts / MINUTE_MS) * MINUTE_MS) as { poll_p50_ms: number | null }
+      expect(stats.poll_p50_ms).toBeNull()
+    })
+
+    it('does not create a minute-stats row for a minute whose only activity is a matrix-release (no phantom day)', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      // A press near the end of one minute, released just after the next
+      // minute starts — the release's own minute has no press activity
+      // of its own, only the duration sample.
+      const minuteStart = Date.UTC(2026, 3, 14, 10, 1, 0)
+      const pressTs = minuteStart - 50
+      const releaseTs = minuteStart + 50
+
+      await ingest(handler, { kind: 'matrix', row: 0, col: 7, layer: 0, keycode: 0x04, ts: pressTs, keyboard: sampleKeyboard })
+      await ingest(handler, {
+        kind: 'matrix-release', row: 0, col: 7, layer: 0, keycode: 0x04, ts: releaseTs, durationMs: 100, keyboard: sampleKeyboard,
+      })
+      await flushTypingAnalyticsNowForTests()
+
+      const conn = getTypingAnalyticsDB().getConnection()
+      const releaseMinuteTs = Math.floor(releaseTs / MINUTE_MS) * MINUTE_MS
+      const statsRow = conn.prepare('SELECT keystrokes FROM typing_minute_stats WHERE minute_ts = ?').get(releaseMinuteTs)
+      expect(statsRow).toBeUndefined()
+
+      // The duration data itself still ships for that same minute.
+      const matrixRow = conn.prepare('SELECT dur_sum FROM typing_matrix_minute WHERE minute_ts = ? AND row = 0 AND col = 7').get(releaseMinuteTs) as { dur_sum: number } | undefined
+      expect(matrixRow?.dur_sum).toBe(100)
+
+      // The press's own (earlier) minute still gets an ordinary
+      // minute-stats row — only the release-only minute is skipped.
+      const pressMinuteTs = Math.floor(pressTs / MINUTE_MS) * MINUTE_MS
+      const pressStatsRow = conn.prepare('SELECT keystrokes FROM typing_minute_stats WHERE minute_ts = ?').get(pressMinuteTs) as { keystrokes: number } | undefined
+      expect(pressStatsRow?.keystrokes).toBe(1)
+    })
+
+    it('excludes matrix-release from session detection (a release alone does not open or extend a session)', async () => {
+      setupTypingAnalyticsIpc()
+      const eventHandler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const flushHandler = getHandler(IpcChannels.TYPING_ANALYTICS_FLUSH)
+
+      const pressTs = Date.UTC(2026, 3, 14, 12, 0, 0)
+      // Well past SESSION_IDLE_GAP_MS (5 min) — if the release below
+      // were treated as an ordinary keystroke for session detection, this
+      // gap would close the press's session and open a second one at
+      // the release's own ts.
+      const releaseTs = pressTs + 6 * MINUTE_MS
+
+      await ingest(eventHandler, { kind: 'matrix', row: 0, col: 8, layer: 0, keycode: 0x04, ts: pressTs, keyboard: sampleKeyboard })
+      await ingest(eventHandler, {
+        kind: 'matrix-release', row: 0, col: 8, layer: 0, keycode: 0x04, ts: releaseTs, durationMs: 6 * MINUTE_MS, keyboard: sampleKeyboard,
+      })
+
+      await flushHandler(fakeEvent, sampleKeyboard.uid)
+
+      const conn = getTypingAnalyticsDB().getConnection()
+      const sessions = conn.prepare('SELECT start_ms, end_ms FROM typing_sessions').all() as Array<{ start_ms: number; end_ms: number }>
+      // Exactly one session, ending at the press itself — the release
+      // never reached the session detector at all.
+      expect(sessions).toHaveLength(1)
+      expect(sessions[0].start_ms).toBe(pressTs)
+      expect(sessions[0].end_ms).toBe(pressTs)
     })
   })
 

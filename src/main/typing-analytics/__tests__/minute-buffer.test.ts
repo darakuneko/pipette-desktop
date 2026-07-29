@@ -52,6 +52,7 @@ function matrixEvent(
   keycode: number,
   ts: number,
   action?: TypingMatrixAction,
+  extra?: { overlap?: boolean; pollGapMs?: number },
 ): TypingAnalyticsEvent {
   return {
     kind: 'matrix',
@@ -61,6 +62,28 @@ function matrixEvent(
     keycode,
     ts,
     ...(action ? { action } : {}),
+    ...(extra?.overlap !== undefined ? { overlap: extra.overlap } : {}),
+    ...(extra?.pollGapMs !== undefined ? { pollGapMs: extra.pollGapMs } : {}),
+    keyboard: { uid: 'x', vendorId: 0, productId: 0, productName: '' },
+  }
+}
+
+function matrixReleaseEvent(
+  row: number,
+  col: number,
+  layer: number,
+  keycode: number,
+  ts: number,
+  durationMs: number,
+): TypingAnalyticsEvent {
+  return {
+    kind: 'matrix-release',
+    row,
+    col,
+    layer,
+    keycode,
+    ts,
+    durationMs,
     keyboard: { uid: 'x', vendorId: 0, productId: 0, productName: '' },
   }
 }
@@ -130,8 +153,8 @@ describe('MinuteBuffer', () => {
     addEv(matrixEvent(2, 1, 1, 0x4015, 3_000), fp)
 
     const [snap] = buffer.drainAll()
-    expect(snap.matrixCounts.get('0,3,0')).toEqual({ row: 0, col: 3, layer: 0, keycode: 0x04, count: 2, tapCount: 0, holdCount: 0 })
-    expect(snap.matrixCounts.get('2,1,1')).toEqual({ row: 2, col: 1, layer: 1, keycode: 0x4015, count: 1, tapCount: 0, holdCount: 0 })
+    expect(snap.matrixCounts.get('0,3,0')).toEqual({ row: 0, col: 3, layer: 0, keycode: 0x04, count: 2, tapCount: 0, holdCount: 0, durations: [] })
+    expect(snap.matrixCounts.get('2,1,1')).toEqual({ row: 2, col: 1, layer: 1, keycode: 0x4015, count: 1, tapCount: 0, holdCount: 0, durations: [] })
   })
 
   it('computes interval stats from event timing', () => {
@@ -630,6 +653,7 @@ describe('MinuteBuffer', () => {
         count: 1,
         tapCount: 0,
         holdCount: 1,
+        durations: [],
       })
     })
 
@@ -644,6 +668,204 @@ describe('MinuteBuffer', () => {
       // Only the A-B pair survives; nothing pairs or triples through the hold.
       expect([...snap.bigrams.entries()]).toEqual([['4_11', [100]]])
       expect(snap.trigrams.size).toBe(0)
+    })
+  })
+
+  describe('matrix-release duration folding', () => {
+    it('folds durationMs into the cell without touching keystrokes/intervals/activeMs', () => {
+      const fp = fingerprint()
+      addEv(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      addEv(matrixReleaseEvent(0, 0, 0, 4, 1_120, 120), fp)
+
+      const [snap] = buffer.drainAll()
+      expect(snap.keystrokes).toBe(1)
+      expect(snap.activeMs).toBe(0)
+      expect(snap.intervalMinMs).toBeNull()
+      expect(snap.matrixCounts.get('0,0,0')).toEqual({
+        row: 0, col: 0, layer: 0, keycode: 4, count: 1, tapCount: 0, holdCount: 0, durations: [120],
+      })
+    })
+
+    it('accumulates multiple durations for the same cell', () => {
+      const fp = fingerprint()
+      addEv(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      addEv(matrixReleaseEvent(0, 0, 0, 4, 1_100, 100), fp)
+      addEv(matrixEvent(0, 0, 0, 4, 1_200), fp)
+      addEv(matrixReleaseEvent(0, 0, 0, 4, 1_290, 90), fp)
+
+      const [snap] = buffer.drainAll()
+      expect(snap.matrixCounts.get('0,0,0')?.durations).toEqual([100, 90])
+      expect(snap.matrixCounts.get('0,0,0')?.count).toBe(2)
+    })
+
+    it('a release landing in a later minute than its press attributes the duration to the release minute', () => {
+      const fp = fingerprint()
+      // Press at 59.9s (minute 0), release at 60.1s (minute 1).
+      addEv(matrixEvent(0, 0, 0, 4, MINUTE_MS - 100), fp)
+      addEv(matrixReleaseEvent(0, 0, 0, 4, MINUTE_MS + 100, 200), fp)
+
+      const snapshots = buffer.drainAll().sort((a, b) => a.minuteTs - b.minuteTs)
+      expect(snapshots).toHaveLength(2)
+      const [minute0, minute1] = snapshots
+      // Press count lands in minute 0, with no duration sample.
+      expect(minute0.matrixCounts.get('0,0,0')?.count).toBe(1)
+      expect(minute0.matrixCounts.get('0,0,0')?.durations).toEqual([])
+      // The duration sample lands in minute 1, as a duration-only cell
+      // (count 0 — the press itself never touched this minute).
+      expect(minute1.matrixCounts.get('0,0,0')?.count).toBe(0)
+      expect(minute1.matrixCounts.get('0,0,0')?.durations).toEqual([200])
+      expect(minute1.keystrokes).toBe(0)
+    })
+
+    it('drops a release with no matching press instead of fabricating one', () => {
+      const fp = fingerprint()
+      addEv(matrixReleaseEvent(0, 0, 0, 4, 1_000, 50), fp)
+
+      const [snap] = buffer.drainAll()
+      // The cell exists (duration-only) but nothing else is touched.
+      expect(snap.keystrokes).toBe(0)
+      expect(snap.matrixCounts.get('0,0,0')).toEqual({
+        row: 0, col: 0, layer: 0, keycode: 4, count: 0, tapCount: 0, holdCount: 0, durations: [50],
+      })
+    })
+
+    it('reopens a retained entry when a release arrives after its minute was already finalized', () => {
+      const fp = fingerprint()
+      addEv(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      const [first] = buffer.drainClosed(1_000 + MINUTE_MS + DRAIN_CLOSE_GRACE_MS)
+      expect(first.matrixCounts.get('0,0,0')?.durations).toEqual([])
+      expect(buffer.isEmpty()).toBe(true)
+
+      // A straggler release for the same press, still inside RETENTION_MS.
+      addEv(matrixReleaseEvent(0, 0, 0, 4, 1_050, 50), fp, 1_000 + MINUTE_MS + DRAIN_CLOSE_GRACE_MS + 10)
+      expect(buffer.isEmpty()).toBe(false)
+
+      const [second] = buffer.drainAll()
+      // Re-finalize is cumulative — the press count is still there.
+      expect(second.matrixCounts.get('0,0,0')).toEqual({
+        row: 0, col: 0, layer: 0, keycode: 4, count: 1, tapCount: 0, holdCount: 0, durations: [50],
+      })
+    })
+  })
+
+  describe('bigram overlap tracking', () => {
+    it('records on/oc for a pair whose incoming event has overlap=true', () => {
+      const fp = fingerprint()
+      addEv(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      addEv(matrixEvent(0, 1, 0, 11, 1_050, undefined, { overlap: true }), fp)
+
+      const [snap] = buffer.drainAll()
+      expect(snap.overlaps.get('4_11')).toEqual({ oc: 1, on: 1 })
+    })
+
+    it('records on without oc for a pair whose incoming event has overlap=false', () => {
+      const fp = fingerprint()
+      addEv(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      addEv(matrixEvent(0, 1, 0, 11, 1_050, undefined, { overlap: false }), fp)
+
+      const [snap] = buffer.drainAll()
+      expect(snap.overlaps.get('4_11')).toEqual({ oc: 0, on: 1 })
+    })
+
+    it('excludes a pair from the on/oc denominator entirely when overlap is undefined', () => {
+      const fp = fingerprint()
+      addEv(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      // No `overlap` field at all — the renderer couldn't determine it.
+      addEv(matrixEvent(0, 1, 0, 11, 1_050), fp)
+
+      const [snap] = buffer.drainAll()
+      expect(snap.overlaps.has('4_11')).toBe(false)
+      // The IKI histogram itself is unaffected by overlap being unknown.
+      expect(snap.bigrams.get('4_11')).toEqual([50])
+    })
+
+    it('accumulates overlap across a 3-key chord (both completed pairs)', () => {
+      const fp = fingerprint()
+      addEv(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      addEv(matrixEvent(0, 1, 0, 11, 1_010, undefined, { overlap: true }), fp)
+      addEv(matrixEvent(0, 2, 0, 7, 1_020, undefined, { overlap: true }), fp)
+
+      const [snap] = buffer.drainAll()
+      expect(snap.overlaps.get('4_11')).toEqual({ oc: 1, on: 1 })
+      expect(snap.overlaps.get('11_7')).toEqual({ oc: 1, on: 1 })
+    })
+
+    it('does not record overlap for a pair whose interval exceeds NGRAM_MAX_IKI_MS', () => {
+      const fp = fingerprint()
+      addEv(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      addEv(matrixEvent(0, 1, 0, 11, 1_000 + NGRAM_MAX_IKI_MS + 1, undefined, { overlap: true }), fp)
+
+      const [snap] = buffer.drainAll()
+      expect(snap.overlaps.size).toBe(0)
+    })
+
+    describe('same-frame ties (iki === 0)', () => {
+      it('folds overlap=true onto the tied pair without recording an IKI', () => {
+        const fp = fingerprint()
+        addEv(matrixEvent(0, 0, 0, 4, 1_000), fp)
+        // Same ts as the previous press — a genuine same-frame chord.
+        addEv(matrixEvent(0, 1, 0, 11, 1_000, undefined, { overlap: true }), fp)
+
+        const [snap] = buffer.drainAll()
+        expect(snap.overlaps.get('4_11')).toEqual({ oc: 1, on: 1 })
+        // The tie is unusable as an interval — bigrams map stays untouched.
+        expect(snap.bigrams.has('4_11')).toBe(false)
+      })
+
+      it('folds overlap=false onto the tied pair too (on without oc)', () => {
+        const fp = fingerprint()
+        addEv(matrixEvent(0, 0, 0, 4, 1_000), fp)
+        addEv(matrixEvent(0, 1, 0, 11, 1_000, undefined, { overlap: false }), fp)
+
+        const [snap] = buffer.drainAll()
+        expect(snap.overlaps.get('4_11')).toEqual({ oc: 0, on: 1 })
+        expect(snap.bigrams.has('4_11')).toBe(false)
+      })
+
+      it('does not fold anything for a tie when overlap is undefined', () => {
+        const fp = fingerprint()
+        addEv(matrixEvent(0, 0, 0, 4, 1_000), fp)
+        addEv(matrixEvent(0, 1, 0, 11, 1_000), fp)
+
+        const [snap] = buffer.drainAll()
+        expect(snap.overlaps.has('4_11')).toBe(false)
+        expect(snap.bigrams.has('4_11')).toBe(false)
+      })
+
+      it('does not advance the chain on a tie — a later event still pairs against the pre-tie key', () => {
+        const fp = fingerprint()
+        addEv(matrixEvent(0, 0, 0, 4, 1_000), fp) // k2 becomes keycode 4
+        addEv(matrixEvent(0, 1, 0, 11, 1_000, undefined, { overlap: true }), fp) // tie: folds overlap, chain unchanged
+        addEv(matrixEvent(0, 2, 0, 7, 1_050), fp) // must still pair against keycode 4, not 11
+
+        const [snap] = buffer.drainAll()
+        expect(snap.bigrams.has('4_7')).toBe(true)
+        expect(snap.bigrams.has('11_7')).toBe(false)
+      })
+    })
+  })
+
+  describe('poll-gap p50/p95', () => {
+    it('is null when no matrix event carried a pollGapMs sample', () => {
+      const fp = fingerprint()
+      addEv(matrixEvent(0, 0, 0, 4, 1_000), fp)
+
+      const [snap] = buffer.drainAll()
+      expect(snap.pollP50Ms).toBeNull()
+      expect(snap.pollP95Ms).toBeNull()
+    })
+
+    it('computes p50/p95 from the accumulated samples', () => {
+      const fp = fingerprint()
+      // Same percentile convention as the existing IKI stats: sorted
+      // index = floor((n - 1) * q). Five ordered samples make both
+      // checkpoints land on an unambiguous element.
+      const gaps = [10, 20, 30, 40, 50]
+      gaps.forEach((gap, i) => addEv(matrixEvent(0, i, 0, 4 + i, 1_000 + i * 10, undefined, { pollGapMs: gap }), fp))
+
+      const [snap] = buffer.drainAll()
+      expect(snap.pollP50Ms).toBe(30)
+      expect(snap.pollP95Ms).toBe(40)
     })
   })
 

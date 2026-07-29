@@ -104,6 +104,43 @@ export type TypingAnalyticsEventPayload =
        * and masked presses not yet classified leave this undefined; the
        * count still lands in the `count` total column. */
       action?: TypingMatrixAction
+      /** Whether the immediately preceding press-edge key (across any
+       * frame) was still physically held down when THIS press was
+       * observed — a same-frame set-membership check, not a measurement
+       * of how much the two presses overlapped in time (sub-poll-interval
+       * timing isn't available from the HID layer). `undefined` when
+       * there is no prior press to compare against, when that prior
+       * press predates an observation hole, or when this frame itself
+       * follows a hole — see `PressDurationTracker` in
+       * matrix-press-duration.ts for the full derivation. */
+      overlap?: boolean
+      /** Effective gap (ms) since the previous polled frame, attached
+       * only to the first press edge of a frame (attaching it to every
+       * simultaneous key in a chord would over-weight that one sample in
+       * any per-minute percentile). Absent when there is no previous
+       * frame yet, or when the gap exceeds the observation-hole
+       * threshold (a hole is a break in sampling, not a sample of the
+       * sampling period itself). */
+      pollGapMs?: number
+    })
+  | (TypingAnalyticsEventCommon & {
+      kind: 'matrix-release'
+      row: number
+      col: number
+      layer: number
+      keycode: number
+      /** Release timestamp. Minute attribution follows this ts, NOT the
+       * matching press's ts — a press in second 59 and its release in
+       * second 00 of the next minute land the press count and the
+       * duration sample in different per-minute buckets. Consumers must
+       * not assume the duration sample count equals the press count for
+       * any given minute. */
+      ts: number
+      /** ts - (the matching press's ts), in ms. Always > 0; a press
+       * whose duration would span an observation hole is never emitted
+       * (see matrix-press-duration.ts) rather than reported with a
+       * fabricated value. */
+      durationMs: number
     })
 
 /** Normalized analytics event carried over the IPC to the main process. */
@@ -379,10 +416,35 @@ export interface TypingBigramSlowEntry extends TypingBigramTopEntry {
  * count-ranked before any avgIki re-ranking) may be missing low-
  * frequency-but-slow pairs. Computed server-side from the full pair
  * universe rather than guessed from `entries.length` on the renderer,
- * so a period with exactly `limit` distinct pairs isn't misreported. */
+ * so a period with exactly `limit` distinct pairs isn't misreported.
+ *
+ * `observedRolloverRatio` is Σoverlap / Σcount across every pair in the
+ * selection — see aggregatePairTotals / observedRolloverRatio in
+ * bigram-aggregate.ts. A row with no overlap data (older than schema
+ * v8, or a trigram row where the columns don't exist) simply
+ * contributes 0 to both sums rather than poisoning the whole pair —
+ * unlike the sum/sumSq columns used for standard deviation, a row's
+ * own overlap counts are always self-consistent on their own, so a
+ * missing row can't hide a real partial count. Null when the resulting
+ * denominator is 0 (no pair in the selection ever had a determined
+ * overlap — e.g. the `slow`/`top` view was requested with `gram: 3`, or
+ * every contributing row predates schema v8). The `observed` prefix is
+ * deliberate and must be kept on every surface this value reaches (type
+ * name, IPC field, any future CSV/UI column): it is a SAMPLED
+ * approximation bounded by the renderer's polling cadence, not a
+ * measurement of true rollover timing — see the Typing Metrics plan's
+ * constraint on why the exact overlap duration can never be recovered
+ * from HID polling alone. It also carries a small amount of pair
+ * misattribution noise from same-frame ties (two presses landing in one
+ * polled frame): the tied key's overlap can end up counted against the
+ * NEXT pair the chain completes rather than the pair it was actually
+ * measured against, concentrated in fast chords — see
+ * MinuteBuffer.recordNgramChain and observedRolloverRatio's own doc
+ * comment for why a full fix was rejected as disproportionate to an
+ * avowedly approximate metric. */
 export type TypingBigramAggregateResult =
-  | { view: 'top'; entries: TypingBigramTopEntry[]; truncated: boolean }
-  | { view: 'slow'; entries: TypingBigramSlowEntry[]; truncated: boolean }
+  | { view: 'top'; entries: TypingBigramTopEntry[]; truncated: boolean; observedRolloverRatio?: number | null }
+  | { view: 'slow'; entries: TypingBigramSlowEntry[]; truncated: boolean; observedRolloverRatio?: number | null }
 
 /** Phase 1 metrics for the Layout Comparison. Bigram-derived ones
  * (travel distance / SFB) are added in Phase 2. */

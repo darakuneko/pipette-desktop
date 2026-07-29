@@ -69,6 +69,15 @@ export interface JsonlMatrixMinutePayload {
   count: number
   tapCount: number
   holdCount: number
+  /** 8-bucket keypress-duration histogram (see bigram-bucket.ts's
+   * duration grid), `ds` its sum (ms), `dq` its sum-of-squares — same
+   * all-or-nothing-triple convention as the n-gram `s`/`sq` pair (see
+   * {@link JsonlBigramMinuteEntry}). Absent when this cell had no
+   * `matrix-release` samples this minute (including every row written
+   * before schema v8). */
+  dh?: number[]
+  ds?: number
+  dq?: number
   appName?: AppNameField
   typingTest?: TypingTestField
   runId?: RunIdField
@@ -85,6 +94,12 @@ export interface JsonlMinuteStatsPayload {
   intervalP50Ms: number | null
   intervalP75Ms: number | null
   intervalMaxMs: number | null
+  /** Median / p95 sampling gap (ms) between polled matrix frames this
+   * minute (see matrix-press-duration.ts's pollGapMs). Absent when no
+   * frame this minute contributed a sample (e.g. every frame followed an
+   * observation hole, or the minute had at most one press). */
+  pollP50Ms?: number | null
+  pollP95Ms?: number | null
   appName?: AppNameField
   typingTest?: TypingTestField
   runId?: RunIdField
@@ -105,12 +120,25 @@ export interface JsonlSessionPayload {
  * bucket-midpoint approximation. Optional and always a pair: rows
  * written before this field existed (or merged from an older peer)
  * omit both, and SD then reads as null rather than an approximation —
- * see isBigramMinuteEntry / isNgramMinuteEntry. */
+ * see isBigramMinuteEntry / isNgramMinuteEntry.
+ *
+ * `oc` / `on` are the physical-overlap accumulators for this pair (see
+ * OverlapCounts in minute-buffer.ts) — populated for BIGRAM entries only.
+ * Structurally available on {@link JsonlTrigramMinuteEntry} too (it's a
+ * straight alias of this type), but the recorder never sets them for
+ * trigrams: overlap is defined as "does the previous PRESS overlap the
+ * new one", a pairwise notion that doesn't extend to a 3-key chain
+ * without inventing a new definition. Absent for every row written
+ * before schema v8, and for a bigram row whose contributing event(s)
+ * never had a determined overlap (see {@link OverlapCounts}'s own doc
+ * comment on why "unknown" must not collapse into "no overlap"). */
 export interface JsonlBigramMinuteEntry {
   c: number
   h: number[]
   s?: number
   sq?: number
+  oc?: number
+  on?: number
 }
 
 export interface JsonlBigramMinutePayload {
@@ -293,6 +321,21 @@ function isCharMinutePayload(p: Record<string, unknown>): boolean {
   )
 }
 
+/** `dh`/`ds`/`dq` are optional but must appear as a complete triple: all
+ * absent is a pre-v8 row (valid), all present must be well-formed, and
+ * any partial combination is malformed (rejected) — same all-or-nothing
+ * discipline as {@link hasValidSumPair}. `dh` uses the same 8-bucket
+ * shape contract as a bigram/trigram `h` (see {@link isHistBuckets}) —
+ * the duration grid just has different bucket boundaries, not a
+ * different wire shape. */
+function isValidDurationTriple(p: Record<string, unknown>): boolean {
+  const gate = allOrNone(p, ['dh', 'ds', 'dq'])
+  if (gate === false) return false
+  if (gate === 'absent') return true
+  return isHistBuckets(p.dh) && typeof p.ds === 'number' && Number.isFinite(p.ds) &&
+    typeof p.dq === 'number' && Number.isFinite(p.dq)
+}
+
 function isMatrixMinutePayload(p: Record<string, unknown>): boolean {
   return (
     hasStringField(p, 'scopeId') &&
@@ -304,6 +347,7 @@ function isMatrixMinutePayload(p: Record<string, unknown>): boolean {
     hasNumberField(p, 'count') &&
     hasNumberField(p, 'tapCount') &&
     hasNumberField(p, 'holdCount') &&
+    isValidDurationTriple(p) &&
     isOptionalAppName(p) &&
     isOptionalTypingTest(p) &&
     isOptionalRunId(p)
@@ -313,6 +357,21 @@ function isMatrixMinutePayload(p: Record<string, unknown>): boolean {
 function isNumericOrNull(p: Record<string, unknown>, key: string): boolean {
   const value = p[key]
   return value === null || (typeof value === 'number' && Number.isFinite(value))
+}
+
+/** All-or-nothing presence gate shared by every optional field pair/triple
+ * validator below (`s`/`sq`, `dh`/`ds`/`dq`, `pollP50Ms`/`pollP95Ms`,
+ * `oc`/`on`): these always travel together on the wire, so a caller only
+ * needs to check each field's own value once it knows they're all
+ * present. Returns `'absent'` when none of `keys` are on `o` (a legacy
+ * row — valid as-is), `'present'` when every key is there (go on to
+ * validate values), or `false` for any partial combination (a malformed
+ * write — rejected). */
+function allOrNone(o: Record<string, unknown>, keys: readonly string[]): 'absent' | 'present' | false {
+  const presentCount = keys.filter((k) => k in o).length
+  if (presentCount === 0) return 'absent'
+  if (presentCount === keys.length) return 'present'
+  return false
 }
 
 /** appName is optional on the wire (master files written before the
@@ -341,6 +400,16 @@ function isOptionalRunId(p: Record<string, unknown>): boolean {
   return typeof p.runId === 'string'
 }
 
+/** `pollP50Ms`/`pollP95Ms` are optional but must appear as a pair — same
+ * all-or-nothing discipline as {@link hasValidSumPair}. Each present
+ * value may itself be null (no sample that minute) or a finite number. */
+function isValidPollStatsPair(p: Record<string, unknown>): boolean {
+  const gate = allOrNone(p, ['pollP50Ms', 'pollP95Ms'])
+  if (gate === false) return false
+  if (gate === 'absent') return true
+  return isNumericOrNull(p, 'pollP50Ms') && isNumericOrNull(p, 'pollP95Ms')
+}
+
 function isMinuteStatsPayload(p: Record<string, unknown>): boolean {
   return (
     hasStringField(p, 'scopeId') &&
@@ -353,6 +422,7 @@ function isMinuteStatsPayload(p: Record<string, unknown>): boolean {
     isNumericOrNull(p, 'intervalP50Ms') &&
     isNumericOrNull(p, 'intervalP75Ms') &&
     isNumericOrNull(p, 'intervalMaxMs') &&
+    isValidPollStatsPair(p) &&
     isOptionalAppName(p) &&
     isOptionalTypingTest(p) &&
     isOptionalRunId(p)
@@ -368,7 +438,12 @@ function isSessionPayload(p: Record<string, unknown>): boolean {
   )
 }
 
-function isBigramHist(value: unknown): boolean {
+/** Exactly BIGRAM_HIST_BUCKETS finite numbers. Grid-neutral name — this
+ * shape contract is shared by the bigram/trigram IKI histogram (`h`) and
+ * the matrix-release duration histogram (`dh`, see
+ * {@link isValidDurationTriple}); only the bucket boundaries differ
+ * between the two grids, not the wire shape this validates. */
+function isHistBuckets(value: unknown): boolean {
   if (!Array.isArray(value) || value.length !== BIGRAM_HIST_BUCKETS) return false
   for (const n of value) {
     if (typeof n !== 'number' || !Number.isFinite(n)) return false
@@ -382,19 +457,37 @@ function isBigramHist(value: unknown): boolean {
  * a complete sum pair yields a real SD" invariant enforceable straight
  * off the wire. */
 function hasValidSumPair(o: Record<string, unknown>): boolean {
-  const hasS = 's' in o
-  const hasSq = 'sq' in o
-  if (!hasS && !hasSq) return true
-  if (!hasS || !hasSq) return false
+  const gate = allOrNone(o, ['s', 'sq'])
+  if (gate === false) return false
+  if (gate === 'absent') return true
   return typeof o.s === 'number' && Number.isFinite(o.s) && typeof o.sq === 'number' && Number.isFinite(o.sq)
 }
 
+/** `oc` / `on` are optional but must appear as a pair (same discipline as
+ * {@link hasValidSumPair}), both non-negative finite integers, with
+ * `oc <= on` — `oc` counts a SUBSET of what `on` counts (see
+ * OverlapCounts in minute-buffer.ts), so `oc > on` can only be
+ * corruption. Structurally checked on every n-gram entry (bigram AND
+ * trigram — see {@link isNgramMinuteEntry}) even though the recorder
+ * only ever populates it for bigrams; a trigram row happening to carry
+ * it is accepted the same way an unexpected-but-well-formed field
+ * always is elsewhere in this parser. */
+function hasValidOverlapPair(o: Record<string, unknown>): boolean {
+  const gate = allOrNone(o, ['oc', 'on'])
+  if (gate === false) return false
+  if (gate === 'absent') return true
+  if (typeof o.oc !== 'number' || !Number.isInteger(o.oc) || o.oc < 0) return false
+  if (typeof o.on !== 'number' || !Number.isInteger(o.on) || o.on < 0) return false
+  return o.oc <= o.on
+}
+
 /** Shared validator for bigram and trigram minute entries — both use
- * the identical `{c, h, s?, sq?}` shape (see JsonlTrigramMinuteEntry). */
+ * the identical `{c, h, s?, sq?, oc?, on?}` shape (see JsonlTrigramMinuteEntry). */
 function isNgramMinuteEntry(value: unknown): boolean {
   if (typeof value !== 'object' || value === null) return false
   const o = value as Record<string, unknown>
-  return typeof o.c === 'number' && Number.isFinite(o.c) && isBigramHist(o.h) && hasValidSumPair(o)
+  return typeof o.c === 'number' && Number.isFinite(o.c) && isHistBuckets(o.h) &&
+    hasValidSumPair(o) && hasValidOverlapPair(o)
 }
 
 /** Shared validator for bigram-minute / trigram-minute payloads — same

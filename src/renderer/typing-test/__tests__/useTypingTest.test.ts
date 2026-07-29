@@ -30,11 +30,24 @@ function pressKeys(keys: string[]): Set<string> {
  *  real caller (useInputModes) layers on top, so prepare here always
  *  authorizes (opaque token `true`) and emit forwards the bare payload —
  *  reproducing the single-argument `sink(payload)` shape these tests were
- *  written against. */
-function analyticsOptions(sink: (payload: TypingAnalyticsEventPayload) => void) {
+ *  written against.
+ *
+ *  `kind: 'matrix-release'` events are filtered out by default: every
+ *  pre-existing test in this file was written against a world where a
+ *  release edge never produced its own event, and pinning that behavior
+ *  means those assertions (call counts especially) must keep seeing
+ *  exactly what they saw before. Tests that specifically cover the new
+ *  duration/release emit opt in via `includeReleases: true`. */
+function analyticsOptions(
+  sink: (payload: TypingAnalyticsEventPayload) => void,
+  options?: { includeReleases?: boolean },
+) {
   return {
     onPrepareAnalyticsEvent: () => true,
-    onEmitAnalyticsEvent: (_prepared: unknown, event: TypingAnalyticsEventPayload) => sink(event),
+    onEmitAnalyticsEvent: (_prepared: unknown, event: TypingAnalyticsEventPayload) => {
+      if (event.kind === 'matrix-release' && !options?.includeReleases) return
+      sink(event)
+    },
   }
 }
 
@@ -1446,6 +1459,88 @@ describe('useTypingTest windowFocused', () => {
         const kcA = calls.find((c) => c.row === 1 && c.col === 1)
         expect(mo1?.layer).toBe(0)
         expect(kcA?.layer).toBe(1)
+      })
+    })
+
+    // Tracker-level semantics (overlap true/false/undefined, chords, holes,
+    // pollGapMs first-edge-only, pre-hole discard) are covered exhaustively
+    // in matrix-press-duration.test.ts. These hook-level tests stick to
+    // wiring: that the hook actually calls into the tracker and forwards
+    // its output onto the right events, not re-deriving the tracker's own
+    // branch logic.
+    describe('press duration + overlap + observation holes (hook wiring)', () => {
+      it('emits a matrix-release event on release, with the release ts and elapsed duration', () => {
+        const sink = vi.fn()
+        const keymap = buildMultiLayerKeymap([{ layer: 0, entries: [[0, 0, 'KC_A']] }])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink, { includeReleases: true })))
+
+        const pressAt = new Date('2026-04-18T10:00:00.000Z')
+        vi.setSystemTime(pressAt)
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+
+        vi.setSystemTime(new Date(pressAt.getTime() + 120))
+        act(() => result.current.processMatrixFrame(new Set(), keymap))
+
+        expect(sink).toHaveBeenCalledTimes(2)
+        expect(sink).toHaveBeenNthCalledWith(1, expect.objectContaining({ kind: 'matrix', row: 0, col: 0 }))
+        expect(sink).toHaveBeenNthCalledWith(2, expect.objectContaining({
+          kind: 'matrix-release', row: 0, col: 0, layer: 0, durationMs: 120,
+        }))
+      })
+
+      it('does not emit a release for a masked key (duration tracking is independent of the tap/hold queue)', () => {
+        const sink = vi.fn()
+        const keymap = buildMultiLayerKeymap([{ layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)']] }])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { ...analyticsOptions(sink, { includeReleases: true }), tappingTermMs: 200 }))
+
+        const pressAt = new Date('2026-04-18T10:00:00.000Z')
+        vi.setSystemTime(pressAt)
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+
+        vi.setSystemTime(new Date(pressAt.getTime() + 80))
+        act(() => result.current.processMatrixFrame(new Set(), keymap))
+
+        // The tap classification AND the release-duration event both land.
+        expect(sink).toHaveBeenCalledTimes(2)
+        expect(sink).toHaveBeenCalledWith(expect.objectContaining({ kind: 'matrix', action: 'tap' }))
+        expect(sink).toHaveBeenCalledWith(expect.objectContaining({ kind: 'matrix-release', durationMs: 80 }))
+      })
+
+      it('resetMatrixPressTracking discards an unresolved press instead of synthesizing a release', () => {
+        const sink = vi.fn()
+        const keymap = buildMultiLayerKeymap([{ layer: 0, entries: [[0, 0, 'KC_A']] }])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink, { includeReleases: true })))
+
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+        expect(sink).toHaveBeenCalledTimes(1)
+
+        act(() => { void result.current.resetMatrixPressTracking() })
+        vi.advanceTimersByTime(500)
+
+        // No release ever ships for the discarded press, even once the
+        // physical release eventually arrives — the tracker forgot it.
+        act(() => result.current.processMatrixFrame(new Set(), keymap))
+        expect(sink).toHaveBeenCalledTimes(1)
+      })
+
+      it('forwards overlap and pollGapMs from the tracker onto the emitted matrix event', () => {
+        const sink = vi.fn()
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'KC_A'], [0, 1, 'KC_B']] },
+        ])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink)))
+
+        const start = new Date('2026-04-18T10:00:00.000Z')
+        vi.setSystemTime(start)
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+        vi.setSystemTime(new Date(start.getTime() + 20))
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0', '0,1']), keymap))
+
+        expect(sink).toHaveBeenCalledTimes(2)
+        const second = sink.mock.calls[1][0] as { overlap?: boolean; pollGapMs?: number }
+        expect(second.overlap).toBe(true)
+        expect(second.pollGapMs).toBe(20)
       })
     })
   })

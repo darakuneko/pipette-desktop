@@ -64,7 +64,14 @@ export const RETENTION_MS = 5 * MINUTE_MS
  * and `holdCount` break that down for LT/MT presses, classified by
  * release edge or by the renderer's deferred-emit deadline, whichever
  * comes first; non-tap-hold presses leave both at zero and the consumer
- * treats `count` as the fallback intensity. */
+ * treats `count` as the fallback intensity. `durations` are raw keypress
+ * durations (ms) from `matrix-release` events landing in this minute —
+ * bucketized into a histogram at flush time (see bigram-bucket.ts's
+ * duration grid). Its length can differ from `count` for the same
+ * minute: a release's ts drives its OWN minute attribution, independent
+ * of which minute the matching press landed in (see the `matrix-release`
+ * event type's doc comment) — a press near a minute boundary is a
+ * routine way for this to happen, not a bug. */
 export interface MatrixCellCounts {
   row: number
   col: number
@@ -73,6 +80,20 @@ export interface MatrixCellCounts {
   count: number
   tapCount: number
   holdCount: number
+  durations: number[]
+}
+
+/** Per-pair physical-overlap accumulator. `on` counts pairs whose
+ * incoming press had a KNOWN overlap determination (true or false); `oc`
+ * is the subset of those where it was true. Pairs recorded while overlap
+ * was undefined (no reference press, a hole, or a reference press that
+ * predates a hole — see matrix-press-duration.ts) contribute to neither
+ * field, so `oc / on` is a ratio over only the pairs we could actually
+ * observe — never over the full pair population, which would silently
+ * treat "unknown" as "no overlap". */
+export interface OverlapCounts {
+  oc: number
+  on: number
 }
 
 export interface MinuteSnapshot {
@@ -102,6 +123,17 @@ export interface MinuteSnapshot {
    * semantics as bigrams so the existing histogram bucketing applies
    * unchanged. */
   trigrams: Map<string, number[]>
+  /** Per-bigram physical-overlap accumulators — see {@link OverlapCounts}.
+   * Keyed identically to `bigrams` (`${prevKeycode}_${currKeycode}`). */
+  overlaps: Map<string, OverlapCounts>
+  /** Median sampling gap (ms) between polled frames this minute, from
+   * `matrix` events' `pollGapMs` — null when no sample was recorded
+   * (e.g. every frame this minute followed an observation hole, or the
+   * minute had at most one press). */
+  pollP50Ms: number | null
+  /** 95th-percentile sampling gap (ms) — same source and null semantics
+   * as {@link pollP50Ms}. */
+  pollP95Ms: number | null
   /** Active application name observed during this minute, or null when:
    *  - Monitor App is disabled
    *  - the minute observed multiple distinct apps (mixed → null)
@@ -134,6 +166,12 @@ interface Entry {
   intervals: number[]
   bigrams: Map<string, number[]>
   trigrams: Map<string, number[]>
+  /** See {@link MinuteSnapshot.overlaps}. */
+  overlaps: Map<string, OverlapCounts>
+  /** Raw sampling gaps (ms) from this minute's `matrix` events —
+   * bucketed into p50/p95 on {@link finalize}. See
+   * {@link MinuteSnapshot.pollP50Ms}. */
+  pollGaps: number[]
   keystrokes: number
   firstEventMs: number
   lastEventMs: number
@@ -200,6 +238,10 @@ function finalize(entry: Entry): MinuteSnapshot {
   if (entry.typingTestSet.size === 1) {
     typingTest = entry.typingTestSet.values().next().value ?? null
   }
+  // Same in-place-sort trade-off as `entry.intervals` above — the array
+  // is retained, so a later straggler's poll gap gets folded in and this
+  // just re-sorts a mostly-sorted array on the next finalize.
+  const sortedGaps = entry.pollGaps.sort((a, b) => a - b)
   return {
     scopeId: entry.scopeId,
     fingerprint: entry.fingerprint,
@@ -216,6 +258,9 @@ function finalize(entry: Entry): MinuteSnapshot {
     matrixCounts: entry.matrixCounts,
     bigrams: entry.bigrams,
     trigrams: entry.trigrams,
+    overlaps: entry.overlaps,
+    pollP50Ms: percentile(sortedGaps, 0.5),
+    pollP95Ms: percentile(sortedGaps, 0.95),
     appName,
     typingTest,
     runId: entry.runId,
@@ -259,6 +304,29 @@ export class MinuteBuffer {
     return minuteTs + MINUTE_MS + windowMs <= nowMs
   }
 
+  /** Fetch a cell's mutable counters, creating a zeroed one (seeded with
+   * `keycode`) if this is the first event ever recorded for it this
+   * minute. Shared by both the press path (which counts/tap/hold onto
+   * it, refreshing `keycode` itself) and the matrix-release path (which
+   * only pushes a duration sample) so neither has to hand-write the
+   * 8-field object literal — a cell created by one path is filled in by
+   * the other exactly the same way a same-path repeat would. */
+  private getOrCreateCell(
+    entry: Entry,
+    key: string,
+    row: number,
+    col: number,
+    layer: number,
+    keycode: number,
+  ): MatrixCellCounts {
+    let cell = entry.matrixCounts.get(key)
+    if (!cell) {
+      cell = { row, col, layer, keycode, count: 0, tapCount: 0, holdCount: 0, durations: [] }
+      entry.matrixCounts.set(key, cell)
+    }
+    return cell
+  }
+
   /** `nowMs` is a real wall-clock timestamp (the service passes
    * `Date.now()`), used only to decide whether an event targeting a
    * minute with no live entry is a genuine new minute or an ultra-late
@@ -293,6 +361,8 @@ export class MinuteBuffer {
         intervals: [],
         bigrams: new Map(),
         trigrams: new Map(),
+        overlaps: new Map(),
+        pollGaps: [],
         keystrokes: 0,
         firstEventMs: event.ts,
         lastEventMs: event.ts,
@@ -309,6 +379,24 @@ export class MinuteBuffer {
     }
 
     if (event.typingTest) entry.typingTestSet.add(event.typingTest)
+
+    if (event.kind === 'matrix-release') {
+      // Duration-only path: a release's ts drives ITS OWN minute
+      // attribution (see the event type's doc comment), independent of
+      // whichever minute the matching press landed in — so this must
+      // touch only the per-cell duration accumulator. Folding it into
+      // keystrokes/intervals/activeMs/lastEventMs/firstEventMs would
+      // double-count a press already tallied by its own `matrix` event
+      // (possibly in a different minute entirely), and folding it into
+      // the n-gram chain would fabricate a pair the user never typed.
+      // The entry is still marked dirty (via the 'retained' → 'reopened'
+      // transition above) and still respects the retention/ultra-late-drop
+      // guard above, exactly like every other event kind.
+      const mKey = `${event.row},${event.col},${event.layer}`
+      const cell = this.getOrCreateCell(entry, mKey, event.row, event.col, event.layer, event.keycode)
+      cell.durations.push(event.durationMs)
+      return
+    }
 
     if (entry.keystrokes > 0) {
       const gap = event.ts - entry.lastEventMs
@@ -330,18 +418,17 @@ export class MinuteBuffer {
       entry.charCounts.set(event.key, (entry.charCounts.get(event.key) ?? 0) + 1)
     } else {
       const mKey = `${event.row},${event.col},${event.layer}`
-      const existing = entry.matrixCounts.get(mKey)
-      const tapDelta = event.action === 'tap' ? 1 : 0
-      const holdDelta = event.action === 'hold' ? 1 : 0
-      entry.matrixCounts.set(mKey, {
-        row: event.row,
-        col: event.col,
-        layer: event.layer,
-        keycode: event.keycode,
-        count: (existing?.count ?? 0) + 1,
-        tapCount: (existing?.tapCount ?? 0) + tapDelta,
-        holdCount: (existing?.holdCount ?? 0) + holdDelta,
-      })
+      const cell = this.getOrCreateCell(entry, mKey, event.row, event.col, event.layer, event.keycode)
+      // Always refresh the keycode from a press — unlike a release (which
+      // only seeds it when first creating the cell), a press is the
+      // authoritative source for "what's currently mapped here" and must
+      // reflect a keymap change made mid-session.
+      cell.keycode = event.keycode
+      cell.count += 1
+      if (event.action === 'tap') cell.tapCount += 1
+      if (event.action === 'hold') cell.holdCount += 1
+
+      if (event.pollGapMs !== undefined) entry.pollGaps.push(event.pollGapMs)
 
       if (event.action === 'hold') {
         // A hold is the user reaching for a layer or modifier, not a
@@ -357,7 +444,7 @@ export class MinuteBuffer {
         // nothing to pair against yet.
         this.resetBigramChain()
       } else {
-        this.recordNgramChain(entry, `${scopeId}|${runId}`, event.keycode, event.ts)
+        this.recordNgramChain(entry, `${scopeId}|${runId}`, event.keycode, event.ts, event.overlap)
       }
     }
   }
@@ -384,8 +471,28 @@ export class MinuteBuffer {
    *
    * `chainKey` scopes the chain to one `${scopeId}|${runId}` stream: an
    * event from a different keyboard or test run restarts the chain from
-   * itself instead of pairing against the other stream's keys. */
-  private recordNgramChain(entry: Entry, chainKey: string, currKeycode: number, ts: number): void {
+   * itself instead of pairing against the other stream's keys.
+   *
+   * `overlap` is the INCOMING event's own overlap determination (from its
+   * `matrix` payload, see the shared event type) — when it is not
+   * `undefined` and this call completes an eligible bigram, it folds into
+   * that pair's {@link OverlapCounts} (`on` always, `oc` only when the
+   * overlap was true). An undefined overlap means the renderer couldn't
+   * determine it (no reference press, or a hole — see
+   * matrix-press-duration.ts) and must not silently count as "no
+   * overlap", so it contributes to neither field — see
+   * {@link OverlapCounts}'s own doc comment.
+   *
+   * A same-frame tie (`iki === 0`) still folds `overlap` into the tied
+   * pair even though the chain doesn't advance and no IKI is recorded:
+   * two presses landing in the very same polled frame is the single
+   * strongest physical-overlap evidence this tracker ever sees — overlap
+   * is guaranteed determined there (see matrix-press-duration.ts's
+   * overlapFor), so discarding it alongside the (genuinely unusable) IKI
+   * would throw away the clearest signal to avoid throwing away the
+   * noisiest one. This does introduce a small, documented attribution
+   * bias — see observedRolloverRatio in bigram-aggregate.ts. */
+  private recordNgramChain(entry: Entry, chainKey: string, currKeycode: number, ts: number, overlap: boolean | undefined): void {
     if (this.k2Ts === null || this.chainKey !== chainKey) {
       // First matrix event this chain has seen, or the event belongs to
       // a different scope/run than the current chain — nothing valid to
@@ -399,7 +506,12 @@ export class MinuteBuffer {
     }
     const iki = ts - this.k2Ts
     if (iki <= 0) {
-      // Tie / out-of-order: discard this event, chain unchanged.
+      // Tie / out-of-order: discard the IKI contribution and don't
+      // advance the chain — but still fold overlap into the tied pair
+      // (see this method's doc comment). The overlaps map is
+      // independent of the bigrams IKI array, so this doesn't touch
+      // anything the "no IKI recorded" guarantee depends on.
+      this.foldOverlap(entry, `${this.k2Keycode}_${currKeycode}`, overlap)
       return
     }
     const eligible = iki <= NGRAM_MAX_IKI_MS
@@ -411,6 +523,7 @@ export class MinuteBuffer {
         entry.bigrams.set(pairKey, ikis)
       }
       ikis.push(iki)
+      this.foldOverlap(entry, pairKey, overlap)
       if (this.k1Keycode !== null && this.prevIki !== null) {
         const tripleKey = `${this.k1Keycode}_${this.k2Keycode}_${currKeycode}`
         let ikis3 = entry.trigrams.get(tripleKey)
@@ -425,6 +538,24 @@ export class MinuteBuffer {
     this.prevIki = eligible ? iki : null
     this.k2Keycode = currKeycode
     this.k2Ts = ts
+  }
+
+  /** Fold one event's overlap determination into a pair's
+   * {@link OverlapCounts}, creating the accumulator on first use. No-op
+   * when `overlap` is undefined (renderer couldn't determine it) — see
+   * {@link recordNgramChain}'s doc comment on why that must not silently
+   * count as "no overlap". Shared by both the eligible-bigram path and
+   * the same-frame-tie path in `recordNgramChain`, since a tie folds
+   * overlap without touching the bigrams IKI array. */
+  private foldOverlap(entry: Entry, pairKey: string, overlap: boolean | undefined): void {
+    if (overlap === undefined) return
+    let ov = entry.overlaps.get(pairKey)
+    if (!ov) {
+      ov = { oc: 0, on: 0 }
+      entry.overlaps.set(pairKey, ov)
+    }
+    ov.on += 1
+    if (overlap) ov.oc += 1
   }
 
   /** Tag every currently-open buffer entry with an observed application

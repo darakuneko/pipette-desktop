@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import Database from 'better-sqlite3'
+import type { Database as DatabaseType } from 'better-sqlite3'
 import { TypingAnalyticsDB, type TypingScopeRow } from '../typing-analytics-db'
 import { SCHEMA_VERSION } from '../schema'
 
@@ -24,6 +25,90 @@ function sampleScope(overrides: Partial<TypingScopeRow> = {}): TypingScopeRow {
     updatedAt: 1_000,
     ...overrides,
   }
+}
+
+/** Whether `table` has a column named `name`, per SQLite's own
+ * PRAGMA — replaces the repeated `cols.some((c) => c.name === ...)`
+ * pattern used across the migration tests below. */
+function hasColumn(conn: DatabaseType, table: string, name: string): boolean {
+  const cols = conn.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]
+  return cols.some((c) => c.name === name)
+}
+
+/** Creates the pre-v8 shape of the four data tables a real v6 or v7 DB
+ * always has (typing_scopes / typing_matrix_minute / typing_minute_stats
+ * / typing_bigram_minute), shared by the v6->v7 and v7->v8 migration
+ * fixtures below — the two only differ in whether typing_bigram_minute
+ * already has the v7 sum columns and whether typing_trigram_minute (added
+ * in v7) exists yet. Does NOT insert `typing_analytics_meta` rows or any
+ * data rows — callers append those in their own `db.exec` call so each
+ * fixture's actual test data stays visible at its own call site. */
+function createLegacyTables(db: DatabaseType, options: { bigramSums: boolean; trigram: boolean }): void {
+  db.exec(`
+    CREATE TABLE typing_analytics_meta (
+      key TEXT PRIMARY KEY, value TEXT NOT NULL
+    );
+    CREATE TABLE typing_scopes (
+      id TEXT PRIMARY KEY,
+      machine_hash TEXT NOT NULL, os_platform TEXT NOT NULL,
+      os_release TEXT NOT NULL, os_arch TEXT NOT NULL,
+      keyboard_uid TEXT NOT NULL,
+      keyboard_vendor_id INTEGER NOT NULL,
+      keyboard_product_id INTEGER NOT NULL,
+      keyboard_product_name TEXT NOT NULL,
+      updated_at INTEGER NOT NULL,
+      is_deleted INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE typing_matrix_minute (
+      scope_id TEXT NOT NULL, minute_ts INTEGER NOT NULL,
+      row INTEGER NOT NULL, col INTEGER NOT NULL,
+      layer INTEGER NOT NULL, keycode INTEGER NOT NULL,
+      count INTEGER NOT NULL,
+      tap_count INTEGER NOT NULL DEFAULT 0,
+      hold_count INTEGER NOT NULL DEFAULT 0,
+      app_name TEXT, typing_test TEXT,
+      run_id TEXT NOT NULL DEFAULT '',
+      updated_at INTEGER NOT NULL,
+      is_deleted INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (scope_id, minute_ts, run_id, row, col, layer)
+    );
+    CREATE TABLE typing_minute_stats (
+      scope_id TEXT NOT NULL, minute_ts INTEGER NOT NULL,
+      keystrokes INTEGER NOT NULL, active_ms INTEGER NOT NULL,
+      interval_avg_ms INTEGER, interval_min_ms INTEGER,
+      interval_p25_ms INTEGER, interval_p50_ms INTEGER,
+      interval_p75_ms INTEGER, interval_max_ms INTEGER,
+      app_name TEXT, typing_test TEXT,
+      run_id TEXT NOT NULL DEFAULT '',
+      updated_at INTEGER NOT NULL,
+      is_deleted INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (scope_id, minute_ts, run_id)
+    );
+    CREATE TABLE typing_bigram_minute (
+      scope_id TEXT NOT NULL, minute_ts INTEGER NOT NULL,
+      bigram_id TEXT NOT NULL, count INTEGER NOT NULL,
+      hist BLOB NOT NULL,
+      ${options.bigramSums ? 'sum_iki REAL, sumsq_iki REAL,' : ''}
+      app_name TEXT, typing_test TEXT,
+      run_id TEXT NOT NULL DEFAULT '',
+      updated_at INTEGER NOT NULL,
+      is_deleted INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (scope_id, minute_ts, run_id, bigram_id)
+    );
+    ${options.trigram ? `
+    CREATE TABLE typing_trigram_minute (
+      scope_id TEXT NOT NULL, minute_ts INTEGER NOT NULL,
+      trigram_id TEXT NOT NULL, count INTEGER NOT NULL,
+      hist BLOB NOT NULL,
+      sum_iki REAL, sumsq_iki REAL,
+      app_name TEXT, typing_test TEXT,
+      run_id TEXT NOT NULL DEFAULT '',
+      updated_at INTEGER NOT NULL,
+      is_deleted INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (scope_id, minute_ts, run_id, trigram_id)
+    );
+    ` : ''}
+  `)
 }
 
 describe('TypingAnalyticsDB', () => {
@@ -129,8 +214,7 @@ describe('TypingAnalyticsDB', () => {
       'typing_minute_stats',
       'typing_bigram_minute',
     ]) {
-      const cols = conn.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]
-      expect(cols.some((c) => c.name === 'app_name')).toBe(true)
+      expect(hasColumn(conn, table, 'app_name')).toBe(true)
     }
   })
 
@@ -140,32 +224,15 @@ describe('TypingAnalyticsDB', () => {
     tmpDir = mkdtempSync(join(tmpdir(), 'pipette-typing-analytics-db-upgrade67-'))
     const dbPath = join(tmpDir, 'typing-analytics.db')
 
+    // A real v6 DB has no sum_iki/sumsq_iki on typing_bigram_minute and no
+    // typing_trigram_minute yet (both arrived in v7) — but already has
+    // typing_matrix_minute/typing_minute_stats in their pre-v8 shape, so
+    // the v7 -> v8 step later in this same open (this fixture jumps
+    // straight from v6 to the current SCHEMA_VERSION) has something to
+    // ALTER on all three tables.
     const v6 = new Database(dbPath)
+    createLegacyTables(v6, { bigramSums: false, trigram: false })
     v6.exec(`
-      CREATE TABLE typing_analytics_meta (
-        key TEXT PRIMARY KEY, value TEXT NOT NULL
-      );
-      CREATE TABLE typing_scopes (
-        id TEXT PRIMARY KEY,
-        machine_hash TEXT NOT NULL, os_platform TEXT NOT NULL,
-        os_release TEXT NOT NULL, os_arch TEXT NOT NULL,
-        keyboard_uid TEXT NOT NULL,
-        keyboard_vendor_id INTEGER NOT NULL,
-        keyboard_product_id INTEGER NOT NULL,
-        keyboard_product_name TEXT NOT NULL,
-        updated_at INTEGER NOT NULL,
-        is_deleted INTEGER NOT NULL DEFAULT 0
-      );
-      CREATE TABLE typing_bigram_minute (
-        scope_id TEXT NOT NULL, minute_ts INTEGER NOT NULL,
-        bigram_id TEXT NOT NULL, count INTEGER NOT NULL,
-        hist BLOB NOT NULL,
-        app_name TEXT, typing_test TEXT,
-        run_id TEXT NOT NULL DEFAULT '',
-        updated_at INTEGER NOT NULL,
-        is_deleted INTEGER NOT NULL DEFAULT 0,
-        PRIMARY KEY (scope_id, minute_ts, run_id, bigram_id)
-      );
       INSERT INTO typing_scopes (
         id, machine_hash, os_platform, os_release, os_arch,
         keyboard_uid, keyboard_vendor_id, keyboard_product_id, keyboard_product_name,
@@ -188,9 +255,8 @@ describe('TypingAnalyticsDB', () => {
     expect(db.cacheNeedsRebuild).toBe(false)
 
     const conn = db.getConnection()
-    const bigramCols = conn.prepare('PRAGMA table_info(typing_bigram_minute)').all() as { name: string }[]
-    expect(bigramCols.some((c) => c.name === 'sum_iki')).toBe(true)
-    expect(bigramCols.some((c) => c.name === 'sumsq_iki')).toBe(true)
+    expect(hasColumn(conn, 'typing_bigram_minute', 'sum_iki')).toBe(true)
+    expect(hasColumn(conn, 'typing_bigram_minute', 'sumsq_iki')).toBe(true)
 
     // Existing count/hist row survives the migration untouched, with the
     // new sum columns reading as NULL (no source data to backfill from).
@@ -205,6 +271,115 @@ describe('TypingAnalyticsDB', () => {
 
     const trigramTable = conn.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'typing_trigram_minute'`).get()
     expect(trigramTable).toBeDefined()
+
+    // The v7 -> v8 step (schema v8: duration/overlap/poll-gap columns)
+    // also fires in the same open, since this fixture jumps straight
+    // from v6 to the current SCHEMA_VERSION.
+    expect(hasColumn(conn, 'typing_matrix_minute', 'dur_hist')).toBe(true)
+    expect(hasColumn(conn, 'typing_matrix_minute', 'dur_sum')).toBe(true)
+    expect(hasColumn(conn, 'typing_matrix_minute', 'dur_sumsq')).toBe(true)
+    expect(hasColumn(conn, 'typing_bigram_minute', 'overlap_count')).toBe(true)
+    expect(hasColumn(conn, 'typing_bigram_minute', 'overlap_n')).toBe(true)
+    expect(hasColumn(conn, 'typing_minute_stats', 'poll_p50_ms')).toBe(true)
+    expect(hasColumn(conn, 'typing_minute_stats', 'poll_p95_ms')).toBe(true)
+  })
+
+  it('upgrades a v7 DB to v8: adds duration/overlap/poll-gap columns without a cache rebuild', () => {
+    db.close()
+    rmSync(tmpDir, { recursive: true, force: true })
+    tmpDir = mkdtempSync(join(tmpdir(), 'pipette-typing-analytics-db-upgrade78-'))
+    const dbPath = join(tmpDir, 'typing-analytics.db')
+
+    // A real v7 DB already has typing_bigram_minute's sum columns and the
+    // typing_trigram_minute table (both arrived in v7) — only the v8
+    // duration/overlap/poll-gap columns are missing.
+    const v7 = new Database(dbPath)
+    createLegacyTables(v7, { bigramSums: true, trigram: true })
+    v7.exec(`
+      INSERT INTO typing_scopes (
+        id, machine_hash, os_platform, os_release, os_arch,
+        keyboard_uid, keyboard_vendor_id, keyboard_product_id, keyboard_product_name,
+        updated_at, is_deleted
+      ) VALUES (
+        'scope-1', 'hash-abc', 'linux', '6.8.0', 'x64',
+        '0xAABB', 65261, 0, 'Pipette', 1000, 0
+      );
+      INSERT INTO typing_matrix_minute (
+        scope_id, minute_ts, row, col, layer, keycode, count, tap_count, hold_count, run_id, updated_at, is_deleted
+      ) VALUES (
+        'scope-1', 60000, 0, 0, 0, 4, 5, 2, 0, '', 2000, 0
+      );
+      INSERT INTO typing_bigram_minute (
+        scope_id, minute_ts, bigram_id, count, hist, sum_iki, sumsq_iki, run_id, updated_at, is_deleted
+      ) VALUES (
+        'scope-1', 60000, '4_11', 3, X'0300000000000000000000000000000000000000000000000000000000', 250, 22000, '', 2000, 0
+      );
+      INSERT INTO typing_minute_stats (
+        scope_id, minute_ts, keystrokes, active_ms, run_id, updated_at, is_deleted
+      ) VALUES (
+        'scope-1', 60000, 5, 1000, '', 2000, 0
+      );
+      INSERT INTO typing_analytics_meta (key, value) VALUES ('schema_version', '7');
+    `)
+    v7.close()
+
+    db = new TypingAnalyticsDB(dbPath)
+    expect(db.getMeta('schema_version')).toBe(String(SCHEMA_VERSION))
+    expect(db.cacheNeedsRebuild).toBe(false)
+
+    const conn = db.getConnection()
+    expect(hasColumn(conn, 'typing_matrix_minute', 'dur_hist')).toBe(true)
+    expect(hasColumn(conn, 'typing_matrix_minute', 'dur_sum')).toBe(true)
+    expect(hasColumn(conn, 'typing_matrix_minute', 'dur_sumsq')).toBe(true)
+    expect(hasColumn(conn, 'typing_bigram_minute', 'overlap_count')).toBe(true)
+    expect(hasColumn(conn, 'typing_bigram_minute', 'overlap_n')).toBe(true)
+    expect(hasColumn(conn, 'typing_minute_stats', 'poll_p50_ms')).toBe(true)
+    expect(hasColumn(conn, 'typing_minute_stats', 'poll_p95_ms')).toBe(true)
+
+    // Existing rows survive untouched; new columns read NULL (no source
+    // data to backfill from — the whole point of "no cache rebuild").
+    const matrixRow = conn.prepare('SELECT count, tap_count, dur_hist, dur_sum, dur_sumsq FROM typing_matrix_minute').get() as {
+      count: number
+      tap_count: number
+      dur_hist: Buffer | null
+      dur_sum: number | null
+      dur_sumsq: number | null
+    }
+    expect(matrixRow.count).toBe(5)
+    expect(matrixRow.tap_count).toBe(2)
+    expect(matrixRow.dur_hist).toBeNull()
+    expect(matrixRow.dur_sum).toBeNull()
+    expect(matrixRow.dur_sumsq).toBeNull()
+
+    const bigramRow = conn.prepare('SELECT count, sum_iki, overlap_count, overlap_n FROM typing_bigram_minute').get() as {
+      count: number
+      sum_iki: number | null
+      overlap_count: number | null
+      overlap_n: number | null
+    }
+    expect(bigramRow.count).toBe(3)
+    expect(bigramRow.sum_iki).toBe(250) // pre-existing v7 data untouched
+    expect(bigramRow.overlap_count).toBeNull()
+    expect(bigramRow.overlap_n).toBeNull()
+
+    const statsRow = conn.prepare('SELECT keystrokes, poll_p50_ms, poll_p95_ms FROM typing_minute_stats').get() as {
+      keystrokes: number
+      poll_p50_ms: number | null
+      poll_p95_ms: number | null
+    }
+    expect(statsRow.keystrokes).toBe(5)
+    expect(statsRow.poll_p50_ms).toBeNull()
+    expect(statsRow.poll_p95_ms).toBeNull()
+  })
+
+  it('fresh-creates a v8 DB directly (no migration path) with every v8 column present', () => {
+    // db was already freshly created in beforeEach — verify it landed
+    // straight at the current schema without going through migrateSchema.
+    expect(db.getMeta('schema_version')).toBe(String(SCHEMA_VERSION))
+    const conn = db.getConnection()
+    expect(hasColumn(conn, 'typing_matrix_minute', 'dur_hist')).toBe(true)
+    expect(hasColumn(conn, 'typing_bigram_minute', 'overlap_count')).toBe(true)
+    expect(hasColumn(conn, 'typing_minute_stats', 'poll_p50_ms')).toBe(true)
   })
 
   it('upserts a scope row and keeps the newest updatedAt', () => {
@@ -701,6 +876,46 @@ describe('TypingAnalyticsDB', () => {
     it('exportSessionsForUid respects the live start_ms window', () => {
       const rows = db.exportSessionsForUid('0xAABB', 100_000, 5_000)
       expect(rows.map((r) => r.id).sort()).toEqual(['session-live'])
+    })
+
+    it('exportMatrixMinutesForUid carries the v8 duration triple, decoded back to a number array', () => {
+      db.mergeMatrixMinute({
+        scopeId: 'scope-local-a', minuteTs: 200_000, row: 1, col: 2, layer: 0, keycode: 0x04,
+        count: 1, tapCount: 0, holdCount: 0,
+        dh: [0, 1, 0, 0, 0, 0, 0, 0], ds: 65, dq: 4_225,
+        updatedAt: 20_000, isDeleted: false,
+      })
+      db.mergeMatrixMinute({
+        scopeId: 'scope-local-a', minuteTs: 200_000, row: 1, col: 3, layer: 0, keycode: 0x05,
+        count: 1, tapCount: 0, holdCount: 0,
+        updatedAt: 20_000, isDeleted: false,
+      })
+      const rows = db.exportMatrixMinutesForUid('0xAABB', 100_000, 5_000)
+
+      const withDuration = rows.find((r) => r.row === 1 && r.col === 2)!
+      expect(withDuration.dh).toEqual([0, 1, 0, 0, 0, 0, 0, 0])
+      expect(withDuration.ds).toBe(65)
+      expect(withDuration.dq).toBe(4_225)
+
+      // A cell with no duration sample stays null, not a decoded
+      // zero-filled histogram.
+      const withoutDuration = rows.find((r) => r.row === 1 && r.col === 3)!
+      expect(withoutDuration.dh).toBeNull()
+      expect(withoutDuration.ds).toBeNull()
+      expect(withoutDuration.dq).toBeNull()
+    })
+
+    it('exportMinuteStatsForUid carries the v8 poll-gap columns', () => {
+      db.mergeMinuteStats({
+        scopeId: 'scope-local-a', minuteTs: 200_000, keystrokes: 1, activeMs: 1,
+        intervalAvgMs: 1, intervalMinMs: 1, intervalP25Ms: 1, intervalP50Ms: 1, intervalP75Ms: 1, intervalMaxMs: 1,
+        pollP50Ms: 20, pollP95Ms: 45,
+        updatedAt: 20_000, isDeleted: false,
+      })
+      const rows = db.exportMinuteStatsForUid('0xAABB', 100_000, 5_000)
+      const row = rows.find((r) => r.minuteTs === 200_000)!
+      expect(row.pollP50Ms).toBe(20)
+      expect(row.pollP95Ms).toBe(45)
     })
 
     it('listLocalKeyboardUids returns distinct uids for this machine only', () => {
@@ -1212,6 +1427,71 @@ describe('TypingAnalyticsDB', () => {
     })
   })
 
+  describe('listMatrixDurationCellsForUid (Analyze > keypress duration)', () => {
+    beforeEach(() => {
+      db.upsertScope(sampleScope({ id: 'scope-local', machineHash: MACHINE_HASH, keyboardUid: '0xAABB' }))
+      db.upsertScope(sampleScope({ id: 'scope-other-machine', machineHash: 'other', keyboardUid: '0xAABB' }))
+    })
+
+    function writeMatrixWithDuration(
+      scopeId: string,
+      minuteTs: number,
+      row: number,
+      col: number,
+      layer: number,
+      dh: number[] | null,
+      ds: number | null,
+      dq: number | null,
+      updatedAt = 1_000,
+    ): void {
+      db.mergeMatrixMinute({
+        scopeId, minuteTs, row, col, layer, keycode: 0x04, count: 1, tapCount: 0, holdCount: 0,
+        dh, ds, dq, updatedAt, isDeleted: false,
+      })
+    }
+
+    it('decodes the histogram back to a number array and carries sum/sumSq', () => {
+      writeMatrixWithDuration('scope-local', 60_000, 0, 0, 0, [0, 1, 0, 0, 0, 0, 0, 0], 65, 4_225)
+      const rows = db.listMatrixDurationCellsForUid('0xAABB', 60_000, 120_000)
+      expect(rows).toEqual([{ row: 0, col: 0, layer: 0, minuteTs: 60_000, hist: [0, 1, 0, 0, 0, 0, 0, 0], sum: 65, sumSq: 4_225 }])
+    })
+
+    it('excludes a row with no duration sample that minute (dur_hist NULL)', () => {
+      writeMatrixWithDuration('scope-local', 60_000, 0, 0, 0, null, null, null)
+      const rows = db.listMatrixDurationCellsForUid('0xAABB', 60_000, 120_000)
+      expect(rows).toEqual([])
+    })
+
+    it('restricts to one machine_hash via listMatrixDurationCellsForUidAndHash', () => {
+      writeMatrixWithDuration('scope-local', 60_000, 0, 0, 0, [0, 1, 0, 0, 0, 0, 0, 0], 65, 4_225)
+      writeMatrixWithDuration('scope-other-machine', 60_000, 0, 0, 0, [0, 0, 1, 0, 0, 0, 0, 0], 90, 8_100)
+      const rows = db.listMatrixDurationCellsForUidAndHash('0xAABB', MACHINE_HASH, 60_000, 120_000)
+      expect(rows).toEqual([{ row: 0, col: 0, layer: 0, minuteTs: 60_000, hist: [0, 1, 0, 0, 0, 0, 0, 0], sum: 65, sumSq: 4_225 }])
+    })
+
+    it('drops rows outside the window', () => {
+      writeMatrixWithDuration('scope-local', 30_000, 0, 0, 0, [1, 0, 0, 0, 0, 0, 0, 0], 40, 1_600)
+      const rows = db.listMatrixDurationCellsForUid('0xAABB', 60_000, 120_000)
+      expect(rows).toEqual([])
+    })
+
+    it('excludes a row whose dur_hist is set but dur_sum is NULL (broken triple invariant)', () => {
+      // A well-formed row always writes dh/ds/dq together (see
+      // isValidDurationTriple in jsonl-row.ts) — this simulates that
+      // invariant being violated some other way (corruption, a hand-
+      // edited JSONL master) to prove the select itself refuses to hand
+      // a hist with no matching sum to the aggregator, rather than
+      // trusting the invariant blindly.
+      writeMatrixWithDuration('scope-local', 60_000, 0, 0, 0, [0, 1, 0, 0, 0, 0, 0, 0], 65, 4_225)
+      db.getConnection().prepare(
+        'UPDATE typing_matrix_minute SET dur_sum = NULL WHERE scope_id = ? AND minute_ts = ? AND row = 0 AND col = 0',
+      ).run('scope-local', 60_000)
+
+      const rows = db.listMatrixDurationCellsForUid('0xAABB', 60_000, 120_000)
+      expect(rows).toEqual([])
+    })
+  })
+
   describe('listBigramMinutesInRangeForUid (Analyze > Bigrams)', () => {
     function bigramRow(
       scopeId: string,
@@ -1240,7 +1520,7 @@ describe('TypingAnalyticsDB', () => {
       bigramRow('scope-local', 60_000, '4_11', 3, [0, 2, 1, 0, 0, 0, 0, 0])
       const rows = db.listBigramMinutesInRangeForUid('0xAABB', 60_000, 120_000)
       expect(rows).toEqual([
-        { ngramId: '4_11', minuteTs: 60_000, count: 3, hist: [0, 2, 1, 0, 0, 0, 0, 0], sumIki: null, sumSqIki: null },
+        { ngramId: '4_11', minuteTs: 60_000, count: 3, hist: [0, 2, 1, 0, 0, 0, 0, 0], sumIki: null, sumSqIki: null, overlapCount: null, overlapN: null },
       ])
     })
 
@@ -1283,8 +1563,36 @@ describe('TypingAnalyticsDB', () => {
       })
       const rows = db.listBigramMinutesInRangeForUid('0xAABB', 60_000, 120_000)
       expect(rows).toEqual([
-        { ngramId: 'with-sum', minuteTs: 60_000, count: 2, hist: [0, 2, 0, 0, 0, 0, 0, 0], sumIki: 240, sumSqIki: 28_800 },
+        { ngramId: 'with-sum', minuteTs: 60_000, count: 2, hist: [0, 2, 0, 0, 0, 0, 0, 0], sumIki: 240, sumSqIki: 28_800, overlapCount: null, overlapN: null },
       ])
+    })
+
+    it('returns overlapCount / overlapN when the row has them, null otherwise', () => {
+      db.mergeBigramMinute({
+        scopeId: 'scope-local', minuteTs: 60_000,
+        bigrams: { 'with-overlap': { c: 2, h: [0, 2, 0, 0, 0, 0, 0, 0], oc: 1, on: 2 } },
+        updatedAt: 1_000, isDeleted: false,
+      })
+      bigramRow('scope-local', 120_000, 'no-overlap', 1, [1, 0, 0, 0, 0, 0, 0, 0])
+      const rows = db.listBigramMinutesInRangeForUid('0xAABB', 60_000, 180_000)
+      const byId = new Map(rows.map((r) => [r.ngramId, r]))
+      expect(byId.get('with-overlap')).toEqual({
+        ngramId: 'with-overlap', minuteTs: 60_000, count: 2, hist: [0, 2, 0, 0, 0, 0, 0, 0], sumIki: null, sumSqIki: null, overlapCount: 1, overlapN: 2,
+      })
+      expect(byId.get('no-overlap')).toEqual({
+        ngramId: 'no-overlap', minuteTs: 120_000, count: 1, hist: [1, 0, 0, 0, 0, 0, 0, 0], sumIki: null, sumSqIki: null, overlapCount: null, overlapN: null,
+      })
+    })
+
+    it('does not select overlap columns for trigram rows (structurally absent)', () => {
+      db.mergeTrigramMinute({
+        scopeId: 'scope-local', minuteTs: 60_000,
+        trigrams: { '4_11_7': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 1_000, isDeleted: false,
+      })
+      const rows = db.listNgramMinutesInRangeForUid(3, '0xAABB', 60_000, 120_000)
+      expect(rows[0].overlapCount).toBeUndefined()
+      expect(rows[0].overlapN).toBeUndefined()
     })
   })
 

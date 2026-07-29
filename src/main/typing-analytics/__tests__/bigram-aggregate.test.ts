@@ -2,15 +2,31 @@
 
 import { describe, it, expect } from 'vitest'
 import {
+  aggregateMatrixDurationTotals,
   aggregatePairTotals,
+  avgDurationMsFromTotal,
   avgIkiFromHist,
+  durationSdFromTotal,
+  observedRolloverRatio,
   percentileFromHist,
   rankBigramsByCount,
   rankBigramsBySlow,
   sdFromSums,
   type BigramPairTotal,
 } from '../bigram-aggregate'
-import type { NgramMinuteCellRow } from '../db/typing-analytics-db'
+import type { MatrixDurationCellRow, NgramMinuteCellRow } from '../db/typing-analytics-db'
+
+function durationRow(
+  row: number,
+  col: number,
+  layer: number,
+  hist: number[],
+  sum: number,
+  sumSq: number,
+  minuteTs = 60_000,
+): MatrixDurationCellRow {
+  return { row, col, layer, minuteTs, hist, sum, sumSq }
+}
 
 function row(
   ngramId: string,
@@ -19,8 +35,9 @@ function row(
   minuteTs = 60_000,
   sumIki: number | null = null,
   sumSqIki: number | null = null,
+  overlap?: { overlapCount: number | null; overlapN: number | null },
 ): NgramMinuteCellRow {
-  return { ngramId, minuteTs, count, hist, sumIki, sumSqIki }
+  return { ngramId, minuteTs, count, hist, sumIki, sumSqIki, ...overlap }
 }
 
 function trigramRow(
@@ -34,7 +51,15 @@ function trigramRow(
   return { ngramId, minuteTs, count, hist, sumIki, sumSqIki }
 }
 
-function totals(entries: { ngramId: string; count: number; hist: number[]; sumIki?: number | null; sumSqIki?: number | null }[]): Map<string, BigramPairTotal> {
+function totals(entries: {
+  ngramId: string
+  count: number
+  hist: number[]
+  sumIki?: number | null
+  sumSqIki?: number | null
+  overlapCount?: number
+  overlapN?: number
+}[]): Map<string, BigramPairTotal> {
   const map = new Map<string, BigramPairTotal>()
   for (const e of entries) {
     map.set(e.ngramId, {
@@ -43,6 +68,8 @@ function totals(entries: { ngramId: string; count: number; hist: number[]; sumIk
       hist: e.hist,
       sumIki: e.sumIki ?? null,
       sumSqIki: e.sumSqIki ?? null,
+      overlapCount: e.overlapCount ?? 0,
+      overlapN: e.overlapN ?? 0,
     })
   }
   return map
@@ -70,10 +97,10 @@ describe('aggregatePairTotals', () => {
       row('A', 4, [3, 1, 0, 0, 0, 0, 0, 0]),
     ])
     expect(map.get('A')).toEqual({
-      ngramId: 'A', count: 5, hist: [4, 1, 0, 0, 0, 0, 0, 0], sumIki: null, sumSqIki: null,
+      ngramId: 'A', count: 5, hist: [4, 1, 0, 0, 0, 0, 0, 0], sumIki: null, sumSqIki: null, overlapCount: 0, overlapN: 0,
     })
     expect(map.get('B')).toEqual({
-      ngramId: 'B', count: 2, hist: [0, 2, 0, 0, 0, 0, 0, 0], sumIki: null, sumSqIki: null,
+      ngramId: 'B', count: 2, hist: [0, 2, 0, 0, 0, 0, 0, 0], sumIki: null, sumSqIki: null, overlapCount: 0, overlapN: 0,
     })
   })
 
@@ -118,6 +145,71 @@ describe('aggregatePairTotals', () => {
     const e = map.get('A')!
     expect(e.sumIki).toBeNull()
     expect(e.sumSqIki).toBeNull()
+  })
+
+  it('accumulates overlapCount/overlapN when every contributing row has them', () => {
+    const map = aggregatePairTotals([
+      row('A', 2, [2, 0, 0, 0, 0, 0, 0, 0], 60_000, null, null, { overlapCount: 1, overlapN: 2 }),
+      row('A', 3, [3, 0, 0, 0, 0, 0, 0, 0], 120_000, null, null, { overlapCount: 2, overlapN: 3 }),
+    ])
+    const e = map.get('A')!
+    expect(e.overlapCount).toBe(3)
+    expect(e.overlapN).toBe(5)
+  })
+
+  // Deliberate deviation from the sumIki/sumSqIki null-poisoning rule
+  // (codex P1 — overrides the original task doc's "same rule as SD"):
+  // a row with no overlap data contributes 0, it does not poison
+  // whatever the OTHER rows for the same pair DID observe. See the
+  // deviation comment at the aggregation site in bigram-aggregate.ts.
+  it('skips a row with no overlap data instead of poisoning the whole pair', () => {
+    const map = aggregatePairTotals([
+      row('A', 2, [2, 0, 0, 0, 0, 0, 0, 0], 60_000, null, null, { overlapCount: 1, overlapN: 2 }),
+      // A row whose events never had a determined overlap — contributes
+      // nothing, but does not erase the other row's contribution.
+      row('A', 1, [1, 0, 0, 0, 0, 0, 0, 0], 120_000, null, null),
+    ])
+    const e = map.get('A')!
+    expect(e.overlapCount).toBe(1)
+    expect(e.overlapN).toBe(2)
+  })
+
+  it('treats a trigram row (overlap columns structurally absent) as contributing 0, not poisoned', () => {
+    const map = aggregatePairTotals([
+      trigramRow('4_11_7', 1, [1, 0, 0, 0, 0, 0, 0, 0]),
+    ])
+    const e = map.get('4_11_7')!
+    expect(e.overlapCount).toBe(0)
+    expect(e.overlapN).toBe(0)
+  })
+})
+
+describe('observedRolloverRatio', () => {
+  it('returns null for an empty selection', () => {
+    expect(observedRolloverRatio(new Map())).toBeNull()
+  })
+
+  it('computes Σoc/Σon across every pair', () => {
+    const map = totals([
+      { ngramId: 'A', count: 5, hist: [], overlapCount: 3, overlapN: 5 },
+      { ngramId: 'B', count: 2, hist: [], overlapCount: 1, overlapN: 5 },
+    ])
+    expect(observedRolloverRatio(map)).toBe(4 / 10)
+  })
+
+  it('a pair with no overlap data contributes 0/0 rather than nulling the whole ratio', () => {
+    const map = totals([
+      { ngramId: 'A', count: 5, hist: [], overlapCount: 3, overlapN: 5 },
+      { ngramId: 'B', count: 2, hist: [] },
+    ])
+    expect(observedRolloverRatio(map)).toBe(3 / 5)
+  })
+
+  it('returns null when no pair in the selection has any overlap data (e.g. a trigram-only selection)', () => {
+    const map = totals([
+      { ngramId: 'A', count: 5, hist: [] },
+    ])
+    expect(observedRolloverRatio(map)).toBeNull()
   })
 })
 
@@ -299,5 +391,76 @@ describe('rankBigramsBySlow', () => {
     ])
     const [entry] = rankBigramsBySlow(map, 5, 5)
     expect(entry.sd).toBeNull()
+  })
+})
+
+describe('aggregateMatrixDurationTotals', () => {
+  it('returns an empty map for an empty input', () => {
+    expect(aggregateMatrixDurationTotals([]).size).toBe(0)
+  })
+
+  it('sums count/hist/sum/sumSq across rows for the same cell', () => {
+    const map = aggregateMatrixDurationTotals([
+      durationRow(0, 0, 0, [0, 1, 0, 0, 0, 0, 0, 0], 65, 4_225, 60_000),
+      durationRow(0, 0, 0, [0, 0, 1, 0, 0, 0, 0, 0], 95, 9_025, 120_000),
+    ])
+    const e = map.get('0,0,0')!
+    expect(e.count).toBe(2)
+    expect(e.hist).toEqual([0, 1, 1, 0, 0, 0, 0, 0])
+    expect(e.sum).toBe(160)
+    expect(e.sumSq).toBe(13_250)
+  })
+
+  it('keeps separate entries for different cells', () => {
+    const map = aggregateMatrixDurationTotals([
+      durationRow(0, 0, 0, [1, 0, 0, 0, 0, 0, 0, 0], 40, 1_600),
+      durationRow(0, 1, 0, [0, 1, 0, 0, 0, 0, 0, 0], 65, 4_225),
+    ])
+    expect(map.size).toBe(2)
+    expect(map.get('0,0,0')!.count).toBe(1)
+    expect(map.get('0,1,0')!.count).toBe(1)
+  })
+
+  it('keeps the same physical cell on different layers distinct', () => {
+    const map = aggregateMatrixDurationTotals([
+      durationRow(0, 0, 0, [1, 0, 0, 0, 0, 0, 0, 0], 40, 1_600),
+      durationRow(0, 0, 1, [0, 1, 0, 0, 0, 0, 0, 0], 65, 4_225),
+    ])
+    expect(map.size).toBe(2)
+  })
+})
+
+describe('avgDurationMsFromTotal / durationSdFromTotal', () => {
+  it('computes the true mean from sum/count, not a histogram estimate', () => {
+    const map = aggregateMatrixDurationTotals([
+      durationRow(0, 0, 0, [1, 1, 0, 0, 0, 0, 0, 0], 130, 8_500, 60_000),
+    ])
+    const e = map.get('0,0,0')!
+    expect(avgDurationMsFromTotal(e)).toBe(65)
+  })
+
+  it('returns null avg for a cell with no duration samples', () => {
+    const map = aggregateMatrixDurationTotals([])
+    map.set('0,0,0', { row: 0, col: 0, layer: 0, count: 0, hist: new Array(8).fill(0), sum: 0, sumSq: 0 })
+    expect(avgDurationMsFromTotal(map.get('0,0,0')!)).toBeNull()
+  })
+
+  it('returns null SD for fewer than 2 samples', () => {
+    const map = aggregateMatrixDurationTotals([
+      durationRow(0, 0, 0, [1, 0, 0, 0, 0, 0, 0, 0], 65, 4_225),
+    ])
+    expect(durationSdFromTotal(map.get('0,0,0')!)).toBeNull()
+  })
+
+  it('computes a real SD from sum/sumSq once there are 2+ samples', () => {
+    // Durations [60, 70, 80]: mean=70, variance=((60-70)^2+(70-70)^2+(80-70)^2)/3=66.67
+    const sum = 60 + 70 + 80
+    const sumSq = 60 ** 2 + 70 ** 2 + 80 ** 2
+    const map = aggregateMatrixDurationTotals([
+      durationRow(0, 0, 0, [1, 1, 1, 0, 0, 0, 0, 0], sum, sumSq),
+    ])
+    const sd = durationSdFromTotal(map.get('0,0,0')!)
+    expect(sd).not.toBeNull()
+    expect(sd!).toBeCloseTo(Math.sqrt(200 / 3), 5)
   })
 })

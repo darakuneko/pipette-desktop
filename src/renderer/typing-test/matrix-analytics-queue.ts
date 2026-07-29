@@ -91,6 +91,8 @@ function settleTapHold<TPreparedEvent>(
     keycode: pending.start.keycode,
     ts: pending.start.tsMs,
     action,
+    overlap: pending.start.overlap,
+    pollGapMs: pending.start.pollGapMs,
   }
   item.pending = undefined
 }

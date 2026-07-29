@@ -3,7 +3,9 @@
 import { describe, it, expect } from 'vitest'
 import {
   BIGRAM_BUCKET_UPPER_BOUNDS_MS,
+  DURATION_BUCKET_UPPER_BOUNDS_MS,
   bucketizeIki,
+  bucketizeDurations,
 } from '../bigram-bucket'
 import { BIGRAM_HIST_BUCKETS } from '../jsonl/jsonl-row'
 
@@ -47,6 +49,42 @@ describe('bucketizeIki', () => {
     // scan returns the correct bucket.
     for (let i = 1; i < BIGRAM_BUCKET_UPPER_BOUNDS_MS.length; i += 1) {
       expect(BIGRAM_BUCKET_UPPER_BOUNDS_MS[i]).toBeGreaterThan(BIGRAM_BUCKET_UPPER_BOUNDS_MS[i - 1])
+    }
+  })
+})
+
+describe('bucketizeDurations', () => {
+  it('returns an all-zero histogram for an empty array', () => {
+    const hist = bucketizeDurations([])
+    expect(hist).toHaveLength(BIGRAM_HIST_BUCKETS)
+    expect(hist.every((n) => n === 0)).toBe(true)
+  })
+
+  it('uses the tighter duration grid, not the IKI grid', () => {
+    // 120ms would land in IKI bucket 2 (100-150) but duration bucket 3
+    // (110-140) — the two grids must not be interchangeable.
+    expect(bucketizeDurations([120])).toEqual([0, 0, 0, 1, 0, 0, 0, 0])
+  })
+
+  it('places boundary values into the bucket whose lower edge they sit on', () => {
+    expect(bucketizeDurations([50])).toEqual([0, 1, 0, 0, 0, 0, 0, 0])
+    expect(bucketizeDurations([80])).toEqual([0, 0, 1, 0, 0, 0, 0, 0])
+    expect(bucketizeDurations([110])).toEqual([0, 0, 0, 1, 0, 0, 0, 0])
+    expect(bucketizeDurations([140])).toEqual([0, 0, 0, 0, 1, 0, 0, 0])
+    expect(bucketizeDurations([180])).toEqual([0, 0, 0, 0, 0, 1, 0, 0])
+    expect(bucketizeDurations([250])).toEqual([0, 0, 0, 0, 0, 0, 1, 0])
+    expect(bucketizeDurations([400])).toEqual([0, 0, 0, 0, 0, 0, 0, 1])
+  })
+
+  it('places values above the last boundary into the final bucket', () => {
+    expect(bucketizeDurations([1000, 60_000])).toEqual([0, 0, 0, 0, 0, 0, 0, 2])
+  })
+
+  it('exports a boundary array of expected length and shape', () => {
+    expect(DURATION_BUCKET_UPPER_BOUNDS_MS).toHaveLength(BIGRAM_HIST_BUCKETS)
+    expect(DURATION_BUCKET_UPPER_BOUNDS_MS[BIGRAM_HIST_BUCKETS - 1]).toBe(Number.POSITIVE_INFINITY)
+    for (let i = 1; i < DURATION_BUCKET_UPPER_BOUNDS_MS.length; i += 1) {
+      expect(DURATION_BUCKET_UPPER_BOUNDS_MS[i]).toBeGreaterThan(DURATION_BUCKET_UPPER_BOUNDS_MS[i - 1])
     }
   })
 })
