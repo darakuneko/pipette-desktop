@@ -28,6 +28,25 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+/** emitAnalyticsEvent now chains every call behind chainRef.current (see
+ *  useInputModes.ts) — each emit reaches the mocked IPC only after the
+ *  chain's antecedent settles, and a burst of same-tick emits (e.g. a
+ *  forced drain flushing several queued presses) stacks one link's worth
+ *  of `.then().catch()` hops per emit. The exact number of microtask
+ *  ticks that takes isn't worth hand-deriving per call site, so this
+ *  loops generously — harmless overshoot for a short, already-settled
+ *  chain, and reliably enough for a several-link one. Chains gated on a
+ *  deliberately-unresolved mock (see the in-flight-drain test) still
+ *  never settle no matter how many rounds run, so this cannot mask a
+ *  premature flush. */
+async function flushMicrotasks(rounds = 10): Promise<void> {
+  await act(async () => {
+    for (let i = 0; i < rounds; i++) {
+      await Promise.resolve()
+    }
+  })
+}
+
 function buildKeymap(): Map<string, number> {
   // layer 0: (0,0) = 0x04 (KC_A basic keycode value)
   const m = new Map<string, number>()
@@ -66,12 +85,13 @@ function renderUseInputModes(overrides: Partial<Parameters<typeof useInputModes>
 }
 
 describe('useInputModes — typing analytics dispatch', () => {
-  it('dispatches a matrix event with the active keyboard attached', () => {
+  it('dispatches a matrix event with the active keyboard attached', async () => {
     const { result } = renderUseInputModes({ typingRecordEnabled: true })
 
     act(() => {
       result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
     })
+    await flushMicrotasks()
 
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(1)
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledWith(
@@ -106,7 +126,7 @@ describe('useInputModes — typing analytics dispatch', () => {
     expect(mockTypingAnalyticsEvent).not.toHaveBeenCalled()
   })
 
-  it('tags editor-test keystrokes once the test is running, with REC off', () => {
+  it('tags editor-test keystrokes once the test is running, with REC off', async () => {
     // The editor test path is independent of the REC toggle: a running test
     // feeds analytics tagged with its typing_test label. Use 'time' mode so
     // the first key starts the run without auto-finishing on an empty word
@@ -130,6 +150,7 @@ describe('useInputModes — typing analytics dispatch', () => {
     act(() => {
       result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
     })
+    await flushMicrotasks()
 
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'matrix', keyboard: sampleKeyboard, typingTest: expect.any(String) }),
@@ -149,7 +170,7 @@ describe('useInputModes — typing analytics dispatch', () => {
     expect(mockTypingAnalyticsEvent).not.toHaveBeenCalled()
   })
 
-  it('resets press-edge tracking so the next ON toggle re-emits held keys', () => {
+  it('resets press-edge tracking so the next ON toggle re-emits held keys', async () => {
     const { result, rerender } = renderHook(
       ({ typingRecordEnabled }: { typingRecordEnabled: boolean }) => useInputModes({
         rows: 1,
@@ -167,6 +188,7 @@ describe('useInputModes — typing analytics dispatch', () => {
     act(() => {
       result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
     })
+    await flushMicrotasks()
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(1)
 
     // Record OFF → further frames are dropped.
@@ -174,6 +196,7 @@ describe('useInputModes — typing analytics dispatch', () => {
     act(() => {
       result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
     })
+    await flushMicrotasks()
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(1)
 
     // Record ON again → the reset effect clears prevPressed, so the same held
@@ -182,6 +205,7 @@ describe('useInputModes — typing analytics dispatch', () => {
     act(() => {
       result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
     })
+    await flushMicrotasks()
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(2)
   })
 
@@ -251,7 +275,10 @@ describe('useInputModes — typing analytics dispatch', () => {
 
     // Recording stops mid-hold: the drain finalizes the press and calls
     // typingAnalyticsEvent, but that call's own promise is still pending.
+    // One microtask lets emitAnalyticsEvent's chainRef link actually reach
+    // the (still-pending) mocked IPC call.
     rerender({ typingRecordEnabled: false })
+    await flushMicrotasks()
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(1)
     expect(mockTypingAnalyticsFlush).not.toHaveBeenCalled()
 
@@ -273,6 +300,82 @@ describe('useInputModes — typing analytics dispatch', () => {
     expect(mockTypingAnalyticsFlush).toHaveBeenCalledTimes(1)
   })
 
+  it('does not request the flush until an ordinary (non-queued) in-flight matrix event settles', async () => {
+    // Distinct from the drained-event regression above: an ordinary key on
+    // an empty queue never enters MatrixAnalyticsQueue at all (see its
+    // pushResolved caller in useTypingTest) — it calls emitAnalyticsEvent
+    // straight away and pendingDrainRef's drain sees nothing to wait on.
+    // The flush must still wait for it via chainRef, not just via the
+    // drain.
+    let resolveEvent: (() => void) | undefined
+    mockTypingAnalyticsEvent.mockImplementation(() => new Promise((resolve) => {
+      resolveEvent = resolve
+    }))
+
+    const { result, rerender } = renderHook(
+      ({ typingRecordEnabled }: { typingRecordEnabled: boolean }) => useInputModes({
+        rows: 1,
+        cols: 1,
+        keymap: buildKeymap(),
+        typingTestMode: true,
+        typingTestViewOnly: true,
+        typingRecordKeyboard: sampleKeyboard,
+        typingRecordEnabled,
+      }),
+      { initialProps: { typingRecordEnabled: true } },
+    )
+
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
+    })
+    await flushMicrotasks()
+    expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(1)
+
+    // The queue was empty when recording stops, so the drain itself
+    // resolves quickly — the still-pending IPC call is what must gate
+    // the flush.
+    rerender({ typingRecordEnabled: false })
+    await flushMicrotasks()
+    expect(mockTypingAnalyticsFlush).not.toHaveBeenCalled()
+
+    resolveEvent?.()
+    await flushMicrotasks()
+    expect(mockTypingAnalyticsFlush).toHaveBeenCalledTimes(1)
+  })
+
+  it('sends events strictly serially — a second emit does not reach the IPC before the first settles', async () => {
+    const resolvers: Array<() => void> = []
+    mockTypingAnalyticsEvent.mockImplementation(() => new Promise((resolve) => {
+      resolvers.push(resolve)
+    }))
+    const { result } = renderUseInputModes({ typingRecordEnabled: true })
+
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
+    })
+    await flushMicrotasks()
+    expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(1)
+
+    // Release then press again — a second, independent ordinary press
+    // while the first's IPC promise is still unresolved.
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(), buildKeymap())
+    })
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
+    })
+    await flushMicrotasks()
+
+    // The second event must not have reached the mock yet — it is chained
+    // behind the first, whose promise is still pending.
+    expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(1)
+
+    // Resolving the first lets the second proceed.
+    resolvers[0]?.()
+    await flushMicrotasks()
+    expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(2)
+  })
+
   it('swallows IPC rejection silently (fire-and-forget)', async () => {
     mockTypingAnalyticsEvent.mockRejectedValueOnce(new Error('ipc down'))
     const handler = vi.fn()
@@ -287,6 +390,110 @@ describe('useInputModes — typing analytics dispatch', () => {
     process.off('unhandledRejection', handler)
     expect(handler).not.toHaveBeenCalled()
   })
+
+  it('recovers after a rejected event — a later emit still reaches the IPC', async () => {
+    // Regression guard: emitAnalyticsEvent's chain is
+    // `chainRef.current.then(...).catch(() => {})` — the per-link .catch
+    // is what keeps a rejection from propagating into chainRef.current
+    // itself. If a future edit dropped that .catch, the first link's
+    // rejection would permanently wedge chainRef.current in a rejected
+    // state, and every later .then() (including this test's second emit,
+    // and both flush sites) would never run again.
+    mockTypingAnalyticsEvent.mockRejectedValueOnce(new Error('ipc down'))
+    const { result } = renderUseInputModes({ typingRecordEnabled: true })
+
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
+    })
+    await flushMicrotasks()
+    expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(1)
+
+    // Release then press again — a second, independent press chained
+    // behind the first's now-rejected link.
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(), buildKeymap())
+    })
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
+    })
+    await flushMicrotasks()
+
+    expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('useInputModes — test-finish flush gating', () => {
+  it('does not request the flush until the finishing keystroke\'s in-flight event settles', async () => {
+    // Mirrors the record-off regression above for the OTHER flush site:
+    // the test-finish effect also chains its flush behind
+    // resetMatrixPressTracking() and chainRef.current (see useInputModes.ts),
+    // so a still in-flight analytics IPC for the very keystroke that
+    // finished the run must gate the flush the same way.
+    // Stable across renders (computed once, outside the renderHook
+    // callback), matching the actual caller's usage: a fresh Map/config
+    // literal every render (fine for other tests here, which never await
+    // microtasks mid-run) would let the "feed matrix frames" and config-sync
+    // effects re-fire on every render once passive effects get a chance to
+    // flush, which regenerates a brand-new run mid-word.
+    const onSaveTypingTestResult = vi.fn()
+    const stableKeymap = buildKeymap()
+    const stableConfig = { mode: 'words' as const, wordCount: 1, punctuation: false, numbers: false }
+    const { result } = renderHook(() => useInputModes({
+      rows: 1,
+      cols: 1,
+      keymap: stableKeymap,
+      unlocked: true,
+      typingTestMode: true,
+      typingTestViewOnly: false,
+      typingRecordKeyboard: sampleKeyboard,
+      onSaveTypingTestResult,
+      savedTypingTestConfig: stableConfig,
+    }))
+
+    act(() => {
+      result.current.typingTest.setWindowFocused(true)
+    })
+
+    // Type the whole word in one synchronous burst (no awaited microtasks
+    // in between — see the note above) so the run completes in a single
+    // pass instead of being disturbed mid-word. The word's last character
+    // finishes it (a single-word list finishes immediately on completing
+    // it, no trailing space needed); hold that last keystroke's IPC
+    // promise open to simulate it still being in flight when the finish
+    // effect requests the flush.
+    const [word] = result.current.typingTest.state.words
+    // Collected rather than a single overwritten variable: completing the
+    // run may emit more than one event off the finishing keystroke, and
+    // each mockImplementation call below creates its own promise.
+    const pendingResolvers: Array<() => void> = []
+    for (const char of word.slice(0, -1)) {
+      act(() => {
+        result.current.typingTest.processKeyEvent(char, false, false, false)
+      })
+    }
+    mockTypingAnalyticsEvent.mockImplementation(() => new Promise((resolve) => {
+      pendingResolvers.push(resolve)
+    }))
+    act(() => {
+      result.current.typingTest.processKeyEvent(word.slice(-1), false, false, false)
+    })
+    expect(result.current.typingTest.state.status).toBe('finished')
+
+    await flushMicrotasks()
+    expect(mockTypingAnalyticsFlush).not.toHaveBeenCalled()
+
+    // Drain in rounds rather than once: resolving a link can itself cause
+    // the chain to reach the next still-pending mock call, adding a fresh
+    // resolver to the array after this loop would otherwise have already
+    // moved on.
+    for (let i = 0; i < 20 && mockTypingAnalyticsFlush.mock.calls.length === 0; i++) {
+      const resolvers = pendingResolvers.splice(0)
+      for (const resolve of resolvers) resolve()
+      await flushMicrotasks()
+    }
+    expect(mockTypingAnalyticsFlush).toHaveBeenCalledTimes(1)
+    expect(mockTypingAnalyticsFlush).toHaveBeenCalledWith(sampleKeyboard.uid)
+  })
 })
 
 // A matrix event can now sit in useTypingTest's ordering queue for up to
@@ -296,7 +503,7 @@ describe('useInputModes — typing analytics dispatch', () => {
 // were read to authorize the press — and is never revisited once the
 // event is actually flushed, however much the live state has since moved.
 describe('useInputModes — analytics gate/tag survive the ordering queue', () => {
-  it('still delivers an unresolved masked press (as hold) and the ordinary key queued behind it when recording stops mid-hold', () => {
+  it('still delivers an unresolved masked press (as hold) and the ordinary key queued behind it when recording stops mid-hold', async () => {
     const keymap = buildMaskedKeymap()
     const { result, rerender } = renderHook(
       ({ typingRecordEnabled }: { typingRecordEnabled: boolean }) => useInputModes({
@@ -328,6 +535,7 @@ describe('useInputModes — analytics gate/tag survive the ordering queue', () =
     // on then) and must still reach the sink, in press order — dropping
     // them here would be strictly worse than not queueing at all.
     rerender({ typingRecordEnabled: false })
+    await flushMicrotasks()
 
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(2)
     expect(mockTypingAnalyticsEvent).toHaveBeenNthCalledWith(1, expect.objectContaining({
@@ -338,7 +546,7 @@ describe('useInputModes — analytics gate/tag survive the ordering queue', () =
     }))
   })
 
-  it("keeps a running test's label and run id when the press is flushed after the test view is exited", () => {
+  it("keeps a running test's label and run id when the press is flushed after the test view is exited", async () => {
     const keymap = buildMaskedKeymap()
     const { result, rerender } = renderHook(
       ({ typingTestViewOnly }: { typingTestViewOnly: boolean }) => useInputModes({
@@ -380,6 +588,7 @@ describe('useInputModes — analytics gate/tag survive the ordering queue', () =
     act(() => {
       result.current.typingTest.processMatrixFrame(new Set(), keymap)
     })
+    await flushMicrotasks()
 
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(1)
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledWith(expect.objectContaining({
@@ -389,7 +598,7 @@ describe('useInputModes — analytics gate/tag survive the ordering queue', () =
 })
 
 describe('useInputModes — tray keystroke counter', () => {
-  it('counts an authorized matrix press at press time, once — before it resolves and again not when it does', () => {
+  it('counts an authorized matrix press at press time, once — before it resolves and again not when it does', async () => {
     const keymap = buildMaskedKeymap()
     const onRecKeystroke = vi.fn()
     const { result } = renderUseInputModes({ typingRecordEnabled: true, keymap, onRecKeystroke })
@@ -408,6 +617,7 @@ describe('useInputModes — tray keystroke counter', () => {
     act(() => {
       result.current.typingTest.processMatrixFrame(new Set(), keymap)
     })
+    await flushMicrotasks()
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(1)
     expect(onRecKeystroke).toHaveBeenCalledTimes(1)
   })
@@ -424,7 +634,7 @@ describe('useInputModes — tray keystroke counter', () => {
     expect(onRecKeystroke).not.toHaveBeenCalled()
   })
 
-  it('does not count a tagged editor-test keystroke (only untagged REC input counts)', () => {
+  it('does not count a tagged editor-test keystroke (only untagged REC input counts)', async () => {
     const onRecKeystroke = vi.fn()
     const { result } = renderUseInputModes({
       typingRecordEnabled: false,
@@ -442,6 +652,7 @@ describe('useInputModes — tray keystroke counter', () => {
     act(() => {
       result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
     })
+    await flushMicrotasks()
 
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledWith(expect.objectContaining({ typingTest: expect.any(String) }))
     expect(onRecKeystroke).not.toHaveBeenCalled()
