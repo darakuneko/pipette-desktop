@@ -43,12 +43,13 @@ export function formatSharePercent(fraction: number): string {
 }
 
 /** Same `(v * 100).toFixed(1)%` shape as `formatSharePercent` but
- * tolerant of `undefined` and prints the `%` glyph itself, so a
- * single helper covers Layout Comparison cells and skip-rate banner
+ * tolerant of `undefined`/`null` and prints the `%` glyph itself, so a
+ * single helper covers Layout Comparison cells, the skip-rate banner,
+ * and every "unobserved ratio" stat (e.g. the Analyze rollover rate)
  * without forcing each call site to repeat the wrap. Renders `'—'`
  * when the value is missing or non-finite. */
-export function formatPercentLabel(value: number | undefined): string {
-  if (value === undefined || !Number.isFinite(value)) return '—'
+export function formatPercentLabel(value: number | null | undefined): string {
+  if (value === undefined || value === null || !Number.isFinite(value)) return '—'
   return `${(value * 100).toFixed(1)}%`
 }
 

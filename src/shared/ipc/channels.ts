@@ -159,6 +159,12 @@ export const IpcChannels = {
   /** Per-app WPM aggregate (mean over single-app minutes) over the
    * analyze range. Backs the "WPM by App" bar chart. */
   TYPING_ANALYTICS_GET_WPM_BY_APP_FOR_RANGE: 'typing-analytics:get-wpm-by-app-for-range',
+  /** Per-minute Σoverlap_count / Σoverlap_n for the Analyze rollover
+   * trend chart. Single-variant channel (like
+   * TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE) — `DeviceScope` is
+   * passed as a parameter and resolved main-side rather than fanning
+   * out to `*Local`/`*ForHash` siblings. */
+  TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES: 'typing-analytics:list-rollover-minutes',
 
   // Typing Test Text Store (renderer → main → renderer)
   TYPING_TEST_TEXT_LIST: 'typing-test-text:list',

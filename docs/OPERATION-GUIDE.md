@@ -355,6 +355,15 @@ Same options as WPM.
 - **Time series** — Total keystrokes, Active typing time, Weighted median interval, Shortest interval (per min), Longest interval (per min)
 - **Distribution** — Total keystrokes, Median interval, Fast (<200ms) share, Normal (200–500ms) share, Slow (500ms–2s) share, Pause (≥2s) share, Longest interval (per min), Longest session
 
+**Observed rollover rate** (Time series only)
+
+Below the percentile chart, a second subsection reports how often you pressed a key while the previous one was still held down — commonly called rollover, or n-key rollover.
+
+- **Stat card** — "Observed rollover rate" shows the share of sampled key-pairs where the previous key was still down. Its caption reports the effective sampling period (median p50 / worst-case p95): the polling cadence that sets a floor on how short an overlap can be detected. Overlaps shorter than that period simply aren't observed
+- **Trend chart** — the same rate bucketed over the range on a fixed 0–100% Y axis. A bucket with no observed-overlap data shows as a gap in the line rather than a false 0%
+- **Population avg** — same checkbox as the WPM/Interval reference line above (see WPM tab); draws a dashed reference line at the population-average rollover rate when on
+- Because the underlying sampling can only detect overlaps at least as long as the polling period, the figure is a **structural undercount**. A persistent note under the chart reminds you that sitting below the population-average line does not mean you type slower — it more often reflects the sampling period than your technique
+
 #### Activity
 
 The Activity tab groups typing by day-of-week × hour so you can see when you actually type. The filter row offers two orthogonal pickers: **View** (chart geometry) and **Metric** (what each cell measures).
@@ -461,14 +470,16 @@ At 2-gram the view is a 2×2 grid of four quadrants. **Top pairs**, **Pair inter
 
 | Quadrant | What it shows |
 |----------|---------------|
-| **Top pairs** | Ranking by total occurrence count. Click **Count**, **Avg IKI**, or **SD** to re-sort |
-| **Pair interval** | Ranking by average IKI (slowest first). Click any of **Count**, **Avg IKI**, **SD**, or **p95** to re-sort. The Avg interval threshold (see Common filters) hides faster-than-threshold rows |
+| **Top pairs** | Ranking by total occurrence count. Click **Count**, **Avg IKI**, **SD**, or **Rollover** (2-gram only) to re-sort |
+| **Pair interval** | Ranking by average IKI (slowest first). Click any of **Count**, **Avg IKI**, **SD**, **p95**, or **Rollover** (2-gram only) to re-sort. The Avg interval threshold (see Common filters) hides faster-than-threshold rows |
 | **Finger IKI** (2-gram only) | Per-(from-finger → to-finger) average IKI bar chart. Bars are coloured blue for left-hand starts and red for right-hand starts. Same Avg interval threshold applies |
 | **Bigram patterns** (2-gram only) | One table, split into two independently-scoped row groups that classify the same pairs along two different axes — their row counts don't add up to a single total. See below |
 
 At 3-gram, **Avg IKI** is the average of the two intervals inside the triple (key1→key2 and key2→key3) — not the total elapsed time across all three keystrokes. Hover the column header for this reminder.
 
 The **SD** column is the standard deviation of the underlying IKI samples for that pair/triple — low SD means a consistent rhythm, high SD means erratic timing. It reads as "—" per row: a pair/triple shows "—" when it has fewer than 2 samples in the range, or when any of its data in the range was recorded before this column shipped — a true SD needs the raw sum/sum-of-squares that older rows don't carry, and mixing a partial sum in would silently understate the result. Other pairs in the same range keep their SD; pick a range recorded entirely after the update to see values on every row.
+
+The **Rollover** column (2-gram only) shows this pair's own observed rollover rate — the share of its recorded presses where the previous key was still held down when this one was pressed. It reads "—" when the pair has no determined-overlap sample in the range; a real 0% renders as `0.0%`, distinct from "—". Like the Interval tab's Observed rollover rate subsection, this is a sampled, structurally-undercounted figure rather than a precise measurement — see that subsection for the sampling-period caveat. The column doesn't appear at all at 3-gram: overlap sampling only has meaning for a key pair.
 
 **Bigram patterns rows**
 
@@ -597,7 +608,7 @@ The **Export** button on the panel header opens a category-pick modal that write
 - **By App** — per-application breakdown
 - **Heatmap** — per-cell press counts (snapshot-bound)
 - **Ergonomics** — per-finger / per-hand / per-row totals (snapshot-bound)
-- **Bigrams** — Top pairs / Pair interval rows (Count, Avg IKI, SD, plus the Bigram patterns classification as `class` and `word_position` columns); Finger IKI has no CSV column. `class` is blank at 3-gram and whenever there's no keymap snapshot for the range; `word_position` is blank only at 3-gram. Exports whichever gram size (2-gram or 3-gram) is currently selected in the tab — the id column is named `bigram_id` or `trigram_id` to match
+- **Bigrams** — Top pairs / Pair interval rows (Count, Avg IKI, SD, plus the Bigram patterns classification as `class` and `word_position` columns, and the per-pair observed rollover rate as `observed_rollover_percent`); Finger IKI has no CSV column. `class` is blank at 3-gram and whenever there's no keymap snapshot for the range; `word_position` is blank only at 3-gram; `observed_rollover_percent` is blank at 3-gram and whenever the pair has no determined-overlap sample in the range. Exports whichever gram size (2-gram or 3-gram) is currently selected in the tab — the id column is named `bigram_id` or `trigram_id` to match
 - **Layer** — per-layer keystroke or activation counts
 - **Layout Comparison** — per-finger / row / hand deltas (snapshot-bound; reflects manual finger overrides)
 

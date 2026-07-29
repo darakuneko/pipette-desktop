@@ -25,6 +25,7 @@ import type {
   TypingMatrixCellRow,
   TypingMatrixCellDailyRow,
   TypingMinuteStatsRow,
+  TypingRolloverMinuteRow,
   TypingSessionRow,
   TypingBksMinuteRow,
   PeakRecords,
@@ -221,6 +222,7 @@ export type {
   TypingMatrixCellRow,
   TypingMatrixCellDailyRow,
   TypingMinuteStatsRow,
+  TypingRolloverMinuteRow,
   TypingSessionRow,
   TypingBksMinuteRow,
   TypingTombstoneResult,
@@ -541,6 +543,7 @@ export class TypingAnalyticsDB {
   private readonly selectMatrixCellsByDayForUidAndHashStmt: Statement
   private readonly selectMinuteStatsInRangeForUidStmt: Statement
   private readonly selectMinuteStatsInRangeForUidAndHashStmt: Statement
+  private readonly selectRolloverMinutesStmt: Statement
   private readonly selectSessionsInRangeForUidStmt: Statement
   private readonly selectSessionsInRangeForUidAndHashStmt: Statement
   private readonly selectBksMinuteInRangeForUidStmt: Statement
@@ -1405,6 +1408,14 @@ export class TypingAnalyticsDB {
     // minutes (app_name IS NULL on the row) only show up when no
     // filter is set, matching the semantic the analytics service uses
     // on the write side.
+    // poll_p50_ms/poll_p95_ms: AVG ignores NULL contributors by SQL
+    // semantics (a minute with zero non-NULL rows yields NULL for the
+    // whole aggregate, not 0) — this is deliberately an unweighted mean
+    // across same-minute scopes, not a sample-weighted one: the source
+    // values are already percentiles, and there is no way to recover
+    // per-scope sample counts to weight them by. See
+    // TypingMinuteStatsRow.pollP50Ms for the indicative-not-precise
+    // framing this feeds.
     this.selectMinuteStatsInRangeForUidStmt = this.db.prepare(`
       SELECT t.minute_ts AS minuteMs,
              SUM(t.keystrokes) AS keystrokes,
@@ -1413,7 +1424,9 @@ export class TypingAnalyticsDB {
              AVG(t.interval_p25_ms) AS intervalP25Ms,
              AVG(t.interval_p50_ms) AS intervalP50Ms,
              AVG(t.interval_p75_ms) AS intervalP75Ms,
-             MAX(t.interval_max_ms) AS intervalMaxMs
+             MAX(t.interval_max_ms) AS intervalMaxMs,
+             AVG(t.poll_p50_ms) AS pollP50Ms,
+             AVG(t.poll_p95_ms) AS pollP95Ms
         FROM typing_minute_stats t
         JOIN typing_scopes s ON s.id = t.scope_id
        WHERE s.keyboard_uid = @uid
@@ -1434,13 +1447,61 @@ export class TypingAnalyticsDB {
              AVG(t.interval_p25_ms) AS intervalP25Ms,
              AVG(t.interval_p50_ms) AS intervalP50Ms,
              AVG(t.interval_p75_ms) AS intervalP75Ms,
-             MAX(t.interval_max_ms) AS intervalMaxMs
+             MAX(t.interval_max_ms) AS intervalMaxMs,
+             AVG(t.poll_p50_ms) AS pollP50Ms,
+             AVG(t.poll_p95_ms) AS pollP95Ms
         FROM typing_minute_stats t
         JOIN typing_scopes s ON s.id = t.scope_id
        WHERE s.keyboard_uid = @uid
          AND s.machine_hash = @machineHash
          AND s.is_deleted = 0
          AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         ${appFilterClause('t.app_name')} ${typingTestFilterClause('t.typing_test')} ${runIdFilterClause('t.run_id')}
+       GROUP BY t.minute_ts
+       ORDER BY t.minute_ts ASC
+    `)
+
+    // Per-minute Σoverlap_count / Σoverlap_n across every bigram pair —
+    // the granularity the Analyze rollover trend chart needs (unlike
+    // the bigram-aggregate IPC's single whole-range ratio). Filters
+    // directly on typing_bigram_minute's own app/typing_test/run_id
+    // columns (same convention as prepareNgramStatements' per-ngram
+    // selects above) rather than joining through a per-pair breakdown,
+    // since this query only needs the minute-level oc/on sums, not
+    // per-pair rows. `overlap_n IS NOT NULL` is the same skip-not-poison
+    // rule as aggregatePairTotals: a row that never had overlap data
+    // (pre-v8, or the frame's overlap was undetermined) contributes
+    // nothing rather than counting as a 0-overlap observation — see
+    // that function's doc comment for the full rationale, which applies
+    // identically here since this query sums the same oc/on pair.
+    // `overlap_count IS NOT NULL` guards the all-or-nothing oc/on pair
+    // contract at the SQL boundary too: a synced row that somehow has
+    // `overlap_n` set but `overlap_count` NULL (malformed write, or a
+    // future schema bug) would otherwise make `SUM(overlap_count)`
+    // return NULL for the whole minute once any row is missing it,
+    // which the renderer would then read as `oc: null` and could
+    // fabricate a 0% rather than surfacing "unobserved" — excluding the
+    // row up front keeps the two columns' presence in lockstep.
+    // Single statement per the Monitor App aggregates' convention above
+    // — `@machineHash IS NULL` collapses the hash filter for the
+    // all-devices case, so a second physical statement would just
+    // duplicate. `"on"` is quoted since it's a SQL keyword; the quoted
+    // alias still comes back as a plain `on` property on the row, so
+    // the result already matches TypingRolloverMinuteRow with no rename.
+    this.selectRolloverMinutesStmt = this.db.prepare(`
+      SELECT t.minute_ts AS minuteTs,
+             SUM(t.overlap_count) AS oc,
+             SUM(t.overlap_n) AS "on"
+        FROM typing_bigram_minute t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND (@machineHash IS NULL OR s.machine_hash = @machineHash)
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.overlap_n IS NOT NULL
+         AND t.overlap_count IS NOT NULL
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
          ${appFilterClause('t.app_name')} ${typingTestFilterClause('t.typing_test')} ${runIdFilterClause('t.run_id')}
@@ -2453,6 +2514,29 @@ export class TypingAnalyticsDB {
       untilMs,
       appNamesJson: JSON.stringify(appScopes), typingTestsJson: JSON.stringify(typingTestScopes), runIdsJson: JSON.stringify(runIdScopes),
     }) as TypingMinuteStatsRow[]
+  }
+
+  /** Per-minute observed-rollover accumulators for the Analyze rollover
+   * trend chart — see {@link selectRolloverMinutesStmt}. `machineHash`
+   * `null` widens the scope to all devices (the Analyze "own" scope
+   * resolves its own hash before calling this); minutes with no
+   * determined-overlap bigram row are simply absent, not returned with
+   * `on: 0`. The query's quoted `"on"` alias already matches
+   * `TypingRolloverMinuteRow` field-for-field, so no rename is needed. */
+  listRolloverMinutesInRange(
+    uid: string,
+    machineHash: string | null,
+    sinceMs: number,
+    untilMs: number,
+    appScopes: readonly string[] = [], typingTestScopes: readonly string[] = [], runIdScopes: readonly string[] = [],
+  ): TypingRolloverMinuteRow[] {
+    return this.selectRolloverMinutesStmt.all({
+      uid,
+      machineHash,
+      sinceMs,
+      untilMs,
+      appNamesJson: JSON.stringify(appScopes), typingTestsJson: JSON.stringify(typingTestScopes), runIdsJson: JSON.stringify(runIdScopes),
+    }) as TypingRolloverMinuteRow[]
   }
 
   /** Distinct application names with keystroke totals over the range.

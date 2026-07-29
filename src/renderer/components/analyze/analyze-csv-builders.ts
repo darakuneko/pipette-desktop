@@ -77,6 +77,8 @@ import { classifyBigram } from './analyze-bigram-classes'
 import { classifyWordPosition } from './analyze-bigram-word-position'
 import { buildKeycodeFingerMap, resolvePairFingers } from './analyze-bigram-finger'
 import { parseBigramId } from './analyze-bigram-heatmap'
+import { rolloverRatioFromEntry } from './analyze-bigram-format'
+import { formatSharePercent } from './analyze-format'
 import { withSnapshotProtocol } from './analyze-protocol'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { buildBksRateBuckets } from './analyze-error-proxy'
@@ -479,6 +481,12 @@ export async function buildBigramsCsv(args: ScopeArgs & {
       const pair = parseBigramId(e.ngramId)
       if (pair) wordPosition = classifyWordPosition(pair.prev, pair.curr, unwrapTaps)
     }
+    // Trigram entries always resolve to null here (aggregatePairTotals
+    // never populates overlap accumulators for trigram rows), so the
+    // column comes out blank for gram === 3 without a separate gate —
+    // matching `class`/`word_position`'s "not applicable to trigrams"
+    // treatment above.
+    const rollover = rolloverRatioFromEntry(e)
     return [
       e.ngramId,
       e.count,
@@ -486,12 +494,13 @@ export async function buildBigramsCsv(args: ScopeArgs & {
       e.sd === null ? '' : Math.round(e.sd),
       cls,
       wordPosition,
+      rollover === null ? '' : formatSharePercent(rollover),
     ]
   }))
   return {
     slug: gram === 3 ? SLUG.trigrams : SLUG.bigrams,
     content: buildCsv(
-      [gram === 3 ? 'trigram_id' : 'bigram_id', 'count', 'avg_iki_ms', 'sd_iki_ms', 'class', 'word_position'],
+      [gram === 3 ? 'trigram_id' : 'bigram_id', 'count', 'avg_iki_ms', 'sd_iki_ms', 'class', 'word_position', 'observed_rollover_percent'],
       rows,
     ),
   }

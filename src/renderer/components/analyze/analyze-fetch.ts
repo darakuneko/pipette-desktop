@@ -21,6 +21,7 @@ import type {
   TypingMatrixCellRow,
   TypingMatrixCellDailyRow,
   TypingMinuteStatsRow,
+  TypingRolloverMinuteRow,
 } from '../../../shared/types/typing-analytics'
 import type { DeviceScope } from '../../../shared/types/analyze-filters'
 import { isHashScope, isOwnScope } from '../../../shared/types/analyze-filters'
@@ -37,6 +38,19 @@ export function listDailyForScope(
   return window.vialAPI.typingAnalyticsListItems(uid, appScopes, typingTestScopes, runIdScopes)
 }
 
+// In-flight de-dupe for `listMinuteStatsForScope`. IntervalChart and
+// RolloverSection mount together with byte-identical filter args and
+// both call this, which used to fire two concurrent IPC round trips
+// (and two synchronous DB aggregates) for the same rows — with zero
+// coupling between the two components, since neither knows the other
+// exists. Keyed by the full argument tuple; the entry is deleted the
+// instant its promise settles (success or failure), so this is
+// deliberately NOT a result cache — there is no staleness window. A
+// call made after the in-flight one has already settled always misses
+// the map and triggers a fresh fetch, exactly as if de-dupe didn't
+// exist; only genuinely concurrent callers ever share a promise.
+const inFlightMinuteStats = new Map<string, Promise<TypingMinuteStatsRow[]>>()
+
 export function listMinuteStatsForScope(
   uid: string,
   scope: DeviceScope,
@@ -46,9 +60,18 @@ export function listMinuteStatsForScope(
   typingTestScopes: string[] = [],
   runIdScopes: string[] = [],
 ): Promise<TypingMinuteStatsRow[]> {
-  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, scope.machineHash, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
-  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
-  return window.vialAPI.typingAnalyticsListMinuteStats(uid, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
+  const key = JSON.stringify([uid, scope, fromMs, toMs, appScopes, typingTestScopes, runIdScopes])
+  const inFlight = inFlightMinuteStats.get(key)
+  if (inFlight) return inFlight
+
+  const request = isHashScope(scope)
+    ? window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, scope.machineHash, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
+    : isOwnScope(scope)
+      ? window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
+      : window.vialAPI.typingAnalyticsListMinuteStats(uid, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
+  const deduped = request.finally(() => { inFlightMinuteStats.delete(key) })
+  inFlightMinuteStats.set(key, deduped)
+  return deduped
 }
 
 export function listBksMinuteForScope(
@@ -158,6 +181,22 @@ export function fetchBigramAggregateForRange(
   runIdScopes: string[] = [],
 ): Promise<TypingBigramAggregateResult> {
   return window.vialAPI.typingAnalyticsGetBigramAggregateForRange(uid, fromMs, toMs, view, scope, options, appScopes, typingTestScopes, runIdScopes)
+}
+
+/** Per-minute observed-rollover fetch for the Analyze rollover trend
+ * chart. Single-variant IPC, same reasoning as
+ * {@link fetchBigramAggregateForRange} — the main-side handler resolves
+ * `DeviceScope` itself. */
+export function fetchRolloverMinutesForRange(
+  uid: string,
+  scope: DeviceScope,
+  fromMs: number,
+  toMs: number,
+  appScopes: string[] = [],
+  typingTestScopes: string[] = [],
+  runIdScopes: string[] = [],
+): Promise<TypingRolloverMinuteRow[]> {
+  return window.vialAPI.typingAnalyticsListRolloverMinutes(uid, scope, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
 }
 
 /** Layout Comparison metrics fetch. Single channel; the main-side

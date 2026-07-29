@@ -25,6 +25,11 @@ export interface AnalyzeSummaryItem {
    * Ignored by {@link AnalyzeSummaryTable}; consumed by the
    * card-grid renderer. */
   descriptionKey?: string
+  /** Optional interpolation values for `descriptionKey` (e.g. a
+   * pre-formatted "12 ms" figure baked into the description text).
+   * Ignored by {@link AnalyzeSummaryTable}; consumed by the card-grid
+   * renderer, which forwards it as `t(descriptionKey, descriptionParams)`. */
+  descriptionParams?: Record<string, string | number>
   /** Optional top-right affordance for the card variant (e.g. an inline
    * edit button). Ignored by {@link AnalyzeSummaryTable}; only the
    * card-grid renderer forwards it to the underlying StatCard. */

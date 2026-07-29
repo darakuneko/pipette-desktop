@@ -982,6 +982,78 @@ describe('typing-analytics-service', () => {
     })
   })
 
+  describe('listRolloverMinutes', () => {
+    type RolloverMinuteRow = { minuteTs: number; oc: number; on: number }
+
+    async function ingestOverlapPair(ts: number): Promise<void> {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      // 4->11 completes with overlap=true, 11->7 with overlap=false —
+      // both bigram completions land in the same minute.
+      await ingest(handler, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 80, keyboard: sampleKeyboard, overlap: true })
+      await ingest(handler, { kind: 'matrix', row: 0, col: 2, layer: 0, keycode: 0x07, ts: ts + 280, keyboard: sampleKeyboard, overlap: false })
+      await flushTypingAnalyticsNowForTests()
+    }
+
+    it('returns the per-minute oc/on sum across every completed bigram pair', async () => {
+      const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+      await ingestOverlapPair(ts)
+      const handler = getHandler<RolloverMinuteRow[]>(IpcChannels.TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES)
+      const result = await handler(fakeEvent, sampleKeyboard.uid, 'all', ts - 60_000, ts + 60_000)
+      const minuteTs = Math.floor(ts / MINUTE_MS) * MINUTE_MS
+      expect(result).toEqual([{ minuteTs, oc: 1, on: 2 }])
+    })
+
+    it('returns an empty array when no ingested event carried a determined overlap', async () => {
+      setupTypingAnalyticsIpc()
+      const handler2 = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+      await ingest(handler2, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
+      await ingest(handler2, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 80, keyboard: sampleKeyboard })
+      await flushTypingAnalyticsNowForTests()
+
+      const handler = getHandler<RolloverMinuteRow[]>(IpcChannels.TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES)
+      const result = await handler(fakeEvent, sampleKeyboard.uid, 'all', ts - 60_000, ts + 60_000)
+      expect(result).toEqual([])
+    })
+
+    it('honours scope=own by filtering to the local machine_hash', async () => {
+      const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+      await ingestOverlapPair(ts)
+      const handler = getHandler<RolloverMinuteRow[]>(IpcChannels.TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES)
+      const result = await handler(fakeEvent, sampleKeyboard.uid, 'own', ts - 60_000, ts + 60_000)
+      const minuteTs = Math.floor(ts / MINUTE_MS) * MINUTE_MS
+      // The own machineHash is the only one in test data — same as 'all'.
+      expect(result).toEqual([{ minuteTs, oc: 1, on: 2 }])
+    })
+
+    it('returns an empty array when uid is invalid', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler<RolloverMinuteRow[]>(IpcChannels.TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES)
+      expect(await handler(fakeEvent, '', 'all', 0, 60_000)).toEqual([])
+    })
+
+    it('returns an empty array when sinceMs >= untilMs', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler<RolloverMinuteRow[]>(IpcChannels.TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES)
+      expect(await handler(fakeEvent, sampleKeyboard.uid, 'all', 60_000, 60_000)).toEqual([])
+    })
+
+    it('returns an empty array for an unparseable scope', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler<RolloverMinuteRow[]>(IpcChannels.TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES)
+      expect(await handler(fakeEvent, sampleKeyboard.uid, 'not-a-scope', 0, 60_000)).toEqual([])
+    })
+
+    it('rejects non-numeric sinceMs/untilMs instead of coercing them', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler<RolloverMinuteRow[]>(IpcChannels.TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES)
+      expect(await handler(fakeEvent, sampleKeyboard.uid, 'all', 'x', 60_000)).toEqual([])
+      expect(await handler(fakeEvent, sampleKeyboard.uid, 'all', 0, 'x')).toEqual([])
+    })
+  })
+
   describe('parseLayoutComparisonOptions (fingerOverrides validation)', () => {
     const validBase = {
       source: { id: 'qwerty', map: {} },

@@ -238,6 +238,19 @@ export interface TypingMinuteStatsRow {
   intervalP50Ms: number | null
   intervalP75Ms: number | null
   intervalMaxMs: number | null
+  /** Equal-weight AVG of the per-scope `poll_p50_ms`/`poll_p95_ms`
+   * samples contributing to this minute (see
+   * selectMinuteStatsInRangeForUidStmt) — deliberate: sample-weighting
+   * by scope isn't possible once the value is already a percentile,
+   * and the range this feeds (the Analyze rollover section) only needs
+   * an indicative effective-sampling-period figure, not a precise one.
+   * Optional/null when no contributing row recorded a poll-gap sample
+   * that minute (pre-v8 data, or a minute with no matrix polling at
+   * all) — optional so existing fixtures across the Analyze test
+   * suite don't all need updating for a field most of them don't
+   * exercise. */
+  pollP50Ms?: number | null
+  pollP95Ms?: number | null
 }
 
 /** One bucket of the Analyze activity heatmap (hour-of-day × day-of-week).
@@ -400,6 +413,17 @@ export interface TypingBigramTopEntry {
   hist: number[]
   avgIki: number | null
   sd: number | null
+  /** This pair's own contribution to the observed rollover rate — see
+   * {@link BigramPairTotal} (bigram-aggregate.ts) for the accumulators
+   * and `rankBigramsByCount`/`rankBigramsBySlow` for the projection.
+   * ALWAYS null-paired: `overlapN === 0` (no determined-overlap sample
+   * for this pair in the selection) projects both fields as null;
+   * `overlapN > 0` projects the raw counts even when `overlapCount` is
+   * 0 (a real, observed 0%). Optional so fixtures/tests written before
+   * this field existed don't all need updating — the real IPC path
+   * always sets both or neither. */
+  overlapCount?: number | null
+  overlapN?: number | null
 }
 
 /** Per-pair entry in a `slow` view response. Adds `p95` so the UI can
@@ -445,6 +469,23 @@ export interface TypingBigramSlowEntry extends TypingBigramTopEntry {
 export type TypingBigramAggregateResult =
   | { view: 'top'; entries: TypingBigramTopEntry[]; truncated: boolean; observedRolloverRatio?: number | null }
   | { view: 'slow'; entries: TypingBigramSlowEntry[]; truncated: boolean; observedRolloverRatio?: number | null }
+
+/** One minute's Σoverlap_count / Σoverlap_n across every bigram pair
+ * observed that minute — the per-minute granularity the Analyze
+ * rollover trend chart needs (the bigram-aggregate IPC only returns a
+ * single ratio for the whole range, not a time series). Backed by
+ * `TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES`; see
+ * listRolloverMinutesInRange in typing-analytics-db.ts. A minute
+ * with no determined-overlap sample (pre-v8 data, or every row that
+ * minute failed to observe overlap) is simply absent from the result
+ * array rather than emitted with `on: 0` — callers bucket by summing
+ * `oc`/`on` and must treat a bucket with zero contributing minutes as
+ * null (no data), never as a 0% ratio. */
+export interface TypingRolloverMinuteRow {
+  minuteTs: number
+  oc: number
+  on: number
+}
 
 /** Phase 1 metrics for the Layout Comparison. Bigram-derived ones
  * (travel distance / SFB) are added in Phase 2. */

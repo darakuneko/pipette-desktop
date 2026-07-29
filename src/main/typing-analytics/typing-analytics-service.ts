@@ -55,6 +55,7 @@ import {
   type TypingMatrixCellRow,
   type TypingMatrixCellDailyRow,
   type TypingMinuteStatsRow,
+  type TypingRolloverMinuteRow,
   type TypingSessionRow,
   type TypingBksMinuteRow,
   type TypingTombstoneResult,
@@ -709,6 +710,54 @@ export function setupTypingAnalyticsIpc(): void {
     }
   }
 
+  // Shared validator for the single-variant "resolve DeviceScope
+  // main-side" IPC pattern (GET_BIGRAM_AGGREGATE_FOR_RANGE and
+  // LIST_ROLLOVER_MINUTES) — sibling to `parseAppRangeArgs` above, but
+  // returns `machineHash: null` for the "all devices" scope (matching
+  // this pattern's own `machineHash === null` dispatch convention)
+  // instead of `parseAppRangeArgs`'s `undefined`, and does NOT snap
+  // sinceMs/untilMs to minute boundaries — both handlers on this side
+  // already pass raw ms bounds straight through to a SQL range compare
+  // that doesn't need snapping, and rounding here would change their
+  // existing behavior.
+  const parseScopedRangeArgs = async (
+    uid: unknown,
+    sinceMs: unknown,
+    untilMs: unknown,
+    scope: unknown,
+    appScopes: unknown,
+    typingTestScopes: unknown,
+    runIdScopes: unknown,
+  ): Promise<{
+    uid: string
+    machineHash: string | null
+    sinceMs: number
+    untilMs: number
+    apps: string[]
+    typingTests: string[]
+    runIds: string[]
+  } | null> => {
+    if (typeof uid !== 'string' || uid.length === 0) return null
+    if (typeof sinceMs !== 'number' || !Number.isFinite(sinceMs)) return null
+    if (typeof untilMs !== 'number' || !Number.isFinite(untilMs) || untilMs <= sinceMs) return null
+    const parsedScope = parseDeviceScope(scope)
+    if (parsedScope === null) return null
+    const machineHash = isOwnScope(parsedScope)
+      ? await getMachineHash()
+      : isHashScope(parsedScope)
+        ? parsedScope.machineHash
+        : null
+    return {
+      uid,
+      machineHash,
+      sinceMs,
+      untilMs,
+      apps: normalizeAppScopes(appScopes),
+      typingTests: normalizeAppScopes(typingTestScopes),
+      runIds: normalizeAppScopes(runIdScopes),
+    }
+  }
+
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_APPS_FOR_RANGE,
     async (_event, uid, sinceMs, untilMs, scope): Promise<{ name: string; keystrokes: number; activeMs: number }[]> => {
@@ -781,30 +830,17 @@ export function setupTypingAnalyticsIpc(): void {
         return emptyBigramResult('top')
       }
       const parsedView: TypingBigramAggregateView = view
-      if (typeof uid !== 'string' || uid.length === 0) return emptyBigramResult(parsedView)
-      if (typeof sinceMs !== 'number' || !Number.isFinite(sinceMs)) return emptyBigramResult(parsedView)
-      if (typeof untilMs !== 'number' || !Number.isFinite(untilMs) || untilMs <= sinceMs) {
-        return emptyBigramResult(parsedView)
-      }
-      const parsedScope = parseDeviceScope(scope)
-      if (parsedScope === null) return emptyBigramResult(parsedView)
+      const args = await parseScopedRangeArgs(uid, sinceMs, untilMs, scope, appScopes, typingTestScopes, runIdScopes)
+      if (!args) return emptyBigramResult(parsedView)
       const opts = parseBigramAggregateOptions(options)
       const limit = opts.limit ?? 30
       const minSample = opts.minSampleCount ?? 5
       const gram = opts.gram ?? 2
-      const apps = normalizeAppScopes(appScopes)
-      const typingTests = normalizeAppScopes(typingTestScopes)
-      const runIds = normalizeAppScopes(runIdScopes)
 
       const db = getTypingAnalyticsDB()
-      const machineHash = isOwnScope(parsedScope)
-        ? await getMachineHash()
-        : isHashScope(parsedScope)
-          ? parsedScope.machineHash
-          : undefined
-      const rows = machineHash === undefined
-        ? db.listNgramMinutesInRangeForUid(gram, uid, sinceMs, untilMs, apps, typingTests, runIds)
-        : db.listNgramMinutesInRangeForUidAndHash(gram, uid, machineHash, sinceMs, untilMs, apps, typingTests, runIds)
+      const rows = args.machineHash === null
+        ? db.listNgramMinutesInRangeForUid(gram, args.uid, args.sinceMs, args.untilMs, args.apps, args.typingTests, args.runIds)
+        : db.listNgramMinutesInRangeForUidAndHash(gram, args.uid, args.machineHash, args.sinceMs, args.untilMs, args.apps, args.typingTests, args.runIds)
       const totals = aggregatePairTotals(rows)
       // Ranking always slices to `limit`; when the period holds more
       // distinct pairs than that, low-frequency-but-slow entries can
@@ -820,6 +856,28 @@ export function setupTypingAnalyticsIpc(): void {
         return { view: 'slow', entries: rankBigramsBySlow(totals, minSample, limit), truncated, observedRolloverRatio: rolloverRatio }
       }
       return { view: 'top', entries: rankBigramsByCount(totals, limit), truncated, observedRolloverRatio: rolloverRatio }
+    },
+  )
+
+  // Per-minute oc/on for the Analyze rollover trend chart. Single-variant
+  // channel like GET_BIGRAM_AGGREGATE_FOR_RANGE above — `scope` is
+  // resolved to own/all/hash here instead of the renderer picking
+  // between `*Local`/`*ForHash` siblings. `parseScopedRangeArgs` already
+  // resolves `machineHash` to the exact `string | null` shape
+  // `listRolloverMinutesInRange` takes, so no further branching is needed.
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES,
+    async (
+      _event,
+      uid: unknown,
+      scope: unknown,
+      sinceMs: unknown,
+      untilMs: unknown,
+      appScopes: unknown, typingTestScopes: unknown, runIdScopes: unknown,
+    ): Promise<TypingRolloverMinuteRow[]> => {
+      const args = await parseScopedRangeArgs(uid, sinceMs, untilMs, scope, appScopes, typingTestScopes, runIdScopes)
+      if (!args) return []
+      return getTypingAnalyticsDB().listRolloverMinutesInRange(args.uid, args.machineHash, args.sinceMs, args.untilMs, args.apps, args.typingTests, args.runIds)
     },
   )
 

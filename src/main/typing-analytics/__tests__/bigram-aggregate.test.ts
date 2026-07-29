@@ -335,6 +335,33 @@ describe('rankBigramsByCount', () => {
     const [entry] = rankBigramsByCount(map, 5)
     expect(entry.sd).toBeNull()
   })
+
+  it('projects overlapCount/overlapN as null/null when the pair has no determined-overlap sample', () => {
+    const map = totals([
+      { ngramId: 'A', count: 2, hist: [2, 0, 0, 0, 0, 0, 0, 0] },
+    ])
+    const [entry] = rankBigramsByCount(map, 5)
+    expect(entry.overlapCount).toBeNull()
+    expect(entry.overlapN).toBeNull()
+  })
+
+  it('projects the raw overlapCount/overlapN when overlapN > 0, even a real observed 0', () => {
+    const map = totals([
+      { ngramId: 'A', count: 5, hist: [5, 0, 0, 0, 0, 0, 0, 0], overlapCount: 0, overlapN: 5 },
+    ])
+    const [entry] = rankBigramsByCount(map, 5)
+    expect(entry.overlapCount).toBe(0)
+    expect(entry.overlapN).toBe(5)
+  })
+
+  it('projects a non-zero overlapCount/overlapN pair unchanged', () => {
+    const map = totals([
+      { ngramId: 'A', count: 5, hist: [5, 0, 0, 0, 0, 0, 0, 0], overlapCount: 2, overlapN: 5 },
+    ])
+    const [entry] = rankBigramsByCount(map, 5)
+    expect(entry.overlapCount).toBe(2)
+    expect(entry.overlapN).toBe(5)
+  })
 })
 
 describe('rankBigramsBySlow', () => {
@@ -391,6 +418,24 @@ describe('rankBigramsBySlow', () => {
     ])
     const [entry] = rankBigramsBySlow(map, 5, 5)
     expect(entry.sd).toBeNull()
+  })
+
+  it('projects overlapCount/overlapN as null/null when the pair has no determined-overlap sample', () => {
+    const map = totals([
+      { ngramId: 'A', count: 5, hist: [4, 0, 0, 0, 0, 0, 0, 1] },
+    ])
+    const [entry] = rankBigramsBySlow(map, 5, 5)
+    expect(entry.overlapCount).toBeNull()
+    expect(entry.overlapN).toBeNull()
+  })
+
+  it('projects the raw overlapCount/overlapN when overlapN > 0, even a real observed 0', () => {
+    const map = totals([
+      { ngramId: 'A', count: 5, hist: [4, 0, 0, 0, 0, 0, 0, 1], overlapCount: 0, overlapN: 4 },
+    ])
+    const [entry] = rankBigramsBySlow(map, 5, 5)
+    expect(entry.overlapCount).toBe(0)
+    expect(entry.overlapN).toBe(4)
   })
 })
 

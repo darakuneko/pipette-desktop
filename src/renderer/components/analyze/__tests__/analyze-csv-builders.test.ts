@@ -70,10 +70,12 @@ describe('buildBigramsCsv', () => {
     })
     const result = await buildBigramsCsv({ ...scopeArgs, gram: 2, snapshot: null })
     const { headers, rows } = parseCsv(result.content)
-    expect(headers).toEqual(['bigram_id', 'count', 'avg_iki_ms', 'sd_iki_ms', 'class', 'word_position'])
+    expect(headers).toEqual(['bigram_id', 'count', 'avg_iki_ms', 'sd_iki_ms', 'class', 'word_position', 'observed_rollover_percent'])
     // No snapshot -> class stays blank, word_position still resolves.
-    expect(rows[0]).toEqual([`${keSpace}_${keyA}`, '5', '400', '10', '', 'initiation'])
-    expect(rows[1]).toEqual([`${keyA}_${keyB}`, '3', '30', '5', '', 'inWord'])
+    // Neither fixture entry carries overlapCount/overlapN -> the new
+    // column is empty (unobserved), not 0.
+    expect(rows[0]).toEqual([`${keSpace}_${keyA}`, '5', '400', '10', '', 'initiation', ''])
+    expect(rows[1]).toEqual([`${keyA}_${keyB}`, '3', '30', '5', '', 'inWord', ''])
   })
 
   it('populates both class and word_position when a snapshot is supplied', async () => {
@@ -88,7 +90,7 @@ describe('buildBigramsCsv', () => {
       ...scopeArgs, gram: 2, snapshot: buildSnapshot(), fingerOverrides,
     })
     const { rows } = parseCsv(result.content)
-    expect(rows[0]).toEqual([`${keyA}_${keyB}`, '3', '30', '5', 'alternation', 'inWord'])
+    expect(rows[0]).toEqual([`${keyA}_${keyB}`, '3', '30', '5', 'alternation', 'inWord', ''])
   })
 
   it('excludes a pair ending at a separator from word_position via the "excluded" value', async () => {
@@ -101,7 +103,7 @@ describe('buildBigramsCsv', () => {
     })
     const result = await buildBigramsCsv({ ...scopeArgs, gram: 2, snapshot: null })
     const { rows } = parseCsv(result.content)
-    expect(rows[0]).toEqual([`${keyA}_${keSpace}`, '2', '30', '0', '', 'excluded'])
+    expect(rows[0]).toEqual([`${keyA}_${keSpace}`, '2', '30', '0', '', 'excluded', ''])
   })
 
   it('leaves word_position blank for trigrams, matching the class column', async () => {
@@ -114,7 +116,33 @@ describe('buildBigramsCsv', () => {
     })
     const result = await buildBigramsCsv({ ...scopeArgs, gram: 3, snapshot: buildSnapshot(), fingerOverrides })
     const { headers, rows } = parseCsv(result.content)
-    expect(headers).toEqual(['trigram_id', 'count', 'avg_iki_ms', 'sd_iki_ms', 'class', 'word_position'])
-    expect(rows[0]).toEqual([`${keyA}_${keyB}_${keyA}`, '4', '30', '0', '', ''])
+    expect(headers).toEqual(['trigram_id', 'count', 'avg_iki_ms', 'sd_iki_ms', 'class', 'word_position', 'observed_rollover_percent'])
+    expect(rows[0]).toEqual([`${keyA}_${keyB}_${keyA}`, '4', '30', '0', '', '', ''])
+  })
+
+  it('renders observed_rollover_percent with 1 decimal when the entry has overlap data', async () => {
+    fetchSpy.mockResolvedValue({
+      view: 'top',
+      entries: [
+        { ngramId: `${keyA}_${keyB}`, count: 4, hist: [4, 0, 0, 0, 0, 0, 0, 0], avgIki: 30, sd: 0, overlapCount: 1, overlapN: 3 },
+      ],
+      truncated: false,
+    })
+    const result = await buildBigramsCsv({ ...scopeArgs, gram: 2, snapshot: null })
+    const { rows } = parseCsv(result.content)
+    expect(rows[0]).toEqual([`${keyA}_${keyB}`, '4', '30', '0', '', 'inWord', '33.3'])
+  })
+
+  it('renders observed_rollover_percent as 0.0 (not empty) when overlapCount is a real observed zero', async () => {
+    fetchSpy.mockResolvedValue({
+      view: 'top',
+      entries: [
+        { ngramId: `${keyA}_${keyB}`, count: 4, hist: [4, 0, 0, 0, 0, 0, 0, 0], avgIki: 30, sd: 0, overlapCount: 0, overlapN: 5 },
+      ],
+      truncated: false,
+    })
+    const result = await buildBigramsCsv({ ...scopeArgs, gram: 2, snapshot: null })
+    const { rows } = parseCsv(result.content)
+    expect(rows[0]).toEqual([`${keyA}_${keyB}`, '4', '30', '0', '', 'inWord', '0.0'])
   })
 })
