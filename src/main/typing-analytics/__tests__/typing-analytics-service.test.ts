@@ -45,6 +45,17 @@ vi.mock('../app-monitor', () => ({
   getCurrentAppName: vi.fn(async () => null),
 }))
 
+// The real logger memoizes its log directory (derived from
+// app.getPath('userData')) at module scope on first use and never
+// recomputes it — fine in production (one userData dir for the process
+// lifetime) but incompatible with per-test mkdtemp directories: a test
+// after the first one to log anything would ENOENT against an already
+// mkdtemp mkdir/rm'd directory. Mocked out here since the flush-failure
+// tests below deliberately trigger the service's error-path log call.
+vi.mock('../../logger', () => ({
+  log: vi.fn(),
+}))
+
 const mockMachineId = vi.fn<(original?: boolean) => Promise<string>>()
 
 vi.mock('node-machine-id', () => ({
@@ -86,6 +97,7 @@ import {
 } from '../db/typing-analytics-db'
 import { IpcChannels } from '../../../shared/ipc/channels'
 import type { TypingBigramAggregateResult } from '../../../shared/types/typing-analytics'
+import { DRAIN_CLOSE_GRACE_MS, MINUTE_MS, RETENTION_MS } from '../minute-buffer'
 
 type IpcHandler<R = unknown> = (event: unknown, ...args: unknown[]) => Promise<R>
 
@@ -97,6 +109,27 @@ function getHandler<R = unknown>(channel: string): IpcHandler<R> {
 }
 
 const fakeEvent = {} as Electron.IpcMainInvokeEvent
+
+/** Dispatch a TYPING_ANALYTICS_EVENT payload through the given handler,
+ *  pinning the fake system clock to the payload's own `ts` first.
+ *
+ *  ingestEvent passes real `Date.now()` as MinuteBuffer.addEvent's `nowMs`
+ *  — the retention/eviction guard needs the actual wall-clock moment an
+ *  event is ingested, not its own `ts` (see minute-buffer.ts). In
+ *  production those are always close together (an event is ingested at
+ *  most a tapping-term-plus-jitter after it fires), but this suite's
+ *  events are timestamped by scenario (arbitrary calendar dates, small
+ *  relative offsets), independent of when the test actually runs. Pinning
+ *  the clock to each event's own `ts` keeps every pre-existing scenario's
+ *  "this is a normal, in-order event" assumption true without having to
+ *  rewrite every literal timestamp in this file. Tests that specifically
+ *  exercise retention/eviction pin the clock explicitly instead (see the
+ *  "retention and eviction" describe block below). */
+async function ingest(handler: IpcHandler, payload: Record<string, unknown>): Promise<void> {
+  const ts = payload.ts
+  if (typeof ts === 'number') vi.setSystemTime(ts)
+  await handler(fakeEvent, payload)
+}
 
 const sampleKeyboard = {
   uid: '0xAABB',
@@ -113,6 +146,12 @@ type ScopeRow = { id: string; keyboard_uid: string }
 
 describe('typing-analytics-service', () => {
   beforeEach(async () => {
+    // Only Date is faked (never setTimeout/setInterval) — the flush
+    // debounce timer and any real async I/O keep working normally; only
+    // Date.now() / new Date() become controllable, via `ingest()` above,
+    // so MinuteBuffer's retention guard sees a "now" consistent with each
+    // test's own scenario timestamps instead of the real wall clock.
+    vi.useFakeTimers({ toFake: ['Date'] })
     vi.clearAllMocks()
     mockUserDataPath = await mkdtemp(join(tmpdir(), 'pipette-typing-analytics-service-test-'))
     resetTypingAnalyticsForTests()
@@ -126,6 +165,7 @@ describe('typing-analytics-service', () => {
   afterEach(async () => {
     resetTypingAnalyticsDBForTests()
     await rm(mockUserDataPath, { recursive: true, force: true })
+    vi.useRealTimers()
   })
 
   describe('setupTypingAnalytics', () => {
@@ -186,9 +226,9 @@ describe('typing-analytics-service', () => {
       setupTypingAnalyticsIpc()
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
 
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_001, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'char', key: 'b', ts: 1_002, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: 1_001, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'b', ts: 1_002, keyboard: sampleKeyboard })
 
       // Live minute buffer holds exactly one entry for minute 0.
       expect(getMinuteBufferForTests().isEmpty()).toBe(false)
@@ -199,9 +239,9 @@ describe('typing-analytics-service', () => {
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
 
       const ts = Date.UTC(2026, 3, 14, 10, 0, 0)
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: ts + 100, keyboard: sampleKeyboard })
-      await handler(fakeEvent, {
+      await ingest(handler, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: ts + 100, keyboard: sampleKeyboard })
+      await ingest(handler, {
         kind: 'matrix', row: 0, col: 3, layer: 0, keycode: 0x04, ts: ts + 200, keyboard: sampleKeyboard,
       })
 
@@ -230,9 +270,9 @@ describe('typing-analytics-service', () => {
 
       const ts = Date.UTC(2026, 3, 14, 10, 0, 0)
       // Three matrix events in the same minute → two bigrams (a→h, h→d).
-      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 120, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 2, layer: 0, keycode: 0x07, ts: ts + 280, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 120, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'matrix', row: 0, col: 2, layer: 0, keycode: 0x07, ts: ts + 280, keyboard: sampleKeyboard })
 
       await flushTypingAnalyticsNowForTests()
 
@@ -252,9 +292,9 @@ describe('typing-analytics-service', () => {
 
       const ts = Date.UTC(2026, 3, 14, 10, 0, 0)
       // Same 3 events as above: iki(4->11)=120, iki(11->7)=160.
-      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 120, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 2, layer: 0, keycode: 0x07, ts: ts + 280, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 120, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'matrix', row: 0, col: 2, layer: 0, keycode: 0x07, ts: ts + 280, keyboard: sampleKeyboard })
 
       await flushTypingAnalyticsNowForTests()
 
@@ -274,9 +314,9 @@ describe('typing-analytics-service', () => {
 
       const ts = Date.UTC(2026, 3, 14, 10, 0, 0)
       // iki(4->11)=120, iki(11->7)=160 -> trigram value = (120+160)/2 = 140.
-      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 120, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 2, layer: 0, keycode: 0x07, ts: ts + 280, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 120, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'matrix', row: 0, col: 2, layer: 0, keycode: 0x07, ts: ts + 280, keyboard: sampleKeyboard })
 
       await flushTypingAnalyticsNowForTests()
 
@@ -294,8 +334,8 @@ describe('typing-analytics-service', () => {
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
 
       const ts = Date.UTC(2026, 3, 14, 10, 0, 0)
-      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 120, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 120, keyboard: sampleKeyboard })
 
       await flushTypingAnalyticsNowForTests()
 
@@ -309,8 +349,8 @@ describe('typing-analytics-service', () => {
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
 
       const ts = Date.UTC(2026, 3, 14, 10, 0, 0)
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'char', key: 'b', ts: ts + 100, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'b', ts: ts + 100, keyboard: sampleKeyboard })
 
       await flushTypingAnalyticsNowForTests()
 
@@ -326,8 +366,8 @@ describe('typing-analytics-service', () => {
 
       const start = Date.UTC(2026, 3, 14, 10, 0, 0)
       const end = Date.UTC(2026, 3, 14, 10, 0, 5)
-      await eventHandler(fakeEvent, { kind: 'char', key: 'a', ts: start, keyboard: sampleKeyboard })
-      await eventHandler(fakeEvent, { kind: 'char', key: 'b', ts: end, keyboard: sampleKeyboard })
+      await ingest(eventHandler, { kind: 'char', key: 'a', ts: start, keyboard: sampleKeyboard })
+      await ingest(eventHandler, { kind: 'char', key: 'b', ts: end, keyboard: sampleKeyboard })
 
       await flushHandler(fakeEvent, sampleKeyboard.uid)
 
@@ -343,8 +383,8 @@ describe('typing-analytics-service', () => {
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
       const otherKeyboard = { ...sampleKeyboard, uid: '0xCCDD', vendorId: 0x1234 }
 
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: otherKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: 1_000, keyboard: otherKeyboard })
 
       await flushTypingAnalyticsNowForTests()
 
@@ -357,7 +397,7 @@ describe('typing-analytics-service', () => {
       setupTypingAnalyticsIpc()
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
 
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
       await flushTypingAnalyticsNowForTests()
 
       // After a successful flush the buffer and queued sessions are empty,
@@ -372,7 +412,7 @@ describe('typing-analytics-service', () => {
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
 
       const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
       await flushTypingAnalyticsNowForTests()
       await flushTypingAnalyticsBeforeQuit()
 
@@ -387,7 +427,7 @@ describe('typing-analytics-service', () => {
       setupTypingAnalyticsIpc()
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
 
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
 
       // Kick off a flush but don't await — the chain holds the in-flight pass.
       const inflight = flushTypingAnalyticsNowForTests()
@@ -406,7 +446,7 @@ describe('typing-analytics-service', () => {
       setupTypingAnalyticsIpc()
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
 
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
 
       const a = flushTypingAnalyticsNowForTests()
       const b = flushTypingAnalyticsNowForTests()
@@ -424,8 +464,8 @@ describe('typing-analytics-service', () => {
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
       const otherKeyboard = { ...sampleKeyboard, uid: '0xCCDD', vendorId: 0x1234 }
 
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: otherKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: 1_000, keyboard: otherKeyboard })
       await flushTypingAnalyticsNowForTests()
 
       const machineHash = await getMachineHash()
@@ -444,7 +484,7 @@ describe('typing-analytics-service', () => {
       setupTypingAnalyticsIpc()
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
 
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
       // Force the open DB into a bad state so the transaction throws.
       getTypingAnalyticsDB().close()
       await flushTypingAnalyticsNowForTests()
@@ -457,7 +497,7 @@ describe('typing-analytics-service', () => {
       async function seedKeyboardData(keyboard: typeof sampleKeyboard, ts: number, key = 'a'): Promise<void> {
         setupTypingAnalyticsIpc()
         const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
-        await handler(fakeEvent, { kind: 'char', key, ts, keyboard })
+        await ingest(handler, { kind: 'char', key, ts, keyboard })
         await flushTypingAnalyticsNowForTests()
       }
 
@@ -546,7 +586,7 @@ describe('typing-analytics-service', () => {
         ): Promise<void> {
           setupTypingAnalyticsIpc()
           const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
-          await handler(fakeEvent, { kind: 'matrix', row, col, layer, keycode: 0x04, ts, keyboard })
+          await ingest(handler, { kind: 'matrix', row, col, layer, keycode: 0x04, ts, keyboard })
         }
 
         it('combines flushed DB rows with the live in-memory current minute', async () => {
@@ -554,9 +594,12 @@ describe('typing-analytics-service', () => {
           // One press lands in the DB via the flush.
           await ingestMatrix(sampleKeyboard, 1, 2, 0, ts)
           await flushTypingAnalyticsNowForTests()
-          // Second press stays in the buffer (not flushed), so only
-          // the peekMatrixCountsForUid path can see it.
-          await ingestMatrix(sampleKeyboard, 1, 2, 0, ts + 500)
+          // Second press lands in the NEXT minute — a genuinely fresh,
+          // never-flushed entry — so only the peekMatrixCountsForUid path
+          // can see it. (A press landing back in the SAME, already-flushed
+          // minute would instead be excluded from the peek — see the
+          // "retention and eviction" describe block below for that case.)
+          await ingestMatrix(sampleKeyboard, 1, 2, 0, ts + MINUTE_MS)
 
           const heat = await getMatrixHeatmap(sampleKeyboard.uid, 0, ts - 60_000)
           expect(heat['1,2']?.total).toBe(2)
@@ -595,9 +638,9 @@ describe('typing-analytics-service', () => {
         setupTypingAnalyticsIpc()
         const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
         // Three matrix events → two bigrams (4→11 and 11→7).
-        await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
-        await handler(fakeEvent, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 80, keyboard: sampleKeyboard })
-        await handler(fakeEvent, { kind: 'matrix', row: 0, col: 2, layer: 0, keycode: 0x07, ts: ts + 280, keyboard: sampleKeyboard })
+        await ingest(handler, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
+        await ingest(handler, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 80, keyboard: sampleKeyboard })
+        await ingest(handler, { kind: 'matrix', row: 0, col: 2, layer: 0, keycode: 0x07, ts: ts + 280, keyboard: sampleKeyboard })
         await flushTypingAnalyticsNowForTests()
       }
 
@@ -734,8 +777,8 @@ describe('typing-analytics-service', () => {
           setupTypingAnalyticsIpc()
           const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
           const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
-          await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
-          await handler(fakeEvent, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 80, keyboard: sampleKeyboard })
+          await ingest(handler, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
+          await ingest(handler, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 80, keyboard: sampleKeyboard })
           await flushTypingAnalyticsNowForTests()
 
           const aggHandler = getHandler<TypingBigramAggregateResult>(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
@@ -751,13 +794,13 @@ describe('typing-analytics-service', () => {
 
       await handler(fakeEvent, null)
       await handler(fakeEvent, 'not-an-object')
-      await handler(fakeEvent, { kind: 'char', ts: 1_000, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'char', key: 'a', keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 1, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'unknown', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'matrix', row: -1, col: 0, layer: 0, keycode: 1, ts: 1_000, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000 })
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: { uid: '', vendorId: 0, productId: 0, productName: '' } })
+      await ingest(handler, { kind: 'char', ts: 1_000, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 1, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'unknown', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'matrix', row: -1, col: 0, layer: 0, keycode: 1, ts: 1_000, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: 1_000 })
+      await ingest(handler, { kind: 'char', key: 'a', ts: 1_000, keyboard: { uid: '', vendorId: 0, productId: 0, productName: '' } })
 
       expect(getMinuteBufferForTests().isEmpty()).toBe(true)
     })
@@ -831,8 +874,8 @@ describe('typing-analytics-service', () => {
       setupTypingAnalyticsIpc()
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
       const ts = Date.UTC(2026, 3, 14, 10, 0, 0)
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: ts + 100, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: ts + 100, keyboard: sampleKeyboard })
       await flushTypingAnalyticsNowForTests()
 
       const hash = await getMachineHash()
@@ -856,8 +899,8 @@ describe('typing-analytics-service', () => {
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
       const dayOne = Date.UTC(2026, 3, 14, 10, 0, 0)
       const dayTwo = Date.UTC(2026, 3, 15, 10, 0, 0)
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: dayOne, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'char', key: 'b', ts: dayTwo, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: dayOne, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'b', ts: dayTwo, keyboard: sampleKeyboard })
       await flushTypingAnalyticsNowForTests()
 
       const hash = await getMachineHash()
@@ -876,8 +919,8 @@ describe('typing-analytics-service', () => {
 
       const eveningMinute = Date.UTC(2026, 3, 14, 23, 30, 0)
       const morningMinute = Date.UTC(2026, 3, 15, 0, 30, 0)
-      await handler(fakeEvent, { kind: 'char', key: 'x', ts: eveningMinute, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'char', key: 'y', ts: morningMinute, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'x', ts: eveningMinute, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'y', ts: morningMinute, keyboard: sampleKeyboard })
       await flushTypingAnalyticsNowForTests()
 
       const hash = await getMachineHash()
@@ -899,8 +942,8 @@ describe('typing-analytics-service', () => {
 
       const start = Date.UTC(2026, 3, 14, 23, 59, 50)
       const end = Date.UTC(2026, 3, 15, 0, 0, 5)
-      await eventHandler(fakeEvent, { kind: 'char', key: 'a', ts: start, keyboard: sampleKeyboard })
-      await eventHandler(fakeEvent, { kind: 'char', key: 'b', ts: end, keyboard: sampleKeyboard })
+      await ingest(eventHandler, { kind: 'char', key: 'a', ts: start, keyboard: sampleKeyboard })
+      await ingest(eventHandler, { kind: 'char', key: 'b', ts: end, keyboard: sampleKeyboard })
       await flushHandler(fakeEvent, sampleKeyboard.uid)
 
       const hash = await getMachineHash()
@@ -916,13 +959,124 @@ describe('typing-analytics-service', () => {
 
       const minuteOne = Date.UTC(2026, 3, 14, 10, 0, 0)
       const minuteTwo = Date.UTC(2026, 3, 14, 10, 5, 0)
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: minuteOne, keyboard: sampleKeyboard })
-      await handler(fakeEvent, { kind: 'char', key: 'b', ts: minuteTwo, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: minuteOne, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'b', ts: minuteTwo, keyboard: sampleKeyboard })
       await flushTypingAnalyticsNowForTests()
 
       const hash = await getMachineHash()
       const rows = await readDayRows(sampleKeyboard.uid, hash, '2026-04-14')
       expect(rows.filter((r) => r.kind === 'scope')).toHaveLength(1)
+    })
+  })
+
+  describe('retention and full re-send', () => {
+    it('persists the full cumulative keystroke count when a late event arrives after a completed flush', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+
+      await ingest(handler, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
+      await flushTypingAnalyticsNowForTests()
+
+      const conn = getTypingAnalyticsDB().getConnection()
+      let stats = conn.prepare('SELECT keystrokes FROM typing_minute_stats').all() as { keystrokes: number }[]
+      expect(stats).toEqual([{ keystrokes: 1 }])
+
+      // A straggler for the SAME minute arrives after that flush already
+      // completed — e.g. a tap-hold press whose deferred emit landed past
+      // DRAIN_CLOSE_GRACE_MS.
+      await ingest(handler, { kind: 'char', key: 'a', ts: ts + DRAIN_CLOSE_GRACE_MS + 500, keyboard: sampleKeyboard })
+      await flushTypingAnalyticsNowForTests()
+
+      stats = conn.prepare('SELECT keystrokes FROM typing_minute_stats').all() as { keystrokes: number }[]
+      // Must be the FULL cumulative count (2), not the straggler alone —
+      // a partial re-send here would replace the DB's real total through
+      // the strict `>` LWW merge instead of adding to it.
+      expect(stats).toEqual([{ keystrokes: 2 }])
+    })
+
+    it('drops an ultra-late event targeting an already-evicted minute instead of persisting a fresh partial entry', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+
+      await ingest(handler, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
+      await flushTypingAnalyticsNowForTests()
+
+      // drainAll (used by flushTypingAnalyticsNowForTests) retains entries —
+      // only drainClosed evicts (see minute-buffer.ts) — so eviction is
+      // driven directly here to simulate the periodic flush pass that
+      // would eventually run drainClosed once the wall clock genuinely
+      // moves this far past the minute.
+      const evictedNow = ts + MINUTE_MS + RETENTION_MS + 1
+      getMinuteBufferForTests().drainClosed(evictedNow)
+
+      // An event still targeting the now-evicted minute arrives.
+      // ingestEvent passes real Date.now() (pinned here to the same
+      // ultra-late instant) as MinuteBuffer.addEvent's nowMs, so this must
+      // be dropped rather than starting a fresh partial entry.
+      vi.setSystemTime(evictedNow)
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
+      await flushTypingAnalyticsNowForTests()
+
+      const conn = getTypingAnalyticsDB().getConnection()
+      const stats = conn.prepare('SELECT scope_id, minute_ts, keystrokes FROM typing_minute_stats').all() as StatsRow[]
+      // Only the original minute's original count — the ultra-late event
+      // was dropped, not persisted as a second, disconnected minute.
+      expect(stats).toHaveLength(1)
+      expect(stats[0].keystrokes).toBe(1)
+    })
+
+    it('keeps updatedAt strictly increasing across two flush passes at the exact same fake instant', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+
+      await ingest(handler, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
+      await flushTypingAnalyticsNowForTests()
+      const conn = getTypingAnalyticsDB().getConnection()
+      const first = conn.prepare('SELECT updated_at FROM typing_minute_stats').get() as { updated_at: number }
+
+      // Same instant as the first flush (ingest() pins the clock to `ts`
+      // again) — the DB's strict `>` LWW guard would reject this second
+      // pass's row entirely if updatedAt merely tied instead of strictly
+      // increasing.
+      await ingest(handler, { kind: 'char', key: 'b', ts, keyboard: sampleKeyboard })
+      await flushTypingAnalyticsNowForTests()
+      const second = conn.prepare('SELECT updated_at FROM typing_minute_stats').get() as { updated_at: number }
+
+      expect(second.updated_at).toBeGreaterThan(first.updated_at)
+      // And the second pass's cumulative row actually landed (both chars
+      // counted) — proof the tie-break wasn't merely cosmetic.
+      const stats = conn.prepare('SELECT keystrokes FROM typing_minute_stats').get() as { keystrokes: number }
+      expect(stats.keystrokes).toBe(2)
+    })
+
+    it('recovers a failed flush by reopening the drained snapshot instead of losing it', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+
+      await ingest(handler, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
+      // Force the cache-apply step to throw after the drain already
+      // captured this minute's snapshot (see persistOwnJsonlDay: JSONL
+      // append happens first, cache apply second, against this closed
+      // connection).
+      getTypingAnalyticsDB().close()
+      await flushTypingAnalyticsNowForTests()
+
+      // A second keystroke for the same minute arrives before the retry.
+      await ingest(handler, { kind: 'char', key: 'b', ts: ts + 500, keyboard: sampleKeyboard })
+
+      resetTypingAnalyticsDBForTests()
+      await flushTypingAnalyticsNowForTests()
+
+      // The retry must land BOTH keystrokes — the one from the failed
+      // pass (recovered via minuteBuffer.reopenAll()) and the one that
+      // arrived after it — not just the second one alone.
+      const conn = getTypingAnalyticsDB().getConnection()
+      const stats = conn.prepare('SELECT keystrokes FROM typing_minute_stats').get() as { keystrokes: number }
+      expect(stats.keystrokes).toBe(2)
     })
   })
 })

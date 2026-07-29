@@ -264,6 +264,28 @@ export function useInputModes({
     // input carries neither (so it lands as the null run / null test).
     return { keyboard, typingTest: label, runId: label ? testRunIdRef.current : null }
   }, [])
+  // Ordering contract, not an optimization: chaining every emit behind the
+  // previous one's IPC guarantees at most one typingAnalyticsEvent invoke
+  // is in flight at a time, so main's ingestEvent handlers can never
+  // interleave around their own internal `await resolveScope()` — the
+  // arrival order at main is always the call order here. Without this, a
+  // second event whose resolveScope() call resolves from a warm cache
+  // could reach the minute buffer before an earlier event still waiting
+  // on a cold-cache resolveScope(), reordering keystrokes.
+  //
+  // Four independent layers share the ordering job end to end, each
+  // covering what the one before it cannot:
+  //   - MatrixAnalyticsQueue (renderer): press-order classification —
+  //     decides tap vs. hold before anything reaches this sink.
+  //   - this chain (renderer): the arrival-order contract into main — at
+  //     most one IPC in flight, so decided order survives the IPC hop.
+  //   - MinuteBuffer retention (main): self-healing aggregation — a late
+  //     arrival re-dirties its entry instead of corrupting an already-flushed
+  //     minute, so a rare reorder or straggler heals on the next drain
+  //     rather than needing to never happen.
+  //   - `iki <= 0` guard (main, recordNgramChain): last-resort discard for
+  //     whatever tie/out-of-order pair still slips through all of the above.
+  const chainRef = useRef<Promise<void>>(Promise.resolve())
   const emitAnalyticsEvent = useCallback((context: PreparedAnalyticsContext, payload: TypingAnalyticsEventPayload): Promise<void> => {
     const event = context.typingTest
       ? { ...payload, keyboard: context.keyboard, typingTest: context.typingTest, runId: context.runId ?? undefined }
@@ -272,8 +294,39 @@ export function useInputModes({
     // (MatrixAnalyticsQueue.drainAll, via resetMatrixPressTracking) — the
     // ordinary press/release/deadline paths call this and ignore it,
     // staying fire-and-forget same as before. Caught here (not left to
-    // the caller) so a drain's Promise.all never rejects on an IPC error.
-    return window.vialAPI.typingAnalyticsEvent(event).catch(() => { /* fire-and-forget */ })
+    // the caller) so a drain's Promise.all never rejects on an IPC error,
+    // and so one failed IPC doesn't stall every later link in the chain.
+    const next = chainRef.current
+      .then(() => window.vialAPI.typingAnalyticsEvent(event))
+      .catch(() => { /* fire-and-forget */ })
+    chainRef.current = next
+    return next
+  }, [])
+  /** Request a flush only after both `drained` and every event it just
+   * emitted have settled. `chainRef.current` must be read INSIDE the
+   * `.then()` — only after `drained` resolves — because draining is what
+   * pushes those emits onto the chain in the first place; reading it
+   * before `drained` resolves could capture the chain's state from
+   * before the drain ran. Shared by both flush sites (record-off, test
+   * finish): each has its own `drained` promise (from
+   * resetMatrixPressTracking) but the same requirement — main's
+   * ingestEvent does a real await (resolveScope) before an event reaches
+   * its minute buffer, so requesting the flush any earlier could have it
+   * serviced before a just-drained or still in-flight event lands,
+   * landing that event in a fresh buffer entry after the session it
+   * belonged to was already finalized.
+   *
+   * Reading `chainRef.current` here (rather than trusting emitAnalyticsEvent's
+   * return value alone) is also what survives a future refactor: useTypingTest's
+   * `onEmitAnalyticsEvent` is typed `=> void`, so nothing at the type level
+   * checks that emit keeps returning the chain tail — if a later change quietly
+   * dropped that return, this independent read of chainRef.current would still
+   * see the same in-flight state. */
+  const flushAfterPendingEmits = useCallback((drained: Promise<void>, uid: string): void => {
+    void drained
+      .then(() => chainRef.current)
+      .then(() => window.vialAPI.typingAnalyticsFlush(uid))
+      .catch(() => { /* fire-and-forget */ })
   }, [])
   const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage, {
     onPrepareAnalyticsEvent: prepareAnalyticsEvent,
@@ -391,25 +444,16 @@ export function useInputModes({
   // leaves view-only mode), finalize the open session in main and flush
   // its data for the active keyboard. Must wait for the drain the effect
   // above just kicked off (same recordingActive dependency, so it always
-  // runs first in this commit) to actually land in main before asking it
-  // to flush — main's ingestEvent does a real await before an event
-  // reaches its minute buffer, so an unawaited flush can be serviced
-  // before a just-drained event arrives, landing that event in a fresh
-  // buffer entry after the session it belonged to was already finalized.
+  // runs first in this commit) — see flushAfterPendingEmits for why.
   const prevRecordingActiveRef = useRef(recordingActive)
   useEffect(() => {
     const wasOn = prevRecordingActiveRef.current
     prevRecordingActiveRef.current = recordingActive
     if (wasOn && !recordingActive) {
       const uid = typingRecordKeyboard?.uid
-      if (uid) {
-        const drained = pendingDrainRef.current
-        void drained
-          .then(() => window.vialAPI.typingAnalyticsFlush(uid))
-          .catch(() => { /* fire-and-forget */ })
-      }
+      if (uid) flushAfterPendingEmits(pendingDrainRef.current, uid)
     }
-  }, [recordingActive, typingRecordKeyboard])
+  }, [recordingActive, typingRecordKeyboard, flushAfterPendingEmits])
 
   // Capture-phase keydown listener for typing test
   useEffect(() => {
@@ -473,18 +517,11 @@ export function useInputModes({
       // Flush the test's analytics so the just-finished minute/session
       // lands in the cache promptly (Analyze can show it without waiting
       // for the minute-close / before-quit flush). Keystrokes are recorded
-      // regardless of whether the result row is saved. Drain first (same
-      // reasoning as the record-off flush above): a masked key pressed
-      // near the end of the run may still be sitting unresolved in the
-      // ordering queue, and requesting the flush before it lands in main
-      // would land it in a fresh buffer entry after this run's session
-      // was already finalized.
+      // regardless of whether the result row is saved. See
+      // flushAfterPendingEmits for why the drain and the chain tail must
+      // both settle first.
       const uid = keyboardRef.current?.uid
-      if (uid) {
-        resetMatrixPressTracking()
-          .then(() => window.vialAPI.typingAnalyticsFlush(uid))
-          .catch(() => { /* fire-and-forget */ })
-      }
+      if (uid) flushAfterPendingEmits(resetMatrixPressTracking(), uid)
       // A completed test makes any saved pause snapshot obsolete.
       if (savedMemoryRef.current) onMemoryChangeRef.current?.(undefined)
     }
@@ -501,7 +538,7 @@ export function useInputModes({
     typingTest.wpm, typingTest.accuracy,
     typingTest.config, typingTest.language,
     typingTestHistory, onSaveTypingTestResult, saveUnnamed, pendingUnnamedResult,
-    resetMatrixPressTracking])
+    resetMatrixPressTracking, flushAfterPendingEmits])
 
   // The just-finished result, exposed so the pane can build name chips: the
   // held unsaved one (save-unnamed off) until named, else the saved latest.

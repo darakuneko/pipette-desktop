@@ -114,7 +114,7 @@ interface ResolvedScope {
   scopeKey: string
 }
 
-const minuteBuffer = new MinuteBuffer()
+let minuteBuffer = new MinuteBuffer()
 const sessionDetector = new SessionDetector()
 const scopeCache = new Map<string, ResolvedScope>()
 const pendingSessions: FinalizedSession[] = []
@@ -124,6 +124,23 @@ let flushChain: Promise<void> = Promise.resolve()
 let inFlightFlushCount = 0
 let flushTimer: ReturnType<typeof setTimeout> | null = null
 let syncState: TypingSyncState | null = null
+
+/** Last `updatedAt` a flush pass wrote. The DB's LWW merge only accepts a
+ * row when `excluded.updated_at > current.updated_at` (strict), so two
+ * passes landing in the same millisecond would make the second one — the
+ * cumulative, corrected re-send of a retained minute — silently lose to
+ * the first. Forcing each pass's `updatedAt` strictly past the previous
+ * one closes that race regardless of how fast passes run back to back.
+ *
+ * A backwards clock correction (e.g. NTP) does not roll `updatedAt` back:
+ * it stays pinned above the pre-correction value (potentially reading as
+ * up to that offset in the future) and flows into `state.last_synced_at`
+ * too. This is harmless — rows are scoped per `machineHash`, so there is
+ * no cross-machine contention over what "future" means — and required:
+ * without it, a re-send after the clock jumps backward would lose the
+ * strict `>` LWW race against its own earlier, partial write. Do not
+ * "fix" an apparently future-dated row by removing this bump. */
+let lastFlushUpdatedAt = 0
 
 async function initialize(): Promise<void> {
   // getMachineHash transitively warms getInstallationId (and caches its
@@ -1408,7 +1425,7 @@ async function resolveScope(keyboard: TypingAnalyticsKeyboard): Promise<Resolved
 
 async function ingestEvent(event: TypingAnalyticsEvent): Promise<void> {
   const { fingerprint, scopeKey } = await resolveScope(event.keyboard)
-  minuteBuffer.addEvent(event, fingerprint)
+  minuteBuffer.addEvent(event, fingerprint, Date.now())
   const finalized = sessionDetector.recordEvent(event.keyboard.uid, scopeKey, event.ts)
   if (finalized.length > 0) pendingSessions.push(...finalized)
   dirty = true
@@ -1757,6 +1774,12 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
     log('warn', `typing-analytics app-name tag failed: ${String(err)}`)
   }
 
+  // No await may be introduced between this drain and buildSnapshotRows /
+  // groupRowsByUidDay below: those functions copy each snapshot's Maps
+  // into plain row payloads synchronously, and a retained entry can be
+  // reopened (mutated) by the very next ingestEvent. Without that
+  // synchronous handoff, a snapshot already handed to a caller could be
+  // mutated out from under it before its rows are built.
   const snapshots = options.final
     ? minuteBuffer.drainAll()
     : minuteBuffer.drainClosed(Date.now())
@@ -1791,7 +1814,9 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
     scopesToUpsert.set(resolved.scopeKey, resolved.fingerprint)
   }
 
-  const updatedAt = Date.now()
+  // Strictly increasing across passes — see lastFlushUpdatedAt's docblock.
+  const updatedAt = Math.max(Date.now(), lastFlushUpdatedAt + 1)
+  lastFlushUpdatedAt = updatedAt
   const rowsByUidDay = groupRowsByUidDay(scopesToUpsert, snapshots, validSessions, updatedAt)
   if (rowsByUidDay.size === 0) {
     dirty = !minuteBuffer.isEmpty()
@@ -1833,10 +1858,18 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
     await saveSyncState(userDataDir, state)
   } catch (err) {
     log('error', `typing-analytics flush failed: ${String(err)}`)
-    // Re-queue sessions so the next pass can retry. Snapshots are already
-    // drained and cannot be cheaply reinserted, so their counts are
-    // accepted as lost (the JSONL append for the failed uid may or may
-    // not have landed; an eventual cache rebuild reconciles).
+    // Re-queue sessions so the next pass can retry. The drained snapshots
+    // themselves are NOT lost: minuteBuffer.reopenAll() flips every
+    // 'retained' entry back to 'reopened', so the next drain re-finalizes
+    // and re-sends the full cumulative minute rather than just whatever
+    // arrives after this point — a failed persist is no longer lossy for
+    // retained minutes. (Reopening entries that weren't actually part of
+    // this failed pass is harmless — see reopenAll's docblock — so this
+    // can run unconditionally.) The one gap this doesn't cover: an entry
+    // both finalized and evicted within this same failed pass is already
+    // gone from the map and cannot be recovered here — a rare boundary
+    // case, accepted.
+    minuteBuffer.reopenAll()
     pendingSessions.push(...sessionsToWrite)
     dirty = true
     return
@@ -1890,13 +1923,19 @@ function flushNow(options: { final: boolean }): Promise<void> {
 export function resetTypingAnalyticsForTests(): void {
   initialization = null
   ipcRegistered = false
-  minuteBuffer.drainAll()
+  // Not drainAll(): with retention, drainAll only finalizes dirty entries
+  // and retains the rest, so it would leak clean entries from one test
+  // case into the next case's identically-keyed scope/minute. Reassigning
+  // the singleton (mirrors flushChain's reset below) starts every case
+  // from a real empty buffer.
+  minuteBuffer = new MinuteBuffer()
   sessionDetector.closeAll()
   scopeCache.clear()
   pendingSessions.length = 0
   dirty = false
   flushChain = Promise.resolve()
   inFlightFlushCount = 0
+  lastFlushUpdatedAt = 0
   syncNotifier = null
   syncState = null
   if (flushTimer) {

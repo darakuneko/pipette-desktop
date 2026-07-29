@@ -33,24 +33,32 @@ export const NGRAM_MAX_IKI_MS = 5000
 const DRAIN_CLOSE_JITTER_MARGIN_MS = 1000
 
 /** Grace period `drainClosed` waits past a minute's wall-clock end before
- * finalizing it. The renderer defers emitting an LT/MT press until it
- * resolves as tap or hold — by its release edge, or by
- * {@link MAX_TAP_HOLD_DEFER_MS} if the key is still held — so an event
- * can still be in flight after its own minute has technically ended.
- * Closing the buffer right at the boundary would land that event in a
- * *second* snapshot for a minute already flushed. That second snapshot
- * does not merge into the first: the flush path applies snapshots
- * through the same last-writer-wins merge sync uses
- * (`mergeMinuteStatsStmt`), so a late arrival *replaces* the minute's
- * recorded totals instead of adding to them. Do not remove this margin
- * to "close minutes sooner" — that reintroduces the overwrite.
+ * finalizing it for the first time. This is a PERFORMANCE window, not a
+ * correctness boundary: correctness comes from retention + full re-send
+ * (see {@link RETENTION_MS}) — an entry stays in the map, dirty-tracked,
+ * for {@link RETENTION_MS} after its minute ends, so a late arrival past
+ * this grace still lands in the same entry and produces one cumulative
+ * re-send on the next drain rather than a partial second snapshot.
  *
- * Derived from the cap (not chosen independently) so the two can never
- * drift apart: the renderer is contractually bounded to
- * MAX_TAP_HOLD_DEFER_MS regardless of the keyboard's configured
- * TAPPING_TERM, so this only needs to cover that cap plus the jitter
- * margin above — not the keyboard's raw (u16, up to 65535 ms) setting. */
+ * Sized around the renderer's deferred-emit deadline
+ * ({@link MAX_TAP_HOLD_DEFER_MS}) plus IPC/timer jitter purely to
+ * minimize how often that harmless-but-wasteful re-send happens: a
+ * tapping term or timer delay landing inside the grace closes the
+ * minute once, cleanly, on the first drain. Landing outside it — a
+ * slower straggler, renderer hiccup, whatever — just costs one extra
+ * cumulative re-send of that minute; it does not corrupt anything. */
 export const DRAIN_CLOSE_GRACE_MS = MAX_TAP_HOLD_DEFER_MS + DRAIN_CLOSE_JITTER_MARGIN_MS
+
+/** How long a finalized entry is kept in memory (dirty-tracked) after its
+ * minute ends before being evicted outright. Must comfortably exceed
+ * {@link DRAIN_CLOSE_GRACE_MS} — every ordinary late arrival should find
+ * its entry still retained, not evicted — while staying short enough
+ * that a renderer suspend/crash doesn't hold stale minutes forever. An
+ * event whose target minute has aged past this window is dropped by
+ * {@link MinuteBuffer.addEvent} instead of starting a fresh partial
+ * entry (see there for why: a partial entry for an already-flushed,
+ * evicted minute would replace its real totals through the LWW merge). */
+export const RETENTION_MS = 5 * MINUTE_MS
 
 /** Per-cell aggregated counts. `count` is the total press count. `tapCount`
  * and `holdCount` break that down for LT/MT presses, classified by
@@ -138,6 +146,23 @@ interface Entry {
    * per-event in {@link MinuteBuffer.addEvent}. Same size→value/null
    * collapse as {@link appSet} on finalize. */
   typingTestSet: Set<string>
+  /** Lifecycle relative to what has been reported in a snapshot so far:
+   *   - 'open': never finalized — a fresh, still-accumulating minute.
+   *   - 'retained': finalized at least once and unchanged since. Kept in
+   *     the map (not deleted) only so a later straggler can reopen it —
+   *     see {@link RETENTION_MS}.
+   *   - 'reopened': finalized at least once, then a later event added
+   *     data not yet captured by any snapshot. Needs one more cumulative
+   *     finalize, whose result is the complete minute (including
+   *     whatever was already reported), not just the delta.
+   *
+   * Two derived questions every consumer asks reduce to this one field:
+   * dirty (needs a finalize) ⇔ `state !== 'retained'`; flushed (has
+   * shipped at least one snapshot, so its counts already live in the DB)
+   * ⇔ `state !== 'open'`. Collapsing what used to be two independent
+   * booleans into one enum makes the fourth, meaningless combination
+   * (unflushed yet clean) unrepresentable. */
+  state: 'open' | 'retained' | 'reopened'
 }
 
 function floorMinute(ts: number): number {
@@ -152,7 +177,11 @@ function percentile(sorted: number[], q: number): number | null {
 }
 
 function finalize(entry: Entry): MinuteSnapshot {
-  // Entry is discarded right after, so in-place sort is safe and avoids a
+  // The entry is retained after this (see RETENTION_MS), so a later
+  // straggler can push more values into entry.intervals and this same
+  // array gets re-sorted on the next finalize. In-place sort stays safe
+  // either way — re-sorting an already-sorted array plus a few new
+  // values is still correct, just not free — and it avoids a
   // per-keystroke-sized allocation on every flush.
   const sorted = entry.intervals.sort((a, b) => a - b)
   const avg = sorted.length
@@ -218,7 +247,24 @@ export class MinuteBuffer {
   // the existing drain/resetBigramChain path.
   private chainKey: string | null = null
 
-  addEvent(event: TypingAnalyticsEvent, fingerprint: TypingAnalyticsFingerprint): void {
+  /** True once `minuteTs`'s `windowMs`-past-its-own-end window has fully
+   * elapsed as of `nowMs`. The single definition backing both the
+   * ultra-late drop check in {@link addEvent} (`windowMs = RETENTION_MS`)
+   * and the grace/eviction checks in {@link drainClosed}
+   * (`windowMs = DRAIN_CLOSE_GRACE_MS` / `RETENTION_MS`): those two call
+   * sites must use the identical comparison shape for the documented "a
+   * dropped event's minute would already have been evicted" invariant to
+   * hold — one shared definition makes that drift impossible. */
+  private minuteAgedPast(minuteTs: number, windowMs: number, nowMs: number): boolean {
+    return minuteTs + MINUTE_MS + windowMs <= nowMs
+  }
+
+  /** `nowMs` is a real wall-clock timestamp (the service passes
+   * `Date.now()`), used only to decide whether an event targeting a
+   * minute with no live entry is a genuine new minute or an ultra-late
+   * arrival past {@link RETENTION_MS} — never to bucket the event
+   * itself, which still buckets by `event.ts`. */
+  addEvent(event: TypingAnalyticsEvent, fingerprint: TypingAnalyticsFingerprint, nowMs: number): void {
     const scopeId = canonicalScopeKey(fingerprint)
     const minuteTs = floorMinute(event.ts)
     // run id joins the bucket key so two runs sharing a wall-clock minute
@@ -228,6 +274,15 @@ export class MinuteBuffer {
     const key = `${scopeId}|${minuteTs}|${runId}`
     let entry = this.buffers.get(key)
     if (!entry) {
+      if (this.minuteAgedPast(minuteTs, RETENTION_MS, nowMs)) {
+        // No live entry, and this minute is old enough that one would
+        // already have been evicted (or never have existed dirty this
+        // long). Starting a fresh partial entry here would eventually
+        // flush a fragment that, through the LWW merge, replaces
+        // whatever complete totals this minute already has on disk.
+        // Dropping the keystroke is the safe degradation.
+        return
+      }
       entry = {
         scopeId,
         fingerprint,
@@ -243,8 +298,14 @@ export class MinuteBuffer {
         lastEventMs: event.ts,
         appSet: new Set<string>(),
         typingTestSet: new Set<string>(),
+        state: 'open',
       }
       this.buffers.set(key, entry)
+    } else if (entry.state === 'retained') {
+      // Reopens a retained clean entry — this event's data hasn't been
+      // captured by any snapshot yet. An already-'open'/'reopened' entry
+      // is dirty already and needs no transition.
+      entry.state = 'reopened'
     }
 
     if (event.typingTest) entry.typingTestSet.add(event.typingTest)
@@ -373,19 +434,35 @@ export class MinuteBuffer {
    * adding null to the set, so the absence of any add is what signals
    * "no app observed" downstream (size === 0 in finalize → null).
    *
-   * Tags every live entry (across all scope IDs). When multiple
-   * keyboards are typing in parallel they share the OS focus, so the
-   * same app applies to all of them. */
+   * Tags only 'open' entries (across all scope IDs) — see {@link Entry.state}.
+   * When multiple keyboards are typing in parallel they share the OS
+   * focus, so the same app applies to all of them. A 'retained' or
+   * 'reopened' entry's appName was already decided and reported; tagging
+   * it from whatever app happens to be focused during a much later flush
+   * pass would contaminate that decision with unrelated activity instead
+   * of describing the minute that was actually recorded. */
   markAppName(appName: string | null): void {
     if (appName === null) return
     for (const entry of this.buffers.values()) {
+      if (entry.state !== 'open') continue
       entry.appSet.add(appName)
     }
   }
 
-  /** Finalize and return every buffer entry whose minute ended at least
-   * {@link DRAIN_CLOSE_GRACE_MS} ago. Called on each event so closed
-   * minutes don't linger in memory.
+  /** Finalize every dirty entry ('open' or 'reopened', see
+   * {@link Entry.state}) whose minute ended at least
+   * {@link DRAIN_CLOSE_GRACE_MS} ago, then evict any entry whose minute
+   * ended more than {@link RETENTION_MS} ago — both checks per entry in a
+   * single pass, so an entry due for eviction always gets its finalize
+   * check first (retention comfortably exceeds grace), giving a dirty
+   * one last cumulative re-send before it is dropped for good. Called on
+   * each flush pass.
+   *
+   * Finalized entries are marked 'retained', not deleted, so a straggler
+   * arriving after this call reopens the same entry instead of creating
+   * a second partial one — the next drain then re-finalizes the WHOLE
+   * entry (cumulative totals) rather than sending a partial that would
+   * overwrite the real totals through the LWW merge.
    *
    * `nowMs` is a real wall-clock timestamp, not a floored minute: the
    * grace is a few seconds, so flooring it first would round the margin
@@ -395,24 +472,70 @@ export class MinuteBuffer {
   drainClosed(nowMs: number): MinuteSnapshot[] {
     const closed: MinuteSnapshot[] = []
     for (const [key, entry] of this.buffers) {
-      if (entry.minuteTs + MINUTE_MS + DRAIN_CLOSE_GRACE_MS <= nowMs) {
+      if (entry.state !== 'retained' && this.minuteAgedPast(entry.minuteTs, DRAIN_CLOSE_GRACE_MS, nowMs)) {
         closed.push(finalize(entry))
+        entry.state = 'retained'
+      }
+      if (this.minuteAgedPast(entry.minuteTs, RETENTION_MS, nowMs)) {
         this.buffers.delete(key)
       }
     }
+    // A 'reopened' entry re-finalizing here triggers this same reset a
+    // second time for what is, in wall-clock terms, still one minute —
+    // the chain was already reset when this minute first closed, and a
+    // later straggler reopening it closes it again. Cost: at most one
+    // extra n-gram pair lost from whatever is the live minute at that
+    // moment. Not worth conditioning the reset on which specific minutes
+    // closed (self-healing next chain, rare in practice) just to avoid
+    // this micro-loss.
     if (closed.length > 0) this.resetBigramChain()
     return closed
   }
 
-  /** Finalize every entry — used on explicit flush (record OFF, before-quit). */
+  /** Finalize every dirty entry — used on explicit flush (record OFF,
+   * test finish, before-quit). Entries are retained the same way
+   * {@link drainClosed} retains them ('retained' entries stay in the map
+   * so a straggler after this flush lands in the retained entry rather
+   * than a fresh one); eviction still only happens in {@link drainClosed}.
+   * On process exit the retained memory is simply reclaimed by the OS, so
+   * not clearing the map here costs nothing in that case. */
   drainAll(): MinuteSnapshot[] {
     const all: MinuteSnapshot[] = []
     for (const entry of this.buffers.values()) {
+      if (entry.state === 'retained') continue
       all.push(finalize(entry))
+      entry.state = 'retained'
     }
-    this.buffers.clear()
     this.resetBigramChain()
     return all
+  }
+
+  /** Flip every 'retained' entry back to 'reopened', so the next drain
+   * re-finalizes and re-sends it. Used when a flush pass's persistence
+   * step (JSONL append / cache apply) throws AFTER a drain already
+   * captured snapshots — since those snapshots were never actually
+   * written anywhere, this un-does the "already reported" state that
+   * `drainClosed` / `drainAll` had just set, without needing to know
+   * which specific entries the failed pass touched: reopening a
+   * 'retained' entry that was NOT part of the failed pass is harmless
+   * (it just costs one extra, unnecessary cumulative re-send next drain),
+   * so this can safely be called unconditionally on any persist failure.
+   *
+   * Entries already 'open' are untouched (nothing to reopen — they were
+   * never finalized in the first place, so they're already covered by
+   * the re-queued keystrokes/session data).
+   *
+   * One loss window this cannot recover: an entry that was BOTH
+   * finalized AND evicted within the same failed pass (its minute aged
+   * past {@link RETENTION_MS} between the drain and this call) is gone
+   * from the map entirely — there's nothing left here to reopen. That
+   * requires the persist step to hang for the better part of
+   * RETENTION_MS while the wall clock keeps advancing; accepted as a
+   * rare boundary case rather than engineered around. */
+  reopenAll(): void {
+    for (const entry of this.buffers.values()) {
+      if (entry.state === 'retained') entry.state = 'reopened'
+    }
   }
 
   private resetBigramChain(): void {
@@ -423,8 +546,15 @@ export class MinuteBuffer {
     this.chainKey = null
   }
 
+  /** True only when every entry is 'retained' (see {@link Entry.state}) —
+   * i.e. nothing dirty is left to flush. If a 'retained' entry counted as
+   * non-empty, doFlushPass's dirty-reschedule check would spin forever
+   * once any minute had ever been retained. */
   isEmpty(): boolean {
-    return this.buffers.size === 0
+    for (const entry of this.buffers.values()) {
+      if (entry.state !== 'retained') return false
+    }
+    return true
   }
 
   /** Read-only view of the in-memory matrix counts matching the given
@@ -433,7 +563,28 @@ export class MinuteBuffer {
    * totals so the UI does not lag ~59 seconds behind actual input.
    * Returns `"row,col"` keyed triples summed across every live minute
    * for the scope. Matching by (uid, machineHash) lets callers query
-   * without first resolving the canonical scope key. */
+   * without first resolving the canonical scope key.
+   *
+   * Only 'open' entries are included (see {@link Entry.state}): a
+   * 'retained' or 'reopened' entry's last-reported counts are already in
+   * the DB, and this peek is meant to add only what the DB doesn't have
+   * yet. A 'reopened' entry's counts are cumulative (include what was
+   * already flushed), so including it here would double-count against
+   * the DB row until the next drain re-sends the full total and this
+   * peek naturally stops needing to cover it. The accepted cost is a
+   * transient undercount: a straggler into an already-flushed minute is
+   * invisible to the live heatmap until it is re-drained.
+   *
+   * This is not just a rare-straggler edge case — it has a routine
+   * trigger: TYPING_ANALYTICS_FLUSH always runs `final: true`, so
+   * drainAll finalizes even the still-open CURRENT minute. Toggling REC
+   * off then back on within the same wall-clock minute flushes that
+   * minute (marking it 'retained'), and every keystroke typed after
+   * re-enabling lands in a 'reopened' entry — excluded from this peek —
+   * for up to ~62s (a minute's worth of drainClosed's ~59s window, plus
+   * the grace period) until the next drainClosed re-sends it. A routine
+   * toggle cycle, not just a rare event; the trade-off stands as
+   * documented above regardless. */
   peekMatrixCountsForUid(
     uid: string,
     machineHash: string,
@@ -441,6 +592,7 @@ export class MinuteBuffer {
   ): Map<string, { total: number; tap: number; hold: number }> {
     const result = new Map<string, { total: number; tap: number; hold: number }>()
     for (const entry of this.buffers.values()) {
+      if (entry.state !== 'open') continue
       if (entry.fingerprint.keyboard.uid !== uid) continue
       if (entry.fingerprint.machineHash !== machineHash) continue
       for (const cell of entry.matrixCounts.values()) {
