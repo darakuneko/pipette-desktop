@@ -204,11 +204,11 @@ The tab bar above the chart groups ten analyses by intent — overview, performa
 | Behavior | **By App** | Active-application breakdown — App Usage Distribution donut and WPM by App horizontal bars. Requires Monitor App data |
 | Load | **Heatmap** | Press count per physical key, overlaid on the keymap (per layer). Requires a keymap snapshot in range |
 | Load | **Ergonomics** | Per-finger keystroke totals, with a manual finger-assignment editor and a Learning curve view. Requires a snapshot |
-| Load | **Bigrams** | Top key-pair/triple counts, pair-interval ranking with SD, and per-finger IKI bar chart (2/3-gram toggle) |
+| Load | **Bigrams** | Top key-pair/triple counts, pair-interval ranking with SD, per-finger IKI bar chart, and a hand-usage / word-position breakdown (2/3-gram toggle) |
 | Load | **Layer** | Per-layer keystroke counts or layer-op activations |
 | Optimization | **Layout Comparison** | Simulate how your recorded typing would land on alternative layouts (Colemak / Dvorak / etc.). Requires a snapshot |
 
-The Heatmap, Ergonomics, Bigrams > Finger IKI, Layout Comparison, and Layer > Activations views need a keymap snapshot that overlaps the selected range. Pipette saves a snapshot automatically when typing recording is enabled on the keyboard; the empty state tells you when to start a recording session to capture one.
+The Heatmap, Ergonomics, Bigrams > Finger IKI, Bigrams > Bigram patterns' Hand usage rows, Layout Comparison, and Layer > Activations views need a keymap snapshot that overlaps the selected range. Pipette saves a snapshot automatically when typing recording is enabled on the keyboard; the empty state tells you when to start a recording session to capture one.
 
 **Filter summary chip**
 
@@ -249,7 +249,7 @@ The Summary tab is the default landing view. It collects four read-only cards bu
 - **Today** — Keystrokes, WPM, Typing duration for the current local day
 - **Last 7 days** — Keystrokes, WPM, Typing duration, Active days, each with a delta arrow comparing the prior 7 days. Insufficient prior data renders as `—`
 - **Typing profile (last N days)** — Four qualitative read-outs computed over the recent window:
-  - **Speed** — overall WPM bucketed into Slow (<30) / Medium (30–50) / Fast (≥50)
+  - **Speed** — overall WPM bucketed into Slow (<30) / Medium (30–50) / Fast (≥50). A second line below the WPM figure shows the population average and a direction-neutral position label (Far below average / Below average / Average / Above average / Far above average) based on standard-deviation distance from that average — hidden whenever the bucket itself reads `Not enough data`
   - **Hand balance** — share of bigram keystrokes per hand. Within ±5% of 50/50 reads as Balanced
   - **SFB rate** — share of bigrams typed with the same finger. <4% Low / 4–8% Medium / ≥8% High
   - **Fatigue risk** — drop from peak hour to slowest hour WPM. Wider gap = higher risk
@@ -311,6 +311,10 @@ The WPM tab charts Words Per Minute — keystrokes per minute divided by 5 — e
 
 `30s`, `1 min`, `2 min`, `5 min`. Minutes with fewer keystrokes than the chosen WPM-worth-of-keys threshold are dropped from the chart so very light sessions don't skew the line.
 
+**Population avg** (Time series only)
+
+A checkbox next to Min sample toggles a dashed **Population avg** reference line drawn at the population-average WPM. The line's axis rescales automatically if your data sits entirely above or below it, so it never gets clipped out of the chart. The same checkbox controls the Interval tab's own reference line, and the choice is persisted per keyboard (defaults to on).
+
 **Granularity** (Time series only)
 
 Bucket width of the time series (`Auto`, `1 min`, `5 min`, … `1 week`, `1 month`).
@@ -337,6 +341,10 @@ The Interval tab visualizes the time between consecutive keystrokes, either as p
 **Display** (both views)
 
 `Seconds` / `Milliseconds`. Switches the unit used in tooltips and on the Y axis. The distribution bin labels stay in their native unit.
+
+**Population avg** (Time series only)
+
+Same checkbox as the WPM tab (see WPM tab) — draws a dashed **Population avg** reference line at the population-average interval. The line always sits at the raw millisecond mean regardless of the Display unit: only the axis tick labels switch between seconds and milliseconds, the underlying chart data stays in ms.
 
 **Granularity** (Time series only)
 
@@ -449,17 +457,27 @@ An interval longer than **5 seconds** is not counted: a gap that long is a pause
 
 **Quadrant layout**
 
-At 2-gram the view is a 3-quadrant grid; each quadrant has its own list-size selector (10 / 20 / 30 / … / 100). Bars are rendered with recharts so tooltips track the cursor. At 3-gram the **Finger IKI** quadrant disappears — a finger-pair mapping isn't a defined concept for a 3-key sequence — and **Top pairs** / **Pair interval** expand to fill the freed row instead of leaving an empty cell.
+At 2-gram the view is a 2×2 grid of four quadrants. **Top pairs**, **Pair interval**, and **Finger IKI** each have their own list-size selector (10 / 20 / 30 / … / 100); Top pairs and Pair interval render as plain tables, while Finger IKI's bars are rendered with recharts so its tooltips track the cursor. **Bigram patterns** has no list-size selector since it always folds every fetched pair into a fixed set of rows rather than a ranked list. At 3-gram both **Finger IKI** and **Bigram patterns** disappear — a finger-pair mapping and a hand-usage / word-position split aren't defined concepts for a 3-key sequence, and a trigram's own Avg IKI is already the average of its two internal transitions rather than a single one to classify — and **Top pairs** / **Pair interval** expand to fill the freed row instead of leaving an empty cell.
 
 | Quadrant | What it shows |
 |----------|---------------|
 | **Top pairs** | Ranking by total occurrence count. Click **Count**, **Avg IKI**, or **SD** to re-sort |
 | **Pair interval** | Ranking by average IKI (slowest first). Click any of **Count**, **Avg IKI**, **SD**, or **p95** to re-sort. The Avg interval threshold (see Common filters) hides faster-than-threshold rows |
 | **Finger IKI** (2-gram only) | Per-(from-finger → to-finger) average IKI bar chart. Bars are coloured blue for left-hand starts and red for right-hand starts. Same Avg interval threshold applies |
+| **Bigram patterns** (2-gram only) | One table, split into two independently-scoped row groups that classify the same pairs along two different axes — their row counts don't add up to a single total. See below |
 
 At 3-gram, **Avg IKI** is the average of the two intervals inside the triple (key1→key2 and key2→key3) — not the total elapsed time across all three keystrokes. Hover the column header for this reminder.
 
 The **SD** column is the standard deviation of the underlying IKI samples for that pair/triple — low SD means a consistent rhythm, high SD means erratic timing. It reads as "—" per row: a pair/triple shows "—" when it has fewer than 2 samples in the range, or when any of its data in the range was recorded before this column shipped — a true SD needs the raw sum/sum-of-squares that older rows don't carry, and mixing a partial sum in would silently understate the result. Other pairs in the same range keep their SD; pick a range recorded entirely after the update to see values on every row.
+
+**Bigram patterns rows**
+
+- **Hand usage** — **Left** / **Right** (both keys land on the same hand — including two different keys sharing one finger, e.g. a thumb cluster), **Alternation** (the two keys are on opposite hands), **Repetition** (the same key struck twice in a row). Needs a keymap snapshot because it has to resolve each key to a finger; a coverage line above the table ("N% of pairs classified") reports how much of the data resolved to one of the four classes
+- **Word position** — **Initiation** (the first pair typed right after a word-ending separator — Space or Enter) and **In-word** (every other pair). Bare Space/Enter always count as a separator; a dual-role key (Layer-Tap / Mod-Tap / Swap-Hands-Tap) that sends Space or Enter on tap counts too, but only when a keymap snapshot supplies the protocol info needed to resolve it — which is why this row group works without a snapshot (unlike Hand usage), just more precisely once one is available
+- **ΔLeft** / **ΔRight** / **ΔInitiation**, listed below the table — signed ms deltas: ΔLeft = Left − Alternation, ΔRight = Right − Alternation, ΔInitiation = Initiation − In-word. A positive value means the first-named class was slower
+- Pairs ending at a separator are excluded from both Word position rows — they're the end of a word, not its start or a continuation of it — and their count is reported instead as a footnote below the table
+- Not affected by the Avg interval threshold (Common filters below); that threshold only hides rows in Pair interval and Finger IKI
+- The bigram CSV export (see Export / Upload) carries this same classification as two extra columns
 
 ![Analyze — Bigrams](screenshots/analyze-bigrams.png)
 
@@ -467,20 +485,21 @@ The **SD** column is the standard deviation of the underlying IKI samples for th
 
 **Snapshot requirement**
 
-Only the **Finger IKI** quadrant needs a keymap snapshot — it has to map each numeric keycode in the pair to a finger, which depends on the snapshot's keymap and layout. Since Finger IKI only exists at 2-gram, the 3-gram view never needs a snapshot. The Top pairs and Pair interval quadrants both render directly from the recorded counts and work without a snapshot at either gram size.
+The **Finger IKI** quadrant and **Bigram patterns**' Hand usage row group both need a keymap snapshot — each has to map a numeric keycode in the pair to a finger, which depends on the snapshot's keymap and layout. Bigram patterns' Word position row group needs no snapshot: it only compares keycodes against a small separator set. Since every snapshot-dependent piece only exists at 2-gram, the 3-gram view never needs a snapshot at all. The Top pairs and Pair interval quadrants both render directly from the recorded counts and work without a snapshot at either gram size.
 
 **Common filters**
 
 - **Range** — same `From` / `To` pickers as the rest of Analyze. The view re-aggregates over the chosen window
 - **Device** — `This device` only or all synced devices, identical to the other tabs
-- **Avg interval (ms or slower)** — minimum-IKI threshold rendered inline in the Pair interval quadrant header, and also in the Finger IKI quadrant header at 2-gram. Rows whose average IKI is below the threshold are hidden from both of those quadrants at once (the input is shared, so editing it in one quadrant updates the other); Top pairs is never filtered. `0` disables the filter; the value is persisted per keyboard via `PipetteSettings`. The IKI used for comparison is approximate (histogram bucket-center weighted average), so the cut-off is best treated as a coarse "ignore rows faster than ~N ms" filter
+- **Avg interval (ms or slower)** — minimum-IKI threshold rendered inline in the Pair interval quadrant header, and also in the Finger IKI quadrant header at 2-gram. Rows whose average IKI is below the threshold are hidden from both of those quadrants at once (the input is shared, so editing it in one quadrant updates the other); Top pairs and Bigram patterns are never filtered by it. `0` disables the filter; the value is persisted per keyboard via `PipetteSettings`. The IKI used for comparison is approximate (histogram bucket-center weighted average), so the cut-off is best treated as a coarse "ignore rows faster than ~N ms" filter
 
 **Empty states**
 
 - **No bigram data** — "No bigram data in this range yet. Record some typing and try again." Shown when the range has no recorded activity for the selected gram size
 - **No snapshot (Finger IKI quadrant only, 2-gram)** — "Finger interval needs a keymap snapshot. Start a record session or pick a range with one." The other quadrants still render
+- **No snapshot (Bigram patterns' Hand usage row group only, 2-gram)** — "Hand usage needs a keymap snapshot. Start a record session or pick a range with one." Word position still renders below it, and the rest of the tab is unaffected
 - **Threshold filtered everything out** — when **Avg interval** is set high enough that no row survives, Pair interval (and Finger IKI at 2-gram) fall back to "No bigram data in this range yet." Lower the threshold to bring rows back
-- **Very large ranges** — when the selected range holds more distinct pairs/triples than the single-fetch cap (5,000), Pair interval and Finger IKI show "Computed from the 5000 most frequent pairs — rare pairs may be missing." Top pairs stays exact; narrow the range to bring rare rows back
+- **Very large ranges** — when the selected range holds more distinct pairs/triples than the single-fetch cap (5,000), Pair interval, Finger IKI, and Bigram patterns show "Computed from the 5000 most frequent pairs — rare pairs may be missing." Top pairs stays exact; narrow the range to bring rare rows back
 
 #### By App
 
@@ -578,7 +597,7 @@ The **Export** button on the panel header opens a category-pick modal that write
 - **By App** — per-application breakdown
 - **Heatmap** — per-cell press counts (snapshot-bound)
 - **Ergonomics** — per-finger / per-hand / per-row totals (snapshot-bound)
-- **Bigrams** — Top pairs / Pair interval rows (Count, Avg IKI, SD); Finger IKI has no CSV column. Exports whichever gram size (2-gram or 3-gram) is currently selected in the tab — the id column is named `bigram_id` or `trigram_id` to match
+- **Bigrams** — Top pairs / Pair interval rows (Count, Avg IKI, SD, plus the Bigram patterns classification as `class` and `word_position` columns); Finger IKI has no CSV column. `class` is blank at 3-gram and whenever there's no keymap snapshot for the range; `word_position` is blank only at 3-gram. Exports whichever gram size (2-gram or 3-gram) is currently selected in the tab — the id column is named `bigram_id` or `trigram_id` to match
 - **Layer** — per-layer keystroke or activation counts
 - **Layout Comparison** — per-finger / row / hand deltas (snapshot-bound; reflects manual finger overrides)
 
