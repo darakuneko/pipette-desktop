@@ -17,6 +17,13 @@ export interface PressStartRecord {
   col: number
   layer: number
   keycode: number
+  /** Overlap / pollGapMs determined at press time (see
+   * matrix-press-duration.ts) — carried through to whatever event this
+   * press eventually resolves into (tap or hold), so a masked key's
+   * deferred classification doesn't lose the fields a non-masked press
+   * gets immediately. */
+  overlap?: boolean
+  pollGapMs?: number
 }
 
 /** Parse a "row,col" matrix key string into numeric row and col. */

@@ -80,6 +80,20 @@ export interface MatrixMinuteRow {
   /** Portion of `count` attributed to a hold, by the same classification
    * as `tapCount`. Defaults to 0 for the same reasons as `tapCount`. */
   holdCount?: number
+  /** Keypress-duration histogram (see bigram-bucket.ts's duration grid)
+   * / sum / sum-of-squares (ms), from `matrix-release` events landing
+   * in this minute. Field names match {@link JsonlMatrixMinutePayload}'s
+   * `dh`/`ds`/`dq` exactly (not spelled out) because apply-to-cache.ts
+   * spreads a parsed JSONL payload straight into this shape — a
+   * same-meaning-different-name pair here would silently stop
+   * persisting duration data with no type error (every field involved
+   * is optional). All three null/undefined together — a row written
+   * before schema v8, or a cell with no duration samples this minute (a
+   * routine state — see the shared event type's note on release-minute
+   * vs press-minute attribution). */
+  dh?: number[] | null
+  ds?: number | null
+  dq?: number | null
   /** See {@link CharMinuteRow.appName}. */
   appName?: string | null
   /** See {@link CharMinuteRow.typingTest}. */
@@ -99,6 +113,11 @@ export interface MinuteStatsRow {
   intervalP50Ms: number | null
   intervalP75Ms: number | null
   intervalMaxMs: number | null
+  /** Median / p95 sampling gap (ms) between polled matrix frames this
+   * minute. Null for rows written before schema v8, or a minute with
+   * no poll-gap sample. */
+  pollP50Ms?: number | null
+  pollP95Ms?: number | null
   /** See {@link CharMinuteRow.appName}. */
   appName?: string | null
   /** See {@link CharMinuteRow.typingTest}. */
@@ -143,6 +162,27 @@ export interface NgramMinuteCellRow {
   hist: number[]
   sumIki: number | null
   sumSqIki: number | null
+  /** Physical-overlap accumulators (see OverlapCounts in
+   * minute-buffer.ts) — only ever populated for BIGRAM rows;
+   * `undefined` for trigram rows (the table has no such columns) so
+   * callers can tell "not applicable" apart from "recorded as null". */
+  overlapCount?: number | null
+  overlapN?: number | null
+}
+
+/** Row shape returned by {@link TypingAnalyticsDB.listMatrixDurationCellsForUid} /
+ * {@link TypingAnalyticsDB.listMatrixDurationCellsForUidAndHash} — one row
+ * per (scope, minute, cell) that had at least one `matrix-release` sample
+ * (rows with no sample that minute are excluded by the SQL, not returned
+ * with an empty histogram). `hist` is decoded from the on-disk BLOB. */
+export interface MatrixDurationCellRow {
+  row: number
+  col: number
+  layer: number
+  minuteTs: number
+  hist: number[]
+  sum: number
+  sumSq: number
 }
 
 /** Row shapes carried across sync bundles. Live columns plus the
@@ -313,33 +353,66 @@ interface NgramStatements {
   deleteBefore: Statement
 }
 
+/** One extra column an n-gram table may carry beyond the common
+ * count/hist/sum/sumSq/tag shape — currently just overlap_count/overlap_n
+ * on typing_bigram_minute (see {@link prepareNgramStatements}). `column`
+ * is the SQL column name; `bind` is both the named-parameter key
+ * (referenced as `@bind` in generated SQL) and the SELECT alias, so it
+ * doubles as the camelCase field name the row comes back as (matching
+ * NgramMinuteCellRow). */
+interface NgramExtraColumn {
+  column: string
+  bind: string
+}
+
+/** typing_bigram_minute's only extra columns beyond the shape every
+ * n-gram table shares — see {@link NgramExtraColumn}. typing_trigram_minute
+ * passes an empty array at its {@link prepareNgramStatements} call site:
+ * overlap is a pairwise notion that doesn't extend to trigrams, and that
+ * table has no such SQL columns to reference. */
+const BIGRAM_OVERLAP_EXTRA_COLUMNS: readonly NgramExtraColumn[] = [
+  { column: 'overlap_count', bind: 'overlapCount' },
+  { column: 'overlap_n', bind: 'overlapN' },
+]
+
 /** Build the seven prepared statements one n-gram table needs. `table`
  * and `idColumn` are always hard-coded literals from the call sites
  * below (never user input), so interpolating them directly into the SQL
  * text is safe — every value-level parameter still goes through
- * better-sqlite3's `@name` binding. */
+ * better-sqlite3's `@name` binding.
+ *
+ * `extraColumns` derives all four insert/update/select SQL fragments
+ * that need to vary per table from one list, rather than four
+ * hand-maintained boolean-gated strings — a table with no extra columns
+ * (trigram) just passes an empty array and every fragment below
+ * collapses to '' automatically. */
 function prepareNgramStatements(
   db: DatabaseType,
   table: 'typing_bigram_minute' | 'typing_trigram_minute',
   idColumn: 'bigram_id' | 'trigram_id',
+  extraColumns: readonly NgramExtraColumn[],
 ): NgramStatements {
+  const insertCols = extraColumns.map((c) => `, ${c.column}`).join('')
+  const insertVals = extraColumns.map((c) => `, @${c.bind}`).join('')
+  const updateSet = extraColumns.map((c) => `${c.column} = excluded.${c.column},\n        `).join('')
+  const selectCols = extraColumns.map((c) => `,\n             t.${c.column} AS ${c.bind}`).join('')
   return {
     // Authoritative LWW upsert for sync merge — replaces the target row
     // wholesale, respects the incoming is_deleted flag, and only fires
     // when excluded.updated_at is strictly newer than the existing row.
     merge: db.prepare(`
       INSERT INTO ${table} (
-        scope_id, minute_ts, ${idColumn}, count, hist, sum_iki, sumsq_iki, app_name, typing_test, run_id, updated_at, is_deleted
+        scope_id, minute_ts, ${idColumn}, count, hist, sum_iki, sumsq_iki${insertCols}, app_name, typing_test, run_id, updated_at, is_deleted
       )
       VALUES (
-        @scopeId, @minuteTs, @ngramId, @count, @hist, @sumIki, @sumSqIki, @appName, @typingTest, @runId, @updatedAt, @isDeleted
+        @scopeId, @minuteTs, @ngramId, @count, @hist, @sumIki, @sumSqIki${insertVals}, @appName, @typingTest, @runId, @updatedAt, @isDeleted
       )
       ON CONFLICT(scope_id, minute_ts, run_id, ${idColumn}) DO UPDATE SET
         count = excluded.count,
         hist = excluded.hist,
         sum_iki = excluded.sum_iki,
         sumsq_iki = excluded.sumsq_iki,
-        app_name = excluded.app_name,
+        ${updateSet}app_name = excluded.app_name,
         typing_test = excluded.typing_test,
         updated_at = excluded.updated_at,
         is_deleted = excluded.is_deleted
@@ -359,7 +432,7 @@ function prepareNgramStatements(
              t.count AS count,
              t.hist AS hist,
              t.sum_iki AS sumIki,
-             t.sumsq_iki AS sumSqIki
+             t.sumsq_iki AS sumSqIki${selectCols}
         FROM ${table} t
         JOIN typing_scopes s ON s.id = t.scope_id
        WHERE s.keyboard_uid = @uid
@@ -379,7 +452,7 @@ function prepareNgramStatements(
              t.count AS count,
              t.hist AS hist,
              t.sum_iki AS sumIki,
-             t.sumsq_iki AS sumSqIki
+             t.sumsq_iki AS sumSqIki${selectCols}
         FROM ${table} t
         JOIN typing_scopes s ON s.id = t.scope_id
        WHERE s.keyboard_uid = @uid
@@ -462,6 +535,8 @@ export class TypingAnalyticsDB {
   private readonly selectLayerUsageForUidAndHashStmt: Statement
   private readonly selectMatrixCellsForUidStmt: Statement
   private readonly selectMatrixCellsForUidAndHashStmt: Statement
+  private readonly selectMatrixDurationForUidStmt: Statement
+  private readonly selectMatrixDurationForUidAndHashStmt: Statement
   private readonly selectMatrixCellsByDayForUidStmt: Statement
   private readonly selectMatrixCellsByDayForUidAndHashStmt: Statement
   private readonly selectMinuteStatsInRangeForUidStmt: Statement
@@ -689,8 +764,8 @@ export class TypingAnalyticsDB {
     `)
 
     this.ngramStmts = {
-      2: prepareNgramStatements(this.db, 'typing_bigram_minute', 'bigram_id'),
-      3: prepareNgramStatements(this.db, 'typing_trigram_minute', 'trigram_id'),
+      2: prepareNgramStatements(this.db, 'typing_bigram_minute', 'bigram_id', BIGRAM_OVERLAP_EXTRA_COLUMNS),
+      3: prepareNgramStatements(this.db, 'typing_trigram_minute', 'trigram_id', []),
     }
 
     this.deleteSessionsBeforeStmt = this.db.prepare(`
@@ -751,12 +826,14 @@ export class TypingAnalyticsDB {
       INSERT INTO typing_matrix_minute (
         scope_id, minute_ts, row, col, layer, keycode, count,
         tap_count, hold_count,
+        dur_hist, dur_sum, dur_sumsq,
         app_name, typing_test, run_id,
         updated_at, is_deleted
       )
       VALUES (
         @scopeId, @minuteTs, @row, @col, @layer, @keycode, @count,
         @tapCount, @holdCount,
+        @durHist, @durSum, @durSumSq,
         @appName, @typingTest, @runId,
         @updatedAt, @isDeleted
       )
@@ -765,6 +842,9 @@ export class TypingAnalyticsDB {
         count = excluded.count,
         tap_count = excluded.tap_count,
         hold_count = excluded.hold_count,
+        dur_hist = excluded.dur_hist,
+        dur_sum = excluded.dur_sum,
+        dur_sumsq = excluded.dur_sumsq,
         app_name = excluded.app_name,
         typing_test = excluded.typing_test,
         updated_at = excluded.updated_at,
@@ -777,6 +857,7 @@ export class TypingAnalyticsDB {
         scope_id, minute_ts, keystrokes, active_ms,
         interval_avg_ms, interval_min_ms,
         interval_p25_ms, interval_p50_ms, interval_p75_ms, interval_max_ms,
+        poll_p50_ms, poll_p95_ms,
         app_name, typing_test, run_id,
         updated_at, is_deleted
       )
@@ -784,6 +865,7 @@ export class TypingAnalyticsDB {
         @scopeId, @minuteTs, @keystrokes, @activeMs,
         @intervalAvgMs, @intervalMinMs,
         @intervalP25Ms, @intervalP50Ms, @intervalP75Ms, @intervalMaxMs,
+        @pollP50Ms, @pollP95Ms,
         @appName, @typingTest, @runId,
         @updatedAt, @isDeleted
       )
@@ -796,6 +878,8 @@ export class TypingAnalyticsDB {
         interval_p50_ms = excluded.interval_p50_ms,
         interval_p75_ms = excluded.interval_p75_ms,
         interval_max_ms = excluded.interval_max_ms,
+        poll_p50_ms = excluded.poll_p50_ms,
+        poll_p95_ms = excluded.poll_p95_ms,
         app_name = excluded.app_name,
         typing_test = excluded.typing_test,
         updated_at = excluded.updated_at,
@@ -854,11 +938,18 @@ export class TypingAnalyticsDB {
          )
     `)
 
+    // dur_hist/dur_sum/dur_sumsq (v8) are included even though this export
+    // path has no live caller today (see exportMatrixMinutesForUid) —
+    // omitting them here would mean a future revival of sync export
+    // silently drops every cell's duration data on the wholesale LWW
+    // replace at the receiving end, and every field involved being
+    // optional means no compile error would ever flag the gap.
     this.selectMatrixMinutesForUidStmt = this.db.prepare(`
       SELECT m.scope_id AS scopeId, m.minute_ts AS minuteTs,
              m.row AS row, m.col AS col, m.layer AS layer,
              m.keycode AS keycode, m.count AS count,
              m.tap_count AS tapCount, m.hold_count AS holdCount,
+             m.dur_hist AS dh, m.dur_sum AS ds, m.dur_sumsq AS dq,
              m.updated_at AS updatedAt, m.is_deleted AS isDeleted
         FROM typing_matrix_minute m
         JOIN typing_scopes s ON s.id = m.scope_id
@@ -870,6 +961,9 @@ export class TypingAnalyticsDB {
          )
     `)
 
+    // poll_p50_ms/poll_p95_ms (v8) — same "no live caller yet, but must
+    // not silently vanish if this export path is revived" reasoning as
+    // dur_hist/dur_sum/dur_sumsq above.
     this.selectMinuteStatsForUidStmt = this.db.prepare(`
       SELECT t.scope_id AS scopeId, t.minute_ts AS minuteTs,
              t.keystrokes AS keystrokes, t.active_ms AS activeMs,
@@ -879,6 +973,7 @@ export class TypingAnalyticsDB {
              t.interval_p50_ms AS intervalP50Ms,
              t.interval_p75_ms AS intervalP75Ms,
              t.interval_max_ms AS intervalMaxMs,
+             t.poll_p50_ms AS pollP50Ms, t.poll_p95_ms AS pollP95Ms,
              t.updated_at AS updatedAt, t.is_deleted AS isDeleted
         FROM typing_minute_stats t
         JOIN typing_scopes s ON s.id = t.scope_id
@@ -1187,6 +1282,67 @@ export class TypingAnalyticsDB {
          AND m.minute_ts < @untilMs
          ${appFilterClause('m.app_name')} ${typingTestFilterClause('m.typing_test')} ${runIdFilterClause('m.run_id')}
        GROUP BY m.layer, m.row, m.col
+    `)
+
+    // Per-(scope, minute, cell) raw duration rows for the Analyze
+    // keypress-duration aggregate. Unlike selectMatrixCellsForUidStmt
+    // above, this can't SUM the histogram BLOB in SQL — it hands back
+    // one row per contributing minute and lets bigram-aggregate.ts fold
+    // hist/sum/sumSq in JS, the same shape as the n-gram range selects.
+    // Rows with no duration sample that minute (dur_hist IS NULL) are
+    // excluded rather than returned as an empty histogram — they
+    // contribute nothing to the aggregate either way.
+    this.selectMatrixDurationForUidStmt = this.db.prepare(`
+      SELECT m.row AS row,
+             m.col AS col,
+             m.layer AS layer,
+             m.minute_ts AS minuteTs,
+             m.dur_hist AS durHist,
+             m.dur_sum AS durSum,
+             m.dur_sumsq AS durSumSq
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         -- dh/ds/dq are written as an all-or-nothing triple by the
+         -- validator (isValidDurationTriple in jsonl-row.ts), three
+         -- modules away from this query — checking both columns here
+         -- rather than trusting that invariant blindly means a future
+         -- bug in that validator (or a hand-edited JSONL master) can't
+         -- feed the mapper/aggregate a hist with no matching sum.
+         AND m.dur_hist IS NOT NULL
+         AND m.dur_sum IS NOT NULL
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+         ${appFilterClause('m.app_name')} ${typingTestFilterClause('m.typing_test')} ${runIdFilterClause('m.run_id')}
+    `)
+
+    this.selectMatrixDurationForUidAndHashStmt = this.db.prepare(`
+      SELECT m.row AS row,
+             m.col AS col,
+             m.layer AS layer,
+             m.minute_ts AS minuteTs,
+             m.dur_hist AS durHist,
+             m.dur_sum AS durSum,
+             m.dur_sumsq AS durSumSq
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         -- dh/ds/dq are written as an all-or-nothing triple by the
+         -- validator (isValidDurationTriple in jsonl-row.ts), three
+         -- modules away from this query — checking both columns here
+         -- rather than trusting that invariant blindly means a future
+         -- bug in that validator (or a hand-edited JSONL master) can't
+         -- feed the mapper/aggregate a hist with no matching sum.
+         AND m.dur_hist IS NOT NULL
+         AND m.dur_sum IS NOT NULL
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+         ${appFilterClause('m.app_name')} ${typingTestFilterClause('m.typing_test')} ${runIdFilterClause('m.run_id')}
     `)
 
     // Per-(localDay, layer, row, col) totals for the Analyze Ergonomic
@@ -2191,6 +2347,48 @@ export class TypingAnalyticsDB {
     return this.selectMatrixCellsForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes), typingTestsJson: JSON.stringify(typingTestScopes), runIdsJson: JSON.stringify(runIdScopes) }) as TypingMatrixCellRow[]
   }
 
+  /** Per-(scope, minute, cell) raw duration rows in `[sinceMs, untilMs)`
+   * for the Analyze keypress-duration aggregate. One row per minute a
+   * cell had at least one `matrix-release` sample — the aggregation
+   * layer (bigram-aggregate.ts) folds hist/sum/sumSq per cell across
+   * rows, the same pattern as the n-gram range selects. */
+  listMatrixDurationCellsForUid(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    appScopes: readonly string[] = [], typingTestScopes: readonly string[] = [], runIdScopes: readonly string[] = [],
+  ): MatrixDurationCellRow[] {
+    return this.toMatrixDurationCellRows(
+      this.selectMatrixDurationForUidStmt.all({ uid, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes), typingTestsJson: JSON.stringify(typingTestScopes), runIdsJson: JSON.stringify(runIdScopes) }),
+    )
+  }
+
+  /** Same as {@link listMatrixDurationCellsForUid} but restricted to one
+   * machine_hash for the Analyze "This device" scope. */
+  listMatrixDurationCellsForUidAndHash(
+    uid: string,
+    machineHash: string,
+    sinceMs: number,
+    untilMs: number,
+    appScopes: readonly string[] = [], typingTestScopes: readonly string[] = [], runIdScopes: readonly string[] = [],
+  ): MatrixDurationCellRow[] {
+    return this.toMatrixDurationCellRows(
+      this.selectMatrixDurationForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes), typingTestsJson: JSON.stringify(typingTestScopes), runIdsJson: JSON.stringify(runIdScopes) }),
+    )
+  }
+
+  private toMatrixDurationCellRows(raws: unknown): MatrixDurationCellRow[] {
+    return (raws as { row: number; col: number; layer: number; minuteTs: number; durHist: Uint8Array; durSum: number; durSumSq: number }[]).map((r) => ({
+      row: r.row,
+      col: r.col,
+      layer: r.layer,
+      minuteTs: r.minuteTs,
+      hist: decodeHistBuffer(r.durHist),
+      sum: r.durSum,
+      sumSq: r.durSumSq,
+    }))
+  }
+
   /** Per-(localDay, layer, row, col) press totals for the Analyze
    * Ergonomic Learning Curve. The SQL groups by a `localtime` date
    * string so day boundaries match the user's wall clock; we map that
@@ -2384,13 +2582,25 @@ export class TypingAnalyticsDB {
   }
 
   private toNgramMinuteCellRows(raws: unknown): NgramMinuteCellRow[] {
-    return (raws as { ngramId: string; minuteTs: number; count: number; hist: Uint8Array; sumIki: number | null; sumSqIki: number | null }[]).map((r) => ({
+    return (raws as {
+      ngramId: string
+      minuteTs: number
+      count: number
+      hist: Uint8Array
+      sumIki: number | null
+      sumSqIki: number | null
+      // Absent (not selected) on a trigram query — see prepareNgramStatements.
+      overlapCount?: number | null
+      overlapN?: number | null
+    }[]).map((r) => ({
       ngramId: r.ngramId,
       minuteTs: r.minuteTs,
       count: r.count,
       hist: decodeHistBuffer(r.hist),
       sumIki: r.sumIki,
       sumSqIki: r.sumSqIki,
+      overlapCount: r.overlapCount,
+      overlapN: r.overlapN,
     }))
   }
 
@@ -2639,9 +2849,11 @@ export class TypingAnalyticsDB {
     tombstoneSinceMs: number,
   ): MatrixMinuteExportRow[] {
     const rows = this.selectMatrixMinutesForUidStmt.all({ uid, liveSinceMinuteMs, tombstoneSinceMs }) as Array<
-      WithDeletedFlag<MatrixMinuteExportRow>
+      WithDeletedFlag<Omit<MatrixMinuteExportRow, 'dh'>> & { dh: Uint8Array | null }
     >
-    return rows.map((r) => ({ ...r, isDeleted: r.isDeleted === 1 }))
+    // dh comes back as a raw BLOB (or null) like every other hist column
+    // in this file — decode it the same way toMatrixDurationCellRows does.
+    return rows.map((r) => ({ ...r, isDeleted: r.isDeleted === 1, dh: r.dh ? decodeHistBuffer(r.dh) : null }))
   }
 
   exportMinuteStatsForUid(
@@ -2709,6 +2921,9 @@ export class TypingAnalyticsDB {
       count: row.count,
       tapCount: row.tapCount ?? 0,
       holdCount: row.holdCount ?? 0,
+      durHist: row.dh ? encodeHistBuffer(row.dh) : null,
+      durSum: row.ds ?? null,
+      durSumSq: row.dq ?? null,
       appName: row.appName ?? null,
       typingTest: row.typingTest ?? null,
       runId: row.runId ?? '',
@@ -2729,6 +2944,8 @@ export class TypingAnalyticsDB {
       intervalP50Ms: row.intervalP50Ms,
       intervalP75Ms: row.intervalP75Ms,
       intervalMaxMs: row.intervalMaxMs,
+      pollP50Ms: row.pollP50Ms ?? null,
+      pollP95Ms: row.pollP95Ms ?? null,
       appName: row.appName ?? null,
       typingTest: row.typingTest ?? null,
       runId: row.runId ?? '',
@@ -2769,6 +2986,8 @@ export class TypingAnalyticsDB {
         hist: encodeHistBuffer(entry.h),
         sumIki: entry.s ?? null,
         sumSqIki: entry.sq ?? null,
+        overlapCount: entry.oc ?? null,
+        overlapN: entry.on ?? null,
         appName,
         typingTest,
         runId,
@@ -2882,6 +3101,30 @@ export class TypingAnalyticsDB {
       this.db.exec(`
         ALTER TABLE typing_bigram_minute ADD COLUMN sum_iki REAL;
         ALTER TABLE typing_bigram_minute ADD COLUMN sumsq_iki REAL;
+      `)
+    }
+    // v7 -> v8: add keypress-duration columns to typing_matrix_minute,
+    // physical-overlap columns to typing_bigram_minute, and poll-gap
+    // columns to typing_minute_stats — all nullable, no cache rebuild
+    // (old JSONL masters have no source data for any of these; see
+    // schema.ts). Guarded by `fromVersion === 6 || fromVersion === 7`,
+    // not `<= 7`: every one of these three tables was in the `< 6` drop
+    // list above, so a DB migrating from before v6 already got them
+    // dropped-and-recreated by CREATE_SCHEMA_SQL (today's full v8 DDL,
+    // columns included) — re-altering here would hit "no such table" for
+    // that path, exactly like the v6->v7 precedent immediately above.
+    // Both v6 and v7 DBs, in contrast, kept these tables intact since v6
+    // (the v6->v7 step above only touched typing_bigram_minute's
+    // sum_iki/sumsq_iki, not the other two), so both need the v8 ALTER.
+    if (fromVersion === 6 || fromVersion === 7) {
+      this.db.exec(`
+        ALTER TABLE typing_matrix_minute ADD COLUMN dur_hist BLOB;
+        ALTER TABLE typing_matrix_minute ADD COLUMN dur_sum REAL;
+        ALTER TABLE typing_matrix_minute ADD COLUMN dur_sumsq REAL;
+        ALTER TABLE typing_bigram_minute ADD COLUMN overlap_count INTEGER;
+        ALTER TABLE typing_bigram_minute ADD COLUMN overlap_n INTEGER;
+        ALTER TABLE typing_minute_stats ADD COLUMN poll_p50_ms REAL;
+        ALTER TABLE typing_minute_stats ADD COLUMN poll_p95_ms REAL;
       `)
     }
   }

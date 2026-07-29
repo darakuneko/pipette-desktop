@@ -27,6 +27,7 @@ import {
   resolveEffectiveCodeWithLayer,
 } from './matrix-layers'
 import { MatrixAnalyticsQueue } from './matrix-analytics-queue'
+import { PressDurationTracker } from './matrix-press-duration'
 
 export type { WordResult, TypingTestState, TypingTestStatus } from './run-state'
 
@@ -130,6 +131,16 @@ export function useTypingTest<TPreparedEvent = unknown>(
   // matrix-analytics-queue.ts for why this exists instead of emitting
   // non-masked keys unconditionally on press.
   const matrixQueueRef = useRef(new MatrixAnalyticsQueue<TPreparedEvent>())
+  // Per-key press-duration + overlap tracking, independent of the queue
+  // above — it covers every press (masked or not) and ships its own
+  // 'matrix-release' event straight through `emit`, bypassing the queue
+  // entirely. Safe to bypass: a release event only touches the per-cell
+  // duration accumulator in main (no keystrokes/intervals/activeMs/n-gram),
+  // so it can never corrupt the ordering the queue exists to protect, and
+  // a release arriving late relative to a still-queued masked press is
+  // absorbed by the main-process MinuteBuffer's retention window instead
+  // of needing to arrive in order. See matrix-press-duration.ts.
+  const matrixDurationRef = useRef(new PressDurationTracker<TPreparedEvent>())
   const tappingTermMsRef = useRef(options?.tappingTermMs ?? DEFAULT_TAPPING_TERM_MS)
   const seqRef = useRef(0)
   const langLoadSeqRef = useRef(0)
@@ -371,6 +382,8 @@ export function useTypingTest<TPreparedEvent = unknown>(
       const preExistingSortedLayers = [...preExistingLayerSet].sort((a, b) => b - a)
       const ts = Date.now()
       const tappingTermMs = tappingTermMsRef.current
+      const duration = matrixDurationRef.current
+      const frame = duration.onFrame(ts)
 
       for (const key of pressed) {
         if (prev.has(key)) continue
@@ -386,14 +399,26 @@ export function useTypingTest<TPreparedEvent = unknown>(
         // (e.g. recording toggling back on) while it would have waited.
         const prepared = prepare('matrix')
         if (prepared == null) continue
+        // Overlap / pollGapMs are derived from the raw pressed set, not
+        // from anything queue-related — see matrix-press-duration.ts.
+        // registerPress also records this press so the matching release
+        // edge (below, in a later frame) can compute its duration and
+        // ship the same `prepared` context this press already captured.
+        const { overlap, pollGapMs } = duration.registerPress({
+          key,
+          start: { tsMs: ts, row, col, layer: eventLayer, keycode: code },
+          prepared,
+          pressed,
+          frame,
+        })
         // Only LT / MT style tap-hold keys need the deferred classify
         // pass. LSFT(kc) etc. are "masked" too but always fire the
         // modifier + base together, so the heatmap treats them as
         // regular presses.
         if (isTapKeycode(code)) {
-          queue.pushPending(prepared, { tsMs: ts, row, col, layer: eventLayer, keycode: code }, key, tappingTermMs, emit)
+          queue.pushPending(prepared, { tsMs: ts, row, col, layer: eventLayer, keycode: code, overlap, pollGapMs }, key, tappingTermMs, emit)
         } else {
-          const event: TypingAnalyticsEventPayload = { kind: 'matrix', row, col, layer: eventLayer, keycode: code, ts }
+          const event: TypingAnalyticsEventPayload = { kind: 'matrix', row, col, layer: eventLayer, keycode: code, ts, overlap, pollGapMs }
           // An empty queue means nothing ahead is still unresolved, so
           // this press can go straight out instead of paying for a
           // round trip through the queue.
@@ -408,6 +433,8 @@ export function useTypingTest<TPreparedEvent = unknown>(
       for (const key of prev) {
         if (pressed.has(key)) continue
         queue.resolveReleaseByKey(key, ts, emit)
+        const resolved = duration.resolveRelease(key, ts)
+        if (resolved) emit?.(resolved.prepared, resolved.event)
       }
     }
     prevPressedRef.current = new Set(pressed)
@@ -443,6 +470,12 @@ export function useTypingTest<TPreparedEvent = unknown>(
   const resetMatrixPressTracking = useCallback((): Promise<void> => {
     const drained = matrixQueueRef.current.drainAll(emitAnalyticsEventRef.current)
     prevPressedRef.current = new Set()
+    // Discard rather than finalize — an in-flight press with no release
+    // yet must not be synthesized into a fabricated release event (see
+    // matrix-press-duration.ts). Unlike the queue's forced hold
+    // classification, there is nothing to salvage here: a duration
+    // sample without an observed release is just noise.
+    matrixDurationRef.current.reset()
     return drained
   }, [])
 
@@ -453,6 +486,7 @@ export function useTypingTest<TPreparedEvent = unknown>(
   useEffect(() => {
     return () => {
       matrixQueueRef.current.dispose()
+      matrixDurationRef.current.reset()
     }
   }, [])
 

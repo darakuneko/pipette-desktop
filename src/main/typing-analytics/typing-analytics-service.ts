@@ -28,6 +28,7 @@ import type {
 import type { KleKey } from '../../shared/kle/types'
 import { isFingerType, isPosKey, type FingerType } from '../../shared/kle/kle-ergonomics'
 import { canonicalScopeKey, emptyTombstoneResult } from '../../shared/types/typing-analytics'
+import { OBSERVATION_HOLE_MS } from '../../shared/typing-analytics-timing'
 import { isHashScope, isOwnScope, normalizeAppScopes, parseDeviceScope } from '../../shared/types/analyze-filters'
 import { log } from '../logger'
 import { getCurrentAppName } from './app-monitor'
@@ -74,9 +75,10 @@ import {
   type JsonlRow,
 } from './jsonl/jsonl-row'
 import { appendRowsToFile } from './jsonl/jsonl-writer'
-import { bucketizeIki, sumAndSumSquares } from './bigram-bucket'
+import { bucketizeDurations, bucketizeIki, sumAndSumSquares } from './bigram-bucket'
 import {
   aggregatePairTotals,
+  observedRolloverRatio,
   rankBigramsByCount,
   rankBigramsBySlow,
 } from './bigram-aggregate'
@@ -190,8 +192,8 @@ const emptyPeakRecords = (): PeakRecords => ({
  * a defined value regardless of how far the handler got. */
 const emptyBigramResult = (view: TypingBigramAggregateView): TypingBigramAggregateResult =>
   view === 'slow'
-    ? { view: 'slow', entries: [], truncated: false }
-    : { view: 'top', entries: [], truncated: false }
+    ? { view: 'slow', entries: [], truncated: false, observedRolloverRatio: null }
+    : { view: 'top', entries: [], truncated: false, observedRolloverRatio: null }
 
 /**
  * Register typing-analytics IPC handlers. Called synchronously at startup so
@@ -810,10 +812,14 @@ export function setupTypingAnalyticsIpc(): void {
       // here (against the full pair universe) rather than left for the
       // renderer to infer from `entries.length`.
       const truncated = totals.size > limit
+      // Trigram rows never carry overlap columns (see NgramMinuteCellRow),
+      // so every entry would be null-poisoned anyway — skip the full-map
+      // pass entirely instead of walking it just to get null back.
+      const rolloverRatio = gram === 3 ? null : observedRolloverRatio(totals)
       if (parsedView === 'slow') {
-        return { view: 'slow', entries: rankBigramsBySlow(totals, minSample, limit), truncated }
+        return { view: 'slow', entries: rankBigramsBySlow(totals, minSample, limit), truncated, observedRolloverRatio: rolloverRatio }
       }
-      return { view: 'top', entries: rankBigramsByCount(totals, limit), truncated }
+      return { view: 'top', entries: rankBigramsByCount(totals, limit), truncated, observedRolloverRatio: rolloverRatio }
     },
   )
 
@@ -1395,6 +1401,49 @@ function isValidKeyboard(value: unknown): value is TypingAnalyticsKeyboard {
   )
 }
 
+/** Longest duration (ms) a single keypress is allowed to report. Well
+ * above any real tap or held layer key, but low enough to reject a
+ * clearly corrupt/fabricated sample (e.g. a renderer bug feeding a stale
+ * press record) instead of letting it skew the per-cell histogram. */
+const MAX_MATRIX_RELEASE_DURATION_MS = 60_000
+
+function isValidMatrixCommon(obj: Record<string, unknown>): boolean {
+  return (
+    typeof obj.row === 'number' && Number.isInteger(obj.row) && obj.row >= 0 &&
+    typeof obj.col === 'number' && Number.isInteger(obj.col) && obj.col >= 0 &&
+    typeof obj.layer === 'number' && Number.isInteger(obj.layer) && obj.layer >= 0 &&
+    typeof obj.keycode === 'number' && Number.isFinite(obj.keycode)
+  )
+}
+
+/** Strip an invalid optional auxiliary field from a `matrix` event
+ * payload in place, rather than rejecting the whole keystroke over it.
+ * `action`/`overlap`/`pollGapMs` are all best-effort classification data
+ * layered on top of a real physical press — an out-of-range value there
+ * (a stale/misordered pollGapMs sample, a corrupted boolean) is a timing
+ * or classification artifact, not evidence the press itself didn't
+ * happen. Rejecting the whole event over it would lose a real keystroke
+ * to something the renderer could compute wrong — precisely the class of
+ * bug #322/#323 already fixed elsewhere in this pipeline. Core fields
+ * (row/col/layer/keycode, checked by isValidMatrixCommon before this
+ * runs) are NOT sanitized: there is no safe fallback for "which cell was
+ * this", so those still reject the whole event as before.
+ *
+ * The pollGapMs bound (`0 < pollGapMs <= OBSERVATION_HOLE_MS`) reuses the
+ * same shared constant the renderer's hole detection is built on (see
+ * matrix-press-duration.ts's onFrame) — by construction, any pollGapMs
+ * the renderer ever legitimately attaches already satisfies it, so this
+ * is a self-consistency check on the wire value, not an independent
+ * policy choice that could drift from the renderer's own threshold. */
+function sanitizeMatrixAuxFields(obj: Record<string, unknown>): void {
+  if (obj.action !== undefined && obj.action !== 'tap' && obj.action !== 'hold') delete obj.action
+  if (obj.overlap !== undefined && typeof obj.overlap !== 'boolean') delete obj.overlap
+  if (obj.pollGapMs !== undefined) {
+    const gap = obj.pollGapMs
+    if (typeof gap !== 'number' || !Number.isFinite(gap) || gap <= 0 || gap > OBSERVATION_HOLE_MS) delete obj.pollGapMs
+  }
+}
+
 function isValidEvent(value: unknown): value is TypingAnalyticsEvent {
   if (typeof value !== 'object' || value === null) return false
   const obj = value as Record<string, unknown>
@@ -1404,11 +1453,15 @@ function isValidEvent(value: unknown): value is TypingAnalyticsEvent {
     return typeof obj.key === 'string' && obj.key.length > 0
   }
   if (obj.kind === 'matrix') {
+    if (!isValidMatrixCommon(obj)) return false
+    sanitizeMatrixAuxFields(obj)
+    return true
+  }
+  if (obj.kind === 'matrix-release') {
+    if (!isValidMatrixCommon(obj)) return false
     return (
-      typeof obj.row === 'number' && Number.isInteger(obj.row) && obj.row >= 0 &&
-      typeof obj.col === 'number' && Number.isInteger(obj.col) && obj.col >= 0 &&
-      typeof obj.layer === 'number' && Number.isInteger(obj.layer) && obj.layer >= 0 &&
-      typeof obj.keycode === 'number' && Number.isFinite(obj.keycode)
+      typeof obj.durationMs === 'number' && Number.isFinite(obj.durationMs) &&
+      obj.durationMs > 0 && obj.durationMs < MAX_MATRIX_RELEASE_DURATION_MS
     )
   }
   return false
@@ -1426,8 +1479,17 @@ async function resolveScope(keyboard: TypingAnalyticsKeyboard): Promise<Resolved
 async function ingestEvent(event: TypingAnalyticsEvent): Promise<void> {
   const { fingerprint, scopeKey } = await resolveScope(event.keyboard)
   minuteBuffer.addEvent(event, fingerprint, Date.now())
-  const finalized = sessionDetector.recordEvent(event.keyboard.uid, scopeKey, event.ts)
-  if (finalized.length > 0) pendingSessions.push(...finalized)
+  // matrix-release events are duration-only by contract (see the shared
+  // event type's doc comment) — they carry no new keystroke, so they
+  // must not participate in session detection. A held key's release can
+  // land minutes after its press (a long hold, or a press near a poll
+  // gap); if it counted here, that gap-spanning release could silently
+  // extend — or even re-open — a session a press-only stream would have
+  // already let idle-close.
+  if (event.kind !== 'matrix-release') {
+    const finalized = sessionDetector.recordEvent(event.keyboard.uid, scopeKey, event.ts)
+    if (finalized.length > 0) pendingSessions.push(...finalized)
+  }
   dirty = true
   scheduleFlush()
 }
@@ -1558,8 +1620,20 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
   // run_id is part of every per-minute row's identity (id + SQLite PK) so
   // two runs in one minute stay distinct. '' for non-test (REC) input.
   const runId = snapshot.runId
-  const rows: JsonlRow[] = [
-    {
+  const rows: JsonlRow[] = []
+  // A minute whose only contribution is a matrix-release event (a press
+  // near :59.9 released at :00.1 of the NEXT minute — see the
+  // matrix-release event type's doc comment on release-vs-press minute
+  // attribution) has keystrokes === 0 and no charCounts: nothing was
+  // actually typed IN this minute, only a duration sample that happens
+  // to land here. Shipping a minute-stats row for it would fabricate a
+  // phantom day in selectDailySummariesForUid — a day appears in Analyze
+  // solely because a key held across midnight happened to release a
+  // fraction of a second into the next day. The matrix-minute row for
+  // that cell (carrying the duration data) still ships in the loop
+  // below regardless; only this per-minute stats rollup is skipped.
+  if (snapshot.keystrokes > 0 || snapshot.charCounts.size > 0) {
+    rows.push({
       id: minuteStatsRowId(snapshot.scopeId, snapshot.minuteTs, runId),
       kind: 'minute-stats',
       updated_at: updatedAt,
@@ -1574,12 +1648,19 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
         intervalP50Ms: snapshot.intervalP50Ms,
         intervalP75Ms: snapshot.intervalP75Ms,
         intervalMaxMs: snapshot.intervalMaxMs,
+        // Absent (not null) when the minute recorded no poll-gap samples
+        // at all — mirrors the matrix-minute dh/ds/dq convention below:
+        // "no data" stays absent on the wire rather than an explicit
+        // null pair, keeping pre-v8 rows and "genuinely no samples" rows
+        // indistinguishable on disk — readers already treat both
+        // identically (see isValidPollStatsPair).
+        ...(snapshot.pollP50Ms !== null ? { pollP50Ms: snapshot.pollP50Ms, pollP95Ms: snapshot.pollP95Ms } : {}),
         appName,
         typingTest,
         runId,
       },
-    },
-  ]
+    })
+  }
   for (const [char, count] of snapshot.charCounts) {
     rows.push({
       id: charMinuteRowId(snapshot.scopeId, snapshot.minuteTs, runId, char),
@@ -1589,6 +1670,15 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
     })
   }
   for (const cell of snapshot.matrixCounts.values()) {
+    // Built once as a complete triple (or left undefined) rather than
+    // computed piecemeal — present only when this cell had at least one
+    // matrix-release sample this minute; see JsonlMatrixMinutePayload's
+    // doc comment for why absent (not a zeroed histogram) is correct.
+    let dur: { dh: number[]; ds: number; dq: number } | undefined
+    if (cell.durations.length > 0) {
+      const { sum, sumSq } = sumAndSumSquares(cell.durations)
+      dur = { dh: bucketizeDurations(cell.durations), ds: sum, dq: sumSq }
+    }
     rows.push({
       id: matrixMinuteRowId(snapshot.scopeId, snapshot.minuteTs, runId, cell.row, cell.col, cell.layer),
       kind: 'matrix-minute',
@@ -1603,6 +1693,7 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
         count: cell.count,
         tapCount: cell.tapCount,
         holdCount: cell.holdCount,
+        ...dur,
         appName,
         typingTest,
         runId,
@@ -1617,7 +1708,7 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
       payload: {
         scopeId: snapshot.scopeId,
         minuteTs: snapshot.minuteTs,
-        bigrams: toNgramEntries(snapshot.bigrams),
+        bigrams: toNgramEntries(snapshot.bigrams, snapshot.overlaps),
         appName,
         typingTest,
         runId,
@@ -1632,6 +1723,8 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
       payload: {
         scopeId: snapshot.scopeId,
         minuteTs: snapshot.minuteTs,
+        // Overlap is a bigram-only concept — see JsonlBigramMinuteEntry's
+        // doc comment on why trigram entries never carry oc/on.
         trigrams: toNgramEntries(snapshot.trigrams),
         appName,
         typingTest,
@@ -1644,12 +1737,26 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
 
 /** Bucketize each pair/triple's raw IKI samples into the JSONL entry
  * shape (`c`/`h`/`s`/`sq`) shared by bigram-minute and trigram-minute
- * rows — see {@link buildSnapshotRows}. */
-function toNgramEntries(ikisByKey: ReadonlyMap<string, number[]>): Record<string, JsonlBigramMinuteEntry> {
+ * rows — see {@link buildSnapshotRows}. `overlaps` is supplied for the
+ * bigram call site only; when present, a pair with a recorded overlap
+ * accumulator gains `oc`/`on` (absent — not zeroed — for a pair whose
+ * every contributing event had an undetermined overlap, since "never
+ * observed" must not collapse into "observed as never overlapping"). */
+function toNgramEntries(
+  ikisByKey: ReadonlyMap<string, number[]>,
+  overlaps?: ReadonlyMap<string, { oc: number; on: number }>,
+): Record<string, JsonlBigramMinuteEntry> {
   const entries: Record<string, JsonlBigramMinuteEntry> = {}
   for (const [key, ikis] of ikisByKey) {
     const { sum, sumSq } = sumAndSumSquares(ikis)
-    entries[key] = { c: ikis.length, h: bucketizeIki(ikis), s: sum, sq: sumSq }
+    const overlap = overlaps?.get(key)
+    entries[key] = {
+      c: ikis.length,
+      h: bucketizeIki(ikis),
+      s: sum,
+      sq: sumSq,
+      ...(overlap ? { oc: overlap.oc, on: overlap.on } : {}),
+    }
   }
   return entries
 }

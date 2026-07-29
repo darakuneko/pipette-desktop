@@ -2,7 +2,7 @@
 // SQLite schema for the typing analytics database. See
 // .claude/plans/typing-analytics.md for the design rationale.
 
-export const SCHEMA_VERSION = 7
+export const SCHEMA_VERSION = 8
 
 /** User-data tables in the order a rebuild should truncate them. Listed
  * child-before-parent so any future FK_ON delete won't trip itself. */
@@ -89,6 +89,14 @@ CREATE TABLE IF NOT EXISTS typing_matrix_minute (
   -- both at 0 and the heatmap falls back to the total count column.
   tap_count INTEGER NOT NULL DEFAULT 0,
   hold_count INTEGER NOT NULL DEFAULT 0,
+  -- Keypress-duration histogram / sum / sum-of-squares from
+  -- matrix-release events landing in this minute (see
+  -- bigram-bucket.ts's duration grid -- deliberately tighter than the
+  -- IKI grid). All three NULL for rows written before schema v8, or for
+  -- a minute that had presses but no matching release yet.
+  dur_hist BLOB,
+  dur_sum REAL,
+  dur_sumsq REAL,
   -- See typing_char_minute.app_name comment.
   app_name TEXT,
   -- See typing_char_minute.typing_test comment.
@@ -129,6 +137,11 @@ CREATE TABLE IF NOT EXISTS typing_minute_stats (
   typing_test TEXT,
   -- See typing_char_minute.run_id comment.
   run_id TEXT NOT NULL DEFAULT '',
+  -- Median / p95 sampling gap (ms) between polled matrix frames this
+  -- minute (see matrix-press-duration.ts's pollGapMs). NULL for rows
+  -- written before schema v8, or a minute with no sample.
+  poll_p50_ms REAL,
+  poll_p95_ms REAL,
   updated_at INTEGER NOT NULL,
   is_deleted INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (scope_id, minute_ts, run_id),
@@ -161,6 +174,14 @@ CREATE TABLE IF NOT EXISTS typing_bigram_minute (
   -- approximation (see Plan-trigram-and-iki-variance.md).
   sum_iki REAL,
   sumsq_iki REAL,
+  -- Physical-overlap accumulators (see OverlapCounts in minute-buffer.ts).
+  -- overlap_n counts pairs whose incoming press had a KNOWN overlap
+  -- determination; overlap_count is the subset where it was true.
+  -- Both NULL for rows written before schema v8, or a pair whose every
+  -- contributing event had an undetermined overlap -- never treat NULL
+  -- as 0 here, the same null-poisons-aggregation rule as sum_iki above.
+  overlap_count INTEGER,
+  overlap_n INTEGER,
   -- See typing_char_minute.app_name comment.
   app_name TEXT,
   -- See typing_char_minute.typing_test comment.

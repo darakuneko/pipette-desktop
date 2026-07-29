@@ -9,22 +9,57 @@ import { deserialize } from '../../../../shared/keycodes/keycodes'
 const mockTypingAnalyticsEvent = vi.fn<(event: unknown) => Promise<void>>()
 const mockTypingAnalyticsFlush = vi.fn<(uid: string) => Promise<void>>()
 
-beforeEach(() => {
-  mockTypingAnalyticsEvent.mockReset()
-  mockTypingAnalyticsFlush.mockReset()
-  mockTypingAnalyticsEvent.mockResolvedValue(undefined)
-  mockTypingAnalyticsFlush.mockResolvedValue(undefined)
+/** Whether `matrix-release` events reach `mockTypingAnalyticsEvent` at all
+ *  — see {@link installVialApi}. Reset to the default (excluded) every
+ *  test by beforeEach; opt in per-test with `installVialApi({ includeReleases: true })`. */
+let includeMatrixReleaseEvents = false
+
+/** (Re)installs the mocked `vialAPI` used by useInputModes. Mirrors
+ *  useTypingTest.test.ts's `analyticsOptions` filtering: `matrix-release`
+ *  events are excluded from `mockTypingAnalyticsEvent` by default so every
+ *  pre-existing assertion in this file (exact call counts, nth-call
+ *  content) keeps meaning what it meant before release events existed,
+ *  regardless of whether a given test happens to advance the clock
+ *  between a press and its release. Tests that specifically cover
+ *  release/duration wiring opt in explicitly instead of relying on
+ *  incidental zero-duration suppression (a frozen clock still produces
+ *  durationMs === 0, which the tracker itself discards, but this filter
+ *  no longer depends on that coincidence). Excluded releases resolve
+ *  immediately — the IPC call still "happens", it's just not observed by
+ *  the mock callers assert against. */
+function installVialApi(options?: { includeReleases?: boolean }): void {
+  includeMatrixReleaseEvents = options?.includeReleases ?? false
   Object.defineProperty(window, 'vialAPI', {
     value: {
-      typingAnalyticsEvent: mockTypingAnalyticsEvent,
+      typingAnalyticsEvent: (event: unknown) => {
+        const kind = (event as { kind?: string } | null)?.kind
+        if (kind === 'matrix-release' && !includeMatrixReleaseEvents) return Promise.resolve()
+        return mockTypingAnalyticsEvent(event)
+      },
       typingAnalyticsFlush: mockTypingAnalyticsFlush,
     },
     writable: true,
     configurable: true,
   })
+}
+
+beforeEach(() => {
+  mockTypingAnalyticsEvent.mockReset()
+  mockTypingAnalyticsFlush.mockReset()
+  mockTypingAnalyticsEvent.mockResolvedValue(undefined)
+  mockTypingAnalyticsFlush.mockResolvedValue(undefined)
+  installVialApi()
+  // Fake ONLY Date (not setTimeout/setImmediate — several tests below rely
+  // on those firing for real via flushMicrotasks). Deterministic durations
+  // are still needed for the release-wiring tests (see "matrix-release IPC
+  // wiring" below), which advance the clock explicitly with
+  // vi.setSystemTime() between a press and its release.
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.restoreAllMocks()
 })
 
@@ -656,5 +691,78 @@ describe('useInputModes — tray keystroke counter', () => {
 
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledWith(expect.objectContaining({ typingTest: expect.any(String) }))
     expect(onRecKeystroke).not.toHaveBeenCalled()
+  })
+})
+
+// The `matrix-release` event travels through the exact same
+// prepare/emit/chainRef pipeline as every other analytics event — these
+// pin that it reaches the real IPC (typingAnalyticsEvent) with the same
+// keyboard/typingTest/runId attachment as a `matrix` event, not just
+// within useTypingTest's own in-memory sink (see useTypingTest.test.ts
+// for the duration/overlap/hole semantics themselves).
+describe('useInputModes — matrix-release IPC wiring', () => {
+  it('ships a matrix-release event over IPC with the keyboard attached', async () => {
+    installVialApi({ includeReleases: true })
+    // A stable keymap reference (not a fresh buildKeymap() per render) —
+    // useInputModes resets matrix press tracking whenever its `keymap`
+    // prop identity changes, which would otherwise wipe the just-pressed
+    // key's duration record before the release frame below looks it up.
+    const keymap = buildKeymap()
+    const { result } = renderUseInputModes({ typingRecordEnabled: true, keymap })
+
+    const pressAt = new Date('2026-01-01T00:00:00.000Z')
+    vi.setSystemTime(pressAt)
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(['0,0']), keymap)
+    })
+    await flushMicrotasks()
+    expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(1)
+
+    vi.setSystemTime(new Date(pressAt.getTime() + 60))
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(), keymap)
+    })
+    await flushMicrotasks()
+
+    expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(2)
+    expect(mockTypingAnalyticsEvent).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      kind: 'matrix-release', row: 0, col: 0, durationMs: 60, keyboard: sampleKeyboard,
+    }))
+  })
+
+  it('tags a matrix-release event with the running test label and run id, like its matrix press', async () => {
+    installVialApi({ includeReleases: true })
+    const keymap = buildKeymap()
+    const { result } = renderUseInputModes({
+      typingRecordEnabled: false,
+      typingTestViewOnly: false,
+      keymap,
+      savedTypingTestConfig: { mode: 'time', duration: 30, punctuation: false, numbers: false },
+    })
+
+    act(() => {
+      result.current.typingTest.setWindowFocused(true)
+    })
+    act(() => {
+      result.current.typingTest.processKeyEvent('a', false, false, false)
+    })
+    const runId = result.current.typingTest.state.runId
+
+    const pressAt = new Date('2026-01-01T00:00:01.000Z')
+    vi.setSystemTime(pressAt)
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(['0,0']), keymap)
+    })
+    await flushMicrotasks()
+
+    vi.setSystemTime(new Date(pressAt.getTime() + 45))
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(), keymap)
+    })
+    await flushMicrotasks()
+
+    expect(mockTypingAnalyticsEvent).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'matrix-release', row: 0, col: 0, durationMs: 45, runId, typingTest: expect.any(String),
+    }))
   })
 })

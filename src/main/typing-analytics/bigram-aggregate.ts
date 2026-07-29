@@ -9,7 +9,7 @@ import {
   BIGRAM_BUCKET_CENTERS_MS,
   BIGRAM_BUCKET_UPPER_BOUNDS_MS,
 } from './bigram-bucket'
-import type { NgramMinuteCellRow } from './db/typing-analytics-db'
+import type { MatrixDurationCellRow, NgramMinuteCellRow } from './db/typing-analytics-db'
 import { BIGRAM_HIST_BUCKETS } from './jsonl/jsonl-row'
 import type {
   TypingBigramSlowEntry,
@@ -27,6 +27,15 @@ export interface BigramPairTotal {
    * pair are no longer added to it. */
   sumIki: number | null
   sumSqIki: number | null
+  /** Running physical-overlap accumulators (see OverlapCounts in
+   * minute-buffer.ts). Deliberately NOT null-poisoned the way
+   * sumIki/sumSqIki are (see {@link aggregatePairTotals}'s doc comment
+   * for why that rule doesn't transfer here) — a row with no oc/on
+   * (older data, or a v8 row whose events never had a determined
+   * overlap, or a trigram row where the columns don't exist at all)
+   * simply contributes 0 to both. Always a plain number, never null. */
+  overlapCount: number
+  overlapN: number
 }
 
 /** Sum per-(scope, minute, pair) rows into one entry per pair id
@@ -56,6 +65,8 @@ export function aggregatePairTotals(
         hist: new Array<number>(BIGRAM_HIST_BUCKETS).fill(0),
         sumIki: 0,
         sumSqIki: 0,
+        overlapCount: 0,
+        overlapN: 0,
       }
       totals.set(id, entry)
     }
@@ -70,8 +81,67 @@ export function aggregatePairTotals(
       entry.sumIki += row.sumIki
       entry.sumSqIki += row.sumSqIki
     }
+    // Deliberate deviation from the sumIki/sumSqIki null-poisoning rule
+    // above (codex P1 review — overrides the original task doc's "same
+    // rule as SD" instruction): `undefined` (trigram rows never carry
+    // these columns) and `null` (a bigram row that predates schema v8,
+    // or whose events never had a determined overlap) both just mean
+    // "this row observed nothing about overlap" and contribute 0 to
+    // both accumulators, rather than poisoning the whole pair. Unlike
+    // sumIki, there is no cross-row inconsistency possible here: each
+    // row's own oc/on is already a self-consistent fraction of the
+    // events THAT row observed, so a missing row can never hide a real
+    // partial count the way an incomplete sum could silently understate
+    // an SD. Poisoning here would mean every pair touched by even one
+    // v7-era row — i.e. every pair for the entire v7->v8 transition
+    // month — or one v8 row whose presses all had undefined overlap,
+    // permanently nulls that pair's contribution to observedRolloverRatio.
+    if (row.overlapCount != null && row.overlapN != null) {
+      entry.overlapCount += row.overlapCount
+      entry.overlapN += row.overlapN
+    }
   }
   return totals
+}
+
+/** Selection-wide overlap ratio: ΣoverlapCount / ΣoverlapN across every
+ * pair in `totals` (see {@link aggregatePairTotals} — a row with no
+ * overlap data just contributes 0 to both sums, it is never poisoned).
+ * Null when the resulting denominator is 0 (no pair in the selection
+ * ever had a determined overlap — e.g. a trigram view, or a selection
+ * entirely from before schema v8).
+ *
+ * Named with the `observed` prefix everywhere this value travels (type,
+ * IPC field, any future CSV/UI column) because it is a SAMPLED
+ * approximation of how often consecutive keys physically overlapped —
+ * bounded by the renderer's polling cadence, not a measurement of true
+ * rollover timing (see Plan-typing-metrics-chi2018.md "制約 2"). It must
+ * never be presented as "the" rollover rate.
+ *
+ * Residual bias, even after the fixes above: a same-frame tie (two
+ * presses landing in one polled frame, iki === 0 in
+ * MinuteBuffer.recordNgramChain) folds its overlap into the TIED pair
+ * rather than advancing the chain, so the tie key becomes stale for
+ * whatever pair the chain completes next. Concretely — A and B pressed
+ * in the same frame, then C pressed later: pair A_C's overlap sample
+ * actually describes "was B still down when C was pressed", not
+ * A's relationship to C. Full reference-key realignment (re-deriving
+ * which physical key the NEXT pair should compare against after a tie)
+ * was considered and rejected as machinery disproportionate to an
+ * avowedly sampled, approximate metric. What remains after the tie fix
+ * is this: the ratio no longer has a systematic downward bias (ties used
+ * to discard the overlap evidence entirely), but it does carry
+ * attribution noise — a small, non-systematic chance that a sample
+ * counted toward one pair actually describes a different, adjacent one —
+ * concentrated in fast chords where same-frame ties are common. */
+export function observedRolloverRatio(totals: ReadonlyMap<string, BigramPairTotal>): number | null {
+  let oc = 0
+  let on = 0
+  for (const entry of totals.values()) {
+    oc += entry.overlapCount
+    on += entry.overlapN
+  }
+  return on > 0 ? oc / on : null
 }
 
 /** Standard deviation of raw IKI from accumulated sum / sum-of-squares.
@@ -188,4 +258,77 @@ export function rankBigramsBySlow(
     p95: percentileFromHist(entry.hist, 0.95),
     sd: sdFromTotal(entry),
   }))
+}
+
+// --- Matrix cell keypress-duration aggregation ------------------------
+// Same per-cell-across-minutes folding pattern as aggregatePairTotals
+// above, but for matrix-release durations. There is no cross-row
+// null-poisoning case here the way there is for sumIki/overlap: every
+// MatrixDurationCellRow the DB hands back already has a complete
+// hist/sum/sumSq triple (see the JSONL dh/ds/dq all-or-nothing
+// validator) — a row with no duration sample that minute is simply
+// excluded from the SQL result (see selectMatrixDurationForUidStmt),
+// not returned with a partial/inconsistent shape.
+
+export interface MatrixCellDurationTotal {
+  row: number
+  col: number
+  layer: number
+  /** Total duration SAMPLE count for this cell across the range — not
+   * the press count (see the shared `matrix-release` event type's note
+   * on why a minute's duration samples and press count can legitimately
+   * differ). */
+  count: number
+  hist: number[]
+  sum: number
+  sumSq: number
+}
+
+/** Sum per-(scope, minute, cell) duration rows into one entry per
+ * physical cell (row, col, layer). Counts add directly (from the
+ * histogram bucket totals); histograms add element-wise; sum/sumSq
+ * accumulate unconditionally since every contributing row is already a
+ * complete triple (see this section's header comment). */
+export function aggregateMatrixDurationTotals(
+  rows: readonly MatrixDurationCellRow[],
+): Map<string, MatrixCellDurationTotal> {
+  const totals = new Map<string, MatrixCellDurationTotal>()
+  for (const row of rows) {
+    const key = `${row.row},${row.col},${row.layer}`
+    let entry = totals.get(key)
+    if (!entry) {
+      entry = {
+        row: row.row,
+        col: row.col,
+        layer: row.layer,
+        count: 0,
+        hist: new Array<number>(BIGRAM_HIST_BUCKETS).fill(0),
+        sum: 0,
+        sumSq: 0,
+      }
+      totals.set(key, entry)
+    }
+    for (let i = 0; i < BIGRAM_HIST_BUCKETS; i += 1) {
+      const bucketCount = row.hist[i] ?? 0
+      entry.hist[i] += bucketCount
+      entry.count += bucketCount
+    }
+    entry.sum += row.sum
+    entry.sumSq += row.sumSq
+  }
+  return totals
+}
+
+/** Average keypress duration (ms) for a cell total — the true mean from
+ * `sum / count`, not a histogram-bucket-center estimate (unlike
+ * avgIkiFromHist, the exact sum is always available here). Null when
+ * the cell has no duration samples in range. */
+export function avgDurationMsFromTotal(entry: MatrixCellDurationTotal): number | null {
+  return entry.count > 0 ? entry.sum / entry.count : null
+}
+
+/** Standard deviation of keypress duration (ms) for a cell total. Null
+ * when fewer than 2 samples (see {@link sdFromSums}). */
+export function durationSdFromTotal(entry: MatrixCellDurationTotal): number | null {
+  return sdFromSums(entry.sum, entry.sumSq, entry.count)
 }
