@@ -36,6 +36,43 @@ export interface TypingTestState {
   endTime: number | null
   correctChars: number
   incorrectChars: number
+  /** Total physical keystrokes observed this run — one per key event
+   *  matching the same predicate as the analytics gate in
+   *  `useTypingTest.processKeyEvent` (`key.length === 1 || key ===
+   *  'Backspace'`), counting keystrokes observable by this implementation.
+   *  Counted regardless of accept/reject: a romaji reject, a Backspace on
+   *  empty input, or a wrong submit key all count — they are retyping
+   *  cost, the whole point of KSPC (keystrokes per confirmed character).
+   *  Reset to 0 by `freshState`; persisted across pause/resume via
+   *  `TypingTestMemory.totalKeystrokes`. */
+  totalKeystrokes: number
+  /** Mode-agnostic count of characters actually confirmed this run —
+   *  KSPC's denominator. Incremented exactly where each mode confirms a
+   *  character: a mid-run verbatim word submit (`handleSpace`) adds
+   *  `correct + incorrect` for that word (see `computeWordCharCounts` —
+   *  the credited separator included); the run's FINAL word instead goes
+   *  through `tryFinishLastWord`, which adds only that word's own char
+   *  count with no separator credit (there is no trailing space to type
+   *  after the last word) — the two rules agree numerically only because
+   *  `incorrect` is always 0 there (`tryFinishLastWord` only fires on an
+   *  exact `currentInput === currentWord` match). Romaji mode adds 1 per
+   *  accepted keystroke (see `handleRomajiChar` in romaji-input.ts,
+   *  rejects don't count). Callers (`result-builder.ts`,
+   *  `useTypingTest.ts`) read this directly — no per-mode derivation left
+   *  outside this module. Reset to 0 by `freshState`; persisted across
+   *  pause/resume via `TypingTestMemory.confirmedChars`. */
+  confirmedChars: number
+  /** True once an IME composition has started or committed during this
+   *  run (see `processCompositionStart`/`processCompositionEnd` in
+   *  useTypingTest.ts), making `totalKeystrokes` untrustworthy for the
+   *  rest of the run — composing keydowns never reach `processKeyEvent`,
+   *  so keystrokes routed through the IME escape the counter entirely.
+   *  Set at composition START (not just end) so a run that finishes or
+   *  pauses while composition is still open is flagged before it can save
+   *  a computable-looking KSPC. One-way: never reset back to false except
+   *  by `freshState` starting a new run. KSPC is omitted (not computed)
+   *  for a run with this flag set. */
+  kspcUncomputable: boolean
   currentQuote: Quote | null
   wpmHistory: number[]
   /** Word indices that end a line (imported fileImport text only). At these
@@ -94,6 +131,9 @@ export function freshState({ words, quote, lineBreaks, lineIndents, romajiCapabl
     endTime: null,
     correctChars: 0,
     incorrectChars: 0,
+    totalKeystrokes: 0,
+    confirmedChars: 0,
+    kspcUncomputable: false,
     currentQuote: quote,
     wpmHistory: [],
     lineBreaks: new Set(lineBreaks),
@@ -131,6 +171,11 @@ export function tryFinishLastWord(state: TypingTestState): TypingTestState | nul
     wordResults: [...state.wordResults, { word: currentWord, typed: currentWord, correct: true }],
     correctChars: state.correctChars + correct,
     incorrectChars: state.incorrectChars,
+    // No separator credited for the last word (see the comment above) —
+    // confirmedChars advances by exactly `correct` here, matching the
+    // `correct + incorrect` rule everywhere else since incorrect is
+    // always 0 at this point (currentInput === currentWord, checked above).
+    confirmedChars: state.confirmedChars + correct,
     status: 'finished',
     endTime: Date.now(),
     // currentInput === currentWord here (checked above), so there is
@@ -186,6 +231,10 @@ export function handleSpace(state: TypingTestState, config: TypingTestConfig, la
     wordResults: [...state.wordResults, { word: currentWord, typed, correct: isCorrect }],
     correctChars: state.correctChars + charCounts.correct,
     incorrectChars: state.incorrectChars + charCounts.incorrect,
+    // Confirmed at submit: the whole submitted word's char count
+    // (correct + incorrect, credited separator included) — see
+    // `computeWordCharCounts` and `TypingTestState.confirmedChars`.
+    confirmedChars: state.confirmedChars + charCounts.correct + charCounts.incorrect,
     mistakes,
     missedPositions: [],
     romajiSegmentErred: false,

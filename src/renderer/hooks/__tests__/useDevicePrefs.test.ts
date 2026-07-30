@@ -359,6 +359,69 @@ describe('useDevicePrefs', () => {
       expect(result.current.typingTestResults[1].mistakes).toBeUndefined()
     })
 
+    it('round-trips a valid typingTestResults kspcKeystrokes/kspcChars pair', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestResults: [
+          {
+            date: '2024-01-01', wpm: 60, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 5, durationSeconds: 30,
+            kspcKeystrokes: 6, kspcChars: 4,
+          },
+        ],
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestResults).toHaveLength(1)
+      expect(result.current.typingTestResults[0].kspcKeystrokes).toBe(6)
+      expect(result.current.typingTestResults[0].kspcChars).toBe(4)
+    })
+
+    it('drops a malformed typingTestResults kspc pair (only one field present) but keeps the rest of the result', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestResults: [
+          {
+            date: '2024-01-01', wpm: 60, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 5, durationSeconds: 30,
+            kspcKeystrokes: 6, // kspcChars missing — both-or-neither violated
+          },
+          {
+            date: '2024-01-02', wpm: 70, accuracy: 96, wordCount: 30, correctChars: 110, incorrectChars: 4, durationSeconds: 28,
+            kspcKeystrokes: -1, kspcChars: 4, // negative keystrokes
+          },
+          {
+            date: '2024-01-03', wpm: 75, accuracy: 96, wordCount: 30, correctChars: 110, incorrectChars: 4, durationSeconds: 28,
+            kspcKeystrokes: 6, kspcChars: 0, // zero chars — would divide by zero
+          },
+        ],
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestResults).toHaveLength(3)
+      for (const r of result.current.typingTestResults) {
+        expect(r.kspcKeystrokes).toBeUndefined()
+        expect(r.kspcChars).toBeUndefined()
+      }
+      expect(result.current.typingTestResults[0].wpm).toBe(60)
+    })
+
     it('falls back to defaults when IPC fails', async () => {
       setupMocks({ defaultKeyboardLayout: 'dvorak' })
       mockPipetteSettingsGet.mockRejectedValue(new Error('IPC error'))
@@ -370,6 +433,106 @@ describe('useDevicePrefs', () => {
       })
       expect(result.current.layout).toBe('dvorak')
       expect(result.current.autoAdvance).toBe(true)
+    })
+  })
+
+  describe('typingTestMemory KSPC fields', () => {
+    const baseMemory = {
+      textId: 't1',
+      currentWordIndex: 1,
+      currentInput: '',
+      wordResults: [{ word: 'a', typed: 'a', correct: true }],
+      correctChars: 2,
+      incorrectChars: 0,
+      elapsedMs: 1000,
+      wpmHistory: [],
+      savedAt: '2024-01-01T00:00:00.000Z',
+    }
+
+    it('round-trips a valid totalKeystrokes/confirmedChars/kspcUncomputable group', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestMemory: { ...baseMemory, totalKeystrokes: 3, confirmedChars: 2, kspcUncomputable: false },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestMemory?.totalKeystrokes).toBe(3)
+      expect(result.current.typingTestMemory?.confirmedChars).toBe(2)
+      expect(result.current.typingTestMemory?.kspcUncomputable).toBe(false)
+    })
+
+    it('drops the whole group (all three fields) when only some are present — legacy-format fallback applies on restore', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestMemory: { ...baseMemory, totalKeystrokes: 3, confirmedChars: 2 }, // kspcUncomputable missing
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestMemory?.totalKeystrokes).toBeUndefined()
+      expect(result.current.typingTestMemory?.confirmedChars).toBeUndefined()
+      expect(result.current.typingTestMemory?.kspcUncomputable).toBeUndefined()
+      // The rest of the memory still survives.
+      expect(result.current.typingTestMemory?.textId).toBe('t1')
+    })
+
+    it('leaves all three fields undefined for a memory saved before KSPC existed', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestMemory: { ...baseMemory },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestMemory?.totalKeystrokes).toBeUndefined()
+      expect(result.current.typingTestMemory?.confirmedChars).toBeUndefined()
+      expect(result.current.typingTestMemory?.kspcUncomputable).toBeUndefined()
+    })
+
+    it('drops the whole group when totalKeystrokes is fractional (corrupted data), same as a missing field', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestMemory: { ...baseMemory, totalKeystrokes: 3.5, confirmedChars: 2, kspcUncomputable: false },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestMemory?.totalKeystrokes).toBeUndefined()
+      expect(result.current.typingTestMemory?.confirmedChars).toBeUndefined()
+      expect(result.current.typingTestMemory?.kspcUncomputable).toBeUndefined()
     })
   })
 

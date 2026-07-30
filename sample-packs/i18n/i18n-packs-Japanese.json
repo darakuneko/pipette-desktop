@@ -1,5 +1,5 @@
 {
-  "version": "0.1.49",
+  "version": "0.1.50",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -304,6 +304,7 @@
       "wpm": "WPM",
       "kpm": "KPM",
       "accuracy": "正確性",
+      "kspc": "KSPC",
       "time": "時間",
       "words": "単語",
       "lines": "行",
@@ -858,6 +859,7 @@
     },
     "benchmark": {
       "populationAverage": "全体平均 {{value}} WPM",
+      "populationAverageKspc": "全体平均 {{value}}",
       "position": {
         "farBelow": "平均よりかなり低い",
         "below": "平均より低い",
@@ -1193,7 +1195,9 @@
           "low": "低",
           "medium": "中",
           "high": "高"
-        }
+        },
+        "kspcLabel": "KSPC",
+        "kspcDesc": "1 文字あたりの打鍵数（Backspace も打鍵として数える）。この期間に保存されたタイピングテストの結果から算出。Device/App フィルタの対象外（記録された打鍵データではなく History から算出するため）。ローマ字入力のランはここでは集計対象外（分母が異なる指標のため、下の基準値とそのまま比較できない）"
       }
     },
     "bigrams": {

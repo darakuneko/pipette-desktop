@@ -20,6 +20,7 @@ import {
   tryFinishLastWord,
 } from './run-state'
 import { isRomajiInputActive, buildRomajiMatcher, romajiDetail, processRomajiKeyEvent } from './romaji-input'
+import { computeKspc } from '../../shared/kspc'
 import {
   parseMatrixKey,
   extractSwitchLayer,
@@ -69,6 +70,12 @@ export interface UseTypingTestReturn {
   wpm: number
   kpm: number
   accuracy: number
+  /** Keystrokes per confirmed character (see `computeKspc` and
+   *  `TypingTestState.confirmedChars`), live-updated the same way as
+   *  wpm/kpm/accuracy. `null` while nothing is confirmed yet, or once an
+   *  IME composition made the run's `totalKeystrokes` untrustworthy
+   *  (`state.kspcUncomputable`). */
+  kspc: number | null
   /** Current word's romaji progress (romajiInput mode only); null otherwise
    *  or once all words are done. */
   romajiGuide: RomajiGuide | null
@@ -246,6 +253,11 @@ export function useTypingTest<TPreparedEvent = unknown>(
       // startTime already folds in any earlier paused/resumed segments.
       elapsedMs: s.startTime ? Date.now() - s.startTime : 0,
       wpmHistory: s.wpmHistory,
+      // Persisted together — see TypingTestMemory's doc comment for why a
+      // memory saved before KSPC existed has neither field.
+      totalKeystrokes: s.totalKeystrokes,
+      confirmedChars: s.confirmedChars,
+      kspcUncomputable: s.kspcUncomputable,
       savedAt: new Date().toISOString(),
     }
   }, [])
@@ -271,6 +283,15 @@ export function useTypingTest<TPreparedEvent = unknown>(
     if (words.length === 0) return false
     const idx = Math.min(Math.max(0, memory.currentWordIndex), words.length - 1)
     const startTime = Date.now() - memory.elapsedMs
+    // A memory saved before KSPC existed carries none of these three
+    // fields — validateTypingTestMemory (useDevicePrefs.ts) already
+    // enforces that they arrive either all-present or all-absent, so
+    // defaulting each independently here can't produce an inconsistent
+    // mix: absent means "uncomputable", so kspcUncomputable defaults to
+    // true (not false) when unset.
+    const totalKeystrokes = memory.totalKeystrokes ?? 0
+    const confirmedChars = memory.confirmedChars ?? 0
+    const kspcUncomputable = memory.kspcUncomputable ?? true
     setState({
       status: resume ? 'running' : 'paused',
       // Keep the original run's id so a paused/resumed run stays one run in
@@ -286,6 +307,9 @@ export function useTypingTest<TPreparedEvent = unknown>(
       endTime: resume ? null : Date.now(),
       correctChars: memory.correctChars,
       incorrectChars: memory.incorrectChars,
+      totalKeystrokes,
+      confirmedChars,
+      kspcUncomputable,
       currentQuote: quote,
       wpmHistory: memory.wpmHistory,
       lineBreaks: new Set(lineBreaks),
@@ -515,8 +539,19 @@ export function useTypingTest<TPreparedEvent = unknown>(
       }
     }
 
-    setState((s) => {
-      if (s.status !== 'waiting' && s.status !== 'running') return s
+    // Total-keystroke counter's predicate — same gate as the analytics
+    // prepare() call above, so it counts exactly the keystrokes this
+    // implementation can observe per-key (see TypingTestState.totalKeystrokes).
+    const countsAsKeystroke = key.length === 1 || key === 'Backspace'
+
+    setState((rawState) => {
+      if (rawState.status !== 'waiting' && rawState.status !== 'running') return rawState
+      // Applied once, up front: every branch below (including its no-op
+      // paths — a wrong submit key, a Backspace on empty input) returns a
+      // state derived from this already-incremented `s`, so a rejected/
+      // no-op keystroke still counts as retyping cost without each branch
+      // having to add it separately.
+      const s = countsAsKeystroke ? { ...rawState, totalKeystrokes: rawState.totalKeystrokes + 1 } : rawState
 
       // Romaji mode has its own key semantics for every key kind — see
       // processRomajiKeyEvent's doc comment in romaji-input.ts. Dispatch
@@ -570,7 +605,17 @@ export function useTypingTest<TPreparedEvent = unknown>(
   const processCompositionStart = useCallback(() => {
     setState((s) => {
       if (s.status !== 'waiting' && s.status !== 'running') return s
-      return { ...s, compositionText: '' }
+      // Mirrors processCompositionEnd's sticky flag, set here too (not just
+      // at the end) so a run that finishes or pauses while composition is
+      // still open — e.g. time-mode expiry, or pause, firing before the
+      // IME ever commits — is marked uncomputable immediately. Waiting for
+      // compositionEnd alone missed exactly that window: the composing
+      // keydowns already bypass processKeyEvent's counter (see
+      // processCompositionEnd's own comment), so a run that never reaches
+      // compositionEnd would otherwise save a computable KSPC built from an
+      // undercounted totalKeystrokes.
+      const s2 = s.kspcUncomputable ? s : { ...s, kspcUncomputable: true }
+      return { ...s2, compositionText: '' }
     })
   }, [])
 
@@ -584,14 +629,24 @@ export function useTypingTest<TPreparedEvent = unknown>(
   const processCompositionEnd = useCallback((data: string) => {
     setState((s) => {
       if (s.status !== 'waiting' && s.status !== 'running') return s
+      // Any composition end during a run means at least some keystrokes were
+      // routed through the IME instead of processKeyEvent's per-key counter
+      // — composing keydowns never reach processKeyEvent at all (see the
+      // capture-phase listener in useInputModes, `if (e.isComposing) return`)
+      // — so totalKeystrokes can no longer be trusted for KSPC on this run.
+      // One-way: freshState is the only place that resets it. Set
+      // unconditionally, before the mode/data branches below, so every path
+      // out of this updater (romaji ignore, empty-data cancel, real commit)
+      // carries it.
+      const s2 = s.kspcUncomputable ? s : { ...s, kspcUncomputable: true }
       // Romaji mode is direct-keystroke only; IME composition input (which
       // implies IME is on, contrary to the mode's requirement) is ignored
       // entirely rather than fed into currentInput.
-      if (isRomajiInputActive(configRef.current, languageRef.current, s.romajiCapable)) return s
+      if (isRomajiInputActive(configRef.current, languageRef.current, s2.romajiCapable)) return s2
       if (!data) {
-        return { ...s, compositionText: '' }
+        return { ...s2, compositionText: '' }
       }
-      let current = s
+      let current = s2
       if (current.status === 'waiting') {
         current = { ...current, status: 'running', startTime: Date.now() }
       }
@@ -664,6 +719,14 @@ export function useTypingTest<TPreparedEvent = unknown>(
     return Math.round((state.correctChars / total) * 100)
   }, [state.correctChars, state.incorrectChars])
 
+  // Live keystrokes-per-confirmed-character, same computeKspc math the
+  // finished result is built from (buildTypingTestResult), reading
+  // state.confirmedChars directly — no per-mode derivation here.
+  const kspc = useMemo(() => {
+    if (state.kspcUncomputable) return null
+    return computeKspc(state.totalKeystrokes, state.confirmedChars)
+  }, [state.kspcUncomputable, state.totalKeystrokes, state.confirmedChars])
+
   const elapsedSeconds = useMemo(() => {
     if (!state.startTime) return 0
     const end = state.endTime ?? Date.now()
@@ -713,6 +776,7 @@ export function useTypingTest<TPreparedEvent = unknown>(
     wpm,
     kpm,
     accuracy,
+    kspc,
     romajiGuide,
     elapsedSeconds,
     remainingSeconds,

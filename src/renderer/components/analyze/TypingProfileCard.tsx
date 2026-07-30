@@ -14,14 +14,18 @@ import type {
   TypingKeymapSnapshot,
   TypingMinuteStatsRow,
 } from '../../../shared/types/typing-analytics'
+import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
-import { BENCHMARK_WPM } from '../../../shared/typing-benchmarks'
+import { typingTestResultMaterialLabel } from '../../typing-test/result-builder'
+import { BENCHMARK_WPM, BENCHMARK_KSPC } from '../../../shared/typing-benchmarks'
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
 import { AnalyzeStatGrid } from './stat-card'
 import { EMPTY_STAT_VALUE } from './analyze-constants'
 import { fetchBigramAggregateForRange, listMinuteStatsForScope } from './analyze-fetch'
 import { aggregateFingerPairs } from './analyze-bigram-finger'
 import { benchmarkPosition } from './analyze-benchmark'
+import { BenchmarkSubline } from './BenchmarkSubline'
+import { computeKspc, formatKspc } from '../../../shared/kspc'
 import { filterDailyWindow, shiftLocalDate } from './analyze-streak-goal'
 import {
   classifyFatigue,
@@ -54,6 +58,16 @@ interface Props {
    * can't decode bigram keycodes without a keymap. */
   snapshot: TypingKeymapSnapshot | null
   fingerOverrides: Record<string, FingerType>
+  /** Saved Typing Test History, already sanitized — fetched once by
+   * AnalyzePane's own settings effect (~:440) and passed down through
+   * SummaryView, rather than this card issuing its own duplicate
+   * pipetteSettingsGet. The KSPC cell filters this to its own 30-day
+   * window and honours typingTestScopes (material) / runIdScopes itself;
+   * unlike every other cell here it deliberately ignores ONLY
+   * deviceScope/appScopes (see kspcDesc) since it comes from History,
+   * not the recorded keystroke stream, which has no per-device or
+   * per-app breakdown to filter against. */
+  typingTestResults: TypingTestResult[]
 }
 
 /** Cap the bigram aggregate to a wide top-N so the SFB / hand split
@@ -72,6 +86,7 @@ export function TypingProfileCard({
   today,
   snapshot,
   fingerOverrides,
+  typingTestResults,
 }: Props) {
   const { t } = useTranslation()
   const [bigrams, setBigrams] = useState<TypingBigramTopEntry[]>([])
@@ -83,6 +98,15 @@ export function TypingProfileCard({
     const toMs = Date.parse(`${today}T23:59:59`)
     return { fromMs, toMs }
   }, [today])
+
+  // Exclusive next-local-day-00:00 bound for the KSPC memo's own per-result
+  // filter below. `range.toMs` (23:59:59.000, handed to the bigram/minute-
+  // stats IPC fetches above as their inclusive upper bound) would drop a
+  // saved result's own timestamp for the day's last 999ms if reused as
+  // `ts > range.toMs` here — this is the exact boundary a saved
+  // TypingTestResult's Date.parse(date) can land on, unlike the
+  // server-side minute buckets those other fetches query.
+  const nextDayStartMs = useMemo(() => Date.parse(`${shiftLocalDate(today, 1)}T00:00:00`), [today])
 
   useEffect(() => {
     let cancelled = false
@@ -142,6 +166,48 @@ export function TypingProfileCard({
   )
   const fatigue = useMemo(() => classifyFatigue(minuteStats, range), [minuteStats, range])
 
+  // Char-weighted KSPC over the window: Σkeystrokes / Σchars across every
+  // qualifying saved result, never a plain average of each run's own
+  // ratio (a bare average would let a handful of tiny runs skew the
+  // figure as much as one long session). Only results carrying both raw
+  // fields (see TypingTestResult.kspcKeystrokes) and falling inside the
+  // window qualify; a legacy result missing them is silently excluded,
+  // not treated as 0. Ratio and position are folded into one memo (a
+  // finite ratio against BENCHMARK_KSPC's fixed, positive-SD constants
+  // always yields a position, so there's exactly one null check below —
+  // not a separate ratio-null check plus a redundant benchmark-null one).
+  //
+  // Three exclusions beyond the window itself, applied in the same loop:
+  //  - romajiInput results: romaji KSPC is algebraically 1+rejectRate
+  //    (denominator = accepted keystrokes only, a different unit than
+  //    verbatim mode's confirmed-character count), so pooling it against
+  //    the English-transcription BENCHMARK_KSPC would misread as "far
+  //    below average" for a perfectly normal romaji run. See kspcDesc.
+  //  - runIdScopes (when a run filter is active): a result without its
+  //    own runId can never match a specific run, so it drops out rather
+  //    than silently ignoring the filter.
+  //  - typingTestScopes (when a material filter is active): matched via
+  //    typingTestResultMaterialLabel, the same join key the recording
+  //    side and the run filter itself use, so this stays byte-identical
+  //    to how every other cell's material filter resolves.
+  const kspc = useMemo(() => {
+    let keystrokes = 0
+    let chars = 0
+    for (const r of typingTestResults) {
+      if (r.kspcKeystrokes === undefined || r.kspcChars === undefined) continue
+      const ts = Date.parse(r.date)
+      if (!Number.isFinite(ts) || ts < range.fromMs || ts >= nextDayStartMs) continue
+      if (r.romajiInput) continue
+      if (runIdScopes.length > 0 && (!r.runId || !runIdScopes.includes(r.runId))) continue
+      if (typingTestScopes.length > 0 && !typingTestScopes.includes(typingTestResultMaterialLabel(r))) continue
+      keystrokes += r.kspcKeystrokes
+      chars += r.kspcChars
+    }
+    const ratio = computeKspc(keystrokes, chars)
+    if (ratio === null) return null
+    return { ratio, position: benchmarkPosition(ratio, BENCHMARK_KSPC) }
+  }, [typingTestResults, range, nextDayStartMs, runIdScopes, typingTestScopes])
+
   const items: AnalyzeSummaryItem[] = useMemo(() => [
     {
       labelKey: 'analyze.summary.profile.speedLabel',
@@ -154,12 +220,12 @@ export function TypingProfileCard({
           <>
             {t('analyze.summary.profile.speedContext', { wpm: formatWpm(speed.wpm) })}
             {speedBenchmark && (
-              <>
-                <br />
-                {t('analyze.benchmark.populationAverage', { value: formatWpm(BENCHMARK_WPM.mean) })}
-                {' · '}
-                {t(`analyze.benchmark.position.${speedBenchmark.label}`)}
-              </>
+              <BenchmarkSubline
+                populationAverageKey="analyze.benchmark.populationAverage"
+                value={formatWpm(BENCHMARK_WPM.mean)}
+                position={speedBenchmark}
+                leadingBreak
+              />
             )}
           </>
         ),
@@ -198,7 +264,21 @@ export function TypingProfileCard({
         : t('analyze.summary.profile.fatigueContext', { pct: fatigue.dropPct.toFixed(1) }),
       descriptionKey: 'analyze.summary.profile.fatigueDesc',
     },
-  ], [speed, speedBenchmark, handBalance, sfb, fatigue, t])
+    {
+      labelKey: 'analyze.summary.profile.kspcLabel',
+      value: kspc === null ? EMPTY_STAT_VALUE : formatKspc(kspc.ratio),
+      context: kspc === null
+        ? t('analyze.summary.profile.insufficient')
+        : kspc.position && (
+          <BenchmarkSubline
+            populationAverageKey="analyze.benchmark.populationAverageKspc"
+            value={formatKspc(BENCHMARK_KSPC.mean)}
+            position={kspc.position}
+          />
+        ),
+      descriptionKey: 'analyze.summary.profile.kspcDesc',
+    },
+  ], [speed, speedBenchmark, handBalance, sfb, fatigue, kspc, t])
 
   return (
     <section className="flex flex-col gap-2" data-testid="analyze-typing-profile-section">

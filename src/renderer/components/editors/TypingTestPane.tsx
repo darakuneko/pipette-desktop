@@ -741,6 +741,7 @@ export function TypingTestPane({
           wpm={typingTest.wpm}
           kpm={typingTest.kpm}
           accuracy={typingTest.accuracy}
+          kspc={typingTest.kspc}
           elapsedSeconds={typingTest.elapsedSeconds}
           remainingSeconds={typingTest.remainingSeconds}
           config={typingTest.config}

@@ -44,6 +44,20 @@ export interface TypingTestResult {
    *  of mistake analysis: stored on the result for the completion screen's
    *  "missed characters" list; not yet surfaced in Analyze. */
   mistakes?: Record<string, number>
+  /** KSPC (keystrokes per confirmed character) raw numerator: total
+   *  physical keystrokes observed this run (see
+   *  `TypingTestState.totalKeystrokes`). Both-or-neither with
+   *  `kspcChars` — stored only when the run was actually KSPC-computable
+   *  (see `buildTypingTestResult`); the displayed ratio is derived via
+   *  `resultKspc` rather than precomputed, mirroring the KPM
+   *  (`resultKpm`) precedent. Omitted for runs saved before KSPC existed,
+   *  or any run an IME composition made uncomputable. */
+  kspcKeystrokes?: number
+  /** KSPC raw denominator: the run's confirmed-character count (see
+   *  `TypingTestState.confirmedChars`, accumulated mode-agnostically by
+   *  run-state.ts/romaji-input.ts as each mode confirms a character). See
+   *  `kspcKeystrokes` for the both-or-neither contract. */
+  kspcChars?: number
 }
 
 /** A saved result tagged with the keyboard it belongs to. Returned by the
@@ -210,6 +224,24 @@ export interface TypingTestMemory {
   /** Accumulated typing time in ms (excludes the paused interval). */
   elapsedMs: number
   wpmHistory: number[]
+  /** Total physical keystrokes observed so far (see
+   *  `TypingTestState.totalKeystrokes`), persisted alongside
+   *  `confirmedChars`/`kspcUncomputable` so KSPC keeps counting correctly
+   *  across pause/resume. All-or-nothing: a memory saved before KSPC
+   *  existed has none of the three fields, and restoring it makes the
+   *  resumed run permanently KSPC-uncomputable (see
+   *  `useTypingTest.restoreState`) — a bare `totalKeystrokes` with no
+   *  `kspcUncomputable` would otherwise conflate a genuine 0 with
+   *  "unknown, pre-KSPC format". */
+  totalKeystrokes?: number
+  /** Mode-agnostic confirmed-character count so far (see
+   *  `TypingTestState.confirmedChars`) — KSPC's denominator. See
+   *  `totalKeystrokes` for the all-or-nothing contract. */
+  confirmedChars?: number
+  /** True once an IME composition fired during this run before it was
+   *  paused (see `TypingTestState.kspcUncomputable`). See
+   *  `totalKeystrokes` for the all-or-nothing contract. */
+  kspcUncomputable?: boolean
   /** ISO 8601 save time. */
   savedAt: string
 }

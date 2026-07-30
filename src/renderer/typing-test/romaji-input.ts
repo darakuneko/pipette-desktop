@@ -163,6 +163,10 @@ function handleRomajiChar(state: TypingTestState, char: string, config: TypingTe
   }
 
   const correctChars = state.correctChars + 1
+  // One accepted keystroke confirms exactly one character in this mode
+  // (see `TypingTestState.confirmedChars`) — rejects (handled above)
+  // don't advance it.
+  const confirmedChars = state.confirmedChars + 1
   const kanaAfter = matcher.completedKanaCount()
 
   let mistakes = state.mistakes
@@ -185,10 +189,11 @@ function handleRomajiChar(state: TypingTestState, char: string, config: TypingTe
       missedPositions: [],
       wordResults: [...state.wordResults, { word, typed: matcher.typedRomaji(), correct: true }],
       correctChars,
+      confirmedChars,
       mistakes,
     }
     return advanceAfterWord(base, config, language)
   }
 
-  return { ...state, romajiKeystrokes: state.romajiKeystrokes + char, correctChars, mistakes, romajiSegmentErred }
+  return { ...state, romajiKeystrokes: state.romajiKeystrokes + char, correctChars, confirmedChars, mistakes, romajiSegmentErred }
 }

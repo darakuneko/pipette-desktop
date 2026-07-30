@@ -2,6 +2,7 @@
 
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import type { TypingTestConfig } from './types'
+import { computeKspc } from '../../shared/kspc'
 
 export function computeRawWpm(totalChars: number, durationMs: number): number {
   if (durationMs <= 0) return 0
@@ -43,6 +44,15 @@ export function typingTestResultMaterialLabel(result: TypingTestResult): string 
  *  it works for legacy rows too (no separate field needed). */
 export function resultKpm(r: TypingTestResult): number {
   return r.durationSeconds > 0 ? Math.round((r.correctChars * 60) / r.durationSeconds) : 0
+}
+
+/** Derives a saved result's KSPC from its raw `kspcKeystrokes`/`kspcChars`
+ *  fields (the `resultKpm` derived-field precedent) — `null` when either
+ *  is absent (legacy row, or the run was KSPC-uncomputable) or the pair
+ *  is otherwise invalid. */
+export function resultKspc(r: TypingTestResult): number | null {
+  if (r.kspcKeystrokes === undefined || r.kspcChars === undefined) return null
+  return computeKspc(r.kspcKeystrokes, r.kspcChars)
 }
 
 /** Compact `YYYYMMDDHHmmss` timestamp from a result's ISO date. */
@@ -131,6 +141,19 @@ export interface BuildTypingTestResultInput {
   /** Per-run mistake tally (see `TypingTestState.mistakes`). Stored on the
    *  result only when non-empty — see `buildTypingTestResult`. */
   mistakes: Record<string, number>
+  /** Total physical keystrokes observed this run (see
+   *  `TypingTestState.totalKeystrokes`) — KSPC's numerator. */
+  totalKeystrokes: number
+  /** Mode-agnostic count of characters actually confirmed this run (see
+   *  `TypingTestState.confirmedChars`) — KSPC's denominator. Accumulated
+   *  by run-state.ts/romaji-input.ts at the moment each mode confirms a
+   *  character, so this function does no mode-specific derivation of
+   *  its own. */
+  confirmedChars: number
+  /** True when an IME composition made `totalKeystrokes` untrustworthy
+   *  for this run (see `TypingTestState.kspcUncomputable`) — when true,
+   *  neither KSPC field is stored regardless of the numeric values. */
+  kspcUncomputable: boolean
 }
 
 /** Narrows to the 'words' / 'time' config variants — the only ones carrying
@@ -151,6 +174,13 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
   const wordTimeConfig = hasWordTimeToggles(config) ? config : undefined
   const hasPunctuation = wordTimeConfig?.punctuation
   const hasNumbers = wordTimeConfig?.numbers
+
+  // Both-or-neither: KSPC is only stored when it was actually computable
+  // for this run (see computeKspc's doc comment) — an uncomputable run,
+  // or one with no confirmed characters at all, stores neither raw
+  // field, so the display side reads it as "—" exactly like any other
+  // legacy result.
+  const kspc = input.kspcUncomputable ? null : computeKspc(input.totalKeystrokes, input.confirmedChars)
 
   return {
     date: new Date().toISOString(),
@@ -174,5 +204,7 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
     consistency,
     wpmHistory: input.wpmHistory,
     mistakes: Object.keys(input.mistakes).length > 0 ? input.mistakes : undefined,
+    kspcKeystrokes: kspc !== null ? input.totalKeystrokes : undefined,
+    kspcChars: kspc !== null ? input.confirmedChars : undefined,
   }
 }

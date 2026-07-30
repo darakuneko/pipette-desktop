@@ -1,5 +1,5 @@
 {
-  "version": "0.1.49",
+  "version": "0.1.50",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -304,6 +304,7 @@
       "wpm": "WPM",
       "kpm": "KPM",
       "accuracy": "正確さどすえ",
+      "kspc": "KSPC",
       "time": "時間",
       "words": "単語",
       "lines": "行",
@@ -848,6 +849,7 @@
     },
     "benchmark": {
       "populationAverage": "みなさんの平均は {{value}} WPMどすえ",
+      "populationAverageKspc": "みなさんの平均は {{value}} どすえ",
       "position": {
         "farBelow": "平均よりだいぶゆっくりどすなぁ",
         "below": "平均より少しゆっくりどす",
@@ -1183,7 +1185,9 @@
           "low": "低いどすえ",
           "medium": "中くらいどすなぁ",
           "high": "高おすなぁ"
-        }
+        },
+        "kspcLabel": "KSPC",
+        "kspcDesc": "1文字打つのに何回キーを押したはるかどすえ（Backspaceも打鍵として数えますえ）。この期間に保存されたタイピングテストの結果から出してますえ。Device/Appのフィルタは効きまへん（記録した打鍵データやのうてHistoryから計算してるさかい）。ローマ字入力のランはここには入れてしまへんえ（計算のしくみが違うさかい、下の基準値とそのまま比べられしまへんのどす）"
       }
     },
     "bigrams": {

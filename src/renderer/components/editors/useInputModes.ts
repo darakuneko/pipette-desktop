@@ -507,6 +507,9 @@ export function useInputModes({
         runId: typingTest.state.runId,
         romajiActive: isRomajiInputActive(typingTest.config, typingTest.language, typingTest.state.romajiCapable),
         mistakes: typingTest.state.mistakes,
+        totalKeystrokes: typingTest.state.totalKeystrokes,
+        confirmedChars: typingTest.state.confirmedChars,
+        kspcUncomputable: typingTest.state.kspcUncomputable,
       })
       result.isPb = isPbForConfig(result, typingTestHistory ?? [])
       if (saveUnnamed) {
@@ -535,6 +538,7 @@ export function useInputModes({
     typingTest.state.correctChars, typingTest.state.incorrectChars,
     typingTest.state.currentWordIndex, typingTest.state.wpmHistory,
     typingTest.state.currentQuote, typingTest.state.runId, typingTest.state.romajiCapable,
+    typingTest.state.totalKeystrokes, typingTest.state.confirmedChars, typingTest.state.kspcUncomputable,
     typingTest.wpm, typingTest.accuracy,
     typingTest.config, typingTest.language,
     typingTestHistory, onSaveTypingTestResult, saveUnnamed, pendingUnnamedResult,

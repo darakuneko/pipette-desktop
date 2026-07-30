@@ -27,6 +27,7 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 import type { TypingDurationCell } from '../../../shared/types/typing-analytics'
 import { BENCHMARK_KEYPRESS_DURATION_MS } from '../../../shared/typing-benchmarks'
 import { benchmarkPosition } from './analyze-benchmark'
+import { BenchmarkSubline } from './BenchmarkSubline'
 import { sdFromSums } from '../../../shared/stat-sums'
 import { DURATION_BUCKET_BIN_IDS, sumDurationTotals } from './analyze-duration'
 import { distributionForcesOwnDevice, primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
@@ -108,11 +109,11 @@ export function DurationSection({ uid, range, deviceScopes, appScopes, typingTes
         labelKey: 'analyze.duration.stat.mean',
         value: mean === null ? EMPTY_STAT_VALUE : fmtMs(mean),
         context: benchmark && (
-          <>
-            {t('analyze.duration.stat.populationAverage', { value: BENCHMARK_KEYPRESS_DURATION_MS.mean.toFixed(1) })}
-            {' · '}
-            {t(`analyze.benchmark.position.${benchmark.label}`)}
-          </>
+          <BenchmarkSubline
+            populationAverageKey="analyze.duration.stat.populationAverage"
+            value={BENCHMARK_KEYPRESS_DURATION_MS.mean.toFixed(1)}
+            position={benchmark}
+          />
         ),
       },
       {

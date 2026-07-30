@@ -11,6 +11,7 @@ import type { ComparisonStats } from './comparison'
 import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, isTimeBoundedRun } from './types'
 import { WordDisplay } from './WordDisplay'
 import { ResultNameModal } from './ResultNameModal'
+import { formatKspc } from '../../shared/kspc'
 
 
 interface Props {
@@ -19,6 +20,9 @@ interface Props {
   /** Keystrokes per minute — shown instead of WPM in fileImport mode. */
   kpm?: number
   accuracy: number
+  /** Keystrokes per confirmed character (see `useTypingTest`'s `kspc`).
+   *  `null`/`undefined` shows '-', same as before measuring starts. */
+  kspc?: number | null
   elapsedSeconds: number
   remainingSeconds: number | null
   config: TypingTestConfig
@@ -104,6 +108,7 @@ export function TypingTestView({
   wpm,
   kpm = 0,
   accuracy,
+  kspc = null,
   elapsedSeconds,
   remainingSeconds,
   config,
@@ -502,6 +507,12 @@ export function TypingTestView({
                 {showStats && <ComparisonDelta current={accuracy} baseline={comparison.accuracy} suffix="%" testid="accuracy" />}
               </span>
             )}
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-content-muted">{t('editor.typingTest.kspc')}:</span>
+            <span data-testid="typing-test-kspc" className="font-mono text-lg font-semibold tabular-nums">
+              {showStats && kspc !== null ? formatKspc(kspc) : '-'}
+            </span>
           </div>
           <div className="flex items-baseline gap-1.5">
             <span className="text-content-muted">{t('editor.typingTest.time')}:</span>

@@ -36,7 +36,13 @@ export const BENCHMARK_IKI_MS: BenchmarkStat = { mean: 238.66, sd: 111.60 }
 export const BENCHMARK_KEYPRESS_DURATION_MS: BenchmarkStat = { mean: 116.25, sd: 23.88 }
 export const BENCHMARK_UNCORRECTED_ERROR_RATE_PCT: BenchmarkStat = { mean: 1.17, sd: 1.43 }
 export const BENCHMARK_ERROR_CORRECTION_RATE_PCT: BenchmarkStat = { mean: 6.31, sd: 4.48 }
-export const BENCHMARK_KSPC: BenchmarkStat = { mean: 1.17, sd: 0.09 }
+/** Population reference from transcription typing (see caveat 2 above),
+ * not a threshold of "good" or "bad" typing. Keystrokes per confirmed
+ * character — the paper's Table 3 reports this pair to three decimal
+ * places (1.173/0.094), unlike the two-decimal figures transcribed for
+ * the other stats above, so it's kept here at that source precision
+ * rather than rounded to match them. */
+export const BENCHMARK_KSPC: BenchmarkStat = { mean: 1.173, sd: 0.094 }
 
 // Hand-class IKI values — see caveat 1 above before using these.
 
