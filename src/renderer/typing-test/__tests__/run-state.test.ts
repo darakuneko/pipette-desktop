@@ -22,6 +22,9 @@ function makeState(overrides: Partial<TypingTestState> = {}): TypingTestState {
     endTime: null,
     correctChars: 0,
     incorrectChars: 0,
+    totalKeystrokes: 0,
+    confirmedChars: 0,
+    kspcUncomputable: false,
     currentQuote: null,
     wpmHistory: [],
     lineBreaks: new Set(),
@@ -137,5 +140,56 @@ describe('tryFinishLastWord — verbatim mistake tracking', () => {
     expect(full!.status).toBe('finished')
     expect(full!.mistakes).toEqual({ a: 1 })
     expect(full!.missedPositions).toEqual([])
+  })
+})
+
+// KSPC's mode-agnostic denominator counter — verified directly against
+// computeWordCharCounts's own credited-separator rule (handleSpace) and
+// the no-separator last-word rule (tryFinishLastWord), independent of
+// mistake tracking.
+describe('confirmedChars', () => {
+  it('handleSpace: advances by correct + incorrect (the credited separator included) for a correct submission', () => {
+    // 'cat' typed 'cat': computeWordCharCounts -> correct 4 (1 separator + 3 match), incorrect 0.
+    const state = makeState({ currentInput: 'cat' })
+    const next = handleSpace(state, config, 'english')
+    expect(next.confirmedChars).toBe(4)
+  })
+
+  it('handleSpace: advances by correct + incorrect for a wrong submission too (typo still confirmed)', () => {
+    // 'cat' typed 'cxt': correct 3 (1 separator + 2 match), incorrect 1 -> sum 4.
+    const state = makeState({ currentInput: 'cxt' })
+    const next = handleSpace(state, config, 'english')
+    expect(next.confirmedChars).toBe(4)
+  })
+
+  it('handleSpace: advances by correct + incorrect for a short submission (missing chars count as incorrect)', () => {
+    // 'cat' typed 'c': len = max(1,3) = 3, correct 1(sep)+1('c' matches) = 2, incorrect 2 -> sum 4.
+    const state = makeState({ currentInput: 'c' })
+    const next = handleSpace(state, config, 'english')
+    expect(next.confirmedChars).toBe(4)
+  })
+
+  it('handleSpace: accumulates across words without resetting', () => {
+    let state = makeState({ currentInput: 'cat' })
+    state = handleSpace(state, config, 'english') // +4
+    state = { ...state, currentInput: 'dog' }
+    state = handleSpace(state, config, 'english') // +4
+    expect(state.confirmedChars).toBe(8)
+  })
+
+  it('tryFinishLastWord: advances by the word length alone, no separator credited', () => {
+    const state = makeState({ words: ['cat'], currentWordIndex: 0, currentInput: 'cat' })
+    const full = tryFinishLastWord(state)
+    expect(full).not.toBeNull()
+    expect(full!.confirmedChars).toBe(3) // 'cat'.length, no +1 separator
+  })
+
+  it('tryFinishLastWord: adds on top of whatever confirmedChars already accumulated from earlier words', () => {
+    let state = makeState({ words: ['dog', 'cat'], currentWordIndex: 0, currentInput: 'dog' })
+    state = handleSpace(state, config, 'english') // +4 (1 sep + 3 match) -> confirmedChars 4
+    state = { ...state, currentInput: 'cat' }
+    const full = tryFinishLastWord(state)
+    expect(full).not.toBeNull()
+    expect(full!.confirmedChars).toBe(7) // 4 + 3 (last word, no separator)
   })
 })

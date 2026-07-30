@@ -180,6 +180,9 @@ describe('conditionKey / resultConditionKey agreement', () => {
     wpmHistory: [60],
     fileImportTextName: 'novel.txt',
     mistakes: {},
+    confirmedChars: 105,
+    totalKeystrokes: 105,
+    kspcUncomputable: false,
     // Mirrors the real call site (useInputModes.ts): romajiActive is always
     // the effective isRomajiInputActive state, not the raw config flag — a
     // config with an explicit `romajiInput: true` on a non-capable language
@@ -223,6 +226,9 @@ describe('conditionKey / resultConditionKey agreement', () => {
       wpmHistory: [60],
       romajiActive,
       mistakes: {},
+      confirmedChars: 105,
+      totalKeystrokes: 105,
+      kspcUncomputable: false,
     })
     expect(conditionKey(config, language)).toBe(resultConditionKey(result))
     expect(conditionKey(config, language)).toBe(configKey(result))

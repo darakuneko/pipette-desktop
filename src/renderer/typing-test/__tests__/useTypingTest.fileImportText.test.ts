@@ -189,4 +189,43 @@ describe('useTypingTest — memory mode (pause / capture / restore)', () => {
     expect(result.current.state.status).toBe('paused')
     expect(result.current.state.currentWordIndex).toBe(1)
   })
+
+  it('captureMemory includes totalKeystrokes, confirmedChars and kspcUncomputable', async () => {
+    const { result } = await setupFileImport()
+    type(result, 'a')
+    type(result, ' ')
+    const mem = result.current.captureMemory()
+    expect(mem?.totalKeystrokes).toBe(2) // 'a' + separator space
+    expect(mem?.confirmedChars).toBe(2) // 'a' -> correct 1(sep)+1, incorrect 0
+    expect(mem?.kspcUncomputable).toBe(false)
+  })
+
+  it('round-trips totalKeystrokes/confirmedChars/kspcUncomputable through pause -> restoreState', async () => {
+    const { result } = await setupFileImport()
+    type(result, 'a')
+    type(result, ' ')
+    const mem = result.current.captureMemory()
+    expect(mem).not.toBeNull()
+    await act(async () => { await result.current.restoreState(mem!, true) })
+    expect(result.current.state.totalKeystrokes).toBe(2)
+    expect(result.current.state.confirmedChars).toBe(2)
+    expect(result.current.state.kspcUncomputable).toBe(false)
+  })
+
+  it('restoring a memory saved before KSPC existed (fields absent) makes the run permanently uncomputable', async () => {
+    const { result } = await setupFileImport()
+    const legacyMemory = {
+      textId: 't', currentWordIndex: 1, currentInput: '',
+      wordResults: [{ word: 'a', typed: 'a', correct: true }],
+      correctChars: 2, incorrectChars: 0, elapsedMs: 1000, wpmHistory: [],
+      savedAt: new Date(0).toISOString(),
+      // totalKeystrokes / confirmedChars / kspcUncomputable intentionally
+      // absent (legacy format).
+    }
+    await act(async () => { await result.current.restoreState(legacyMemory, true) })
+    expect(result.current.state.totalKeystrokes).toBe(0)
+    expect(result.current.state.confirmedChars).toBe(0)
+    expect(result.current.state.kspcUncomputable).toBe(true)
+    expect(result.current.kspc).toBeNull()
+  })
 })

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.49",
+  "version": "0.1.50",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -304,6 +304,7 @@
       "wpm": "WPM",
       "kpm": "KPM",
       "accuracy": "ガチ度☆",
+      "kspc": "KSPC",
       "time": "タイム",
       "words": "単語",
       "lines": "行っしょ",
@@ -848,6 +849,7 @@
     },
     "benchmark": {
       "populationAverage": "みんなの平均 {{value}} WPMだよん☆",
+      "populationAverageKspc": "みんなの平均 {{value}}だよん☆",
       "position": {
         "farBelow": "平均よりかなりスローっしょ",
         "below": "平均よりゆっくりめ",
@@ -1183,7 +1185,9 @@
           "low": "低☆",
           "medium": "中",
           "high": "高ｗ"
-        }
+        },
+        "kspcLabel": "KSPC☆",
+        "kspcDesc": "1文字打つのに何回キー押してるかっしょ（Backspaceも1打鍵カウント）☆この期間に保存したタイピングテストの結果から出してるよ。Device/Appのフィルタは効かないっしょ（打鍵データじゃなくてHistoryから計算してるから）。ローマ字入力のランはカウントしてないっしょ（計算の仕組みが違うから下の基準値と比べらんないんだよね☆）"
       }
     },
     "bigrams": {

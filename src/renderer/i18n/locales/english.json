@@ -1,5 +1,5 @@
 {
-  "version": "0.1.49",
+  "version": "0.1.50",
   "name": "English",
   "common": {
     "save": "Save",
@@ -304,6 +304,7 @@
       "wpm": "WPM",
       "kpm": "KPM",
       "accuracy": "Accuracy",
+      "kspc": "KSPC",
       "time": "Time",
       "words": "Words",
       "lines": "Lines",
@@ -858,6 +859,7 @@
     },
     "benchmark": {
       "populationAverage": "Population avg {{value}} WPM",
+      "populationAverageKspc": "Population avg {{value}}",
       "position": {
         "farBelow": "Far below average",
         "below": "Below average",
@@ -1193,7 +1195,9 @@
           "low": "Low",
           "medium": "Medium",
           "high": "High"
-        }
+        },
+        "kspcLabel": "KSPC",
+        "kspcDesc": "Keystrokes per confirmed character (Backspace counts as a keystroke), aggregated from your saved Typing Test results over this window — not filtered by Device/App, since it comes from History rather than the recorded keystroke stream. Romaji-input runs are excluded here, since their ratio measures something different (rejected keystrokes per accepted one) and isn't comparable to the population average shown below."
       }
     },
     "bigrams": {

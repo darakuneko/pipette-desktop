@@ -10,6 +10,7 @@ import {
   typingTestResultMaterialLabel,
   resultKpm,
   buildResultNameChips,
+  resultKspc,
 } from '../result-builder'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../types'
@@ -182,7 +183,7 @@ describe('buildTypingTestResult', () => {
       config,
       language: 'english',
       wpmHistory: [55, 58, 60, 62],
-      romajiActive: false, mistakes: {},
+      romajiActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
 
     expect(result.wpm).toBe(60)
@@ -207,6 +208,7 @@ describe('buildTypingTestResult', () => {
     const baseInput = {
       correctChars: 20, incorrectChars: 2, wordCount: 5, wpm: 40, accuracy: 90, elapsedMs: 20000,
       config, language: 'english', wpmHistory: [], romajiActive: false,
+      confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     }
 
     const withMistakes = buildTypingTestResult({ ...baseInput, mistakes: { a: 2, t: 1 } })
@@ -220,20 +222,20 @@ describe('buildTypingTestResult', () => {
     const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
     const withRomaji = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
-      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: true, mistakes: {},
+      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: true, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(withRomaji.romajiInput).toBe(true)
 
     const notActive = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
-      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: false, mistakes: {},
+      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(notActive.romajiInput).toBeUndefined()
 
     const quoteConfig: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }
     const quoteResult = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
-      config: quoteConfig, language: 'english', wpmHistory: [], romajiActive: false, mistakes: {},
+      config: quoteConfig, language: 'english', wpmHistory: [], romajiActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(quoteResult.romajiInput).toBeUndefined()
   })
@@ -242,7 +244,7 @@ describe('buildTypingTestResult', () => {
     const tatoebaCfg: TypingTestConfig = { mode: 'tatoeba', language: 'japanese_hiragana', pattern: 'lines', lineCount: 5, duration: 30 }
     const result = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
-      config: tatoebaCfg, language: 'english', wpmHistory: [], romajiActive: true, mistakes: {},
+      config: tatoebaCfg, language: 'english', wpmHistory: [], romajiActive: true, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(result.romajiInput).toBe(true)
   })
@@ -259,7 +261,7 @@ describe('buildTypingTestResult', () => {
       config,
       language: 'english',
       wpmHistory: [],
-      romajiActive: false, mistakes: {},
+      romajiActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(result.mode).toBe('time')
     expect(result.mode2).toBe(60)
@@ -277,7 +279,7 @@ describe('buildTypingTestResult', () => {
       config,
       language: 'english',
       wpmHistory: [],
-      romajiActive: false, mistakes: {},
+      romajiActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(result.mode).toBe('quote')
     expect(result.mode2).toBe('medium')
@@ -296,7 +298,7 @@ describe('buildTypingTestResult', () => {
       // The top-level (MonkeyType) language is irrelevant for tatoeba.
       language: 'german',
       wpmHistory: [],
-      romajiActive: false, mistakes: {},
+      romajiActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(result.mode).toBe('tatoeba')
     expect(result.mode2).toBe('english|lines|5')
@@ -316,7 +318,7 @@ describe('buildTypingTestResult', () => {
       config,
       language: 'japanese',
       wpmHistory: [],
-      romajiActive: false, mistakes: {},
+      romajiActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(result.mode2).toBe('japanese|time|30')
   })
@@ -361,5 +363,77 @@ describe('buildResultNameChips', () => {
     const chips = buildResultNameChips({ ...base, mode: 'words', language: 'english' }, tStub, 'Ieneko54R')
     expect(chips[0]).toBe('Ieneko54R')
     expect(chips[1]).toBe('words (english)')
+  })
+})
+
+describe('resultKspc', () => {
+  const base: TypingTestResult = {
+    date: '2026-01-01T00:00:00.000Z', wpm: 50, accuracy: 95, wordCount: 10,
+    correctChars: 50, incorrectChars: 2, durationSeconds: 30,
+  }
+  it('derives the ratio from the stored raw fields', () => {
+    expect(resultKspc({ ...base, kspcKeystrokes: 6, kspcChars: 4 })).toBe(1.5)
+  })
+
+  it('returns null when either raw field is missing (legacy result)', () => {
+    expect(resultKspc(base)).toBeNull()
+    expect(resultKspc({ ...base, kspcKeystrokes: 6 })).toBeNull()
+    expect(resultKspc({ ...base, kspcChars: 4 })).toBeNull()
+  })
+})
+
+describe('buildTypingTestResult — KSPC raw fields', () => {
+  const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+  const baseInput = {
+    wordCount: 5, wpm: 40, accuracy: 90, elapsedMs: 20000,
+    config: wordsConfig, language: 'english', wpmHistory: [], mistakes: {},
+  }
+
+  it('verbatim mode: stores keystrokes and confirmedChars verbatim', () => {
+    // Hand-computed: word 'cat', typed 'c','x' (wrong), Backspace, 'a','t',
+    // Space — 6 physical keystrokes. Backspace fixes the typo, so the final
+    // submission is correct: computeWordCharCounts('cat','cat') = correct 4
+    // (1 separator + 3 match), incorrect 0 — confirmedChars is that sum (4),
+    // accumulated by run-state.ts's handleSpace, not derived here.
+    const result = buildTypingTestResult({
+      ...baseInput, romajiActive: false,
+      correctChars: 4, incorrectChars: 0, confirmedChars: 4, totalKeystrokes: 6, kspcUncomputable: false,
+    })
+    expect(result.kspcKeystrokes).toBe(6)
+    expect(result.kspcChars).toBe(4)
+    expect(resultKspc(result)).toBe(1.5)
+  })
+
+  it('romaji mode: stores keystrokes and confirmedChars verbatim (accepted keystrokes, not +rejected)', () => {
+    // Hand-computed: word1 'し' typed s,h,i (3 accepted); word2 'か' typed
+    // x (rejected), k, a (2 accepted). confirmedChars=5 (accumulated by
+    // romaji-input.ts's handleRomajiChar, one per accepted keystroke —
+    // rejects don't count), incorrectChars=1 is a separate cumulative
+    // rejected-keystroke tally unrelated to confirmedChars, totalKeystrokes=6 (3+1+2).
+    const result = buildTypingTestResult({
+      ...baseInput, romajiActive: true,
+      correctChars: 5, incorrectChars: 1, confirmedChars: 5, totalKeystrokes: 6, kspcUncomputable: false,
+    })
+    expect(result.kspcKeystrokes).toBe(6)
+    expect(result.kspcChars).toBe(5)
+    expect(resultKspc(result)).toBeCloseTo(1.2)
+  })
+
+  it('omits both fields on zero confirmed chars (no division by zero)', () => {
+    const result = buildTypingTestResult({
+      ...baseInput, romajiActive: false,
+      correctChars: 0, incorrectChars: 0, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
+    })
+    expect(result.kspcKeystrokes).toBeUndefined()
+    expect(result.kspcChars).toBeUndefined()
+  })
+
+  it('omits both fields when the run was KSPC-uncomputable (IME composition fired), regardless of the numbers', () => {
+    const result = buildTypingTestResult({
+      ...baseInput, romajiActive: false,
+      correctChars: 4, incorrectChars: 0, confirmedChars: 4, totalKeystrokes: 6, kspcUncomputable: true,
+    })
+    expect(result.kspcKeystrokes).toBeUndefined()
+    expect(result.kspcChars).toBeUndefined()
   })
 })

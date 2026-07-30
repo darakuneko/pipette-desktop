@@ -23,6 +23,9 @@ function makeState(overrides: Partial<TypingTestState> = {}): TypingTestState {
     endTime: null,
     correctChars: 0,
     incorrectChars: 0,
+    totalKeystrokes: 0,
+    confirmedChars: 0,
+    kspcUncomputable: false,
     currentQuote: null,
     wpmHistory: [],
     lineBreaks: new Set(),
@@ -66,6 +69,7 @@ describe('TypingTestView', () => {
     expect(screen.getByTestId('typing-test-wpm').textContent).toBe('-')
     expect(screen.getByTestId('typing-test-kpm').textContent).toBe('-')
     expect(screen.getByTestId('typing-test-accuracy').textContent).toBe('-')
+    expect(screen.getByTestId('typing-test-kspc').textContent).toBe('-')
     expect(screen.getByTestId('typing-test-time').textContent).toBe('-')
     expect(screen.getByTestId('typing-test-word-count').textContent).toBe('-')
   })
@@ -203,6 +207,14 @@ describe('TypingTestView', () => {
     expect(screen.getByTestId('typing-test-time').textContent).toBe('0:23')
   })
 
+  it('displays kspc when running', () => {
+    renderView({
+      state: makeState({ status: 'running' }),
+      kspc: 1.234,
+    })
+    expect(screen.getByTestId('typing-test-kspc').textContent).toBe('1.23')
+  })
+
   it('shows the results panel when finished', () => {
     renderView({
       state: makeState({ status: 'finished' }),
@@ -283,6 +295,28 @@ describe('TypingTestView quote mode display', () => {
     })
     expect(screen.getByTestId('typing-test-results')).toBeInTheDocument()
     expect(screen.getByTestId('typing-test-quote-source').textContent).toContain('Test Book')
+  })
+})
+
+describe('TypingTestView kspc cell', () => {
+  it('shows "-" before measuring (waiting/countdown), even if a stale kspc prop is passed', () => {
+    renderView({ state: makeState({ status: 'waiting' }), kspc: 1.5 })
+    expect(screen.getByTestId('typing-test-kspc').textContent).toBe('-')
+  })
+
+  it('shows "-" when kspc is null (uncomputable, or nothing confirmed yet)', () => {
+    renderView({ state: makeState({ status: 'running' }), kspc: null })
+    expect(screen.getByTestId('typing-test-kspc').textContent).toBe('-')
+  })
+
+  it('shows "-" when kspc is omitted entirely (defaults to null)', () => {
+    renderView({ state: makeState({ status: 'running' }) })
+    expect(screen.getByTestId('typing-test-kspc').textContent).toBe('-')
+  })
+
+  it('formats a finished run\'s kspc to 2 decimal places', () => {
+    renderView({ state: makeState({ status: 'finished' }), wpm: 50, accuracy: 95, kspc: 1 })
+    expect(screen.getByTestId('typing-test-kspc').textContent).toBe('1.00')
   })
 })
 

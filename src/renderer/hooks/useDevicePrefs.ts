@@ -10,6 +10,7 @@ import { MIN_SCALE, MAX_SCALE } from '../components/editors/keymap-editor-types'
 import type { TypingTestResult, TypingViewMenuTab, ViewMode, TypingTestMemory, TypingTestMemoryWord, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
 import { VIEW_MODES, isTypingViewMenuTab, isTypingTestComparisonBaselines } from '../../shared/types/pipette-settings'
 import { trimResults } from '../typing-test/result-builder'
+import { isNonNegInt, isValidTypingTestResult, sanitizeTypingTestResult } from '../typing-test/typing-test-result-sanitize'
 import type { TypingTestConfig, RomajiDetailSettings, RomajiCaseStyle } from '../typing-test/types'
 import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, clampDisplayLines, clampFontSize } from '../typing-test/types'
 import type { RomajiStyle } from '../typing-test/romaji-engine'
@@ -169,6 +170,13 @@ function validateTypingTestMemory(raw: unknown): TypingTestMemory | undefined {
   const wpmHistory = Array.isArray(o.wpmHistory)
     ? (o.wpmHistory as unknown[]).filter((n): n is number => typeof n === 'number')
     : []
+  // All-or-nothing, mirroring how captureMemory always writes all three
+  // together (see TypingTestMemory's doc comment): a malformed/partial
+  // group degrades to "absent" rather than trusting a subset, so
+  // restoreState's legacy-format fallback (permanently uncomputable) kicks
+  // in exactly the same as for a memory saved before KSPC existed.
+  const validKspcGroup =
+    isNonNegInt(o.totalKeystrokes) && isNonNegInt(o.confirmedChars) && typeof o.kspcUncomputable === 'boolean'
   return {
     textId: o.textId,
     currentWordIndex: o.currentWordIndex,
@@ -178,44 +186,11 @@ function validateTypingTestMemory(raw: unknown): TypingTestMemory | undefined {
     incorrectChars: o.incorrectChars,
     elapsedMs: o.elapsedMs,
     wpmHistory,
+    totalKeystrokes: validKspcGroup ? (o.totalKeystrokes as number) : undefined,
+    confirmedChars: validKspcGroup ? (o.confirmedChars as number) : undefined,
+    kspcUncomputable: validKspcGroup ? (o.kspcUncomputable as boolean) : undefined,
     savedAt: typeof o.savedAt === 'string' ? o.savedAt : new Date(0).toISOString(),
   }
-}
-
-function isValidTypingTestResult(item: unknown): item is TypingTestResult {
-  if (typeof item !== 'object' || item === null) return false
-  const r = item as Record<string, unknown>
-  return typeof r.date === 'string' && typeof r.wpm === 'number' && typeof r.accuracy === 'number'
-}
-
-/** Validates a result's optional `mistakes` field: a plain object mapping
- *  every key to a finite number. Returns `undefined` for anything else
- *  (absent, wrong shape, non-numeric/non-finite values) so a malformed
- *  field degrades to "not set" rather than rejecting the whole result —
- *  same treatment as the other optional fields on `TypingTestResult`. */
-function sanitizeMistakes(raw: unknown): Record<string, number> | undefined {
-  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return undefined
-  const entries = Object.entries(raw as Record<string, unknown>)
-  if (entries.length === 0) return undefined
-  const mistakes: Record<string, number> = {}
-  for (const [key, value] of entries) {
-    if (typeof value !== 'number' || !Number.isFinite(value)) return undefined
-    mistakes[key] = value
-  }
-  return mistakes
-}
-
-/** Drops a malformed `mistakes` field without discarding the rest of an
- *  already-`isValidTypingTestResult`-checked result. Applied after the
- *  filter above so a persisted result with a corrupted `mistakes` blob
- *  still survives (minus that one field) instead of vanishing from
- *  History entirely. */
-function sanitizeTypingTestResult(result: TypingTestResult): TypingTestResult {
-  const mistakes = sanitizeMistakes(result.mistakes)
-  if (mistakes) return { ...result, mistakes }
-  if (result.mistakes === undefined) return result
-  const { mistakes: _dropped, ...rest } = result
-  return rest
 }
 
 const VALID_BASIC_VIEW_TYPES: ReadonlySet<string> = new Set(['ansi', 'iso', 'jis', 'list'])

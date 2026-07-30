@@ -813,6 +813,65 @@ describe('useTypingTest processKeyEvent', () => {
   })
 })
 
+describe('useTypingTest KSPC (totalKeystrokes)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2025-01-01T00:00:00.000Z'))
+  })
+
+  it('counts one keystroke per accepted printable character', () => {
+    const { result } = renderHook(() => useTypingTest())
+    act(() => result.current.processKeyEvent('a', false, false, false))
+    act(() => result.current.processKeyEvent('b', false, false, false))
+    expect(result.current.state.totalKeystrokes).toBe(2)
+  })
+
+  it('counts a Backspace on empty input (rejected, but still a physical keystroke)', () => {
+    const { result } = renderHook(() => useTypingTest())
+    act(() => result.current.processKeyEvent('a', false, false, false))
+    act(() => result.current.processKeyEvent('Backspace', false, false, false)) // deletes 'a'
+    act(() => result.current.processKeyEvent('Backspace', false, false, false)) // empty — no-op in the reducer
+    expect(result.current.state.currentInput).toBe('')
+    expect(result.current.state.totalKeystrokes).toBe(3)
+  })
+
+  it('counts a wrong submit key (Enter where Space is expected) as a keystroke', () => {
+    const { result } = renderHook(() => useTypingTest())
+    act(() => result.current.processKeyEvent('a', false, false, false))
+    act(() => result.current.processKeyEvent('Enter', false, false, false)) // no-op (Space expected)
+    expect(result.current.state.currentWordIndex).toBe(0)
+    expect(result.current.state.totalKeystrokes).toBe(1)
+  })
+
+  it('does not count multi-character key names (Shift, Control, ...)', () => {
+    const { result } = renderHook(() => useTypingTest())
+    act(() => result.current.processKeyEvent('Shift', false, false, false))
+    expect(result.current.state.totalKeystrokes).toBe(0)
+  })
+
+  it('resets to 0 on restart', async () => {
+    const { result } = renderHook(() => useTypingTest())
+    act(() => result.current.processKeyEvent('a', false, false, false))
+    expect(result.current.state.totalKeystrokes).toBe(1)
+    await act(async () => result.current.restart())
+    expect(result.current.state.totalKeystrokes).toBe(0)
+  })
+
+  it('exposes a live kspc ratio once some keystrokes and confirmed chars exist', () => {
+    const { result } = renderHook(() => useTypingTest({ mode: 'words', wordCount: 5, punctuation: false, numbers: false }, 'english'))
+    const word = result.current.state.words[0]
+    for (const ch of word) act(() => result.current.processKeyEvent(ch, false, false, false))
+    act(() => result.current.processKeyEvent(' ', false, false, false))
+    // word typed correctly + 1 separator keystroke, no mistakes -> keystrokes === chars -> kspc 1.
+    expect(result.current.kspc).toBe(1)
+  })
+
+  it('kspc is null before anything is confirmed', () => {
+    const { result } = renderHook(() => useTypingTest())
+    expect(result.current.kspc).toBeNull()
+  })
+})
+
 describe('useTypingTest composition', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -951,6 +1010,74 @@ describe('useTypingTest composition', () => {
 
     expect(result.current.state.compositionText).toBe('')
     expect(result.current.state.status).toBe('countdown')
+  })
+
+  it('marks the run KSPC-uncomputable once a composition commits real text', () => {
+    const { result } = renderHook(() => useTypingTest())
+    expect(result.current.state.kspcUncomputable).toBe(false)
+    act(() => result.current.processCompositionEnd('あ'))
+    expect(result.current.state.kspcUncomputable).toBe(true)
+    expect(result.current.kspc).toBeNull()
+  })
+
+  it('marks the run KSPC-uncomputable even when the composition is canceled (empty data)', () => {
+    const { result } = renderHook(() => useTypingTest())
+    act(() => result.current.processCompositionStart())
+    act(() => result.current.processCompositionEnd(''))
+    expect(result.current.state.kspcUncomputable).toBe(true)
+  })
+
+  it('stays uncomputable for the rest of the run even after further normal typing (one-way)', () => {
+    const { result } = renderHook(() => useTypingTest())
+    act(() => result.current.processCompositionEnd('あ'))
+    expect(result.current.state.kspcUncomputable).toBe(true)
+    act(() => result.current.processKeyEvent('a', false, false, false))
+    act(() => result.current.processKeyEvent(' ', false, false, false))
+    expect(result.current.state.kspcUncomputable).toBe(true)
+    expect(result.current.kspc).toBeNull()
+  })
+
+  it('resets to computable again on restart (fresh run)', async () => {
+    const { result } = renderHook(() => useTypingTest())
+    act(() => result.current.processCompositionEnd('あ'))
+    expect(result.current.state.kspcUncomputable).toBe(true)
+    await act(async () => result.current.restart())
+    expect(result.current.state.kspcUncomputable).toBe(false)
+  })
+
+  it('marks the run KSPC-uncomputable at composition START, before any compositionEnd', () => {
+    const { result } = renderHook(() => useTypingTest())
+    act(() => result.current.processCompositionStart())
+    expect(result.current.state.kspcUncomputable).toBe(true)
+  })
+
+  it('a time-mode run that expires mid-composition (compositionEnd never fires) is still uncomputable', async () => {
+    const { result } = renderHook(() => useTypingTest())
+    const config: TypingTestConfig = { mode: 'time', duration: 15, punctuation: false, numbers: false }
+    await act(async () => result.current.setConfig(config))
+
+    // A real keystroke starts the run's timer running.
+    act(() => result.current.processKeyEvent('a', false, false, false))
+    expect(result.current.state.status).toBe('running')
+
+    // IME composition opens but the user never confirms it before time runs
+    // out — compositionEnd is never called, only compositionStart.
+    act(() => result.current.processCompositionStart())
+    act(() => result.current.processCompositionUpdate('あ'))
+
+    act(() => vi.advanceTimersByTime(15000))
+    expect(result.current.state.status).toBe('finished')
+    expect(result.current.state.kspcUncomputable).toBe(true)
+    expect(result.current.kspc).toBeNull()
+  })
+
+  it('does not flag kspcUncomputable for composition that starts during countdown', async () => {
+    const { result } = renderHook(() => useTypingTest())
+    await act(async () => result.current.restartWithCountdown())
+    expect(result.current.state.status).toBe('countdown')
+
+    act(() => result.current.processCompositionStart())
+    expect(result.current.state.kspcUncomputable).toBe(false)
   })
 })
 

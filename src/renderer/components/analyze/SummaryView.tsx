@@ -7,6 +7,7 @@
 // 30-day-windowed and not reused by the other cards.
 
 import type { TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
+import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
 import { StreakGoalCard } from './StreakGoalCard'
 import { TodaySummaryCard } from './TodaySummaryCard'
@@ -31,9 +32,12 @@ interface Props {
   /** Per-position finger overrides loaded by the parent's
    * pipetteSettings effect. */
   fingerOverrides: Record<string, FingerType>
+  /** Saved Typing Test History, loaded by the same parent effect — passed
+   * straight through to TypingProfileCard's KSPC cell. */
+  typingTestResults: TypingTestResult[]
 }
 
-export function SummaryView({ uid, deviceScope, appScopes, typingTestScopes, runIdScopes, snapshot, fingerOverrides }: Props) {
+export function SummaryView({ uid, deviceScope, appScopes, typingTestScopes, runIdScopes, snapshot, fingerOverrides, typingTestResults }: Props) {
   const { daily } = useDailySummary(uid, deviceScope, appScopes, typingTestScopes, runIdScopes)
   const today = useLocalToday()
   return (
@@ -50,6 +54,7 @@ export function SummaryView({ uid, deviceScope, appScopes, typingTestScopes, run
         today={today}
         snapshot={snapshot}
         fingerOverrides={fingerOverrides}
+        typingTestResults={typingTestResults}
       />
       {/* The streak counter is a long-running motivator and reads as
           a single timeline of "kept typing every day". Filtering it

@@ -248,14 +248,15 @@ The Summary tab is the default landing view. It collects four read-only cards bu
 
 - **Today** — Keystrokes, WPM, Typing duration for the current local day
 - **Last 7 days** — Keystrokes, WPM, Typing duration, Active days, each with a delta arrow comparing the prior 7 days. Insufficient prior data renders as `—`
-- **Typing profile (last N days)** — Four qualitative read-outs computed over the recent window:
+- **Typing profile (last N days)** — Five qualitative read-outs computed over the recent window:
   - **Speed** — overall WPM bucketed into Slow (<30) / Medium (30–50) / Fast (≥50). A second line below the WPM figure shows the population average and a direction-neutral position label (Far below average / Below average / Average / Above average / Far above average) based on standard-deviation distance from that average — hidden whenever the bucket itself reads `Not enough data`
   - **Hand balance** — share of bigram keystrokes per hand. Within ±5% of 50/50 reads as Balanced
   - **SFB rate** — share of bigrams typed with the same finger. <4% Low / 4–8% Medium / ≥8% High
   - **Fatigue risk** — drop from peak hour to slowest hour WPM. Wider gap = higher risk
+  - **KSPC** — keystrokes per confirmed character (Backspace counts as a keystroke), char-weighted across every saved Typing Test result whose date falls in the window — never a plain average of each run's own ratio. A second line shows the population average and the same position label used by Speed. Reads `Not enough data` when no saved result in the window carries this figure (e.g. every run predates it, or hit an IME composition mid-run). Unlike this card's other four read-outs, KSPC is **not filtered by Device/App** — it always reads every locally saved Typing Test result for the keyboard within the window, since it comes from History rather than the recorded keystroke stream
 - **Goal streak record** — Current cycle progress (`current / goalDays`), longest historical streak, and editable Goal settings (consecutive days × keystrokes/day). Changing the goal clears the current cycle counter. The **Achievement history** button opens a modal that lists every completed cycle with period, goal, days, total keystrokes, and average per day
 
-The Summary tab respects the App filter — selecting one or more apps narrows every card to minutes tagged with those apps.
+The Summary tab respects the App filter — selecting one or more apps narrows every card to minutes tagged with those apps (the Typing profile card's KSPC read-out is the one exception — see above).
 
 #### Heatmap
 
@@ -1293,6 +1294,7 @@ While typing, the following stats are displayed in real time:
 - **WPM**: Words Per Minute (current typing speed)
 - **KPM**: Keystrokes Per Minute (correct characters per minute)
 - **Accuracy**: Percentage of correctly typed characters
+- **KSPC**: Keystrokes per confirmed character (Backspace counts as a keystroke). Reads `-` before anything is confirmed yet, or once an IME composition fires mid-run (that run's keystrokes can no longer be counted reliably)
 - **Time**: Elapsed time (or remaining time in the time pattern)
 - **Words**: Current word / total words. In File Import and Tatoeba modes this becomes **Chars** — character progress through the text instead of a word count
 

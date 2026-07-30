@@ -11,7 +11,8 @@ import { WpmSparkline } from './WpmSparkline'
 import { AccuracyTrendSection } from './AccuracyTrendSection'
 import { MistakeRankingSection } from './MistakeRankingSection'
 import { formatDate, ACTION_BTN, DELETE_BTN, CONFIRM_DELETE_BTN, FILTER_SELECT_CLASS } from '../components/editors/store-modal-shared'
-import { resultKpm, buildResultNameChips } from './result-builder'
+import { resultKpm, resultKspc, buildResultNameChips } from './result-builder'
+import { formatKspc } from '../../shared/kspc'
 import { formatConditionLabel } from './condition-label'
 import { ResultNameModal } from './ResultNameModal'
 import { Tooltip } from '../components/ui/Tooltip'
@@ -85,12 +86,21 @@ function exportFilterSlug(
 
 const MODE_FILTERS: ModeFilter[] = ['all', 'words', 'time', 'quote']
 
-const CSV_HEADERS = ['date', 'name', 'wpm', 'kpm', 'accuracy', 'wordCount', 'correctChars', 'incorrectChars', 'durationSeconds', 'rawWpm', 'mode', 'mode2', 'fileImportTextName', 'language', 'punctuation', 'numbers', 'consistency', 'isPb'] as const
+const CSV_HEADERS = ['date', 'name', 'wpm', 'kpm', 'accuracy', 'kspc', 'wordCount', 'correctChars', 'incorrectChars', 'durationSeconds', 'rawWpm', 'mode', 'mode2', 'fileImportTextName', 'language', 'punctuation', 'numbers', 'consistency', 'isPb'] as const
 
 function buildResultsCsv(results: TypingTestResult[]): string {
   return buildCsv(
     CSV_HEADERS,
-    results.map((r) => CSV_HEADERS.map((key) => (key === 'kpm' ? resultKpm(r) : r[key as keyof TypingTestResult]))),
+    results.map((r) => CSV_HEADERS.map((key) => {
+      if (key === 'kpm') return resultKpm(r)
+      // Derived, same as kpm — empty (not 0) for a legacy result that never
+      // recorded the raw kspcKeystrokes/kspcChars pair.
+      if (key === 'kspc') {
+        const kspc = resultKspc(r)
+        return kspc === null ? '' : formatKspc(kspc)
+      }
+      return r[key as keyof TypingTestResult]
+    })),
   )
 }
 

@@ -206,6 +206,34 @@ describe('TypingTestHistory', () => {
     expect(onExportCsv.mock.calls[0][1]).toBe('monkeytype')
   })
 
+  it('includes a kspc CSV column, formatted to 2 decimal places, for a result carrying the raw fields', () => {
+    const onExportCsv = vi.fn()
+    const results = [
+      makeResult({ wpm: 80, date: '2025-01-01T00:00:00Z', kspcKeystrokes: 6, kspcChars: 4 }),
+    ]
+    renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+
+    fireEvent.click(screen.getByTestId('history-export-csv'))
+    const csv = onExportCsv.mock.calls[0][0] as string
+    expect(csv).toContain('date,name,wpm,kpm,accuracy,kspc,')
+    expect(csv).toContain('1.50')
+  })
+
+  it('leaves the kspc CSV cell empty for a legacy result with no raw fields', () => {
+    const onExportCsv = vi.fn()
+    const results = [
+      makeResult({ wpm: 80, date: '2025-01-01T00:00:00Z' }), // no kspcKeystrokes/kspcChars
+    ]
+    renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+
+    fireEvent.click(screen.getByTestId('history-export-csv'))
+    const csv = onExportCsv.mock.calls[0][0] as string
+    const [, dataLine] = csv.split('\n')
+    const headers = csv.split('\n')[0].split(',')
+    const kspcIndex = headers.indexOf('kspc')
+    expect(dataLine.split(',')[kspcIndex]).toBe('')
+  })
+
   it('passes a filename slug reflecting the active filter selection', () => {
     const onExportCsv = vi.fn()
     const results = [

@@ -799,7 +799,15 @@ interface DummyTypingTestHistoryEntry {
   mode: 'tatoeba' | 'fileImport'
   language?: string
   fileImportTextName?: string
+  kspcKeystrokes: number
+  kspcChars: number
 }
+
+/** Plausible KSPC (keystrokes per confirmed character) for the seeded
+ * results — close to but not exactly the population mean, so the
+ * Analyze Summary screenshot's Typing Profile card shows a real KSPC
+ * figure and position label instead of "Not enough data". */
+const DUMMY_KSPC_RATIO = 1.15
 
 /** Builds the seeded keyboard's `pipette_settings.json` content —
  * History entries for every {@link DUMMY_RUN_PLANS} plan except the
@@ -815,6 +823,9 @@ function buildPipetteSettingsContent(runDates: ReadonlyMap<string, number>): str
     const wordCount = Math.round((SESSION_MINUTES * wpm))
     const correctChars = Math.round(wordCount * 5 * 0.97)
     const incorrectChars = Math.max(0, wordCount * 5 - correctChars)
+    // KSPC's denominator (verbatim-style: correctChars + incorrectChars,
+    // matching input.confirmedChars in buildTypingTestResult, result-builder.ts).
+    const kspcChars = correctChars + incorrectChars
     typingTestResults.push({
       date: new Date(startMs).toISOString(),
       runId: plan.runId,
@@ -828,6 +839,8 @@ function buildPipetteSettingsContent(runDates: ReadonlyMap<string, number>): str
       mode: plan.mode,
       language: plan.language,
       fileImportTextName: plan.fileImportTextName,
+      kspcKeystrokes: Math.round(kspcChars * DUMMY_KSPC_RATIO),
+      kspcChars,
     })
   }
   return JSON.stringify({

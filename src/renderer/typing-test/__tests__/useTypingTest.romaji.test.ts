@@ -96,6 +96,10 @@ describe('useTypingTest — romaji input mode', () => {
     expect(result.current.state.status).toBe('finished')
     expect(result.current.state.correctChars).toBe('dhina-niiku'.length)
     expect(result.current.state.incorrectChars).toBe(0)
+    // confirmedChars (KSPC's mode-agnostic denominator) advances 1-per-
+    // accepted-keystroke here too, same as correctChars — see
+    // TypingTestState.confirmedChars.
+    expect(result.current.state.confirmedChars).toBe('dhina-niiku'.length)
     expect(result.current.state.wordResults).toEqual([
       { word: 'でぃなーにいく', typed: 'dhina-niiku', correct: true },
     ])
@@ -119,12 +123,17 @@ describe('useTypingTest — romaji input mode', () => {
     press(result, 'x') // not a valid start for か (ka/ca)
     expect(result.current.state.incorrectChars).toBe(1)
     expect(result.current.state.correctChars).toBe(0)
+    // The reject does NOT advance confirmedChars (it's not a confirmed
+    // character) — unlike incorrectChars, which tallies it as a
+    // rejected-keystroke count.
+    expect(result.current.state.confirmedChars).toBe(0)
     expect(result.current.state.status).toBe('running')
 
     type(result, 'ka')
     expect(result.current.state.status).toBe('finished')
     expect(result.current.state.correctChars).toBe(2)
     expect(result.current.state.incorrectChars).toBe(1)
+    expect(result.current.state.confirmedChars).toBe(2)
   })
 
   it('auto-advances to the next word on completion, without a space press', async () => {
@@ -173,12 +182,14 @@ describe('useTypingTest — romaji input mode', () => {
 
     press(result, 'a')
     expect(result.current.state.correctChars).toBe(1)
+    expect(result.current.state.confirmedChars).toBe(1)
     const keystrokesBefore = result.current.state.romajiKeystrokes
 
     press(result, 'Backspace')
 
     expect(result.current.state.correctChars).toBe(1)
     expect(result.current.state.incorrectChars).toBe(0)
+    expect(result.current.state.confirmedChars).toBe(1)
     expect(result.current.state.romajiKeystrokes).toBe(keystrokesBefore)
     expect(result.current.state.currentWordIndex).toBe(0)
   })
