@@ -164,14 +164,28 @@ export type IntervalUnit = typeof INTERVAL_UNITS[number]
 export const INTERVAL_VIEW_MODES = ['timeSeries', 'distribution'] as const
 export type IntervalViewMode = typeof INTERVAL_VIEW_MODES[number]
 
+/** Distribution mode's body is a segmented switcher showing one of
+ * three sections at a time (see AnalyzePane's Interval-tab distribution
+ * branch) instead of stacking all three and forcing a scroll:
+ * `'interval'` (the IKI histogram + summary, IntervalChart's own
+ * distribution branch), `'duration'` (DurationSection), `'tappingTerm'`
+ * (TappingTermCard). Order matches the switcher's left-to-right layout. */
+export const DISTRIBUTION_SECTIONS = ['interval', 'duration', 'tappingTerm'] as const
+export type DistributionSection = typeof DISTRIBUTION_SECTIONS[number]
+
 /** Distribution mode needs per-scope raw quartiles — the cross-scope
  * `all` query already aggregates MIN / AVG / MAX over contributing
  * scopes, so redistributing those meta-aggregates as "four samples per
  * minute" would muddy the histogram. The interval chart, the keypress-
- * duration section mounted alongside it, both CSV builders (interval +
- * duration distribution), and the filter modal's disabled Device row
- * all force `'own'` through this one predicate so none of those
- * surfaces can drift apart. */
+ * duration section (`DISTRIBUTION_SECTIONS`'s three mutually-exclusive
+ * switcher panes — only one is ever mounted at a time, but all three
+ * share this one `viewMode`), both CSV builders (interval + duration
+ * distribution), and the filter modal's disabled Device row all force
+ * `'own'` through this one predicate so none of those surfaces can
+ * drift apart. The TAPPING_TERM advisor card (TappingTermCard.tsx) is
+ * documented to stay in the same `'own'` lockstep, but hardcodes the
+ * scope directly instead of calling this predicate — it has no
+ * `viewMode` of its own to pass in. */
 export function distributionForcesOwnDevice(viewMode: IntervalViewMode): boolean {
   return viewMode === 'distribution'
 }
@@ -256,6 +270,16 @@ export interface WpmFilters {
 export interface IntervalFilters {
   unit?: IntervalUnit
   viewMode?: IntervalViewMode
+  /** Which Distribution-mode section is showing (see
+   * `DistributionSection`). Ignored while `viewMode === 'timeSeries'`.
+   * Absent (older persisted settings) normalizes to `'interval'` via the
+   * same `{ ...DEFAULT, ...saved }` merge every other optional field on
+   * this shape goes through. If the persisted pick is no longer
+   * available (e.g. `'tappingTerm'` saved from a keyboard with tap-hold
+   * keys, then loaded against one without any), the consumer falls back
+   * to `'interval'` at render time rather than here — this field only
+   * ever holds the user's last raw pick. */
+  distributionSection?: DistributionSection
 }
 
 export interface ActivityFilters {
@@ -460,6 +484,7 @@ function isValidIntervalFilters(value: unknown): boolean {
   const o = value as Record<string, unknown>
   if (o.unit !== undefined && !includesAs(INTERVAL_UNITS, o.unit)) return false
   if (o.viewMode !== undefined && !includesAs(INTERVAL_VIEW_MODES, o.viewMode)) return false
+  if (o.distributionSection !== undefined && !includesAs(DISTRIBUTION_SECTIONS, o.distributionSection)) return false
   return true
 }
 

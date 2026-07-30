@@ -1,5 +1,5 @@
 {
-  "version": "0.1.48",
+  "version": "0.1.49",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -926,6 +926,7 @@
         "gt10000": ">10s"
       },
       "distribution": {
+        "sectionTitle": "間隔の分布☆",
         "tooltipLabel": "推定打鍵数☆",
         "summary": {
           "label": "打鍵リズムサマリーっしょ☆",
@@ -942,6 +943,7 @@
         }
       },
       "timeSeries": {
+        "sectionTitle": "間隔の推移っしょ",
         "summary": {
           "label": "インターバルサマリー☆",
           "medianP50": "中央値（重み付き）☆",
@@ -980,9 +982,37 @@
       "stat": {
         "mean": "平均打鍵長",
         "sd": "SD",
+        "sdDesc": "ホールド時間のバラつき具合っしょ☆SDが低いと毎回同じくらいの長さで押せてる、高いとバラつきがデカいってこと！",
         "samples": "サンプル数",
+        "samplesDesc": "1サンプルは、キー押してから離すまでを1回分測ったやつっしょ☆",
         "populationAverage": "母集団平均 {{value}} msっしょ"
       }
+    },
+    "tappingTerm": {
+      "sectionTitle": "Tapping Term 診断っしょ",
+      "ariaLabel": "Tapping Term 診断サマリーっしょ",
+      "stat": {
+        "current": "今の値",
+        "assumed": "想定値っしょ",
+        "tapP95": "観測タップ p95",
+        "tapP95Desc": "このキーのタップの長さ、95%はこの範囲より短かったってこと☆上の Tapping Term と比べて、タップとホールドが見分けやすいかの目安になるっしょ",
+        "samples": "サンプル数っしょ",
+        "recordedCounts": "記録済みタップ / ホールド"
+      },
+      "recordedCountsDescription": "打鍵した時に有効だった Tapping Term で分類されてるから、今の値とはズレてることもあるっしょ☆参考程度に見といてね",
+      "verdict": {
+        "unknown": {
+          "insufficientSamples": "これ診断するにはタップ・ホールドの記録がまだ足りないっしょ",
+          "noTapMass": "これらのキー、今の値だともう全部ホールド判定になっちゃってて、比べれるタップ側のデータがまだないっしょ",
+          "bucketResolution": "Tapping Term、あんたの普段のタップの長さと同じ計測区間に入っちゃってるから、実際どっち側にあるかこのデータじゃ判断できない感じ☆"
+        },
+        "ok": "今の Tapping Term、あんたの打鍵感にちょうど合ってる感じ☆",
+        "canLower": "あんたの打鍵傾向なら ~{{value}} ms くらいまで下げても平気そうっしょ",
+        "nearTerm": "この Tapping Term 付近だと長いタップと短いホールドの区別つかないっしょ☆数字だけじゃ切り分けれない感じ"
+      },
+      "reportedHint": "エディタの {{tab}} タブ → {{button}} から変えれるっしょ",
+      "unreportedNotice": "このファームウェア、QMK Settings 経由で Tapping Term 教えてくれないみたい。だからこの診断は QMK の既定値 {{default}} ms 前提でやってるっしょ。変えたいならファームウェアの再ビルドが必要だよ",
+      "guidance": "このキーボード繋いだら Tapping Term 読み取って診断できるっしょ☆"
     },
     "activity": {
       "tableLabel": "時間 × 曜日の活動量☆",
@@ -1454,6 +1484,7 @@
         "timeSeries": "時系列っしょ",
         "distribution": "分布☆"
       },
+      "intervalDistributionSection": "セクション☆",
       "wpmViewMode": "ビュー☆",
       "wpmViewModeOption": {
         "timeSeries": "時系列っしょ",

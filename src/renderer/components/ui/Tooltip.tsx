@@ -126,23 +126,47 @@ export function Tooltip({
     const wrap = wrapperRef.current
     const bubble = bubbleRef.current
     if (!wrap || !bubble) return
-    setPosition(computeBubblePosition(
+    const next = computeBubblePosition(
       wrap.getBoundingClientRect(),
       bubble.getBoundingClientRect(),
       side,
       align,
       Math.max(0, offset),
       { width: window.innerWidth, height: window.innerHeight },
-    ))
+    )
+    // Bail out (return the SAME object) when the coordinates didn't
+    // actually change. `computeBubblePosition` always returns a fresh
+    // object literal, and this runs from a deps-less layout effect (see
+    // below) — setting unconditionally would re-render every time,
+    // which re-runs the effect, which sets state again, forever.
+    setPosition((prev) => (prev.top === next.top && prev.left === next.left) ? prev : next)
   }, [side, align, offset])
 
-  // Re-position whenever the bubble opens or any layout-affecting input
-  // changes. `useLayoutEffect` so the position is in place before paint
-  // (avoids a one-frame flash at the previous coords).
+  // Keep `position` synced to the wrapper's actual on-screen location on
+  // EVERY render — deliberately unconditional (no `if (!open)` guard, no
+  // dependency array), and deliberately decoupled from `open`: position
+  // TRACKING and VISIBILITY are two different concerns, and gating the
+  // former on the latter is exactly what caused a real bug. When a
+  // consumer reuses the same React key for a logically-identical item
+  // across two different layouts (e.g. AnalyzeStatGrid's "Longest
+  // session" card, which shares its `labelKey`/`descriptionKey` between
+  // Interval's timeSeries and distribution summaries), React preserves
+  // this exact Tooltip instance across the switch instead of unmounting
+  // it, even though the grid cell it renders into moves — and it can
+  // take more than one render for the trigger to reach its FINAL
+  // settled position (an intermediate reflow, then a later one once
+  // sibling content — e.g. a filter row losing a control — finishes
+  // settling). If repositioning only ran while `open`, and the browser
+  // closes the tooltip (a real mouseleave once the trigger has visibly
+  // moved out from under a stationary cursor) before that later reflow
+  // lands, the bubble is left mid-fade at whatever intermediate
+  // coordinates it last computed — visibly "floating" over unrelated
+  // content until the fade-out finishes. Running this on every render
+  // regardless of `open` means the position keeps catching up to
+  // reality for as long as the bubble is even partially visible.
   useLayoutEffect(() => {
-    if (!open) return
     updatePosition()
-  }, [open, updatePosition, content])
+  })
 
   // While open, follow scroll / resize so the bubble stays glued to the
   // trigger as the page moves.

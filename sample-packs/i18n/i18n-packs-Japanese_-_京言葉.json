@@ -1,5 +1,5 @@
 {
-  "version": "0.1.48",
+  "version": "0.1.49",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -926,6 +926,7 @@
         "gt10000": ">10s"
       },
       "distribution": {
+        "sectionTitle": "間隔の分布どす",
         "tooltipLabel": "推定打鍵数",
         "summary": {
           "label": "打鍵リズムサマリー",
@@ -942,6 +943,7 @@
         }
       },
       "timeSeries": {
+        "sectionTitle": "間隔の推移どす",
         "summary": {
           "label": "インターバルサマリー",
           "medianP50": "重み付き中央値",
@@ -980,9 +982,37 @@
       "stat": {
         "mean": "平均打鍵の長さ",
         "sd": "SD",
+        "sdDesc": "ホールド時間の標準偏差どす。SDが低いほどホールド時間が揃うてて、高いほどばらつきが大きいいうことどす。",
         "samples": "サンプル数",
+        "samplesDesc": "1サンプルは、キーを押してから離すまでを1回分測ったものどす。",
         "populationAverage": "母集団平均 {{value}} msどす"
       }
+    },
+    "tappingTerm": {
+      "sectionTitle": "Tapping Term の診断どす",
+      "ariaLabel": "Tapping Term 診断のまとめどす",
+      "stat": {
+        "current": "今の値",
+        "assumed": "見込みの値",
+        "tapP95": "観測タップ p95",
+        "tapP95Desc": "このキーのタップの長さの95%がこの範囲より短かったいうことどす — 上の Tapping Term と見比べて、タップとホールドが区別しやすいかどうかの目安になりますえ。",
+        "samples": "サンプル数どす",
+        "recordedCounts": "記録済みタップ / ホールド"
+      },
+      "recordedCountsDescription": "打鍵しはった時に有効やった Tapping Term を基準に分類されとりますよって、今の値とは違うこともおすえ — あくまで参考としてお見せしとります",
+      "verdict": {
+        "unknown": {
+          "insufficientSamples": "これを診断するにはタップ・ホールドの記録がまだ足りしまへん",
+          "noTapMass": "このキーの押下は今の値やともうみんなホールド判定になってしもてますよって、比べられるタップ側のデータがまだおへん",
+          "bucketResolution": "Tapping Term が、あんさんの普段のタップの長さと同じ計測区間に収まってしもてますよって、実際どちら側にあるんかこのデータからは判定できしまへん"
+        },
+        "ok": "今の Tapping Term は、あんさんの打鍵の癖によう合うてはりますえ",
+        "canLower": "あんさんの打鍵傾向やと、~{{value}} ms くらいまで下げても良さそうどす",
+        "nearTerm": "この Tapping Term のあたりやと、長いタップと短いホールドの見分けがつきしまへん — 数字だけでは切り分けられまへんのや"
+      },
+      "reportedHint": "エディタの {{tab}} タブ → {{button}} から変えられますえ",
+      "unreportedNotice": "このファームウェアは QMK Settings 経由で Tapping Term を教えてくれしまへん。せやさかい、この診断は QMK の既定値である {{default}} ms を前提にしとります。変えるにはファームウェアの再ビルドが要りますえ",
+      "guidance": "このキーボードを繋いだら Tapping Term を読み取って、この診断ができますえ"
     },
     "activity": {
       "tableLabel": "時間帯 × 曜日の活動量",
@@ -1454,6 +1484,7 @@
         "timeSeries": "時系列",
         "distribution": "分布"
       },
+      "intervalDistributionSection": "セクションどす",
       "wpmViewMode": "ビュー",
       "wpmViewModeOption": {
         "timeSeries": "時系列",

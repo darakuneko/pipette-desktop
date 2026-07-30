@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
 import { AnalyzePane } from './AnalyzePane'
+import type { ConnectedTappingTerm } from './analyze-types'
 import { formatSharePercent } from './analyze-format'
 
 // Below this viewport width the two panes can't fit side-by-side
@@ -39,9 +40,14 @@ interface TypingAnalyticsViewProps {
    * this handler. Omit to hide the button (e.g. when the Analyze view
    * is embedded somewhere without a meaningful "back" destination). */
   onBack?: () => void
+  /** TAPPING_TERM of the physically connected keyboard — forwarded
+   * unchanged to every pane (see AnalyzePaneProps). Both Pane A and
+   * Pane B receive the same value; each pane matches it against its
+   * own selected uid independently. */
+  connectedTappingTerm?: ConnectedTappingTerm | null
 }
 
-export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewProps = {}) {
+export function TypingAnalyticsView({ initialUid, onBack, connectedTappingTerm }: TypingAnalyticsViewProps = {}) {
   const { t } = useTranslation()
   const [splitEnabled, setSplitEnabled] = useState(false)
 
@@ -141,6 +147,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
           selectedUid={selectedUidA}
           onSelectUid={setSelectedUidA}
           onSkipPercentChange={setSkipPercentA}
+          connectedTappingTerm={connectedTappingTerm}
         />
         {splitVisible && (
           <AnalyzePane
@@ -150,6 +157,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
             selectedUid={selectedUidB}
             onSelectUid={handleSelectUidB}
             onSkipPercentChange={setSkipPercentB}
+            connectedTappingTerm={connectedTappingTerm}
           />
         )}
       </div>

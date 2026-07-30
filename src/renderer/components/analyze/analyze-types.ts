@@ -23,6 +23,13 @@ export type {
   WpmViewMode,
 } from '../../../shared/types/analyze-filters'
 
+// `ConnectedTappingTerm` and its `resolveConnectedTappingTerm`
+// constructor live together in shared/qmk-settings-tapping-term.ts (the
+// gating logic needs to stay unit-testable without React); re-exported
+// here purely so renderer call sites keep importing analyze types from
+// one place.
+export type { ConnectedTappingTerm } from '../../../shared/qmk-settings-tapping-term'
+
 export type AnalysisTabKey = 'summary' | 'wpm' | 'interval' | 'activity' | 'keyHeatmap' | 'ergonomics' | 'bigrams' | 'layoutComparison' | 'layer' | 'byApp'
 
 /** Inclusive-lower, exclusive-upper millisecond range used by every

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.48",
+  "version": "0.1.49",
   "name": "English",
   "common": {
     "save": "Save",
@@ -936,6 +936,7 @@
         "gt10000": ">10s"
       },
       "distribution": {
+        "sectionTitle": "Interval distribution",
         "tooltipLabel": "Estimated keystrokes",
         "summary": {
           "label": "Typing rhythm summary",
@@ -952,6 +953,7 @@
         }
       },
       "timeSeries": {
+        "sectionTitle": "Interval over time",
         "summary": {
           "label": "Interval summary",
           "medianP50": "Weighted median interval",
@@ -990,9 +992,37 @@
       "stat": {
         "mean": "Mean duration",
         "sd": "SD",
+        "sdDesc": "Standard deviation of your hold times. Low SD means a consistent hold time; high SD means hold times vary widely.",
         "samples": "Samples",
+        "samplesDesc": "Each sample is one completed key press-to-release measurement.",
         "populationAverage": "Population avg {{value}} ms"
       }
+    },
+    "tappingTerm": {
+      "sectionTitle": "Tapping Term diagnosis",
+      "ariaLabel": "Tapping Term diagnosis summary",
+      "stat": {
+        "current": "Current term",
+        "assumed": "Assumed term",
+        "tapP95": "Observed tap p95",
+        "tapP95Desc": "95% of your taps on these keys were shorter than this range — compared against the Tapping Term above to judge whether taps and holds are easy to tell apart.",
+        "samples": "Samples",
+        "recordedCounts": "Recorded tap / hold"
+      },
+      "recordedCountsDescription": "Classified against whatever Tapping Term was active when each press was recorded, not the current term — shown for context only.",
+      "verdict": {
+        "unknown": {
+          "insufficientSamples": "Not enough recorded tap-hold presses yet to diagnose this term.",
+          "noTapMass": "Every recorded press on these keys has already resolved as a hold at this term, so there's no tap-side data yet to compare it against.",
+          "bucketResolution": "Your Tapping Term falls in the same measured bucket as your typical tap length, so this data can't tell which side of it your taps actually land on."
+        },
+        "ok": "Your Tapping Term looks well matched to how you type.",
+        "canLower": "Based on your typing, you could try lowering this to ~{{value}} ms.",
+        "nearTerm": "Long taps and fast holds are hard to tell apart at this Tapping Term — the number alone can't separate them here."
+      },
+      "reportedHint": "You can change this from the editor's {{tab}} tab → {{button}}.",
+      "unreportedNotice": "This firmware doesn't report Tapping Term through QMK Settings, so this diagnosis assumes the QMK default of {{default}} ms. Changing it requires rebuilding the firmware.",
+      "guidance": "Connect this keyboard to read its Tapping Term and run this diagnosis."
     },
     "activity": {
       "tableLabel": "Hour × day-of-week activity",
@@ -1464,6 +1494,7 @@
         "timeSeries": "Time series",
         "distribution": "Distribution"
       },
+      "intervalDistributionSection": "Section",
       "wpmViewMode": "View",
       "wpmViewModeOption": {
         "timeSeries": "Time series",

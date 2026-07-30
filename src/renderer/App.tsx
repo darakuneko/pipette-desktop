@@ -43,6 +43,7 @@ import type { AnalyticsOrigin, KeymapApplyResult } from './components/editors/ke
 import { useKeymapApplyPrompt } from './hooks/useKeymapApplyPrompt'
 import type { KeymapRewriteTable } from '../shared/keymap/keymap-apply'
 import { AnalyzePage } from './components/analyze/AnalyzePage'
+import type { ConnectedTappingTerm } from './components/analyze/analyze-types'
 import { buildKeymapSnapshot } from './components/analyze/keymap-snapshot-builder'
 import { LayoutStoreContent } from './components/editors/LayoutStoreModal'
 import { IMPORT_BTN } from './components/editors/layout-store-types'
@@ -52,7 +53,7 @@ import { decodeLayoutOptions } from '../shared/kle/layout-options'
 import { ZOOM_FACTOR_DEFAULT } from '../shared/types/app-config'
 import { generateKeymapC } from '../shared/keymap-export'
 import { generateKeymapPdf } from '../shared/pdf-export'
-import { resolveTappingTermMs } from '../shared/qmk-settings-tapping-term'
+import { resolveConnectedTappingTerm, resolveTappingTerm } from '../shared/qmk-settings-tapping-term'
 import {
   serialize as serializeKeycode,
   serializeForCExport,
@@ -334,6 +335,24 @@ export function App() {
   // Where the user opened Analyze from, so Back returns there: the compact
   // Typing View or the full-screen Typing Test.
   const analyticsOriginRef = useRef<AnalyticsOrigin>('typingView')
+
+  // Resolved once here and reused both for KeymapEditor's `tappingTermMs`
+  // prop below and for `connectedTappingTerm` — a single source so the
+  // two can't read a different `reported` rule from each other.
+  const tappingTerm = useMemo(
+    () => resolveTappingTerm(keyboard.qmkSettingsValues),
+    [keyboard.qmkSettingsValues],
+  )
+  // TAPPING_TERM of the physically connected keyboard, threaded down to
+  // the Analyze page's TappingTermCard (AnalyzePane matches this
+  // against its own selected keyboard — see AnalyzePaneProps). The
+  // live-connection / file-backed gating is tested directly on
+  // `resolveConnectedTappingTerm` (see its doc comment) rather than
+  // here — `keyboard.uid` alone would lag behind an auto-disconnect.
+  const connectedTappingTerm: ConnectedTappingTerm | null = useMemo(
+    () => resolveConnectedTappingTerm(!!device.connectedDevice, device.isPipetteFile, keyboard.uid, tappingTerm),
+    [device.connectedDevice, device.isPipetteFile, keyboard.uid, tappingTerm],
+  )
 
   // Exit view-only mode: hide content → wait for paint → resize → show editor
   const exitViewOnlyMode = useCallback(() => {
@@ -866,6 +885,7 @@ export function App() {
           <AnalyzePage
             initialUid={keyboard.uid && keyboard.uid !== EMPTY_UID ? keyboard.uid : undefined}
             onBack={handleAnalyticsBack}
+            connectedTappingTerm={connectedTappingTerm}
           />
         ) : (
         <div className={`flex min-h-0 flex-1 flex-col ${editorUI.typingTestMode && devicePrefs.typingTestViewOnly ? 'overflow-hidden p-0' : 'overflow-auto p-4'}`} data-testid="editor-content" style={viewExitTransition ? { display: 'none' } : undefined}>
@@ -918,7 +938,7 @@ export function App() {
             qmkSettingsSet={editorUI.hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsSet : api.qmkSettingsSet) : undefined}
             qmkSettingsReset={editorUI.hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsReset : api.qmkSettingsReset) : undefined}
             onSettingsUpdate={editorUI.hasAnySettings ? keyboard.updateQmkSettingsValue : undefined}
-            tappingTermMs={resolveTappingTermMs(keyboard.qmkSettingsValues)}
+            tappingTermMs={tappingTerm.termMs}
             autoAdvance={devicePrefs.autoAdvance}
             onAutoAdvanceChange={devicePrefs.setAutoAdvance}
             viewMatrix={devicePrefs.viewMatrix}

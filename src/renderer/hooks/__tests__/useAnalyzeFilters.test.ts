@@ -305,6 +305,61 @@ describe('useAnalyzeFilters', () => {
     expect(withoutGram.current.filters.bigrams.gram).toBe(2)
   })
 
+  it('defaults interval.distributionSection to interval and persists it through setInterval', async () => {
+    const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
+    await waitFor(() => expect(result.current.ready).toBe(true))
+    expect(result.current.filters.interval.distributionSection).toBe('interval')
+    patchSpy.mockClear()
+    getSpy.mockClear().mockResolvedValue(null)
+
+    act(() => { result.current.setInterval({ distributionSection: 'tappingTerm' }) })
+    act(() => { vi.advanceTimersByTime(300) })
+    await flushMicrotasks()
+    await flushMicrotasks()
+
+    expect(patchSpy).toHaveBeenCalledTimes(1)
+    expect(patchSpy.mock.calls[0][1].analyze?.filters?.interval?.distributionSection).toBe('tappingTerm')
+    expect(result.current.filters.interval.distributionSection).toBe('tappingTerm')
+    // Sibling defaults must survive the partial patch.
+    expect(result.current.filters.interval.viewMode).toBe(DEFAULT_ANALYZE_FILTERS.interval.viewMode)
+  })
+
+  it('restores a persisted distributionSection on mount, and normalizes an absent one to interval', async () => {
+    getSpy.mockResolvedValueOnce({
+      _rev: 1,
+      keyboardLayout: 'qwerty',
+      autoAdvance: true,
+      layerNames: [],
+      analyze: {
+        filters: {
+          interval: { viewMode: 'distribution', distributionSection: 'duration' },
+        },
+      },
+    })
+    const { result: withSection } = renderHook(() => useAnalyzeFilters('uid-a'))
+    await waitFor(() => expect(withSection.current.ready).toBe(true))
+    expect(withSection.current.filters.interval.distributionSection).toBe('duration')
+
+    // Settings persisted before this field existed never wrote
+    // `distributionSection` at all — absence must normalize to
+    // 'interval', not `undefined`, matching every other optional field
+    // on this shape.
+    getSpy.mockResolvedValueOnce({
+      _rev: 1,
+      keyboardLayout: 'qwerty',
+      autoAdvance: true,
+      layerNames: [],
+      analyze: {
+        filters: {
+          interval: { viewMode: 'distribution' },
+        },
+      },
+    })
+    const { result: withoutSection } = renderHook(() => useAnalyzeFilters('uid-b'))
+    await waitFor(() => expect(withoutSection.current.ready).toBe(true))
+    expect(withoutSection.current.filters.interval.distributionSection).toBe('interval')
+  })
+
   it('defaults filterDimension to app', async () => {
     const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
     await waitFor(() => expect(result.current.ready).toBe(true))

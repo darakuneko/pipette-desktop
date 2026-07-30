@@ -4,26 +4,86 @@
 // value used by typing tests before we had the configurator — whenever
 // the keyboard didn't expose the setting or the payload is malformed.
 
+import { EMPTY_UID } from './constants/protocol'
+
 /** QSID for TAPPING_TERM in QMK settings (see qmk-settings-defs.json). */
 export const QSID_TAPPING_TERM = 7
 
 /** QMK's own default when TAPPING_TERM is not configured. */
 export const DEFAULT_TAPPING_TERM_MS = 200
 
-/** Resolve TAPPING_TERM (ms) from the keyboard's cached QMK settings.
- * Pass the `qmkSettingsValues` record produced by useKeyboardReload (or
- * `undefined` for keyboards without QMK settings support). */
-export function resolveTappingTermMs(
+export interface ResolvedTappingTerm {
+  termMs: number
+  /** Whether the keyboard's own QMK settings payload actually supplied
+   * this value — false whenever `termMs` fell back to the QMK default,
+   * for any reason (key absent, malformed payload, or a legal-but-
+   * unusable zero). A caller that needs to tell a keyboard's own 200ms
+   * apart from an assumed 200ms default reads this, not just `termMs`. */
+  reported: boolean
+}
+
+/** Resolve TAPPING_TERM from the keyboard's cached QMK settings. Pass
+ * the `qmkSettingsValues` record produced by useKeyboardReload (or
+ * `undefined` for keyboards without QMK settings support). `reported`
+ * uses the exact same validity rule `termMs` falls back under — a
+ * malformed or zero payload is `reported: false`, matching the value
+ * it produces (the QMK default), not just "was the key present". */
+export function resolveTappingTerm(
   qmkSettingsValues: Record<string, number[]> | undefined,
-): number {
-  if (!qmkSettingsValues) return DEFAULT_TAPPING_TERM_MS
-  const bytes = qmkSettingsValues[String(QSID_TAPPING_TERM)]
-  if (!bytes || bytes.length < 2) return DEFAULT_TAPPING_TERM_MS
+): ResolvedTappingTerm {
+  const bytes = qmkSettingsValues?.[String(QSID_TAPPING_TERM)]
+  if (!bytes || bytes.length < 2) return { termMs: DEFAULT_TAPPING_TERM_MS, reported: false }
   // QMK settings are little-endian; TAPPING_TERM is width=2.
   const value = (bytes[0] | (bytes[1] << 8)) & 0xFFFF
   // A zero is technically legal in QMK but reduces to "tap never succeeds",
   // which would flag every press as a hold. Treat it as "not configured".
-  return value > 0 ? value : DEFAULT_TAPPING_TERM_MS
+  if (value <= 0) return { termMs: DEFAULT_TAPPING_TERM_MS, reported: false }
+  return { termMs: value, reported: true }
+}
+
+/** Thin wrapper over `resolveTappingTerm` for callers that only need
+ * the millisecond value. */
+export function resolveTappingTermMs(
+  qmkSettingsValues: Record<string, number[]> | undefined,
+): number {
+  return resolveTappingTerm(qmkSettingsValues).termMs
+}
+
+/** `resolveTappingTerm`'s result plus which keyboard it belongs to —
+ * threaded from App.tsx down through AnalyzePage / TypingAnalyticsView
+ * / AnalyzePane to TappingTermCard, which only shows a diagnosis when
+ * `uid` matches the pane's own selected keyboard. Re-exported from
+ * `analyze-types.ts` for renderer call sites. */
+export interface ConnectedTappingTerm extends ResolvedTappingTerm {
+  uid: string
+}
+
+/** Gates `{uid, ...tappingTerm}` behind an actual LIVE connection,
+ * returning `null` whenever there's nothing trustworthy to diagnose
+ * against:
+ *
+ * - `hasConnectedDevice` false — no keyboard is physically connected
+ *   right now. `keyboard.uid` alone can't stand in for this: it lags
+ *   behind an auto-disconnect (unplug), so it can still read as a real
+ *   uid for a keyboard that's no longer there. App.tsx passes
+ *   `!!device.connectedDevice` (see useDeviceConnection's
+ *   `handleDisconnect` / `disconnectDevice`, both of which null it
+ *   synchronously on disconnect).
+ * - `isPipetteFile` true — a `.pipette` file loaded for viewing, not a
+ *   live device. Its `qmkSettingsValues` reflect whatever the file
+ *   says, not necessarily what's actually flashed to real firmware, so
+ *   the honest answer is the guidance state, not a diagnosis against
+ *   an unverifiable value.
+ * - `uid` missing or still `EMPTY_UID` — keyboard not loaded yet. */
+export function resolveConnectedTappingTerm(
+  hasConnectedDevice: boolean,
+  isPipetteFile: boolean,
+  uid: string | undefined,
+  tappingTerm: ResolvedTappingTerm,
+): ConnectedTappingTerm | null {
+  if (!hasConnectedDevice || isPipetteFile) return null
+  if (!uid || uid === EMPTY_UID) return null
+  return { uid, ...tappingTerm }
 }
 
 /** Hard ceiling (ms) on how long the renderer's typing-analytics queue

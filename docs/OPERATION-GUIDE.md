@@ -343,7 +343,7 @@ The Interval tab visualizes the time between consecutive keystrokes, either as p
 
   ![Analyze — Interval Time Series](screenshots/analyze-interval-time-series.png)
 
-- **Distribution** — Bar chart of nine fixed bins (`<50ms`, `50-100ms`, `100-200ms`, `200-500ms`, `500ms-1s`, `1-2s`, `2-5s`, `5-10s`, `>10s`). Bars are colored by band: **Fast** (green, <200ms), **Normal** (blue, 200–500ms), **Slow** (orange, 500ms–2s), **Pause** (red, ≥2s). The **Device** filter is hidden in Distribution mode because bins are always computed from this device alone
+- **Distribution** — a **Section** select appears in the controls row, right after View: **Interval distribution**, **Keypress duration**, or **Tapping Term diagnosis** (each described below). Only the picked section renders, instead of stacking all three. The **Device** filter is hidden in this mode because bins are always computed from this device alone
 
   ![Analyze — Interval Distribution](screenshots/analyze-interval-distribution.png)
 
@@ -362,26 +362,45 @@ Same options as WPM.
 **Summary cards**
 
 - **Time series** — Total keystrokes, Active typing time, Weighted median interval, Shortest interval (per min), Longest interval (per min)
-- **Distribution** — Total keystrokes, Median interval, Fast (<200ms) share, Normal (200–500ms) share, Slow (500ms–2s) share, Pause (≥2s) share, Longest interval (per min), Longest session
+- **Interval distribution** — Total keystrokes, Median interval, Fast (<200ms) share, Normal (200–500ms) share, Slow (500ms–2s) share, Pause (≥2s) share, Longest interval (per min), Longest session
 
 **Observed rollover rate** (Time series only)
 
 Below the percentile chart, a second subsection reports how often you pressed a key while the previous one was still held down — commonly called rollover, or n-key rollover.
 
-- **Stat card** — "Observed rollover rate" shows the share of sampled key-pairs where the previous key was still down. Its caption reports the effective sampling period (median p50 / worst-case p95): the polling cadence that sets a floor on how short an overlap can be detected. Overlaps shorter than that period simply aren't observed
-- **Trend chart** — the same rate bucketed over the range on a fixed 0–100% Y axis. A bucket with no observed-overlap data shows as a gap in the line rather than a false 0%
+- **Trend chart** — the rate bucketed over the range on a fixed 0–100% Y axis. A bucket with no observed-overlap data shows as a gap in the line rather than a false 0%
 - **Population avg** — same checkbox as the WPM/Interval reference line above (see WPM tab); draws a dashed reference line at the population-average rollover rate when on
 - Because the underlying sampling can only detect overlaps at least as long as the polling period, the figure is a **structural undercount**. A persistent note under the chart reminds you that sitting below the population-average line does not mean you type slower — it more often reflects the sampling period than your technique
+- **Stat card** — "Observed rollover rate" shows the share of sampled key-pairs where the previous key was still down. Its caption reports the effective sampling period (median p50 / worst-case p95): the polling cadence that sets a floor on how short an overlap can be detected. Overlaps shorter than that period simply aren't observed
+
+Distribution mode's body is driven by the **Section** select named above, showing exactly one of the sections below at a time. The **Tapping Term diagnosis** option only appears when the current keymap has at least one Layer-Tap / Mod-Tap / Swap-Hands-Tap key, and picking a section that later becomes unavailable (e.g. switching to a keyboard without one) falls back to **Interval distribution**. The pick is remembered per keyboard, same persistence as this tab's other filters.
+
+**Interval distribution** (Distribution only)
+
+Bar chart of nine fixed bins (`<50ms`, `50-100ms`, `100-200ms`, `200-500ms`, `500ms-1s`, `1-2s`, `2-5s`, `5-10s`, `>10s`). Bars are colored by band: **Fast** (green, <200ms), **Normal** (blue, 200–500ms), **Slow** (orange, 500ms–2s), **Pause** (red, ≥2s). This is the default Distribution section, shown in the screenshot above.
 
 **Keypress duration** (Distribution only)
 
-Below the distribution histogram, a second subsection breaks down how long you hold each key down — press to release — independent of the interval-between-keys metric above it.
+Breaks down how long you hold each key down — press to release — independent of the interval-between-keys metric above.
 
 - **Histogram** — a bar chart of eight fixed buckets (`<50`, `50–79`, `80–109`, `110–139`, `140–179`, `180–249`, `250–399`, `≥400 ms`), tighter than the interval bins above since keypress durations cluster in a much narrower range
 - **Stat cards** — Mean duration, SD, Samples. The Mean card's caption always shows the population-average duration alongside a neutral position label (below / average / above); unlike the rollover section's reference line, this comparison has no sampling bias and is shown unconditionally — clustering close to "average" is itself the finding this metric surfaces
 - **Empty state** — "No keypress-duration data in this range." Durations are only recorded while typing in matrix mode with the keyboard unlocked, so ranges predating that capture (or with recording off) show no data — the message doesn't try to distinguish the two, since they're indistinguishable from the recorded data alone
 
-The keypress-duration section is included in the Distribution screenshot above.
+  ![Analyze — Interval Keypress Duration](screenshots/analyze-interval-duration.png)
+
+**Tapping Term diagnosis** (Distribution only, tap-hold keys only)
+
+Checks whether the connected keyboard's Tapping Term (the tap/hold decision window used by Layer-Tap, Mod-Tap and Swap-Hands-Tap keys) fits how you actually type. It's built entirely from the keypress-duration data above, split at the current Tapping Term, so the **Section** select only offers this option when the keymap on screen has at least one Layer-Tap / Mod-Tap / Swap-Hands-Tap key — a keymap with none omits it entirely.
+
+- **Current / Assumed term**, **Observed tap p95** (shown as a range, since the underlying histogram buckets can only bound a percentile, not pin it to one millisecond), **Samples**, and **Recorded tap / hold** (the press counts recorded for these keys — classified against whatever term was active when each press happened, not necessarily the current one, so this row is shown for context only and never drives the diagnosis)
+- One of four findings: the term looks well matched; a candidate lower value based on your own typing (never a guarantee — nothing here writes it back for you); "long taps and fast holds are hard to tell apart at this term" (mass sits close enough to the term on either side that the two can't be told apart); or "not enough data yet" — which covers three distinct causes rather than one generic message: too few tap-hold presses recorded so far, every recorded press on these keys already resolving as a hold at the current term (nothing to compare a tap length against), or the typical tap length happening to fall in the same measured bucket as the term itself, so the data can't tell which side of it your taps actually land on
+- **Connection states** — with the keyboard connected and reporting its Tapping Term, the card shows the live value plus a pointer to where to change it (the editor's **Tap-Hold / Tap Dance** tab → **Tap-Hold**). If the firmware doesn't report Tapping Term through QMK Settings at all, the diagnosis runs against the assumed QMK default (200ms) instead, with a note that changing it requires rebuilding the firmware. Without a matching connected keyboard, the card shows a prompt to connect one instead of a diagnosis
+- There is no button to apply a suggested value — every suggestion here is a read-only observation about your own recorded data, not a setting Pipette will write for you
+
+  ![Analyze — Interval Tapping Term Diagnosis](screenshots/analyze-interval-tapping-term.png)
+
+  This screenshot happens to show the connect-a-keyboard prompt rather than a live diagnosis, since Analyze can be opened straight from the device selection screen, before any keyboard is connected — the card's other two states look the same as described above, just with the prompt replaced by the stat cards and the finding.
 
 #### Activity
 

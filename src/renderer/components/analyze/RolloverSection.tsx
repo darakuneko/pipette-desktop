@@ -130,11 +130,6 @@ export function RolloverSection({ uid, range, deviceScopes, appScopes, typingTes
   return (
     <section className="flex flex-col gap-2 border-t border-edge pt-3" data-testid="analyze-rollover-section">
       <h3 className="text-sm font-semibold text-content">{t('analyze.rollover.sectionTitle')}</h3>
-      <AnalyzeStatGrid
-        items={statItems}
-        ariaLabelKey="analyze.rollover.ariaLabel"
-        testId="analyze-rollover-summary"
-      />
       {rolloverRows.length === 0 ? (
         <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-rollover-empty">
           {t('analyze.noData')}
@@ -186,12 +181,21 @@ export function RolloverSection({ uid, range, deviceScopes, appScopes, typingTes
             </ResponsiveContainer>
           </div>
           {showBenchmark && (
+            // Kept directly under the chart (not next to the stat card
+            // below) — the note explains how to read the reference line
+            // drawn on THIS chart, so it belongs with the chart/
+            // reference-line context rather than with the summary number.
             <p className="text-2xs text-content-muted" data-testid="analyze-rollover-under-bias-note">
               {t('analyze.rollover.underBiasNote')}
             </p>
           )}
         </>
       )}
+      <AnalyzeStatGrid
+        items={statItems}
+        ariaLabelKey="analyze.rollover.ariaLabel"
+        testId="analyze-rollover-summary"
+      />
     </section>
   )
 }

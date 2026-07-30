@@ -200,6 +200,23 @@ describe('RolloverSection', () => {
     expect(screen.queryByTestId('analyze-rollover-under-bias-note')).toBeNull()
   })
 
+  // Regression guard: the chart used to render above the stat card,
+  // the only section on this tab that did — every sibling display here
+  // (chart above numbers) is the other way around. Pin chart-then-stat
+  // order so a future edit can't silently flip it back.
+  it('renders the chart above the stat card, matching every other section\'s chart-then-numbers order', async () => {
+    rolloverFetchSpy.mockResolvedValue([{ minuteTs: 0, oc: 1, on: 2 }])
+    renderSection()
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-rollover-chart')).toBeTruthy()
+    })
+    const chart = screen.getByTestId('analyze-rollover-chart')
+    const summary = screen.getByTestId('analyze-rollover-summary')
+    // DOCUMENT_POSITION_FOLLOWING (4) set on `chart` relative to
+    // `summary` means chart comes first in document order.
+    expect(chart.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('bucketizes the series in percent, filling every bucket in range with a null gap where unobserved', async () => {
     // Range is [0, 3*MINUTE) at 1-min granularity -> 3 buckets. Only
     // minute 0 has data; the other two must come back null (a gap in

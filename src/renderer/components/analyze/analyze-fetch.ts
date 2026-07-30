@@ -39,17 +39,30 @@ export function listDailyForScope(
   return window.vialAPI.typingAnalyticsListItems(uid, appScopes, typingTestScopes, runIdScopes)
 }
 
-// In-flight de-dupe for `listMinuteStatsForScope`. IntervalChart and
-// RolloverSection mount together with byte-identical filter args and
-// both call this, which used to fire two concurrent IPC round trips
-// (and two synchronous DB aggregates) for the same rows — with zero
-// coupling between the two components, since neither knows the other
-// exists. Keyed by the full argument tuple; the entry is deleted the
-// instant its promise settles (success or failure), so this is
-// deliberately NOT a result cache — there is no staleness window. A
-// call made after the in-flight one has already settled always misses
-// the map and triggers a fresh fetch, exactly as if de-dupe didn't
-// exist; only genuinely concurrent callers ever share a promise.
+/** Generic in-flight de-dupe: concurrent callers with the same `key`
+ * share one underlying `request()` promise instead of each firing their
+ * own IPC round trip (and, main-side, their own synchronous DB
+ * aggregate) for what turns out to be identical rows. Keyed by
+ * whatever the caller considers "identical" (typically
+ * `JSON.stringify` over the full argument tuple); the entry is deleted
+ * the instant its promise settles (success or failure), so this is
+ * deliberately NOT a result cache — there is no staleness window. A
+ * call made after the in-flight one has already settled always misses
+ * `store` and triggers a fresh `request()`, exactly as if de-dupe
+ * didn't exist; only genuinely concurrent callers ever share a
+ * promise. One `store` per fetch — sharing a single map across
+ * unrelated fetches would risk a key collision between two functions
+ * that happen to serialize the same argument shapes. */
+function dedupeInFlight<T>(store: Map<string, Promise<T>>, key: string, request: () => Promise<T>): Promise<T> {
+  const inFlight = store.get(key)
+  if (inFlight) return inFlight
+  const deduped = request().finally(() => { store.delete(key) })
+  store.set(key, deduped)
+  return deduped
+}
+
+// IntervalChart and RolloverSection mount together with byte-identical
+// filter args and both call this.
 const inFlightMinuteStats = new Map<string, Promise<TypingMinuteStatsRow[]>>()
 
 export function listMinuteStatsForScope(
@@ -62,17 +75,12 @@ export function listMinuteStatsForScope(
   runIdScopes: string[] = [],
 ): Promise<TypingMinuteStatsRow[]> {
   const key = JSON.stringify([uid, scope, fromMs, toMs, appScopes, typingTestScopes, runIdScopes])
-  const inFlight = inFlightMinuteStats.get(key)
-  if (inFlight) return inFlight
-
-  const request = isHashScope(scope)
-    ? window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, scope.machineHash, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
-    : isOwnScope(scope)
-      ? window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
-      : window.vialAPI.typingAnalyticsListMinuteStats(uid, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
-  const deduped = request.finally(() => { inFlightMinuteStats.delete(key) })
-  inFlightMinuteStats.set(key, deduped)
-  return deduped
+  return dedupeInFlight(inFlightMinuteStats, key, () =>
+    isHashScope(scope)
+      ? window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, scope.machineHash, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
+      : isOwnScope(scope)
+        ? window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
+        : window.vialAPI.typingAnalyticsListMinuteStats(uid, fromMs, toMs, appScopes, typingTestScopes, runIdScopes))
 }
 
 export function listBksMinuteForScope(
@@ -89,6 +97,16 @@ export function listBksMinuteForScope(
   return window.vialAPI.typingAnalyticsListBksMinute(uid, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
 }
 
+// Split View renders two independent AnalyzePanes, each with its own
+// DurationSection/TappingTermCard pair; picking the same keyboard,
+// range and scope in both (a very ordinary thing to do when comparing
+// "this range vs itself" on two keyboards, or just re-opening the same
+// keyboard in both panes) fires this with byte-identical args from
+// both panes at once. StrictMode's dev-only double-invoke of effects
+// is the same shape on a single pane. Same de-dupe as
+// `listMinuteStatsForScope` / `fetchDurationCellsForRange`.
+const inFlightMatrixCells = new Map<string, Promise<TypingMatrixCellRow[]>>()
+
 export function listMatrixCellsForScope(
   uid: string,
   scope: DeviceScope,
@@ -98,9 +116,13 @@ export function listMatrixCellsForScope(
   typingTestScopes: string[] = [],
   runIdScopes: string[] = [],
 ): Promise<TypingMatrixCellRow[]> {
-  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListMatrixCellsForHash(uid, scope.machineHash, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
-  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListMatrixCellsLocal(uid, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
-  return window.vialAPI.typingAnalyticsListMatrixCells(uid, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
+  const key = JSON.stringify([uid, scope, fromMs, toMs, appScopes, typingTestScopes, runIdScopes])
+  return dedupeInFlight(inFlightMatrixCells, key, () =>
+    isHashScope(scope)
+      ? window.vialAPI.typingAnalyticsListMatrixCellsForHash(uid, scope.machineHash, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
+      : isOwnScope(scope)
+        ? window.vialAPI.typingAnalyticsListMatrixCellsLocal(uid, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
+        : window.vialAPI.typingAnalyticsListMatrixCells(uid, fromMs, toMs, appScopes, typingTestScopes, runIdScopes))
 }
 
 /** Per-(localDay, layer, row, col) totals for the Analyze Ergonomic
@@ -200,11 +222,24 @@ export function fetchRolloverMinutesForRange(
   return window.vialAPI.typingAnalyticsListRolloverMinutes(uid, scope, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
 }
 
+// DurationSection and TappingTermCard mount under the same
+// distribution-mode gate, but their first fetch isn't actually
+// concurrent — TappingTermCard also waits on the snapshot (an
+// independent, later-arriving fetch) before it calls this at all. The
+// de-dupe instead pays off once both are already mounted and loaded:
+// any later range/filter change both react to together (plus the same
+// split-view / StrictMode double-invoke shapes `listMatrixCellsForScope`
+// documents above) still fires this with byte-identical args from two
+// call sites at once.
+const inFlightDurationCells = new Map<string, Promise<TypingDurationCell[]>>()
+
 /** Per-(row,col,layer) keypress-duration fetch for the Analyze duration
- * distribution chart and the Heatmap duration mode. Single-variant
- * IPC, same reasoning as {@link fetchRolloverMinutesForRange} — the
- * main-side handler resolves `DeviceScope` itself and folds the raw
- * per-minute rows into one total per cell before returning. */
+ * distribution chart, the Heatmap duration mode, and the TAPPING_TERM
+ * advisor. Single-variant IPC, same reasoning as
+ * {@link fetchRolloverMinutesForRange} — the main-side handler resolves
+ * `DeviceScope` itself and folds the raw per-minute rows into one total
+ * per cell before returning. De-duped the same way as
+ * `listMinuteStatsForScope` / `listMatrixCellsForScope`. */
 export function fetchDurationCellsForRange(
   uid: string,
   scope: DeviceScope,
@@ -214,7 +249,9 @@ export function fetchDurationCellsForRange(
   typingTestScopes: string[] = [],
   runIdScopes: string[] = [],
 ): Promise<TypingDurationCell[]> {
-  return window.vialAPI.typingAnalyticsListDurationCells(uid, scope, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
+  const key = JSON.stringify([uid, scope, fromMs, toMs, appScopes, typingTestScopes, runIdScopes])
+  return dedupeInFlight(inFlightDurationCells, key, () =>
+    window.vialAPI.typingAnalyticsListDurationCells(uid, scope, fromMs, toMs, appScopes, typingTestScopes, runIdScopes))
 }
 
 /** Layout Comparison metrics fetch. Single channel; the main-side

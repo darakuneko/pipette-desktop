@@ -106,6 +106,29 @@ describe('DurationSection', () => {
     expect(text).toContain('2')
   })
 
+  // Regression guard: SD and Samples used to render as bare numbers
+  // with no explanation of what they mean (user feedback: "SD is not
+  // understandable without an explanation"). Both now carry a
+  // `descriptionKey`, rendered into a hover tooltip bubble that's
+  // always portaled to `document.body` (opacity-hidden until hover —
+  // see ui/Tooltip.tsx), so the assertion searches the whole document
+  // rather than the stat-grid container, same as RolloverSection's
+  // equivalent test.
+  it('describes SD and Samples in a hover tooltip', async () => {
+    durationFetchSpy.mockResolvedValue([
+      cell({ hist: [1, 0, 0, 0, 0, 0, 0, 0], durationSamples: 1, sum: 80, sumSq: 6_400 }),
+    ])
+    renderSection()
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-duration-summary')).toBeTruthy()
+    })
+    await waitFor(() => {
+      const text = document.body.textContent ?? ''
+      expect(text).toContain('analyze.duration.stat.sdDesc')
+      expect(text).toContain('analyze.duration.stat.samplesDesc')
+    })
+  })
+
   it('shows the population-average subline and a neutral position label unconditionally', async () => {
     durationFetchSpy.mockResolvedValue([
       cell({ hist: [0, 0, 0, 1, 0, 0, 0, 0], durationSamples: 1, sum: 116, sumSq: 116 * 116 }),
@@ -178,5 +201,17 @@ describe('DurationSection', () => {
     renderSection({ deviceScopes: [{ kind: 'hash', machineHash: 'abc123' }] })
     await waitFor(() => expect(durationFetchSpy).toHaveBeenCalledTimes(1))
     expect(durationFetchSpy.mock.calls[0][1]).toBe('own')
+  })
+
+  // This section only ever renders under AnalyzePane's "Section"
+  // filter-row select, which already labels it visually (shared
+  // `sectionTitle` key) — no in-body <h3> here. `aria-label` on the
+  // section keeps the name available to assistive tech even without a
+  // visible heading.
+  it('has no visible section title, but exposes the same name via aria-label', async () => {
+    renderSection()
+    const section = await waitFor(() => screen.getByTestId('analyze-duration-section'))
+    expect(screen.queryByText('analyze.duration.sectionTitle')).toBeNull()
+    expect(section.getAttribute('aria-label')).toBe('analyze.duration.sectionTitle')
   })
 })

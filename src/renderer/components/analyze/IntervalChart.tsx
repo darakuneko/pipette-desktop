@@ -219,8 +219,37 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, typingTestS
       )
     }
     return (
-      <div className="flex h-full w-full flex-col gap-2" data-testid="analyze-interval-distribution">
-        <div className="flex-1 min-h-0">
+      // Unlike the timeSeries branch below, this root deliberately does
+      // NOT use `h-full` / `flex-1 min-h-0` for the chart: distribution
+      // mode has no RolloverSection-style sibling that needs the chart
+      // to cede space (see #328), and DurationSection/TappingTermCard
+      // render below it as separate `shrink-0` siblings in AnalyzePane,
+      // not inside this component. Stretching the chart to fill
+      // whatever height AnalyzePane's flex-1 wrapper happened to
+      // allocate (which varies while those siblings' own async data is
+      // still loading — see AnalyzePane's viewMode-conditional wrapper)
+      // produced an oversized, mostly-empty BarChart plot area that
+      // read as a large void above the summary grid, and — because
+      // AnalyzeStatGrid's "Longest session" card shares a labelKey with
+      // the timeSeries summary and so keeps the same Tooltip instance
+      // across a view-mode switch (see components/ui/Tooltip.tsx) —
+      // also caused that card to visibly shift position across two
+      // reflows as the allocated height changed. A fixed height
+      // (matching DurationSection's own `h-64` convention) keeps the
+      // chart's footprint deterministic regardless of sibling loading
+      // state, eliminating both symptoms at the source.
+      // No visible <h3> here — this branch only ever renders under
+      // AnalyzePane's "Section" filter-row select, which already labels
+      // it (shared `sectionTitle` key), so a second in-body heading
+      // would just repeat it. `aria-label` keeps the name available to
+      // assistive tech (as a named landmark) even without a visible
+      // heading to navigate by.
+      <section
+        className="flex w-full flex-col gap-2"
+        data-testid="analyze-interval-distribution"
+        aria-label={t('analyze.interval.distribution.sectionTitle')}
+      >
+        <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={distributionData} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" />
@@ -260,7 +289,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, typingTestS
             ariaLabelKey="analyze.interval.distribution.summary.label"
           />
         )}
-      </div>
+      </section>
     )
   }
 
@@ -274,6 +303,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, typingTestS
 
   return (
     <div className="flex h-full w-full flex-col gap-2" data-testid="analyze-interval-chart">
+      <h3 className="text-sm font-semibold text-content">{t('analyze.interval.timeSeries.sectionTitle')}</h3>
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
