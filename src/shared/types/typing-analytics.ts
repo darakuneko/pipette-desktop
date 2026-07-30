@@ -487,6 +487,27 @@ export interface TypingRolloverMinuteRow {
   on: number
 }
 
+/** Per-(row,col,layer) keypress-duration totals for the Analyze
+ * duration distribution (Interval tab) and the Heatmap duration mode.
+ * Already folded across every contributing minute on the main side
+ * (see `aggregateMatrixDurationTotals` in bigram-aggregate.ts) — one
+ * row per physical cell that had at least one `matrix-release` sample
+ * in range, not one row per minute. `durationSamples` is the duration
+ * SAMPLE count, explicitly NOT the press count: a keystroke that spans
+ * a minute boundary is counted (as a press) in the minute it was
+ * pressed but (as a duration) in the minute it was released, so the
+ * two can legitimately differ. `hist` follows the shared
+ * DURATION_BUCKET_UPPER_BOUNDS_MS grid (duration-buckets.ts). */
+export interface TypingDurationCell {
+  row: number
+  col: number
+  layer: number
+  durationSamples: number
+  hist: number[]
+  sum: number
+  sumSq: number
+}
+
 /** Phase 1 metrics for the Layout Comparison. Bigram-derived ones
  * (travel distance / SFB) are added in Phase 2. */
 export type LayoutComparisonMetric =

@@ -327,19 +327,66 @@ function recentTailOffsetsMinutes(): number[] {
 // IKI rather than an unrelated number.
 const BUCKET_CENTERS_MS = [30, 80, 125, 175, 250, 400, 750, 1500] as const
 
-/** Derives the sum and sum-of-squares of raw IKI a histogram implies,
- * by weighting each bucket's center by its count — see the module
- * comment above. Lets the bigram/trigram fixtures below carry only
- * `hist` instead of hand-computed `s` / `sq` duplicates. */
-function sumsFromHist(hist: readonly number[]): { s: number; sq: number } {
+/** Derives the sum and sum-of-squares a histogram implies, by weighting
+ * each bucket's `centers` entry by its count — shared by the IKI
+ * bigram/trigram fixtures (`BUCKET_CENTERS_MS`) and the keypress-duration
+ * fixtures (`DURATION_BUCKET_CENTERS_MS` below), so the seeded `s`/`sq`
+ * (or `ds`/`dq`) are always a real derivation of the `hist` they ship
+ * alongside rather than independently-fabricated numbers that could
+ * disagree with it. */
+function sumsFromHist(hist: readonly number[], centers: readonly number[]): { s: number; sq: number } {
   let s = 0
   let sq = 0
   hist.forEach((count, i) => {
-    const center = BUCKET_CENTERS_MS[i]
+    const center = centers[i]
     s += count * center
     sq += count * center * center
   })
   return { s, sq }
+}
+
+// --- Keypress-duration (v8 `dh`/`ds`/`dq`) and rollover (v8 `oc`/`on`) ---
+//
+// Mirrors DURATION_BUCKET_CENTERS_MS in shared/duration-buckets.ts — kept
+// as a local literal (same convention as BUCKET_CENTERS_MS above) rather
+// than importing from src/shared so this e2e helper stays decoupled from
+// the app's module graph (verified: no e2e helper imports from src/
+// today).
+const DURATION_BUCKET_CENTERS_MS = [25, 65, 95, 125, 160, 215, 325, 600] as const
+
+// Fixed-shape duration histogram template (8 buckets), peak at index 3
+// (the 110-139ms bucket — inside the ~90-140ms band real keypress
+// durations cluster around, and close to the CHI 2018 population mean
+// of ~116ms). `buildDurationHist` shifts this template's peak to a
+// per-cell `centerBucket` so different keys can look faster/slower
+// without hand-authoring one histogram array per cell, the same way
+// `distributeByWeights` already turns a total + weight array into a
+// spread — this just picks the weight array from the shifted template.
+const DURATION_HIST_TEMPLATE = [1, 3, 6, 8, 6, 3, 1, 0] as const
+
+function buildDurationHist(totalSamples: number, centerBucket: number): number[] {
+  const shift = centerBucket - 3
+  const weights = new Array(8).fill(0)
+  for (let i = 0; i < 8; i += 1) {
+    const src = i - shift
+    if (src >= 0 && src < DURATION_HIST_TEMPLATE.length) weights[i] = DURATION_HIST_TEMPLATE[src]
+  }
+  return distributeByWeights(totalSamples, weights)
+}
+
+/** Deterministic per-pair rollover fraction: `on` (share of the pair's
+ * completions with a determined overlap) cycles 60/70/80/90% by index,
+ * `oc` (share of `on` that were an actual physical overlap) cycles
+ * 20/30/40% — both varied per pair so the Bigrams "Rollover" column and
+ * the Interval tab's observed-rollover-rate trend show a realistic
+ * spread instead of one flat number. Both fractions are `< 1`, so
+ * rounding can never push `on` above `c` or `oc` above `on`. */
+function onOcForPair(index: number, c: number): { oc: number; on: number } {
+  const onFraction = 0.6 + 0.1 * (index % 4) // 0.6, 0.7, 0.8, 0.9
+  const on = Math.round(c * onFraction)
+  const ocFraction = 0.2 + 0.1 * (index % 3) // 0.2, 0.3, 0.4
+  const oc = Math.round(on * ocFraction)
+  return { oc, on }
 }
 
 // Representative bigram pairs for the Bigrams tab. Histogram bucket
@@ -551,33 +598,49 @@ function buildMinuteRows(
   const rows: unknown[] = []
   let total = 0
 
-  const pushMatrix = (row: number, col: number, layer: number, keycode: number, count: number, tapCount: number, holdCount: number): void => {
+  // `centerBucket` defaults to 2 (the 80-109ms duration bucket) — the
+  // fastest-typical band — so a call site only needs to override it when
+  // it wants a visibly slower key (modifiers, layer-ops, Backspace).
+  // Every non-zero cell gets a duration histogram (see `buildDurationHist`)
+  // derived into `dh`/`ds`/`dq`: the seed doesn't try to distinguish
+  // "no duration data" from "very little", since every seeded press here
+  // is a real (fabricated) keystroke with a real (fabricated) release.
+  const pushMatrix = (row: number, col: number, layer: number, keycode: number, count: number, tapCount: number, holdCount: number, centerBucket = 2): void => {
     if (count <= 0) return
+    const dh = buildDurationHist(count, centerBucket)
+    const durationSamples = dh.reduce((a, b) => a + b, 0)
+    const payload: Record<string, unknown> = {
+      scopeId: DUMMY_TA_SCOPE_ID, minuteTs, row, col, layer, keycode, count, tapCount, holdCount,
+      appName, ...tag,
+    }
+    if (durationSamples > 0) {
+      const { s, sq } = sumsFromHist(dh, DURATION_BUCKET_CENTERS_MS)
+      Object.assign(payload, { dh, ds: s, dq: sq })
+    }
     rows.push({
       id: `matrix|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}|${minuteTs}|${row}|${col}|${layer}`,
       kind: 'matrix-minute',
       updated_at: nowMs,
-      payload: {
-        scopeId: DUMMY_TA_SCOPE_ID, minuteTs, row, col, layer, keycode, count, tapCount, holdCount,
-        appName, ...tag,
-      },
+      payload,
     })
     total += count
   }
 
-  // Bigram-critical alpha cells (top row, cols 0-5 = KC_A-KC_F).
+  // Bigram-critical alpha cells (top row, cols 0-5 = KC_A-KC_F). Centers
+  // alternate 2/3 (80-109ms / 110-139ms) for a little heatmap texture.
   for (let col = 0; col < 6; col += 1) {
-    pushMatrix(1, col, 0, 4 + col, 12 + col, 12 + col, 0)
+    pushMatrix(1, col, 0, 4 + col, 12 + col, 12 + col, 0, 2 + (col % 2))
   }
   // Layer-op keys — feeds MO/TG/TO/OSL (count) and LT1 (holdCount) activations.
   // col 1 is the LT1 key, which only counts as a layer activation when held.
+  // Held a bit longer than plain characters (center bucket 3, ~110-139ms).
   for (let col = 0; col < 5; col += 1) {
     const isLtHold = col === 1
-    pushMatrix(0, col, 0, 0, 3, isLtHold ? 1 : 3, isLtHold ? 2 : 0)
+    pushMatrix(0, col, 0, 0, 3, isLtHold ? 1 : 3, isLtHold ? 2 : 0, 3)
   }
   // Layer 1 / 2 samples so the Keystrokes / Activations views show multi-bar.
-  pushMatrix(2, 3, 1, 7, 5, 5, 0)
-  pushMatrix(2, 5, 2, 9, 2, 2, 0)
+  pushMatrix(2, 3, 1, 7, 5, 5, 0, 3)
+  pushMatrix(2, 5, 2, 9, 2, 2, 0, 4)
 
   // Variable cells make up the rest of the target: Backspace (5%),
   // top-row extras (35% of the remainder), home row (65%).
@@ -587,12 +650,18 @@ function buildMinuteRows(
   const topExtraTotal = Math.round(distributable * 0.35)
   const homeTotal = distributable - topExtraTotal
 
-  pushMatrix(DUMMY_TA_BACKSPACE_POS.row, DUMMY_TA_BACKSPACE_POS.col, 0, DUMMY_TA_BACKSPACE_KEYCODE, bkspCount, bkspCount, 0)
+  // Backspace is a deliberate correction key — held longest (center 4,
+  // ~140-179ms) of anything on the board.
+  pushMatrix(DUMMY_TA_BACKSPACE_POS.row, DUMMY_TA_BACKSPACE_POS.col, 0, DUMMY_TA_BACKSPACE_KEYCODE, bkspCount, bkspCount, 0, 4)
   distributeByWeights(topExtraTotal, TOP_EXTRA_WEIGHTS).forEach((count, i) => {
-    pushMatrix(1, TOP_EXTRA_COLS[i], 0, TOP_EXTRA_KEYCODES[i], count, count, 0)
+    pushMatrix(1, TOP_EXTRA_COLS[i], 0, TOP_EXTRA_KEYCODES[i], count, count, 0, 2)
   })
+  // Home row: the more-used center-finger columns (weight >= 6) read as
+  // faster (center 2, ~80-109ms); the lighter pinky-ish columns read as
+  // slightly slower (center 3, ~110-139ms) — same ergonomic story the
+  // weights already tell for press count.
   distributeByWeights(homeTotal, HOME_ROW_WEIGHTS).forEach((count, i) => {
-    pushMatrix(2, HOME_ROW_COLS[i], 0, HOME_ROW_KEYCODES[i], count, count, 0)
+    pushMatrix(2, HOME_ROW_COLS[i], 0, HOME_ROW_KEYCODES[i], count, count, 0, HOME_ROW_WEIGHTS[i] >= 6 ? 2 : 3)
   })
 
   const avgIntervalMs = 60_000 / Math.max(1, total)
@@ -615,14 +684,21 @@ function buildMinuteRows(
       intervalP50Ms: Math.round(avgIntervalMs * 0.89),
       intervalP75Ms: Math.round(avgIntervalMs * 1.44),
       intervalMaxMs: Math.round(avgIntervalMs * 2.89),
+      // Effective sampling period (matrix poll gap), matching the real
+      // measured range from Task-tm-phase2-capture-duration-overlap's
+      // Step 0 (p50 23-24ms, p95 25-40ms) — varied per minute via
+      // `total` so the Interval tab's rollover caption isn't one flat
+      // number across every bucket.
+      pollP50Ms: 23 + (total % 3),
+      pollP95Ms: 28 + (total % 13),
       appName, ...tag,
     },
   })
 
-  const bigrams: Record<string, { c: number; h: readonly number[]; s: number; sq: number }> = {}
-  for (const pair of DUMMY_TA_BIGRAM_PER_MINUTE) {
-    bigrams[`${pair.prev}_${pair.curr}`] = { c: pair.c, h: pair.hist, ...sumsFromHist(pair.hist) }
-  }
+  const bigrams: Record<string, { c: number; h: readonly number[]; s: number; sq: number; oc: number; on: number }> = {}
+  DUMMY_TA_BIGRAM_PER_MINUTE.forEach((pair, i) => {
+    bigrams[`${pair.prev}_${pair.curr}`] = { c: pair.c, h: pair.hist, ...sumsFromHist(pair.hist, BUCKET_CENTERS_MS), ...onOcForPair(i, pair.c) }
+  })
   rows.push({
     id: `bigram|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}|${minuteTs}`,
     kind: 'bigram-minute',
@@ -632,7 +708,7 @@ function buildMinuteRows(
 
   const trigrams: Record<string, { c: number; h: readonly number[]; s: number; sq: number }> = {}
   for (const triple of DUMMY_TA_TRIGRAM_PER_MINUTE) {
-    trigrams[`${triple.k1}_${triple.k2}_${triple.k3}`] = { c: triple.c, h: triple.hist, ...sumsFromHist(triple.hist) }
+    trigrams[`${triple.k1}_${triple.k2}_${triple.k3}`] = { c: triple.c, h: triple.hist, ...sumsFromHist(triple.hist, BUCKET_CENTERS_MS) }
   }
   rows.push({
     id: `trigram|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}|${minuteTs}`,

@@ -3,7 +3,6 @@
 import { describe, it, expect } from 'vitest'
 import {
   BIGRAM_BUCKET_UPPER_BOUNDS_MS,
-  DURATION_BUCKET_UPPER_BOUNDS_MS,
   bucketizeIki,
   bucketizeDurations,
 } from '../bigram-bucket'
@@ -80,11 +79,8 @@ describe('bucketizeDurations', () => {
     expect(bucketizeDurations([1000, 60_000])).toEqual([0, 0, 0, 0, 0, 0, 0, 2])
   })
 
-  it('exports a boundary array of expected length and shape', () => {
-    expect(DURATION_BUCKET_UPPER_BOUNDS_MS).toHaveLength(BIGRAM_HIST_BUCKETS)
-    expect(DURATION_BUCKET_UPPER_BOUNDS_MS[BIGRAM_HIST_BUCKETS - 1]).toBe(Number.POSITIVE_INFINITY)
-    for (let i = 1; i < DURATION_BUCKET_UPPER_BOUNDS_MS.length; i += 1) {
-      expect(DURATION_BUCKET_UPPER_BOUNDS_MS[i]).toBeGreaterThan(DURATION_BUCKET_UPPER_BOUNDS_MS[i - 1])
-    }
-  })
+  // Grid shape/ordering (length, POSITIVE_INFINITY tail, strictly
+  // ascending) is covered by shared/__tests__/duration-buckets.test.ts,
+  // which owns the grid now that it lives in shared/duration-buckets.ts
+  // — no need to duplicate that assertion against the re-imported value.
 })

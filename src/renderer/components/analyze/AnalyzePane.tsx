@@ -72,6 +72,7 @@ import { generateAnalyzeThumbnail } from './analyze-thumbnail'
 import { formatDateTime } from '../editors/store-modal-shared'
 import { IntervalChart } from './IntervalChart'
 import { RolloverSection } from './RolloverSection'
+import { DurationSection } from './DurationSection'
 import { KeyHeatmapChart } from './KeyHeatmapChart'
 import { LayerUsageChart } from './LayerUsageChart'
 import { SummaryView } from './SummaryView'
@@ -1337,14 +1338,15 @@ export function AnalyzePane({
                   showBenchmark={showBenchmark}
                 />
               ) : analysisTab === 'interval' ? (
-                // Flex column so IntervalChart and RolloverSection share
-                // the tab's height instead of IntervalChart's own
-                // `h-full` root claiming the whole viewport and pushing
-                // the section below the fold. `flex-1 min-h-0` lets the
-                // chart shrink to make room; `shrink-0` keeps the section
-                // at its natural height rather than getting squeezed.
-                // Distribution mode (no RolloverSection) still fills the
-                // column exactly as before — it's the sole flex item.
+                // Flex column so IntervalChart and RolloverSection/
+                // DurationSection share the tab's height instead of
+                // IntervalChart's own `h-full` root claiming the whole
+                // viewport and pushing the section below the fold.
+                // `flex-1 min-h-0` lets the chart shrink to make room;
+                // `shrink-0` keeps the section at its natural height
+                // rather than getting squeezed. Distribution mode swaps
+                // RolloverSection for DurationSection below the chart —
+                // neither mode leaves IntervalChart as the sole flex item.
                 <div className="flex h-full min-h-0 flex-col gap-3">
                   <div className="min-h-0 flex-1">
                     <IntervalChart
@@ -1371,6 +1373,18 @@ export function AnalyzePane({
                         runIdScopes={runIdScopes}
                         granularity={wpmFilter.granularity}
                         showBenchmark={showBenchmark}
+                      />
+                    </div>
+                  )}
+                  {intervalFilter.viewMode === 'distribution' && (
+                    <div className="shrink-0">
+                      <DurationSection
+                        uid={selected.uid}
+                        range={range}
+                        deviceScopes={deviceScopes}
+                        appScopes={appScopes}
+                        typingTestScopes={typingTestScopes}
+                        runIdScopes={runIdScopes}
                       />
                     </div>
                   )}

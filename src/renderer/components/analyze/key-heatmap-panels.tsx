@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Presentational sub-components for the Analyze > Heatmap tab —
-// the per-layer keyboard panel, the Count-mode ranking table, the
-// Speed-mode ranking table, and the Count/Speed mode toggle. Split out
-// of KeyHeatmapChart.tsx so the container component (state, effects,
-// data plumbing) stays under the file-splitting size guideline.
+// Presentational sub-components for the Analyze > Heatmap tab — the
+// per-layer keyboard panel, and the Count/Speed/Duration ranking
+// tables. Split out of KeyHeatmapChart.tsx so the container component
+// (state, effects, data plumbing) stays under the file-splitting size
+// guideline; the mode toggle and toolbar-row controls live alongside
+// in key-heatmap-controls.tsx for the same reason.
 
 import { memo, useMemo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
@@ -12,11 +13,9 @@ import type { TFunction } from 'i18next'
 import type { TypingHeatmapByCell, TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 import type { KeyboardLayout } from '../../../shared/kle/types'
 import { KeyboardWidget } from '../keyboard/KeyboardWidget'
-import { SegmentedToggle } from './SegmentedToggle'
 import { fmtMs } from './analyze-format'
 import type { HeatmapNormalization, RangeMs } from './analyze-types'
 import {
-  HEATMAP_MODES,
   filterCellsByGroup,
   sumAndNormalizeGroupCells,
 } from './key-heatmap-helpers'
@@ -25,12 +24,12 @@ import type {
   KeyGroupFilter,
   LayerKeycodes,
   RankingEntry,
-  SpeedRankingEntry,
 } from './key-heatmap-helpers'
 
-// Stable empty-map reference for Speed mode, where the Count-mode-only
-// cell memos below are skipped entirely — avoids allocating a fresh
-// Map every render just to hand KeyboardWidget "no data".
+// Stable empty-map reference for Speed and Duration mode, where the
+// Count-mode-only cell memos below are skipped entirely — avoids
+// allocating a fresh Map every render just to hand KeyboardWidget
+// "no data".
 const EMPTY_HEATMAP_CELLS = new Map<string, TypingHeatmapCell>()
 
 export interface LayerKeyboardProps {
@@ -39,9 +38,11 @@ export interface LayerKeyboardProps {
   mode: HeatmapMode
   layerCells: Map<number, TypingHeatmapByCell>
   layerKeycodes: Map<number, LayerKeycodes>
-  /** Precomputed Speed-mode fill per position — only meaningful (and
-   * only computed by the parent) when `mode === 'speed'`. */
-  speedFillByPos?: Map<string, string>
+  /** Precomputed Speed/Duration-mode fill per position — only
+   * meaningful (and only computed by the parent) when `mode` is one of
+   * those two; the parent picks which builder fed it (see
+   * KeyHeatmapChart's `fillsByLayer` memo). */
+  keyFillByPos?: Map<string, string>
   layout: KeyboardLayout
   range: RangeMs
   normalization: HeatmapNormalization
@@ -60,7 +61,7 @@ export const LayerKeyboard = memo(function LayerKeyboard({
   mode,
   layerCells,
   layerKeycodes,
-  speedFillByPos,
+  keyFillByPos,
   layout,
   range,
   normalization,
@@ -72,25 +73,28 @@ export const LayerKeyboard = memo(function LayerKeyboard({
   onClick,
   t,
 }: LayerKeyboardProps) {
-  const isSpeed = mode === 'speed'
+  // Both Speed and Duration paint from a single precomputed keyColors
+  // map (`keyFillByPos`) instead of the Count-mode heatmapCells path —
+  // see the memos below.
+  const usesKeyColors = mode === 'speed' || mode === 'duration'
   const layerKc = layerKeycodes.get(layer)
   const keycodes = layerKc?.keycodes ?? new Map<string, string>()
   const labelOverrides = layerKc?.labelOverrides ?? new Map()
   const singletonGroup = useMemo(() => [layer], [layer])
-  // Count-mode-only: Speed mode paints from `speedFillByPos` instead
-  // (via `keyColors` below), so skip summing/filtering/scanning cells
-  // no one reads while the user stays in Speed mode.
+  // Count-mode-only: Speed/Duration mode paints from their own
+  // precomputed fill map instead (via `keyColors` below), so skip
+  // summing/filtering/scanning cells no one reads outside Count mode.
   const groupHeatmapCells = useMemo(
-    () => isSpeed
+    () => usesKeyColors
       ? EMPTY_HEATMAP_CELLS
       : sumAndNormalizeGroupCells(singletonGroup, layerCells, range, normalization),
-    [isSpeed, singletonGroup, layerCells, range, normalization],
+    [usesKeyColors, singletonGroup, layerCells, range, normalization],
   )
   const filteredHeatmapCells = useMemo(
-    () => isSpeed
+    () => usesKeyColors
       ? EMPTY_HEATMAP_CELLS
       : filterCellsByGroup(groupHeatmapCells, keycodes, keyGroupFilter),
-    [isSpeed, groupHeatmapCells, keycodes, keyGroupFilter],
+    [usesKeyColors, groupHeatmapCells, keycodes, keyGroupFilter],
   )
   // A single unified max drives the outer rect colour so masked cells
   // (painted by `hold`) and non-masked cells (painted by `total`) share
@@ -98,7 +102,7 @@ export const LayerKeyboard = memo(function LayerKeyboard({
   // red as a character key at its peak despite having a much smaller
   // absolute count.
   const { heatmapMaxOuter, heatmapMaxTap } = useMemo(() => {
-    if (isSpeed) return { heatmapMaxOuter: 0, heatmapMaxTap: 0 }
+    if (usesKeyColors) return { heatmapMaxOuter: 0, heatmapMaxTap: 0 }
     let outer = 0
     let tap = 0
     for (const cell of filteredHeatmapCells.values()) {
@@ -107,7 +111,7 @@ export const LayerKeyboard = memo(function LayerKeyboard({
       if (cell.tap > tap) tap = cell.tap
     }
     return { heatmapMaxOuter: outer, heatmapMaxTap: tap }
-  }, [isSpeed, filteredHeatmapCells])
+  }, [usesKeyColors, filteredHeatmapCells])
 
   const borderClass = isMergeCandidate
     ? 'border-accent bg-accent/5'
@@ -129,11 +133,11 @@ export const LayerKeyboard = memo(function LayerKeyboard({
         keys={layout.keys}
         keycodes={keycodes}
         labelOverrides={labelOverrides}
-        heatmapCells={isSpeed ? undefined : filteredHeatmapCells}
+        heatmapCells={usesKeyColors ? undefined : filteredHeatmapCells}
         heatmapMaxTotal={heatmapMaxOuter}
         heatmapMaxTap={heatmapMaxTap}
         heatmapMaxHold={heatmapMaxOuter}
-        keyColors={isSpeed ? speedFillByPos : undefined}
+        keyColors={usesKeyColors ? keyFillByPos : undefined}
         highlightedKeys={highlightedCells}
         readOnly
         scale={scale}
@@ -264,48 +268,71 @@ export const RankingTable = memo(function RankingTable({
   )
 })
 
-export interface SpeedRankingTableProps {
-  entries: SpeedRankingEntry[]
+export interface FlatRankingTableProps<E extends { keyLabel: string; count: number }> {
+  entries: E[]
+  /** Pulls the value column's number out of whatever entry shape the
+   * caller has (Speed's `avgIki`, Duration's `avgMs`, ...) — same
+   * accessor-over-adapter-map approach as `normalizeAvgIntensity`. */
+  valueOf: (entry: E) => number
+  /** i18n key for the value column header (e.g. "Avg IKI" / "Avg Duration"). */
+  valueColumnKey: string
+  /** i18n key for the empty-state message. */
+  emptyKey: string
+  /** `data-testid` prefix — the table gets `${testIdPrefix}-ranking`,
+   * the empty state `${testIdPrefix}-empty`. */
+  testIdPrefix: string
 }
 
-const SPEED_GRID = { gridTemplateColumns: '2.5rem minmax(0, 7rem) 6rem 6rem' }
+const FLAT_RANKING_GRID = { gridTemplateColumns: '2.5rem minmax(0, 7rem) 6rem 6rem' }
 
-/** Flat "Key / Avg IKI / Samples" ranking for Speed mode. Unlike
- * `RankingTable`, this isn't scoped to layer groups — the bigram
- * aggregate the ranking is built from carries no layer tag (see
- * `buildSpeedRanking`), so there is exactly one ranking regardless of
- * how many layer panels are selected/bonded above. */
-export const SpeedRankingTable = memo(function SpeedRankingTable({ entries }: SpeedRankingTableProps) {
+/** Flat "Key / <value> / Samples" ranking shared by Speed and Duration
+ * mode — neither is scoped to layer groups the way Count's
+ * `RankingTable` is (Speed's bigram aggregate carries no layer tag at
+ * all; Duration's `buildDurationRanking` already pre-scopes to the
+ * selected layers itself), so both render as one flat list regardless
+ * of how many layer panels are selected/bonded above. Both call sites'
+ * value columns are milliseconds by construction, so `fmtMs` is called
+ * directly here rather than threaded through as a `formatValue` prop.
+ * Wrapped in `memo`, matching the pre-refactor `SpeedRankingTable` this
+ * component generalized (that wrapper was silently dropped by the
+ * extraction). `valueOf` is still an inline closure at every call site
+ * today, so this alone still defeats memo's shallow prop comparison on
+ * every parent render — unlike the removed `formatValue`, dropping it
+ * doesn't fix that; a stable `valueOf` reference at the call sites
+ * would be needed for `memo` to actually skip renders. */
+function FlatRankingTableImpl<E extends { keyLabel: string; count: number }>({
+  entries, valueOf, valueColumnKey, emptyKey, testIdPrefix,
+}: FlatRankingTableProps<E>): JSX.Element {
   const { t } = useTranslation()
   return (
-    <div className="flex min-h-0 w-fit flex-1 flex-col" data-testid="analyze-keyheatmap-speed-ranking">
+    <div className="flex min-h-0 w-fit flex-1 flex-col" data-testid={`${testIdPrefix}-ranking`}>
       <div className="flex min-h-0 flex-1 flex-col overflow-auto">
         <div className="sticky top-0 z-10 bg-surface">
           <div
             className="grid border-b border-edge text-2xs font-semibold uppercase tracking-wider text-content-muted"
-            style={SPEED_GRID}
+            style={FLAT_RANKING_GRID}
           >
             <div />
             <span className="truncate px-2 py-1">{t('analyze.keyHeatmap.ranking.colKey')}</span>
-            <span className="px-2 py-1 text-right">{t('analyze.keyHeatmap.speed.colAvgIki')}</span>
+            <span className="px-2 py-1 text-right">{t(valueColumnKey)}</span>
             <span className="px-2 py-1 text-right">{t('analyze.keyHeatmap.ranking.colCount')}</span>
           </div>
         </div>
         {entries.length === 0 ? (
-          <div className="py-2 text-xs text-content-muted" data-testid="analyze-keyheatmap-speed-empty">
-            {t('analyze.keyHeatmap.speed.empty')}
+          <div className="py-2 text-xs text-content-muted" data-testid={`${testIdPrefix}-empty`}>
+            {t(emptyKey)}
           </div>
         ) : (
           entries.map((entry, rankIdx) => (
             <div
               key={`${entry.keyLabel}-${rankIdx}`}
               className={`grid text-xs ${rankIdx % 2 === 1 ? 'bg-surface-dim/40' : ''}`}
-              style={SPEED_GRID}
+              style={FLAT_RANKING_GRID}
             >
               <span className="px-2 py-1 text-right text-content-muted">{rankIdx + 1}</span>
               <span className="min-w-0 truncate px-2 py-1 font-mono text-content">{entry.keyLabel}</span>
               <span className="px-2 py-1 text-right font-mono text-content-secondary">
-                {fmtMs(entry.avgIki)}
+                {fmtMs(valueOf(entry))}
               </span>
               <span className="px-2 py-1 text-right font-mono text-content-secondary">
                 {entry.count.toLocaleString()}
@@ -316,35 +343,9 @@ export const SpeedRankingTable = memo(function SpeedRankingTable({ entries }: Sp
       </div>
     </div>
   )
-})
-
-const HEATMAP_MODE_LABEL_KEY: Record<HeatmapMode, string> = {
-  count: 'analyze.keyHeatmap.modeToggle.count',
-  speed: 'analyze.keyHeatmap.modeToggle.speed',
 }
 
-export interface HeatmapModeToggleProps {
-  value: HeatmapMode
-  onChange: (next: HeatmapMode) => void
-}
+export const FlatRankingTable = memo(FlatRankingTableImpl) as typeof FlatRankingTableImpl
 
-/** Segmented Count / Speed switch — built from the same `SegmentedToggle`
- * primitive as the Bigrams gram toggle so the two tabs' mode switches
- * read as the same control family. */
-export function HeatmapModeToggle({ value, onChange }: HeatmapModeToggleProps): JSX.Element {
-  const { t } = useTranslation()
-  return (
-    <SegmentedToggle
-      options={HEATMAP_MODES}
-      value={value}
-      onChange={onChange}
-      labelFor={(option) => t(HEATMAP_MODE_LABEL_KEY[option])}
-      ariaLabel={t('analyze.keyHeatmap.modeToggle.ariaLabel')}
-      testId="analyze-keyheatmap-mode-toggle"
-    />
-  )
-}
-
-export function groupOf(groups: number[][], layer: number): number {
-  return groups.findIndex((g) => g.includes(layer))
-}
+// Mode toggle + toolbar-row controls (HeatmapModeToggle, LayerToggleRow,
+// RankingControls) now live in key-heatmap-controls.tsx.

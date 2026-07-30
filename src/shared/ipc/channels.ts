@@ -165,6 +165,14 @@ export const IpcChannels = {
    * passed as a parameter and resolved main-side rather than fanning
    * out to `*Local`/`*ForHash` siblings. */
   TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES: 'typing-analytics:list-rollover-minutes',
+  /** Per-(row,col,layer) keypress-duration totals for the Analyze
+   * duration distribution chart and the Heatmap duration mode.
+   * Single-variant channel, same shape as
+   * TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES — `DeviceScope` is resolved
+   * main-side. Layer filtering happens renderer-side (a `layer` arg
+   * could be added later if per-cell row counts ever warrant server-side
+   * narrowing). */
+  TYPING_ANALYTICS_LIST_DURATION_CELLS: 'typing-analytics:list-duration-cells',
 
   // Typing Test Text Store (renderer → main → renderer)
   TYPING_TEST_TEXT_LIST: 'typing-test-text:list',

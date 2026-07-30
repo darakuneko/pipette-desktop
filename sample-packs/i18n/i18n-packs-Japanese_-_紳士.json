@@ -1,5 +1,5 @@
 {
-  "version": "0.1.47",
+  "version": "0.1.48",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -962,6 +962,28 @@
       },
       "underBiasNote": "この数値は構造上どうしても控えめに出るものであり、真のロールオーバー率ではございません。母集団平均の線を下回っておりましても、タイピングが遅いという意味にはなりません"
     },
+    "duration": {
+      "sectionTitle": "打鍵長",
+      "ariaLabel": "打鍵長の要約",
+      "tooltipLabel": "サンプル数",
+      "empty": "この期間には打鍵長のデータがございません。打鍵長は matrix モードでロック解除中にタイピングした場合にのみ記録されます — この機能の導入前の期間、あるいは記録がオフであった期間には、データがございません",
+      "bin": {
+        "lt50": "<50ms",
+        "50to80": "50-80ms",
+        "80to110": "80-110ms",
+        "110to140": "110-140ms",
+        "140to180": "140-180ms",
+        "180to250": "180-250ms",
+        "250to400": "250-400ms",
+        "gt400": ">400ms"
+      },
+      "stat": {
+        "mean": "平均打鍵長",
+        "sd": "SD",
+        "samples": "サンプル数",
+        "populationAverage": "母集団平均 {{value}} ms"
+      }
+    },
     "activity": {
       "tableLabel": "時間帯 × 曜日の活動量",
       "tableLabelWpm": "時間帯 × 曜日の WPM",
@@ -1208,13 +1230,19 @@
       "modeToggle": {
         "ariaLabel": "熱分布の彩色の型",
         "count": "回数",
-        "speed": "速さ"
+        "speed": "速さ",
+        "duration": "打鍵長"
       },
       "speed": {
         "colAvgIki": "到達 Avg IKI",
         "empty": "この期間の到達速度の記録はまだございません",
         "minSampleNote": "到達回数が {{n}} 回に満たぬ鍵には彩色いたしません",
         "cappedNotice": "頻度上位 {{limit}} 件の組より算出しております — 稀な組は含まれぬこともございます"
+      },
+      "duration": {
+        "colAvgDuration": "平均打鍵長",
+        "empty": "この期間の打鍵長の記録はまだございません",
+        "minSampleNote": "打鍵長サンプルが {{n}} 件に満たぬ鍵には彩色いたしません"
       },
       "ranking": {
         "frequentUsedN": "上位",

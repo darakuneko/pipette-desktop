@@ -4,9 +4,7 @@ import { describe, it, expect } from 'vitest'
 import {
   aggregateMatrixDurationTotals,
   aggregatePairTotals,
-  avgDurationMsFromTotal,
   avgIkiFromHist,
-  durationSdFromTotal,
   observedRolloverRatio,
   percentileFromHist,
   rankBigramsByCount,
@@ -472,40 +470,5 @@ describe('aggregateMatrixDurationTotals', () => {
       durationRow(0, 0, 1, [0, 1, 0, 0, 0, 0, 0, 0], 65, 4_225),
     ])
     expect(map.size).toBe(2)
-  })
-})
-
-describe('avgDurationMsFromTotal / durationSdFromTotal', () => {
-  it('computes the true mean from sum/count, not a histogram estimate', () => {
-    const map = aggregateMatrixDurationTotals([
-      durationRow(0, 0, 0, [1, 1, 0, 0, 0, 0, 0, 0], 130, 8_500, 60_000),
-    ])
-    const e = map.get('0,0,0')!
-    expect(avgDurationMsFromTotal(e)).toBe(65)
-  })
-
-  it('returns null avg for a cell with no duration samples', () => {
-    const map = aggregateMatrixDurationTotals([])
-    map.set('0,0,0', { row: 0, col: 0, layer: 0, count: 0, hist: new Array(8).fill(0), sum: 0, sumSq: 0 })
-    expect(avgDurationMsFromTotal(map.get('0,0,0')!)).toBeNull()
-  })
-
-  it('returns null SD for fewer than 2 samples', () => {
-    const map = aggregateMatrixDurationTotals([
-      durationRow(0, 0, 0, [1, 0, 0, 0, 0, 0, 0, 0], 65, 4_225),
-    ])
-    expect(durationSdFromTotal(map.get('0,0,0')!)).toBeNull()
-  })
-
-  it('computes a real SD from sum/sumSq once there are 2+ samples', () => {
-    // Durations [60, 70, 80]: mean=70, variance=((60-70)^2+(70-70)^2+(80-70)^2)/3=66.67
-    const sum = 60 + 70 + 80
-    const sumSq = 60 ** 2 + 70 ** 2 + 80 ** 2
-    const map = aggregateMatrixDurationTotals([
-      durationRow(0, 0, 0, [1, 1, 1, 0, 0, 0, 0, 0], sum, sumSq),
-    ])
-    const sd = durationSdFromTotal(map.get('0,0,0')!)
-    expect(sd).not.toBeNull()
-    expect(sd!).toBeCloseTo(Math.sqrt(200 / 3), 5)
   })
 })

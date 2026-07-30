@@ -259,7 +259,7 @@ The Summary tab respects the App filter — selecting one or more apps narrows e
 
 #### Heatmap
 
-The Heatmap tab paints per-physical-key data on the keymap layout, one layer at a time. A **Count / Speed** toggle above the keymap panel switches what's painted; Layer and Period filters apply to both modes.
+The Heatmap tab paints per-physical-key data on the keymap layout, one layer at a time. A **Count / Speed / Duration** toggle above the keymap panel switches what's painted; Layer and Period filters apply to all three modes.
 
 **Count mode**
 
@@ -286,12 +286,21 @@ The **Normalize** and **Aggregate** controls disappear in Speed mode (both are c
 
 ![Analyze — Heatmap (speed)](screenshots/analyze-heatmap-speed.png)
 
+**Duration mode**
+
+Duration recolours the same keyboard by average keypress duration — the time between pressing a key and releasing it — using the same per-cell capture the Interval tab's keypress-duration histogram (see below) is built from: cool (blue) keys are held briefly, warm (red) keys are held longer. Unlike Speed mode this data already carries a layer tag, so each layer panel paints from its own recorded cells rather than resolving through a shared keycode. Keys with fewer than 5 duration samples in range stay uncoloured, same threshold and caption convention as Speed mode.
+
+The **Normalize** and **Aggregate** controls disappear in Duration mode (both are count-specific); **Group** and **Top N** still apply. The ranking table's columns switch to **Key**, **Avg Duration**, **Count**, sorted longest-duration-first, scoped to whichever layers are currently selected.
+
+![Analyze — Heatmap (duration)](screenshots/analyze-heatmap-duration.png)
+
 **Empty states**
 
 - **No snapshot** — "No keymap snapshot recorded for this range. Start a record session to capture one."
 - **No layout** — "Layout data not available for this snapshot." The snapshot exists but lacks KLE geometry
 - **No activity** — "No key presses in this range." Ranking table only (Count mode)
 - **No reach-speed data** — "No reach-speed data in this range yet." Ranking table only (Speed mode)
+- **No keypress-duration data** — "No keypress-duration data in this range yet." Ranking table only (Duration mode); durations are only recorded while typing in matrix mode with the keyboard unlocked, so ranges predating that capture (or with recording off) show no data
 
 #### WPM
 
@@ -363,6 +372,16 @@ Below the percentile chart, a second subsection reports how often you pressed a 
 - **Trend chart** — the same rate bucketed over the range on a fixed 0–100% Y axis. A bucket with no observed-overlap data shows as a gap in the line rather than a false 0%
 - **Population avg** — same checkbox as the WPM/Interval reference line above (see WPM tab); draws a dashed reference line at the population-average rollover rate when on
 - Because the underlying sampling can only detect overlaps at least as long as the polling period, the figure is a **structural undercount**. A persistent note under the chart reminds you that sitting below the population-average line does not mean you type slower — it more often reflects the sampling period than your technique
+
+**Keypress duration** (Distribution only)
+
+Below the distribution histogram, a second subsection breaks down how long you hold each key down — press to release — independent of the interval-between-keys metric above it.
+
+- **Histogram** — a bar chart of eight fixed buckets (`<50`, `50–79`, `80–109`, `110–139`, `140–179`, `180–249`, `250–399`, `≥400 ms`), tighter than the interval bins above since keypress durations cluster in a much narrower range
+- **Stat cards** — Mean duration, SD, Samples. The Mean card's caption always shows the population-average duration alongside a neutral position label (below / average / above); unlike the rollover section's reference line, this comparison has no sampling bias and is shown unconditionally — clustering close to "average" is itself the finding this metric surfaces
+- **Empty state** — "No keypress-duration data in this range." Durations are only recorded while typing in matrix mode with the keyboard unlocked, so ranges predating that capture (or with recording off) show no data — the message doesn't try to distinguish the two, since they're indistinguishable from the recorded data alone
+
+The keypress-duration section is included in the Distribution screenshot above.
 
 #### Activity
 
@@ -603,10 +622,10 @@ The **Export** button on the panel header opens a category-pick modal that write
 
 - **Summary** — today / last-7-days overview cards
 - **WPM** — per-bucket WPM time series
-- **Interval** — per-bucket interval percentiles
+- **Interval** — per-bucket interval percentiles. In Distribution mode this also writes a second file: the eight-bucket keypress-duration histogram (`bucket_id`, `upper_bound_ms`, `center_ms`, `count`, `share_percent`), matching the Interval tab's own keypress-duration subsection
 - **Activity** — hour × day-of-week or day-cell counts depending on the View setting
 - **By App** — per-application breakdown
-- **Heatmap** — per-cell press counts (snapshot-bound)
+- **Heatmap** — per-cell press counts (snapshot-bound). Every ranking row also carries `avg_duration_ms` / `duration_samples` columns regardless of which Count/Speed/Duration mode is active on screen — blank when the key has no duration data in range. A masked (tap-hold) key position exports as two rows (hold and tap split), and both repeat the same blended duration values — the recorded data can't be split by tap vs. hold
 - **Ergonomics** — per-finger / per-hand / per-row totals (snapshot-bound)
 - **Bigrams** — Top pairs / Pair interval rows (Count, Avg IKI, SD, plus the Bigram patterns classification as `class` and `word_position` columns, and the per-pair observed rollover rate as `observed_rollover_percent`); Finger IKI has no CSV column. `class` is blank at 3-gram and whenever there's no keymap snapshot for the range; `word_position` is blank only at 3-gram; `observed_rollover_percent` is blank at 3-gram and whenever the pair has no determined-overlap sample in the range. Exports whichever gram size (2-gram or 3-gram) is currently selected in the tab — the id column is named `bigram_id` or `trigram_id` to match
 - **Layer** — per-layer keystroke or activation counts

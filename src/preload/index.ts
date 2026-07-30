@@ -72,6 +72,7 @@ import type {
   TypingMatrixCellDailyRow,
   TypingMinuteStatsRow,
   TypingRolloverMinuteRow,
+  TypingDurationCell,
   TypingSessionRow,
   TypingBksMinuteRow,
   TypingTombstoneResult,
@@ -567,6 +568,23 @@ const vialAPI = {
   ): Promise<TypingRolloverMinuteRow[]> =>
     ipcRenderer.invoke(
       IpcChannels.TYPING_ANALYTICS_LIST_ROLLOVER_MINUTES,
+      uid,
+      scope,
+      sinceMs,
+      untilMs,
+      appScopes,
+      typingTestScopes,
+      runIdScopes,
+    ),
+  typingAnalyticsListDurationCells: (
+    uid: string,
+    scope: DeviceScope,
+    sinceMs: number,
+    untilMs: number,
+    appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = [],
+  ): Promise<TypingDurationCell[]> =>
+    ipcRenderer.invoke(
+      IpcChannels.TYPING_ANALYTICS_LIST_DURATION_CELLS,
       uid,
       scope,
       sinceMs,

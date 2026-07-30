@@ -14,6 +14,7 @@
 
 import type { TFunction } from 'i18next'
 import type {
+  TypingDurationCell,
   TypingHeatmapByCell,
   TypingHeatmapCell,
   TypingKeymapSnapshot,
@@ -65,6 +66,7 @@ async function resolveLayoutLabel(id: string): Promise<string> {
 import { toLocalDate } from './analyze-streak-goal'
 import {
   fetchBigramAggregateForRange,
+  fetchDurationCellsForRange,
   fetchLayoutComparisonForRange,
   fetchMatrixHeatmapAllLayers,
   listBksMinuteForScope,
@@ -84,6 +86,8 @@ import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { buildBksRateBuckets } from './analyze-error-proxy'
 import { buildHourOfDayWpm, computeWpm } from './analyze-wpm'
 import { buildIntervalHistogram } from './analyze-histogram'
+import { sumDurationTotals } from './analyze-duration'
+import { DURATION_BUCKET_CENTERS_MS, DURATION_BUCKET_UPPER_BOUNDS_MS } from '../../../shared/duration-buckets'
 import { buildActivityGrid } from './analyze-activity'
 import { buildSessionHistogram } from './analyze-sessions'
 import {
@@ -97,9 +101,11 @@ import type { FingerType } from '../../../shared/kle/kle-ergonomics'
 import {
   buildGroupRankings,
   buildLayerKeycodes,
+  durationCellKey,
   layoutPositions,
   type LayerKeycodes,
 } from './key-heatmap-helpers'
+import { posKey } from '../../../shared/kle/pos-key'
 import type {
   ActivityMetric,
   DeviceScope,
@@ -125,6 +131,7 @@ const SLUG = {
   wpmTimeOfDay: 'analyze-wpm-time-of-day',
   interval: 'analyze-interval',
   intervalDistribution: 'analyze-interval-distribution',
+  durationDistribution: 'analyze-duration-distribution',
   activityKeystrokes: 'analyze-activity-keystrokes',
   activityWpm: 'analyze-activity-wpm',
   activitySessions: 'analyze-activity-sessions',
@@ -152,6 +159,32 @@ interface ScopeArgs {
 
 // --- Heatmap ranking ---------------------------------------------
 
+/** Folds a ranking entry's `cellsByLayer` (the same per-layer position
+ * set the Count ranking already tracks for hover-highlight) against
+ * the fetched duration cells, keyed via the shared `durationCellKey`
+ * helper — the same key format key-heatmap-helpers.ts's Duration mode
+ * uses, so the two can't silently drift apart. Handles both
+ * aggregateMode `'cell'` (one physical cell per entry) and `'char'`
+ * (several cells folded into one row) identically — summing whatever
+ * cells the entry covers and deriving one mean from the total, rather
+ * than averaging per-cell means. */
+function sumEntryDuration(
+  cellsByLayer: ReadonlyMap<number, ReadonlySet<string>>,
+  durationByCellKey: ReadonlyMap<string, TypingDurationCell>,
+): { avgMs: number | null; samples: number } {
+  let samples = 0
+  let sum = 0
+  for (const [layer, positions] of cellsByLayer) {
+    for (const pos of positions) {
+      const cell = durationByCellKey.get(durationCellKey(layer, pos))
+      if (!cell) continue
+      samples += cell.durationSamples
+      sum += cell.sum
+    }
+  }
+  return { avgMs: samples > 0 ? sum / samples : null, samples }
+}
+
 export async function buildHeatmapCsv(args: ScopeArgs & {
   snapshot: TypingKeymapSnapshot
   heatmap: Required<HeatmapFilters>
@@ -160,15 +193,28 @@ export async function buildHeatmapCsv(args: ScopeArgs & {
   const { uid, range, deviceScope, appScopes = [], typingTestScopes = [], runIdScopes = [], snapshot, heatmap, t } = args
   const { selectedLayers, groups, frequentUsedN, aggregateMode, normalization, keyGroupFilter } = heatmap
 
+  // Per-layer heatmap cells and the duration cells below are
+  // independent fetches (different IPC channels, no shared input), so
+  // they run inside one `Promise.all` rather than the duration fetch
+  // waiting behind the whole per-layer batch.
   const layerCells = new Map<number, TypingHeatmapByCell>()
-  await Promise.all(selectedLayers.map(async (layer) => {
-    try {
-      const cells = await window.vialAPI.typingAnalyticsGetMatrixHeatmapForRange(uid, layer, range.fromMs, range.toMs, deviceScope, appScopes, typingTestScopes, runIdScopes)
-      layerCells.set(layer, cells)
-    } catch {
-      layerCells.set(layer, {})
-    }
-  }))
+  const [, durationCells] = await Promise.all([
+    Promise.all(selectedLayers.map(async (layer) => {
+      try {
+        const cells = await window.vialAPI.typingAnalyticsGetMatrixHeatmapForRange(uid, layer, range.fromMs, range.toMs, deviceScope, appScopes, typingTestScopes, runIdScopes)
+        layerCells.set(layer, cells)
+      } catch {
+        layerCells.set(layer, {})
+      }
+    })),
+    // Duration columns are appended to every ranking row regardless of
+    // the live chart's Count/Speed/Duration mode toggle — same
+    // "count always exported" convention this CSV already follows for
+    // the press-count column. Fetched once (not per layer/group) since
+    // TypingDurationCell already carries its own layer tag.
+    fetchDurationCellsForRange(uid, deviceScope, range.fromMs, range.toMs, appScopes, typingTestScopes, runIdScopes).catch(() => [] as TypingDurationCell[]),
+  ])
+  const durationByCellKey = new Map(durationCells.map((c) => [durationCellKey(c.layer, posKey(c.row, c.col)), c]))
 
   const layerKeycodes = new Map<number, LayerKeycodes>()
   for (const layer of selectedLayers) layerKeycodes.set(layer, buildLayerKeycodes(snapshot, layer))
@@ -188,14 +234,19 @@ export async function buildHeatmapCsv(args: ScopeArgs & {
       : t('analyze.keyHeatmap.layerOptionMulti', { layers: group.join(', ') })
     const entries = groupRankings[gIdx] ?? []
     entries.forEach((entry, rankIdx) => {
-      rows.push([gIdx, groupLabel, rankIdx + 1, entry.keyLabel, entry.layerLabel, entry.matrixLabel, entry.count])
+      const duration = sumEntryDuration(entry.cellsByLayer, durationByCellKey)
+      rows.push([
+        gIdx, groupLabel, rankIdx + 1, entry.keyLabel, entry.layerLabel, entry.matrixLabel, entry.count,
+        duration.avgMs === null ? '' : Math.round(duration.avgMs),
+        duration.samples === 0 ? '' : duration.samples,
+      ])
     })
   })
 
   return {
     slug: SLUG.heatmapRanking,
     content: buildCsv(
-      ['group_idx', 'group_label', 'rank', 'key_label', 'layer_label', 'matrix_label', 'count'],
+      ['group_idx', 'group_label', 'rank', 'key_label', 'layer_label', 'matrix_label', 'count', 'avg_duration_ms', 'duration_samples'],
       rows,
     ),
   }
@@ -254,6 +305,38 @@ export async function buildWpmCsv(args: ScopeArgs & {
 }
 
 // --- Interval (timeSeries / distribution) ------------------------
+
+/** Builds the keypress-duration distribution bundle entry that pairs
+ * with the interval histogram in `distribution` viewMode — a distinct
+ * slug (not appended as extra columns to the interval bundle) since
+ * it's a different sample universe (matrix-release durations, not
+ * minute-stats quartiles) with its own row shape. Bucket bounds/centers
+ * come from the SHARED duration grid (shared/duration-buckets.ts) so
+ * this can never disagree with the live DurationSection chart. Forces
+ * `own` scope itself (same anti-meta-aggregate rule as the interval
+ * histogram it pairs with — see `distributionForcesOwnDevice`) since
+ * this is only ever called for the distribution view. */
+export async function buildDurationDistributionCsv(args: ScopeArgs): Promise<CsvBundleEntry> {
+  const { uid, range, appScopes = [], typingTestScopes = [], runIdScopes = [] } = args
+  // Unconditionally `own`: this builder only ever backs the distribution
+  // view, which forces own-device scope the same way the interval
+  // histogram it pairs with does (see `distributionForcesOwnDevice`) —
+  // there is no other viewMode this could be called for.
+  const effectiveScope: DeviceScope = 'own'
+  const cells = await fetchDurationCellsForRange(uid, effectiveScope, range.fromMs, range.toMs, appScopes, typingTestScopes, runIdScopes).catch(() => [])
+  const totals = sumDurationTotals(cells)
+  const csvRows = totals.hist.map((count, i) => [
+    i,
+    DURATION_BUCKET_UPPER_BOUNDS_MS[i],
+    DURATION_BUCKET_CENTERS_MS[i],
+    count,
+    totals.samples > 0 ? Math.round((count / totals.samples) * 1000) / 10 : 0,
+  ])
+  return {
+    slug: SLUG.durationDistribution,
+    content: buildCsv(['bucket_id', 'upper_bound_ms', 'center_ms', 'count', 'share_percent'], csvRows),
+  }
+}
 
 export async function buildIntervalCsv(args: ScopeArgs & {
   granularity: GranularityChoice

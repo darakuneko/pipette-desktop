@@ -22,6 +22,7 @@ import type {
   TypingMatrixCellDailyRow,
   TypingMinuteStatsRow,
   TypingRolloverMinuteRow,
+  TypingDurationCell,
 } from '../../../shared/types/typing-analytics'
 import type { DeviceScope } from '../../../shared/types/analyze-filters'
 import { isHashScope, isOwnScope } from '../../../shared/types/analyze-filters'
@@ -197,6 +198,23 @@ export function fetchRolloverMinutesForRange(
   runIdScopes: string[] = [],
 ): Promise<TypingRolloverMinuteRow[]> {
   return window.vialAPI.typingAnalyticsListRolloverMinutes(uid, scope, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
+}
+
+/** Per-(row,col,layer) keypress-duration fetch for the Analyze duration
+ * distribution chart and the Heatmap duration mode. Single-variant
+ * IPC, same reasoning as {@link fetchRolloverMinutesForRange} — the
+ * main-side handler resolves `DeviceScope` itself and folds the raw
+ * per-minute rows into one total per cell before returning. */
+export function fetchDurationCellsForRange(
+  uid: string,
+  scope: DeviceScope,
+  fromMs: number,
+  toMs: number,
+  appScopes: string[] = [],
+  typingTestScopes: string[] = [],
+  runIdScopes: string[] = [],
+): Promise<TypingDurationCell[]> {
+  return window.vialAPI.typingAnalyticsListDurationCells(uid, scope, fromMs, toMs, appScopes, typingTestScopes, runIdScopes)
 }
 
 /** Layout Comparison metrics fetch. Single channel; the main-side
