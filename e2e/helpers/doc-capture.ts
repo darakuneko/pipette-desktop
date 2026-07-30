@@ -719,6 +719,14 @@ async function captureAnalyzePage(page: Page): Promise<void> {
       'analyze-keyheatmap-mode-toggle-count',
       () => captureNamed(page, 'analyze-heatmap-speed', { fullPage: true }),
     )
+
+    // Duration mode: same Count round-trip as Speed above.
+    await captureSegmentVariant(
+      page,
+      'analyze-keyheatmap-mode-toggle-duration',
+      'analyze-keyheatmap-mode-toggle-count',
+      () => captureNamed(page, 'analyze-heatmap-duration', { fullPage: true }),
+    )
   } else {
     console.log('  [skip] analyze-tab-keyHeatmap not found')
   }
@@ -1894,7 +1902,7 @@ async function main(): Promise<void> {
     await captureDeviceSelection(page)       // 01
     await captureDataModal(page)             // 02
     await captureSettingsModal(page)         // named: settings-troubleshooting, settings-defaults
-    await captureAnalyzePage(page)           // named: analyze-heatmap, analyze-heatmap-speed, analyze-wpm-time-series, analyze-wpm-time-of-day, analyze-interval-time-series, analyze-interval-distribution, analyze-activity-keystrokes, analyze-activity-calendar, analyze-ergonomics, analyze-ergonomics-learning, analyze-finger-assignment-modal, analyze-layer-keystrokes, analyze-layer-activations
+    await captureAnalyzePage(page)           // named: analyze-heatmap, analyze-heatmap-speed, analyze-heatmap-duration, analyze-wpm-time-series, analyze-wpm-time-of-day, analyze-interval-time-series, analyze-interval-distribution, analyze-activity-keystrokes, analyze-activity-calendar, analyze-ergonomics, analyze-ergonomics-learning, analyze-finger-assignment-modal, analyze-layer-keystrokes, analyze-layer-activations
 
     const connected = await connectDevice(app, page)
     if (!connected) {

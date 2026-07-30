@@ -6,8 +6,9 @@ import {
   buildKeycodeSpeedMap,
   buildSpeedFillByPos,
   buildSpeedRanking,
-  normalizeKeySpeedIntensity,
+  normalizeAvgIntensity,
 } from '../key-heatmap-helpers'
+import type { KeySpeedStat } from '../key-heatmap-helpers'
 import type { LayerKeycodes } from '../key-heatmap-helpers'
 import { deserialize, getProtocol, setProtocol } from '../../../../shared/keycodes/keycodes'
 import { PALETTE_MIN_T, paletteColorFromIntensity } from '../../../utils/chart-palette'
@@ -77,9 +78,11 @@ describe('buildKeycodeSpeedMap', () => {
   })
 })
 
-describe('normalizeKeySpeedIntensity', () => {
+describe('normalizeAvgIntensity (Speed mode: KeySpeedStat.avgIki)', () => {
+  const avgIki = (stat: KeySpeedStat): number => stat.avgIki
+
   it('returns an empty map for an empty speed map', () => {
-    expect(normalizeKeySpeedIntensity(new Map()).size).toBe(0)
+    expect(normalizeAvgIntensity(new Map(), avgIki).size).toBe(0)
   })
 
   it('min-max normalizes avgIki to [PALETTE_MIN_T, 1], fastest -> floor, slowest -> 1', () => {
@@ -88,7 +91,7 @@ describe('normalizeKeySpeedIntensity', () => {
       [5, { avgIki: 150, count: 10 }],
       [6, { avgIki: 250, count: 10 }],
     ])
-    const intensity = normalizeKeySpeedIntensity(speedMap)
+    const intensity = normalizeAvgIntensity(speedMap, avgIki)
     expect(intensity.get(4)).toBeCloseTo(PALETTE_MIN_T, 10)
     expect(intensity.get(5)).toBeCloseTo(PALETTE_MIN_T + (1 - PALETTE_MIN_T) * 0.5, 10)
     expect(intensity.get(6)).toBe(1)
@@ -99,7 +102,7 @@ describe('normalizeKeySpeedIntensity', () => {
       [4, { avgIki: 50, count: 10 }],
       [5, { avgIki: 250, count: 10 }],
     ])
-    const intensity = normalizeKeySpeedIntensity(speedMap)
+    const intensity = normalizeAvgIntensity(speedMap, avgIki)
     const fastest = intensity.get(4)
     expect(fastest).toBeDefined()
     // The fastest key must remain distinguishable from a no-data key:
@@ -113,7 +116,7 @@ describe('normalizeKeySpeedIntensity', () => {
       [4, { avgIki: 100, count: 10 }],
       [5, { avgIki: 100, count: 20 }],
     ])
-    const intensity = normalizeKeySpeedIntensity(speedMap)
+    const intensity = normalizeAvgIntensity(speedMap, avgIki)
     const mid = PALETTE_MIN_T + (1 - PALETTE_MIN_T) * 0.5
     expect(intensity.get(4)).toBeCloseTo(mid, 10)
     expect(intensity.get(5)).toBeCloseTo(mid, 10)
@@ -122,7 +125,7 @@ describe('normalizeKeySpeedIntensity', () => {
 
 describe('buildSpeedFillByPos', () => {
   const intensityByCode = new Map([
-    // Raw palette-space values passed directly (normalizeKeySpeedIntensity
+    // Raw palette-space values passed directly (normalizeAvgIntensity
     // never emits 0 — it floors at PALETTE_MIN_T). Kept at 0 here to
     // document that the palette itself still skips sub-floor input.
     [4, 0], // KC_A — below the palette visibility floor

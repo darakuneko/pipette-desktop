@@ -24,6 +24,7 @@ import type {
   TypingBigramAggregateOptions,
   TypingBigramAggregateResult,
   TypingBigramAggregateView,
+  TypingDurationCell,
 } from '../../shared/types/typing-analytics'
 import type { KleKey } from '../../shared/kle/types'
 import { isFingerType, isPosKey, type FingerType } from '../../shared/kle/kle-ergonomics'
@@ -78,6 +79,7 @@ import {
 import { appendRowsToFile } from './jsonl/jsonl-writer'
 import { bucketizeDurations, bucketizeIki, sumAndSumSquares } from './bigram-bucket'
 import {
+  aggregateMatrixDurationTotals,
   aggregatePairTotals,
   observedRolloverRatio,
   rankBigramsByCount,
@@ -878,6 +880,46 @@ export function setupTypingAnalyticsIpc(): void {
       const args = await parseScopedRangeArgs(uid, sinceMs, untilMs, scope, appScopes, typingTestScopes, runIdScopes)
       if (!args) return []
       return getTypingAnalyticsDB().listRolloverMinutesInRange(args.uid, args.machineHash, args.sinceMs, args.untilMs, args.apps, args.typingTests, args.runIds)
+    },
+  )
+
+  // Per-(row,col,layer) keypress-duration totals for the Analyze
+  // duration distribution chart (Interval tab) and the Heatmap duration
+  // mode. Single-variant channel, same `parseScopedRangeArgs` resolution
+  // as LIST_ROLLOVER_MINUTES above. Unlike that channel, the underlying
+  // DB methods are split by uid/uid+hash (matching listMatrixCellsForUid /
+  // *ForUidAndHash) rather than taking a nullable machineHash directly,
+  // so the dispatch happens here instead of inside the DB layer. The raw
+  // per-minute rows are folded into one total per cell via
+  // aggregateMatrixDurationTotals — the same aggregation
+  // GET_BIGRAM_AGGREGATE_FOR_RANGE runs for n-gram pairs — before
+  // shipping, so the renderer never re-derives cross-minute sums itself.
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_DURATION_CELLS,
+    async (
+      _event,
+      uid: unknown,
+      scope: unknown,
+      sinceMs: unknown,
+      untilMs: unknown,
+      appScopes: unknown, typingTestScopes: unknown, runIdScopes: unknown,
+    ): Promise<TypingDurationCell[]> => {
+      const args = await parseScopedRangeArgs(uid, sinceMs, untilMs, scope, appScopes, typingTestScopes, runIdScopes)
+      if (!args) return []
+      const db = getTypingAnalyticsDB()
+      const rows = args.machineHash === null
+        ? db.listMatrixDurationCellsForUid(args.uid, args.sinceMs, args.untilMs, args.apps, args.typingTests, args.runIds)
+        : db.listMatrixDurationCellsForUidAndHash(args.uid, args.machineHash, args.sinceMs, args.untilMs, args.apps, args.typingTests, args.runIds)
+      const totals = aggregateMatrixDurationTotals(rows)
+      return Array.from(totals.values()).map((total) => ({
+        row: total.row,
+        col: total.col,
+        layer: total.layer,
+        durationSamples: total.count,
+        hist: total.hist,
+        sum: total.sum,
+        sumSq: total.sumSq,
+      }))
     },
   )
 

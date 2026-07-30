@@ -25,6 +25,7 @@ import {
   buildActivityCsv,
   buildBigramsCsv,
   buildByAppCsv,
+  buildDurationDistributionCsv,
   buildErgonomicsCsv,
   buildHeatmapCsv,
   buildIntervalCsv,
@@ -296,6 +297,13 @@ function pickBuilders(
       ...scope,
       granularity: ctx.interval.granularity, viewMode: ctx.interval.viewMode,
     }))
+    // Duration pairs with the distribution view only — DurationSection
+    // is likewise mounted only in `distribution` mode (see AnalyzePane).
+    // A separate builder/push (rather than buildIntervalCsv returning an
+    // array) keeps every builder in this list to the same one-entry shape.
+    if (ctx.interval.viewMode === 'distribution') {
+      out.push(buildDurationDistributionCsv(scope))
+    }
   }
   if (selected.activity) {
     out.push(buildActivityCsv({

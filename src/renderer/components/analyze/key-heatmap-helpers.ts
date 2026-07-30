@@ -2,7 +2,7 @@
 // Pure helpers for the Analyze > Heatmap tab. Keeps the component file
 // readable and the math covered by dedicated tests.
 
-import type { TypingBigramTopEntry, TypingHeatmapByCell, TypingHeatmapCell, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
+import type { TypingBigramTopEntry, TypingDurationCell, TypingHeatmapByCell, TypingHeatmapCell, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 import type { KeyboardLayout } from '../../../shared/kle/types'
 import { resolveSnapshotLabel, keycodeGroup, deserialize, serialize, codeToLabel } from '../../../shared/keycodes/keycodes'
 import type { KeycodeGroup } from '../../../shared/keycodes/keycodes'
@@ -11,7 +11,7 @@ import { avgIkiFromHist, foldHist, HIST_BUCKETS, parseBigramId } from './analyze
 import { PALETTE_MIN_T, paletteColorFromIntensity } from '../../utils/chart-palette'
 import type { EffectiveTheme } from '../../hooks/useEffectiveTheme'
 import type { HeatmapNormalization, RangeMs } from './analyze-types'
-import type { AggregateMode, KeyGroupFilter } from '../../../shared/types/analyze-filters'
+import type { AggregateMode, HeatmapFilters, KeyGroupFilter } from '../../../shared/types/analyze-filters'
 import { withSnapshotProtocol } from './analyze-protocol'
 
 export { AGGREGATE_MODES, KEY_GROUPS, HEATMAP_MODES } from '../../../shared/types/analyze-filters'
@@ -25,6 +25,10 @@ export type LabelOverride = { outer: string; inner: string; masked: boolean }
 export type LayerKeycodes = {
   keycodes: Map<string, string>
   labelOverrides: Map<string, LabelOverride>
+}
+
+export function groupOf(groups: readonly number[][], layer: number): number {
+  return groups.findIndex((g) => g.includes(layer))
 }
 
 export function compactLayerOp(label: string): string {
@@ -323,29 +327,36 @@ export function buildKeycodeSpeedMap(
   return result
 }
 
-/** Min-max normalizes each qualifying keycode's avgIki to a
- * [`PALETTE_MIN_T`, 1] intensity (floor = fastest reach, 1 = slowest)
- * for `paletteColorFromIntensity`. The lower bound matters: the palette
- * skips fills below its visibility floor, but every key that cleared
- * `MIN_SPEED_SAMPLE_COUNT` must stay distinguishable from a no-data
- * key, so the fastest key is pinned at the floor instead of 0. When
- * every qualifying key ties, everything renders at the remapped range's
+/** Min-max normalizes a map of per-key stats to a [`PALETTE_MIN_T`, 1]
+ * intensity (floor = lowest average, 1 = highest) for
+ * `paletteColorFromIntensity`. Generic over both the map's key type and
+ * its value type — `valueOf` picks the average out of whatever stat
+ * shape the caller has (Speed mode's `KeySpeedStat.avgIki`, Duration
+ * mode's `KeyDurationStat.avgMs`, ...) so both modes share one
+ * normalization pass without either adapting its map into a common
+ * shape first. The lower bound matters: the palette skips fills below
+ * its visibility floor, but every key that cleared its mode's minimum
+ * sample gate must stay distinguishable from a no-data key, so the
+ * lowest-average key is pinned at the floor instead of 0. When every
+ * qualifying key ties, everything renders at the remapped range's
  * midpoint instead of dividing by zero. */
-export function normalizeKeySpeedIntensity(
-  speedMap: ReadonlyMap<number, KeySpeedStat>,
-): Map<number, number> {
-  const result = new Map<number, number>()
-  if (speedMap.size === 0) return result
+export function normalizeAvgIntensity<K, V>(
+  entries: ReadonlyMap<K, V>,
+  valueOf: (value: V) => number,
+): Map<K, number> {
+  const result = new Map<K, number>()
+  if (entries.size === 0) return result
   let min = Infinity
   let max = -Infinity
-  for (const stat of speedMap.values()) {
-    if (stat.avgIki < min) min = stat.avgIki
-    if (stat.avgIki > max) max = stat.avgIki
+  for (const stat of entries.values()) {
+    const avg = valueOf(stat)
+    if (avg < min) min = avg
+    if (avg > max) max = avg
   }
   const range = max - min
-  for (const [code, stat] of speedMap) {
-    const normalized = range > 0 ? (stat.avgIki - min) / range : 0.5
-    result.set(code, PALETTE_MIN_T + (1 - PALETTE_MIN_T) * normalized)
+  for (const [key, stat] of entries) {
+    const normalized = range > 0 ? (valueOf(stat) - min) / range : 0.5
+    result.set(key, PALETTE_MIN_T + (1 - PALETTE_MIN_T) * normalized)
   }
   return result
 }
@@ -416,4 +427,224 @@ export function buildSpeedRanking(
     entries.sort((a, b) => b.avgIki - a.avgIki)
     return entries.slice(0, Math.max(limit, 0))
   })
+}
+
+// --- Duration mode ---------------------------------------------------
+// Colours the same keyboard by each key's average keypress duration
+// (release ts - press ts). Unlike Speed mode, `TypingDurationCell`
+// already carries a (row, col, layer) tag — the data was recorded per
+// physical cell, not per keycode — so there is no bigram-style
+// cross-layer keycode resolution step: a cell's data belongs to
+// exactly the layer it was recorded on.
+
+/** Minimum accumulated duration-sample count for a cell's average
+ * duration to be considered reliable enough to paint or rank. Sibling
+ * to `MIN_SPEED_SAMPLE_COUNT` (same threshold value today, named for
+ * the metric it gates) — the two modes' minimums are independent
+ * knobs, so this is a literal rather than a reference to the Speed
+ * constant. */
+export const MIN_DURATION_SAMPLE_COUNT = 5
+
+export interface KeyDurationStat {
+  avgMs: number
+  count: number
+}
+
+/** `"layer:row,col"` — the composite key every Duration-mode map below
+ * is keyed by, since (unlike Speed mode's keycode) the same physical
+ * position can carry independent duration data on each layer. Exported
+ * so the Heatmap CSV builder (analyze-csv-builders.ts) keys its own
+ * duration lookup identically instead of hand-rolling the same string
+ * format with nothing enforcing agreement between the two. */
+export function durationCellKey(layer: number, pos: string): string {
+  return `${layer}:${pos}`
+}
+
+/** One avgMs/count stat per (layer, position) from the raw per-cell
+ * duration totals the IPC already returns folded across the range (see
+ * TypingDurationCell). Cells below `MIN_DURATION_SAMPLE_COUNT` are
+ * dropped entirely — same "invisible, not zero" convention as
+ * `buildKeycodeSpeedMap`. */
+export function buildCellDurationStats(
+  cells: readonly TypingDurationCell[],
+): Map<string, KeyDurationStat> {
+  const result = new Map<string, KeyDurationStat>()
+  for (const cell of cells) {
+    if (cell.durationSamples < MIN_DURATION_SAMPLE_COUNT) continue
+    const key = durationCellKey(cell.layer, posKey(cell.row, cell.col))
+    result.set(key, { avgMs: cell.sum / cell.durationSamples, count: cell.durationSamples })
+  }
+  return result
+}
+
+/** Resolves the Duration-mode fill for every physical position on one
+ * layer. Simpler than `buildSpeedFillByPos`: the duration stat is
+ * already keyed by (layer, position) directly, so there is no
+ * keycode-deserialize step — only the keyGroupFilter check needs the
+ * position's keycode. */
+export function buildDurationFillByPos(
+  layer: number,
+  layerKeycodes: LayerKeycodes,
+  positions: readonly string[],
+  intensityByCellKey: ReadonlyMap<string, number>,
+  keyGroupFilter: KeyGroupFilter,
+  theme: EffectiveTheme,
+): Map<string, string> {
+  const result = new Map<string, string>()
+  for (const pos of positions) {
+    const qmkId = layerKeycodes.keycodes.get(pos) ?? ''
+    if (!qmkId) continue
+    if (keyGroupFilter !== 'all' && keycodeGroup(qmkId) !== keyGroupFilter) continue
+    const intensity = intensityByCellKey.get(durationCellKey(layer, pos))
+    if (intensity === undefined) continue
+    const fill = paletteColorFromIntensity(intensity, theme)
+    if (fill) result.set(pos, fill)
+  }
+  return result
+}
+
+export interface DurationRankingEntry {
+  keyLabel: string
+  avgMs: number
+  count: number
+}
+
+/** Flat "Key / Avg duration / Samples" ranking for Duration mode,
+ * scoped to whichever layers are currently selected (`layerKeycodes`
+ * only has entries for those — see KeyHeatmapChart's `layerKeycodes`
+ * memo) so the ranking always matches the keyboards on screen. Unlike
+ * Speed mode's ranking (which has no layer tag to scope by), Duration
+ * data carries one, so this mirrors Count mode's per-selection scoping
+ * instead. */
+export function buildDurationRanking(
+  cells: readonly TypingDurationCell[],
+  layerKeycodes: ReadonlyMap<number, LayerKeycodes>,
+  keyGroupFilter: KeyGroupFilter,
+  limit: number,
+): DurationRankingEntry[] {
+  const entries: DurationRankingEntry[] = []
+  for (const cell of cells) {
+    if (cell.durationSamples < MIN_DURATION_SAMPLE_COUNT) continue
+    const pos = posKey(cell.row, cell.col)
+    const qmkId = layerKeycodes.get(cell.layer)?.keycodes.get(pos) ?? ''
+    if (!qmkId) continue
+    if (keyGroupFilter !== 'all' && keycodeGroup(qmkId) !== keyGroupFilter) continue
+    const resolved = resolveSnapshotLabel(qmkId)
+    entries.push({
+      keyLabel: compactLayerOp(resolved.outer || qmkId || pos),
+      avgMs: cell.sum / cell.durationSamples,
+      count: cell.durationSamples,
+    })
+  }
+  entries.sort((a, b) => b.avgMs - a.avgMs)
+  return entries.slice(0, Math.max(limit, 0))
+}
+
+// --- Layer selection / bonding (pure state transitions) ---------------
+// Extracted from KeyHeatmapChart.tsx so the component only wires
+// callbacks to `onHeatmapChange` / `setMergeCandidate` — the merge/bond
+// rules themselves are plain data transforms, independently testable.
+
+export interface ToggleLayerResult {
+  patch: Partial<HeatmapFilters>
+  /** Whether the caller should also clear its local merge-candidate
+   * state — true only when a layer was deselected (a bonded group it
+   * was mid-merge into may no longer make sense). */
+  clearMergeCandidate: boolean
+}
+
+/** Adds or removes `layer` from the selected-layers set, keeping
+ * `groups` in sync (dropping the layer from any group it was bonded
+ * into, discarding groups left empty). Returns `null` for a no-op:
+ * deselecting the last remaining layer, or selecting past `maxLayers`. */
+export function toggleLayerSelection(
+  selectedLayers: readonly number[],
+  groups: readonly number[][],
+  layer: number,
+  maxLayers: number,
+): ToggleLayerResult | null {
+  if (selectedLayers.includes(layer)) {
+    if (selectedLayers.length === 1) return null
+    const nextLayers = selectedLayers.filter((l) => l !== layer)
+    const nextGroups = groups
+      .map((g) => g.filter((l) => l !== layer))
+      .filter((g) => g.length > 0)
+    return { patch: { selectedLayers: nextLayers, groups: nextGroups }, clearMergeCandidate: true }
+  }
+  if (selectedLayers.length >= maxLayers) return null
+  const nextLayers = [...selectedLayers, layer].sort((a, b) => a - b)
+  const nextGroups = [...groups, [layer]]
+  return { patch: { selectedLayers: nextLayers, groups: nextGroups }, clearMergeCandidate: false }
+}
+
+export interface KeyboardClickResult {
+  /** Present only when the click changed the group bonding. */
+  patch?: Partial<HeatmapFilters>
+  /** Value the caller should pass to `setMergeCandidate` unconditionally. */
+  mergeCandidate: number | null
+}
+
+/** Resolves a keyboard-panel click into a bonding change plus the next
+ * merge-candidate state — the two-step "click a standalone panel to
+ * arm it, click another to bond them" interaction, and the one-step
+ * "click an already-bonded panel to split it back out" interaction.
+ * See KeyHeatmapChart.tsx's original inline version for the
+ * interaction's full rationale; this is a direct, behavior-preserving
+ * extraction. */
+export function resolveKeyboardClick(
+  groups: readonly number[][],
+  layer: number,
+  mergeCandidate: number | null,
+): KeyboardClickResult {
+  if (mergeCandidate !== null) {
+    if (mergeCandidate === layer) return { mergeCandidate: null }
+    const candidateGroupIdx = groups.findIndex((g) => g.includes(mergeCandidate))
+    const targetGroupIdx = groups.findIndex((g) => g.includes(layer))
+    if (candidateGroupIdx !== -1 && targetGroupIdx !== -1 && candidateGroupIdx !== targetGroupIdx) {
+      const merged = [...new Set([...groups[candidateGroupIdx], ...groups[targetGroupIdx]])]
+        .sort((a, b) => a - b)
+      const result: number[][] = []
+      const lower = Math.min(candidateGroupIdx, targetGroupIdx)
+      for (let i = 0; i < groups.length; i += 1) {
+        if (i === lower) result.push(merged)
+        else if (i === candidateGroupIdx || i === targetGroupIdx) continue
+        else result.push(groups[i])
+      }
+      return { patch: { groups: result }, mergeCandidate: null }
+    }
+    return { mergeCandidate: null }
+  }
+  const currentGroupIdx = groupOf(groups, layer)
+  const currentGroup = groups[currentGroupIdx]
+  const isBonded = !!currentGroup && currentGroup.length > 1
+  if (isBonded) {
+    const result: number[][] = []
+    for (const g of groups) {
+      if (g.includes(layer)) {
+        const without = g.filter((l) => l !== layer)
+        if (without.length > 0) result.push(without)
+        result.push([layer])
+      } else {
+        result.push(g)
+      }
+    }
+    return { patch: { groups: result }, mergeCandidate: null }
+  }
+  // Standalone click with a single existing bonded group → auto-merge
+  // into it so the user doesn't have to pre-select the bond first.
+  const bondedGroupIdx = groups.findIndex((g) => g.length > 1)
+  const multipleBonded = groups.filter((g) => g.length > 1).length > 1
+  if (bondedGroupIdx !== -1 && !multipleBonded) {
+    const merged = [...new Set([...groups[bondedGroupIdx], ...groups[currentGroupIdx]])]
+      .sort((a, b) => a - b)
+    const lower = Math.min(bondedGroupIdx, currentGroupIdx)
+    const result: number[][] = []
+    for (let i = 0; i < groups.length; i += 1) {
+      if (i === lower) result.push(merged)
+      else if (i === bondedGroupIdx || i === currentGroupIdx) continue
+      else result.push(groups[i])
+    }
+    return { patch: { groups: result }, mergeCandidate: null }
+  }
+  return { mergeCandidate: layer }
 }

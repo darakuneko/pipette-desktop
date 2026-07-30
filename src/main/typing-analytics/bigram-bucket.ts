@@ -6,6 +6,12 @@
 // .claude/plans/Plan-analyze-bigram.md for the bucket rationale.
 
 import { BIGRAM_HIST_BUCKETS } from './jsonl/jsonl-row'
+// The duration grid itself lives in shared/duration-buckets.ts (the
+// renderer's Analyze duration UI and CSV export need it too, and main
+// can't be imported from the renderer process). Only the upper-bounds
+// array is needed here, for `bucketizeDurations` below — main has no
+// use for the bucket centers.
+import { DURATION_BUCKET_UPPER_BOUNDS_MS } from '../../shared/duration-buckets'
 
 /** Exclusive upper bounds of each histogram bucket in ms. The final
  * bucket has implicit positive-infinity upper bound; the recorder
@@ -47,41 +53,6 @@ export const BIGRAM_BUCKET_CENTERS_MS: readonly number[] = [
   400,   // bucket 5: 300-500
   750,   // bucket 6: 500-1000
   1500,  // bucket 7: >= 1000 (slow-tail estimate)
-] as const
-
-/** Exclusive upper bounds of each keypress-duration histogram bucket, in
- * ms. Deliberately a much tighter grid than {@link BIGRAM_BUCKET_UPPER_BOUNDS_MS}:
- * the CHI 2018 typing-behaviour literature this project's benchmarks are
- * modeled on (see `src/shared/typing-benchmarks.ts`) puts typical keypress
- * durations in the 80-150 ms range — an order of magnitude narrower than
- * inter-key intervals, which range from sub-60ms rolls to multi-second
- * pauses. Reusing the IKI grid here would collapse almost every real
- * duration sample into the first one or two buckets. */
-export const DURATION_BUCKET_UPPER_BOUNDS_MS: readonly number[] = [
-  50,
-  80,
-  110,
-  140,
-  180,
-  250,
-  400,
-  Number.POSITIVE_INFINITY,
-] as const
-
-/** Estimated bucket centers (ms) for the duration grid above — same
- * midpoint-of-closed-bucket / synthetic-center-for-the-open-bucket
- * convention as {@link BIGRAM_BUCKET_CENTERS_MS}. Not consumed yet — its
- * reader arrives with the duration-UI task (Analyze view), same as how
- * the histogram data itself isn't rendered anywhere until then. */
-export const DURATION_BUCKET_CENTERS_MS: readonly number[] = [
-  25,   // bucket 0: < 50
-  65,   // bucket 1: 50-80
-  95,   // bucket 2: 80-110
-  125,  // bucket 3: 110-140
-  160,  // bucket 4: 140-180
-  215,  // bucket 5: 180-250
-  325,  // bucket 6: 250-400
-  600,  // bucket 7: >= 400 (long-hold estimate)
 ] as const
 
 /** Shared bucket-index lookup, generalized over any exclusive-upper-bound

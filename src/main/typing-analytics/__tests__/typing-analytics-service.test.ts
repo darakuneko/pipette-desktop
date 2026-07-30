@@ -1054,6 +1054,85 @@ describe('typing-analytics-service', () => {
     })
   })
 
+  describe('listDurationCells', () => {
+    type DurationCellRow = { row: number; col: number; layer: number; durationSamples: number; hist: number[]; sum: number; sumSq: number }
+
+    async function ingestDuration(row: number, col: number, ts: number, durationMs: number): Promise<void> {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      await ingest(handler, {
+        kind: 'matrix-release', row, col, layer: 0, keycode: 0x04, ts, durationMs, keyboard: sampleKeyboard,
+      })
+      await flushTypingAnalyticsNowForTests()
+    }
+
+    it('returns one folded cell total per (row, col, layer) in range', async () => {
+      const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+      await ingestDuration(0, 3, ts, 90)
+      const handler = getHandler<DurationCellRow[]>(IpcChannels.TYPING_ANALYTICS_LIST_DURATION_CELLS)
+      const result = await handler(fakeEvent, sampleKeyboard.uid, 'all', ts - 60_000, ts + 60_000)
+      expect(result).toHaveLength(1)
+      expect(result[0].row).toBe(0)
+      expect(result[0].col).toBe(3)
+      expect(result[0].layer).toBe(0)
+      expect(result[0].durationSamples).toBe(1)
+      expect(result[0].sum).toBe(90)
+      expect(result[0].sumSq).toBe(8_100)
+      expect(Array.isArray(result[0].hist)).toBe(true)
+    })
+
+    it('folds multiple minutes for the same cell into one total', async () => {
+      const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+      await ingestDuration(1, 2, ts, 80)
+      await ingestDuration(1, 2, ts + MINUTE_MS, 120)
+      const handler = getHandler<DurationCellRow[]>(IpcChannels.TYPING_ANALYTICS_LIST_DURATION_CELLS)
+      const result = await handler(fakeEvent, sampleKeyboard.uid, 'all', ts - 60_000, ts + 2 * MINUTE_MS)
+      expect(result).toHaveLength(1)
+      expect(result[0].durationSamples).toBe(2)
+      expect(result[0].sum).toBe(200)
+      expect(result[0].sumSq).toBe(80 * 80 + 120 * 120)
+    })
+
+    it('returns an empty array when no matrix-release event has landed in range', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler<DurationCellRow[]>(IpcChannels.TYPING_ANALYTICS_LIST_DURATION_CELLS)
+      expect(await handler(fakeEvent, sampleKeyboard.uid, 'all', 0, 60_000)).toEqual([])
+    })
+
+    it('honours scope=own by filtering to the local machine_hash', async () => {
+      const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+      await ingestDuration(0, 0, ts, 100)
+      const handler = getHandler<DurationCellRow[]>(IpcChannels.TYPING_ANALYTICS_LIST_DURATION_CELLS)
+      const result = await handler(fakeEvent, sampleKeyboard.uid, 'own', ts - 60_000, ts + 60_000)
+      expect(result).toHaveLength(1)
+    })
+
+    it('returns an empty array when uid is invalid', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler<DurationCellRow[]>(IpcChannels.TYPING_ANALYTICS_LIST_DURATION_CELLS)
+      expect(await handler(fakeEvent, '', 'all', 0, 60_000)).toEqual([])
+    })
+
+    it('returns an empty array when sinceMs >= untilMs', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler<DurationCellRow[]>(IpcChannels.TYPING_ANALYTICS_LIST_DURATION_CELLS)
+      expect(await handler(fakeEvent, sampleKeyboard.uid, 'all', 60_000, 60_000)).toEqual([])
+    })
+
+    it('returns an empty array for an unparseable scope', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler<DurationCellRow[]>(IpcChannels.TYPING_ANALYTICS_LIST_DURATION_CELLS)
+      expect(await handler(fakeEvent, sampleKeyboard.uid, 'not-a-scope', 0, 60_000)).toEqual([])
+    })
+
+    it('rejects non-numeric sinceMs/untilMs instead of coercing them', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler<DurationCellRow[]>(IpcChannels.TYPING_ANALYTICS_LIST_DURATION_CELLS)
+      expect(await handler(fakeEvent, sampleKeyboard.uid, 'all', 'x', 60_000)).toEqual([])
+      expect(await handler(fakeEvent, sampleKeyboard.uid, 'all', 0, 'x')).toEqual([])
+    })
+  })
+
   describe('parseLayoutComparisonOptions (fingerOverrides validation)', () => {
     const validBase = {
       source: { id: 'qwerty', map: {} },

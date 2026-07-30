@@ -1,5 +1,5 @@
 {
-  "version": "0.1.47",
+  "version": "0.1.48",
   "name": "English",
   "common": {
     "save": "Save",
@@ -972,6 +972,28 @@
       },
       "underBiasNote": "This is structurally an undercount, not the true rollover rate — sitting below the population average line does not mean slower typing."
     },
+    "duration": {
+      "sectionTitle": "Keypress duration",
+      "ariaLabel": "Keypress duration summary",
+      "tooltipLabel": "Samples",
+      "empty": "No keypress-duration data in this range. Durations are only recorded while typing in matrix mode with the keyboard unlocked — ranges from before that capture existed, or with recording off, show no data here.",
+      "bin": {
+        "lt50": "<50ms",
+        "50to80": "50-80ms",
+        "80to110": "80-110ms",
+        "110to140": "110-140ms",
+        "140to180": "140-180ms",
+        "180to250": "180-250ms",
+        "250to400": "250-400ms",
+        "gt400": ">400ms"
+      },
+      "stat": {
+        "mean": "Mean duration",
+        "sd": "SD",
+        "samples": "Samples",
+        "populationAverage": "Population avg {{value}} ms"
+      }
+    },
     "activity": {
       "tableLabel": "Hour × day-of-week activity",
       "tableLabelWpm": "Hour × day-of-week WPM",
@@ -1218,13 +1240,19 @@
       "modeToggle": {
         "ariaLabel": "Heatmap colouring mode",
         "count": "Count",
-        "speed": "Speed"
+        "speed": "Speed",
+        "duration": "Duration"
       },
       "speed": {
         "colAvgIki": "Avg IKI",
         "empty": "No reach-speed data in this range yet.",
         "minSampleNote": "Keys reached fewer than {{n}} times are left uncoloured.",
         "cappedNotice": "Computed from the {{limit}} most frequent pairs — rare pairs may be missing."
+      },
+      "duration": {
+        "colAvgDuration": "Avg Duration",
+        "empty": "No keypress-duration data in this range yet.",
+        "minSampleNote": "Keys with fewer than {{n}} duration samples are left uncoloured."
       },
       "ranking": {
         "frequentUsedN": "Top N",

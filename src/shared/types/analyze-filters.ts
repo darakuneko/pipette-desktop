@@ -141,8 +141,12 @@ export type HeatmapNormalization = typeof HEATMAP_NORMALIZATIONS[number]
 /** `'count'` (default) keeps the historical press-count colouring;
  * `'speed'` recolours the same keyboard by each key's reach IKI
  * (average interval between the preceding key and this one), derived
- * from the bigram aggregate rather than the matrix heatmap. */
-export const HEATMAP_MODES = ['count', 'speed'] as const
+ * from the bigram aggregate rather than the matrix heatmap; `'duration'`
+ * recolours by each key's average keypress duration (release ts - press
+ * ts), derived from the per-cell duration totals (see
+ * TypingDurationCell) — unlike `'speed'`, this data already carries a
+ * layer tag, so no keycode-based cross-layer resolution is needed. */
+export const HEATMAP_MODES = ['count', 'speed', 'duration'] as const
 export type HeatmapMode = typeof HEATMAP_MODES[number]
 
 export const AGGREGATE_MODES = ['cell', 'char'] as const
@@ -163,9 +167,11 @@ export type IntervalViewMode = typeof INTERVAL_VIEW_MODES[number]
 /** Distribution mode needs per-scope raw quartiles — the cross-scope
  * `all` query already aggregates MIN / AVG / MAX over contributing
  * scopes, so redistributing those meta-aggregates as "four samples per
- * minute" would muddy the histogram. The chart, the CSV builder, and
- * the filter modal's disabled rows all force `'own'` through this one
- * predicate so the three surfaces can't drift. */
+ * minute" would muddy the histogram. The interval chart, the keypress-
+ * duration section mounted alongside it, both CSV builders (interval +
+ * duration distribution), and the filter modal's disabled Device row
+ * all force `'own'` through this one predicate so none of those
+ * surfaces can drift apart. */
 export function distributionForcesOwnDevice(viewMode: IntervalViewMode): boolean {
   return viewMode === 'distribution'
 }

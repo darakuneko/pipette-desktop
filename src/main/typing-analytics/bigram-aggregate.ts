@@ -15,6 +15,13 @@ import type {
   TypingBigramSlowEntry,
   TypingBigramTopEntry,
 } from '../../shared/types/typing-analytics'
+import { sdFromSums } from '../../shared/stat-sums'
+
+// `sdFromSums` itself now lives in shared/stat-sums.ts (the renderer's
+// Analyze duration section needs it too, and main can't be imported from
+// the renderer process) — re-exported here so this module's own call
+// sites and existing external importers don't need a second import path.
+export { sdFromSums }
 
 export interface BigramPairTotal {
   ngramId: string
@@ -142,19 +149,6 @@ export function observedRolloverRatio(totals: ReadonlyMap<string, BigramPairTota
     on += entry.overlapN
   }
   return on > 0 ? oc / on : null
-}
-
-/** Standard deviation of raw IKI from accumulated sum / sum-of-squares.
- * Clips the variance to 0 before the sqrt — with equally-spaced
- * keystrokes, floating-point rounding in `sumSq/n - (sum/n)^2` can go
- * very slightly negative, which would otherwise produce NaN instead of
- * the correct answer (0). Returns null when there are fewer than 2
- * samples (SD is undefined for n < 2). */
-export function sdFromSums(sum: number, sumSq: number, count: number): number | null {
-  if (count < 2) return null
-  const mean = sum / count
-  const variance = sumSq / count - mean * mean
-  return Math.sqrt(Math.max(0, variance))
 }
 
 function sdFromTotal(entry: BigramPairTotal): number | null {
@@ -333,16 +327,3 @@ export function aggregateMatrixDurationTotals(
   return totals
 }
 
-/** Average keypress duration (ms) for a cell total — the true mean from
- * `sum / count`, not a histogram-bucket-center estimate (unlike
- * avgIkiFromHist, the exact sum is always available here). Null when
- * the cell has no duration samples in range. */
-export function avgDurationMsFromTotal(entry: MatrixCellDurationTotal): number | null {
-  return entry.count > 0 ? entry.sum / entry.count : null
-}
-
-/** Standard deviation of keypress duration (ms) for a cell total. Null
- * when fewer than 2 samples (see {@link sdFromSums}). */
-export function durationSdFromTotal(entry: MatrixCellDurationTotal): number | null {
-  return sdFromSums(entry.sum, entry.sumSq, entry.count)
-}
