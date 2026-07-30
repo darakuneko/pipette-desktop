@@ -49,3 +49,23 @@ export const DURATION_BUCKET_CENTERS_MS: readonly number[] = [
   325,  // bucket 6: 250-400
   600,  // bucket 7: >= 400 (long-hold estimate)
 ] as const
+
+/** Lower (inclusive) bound of bucket `i` — the previous bucket's upper
+ * bound, or 0 for the first bucket. Companion to
+ * `DURATION_BUCKET_UPPER_BOUNDS_MS` for callers that need a bucket's
+ * full `[lo, hi)` span rather than just its upper edge (e.g. the
+ * TAPPING_TERM advisor's percentile ranges in
+ * `analyze-tapping-term.ts`). */
+export function durationBucketLowerBoundMs(bucketIndex: number): number {
+  return bucketIndex === 0 ? 0 : DURATION_BUCKET_UPPER_BOUNDS_MS[bucketIndex - 1]
+}
+
+/** Synthetic upper bound for the open-ended top bucket (>= 400ms),
+ * derived symmetrically around `DURATION_BUCKET_CENTERS_MS`'s synthetic
+ * center for that bucket (center = midpoint of `[lo, hi)`, so
+ * `hi = 2*center - lo`). The bucket's true upper bound is unbounded —
+ * this value is only meaningful for display purposes (a percentile
+ * range's `hi` edge, a chart's synthetic span), never for classifying
+ * a duration against the bucket. */
+export const DURATION_BUCKET_SYNTHETIC_TOP_UPPER_MS =
+  2 * DURATION_BUCKET_CENTERS_MS[7] - DURATION_BUCKET_UPPER_BOUNDS_MS[6]

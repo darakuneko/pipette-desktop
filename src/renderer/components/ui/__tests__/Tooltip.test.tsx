@@ -224,6 +224,51 @@ describe('Tooltip', () => {
     expect(bubble.textContent).toBe('first line\nsecond line')
   })
 
+  it('recomputes position on a plain re-render while open, not just when open/content/updatePosition change', () => {
+    // Regression for: a consumer that reuses the same React key for a
+    // logically-identical item across two different layouts (e.g.
+    // AnalyzeStatGrid's "Longest session" card sharing labelKey between
+    // Interval's timeSeries and distribution summaries) keeps this
+    // exact Tooltip instance mounted — including `open` — across a
+    // layout change that moves the trigger to a new screen position.
+    // `open`/`content`/`updatePosition` all stay the same across that
+    // re-render, so a deps-gated effect would leave the bubble floating
+    // at the pre-move coordinates.
+    const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect
+    let wrapperRect = rect(100, 300, 50, 20)
+    HTMLElement.prototype.getBoundingClientRect = function (this: HTMLElement) {
+      if (this.id === 'wrapper-under-test') return wrapperRect
+      return rect(0, 0, 100, 30) // bubble's own rect — stable throughout
+    }
+    try {
+      const { container, rerender } = render(
+        <Tooltip content="Help" wrapperProps={{ id: 'wrapper-under-test' }}>
+          <button type="button">Trigger</button>
+        </Tooltip>,
+      )
+      const wrapper = container.firstElementChild!
+      fireEvent.mouseEnter(wrapper)
+      const bubble = screen.getByRole('tooltip')
+      const topBeforeMove = bubble.style.top
+      expect(topBeforeMove).toBe('262px') // 300 - bubble.height(30) - offset(8)
+
+      // The trigger moves — no other prop on <Tooltip> changes, and
+      // `open` was already true (this is a re-render, not a fresh
+      // mouseEnter) — mirroring the key-reused reconciliation case.
+      wrapperRect = rect(100, 600, 50, 20)
+      rerender(
+        <Tooltip content="Help" wrapperProps={{ id: 'wrapper-under-test' }}>
+          <button type="button">Trigger</button>
+        </Tooltip>,
+      )
+
+      expect(bubble.style.top).toBe('562px') // 600 - 30 - 8
+      expect(bubble.style.top).not.toBe(topBeforeMove)
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect
+    }
+  })
+
   describe('computeBubblePosition viewport clamping', () => {
     const viewport = { width: 1000, height: 800 }
 

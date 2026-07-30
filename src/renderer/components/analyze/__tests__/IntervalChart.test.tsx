@@ -127,3 +127,52 @@ describe('IntervalChart benchmark reference line', () => {
     expect(screen.queryByTestId('analyze-reference-line')).toBeNull()
   })
 })
+
+describe('IntervalChart distribution mode layout', () => {
+  beforeEach(() => {
+    setVialAPI()
+  })
+
+  // Regression guard: the distribution root previously used `h-full` with
+  // a `flex-1 min-h-0` chart wrapper, which stretched the BarChart to
+  // fill whatever height AnalyzePane's outer flex-1 wrapper happened to
+  // allocate — and that allocation shrank once DurationSection/
+  // TappingTermCard's own async data replaced their loading placeholders,
+  // producing a two-step reflow. That reflow both left a large empty gap
+  // above the summary grid (the reported whitespace defect) and left the
+  // "Longest session" card's shared-key Tooltip pinned to a stale
+  // intermediate position while it faded out (the reported stray-tooltip
+  // defect — see components/ui/Tooltip.tsx). The fix gives the chart a
+  // fixed height (matching DurationSection's own `h-64` convention)
+  // instead of stretching, so this must never regress back to `h-full`
+  // / `flex-1 min-h-0`.
+  it('sizes the distribution chart with a fixed height instead of stretching to fill the parent', async () => {
+    renderChart({ viewMode: 'distribution' })
+    const root = await waitFor(() => screen.getByTestId('analyze-interval-distribution'))
+    expect(root.className).not.toContain('h-full')
+    expect(root.className).not.toContain('flex-1')
+    const chartWrapper = root.querySelector('[class~="h-64"]')
+    expect(chartWrapper).toBeTruthy()
+    expect(chartWrapper?.className).not.toContain('flex-1')
+  })
+
+  // Regression guard: this branch used to render a visible `<h3>`
+  // section title, but AnalyzePane's "Section" filter-row select
+  // already labels the section with the same `sectionTitle` key, so
+  // the in-body heading was pure duplication and got removed. The name
+  // must still reach assistive tech though — via `aria-label` on the
+  // section itself — since there's no longer a visible heading to
+  // navigate to.
+  it('has no visible section title, but exposes the same name via aria-label', async () => {
+    renderChart({ viewMode: 'distribution' })
+    const root = await waitFor(() => screen.getByTestId('analyze-interval-distribution'))
+    expect(screen.queryByText('analyze.interval.distribution.sectionTitle')).toBeNull()
+    expect(root.getAttribute('aria-label')).toBe('analyze.interval.distribution.sectionTitle')
+  })
+
+  it('renders a section title in timeSeries mode too', async () => {
+    renderChart({ viewMode: 'timeSeries' })
+    await waitFor(() => screen.getByTestId('analyze-interval-chart'))
+    expect(screen.getByText('analyze.interval.timeSeries.sectionTitle')).toBeTruthy()
+  })
+})

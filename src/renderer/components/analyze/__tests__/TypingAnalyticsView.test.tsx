@@ -58,6 +58,19 @@ vi.mock('../IntervalChart', () => ({ IntervalChart: mockSummary('mock-interval')
 // every other chart here so its own IPC fetch (not stubbed on this
 // file's vialAPI object) never runs during these shell-level tests.
 vi.mock('../RolloverSection', () => ({ RolloverSection: mockSummary('mock-rollover') }))
+// Mounted below IntervalChart in distribution mode instead of
+// RolloverSection — mocked shallow for the same reason.
+vi.mock('../DurationSection', () => ({ DurationSection: mockSummary('mock-duration') }))
+// Also distribution-mode-only. The mock renders `connectedTappingTerm`
+// so the AnalyzePane-uid-matching wiring (App -> AnalyzePage ->
+// TypingAnalyticsView -> AnalyzePane -> here) has something to assert on.
+vi.mock('../TappingTermCard', () => ({
+  TappingTermCard: (props: { uid: string; connectedTappingTerm: { uid: string; termMs: number; reported: boolean } | null }) => (
+    <div data-testid="mock-tapping-term">
+      {`${props.uid}:${props.connectedTappingTerm ? `${props.connectedTappingTerm.uid}:${props.connectedTappingTerm.termMs}:${props.connectedTappingTerm.reported}` : 'null'}`}
+    </div>
+  ),
+}))
 vi.mock('../ActivityChart', () => ({ ActivityChart: mockSummary('mock-activity') }))
 vi.mock('../KeyHeatmapChart', () => ({ KeyHeatmapChart: mockSummary('mock-keyheatmap') }))
 vi.mock('../ErgonomicsChart', () => ({
@@ -699,6 +712,111 @@ describe('TypingAnalyticsView', () => {
     expect(text('analyze-filter-chip-source')).toContain('tatoeba-japanese')
     expect(text('analyze-filter-chip-source')).not.toContain('acb0f4e9')
     runsSpy.mockRestore()
+    getSpy.mockRestore()
+  })
+
+  it('forwards connectedTappingTerm to the pane and matches it against the selected uid only', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    // The distribution-section select only offers 'Tapping Term
+    // diagnosis' when the snapshot has at least one tap-hold key (same
+    // gate as TappingTermCard's own hidden rule) — give it one so the
+    // option (and thus the mock) is reachable, for both keyboards used
+    // below.
+    mockGetSnapshot.mockResolvedValue({ ...SNAPSHOT, keymap: [[['LT(1,KC_SPC)']]] })
+    // uid-b's own persisted filters already point at the Tapping Term
+    // section: the modal's Apply patch only carries scope/dimension
+    // fields (not `interval`), so a plain `pipetteSettingsGet` default
+    // of `null` would reload uid-b onto `viewMode: 'timeSeries'` the
+    // instant its own load resolves — racing against this test's
+    // `waitFor` below instead of deterministically staying on the
+    // Tapping Term section, which is the only thing this assertion
+    // means to exercise (connectedTappingTerm's uid guard, not the
+    // section-persistence contract covered elsewhere).
+    const getSpy = vi.spyOn(window.vialAPI, 'pipetteSettingsGet').mockImplementation((uid: string) =>
+      Promise.resolve(uid === 'uid-b'
+        ? {
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          analyze: { filters: { interval: { viewMode: 'distribution', distributionSection: 'tappingTerm' } } },
+        }
+        : null),
+    )
+    const { TypingAnalyticsView } = await importView()
+    render(
+      <TypingAnalyticsView connectedTappingTerm={{ uid: 'uid-a', termMs: 250, reported: true }} />,
+    )
+    await waitFor(() => expect(screen.getByTestId('mock-summary')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('analyze-tab-interval'))
+    fireEvent.change(screen.getByTestId('analyze-filter-interval-view-mode'), { target: { value: 'distribution' } })
+    fireEvent.change(await screen.findByTestId('analyze-filter-interval-distribution-section'), { target: { value: 'tappingTerm' } })
+    // Selected keyboard (uid-a) matches the connected keyboard's uid —
+    // the pane forwards the real term.
+    await waitFor(() => expect(text('mock-tapping-term')).toBe('uid-a:uid-a:250:true'))
+
+    // Switch to uid-b: the connected term is still for uid-a, so the
+    // pane must null it out rather than diagnosing the wrong keyboard.
+    openFilterModal()
+    fireEvent.change(await screen.findByTestId('analyze-filter-keyboard'), { target: { value: 'uid-b' } })
+    applyFilterModal()
+    await waitFor(() => expect(text('mock-tapping-term')).toBe('uid-b:null'))
+    getSpy.mockRestore()
+  })
+
+  it('shows all three distribution-section options when the snapshot has tap-hold keys, one section at a time', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    mockGetSnapshot.mockResolvedValue({ ...SNAPSHOT, keymap: [[['LT(1,KC_SPC)']]] })
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(screen.getByTestId('mock-summary')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('analyze-tab-interval'))
+    fireEvent.change(screen.getByTestId('analyze-filter-interval-view-mode'), { target: { value: 'distribution' } })
+
+    const sectionSelect = await screen.findByTestId('analyze-filter-interval-distribution-section')
+    const optionValues = () => Array.from(sectionSelect.querySelectorAll('option')).map((o) => o.getAttribute('value'))
+    await waitFor(() => expect(optionValues()).toEqual(['interval', 'duration', 'tappingTerm']))
+
+    // 'interval' is the default section — only its mock is mounted.
+    expect(screen.getByTestId('mock-interval')).toBeInTheDocument()
+    expect(screen.queryByTestId('mock-duration')).toBeNull()
+    expect(screen.queryByTestId('mock-tapping-term')).toBeNull()
+
+    fireEvent.change(sectionSelect, { target: { value: 'duration' } })
+    await waitFor(() => expect(screen.getByTestId('mock-duration')).toBeInTheDocument())
+    expect(screen.queryByTestId('mock-interval')).toBeNull()
+    expect(screen.queryByTestId('mock-tapping-term')).toBeNull()
+
+    fireEvent.change(sectionSelect, { target: { value: 'tappingTerm' } })
+    await waitFor(() => expect(screen.getByTestId('mock-tapping-term')).toBeInTheDocument())
+    expect(screen.queryByTestId('mock-interval')).toBeNull()
+    expect(screen.queryByTestId('mock-duration')).toBeNull()
+  })
+
+  it('omits the Tapping Term option and falls back to Interval distribution when the snapshot has no tap-hold keys', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    // Default snapshot (`KC_NO` only) has no tap-hold keys.
+    mockGetSnapshot.mockResolvedValue(SNAPSHOT)
+    const getSpy = vi.spyOn(window.vialAPI, 'pipetteSettingsGet').mockResolvedValue({
+      _rev: 1,
+      keyboardLayout: 'qwerty',
+      autoAdvance: true,
+      layerNames: [],
+      // Persisted pick points at a section that isn't available for
+      // this keymap (e.g. saved on a keyboard that used to have
+      // tap-hold keys) — must fall back to 'interval' rather than
+      // rendering nothing.
+      analyze: { filters: { interval: { viewMode: 'distribution', distributionSection: 'tappingTerm' } } },
+    })
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(screen.getByTestId('mock-summary')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('analyze-tab-interval'))
+
+    const sectionSelect = await screen.findByTestId('analyze-filter-interval-distribution-section')
+    const optionValues = Array.from(sectionSelect.querySelectorAll('option')).map((o) => o.getAttribute('value'))
+    expect(optionValues).toEqual(['interval', 'duration'])
+    expect(screen.getByTestId('mock-interval')).toBeInTheDocument()
     getSpy.mockRestore()
   })
 

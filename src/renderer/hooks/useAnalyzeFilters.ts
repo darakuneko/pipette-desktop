@@ -98,6 +98,7 @@ export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
   interval: {
     unit: 'sec',
     viewMode: 'timeSeries',
+    distributionSection: 'interval',
   },
   activity: {
     metric: 'keystrokes',

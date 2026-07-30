@@ -762,7 +762,25 @@ async function captureAnalyzePage(page: Page): Promise<void> {
       await captureNamed(page, 'analyze-interval-time-series', { fullPage: true })
       await intervalViewMode.selectOption('distribution')
       await page.waitForTimeout(500)
+      // The distribution "Section" select (in the controls row, right
+      // after View) defaults to 'Interval distribution' — captured here
+      // — then round-trips through 'Keypress duration' and 'Tapping
+      // Term diagnosis' the same way the interval View select itself
+      // round-trips timeSeries/distribution above.
       await captureNamed(page, 'analyze-interval-distribution', { fullPage: true })
+      const distributionSection = page.locator('[data-testid="analyze-filter-interval-distribution-section"]')
+      if (await isAvailable(distributionSection)) {
+        await distributionSection.selectOption('duration')
+        await page.waitForTimeout(500)
+        await captureNamed(page, 'analyze-interval-duration', { fullPage: true })
+        await distributionSection.selectOption('tappingTerm')
+        await page.waitForTimeout(500)
+        await captureNamed(page, 'analyze-interval-tapping-term', { fullPage: true })
+        await distributionSection.selectOption('interval')
+        await page.waitForTimeout(500)
+      } else {
+        console.log('  [warn] interval distribution-section select not found — duration/tapping-term captures skipped')
+      }
     } else {
       console.log('  [warn] interval view-mode select not found — capturing default only')
       await captureNamed(page, 'analyze-interval-time-series', { fullPage: true })
@@ -1902,7 +1920,7 @@ async function main(): Promise<void> {
     await captureDeviceSelection(page)       // 01
     await captureDataModal(page)             // 02
     await captureSettingsModal(page)         // named: settings-troubleshooting, settings-defaults
-    await captureAnalyzePage(page)           // named: analyze-heatmap, analyze-heatmap-speed, analyze-heatmap-duration, analyze-wpm-time-series, analyze-wpm-time-of-day, analyze-interval-time-series, analyze-interval-distribution, analyze-activity-keystrokes, analyze-activity-calendar, analyze-ergonomics, analyze-ergonomics-learning, analyze-finger-assignment-modal, analyze-layer-keystrokes, analyze-layer-activations
+    await captureAnalyzePage(page)           // named: analyze-heatmap, analyze-heatmap-speed, analyze-heatmap-duration, analyze-wpm-time-series, analyze-wpm-time-of-day, analyze-interval-time-series, analyze-interval-distribution, analyze-interval-duration, analyze-interval-tapping-term, analyze-activity-keystrokes, analyze-activity-calendar, analyze-ergonomics, analyze-ergonomics-learning, analyze-finger-assignment-modal, analyze-layer-keystrokes, analyze-layer-activations
 
     const connected = await connectDevice(app, page)
     if (!connected) {

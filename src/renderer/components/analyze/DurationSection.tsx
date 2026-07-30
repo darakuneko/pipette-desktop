@@ -3,10 +3,11 @@
 // from matrix-release duration capture (see
 // .claude/plans/Plan-typing-metrics-chi2018.md Phase 2 and
 // bigram-bucket.ts's DURATION_BUCKET_* grid, now shared via
-// shared/duration-buckets.ts). Mounted below IntervalChart, only in
-// `distribution` mode — the tighter duration grid pairs with a
-// histogram, not a time series, and RolloverSection already owns the
-// timeSeries slot.
+// shared/duration-buckets.ts). One of the three panes AnalyzePane's
+// "Section" filter-row select picks between (see `DistributionSection`
+// in shared/types/analyze-filters.ts), only in `distribution` mode —
+// the tighter duration grid pairs with a histogram, not a time series,
+// and RolloverSection already owns the timeSeries slot.
 //
 // Deliberately renders NO reference line on the histogram: the X axis
 // is categorical (8 fixed buckets), and a vertical line has no honest
@@ -117,10 +118,12 @@ export function DurationSection({ uid, range, deviceScopes, appScopes, typingTes
       {
         labelKey: 'analyze.duration.stat.sd',
         value: sd === null ? EMPTY_STAT_VALUE : fmtMs(sd),
+        descriptionKey: 'analyze.duration.stat.sdDesc',
       },
       {
         labelKey: 'analyze.duration.stat.samples',
         value: totals.samples.toLocaleString(),
+        descriptionKey: 'analyze.duration.stat.samplesDesc',
       },
     ]
   }, [totals, t])
@@ -134,8 +137,17 @@ export function DurationSection({ uid, range, deviceScopes, appScopes, typingTes
   }
 
   return (
-    <section className="flex flex-col gap-2 border-t border-edge pt-3" data-testid="analyze-duration-section">
-      <h3 className="text-sm font-semibold text-content">{t('analyze.duration.sectionTitle')}</h3>
+    // No visible <h3> here — this section only ever renders under
+    // AnalyzePane's "Section" filter-row select, which already labels
+    // it (shared `sectionTitle` key), so a second in-body heading would
+    // just repeat it. `aria-label` on the section itself keeps the
+    // name available to assistive tech (as a named landmark) even
+    // without a visible heading to navigate by.
+    <section
+      className="flex flex-col gap-2 border-t border-edge pt-3"
+      data-testid="analyze-duration-section"
+      aria-label={t('analyze.duration.sectionTitle')}
+    >
       {totals.samples === 0 ? (
         <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-duration-empty">
           {t('analyze.duration.empty')}

@@ -22,6 +22,7 @@ import {
   ACTIVITY_CALENDAR_NORMALIZATIONS,
   ACTIVITY_METRICS,
   ACTIVITY_VIEWS,
+  DISTRIBUTION_SECTIONS,
   ERGONOMICS_LEARNING_PERIODS,
   ERGONOMICS_VIEW_MODES,
   INTERVAL_UNITS,
@@ -30,6 +31,7 @@ import {
   isAllScope,
   isHashScope,
   parseFilterDimension,
+  type DistributionSection,
   type LayoutComparisonFilters,
 } from '../../../shared/types/analyze-filters'
 import type {
@@ -38,6 +40,7 @@ import type {
   ActivityMetric,
   ActivityView,
   AnalysisTabKey,
+  ConnectedTappingTerm,
   ErgonomicsLearningPeriod,
   ErgonomicsViewMode,
   GranularityChoice,
@@ -73,6 +76,8 @@ import { formatDateTime } from '../editors/store-modal-shared'
 import { IntervalChart } from './IntervalChart'
 import { RolloverSection } from './RolloverSection'
 import { DurationSection } from './DurationSection'
+import { TappingTermCard } from './TappingTermCard'
+import { tapHoldPositionKeys } from './analyze-tapping-term-cells'
 import { KeyHeatmapChart } from './KeyHeatmapChart'
 import { LayerUsageChart } from './LayerUsageChart'
 import { SummaryView } from './SummaryView'
@@ -191,6 +196,18 @@ const GRANULARITY_OPTIONS: Array<{ value: GranularityChoice; labelKey: string }>
   { value: DAY_MS * 30, labelKey: 'month1' },
 ]
 
+// Interval > Distribution's section select reuses each section's own
+// `sectionTitle` key as its option label — the same string that used to
+// sit as an in-body <h3> before the switcher took over labeling (see
+// DurationSection.tsx / TappingTermCard.tsx / IntervalChart.tsx's
+// distribution branch), so the select and the content it reveals never
+// disagree on the section's name.
+const DISTRIBUTION_SECTION_LABEL_KEY: Record<DistributionSection, string> = {
+  interval: 'analyze.interval.distribution.sectionTitle',
+  duration: 'analyze.duration.sectionTitle',
+  tappingTerm: 'analyze.tappingTerm.sectionTitle',
+}
+
 export type AnalyzePaneKey = 'A' | 'B'
 
 export interface AnalyzePaneProps {
@@ -213,6 +230,10 @@ export interface AnalyzePaneProps {
    * callback receives `null` whenever no Layout Comparison result is
    * loaded (different tab, no snapshot, no target picked). */
   onSkipPercentChange?: (percent: number | null) => void
+  /** See {@link ConnectedTappingTerm}. `undefined`/`null` both mean "no
+   * physically connected keyboard to diagnose" — the TappingTermCard
+   * only renders when this matches the pane's own selected keyboard. */
+  connectedTappingTerm?: ConnectedTappingTerm | null
 }
 
 export function AnalyzePane({
@@ -222,6 +243,7 @@ export function AnalyzePane({
   selectedUid,
   onSelectUid,
   onSkipPercentChange,
+  connectedTappingTerm,
 }: AnalyzePaneProps): JSX.Element {
   // Pane A keeps the historical (unsuffixed) testids so existing
   // selectors keep working; pane B appends `-b` so split-mode renders
@@ -450,6 +472,31 @@ export function AnalyzePane({
   // / Ergonomics / Layer-activations consume the snapshot directly so
   // gating here keeps a multi-device pick from blanking those tabs.
   const effectiveSnapshot = deviceScopes.every(isHashScope) ? null : keymapSnapshot
+
+  // Mirrors TappingTermCard's own hidden rule (`snapshotLoading ||
+  // !hasTapHoldKeys` -> render nothing) so the distribution-section
+  // switcher never offers a "Tapping Term diagnosis" option that would
+  // render an empty section. Computed here (not read back from the
+  // card) because the switcher has to decide what to show *before*
+  // TappingTermCard itself would mount.
+  const hasTapHoldKeys = effectiveSnapshot !== null && tapHoldPositionKeys(effectiveSnapshot).size > 0
+  const availableDistributionSections: readonly DistributionSection[] = useMemo(
+    () => (snapshotLoading || !hasTapHoldKeys
+      ? DISTRIBUTION_SECTIONS.filter((section) => section !== 'tappingTerm')
+      : DISTRIBUTION_SECTIONS),
+    [snapshotLoading, hasTapHoldKeys],
+  )
+  // The persisted pick, clamped to what's actually offered right now.
+  // Falls back to `'interval'` at render time rather than rewriting
+  // `intervalFilter.distributionSection` — the user's last raw pick
+  // (e.g. 'tappingTerm' saved from a keyboard with tap-hold keys) stays
+  // intact in storage so it comes back the moment it's available again
+  // (e.g. after the snapshot finishes loading, or on a keyboard whose
+  // keymap does have tap-hold keys).
+  const effectiveDistributionSection: DistributionSection =
+    availableDistributionSections.includes(intervalFilter.distributionSection)
+      ? intervalFilter.distributionSection
+      : 'interval'
 
   // The active window of the currently-selected snapshot. `null` means
   // "no clamp" — either no snapshot is picked yet or the keyboard has
@@ -1211,6 +1258,23 @@ export function AnalyzePane({
                       ))}
                     </select>
                   </label>
+                  {intervalFilter.viewMode === 'distribution' && (
+                    <label className={FILTER_LABEL}>
+                      <span>{t('analyze.filters.intervalDistributionSection')}</span>
+                      <select
+                        className={FILTER_SELECT}
+                        value={effectiveDistributionSection}
+                        onChange={(e) => setIntervalFilter({ distributionSection: e.target.value as DistributionSection })}
+                        data-testid={tid("analyze-filter-interval-distribution-section")}
+                      >
+                        {availableDistributionSections.map((section) => (
+                          <option key={section} value={section}>
+                            {t(DISTRIBUTION_SECTION_LABEL_KEY[section])}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
                   <label className={FILTER_LABEL}>
                     <span>{t('analyze.filters.unit')}</span>
                     <select
@@ -1338,30 +1402,40 @@ export function AnalyzePane({
                   showBenchmark={showBenchmark}
                 />
               ) : analysisTab === 'interval' ? (
-                // Flex column so IntervalChart and RolloverSection/
-                // DurationSection share the tab's height instead of
+                // Flex column so IntervalChart and RolloverSection share
+                // the tab's height in timeSeries mode instead of
                 // IntervalChart's own `h-full` root claiming the whole
-                // viewport and pushing the section below the fold.
+                // viewport and pushing RolloverSection below the fold.
                 // `flex-1 min-h-0` lets the chart shrink to make room;
-                // `shrink-0` keeps the section at its natural height
-                // rather than getting squeezed. Distribution mode swaps
-                // RolloverSection for DurationSection below the chart —
-                // neither mode leaves IntervalChart as the sole flex item.
+                // `shrink-0` keeps RolloverSection at its natural height
+                // rather than getting squeezed (the #328 contract).
+                //
+                // Distribution mode is structurally different: instead
+                // of stacking IntervalChart / DurationSection /
+                // TappingTermCard (which forced a scroll — the whole
+                // reason a section picker exists), the filter row's
+                // "Section" select (next to View/Display, see the
+                // controls row below) picks exactly one of the three to
+                // mount at a time, each at its own natural (`shrink-0`-
+                // friendly) height — see `distributionSection` persisted
+                // alongside `viewMode`.
                 <div className="flex h-full min-h-0 flex-col gap-3">
-                  <div className="min-h-0 flex-1">
-                    <IntervalChart
-                      uid={selected.uid}
-                      range={range}
-                      deviceScopes={deviceScopes}
-                      appScopes={appScopes}
-                      typingTestScopes={typingTestScopes}
-                      runIdScopes={runIdScopes}
-                      unit={intervalFilter.unit}
-                      granularity={wpmFilter.granularity}
-                      viewMode={intervalFilter.viewMode}
-                      showBenchmark={showBenchmark}
-                    />
-                  </div>
+                  {intervalFilter.viewMode === 'timeSeries' && (
+                    <div className="min-h-0 flex-1">
+                      <IntervalChart
+                        uid={selected.uid}
+                        range={range}
+                        deviceScopes={deviceScopes}
+                        appScopes={appScopes}
+                        typingTestScopes={typingTestScopes}
+                        runIdScopes={runIdScopes}
+                        unit={intervalFilter.unit}
+                        granularity={wpmFilter.granularity}
+                        viewMode={intervalFilter.viewMode}
+                        showBenchmark={showBenchmark}
+                      />
+                    </div>
+                  )}
                   {intervalFilter.viewMode === 'timeSeries' && (
                     <div className="shrink-0">
                       <RolloverSection
@@ -1377,15 +1451,45 @@ export function AnalyzePane({
                     </div>
                   )}
                   {intervalFilter.viewMode === 'distribution' && (
-                    <div className="shrink-0">
-                      <DurationSection
-                        uid={selected.uid}
-                        range={range}
-                        deviceScopes={deviceScopes}
-                        appScopes={appScopes}
-                        typingTestScopes={typingTestScopes}
-                        runIdScopes={runIdScopes}
-                      />
+                    <div className="shrink-0 flex flex-col gap-3">
+                      {effectiveDistributionSection === 'interval' && (
+                        <IntervalChart
+                          uid={selected.uid}
+                          range={range}
+                          deviceScopes={deviceScopes}
+                          appScopes={appScopes}
+                          typingTestScopes={typingTestScopes}
+                          runIdScopes={runIdScopes}
+                          unit={intervalFilter.unit}
+                          granularity={wpmFilter.granularity}
+                          viewMode={intervalFilter.viewMode}
+                          showBenchmark={showBenchmark}
+                        />
+                      )}
+                      {effectiveDistributionSection === 'duration' && (
+                        <DurationSection
+                          uid={selected.uid}
+                          range={range}
+                          deviceScopes={deviceScopes}
+                          appScopes={appScopes}
+                          typingTestScopes={typingTestScopes}
+                          runIdScopes={runIdScopes}
+                        />
+                      )}
+                      {effectiveDistributionSection === 'tappingTerm' && (
+                        <TappingTermCard
+                          uid={selected.uid}
+                          range={range}
+                          appScopes={appScopes}
+                          typingTestScopes={typingTestScopes}
+                          runIdScopes={runIdScopes}
+                          snapshot={effectiveSnapshot}
+                          snapshotLoading={snapshotLoading}
+                          connectedTappingTerm={
+                            connectedTappingTerm?.uid === selected.uid ? connectedTappingTerm : null
+                          }
+                        />
+                      )}
                     </div>
                   )}
                 </div>

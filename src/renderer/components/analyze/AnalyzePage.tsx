@@ -7,17 +7,19 @@
 // this page stays header-less.
 
 import { TypingAnalyticsView } from './TypingAnalyticsView'
+import type { ConnectedTappingTerm } from './analyze-types'
 
 interface Props {
   onBack: () => void
   initialUid?: string
+  connectedTappingTerm?: ConnectedTappingTerm | null
 }
 
-export function AnalyzePage({ onBack, initialUid }: Props) {
+export function AnalyzePage({ onBack, initialUid, connectedTappingTerm }: Props) {
   return (
     <div className="flex h-screen flex-col bg-surface" data-testid="analyze-page">
       <main className="flex-1 min-h-0 p-8">
-        <TypingAnalyticsView initialUid={initialUid} onBack={onBack} />
+        <TypingAnalyticsView initialUid={initialUid} onBack={onBack} connectedTappingTerm={connectedTappingTerm} />
       </main>
     </div>
   )

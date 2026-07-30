@@ -1,5 +1,5 @@
 {
-  "version": "0.1.48",
+  "version": "0.1.49",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -926,6 +926,7 @@
         "gt10000": ">10s"
       },
       "distribution": {
+        "sectionTitle": "間隔の分布",
         "tooltipLabel": "推定打鍵数",
         "summary": {
           "label": "打鍵リズム要約",
@@ -942,6 +943,7 @@
         }
       },
       "timeSeries": {
+        "sectionTitle": "間隔の推移",
         "summary": {
           "label": "間隔要約",
           "medianP50": "重み付き中央値",
@@ -980,9 +982,37 @@
       "stat": {
         "mean": "平均打鍵長",
         "sd": "SD",
+        "sdDesc": "ホールド時間の標準偏差でございます。SDが低いほどホールド時間が安定しており、高いほどばらつきが大きいことを意味いたします。",
         "samples": "サンプル数",
+        "samplesDesc": "1サンプルは、キーを押してから離すまでを1回分計測したものでございます。",
         "populationAverage": "母集団平均 {{value}} ms"
       }
+    },
+    "tappingTerm": {
+      "sectionTitle": "Tapping Term の診断",
+      "ariaLabel": "Tapping Term 診断の要約",
+      "stat": {
+        "current": "現在の値",
+        "assumed": "想定値",
+        "tapP95": "観測タップ p95",
+        "tapP95Desc": "このキーでのタップの長さの95%がこの範囲より短かったことを示しております — 上の Tapping Term と比べて、タップとホールドを区別しやすいかどうかの目安となります。",
+        "samples": "サンプル数",
+        "recordedCounts": "記録済みタップ / ホールド"
+      },
+      "recordedCountsDescription": "各打鍵を記録した時点で有効であった Tapping Term を基準に分類しておりますため、現在の値とは異なる場合がございます — あくまで参考情報としてお示ししております",
+      "verdict": {
+        "unknown": {
+          "insufficientSamples": "この値を診断するには、タップ・ホールドの記録数がまだ不足しております",
+          "noTapMass": "これらのキーの押下は、現在の値では既にすべてホールドと判定されておりますため、比較すべきタップ側のデータがまだございません",
+          "bucketResolution": "Tapping Term が、お客様の標準的なタップの長さと同じ計測区間に収まっておりますため、実際にどちら側に位置するかをこのデータから判定いたしかねます"
+        },
+        "ok": "現在の Tapping Term は、お客様の打鍵傾向によく合っております",
+        "canLower": "お客様の打鍵傾向からしますと、~{{value}} ms 程度まで下げられる見込みがございます",
+        "nearTerm": "この Tapping Term 付近では、長いタップと短いホールドの見分けがつきかねます — 数値のみでは切り分けられない領域でございます"
+      },
+      "reportedHint": "エディタの {{tab}} タブ → {{button}} より変更いただけます",
+      "unreportedNotice": "このファームウェアは QMK Settings を通じて Tapping Term をご報告いたしません。そのため、この診断は QMK の既定値である {{default}} ms を前提としております。変更にはファームウェアの再構築が必要でございます",
+      "guidance": "このキーボードをお繋ぎいただきますと、Tapping Term を読み取り、この診断を実行いたします"
     },
     "activity": {
       "tableLabel": "時間帯 × 曜日の活動量",
@@ -1454,6 +1484,7 @@
         "timeSeries": "時系列",
         "distribution": "分布"
       },
+      "intervalDistributionSection": "セクション",
       "wpmViewMode": "見栄え",
       "wpmViewModeOption": {
         "timeSeries": "時系列",
