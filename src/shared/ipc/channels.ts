@@ -174,6 +174,11 @@ export const IpcChannels = {
    * narrowing). */
   TYPING_ANALYTICS_LIST_DURATION_CELLS: 'typing-analytics:list-duration-cells',
 
+  // Typing Run Log Store — per-run raw keystroke log (renderer → main → renderer)
+  TYPING_RUN_LOG_SAVE: 'typing-run-log:save',
+  TYPING_RUN_LOG_LIST: 'typing-run-log:list',
+  TYPING_RUN_LOG_GET: 'typing-run-log:get',
+
   // Typing Test Text Store (renderer → main → renderer)
   TYPING_TEST_TEXT_LIST: 'typing-test-text:list',
   TYPING_TEST_TEXT_GET: 'typing-test-text:get',

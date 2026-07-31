@@ -177,7 +177,12 @@ export function syncUnitFromFileName(fileName: string): string | null {
 
   // "keyboards_0x1234_settings.enc" → "keyboards/0x1234/settings"
   // "keyboards_0x1234_snapshots.enc" → "keyboards/0x1234/snapshots"
-  const kbMatch = fileName.match(/^keyboards_(.+?)_(settings|snapshots)\.enc$/)
+  // "keyboards_0x1234_runs.enc" → "keyboards/0x1234/runs" (per-run raw
+  // keystroke log — added so a fresh machine can discover a remote-only
+  // run-log unit via manual sync; the same gap exists today for
+  // analyze_filters/key-labels/typing-test-texts/themes, tracked
+  // separately and deliberately not fixed here)
+  const kbMatch = fileName.match(/^keyboards_(.+?)_(settings|snapshots|runs)\.enc$/)
   if (kbMatch) return `keyboards/${kbMatch[1]}/${kbMatch[2]}`
 
   // "favorites_tapDance.enc" → "favorites/tapDance"

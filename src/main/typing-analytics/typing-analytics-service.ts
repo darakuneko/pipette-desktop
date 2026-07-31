@@ -1507,12 +1507,24 @@ function isValidKeyboard(value: unknown): value is TypingAnalyticsKeyboard {
  * press record) instead of letting it skew the per-cell histogram. */
 const MAX_MATRIX_RELEASE_DURATION_MS = 60_000
 
-function isValidMatrixCommon(obj: Record<string, unknown>): boolean {
+/** row/col/keycode validity (non-negative integers for row/col, any
+ * finite number for keycode) — shared with `typing-run-log-store.ts`'s
+ * per-keystroke validation, which carries the same three fields but no
+ * `layer` (a run-log keystroke isn't tagged by layer), hence this being
+ * split out from `isValidMatrixCommon` rather than that function being
+ * reused directly. */
+export function isValidRowColKeycode(obj: Record<string, unknown>): boolean {
   return (
     typeof obj.row === 'number' && Number.isInteger(obj.row) && obj.row >= 0 &&
     typeof obj.col === 'number' && Number.isInteger(obj.col) && obj.col >= 0 &&
-    typeof obj.layer === 'number' && Number.isInteger(obj.layer) && obj.layer >= 0 &&
     typeof obj.keycode === 'number' && Number.isFinite(obj.keycode)
+  )
+}
+
+function isValidMatrixCommon(obj: Record<string, unknown>): boolean {
+  return (
+    isValidRowColKeycode(obj) &&
+    typeof obj.layer === 'number' && Number.isInteger(obj.layer) && obj.layer >= 0
   )
 }
 

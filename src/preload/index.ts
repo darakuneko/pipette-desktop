@@ -12,6 +12,7 @@ import type { DeviceInfo, KeyboardDefinition, ProbeResult } from '../shared/type
 import type { TrayStatus } from '../shared/types/vial-api'
 import type { SnapshotMeta } from '../shared/types/snapshot-store'
 import type { AnalyzeFilterSnapshotMeta } from '../shared/types/analyze-filter-store'
+import type { RunKeystrokeLog, RunLogMeta } from '../shared/types/typing-run-log'
 import type { SavedFavoriteMeta, FavoriteImportResult } from '../shared/types/favorite-store'
 import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult, KeyLabelImportBatchResult } from '../shared/types/key-label-store'
 import type { TypingTestTextMeta, TypingTestTextRecord, TypingTestTextStoreResult } from '../shared/types/typing-test-text-store'
@@ -248,6 +249,14 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.ANALYZE_FILTER_STORE_RENAME, uid, entryId, newLabel),
   analyzeFilterStoreDelete: (uid: string, entryId: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.ANALYZE_FILTER_STORE_DELETE, uid, entryId),
+
+  // --- Typing Run Log Store (per-run raw keystroke log) ---
+  typingRunLogSave: (uid: string, log: RunKeystrokeLog): Promise<{ success: boolean; entry?: RunLogMeta; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_RUN_LOG_SAVE, uid, log),
+  typingRunLogList: (uid: string): Promise<{ success: boolean; entries?: RunLogMeta[]; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_RUN_LOG_LIST, uid),
+  typingRunLogGet: (uid: string, runId: string): Promise<{ success: boolean; data?: RunKeystrokeLog; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_RUN_LOG_GET, uid, runId),
 
   // --- Favorite Store (internal save/load via IPC) ---
   favoriteStoreList: (type: string): Promise<{ success: boolean; entries?: SavedFavoriteMeta[]; error?: string }> =>

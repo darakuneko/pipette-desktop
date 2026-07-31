@@ -29,6 +29,7 @@ import {
 import { MatrixAnalyticsQueue } from './matrix-analytics-queue'
 import { PressDurationTracker } from './matrix-press-duration'
 import { MatrixLayerLatch } from './matrix-layer-latch'
+import { deriveExpectedChar } from './expected-char'
 
 export type { WordResult, TypingTestState, TypingTestStatus } from './run-state'
 
@@ -42,14 +43,51 @@ export interface UseTypingTestOptions<TPreparedEvent = unknown> {
    * item to {@link onEmitAnalyticsEvent} — or null/undefined to drop the
    * press: it is then never queued or emitted, so a later state change
    * cannot retroactively authorize it. Called once per accepted keystroke,
-   * never re-invoked for the same press. */
-  onPrepareAnalyticsEvent?: (kind: 'matrix' | 'char') => TPreparedEvent | null | undefined
+   * never re-invoked for the same press. `windowFocused` is this hook's own
+   * live focus state at the moment of the call (always true for 'char' —
+   * processKeyEvent already refuses to run at all while unfocused) — the
+   * caller carries it into its own opaque `TPreparedEvent` so a
+   * consumer gated on focus (see run-log-recorder.ts's PRIVACY note) can
+   * apply the press-time value rather than whatever focus is by the time
+   * the event actually ships. */
+  onPrepareAnalyticsEvent?: (kind: 'matrix' | 'char', windowFocused: boolean) => TPreparedEvent | null | undefined
   /** Ships an event that {@link onPrepareAnalyticsEvent} already authorized
    * and tagged for this exact press. Called either immediately (empty
    * queue) or once the item reaches the front of the ordering queue —
    * must not re-read whatever live state produced `prepared`, since that
    * state may have changed while the item was queued. */
   onEmitAnalyticsEvent?: (prepared: TPreparedEvent, event: TypingAnalyticsEventPayload) => void
+  /** Notifies the run-keystroke-log recorder (owned by the caller, e.g.
+   * useInputModes) of a matrix press at REGISTRATION time, so a later
+   * (possibly TAPPING_TERM-delayed) analytics event can still be joined
+   * back to the word it was actually typed against. See
+   * run-log-recorder.ts's `noteRegistration`. `getExpectedChar` is a
+   * thunk (not an already-computed value) so its — possibly expensive,
+   * for romaji — derivation is free whenever the recorder is gated off;
+   * the recorder invokes it only once it has confirmed recording is
+   * actually active. Only ever called while `windowFocused` (this
+   * hook's own live focus state) is true — see the call site in
+   * `processMatrixFrame` — so `windowFocused` is always `true` here too;
+   * threaded through anyway so the recorder's own gate (defense in
+   * depth, see run-log-recorder.ts's PRIVACY note) doesn't have to
+   * assume the caller's discipline. */
+  onNoteKeystrokeRegistration?: (
+    runId: string, row: number, col: number, ts: number, wordIndex: number,
+    getExpectedChar: () => string | undefined, windowFocused: boolean,
+  ) => void
+  /** Notifies the run-keystroke-log recorder of a char-producing
+   * keystroke's word attribution, snapshotted immediately BEFORE this
+   * same key's own run-state update — unlike a matrix press (registered
+   * at HID-poll time, always AFTER its own handler already advanced
+   * state for the same physical press), a DOM char event's own emit
+   * below IS that state's first touch for this key, so this call must
+   * run first, not merely before the emit. See run-log-recorder.ts's
+   * `noteCharContext`. `getExpectedChar` is a thunk for the same reason
+   * as `onNoteKeystrokeRegistration`'s. Only ever called while
+   * `windowFocused` is true, same as `onNoteKeystrokeRegistration`. */
+  onNoteCharContext?: (
+    runId: string, wordIndex: number, getExpectedChar: () => string | undefined, windowFocused: boolean,
+  ) => void
   /** TAPPING_TERM (ms) used to classify masked-key presses as tap vs
    * hold against a deadline fixed at press time (pressTs + this value,
    * captured then — not re-read at release/deadline, so a setting change
@@ -133,6 +171,8 @@ export function useTypingTest<TPreparedEvent = unknown>(
   const windowFocusedRef = useRef(windowFocused)
   const prepareAnalyticsEventRef = useRef(options?.onPrepareAnalyticsEvent)
   const emitAnalyticsEventRef = useRef(options?.onEmitAnalyticsEvent)
+  const noteKeystrokeRegistrationRef = useRef(options?.onNoteKeystrokeRegistration)
+  const noteCharContextRef = useRef(options?.onNoteCharContext)
   const prevPressedRef = useRef<ReadonlySet<string>>(new Set())
   const latchedLayersRef = useRef(new MatrixLayerLatch())
   // Press-order emission queue for matrix analytics events. See
@@ -159,6 +199,8 @@ export function useTypingTest<TPreparedEvent = unknown>(
   windowFocusedRef.current = windowFocused
   prepareAnalyticsEventRef.current = options?.onPrepareAnalyticsEvent
   emitAnalyticsEventRef.current = options?.onEmitAnalyticsEvent
+  noteKeystrokeRegistrationRef.current = options?.onNoteKeystrokeRegistration
+  noteCharContextRef.current = options?.onNoteCharContext
   tappingTermMsRef.current = options?.tappingTermMs ?? DEFAULT_TAPPING_TERM_MS
 
   const restartAsync = useCallback(async () => {
@@ -389,8 +431,23 @@ export function useTypingTest<TPreparedEvent = unknown>(
       // that isn't authorized right now is dropped for good — it never
       // enters the queue, so it can't be "un-dropped" by a state change
       // (e.g. recording toggling back on) while it would have waited.
-      const prepared = prepare('matrix')
+      const prepared = prepare('matrix', windowFocusedRef.current)
       if (prepared == null) continue
+      // Run-keystroke-log word attribution, snapshotted now (registration
+      // time) rather than whenever this press eventually emits — see
+      // onNoteKeystrokeRegistration's doc comment. Gated on window focus
+      // here (the primary gate — HID matrix polling itself is NOT gated
+      // on focus, see the comment atop this function, so without this
+      // check a keystroke typed into a different, unfocused application
+      // on the same keyboard would be attributed to the run log): only
+      // ever called while the app window is actually focused.
+      if (windowFocusedRef.current) {
+        noteKeystrokeRegistrationRef.current?.(
+          stateRef.current.runId, edge.row, edge.col, ts, stateRef.current.currentWordIndex,
+          () => deriveExpectedChar(stateRef.current, configRef.current, languageRef.current),
+          windowFocusedRef.current,
+        )
+      }
       // Overlap / pollGapMs are derived from the raw pressed set, not
       // from anything queue-related — see matrix-press-duration.ts.
       // registerPress also records this press so the matching release
@@ -532,8 +589,22 @@ export function useTypingTest<TPreparedEvent = unknown>(
     // in the same call — no staleness window to guard against.
     const prepare = prepareAnalyticsEventRef.current
     if (prepare && (key.length === 1 || key === 'Backspace')) {
-      const prepared = prepare('char')
+      // Always true here — the early return above already refused to run
+      // at all while unfocused — passed through anyway for a uniform
+      // prepare() signature between the matrix and char call sites.
+      const prepared = prepare('char', windowFocusedRef.current)
       if (prepared != null) {
+        // Run-keystroke-log word attribution for this char, captured NOW
+        // — before the reducer below advances state for this same key —
+        // see onNoteCharContext's doc comment. Gated on focus the same
+        // way as onNoteKeystrokeRegistration's own call site.
+        if (windowFocusedRef.current) {
+          noteCharContextRef.current?.(
+            stateRef.current.runId, stateRef.current.currentWordIndex,
+            () => deriveExpectedChar(stateRef.current, configRef.current, languageRef.current),
+            windowFocusedRef.current,
+          )
+        }
         emitAnalyticsEventRef.current?.(prepared, { kind: 'char', key, ts: Date.now() })
       }
     }

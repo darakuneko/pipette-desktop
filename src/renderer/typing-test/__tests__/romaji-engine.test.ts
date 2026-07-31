@@ -550,3 +550,44 @@ describe('canonicalRomaji', () => {
     expect(canonicalRomaji('あい')).toBe('ai')
   })
 })
+
+// nextGuideChar is a cheap one-character read meant to be exactly
+// equivalent to remainingGuide()[0] without paying for the recursive
+// build of the whole remaining-word guide — see its own doc comment in
+// romaji-engine.ts. This sweep pins that equivalence across ordinary
+// kana, a pending-n case (single "n" that could still extend to "nn"),
+// sokuon (gemination), and the empty-prefix (nothing typed yet) case.
+describe('nextGuideChar equivalence with remainingGuide()[0]', () => {
+  const cases: Array<{ word: string; typed: string }> = [
+    { word: 'こんにちは', typed: '' },
+    { word: 'こんにちは', typed: 'ko' },
+    { word: 'ありがとう', typed: 'a' },
+    // Pending "n" — could still commit as ん (single tap) or extend to
+    // "nn"/"n'" — remainingGuide falls through to the NEXT segment here
+    // since the current segment's winner is already fully typed.
+    { word: 'かんい', typed: 'ka' + 'n' },
+    { word: 'あんない', typed: 'a' + 'n' },
+    // Sokuon (っ) — explicit small-tsu and geminated-consonant spellings.
+    { word: 'がっこう', typed: 'ga' },
+    { word: 'がっこう', typed: 'ga' + 'k' },
+    { word: 'きって', typed: '' },
+    // でぃなーにいく — ambiguous digraph vs decomposed segmentation.
+    { word: 'でぃなーにいく', typed: '' },
+    { word: 'でぃなーにいく', typed: 'de' },
+    // Word-final ん, single-tap pending.
+    { word: 'ほん', typed: 'ho' + 'n' },
+  ]
+
+  it.each(cases)('word=$word typed=$typed', ({ word, typed }) => {
+    const matcher = createRomajiMatcher(word)
+    for (const key of typed) matcher.acceptChar(key)
+    const guide = matcher.remainingGuide()
+    expect(matcher.nextGuideChar()).toBe(guide.length > 0 ? guide[0] : undefined)
+  })
+
+  it('returns undefined once the word is fully typed, matching an empty remainingGuide', () => {
+    const { matcher } = type('あい', 'ai')
+    expect(matcher.remainingGuide()).toBe('')
+    expect(matcher.nextGuideChar()).toBeUndefined()
+  })
+})

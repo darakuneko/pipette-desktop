@@ -100,6 +100,15 @@ export function buildRomajiMatcher(word: string, keystrokes: string, opts?: Roma
   return matcher
 }
 
+/** The single next character romaji judging expects for `word`, given
+ *  what's been typed so far — `buildRomajiMatcher(...).nextGuideChar()`,
+ *  which (unlike reading `remainingGuide()[0]`) never builds the guide
+ *  for the rest of the word just to read one character off it. Used by
+ *  expected-char.ts's `deriveExpectedChar` for the romaji branch. */
+export function romajiNextExpectedChar(word: string, keystrokes: string, opts?: RomajiMatcherOptions): string | undefined {
+  return buildRomajiMatcher(word, keystrokes, opts).nextGuideChar()
+}
+
 /** Romaji Settings modal detail fields (disabledStyles / guideStyles /
  *  caseStyle), read only while `romajiInput` is honored (see
  *  `isRomajiInputActive`) — the config shape guarantees `romaji` only

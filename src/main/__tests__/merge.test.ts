@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mergeEntries, gcTombstones, effectiveTime } from '../sync/merge'
+import { mergeEntries, gcTombstones, effectiveTime, applyRunLogRetention } from '../sync/merge'
 import type { SavedFavoriteMeta } from '../../shared/types/favorite-store'
+import type { RunLogMeta } from '../../shared/types/typing-run-log'
+import { MAX_RUN_LOGS_PER_KEYBOARD } from '../../shared/types/typing-run-log'
 
 type Entry = SavedFavoriteMeta
 
@@ -344,6 +346,91 @@ describe('mergeEntries', () => {
       )
       expect(result.remoteNeedsUpdate).toBe(true)
     })
+  })
+})
+
+describe('applyRunLogRetention (pure, deterministic)', () => {
+  function makeMeta(overrides: Partial<RunLogMeta> & { id: string; startedAt: string }): RunLogMeta {
+    return { filename: `${overrides.id}.json`, savedAt: overrides.startedAt, ...overrides }
+  }
+
+  function makeMetas(count: number): RunLogMeta[] {
+    return Array.from({ length: count }, (_, i) => makeMeta({ id: `id-${i}`, startedAt: new Date(2026, 0, 1, 0, 0, i).toISOString() }))
+  }
+
+  it('is a no-op under the cap', () => {
+    const entries = makeMetas(MAX_RUN_LOGS_PER_KEYBOARD)
+    const { entries: result, evicted } = applyRunLogRetention(entries, MAX_RUN_LOGS_PER_KEYBOARD)
+    expect(result).toHaveLength(MAX_RUN_LOGS_PER_KEYBOARD)
+    expect(evicted).toHaveLength(0)
+  })
+
+  it('keeps the newest N regardless of input order (shuffled)', () => {
+    const entries = makeMetas(MAX_RUN_LOGS_PER_KEYBOARD + 10)
+    const shuffled = [...entries].sort(() => Math.random() - 0.5)
+    const { entries: result } = applyRunLogRetention(shuffled, MAX_RUN_LOGS_PER_KEYBOARD)
+    const keptIds = new Set(result.filter((e) => !e.deletedAt).map((e) => e.id))
+    expect(keptIds.size).toBe(MAX_RUN_LOGS_PER_KEYBOARD)
+    // Newest 50 (highest index, since index tracks minute-offset here) survive.
+    for (let i = 10; i < MAX_RUN_LOGS_PER_KEYBOARD + 10; i++) {
+      expect(keptIds.has(`id-${i}`)).toBe(true)
+    }
+    for (let i = 0; i < 10; i++) {
+      expect(keptIds.has(`id-${i}`)).toBe(false)
+    }
+  })
+
+  it('converges two divergent 50+ sets onto the same kept set after a union', () => {
+    // Simulate two devices that each recorded slightly different extra
+    // runs beyond the cap, then a merge that unions everything. Ranking
+    // by immutable startedAt (not by whichever device's LWW timestamp
+    // is newer) must yield the identical kept set regardless of which
+    // side's array order the union happens to preserve.
+    const shared = makeMetas(MAX_RUN_LOGS_PER_KEYBOARD)
+    const deviceAExtra = [makeMeta({ id: 'device-a-1', startedAt: new Date(2025, 0, 1).toISOString() })]
+    const deviceBExtra = [makeMeta({ id: 'device-b-1', startedAt: new Date(2025, 0, 2).toISOString() })]
+
+    const unionOrderA = [...shared, ...deviceAExtra, ...deviceBExtra]
+    const unionOrderB = [...deviceBExtra, ...deviceAExtra, ...shared].reverse()
+
+    const resultA = applyRunLogRetention(unionOrderA, MAX_RUN_LOGS_PER_KEYBOARD)
+    const resultB = applyRunLogRetention(unionOrderB, MAX_RUN_LOGS_PER_KEYBOARD)
+
+    const keptIdsA = new Set(resultA.entries.filter((e) => !e.deletedAt).map((e) => e.id))
+    const keptIdsB = new Set(resultB.entries.filter((e) => !e.deletedAt).map((e) => e.id))
+    expect(keptIdsA).toEqual(keptIdsB)
+    // Both older, single extra entries lose to the 50 newer `shared` runs.
+    expect(keptIdsA.has('device-a-1')).toBe(false)
+    expect(keptIdsA.has('device-b-1')).toBe(false)
+  })
+
+  it('mergeEntries applies retention via runLogRetentionMax and reports evicted entries', () => {
+    const local = makeMetas(MAX_RUN_LOGS_PER_KEYBOARD)
+    const remote: RunLogMeta[] = [makeMeta({ id: 'newcomer', startedAt: new Date(2027, 0, 1).toISOString() })]
+
+    const result = mergeEntries(local, remote, { runLogRetentionMax: MAX_RUN_LOGS_PER_KEYBOARD })
+
+    const keptIds = new Set(result.entries.filter((e) => !e.deletedAt).map((e) => e.id))
+    expect(keptIds.size).toBe(MAX_RUN_LOGS_PER_KEYBOARD)
+    expect(keptIds.has('newcomer')).toBe(true)
+    // The oldest local entry (id-0) was evicted to make room.
+    expect(result.evicted.map((e) => e.id)).toContain('id-0')
+    expect(keptIds.has('id-0')).toBe(false)
+  })
+
+  it('marks remoteNeedsUpdate when retention evicts entries even though the LWW pass alone found nothing to upload (P8)', () => {
+    // Remote-only-so-far merge: an empty local side merged against a
+    // remote bundle that already has MORE than the cap active — every
+    // entry lands in the "remote only" branch, which never sets
+    // remoteNeedsUpdate on its own (there's nothing local-only to report
+    // back). Retention then evicts the overflow into FRESH tombstones
+    // that remote doesn't have yet — those must upload on THIS sync.
+    const remote = makeMetas(MAX_RUN_LOGS_PER_KEYBOARD + 1)
+
+    const result = mergeEntries([], remote, { runLogRetentionMax: MAX_RUN_LOGS_PER_KEYBOARD })
+
+    expect(result.evicted.length).toBeGreaterThan(0)
+    expect(result.remoteNeedsUpdate).toBe(true)
   })
 })
 

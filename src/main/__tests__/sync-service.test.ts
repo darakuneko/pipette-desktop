@@ -98,6 +98,7 @@ let mockAutoSync = false
 vi.mock('../app-config', () => ({
   loadAppConfig: vi.fn(async () => ({ autoSync: mockAutoSync })),
   saveAppConfig: vi.fn(async () => {}),
+  getAppConfigStore: vi.fn(() => ({ get: () => false })),
 }))
 
 vi.mock('../typing-analytics/sync', () => ({
@@ -717,6 +718,22 @@ describe('sync-service', () => {
         (call) => call[0] !== 'password-check.enc',
       )
       expect(syncUnitUploads).toHaveLength(0)
+    })
+
+    it('never writes a remote entry whose filename attempts path traversal (P9)', async () => {
+      await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'data.json', content: '{"local":true}' })
+
+      mockListFiles.mockResolvedValue([makeDriveFile('2025-06-01T00:00:00.000Z')])
+      mockDownloadFile.mockResolvedValue(makeRemoteEnvelope('2025-06-01T00:00:00.000Z', [
+        { id: 'evil', label: 'evil', filename: '../../../evil.json', savedAt: '2025-06-01T00:00:00.000Z' },
+      ]))
+
+      await executeSync('download')
+
+      // The merge itself must not have thrown, and the traversal target
+      // must never be created outside the sync store's own directory.
+      await expect(access(join(mockUserDataPath, 'evil.json'))).rejects.toThrow()
+      await expect(access(join(mockUserDataPath, 'sync', 'evil.json'))).rejects.toThrow()
     })
 
     it('uses updatedAt for local timestamp comparison', async () => {
@@ -1339,9 +1356,14 @@ describe('sync-service', () => {
       })
     })
 
+    // isRunLogSyncUnit itself is just re-exported here (see sync-bundle's
+    // own isRunLogSyncUnit tests in sync-bundle.run-log.test.ts) — only
+    // its use in shouldDownloadSyncUnit's scope logic is worth covering
+    // in this file.
     describe('shouldDownloadSyncUnit', () => {
       const local = new Set(['uid-a'])
       const analyticsUnit = 'keyboards/uid-a/devices/hash/days/2026-04-19'
+      const runLogUnit = 'keyboards/uid-a/runs'
       const settingsUnit = 'keyboards/uid-a/settings'
       const favoritesUnit = 'favorites/macro'
 
@@ -1358,6 +1380,13 @@ describe('sync-service', () => {
         expect(shouldDownloadSyncUnit(analyticsUnit, scope, local)).toBe(false)
         expect(shouldDownloadSyncUnit(settingsUnit, scope, local)).toBe(true)
         expect(shouldDownloadSyncUnit(favoritesUnit, scope, local)).toBe(true)
+      })
+
+      it("keeps run logs when scope is 'all' or an explicit keyboard scope, but drops them at connect time", () => {
+        expect(shouldDownloadSyncUnit(runLogUnit, 'all', local)).toBe(true)
+        expect(shouldDownloadSyncUnit(runLogUnit, { keyboard: 'uid-a' }, local)).toBe(true)
+        const connectScope = { favorites: true as const, keyboard: 'uid-a' }
+        expect(shouldDownloadSyncUnit(runLogUnit, connectScope, local)).toBe(false)
       })
     })
 

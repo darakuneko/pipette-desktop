@@ -12,6 +12,7 @@ import type { SnapshotIndex } from '../../shared/types/snapshot-store'
 import type { AnalyzeFilterSnapshotIndex } from '../../shared/types/analyze-filter-store'
 import type { KeyLabelIndex } from '../../shared/types/key-label-store'
 import type { TypingTestTextIndex } from '../../shared/types/typing-test-text-store'
+import type { RunLogIndex } from '../../shared/types/typing-run-log'
 import type { SyncBundle } from '../../shared/types/sync'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
@@ -30,10 +31,10 @@ import {
 } from '../typing-analytics/sync'
 import { log } from '../logger'
 
-export async function readIndexFile(dir: string): Promise<FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyLabelIndex | TypingTestTextIndex | null> {
+export async function readIndexFile(dir: string): Promise<FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | RunLogIndex | KeyLabelIndex | TypingTestTextIndex | null> {
   try {
     const raw = await readFile(join(dir, 'index.json'), 'utf-8')
-    return JSON.parse(raw) as FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyLabelIndex | TypingTestTextIndex
+    return JSON.parse(raw) as FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | RunLogIndex | KeyLabelIndex | TypingTestTextIndex
   } catch {
     return null
   }
@@ -195,6 +196,9 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
   } else if (parts[2] === 'analyze_filters') {
     type = 'analyze-filter'
     key = parts[1]
+  } else if (parts[2] === 'runs') {
+    type = 'run-log'
+    key = parts[1]
   } else {
     type = 'layout'
     key = parts[1]
@@ -211,6 +215,17 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
  * `.claude/rules/settings-persistence.md`. */
 export function isAnalyticsSyncUnit(syncUnit: string): boolean {
   return parseTypingAnalyticsDeviceDaySyncUnit(syncUnit) !== null
+}
+
+/** Per-run raw keystroke log units (`keyboards/{uid}/runs`). Excluded
+ * from connect-time initial sync and 3-minute polling for the same
+ * reason as `isAnalyticsSyncUnit` — see
+ * `.claude/rules/settings-persistence.md`'s trigger matrix. Unlike
+ * typing-analytics units, this data has no dedicated on-demand sync
+ * entry point yet (Row F: "no dedicated sync") — it only syncs via the
+ * generic before-quit flush and manual "sync now". */
+export function isRunLogSyncUnit(syncUnit: string): boolean {
+  return /^keyboards\/[^/]+\/runs$/.test(syncUnit)
 }
 
 /** Own-hash typing-analytics units for one keyboard. Narrower than
@@ -304,6 +319,14 @@ export async function collectAllSyncUnits(): Promise<string[]> {
         await access(join(keyboardsDir, uid, 'analyze_filters', 'index.json'))
         units.push(`keyboards/${uid}/analyze_filters`)
       } catch { /* no analyze filter snapshots */ }
+      // per-run raw keystroke logs (index-based, mirrors analyze_filters
+      // layout) — connect-time initial sync/polling exclude this unit
+      // via isRunLogSyncUnit, but it still needs to be collected here so
+      // before-quit flush and manual sync can upload it.
+      try {
+        await access(join(keyboardsDir, uid, 'runs', 'index.json'))
+        units.push(`keyboards/${uid}/runs`)
+      } catch { /* no run logs */ }
     }
   } catch { /* dir doesn't exist */ }
 

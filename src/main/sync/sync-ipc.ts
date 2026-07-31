@@ -422,7 +422,9 @@ export function setupSyncIpc(): void {
         const bundle = await bundleSyncUnit(syncUnit)
         if (!bundle) continue
         const category = bundleTypeToCategory[bundle.type]
-        if (!category) continue // typing-analytics / keyboard-meta not in export contract yet
+        // typing-analytics / keyboard-meta / run-log not in export contract yet —
+        // run-log is deliberately absent (highest input-recovery-risk data; never leaves this device via Export Local Data)
+        if (!category) continue
         // bundleTypeToCategory only maps 'favorite' / 'layout' / 'settings',
         // so bundle.index is always a FavoriteIndex or SnapshotIndex here —
         // SyncBundle['index'] just isn't discriminated by ['type'] in the type system.

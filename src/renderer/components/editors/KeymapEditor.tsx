@@ -101,6 +101,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     onTypingTestConfigChange, onTypingTestLanguageChange, onSaveTypingTestResult, onRenameTypingTestResult, saveUnnamed: typingTestSaveUnnamed, typingTestHistory,
     savedTypingTestMemory, onTypingTestMemoryChange,
     typingTestViewOnly, typingRecordEnabled, onRecKeystroke,
+    recordingConsentAccepted: typingRecordingConsentAccepted,
     typingRecordKeyboard: keyboardUid && connectedDevice
       ? {
           uid: keyboardUid,

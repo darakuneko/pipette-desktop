@@ -75,6 +75,11 @@ describe('google-drive', () => {
       expect(syncUnitFromFileName('keyboards_0x1234_snapshots.enc')).toBe('keyboards/0x1234/snapshots')
     })
 
+    it('parses keyboard run-log drive filename to sync unit', () => {
+      expect(driveFileName('keyboards/0x1234/runs')).toBe('keyboards_0x1234_runs.enc')
+      expect(syncUnitFromFileName('keyboards_0x1234_runs.enc')).toBe('keyboards/0x1234/runs')
+    })
+
     it('parses per-day device JSONL drive filename to sync unit', () => {
       expect(syncUnitFromFileName('keyboards_0x1234_devices_hash-abc_days_2026-04-19.enc'))
         .toBe('keyboards/0x1234/devices/hash-abc/days/2026-04-19')

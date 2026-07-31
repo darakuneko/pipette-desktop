@@ -15,6 +15,7 @@ import type {
 } from './protocol'
 import type { SnapshotMeta } from './snapshot-store'
 import type { AnalyzeFilterSnapshotMeta } from './analyze-filter-store'
+import type { RunKeystrokeLog, RunLogMeta } from './typing-run-log'
 import type { FavoriteType, SavedFavoriteMeta, FavoriteImportResult } from './favorite-store'
 import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult, KeyLabelImportBatchResult } from './key-label-store'
 import type { TypingTestTextMeta, TypingTestTextRecord, TypingTestTextStoreResult } from './typing-test-text-store'
@@ -168,6 +169,11 @@ export interface VialAPI {
   analyzeFilterStoreUpdate(uid: string, entryId: string, json: string): Promise<{ success: boolean; error?: string }>
   analyzeFilterStoreRename(uid: string, entryId: string, newLabel: string): Promise<{ success: boolean; error?: string }>
   analyzeFilterStoreDelete(uid: string, entryId: string): Promise<{ success: boolean; error?: string }>
+
+  // --- Typing Run Log Store (per-run raw keystroke log) ---
+  typingRunLogSave(uid: string, log: RunKeystrokeLog): Promise<{ success: boolean; entry?: RunLogMeta; error?: string }>
+  typingRunLogList(uid: string): Promise<{ success: boolean; entries?: RunLogMeta[]; error?: string }>
+  typingRunLogGet(uid: string, runId: string): Promise<{ success: boolean; data?: RunKeystrokeLog; error?: string }>
 
   // Favorite Store (internal save/load)
   favoriteStoreList(type: string): Promise<{ success: boolean; entries?: SavedFavoriteMeta[]; error?: string }>
