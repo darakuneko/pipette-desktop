@@ -22,13 +22,13 @@ import {
 import { isRomajiInputActive, buildRomajiMatcher, romajiDetail, processRomajiKeyEvent } from './romaji-input'
 import { computeKspc } from '../../shared/kspc'
 import {
-  parseMatrixKey,
   extractSwitchLayer,
-  resolveEffectiveCode,
   resolveEffectiveCodeWithLayer,
+  matrixFrameEdges,
 } from './matrix-layers'
 import { MatrixAnalyticsQueue } from './matrix-analytics-queue'
 import { PressDurationTracker } from './matrix-press-duration'
+import { MatrixLayerLatch } from './matrix-layer-latch'
 
 export type { WordResult, TypingTestState, TypingTestStatus } from './run-state'
 
@@ -87,7 +87,7 @@ export interface UseTypingTestReturn {
   baseLayer: number
   effectiveLayer: number
   windowFocused: boolean
-  processMatrixFrame: (pressed: Set<string>, keymap: Map<string, number>) => void
+  processMatrixFrame: (pressed: ReadonlySet<string>, keymap: Map<string, number>) => void
   /** Returns a promise that resolves once every drained item's emit has
    * settled — see {@link MatrixAnalyticsQueue.drainAll}. A caller that
    * finalizes a session (record-off, test-finish) before requesting a
@@ -133,7 +133,8 @@ export function useTypingTest<TPreparedEvent = unknown>(
   const windowFocusedRef = useRef(windowFocused)
   const prepareAnalyticsEventRef = useRef(options?.onPrepareAnalyticsEvent)
   const emitAnalyticsEventRef = useRef(options?.onEmitAnalyticsEvent)
-  const prevPressedRef = useRef<Set<string>>(new Set())
+  const prevPressedRef = useRef<ReadonlySet<string>>(new Set())
+  const latchedLayersRef = useRef(new MatrixLayerLatch())
   // Press-order emission queue for matrix analytics events. See
   // matrix-analytics-queue.ts for why this exists instead of emitting
   // non-masked keys unconditionally on press.
@@ -227,7 +228,10 @@ export function useTypingTest<TPreparedEvent = unknown>(
   const setBaseLayer = useCallback(async (layer: number) => {
     setBaseLayerState(layer)
     baseLayerRef.current = layer
-    setEffectiveLayer(layer)
+    // A layer key held across the base-layer change (e.g. the keyboard
+    // popover's own layer selector) must keep the indicator on its
+    // latched target rather than snapping to the newly selected base.
+    setEffectiveLayer(latchedLayersRef.current.displayLayer(layer))
     const seq = ++seqRef.current
     const result = await createWordsForConfig(configRef.current, languageRef.current)
     if (seqRef.current !== seq) return
@@ -328,140 +332,124 @@ export function useTypingTest<TPreparedEvent = unknown>(
     return true
   }, [])
 
-  const processMatrixFrame = useCallback((pressed: Set<string>, keymap: Map<string, number>) => {
+  const processMatrixFrame = useCallback((pressed: ReadonlySet<string>, keymap: Map<string, number>) => {
     const bl = baseLayerRef.current
     const prev = prevPressedRef.current
+    const latched = latchedLayersRef.current
 
-    // Fixed-point layer activation: a key that activates a layer may
-    // itself resolve differently on that newly-active layer, so keep
-    // iterating until no new layer is added. Used for both the full
-    // live set (drives the UI layer indicator) and the pre-existing
-    // set used to classify new presses against the layer context that
-    // existed before this frame.
-    function activateLayers(keys: Iterable<string>): Set<number> {
-      const set = new Set<number>()
-      let changed = true
-      while (changed) {
-        changed = false
-        for (const key of keys) {
-          const sortedLayers = [...set].sort((a, b) => b - a)
-          const [row, col] = parseMatrixKey(key)
-          const code = resolveEffectiveCode(row, col, keymap, sortedLayers, bl)
-          if (code == null) continue
-          const targetLayer = extractSwitchLayer(code)
-          if (targetLayer === null) continue
-          const effective = Math.max(bl, targetLayer)
-          if (!set.has(effective)) {
-            set.add(effective)
-            changed = true
-          }
-        }
-      }
-      return set
-    }
-
-    const activeLayerSet = activateLayers(pressed)
-    const highestActiveLayer = activeLayerSet.size > 0
-      ? Math.max(...activeLayerSet)
-      : bl
-    setEffectiveLayer(highestActiveLayer)
-
-    // Detect press / release edges for analytics recording. Matrix events
-    // come from HID polling and should fire regardless of window focus;
-    // it's the caller's responsibility to stop calling processMatrixFrame
-    // when recording should pause (e.g. record toggle off).
-    //
-    // Non-masked keys carry no action field and are queued/emitted in
-    // press order like everything else. Masked keys (LT/MT) resolve to
-    // tap vs hold on a deadline fixed at press time (see
-    // matrix-analytics-queue.ts), by the release edge if it arrives first or by
-    // the deadline timer if the key is still held — so resolution can
-    // land later than physical presses that follow it. Emitting those
-    // later presses immediately would hand the main process a masked
-    // key's event stamped with an earlier timestamp than events already
-    // emitted for what came after it; its n-gram chain treats a
-    // non-increasing timestamp as out of order and silently drops it,
-    // losing the masked key from every pair around it (the motivating
-    // case: a thumb LT(1, KC_SPACE) overlapping the next letter in
-    // ordinary fast typing). Queuing every press behind an unresolved
-    // one and draining in order once it resolves keeps the emitted
-    // stream monotonic. See resetMatrixPressTracking for what happens
-    // to a press still unresolved when recording stops.
+    // Matrix events come from HID polling and should fire regardless of
+    // window focus; it's the caller's responsibility to stop calling
+    // processMatrixFrame when recording should pause (e.g. record
+    // toggle off).
     const prepare = prepareAnalyticsEventRef.current
-    if (prepare) {
-      const emit = emitAnalyticsEventRef.current
-      const queue = matrixQueueRef.current
-      // Layer context for a NEW press is "what OTHER keys were already
-      // holding us to" — i.e. layers activated by keys carried over
-      // from the previous frame. A lone MO(1) press at base 0 must
-      // resolve as layer 0 even if MO(1) is also the layer 1 keycode
-      // at the same cell; otherwise the press is attributed to the
-      // very layer the key is activating and disappears from the
-      // base-layer heatmap.
-      const carriedKeys: string[] = []
-      for (const k of prev) {
-        if (pressed.has(k)) carriedKeys.push(k)
-      }
-      const preExistingLayerSet = activateLayers(carriedKeys)
-      const preExistingSortedLayers = [...preExistingLayerSet].sort((a, b) => b - a)
-      const ts = Date.now()
-      const tappingTermMs = tappingTermMsRef.current
-      const duration = matrixDurationRef.current
-      const frame = duration.onFrame(ts)
+    const emit = emitAnalyticsEventRef.current
+    const queue = matrixQueueRef.current
+    const duration = matrixDurationRef.current
+    const ts = Date.now()
+    const tappingTermMs = tappingTermMsRef.current
+    // Read once per frame, before any press edge, regardless of whether
+    // any press lands this frame — onFrame's rolling gap/hole tracking
+    // needs a sample every frame to detect a hole between frames with no
+    // edges at all. Always defined together with `prepare`; both are
+    // checked together below purely so `frame`'s type narrows to
+    // non-null at the registerPress call site.
+    const frame = prepare ? duration.onFrame(ts) : null
 
-      for (const key of pressed) {
-        if (prev.has(key)) continue
-        const [row, col] = parseMatrixKey(key)
-        const resolved = resolveEffectiveCodeWithLayer(row, col, keymap, preExistingSortedLayers, bl)
-        if (!resolved) continue
-        const { code, layer: eventLayer } = resolved
-        // Authorize + tag at press time, not when this press eventually
-        // reaches the sink (which may be up to TAPPING_TERM later if it
-        // queues behind an unresolved masked key ahead of it). A press
-        // that isn't authorized right now is dropped for good — it never
-        // enters the queue, so it can't be "un-dropped" by a state change
-        // (e.g. recording toggling back on) while it would have waited.
-        const prepared = prepare('matrix')
-        if (prepared == null) continue
-        // Overlap / pollGapMs are derived from the raw pressed set, not
-        // from anything queue-related — see matrix-press-duration.ts.
-        // registerPress also records this press so the matching release
-        // edge (below, in a later frame) can compute its duration and
-        // ship the same `prepared` context this press already captured.
-        const { overlap, pollGapMs } = duration.registerPress({
-          key,
-          start: { tsMs: ts, row, col, layer: eventLayer, keycode: code },
+    // Walk this frame's press/release edges in row-major order — a held
+    // key (no edge) is skipped entirely, since its action was already
+    // latched on the frame it was pressed and QMK never re-resolves a
+    // held key against layers it or another key activates later. A
+    // release drops its own latch; a press resolves against whatever is
+    // latched right now (base layer + targets latched by keys already
+    // held, or by an earlier edge in this same walk), THEN latches its
+    // own target — so a same-frame rollover between a release and a
+    // press "sees" each other in the deterministic row-scan order rather
+    // than in whatever order a Set happened to iterate.
+    for (const edge of matrixFrameEdges(prev, pressed)) {
+      if (!edge.isPress) {
+        latched.release(edge.key)
+        if (prepare) {
+          queue.resolveReleaseByKey(edge.key, ts, emit)
+          const resolved = duration.resolveRelease(edge.key, ts)
+          if (resolved) emit?.(resolved.prepared, resolved.event)
+        }
+        continue
+      }
+
+      const sortedLayers = latched.activeLayers(bl)
+      const resolved = resolveEffectiveCodeWithLayer(edge.row, edge.col, keymap, sortedLayers, bl)
+      if (!resolved) continue
+      const { code, layer: eventLayer } = resolved
+      latched.latch(edge.key, extractSwitchLayer(code))
+
+      if (!prepare || !frame) continue
+      // Authorize + tag at press time, not when this press eventually
+      // reaches the sink (which may be up to TAPPING_TERM later if it
+      // queues behind an unresolved masked key ahead of it). A press
+      // that isn't authorized right now is dropped for good — it never
+      // enters the queue, so it can't be "un-dropped" by a state change
+      // (e.g. recording toggling back on) while it would have waited.
+      const prepared = prepare('matrix')
+      if (prepared == null) continue
+      // Overlap / pollGapMs are derived from the raw pressed set, not
+      // from anything queue-related — see matrix-press-duration.ts.
+      // registerPress also records this press so the matching release
+      // edge (in a later frame) can compute its duration and ship the
+      // same `prepared` context this press already captured.
+      const { overlap, pollGapMs } = duration.registerPress({
+        key: edge.key,
+        start: { tsMs: ts, row: edge.row, col: edge.col, layer: eventLayer, keycode: code },
+        prepared,
+        pressed,
+        frame,
+      })
+      // Non-masked keys carry no action field and are queued/emitted in
+      // press order like everything else. Masked keys (LT/MT) resolve to
+      // tap vs hold on a deadline fixed at press time (see
+      // matrix-analytics-queue.ts), by the release edge if it arrives
+      // first or by the deadline timer if the key is still held — so
+      // resolution can land later than physical presses that follow it.
+      // Emitting those later presses immediately would hand the main
+      // process a masked key's event stamped with an earlier timestamp
+      // than events already emitted for what came after it; its n-gram
+      // chain treats a non-increasing timestamp as out of order and
+      // silently drops it, losing the masked key from every pair around
+      // it (the motivating case: a thumb LT(1, KC_SPACE) overlapping the
+      // next letter in ordinary fast typing). Queuing every press behind
+      // an unresolved one and draining in order once it resolves keeps
+      // the emitted stream monotonic. See resetMatrixPressTracking for
+      // what happens to a press still unresolved when recording stops.
+      // Only LT / MT style tap-hold keys need the deferred classify
+      // pass. LSFT(kc) etc. are "masked" too but always fire the
+      // modifier + base together, so the heatmap treats them as regular
+      // presses.
+      if (isTapKeycode(code)) {
+        queue.pushPending(
           prepared,
-          pressed,
-          frame,
-        })
-        // Only LT / MT style tap-hold keys need the deferred classify
-        // pass. LSFT(kc) etc. are "masked" too but always fire the
-        // modifier + base together, so the heatmap treats them as
-        // regular presses.
-        if (isTapKeycode(code)) {
-          queue.pushPending(prepared, { tsMs: ts, row, col, layer: eventLayer, keycode: code, overlap, pollGapMs }, key, tappingTermMs, emit)
+          { tsMs: ts, row: edge.row, col: edge.col, layer: eventLayer, keycode: code, overlap, pollGapMs },
+          edge.key,
+          tappingTermMs,
+          emit,
+        )
+      } else {
+        const event: TypingAnalyticsEventPayload = { kind: 'matrix', row: edge.row, col: edge.col, layer: eventLayer, keycode: code, ts, overlap, pollGapMs }
+        // An empty queue means nothing ahead is still unresolved, so
+        // this press can go straight out instead of paying for a round
+        // trip through the queue.
+        if (queue.isEmpty) {
+          emit?.(prepared, event)
         } else {
-          const event: TypingAnalyticsEventPayload = { kind: 'matrix', row, col, layer: eventLayer, keycode: code, ts, overlap, pollGapMs }
-          // An empty queue means nothing ahead is still unresolved, so
-          // this press can go straight out instead of paying for a
-          // round trip through the queue.
-          if (queue.isEmpty) {
-            emit?.(prepared, event)
-          } else {
-            queue.pushResolved(event, prepared)
-          }
+          queue.pushResolved(event, prepared)
         }
       }
-
-      for (const key of prev) {
-        if (pressed.has(key)) continue
-        queue.resolveReleaseByKey(key, ts, emit)
-        const resolved = duration.resolveRelease(key, ts)
-        if (resolved) emit?.(resolved.prepared, resolved.event)
-      }
     }
-    prevPressedRef.current = new Set(pressed)
+
+    setEffectiveLayer(latched.displayLayer(bl))
+    // `pressed` is a fresh Set the caller builds every poll and never
+    // mutates afterward (see parseMatrixState in matrix-utils.ts), so
+    // adopting the reference is safe and skips a same-size Set clone on
+    // every frame, busy or idle.
+    prevPressedRef.current = pressed
   }, [])
 
   /** Reset press-edge tracking. Call on record toggle, device change, or
@@ -494,6 +482,16 @@ export function useTypingTest<TPreparedEvent = unknown>(
   const resetMatrixPressTracking = useCallback((): Promise<void> => {
     const drained = matrixQueueRef.current.drainAll(emitAnalyticsEventRef.current)
     prevPressedRef.current = new Set()
+    // A latch with no corresponding entry in prevPressedRef (now empty)
+    // can never be reached by a future release edge — its key would
+    // have to reappear in `pressed` AND `prev` at once to register as
+    // "held, no edge", which can't happen once prev is cleared. Left
+    // uncleared, a key still physically held through this reset would
+    // keep its stale target forever, permanently inflating the layer
+    // indicator. Clearing here is safe either way: a key still actually
+    // held gets treated as a fresh press (and re-latched) on the very
+    // next frame, per its own row/col resolution at that point.
+    latchedLayersRef.current.clear()
     // Discard rather than finalize — an in-flight press with no release
     // yet must not be synthesized into a fabricated release event (see
     // matrix-press-duration.ts). Unlike the queue's forced hold
@@ -511,6 +509,7 @@ export function useTypingTest<TPreparedEvent = unknown>(
     return () => {
       matrixQueueRef.current.dispose()
       matrixDurationRef.current.reset()
+      latchedLayersRef.current.clear()
     }
   }, [])
 

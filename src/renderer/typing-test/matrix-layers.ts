@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 /** Matrix key (row/col) resolution against active layers: parsing matrix
- *  key strings, extracting layer-switch targets, and resolving the
- *  effective keycode for a pressed matrix position. */
+ *  key strings, extracting layer-switch targets, resolving the effective
+ *  keycode for a pressed matrix position, and diffing two frames' pressed
+ *  sets into an ordered list of press/release edges. */
 
 import { extractMOLayer, extractLTLayer, extractLMLayer } from './keycode-char-map'
 
@@ -37,23 +38,6 @@ export function extractSwitchLayer(code: number): number | null {
   return extractMOLayer(code) ?? extractLTLayer(code) ?? extractLMLayer(code)
 }
 
-/** Resolve the effective keycode for a matrix position by checking active
- * layers in descending order, skipping KC_TRNS (0x01), then falling back
- * to the base layer. */
-export function resolveEffectiveCode(
-  row: number,
-  col: number,
-  keymap: Map<string, number>,
-  sortedLayers: number[],
-  baseLayer: number,
-): number | undefined {
-  for (const layer of sortedLayers) {
-    const code = keymap.get(`${layer},${row},${col}`)
-    if (code != null && code !== 0x01) return code
-  }
-  return keymap.get(`${baseLayer},${row},${col}`)
-}
-
 /** Resolve the effective keycode AND the layer the keycode was picked
  * from. Used by the analytics path so each event is attributed to the
  * layer where the key is actually defined, not the (possibly different)
@@ -74,4 +58,39 @@ export function resolveEffectiveCodeWithLayer(
   }
   const baseCode = keymap.get(`${baseLayer},${row},${col}`)
   return baseCode != null ? { code: baseCode, layer: baseLayer } : undefined
+}
+
+/** One press or release edge between two frames' pressed sets, in
+ * row-major walk order (see {@link matrixFrameEdges}). */
+export interface MatrixEdge {
+  key: string
+  row: number
+  col: number
+  isPress: boolean
+}
+
+/** Diff `prev` and `pressed` into the keys whose held-status changed —
+ * a key present in both is not an edge and is skipped. Edges are
+ * returned in row-major order (ascending row, then col) rather than Set
+ * iteration order, which has no ordering guarantee: a caller resolving
+ * each edge against state mutated by the edges before it (as
+ * processMatrixFrame does for its layer latch) needs that order to be
+ * deterministic, not incidental to Set internals. Built from two direct
+ * scans of `prev` and `pressed` rather than a unioned copy, so an idle
+ * frame (nothing changed) does no allocation beyond the empty result. */
+export function matrixFrameEdges(prev: ReadonlySet<string>, pressed: ReadonlySet<string>): MatrixEdge[] {
+  const edges: MatrixEdge[] = []
+  for (const key of prev) {
+    if (!pressed.has(key)) {
+      const [row, col] = parseMatrixKey(key)
+      edges.push({ key, row, col, isPress: false })
+    }
+  }
+  for (const key of pressed) {
+    if (!prev.has(key)) {
+      const [row, col] = parseMatrixKey(key)
+      edges.push({ key, row, col, isPress: true })
+    }
+  }
+  return edges.sort((a, b) => a.row - b.row || a.col - b.col)
 }
