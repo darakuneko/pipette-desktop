@@ -581,6 +581,10 @@ export function useInputModes({
         mode: typingTest.config.mode,
         language: typingTest.language,
         charCorrelationUnavailable: typingTest.state.kspcUncomputable,
+        // Reuse the same isRomajiInputActive determination already made
+        // for `result.romajiInput` above, rather than recomputing it —
+        // see RunLogFinishMeta.romajiInput's own doc comment.
+        romajiInput: result.romajiInput === true,
         inFlightWord,
       })
       // A completed test makes any saved pause snapshot obsolete.

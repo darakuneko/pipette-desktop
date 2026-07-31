@@ -46,6 +46,7 @@ import { BTN_TOGGLE_ACTIVE, BTN_TOGGLE_INACTIVE } from '../../constants/ui-token
 import { ToggleRow } from './modal-controls'
 import type { AnalyticsOrigin } from './keymap-editor-types'
 import { PANEL_COLLAPSED_WIDTH } from './keymap-editor-types'
+import type { TimelineHandoff } from '../../hooks/useRunTimelineHandoff'
 
 export interface TypingTestPaneProps {
   typingTest: ReturnType<typeof useTypingTest>
@@ -163,6 +164,10 @@ export interface TypingTestPaneProps {
    * stays hidden while this is unset or recording is off so a session
    * without a device never sees stale overlay data. */
   keyboardUid?: string
+  /** Analyze -> Typing Test "open timeline" handoff (consume-once):
+   * forwarded straight to HistoryToggle, which auto-opens History and
+   * this run's keystroke timeline for it. */
+  timelineHandoff?: TimelineHandoff | null
 }
 
 export function TypingTestPane({
@@ -231,6 +236,7 @@ export function TypingTestPane({
   onMenuTabChange,
   onViewAnalytics,
   keyboardUid,
+  timelineHandoff,
 }: TypingTestPaneProps) {
   const { t } = useTranslation()
 
@@ -649,6 +655,8 @@ export function TypingTestPane({
           deviceName={deviceName}
           onRename={onRenameTypingTestResult}
           onDelete={onDeleteTypingTestResult}
+          uid={keyboardUid}
+          timelineHandoff={timelineHandoff}
         />
         <ComparisonToggle
           pool={sameConditionResults}

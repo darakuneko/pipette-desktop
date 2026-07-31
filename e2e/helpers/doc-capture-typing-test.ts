@@ -22,10 +22,12 @@ import {
   restoreFile,
   restoreVirtualDeviceSettings,
   VIRTUAL_DEVICE_DISPLAY_NAME,
+  VIRTUAL_DEVICE_UID,
   VirtualDeviceSettingsBackup,
   waitForTypingTestCountdown,
   waitForUnlockDialog,
 } from './doc-capture-common'
+import type { RunKeystrokeLog, RunLogIndex } from '../../src/shared/types/typing-run-log'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
@@ -54,6 +56,13 @@ const ACCURACY_TREND_SEED_RUNS: [number, number, number, number, number][] = [
 const SEED_ERROR_SUBSTITUTION_RATE = 0.018
 const SEED_ERROR_OMISSION_RATE = 0.009
 const SEED_ERROR_INSERTION_RATE = 0.006
+
+// The most recent Accuracy Trend seed run (see ACCURACY_TREND_SEED_RUNS'
+// last entry, daysAgo: 1) doubles as the Keystroke Timeline seed run — its
+// History row gets this `runId` so the seeded run log below
+// (`seedRunKeystrokeLog`) actually has a matching History entry to open
+// the timeline icon from.
+const TIMELINE_SEED_RUN_ID = 'doc-capture-timeline-run'
 
 /** Seeds the Accuracy Trend seed runs above into the virtual device's
  *  pipette_settings.json, so the Accuracy Trend chart (History → Data
@@ -84,14 +93,16 @@ function seedAccuracyTrendHistory(settingsBackup: VirtualDeviceSettingsBackup): 
   existing.layerNames ??= []
   const now = Date.now()
   const DAY_MS = 24 * 60 * 60 * 1000
-  existing.typingTestResults = ACCURACY_TREND_SEED_RUNS.map(([daysAgo, wpm, accuracy, correctChars, incorrectChars]) => {
+  existing.typingTestResults = ACCURACY_TREND_SEED_RUNS.map(([daysAgo, wpm, accuracy, correctChars, incorrectChars], i) => {
     // All-or-nothing error-class group (see TypingTestResult.errorSubstitutions
     // et al.) — errorTargetChars stands in for Σ target length the same way
     // analyze-seed.ts's dummy History rows do (correctChars + incorrectChars
     // is a plausible total, not a real Levenshtein alignment).
     const errorTargetChars = correctChars + incorrectChars
+    const isLast = i === ACCURACY_TREND_SEED_RUNS.length - 1
     return {
       date: new Date(now - daysAgo * DAY_MS).toISOString(),
+      runId: isLast ? TIMELINE_SEED_RUN_ID : undefined,
       wpm, accuracy, wordCount: 30, correctChars, incorrectChars, durationSeconds: 24,
       mode: 'words', mode2: 30, language: 'english', punctuation: false, numbers: false,
       errorSubstitutions: Math.round(errorTargetChars * SEED_ERROR_SUBSTITUTION_RATE),
@@ -101,6 +112,71 @@ function seedAccuracyTrendHistory(settingsBackup: VirtualDeviceSettingsBackup): 
     }
   })
   writeFileSync(settingsBackup.path, JSON.stringify(existing), 'utf-8')
+}
+
+/** Seeds a plausible `RunKeystrokeLog` (index + payload file, mirroring
+ *  `typing-run-log-store.ts`'s on-disk layout) for `TIMELINE_SEED_RUN_ID` —
+ *  the History row seeded above with that runId — so the row's Keystroke
+ *  Timeline icon has real data to open for the `typing-test-timeline.png`
+ *  capture. Two words: one clean, one with a short overlap and a
+ *  above-threshold pause, so the timeline shows every legend state at
+ *  once. Returns both file backups for `restoreFile` in a `finally` block. */
+function seedRunKeystrokeLog(userDataPath: string): { indexBackup: FileBackup; payloadBackup: FileBackup } {
+  const runsDir = join(userDataPath, 'sync', 'keyboards', VIRTUAL_DEVICE_UID, 'runs')
+  const indexPath = join(runsDir, 'index.json')
+  const filename = `${TIMELINE_SEED_RUN_ID}.json`
+  const payloadPath = join(runsDir, filename)
+  const indexBackup = backupFile(indexPath)
+  const payloadBackup = backupFile(payloadPath)
+  mkdirSync(runsDir, { recursive: true })
+
+  const log: RunKeystrokeLog = {
+    runId: TIMELINE_SEED_RUN_ID,
+    uid: VIRTUAL_DEVICE_UID,
+    startedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    durationMs: 3000,
+    mode: 'words',
+    language: 'english',
+    words: [
+      {
+        index: 0,
+        display: 'the',
+        typed: 'the',
+        correct: true,
+        keystrokes: [
+          // Observed non-overlaps so the summary's pooled overlap rate reads
+          // as a realistic fraction rather than 100% from a single verdict.
+          { pressMs: 0, releaseMs: 90, keycode: 0, row: 0, col: 0, correct: true, overlapped: false, expectedChar: 't' },
+          { pressMs: 120, releaseMs: 210, keycode: 0, row: 0, col: 1, correct: true, overlapped: false, expectedChar: 'h' },
+          { pressMs: 240, releaseMs: 330, keycode: 0, row: 0, col: 2, correct: true, overlapped: false, expectedChar: 'e' },
+        ],
+      },
+      {
+        index: 1,
+        display: 'quick',
+        typed: 'qiuck',
+        correct: false,
+        keystrokes: [
+          // Well past the blank threshold — this is the hesitation the
+          // screenshot's lead-in pause marker shows.
+          { pressMs: 1800, releaseMs: 1880, keycode: 0, row: 1, col: 0, correct: true, expectedChar: 'q' },
+          { pressMs: 1900, releaseMs: 2010, keycode: 0, row: 1, col: 1, correct: false, expectedChar: 'u' },
+          // Overlaps the previous key's own release — the duplicate-
+          // keystroke case the legend's "Overlapped" swatch documents.
+          { pressMs: 1990, releaseMs: 2080, keycode: 0, row: 1, col: 2, correct: false, overlapped: true, expectedChar: 'i' },
+        ],
+      },
+    ],
+  }
+
+  const index: RunLogIndex = {
+    uid: VIRTUAL_DEVICE_UID,
+    entries: [{ id: TIMELINE_SEED_RUN_ID, startedAt: log.startedAt, filename, savedAt: new Date().toISOString() }],
+  }
+
+  writeFileSync(payloadPath, JSON.stringify(log), 'utf-8')
+  writeFileSync(indexPath, JSON.stringify(index, null, 2), 'utf-8')
+  return { indexBackup, payloadBackup }
 }
 
 // The romaji-engine test suite's canonical multi-pattern word (accepts
@@ -315,6 +391,7 @@ async function main(): Promise<void> {
   const settingsBackup = backupVirtualDeviceSettings(userDataPath)
   seedAccuracyTrendHistory(settingsBackup)
   const kanaPackBackup = seedKanaLanguagePack(userDataPath)
+  const runLogBackup = seedRunKeystrokeLog(userDataPath)
 
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
@@ -367,6 +444,21 @@ async function main(): Promise<void> {
     await page.locator('[data-testid="history-modal"]').waitFor({ state: 'visible', timeout: 5_000 })
     await page.waitForTimeout(300)
     await capture(page, 'typing-test-accuracy-trend')
+
+    // 1c. Keystroke Timeline — opened from the seeded run's row (see
+    // seedRunKeystrokeLog); its History row is the most recent Accuracy
+    // Trend seed run above, tagged with TIMELINE_SEED_RUN_ID.
+    const timelineOpenBtn = page.locator('[data-testid^="history-timeline-open-"]').first()
+    if (!(await timelineOpenBtn.isVisible().catch(() => false))) {
+      throw new Error('history-timeline-open button not found — seedRunKeystrokeLog guarantees this row, so silently skipping the capture would ship a stale/missing doc screenshot')
+    }
+    await timelineOpenBtn.click()
+    await page.locator('[data-testid="word-timeline-modal"]').waitFor({ state: 'visible', timeout: 5_000 })
+    await page.waitForTimeout(400)
+    await capture(page, 'typing-test-timeline')
+    await page.locator('[data-testid="word-timeline-close"]').click()
+    await page.waitForTimeout(300)
+
     await page.locator('[data-testid="history-modal-close"]').click()
     await page.waitForTimeout(300)
 
@@ -499,6 +591,12 @@ async function main(): Promise<void> {
       restoreFile(kanaPackBackup)
     } catch (err) {
       console.error('  [cleanup] restore kana language pack failed:', err)
+    }
+    try {
+      restoreFile(runLogBackup.indexBackup)
+      restoreFile(runLogBackup.payloadBackup)
+    } catch (err) {
+      console.error('  [cleanup] restore seeded run log failed:', err)
     }
   }
 }

@@ -136,6 +136,19 @@ export function producesChar(code: number): boolean {
   return resolveCodeWithTapFallback(code, false) !== null
 }
 
+/** Resolve a char/action directly from an already-effective keycode,
+ * without a live row/col + keymap + layer lookup — used by
+ * word-timeline.ts, whose `RunKeystroke.keycode` is already the resolved
+ * matrix keycode captured at press time (see `RunKeystrokeLog`'s module
+ * doc comment), so there is no keymap/layer to look it up from. Same
+ * resolution cascade as `resolveCharFromMatrix`, minus the keymap step.
+ * Unshifted only — its only caller has no notion of shift state for a
+ * captured matrix keystroke (the run log never records one), so a
+ * `shifted` parameter would be permanently unreachable dead code. */
+export function resolveCharFromKeycode(code: number): CharResult {
+  return resolveCodeWithTapFallback(code, false)
+}
+
 export function resolveCharFromMatrix(
   row: number,
   col: number,

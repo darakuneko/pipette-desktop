@@ -1,5 +1,5 @@
 {
-  "version": "0.1.52",
+  "version": "0.1.53",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -511,7 +511,48 @@
         "errorMixEmpty": "まだ対象のやつないっしょ",
         "errorMixSubstitutionRow": "置換 {{pct}}%（平均{{avgPct}}%）だよ",
         "errorMixOmissionRow": "脱字 {{pct}}%（平均{{avgPct}}%）だよ",
-        "errorMixInsertionRow": "衍字 {{pct}}%（平均{{avgPct}}%）だよ"
+        "errorMixInsertionRow": "衍字 {{pct}}%（平均{{avgPct}}%）だよ",
+        "timeline": {
+          "modalTitle": "打鍵タイムライン☆",
+          "openButton": "打鍵タイムライン開くじゃん",
+          "loading": "タイムライン読み込み中…",
+          "error": "このランの打鍵ログ読み込めなかったじゃん",
+          "partialBadge": "途中",
+          "stats": {
+            "wordPace": "ワード速度☆",
+            "runWpm": "ラン全体のWPMじゃん☆",
+            "accuracy": "正確度☆",
+            "overlap": "重複率☆",
+            "duration": "所要時間☆"
+          },
+          "legend": {
+            "normal": "普通の打鍵",
+            "mistake": "ミス☆",
+            "overlap": "重複打鍵（前のキー離す前に押しちゃったやつ）",
+            "unjudged": "未判定（正誤わかんないやつ）",
+            "blank": "ブランク（圧縮表示だよ）",
+            "leadIn": "ワード前の間",
+            "correctedNote": "ミスの印、提出前に直したのも入ってるから、印あっても正確度100%になることあるよ"
+          },
+          "axisNote": "ブランクは軸上で圧縮して表示してるけど、出てる時間は全部リアルな値だよ",
+          "correlationUnreliable": "このラン、正誤の印あてにならないかも（IME変換通った入力あるから）",
+          "zoom": {
+            "label": "拡大率",
+            "aria": "タイムラインの拡大率"
+          },
+          "tooltip": {
+            "releaseUnobserved": "離鍵未観測",
+            "overlapYes": "前のキーと重複",
+            "overlapNo": "重複なし",
+            "overlapUnknown": "重複不明",
+            "mistake": "ミス（直されたかも）",
+            "unjudged": "未判定",
+            "correct": "正解☆",
+            "offset": "+{{ms}}ms",
+            "blankDuration": "ブランク: {{ms}}ms",
+            "leadInDuration": "ワード前の間: {{ms}}ms"
+          }
+        }
       },
       "results": {
         "mistakesLabel": "ミスった文字ｗ",
@@ -1621,7 +1662,8 @@
       "editConditions": "検索条件を編集っしょ☆",
       "chipAriaLabel": "検索条件を編集っしょ☆",
       "sourceDisabledByApp": "By Appだと全ソース合わせちゃうから、この項目は使えないっしょ☆",
-      "distributionDisabledNote": "分布ビューはいつもこのデバイスのデータ使うから、この項目は使えないっしょ☆"
+      "distributionDisabledNote": "分布ビューはいつもこのデバイスのデータ使うから、この項目は使えないっしょ☆",
+      "openRunTimeline": "タイムライン開いちゃお☆"
     }
   },
   "dataModal": {

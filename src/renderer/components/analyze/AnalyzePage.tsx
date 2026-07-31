@@ -13,13 +13,14 @@ interface Props {
   onBack: () => void
   initialUid?: string
   connectedTappingTerm?: ConnectedTappingTerm | null
+  onOpenRunTimeline?: (runId: string) => void
 }
 
-export function AnalyzePage({ onBack, initialUid, connectedTappingTerm }: Props) {
+export function AnalyzePage({ onBack, initialUid, connectedTappingTerm, onOpenRunTimeline }: Props) {
   return (
     <div className="flex h-screen flex-col bg-surface" data-testid="analyze-page">
       <main className="flex-1 min-h-0 p-8">
-        <TypingAnalyticsView initialUid={initialUid} onBack={onBack} connectedTappingTerm={connectedTappingTerm} />
+        <TypingAnalyticsView initialUid={initialUid} onBack={onBack} connectedTappingTerm={connectedTappingTerm} onOpenRunTimeline={onOpenRunTimeline} />
       </main>
     </div>
   )

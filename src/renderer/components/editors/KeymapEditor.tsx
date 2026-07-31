@@ -79,6 +79,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   typingTrayResident, onTypingTrayResidentChange, typingStartInTray, onTypingStartInTrayChange,
   typingViewMenuTab, onTypingViewMenuTabChange,
   onViewAnalytics, onTypingTestRunningChange,
+  timelineHandoff,
   tappingTermMs,
   deviceName, isDummy, onExportLayoutPdfAll, onExportLayoutPdfCurrent,
   favHubOrigin, favHubNeedsDisplayName, favHubUploading, favHubUploadResult,
@@ -682,6 +683,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               onMenuTabChange={onTypingViewMenuTabChange}
               onViewAnalytics={onViewAnalytics}
               keyboardUid={keyboardUid}
+              timelineHandoff={timelineHandoff}
             />
           ) : (
             <>

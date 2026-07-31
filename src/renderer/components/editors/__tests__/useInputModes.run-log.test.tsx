@@ -140,10 +140,14 @@ describe('useInputModes — run-log recording', () => {
     await flushMicrotasks()
 
     expect(mockTypingRunLogSave).toHaveBeenCalledTimes(1)
-    const [savedUid, savedLog] = mockTypingRunLogSave.mock.calls[0] as [string, { runId: string; uid: string }]
+    const [savedUid, savedLog] = mockTypingRunLogSave.mock.calls[0] as [string, { runId: string; uid: string; romajiInput?: boolean }]
     expect(savedUid).toBe(sampleKeyboard.uid)
     expect(savedLog.runId).toBe(runId)
     expect(savedLog.uid).toBe(sampleKeyboard.uid)
+    // An ordinary verbatim (non-romaji) English words run must not flag
+    // romajiInput — reuses the same isRomajiInputActive determination
+    // already made for the saved TypingTestResult, forwarded verbatim.
+    expect(savedLog.romajiInput).toBeUndefined()
   })
 
   it('never saves a run log without recording consent, even for a completed practice run', async () => {

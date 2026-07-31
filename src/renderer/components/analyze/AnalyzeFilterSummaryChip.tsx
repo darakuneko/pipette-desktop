@@ -21,6 +21,12 @@ interface Props {
 
 const SEGMENT_CLASS = 'max-w-filter-chip-segment min-w-0 truncate'
 
+/** Shared chip skin — the filter summary chip and `RunTimelineJumpButton`
+ *  both render a small bordered/rounded pill next to it, so the two
+ *  can't drift apart one hover-state tweak at a time. Callers append
+ *  their own shrink/color modifiers on top. */
+export const CHIP_BUTTON_CLASS = 'flex items-center gap-1.5 rounded-md border border-edge bg-surface px-2.5 py-1.5 text-xs transition-colors hover:bg-surface-dim focus:border-accent focus:outline-none'
+
 export function AnalyzeFilterSummaryChip({
   keyboardLabel,
   deviceLabel,
@@ -33,7 +39,7 @@ export function AnalyzeFilterSummaryChip({
   return (
     <button
       type="button"
-      className="flex min-w-0 items-center gap-1.5 rounded-md border border-edge bg-surface px-2.5 py-1.5 text-xs text-content transition-colors hover:bg-surface-dim focus:border-accent focus:outline-none"
+      className={`${CHIP_BUTTON_CLASS} min-w-0 text-content`}
       onClick={onClick}
       title={`${keyboardLabel} · ${deviceLabel} · ${sourceLabel} · ${periodLabel}`}
       data-testid={testId}

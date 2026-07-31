@@ -63,6 +63,7 @@ import { AnalyzeFilterStorePanel } from './AnalyzeFilterStorePanel'
 import { ConnectingOverlay } from '../ConnectingOverlay'
 import { ActivityChart } from './ActivityChart'
 import { AnalyzeFilterSummaryChip } from './AnalyzeFilterSummaryChip'
+import { RunTimelineJumpButton } from './RunTimelineJumpButton'
 import { AnalyzeFilterModal, type AnalyzeFilterDraft } from './AnalyzeFilterModal'
 import { buildDeviceLabel, buildFilterConditionLabels, buildPeriodLabel } from './filter-labels'
 import { clampRangeToBoundaries, getSnapshotBoundaries } from './clamp-range'
@@ -236,6 +237,9 @@ export interface AnalyzePaneProps {
    * physically connected keyboard to diagnose" — the TappingTermCard
    * only renders when this matches the pane's own selected keyboard. */
   connectedTappingTerm?: ConnectedTappingTerm | null
+  /** Analyze -> Typing Test "open timeline" handoff (see
+   * `RunTimelineJumpButton`); omit to hide the action entirely. */
+  onOpenRunTimeline?: (runId: string) => void
 }
 
 export function AnalyzePane({
@@ -246,6 +250,7 @@ export function AnalyzePane({
   onSelectUid,
   onSkipPercentChange,
   connectedTappingTerm,
+  onOpenRunTimeline,
 }: AnalyzePaneProps): JSX.Element {
   // Pane A keeps the historical (unsuffixed) testids so existing
   // selectors keep working; pane B appends `-b` so split-mode renders
@@ -650,6 +655,13 @@ export function AnalyzePane({
   const selected = selectedUid
     ? keyboards.find((kb) => kb.uid === selectedUid) ?? null
     : null
+
+  // Whether the selected keyboard is the one physically connected right
+  // now — the only keyboard `connectedTappingTerm` can ever describe.
+  // Shared by the Analyze -> Typing Test jump button (the destination
+  // view only exists to re-enter for the LIVE keyboard) and TappingTermCard
+  // (tap-hold diagnostics need the live device to diagnose against).
+  const isConnectedKeyboard = connectedTappingTerm?.uid === selected?.uid
 
   // Snapshot the filter state in the shape AnalyzeExportModal needs.
   // The modal calls per-category builders directly with these values
@@ -1202,6 +1214,9 @@ export function AnalyzePane({
               onClick={() => setFilterModalOpen(true)}
               testId={tid('analyze-filter-chip')}
             />
+            {selected && onOpenRunTimeline && runIdScopes.length === 1 && isConnectedKeyboard && (
+              <RunTimelineJumpButton runId={runIdScopes[0]} onOpen={onOpenRunTimeline} testId={tid('analyze-open-run-timeline')} />
+            )}
           </div>
           {/* Row 2: tab-specific filters, unchanged by the chip/modal
            * restructure. Its own 10-column max-content grid keeps every
@@ -1497,9 +1512,7 @@ export function AnalyzePane({
                           runIdScopes={runIdScopes}
                           snapshot={effectiveSnapshot}
                           snapshotLoading={snapshotLoading}
-                          connectedTappingTerm={
-                            connectedTappingTerm?.uid === selected.uid ? connectedTappingTerm : null
-                          }
+                          connectedTappingTerm={isConnectedKeyboard && connectedTappingTerm ? connectedTappingTerm : null}
                         />
                       )}
                     </div>

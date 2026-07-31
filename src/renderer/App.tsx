@@ -41,6 +41,7 @@ import { UnlockDialog } from './components/editors/UnlockDialog'
 import { KeymapEditor, type KeymapEditorHandle } from './components/editors/KeymapEditor'
 import type { AnalyticsOrigin, KeymapApplyResult } from './components/editors/keymap-editor-types'
 import { useKeymapApplyPrompt } from './hooks/useKeymapApplyPrompt'
+import { useRunTimelineHandoff } from './hooks/useRunTimelineHandoff'
 import type { KeymapRewriteTable } from '../shared/keymap/keymap-apply'
 import { AnalyzePage } from './components/analyze/AnalyzePage'
 import type { ConnectedTappingTerm } from './components/analyze/analyze-types'
@@ -519,6 +520,10 @@ export function App() {
   const { setViewMode } = devicePrefs
   const { resetUIState } = editorUI
 
+  const { timelineHandoff, openRunTimeline } = useRunTimelineHandoff({
+    setAnalyticsPageOpen, setViewMode, pendingTypingTestReentryRef,
+  })
+
   const prevConnectedRef = useRef(device.connectedDevice)
   useEffect(() => {
     const wasConnected = prevConnectedRef.current
@@ -886,6 +891,7 @@ export function App() {
             initialUid={keyboard.uid && keyboard.uid !== EMPTY_UID ? keyboard.uid : undefined}
             onBack={handleAnalyticsBack}
             connectedTappingTerm={connectedTappingTerm}
+            onOpenRunTimeline={openRunTimeline}
           />
         ) : (
         <div className={`flex min-h-0 flex-1 flex-col ${editorUI.typingTestMode && devicePrefs.typingTestViewOnly ? 'overflow-hidden p-0' : 'overflow-auto p-4'}`} data-testid="editor-content" style={viewExitTransition ? { display: 'none' } : undefined}>
@@ -1043,6 +1049,7 @@ export function App() {
             typingViewMenuTab={devicePrefs.typingViewMenuTab}
             onTypingViewMenuTabChange={devicePrefs.setTypingViewMenuTab}
             onViewAnalytics={handleViewAnalytics}
+            timelineHandoff={timelineHandoff}
             onTypingTestRunningChange={setTypingTestRunning}
             deviceName={deviceName}
             isDummy={effectiveIsDummy}

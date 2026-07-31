@@ -1,5 +1,5 @@
 {
-  "version": "0.1.52",
+  "version": "0.1.53",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -511,7 +511,48 @@
         "errorMixEmpty": "対象となる結果はまだありません",
         "errorMixSubstitutionRow": "置換 {{pct}}%（母集団平均 {{avgPct}}%）",
         "errorMixOmissionRow": "脱字 {{pct}}%（母集団平均 {{avgPct}}%）",
-        "errorMixInsertionRow": "衍字 {{pct}}%（母集団平均 {{avgPct}}%）"
+        "errorMixInsertionRow": "衍字 {{pct}}%（母集団平均 {{avgPct}}%）",
+        "timeline": {
+          "modalTitle": "打鍵タイムライン",
+          "openButton": "打鍵タイムラインを開く",
+          "loading": "タイムラインを読み込み中…",
+          "error": "このランの打鍵ログを読み込めませんでした。",
+          "partialBadge": "未完了",
+          "stats": {
+            "wordPace": "ワード速度",
+            "runWpm": "ラン全体のWPM",
+            "accuracy": "正確度",
+            "overlap": "重複率",
+            "duration": "所要時間"
+          },
+          "legend": {
+            "normal": "通常の打鍵",
+            "mistake": "ミス",
+            "overlap": "重複打鍵（前のキーを離す前に押した）",
+            "unjudged": "未判定（正誤データなし）",
+            "blank": "ブランク（圧縮表示）",
+            "leadIn": "ワード前の間",
+            "correctedNote": "ミスの印には提出前に修正された打鍵も含まれます。ミスの印があっても正確度100%になることがあります。"
+          },
+          "axisNote": "ブランクは軸上で圧縮表示されています。表示される時間は全て実際の値です。",
+          "correlationUnreliable": "このランは正誤の印が不正確な場合があります（IME変換を経由した入力が含まれています）。",
+          "zoom": {
+            "label": "拡大率",
+            "aria": "タイムラインの拡大率"
+          },
+          "tooltip": {
+            "releaseUnobserved": "離鍵未観測",
+            "overlapYes": "前のキーと重複",
+            "overlapNo": "重複なし",
+            "overlapUnknown": "重複不明",
+            "mistake": "ミス（修正された可能性あり）",
+            "unjudged": "未判定",
+            "correct": "正解",
+            "offset": "+{{ms}}ms",
+            "blankDuration": "ブランク: {{ms}}ms",
+            "leadInDuration": "ワード前の間: {{ms}}ms"
+          }
+        }
       },
       "results": {
         "mistakesLabel": "ミス文字",
@@ -1631,7 +1672,8 @@
       "editConditions": "検索条件を編集",
       "chipAriaLabel": "検索条件を編集",
       "sourceDisabledByApp": "By App は全ソースを合算するため、この項目は無効です。",
-      "distributionDisabledNote": "分布ビューは常にこのデバイスのデータを使うため、この項目は無効です。"
+      "distributionDisabledNote": "分布ビューは常にこのデバイスのデータを使うため、この項目は無効です。",
+      "openRunTimeline": "タイムラインを開く"
     }
   },
   "dataModal": {

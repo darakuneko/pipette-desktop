@@ -101,6 +101,16 @@ export function fmtMs(value: number | null): string {
   return value !== null ? `${Math.round(value)} ms` : '—'
 }
 
+/** `M:SS` run-duration formatter shared by the History table and the
+ * word-timeline modal's summary card, so the same run's duration reads
+ * identically in both places (e.g. `1:30`, never `90s` in one and `1:30`
+ * in the other). */
+export function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
 /** Generic bucket-lookup for bin tables whose upper edge is `toMs`
  * (exclusive) or `null` for the unbounded tail. Non-finite / negative
  * inputs clamp to the first bucket so bad data stays visible. */
