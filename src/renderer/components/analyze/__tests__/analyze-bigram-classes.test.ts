@@ -128,4 +128,29 @@ describe('aggregateBigramClasses', () => {
     expect(result.unknownCount).toBe(3)
     expect(result.totals.repetition.count).toBe(0)
   })
+
+  it('with a pairFilter, a rejected parsed pair contributes to neither a class total nor totalCount', () => {
+    const result = aggregateBigramClasses(
+      [
+        entry('1_3', 2, [2, 0, 0, 0, 0, 0, 0, 0]), // alternation, kept
+        entry('1_2', 4, [4, 0, 0, 0, 0, 0, 0, 0]), // left, rejected by filter
+      ],
+      fingerMap,
+      (pair) => pair.prev === 1 && pair.curr === 3,
+    )
+    expect(result.totals.alternation.count).toBe(2)
+    expect(result.totals.left.count).toBe(0)
+    expect(result.unknownCount).toBe(0)
+    expect(result.totalCount).toBe(2)
+  })
+
+  it('a malformed id always lands in unknownCount, even with a pairFilter that would reject everything — the filter is never consulted since there is no parsed pair to hand it', () => {
+    const result = aggregateBigramClasses(
+      [entry('bad', 9)],
+      fingerMap,
+      () => false,
+    )
+    expect(result.unknownCount).toBe(9)
+    expect(result.totalCount).toBe(9)
+  })
 })

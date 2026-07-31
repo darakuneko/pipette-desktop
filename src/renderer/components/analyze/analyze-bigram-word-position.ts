@@ -16,7 +16,9 @@ import {
   isModTapKeycode,
   isSHTKeycode,
 } from '../../../shared/keycodes/keycodes'
+import type { FingerType } from '../../../shared/kle/kle-ergonomics'
 import type { TypingBigramTopEntry } from '../../../shared/types/typing-analytics'
+import { aggregateBigramClasses, type BigramClassAggregate } from './analyze-bigram-classes'
 import { emptyHistTotal, foldHist, parseBigramId, type HistTotal } from './analyze-bigram-heatmap'
 import { withSnapshotProtocol } from './analyze-protocol'
 
@@ -189,5 +191,44 @@ export function aggregateWordPosition(
       foldHist(bucket.hist, entry.hist)
     }
     return { initiation, inWord, excludedCount }
+  })
+}
+
+/**
+ * Hand-usage classes (`aggregateBigramClasses`) restricted to in-word
+ * pairs only — the counterpart of `aggregateWordPosition` for callers
+ * that need the CHI 2018 Left/Right/Alternation/Repetition split, not
+ * the initiation/in-word split itself. Keeps only `classifyWordPosition
+ * === 'inWord'` pairs, which drops both ends of `WordPosition`'s other
+ * two buckets: `initiation` pairs (the same word-initiation exclusion
+ * the paper's own hand-class figures use — see `typing-benchmarks.ts`'s
+ * caveat 1) AND `excluded` pairs (a pair whose `curr` key IS the
+ * separator, i.e. word-terminal). The terminal exclusion is deliberate,
+ * not a side effect: `KC_SPACE`/`KC_ENTER` are conventionally mapped to
+ * a thumb, so folding word-terminal pairs into the left/right classes
+ * would pollute whichever hand's thumb reaches the separator with a
+ * disproportionate share of separator-ending pairs, the same kind of
+ * distortion the initiation exclusion already guards against on the
+ * other end of a word. The current consumer is the typist-cluster
+ * classifier (`analyze-typist-cluster.ts`'s `typistHandIkisFromEntries`),
+ * which needs each hand class's IKI comparable against
+ * `BENCHMARK_LEFT_HAND_IKI_MS`/`RIGHT`/`ALTERNATION`.
+ *
+ * Mirrors `aggregateWordPosition`'s own protocol handling exactly:
+ * `unwrapTaps` is only enabled when `vialProtocol` is known, and both
+ * the word-position check and the hand-class fold run inside the same
+ * `withSnapshotProtocol` scope so a dual-role space/enter key unwraps
+ * against the snapshot's own protocol rather than the current session's.
+ */
+export function aggregateInWordBigramClasses(
+  entries: readonly TypingBigramTopEntry[],
+  keycodeFinger: ReadonlyMap<number, FingerType>,
+  vialProtocol?: number,
+): BigramClassAggregate {
+  const unwrapTaps = vialProtocol !== undefined
+  return withSnapshotProtocol(vialProtocol, () => {
+    const inWordFilter = (pair: { prev: number; curr: number }): boolean =>
+      classifyWordPosition(pair.prev, pair.curr, unwrapTaps) === 'inWord'
+    return aggregateBigramClasses(entries, keycodeFinger, inWordFilter)
   })
 }

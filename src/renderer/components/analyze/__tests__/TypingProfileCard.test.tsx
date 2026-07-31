@@ -4,11 +4,16 @@
 // classifier boundary logic itself is covered by
 // analyze-typing-profile.test.ts and analyze-benchmark.test.ts.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { TypingProfileCard } from '../TypingProfileCard'
+import { classifyTypist } from '../analyze-typist-cluster'
 import { SPEED_MIN_KEYSTROKES } from '../analyze-typing-profile'
-import type { TypingDailySummary } from '../../../../shared/types/typing-analytics'
+import { EMPTY_STAT_VALUE } from '../analyze-constants'
+import { deserialize } from '../../../../shared/keycodes/keycodes'
+import { parseKle } from '../../../../shared/kle/kle-parser'
+import type { FingerType } from '../../../../shared/kle/kle-ergonomics'
+import type { TypingBigramTopEntry, TypingDailySummary, TypingKeymapSnapshot } from '../../../../shared/types/typing-analytics'
 import type { TypingTestResult } from '../../../../shared/types/pipette-settings'
 
 vi.mock('react-i18next', () => ({
@@ -18,9 +23,24 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+// Real implementation by default (every other describe block in this file
+// exercises the actual classifier) — only the "classification-reason copy
+// switch" describe block below overrides it, and restores this same real
+// implementation in its own afterEach so the override never leaks into
+// another test.
+vi.mock('../analyze-typist-cluster', async () => {
+  const actual = await vi.importActual<typeof import('../analyze-typist-cluster')>('../analyze-typist-cluster')
+  return { ...actual, classifyTypist: vi.fn(actual.classifyTypist) }
+})
+
+const bigramFetchMock = vi.fn(
+  (): Promise<{ view: 'top'; entries: TypingBigramTopEntry[]; truncated: boolean }> =>
+    Promise.resolve({ view: 'top', entries: [], truncated: false }),
+)
+
 Object.defineProperty(window, 'vialAPI', {
   value: {
-    typingAnalyticsGetBigramAggregateForRange: () => Promise.resolve({ view: 'top', entries: [], truncated: false }),
+    typingAnalyticsGetBigramAggregateForRange: bigramFetchMock,
     typingAnalyticsListMinuteStatsLocal: () => Promise.resolve([]),
   },
   writable: true,
@@ -38,6 +58,7 @@ function renderCard(
   daily: ReadonlyArray<TypingDailySummary>,
   typingTestResults: TypingTestResult[] = [],
   scopes: { typingTestScopes?: string[]; runIdScopes?: string[] } = {},
+  extra: { snapshot?: TypingKeymapSnapshot | null; fingerOverrides?: Record<string, FingerType> } = {},
 ): void {
   render(
     <TypingProfileCard
@@ -48,8 +69,8 @@ function renderCard(
       runIdScopes={scopes.runIdScopes ?? []}
       daily={daily}
       today={today}
-      snapshot={null}
-      fingerOverrides={{}}
+      snapshot={extra.snapshot ?? null}
+      fingerOverrides={extra.fingerOverrides ?? {}}
       typingTestResults={typingTestResults}
     />,
   )
@@ -317,5 +338,109 @@ describe('TypingProfileCard Error mix cell', () => {
       expect(screen.getByTestId('analyze-typing-profile')).toBeInTheDocument()
     })
     expect(screen.getByText('analyze.summary.profile.errorMixLabel')).toBeInTheDocument()
+  })
+})
+
+describe('TypingProfileCard Typing style cell', () => {
+  // No mockResolvedValue call here — vi.clearAllMocks() only clears call
+  // history, not the resolved-empty-entries implementation bigramFetchMock
+  // was created with above, so that default already applies.
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows the insufficient-data state (EMPTY_STAT_VALUE + insufficient context) when there is no speed/rhythm data at all', async () => {
+    renderCard([])
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-typing-profile')).toBeInTheDocument()
+    })
+    const label = screen.getByText('analyze.summary.profile.typistClusterLabel')
+    const card = label.parentElement as HTMLElement
+    expect(card.textContent).toContain(EMPTY_STAT_VALUE)
+    expect(card.textContent).toContain('analyze.summary.profile.insufficient')
+  })
+
+  it('shows a matched cluster name and one-line description once enough speed/rhythm data is present — this only proves the fetch/finger/daily data reaches classifyTypist and its result renders; see analyze-typist-cluster.test.ts for why this exact fixture lands on cluster 6', async () => {
+    // A + D map to two distinct left-hand fingers (a 'left'-class pair);
+    // J + K to two distinct right-hand fingers ('right'-class); A + J
+    // crosses hands ('alternation'-class).
+    const layout = parseKle([['0,0', '0,1', '0,2', '0,3']])
+    const keyA = deserialize('KC_A')
+    const keyD = deserialize('KC_D')
+    const keyJ = deserialize('KC_J')
+    const keyK = deserialize('KC_K')
+    const snapshot: TypingKeymapSnapshot = {
+      uid: '0xAABB',
+      machineHash: 'h',
+      productName: 'Test',
+      savedAt: 0,
+      layers: 1,
+      matrix: { rows: 1, cols: 4 },
+      keymap: [[['KC_A', 'KC_D', 'KC_J', 'KC_K']]],
+      layout,
+    }
+    const fingerOverrides: Record<string, FingerType> = {
+      '0,0': 'left-index',
+      '0,1': 'left-middle',
+      '0,2': 'right-index',
+      '0,3': 'right-middle',
+    }
+    // Bucket centers are [30, 80, 125, 175, 250, 400, 750, 1500] — counts
+    // below are chosen so avgIkiFromHist lands on a clean figure: left and
+    // right both average 180ms (1400@175 + 100@250), alternation averages
+    // 160ms (300@125 + 700@175), overall 175ms. Combined with 56 WPM below,
+    // the exact same numbers are fed straight into `classifyTypist` in
+    // analyze-typist-cluster.test.ts, which is where the cluster-6 match is
+    // actually verified.
+    bigramFetchMock.mockResolvedValue({
+      view: 'top',
+      entries: [
+        { ngramId: `${keyA}_${keyD}`, count: 1500, hist: [0, 0, 0, 1400, 100, 0, 0, 0], avgIki: null, sd: null },
+        { ngramId: `${keyJ}_${keyK}`, count: 1500, hist: [0, 0, 0, 1400, 100, 0, 0, 0], avgIki: null, sd: null },
+        { ngramId: `${keyA}_${keyJ}`, count: 1000, hist: [0, 0, 300, 700, 0, 0, 0, 0], avgIki: null, sd: null },
+      ],
+      truncated: false,
+    })
+    // (4200 / 5) * 60000 / 900000 = 56 WPM.
+    const daily: TypingDailySummary[] = [{ date: today, keystrokes: 4200, activeMs: 900_000 }]
+    renderCard(daily, [], {}, { snapshot, fingerOverrides })
+    await waitFor(() => {
+      expect(screen.getByText('analyze.summary.profile.typistCluster.6.name')).toBeInTheDocument()
+    })
+    expect(screen.getByText('analyze.summary.profile.typistCluster.6.context')).toBeInTheDocument()
+  })
+})
+
+describe('TypingProfileCard Typing style cell — classification-reason copy switch', () => {
+  // classifyTypist itself is a mocked wrapper around the real
+  // implementation (see the vi.mock above) so these two tests can force
+  // each noMatch reason without reverse-engineering bucket-histogram
+  // inputs that happen to land exactly ambiguous/tooFar — that arithmetic
+  // is already covered by analyze-typist-cluster.test.ts. Restoring the
+  // real implementation afterward keeps every other describe block in
+  // this file exercising the actual classifier, unaffected by this one.
+  afterEach(async () => {
+    const actual = await vi.importActual<typeof import('../analyze-typist-cluster')>('../analyze-typist-cluster')
+    vi.mocked(classifyTypist).mockImplementation(actual.classifyTypist)
+  })
+
+  it('shows the "Between styles" copy, not the "No match" copy, when the classifier reports reason "ambiguous"', async () => {
+    vi.mocked(classifyTypist).mockReturnValue({ kind: 'noMatch', reason: 'ambiguous' })
+    renderCard([])
+    await waitFor(() => {
+      expect(screen.getByText('analyze.summary.profile.typistCluster.ambiguous.name')).toBeInTheDocument()
+    })
+    expect(screen.getByText('analyze.summary.profile.typistCluster.ambiguous.context')).toBeInTheDocument()
+    expect(screen.queryByText('analyze.summary.profile.typistCluster.noMatch.name')).not.toBeInTheDocument()
+  })
+
+  it('shows the "No match" copy, not the "Between styles" copy, when the classifier reports reason "tooFar"', async () => {
+    vi.mocked(classifyTypist).mockReturnValue({ kind: 'noMatch', reason: 'tooFar' })
+    renderCard([])
+    await waitFor(() => {
+      expect(screen.getByText('analyze.summary.profile.typistCluster.noMatch.name')).toBeInTheDocument()
+    })
+    expect(screen.getByText('analyze.summary.profile.typistCluster.noMatch.context')).toBeInTheDocument()
+    expect(screen.queryByText('analyze.summary.profile.typistCluster.ambiguous.name')).not.toBeInTheDocument()
   })
 })

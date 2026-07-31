@@ -71,14 +71,35 @@ export function buildKeycodeFingerMap(
  * `BigramClassTotal`, the hand-usage-class sibling) for the shape. */
 export type FingerPairTotal = HistTotal
 
+/** Resolves the (prev, curr) finger pair from already-parsed keycodes via
+ * the keycodeFinger map, plus whether the two keycodes are the same key
+ * (needed by `classifyBigram` to detect a letter repeat). Either finger
+ * comes back `undefined` when that half's keycode has no mapped finger.
+ * Split out from `resolvePairFingers` so a caller that already parsed the
+ * bigram id (e.g. `aggregateBigramClasses`, which needs the parsed pair
+ * for its own filter) doesn't parse it a second time. */
+export function resolvePairFingersFromCodes(
+  prev: number,
+  curr: number,
+  keycodeFinger: ReadonlyMap<number, FingerType>,
+): {
+  prevFinger: FingerType | undefined
+  currFinger: FingerType | undefined
+  sameKeycode: boolean
+} {
+  return {
+    prevFinger: keycodeFinger.get(prev),
+    currFinger: keycodeFinger.get(curr),
+    sameKeycode: prev === curr,
+  }
+}
+
 /** Resolves the (prev, curr) finger pair for a bigram id via the
- * keycodeFinger map, plus whether the pair's two keycodes are the same
- * key (needed by `classifyBigram` to detect a letter repeat). Either
- * finger comes back `undefined` when the id is malformed or that
- * half's keycode has no mapped finger; `sameKeycode` is `false` for a
- * malformed id. Shared by every aggregator that needs a bigram's
- * finger pair, so the parse-then-look-up pair isn't duplicated at each
- * call site. */
+ * keycodeFinger map — see `resolvePairFingersFromCodes` for the shape.
+ * `undefined` for both fingers and `sameKeycode: false` when the id is
+ * malformed. Shared by every aggregator that needs a bigram's finger
+ * pair from its raw id, so the parse-then-look-up pair isn't duplicated
+ * at each call site. */
 export function resolvePairFingers(
   ngramId: string,
   keycodeFinger: ReadonlyMap<number, FingerType>,
@@ -88,11 +109,8 @@ export function resolvePairFingers(
   sameKeycode: boolean
 } {
   const pair = parseBigramId(ngramId)
-  return {
-    prevFinger: pair ? keycodeFinger.get(pair.prev) : undefined,
-    currFinger: pair ? keycodeFinger.get(pair.curr) : undefined,
-    sameKeycode: pair ? pair.prev === pair.curr : false,
-  }
+  if (!pair) return { prevFinger: undefined, currFinger: undefined, sameKeycode: false }
+  return resolvePairFingersFromCodes(pair.prev, pair.curr, keycodeFinger)
 }
 
 /** Aggregate bigram entries into (prevFinger, currFinger) totals.

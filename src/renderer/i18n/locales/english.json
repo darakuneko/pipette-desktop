@@ -1,5 +1,5 @@
 {
-  "version": "0.1.51",
+  "version": "0.1.52",
   "name": "English",
   "common": {
     "save": "Save",
@@ -1208,7 +1208,52 @@
         "kspcDesc": "Keystrokes per confirmed character (Backspace counts as a keystroke), aggregated from your saved Typing Test results over this window — not filtered by Device/App, since it comes from History rather than the recorded keystroke stream. Romaji-input runs are excluded here, since their ratio measures something different (rejected keystrokes per accepted one) and isn't comparable to the population average shown below.",
         "errorMixLabel": "Error mix",
         "errorMixContext": "Sub {{subPct}}% (avg {{subAvg}}%) · Om {{omPct}}% (avg {{omAvg}}%) · Ins {{insPct}}% (avg {{insAvg}}%)",
-        "errorMixDesc": "Substitution / omission / insertion rates (share of target characters), char-weighted from your saved Typing Test results over this window — not filtered by Device/App, since it comes from History rather than the recorded keystroke stream. Romaji-input runs are excluded (their typed text always matches an accepted spelling, so there's nothing to classify)."
+        "errorMixDesc": "Substitution / omission / insertion rates (share of target characters), char-weighted from your saved Typing Test results over this window — not filtered by Device/App, since it comes from History rather than the recorded keystroke stream. Romaji-input runs are excluded (their typed text always matches an accepted spelling, so there's nothing to classify).",
+        "typistClusterLabel": "Typing style",
+        "typistClusterDesc": "Compares your typing averages over this window against population typing-style profiles built from speed, typing rhythm, and error patterns. The rollover dimension isn't part of this comparison.",
+        "typistClusterDescNoError": "Compares your typing averages over this window against population typing-style profiles. Error patterns weren't part of this match — no qualifying error data was available for this window.",
+        "typistCluster": {
+          "1": {
+            "name": "Steady rhythm",
+            "context": "Slower pace than the population average, with typical hand alternation and typical leftover-error rates."
+          },
+          "2": {
+            "name": "Steady, alternating",
+            "context": "Slower pace with pronounced hand alternation, and more leftover errors than average."
+          },
+          "3": {
+            "name": "Mid pace, more leftovers",
+            "context": "Near-average pace and typical hand alternation, with more leftover errors than most."
+          },
+          "4": {
+            "name": "Mid pace, right-hand lean",
+            "context": "Near-average pace, with the right hand noticeably faster than the left."
+          },
+          "5": {
+            "name": "Mid pace, alternating",
+            "context": "Near-average pace with the strongest hand alternation in this set."
+          },
+          "6": {
+            "name": "Mid pace, balanced",
+            "context": "Near-average pace across every measure, close to the overall population median."
+          },
+          "7": {
+            "name": "Quick, some leftovers",
+            "context": "Faster pace than most, with slightly more leftover errors than the quickest group."
+          },
+          "8": {
+            "name": "Quick, few leftovers",
+            "context": "The fastest pace in this set, with leftover errors among the lowest here."
+          },
+          "noMatch": {
+            "name": "No match",
+            "context": "Your typing doesn't closely resemble any of the reference profiles."
+          },
+          "ambiguous": {
+            "name": "Between styles",
+            "context": "Your typing sits about equally between two reference profiles."
+          }
+        }
       }
     },
     "bigrams": {
