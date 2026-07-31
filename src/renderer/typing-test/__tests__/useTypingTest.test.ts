@@ -564,6 +564,196 @@ describe('useTypingTest layer tracking with MO/LT', () => {
   })
 })
 
+// Issue #333: a layer-switch key's action must be latched against the
+// layer state active at its OWN press time, then never re-resolved while
+// it stays held — even if the layer it activates redefines its own cell.
+// The old fixed-point activateLayers() violated this by re-resolving
+// already-held keys against layers they themselves had just activated.
+describe('useTypingTest layer tracking — press-time latch (issue #333)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2025-01-01T00:00:00.000Z'))
+  })
+
+  it('resolves a lone MO(2) press from the layer active at press time, not the layer it activates', () => {
+    const { result } = renderHook(() => useTypingTest())
+
+    // (3,0) is MO(2) on layer 0, but the SAME cell is MO(5) on layer 2 —
+    // the exact keymap shape reported in issue #333.
+    const keymap = buildMultiLayerKeymap([
+      { layer: 0, entries: [[3, 0, 'MO(2)']] },
+      { layer: 2, entries: [[3, 0, 'MO(5)']] },
+    ])
+
+    act(() => result.current.processMatrixFrame(pressKeys(['3,0']), keymap))
+
+    expect(result.current.effectiveLayer).toBe(2)
+  })
+
+  it('activates the nested layer once a different key latched on layer 2 is pressed while MO(2) is held', () => {
+    const { result } = renderHook(() => useTypingTest())
+
+    const keymap = buildMultiLayerKeymap([
+      { layer: 0, entries: [[3, 0, 'MO(2)']] },
+      { layer: 2, entries: [[0, 1, 'MO(5)']] },
+    ])
+
+    act(() => result.current.processMatrixFrame(pressKeys(['3,0']), keymap))
+    expect(result.current.effectiveLayer).toBe(2)
+
+    act(() => result.current.processMatrixFrame(pressKeys(['3,0', '0,1']), keymap))
+    expect(result.current.effectiveLayer).toBe(5)
+  })
+
+  it('attributes a press made while MO(2) is held to layer 2, not layer 5, even though MO(2)\'s own cell targets layer 5', () => {
+    const sink = vi.fn()
+    const keymap = buildMultiLayerKeymap([
+      { layer: 0, entries: [[3, 0, 'MO(2)']] },
+      { layer: 2, entries: [[3, 0, 'MO(5)'], [0, 1, 'KC_C']] },
+      { layer: 5, entries: [[0, 1, 'KC_F']] },
+    ])
+    const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink)))
+
+    act(() => result.current.processMatrixFrame(pressKeys(['3,0']), keymap))
+    act(() => result.current.processMatrixFrame(pressKeys(['3,0', '0,1']), keymap))
+
+    const calls = sink.mock.calls.map((c) => c[0]) as Array<{ row: number; col: number; layer: number }>
+    const second = calls.find((c) => c.row === 0 && c.col === 1)
+    expect(second?.layer).toBe(2)
+  })
+
+  it('resolves a same-frame chord where the lower-row press activates the layer the higher-row press needs', () => {
+    const { result } = renderHook(() => useTypingTest())
+
+    const keymap = buildMultiLayerKeymap([
+      { layer: 0, entries: [[0, 0, 'MO(2)'], [1, 0, 'KC_B']] },
+      { layer: 2, entries: [[1, 0, 'MO(5)']] },
+    ])
+
+    // Both keys are new presses in a single frame — row-major order means
+    // (0,0) is processed before (1,0), so (1,0) resolves against layer 2.
+    act(() => result.current.processMatrixFrame(pressKeys(['0,0', '1,0']), keymap))
+
+    expect(result.current.effectiveLayer).toBe(5)
+  })
+
+  describe('same-frame release + press rollover (row-major order)', () => {
+    it('a lower-row release is processed before a higher-row press, clearing the latch first', () => {
+      const sink = vi.fn()
+      const keymap = buildMultiLayerKeymap([
+        { layer: 0, entries: [[0, 0, 'MO(2)'], [5, 0, 'KC_BASE']] },
+        { layer: 2, entries: [[5, 0, 'KC_OVERRIDE']] },
+      ])
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink)))
+
+      act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+      expect(result.current.effectiveLayer).toBe(2)
+      sink.mockClear()
+
+      // Same frame: MO(2) at row 0 releases while a new key at row 5
+      // presses. Row-major order processes the row-0 release first, so
+      // the press resolves with the latch already gone.
+      act(() => result.current.processMatrixFrame(pressKeys(['5,0']), keymap))
+
+      expect(result.current.effectiveLayer).toBe(0)
+      expect(sink).toHaveBeenCalledWith(expect.objectContaining({ row: 5, col: 0, layer: 0 }))
+    })
+
+    it('a higher-row release is processed after a lower-row press, still resolving against the latch', () => {
+      const sink = vi.fn()
+      const keymap = buildMultiLayerKeymap([
+        { layer: 0, entries: [[5, 0, 'MO(2)'], [0, 0, 'KC_BASE']] },
+        { layer: 2, entries: [[0, 0, 'KC_OVERRIDE']] },
+      ])
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink)))
+
+      act(() => result.current.processMatrixFrame(pressKeys(['5,0']), keymap))
+      expect(result.current.effectiveLayer).toBe(2)
+      sink.mockClear()
+
+      // Same frame: a new key at row 0 presses while MO(2) at row 5
+      // releases. Row-major order processes the row-0 press first, so it
+      // still resolves against layer 2 before the release clears it.
+      act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+
+      expect(sink).toHaveBeenCalledWith(expect.objectContaining({ row: 0, col: 0, layer: 2 }))
+      expect(result.current.effectiveLayer).toBe(0)
+    })
+  })
+
+  it('keeps the nested layer active after releasing the outer MO key that activated it', () => {
+    const { result } = renderHook(() => useTypingTest())
+
+    const keymap = buildMultiLayerKeymap([
+      { layer: 0, entries: [[3, 0, 'MO(2)']] },
+      { layer: 2, entries: [[0, 1, 'MO(5)']] },
+    ])
+
+    act(() => result.current.processMatrixFrame(pressKeys(['3,0']), keymap))
+    act(() => result.current.processMatrixFrame(pressKeys(['3,0', '0,1']), keymap))
+    expect(result.current.effectiveLayer).toBe(5)
+
+    // Release MO(2) (the outer key) while the nested MO(5) stays held —
+    // MO(5) was latched directly at its own press time and doesn't
+    // depend on MO(2) staying active, matching QMK's layer_on semantics.
+    act(() => result.current.processMatrixFrame(pressKeys(['0,1']), keymap))
+
+    expect(result.current.effectiveLayer).toBe(5)
+  })
+
+  it('shows the latched target above a new base layer, using the raw target captured at press time (not maxed against the old base)', async () => {
+    const { result } = renderHook(() => useTypingTest())
+
+    await act(async () => result.current.setBaseLayer(3))
+    expect(result.current.effectiveLayer).toBe(3)
+
+    // MO(1) is defined on layer 3 (the current base) and targets layer 1
+    // — below the current base, so the indicator correctly stays at 3.
+    // If the latch stored Math.max(oldBase=3, target=1) = 3 instead of
+    // the raw target 1, the next assertion (after dropping the base to
+    // 0) would incorrectly still show 3 instead of 1.
+    const keymap = buildMultiLayerKeymap([{ layer: 3, entries: [[0, 0, 'MO(1)']] }])
+    act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+    expect(result.current.effectiveLayer).toBe(3)
+
+    // Base drops below the latched target while MO(1) is still held —
+    // the indicator must now show the raw target (1), derived fresh from
+    // { newBase(0) } ∪ { latched target(1) }.
+    await act(async () => result.current.setBaseLayer(0))
+    expect(result.current.effectiveLayer).toBe(1)
+  })
+
+  it('attributes a press to a layer below the current base, when the key is only defined there', async () => {
+    const sink = vi.fn()
+    // (3,0) is MO(1) on the base layer (3). (0,1) has no cell at all on
+    // layer 3 — only on layer 1, the layer MO(1) latches — so
+    // resolveEffectiveCodeWithLayer's walk over sortedLayers ([3, 1])
+    // must fall through past the (undefined) base-layer cell to find it
+    // on the latched target below the base, not just above it.
+    const keymap = buildMultiLayerKeymap([
+      { layer: 3, entries: [[3, 0, 'MO(1)']] },
+      { layer: 1, entries: [[0, 1, 'KC_A']] },
+    ])
+    const { result } = renderHook(() => useTypingTest(undefined, undefined, analyticsOptions(sink)))
+
+    await act(async () => result.current.setBaseLayer(3))
+
+    act(() => result.current.processMatrixFrame(pressKeys(['3,0']), keymap))
+    // The latched target (1) is below the base (3), so the indicator
+    // correctly stays at the base rather than dropping to it.
+    expect(result.current.effectiveLayer).toBe(3)
+
+    act(() => result.current.processMatrixFrame(pressKeys(['3,0', '0,1']), keymap))
+
+    expect(sink).toHaveBeenCalledWith(expect.objectContaining({
+      row: 0,
+      col: 1,
+      layer: 1,
+      keycode: deserialize('KC_A'),
+    }))
+  })
+})
+
 describe('useTypingTest effectiveLayer', () => {
   beforeEach(() => {
     vi.useFakeTimers()
