@@ -1862,3 +1862,62 @@ describe('useTypingTest windowFocused', () => {
     })
   })
 })
+
+describe('useTypingTest onNoteKeystrokeRegistration / window focus gate (P1)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2025-01-01T00:00:00.000Z'))
+  })
+
+  it('does not call onNoteKeystrokeRegistration while the window is unfocused, but the per-minute matrix event still ships', () => {
+    const keymap = buildMultiLayerKeymap([{ layer: 0, entries: [[0, 0, 'KC_A']] }])
+    const sink = vi.fn()
+    const noteRegistration = vi.fn()
+    const { result } = renderHook(() => useTypingTest(undefined, undefined, {
+      ...analyticsOptions(sink),
+      onNoteKeystrokeRegistration: noteRegistration,
+    }))
+
+    act(() => result.current.setWindowFocused(false))
+    act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+
+    expect(noteRegistration).not.toHaveBeenCalled()
+    // HID matrix polling is unaffected by focus — the per-minute analytics
+    // pipeline deliberately keeps recording regardless (see the module's
+    // own comment on processMatrixFrame).
+    expect(sink).toHaveBeenCalled()
+  })
+
+  it('calls onNoteKeystrokeRegistration with windowFocused=true once the window is focused', () => {
+    const keymap = buildMultiLayerKeymap([{ layer: 0, entries: [[0, 0, 'KC_A']] }])
+    const noteRegistration = vi.fn()
+    const { result } = renderHook(() => useTypingTest(undefined, undefined, {
+      ...analyticsOptions(() => {}),
+      onNoteKeystrokeRegistration: noteRegistration,
+    }))
+
+    act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+
+    expect(noteRegistration).toHaveBeenCalledTimes(1)
+    const windowFocusedArg = noteRegistration.mock.calls[0][6] as boolean
+    expect(windowFocusedArg).toBe(true)
+  })
+
+  it('resumes calling onNoteKeystrokeRegistration once focus is restored', () => {
+    const keymap = buildMultiLayerKeymap([{ layer: 0, entries: [[0, 0, 'KC_A']] }])
+    const noteRegistration = vi.fn()
+    const { result } = renderHook(() => useTypingTest(undefined, undefined, {
+      ...analyticsOptions(() => {}),
+      onNoteKeystrokeRegistration: noteRegistration,
+    }))
+
+    act(() => result.current.setWindowFocused(false))
+    act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+    expect(noteRegistration).not.toHaveBeenCalled()
+
+    act(() => result.current.processMatrixFrame(new Set(), keymap))
+    act(() => result.current.setWindowFocused(true))
+    act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+    expect(noteRegistration).toHaveBeenCalledTimes(1)
+  })
+})

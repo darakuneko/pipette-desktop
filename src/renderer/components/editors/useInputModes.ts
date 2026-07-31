@@ -6,6 +6,7 @@ import { buildTypingTestResult, isPbForConfig, materialLabel } from '../../typin
 import { isRomajiInputActive } from '../../typing-test/romaji-input'
 import type { TypingTestConfig } from '../../typing-test/types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from '../../typing-test/types'
+import { useRunLogRecorder } from './use-run-log-recorder'
 import type { TypingTestResult, TypingTestMemory } from '../../../shared/types/pipette-settings'
 import type { TypingAnalyticsEventPayload, TypingAnalyticsKeyboard } from '../../../shared/types/typing-analytics'
 import { parseMatrixState, POLL_INTERVAL } from './matrix-utils'
@@ -36,6 +37,13 @@ interface PreparedAnalyticsContext {
   keyboard: TypingAnalyticsKeyboard
   typingTest: string | null
   runId: string | null
+  /** Window-focus state snapshotted at press time (see useTypingTest's
+   *  `onPrepareAnalyticsEvent` doc comment) — carried through to
+   *  `emitAnalyticsEvent` so the run-log recorder's defense-in-depth gate
+   *  (see run-log-recorder.ts's PRIVACY note) checks the value as of
+   *  when this keystroke actually happened, not whatever focus is by the
+   *  time a queued masked-key event finally ships. */
+  windowFocused: boolean
 }
 
 export interface UseInputModesOptions {
@@ -78,6 +86,10 @@ export interface UseInputModesOptions {
    * tap/hold classification. Defaults to QMK's 200 ms when the
    * keyboard hasn't reported one. */
   tappingTermMs?: number
+  /** `AppConfig.typingRecordingConsentAccepted` — gates the per-run raw
+   * keystroke log (see run-log-recorder.ts), independently of and
+   * stricter than `typingRecordEnabled`'s per-minute analytics gate. */
+  recordingConsentAccepted?: boolean
 }
 
 export interface UseInputModesReturn {
@@ -128,6 +140,7 @@ export function useInputModes({
   typingRecordKeyboard,
   onRecKeystroke,
   tappingTermMs,
+  recordingConsentAccepted = false,
 }: UseInputModesOptions): UseInputModesReturn {
   // --- Matrix tester state ---
   const [matrixMode, setMatrixMode] = useState(false)
@@ -225,6 +238,14 @@ export function useInputModes({
   const testRunIdRef = useRef<string | null>(null)
   const onRecKeystrokeRef = useRef(onRecKeystroke)
   onRecKeystrokeRef.current = onRecKeystroke
+  // Per-run raw keystroke log recorder (see run-log-recorder.ts and
+  // use-run-log-recorder.ts) — one instance per editor session, mirroring
+  // matrixQueueRef's construction style in useTypingTest.ts.
+  const runLog = useRunLogRecorder({
+    recordingConsentAccepted,
+    keyboardUid: typingRecordKeyboard?.uid,
+    typingTestLabelRef: testLabelRef,
+  })
   // The sink used to read recordingActiveRef / testLabelRef / testRunIdRef
   // at the moment an event was actually sent, but a matrix event can now
   // sit in useTypingTest's ordering queue for up to the tapping term
@@ -240,7 +261,7 @@ export function useInputModes({
   // back of the queue) fixes that: prepare captures the gate + tag
   // decision when the keystroke happens and hands back an opaque
   // context; emit only ever ships what prepare already decided.
-  const prepareAnalyticsEvent = useCallback((kind: 'matrix' | 'char'): PreparedAnalyticsContext | null => {
+  const prepareAnalyticsEvent = useCallback((kind: 'matrix' | 'char', windowFocused: boolean): PreparedAnalyticsContext | null => {
     const keyboard = keyboardRef.current
     if (!keyboard) return null
     const label = testLabelRef.current
@@ -262,7 +283,7 @@ export function useInputModes({
     }
     // A test keystroke carries both its material label and its run id; REC
     // input carries neither (so it lands as the null run / null test).
-    return { keyboard, typingTest: label, runId: label ? testRunIdRef.current : null }
+    return { keyboard, typingTest: label, runId: label ? testRunIdRef.current : null, windowFocused }
   }, [])
   // Ordering contract, not an optimization: chaining every emit behind the
   // previous one's IPC guarantees at most one typingAnalyticsEvent invoke
@@ -287,6 +308,11 @@ export function useInputModes({
   //     whatever tie/out-of-order pair still slips through all of the above.
   const chainRef = useRef<Promise<void>>(Promise.resolve())
   const emitAnalyticsEvent = useCallback((context: PreparedAnalyticsContext, payload: TypingAnalyticsEventPayload): Promise<void> => {
+    // Run-keystroke-log capture — gates itself independently (see
+    // RunLogRecordContext); a no-op for ordinary REC input (context.typingTest
+    // null), without recording consent, or without window focus (see
+    // context.windowFocused's doc comment).
+    runLog.record({ typingTestLabel: context.typingTest, runId: context.runId, windowFocused: context.windowFocused }, payload)
     const event = context.typingTest
       ? { ...payload, keyboard: context.keyboard, typingTest: context.typingTest, runId: context.runId ?? undefined }
       : { ...payload, keyboard: context.keyboard }
@@ -331,6 +357,12 @@ export function useInputModes({
   const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage, {
     onPrepareAnalyticsEvent: prepareAnalyticsEvent,
     onEmitAnalyticsEvent: emitAnalyticsEvent,
+    // A direct passthrough — runLog.noteRegistration re-checks the label/
+    // consent gate itself (same privacy-critical gate `record` uses
+    // above), so ambient REC frames (testLabelRef null) never touch the
+    // recorder buffer at all, not even to register.
+    onNoteKeystrokeRegistration: runLog.noteRegistration,
+    onNoteCharContext: runLog.noteCharContext,
     tappingTermMs,
   })
   const {
@@ -526,6 +558,31 @@ export function useInputModes({
       // both settle first.
       const uid = keyboardRef.current?.uid
       if (uid) flushAfterPendingEmits(resetMatrixPressTracking(), uid)
+      // The word the run ended on without submitting (e.g. a timed run
+      // expiring mid-word) — undefined when the run ended cleanly on a
+      // word boundary (currentWordIndex === words.length, every
+      // words/quote-mode finish) or with nothing typed into it yet.
+      // `currentInput` covers verbatim mode; `romajiKeystrokes` covers
+      // romaji mode (currentInput stays '' there — see handleRomajiChar
+      // in romaji-input.ts). See run-log-recorder.ts's `finish()`.
+      const typedSoFar = typingTest.state.currentInput || typingTest.state.romajiKeystrokes
+      const inFlightWord = typingTest.state.currentWordIndex < typingTest.state.words.length && typedSoFar.length > 0
+        ? { display: typingTest.state.words[typingTest.state.currentWordIndex], typed: typedSoFar }
+        : undefined
+      // Finalize the per-run raw keystroke log — discards outright when
+      // there's no active keyboard uid to save under; otherwise builds and
+      // saves it (itself a no-op unless this run was actually
+      // recorder-gated — see `record`'s own gate). Never
+      // truncated-and-saved: finish() refuses instead.
+      runLog.finishAndSave(uid, typingTest.state.wordResults, {
+        runId: typingTest.state.runId,
+        startedAtMs: typingTest.state.startTime ?? Date.now(),
+        durationMs: elapsed,
+        mode: typingTest.config.mode,
+        language: typingTest.language,
+        charCorrelationUnavailable: typingTest.state.kspcUncomputable,
+        inFlightWord,
+      })
       // A completed test makes any saved pause snapshot obsolete.
       if (savedMemoryRef.current) onMemoryChangeRef.current?.(undefined)
     }
@@ -540,10 +597,11 @@ export function useInputModes({
     typingTest.state.currentWordIndex, typingTest.state.wpmHistory,
     typingTest.state.currentQuote, typingTest.state.runId, typingTest.state.romajiCapable,
     typingTest.state.totalKeystrokes, typingTest.state.confirmedChars, typingTest.state.kspcUncomputable,
+    typingTest.state.currentInput, typingTest.state.romajiKeystrokes, typingTest.state.words,
     typingTest.wpm, typingTest.accuracy,
     typingTest.config, typingTest.language,
     typingTestHistory, onSaveTypingTestResult, saveUnnamed, pendingUnnamedResult,
-    resetMatrixPressTracking, flushAfterPendingEmits])
+    resetMatrixPressTracking, flushAfterPendingEmits, runLog.finishAndSave])
 
   // The just-finished result, exposed so the pane can build name chips: the
   // held unsaved one (save-unnamed off) until named, else the saved latest.
@@ -607,7 +665,14 @@ export function useInputModes({
     if (!mem) return
     onMemoryChangeRef.current?.(mem)
     typingTest.pause()
-  }, [typingTest])
+    // Discard (never save) the run-log buffer for THIS run on pause, and
+    // block it from being re-buffered once typing resumes under the same
+    // runId (see run-log-recorder.ts's `discardRun()`): resume rebases
+    // `startTime` to `Date.now() - elapsedMs`, so this run's raw timeline
+    // is already broken by the pause gap — the summary result above still
+    // saves/resumes normally, just not this run's raw log.
+    runLog.discardRun(typingTest.state.runId)
+  }, [typingTest, runLog.discardRun])
 
   const resumeTypingTest = useCallback(() => {
     const mem = savedMemoryRef.current

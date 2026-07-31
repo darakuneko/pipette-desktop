@@ -27,7 +27,10 @@ import {
   collectAllSyncUnits,
   collectAnalyticsSyncUnitsForUid,
   isAnalyticsSyncUnit,
+  isRunLogSyncUnit,
 } from './sync-bundle'
+import { isSafePathSegment } from '../utils/safe-filename'
+import { MAX_RUN_LOGS_PER_KEYBOARD } from '../../shared/types/typing-run-log'
 import {
   applyRemoteKeyboardMetaIndex,
   backfillKeyboardMeta,
@@ -153,9 +156,9 @@ export function matchesScope(syncUnit: string | null, scope: SyncScope): boolean
   return syncUnit.startsWith(`keyboards/${scope.keyboard}/`)
 }
 
-// Re-export the analytics-sync-unit detector so existing callers
-// (sync-ipc, tests) keep importing it from sync-service.
-export { isAnalyticsSyncUnit }
+// Re-export the analytics/run-log sync-unit detectors so existing
+// callers (sync-ipc, tests) keep importing them from sync-service.
+export { isAnalyticsSyncUnit, isRunLogSyncUnit }
 
 async function listLocalKeyboardUids(): Promise<Set<string>> {
   const userData = app.getPath('userData')
@@ -180,8 +183,10 @@ export function shouldDownloadSyncUnit(
   // Keyboard-connect initial sync (useDeviceAutoSync) passes a
   // `{ favorites: true, keyboard }` scope. typing-analytics is pulled
   // separately when the Analyze panel opens — skip it here so the
-  // connect progress bar stays short.
-  if (typeof scope === 'object' && 'favorites' in scope && isAnalyticsSyncUnit(syncUnit)) {
+  // connect progress bar stays short. Run logs are excluded the same
+  // way (no per-uid keystroke count to show on the connect progress
+  // bar either) — see .claude/rules/settings-persistence.md Row E.
+  if (typeof scope === 'object' && 'favorites' in scope && (isAnalyticsSyncUnit(syncUnit) || isRunLogSyncUnit(syncUnit))) {
     return false
   }
   // Lazy: when scope is 'all' only download keyboards/<uid>/* that already exist locally.
@@ -571,26 +576,68 @@ async function mergeSyncUnit(
   const localEntries = gcTombstones((localIndex?.entries ?? []) as EntryMeta[])
   const remoteEntries = gcTombstones((remoteBundle.index as { entries: EntryMeta[] }).entries)
 
-  // Merge entries (both sides GC'd to prevent expired-tombstone upload loops)
+  // Merge entries (both sides GC'd to prevent expired-tombstone upload loops).
+  // Run-log retention is a deterministic trim (not reject-at-cap like
+  // analyze-filter/snapshot), applied as part of this same merge via
+  // `runLogRetentionMax` — see applyRunLogRetention's doc comment for why
+  // ranking by immutable `startedAt` lets two devices that independently
+  // exceeded the cap converge on the same kept set.
   const preserveLocalOrder = syncUnit === KEY_LABEL_SYNC_UNIT
-  const result = mergeEntries(localEntries, remoteEntries, { preserveLocalOrder })
+  const runLogRetentionMax = isRunLogSyncUnit(syncUnit) ? MAX_RUN_LOGS_PER_KEYBOARD : undefined
+  const result = mergeEntries(localEntries, remoteEntries, { preserveLocalOrder, runLogRetentionMax })
 
-  // Copy files from remote bundle for entries that remote won
+  // Copy files from remote bundle for entries that remote won. Every
+  // remote entry's filename must pass isSafePathSegment before it's
+  // joined into a local path — a remote bundle is attacker-reachable
+  // data (anyone who can write to this sync unit's Drive file), and this
+  // is the generic write site every index-based sync unit (favorites,
+  // snapshots, analyze-filter, key-label, typing-test-text, run logs)
+  // funnels through, so the guard has to live here rather than per-unit.
+  let unsafeRemoteFilenames = 0
   for (const filename of result.remoteFilesToCopy) {
+    if (!isSafePathSegment(filename)) {
+      unsafeRemoteFilenames++
+      continue
+    }
     if (filename in remoteBundle.files) {
       await writeFile(join(basePath, filename), remoteBundle.files[filename], 'utf-8')
     }
   }
+  if (unsafeRemoteFilenames > 0) {
+    log('warn', `sync: skipped ${unsafeRemoteFilenames} unsafe remote filename(s) for ${syncUnit}`)
+  }
 
   // Write merged index
-  const mergedIndex = localIndex
+  let mergedIndex = localIndex
     ? { ...localIndex, entries: result.entries }
     : remoteBundle.index
+
+  // For the remote-only-so-far branch (no local index yet) the retention
+  // trim above must still land in what gets written — narrow override
+  // kept to exactly this sync unit.
+  if (isRunLogSyncUnit(syncUnit)) {
+    mergedIndex = { ...mergedIndex, entries: result.entries }
+  }
+
   await writeFile(
     join(basePath, 'index.json'),
     JSON.stringify(mergedIndex, null, 2),
     'utf-8',
   )
+
+  // Unlink files for entries retention evicted during the merge above —
+  // best-effort, a file already gone is not an error. Always empty for
+  // every sync unit except run logs (runLogRetentionMax above). Inlined
+  // here (rather than shared with typing-run-log-store.ts's own local-save
+  // eviction) since this module already owns basePath/fs for this branch.
+  for (const meta of result.evicted) {
+    if (!isSafePathSegment(meta.filename)) continue
+    try {
+      await unlink(join(basePath, meta.filename))
+    } catch {
+      // best-effort
+    }
+  }
 
   return result.remoteNeedsUpdate
 }
@@ -1130,6 +1177,10 @@ async function pollForRemoteChanges(): Promise<void> {
       const syncUnit = syncUnitFromFileName(file.name)
       // analytics: handled by executeAnalyticsSync (Analyze panel mount).
       if (syncUnit && isAnalyticsSyncUnit(syncUnit)) return false
+      // run logs: no dedicated on-demand sync entry point yet (see
+      // isRunLogSyncUnit's doc comment) — before-quit flush and manual
+      // sync still cover it, 3-minute polling does not.
+      if (syncUnit && isRunLogSyncUnit(syncUnit)) return false
       return shouldDownloadSyncUnit(syncUnit, 'all', localKeyboardUids)
     })
 

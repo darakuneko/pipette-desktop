@@ -843,6 +843,21 @@ function pickGuideWinner(candidates: readonly FlatPattern[], guideStyles: Readon
   return pickWinner(candidates)
 }
 
+/** The first character `canonicalGuideFrom(kana, index, ...)` would
+ *  produce, without recursively building the guide for the rest of the
+ *  word — just one segment's `representativeAt` call. Used by
+ *  `nextGuideChar`'s fallthrough case (see its own doc comment). */
+function firstGuideCharAt(
+  kana: readonly string[],
+  index: number,
+  disabledStyles: ReadonlySet<RomajiStyle> | undefined,
+  guideStyles: ReadonlySet<RomajiStyle> | undefined,
+): string | undefined {
+  if (index >= kana.length) return undefined
+  const winner = representativeAt(kana, index, '', disabledStyles, guideStyles)
+  return winner ? winner.pattern[0] : undefined
+}
+
 function representativeAt(
   kana: readonly string[],
   index: number,
@@ -946,6 +961,11 @@ export interface RomajiMatcher {
    *  keystroke, so it tracks whichever spelling the user is actually
    *  typing once earlier alternatives fall out of contention. */
   remainingGuide(): string
+  /** Equivalent to `remainingGuide()[0]` (the next character the guide
+   *  would display), computed without building the guide for the rest of
+   *  the word — a cheap read for a caller that only needs one character
+   *  (e.g. the run-keystroke-log recorder's per-press `expectedChar`). */
+  nextGuideChar(): string | undefined
   isComplete(): boolean
   /** Number of kana characters fully confirmed so far — i.e. committed
    *  segments only, excluding whatever's in the in-progress keystroke
@@ -1069,6 +1089,19 @@ export function createRomajiMatcher(word: string, opts?: RomajiMatcherOptions): 
         winner.pattern.slice(buffer.length) +
         canonicalGuideFrom(kana, position + winner.length, disabledStyles, guideStyles)
       )
+    },
+
+    nextGuideChar(): string | undefined {
+      if (position >= kana.length) return undefined
+      const winner = representativeAt(kana, position, buffer, disabledStyles, guideStyles)
+      if (!winner) return undefined
+      const rest = winner.pattern.slice(buffer.length)
+      // Mirrors remainingGuide's own fallthrough: when the current
+      // segment's winner is already fully typed (buffer === winner.pattern
+      // exactly — e.g. a pending bare "n" that could still extend to
+      // "nn"), the next displayed character comes from the following
+      // segment instead.
+      return rest.length > 0 ? rest[0] : firstGuideCharAt(kana, position + winner.length, disabledStyles, guideStyles)
     },
 
     isComplete(): boolean {
