@@ -199,6 +199,24 @@ function applyFilterModal(): void {
   fireEvent.click(screen.getByTestId('analyze-filter-modal-apply'))
 }
 
+// Shared by the "open timeline" action's single-run/multi-run cases below
+// — the two only ever differ in which runIds are persisted.
+function mockFiltersWithRuns(runIds: string[]) {
+  return vi.spyOn(window.vialAPI, 'pipetteSettingsGet').mockResolvedValue({
+    _rev: 1,
+    keyboardLayout: 'qwerty',
+    autoAdvance: true,
+    layerNames: [],
+    analyze: {
+      filters: {
+        filterDimension: 'typingTest',
+        typingTestScopes: ['words'],
+        runIdScopes: runIds,
+      },
+    },
+  })
+}
+
 describe('TypingAnalyticsView', () => {
   beforeEach(async () => {
     // The pane's syncAnalyticsNow rate-limit map lives at module scope
@@ -761,6 +779,49 @@ describe('TypingAnalyticsView', () => {
     fireEvent.change(await screen.findByTestId('analyze-filter-keyboard'), { target: { value: 'uid-b' } })
     applyFilterModal()
     await waitFor(() => expect(text('mock-tapping-term')).toBe('uid-b:null'))
+    getSpy.mockRestore()
+  })
+
+  it('shows the Analyze -> Typing Test "open timeline" action only when exactly one run is selected for the connected keyboard', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    const getSpy = mockFiltersWithRuns(['run-123'])
+    const onOpenRunTimeline = vi.fn()
+    const { TypingAnalyticsView } = await importView()
+    const { rerender } = render(
+      <TypingAnalyticsView
+        connectedTappingTerm={{ uid: 'uid-a', termMs: 250, reported: true }}
+        onOpenRunTimeline={onOpenRunTimeline}
+      />,
+    )
+    await waitFor(() => expect(screen.getByTestId('analyze-open-run-timeline')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('analyze-open-run-timeline'))
+    expect(onOpenRunTimeline).toHaveBeenCalledWith('run-123')
+
+    // The connected keyboard no longer matches the pane's selected uid
+    // (Analyze may be showing a different, possibly disconnected,
+    // keyboard's data) — there is no typing test view to re-enter for it.
+    rerender(
+      <TypingAnalyticsView
+        connectedTappingTerm={{ uid: 'uid-b', termMs: 250, reported: true }}
+        onOpenRunTimeline={onOpenRunTimeline}
+      />,
+    )
+    await waitFor(() => expect(screen.queryByTestId('analyze-open-run-timeline')).toBeNull())
+    getSpy.mockRestore()
+  })
+
+  it('hides the "open timeline" action when more than one run is selected', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    const getSpy = mockFiltersWithRuns(['run-123', 'run-456'])
+    const { TypingAnalyticsView } = await importView()
+    render(
+      <TypingAnalyticsView
+        connectedTappingTerm={{ uid: 'uid-a', termMs: 250, reported: true }}
+        onOpenRunTimeline={vi.fn()}
+      />,
+    )
+    await waitFor(() => expect(screen.getByTestId('analyze-filter-chip')).toBeInTheDocument())
+    expect(screen.queryByTestId('analyze-open-run-timeline')).toBeNull()
     getSpy.mockRestore()
   })
 

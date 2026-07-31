@@ -178,6 +178,9 @@ function validateRunLog(
   if (log.charCorrelationUnavailable !== undefined && typeof log.charCorrelationUnavailable !== 'boolean') {
     return { ok: false, error: 'Invalid charCorrelationUnavailable' }
   }
+  if (log.romajiInput !== undefined && typeof log.romajiInput !== 'boolean') {
+    return { ok: false, error: 'Invalid romajiInput' }
+  }
   if (!Array.isArray(log.words)) return { ok: false, error: 'Invalid words' }
 
   const words: RunWord[] = []
@@ -207,6 +210,7 @@ function validateRunLog(
       mode: log.mode,
       language: log.language,
       charCorrelationUnavailable: log.charCorrelationUnavailable,
+      romajiInput: log.romajiInput,
       words,
     },
     serialized,

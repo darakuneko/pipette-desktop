@@ -1,5 +1,5 @@
 {
-  "version": "0.1.52",
+  "version": "0.1.53",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -511,7 +511,48 @@
         "errorMixEmpty": "対象となる結果はまだおへんなぁ",
         "errorMixSubstitutionRow": "置換 {{pct}}%（母集団平均 {{avgPct}}%）どすえ",
         "errorMixOmissionRow": "脱字 {{pct}}%（母集団平均 {{avgPct}}%）どすえ",
-        "errorMixInsertionRow": "衍字 {{pct}}%（母集団平均 {{avgPct}}%）どすえ"
+        "errorMixInsertionRow": "衍字 {{pct}}%（母集団平均 {{avgPct}}%）どすえ",
+        "timeline": {
+          "modalTitle": "打鍵タイムラインどすえ",
+          "openButton": "打鍵タイムラインを開きますえ",
+          "loading": "タイムラインを読み込み中どすえ…",
+          "error": "このランの打鍵ログが読み込めしまへんどした。",
+          "partialBadge": "未完了どすえ",
+          "stats": {
+            "wordPace": "ワード速度どすえ",
+            "runWpm": "ラン全体のWPMどすえ",
+            "accuracy": "正確度どすえ",
+            "overlap": "重複率どすえ",
+            "duration": "所要時間どすえ"
+          },
+          "legend": {
+            "normal": "通常の打鍵どすえ",
+            "mistake": "ミスどすえ",
+            "overlap": "重複打鍵（前のキーを離さんうちに押さはったん）",
+            "unjudged": "未判定（正誤のデータがおへん）",
+            "blank": "ブランク（圧縮して表示どすえ）",
+            "leadIn": "ワード前の間どすえ",
+            "correctedNote": "ミスの印には提出前に直さはった打鍵も入ってますよって、印があっても正確度100%になることがおすえ"
+          },
+          "axisNote": "ブランクはこの軸の上で圧縮して表示してますけど、出てる時間はどれも本当の値どすえ",
+          "correlationUnreliable": "このランは正誤の印が正しないことがおすえ（IME変換を通した入力が入ってますよって）",
+          "zoom": {
+            "label": "拡大率",
+            "aria": "タイムラインの拡大率"
+          },
+          "tooltip": {
+            "releaseUnobserved": "離鍵未観測どすえ",
+            "overlapYes": "前のキーと重複どすえ",
+            "overlapNo": "重複おへん",
+            "overlapUnknown": "重複不明どすえ",
+            "mistake": "ミス（直さはったかもどすえ）",
+            "unjudged": "未判定どすえ",
+            "correct": "正解どすえ",
+            "offset": "+{{ms}}ms",
+            "blankDuration": "ブランク: {{ms}}ms",
+            "leadInDuration": "ワード前の間: {{ms}}ms"
+          }
+        }
       },
       "results": {
         "mistakesLabel": "ミス文字どすえ",
@@ -1621,7 +1662,8 @@
       "editConditions": "検索条件を編集しますえ",
       "chipAriaLabel": "検索条件を編集しますえ",
       "sourceDisabledByApp": "By App は全ソースを合算しますよって、この項目は使えまへんえ。",
-      "distributionDisabledNote": "分布ビューはいつもこのデバイスのデータを使いますよって、この項目は使えまへんえ。"
+      "distributionDisabledNote": "分布ビューはいつもこのデバイスのデータを使いますよって、この項目は使えまへんえ。",
+      "openRunTimeline": "タイムラインを開きますえ"
     }
   },
   "dataModal": {

@@ -45,9 +45,12 @@ interface TypingAnalyticsViewProps {
    * Pane B receive the same value; each pane matches it against its
    * own selected uid independently. */
   connectedTappingTerm?: ConnectedTappingTerm | null
+  /** Analyze -> Typing Test "open timeline" handoff, forwarded
+   * unchanged to every pane (see AnalyzePaneProps). */
+  onOpenRunTimeline?: (runId: string) => void
 }
 
-export function TypingAnalyticsView({ initialUid, onBack, connectedTappingTerm }: TypingAnalyticsViewProps = {}) {
+export function TypingAnalyticsView({ initialUid, onBack, connectedTappingTerm, onOpenRunTimeline }: TypingAnalyticsViewProps = {}) {
   const { t } = useTranslation()
   const [splitEnabled, setSplitEnabled] = useState(false)
 
@@ -148,6 +151,7 @@ export function TypingAnalyticsView({ initialUid, onBack, connectedTappingTerm }
           onSelectUid={setSelectedUidA}
           onSkipPercentChange={setSkipPercentA}
           connectedTappingTerm={connectedTappingTerm}
+          onOpenRunTimeline={onOpenRunTimeline}
         />
         {splitVisible && (
           <AnalyzePane
@@ -158,6 +162,7 @@ export function TypingAnalyticsView({ initialUid, onBack, connectedTappingTerm }
             onSelectUid={handleSelectUidB}
             onSkipPercentChange={setSkipPercentB}
             connectedTappingTerm={connectedTappingTerm}
+            onOpenRunTimeline={onOpenRunTimeline}
           />
         )}
       </div>

@@ -12,6 +12,7 @@ import type { TypingTestConfig } from '../../typing-test/types'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 import type { KeymapRewriteTable } from '../../../shared/keymap/keymap-apply'
 import type { RemapKind } from '../keyboard/constants'
+import type { TimelineHandoff } from '../../hooks/useRunTimelineHandoff'
 
 export const MIN_SCALE = 0.3
 export const MAX_SCALE = 2.0
@@ -263,6 +264,9 @@ export interface KeymapEditorProps {
    * the compact window stops the sink via typingTestViewOnly without
    * touching the persisted preference. */
   onViewAnalytics?: (origin: AnalyticsOrigin) => void
+  /** Analyze -> Typing Test "open timeline" handoff (consume-once),
+   * forwarded to TypingTestPane -> HistoryToggle. */
+  timelineHandoff?: TimelineHandoff | null
   /** Reports whether an editor typing test is mid-run, so the host (App)
    * can disable the StatusBar's "View Analytics" button mid-run. */
   onTypingTestRunningChange?: (running: boolean) => void

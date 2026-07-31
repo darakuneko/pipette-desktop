@@ -96,6 +96,20 @@ export interface RunKeystrokeLog {
    *  unavailable for (at least) that keystroke — mirrors
    *  `TypingTestState.kspcUncomputable`'s naming/spirit for this log. */
   charCorrelationUnavailable?: boolean
+  /** True when romaji-keystroke judging was actually in effect for this
+   *  run (mirrors `TypingTestResult.romajiInput` — see
+   *  `isRomajiInputActive`). `RunKeystroke.expectedChar`/`correct` are
+   *  romaji-space values (the typed kana segment's canonical spelling),
+   *  while `RunWord.display`/`typed` stay in the word's own kana/text
+   *  space — the two are not directly comparable char-by-char, so a
+   *  consumer (see word-timeline.ts) must not run its verbatim
+   *  char-count scoring (`computeWordCharCounts`) against them when this
+   *  is true. Optional and backward-compatible: a log saved before this
+   *  field existed has no way to know its own romaji state, so it is
+   *  treated as non-romaji (`undefined` reads the same as `false`) —
+   *  the pre-existing (and only slightly wrong, not nonsensical) verbatim
+   *  scoring is preferred over guessing. */
+  romajiInput?: boolean
   words: RunWord[]
 }
 

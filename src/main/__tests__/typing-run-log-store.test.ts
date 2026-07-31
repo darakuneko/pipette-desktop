@@ -201,6 +201,28 @@ describe('typing-run-log-store', () => {
       expect(result.success).toBe(false)
     })
 
+    it('accepts and persists an explicit romajiInput flag', async () => {
+      const result = await saveRunLog('kb-1', makeLog({ romajiInput: true }))
+      expect(result.success).toBe(true)
+
+      const dataPath = join(mockUserDataPath, 'sync', 'keyboards', 'kb-1', 'runs', result.entry!.filename)
+      const saved = JSON.parse(await readFile(dataPath, 'utf-8')) as RunKeystrokeLog
+      expect(saved.romajiInput).toBe(true)
+    })
+
+    it('accepts an omitted romajiInput flag (backward-compatible, pre-flag logs)', async () => {
+      const result = await saveRunLog('kb-1', makeLog())
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects a non-boolean romajiInput flag', async () => {
+      const log = makeLog()
+      const malformed = { ...log, romajiInput: 'yes' }
+      const result = await saveRunLog('kb-1', malformed)
+      expect(result.success).toBe(false)
+      expect(result.error).toMatch(/romajiInput/i)
+    })
+
     it('saving the same runId twice leaves exactly one payload file on disk (P7)', async () => {
       // Fake timers guarantee the two saves land at different millisecond
       // timestamps — the filename prefix — so the second save's filename

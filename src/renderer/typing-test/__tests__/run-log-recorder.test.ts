@@ -73,7 +73,7 @@ function charEvent(key: string, ts = 1010): Extract<TypingAnalyticsEventPayload,
 function finishMeta(overrides?: Partial<RunLogFinishMeta>): RunLogFinishMeta {
   return {
     uid: 'kb-1', runId: 'run-1', startedAtMs: 1000, durationMs: 5000, mode: 'words', language: 'english',
-    charCorrelationUnavailable: false, ...overrides,
+    charCorrelationUnavailable: false, romajiInput: false, ...overrides,
   }
 }
 
@@ -268,6 +268,24 @@ describe('RunLogRecorder', () => {
 
       const log = recorder.finish(oneWordResult(), finishMeta({ charCorrelationUnavailable: false }))
       expect(log?.charCorrelationUnavailable).toBeUndefined()
+    })
+
+    it('forwards romajiInput verbatim when the caller flags a romaji run', () => {
+      const recorder = new RunLogRecorder()
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a')
+      recorder.record(ctx(), matrixPress())
+
+      const log = recorder.finish(oneWordResult(), finishMeta({ romajiInput: true }))
+      expect(log?.romajiInput).toBe(true)
+    })
+
+    it('omits romajiInput (rather than storing false) for an ordinary run', () => {
+      const recorder = new RunLogRecorder()
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a')
+      recorder.record(ctx(), matrixPress())
+
+      const log = recorder.finish(oneWordResult(), finishMeta({ romajiInput: false }))
+      expect(log?.romajiInput).toBeUndefined()
     })
 
     it('drops (rather than clamps to 0) a keystroke whose relative pressMs would be negative (P3 belt-and-braces)', () => {

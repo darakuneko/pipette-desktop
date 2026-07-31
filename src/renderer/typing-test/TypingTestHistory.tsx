@@ -17,6 +17,9 @@ import { formatKspc } from '../../shared/kspc'
 import { formatConditionLabel } from './condition-label'
 import { ResultNameModal } from './ResultNameModal'
 import { Tooltip } from '../components/ui/Tooltip'
+import { formatDuration } from '../components/analyze/analyze-format'
+import { HistoryTimelineCell } from './HistoryTimelineCell'
+import { EMPTY_RUN_ID_SET } from '../hooks/useRunLogAvailability'
 
 type ModeFilter = 'all' | 'words' | 'time' | 'quote'
 type SortColumn = 'date' | 'wpm' | 'kpm' | 'accuracy' | 'mode' | 'duration'
@@ -36,6 +39,10 @@ interface Props {
   onDelete?: (date: string) => void
   /** Current keyboard name, offered as a quick-insert chip when renaming. */
   deviceName?: string
+  /** Keyboard uid + which runIds have a saved keystroke log (owned by
+   *  `HistoryToggle`) — the timeline column is omitted when `uid` is unset. */
+  uid?: string
+  availableRunIds?: ReadonlySet<string>
 }
 
 const MAX_TABLE_ROWS = 20
@@ -43,13 +50,6 @@ const MAX_TABLE_ROWS = 20
 const EXPORT_BTN_CLASS = 'inline-flex h-8 items-center rounded-md border border-edge px-2.5 text-xs text-content-secondary transition-colors hover:text-content'
 
 const MAX_SPARKLINE_RESULTS = 50
-
-
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  return `${m}:${String(s).padStart(2, '0')}`
-}
 
 /** Mode-column detail. FileImport (imported-text) runs show the snapshotted text
  *  name (falling back to the stable textId for legacy rows saved before the
@@ -114,7 +114,7 @@ function buildResultsCsv(results: TypingTestResult[]): string {
   )
 }
 
-export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, deviceName }: Props) {
+export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, deviceName, uid, availableRunIds }: Props) {
   const { t } = useTranslation()
   const [tab, setTab] = useState<HistoryTab>('monkeytype')
   const [modeFilter, setModeFilter] = useState<ModeFilter>('all')
@@ -310,6 +310,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
                 <SortableHeader column="mode" label={isText ? t('editor.typingTest.history.tabText') : t('editor.typingTest.history.mode')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
                 <SortableHeader column="duration" label={t('editor.typingTest.time')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
                 <th className="px-3 py-1.5">{t('editor.typingTest.history.pb')}</th>
+                {uid && <th className="px-3 py-1.5" aria-label={t('editor.typingTest.history.timeline.modalTitle')} />}
                 {onDelete && <th className="px-3 py-1.5" aria-label={t('editor.typingTest.history.delete')} />}
               </tr>
             </thead>
@@ -340,6 +341,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
                   <td className="px-3 py-1.5">
                     {r.isPb && <Trophy role="img" className="inline-block size-3.5 text-warning" aria-label={t('editor.typingTest.history.pb')} />}
                   </td>
+                  {uid && <HistoryTimelineCell result={r} uid={uid} availableRunIds={availableRunIds ?? EMPTY_RUN_ID_SET} />}
                   {onDelete && (
                     <td className="px-3 py-1.5">
                       {confirmDeleteDate === r.date ? (

@@ -295,7 +295,11 @@ export function handleBackspace(state: TypingTestState): TypingTestState {
   }
 }
 
-function computeWordCharCounts(word: string, typed: string): { correct: number; incorrect: number } {
+/** Exported for `word-timeline.ts`, which reuses this exact char-scoring
+ *  rule (correct/incorrect counts, separator credit included) to derive a
+ *  per-word accuracy/pace stat from the same semantics the run summary's
+ *  accuracy already uses — see `WordTimelineStats`. */
+export function computeWordCharCounts(word: string, typed: string): { correct: number; incorrect: number } {
   const len = Math.max(typed.length, word.length)
   let correct = 1 // count the space separator as a correct char
   let incorrect = 0

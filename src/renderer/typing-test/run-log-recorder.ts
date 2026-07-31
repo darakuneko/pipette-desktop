@@ -150,6 +150,13 @@ export interface RunLogFinishMeta {
    *  makes per-keystroke char correlation unreliable for this run (see
    *  the module doc comment's char-correlation note). */
   charCorrelationUnavailable: boolean
+  /** Whether romaji-keystroke judging was actually in effect for this run
+   *  (the same `isRomajiInputActive` determination the result-builder
+   *  path already computes for `TypingTestResult.romajiInput` — see
+   *  `useInputModes.ts`'s call site, which reuses that same result rather
+   *  than deriving it twice). Forwarded verbatim to
+   *  `RunKeystrokeLog.romajiInput` — see that field's own doc comment. */
+  romajiInput: boolean
   /** The word the run ended on without submitting (e.g. a timed run
    *  expiring mid-word), if any — `display` is the target word text,
    *  `typed` whatever input was accumulated for it. Omitted when the run
@@ -682,6 +689,7 @@ export class RunLogRecorder {
       mode: meta.mode,
       language: meta.language,
       charCorrelationUnavailable: meta.charCorrelationUnavailable || undefined,
+      romajiInput: meta.romajiInput || undefined,
       words,
     }
   }
