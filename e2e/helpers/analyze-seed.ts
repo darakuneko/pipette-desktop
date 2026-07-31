@@ -801,6 +801,10 @@ interface DummyTypingTestHistoryEntry {
   fileImportTextName?: string
   kspcKeystrokes: number
   kspcChars: number
+  errorSubstitutions: number
+  errorOmissions: number
+  errorInsertions: number
+  errorTargetChars: number
 }
 
 /** Plausible KSPC (keystrokes per confirmed character) for the seeded
@@ -808,6 +812,17 @@ interface DummyTypingTestHistoryEntry {
  * Analyze Summary screenshot's Typing Profile card shows a real KSPC
  * figure and position label instead of "Not enough data". */
 const DUMMY_KSPC_RATIO = 1.15
+
+/** Plausible substitution/omission/insertion rates for the seeded
+ * results (share of `errorTargetChars`) — close to but not exactly the
+ * population means (`BENCHMARK_SUBSTITUTION_RATE_PCT` et al. in
+ * `shared/typing-benchmarks.ts`), so the Analyze Summary screenshot's
+ * Typing Profile card shows real Error mix figures instead of "Not
+ * enough data". None of {@link DUMMY_RUN_PLANS} sets `romajiInput`, so
+ * every seeded History entry below is eligible for this group. */
+const DUMMY_ERROR_SUBSTITUTION_RATE = 0.018
+const DUMMY_ERROR_OMISSION_RATE = 0.009
+const DUMMY_ERROR_INSERTION_RATE = 0.006
 
 /** Builds the seeded keyboard's `pipette_settings.json` content —
  * History entries for every {@link DUMMY_RUN_PLANS} plan except the
@@ -826,6 +841,11 @@ function buildPipetteSettingsContent(runDates: ReadonlyMap<string, number>): str
     // KSPC's denominator (verbatim-style: correctChars + incorrectChars,
     // matching input.confirmedChars in buildTypingTestResult, result-builder.ts).
     const kspcChars = correctChars + incorrectChars
+    // Error mix's denominator (Σ target length of every classified word) —
+    // reuses the same total as a plausible stand-in; this dummy data only
+    // needs to be internally consistent, not derived from an actual
+    // Levenshtein alignment.
+    const errorTargetChars = kspcChars
     typingTestResults.push({
       date: new Date(startMs).toISOString(),
       runId: plan.runId,
@@ -841,6 +861,10 @@ function buildPipetteSettingsContent(runDates: ReadonlyMap<string, number>): str
       fileImportTextName: plan.fileImportTextName,
       kspcKeystrokes: Math.round(kspcChars * DUMMY_KSPC_RATIO),
       kspcChars,
+      errorSubstitutions: Math.round(errorTargetChars * DUMMY_ERROR_SUBSTITUTION_RATE),
+      errorOmissions: Math.round(errorTargetChars * DUMMY_ERROR_OMISSION_RATE),
+      errorInsertions: Math.round(errorTargetChars * DUMMY_ERROR_INSERTION_RATE),
+      errorTargetChars,
     })
   }
   return JSON.stringify({

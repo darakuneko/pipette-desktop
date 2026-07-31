@@ -1,5 +1,5 @@
 {
-  "version": "0.1.50",
+  "version": "0.1.51",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -506,10 +506,18 @@
         "conditionRomaji": "+ローマ字入力☆",
         "conditionTatoeba": "Tatoeba",
         "mistakeRankingTitle": "苦手な文字☆",
-        "mistakeRankingEmpty": "まだミスってないっしょ"
+        "mistakeRankingEmpty": "まだミスってないっしょ",
+        "errorMixTitle": "誤り種別☆",
+        "errorMixEmpty": "まだ対象のやつないっしょ",
+        "errorMixSubstitutionRow": "置換 {{pct}}%（平均{{avgPct}}%）だよ",
+        "errorMixOmissionRow": "脱字 {{pct}}%（平均{{avgPct}}%）だよ",
+        "errorMixInsertionRow": "衍字 {{pct}}%（平均{{avgPct}}%）だよ"
       },
       "results": {
-        "mistakesLabel": "ミスった文字ｗ"
+        "mistakesLabel": "ミスった文字ｗ",
+        "errorSubstitutions": "置換 {{count}}こ",
+        "errorOmissions": "脱字 {{count}}こ",
+        "errorInsertions": "衍字 {{count}}こ"
       }
     }
   },
@@ -1187,7 +1195,10 @@
           "high": "高ｗ"
         },
         "kspcLabel": "KSPC☆",
-        "kspcDesc": "1文字打つのに何回キー押してるかっしょ（Backspaceも1打鍵カウント）☆この期間に保存したタイピングテストの結果から出してるよ。Device/Appのフィルタは効かないっしょ（打鍵データじゃなくてHistoryから計算してるから）。ローマ字入力のランはカウントしてないっしょ（計算の仕組みが違うから下の基準値と比べらんないんだよね☆）"
+        "kspcDesc": "1文字打つのに何回キー押してるかっしょ（Backspaceも1打鍵カウント）☆この期間に保存したタイピングテストの結果から出してるよ。Device/Appのフィルタは効かないっしょ（打鍵データじゃなくてHistoryから計算してるから）。ローマ字入力のランはカウントしてないっしょ（計算の仕組みが違うから下の基準値と比べらんないんだよね☆）",
+        "errorMixLabel": "誤り種別☆",
+        "errorMixContext": "置換{{subPct}}%(平均{{subAvg}}%)・脱字{{omPct}}%(平均{{omAvg}}%)・衍字{{insPct}}%(平均{{insAvg}}%)だよ",
+        "errorMixDesc": "置換・脱字・衍字がどんくらいの割合か、ってやつ☆この期間に保存したタイピングテストの結果から文字数で重み付けして出してるよ。Device/Appのフィルタは効かないっしょ（打鍵データじゃなくてHistoryから計算してるから）。ローマ字入力のランは対象外だよ（確定した綴りはいつも合ってるやつだから、分類するもんが無いんだよね☆）"
       }
     },
     "bigrams": {

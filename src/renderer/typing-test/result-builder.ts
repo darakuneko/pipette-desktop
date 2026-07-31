@@ -2,7 +2,9 @@
 
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import type { TypingTestConfig } from './types'
+import type { WordResult } from './run-state'
 import { computeKspc } from '../../shared/kspc'
+import { classifyWordResults } from './error-classify'
 
 export function computeRawWpm(totalChars: number, durationMs: number): number {
   if (durationMs <= 0) return 0
@@ -154,6 +156,14 @@ export interface BuildTypingTestResultInput {
    *  for this run (see `TypingTestState.kspcUncomputable`) — when true,
    *  neither KSPC field is stored regardless of the numeric values. */
   kspcUncomputable: boolean
+  /** Finalized word pairs (see `TypingTestState.wordResults`), used to
+   *  compute the error-class raw group (`errorSubstitutions`/
+   *  `errorOmissions`/`errorInsertions`/`errorTargetChars` — see
+   *  `classifyWordResults`). Optional and defaulted to `[]` so existing
+   *  callers/tests that don't care about error classes don't have to
+   *  thread it through; an empty (or omitted) list stores nothing, same
+   *  as a romaji run (see `buildTypingTestResult`). */
+  wordResults?: readonly WordResult[]
 }
 
 /** Narrows to the 'words' / 'time' config variants — the only ones carrying
@@ -182,6 +192,19 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
   // legacy result.
   const kspc = input.kspcUncomputable ? null : computeKspc(input.totalKeystrokes, input.confirmedChars)
 
+  // Error-class breakdown: non-romaji runs only, with at least one
+  // finalized word (see error-classify.ts's module header for the romaji
+  // rationale, classifyWordResults for the in-flight-word exclusion).
+  const wordResults = input.wordResults ?? []
+  const rawErrorClasses = !input.romajiActive && wordResults.length > 0
+    ? classifyWordResults(wordResults)
+    : null
+  // Same division-by-zero guard as kspcChars above: a target-length sum
+  // of 0 (every finalized word was an empty string, never expected in
+  // practice) would make a downstream rate undefined, so store nothing
+  // rather than a group with an unusable denominator.
+  const errorClasses = rawErrorClasses && rawErrorClasses.targetChars > 0 ? rawErrorClasses : null
+
   return {
     date: new Date().toISOString(),
     runId: input.runId,
@@ -206,5 +229,9 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
     mistakes: Object.keys(input.mistakes).length > 0 ? input.mistakes : undefined,
     kspcKeystrokes: kspc !== null ? input.totalKeystrokes : undefined,
     kspcChars: kspc !== null ? input.confirmedChars : undefined,
+    errorSubstitutions: errorClasses?.substitutions,
+    errorOmissions: errorClasses?.omissions,
+    errorInsertions: errorClasses?.insertions,
+    errorTargetChars: errorClasses?.targetChars,
   }
 }

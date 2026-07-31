@@ -1,5 +1,5 @@
 {
-  "version": "0.1.50",
+  "version": "0.1.51",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -506,10 +506,18 @@
         "conditionRomaji": "+ローマ字入力",
         "conditionTatoeba": "Tatoeba",
         "mistakeRankingTitle": "苦手な文字どすえ",
-        "mistakeRankingEmpty": "ミスの記録はまだおへんなぁ"
+        "mistakeRankingEmpty": "ミスの記録はまだおへんなぁ",
+        "errorMixTitle": "誤り種別どすえ",
+        "errorMixEmpty": "対象となる結果はまだおへんなぁ",
+        "errorMixSubstitutionRow": "置換 {{pct}}%（母集団平均 {{avgPct}}%）どすえ",
+        "errorMixOmissionRow": "脱字 {{pct}}%（母集団平均 {{avgPct}}%）どすえ",
+        "errorMixInsertionRow": "衍字 {{pct}}%（母集団平均 {{avgPct}}%）どすえ"
       },
       "results": {
-        "mistakesLabel": "ミス文字どすえ"
+        "mistakesLabel": "ミス文字どすえ",
+        "errorSubstitutions": "置換 {{count}}どす",
+        "errorOmissions": "脱字 {{count}}どす",
+        "errorInsertions": "衍字 {{count}}どす"
       }
     }
   },
@@ -1187,7 +1195,10 @@
           "high": "高おすなぁ"
         },
         "kspcLabel": "KSPC",
-        "kspcDesc": "1文字打つのに何回キーを押したはるかどすえ（Backspaceも打鍵として数えますえ）。この期間に保存されたタイピングテストの結果から出してますえ。Device/Appのフィルタは効きまへん（記録した打鍵データやのうてHistoryから計算してるさかい）。ローマ字入力のランはここには入れてしまへんえ（計算のしくみが違うさかい、下の基準値とそのまま比べられしまへんのどす）"
+        "kspcDesc": "1文字打つのに何回キーを押したはるかどすえ（Backspaceも打鍵として数えますえ）。この期間に保存されたタイピングテストの結果から出してますえ。Device/Appのフィルタは効きまへん（記録した打鍵データやのうてHistoryから計算してるさかい）。ローマ字入力のランはここには入れてしまへんえ（計算のしくみが違うさかい、下の基準値とそのまま比べられしまへんのどす）",
+        "errorMixLabel": "誤り種別どすえ",
+        "errorMixContext": "置換{{subPct}}%（平均{{subAvg}}%）・脱字{{omPct}}%（平均{{omAvg}}%）・衍字{{insPct}}%（平均{{insAvg}}%）どすなぁ",
+        "errorMixDesc": "置換・脱字・衍字の割合どす（対象文字数に対する比率どすえ）。この期間に保存されたタイピングテストの結果から文字数で重み付けして出してますえ。Device/Appのフィルタは効きまへん（記録した打鍵データやのうてHistoryから計算してるさかい）。ローマ字入力のランは対象外どす（確定した綴りはいつも正しいものどすさかい、分類するもんがおへんのどす）"
       }
     },
     "bigrams": {

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.50",
+  "version": "0.1.51",
   "name": "English",
   "common": {
     "save": "Save",
@@ -506,10 +506,18 @@
         "conditionRomaji": "+romaji",
         "conditionTatoeba": "Tatoeba",
         "mistakeRankingTitle": "Most missed",
-        "mistakeRankingEmpty": "No mistakes recorded yet"
+        "mistakeRankingEmpty": "No mistakes recorded yet",
+        "errorMixTitle": "Error mix",
+        "errorMixEmpty": "No qualifying results yet",
+        "errorMixSubstitutionRow": "Substitution {{pct}}% (pop. avg {{avgPct}}%)",
+        "errorMixOmissionRow": "Omission {{pct}}% (pop. avg {{avgPct}}%)",
+        "errorMixInsertionRow": "Insertion {{pct}}% (pop. avg {{avgPct}}%)"
       },
       "results": {
-        "mistakesLabel": "Missed"
+        "mistakesLabel": "Missed",
+        "errorSubstitutions": "Substitution {{count}}",
+        "errorOmissions": "Omission {{count}}",
+        "errorInsertions": "Insertion {{count}}"
       }
     }
   },
@@ -1197,7 +1205,10 @@
           "high": "High"
         },
         "kspcLabel": "KSPC",
-        "kspcDesc": "Keystrokes per confirmed character (Backspace counts as a keystroke), aggregated from your saved Typing Test results over this window — not filtered by Device/App, since it comes from History rather than the recorded keystroke stream. Romaji-input runs are excluded here, since their ratio measures something different (rejected keystrokes per accepted one) and isn't comparable to the population average shown below."
+        "kspcDesc": "Keystrokes per confirmed character (Backspace counts as a keystroke), aggregated from your saved Typing Test results over this window — not filtered by Device/App, since it comes from History rather than the recorded keystroke stream. Romaji-input runs are excluded here, since their ratio measures something different (rejected keystrokes per accepted one) and isn't comparable to the population average shown below.",
+        "errorMixLabel": "Error mix",
+        "errorMixContext": "Sub {{subPct}}% (avg {{subAvg}}%) · Om {{omPct}}% (avg {{omAvg}}%) · Ins {{insPct}}% (avg {{insAvg}}%)",
+        "errorMixDesc": "Substitution / omission / insertion rates (share of target characters), char-weighted from your saved Typing Test results over this window — not filtered by Device/App, since it comes from History rather than the recorded keystroke stream. Romaji-input runs are excluded (their typed text always matches an accepted spelling, so there's nothing to classify)."
       }
     },
     "bigrams": {

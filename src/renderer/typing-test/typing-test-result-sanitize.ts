@@ -63,17 +63,56 @@ function sanitizeKspcFields(result: TypingTestResult): { kspcKeystrokes?: number
   return {}
 }
 
-/** Replaces a malformed `mistakes` / `kspcKeystrokes`+`kspcChars` field
- *  with `undefined` (rather than discarding the rest of an already-
- *  `isValidTypingTestResult`-checked result). Applied after that filter
- *  so a persisted result with a corrupted field still survives (minus
- *  that one field) instead of vanishing from History entirely. */
+/** Validates a result's optional 4-field error-class raw group
+ *  (`errorSubstitutions`/`errorOmissions`/`errorInsertions`/
+ *  `errorTargetChars` — see `TypingTestResult`'s doc comment): all-or-
+ *  none, each a non-negative integer, `errorTargetChars` > 0 (same
+ *  division-by-zero guard rationale as `kspcChars` above, since it's the
+ *  rate denominator at display time). Returns `{}` for anything else
+ *  (partial group, wrong type, fractional/negative) so a malformed group
+ *  degrades to "not set" rather than displaying a bogus rate. */
+function sanitizeErrorClassFields(result: TypingTestResult): {
+  errorSubstitutions?: number
+  errorOmissions?: number
+  errorInsertions?: number
+  errorTargetChars?: number
+} {
+  const { errorSubstitutions, errorOmissions, errorInsertions, errorTargetChars } = result
+  if (
+    errorSubstitutions === undefined
+    && errorOmissions === undefined
+    && errorInsertions === undefined
+    && errorTargetChars === undefined
+  ) return {}
+  if (
+    isNonNegInt(errorSubstitutions)
+    && isNonNegInt(errorOmissions)
+    && isNonNegInt(errorInsertions)
+    && isNonNegInt(errorTargetChars)
+    && errorTargetChars > 0
+  ) {
+    return { errorSubstitutions, errorOmissions, errorInsertions, errorTargetChars }
+  }
+  return {}
+}
+
+/** Replaces a malformed `mistakes` / `kspcKeystrokes`+`kspcChars` /
+ *  error-class field with `undefined` (rather than discarding the rest of
+ *  an already-`isValidTypingTestResult`-checked result). Applied after
+ *  that filter so a persisted result with a corrupted field still
+ *  survives (minus that one field) instead of vanishing from History
+ *  entirely. */
 export function sanitizeTypingTestResult(result: TypingTestResult): TypingTestResult {
   const { kspcKeystrokes, kspcChars } = sanitizeKspcFields(result)
+  const { errorSubstitutions, errorOmissions, errorInsertions, errorTargetChars } = sanitizeErrorClassFields(result)
   return {
     ...result,
     mistakes: sanitizeMistakes(result.mistakes),
     kspcKeystrokes,
     kspcChars,
+    errorSubstitutions,
+    errorOmissions,
+    errorInsertions,
+    errorTargetChars,
   }
 }

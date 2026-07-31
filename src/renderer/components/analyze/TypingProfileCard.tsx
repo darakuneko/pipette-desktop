@@ -17,7 +17,14 @@ import type {
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
 import { typingTestResultMaterialLabel } from '../../typing-test/result-builder'
-import { BENCHMARK_WPM, BENCHMARK_KSPC } from '../../../shared/typing-benchmarks'
+import { sumErrorClassGroups } from '../../typing-test/error-classify'
+import {
+  BENCHMARK_WPM,
+  BENCHMARK_KSPC,
+  BENCHMARK_SUBSTITUTION_RATE_PCT,
+  BENCHMARK_OMISSION_RATE_PCT,
+  BENCHMARK_INSERTION_RATE_PCT,
+} from '../../../shared/typing-benchmarks'
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
 import { AnalyzeStatGrid } from './stat-card'
 import { EMPTY_STAT_VALUE } from './analyze-constants'
@@ -166,23 +173,19 @@ export function TypingProfileCard({
   )
   const fatigue = useMemo(() => classifyFatigue(minuteStats, range), [minuteStats, range])
 
-  // Char-weighted KSPC over the window: Σkeystrokes / Σchars across every
-  // qualifying saved result, never a plain average of each run's own
-  // ratio (a bare average would let a handful of tiny runs skew the
-  // figure as much as one long session). Only results carrying both raw
-  // fields (see TypingTestResult.kspcKeystrokes) and falling inside the
-  // window qualify; a legacy result missing them is silently excluded,
-  // not treated as 0. Ratio and position are folded into one memo (a
-  // finite ratio against BENCHMARK_KSPC's fixed, positive-SD constants
-  // always yields a position, so there's exactly one null check below —
-  // not a separate ratio-null check plus a redundant benchmark-null one).
-  //
-  // Three exclusions beyond the window itself, applied in the same loop:
-  //  - romajiInput results: romaji KSPC is algebraically 1+rejectRate
-  //    (denominator = accepted keystrokes only, a different unit than
-  //    verbatim mode's confirmed-character count), so pooling it against
-  //    the English-transcription BENCHMARK_KSPC would misread as "far
-  //    below average" for a perfectly normal romaji run. See kspcDesc.
+  // Shared eligibility gate for the KSPC and Error mix cells below — both
+  // read from saved History (not the recorded keystroke stream) and
+  // apply the same four conditions before their own per-field checks:
+  //  - the window itself (today's local-day-aware [fromMs, nextDayStartMs)).
+  //  - romajiInput results: excluded from both. For KSPC, romaji's ratio
+  //    is algebraically 1+rejectRate (denominator = accepted keystrokes
+  //    only, a different unit than verbatim mode's confirmed-character
+  //    count), so pooling it against the English-transcription
+  //    BENCHMARK_KSPC would misread as "far below average" for a
+  //    perfectly normal romaji run (see kspcDesc). For Error mix, a
+  //    romaji run's committed text is always one of the accepted
+  //    spellings for its target, so there's no target/typed difference
+  //    left to classify (see error-classify.ts's module header).
   //  - runIdScopes (when a run filter is active): a result without its
   //    own runId can never match a specific run, so it drops out rather
   //    than silently ignoring the filter.
@@ -190,23 +193,57 @@ export function TypingProfileCard({
   //    typingTestResultMaterialLabel, the same join key the recording
   //    side and the run filter itself use, so this stays byte-identical
   //    to how every other cell's material filter resolves.
+  // One filtered list feeds both memos below so the two cells can't
+  // drift into subtly different eligibility rules.
+  const windowResults = useMemo(() => typingTestResults.filter((r) => {
+    const ts = Date.parse(r.date)
+    if (!Number.isFinite(ts) || ts < range.fromMs || ts >= nextDayStartMs) return false
+    if (r.romajiInput) return false
+    if (runIdScopes.length > 0 && (!r.runId || !runIdScopes.includes(r.runId))) return false
+    if (typingTestScopes.length > 0 && !typingTestScopes.includes(typingTestResultMaterialLabel(r))) return false
+    return true
+  }), [typingTestResults, range, nextDayStartMs, runIdScopes, typingTestScopes])
+
+  // Char-weighted KSPC over windowResults: Σkeystrokes / Σchars across
+  // every qualifying result, never a plain average of each run's own
+  // ratio (a bare average would let a handful of tiny runs skew the
+  // figure as much as one long session). Only results carrying both raw
+  // fields (see TypingTestResult.kspcKeystrokes) qualify; a legacy result
+  // missing them is silently excluded, not treated as 0. Ratio and
+  // position are folded into one memo (a finite ratio against
+  // BENCHMARK_KSPC's fixed, positive-SD constants always yields a
+  // position, so there's exactly one null check below — not a separate
+  // ratio-null check plus a redundant benchmark-null one).
   const kspc = useMemo(() => {
     let keystrokes = 0
     let chars = 0
-    for (const r of typingTestResults) {
+    for (const r of windowResults) {
       if (r.kspcKeystrokes === undefined || r.kspcChars === undefined) continue
-      const ts = Date.parse(r.date)
-      if (!Number.isFinite(ts) || ts < range.fromMs || ts >= nextDayStartMs) continue
-      if (r.romajiInput) continue
-      if (runIdScopes.length > 0 && (!r.runId || !runIdScopes.includes(r.runId))) continue
-      if (typingTestScopes.length > 0 && !typingTestScopes.includes(typingTestResultMaterialLabel(r))) continue
       keystrokes += r.kspcKeystrokes
       chars += r.kspcChars
     }
     const ratio = computeKspc(keystrokes, chars)
     if (ratio === null) return null
     return { ratio, position: benchmarkPosition(ratio, BENCHMARK_KSPC) }
-  }, [typingTestResults, range, nextDayStartMs, runIdScopes, typingTestScopes])
+  }, [windowResults])
+
+  // Char-weighted (Σ/Σ) error-class rates over windowResults — see
+  // sumErrorClassGroups for the per-result all-or-nothing read and the
+  // fold (shared with ErrorMixSection's History summary), and
+  // windowResults above for why romaji is excluded. No position labels
+  // here — the three population rate constants have no transcribed SD
+  // (see BenchmarkMeanStat's doc comment), so only the mean is shown, as
+  // plain context text rather than through BenchmarkSubline (which
+  // requires a position).
+  const errorMix = useMemo(() => {
+    const totals = sumErrorClassGroups(windowResults)
+    if (!totals) return null
+    return {
+      substitutionPct: (totals.substitutions / totals.targetChars) * 100,
+      omissionPct: (totals.omissions / totals.targetChars) * 100,
+      insertionPct: (totals.insertions / totals.targetChars) * 100,
+    }
+  }, [windowResults])
 
   const items: AnalyzeSummaryItem[] = useMemo(() => [
     {
@@ -278,7 +315,26 @@ export function TypingProfileCard({
         ),
       descriptionKey: 'analyze.summary.profile.kspcDesc',
     },
-  ], [speed, speedBenchmark, handBalance, sfb, fatigue, kspc, t])
+    {
+      labelKey: 'analyze.summary.profile.errorMixLabel',
+      // The headline value repeats the substitution rate (also the first
+      // figure in the context line below) so the cell reads consistently
+      // with every other cell here (value = the primary figure, context
+      // = supporting detail) rather than leaving the value unlabeled.
+      value: errorMix === null ? EMPTY_STAT_VALUE : `${formatKspc(errorMix.substitutionPct)}%`,
+      context: errorMix === null
+        ? t('analyze.summary.profile.insufficient')
+        : t('analyze.summary.profile.errorMixContext', {
+          subPct: formatKspc(errorMix.substitutionPct),
+          subAvg: formatKspc(BENCHMARK_SUBSTITUTION_RATE_PCT.mean),
+          omPct: formatKspc(errorMix.omissionPct),
+          omAvg: formatKspc(BENCHMARK_OMISSION_RATE_PCT.mean),
+          insPct: formatKspc(errorMix.insertionPct),
+          insAvg: formatKspc(BENCHMARK_INSERTION_RATE_PCT.mean),
+        }),
+      descriptionKey: 'analyze.summary.profile.errorMixDesc',
+    },
+  ], [speed, speedBenchmark, handBalance, sfb, fatigue, kspc, errorMix, t])
 
   return (
     <section className="flex flex-col gap-2" data-testid="analyze-typing-profile-section">

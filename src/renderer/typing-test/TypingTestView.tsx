@@ -63,6 +63,14 @@ interface Props {
   onResume?: () => void
   /** A paused fileImport run is saved and can be resumed. */
   hasSavedMemory?: boolean
+  /** Error-class raw counts (see `TypingTestResult.errorSubstitutions` et
+   *  al.) from the just-finished result, or `null` when the result has
+   *  none (romaji run, no finalized words, or a legacy pre-error-class
+   *  result) — the completion screen's error-mix line is omitted
+   *  entirely rather than showing a '-' placeholder, since (unlike WPM /
+   *  KSPC) "the metric doesn't apply to this run" is common, not an
+   *  in-progress state. */
+  errorClasses?: { substitutions: number; omissions: number; insertions: number } | null
 }
 
 // Completion screen's "missed characters" list (Phase 1 of mistake
@@ -129,6 +137,7 @@ export function TypingTestView({
   onPause,
   onResume,
   hasSavedMemory,
+  errorClasses = null,
 }: Props) {
   const { t } = useTranslation()
   const showStats = state.status === 'running' || state.status === 'finished' || state.status === 'paused'
@@ -549,6 +558,19 @@ export function TypingTestView({
                 {key}:{count}
               </span>
             ))}
+          </div>
+        )}
+        {state.status === 'finished' && errorClasses && (
+          <div data-testid="typing-test-error-classes" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-content-muted">
+            <span data-testid="typing-test-error-substitutions">
+              {t('editor.typingTest.results.errorSubstitutions', { count: errorClasses.substitutions })}
+            </span>
+            <span data-testid="typing-test-error-omissions">
+              {t('editor.typingTest.results.errorOmissions', { count: errorClasses.omissions })}
+            </span>
+            <span data-testid="typing-test-error-insertions">
+              {t('editor.typingTest.results.errorInsertions', { count: errorClasses.insertions })}
+            </span>
           </div>
         )}
       </div>

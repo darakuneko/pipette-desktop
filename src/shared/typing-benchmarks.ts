@@ -27,6 +27,20 @@ export interface BenchmarkStat {
   sd: number
 }
 
+/** A population mean with no SD — used when the paper's SD for a
+ * statistic was not transcribed (see the three error-rate constants
+ * below). Deliberately a different shape than {@link BenchmarkStat}
+ * rather than a `sd?: number` bolt-on: `benchmarkPosition` (in
+ * `renderer/components/analyze/analyze-benchmark.ts`) computes a
+ * z-distance and an evaluative position label ("above average" etc.)
+ * from mean+SD, and a position label without a real SD would be
+ * fabricated precision. Consumers of a {@link BenchmarkMeanStat} must
+ * render the mean as plain context text and MUST NOT invent a position
+ * label for it. */
+export interface BenchmarkMeanStat {
+  mean: number
+}
+
 /** Population reference from transcription typing (see caveat 2 above),
  * not a threshold of "good" or "bad" typing. */
 export const BENCHMARK_WPM: BenchmarkStat = { mean: 51.56, sd: 20.20 }
@@ -60,6 +74,19 @@ export const BENCHMARK_ALTERNATION_IKI_MS: BenchmarkStat = { mean: 198.26, sd: 1
 export const BENCHMARK_LETTER_REPETITION_IKI_MS: BenchmarkStat = { mean: 176.36, sd: 70.26 }
 
 export const BENCHMARK_ROLLOVER_RATIO_PCT: BenchmarkStat = { mean: 25.00, sd: 17.00 }
+
+// Error-class rates (substitution / omission / insertion — see
+// `renderer/typing-test/error-classify.ts`) — Table 3 (p.6). The SDs for
+// these three rows were NOT transcribed from the paper and must not be
+// invented; each is kept as a mean-only {@link BenchmarkMeanStat}
+// instead of a {@link BenchmarkStat}. This also means these three
+// deliberately have no "below/above average" position label — that
+// judgement needs a real z-distance, which needs a real SD. Add the SD
+// here (and switch these to `BenchmarkStat`) once it's actually
+// transcribed and verified against the PDF, not before.
+export const BENCHMARK_SUBSTITUTION_RATE_PCT: BenchmarkMeanStat = { mean: 1.65 }
+export const BENCHMARK_OMISSION_RATE_PCT: BenchmarkMeanStat = { mean: 0.80 }
+export const BENCHMARK_INSERTION_RATE_PCT: BenchmarkMeanStat = { mean: 0.67 }
 
 /** Typist-group thresholds from the paper's Typist Groups definition
  * (p.4): "fast" is faster than ~90% of participants, "slow" is slower

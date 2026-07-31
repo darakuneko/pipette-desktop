@@ -14,6 +14,7 @@ import {
 } from '../result-builder'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../types'
+import type { WordResult } from '../run-state'
 
 describe('typingTestResultMaterialLabel', () => {
   const base: TypingTestResult = {
@@ -435,5 +436,58 @@ describe('buildTypingTestResult — KSPC raw fields', () => {
     })
     expect(result.kspcKeystrokes).toBeUndefined()
     expect(result.kspcChars).toBeUndefined()
+  })
+})
+
+describe('buildTypingTestResult — error-class raw fields', () => {
+  const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+  const baseInput = {
+    wordCount: 5, wpm: 40, accuracy: 90, elapsedMs: 20000,
+    config: wordsConfig, language: 'english', wpmHistory: [], mistakes: {},
+    correctChars: 4, incorrectChars: 0, confirmedChars: 4, totalKeystrokes: 6, kspcUncomputable: false,
+  }
+
+  it('stores the 4-field group for a non-romaji run with finalized words', () => {
+    const wordResults: WordResult[] = [
+      { word: 'road', typed: 'riad', correct: false },
+      { word: 'string', typed: 'strring', correct: false },
+    ]
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, wordResults })
+    expect(result.errorSubstitutions).toBe(1)
+    expect(result.errorOmissions).toBe(0)
+    expect(result.errorInsertions).toBe(1)
+    expect(result.errorTargetChars).toBe(4 + 6)
+  })
+
+  it('stores nothing when wordResults is omitted', () => {
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: false })
+    expect(result.errorSubstitutions).toBeUndefined()
+    expect(result.errorOmissions).toBeUndefined()
+    expect(result.errorInsertions).toBeUndefined()
+    expect(result.errorTargetChars).toBeUndefined()
+  })
+
+  it('stores nothing when wordResults is empty', () => {
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, wordResults: [] })
+    expect(result.errorSubstitutions).toBeUndefined()
+    expect(result.errorTargetChars).toBeUndefined()
+  })
+
+  it('stores nothing for a romaji-active run, even with finalized words', () => {
+    const wordResults: WordResult[] = [{ word: 'road', typed: 'riad', correct: false }]
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: true, wordResults })
+    expect(result.errorSubstitutions).toBeUndefined()
+    expect(result.errorOmissions).toBeUndefined()
+    expect(result.errorInsertions).toBeUndefined()
+    expect(result.errorTargetChars).toBeUndefined()
+  })
+
+  it('stores all-zero counts for an all-correct run (no false "nothing set")', () => {
+    const wordResults: WordResult[] = [{ word: 'hello', typed: 'hello', correct: true }]
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, wordResults })
+    expect(result.errorSubstitutions).toBe(0)
+    expect(result.errorOmissions).toBe(0)
+    expect(result.errorInsertions).toBe(0)
+    expect(result.errorTargetChars).toBe(5)
   })
 })

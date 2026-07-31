@@ -57,3 +57,46 @@ describe('sanitizeTypingTestResult KSPC fields', () => {
     expect(result.kspcChars).toBeUndefined()
   })
 })
+
+describe('sanitizeTypingTestResult error-class fields', () => {
+  it('keeps a valid all-four error-class group', () => {
+    const result = sanitizeTypingTestResult(baseResult({
+      errorSubstitutions: 2, errorOmissions: 1, errorInsertions: 0, errorTargetChars: 40,
+    }))
+    expect(result.errorSubstitutions).toBe(2)
+    expect(result.errorOmissions).toBe(1)
+    expect(result.errorInsertions).toBe(0)
+    expect(result.errorTargetChars).toBe(40)
+  })
+
+  it('leaves all four fields undefined when none are present', () => {
+    const result = sanitizeTypingTestResult(baseResult())
+    expect(result.errorSubstitutions).toBeUndefined()
+    expect(result.errorOmissions).toBeUndefined()
+    expect(result.errorInsertions).toBeUndefined()
+    expect(result.errorTargetChars).toBeUndefined()
+  })
+
+  it('drops the whole group when only some of the four fields are present', () => {
+    const result = sanitizeTypingTestResult(baseResult({ errorSubstitutions: 2, errorTargetChars: 40 }))
+    expect(result.errorSubstitutions).toBeUndefined()
+    expect(result.errorOmissions).toBeUndefined()
+    expect(result.errorInsertions).toBeUndefined()
+    expect(result.errorTargetChars).toBeUndefined()
+  })
+
+  it('drops the whole group when errorTargetChars is 0 (division-by-zero guard)', () => {
+    const result = sanitizeTypingTestResult(baseResult({
+      errorSubstitutions: 0, errorOmissions: 0, errorInsertions: 0, errorTargetChars: 0,
+    }))
+    expect(result.errorTargetChars).toBeUndefined()
+  })
+
+  it('drops the whole group when a field is fractional or negative', () => {
+    const result = sanitizeTypingTestResult(baseResult({
+      errorSubstitutions: 1.5, errorOmissions: 1, errorInsertions: 0, errorTargetChars: 40,
+    }))
+    expect(result.errorSubstitutions).toBeUndefined()
+    expect(result.errorTargetChars).toBeUndefined()
+  })
+})
