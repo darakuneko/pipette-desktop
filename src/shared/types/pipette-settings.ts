@@ -58,6 +58,26 @@ export interface TypingTestResult {
    *  run-state.ts/romaji-input.ts as each mode confirms a character). See
    *  `kspcKeystrokes` for the both-or-neither contract. */
   kspcChars?: number
+  /** Error-class breakdown (see `error-classify.ts`'s `classifyWordResults`),
+   *  a 4-field all-or-nothing raw group (same both-or-neither shape as
+   *  `kspcKeystrokes`/`kspcChars`, just with four fields instead of two):
+   *  `errorSubstitutions`/`errorOmissions`/`errorInsertions` are the raw
+   *  counts from aligning every finalized word's target text against what
+   *  was actually typed, and `errorTargetChars` is the WER/CER-style
+   *  denominator (Σ target length of every classified word — NOT Σ typed
+   *  length, which shrinks under omission and would inflate an omission
+   *  rate computed against it). Display derives rate% = count /
+   *  errorTargetChars × 100 at read time (never precomputed/stored) — an
+   *  insertion rate can validly exceed 100% since insertions have no
+   *  target-length ceiling. Stored only for non-romaji runs with at least
+   *  one finalized word (see `buildTypingTestResult`) — romaji runs never
+   *  get this group (see `error-classify.ts`'s module header for why a
+   *  romaji comparison is structurally impossible, not merely skipped).
+   *  Omitted entirely for runs saved before this existed. */
+  errorSubstitutions?: number
+  errorOmissions?: number
+  errorInsertions?: number
+  errorTargetChars?: number
 }
 
 /** A saved result tagged with the keyboard it belongs to. Returned by the

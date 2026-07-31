@@ -248,15 +248,16 @@ The Summary tab is the default landing view. It collects four read-only cards bu
 
 - **Today** — Keystrokes, WPM, Typing duration for the current local day
 - **Last 7 days** — Keystrokes, WPM, Typing duration, Active days, each with a delta arrow comparing the prior 7 days. Insufficient prior data renders as `—`
-- **Typing profile (last N days)** — Five qualitative read-outs computed over the recent window:
+- **Typing profile (last N days)** — Six qualitative read-outs computed over the recent window:
   - **Speed** — overall WPM bucketed into Slow (<30) / Medium (30–50) / Fast (≥50). A second line below the WPM figure shows the population average and a direction-neutral position label (Far below average / Below average / Average / Above average / Far above average) based on standard-deviation distance from that average — hidden whenever the bucket itself reads `Not enough data`
   - **Hand balance** — share of bigram keystrokes per hand. Within ±5% of 50/50 reads as Balanced
   - **SFB rate** — share of bigrams typed with the same finger. <4% Low / 4–8% Medium / ≥8% High
   - **Fatigue risk** — drop from peak hour to slowest hour WPM. Wider gap = higher risk
   - **KSPC** — keystrokes per confirmed character (Backspace counts as a keystroke), char-weighted across every saved Typing Test result whose date falls in the window — never a plain average of each run's own ratio. A second line shows the population average and the same position label used by Speed. Reads `Not enough data` when no saved result in the window carries this figure (e.g. every run predates it, or hit an IME composition mid-run). Unlike this card's other four read-outs, KSPC is **not filtered by Device/App** — it always reads every locally saved Typing Test result for the keyboard within the window, since it comes from History rather than the recorded keystroke stream
+  - **Error mix** — substitution / omission / insertion rates (each a share of the target characters classified), char-weighted the same way as KSPC across every saved Typing Test result in the window. Each rate's population average is shown alongside as plain text — unlike Speed and KSPC, there's no position label here (no standard-deviation figure is available for these three population averages yet). Reads `Not enough data` when no saved result in the window carries this figure. Like KSPC, it's **not filtered by Device/App**, and Romaji-input runs are excluded — a Romaji run's committed text is always one of the accepted spellings for its target, so there's no target/typed difference left to classify
 - **Goal streak record** — Current cycle progress (`current / goalDays`), longest historical streak, and editable Goal settings (consecutive days × keystrokes/day). Changing the goal clears the current cycle counter. The **Achievement history** button opens a modal that lists every completed cycle with period, goal, days, total keystrokes, and average per day
 
-The Summary tab respects the App filter — selecting one or more apps narrows every card to minutes tagged with those apps (the Typing profile card's KSPC read-out is the one exception — see above).
+The Summary tab respects the App filter — selecting one or more apps narrows every card to minutes tagged with those apps (the Typing profile card's KSPC and Error mix read-outs are the exception — see above).
 
 #### Heatmap
 
@@ -1147,6 +1148,8 @@ The left side of the typing-test screen is a collapsible **Settings** panel. The
   ![Typing Test — Accuracy trend](screenshots/typing-test-accuracy-trend.png)
 
   Below the Accuracy Trend chart, a **Most missed** ranking lists up to the top 15 missed characters (or, in Romaji mode, the missed kana's romaji, e.g. "shi") as proportional bars, ranked by mistake count. Unlike the Accuracy Trend, it isn't scoped to one condition — it aggregates every result in the active tab. It stays hidden when the tab has no results at all, and shows a brief empty message when there are results but none of them recorded a mistake
+
+  Below Most missed, an **Error mix** section shows substitution / omission / insertion rates (each a share of the target characters classified), char-weighted across every result in the active tab, with each rate's population average shown alongside as plain text. Like Most missed, it isn't scoped to one condition, stays hidden when the tab has no results at all, and shows a brief empty message when there are results but none of them qualify (e.g. every result predates error-class tracking, or the tab is Romaji-only, whose runs never carry this figure)
 - **View** — three switches: **Operation** (the controls row below the reading window), **Measurement** (the live stats row), and **Keymap** (the keyboard pane). Each hides its area when switched off; a finished test always shows the controls and the results regardless
 
 #### Data Source
@@ -1306,7 +1309,7 @@ The controls row below the reading window changes with the test state:
 
 - **Before a run starts**: **Next Test** generates a fresh test. When a paused File Import run is saved, a **Resume** button appears beside it
 - **While running or paused**: **Restart** starts the test over. In File Import mode a **Pause** (running) or **Resume** (paused) button joins it — pausing saves the run, and resuming asks whether to continue from the saved position or start over
-- **When finished**: a result-name field opens the naming modal, with quick-insert chips for the keyboard name, the test material, a timestamp, and the run's WPM / KPM / Accuracy; **Next Test** starts the next run. If the run had any mistakes, a **Missed** row appears below the stats, listing each missed character (or, in Romaji mode, each missed kana's romaji, e.g. "shi") with its count — counted when a wrong character is deleted with Backspace or left wrong when the word is submitted
+- **When finished**: a result-name field opens the naming modal, with quick-insert chips for the keyboard name, the test material, a timestamp, and the run's WPM / KPM / Accuracy; **Next Test** starts the next run. If the run had any mistakes, a **Missed** row appears below the stats, listing each missed character (or, in Romaji mode, each missed kana's romaji, e.g. "shi") with its count — counted when a wrong character is deleted with Backspace or left wrong when the word is submitted. Below that, a **Substitution / Omission / Insertion** row shows the run's error-class breakdown, computed by comparing each finished word's target text against what was actually typed. This row is omitted for a Romaji-input run (its committed text is always one of the accepted spellings for the target, so there's no difference left to classify) and for a run with no finished words at all
 
 Additional notes:
 

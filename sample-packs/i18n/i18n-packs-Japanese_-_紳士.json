@@ -1,5 +1,5 @@
 {
-  "version": "0.1.50",
+  "version": "0.1.51",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -506,10 +506,18 @@
         "conditionRomaji": "+ローマ字入力",
         "conditionTatoeba": "Tatoeba",
         "mistakeRankingTitle": "苦手とする文字",
-        "mistakeRankingEmpty": "過ちの記録はまだございません"
+        "mistakeRankingEmpty": "過ちの記録はまだございません",
+        "errorMixTitle": "誤りの種別",
+        "errorMixEmpty": "対象となる結果はまだございません",
+        "errorMixSubstitutionRow": "置換 {{pct}}%（母集団平均 {{avgPct}}%）でございます",
+        "errorMixOmissionRow": "脱字 {{pct}}%（母集団平均 {{avgPct}}%）でございます",
+        "errorMixInsertionRow": "衍字 {{pct}}%（母集団平均 {{avgPct}}%）でございます"
       },
       "results": {
-        "mistakesLabel": "過ちの文字"
+        "mistakesLabel": "過ちの文字",
+        "errorSubstitutions": "置換 {{count}}",
+        "errorOmissions": "脱字 {{count}}",
+        "errorInsertions": "衍字 {{count}}"
       }
     }
   },
@@ -1187,7 +1195,10 @@
           "high": "高"
         },
         "kspcLabel": "KSPC",
-        "kspcDesc": "1 文字を確定するまでに要した打鍵数でございます（Backspace も打鍵として数えます）。この期間に保存されたタイピングテストの結果から算出いたします。Device / App のフィルタは適用されません（記録された打鍵データではなく History から算出するためでございます）。ローマ字入力によるランはこちらの集計から除外いたします（分母となる指標が異なり、下の基準値と単純比較できないためでございます）"
+        "kspcDesc": "1 文字を確定するまでに要した打鍵数でございます（Backspace も打鍵として数えます）。この期間に保存されたタイピングテストの結果から算出いたします。Device / App のフィルタは適用されません（記録された打鍵データではなく History から算出するためでございます）。ローマ字入力によるランはこちらの集計から除外いたします（分母となる指標が異なり、下の基準値と単純比較できないためでございます）",
+        "errorMixLabel": "誤りの種別",
+        "errorMixContext": "置換 {{subPct}}%（平均 {{subAvg}}%）・脱字 {{omPct}}%（平均 {{omAvg}}%）・衍字 {{insPct}}%（平均 {{insAvg}}%）",
+        "errorMixDesc": "置換・脱字・衍字の割合でございます（対象文字数に対する比率）。この期間に保存されたタイピングテストの結果から、文字数で重み付けして算出いたします。Device / App のフィルタは適用されません（記録された打鍵データではなく History から算出するためでございます）。ローマ字入力によるランは対象外でございます（確定した綴りは常に正しいものであり、分類すべき差分がないためでございます）"
       }
     },
     "bigrams": {

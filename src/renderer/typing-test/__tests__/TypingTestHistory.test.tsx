@@ -234,6 +234,47 @@ describe('TypingTestHistory', () => {
     expect(dataLine.split(',')[kspcIndex]).toBe('')
   })
 
+  it('includes raw error-class CSV columns for a result carrying the 4-field group', () => {
+    const onExportCsv = vi.fn()
+    const results = [
+      makeResult({
+        wpm: 80, date: '2025-01-01T00:00:00Z',
+        errorSubstitutions: 2, errorOmissions: 1, errorInsertions: 0, errorTargetChars: 40,
+      }),
+    ]
+    renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+
+    fireEvent.click(screen.getByTestId('history-export-csv'))
+    const csv = onExportCsv.mock.calls[0][0] as string
+    const [headerLine, dataLine] = csv.split('\n')
+    const headers = headerLine.split(',')
+    expect(headers).toContain('errorSubstitutions')
+    expect(headers).toContain('errorOmissions')
+    expect(headers).toContain('errorInsertions')
+    expect(headers).toContain('errorTargetChars')
+    const cells = dataLine.split(',')
+    expect(cells[headers.indexOf('errorSubstitutions')]).toBe('2')
+    expect(cells[headers.indexOf('errorOmissions')]).toBe('1')
+    expect(cells[headers.indexOf('errorInsertions')]).toBe('0')
+    expect(cells[headers.indexOf('errorTargetChars')]).toBe('40')
+  })
+
+  it('leaves error-class CSV cells empty for a legacy result with no raw fields', () => {
+    const onExportCsv = vi.fn()
+    const results = [
+      makeResult({ wpm: 80, date: '2025-01-01T00:00:00Z' }),
+    ]
+    renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+
+    fireEvent.click(screen.getByTestId('history-export-csv'))
+    const csv = onExportCsv.mock.calls[0][0] as string
+    const [headerLine, dataLine] = csv.split('\n')
+    const headers = headerLine.split(',')
+    const cells = dataLine.split(',')
+    expect(cells[headers.indexOf('errorSubstitutions')]).toBe('')
+    expect(cells[headers.indexOf('errorTargetChars')]).toBe('')
+  })
+
   it('passes a filename slug reflecting the active filter selection', () => {
     const onExportCsv = vi.fn()
     const results = [

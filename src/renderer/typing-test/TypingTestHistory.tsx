@@ -10,6 +10,7 @@ import { computeStats } from './history-stats'
 import { WpmSparkline } from './WpmSparkline'
 import { AccuracyTrendSection } from './AccuracyTrendSection'
 import { MistakeRankingSection } from './MistakeRankingSection'
+import { ErrorMixSection } from './ErrorMixSection'
 import { formatDate, ACTION_BTN, DELETE_BTN, CONFIRM_DELETE_BTN, FILTER_SELECT_CLASS } from '../components/editors/store-modal-shared'
 import { resultKpm, resultKspc, buildResultNameChips } from './result-builder'
 import { formatKspc } from '../../shared/kspc'
@@ -86,7 +87,16 @@ function exportFilterSlug(
 
 const MODE_FILTERS: ModeFilter[] = ['all', 'words', 'time', 'quote']
 
-const CSV_HEADERS = ['date', 'name', 'wpm', 'kpm', 'accuracy', 'kspc', 'wordCount', 'correctChars', 'incorrectChars', 'durationSeconds', 'rawWpm', 'mode', 'mode2', 'fileImportTextName', 'language', 'punctuation', 'numbers', 'consistency', 'isPb'] as const
+// errorSubstitutions/errorOmissions/errorInsertions/errorTargetChars are
+// exported as their RAW counts (not a derived per-row rate like `kspc`
+// above) — unlike a single ratio, a per-row percentage would use each
+// row's own errorTargetChars as its denominator, which can't be
+// correctly re-aggregated across multiple exported rows (a naive average
+// of percentages misweights short and long runs); raw counts + the
+// shared denominator let a spreadsheet compute the same char-weighted
+// Σ/Σ rate this app itself uses. Empty (not 0) for a result missing the
+// group, same treatment as `kspc`.
+const CSV_HEADERS = ['date', 'name', 'wpm', 'kpm', 'accuracy', 'kspc', 'wordCount', 'correctChars', 'incorrectChars', 'durationSeconds', 'rawWpm', 'mode', 'mode2', 'fileImportTextName', 'language', 'punctuation', 'numbers', 'consistency', 'isPb', 'errorSubstitutions', 'errorOmissions', 'errorInsertions', 'errorTargetChars'] as const
 
 function buildResultsCsv(results: TypingTestResult[]): string {
   return buildCsv(
@@ -284,6 +294,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
 
       <AccuracyTrendSection results={tabResults} />
       <MistakeRankingSection results={tabResults} />
+      <ErrorMixSection results={tabResults} />
 
       {/* Results table — fills remaining height */}
       <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-edge">

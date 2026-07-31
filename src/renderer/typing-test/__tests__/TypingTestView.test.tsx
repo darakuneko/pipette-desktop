@@ -373,6 +373,43 @@ describe('TypingTestView mistakes list', () => {
   })
 })
 
+describe('TypingTestView error-class line', () => {
+  it('renders the substitution/omission/insertion counts when the finished result has the fields', () => {
+    renderView({
+      state: makeState({ status: 'finished' }),
+      wpm: 50,
+      accuracy: 90,
+      errorClasses: { substitutions: 2, omissions: 1, insertions: 0 },
+    })
+    expect(screen.getByTestId('typing-test-error-substitutions').textContent).toContain('2')
+    expect(screen.getByTestId('typing-test-error-omissions').textContent).toContain('1')
+    expect(screen.getByTestId('typing-test-error-insertions').textContent).toContain('0')
+  })
+
+  it('renders nothing when errorClasses is null (romaji run, no finalized words, or legacy result)', () => {
+    renderView({
+      state: makeState({ status: 'finished' }),
+      wpm: 50,
+      accuracy: 90,
+      errorClasses: null,
+    })
+    expect(screen.queryByTestId('typing-test-error-classes')).toBeNull()
+  })
+
+  it('renders nothing when errorClasses is omitted entirely (defaults to null)', () => {
+    renderView({ state: makeState({ status: 'finished' }), wpm: 50, accuracy: 90 })
+    expect(screen.queryByTestId('typing-test-error-classes')).toBeNull()
+  })
+
+  it('does not render before the run finishes, even if errorClasses were somehow already set', () => {
+    renderView({
+      state: makeState({ status: 'running' }),
+      errorClasses: { substitutions: 2, omissions: 1, insertions: 0 },
+    })
+    expect(screen.queryByTestId('typing-test-error-classes')).toBeNull()
+  })
+})
+
 describe('TypingTestView controls row (state-based)', () => {
   const fileImportConfig: TypingTestConfig = { mode: 'fileImport', textId: 'abc' }
 

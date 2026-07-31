@@ -510,6 +510,7 @@ export function useInputModes({
         totalKeystrokes: typingTest.state.totalKeystrokes,
         confirmedChars: typingTest.state.confirmedChars,
         kspcUncomputable: typingTest.state.kspcUncomputable,
+        wordResults: typingTest.state.wordResults,
       })
       result.isPb = isPbForConfig(result, typingTestHistory ?? [])
       if (saveUnnamed) {

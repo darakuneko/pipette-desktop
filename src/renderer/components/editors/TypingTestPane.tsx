@@ -11,6 +11,7 @@ import { PauseResumeModal } from '../../typing-test/PauseResumeModal'
 import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
 import { TypingRecordingConsentModal } from '../../typing-test/TypingRecordingConsentModal'
 import { isRomajiCapable, carryRomajiFields } from '../../typing-test/romaji-input'
+import { errorClassGroup } from '../../typing-test/error-classify'
 import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
 import { TYPING_HEATMAP_WINDOW_OPTIONS } from '../../../shared/types/app-config'
 import { KeyboardPane } from './KeyboardPane'
@@ -756,6 +757,10 @@ export function TypingTestPane({
           onNameResult={onNameFinishedResult}
           // Chips come from the just-finished result (held unsaved or saved).
           resultNameChips={finishedResult ? buildResultNameChips(finishedResult, t, deviceName) : []}
+          // Error-class raw counts — null for a romaji run, a run with no
+          // finalized words, or a legacy result, in which case the finish
+          // screen omits the line (see errorClassGroup's all-or-nothing read).
+          errorClasses={finishedResult ? errorClassGroup(finishedResult) : null}
           onStart={() => typingTest.restart()}
           onPause={() => onPauseTest?.()}
           onResume={() => setShowResumeModal(true)}

@@ -45,24 +45,61 @@ const ACCURACY_TREND_SEED_RUNS: [number, number, number, number, number][] = [
   [1, 71, 96, 154, 6],
 ]
 
+// Plausible substitution/omission/insertion rates for the seeded runs
+// (share of errorTargetChars) — same constants as analyze-seed.ts's
+// DUMMY_ERROR_*_RATE, so the two seed helpers agree, and close to but not
+// exactly the population means (shared/typing-benchmarks.ts) so the
+// History Error mix section shows real figures instead of its empty
+// state.
+const SEED_ERROR_SUBSTITUTION_RATE = 0.018
+const SEED_ERROR_OMISSION_RATE = 0.009
+const SEED_ERROR_INSERTION_RATE = 0.006
+
 /** Seeds the Accuracy Trend seed runs above into the virtual device's
  *  pipette_settings.json, so the Accuracy Trend chart (History → Data
- *  section) has a real trend line to screenshot. Merged onto whatever the
- *  file already has — `settingsBackup` (the snapshot `backupVirtualDeviceSettings`
- *  took before this call) restores the pre-seed content (or removes the
- *  file) once the script is done, independent of this seed. */
+ *  section) has a real trend line to screenshot, and — since every run
+ *  now also carries the error-class group — so the Error mix section
+ *  below it shows real figures instead of its empty state. Merged onto
+ *  whatever the file already has — `settingsBackup` (the snapshot
+ *  `backupVirtualDeviceSettings` took before this call) restores the
+ *  pre-seed content (or removes the file) once the script is done,
+ *  independent of this seed. */
 function seedAccuracyTrendHistory(settingsBackup: VirtualDeviceSettingsBackup): void {
   mkdirSync(dirname(settingsBackup.path), { recursive: true })
   const existing = settingsBackup.content != null
     ? (JSON.parse(settingsBackup.content) as Record<string, unknown>)
     : {}
+  // Required baseline fields the main-process settings validator expects
+  // (see DEFAULT_PIPETTE_SETTINGS in shared/types/pipette-settings.ts).
+  // On a brand-new virtual-device profile (no prior settings file at all —
+  // `existing` starts as `{}`), writing ONLY `typingTestResults` produces a
+  // file the validator treats as incomplete: it gets silently replaced with
+  // defaults (typingTestResults: []) on first read, discarding this seed
+  // entirely before Typing Test ever opens. Only filled in when missing so
+  // a real prior file's own values survive (analyze-seed.ts's dummy
+  // History rows already always set these, for the same reason).
+  existing._rev ??= 1
+  existing.keyboardLayout ??= 'qwerty'
+  existing.autoAdvance ??= true
+  existing.layerNames ??= []
   const now = Date.now()
   const DAY_MS = 24 * 60 * 60 * 1000
-  existing.typingTestResults = ACCURACY_TREND_SEED_RUNS.map(([daysAgo, wpm, accuracy, correctChars, incorrectChars]) => ({
-    date: new Date(now - daysAgo * DAY_MS).toISOString(),
-    wpm, accuracy, wordCount: 30, correctChars, incorrectChars, durationSeconds: 24,
-    mode: 'words', mode2: 30, language: 'english', punctuation: false, numbers: false,
-  }))
+  existing.typingTestResults = ACCURACY_TREND_SEED_RUNS.map(([daysAgo, wpm, accuracy, correctChars, incorrectChars]) => {
+    // All-or-nothing error-class group (see TypingTestResult.errorSubstitutions
+    // et al.) — errorTargetChars stands in for Σ target length the same way
+    // analyze-seed.ts's dummy History rows do (correctChars + incorrectChars
+    // is a plausible total, not a real Levenshtein alignment).
+    const errorTargetChars = correctChars + incorrectChars
+    return {
+      date: new Date(now - daysAgo * DAY_MS).toISOString(),
+      wpm, accuracy, wordCount: 30, correctChars, incorrectChars, durationSeconds: 24,
+      mode: 'words', mode2: 30, language: 'english', punctuation: false, numbers: false,
+      errorSubstitutions: Math.round(errorTargetChars * SEED_ERROR_SUBSTITUTION_RATE),
+      errorOmissions: Math.round(errorTargetChars * SEED_ERROR_OMISSION_RATE),
+      errorInsertions: Math.round(errorTargetChars * SEED_ERROR_INSERTION_RATE),
+      errorTargetChars,
+    }
+  })
   writeFileSync(settingsBackup.path, JSON.stringify(existing), 'utf-8')
 }
 

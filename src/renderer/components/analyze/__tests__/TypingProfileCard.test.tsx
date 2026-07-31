@@ -222,3 +222,100 @@ describe('TypingProfileCard KSPC cell', () => {
     })
   })
 })
+
+describe('TypingProfileCard Error mix cell', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows the char-weighted aggregate across qualifying results, not a plain average of per-run rates', async () => {
+    renderCard([], [
+      makeResult({ date: today, errorSubstitutions: 2, errorOmissions: 1, errorInsertions: 0, errorTargetChars: 100 }),
+      makeResult({ date: today, errorSubstitutions: 1, errorOmissions: 1, errorInsertions: 1, errorTargetChars: 100 }),
+    ])
+    let grid: HTMLElement
+    await waitFor(() => {
+      grid = screen.getByTestId('analyze-typing-profile')
+      // Σ substitutions=3 / Σ targetChars=200 -> 1.50%
+      expect(grid!.textContent).toContain('1.50')
+    })
+  })
+
+  it('excludes results outside the 30-day window', async () => {
+    const outOfRange = '2025-01-01'
+    renderCard([], [
+      makeResult({ date: today, errorSubstitutions: 2, errorOmissions: 0, errorInsertions: 0, errorTargetChars: 100 }),
+      makeResult({ date: outOfRange, errorSubstitutions: 900, errorOmissions: 0, errorInsertions: 0, errorTargetChars: 100 }),
+    ])
+    let grid: HTMLElement
+    await waitFor(() => {
+      grid = screen.getByTestId('analyze-typing-profile')
+      expect(grid!.textContent).toContain('2.00')
+    })
+  })
+
+  it('excludes results missing the 4-field group (legacy results)', async () => {
+    renderCard([], [
+      makeResult({ date: today }), // no error-class fields — legacy
+    ])
+    let grid: HTMLElement
+    await waitFor(() => {
+      grid = screen.getByTestId('analyze-typing-profile')
+    })
+    expect(grid!.textContent).toContain('analyze.summary.profile.insufficient')
+  })
+
+  it('shows the insufficient-data state when there are no qualifying results at all', async () => {
+    renderCard([], [])
+    let grid: HTMLElement
+    await waitFor(() => {
+      grid = screen.getByTestId('analyze-typing-profile')
+    })
+    expect(grid!.textContent).toContain('analyze.summary.profile.insufficient')
+  })
+
+  it('excludes romaji-input results from the aggregate (no target/typed difference to classify)', async () => {
+    renderCard([], [
+      makeResult({ date: today, errorSubstitutions: 2, errorOmissions: 0, errorInsertions: 0, errorTargetChars: 100 }),
+      // Would wildly skew the pool if pooled in.
+      makeResult({ date: today, errorSubstitutions: 900, errorOmissions: 0, errorInsertions: 0, errorTargetChars: 100, romajiInput: true }),
+    ])
+    let grid: HTMLElement
+    await waitFor(() => {
+      grid = screen.getByTestId('analyze-typing-profile')
+      expect(grid!.textContent).toContain('2.00')
+    })
+  })
+
+  it('honors typingTestScopes: only results whose recorded material label matches are included', async () => {
+    renderCard([], [
+      makeResult({ date: today, errorSubstitutions: 2, errorOmissions: 0, errorInsertions: 0, errorTargetChars: 100, mode: 'words', language: 'english' }),
+      makeResult({ date: today, errorSubstitutions: 900, errorOmissions: 0, errorInsertions: 0, errorTargetChars: 100, mode: 'time', language: 'english' }),
+    ], { typingTestScopes: ['words (english)'] })
+    let grid: HTMLElement
+    await waitFor(() => {
+      grid = screen.getByTestId('analyze-typing-profile')
+      expect(grid!.textContent).toContain('2.00')
+    })
+  })
+
+  it('honors runIdScopes: a result missing runId drops out when a run filter is active', async () => {
+    renderCard([], [
+      makeResult({ date: today, errorSubstitutions: 2, errorOmissions: 0, errorInsertions: 0, errorTargetChars: 100, runId: 'run-1' }),
+      makeResult({ date: today, errorSubstitutions: 900, errorOmissions: 0, errorInsertions: 0, errorTargetChars: 100 }),
+    ], { runIdScopes: ['run-1'] })
+    let grid: HTMLElement
+    await waitFor(() => {
+      grid = screen.getByTestId('analyze-typing-profile')
+      expect(grid!.textContent).toContain('2.00')
+    })
+  })
+
+  it('includes the description key so a hover tooltip can be rendered', async () => {
+    renderCard([], [makeResult({ date: today, errorSubstitutions: 2, errorOmissions: 0, errorInsertions: 0, errorTargetChars: 100 })])
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-typing-profile')).toBeInTheDocument()
+    })
+    expect(screen.getByText('analyze.summary.profile.errorMixLabel')).toBeInTheDocument()
+  })
+})
