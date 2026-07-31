@@ -45,6 +45,17 @@ export function benchmarkReferenceLineProps(y: number, label: string): {
   }
 }
 
+/** Plain z-score, `(value - mean) / sd`, with no guard against a
+ * degenerate `stat` (zero/negative sd, non-finite mean) — callers that
+ * need that guard (e.g. `benchmarkPosition` below) check it themselves
+ * before calling this. Exported so other Analyze consumers that need a
+ * bare z-score without a position label — e.g. the typist-cluster
+ * classifier's per-dimension distance (`analyze-typist-cluster.ts`) —
+ * share this one implementation instead of re-deriving it. */
+export function benchmarkZ(value: number, stat: BenchmarkStat): number {
+  return (value - stat.mean) / stat.sd
+}
+
 export type BenchmarkPositionLabel = 'farBelow' | 'below' | 'average' | 'above' | 'farAbove'
 
 export interface BenchmarkPosition {
@@ -55,7 +66,7 @@ export interface BenchmarkPosition {
 export function benchmarkPosition(value: number, stat: BenchmarkStat): BenchmarkPosition | null {
   if (!Number.isFinite(value) || !Number.isFinite(stat.mean) || !Number.isFinite(stat.sd)) return null
   if (stat.sd <= 0) return null
-  const z = (value - stat.mean) / stat.sd
+  const z = benchmarkZ(value, stat)
   const abs = Math.abs(z)
   const label: BenchmarkPositionLabel = abs <= 0.5
     ? 'average'

@@ -14,8 +14,9 @@
 
 import { HAND_OF_FINGER, type FingerType } from '../../../shared/kle/kle-ergonomics'
 import type { TypingBigramTopEntry } from '../../../shared/types/typing-analytics'
-import { resolvePairFingers } from './analyze-bigram-finger'
-import { emptyHistTotal, foldHist, type HistTotal } from './analyze-bigram-heatmap'
+import { resolvePairFingersFromCodes } from './analyze-bigram-finger'
+import { avgIkiFromHist, emptyHistTotal, foldHist, parseBigramId, type HistTotal } from './analyze-bigram-heatmap'
+import { BIGRAM_MIN_COUNT } from './analyze-typing-profile'
 
 export type BigramClass = 'left' | 'right' | 'alternation' | 'repetition' | 'unknown'
 
@@ -80,10 +81,25 @@ export interface BigramClassAggregate {
  * hist): the wire entries only carry a per-pair `sd`, and re-combining
  * per-pair SDs into a per-class variance needs sum/sumsq, which
  * `TypingBigramTopEntry` doesn't have.
+ *
+ * `entry.ngramId` is parsed exactly once via `parseBigramId`. A
+ * malformed id always lands in `unknownCount` — `pairFilter`, when
+ * given, is never consulted for it, since there's no parsed pair to
+ * hand it. A pair that *does* parse is offered to `pairFilter` next;
+ * a rejection there skips the entry entirely (not even `totalCount`),
+ * so a scoped caller — e.g. `aggregateInWordBigramClasses`, which keeps
+ * only in-word pairs — gets a coverage ratio over just the pairs it
+ * intended to count, not one silently diluted by pairs outside its
+ * scope. `pairFilter` only receives the parsed `(prev, curr)` pair, not
+ * the source `entry` — every current and anticipated filter (word
+ * position) decides purely from the keycodes, and a caller that ever
+ * needs the raw entry can close over it instead of this function
+ * threading it through.
  */
 export function aggregateBigramClasses(
   entries: readonly TypingBigramTopEntry[],
   keycodeFinger: ReadonlyMap<number, FingerType>,
+  pairFilter?: (pair: { prev: number; curr: number }) => boolean,
 ): BigramClassAggregate {
   const totals: Record<ClassifiedBigramClass, BigramClassTotal> = {
     left: emptyHistTotal(),
@@ -94,8 +110,15 @@ export function aggregateBigramClasses(
   let unknownCount = 0
   let totalCount = 0
   for (const entry of entries) {
+    const pair = parseBigramId(entry.ngramId)
+    if (!pair) {
+      unknownCount += entry.count
+      totalCount += entry.count
+      continue
+    }
+    if (pairFilter && !pairFilter(pair)) continue
     totalCount += entry.count
-    const { prevFinger, currFinger, sameKeycode } = resolvePairFingers(entry.ngramId, keycodeFinger)
+    const { prevFinger, currFinger, sameKeycode } = resolvePairFingersFromCodes(pair.prev, pair.curr, keycodeFinger)
     const cls = classifyBigram(prevFinger, currFinger, sameKeycode)
     if (cls === 'unknown') {
       unknownCount += entry.count
@@ -106,4 +129,16 @@ export function aggregateBigramClasses(
     foldHist(bucket.hist, entry.hist)
   }
   return { totals, unknownCount, totalCount }
+}
+
+/** Per-class avgIki, `null` (renders "—") whenever the class's sample
+ * falls below `BIGRAM_MIN_COUNT` — the same floor the Typing Profile
+ * card uses to suppress its Hand balance / SFB labels on thin data.
+ * Shared by `BigramsClassesQuadrant` (the hand-usage / word-position
+ * table) and `analyze-typist-cluster.ts` (the typist-cluster
+ * classifier's IKI features), so the floor can't drift between the two
+ * consumers. */
+export function classAvgOrNull(total: BigramClassTotal): number | null {
+  if (total.count < BIGRAM_MIN_COUNT) return null
+  return avgIkiFromHist(total.hist)
 }

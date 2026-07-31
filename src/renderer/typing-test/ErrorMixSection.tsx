@@ -9,7 +9,7 @@ import {
   BENCHMARK_SUBSTITUTION_RATE_PCT,
   BENCHMARK_OMISSION_RATE_PCT,
   BENCHMARK_INSERTION_RATE_PCT,
-  type BenchmarkMeanStat,
+  type BenchmarkStat,
 } from '../../shared/typing-benchmarks'
 
 interface Props {
@@ -25,7 +25,7 @@ interface Props {
  *  of it depends on props/state. */
 const ERROR_MIX_ROWS: ReadonlyArray<{
   testId: string
-  bench: BenchmarkMeanStat
+  bench: BenchmarkStat
   i18nKey: string
   pick: (totals: ErrorClassCounts) => number
 }> = [
@@ -38,11 +38,10 @@ const ERROR_MIX_ROWS: ReadonlyArray<{
  *  insertion rates aggregated across every result in the active tab that
  *  recorded the 4-field error-class group, alongside the population mean
  *  for each (see `typing-benchmarks.ts`) as plain context text. No
- *  position labels ("above/below average") — those three population
- *  stats have no transcribed SD to derive a position from (see
- *  `BenchmarkMeanStat`'s doc comment). Hidden entirely when the tab has
- *  no results at all; shows a subtle empty line when there are results
- *  but none of them qualify (e.g. a romaji-only tab, or every result
+ *  position labels here — see the three rate constants' doc comment in
+ *  typing-benchmarks.ts for why. Hidden entirely when the tab has no
+ *  results at all; shows a subtle empty line when there are results but
+ *  none of them qualify (e.g. a romaji-only tab, or every result
  *  predates error-class tracking). */
 export function ErrorMixSection({ results }: Props) {
   const { t } = useTranslation()

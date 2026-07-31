@@ -9,13 +9,11 @@
 import { useTranslation } from 'react-i18next'
 import {
   CLASSIFIED_CLASSES,
+  classAvgOrNull,
   type BigramClassAggregate,
-  type BigramClassTotal,
   type ClassifiedBigramClass,
 } from './analyze-bigram-classes'
 import type { WordPositionAggregate } from './analyze-bigram-word-position'
-import { BIGRAM_MIN_COUNT } from './analyze-typing-profile'
-import { avgIkiFromHist } from './analyze-bigram-heatmap'
 import { EMPTY_STAT_VALUE } from './analyze-constants'
 import { fmtMs } from './analyze-format'
 
@@ -41,14 +39,6 @@ function BigramClassesCoverage({ aggregate, hasSnapshot }: BigramClassesQuadrant
       {t('analyze.bigrams.classes.coverage', { percent })}
     </div>
   )
-}
-
-/** Per-class avgIki, `null` (renders "—") whenever the class's sample
- * falls below `BIGRAM_MIN_COUNT` — the same floor the Typing Profile
- * card uses to suppress its Hand balance / SFB labels on thin data. */
-function classAvgOrNull(total: BigramClassTotal): number | null {
-  if (total.count < BIGRAM_MIN_COUNT) return null
-  return avgIkiFromHist(total.hist)
 }
 
 /** Signed `+N ms` / `-N ms` delta, `'—'` when either side is `null`.
@@ -198,4 +188,4 @@ function BigramClassesTable({
 }
 
 export type { BigramClassesQuadrantProps }
-export { BigramClassesCoverage, classAvgOrNull, fmtDelta, BigramClassesTable }
+export { BigramClassesCoverage, fmtDelta, BigramClassesTable }

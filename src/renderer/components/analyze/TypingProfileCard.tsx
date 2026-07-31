@@ -2,7 +2,7 @@
 // Analyze > Summary > Typing Profile — labels-only digest of the
 // user's last 30 days. Pulls bigram aggregate and minute-stats over
 // the same window the daily summary already covers, classifies each
-// metric into a discrete bucket, and shows a 4-cell stat grid. No
+// metric into a discrete bucket, and shows a stat grid. No
 // recommendations: the card surfaces the bucket and lets the user
 // draw their own conclusions.
 
@@ -45,6 +45,12 @@ import {
   type SfbLabel,
   type SpeedLabel,
 } from './analyze-typing-profile'
+import {
+  classifyTypist,
+  typistHandIkisFromEntries,
+  typistIkiFromEntries,
+  type TypistClassification,
+} from './analyze-typist-cluster'
 import { formatWpm } from './analyze-wpm'
 import type { DeviceScope } from './analyze-types'
 import { useKeycodeFingerMap } from './use-keycode-finger-map'
@@ -82,6 +88,49 @@ interface Props {
  * limit; tens of thousands of unique bigrams is uncommon, so 5_000
  * captures the long tail without paying for a flat-out scan. */
 const BIGRAM_FETCH_LIMIT = 5_000
+
+/** Derives the Typing style cell's `value` / `context` / `descriptionKey`
+ * from a `TypistClassification` — one switch instead of the three
+ * parallel nested-ternary chains (matched / noMatch / unknown) the value,
+ * context, and descriptionKey used to each repeat independently. The
+ * 'matched' branch's descriptionKey follows `basis` (see
+ * `analyze-typist-cluster.ts`: 'full' when all three error dimensions
+ * fed the match, 'rhythmOnly' otherwise) so the tooltip stays honest
+ * about which dimensions actually drove this particular match. */
+function typistCellContent(
+  classification: TypistClassification,
+  t: (key: string) => string,
+): { value: string; context: string; descriptionKey: string } {
+  switch (classification.kind) {
+    case 'matched':
+      return {
+        value: t(`analyze.summary.profile.typistCluster.${classification.clusterId}.name`),
+        context: t(`analyze.summary.profile.typistCluster.${classification.clusterId}.context`),
+        descriptionKey: classification.basis === 'full'
+          ? 'analyze.summary.profile.typistClusterDesc'
+          : 'analyze.summary.profile.typistClusterDescNoError',
+      }
+    case 'noMatch': {
+      // 'ambiguous' and 'tooFar' are opposite situations — ambiguous
+      // means the profile resembles two reference clusters about
+      // equally, tooFar means it resembles none of them — so each gets
+      // its own name/context pair rather than sharing the noMatch copy,
+      // which would tell an ambiguous user the opposite of what's true.
+      const key = classification.reason === 'ambiguous' ? 'ambiguous' : 'noMatch'
+      return {
+        value: t(`analyze.summary.profile.typistCluster.${key}.name`),
+        context: t(`analyze.summary.profile.typistCluster.${key}.context`),
+        descriptionKey: 'analyze.summary.profile.typistClusterDesc',
+      }
+    }
+    case 'unknown':
+      return {
+        value: EMPTY_STAT_VALUE,
+        context: t('analyze.summary.profile.insufficient'),
+        descriptionKey: 'analyze.summary.profile.typistClusterDesc',
+      }
+  }
+}
 
 export function TypingProfileCard({
   uid,
@@ -124,7 +173,14 @@ export function TypingProfileCard({
       })
       .catch(() => { if (!cancelled) setBigrams([]) })
     return () => { cancelled = true }
-  }, [uid, deviceScope, range, appScopes.join('|')])
+    // typingTestScopes/runIdScopes join()ed the same way as appScopes so
+    // the effect refires on a filter change but not on a fresh-but-equal
+    // array identity from the parent re-rendering — without these two,
+    // the IKI-family inputs classifyTypist reads (via typistIki/
+    // typistHandIkis below) kept classifying against stale bigram data
+    // after either filter changed, while the error/KSPC inputs (sourced
+    // from windowResults, which does list them) updated immediately.
+  }, [uid, deviceScope, range, appScopes.join('|'), typingTestScopes.join('|'), runIdScopes.join('|')])
 
   useEffect(() => {
     let cancelled = false
@@ -132,7 +188,9 @@ export function TypingProfileCard({
       .then((rows) => { if (!cancelled) setMinuteStats(rows) })
       .catch(() => { if (!cancelled) setMinuteStats([]) })
     return () => { cancelled = true }
-  }, [uid, deviceScope, range, appScopes.join('|')])
+    // See the bigram-aggregate effect above for why typingTestScopes/
+    // runIdScopes are joined into the dep array rather than passed raw.
+  }, [uid, deviceScope, range, appScopes.join('|'), typingTestScopes.join('|'), runIdScopes.join('|')])
 
   const keycodeFinger = useKeycodeFingerMap(snapshot, fingerOverrides)
 
@@ -231,10 +289,9 @@ export function TypingProfileCard({
   // sumErrorClassGroups for the per-result all-or-nothing read and the
   // fold (shared with ErrorMixSection's History summary), and
   // windowResults above for why romaji is excluded. No position labels
-  // here — the three population rate constants have no transcribed SD
-  // (see BenchmarkMeanStat's doc comment), so only the mean is shown, as
-  // plain context text rather than through BenchmarkSubline (which
-  // requires a position).
+  // here — shown as plain mean context text rather than through
+  // BenchmarkSubline; see the three rate constants' doc comment in
+  // typing-benchmarks.ts for why (their SD is used elsewhere, not here).
   const errorMix = useMemo(() => {
     const totals = sumErrorClassGroups(windowResults)
     if (!totals) return null
@@ -244,6 +301,30 @@ export function TypingProfileCard({
       insertionPct: (totals.insertions / totals.targetChars) * 100,
     }
   }, [windowResults])
+
+  // Typing-style classification (see analyze-typist-cluster.ts for the
+  // full design rationale). Assembled from data already computed above
+  // for the other cells — this cell adds no new fetch, only a new read
+  // of the same bigram/error/KSPC memos.
+  const typistIki = useMemo(() => typistIkiFromEntries(bigrams), [bigrams])
+  const typistHandIkis = useMemo(
+    () => typistHandIkisFromEntries(bigrams, keycodeFinger, snapshot?.vialProtocol),
+    [bigrams, keycodeFinger, snapshot?.vialProtocol],
+  )
+  // The features object has exactly one consumer (classifyTypist), so
+  // building it stays folded into this memo rather than living as its
+  // own separate step.
+  const typistClassification = useMemo(() => classifyTypist({
+    wpm: speed.label === 'unknown' ? undefined : speed.wpm,
+    ikiMs: typistIki,
+    leftIkiMs: typistHandIkis.leftIkiMs,
+    rightIkiMs: typistHandIkis.rightIkiMs,
+    alternationIkiMs: typistHandIkis.alternationIkiMs,
+    substitutionPct: errorMix?.substitutionPct,
+    omissionPct: errorMix?.omissionPct,
+    insertionPct: errorMix?.insertionPct,
+    kspc: kspc?.ratio,
+  }), [speed, typistIki, typistHandIkis, errorMix, kspc])
 
   const items: AnalyzeSummaryItem[] = useMemo(() => [
     {
@@ -334,7 +415,11 @@ export function TypingProfileCard({
         }),
       descriptionKey: 'analyze.summary.profile.errorMixDesc',
     },
-  ], [speed, speedBenchmark, handBalance, sfb, fatigue, kspc, errorMix, t])
+    {
+      labelKey: 'analyze.summary.profile.typistClusterLabel',
+      ...typistCellContent(typistClassification, t),
+    },
+  ], [speed, speedBenchmark, handBalance, sfb, fatigue, kspc, errorMix, typistClassification, t])
 
   return (
     <section className="flex flex-col gap-2" data-testid="analyze-typing-profile-section">
