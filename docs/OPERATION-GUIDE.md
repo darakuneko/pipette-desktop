@@ -1357,6 +1357,8 @@ Recording controls and the Monitor App toggle. Detailed in **Typing analytics re
 - **Base**: Select which layer to display (when the keyboard has multiple layers)
 - **Exit Typing View**: Return to the full editor
 
+> **Note**: The keyboard layout's live layer indicator follows momentary layer keys (`MO`, `LT`, `LM`) only, while they are held. Persistent layer switches (`TO`, `TG`, `DF`) are not tracked — the VIA/Vial protocol offers no way to read the keyboard's live layer state back, so a persistent switch triggered outside the app would silently desync from what's shown. Use **Base** above to tell the view which base layer the keyboard is actually on.
+
 Press Escape or click the keyboard area again to close the pane. A hint text appears at the bottom when hovering over the window. The window size, always-on-top preference, and the active menu tab are saved per keyboard.
 
 > **Note**: Auto-lock is suspended while in Typing View mode. If the keyboard is disconnected while in view-only mode, the window automatically restores to its normal size.
