@@ -8,7 +8,7 @@
 //    kept, overflow tombstoned), not a reject-at-cap like
 //    analyze-filter-store / snapshot-store. The trim itself lives in
 //    `sync/merge.ts` (`applyRunLogRetention`), shared with
-//    `sync-service.ts`'s post-merge step for this sync unit — see that
+//    `sync-merge-dispatch.ts`'s post-merge step for this sync unit — see that
 //    function's doc comment for why ranking by immutable `startedAt`
 //    (not local `savedAt`/LWW `updatedAt`) is what lets every device
 //    converge on the same kept set after a sync merge.
@@ -77,7 +77,7 @@ async function writeIndex(uid: string, index: RunLogIndex): Promise<void> {
 /** Best-effort unlink of the entries `applyRunLogRetention` just evicted
  *  during a local save — never throws (a file already gone, e.g. from a
  *  previous partial trim, is not an error). Kept private and separate
- *  from `sync-service.ts`'s own inline unlink for the same eviction
+ *  from `sync-merge-dispatch.ts`'s own inline unlink for the same eviction
  *  during a merge: the two run under different write-lock/ownership
  *  assumptions, so duplicating this handful of lines is simpler than
  *  sharing it across a module boundary that isn't otherwise coupled. */
