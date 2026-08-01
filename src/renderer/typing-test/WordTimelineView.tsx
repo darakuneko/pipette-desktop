@@ -320,6 +320,12 @@ export function WordTimelineView({ uid, runId, result, onClose }: Props) {
 
         {!loading && !loadError && model && (
           <div className="flex min-h-0 flex-1 flex-col gap-3">
+            {/* Deliberate exception to the Analyze chart-above-stats rule
+                (.claude/tasks/backlog/Task-analyze-section-layout-consistency.md):
+                this grid is the modal's summary header, not a chart-adjacent
+                stat row — it must sit above the legend/zoom controls and the
+                canvas, all of which the user reads top-to-bottom before ever
+                reaching the scrollable, flex-grow canvas below. */}
             <AnalyzeStatGrid items={summaryItems} ariaLabelKey="editor.typingTest.history.timeline.modalTitle" />
 
             {model.charCorrelationUnavailable && (

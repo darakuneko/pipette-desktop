@@ -121,3 +121,34 @@ describe('WpmChart benchmark reference line', () => {
     expect(screen.queryByTestId('analyze-reference-line')).toBeNull()
   })
 })
+
+describe('WpmChart section order', () => {
+  beforeEach(() => {
+    setVialAPI()
+  })
+
+  // Regression guard, same pattern as RolloverSection's order-lock test
+  // (.claude/tasks/backlog/Task-analyze-section-layout-consistency.md):
+  // pins chart-then-stat order in timeSeries mode.
+  it('renders the chart above the stat card in timeSeries mode', async () => {
+    renderChart({ viewMode: 'timeSeries' })
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-wpm-summary')).toBeTruthy()
+    })
+    const plot = screen.getByTestId('analyze-wpm-plot')
+    const summary = screen.getByTestId('analyze-wpm-summary')
+    expect(plot.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  // Same guard for the timeOfDay bar chart, which shares the same
+  // AnalyzeStatGrid testid as timeSeries above.
+  it('renders the chart above the stat card in timeOfDay mode', async () => {
+    renderChart({ viewMode: 'timeOfDay' })
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-wpm-summary')).toBeTruthy()
+    })
+    const plot = screen.getByTestId('analyze-wpm-plot')
+    const summary = screen.getByTestId('analyze-wpm-summary')
+    expect(plot.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+})
