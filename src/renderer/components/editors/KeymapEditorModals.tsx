@@ -16,6 +16,7 @@ import { TapDanceJsonEditor } from './TapDanceJsonEditor'
 import { JsonEditorModal } from './JsonEditorModal'
 import { comboToJson, parseCombo, keyOverrideToJson, parseKeyOverride, altRepeatKeyToJson, parseAltRepeatKey, macroToJson, parseMacro } from './json-entry-serializers'
 import { QmkSettingsModals } from './QmkSettingsModal'
+import { KeymapApplyConfirmModal } from '../key-labels/KeymapApplyConfirmModal'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 import type { EntryJsonEditor, MacroJsonEditor, VisibleQmkModals } from './useKeymapJsonEditors'
 
@@ -74,6 +75,13 @@ export interface KeymapEditorModalsProps {
   onSettingsUpdate?: (qsid: number, data: number[]) => void
   visibleModals: VisibleQmkModals
   closeSettings: (key: string) => void
+
+  // --- Key Label "apply to keymap" confirm modal ---
+  keymapApplyOpen?: boolean
+  keymapApplyLabelName?: string
+  keymapApplyBusy?: boolean
+  onKeymapApplyConfirm?: () => void
+  onKeymapApplyCancel?: () => void
 }
 
 export function KeymapEditorModals({
@@ -86,6 +94,7 @@ export function KeymapEditorModals({
   comboEntries, keyOverrideEntries, altRepeatKeyEntries,
   tdJson, comboJson, koJson, arkJson, macroJson,
   supportedQsids, qmkSettingsGet, qmkSettingsSet, qmkSettingsReset, onSettingsUpdate, visibleModals, closeSettings,
+  keymapApplyOpen, keymapApplyLabelName, keymapApplyBusy, onKeymapApplyConfirm, onKeymapApplyCancel,
 }: KeymapEditorModalsProps) {
   const { t } = useTranslation()
 
@@ -182,6 +191,14 @@ export function KeymapEditorModals({
           qmkSettingsSet={qmkSettingsSet} qmkSettingsReset={qmkSettingsReset}
           onSettingsUpdate={onSettingsUpdate} visibleModals={visibleModals} onCloseModal={closeSettings} />
       )}
+
+      <KeymapApplyConfirmModal
+        open={!!keymapApplyOpen}
+        labelName={keymapApplyLabelName ?? ''}
+        onApply={() => onKeymapApplyConfirm?.()}
+        onCancel={() => onKeymapApplyCancel?.()}
+        busy={!!keymapApplyBusy}
+      />
     </>
   )
 }
