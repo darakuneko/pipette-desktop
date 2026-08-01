@@ -38,6 +38,7 @@
 // `modal-tabs.tsx`).
 
 import { useTranslation } from 'react-i18next'
+import { BTN_PRIMARY_FOOTER } from '../../constants/ui-tokens'
 
 export type KeymapPackTab = 'pack' | 'base'
 
@@ -98,5 +99,40 @@ export function KeymapPackTabs({ activeTab, onTabChange, packName }: KeymapPackT
         {t('keyLabels.qwertyDefaultShort')}
       </button>
     </div>
+  )
+}
+
+export interface KeymapPackApplyButtonProps {
+  onRequestKeymapApply?: () => void
+  keymapApplyBusy?: boolean
+  keymapApplyError?: string | null
+}
+
+/** The simulation tab's own Apply button (layer-indicator row's
+ *  `footerExtra`) — reachable only while the pack tab is showing (see
+ *  `KeymapEditor`'s `footerExtra={...}`, passed exclusively to the
+ *  pack-tab `<KeyboardPane>`). Renders nothing when the host has no
+ *  `onRequestKeymapApply` handler wired up (e.g. `keymapEditable` is
+ *  false) — same as the previous inline `undefined` fallback. */
+export function KeymapPackApplyButton({ onRequestKeymapApply, keymapApplyBusy, keymapApplyError }: KeymapPackApplyButtonProps): JSX.Element | null {
+  const { t } = useTranslation()
+  if (!onRequestKeymapApply) return null
+  return (
+    <span className="flex items-center gap-2">
+      <button
+        type="button"
+        className={BTN_PRIMARY_FOOTER}
+        onClick={onRequestKeymapApply}
+        disabled={!!keymapApplyBusy}
+        data-testid="keymap-pack-apply-button"
+      >
+        {t('common.apply')}
+      </button>
+      {keymapApplyError && (
+        <span className="text-xs text-danger" data-testid="keymap-apply-error">
+          {t('keyLabels.keymapApply.errorPartial')}
+        </span>
+      )}
+    </span>
   )
 }
