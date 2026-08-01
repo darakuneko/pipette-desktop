@@ -51,6 +51,7 @@ import { TYPING_TEST_TEXT_SYNC_UNIT } from '../typing-test-text-store'
 import { I18N_SYNC_UNIT_PREFIX, I18N_INDEX_SYNC_UNIT } from '../../shared/types/i18n-store'
 import { THEME_SYNC_UNIT_PREFIX, THEME_INDEX_SYNC_UNIT } from '../../shared/types/theme-store'
 import { broadcastToAllWindows } from '../utils/broadcast'
+import { runPackGcAfterPass } from './pack-gc'
 import {
   parseTypingAnalyticsDeviceDaySyncUnit,
   typingAnalyticsDeviceDaySyncUnit,
@@ -74,7 +75,7 @@ import {
   type TypingSyncState,
 } from '../typing-analytics/sync-state'
 import { log } from '../logger'
-import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile, SyncDataScanResult, SyncScope, SyncCredentialFailureReason, SyncCredentialResult } from '../../shared/types/sync'
+import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile, SyncDataScanResult, SyncScope, SyncCredentialFailureReason, SyncCredentialResult, SyncExecuteStatus, SyncSkipReason } from '../../shared/types/sync'
 import { syncCredentialI18nKey } from '../../shared/types/sync'
 
 export class SyncCredentialError extends Error {
@@ -144,24 +145,28 @@ function errorMessage(err: unknown, fallback: string): string {
 export function matchesScope(syncUnit: string | null, scope: SyncScope): boolean {
   if (scope === 'all') return true
   if (syncUnit === null) return false
+  // 'packs' is checked before the unconditional keyboard-meta/key-label/
+  // typing-test-text `true`s below — otherwise a 'packs'-scoped download
+  // would also pull those unrelated global units in, since their own
+  // checks don't otherwise care what scope was asked for. Returning here
+  // also means 'packs' never falls through to the i18n/themes rejection
+  // further down, and never matches anything else (favorites/keyboards).
+  // See .claude/docs/DATA-INVENTORY.md §3.7's packs-scope definition for
+  // the full discovery-route writeup this ordering exists to support.
+  if (scope === 'packs') {
+    return syncUnit.startsWith(I18N_SYNC_UNIT_PREFIX) || syncUnit.startsWith(THEME_SYNC_UNIT_PREFIX)
+  }
   if (syncUnit === KEYBOARD_META_SYNC_UNIT) return true // meta follows every scope
   if (syncUnit === KEY_LABEL_SYNC_UNIT) return true // key-labels follow every scope (global, all-keyboard)
   if (syncUnit === TYPING_TEST_TEXT_SYNC_UNIT) return true // imported typing-test texts follow every scope (global, all-keyboard)
-  // i18n/themes only match scope 'all' (short-circuited above) — excluded
-  // from favorites/keyboard-scoped syncs (connect-time initial sync,
-  // manual per-keyboard sync), but both DO participate in the 3-minute
-  // poll and any other scope-'all' sync, symmetrically. i18n additionally
-  // gets its own startup reconcile via i18n-startup-sync (Hub-linked
-  // packs only); themes have no Hub auto-update path.
-  //
-  // Production UI has no button that calls executeSync with scope
-  // 'all' — connect-time initial sync and manual per-keyboard sync both
-  // pass a scope this function rejects for i18n/themes. So the 3-minute
-  // poll (which always uses 'all' — see pollForRemoteChanges) is
-  // currently the ONLY download route that discovers a remote-only
-  // i18n/theme pack on a fresh machine; the Pack Manager's own explicit
-  // Hub pull is the only immediate alternative. Tracked as
-  // Task-sync-remote-reset-and-discovery-gaps.md's "問題 2".
+  // i18n/themes only match 'all' or 'packs' (both short-circuited above) —
+  // excluded from favorites/keyboard-scoped syncs. NOT reliably discovered
+  // by the 3-minute poll alone despite it using 'all': polling only merges
+  // a CHANGED modifiedTime since its own last snapshot, so a pack already
+  // on Drive before this machine's first poll is invisible to it forever.
+  // See matchesScope's doc in .claude/docs/DATA-INVENTORY.md §3.7 (and
+  // .claude/rules/settings-persistence.md) for the full writeup and the
+  // 'packs'-scope discovery routes that actually close this gap.
   if (syncUnit.startsWith(I18N_SYNC_UNIT_PREFIX) || syncUnit.startsWith(THEME_SYNC_UNIT_PREFIX)) return false
   if (scope === 'favorites') return syncUnit.startsWith('favorites/')
   if (typeof scope === 'object' && 'favorites' in scope) {
@@ -261,9 +266,27 @@ export async function listUndecryptableFiles(): Promise<UndecryptableFile[]> {
   return findUndecryptableFiles(result.password, result.dataFiles)
 }
 
+/** Shared by the no-credentials early return and (spread into) the
+ *  success path below, so a future new `SyncDataScanResult` field only
+ *  needs a default added here once instead of in both literals. */
+const EMPTY_SCAN_RESULT: SyncDataScanResult = {
+  keyboards: [],
+  keyboardNames: {},
+  favorites: [],
+  i18nPacks: [],
+  themePacks: [],
+  keyLabels: false,
+  typingTestTexts: false,
+  hasI18nData: false,
+  hasThemesData: false,
+  undecryptable: [],
+}
+
 export async function scanRemoteData(): Promise<SyncDataScanResult> {
   const result = await fetchValidatedDataFiles()
-  if (!result) return { keyboards: [], keyboardNames: {}, favorites: [], i18nPacks: [], themePacks: [], undecryptable: [] }
+  if (!result) {
+    return EMPTY_SCAN_RESULT
+  }
   const { password, dataFiles } = result
 
   // Categorize from filenames (no download needed)
@@ -271,6 +294,10 @@ export async function scanRemoteData(): Promise<SyncDataScanResult> {
   const favoriteTypes = new Set<string>()
   const i18nPackIds = new Set<string>()
   const themePackIds = new Set<string>()
+  let keyLabelsFound = false
+  let typingTestTextsFound = false
+  let i18nIndexFound = false
+  let themesIndexFound = false
   for (const file of dataFiles) {
     const syncUnit = syncUnitFromFileName(file.name)
     if (!syncUnit) continue
@@ -286,10 +313,19 @@ export async function scanRemoteData(): Promise<SyncDataScanResult> {
     } else if (syncUnit.startsWith('themes/packs/')) {
       const packId = syncUnit.slice('themes/packs/'.length)
       if (packId) themePackIds.add(packId)
+    } else if (syncUnit === KEY_LABEL_SYNC_UNIT) {
+      keyLabelsFound = true
+    } else if (syncUnit === TYPING_TEST_TEXT_SYNC_UNIT) {
+      typingTestTextsFound = true
+    } else if (syncUnit === I18N_INDEX_SYNC_UNIT) {
+      // The index can outlive every pack id it once listed (all
+      // tombstoned and GC'd) — tracked separately so `hasI18nData`
+      // below still surfaces a resettable target in that 30-day dead
+      // zone instead of going silent just because `i18nPackIds` is empty.
+      i18nIndexFound = true
+    } else if (syncUnit === THEME_INDEX_SYNC_UNIT) {
+      themesIndexFound = true
     }
-    // i18n/index and themes/index are also returned by syncUnitFromFileName
-    // but we only surface per-pack ids here — the index is implicitly
-    // covered when the user resets any pack.
   }
 
   // Use whatever names are already in the local meta index (populated by executeSync/backfill
@@ -306,11 +342,16 @@ export async function scanRemoteData(): Promise<SyncDataScanResult> {
   const undecryptable = await findUndecryptableFiles(password, dataFiles)
 
   return {
+    ...EMPTY_SCAN_RESULT,
     keyboards: [...keyboardUids],
     keyboardNames,
     favorites: [...favoriteTypes],
     i18nPacks: [...i18nPackIds],
     themePacks: [...themePackIds],
+    keyLabels: keyLabelsFound,
+    typingTestTexts: typingTestTextsFound,
+    hasI18nData: i18nIndexFound || i18nPackIds.size > 0,
+    hasThemesData: themesIndexFound || themePackIds.size > 0,
     undecryptable,
   }
 }
@@ -768,11 +809,26 @@ async function syncOrUpload(
   }
 }
 
+/** Real outcome of an `executeSync` call — distinct from the `void`
+ *  return the caller used to get, which made a busy-race skip and a
+ *  missing-credentials skip both look identical to a fully-completed
+ *  sync (neither throws; both just emit progress and return). Threaded
+ *  through SYNC_EXECUTE's IPC result as `status`/`skipReason` — see
+ *  `SyncOperationResult`'s doc in shared/types/sync.ts for why `success`
+ *  itself is deliberately left alone. */
+export interface SyncExecuteResult {
+  status: SyncExecuteStatus
+  /** Populated only when `status === 'skipped'`. */
+  skipReason?: SyncSkipReason
+  /** Populated only when `status === 'partial'`. */
+  failedUnits?: string[]
+}
+
 export async function executeSync(
   direction: 'download' | 'upload',
   scope: SyncScope = 'all',
-): Promise<void> {
-  if (isSyncing) return
+): Promise<SyncExecuteResult> {
+  if (isSyncing) return { status: 'skipped', skipReason: 'busy' }
   isSyncing = true
 
   try {
@@ -784,7 +840,7 @@ export async function executeSync(
         reason: credentials.reason,
         message: syncCredentialI18nKey('readiness', credentials.reason),
       })
-      return
+      return { status: 'skipped', skipReason: credentials.reason }
     }
     const password = credentials.password
 
@@ -823,6 +879,7 @@ export async function executeSync(
 
     if (failedUnits.length === 0) {
       emitProgress({ direction, status: 'success', message: 'Sync complete' })
+      return { status: 'completed' }
     } else {
       emitProgress({
         direction,
@@ -830,6 +887,7 @@ export async function executeSync(
         message: `${failedUnits.length} sync unit(s) failed`,
         failedUnits,
       })
+      return { status: 'partial', failedUnits }
     }
   } catch (err) {
     emitProgress({
@@ -892,6 +950,12 @@ async function executeDownloadSync(
       }),
     ),
   )
+
+  // Pass-level GC — see pack-gc.ts's doc for why this must never be
+  // triggered from inside a single unit's own merge callback above, and
+  // for why `failedUnits` is passed separately from the full attempted
+  // list (a failed unit skips that store's sweep, not the whole GC call).
+  await runPackGcAfterPass(filesToDownload.map((f) => f.syncUnit), failedUnits)
 
   return failedUnits
 }
@@ -1288,6 +1352,7 @@ async function pollForRemoteChanges(): Promise<void> {
     updateRemoteState(remoteFiles)
 
     const limit = pLimit(SYNC_CONCURRENCY)
+    const failedUnits: string[] = []
     await Promise.allSettled(
       changedFiles.map(({ file: remoteFile, syncUnit }) =>
         limit(async () => {
@@ -1300,6 +1365,7 @@ async function pollForRemoteChanges(): Promise<void> {
               message: 'Sync complete',
             })
           } catch (err) {
+            failedUnits.push(syncUnit)
             if (err instanceof MalformedSyncBundleError) {
               // Contained per-unit, same as any other poll failure — but
               // deliberately do NOT forget the modifiedTime below: this
@@ -1324,6 +1390,12 @@ async function pollForRemoteChanges(): Promise<void> {
         }),
       ),
     )
+
+    // Pass-level GC — see pack-gc.ts's doc for why this must never be
+    // triggered from inside a single unit's own merge callback above, and
+    // for why `failedUnits` is passed separately (skips that store's
+    // sweep only, not the whole GC call).
+    await runPackGcAfterPass(changedFiles.map((f) => f.syncUnit), failedUnits)
   } catch {
     // Polling failed — will retry next interval
   } finally {

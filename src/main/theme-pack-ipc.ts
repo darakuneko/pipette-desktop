@@ -8,6 +8,7 @@
 import { BrowserWindow } from 'electron'
 import { IpcChannels } from '../shared/ipc/channels'
 import { secureHandle } from './ipc-guard'
+import { broadcastToAllWindows } from './utils/broadcast'
 import { readSelectedImportFiles } from './pack-import-dialog'
 import {
   listMetas,
@@ -28,9 +29,7 @@ import type {
 } from '../shared/types/theme-store'
 
 function broadcastChanged(): void {
-  for (const win of BrowserWindow.getAllWindows()) {
-    win.webContents.send(IpcChannels.THEME_PACK_CHANGED)
-  }
+  broadcastToAllWindows(IpcChannels.THEME_PACK_CHANGED)
 }
 
 export function setupThemePackStore(): void {

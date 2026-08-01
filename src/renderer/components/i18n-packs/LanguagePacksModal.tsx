@@ -32,6 +32,7 @@ import { localizeHubError } from '../../utils/hub-error-i18n'
 import { PackManagerModal } from '../pack-modal/PackManagerModal'
 import { PackHubTab } from '../pack-modal/PackHubTab'
 import { PackSortButton } from '../pack-modal/PackSortButton'
+import { usePackCloudPull } from '../pack-modal/usePackCloudPull'
 import { useHubOrigin } from '../pack-modal/useHubOrigin'
 import { useHubSearchList } from '../pack-modal/useHubSearchList'
 import { useDragReorder } from '../pack-modal/useDragReorder'
@@ -705,6 +706,10 @@ export function LanguagePacksModal({
     // `importing` itself flips, not on every unrelated render.
   }, [importing])
 
+  // Explicit cloud pull: a 'packs'-scoped download (i18n + theme packs
+  // only) — see usePackCloudPull's doc for the discovery-gap rationale.
+  const pull = usePackCloudPull(setActionError, t, 'i18n.errorGeneric')
+
   const handleHubDownload = useCallback(async (postId: string): Promise<void> => {
     setPendingId(postId)
     setActionError(null)
@@ -738,6 +743,7 @@ export function LanguagePacksModal({
         importButton: 'language-packs-import-button',
         errorBanner: 'language-packs-error',
         importFeedback: 'language-packs-import-feedback',
+        pullButton: 'language-packs-pull-button',
       }}
       activeTab={activeTab}
       onTabChange={setActiveTab}
@@ -753,6 +759,10 @@ export function LanguagePacksModal({
       importLabel={t('i18n.import')}
       onImport={() => void runImport()}
       importDisabled={importing}
+      pullLabel={pull.pulling ? t('common.pulling') : t('common.pullFromCloud')}
+      onPull={() => void pull.pull()}
+      pullDisabled={importing}
+      pulling={pull.pulling}
       sortButton={(
         <PackSortButton
           direction={nameSort.direction}

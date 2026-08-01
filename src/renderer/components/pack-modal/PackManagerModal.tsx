@@ -9,7 +9,7 @@
 
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { BTN_PRIMARY } from '../../constants/ui-tokens'
+import { BTN_PRIMARY, PACK_TOOLBAR_BTN } from '../../constants/ui-tokens'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { PackTabButton } from './PackTabButton'
 import type { PackManagerTabId } from './pack-modal-types'
@@ -29,6 +29,9 @@ export interface PackManagerModalTestIds {
   /** Toolbar "Imported {{name}}" / "Updated {{name}}" feedback, shown
    *  next to the Name sort button. All three modals set this. */
   importFeedback: string
+  /** "Pull from Cloud" button, rendered next to Import — omit for a
+   *  pack modal with no cloud-pull affordance (Key Labels). */
+  pullButton?: string
 }
 
 export interface PackManagerModalProps {
@@ -55,6 +58,22 @@ export interface PackManagerModalProps {
    *  flight — every modal passes its own `importing` state so a
    *  double-click can't queue a second concurrent batch. */
   importDisabled?: boolean
+  /** Label for the "Pull from Cloud" toolbar button, rendered next to
+   *  Import in the Installed tab toolbar. Omit (along with `onPull`)
+   *  for a pack modal with no cloud-pull affordance (Key Labels) — the
+   *  shell renders the button itself so both Language Packs and Theme
+   *  Packs share one implementation instead of each building their own
+   *  `<button>`. Callers swap this between "Pull from Cloud" and
+   *  "Pulling…" themselves (same convention as `searchButtonLabel`). */
+  pullLabel?: string
+  onPull?: () => void
+  /** External lock on the Pull button — each modal passes its own
+   *  `importing` state so a batch import can't run concurrently with a
+   *  pull. ORed with `pulling` below for the button's actual disabled
+   *  state, so callers don't have to combine the two themselves. */
+  pullDisabled?: boolean
+  /** This pull's own in-flight state (from `usePackCloudPull`). */
+  pulling?: boolean
   /** "Name" sort toggle rendered at the left end of the Installed
    *  toolbar, opposite Import. Required — all three modals have one. */
   sortButton: ReactNode
@@ -91,6 +110,10 @@ export function PackManagerModal({
   importLabel,
   onImport,
   importDisabled,
+  pullLabel,
+  onPull,
+  pullDisabled,
+  pulling,
   sortButton,
   importFeedback,
   actionError,
@@ -166,15 +189,28 @@ export function PackManagerModal({
                 </span>
               )}
             </div>
-            <button
-              type="button"
-              onClick={onImport}
-              disabled={importDisabled}
-              className="shrink-0 rounded border border-edge bg-surface px-3 py-1.5 text-sm font-medium text-content hover:bg-surface-hover disabled:opacity-50"
-              data-testid={testids.importButton}
-            >
-              {importLabel}
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              {onPull && (
+                <button
+                  type="button"
+                  onClick={onPull}
+                  disabled={pulling || pullDisabled}
+                  className={PACK_TOOLBAR_BTN}
+                  data-testid={testids.pullButton}
+                >
+                  {pullLabel}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onImport}
+                disabled={importDisabled}
+                className={PACK_TOOLBAR_BTN}
+                data-testid={testids.importButton}
+              >
+                {importLabel}
+              </button>
+            </div>
           </div>
         )}
 

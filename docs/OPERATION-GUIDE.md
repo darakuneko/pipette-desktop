@@ -159,8 +159,9 @@ The left sidebar provides a **tree navigation** with the following structure:
   - **Keyboards**: Browse saved keyboard snapshots. Click a keyboard to view, load, export, or delete entries
   - **Typing**: Recorded typing-analytics data per keyboard — a per-day list (date, keystrokes, active time) with day selection for deleting, plus export / import of the recorded days
   - **Favorites**: Tap Dance, Macro, Combo, Key Override, Alt Repeat Key — each type shows its saved entries with rename, delete, export, and Hub actions
-  - **Application**: Import/export local data or reset selected targets (keyboard data, favorites, app settings)
-- **Sync** (when Cloud Sync is configured): Lists keyboards that exist only in Google Drive (not yet downloaded on this device). Each entry is labeled with the keyboard's real name, resolved from the synced name index rather than from the raw UID. Click a remote-only keyboard to download it on demand — a spinner is shown while fetching, and a failure message appears inline if the download cannot complete. Once downloaded, the keyboard moves into the **Local › Keyboards** branch. To clean up orphaned encrypted files that can no longer be decrypted, use **Undecryptable Files** in the Settings **Data** tab instead (see §6.1)
+  - **Application**: Import/export local data, or reset application settings
+- **Sync** (when Cloud Sync is configured): Lists keyboards that exist only in Google Drive (not yet downloaded on this device). Each entry is labeled with the keyboard's real name, resolved from the synced name index rather than from the raw UID. Click a remote-only keyboard to download it on demand — a spinner is shown while fetching, and a failure message appears inline if the download cannot complete. Once downloaded, the keyboard moves into the **Local › Keyboards** branch
+  - **Cloud Data**: Reset targets that aren't tied to one keyboard — Favorites, Language Packs, Theme Packs, Key Labels, and imported Typing Test Texts. Only the targets actually present on Google Drive are listed. Each row has its own **Reset** button with a two-step confirmation (click Reset, then confirm or cancel); resetting removes that target's data from Google Drive only — local copies on this device are untouched, and a local copy that still exists re-uploads on the next sync (the same behavior Favorites already has). This is also where **Undecryptable Files** are listed and cleaned up: files that cannot be decrypted with the current password (e.g. encrypted with a forgotten previous password) appear as their own rows with a filename and a **Delete** button (two-step confirmation, one file at a time)
 - **Hub** (when Hub is connected): Manage Hub posts grouped by keyboard name
 
 Keyboards are shown by display name everywhere in this panel: on connect, a keyboard that has no saved name yet is automatically named from its USB product name, so even keyboards that never saved anything show a real name instead of a raw uid — including in the **Sync** list. Every keyboard list is sorted A–Z by display name (case-insensitive).
@@ -1592,7 +1593,7 @@ Operational errors (shown as the message directly, no reason code):
 |---------|---------|
 | "Cannot change password while sync is in progress." | A sync is already running — wait for it to finish |
 | "New password must be different from the current password." | The new password matches the existing one |
-| "Some files cannot be decrypted. Please scan and delete undecryptable files first." | Drive has files the current password cannot decrypt — use **Undecryptable Files** first |
+| "Some files cannot be decrypted. Please scan and delete undecryptable files first." | Drive has files the current password cannot decrypt — delete them first via the Data panel's **Sync › Cloud Data** (§1.3) |
 | "Sync password does not match. Please check your encryption password." | The current password fails to decrypt the remote password check — reconfirm the password you are providing |
 
 #### Sync Controls
@@ -1615,11 +1616,6 @@ If sync cannot run because the client is not ready, a specific readiness reason 
 | `noPasswordFile` | "Set a sync password to start syncing." |
 | `remoteCheckFailed` | "Couldn't reach Google Drive — sync is paused." |
 
-#### Undecryptable Files
-
-- Files that cannot be decrypted with the current password or are otherwise unreadable (e.g., encrypted with a forgotten previous password)
-- Click **Scan** to detect undecryptable files, select the ones to remove, then click **Delete Selected** to permanently delete them from Google Drive
-
 #### Sync Unavailable Alert
 
 - Displayed when the sync backend cannot be reached. Click **Retry** to attempt reconnection
@@ -1634,8 +1630,8 @@ See the [Data Guide](Data.md) for details on what is synced and how your data is
 
 Troubleshooting and data management functions are available in the **Data** panel (see §1.3):
 
-- **Local > Application**: Import/export local data or reset selected targets (keyboard data, favorites, app settings)
-- **Sync**: List remote-only keyboards by real name and download any one on demand (see §1.3). To delete encrypted files that cannot be decrypted, use the **Undecryptable Files** section above
+- **Local > Application**: Import/export local data, or reset application settings
+- **Sync**: List remote-only keyboards by real name and download any one on demand, plus reset global (non-keyboard) targets and delete undecryptable files under **Sync › Cloud Data** (see §1.3)
 
 #### Settings — Defaults
 
@@ -1815,6 +1811,8 @@ The Name button's three states (ascending/descending triangle, or a plain "Name"
 
 The **Import** button in the toolbar opens a file dialog that accepts **one or more** `.json` language packs at once. Re-importing a pack with the same `name` overwrites the existing entry. While the import runs, the list locks and the toolbar shows an **Importing…** indicator; a batch of two or more files shows a summary once it finishes — "Imported N files (success N, failure N)" — instead of the per-name feedback, and no row is auto-scrolled into view (see Key Labels §6.2 for the full behavior).
 
+A **Pull from Cloud** button sits next to Import (installed tab only). It runs a one-off download of every language and theme pack from Google Drive, so a pack another device already synced but this device hasn't seen yet shows up immediately, without waiting for the periodic background sync — it fails with an error if Cloud Sync isn't configured. The button shows a **Pulling…** state while it runs and disables during an in-flight import. The app also runs this same pull automatically, once, the first time a keyboard connects after Cloud Sync credentials are ready — after that first successful pull it doesn't run again automatically (a failure is retried on the next connection). Either path only affects language/theme packs — favorites, keyboard data, and other synced content are unaffected.
+
 **Find on Hub tab**
 
 ![Language Packs — Find on Hub](screenshots/language-packs-hub.png)
@@ -1879,6 +1877,8 @@ Drag the grip handle on the left of each row to reorder theme packs — the orde
 The Name button's three states (ascending/descending triangle, or a plain "Name" once you drag a row by hand) and what happens on a **single**-file import or Hub download — the new pack is inserted at its correct alphabetical position while a triangle is showing, an overwrite of an existing pack keeps its position, and a brief "Imported {name}" / "Updated {name}" message appears next to the Name button with the row scrolled into view — work exactly as described for Key Labels (§6.2); downloading from Hub follows the same placement rule.
 
 The **Import** button in the toolbar opens a file dialog that accepts **one or more** `.json` theme packs at once. Re-importing a pack with the same `name` overwrites the existing entry. While the import runs, the list locks and the toolbar shows an **Importing…** indicator; a batch of two or more files shows a summary once it finishes — "Imported N files (success N, failure N)" — instead of the per-name feedback, and no row is auto-scrolled into view (see Key Labels §6.2 for the full behavior).
+
+A **Pull from Cloud** button sits next to Import, with the same one-off download behavior (and the same automatic first-connection pull) described for Language Packs in §6.3 — a single pull refreshes both language and theme packs together.
 
 **Find on Hub tab**
 

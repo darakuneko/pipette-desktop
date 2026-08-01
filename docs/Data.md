@@ -255,11 +255,11 @@ App settings (theme, language, window state, etc.) are **not** synced.
 | **Is my data encrypted?** | **Yes.** All data is encrypted with AES-256-GCM using a key derived from your sync password (PBKDF2, 600,000 iterations) before it leaves your device. Google stores only encrypted blobs. |
 | **Can Pipette's developers read my synced data?** | **No.** Encryption happens on your device with your password. Without your sync password, the encrypted data is unreadable. |
 | **What happens if I sign out?** | Local data is preserved. Cloud data remains in Google Drive appDataFolder but is no longer synced. You can sign back in to resume syncing. |
-| **How do I delete all cloud data?** | Use "Reset Sync Data" in settings and select both keyboard and favorite data. This removes selected `keyboards_*.enc` / `favorites_*.enc` files from Google Drive appDataFolder. The keyboard name index (`meta_keyboard-names.enc`) and password check (`password-check.enc`) are retained; deletions are propagated to other signed-in devices via tombstone entries in the name index (garbage-collected after 30 days). |
+| **How do I delete all cloud data?** | Use the Data modal (☰ menu) — **Sync › Keyboards** → select a keyboard → **Delete All** removes that keyboard's cloud copy; **Sync › Cloud Data** resets Favorites, Language Packs, Theme Packs, Key Labels, and imported Typing Test Texts, each with its own two-step-confirm **Reset** row. Resetting a Cloud Data target only removes its Google Drive copy — a surviving local store re-uploads it on the next sync (the same behavior Favorites already has), so pair a Cloud Data reset with the matching local deletion if you want the data gone for good. The keyboard name index (`meta_keyboard-names.enc`) and password check (`password-check.enc`) are retained; deletions are propagated to other signed-in devices via tombstone entries in the name index (garbage-collected after 30 days). |
 | **What is stored on Google?** | Encrypted files named by sync unit (e.g., `keyboards_{uid}_snapshots.enc`, `favorites_tapDance.enc`, `meta_keyboard-names.enc`, `password-check.enc`). File names contain keyboard UIDs but no personal information. |
 | **How does authentication work?** | Standard Google OAuth 2.0 with PKCE (Proof Key for Code Exchange) via a local loopback redirect. No passwords are sent to any third-party server. |
 | **What happens if I change my password?** | All synced files are re-encrypted with the new password. No data is deleted — files are decrypted and re-encrypted in place. |
-| **What are undecryptable files?** | Files that cannot be decrypted with your current sync password or are otherwise unreadable (e.g., leftover from a previous password). You can scan for and delete them from the Data tab in settings. |
+| **What are undecryptable files?** | Files that cannot be decrypted with your current sync password or are otherwise unreadable (e.g., leftover from a previous password). |
 
 ### Google OAuth Scopes
 
@@ -346,6 +346,8 @@ Pipette can export keymap data in several formats. These are local file download
 | Export/Import Local Data | Included | Included | Included | - | - | - |
 
 > **Note**: Reset Local Data allows you to select individual targets — keyboard data, favorites, and app settings can each be reset independently.
+>
+> **Note**: Reset Sync Data's targets are not tied to one keyboard: keyboard data, Favorites, Language Packs, Theme Packs, Key Labels, and imported Typing Test Texts can each be reset independently, deleting only that target's copy on Google Drive (local copies on this device are untouched). Per-keyboard remote deletion lives in the Data modal's **Sync › Keyboards** list; the remaining global targets live in **Sync › Cloud Data** — both surface only the targets that actually exist on the remote and require a two-step confirmation before deleting.
 >
 > **Note**: Reset Keyboard Data also removes that keyboard's typing analytics: the active recording session is flushed and closed, the keyboard's rows are tombstoned in the SQLite query cache, and its JSONL master files are unlinked — so the keyboard disappears from the Analyze view immediately instead of lingering in the stale cache.
 >

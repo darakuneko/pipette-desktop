@@ -159,6 +159,7 @@ const vialAPI = {
   i18nPackSetHubPostId: vi.fn(),
   i18nPackHubTimestamps: vi.fn(),
   openExternal: vi.fn(),
+  syncExecute: vi.fn(),
 }
 
 Object.defineProperty(window, 'vialAPI', { value: vialAPI, writable: true })
@@ -221,6 +222,7 @@ describe('LanguagePacksModal', () => {
     vialAPI.i18nPackExport.mockResolvedValue({ success: true })
     vialAPI.i18nPackSetHubPostId.mockResolvedValue({ success: true })
     vialAPI.i18nPackHubTimestamps.mockResolvedValue({ success: true, data: { items: [] } })
+    vialAPI.syncExecute.mockResolvedValue({ success: true })
   })
 
   afterEach(() => {
@@ -1460,5 +1462,28 @@ describe('LanguagePacksModal', () => {
     fireEvent.click(screen.getByTestId('language-packs-import-button'))
     // Alpha < Charlie < English < Zeta
     await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['a', 'c', 'builtin-english', 'z']))
+  })
+
+  // Generic pull-button rendering/disabled-state behavior (label swap,
+  // disables while pulling) is shell-level, covered once in
+  // PackManagerModal.test.tsx — this file only exercises Language
+  // Packs' own wiring into usePackCloudPull.
+  describe('pull from cloud (C.3)', () => {
+    it('calls syncExecute with a packs-scoped download', async () => {
+      render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+      fireEvent.click(screen.getByTestId('language-packs-pull-button'))
+
+      await waitFor(() => expect(vialAPI.syncExecute).toHaveBeenCalledWith('download', 'packs'))
+    })
+
+    it('surfaces an error banner when the pull fails', async () => {
+      vialAPI.syncExecute.mockResolvedValueOnce({ success: false, error: 'network down' })
+      render(<LanguagePacksModal open onClose={vi.fn()} />)
+
+      fireEvent.click(screen.getByTestId('language-packs-pull-button'))
+
+      await waitFor(() => expect(screen.getByTestId('language-packs-error')).toHaveTextContent('network down'))
+    })
   })
 })

@@ -21,7 +21,7 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   return { ...actual, utimes: vi.fn(actual.utimes) }
 })
 
-import { mkdtemp, readFile, rm, stat, utimes } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rm, stat, utimes, writeFile } from 'node:fs/promises'
 
 let mockUserDataPath = ''
 
@@ -63,6 +63,7 @@ import {
   applySyncedPackBody,
   pinPackBodyMtime,
   statLocalPackMtime,
+  runGcUnderLock,
   __testing,
 } from '../i18n-pack-store'
 import { BUILTIN_ENGLISH_PACK_ID, I18N_INDEX_SYNC_UNIT } from '../../shared/types/i18n-store'
@@ -497,5 +498,101 @@ describe('i18n-pack-store sync robustness fixes (utimes degrade / pin CAS / malf
     expect(log).toHaveBeenCalledWith('warn', expect.stringContaining('dropped 1 unsafe remote meta id'))
     const all = await listAllMetas()
     expect(all.some((m) => m.id === 'good-1')).toBe(true)
+  })
+})
+
+// Orphan-file removal itself is now shared body (sweepOrphanFiles,
+// tested directly in sweep-orphan-pack-bodies.test.ts) — this file
+// keeps only a thin lock-behavior test: runGcUnderLock must not be able
+// to race a concurrent savePack's own read-modify-write of the index.
+describe('i18n-pack-store runGcUnderLock (D.2/single-lock GC: wired post-pass, lock-held)', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    mockUserDataPath = await mkdtemp(join(tmpdir(), 'i18n-pack-store-test-'))
+  })
+
+  afterEach(async () => {
+    await rm(mockUserDataPath, { recursive: true, force: true })
+  })
+
+  it('sweeps an orphaned pack body file with no matching index entry', async () => {
+    const kept = await savePack({ pack: makePack({ name: 'Kept' }) })
+    await writeFile(join(__testing.getPacksDir(), 'orphan-id.json'), JSON.stringify(makePack()), 'utf-8')
+
+    const result = await runGcUnderLock()
+
+    expect(result.swept).toBe(1)
+    const remaining = await readdir(__testing.getPacksDir())
+    expect(remaining).toContain(`${kept.data!.id}.json`)
+    expect(remaining).not.toContain('orphan-id.json')
+  })
+
+  it('serializes against a concurrent savePack instead of racing it (locked via withIndexWriteLock)', async () => {
+    // A brand-new pack's body write and its index write happen inside the
+    // same lock-held savePack call — runGcUnderLock's sweep must not be
+    // able to observe the body without the index (which would
+    // misclassify it as an orphan) by interleaving between the two. Run
+    // both concurrently: whichever gets the lock first must complete
+    // atomically before the other starts.
+    const [saveResult] = await Promise.all([
+      savePack({ pack: makePack({ name: 'Racer' }) }),
+      runGcUnderLock(),
+    ])
+
+    const all = await listAllMetas()
+    expect(all.some((m) => m.id === saveResult.data!.id)).toBe(true)
+    const files = await readdir(__testing.getPacksDir())
+    expect(files).toContain(`${saveResult.data!.id}.json`)
+  })
+
+  // M4: a corrupt/missing index must not be treated as "legitimately
+  // empty" when pack bodies still exist on disk — an empty-roster
+  // fallback there would make the sweep delete every one of them.
+  it('skips both purge and sweep when index.json is truncated/unparseable, keeping every pack body intact', async () => {
+    const saved = await savePack({ pack: makePack({ name: 'Survivor' }) })
+    await writeFile(__testing.getIndexPath(), '{ "metas": [ not valid json', 'utf-8')
+
+    const result = await runGcUnderLock()
+
+    expect(result).toEqual({ purged: 0, swept: 0 })
+    const remaining = await readdir(__testing.getPacksDir())
+    expect(remaining).toContain(`${saved.data!.id}.json`)
+    expect(log).toHaveBeenCalledWith('warn', expect.stringContaining(I18N_INDEX_SYNC_UNIT))
+  })
+
+  it('skips both purge and sweep when index.json is missing but pack bodies exist', async () => {
+    const saved = await savePack({ pack: makePack({ name: 'Orphaned-by-missing-index' }) })
+    await rm(__testing.getIndexPath(), { force: true })
+
+    const result = await runGcUnderLock()
+
+    expect(result).toEqual({ purged: 0, swept: 0 })
+    const remaining = await readdir(__testing.getPacksDir())
+    expect(remaining).toContain(`${saved.data!.id}.json`)
+  })
+
+  it('treats a missing index as legitimately empty when the packs dir is also empty/missing', async () => {
+    const result = await runGcUnderLock()
+
+    expect(result).toEqual({ purged: 0, swept: 0 })
+  })
+
+  // M3: options.skipSweep — set by pack-gc.ts when a sibling sync unit
+  // for this store failed to merge this pass. Purge still runs (index
+  // is trustworthy here — just possibly stale relative to a body still
+  // in flight); only the sweep is withheld.
+  it('skips only the sweep (not purge) when options.skipSweep is set, index-fails-body-succeeds scenario', async () => {
+    const kept = await savePack({ pack: makePack({ name: 'Kept' }) })
+    await writeFile(join(__testing.getPacksDir(), 'in-flight-body.json'), JSON.stringify(makePack()), 'utf-8')
+
+    const result = await runGcUnderLock({ skipSweep: true })
+
+    expect(result.swept).toBe(0)
+    const remaining = await readdir(__testing.getPacksDir())
+    expect(remaining).toContain(`${kept.data!.id}.json`)
+    // The body for the sync unit that failed this pass must survive —
+    // it has no index entry yet only because its own merge hasn't
+    // landed, not because it's a genuine orphan.
+    expect(remaining).toContain('in-flight-body.json')
   })
 })

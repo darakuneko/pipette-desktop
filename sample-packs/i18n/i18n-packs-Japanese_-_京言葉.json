@@ -1,5 +1,5 @@
 {
-  "version": "0.1.55",
+  "version": "0.1.57",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -44,7 +44,9 @@
     "importBatchFailed_one": "{{count}} 件、インポートできまへんでしたわ",
     "importBatchFailed_other": "{{count}} 件、インポートできまへんでしたわ",
     "importSummary_one": "{{count}} 件インポートしましたえ (成功{{success}}、失敗{{failure}})",
-    "importSummary_other": "{{count}} 件インポートしましたえ (成功{{success}}、失敗{{failure}})"
+    "importSummary_other": "{{count}} 件インポートしましたえ (成功{{success}}、失敗{{failure}})",
+    "pullFromCloud": "クラウドから取ってきますえ",
+    "pulling": "取ってきてますえ..."
   },
   "app": {
     "title": "Pipette",
@@ -756,16 +758,13 @@
     "manualSync": "手動同期",
     "sync": "同期しますえ",
     "resetTarget": {
-      "keyboardData": "キーボード",
       "favorites": "お気に入り",
-      "appSettings": "アプリケーション",
       "i18nPacks": "言語パック",
-      "themePacks": "テーマパック"
+      "themePacks": "テーマパック",
+      "keyLabels": "キーラベル",
+      "typingTestTexts": "タイピングテスト文章"
     },
-    "deleteSelected": "選んだもんを消しますえ",
     "resetTargetsConfirm": "選んだデータが完全に消えますえ。元には戻せまへんえ。",
-    "resetLocalTargetsConfirm": "選んだローカルデータが完全に消えますえ。元には戻せまへんえ。",
-    "resettingData": "データを消してますえ…",
     "syncing": "同期してますえ…",
     "continueOffline": "オフラインで続けますえ",
     "noSyncYet": "まだ同期してまへんえ",
@@ -778,17 +777,23 @@
     "importComplete": "インポートしましたえ",
     "importFailed": "インポートがあきまへんでしたえ",
     "passwordMismatch": "同期パスワードが合いまへんなぁ。暗号化パスワードを確認しておくれやす。",
-    "scanRemote": "スキャンしますえ",
     "scanning": "スキャンしてますえ…",
     "downloading": "ダウンロードしてますえ…",
     "noRemoteData": "リモートにデータがおへんなぁ",
     "undecryptableCount": "{{count}} 件開けへんファイルがありますえ",
-    "selectAll": "全部選びますえ",
-    "deselectAll": "全部はずしますえ",
     "checkingRemotePassword": "同期状態を確認してますえ…",
     "existingPasswordHint": "同期パスワードがもう設定されてますえ。他のデバイスで使うてたパスワードを入れておくれやす。",
     "unavailable": "接続先かネットワークに問題がありますえ。同期できまへんなぁ。",
-    "retry": "もういっぺんやりますえ"
+    "retry": "もういっぺんやりますえ",
+    "pullError": {
+      "busy": "いま同期してますさかい、ちょっと待っておくれやす。",
+      "unauthenticated": "クラウドから取ってくるにはGoogleにつないでおくれやす。",
+      "noPasswordFile": "クラウドから取ってくるには同期パスワードを設定しておくれやす。",
+      "decryptFailed": "保存してあるパスワードが読めまへんでしたえ。",
+      "keystoreUnavailable": "OSのキーチェーンが使えへんさかい、ここではクラウドから取ってこれまへんなぁ。",
+      "remoteCheckFailed": "Google Driveにつながりまへんでした。また後でやっておくれやす。",
+      "partial": "一部のパックの取得があきまへんでしたえ。もういっぺん試しておくれやす。"
+    }
   },
   "settings": {
     "title": "設定",
@@ -1689,6 +1694,7 @@
     "deleteAllConfirm": "同期データも全部消えますえ",
     "syncNoOrphans": "同期データは全部ここにありますえ",
     "resetAppSettings": "アプリケーション設定をリセットしますえ",
+    "cloudData": "クラウドデータ",
     "typing": {
       "title": "タイピング",
       "noKeyboards": "タイピングデータがおへんなぁ",

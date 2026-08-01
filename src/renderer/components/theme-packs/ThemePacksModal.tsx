@@ -24,6 +24,7 @@ import { PackManagerModal } from '../pack-modal/PackManagerModal'
 import { PackHubTab } from '../pack-modal/PackHubTab'
 import { PackHubResultRow } from '../pack-modal/PackHubResultRow'
 import { PackSortButton } from '../pack-modal/PackSortButton'
+import { usePackCloudPull } from '../pack-modal/usePackCloudPull'
 import { useHubOrigin } from '../pack-modal/useHubOrigin'
 import { useHubSearchList } from '../pack-modal/useHubSearchList'
 import { useDragReorder } from '../pack-modal/useDragReorder'
@@ -494,6 +495,10 @@ export function ThemePacksModal({
     }
   }, [store, t])
 
+  // Explicit cloud pull: a 'packs'-scoped download (i18n + theme packs
+  // only) — see usePackCloudPull's doc for the discovery-gap rationale.
+  const pull = usePackCloudPull(setActionError, t, 'themePacks.parseError')
+
   const handleHubDownload = useCallback(async (postId: string): Promise<void> => {
     setPendingId(postId)
     setActionError(null)
@@ -540,6 +545,7 @@ export function ThemePacksModal({
         importButton: 'theme-packs-import-button',
         errorBanner: 'theme-packs-error',
         importFeedback: 'theme-packs-import-feedback',
+        pullButton: 'theme-packs-pull-button',
       }}
       activeTab={activeTab}
       onTabChange={handleTabChange}
@@ -555,6 +561,10 @@ export function ThemePacksModal({
       importLabel={t('i18n.import')}
       onImport={() => void runImport()}
       importDisabled={importing}
+      pullLabel={pull.pulling ? t('common.pulling') : t('common.pullFromCloud')}
+      onPull={() => void pull.pull()}
+      pullDisabled={importing}
+      pulling={pull.pulling}
       sortButton={(
         <PackSortButton
           direction={nameSort.direction}

@@ -13,6 +13,7 @@ import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { buildSubsetFromKeys } from '../../../shared/i18n/coverage'
 import { downloadJson } from '../../utils/download-json'
+import { PACK_TOOLBAR_BTN } from '../../constants/ui-tokens'
 
 export interface MissingKeysModalProps {
   open: boolean
@@ -76,7 +77,7 @@ export function MissingKeysModal({
             type="button"
             disabled={missingKeys.length === 0}
             onClick={handleExport}
-            className="shrink-0 rounded border border-edge bg-surface px-3 py-1.5 text-sm font-medium text-content hover:bg-surface-hover disabled:opacity-50"
+            className={PACK_TOOLBAR_BTN}
             data-testid="missing-keys-modal-export"
           >
             {t('keyLabels.actionExport')}

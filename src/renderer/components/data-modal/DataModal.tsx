@@ -5,13 +5,15 @@ import { useTranslation } from 'react-i18next'
 import { useTroubleshooting } from '../../hooks/useTroubleshooting'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
-import { BTN_SECONDARY, BTN_DANGER_OUTLINE } from '../../constants/ui-tokens'
+import { BTN_SECONDARY } from '../../constants/ui-tokens'
 import { HubPostRow, DEFAULT_PER_PAGE } from '../hub-post-shared'
 import { DataNavTree } from './DataNavTree'
 import { DataNavBreadcrumb } from './DataNavBreadcrumb'
 import { FavoriteTabContent } from './FavoriteTabContent'
 import { KeyboardSavesContent } from './KeyboardSavesContent'
 import { TypingAnalyticsContent } from './TypingAnalyticsContent'
+import { CloudDataContent } from './CloudDataContent'
+import { ConfirmResetRow } from './ConfirmResetRow'
 import { useDataNavTree } from './useDataNavTree'
 import type { FavoriteType } from '../../../shared/types/favorite-store'
 import type { FavHubEntryResult } from '../editors/FavoriteHubActions'
@@ -36,8 +38,6 @@ interface Props {
   onFavUpdateOnHub?: (type: FavoriteType, entryId: string) => void
   onFavRemoveFromHub?: (type: FavoriteType, entryId: string) => void
   onFavRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
-  onResetStart?: () => void
-  onResetEnd?: () => void
 }
 
 export function DataModal({
@@ -58,20 +58,13 @@ export function DataModal({
   onFavUpdateOnHub,
   onFavRemoveFromHub,
   onFavRenameOnHub,
-  onResetStart,
-  onResetEnd,
 }: Props) {
   const { t } = useTranslation()
   const showHubTab = hubEnabled && hubAuthenticated
   const syncEnabled = sync.authStatus.authenticated && sync.hasPassword
   const nav = useDataNavTree({ showHubTab, syncEnabled })
 
-  const troubleshoot = useTroubleshooting({
-    sync,
-    active: nav.activePath?.section === 'local',
-    onResetStart,
-    onResetEnd,
-  })
+  const troubleshoot = useTroubleshooting()
 
   useEscapeClose(onClose, !troubleshoot.busy)
 
@@ -227,6 +220,17 @@ export function DataModal({
           mode="sync"
           machineHash={path.machineHash}
           onDeleted={() => { void nav.refreshTypingKeyboards() }}
+        />
+      )
+    }
+
+    if (path.page === 'cloud-data') {
+      return (
+        <CloudDataContent
+          sync={sync}
+          scanResult={nav.rawSyncScanResult}
+          scanning={nav.syncScanning}
+          onRescan={nav.handleSyncScan}
         />
       )
     }
@@ -388,22 +392,22 @@ function AppSettingsReset({
   }
 
   return (
-    <div className="flex items-center justify-between" data-testid="app-settings-reset">
-      <span className="text-sm text-content-secondary">{t('dataModal.resetAppSettings')}</span>
-      {confirming ? (
-        <div className="flex items-center gap-2">
-          <button type="button" className={BTN_DANGER_OUTLINE} onClick={() => void handleReset()} disabled={troubleshoot.busy} data-testid="app-reset-confirm">
-            {t('common.confirmReset')}
-          </button>
-          <button type="button" className={BTN_SECONDARY} onClick={() => setConfirming(false)} data-testid="app-reset-cancel">
-            {t('common.cancel')}
-          </button>
-        </div>
-      ) : (
-        <button type="button" className={BTN_DANGER_OUTLINE} onClick={() => setConfirming(true)} disabled={troubleshoot.busy} data-testid="app-reset-btn">
-          {t('common.reset')}
-        </button>
-      )}
-    </div>
+    <ConfirmResetRow
+      rowClassName="flex items-center justify-between"
+      rowTestid="app-settings-reset"
+      labelClassName="text-sm text-content-secondary"
+      label={t('dataModal.resetAppSettings')}
+      triggerLabel={t('common.reset')}
+      confirmLabel={t('common.confirmReset')}
+      cancelLabel={t('common.cancel')}
+      confirming={confirming}
+      busy={troubleshoot.busy}
+      onTrigger={() => setConfirming(true)}
+      onConfirm={() => void handleReset()}
+      onCancel={() => setConfirming(false)}
+      triggerTestid="app-reset-btn"
+      confirmTestid="app-reset-confirm"
+      cancelTestid="app-reset-cancel"
+    />
   )
 }

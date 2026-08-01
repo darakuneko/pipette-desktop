@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useAutoLock } from './useAutoLock'
 import { isKeyboardDefinition, isVilFile, isVilFileV1, VILFILE_CURRENT_VERSION } from '../../shared/vil-file'
 import type { DeviceInfo, VilFile, KeyboardDefinition } from '../../shared/types/protocol'
-import type { SyncScope } from '../../shared/types/sync'
+import type { SyncScope, SyncOperationResult } from '../../shared/types/sync'
 import type { PipetteFileKeyboard, PipetteFileEntry } from '../app-types'
 
 interface Options {
@@ -31,8 +31,16 @@ interface Options {
   autoSync: boolean
   authenticated: boolean
   hasPassword: boolean
-  syncNow: (direction: 'download' | 'upload', scope?: SyncScope) => Promise<void>
+  syncNow: (direction: 'download' | 'upload', scope?: SyncScope) => Promise<SyncOperationResult>
   deviceSyncing: boolean
+  // First-sync auto-fire (i18n/theme pack discovery — see
+  // matchesScope's doc in sync-service.ts for why the 3-minute poll
+  // alone cannot discover a pack that predates this machine's first
+  // poll). `packsPulledOnce` is read from AppConfig; `markPacksPulledOnce`
+  // persists it back — called only after a successful pull, so a
+  // failure retries on the next connect.
+  packsPulledOnce: boolean
+  markPacksPulledOnce: () => void
   // Cross-cutting callbacks
   resetUIState: () => void
   clearFileStatus: () => void
@@ -70,6 +78,8 @@ export function useDeviceLifecycle(options: Options) {
     hasPassword,
     syncNow,
     deviceSyncing,
+    packsPulledOnce,
+    markPacksPulledOnce,
     resetUIState,
     clearFileStatus,
     resetHubState,
@@ -89,7 +99,6 @@ export function useDeviceLifecycle(options: Options) {
   const [lastLoadedLabel, setLastLoadedLabel] = useState('')
   const [pipetteFileKeyboards, setPipetteFileKeyboards] = useState<PipetteFileKeyboard[]>([])
   const [pipetteFileEntries, setPipetteFileEntries] = useState<PipetteFileEntry[]>([])
-  const [resettingData, setResettingData] = useState(false)
   const pipetteFileSavedActivityRef = useRef(0)
   const hasFavSyncedForDataRef = useRef(false)
 
@@ -147,6 +156,25 @@ export function useDeviceLifecycle(options: Options) {
             } catch {
               // Non-fatal — fall through to apply whatever local data we have.
             }
+            // First-sync auto-fire: a once-only 'packs' pull (i18n +
+            // theme packs), sequenced strictly after the favorites +
+            // keyboard sync above so it never delays or races it.
+            // Error-tolerant like the sync above — failure leaves
+            // packsPulledOnce false so the next connect retries. Gated on
+            // status === 'completed' (not just "didn't throw" — syncNow
+            // never throws for a busy race or missing credentials, it
+            // just returns status: 'skipped'/'partial'): a race with
+            // useDeviceAutoSync's own parallel syncNow call, or a
+            // sync-unit failure mid-pass, must also retry next connect
+            // rather than being marked done on a no-op or partial pull.
+            if (!packsPulledOnce) {
+              try {
+                const result = await syncNow('download', 'packs')
+                if (result.status === 'completed') markPacksPulledOnce()
+              } catch {
+                // Non-fatal — retried on the next connect.
+              }
+            }
           }
           await applyDevicePrefs(uid)
         } else {
@@ -156,7 +184,8 @@ export function useDeviceLifecycle(options: Options) {
       }
     },
     [connectDevice, keyboardReload, applyDevicePrefs, handleDisconnect, t,
-     autoSync, authenticated, hasPassword, syncNow, saveLastDevice],
+     autoSync, authenticated, hasPassword, syncNow, saveLastDevice,
+     packsPulledOnce, markPacksPulledOnce],
   )
 
   const handleLock = useCallback(async () => {
@@ -301,8 +330,6 @@ export function useDeviceLifecycle(options: Options) {
     setLastLoadedLabel,
     pipetteFileKeyboards,
     pipetteFileEntries,
-    resettingData,
-    setResettingData,
     pipetteFileSavedActivityRef,
     handleConnect,
     handleDisconnect,

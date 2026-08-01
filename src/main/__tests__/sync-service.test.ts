@@ -192,6 +192,19 @@ vi.mock('../logger', () => ({
   log: (...args: unknown[]) => mockLog(...args),
 }))
 
+// Pass-level pack GC is exercised by its own dedicated unit tests
+// (src/main/sync/__tests__/pack-gc.test.ts) and by the
+// "pack GC coordinator" describe block below (which restores the real
+// implementation). Mocked to a no-op by default so every OTHER test in
+// this file — many of which write an isolated pack body or index
+// fixture without the full sibling state a real sweepOrphans expects —
+// doesn't have its fixture files swept out from under it as a false
+// "orphan" by a real filesystem side effect it never opted into.
+const mockRunPackGcAfterPass = vi.fn().mockResolvedValue(undefined)
+vi.mock('../sync/pack-gc', () => ({
+  runPackGcAfterPass: (...args: unknown[]) => mockRunPackGcAfterPass(...args),
+}))
+
 import { decrypt as mockDecryptFn, encrypt as mockEncryptFn, storePassword as mockStorePasswordFn, clearPassword as mockClearPasswordFn, retrievePasswordResult as mockRetrievePasswordResultFn } from '../sync/sync-crypto'
 import type { SyncProgress } from '../../shared/types/sync'
 import {
@@ -474,8 +487,12 @@ describe('sync-service', () => {
       const second = executeSync('download')
 
       await vi.advanceTimersByTimeAsync(200)
-      await first
-      await second
+      const firstResult = await first
+      // M1/M2: the busy race must surface as a real, checkable status —
+      // not a silent no-op indistinguishable from a completed sync.
+      const secondResult = await second
+      expect(firstResult).toEqual({ status: 'completed' })
+      expect(secondResult).toEqual({ status: 'skipped', skipReason: 'busy' })
 
       expect(mockListFiles).toHaveBeenCalledTimes(1)
     })
@@ -728,6 +745,112 @@ describe('sync-service', () => {
     })
   })
 
+  describe('pack GC coordinator wiring', () => {
+    // pack-gc.ts's own internals (which store(s) it calls, error
+    // isolation) are covered by src/main/sync/__tests__/pack-gc.test.ts.
+    // This block only asserts sync-service.ts calls it exactly once per
+    // PASS (never per-unit) from both the download path and the poll
+    // path, with the attempted sync units for that pass.
+    it('calls runPackGcAfterPass once after a download pass, with every attempted sync unit', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'pack1', name: 'i18n_packs_pack-a.enc', modifiedTime: '2026-01-01T00:00:00.000Z' },
+        makeDriveFile('2026-01-01T00:00:00.000Z'),
+      ])
+      mockDownloadFile.mockResolvedValue(makeRemoteEnvelope('2026-01-01T00:00:00.000Z'))
+
+      await executeSync('download')
+
+      expect(mockRunPackGcAfterPass).toHaveBeenCalledTimes(1)
+      const attempted = mockRunPackGcAfterPass.mock.calls[0][0] as string[]
+      expect(attempted).toContain('i18n/packs/pack-a')
+    })
+
+    it('calls runPackGcAfterPass once per poll pass that touches a pack unit', async () => {
+      const themePackFile = (modifiedTime: string): DriveFile =>
+        ({ id: 'theme-pack-1', name: 'themes_packs_pack-a.enc', modifiedTime })
+      mockListFiles
+        .mockResolvedValueOnce([themePackFile('2026-01-01T00:00:00.000Z')])
+        .mockResolvedValueOnce([themePackFile('2026-01-02T00:00:00.000Z')])
+      mockDownloadFile.mockResolvedValue({
+        version: 1,
+        syncUnit: 'themes/packs/pack-a',
+        updatedAt: '2026-01-02T00:00:00.000Z',
+        salt: 's',
+        iv: 'i',
+        ciphertext: JSON.stringify({
+          type: 'theme-pack',
+          key: 'pack-a',
+          index: { metas: [] },
+          files: { 'pack-a.json': JSON.stringify({ name: 'Pack A', version: '1.0.0', colorScheme: 'dark', colors: {} }) },
+        }),
+      })
+
+      startPolling()
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockListFiles.mock.calls.length >= 1)
+      await flushIO()
+      expect(mockRunPackGcAfterPass).not.toHaveBeenCalled() // first poll: seed-only, no merge
+
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'theme-pack-1'))
+      await flushUntil(() => !isSyncInProgress())
+
+      expect(mockRunPackGcAfterPass).toHaveBeenCalledTimes(1)
+      expect(mockRunPackGcAfterPass.mock.calls[0][0]).toContain('themes/packs/pack-a')
+
+      stopPolling()
+    })
+
+    it('still calls runPackGcAfterPass once for a pass with no pack units — the attempted list is passed through as-is, and the function itself no-ops on a pack-free list (see pack-gc.test.ts)', async () => {
+      mockListFiles.mockResolvedValue([makeDriveFile('2026-01-01T00:00:00.000Z')])
+      mockDownloadFile.mockResolvedValue(makeRemoteEnvelope('2026-01-01T00:00:00.000Z'))
+
+      await executeSync('download')
+
+      expect(mockRunPackGcAfterPass).toHaveBeenCalledTimes(1)
+      expect(mockRunPackGcAfterPass.mock.calls[0][0]).toEqual(['favorites/tapDance'])
+    })
+
+    // M3: a unit that failed to merge this pass must be threaded through
+    // as the second argument so pack-gc.ts can skip that store's sweep
+    // (see pack-gc.test.ts for the skipSweep-per-store behavior itself).
+    it('passes the failed sync unit as the second argument on a download pass', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'pack1', name: 'i18n_packs_pack-a.enc', modifiedTime: '2026-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile.mockRejectedValueOnce(new Error('decrypt failed'))
+
+      await executeSync('download')
+
+      expect(mockRunPackGcAfterPass).toHaveBeenCalledTimes(1)
+      expect(mockRunPackGcAfterPass.mock.calls[0][0]).toContain('i18n/packs/pack-a')
+      expect(mockRunPackGcAfterPass.mock.calls[0][1]).toEqual(['i18n/packs/pack-a'])
+    })
+
+    it('passes the failed sync unit as the second argument on a poll pass', async () => {
+      const themePackFile = (modifiedTime: string): DriveFile =>
+        ({ id: 'theme-pack-1', name: 'themes_packs_pack-a.enc', modifiedTime })
+      mockListFiles
+        .mockResolvedValueOnce([themePackFile('2026-01-01T00:00:00.000Z')])
+        .mockResolvedValueOnce([themePackFile('2026-01-02T00:00:00.000Z')])
+      mockDownloadFile.mockRejectedValue(new Error('decrypt failed'))
+
+      startPolling()
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockListFiles.mock.calls.length >= 1)
+      await flushIO()
+
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'theme-pack-1'))
+      await flushUntil(() => !isSyncInProgress())
+
+      expect(mockRunPackGcAfterPass).toHaveBeenCalledTimes(1)
+      expect(mockRunPackGcAfterPass.mock.calls[0][1]).toEqual(['themes/packs/pack-a'])
+
+      stopPolling()
+    })
+  })
+
   describe('merge-based sync', () => {
     it('merges local and remote entries during download sync', async () => {
       // Local has entry '1', remote has entry 'r1'
@@ -922,6 +1045,52 @@ describe('sync-service', () => {
       const final = progressEvents[progressEvents.length - 1]
       expect(final.status).toBe('error')
       expect(final.failedUnits).toBeUndefined()
+    })
+  })
+
+  // M1/M2: executeSync's own return value must distinguish a real
+  // completion from a silent skip (busy race, missing credentials) or a
+  // partial failure — callers (useDeviceLifecycle's packsPulledOnce
+  // once-flag, usePackCloudPull's error state) branch on this instead of
+  // assuming any non-throwing call succeeded.
+  describe('executeSync return value contract (M1/M2)', () => {
+    it('returns status: completed when every unit succeeds', async () => {
+      mockListFiles.mockResolvedValue([])
+
+      await expect(executeSync('download')).resolves.toEqual({ status: 'completed' })
+    })
+
+    it('returns status: skipped, skipReason: unauthenticated when not signed in', async () => {
+      mockGetAuthStatus.mockResolvedValueOnce({ authenticated: false })
+
+      await expect(executeSync('download')).resolves.toEqual({
+        status: 'skipped',
+        skipReason: 'unauthenticated',
+      })
+    })
+
+    it('returns status: skipped, skipReason: noPasswordFile when no password is stored', async () => {
+      vi.mocked(mockRetrievePasswordResultFn).mockResolvedValueOnce({ ok: false, reason: 'noPasswordFile' })
+
+      await expect(executeSync('download')).resolves.toEqual({
+        status: 'skipped',
+        skipReason: 'noPasswordFile',
+      })
+    })
+
+    it('returns status: partial with failedUnits when some downloads fail', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'f2', name: 'favorites_macro.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile
+        .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+        .mockRejectedValueOnce(new Error('decrypt failed'))
+
+      await expect(executeSync('download')).resolves.toEqual({
+        status: 'partial',
+        failedUnits: ['favorites/macro'],
+      })
     })
   })
 
@@ -1122,11 +1291,54 @@ describe('sync-service', () => {
       expect(result.undecryptable[0].fileId).toBe('f5')
     })
 
+    // C2: the index file can outlive every pack id it once listed (all
+    // tombstoned and GC'd) — hasI18nData/hasThemesData must still report
+    // `true` from the index file's own presence alone in that dead zone.
+    it('reports hasI18nData/hasThemesData true from the index file alone, with zero pack ids', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'idx1', name: 'i18n_index.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'idx2', name: 'themes_index.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile
+        .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+        .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+      mockDecrypt
+        .mockResolvedValueOnce('ok')
+        .mockResolvedValueOnce('ok')
+
+      const result = await scanRemoteData()
+
+      expect(result.i18nPacks).toEqual([])
+      expect(result.themePacks).toEqual([])
+      expect(result.hasI18nData).toBe(true)
+      expect(result.hasThemesData).toBe(true)
+    })
+
+    it('reports hasI18nData/hasThemesData false when neither the index nor any pack id is present', async () => {
+      mockListFiles.mockResolvedValue([])
+
+      const result = await scanRemoteData()
+
+      expect(result.hasI18nData).toBe(false)
+      expect(result.hasThemesData).toBe(false)
+    })
+
     it('returns empty result when not authenticated', async () => {
       mockGetAuthStatus.mockResolvedValueOnce({ authenticated: false })
 
       const result = await scanRemoteData()
-      expect(result).toEqual({ keyboards: [], keyboardNames: {}, favorites: [], i18nPacks: [], themePacks: [], undecryptable: [] })
+      expect(result).toEqual({
+        keyboards: [],
+        keyboardNames: {},
+        favorites: [],
+        i18nPacks: [],
+        themePacks: [],
+        keyLabels: false,
+        typingTestTexts: false,
+        hasI18nData: false,
+        hasThemesData: false,
+        undecryptable: [],
+      })
     })
 
     it('deduplicates keyboard UIDs', async () => {
@@ -1183,6 +1395,28 @@ describe('sync-service', () => {
 
       const result = await scanRemoteData()
       expect(result.themePacks).toEqual(['pack-a'])
+    })
+
+    it('surfaces keyLabels=true when the global key-labels unit exists on the remote', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'k1', name: 'key-labels.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile.mockResolvedValueOnce({ ciphertext: 'ok' })
+
+      const result = await scanRemoteData()
+      expect(result.keyLabels).toBe(true)
+      expect(result.typingTestTexts).toBe(false)
+    })
+
+    it('surfaces typingTestTexts=true when the global typing-test-texts unit exists on the remote', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'tt1', name: 'typing-test-texts.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile.mockResolvedValueOnce({ ciphertext: 'ok' })
+
+      const result = await scanRemoteData()
+      expect(result.typingTestTexts).toBe(true)
+      expect(result.keyLabels).toBe(false)
     })
   })
 
@@ -1410,6 +1644,32 @@ describe('sync-service', () => {
         expect(matchesScope(null, 'all')).toBe(true)
         expect(matchesScope(null, 'favorites')).toBe(false)
         expect(matchesScope(null, { keyboard: '0x1234' })).toBe(false)
+        expect(matchesScope(null, 'packs')).toBe(false)
+      })
+
+      // C.1 / codex ordering trap: 'packs' must be checked BEFORE the
+      // unconditional key-labels/typing-test-texts `true`s below it in
+      // matchesScope — otherwise a 'packs'-scoped download would also
+      // pull those unrelated global units in, since their own checks
+      // don't care what scope was asked for.
+      describe('scope "packs"', () => {
+        it('admits i18n and theme sync units', () => {
+          expect(matchesScope('i18n/index', 'packs')).toBe(true)
+          expect(matchesScope('i18n/packs/pack-a', 'packs')).toBe(true)
+          expect(matchesScope('themes/index', 'packs')).toBe(true)
+          expect(matchesScope('themes/packs/pack-a', 'packs')).toBe(true)
+        })
+
+        it('rejects key-labels and typing-test-texts despite their normal every-scope pass', () => {
+          expect(matchesScope('key-labels', 'packs')).toBe(false)
+          expect(matchesScope('typing-test-texts', 'packs')).toBe(false)
+        })
+
+        it('rejects keyboard-meta, favorites, and keyboard-scoped units', () => {
+          expect(matchesScope('meta/keyboard-names', 'packs')).toBe(false)
+          expect(matchesScope('favorites/tapDance', 'packs')).toBe(false)
+          expect(matchesScope('keyboards/0x1234/settings', 'packs')).toBe(false)
+        })
       })
     })
 

@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from 'lucide-react'
 import { Monitor, Sun, Moon } from 'lucide-react'
-export { BTN_PRIMARY, BTN_SECONDARY, BTN_DANGER_OUTLINE, BTN_DANGER } from '../../constants/ui-tokens'
+export { BTN_PRIMARY, BTN_SECONDARY, BTN_DANGER_OUTLINE } from '../../constants/ui-tokens'
 import type { UseSyncReturn } from '../../hooks/useSync'
 import type { ThemeMode, ThemeSelection } from '../../hooks/useTheme'
 import type { KeyboardLayoutId, AutoLockMinutes } from '../../hooks/useDevicePrefs'
@@ -13,13 +13,6 @@ export function scoreColor(score: number | null): string {
   if (score < 2) return 'bg-danger'
   if (score < 4) return 'bg-warning'
   return 'bg-accent'
-}
-
-export function toggleSetItem<T>(prev: Set<T>, item: T, selected: boolean): Set<T> {
-  const next = new Set(prev)
-  if (selected) next.add(item)
-  else next.delete(item)
-  return next
 }
 
 export interface ThemeOption {

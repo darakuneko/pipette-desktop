@@ -13,12 +13,13 @@
 
 import { app, dialog, BrowserWindow } from 'electron'
 import { join } from 'node:path'
-import { mkdir, readFile, rename, rm, stat, unlink, utimes, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rename, rm, stat, unlink, utimes, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { notifyChange } from './sync/sync-service'
 import { gcTombstones, mergeEntries, MalformedSyncBundleError } from './sync/merge'
 import { log } from './logger'
 import { safeFilename, isSafePackId } from './utils/safe-filename'
+import { sweepOrphanFiles } from './utils/sweep-orphan-pack-bodies'
 import { validateThemePack } from '../shared/theme/validate'
 import {
   THEME_INDEX_SYNC_UNIT,
@@ -292,9 +293,14 @@ export async function readIndex(): Promise<ThemePackIndex> {
   return { metas: [] }
 }
 
+// Routed through writeFileAtomic (temp-file-then-rename) — see
+// i18n-pack-store.ts's equivalent doc: the sync merge path already wrote
+// atomically, but this local read-modify-write path did not, leaving a
+// crash-during-write window `readIndexForGc` below could otherwise
+// mistake for a corrupt index.
 async function writeIndex(index: ThemePackIndex): Promise<void> {
   await mkdir(getStoreDir(), { recursive: true })
-  await writeFile(getIndexPath(), JSON.stringify(index, null, 2), 'utf-8')
+  await writeFileAtomic(getIndexPath(), JSON.stringify(index, null, 2))
 }
 
 function findActiveByName(metas: ThemePackMeta[], name: string, excludeId?: string): ThemePackMeta | undefined {
@@ -334,14 +340,64 @@ async function purgeExpiredTombstonesInPlace(index: ThemePackIndex): Promise<{ r
   return { removed, touched: true }
 }
 
-export async function purgeExpiredTombstones(): Promise<void> {
+/** See i18n-pack-store.ts's equivalent for the full rationale: distinguishes
+ *  a genuinely untrustworthy index (missing while pack bodies still exist,
+ *  or present-but-unparseable) from a legitimately empty one (fresh store,
+ *  or an empty-but-valid index). `ok: false` short-circuits both purge and
+ *  sweep in `runGcUnderLock` — there's no trustworthy roster to purge
+ *  tombstones from either. */
+async function readIndexForGc(): Promise<{ ok: true; index: ThemePackIndex } | { ok: false }> {
+  let raw: string
+  try {
+    raw = await readFile(getIndexPath(), 'utf-8')
+  } catch {
+    try {
+      const entries = await readdir(getPacksDir())
+      if (entries.some((f) => f.endsWith('.json'))) return { ok: false }
+    } catch {
+      // packs dir doesn't exist either — legitimately empty, fall through
+    }
+    return { ok: true, index: { metas: [] } }
+  }
+  try {
+    const parsed = JSON.parse(raw) as ThemePackIndex
+    if (Array.isArray(parsed?.metas)) return { ok: true, index: parsed }
+  } catch {
+    // fall through to ok: false
+  }
+  return { ok: false }
+}
+
+/**
+ * Single-lock post-pass GC: purge expired tombstones (writing the index
+ * once if anything changed) then sweep orphan pack-body files — all
+ * inside ONE `withIndexWriteLock` acquisition. Mirrors
+ * `i18n-pack-store.ts`'s `runGcUnderLock` — see its doc for the full
+ * rationale (halves lock/read round-trips, closes the purge→sweep
+ * interleave window, pass-level-only wiring via `pack-gc.ts`, the
+ * `options.skipSweep` failed-units rule, and the untrustworthy-index
+ * short-circuit).
+ */
+export async function runGcUnderLock(options?: { skipSweep?: boolean }): Promise<{ purged: number; swept: number }> {
   return withIndexWriteLock(async () => {
-    const index = await readIndex()
-    const result = await purgeExpiredTombstonesInPlace(index)
-    if (result.touched) {
+    const safeIndex = await readIndexForGc()
+    if (!safeIndex.ok) {
+      log('warn', `pack-gc: skipped ${THEME_INDEX_SYNC_UNIT} sweep — index missing/unreadable while pack bodies exist`)
+      return { purged: 0, swept: 0 }
+    }
+    const index = safeIndex.index
+    const purgeResult = await purgeExpiredTombstonesInPlace(index)
+    if (purgeResult.touched) {
       await writeIndex(index)
       notifyChange(THEME_INDEX_SYNC_UNIT)
     }
+    if (options?.skipSweep) {
+      log('warn', `pack-gc: skipped ${THEME_INDEX_SYNC_UNIT} sweep — a sync unit failed this pass`)
+      return { purged: purgeResult.removed, swept: 0 }
+    }
+    const known = new Set(index.metas.map((m) => `${m.id}.json`))
+    const swept = await sweepOrphanFiles(getPacksDir(), known)
+    return { purged: purgeResult.removed, swept }
   })
 }
 

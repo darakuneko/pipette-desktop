@@ -102,6 +102,10 @@ export interface SyncResetTargets {
   favorites: boolean
   i18nPacks?: boolean
   themePacks?: boolean
+  /** Global, all-keyboard key-display-label store (`key-labels.enc`). */
+  keyLabels?: boolean
+  /** Global, all-keyboard imported typing-test text store (`typing-test-texts.enc`). */
+  typingTestTexts?: boolean
 }
 
 export interface LocalResetTargets {
@@ -127,6 +131,18 @@ export interface SyncDataScanResult {
   i18nPacks: string[]
   /** Pack ids of theme packs found on the remote. */
   themePacks: string[]
+  /** True when the global, all-keyboard key-labels sync unit exists on the remote. */
+  keyLabels: boolean
+  /** True when the global, all-keyboard typing-test-texts sync unit exists on the remote. */
+  typingTestTexts: boolean
+  /** True when the remote `i18n/index` file exists OR at least one i18n pack
+   *  id was found — the index can outlive every pack it once listed (all
+   *  tombstoned and GC'd), so checking `i18nPacks.length` alone misses that
+   *  30-day dead zone where the index (and thus a resettable target) is
+   *  still on Drive but no pack id remains to report. */
+  hasI18nData: boolean
+  /** Same as `hasI18nData`, for `themes/index`. */
+  hasThemesData: boolean
   undecryptable: UndecryptableFile[]
 }
 
@@ -138,6 +154,7 @@ export interface StoredKeyboardInfo {
 export type SyncScope =
   | 'all'           // changePassword, listUndecryptable
   | 'favorites'     // favorites/* only
+  | 'packs'         // i18n/* + themes/* only — Pack Manager pull button + first-sync auto-fire
   | { keyboard: string }  // keyboards/{uid}/* only
   | { favorites: true; keyboard: string }  // favorites/* + keyboards/{uid}/*
 
@@ -169,9 +186,27 @@ export type SyncCredentialResult =
   | { ok: true; password: string }
   | { ok: false; reason: SyncCredentialFailureReason }
 
+/** Real outcome of a SYNC_EXECUTE call, distinct from `SyncOperationResult.success`
+ *  (which only reflects "the IPC call didn't throw" and stays `true` even when
+ *  the sync never actually ran — see `SyncOperationResult.status`'s doc). */
+export type SyncExecuteStatus = 'completed' | 'skipped' | 'partial'
+
+/** Why a sync was skipped (`status === 'skipped'`): either another sync was
+ *  already in flight (`'busy'`), or the credential-readiness check failed
+ *  (same reasons `SyncCredentialFailureReason` already enumerates). */
+export type SyncSkipReason = 'busy' | SyncCredentialFailureReason
+
 /** Serializable IPC envelope so renderer code can branch on the reason. */
 export interface SyncOperationResult {
   success: boolean
   error?: string
   reason?: SyncCredentialFailureReason
+  /** Populated only by SYNC_EXECUTE. `success` stays `true` whenever the IPC
+   *  call itself didn't throw — including when the sync silently did
+   *  nothing (busy race, missing credentials) — so callers that need to know
+   *  whether a sync actually ran to completion must check `status`, not
+   *  `success`. */
+  status?: SyncExecuteStatus
+  /** Populated when `status === 'skipped'`. */
+  skipReason?: SyncSkipReason
 }

@@ -40,7 +40,7 @@ vi.mock('../sync/google-auth', () => ({
   getAccessToken: vi.fn(async () => 'mock-token'),
 }))
 
-import { driveFileName, listFiles, syncUnitFromFileName, uploadFile } from '../sync/google-drive'
+import { driveFileName, listFiles, syncUnitFromFileName, uploadFile, deleteFilesByExactName } from '../sync/google-drive'
 import type { SyncEnvelope } from '../../shared/types/sync'
 
 function extractFetchUrl(call: unknown): URL {
@@ -249,6 +249,113 @@ describe('google-drive', () => {
       const url = extractFetchUrl(fetchSpy.mock.calls[0])
       expect(url.searchParams.get('fields')).toBe('id,modifiedTime')
       expect(result).toEqual({ id: 'existing-id', modifiedTime: '2026-06-02T00:00:00.000Z' })
+    })
+  })
+
+  // A: key-labels / typing-test-texts have no subtree — deleteFilesByExactName
+  // is the reset path for both. Unlike a find-first-id approach, it must
+  // delete EVERY file sharing this exact name (Drive keys by id, not
+  // name — a stale duplicate from a past upload race could otherwise
+  // survive a reset untouched).
+  describe('deleteFilesByExactName', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('deletes every remote file with this exact name, not just the first match', async () => {
+      const deletedIds: string[] = []
+      const fetchSpy = vi.fn(async (url: string | URL, init?: RequestInit) => {
+        if (init?.method === 'DELETE') {
+          const u = new URL(typeof url === 'string' ? url : url.toString())
+          const id = u.pathname.split('/').pop()
+          deletedIds.push(id ?? '')
+          return new Response(null, { status: 204 })
+        }
+        return new Response(JSON.stringify({
+          files: [
+            { id: 'a', name: 'key-labels.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+            { id: 'b', name: 'key-labels.enc', modifiedTime: '2025-01-02T00:00:00.000Z' },
+            { id: 'c', name: 'typing-test-texts.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          ],
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      })
+      vi.stubGlobal('fetch', fetchSpy)
+
+      const result = await deleteFilesByExactName('key-labels.enc')
+
+      expect(deletedIds.sort()).toEqual(['a', 'b'])
+      expect(result).toEqual({ attempted: 2, failed: 0 })
+    })
+
+    it('deletes nothing when no remote file matches the exact name', async () => {
+      const fetchSpy = vi.fn(async (_url: string | URL, init?: RequestInit) => {
+        if (init?.method === 'DELETE') throw new Error('should not delete anything')
+        return new Response(JSON.stringify({
+          files: [{ id: 'c', name: 'typing-test-texts.enc', modifiedTime: '2025-01-01T00:00:00.000Z' }],
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      })
+      vi.stubGlobal('fetch', fetchSpy)
+
+      await expect(deleteFilesByExactName('key-labels.enc')).resolves.toEqual({ attempted: 0, failed: 0 })
+    })
+
+    // C1: a rejected delete must be surfaced (`failed > 0`) rather than
+    // silently discarded by the underlying Promise.allSettled.
+    it('reports a failed count when a delete rejects', async () => {
+      const fetchSpy = vi.fn(async (url: string | URL, init?: RequestInit) => {
+        if (init?.method === 'DELETE') {
+          const u = new URL(typeof url === 'string' ? url : url.toString())
+          if (u.pathname.endsWith('/b')) throw new Error('network error')
+          return new Response(null, { status: 204 })
+        }
+        return new Response(JSON.stringify({
+          files: [
+            { id: 'a', name: 'key-labels.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+            { id: 'b', name: 'key-labels.enc', modifiedTime: '2025-01-02T00:00:00.000Z' },
+          ],
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      })
+      vi.stubGlobal('fetch', fetchSpy)
+
+      const result = await deleteFilesByExactName('key-labels.enc')
+
+      expect(result).toEqual({ attempted: 2, failed: 1 })
+    })
+  })
+
+  // C1: a Drive listing spanning more than one page must be followed to
+  // completion via `nextPageToken` — a single-page cap previously meant
+  // a large appDataFolder (many keyboards/devices/per-day analytics
+  // files) silently lost everything past the first 1000 results.
+  describe('listFiles pagination', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('follows nextPageToken until Drive stops returning one', async () => {
+      const page1 = { id: 'p1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' }
+      const page2 = { id: 'p2', name: 'favorites_macro.enc', modifiedTime: '2025-01-01T00:00:00.000Z' }
+      const fetchSpy = vi.fn(async (url: string | URL) => {
+        const u = new URL(typeof url === 'string' ? url : url.toString())
+        const token = u.searchParams.get('pageToken')
+        if (!token) {
+          return new Response(JSON.stringify({ files: [page1], nextPageToken: 'token-2' }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        }
+        expect(token).toBe('token-2')
+        return new Response(JSON.stringify({ files: [page2] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      })
+      vi.stubGlobal('fetch', fetchSpy)
+
+      const files = await listFiles()
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+      expect(files).toEqual([page1, page2])
     })
   })
 })

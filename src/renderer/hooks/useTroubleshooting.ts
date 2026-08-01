@@ -1,75 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+//
+// Local > Application's Import/Export handlers. Used to also own a
+// Reset Local Data multi-target picker (localTargets/selectedKeyboardUids/
+// confirmingLocalReset/handleResetLocalTargets/storedKeyboards/isSyncing/
+// syncDisabled) that DataModal never actually rendered — the real
+// per-keyboard and remote reset affordances live in KeyboardSavesContent
+// ("Delete All") and CloudDataContent respectively, and Local >
+// Application's own reset is the single-target AppSettingsReset below.
+// That dead half is pruned here; see
+// .claude/tasks/backlog/Task-sync-remote-reset-and-discovery-gaps.md.
 
-import { useState, useCallback, useRef, useEffect } from 'react'
-import type { UseSyncReturn } from './useSync'
-import type { LocalResetTargets, StoredKeyboardInfo } from '../../shared/types/sync'
+import { useState, useCallback } from 'react'
 
-export interface UseTroubleshootingOptions {
-  sync: UseSyncReturn
-  active: boolean
-  onResetStart?: () => void
-  onResetEnd?: () => void
-}
-
-export function useTroubleshooting({ sync, active, onResetStart, onResetEnd }: UseTroubleshootingOptions) {
+export function useTroubleshooting() {
   const [busy, setBusy] = useState(false)
-  const [localTargets, setLocalTargets] = useState<LocalResetTargets>({
-    keyboards: false,
-    favorites: false,
-    appSettings: false,
-  })
-  const [confirmingLocalReset, setConfirmingLocalReset] = useState(false)
   const [importResult, setImportResult] = useState<'success' | 'error' | null>(null)
-  const [storedKeyboards, setStoredKeyboards] = useState<StoredKeyboardInfo[]>([])
-  const [selectedKeyboardUids, setSelectedKeyboardUids] = useState<Set<string>>(new Set())
-  const fetchedRef = useRef(false)
-
-  useEffect(() => {
-    if (!active || fetchedRef.current) return
-    fetchedRef.current = true
-    window.vialAPI.listStoredKeyboards().then(setStoredKeyboards).catch(() => {})
-  }, [active])
-
-  const isSyncing = sync.syncStatus === 'syncing'
-  const syncDisabled = busy || !sync.authStatus.authenticated || !sync.hasPassword || isSyncing || sync.syncUnavailable
-
-  const handleResetLocalTargets = useCallback(async () => {
-    setBusy(true)
-    onResetStart?.()
-    try {
-      const keyboardUids = Array.from(selectedKeyboardUids)
-      const deletedUids = new Set<string>()
-      for (const uid of keyboardUids) {
-        try {
-          await window.vialAPI.resetKeyboardData(uid)
-          deletedUids.add(uid)
-        } catch {
-          /* continue deleting other keyboards */
-        }
-      }
-      const hasNonKeyboardTargets = localTargets.favorites || localTargets.appSettings
-      if (hasNonKeyboardTargets) {
-        await window.vialAPI.resetLocalTargets({
-          keyboards: false,
-          favorites: localTargets.favorites,
-          appSettings: localTargets.appSettings,
-        })
-      }
-      if (deletedUids.size > 0 || hasNonKeyboardTargets) {
-        setConfirmingLocalReset(false)
-        setLocalTargets({ keyboards: false, favorites: false, appSettings: false })
-        setSelectedKeyboardUids((prev) => {
-          const next = new Set(prev)
-          for (const uid of deletedUids) next.delete(uid)
-          return next
-        })
-        setStoredKeyboards((prev) => prev.filter((kb) => !deletedUids.has(kb.uid)))
-      }
-    } finally {
-      setBusy(false)
-      onResetEnd?.()
-    }
-  }, [localTargets, selectedKeyboardUids, onResetStart, onResetEnd])
 
   const handleExport = useCallback(async () => {
     setBusy(true)
@@ -91,18 +36,8 @@ export function useTroubleshooting({ sync, active, onResetStart, onResetEnd }: U
   }, [])
 
   return {
-    storedKeyboards,
-    selectedKeyboardUids,
-    setSelectedKeyboardUids,
-    localTargets,
-    setLocalTargets,
-    confirmingLocalReset,
-    setConfirmingLocalReset,
     busy,
-    isSyncing,
-    syncDisabled,
     importResult,
-    handleResetLocalTargets,
     handleExport,
     handleImport,
   }

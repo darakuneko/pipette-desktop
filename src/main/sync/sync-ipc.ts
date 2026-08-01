@@ -12,7 +12,8 @@ import {
 } from './sync-crypto'
 import { startOAuthFlow, getAuthStatus, signOut } from './google-auth'
 import { clearHubTokenCache } from '../hub/hub-ipc'
-import { deleteFilesByPrefix, deleteFile } from './google-drive'
+import { deleteFilesByPrefix, deleteFilesByExactName, deleteFile, driveFileName } from './google-drive'
+import { broadcastToAllWindows } from '../utils/broadcast'
 import {
   executeAnalyticsSync,
   executeSync,
@@ -47,7 +48,7 @@ import { getMachineHash } from '../typing-analytics/machine-hash'
 import { ensureCacheIsFresh } from '../typing-analytics/cache-rebuild'
 import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
 import { deleteAllTypingForKeyboard } from '../typing-analytics/typing-analytics-service'
-import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle } from '../../shared/types/sync'
+import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle, SyncOperationResult } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
 import type { FavoriteIndex, SavedFavoriteMeta } from '../../shared/types/favorite-store'
 import type { SnapshotIndex, SnapshotMeta } from '../../shared/types/snapshot-store'
@@ -63,6 +64,8 @@ import {
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import { I18N_SYNC_UNIT_PREFIX } from '../../shared/types/i18n-store'
 import { THEME_SYNC_UNIT_PREFIX } from '../../shared/types/theme-store'
+import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
+import { TYPING_TEST_TEXT_SYNC_UNIT } from '../typing-test-text-store'
 
 interface IpcResult {
   success: boolean
@@ -95,9 +98,16 @@ interface ImportBundle<T extends EntryMeta> {
 
 const SAFE_UID_RE = /^[\w-]+$/
 
+/** `SyncResetTargets`' optional boolean fields — every one of them
+ *  follows the identical "boolean or absent" validation and the same
+ *  "counts toward at least one target selected" rule, so both the
+ *  per-field type checks and the no-targets guard below loop over this
+ *  instead of hand-repeating four near-identical `if` blocks. */
+const OPTIONAL_SYNC_RESET_TARGETS = ['i18nPacks', 'themePacks', 'keyLabels', 'typingTestTexts'] as const
+
 function validateSyncScope(raw: unknown): SyncScope | undefined {
   if (raw == null) return undefined
-  if (raw === 'all' || raw === 'favorites') return raw
+  if (raw === 'all' || raw === 'favorites' || raw === 'packs') return raw
   if (typeof raw === 'object' && 'keyboard' in raw) {
     const { keyboard } = raw as Record<string, unknown>
     if (typeof keyboard === 'string' && SAFE_UID_RE.test(keyboard)) {
@@ -205,42 +215,66 @@ export function setupSyncIpc(): void {
       if (typeof targets.favorites !== 'boolean') {
         throw new Error('Invalid targets: favorites must be boolean')
       }
-      if (targets.i18nPacks !== undefined && typeof targets.i18nPacks !== 'boolean') {
-        throw new Error('Invalid targets: i18nPacks must be boolean')
+      for (const key of OPTIONAL_SYNC_RESET_TARGETS) {
+        if (targets[key] !== undefined && typeof targets[key] !== 'boolean') {
+          throw new Error(`Invalid targets: ${key} must be boolean`)
+        }
       }
-      if (targets.themePacks !== undefined && typeof targets.themePacks !== 'boolean') {
-        throw new Error('Invalid targets: themePacks must be boolean')
+      if (!hasKeyboards && !targets.favorites && !OPTIONAL_SYNC_RESET_TARGETS.some((key) => targets[key])) {
+        throw new Error('No targets selected')
       }
-      if (!hasKeyboards && !targets.favorites && !targets.i18nPacks && !targets.themePacks) throw new Error('No targets selected')
       if (isSyncInProgress()) throw new Error('Cannot reset while sync is in progress')
       let metaChanged = false
+      // Unit-name-only labels for any target whose Drive delete batch had
+      // a rejection — collected rather than thrown immediately so every
+      // requested target still gets attempted even if an earlier one
+      // partially failed (a rejected delete does not stop the batch).
+      const failedTargets: string[] = []
       if (targets.keyboards === true) {
         cancelPendingChanges('keyboards/')
-        await deleteFilesByPrefix('keyboards_')
+        const result = await deleteFilesByPrefix('keyboards_')
+        if (result.failed > 0) failedTargets.push('keyboards')
         const tombstoned = await tombstoneAllKeyboardMeta()
         if (tombstoned > 0) metaChanged = true
       } else if (Array.isArray(targets.keyboards)) {
         for (const uid of targets.keyboards) {
           if (typeof uid !== 'string' || !isSafeKey(uid)) throw new Error('Invalid keyboard UID')
           cancelPendingChanges(`keyboards/${uid}/`)
-          await deleteFilesByPrefix(`keyboards_${uid}_`)
-          const result = await tombstoneKeyboardMeta(uid)
-          if (result === 'tombstoned') metaChanged = true
+          const result = await deleteFilesByPrefix(`keyboards_${uid}_`)
+          if (result.failed > 0) failedTargets.push(`keyboards/${uid}`)
+          const tombstoneResult = await tombstoneKeyboardMeta(uid)
+          if (tombstoneResult === 'tombstoned') metaChanged = true
         }
       }
       if (targets.favorites) {
         cancelPendingChanges('favorites/')
-        await deleteFilesByPrefix('favorites_')
+        const result = await deleteFilesByPrefix('favorites_')
+        if (result.failed > 0) failedTargets.push('favorites')
       }
       if (targets.i18nPacks) {
         cancelPendingChanges(I18N_SYNC_UNIT_PREFIX)
-        await deleteFilesByPrefix('i18n_')
+        const result = await deleteFilesByPrefix('i18n_')
+        if (result.failed > 0) failedTargets.push('i18nPacks')
       }
       if (targets.themePacks) {
         cancelPendingChanges(THEME_SYNC_UNIT_PREFIX)
-        await deleteFilesByPrefix('themes_')
+        const result = await deleteFilesByPrefix('themes_')
+        if (result.failed > 0) failedTargets.push('themePacks')
+      }
+      if (targets.keyLabels) {
+        cancelPendingChanges(KEY_LABEL_SYNC_UNIT)
+        const result = await deleteFilesByExactName(driveFileName(KEY_LABEL_SYNC_UNIT))
+        if (result.failed > 0) failedTargets.push('keyLabels')
+      }
+      if (targets.typingTestTexts) {
+        cancelPendingChanges(TYPING_TEST_TEXT_SYNC_UNIT)
+        const result = await deleteFilesByExactName(driveFileName(TYPING_TEST_TEXT_SYNC_UNIT))
+        if (result.failed > 0) failedTargets.push('typingTestTexts')
       }
       if (metaChanged) notifyChange(KEYBOARD_META_SYNC_UNIT)
+      if (failedTargets.length > 0) {
+        throw new Error(`Failed to delete remote data for: ${failedTargets.join(', ')}`)
+      }
     }),
   )
 
@@ -252,22 +286,47 @@ export function setupSyncIpc(): void {
   )
 
   // --- Sync execution ---
+  // Not routed through wrapIpc: that helper only ever returns `{success:
+  // true}` when the wrapped fn() doesn't throw, which is exactly the bug
+  // that let a busy-race or missing-credentials skip (executeSync
+  // returns normally in both cases, never throws) look identical to a
+  // real completed sync to every caller — see executeSync's `status`
+  // field doc in sync-service.ts and SyncOperationResult's doc in
+  // shared/types/sync.ts. `success` is kept `true` for any non-throwing
+  // outcome (including skipped/partial) to preserve existing callers'
+  // "did the IPC call itself throw" semantics; `status`/`skipReason`
+  // carry the real outcome for callers that need it (useDeviceLifecycle's
+  // packsPulledOnce once-flag, usePackCloudPull's error state).
   secureHandle(
     IpcChannels.SYNC_EXECUTE,
-    (_event, direction: 'download' | 'upload', scope?: unknown) =>
-      wrapIpc('Sync failed', async () => {
-        if (scope != null && validateSyncScope(scope) === undefined) {
-          throw new Error('Invalid sync scope')
-        }
-        const validatedScope = validateSyncScope(scope) ?? 'all'
-        await executeSync(direction, validatedScope)
+    async (_event, direction: 'download' | 'upload', scope?: unknown): Promise<SyncOperationResult> => {
+      if (scope != null && validateSyncScope(scope) === undefined) {
+        return { success: false, error: 'Invalid sync scope' }
+      }
+      const validatedScope = validateSyncScope(scope) ?? 'all'
+      try {
+        const outcome = await executeSync(direction, validatedScope)
         if (direction === 'download') {
           const config = loadAppConfig()
           if (config.autoSync) {
             startPolling()
           }
         }
-      }),
+        return {
+          success: true,
+          status: outcome.status,
+          skipReason: outcome.skipReason,
+          error: outcome.status === 'partial'
+            ? `${outcome.failedUnits?.length ?? 0} sync unit(s) failed`
+            : undefined,
+        }
+      } catch (err) {
+        if (err instanceof SyncCredentialError) {
+          return { success: false, error: err.message, reason: err.reason, status: 'skipped', skipReason: err.reason }
+        }
+        return { success: false, error: err instanceof Error ? err.message : 'Sync failed' }
+      }
+    },
   )
 
   // --- Name a keyboard on connect (names a new uid, revives a tombstone;
@@ -364,9 +423,11 @@ export function setupSyncIpc(): void {
         if (targets.keyboards) cancelPendingChanges('keyboards/')
         if (targets.favorites) {
           cancelPendingChanges('favorites/')
-          // Imported typing-test texts are global user content — reset
-          // them alongside favorites (the global-content reset bucket).
-          cancelPendingChanges('typing-test-texts')
+          // Imported typing-test texts and key-display labels are both
+          // global, all-keyboard user content — reset them alongside
+          // favorites (the global-content reset bucket).
+          cancelPendingChanges(TYPING_TEST_TEXT_SYNC_UNIT)
+          cancelPendingChanges(KEY_LABEL_SYNC_UNIT)
         }
         if (targets.i18nPacks) cancelPendingChanges(I18N_SYNC_UNIT_PREFIX)
         if (targets.themePacks) cancelPendingChanges(THEME_SYNC_UNIT_PREFIX)
@@ -379,6 +440,7 @@ export function setupSyncIpc(): void {
       if (targets.favorites) {
         await rm(join(userData, 'sync', 'favorites'), { recursive: true, force: true })
         await rm(join(userData, 'sync', 'typing-test-texts'), { recursive: true, force: true })
+        await rm(join(userData, 'sync', 'key-labels'), { recursive: true, force: true })
       }
       if (targets.i18nPacks) {
         await rm(join(userData, 'sync', 'i18n'), { recursive: true, force: true })
@@ -696,9 +758,7 @@ export function setupSyncIpc(): void {
 
   // --- Progress events (main -> renderer) ---
   setProgressCallback((progress: SyncProgress) => {
-    for (const win of BrowserWindow.getAllWindows()) {
-      win.webContents.send(IpcChannels.SYNC_PROGRESS, progress)
-    }
+    broadcastToAllWindows(IpcChannels.SYNC_PROGRESS, progress)
   })
 
   // --- Before-quit handler ---

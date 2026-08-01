@@ -11,6 +11,7 @@ export type DataNavPath =
   | { section: 'sync'; page: 'sync-keyboard'; uid: string; name: string }
   | { section: 'sync'; page: 'sync-favorite'; favoriteType: string }
   | { section: 'sync'; page: 'sync-typing-device'; uid: string; name: string; machineHash: string; deviceLabel: string }
+  | { section: 'sync'; page: 'cloud-data' }
   | { section: 'hub'; page: 'hub-keyboard'; keyboardName: string }
 
 /** Compute breadcrumb segments from a navigation path. */
@@ -33,6 +34,8 @@ export function breadcrumbSegments(
       return [t('dataModal.sync'), t('dataModal.favorites'), t(`editor.${path.favoriteType}.title`)]
     case 'sync-typing-device':
       return [t('dataModal.sync'), t('dataModal.typing.title'), path.name, path.deviceLabel]
+    case 'cloud-data':
+      return [t('dataModal.sync'), t('dataModal.cloudData')]
     case 'hub-keyboard':
       return [t('dataModal.hub'), t('dataModal.keyboards'), path.keyboardName]
   }
@@ -58,6 +61,8 @@ export function navTitle(
       return t(`editor.${path.favoriteType}.title`)
     case 'sync-typing-device':
       return `${path.name} — ${path.deviceLabel}`
+    case 'cloud-data':
+      return t('dataModal.cloudData')
     case 'hub-keyboard':
       return path.keyboardName
   }

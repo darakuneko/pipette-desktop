@@ -13,8 +13,6 @@ import type {
   PasswordStrength,
   LastSyncResult,
   SyncResetTargets,
-  UndecryptableFile,
-  SyncDataScanResult,
   SyncScope,
   SyncOperationResult,
   SyncCredentialFailureReason,
@@ -54,11 +52,14 @@ export interface UseSyncReturn {
   changePassword: (newPassword: string) => Promise<SyncOperationResult>
   resetSyncTargets: (targets: SyncResetTargets) => Promise<SyncOperationResult>
   validatePassword: (password: string) => Promise<PasswordStrength>
-  syncNow: (direction: 'download' | 'upload', scope?: SyncScope) => Promise<void>
+  /** Returns the real outcome (`status`/`skipReason`, not just `success` —
+   *  see `SyncOperationResult`'s doc) so callers that must distinguish a
+   *  completed sync from a silent skip (busy race, missing credentials)
+   *  or a partial failure can do so instead of assuming any non-throwing
+   *  call succeeded. */
+  syncNow: (direction: 'download' | 'upload', scope?: SyncScope) => Promise<SyncOperationResult>
   refreshStatus: () => Promise<void>
-  listUndecryptable: () => Promise<UndecryptableFile[]>
-  scanRemote: () => Promise<SyncDataScanResult>
-  deleteFiles: (fileIds: string[]) => Promise<SyncOperationResult>
+  deleteFiles: (fileIds: string[]) => Promise<{ success: boolean; error?: string }>
 }
 
 export function useSync(): UseSyncReturn {
@@ -219,17 +220,8 @@ export function useSync(): UseSyncReturn {
     [],
   )
 
-  const syncNow = useCallback(async (direction: 'download' | 'upload', scope?: SyncScope) => {
-    await window.vialAPI.syncExecute(direction, scope)
-  }, [])
-
-  const listUndecryptable = useCallback(
-    () => window.vialAPI.syncListUndecryptable(),
-    [],
-  )
-
-  const scanRemote = useCallback(
-    () => window.vialAPI.syncScanRemote(),
+  const syncNow = useCallback(
+    (direction: 'download' | 'upload', scope?: SyncScope) => window.vialAPI.syncExecute(direction, scope),
     [],
   )
 
@@ -280,8 +272,6 @@ export function useSync(): UseSyncReturn {
     validatePassword,
     syncNow,
     refreshStatus,
-    listUndecryptable,
-    scanRemote,
     deleteFiles,
   }
 }
