@@ -325,6 +325,22 @@ describe('favorite-store', () => {
     })
   })
 
+  describe('path traversal prevention', () => {
+    it('rejects an entry whose stored filename escapes the favorites directory', async () => {
+      const dir = join(mockUserDataPath, 'sync', 'favorites', 'tapDance')
+      await mkdir(dir, { recursive: true })
+      await writeFile(join(dir, 'index.json'), JSON.stringify({
+        type: 'tapDance',
+        entries: [{ id: 'evil-entry', label: 'Evil', filename: '../../etc/passwd', savedAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z' }],
+      }), 'utf-8')
+
+      const loadHandler = getHandler(IpcChannels.FAVORITE_STORE_LOAD)
+      const result = await loadHandler(fakeEvent, 'tapDance', 'evil-entry') as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Invalid filename')
+    })
+  })
+
   describe('export', () => {
     const validTapDanceJson = '{"type":"tapDance","data":{"onTap":4,"onHold":0,"onDoubleTap":0,"onTapHold":0,"tappingTerm":200}}'
 

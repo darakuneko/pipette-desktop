@@ -11,6 +11,7 @@ import { withWriteLock } from './per-uid-write-lock'
 import { upsertKeyboardMeta } from './sync/keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT } from '../shared/types/keyboard-meta'
 import { secureHandle } from './ipc-guard'
+import { isSafePathSegment, tsForFilename } from './utils/safe-filename'
 import type { SnapshotMeta, SnapshotIndex } from '../shared/types/snapshot-store'
 import type { HubPrivateLink } from '../shared/types/hub-private'
 
@@ -22,12 +23,6 @@ function sanitizeFilename(name: string): string {
     .replace(/[\x00-\x1f]/g, '')
     .replace(/\.+$/, '')
     .trim() || 'keyboard'
-}
-
-// Reject uid or filename values that could escape the snapshots directory
-function isSafePathSegment(segment: string): boolean {
-  if (!segment || segment === '.' || segment === '..') return false
-  return !/[/\\]/.test(segment)
 }
 
 function validateUid(uid: string): void {
@@ -126,7 +121,7 @@ export function setupSnapshotStore(): void {
           await mkdir(dir, { recursive: true })
 
           const now = new Date()
-          const timestamp = now.toISOString().replace(/:/g, '-')
+          const timestamp = tsForFilename(now)
           const safeName = sanitizeFilename(deviceName)
           const filename = `${safeName}_${timestamp}.pipette`
           const filePath = getSafeFilePath(uid, filename)

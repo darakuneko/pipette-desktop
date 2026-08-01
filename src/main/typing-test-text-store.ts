@@ -7,6 +7,7 @@ import { join, basename } from 'node:path'
 import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { notifyChange } from './sync/sync-service'
+import { isSafePathSegment, tsForFilename } from './utils/safe-filename'
 import { isKanaOnlyText } from '../shared/kana-purity'
 import type {
   TypingTestTextMeta,
@@ -54,11 +55,6 @@ function getIndexPath(): string {
   return join(getStoreDir(), 'index.json')
 }
 
-function isSafePathSegment(segment: string): boolean {
-  if (!segment || segment === '.' || segment === '..') return false
-  return !/[/\\]/.test(segment)
-}
-
 function getEntryPath(filename: string): string {
   if (!isSafePathSegment(filename)) throw new Error('Invalid filename')
   return join(getStoreDir(), filename)
@@ -74,10 +70,6 @@ function ok<T>(data?: T): TypingTestTextStoreResult<T> {
 
 function nowIso(): string {
   return new Date().toISOString()
-}
-
-function tsForFilename(now: Date = new Date()): string {
-  return now.toISOString().replace(/:/g, '-')
 }
 
 async function readIndex(): Promise<TypingTestTextIndex> {

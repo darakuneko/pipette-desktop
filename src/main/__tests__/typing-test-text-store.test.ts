@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
-import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile, readFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 
 // --- Mock electron ---
@@ -213,6 +213,21 @@ describe('typing-test-text-store', () => {
       const rec = await getRecord(saved.data!.id)
       // Single spaces within a line, a newline at each line break, blank line dropped.
       expect(rec.data?.data.text).toBe('the quick brown\nfox jumps\nover')
+    })
+  })
+
+  describe('path traversal prevention', () => {
+    it('rejects an entry whose stored filename escapes the typing-test-texts directory', async () => {
+      const dir = join(mockUserDataPath, 'sync', TYPING_TEST_TEXT_SYNC_UNIT)
+      await mkdir(dir, { recursive: true })
+      await writeFile(join(dir, 'index.json'), JSON.stringify({
+        entries: [{ id: 'evil-entry', name: 'Evil', wordCount: 1, lineCount: 1, filename: '../../etc/passwd', savedAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z' }],
+      }), 'utf-8')
+
+      const record = await getRecord('evil-entry')
+      expect(record.success).toBe(false)
+      expect(record.errorCode).toBe('IO_ERROR')
+      expect(record.error).toContain('Invalid filename')
     })
   })
 

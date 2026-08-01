@@ -6,7 +6,7 @@ import { basename, join } from 'node:path'
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { notifyChange } from './sync/sync-service'
-import { safeFilename } from './utils/safe-filename'
+import { safeFilename, isSafePathSegment, tsForFilename } from './utils/safe-filename'
 import type {
   KeyLabelMeta,
   KeyLabelIndex,
@@ -32,11 +32,6 @@ function getIndexPath(): string {
   return join(getStoreDir(), 'index.json')
 }
 
-function isSafePathSegment(segment: string): boolean {
-  if (!segment || segment === '.' || segment === '..') return false
-  return !/[/\\]/.test(segment)
-}
-
 function getEntryPath(filename: string): string {
   if (!isSafePathSegment(filename)) throw new Error('Invalid filename')
   return join(getStoreDir(), filename)
@@ -52,10 +47,6 @@ function ok<T>(data?: T): KeyLabelStoreResult<T> {
 
 function nowIso(): string {
   return new Date().toISOString()
-}
-
-function tsForFilename(now: Date = new Date()): string {
-  return now.toISOString().replace(/:/g, '-')
 }
 
 async function readIndex(): Promise<KeyLabelIndex> {

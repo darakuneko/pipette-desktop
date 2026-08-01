@@ -446,7 +446,10 @@ function buildFiles(params: HubUploadPostParams): HubUploadFiles {
   return files
 }
 
-function isSafePathSegment(segment: string): boolean {
+// Deliberately stricter than the shared `isSafePathSegment` (ASCII
+// allowlist vs separator denylist) because these filenames cross the
+// Hub upload boundary; not consolidated by design.
+function isSafeExportFilename(segment: string): boolean {
   return /^[a-zA-Z0-9_.-]+$/.test(segment) && segment !== '.' && segment !== '..'
 }
 
@@ -462,7 +465,7 @@ async function buildFavoriteExportJson(
   const entry = index.entries.find((e) => e.id === entryId && !e.deletedAt)
   if (!entry) throw new Error('Entry not found')
 
-  if (!isSafePathSegment(entry.filename)) throw new Error('Invalid filename')
+  if (!isSafeExportFilename(entry.filename)) throw new Error('Invalid filename')
   const filePath = join(favDir, entry.filename)
   const fileRaw = await readFile(filePath, 'utf-8')
   const parsed = JSON.parse(fileRaw) as { type: string; data: unknown }

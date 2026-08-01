@@ -8,6 +8,7 @@ import { IpcChannels } from '../shared/ipc/channels'
 import { notifyChange } from './sync/sync-service'
 import { secureHandle } from './ipc-guard'
 import { withWriteLock } from './per-uid-write-lock'
+import { isSafePathSegment } from './utils/safe-filename'
 import { isRecord } from '../shared/vil-file'
 import { getActiveKeyboardMetaMap, readKeyboardMetaIndex, resolveKeyboardDisplayName } from './sync/keyboard-meta'
 import { getTypingAnalyticsDB } from './typing-analytics/db/typing-analytics-db'
@@ -70,11 +71,6 @@ function isValidViewMatrix(value: unknown): boolean {
     if (!Number.isInteger(cell.col) || (cell.col as number) < 0) return false
   }
   return true
-}
-
-function isSafePathSegment(segment: string): boolean {
-  if (!segment || segment === '.' || segment === '..') return false
-  return !/[/\\]/.test(segment)
 }
 
 function validateUid(uid: string): void {
