@@ -29,6 +29,7 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
       keyboardNames: rawScanResult.keyboardNames,
       favorites: [], // All favorites exist locally, so cloud-only = none
       i18nPacks: rawScanResult.i18nPacks,
+      themePacks: rawScanResult.themePacks,
       undecryptable: rawScanResult.undecryptable,
     }
   }, [rawScanResult, excludeLocalData, localKeyboardUids])
@@ -36,6 +37,7 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
   const [selectedKeyboardUids, setSelectedKeyboardUids] = useState<Set<string>>(new Set())
   const [favoritesSelected, setFavoritesSelected] = useState(false)
   const [i18nPacksSelected, setI18nPacksSelected] = useState(false)
+  const [themePacksSelected, setThemePacksSelected] = useState(false)
   const [selectedUndecryptable, setSelectedUndecryptable] = useState<Set<string>>(new Set())
   const [confirming, setConfirming] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -48,6 +50,7 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
     setSelectedKeyboardUids(new Set())
     setFavoritesSelected(false)
     setI18nPacksSelected(false)
+    setThemePacksSelected(false)
     setSelectedUndecryptable(new Set())
   }, [])
 
@@ -89,7 +92,7 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
     setConfirming(false)
   }, [scanResult, selectedUndecryptable.size])
 
-  const anySelected = selectedKeyboardUids.size > 0 || favoritesSelected || i18nPacksSelected || selectedUndecryptable.size > 0
+  const anySelected = selectedKeyboardUids.size > 0 || favoritesSelected || i18nPacksSelected || themePacksSelected || selectedUndecryptable.size > 0
   const allUndecryptableSelected = scanResult !== null && scanResult.undecryptable.length > 0 && selectedUndecryptable.size === scanResult.undecryptable.length
 
   const handleDelete = useCallback(async () => {
@@ -98,11 +101,12 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
     setError(null)
     onResetStart?.()
     try {
-      if (selectedKeyboardUids.size > 0 || favoritesSelected || i18nPacksSelected) {
+      if (selectedKeyboardUids.size > 0 || favoritesSelected || i18nPacksSelected || themePacksSelected) {
         const targets = {
           keyboards: selectedKeyboardUids.size > 0 ? [...selectedKeyboardUids] : false as const,
           favorites: favoritesSelected,
           i18nPacks: i18nPacksSelected,
+          themePacks: themePacksSelected,
         }
         const result = await sync.resetSyncTargets(targets)
         if (!result.success) {
@@ -131,12 +135,13 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
       setDeleting(false)
       onResetEnd?.()
     }
-  }, [sync, selectedKeyboardUids, favoritesSelected, i18nPacksSelected, selectedUndecryptable, resetSelections, onResetStart, onResetEnd, t])
+  }, [sync, selectedKeyboardUids, favoritesSelected, i18nPacksSelected, themePacksSelected, selectedUndecryptable, resetSelections, onResetStart, onResetEnd, t])
 
   const hasNoData = scanResult !== null
     && scanResult.keyboards.length === 0
     && scanResult.favorites.length === 0
     && (scanResult.i18nPacks?.length ?? 0) === 0
+    && scanResult.themePacks.length === 0
     && scanResult.undecryptable.length === 0
 
   return (
@@ -214,6 +219,21 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
                 className="accent-danger"
               />
               {t('sync.resetTarget.i18nPacks')}
+            </label>
+          )}
+          {scanResult.themePacks.length > 0 && (
+            <label className="flex items-center gap-2 text-sm text-content" data-testid="sync-target-themePacks">
+              <input
+                type="checkbox"
+                checked={themePacksSelected}
+                onChange={(e) => {
+                  setThemePacksSelected(e.target.checked)
+                  setConfirming(false)
+                }}
+                disabled={disabled || deleting}
+                className="accent-danger"
+              />
+              {t('sync.resetTarget.themePacks')}
             </label>
           )}
           {scanResult.undecryptable.length > 0 && (

@@ -9,8 +9,19 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
-import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
+
+// Real fs/promises for every export except `utimes`, which is wrapped in a
+// `vi.fn` so individual tests can force it to reject (simulating a utimes
+// failure) — `vi.spyOn` cannot patch a real ESM module's export (Node's
+// `node:fs/promises` namespace is non-configurable), so the override has to
+// happen at mock-definition time instead.
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>()
+  return { ...actual, utimes: vi.fn(actual.utimes) }
+})
+
+import { mkdtemp, readFile, rm, stat, utimes } from 'node:fs/promises'
 
 let mockUserDataPath = ''
 
@@ -30,7 +41,15 @@ vi.mock('../sync/sync-service', () => ({
   notifyChange: vi.fn(),
 }))
 
+// The real logger is a module-level singleton (cached log directory) that
+// doesn't play well with a fresh mkdtemp'd userData per test — mock it out,
+// same as sync-bundle.run-log.test.ts does.
+vi.mock('../logger', () => ({
+  log: vi.fn(),
+}))
+
 import { notifyChange } from '../sync/sync-service'
+import { log } from '../logger'
 import {
   savePack,
   listMetas,
@@ -40,6 +59,10 @@ import {
   renamePack,
   reorderActive,
   setHubPostId,
+  mergeSyncedIndex,
+  applySyncedPackBody,
+  pinPackBodyMtime,
+  statLocalPackMtime,
   __testing,
 } from '../i18n-pack-store'
 import { BUILTIN_ENGLISH_PACK_ID, I18N_INDEX_SYNC_UNIT } from '../../shared/types/i18n-store'
@@ -352,5 +375,127 @@ describe('i18n-pack-store built-in English entry (ensureBuiltinEnglishEntry)', (
     const afterGet = await getPack(BUILTIN_ENGLISH_PACK_ID)
     expect(afterGet.success).toBe(true)
     expect(afterGet.data!.pack).toEqual({ name: 'English', version: '0.0.0' })
+  })
+})
+
+// --- Task-sync-unit-discovery bugfix plan: fixes 1-3 ------------------------
+
+describe('i18n-pack-store sync robustness fixes (utimes degrade / pin CAS / malformed metas)', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    mockUserDataPath = await mkdtemp(join(tmpdir(), 'i18n-pack-store-test-'))
+  })
+
+  afterEach(async () => {
+    await rm(mockUserDataPath, { recursive: true, force: true })
+  })
+
+  // --- Fix 1: utimes failure degrades to accept-with-warn -------------------
+
+  it('applySyncedPackBody: a utimes failure after a successful write still reports "applied" (never io-error)', async () => {
+    vi.mocked(utimes).mockRejectedValueOnce(new Error('EPERM: operation not permitted'))
+
+    const outcome = await applySyncedPackBody(
+      'utimes-fail-pack',
+      JSON.stringify({ name: 'UtimesFail', version: '1.0.0' }),
+      '2026-01-01T00:00:00.000Z',
+    )
+
+    expect(outcome).toBe('applied')
+    expect(utimes).toHaveBeenCalledTimes(1)
+    expect(log).toHaveBeenCalledWith('warn', expect.stringContaining('i18n/packs/utimes-fail-pack'))
+
+    // The body write itself must have landed despite the pin failure.
+    // (applySyncedPackBody only writes the body file — no index entry
+    // exists for this id, so read the file directly rather than via
+    // getPack, which requires an index meta.)
+    const body = await readFile(__testing.getPackPath('utimes-fail-pack'), 'utf-8')
+    expect(JSON.parse(body)).toEqual({ name: 'UtimesFail', version: '1.0.0' })
+  })
+
+  it('pinPackBodyMtime: a utimes failure is swallowed (warn), never thrown', async () => {
+    const saved = await savePack({ pack: makePack({ name: 'PinFail' }) })
+    const id = saved.data!.id
+    const mtime = await statLocalPackMtime(id)
+
+    vi.mocked(utimes).mockRejectedValueOnce(new Error('EPERM'))
+    await expect(pinPackBodyMtime(id, '2026-01-01T00:00:00.000Z', mtime)).resolves.toBeUndefined()
+    expect(log).toHaveBeenCalledWith('warn', expect.stringContaining(`i18n/packs/${id}`))
+  })
+
+  // --- Fix 2: post-upload pin is CAS-guarded ---------------------------------
+
+  it('pinPackBodyMtime: skips the pin (no utimes call) when the local mtime no longer matches the upload snapshot', async () => {
+    const saved = await savePack({ pack: makePack({ name: 'Racer' }) })
+    const id = saved.data!.id
+    const path = __testing.getPackPath(id)
+
+    // Snapshot mtime as it was when uploadSyncUnit bundled the (old) content.
+    const snapshotDate = new Date('2020-01-01T00:00:00.000Z')
+    await utimes(path, snapshotDate, snapshotDate)
+    const snapshot = snapshotDate.getTime()
+
+    // A concurrent local save lands after the snapshot but before the pin
+    // takes the store's write lock — simulated by advancing the file's
+    // mtime well past both the snapshot and the (old) upload's Drive time.
+    const raceDate = new Date('2026-06-01T00:00:00.000Z')
+    await utimes(path, raceDate, raceDate)
+
+    vi.mocked(utimes).mockClear() // discard the setup calls above
+    await pinPackBodyMtime(id, '2020-01-01T00:00:05.000Z', snapshot)
+    expect(utimes).not.toHaveBeenCalled()
+
+    // The newer (raced) edit's mtime survives untouched, so it still wins
+    // the next LWW comparison against the stale upload's Drive time.
+    const finalMtime = (await statLocalPackMtime(id))!
+    expect(finalMtime).toBe(raceDate.getTime())
+    expect(finalMtime).toBeGreaterThan(new Date('2020-01-01T00:00:05.000Z').getTime())
+  })
+
+  it('pinPackBodyMtime: pins when the local mtime still matches the snapshot (no race)', async () => {
+    const saved = await savePack({ pack: makePack({ name: 'NoRace' }) })
+    const id = saved.data!.id
+    const snapshot = await statLocalPackMtime(id)
+
+    const remoteModifiedTime = '2026-07-01T00:00:00.000Z'
+    await pinPackBodyMtime(id, remoteModifiedTime, snapshot)
+
+    const path = __testing.getPackPath(id)
+    const finalStat = await stat(path)
+    expect(finalStat.mtime.getTime()).toBe(new Date(remoteModifiedTime).getTime())
+  })
+
+  it('pinPackBodyMtime: skips the pin when given no snapshot to compare (null)', async () => {
+    const saved = await savePack({ pack: makePack({ name: 'NoSnapshot' }) })
+    const id = saved.data!.id
+    const before = await statLocalPackMtime(id)
+
+    vi.mocked(utimes).mockClear()
+    await pinPackBodyMtime(id, '2026-07-01T00:00:00.000Z', null)
+    expect(utimes).not.toHaveBeenCalled()
+
+    const after = await statLocalPackMtime(id)
+    expect(after).toBe(before)
+  })
+
+  // --- Fix 3: meta validation must not crash on non-object entries ----------
+
+  it('mergeSyncedIndex drops non-object entries (e.g. null) instead of crashing, keeping valid siblings', async () => {
+    const goodMeta = {
+      id: 'good-1',
+      filename: 'packs/good-1.json',
+      name: 'Good',
+      version: '1.0.0',
+      enabled: true,
+      savedAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    }
+
+    const result = await mergeSyncedIndex([null, goodMeta])
+
+    expect(result.applied).toBe(true)
+    expect(log).toHaveBeenCalledWith('warn', expect.stringContaining('dropped 1 unsafe remote meta id'))
+    const all = await listAllMetas()
+    expect(all.some((m) => m.id === 'good-1')).toBe(true)
   })
 })

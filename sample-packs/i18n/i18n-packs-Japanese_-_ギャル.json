@@ -1,5 +1,5 @@
 {
-  "version": "0.1.53",
+  "version": "0.1.54",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -759,7 +759,8 @@
       "keyboardData": "キーボード☆",
       "favorites": "お気に入り♡",
       "appSettings": "アプリ設定っしょ",
-      "i18nPacks": "言語パック☆"
+      "i18nPacks": "言語パック☆",
+      "themePacks": "テーマパック☆"
     },
     "deleteSelected": "選んだのポイっちょ！",
     "resetTargetsConfirm": "消したら戻んないけどいい？ガチで☆",

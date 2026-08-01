@@ -1,5 +1,5 @@
 {
-  "version": "0.1.53",
+  "version": "0.1.54",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -759,7 +759,8 @@
       "keyboardData": "機材",
       "favorites": "お気に入り",
       "appSettings": "御用達設定",
-      "i18nPacks": "言葉の包み"
+      "i18nPacks": "言葉の包み",
+      "themePacks": "意匠の包み"
     },
     "deleteSelected": "選ばれしものを抹消",
     "resetTargetsConfirm": "選ばれた記録は永遠に失われます。よろしいのですね？",

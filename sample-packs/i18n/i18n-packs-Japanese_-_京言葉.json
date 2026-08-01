@@ -1,5 +1,5 @@
 {
-  "version": "0.1.53",
+  "version": "0.1.54",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -759,7 +759,8 @@
       "keyboardData": "キーボード",
       "favorites": "お気に入り",
       "appSettings": "アプリケーション",
-      "i18nPacks": "言語パック"
+      "i18nPacks": "言語パック",
+      "themePacks": "テーマパック"
     },
     "deleteSelected": "選んだもんを消しますえ",
     "resetTargetsConfirm": "選んだデータが完全に消えますえ。元には戻せまへんえ。",

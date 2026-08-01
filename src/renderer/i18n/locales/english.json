@@ -1,5 +1,5 @@
 {
-  "version": "0.1.53",
+  "version": "0.1.54",
   "name": "English",
   "common": {
     "save": "Save",
@@ -769,7 +769,8 @@
       "keyboardData": "Keyboard",
       "favorites": "Favorite",
       "appSettings": "Application",
-      "i18nPacks": "Language Packs"
+      "i18nPacks": "Language Packs",
+      "themePacks": "Theme Packs"
     },
     "deleteSelected": "Delete Selected",
     "resetTargetsConfirm": "The selected data will be permanently deleted. This action cannot be undone.",
