@@ -80,15 +80,23 @@ export const BENCHMARK_ROLLOVER_RATIO_PCT: BenchmarkStat = { mean: 25.00, sd: 17
 // error subsample, not the full 168,960-participant cohort the other
 // constants in this file are drawn from.
 //
-// These three constants carry a real, transcribed SD, but the two
-// direct-render consumers (`ErrorMixSection`'s History summary and the
-// Analyze Typing Profile card's Error mix cell) still show only the
-// plain mean as context text — adding a `benchmarkPosition` label to
-// either is a deliberate follow-up, not an oversight. The typist-cluster
-// classifier (`renderer/components/analyze/analyze-typist-cluster.ts`)
-// is the current SD consumer: it z-scores these three rates against
-// `TYPIST_CLUSTER_CENTROIDS`, but that z-score never surfaces as a
-// per-row position label anywhere in the UI.
+// These three constants carry a real, transcribed SD, used two different
+// ways by their two direct-render consumers:
+//
+//  - `ErrorMixSection`'s History summary surfaces it as a per-row
+//    `benchmarkPosition` label (Far below/Below/Average/Above/Far above
+//    average) alongside the plain mean — see that component's module doc
+//    for why a dedicated `analyze.benchmark.positionRate.*` i18n key set
+//    backs it instead of the existing `analyze.benchmark.position.*` one.
+//  - The Analyze Typing Profile card's Error mix cell stays plain-mean by
+//    design, not as a follow-up: that cell packs all three rates into one
+//    cell of a shared four-column grid, and three long position labels
+//    would triple the cell's height with no compact form to fall back on.
+//
+// The typist-cluster classifier (`renderer/components/analyze/
+// analyze-typist-cluster.ts`) is a third SD consumer: it z-scores these
+// three rates against `TYPIST_CLUSTER_CENTROIDS`, but that z-score never
+// surfaces as a per-row position label there either.
 export const BENCHMARK_SUBSTITUTION_RATE_PCT: BenchmarkStat = { mean: 1.65, sd: 1.43 }
 export const BENCHMARK_OMISSION_RATE_PCT: BenchmarkStat = { mean: 0.80, sd: 0.57 }
 export const BENCHMARK_INSERTION_RATE_PCT: BenchmarkStat = { mean: 0.67, sd: 0.48 }

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.54",
+  "version": "0.1.55",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -906,6 +906,13 @@
         "average": "平均的でございます",
         "above": "平均より高めでございます",
         "farAbove": "平均よりかなり高うございます"
+      },
+      "positionRate": {
+        "farBelow": "平均よりかなり少のうございます",
+        "below": "平均より少なめでございます",
+        "average": "平均的でございます",
+        "above": "平均より多めでございます",
+        "farAbove": "平均よりかなり多うございます"
       },
       "referenceLineLabel": "全体平均",
       "toggleAria": "全体平均の基準線を表示いたします"

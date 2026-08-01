@@ -64,4 +64,24 @@ describe('ErrorMixSection', () => {
     // it doesn't crash and still shows the qualifying result's own rate.
     expect(screen.getByTestId('error-mix-substitution').textContent).toContain('4.00')
   })
+
+  it('appends the far-above-average position label for a rate far past the population mean', () => {
+    // Substitution population mean/SD is 1.65/1.43 — a 10% rate is ~5.8
+    // SDs above the mean, well past the |z| > 1.5 far-above threshold.
+    const results = [
+      makeResult({ errorSubstitutions: 10, errorOmissions: 0, errorInsertions: 0, errorTargetChars: 100 }),
+    ]
+    renderWithI18n(<ErrorMixSection results={results} />)
+    expect(screen.getByTestId('error-mix-substitution').textContent).toContain('Far above average')
+  })
+
+  it('appends the average position label for a rate within half an SD of the population mean', () => {
+    // 33 / 2000 = 1.65% — exactly the substitution population mean, so
+    // z = 0, squarely inside the |z| <= 0.5 average bucket.
+    const results = [
+      makeResult({ errorSubstitutions: 33, errorOmissions: 0, errorInsertions: 0, errorTargetChars: 2000 }),
+    ]
+    renderWithI18n(<ErrorMixSection results={results} />)
+    expect(screen.getByTestId('error-mix-substitution').textContent).toContain('Average')
+  })
 })

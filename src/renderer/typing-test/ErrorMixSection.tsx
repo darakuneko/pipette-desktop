@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import { sumErrorClassGroups, type ErrorClassCounts } from './error-classify'
 import { formatKspc } from '../../shared/kspc'
+import { benchmarkPosition } from '../components/analyze/analyze-benchmark'
 import {
   BENCHMARK_SUBSTITUTION_RATE_PCT,
   BENCHMARK_OMISSION_RATE_PCT,
@@ -37,12 +38,16 @@ const ERROR_MIX_ROWS: ReadonlyArray<{
 /** History's error-mix summary — char-weighted substitution/omission/
  *  insertion rates aggregated across every result in the active tab that
  *  recorded the 4-field error-class group, alongside the population mean
- *  for each (see `typing-benchmarks.ts`) as plain context text. No
- *  position labels here — see the three rate constants' doc comment in
- *  typing-benchmarks.ts for why. Hidden entirely when the tab has no
- *  results at all; shows a subtle empty line when there are results but
- *  none of them qualify (e.g. a romaji-only tab, or every result
- *  predates error-class tracking). */
+ *  for each (see `typing-benchmarks.ts`) as context text. Each row also
+ *  appends a `benchmarkPosition` label (Far below/Below/Average/Above/Far
+ *  above average) through a dedicated `analyze.benchmark.positionRate.*`
+ *  key set rather than the existing `analyze.benchmark.position.*` one —
+ *  that set's pack strings are speed-phrased (slow/fast, for WPM/KSPC/
+ *  IKI-shaped stats) and would read backwards for an error rate, where
+ *  "above average" is worse, not faster. Hidden entirely when the tab
+ *  has no results at all; shows a subtle empty line when there are
+ *  results but none of them qualify (e.g. a romaji-only tab, or every
+ *  result predates error-class tracking). */
 export function ErrorMixSection({ results }: Props) {
   const { t } = useTranslation()
   const totals = useMemo(() => sumErrorClassGroups(results), [results])
@@ -62,9 +67,11 @@ export function ErrorMixSection({ results }: Props) {
         <div className="flex flex-col gap-1">
           {ERROR_MIX_ROWS.map(({ testId, bench, i18nKey, pick }) => {
             const pct = (pick(totals) / totals.targetChars) * 100
+            const position = benchmarkPosition(pct, bench)
             return (
               <div key={testId} className="text-xs text-content-muted" data-testid={`error-mix-${testId}`}>
                 {t(i18nKey, { pct: formatKspc(pct), avgPct: formatKspc(bench.mean) })}
+                {position && ` · ${t(`analyze.benchmark.positionRate.${position.label}`)}`}
               </div>
             )
           })}
