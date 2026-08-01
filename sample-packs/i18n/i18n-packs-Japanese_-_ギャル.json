@@ -1,5 +1,5 @@
 {
-  "version": "0.1.54",
+  "version": "0.1.55",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -906,6 +906,13 @@
         "average": "ふつーくらい☆",
         "above": "平均より速いじゃん",
         "farAbove": "平均よりめっちゃ速い★"
+      },
+      "positionRate": {
+        "farBelow": "平均よりかなり少ないっしょ",
+        "below": "平均より少なめ",
+        "average": "ふつーくらい☆",
+        "above": "平均より多いじゃん",
+        "farAbove": "平均よりめっちゃ多い★"
       },
       "referenceLineLabel": "みんなの平均☆",
       "toggleAria": "みんなの平均ラインを表示するよん"

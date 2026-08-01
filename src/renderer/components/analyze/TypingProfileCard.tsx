@@ -288,10 +288,14 @@ export function TypingProfileCard({
   // Char-weighted (Σ/Σ) error-class rates over windowResults — see
   // sumErrorClassGroups for the per-result all-or-nothing read and the
   // fold (shared with ErrorMixSection's History summary), and
-  // windowResults above for why romaji is excluded. No position labels
-  // here — shown as plain mean context text rather than through
-  // BenchmarkSubline; see the three rate constants' doc comment in
-  // typing-benchmarks.ts for why (their SD is used elsewhere, not here).
+  // windowResults above for why romaji is excluded. Plain mean context
+  // text by design, not a follow-up: this cell packs all three rates
+  // into one cell of a shared four-column grid, and three long position
+  // labels would triple the cell's height with no compact form to fall
+  // back on — the per-row position labels live in the Typing Test
+  // History's Error mix rows (ErrorMixSection) instead. See the three
+  // rate constants' doc comment in typing-benchmarks.ts for the full
+  // rationale.
   const errorMix = useMemo(() => {
     const totals = sumErrorClassGroups(windowResults)
     if (!totals) return null

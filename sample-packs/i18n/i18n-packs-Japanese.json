@@ -1,5 +1,5 @@
 {
-  "version": "0.1.54",
+  "version": "0.1.55",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -916,6 +916,13 @@
         "average": "平均的",
         "above": "平均より高い",
         "farAbove": "平均よりかなり高い"
+      },
+      "positionRate": {
+        "farBelow": "平均よりかなり少ない",
+        "below": "平均より少ない",
+        "average": "平均的",
+        "above": "平均より多い",
+        "farAbove": "平均よりかなり多い"
       },
       "referenceLineLabel": "全体平均",
       "toggleAria": "全体平均の基準線を表示"

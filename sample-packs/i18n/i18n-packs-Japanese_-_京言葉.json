@@ -1,5 +1,5 @@
 {
-  "version": "0.1.54",
+  "version": "0.1.55",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -906,6 +906,13 @@
         "average": "平均的どす",
         "above": "平均より少し速いどす",
         "farAbove": "平均よりえろう速いどすなぁ"
+      },
+      "positionRate": {
+        "farBelow": "平均よりだいぶ少ないどすなぁ",
+        "below": "平均より少し少ないどす",
+        "average": "平均的どす",
+        "above": "平均より少し多いどす",
+        "farAbove": "平均よりえろう多いどすなぁ"
       },
       "referenceLineLabel": "みなさんの平均",
       "toggleAria": "みなさんの平均の基準線を表示しますえ"
