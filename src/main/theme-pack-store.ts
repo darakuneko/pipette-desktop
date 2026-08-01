@@ -18,7 +18,7 @@ import { randomUUID } from 'node:crypto'
 import { notifyChange } from './sync/sync-service'
 import { gcTombstones, mergeEntries, MalformedSyncBundleError } from './sync/merge'
 import { log } from './logger'
-import { safeFilename } from './utils/safe-filename'
+import { safeFilename, isSafePackId } from './utils/safe-filename'
 import { validateThemePack } from '../shared/theme/validate'
 import {
   THEME_INDEX_SYNC_UNIT,
@@ -50,11 +50,6 @@ function getPacksDir(): string {
 
 function getIndexPath(): string {
   return join(getStoreDir(), INDEX_FILENAME)
-}
-
-function isSafePackId(id: string): boolean {
-  // UUID-like form. Reject anything that could escape the packs dir.
-  return /^[A-Za-z0-9_-]{1,64}$/.test(id)
 }
 
 /** True when `m` is at least shaped enough to read `.id` off of safely —

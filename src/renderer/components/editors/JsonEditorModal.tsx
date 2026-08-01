@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { ModalCloseButton } from './ModalCloseButton'
 import { BTN_PRIMARY } from '../../constants/ui-tokens'
 import { useEscapeCloseCapture } from '../../hooks/useEscapeClose'
+import { tsForExportFilename } from '../../../shared/utils/safe-filename'
 
 export interface JsonEditorModalProps<T> {
   title: string
@@ -68,7 +69,7 @@ export function JsonEditorModal<T>({
   }, [text, parse, onApply, onClose, t])
 
   const handleExport = useCallback(async () => {
-    const ts = new Date().toISOString().replace(/:/g, '').replace(/\.\d+Z$/, '').replace('T', '-')
+    const ts = tsForExportFilename()
     const filename = `pipette-fav-${exportFileName}-current-all-${ts}`
     await window.vialAPI.exportJson(text, filename)
   }, [text, exportFileName])

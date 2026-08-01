@@ -145,6 +145,21 @@ describe('key-label-store', () => {
     })
   })
 
+  describe('path traversal prevention', () => {
+    it('rejects an entry whose stored filename escapes the key-labels directory', async () => {
+      const dir = join(mockUserDataPath, 'sync', 'key-labels')
+      await mkdir(dir, { recursive: true })
+      await writeFile(join(dir, 'index.json'), JSON.stringify({
+        entries: [{ id: 'evil-entry', name: 'Evil', filename: '../../etc/passwd', savedAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z' }],
+      }), 'utf-8')
+
+      const record = await getRecord('evil-entry')
+      expect(record.success).toBe(false)
+      expect(record.errorCode).toBe('IO_ERROR')
+      expect(record.error).toContain('Invalid filename')
+    })
+  })
+
   describe('renameRecord', () => {
     it('updates index + payload', async () => {
       const created = await saveRecord({ name: 'Old', uploaderName: 'me', map: { KC_A: '1' } })

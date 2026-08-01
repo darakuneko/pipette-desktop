@@ -10,13 +10,9 @@ import { isValidFavoriteType, isValidVialProtocol, isFavoriteDataFile, FAV_EXPOR
 import { serialize as serializeKeycode, deserialize as deserializeKeycode, getProtocol, setProtocol } from '../shared/keycodes/keycodes'
 import { notifyChange } from './sync/sync-service'
 import { secureHandle } from './ipc-guard'
+import { isSafePathSegment, tsForFilename, tsForExportFilename } from './utils/safe-filename'
 import type { FavoriteType, SavedFavoriteMeta, FavoriteIndex, FavoriteExportEntry, FavoriteImportResult } from '../shared/types/favorite-store'
 import type { HubPrivateLink } from '../shared/types/hub-private'
-
-function isSafePathSegment(segment: string): boolean {
-  if (!segment || segment === '.' || segment === '..') return false
-  return !/[/\\]/.test(segment)
-}
 
 function validateType(type: unknown): asserts type is FavoriteType {
   if (!isValidFavoriteType(type)) throw new Error('Invalid favorite type')
@@ -108,7 +104,7 @@ export function setupFavoriteStore(): void {
         await mkdir(dir, { recursive: true })
 
         const now = new Date()
-        const timestamp = now.toISOString().replace(/:/g, '-')
+        const timestamp = tsForFilename(now)
         const filename = `${type}_${timestamp}_${randomUUID().slice(0, 8)}.json`
         const filePath = getSafeFilePath(type, filename)
 
@@ -244,7 +240,7 @@ export function setupFavoriteStore(): void {
           : {}
 
         const now = new Date()
-        const ts = now.toISOString().replace(/:/g, '').replace(/\.\d+Z$/, '').replace('T', '-')
+        const ts = tsForExportFilename(now)
         const defaultFilename = `pipette-fav-${exportKey}-${ts}.json`
 
         const result = await dialog.showSaveDialog(win, {
@@ -289,7 +285,7 @@ export function setupFavoriteStore(): void {
         const serializedData = serializeFavData(scope, parsed.data, serializeKeycode)
 
         const now = new Date()
-        const ts = now.toISOString().replace(/:/g, '').replace(/\.\d+Z$/, '').replace('T', '-')
+        const ts = tsForExportFilename(now)
         const defaultFilename = `pipette-fav-${exportKey}-current-${ts}.json`
 
         const result = await dialog.showSaveDialog(win, {
@@ -482,7 +478,7 @@ export function setupFavoriteStore(): void {
             }
 
             const now = new Date()
-            const timestamp = now.toISOString().replace(/:/g, '-')
+            const timestamp = tsForFilename(now)
             const filename = `${favType}_${timestamp}_${randomUUID().slice(0, 8)}.json`
             const filePath = getSafeFilePath(favType, filename)
 

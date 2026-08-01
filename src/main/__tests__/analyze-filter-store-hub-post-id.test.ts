@@ -144,4 +144,20 @@ describe('analyze-filter-store set-hub-post-id', () => {
     await deleteHandler(fakeEvent, UID, entry.id)
     expect(await readAnalyzeFilterEntry(UID, entry.id)).toBeNull()
   })
+
+  describe('path traversal prevention', () => {
+    it('rejects uid with path traversal characters', async () => {
+      const handler = getHandler(IpcChannels.ANALYZE_FILTER_STORE_LIST)
+      const result = await handler(fakeEvent, '../..') as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Invalid uid')
+    })
+
+    it('rejects uid with slashes', async () => {
+      const handler = getHandler(IpcChannels.ANALYZE_FILTER_STORE_SAVE)
+      const result = await handler(fakeEvent, 'foo/bar', '{}', 'test') as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Invalid uid')
+    })
+  })
 })

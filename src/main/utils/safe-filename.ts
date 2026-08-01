@@ -5,4 +5,4 @@
 // `src/shared/utils/safe-filename.ts` so the renderer can use them
 // without crossing the process boundary.
 
-export { safeFilename, isSafePathSegment, tsForFilename } from '../../shared/utils/safe-filename'
+export { safeFilename, isSafePathSegment, isSafePackId, tsForFilename, tsForExportFilename } from '../../shared/utils/safe-filename'

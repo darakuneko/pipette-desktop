@@ -3,10 +3,9 @@
 // snapshots per keyboard. File layout intentionally mirrors
 // snapshot-store.ts so the existing index-based sync (sync-bundle /
 // sync-service / merge) picks it up via the new
-// "keyboards/{uid}/analyze_filters" sync unit. Helpers are duplicated
-// rather than abstracted while there are still only two index stores;
-// see snapshot-store.ts for the original rationale on uid validation,
-// write locks, and tombstone-based deletes.
+// "keyboards/{uid}/analyze_filters" sync unit; see snapshot-store.ts for
+// the original rationale on uid validation, write locks, and
+// tombstone-based deletes.
 
 import { app } from 'electron'
 import { join } from 'node:path'
@@ -16,6 +15,7 @@ import { IpcChannels } from '../shared/ipc/channels'
 import { notifyChange } from './sync/sync-service'
 import { withWriteLock } from './per-uid-write-lock'
 import { secureHandle } from './ipc-guard'
+import { isSafePathSegment, tsForFilename } from './utils/safe-filename'
 import {
   ANALYZE_FILTER_STORE_ERROR_MAX_ENTRIES,
   ANALYZE_FILTER_STORE_MAX_ENTRIES_PER_KEYBOARD,
@@ -25,11 +25,6 @@ import {
 import type { HubPrivateLink } from '../shared/types/hub-private'
 
 const MAX_ENTRIES_PER_KEYBOARD = ANALYZE_FILTER_STORE_MAX_ENTRIES_PER_KEYBOARD
-
-function isSafePathSegment(segment: string): boolean {
-  if (!segment || segment === '.' || segment === '..') return false
-  return !/[/\\]/.test(segment)
-}
 
 function validateUid(uid: string): void {
   if (!isSafePathSegment(uid)) throw new Error('Invalid uid')
@@ -130,7 +125,7 @@ export function setupAnalyzeFilterStore(): void {
           await mkdir(dir, { recursive: true })
 
           const now = new Date()
-          const timestamp = now.toISOString().replace(/:/g, '-')
+          const timestamp = tsForFilename(now)
           const filename = `${timestamp}_${randomUUID()}.json`
           const filePath = getSafeFilePath(uid, filename)
 
