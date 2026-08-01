@@ -250,7 +250,7 @@ export function syncUnitFromFileName(fileName: string): string | null {
   if (themePackMatch) return `themes/packs/${themePackMatch[1]}`
 
   // "password-check.enc" is intentionally never mapped to a sync unit —
-  // it's a standalone credential-validation file (see sync-service.ts's
+  // it's a standalone credential-validation file (see sync-password.ts's
   // PASSWORD_CHECK_UNIT), not a data sync unit, and must stay invisible
   // to scanRemoteData / polling / fresh-machine discovery.
 

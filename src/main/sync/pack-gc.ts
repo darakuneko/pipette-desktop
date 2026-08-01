@@ -6,9 +6,9 @@
 // DOWNLOAD PASS actually touched.
 //
 // Binding: this must only ever be invoked once per whole pass (from
-// `executeDownloadSync` and `pollForRemoteChanges` in sync-service.ts),
-// NEVER from inside a single sync unit's own merge callback. The index
-// unit (`i18n/index` / `themes/index`) and each pack-body unit
+// `executeDownloadSync` in sync-execute.ts and `pollForRemoteChanges` in
+// sync-polling.ts), NEVER from inside a single sync unit's own merge
+// callback. The index unit (`i18n/index` / `themes/index`) and each pack-body unit
 // (`i18n/packs/{id}` / `themes/packs/{id}`) merge in parallel with no
 // ordering guarantee within a pass — a per-unit sweep triggered by
 // whichever merge happens to finish first could delete a pack body

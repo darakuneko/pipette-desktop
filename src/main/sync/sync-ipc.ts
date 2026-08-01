@@ -291,7 +291,7 @@ export function setupSyncIpc(): void {
   // that let a busy-race or missing-credentials skip (executeSync
   // returns normally in both cases, never throws) look identical to a
   // real completed sync to every caller — see executeSync's `status`
-  // field doc in sync-service.ts and SyncOperationResult's doc in
+  // field doc in sync-execute.ts and SyncOperationResult's doc in
   // shared/types/sync.ts. `success` is kept `true` for any non-throwing
   // outcome (including skipped/partial) to preserve existing callers'
   // "did the IPC call itself throw" semantics; `status`/`skipReason`

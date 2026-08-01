@@ -14,11 +14,12 @@
 //
 // Import-cycle note: this module imports from i18n-pack-store.ts /
 // theme-pack-store.ts, which each import `notifyChange` from
-// `./sync-service`, which imports from this module — a cycle. This is
-// the same shape sync-bundle.ts already has via key-label-store.ts
-// (sync-service → sync-bundle → key-label-store → sync-service) and is
-// inert here for the same reason: every import is only used inside a
-// function body, never at module-evaluation time.
+// `./sync-service`, whose facade re-exports transitively pull in
+// `sync-merge-dispatch.ts`, which imports from this module — a cycle.
+// This is the same shape sync-bundle.ts already has via
+// key-label-store.ts (sync-service → sync-bundle → key-label-store →
+// sync-service) and is inert here for the same reason: every import is
+// only used inside a function body, never at module-evaluation time.
 
 import { IpcChannels } from '../../shared/ipc/channels'
 import { broadcastToAllWindows } from '../utils/broadcast'
@@ -40,7 +41,7 @@ import {
 import type { SyncBundle } from '../../shared/types/sync'
 
 /** `i18n/packs/{packId}` / `themes/packs/{packId}` parsed once — the
- *  shape every caller in this module and sync-service.ts needs, instead
+ *  shape every caller in this module and sync-merge-dispatch.ts needs, instead
  *  of each re-splitting `syncUnit` and re-deriving `isTheme` on its own. */
 export interface PackBodySyncUnit {
   isTheme: boolean
@@ -124,7 +125,7 @@ function broadcastPackChanged(isTheme: boolean): void {
  * like a legitimately-empty one, which the sync poll's `instanceof`
  * check couldn't distinguish from "nothing to merge" to apply its
  * permanently-rejected-revision skip. This mirrors the generic
- * index-based tail in sync-service.ts, which throws the same way for a
+ * index-based tail in sync-merge-dispatch.ts, which throws the same way for a
  * non-array `.entries`.
  */
 export async function mergePackIndexBundle(
@@ -151,7 +152,7 @@ export async function mergePackIndexBundle(
 /** True when the local pack-body file is already strictly newer than
  *  the remote Drive file's `modifiedTime` — i.e. `mergePackBodyBundle`'s
  *  own comparison would end in "local wins" without needing to look at
- *  the bundle at all. `mergeWithRemote` (sync-service.ts) consults this
+ *  the bundle at all. `mergeWithRemote` (sync-merge-dispatch.ts) consults this
  *  BEFORE downloading + decrypting the full remote bundle, so a manual
  *  'all'-scope sync doesn't pay that cost for every pack whose local
  *  copy is already known to be newer. A tie or a remote win both return
@@ -168,7 +169,7 @@ export async function packBodyLocalWins(
 
 /** Local mtime (ms) of the pack body `ref` refers to, or `null` if it's
  *  unsafe or doesn't exist yet. Exposed so `uploadSyncUnit`
- *  (sync-service.ts) can snapshot the mtime BEFORE bundling the body for
+ *  (sync-merge-dispatch.ts) can snapshot the mtime BEFORE bundling the body for
  *  upload — that snapshot is later passed to `pinPackBodyMtimeAfterUpload`
  *  as its compare-and-swap baseline, see that function's doc. */
 export async function statPackBodyLocalMtime(ref: PackBodySyncUnit): Promise<number | null> {
@@ -261,7 +262,7 @@ export async function mergePackBodyBundle(
  * (and every peer would re-download it), forever.
  *
  * `expectedLocalMtimeMs` is the local body's mtime snapshot taken by the
- * caller (`uploadSyncUnit`, sync-service.ts) at upload-bundling time,
+ * caller (`uploadSyncUnit`, sync-merge-dispatch.ts) at upload-bundling time,
  * BEFORE this store-serialized pin call even runs — bundling, encrypting
  * and uploading to Drive all happen outside the store's write lock, so a
  * user save can land in that window. `pinPackBodyMtime` (i18n/theme

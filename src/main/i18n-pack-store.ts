@@ -326,7 +326,7 @@ export async function applySyncedPackBody(
  *  this same file.
  *
  *  `expectedLocalMtimeMs` is a compare-and-swap guard: the caller
- *  (`uploadSyncUnit`, sync-service.ts) snapshots the local file's mtime
+ *  (`uploadSyncUnit`, sync-merge-dispatch.ts) snapshots the local file's mtime
  *  BEFORE bundling the content for upload — outside this store's write
  *  lock, since bundling/encrypting/uploading to Drive all happen
  *  without holding it. A user save (`savePack`/`renamePack`, both
