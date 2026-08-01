@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { useAppConfig } from './hooks/useAppConfig'
 import { useDeviceConnection } from './hooks/useDeviceConnection'
 import { useKeyboard } from './hooks/useKeyboard'
@@ -22,54 +21,30 @@ import { useDeviceLifecycle } from './hooks/useDeviceLifecycle'
 import { useSessionRestore } from './hooks/useSessionRestore'
 import { useBootHiddenWindow } from './hooks/useBootHiddenWindow'
 import { useMissingKeyLabelNotice } from './hooks/useMissingKeyLabelNotice'
-import { useRecKeystrokeCounter } from './hooks/useRecKeystrokeCounter'
-import { useTrayStatus } from './hooks/useTrayStatus'
-import { MissingKeyLabelDialog } from './components/key-labels/MissingKeyLabelDialog'
-import { JaRemovedBanner } from './components/i18n-packs/JaRemovedBanner'
+import { useTypingRecordingTray } from './hooks/use-typing-recording-tray'
+import { useFileGenerators } from './hooks/use-file-generators'
 import { formatDeviceId } from './app-types'
-import { DeviceSelector } from './components/DeviceSelector'
-import { SettingsModal } from './components/SettingsModal'
-import { DataModal } from './components/DataModal'
-import { NotificationModal } from './components/NotificationModal'
+import { AppBanners } from './components/AppBanners'
+import { AppDisconnectedView } from './components/AppDisconnectedView'
+import { AppModals } from './components/AppModals'
+import { AppEditorSurface } from './components/AppEditorSurface'
 import { ConnectingOverlay } from './components/ConnectingOverlay'
-import { StatusBar } from './components/StatusBar'
-import { ComboPanelModal } from './components/editors/ComboPanelModal'
-import { AltRepeatKeyPanelModal } from './components/editors/AltRepeatKeyPanelModal'
-import { KeyOverridePanelModal } from './components/editors/KeyOverridePanelModal'
-import { RGBConfigurator } from './components/editors/RGBConfigurator'
-import { UnlockDialog } from './components/editors/UnlockDialog'
-import { KeymapEditor, type KeymapEditorHandle } from './components/editors/KeymapEditor'
-import type { AnalyticsOrigin, KeymapApplyResult } from './components/editors/keymap-editor-types'
+import { AppStatusBar } from './components/AppStatusBar'
+import type { KeymapEditorHandle } from './components/editors/KeymapEditor'
+import type { KeymapApplyResult } from './components/editors/keymap-editor-types'
 import { useKeymapApplyPrompt } from './hooks/useKeymapApplyPrompt'
-import { useRunTimelineHandoff } from './hooks/useRunTimelineHandoff'
+import { useViewModeRouting } from './hooks/use-view-mode-routing'
 import type { KeymapRewriteTable } from '../shared/keymap/keymap-apply'
 import { AnalyzePage } from './components/analyze/AnalyzePage'
 import type { ConnectedTappingTerm } from './components/analyze/analyze-types'
-import { buildKeymapSnapshot } from './components/analyze/keymap-snapshot-builder'
-import { LayoutStoreContent } from './components/editors/LayoutStoreModal'
-import { IMPORT_BTN } from './components/editors/layout-store-types'
-import { ROW_CLASS } from './components/editors/modal-controls'
-import { ModalCloseButton } from './components/editors/ModalCloseButton'
 import { decodeLayoutOptions } from '../shared/kle/layout-options'
-import { ZOOM_FACTOR_DEFAULT } from '../shared/types/app-config'
-import { generateKeymapC } from '../shared/keymap-export'
-import { generateKeymapPdf } from '../shared/pdf-export'
 import { resolveConnectedTappingTerm, resolveTappingTerm } from '../shared/qmk-settings-tapping-term'
-import {
-  serialize as serializeKeycode,
-  serializeForCExport,
-  keycodeLabel,
-  isMask,
-  findOuterKeycode,
-  findInnerKeycode,
-} from '../shared/keycodes/keycodes'
 import { deserializeAllMacros } from '../preload/macro'
 import { EMPTY_UID } from '../shared/constants/protocol'
 
 export { type PipetteFileKeyboard, type PipetteFileEntry } from './app-types'
 
 export function App() {
-  const { t } = useTranslation()
   const appConfig = useAppConfig()
   const themeCtx = useTheme()
   const devicePrefs = useDevicePrefs()
@@ -100,46 +75,12 @@ export function App() {
 
   const deviceName = device.connectedDevice?.productName || 'keyboard'
 
-  const keymapCGenerator = useCallback(
-    () => generateKeymapC({
-      layers: keyboard.layers,
-      keys: keyboard.layout?.keys ?? [],
-      keymap: keyboard.keymap,
-      encoderLayout: keyboard.encoderLayout,
-      encoderCount: keyboard.encoderCount,
-      layoutOptions: decodedLayoutOptions,
-      serializeKeycode: serializeForCExport,
-      customKeycodes: keyboard.definition?.customKeycodes,
-    }),
-    [keyboard.layers, keyboard.layout, keyboard.keymap, keyboard.encoderLayout,
-     keyboard.encoderCount, decodedLayoutOptions, keyboard.definition?.customKeycodes],
-  )
-
-  const pdfGenerator = useCallback(
-    () => generateKeymapPdf({
-      deviceName,
-      layers: keyboard.layers,
-      keys: keyboard.layout?.keys ?? [],
-      keymap: keyboard.keymap,
-      encoderLayout: keyboard.encoderLayout,
-      encoderCount: keyboard.encoderCount,
-      layoutOptions: decodedLayoutOptions,
-      serializeKeycode,
-      keycodeLabel,
-      isMask,
-      findOuterKeycode,
-      findInnerKeycode,
-      tapDance: keyboard.tapDanceEntries,
-      combo: keyboard.comboEntries,
-      keyOverride: keyboard.keyOverrideEntries,
-      altRepeatKey: keyboard.altRepeatKeyEntries,
-      macros: deserializedMacros,
-    }),
-    [deviceName, keyboard.layers, keyboard.layout, keyboard.keymap,
-     keyboard.encoderLayout, keyboard.encoderCount, decodedLayoutOptions,
-     keyboard.tapDanceEntries, keyboard.comboEntries, keyboard.keyOverrideEntries,
-     keyboard.altRepeatKeyEntries, deserializedMacros],
-  )
+  const { keymapCGenerator, pdfGenerator } = useFileGenerators({
+    keyboard,
+    deviceName,
+    decodedLayoutOptions,
+    deserializedMacros,
+  })
 
   const fileIO = useFileIO({
     deviceUid: keyboard.uid,
@@ -328,17 +269,6 @@ export function App() {
 
   const keymapEditorRef = useRef<KeymapEditorHandle>(null)
 
-  // Hide content during view→edit transition animation
-  const [viewExitTransition, setViewExitTransition] = useState(false)
-
-  // Analytics page shell. Session-local boolean — entering the page
-  // from the REC tab of the typing view exits the compact window
-  // and hands the main content area over to TypingAnalyticsPage.
-  const [analyticsPageOpen, setAnalyticsPageOpen] = useState(false)
-  // Where the user opened Analyze from, so Back returns there: the compact
-  // Typing View or the full-screen Typing Test.
-  const analyticsOriginRef = useRef<AnalyticsOrigin>('typingView')
-
   // Resolved once here and reused both for KeymapEditor's `tappingTermMs`
   // prop below and for `connectedTappingTerm` — a single source so the
   // two can't read a different `reported` rule from each other.
@@ -357,66 +287,13 @@ export function App() {
     [device.connectedDevice, device.isPipetteFile, keyboard.uid, tappingTerm],
   )
 
-  // Exit view-only mode: hide content → wait for paint → resize → show editor
-  const exitViewOnlyMode = useCallback(() => {
-    setViewExitTransition(true)
-    requestAnimationFrame(() => { requestAnimationFrame(() => {
-      window.vialAPI.setWindowCompactMode(false).then(() => {
-        devicePrefs.setTypingTestViewOnly(false)
-        keymapEditorRef.current?.toggleTypingTest()
-        setViewExitTransition(false)
-      }).catch(() => { setViewExitTransition(false) })
-    }) })
-  }, [devicePrefs])
-
-  // Persist the record toggle — snapshot capture is handled by the
-  // recording-active effect below so any path that activates recording
-  // (direct toggle, view re-entry with persisted ON, cold-start after
-  // device connect) produces a layout anchor, not just the toggle
-  // edge.
-  const handleTypingRecordEnabledChange = useCallback((enabled: boolean) => {
-    devicePrefs.setTypingRecordEnabled(enabled)
-  }, [devicePrefs])
-
-  // Save a keymap snapshot every time recording activates or the
-  // active keyboard changes while recording is already active. A
-  // keyboard edit made between sessions (user tweaks a layer, comes
-  // back, hits Record) must produce a new snapshot so the Analyze
-  // heatmap reflects the layout actually in use — not a stale one
-  // from the previous toggle-ON. `saveKeymapSnapshotIfChanged` on
-  // main dedupes by content, so re-firing on unrelated keyboard
-  // state churn is cheap (no file write when the keymap is equal).
-  //
-  // An editor typing test counts too: it records matrix keystrokes
-  // tagged by test/run, so without a snapshot the Analyze Heatmap /
-  // Ergonomics / Layer-activations views have no layout to draw them on
-  // ("No keymap snapshot recorded for this range").
-  const recordingSnapshotRef = useRef<{ active: boolean; uid: string }>({ active: false, uid: '' })
-  useEffect(() => {
-    const active = (devicePrefs.typingRecordEnabled && devicePrefs.typingTestViewOnly)
-      || editorUI.typingTestMode
-    const uid = keyboard.uid
-    const prev = recordingSnapshotRef.current
-    recordingSnapshotRef.current = { active, uid }
-    if (!active) return
-    if (prev.active && prev.uid === uid) return
-    const snap = buildKeymapSnapshot(keyboard)
-    if (!snap) return
-    void window.vialAPI.typingAnalyticsSaveKeymapSnapshot(snap).catch(() => { /* main logs */ })
-  }, [devicePrefs.typingRecordEnabled, devicePrefs.typingTestViewOnly, editorUI.typingTestMode, keyboard])
-
-  // System tray: connected-keyboard name + live REC keystroke count.
-  // recordingActive mirrors useInputModes' authoritative definition
-  // exactly (narrower than recordingSnapshotRef's `active` above, which
-  // also counts an editor typing-test practice run) — the tray's REC
-  // line should only light up for the ambient Typing View record toggle.
-  const recordingActive = devicePrefs.typingRecordEnabled && devicePrefs.typingTestViewOnly
-  const recKeystroke = useRecKeystrokeCounter(recordingActive)
-  // Dummy and pipette-file "connections" have no live device behind them
-  // (see useDeviceConnection's connectDummy/connectPipetteFile), so the
-  // tray should read as disconnected rather than show a pseudo name.
-  const trayKeyboardName = device.isDummy ? null : (device.connectedDevice?.productName ?? null)
-  useTrayStatus({ keyboardName: trayKeyboardName, recording: recordingActive, getCount: recKeystroke.getCount, getKpm: recKeystroke.getKpm })
+  const { handleTypingRecordEnabledChange, recKeystroke } = useTypingRecordingTray({
+    keyboard,
+    devicePrefs,
+    typingTestMode: editorUI.typingTestMode,
+    isDummy: device.isDummy,
+    connectedDevice: device.connectedDevice,
+  })
 
   // Whether an editor typing test is mid-run — surfaced from KeymapEditor so
   // the StatusBar's "View Analytics" button can be disabled mid-run.
@@ -456,180 +333,24 @@ export function App() {
     activeLayoutName: devicePrefs.activeLayoutName,
   })
 
-  const handleViewAnalytics = useCallback((origin: AnalyticsOrigin) => {
-    // Each entry point states its own origin so Back returns there.
-    analyticsOriginRef.current = origin
-    setViewExitTransition(true)
-    requestAnimationFrame(() => { requestAnimationFrame(() => {
-      window.vialAPI.setWindowCompactMode(false).then(() => {
-        devicePrefs.setTypingTestViewOnly(false)
-        // Leaving the typing view — flip the persisted viewMode back
-        // to 'editor' too so the next session-restore doesn't reopen
-        // the compact window behind the analytics page.
-        devicePrefs.setViewMode('editor')
-        if (editorUI.typingTestMode) keymapEditorRef.current?.toggleTypingTest()
-        setAnalyticsPageOpen(true)
-        setViewExitTransition(false)
-      }).catch(() => { setViewExitTransition(false) })
-    }) })
-  }, [devicePrefs, editorUI.typingTestMode])
-
-  // Enter typing view-only mode (compact window + typing test). Assumes unlocked.
-  const { typingTestViewOnlyWindowSize, setTypingTestViewOnly } = devicePrefs
-  const enterTypingViewOnly = useCallback(() => {
-    window.vialAPI.setWindowCompactMode(true, typingTestViewOnlyWindowSize).then(() => {
-      setTypingTestViewOnly(true)
-      if (!editorUI.typingTestMode) {
-        keymapEditorRef.current?.toggleTypingTest()
-      }
-    }).catch(() => {})
-  }, [typingTestViewOnlyWindowSize, setTypingTestViewOnly, editorUI.typingTestMode])
-
-  // Back from the analytics page returns the user to wherever they came
-  // from (recorded in analyticsOriginRef): the full-screen Typing Test or
-  // the compact Typing View. Re-enter that view in one step so they land
-  // exactly where they were before clicking View Analytics.
-  const handleAnalyticsBack = useCallback(() => {
-    setAnalyticsPageOpen(false)
-    if (analyticsOriginRef.current === 'typingTest') {
-      // KeymapEditor is unmounted while the analytics page is open, so its
-      // ref is null right now — defer the typing-test re-entry to an effect
-      // that fires after the editor remounts (see below).
-      devicePrefs.setViewMode('typingTest')
-      pendingTypingTestReentryRef.current = true
-    } else if (analyticsOriginRef.current === 'editor') {
-      // Opened straight from the editor's own footer — there is no compact
-      // window or typing test to re-enter, just return to the plain editor.
-      devicePrefs.setViewMode('editor')
-    } else {
-      enterTypingViewOnly()
-      devicePrefs.setViewMode('typingView')
-    }
-  }, [enterTypingViewOnly, devicePrefs])
-
-  // One-shot guard: prevents re-restoring the same uid after an initial restore
-  const restoreRequestedUidRef = useRef<string | null>(null)
-
-  // Pending refs for deferred user intents (set while unlock dialog is open)
-  const pendingViewOnlyRef = useRef(false)
-  const pendingTypingTestSaveRef = useRef(false)
-  // Re-enter the full typing test after returning from the analytics page —
-  // deferred because KeymapEditor (which owns the typing test) only remounts
-  // once analyticsPageOpen flips back to false.
-  const pendingTypingTestReentryRef = useRef(false)
-  const prevZoomRef = useRef<number | null>(null)
-
-  const { setViewMode } = devicePrefs
-  const { resetUIState } = editorUI
-
-  const { timelineHandoff, openRunTimeline } = useRunTimelineHandoff({
-    setAnalyticsPageOpen, setViewMode, pendingTypingTestReentryRef,
+  const {
+    viewExitTransition,
+    analyticsPageOpen,
+    handleViewAnalytics,
+    handleAnalyticsBack,
+    timelineHandoff,
+    openRunTimeline,
+    onTypingTestViewOnlyChange,
+    onStatusBarViewOnlyChange,
+    onStatusBarTypingTestModeChange,
+  } = useViewModeRouting({
+    device,
+    keyboard,
+    devicePrefs,
+    editorUI,
+    appConfig,
+    keymapEditorRef,
   })
-
-  const prevConnectedRef = useRef(device.connectedDevice)
-  useEffect(() => {
-    const wasConnected = prevConnectedRef.current
-    prevConnectedRef.current = device.connectedDevice
-    if (wasConnected && !device.connectedDevice) {
-      restoreRequestedUidRef.current = null
-      pendingViewOnlyRef.current = false
-      pendingTypingTestSaveRef.current = false
-      // Auto-detect polling disconnect bypasses lifecycle.handleDisconnect,
-      // so ephemeral UI state (typingTestMode etc.) must be reset here too.
-      resetUIState()
-      if (devicePrefs.typingTestViewOnly) {
-        window.vialAPI.setWindowCompactMode(false).catch(() => {})
-        window.vialAPI.setWindowAspectRatio(0).catch(() => {})
-        window.vialAPI.setWindowAlwaysOnTop(false).catch(() => {})
-        setTypingTestViewOnly(false)
-        setViewExitTransition(false)
-      }
-    }
-  }, [device.connectedDevice, devicePrefs.typingTestViewOnly, setTypingTestViewOnly, resetUIState])
-
-  // Deferred view-only entry after unlock
-  useEffect(() => {
-    if (!device.connectedDevice) { pendingViewOnlyRef.current = false; return }
-    if (pendingViewOnlyRef.current && keyboard.unlockStatus.unlocked) {
-      pendingViewOnlyRef.current = false
-      setViewMode('typingView')
-      enterTypingViewOnly()
-    }
-  }, [device.connectedDevice, keyboard.unlockStatus.unlocked, enterTypingViewOnly, setViewMode])
-
-  // Commit deferred typing-test save once state actually transitions to on.
-  // Catches both immediate (unlocked click) and deferred (locked click → unlock) paths.
-  useEffect(() => {
-    if (pendingTypingTestSaveRef.current && editorUI.typingTestMode) {
-      pendingTypingTestSaveRef.current = false
-      setViewMode('typingTest')
-    }
-  }, [editorUI.typingTestMode, setViewMode])
-
-  // Re-enter the full typing test after Back from analytics (typingTest
-  // origin). Runs once the editor has remounted (analyticsPageOpen false)
-  // so keymapEditorRef is live; the auto-restore effect is one-shot per uid
-  // and already fired, so this is the only path that re-enters here.
-  useEffect(() => {
-    if (analyticsPageOpen) return
-    if (!pendingTypingTestReentryRef.current) return
-    pendingTypingTestReentryRef.current = false
-    if (!editorUI.typingTestMode) keymapEditorRef.current?.toggleTypingTest()
-  }, [analyticsPageOpen, editorUI.typingTestMode])
-
-  // Auto-restore last view mode once prefs are applied for the connected uid
-  useEffect(() => {
-    if (!device.connectedDevice || device.isDummy) return
-    if (keyboard.loading || keyboard.uid === EMPTY_UID) return
-    if (devicePrefs.appliedUid !== keyboard.uid) return
-    if (restoreRequestedUidRef.current === keyboard.uid) return
-    restoreRequestedUidRef.current = keyboard.uid
-    // Restore is not a user intent — clear any stale pending save flags so the
-    // watcher above does not misattribute the restore's state change to a user click.
-    pendingTypingTestSaveRef.current = false
-    pendingViewOnlyRef.current = false
-
-    const mode = devicePrefs.viewMode
-    if (mode === 'typingTest') {
-      keymapEditorRef.current?.toggleTypingTest()
-    } else if (mode === 'typingView') {
-      if (keyboard.unlockStatus.unlocked) {
-        enterTypingViewOnly()
-      } else if (keyboard.unlockStatusKnown) {
-        pendingViewOnlyRef.current = true
-        editorUI.setShowUnlockDialog(true)
-      }
-      // Unknown unlock status (getUnlockStatus failed) — skip the restore
-      // rather than prompting for an unlock that may not be needed.
-    }
-  }, [
-    device.connectedDevice,
-    device.isDummy,
-    keyboard.loading,
-    keyboard.uid,
-    keyboard.unlockStatus.unlocked,
-    keyboard.unlockStatusKnown,
-    devicePrefs.appliedUid,
-    devicePrefs.viewMode,
-    enterTypingViewOnly,
-    editorUI.setShowUnlockDialog,
-  ])
-
-  useEffect(() => {
-    const appZoom = appConfig.config.zoomFactor ?? ZOOM_FACTOR_DEFAULT
-    const zoom = (device.connectedDevice && !device.isDummy && devicePrefs.viewMode === 'editor')
-      ? (devicePrefs.keyEditorZoom ?? appZoom)
-      : appZoom
-    if (prevZoomRef.current === zoom) return
-    prevZoomRef.current = zoom
-    window.vialAPI.setWindowZoom(zoom).catch(() => {})
-  }, [
-    device.connectedDevice,
-    device.isDummy,
-    devicePrefs.viewMode,
-    devicePrefs.keyEditorZoom,
-    appConfig.config.zoomFactor,
-  ])
 
   // Restore cleanup (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時の
   // クリーンアップ): snapshot/layout-store restore and .vil import both
@@ -648,219 +369,28 @@ export function App() {
     keymapEditorRef.current?.clearHistory()
   }, [keyboard.keymapRestoreSeq])
 
-  const handleLoadEntry = useCallback(async (entryId: string) => {
-    const entry = layoutStore.entries.find((e) => e.id === entryId)
-    const ok = await layoutStore.loadLayout(entryId)
-    if (ok) {
-      lifecycle.setLastLoadedLabel(entry?.label ?? '')
-      fileHandlers.clearFileStatus()
-    }
-  }, [layoutStore, fileHandlers.clearFileStatus, lifecycle.setLastLoadedLabel])
-
   // --- Disconnected view ---
   if (!device.connectedDevice) {
     return (
-      <>
-        {deviceSyncing && (
-          <div className="fixed inset-0 z-50">
-            <ConnectingOverlay deviceName="" deviceId="" syncProgress={sync.progress} syncOnly />
-          </div>
-        )}
-        <DeviceSelector
-          devices={device.devices}
-          connecting={device.connecting}
-          error={lifecycle.fileLoadError || device.error}
-          onConnect={lifecycle.handleConnect}
-          onLoadDummy={lifecycle.handleLoadDummy}
-          onLoadPipetteFile={lifecycle.handleLoadPipetteFile}
-          pipetteFileKeyboards={lifecycle.pipetteFileKeyboards}
-          pipetteFileEntries={lifecycle.pipetteFileEntries}
-          connectedDeviceNames={device.devices.map((d) => d.productName)}
-          onOpenPipetteFileEntry={lifecycle.handleOpenPipetteFileEntry}
-          onRefreshPipetteFileEntries={lifecycle.refreshPipetteFileEntries}
-          onOpenSettings={() => lifecycle.setShowSettings(true)}
-          onOpenData={lifecycle.handleOpenDataModal}
-          syncStatus={sync.syncStatus}
-          deviceWarning={lifecycle.deviceLoadError}
-          onClearError={lifecycle.clearFileLoadError}
-        />
-        {lifecycle.showSettings && (
-          <SettingsModal
-            sync={sync}
-            theme={themeCtx.theme}
-            onThemeChange={themeCtx.setTheme}
-            defaultLayout={devicePrefs.defaultLayout}
-            onDefaultLayoutChange={devicePrefs.setDefaultLayout}
-            defaultAutoAdvance={devicePrefs.defaultAutoAdvance}
-            onDefaultAutoAdvanceChange={devicePrefs.setDefaultAutoAdvance}
-            defaultLayerPanelOpen={devicePrefs.defaultLayerPanelOpen}
-            onDefaultLayerPanelOpenChange={devicePrefs.setDefaultLayerPanelOpen}
-            defaultBasicViewType={devicePrefs.defaultBasicViewType}
-            onDefaultBasicViewTypeChange={devicePrefs.setDefaultBasicViewType}
-            defaultSplitKeyMode={devicePrefs.defaultSplitKeyMode}
-            onDefaultSplitKeyModeChange={devicePrefs.setDefaultSplitKeyMode}
-            defaultQuickSelect={devicePrefs.defaultQuickSelect}
-            onDefaultQuickSelectChange={devicePrefs.setDefaultQuickSelect}
-            autoLockTime={devicePrefs.autoLockTime}
-            onAutoLockTimeChange={devicePrefs.setAutoLockTime}
-            maxKeymapHistory={appConfig.config.maxKeymapHistory}
-            onMaxKeymapHistoryChange={(n) => appConfig.set('maxKeymapHistory', n)}
-            onClose={() => lifecycle.setShowSettings(false)}
-            hubEnabled={appConfig.config.hubEnabled}
-            onHubEnabledChange={(enabled) => appConfig.set('hubEnabled', enabled)}
-            hubAuthenticated={sync.authStatus.authenticated}
-            hubDisplayName={hub.hubDisplayName}
-            hubCanUpload={hub.hubCanUpload}
-            onHubDisplayNameChange={hub.handleUpdateHubDisplayName}
-            hubAuthConflict={hub.hubAuthConflict}
-            onResolveAuthConflict={hub.handleResolveAuthConflict}
-            hubAccountDeactivated={hub.hubAccountDeactivated}
-          />
-        )}
-        {lifecycle.showDataModal && (
-          <DataModal
-            onClose={() => lifecycle.setShowDataModal(false)}
-            sync={sync}
-            hubEnabled={appConfig.config.hubEnabled}
-            hubAuthenticated={sync.authStatus.authenticated}
-            hubPosts={hub.hubMyPosts}
-            hubPostsPagination={hub.hubMyPostsPagination}
-            onHubRefresh={hub.refreshHubMyPosts}
-            onHubRename={hub.handleHubRenamePost}
-            onHubDelete={hub.handleHubDeletePost}
-            hubOrigin={hub.hubOrigin}
-            hubNeedsDisplayName={hub.hubReady && !hub.hubCanUpload}
-            hubFavUploading={hub.favHubUploading}
-            hubFavUploadResult={hub.favHubUploadResult}
-            onFavUploadToHub={hub.hubCanUpload ? hub.handleFavUploadToHub : undefined}
-            onFavUpdateOnHub={hub.hubCanUpload ? hub.handleFavUpdateOnHub : undefined}
-            onFavRemoveFromHub={hub.hubReady ? hub.handleFavRemoveFromHub : undefined}
-            onFavRenameOnHub={hub.hubReady ? hub.handleFavRenameOnHub : undefined}
-          />
-        )}
-        {startupNotification.visible && (
-          <NotificationModal
-            notifications={startupNotification.notifications}
-            onClose={startupNotification.dismiss}
-          />
-        )}
-        <JaRemovedBanner />
-      </>
+      <AppDisconnectedView
+        deviceSyncing={deviceSyncing}
+        device={device}
+        sync={sync}
+        lifecycle={lifecycle}
+        themeCtx={themeCtx}
+        devicePrefs={devicePrefs}
+        appConfig={appConfig}
+        hub={hub}
+        startupNotification={startupNotification}
+      />
     )
   }
 
   // --- Connected view ---
-  const api = window.vialAPI
-
-  const toolsExtra = (
-    <>
-      {/* handleImportVil / sideloadJson are always-defined functions, so the
-          old function-reference guards were constant-true — the row always
-          renders and only the sideload button is gated (on !isDummy). */}
-      <div className={ROW_CLASS} data-testid="overlay-import-row">
-        <span className="text-sm font-medium text-content">{t('layoutStore.import')}</span>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            className={IMPORT_BTN}
-            onClick={fileHandlers.handleImportVil}
-            disabled={fileIO.saving || fileIO.loading}
-            data-testid="overlay-import-vil"
-          >
-            {t('fileIO.loadLayout')}
-          </button>
-          {!device.isDummy && (
-            <button
-              type="button"
-              className={IMPORT_BTN}
-              onClick={sideload.sideloadJson}
-              disabled={fileIO.saving || fileIO.loading}
-              data-testid="overlay-sideload-json"
-            >
-              {t('fileIO.sideloadJson')}
-            </button>
-          )}
-        </div>
-      </div>
-    </>
-  )
-
-  const dataPanel = (
-    <div className="px-4 pb-3">
-      <LayoutStoreContent
-        entries={layoutStore.entries}
-        loading={layoutStore.loading}
-        saving={layoutStore.saving}
-        fileStatus={fileHandlers.fileStatus}
-        isDummy={effectiveIsDummy}
-        defaultSaveLabel={lifecycle.lastLoadedLabel}
-        onSave={async (label: string) => {
-          const id = await layoutStore.saveLayout(label)
-          if (id) lifecycle.pipetteFileSavedActivityRef.current = keyboard.activityCount
-          return id
-        }}
-        onLoad={handleLoadEntry}
-        onRename={hub.handleRenameEntry}
-        onDelete={hub.handleDeleteEntry}
-        onExportVil={fileHandlers.handleExportVil}
-        onExportKeymapC={fileHandlers.handleExportKeymapC}
-        onExportPdf={fileHandlers.handleExportPdf}
-        onExportEntryVil={!effectiveIsDummy ? entryOps.handleExportEntryVil : undefined}
-        onExportEntryKeymapC={!effectiveIsDummy ? entryOps.handleExportEntryKeymapC : undefined}
-        onExportEntryPdf={!effectiveIsDummy ? entryOps.handleExportEntryPdf : undefined}
-        onOverwriteSave={hub.handleOverwriteSave}
-        onUploadToHub={hub.hubCanUpload ? hub.handleUploadToHub : undefined}
-        onUpdateOnHub={hub.hubCanUpload ? hub.handleUpdateOnHub : undefined}
-        onRemoveFromHub={hub.hubReady ? hub.handleRemoveFromHub : undefined}
-        onReuploadToHub={hub.hubCanUpload ? hub.handleReuploadToHub : undefined}
-        onDeleteOrphanedHubPost={hub.hubReady ? hub.handleDeleteOrphanedHubPost : undefined}
-        keyboardName={deviceName}
-        hubOrigin={hub.hubReady ? hub.hubOrigin : undefined}
-        hubMyPosts={hub.hubReady ? hub.hubMyPosts : undefined}
-        hubKeyboardPosts={hub.hubReady ? hub.hubKeyboardPosts : undefined}
-        hubNeedsDisplayName={hub.hubReady && !hub.hubCanUpload}
-        hubUploading={hub.hubUploading}
-        hubUploadResult={hub.hubUploadResult}
-        fileDisabled={fileIO.saving || fileIO.loading}
-        listClassName="overflow-y-auto"
-      />
-    </div>
-  )
 
   return (
     <div className="relative flex h-screen flex-col bg-surface text-content">
-      {!keyboard.loading && (
-        <>
-          {device.isDummy && (
-            <div className="flex items-center justify-between border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">
-              <span>{device.isPipetteFile ? t('error.pipetteFileMode') : t('error.dummyMode')}</span>
-              {device.isPipetteFile && keyboard.activityCount > lifecycle.pipetteFileSavedActivityRef.current && (
-                <span className="text-danger" data-testid="unsaved-indicator">
-                  {t('error.unsavedChanges')}
-                </span>
-              )}
-            </div>
-          )}
-
-          {!device.isDummy && keyboard.uid === EMPTY_UID && (
-            <div className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">
-              {t('error.exampleUid')}
-            </div>
-          )}
-
-          {keyboard.viaProtocol > 0 && keyboard.viaProtocol < 9 && (
-            <div className="border-b border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger">
-              {t('error.protocolVersion')}
-            </div>
-          )}
-
-          {keyboard.connectionWarning && (
-            <div className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">
-              {t(keyboard.connectionWarning)}
-            </div>
-          )}
-        </>
-      )}
+      <AppBanners device={device} keyboard={keyboard} lifecycle={lifecycle} />
 
       {(keyboard.loading || deviceSyncing || phase2SyncPending || migration.migrationChecking || migration.migrating) && (
         <ConnectingOverlay
@@ -881,180 +411,38 @@ export function App() {
             onOpenRunTimeline={openRunTimeline}
           />
         ) : (
-        <div className={`flex min-h-0 flex-1 flex-col ${editorUI.typingTestMode && devicePrefs.typingTestViewOnly ? 'overflow-hidden p-0' : 'overflow-auto p-4'}`} data-testid="editor-content" style={viewExitTransition ? { display: 'none' } : undefined}>
-          <KeymapEditor
-            ref={keymapEditorRef}
-            keyboardUid={keyboard.uid}
-            layout={keyboard.layout}
-            layers={keyboard.layers}
-            currentLayer={editorUI.currentLayer}
-            onLayerChange={editorUI.setCurrentLayer}
-            keymap={keyboard.keymap}
-            encoderLayout={keyboard.encoderLayout}
-            encoderCount={keyboard.encoderCount}
-            layoutOptions={decodedLayoutOptions}
-            layoutLabels={keyboard.definition?.layouts?.labels}
-            packedLayoutOptions={keyboard.layoutOptions}
-            onSetLayoutOptions={keyboard.setLayoutOptions}
-            remapLabel={devicePrefs.remapLabel}
-            isRemapped={devicePrefs.isRemapped}
-            remapKind={devicePrefs.remapKind}
-            pickerRemapLabel={devicePrefs.pickerRemapLabel}
-            onSetKey={keyboard.setKey}
-            onSetKeysBulk={keyboard.setKeysBulk}
-            onSetEncoder={keyboard.setEncoder}
-            rows={keyboard.rows}
-            cols={keyboard.cols}
-            getMatrixState={!device.isDummy && keyboard.vialProtocol >= 3 ? api.getMatrixState : undefined}
-            unlocked={keyboard.unlockStatus.unlocked}
-            onUnlock={(options) => {
-              editorUI.setShowUnlockDialog(true)
-              editorUI.setUnlockMacroWarning(!!options?.macroWarning)
-            }}
-            tapDanceEntries={keyboard.tapDanceEntries}
-            onSetTapDanceEntry={keyboard.setTapDanceEntry}
-            macroCount={keyboard.macroCount}
-            macroBufferSize={keyboard.macroBufferSize}
-            macroBuffer={keyboard.macroBuffer}
-            vialProtocol={keyboard.vialProtocol}
-            parsedMacros={keyboard.parsedMacros}
-            onSaveMacros={keyboard.setMacroBuffer}
-            tapHoldSupported={editorUI.tapHoldSupported}
-            mouseKeysSupported={editorUI.mouseKeysSupported}
-            magicSupported={editorUI.magicSupported}
-            graveEscapeSupported={editorUI.graveEscapeSupported}
-            autoShiftSupported={editorUI.autoShiftSupported}
-            oneShotKeysSupported={editorUI.oneShotKeysSupported}
-            comboSettingsSupported={editorUI.comboSettingsSupported}
-            supportedQsids={editorUI.hasAnySettings ? keyboard.supportedQsids : undefined}
-            qmkSettingsGet={editorUI.hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsGet : api.qmkSettingsGet) : undefined}
-            qmkSettingsSet={editorUI.hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsSet : api.qmkSettingsSet) : undefined}
-            qmkSettingsReset={editorUI.hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsReset : api.qmkSettingsReset) : undefined}
-            onSettingsUpdate={editorUI.hasAnySettings ? keyboard.updateQmkSettingsValue : undefined}
-            tappingTermMs={tappingTerm.termMs}
-            autoAdvance={devicePrefs.autoAdvance}
-            onAutoAdvanceChange={devicePrefs.setAutoAdvance}
-            viewMatrix={devicePrefs.viewMatrix}
-            onViewMatrixChange={devicePrefs.setViewMatrix}
-            basicViewType={devicePrefs.basicViewType}
-            onBasicViewTypeChange={devicePrefs.setBasicViewType}
-            splitKeyMode={devicePrefs.splitKeyMode}
-            onSplitKeyModeChange={devicePrefs.setSplitKeyMode}
-            quickSelect={devicePrefs.quickSelect}
-            onQuickSelectChange={devicePrefs.setQuickSelect}
-            keyboardLayout={devicePrefs.layout}
-            onKeyboardLayoutChange={devicePrefs.setLayout}
-            keymapPackName={devicePrefs.activeLayoutName}
-            onRequestKeymapApply={requestKeymapApply}
-            keymapApplyOpen={pendingKeymapApply !== null}
-            keymapApplyLabelName={pendingKeymapApply?.name}
-            keymapApplyBusy={keymapApplyBusy}
-            onKeymapApplyConfirm={handleKeymapApplyConfirm}
-            onKeymapApplyCancel={handleKeymapApplyCancel}
-            keymapApplyError={keymapApplyError}
-            onLock={lifecycle.handleLock}
-            onMatrixModeChange={editorUI.handleMatrixModeChange}
-            onOpenLighting={editorUI.lightingSupported ? () => editorUI.setShowLightingModal(true) : undefined}
-            comboEntries={editorUI.comboSupported ? keyboard.comboEntries : undefined}
-            onOpenCombo={editorUI.comboSupported ? (index: number) => editorUI.setComboInitialIndex(index) : undefined}
-            onSetComboEntry={editorUI.comboSupported ? keyboard.setComboEntry : undefined}
-            keyOverrideEntries={editorUI.keyOverrideSupported ? keyboard.keyOverrideEntries : undefined}
-            onOpenKeyOverride={editorUI.keyOverrideSupported ? (index: number) => editorUI.setKeyOverrideInitialIndex(index) : undefined}
-            onSetKeyOverrideEntry={editorUI.keyOverrideSupported ? keyboard.setKeyOverrideEntry : undefined}
-            altRepeatKeyEntries={editorUI.altRepeatKeySupported ? keyboard.altRepeatKeyEntries : undefined}
-            onOpenAltRepeatKey={editorUI.altRepeatKeySupported ? (index: number) => editorUI.setAltRepeatKeyInitialIndex(index) : undefined}
-            onSetAltRepeatKeyEntry={editorUI.altRepeatKeySupported ? keyboard.setAltRepeatKeyEntry : undefined}
-            layerNames={!effectiveIsDummy ? keyboard.layerNames : undefined}
-            onSetLayerName={!effectiveIsDummy ? keyboard.setLayerName : undefined}
-            toolsExtra={toolsExtra}
-            dataPanel={dataPanel}
-            onOverlayOpen={!effectiveIsDummy ? layoutStore.refreshEntries : undefined}
-            layerPanelOpen={devicePrefs.layerPanelOpen}
-            onLayerPanelOpenChange={devicePrefs.setLayerPanelOpen}
-            scale={editorUI.keymapScale}
-            onScaleChange={editorUI.adjustKeymapScale}
-            keyEditorZoom={devicePrefs.keyEditorZoom ?? (appConfig.config.zoomFactor ?? ZOOM_FACTOR_DEFAULT)}
-            onKeyEditorZoomChange={devicePrefs.setKeyEditorZoom}
-            typingTestMode={editorUI.typingTestMode}
-            onTypingTestModeChange={editorUI.handleTypingTestModeChange}
-            onSaveTypingTestResult={devicePrefs.addTypingTestResult}
-            onRenameTypingTestResult={devicePrefs.renameTypingTestResult}
-            onDeleteTypingTestResult={devicePrefs.deleteTypingTestResult}
-            typingTestHistory={devicePrefs.typingTestResults}
-            typingTestConfig={devicePrefs.typingTestConfig}
-            typingTestMonkeytypeConfig={devicePrefs.typingTestMonkeytypeConfig}
-            typingTestLanguage={devicePrefs.typingTestLanguage}
-            onTypingTestConfigChange={devicePrefs.setTypingTestConfig}
-            onTypingTestLanguageChange={devicePrefs.setTypingTestLanguage}
-            typingTestViewOnly={devicePrefs.typingTestViewOnly}
-            onTypingTestViewOnlyChange={(enabled: boolean) => {
-              pendingTypingTestSaveRef.current = false
-              pendingViewOnlyRef.current = false
-              if (!enabled) {
-                setViewMode('editor')
-                exitViewOnlyMode()
-              } else {
-                setViewMode('typingView')
-                devicePrefs.setTypingTestViewOnly(true)
-              }
-            }}
-            typingTestViewOnlyWindowSize={devicePrefs.typingTestViewOnlyWindowSize}
-            onTypingTestViewOnlyWindowSizeChange={devicePrefs.setTypingTestViewOnlyWindowSize}
-            typingTestViewOnlyAlwaysOnTop={devicePrefs.typingTestViewOnlyAlwaysOnTop}
-            onTypingTestViewOnlyAlwaysOnTopChange={devicePrefs.setTypingTestViewOnlyAlwaysOnTop}
-            typingTestMemory={devicePrefs.typingTestMemory}
-            onTypingTestMemoryChange={devicePrefs.setTypingTestMemory}
-            typingTestDisplayLines={devicePrefs.typingTestDisplayLines}
-            typingTestFontSize={devicePrefs.typingTestFontSize}
-            onTypingTestDisplayLinesChange={devicePrefs.setTypingTestDisplayLines}
-            onTypingTestFontSizeChange={devicePrefs.setTypingTestFontSize}
-            typingTestHideKeymap={devicePrefs.typingTestHideKeymap}
-            typingTestHideStatsRow={devicePrefs.typingTestHideStatsRow}
-            typingTestHideControls={devicePrefs.typingTestHideControls}
-            typingTestSaveUnnamed={devicePrefs.typingTestSaveUnnamed}
-            typingTestComparisonBaselines={devicePrefs.typingTestComparisonBaselines}
-            onTypingTestHideKeymapChange={devicePrefs.setTypingTestHideKeymap}
-            onTypingTestHideStatsRowChange={devicePrefs.setTypingTestHideStatsRow}
-            onTypingTestHideControlsChange={devicePrefs.setTypingTestHideControls}
-            onTypingTestSaveUnnamedChange={devicePrefs.setTypingTestSaveUnnamed}
-            onTypingTestComparisonBaselineChange={devicePrefs.setTypingTestComparisonBaseline}
-            typingTestSettingsPanelOpen={devicePrefs.typingTestSettingsPanelOpen}
-            onTypingTestSettingsPanelOpenChange={devicePrefs.setTypingTestSettingsPanelOpen}
-            typingRecordEnabled={devicePrefs.typingRecordEnabled}
-            onTypingRecordEnabledChange={handleTypingRecordEnabledChange}
-            onRecKeystroke={recKeystroke.increment}
-            typingHeatmapWindowMin={appConfig.config.typingHeatmapWindowMin}
-            onTypingHeatmapWindowMinChange={(m) => appConfig.set('typingHeatmapWindowMin', m as typeof appConfig.config.typingHeatmapWindowMin)}
-            typingRecordingConsentAccepted={appConfig.config.typingRecordingConsentAccepted}
-            onTypingRecordingConsentAccepted={() => appConfig.set('typingRecordingConsentAccepted', true)}
-            typingMonitorAppEnabled={appConfig.config.typingMonitorAppEnabled}
-            onTypingMonitorAppEnabledChange={(enabled) => appConfig.set('typingMonitorAppEnabled', enabled)}
-            typingTrayResident={appConfig.config.trayResident}
-            onTypingTrayResidentChange={(enabled) => appConfig.set('trayResident', enabled)}
-            typingStartInTray={appConfig.config.startInTray}
-            onTypingStartInTrayChange={(enabled) => appConfig.set('startInTray', enabled)}
-            typingViewMenuTab={devicePrefs.typingViewMenuTab}
-            onTypingViewMenuTabChange={devicePrefs.setTypingViewMenuTab}
-            onViewAnalytics={handleViewAnalytics}
-            timelineHandoff={timelineHandoff}
-            onTypingTestRunningChange={setTypingTestRunning}
+          <AppEditorSurface
+            device={device}
+            keyboard={keyboard}
+            editorUI={editorUI}
+            devicePrefs={devicePrefs}
+            appConfig={appConfig}
+            hub={hub}
+            layoutStore={layoutStore}
+            fileHandlers={fileHandlers}
+            entryOps={entryOps}
+            fileIO={fileIO}
+            sideload={sideload}
+            lifecycle={lifecycle}
             deviceName={deviceName}
-            isDummy={effectiveIsDummy}
-            onExportLayoutPdfAll={fileHandlers.handleExportLayoutPdfAll}
-            onExportLayoutPdfCurrent={fileHandlers.handleExportLayoutPdfCurrent}
-            favHubOrigin={hub.hubReady ? hub.hubOrigin : undefined}
-            favHubNeedsDisplayName={hub.hubReady && !hub.hubCanUpload}
-            favHubUploading={hub.favHubUploading}
-            favHubUploadResult={hub.favHubUploadResult}
-            onFavUploadToHub={hub.hubCanUpload ? hub.handleFavUploadToHub : undefined}
-            onFavUpdateOnHub={hub.hubCanUpload ? hub.handleFavUpdateOnHub : undefined}
-            onFavRemoveFromHub={hub.hubReady ? hub.handleFavRemoveFromHub : undefined}
-            onFavRenameOnHub={hub.hubReady ? hub.handleFavRenameOnHub : undefined}
-            devices={device.devices}
-            connectedDevice={device.connectedDevice}
-            onDeviceListActiveChange={device.setDeviceListActive}
+            effectiveIsDummy={effectiveIsDummy}
+            decodedLayoutOptions={decodedLayoutOptions}
+            tappingTerm={tappingTerm}
+            viewExitTransition={viewExitTransition}
+            editorRef={keymapEditorRef}
+            requestKeymapApply={requestKeymapApply}
+            pendingKeymapApply={pendingKeymapApply}
+            handleKeymapApplyConfirm={handleKeymapApplyConfirm}
+            handleKeymapApplyCancel={handleKeymapApplyCancel}
+            keymapApplyError={keymapApplyError}
+            keymapApplyBusy={keymapApplyBusy}
+            handleTypingRecordEnabledChange={handleTypingRecordEnabledChange}
+            recKeystroke={recKeystroke}
+            onTypingTestViewOnlyChange={onTypingTestViewOnlyChange}
+            handleViewAnalytics={handleViewAnalytics}
+            timelineHandoff={timelineHandoff}
+            setTypingTestRunning={setTypingTestRunning}
           />
-        </div>
         )}
 
         {(fileIO.error || sideload.error || layoutStore.error) && (
@@ -1064,236 +452,35 @@ export function App() {
         )}
       </div>
 
-      {!(editorUI.typingTestMode && devicePrefs.typingTestViewOnly) && !analyticsPageOpen && (
-        <StatusBar
-          deviceName={device.connectedDevice.productName || 'Unknown'}
-          loadedLabel={lifecycle.lastLoadedLabel}
-          autoAdvance={devicePrefs.autoAdvance}
-          unlocked={keyboard.unlockStatus.unlocked}
-          syncStatus={sync.syncStatus}
-          hubConnected={sync.authStatus.authenticated ? hub.hubConnected : undefined}
-          matrixMode={editorUI.matrixState.matrixMode}
-          typingTestMode={editorUI.typingTestMode}
-          hasMatrixTester={editorUI.matrixState.hasMatrixTester}
-          comboActive={editorUI.comboSupported && keyboard.comboEntries.some((e) => e.output !== 0)}
-          altRepeatKeyActive={editorUI.altRepeatKeySupported && keyboard.altRepeatKeyEntries.some((e) => e.enabled)}
-          keyOverrideActive={editorUI.keyOverrideSupported && keyboard.keyOverrideEntries.some((e) => e.enabled)}
-          viewOnly={devicePrefs.typingTestViewOnly}
-          onViewOnlyChange={() => {
-            pendingTypingTestSaveRef.current = false
-            if (editorUI.typingTestMode && devicePrefs.typingTestViewOnly) {
-              pendingViewOnlyRef.current = false
-              setViewMode('editor')
-              exitViewOnlyMode()
-            } else if (!keyboard.unlockStatus.unlocked) {
-              pendingViewOnlyRef.current = true
-              editorUI.setShowUnlockDialog(true)
-            } else {
-              pendingViewOnlyRef.current = false
-              setViewMode('typingView')
-              enterTypingViewOnly()
-            }
-          }}
-          onTypingTestModeChange={() => {
-            pendingViewOnlyRef.current = false
-            if (editorUI.typingTestMode) {
-              setViewMode('editor')
-              pendingTypingTestSaveRef.current = false
-            } else {
-              pendingTypingTestSaveRef.current = true
-            }
-            keymapEditorRef.current?.toggleTypingTest()
-          }}
-          onOpenAnalyze={() => handleViewAnalytics('editor')}
-          // Disabled while a Key Label "apply to keymap" rewrite is mid-
-          // flight: opening AnalyzePage unmounts KeymapEditor (and its
-          // `history`/undo stack) out from under the in-flight rewrite,
-          // which would otherwise land the batch history push in an
-          // unmounted component (making it un-undoable after Back) and
-          // fire the post-apply flash timer's setState after unmount.
-          // Typing View / Typing Test don't unmount the editor, so they're
-          // unaffected; Disconnect has the same mid-apply hazard but
-          // that's pre-existing and out of scope here.
-          analyzeDisabled={keymapApplyBusy}
-          onViewAnalytics={() => handleViewAnalytics('typingTest')}
-          viewAnalyticsDisabled={typingTestRunning}
-          onDisconnect={editorUI.typingTestMode ? undefined : lifecycle.handleDisconnect}
-          quickSettings={{
-            onThemeChange: themeCtx.setTheme,
-            hubDisplayName: hub.hubDisplayName,
-            hubCanWrite: hub.hubCanUpload,
-            keyboardLayout: devicePrefs.layout,
-            onKeyboardLayoutChange: handleKeyboardLayoutSelectChange,
-          }}
-        />
-      )}
-
-      {editorUI.showUnlockDialog && !device.isDummy && (
-        <UnlockDialog
-          keys={keyboard.layout?.keys ?? []}
-          unlockKeys={keyboard.unlockStatus.keys}
-          layoutOptions={decodedLayoutOptions}
-          unlockStart={() => { device.setPollSuspended(true); return api.unlockStart() }}
-          unlockPoll={api.unlockPoll}
-          onComplete={async () => {
-            device.setPollSuspended(false)
-            editorUI.setShowUnlockDialog(false)
-            editorUI.setUnlockMacroWarning(false)
-            await keyboard.refreshUnlockStatus()
-          }}
-          onDisconnect={() => {
-            device.setPollSuspended(false)
-            editorUI.setShowUnlockDialog(false)
-            editorUI.setUnlockMacroWarning(false)
-            keyboard.rejectPendingUnlock()
-          }}
-          macroWarning={editorUI.unlockMacroWarning}
-        />
-      )}
-
-      {editorUI.showLightingModal && editorUI.lightingSupported && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-          data-testid="lighting-modal-backdrop"
-          onClick={() => editorUI.setShowLightingModal(false)}
-        >
-          <div
-            className="w-modal-app max-w-modal-vw max-h-modal-80vh overflow-y-auto rounded-lg bg-surface-alt p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">{t('editor.lighting.title')}</h3>
-              <ModalCloseButton testid="lighting-modal-close" onClick={() => editorUI.setShowLightingModal(false)} />
-            </div>
-            <RGBConfigurator
-              lightingType={keyboard.definition?.lighting}
-              backlightBrightness={keyboard.backlightBrightness}
-              backlightEffect={keyboard.backlightEffect}
-              rgblightBrightness={keyboard.rgblightBrightness}
-              rgblightEffect={keyboard.rgblightEffect}
-              rgblightEffectSpeed={keyboard.rgblightEffectSpeed}
-              rgblightHue={keyboard.rgblightHue}
-              rgblightSat={keyboard.rgblightSat}
-              vialRGBVersion={keyboard.vialRGBVersion}
-              vialRGBMode={keyboard.vialRGBMode}
-              vialRGBSpeed={keyboard.vialRGBSpeed}
-              vialRGBHue={keyboard.vialRGBHue}
-              vialRGBSat={keyboard.vialRGBSat}
-              vialRGBVal={keyboard.vialRGBVal}
-              vialRGBMaxBrightness={keyboard.vialRGBMaxBrightness}
-              vialRGBSupported={keyboard.vialRGBSupported}
-              onSetBacklightBrightness={keyboard.setBacklightBrightness}
-              onSetBacklightEffect={keyboard.setBacklightEffect}
-              onSetRgblightBrightness={keyboard.setRgblightBrightness}
-              onSetRgblightEffect={keyboard.setRgblightEffect}
-              onSetRgblightEffectSpeed={keyboard.setRgblightEffectSpeed}
-              onSetRgblightColor={keyboard.setRgblightColor}
-              onSetVialRGBMode={keyboard.setVialRGBMode}
-              onSetVialRGBSpeed={keyboard.setVialRGBSpeed}
-              onSetVialRGBColor={keyboard.setVialRGBColor}
-              onSetVialRGBBrightness={keyboard.setVialRGBBrightness}
-              onSetVialRGBHSV={keyboard.setVialRGBHSV}
-              onSave={api.saveLighting}
-            />
-          </div>
-        </div>
-      )}
-
-      {editorUI.comboSupported && editorUI.comboInitialIndex !== null && (
-        <ComboPanelModal
-          entries={keyboard.comboEntries}
-          onSetEntry={keyboard.setComboEntry}
-          initialIndex={editorUI.comboInitialIndex}
-          unlocked={keyboard.unlockStatus.unlocked}
-          onUnlock={() => editorUI.setShowUnlockDialog(true)}
-          tapDanceEntries={keyboard.tapDanceEntries}
-          deserializedMacros={deserializedMacros}
-          quickSelect={devicePrefs.quickSelect}
-          splitKeyMode={devicePrefs.splitKeyMode}
-          basicViewType={devicePrefs.basicViewType}
-          vialProtocol={keyboard.vialProtocol}
-          onClose={() => editorUI.setComboInitialIndex(null)}
-          hubOrigin={hub.hubReady ? hub.hubOrigin : undefined}
-          hubNeedsDisplayName={hub.hubReady && !hub.hubCanUpload}
-          hubUploading={hub.favHubUploading}
-          hubUploadResult={hub.favHubUploadResult}
-          onUploadToHub={hub.hubCanUpload ? (entryId) => hub.handleFavUploadToHub('combo', entryId) : undefined}
-          onUpdateOnHub={hub.hubCanUpload ? (entryId) => hub.handleFavUpdateOnHub('combo', entryId) : undefined}
-          onRemoveFromHub={hub.hubReady ? (entryId) => hub.handleFavRemoveFromHub('combo', entryId) : undefined}
-          onRenameOnHub={hub.hubReady ? hub.handleFavRenameOnHub : undefined}
-        />
-      )}
-
-      {editorUI.altRepeatKeySupported && editorUI.altRepeatKeyInitialIndex !== null && (
-        <AltRepeatKeyPanelModal
-          entries={keyboard.altRepeatKeyEntries}
-          onSetEntry={keyboard.setAltRepeatKeyEntry}
-          initialIndex={editorUI.altRepeatKeyInitialIndex}
-          unlocked={keyboard.unlockStatus.unlocked}
-          onUnlock={() => editorUI.setShowUnlockDialog(true)}
-          tapDanceEntries={keyboard.tapDanceEntries}
-          deserializedMacros={deserializedMacros}
-          quickSelect={devicePrefs.quickSelect}
-          splitKeyMode={devicePrefs.splitKeyMode}
-          basicViewType={devicePrefs.basicViewType}
-          vialProtocol={keyboard.vialProtocol}
-          onClose={() => editorUI.setAltRepeatKeyInitialIndex(null)}
-          hubOrigin={hub.hubReady ? hub.hubOrigin : undefined}
-          hubNeedsDisplayName={hub.hubReady && !hub.hubCanUpload}
-          hubUploading={hub.favHubUploading}
-          hubUploadResult={hub.favHubUploadResult}
-          onUploadToHub={hub.hubCanUpload ? (entryId) => hub.handleFavUploadToHub('altRepeatKey', entryId) : undefined}
-          onUpdateOnHub={hub.hubCanUpload ? (entryId) => hub.handleFavUpdateOnHub('altRepeatKey', entryId) : undefined}
-          onRemoveFromHub={hub.hubReady ? (entryId) => hub.handleFavRemoveFromHub('altRepeatKey', entryId) : undefined}
-          onRenameOnHub={hub.hubReady ? hub.handleFavRenameOnHub : undefined}
-        />
-      )}
-
-      {editorUI.keyOverrideSupported && editorUI.keyOverrideInitialIndex !== null && (
-        <KeyOverridePanelModal
-          entries={keyboard.keyOverrideEntries}
-          onSetEntry={keyboard.setKeyOverrideEntry}
-          initialIndex={editorUI.keyOverrideInitialIndex}
-          unlocked={keyboard.unlockStatus.unlocked}
-          onUnlock={() => editorUI.setShowUnlockDialog(true)}
-          tapDanceEntries={keyboard.tapDanceEntries}
-          deserializedMacros={deserializedMacros}
-          quickSelect={devicePrefs.quickSelect}
-          splitKeyMode={devicePrefs.splitKeyMode}
-          basicViewType={devicePrefs.basicViewType}
-          vialProtocol={keyboard.vialProtocol}
-          onClose={() => editorUI.setKeyOverrideInitialIndex(null)}
-          hubOrigin={hub.hubReady ? hub.hubOrigin : undefined}
-          hubNeedsDisplayName={hub.hubReady && !hub.hubCanUpload}
-          hubUploading={hub.favHubUploading}
-          hubUploadResult={hub.favHubUploadResult}
-          onUploadToHub={hub.hubCanUpload ? (entryId) => hub.handleFavUploadToHub('keyOverride', entryId) : undefined}
-          onUpdateOnHub={hub.hubCanUpload ? (entryId) => hub.handleFavUpdateOnHub('keyOverride', entryId) : undefined}
-          onRemoveFromHub={hub.hubReady ? (entryId) => hub.handleFavRemoveFromHub('keyOverride', entryId) : undefined}
-          onRenameOnHub={hub.hubReady ? hub.handleFavRenameOnHub : undefined}
-        />
-      )}
-
-      {startupNotification.visible && (
-        <NotificationModal
-          notifications={startupNotification.notifications}
-          onClose={startupNotification.dismiss}
-        />
-      )}
-
-      <MissingKeyLabelDialog
-        open={missingKeyLabel.missingName !== null}
-        missingName={missingKeyLabel.missingName ?? ''}
-        onClose={() => {
-          missingKeyLabel.dismiss()
-          // Flip the active layout to qwerty so the dropdown reflects
-          // the fallback and `pipette_settings.json` is updated by
-          // useDevicePrefs' own save path. Without this the next
-          // connect would still hit the same missing id.
-          devicePrefs.setLayout('qwerty')
-        }}
+      <AppStatusBar
+        connectedDevice={device.connectedDevice}
+        keyboard={keyboard}
+        editorUI={editorUI}
+        devicePrefs={devicePrefs}
+        sync={sync}
+        hub={hub}
+        themeCtx={themeCtx}
+        lifecycle={lifecycle}
+        analyticsPageOpen={analyticsPageOpen}
+        onStatusBarViewOnlyChange={onStatusBarViewOnlyChange}
+        onStatusBarTypingTestModeChange={onStatusBarTypingTestModeChange}
+        handleViewAnalytics={handleViewAnalytics}
+        handleKeyboardLayoutSelectChange={handleKeyboardLayoutSelectChange}
+        keymapApplyBusy={keymapApplyBusy}
+        typingTestRunning={typingTestRunning}
       />
-      <JaRemovedBanner />
+
+      <AppModals
+        device={device}
+        keyboard={keyboard}
+        editorUI={editorUI}
+        devicePrefs={devicePrefs}
+        hub={hub}
+        startupNotification={startupNotification}
+        missingKeyLabel={missingKeyLabel}
+        decodedLayoutOptions={decodedLayoutOptions}
+        deserializedMacros={deserializedMacros}
+      />
     </div>
   )
 }
