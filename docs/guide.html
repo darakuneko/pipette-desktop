@@ -1088,6 +1088,7 @@ header {
 <p>Recording controls and the Monitor App toggle. Detailed in <strong>Typing analytics recording</strong> below.</p>
 <p><strong>Shared controls</strong> (visible in both tabs)</p>
 <ul><li><strong>Base</strong>: Select which layer to display (when the keyboard has multiple layers)</li><li><strong>Exit Typing View</strong>: Return to the full editor</li></ul>
+<blockquote><p><strong>Note</strong>: The keyboard layout's live layer indicator follows momentary layer keys (<code class="ic">MO</code>, <code class="ic">LT</code>, <code class="ic">LM</code>) only, while they are held. Persistent layer switches (<code class="ic">TO</code>, <code class="ic">TG</code>, <code class="ic">DF</code>) are not tracked — the VIA/Vial protocol offers no way to read the keyboard's live layer state back, so a persistent switch triggered outside the app would silently desync from what's shown. Use <strong>Base</strong> above to tell the view which base layer the keyboard is actually on.</p></blockquote>
 <p>Press Escape or click the keyboard area again to close the pane. A hint text appears at the bottom when hovering over the window. The window size, always-on-top preference, and the active menu tab are saved per keyboard.</p>
 <blockquote><p><strong>Note</strong>: Auto-lock is suspended while in Typing View mode. If the keyboard is disconnected while in view-only mode, the window automatically restores to its normal size.</p></blockquote>
 <h4 id="typing-analytics-recording">Typing analytics recording</h4>
@@ -1936,6 +1937,7 @@ header {
 <p>録画コントロールと Monitor App トグル。詳細は下の <strong>タイピング分析の記録</strong> を参照。</p>
 <p><strong>共通コントロール</strong>（両タブで表示）</p>
 <ul><li><strong>Base</strong>: 表示するレイヤーを選択（複数レイヤーがある場合）</li><li><strong>タイピングビュー終了</strong>: フルエディタに戻る</li></ul>
+<blockquote><p><strong>注意</strong>: キーボードレイアウトのライブレイヤー表示は、モーメンタリレイヤーキー（<code class="ic">MO</code>、<code class="ic">LT</code>、<code class="ic">LM</code>）が押されている間のみ追従します。永続的なレイヤー切り替え（<code class="ic">TO</code>、<code class="ic">TG</code>、<code class="ic">DF</code>）は追従しません — VIA/Vial プロトコルにはキーボードの現在のレイヤー状態を読み戻す手段がないため、アプリの外でこれらの永続的な切り替えを行うと、表示上のレイヤーと実機のレイヤーが気づかないうちにずれてしまいます。キーボードが実際にどのベースレイヤーにいるかをビューに伝えるには、上の <strong>Base</strong> を使用してください。</p></blockquote>
 <p>Escape キーを押すかキーボードエリアを再度クリックするとペインが閉じます。ウィンドウにマウスを乗せるとヒントテキストが下部に表示されます。ウィンドウサイズ、最前面表示の設定、現在のメニュータブはキーボードごとに保存されます。</p>
 <blockquote><p><strong>注意</strong>: Typing View モード中はオートロックが停止されます。ビューオンリーモード中にキーボードが切断された場合、ウィンドウは自動的に通常サイズに復元されます。</p></blockquote>
 <h4 id="タイピング分析の記録">タイピング分析の記録</h4>
