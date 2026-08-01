@@ -249,7 +249,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, typingTestS
         data-testid="analyze-interval-distribution"
         aria-label={t('analyze.interval.distribution.sectionTitle')}
       >
-        <div className="h-64 w-full">
+        <div className="h-64 w-full" data-testid="analyze-interval-distribution-plot">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={distributionData} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" />
@@ -287,6 +287,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, typingTestS
           <AnalyzeStatGrid
             items={distributionItems}
             ariaLabelKey="analyze.interval.distribution.summary.label"
+            testId="analyze-interval-distribution-summary"
           />
         )}
       </section>
@@ -304,7 +305,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, typingTestS
   return (
     <div className="flex h-full w-full flex-col gap-2" data-testid="analyze-interval-chart">
       <h3 className="text-sm font-semibold text-content">{t('analyze.interval.timeSeries.sectionTitle')}</h3>
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0" data-testid="analyze-interval-timeseries-plot">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" />
@@ -392,6 +393,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, typingTestS
         <AnalyzeStatGrid
           items={timeSeriesItems}
           ariaLabelKey="analyze.interval.timeSeries.summary.label"
+          testId="analyze-interval-timeseries-summary"
         />
       )}
     </div>

@@ -374,6 +374,23 @@ describe('TypingTestHistory', () => {
     expect(screen.queryByTestId('history-delete-d1')).toBeNull()
   })
 
+  // Regression guard: pins sparkline-then-stats order, matching the Analyze
+  // chart-above-stats convention (RolloverSection's order-lock test is the
+  // original of this pattern; see
+  // .claude/tasks/backlog/Task-analyze-section-layout-consistency.md).
+  it('renders the sparkline above the stats row', () => {
+    const results = [
+      makeResult({ wpm: 80 }),
+      makeResult({ wpm: 60 }),
+    ]
+    renderWithI18n(<TypingTestHistory results={results} />)
+    const sparkline = screen.getByTestId('history-sparkline')
+    const stats = screen.getByTestId('history-stats')
+    // DOCUMENT_POSITION_FOLLOWING (4) set on `sparkline` relative to
+    // `stats` means the sparkline comes first in document order.
+    expect(sparkline.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('renders the name read-only (no edit) when no onRename handler', () => {
     renderWithI18n(<TypingTestHistory results={[makeResult({ date: 'x', name: 'kept' })]} />)
     expect(screen.queryByTestId('history-name-x')).toBeNull()

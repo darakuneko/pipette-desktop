@@ -237,7 +237,7 @@ export function WpmChart({ uid, range, deviceScopes, appScopes, typingTestScopes
     }))
     return (
       <div className="flex h-full w-full flex-col gap-2" data-testid="analyze-wpm-time-of-day">
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0" data-testid="analyze-wpm-plot">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" />
@@ -296,7 +296,7 @@ export function WpmChart({ uid, range, deviceScopes, appScopes, typingTestScopes
 
   return (
     <div className="flex h-full w-full flex-col gap-2" data-testid="analyze-wpm-chart">
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0" data-testid="analyze-wpm-plot">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" />

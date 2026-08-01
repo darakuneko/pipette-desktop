@@ -175,4 +175,27 @@ describe('IntervalChart distribution mode layout', () => {
     await waitFor(() => screen.getByTestId('analyze-interval-chart'))
     expect(screen.getByText('analyze.interval.timeSeries.sectionTitle')).toBeTruthy()
   })
+
+  // Regression guard, same pattern as RolloverSection's order-lock test
+  // (.claude/tasks/backlog/Task-analyze-section-layout-consistency.md):
+  // pins chart-then-stat order in both viewModes.
+  it('renders the chart above the stat card in timeSeries mode', async () => {
+    renderChart({ viewMode: 'timeSeries' })
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-interval-timeseries-summary')).toBeTruthy()
+    })
+    const plot = screen.getByTestId('analyze-interval-timeseries-plot')
+    const summary = screen.getByTestId('analyze-interval-timeseries-summary')
+    expect(plot.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('renders the chart above the stat card in distribution mode', async () => {
+    renderChart({ viewMode: 'distribution' })
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-interval-distribution-summary')).toBeTruthy()
+    })
+    const plot = screen.getByTestId('analyze-interval-distribution-plot')
+    const summary = screen.getByTestId('analyze-interval-distribution-summary')
+    expect(plot.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
 })

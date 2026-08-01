@@ -276,21 +276,21 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
         )}
       </div>
 
+      {/* Sparkline — chart-above-stats, matching every other Analyze section's order */}
+      {sparklineResults.length >= 2 && (
+        <div className="flex justify-center" data-testid="history-sparkline">
+          <WpmSparkline results={sparklineResults} width={400} height={50} />
+        </div>
+      )}
+
       {/* Stats summary */}
-      <div className="flex flex-wrap items-center gap-6 text-sm">
+      <div className="flex flex-wrap items-center gap-6 text-sm" data-testid="history-stats">
         <StatItem label={t('editor.typingTest.history.bestWpm')} value={stats.bestWpm} highlight />
         <StatItem label={t('editor.typingTest.history.avgWpm')} value={stats.avgWpm} />
         <StatItem label={t('editor.typingTest.history.last10Avg')} value={stats.last10Avg} />
         <StatItem label={t('editor.typingTest.history.totalTests')} value={stats.totalTests} />
         <StatItem label={t('editor.typingTest.history.avgAccuracy')} value={`${stats.avgAccuracy}%`} />
       </div>
-
-      {/* Sparkline */}
-      {sparklineResults.length >= 2 && (
-        <div className="flex justify-center">
-          <WpmSparkline results={sparklineResults} width={400} height={50} />
-        </div>
-      )}
 
       <AccuracyTrendSection results={tabResults} />
       <MistakeRankingSection results={tabResults} />

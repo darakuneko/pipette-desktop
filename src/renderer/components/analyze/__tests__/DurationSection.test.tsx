@@ -214,4 +214,21 @@ describe('DurationSection', () => {
     expect(screen.queryByText('analyze.duration.sectionTitle')).toBeNull()
     expect(section.getAttribute('aria-label')).toBe('analyze.duration.sectionTitle')
   })
+
+  // Regression guard: pins chart-then-stat order, same as RolloverSection's
+  // equivalent test (.claude/tasks/backlog/Task-analyze-section-layout-consistency.md).
+  it('renders the chart above the stat card, matching every other section\'s chart-then-numbers order', async () => {
+    durationFetchSpy.mockResolvedValue([
+      cell({ hist: [1, 0, 0, 0, 0, 0, 0, 0], durationSamples: 1, sum: 80, sumSq: 6_400 }),
+    ])
+    renderSection()
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-duration-chart')).toBeTruthy()
+    })
+    const chart = screen.getByTestId('analyze-duration-chart')
+    const summary = screen.getByTestId('analyze-duration-summary')
+    // DOCUMENT_POSITION_FOLLOWING (4) set on `chart` relative to
+    // `summary` means chart comes first in document order.
+    expect(chart.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
 })
