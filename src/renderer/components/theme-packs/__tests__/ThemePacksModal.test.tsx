@@ -109,6 +109,7 @@ const vialAPI = {
   themePackGet: vi.fn(),
   themePackHubTimestamps: vi.fn(),
   openExternal: vi.fn(),
+  syncExecute: vi.fn(),
 }
 
 Object.defineProperty(window, 'vialAPI', { value: vialAPI, writable: true })
@@ -162,6 +163,7 @@ describe('ThemePacksModal', () => {
     vialAPI.hubDeleteThemePost.mockResolvedValue({ success: true })
     vialAPI.themePackGet.mockResolvedValue({ success: true, data: { meta: {}, pack: { name: 'P', version: '1', colorScheme: 'dark', colors: {} } } })
     vialAPI.themePackHubTimestamps.mockResolvedValue({ success: true, data: { items: [] } })
+    vialAPI.syncExecute.mockResolvedValue({ success: true })
   })
 
   it('renders nothing when closed', () => {
@@ -1180,5 +1182,28 @@ describe('ThemePacksModal', () => {
     await waitFor(() => expect(reorderFn).toHaveBeenCalledWith(['a', 'z']))
     fireEvent.click(screen.getByTestId('theme-packs-sort-button'))
     await waitFor(() => expect(reorderFn).toHaveBeenLastCalledWith(['z', 'a']))
+  })
+
+  // Generic pull-button rendering/disabled-state behavior (label swap,
+  // disables while pulling) is shell-level, covered once in
+  // PackManagerModal.test.tsx — this file only exercises Theme Packs'
+  // own wiring into usePackCloudPull.
+  describe('pull from cloud (C.3)', () => {
+    it('calls syncExecute with a packs-scoped download', async () => {
+      render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+
+      fireEvent.click(screen.getByTestId('theme-packs-pull-button'))
+
+      await waitFor(() => expect(vialAPI.syncExecute).toHaveBeenCalledWith('download', 'packs'))
+    })
+
+    it('surfaces an error banner when the pull fails', async () => {
+      vialAPI.syncExecute.mockResolvedValueOnce({ success: false, error: 'network down' })
+      render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+
+      fireEvent.click(screen.getByTestId('theme-packs-pull-button'))
+
+      await waitFor(() => expect(screen.getByTestId('theme-packs-error')).toHaveTextContent('network down'))
+    })
   })
 })

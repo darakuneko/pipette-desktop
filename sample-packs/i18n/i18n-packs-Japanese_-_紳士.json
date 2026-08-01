@@ -1,5 +1,5 @@
 {
-  "version": "0.1.55",
+  "version": "0.1.57",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -44,7 +44,9 @@
     "importBatchFailed_one": "誠に恐縮ながら、{{count}} 件のファイルをお受け取りできませんでした。",
     "importBatchFailed_other": "誠に恐縮ながら、{{count}} 件のファイルをお受け取りできませんでした。",
     "importSummary_one": "{{count}} 件のファイルをお受け取りいたしました (成功 {{success}} 件、失敗 {{failure}} 件)。",
-    "importSummary_other": "{{count}} 件のファイルをお受け取りいたしました (成功 {{success}} 件、失敗 {{failure}} 件)。"
+    "importSummary_other": "{{count}} 件のファイルをお受け取りいたしました (成功 {{success}} 件、失敗 {{failure}} 件)。",
+    "pullFromCloud": "クラウドより頂戴する",
+    "pulling": "頂戴中でございます..."
   },
   "app": {
     "title": "Pipette",
@@ -756,16 +758,13 @@
     "manualSync": "手動で揃える",
     "sync": "揃える",
     "resetTarget": {
-      "keyboardData": "機材",
       "favorites": "お気に入り",
-      "appSettings": "御用達設定",
       "i18nPacks": "言葉の包み",
-      "themePacks": "意匠の包み"
+      "themePacks": "意匠の包み",
+      "keyLabels": "キー銘板の記録",
+      "typingTestTexts": "腕試しの文言"
     },
-    "deleteSelected": "選ばれしものを抹消",
     "resetTargetsConfirm": "選ばれた記録は永遠に失われます。よろしいのですね？",
-    "resetLocalTargetsConfirm": "手元の記録が永遠に失われます。よろしいのですね？",
-    "resettingData": "記録を抹消しております...",
     "syncing": "同期中...",
     "continueOffline": "独りで続行",
     "noSyncYet": "まだ揃っておりません",
@@ -778,17 +777,23 @@
     "importComplete": "完了いたしました",
     "importFailed": "失敗いたしました",
     "passwordMismatch": "合言葉が違います。今一度ご確認くださいませ。",
-    "scanRemote": "見渡す",
     "scanning": "見渡しております...",
     "downloading": "お取り寄せ中...",
     "noRemoteData": "あちらに記録はございません",
     "undecryptableCount": "{{count}} 件の開けぬ書物",
-    "selectAll": "すべて選ぶ",
-    "deselectAll": "すべて外す",
     "checkingRemotePassword": "あちらの様子を伺っております...",
     "existingPasswordHint": "合言葉が既にございます。他で使ったものを教えていただけますか？",
     "unavailable": "繋がりが芳しくありません。同期は叶わぬようです。",
-    "retry": "再試行"
+    "retry": "再試行",
+    "pullError": {
+      "busy": "ただいま揃えている最中でございます。しばしお待ちを。",
+      "unauthenticated": "雲上より取り寄せるには、まず Google へ御挨拶を。",
+      "noPasswordFile": "雲上より取り寄せるには、合言葉を定めてくださいませ。",
+      "decryptFailed": "保管された合言葉を読み取れませんでした。",
+      "keystoreUnavailable": "OSの錠前が使えぬため、ここでは雲上より取り寄せられませぬ。",
+      "remoteCheckFailed": "あちらへ繋がりませんでした。しばし後にもう一度お試しを。",
+      "partial": "一部の包みが取り寄せられませんでした。今一度お試しくださいませ。"
+    }
   },
   "settings": {
     "title": "御用設定",
@@ -1689,6 +1694,7 @@
     "deleteAllConfirm": "雲の上も含め、全てのデータが消え去ります。よろしいのですね？",
     "syncNoOrphans": "全てのデータが手元にございます",
     "resetAppSettings": "設定を初期化",
+    "cloudData": "クラウドの記録",
     "typing": {
       "title": "タイピング",
       "noKeyboards": "記録がございません",

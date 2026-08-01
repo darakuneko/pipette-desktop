@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { EMPTY_UID } from '../../shared/constants/protocol'
 import type { DeviceInfo } from '../../shared/types/protocol'
+import type { SyncOperationResult } from '../../shared/types/sync'
 
 interface Options {
   connectedDevice: DeviceInfo | null
@@ -13,7 +14,7 @@ interface Options {
   autoSync: boolean
   authenticated: boolean
   hasPassword: boolean
-  syncNow: (direction: 'download', opts: { favorites: true; keyboard: string }) => Promise<void>
+  syncNow: (direction: 'download', opts: { favorites: true; keyboard: string }) => Promise<SyncOperationResult>
 }
 
 interface DeviceAutoSyncResult {

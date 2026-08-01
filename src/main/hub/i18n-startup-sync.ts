@@ -25,11 +25,11 @@
 // available, runs in the background, and notifies the renderer when
 // done so any open language picker reflects the refreshed packs.
 
-import { BrowserWindow } from 'electron'
 import { downloadI18nPostBody, fetchI18nPackTimestamps, validateI18nExport } from './hub-i18n'
 import { listMetas, savePack } from '../i18n-pack-store'
 import { log } from '../logger'
 import { IpcChannels } from '../../shared/ipc/channels'
+import { broadcastToAllWindows } from '../utils/broadcast'
 import { HUB_I18N_PACK_TIMESTAMPS_BATCH_LIMIT } from '../../shared/types/hub'
 import type { I18nPackMeta } from '../../shared/types/i18n-store'
 
@@ -184,9 +184,7 @@ function reportSyncResult(result: I18nStartupSyncResult): void {
     log('warn', `i18n startup sync error pack=${err.packId} hub=${err.hubPostId}: ${err.reason}`)
   }
   if (result.updated > 0) {
-    for (const win of BrowserWindow.getAllWindows()) {
-      win.webContents.send(IpcChannels.I18N_PACK_CHANGED)
-    }
+    broadcastToAllWindows(IpcChannels.I18N_PACK_CHANGED)
   }
 }
 

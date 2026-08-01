@@ -230,6 +230,8 @@ export function App() {
     hasPassword: sync.hasPassword,
     syncNow: sync.syncNow,
     deviceSyncing,
+    packsPulledOnce: sync.config.packsPulledOnce,
+    markPacksPulledOnce: () => appConfig.set('packsPulledOnce', true),
     resetUIState: editorUI.resetUIState,
     clearFileStatus: fileHandlers.clearFileStatus,
     resetHubState: () => hub.resetHubState(),
@@ -734,8 +736,6 @@ export function App() {
             onFavUpdateOnHub={hub.hubCanUpload ? hub.handleFavUpdateOnHub : undefined}
             onFavRemoveFromHub={hub.hubReady ? hub.handleFavRemoveFromHub : undefined}
             onFavRenameOnHub={hub.hubReady ? hub.handleFavRenameOnHub : undefined}
-            onResetStart={() => lifecycle.setResettingData(true)}
-            onResetEnd={() => lifecycle.setResettingData(false)}
           />
         )}
         {startupNotification.visible && (
@@ -870,19 +870,6 @@ export function App() {
           syncProgress={deviceSyncing ? sync.progress : undefined}
           syncOnly={!keyboard.loading && !migration.migrating && !migration.migrationChecking}
         />
-      )}
-
-      {lifecycle.resettingData && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-surface" data-testid="resetting-overlay">
-          <div className="flex flex-col items-center gap-4">
-            <div className="h-1 w-48 overflow-hidden rounded bg-surface-dim">
-              <div className="h-full w-3/5 animate-pulse rounded bg-danger" />
-            </div>
-            <p className="text-sm font-medium text-content-secondary">
-              {t('sync.resettingData')}
-            </p>
-          </div>
-        </div>
       )}
 
       <div className="flex min-h-0 flex-1 flex-col">

@@ -7,9 +7,13 @@ import { BrowserWindow } from 'electron'
  * Send `channel` (with optional `args`) to every open `BrowserWindow`.
  * Pulled out of `pack-bundle-merge.ts` and `sync-service.ts`, which each
  * had their own identical `for (const win of BrowserWindow.getAllWindows())`
- * loop. Three other call sites (`i18n-startup-sync.ts`, `theme-pack-ipc.ts`,
- * `sync-ipc.ts`) have the same shape but are left as pre-existing debt —
- * see `Task-sync-remote-reset-and-discovery-gaps.md`.
+ * loop. `i18n-startup-sync.ts`, `theme-pack-ipc.ts`, and `sync-ipc.ts`'s
+ * progress-event emitter have since been unified onto this helper too
+ * (Task-sync-remote-reset-and-discovery-gaps.md) — the only intentional
+ * holdout is `sync-ipc.ts`'s `getDialogWindow()` fallback
+ * (`BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]`),
+ * which anchors a native save/open DIALOG to one window and is not a
+ * broadcast at all.
  *
  * Guards against a window closing between `getAllWindows()` enumerating
  * it and this loop reaching it (a real window-close race, not

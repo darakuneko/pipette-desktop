@@ -252,140 +252,155 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping,
           <div className="text-xs text-content-muted py-1" style={treeIndentStyle(2)}>
             {t('sync.scanning')}
           </div>
+        ) : !syncScanResult ? (
+          <div className="text-xs text-content-muted py-1" style={treeIndentStyle(2)}>
+            {t('sync.noRemoteData')}
+          </div>
+        ) : syncScanResult.keyboards.length === 0 ? (
+          <div
+            className="text-xs text-content-muted py-1"
+            style={treeIndentStyle(2)}
+            data-testid="nav-sync-empty"
+          >
+            {t('dataModal.syncNoOrphans')}
+          </div>
         ) : (
-          <>
-            {!syncScanResult ? (
-              <div className="text-xs text-content-muted py-1" style={treeIndentStyle(2)}>
-                {t('sync.noRemoteData')}
-              </div>
-            ) : syncScanResult.keyboards.length === 0 ? (
-              <div
-                className="text-xs text-content-muted py-1"
-                style={treeIndentStyle(2)}
-                data-testid="nav-sync-empty"
-              >
-                {t('dataModal.syncNoOrphans')}
-              </div>
-            ) : (
-              <Branch
-                label={t('dataModal.keyboards')}
-                depth={1}
-                open={isExpanded('sync-keyboards')}
-                onToggle={() => onToggle('sync-keyboards')}
-                testId="nav-sync-keyboards"
-              >
-                {[...syncScanResult.keyboards]
-                  .sort((a, b) => byDisplayName(resolveSyncKeyboardName(a), resolveSyncKeyboardName(b)))
-                  .map((uid) => {
-                  const name = resolveSyncKeyboardName(uid)
-                  const isDownloading = downloadingUid === uid
-                  const error = downloadErrorByUid[uid]
-                  const label = isDownloading ? `${name} (${t('sync.downloading')})` : name
-                  return (
-                    <Fragment key={uid}>
-                      <Leaf
-                        label={label}
-                        depth={2}
-                        active={isActivePath(activePath, { section: 'sync', page: 'sync-keyboard', uid, name })}
-                        onClick={() => { if (!isDownloading) void onSyncKeyboardSelect(uid, name) }}
-                        testId={`nav-sync-kb-${uid}`}
-                      />
-                      {error && (
-                        <div
-                          className="text-xs text-danger py-1"
-                          style={treeIndentStyle(2)}
-                          data-testid={`nav-sync-kb-${uid}-error`}
-                        >
-                          {error}
-                        </div>
-                      )}
-                    </Fragment>
-                  )
-                })}
-              </Branch>
-            )}
-            {/* Typing — per-keyboard, per-device subtree powered by the
-                local cache so startup stays quiet. Hidden entirely when
-                cloud has no non-own typing data; expanding a keyboard
-                triggers a lazy fetch of its remote hashes. */}
-            {hasRemoteTyping && (
-            <Branch
-              label={t('dataModal.typing.title')}
-              depth={1}
-              open={isExpanded('sync-typing')}
-              onToggle={() => onToggle('sync-typing')}
-              testId="nav-sync-typing"
-            >
-              {typingKeyboards.length === 0 ? (
-                <div
-                  className="text-xs text-content-muted py-1"
-                  style={treeIndentStyle(3)}
-                  data-testid="nav-sync-typing-empty"
-                >
-                  {t('dataModal.typing.noKeyboards')}
-                </div>
-              ) : (
-                typingKeyboards.map((kb) => {
-                  const nodeId = `sync-typing-${kb.uid}`
-                  const hashes = remoteTypingHashes[kb.uid] ?? []
-                  const open = isExpanded(nodeId)
-                  return (
-                    <Branch
-                      key={kb.uid}
-                      label={kb.productName || kb.uid}
-                      depth={2}
-                      open={open}
-                      onToggle={() => {
-                        onToggle(nodeId)
-                        ensureRemoteTypingHashes(kb.uid)
-                      }}
-                      testId={`nav-sync-typing-${kb.uid}`}
+          <Branch
+            label={t('dataModal.keyboards')}
+            depth={1}
+            open={isExpanded('sync-keyboards')}
+            onToggle={() => onToggle('sync-keyboards')}
+            testId="nav-sync-keyboards"
+          >
+            {[...syncScanResult.keyboards]
+              .sort((a, b) => byDisplayName(resolveSyncKeyboardName(a), resolveSyncKeyboardName(b)))
+              .map((uid) => {
+              const name = resolveSyncKeyboardName(uid)
+              const isDownloading = downloadingUid === uid
+              const error = downloadErrorByUid[uid]
+              const label = isDownloading ? `${name} (${t('sync.downloading')})` : name
+              return (
+                <Fragment key={uid}>
+                  <Leaf
+                    label={label}
+                    depth={2}
+                    active={isActivePath(activePath, { section: 'sync', page: 'sync-keyboard', uid, name })}
+                    onClick={() => { if (!isDownloading) void onSyncKeyboardSelect(uid, name) }}
+                    testId={`nav-sync-kb-${uid}`}
+                  />
+                  {error && (
+                    <div
+                      className="text-xs text-danger py-1"
+                      style={treeIndentStyle(2)}
+                      data-testid={`nav-sync-kb-${uid}-error`}
                     >
-                      {hashes.length === 0 ? (
-                        <div
-                          className="text-xs text-content-muted py-1"
-                          style={treeIndentStyle(4)}
-                          data-testid={`nav-sync-typing-${kb.uid}-empty`}
-                        >
-                          {t('dataModal.typing.noRemoteDevices')}
-                        </div>
-                      ) : (
-                        hashes.map((hash) => {
-                          const deviceLabel = deviceLabelFromHash(hash)
-                          return (
-                            <Leaf
-                              key={hash}
-                              label={deviceLabel}
-                              depth={3}
-                              active={isActivePath(activePath, {
-                                section: 'sync',
-                                page: 'sync-typing-device',
-                                uid: kb.uid,
-                                name: kb.productName || kb.uid,
-                                machineHash: hash,
-                                deviceLabel,
-                              })}
-                              onClick={() => onNavigate({
-                                section: 'sync',
-                                page: 'sync-typing-device',
-                                uid: kb.uid,
-                                name: kb.productName || kb.uid,
-                                machineHash: hash,
-                                deviceLabel,
-                              })}
-                              testId={`nav-sync-typing-${kb.uid}-${hash}`}
-                            />
-                          )
-                        })
-                      )}
-                    </Branch>
-                  )
-                })
-              )}
-            </Branch>
-            )}
-          </>
+                      {error}
+                    </div>
+                  )}
+                </Fragment>
+              )
+            })}
+          </Branch>
         )}
+        {/* Typing — per-keyboard, per-device subtree powered by the
+            local cache so startup stays quiet. Hidden entirely when
+            cloud has no non-own typing data or while a scan is in
+            flight; expanding a keyboard triggers a lazy fetch of its
+            remote hashes. */}
+        {!syncScanning && hasRemoteTyping && (
+        <Branch
+          label={t('dataModal.typing.title')}
+          depth={1}
+          open={isExpanded('sync-typing')}
+          onToggle={() => onToggle('sync-typing')}
+          testId="nav-sync-typing"
+        >
+          {typingKeyboards.length === 0 ? (
+            <div
+              className="text-xs text-content-muted py-1"
+              style={treeIndentStyle(3)}
+              data-testid="nav-sync-typing-empty"
+            >
+              {t('dataModal.typing.noKeyboards')}
+            </div>
+          ) : (
+            typingKeyboards.map((kb) => {
+              const nodeId = `sync-typing-${kb.uid}`
+              const hashes = remoteTypingHashes[kb.uid] ?? []
+              const open = isExpanded(nodeId)
+              return (
+                <Branch
+                  key={kb.uid}
+                  label={kb.productName || kb.uid}
+                  depth={2}
+                  open={open}
+                  onToggle={() => {
+                    onToggle(nodeId)
+                    ensureRemoteTypingHashes(kb.uid)
+                  }}
+                  testId={`nav-sync-typing-${kb.uid}`}
+                >
+                  {hashes.length === 0 ? (
+                    <div
+                      className="text-xs text-content-muted py-1"
+                      style={treeIndentStyle(4)}
+                      data-testid={`nav-sync-typing-${kb.uid}-empty`}
+                    >
+                      {t('dataModal.typing.noRemoteDevices')}
+                    </div>
+                  ) : (
+                    hashes.map((hash) => {
+                      const deviceLabel = deviceLabelFromHash(hash)
+                      return (
+                        <Leaf
+                          key={hash}
+                          label={deviceLabel}
+                          depth={3}
+                          active={isActivePath(activePath, {
+                            section: 'sync',
+                            page: 'sync-typing-device',
+                            uid: kb.uid,
+                            name: kb.productName || kb.uid,
+                            machineHash: hash,
+                            deviceLabel,
+                          })}
+                          onClick={() => onNavigate({
+                            section: 'sync',
+                            page: 'sync-typing-device',
+                            uid: kb.uid,
+                            name: kb.productName || kb.uid,
+                            machineHash: hash,
+                            deviceLabel,
+                          })}
+                          testId={`nav-sync-typing-${kb.uid}-${hash}`}
+                        />
+                      )
+                    })
+                  )}
+                </Branch>
+              )
+            })
+          )}
+        </Branch>
+        )}
+        {/* Cloud Data — global (all-keyboard) remote reset targets:
+            favorites, i18n/theme packs, key labels, imported
+            typing-test texts, and undecryptable files. Always rendered,
+            including while `syncScanning` is true (N5): its own content
+            pane reads from the `scanResult`/`scanning` props threaded
+            through by DataModal (nav.rawSyncScanResult / nav.syncScanning
+            — no separate scan of its own, it shows its own scanning/empty
+            state), so collapsing this leaf during a reset-triggered
+            rescan would visually drop the selected nav item without the
+            content pane itself ever unmounting. Mirrors the
+            always-visible Local > Application leaf. */}
+        <Leaf
+          label={t('dataModal.cloudData')}
+          depth={1}
+          active={isActivePath(activePath, { section: 'sync', page: 'cloud-data' })}
+          onClick={() => onNavigate({ section: 'sync', page: 'cloud-data' })}
+          testId="nav-sync-cloud-data"
+        />
       </Branch>
 
       {/* ── Hub ── */}

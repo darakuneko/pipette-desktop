@@ -14,12 +14,13 @@
 
 import { app, dialog, BrowserWindow } from 'electron'
 import { join } from 'node:path'
-import { access, mkdir, readFile, readdir, rename, rm, stat, unlink, utimes, writeFile } from 'node:fs/promises'
+import { access, mkdir, readdir, readFile, rename, rm, stat, unlink, utimes, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { notifyChange } from './sync/sync-service'
 import { gcTombstones, mergeEntries, MalformedSyncBundleError } from './sync/merge'
 import { log } from './logger'
 import { safeFilename, isSafePackId } from './utils/safe-filename'
+import { sweepOrphanFiles } from './utils/sweep-orphan-pack-bodies'
 import {
   BUILTIN_ENGLISH_PACK_ID,
   I18N_INDEX_SYNC_UNIT,
@@ -403,9 +404,15 @@ export async function readIndex(): Promise<I18nPackIndex> {
   return { metas: [] }
 }
 
+// Routed through writeFileAtomic (temp-file-then-rename) — the sync merge
+// path (mergeSyncedIndex above) already wrote atomically; this local
+// read-modify-write path (save/rename/setEnabled/delete/setHubPostId/
+// reorder/purge) did not, leaving a crash-during-write window where a
+// reader (including this same store's own readIndexForGc below) could
+// observe a torn file and mistake it for a corrupt index.
 async function writeIndex(index: I18nPackIndex): Promise<void> {
   await mkdir(getStoreDir(), { recursive: true })
-  await writeFile(getIndexPath(), JSON.stringify(index, null, 2), 'utf-8')
+  await writeFileAtomic(getIndexPath(), JSON.stringify(index, null, 2))
 }
 
 function findActiveByName(metas: I18nPackMeta[], name: string, excludeId?: string): I18nPackMeta | undefined {
@@ -446,15 +453,90 @@ async function purgeExpiredTombstonesInPlace(index: I18nPackIndex): Promise<{ re
   return { removed, touched: true }
 }
 
-export async function purgeExpiredTombstones(): Promise<number> {
+/**
+ * Distinguishes a genuinely untrustworthy index from a legitimately
+ * empty one, for `runGcUnderLock`'s sweep-safety check:
+ *   - Index file present and parses to an array `.metas` → trustworthy,
+ *     whatever it contains (including empty).
+ *   - Index file missing AND the packs dir is also missing/empty → a
+ *     fresh store that never saved anything — legitimately empty.
+ *   - Index file missing but the packs dir has at least one `.json`
+ *     file → the index was lost (crash, partial migration, manual
+ *     tampering) while pack bodies still exist; an empty roster here
+ *     would make the sweep below delete every one of them. Untrustworthy.
+ *   - Index file present but unparseable (corrupt JSON / non-array
+ *     `.metas`) → untrustworthy regardless of the packs dir.
+ * `ok: false` short-circuits BOTH purge and sweep in `runGcUnderLock` —
+ * there is no trustworthy roster to purge tombstones from either.
+ */
+async function readIndexForGc(): Promise<{ ok: true; index: I18nPackIndex } | { ok: false }> {
+  let raw: string
+  try {
+    raw = await readFile(getIndexPath(), 'utf-8')
+  } catch {
+    try {
+      const entries = await readdir(getPacksDir())
+      if (entries.some((f) => f.endsWith('.json'))) return { ok: false }
+    } catch {
+      // packs dir doesn't exist either — legitimately empty, fall through
+    }
+    return { ok: true, index: { metas: [] } }
+  }
+  try {
+    const parsed = JSON.parse(raw) as I18nPackIndex
+    if (Array.isArray(parsed?.metas)) return { ok: true, index: parsed }
+  } catch {
+    // fall through to ok: false
+  }
+  return { ok: false }
+}
+
+/**
+ * Single-lock post-pass GC: purge expired tombstones (writing the index
+ * once if anything changed) then sweep orphan pack-body files — all
+ * inside ONE `withIndexWriteLock` acquisition instead of purge and
+ * sweep each separately re-reading the index under their own lock.
+ * Halves the lock/read round-trips `pack-gc.ts` previously needed per
+ * store, and closes the purge→sweep interleave window a separate-lock
+ * sequence would otherwise leave open (a concurrent write landing
+ * between the two could make the sweep see a stale, pre-purge index).
+ * Wired at the PASS level only (never per sync unit) via `pack-gc.ts` —
+ * see its module doc for why per-unit sweeping is unsafe (index and
+ * pack-body sync units merge in parallel with no ordering guarantee).
+ *
+ * `options.skipSweep` — set by `pack-gc.ts` when at least one of this
+ * store's sync units failed to merge in the pass that triggered this
+ * call: the just-read index cannot be trusted as a complete "still
+ * active" roster in that case, so sweeping against it risks deleting a
+ * body file for an entry that simply hasn't merged in yet. Purge still
+ * runs (index-only, safe regardless).
+ *
+ * When the index itself is untrustworthy (`readIndexForGc` returns
+ * `ok: false` — missing while pack bodies exist, or unparseable), BOTH
+ * purge and sweep are skipped and a unit-name-only warning is logged —
+ * an empty-roster fallback here would otherwise make the sweep below
+ * delete every pack body on disk.
+ */
+export async function runGcUnderLock(options?: { skipSweep?: boolean }): Promise<{ purged: number; swept: number }> {
   return withIndexWriteLock(async () => {
-    const index = await readIndex()
-    const result = await purgeExpiredTombstonesInPlace(index)
-    if (result.touched) {
+    const safeIndex = await readIndexForGc()
+    if (!safeIndex.ok) {
+      log('warn', `pack-gc: skipped ${I18N_INDEX_SYNC_UNIT} sweep — index missing/unreadable while pack bodies exist`)
+      return { purged: 0, swept: 0 }
+    }
+    const index = safeIndex.index
+    const purgeResult = await purgeExpiredTombstonesInPlace(index)
+    if (purgeResult.touched) {
       await writeIndex(index)
       notifyChange(I18N_INDEX_SYNC_UNIT)
     }
-    return result.removed
+    if (options?.skipSweep) {
+      log('warn', `pack-gc: skipped ${I18N_INDEX_SYNC_UNIT} sweep — a sync unit failed this pass`)
+      return { purged: purgeResult.removed, swept: 0 }
+    }
+    const known = new Set(index.metas.map((m) => `${m.id}.json`))
+    const swept = await sweepOrphanFiles(getPacksDir(), known)
+    return { purged: purgeResult.removed, swept }
   })
 }
 
@@ -916,33 +998,6 @@ export async function exportPackToDialog(
 /** Wipe all i18n pack data from disk. Called by the Local Reset flow. */
 export async function resetAllI18nPacks(): Promise<void> {
   await rm(getStoreDir(), { recursive: true, force: true })
-}
-
-/** Best-effort orphan sweep: pack files on disk without an index entry
- * are deleted. NOT currently wired to run automatically anywhere (no
- * call site triggers it after a sync download applies a tombstone) —
- * it exists as a standalone utility a future cleanup pass can call.
- * Wiring it in after the index-merge landed (so a GC'd tombstone's
- * orphaned body file gets swept) is tracked as follow-up in
- * `Task-sync-remote-reset-and-discovery-gaps.md`. */
-export async function sweepOrphans(): Promise<number> {
-  let removed = 0
-  try {
-    const index = await readIndex()
-    const known = new Set(index.metas.map((m) => `${m.id}.json`))
-    const entries = await readdir(getPacksDir())
-    for (const file of entries) {
-      if (!file.endsWith('.json')) continue
-      if (known.has(file)) continue
-      try {
-        await unlink(join(getPacksDir(), file))
-        removed += 1
-      } catch { /* swallow */ }
-    }
-  } catch {
-    // packs dir may not exist yet
-  }
-  return removed
 }
 
 // --- Test-only helpers -------------------------------------------------------

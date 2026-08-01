@@ -33,27 +33,43 @@ export interface ListFilesOptions {
   nameContains?: string
 }
 
+/** Lists every file in `appDataFolder` matching `options`, following
+ *  `nextPageToken` until Drive stops returning one. Every existing caller
+ *  (scan, poll, upload/download passes, resets, …) expects a single
+ *  complete `DriveFile[]` for the whole appData folder — this loops
+ *  internally rather than exposing a separate paginated variant, so
+ *  none of those call sites need to change once a user's file count
+ *  crosses Drive's single-page cap (1000, this call's own `pageSize`). */
 export async function listFiles(options?: ListFilesOptions): Promise<DriveFile[]> {
   const headers = await authHeaders()
-  const params = new URLSearchParams({
-    spaces: 'appDataFolder',
-    fields: 'files(id, name, modifiedTime)',
-    pageSize: '1000',
-  })
-  const filter = options?.nameContains
-  if (filter) {
-    const escaped = filter.replace(/'/g, "\\'")
-    params.set('q', `name contains '${escaped}'`)
-  }
+  const files: DriveFile[] = []
+  let pageToken: string | undefined
 
-  const response = await fetch(`${DRIVE_API}/files?${params}`, { headers })
-  if (!response.ok) {
-    const body = await response.text()
-    throw new Error(`Drive list failed: ${response.status} ${body}`)
-  }
+  do {
+    const params = new URLSearchParams({
+      spaces: 'appDataFolder',
+      fields: 'nextPageToken, files(id, name, modifiedTime)',
+      pageSize: '1000',
+    })
+    const filter = options?.nameContains
+    if (filter) {
+      const escaped = filter.replace(/'/g, "\\'")
+      params.set('q', `name contains '${escaped}'`)
+    }
+    if (pageToken) params.set('pageToken', pageToken)
 
-  const data = (await response.json()) as { files: DriveFile[] }
-  return data.files ?? []
+    const response = await fetch(`${DRIVE_API}/files?${params}`, { headers })
+    if (!response.ok) {
+      const body = await response.text()
+      throw new Error(`Drive list failed: ${response.status} ${body}`)
+    }
+
+    const data = (await response.json()) as { files?: DriveFile[]; nextPageToken?: string }
+    files.push(...(data.files ?? []))
+    pageToken = data.nextPageToken
+  } while (pageToken)
+
+  return files
 }
 
 export async function downloadFile(fileId: string): Promise<SyncEnvelope> {
@@ -241,12 +257,55 @@ export function syncUnitFromFileName(fileName: string): string | null {
   return null
 }
 
-export async function deleteFilesByPrefix(prefix: string): Promise<void> {
-  const files = await listFiles()
+/** Outcome of a matched-files delete batch: `attempted` is how many files
+ *  matched the predicate (0 is a legitimate "nothing to delete", not a
+ *  failure); `failed` is how many of those rejected. Callers (the
+ *  SYNC_RESET_TARGETS IPC handler) surface `failed > 0` as a reset
+ *  failure instead of silently discarding it the way a bare
+ *  `Promise.allSettled` would. */
+export interface DeleteMatchingFilesResult {
+  attempted: number
+  failed: number
+}
+
+/** Shared body for `deleteFilesByPrefix`/`deleteFilesByExactName`: list,
+ * filter by `predicate`, then delete every match with bounded
+ * concurrency. Both callers still list-then-filter separately per
+ * target rather than sharing one listing across a whole reset — resets
+ * are a rare path, so that batching isn't worth the added complexity
+ * here. */
+async function deleteMatchingFiles(
+  predicate: (file: DriveFile) => boolean,
+  listOptions?: ListFilesOptions,
+): Promise<DeleteMatchingFilesResult> {
+  const files = await listFiles(listOptions)
+  const matched = files.filter(predicate)
   const limit = pLimit(DELETE_CONCURRENCY)
-  await Promise.allSettled(
-    files
-      .filter((file) => file.name.startsWith(prefix))
-      .map((file) => limit(() => deleteFile(file.id))),
+  const results = await Promise.allSettled(
+    matched.map((file) => limit(() => deleteFile(file.id))),
   )
+  const failed = results.filter((r) => r.status === 'rejected').length
+  return { attempted: matched.length, failed }
+}
+
+export async function deleteFilesByPrefix(prefix: string): Promise<DeleteMatchingFilesResult> {
+  return deleteMatchingFiles((file) => file.name.startsWith(prefix))
+}
+
+/** Delete every remote file whose name matches `name` EXACTLY — unlike
+ * `deleteFilesByPrefix`, this is for sync units with no subtree to
+ * speak of (`key-labels.enc`, `typing-test-texts.enc`): a bare
+ * `driveFileName(unit)` string has no trailing separator a prefix
+ * match could safely anchor on, and a prefix match against it would
+ * also catch any unrelated file that merely starts with the same
+ * characters. Deletes ALL matching entries rather than looking up a
+ * single id and deleting just that one — Drive keys files by id, not
+ * name, so more than one file can legitimately share this exact name
+ * (e.g. a stale duplicate left behind by a past upload race); a
+ * find-first approach would silently leave such a duplicate behind.
+ * Narrows the listing server-side via `nameContains` (the exact match
+ * itself still happens client-side as a backstop, since `nameContains`
+ * is a substring filter, not an equality one). */
+export async function deleteFilesByExactName(name: string): Promise<DeleteMatchingFilesResult> {
+  return deleteMatchingFiles((file) => file.name === name, { nameContains: name })
 }

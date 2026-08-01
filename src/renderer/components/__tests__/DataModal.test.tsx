@@ -7,6 +7,28 @@ import { DataModal } from '../DataModal'
 import { resetDataNavCache } from '../data-modal/useDataNavTree'
 import type { UseSyncReturn } from '../../hooks/useSync'
 import { DEFAULT_APP_CONFIG } from '../../../shared/types/sync'
+import type { SyncDataScanResult } from '../../../shared/types/sync'
+
+/** Full `SyncDataScanResult` fixture — hoisted above `makeSyncMock` so
+ *  every test in this file (not just the Cloud Data describe block)
+ *  shares one shape instead of each hand-rolling its own partial
+ *  literal. Overrides are typed against the real result type so a
+ *  typo/renamed field fails typecheck instead of silently no-oping. */
+function fullScanResult(overrides?: Partial<SyncDataScanResult>): SyncDataScanResult {
+  return {
+    keyboards: [],
+    keyboardNames: {},
+    favorites: [],
+    i18nPacks: [],
+    themePacks: [],
+    keyLabels: false,
+    typingTestTexts: false,
+    hasI18nData: false,
+    hasThemesData: false,
+    undecryptable: [],
+    ...overrides,
+  }
+}
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -54,6 +76,7 @@ const mockTypingAnalyticsExport = vi.fn().mockResolvedValue({ written: 0, cancel
 const mockTypingAnalyticsImport = vi.fn().mockResolvedValue({ result: { imported: 0, rejections: [] }, cancelled: true })
 const mockTypingAnalyticsDeleteItems = vi.fn().mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
 const mockTypingAnalyticsDeleteAll = vi.fn().mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
+const mockSyncScanRemote = vi.fn().mockResolvedValue(fullScanResult())
 
 Object.defineProperty(window, 'vialAPI', {
   value: {
@@ -91,6 +114,7 @@ Object.defineProperty(window, 'vialAPI', {
     typingAnalyticsImport: mockTypingAnalyticsImport,
     typingAnalyticsDeleteItems: mockTypingAnalyticsDeleteItems,
     typingAnalyticsDeleteAll: mockTypingAnalyticsDeleteAll,
+    syncScanRemote: mockSyncScanRemote,
   },
   writable: true,
 })
@@ -117,10 +141,8 @@ function makeSyncMock(overrides?: Partial<UseSyncReturn>): UseSyncReturn {
     changePassword: vi.fn().mockResolvedValue({ success: true }),
     resetSyncTargets: vi.fn().mockResolvedValue({ success: true }),
     validatePassword: vi.fn().mockResolvedValue({ score: 4, feedback: [] }),
-    syncNow: vi.fn().mockResolvedValue(undefined),
+    syncNow: vi.fn().mockResolvedValue({ success: true, status: 'completed' }),
     refreshStatus: vi.fn().mockResolvedValue(undefined),
-    listUndecryptable: vi.fn().mockResolvedValue([]),
-    scanRemote: vi.fn().mockResolvedValue({ keyboards: [], favorites: [], undecryptable: [] }),
     deleteFiles: vi.fn().mockResolvedValue({ success: true }),
     ...overrides,
   }
@@ -166,6 +188,7 @@ describe('DataModal', () => {
     mockTypingAnalyticsImport.mockResolvedValue({ result: { imported: 0, rejections: [] }, cancelled: true })
     mockTypingAnalyticsDeleteItems.mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
     mockTypingAnalyticsDeleteAll.mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
+    mockSyncScanRemote.mockResolvedValue(fullScanResult())
     resetDataNavCache()
   })
 
@@ -725,6 +748,158 @@ describe('DataModal', () => {
     it('renders sync branch in sidebar', () => {
       render(<DataModal {...makeProps()} />)
       expect(screen.getByTestId('nav-sync')).toBeInTheDocument()
+    })
+  })
+
+  describe('Sync > Cloud Data (B: global remote reset targets)', () => {
+    // CloudDataContent reuses useDataNavTree's own raw scan (fix: scan
+    // reuse) instead of running a private scanRemote() — so populating
+    // it here means driving `window.vialAPI.syncScanRemote` (what
+    // useDataNavTree's handleSyncScan calls) with sync "enabled"
+    // (authenticated + a password set), the same gate the nav tree's
+    // own auto-scan effect checks.
+    const SYNC_ENABLED_SYNC_MOCK_OVERRIDES = { authStatus: { authenticated: true }, hasPassword: true }
+
+    async function renderAndSwitchToCloudData(overrides?: Partial<Parameters<typeof DataModal>[0]>) {
+      const result = render(<DataModal {...makeProps({
+        sync: makeSyncMock(SYNC_ENABLED_SYNC_MOCK_OVERRIDES),
+        ...overrides,
+      })} />)
+      fireEvent.click(screen.getByTestId('nav-sync'))
+      // The Cloud Data leaf renders unconditionally, even mid-scan (N5) —
+      // this just waits for the Sync branch's own auto-scan to settle so
+      // CloudDataContent's `scanResult` prop (reused from the same scan,
+      // not a private one) is populated before switching to it.
+      await waitFor(() => expect(screen.getByTestId('nav-sync-cloud-data')).toBeInTheDocument())
+      fireEvent.click(screen.getByTestId('nav-sync-cloud-data'))
+      return result
+    }
+
+    it('always shows the Cloud Data leaf under Sync', () => {
+      render(<DataModal {...makeProps()} />)
+      fireEvent.click(screen.getByTestId('nav-sync'))
+      expect(screen.getByTestId('nav-sync-cloud-data')).toBeInTheDocument()
+    })
+
+    it('shows an empty state when nothing exists on the remote', async () => {
+      mockSyncScanRemote.mockResolvedValue(fullScanResult())
+      await renderAndSwitchToCloudData()
+
+      await waitFor(() => expect(screen.getByTestId('cloud-data-empty')).toBeInTheDocument())
+    })
+
+    it('shows only the targets present on the remote, driven by scanRemoteData', async () => {
+      mockSyncScanRemote.mockResolvedValue(fullScanResult({ themePacks: ['theme-a'] }))
+      await renderAndSwitchToCloudData()
+
+      await waitFor(() => expect(screen.getByTestId('cloud-data-row-themePacks')).toBeInTheDocument())
+      expect(screen.queryByTestId('cloud-data-row-favorites')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('cloud-data-row-keyLabels')).not.toBeInTheDocument()
+    })
+
+    it('requires a two-step confirm before calling resetSyncTargets', async () => {
+      mockSyncScanRemote.mockResolvedValue(fullScanResult({ themePacks: ['theme-a'] }))
+      const resetSyncTargets = vi.fn().mockResolvedValue({ success: true })
+      await renderAndSwitchToCloudData({ sync: makeSyncMock({ ...SYNC_ENABLED_SYNC_MOCK_OVERRIDES, resetSyncTargets }) })
+
+      await waitFor(() => expect(screen.getByTestId('cloud-data-reset-themePacks')).toBeInTheDocument())
+      fireEvent.click(screen.getByTestId('cloud-data-reset-themePacks'))
+      expect(resetSyncTargets).not.toHaveBeenCalled()
+      expect(screen.getByTestId('cloud-data-confirm-themePacks')).toBeInTheDocument()
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('cloud-data-confirm-themePacks'))
+      })
+      expect(resetSyncTargets).toHaveBeenCalledWith({ keyboards: false, favorites: false, themePacks: true })
+    })
+
+    it('cancel returns to the un-confirmed reset button without calling resetSyncTargets', async () => {
+      mockSyncScanRemote.mockResolvedValue(fullScanResult({ themePacks: ['theme-a'] }))
+      const resetSyncTargets = vi.fn().mockResolvedValue({ success: true })
+      await renderAndSwitchToCloudData({ sync: makeSyncMock({ ...SYNC_ENABLED_SYNC_MOCK_OVERRIDES, resetSyncTargets }) })
+
+      await waitFor(() => expect(screen.getByTestId('cloud-data-reset-themePacks')).toBeInTheDocument())
+      fireEvent.click(screen.getByTestId('cloud-data-reset-themePacks'))
+      fireEvent.click(screen.getByTestId('cloud-data-cancel-themePacks'))
+
+      expect(resetSyncTargets).not.toHaveBeenCalled()
+      expect(screen.getByTestId('cloud-data-reset-themePacks')).toBeInTheDocument()
+    })
+
+    // C2: the index file can outlive every pack id it once listed (all
+    // tombstoned and GC'd) — hasI18nData/hasThemesData cover that dead
+    // zone so the row still shows up with an empty id array.
+    it('shows the i18nPacks/themePacks row from hasI18nData/hasThemesData alone (index survives with zero pack ids)', async () => {
+      mockSyncScanRemote.mockResolvedValue(fullScanResult({ hasI18nData: true, hasThemesData: true }))
+      await renderAndSwitchToCloudData()
+
+      await waitFor(() => expect(screen.getByTestId('cloud-data-row-i18nPacks')).toBeInTheDocument())
+      expect(screen.getByTestId('cloud-data-row-themePacks')).toBeInTheDocument()
+    })
+
+    it('does not show the i18nPacks/themePacks row when both the index and every pack id are absent', async () => {
+      mockSyncScanRemote.mockResolvedValue(fullScanResult())
+      await renderAndSwitchToCloudData()
+
+      await waitFor(() => expect(screen.getByTestId('cloud-data-empty')).toBeInTheDocument())
+      expect(screen.queryByTestId('cloud-data-row-i18nPacks')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('cloud-data-row-themePacks')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Sync > Cloud Data — Undecryptable Files (M5, Option A)', () => {
+    const SYNC_ENABLED_SYNC_MOCK_OVERRIDES = { authStatus: { authenticated: true }, hasPassword: true }
+    const UNDECRYPTABLE_FILE = { fileId: 'file-1', fileName: 'keyboards_abc_settings.enc', syncUnit: 'keyboards/abc/settings' }
+
+    async function renderAndSwitchToCloudData(overrides?: Partial<Parameters<typeof DataModal>[0]>) {
+      const result = render(<DataModal {...makeProps({
+        sync: makeSyncMock(SYNC_ENABLED_SYNC_MOCK_OVERRIDES),
+        ...overrides,
+      })} />)
+      fireEvent.click(screen.getByTestId('nav-sync'))
+      await waitFor(() => expect(screen.getByTestId('nav-sync-cloud-data')).toBeInTheDocument())
+      fireEvent.click(screen.getByTestId('nav-sync-cloud-data'))
+      return result
+    }
+
+    it('lists undecryptable files with a count and per-file delete row', async () => {
+      mockSyncScanRemote.mockResolvedValue(fullScanResult({ undecryptable: [UNDECRYPTABLE_FILE] }))
+      await renderAndSwitchToCloudData()
+
+      await waitFor(() => expect(screen.getByTestId('cloud-data-undecryptable-count')).toBeInTheDocument())
+      expect(screen.getByTestId(`undecryptable-file-${UNDECRYPTABLE_FILE.fileId}`)).toBeInTheDocument()
+      expect(screen.getByTestId(`undecryptable-delete-${UNDECRYPTABLE_FILE.fileId}`)).toBeInTheDocument()
+    })
+
+    it('requires a two-step confirm before calling deleteFiles, then rescans', async () => {
+      mockSyncScanRemote.mockResolvedValue(fullScanResult({ undecryptable: [UNDECRYPTABLE_FILE] }))
+      const deleteFiles = vi.fn().mockResolvedValue({ success: true })
+      await renderAndSwitchToCloudData({ sync: makeSyncMock({ ...SYNC_ENABLED_SYNC_MOCK_OVERRIDES, deleteFiles }) })
+
+      await waitFor(() => expect(screen.getByTestId(`undecryptable-delete-${UNDECRYPTABLE_FILE.fileId}`)).toBeInTheDocument())
+      fireEvent.click(screen.getByTestId(`undecryptable-delete-${UNDECRYPTABLE_FILE.fileId}`))
+      expect(deleteFiles).not.toHaveBeenCalled()
+      expect(screen.getByTestId(`undecryptable-delete-confirm-${UNDECRYPTABLE_FILE.fileId}`)).toBeInTheDocument()
+
+      mockSyncScanRemote.mockResolvedValue(fullScanResult())
+      await act(async () => {
+        fireEvent.click(screen.getByTestId(`undecryptable-delete-confirm-${UNDECRYPTABLE_FILE.fileId}`))
+      })
+      expect(deleteFiles).toHaveBeenCalledWith([UNDECRYPTABLE_FILE.fileId])
+      await waitFor(() => expect(screen.getByTestId('cloud-data-empty')).toBeInTheDocument())
+    })
+
+    it('cancel returns to the un-confirmed delete button without calling deleteFiles', async () => {
+      mockSyncScanRemote.mockResolvedValue(fullScanResult({ undecryptable: [UNDECRYPTABLE_FILE] }))
+      const deleteFiles = vi.fn().mockResolvedValue({ success: true })
+      await renderAndSwitchToCloudData({ sync: makeSyncMock({ ...SYNC_ENABLED_SYNC_MOCK_OVERRIDES, deleteFiles }) })
+
+      await waitFor(() => expect(screen.getByTestId(`undecryptable-delete-${UNDECRYPTABLE_FILE.fileId}`)).toBeInTheDocument())
+      fireEvent.click(screen.getByTestId(`undecryptable-delete-${UNDECRYPTABLE_FILE.fileId}`))
+      fireEvent.click(screen.getByTestId(`undecryptable-delete-cancel-${UNDECRYPTABLE_FILE.fileId}`))
+
+      expect(deleteFiles).not.toHaveBeenCalled()
+      expect(screen.getByTestId(`undecryptable-delete-${UNDECRYPTABLE_FILE.fileId}`)).toBeInTheDocument()
     })
   })
 })

@@ -14,7 +14,7 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   return { ...actual, utimes: vi.fn(actual.utimes) }
 })
 
-import { mkdtemp, rm, readFile, writeFile, mkdir, stat, utimes } from 'node:fs/promises'
+import { mkdtemp, rm, readFile, readdir, writeFile, mkdir, stat, utimes } from 'node:fs/promises'
 
 let mockUserDataPath = ''
 
@@ -52,7 +52,7 @@ import {
   deletePack,
   setHubPostId,
   hasActiveName,
-  purgeExpiredTombstones,
+  runGcUnderLock,
   reorderActive,
   mergeSyncedIndex,
   applySyncedPackBody,
@@ -642,7 +642,7 @@ describe('theme-pack-store', () => {
     })
   })
 
-  describe('purgeExpiredTombstones', () => {
+  describe('runGcUnderLock (purge tombstones + sweep orphans, single lock)', () => {
     it('removes tombstones older than TTL and deletes pack body', async () => {
       const saved = await savePack({ raw: makeValidPack({ name: 'Expired' }) })
       const packPath = __testing.getPackPath(saved.data!.id)
@@ -656,7 +656,7 @@ describe('theme-pack-store', () => {
 
       vi.mocked(notifyChange).mockClear()
 
-      await purgeExpiredTombstones()
+      await runGcUnderLock()
 
       const afterIndex = await __testing.readIndex()
       expect(afterIndex.metas.find((m) => m.id === saved.data!.id)).toBeUndefined()
@@ -672,7 +672,7 @@ describe('theme-pack-store', () => {
 
       vi.mocked(notifyChange).mockClear()
 
-      await purgeExpiredTombstones()
+      await runGcUnderLock()
 
       const afterIndex = await __testing.readIndex()
       const meta = afterIndex.metas.find((m) => m.id === saved.data!.id)
@@ -687,7 +687,7 @@ describe('theme-pack-store', () => {
 
       vi.mocked(notifyChange).mockClear()
 
-      await purgeExpiredTombstones()
+      await runGcUnderLock()
 
       expect(notifyChange).not.toHaveBeenCalled()
     })
@@ -701,11 +701,58 @@ describe('theme-pack-store', () => {
       meta.deletedAt = new Date(Date.now() - THEME_PACK_TOMBSTONE_TTL_MS - 1000).toISOString()
       await __testing.writeIndex(index)
 
-      await purgeExpiredTombstones()
+      await runGcUnderLock()
 
       const afterIndex = await __testing.readIndex()
       expect(afterIndex.metas).toHaveLength(1)
       expect(afterIndex.metas[0].name).toBe('Keeper')
+    })
+
+    // M4: a corrupt/missing index must not be treated as "legitimately
+    // empty" when pack bodies still exist — an empty-roster fallback
+    // there would make the sweep delete every one of them.
+    it('skips both purge and sweep when index.json is truncated/unparseable, keeping every pack body intact', async () => {
+      const saved = await savePack({ raw: makeValidPack({ name: 'Survivor' }) })
+      await writeFile(__testing.getIndexPath(), '{ "metas": [ not valid json', 'utf-8')
+
+      const result = await runGcUnderLock()
+
+      expect(result).toEqual({ purged: 0, swept: 0 })
+      const remaining = await readdir(__testing.getPacksDir())
+      expect(remaining).toContain(`${saved.data!.id}.json`)
+      expect(log).toHaveBeenCalledWith('warn', expect.stringContaining(THEME_INDEX_SYNC_UNIT))
+    })
+
+    it('skips both purge and sweep when index.json is missing but pack bodies exist', async () => {
+      const saved = await savePack({ raw: makeValidPack({ name: 'Orphaned-by-missing-index' }) })
+      await rm(__testing.getIndexPath(), { force: true })
+
+      const result = await runGcUnderLock()
+
+      expect(result).toEqual({ purged: 0, swept: 0 })
+      const remaining = await readdir(__testing.getPacksDir())
+      expect(remaining).toContain(`${saved.data!.id}.json`)
+    })
+
+    it('treats a missing index as legitimately empty when the packs dir is also empty/missing', async () => {
+      const result = await runGcUnderLock()
+
+      expect(result).toEqual({ purged: 0, swept: 0 })
+    })
+
+    // M3: options.skipSweep — set by pack-gc.ts when a sibling sync unit
+    // for this store failed to merge this pass. Purge still runs; only
+    // the sweep is withheld.
+    it('skips only the sweep (not purge) when options.skipSweep is set, index-fails-body-succeeds scenario', async () => {
+      const kept = await savePack({ raw: makeValidPack({ name: 'Kept' }) })
+      await writeFile(join(__testing.getPacksDir(), 'in-flight-body.json'), JSON.stringify(makeValidPack()), 'utf-8')
+
+      const result = await runGcUnderLock({ skipSweep: true })
+
+      expect(result.swept).toBe(0)
+      const remaining = await readdir(__testing.getPacksDir())
+      expect(remaining).toContain(`${kept.data!.id}.json`)
+      expect(remaining).toContain('in-flight-body.json')
     })
   })
 
@@ -837,6 +884,37 @@ describe('theme-pack-store', () => {
       expect(log).toHaveBeenCalledWith('warn', expect.stringContaining('dropped 1 unsafe remote meta id'))
       const all = await listAllMetas()
       expect(all.some((m) => m.id === 'good-1')).toBe(true)
+    })
+  })
+
+  // Orphan-file removal itself is now shared body (sweepOrphanFiles,
+  // tested directly in sweep-orphan-pack-bodies.test.ts) — this file
+  // keeps only a thin lock-behavior test: runGcUnderLock's sweep must
+  // not be able to race a concurrent save/rename/delete's own
+  // read-modify-write of the index.
+  describe('runGcUnderLock sweep (single-lock GC)', () => {
+    it('sweeps an orphaned pack body file with no matching index entry', async () => {
+      const kept = await savePack({ raw: makeValidPack({ name: 'Kept' }) })
+      await writeFile(join(__testing.getPacksDir(), 'orphan-id.json'), JSON.stringify(makeValidPack()), 'utf-8')
+
+      const result = await runGcUnderLock()
+
+      expect(result.swept).toBe(1)
+      const remaining = await readdir(__testing.getPacksDir())
+      expect(remaining).toContain(`${kept.data!.id}.json`)
+      expect(remaining).not.toContain('orphan-id.json')
+    })
+
+    it('serializes against a concurrent savePack instead of racing it (locked via withIndexWriteLock)', async () => {
+      const [saveResult] = await Promise.all([
+        savePack({ raw: makeValidPack({ name: 'Racer' }) }),
+        runGcUnderLock(),
+      ])
+
+      const all = await listAllMetas()
+      expect(all.some((m) => m.id === saveResult.data!.id)).toBe(true)
+      const files = await readdir(__testing.getPacksDir())
+      expect(files).toContain(`${saveResult.data!.id}.json`)
     })
   })
 })

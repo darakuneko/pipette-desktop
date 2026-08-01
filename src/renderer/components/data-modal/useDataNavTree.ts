@@ -203,6 +203,14 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
     refreshStoredKeyboards,
     refreshTypingKeyboards,
     syncScanResult: filteredSyncScanResult,
+    // Unfiltered scan, threaded through to CloudDataContent (Sync >
+    // Cloud Data) so it can reuse this same scan instead of running its
+    // own second full download+decrypt pass — the filtered result above
+    // intentionally zeroes `favorites` for the orphan-discovery tree,
+    // which is wrong for Cloud Data's actual need (showing/resetting a
+    // target's remote copy regardless of whether it's also filtered out
+    // of that tree).
+    rawSyncScanResult: syncScanResult,
     syncScanning,
     handleSyncScan,
     onSyncKeyboardSelect,

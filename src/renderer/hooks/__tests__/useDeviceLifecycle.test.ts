@@ -31,13 +31,19 @@ function makeOptions(overrides: Partial<{
   autoSync: boolean
   hasPassword: boolean
   reloadUid: string | undefined
-}> = {}, mocks?: Partial<Mocks>) {
+  // Defaults to true so the pre-existing suite below (written before the
+  // packs auto-fire existed) doesn't need to account for an extra
+  // syncNow('download', 'packs') call it never asserts on. The dedicated
+  // "packs auto-fire" describe block below overrides this to false.
+  packsPulledOnce: boolean
+}> = {}, mocks?: Partial<Mocks> & { markPacksPulledOnce?: ReturnType<typeof vi.fn> }) {
   const connectDevice = mocks?.connectDevice ?? vi.fn().mockResolvedValue(true)
   const disconnectDevice = mocks?.disconnectDevice ?? vi.fn().mockResolvedValue(undefined)
   const keyboardReload = mocks?.keyboardReload ??
     vi.fn().mockResolvedValue(overrides.reloadUid ?? 'uid-1')
   const applyDevicePrefs = mocks?.applyDevicePrefs ?? vi.fn().mockResolvedValue(undefined)
   const syncNow = mocks?.syncNow ?? vi.fn().mockResolvedValue(undefined)
+  const markPacksPulledOnce = mocks?.markPacksPulledOnce ?? vi.fn()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(window as any).vialAPI = {
@@ -67,6 +73,8 @@ function makeOptions(overrides: Partial<{
       hasPassword: overrides.hasPassword ?? true,
       syncNow,
       deviceSyncing: false,
+      packsPulledOnce: overrides.packsPulledOnce ?? true,
+      markPacksPulledOnce,
       resetUIState: vi.fn(),
       clearFileStatus: vi.fn(),
       resetHubState: vi.fn(),
@@ -76,7 +84,7 @@ function makeOptions(overrides: Partial<{
       saveLastDevice: vi.fn(),
       clearLastDevice: vi.fn(),
     },
-    mocks: { connectDevice, disconnectDevice, keyboardReload, applyDevicePrefs, syncNow },
+    mocks: { connectDevice, disconnectDevice, keyboardReload, applyDevicePrefs, syncNow, markPacksPulledOnce },
   }
 }
 
@@ -185,5 +193,102 @@ describe('useDeviceLifecycle.handleConnect — issue #190 regression', () => {
     })
 
     expect(options.clearLastDevice).toHaveBeenCalled()
+  })
+})
+
+describe('useDeviceLifecycle.handleConnect — packs first-sync auto-fire', () => {
+  it('runs a packs-scoped download once and marks it done on success', async () => {
+    const syncNow = vi.fn().mockResolvedValue({ success: true, status: 'completed' })
+    const { options, mocks } = makeOptions({ packsPulledOnce: false }, { syncNow })
+    const { result } = renderHook(() => useDeviceLifecycle(options))
+
+    await act(async () => {
+      await result.current.handleConnect(mockDevice)
+    })
+
+    expect(syncNow).toHaveBeenCalledWith('download', { favorites: true, keyboard: 'uid-1' })
+    expect(syncNow).toHaveBeenCalledWith('download', 'packs')
+    expect(mocks.markPacksPulledOnce).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not mark done and does not throw when the packs download throws outright', async () => {
+    const syncNow = vi.fn().mockImplementation(async (_direction: string, scope?: unknown) => {
+      if (scope === 'packs') throw new Error('network error')
+      return { success: true, status: 'completed' }
+    })
+    const { options, mocks } = makeOptions({ packsPulledOnce: false }, { syncNow })
+    const { result } = renderHook(() => useDeviceLifecycle(options))
+
+    await act(async () => {
+      await result.current.handleConnect(mockDevice)
+    })
+
+    expect(syncNow).toHaveBeenCalledWith('download', 'packs')
+    expect(mocks.markPacksPulledOnce).not.toHaveBeenCalled()
+    // Device prefs must still apply — a packs-pull failure is non-fatal.
+    expect(mocks.applyDevicePrefs).toHaveBeenCalledWith('uid-1')
+  })
+
+  // M1: the real wiring never throws for a busy race or missing
+  // credentials — executeSync/syncExecute resolve normally with
+  // status: 'skipped' in both cases (see SyncOperationResult's doc).
+  // A mock that throws for this case would never happen in practice;
+  // this is the actual shape markPacksPulledOnce must gate on.
+  it('does not mark done when the packs pull resolves skipped (busy race with useDeviceAutoSync)', async () => {
+    const syncNow = vi.fn().mockImplementation(async (_direction: string, scope?: unknown) => {
+      if (scope === 'packs') return { success: true, status: 'skipped', skipReason: 'busy' }
+      return { success: true, status: 'completed' }
+    })
+    const { options, mocks } = makeOptions({ packsPulledOnce: false }, { syncNow })
+    const { result } = renderHook(() => useDeviceLifecycle(options))
+
+    await act(async () => {
+      await result.current.handleConnect(mockDevice)
+    })
+
+    expect(syncNow).toHaveBeenCalledWith('download', 'packs')
+    expect(mocks.markPacksPulledOnce).not.toHaveBeenCalled()
+    expect(mocks.applyDevicePrefs).toHaveBeenCalledWith('uid-1')
+  })
+
+  it('does not mark done when the packs pull resolves partial (a sync unit failed mid-pass)', async () => {
+    const syncNow = vi.fn().mockImplementation(async (_direction: string, scope?: unknown) => {
+      if (scope === 'packs') return { success: true, status: 'partial', error: '1 sync unit(s) failed' }
+      return { success: true, status: 'completed' }
+    })
+    const { options, mocks } = makeOptions({ packsPulledOnce: false }, { syncNow })
+    const { result } = renderHook(() => useDeviceLifecycle(options))
+
+    await act(async () => {
+      await result.current.handleConnect(mockDevice)
+    })
+
+    expect(mocks.markPacksPulledOnce).not.toHaveBeenCalled()
+  })
+
+  it('skips the packs pull entirely once it has already succeeded', async () => {
+    const syncNow = vi.fn().mockResolvedValue({ success: true, status: 'completed' })
+    const { options, mocks } = makeOptions({ packsPulledOnce: true }, { syncNow })
+    const { result } = renderHook(() => useDeviceLifecycle(options))
+
+    await act(async () => {
+      await result.current.handleConnect(mockDevice)
+    })
+
+    expect(syncNow).not.toHaveBeenCalledWith('download', 'packs')
+    expect(mocks.markPacksPulledOnce).not.toHaveBeenCalled()
+  })
+
+  it('does not fire the packs pull when autoSync/credentials are not ready', async () => {
+    const syncNow = vi.fn().mockResolvedValue({ success: true, status: 'completed' })
+    const { options, mocks } = makeOptions({ packsPulledOnce: false, autoSync: false }, { syncNow })
+    const { result } = renderHook(() => useDeviceLifecycle(options))
+
+    await act(async () => {
+      await result.current.handleConnect(mockDevice)
+    })
+
+    expect(syncNow).not.toHaveBeenCalled()
+    expect(mocks.markPacksPulledOnce).not.toHaveBeenCalled()
   })
 })

@@ -23,6 +23,7 @@ const TESTIDS: PackManagerModalProps['testids'] = {
   importButton: 'test-import-button',
   errorBanner: 'test-error',
   importFeedback: 'test-import-feedback',
+  pullButton: 'test-pull-button',
 }
 
 function renderShell(overrides: Partial<PackManagerModalProps> = {}) {
@@ -184,5 +185,39 @@ describe('PackManagerModal', () => {
     renderShell({ onClose })
     fireEvent.click(screen.getByTestId('test-close'))
     expect(onClose).toHaveBeenCalled()
+  })
+
+  it('renders a Pull button in the installed toolbar next to Import when onPull is passed', () => {
+    renderShell({ activeTab: 'installed', pullLabel: 'Pull from Cloud', onPull: vi.fn() })
+    expect(screen.getByTestId('test-pull-button')).toBeTruthy()
+    expect(screen.getByTestId('test-pull-button').textContent).toBe('Pull from Cloud')
+    expect(screen.getByTestId('test-import-button')).toBeTruthy()
+  })
+
+  it('omits the Pull button when onPull is not provided', () => {
+    renderShell({ activeTab: 'installed' })
+    expect(screen.queryByTestId('test-pull-button')).toBeNull()
+  })
+
+  it('does not render the Pull button on the hub tab (installed-only toolbar)', () => {
+    renderShell({ activeTab: 'hub', pullLabel: 'Pull from Cloud', onPull: vi.fn() })
+    expect(screen.queryByTestId('test-pull-button')).toBeNull()
+  })
+
+  it('calls onPull when the Pull button is clicked', () => {
+    const onPull = vi.fn()
+    renderShell({ activeTab: 'installed', pullLabel: 'Pull from Cloud', onPull })
+    fireEvent.click(screen.getByTestId('test-pull-button'))
+    expect(onPull).toHaveBeenCalled()
+  })
+
+  it('disables the Pull button when pullDisabled is set', () => {
+    renderShell({ activeTab: 'installed', pullLabel: 'Pull from Cloud', onPull: vi.fn(), pullDisabled: true })
+    expect((screen.getByTestId('test-pull-button') as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('disables the Pull button while pulling', () => {
+    renderShell({ activeTab: 'installed', pullLabel: 'Pulling…', onPull: vi.fn(), pulling: true })
+    expect((screen.getByTestId('test-pull-button') as HTMLButtonElement).disabled).toBe(true)
   })
 })

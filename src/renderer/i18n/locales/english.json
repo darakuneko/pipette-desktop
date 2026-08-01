@@ -1,5 +1,5 @@
 {
-  "version": "0.1.55",
+  "version": "0.1.57",
   "name": "English",
   "common": {
     "save": "Save",
@@ -44,7 +44,9 @@
     "importBatchFailed_one": "{{count}} file could not be imported:",
     "importBatchFailed_other": "{{count}} files could not be imported:",
     "importSummary_one": "Imported {{count}} file (success {{success}}, failure {{failure}})",
-    "importSummary_other": "Imported {{count}} files (success {{success}}, failure {{failure}})"
+    "importSummary_other": "Imported {{count}} files (success {{success}}, failure {{failure}})",
+    "pullFromCloud": "Pull from Cloud",
+    "pulling": "Pulling..."
   },
   "app": {
     "title": "Pipette",
@@ -766,16 +768,13 @@
     "manualSync": "Manual Sync",
     "sync": "Sync",
     "resetTarget": {
-      "keyboardData": "Keyboard",
       "favorites": "Favorite",
-      "appSettings": "Application",
       "i18nPacks": "Language Packs",
-      "themePacks": "Theme Packs"
+      "themePacks": "Theme Packs",
+      "keyLabels": "Key Labels",
+      "typingTestTexts": "Typing Test Texts"
     },
-    "deleteSelected": "Delete Selected",
     "resetTargetsConfirm": "The selected data will be permanently deleted. This action cannot be undone.",
-    "resetLocalTargetsConfirm": "The selected local data will be permanently deleted. This action cannot be undone.",
-    "resettingData": "Deleting data...",
     "syncing": "Syncing...",
     "continueOffline": "Continue offline",
     "noSyncYet": "Not synced yet",
@@ -788,17 +787,23 @@
     "importComplete": "Import complete",
     "importFailed": "Import failed",
     "passwordMismatch": "Sync password does not match. Please check your encryption password.",
-    "scanRemote": "Scan",
     "scanning": "Scanning...",
     "downloading": "Downloading...",
     "noRemoteData": "No remote data found",
     "undecryptableCount": "{{count}} undecryptable file(s)",
-    "selectAll": "Select All",
-    "deselectAll": "Deselect All",
     "checkingRemotePassword": "Checking sync status...",
     "existingPasswordHint": "A sync password already exists. Enter the same password used on your other device.",
     "unavailable": "Unable to connect to sync server. Sync features are currently disabled.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "pullError": {
+      "busy": "A sync is already running. Try again in a moment.",
+      "unauthenticated": "Sign in to Google to pull from cloud.",
+      "noPasswordFile": "Set a sync password to pull from cloud.",
+      "decryptFailed": "Couldn't read the saved sync password.",
+      "keystoreUnavailable": "OS keychain is not available; cloud pull is disabled here.",
+      "remoteCheckFailed": "Couldn't reach Google Drive. Try again later.",
+      "partial": "Some packs failed to pull. Try again."
+    }
   },
   "settings": {
     "title": "Settings",
@@ -1699,6 +1704,7 @@
     "deleteAllConfirm": "This deletes everything tied to this keyboard — keymaps, typing history & analytics, and settings — including synced data.",
     "syncNoOrphans": "All synced data is available locally",
     "resetAppSettings": "Reset application settings",
+    "cloudData": "Cloud Data",
     "typing": {
       "title": "Typing",
       "noKeyboards": "No recorded typing data",

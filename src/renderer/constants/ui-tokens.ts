@@ -54,3 +54,10 @@ export const BTN_PRIMARY_FOOTER = 'rounded bg-accent px-2.5 py-1 text-xs leading
 // View-only pack is neither.
 export const PACK_TYPE_TAG_WRITABLE = 'font-medium text-accent'
 export const PACK_TYPE_TAG_VIEW = 'text-content-secondary'
+
+// Pack-manager toolbar button (Import / Pull from Cloud) — shared by
+// PackManagerModal's Import button and its Pull from Cloud button (both
+// modal-agnostic, secondary-weight toolbar actions), and by
+// MissingKeysModal's Export button, which is visually the same kind of
+// control.
+export const PACK_TOOLBAR_BTN = 'shrink-0 rounded border border-edge bg-surface px-3 py-1.5 text-sm font-medium text-content hover:bg-surface-hover disabled:opacity-50'

@@ -103,6 +103,18 @@ export interface AppConfig {
   /** USB identity of the last successfully connected device, used by
    * `restoreLastSession` to reopen it at launch. */
   lastDevice?: LastDeviceInfo | null
+  /** Settable via IPC like `lastDevice` (App.tsx writes it directly), but
+   * exposes no Settings UI toggle — nothing for the user to turn on or
+   * off. True once the app has successfully run a one-time `'packs'`-
+   * scoped download (i18n + theme packs) after sync credentials became
+   * ready — see `useDeviceLifecycle`'s first-sync seam. Exists because
+   * the 3-minute poll cannot discover a pack that was already on Drive
+   * before this machine ever polled (see `matchesScope`'s doc in
+   * sync-service.ts), so a fresh machine would otherwise never learn
+   * about pre-existing remote packs without the user manually opening a
+   * Pack Manager modal and clicking pull. Stays false on failure so the
+   * next launch retries. */
+  packsPulledOnce: boolean
 }
 
 export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
@@ -130,6 +142,7 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'startInTray',
   'restoreLastSession',
   'lastDevice',
+  'packsPulledOnce',
 ])
 
 export const DEFAULT_APP_CONFIG: AppConfig = {
@@ -154,4 +167,5 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   trayResident: false,
   startInTray: false,
   restoreLastSession: true,
+  packsPulledOnce: false,
 }
