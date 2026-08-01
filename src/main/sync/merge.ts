@@ -7,10 +7,34 @@ import type { AnalyzeFilterSnapshotMeta } from '../../shared/types/analyze-filte
 import type { KeyLabelMeta } from '../../shared/types/key-label-store'
 import type { TypingTestTextMeta } from '../../shared/types/typing-test-text-store'
 import type { RunLogMeta } from '../../shared/types/typing-run-log'
+import type { I18nPackMeta } from '../../shared/types/i18n-store'
+import type { ThemePackMeta } from '../../shared/types/theme-store'
 
-export type EntryMeta = SavedFavoriteMeta | SnapshotMeta | AnalyzeFilterSnapshotMeta | KeyLabelMeta | TypingTestTextMeta | RunLogMeta
+// I18nPackMeta / ThemePackMeta are structurally identical to every other
+// member here (id / filename / savedAt / updatedAt / deletedAt?) — see
+// pack-bundle-merge.ts's mergePackIndexBundle, which reuses this same
+// mergeEntries/gcTombstones machinery for the i18n/theme pack roster
+// instead of the file-level whole-index LWW this module used to require
+// bundle-merge.ts to implement on its own.
+export type EntryMeta = SavedFavoriteMeta | SnapshotMeta | AnalyzeFilterSnapshotMeta | KeyLabelMeta | TypingTestTextMeta | RunLogMeta | I18nPackMeta | ThemePackMeta
 
 const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
+
+/** Thrown when a downloaded bundle's index doesn't have the `entries`
+ * array shape `mergeEntries`/`gcTombstones` require (favorites /
+ * snapshots / analyze-filter / key-label / typing-test-text / run-log —
+ * every generic index-based sync unit). A remote bundle is
+ * attacker-reachable data (anyone who can write to this sync unit's
+ * Drive file), so this guards `mergeEntries`' input contract rather than
+ * letting a malformed shape throw an opaque TypeError deep inside it.
+ * The message intentionally carries only the sync unit name — never
+ * bundle content — so logs never leak ciphertext-derived payloads. */
+export class MalformedSyncBundleError extends Error {
+  constructor(syncUnit: string) {
+    super(`malformed sync bundle index for ${syncUnit}`)
+    this.name = 'MalformedSyncBundleError'
+  }
+}
 
 export interface MergeOptions {
   preserveLocalOrder?: boolean
@@ -63,9 +87,29 @@ export function applyRunLogRetention(entries: readonly RunLogMeta[], max: number
   return { entries: [...kept, ...evictedTombstones, ...tombstones], evicted }
 }
 
-export function effectiveTime(entry: EntryMeta): number {
-  const t = new Date(entry.updatedAt ?? entry.savedAt).getTime()
+/** Parses an ISO timestamp to epoch ms, treating a missing/invalid value
+ *  as 0 (oldest possible) so a corrupt or absent timestamp always loses
+ *  an LWW comparison rather than throwing. Shared by every file-level and
+ *  entry-level LWW comparison in the sync subsystem (settings, i18n/theme
+ *  pack bundles, favorites/snapshots/etc. via `effectiveTime` below). */
+export function safeTimestamp(value: string | undefined): number {
+  if (!value) return 0
+  const t = new Date(value).getTime()
   return Number.isNaN(t) ? 0 : t
+}
+
+/** Timestamp shape shared by every meta this module and the i18n/theme
+ *  pack-bundle merge (`pack-bundle-merge.ts`) compare for LWW — the
+ *  newest of `updatedAt`/`savedAt` wins. Kept structural (rather than
+ *  `EntryMeta`) so non-entry meta shapes (`I18nPackMeta`, `ThemePackMeta`)
+ *  can share this single comparison instead of re-implementing it. */
+export interface TimestampedMeta {
+  updatedAt?: string
+  savedAt?: string
+}
+
+export function effectiveTime(entry: TimestampedMeta): number {
+  return safeTimestamp(entry.updatedAt ?? entry.savedAt)
 }
 
 export function mergeEntries<T extends EntryMeta>(local: T[], remote: T[], options?: MergeOptions): MergeResult<T> {

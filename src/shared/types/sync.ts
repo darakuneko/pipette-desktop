@@ -8,7 +8,7 @@ import type { KeyboardMetaIndex, KeyboardMetaSyncUnit } from './keyboard-meta'
 import type { KeyLabelIndex } from './key-label-store'
 import type { TypingTestTextIndex } from './typing-test-text-store'
 import type { I18nPackIndex, I18nIndexSyncUnit, I18nPackSyncUnit } from './i18n-store'
-import type { ThemePackIndex } from './theme-store'
+import type { ThemePackIndex, ThemeIndexSyncUnit, ThemePackSyncUnit } from './theme-store'
 import type { RunLogIndex } from './typing-run-log'
 
 export type { AppConfig }
@@ -80,6 +80,8 @@ export type SyncUnit =
   | TypingTestTextSyncUnit
   | I18nIndexSyncUnit
   | I18nPackSyncUnit
+  | ThemeIndexSyncUnit
+  | ThemePackSyncUnit
 
 export interface PasswordStrength {
   score: number // 0-4

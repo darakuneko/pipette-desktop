@@ -40,7 +40,13 @@ vi.mock('../sync/google-auth', () => ({
   getAccessToken: vi.fn(async () => 'mock-token'),
 }))
 
-import { driveFileName, listFiles, syncUnitFromFileName } from '../sync/google-drive'
+import { driveFileName, listFiles, syncUnitFromFileName, uploadFile } from '../sync/google-drive'
+import type { SyncEnvelope } from '../../shared/types/sync'
+
+function extractFetchUrl(call: unknown): URL {
+  const args = call as readonly [string | URL, RequestInit?]
+  return new URL(typeof args[0] === 'string' ? args[0] : args[0].toString())
+}
 
 describe('google-drive', () => {
   beforeEach(() => {
@@ -102,6 +108,36 @@ describe('google-drive', () => {
       expect(syncUnitFromFileName('layerNames_0x1234.enc')).toBeNull()
       expect(syncUnitFromFileName('')).toBeNull()
     })
+
+    // Task-sync-unit-filename-gap: these five patterns were previously
+    // unmapped, so a fresh machine could never discover a remote-only
+    // unit for these stores via scanRemoteData / polling / manual sync
+    // (the store still uploaded fine — only the reverse mapping was
+    // missing). Each case round-trips through both directions since
+    // driveFileName and syncUnitFromFileName are meant to be exact
+    // inverses of each other.
+    it.each<[syncUnit: string, fileName: string]>([
+      ['keyboards/0x1234/analyze_filters', 'keyboards_0x1234_analyze_filters.enc'],
+      ['key-labels', 'key-labels.enc'],
+      ['typing-test-texts', 'typing-test-texts.enc'],
+      ['themes/index', 'themes_index.enc'],
+      ['themes/packs/pack-abc-123', 'themes_packs_pack-abc-123.enc'],
+    ])('round-trips %s', (syncUnit, fileName) => {
+      expect(driveFileName(syncUnit)).toBe(fileName)
+      expect(syncUnitFromFileName(fileName)).toBe(syncUnit)
+    })
+
+    it('keeps password-check.enc unmapped (not a data sync unit)', () => {
+      expect(syncUnitFromFileName('password-check.enc')).toBeNull()
+    })
+
+    it('handles a uid whose own text contains "_analyze_filters"-shaped substrings via non-greedy backtracking', () => {
+      // The uid capture is non-greedy — confirm the regex still resolves
+      // to the intended (uid, store) split rather than mis-splitting on
+      // an early underscore inside the uid itself.
+      expect(syncUnitFromFileName('keyboards_foo_analyze_analyze_filters.enc'))
+        .toBe('keyboards/foo_analyze/analyze_filters')
+    })
   })
 
   describe('listFiles', () => {
@@ -116,11 +152,6 @@ describe('google-drive', () => {
       )
       vi.stubGlobal('fetch', fetchSpy)
       return { fetchSpy }
-    }
-
-    function extractFetchUrl(call: unknown): URL {
-      const args = call as readonly [string | URL, RequestInit?]
-      return new URL(typeof args[0] === 'string' ? args[0] : args[0].toString())
     }
 
     afterEach(() => {
@@ -164,6 +195,60 @@ describe('google-drive', () => {
 
       const url = extractFetchUrl(fetchSpy.mock.calls[0])
       expect(url.searchParams.has('q')).toBe(false)
+    })
+  })
+
+  // S3: the local-wins pack-body upload path (sync-service.ts's
+  // uploadSyncUnit + pack-bundle-merge.ts's pinPackBodyMtimeAfterUpload)
+  // pins the local file's mtime to whatever `modifiedTime` Drive just
+  // assigned this revision — closing a clock-skew loop where a
+  // locally-ahead wall clock would otherwise look newer than Drive's
+  // own stamped time forever. That only works if `uploadFile` actually
+  // requests and returns `modifiedTime` — Drive's default response
+  // fields for an upload omit it.
+  describe('uploadFile', () => {
+    const envelope: SyncEnvelope = {
+      version: 1,
+      syncUnit: 'i18n/packs/pack-a',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      salt: 's',
+      iv: 'i',
+      ciphertext: 'cipher',
+    }
+
+    function mockFetchUploadOk(id: string, modifiedTime: string): { fetchSpy: ReturnType<typeof vi.fn> } {
+      const fetchSpy = vi.fn(async () =>
+        new Response(JSON.stringify({ id, modifiedTime }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      vi.stubGlobal('fetch', fetchSpy)
+      return { fetchSpy }
+    }
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('requests id + modifiedTime fields and returns both when creating a new file', async () => {
+      const { fetchSpy } = mockFetchUploadOk('new-id', '2026-06-01T00:00:00.000Z')
+
+      const result = await uploadFile('i18n_packs_pack-a.enc', envelope)
+
+      const url = extractFetchUrl(fetchSpy.mock.calls[0])
+      expect(url.searchParams.get('fields')).toBe('id,modifiedTime')
+      expect(result).toEqual({ id: 'new-id', modifiedTime: '2026-06-01T00:00:00.000Z' })
+    })
+
+    it('requests id + modifiedTime fields and returns both when updating an existing file', async () => {
+      const { fetchSpy } = mockFetchUploadOk('existing-id', '2026-06-02T00:00:00.000Z')
+
+      const result = await uploadFile('i18n_packs_pack-a.enc', envelope, 'existing-id')
+
+      const url = extractFetchUrl(fetchSpy.mock.calls[0])
+      expect(url.searchParams.get('fields')).toBe('id,modifiedTime')
+      expect(result).toEqual({ id: 'existing-id', modifiedTime: '2026-06-02T00:00:00.000Z' })
     })
   })
 })

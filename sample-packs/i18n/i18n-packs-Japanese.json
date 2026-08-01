@@ -1,5 +1,5 @@
 {
-  "version": "0.1.53",
+  "version": "0.1.54",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -769,7 +769,8 @@
       "keyboardData": "キーボード",
       "favorites": "お気に入り",
       "appSettings": "アプリケーション",
-      "i18nPacks": "言語パック"
+      "i18nPacks": "言語パック",
+      "themePacks": "テーマパック"
     },
     "deleteSelected": "選択を削除",
     "resetTargetsConfirm": "選択したデータが完全に削除されます。この操作は取り消せません。",

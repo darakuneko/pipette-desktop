@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
-import { access, mkdtemp, readFile, rm, writeFile, mkdir } from 'node:fs/promises'
+import { access, mkdtemp, readFile, rm, stat, utimes, writeFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import type { DriveFile } from '../sync/google-drive'
 
@@ -42,31 +42,28 @@ vi.mock('electron', () => ({
 const mockListFiles = vi.fn(async (..._args: unknown[]): Promise<DriveFile[]> => [])
 const mockDownloadFile = vi.fn(async (_fileId: string): Promise<Record<string, unknown>> => ({}))
 const mockUploadFile = vi.fn(
-  async (_name: string, _envelope?: unknown, _existingFileId?: string): Promise<string> => 'file-id',
+  async (_name: string, _envelope?: unknown, _existingFileId?: string): Promise<{ id: string; modifiedTime: string }> =>
+    ({ id: 'file-id', modifiedTime: '2026-01-01T00:00:00.000Z' }),
 )
 const mockDeleteFile = vi.fn(async (_fileId: string): Promise<void> => {})
-const mockDriveFileName = vi.fn((syncUnit: string) => syncUnit.replaceAll('/', '_') + '.enc')
-const mockSyncUnitFromFileName = vi.fn((name: string) => {
-  const dayMatch = name.match(/^keyboards_(.+?)_devices_(.+?)_days_(\d{4}-\d{2}-\d{2})\.enc$/)
-  if (dayMatch) return `keyboards/${dayMatch[1]}/devices/${dayMatch[2]}/days/${dayMatch[3]}`
-  const deviceMatch = name.match(/^keyboards_(.+?)_devices_(.+)\.enc$/)
-  if (deviceMatch) return `keyboards/${deviceMatch[1]}/devices/${deviceMatch[2]}`
-  const kbMatch = name.match(/^keyboards_(.+?)_(settings|snapshots)\.enc$/)
-  if (kbMatch) return `keyboards/${kbMatch[1]}/${kbMatch[2]}`
-  const favMatch = name.match(/^favorites_(.+)\.enc$/)
-  if (favMatch) return `favorites/${favMatch[1]}`
-  return null
-})
 
-vi.mock('../sync/google-drive', () => ({
-  listFiles: (...args: unknown[]) => mockListFiles(...args),
-  downloadFile: (...args: unknown[]) => mockDownloadFile(...(args as Parameters<typeof mockDownloadFile>)),
-  uploadFile: (...args: unknown[]) => mockUploadFile(...(args as Parameters<typeof mockUploadFile>)),
-  deleteFile: (...args: unknown[]) => mockDeleteFile(...(args as Parameters<typeof mockDeleteFile>)),
-  driveFileName: (...args: unknown[]) => mockDriveFileName(...(args as Parameters<typeof mockDriveFileName>)),
-  syncUnitFromFileName: (...args: unknown[]) =>
-    mockSyncUnitFromFileName(...(args as Parameters<typeof mockSyncUnitFromFileName>)),
-}))
+vi.mock('../sync/google-drive', async () => {
+  // `driveFileName`/`syncUnitFromFileName` are imported via `importActual`
+  // (not hand-rolled) so this mock can never drift out of sync with the
+  // real filename ↔ sync-unit mapping again — a stale hand-rolled regex
+  // here previously hid a fresh-machine discovery gap for several stores
+  // (see Task-sync-unit-filename-gap.md) because the test mock silently
+  // kept "supporting" a narrower set of filenames than production code.
+  const actual = await vi.importActual<typeof import('../sync/google-drive')>('../sync/google-drive')
+  return {
+    listFiles: (...args: unknown[]) => mockListFiles(...args),
+    downloadFile: (...args: unknown[]) => mockDownloadFile(...(args as Parameters<typeof mockDownloadFile>)),
+    uploadFile: (...args: unknown[]) => mockUploadFile(...(args as Parameters<typeof mockUploadFile>)),
+    deleteFile: (...args: unknown[]) => mockDeleteFile(...(args as Parameters<typeof mockDeleteFile>)),
+    driveFileName: actual.driveFileName,
+    syncUnitFromFileName: actual.syncUnitFromFileName,
+  }
+})
 
 const mockGetAuthStatus = vi.fn(async (..._args: unknown[]) => ({ authenticated: true }))
 
@@ -189,6 +186,11 @@ vi.mock('../typing-analytics/sync-state', () => ({
 }))
 
 vi.stubGlobal('fetch', vi.fn())
+
+const mockLog = vi.fn()
+vi.mock('../logger', () => ({
+  log: (...args: unknown[]) => mockLog(...args),
+}))
 
 import { decrypt as mockDecryptFn, encrypt as mockEncryptFn, storePassword as mockStorePasswordFn, clearPassword as mockClearPasswordFn, retrievePasswordResult as mockRetrievePasswordResultFn } from '../sync/sync-crypto'
 import type { SyncProgress } from '../../shared/types/sync'
@@ -618,6 +620,56 @@ describe('sync-service', () => {
       stopPolling()
     })
 
+    // Task-sync-unit-filename-gap: themes/i18n only match scope 'all',
+    // which the 3-minute poll always uses (see matchesScope) — so once
+    // syncUnitFromFileName recognizes their filenames, polling picks up
+    // changes for them exactly like any other scope-'all' unit.
+    it('detects a changed themes/packs file on a subsequent poll and downloads it', async () => {
+      const themePackFile = (modifiedTime: string): DriveFile =>
+        ({ id: 'theme-pack-1', name: 'themes_packs_pack-a.enc', modifiedTime })
+      mockListFiles
+        .mockResolvedValueOnce([themePackFile('2026-01-01T00:00:00.000Z')])
+        .mockResolvedValueOnce([themePackFile('2026-01-02T00:00:00.000Z')])
+      mockDownloadFile.mockResolvedValue({
+        version: 1,
+        syncUnit: 'themes/packs/pack-a',
+        updatedAt: '2026-01-02T00:00:00.000Z',
+        salt: 's',
+        iv: 'i',
+        ciphertext: JSON.stringify({
+          type: 'theme-pack',
+          key: 'pack-a',
+          index: { metas: [] },
+          files: { 'pack-a.json': JSON.stringify({ name: 'Pack A', version: '1.0.0', colorScheme: 'dark', colors: {} }) },
+        }),
+      })
+
+      startPolling()
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockListFiles.mock.calls.length >= 1)
+      await flushIO()
+
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'theme-pack-1'))
+      // The merge's file write is real disk I/O — wait for the poll's own
+      // sync-lock release rather than a fixed tick count.
+      await flushUntil(() => !isSyncInProgress())
+
+      expect(mockDownloadFile).toHaveBeenCalledWith('theme-pack-1')
+      await expect(
+        readFile(join(mockUserDataPath, 'sync', 'themes', 'packs', 'pack-a.json'), 'utf-8'),
+      ).resolves.toContain('Pack A')
+
+      stopPolling()
+    })
+
+    // A key-labels-specific variant of this test previously lived here.
+    // Dropped as redundant: key-labels rides the same generic index-based
+    // poll-merge path already exercised above by favorites (this file's
+    // own "detects remote changes on subsequent polls and downloads"),
+    // and its filename recognition is pinned at the unit level in
+    // google-drive.test.ts's round-trip coverage.
+
     it('skips when no remote changes detected', async () => {
       mockListFiles.mockResolvedValue([makeDriveFile('2025-01-01T00:00:00.000Z')])
 
@@ -804,7 +856,7 @@ describe('sync-service', () => {
       // tapDance upload succeeds, macro upload fails (argument-based to avoid order dependency)
       mockUploadFile.mockImplementation((name: string) => {
         if (name === 'favorites_macro.enc') return Promise.reject(new Error('upload failed'))
-        return Promise.resolve('id1')
+        return Promise.resolve({ id: 'id1', modifiedTime: '2026-01-01T00:00:00.000Z' })
       })
 
       await executeSync('upload')
@@ -830,7 +882,7 @@ describe('sync-service', () => {
       // tapDance succeeds, macro fails (argument-based to avoid order dependency)
       mockUploadFile.mockImplementation((name: string) => {
         if (name === 'favorites_macro.enc') return Promise.reject(new Error('upload failed'))
-        return Promise.resolve('id1')
+        return Promise.resolve({ id: 'id1', modifiedTime: '2026-01-01T00:00:00.000Z' })
       })
 
       await executeSync('upload')
@@ -846,7 +898,7 @@ describe('sync-service', () => {
 
       mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
       mockDownloadFile.mockResolvedValueOnce(makePasswordCheckEnvelope())
-      mockUploadFile.mockResolvedValue('id1')
+      mockUploadFile.mockResolvedValue({ id: 'id1', modifiedTime: '2026-01-01T00:00:00.000Z' })
 
       await executeSync('upload')
 
@@ -1106,6 +1158,31 @@ describe('sync-service', () => {
       expect(result.favorites).toEqual(['tapDance'])
       expect(result.keyboards).toEqual([])
       expect(result.undecryptable).toEqual([])
+    })
+
+    // Task-sync-unit-filename-gap: scanRemoteData categorizes purely from
+    // syncUnitFromFileName — these previously fell through as unrecognized
+    // filenames (syncUnit === null) and were silently dropped from every
+    // category, including keyboards (for a uid that only has this file)
+    // and themePacks.
+    it('surfaces a uid whose only remote file is analyze_filters as a cloud keyboard', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'f1', name: 'keyboards_uid-only-filters_analyze_filters.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile.mockResolvedValueOnce({ ciphertext: 'ok' })
+
+      const result = await scanRemoteData()
+      expect(result.keyboards).toEqual(['uid-only-filters'])
+    })
+
+    it('surfaces theme pack ids found on the remote', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 't1', name: 'themes_packs_pack-a.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile.mockResolvedValueOnce({ ciphertext: 'ok' })
+
+      const result = await scanRemoteData()
+      expect(result.themePacks).toEqual(['pack-a'])
     })
   })
 
@@ -1388,9 +1465,88 @@ describe('sync-service', () => {
         const connectScope = { favorites: true as const, keyboard: 'uid-a' }
         expect(shouldDownloadSyncUnit(runLogUnit, connectScope, local)).toBe(false)
       })
+
+      // Task-sync-unit-filename-gap: these three stores are discovery-included
+      // ("それ以外" column in settings-persistence.md's trigger matrix — no
+      // dedicated exclusion predicate like analytics/run-logs) — the fix here
+      // is purely that syncUnitFromFileName now recognizes their filenames at
+      // all; shouldDownloadSyncUnit's own logic needs no changes for them.
+      it('keeps key-labels, typing-test-texts, and analyze_filters under the connect-time scope shape', () => {
+        const connectScope = { favorites: true as const, keyboard: 'uid-a' }
+        expect(shouldDownloadSyncUnit('key-labels', connectScope, local)).toBe(true)
+        expect(shouldDownloadSyncUnit('typing-test-texts', connectScope, local)).toBe(true)
+        expect(shouldDownloadSyncUnit('keyboards/uid-a/analyze_filters', connectScope, local)).toBe(true)
+        // Sanity: analytics/run-logs remain excluded under the same scope shape.
+        expect(shouldDownloadSyncUnit(analyticsUnit, connectScope, local)).toBe(false)
+        expect(shouldDownloadSyncUnit(runLogUnit, connectScope, local)).toBe(false)
+      })
     })
 
     describe('executeSync with scope', () => {
+      // Task-sync-unit-filename-gap: fresh-machine discovery — a remote-only
+      // unit for these stores previously could never be found because
+      // syncUnitFromFileName didn't recognize their filenames at all.
+      it.each([
+        {
+          label: 'key-labels',
+          fileId: 'kl1',
+          fileName: 'key-labels.enc',
+          syncUnit: 'key-labels',
+          bundleType: 'key-label',
+          key: 'key-labels',
+          dirSegments: ['key-labels'],
+          scope: 'favorites' as const,
+        },
+        {
+          label: 'typing-test-texts',
+          fileId: 'tt1',
+          fileName: 'typing-test-texts.enc',
+          syncUnit: 'typing-test-texts',
+          bundleType: 'typing-test-text',
+          key: 'typing-test-texts',
+          dirSegments: ['typing-test-texts'],
+          scope: 'favorites' as const,
+        },
+        {
+          label: 'analyze_filters',
+          fileId: 'af1',
+          fileName: 'keyboards_0x9999_analyze_filters.enc',
+          syncUnit: 'keyboards/0x9999/analyze_filters',
+          bundleType: 'analyze-filter',
+          key: '0x9999',
+          dirSegments: ['keyboards', '0x9999', 'analyze_filters'],
+          scope: { keyboard: '0x9999' } as const,
+        },
+      ])('fresh-machine discovery: downloads a remote-only $label unit', async ({ fileId, fileName, syncUnit, bundleType, key, dirSegments, scope }) => {
+        mockListFiles.mockResolvedValue([
+          { id: fileId, name: fileName, modifiedTime: '2025-01-01T00:00:00.000Z' },
+          PASSWORD_CHECK_DRIVE_FILE,
+        ])
+        mockDownloadFile
+          .mockResolvedValueOnce(makePasswordCheckEnvelope())
+          .mockResolvedValueOnce({
+            version: 1,
+            syncUnit,
+            updatedAt: '2025-01-01T00:00:00.000Z',
+            salt: 's',
+            iv: 'i',
+            ciphertext: JSON.stringify({
+              type: bundleType,
+              key,
+              index: { entries: [] },
+              files: {},
+            }),
+          })
+
+        await executeSync('download', scope)
+
+        const downloadedIds = mockDownloadFile.mock.calls.map((call) => call[0])
+        expect(downloadedIds).toContain(fileId)
+        await expect(
+          access(join(mockUserDataPath, 'sync', ...dirSegments, 'index.json')),
+        ).resolves.toBeUndefined()
+      })
+
       it('downloads only favorites files when scope is "favorites"', async () => {
         mockListFiles.mockResolvedValue([
           { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
@@ -1611,7 +1767,7 @@ describe('sync-service', () => {
         mockUploadFile.mockClear()
         mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
         mockDownloadFile.mockResolvedValueOnce(makePasswordCheckEnvelope())
-        mockUploadFile.mockResolvedValue('id1')
+        mockUploadFile.mockResolvedValue({ id: 'id1', modifiedTime: '2026-01-01T00:00:00.000Z' })
 
         await executeSync('upload', 'favorites')
 
@@ -1629,7 +1785,7 @@ describe('sync-service', () => {
 
         mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
         mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
-        mockUploadFile.mockResolvedValue('id1')
+        mockUploadFile.mockResolvedValue({ id: 'id1', modifiedTime: '2026-01-01T00:00:00.000Z' })
 
         await executeSync('upload', 'favorites')
 
@@ -1735,11 +1891,12 @@ describe('sync-service', () => {
     })
 
     it('does not treat password-check as a regular sync unit during download', async () => {
+      // syncUnitFromFileName's own null-mapping for password-check.enc is
+      // covered at the unit level by google-drive.test.ts — this test only
+      // needs the integration behavior: a download sync must succeed
+      // without trying to merge password-check as a data sync unit.
       mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
       mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
-
-      // syncUnitFromFileName should return null for password-check.enc
-      expect(mockSyncUnitFromFileName('password-check.enc')).toBeNull()
 
       await executeSync('download')
       // Should succeed without trying to merge password-check as a sync unit
@@ -2301,6 +2458,632 @@ describe('sync-service', () => {
         'drive-test-machine-hash-2026-04-18',
       ])
       expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual([])
+    })
+  })
+
+  // Task-sync-unit-filename-gap / bundle-variant merge crash regression.
+  // i18n-index / i18n-pack / theme-index / theme-pack bundles carry
+  // `{ metas: [...] }` or a raw pack body, never `{ entries }` — so before
+  // dedicated branches existed, mergeSyncUnit's generic index-based branch
+  // called `gcTombstones((remoteBundle.index as { entries }).entries)` on
+  // `undefined`, throwing a TypeError. This first test pins the pre-fix
+  // failure mode (caught per-unit → 'partial' status); every test after it
+  // asserts the fixed LWW behavior.
+  describe('bundle-variant merge (i18n/theme index + pack)', () => {
+    /** Builds a mock decrypted SyncEnvelope for any bundle shape (index
+     *  or pack-body). Replaces the four near-identical `make*Envelope`
+     *  factories this describe block used to carry, one per
+     *  i18n/theme × index/pack combination. */
+    function makeBundleEnvelope(
+      syncUnit: string,
+      updatedAt: string,
+      bundle: { type: string; key: string; index?: unknown; files?: Record<string, string> },
+    ): Record<string, unknown> {
+      return {
+        version: 1,
+        syncUnit,
+        updatedAt,
+        salt: 's',
+        iv: 'i',
+        ciphertext: JSON.stringify({
+          type: bundle.type,
+          key: bundle.key,
+          index: bundle.index ?? { metas: [] },
+          files: bundle.files ?? {},
+        }),
+      }
+    }
+
+    it('regression baseline: merging a remote i18n-index bundle no longer crashes the sync unit', async () => {
+      // Pre-fix, this scenario threw inside gcTombstones(undefined) and
+      // surfaced as a 'partial' sync with 'i18n/index' in failedUnits.
+      // Post-fix it must merge cleanly (remote is the only side, so
+      // remote wins trivially) and report 'success'.
+      mockListFiles.mockResolvedValue([
+        { id: 'idx1', name: 'i18n_index.enc', modifiedTime: '2026-01-01T00:00:00.000Z' },
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+      mockDownloadFile
+        .mockResolvedValueOnce(makePasswordCheckEnvelope())
+        .mockResolvedValueOnce(makeBundleEnvelope('i18n/index', '2026-01-01T00:00:00.000Z', {
+          type: 'i18n-index',
+          key: 'i18n-index',
+          index: { metas: [{ id: 'p1', name: 'Test Pack', version: '1.0.0', enabled: true, savedAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' }] },
+        }))
+
+      const progressEvents: SyncProgress[] = []
+      setProgressCallback((p) => progressEvents.push({ ...p }))
+
+      await executeSync('download')
+
+      const final = progressEvents[progressEvents.length - 1]
+      expect(final.status).toBe('success')
+      expect(final.failedUnits).toBeUndefined()
+
+      const written = JSON.parse(
+        await readFile(join(mockUserDataPath, 'sync', 'i18n', 'index.json'), 'utf-8'),
+      ) as { metas: Array<{ id: string }> }
+      expect(written.metas.map((m) => m.id)).toEqual(['p1'])
+    })
+
+    it.each([
+      {
+        label: 'i18n',
+        syncUnit: 'i18n/index',
+        fileName: 'i18n_index.enc',
+        fileId: 'idx1',
+        bundleType: 'i18n-index',
+        dir: 'i18n',
+        meta: { id: 'new', name: 'New Pack', version: '2.0.0', enabled: true, savedAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z' },
+      },
+      {
+        label: 'theme',
+        syncUnit: 'themes/index',
+        fileName: 'themes_index.enc',
+        fileId: 'tidx1',
+        bundleType: 'theme-index',
+        dir: 'themes',
+        meta: { id: 't1', name: 'Ocean', version: '1.0.0', savedAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z' },
+      },
+    ])('$label-index: remote-only id merges alongside the pre-existing local id (union, not wholesale replace)', async ({ syncUnit, fileName, fileId, bundleType, dir, meta }) => {
+      // M1 fix: index merge used to be file-level LWW — "newer roster
+      // wins wholesale" — which meant a remote index arriving with a
+      // different id than local's simply erased the local-only entry
+      // forever (its body file became an orphan, unreachable because
+      // collectAllSyncUnits only walks ids present in the index). This
+      // is now entry-level LWW: both ids survive as a union, and since
+      // local has an id remote doesn't have yet, the merged index is
+      // marked for re-upload so remote converges too.
+      await mkdir(join(mockUserDataPath, 'sync', dir), { recursive: true })
+      await writeFile(
+        join(mockUserDataPath, 'sync', dir, 'index.json'),
+        JSON.stringify({ metas: [{ ...meta, id: 'old', savedAt: '2020-01-01T00:00:00.000Z', updatedAt: '2020-01-01T00:00:00.000Z' }] }),
+        'utf-8',
+      )
+
+      mockListFiles.mockResolvedValue([
+        { id: fileId, name: fileName, modifiedTime: '2026-06-01T00:00:00.000Z' },
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+      mockDownloadFile
+        .mockResolvedValueOnce(makePasswordCheckEnvelope())
+        .mockResolvedValueOnce(makeBundleEnvelope(syncUnit, '2026-06-01T00:00:00.000Z', {
+          type: bundleType,
+          key: bundleType,
+          index: { metas: [meta] },
+        }))
+
+      await executeSync('download')
+
+      // Local had an entry ('old') remote doesn't have — the unit must
+      // be re-uploaded so remote picks it up too (both sides converge).
+      expect(mockUploadFile.mock.calls.some((c) => c[0] === fileName)).toBe(true)
+      const written = JSON.parse(
+        await readFile(join(mockUserDataPath, 'sync', dir, 'index.json'), 'utf-8'),
+      ) as { metas: Array<{ id: string }> }
+      expect(written.metas.map((m) => m.id).sort()).toEqual(['old', meta.id].sort())
+    })
+
+    it('two machines each install a different pack while offline: next sync converges to the union, neither pack is lost', async () => {
+      // The headline M1 scenario: machine A installs pack 'pack-a'
+      // (already on remote); machine B (this process) independently
+      // installed 'pack-b' locally before ever syncing. A naive
+      // file-level LWW would have machine B's later local timestamp win
+      // wholesale, permanently erasing 'pack-a' from both the local
+      // index AND — once B uploads — from remote too, orphaning its
+      // pack body forever. Entry-level LWW must instead keep both.
+      await mkdir(join(mockUserDataPath, 'sync', 'i18n'), { recursive: true })
+      await writeFile(
+        join(mockUserDataPath, 'sync', 'i18n', 'index.json'),
+        JSON.stringify({ metas: [{ id: 'pack-b', name: 'Pack B', version: '1.0.0', enabled: true, savedAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z' }] }),
+        'utf-8',
+      )
+
+      mockListFiles.mockResolvedValue([
+        { id: 'idx1', name: 'i18n_index.enc', modifiedTime: '2020-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile.mockResolvedValueOnce(makeBundleEnvelope('i18n/index', '2020-01-01T00:00:00.000Z', {
+        type: 'i18n-index',
+        key: 'i18n-index',
+        index: { metas: [{ id: 'pack-a', name: 'Pack A', version: '1.0.0', enabled: true, savedAt: '2020-01-01T00:00:00.000Z', updatedAt: '2020-01-01T00:00:00.000Z' }] },
+      }))
+      mockUploadFile.mockResolvedValue({ id: 'idx-file-id', modifiedTime: '2026-01-01T00:00:00.000Z' })
+
+      await executeSync('download')
+
+      // Both packs survive the merge — this is the union, not a
+      // one-side-wins replacement.
+      expect(mockUploadFile.mock.calls.some((c) => c[0] === 'i18n_index.enc')).toBe(true)
+      const written = JSON.parse(
+        await readFile(join(mockUserDataPath, 'sync', 'i18n', 'index.json'), 'utf-8'),
+      ) as { metas: Array<{ id: string }> }
+      expect(written.metas.map((m) => m.id)).toEqual(['pack-b', 'pack-a'])
+    })
+
+    it('the built-in English meta merges harmlessly across machines despite each machine stamping its own first-seen timestamp', async () => {
+      // ensureBuiltinEnglishEntry creates 'builtin-english' locally with
+      // whatever timestamp this machine first saw it at — two machines
+      // therefore carry different savedAt/updatedAt for the exact same
+      // logical entry. Confirms per-id LWW picking either side is
+      // harmless: the entry that "wins" still has the same
+      // name/version/enabled content every machine generates.
+      await mkdir(join(mockUserDataPath, 'sync', 'i18n'), { recursive: true })
+      await writeFile(
+        join(mockUserDataPath, 'sync', 'i18n', 'index.json'),
+        JSON.stringify({ metas: [{ id: 'builtin-english', filename: 'packs/builtin-english.json', name: 'English', version: '0.0.0', enabled: true, uploaderName: 'pipette', savedAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' }] }),
+        'utf-8',
+      )
+
+      mockListFiles.mockResolvedValue([
+        { id: 'idx1', name: 'i18n_index.enc', modifiedTime: '2026-06-01T00:00:00.000Z' },
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+      mockDownloadFile
+        .mockResolvedValueOnce(makePasswordCheckEnvelope())
+        .mockResolvedValueOnce(makeBundleEnvelope('i18n/index', '2026-06-01T00:00:00.000Z', {
+          type: 'i18n-index',
+          key: 'i18n-index',
+          index: { metas: [{ id: 'builtin-english', filename: 'packs/builtin-english.json', name: 'English', version: '0.0.0', enabled: true, uploaderName: 'pipette', savedAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z' }] },
+        }))
+
+      await executeSync('download')
+
+      const written = JSON.parse(
+        await readFile(join(mockUserDataPath, 'sync', 'i18n', 'index.json'), 'utf-8'),
+      ) as { metas: Array<{ id: string; name: string; version: string; enabled: boolean }> }
+      expect(written.metas).toHaveLength(1)
+      expect(written.metas[0]).toMatchObject({ id: 'builtin-english', name: 'English', version: '0.0.0', enabled: true })
+    })
+
+    it.each([
+      {
+        label: 'i18n',
+        syncUnit: 'i18n/packs/pack-a',
+        fileName: 'i18n_packs_pack-a.enc',
+        fileId: 'pack1',
+        bundleType: 'i18n-pack',
+        dir: 'i18n',
+        packId: 'pack-a',
+        body: { name: 'Pack A', version: '2.0.0' },
+      },
+      {
+        label: 'theme',
+        syncUnit: 'themes/packs/theme-a',
+        fileName: 'themes_packs_theme-a.enc',
+        fileId: 'tpack1',
+        bundleType: 'theme-pack',
+        dir: 'themes',
+        packId: 'theme-a',
+        body: { name: 'Theme A', version: '2.0.0', colorScheme: 'dark', colors: {} },
+      },
+    ])('$label-pack: remote newer than local mtime writes the pack body locally', async ({ syncUnit, fileName, fileId, bundleType, dir, packId, body }) => {
+      mockListFiles.mockResolvedValue([
+        { id: fileId, name: fileName, modifiedTime: '2026-06-01T00:00:00.000Z' },
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+      mockDownloadFile
+        .mockResolvedValueOnce(makePasswordCheckEnvelope())
+        .mockResolvedValueOnce(makeBundleEnvelope(syncUnit, '2026-06-01T00:00:00.000Z', {
+          type: bundleType,
+          key: packId,
+          files: { [`${packId}.json`]: JSON.stringify(body) },
+        }))
+
+      await executeSync('download')
+
+      const written = JSON.parse(
+        await readFile(join(mockUserDataPath, 'sync', dir, 'packs', `${packId}.json`), 'utf-8'),
+      ) as { version: string }
+      expect(written.version).toBe('2.0.0')
+      // applySyncedPackBody writes via temp-file-then-rename — the `.tmp`
+      // must never linger after a successful write.
+      await expect(
+        access(join(mockUserDataPath, 'sync', dir, 'packs', `${packId}.json.tmp`)),
+      ).rejects.toThrow()
+    })
+
+    it('local i18n-pack file newer than remote drive modifiedTime: local kept, remote re-uploaded', async () => {
+      await mkdir(join(mockUserDataPath, 'sync', 'i18n', 'packs'), { recursive: true })
+      await writeFile(
+        join(mockUserDataPath, 'sync', 'i18n', 'packs', 'pack-a.json'),
+        JSON.stringify({ name: 'Pack A', version: '3.0.0' }),
+        'utf-8',
+      )
+      // Local file mtime is "now" (just written) — the remote drive
+      // file's modifiedTime is set far in the past, so local must win.
+      // No mockDownloadFile queued for this pack: packBodyLocalWins
+      // short-circuits mergeWithRemote BEFORE downloadFile is ever
+      // called — if the production code regressed and called it
+      // anyway, the mock would throw/return undefined and this test
+      // would fail loudly instead of silently leaking a queued
+      // implementation into the next test.
+      mockListFiles.mockResolvedValue([
+        { id: 'pack1', name: 'i18n_packs_pack-a.enc', modifiedTime: '2000-01-01T00:00:00.000Z' },
+      ])
+      mockUploadFile.mockResolvedValue({ id: 'pack-file-id', modifiedTime: '2026-01-01T00:00:00.000Z' })
+
+      await executeSync('download')
+
+      expect(mockDownloadFile.mock.calls.some((c) => c[0] === 'pack1')).toBe(false)
+      expect(mockUploadFile.mock.calls.some((c) => c[0] === 'i18n_packs_pack-a.enc')).toBe(true)
+      const written = JSON.parse(
+        await readFile(join(mockUserDataPath, 'sync', 'i18n', 'packs', 'pack-a.json'), 'utf-8'),
+      ) as { version: string }
+      expect(written.version).toBe('3.0.0')
+    })
+
+    it('S3: a local-wins pack-body upload pins local mtime to the Drive response modifiedTime (closes a clock-skew re-upload loop)', async () => {
+      // Without this pin, the local pack file keeps its own wall-clock
+      // write time. If the local clock runs ahead of Drive's own clock
+      // (or the two just don't line up exactly), that time permanently
+      // looks "newer than the remote copy" — every subsequent sync pass
+      // would re-upload this unchanged body, and every peer would
+      // re-download it, forever. Pinning to the upload response's own
+      // modifiedTime closes that gap the same way a remote-win already
+      // does for the download direction (see the idempotence test
+      // below).
+      await mkdir(join(mockUserDataPath, 'sync', 'i18n', 'packs'), { recursive: true })
+      const packPath = join(mockUserDataPath, 'sync', 'i18n', 'packs', 'pack-a.json')
+      await writeFile(packPath, JSON.stringify({ name: 'Pack A', version: '3.0.0' }), 'utf-8')
+
+      mockListFiles.mockResolvedValue([
+        { id: 'pack1', name: 'i18n_packs_pack-a.enc', modifiedTime: '2000-01-01T00:00:00.000Z' },
+      ])
+      const driveAssignedModifiedTime = '2026-07-15T12:00:00.000Z'
+      mockUploadFile.mockResolvedValue({ id: 'pack-file-id', modifiedTime: driveAssignedModifiedTime })
+
+      await executeSync('download')
+
+      expect(mockUploadFile.mock.calls.some((c) => c[0] === 'i18n_packs_pack-a.enc')).toBe(true)
+      const statAfterUpload = await stat(packPath)
+      expect(statAfterUpload.mtime.toISOString()).toBe(driveAssignedModifiedTime)
+    })
+
+    it('S3-race: a concurrent local save landing between the upload snapshot and the post-upload pin is not clobbered (CAS-guarded)', async () => {
+      // uploadSyncUnit snapshots the local body's mtime BEFORE bundling —
+      // bundling/encrypting/uploading all happen without holding the
+      // store's write lock, so a fresh local save can land in that
+      // window. A blind pin would stamp the NEW content with the OLD
+      // upload's stale Drive time, making the next LWW comparison see a
+      // tie and the new edit never get uploaded. Simulate that race
+      // inside the uploadFile mock itself: by the time it "returns" from
+      // Drive, a concurrent save has already landed locally.
+      await mkdir(join(mockUserDataPath, 'sync', 'i18n', 'packs'), { recursive: true })
+      const packPath = join(mockUserDataPath, 'sync', 'i18n', 'packs', 'pack-a.json')
+      await writeFile(packPath, JSON.stringify({ name: 'Pack A', version: '3.0.0' }), 'utf-8')
+
+      mockListFiles.mockResolvedValue([
+        { id: 'pack1', name: 'i18n_packs_pack-a.enc', modifiedTime: '2000-01-01T00:00:00.000Z' },
+      ])
+      const staleDriveModifiedTime = '2026-07-15T12:00:00.000Z'
+      const raceMtime = new Date('2030-01-01T00:00:00.000Z')
+      mockUploadFile.mockImplementation(async (name: string) => {
+        if (name === 'i18n_packs_pack-a.enc') {
+          await writeFile(packPath, JSON.stringify({ name: 'Pack A', version: '4.0.0' }), 'utf-8')
+          await utimes(packPath, raceMtime, raceMtime)
+        }
+        return { id: 'pack-file-id', modifiedTime: staleDriveModifiedTime }
+      })
+
+      await executeSync('download')
+
+      // The raced edit's content and mtime must both survive untouched —
+      // the pin must have been skipped rather than overwriting either.
+      const written = JSON.parse(await readFile(packPath, 'utf-8')) as { version: string }
+      expect(written.version).toBe('4.0.0')
+      const finalStat = await stat(packPath)
+      expect(finalStat.mtime.getTime()).toBe(raceMtime.getTime())
+      expect(finalStat.mtime.toISOString()).not.toBe(staleDriveModifiedTime)
+    })
+
+    it('idempotence: a remote-won pack body is not re-uploaded on the very next sync (mtime pinned to remote modifiedTime)', async () => {
+      const remoteModifiedTime = '2026-06-01T00:00:00.000Z'
+      const remoteFile = { id: 'pack1', name: 'i18n_packs_pack-a.enc', modifiedTime: remoteModifiedTime }
+      const packEnvelope = makeBundleEnvelope('i18n/packs/pack-a', remoteModifiedTime, {
+        type: 'i18n-pack',
+        key: 'pack-a',
+        files: { 'pack-a.json': JSON.stringify({ name: 'Pack A', version: '2.0.0' }) },
+      })
+
+      mockListFiles.mockResolvedValue([remoteFile, PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile
+        .mockResolvedValueOnce(makePasswordCheckEnvelope())
+        .mockResolvedValueOnce(packEnvelope)
+        .mockResolvedValueOnce(makePasswordCheckEnvelope())
+        .mockResolvedValueOnce(packEnvelope)
+
+      await executeSync('download')
+      expect(mockUploadFile.mock.calls.some((c) => c[0] === 'i18n_packs_pack-a.enc')).toBe(false)
+
+      // Second, independent sync pass against the exact same unchanged
+      // remote revision. Without the mtime pin in applySyncedPackBody,
+      // the file just written would carry a local mtime of "now" (>
+      // remoteModifiedTime), so this recompute would see "local newer"
+      // and immediately re-upload the identical content it just
+      // downloaded — an endless full-body ping-pong between any two
+      // devices that both hold this pack.
+      await executeSync('download')
+      expect(mockUploadFile.mock.calls.some((c) => c[0] === 'i18n_packs_pack-a.enc')).toBe(false)
+    })
+
+    it('rejects a hostile packId parsed from a crafted remote filename — nothing is written outside the packs dir', async () => {
+      // A remote Drive file is attacker-reachable data (anyone who can
+      // write to this appData folder) — a crafted filename can make
+      // syncUnitFromFileName/parsePackBodySyncUnit produce a traversal
+      // packId. applySyncedPackBody's isSafePackId guard must refuse it
+      // before it's ever joined into a filesystem path.
+      const hostileFile = { id: 'evil1', name: 'i18n_packs_../evil.enc', modifiedTime: '2026-06-01T00:00:00.000Z' }
+      mockListFiles.mockResolvedValue([hostileFile, PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile
+        .mockResolvedValueOnce(makePasswordCheckEnvelope())
+        .mockResolvedValueOnce(makeBundleEnvelope('i18n/packs/../evil', '2026-06-01T00:00:00.000Z', {
+          type: 'i18n-pack',
+          key: '../evil',
+          files: { '../evil.json': JSON.stringify({ name: 'Evil', version: '1.0.0' }) },
+        }))
+
+      const progressEvents: SyncProgress[] = []
+      setProgressCallback((p) => progressEvents.push({ ...p }))
+
+      await executeSync('download')
+
+      const final = progressEvents[progressEvents.length - 1]
+      expect(final.status).toBe('partial')
+      expect(final.failedUnits).toContain('i18n/packs/../evil')
+
+      await expect(access(join(mockUserDataPath, 'sync', 'i18n', 'evil.json'))).rejects.toThrow()
+      await expect(access(join(mockUserDataPath, 'sync', 'evil.json'))).rejects.toThrow()
+      await expect(access(join(mockUserDataPath, 'evil.json'))).rejects.toThrow()
+    })
+
+    it('malformed generic bundle (entries not an array) is skipped with a warn, not thrown', async () => {
+      // A hypothetical corrupt favorites bundle whose index.entries isn't
+      // an array must not crash the whole sync pass — it should be
+      // contained per-unit (same shape as any other per-unit failure).
+      mockListFiles.mockResolvedValue([
+        { id: 'bad1', name: 'favorites_tapDance.enc', modifiedTime: '2026-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile.mockResolvedValueOnce({
+        version: 1,
+        syncUnit: 'favorites/tapDance',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        salt: 's',
+        iv: 'i',
+        ciphertext: JSON.stringify({
+          type: 'favorite',
+          key: 'tapDance',
+          index: { type: 'tapDance', entries: 'not-an-array' },
+          files: {},
+        }),
+      })
+
+      const progressEvents: SyncProgress[] = []
+      setProgressCallback((p) => progressEvents.push({ ...p }))
+
+      await executeSync('download')
+
+      const final = progressEvents[progressEvents.length - 1]
+      expect(final.status).toBe('partial')
+      expect(final.failedUnits).toContain('favorites/tapDance')
+    })
+
+    it('malformed bundle: same remote revision is not retried on the next poll (contained via lastKnownRemoteState)', async () => {
+      const badFile = { id: 'bad1', name: 'favorites_tapDance.enc', modifiedTime: '2026-01-01T00:00:00.000Z' }
+      const badEnvelope = {
+        version: 1,
+        syncUnit: 'favorites/tapDance',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        salt: 's',
+        iv: 'i',
+        ciphertext: JSON.stringify({
+          type: 'favorite',
+          key: 'tapDance',
+          index: { type: 'tapDance', entries: 'not-an-array' },
+          files: {},
+        }),
+      }
+      // First poll returns only the (syncUnit-less) password-check file,
+      // so the baseline is non-empty but doesn't include badFile — the
+      // very next poll then sees badFile as newly "changed" (present but
+      // absent from the recorded state). An empty first-poll file list
+      // would instead re-trigger pollForRemoteChanges's own "first poll
+      // ever" branch (`lastKnownRemoteState.size === 0`) a second time.
+      mockListFiles.mockResolvedValueOnce([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValue(badEnvelope)
+
+      startPolling()
+      // First poll: records baseline state only (no download attempts).
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockListFiles.mock.calls.length >= 1)
+      await flushIO()
+
+      // Second poll: badFile is now present and wasn't in the baseline,
+      // so it's treated as "changed" — the merge fails with
+      // MalformedSyncBundleError, but the poll's catch deliberately does
+      // NOT forget badFile's modifiedTime from lastKnownRemoteState (it
+      // was already recorded earlier in this same poll pass), so poll 3
+      // below sees an unchanged modifiedTime and skips it without ever
+      // retrying — no separate block-map data structure needed.
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE, badFile])
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockDownloadFile.mock.calls.some((c) => c[0] === 'bad1'))
+      // The failing merge itself is real disk I/O (readIndexFile against a
+      // real tmp dir), which resolves via the libuv threadpool rather than
+      // the microtask queue `flushIO` drains — wait for the poll's own
+      // sync-lock release, not just a fixed tick count, so poll 3 below
+      // never races a still-in-flight poll 2.
+      await flushUntil(() => !isSyncInProgress())
+      const attemptsAfterSecondPoll = mockDownloadFile.mock.calls.filter((c) => c[0] === 'bad1').length
+      expect(attemptsAfterSecondPoll).toBeGreaterThan(0)
+      // Contained per-unit with a warn naming only the sync unit — never
+      // bundle content (attacker-reachable remote data).
+      expect(mockLog).toHaveBeenCalledWith('warn', expect.stringContaining('favorites/tapDance'))
+
+      // Third poll, same revision still on Drive — must NOT retry again.
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockListFiles.mock.calls.length >= 3)
+      await flushUntil(() => !isSyncInProgress())
+      const attemptsAfterThirdPoll = mockDownloadFile.mock.calls.filter((c) => c[0] === 'bad1').length
+      expect(attemptsAfterThirdPoll).toBe(attemptsAfterSecondPoll)
+
+      // A changed revision (new modifiedTime) clears the block and is retried.
+      const changedFile = { ...badFile, modifiedTime: '2026-01-02T00:00:00.000Z' }
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE, changedFile])
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockDownloadFile.mock.calls.filter((c) => c[0] === 'bad1').length > attemptsAfterThirdPoll)
+      const attemptsAfterFourthPoll = mockDownloadFile.mock.calls.filter((c) => c[0] === 'bad1').length
+      expect(attemptsAfterFourthPoll).toBeGreaterThan(attemptsAfterThirdPoll)
+
+      stopPolling()
+    })
+
+    it('S1: a hostile packId is contained on the poll path too — not retried every 3 minutes', async () => {
+      // Task M2's hostile-packId test above only exercises the manual
+      // sync path (executeSync). S1: applySyncedPackBody now THROWS
+      // MalformedSyncBundleError for a rejected packId instead of
+      // returning false as a bare Error would — this lets the poll's
+      // `instanceof MalformedSyncBundleError` branch recognize the
+      // rejection as permanent and skip retrying it, exactly like the
+      // malformed-generic-bundle poll test above. Before this fix, a
+      // bare Error looked identical to a transient I/O failure, which
+      // the poll deliberately DOES keep retrying — so a hostile remote
+      // filename would have triggered a fresh download+decrypt attempt
+      // every 3 minutes forever.
+      const evilFile = { id: 'evil1', name: 'i18n_packs_../evil.enc', modifiedTime: '2026-06-01T00:00:00.000Z' }
+      const evilEnvelope = makeBundleEnvelope('i18n/packs/../evil', '2026-06-01T00:00:00.000Z', {
+        type: 'i18n-pack',
+        key: '../evil',
+        files: { '../evil.json': JSON.stringify({ name: 'Evil', version: '1.0.0' }) },
+      })
+      mockListFiles.mockResolvedValueOnce([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValue(evilEnvelope)
+
+      startPolling()
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockListFiles.mock.calls.length >= 1)
+      await flushIO()
+
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE, evilFile])
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockDownloadFile.mock.calls.some((c) => c[0] === 'evil1'))
+      await flushUntil(() => !isSyncInProgress())
+      const attemptsAfterSecondPoll = mockDownloadFile.mock.calls.filter((c) => c[0] === 'evil1').length
+      expect(attemptsAfterSecondPoll).toBeGreaterThan(0)
+
+      // Same revision still on Drive on the next poll — must NOT retry.
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockListFiles.mock.calls.length >= 3)
+      await flushUntil(() => !isSyncInProgress())
+      const attemptsAfterThirdPoll = mockDownloadFile.mock.calls.filter((c) => c[0] === 'evil1').length
+      expect(attemptsAfterThirdPoll).toBe(attemptsAfterSecondPoll)
+
+      await expect(access(join(mockUserDataPath, 'sync', 'i18n', 'evil.json'))).rejects.toThrow()
+      await expect(access(join(mockUserDataPath, 'evil.json'))).rejects.toThrow()
+
+      stopPolling()
+    })
+
+    it('M2: a hostile meta id is filtered out of the merged index — never persisted, never reaches collectAllSyncUnits', async () => {
+      // A remote index meta whose id is shaped like a path-traversal
+      // sequence would, if persisted, later flow through
+      // collectAllSyncUnits into a sync-unit string with more than the
+      // expected 3 `/`-separated segments — bundleSyncUnit's i18n pack
+      // branch fails to match that shape and falls through to the
+      // generic index-based tail, joining an attacker-chosen path into
+      // a filesystem read that gets bundled for upload. The index merge
+      // must drop the hostile id before it's ever written to disk,
+      // while keeping the legitimate sibling entry.
+      mockListFiles.mockResolvedValue([
+        { id: 'idx1', name: 'i18n_index.enc', modifiedTime: '2026-01-01T00:00:00.000Z' },
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+      mockDownloadFile
+        .mockResolvedValueOnce(makePasswordCheckEnvelope())
+        .mockResolvedValueOnce(makeBundleEnvelope('i18n/index', '2026-01-01T00:00:00.000Z', {
+          type: 'i18n-index',
+          key: 'i18n-index',
+          index: {
+            metas: [
+              { id: '../evil', name: 'Evil', version: '1.0.0', enabled: true, savedAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+              { id: 'ok-pack', name: 'OK Pack', version: '1.0.0', enabled: true, savedAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+            ],
+          },
+        }))
+
+      const progressEvents: SyncProgress[] = []
+      setProgressCallback((p) => progressEvents.push({ ...p }))
+
+      await executeSync('download')
+
+      const final = progressEvents[progressEvents.length - 1]
+      expect(final.status).toBe('success')
+
+      const written = JSON.parse(
+        await readFile(join(mockUserDataPath, 'sync', 'i18n', 'index.json'), 'utf-8'),
+      ) as { metas: Array<{ id: string }> }
+      expect(written.metas.map((m) => m.id)).toEqual(['ok-pack'])
+      expect(mockLog).toHaveBeenCalledWith('warn', expect.stringContaining('i18n/index'))
+    })
+
+    it('M2: a hostile favorites filename with a path-separator segment is rejected, not traversed', async () => {
+      // syncUnitFromFileName's regex captures everything after
+      // `favorites_` up to `.enc` — a crafted Drive filename (Drive
+      // names are arbitrary strings, not real filesystem paths, so
+      // they can contain '/') can make that capture contain a path
+      // separator, producing a syncUnit like 'favorites/../../evil'.
+      // Every `/`-split segment of `syncUnit` must be validated before
+      // mergeSyncUnit's settings / generic branches join it into a
+      // filesystem path — this is the pre-existing exposure M2 closes
+      // centrally, independent of the i18n/theme pack-index fix above.
+      const hostileFile = { id: 'evil1', name: 'favorites_../../evil.enc', modifiedTime: '2026-06-01T00:00:00.000Z' }
+      mockListFiles.mockResolvedValue([hostileFile, PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile
+        .mockResolvedValueOnce(makePasswordCheckEnvelope())
+        .mockResolvedValueOnce({
+          version: 1,
+          syncUnit: 'favorites/../../evil',
+          updatedAt: '2026-06-01T00:00:00.000Z',
+          salt: 's',
+          iv: 'i',
+          ciphertext: JSON.stringify({
+            type: 'favorite',
+            key: 'evil',
+            index: { type: 'evil', entries: [] },
+            files: {},
+          }),
+        })
+
+      const progressEvents: SyncProgress[] = []
+      setProgressCallback((p) => progressEvents.push({ ...p }))
+
+      await executeSync('download')
+
+      const final = progressEvents[progressEvents.length - 1]
+      expect(final.status).toBe('partial')
+      expect(final.failedUnits).toContain('favorites/../../evil')
+
+      await expect(access(join(mockUserDataPath, 'sync', 'evil.json'))).rejects.toThrow()
+      await expect(access(join(mockUserDataPath, 'evil.json'))).rejects.toThrow()
     })
   })
 })
