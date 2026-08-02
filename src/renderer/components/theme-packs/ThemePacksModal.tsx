@@ -4,39 +4,33 @@
 //   - Built-in themes (System, Light, Dark) as a horizontal selector bar
 //   - Imported theme packs listed below with Select / Rename / Export / Delete
 //   - Import button in the Installed tab toolbar
+//
+// The row model (installed + Hub browse), Hub preview, the per-row
+// actions, and the import surface each live in their own sibling hook
+// (Task-split-pack-modals) — this shell only owns the 7 top-level
+// state atoms, the (non-preview) on-close reset, the built-in
+// System/Light/Dark selector, and the JSX.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Circle, CheckCircle2, Monitor, Sun, Moon } from 'lucide-react'
 import { ICON_MD } from '../../constants/ui-tokens'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { useThemePackStore } from '../../hooks/useThemePackStore'
-import { applyPackColors, clearPackColors, isPackTheme, extractPackId } from '../../hooks/useTheme'
-import type { ThemeColorScheme, ThemePackColors, ThemePackMeta } from '../../../shared/types/theme-store'
-import type { HubThemePostListItem, HubThemePackBody } from '../../../shared/types/hub'
 import { HUB_CATEGORY } from '../../../shared/hub-urls'
-import { useHubFreshness } from '../../hooks/useHubFreshness'
-import { localizeHubError } from '../../utils/hub-error-i18n'
 import type { ThemeMode, ThemeSelection } from '../../../shared/types/app-config'
 import { PackRow } from './ThemePackRow'
+import { ThemeHubRow } from './ThemeHubRow'
 import { PackManagerModal } from '../pack-modal/PackManagerModal'
 import { PackHubTab } from '../pack-modal/PackHubTab'
-import { PackHubResultRow } from '../pack-modal/PackHubResultRow'
 import { PackSortButton } from '../pack-modal/PackSortButton'
-import { usePackCloudPull } from '../pack-modal/usePackCloudPull'
 import { useHubOrigin } from '../pack-modal/useHubOrigin'
-import { useHubSearchList } from '../pack-modal/useHubSearchList'
-import { useDragReorder } from '../pack-modal/useDragReorder'
-import { applyDragOrder } from '../pack-modal/drag-order'
-import { useNameSort } from '../pack-modal/useNameSort'
-import { useImportPlacement } from '../pack-modal/useImportPlacement'
-import { useImportBatch, type CollectedImportBatch, type ImportBatchItem } from '../pack-modal/useImportBatch'
-import { basenameOf, type ImportBatchFailure } from '../pack-modal/import-batch-summary'
-import { isHubItemInstalled, type InstalledDetectionEntry } from '../pack-modal/installed-detection'
-import { fetchHubPackMeta } from '../pack-modal/fetch-hub-pack-meta'
-import { isOwnPack } from '../pack-modal/ownership'
 import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
+import { useThemePreview } from './use-theme-preview'
+import { useThemePackList } from './use-theme-pack-list'
+import { useThemePackActions } from './use-theme-pack-actions'
+import { useThemePackImport } from './use-theme-pack-import'
 
 export interface ThemePacksModalProps {
   open: boolean
@@ -72,461 +66,85 @@ export function ThemePacksModal({
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [lastResult, setLastResult] = useState<PackActionResult | PackActionResult[] | null>(null)
   const [previewPostId, setPreviewPostId] = useState<string | null>(null)
-  const previewSeqRef = useRef(0)
-  const hubPreviewCacheRef = useRef(new Map<string, HubThemePackBody>())
-  const activePackCacheRef = useRef<{ id: string; colors: ThemePackColors; colorScheme: ThemeColorScheme } | null>(null)
 
   const activeTheme = appConfig.config.theme
   const hubOrigin = useHubOrigin(open)
 
-  // hubPostId-first + name-fallback (unified with Language Packs / Key
-  // Labels — see installed-detection.ts).
-  const installedEntries = useMemo<InstalledDetectionEntry[]>(
-    () => store.metas.filter((m) => !m.deletedAt).map((m) => ({ hubPostId: m.hubPostId, name: m.name })),
-    [store.metas],
-  )
-
-  // Drag reorder + Name sort. The built-in System/Light/Dark selector
-  // bar is a separate UI block above this list (not a PackListRow),
-  // so every entry here is a real, draggable/sortable store pack.
-  const dragReorderIds = useMemo(() => store.metas.map((meta) => meta.id), [store.metas])
-  const drag = useDragReorder({
-    ids: dragReorderIds,
-    reorder: store.reorder,
-    onError: (error) => setActionError(error ?? t('themePacks.parseError')),
-  })
-  const displayedMetas = useMemo(
-    () => applyDragOrder(store.metas, drag.dragOrder, (meta) => meta.id),
-    [store.metas, drag.dragOrder],
-  )
-  const nameSortEntries = useMemo(
-    () => store.metas.map((meta) => ({ id: meta.id, name: meta.name })),
-    [store.metas],
-  )
-  const nameSort = useNameSort({
+  const { handlePreview, handleTabChange } = useThemePreview({
     open,
-    ready: !store.loading,
-    entries: nameSortEntries,
-    reorder: store.reorder,
-    onError: (error) => setActionError(error ?? t('themePacks.parseError')),
-  })
-  const handleSortByName = useCallback((): void => {
-    void nameSort.toggle(store.metas.map((meta) => ({ id: meta.id, name: meta.name })))
-  }, [nameSort, store.metas])
-  const placement = useImportPlacement({
-    open,
-    entries: nameSortEntries,
-    direction: nameSort.direction,
-    reorder: store.reorder,
-    rowTestidPrefix: 'theme-packs',
-    onReorderError: (error) => { if (error) setActionError(error) },
+    activeTheme,
+    previewPostId,
+    setPreviewPostId,
+    setActiveTab,
+    setPendingId,
   })
 
-  const freshnessCandidates = useMemo(
-    () => store.metas
-      .filter((m) => !m.deletedAt && !!m.hubPostId)
-      .map((m) => ({ localId: m.id, hubPostId: m.hubPostId as string })),
-    [store.metas],
-  )
-
-  const fetchTimestamps = useCallback(
-    (ids: string[]) => window.vialAPI.themePackHubTimestamps(ids),
-    [],
-  )
-
-  const hubFreshness = useHubFreshness({
-    enabled: open && activeTab === 'installed',
-    candidates: freshnessCandidates,
-    fetchTimestamps,
-  })
-
-  const { search, setSearch, hubResults, hubSearched, hubSearching, runSearch } = useHubSearchList<HubThemePostListItem>({
-    open,
-    activeTab,
-    hubTabId: 'hub',
-    fetchPage: (query) => window.vialAPI.hubListThemePosts({ q: query }),
-    errorMessage: (error) => error ?? t('themePacks.hubEmpty'),
-    onSearchStart: () => setActionError(null),
-    onError: setActionError,
-  })
-
-  const hubRows = useMemo(() => hubResults.map((item) => ({
-    hubPostId: item.id,
-    name: item.name,
-    version: item.version,
-    uploaderName: item.uploaderName ?? '',
-    alreadyInstalled: isHubItemInstalled(item, installedEntries),
-  })), [hubResults, installedEntries])
-
-  const restoreActiveTheme = useCallback(() => {
-    clearPackColors()
-    if (isPackTheme(activeTheme)) {
-      const packId = extractPackId(activeTheme)
-      const cached = activePackCacheRef.current
-      if (cached && cached.id === packId) {
-        applyPackColors(cached.colors, cached.colorScheme)
-      } else {
-        void window.vialAPI.themePackGet(packId).then((result) => {
-          if (result.success && result.data) {
-            activePackCacheRef.current = { id: packId, colors: result.data.pack.colors, colorScheme: result.data.pack.colorScheme }
-            applyPackColors(result.data.pack.colors, result.data.pack.colorScheme)
-          }
-        })
-      }
-    }
-    setPreviewPostId(null)
-  }, [activeTheme])
-
-  const handlePreview = useCallback(async (postId: string): Promise<void> => {
-    if (previewPostId === postId) {
-      restoreActiveTheme()
-      return
-    }
-    const cached = hubPreviewCacheRef.current.get(postId)
-    if (cached) {
-      applyPackColors(cached.colors as ThemePackColors, cached.colorScheme)
-      setPreviewPostId(postId)
-      return
-    }
-    const seq = ++previewSeqRef.current
-    setPendingId(postId)
-    try {
-      const result = await window.vialAPI.hubDownloadThemePost(postId)
-      if (!result.success || !result.data || previewSeqRef.current !== seq) return
-      hubPreviewCacheRef.current.set(postId, result.data)
-      applyPackColors(result.data.colors as ThemePackColors, result.data.colorScheme)
-      setPreviewPostId(postId)
-    } finally {
-      if (previewSeqRef.current === seq) setPendingId(null)
-    }
-  }, [previewPostId, restoreActiveTheme])
+  const {
+    displayedMetas,
+    drag,
+    nameSort,
+    handleSortByName,
+    placement,
+    hubFreshness,
+    search,
+    setSearch,
+    hubSearched,
+    hubSearching,
+    runSearch,
+    hubRows,
+    handleSelectTheme,
+  } = useThemePackList({ open, activeTab, store, activeTheme, onThemeChange, setActionError, t })
 
   useEffect(() => {
     if (!open) {
-      if (previewPostId) restoreActiveTheme()
       setActionError(null)
       setLastResult(null)
       setConfirmDeleteId(null)
       setConfirmRemoveId(null)
-      hubPreviewCacheRef.current.clear()
-      activePackCacheRef.current = null
     }
-  }, [open, previewPostId, restoreActiveTheme])
+  }, [open])
 
-  useEffect(() => {
-    activePackCacheRef.current = null
-  }, [activeTheme])
-
-  const pushPackToHub = useCallback(async (
-    packId: string,
-    hubPostId: string,
-  ): Promise<{ success: boolean; error?: string }> => {
-    const get = await window.vialAPI.themePackGet(packId)
-    if (!get.success || !get.data) {
-      return { success: false, error: get.error ?? t('themePacks.parseError') }
-    }
-    const res = await window.vialAPI.hubUpdateThemePost({
-      postId: hubPostId,
-      entryId: packId,
-      pack: get.data.pack as HubThemePackBody,
-    })
-    if (res.success) {
-      await store.refresh()
-      return { success: true }
-    }
-    return { success: false, error: localizeHubError(res.error, 'hub.updateFailed', t) }
-  }, [store, t])
-
-  const handleTabChange = useCallback((tab: PackManagerTabId) => {
-    if (tab === 'installed' && previewPostId) restoreActiveTheme()
-    setActiveTab(tab)
-  }, [previewPostId, restoreActiveTheme])
-
-  const handleSelectTheme = useCallback((selection: ThemeSelection) => {
-    if (selection === activeTheme) return
-    setActionError(null)
-    onThemeChange(selection)
-  }, [activeTheme, onThemeChange])
-
-  const handleExport = useCallback(async (id: string) => {
-    setActionError(null)
-    setPendingId(id)
-    try {
-      const result = await store.exportPack(id)
-      if (!result.success && result.error) setActionError(result.error)
-    } finally {
-      setPendingId(null)
-    }
-  }, [store])
-
-  const handleDelete = useCallback(async (id: string) => {
-    setActionError(null)
-    setLastResult(null)
-    setPendingId(id)
-    try {
-      const meta = store.metas.find((m) => m.id === id)
-      // Cascade to Hub only for posts *we* own — the orphan-post
-      // prevention argument (a local-only delete would strand a name
-      // nobody can re-upload) only holds for a post the user could
-      // actually re-upload themselves. A downloaded (foreign) pack
-      // also carries `hubPostId` (for Sync/freshness linkage), so
-      // gating on presence alone would attempt — and fail — a Hub
-      // delete the user has no rights to, then block the local delete
-      // on that failure. Not-owned entries delete locally only, no
-      // Hub call, same as Update/Remove's `isMine` gating.
-      if (meta?.hubPostId && isOwnPack(meta.hubPostId, meta.uploaderName ?? '', currentDisplayName)) {
-        // If the Hub deletion fails, abort the cascade — proceeding to
-        // a local-only delete would strand an orphan post whose name
-        // can never be re-uploaded, exactly what the cascade is meant
-        // to avoid.
-        const hubResult = await window.vialAPI.hubDeleteThemePost(meta.hubPostId, id)
-          .catch((err) => ({ success: false, error: err instanceof Error ? err.message : String(err) }))
-        if (!hubResult.success) {
-          setLastResult({ id, kind: 'error', message: hubResult.error ?? t('themePacks.parseError') })
-          return
-        }
-      }
-      const result = await store.remove(id)
-      if (!result.success && result.error) setActionError(result.error)
-      if (result.success && isPackTheme(activeTheme) && extractPackId(activeTheme) === id) {
-        onThemeChange('system')
-      }
-    } finally {
-      setPendingId(null)
-      setConfirmDeleteId(null)
-    }
-  }, [store, activeTheme, onThemeChange, t, currentDisplayName])
-
-  // Multi-file import batch: every selected file is saved independently
-  // here (theme pack validation lives entirely main-side in `savePack`,
-  // so there is no renderer-side pre-check to run first, unlike
-  // Language Packs); dedupe, hub-sync, placement and the toolbar
-  // summary/failure banner are handled by the shared `useImportBatch`
-  // hook below (see its module doc for the extraction rationale). The
-  // snapshot is taken right after the "canceled" check — before any
-  // per-file save runs — matching `placement.snapshotEntries()`'s
-  // "before the batch's own mutations begin" contract.
-  const collectImportResults = useCallback(async (): Promise<CollectedImportBatch<ThemePackMeta> | null> => {
-    const dialogResult = await store.importFromDialog()
-    if (dialogResult.canceled) return null
-    const snapshot = placement.snapshotEntries()
-    const notSavedFailures: ImportBatchFailure[] = []
-    const successes: ImportBatchItem<ThemePackMeta>[] = []
-    for (const file of dialogResult.files) {
-      const fileName = basenameOf(file.filePath)
-      if (file.parseError || file.raw === undefined) {
-        notSavedFailures.push({ fileName, reason: file.parseError ?? t('themePacks.parseError') })
-        continue
-      }
-      try {
-        const result = await store.applyImport(file.raw)
-        if (!result.success || !result.meta) {
-          notSavedFailures.push({ fileName, reason: result.error ?? t('themePacks.parseError') })
-          continue
-        }
-        successes.push({ fileName, meta: result.meta })
-      } catch {
-        notSavedFailures.push({ fileName, reason: t('themePacks.parseError') })
-      }
-    }
-    return { successes, notSavedFailures, snapshot }
-  }, [store, t, placement])
-
-  const { importing, importSummary, runImport, isImportingRef } = useImportBatch<ThemePackMeta>({
-    open,
-    placement,
-    setLastResult,
-    setActionError,
+  const {
+    pushPackToHub,
+    handleExport,
+    handleDelete,
+    handleUpload,
+    handleUpdate,
+    handleSync,
+    handleRemove,
+  } = useThemePackActions({
+    store,
     t,
-    collectResults: collectImportResults,
-    hubSync: (meta) => pushPackToHub(meta.id, meta.hubPostId!),
-    onCollapsedToOne: (meta) => handleSelectTheme(`pack:${meta.id}`),
+    activeTheme,
+    onThemeChange,
+    currentDisplayName,
+    setPendingId,
+    setActionError,
+    setLastResult,
+    setConfirmDeleteId,
+    setConfirmRemoveId,
   })
 
-  // Closes any inline rename that was already open the moment a batch
-  // starts, so its input unmounts instead of sitting there interactive
-  // (and committable) for the whole duration of the import — see
-  // `handleRenameCommit`'s own `isImportingRef` guard below for the one
-  // race this cannot cover (a rename input's blur, and the click that
-  // starts the batch, are the same user click; the blur's commit is
-  // already in flight before `importing` ever flips true).
-  useEffect(() => {
-    if (importing) rename.cancelRename()
-    // `rename.cancelRename` is a stable (`useCallback([])`) identity —
-    // intentionally not in the deps array so this only re-fires when
-    // `importing` itself flips, not on every unrelated render.
-  }, [importing])
-
-  const handleRenameCommit = useCallback(async (id: string) => {
-    // Guards on `useImportBatch`'s own re-entrancy ref rather than a
-    // locally-mirrored one — written only inside an event handler
-    // (`runImport`), never during render, so it can't go stale under a
-    // discarded/interrupted concurrent render. Referencing
-    // `isImportingRef` here, defined further up via `useImportBatch`,
-    // is safe regardless: this callback's body only runs later, on a
-    // real blur/Enter event, well after the full render has finished.
-    //
-    // A rename already committed its `store.rename` call the instant
-    // the underlying input blurred — including the blur a click on the
-    // Import button itself triggers, which fires before that click's
-    // own handler runs — so this check cannot intercept that exact
-    // call. It DOES catch every other path: a rename input left open
-    // when a batch was already running, and any stray commit that
-    // slips through after the cancel-on-import-start effect above has
-    // already reset the editor for this render.
-    if (isImportingRef.current) return
-    const newName = rename.commitRename(id)
-    if (!newName) return
-    setActionError(null)
-    setPendingId(id)
-    try {
-      const result = await store.rename(id, newName)
-      if (!result.success && result.error) {
-        setActionError(result.error)
-        return
-      }
-      const meta = store.metas.find((m) => m.id === id)
-      if (meta?.hubPostId) {
-        const upd = await pushPackToHub(id, meta.hubPostId)
-        if (upd.success) {
-          setLastResult({ id, kind: 'success', message: t('common.synced') })
-        } else {
-          setActionError(upd.error ?? t('hub.updateFailed'))
-        }
-      }
-    } finally {
-      setPendingId(null)
-    }
-  }, [rename, store, t, pushPackToHub])
-
-  const handleUpload = useCallback(async (id: string): Promise<void> => {
-    setPendingId(id)
-    setActionError(null)
-    setLastResult(null)
-    try {
-      const get = await window.vialAPI.themePackGet(id)
-      if (!get.success || !get.data) {
-        setLastResult({ id, kind: 'error', message: get.error ?? t('themePacks.parseError') })
-        return
-      }
-      const result = await window.vialAPI.hubUploadThemePost({
-        entryId: id,
-        pack: get.data.pack as HubThemePackBody,
-      })
-      if (result.success) {
-        setLastResult({ id, kind: 'success', message: t('hub.uploadSuccess') })
-        await store.refresh()
-      } else {
-        setLastResult({ id, kind: 'error', message: result.error ?? t('hub.uploadFailed') })
-      }
-    } finally {
-      setPendingId(null)
-    }
-  }, [store, t])
-
-  const handleUpdate = useCallback(async (id: string): Promise<void> => {
-    const meta = store.metas.find((m) => m.id === id)
-    if (!meta?.hubPostId) return
-    setPendingId(id)
-    setActionError(null)
-    setLastResult(null)
-    try {
-      const result = await pushPackToHub(id, meta.hubPostId)
-      if (result.success) {
-        setLastResult({ id, kind: 'success', message: t('hub.updateSuccess') })
-      } else {
-        setLastResult({ id, kind: 'error', message: result.error ?? t('hub.updateFailed') })
-      }
-    } finally {
-      setPendingId(null)
-    }
-  }, [store.metas, pushPackToHub, t])
-
-  const handleSync = useCallback(async (id: string): Promise<void> => {
-    const meta = store.metas.find((m) => m.id === id)
-    if (!meta?.hubPostId) return
-    setPendingId(id)
-    setActionError(null)
-    setLastResult(null)
-    try {
-      const result = await window.vialAPI.hubDownloadThemePost(meta.hubPostId)
-      if (!result.success || !result.data) {
-        setLastResult({ id, kind: 'error', message: result.error ?? t('themePacks.parseError') })
-        return
-      }
-      // Refresh the Author/Updated cache the same way upload/update do —
-      // the download body carries no metadata, so look the post back up
-      // by its (possibly just-changed) name via the Hub list endpoint.
-      const enriched = await fetchHubPackMeta(window.vialAPI.hubListThemePosts, result.data.name, meta.hubPostId)
-      const apply = await store.applyImport(result.data, {
-        id,
-        hubPostId: meta.hubPostId,
-        hubUpdatedAt: enriched.hubUpdatedAt,
-        uploaderName: enriched.uploaderName,
-      })
-      if (apply.success) {
-        setLastResult({ id, kind: 'success', message: t('common.synced') })
-        await store.refresh()
-      } else {
-        setLastResult({ id, kind: 'error', message: apply.error ?? t('themePacks.parseError') })
-      }
-    } finally {
-      setPendingId(null)
-    }
-  }, [store, t])
-
-  const handleRemove = useCallback(async (id: string): Promise<void> => {
-    const meta = store.metas.find((m) => m.id === id)
-    if (!meta?.hubPostId) return
-    setPendingId(id)
-    setActionError(null)
-    setLastResult(null)
-    try {
-      const result = await window.vialAPI.hubDeleteThemePost(meta.hubPostId, id)
-      if (result.success) {
-        setLastResult({ id, kind: 'success', message: t('hub.removeSuccess') })
-        await store.refresh()
-      } else {
-        setLastResult({ id, kind: 'error', message: result.error ?? t('hub.removeFailed') })
-      }
-    } finally {
-      setPendingId(null)
-      setConfirmRemoveId(null)
-    }
-  }, [store, t])
-
-  // Explicit cloud pull: a 'packs'-scoped download (i18n + theme packs
-  // only) — see usePackCloudPull's doc for the discovery-gap rationale.
-  const pull = usePackCloudPull(setActionError, t, 'themePacks.parseError')
-
-  const handleHubDownload = useCallback(async (postId: string): Promise<void> => {
-    setPendingId(postId)
-    setActionError(null)
-    try {
-      const result = await window.vialAPI.hubDownloadThemePost(postId)
-      if (!result.success || !result.data) {
-        setActionError(result.error ?? t('themePacks.hubEmpty'))
-        return
-      }
-      const beforeIds = placement.snapshotBeforeIds()
-      const enriched = await fetchHubPackMeta(window.vialAPI.hubListThemePosts, result.data.name, postId)
-      const apply = await store.applyImport(result.data, { hubPostId: postId, hubUpdatedAt: enriched.hubUpdatedAt, uploaderName: enriched.uploaderName })
-      if (!apply.success || !apply.meta) return
-      await placement.place({ id: apply.meta.id, name: apply.meta.name }, { beforeIds })
-    } finally {
-      setPendingId(null)
-    }
-  }, [store, t, placement])
-
-  const handleRenameKey = (event: React.KeyboardEvent<HTMLInputElement>, id: string): void => {
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      void handleRenameCommit(id)
-    } else if (event.key === 'Escape') {
-      event.preventDefault()
-      rename.cancelRename()
-    }
-  }
+  const {
+    importing,
+    importSummary,
+    runImport,
+    handleRenameCommit,
+    handleRenameKey,
+    pull,
+    handleHubDownload,
+  } = useThemePackImport({
+    open,
+    store,
+    t,
+    rename,
+    placement,
+    pushPackToHub,
+    handleSelectTheme,
+    setPendingId,
+    setActionError,
+    setLastResult,
+  })
 
   return (
     <PackManagerModal
@@ -668,58 +286,5 @@ export function ThemePacksModal({
         />
       )}
     </PackManagerModal>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-
-interface ThemeHubRowData {
-  hubPostId: string
-  name: string
-  version: string
-  uploaderName: string
-  alreadyInstalled: boolean
-}
-
-interface ThemeHubRowProps {
-  row: ThemeHubRowData
-  pendingId: string | null
-  /** Defensive: the Hub tab isn't meant to be operable mid-import
-   *  either, even though its own actions don't touch the Installed
-   *  list directly. */
-  importing: boolean
-  hubOrigin: string
-  previewPostId: string | null
-  onPreview: (postId: string) => void
-  onDownload: (postId: string) => void
-}
-
-function ThemeHubRow({ row, pendingId, importing, previewPostId, onPreview, onDownload }: ThemeHubRowProps): JSX.Element {
-  const { t } = useTranslation()
-  const busy = pendingId === row.hubPostId || importing
-  return (
-    <PackHubResultRow
-      hubPostId={row.hubPostId}
-      testidPrefix="theme-packs"
-      name={row.name}
-      version={row.version}
-      uploaderName={row.uploaderName}
-      alreadyInstalled={row.alreadyInstalled}
-      busy={busy}
-      onDownload={() => onDownload(row.hubPostId)}
-      leadingActions={
-        <button
-          type="button"
-          className={`text-xs font-medium hover:underline disabled:opacity-50 ${
-            previewPostId === row.hubPostId ? 'text-success' : 'text-content-secondary'
-          }`}
-          onClick={() => onPreview(row.hubPostId)}
-          disabled={busy}
-          data-testid={`theme-packs-hub-preview-${row.hubPostId}`}
-        >
-          {previewPostId === row.hubPostId ? t('themePacks.previewing') : t('themePacks.preview')}
-        </button>
-      }
-    />
   )
 }
