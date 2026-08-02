@@ -93,14 +93,15 @@ vi.mock('node:fs/promises', () => ({
 }))
 
 // Mock keycodes serialize. `serialize`'s output depends on a mutable
-// `mockProtocol` so tests can prove `withExportProtocol` actually switches
-// protocol around the serialize call (header/body agreement) instead of
-// always running at main's global v6 — without this, `getProtocol` /
-// `setProtocol` / `recreateKeycodes` would be undefined and
-// `withExportProtocol` (imported from the real `../favorite-store` module)
-// would throw. Default output format (`KC_${code}`) is unchanged from the
-// original stub so every existing protocol-6 assertion in this file keeps
-// passing untouched.
+// `mockProtocol` so tests can prove `withSerializeProtocol` actually
+// switches protocol around the serialize call (header/body agreement)
+// instead of always running at main's global v6 — without this,
+// `getProtocol` / `setProtocol` / `recreateKeycodes` would be undefined
+// and `withSerializeProtocol` (imported from the real
+// `../../shared/keycodes/with-protocol` module) would throw. Default
+// output format (`KC_${code}`) is unchanged from the original stub so
+// every existing protocol-6 assertion in this file keeps passing
+// untouched.
 vi.mock('../../shared/keycodes/keycodes', () => {
   let mockProtocol = 6
   return {

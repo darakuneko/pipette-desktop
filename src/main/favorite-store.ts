@@ -7,7 +7,8 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { IpcChannels } from '../shared/ipc/channels'
 import { isValidFavoriteType, isValidVialProtocol, isFavoriteDataFile, FAV_EXPORT_KEY_MAP, FAV_TYPE_TO_EXPORT_KEY, isValidFavExportFile, buildFavExportFile, serializeFavData, deserializeFavData } from '../shared/favorite-data'
-import { serialize as serializeKeycode, deserialize as deserializeKeycode, getProtocol, setProtocol, recreateKeycodes } from '../shared/keycodes/keycodes'
+import { serialize as serializeKeycode, deserialize as deserializeKeycode } from '../shared/keycodes/keycodes'
+import { withDeserializeProtocol, withSerializeProtocol } from '../shared/keycodes/with-protocol'
 import { notifyChange } from './sync/sync-service'
 import { secureHandle } from './ipc-guard'
 import { isSafePathSegment, tsForFilename, tsForExportFilename } from './utils/safe-filename'
@@ -55,68 +56,6 @@ async function findEntry(type: FavoriteType, entryId: string): Promise<{ index: 
   const entry = index.entries.find((e) => e.id === entryId)
   if (!entry) return null
   return { index, entry }
-}
-
-/**
- * Run `body` with `getProtocol()` temporarily set to `protocol` so that
- * `deserializeKeycode` resolves keycode strings against the file's protocol
- * version. Restores the previous protocol in `finally`.
- *
- * If `protocol` is undefined (legacy v2 file or out-of-spec v3 without
- * `vial_protocol`), runs `body` with the current default protocol.
- *
- * Deliberately skips `recreateKeycodes()` (unlike `withExportProtocol`
- * below): `deserializeKeycode` resolves qmkId strings through
- * `qmkIdToKeycode` + `resolve()`/`getProtocolValue()`, never through
- * `RAWCODES_MAP`, so there is no frozen snapshot here that needs rebuilding.
- */
-function withImportProtocol<T>(protocol: number | undefined, body: () => T): T {
-  if (protocol === undefined) return body()
-  const prev = getProtocol()
-  setProtocol(protocol)
-  try {
-    return body()
-  } finally {
-    setProtocol(prev)
-  }
-}
-
-/**
- * Run `body` with `getProtocol()` temporarily set to `protocol` so that
- * `serializeKeycode` stamps keycode strings against the *requested* export
- * protocol rather than main's global one (always 6). Restores the previous
- * protocol in `finally`.
- *
- * `setProtocol` alone is NOT sufficient: `RAWCODES_MAP` (what `serialize`
- * actually reads) is a frozen snapshot built by `recreateKeycodes()` — it
- * has to be rebuilt for the new protocol before serializing, and rebuilt
- * again on the way back out so callers after this function see main's
- * normal v6 tables.
- *
- * `body` MUST be strictly synchronous. `protocol` is module-global state
- * shared by every export in flight; an `await` inside `body` would let a
- * second, interleaved export observe (or even restore) the wrong protocol.
- *
- * If `protocol` is undefined or already matches the current global
- * protocol (the common case — main is always 6), this skips the
- * set/recreate/restore cycle entirely and just runs `body`. That fast path
- * relies on the invariant "protocol unchanged ⇒ `RAWCODES_MAP` already
- * matches", which only holds because nothing in this module changes
- * `getProtocol()` without also calling `recreateKeycodes()` — nesting this
- * inside a `withImportProtocol` scope would violate that (unreachable
- * today; do not nest).
- */
-export function withExportProtocol<T>(protocol: number | undefined, body: () => T): T {
-  const prev = getProtocol()
-  if (protocol === undefined || protocol === prev) return body()
-  setProtocol(protocol)
-  recreateKeycodes()
-  try {
-    return body()
-  } finally {
-    setProtocol(prev)
-    recreateKeycodes()
-  }
 }
 
 export function setupFavoriteStore(): void {
@@ -266,7 +205,7 @@ export function setupFavoriteStore(): void {
             exportEntries.push({
               label: entry.label,
               savedAt: entry.savedAt,
-              data: withExportProtocol(vialProtocol, () => serializeFavData(scope, parsed.data, serializeKeycode)),
+              data: withSerializeProtocol(vialProtocol, () => serializeFavData(scope, parsed.data, serializeKeycode)),
             })
           } catch {
             // Skip unreadable entries
@@ -325,7 +264,7 @@ export function setupFavoriteStore(): void {
         if (parsed.data == null) return { success: false, error: 'Missing data field' }
 
         const exportKey = FAV_TYPE_TO_EXPORT_KEY[scope]
-        const serializedData = withExportProtocol(vialProtocol, () => serializeFavData(scope, parsed.data, serializeKeycode))
+        const serializedData = withSerializeProtocol(vialProtocol, () => serializeFavData(scope, parsed.data, serializeKeycode))
 
         const now = new Date()
         const ts = tsForExportFilename(now)
@@ -452,7 +391,7 @@ export function setupFavoriteStore(): void {
         }
 
         const firstEntry = entries[0]
-        const normalizedData = withImportProtocol(parsed.vial_protocol, () =>
+        const normalizedData = withDeserializeProtocol(parsed.vial_protocol, () =>
           deserializeFavData(scope, firstEntry.data, deserializeKeycode),
         )
 
@@ -504,7 +443,7 @@ export function setupFavoriteStore(): void {
           await mkdir(dir, { recursive: true })
 
           for (const entry of entries) {
-            const normalizedData = withImportProtocol(parsed.vial_protocol, () =>
+            const normalizedData = withDeserializeProtocol(parsed.vial_protocol, () =>
               deserializeFavData(favType, entry.data, deserializeKeycode),
             )
             if (!isFavoriteDataFile({ type: favType, data: normalizedData }, favType)) {

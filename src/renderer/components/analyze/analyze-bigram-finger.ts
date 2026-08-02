@@ -17,7 +17,7 @@ import type {
   TypingKeymapSnapshot,
 } from '../../../shared/types/typing-analytics'
 import { emptyHistTotal, foldHist, parseBigramId, type HistTotal } from './analyze-bigram-heatmap'
-import { withSnapshotProtocol } from './analyze-protocol'
+import { withDeserializeProtocol } from '../../../shared/keycodes/with-protocol'
 
 /** Build a numeric-keycode → finger lookup from the snapshot's layer-0
  * keymap, honouring user finger overrides keyed by `${row},${col}`.
@@ -28,8 +28,8 @@ import { withSnapshotProtocol } from './analyze-protocol'
  * them as a single finger anyway.
  *
  * Keycodes decode under `vialProtocol` (the snapshot's own protocol —
- * see `withSnapshotProtocol`) so the resulting numeric codes match the
- * ones the bigram aggregate stores. Callers should pass
+ * see `withDeserializeProtocol`) so the resulting numeric codes match
+ * the ones the bigram aggregate stores. Callers should pass
  * `snapshot.vialProtocol` so protocol-dependent codes (QK_BOOT, macros,
  * ...) resolve to the value recorded at capture time rather than the
  * current session's default. */
@@ -39,7 +39,7 @@ export function buildKeycodeFingerMap(
   fingerOverrides?: Record<string, FingerType>,
   vialProtocol?: number,
 ): Map<number, FingerType> {
-  return withSnapshotProtocol(vialProtocol, () => {
+  return withDeserializeProtocol(vialProtocol, () => {
     const result = new Map<number, FingerType>()
     if (snapshot.keymap.length === 0) return result
     const layer0 = snapshot.keymap[0]

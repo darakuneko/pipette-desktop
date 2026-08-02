@@ -44,7 +44,8 @@ export function isValidVialProtocol(v: unknown): v is number {
  * with no keyboard connected (the Data modal only renders on the
  * disconnected screen, where `vialProtocol` is the emptyState sentinel
  * -1 — see `keyboard-types.ts`). 6, not 9: on import this value is fed
- * to `setProtocol` (`withImportProtocol` in `main/favorite-store.ts`),
+ * to `setProtocol` (`withDeserializeProtocol` in
+ * `shared/keycodes/with-protocol.ts`),
  * and the keycode resolver behind `deserialize` treats *only* protocol 6
  * as the v6 keycode table (`resolve` in `keycodes-utils.ts`: `protocol
  * === 6 ? keycodesV6.kc : keycodesV5.kc`). 9 would silently fall through
