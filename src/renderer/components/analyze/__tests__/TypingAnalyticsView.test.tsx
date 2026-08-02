@@ -561,6 +561,36 @@ describe('TypingAnalyticsView', () => {
     hashSpy.mockRestore()
   })
 
+  it('gives split-view panes distinct finger-assignment button testids', async () => {
+    // Split view needs a wide-enough viewport for the toggle to be
+    // enabled (SPLIT_MIN_WIDTH_PX in TypingAnalyticsView.tsx); jsdom's
+    // default width is narrower than that.
+    const originalInnerWidth = window.innerWidth
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1400 })
+    try {
+      mockListKeyboards.mockResolvedValue(SAMPLE)
+      mockGetSnapshot.mockResolvedValue(SNAPSHOT)
+      const { TypingAnalyticsView } = await importView()
+      render(<TypingAnalyticsView />)
+      await waitFor(() => expect(screen.getByTestId('analyze-filter-chip')).toBeInTheDocument())
+      fireEvent.click(screen.getByTestId('analyze-split-toggle'))
+      await waitFor(() => expect(screen.getByTestId('analyze-filter-chip-b')).toBeInTheDocument())
+      // Move both panes to a tab that renders the finger-assignment
+      // button (Ergonomics is one of FINGER_ASSIGNMENT_TABS).
+      fireEvent.click(screen.getByTestId('analyze-tab-ergonomics'))
+      fireEvent.click(screen.getByTestId('analyze-tab-ergonomics-b'))
+      // Pane A keeps the historical unsuffixed testid (the three
+      // external consumers — TypingAnalyticsView.test.tsx itself,
+      // e2e/analyze.test.ts, doc-capture.ts — all target it
+      // unsuffixed), so exactly one element should carry it; pane B's
+      // must be disambiguated with the `-b` suffix.
+      await waitFor(() => expect(screen.getAllByTestId('analyze-finger-assignment-open')).toHaveLength(1))
+      expect(screen.getByTestId('analyze-finger-assignment-open-b')).toBeInTheDocument()
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth })
+    }
+  })
+
   it('falls back to own when a persisted hash is missing from the remote list', async () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     const getSpy = vi.spyOn(window.vialAPI, 'pipetteSettingsGet').mockResolvedValue({
