@@ -11,6 +11,7 @@ import { WordDisplay } from './WordDisplay'
 import { TypingTestControlsRow } from './TypingTestControlsRow'
 import { TypingTestStatsRow } from './TypingTestStatsRow'
 import { useVisualLines } from './useVisualLines'
+import { useLogicalWindowHeight } from './useLogicalWindowHeight'
 
 
 interface Props {
@@ -173,13 +174,19 @@ export function TypingTestView({
       )),
     [state.words],
   )
-  // Reading window: font size + line count drive the CSS calc in
-  // .typing-multiline-window. Applied to every mode (normal word-flow and
-  // imported fileImport text share the same Font/Line settings). Memoized so the
-  // style object is stable.
+  // Reading window: font size + line count drive the CSS min-height calc in
+  // .typing-multiline-window (the fallback for unmeasured content — see
+  // useLogicalWindowHeight). displayLines is meant to count LOGICAL lines
+  // (one wrapped sentence = one line), not visual rows, so once line rows
+  // (real or synthetic) are measured, an inline height overrides that
+  // min-height to fit exactly `displayLines` of them.
+  const minWindowHeight = fontSize * displayLines * 1.5
+  const windowHeight = useLogicalWindowHeight(wordsRef, lines, displayLines, minWindowHeight)
+  // Applied to every mode (normal word-flow and imported fileImport text
+  // share the same Font/Line settings). Memoized so the style object is stable.
   const multilineStyle = useMemo(
-    () => ({ '--tt-font': fontSize, '--tt-lines': displayLines } as CSSProperties),
-    [fontSize, displayLines],
+    () => ({ '--tt-font': fontSize, '--tt-lines': displayLines, height: `${windowHeight}px` } as CSSProperties),
+    [fontSize, displayLines, windowHeight],
   )
   function clearImeInput(): void {
     if (imeInputRef.current) imeInputRef.current.value = ''
@@ -252,7 +259,11 @@ export function TypingTestView({
       container.scrollTop += (visibleLine - 1) * lineHeight
     }
     // Font/line changes resize the window, so re-snap the scroll position.
-  }, [state.currentWordIndex, lines, fontSize, displayLines])
+    // windowHeight also resizes it (see useLogicalWindowHeight) — its own
+    // measurement runs in an earlier layout effect and may update state
+    // synchronously before paint, so this effect must re-run against the
+    // container's post-measurement height rather than a stale one.
+  }, [state.currentWordIndex, lines, fontSize, displayLines, windowHeight])
 
   // Shared by the line-row and flat layouts so the word props stay in one place.
   const renderWord = (wordIdx: number) => (
