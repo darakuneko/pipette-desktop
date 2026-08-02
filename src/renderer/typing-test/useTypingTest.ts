@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
-import { isTapKeycode } from './keycode-char-map'
 import { getLanguageData } from './word-generator'
 import { DEFAULT_TAPPING_TERM_MS } from '../../shared/qmk-settings-tapping-term'
-import type { TypingTestConfig, RomajiGuide } from './types'
-import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, applyRomajiCaseStyle, isTimeBoundedRun, runDurationSeconds } from './types'
+import type { TypingTestConfig } from './types'
+import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, isTimeBoundedRun } from './types'
 import type { TypingTestMemory } from '../../shared/types/pipette-settings'
-import type { TypingAnalyticsEventPayload } from '../../shared/types/typing-analytics'
 import { createWordsForConfig } from './word-supply'
 import {
   type TypingTestState,
@@ -19,133 +17,19 @@ import {
   handleSpace,
   tryFinishLastWord,
 } from './run-state'
-import { isRomajiInputActive, buildRomajiMatcher, romajiDetail, processRomajiKeyEvent } from './romaji-input'
-import { computeKspc } from '../../shared/kspc'
-import {
-  extractSwitchLayer,
-  resolveEffectiveCodeWithLayer,
-  matrixFrameEdges,
-} from './matrix-layers'
-import { MatrixAnalyticsQueue } from './matrix-analytics-queue'
-import { PressDurationTracker } from './matrix-press-duration'
-import { MatrixLayerLatch } from './matrix-layer-latch'
+import { isRomajiInputActive, processRomajiKeyEvent, buildRomajiGuide } from './romaji-input'
 import { deriveExpectedChar } from './expected-char'
+import { useTypingTestMatrix } from './use-typing-test-matrix'
+import { useTypingTestMetrics } from './use-typing-test-metrics'
+import { buildMemorySnapshot, buildRestoredState } from './typing-test-memory'
+import type { UseTypingTestOptions, UseTypingTestReturn } from './use-typing-test-types'
 
 export type { WordResult, TypingTestState, TypingTestStatus } from './run-state'
-
-export interface UseTypingTestOptions<TPreparedEvent = unknown> {
-  /** Authorizes and tags a keystroke at the moment it is detected — before
-   * it may sit in the ordering queue for up to TAPPING_TERM waiting on a
-   * masked key ahead of it to resolve. `kind` distinguishes a matrix press
-   * from a typed char so the caller can apply kind-specific bookkeeping
-   * (e.g. the tray keystroke counter). Returns an opaque value that
-   * useTypingTest never inspects — it only carries it alongside the queued
-   * item to {@link onEmitAnalyticsEvent} — or null/undefined to drop the
-   * press: it is then never queued or emitted, so a later state change
-   * cannot retroactively authorize it. Called once per accepted keystroke,
-   * never re-invoked for the same press. `windowFocused` is this hook's own
-   * live focus state at the moment of the call (always true for 'char' —
-   * processKeyEvent already refuses to run at all while unfocused) — the
-   * caller carries it into its own opaque `TPreparedEvent` so a
-   * consumer gated on focus (see run-log-recorder.ts's PRIVACY note) can
-   * apply the press-time value rather than whatever focus is by the time
-   * the event actually ships. */
-  onPrepareAnalyticsEvent?: (kind: 'matrix' | 'char', windowFocused: boolean) => TPreparedEvent | null | undefined
-  /** Ships an event that {@link onPrepareAnalyticsEvent} already authorized
-   * and tagged for this exact press. Called either immediately (empty
-   * queue) or once the item reaches the front of the ordering queue —
-   * must not re-read whatever live state produced `prepared`, since that
-   * state may have changed while the item was queued. */
-  onEmitAnalyticsEvent?: (prepared: TPreparedEvent, event: TypingAnalyticsEventPayload) => void
-  /** Notifies the run-keystroke-log recorder (owned by the caller, e.g.
-   * useInputModes) of a matrix press at REGISTRATION time, so a later
-   * (possibly TAPPING_TERM-delayed) analytics event can still be joined
-   * back to the word it was actually typed against. See
-   * run-log-recorder.ts's `noteRegistration`. `getExpectedChar` is a
-   * thunk (not an already-computed value) so its — possibly expensive,
-   * for romaji — derivation is free whenever the recorder is gated off;
-   * the recorder invokes it only once it has confirmed recording is
-   * actually active. Only ever called while `windowFocused` (this
-   * hook's own live focus state) is true — see the call site in
-   * `processMatrixFrame` — so `windowFocused` is always `true` here too;
-   * threaded through anyway so the recorder's own gate (defense in
-   * depth, see run-log-recorder.ts's PRIVACY note) doesn't have to
-   * assume the caller's discipline. */
-  onNoteKeystrokeRegistration?: (
-    runId: string, row: number, col: number, ts: number, wordIndex: number,
-    getExpectedChar: () => string | undefined, windowFocused: boolean,
-  ) => void
-  /** Notifies the run-keystroke-log recorder of a char-producing
-   * keystroke's word attribution, snapshotted immediately BEFORE this
-   * same key's own run-state update — unlike a matrix press (registered
-   * at HID-poll time, always AFTER its own handler already advanced
-   * state for the same physical press), a DOM char event's own emit
-   * below IS that state's first touch for this key, so this call must
-   * run first, not merely before the emit. See run-log-recorder.ts's
-   * `noteCharContext`. `getExpectedChar` is a thunk for the same reason
-   * as `onNoteKeystrokeRegistration`'s. Only ever called while
-   * `windowFocused` is true, same as `onNoteKeystrokeRegistration`. */
-  onNoteCharContext?: (
-    runId: string, wordIndex: number, getExpectedChar: () => string | undefined, windowFocused: boolean,
-  ) => void
-  /** TAPPING_TERM (ms) used to classify masked-key presses as tap vs
-   * hold against a deadline fixed at press time (pressTs + this value,
-   * captured then — not re-read at release/deadline, so a setting change
-   * mid-press doesn't retroactively reclassify it). Defaults to QMK's
-   * 200 ms; the KeymapEditor passes the live value pulled from the
-   * keyboard's QMK settings when available. */
-  tappingTermMs?: number
-}
+export type { UseTypingTestOptions, UseTypingTestReturn } from './use-typing-test-types'
 
 const COUNTDOWN_MS = 3000
 
 const IGNORED_KEYS = new Set(['Dead', 'Unidentified'])
-
-const MAX_WPM_HISTORY = 300
-
-export interface UseTypingTestReturn {
-  state: TypingTestState
-  wpm: number
-  kpm: number
-  accuracy: number
-  /** Keystrokes per confirmed character (see `computeKspc` and
-   *  `TypingTestState.confirmedChars`), live-updated the same way as
-   *  wpm/kpm/accuracy. `null` while nothing is confirmed yet, or once an
-   *  IME composition made the run's `totalKeystrokes` untrustworthy
-   *  (`state.kspcUncomputable`). */
-  kspc: number | null
-  /** Current word's romaji progress (romajiInput mode only); null otherwise
-   *  or once all words are done. */
-  romajiGuide: RomajiGuide | null
-  elapsedSeconds: number
-  remainingSeconds: number | null
-  config: TypingTestConfig
-  language: string
-  isLanguageLoading: boolean
-  baseLayer: number
-  effectiveLayer: number
-  windowFocused: boolean
-  processMatrixFrame: (pressed: ReadonlySet<string>, keymap: Map<string, number>) => void
-  /** Returns a promise that resolves once every drained item's emit has
-   * settled — see {@link MatrixAnalyticsQueue.drainAll}. A caller that
-   * finalizes a session (record-off, test-finish) before requesting a
-   * flush must await it; a caller that just wants edge-tracking reset
-   * (e.g. a keymap change) can ignore the return value. */
-  resetMatrixPressTracking: () => Promise<void>
-  processKeyEvent: (key: string, ctrlKey: boolean, altKey: boolean, metaKey: boolean) => void
-  processCompositionStart: () => void
-  processCompositionUpdate: (data: string) => void
-  processCompositionEnd: (data: string) => void
-  restart: () => void
-  restartWithCountdown: () => void
-  setConfig: (config: TypingTestConfig) => void
-  setLanguage: (language: string) => Promise<string>
-  setBaseLayer: (layer: number) => void
-  setWindowFocused: (focused: boolean) => void
-  captureMemory: () => TypingTestMemory | null
-  pause: () => void
-  restoreState: (memory: TypingTestMemory, resume: boolean) => Promise<boolean>
-}
 
 export function useTypingTest<TPreparedEvent = unknown>(
   initialConfig?: TypingTestConfig,
@@ -159,7 +43,6 @@ export function useTypingTest<TPreparedEvent = unknown>(
   const [language, setLanguageState] = useState<string>(() => initialLanguage ?? DEFAULT_LANGUAGE)
   const [isLanguageLoading, setIsLanguageLoading] = useState(false)
   const [baseLayer, setBaseLayerState] = useState(0)
-  const [effectiveLayer, setEffectiveLayer] = useState(0)
   const [windowFocused, setWindowFocusedState] = useState(true)
   const [state, setState] = useState<TypingTestState>(() =>
     createInitialState(initialConfig ?? DEFAULT_CONFIG, initialLanguage ?? DEFAULT_LANGUAGE),
@@ -173,22 +56,6 @@ export function useTypingTest<TPreparedEvent = unknown>(
   const emitAnalyticsEventRef = useRef(options?.onEmitAnalyticsEvent)
   const noteKeystrokeRegistrationRef = useRef(options?.onNoteKeystrokeRegistration)
   const noteCharContextRef = useRef(options?.onNoteCharContext)
-  const prevPressedRef = useRef<ReadonlySet<string>>(new Set())
-  const latchedLayersRef = useRef(new MatrixLayerLatch())
-  // Press-order emission queue for matrix analytics events. See
-  // matrix-analytics-queue.ts for why this exists instead of emitting
-  // non-masked keys unconditionally on press.
-  const matrixQueueRef = useRef(new MatrixAnalyticsQueue<TPreparedEvent>())
-  // Per-key press-duration + overlap tracking, independent of the queue
-  // above — it covers every press (masked or not) and ships its own
-  // 'matrix-release' event straight through `emit`, bypassing the queue
-  // entirely. Safe to bypass: a release event only touches the per-cell
-  // duration accumulator in main (no keystrokes/intervals/activeMs/n-gram),
-  // so it can never corrupt the ordering the queue exists to protect, and
-  // a release arriving late relative to a still-queued masked press is
-  // absorbed by the main-process MinuteBuffer's retention window instead
-  // of needing to arrive in order. See matrix-press-duration.ts.
-  const matrixDurationRef = useRef(new PressDurationTracker<TPreparedEvent>())
   const tappingTermMsRef = useRef(options?.tappingTermMs ?? DEFAULT_TAPPING_TERM_MS)
   const seqRef = useRef(0)
   const langLoadSeqRef = useRef(0)
@@ -267,13 +134,19 @@ export function useTypingTest<TPreparedEvent = unknown>(
     }
   }, [])
 
+  const { effectiveLayer, applyBaseLayer, processMatrixFrame, resetMatrixPressTracking } = useTypingTestMatrix<TPreparedEvent>({
+    stateRef, configRef, languageRef, baseLayerRef, windowFocusedRef,
+    prepareAnalyticsEventRef, emitAnalyticsEventRef, noteKeystrokeRegistrationRef, tappingTermMsRef,
+  })
+
   const setBaseLayer = useCallback(async (layer: number) => {
     setBaseLayerState(layer)
     baseLayerRef.current = layer
     // A layer key held across the base-layer change (e.g. the keyboard
     // popover's own layer selector) must keep the indicator on its
-    // latched target rather than snapping to the newly selected base.
-    setEffectiveLayer(latchedLayersRef.current.displayLayer(layer))
+    // latched target rather than snapping to the newly selected base —
+    // see MatrixLayerLatch.displayLayer via applyBaseLayer.
+    applyBaseLayer(layer)
     const seq = ++seqRef.current
     const result = await createWordsForConfig(configRef.current, languageRef.current)
     if (seqRef.current !== seq) return
@@ -285,27 +158,7 @@ export function useTypingTest<TPreparedEvent = unknown>(
   /** Snapshot the in-progress test so it can be persisted and resumed.
    *  Returns null unless an imported fileImport text is active. */
   const captureMemory = useCallback((): TypingTestMemory | null => {
-    const s = stateRef.current
-    const cfg = configRef.current
-    if (cfg.mode !== 'fileImport') return null
-    return {
-      textId: cfg.textId,
-      runId: s.runId,
-      currentWordIndex: s.currentWordIndex,
-      currentInput: s.currentInput,
-      wordResults: s.wordResults.map((w) => ({ word: w.word, typed: w.typed, correct: w.correct })),
-      correctChars: s.correctChars,
-      incorrectChars: s.incorrectChars,
-      // startTime already folds in any earlier paused/resumed segments.
-      elapsedMs: s.startTime ? Date.now() - s.startTime : 0,
-      wpmHistory: s.wpmHistory,
-      // Persisted together — see TypingTestMemory's doc comment for why a
-      // memory saved before KSPC existed has neither field.
-      totalKeystrokes: s.totalKeystrokes,
-      confirmedChars: s.confirmedChars,
-      kspcUncomputable: s.kspcUncomputable,
-      savedAt: new Date().toISOString(),
-    }
+    return buildMemorySnapshot(stateRef.current, configRef.current)
   }, [])
 
   /** Stop accepting input and freeze the timer (endTime pins elapsed/WPM)
@@ -324,250 +177,11 @@ export function useTypingTest<TPreparedEvent = unknown>(
     setConfigState(cfg)
     configRef.current = cfg
     const seq = ++seqRef.current
-    const { words, quote, lineBreaks, lineIndents, romajiCapable } = await createWordsForConfig(cfg, languageRef.current)
+    const text = await createWordsForConfig(cfg, languageRef.current)
     if (seqRef.current !== seq) return false
-    if (words.length === 0) return false
-    const idx = Math.min(Math.max(0, memory.currentWordIndex), words.length - 1)
-    const startTime = Date.now() - memory.elapsedMs
-    // A memory saved before KSPC existed carries none of these three
-    // fields — validateTypingTestMemory (useDevicePrefs.ts) already
-    // enforces that they arrive either all-present or all-absent, so
-    // defaulting each independently here can't produce an inconsistent
-    // mix: absent means "uncomputable", so kspcUncomputable defaults to
-    // true (not false) when unset.
-    const totalKeystrokes = memory.totalKeystrokes ?? 0
-    const confirmedChars = memory.confirmedChars ?? 0
-    const kspcUncomputable = memory.kspcUncomputable ?? true
-    setState({
-      status: resume ? 'running' : 'paused',
-      // Keep the original run's id so a paused/resumed run stays one run in
-      // analytics. Older memories without a runId fall back to a fresh id.
-      runId: memory.runId ?? crypto.randomUUID(),
-      words,
-      currentWordIndex: idx,
-      currentInput: memory.currentInput,
-      compositionText: '',
-      wordResults: memory.wordResults.map((w) => ({ word: w.word, typed: w.typed, correct: w.correct })),
-      startTime,
-      // Paused: pin endTime so elapsed/WPM display stays frozen at the saved time.
-      endTime: resume ? null : Date.now(),
-      correctChars: memory.correctChars,
-      incorrectChars: memory.incorrectChars,
-      totalKeystrokes,
-      confirmedChars,
-      kspcUncomputable,
-      currentQuote: quote,
-      wpmHistory: memory.wpmHistory,
-      lineBreaks: new Set(lineBreaks),
-      lineIndents,
-      romajiKeystrokes: '',
-      romajiCapable,
-      // Pause/resume memory doesn't carry per-run mistake tracking (it was
-      // never part of TypingTestMemory) — any mistakes tallied before the
-      // pause are lost on resume, same as they would be on any other field
-      // absent from the persisted snapshot. Acceptable: Phase 1 mistake
-      // tracking is best-effort per run, not a durable record.
-      mistakes: {},
-      romajiSegmentErred: false,
-      missedPositions: [],
-    })
+    if (text.words.length === 0) return false
+    setState(buildRestoredState(memory, resume, text))
     return true
-  }, [])
-
-  const processMatrixFrame = useCallback((pressed: ReadonlySet<string>, keymap: Map<string, number>) => {
-    const bl = baseLayerRef.current
-    const prev = prevPressedRef.current
-    const latched = latchedLayersRef.current
-
-    // Matrix events come from HID polling and should fire regardless of
-    // window focus; it's the caller's responsibility to stop calling
-    // processMatrixFrame when recording should pause (e.g. record
-    // toggle off).
-    const prepare = prepareAnalyticsEventRef.current
-    const emit = emitAnalyticsEventRef.current
-    const queue = matrixQueueRef.current
-    const duration = matrixDurationRef.current
-    const ts = Date.now()
-    const tappingTermMs = tappingTermMsRef.current
-    // Read once per frame, before any press edge, regardless of whether
-    // any press lands this frame — onFrame's rolling gap/hole tracking
-    // needs a sample every frame to detect a hole between frames with no
-    // edges at all. Always defined together with `prepare`; both are
-    // checked together below purely so `frame`'s type narrows to
-    // non-null at the registerPress call site.
-    const frame = prepare ? duration.onFrame(ts) : null
-
-    // Walk this frame's press/release edges in row-major order — a held
-    // key (no edge) is skipped entirely, since its action was already
-    // latched on the frame it was pressed and QMK never re-resolves a
-    // held key against layers it or another key activates later. A
-    // release drops its own latch; a press resolves against whatever is
-    // latched right now (base layer + targets latched by keys already
-    // held, or by an earlier edge in this same walk), THEN latches its
-    // own target — so a same-frame rollover between a release and a
-    // press "sees" each other in the deterministic row-scan order rather
-    // than in whatever order a Set happened to iterate.
-    for (const edge of matrixFrameEdges(prev, pressed)) {
-      if (!edge.isPress) {
-        latched.release(edge.key)
-        if (prepare) {
-          queue.resolveReleaseByKey(edge.key, ts, emit)
-          const resolved = duration.resolveRelease(edge.key, ts)
-          if (resolved) emit?.(resolved.prepared, resolved.event)
-        }
-        continue
-      }
-
-      const sortedLayers = latched.activeLayers(bl)
-      const resolved = resolveEffectiveCodeWithLayer(edge.row, edge.col, keymap, sortedLayers, bl)
-      if (!resolved) continue
-      const { code, layer: eventLayer } = resolved
-      latched.latch(edge.key, extractSwitchLayer(code))
-
-      if (!prepare || !frame) continue
-      // Authorize + tag at press time, not when this press eventually
-      // reaches the sink (which may be up to TAPPING_TERM later if it
-      // queues behind an unresolved masked key ahead of it). A press
-      // that isn't authorized right now is dropped for good — it never
-      // enters the queue, so it can't be "un-dropped" by a state change
-      // (e.g. recording toggling back on) while it would have waited.
-      const prepared = prepare('matrix', windowFocusedRef.current)
-      if (prepared == null) continue
-      // Run-keystroke-log word attribution, snapshotted now (registration
-      // time) rather than whenever this press eventually emits — see
-      // onNoteKeystrokeRegistration's doc comment. Gated on window focus
-      // here (the primary gate — HID matrix polling itself is NOT gated
-      // on focus, see the comment atop this function, so without this
-      // check a keystroke typed into a different, unfocused application
-      // on the same keyboard would be attributed to the run log): only
-      // ever called while the app window is actually focused.
-      if (windowFocusedRef.current) {
-        noteKeystrokeRegistrationRef.current?.(
-          stateRef.current.runId, edge.row, edge.col, ts, stateRef.current.currentWordIndex,
-          () => deriveExpectedChar(stateRef.current, configRef.current, languageRef.current),
-          windowFocusedRef.current,
-        )
-      }
-      // Overlap / pollGapMs are derived from the raw pressed set, not
-      // from anything queue-related — see matrix-press-duration.ts.
-      // registerPress also records this press so the matching release
-      // edge (in a later frame) can compute its duration and ship the
-      // same `prepared` context this press already captured.
-      const { overlap, pollGapMs } = duration.registerPress({
-        key: edge.key,
-        start: { tsMs: ts, row: edge.row, col: edge.col, layer: eventLayer, keycode: code },
-        prepared,
-        pressed,
-        frame,
-      })
-      // Non-masked keys carry no action field and are queued/emitted in
-      // press order like everything else. Masked keys (LT/MT) resolve to
-      // tap vs hold on a deadline fixed at press time (see
-      // matrix-analytics-queue.ts), by the release edge if it arrives
-      // first or by the deadline timer if the key is still held — so
-      // resolution can land later than physical presses that follow it.
-      // Emitting those later presses immediately would hand the main
-      // process a masked key's event stamped with an earlier timestamp
-      // than events already emitted for what came after it; its n-gram
-      // chain treats a non-increasing timestamp as out of order and
-      // silently drops it, losing the masked key from every pair around
-      // it (the motivating case: a thumb LT(1, KC_SPACE) overlapping the
-      // next letter in ordinary fast typing). Queuing every press behind
-      // an unresolved one and draining in order once it resolves keeps
-      // the emitted stream monotonic. See resetMatrixPressTracking for
-      // what happens to a press still unresolved when recording stops.
-      // Only LT / MT style tap-hold keys need the deferred classify
-      // pass. LSFT(kc) etc. are "masked" too but always fire the
-      // modifier + base together, so the heatmap treats them as regular
-      // presses.
-      if (isTapKeycode(code)) {
-        queue.pushPending(
-          prepared,
-          { tsMs: ts, row: edge.row, col: edge.col, layer: eventLayer, keycode: code, overlap, pollGapMs },
-          edge.key,
-          tappingTermMs,
-          emit,
-        )
-      } else {
-        const event: TypingAnalyticsEventPayload = { kind: 'matrix', row: edge.row, col: edge.col, layer: eventLayer, keycode: code, ts, overlap, pollGapMs }
-        // An empty queue means nothing ahead is still unresolved, so
-        // this press can go straight out instead of paying for a round
-        // trip through the queue.
-        if (queue.isEmpty) {
-          emit?.(prepared, event)
-        } else {
-          queue.pushResolved(event, prepared)
-        }
-      }
-    }
-
-    setEffectiveLayer(latched.displayLayer(bl))
-    // `pressed` is a fresh Set the caller builds every poll and never
-    // mutates afterward (see parseMatrixState in matrix-utils.ts), so
-    // adopting the reference is safe and skips a same-size Set clone on
-    // every frame, busy or idle.
-    prevPressedRef.current = pressed
-  }, [])
-
-  /** Reset press-edge tracking. Call on record toggle, device change, or
-   * keymap reload so the next frame doesn't emit stale "newly pressed"
-   * events.
-   *
-   * Also drains any in-flight masked-key press and the queue behind it:
-   * every unresolved press is finalized as `hold` (the keystroke must
-   * not vanish just because recording stopped mid-hold — a hold only
-   * breaks the n-gram chain downstream, it never fabricates a pair),
-   * then the whole queue is flushed in press order so ordinary keys
-   * queued behind it aren't dropped either. Simply clearing the maps,
-   * as before this queue existed, would have silently discarded more
-   * than just the pending press.
-   *
-   * Each item ships with the `prepared` context its own press already
-   * captured via onPrepareAnalyticsEvent — not whatever is live right
-   * now. resetMatrixPressTracking itself typically runs *because* that
-   * live state just changed (e.g. recording toggled off), so re-reading
-   * it here would gate or tag every drained item by state that arrived
-   * after the keystroke, which is exactly what this queue exists to
-   * avoid.
-   *
-   * Returns the promise {@link MatrixAnalyticsQueue.drainAll} hands back.
-   * A caller finalizing a session (record toggling off, a test
-   * finishing) must await it before requesting a flush for that session
-   * — see the promise's own doc comment for why firing the flush
-   * without waiting can lose or misplace exactly the events this drain
-   * just sent. */
-  const resetMatrixPressTracking = useCallback((): Promise<void> => {
-    const drained = matrixQueueRef.current.drainAll(emitAnalyticsEventRef.current)
-    prevPressedRef.current = new Set()
-    // A latch with no corresponding entry in prevPressedRef (now empty)
-    // can never be reached by a future release edge — its key would
-    // have to reappear in `pressed` AND `prev` at once to register as
-    // "held, no edge", which can't happen once prev is cleared. Left
-    // uncleared, a key still physically held through this reset would
-    // keep its stale target forever, permanently inflating the layer
-    // indicator. Clearing here is safe either way: a key still actually
-    // held gets treated as a fresh press (and re-latched) on the very
-    // next frame, per its own row/col resolution at that point.
-    latchedLayersRef.current.clear()
-    // Discard rather than finalize — an in-flight press with no release
-    // yet must not be synthesized into a fabricated release event (see
-    // matrix-press-duration.ts). Unlike the queue's forced hold
-    // classification, there is nothing to salvage here: a duration
-    // sample without an observed release is just noise.
-    matrixDurationRef.current.reset()
-    return drained
-  }, [])
-
-  // Clear any still-armed deadline timer on unmount. Without this, a
-  // timer set by MatrixAnalyticsQueue.pushPending can outlive the
-  // component and fire against refs that are no longer meaningful — see
-  // MatrixAnalyticsQueue.dispose.
-  useEffect(() => {
-    return () => {
-      matrixQueueRef.current.dispose()
-      matrixDurationRef.current.reset()
-      latchedLayersRef.current.clear()
-    }
   }, [])
 
   const setWindowFocused = useCallback((focused: boolean) => {
@@ -728,118 +342,15 @@ export function useTypingTest<TPreparedEvent = unknown>(
     })
   }, [])
 
-  // Tick every second while running so elapsed time and WPM update live
-  const [tick, setTick] = useState(0)
-  useEffect(() => {
-    if (state.status !== 'running') return
-    const id = setInterval(() => {
-      setTick((n) => n + 1)
-      // Record WPM snapshot for history
-      setState((s) => {
-        if (s.status !== 'running' || !s.startTime) return s
-        const elapsed = (Date.now() - s.startTime) / 60000
-        if (elapsed <= 0) return s
-        const currentWpm = Math.round((s.correctChars / 5) / elapsed)
-        if (s.wpmHistory.length >= MAX_WPM_HISTORY) return s
-        return { ...s, wpmHistory: [...s.wpmHistory, currentWpm] }
-      })
-    }, 1000)
-    return () => clearInterval(id)
-  }, [state.status])
+  const { wpm, kpm, accuracy, kspc, elapsedSeconds, remainingSeconds } = useTypingTestMetrics(state, config, setState)
 
-  // Time-bounded countdown (monkeytype time mode, or tatoeba's Time
-  // pattern) - finish when remaining reaches 0
-  useEffect(() => {
-    if (state.status !== 'running') return
-    if (!isTimeBoundedRun(config)) return
-    if (!state.startTime) return
-
-    const duration = runDurationSeconds(config)
-    if (duration == null) return
-    const elapsed = Math.floor((Date.now() - state.startTime) / 1000)
-    if (elapsed >= duration) {
-      setState((s) => {
-        if (s.status !== 'running') return s
-        return { ...s, status: 'finished', endTime: Date.now() }
-      })
-    }
-  }, [tick, state.status, state.startTime, config])
-
-  const wpm = useMemo(() => {
-    if (!state.startTime) return 0
-    const end = state.endTime ?? Date.now()
-    const minutes = (end - state.startTime) / 60000
-    if (minutes <= 0) return 0
-    return Math.round((state.correctChars / 5) / minutes)
-  }, [state.startTime, state.endTime, state.correctChars, tick])
-
-  // Keystrokes per minute (correct chars / minute). FileImport mode shows this
-  // instead of WPM, since imported code / CJK text has no meaningful "words".
-  const kpm = useMemo(() => {
-    if (!state.startTime) return 0
-    const end = state.endTime ?? Date.now()
-    const minutes = (end - state.startTime) / 60000
-    if (minutes <= 0) return 0
-    return Math.round(state.correctChars / minutes)
-  }, [state.startTime, state.endTime, state.correctChars, tick])
-
-  const accuracy = useMemo(() => {
-    const total = state.correctChars + state.incorrectChars
-    if (total === 0) return 100
-    return Math.round((state.correctChars / total) * 100)
-  }, [state.correctChars, state.incorrectChars])
-
-  // Live keystrokes-per-confirmed-character, same computeKspc math the
-  // finished result is built from (buildTypingTestResult), reading
-  // state.confirmedChars directly — no per-mode derivation here.
-  const kspc = useMemo(() => {
-    if (state.kspcUncomputable) return null
-    return computeKspc(state.totalKeystrokes, state.confirmedChars)
-  }, [state.kspcUncomputable, state.totalKeystrokes, state.confirmedChars])
-
-  const elapsedSeconds = useMemo(() => {
-    if (!state.startTime) return 0
-    const end = state.endTime ?? Date.now()
-    return Math.floor((end - state.startTime) / 1000)
-  }, [state.startTime, state.endTime, tick])
-
-  const remainingSeconds = useMemo(() => {
-    const duration = runDurationSeconds(config)
-    if (duration == null) return null
-    if (!state.startTime) return duration
-    if (state.endTime) return 0
-    const elapsed = Math.floor((Date.now() - state.startTime) / 1000)
-    return Math.max(0, duration - elapsed)
-  }, [config, state.startTime, state.endTime, tick])
-
-  // Current word's romaji progress (romajiInput mode only), re-derived from
-  // the accepted keystroke history on every change rather than stored on
-  // state directly — see `buildRomajiMatcher`. `guideWordCount` is the total
-  // number of words shown in the guide row (current word included), so the
-  // look-ahead word count is one fewer; the slice's end <= start for counts
-  // 0 and 1 naturally yields an empty `lookahead`. `showRow` is false only
-  // at count 0 — kanaCompleted (for WordDisplay's coloring) is always
-  // computed regardless, since it must keep working even when the row
-  // itself is hidden.
-  const romajiGuide = useMemo(() => {
-    if (!isRomajiInputActive(config, language, state.romajiCapable)) return null
-    if (state.currentWordIndex >= state.words.length) return null
-    const word = state.words[state.currentWordIndex]
-    const detail = romajiDetail(config)
-    const matcher = buildRomajiMatcher(word, state.romajiKeystrokes, detail)
-    const guideWordCount = detail?.guideWordCount ?? 2
-    const lookahead = state.words
-      .slice(state.currentWordIndex + 1, state.currentWordIndex + guideWordCount)
-      .map((w) => buildRomajiMatcher(w, '', detail).remainingGuide())
-    const guide: RomajiGuide = {
-      typed: matcher.typedRomaji(),
-      remaining: matcher.remainingGuide(),
-      kanaCompleted: matcher.completedKanaCount(),
-      lookahead,
-      showRow: guideWordCount > 0,
-    }
-    return applyRomajiCaseStyle(guide, detail?.caseStyle)
-  }, [config, language, state.words, state.currentWordIndex, state.romajiKeystrokes, state.romajiCapable])
+  // Current word's romaji progress (romajiInput mode only) — see
+  // buildRomajiGuide's doc comment in romaji-input.ts for the guide-row
+  // derivation itself; this memo only pins the dependency set.
+  const romajiGuide = useMemo(
+    () => buildRomajiGuide(config, language, state),
+    [config, language, state.words, state.currentWordIndex, state.romajiKeystrokes, state.romajiCapable],
+  )
 
   return {
     state,
