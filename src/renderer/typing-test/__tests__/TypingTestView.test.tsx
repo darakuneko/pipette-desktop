@@ -874,3 +874,140 @@ describe('TypingTestView — monkeytype synthetic line rows (measured)', () => {
     expect(screen.getByTestId('typing-test-words').className).toContain('typing-multiline-window')
   })
 })
+
+// Plan-logical-line-window PR2: the Lines setting counts LOGICAL lines
+// (real or synthetic rows), not visual rows — see useLogicalWindowHeight.
+// jsdom never lays elements out, so `[data-line-row]`'s own
+// getBoundingClientRect is stubbed per row (keyed by the row's own
+// data-line-row index) to feed the measurement a deterministic multi-row
+// geometry, the same seam useLogicalWindowHeight itself reads from in the
+// real browser.
+describe('TypingTestView — logical-line window height (measured, real lines)', () => {
+  let mockRowRects: Record<number, { top: number; bottom: number }> = {}
+
+  beforeEach(() => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const lineRow = this.getAttribute('data-line-row')
+      const rect = lineRow !== null ? (mockRowRects[Number(lineRow)] ?? { top: 0, bottom: 0 }) : { top: 0, bottom: 0 }
+      return {
+        top: rect.top, bottom: rect.bottom, height: rect.bottom - rect.top,
+        left: 0, right: 400, width: 400, x: 0, y: rect.top, toJSON: () => ({}),
+      } as DOMRect
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    mockRowRects = {}
+  })
+
+  it('sets the window height to the bottom of the displayLines-th real line row', () => {
+    // Three real lines (words split by lineBreaks after 0 and 1); displayLines=2
+    // should size the window to rows 0-1 only (bottom of row 1 = 48).
+    mockRowRects = { 0: { top: 0, bottom: 24 }, 1: { top: 24, bottom: 48 }, 2: { top: 48, bottom: 72 } }
+    renderView({
+      displayLines: 2,
+      fontSize: 16,
+      state: makeState({ status: 'running', words: ['a', 'b', 'c'], lineBreaks: new Set([0, 1]) }),
+    })
+    expect(screen.getByTestId('typing-test-words').style.height).toBe('48px')
+  })
+
+  it('keeps the CSS min-height fallback when there are fewer/shorter rows than displayLines (short text)', () => {
+    // Two real lines totaling 40px of measured content; displayLines=4 at
+    // fontSize=16 sets a 96px floor (16 * 4 * 1.5) — content stays shorter
+    // than the floor, so the blank-window minimum wins instead of shrinking.
+    mockRowRects = { 0: { top: 0, bottom: 20 }, 1: { top: 20, bottom: 40 } }
+    renderView({
+      displayLines: 4,
+      fontSize: 16,
+      state: makeState({ status: 'running', words: ['a', 'b'], lineBreaks: new Set([0]) }),
+    })
+    expect(screen.getByTestId('typing-test-words').style.height).toBe('96px')
+  })
+
+  it('re-measures when displayLines changes', () => {
+    mockRowRects = { 0: { top: 0, bottom: 24 }, 1: { top: 24, bottom: 48 }, 2: { top: 48, bottom: 72 } }
+    const { rerender } = renderView({
+      displayLines: 2,
+      fontSize: 16,
+      state: makeState({ status: 'running', words: ['a', 'b', 'c'], lineBreaks: new Set([0, 1]) }),
+    })
+    expect(screen.getByTestId('typing-test-words').style.height).toBe('48px')
+
+    rerender(
+      <I18nextProvider i18n={i18n}>
+        <TypingTestView
+          state={makeState({ status: 'running', words: ['a', 'b', 'c'], lineBreaks: new Set([0, 1]) })}
+          wpm={0}
+          accuracy={100}
+          elapsedSeconds={0}
+          remainingSeconds={null}
+          config={DEFAULT_CONFIG}
+          paused={false}
+          displayLines={3}
+          fontSize={16}
+        />
+      </I18nextProvider>,
+    )
+    expect(screen.getByTestId('typing-test-words').style.height).toBe('72px')
+  })
+})
+
+describe('TypingTestView — logical-line window height (unmeasured fallback)', () => {
+  it('sets the window height to the CSS min-height formula when line rows cannot be measured (jsdom)', () => {
+    // No getBoundingClientRect mocking here — jsdom's real all-zero rects
+    // mean the container-width guard keeps `lines` null, so the height
+    // falls back to fontSize * displayLines * 1.5, matching the pre-feature
+    // fixed CSS height exactly.
+    renderView({
+      displayLines: 4,
+      fontSize: 24,
+      state: makeState({ status: 'running', words: ['a', 'b'], lineBreaks: new Set() }),
+    })
+    expect(screen.getByTestId('typing-test-words').style.height).toBe('144px')
+  })
+})
+
+describe('TypingTestView — logical-line window height (measured, synthetic monkeytype rows)', () => {
+  let mockOffsetTops: number[] = []
+  let mockRowRects: Record<number, { top: number; bottom: number }> = {}
+
+  beforeEach(() => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const lineRow = this.getAttribute('data-line-row')
+      const rect = lineRow !== null ? (mockRowRects[Number(lineRow)] ?? { top: 0, bottom: 0 }) : { top: 0, bottom: 0 }
+      return {
+        top: rect.top, bottom: rect.bottom, height: rect.bottom - rect.top,
+        left: 0, right: 400, width: 400, x: 0, y: rect.top, toJSON: () => ({}),
+      } as DOMRect
+    })
+    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(function (this: HTMLElement) {
+      const idx = this.getAttribute('data-mirror-word')
+      return idx === null ? 0 : (mockOffsetTops[Number(idx)] ?? 0)
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    mockOffsetTops = []
+    mockRowRects = {}
+  })
+
+  it('measures synthetic rows the same way as real rows (logical==visual for monkeytype)', () => {
+    // Words a,b measure onto row 0; c wraps to row 1. fontSize is chosen so
+    // the CSS min-height floor (10 * 2 * 1.5 = 30) is well below the
+    // measured target (48) — if the effect only ever ran its first pass
+    // (before useVisualLines resolves `lines` asynchronously) this would
+    // read 30px instead, so the assertion actually exercises the re-measure
+    // once the synthetic rows land, not just the fallback.
+    mockOffsetTops = [0, 0, 24]
+    mockRowRects = { 0: { top: 0, bottom: 24 }, 1: { top: 24, bottom: 48 } }
+    renderView({
+      displayLines: 2,
+      fontSize: 10,
+      state: makeState({ status: 'running', words: ['a', 'b', 'c'], lineBreaks: new Set() }),
+    })
+    expect(screen.getByTestId('typing-test-words').style.height).toBe('48px')
+  })
+})

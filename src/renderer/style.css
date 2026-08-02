@@ -62,12 +62,17 @@
 }
 
 /* Imported-text typing display: font size + visible-line window driven by
-   --tt-font (px) and --tt-lines (count). Window height = font × 1.5 (the
-   leading-normal line box) × line count. Kept here (not inline styles) so
-   the sizing math stays in the stylesheet. */
+   --tt-font (px) and --tt-lines (count). Base window height = font × 1.5
+   (the leading-normal line box) × line count — kept as a MIN-HEIGHT (not a
+   fixed height) so it still guarantees the blank-window minimum for short
+   texts and is the exact fallback height when line rows can't be measured
+   (jsdom, or before first paint). TypingTestView measures actual rendered
+   `[data-line-row]` rows (see useLogicalWindowHeight) so displayLines counts
+   LOGICAL lines rather than visual rows, and sets an inline `height` that
+   overrides this min-height floor whenever the logical content is taller. */
 .typing-multiline-window {
   font-size: calc(var(--tt-font) * 1px);
-  height: calc(var(--tt-font) * var(--tt-lines) * 1.5px);
+  min-height: calc(var(--tt-font) * var(--tt-lines) * 1.5px);
 }
 
 /* Romaji guide line below the reading window tracks the same --tt-font
