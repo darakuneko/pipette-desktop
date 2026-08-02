@@ -595,6 +595,18 @@ export function getKeycodeRevision(): number {
   return keycodeRevision
 }
 
+// Protocol RAWCODES_MAP was last *successfully* built at. Init value 6
+// matches the module-load build below (`_initRecreateKeycodes()` in
+// keycodes.ts runs before any `setProtocolValue` call, so it builds at
+// the default protocol 6). Only updated at the very end of
+// `recreateKeycodes()`, after the rebuild completes without throwing --
+// a failed rebuild must not claim the map matches a protocol it never
+// finished building for.
+let rawcodesProtocol = 6
+export function getRawcodesProtocol(): number {
+  return rawcodesProtocol
+}
+
 export function recreateKeycodes(): void {
   keycodeRevision++
   KEYCODES.length = 0
@@ -632,6 +644,9 @@ export function recreateKeycodes(): void {
   }
   // Reset lazy LM mod value map so it rebuilds with current protocol
   lmModValueMap = null
+  // Last statement: only record the protocol this build matches once
+  // every step above has completed without throwing.
+  rawcodesProtocol = getProtocolValue()
 }
 
 // --- User keycodes ---
