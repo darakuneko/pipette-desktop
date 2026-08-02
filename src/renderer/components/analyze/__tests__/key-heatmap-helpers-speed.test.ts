@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { describe, it, expect } from 'vitest'
+import { afterEach, describe, it, expect } from 'vitest'
 import {
   MIN_SPEED_SAMPLE_COUNT,
   buildKeycodeSpeedMap,
@@ -10,9 +10,17 @@ import {
 } from '../key-heatmap-helpers'
 import type { KeySpeedStat } from '../key-heatmap-helpers'
 import type { LayerKeycodes } from '../key-heatmap-helpers'
-import { deserialize, getProtocol, recreateKeycodes, serialize, setProtocol } from '../../../../shared/keycodes/keycodes'
+import { buildSnapshotQmkByCode, decodeSnapshotQmkId } from '../analyze-snapshot-codes'
+import {
+  deserialize,
+  getProtocol,
+  recreateKeyboardKeycodes,
+  recreateKeycodes,
+  serialize,
+  setProtocol,
+} from '../../../../shared/keycodes/keycodes'
 import { PALETTE_MIN_T, paletteColorFromIntensity } from '../../../utils/chart-palette'
-import type { TypingBigramTopEntry } from '../../../../shared/types/typing-analytics'
+import type { TypingBigramTopEntry, TypingKeymapSnapshot } from '../../../../shared/types/typing-analytics'
 
 /** Resolve `qmkId` to its numeric code under a specific protocol,
  * restoring the global protocol afterwards. */
@@ -26,12 +34,58 @@ function deserializeUnderProtocol(qmkId: string, protocol: number): number {
   }
 }
 
+/** Registers the CURRENT session's keyboard as a small one — 4 layers,
+ * 16 macros — the same shape a snapshot recorded by a bigger keyboard
+ * (8 layers, 32 macros) leaves this session unable to fully resolve by
+ * itself (see Task-speed-ranking-snapshot-labels.md). */
+function useSmallSessionKeyboard(): void {
+  recreateKeyboardKeycodes({
+    vialProtocol: 6,
+    layers: 4,
+    macroCount: 16,
+    tapDanceCount: 0,
+    customKeycodes: null,
+    midi: '',
+    supportedFeatures: new Set(),
+  })
+}
+
+// Re-pins the module-global keyboard registration to this same small
+// shape after every test in this file, rather than to a bigger one.
+// `qmkIdToKeycode` (shared/keycodes/keycodes.ts) is a plain Map that
+// Keycode's constructor only ever ADDS to and nothing ever clears --
+// so restoring to a *larger* context here would permanently register
+// e.g. `M20` for the rest of this file's run, and a later
+// `useSmallSessionKeyboard()` call could no longer make `M20` look
+// unresolvable no matter what it passes as `macroCount` (a stale
+// Keycode object would still satisfy the `qmkIdToKeycode.get('M20')`
+// lookup `deserialize` makes). Restoring to this exact small shape
+// instead keeps the file's ambient state deterministic across test
+// reorders without ever widening what `qmkIdToKeycode` has registered.
+afterEach(() => {
+  useSmallSessionKeyboard()
+})
+
 function entry(ngramId: string, count: number, hist: number[] = [0, 0, 0, 0, 0, 0, 0, 0]): TypingBigramTopEntry {
   return { ngramId, count, hist, avgIki: null, sd: null }
 }
 
 function layerKeycodes(pairs: Record<string, string>): LayerKeycodes {
   return { keycodes: new Map(Object.entries(pairs)), labelOverrides: new Map() }
+}
+
+function snapshotWithKeymap(keymap: string[][][], vialProtocol?: number): TypingKeymapSnapshot {
+  return {
+    uid: '0x00',
+    machineHash: 'h',
+    productName: 'Test',
+    savedAt: 0,
+    layers: keymap.length,
+    matrix: { rows: keymap[0]?.length ?? 0, cols: keymap[0]?.[0]?.length ?? 0 },
+    keymap,
+    layout: null,
+    vialProtocol,
+  }
 }
 
 describe('buildKeycodeSpeedMap', () => {
@@ -182,6 +236,27 @@ describe('buildSpeedFillByPos', () => {
     buildSpeedFillByPos(layerKeycodes({ '0,0': 'KC_A' }), ['0,0'], new Map(), 'all', 'light', 5)
     expect(getProtocol()).toBe(prev)
   })
+
+  it('paints an M20 cell instead of treating it as an unresolvable (KC_NO-like) 0 code', () => {
+    // A snapshot recorded by a keyboard with 32 macros reports "M20" at
+    // this position, but the current session only registered 16 --
+    // `deserialize('M20')` silently returns 0 in that case (see
+    // decodeSnapshotQmkId's doc comment), which used to make this cell
+    // match whatever intensity happened to be keyed at 0 instead of
+    // painting nothing (or the correct M20 intensity).
+    useSmallSessionKeyboard()
+    expect(deserialize('M20')).toBe(0)
+    const m20Code = decodeSnapshotQmkId('M20')!
+    expect(m20Code).not.toBe(0)
+
+    const kc = layerKeycodes({ '0,0': 'M20' })
+    const intensityKeyedAtZero = new Map([[0, 1]])
+    // A stray intensity entry at 0 must NOT bleed onto the M20 cell.
+    expect(buildSpeedFillByPos(kc, ['0,0'], intensityKeyedAtZero, 'all', 'light').has('0,0')).toBe(false)
+
+    const intensityByM20Code = new Map([[m20Code, 1]])
+    expect(buildSpeedFillByPos(kc, ['0,0'], intensityByM20Code, 'all', 'light').get('0,0')).toMatch(/^hsl\(/)
+  })
 })
 
 describe('buildSpeedRanking', () => {
@@ -234,5 +309,53 @@ describe('buildSpeedRanking', () => {
     // map directly by re-serializing 0x7c00 back under v6.
     expect(getProtocol()).toBe(6)
     expect(serialize(0x7c00)).toBe('QK_BOOT')
+  })
+
+  it('resolves labels/groups from the snapshot\'s own qmk strings for keyboard-shape mismatches (M20, MO(6))', () => {
+    // Session only knows about 4 layers / 16 macros; the snapshot was
+    // recorded by an 8-layer / 32-macro keyboard, so `M20` and `MO(6)`
+    // are both codes this session's own `RAWCODES_MAP` can't round-trip
+    // through `serialize` -- M20 lands on bare hex, MO(6) lands in the
+    // 'other' group bucket instead of 'layerOp'. Building the map from
+    // the snapshot's own recorded qmk strings sidesteps the round-trip
+    // entirely (see Task-speed-ranking-snapshot-labels.md).
+    useSmallSessionKeyboard()
+    const snapshot = snapshotWithKeymap([[['M20', 'MO(6)']]])
+    const qmkByCode = buildSnapshotQmkByCode(snapshot, snapshot.vialProtocol)
+    const m20Code = [...qmkByCode.entries()].find(([, id]) => id === 'M20')?.[0]
+    const mo6Code = [...qmkByCode.entries()].find(([, id]) => id === 'MO(6)')?.[0]
+    expect(m20Code).toBeDefined()
+    expect(mo6Code).toBeDefined()
+
+    const speedMap = new Map([
+      [m20Code!, { avgIki: 100, count: 10 }],
+      [mo6Code!, { avgIki: 200, count: 10 }],
+    ])
+
+    const allRanking = buildSpeedRanking(speedMap, 'all', 10, snapshot.vialProtocol, qmkByCode)
+    expect(allRanking.find((e) => e.avgIki === 100)?.keyLabel).toBe('M20')
+    expect(allRanking.find((e) => e.avgIki === 200)?.keyLabel).toBe('MO(6)')
+
+    // MO(6) must land in the 'layerOp' group filter, not 'other'.
+    const layerOpOnly = buildSpeedRanking(speedMap, 'layerOp', 10, snapshot.vialProtocol, qmkByCode)
+    expect(layerOpOnly).toHaveLength(1)
+    expect(layerOpOnly[0].keyLabel).toBe('MO(6)')
+  })
+
+  it('resolves RAG_T(KC_NO) to "RAG_T" (not the #359 fallback\'s "RAG_T(NO)") when the snapshot map has it', () => {
+    // Same 0x7c00-family collision code as the #359 test above, but
+    // this time the snapshot's own keymap literally recorded
+    // "RAG_T(KC_NO)" at v5, so the snapshot-string path resolves it
+    // directly instead of falling back to codeToLabel's serialize
+    // round-trip (which produces the differently-formatted "RAG_T(NO)").
+    const snapshot = snapshotWithKeymap([[['RAG_T(KC_NO)']]], 5)
+    const qmkByCode = buildSnapshotQmkByCode(snapshot, snapshot.vialProtocol)
+    const code = [...qmkByCode.entries()].find(([, id]) => id === 'RAG_T(KC_NO)')?.[0]
+    expect(code).toBeDefined()
+
+    const speedMap = new Map([[code!, { avgIki: 100, count: 10 }]])
+    const ranking = buildSpeedRanking(speedMap, 'all', 10, snapshot.vialProtocol, qmkByCode)
+    expect(ranking).toHaveLength(1)
+    expect(ranking[0].keyLabel).toBe('RAG_T')
   })
 })

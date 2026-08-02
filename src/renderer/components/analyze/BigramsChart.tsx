@@ -15,6 +15,7 @@ import type {
 } from '../../../shared/types/typing-analytics'
 import { fetchBigramAggregateForRange } from './analyze-fetch'
 import { useKeycodeFingerMap } from './use-keycode-finger-map'
+import { useSnapshotQmkByCode } from './use-snapshot-qmk-by-code'
 import { aggregateBigramClasses } from './analyze-bigram-classes'
 import { aggregateWordPosition } from './analyze-bigram-word-position'
 import { ALL_PAIRS_LIMIT } from './analyze-constants'
@@ -163,6 +164,12 @@ export function BigramsChart({
   // quadrant nobody sees.
   const classesFingerMap = useKeycodeFingerMap(showFingerIki ? snapshot : null, fingerOverrides)
   const classesEntries = showFingerIki ? entries : EMPTY_CLASSES_ENTRIES
+
+  // Snapshot's own `code -> qmkId` map — threaded into Top/Slow pair
+  // labels below so they resolve from the snapshot's own recorded
+  // keymap strings instead of the session's `RAWCODES_MAP` (see
+  // analyze-snapshot-codes.ts / Task-speed-ranking-snapshot-labels.md).
+  const qmkByCode = useSnapshotQmkByCode(snapshot)
   const classesAggregate = useMemo(
     () => aggregateBigramClasses(classesEntries, classesFingerMap),
     [classesEntries, classesFingerMap],
@@ -205,7 +212,7 @@ export function BigramsChart({
           />
         }
       >
-        <TopRanking entries={entries} listLimit={topLimit} gram={gram} />
+        <TopRanking entries={entries} listLimit={topLimit} gram={gram} qmkByCode={qmkByCode} vialProtocol={snapshot?.vialProtocol} />
       </Quadrant>
       {showFingerIki && (
         <Quadrant
@@ -269,6 +276,8 @@ export function BigramsChart({
           listLimit={slowLimit}
           minAvgIkiMs={pairIntervalThresholdMs}
           gram={gram}
+          qmkByCode={qmkByCode}
+          vialProtocol={snapshot?.vialProtocol}
         />
       </Quadrant>
       {showFingerIki && (

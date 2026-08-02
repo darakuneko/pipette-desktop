@@ -4,7 +4,7 @@
 
 import type { TypingBigramTopEntry, TypingDurationCell, TypingHeatmapByCell, TypingHeatmapCell, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 import type { KeyboardLayout } from '../../../shared/kle/types'
-import { resolveSnapshotLabel, keycodeGroup, deserialize, serialize, codeToLabel } from '../../../shared/keycodes/keycodes'
+import { resolveSnapshotLabel, keycodeGroup, serialize, codeToLabel } from '../../../shared/keycodes/keycodes'
 import type { KeycodeGroup } from '../../../shared/keycodes/keycodes'
 import { posKey } from '../../../shared/kle/pos-key'
 import { avgIkiFromHist, foldHist, HIST_BUCKETS, parseBigramId } from './analyze-bigram-heatmap'
@@ -13,12 +13,12 @@ import type { EffectiveTheme } from '../../hooks/useEffectiveTheme'
 import type { HeatmapNormalization, RangeMs } from './analyze-types'
 import type { AggregateMode, HeatmapFilters, KeyGroupFilter } from '../../../shared/types/analyze-filters'
 import { withDeserializeProtocol, withSerializeProtocol } from '../../../shared/keycodes/with-protocol'
+import { compactLayerOp, decodeSnapshotQmkId, snapshotCodeLabel } from './analyze-snapshot-codes'
 
 export { AGGREGATE_MODES, KEY_GROUPS, HEATMAP_MODES } from '../../../shared/types/analyze-filters'
 export type { AggregateMode, KeyGroupFilter, HeatmapMode } from '../../../shared/types/analyze-filters'
 
 const MASK_INNER_RE = /\((.+)\)$/
-const COMPACT_LAYER_OP_RE = /^(LT|LM|MO|DF|PDF|TG|TT|OSL|TO)\s(\d+)$/
 
 export type LabelOverride = { outer: string; inner: string; masked: boolean }
 
@@ -29,11 +29,6 @@ export type LayerKeycodes = {
 
 export function groupOf(groups: readonly number[][], layer: number): number {
   return groups.findIndex((g) => g.includes(layer))
-}
-
-export function compactLayerOp(label: string): string {
-  const m = label.match(COMPACT_LAYER_OP_RE)
-  return m ? `${m[1]}${m[2]}` : label
 }
 
 export function buildLayerKeycodes(snapshot: TypingKeymapSnapshot, layer: number): LayerKeycodes {
@@ -384,13 +379,14 @@ export function buildSpeedFillByPos(
       const qmkId = layerKeycodes.keycodes.get(pos) ?? ''
       if (!qmkId) continue
       if (keyGroupFilter !== 'all' && keycodeGroup(qmkId) !== keyGroupFilter) continue
-      let code: number
-      try {
-        code = deserialize(qmkId)
-      } catch {
-        continue
-      }
-      if (!Number.isFinite(code)) continue
+      // decodeSnapshotQmkId (not a bare deserialize) so a keycode this
+      // session's keyboard doesn't fully know about (e.g. `M20` when
+      // the session registered fewer than 21 macros) still resolves to
+      // its real numeric code instead of silently landing on 0 and
+      // being mistaken for a `KC_NO` cell — see that function's doc
+      // comment for why plain `deserialize` can't tell the two apart.
+      const code = decodeSnapshotQmkId(qmkId)
+      if (code === undefined || !Number.isFinite(code)) continue
       const intensity = intensityByCode.get(code)
       if (intensity === undefined) continue
       const fill = paletteColorFromIntensity(intensity, theme)
@@ -409,27 +405,59 @@ export interface SpeedRankingEntry {
 /** Ranks qualifying keycodes slowest-reach-first for the Speed
  * ranking table. Unlike the Count ranking, this isn't scoped to a
  * layer group — the bigram aggregate carries no layer tag, so one flat
- * ranking covers every selected layer. Labels and group filtering run
- * under the snapshot's protocol (see `withSerializeProtocol`)
- * since the numeric codes were recorded under it — this body calls
- * `serialize`/`codeToLabel` (number → qmkId/label), unlike
- * `buildSpeedFillByPos` above which only `deserialize`s, so it needs
- * the RAWCODES_MAP-rebuilding variant rather than the plain one. */
+ * ranking covers every selected layer.
+ *
+ * When `qmkByCode` (from `buildSnapshotQmkByCode`) has an entry for a
+ * code, that's the snapshot's own recorded qmkId string — resolve the
+ * group/label straight from it (`keycodeGroup(qmkId)` /
+ * `snapshotCodeLabel`), no serialize round-trip needed. A code missing
+ * from the map (a keycode observed by the bigram aggregate that the
+ * snapshot itself never recorded — e.g. a mid-recording remap) falls
+ * back to today's `serialize`/`codeToLabel` resolution, which needs
+ * the snapshot protocol's `RAWCODES_MAP` (see `withSerializeProtocol`)
+ * since the numeric codes were recorded under it. That fallback
+ * resolution runs ONCE for every miss code up front — `recreateKeycodes`
+ * inside `withSerializeProtocol` isn't free — then a single pass over
+ * `speedMap` in its original (stable-sort-preserving) insertion order
+ * builds the final entries from whichever path each code took. With
+ * `qmkByCode` absent every code takes the miss path, reproducing the
+ * pre-existing behavior exactly (byte-equivalent — see the #359
+ * regression test in key-heatmap-helpers-speed.test.ts). */
 export function buildSpeedRanking(
   speedMap: ReadonlyMap<number, KeySpeedStat>,
   keyGroupFilter: KeyGroupFilter,
   limit: number,
   vialProtocol?: number,
+  qmkByCode?: ReadonlyMap<number, string>,
 ): SpeedRankingEntry[] {
-  return withSerializeProtocol(vialProtocol, () => {
-    const entries: SpeedRankingEntry[] = []
-    for (const [code, stat] of speedMap) {
-      if (keyGroupFilter !== 'all' && keycodeGroup(serialize(code)) !== keyGroupFilter) continue
-      entries.push({ keyLabel: codeToLabel(code), avgIki: stat.avgIki, count: stat.count })
+  const missCodes: number[] = []
+  for (const code of speedMap.keys()) {
+    if (!qmkByCode?.has(code)) missCodes.push(code)
+  }
+  const missMeta = new Map<number, { label: string; group: KeycodeGroup }>()
+  if (missCodes.length > 0) {
+    withSerializeProtocol(vialProtocol, () => {
+      for (const code of missCodes) {
+        missMeta.set(code, { label: codeToLabel(code), group: keycodeGroup(serialize(code)) })
+      }
+    })
+  }
+
+  const entries: SpeedRankingEntry[] = []
+  for (const [code, stat] of speedMap) {
+    const qmkId = qmkByCode?.get(code)
+    if (qmkId !== undefined) {
+      if (keyGroupFilter !== 'all' && keycodeGroup(qmkId) !== keyGroupFilter) continue
+      entries.push({ keyLabel: snapshotCodeLabel(qmkId), avgIki: stat.avgIki, count: stat.count })
+      continue
     }
-    entries.sort((a, b) => b.avgIki - a.avgIki)
-    return entries.slice(0, Math.max(limit, 0))
-  })
+    const meta = missMeta.get(code)
+    if (!meta) continue
+    if (keyGroupFilter !== 'all' && meta.group !== keyGroupFilter) continue
+    entries.push({ keyLabel: meta.label, avgIki: stat.avgIki, count: stat.count })
+  }
+  entries.sort((a, b) => b.avgIki - a.avgIki)
+  return entries.slice(0, Math.max(limit, 0))
 }
 
 // --- Duration mode ---------------------------------------------------

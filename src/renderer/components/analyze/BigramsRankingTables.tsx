@@ -6,7 +6,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingBigramTopEntry } from '../../../shared/types/typing-analytics'
-import { bigramPairLabel, rolloverRatioFromEntry } from './analyze-bigram-format'
+import { bigramPairLabels, rolloverRatioFromEntry } from './analyze-bigram-format'
 import { avgIkiAtOrAboveThreshold, percentileFromHist } from './analyze-bigram-heatmap'
 import { fmtMs, formatPercentLabel } from './analyze-format'
 import { EmptyQuadrant } from './bigrams-quadrant-ui'
@@ -86,28 +86,41 @@ interface TopRankingProps {
   entries: readonly TypingBigramTopEntry[]
   listLimit: number
   gram: 2 | 3
+  /** Snapshot-derived `code -> qmkId` map (see `useSnapshotQmkByCode`)
+   * threaded into `bigramPairLabels` so pair labels resolve from the
+   * snapshot's own recorded keymap instead of the session's
+   * `RAWCODES_MAP`. Optional so existing callers/tests keep working
+   * unedited — absent, `bigramPairLabels` falls back to its
+   * pre-existing behavior. */
+  qmkByCode?: ReadonlyMap<number, string>
+  vialProtocol?: number
 }
 
-/** `TypingBigramTopEntry` plus the derived rollover fraction, so
- * `compareBySortKey` can sort on it the same generic way it sorts on
- * count/avgIki/sd — those are raw wire fields, `rollover` is computed
- * once per row instead. */
+/** `TypingBigramTopEntry` plus the derived rollover fraction and
+ * resolved pair label, so `compareBySortKey` can sort on the former
+ * the same generic way it sorts on count/avgIki/sd — those are raw
+ * wire fields, `rollover`/`label` are computed once per visible row
+ * instead (label via a single batched `bigramPairLabels` call over the
+ * whole capped set, not one `bigramPairLabel` call per rendered row —
+ * see that function's doc comment for why that matters when the
+ * snapshot's protocol differs from the session's). */
 interface TopRow extends TypingBigramTopEntry {
   rollover: number | null
+  label: string
 }
 
-function TopRanking({ entries, listLimit, gram }: TopRankingProps): JSX.Element {
+function TopRanking({ entries, listLimit, gram, qmkByCode, vialProtocol }: TopRankingProps): JSX.Element {
   const { t } = useTranslation()
   const [sort, setSort] = useState<SortState<TopSortKey>>({ key: 'count', dir: 'desc' })
   const toggle = (key: TopSortKey): void => setSort((prev) => toggleSort(prev, key))
 
   const sliced = useMemo<TopRow[]>(() => {
-    const arr: TopRow[] = entries
-      .slice(0, Math.max(listLimit, 0))
-      .map((e) => ({ ...e, rollover: rolloverRatioFromEntry(e) }))
+    const capped = entries.slice(0, Math.max(listLimit, 0))
+    const labels = bigramPairLabels(capped.map((e) => e.ngramId), qmkByCode, vialProtocol)
+    const arr: TopRow[] = capped.map((e, i) => ({ ...e, rollover: rolloverRatioFromEntry(e), label: labels[i] }))
     arr.sort((a, b) => compareBySortKey(a, b, sort))
     return arr
-  }, [entries, listLimit, sort])
+  }, [entries, listLimit, sort, qmkByCode, vialProtocol])
 
   if (sliced.length === 0) {
     return <EmptyQuadrant text={t('analyze.bigrams.empty')} />
@@ -161,7 +174,7 @@ function TopRanking({ entries, listLimit, gram }: TopRankingProps): JSX.Element 
         {sliced.map((entry, i) => (
           <tr key={entry.ngramId} className="border-t border-surface-dim">
             <td className="px-1 py-1 text-right tabular-nums text-content-muted">{i + 1}</td>
-            <td className="px-2 py-1 font-mono">{bigramPairLabel(entry.ngramId)}</td>
+            <td className="px-2 py-1 font-mono">{entry.label}</td>
             <td className="px-2 py-1 text-right tabular-nums">{entry.count.toLocaleString()}</td>
             <td className="px-2 py-1 text-right tabular-nums">{fmtMs(entry.avgIki)}</td>
             <td className="px-2 py-1 text-right tabular-nums">{fmtMs(entry.sd)}</td>
@@ -181,6 +194,7 @@ interface SlowEntry {
   sd: number | null
   p95: number | null
   rollover: number | null
+  label: string
 }
 
 interface SlowRankingProps {
@@ -190,15 +204,18 @@ interface SlowRankingProps {
    * `avgIkiAtOrAboveThreshold` for the bucket-center caveat. */
   minAvgIkiMs: number
   gram: 2 | 3
+  /** See `TopRankingProps.qmkByCode`. */
+  qmkByCode?: ReadonlyMap<number, string>
+  vialProtocol?: number
 }
 
-function SlowRanking({ entries, listLimit, minAvgIkiMs, gram }: SlowRankingProps): JSX.Element {
+function SlowRanking({ entries, listLimit, minAvgIkiMs, gram, qmkByCode, vialProtocol }: SlowRankingProps): JSX.Element {
   const { t } = useTranslation()
   const [sort, setSort] = useState<SortState<SlowSortKey>>({ key: 'avgIki', dir: 'desc' })
   const toggle = (key: SlowSortKey): void => setSort((prev) => toggleSort(prev, key))
 
   const slowEntries = useMemo<SlowEntry[]>(() => {
-    const eligible: SlowEntry[] = []
+    const eligible: Omit<SlowEntry, 'label'>[] = []
     for (const entry of entries) {
       const avg = avgIkiAtOrAboveThreshold(entry.hist, minAvgIkiMs)
       if (avg === null) continue
@@ -213,8 +230,10 @@ function SlowRanking({ entries, listLimit, minAvgIkiMs, gram }: SlowRankingProps
       })
     }
     eligible.sort((a, b) => compareBySortKey(a, b, sort))
-    return eligible.slice(0, Math.max(listLimit, 0))
-  }, [entries, listLimit, minAvgIkiMs, sort])
+    const capped = eligible.slice(0, Math.max(listLimit, 0))
+    const labels = bigramPairLabels(capped.map((e) => e.ngramId), qmkByCode, vialProtocol)
+    return capped.map((e, i) => ({ ...e, label: labels[i] }))
+  }, [entries, listLimit, minAvgIkiMs, sort, qmkByCode, vialProtocol])
 
   if (slowEntries.length === 0) {
     return <EmptyQuadrant text={t('analyze.bigrams.empty')} />
@@ -271,7 +290,7 @@ function SlowRanking({ entries, listLimit, minAvgIkiMs, gram }: SlowRankingProps
         {slowEntries.map((entry, i) => (
           <tr key={entry.ngramId} className="border-t border-surface-dim">
             <td className="px-1 py-1 text-right tabular-nums text-content-muted">{i + 1}</td>
-            <td className="px-2 py-1 font-mono">{bigramPairLabel(entry.ngramId)}</td>
+            <td className="px-2 py-1 font-mono">{entry.label}</td>
             <td className="px-2 py-1 text-right tabular-nums">{entry.count.toLocaleString()}</td>
             <td className="px-2 py-1 text-right tabular-nums">{fmtMs(entry.avgIki)}</td>
             <td className="px-2 py-1 text-right tabular-nums">{fmtMs(entry.sd)}</td>

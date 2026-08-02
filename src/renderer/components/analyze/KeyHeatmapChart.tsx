@@ -22,6 +22,7 @@ import {
   RankingTable,
 } from './key-heatmap-panels'
 import { HeatmapModeToggle, LayerToggleRow, RankingControls } from './key-heatmap-controls'
+import { useSnapshotQmkByCode } from './use-snapshot-qmk-by-code'
 import {
   MIN_DURATION_SAMPLE_COUNT,
   MIN_SPEED_SAMPLE_COUNT,
@@ -175,6 +176,14 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTest
 
   const layout = snapshot.layout as KeyboardLayout | null
 
+  // Snapshot's own `code -> qmkId` map — threaded into the Speed
+  // ranking below so its labels/group-filter resolve from the
+  // snapshot's own recorded keymap strings instead of the session's
+  // `RAWCODES_MAP` (see analyze-snapshot-codes.ts /
+  // Task-speed-ranking-snapshot-labels.md). `buildSpeedFillByPos`
+  // doesn't need it — it only matches numeric codes, never labels.
+  const qmkByCode = useSnapshotQmkByCode(snapshot)
+
   const layerKeycodes = useMemo(() => {
     const m = new Map<number, LayerKeycodes>()
     for (const layer of selectedLayers) {
@@ -229,8 +238,8 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTest
     return result
   }, [mode, selectedLayers, layerKeycodes, positions, speedIntensityByCode, durationIntensityByCellKey, keyGroupFilter, effectiveTheme, snapshot.vialProtocol])
   const speedRanking = useMemo(
-    () => (mode === 'speed' ? buildSpeedRanking(speedMap, keyGroupFilter, frequentUsedN, snapshot.vialProtocol) : []),
-    [mode, speedMap, keyGroupFilter, frequentUsedN, snapshot.vialProtocol],
+    () => (mode === 'speed' ? buildSpeedRanking(speedMap, keyGroupFilter, frequentUsedN, snapshot.vialProtocol, qmkByCode) : []),
+    [mode, speedMap, keyGroupFilter, frequentUsedN, snapshot.vialProtocol, qmkByCode],
   )
   // Gated the same way `groupRankings` (Count) is below: without the
   // `mode === 'duration'` guard this recomputed on every ranking-control
