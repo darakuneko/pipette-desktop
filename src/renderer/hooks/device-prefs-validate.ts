@@ -72,13 +72,26 @@ function validateRomajiDetailSettings(raw: unknown): RomajiDetailSettings | unde
     }
     if (styles.length > 0) result.disabledStyles = styles
   }
+  // guideLineCount takes precedence when present and valid; otherwise fall
+  // back to a legacy guideWordCount (pre-rename field, same 0-3 int range
+  // and "0 = hidden" meaning) so a persisted config written before the
+  // rename doesn't silently lose its explicit guide setting. A malformed
+  // value in either field is simply dropped (falls through to "not set" /
+  // the modal's default of 2), same as every other field here.
   if (
+    typeof obj.guideLineCount === 'number'
+    && Number.isInteger(obj.guideLineCount)
+    && obj.guideLineCount >= 0
+    && obj.guideLineCount <= 3
+  ) {
+    result.guideLineCount = obj.guideLineCount
+  } else if (
     typeof obj.guideWordCount === 'number'
     && Number.isInteger(obj.guideWordCount)
     && obj.guideWordCount >= 0
     && obj.guideWordCount <= 3
   ) {
-    result.guideWordCount = obj.guideWordCount
+    result.guideLineCount = obj.guideWordCount
   }
   return Object.keys(result).length > 0 ? result : undefined
 }

@@ -24,10 +24,13 @@ export interface RomajiDetailSettings {
   /** Alternate-spelling families excluded from acceptance. Passed straight
    *  through to `createRomajiMatcher`'s `disabledStyles` opt. */
   disabledStyles?: RomajiStyle[]
-  /** Total number of words shown in the guide row, 0-3: 0 hides the row
-   *  entirely, 1 shows only the current word, 2 shows the current word plus
-   *  the next one, 3 shows the current word plus the next two. Default: 2. */
-  guideWordCount?: number
+  /** Total number of guide lines shown, line-synchronized with the reading
+   *  window's word lines, 0-3: 0 hides the row entirely, 1 shows only the
+   *  line the current word sits on, 2 adds the next line, 3 adds the next
+   *  two lines. Default: 2. Named for lines (not words) since the guide
+   *  row anchors to the same line structure as the reading window — see
+   *  `RomajiGuide`. */
+  guideLineCount?: number
 }
 
 export type TypingTestConfig =
@@ -106,38 +109,44 @@ export const ROMAJI_INPUT_LANGUAGES = new Set(['japanese_hiragana', 'japanese_ka
 
 /** Current word's confirmed romaji + canonical remaining spelling, plus the
  *  count of kana characters fully confirmed so far (romajiInput mode only).
- *  `lookahead` holds the full canonical romaji spelling of up to
- *  `guideWordCount − 1` (default 1) upcoming words (fewer entries once fewer
- *  remain), letting the guide row preview what's coming after the current
- *  word. `showRow` is false when `guideWordCount` is 0 — the guide row
- *  (typed/remaining/lookahead spelling) is hidden entirely, though
- *  `kanaCompleted` still drives the current word's kana coloring and the
- *  IME-on hint still shows independently of `showRow`. Produced by
- *  `useTypingTest`'s `romajiGuide` selector from a `RomajiMatcher` (see
- *  romaji-engine.ts), consumed by `WordDisplay` (kana coloring) and
- *  `TypingTestView` (the guide line below the reading window). */
+ *  `words` is the full canonical romaji spelling of every word in the run,
+ *  index-aligned with `TypingTestState.words` (unbounded — not sliced to
+ *  the guide's visible window), letting `TypingTestView` line-synchronize
+ *  the guide with the reading window's own word lines: it re-derives which
+ *  words fall on each of `lineCount` lines from the same line structure the
+ *  reading window uses, rather than this selector guessing a word count.
+ *  `lineCount` is the number of guide lines to show (line the current word
+ *  sits on, plus that many more) — see `RomajiDetailSettings.guideLineCount`.
+ *  `showRow` is false when `lineCount` is 0 — the guide row is hidden
+ *  entirely, though `kanaCompleted` still drives the current word's kana
+ *  coloring and the IME-on hint still shows independently of `showRow`.
+ *  Produced by `useTypingTest`'s `romajiGuide` selector (composed from the
+ *  `romajiWordsTable`/keystroke-reactive memos — see romaji-input.ts),
+ *  consumed by `WordDisplay` (kana coloring) and `TypingTestView` (the
+ *  guide line(s) below the reading window). */
 export interface RomajiGuide {
   typed: string
   remaining: string
   kanaCompleted: number
-  lookahead: string[]
+  words: string[]
+  lineCount: number
   showRow: boolean
 }
 
-/** Capitalizes only the first character of a whole word (used for
- *  lookahead entries, which have no typed/remaining split of their own). */
+/** Capitalizes only the first character of a whole word (used for `words`
+ *  table entries, which have no typed/remaining split of their own). */
 function capitalizeWord(word: string): string {
   return word.length > 0 ? word[0].toUpperCase() + word.slice(1) : word
 }
 
 /** Applies the Romaji Settings modal's display-only case transform to a
- *  guide's typed/remaining strings, and to each `lookahead` entry. Never
+ *  guide's typed/remaining strings, and to every `words` table entry. Never
  *  touches acceptance/matching — `createRomajiMatcher` always works in
  *  lowercase; this only changes what `TypingTestView`'s guide row renders.
- *  'upper' uppercases the whole string (and each lookahead word in full);
+ *  'upper' uppercases the whole string (and each `words` entry in full);
  *  'capital' uppercases only the first character of the word as a whole
  *  (the first char of `typed` once anything is typed, otherwise the first
- *  char of `remaining`; each lookahead word gets its own first character
+ *  char of `remaining`; each `words` entry gets its own first character
  *  capitalized, since each is a whole word with no typed portion);
  *  'lower'/undefined is a no-op. */
 export function applyRomajiCaseStyle(guide: RomajiGuide, caseStyle: RomajiCaseStyle | undefined): RomajiGuide {
@@ -147,17 +156,17 @@ export function applyRomajiCaseStyle(guide: RomajiGuide, caseStyle: RomajiCaseSt
       ...guide,
       typed: guide.typed.toUpperCase(),
       remaining: guide.remaining.toUpperCase(),
-      lookahead: guide.lookahead.map((word) => word.toUpperCase()),
+      words: guide.words.map((word) => word.toUpperCase()),
     }
   }
-  const lookahead = guide.lookahead.map(capitalizeWord)
+  const words = guide.words.map(capitalizeWord)
   if (guide.typed.length > 0) {
-    return { ...guide, typed: capitalizeWord(guide.typed), lookahead }
+    return { ...guide, typed: capitalizeWord(guide.typed), words }
   }
   if (guide.remaining.length > 0) {
-    return { ...guide, remaining: capitalizeWord(guide.remaining), lookahead }
+    return { ...guide, remaining: capitalizeWord(guide.remaining), words }
   }
-  return { ...guide, lookahead }
+  return { ...guide, words }
 }
 
 // Imported file-import-text display preferences (fileImport mode only).

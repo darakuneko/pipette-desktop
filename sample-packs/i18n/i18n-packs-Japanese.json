@@ -1,5 +1,5 @@
 {
-  "version": "0.1.57",
+  "version": "0.1.58",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -337,7 +337,7 @@
           "capital": "Romaji",
           "lower": "romaji"
         },
-        "guideWordsLabel": "表示語数",
+        "guideLinesLabel": "表示行数",
         "guideLabel": "表示パターン",
         "guideHint": "表示のみです。他の入力パターンでも正解になります",
         "inputLabel": "入力パターン",

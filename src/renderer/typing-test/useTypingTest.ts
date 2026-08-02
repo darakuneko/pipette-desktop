@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { getLanguageData } from './word-generator'
 import { DEFAULT_TAPPING_TERM_MS } from '../../shared/qmk-settings-tapping-term'
 import type { TypingTestConfig } from './types'
-import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, isTimeBoundedRun } from './types'
+import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, isTimeBoundedRun, applyRomajiCaseStyle } from './types'
 import type { TypingTestMemory } from '../../shared/types/pipette-settings'
 import { createWordsForConfig } from './word-supply'
 import {
@@ -17,7 +17,7 @@ import {
   handleSpace,
   tryFinishLastWord,
 } from './run-state'
-import { isRomajiInputActive, processRomajiKeyEvent, buildRomajiGuide } from './romaji-input'
+import { isRomajiInputActive, processRomajiKeyEvent, buildRomajiWordsTable, buildRomajiGuideProgress, romajiDetail } from './romaji-input'
 import { deriveExpectedChar } from './expected-char'
 import { useTypingTestMatrix } from './use-typing-test-matrix'
 import { useTypingTestMetrics } from './use-typing-test-metrics'
@@ -344,13 +344,29 @@ export function useTypingTest<TPreparedEvent = unknown>(
 
   const { wpm, kpm, accuracy, kspc, elapsedSeconds, remainingSeconds } = useTypingTestMetrics(state, config, setState)
 
-  // Current word's romaji progress (romajiInput mode only) — see
-  // buildRomajiGuide's doc comment in romaji-input.ts for the guide-row
-  // derivation itself; this memo only pins the dependency set.
-  const romajiGuide = useMemo(
-    () => buildRomajiGuide(config, language, state),
-    [config, language, state.words, state.currentWordIndex, state.romajiKeystrokes, state.romajiCapable],
+  // Full-run per-word romaji table (romajiInput mode only) — see
+  // buildRomajiWordsTable's doc comment in romaji-input.ts. Deliberately its
+  // own memo, NOT depending on state.romajiKeystrokes: rebuilding a
+  // RomajiMatcher per word is O(n) in word count, so it must only rerun when
+  // the run's word list itself changes (fresh run / time-mode refill), not
+  // on every keystroke.
+  const romajiWordsTable = useMemo(
+    () => buildRomajiWordsTable(config, language, state),
+    [config, language, state.words, state.romajiCapable],
   )
+
+  // Current word's romaji progress (romajiInput mode only) — see
+  // buildRomajiGuideProgress's doc comment in romaji-input.ts for the
+  // guide-row derivation itself; this memo only pins the dependency set
+  // (unchanged from before the words-table split above). Composed with
+  // romajiWordsTable and case-styled once here, rather than inside either
+  // half, so the split above stays purely about the O(n) table build.
+  const romajiGuide = useMemo(() => {
+    const progress = buildRomajiGuideProgress(config, language, state)
+    if (!progress || !romajiWordsTable) return null
+    const detail = romajiDetail(config)
+    return applyRomajiCaseStyle({ ...progress, words: romajiWordsTable }, detail?.caseStyle)
+  }, [config, language, state.words, state.currentWordIndex, state.romajiKeystrokes, state.romajiCapable, romajiWordsTable])
 
   return {
     state,
