@@ -196,6 +196,7 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
   }, [favoriteType, apply, t])
 
   const doExport = useCallback(async (entryId?: string): Promise<boolean> => {
+    if (!enabled) return false
     setError(null)
     setExporting(true)
     try {
@@ -215,7 +216,7 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
     } finally {
       setExporting(false)
     }
-  }, [favoriteType, vialProtocol, t])
+  }, [enabled, favoriteType, vialProtocol, t])
 
   const exportFavorites = useCallback(async (): Promise<boolean> => {
     return doExport()

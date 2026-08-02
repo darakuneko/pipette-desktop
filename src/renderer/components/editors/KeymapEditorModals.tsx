@@ -8,6 +8,7 @@
 import { useTranslation } from 'react-i18next'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../../shared/types/protocol'
 import type { FavoriteType } from '../../../shared/types/favorite-store'
+import { FALLBACK_VIAL_PROTOCOL } from '../../../shared/favorite-data'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import type { MacroAction } from '../../../preload/macro'
 import { TapDanceModal } from './TapDanceModal'
@@ -105,7 +106,7 @@ export function KeymapEditorModals({
           onSave={handleTdModalSave} onClose={handleTdModalClose} isDummy={isDummy}
           tapDanceEntries={tapDanceEntries} deserializedMacros={deserializedMacros}
           quickSelect={quickSelect} splitKeyMode={splitKeyMode} basicViewType={basicViewType}
-          vialProtocol={vialProtocol ?? 0}
+          vialProtocol={vialProtocol ?? FALLBACK_VIAL_PROTOCOL}
           hubOrigin={favHubOrigin} hubNeedsDisplayName={favHubNeedsDisplayName}
           hubUploading={favHubUploading} hubUploadResult={favHubUploadResult}
           onUploadToHub={onFavUploadToHub ? (entryId) => onFavUploadToHub('tapDance', entryId) : undefined}
@@ -116,7 +117,7 @@ export function KeymapEditorModals({
 
       {macroModalIndex !== null && macroBuffer && macroCount != null && onSaveMacros && (
         <MacroModal index={macroModalIndex} macroCount={macroCount} macroBufferSize={macroBufferSize ?? 0}
-          macroBuffer={macroBuffer} vialProtocol={vialProtocol ?? 0} onSaveMacros={onSaveMacros}
+          macroBuffer={macroBuffer} vialProtocol={vialProtocol ?? FALLBACK_VIAL_PROTOCOL} onSaveMacros={onSaveMacros}
           parsedMacros={parsedMacros} onClose={handleMacroModalClose} unlocked={unlocked} onUnlock={onUnlock}
           isDummy={isDummy} tapDanceEntries={tapDanceEntries} deserializedMacros={deserializedMacros}
           quickSelect={quickSelect} autoAdvance={autoAdvance} splitKeyMode={splitKeyMode} basicViewType={basicViewType}

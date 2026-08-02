@@ -92,10 +92,24 @@ vi.mock('node:fs/promises', () => ({
   readFile: vi.fn(),
 }))
 
-// Mock keycodes serialize
-vi.mock('../../shared/keycodes/keycodes', () => ({
-  serialize: vi.fn((code: number) => `KC_${code}`),
-}))
+// Mock keycodes serialize. `serialize`'s output depends on a mutable
+// `mockProtocol` so tests can prove `withExportProtocol` actually switches
+// protocol around the serialize call (header/body agreement) instead of
+// always running at main's global v6 — without this, `getProtocol` /
+// `setProtocol` / `recreateKeycodes` would be undefined and
+// `withExportProtocol` (imported from the real `../favorite-store` module)
+// would throw. Default output format (`KC_${code}`) is unchanged from the
+// original stub so every existing protocol-6 assertion in this file keeps
+// passing untouched.
+vi.mock('../../shared/keycodes/keycodes', () => {
+  let mockProtocol = 6
+  return {
+    serialize: vi.fn((code: number) => (mockProtocol === 6 ? `KC_${code}` : `KC_${code}_p${mockProtocol}`)),
+    getProtocol: vi.fn(() => mockProtocol),
+    setProtocol: vi.fn((p: number) => { mockProtocol = p }),
+    recreateKeycodes: vi.fn(),
+  }
+})
 
 import { ipcMain } from 'electron'
 import { getIdToken } from '../sync/google-auth'
@@ -344,6 +358,37 @@ describe('hub-ipc favorite handlers', () => {
       expect(entry.data.onTapHold).toBe('KC_7')
       // Non-keycode field should remain as-is
       expect(entry.data.tappingTerm).toBe(200)
+    })
+
+    // Regression: the export body used to always serialize at main's
+    // global protocol (always 6) while the header stamped whatever
+    // `vialProtocol` was requested — a protocol-5 upload got header 5,
+    // body v6. Assert header and body now agree.
+    it('serializes keycode fields at the requested protocol (header/body agreement)', async () => {
+      mockHubAuth()
+      mockFavoriteFs()
+      vi.mocked(uploadFeaturePostToHub).mockResolvedValueOnce({
+        id: 'fav-post-3',
+        title: 'My Tap Dance',
+      })
+
+      const handler = getHandler()
+      await handler({}, {
+        type: 'tapDance',
+        entryId: 'entry-1',
+        vialProtocol: 5,
+        title: 'My Tap Dance',
+      })
+
+      const call = vi.mocked(uploadFeaturePostToHub).mock.calls[0]
+      const jsonFile = call[3] as { name: string; data: Buffer }
+      const parsed = JSON.parse(jsonFile.data.toString('utf-8'))
+      expect(parsed.vial_protocol).toBe(5)
+      const entry = parsed.categories.td[0]
+      // Body must reflect protocol 5 too, not main's global v6 default
+      // ('KC_4' would mean the body silently stayed at v6).
+      expect(entry.data.onTap).toBe('KC_4_p5')
+      expect(entry.data.onHold).toBe('KC_5_p5')
     })
   })
 
