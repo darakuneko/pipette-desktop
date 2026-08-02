@@ -12,7 +12,7 @@ import { PALETTE_MIN_T, paletteColorFromIntensity } from '../../utils/chart-pale
 import type { EffectiveTheme } from '../../hooks/useEffectiveTheme'
 import type { HeatmapNormalization, RangeMs } from './analyze-types'
 import type { AggregateMode, HeatmapFilters, KeyGroupFilter } from '../../../shared/types/analyze-filters'
-import { withSnapshotProtocol, withSnapshotSerializeProtocol } from './analyze-protocol'
+import { withDeserializeProtocol, withSerializeProtocol } from '../../../shared/keycodes/with-protocol'
 
 export { AGGREGATE_MODES, KEY_GROUPS, HEATMAP_MODES } from '../../../shared/types/analyze-filters'
 export type { AggregateMode, KeyGroupFilter, HeatmapMode } from '../../../shared/types/analyze-filters'
@@ -364,7 +364,7 @@ export function normalizeAvgIntensity<K, V>(
 /** Resolves the Speed-mode fill for every physical position on one
  * layer: look up that position's keycode on the layer's keymap, decode
  * it to the numeric code the bigram aggregate uses (under the
- * snapshot's own protocol — see `withSnapshotProtocol`), then paint
+ * snapshot's own protocol — see `withDeserializeProtocol`), then paint
  * from the shared intensity map. Positions whose keycode has no
  * qualifying speed data (below `MIN_SPEED_SAMPLE_COUNT`, or never seen
  * as the "to" side of a bigram) are omitted so the caller's default key
@@ -378,7 +378,7 @@ export function buildSpeedFillByPos(
   theme: EffectiveTheme,
   vialProtocol?: number,
 ): Map<string, string> {
-  return withSnapshotProtocol(vialProtocol, () => {
+  return withDeserializeProtocol(vialProtocol, () => {
     const result = new Map<string, string>()
     for (const pos of positions) {
       const qmkId = layerKeycodes.keycodes.get(pos) ?? ''
@@ -410,7 +410,7 @@ export interface SpeedRankingEntry {
  * ranking table. Unlike the Count ranking, this isn't scoped to a
  * layer group — the bigram aggregate carries no layer tag, so one flat
  * ranking covers every selected layer. Labels and group filtering run
- * under the snapshot's protocol (see `withSnapshotSerializeProtocol`)
+ * under the snapshot's protocol (see `withSerializeProtocol`)
  * since the numeric codes were recorded under it — this body calls
  * `serialize`/`codeToLabel` (number → qmkId/label), unlike
  * `buildSpeedFillByPos` above which only `deserialize`s, so it needs
@@ -421,7 +421,7 @@ export function buildSpeedRanking(
   limit: number,
   vialProtocol?: number,
 ): SpeedRankingEntry[] {
-  return withSnapshotSerializeProtocol(vialProtocol, () => {
+  return withSerializeProtocol(vialProtocol, () => {
     const entries: SpeedRankingEntry[] = []
     for (const [code, stat] of speedMap) {
       if (keyGroupFilter !== 'all' && keycodeGroup(serialize(code)) !== keyGroupFilter) continue

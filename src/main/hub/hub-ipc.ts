@@ -76,7 +76,7 @@ import type { SaveRecordInput } from '../key-label-store'
 import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult } from '../../shared/types/key-label-store'
 import { isValidFavoriteType, isValidHubVialProtocol, FAV_TYPE_TO_EXPORT_KEY, serializeFavData, buildFavExportFile } from '../../shared/favorite-data'
 import { serialize as serializeKeycode } from '../../shared/keycodes/keycodes'
-import { withExportProtocol } from '../favorite-store'
+import { withSerializeProtocol } from '../../shared/keycodes/with-protocol'
 import type { FavoriteType, FavoriteIndex } from '../../shared/types/favorite-store'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -474,7 +474,7 @@ async function buildFavoriteExportJson(
   if (parsed.type !== type) throw new Error('Entry type mismatch')
 
   const exportKey = FAV_TYPE_TO_EXPORT_KEY[type]
-  const serializedData = withExportProtocol(vialProtocol, () => serializeFavData(type, parsed.data, serializeKeycode))
+  const serializedData = withSerializeProtocol(vialProtocol, () => serializeFavData(type, parsed.data, serializeKeycode))
 
   const exportFile = buildFavExportFile(vialProtocol, {
     [exportKey]: [{

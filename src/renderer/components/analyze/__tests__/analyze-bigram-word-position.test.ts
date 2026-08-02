@@ -13,12 +13,12 @@ import {
   deserialize,
 } from '../../../../shared/keycodes/keycodes'
 import type { TypingBigramTopEntry } from '../../../../shared/types/typing-analytics'
-import { withSnapshotProtocol } from '../analyze-protocol'
+import { withDeserializeProtocol } from '../../../../shared/keycodes/with-protocol'
 
 /** Build a keycode under a specific protocol so the test can name which
  * version's range a wrapped keycode came from. */
 function withProtocol<T>(protocol: number, body: () => T): T {
-  return withSnapshotProtocol(protocol, body)
+  return withDeserializeProtocol(protocol, body)
 }
 
 const KC_SPACE = deserialize('KC_SPACE')

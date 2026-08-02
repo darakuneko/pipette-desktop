@@ -81,7 +81,7 @@ import { buildKeycodeFingerMap, resolvePairFingers } from './analyze-bigram-fing
 import { parseBigramId } from './analyze-bigram-heatmap'
 import { rolloverRatioFromEntry } from './analyze-bigram-format'
 import { formatSharePercent } from './analyze-format'
-import { withSnapshotProtocol } from './analyze-protocol'
+import { withDeserializeProtocol } from '../../../shared/keycodes/with-protocol'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { buildBksRateBuckets } from './analyze-error-proxy'
 import { buildHourOfDayWpm, computeWpm } from './analyze-wpm'
@@ -553,7 +553,7 @@ export async function buildBigramsCsv(args: ScopeArgs & {
   // ranges move between v5 and v6. Without it the column falls back to
   // bare separator codes rather than guessing — see `tapKeycodeOf`.
   const unwrapTaps = snapshot?.vialProtocol !== undefined
-  const rows = withSnapshotProtocol(snapshot?.vialProtocol, () => entries.map((e) => {
+  const rows = withDeserializeProtocol(snapshot?.vialProtocol, () => entries.map((e) => {
     let cls = ''
     if (canClassify) {
       const { prevFinger, currFinger, sameKeycode } = resolvePairFingers(e.ngramId, keycodeFinger)

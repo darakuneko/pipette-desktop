@@ -20,7 +20,7 @@ import type { FingerType } from '../../../shared/kle/kle-ergonomics'
 import type { TypingBigramTopEntry } from '../../../shared/types/typing-analytics'
 import { aggregateBigramClasses, type BigramClassAggregate } from './analyze-bigram-classes'
 import { emptyHistTotal, foldHist, parseBigramId, type HistTotal } from './analyze-bigram-heatmap'
-import { withSnapshotProtocol } from './analyze-protocol'
+import { withDeserializeProtocol } from '../../../shared/keycodes/with-protocol'
 
 export type WordPosition = 'initiation' | 'inWord' | 'excluded'
 
@@ -33,7 +33,7 @@ export type WordPosition = 'initiation' | 'inWord' | 'excluded'
  * 0x2000 under v6, and `SH_T(kc)` is 0x999d0 under v5 but 0x5600 under
  * v6. A code recorded under one protocol and tested under the other
  * silently fails to unwrap. Callers must therefore run this inside
- * `withSnapshotProtocol(snapshot.vialProtocol, ...)`; when the
+ * `withDeserializeProtocol(snapshot.vialProtocol, ...)`; when the
  * recording protocol is unknown, don't call it at all — see
  * `aggregateWordPosition`'s `vialProtocol` parameter. (`QK_LAYER_TAP`
  * happens to be 0x4000 in both, but relying on that would make the
@@ -114,7 +114,7 @@ function separatorKeycodes(): Set<number> {
  *
  * `unwrapTaps` controls whether `LT`/`MT`/`SH_T` keys are resolved to
  * the key they emit when tapped. Pass `true` only from inside a
- * `withSnapshotProtocol` scope — see `tapKeycodeOf`. With `false` only
+ * `withDeserializeProtocol` scope — see `tapKeycodeOf`. With `false` only
  * bare `KC_SPACE` / `KC_ENTER` count, which under-counts a user who
  * put space on a dual-role key but never mis-classifies.
  */
@@ -174,7 +174,7 @@ export function aggregateWordPosition(
   // bare separator codes: those are identical across protocols, so the
   // fallback under-counts dual-role space keys rather than guessing.
   const unwrapTaps = vialProtocol !== undefined
-  return withSnapshotProtocol(vialProtocol, () => {
+  return withDeserializeProtocol(vialProtocol, () => {
     const initiation = emptyHistTotal()
     const inWord = emptyHistTotal()
     let excludedCount = 0
@@ -217,7 +217,7 @@ export function aggregateWordPosition(
  * Mirrors `aggregateWordPosition`'s own protocol handling exactly:
  * `unwrapTaps` is only enabled when `vialProtocol` is known, and both
  * the word-position check and the hand-class fold run inside the same
- * `withSnapshotProtocol` scope so a dual-role space/enter key unwraps
+ * `withDeserializeProtocol` scope so a dual-role space/enter key unwraps
  * against the snapshot's own protocol rather than the current session's.
  */
 export function aggregateInWordBigramClasses(
@@ -226,7 +226,7 @@ export function aggregateInWordBigramClasses(
   vialProtocol?: number,
 ): BigramClassAggregate {
   const unwrapTaps = vialProtocol !== undefined
-  return withSnapshotProtocol(vialProtocol, () => {
+  return withDeserializeProtocol(vialProtocol, () => {
     const inWordFilter = (pair: { prev: number; curr: number }): boolean =>
       classifyWordPosition(pair.prev, pair.curr, unwrapTaps) === 'inWord'
     return aggregateBigramClasses(entries, keycodeFinger, inWordFilter)

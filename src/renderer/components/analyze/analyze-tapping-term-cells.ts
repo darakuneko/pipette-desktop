@@ -13,7 +13,7 @@
 // for LT / MT / SH_T, so those three are the only keycodes this module
 // cares about. See `buildSpeedFillByPos` in key-heatmap-helpers.ts and
 // `tapKeycodeOf` in analyze-bigram-word-position.ts for the same
-// "deserialize under withSnapshotProtocol, test with the specific
+// "deserialize under withDeserializeProtocol, test with the specific
 // range predicates" pattern this reuses.
 //
 // The caller (TappingTermCard) computes `tapHoldPositionKeys` once per
@@ -24,13 +24,13 @@
 
 import { deserialize, isLTKeycode, isModTapKeycode, isSHTKeycode } from '../../../shared/keycodes/keycodes'
 import type { TypingDurationCell, TypingKeymapSnapshot, TypingMatrixCellRow } from '../../../shared/types/typing-analytics'
-import { withSnapshotProtocol } from './analyze-protocol'
+import { withDeserializeProtocol } from '../../../shared/keycodes/with-protocol'
 import { durationCellKey } from './key-heatmap-helpers'
 import { posKey } from '../../../shared/kle/pos-key'
 
 /** True when a serialized QMK id (as stored in `TypingKeymapSnapshot.keymap`)
  * decodes to a Layer-Tap, Mod-Tap or Swap-Hands-Tap keycode. Must be
- * called inside `withSnapshotProtocol(snapshot.vialProtocol, ...)` —
+ * called inside `withDeserializeProtocol(snapshot.vialProtocol, ...)` —
  * the range predicates it uses resolve against the *current* global
  * protocol, and two of the three move between v5 and v6 (see
  * `tapKeycodeOf`'s doc comment in analyze-bigram-word-position.ts). */
@@ -54,7 +54,7 @@ function isTapHoldQmkId(qmkId: string): boolean {
 export function tapHoldPositionKeys(snapshot: TypingKeymapSnapshot): ReadonlySet<string> {
   const keys = new Set<string>()
   if (!Array.isArray(snapshot.keymap)) return keys
-  withSnapshotProtocol(snapshot.vialProtocol, () => {
+  withDeserializeProtocol(snapshot.vialProtocol, () => {
     snapshot.keymap.forEach((layerRows, layer) => {
       if (!Array.isArray(layerRows)) return
       layerRows.forEach((row, r) => {
