@@ -8,6 +8,7 @@ import { generateKeymapPdf } from '../../../shared/pdf-export'
 import { generatePdfThumbnail } from '../../utils/pdf-thumbnail'
 import { isVilFile, recordToMap, deriveLayerCount } from '../../../shared/vil-file'
 import { vilToVialGuiJson } from '../../../shared/vil-compat'
+import { FALLBACK_VIAL_PROTOCOL } from '../../../shared/favorite-data'
 import {
   splitMacroBuffer,
   deserializeMacro,
@@ -54,7 +55,7 @@ function buildParams(vilData: VilFile) {
     ? (def.layouts.keymap as unknown[][]).flat().filter((k) => typeof k === 'string' && k.includes('\n\n\n\n\n\n\n\n\n\ne')).length
     : 0
   const macroCount = FALLBACK_MACRO_COUNT
-  const vialProtocol = vilData.vialProtocol ?? 9
+  const vialProtocol = vilData.vialProtocol ?? FALLBACK_VIAL_PROTOCOL
 
   return {
     layers: deriveLayerCount(vilData.keymap),
@@ -85,7 +86,7 @@ export function useSnapshotActions({ uid, deviceName }: Options) {
       if (!vilData) return
       const def = vilData.definition!
       const macroCount = FALLBACK_MACRO_COUNT
-      const vialProtocol = vilData.vialProtocol ?? 9
+      const vialProtocol = vilData.vialProtocol ?? FALLBACK_VIAL_PROTOCOL
       const viaProtocol = vilData.viaProtocol ?? 12
       const rows = def.matrix?.rows ?? 0
       const cols = def.matrix?.cols ?? 0
@@ -145,7 +146,7 @@ export function useSnapshotActions({ uid, deviceName }: Options) {
       })
       const def = vilData.definition!
       const macroCount = FALLBACK_MACRO_COUNT
-      const vialProtocol = vilData.vialProtocol ?? 9
+      const vialProtocol = vilData.vialProtocol ?? FALLBACK_VIAL_PROTOCOL
       const viaProtocol = vilData.viaProtocol ?? 12
       const rows = def.matrix?.rows ?? 0
       const cols = def.matrix?.cols ?? 0
@@ -184,7 +185,7 @@ export function useSnapshotActions({ uid, deviceName }: Options) {
       })
       const def = vilData.definition!
       const macroCount = FALLBACK_MACRO_COUNT
-      const vialProtocol = vilData.vialProtocol ?? 9
+      const vialProtocol = vilData.vialProtocol ?? FALLBACK_VIAL_PROTOCOL
       const viaProtocol = vilData.viaProtocol ?? 12
       const rows = def.matrix?.rows ?? 0
       const cols = def.matrix?.cols ?? 0

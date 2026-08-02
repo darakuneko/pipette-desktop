@@ -74,7 +74,7 @@ import { HUB_ERROR_KEY_LABEL_DUPLICATE, HUB_KEY_LABEL_TIMESTAMPS_BATCH_LIMIT } f
 import { getRecord, saveRecord, setHubPostId } from '../key-label-store'
 import type { SaveRecordInput } from '../key-label-store'
 import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult } from '../../shared/types/key-label-store'
-import { isValidFavoriteType, isValidVialProtocol, FAV_TYPE_TO_EXPORT_KEY, serializeFavData, buildFavExportFile } from '../../shared/favorite-data'
+import { isValidFavoriteType, isValidHubVialProtocol, FAV_TYPE_TO_EXPORT_KEY, serializeFavData, buildFavExportFile } from '../../shared/favorite-data'
 import { serialize as serializeKeycode } from '../../shared/keycodes/keycodes'
 import type { FavoriteType, FavoriteIndex } from '../../shared/types/favorite-store'
 import { readFile } from 'node:fs/promises'
@@ -770,7 +770,11 @@ export function setupHubIpc(): void {
     params: HubUploadFavoritePostParams,
   ): Promise<{ title: string; postType: string; jsonFile: { name: string; data: Buffer } }> {
     if (!isValidFavoriteType(params.type)) throw new Error('Invalid favorite type')
-    if (!isValidVialProtocol(params.vialProtocol)) throw new Error('Invalid vialProtocol')
+    // Hub-specific: stricter than the general `isValidVialProtocol` (see
+    // favorite-data.ts) because a raw negative sentinel (e.g. -1, the
+    // disconnected-state placeholder) must fail fast locally with a clear
+    // error instead of reaching the Hub server as a confusing 400.
+    if (!isValidHubVialProtocol(params.vialProtocol)) throw new Error('Invalid vialProtocol')
     const title = validateTitle(params.title)
     const postType = FAV_TYPE_TO_EXPORT_KEY[params.type]
     const jsonStr = await buildFavoriteExportJson(params.type, params.entryId, params.vialProtocol)
