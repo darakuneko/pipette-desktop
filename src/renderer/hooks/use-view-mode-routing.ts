@@ -85,7 +85,9 @@ export function useViewModeRouting({
     }).catch(() => {})
   }, [typingTestViewOnlyWindowSize, setTypingTestViewOnly, editorUI.typingTestMode])
 
-  // One-shot guard: prevents re-restoring the same uid after an initial restore
+  // One-shot guard: prevents re-restoring the same uid after an initial restore.
+  // Must survive StrictMode's double-invoke — the ref persists across the
+  // extra mount/cleanup/mount pass, so the second pass still sees it as fired.
   const restoreRequestedUidRef = useRef<string | null>(null)
 
   // Pending refs for deferred user intents (set while unlock dialog is open)
@@ -126,6 +128,9 @@ export function useViewModeRouting({
     setAnalyticsPageOpen, setViewMode, pendingTypingTestReentryRef,
   })
 
+  // Guard must survive StrictMode's double-invoke: the ref carries the prior
+  // connected value across the extra mount/cleanup/mount pass so cleanup only
+  // fires on a real connected -> disconnected transition, not a remount.
   const prevConnectedRef = useRef(device.connectedDevice)
   useEffect(() => {
     const wasConnected = prevConnectedRef.current

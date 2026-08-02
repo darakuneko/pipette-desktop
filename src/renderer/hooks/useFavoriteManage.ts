@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useCallback, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import type { FavoriteType, SavedFavoriteMeta } from '../../shared/types/favorite-store'
 import { FALLBACK_VIAL_PROTOCOL } from '../../shared/favorite-data'
 import type { FavoriteImportResultState } from './useFavoriteStore'
@@ -20,7 +19,6 @@ export interface UseFavoriteManageReturn {
 }
 
 export function useFavoriteManage(favoriteType: FavoriteType): UseFavoriteManageReturn {
-  const { t } = useTranslation()
   const [entries, setEntries] = useState<SavedFavoriteMeta[]>([])
   const [exporting, setExporting] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -101,7 +99,7 @@ export function useFavoriteManage(favoriteType: FavoriteType): UseFavoriteManage
     } finally {
       setImporting(false)
     }
-  }, [refreshEntries, t])
+  }, [refreshEntries])
 
   return {
     entries,

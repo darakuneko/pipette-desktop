@@ -53,7 +53,6 @@ export function useTypingTestPaneWindow({
   useEffect(() => {
     window.vialAPI.isAlwaysOnTopSupported().then(setAlwaysOnTopSupported).catch(() => {})
   }, [])
-  const controlsBarRef = useRef<HTMLDivElement>(null)
   // Assigned during render on purpose (NOT in an effect): the auto-fit effect
   // below reads this ref instead of taking the callback as a dep so it never
   // re-subscribes its resize listener, and an effect-based assignment would
@@ -203,7 +202,6 @@ export function useTypingTestPaneWindow({
     setViewOnlyControlsOpen,
     mouseOver,
     alwaysOnTopSupported,
-    controlsBarRef,
     paneWrapperRef,
     paneNaturalSizeRef,
     cssScale,

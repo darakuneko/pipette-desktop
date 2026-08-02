@@ -43,6 +43,8 @@ import { AppUsageChart } from './AppUsageChart'
 import { shiftLocalMonth } from './analyze-streak-goal'
 
 export interface AnalyzePaneChartProps {
+  // Identity / range / scopes — which chart tab and keyboard, the active
+  // time window, and the device/app/test/run scope filters.
   tid: (id: string) => string
   analysisTab: AnalysisTabKey
   selected: TypingKeyboardSummary
@@ -51,9 +53,14 @@ export interface AnalyzePaneChartProps {
   appScopes: string[]
   typingTestScopes: string[]
   runIdScopes: string[]
+  // Snapshot-derived values — keymap snapshot, per-finger assignment, and
+  // typing-test results resolved for the current scope.
   effectiveSnapshot: TypingKeymapSnapshot | null
   fingerAssignments: Record<string, FingerType>
   typingTestResults: TypingTestResult[]
+  // Filter state + setters — per-chart filter values (with setters where the
+  // chart can mutate them), plus the snapshot/connection status flags and the
+  // current-time value some of these filters read.
   wpmFilter: AnalyzeFiltersState['wpm']
   showBenchmark: boolean
   intervalFilter: AnalyzeFiltersState['interval']
@@ -70,6 +77,8 @@ export interface AnalyzePaneChartProps {
   bigramsFilter: AnalyzeFiltersState['bigrams']
   setBigrams: (patch: Partial<BigramFilters>) => void
   layoutComparisonFilter: AnalyzeFiltersState['layoutComparison']
+  // Callback — notifies the parent when the Skip% derived from the active
+  // filter changes.
   onSkipPercentChange?: (percent: number | null) => void
   layerFilter: AnalyzeFiltersState['layer']
   setLayer: (patch: Partial<LayerFilters>) => void

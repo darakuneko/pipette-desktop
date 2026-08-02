@@ -3,15 +3,15 @@
 // tray status. Split out of App.tsx (Task-split-app-tsx).
 
 import { useCallback, useEffect, useRef } from 'react'
-import type { KeyboardState } from './keyboard-types'
 import type { UseDevicePrefsReturn } from './useDevicePrefs'
+import type { useKeyboard } from './useKeyboard'
 import { useRecKeystrokeCounter } from './useRecKeystrokeCounter'
 import { useTrayStatus } from './useTrayStatus'
 import { buildKeymapSnapshot } from '../components/analyze/keymap-snapshot-builder'
 import type { DeviceInfo } from '../../shared/types/protocol'
 
 interface Params {
-  keyboard: KeyboardState
+  keyboard: ReturnType<typeof useKeyboard>
   devicePrefs: Pick<UseDevicePrefsReturn, 'typingRecordEnabled' | 'typingTestViewOnly' | 'setTypingRecordEnabled'>
   typingTestMode: boolean
   isDummy: boolean
@@ -47,6 +47,9 @@ export function useTypingRecordingTray({
   // tagged by test/run, so without a snapshot the Analyze Heatmap /
   // Ergonomics / Layer-activations views have no layout to draw them on
   // ("No keymap snapshot recorded for this range").
+  // Guard must survive StrictMode's double-invoke: the ref keeps the prior
+  // { active, uid } across the extra mount/cleanup/mount pass, so the second
+  // pass still sees an unchanged (active, uid) as already snapshotted.
   const recordingSnapshotRef = useRef<{ active: boolean; uid: string }>({ active: false, uid: '' })
   useEffect(() => {
     const active = (devicePrefs.typingRecordEnabled && devicePrefs.typingTestViewOnly)
