@@ -8,6 +8,9 @@ import {
   FAV_TYPE_TO_EXPORT_KEY,
   FAV_KEYCODE_FIELDS,
   isValidFavExportFile,
+  isValidVialProtocol,
+  isValidHubVialProtocol,
+  FALLBACK_VIAL_PROTOCOL,
   serializeFavData,
   deserializeFavData,
 } from '../favorite-data'
@@ -170,6 +173,54 @@ describe('isFavoriteDataFile', () => {
     it('rejects missing data field', () => {
       expect(isFavoriteDataFile({ type: 'tapDance' }, 'tapDance')).toBe(false)
     })
+  })
+})
+
+describe('isValidVialProtocol / isValidHubVialProtocol', () => {
+  // Regression guard: `isValidVialProtocol` is the local (non-Hub)
+  // export/import boundary in `favorite-store.ts`, and it stays loose on
+  // purpose — no caller passes -1 today, so tightening it there would be
+  // an unforced, non-Hub-related behavior change. The only place -1
+  // comes from is `emptyState()` in `keyboard-types.ts` (the disconnected
+  // screen); only the Hub upload boundary (`isValidHubVialProtocol`)
+  // needs to reject it.
+  it('isValidVialProtocol still accepts -1', () => {
+    expect(isValidVialProtocol(-1)).toBe(true)
+  })
+
+  it('isValidVialProtocol accepts any finite number', () => {
+    expect(isValidVialProtocol(0)).toBe(true)
+    expect(isValidVialProtocol(6)).toBe(true)
+    expect(isValidVialProtocol(1.5)).toBe(true)
+  })
+
+  it('isValidVialProtocol rejects non-numbers', () => {
+    expect(isValidVialProtocol('6')).toBe(false)
+    expect(isValidVialProtocol(null)).toBe(false)
+    expect(isValidVialProtocol(undefined)).toBe(false)
+    expect(isValidVialProtocol(NaN)).toBe(false)
+  })
+
+  it('isValidHubVialProtocol rejects the -1 sentinel (Hub upload boundary is stricter)', () => {
+    expect(isValidHubVialProtocol(-1)).toBe(false)
+  })
+
+  it('isValidHubVialProtocol accepts non-negative integers', () => {
+    expect(isValidHubVialProtocol(0)).toBe(true)
+    expect(isValidHubVialProtocol(5)).toBe(true)
+    expect(isValidHubVialProtocol(6)).toBe(true)
+  })
+
+  it('isValidHubVialProtocol rejects non-integers and non-numbers', () => {
+    expect(isValidHubVialProtocol(1.5)).toBe(false)
+    expect(isValidHubVialProtocol('6')).toBe(false)
+    expect(isValidHubVialProtocol(null)).toBe(false)
+    expect(isValidHubVialProtocol(undefined)).toBe(false)
+    expect(isValidHubVialProtocol(NaN)).toBe(false)
+  })
+
+  it('FALLBACK_VIAL_PROTOCOL is 6, not 9 (the v6 keycode table resolver requirement)', () => {
+    expect(FALLBACK_VIAL_PROTOCOL).toBe(6)
   })
 })
 

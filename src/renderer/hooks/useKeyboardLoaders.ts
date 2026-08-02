@@ -89,6 +89,16 @@ export function useKeyboardLoaders(
     newState.isDummy = true
     // Use protocol versions from file if available, otherwise default to latest
     newState.viaProtocol = vil.viaProtocol ?? 9
+    // Deliberately NOT FALLBACK_VIAL_PROTOCOL (favorite-data.ts) — that
+    // constant means "no keyboard context" (Data modal, disconnected
+    // screen) and resolves 6, the v6 keycode table. This 9 means "unknown
+    // legacy file era": a foreign/legacy .vil with no vial_protocol field
+    // predates the v3 export format, so it's treated as v5-era and its
+    // keycodes are interpreted via the v5 map on load (see `resolve` in
+    // keycodes-utils.ts: only protocol 6 selects v6, everything else —
+    // including 9 — falls through to v5). Any favorite exported later
+    // from this loaded state stamps `vial_protocol: 9` accordingly,
+    // consistent with how its keycodes were read in.
     newState.vialProtocol = vil.vialProtocol ?? 9
     newState.definition = definition
     newState.rows = definition.matrix.rows

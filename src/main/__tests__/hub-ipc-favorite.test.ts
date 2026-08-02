@@ -233,6 +233,24 @@ describe('hub-ipc favorite handlers', () => {
       expect(getIdToken).not.toHaveBeenCalled()
     })
 
+    // Regression: the Data modal (no keyboard connected) used to forward
+    // the emptyState sentinel -1 straight through to this handler, which
+    // reached the Hub server as `vial_protocol: -1` and got a confusing
+    // 400. It must now fail fast locally instead.
+    it('returns a local error for vialProtocol -1 instead of reaching the Hub', async () => {
+      const handler = getHandler()
+      const result = await handler({}, {
+        type: 'tapDance',
+        entryId: 'entry-1',
+        vialProtocol: -1,
+        title: 'Test',
+      })
+
+      expect(result).toEqual({ success: false, error: 'Invalid vialProtocol' })
+      expect(getIdToken).not.toHaveBeenCalled()
+      expect(uploadFeaturePostToHub).not.toHaveBeenCalled()
+    })
+
     it('returns error for missing title', async () => {
       const handler = getHandler()
 
@@ -372,6 +390,21 @@ describe('hub-ipc favorite handlers', () => {
           data: expect.any(Buffer),
         }),
       )
+    })
+
+    it('returns a local error for vialProtocol -1 instead of reaching the Hub', async () => {
+      const handler = getHandler()
+      const result = await handler({}, {
+        type: 'tapDance',
+        entryId: 'entry-1',
+        vialProtocol: -1,
+        title: 'Test',
+        postId: 'fav-post-1',
+      })
+
+      expect(result).toEqual({ success: false, error: 'Invalid vialProtocol' })
+      expect(getIdToken).not.toHaveBeenCalled()
+      expect(updateFeaturePostOnHub).not.toHaveBeenCalled()
     })
 
     it('returns error for invalid favorite type', async () => {

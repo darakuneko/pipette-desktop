@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import type { HubMyPost, HubUploadResult, HubPaginationMeta, HubFetchMyPostsParams } from '../../shared/types/hub'
 import type { HubPrivateLink } from '../../shared/types/hub-private'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
+import { FALLBACK_VIAL_PROTOCOL, isValidHubVialProtocol } from '../../shared/favorite-data'
 import { useUploadConfirm } from './useUploadConfirm'
 import { linkFromResult } from '../utils/hub-private-link'
 import type { HubEntryResult } from '../components/editors/LayoutStoreModal'
@@ -61,6 +62,15 @@ export function useHubState(options: Options) {
 
   const { t } = useTranslation()
   const { requestUploadOptions } = useUploadConfirm()
+
+  // Favorite Hub uploads read this instead of the raw `vialProtocol` prop.
+  // The Data modal (the only caller that can reach these handlers with no
+  // keyboard connected) passes the emptyState sentinel -1 here, which the
+  // Hub server rejects outright — substitute the shared fallback protocol
+  // in that case. Any other value (a real connected protocol, e.g. 5 or 6)
+  // passes through unchanged. Reusing the same predicate `hub-ipc.ts`
+  // validates with keeps this sanitizer from drifting out of lockstep.
+  const favVialProtocol = isValidHubVialProtocol(vialProtocol) ? vialProtocol : FALLBACK_VIAL_PROTOCOL
 
   const [hubMyPosts, setHubMyPosts] = useState<HubMyPost[]>([])
   const [hubMyPostsPagination, setHubMyPostsPagination] = useState<HubPaginationMeta | undefined>()
@@ -519,7 +529,7 @@ export function useHubState(options: Options) {
       try {
         if (choice.visibility === 'public') {
           const result = await window.vialAPI.hubUploadFavoritePost({
-            type, entryId, title: entry.label || type, vialProtocol,
+            type, entryId, title: entry.label || type, vialProtocol: favVialProtocol,
           })
           if (result.success) {
             if (result.postId) await persistFavHubPostId(type, entryId, result.postId)
@@ -530,7 +540,7 @@ export function useHubState(options: Options) {
           return
         }
         const result = await window.vialAPI.hubUploadPrivateFavoritePost({
-          type, entryId, title: entry.label || type, vialProtocol, expiresInDays: choice.expiresInDays,
+          type, entryId, title: entry.label || type, vialProtocol: favVialProtocol, expiresInDays: choice.expiresInDays,
         })
         if (result.success) {
           await persistFavHubPrivate(type, entryId, linkFromResult(result))
@@ -542,7 +552,7 @@ export function useHubState(options: Options) {
         setFavHubUploadResult({ kind: 'error', message: t('hub.uploadFailed'), entryId })
       }
     })
-  }, [requestUploadOptions, runFavHubOperation, persistFavHubPostId, persistFavHubPrivate, markAccountDeactivated, t, vialProtocol])
+  }, [requestUploadOptions, runFavHubOperation, persistFavHubPostId, persistFavHubPrivate, markAccountDeactivated, t, favVialProtocol])
 
   const handleFavUpdateOnHub = useCallback(async (type: FavoriteType, entryId: string) => {
     const listResult = await window.vialAPI.favoriteStoreList(type)
@@ -560,7 +570,7 @@ export function useHubState(options: Options) {
         // public → public is a plain in-place update (URL preserved).
         if (currentVisibility === 'public' && choice.visibility === 'public') {
           const result = await window.vialAPI.hubUpdateFavoritePost({
-            type, entryId, title: entry.label || type, postId: entry.hubPostId!, vialProtocol,
+            type, entryId, title: entry.label || type, postId: entry.hubPostId!, vialProtocol: favVialProtocol,
           })
           if (result.success) {
             setFavHubUploadResult({ kind: 'success', message: t('hub.updateSuccess'), entryId })
@@ -579,7 +589,7 @@ export function useHubState(options: Options) {
 
         if (choice.visibility === 'public') {
           const result = await window.vialAPI.hubUploadFavoritePost({
-            type, entryId, title: entry.label || type, vialProtocol,
+            type, entryId, title: entry.label || type, vialProtocol: favVialProtocol,
           })
           if (result.success) {
             if (result.postId) await persistFavHubPostId(type, entryId, result.postId)
@@ -590,7 +600,7 @@ export function useHubState(options: Options) {
           return
         }
         const result = await window.vialAPI.hubUploadPrivateFavoritePost({
-          type, entryId, title: entry.label || type, vialProtocol, expiresInDays: choice.expiresInDays,
+          type, entryId, title: entry.label || type, vialProtocol: favVialProtocol, expiresInDays: choice.expiresInDays,
         })
         if (result.success) {
           await persistFavHubPrivate(type, entryId, linkFromResult(result))
@@ -602,7 +612,7 @@ export function useHubState(options: Options) {
         setFavHubUploadResult({ kind: 'error', message: t('hub.updateFailed'), entryId })
       }
     })
-  }, [requestUploadOptions, runFavHubOperation, persistFavHubPostId, persistFavHubPrivate, markAccountDeactivated, t, vialProtocol])
+  }, [requestUploadOptions, runFavHubOperation, persistFavHubPostId, persistFavHubPrivate, markAccountDeactivated, t, favVialProtocol])
 
   const handleFavRemoveFromHub = useCallback(async (type: FavoriteType, entryId: string) => {
     await runFavHubOperation(type, entryId, true, async (entry) => {

@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { FavoriteType, SavedFavoriteMeta } from '../../shared/types/favorite-store'
+import { FALLBACK_VIAL_PROTOCOL } from '../../shared/favorite-data'
 import type { FavoriteImportResultState } from './useFavoriteStore'
 
 export interface UseFavoriteManageReturn {
@@ -17,11 +18,6 @@ export interface UseFavoriteManageReturn {
   exportEntry: (entryId: string) => Promise<boolean>
   importFavorites: () => Promise<boolean>
 }
-
-// The Data modal has no connected keyboard, so use the same fallback
-// vial protocol the snapshot exports use (see useSnapshotActions). The
-// value only stamps the export file's `vial_protocol` header field.
-const FALLBACK_VIAL_PROTOCOL = 9
 
 export function useFavoriteManage(favoriteType: FavoriteType): UseFavoriteManageReturn {
   const { t } = useTranslation()

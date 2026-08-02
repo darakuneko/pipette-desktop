@@ -39,6 +39,38 @@ export function isValidVialProtocol(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v)
 }
 
+/**
+ * Fallback vial protocol used when a favorite Hub export/upload happens
+ * with no keyboard connected (the Data modal only renders on the
+ * disconnected screen, where `vialProtocol` is the emptyState sentinel
+ * -1 — see `keyboard-types.ts`). 6, not 9: on import this value is fed
+ * to `setProtocol` (`withImportProtocol` in `main/favorite-store.ts`),
+ * and the keycode resolver behind `deserialize` treats *only* protocol 6
+ * as the v6 keycode table (`resolve` in `keycodes-utils.ts`: `protocol
+ * === 6 ? keycodesV6.kc : keycodesV5.kc`). 9 would silently fall through
+ * to the v5 map and mis-import protocol-specific keycodes.
+ */
+export const FALLBACK_VIAL_PROTOCOL = 6
+
+/**
+ * Stricter than {@link isValidVialProtocol} — used only at the Hub
+ * upload boundary (`hub-ipc.ts`), where a raw negative protocol should
+ * fail fast locally instead of reaching the server as a confusing 400.
+ * `isValidVialProtocol` itself stays loose on purpose: it's the local
+ * (non-Hub) export/import boundary in `favorite-store.ts`, and tightening
+ * it there is a separate, non-breaking-guaranteed change no caller
+ * currently needs — no caller passes -1 today. (A connected device can
+ * never actually hold -1: preload's protocol read ends in `>>> 0`, so
+ * `vialProtocol` is unsigned once connected, and a genuinely VIA-only
+ * board never reaches the connected state — `useDeviceLifecycle`
+ * disconnects it with `error.notVialCompatible` first. The only place
+ * -1 comes from is `emptyState()` in `keyboard-types.ts`, on the
+ * disconnected screen.)
+ */
+export function isValidHubVialProtocol(v: unknown): v is number {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 0
+}
+
 export function buildFavExportFile(
   vialProtocol: number,
   categories: Record<string, FavoriteExportEntry[]>,
