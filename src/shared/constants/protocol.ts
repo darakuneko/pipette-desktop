@@ -101,11 +101,12 @@ export const VIAL_MACRO_EXT_TAP = 0x05
 export const VIAL_MACRO_EXT_DOWN = 0x06
 export const VIAL_MACRO_EXT_UP = 0x07
 
-// --- Protocol version ranges ---
-export const SUPPORTED_VIA_PROTOCOLS = [-1, 9]
-export const SUPPORTED_VIAL_PROTOCOLS = [-1, 0, 1, 2, 3, 4, 5, 6]
-
 // --- Protocol version feature gates ---
+// vial-gui gates protocol compatibility with explicit value lists
+// (protocol/keyboard_comm.py SUPPORTED_VIA_PROTOCOL / SUPPORTED_VIAL_PROTOCOL,
+// checked at protocol/keyboard_comm.py:111). Pipette has no equivalent constant —
+// an incompatible board simply fails definition load and is disconnected
+// with error.notVialCompatible instead.
 export const VIAL_PROTOCOL_ADVANCED_MACROS = 2
 export const VIAL_PROTOCOL_MATRIX_TESTER = 3
 export const VIAL_PROTOCOL_DYNAMIC = 4

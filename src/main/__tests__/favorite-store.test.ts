@@ -42,6 +42,7 @@ vi.mock('../ipc-guard', async () => {
 import { ipcMain, dialog, BrowserWindow } from 'electron'
 import { notifyChange } from '../sync/sync-service'
 import { setupFavoriteStore } from '../favorite-store'
+import { serialize as serializeKeycode } from '../../shared/keycodes/keycodes'
 import { IpcChannels } from '../../shared/ipc/channels'
 
 type IpcHandler = (...args: unknown[]) => Promise<unknown>
@@ -500,6 +501,78 @@ describe('favorite-store', () => {
       // Only the valid entry should be exported
       expect(exported.categories.td).toHaveLength(1)
       expect(exported.categories.td[0].label).toBe('With Data')
+    })
+
+    // Regression: main always keeps its global keycode protocol at 6, but
+    // `vialProtocol` here can be any protocol the connected keyboard (or a
+    // legacy .vil load) reports. The serializer must run at *that* protocol,
+    // not main's global one, or the header/body pair mis-decodes on import.
+    //
+    // 0x7c00 is a deliberate collision: under protocol 6 it deserializes to
+    // QK_BOOT, but under protocol 5 it is RAG_T(kc) (masked). A layer-code
+    // fixture could false-pass via the template fallback in serializeInternal
+    // without RAWCODES_MAP actually being rebuilt for protocol 5 — this one
+    // cannot, because RAWCODES_MAP.get(0x7c00) resolves to a *different*
+    // keycode identity depending on which protocol rebuilt it.
+    const keyOverrideJsonWithCollisionCode = JSON.stringify({
+      type: 'keyOverride',
+      data: {
+        triggerKey: 0x7c00,
+        replacementKey: 0,
+        layers: 0,
+        triggerMods: 0,
+        negativeMods: 0,
+        suppressedMods: 0,
+        options: 0,
+        enabled: true,
+      },
+    })
+
+    it('serializes keycodes at the requested protocol, not main\'s global v6', async () => {
+      const saveHandler = getHandler(IpcChannels.FAVORITE_STORE_SAVE)
+      await saveHandler(fakeEvent, 'keyOverride', keyOverrideJsonWithCollisionCode, 'KO Entry')
+
+      const exportPath = join(mockUserDataPath, 'export-protocol5.json')
+      vi.mocked(dialog.showSaveDialog).mockResolvedValue({ canceled: false, filePath: exportPath })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
+      const result = await handler(fakeEvent, 'keyOverride', 5) as { success: boolean }
+      expect(result.success).toBe(true)
+
+      const exported = JSON.parse(await readFile(exportPath, 'utf-8'))
+      expect(exported.vial_protocol).toBe(5)
+      expect(exported.categories.ko).toHaveLength(1)
+      // Under protocol 6 (main's global default) this would serialize as
+      // 'QK_BOOT' instead — proof the body was NOT re-serialized at v5.
+      expect(exported.categories.ko[0].data.triggerKey).toBe('RAG_T(KC_NO)')
+      // ...and main's global tables must be back at v6 afterwards. Covers the
+      // `finally` restore, including its second `recreateKeycodes()`: without
+      // that rebuild RAWCODES_MAP would still hold the v5 snapshot here.
+      expect(serializeKeycode(0x7c00)).toBe('QK_BOOT')
+    })
+
+    it('round-trips a protocol-5 export through export-current -> import-to-current', async () => {
+      const exportPath = join(mockUserDataPath, 'export-current-protocol5.json')
+      vi.mocked(dialog.showSaveDialog).mockResolvedValue({ canceled: false, filePath: exportPath })
+
+      const exportCurrentHandler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT_CURRENT)
+      const exportResult = await exportCurrentHandler(
+        fakeEvent, 'keyOverride', 5, keyOverrideJsonWithCollisionCode,
+      ) as { success: boolean }
+      expect(exportResult.success).toBe(true)
+
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({ canceled: false, filePaths: [exportPath] })
+
+      const importToCurrentHandler = getHandler(IpcChannels.FAVORITE_STORE_IMPORT_TO_CURRENT)
+      const importResult = await importToCurrentHandler(fakeEvent, 'keyOverride') as {
+        success: boolean
+        data: Record<string, unknown>
+      }
+      expect(importResult.success).toBe(true)
+      // Must come back as the exact same raw code that went in. If the body
+      // had been serialized at v6 while the header said 5, this would
+      // deserialize to QK_BOOT's v5 numeric value (0x5c00) instead.
+      expect(importResult.data.triggerKey).toBe(0x7c00)
     })
   })
 
