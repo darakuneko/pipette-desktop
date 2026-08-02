@@ -100,6 +100,7 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
   }, [enabled, favoriteType, serialize, refreshEntries, t])
 
   const loadFavorite = useCallback(async (entryId: string): Promise<boolean> => {
+    if (!enabled) return false
     setError(null)
     setLoading(true)
     try {
@@ -124,9 +125,10 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
     } finally {
       setLoading(false)
     }
-  }, [favoriteType, apply, t])
+  }, [enabled, favoriteType, apply, t])
 
   const renameEntry = useCallback(async (entryId: string, newLabel: string): Promise<boolean> => {
+    if (!enabled) return false
     setError(null)
     try {
       const result = await window.vialAPI.favoriteStoreRename(favoriteType, entryId, newLabel)
@@ -138,9 +140,10 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
     } catch {
       return false
     }
-  }, [favoriteType, refreshEntries])
+  }, [enabled, favoriteType, refreshEntries])
 
   const deleteEntry = useCallback(async (entryId: string): Promise<boolean> => {
+    if (!enabled) return false
     setError(null)
     try {
       const result = await window.vialAPI.favoriteStoreDelete(favoriteType, entryId)
@@ -152,7 +155,7 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
     } catch {
       return false
     }
-  }, [favoriteType, refreshEntries])
+  }, [enabled, favoriteType, refreshEntries])
 
   const exportCurrent = useCallback(async (): Promise<boolean> => {
     if (!enabled) return false
@@ -178,6 +181,7 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
   }, [enabled, favoriteType, serialize, vialProtocol, t])
 
   const importCurrent = useCallback(async (): Promise<boolean> => {
+    if (!enabled) return false
     setError(null)
     try {
       const result = await window.vialAPI.favoriteStoreImportToCurrent(favoriteType)
@@ -193,7 +197,7 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
       setError(t('favoriteStore.importFailed'))
       return false
     }
-  }, [favoriteType, apply, t])
+  }, [enabled, favoriteType, apply, t])
 
   const doExport = useCallback(async (entryId?: string): Promise<boolean> => {
     if (!enabled) return false
@@ -227,6 +231,7 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
   }, [doExport])
 
   const importFavorites = useCallback(async (): Promise<boolean> => {
+    if (!enabled) return false
     setError(null)
     setImportResult(null)
     setImporting(true)
@@ -247,7 +252,7 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
     } finally {
       setImporting(false)
     }
-  }, [refreshEntries, t])
+  }, [enabled, refreshEntries, t])
 
   return {
     entries,
