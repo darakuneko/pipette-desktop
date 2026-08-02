@@ -1066,7 +1066,7 @@ describe('useDevicePrefs', () => {
       })
     })
 
-    it.each([0, 1, 2, 3])('round-trips a valid guideWordCount of %i', async (guideWordCount) => {
+    it.each([0, 1, 2, 3])('round-trips a valid guideLineCount of %i', async (guideLineCount) => {
       setupMocks()
       mockPipetteSettingsGet.mockResolvedValue({
         _rev: 1,
@@ -1078,7 +1078,7 @@ describe('useDevicePrefs', () => {
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          romaji: { guideWordCount },
+          romaji: { guideLineCount },
         },
       } as never)
 
@@ -1093,11 +1093,11 @@ describe('useDevicePrefs', () => {
         wordCount: 30,
         punctuation: false,
         numbers: false,
-        romaji: { guideWordCount },
+        romaji: { guideLineCount },
       })
     })
 
-    it.each([4, -1, 1.5, 'two'])('drops an out-of-range/non-integer guideWordCount (%p) but keeps the rest of romaji', async (guideWordCount) => {
+    it.each([4, -1, 1.5, 'two'])('drops an out-of-range/non-integer guideLineCount (%p) but keeps the rest of romaji', async (guideLineCount) => {
       setupMocks()
       mockPipetteSettingsGet.mockResolvedValue({
         _rev: 1,
@@ -1109,7 +1109,7 @@ describe('useDevicePrefs', () => {
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          romaji: { caseStyle: 'capital', guideWordCount },
+          romaji: { caseStyle: 'capital', guideLineCount },
         },
       } as never)
 
@@ -1125,6 +1125,104 @@ describe('useDevicePrefs', () => {
         punctuation: false,
         numbers: false,
         romaji: { caseStyle: 'capital' },
+      })
+    })
+
+    // Plan-romaji-guide-line-sync: guideWordCount was renamed to
+    // guideLineCount (same 0-3 int range, same "0 = hidden" meaning). A
+    // config persisted before the rename only carries the legacy field, so
+    // it's mapped over on read rather than silently losing the user's
+    // explicit choice — see validateRomajiDetailSettings.
+    it('migrates a legacy guideWordCount to guideLineCount when guideLineCount is absent', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romaji: { guideWordCount: 3 },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { guideLineCount: 3 },
+      })
+    })
+
+    it('prefers guideLineCount over a legacy guideWordCount when both are present', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romaji: { guideLineCount: 1, guideWordCount: 3 },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { guideLineCount: 1 },
+      })
+    })
+
+    it('migrates a legacy guideWordCount of 0 (explicitly hidden) to guideLineCount', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romaji: { guideWordCount: 0 },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { guideLineCount: 0 },
       })
     })
 

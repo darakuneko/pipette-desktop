@@ -52,18 +52,18 @@ describe('RomajiSettingsModal defaults', () => {
     expect(screen.getByTestId('romaji-case-upper').className).not.toContain('text-accent')
   })
 
-  it('defaults the guide word count selector to 2', () => {
+  it('defaults the guide line count selector to 2', () => {
     renderModal()
-    expect(screen.getByTestId('romaji-guide-words-2').className).toContain('text-accent')
+    expect(screen.getByTestId('romaji-guide-lines-2').className).toContain('text-accent')
     for (const n of [0, 1, 3]) {
-      expect(screen.getByTestId(`romaji-guide-words-${n}`).className).not.toContain('text-accent')
+      expect(screen.getByTestId(`romaji-guide-lines-${n}`).className).not.toContain('text-accent')
     }
   })
 
-  it('highlights the persisted guideWordCount instead of the default', () => {
-    renderModal({ config: { ...BASE_CONFIG, romaji: { guideWordCount: 0 } } })
-    expect(screen.getByTestId('romaji-guide-words-0').className).toContain('text-accent')
-    expect(screen.getByTestId('romaji-guide-words-2').className).not.toContain('text-accent')
+  it('highlights the persisted guideLineCount instead of the default', () => {
+    renderModal({ config: { ...BASE_CONFIG, romaji: { guideLineCount: 0 } } })
+    expect(screen.getByTestId('romaji-guide-lines-0').className).toContain('text-accent')
+    expect(screen.getByTestId('romaji-guide-lines-2').className).not.toContain('text-accent')
   })
 
   it('defaults the guide Base selector to Hepburn, with every Option off', () => {
@@ -137,26 +137,26 @@ describe('RomajiSettingsModal edits', () => {
     if (arg.mode === 'words') expect(arg.romaji).toEqual({ caseStyle: 'capital' })
   })
 
-  it('setting guideWordCount to 0 persists it explicitly', () => {
+  it('setting guideLineCount to 0 persists it explicitly', () => {
     const onConfigChange = vi.fn()
     renderModal({ onConfigChange })
-    fireEvent.click(screen.getByTestId('romaji-guide-words-0'))
+    fireEvent.click(screen.getByTestId('romaji-guide-lines-0'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    if (arg.mode === 'words') expect(arg.romaji).toEqual({ guideWordCount: 0 })
+    if (arg.mode === 'words') expect(arg.romaji).toEqual({ guideLineCount: 0 })
   })
 
-  it('setting guideWordCount to 3 persists it explicitly', () => {
+  it('setting guideLineCount to 3 persists it explicitly', () => {
     const onConfigChange = vi.fn()
     renderModal({ onConfigChange })
-    fireEvent.click(screen.getByTestId('romaji-guide-words-3'))
+    fireEvent.click(screen.getByTestId('romaji-guide-lines-3'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    if (arg.mode === 'words') expect(arg.romaji).toEqual({ guideWordCount: 3 })
+    if (arg.mode === 'words') expect(arg.romaji).toEqual({ guideLineCount: 3 })
   })
 
-  it('re-selecting the default guideWordCount of 2 prunes the field back to unset', () => {
+  it('re-selecting the default guideLineCount of 2 prunes the field back to unset', () => {
     const onConfigChange = vi.fn()
-    renderModal({ config: { ...BASE_CONFIG, romaji: { guideWordCount: 0 } }, onConfigChange })
-    fireEvent.click(screen.getByTestId('romaji-guide-words-2'))
+    renderModal({ config: { ...BASE_CONFIG, romaji: { guideLineCount: 0 } }, onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-guide-lines-2'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
     if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
   })

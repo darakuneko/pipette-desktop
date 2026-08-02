@@ -159,6 +159,16 @@ export function TypingTestView({
   const monkeytypeActive = realLines === null
   const { lines: visualLines, mirrorRef } = useVisualLines(wordsRef, state.words, fontSize, monkeytypeActive)
   const lines = realLines ?? visualLines
+  // Romaji guide line-sync: which line rows to preview in the guide row
+  // below the reading window, anchored to whichever row the current word
+  // sits on (real or synthetic — same `lines` shape either way). `null`
+  // when `lines` itself is unmeasured/flat (jsdom, or before first paint) —
+  // the guide row falls back to its own single-flow rendering in that case
+  // (see the guide row JSX below), same as the reading window does above.
+  const guideLines = lines && romajiGuide ? lines.slice(
+    rowIndexForWord(lines, state.currentWordIndex),
+    rowIndexForWord(lines, state.currentWordIndex) + romajiGuide.lineCount,
+  ) : null
   // The mirror's own content (expected word text only) never changes per
   // keystroke — only `currentInput`/`currentWordIndex` do, which re-render
   // the whole component. Memoizing the child span array on `state.words`
@@ -188,6 +198,12 @@ export function TypingTestView({
     () => ({ '--tt-font': fontSize, '--tt-lines': displayLines, height: `${windowHeight}px` } as CSSProperties),
     [fontSize, displayLines, windowHeight],
   )
+  // Romaji guide row: font size only — it must NOT inherit the reading
+  // window's `height` (multilineStyle above tracks `displayLines`, which is
+  // unrelated to the guide's own `lineCount`; carrying it over here would
+  // stretch/clip the guide row to the reading window's height instead of
+  // sizing to its own content).
+  const romajiGuideStyle = useMemo(() => ({ '--tt-font': fontSize } as CSSProperties), [fontSize])
   function clearImeInput(): void {
     if (imeInputRef.current) imeInputRef.current.value = ''
   }
@@ -279,6 +295,35 @@ export function TypingTestView({
       romajiGuide={wordIdx === state.currentWordIndex ? romajiGuide : null}
     />
   )
+
+  // One word's worth of the line-synchronized romaji guide row — 4-tier
+  // coloring by position relative to the current word: done (dimmed
+  // success tone), current (typed/remaining split, same as before), and
+  // upcoming (dimmed muted tone, same `typing-test-romaji-lookahead` testid
+  // the flat fallback below also uses, so both paths satisfy the same
+  // selector contract). `isFirst` suppresses the inter-word leading space
+  // for the first word on a line — words after it get one, same convention
+  // the old lookahead rendering used.
+  const renderGuideWord = (guide: RomajiGuide, wordIdx: number, isFirst: boolean) => {
+    const prefix = isFirst ? '' : ' '
+    if (wordIdx === state.currentWordIndex) {
+      return (
+        <span key={wordIdx}>
+          <span className="text-success">{prefix + guide.typed}</span>
+          <span className="text-content-muted">{guide.remaining}</span>
+        </span>
+      )
+    }
+    const word = guide.words[wordIdx] ?? ''
+    if (wordIdx < state.currentWordIndex) {
+      return <span key={wordIdx} className="text-success/60">{prefix + word}</span>
+    }
+    return (
+      <span key={wordIdx} data-testid="typing-test-romaji-lookahead" className="text-content-muted/40">
+        {prefix + word}
+      </span>
+    )
+  }
 
   return (
     <div data-testid="typing-test-view" className="flex w-full min-w-0 flex-col items-center gap-4 px-4 py-4">
@@ -398,31 +443,49 @@ export function TypingTestView({
         )}
       </div>
 
-      {/* Romaji guide — the current word's confirmed/remaining romaji
-          spelling, a fainter look-ahead preview of the upcoming words' full
-          spelling, plus an IME-on hint once a composition event proves
-          direct keystrokes aren't reaching the matcher. Rendered as its own
-          row below the reading window rather than inline per-word: the
-          words row is a single flex-wrap flow (word-flow modes have no
-          per-line rows to anchor an inline guide under), so a fixed row
-          here avoids overlapping whatever wraps below the current word.
-          The spelling row is gated on `showRow` (guideWordCount === 0 hides
-          it), but the IME hint always shows once detected — it's a warning
-          about input not landing, which stays relevant even with the guide
-          row hidden. The typed/remaining/lookahead line tracks the Font
-          setting via the same --tt-font var as the reading window; the IME
-          hint stays a fixed small size since it's a hint, not reading
-          content. */}
+      {/* Romaji guide — line-synchronized with the reading window's own
+          word lines (real or synthetic — see `guideLines` above): each
+          guide line previews the same words that line shows in the reading
+          window, anchored to start at the line the current word sits on.
+          Falls back to the old single-flow rendering (current word's
+          typed/remaining plus a flat lookahead slice of `words`) whenever
+          `lines` itself is unmeasured (jsdom, or before first paint) — same
+          fallback the reading window uses. Plus an IME-on hint once a
+          composition event proves direct keystrokes aren't reaching the
+          matcher. The spelling row is gated on `showRow` (lineCount === 0
+          hides it), but the IME hint always shows once detected — it's a
+          warning about input not landing, which stays relevant even with
+          the guide row hidden. Every guide line tracks the Font setting via
+          the same --tt-font var as the reading window (romajiGuideStyle —
+          deliberately NOT multilineStyle, which also carries the reading
+          window's own inline height); the IME hint stays a fixed small size
+          since it's a hint, not reading content. The guide row is
+          deliberately left un-capped in width (unlike the reading window's
+          max-w-4xl above) so a whole romaji line fits on one row without
+          wrapping on wide windows, but its left edge is pinned to line up
+          with the centered max-w-4xl reading window via the same
+          --container-4xl token (pl-[calc((100%-min(var(--container-4xl),100%))/2)]
+          clamps to 0 once the pane is at or below that width). */}
       {romajiGuide && (romajiGuide.showRow || imeDetected) && (
-        <div data-testid="typing-test-romaji-guide" className="flex w-full max-w-4xl flex-col items-start gap-1 font-mono" style={multilineStyle}>
+        <div data-testid="typing-test-romaji-guide" className="flex w-full flex-col items-start gap-1 pl-[calc((100%-min(var(--container-4xl),100%))/2)] font-mono" style={romajiGuideStyle}>
           {romajiGuide.showRow && (
-            <p className="typing-romaji-guide-text break-all">
-              <span className="text-success">{romajiGuide.typed}</span>
-              <span className="text-content-muted">{romajiGuide.remaining}</span>
-              {romajiGuide.lookahead.map((word, i) => (
-                <span key={i} data-testid="typing-test-romaji-lookahead" className="text-content-muted/40">{' ' + word}</span>
-              ))}
-            </p>
+            guideLines ? (
+              guideLines.map((lineWordIdxs, lineIdx) => (
+                <p key={lineIdx} data-testid={`typing-test-romaji-guide-line-${lineIdx}`} className="typing-romaji-guide-text">
+                  {lineWordIdxs.map((wordIdx, j) => renderGuideWord(romajiGuide, wordIdx, j === 0))}
+                </p>
+              ))
+            ) : (
+              <p className="typing-romaji-guide-text break-all">
+                <span className="text-success">{romajiGuide.typed}</span>
+                <span className="text-content-muted">{romajiGuide.remaining}</span>
+                {romajiGuide.words
+                  .slice(state.currentWordIndex + 1, state.currentWordIndex + romajiGuide.lineCount)
+                  .map((word, i) => (
+                    <span key={i} data-testid="typing-test-romaji-lookahead" className="text-content-muted/40">{' ' + word}</span>
+                  ))}
+              </p>
+            )
           )}
           {imeDetected && (
             <p data-testid="typing-test-romaji-ime-hint" className="text-xs text-warning">

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.57",
+  "version": "0.1.58",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -337,7 +337,7 @@
           "capital": "Romaji",
           "lower": "romaji"
         },
-        "guideWordsLabel": "表示語数",
+        "guideLinesLabel": "表示行数",
         "guideLabel": "表示する綴りの型",
         "guideHint": "表示のみにございます。他の入力パターンでも正解となります",
         "inputLabel": "受理する入力の型",

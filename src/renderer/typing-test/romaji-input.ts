@@ -6,7 +6,7 @@
 
 import { createRomajiMatcher, canonicalRomaji, type RomajiMatcher, type RomajiMatcherOptions } from './romaji-engine'
 import type { TypingTestConfig, RomajiDetailSettings, RomajiGuide } from './types'
-import { ROMAJI_INPUT_LANGUAGES, applyRomajiCaseStyle } from './types'
+import { ROMAJI_INPUT_LANGUAGES } from './types'
 import { type TypingTestState, isSubmitKey, advanceAfterWord } from './run-state'
 
 /** True when the romaji-keystroke matcher can operate at all for the given
@@ -207,34 +207,48 @@ function handleRomajiChar(state: TypingTestState, char: string, config: TypingTe
   return { ...state, romajiKeystrokes: state.romajiKeystrokes + char, correctChars, confirmedChars, mistakes, romajiSegmentErred }
 }
 
+/** Full-run per-word canonical romaji table (romajiInput mode only),
+ *  unbounded and index-aligned with `state.words` — the source `words`
+ *  field of the guide `TypingTestView` line-synchronizes against the
+ *  reading window's own line structure (see `RomajiGuide`'s doc comment).
+ *  Deliberately split out from `buildRomajiGuideProgress` below: building
+ *  this table runs a full `RomajiMatcher` over every word in the run
+ *  (O(n) in word count), so it must only rebuild when the run's word list
+ *  itself changes (fresh run / time-mode refill) — never on every
+ *  keystroke. `useTypingTest` memoizes this separately from the
+ *  keystroke-reactive half for exactly that reason (dependency set is
+ *  `[state.words, ...]`, deliberately NOT `state.romajiKeystrokes`).
+ *  Returns null once romaji judging isn't active for this config/language. */
+export function buildRomajiWordsTable(config: TypingTestConfig, language: string, state: TypingTestState): string[] | null {
+  if (!isRomajiInputActive(config, language, state.romajiCapable)) return null
+  const detail = romajiDetail(config)
+  return state.words.map((w) => buildRomajiMatcher(w, '', detail).remainingGuide())
+}
+
 /** Current word's romaji progress (romajiInput mode only), re-derived from
  *  the accepted keystroke history on every call rather than stored on
- *  state directly — see `buildRomajiMatcher`. `guideWordCount` is the total
- *  number of words shown in the guide row (current word included), so the
- *  look-ahead word count is one fewer; the slice's end <= start for counts
- *  0 and 1 naturally yields an empty `lookahead`. `showRow` is false only
- *  at count 0 — kanaCompleted (for WordDisplay's coloring) is always
- *  computed regardless, since it must keep working even when the row
- *  itself is hidden. Returns null once romaji judging isn't active for
- *  this config/language, or the run has no current word left. Pure — the
- *  caller (useTypingTest) wraps this in a useMemo with the same
- *  dependency set the inline computation used before extraction. */
-export function buildRomajiGuide(config: TypingTestConfig, language: string, state: TypingTestState): RomajiGuide | null {
+ *  state directly — see `buildRomajiMatcher`. `lineCount` is the total
+ *  number of guide lines to show (`RomajiDetailSettings.guideLineCount`,
+ *  default 2); `showRow` is false only at count 0 — kanaCompleted (for
+ *  WordDisplay's coloring) is always computed regardless, since it must
+ *  keep working even when the row itself is hidden. Returns null once
+ *  romaji judging isn't active for this config/language, or the run has no
+ *  current word left. Pure, and deliberately excludes the `words` table
+ *  (see `buildRomajiWordsTable`) — the caller (`useTypingTest`) composes
+ *  the two into a full `RomajiGuide` and applies `applyRomajiCaseStyle`
+ *  once over the merged object. */
+export function buildRomajiGuideProgress(config: TypingTestConfig, language: string, state: TypingTestState): Omit<RomajiGuide, 'words'> | null {
   if (!isRomajiInputActive(config, language, state.romajiCapable)) return null
   if (state.currentWordIndex >= state.words.length) return null
   const word = state.words[state.currentWordIndex]
   const detail = romajiDetail(config)
   const matcher = buildRomajiMatcher(word, state.romajiKeystrokes, detail)
-  const guideWordCount = detail?.guideWordCount ?? 2
-  const lookahead = state.words
-    .slice(state.currentWordIndex + 1, state.currentWordIndex + guideWordCount)
-    .map((w) => buildRomajiMatcher(w, '', detail).remainingGuide())
-  const guide: RomajiGuide = {
+  const lineCount = detail?.guideLineCount ?? 2
+  return {
     typed: matcher.typedRomaji(),
     remaining: matcher.remainingGuide(),
     kanaCompleted: matcher.completedKanaCount(),
-    lookahead,
-    showRow: guideWordCount > 0,
+    lineCount,
+    showRow: lineCount > 0,
   }
-  return applyRomajiCaseStyle(guide, detail?.caseStyle)
 }

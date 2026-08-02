@@ -1,5 +1,5 @@
 {
-  "version": "0.1.57",
+  "version": "0.1.58",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -337,7 +337,7 @@
           "capital": "Romaji",
           "lower": "romaji"
         },
-        "guideWordsLabel": "表示語数っしょ",
+        "guideLinesLabel": "表示行数っしょ",
         "guideLabel": "表示パターンっしょ",
         "guideHint": "表示だけだから、他の入力パターンでも正解になるよん☆",
         "inputLabel": "入力パターンっしょ",

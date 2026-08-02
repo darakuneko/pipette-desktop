@@ -586,7 +586,10 @@ describe('TypingTestView IME space key', () => {
   })
 })
 
-describe('TypingTestView romaji guide', () => {
+describe('TypingTestView romaji guide — flat fallback (no measured lines)', () => {
+  // jsdom never lays elements out (width stays 0), so `lines` is always null
+  // here regardless of state.lineBreaks — every test in this block exercises
+  // the flat single-flow rendering path (see TypingTestView's `guideLines`).
   it('does not render the guide row when romajiGuide is null', () => {
     renderView({ state: makeState({ status: 'running', words: ['あい'] }) })
     expect(screen.queryByTestId('typing-test-romaji-guide')).toBeNull()
@@ -595,7 +598,7 @@ describe('TypingTestView romaji guide', () => {
   it('renders typed and remaining romaji, and rewrites on prop changes', () => {
     const { rerender } = renderView({
       state: makeState({ status: 'running', words: ['あい'] }),
-      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [], showRow: true },
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, words: ['ai'], lineCount: 2, showRow: true },
     })
     let guide = screen.getByTestId('typing-test-romaji-guide')
     expect(guide.textContent).toBe('ai')
@@ -610,7 +613,7 @@ describe('TypingTestView romaji guide', () => {
           remainingSeconds={null}
           config={DEFAULT_CONFIG}
           paused={false}
-          romajiGuide={{ typed: 'a', remaining: 'i', kanaCompleted: 1, lookahead: [], showRow: true }}
+          romajiGuide={{ typed: 'a', remaining: 'i', kanaCompleted: 1, words: ['ai'], lineCount: 2, showRow: true }}
         />
       </I18nextProvider>,
     )
@@ -623,7 +626,7 @@ describe('TypingTestView romaji guide', () => {
   it('renders the lookahead words, space-separated, after typed/remaining', () => {
     renderView({
       state: makeState({ status: 'running', words: ['あい', 'かめ', 'いぬ'] }),
-      romajiGuide: { typed: 'a', remaining: 'i', kanaCompleted: 1, lookahead: ['kame', 'inu'], showRow: true },
+      romajiGuide: { typed: 'a', remaining: 'i', kanaCompleted: 1, words: ['ai', 'kame', 'inu'], lineCount: 3, showRow: true },
     })
     const guide = screen.getByTestId('typing-test-romaji-guide')
     const lookaheadSpans = screen.getAllByTestId('typing-test-romaji-lookahead')
@@ -633,10 +636,10 @@ describe('TypingTestView romaji guide', () => {
     expect(guide.textContent).toBe('ai kame inu')
   })
 
-  it('does not render any lookahead span when lookahead is empty', () => {
+  it('does not render any lookahead span when lineCount leaves nothing upcoming', () => {
     renderView({
       state: makeState({ status: 'running', words: ['あい'] }),
-      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [], showRow: true },
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, words: ['ai'], lineCount: 2, showRow: true },
     })
     expect(screen.queryByTestId('typing-test-romaji-lookahead')).toBeNull()
   })
@@ -644,7 +647,7 @@ describe('TypingTestView romaji guide', () => {
   it('shows the IME hint once a composition event fires in romaji mode', () => {
     renderView({
       state: makeState({ status: 'running', words: ['あい'] }),
-      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [], showRow: true },
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, words: ['ai'], lineCount: 2, showRow: true },
     })
     expect(screen.queryByTestId('typing-test-romaji-ime-hint')).toBeNull()
     const textarea = screen.getByLabelText('IME input') as HTMLTextAreaElement
@@ -663,7 +666,7 @@ describe('TypingTestView romaji guide', () => {
     renderView({
       fontSize: 40,
       state: makeState({ status: 'running', words: ['あい'] }),
-      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [], showRow: true },
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, words: ['ai'], lineCount: 2, showRow: true },
     })
     const guide = screen.getByTestId('typing-test-romaji-guide')
     expect(guide.style.getPropertyValue('--tt-font')).toBe('40')
@@ -673,10 +676,23 @@ describe('TypingTestView romaji guide', () => {
     expect(guide.querySelector('[data-testid="typing-test-romaji-ime-hint"]')).toBeNull()
   })
 
+  // Height-leak fix (romajiGuideStyle, distinct from multilineStyle): the
+  // guide container must carry only --tt-font, never the reading window's
+  // own inline `height` (multilineStyle's `windowHeight`) — regression
+  // coverage for the bug this feature fixed.
+  it('never carries an inline height on the guide container (height-leak fix)', () => {
+    renderView({
+      state: makeState({ status: 'running', words: ['あい'] }),
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, words: ['ai'], lineCount: 2, showRow: true },
+    })
+    const guide = screen.getByTestId('typing-test-romaji-guide')
+    expect(guide.style.height).toBe('')
+  })
+
   it('hides the guide row entirely when showRow is false and no IME hint is active', () => {
     renderView({
       state: makeState({ status: 'running', words: ['あい'] }),
-      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [], showRow: false },
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, words: ['ai'], lineCount: 0, showRow: false },
     })
     expect(screen.queryByTestId('typing-test-romaji-guide')).toBeNull()
   })
@@ -684,7 +700,7 @@ describe('TypingTestView romaji guide', () => {
   it('shows only the IME hint (no spelling row) when showRow is false but the IME is detected', () => {
     renderView({
       state: makeState({ status: 'running', words: ['あい'] }),
-      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, lookahead: [], showRow: false },
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, words: ['ai'], lineCount: 0, showRow: false },
     })
     const textarea = screen.getByLabelText('IME input') as HTMLTextAreaElement
     fireEvent.compositionStart(textarea)
@@ -693,6 +709,80 @@ describe('TypingTestView romaji guide', () => {
     expect(guide.querySelector('.typing-romaji-guide-text')).toBeNull()
   })
 
+  it('never renders per-line guide testids when lines are unmeasured', () => {
+    renderView({
+      state: makeState({ status: 'running', words: ['あい', 'かめ'] }),
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0, words: ['ai', 'kame'], lineCount: 2, showRow: true },
+    })
+    expect(screen.queryByTestId('typing-test-romaji-guide-line-0')).toBeNull()
+  })
+})
+
+// The real-lines path (state.lineBreaks) is used here instead of the
+// synthetic monkeytype rows (useVisualLines) because jsdom can't measure
+// layout — real line rows don't need measurement, so they're the only way
+// to exercise the line-synchronized guide under jsdom.
+describe('TypingTestView romaji guide — line-synchronized (real lines)', () => {
+  it('anchors the guide to the current row: cursor on line 2 starts the guide at line 2, not line 1', () => {
+    // 6 words, breaks after index 1 and 3 -> 3 lines of 2 words each:
+    // line0=[0,1], line1=[2,3], line2=[4,5].
+    renderView({
+      state: makeState({
+        status: 'running',
+        words: ['w0', 'w1', 'w2', 'w3', 'w4', 'w5'],
+        lineBreaks: new Set([1, 3]),
+        currentWordIndex: 2,
+      }),
+      romajiGuide: {
+        typed: 'ty', remaining: 'ped', kanaCompleted: 1,
+        words: ['r0', 'r1', 'r2', 'r3', 'r4', 'r5'],
+        lineCount: 2, showRow: true,
+      },
+    })
+    expect(screen.queryByTestId('typing-test-romaji-guide-line-0')).not.toBeNull()
+    expect(screen.queryByTestId('typing-test-romaji-guide-line-1')).not.toBeNull()
+    // Guide line 0 is line1's romaji ([2,3]) — current word (2) typed/remaining
+    // plus word 3 as same-line lookahead; guide line 1 is line2's romaji ([4,5]),
+    // both entirely lookahead. Line0 ([0,1], before the current row) never appears.
+    expect(screen.getByTestId('typing-test-romaji-guide-line-0').textContent).toBe('typed r3')
+    expect(screen.getByTestId('typing-test-romaji-guide-line-1').textContent).toBe('r4 r5')
+  })
+
+  it('colors a done word (before the current word, same line) with the dimmed success tone', () => {
+    // line0=[0,1], line1=[2,3]; currentWordIndex=3 -> word2 is "done" on the
+    // same guide line as the current word.
+    renderView({
+      state: makeState({
+        status: 'running',
+        words: ['w0', 'w1', 'w2', 'w3'],
+        lineBreaks: new Set([1]),
+        currentWordIndex: 3,
+      }),
+      romajiGuide: {
+        typed: 'ty', remaining: 'ped', kanaCompleted: 1,
+        words: ['r0', 'r1', 'r2', 'r3'],
+        lineCount: 1, showRow: true,
+      },
+    })
+    const line = screen.getByTestId('typing-test-romaji-guide-line-0')
+    expect(line.textContent).toBe('r2 typed')
+    const done = line.querySelector('.text-success\\/60')
+    expect(done?.textContent).toBe('r2')
+    expect(line.querySelector('.text-success')?.textContent).toBe(' ty')
+    expect(line.querySelector('.text-content-muted')?.textContent).toBe('ped')
+    // The done-word tier is distinguishable from both the current word's
+    // typed tone and the lookahead tone (asserted in the anchor test above).
+    expect(done?.className).not.toContain('text-content-muted')
+  })
+
+  it('never carries an inline height on the guide container with real lines either', () => {
+    renderView({
+      state: makeState({ status: 'running', words: ['w0', 'w1'], lineBreaks: new Set([0]) }),
+      romajiGuide: { typed: '', remaining: 'r0', kanaCompleted: 0, words: ['r0', 'r1'], lineCount: 2, showRow: true },
+    })
+    const guide = screen.getByTestId('typing-test-romaji-guide')
+    expect(guide.style.height).toBe('')
+  })
 })
 
 describe('TypingTestView paused overlay', () => {
