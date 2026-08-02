@@ -10,6 +10,7 @@ import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE } from './types'
 import { WordDisplay } from './WordDisplay'
 import { TypingTestControlsRow } from './TypingTestControlsRow'
 import { TypingTestStatsRow } from './TypingTestStatsRow'
+import { useVisualLines } from './useVisualLines'
 
 
 interface Props {
@@ -88,13 +89,16 @@ function groupIntoLines(words: string[], lineBreaks: Set<number>): number[][] {
   return lines
 }
 
-/** Which logical line the word index sits on (= breaks before it). */
-function lineIndexOf(wordIndex: number, lineBreaks: Set<number>): number {
-  let line = 0
-  for (const b of lineBreaks) {
-    if (b < wordIndex) line++
+/** Which row (real line, per `groupIntoLines`, or synthetic, per
+ *  `useVisualLines`) a word index sits on — both shapes are the same
+ *  `number[][]` of word indices, so one lookup serves both. Falls back to
+ *  the last row for an out-of-range index (e.g. `currentWordIndex ===
+ *  words.length` once a run finishes). */
+function rowIndexForWord(lines: number[][], wordIndex: number): number {
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].includes(wordIndex)) return i
   }
-  return line
+  return Math.max(0, lines.length - 1)
 }
 
 export function TypingTestView({
@@ -140,11 +144,34 @@ export function TypingTestView({
     setImeDetected(false)
   }, [state.runId])
 
-  // Sources with line breaks render as explicit line rows; every other mode
-  // keeps the flat word-flow layout. `null` = flat.
-  const lines = useMemo(
+  // Sources with real line breaks (tatoeba/fileImport) render as explicit
+  // line rows, unchanged from before. `null` = no real lines.
+  const realLines = useMemo(
     () => (state.lineBreaks.size > 0 ? groupIntoLines(state.words, state.lineBreaks) : null),
     [state.words, state.lineBreaks],
+  )
+  // Monkeytype modes (words/time/quote — lineBreaks empty) render synthetic
+  // line rows too, derived from a hidden-mirror measurement (see
+  // useVisualLines) instead of the flat CSS word-flow, so the reading
+  // window addresses N lines the same way real line rows do. Falls back to
+  // flat when unmeasured (jsdom, or before the first paint).
+  const monkeytypeActive = realLines === null
+  const { lines: visualLines, mirrorRef } = useVisualLines(wordsRef, state.words, fontSize, monkeytypeActive)
+  const lines = realLines ?? visualLines
+  // The mirror's own content (expected word text only) never changes per
+  // keystroke — only `currentInput`/`currentWordIndex` do, which re-render
+  // the whole component. Memoizing the child span array on `state.words`
+  // keeps those elements referentially stable across keystrokes, so React
+  // bails out of reconciling the mirror's subtree entirely on every
+  // keystroke instead of re-diffing every word span for no reason.
+  const mirrorChildren = useMemo(
+    () =>
+      state.words.map((word, wordIdx) => (
+        <span key={wordIdx} data-mirror-word={wordIdx} className="min-w-0 break-all">
+          {word}
+        </span>
+      )),
+    [state.words],
   )
   // Reading window: font size + line count drive the CSS calc in
   // .typing-multiline-window. Applied to every mode (normal word-flow and
@@ -185,13 +212,14 @@ export function TypingTestView({
     const container = wordsRef.current
     if (!container) return
 
-    // Imported fileImport text: align to real line-row elements (never clipped).
-    // Prefer the previous line at the top for context — but if a wrapped line
-    // (one logical line spanning several visual rows) would push the current
-    // line out of view, snap the current line to the top so what's being typed
-    // is always visible (e.g. Lines=2 with wrapping).
+    // Real (tatoeba/fileImport) or synthetic (monkeytype, see useVisualLines)
+    // line rows: align to the row elements (never clipped). Prefer the
+    // previous line at the top for context — but if a wrapped line (one
+    // logical line spanning several visual rows) would push the current
+    // line out of view, snap the current line to the top so what's being
+    // typed is always visible (e.g. Lines=2 with wrapping).
     if (lines) {
-      const currentLine = lineIndexOf(state.currentWordIndex, state.lineBreaks)
+      const currentLine = rowIndexForWord(lines, state.currentWordIndex)
       const rows = container.querySelectorAll<HTMLElement>('[data-line-row]')
       const currentRow = rows[currentLine]
       if (!currentRow) {
@@ -224,7 +252,7 @@ export function TypingTestView({
       container.scrollTop += (visibleLine - 1) * lineHeight
     }
     // Font/line changes resize the window, so re-snap the scroll position.
-  }, [state.currentWordIndex, state.lineBreaks, lines, fontSize, displayLines])
+  }, [state.currentWordIndex, lines, fontSize, displayLines])
 
   // Shared by the line-row and flat layouts so the word props stay in one place.
   const renderWord = (wordIdx: number) => (
@@ -302,29 +330,52 @@ export function TypingTestView({
           </div>
         )}
         {state.status !== 'countdown' && state.words.length > 0 && (
-          <div ref={wordsRef} className="h-full overflow-hidden">
-            {lines ? (
-              // Imported fileImport text: one row per logical line, ⏎ marks the
-              // line ends where Enter (not Space) advances.
-              lines.map((lineWordIdxs, lineIdx) => (
-                <div key={lineIdx} data-line-row={lineIdx} className="flex flex-wrap gap-x-3">
-                  {state.lineIndents[lineIdx] && (
-                    // Code indentation, display only — not typed (Space submits
-                    // a word, so leading spaces can't be keyed).
-                    <span data-testid={`line-indent-${lineIdx}`} className="-mr-3 select-none whitespace-pre text-content-muted/40" aria-hidden="true">{state.lineIndents[lineIdx]}</span>
-                  )}
-                  {lineWordIdxs.map(renderWord)}
-                  {lineIdx < lines.length - 1 && (
-                    <span className="select-none text-content-muted/40" aria-hidden="true">⏎</span>
-                  )}
+          <>
+            <div ref={wordsRef} className="h-full overflow-hidden">
+              {lines ? (
+                // Real (fileImport/tatoeba) or synthetic (monkeytype, measured
+                // via useVisualLines) line rows. ⏎ marks a real line end
+                // (Enter, not Space, advances there) — gated on `realLines`
+                // rather than lineWordIdxs' last-word membership in
+                // state.lineBreaks, so it can never fire for the synthetic
+                // monkeytype rows even in the (real-lines-only) edge case
+                // where the very last word happens to be a recorded break.
+                // line-indent-* is fileImport-only for the same "no real
+                // lines" reason: state.lineIndents stays empty elsewhere.
+                lines.map((lineWordIdxs, lineIdx) => (
+                  <div key={lineIdx} data-line-row={lineIdx} className="flex flex-wrap gap-x-3">
+                    {state.lineIndents[lineIdx] && (
+                      // Code indentation, display only — not typed (Space submits
+                      // a word, so leading spaces can't be keyed).
+                      <span data-testid={`line-indent-${lineIdx}`} className="-mr-3 select-none whitespace-pre text-content-muted/40" aria-hidden="true">{state.lineIndents[lineIdx]}</span>
+                    )}
+                    {lineWordIdxs.map(renderWord)}
+                    {Boolean(realLines) && lineIdx < lines.length - 1 && (
+                      <span className="select-none text-content-muted/40" aria-hidden="true">⏎</span>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-wrap gap-x-3">
+                  {state.words.map((_, wordIdx) => renderWord(wordIdx))}
                 </div>
-              ))
-            ) : (
-              <div className="flex flex-wrap gap-x-3">
-                {state.words.map((_, wordIdx) => renderWord(wordIdx))}
+              )}
+            </div>
+            {monkeytypeActive && (
+              // Invisible measurement mirror (see useVisualLines) — same
+              // width/font/flex-wrap/gap as the real words row above, one
+              // plain span per word's expected text. Never shown; read only
+              // for each span's measured offsetTop, then discarded once
+              // `lines` is derived from it.
+              <div
+                ref={mirrorRef}
+                aria-hidden="true"
+                className="invisible pointer-events-none absolute inset-x-0 top-0 flex flex-wrap gap-x-3"
+              >
+                {mirrorChildren}
               </div>
             )}
-          </div>
+          </>
         )}
         {paused && state.status === 'running' && (
           <div

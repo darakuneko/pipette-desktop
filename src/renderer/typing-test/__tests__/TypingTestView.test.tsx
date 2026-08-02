@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '../../i18n'
@@ -768,12 +768,109 @@ describe('TypingTestView — imported fileImport text (line breaks)', () => {
     expect(screen.getByTestId('typing-test-word-count').textContent).toBe('4 / 7')
   })
 
-  it('keeps the flat word-flow layout (no line rows) when there are no line breaks', () => {
+  it('falls back to the flat word-flow layout when line-row measurement has not resolved (jsdom fallback)', () => {
+    // Monkeytype modes (words/time/quote, i.e. lineBreaks empty) render
+    // synthetic line rows once a hidden-mirror measurement resolves (see the
+    // "monkeytype synthetic line rows" describe block below and
+    // useVisualLines.test.ts's groupByOffsetTop tests) — but jsdom never
+    // lays elements out (getBoundingClientRect stays all-zero), so the
+    // container-width guard keeps this deterministic: unmeasured renders
+    // flat, exactly like before this feature existed.
     const { container } = renderView({
       state: makeState({ status: 'running', words: ['a', 'b'], lineBreaks: new Set() }),
     })
     expect(container.querySelectorAll('[data-line-row]')).toHaveLength(0)
     // Flat word-flow still uses the shared var-driven window (no line rows).
+    expect(screen.getByTestId('typing-test-words').className).toContain('typing-multiline-window')
+  })
+})
+
+describe('TypingTestView — monkeytype synthetic line rows (measured)', () => {
+  // jsdom never lays elements out (getBoundingClientRect/offsetTop always
+  // read 0), so the mirror-measurement path (see useVisualLines) is
+  // exercised here by stubbing both: getBoundingClientRect's width so the
+  // container-width guard passes, and offsetTop — keyed by the mirror
+  // span's `data-mirror-word` index — so groupByOffsetTop sees a
+  // deterministic multi-row layout, the same seam useVisualLines itself
+  // reads from in the real browser.
+  let mockOffsetTops: number[] = []
+
+  beforeEach(() => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 400, height: 100, top: 0, left: 0, right: 400, bottom: 100, x: 0, y: 0, toJSON: () => ({}),
+    } as DOMRect)
+    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(function (this: HTMLElement) {
+      const idx = this.getAttribute('data-mirror-word')
+      return idx === null ? 0 : (mockOffsetTops[Number(idx)] ?? 0)
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    mockOffsetTops = []
+  })
+
+  it('groups words into measured rows instead of one flat row', () => {
+    // Words 0-1 measure on the same row; word 2 wraps to a second row (the
+    // せなか example: the first row ends at the last word that fits).
+    mockOffsetTops = [0, 0, 24]
+    const { container } = renderView({
+      state: makeState({ status: 'running', words: ['a', 'b', 'c'], lineBreaks: new Set() }),
+    })
+    const rows = container.querySelectorAll('[data-line-row]')
+    expect(rows).toHaveLength(2)
+    expect(rows[0].textContent).toContain('a')
+    expect(rows[0].textContent).toContain('b')
+    expect(rows[1].textContent).toContain('c')
+  })
+
+  it('never renders the ⏎ glyph for synthetic rows (lineBreaks stays empty in monkeytype modes)', () => {
+    mockOffsetTops = [0, 0, 24, 24]
+    const { container } = renderView({
+      state: makeState({ status: 'running', words: ['a', 'b', 'c', 'd'], lineBreaks: new Set() }),
+    })
+    expect(container.querySelectorAll('[data-line-row]')).toHaveLength(2)
+    expect(container.textContent).not.toContain('⏎')
+  })
+
+  it('never renders line-indent spans for synthetic rows (fileImport-only)', () => {
+    mockOffsetTops = [0, 0, 24]
+    renderView({
+      state: makeState({ status: 'running', words: ['a', 'b', 'c'], lineBreaks: new Set() }),
+    })
+    expect(screen.queryByTestId('line-indent-0')).toBeNull()
+    expect(screen.queryByTestId('line-indent-1')).toBeNull()
+  })
+
+  it('remeasures when the word list changes (regrouping applies)', () => {
+    mockOffsetTops = [0, 0, 0]
+    const { container, rerender } = renderView({
+      state: makeState({ status: 'running', words: ['a', 'b', 'c'], lineBreaks: new Set() }),
+    })
+    expect(container.querySelectorAll('[data-line-row]')).toHaveLength(1)
+
+    mockOffsetTops = [0, 24, 24]
+    rerender(
+      <I18nextProvider i18n={i18n}>
+        <TypingTestView
+          state={makeState({ status: 'running', words: ['x', 'y', 'z'], lineBreaks: new Set() })}
+          wpm={0}
+          accuracy={100}
+          elapsedSeconds={0}
+          remainingSeconds={null}
+          config={DEFAULT_CONFIG}
+          paused={false}
+        />
+      </I18nextProvider>,
+    )
+    expect(container.querySelectorAll('[data-line-row]')).toHaveLength(2)
+  })
+
+  it('still uses the shared var-driven multiline window when rows are synthetic', () => {
+    mockOffsetTops = [0, 0, 24]
+    renderView({
+      state: makeState({ status: 'running', words: ['a', 'b', 'c'], lineBreaks: new Set() }),
+    })
     expect(screen.getByTestId('typing-test-words').className).toContain('typing-multiline-window')
   })
 })
