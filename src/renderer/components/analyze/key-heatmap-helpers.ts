@@ -12,7 +12,7 @@ import { PALETTE_MIN_T, paletteColorFromIntensity } from '../../utils/chart-pale
 import type { EffectiveTheme } from '../../hooks/useEffectiveTheme'
 import type { HeatmapNormalization, RangeMs } from './analyze-types'
 import type { AggregateMode, HeatmapFilters, KeyGroupFilter } from '../../../shared/types/analyze-filters'
-import { withSnapshotProtocol } from './analyze-protocol'
+import { withSnapshotProtocol, withSnapshotSerializeProtocol } from './analyze-protocol'
 
 export { AGGREGATE_MODES, KEY_GROUPS, HEATMAP_MODES } from '../../../shared/types/analyze-filters'
 export type { AggregateMode, KeyGroupFilter, HeatmapMode } from '../../../shared/types/analyze-filters'
@@ -410,15 +410,18 @@ export interface SpeedRankingEntry {
  * ranking table. Unlike the Count ranking, this isn't scoped to a
  * layer group — the bigram aggregate carries no layer tag, so one flat
  * ranking covers every selected layer. Labels and group filtering run
- * under the snapshot's protocol (see `withSnapshotProtocol`) since the
- * numeric codes were recorded under it. */
+ * under the snapshot's protocol (see `withSnapshotSerializeProtocol`)
+ * since the numeric codes were recorded under it — this body calls
+ * `serialize`/`codeToLabel` (number → qmkId/label), unlike
+ * `buildSpeedFillByPos` above which only `deserialize`s, so it needs
+ * the RAWCODES_MAP-rebuilding variant rather than the plain one. */
 export function buildSpeedRanking(
   speedMap: ReadonlyMap<number, KeySpeedStat>,
   keyGroupFilter: KeyGroupFilter,
   limit: number,
   vialProtocol?: number,
 ): SpeedRankingEntry[] {
-  return withSnapshotProtocol(vialProtocol, () => {
+  return withSnapshotSerializeProtocol(vialProtocol, () => {
     const entries: SpeedRankingEntry[] = []
     for (const [code, stat] of speedMap) {
       if (keyGroupFilter !== 'all' && keycodeGroup(serialize(code)) !== keyGroupFilter) continue

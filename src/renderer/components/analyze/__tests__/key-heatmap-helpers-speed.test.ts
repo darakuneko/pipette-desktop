@@ -10,7 +10,7 @@ import {
 } from '../key-heatmap-helpers'
 import type { KeySpeedStat } from '../key-heatmap-helpers'
 import type { LayerKeycodes } from '../key-heatmap-helpers'
-import { deserialize, getProtocol, setProtocol } from '../../../../shared/keycodes/keycodes'
+import { deserialize, getProtocol, recreateKeycodes, serialize, setProtocol } from '../../../../shared/keycodes/keycodes'
 import { PALETTE_MIN_T, paletteColorFromIntensity } from '../../../utils/chart-palette'
 import type { TypingBigramTopEntry } from '../../../../shared/types/typing-analytics'
 
@@ -211,17 +211,28 @@ describe('buildSpeedRanking', () => {
     expect(buildSpeedRanking(new Map(), 'all', 10)).toEqual([])
   })
 
-  it('ranks protocol-dependent codes and restores the global protocol', () => {
-    // Label rendering for protocol-dependent codes additionally depends
-    // on session-level keycode tables (RAWCODES_MAP), so this asserts
-    // the protocol plumbing (entry survives, global protocol restored)
-    // rather than a specific label string.
-    const prev = getProtocol()
-    const v5BootCode = deserializeUnderProtocol('QK_BOOT', 5)
-    const speedMap = new Map([[v5BootCode, { avgIki: 100, count: 10 }]])
+  it('ranks protocol-dependent codes using the snapshot protocol\'s own label and restores the global RAWCODES_MAP', () => {
+    // 0x7c00 is QK_BOOT under v6 but the masked keycode RAG_T(kc) with a
+    // KC_NO inner under v5 (src/shared/keycodes/keycodes-v5.ts:75) — the
+    // same v6-session-viewing-v5-snapshot collision code as the
+    // favorite-store 0x7c00 case (src/main/__tests__/favorite-store.test.ts:551).
+    // Establish the v6 map explicitly first so this doesn't depend on
+    // leftover state from earlier tests in this file.
+    setProtocol(6)
+    recreateKeycodes()
+
+    const speedMap = new Map([[0x7c00, { avgIki: 100, count: 10 }]])
     const ranking = buildSpeedRanking(speedMap, 'all', 10, 5)
     expect(ranking).toHaveLength(1)
     expect(ranking[0].avgIki).toBe(100)
-    expect(getProtocol()).toBe(prev)
+    // Masked RAG_T(kc) + KC_NO inner, stripped of prefixes by codeToLabel.
+    expect(ranking[0].keyLabel).toBe('RAG_T(NO)')
+
+    // Restore leg is the mutation-killer: without recreateKeycodes() on
+    // the way out, getProtocol() alone would already read 6 here even
+    // though RAWCODES_MAP was left rebuilt for v5 — assert the rebuilt
+    // map directly by re-serializing 0x7c00 back under v6.
+    expect(getProtocol()).toBe(6)
+    expect(serialize(0x7c00)).toBe('QK_BOOT')
   })
 })
