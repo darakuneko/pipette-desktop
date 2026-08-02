@@ -8,7 +8,7 @@ import type { DeviceInfo } from '../../shared/types/protocol'
 import type { useKeyboard } from '../hooks/useKeyboard'
 import type { useEditorUIState } from '../hooks/useEditorUIState'
 import type { UseDevicePrefsReturn } from '../hooks/useDevicePrefs'
-import type { useSync } from '../hooks/useSync'
+import type { UseSyncReturn } from '../hooks/useSync'
 import type { useHubState } from '../hooks/useHubState'
 import type { useTheme } from '../hooks/useTheme'
 import type { useDeviceLifecycle } from '../hooks/useDeviceLifecycle'
@@ -19,7 +19,7 @@ interface Props {
   keyboard: ReturnType<typeof useKeyboard>
   editorUI: ReturnType<typeof useEditorUIState>
   devicePrefs: UseDevicePrefsReturn
-  sync: ReturnType<typeof useSync>
+  sync: UseSyncReturn
   hub: ReturnType<typeof useHubState>
   themeCtx: ReturnType<typeof useTheme>
   lifecycle: ReturnType<typeof useDeviceLifecycle>

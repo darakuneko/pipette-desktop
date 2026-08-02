@@ -123,7 +123,6 @@ export function TypingTestPane({
     setViewOnlyControlsOpen,
     mouseOver,
     alwaysOnTopSupported,
-    controlsBarRef,
     paneWrapperRef,
     paneNaturalSizeRef,
     cssScale,
@@ -348,7 +347,6 @@ export function TypingTestPane({
           mouseOver={mouseOver}
           viewOnlyControlsOpen={viewOnlyControlsOpen}
           setViewOnlyControlsOpen={setViewOnlyControlsOpen}
-          controlsBarRef={controlsBarRef}
           menuTab={menuTab}
           onMenuTabChange={onMenuTabChange}
           getDefaultCompactSize={getDefaultCompactSize}

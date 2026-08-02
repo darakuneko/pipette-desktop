@@ -10,7 +10,7 @@ import { DataModal } from './DataModal'
 import { NotificationModal } from './NotificationModal'
 import { JaRemovedBanner } from './i18n-packs/JaRemovedBanner'
 import type { useDeviceConnection } from '../hooks/useDeviceConnection'
-import type { useSync } from '../hooks/useSync'
+import type { UseSyncReturn } from '../hooks/useSync'
 import type { useDeviceLifecycle } from '../hooks/useDeviceLifecycle'
 import type { useTheme } from '../hooks/useTheme'
 import type { UseDevicePrefsReturn } from '../hooks/useDevicePrefs'
@@ -21,7 +21,7 @@ import type { useStartupNotification } from '../hooks/useStartupNotification'
 interface Props {
   deviceSyncing: boolean
   device: ReturnType<typeof useDeviceConnection>
-  sync: ReturnType<typeof useSync>
+  sync: UseSyncReturn
   lifecycle: ReturnType<typeof useDeviceLifecycle>
   themeCtx: ReturnType<typeof useTheme>
   devicePrefs: UseDevicePrefsReturn

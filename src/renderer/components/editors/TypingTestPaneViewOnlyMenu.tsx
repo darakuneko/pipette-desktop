@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import type { RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TYPING_HEATMAP_WINDOW_OPTIONS } from '../../../shared/types/app-config'
 import type { TypingViewMenuTab } from '../../../shared/types/pipette-settings'
@@ -13,7 +12,6 @@ interface TypingTestPaneViewOnlyMenuProps {
   mouseOver: boolean
   viewOnlyControlsOpen: boolean
   setViewOnlyControlsOpen: (open: boolean) => void
-  controlsBarRef: RefObject<HTMLDivElement | null>
   menuTab: TypingViewMenuTab
   onMenuTabChange?: (tab: TypingViewMenuTab) => void
   getDefaultCompactSize: () => { width: number; height: number }
@@ -49,7 +47,6 @@ export function TypingTestPaneViewOnlyMenu({
   mouseOver,
   viewOnlyControlsOpen,
   setViewOnlyControlsOpen,
-  controlsBarRef,
   menuTab,
   onMenuTabChange,
   getDefaultCompactSize,
@@ -88,7 +85,7 @@ export function TypingTestPaneViewOnlyMenu({
           : t('editor.typingTest.recordingIndicator')}
       </span>
     </div>
-    <div ref={controlsBarRef} className="fixed bottom-0 right-0 z-50">
+    <div className="fixed bottom-0 right-0 z-50">
       <div
         id="view-only-panel"
         role="menu"
