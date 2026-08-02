@@ -250,16 +250,16 @@ describe('useViewModeRouting', () => {
       expect(mocks.setViewMode).not.toHaveBeenCalled()
     })
 
-    it('does NOT clear pendingTypingTestReentryRef on disconnect (known gap, Task-clear-typing-reentry-ref-on-disconnect.md)', async () => {
+    it('clears pendingTypingTestReentryRef on disconnect so a later unrelated Back does not spuriously re-enter the typing test (Task-clear-typing-reentry-ref-on-disconnect.md)', async () => {
       // pendingTypingTestReentryRef has no public getter, so this pins the
-      // gap through its one observable consequence: arm it while the
+      // fix through its one observable consequence: arm it while the
       // Analyze page is already closed (openRunTimeline's own
       // setAnalyticsPageOpen(false) is then a no-op, so React never reruns
       // the effect that would otherwise consume the ref in the very same
       // commit), disconnect+reconnect, then walk through Analyze via an
-      // *unrelated* 'editor' origin. If the fix in that task lands (ref
-      // reset alongside the other two on disconnect), this toggle call
-      // disappears and this assertion must flip to `.not.toHaveBeenCalled()`.
+      // *unrelated* 'editor' origin. The disconnect-cleanup effect now
+      // resets the ref alongside the other three, so this Back must NOT
+      // fire the toggle.
       const { result, update, mocks } = renderRouting({ typingTestMode: false })
 
       act(() => { result.current.openRunTimeline('run-1') })
@@ -274,10 +274,10 @@ describe('useViewModeRouting', () => {
 
       act(() => { result.current.handleAnalyticsBack() })
 
-      // Spurious: nothing about this 'editor'-origin Back should re-enter
-      // the typing test, yet the stale ref from the unrelated earlier
-      // openRunTimeline call fires it anyway.
-      expect(mocks.toggleTypingTest).toHaveBeenCalledTimes(1)
+      // The stale ref from the unrelated earlier openRunTimeline call was
+      // cleared on disconnect, so this 'editor'-origin Back does not
+      // re-enter the typing test.
+      expect(mocks.toggleTypingTest).not.toHaveBeenCalled()
     })
   })
 
