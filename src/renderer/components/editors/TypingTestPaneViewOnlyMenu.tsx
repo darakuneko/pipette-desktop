@@ -91,7 +91,7 @@ export function TypingTestPaneViewOnlyMenu({
         role="menu"
         className={`absolute bottom-0 right-0 flex flex-col gap-1.5 rounded-tl-lg bg-surface-alt/95 px-3 pt-3 pb-2 text-xs shadow-lg backdrop-blur-sm transition-all duration-200 ease-out ${viewOnlyControlsOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-full overflow-hidden opacity-0'}`}
         onClick={(e) => e.stopPropagation()}
-        {...(!viewOnlyControlsOpen && { inert: '' } as Record<string, string>)}
+        inert={!viewOnlyControlsOpen}
       >
         {/* Tab row — Window (sizing + always-on-top) / REC
             (recording toggle + analytics entry) / Monitor App
