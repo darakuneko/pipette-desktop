@@ -3,15 +3,13 @@
 import { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
-import { SquarePen, Pause, Play, CircleCheck } from 'lucide-react'
-import { ICON_SM, ICON_LG } from '../constants/ui-tokens'
 import type { TypingTestState } from './useTypingTest'
 import type { RomajiGuide, TypingTestConfig } from './types'
 import type { ComparisonStats } from './comparison'
-import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, isTimeBoundedRun } from './types'
+import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE } from './types'
 import { WordDisplay } from './WordDisplay'
-import { ResultNameModal } from './ResultNameModal'
-import { formatKspc } from '../../shared/kspc'
+import { TypingTestControlsRow } from './TypingTestControlsRow'
+import { TypingTestStatsRow } from './TypingTestStatsRow'
 
 
 interface Props {
@@ -73,18 +71,6 @@ interface Props {
   errorClasses?: { substitutions: number; omissions: number; insertions: number } | null
 }
 
-// Completion screen's "missed characters" list (Phase 1 of mistake
-// analysis — see TypingTestState.mistakes) caps how many distinct
-// mistake keys are shown, so a run with many small errors doesn't turn
-// the results row into an unbounded wall of text.
-const MAX_MISTAKE_ENTRIES = 12
-
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  return `${m}:${String(s).padStart(2, '0')}`
-}
-
 /** Group flat word indices into logical lines using the line-break set
  *  (imported fileImport text). Each entry is the global word indices of one
  *  line, in order. */
@@ -140,7 +126,6 @@ export function TypingTestView({
   errorClasses = null,
 }: Props) {
   const { t } = useTranslation()
-  const showStats = state.status === 'running' || state.status === 'finished' || state.status === 'paused'
   const wordsRef = useRef<HTMLDivElement>(null)
   const imeInputRef = useRef<HTMLTextAreaElement>(null)
   const isComposingRef = useRef(false)
@@ -169,34 +154,6 @@ export function TypingTestView({
     () => ({ '--tt-font': fontSize, '--tt-lines': displayLines } as CSSProperties),
     [fontSize, displayLines],
   )
-  // Char-progress modes (imported fileImport text; Tatoeba sentences) count
-  // progress by character (spaces included): each word-gap is one separator
-  // char, so total = Σ word lengths + (words - 1). Gated on the mode (not
-  // `lines`) so single-line / word-flow sources count chars too.
-  const charProgress = config.mode === 'fileImport' || config.mode === 'tatoeba'
-  const totalChars = useMemo(
-    () => (charProgress ? state.words.reduce((sum, w) => sum + w.length, 0) + Math.max(0, state.words.length - 1) : 0),
-    [charProgress, state.words],
-  )
-  const typedChars = useMemo(() => {
-    if (!charProgress) return 0
-    let sum = state.currentInput.length
-    for (let i = 0; i < state.currentWordIndex && i < state.words.length; i++) sum += state.words[i].length
-    sum += Math.min(state.currentWordIndex, Math.max(0, state.words.length - 1)) // separators passed
-    return Math.min(sum, totalChars)
-  }, [charProgress, state.words, state.currentWordIndex, state.currentInput, totalChars])
-
-  // Completion screen's missed-characters list: sorted by count DESC then
-  // key ASC (ties break deterministically instead of on object insertion
-  // order), capped to the top MAX_MISTAKE_ENTRIES.
-  const mistakeEntries = useMemo(
-    () =>
-      Object.entries(state.mistakes)
-        .sort(([keyA, countA], [keyB, countB]) => countB - countA || keyA.localeCompare(keyB))
-        .slice(0, MAX_MISTAKE_ENTRIES),
-    [state.mistakes],
-  )
-
   function clearImeInput(): void {
     if (imeInputRef.current) imeInputRef.current.value = ''
   }
@@ -268,10 +225,6 @@ export function TypingTestView({
     }
     // Font/line changes resize the window, so re-snap the scroll position.
   }, [state.currentWordIndex, state.lineBreaks, lines, fontSize, displayLines])
-
-  const displayTime = isTimeBoundedRun(config) && remainingSeconds !== null
-    ? formatTime(remainingSeconds)
-    : formatTime(elapsedSeconds)
 
   // Shared by the line-row and flat layouts so the word props stay in one place.
   const renderWord = (wordIdx: number) => (
@@ -422,52 +375,21 @@ export function TypingTestView({
             saved for imported fileImport text)
           - in progress (running / paused): Pause or Resume (fileImport) + Restart
           - finished: result name (fileImport) + Next Test
-          Next Test and Restart share the same action; only the label differs. */}
-      {state.status === 'finished' && (
-        <p data-testid="typing-test-complete" className="flex items-center gap-1.5 text-lg font-semibold text-accent">
-          <CircleCheck size={ICON_LG} aria-hidden="true" />
-          {t('editor.typingTest.complete')}
-        </p>
-      )}
-      {/* The "operation" toggle hides this controls row, but a finished test
-          always shows it so the result can be named and the next test started. */}
+          Next Test and Restart share the same action; only the label differs.
+          The "operation" toggle hides this controls row (and the Complete
+          message above it), but a finished test always shows it so the
+          result can be named and the next test started. */}
       {(!hideControls || state.status === 'finished') && (
-      <div className="flex items-center gap-2">
-        {config.mode === 'fileImport' && (
-          state.status === 'running' ? (
-            <button
-              type="button"
-              data-testid="typing-memory-pause"
-              className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
-              onClick={onPause}
-            >
-              <Pause size={ICON_SM} aria-hidden="true" />
-              <span>{t('editor.typingTest.memory.pause')}</span>
-            </button>
-          ) : (state.status === 'paused' || ((state.status === 'waiting' || state.status === 'countdown') && hasSavedMemory)) ? (
-            <button
-              type="button"
-              data-testid="typing-memory-resume"
-              className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-accent transition-colors hover:text-accent/80"
-              onClick={onResume}
-            >
-              <Play size={ICON_SM} aria-hidden="true" />
-              <span>{t('editor.typingTest.memory.resumeButton')}</span>
-            </button>
-          ) : null
-        )}
-        {state.status === 'finished' && (
-          <ResultNameField key={state.startTime ?? 'none'} onName={onNameResult} chips={resultNameChips} />
-        )}
-        <button
-          type="button"
-          data-testid={state.status === 'running' || state.status === 'paused' ? 'typing-test-restart' : 'typing-test-start'}
-          className="flex h-8 items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
-          onClick={onStart}
-        >
-          {t(state.status === 'running' || state.status === 'paused' ? 'editor.typingTest.restart' : 'editor.typingTest.nextTest')}
-        </button>
-      </div>
+        <TypingTestControlsRow
+          state={state}
+          config={config}
+          onNameResult={onNameResult}
+          resultNameChips={resultNameChips}
+          onStart={onStart}
+          onPause={onPause}
+          onResume={onResume}
+          hasSavedMemory={hasSavedMemory}
+        />
       )}
 
       {/* Measurement / results row — below the reading window and the
@@ -476,159 +398,21 @@ export function TypingTestView({
           hides the LIVE metrics during a run — once finished, the results
           always show. */}
       {(!hideStatsRow || state.status === 'finished') && (
-      // Centres on the full available (window-driven) width so all stats stay
-      // on one line instead of wrapping — independent of the keyboard width,
-      // like the reading window above.
-      <div
-        data-testid="typing-test-results"
-        className="flex w-full flex-col items-center gap-2"
-      >
-        <div className="flex flex-wrap items-center justify-center gap-8 text-sm">
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-content-muted">{t('editor.typingTest.wpm')}:</span>
-            <span data-testid="typing-test-wpm" className="font-mono text-lg font-semibold text-accent tabular-nums">
-              {showStats ? wpm : '-'}
-            </span>
-            {comparison && (
-              <span className="inline-flex min-w-12 justify-start">
-                {showStats && <ComparisonDelta current={wpm} baseline={comparison.wpm} testid="wpm" />}
-              </span>
-            )}
-          </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-content-muted">{t('editor.typingTest.kpm')}:</span>
-            <span data-testid="typing-test-kpm" className="font-mono text-lg font-semibold text-accent tabular-nums">
-              {showStats ? kpm : '-'}
-            </span>
-            {comparison && (
-              <span className="inline-flex min-w-12 justify-start">
-                {showStats && <ComparisonDelta current={kpm} baseline={comparison.kpm} testid="kpm" />}
-              </span>
-            )}
-          </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-content-muted">{t('editor.typingTest.accuracy')}:</span>
-            <span data-testid="typing-test-accuracy" className="font-mono text-lg font-semibold tabular-nums">
-              {showStats ? `${accuracy}%` : '-'}
-            </span>
-            {comparison && (
-              <span className="inline-flex min-w-12 justify-start">
-                {showStats && <ComparisonDelta current={accuracy} baseline={comparison.accuracy} suffix="%" testid="accuracy" />}
-              </span>
-            )}
-          </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-content-muted">{t('editor.typingTest.kspc')}:</span>
-            <span data-testid="typing-test-kspc" className="font-mono text-lg font-semibold tabular-nums">
-              {showStats && kspc !== null ? formatKspc(kspc) : '-'}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-content-muted">{t('editor.typingTest.time')}:</span>
-            <span data-testid="typing-test-time" className="font-mono text-lg font-semibold tabular-nums">
-              {showStats ? displayTime : '-'}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-1.5">
-            {/* Char-progress modes (fileImport / Tatoeba) track character
-                progress (spaces included); everything else tracks words. */}
-            <span className="text-content-muted">{t(charProgress ? 'editor.typingTest.chars' : 'editor.typingTest.words')}:</span>
-            <span data-testid="typing-test-word-count" className="font-mono text-lg font-semibold tabular-nums">
-              {!showStats
-                ? '-'
-                : charProgress
-                ? t('editor.typingTest.wordCount', { current: typedChars, total: totalChars })
-                : t('editor.typingTest.wordCount', {
-                    current: state.currentWordIndex,
-                    total: state.words.length,
-                  })}
-            </span>
-          </div>
-          {state.status === 'finished' && config.mode === 'quote' && state.currentQuote && (
-            <span data-testid="typing-test-quote-source" className="text-content-muted italic">
-              {t('editor.typingTest.quoteSource', { source: state.currentQuote.source })}
-            </span>
-          )}
-        </div>
-        {state.status === 'finished' && mistakeEntries.length > 0 && (
-          <div data-testid="typing-test-mistakes" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-content-muted">
-            <span>{t('editor.typingTest.results.mistakesLabel')}:</span>
-            {mistakeEntries.map(([key, count]) => (
-              <span key={key} data-testid={`typing-test-mistake-${key}`} className="font-mono">
-                {key}:{count}
-              </span>
-            ))}
-          </div>
-        )}
-        {state.status === 'finished' && errorClasses && (
-          <div data-testid="typing-test-error-classes" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-content-muted">
-            <span data-testid="typing-test-error-substitutions">
-              {t('editor.typingTest.results.errorSubstitutions', { count: errorClasses.substitutions })}
-            </span>
-            <span data-testid="typing-test-error-omissions">
-              {t('editor.typingTest.results.errorOmissions', { count: errorClasses.omissions })}
-            </span>
-            <span data-testid="typing-test-error-insertions">
-              {t('editor.typingTest.results.errorInsertions', { count: errorClasses.insertions })}
-            </span>
-          </div>
-        )}
-      </div>
+        <TypingTestStatsRow
+          state={state}
+          wpm={wpm}
+          kpm={kpm}
+          accuracy={accuracy}
+          kspc={kspc}
+          elapsedSeconds={elapsedSeconds}
+          remainingSeconds={remainingSeconds}
+          config={config}
+          comparison={comparison}
+          errorClasses={errorClasses}
+        />
       )}
 
     </div>
-  )
-}
-
-/** Signed delta of the live metric against the comparison baseline: an arrow +
- *  the difference, green when ahead, red when behind, muted when level. */
-function ComparisonDelta({ current, baseline, suffix, testid }: { current: number; baseline: number; suffix?: string; testid: string }) {
-  const diff = current - baseline
-  const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : ''
-  const color = diff > 0 ? 'text-success' : diff < 0 ? 'text-danger' : 'text-content-muted'
-  return (
-    <span data-testid={`typing-test-delta-${testid}`} className={`font-mono text-xs ${color}`}>
-      {arrow}{diff > 0 ? '+' : ''}{diff}{suffix ?? ''}
-    </span>
-  )
-}
-
-/** Name for the just-finished result (imported fileImport text). A button showing
- *  the current name (or the "Unnamed" placeholder) with an edit icon; clicking
- *  opens the naming modal with quick-insert chips. Mounted with a per-test
- *  `key`, so the draft starts empty for a fresh result. */
-function ResultNameField({ onName, chips }: { onName?: (name: string) => void; chips: string[] }) {
-  const { t } = useTranslation()
-  const [name, setName] = useState('')
-  const [modalOpen, setModalOpen] = useState(false)
-
-  const commit = (newName: string): void => {
-    setName(newName)
-    onName?.(newName)
-  }
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setModalOpen(true)}
-        title={t('editor.typingTest.nameResult')}
-        aria-label={t('editor.typingTest.nameResult')}
-        className={`flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm transition-colors hover:text-content ${name ? 'text-content-secondary' : 'text-content-muted'}`}
-        data-testid="typing-test-result-name"
-      >
-        <SquarePen size={ICON_SM} aria-hidden="true" />
-        <span>{name || t('editor.typingTest.history.unnamed')}</span>
-      </button>
-      {modalOpen && (
-        <ResultNameModal
-          initialName={name}
-          chips={chips}
-          onSave={commit}
-          onClose={() => setModalOpen(false)}
-        />
-      )}
-    </>
   )
 }
 
