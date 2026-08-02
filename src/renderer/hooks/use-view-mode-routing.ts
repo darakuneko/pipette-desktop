@@ -134,6 +134,7 @@ export function useViewModeRouting({
       restoreRequestedUidRef.current = null
       pendingViewOnlyRef.current = false
       pendingTypingTestSaveRef.current = false
+      pendingTypingTestReentryRef.current = false
       // Auto-detect polling disconnect bypasses lifecycle.handleDisconnect,
       // so ephemeral UI state (typingTestMode etc.) must be reset here too.
       resetUIState()
