@@ -150,7 +150,14 @@ export function AnalyzePaneFilterRow({
             type="button"
             className="ml-auto shrink-0 rounded-md border border-edge bg-surface px-3 py-1 text-xs text-content-secondary transition-colors hover:border-accent hover:text-content"
             onClick={onOpenFingerModal}
-            data-testid="analyze-finger-assignment-open"
+            // Wrapped in `tid()` like every other testid in this pane —
+            // pane A stays unsuffixed (tid is identity there), so the
+            // external selectors (TypingAnalyticsView.test.tsx,
+            // e2e/analyze.test.ts, doc-capture.ts) that target the bare
+            // `analyze-finger-assignment-open` id keep resolving to
+            // pane A only; pane B's button gets the `-b` suffix so
+            // split view no longer renders a duplicate testid.
+            data-testid={tid('analyze-finger-assignment-open')}
           >
             {t('analyze.fingerAssignment.button')}
           </button>
