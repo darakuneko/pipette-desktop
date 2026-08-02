@@ -7,7 +7,7 @@
 // that actually differ: deserialize-only (no RAWCODES_MAP rebuild
 // needed) and serialize-safe (rebuild required).
 
-import { getProtocol, setProtocol, recreateKeycodes } from './keycodes'
+import { getProtocol, getRawcodesProtocol, setProtocol, recreateKeycodes } from './keycodes'
 
 /**
  * Run `body` with `getProtocol()` temporarily set to `protocol` so
@@ -27,15 +27,16 @@ import { getProtocol, setProtocol, recreateKeycodes } from './keycodes'
  * `withSerializeProtocol` for a body that calls
  * `serialize`/`codeToLabel` (number -> qmkId/label).
  *
- * No `protocol === getProtocol()` fast path here (unlike
- * `withSerializeProtocol` below) — intentionally not added in this
- * pass. It would be an observable no-op (`setProtocolValue` is a plain
- * assignment), but is left out to keep this a pure carry-over of the
- * two deserialize-only helpers it replaces, both of which always ran
- * the set/finally-restore cycle whenever `protocol` was defined.
+ * Fast path: if `protocol` is undefined or already matches the current
+ * global protocol, skips the set/restore cycle and just runs `body`.
+ * Unlike `withSerializeProtocol` below, this checks protocol-variable
+ * equality ONLY -- there is no second `RAWCODES_MAP`-freshness
+ * condition to check, because (per the module doc above) `deserialize`
+ * never reads `RAWCODES_MAP`; the protocol variable is the only piece
+ * of state this helper's body can observe.
  */
 export function withDeserializeProtocol<T>(protocol: number | undefined, body: () => T): T {
-  if (protocol === undefined) return body()
+  if (protocol === undefined || protocol === getProtocol()) return body()
   const prev = getProtocol()
   setProtocol(protocol)
   try {
@@ -64,28 +65,51 @@ export function withDeserializeProtocol<T>(protocol: number | undefined, body: (
  * concurrent call into this function) observe or restore the wrong
  * protocol/map.
  *
- * If `protocol` is undefined or already matches the current global
- * protocol, this skips the set/recreate/restore cycle entirely and just
- * runs `body`.
+ * Fast path requires BOTH conditions to hold, unlike
+ * `withDeserializeProtocol`'s single check: `body` may itself call
+ * `deserialize` (which reads the protocol variable via
+ * `getProtocolValue()`), AND `serialize` needs `RAWCODES_MAP` built at
+ * that same protocol. So this skips the set/recreate/restore cycle
+ * only when `protocol` is undefined, or matches BOTH the current
+ * protocol variable AND the protocol `RAWCODES_MAP` was last
+ * successfully built at (`getRawcodesProtocol()`). If the map is stale
+ * relative to the protocol variable -- which happens when this call is
+ * nested inside a `withDeserializeProtocol` scope that changed the
+ * protocol variable without rebuilding the map -- the second condition
+ * fails and the full rebuild runs, even though the first condition
+ * alone would have looked like a match.
  *
- * NESTING WARNING: `withDeserializeProtocol` above changes protocol
- * WITHOUT rebuilding `RAWCODES_MAP`. Nesting this function inside a
- * `withDeserializeProtocol` scope with a matching protocol would
- * fast-path over a stale map. No such nesting exists today -- do not
- * add any. Use `withDeserializeProtocol` for deserialize-only bodies
+ * On the way out, the `finally` restores `RAWCODES_MAP` to the protocol
+ * it was built at on entry (`prevBuilt`), then restores the protocol
+ * variable to its entry value (`prevProtocol`). Restoring in that order
+ * means that under nesting inside `withDeserializeProtocol`, this
+ * reproduces the exact state the outer scope had set up -- the map
+ * rebuild targets the outer scope's protocol, not the just-restored
+ * variable. The inner `try/finally` guarantees `prevProtocol` is
+ * restored even if the restore-leg `recreateKeycodes()` itself throws.
+ *
+ * ENFORCED INVARIANT (formerly a nesting warning): nesting this
+ * function inside a `withDeserializeProtocol` scope with a matching
+ * protocol no longer fast-paths over a stale map -- the `prevBuilt`
+ * check above forces the rebuild whenever the map doesn't already match
+ * `protocol`. Use `withDeserializeProtocol` for deserialize-only bodies
  * (cheaper -- `deserialize` never reads `RAWCODES_MAP`); use this one
- * only for bodies that serialize numeric codes back to qmkId/label
- * strings.
+ * for bodies that serialize numeric codes back to qmkId/label strings.
  */
 export function withSerializeProtocol<T>(protocol: number | undefined, body: () => T): T {
-  const prev = getProtocol()
-  if (protocol === undefined || protocol === prev) return body()
+  const prevProtocol = getProtocol()
+  const prevBuilt = getRawcodesProtocol()
+  if (protocol === undefined || (protocol === prevProtocol && protocol === prevBuilt)) return body()
   setProtocol(protocol)
   recreateKeycodes()
   try {
     return body()
   } finally {
-    setProtocol(prev)
-    recreateKeycodes()
+    setProtocol(prevBuilt)
+    try {
+      recreateKeycodes()
+    } finally {
+      setProtocol(prevProtocol)
+    }
   }
 }

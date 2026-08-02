@@ -107,6 +107,7 @@ vi.mock('../../shared/keycodes/keycodes', () => {
   return {
     serialize: vi.fn((code: number) => (mockProtocol === 6 ? `KC_${code}` : `KC_${code}_p${mockProtocol}`)),
     getProtocol: vi.fn(() => mockProtocol),
+    getRawcodesProtocol: vi.fn(() => mockProtocol),
     setProtocol: vi.fn((p: number) => { mockProtocol = p }),
     recreateKeycodes: vi.fn(),
   }

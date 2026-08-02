@@ -1238,6 +1238,7 @@ export {
   keycodeGroup,
   getLayerOpTarget,
   getKeycodeRevision,
+  getRawcodesProtocol,
   recreateKeycodes,
   createUserKeycodes,
   createCustomUserKeycodes,
