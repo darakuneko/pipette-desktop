@@ -20,11 +20,19 @@ interface Props {
 
 const MAX_PINNABLE = 100
 
-// Compare opens a modal — a dialog trigger, not a stateful toggle — so it keeps
-// a single static style; the active baseline is conveyed by the button text
-// ("Compare - <baseline>") rather than an accent highlight.
-const COMPARE_BUTTON_CLASS =
-  'flex h-8 w-full items-center justify-center rounded-md border border-edge px-3 text-sm text-content-secondary transition-colors hover:text-content'
+// Compare opens a modal rather than toggling inline, but the baseline it
+// opens onto is still persistent state — so, like the other stateful config
+// buttons in this sidebar (e.g. optionButtonClass's Romaji/Pattern/Units
+// buttons in TypingTestSettingsBar), it shows an accent border + accent text
+// whenever a comparison is active (baseline.kind !== 'off'). The neutral
+// border/secondary-text style is kept only for kind === 'off', so the button
+// still reads as "off" at a glance in addition to its text.
+function compareButtonClass(active: boolean): string {
+  const base = 'flex h-8 w-full items-center justify-center rounded-md border px-3 text-sm transition-colors'
+  return active
+    ? `${base} border-accent bg-accent/10 font-semibold text-accent`
+    : `${base} border-edge text-content-secondary hover:text-content`
+}
 
 export function ComparisonToggle({ pool, baseline, onChange }: Props) {
   const { t } = useTranslation()
@@ -66,7 +74,7 @@ export function ComparisonToggle({ pool, baseline, onChange }: Props) {
       <button
         type="button"
         data-testid="typing-test-comparison-toggle"
-        className={COMPARE_BUTTON_CLASS}
+        className={compareButtonClass(baseline.kind !== 'off')}
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={openModal}
