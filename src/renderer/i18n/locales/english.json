@@ -1,5 +1,5 @@
 {
-  "version": "0.1.60",
+  "version": "0.1.61",
   "name": "English",
   "common": {
     "save": "Save",
@@ -530,7 +530,9 @@
             "runWpm": "Run WPM",
             "accuracy": "Accuracy",
             "overlap": "Overlap",
-            "duration": "Duration"
+            "duration": "Duration",
+            "kpm": "Keystrokes/min",
+            "durationSeconds": "{{s}}s"
           },
           "legend": {
             "normal": "Normal keystroke",
@@ -539,6 +541,8 @@
             "unjudged": "Unjudged (no correctness data)",
             "blank": "Pause (shown compressed)",
             "leadIn": "Pause before this word",
+            "blankLine": "Pause (>250ms, shown compressed)",
+            "leadInLine": "Pause before this line",
             "correctedNote": "Mistake markers include keystrokes later corrected before submit — a word can show markers and still be 100% accuracy."
           },
           "axisNote": "Pauses are shown compressed on this axis; every duration shown is still the real one.",
@@ -557,7 +561,12 @@
             "correct": "correct",
             "offset": "+{{ms}}ms",
             "blankDuration": "Pause: {{ms}}ms",
-            "leadInDuration": "Pause before word: {{ms}}ms"
+            "leadInDuration": "Pause before word: {{ms}}ms",
+            "leadInLineDuration": "Pause before line: {{ms}}ms"
+          },
+          "line": {
+            "indexAria": "Line {{n}}",
+            "romajiAria": "Romaji: {{text}}"
           }
         }
       },

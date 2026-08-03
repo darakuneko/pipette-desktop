@@ -1,5 +1,5 @@
 {
-  "version": "0.1.60",
+  "version": "0.1.61",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -530,7 +530,9 @@
             "runWpm": "ラン全体のWPM",
             "accuracy": "正確度",
             "overlap": "重複率",
-            "duration": "所要時間"
+            "duration": "所要時間",
+            "kpm": "1分あたりの打鍵数",
+            "durationSeconds": "{{s}}秒"
           },
           "legend": {
             "normal": "通常の打鍵",
@@ -539,6 +541,8 @@
             "unjudged": "未判定（正誤データなし）",
             "blank": "ブランク（圧縮表示）",
             "leadIn": "ワード前の間",
+            "blankLine": "ブランク（250ms超、圧縮表示）",
+            "leadInLine": "行前の間",
             "correctedNote": "ミスの印には提出前に修正された打鍵も含まれます。ミスの印があっても正確度100%になることがあります。"
           },
           "axisNote": "ブランクは軸上で圧縮表示されています。表示される時間は全て実際の値です。",
@@ -557,7 +561,12 @@
             "correct": "正解",
             "offset": "+{{ms}}ms",
             "blankDuration": "ブランク: {{ms}}ms",
-            "leadInDuration": "ワード前の間: {{ms}}ms"
+            "leadInDuration": "ワード前の間: {{ms}}ms",
+            "leadInLineDuration": "行前の間: {{ms}}ms"
+          },
+          "line": {
+            "indexAria": "{{n}}行目",
+            "romajiAria": "ローマ字: {{text}}"
           }
         }
       },

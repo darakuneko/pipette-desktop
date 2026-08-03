@@ -46,6 +46,15 @@ export const TIMELINE_LEGEND: Record<TimelineFillKind, TimelineLegendEntry> = {
   leadIn: { swatchClass: 'bg-edge-strong', labelKey: 'editor.typingTest.history.timeline.legend.leadIn' },
 }
 
+/** Fill for a word-boundary divider inside a LINE row's SVG strip
+ *  (`LineTimelineRow.tsx`) — purely structural (marks where one word's
+ *  keystrokes end and the next begins on the line's shared axis), not a
+ *  semantic "kind" like the ones above, so it has no `TIMELINE_LEGEND`
+ *  entry of its own. Uses the same subtle hairline-divider token
+ *  `style.css` reserves for this purpose elsewhere (`--color-edge-subtle`
+ *  — see `.claude/DESIGN.md`'s Elevation & Depth table). */
+export const WORD_SEPARATOR_FILL = 'var(--color-edge-subtle)'
+
 /** Priority order for a keystroke's fill when more than one condition
  *  applies (e.g. a mistake that also overlapped the previous key):
  *  overlap first (this view exists to make overlap visible even on an
@@ -57,4 +66,46 @@ export function fillForKeystroke(seg: KeystrokeSegment): string {
   if (seg.correct === false) return TIMELINE_FILL.mistake
   if (seg.correct === undefined) return TIMELINE_FILL.unjudged
   return TIMELINE_FILL.normal
+}
+
+/** Per-fill-kind label TEXT color for the LINE view's on-bar keystroke
+ *  labels (`LineTimelineRow.tsx`) — same philosophy as `KeyWidget`'s
+ *  `FILL_INVERT_TABLE` (`.claude/rules/coding-ui.md`): every fill a
+ *  keystroke can render as gets an explicit, theme-aware class instead of
+ *  one default that quietly breaks on fills bright enough to need dark
+ *  text. `normal`/`mistake` are safe with the plain inverse token in both
+ *  themes — their fills (`accent`/`danger`) swap SATURATION, not
+ *  lightness, across the theme pair, so `content-inverse`'s own light/dark
+ *  flip already lands on a readable color both times. `overlap` (warning)
+ *  and `unjudged` (muted) don't get that lucky symmetry:
+ *  - `unjudged`'s fill (`content-muted`) is lighter in the light theme and
+ *    darker in the dark theme — exactly the shape `text-content` (not
+ *    `-inverse`) already flips to match, so it needs no `dark:` override.
+ *  - `overlap`'s fill (`warning`) is a MID orange in light but a bright
+ *    yellow in dark (`--warning` actually gets LIGHTER in dark mode, the
+ *    one fill that doesn't track the usual "brighten for dark bg"
+ *    pattern) — both instances need dark text, so this is the one entry
+ *    that pins to `text-content` unconditionally in the base class and
+ *    overrides to `content-inverse` under `dark:` (which happens to also
+ *    resolve dark, since `content-inverse` itself is near-black in the
+ *    dark theme).
+ *  Expressed purely as Tailwind classes (`dark:` variant) rather than a
+ *  JS theme read — the row picks up the right color for free from
+ *  whichever CSS rule matches, the same way the SVG fills above already
+ *  do via CSS custom properties. */
+export const TIMELINE_LABEL_CLASS: Record<'normal' | 'mistake' | 'overlap' | 'unjudged', string> = {
+  normal: 'text-content-inverse',
+  mistake: 'text-content-inverse',
+  overlap: 'text-content dark:text-content-inverse',
+  unjudged: 'text-content',
+}
+
+/** Mirrors `fillForKeystroke`'s own branching (see its doc comment for
+ *  the priority order) — returns the on-bar label's text color class
+ *  instead of the bar's own fill. */
+export function labelClassForKeystroke(seg: KeystrokeSegment): string {
+  if (seg.overlapped === true) return TIMELINE_LABEL_CLASS.overlap
+  if (seg.correct === false) return TIMELINE_LABEL_CLASS.mistake
+  if (seg.correct === undefined) return TIMELINE_LABEL_CLASS.unjudged
+  return TIMELINE_LABEL_CLASS.normal
 }

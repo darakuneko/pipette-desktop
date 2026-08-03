@@ -5,7 +5,7 @@ import { deserialize } from '../../../shared/keycodes/keycodes'
 import {
   buildWordTimeline,
   buildWordTimelineSummary,
-  BLANK_THRESHOLD_MS,
+  WORD_BLANK_THRESHOLD_MS as BLANK_THRESHOLD_MS,
   GAP_DISPLAY_CAP_MS,
   MIN_BAR_MS,
   type KeystrokeSegment,

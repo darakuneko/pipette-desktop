@@ -1,5 +1,5 @@
 {
-  "version": "0.1.60",
+  "version": "0.1.61",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -530,7 +530,9 @@
             "runWpm": "ラン全体のWPMどすえ",
             "accuracy": "正確度どすえ",
             "overlap": "重複率どすえ",
-            "duration": "所要時間どすえ"
+            "duration": "所要時間どすえ",
+            "kpm": "1分あたりの打鍵数どすえ",
+            "durationSeconds": "{{s}}秒"
           },
           "legend": {
             "normal": "通常の打鍵どすえ",
@@ -539,6 +541,8 @@
             "unjudged": "未判定（正誤のデータがおへん）",
             "blank": "ブランク（圧縮して表示どすえ）",
             "leadIn": "ワード前の間どすえ",
+            "blankLine": "ブランク（250ms超、圧縮して表示どすえ）",
+            "leadInLine": "行前の間どすえ",
             "correctedNote": "ミスの印には提出前に直さはった打鍵も入ってますよって、印があっても正確度100%になることがおすえ"
           },
           "axisNote": "ブランクはこの軸の上で圧縮して表示してますけど、出てる時間はどれも本当の値どすえ",
@@ -557,7 +561,12 @@
             "correct": "正解どすえ",
             "offset": "+{{ms}}ms",
             "blankDuration": "ブランク: {{ms}}ms",
-            "leadInDuration": "ワード前の間: {{ms}}ms"
+            "leadInDuration": "ワード前の間: {{ms}}ms",
+            "leadInLineDuration": "行前の間: {{ms}}ms"
+          },
+          "line": {
+            "indexAria": "{{n}}行目どすえ",
+            "romajiAria": "ローマ字: {{text}}どすえ"
           }
         }
       },
