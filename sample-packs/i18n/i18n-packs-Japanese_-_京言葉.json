@@ -1,5 +1,5 @@
 {
-  "version": "0.1.58",
+  "version": "0.1.60",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -492,8 +492,13 @@
         "unnamed": "名なしどすえ",
         "mode": "モード",
         "tabMonkeytype": "MonkeyType",
+        "tabTatoeba": "Tatoeba",
+        "tabAozora": "青空文庫",
         "tabFileImport": "ファイル取込",
         "tabText": "テキスト",
+        "tabResults": "結果",
+        "tabAnalysis": "分析",
+        "viewTabsAriaLabel": "履歴の表示を切り替えますえ",
         "noResults": "結果がおへんなぁ",
         "pb": "PB",
         "allModes": "全部",

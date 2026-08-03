@@ -1,5 +1,5 @@
 {
-  "version": "0.1.58",
+  "version": "0.1.60",
   "name": "English",
   "common": {
     "save": "Save",
@@ -492,8 +492,13 @@
         "unnamed": "Unnamed",
         "mode": "Mode",
         "tabMonkeytype": "MonkeyType",
+        "tabTatoeba": "Tatoeba",
+        "tabAozora": "Aozora",
         "tabFileImport": "File Import",
         "tabText": "Text",
+        "tabResults": "Results",
+        "tabAnalysis": "Analysis",
+        "viewTabsAriaLabel": "History view",
         "noResults": "No results yet",
         "pb": "PB",
         "allModes": "All",

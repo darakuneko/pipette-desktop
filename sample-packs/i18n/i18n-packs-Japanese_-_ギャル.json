@@ -1,5 +1,5 @@
 {
-  "version": "0.1.58",
+  "version": "0.1.60",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -492,8 +492,13 @@
         "unnamed": "名前なし☆",
         "mode": "モード☆",
         "tabMonkeytype": "MonkeyType",
+        "tabTatoeba": "Tatoeba☆",
+        "tabAozora": "青空文庫☆",
         "tabFileImport": "ファイル取込っしょ",
         "tabText": "テキスト",
+        "tabResults": "結果☆",
+        "tabAnalysis": "分析☆",
+        "viewTabsAriaLabel": "履歴の表示を切り替えるっしょ",
         "noResults": "結果ないじゃん",
         "pb": "PB☆",
         "allModes": "全部",

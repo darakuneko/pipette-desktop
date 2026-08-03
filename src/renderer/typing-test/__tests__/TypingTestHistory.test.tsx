@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '../../i18n'
 import { TypingTestHistory } from '../TypingTestHistory'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
+import type { TypingTestTextMeta } from '../../../shared/types/typing-test-text-store'
 
 function makeResult(overrides: Partial<TypingTestResult> = {}): TypingTestResult {
   return {
@@ -26,6 +27,23 @@ function makeResult(overrides: Partial<TypingTestResult> = {}): TypingTestResult
 function renderWithI18n(ui: React.ReactElement) {
   return render(<I18nextProvider i18n={i18n}>{ui}</I18nextProvider>)
 }
+
+/** Minimal TypingTestTextMeta builder for source-tab classification tests —
+ *  only `source` (aozora-provider detection) and `id` matter here. */
+function textMeta(id: string, name: string, source?: { provider: string; workId: string }): TypingTestTextMeta {
+  return { id, name, wordCount: 10, filename: `${id}.json`, savedAt: '', updatedAt: '', source }
+}
+
+beforeEach(() => {
+  // TypingTestHistory now calls useTypingTestTexts() to classify fileImport
+  // rows into Aozora vs File Import — default to no imported texts so
+  // pre-existing tests (which don't care about the Aozora split) are
+  // unaffected. Tests below override this per-case.
+  window.vialAPI = {
+    ...window.vialAPI,
+    typingTestTextStoreList: vi.fn().mockResolvedValue({ success: true, data: [] }),
+  } as typeof window.vialAPI
+})
 
 describe('TypingTestHistory', () => {
   it('shows no results message when empty', () => {
@@ -399,11 +417,17 @@ describe('TypingTestHistory', () => {
   })
 
   // Regression guard for the History modal overflow fix: the sections
-  // between the tabs and the results table (sparkline/stats/accuracy-trend/
-  // mistake-ranking/error-mix) must live inside their own scroll container,
-  // separate from the tabs above and the results table below, so a tall
-  // stack of sections can't push the table past the modal's bottom edge.
-  it('wraps the between-tabs-and-table sections in their own scroll container', () => {
+  // between the tabs and the results table (accuracy-trend/mistake-ranking/
+  // error-mix) must live inside their own scroll container, separate from
+  // the tabs above and the results table below, so a tall stack of sections
+  // can't push the table past the modal's bottom edge.
+  //
+  // Updated for the Results/Analysis secondary-tab split: the three lower
+  // sections now render only under the Analysis view tab (the sparkline/
+  // stats moved into the Results view alongside the table), so this test
+  // checks the Results-view table floor first, then switches to Analysis to
+  // check the scroll wrapper.
+  it('wraps the Analysis sections in their own scroll container, and gives the Results table a min-height floor', () => {
     const results = [
       makeResult({ wpm: 60, accuracy: 90, mistakes: { a: 3, b: 2 } }),
       makeResult({ wpm: 65, accuracy: 92, mistakes: { a: 1 } }),
@@ -422,6 +446,17 @@ describe('TypingTestHistory', () => {
     expect(root.className).toContain('flex-1')
     expect(root.className).not.toContain('h-full')
 
+    // Results view (default): the results-table wrapper carries a min-h-48
+    // floor so it never collapses to zero height.
+    const table = root.querySelector('table')
+    expect(table).toBeTruthy()
+    const tableWrapper = table!.parentElement as HTMLElement
+    expect(tableWrapper.className).toContain('min-h-48')
+    expect(tableWrapper.className).toContain('flex-1')
+    expect(tableWrapper.className).toContain('overflow-y-auto')
+
+    // Analysis view: the three lower sections live in their own scroll wrapper.
+    fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
     const sections = screen.getByTestId('history-sections')
     expect(sections.className).toContain('min-h-0')
     expect(sections.className).toContain('shrink')
@@ -433,22 +468,17 @@ describe('TypingTestHistory', () => {
     expect(sections.querySelector('[data-testid="history-condition-filter"]')).toBeTruthy()
 
     // Does NOT contain the tab buttons or the results table — both live
-    // outside the wrapper (tabs always visible above; table scrolls on its own below).
+    // outside the wrapper (tabs always visible above; the table is a
+    // different view, unmounted while Analysis is active).
     expect(sections.querySelector('[data-testid="history-tab-monkeytype"]')).toBeNull()
     expect(sections.querySelector('table')).toBeNull()
-
-    // The results-table wrapper carries a min-h-48 floor so it never
-    // collapses to zero height when the sections region above it is tall.
-    const history = screen.getByTestId('typing-test-history')
-    const table = history.querySelector('table')
-    expect(table).toBeTruthy()
-    const tableWrapper = table!.parentElement as HTMLElement
-    expect(tableWrapper.className).toContain('min-h-48')
-    expect(tableWrapper.className).toContain('flex-1')
-    expect(tableWrapper.className).toContain('overflow-y-auto')
   })
 
   describe('Accuracy Trend condition selector', () => {
+    // The three lower sections (Accuracy Trend / Mistake Ranking / Error Mix)
+    // now live under the secondary "Analysis" view tab (see the "secondary
+    // view tabs" describe block below), so every test here switches to it
+    // before touching `history-condition-filter` / `accuracy-trend-chart`.
     it('defaults to the latest run\'s condition and hides the chart below 2 same-condition runs', () => {
       // Newest-first, mirroring the real prop order (useDevicePrefs prepends
       // new runs) that the condition grouping relies on.
@@ -458,6 +488,7 @@ describe('TypingTestHistory', () => {
         makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english', date: '2026-01-01T00:00:00.000Z' }),
       ]
       renderWithI18n(<TypingTestHistory results={results} />)
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
       const select = screen.getByTestId('history-condition-filter') as HTMLSelectElement
       expect(select.options.length).toBe(2)
       // The latest run (2026-01-03) is 'time', so it's the default selection.
@@ -472,6 +503,7 @@ describe('TypingTestHistory', () => {
         makeResult({ wpm: 65, accuracy: 92, mode: 'words', mode2: 30, language: 'english', date: '2026-01-02T00:00:00.000Z' }),
       ]
       renderWithI18n(<TypingTestHistory results={results} />)
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
       expect(screen.getByTestId('accuracy-trend-chart')).toBeTruthy()
     })
 
@@ -484,6 +516,7 @@ describe('TypingTestHistory', () => {
         makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english', date: '2026-01-01T00:00:00.000Z' }),
       ]
       renderWithI18n(<TypingTestHistory results={results} />)
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
       // Default (latest = time|60) has only 1 run → no chart yet.
       expect(screen.queryByTestId('accuracy-trend-chart')).toBeNull()
 
@@ -500,17 +533,378 @@ describe('TypingTestHistory', () => {
         makeResult({ wpm: 65, accuracy: 92, mode: 'words', mode2: 30, language: 'english', date: '2026-01-02T00:00:00.000Z' }),
       ]
       renderWithI18n(<TypingTestHistory results={results} />)
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
       expect(screen.getByTestId('accuracy-trend-chart')).toBeTruthy()
-      // Switching the table's mode filter to a mode with zero matching rows
-      // must not affect the condition selector/chart, which is scoped to
-      // the whole tab's results, not the mode-filtered table.
+      // The mode filter dropdown lives in the Results view — switch there to
+      // reach it, change it, then switch back to Analysis. The condition
+      // selector/chart must be unaffected either way, since it's scoped to
+      // the whole tab's results (tabResults), not the mode-filtered table.
+      fireEvent.click(screen.getByTestId('history-view-tab-results'))
       fireEvent.change(screen.getByTestId('history-filter-mode'), { target: { value: 'time' } })
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
       expect(screen.getByTestId('accuracy-trend-chart')).toBeTruthy()
     })
 
     it('is not shown when the active tab has no results', () => {
       renderWithI18n(<TypingTestHistory results={[]} />)
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
       expect(screen.queryByTestId('history-condition-filter')).toBeNull()
+    })
+  })
+
+  describe('secondary view tabs (Results / Analysis)', () => {
+    it('defaults to the Results view: table + sparkline/stats visible, analysis sections absent', () => {
+      const results = [
+        makeResult({ wpm: 80 }),
+        makeResult({ wpm: 60 }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      const history = screen.getByTestId('typing-test-history')
+      expect(history.querySelector('table')).toBeTruthy()
+      expect(screen.getByTestId('history-sparkline')).toBeTruthy()
+      expect(screen.getByTestId('history-stats')).toBeTruthy()
+      expect(screen.queryByTestId('history-sections')).toBeNull()
+      expect(screen.queryByTestId('typing-test-mistake-ranking')).toBeNull()
+      expect(screen.queryByTestId('typing-test-error-mix')).toBeNull()
+    })
+
+    it('switching to Analysis shows the three sections and hides the table/filter/sparkline/stats, then switching back restores Results', () => {
+      const results = [
+        makeResult({ wpm: 60, accuracy: 90, mistakes: { a: 3, b: 2 } }),
+        makeResult({ wpm: 65, accuracy: 92, mistakes: { a: 1 } }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
+      expect(screen.getByTestId('history-sections')).toBeTruthy()
+      expect(screen.getByTestId('typing-test-mistake-ranking')).toBeTruthy()
+      expect(screen.getByTestId('typing-test-error-mix')).toBeTruthy()
+      expect(screen.getByTestId('typing-test-history').querySelector('table')).toBeNull()
+      expect(screen.queryByTestId('history-filter-mode')).toBeNull()
+      expect(screen.queryByTestId('history-sparkline')).toBeNull()
+      expect(screen.queryByTestId('history-stats')).toBeNull()
+
+      fireEvent.click(screen.getByTestId('history-view-tab-results'))
+      expect(screen.getByTestId('typing-test-history').querySelector('table')).toBeTruthy()
+      expect(screen.getByTestId('history-filter-mode')).toBeTruthy()
+      expect(screen.getByTestId('history-sparkline')).toBeTruthy()
+      expect(screen.getByTestId('history-stats')).toBeTruthy()
+      expect(screen.queryByTestId('history-sections')).toBeNull()
+    })
+
+    it('keeps the secondary view selection when switching the source (MonkeyType/Text) tab', () => {
+      const results = [
+        makeResult({ wpm: 81, mode: 'words', mode2: 30 }),
+        makeResult({ wpm: 82, mode: 'fileImport', mode2: 'id-1', fileImportTextName: 'novel.txt' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
+      expect(screen.getByTestId('history-sections')).toBeTruthy()
+
+      fireEvent.click(screen.getByTestId('history-tab-text'))
+      // Secondary tab selection persists across the source-tab switch.
+      expect(screen.getByTestId('history-sections')).toBeTruthy()
+      expect(screen.getByTestId('typing-test-history').querySelector('table')).toBeNull()
+    })
+
+    it('wires the secondary view tabs with a full ARIA tab pattern', () => {
+      renderWithI18n(<TypingTestHistory results={[makeResult()]} />)
+
+      const tablist = screen.getByRole('tablist', { name: 'History view' })
+      expect(tablist).toBeTruthy()
+
+      const resultsTab = screen.getByTestId('history-view-tab-results')
+      const analysisTab = screen.getByTestId('history-view-tab-analysis')
+      expect(resultsTab.getAttribute('role')).toBe('tab')
+      expect(analysisTab.getAttribute('role')).toBe('tab')
+      expect(resultsTab.getAttribute('aria-selected')).toBe('true')
+      expect(analysisTab.getAttribute('aria-selected')).toBe('false')
+
+      const resultsPanelId = resultsTab.getAttribute('aria-controls')
+      expect(resultsPanelId).toBeTruthy()
+      const resultsPanel = document.getElementById(resultsPanelId!)
+      expect(resultsPanel?.getAttribute('role')).toBe('tabpanel')
+      expect(resultsPanel?.getAttribute('aria-labelledby')).toBe(resultsTab.id)
+
+      fireEvent.click(analysisTab)
+      expect(analysisTab.getAttribute('aria-selected')).toBe('true')
+      expect(resultsTab.getAttribute('aria-selected')).toBe('false')
+
+      const analysisPanelId = analysisTab.getAttribute('aria-controls')
+      expect(analysisPanelId).toBeTruthy()
+      const analysisPanel = document.getElementById(analysisPanelId!)
+      expect(analysisPanel?.getAttribute('role')).toBe('tabpanel')
+      expect(analysisPanel?.getAttribute('aria-labelledby')).toBe(analysisTab.id)
+    })
+
+    // Regression guard: an earlier version of this split wrapped each panel
+    // component in its own plain `<div role="tabpanel" ...>` in
+    // TypingTestHistory, with the panel component's real content nested one
+    // level inside it. That extra div's default `display: block` broke the
+    // flex min-h-0/shrink chain HistorySections relies on for its
+    // overflow-y-auto scroll region to actually engage, silently
+    // reintroducing the #377 modal-overflow bug (caught via screenshot, not
+    // by DOM presence/absence assertions — hence this structural check).
+    // The fix makes each panel component apply role=tabpanel/id/
+    // aria-labelledby directly to its OWN existing root div, so the
+    // tabpanel element IS the flex/scroll container, not a wrapper around it.
+    it('keeps each view tabpanel as part of the flex sizing chain (no unconstrained wrapper div)', () => {
+      const results = [
+        makeResult({ wpm: 60, accuracy: 90, mistakes: { a: 3, b: 2 } }),
+        makeResult({ wpm: 65, accuracy: 92, mistakes: { a: 1 } }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+
+      // Panel ids are React-useId-derived (not the static strings this test
+      // used before), so look them up via the tab's aria-controls rather
+      // than a hardcoded id.
+      const resultsTab = screen.getByTestId('history-view-tab-results')
+      const analysisTab = screen.getByTestId('history-view-tab-analysis')
+
+      // Results view: the tabpanel IS HistoryResultsPanel's own root div —
+      // continuing the parent's `flex flex-col` chain (flex + min-h-0 +
+      // flex-1), not a bare block div wrapping it.
+      const resultsPanel = document.getElementById(resultsTab.getAttribute('aria-controls')!)
+      expect(resultsPanel).toBeTruthy()
+      expect(resultsPanel!.className).toContain('flex')
+      expect(resultsPanel!.className).toContain('min-h-0')
+      expect(resultsPanel!.className).toContain('flex-1')
+
+      fireEvent.click(analysisTab)
+
+      // Analysis view: the tabpanel IS HistorySections' own scroll wrapper
+      // (same element as the `history-sections` testid) — its min-h-0/
+      // shrink/overflow-y-auto classes are what actually contain the tall
+      // section stack, so they must land on the tabpanel element itself.
+      const analysisPanel = document.getElementById(analysisTab.getAttribute('aria-controls')!)
+      expect(analysisPanel).toBeTruthy()
+      expect(analysisPanel).toBe(screen.getByTestId('history-sections'))
+      expect(analysisPanel!.className).toContain('flex')
+      expect(analysisPanel!.className).toContain('min-h-0')
+      expect(analysisPanel!.className).toContain('shrink')
+      expect(analysisPanel!.className).toContain('overflow-y-auto')
+    })
+
+    // P2-1 (codex review): sort state used to live inside HistoryResultsPanel,
+    // which unmounts whenever the Analysis view is active (conditional
+    // render) — so a chosen sort silently reset on every round trip through
+    // Analysis. The fix lifts sortColumn/sortDirection into TypingTestHistory
+    // itself, which never unmounts.
+    it('preserves the results-table sort selection across a Results→Analysis→Results round trip', () => {
+      const results = [
+        makeResult({ wpm: 60, date: '2025-01-03T00:00:00Z' }),
+        makeResult({ wpm: 90, date: '2025-01-02T00:00:00Z' }),
+        makeResult({ wpm: 75, date: '2025-01-01T00:00:00Z' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+
+      const rows = () => {
+        const history = screen.getByTestId('typing-test-history')
+        const trs = history.querySelectorAll('tbody tr')
+        return Array.from(trs).map((tr) => Number(tr.querySelectorAll('td')[2].textContent))
+      }
+
+      // Default sort is date desc (most recent first) → 60, 90, 75
+      expect(rows()).toEqual([60, 90, 75])
+
+      // Sort by WPM desc
+      const wpmButton = screen.getByRole('button', { name: /WPM/i })
+      fireEvent.click(wpmButton)
+      expect(rows()).toEqual([90, 75, 60])
+
+      // Round-trip through Analysis and back to Results — the sort
+      // selection must survive since HistoryResultsPanel fully unmounts
+      // while Analysis is active.
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
+      fireEvent.click(screen.getByTestId('history-view-tab-results'))
+      expect(rows()).toEqual([90, 75, 60])
+
+      // aria-sort on the WPM header should also reflect the preserved
+      // column/direction, not reset back to the date-desc default.
+      const activeHeader = screen.getByTestId('typing-test-history').querySelector('th[aria-sort="descending"]')
+      expect(activeHeader?.textContent).toContain('WPM')
+    })
+
+    // P2-2 (codex review): APG tabs pattern — arrow keys move focus AND
+    // selection between the two view tabs, roving tabIndex keeps the
+    // tablist a single Tab stop. Scoped to the NEW view tabs only; the
+    // pre-existing source tabs (MonkeyType/File Import) are untouched.
+    it('supports APG roving-tabindex arrow-key navigation between the view tabs', () => {
+      renderWithI18n(<TypingTestHistory results={[makeResult()]} />)
+      const resultsTab = screen.getByTestId('history-view-tab-results') as HTMLButtonElement
+      const analysisTab = screen.getByTestId('history-view-tab-analysis') as HTMLButtonElement
+
+      // Roving tabIndex: only the active tab is in the page's Tab order.
+      expect(resultsTab.tabIndex).toBe(0)
+      expect(analysisTab.tabIndex).toBe(-1)
+
+      resultsTab.focus()
+      fireEvent.keyDown(resultsTab, { key: 'ArrowRight' })
+      // Automatic activation: the arrow key moves both focus AND selection.
+      expect(document.activeElement).toBe(analysisTab)
+      expect(analysisTab.getAttribute('aria-selected')).toBe('true')
+      expect(resultsTab.getAttribute('aria-selected')).toBe('false')
+      expect(analysisTab.tabIndex).toBe(0)
+      expect(resultsTab.tabIndex).toBe(-1)
+      expect(screen.getByTestId('history-sections')).toBeTruthy()
+
+      fireEvent.keyDown(analysisTab, { key: 'ArrowLeft' })
+      expect(document.activeElement).toBe(resultsTab)
+      expect(resultsTab.getAttribute('aria-selected')).toBe('true')
+      expect(resultsTab.tabIndex).toBe(0)
+      expect(analysisTab.tabIndex).toBe(-1)
+
+      // Home/End jump to the first/last tab regardless of current position.
+      fireEvent.keyDown(resultsTab, { key: 'End' })
+      expect(document.activeElement).toBe(analysisTab)
+      expect(analysisTab.getAttribute('aria-selected')).toBe('true')
+
+      fireEvent.keyDown(analysisTab, { key: 'Home' })
+      expect(document.activeElement).toBe(resultsTab)
+      expect(resultsTab.getAttribute('aria-selected')).toBe('true')
+    })
+  })
+
+  describe('source tabs: Tatoeba and Aozora split out of MonkeyType/File Import', () => {
+    it('classifies mode "tatoeba" rows into their own tab, out of MonkeyType', () => {
+      const results = [
+        makeResult({ wpm: 81, mode: 'words', mode2: 30 }),
+        makeResult({ wpm: 77, mode: 'tatoeba', mode2: 'english|lines|5', language: 'english' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+
+      // MonkeyType tab (default): only the words row.
+      expect(screen.getAllByText('81').length).toBeGreaterThan(0)
+      expect(screen.queryByText('77')).toBeNull()
+
+      // Tatoeba tab: only the tatoeba row.
+      fireEvent.click(screen.getByTestId('history-tab-tatoeba'))
+      expect(screen.getAllByText('77').length).toBeGreaterThan(0)
+      expect(screen.queryByText('81')).toBeNull()
+    })
+
+    it('classifies a fileImport row whose text meta has source.provider "aozora" into the Aozora tab, not File Import', async () => {
+      window.vialAPI.typingTestTextStoreList = vi.fn().mockResolvedValue({
+        success: true,
+        data: [textMeta('aozora-1', 'Kokoro', { provider: 'aozora', workId: 'works/42' })],
+      })
+      const results = [
+        makeResult({ wpm: 55, mode: 'fileImport', mode2: 'aozora-1', fileImportTextName: 'Kokoro' }),
+        makeResult({ wpm: 66, mode: 'fileImport', mode2: 'plain-1', fileImportTextName: 'my-notes.txt' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      await waitFor(() => expect(window.vialAPI.typingTestTextStoreList).toHaveBeenCalled())
+
+      // Aozora tab: only the aozora-provider row.
+      fireEvent.click(screen.getByTestId('history-tab-aozora'))
+      await waitFor(() => expect(screen.getAllByText('55').length).toBeGreaterThan(0))
+      expect(screen.queryByText('66')).toBeNull()
+
+      // File Import tab: only the plain (non-aozora) row.
+      fireEvent.click(screen.getByTestId('history-tab-text'))
+      expect(screen.getAllByText('66').length).toBeGreaterThan(0)
+      expect(screen.queryByText('55')).toBeNull()
+    })
+
+    it('classifies a fileImport row with no resolvable text meta, and a legacy mode "custom" row, into File Import', async () => {
+      window.vialAPI.typingTestTextStoreList = vi.fn().mockResolvedValue({ success: true, data: [] })
+      const results = [
+        // fileImport row whose textId isn't in the text store (e.g. deleted text).
+        makeResult({ wpm: 71, mode: 'fileImport', mode2: 'gone-1', fileImportTextName: 'deleted.txt' }),
+        // Pre-rename legacy row — mode 'custom' predates the fileImport rename
+        // and must not fall through to MonkeyType.
+        makeResult({ wpm: 72, mode: 'custom' as TypingTestResult['mode'], mode2: 'legacy-1' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      await waitFor(() => expect(window.vialAPI.typingTestTextStoreList).toHaveBeenCalled())
+
+      // Neither row shows under MonkeyType.
+      expect(screen.queryByText('71')).toBeNull()
+      expect(screen.queryByText('72')).toBeNull()
+
+      // Both show under File Import.
+      fireEvent.click(screen.getByTestId('history-tab-text'))
+      expect(screen.getAllByText('71').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('72').length).toBeGreaterThan(0)
+
+      // Neither shows under Aozora.
+      fireEvent.click(screen.getByTestId('history-tab-aozora'))
+      expect(screen.queryByText('71')).toBeNull()
+      expect(screen.queryByText('72')).toBeNull()
+    })
+
+    it('hides the sub-filter dropdown entirely on the Tatoeba tab', () => {
+      const results = [
+        makeResult({ mode: 'tatoeba', mode2: 'english|lines|5', language: 'english' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      fireEvent.click(screen.getByTestId('history-tab-tatoeba'))
+      expect(screen.queryByTestId('history-filter-mode')).toBeNull()
+      expect(screen.queryByTestId('history-filter-text')).toBeNull()
+    })
+
+    it('scopes the Aozora and File Import text dropdowns to only their own tab\'s texts', async () => {
+      window.vialAPI.typingTestTextStoreList = vi.fn().mockResolvedValue({
+        success: true,
+        data: [textMeta('aozora-1', 'Kokoro', { provider: 'aozora', workId: 'works/42' })],
+      })
+      const results = [
+        makeResult({ wpm: 55, mode: 'fileImport', mode2: 'aozora-1', fileImportTextName: 'Kokoro' }),
+        makeResult({ wpm: 66, mode: 'fileImport', mode2: 'plain-1', fileImportTextName: 'my-notes.txt' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      await waitFor(() => expect(window.vialAPI.typingTestTextStoreList).toHaveBeenCalled())
+
+      fireEvent.click(screen.getByTestId('history-tab-aozora'))
+      await waitFor(() => expect(screen.getByTestId('history-filter-text')).toBeTruthy())
+      let options = Array.from((screen.getByTestId('history-filter-text') as HTMLSelectElement).options).map((o) => o.value)
+      expect(options).toEqual(['all', 'aozora-1'])
+
+      fireEvent.click(screen.getByTestId('history-tab-text'))
+      options = Array.from((screen.getByTestId('history-filter-text') as HTMLSelectElement).options).map((o) => o.value)
+      expect(options).toEqual(['all', 'plain-1'])
+    })
+
+    it('feeds the Analysis view from the active source tab\'s results (Tatoeba)', () => {
+      const results = [
+        makeResult({ wpm: 81, mode: 'words', mode2: 30, accuracy: 90, mistakes: { a: 3 } }),
+        makeResult({ wpm: 77, mode: 'tatoeba', mode2: 'english|lines|5', language: 'english', accuracy: 88, mistakes: { b: 2 } }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      fireEvent.click(screen.getByTestId('history-tab-tatoeba'))
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
+      expect(screen.getByTestId('history-sections')).toBeTruthy()
+      // The condition selector only has the tatoeba row's condition available
+      // when Tatoeba is the active source tab.
+      const select = screen.getByTestId('history-condition-filter') as HTMLSelectElement
+      expect(Array.from(select.options).every((o) => o.value.startsWith('tatoeba|'))).toBe(true)
+    })
+
+    it('extends the export filename slug for the new tabs (tatoeba, aozora / aozora-<textId>)', async () => {
+      window.vialAPI.typingTestTextStoreList = vi.fn().mockResolvedValue({
+        success: true,
+        data: [textMeta('aozora-1', 'Kokoro', { provider: 'aozora', workId: 'works/42' })],
+      })
+      const onExportCsv = vi.fn()
+      const results = [
+        makeResult({ wpm: 77, mode: 'tatoeba', mode2: 'english|lines|5', language: 'english' }),
+        makeResult({ wpm: 55, mode: 'fileImport', mode2: 'aozora-1', fileImportTextName: 'Kokoro' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+      await waitFor(() => expect(window.vialAPI.typingTestTextStoreList).toHaveBeenCalled())
+
+      fireEvent.click(screen.getByTestId('history-tab-tatoeba'))
+      fireEvent.click(screen.getByTestId('history-export-csv'))
+      expect(onExportCsv.mock.calls.at(-1)?.[1]).toBe('tatoeba')
+
+      fireEvent.click(screen.getByTestId('history-tab-aozora'))
+      await waitFor(() => expect(screen.getByTestId('history-export-csv')).toBeTruthy())
+      fireEvent.click(screen.getByTestId('history-export-csv'))
+      expect(onExportCsv.mock.calls.at(-1)?.[1]).toBe('aozora')
+
+      fireEvent.change(screen.getByTestId('history-filter-text'), { target: { value: 'aozora-1' } })
+      fireEvent.click(screen.getByTestId('history-export-csv'))
+      expect(onExportCsv.mock.calls.at(-1)?.[1]).toBe('aozora-Kokoro')
     })
   })
 })
