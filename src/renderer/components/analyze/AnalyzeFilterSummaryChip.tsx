@@ -9,6 +9,7 @@
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, Filter } from 'lucide-react'
 import { ICON_SM, ICON_XS } from '../../constants/ui-tokens'
+import { Tooltip } from '../ui/Tooltip'
 
 interface Props {
   keyboardLabel: string
@@ -37,26 +38,27 @@ export function AnalyzeFilterSummaryChip({
 }: Props) {
   const { t } = useTranslation()
   return (
-    <button
-      type="button"
-      className={`${CHIP_BUTTON_CLASS} min-w-0 text-content`}
-      onClick={onClick}
-      title={`${keyboardLabel} · ${deviceLabel} · ${sourceLabel} · ${periodLabel}`}
-      data-testid={testId}
-    >
-      {/* The visible segment text is the accessible name; the sr-only
-        * hint appends the action ("edit filter conditions") for
-        * assistive tech without an aria-label overriding the labels. */}
-      <span className="sr-only">{t('analyze.filters.chipAriaLabel')}</span>
-      <Filter size={ICON_SM} className="shrink-0 text-content-muted" aria-hidden="true" />
-      <span className={SEGMENT_CLASS} data-testid={`${testId}-keyboard`}>{keyboardLabel}</span>
-      <span className="shrink-0 text-content-muted" aria-hidden="true">·</span>
-      <span className={SEGMENT_CLASS} data-testid={`${testId}-device`}>{deviceLabel}</span>
-      <span className="shrink-0 text-content-muted" aria-hidden="true">·</span>
-      <span className={SEGMENT_CLASS} data-testid={`${testId}-source`}>{sourceLabel}</span>
-      <span className="shrink-0 text-content-muted" aria-hidden="true">·</span>
-      <span className={SEGMENT_CLASS} data-testid={`${testId}-period`}>{periodLabel}</span>
-      <ChevronDown size={ICON_XS} className="shrink-0 text-content-muted" aria-hidden="true" />
-    </button>
+    <Tooltip content={`${keyboardLabel} · ${deviceLabel} · ${sourceLabel} · ${periodLabel}`}>
+      <button
+        type="button"
+        className={`${CHIP_BUTTON_CLASS} min-w-0 text-content`}
+        onClick={onClick}
+        data-testid={testId}
+      >
+        {/* The visible segment text is the accessible name; the sr-only
+          * hint appends the action ("edit filter conditions") for
+          * assistive tech without an aria-label overriding the labels. */}
+        <span className="sr-only">{t('analyze.filters.chipAriaLabel')}</span>
+        <Filter size={ICON_SM} className="shrink-0 text-content-muted" aria-hidden="true" />
+        <span className={SEGMENT_CLASS} data-testid={`${testId}-keyboard`}>{keyboardLabel}</span>
+        <span className="shrink-0 text-content-muted" aria-hidden="true">·</span>
+        <span className={SEGMENT_CLASS} data-testid={`${testId}-device`}>{deviceLabel}</span>
+        <span className="shrink-0 text-content-muted" aria-hidden="true">·</span>
+        <span className={SEGMENT_CLASS} data-testid={`${testId}-source`}>{sourceLabel}</span>
+        <span className="shrink-0 text-content-muted" aria-hidden="true">·</span>
+        <span className={SEGMENT_CLASS} data-testid={`${testId}-period`}>{periodLabel}</span>
+        <ChevronDown size={ICON_XS} className="shrink-0 text-content-muted" aria-hidden="true" />
+      </button>
+    </Tooltip>
   )
 }

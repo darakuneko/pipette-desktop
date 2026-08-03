@@ -49,19 +49,27 @@ describe('KeycodeField', () => {
     expect(screen.getByTestId('keycode-field')).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('sets title from keycodeTooltip', () => {
+  it('exposes keycodeTooltip via the shared Tooltip, not a native title', () => {
     render(<KeycodeField value={4} selected={false} onSelect={() => {}} />)
-    expect(screen.getByTestId('keycode-field')).toHaveAttribute('title', 'Tooltip: KC_4')
+    const btn = screen.getByTestId('keycode-field')
+    expect(btn).not.toHaveAttribute('title')
+    const bubble = screen.getByRole('tooltip')
+    expect(bubble.textContent).toBe('Tooltip: KC_4')
+    expect(btn.getAttribute('aria-describedby')).toBe(bubble.id)
   })
 
-  it('does not set title when tooltip is undefined', () => {
+  it('does not render a tooltip when keycodeTooltip is undefined', () => {
     render(<KeycodeField value={0} selected={false} onSelect={() => {}} />)
-    expect(screen.getByTestId('keycode-field')).not.toHaveAttribute('title')
+    const btn = screen.getByTestId('keycode-field')
+    expect(btn).not.toHaveAttribute('title')
+    expect(screen.queryByRole('tooltip')).toBeNull()
   })
 
-  it('suppresses title when noTooltip is true', () => {
+  it('suppresses the tooltip when noTooltip is true', () => {
     render(<KeycodeField value={4} selected={false} onSelect={() => {}} noTooltip />)
-    expect(screen.getByTestId('keycode-field')).not.toHaveAttribute('title')
+    const btn = screen.getByTestId('keycode-field')
+    expect(btn).not.toHaveAttribute('title')
+    expect(screen.queryByRole('tooltip')).toBeNull()
   })
 
   it('delays onSelect when onDoubleClick is provided', () => {

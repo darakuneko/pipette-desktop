@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AnchoredPopover } from '../ui/AnchoredPopover'
+import { Tooltip } from '../ui/Tooltip'
 import { FILTER_SELECT } from './analyze-filter-styles'
 
 export interface MultiSelectOption {
@@ -72,19 +73,20 @@ export function MultiSelectPopover({ options, value, onChange, i18nPrefix, ariaL
 
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        className={`${FILTER_SELECT} max-w-filter-trigger truncate text-left`}
-        onClick={() => setOpen((prev) => !prev)}
-        aria-label={ariaLabel}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        title={buttonLabel}
-        data-testid={testId}
-      >
-        {buttonLabel}
-      </button>
+      <Tooltip content={buttonLabel} wrapperClassName="block max-w-full">
+        <button
+          ref={triggerRef}
+          type="button"
+          className={`${FILTER_SELECT} max-w-filter-trigger truncate text-left`}
+          onClick={() => setOpen((prev) => !prev)}
+          aria-label={ariaLabel}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          data-testid={testId}
+        >
+          {buttonLabel}
+        </button>
+      </Tooltip>
       <AnchoredPopover
         anchorRef={triggerRef}
         open={open}

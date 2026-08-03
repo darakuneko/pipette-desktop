@@ -16,6 +16,7 @@ import type { useTypingTest } from '../../typing-test/useTypingTest'
 import { ToggleRow } from './modal-controls'
 import { PANEL_COLLAPSED_WIDTH } from './keymap-editor-types'
 import type { TimelineHandoff } from '../../hooks/useRunTimelineHandoff'
+import { Tooltip } from '../ui/Tooltip'
 
 const LINE_OPTIONS = Array.from({ length: DISPLAY_LINES_MAX - DISPLAY_LINES_MIN + 1 }, (_, i) => DISPLAY_LINES_MIN + i)
 
@@ -152,16 +153,17 @@ export function TypingTestPaneSettingsPanel({
             fileImport); quote uses it to pick the quote source language. */}
         <div className="flex w-full flex-col items-start gap-1">
           <span className="text-sm text-content-muted">{t('editor.typingTest.modeLabel')}({modeType})</span>
-          <button
-            type="button"
-            data-testid="language-selector"
-            title={modeLabel}
-            className="flex h-8 w-full items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
-            onClick={() => onShowLanguageModal(true)}
-            disabled={typingTest.isLanguageLoading}
-          >
-            <span className="truncate">{modeLabel}</span>
-          </button>
+          <Tooltip content={modeLabel} wrapperClassName="w-full">
+            <button
+              type="button"
+              data-testid="language-selector"
+              className="flex h-8 w-full items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
+              onClick={() => onShowLanguageModal(true)}
+              disabled={typingTest.isLanguageLoading}
+            >
+              <span className="truncate">{modeLabel}</span>
+            </button>
+          </Tooltip>
         </div>
         {showLanguageModal && (
           <LanguageSelectorModal
@@ -316,16 +318,17 @@ export function TypingTestPaneSettingsPanel({
       )}
       {/* Collapse / expand toggle — pinned to the bottom (mt-auto). */}
       <div className="mt-auto shrink-0 border-t border-edge p-2">
-        <button
-          type="button"
-          data-testid="typing-settings-panel-toggle"
-          title={t(settingsCollapsed ? 'editor.typingTest.expandSettings' : 'editor.typingTest.collapseSettings')}
-          aria-label={t(settingsCollapsed ? 'editor.typingTest.expandSettings' : 'editor.typingTest.collapseSettings')}
-          className="flex items-center justify-center rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content"
-          onClick={() => onToggleSettingsPanel?.(settingsCollapsed)}
-        >
-          {settingsCollapsed ? <ChevronsRight size={ICON_SM} aria-hidden="true" /> : <ChevronsLeft size={ICON_SM} aria-hidden="true" />}
-        </button>
+        <Tooltip content={t(settingsCollapsed ? 'editor.typingTest.expandSettings' : 'editor.typingTest.collapseSettings')}>
+          <button
+            type="button"
+            data-testid="typing-settings-panel-toggle"
+            aria-label={t(settingsCollapsed ? 'editor.typingTest.expandSettings' : 'editor.typingTest.collapseSettings')}
+            className="flex items-center justify-center rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content"
+            onClick={() => onToggleSettingsPanel?.(settingsCollapsed)}
+          >
+            {settingsCollapsed ? <ChevronsRight size={ICON_SM} aria-hidden="true" /> : <ChevronsLeft size={ICON_SM} aria-hidden="true" />}
+          </button>
+        </Tooltip>
       </div>
     </div>
   )

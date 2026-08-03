@@ -8,6 +8,7 @@ import { serialize, keycodeTooltip, isMask } from '../../../shared/keycodes/keyc
 import { KeyWidget } from '../keyboard/KeyWidget'
 import type { KleKey } from '../../../shared/kle/types'
 import { KEY_UNIT, KEY_SPACING, KEY_FACE_INSET } from '../keyboard/constants'
+import { Tooltip } from '../ui/Tooltip'
 
 interface Props {
   value: number
@@ -104,34 +105,35 @@ export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMa
   )
 
   const keyButton = (
-    <button
-      type="button"
-      aria-label={label}
-      aria-pressed={selected}
-      title={tooltip}
-      data-testid="keycode-field"
-      disabled={disabled}
-      className={`flex shrink-0 rounded ring-1 ${disabled ? 'cursor-default' : 'cursor-pointer'} ${selected ? 'ring-accent' : `ring-picker-item-border ${disabled ? '' : 'hover:ring-accent'}`}`}
-      onClick={handleClick}
-      onDoubleClick={isMasked ? undefined : handleDoubleClick}
-    >
-      <svg
-        width={KEYCODE_FIELD_SIZE}
-        height={KEYCODE_FIELD_SIZE}
-        viewBox={`${FACE_ORIGIN} ${FACE_ORIGIN} ${FACE_SIZE} ${FACE_SIZE}`}
+    <Tooltip content={tooltip ?? ''} disabled={!tooltip}>
+      <button
+        type="button"
+        aria-label={label}
+        aria-pressed={selected}
+        data-testid="keycode-field"
+        disabled={disabled}
+        className={`flex shrink-0 rounded ring-1 ${disabled ? 'cursor-default' : 'cursor-pointer'} ${selected ? 'ring-accent' : `ring-picker-item-border ${disabled ? '' : 'hover:ring-accent'}`}`}
+        onClick={handleClick}
+        onDoubleClick={isMasked ? undefined : handleDoubleClick}
       >
-        <KeyWidget
-          kleKey={FIELD_KEY}
-          keycode={qmkId}
-          selected={selected}
-          selectedMaskPart={selectedMaskPart}
-          selectedFill={false}
-          onClick={isMasked ? handleKeyWidgetClick : undefined}
-          onDoubleClick={isMasked ? handleKeyWidgetDoubleClick : undefined}
-          hoverMaskParts={isMasked}
-        />
-      </svg>
-    </button>
+        <svg
+          width={KEYCODE_FIELD_SIZE}
+          height={KEYCODE_FIELD_SIZE}
+          viewBox={`${FACE_ORIGIN} ${FACE_ORIGIN} ${FACE_SIZE} ${FACE_SIZE}`}
+        >
+          <KeyWidget
+            kleKey={FIELD_KEY}
+            keycode={qmkId}
+            selected={selected}
+            selectedMaskPart={selectedMaskPart}
+            selectedFill={false}
+            onClick={isMasked ? handleKeyWidgetClick : undefined}
+            onDoubleClick={isMasked ? handleKeyWidgetDoubleClick : undefined}
+            hoverMaskParts={isMasked}
+          />
+        </svg>
+      </button>
+    </Tooltip>
   )
 
   if (!onDelete) return keyButton

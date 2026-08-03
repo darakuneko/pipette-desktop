@@ -22,6 +22,24 @@ export default [
     }
   },
   {
+    // Native `title` attributes on DOM elements render the OS tooltip, not
+    // the app's styled bubble (src/renderer/components/ui/Tooltip.tsx) —
+    // forbidden by standing project rule. `title` PROPS on custom
+    // components (JSXIdentifier starting uppercase, e.g. `<PanelSection
+    // title=...>`) are unaffected since they're section headings / modal
+    // titles, not tooltips.
+    files: ['src/renderer/**/*.tsx'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'JSXOpeningElement[name.type="JSXIdentifier"][name.name=/^[a-z]/] > JSXAttribute[name.name="title"]',
+          message: 'Native `title` attributes render the OS tooltip, not the app-styled bubble. Wrap the element with <Tooltip> from src/renderer/components/ui/Tooltip.tsx instead.'
+        }
+      ]
+    }
+  },
+  {
     ignores: ['out/', 'dist/', 'node_modules/']
   }
 ]

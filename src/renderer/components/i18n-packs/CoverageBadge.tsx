@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react'
 import { getCachedCoverage, subscribeCoverage, refreshCoverageFromIpc } from '../../i18n/coverage-cache'
 import type { CoverageResult } from '../../../shared/i18n/coverage'
+import { Tooltip } from '../ui/Tooltip'
 
 interface CoverageBadgeProps {
   packId: string
@@ -59,12 +60,13 @@ export function CoverageBadge({ packId, packVersion }: CoverageBadgeProps): JSX.
   const pct = Math.round(coverage.coverageRatio * 100)
   const tooltip = `${String(coverage.coveredKeys)} / ${String(coverage.totalKeys)} keys`
   return (
-    <span
-      className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${bandClass(coverage.coverageRatio)}`}
-      title={tooltip}
-      data-testid={`coverage-badge-${packId}`}
-    >
-      {String(pct)}%
-    </span>
+    <Tooltip content={tooltip} wrapperAs="span">
+      <span
+        className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${bandClass(coverage.coverageRatio)}`}
+        data-testid={`coverage-badge-${packId}`}
+      >
+        {String(pct)}%
+      </span>
+    </Tooltip>
   )
 }

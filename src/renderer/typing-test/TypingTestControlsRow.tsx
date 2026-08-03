@@ -7,6 +7,7 @@ import { ICON_SM, ICON_LG } from '../constants/ui-tokens'
 import type { TypingTestState } from './useTypingTest'
 import type { TypingTestConfig } from './types'
 import { ResultNameModal } from './ResultNameModal'
+import { Tooltip } from '../components/ui/Tooltip'
 
 interface Props {
   state: TypingTestState
@@ -113,17 +114,18 @@ function ResultNameField({ onName, chips }: { onName?: (name: string) => void; c
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setModalOpen(true)}
-        title={t('editor.typingTest.nameResult')}
-        aria-label={t('editor.typingTest.nameResult')}
-        className={`flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm transition-colors hover:text-content ${name ? 'text-content-secondary' : 'text-content-muted'}`}
-        data-testid="typing-test-result-name"
-      >
-        <SquarePen size={ICON_SM} aria-hidden="true" />
-        <span>{name || t('editor.typingTest.history.unnamed')}</span>
-      </button>
+      <Tooltip content={t('editor.typingTest.nameResult')}>
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          aria-label={t('editor.typingTest.nameResult')}
+          className={`flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm transition-colors hover:text-content ${name ? 'text-content-secondary' : 'text-content-muted'}`}
+          data-testid="typing-test-result-name"
+        >
+          <SquarePen size={ICON_SM} aria-hidden="true" />
+          <span>{name || t('editor.typingTest.history.unnamed')}</span>
+        </button>
+      </Tooltip>
       {modalOpen && (
         <ResultNameModal
           initialName={name}

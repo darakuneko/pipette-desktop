@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Trash2 } from 'lucide-react'
 import { ICON_SM } from '../constants/ui-tokens'
 import { optionButtonClass } from './TypingTestSettingsBar'
+import { Tooltip } from '../components/ui/Tooltip'
 
 interface SectionHeaderProps {
   label: string
@@ -47,17 +48,18 @@ interface RomajiFilterToggleProps {
 export function RomajiFilterToggle({ active, onToggle }: RomajiFilterToggleProps) {
   const { t } = useTranslation()
   return (
-    <button
-      type="button"
-      data-testid="romaji-filter-toggle"
-      aria-pressed={active}
-      title={t('editor.typingTest.language.romajiFilter')}
-      aria-label={t('editor.typingTest.language.romajiFilter')}
-      onClick={onToggle}
-      className={`${optionButtonClass(active, 'px-2.5')} shrink-0`}
-    >
-      {t('editor.typingTest.language.romajiBadge')}
-    </button>
+    <Tooltip content={t('editor.typingTest.language.romajiFilter')} wrapperClassName="shrink-0">
+      <button
+        type="button"
+        data-testid="romaji-filter-toggle"
+        aria-pressed={active}
+        aria-label={t('editor.typingTest.language.romajiFilter')}
+        onClick={onToggle}
+        className={`${optionButtonClass(active, 'px-2.5')} shrink-0`}
+      >
+        {t('editor.typingTest.language.romajiBadge')}
+      </button>
+    </Tooltip>
   )
 }
 

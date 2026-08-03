@@ -14,6 +14,7 @@ import type { TypingKeyboardSummary } from '../../../shared/types/typing-analyti
 import { AnalyzePane } from './AnalyzePane'
 import type { ConnectedTappingTerm } from './analyze-types'
 import { formatSharePercent } from './analyze-format'
+import { Tooltip } from '../ui/Tooltip'
 
 // Below this viewport width the two panes can't fit side-by-side
 // without crushing the per-tab filter row, so the toggle is disabled
@@ -173,22 +174,23 @@ export function TypingAnalyticsView({ initialUid, onBack, connectedTappingTerm, 
         >
           {skipWarningMessage}
         </div>
-        <button
-          type="button"
-          role="switch"
-          className={`${FOOTER_BUTTON_BASE} disabled:cursor-not-allowed disabled:opacity-50 ${
-            splitVisible
-              ? 'border-accent bg-accent/10 text-accent'
-              : 'border-edge text-content-secondary hover:text-content'
-          }`}
-          onClick={handleToggleSplit}
-          disabled={!isWideViewport}
-          aria-checked={splitEnabled}
-          title={!isWideViewport ? t('analyze.splitView.narrowWindow') : undefined}
-          data-testid="analyze-split-toggle"
-        >
-          {t('analyze.splitView.toggle')}
-        </button>
+        <Tooltip content={t('analyze.splitView.narrowWindow')} disabled={isWideViewport}>
+          <button
+            type="button"
+            role="switch"
+            className={`${FOOTER_BUTTON_BASE} disabled:cursor-not-allowed disabled:opacity-50 ${
+              splitVisible
+                ? 'border-accent bg-accent/10 text-accent'
+                : 'border-edge text-content-secondary hover:text-content'
+            }`}
+            onClick={handleToggleSplit}
+            disabled={!isWideViewport}
+            aria-checked={splitEnabled}
+            data-testid="analyze-split-toggle"
+          >
+            {t('analyze.splitView.toggle')}
+          </button>
+        </Tooltip>
         {onBack && (
           <button
             type="button"

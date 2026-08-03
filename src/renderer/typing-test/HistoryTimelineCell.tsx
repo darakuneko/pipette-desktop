@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { ChartNoAxesGantt } from 'lucide-react'
 import { ICON_SM } from '../constants/ui-tokens'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
+import { Tooltip } from '../components/ui/Tooltip'
 import { WordTimelineView } from './WordTimelineView'
 
 interface Props {
@@ -29,16 +30,17 @@ export function HistoryTimelineCell({ result, uid, availableRunIds }: Props) {
 
   return (
     <td className="px-3 py-1.5">
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="rounded p-1 text-content-muted transition-colors hover:text-content"
-        aria-label={t('editor.typingTest.history.timeline.openButton')}
-        title={t('editor.typingTest.history.timeline.openButton')}
-        data-testid={`history-timeline-open-${result.date}`}
-      >
-        <ChartNoAxesGantt size={ICON_SM} aria-hidden="true" />
-      </button>
+      <Tooltip content={t('editor.typingTest.history.timeline.openButton')}>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="rounded p-1 text-content-muted transition-colors hover:text-content"
+          aria-label={t('editor.typingTest.history.timeline.openButton')}
+          data-testid={`history-timeline-open-${result.date}`}
+        >
+          <ChartNoAxesGantt size={ICON_SM} aria-hidden="true" />
+        </button>
+      </Tooltip>
       {open && (
         <WordTimelineView
           uid={uid}
