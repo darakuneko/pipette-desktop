@@ -530,7 +530,9 @@
             "runWpm": "ラン全体のWPMじゃん☆",
             "accuracy": "正確度☆",
             "overlap": "重複率☆",
-            "duration": "所要時間☆"
+            "duration": "所要時間☆",
+            "kpm": "1分の打鍵数☆",
+            "durationSeconds": "{{s}}秒"
           },
           "legend": {
             "normal": "普通の打鍵",
@@ -539,6 +541,8 @@
             "unjudged": "未判定（正誤わかんないやつ）",
             "blank": "ブランク（圧縮表示だよ）",
             "leadIn": "ワード前の間",
+            "blankLine": "ブランク（250ms超、圧縮表示だよ）",
+            "leadInLine": "行前の間じゃん",
             "correctedNote": "ミスの印、提出前に直したのも入ってるから、印あっても正確度100%になることあるよ"
           },
           "axisNote": "ブランクは軸上で圧縮して表示してるけど、出てる時間は全部リアルな値だよ",
@@ -557,7 +561,12 @@
             "correct": "正解☆",
             "offset": "+{{ms}}ms",
             "blankDuration": "ブランク: {{ms}}ms",
-            "leadInDuration": "ワード前の間: {{ms}}ms"
+            "leadInDuration": "ワード前の間: {{ms}}ms",
+            "leadInLineDuration": "行前の間: {{ms}}ms"
+          },
+          "line": {
+            "indexAria": "{{n}}行目じゃん",
+            "romajiAria": "ローマ字: {{text}}"
           }
         }
       },

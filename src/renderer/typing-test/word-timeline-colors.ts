@@ -46,6 +46,15 @@ export const TIMELINE_LEGEND: Record<TimelineFillKind, TimelineLegendEntry> = {
   leadIn: { swatchClass: 'bg-edge-strong', labelKey: 'editor.typingTest.history.timeline.legend.leadIn' },
 }
 
+/** Fill for a word-boundary divider inside a LINE row's SVG strip
+ *  (`LineTimelineRow.tsx`) — purely structural (marks where one word's
+ *  keystrokes end and the next begins on the line's shared axis), not a
+ *  semantic "kind" like the ones above, so it has no `TIMELINE_LEGEND`
+ *  entry of its own. Uses the same subtle hairline-divider token
+ *  `style.css` reserves for this purpose elsewhere (`--color-edge-subtle`
+ *  — see `.claude/DESIGN.md`'s Elevation & Depth table). */
+export const WORD_SEPARATOR_FILL = 'var(--color-edge-subtle)'
+
 /** Priority order for a keystroke's fill when more than one condition
  *  applies (e.g. a mistake that also overlapped the previous key):
  *  overlap first (this view exists to make overlap visible even on an

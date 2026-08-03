@@ -530,7 +530,9 @@
             "runWpm": "ラン全体のWPM",
             "accuracy": "正確度",
             "overlap": "重複率",
-            "duration": "所要時間"
+            "duration": "所要時間",
+            "kpm": "1分あたりの打鍵数",
+            "durationSeconds": "{{s}}秒"
           },
           "legend": {
             "normal": "通常の打鍵",
@@ -539,6 +541,8 @@
             "unjudged": "未判定（正誤のデータなし）",
             "blank": "間（圧縮して表示）",
             "leadIn": "ワード前の間",
+            "blankLine": "間（250ms超、圧縮して表示）",
+            "leadInLine": "行前の間",
             "correctedNote": "誤りの印には提出前に訂正された打鍵も含まれております。印があっても正確度100%となることがございます。"
           },
           "axisNote": "間は軸上で圧縮して表示しておりますが、表示される時間はいずれも実際の値でございます。",
@@ -557,7 +561,12 @@
             "correct": "正解",
             "offset": "+{{ms}}ms",
             "blankDuration": "間: {{ms}}ms",
-            "leadInDuration": "ワード前の間: {{ms}}ms"
+            "leadInDuration": "ワード前の間: {{ms}}ms",
+            "leadInLineDuration": "行前の間: {{ms}}ms"
+          },
+          "line": {
+            "indexAria": "{{n}}行目",
+            "romajiAria": "ローマ字: {{text}}でございます"
           }
         }
       },

@@ -28,8 +28,17 @@ export const MIN_BAR_MS = 30
  *  a gap stops being ordinary signal and starts being a hole in normal
  *  behavior — but this constant answers a different question (human
  *  hesitation vs HID poll starvation), so it is deliberately a different,
- *  much larger value. */
-export const BLANK_THRESHOLD_MS = 1000
+ *  much larger value.
+ *
+ *  Named WORD-specific (not just `BLANK_THRESHOLD_MS`) now that
+ *  `line-timeline.ts` exists alongside this module with its own, much
+ *  smaller `LINE_BLANK_THRESHOLD_MS` (250ms, matching the timeline
+ *  modal's line-view legend) — a per-word row and a per-line row draw the
+ *  line between "ordinary rhythm" and "a pause worth marking" at
+ *  deliberately different places, since a line's shared axis already
+ *  spans several words' worth of ordinary inter-word rhythm that would
+ *  read as noise at the word view's coarser 1000ms cut. */
+export const WORD_BLANK_THRESHOLD_MS = 1000
 
 /** Every inter-keystroke gap's axis contribution is capped at this many
  *  display-ms — legibility AND monotonicity, together:
@@ -268,30 +277,42 @@ function trueObservedEnd(k: RunKeystroke): number {
   return k.releaseMs ?? k.pressMs
 }
 
-function buildWord(word: RunWord, crossWordLastObservedMs: number | null): WordBuildResult {
-  const keystrokes = [...word.keystrokes].sort((a, b) => a.pressMs - b.pressMs)
+export interface KeystrokeStreamResult {
+  keystrokeSegments: KeystrokeSegment[]
+  blankSegments: BlankSegment[]
+  /** See `assignLanes` — computed over `keystrokeSegments` alone. */
+  laneCount: number
+  maxEndMs: number
+  /** MAX observed boundary across every keystroke in the stream — see
+   *  `WordBuildResult.lastObservedTrueMs`'s doc comment for why this is a
+   *  MAX, not just the last press-ordered keystroke's own end. Always
+   *  defined: callers only ever invoke this with a non-empty
+   *  `keystrokes` array. */
+  lastObservedTrueMs: number
+  overlapObserved?: number
+  overlapTrue?: number
+}
 
-  if (keystrokes.length === 0) {
-    return { segments: [], laneCount: 0, maxEndMs: 0, durationMs: 0 }
-  }
-
-  const segments: WordTimelineSegment[] = []
+/** Builds one continuous run of keystroke + blank segments over an
+ *  already press-sorted, NON-EMPTY keystroke array, starting the display
+ *  axis at `startCursor` (already past any leadInPause marker the caller
+ *  chose to insert — see `buildWord`). This is the shared axis-building
+ *  core behind both the per-word row (`buildWord`, one call per word,
+ *  cursor reset to a fresh `startCursor` each time) and the per-line row
+ *  (`line-timeline.ts`'s `buildLine`, ONE call over an entire line's
+ *  keystrokes flattened across all its words) — the two differ only in
+ *  which keystrokes they hand this function and which `blankThresholdMs`
+ *  applies (`WORD_BLANK_THRESHOLD_MS` vs `LINE_BLANK_THRESHOLD_MS`).
+ *  Cross-word / cross-line lead-in markers are each caller's own concern
+ *  (via `startCursor`), never this function's. */
+export function buildKeystrokeStream(
+  keystrokes: RunKeystroke[],
+  blankThresholdMs: number,
+  startCursor: number,
+): KeystrokeStreamResult {
   const keystrokeSegments: KeystrokeSegment[] = []
-  let displayCursor = 0
-
-  // Between-word hesitation: compare this word's first press against the
-  // last OBSERVED instant anywhere in the run so far. A single marker at
-  // the word's start, not folded into the first keystroke's own gap —
-  // the pause belongs to the transition, not to either word.
-  const first = keystrokes[0]
-  if (crossWordLastObservedMs !== null) {
-    const leadGap = first.pressMs - crossWordLastObservedMs
-    if (leadGap >= BLANK_THRESHOLD_MS) {
-      segments.push({ kind: 'leadInPause', startMs: 0, endMs: GAP_DISPLAY_CAP_MS, trueDurationMs: leadGap })
-      displayCursor += GAP_DISPLAY_CAP_MS
-    }
-  }
-
+  const blankSegments: BlankSegment[] = []
+  let displayCursor = startCursor
   let observedOverlapCount = 0
   let overlappedTrueCount = 0
 
@@ -303,14 +324,14 @@ function buildWord(word: RunWord, crossWordLastObservedMs: number | null): WordB
         // A gap is only ever MEASURED from an observed release — see the
         // module doc comment on RunKeystroke.releaseMs. Every gap's axis
         // contribution is capped at GAP_DISPLAY_CAP_MS regardless of
-        // whether it crosses BLANK_THRESHOLD_MS (see that constant's own
+        // whether it crosses `blankThresholdMs` (see that constant's own
         // doc comment for the monotonicity argument) — a negative gap
         // (real overlap) is always below the cap, so overlap depth still
         // stays exactly proportional in that case.
         const gapTrue = k.pressMs - prev.releaseMs
         gapDisplay = Math.min(gapTrue, GAP_DISPLAY_CAP_MS)
-        if (gapTrue >= BLANK_THRESHOLD_MS) {
-          segments.push({ kind: 'blank', startMs: displayCursor, endMs: displayCursor + gapDisplay, trueDurationMs: gapTrue })
+        if (gapTrue >= blankThresholdMs) {
+          blankSegments.push({ kind: 'blank', startMs: displayCursor, endMs: displayCursor + gapDisplay, trueDurationMs: gapTrue })
         }
       } else {
         // The previous release was never observed, so there is no
@@ -354,25 +375,60 @@ function buildWord(word: RunWord, crossWordLastObservedMs: number | null): WordB
   })
 
   const laneCount = assignLanes(keystrokeSegments)
-  segments.push(...keystrokeSegments)
-
-  // MAX observed boundary across every keystroke, not just the last
-  // press-ordered one's own end — see `WordBuildResult.lastObservedTrueMs`'s
-  // doc comment for why (a long hold released after a later keystroke's
-  // own end must still count).
   const lastObservedTrueMs = Math.max(...keystrokes.map(trueObservedEnd))
-  const durationMs = lastObservedTrueMs - first.pressMs
   const maxEndMs = Math.max(...keystrokeSegments.map((s) => s.endMs))
 
   return {
-    segments,
+    keystrokeSegments,
+    blankSegments,
     laneCount,
     maxEndMs,
-    durationMs,
-    overlapRate: observedOverlapCount > 0 ? overlappedTrueCount / observedOverlapCount : undefined,
+    lastObservedTrueMs,
     overlapObserved: observedOverlapCount > 0 ? observedOverlapCount : undefined,
     overlapTrue: observedOverlapCount > 0 ? overlappedTrueCount : undefined,
-    lastObservedTrueMs,
+  }
+}
+
+function buildWord(word: RunWord, crossWordLastObservedMs: number | null): WordBuildResult {
+  const keystrokes = [...word.keystrokes].sort((a, b) => a.pressMs - b.pressMs)
+
+  if (keystrokes.length === 0) {
+    return { segments: [], laneCount: 0, maxEndMs: 0, durationMs: 0 }
+  }
+
+  const segments: WordTimelineSegment[] = []
+  let displayCursor = 0
+
+  // Between-word hesitation: compare this word's first press against the
+  // last OBSERVED instant anywhere in the run so far. A single marker at
+  // the word's start, not folded into the first keystroke's own gap —
+  // the pause belongs to the transition, not to either word.
+  const first = keystrokes[0]
+  if (crossWordLastObservedMs !== null) {
+    const leadGap = first.pressMs - crossWordLastObservedMs
+    if (leadGap >= WORD_BLANK_THRESHOLD_MS) {
+      segments.push({ kind: 'leadInPause', startMs: 0, endMs: GAP_DISPLAY_CAP_MS, trueDurationMs: leadGap })
+      displayCursor += GAP_DISPLAY_CAP_MS
+    }
+  }
+
+  const stream = buildKeystrokeStream(keystrokes, WORD_BLANK_THRESHOLD_MS, displayCursor)
+  // Blanks first (background layer), keystrokes last (foreground) — SVG
+  // paints later elements on top, so a keystroke bar always renders over
+  // any blank it happens to visually overlap.
+  segments.push(...stream.blankSegments, ...stream.keystrokeSegments)
+
+  const durationMs = stream.lastObservedTrueMs - first.pressMs
+
+  return {
+    segments,
+    laneCount: stream.laneCount,
+    maxEndMs: stream.maxEndMs,
+    durationMs,
+    overlapRate: stream.overlapObserved !== undefined ? stream.overlapTrue! / stream.overlapObserved : undefined,
+    overlapObserved: stream.overlapObserved,
+    overlapTrue: stream.overlapTrue,
+    lastObservedTrueMs: stream.lastObservedTrueMs,
   }
 }
 
@@ -399,6 +455,28 @@ interface BuildStatsExtras {
   romajiInput: boolean
 }
 
+export interface ScoredCharCounts {
+  correct: number
+  incorrect: number
+}
+
+/** The scored (post separator-credit adjustment) char counts behind a
+ *  word's `accuracy`/`wordPace` — factored out of `buildStats` so
+ *  `line-timeline.ts` can pool the exact same per-word counts into a
+ *  per-LINE accuracy figure instead of re-deriving the scoring rules.
+ *  Returns undefined under the same "nothing to score" conditions
+ *  `buildStats` itself withholds accuracy/wordPace for — see
+ *  `BuildStatsExtras`'s field doc comments (partial word, no keystrokes,
+ *  or a romaji-mode run). */
+export function computeScoredWordCharCounts(word: RunWord, isRunLastWord: boolean, romajiInput: boolean): ScoredCharCounts | undefined {
+  if (word.partial || word.keystrokes.length === 0 || romajiInput) return undefined
+  const counts = computeWordCharCounts(word.display, word.typed)
+  // Withhold the separator credit for the run's actual last word — see
+  // `BuildStatsExtras.isRunLastWord`'s doc comment.
+  const correct = isRunLastWord ? counts.correct - 1 : counts.correct
+  return { correct, incorrect: counts.incorrect }
+}
+
 function buildStats(word: RunWord, durationMs: number, extras: BuildStatsExtras): WordTimelineStats {
   const { overlapObserved, overlapTrue } = extras
   const overlapRate = overlapObserved !== undefined ? overlapTrue! / overlapObserved : undefined
@@ -410,15 +488,13 @@ function buildStats(word: RunWord, durationMs: number, extras: BuildStatsExtras)
   // to score either — undefined (unscoreable), not a misleading number.
   // A romaji-mode run withholds the same two fields for every word — see
   // `BuildStatsExtras.romajiInput`'s doc comment.
-  if (word.partial || word.keystrokes.length === 0 || extras.romajiInput) {
+  const scored = computeScoredWordCharCounts(word, extras.isRunLastWord, extras.romajiInput)
+  if (!scored) {
     return { durationMs, overlapRate, overlapObserved, overlapTrue }
   }
 
-  const counts = computeWordCharCounts(word.display, word.typed)
-  // Withhold the separator credit for the run's actual last word — see
-  // `BuildStatsExtras.isRunLastWord`'s doc comment.
-  const correct = extras.isRunLastWord ? counts.correct - 1 : counts.correct
-  const totalChars = correct + counts.incorrect
+  const { correct, incorrect } = scored
+  const totalChars = correct + incorrect
   const accuracy = totalChars > 0 ? (correct / totalChars) * 100 : undefined
   const minutes = durationMs / 60_000
   const wordPace = minutes > 0 ? (correct / 5) / minutes : undefined
@@ -430,7 +506,7 @@ function buildStats(word: RunWord, durationMs: number, extras: BuildStatsExtras)
     overlapObserved,
     overlapTrue,
     correctChars: totalChars > 0 ? correct : undefined,
-    incorrectChars: totalChars > 0 ? counts.incorrect : undefined,
+    incorrectChars: totalChars > 0 ? incorrect : undefined,
     durationMs,
   }
 }

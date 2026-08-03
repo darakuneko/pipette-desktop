@@ -32,6 +32,45 @@ const SAMPLE_LOG: RunKeystrokeLog = {
   ],
 }
 
+const SAMPLE_LOG_WITH_LINES: RunKeystrokeLog = {
+  ...SAMPLE_LOG,
+  words: [
+    ...SAMPLE_LOG.words,
+    {
+      index: 1,
+      display: 'go',
+      typed: 'go',
+      correct: true,
+      keystrokes: [
+        { pressMs: 500, releaseMs: 560, keycode: 0, row: 0, col: 0, correct: true, expectedChar: 'g' },
+        { pressMs: 580, releaseMs: 640, keycode: 0, row: 0, col: 1, correct: true, expectedChar: 'o' },
+      ],
+    },
+  ],
+  lineBreaks: [0],
+}
+
+// A single line whose true span is 8.73s — fractional, sub-second
+// precision, matching the shape `analyze-format`'s mm:ss `formatDuration`
+// mishandles (no rounding on the seconds field: "0:8.73"). Regression
+// fixture for the line-view duration display bug (see LineTimelineRow's
+// own doc comment on `formatLineDurationSeconds`).
+const SAMPLE_LOG_LINE_DURATION: RunKeystrokeLog = {
+  ...SAMPLE_LOG,
+  words: [
+    {
+      index: 0,
+      display: 'hi',
+      typed: 'hi',
+      correct: true,
+      keystrokes: [
+        { pressMs: 0, releaseMs: 8730, keycode: 0, row: 0, col: 0, correct: true, expectedChar: 'h' },
+      ],
+    },
+  ],
+  lineBreaks: [],
+}
+
 beforeEach(() => {
   window.vialAPI = {
     typingRunLogGet: vi.fn().mockResolvedValue({ success: true, data: SAMPLE_LOG }),
@@ -122,6 +161,50 @@ describe('WordTimelineView', () => {
     await waitFor(() => expect(screen.getByTestId('word-timeline-canvas')).toBeTruthy())
     expect(screen.queryByTestId('word-timeline-zoom')).toBeNull()
     expect(screen.queryByText('Zoom')).toBeNull()
+  })
+
+  it('auto-selects line rows (never word rows) once the log has a lineBreaks field, and legend uses the line-view blank wording', async () => {
+    window.vialAPI.typingRunLogGet = vi.fn().mockResolvedValue({ success: true, data: SAMPLE_LOG_WITH_LINES })
+    renderWithI18n(<WordTimelineView uid="uid-1" runId="run-1" onClose={() => {}} />)
+    await waitFor(() => expect(screen.getByTestId('line-timeline-row-0')).toBeTruthy())
+    expect(screen.queryByTestId('word-timeline-row-0')).toBeNull()
+    expect(screen.getByText('Pause (>250ms, shown compressed)')).toBeTruthy()
+    expect(screen.queryByText('Pause (shown compressed)')).toBeNull()
+  })
+
+  it('treats an empty lineBreaks array ([]) as a single-line log, still line mode (field PRESENCE, not emptiness, selects the mode)', async () => {
+    window.vialAPI.typingRunLogGet = vi.fn().mockResolvedValue({
+      success: true,
+      data: { ...SAMPLE_LOG, lineBreaks: [] },
+    })
+    renderWithI18n(<WordTimelineView uid="uid-1" runId="run-1" onClose={() => {}} />)
+    await waitFor(() => expect(screen.getByTestId('line-timeline-row-0')).toBeTruthy())
+    expect(screen.queryByTestId('word-timeline-row-0')).toBeNull()
+  })
+
+  it('falls back to word rows (and the word-view legend wording) for a legacy log with no lineBreaks field at all', async () => {
+    renderWithI18n(<WordTimelineView uid="uid-1" runId="run-1" onClose={() => {}} />)
+    await waitFor(() => expect(screen.getByTestId('word-timeline-row-0')).toBeTruthy())
+    expect(screen.queryByTestId('line-timeline-row-0')).toBeNull()
+    expect(screen.getByText('Pause (shown compressed)')).toBeTruthy()
+    expect(screen.queryByText('Pause (>250ms, shown compressed)')).toBeNull()
+  })
+
+  it('renders a fractional line duration as seconds-with-one-decimal ("8.7s"), never mm:ss ("0:8...")', async () => {
+    window.vialAPI.typingRunLogGet = vi.fn().mockResolvedValue({ success: true, data: SAMPLE_LOG_LINE_DURATION })
+    renderWithI18n(<WordTimelineView uid="uid-1" runId="run-1" onClose={() => {}} />)
+    await waitFor(() => expect(screen.getByTestId('line-timeline-row-0')).toBeTruthy())
+    const row = screen.getByTestId('line-timeline-row-0')
+    expect(row.textContent).toContain('8.7s')
+    expect(row.textContent).not.toMatch(/0:8/)
+  })
+
+  it('renders one row per line, grouping words per lineBreaks (2 words across 2 lines -> 2 line rows, not 1)', async () => {
+    window.vialAPI.typingRunLogGet = vi.fn().mockResolvedValue({ success: true, data: SAMPLE_LOG_WITH_LINES })
+    renderWithI18n(<WordTimelineView uid="uid-1" runId="run-1" onClose={() => {}} />)
+    await waitFor(() => expect(screen.getByTestId('line-timeline-row-0')).toBeTruthy())
+    expect(screen.getByTestId('line-timeline-row-1')).toBeTruthy()
+    expect(screen.getAllByTestId('line-timeline-keystroke')).toHaveLength(4)
   })
 
   it('closes only itself on Escape, leaving an outer modal open (nested-modal Escape isolation)', async () => {
