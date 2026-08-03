@@ -215,7 +215,7 @@ The Heatmap, Ergonomics, Bigrams > Finger IKI, Bigrams > Bigram patterns' Hand u
 
 The filter row is a single collapsed chip — `keyboard · device · source · period`. Each segment truncates a long value with an ellipsis; hover the chip to see the full text. Click the chip to open the filter conditions modal — every common condition, including the keymap snapshot, is edited there (the modal's **Keymap** row is the only place to change snapshots).
 
-When the **Source** dimension is set to **TypingTest** and its **Results** drill-down narrows the selection to exactly one run for the currently-connected keyboard, an **Open timeline** button appears next to the chip. It leaves Analyze, re-enters the Typing Test view for that keyboard, and opens the **Keystroke Timeline** for the selected run — the same view a History row's timeline icon opens (see **Data** under §4.3). The button is hidden whenever more than one run is selected, or when Analyze is showing a keyboard other than the one physically connected (there is no typing test view to jump back into for it).
+When the **Source** dimension is set to **TypingTest** and its **Results** drill-down narrows the selection to exactly one run for the currently-connected keyboard, an **Open timeline** button appears next to the chip. It leaves Analyze, re-enters the Typing Test view for that keyboard, and opens the **Keystroke Timeline** for the selected run — the same view a History row's **Timeline** link opens (see **Keystroke Timeline** under §4.3). The button is hidden whenever more than one run is selected, or when Analyze is showing a keyboard other than the one physically connected (there is no typing test view to jump back into for it).
 
 **Filter conditions modal**
 
@@ -1145,20 +1145,39 @@ Click the **Typing Test** button in the status bar to enter typing test mode.
 The left side of the typing-test screen is a collapsible **Settings** panel. The chevron button at its bottom collapses it to a thin rail and expands it again; the state is saved per keyboard. The panel groups the test controls into three sections:
 
 - **Settings** — the **Data Source** row (see below); **Layer** (the base layer used by the on-screen keymap, shown when the keyboard has more than one layer); and **Lines** / **Font** (line count and font size of the reading window — these two apply in every mode). With a MonkeyType language active, the **Pattern** / **Units** / **Option** rows described under **MonkeyType** also appear here; with a Tatoeba pack active, Tatoeba's own **Pattern** / **Units** rows appear instead (see **Tatoeba** below)
-- **Data** — **History** opens the saved-results modal: results are split into **MonkeyType** and **File Import** tabs, with a mode filter dropdown on the MonkeyType tab and a text filter dropdown on the File Import tab; the sparkline, the stats row (Best / Avg / Last 10 / Tests / Avg Acc), and **Export CSV** all follow the current filter, and each row can be renamed (via the same naming modal as the finished screen) or deleted. **Compare** picks the comparison baseline — **Previous**, **Best**, **Average**, a pinned **Result**, or **Off**; while a baseline is set, colored ▲ / ▼ deltas appear next to WPM / KPM / Accuracy in the stats row. The baseline choice is remembered per test condition (mode + settings + language, or per imported text). **Save Unnamed** (default on) auto-saves finished results even without a name; switched off, only named results are kept
-
-  Below the sparkline, an **Accuracy Trend** chart plots accuracy over time for a single test condition, picked from the dropdown next to it (e.g. "50 words (english) +punct" or "30s (english)"; the label format varies by mode). This condition picker is independent of the mode/text filter above it — it always lists every condition present in the active tab's full history — and defaults to the condition of the most recent run. The chart appears once the selected condition has 2 or more saved runs
-
-  ![Typing Test — Accuracy trend](screenshots/typing-test-accuracy-trend.png)
-
-  Below the Accuracy Trend chart, a **Most missed** ranking lists up to the top 15 missed characters (or, in Romaji mode, the missed kana's romaji, e.g. "shi") as proportional bars, ranked by mistake count. Unlike the Accuracy Trend, it isn't scoped to one condition — it aggregates every result in the active tab. It stays hidden when the tab has no results at all, and shows a brief empty message when there are results but none of them recorded a mistake
-
-  Below Most missed, an **Error mix** section shows substitution / omission / insertion rates (each a share of the target characters classified), char-weighted across every result in the active tab. Each row shows the rate's population average alongside a direction-neutral position label (Far below average / Below average / Average / Above average / Far above average) based on standard-deviation distance from that average. Like Most missed, it isn't scoped to one condition, stays hidden when the tab has no results at all, and shows a brief empty message when there are results but none of them qualify (e.g. every result predates error-class tracking, or the tab is Romaji-only, whose runs never carry this figure)
-
-  Each row in the results table with a saved keystroke log shows a small timeline icon button — a run recorded before this feature existed, or one that never finished (paused/interrupted without a log), shows no icon at all rather than a disabled one. Clicking it opens the **Keystroke Timeline**: one horizontal bar strip per word, showing every physical keystroke positioned on a shared time axis. Bar color reads the keystroke's outcome — normal, mistake, overlapped (pressed before the previous key was released), or unjudged (no correctness data, e.g. mid-IME-composition) — and a legend spells out each color plus the pause markers (a long gap mid-word, or a hesitation before the word starts). Pauses beyond a fixed threshold are shown visually compressed so one long pause doesn't dwarf the rest of the row, but every duration shown — in the row headers and in the hover tooltip over any bar or marker — is still the real, uncompressed value. A **Zoom** slider (fit → 10×) reveals individual overlapping keystrokes in a fast-typed cluster. Above the rows, a stat grid mirrors the row's own WPM / Accuracy / Duration figures alongside an overlap rate the table doesn't otherwise show
-
-  ![Typing Test — Keystroke timeline](screenshots/typing-test-timeline.png)
+- **Data** — **History** opens the saved-results modal (see **History** below). **Compare** picks the comparison baseline — **Previous**, **Best**, **Average**, a pinned **Result**, or **Off**; while a baseline is set, colored ▲ / ▼ deltas appear next to WPM / KPM / Accuracy in the stats row, and the **Compare** button itself takes on an accent border and text whenever the baseline isn't Off. The baseline choice is remembered per test condition (mode + settings + language, or per imported text). **Save Unnamed** (default on) auto-saves finished results even without a name; switched off, only named results are kept
 - **View** — three switches: **Operation** (the controls row below the reading window), **Measurement** (the live stats row), and **Keymap** (the keyboard pane). Each hides its area when switched off; a finished test always shows the controls and the results regardless
+
+#### History
+
+![Typing Test — History (Results)](screenshots/typing-test-history-results.png)
+
+The History modal opens on a single header row: **Results** / **Analysis** tabs on the left, and a right-end group of selects — a source select (**MonkeyType** / **Tatoeba** / **Aozora** / **File Import**) that scopes every section in the modal to one source, plus (only while **Analysis** is active) the Accuracy Trend's own condition select. Runs from different sources aren't comparable to each other, so every stat, chart, and export in the modal stays scoped to whichever source is currently picked.
+
+**Results** tab — the run list:
+
+- A sub-filter row sits above the table for two of the four sources: a mode dropdown (All / Words / Time / Quote) for **MonkeyType**, a text dropdown for **Aozora** / **File Import**. **Tatoeba** has neither — its own Accuracy Trend condition selector (on the Analysis tab) already covers per-condition grouping
+- A titled **WPM Trend** chart plots WPM over time for the filtered runs, with the exact value on hover; it appears once there are 2 or more results
+- A stats row (Best / Avg / Last 10 / Tests / Avg Acc) follows, with **Export CSV** at its right end — the export always matches whatever the sub-filter and source select currently show
+- The table lists up to 20 rows under whichever sort is active — click any column header to change it, defaulting to most recent first. A run with a saved keystroke log shows a **Timeline** text link in its own column; clicking it opens the **Keystroke Timeline** (see below). A row shows nothing in that column instead — never a disabled link — when its run has no saved log at all: recorded before Recording Consent was ever accepted (see **Typing analytics recording** below — the same app-wide consent flag also gates the raw log for an ordinary Typing Test run, not only for REC), recorded before this feature existed, or paused/interrupted without finishing. Each row can also be renamed (same naming modal as the finished screen) or deleted
+
+![Typing Test — History (Analysis)](screenshots/typing-test-history-analysis.png)
+
+**Analysis** tab — three aggregate sections, all scoped to whichever source is picked in the header (not to the Results tab's own sub-filter):
+
+- **Accuracy Trend** plots accuracy over time for a single test condition, picked from the header's condition select (e.g. "50 words (english) +punct" or "30s (english)"; the label format varies by mode). It always lists every condition the active source has, defaults to the most recent run's condition, and the chart appears once the selected condition has 2 or more saved runs
+- **Most missed** ranks up to the top 15 missed characters (or, in Romaji mode, the missed kana's romaji, e.g. "shi") as proportional bars, aggregated across every result in the active source rather than one condition. Hidden when the source has no results at all; shows a brief empty message when there are results but none of them recorded a mistake
+- **Error mix** is a TYPE / YOU / POP. AVG table of substitution / omission / insertion rates (each a share of the target characters classified), char-weighted across every result in the active source. **YOU** is the aggregated rate and **POP. AVG** the population mean for context; a colored verdict pill (Far below average / Below average / Average / Above average / Far above average) reads the standard-deviation distance between the two, and hovering a row's label shows a tooltip explaining what that error class means and how to improve it. Hidden when the source has no results at all; shows a brief empty message when there are results but none of them qualify (e.g. every result predates error-class tracking, or the source is Romaji-only, whose runs never carry this figure)
+
+#### Keystroke Timeline
+
+![Typing Test — Keystroke Timeline](screenshots/typing-test-timeline.png)
+
+Opened from a **Timeline** link in the History Results table (see **History** above). A run saved with its typing-test line grouping renders one horizontal bar strip **per line**: a shared time axis for every word on that line, a subtle divider at each word boundary, and a per-line stat fragment in the row's own header — keystrokes/min, accuracy, and overlap rate where they can be computed, plus the line's own duration in seconds, always shown. A Romaji-input run also shows a second monospace row with the typed romaji beneath each line's kana. A run saved before line grouping existed (a legacy log) falls back to the original **per-word** view instead — one strip per word, with no per-line figures.
+
+Bar color reads the keystroke's outcome — normal, mistake, overlapped (pressed before the previous key was released), or unjudged (no correctness data, e.g. mid-IME-composition) — and a legend spells out each color plus the pause markers. The line view treats a gap of **250ms or longer** as a pause (shown compressed on the axis) and a pause crossing into a new line as a lead-in marker before that line; the per-word view uses a coarser **1000ms** cut and "before this word" wording instead, since one word's own axis is much shorter than a line's. Either way, every duration shown — in the row/line headers and in the hover tooltip over any bar or marker — is still the real, uncompressed value, never the compressed on-screen one.
+
+In the line view only, each keystroke bar also shows its own key label once the bar is wide enough to fit one, so zooming in on a fast-typed cluster reveals every key rather than just spacing the bars out — the per-word view has no such label overlay. A **Zoom** slider (fit → 10×) drives this. Above the rows, a stat grid shows the run's own WPM / Accuracy / Duration figures alongside an overlap rate the table doesn't otherwise show.
 
 #### Data Source
 
@@ -1384,6 +1403,8 @@ The very first time you press Start, a consent dialog appears:
 | **What we do NOT collect** | Individual keystroke timing · Text content / passwords / specific words · Window title / URL / file path |
 
 Click **Enable** to opt in — your consent is persisted in app settings (not synced) and the dialog never appears again. Click **Cancel** to back out without starting; you can press Start later to see the dialog again.
+
+This same consent flag also gates the per-run raw keystroke log behind History's **Keystroke Timeline** (§4.3) for an ordinary Typing Test run in the editor — not only REC's own ambient recording here in Typing View. Until you've accepted it at least once, no Typing Test run saves a keystroke log at all, so no History row shows a **Timeline** link, regardless of whether REC itself is on.
 
 **Monitor App**
 

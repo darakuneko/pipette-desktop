@@ -117,10 +117,17 @@ function seedAccuracyTrendHistory(settingsBackup: VirtualDeviceSettingsBackup): 
 /** Seeds a plausible `RunKeystrokeLog` (index + payload file, mirroring
  *  `typing-run-log-store.ts`'s on-disk layout) for `TIMELINE_SEED_RUN_ID` —
  *  the History row seeded above with that runId — so the row's Keystroke
- *  Timeline icon has real data to open for the `typing-test-timeline.png`
- *  capture. Two words: one clean, one with a short overlap and a
- *  above-threshold pause, so the timeline shows every legend state at
- *  once. Returns both file backups for `restoreFile` in a `finally` block. */
+ *  Timeline link has real data to open for the `typing-test-timeline.png`
+ *  capture. Three words across two lines (`lineBreaks: [1]` — see that
+ *  field's own doc comment on `RunKeystrokeLog`): "the"/"quick" share line
+ *  0 (with a mid-line pause and a short overlap on "quick"), "fox" alone
+ *  is line 1 (crossed into after a pause past the line view's own 250ms
+ *  threshold — see `LINE_BLANK_THRESHOLD_MS` — so it renders as a
+ *  lead-in marker rather than an ordinary mid-line blank). `lineBreaks`
+ *  being present at all is what selects the LINE-view renderer
+ *  (`useTimelineModel`) over the legacy per-word one, so this seed's
+ *  screenshot shows the current UI rather than the pre-#376 fallback.
+ *  Returns both file backups for `restoreFile` in a `finally` block. */
 function seedRunKeystrokeLog(userDataPath: string): { indexBackup: FileBackup; payloadBackup: FileBackup } {
   const runsDir = join(userDataPath, 'sync', 'keyboards', VIRTUAL_DEVICE_UID, 'runs')
   const indexPath = join(runsDir, 'index.json')
@@ -134,9 +141,10 @@ function seedRunKeystrokeLog(userDataPath: string): { indexBackup: FileBackup; p
     runId: TIMELINE_SEED_RUN_ID,
     uid: VIRTUAL_DEVICE_UID,
     startedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    durationMs: 3000,
+    durationMs: 3200,
     mode: 'words',
     language: 'english',
+    lineBreaks: [1],
     words: [
       {
         index: 0,
@@ -157,13 +165,30 @@ function seedRunKeystrokeLog(userDataPath: string): { indexBackup: FileBackup; p
         typed: 'qiuck',
         correct: false,
         keystrokes: [
-          // Well past the blank threshold — this is the hesitation the
-          // screenshot's lead-in pause marker shows.
+          // Well past the line view's 250ms blank threshold but still on
+          // the SAME line as "the" (lineBreaks: [1] keeps both on line 0)
+          // — this is the mid-line pause the screenshot's blank marker
+          // shows, not a cross-line lead-in.
           { pressMs: 1800, releaseMs: 1880, keycode: 0, row: 1, col: 0, correct: true, expectedChar: 'q' },
           { pressMs: 1900, releaseMs: 2010, keycode: 0, row: 1, col: 1, correct: false, expectedChar: 'u' },
           // Overlaps the previous key's own release — the duplicate-
           // keystroke case the legend's "Overlapped" swatch documents.
           { pressMs: 1990, releaseMs: 2080, keycode: 0, row: 1, col: 2, correct: false, overlapped: true, expectedChar: 'i' },
+        ],
+      },
+      {
+        index: 2,
+        display: 'fox',
+        typed: 'fox',
+        correct: true,
+        keystrokes: [
+          // 420ms past "quick"'s last release (2080) — crosses the line
+          // break (lineBreaks: [1] ends line 0 at word 1), so this reads
+          // as a lead-in pause before line 1 rather than an ordinary
+          // mid-line blank.
+          { pressMs: 2500, releaseMs: 2580, keycode: 0, row: 2, col: 0, correct: true, overlapped: false, expectedChar: 'f' },
+          { pressMs: 2610, releaseMs: 2690, keycode: 0, row: 2, col: 1, correct: true, overlapped: false, expectedChar: 'o' },
+          { pressMs: 2720, releaseMs: 2800, keycode: 0, row: 2, col: 2, correct: true, overlapped: false, expectedChar: 'x' },
         ],
       },
     ],
@@ -436,18 +461,21 @@ async function main(): Promise<void> {
     await page.waitForTimeout(500)
     await capture(page, 'typing-test-words-waiting')
 
-    // 1b. History modal — Data section, showing the Accuracy Trend chart
-    // populated by seedAccuracyTrendHistory above (3 same-condition `words`
-    // runs, so both the sparkline and the trend chart have real data).
+    // 1b. History modal — opens on the Results tab (default), populated by
+    // seedAccuracyTrendHistory above (3 same-condition `words` runs) plus
+    // the seeded timeline run — so the WPM Trend chart, stats row, and
+    // table (with its Timeline link column) all have real data.
     await expandSettingsPanelIfCollapsed(page)
     await page.locator('[data-testid="typing-test-history-toggle"]').click()
     await page.locator('[data-testid="history-modal"]').waitFor({ state: 'visible', timeout: 5_000 })
     await page.waitForTimeout(300)
-    await capture(page, 'typing-test-accuracy-trend')
+    await capture(page, 'typing-test-history-results')
 
     // 1c. Keystroke Timeline — opened from the seeded run's row (see
     // seedRunKeystrokeLog); its History row is the most recent Accuracy
-    // Trend seed run above, tagged with TIMELINE_SEED_RUN_ID.
+    // Trend seed run above, tagged with TIMELINE_SEED_RUN_ID. The seeded
+    // log now carries `lineBreaks`, so this opens in the current per-LINE
+    // view rather than the legacy per-word fallback.
     const timelineOpenBtn = page.locator('[data-testid^="history-timeline-open-"]').first()
     if (!(await timelineOpenBtn.isVisible().catch(() => false))) {
       throw new Error('history-timeline-open button not found — seedRunKeystrokeLog guarantees this row, so silently skipping the capture would ship a stale/missing doc screenshot')
@@ -458,6 +486,12 @@ async function main(): Promise<void> {
     await capture(page, 'typing-test-timeline')
     await page.locator('[data-testid="word-timeline-close"]').click()
     await page.waitForTimeout(300)
+
+    // 1d. History modal — Analysis tab (Accuracy Trend / Most missed /
+    // Error mix), same seeded data as the Results tab above.
+    await page.locator('[data-testid="history-view-tab-analysis"]').click()
+    await page.waitForTimeout(300)
+    await capture(page, 'typing-test-history-analysis')
 
     await page.locator('[data-testid="history-modal-close"]').click()
     await page.waitForTimeout(300)
