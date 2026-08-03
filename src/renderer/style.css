@@ -82,6 +82,29 @@
   font-size: calc(var(--tt-font) * 1px);
 }
 
+/* Line timeline keystroke label overlay (LineTimelineRow.tsx): each
+   keystroke bar's HTML label wrapper opts into a CSS container query
+   (`container-type: inline-size`) so its own rendered WIDTH — which
+   tracks the shared zoom-driven canvas width, not the line's fixed
+   duration — decides whether the label glyph shows. Hidden by default;
+   the @container rule below reveals it once the bar is wide enough to
+   hold roughly one glyph of the text-2xs (10px) font. This makes
+   per-bar label visibility a pure CSS function of zoom: the row itself
+   never re-renders when the shared canvas width changes (see
+   WordTimelineView's DOM-only zoom invariant), so this could not be
+   done with a JS-computed class instead. */
+.line-timeline-label-cell {
+  container-type: inline-size;
+}
+.line-timeline-label-text {
+  display: none;
+}
+@container (min-width: 12px) {
+  .line-timeline-label-text {
+    display: block;
+  }
+}
+
 /* Interactive elements use pointer cursor */
 button:not(:disabled),
 a,

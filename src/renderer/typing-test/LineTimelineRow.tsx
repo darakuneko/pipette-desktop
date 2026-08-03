@@ -12,7 +12,7 @@ import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { LineTimelineLine } from './line-timeline'
 import type { WordTimelineSegment } from './word-timeline'
-import { fillForKeystroke, TIMELINE_FILL, WORD_SEPARATOR_FILL } from './word-timeline-colors'
+import { fillForKeystroke, labelClassForKeystroke, TIMELINE_FILL, WORD_SEPARATOR_FILL } from './word-timeline-colors'
 import { formatPercentLabel } from '../components/analyze/analyze-format'
 import { EMPTY_STAT_VALUE } from '../components/analyze/analyze-constants'
 import { LANE_UNIT_PX } from './word-timeline-row'
@@ -96,80 +96,125 @@ function LineTimelineRowInner({ line, maxDisplayMs, romajiInput, onHover, onHove
           {romajiText || EMPTY_STAT_VALUE}
         </span>
       )}
-      <svg
-        width="100%"
-        height={rowHeight}
-        viewBox={`0 0 ${Math.max(maxDisplayMs, 1)} ${rowHeight}`}
-        preserveAspectRatio="none"
-        aria-hidden="true"
-        data-testid={`line-timeline-svg-${line.lineIndex}`}
-      >
-        {line.segments.map((seg, i) => {
-          if (seg.kind === 'keystroke') {
+      <div className="relative">
+        <svg
+          width="100%"
+          height={rowHeight}
+          viewBox={`0 0 ${Math.max(maxDisplayMs, 1)} ${rowHeight}`}
+          preserveAspectRatio="none"
+          aria-hidden="true"
+          className="block"
+          data-testid={`line-timeline-svg-${line.lineIndex}`}
+        >
+          {line.segments.map((seg, i) => {
+            if (seg.kind === 'keystroke') {
+              return (
+                <rect
+                  key={i}
+                  data-testid="line-timeline-keystroke"
+                  x={seg.startMs}
+                  y={seg.lane * LANE_UNIT_PX + BAR_INSET_PX}
+                  width={Math.max(seg.endMs - seg.startMs, 1)}
+                  height={LANE_UNIT_PX - BAR_INSET_PX * 2}
+                  fill={fillForKeystroke(seg)}
+                  onMouseEnter={handleSegHover(seg)}
+                  onMouseLeave={onHoverEnd}
+                />
+              )
+            }
+            if (seg.kind === 'blank') {
+              return (
+                <rect
+                  key={i}
+                  data-testid="line-timeline-blank"
+                  x={seg.startMs}
+                  y={0}
+                  width={Math.max(seg.endMs - seg.startMs, 1)}
+                  height={rowHeight}
+                  fill={TIMELINE_FILL.blank}
+                  fillOpacity={0.18}
+                  onMouseEnter={handleSegHover(seg)}
+                  onMouseLeave={onHoverEnd}
+                />
+              )
+            }
+            // leadInPause — always at the row's own start (a line-crossing
+            // pause, never a mid-line one — see `line-timeline.ts`'s
+            // `buildLine`).
             return (
               <rect
                 key={i}
-                data-testid="line-timeline-keystroke"
-                x={seg.startMs}
-                y={seg.lane * LANE_UNIT_PX + BAR_INSET_PX}
-                width={Math.max(seg.endMs - seg.startMs, 1)}
-                height={LANE_UNIT_PX - BAR_INSET_PX * 2}
-                fill={fillForKeystroke(seg)}
-                onMouseEnter={handleSegHover(seg)}
-                onMouseLeave={onHoverEnd}
-              />
-            )
-          }
-          if (seg.kind === 'blank') {
-            return (
-              <rect
-                key={i}
-                data-testid="line-timeline-blank"
+                data-testid="line-timeline-lead-in"
                 x={seg.startMs}
                 y={0}
                 width={Math.max(seg.endMs - seg.startMs, 1)}
                 height={rowHeight}
-                fill={TIMELINE_FILL.blank}
-                fillOpacity={0.18}
+                fill={TIMELINE_FILL.leadIn}
+                fillOpacity={0.28}
                 onMouseEnter={handleSegHover(seg)}
                 onMouseLeave={onHoverEnd}
               />
             )
-          }
-          // leadInPause — always at the row's own start (a line-crossing
-          // pause, never a mid-line one — see `line-timeline.ts`'s
-          // `buildLine`).
-          return (
+          })}
+          {/* Word-boundary separators — subtle vertical dividers, never
+              text (see the module doc comment). Skips the line's own
+              start (index 0 always begins at startMs 0, which needs no
+              divider from "nothing"). */}
+          {line.words.slice(1).map((w) => (
             <rect
-              key={i}
-              data-testid="line-timeline-lead-in"
-              x={seg.startMs}
+              key={`sep-${w.index}`}
+              data-testid="line-timeline-separator"
+              x={Math.max(w.startMs - 0.5, 0)}
               y={0}
-              width={Math.max(seg.endMs - seg.startMs, 1)}
+              width={1}
               height={rowHeight}
-              fill={TIMELINE_FILL.leadIn}
-              fillOpacity={0.28}
-              onMouseEnter={handleSegHover(seg)}
-              onMouseLeave={onHoverEnd}
+              fill={WORD_SEPARATOR_FILL}
             />
-          )
-        })}
-        {/* Word-boundary separators — subtle vertical dividers, never
-            text (see the module doc comment). Skips the line's own
-            start (index 0 always begins at startMs 0, which needs no
-            divider from "nothing"). */}
-        {line.words.slice(1).map((w) => (
-          <rect
-            key={`sep-${w.index}`}
-            data-testid="line-timeline-separator"
-            x={Math.max(w.startMs - 0.5, 0)}
-            y={0}
-            width={1}
-            height={rowHeight}
-            fill={WORD_SEPARATOR_FILL}
-          />
-        ))}
-      </svg>
+          ))}
+        </svg>
+        {/* On-bar keystroke labels — an HTML overlay laid exactly over the
+            SVG strip above rather than SVG `<text>` (see the module doc
+            comment for why the SVG itself stays text-free: zoom is a
+            non-uniform `preserveAspectRatio="none"` width-only scale, which
+            would distort any in-SVG glyph). Geometry uses the SAME shared
+            axis (`maxDisplayMs`, not this line's own duration) the SVG
+            viewBox above uses, expressed in % so it tracks the zoom-driven
+            canvas width for free — the row itself never re-renders on zoom
+            (`WordTimelineView`'s DOM-only zoom invariant). Per-bar
+            visibility at a given zoom is a pure CSS container-query
+            decision (`style.css`), not something computed here. */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden="true"
+          data-testid={`line-timeline-label-layer-${line.lineIndex}`}
+        >
+          {line.segments.map((seg, i) => {
+            if (seg.kind !== 'keystroke') return null
+            const axisMs = Math.max(maxDisplayMs, 1)
+            const leftPct = (seg.startMs / axisMs) * 100
+            const widthPct = (Math.max(seg.endMs - seg.startMs, 1) / axisMs) * 100
+            return (
+              <div
+                key={i}
+                data-testid="line-timeline-label-cell"
+                className="line-timeline-label-cell absolute overflow-hidden"
+                style={{
+                  left: `${leftPct}%`,
+                  width: `${widthPct}%`,
+                  top: seg.lane * LANE_UNIT_PX + BAR_INSET_PX,
+                  height: LANE_UNIT_PX - BAR_INSET_PX * 2,
+                }}
+              >
+                <span
+                  className={`line-timeline-label-text flex h-full items-center justify-center text-2xs font-semibold leading-none ${labelClassForKeystroke(seg)}`}
+                >
+                  {seg.label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
