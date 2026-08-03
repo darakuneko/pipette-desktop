@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useTypingTest } from '../useTypingTest'
-import { clearLanguageCache, getLanguageData, clearFileImportTextCache } from '../word-generator'
+import { clearLanguageCache, getLanguageData, clearFileImportTextCache, getTatoebaPack } from '../word-generator'
 import type { TypingTestConfig, RomajiGuide } from '../types'
 import { applyRomajiCaseStyle } from '../types'
 
@@ -45,6 +45,26 @@ function press(result: Pressable, key: string): void {
 
 function type(result: Pressable, keys: string): void {
   for (const key of keys) press(result, key)
+}
+
+let fileImportRomajiCounter = 0
+
+/** Renders a fresh romaji-active fileImport run from `text` — a kana-pure
+ *  text, possibly multi-line so `parseFileImportText` produces genuine
+ *  `lineBreaks` (unlike the monkeytype words/time configs above, whose
+ *  `lineBreaks` is always empty). This is the harness for the line-end
+ *  Enter semantics tests below (Task-romaji-line-end-enter). */
+async function renderFileImportRomaji(text: string) {
+  const textId = `line-end-${fileImportRomajiCounter++}`
+  mockTypingTestTextStoreGet.mockResolvedValue({
+    success: true,
+    data: { meta: { id: textId, romajiCapable: true }, data: { name: 'Kana Lines', text } },
+  })
+  const { result } = renderHook(() => useTypingTest(undefined, 'english'))
+  await act(async () => {
+    await result.current.setConfig({ mode: 'fileImport', textId, romajiInput: true })
+  })
+  return result
 }
 
 /** Pre-warm the word-generator language cache with a single-word list so
@@ -626,5 +646,189 @@ describe('useTypingTest — romaji input mode (fileImport)', () => {
 
     expect(result.current.state.status).toBe('finished')
     expect(result.current.state.wordResults).toEqual([{ word: 'hello', typed: 'hello', correct: true }])
+  })
+})
+
+// Task-romaji-line-end-enter: in romajiInput mode, a LINE-END word (real
+// lines from tatoeba/fileImport, tracked via `state.lineBreaks`) must not
+// auto-advance when its romaji completes — the user presses Enter, matching
+// non-romaji semantics. Non-line-end words and the run's final word (never
+// in `lineBreaks`, by word-supply.ts's seam convention) keep auto-advancing.
+describe('useTypingTest — romaji input mode (line-end Enter semantics)', () => {
+  it('does not auto-advance a line-end word once its romaji completes', async () => {
+    const result = await renderFileImportRomaji('か\nか')
+    expect(result.current.state.words).toEqual(['か', 'か'])
+    expect([...result.current.state.lineBreaks]).toEqual([0])
+
+    type(result, 'ka')
+
+    expect(result.current.state.currentWordIndex).toBe(0)
+    expect(result.current.state.status).toBe('running')
+    expect(result.current.state.wordResults).toEqual([])
+    expect(result.current.romajiGuide).toEqual(
+      expect.objectContaining({ typed: 'ka', remaining: '', kanaCompleted: 1 }),
+    )
+  })
+
+  it('Enter advances a completed line-end word: wordResults gains an entry and romajiKeystrokes resets', async () => {
+    const result = await renderFileImportRomaji('か\nか')
+    type(result, 'ka')
+
+    press(result, 'Enter')
+
+    expect(result.current.state.currentWordIndex).toBe(1)
+    expect(result.current.state.wordResults).toEqual([{ word: 'か', typed: 'ka', correct: true }])
+    expect(result.current.state.romajiKeystrokes).toBe('')
+  })
+
+  it('Space after the line-end word completes is a no-op — Enter is still required', async () => {
+    const result = await renderFileImportRomaji('か\nか')
+    type(result, 'ka')
+
+    press(result, ' ')
+
+    expect(result.current.state.currentWordIndex).toBe(0)
+    expect(result.current.state.wordResults).toEqual([])
+  })
+
+  it('Enter before the line-end word is complete is a no-op', async () => {
+    const result = await renderFileImportRomaji('かき\nさ')
+    expect([...result.current.state.lineBreaks]).toEqual([0])
+
+    press(result, 'k') // only the first keystroke of かき — not complete yet
+
+    press(result, 'Enter')
+
+    expect(result.current.state.currentWordIndex).toBe(0)
+    expect(result.current.state.romajiKeystrokes).toBe('k')
+  })
+
+  it('a rejected keystroke while held (word already complete) counts as incorrect without moving the matcher', async () => {
+    const result = await renderFileImportRomaji('か\nか')
+    type(result, 'ka')
+
+    press(result, 'x') // not a valid continuation — the word is already complete
+
+    expect(result.current.state.incorrectChars).toBe(1)
+    expect(result.current.state.currentWordIndex).toBe(0)
+    expect(result.current.romajiGuide).toEqual(
+      expect.objectContaining({ typed: 'ka', remaining: '' }),
+    )
+  })
+
+  it('a reject while held does not poison the next word\'s mistake attribution after Enter commits', async () => {
+    const result = await renderFileImportRomaji('か\nか')
+    type(result, 'ka')
+    press(result, 'x') // rejected while held — sets romajiSegmentErred, must not survive the commit
+
+    press(result, 'Enter') // commits word 0, resets romajiSegmentErred
+
+    expect(result.current.state.currentWordIndex).toBe(1)
+
+    // Word 1 is the run's final word (never a lineBreak, by word-supply.ts's
+    // seam convention) — types cleanly and auto-finishes.
+    type(result, 'ka')
+
+    expect(result.current.state.status).toBe('finished')
+    expect(result.current.state.mistakes).toEqual({})
+  })
+
+  it("the run's final word still auto-finishes without Enter, even though an earlier word was line-end", async () => {
+    const result = await renderFileImportRomaji('か\nき')
+    expect([...result.current.state.lineBreaks]).toEqual([0])
+
+    type(result, 'ka')
+    press(result, 'Enter')
+    expect(result.current.state.currentWordIndex).toBe(1)
+
+    type(result, 'ki')
+
+    expect(result.current.state.status).toBe('finished')
+    expect(result.current.state.wordResults).toEqual([
+      { word: 'か', typed: 'ka', correct: true },
+      { word: 'き', typed: 'ki', correct: true },
+    ])
+  })
+
+  it('non-line-end words still auto-advance (regression)', async () => {
+    const result = await renderFileImportRomaji('か き\nさ')
+    expect(result.current.state.words).toEqual(['か', 'き', 'さ'])
+    expect([...result.current.state.lineBreaks]).toEqual([1])
+
+    type(result, 'ka') // word 0, not a line-end word
+    expect(result.current.state.currentWordIndex).toBe(1)
+
+    type(result, 'ki') // word 1, line-end — holds
+    expect(result.current.state.currentWordIndex).toBe(1)
+    press(result, 'Enter')
+    expect(result.current.state.currentWordIndex).toBe(2)
+
+    type(result, 'sa') // word 2, the run's final word — auto-finishes
+    expect(result.current.state.status).toBe('finished')
+  })
+
+  it('word-final ん at a line end: the single-n spelling reaches isComplete and Enter commits it', async () => {
+    const result = await renderFileImportRomaji('ほん\nほん')
+    expect([...result.current.state.lineBreaks]).toEqual([0])
+
+    type(result, 'hon')
+    // The lone trailing 'n' only ever yields 'accept' from the matcher (a
+    // second 'n' could still extend it to 'nn'), so this never trips the
+    // complete-branch hold at all — currentWordIndex simply hasn't moved.
+    expect(result.current.state.currentWordIndex).toBe(0)
+    expect(result.current.state.romajiKeystrokes).toBe('hon')
+
+    press(result, 'Enter')
+
+    expect(result.current.state.currentWordIndex).toBe(1)
+    expect(result.current.state.wordResults).toEqual([{ word: 'ほん', typed: 'hon', correct: true }])
+  })
+
+  it('word-final ん at a line end: the double-n spelling also completes and Enter commits it', async () => {
+    const result = await renderFileImportRomaji('ほん\nほん')
+
+    type(result, 'honn')
+    expect(result.current.state.currentWordIndex).toBe(0)
+
+    press(result, 'Enter')
+
+    expect(result.current.state.currentWordIndex).toBe(1)
+    expect(result.current.state.wordResults).toEqual([{ word: 'ほん', typed: 'honn', correct: true }])
+  })
+
+  it('tatoeba time-mode seam: a refill-introduced line break also requires Enter', async () => {
+    // Two 2-word sentences ('か き' / 'さ し'): word 1 ('き') is the original
+    // sentence-end break. A low-water refill (see refillTimeModeWords in
+    // word-supply.ts) then adds a seam break at word 3 ('し') — the OLD
+    // batch's final word, which had no trailing break of its own yet.
+    mockLangGet.mockResolvedValue({ name: 'japanese_hiragana', words: ['か き', 'さ し'] })
+    await getTatoebaPack('japanese_hiragana')
+
+    const { result } = renderHook(() => useTypingTest(
+      { mode: 'tatoeba', language: 'japanese_hiragana', pattern: 'time', lineCount: 5, duration: 120 },
+      'english',
+    ))
+
+    expect(result.current.state.words).toEqual(['か', 'き', 'さ', 'し'])
+    expect([...result.current.state.lineBreaks]).toEqual([1])
+
+    type(result, 'ka') // word 0, not a line-end word — auto-advances (and the
+    // low-water refill fires here, adding the seam break at word 3)
+    expect(result.current.state.currentWordIndex).toBe(1)
+    expect(result.current.state.lineBreaks.has(3)).toBe(true)
+
+    type(result, 'ki') // word 1, the original sentence-end word — holds
+    expect(result.current.state.currentWordIndex).toBe(1)
+    press(result, 'Enter')
+    expect(result.current.state.currentWordIndex).toBe(2)
+
+    type(result, 'sa') // word 2, not a break — auto-advances
+    expect(result.current.state.currentWordIndex).toBe(3)
+
+    type(result, 'shi') // word 3, the refill seam word — holds despite being
+    // reached mid-run rather than at the run's original end
+    expect(result.current.state.currentWordIndex).toBe(3)
+    press(result, 'Enter')
+    expect(result.current.state.currentWordIndex).toBe(4)
   })
 })
