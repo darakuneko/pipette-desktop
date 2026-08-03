@@ -398,6 +398,56 @@ describe('TypingTestHistory', () => {
     expect(screen.getAllByText('kept').length).toBeGreaterThan(0)
   })
 
+  // Regression guard for the History modal overflow fix: the sections
+  // between the tabs and the results table (sparkline/stats/accuracy-trend/
+  // mistake-ranking/error-mix) must live inside their own scroll container,
+  // separate from the tabs above and the results table below, so a tall
+  // stack of sections can't push the table past the modal's bottom edge.
+  it('wraps the between-tabs-and-table sections in their own scroll container', () => {
+    const results = [
+      makeResult({ wpm: 60, accuracy: 90, mistakes: { a: 3, b: 2 } }),
+      makeResult({ wpm: 65, accuracy: 92, mistakes: { a: 1 } }),
+    ]
+    renderWithI18n(<TypingTestHistory results={results} />)
+
+    // Root: min-h-0 flex-1 (NOT h-full) — it's a flex child of
+    // HistoryToggle's `flex h-modal-80vh flex-col` modal box, sitting
+    // below the title row. h-full resolves to 100% of the modal's own
+    // content-box height, ignoring the title row's share, which pushed
+    // this div (and everything below it) a constant ~20px past the
+    // modal's bottom edge regardless of content or window size. flex-1
+    // makes it consume exactly the space left over after the title row.
+    const root = screen.getByTestId('typing-test-history')
+    expect(root.className).toContain('min-h-0')
+    expect(root.className).toContain('flex-1')
+    expect(root.className).not.toContain('h-full')
+
+    const sections = screen.getByTestId('history-sections')
+    expect(sections.className).toContain('min-h-0')
+    expect(sections.className).toContain('shrink')
+    expect(sections.className).toContain('overflow-y-auto')
+
+    // Contains the three lower sections.
+    expect(sections.querySelector('[data-testid="typing-test-mistake-ranking"]')).toBeTruthy()
+    expect(sections.querySelector('[data-testid="typing-test-error-mix"]')).toBeTruthy()
+    expect(sections.querySelector('[data-testid="history-condition-filter"]')).toBeTruthy()
+
+    // Does NOT contain the tab buttons or the results table — both live
+    // outside the wrapper (tabs always visible above; table scrolls on its own below).
+    expect(sections.querySelector('[data-testid="history-tab-monkeytype"]')).toBeNull()
+    expect(sections.querySelector('table')).toBeNull()
+
+    // The results-table wrapper carries a min-h-48 floor so it never
+    // collapses to zero height when the sections region above it is tall.
+    const history = screen.getByTestId('typing-test-history')
+    const table = history.querySelector('table')
+    expect(table).toBeTruthy()
+    const tableWrapper = table!.parentElement as HTMLElement
+    expect(tableWrapper.className).toContain('min-h-48')
+    expect(tableWrapper.className).toContain('flex-1')
+    expect(tableWrapper.className).toContain('overflow-y-auto')
+  })
+
   describe('Accuracy Trend condition selector', () => {
     it('defaults to the latest run\'s condition and hides the chart below 2 same-condition runs', () => {
       // Newest-first, mirroring the real prop order (useDevicePrefs prepends
