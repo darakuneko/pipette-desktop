@@ -10,6 +10,11 @@ interface Props {
    *  section below scopes/filters independently, matching their own
    *  prop docs in AccuracyTrendSection/MistakeRankingSection/ErrorMixSection). */
   tabResults: TypingTestResult[]
+  /** Forwarded to AccuracyTrendSection — the condition `<select>` itself now
+   *  lives in TypingTestHistory's header (right-end group, next to the
+   *  source select), so this is the parent-resolved key that section uses
+   *  to pick its chart's series. */
+  selectedCondition: string
   /** ARIA tabpanel wiring for the History modal's Results/Analysis secondary
    *  tabs (TypingTestHistory). Applied directly to this component's own root
    *  div — NOT an extra wrapper div in the caller — because a plain block
@@ -28,7 +33,7 @@ interface Props {
  *  a tall stack (e.g. many mistake-ranking rows) scrolls independently
  *  instead of pushing past the modal's bottom edge (flex children don't
  *  shrink below their content height otherwise). */
-export function HistorySections({ tabResults, id, ariaLabelledBy }: Props) {
+export function HistorySections({ tabResults, selectedCondition, id, ariaLabelledBy }: Props) {
   return (
     <div
       role="tabpanel"
@@ -37,7 +42,7 @@ export function HistorySections({ tabResults, id, ariaLabelledBy }: Props) {
       className="flex min-h-0 shrink flex-col gap-3 overflow-y-auto"
       data-testid="history-sections"
     >
-      <AccuracyTrendSection results={tabResults} />
+      <AccuracyTrendSection results={tabResults} selectedCondition={selectedCondition} />
       <MistakeRankingSection results={tabResults} />
       <ErrorMixSection results={tabResults} />
     </div>

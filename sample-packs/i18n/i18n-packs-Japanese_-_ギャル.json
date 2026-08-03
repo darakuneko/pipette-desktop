@@ -1,5 +1,5 @@
 {
-  "version": "0.1.61",
+  "version": "0.1.65",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -499,6 +499,7 @@
         "tabResults": "結果☆",
         "tabAnalysis": "分析☆",
         "viewTabsAriaLabel": "履歴の表示を切り替えるっしょ",
+        "sourceFilterLabel": "ソースで絞り込むっしょ",
         "noResults": "結果ないじゃん",
         "pb": "PB☆",
         "allModes": "全部",
@@ -507,6 +508,7 @@
         "exportCsv": "CSV出すっしょ",
         "delete": "ポイっちょ☆",
         "accuracyTrendTitle": "正確性の推移☆",
+        "wpmTrendTitle": "WPMの推移☆",
         "conditionFilterLabel": "条件で絞り込みっしょ",
         "conditionPunctuation": "+句読点☆",
         "conditionNumbers": "+数字っしょ",
@@ -516,12 +518,22 @@
         "mistakeRankingEmpty": "まだミスってないっしょ",
         "errorMixTitle": "誤り種別☆",
         "errorMixEmpty": "まだ対象のやつないっしょ",
-        "errorMixSubstitutionRow": "置換 {{pct}}%（平均{{avgPct}}%）だよ",
-        "errorMixOmissionRow": "脱字 {{pct}}%（平均{{avgPct}}%）だよ",
-        "errorMixInsertionRow": "衍字 {{pct}}%（平均{{avgPct}}%）だよ",
+        "errorMixColumnType": "種別",
+        "errorMixColumnYou": "あなた",
+        "errorMixColumnPopAvg": "母平均",
+        "errorMixLabelSubstitution": "置換",
+        "errorMixLabelOmission": "脱字",
+        "errorMixLabelInsertion": "衍字",
+        "errorMixDescSubstitution": "置換ってのは、その位置で本来と違う文字打っちゃう誤りのことね☆",
+        "errorMixAdviceSubstitution": "隣のキー押し間違えてること多いよ。スピードより正確さ重視で、そこだけちょい慎重に打ってみて!",
+        "errorMixDescOmission": "脱字は、対象の文字を打たずにスルーしちゃう誤りのことっしょ。",
+        "errorMixAdviceOmission": "焦って打っちゃう時に起きがちだよ。そのキー、他より強めに押さなきゃダメじゃないかチェックしてみて☆",
+        "errorMixDescInsertion": "衍字は、対象にない余計な文字打っちゃう誤りのことだよ。",
+        "errorMixAdviceInsertion": "キー二度押ししちゃってること多いっしょ。うっかり連打しちゃってないか気にしてみて!",
         "timeline": {
           "modalTitle": "打鍵タイムライン☆",
           "openButton": "打鍵タイムライン開くじゃん",
+          "linkLabel": "タイムライン☆",
           "loading": "タイムライン読み込み中…",
           "error": "このランの打鍵ログ読み込めなかったじゃん",
           "partialBadge": "途中",
@@ -932,6 +944,13 @@
         "average": "ふつーくらい☆",
         "above": "平均より多いじゃん",
         "farAbove": "平均よりめっちゃ多い★"
+      },
+      "positionRateShort": {
+        "farBelow": "かなり少なめ",
+        "below": "やや少なめ",
+        "average": "平均的",
+        "above": "やや多め",
+        "farAbove": "かなり多め"
       },
       "referenceLineLabel": "みんなの平均☆",
       "toggleAria": "みんなの平均ラインを表示するよん"

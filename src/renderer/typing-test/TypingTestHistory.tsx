@@ -12,6 +12,7 @@ import { useTypingTestTexts } from '../hooks/useTypingTestTexts'
 import { HistorySections } from './HistorySections'
 import { HistoryResultsPanel } from './HistoryResultsPanel'
 import type { ModeFilter, SortColumn, SortDirection, HistoryTab } from './HistoryResultsPanel'
+import { deriveDistinctConditions } from './AccuracyTrendSection'
 
 // Tab order for the source tablist — MonkeyType (words/time/quote), Tatoeba
 // (mode 'tatoeba'), Aozora (fileImport rows whose text meta was imported via
@@ -133,6 +134,14 @@ function buildResultsCsv(results: TypingTestResult[]): string {
 const VIEW_TAB_ACTIVE = 'border-b-2 border-accent px-1 pb-1 text-xs font-medium text-accent'
 const VIEW_TAB_INACTIVE = 'border-b-2 border-transparent px-1 pb-1 text-xs text-content-muted hover:text-content'
 
+// Compact variant of FILTER_SELECT_CLASS for the two selects living directly
+// in the header row's border-b — shorter (h-7 vs h-8) and text-xs (vs
+// text-sm) so they read as a lighter-weight header control than the
+// Results-panel sub-filters, which keep FILTER_SELECT_CLASS/h-8 as-is.
+const HEADER_SELECT_CLASS =
+  'h-7 rounded-md border border-edge bg-surface-alt px-2 text-xs text-content-secondary ' +
+  'focus:border-accent focus:outline-none'
+
 export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, deviceName, uid, availableRunIds }: Props) {
   const { t } = useTranslation()
   const [tab, setTab] = useState<HistoryTab>('monkeytype')
@@ -143,6 +152,14 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
   // when the picked id isn't in that tab's own text list), matching the
   // existing single-state pattern rather than adding a second filter state.
   const [textFilter, setTextFilter] = useState<string>('all')
+
+  // Accuracy Trend condition selector — lifted up from AccuracyTrendSection
+  // (header redesign: the `<select>` itself now renders in this header's
+  // right-end group, next to the source select, rather than inline above
+  // the chart). Raw pick, resolved below (effectiveConditionKey) against
+  // whatever conditions the active tab currently has — same
+  // pick-with-fallback shape as `textFilter`/`effectiveTextFilter` above.
+  const [conditionFilter, setConditionFilter] = useState<string>('')
 
   // Imported-text metas, used to tell an Aozora-catalog fileImport row apart
   // from a plain File Import one (see classifyResultTab above).
@@ -252,6 +269,25 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
     onExportCsv?.(buildResultsCsv(filtered), exportFilterSlug(tab, modeFilter, effectiveTextFilter, fileImportTexts))
   }, [filtered, onExportCsv, tab, modeFilter, effectiveTextFilter, fileImportTexts])
 
+  // Accuracy Trend condition grouping, scoped to the active source tab's
+  // full result set (tabResults, not the mode/text-filtered `filtered`) —
+  // same shared helper AccuracyTrendSection itself calls to resolve the
+  // picked key into its chart's series, so the two never drift out of
+  // sync. Only computed/rendered when Analysis is showing (below), but the
+  // derivation itself is cheap enough to leave unconditional here.
+  const distinctConditions = useMemo(() => deriveDistinctConditions(tabResults, t), [tabResults, t])
+
+  // Fall back to the latest run's condition (distinctConditions[0], ordered
+  // most-recent-first) when nothing's been picked yet, or the picked
+  // condition no longer has any results — e.g. its rows were deleted, or
+  // the source tab was just switched to one where that key doesn't belong.
+  // Mirrors the effectiveTextFilter pattern above: recomputed on every
+  // render from current state, so a source-tab switch alone (no dedicated
+  // reset effect needed) re-resolves the fallback the next time this is read.
+  const effectiveConditionKey = (conditionFilter && distinctConditions.some((c) => c.key === conditionFilter))
+    ? conditionFilter
+    : (distinctConditions[0]?.key ?? '')
+
   // min-h-0 flex-1 (not h-full) on the root below: this is a flex child of
   // HistoryToggle's `flex h-modal-80vh flex-col` modal box, sitting below
   // the title row. h-full resolves to 100% of the modal's own content-box
@@ -261,56 +297,76 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
   // (flex-basis:0 + grow) makes it consume exactly the space left over
   // after the title row instead.
   return (
-    <div data-testid="typing-test-history" className="flex min-h-0 flex-1 max-w-4xl flex-col gap-3">
-      {/* Top tabs: MonkeyType (words/time/quote) / Tatoeba / Aozora
-          (fileImport rows imported from the Aozora Bunko catalog) / File
-          Import (everything else, per classifyResultTab above). */}
-      <div className="flex items-center gap-4 border-b border-edge">
-        {HISTORY_TABS.map((tb) => (
-          <button
-            key={tb}
-            type="button"
-            data-testid={`history-tab-${tb}`}
-            aria-selected={tab === tb}
-            className={tab === tb
-              ? 'border-b-2 border-accent px-1 pb-1.5 text-sm font-semibold text-accent'
-              : 'border-b-2 border-transparent px-1 pb-1.5 text-sm text-content-secondary hover:text-content'}
-            onClick={() => setTab(tb)}
+    <div data-testid="typing-test-history" className="flex min-h-0 flex-1 max-w-5xl flex-col gap-3">
+      {/* Single header row: Results/Analysis tabs on the left, selects at
+          the right end (ml-auto group). The source tabs (MonkeyType /
+          Tatoeba / Aozora / File Import) that used to be their own row
+          above this one are gone — source selection is now the first
+          select in the right-end group, reusing the same tab i18n labels
+          as its option labels. When Analysis is active, the Accuracy Trend
+          condition select (lifted out of AccuracyTrendSection, see
+          deriveDistinctConditions above) joins it as the second select —
+          order matters here (source first, condition second) per the
+          approved redesign sketch. The condition select carries no visible
+          label (aria-label only); the "ACCURACY TREND" heading stays above
+          the chart in AccuracyTrendSection itself. */}
+      <div className="flex items-center gap-3 border-b border-edge/60">
+        <div
+          role="tablist"
+          aria-label={t('editor.typingTest.history.viewTabsAriaLabel')}
+          className="flex items-center gap-3"
+        >
+          {VIEW_TABS.map((v) => (
+            <button
+              key={v}
+              ref={(el) => { viewTabRefs.current[v] = el ?? undefined }}
+              type="button"
+              role="tab"
+              id={viewTabId(v)}
+              aria-selected={view === v}
+              aria-controls={viewPanelId(v)}
+              tabIndex={view === v ? 0 : -1}
+              data-testid={`history-view-tab-${v}`}
+              className={view === v ? VIEW_TAB_ACTIVE : VIEW_TAB_INACTIVE}
+              onClick={() => setView(v)}
+              onKeyDown={(e) => handleViewTabKeyDown(e, v)}
+            >
+              {t(v === 'results' ? 'editor.typingTest.history.tabResults' : 'editor.typingTest.history.tabAnalysis')}
+            </button>
+          ))}
+        </div>
+        {/* mb-1 lifts this group's frame off the row's border-b: with
+            items-center on the row, this group (now taller than the tab
+            buttons once its own margin is counted) drives the row's cross
+            size, so the margin lands as visible space between the selects'
+            bottom edge and the border-b line instead of the selects
+            touching it flush. */}
+        <div className="ml-auto mb-1 flex items-center gap-2">
+          <select
+            data-testid="history-filter-source"
+            aria-label={t('editor.typingTest.history.sourceFilterLabel')}
+            className={HEADER_SELECT_CLASS}
+            value={tab}
+            onChange={(e) => setTab(e.target.value as HistoryTab)}
           >
-            {t(HISTORY_TAB_LABEL_KEYS[tb])}
-          </button>
-        ))}
-      </div>
-
-      {/* Secondary tabs: Results (filter/sparkline/stats/table) vs Analysis
-          (accuracy trend / mistake ranking / error mix). Visually subordinate
-          to the source tabs above (smaller text, lighter weight) while
-          keeping the same border-b-2 accent indicator pattern
-          (.claude/DESIGN.md "Tabs"). Local state, persists across source-tab
-          switches. */}
-      <div
-        role="tablist"
-        aria-label={t('editor.typingTest.history.viewTabsAriaLabel')}
-        className="flex items-center gap-3 border-b border-edge/60"
-      >
-        {VIEW_TABS.map((v) => (
-          <button
-            key={v}
-            ref={(el) => { viewTabRefs.current[v] = el ?? undefined }}
-            type="button"
-            role="tab"
-            id={viewTabId(v)}
-            aria-selected={view === v}
-            aria-controls={viewPanelId(v)}
-            tabIndex={view === v ? 0 : -1}
-            data-testid={`history-view-tab-${v}`}
-            className={view === v ? VIEW_TAB_ACTIVE : VIEW_TAB_INACTIVE}
-            onClick={() => setView(v)}
-            onKeyDown={(e) => handleViewTabKeyDown(e, v)}
-          >
-            {t(v === 'results' ? 'editor.typingTest.history.tabResults' : 'editor.typingTest.history.tabAnalysis')}
-          </button>
-        ))}
+            {HISTORY_TABS.map((tb) => (
+              <option key={tb} value={tb}>{t(HISTORY_TAB_LABEL_KEYS[tb])}</option>
+            ))}
+          </select>
+          {view === 'analysis' && distinctConditions.length > 0 && (
+            <select
+              data-testid="history-condition-filter"
+              aria-label={t('editor.typingTest.history.conditionFilterLabel')}
+              className={HEADER_SELECT_CLASS}
+              value={effectiveConditionKey}
+              onChange={(e) => setConditionFilter(e.target.value)}
+            >
+              {distinctConditions.map((c) => (
+                <option key={c.key} value={c.key}>{c.label}</option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
 
       {/* No extra wrapper div here: each panel component applies its own
@@ -347,6 +403,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
           id={viewPanelId('analysis')}
           ariaLabelledBy={viewTabId('analysis')}
           tabResults={tabResults}
+          selectedCondition={effectiveConditionKey}
         />
       )}
     </div>

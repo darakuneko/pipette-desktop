@@ -115,7 +115,7 @@ describe('TypingTestHistory', () => {
     renderWithI18n(<TypingTestHistory results={results} />)
 
     // Switch to the Text tab
-    fireEvent.click(screen.getByTestId('history-tab-text'))
+    fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'text' } })
     expect(screen.getAllByText('80').length).toBeGreaterThan(0)
     expect(screen.getAllByText('65').length).toBeGreaterThan(0)
 
@@ -136,7 +136,7 @@ describe('TypingTestHistory', () => {
 
     // …but the Text tab shows it as soon as one imported text exists, matching
     // the always-present Normal mode filter.
-    fireEvent.click(screen.getByTestId('history-tab-text'))
+    fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'text' } })
     expect(screen.getByTestId('history-filter-text')).toBeTruthy()
   })
 
@@ -307,7 +307,7 @@ describe('TypingTestHistory', () => {
     expect(onExportCsv.mock.calls.at(-1)?.[1]).toBe('monkeytype-words')
 
     // Text tab, all → 'text'
-    fireEvent.click(screen.getByTestId('history-tab-text'))
+    fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'text' } })
     fireEvent.click(screen.getByTestId('history-export-csv'))
     expect(onExportCsv.mock.calls.at(-1)?.[1]).toBe('text')
   })
@@ -337,7 +337,7 @@ describe('TypingTestHistory', () => {
     })]
     renderWithI18n(<TypingTestHistory results={results} />)
     // FileImport rows live under the Text tab, not Monkeytype (the default).
-    fireEvent.click(screen.getByTestId('history-tab-text'))
+    fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'text' } })
     // The name shows in the table row (the dropdown also lists it as an option).
     expect(screen.getByText('my-novel.txt', { selector: 'td' })).toBeTruthy()
     expect(screen.queryByText(/b286fff1/)).toBeNull()
@@ -349,17 +349,17 @@ describe('TypingTestHistory', () => {
     expect(screen.getAllByText('200').length).toBeGreaterThan(0)
   })
 
-  it('separates Monkeytype and Text results into tabs', () => {
+  it('separates Monkeytype and Text results via the source select', () => {
     const results = [
       makeResult({ wpm: 81, mode: 'words', mode2: 30 }),
       makeResult({ wpm: 82, mode: 'fileImport', mode2: 'id-1', fileImportTextName: 'novel.txt' }),
     ]
     renderWithI18n(<TypingTestHistory results={results} />)
-    // Monkeytype tab (default): words result shown, fileImport hidden.
+    // Monkeytype (default source): words result shown, fileImport hidden.
     expect(screen.getAllByText('81').length).toBeGreaterThan(0)
     expect(screen.queryByText('novel.txt')).toBeNull()
-    // Text tab: fileImport result shown, words hidden.
-    fireEvent.click(screen.getByTestId('history-tab-text'))
+    // Switch the source select to File Import: fileImport result shown, words hidden.
+    fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'text' } })
     // The name shows in the table row (the dropdown also lists it as an option).
     expect(screen.getByText('novel.txt', { selector: 'td' })).toBeTruthy()
     expect(screen.queryByText('81')).toBeNull()
@@ -407,6 +407,22 @@ describe('TypingTestHistory', () => {
     // DOCUMENT_POSITION_FOLLOWING (4) set on `sparkline` relative to
     // `stats` means the sparkline comes first in document order.
     expect(sparkline.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  // WPM sparkline -> titled recharts chart with hover tooltips (parity with
+  // the Accuracy Trend chart): the Results view now shows an uppercase
+  // "WPM Trend" heading above a chart carrying the same tooltip machinery,
+  // instead of a bare unlabeled SVG polyline.
+  it('shows the WPM Trend heading and a tooltip-bearing chart once 2+ results exist', () => {
+    const results = [
+      makeResult({ wpm: 80 }),
+      makeResult({ wpm: 60 }),
+    ]
+    renderWithI18n(<TypingTestHistory results={results} />)
+    const sparkline = screen.getByTestId('history-sparkline')
+    expect(sparkline.textContent).toContain('WPM Trend')
+    const chart = screen.getByTestId('wpm-trend-chart')
+    expect(sparkline.contains(chart)).toBe(true)
   })
 
   it('renders the name read-only (no edit) when no onRename handler', () => {
@@ -462,15 +478,20 @@ describe('TypingTestHistory', () => {
     expect(sections.className).toContain('shrink')
     expect(sections.className).toContain('overflow-y-auto')
 
-    // Contains the three lower sections.
+    // Contains the three lower sections (heading + chart/list content).
     expect(sections.querySelector('[data-testid="typing-test-mistake-ranking"]')).toBeTruthy()
     expect(sections.querySelector('[data-testid="typing-test-error-mix"]')).toBeTruthy()
-    expect(sections.querySelector('[data-testid="history-condition-filter"]')).toBeTruthy()
 
-    // Does NOT contain the tab buttons or the results table — both live
-    // outside the wrapper (tabs always visible above; the table is a
-    // different view, unmounted while Analysis is active).
-    expect(sections.querySelector('[data-testid="history-tab-monkeytype"]')).toBeNull()
+    // The condition select itself now lives in the header's right-end
+    // group (sibling of the Results/Analysis tabs), not inside this scroll
+    // wrapper — only the "ACCURACY TREND" heading + chart stay here.
+    expect(sections.querySelector('[data-testid="history-condition-filter"]')).toBeNull()
+    expect(screen.getByTestId('history-condition-filter')).toBeTruthy()
+
+    // Does NOT contain the source select or the results table — the source
+    // select lives in the header (always visible, outside this wrapper);
+    // the table is a different view, unmounted while Analysis is active.
+    expect(sections.querySelector('[data-testid="history-filter-source"]')).toBeNull()
     expect(sections.querySelector('table')).toBeNull()
   })
 
@@ -592,7 +613,7 @@ describe('TypingTestHistory', () => {
       expect(screen.queryByTestId('history-sections')).toBeNull()
     })
 
-    it('keeps the secondary view selection when switching the source (MonkeyType/Text) tab', () => {
+    it('keeps the secondary view selection when switching the source select (MonkeyType/Text)', () => {
       const results = [
         makeResult({ wpm: 81, mode: 'words', mode2: 30 }),
         makeResult({ wpm: 82, mode: 'fileImport', mode2: 'id-1', fileImportTextName: 'novel.txt' }),
@@ -601,8 +622,8 @@ describe('TypingTestHistory', () => {
       fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
       expect(screen.getByTestId('history-sections')).toBeTruthy()
 
-      fireEvent.click(screen.getByTestId('history-tab-text'))
-      // Secondary tab selection persists across the source-tab switch.
+      fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'text' } })
+      // Secondary view tab selection persists across the source-select switch.
       expect(screen.getByTestId('history-sections')).toBeTruthy()
       expect(screen.getByTestId('typing-test-history').querySelector('table')).toBeNull()
     })
@@ -728,7 +749,8 @@ describe('TypingTestHistory', () => {
     // P2-2 (codex review): APG tabs pattern — arrow keys move focus AND
     // selection between the two view tabs, roving tabIndex keeps the
     // tablist a single Tab stop. Scoped to the NEW view tabs only; the
-    // pre-existing source tabs (MonkeyType/File Import) are untouched.
+    // source select (MonkeyType/Tatoeba/Aozora/File Import) is a plain
+    // `<select>`, not a tablist, and is untouched by this pattern.
     it('supports APG roving-tabindex arrow-key navigation between the view tabs', () => {
       renderWithI18n(<TypingTestHistory results={[makeResult()]} />)
       const resultsTab = screen.getByTestId('history-view-tab-results') as HTMLButtonElement
@@ -765,8 +787,8 @@ describe('TypingTestHistory', () => {
     })
   })
 
-  describe('source tabs: Tatoeba and Aozora split out of MonkeyType/File Import', () => {
-    it('classifies mode "tatoeba" rows into their own tab, out of MonkeyType', () => {
+  describe('source select: Tatoeba and Aozora classified separately from MonkeyType/File Import', () => {
+    it('classifies mode "tatoeba" rows into their own source-select value, out of MonkeyType', () => {
       const results = [
         makeResult({ wpm: 81, mode: 'words', mode2: 30 }),
         makeResult({ wpm: 77, mode: 'tatoeba', mode2: 'english|lines|5', language: 'english' }),
@@ -778,7 +800,7 @@ describe('TypingTestHistory', () => {
       expect(screen.queryByText('77')).toBeNull()
 
       // Tatoeba tab: only the tatoeba row.
-      fireEvent.click(screen.getByTestId('history-tab-tatoeba'))
+      fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'tatoeba' } })
       expect(screen.getAllByText('77').length).toBeGreaterThan(0)
       expect(screen.queryByText('81')).toBeNull()
     })
@@ -796,12 +818,12 @@ describe('TypingTestHistory', () => {
       await waitFor(() => expect(window.vialAPI.typingTestTextStoreList).toHaveBeenCalled())
 
       // Aozora tab: only the aozora-provider row.
-      fireEvent.click(screen.getByTestId('history-tab-aozora'))
+      fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'aozora' } })
       await waitFor(() => expect(screen.getAllByText('55').length).toBeGreaterThan(0))
       expect(screen.queryByText('66')).toBeNull()
 
       // File Import tab: only the plain (non-aozora) row.
-      fireEvent.click(screen.getByTestId('history-tab-text'))
+      fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'text' } })
       expect(screen.getAllByText('66').length).toBeGreaterThan(0)
       expect(screen.queryByText('55')).toBeNull()
     })
@@ -823,12 +845,12 @@ describe('TypingTestHistory', () => {
       expect(screen.queryByText('72')).toBeNull()
 
       // Both show under File Import.
-      fireEvent.click(screen.getByTestId('history-tab-text'))
+      fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'text' } })
       expect(screen.getAllByText('71').length).toBeGreaterThan(0)
       expect(screen.getAllByText('72').length).toBeGreaterThan(0)
 
       // Neither shows under Aozora.
-      fireEvent.click(screen.getByTestId('history-tab-aozora'))
+      fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'aozora' } })
       expect(screen.queryByText('71')).toBeNull()
       expect(screen.queryByText('72')).toBeNull()
     })
@@ -838,7 +860,7 @@ describe('TypingTestHistory', () => {
         makeResult({ mode: 'tatoeba', mode2: 'english|lines|5', language: 'english' }),
       ]
       renderWithI18n(<TypingTestHistory results={results} />)
-      fireEvent.click(screen.getByTestId('history-tab-tatoeba'))
+      fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'tatoeba' } })
       expect(screen.queryByTestId('history-filter-mode')).toBeNull()
       expect(screen.queryByTestId('history-filter-text')).toBeNull()
     })
@@ -855,12 +877,12 @@ describe('TypingTestHistory', () => {
       renderWithI18n(<TypingTestHistory results={results} />)
       await waitFor(() => expect(window.vialAPI.typingTestTextStoreList).toHaveBeenCalled())
 
-      fireEvent.click(screen.getByTestId('history-tab-aozora'))
+      fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'aozora' } })
       await waitFor(() => expect(screen.getByTestId('history-filter-text')).toBeTruthy())
       let options = Array.from((screen.getByTestId('history-filter-text') as HTMLSelectElement).options).map((o) => o.value)
       expect(options).toEqual(['all', 'aozora-1'])
 
-      fireEvent.click(screen.getByTestId('history-tab-text'))
+      fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'text' } })
       options = Array.from((screen.getByTestId('history-filter-text') as HTMLSelectElement).options).map((o) => o.value)
       expect(options).toEqual(['all', 'plain-1'])
     })
@@ -871,7 +893,7 @@ describe('TypingTestHistory', () => {
         makeResult({ wpm: 77, mode: 'tatoeba', mode2: 'english|lines|5', language: 'english', accuracy: 88, mistakes: { b: 2 } }),
       ]
       renderWithI18n(<TypingTestHistory results={results} />)
-      fireEvent.click(screen.getByTestId('history-tab-tatoeba'))
+      fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'tatoeba' } })
       fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
       expect(screen.getByTestId('history-sections')).toBeTruthy()
       // The condition selector only has the tatoeba row's condition available
@@ -893,11 +915,11 @@ describe('TypingTestHistory', () => {
       renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
       await waitFor(() => expect(window.vialAPI.typingTestTextStoreList).toHaveBeenCalled())
 
-      fireEvent.click(screen.getByTestId('history-tab-tatoeba'))
+      fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'tatoeba' } })
       fireEvent.click(screen.getByTestId('history-export-csv'))
       expect(onExportCsv.mock.calls.at(-1)?.[1]).toBe('tatoeba')
 
-      fireEvent.click(screen.getByTestId('history-tab-aozora'))
+      fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'aozora' } })
       await waitFor(() => expect(screen.getByTestId('history-export-csv')).toBeTruthy())
       fireEvent.click(screen.getByTestId('history-export-csv'))
       expect(onExportCsv.mock.calls.at(-1)?.[1]).toBe('aozora')
@@ -905,6 +927,111 @@ describe('TypingTestHistory', () => {
       fireEvent.change(screen.getByTestId('history-filter-text'), { target: { value: 'aozora-1' } })
       fireEvent.click(screen.getByTestId('history-export-csv'))
       expect(onExportCsv.mock.calls.at(-1)?.[1]).toBe('aozora-Kokoro')
+    })
+  })
+
+  // Header redesign: the source tabs (MonkeyType/Tatoeba/Aozora/File Import)
+  // that used to be their own row are gone entirely — source selection is
+  // now a `<select>` at the right end of the single Results/Analysis tab
+  // row, and (Analysis only) the Accuracy Trend condition select joins it
+  // as a second select in the same right-end group.
+  describe('single header row: Results/Analysis tabs + right-end selects', () => {
+    it('never renders a source-tab button anywhere in the document', () => {
+      renderWithI18n(<TypingTestHistory results={[makeResult()]} />)
+      expect(document.querySelector('[data-testid^="history-tab-"]')).toBeNull()
+    })
+
+    it('renders the source select with exactly 4 options, in tab order, and it switches the visible results', () => {
+      const results = [
+        makeResult({ wpm: 81, mode: 'words', mode2: 30 }),
+        makeResult({ wpm: 77, mode: 'tatoeba', mode2: 'english|lines|5', language: 'english' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      const select = screen.getByTestId('history-filter-source') as HTMLSelectElement
+      const values = Array.from(select.options).map((o) => o.value)
+      expect(values).toEqual(['monkeytype', 'tatoeba', 'aozora', 'text'])
+
+      // Default (monkeytype): only the words row.
+      expect(screen.getAllByText('81').length).toBeGreaterThan(0)
+      expect(screen.queryByText('77')).toBeNull()
+
+      // Switching the select's value re-classifies which rows show, exactly
+      // like the old tab-click behavior did.
+      fireEvent.change(select, { target: { value: 'tatoeba' } })
+      expect(screen.getAllByText('77').length).toBeGreaterThan(0)
+      expect(screen.queryByText('81')).toBeNull()
+    })
+
+    it('shows only the source select at the right end in the Results view — no condition select', () => {
+      const results = [
+        makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english' }),
+        makeResult({ wpm: 65, accuracy: 92, mode: 'words', mode2: 30, language: 'english' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      expect(screen.getByTestId('history-filter-source')).toBeTruthy()
+      expect(screen.queryByTestId('history-condition-filter')).toBeNull()
+    })
+
+    it('shows the source select AND the condition select together in the Analysis view, source first', () => {
+      const results = [
+        makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english' }),
+        makeResult({ wpm: 65, accuracy: 92, mode: 'words', mode2: 30, language: 'english' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
+
+      const sourceSelect = screen.getByTestId('history-filter-source')
+      const conditionSelect = screen.getByTestId('history-condition-filter')
+
+      // Order per the approved redesign sketch: source select first, then
+      // the condition select. DOCUMENT_POSITION_FOLLOWING (4) set on
+      // `conditionSelect` relative to `sourceSelect` means the source select
+      // comes first in document order.
+      expect(sourceSelect.compareDocumentPosition(conditionSelect) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+
+    it('changing the condition select changes the accuracy-trend chart while staying in Analysis', () => {
+      const results = [
+        makeResult({ wpm: 70, accuracy: 88, mode: 'time', mode2: 60, language: 'english', date: '2026-01-04T00:00:00.000Z' }),
+        makeResult({ wpm: 65, accuracy: 92, mode: 'words', mode2: 30, language: 'english', date: '2026-01-02T00:00:00.000Z' }),
+        makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english', date: '2026-01-01T00:00:00.000Z' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
+
+      // Default (latest = time|60) has only 1 run → no chart yet.
+      expect(screen.queryByTestId('accuracy-trend-chart')).toBeNull()
+
+      const select = screen.getByTestId('history-condition-filter') as HTMLSelectElement
+      const wordsOption = Array.from(select.options).find((o) => o.value.startsWith('words|'))
+      expect(wordsOption).toBeTruthy()
+      fireEvent.change(select, { target: { value: wordsOption!.value } })
+      expect(screen.getByTestId('accuracy-trend-chart')).toBeTruthy()
+    })
+
+    it('gives the condition select no visible text label — only the ACCURACY TREND heading is visible above the chart', () => {
+      const results = [
+        makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english' }),
+        makeResult({ wpm: 65, accuracy: 92, mode: 'words', mode2: 30, language: 'english' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
+
+      const select = screen.getByTestId('history-condition-filter')
+      // aria-label only — no rendered label text, and the select's own
+      // accessible name comes purely from that attribute.
+      expect(select.getAttribute('aria-label')).toBeTruthy()
+      expect(select.previousElementSibling?.tagName).not.toBe('LABEL')
+      expect(document.querySelector('label[for]')).toBeNull()
+
+      // The heading stays put, above the chart, inside the Analysis section
+      // (not the header) — unaffected by the select's relocation.
+      const heading = screen.getByText('Accuracy Trend')
+      const chart = screen.getByTestId('accuracy-trend-chart')
+      expect(heading.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      // The heading lives inside the Analysis tabpanel (history-sections),
+      // not in the always-visible header row alongside the selects.
+      expect(screen.getByTestId('history-sections').contains(heading)).toBe(true)
     })
   })
 })

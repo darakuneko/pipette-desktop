@@ -1,5 +1,5 @@
 {
-  "version": "0.1.61",
+  "version": "0.1.65",
   "name": "English",
   "common": {
     "save": "Save",
@@ -499,6 +499,7 @@
         "tabResults": "Results",
         "tabAnalysis": "Analysis",
         "viewTabsAriaLabel": "History view",
+        "sourceFilterLabel": "Filter by source",
         "noResults": "No results yet",
         "pb": "PB",
         "allModes": "All",
@@ -507,6 +508,7 @@
         "exportCsv": "Export CSV",
         "delete": "Delete",
         "accuracyTrendTitle": "Accuracy Trend",
+        "wpmTrendTitle": "WPM Trend",
         "conditionFilterLabel": "Filter by condition",
         "conditionPunctuation": "+punct",
         "conditionNumbers": "+nums",
@@ -516,12 +518,22 @@
         "mistakeRankingEmpty": "No mistakes recorded yet",
         "errorMixTitle": "Error mix",
         "errorMixEmpty": "No qualifying results yet",
-        "errorMixSubstitutionRow": "Substitution {{pct}}% (pop. avg {{avgPct}}%)",
-        "errorMixOmissionRow": "Omission {{pct}}% (pop. avg {{avgPct}}%)",
-        "errorMixInsertionRow": "Insertion {{pct}}% (pop. avg {{avgPct}}%)",
+        "errorMixColumnType": "Type",
+        "errorMixColumnYou": "You",
+        "errorMixColumnPopAvg": "Pop. avg",
+        "errorMixLabelSubstitution": "Substitution",
+        "errorMixLabelOmission": "Omission",
+        "errorMixLabelInsertion": "Insertion",
+        "errorMixDescSubstitution": "Substitution is typing a different character than the one expected at that position.",
+        "errorMixAdviceSubstitution": "Often a neighbor-key mixup — slow down slightly on this key rather than pushing for speed.",
+        "errorMixDescOmission": "Omission is skipping a character from the target text entirely — nothing gets typed for it.",
+        "errorMixAdviceOmission": "Usually a rushed keypress — check whether this key needs more travel or force than the keys around it.",
+        "errorMixDescInsertion": "Insertion is typing an extra character that isn't in the target text.",
+        "errorMixAdviceInsertion": "Often a stray double-press — watch for this key repeating when you don't mean it to.",
         "timeline": {
           "modalTitle": "Keystroke Timeline",
           "openButton": "Open keystroke timeline",
+          "linkLabel": "Timeline",
           "loading": "Loading timeline…",
           "error": "Couldn't load this run's keystroke log.",
           "partialBadge": "Partial",
@@ -942,6 +954,13 @@
         "average": "Average",
         "above": "Above average",
         "farAbove": "Far above average"
+      },
+      "positionRateShort": {
+        "farBelow": "Far below avg",
+        "below": "Below avg",
+        "average": "Average",
+        "above": "Above avg",
+        "farAbove": "Far above avg"
       },
       "referenceLineLabel": "Population avg",
       "toggleAria": "Show population average reference line"

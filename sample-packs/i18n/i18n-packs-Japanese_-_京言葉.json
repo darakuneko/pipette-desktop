@@ -1,5 +1,5 @@
 {
-  "version": "0.1.61",
+  "version": "0.1.65",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -499,6 +499,7 @@
         "tabResults": "結果",
         "tabAnalysis": "分析",
         "viewTabsAriaLabel": "履歴の表示を切り替えますえ",
+        "sourceFilterLabel": "ソースで絞り込みますえ",
         "noResults": "結果がおへんなぁ",
         "pb": "PB",
         "allModes": "全部",
@@ -507,6 +508,7 @@
         "exportCsv": "CSV出しますえ",
         "delete": "消しますえ",
         "accuracyTrendTitle": "正確性の推移どすえ",
+        "wpmTrendTitle": "WPMの推移どすえ",
         "conditionFilterLabel": "条件で絞り込みますえ",
         "conditionPunctuation": "+句読点",
         "conditionNumbers": "+数字",
@@ -516,12 +518,22 @@
         "mistakeRankingEmpty": "ミスの記録はまだおへんなぁ",
         "errorMixTitle": "誤り種別どすえ",
         "errorMixEmpty": "対象となる結果はまだおへんなぁ",
-        "errorMixSubstitutionRow": "置換 {{pct}}%（母集団平均 {{avgPct}}%）どすえ",
-        "errorMixOmissionRow": "脱字 {{pct}}%（母集団平均 {{avgPct}}%）どすえ",
-        "errorMixInsertionRow": "衍字 {{pct}}%（母集団平均 {{avgPct}}%）どすえ",
+        "errorMixColumnType": "種別",
+        "errorMixColumnYou": "あなた",
+        "errorMixColumnPopAvg": "母平均",
+        "errorMixLabelSubstitution": "置換",
+        "errorMixLabelOmission": "脱字",
+        "errorMixLabelInsertion": "衍字",
+        "errorMixDescSubstitution": "置換いうんは、その位置で本来と違う文字を打ってしまわはる誤りどすえ。",
+        "errorMixAdviceSubstitution": "隣のキーと押し間違えたはることが多いんどす。速さより正確さを意識して、そのキーだけそっと打ってみておくれやす。",
+        "errorMixDescOmission": "脱字いうんは、対象の文字を打たんと飛ばしてしまわはる誤りどす。",
+        "errorMixAdviceOmission": "急いで打たはった時に起こりやすおすえ。他のキーより深う押さんとあかんのやないか、確かめてみておくれやす。",
+        "errorMixDescInsertion": "衍字いうんは、対象にない余分な文字を打ってしまわはる誤りどすなぁ。",
+        "errorMixAdviceInsertion": "キーを二度押ししてしまわはることが多おすえ。うっかり連打してしまわはってへんか、気ぃつけておくれやす。",
         "timeline": {
           "modalTitle": "打鍵タイムラインどすえ",
           "openButton": "打鍵タイムラインを開きますえ",
+          "linkLabel": "タイムラインどすえ",
           "loading": "タイムラインを読み込み中どすえ…",
           "error": "このランの打鍵ログが読み込めしまへんどした。",
           "partialBadge": "未完了どすえ",
@@ -932,6 +944,13 @@
         "average": "平均的どす",
         "above": "平均より少し多いどす",
         "farAbove": "平均よりえろう多いどすなぁ"
+      },
+      "positionRateShort": {
+        "farBelow": "かなり少なめ",
+        "below": "やや少なめ",
+        "average": "平均的",
+        "above": "やや多め",
+        "farAbove": "かなり多め"
       },
       "referenceLineLabel": "みなさんの平均",
       "toggleAria": "みなさんの平均の基準線を表示しますえ"
