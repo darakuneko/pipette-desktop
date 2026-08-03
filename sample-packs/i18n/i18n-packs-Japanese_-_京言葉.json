@@ -1,5 +1,5 @@
 {
-  "version": "0.1.59",
+  "version": "0.1.60",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -492,6 +492,8 @@
         "unnamed": "名なしどすえ",
         "mode": "モード",
         "tabMonkeytype": "MonkeyType",
+        "tabTatoeba": "Tatoeba",
+        "tabAozora": "青空文庫",
         "tabFileImport": "ファイル取込",
         "tabText": "テキスト",
         "tabResults": "結果",

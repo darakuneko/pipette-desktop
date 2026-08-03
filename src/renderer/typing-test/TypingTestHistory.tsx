@@ -4,16 +4,53 @@ import { useState, useMemo, useCallback, useId, useRef } from 'react'
 import type { KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
+import type { TypingTestTextMeta } from '../../shared/types/typing-test-text-store'
 import { buildCsv } from '../../shared/csv-export'
 import { resultKpm, resultKspc } from './result-builder'
 import { formatKspc } from '../../shared/kspc'
+import { useTypingTestTexts } from '../hooks/useTypingTestTexts'
 import { HistorySections } from './HistorySections'
 import { HistoryResultsPanel } from './HistoryResultsPanel'
-import type { ModeFilter, SortColumn, SortDirection } from './HistoryResultsPanel'
+import type { ModeFilter, SortColumn, SortDirection, HistoryTab } from './HistoryResultsPanel'
 
-/** Top-level split: Monkeytype (words/time/quote) vs imported Text (fileImport).
- *  Their baselines aren't comparable, so stats / chart / export are separate. */
-type HistoryTab = 'monkeytype' | 'text'
+// Tab order for the source tablist — MonkeyType (words/time/quote), Tatoeba
+// (mode 'tatoeba'), Aozora (fileImport rows whose text meta was imported via
+// the Aozora Bunko catalog), File Import (every other fileImport row, plus
+// pre-rename legacy 'custom' rows). Each tab's baseline isn't comparable to
+// the others', so stats / chart / export stay scoped per tab.
+const HISTORY_TABS: HistoryTab[] = ['monkeytype', 'tatoeba', 'aozora', 'text']
+
+const HISTORY_TAB_LABEL_KEYS: Record<HistoryTab, string> = {
+  monkeytype: 'editor.typingTest.history.tabMonkeytype',
+  tatoeba: 'editor.typingTest.history.tabTatoeba',
+  aozora: 'editor.typingTest.history.tabAozora',
+  text: 'editor.typingTest.history.tabFileImport',
+}
+
+/** Set on a `TypingTestTextMeta.source.provider` when the text was imported
+ *  from the Aozora Bunko catalog (see AozoraCatalogTab/aozora-import.ts) —
+ *  duplicated here as a local literal rather than a shared export, matching
+ *  the existing per-file convention (AozoraCatalogTab.tsx also inlines it). */
+const AOZORA_PROVIDER = 'aozora'
+
+/** Classify a result into its source tab. `mode2` carries the imported
+ *  text's stable textId for fileImport rows — the same link the text
+ *  dropdown already uses (`fileImportTextId` below) — so looking it up in
+ *  `textMetaById` tells Aozora and File Import rows apart. A fileImport row
+ *  whose text no longer exists in the store (deleted) falls back to File
+ *  Import. Legacy rows saved before the fileImport rename used mode
+ *  'custom' — cast through `string` since that value predates (and isn't
+ *  part of) the current `TypingTestResult['mode']` union — and must land in
+ *  File Import too, not MonkeyType. */
+function classifyResultTab(r: TypingTestResult, textMetaById: Map<string, TypingTestTextMeta>): HistoryTab {
+  if (r.mode === 'tatoeba') return 'tatoeba'
+  if (r.mode === 'fileImport') {
+    const meta = textMetaById.get(fileImportTextId(r))
+    return meta?.source?.provider === AOZORA_PROVIDER ? 'aozora' : 'text'
+  }
+  if ((r.mode as string | undefined) === 'custom') return 'text'
+  return 'monkeytype'
+}
 
 /** Secondary split, below the source tabs: Results (filter/sparkline/stats/
  *  table) vs Analysis (accuracy trend / mistake ranking / error mix). Local
@@ -48,20 +85,21 @@ function fileImportTextId(r: TypingTestResult): string {
 }
 
 /** Filename slug describing the active export selection (tab + filter), so each
- *  filtered export lands in a distinct, self-describing file. Monkeytype-all and
- *  Text-all stay distinct via the tab prefix. */
+ *  filtered export lands in a distinct, self-describing file. Every tab's
+ *  "all" slug stays distinct via its own prefix. */
 function exportFilterSlug(
-  isText: boolean,
+  tab: HistoryTab,
   modeFilter: ModeFilter,
   textFilter: string,
   fileImportTexts: { id: string, name: string }[],
 ): string {
-  if (isText) {
-    if (textFilter === 'all') return 'text'
+  if (tab === 'aozora' || tab === 'text') {
+    if (textFilter === 'all') return tab
     // Fall back to the textId for an empty / missing name so the slug never
-    // ends in a bare `text-`.
-    return `text-${fileImportTexts.find((c) => c.id === textFilter)?.name || textFilter}`
+    // ends in a bare `aozora-`/`text-`.
+    return `${tab}-${fileImportTexts.find((c) => c.id === textFilter)?.name || textFilter}`
   }
+  if (tab === 'tatoeba') return 'tatoeba'
   return modeFilter === 'all' ? 'monkeytype' : `monkeytype-${modeFilter}`
 }
 
@@ -100,9 +138,16 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
   const [tab, setTab] = useState<HistoryTab>('monkeytype')
   const [view, setView] = useState<HistoryView>('results')
   const [modeFilter, setModeFilter] = useState<ModeFilter>('all')
-  // Text-tab filter, keyed by the stable textId (mode2). 'all' = no filter.
+  // Aozora/File Import tab filter, keyed by the stable textId (mode2).
+  // 'all' = no filter. Shared by both tabs (each falls back to 'all' below
+  // when the picked id isn't in that tab's own text list), matching the
+  // existing single-state pattern rather than adding a second filter state.
   const [textFilter, setTextFilter] = useState<string>('all')
-  const isText = tab === 'text'
+
+  // Imported-text metas, used to tell an Aozora-catalog fileImport row apart
+  // from a plain File Import one (see classifyResultTab above).
+  const { metas: textMetas } = useTypingTestTexts()
+  const textMetaById = useMemo(() => new Map(textMetas.map((m) => [m.id, m])), [textMetas])
 
   // Sort state lives here (not in HistoryResultsPanel) because that panel
   // unmounts while the Analysis view is active (conditional render below) —
@@ -156,44 +201,56 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
     }
   }, [focusAndSelectView])
 
-  // Active tab's rows: fileImport for Text, everything else for Monkeytype.
+  // Active tab's rows, per classifyResultTab above.
   const tabResults = useMemo(
-    () => results.filter((r) => isText ? r.mode === 'fileImport' : r.mode !== 'fileImport'),
-    [results, isText],
+    () => results.filter((r) => classifyResultTab(r, textMetaById) === tab),
+    [results, tab, textMetaById],
   )
 
-  // Distinct imported texts (fileImport rows), keyed by stable textId, displayed by
-  // the snapshotted name. Drives the Text-tab filter dropdown.
+  // Distinct imported texts (fileImport rows), keyed by stable textId,
+  // displayed by the snapshotted name — scoped to the active tab (Aozora
+  // gets only source.provider 'aozora' texts, File Import gets the rest).
+  // Drives that tab's filter dropdown; empty (and thus hidden) for
+  // MonkeyType/Tatoeba.
   const fileImportTexts = useMemo(() => {
+    if (tab !== 'aozora' && tab !== 'text') return []
     const seen = new Map<string, string>()
     for (const r of results) {
       if (r.mode !== 'fileImport') continue
       const id = fileImportTextId(r)
+      const isAozoraText = textMetaById.get(id)?.source?.provider === AOZORA_PROVIDER
+      if (isAozoraText !== (tab === 'aozora')) continue
       if (!seen.has(id)) seen.set(id, r.fileImportTextName ?? id)
     }
     return Array.from(seen, ([id, name]) => ({ id, name }))
-  }, [results])
+  }, [results, tab, textMetaById])
 
-  // Fall back to 'all' when the selected text no longer exists (e.g. all its
-  // rows were deleted), so the dropdown stays controlled and the stats/chart
-  // never collapse to an empty selection.
+  // Fall back to 'all' when the selected text no longer exists in this tab
+  // (e.g. all its rows were deleted, or the tab was just switched to one
+  // where that id doesn't belong), so the dropdown stays controlled and the
+  // stats/chart never collapse to an empty selection.
   const effectiveTextFilter = textFilter === 'all' || fileImportTexts.some((c) => c.id === textFilter)
     ? textFilter
     : 'all'
 
   const filtered = useMemo(() => {
-    if (isText) {
+    if (tab === 'aozora' || tab === 'text') {
       if (effectiveTextFilter === 'all') return tabResults
       return tabResults.filter((r) => fileImportTextId(r) === effectiveTextFilter)
     }
-    if (modeFilter === 'all') return tabResults
-    return tabResults.filter((r) => (r.mode ?? 'words') === modeFilter)
-  }, [tabResults, isText, modeFilter, effectiveTextFilter])
+    if (tab === 'monkeytype') {
+      if (modeFilter === 'all') return tabResults
+      return tabResults.filter((r) => (r.mode ?? 'words') === modeFilter)
+    }
+    // Tatoeba has no sub-filter — the Analysis condition selector already
+    // covers per-condition grouping.
+    return tabResults
+  }, [tabResults, tab, modeFilter, effectiveTextFilter])
 
   // Export is per-tab: only the rows currently shown.
   const handleExport = useCallback(() => {
-    onExportCsv?.(buildResultsCsv(filtered), exportFilterSlug(isText, modeFilter, effectiveTextFilter, fileImportTexts))
-  }, [filtered, onExportCsv, isText, modeFilter, effectiveTextFilter, fileImportTexts])
+    onExportCsv?.(buildResultsCsv(filtered), exportFilterSlug(tab, modeFilter, effectiveTextFilter, fileImportTexts))
+  }, [filtered, onExportCsv, tab, modeFilter, effectiveTextFilter, fileImportTexts])
 
   // min-h-0 flex-1 (not h-full) on the root below: this is a flex child of
   // HistoryToggle's `flex h-modal-80vh flex-col` modal box, sitting below
@@ -205,9 +262,11 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
   // after the title row instead.
   return (
     <div data-testid="typing-test-history" className="flex min-h-0 flex-1 max-w-4xl flex-col gap-3">
-      {/* Top tabs: Monkeytype (words/time/quote) vs imported Text (fileImport). */}
+      {/* Top tabs: MonkeyType (words/time/quote) / Tatoeba / Aozora
+          (fileImport rows imported from the Aozora Bunko catalog) / File
+          Import (everything else, per classifyResultTab above). */}
       <div className="flex items-center gap-4 border-b border-edge">
-        {(['monkeytype', 'text'] as HistoryTab[]).map((tb) => (
+        {HISTORY_TABS.map((tb) => (
           <button
             key={tb}
             type="button"
@@ -218,7 +277,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
               : 'border-b-2 border-transparent px-1 pb-1.5 text-sm text-content-secondary hover:text-content'}
             onClick={() => setTab(tb)}
           >
-            {t(tb === 'text' ? 'editor.typingTest.history.tabFileImport' : 'editor.typingTest.history.tabMonkeytype')}
+            {t(HISTORY_TAB_LABEL_KEYS[tb])}
           </button>
         ))}
       </div>
@@ -266,7 +325,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
         <HistoryResultsPanel
           id={viewPanelId('results')}
           ariaLabelledBy={viewTabId('results')}
-          isText={isText}
+          tab={tab}
           modeFilter={modeFilter}
           onModeFilterChange={setModeFilter}
           effectiveTextFilter={effectiveTextFilter}

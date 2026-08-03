@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '../../i18n'
 import { TypingTestHistory } from '../TypingTestHistory'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
+import type { TypingTestTextMeta } from '../../../shared/types/typing-test-text-store'
 
 function makeResult(overrides: Partial<TypingTestResult> = {}): TypingTestResult {
   return {
@@ -26,6 +27,23 @@ function makeResult(overrides: Partial<TypingTestResult> = {}): TypingTestResult
 function renderWithI18n(ui: React.ReactElement) {
   return render(<I18nextProvider i18n={i18n}>{ui}</I18nextProvider>)
 }
+
+/** Minimal TypingTestTextMeta builder for source-tab classification tests —
+ *  only `source` (aozora-provider detection) and `id` matter here. */
+function textMeta(id: string, name: string, source?: { provider: string; workId: string }): TypingTestTextMeta {
+  return { id, name, wordCount: 10, filename: `${id}.json`, savedAt: '', updatedAt: '', source }
+}
+
+beforeEach(() => {
+  // TypingTestHistory now calls useTypingTestTexts() to classify fileImport
+  // rows into Aozora vs File Import — default to no imported texts so
+  // pre-existing tests (which don't care about the Aozora split) are
+  // unaffected. Tests below override this per-case.
+  window.vialAPI = {
+    ...window.vialAPI,
+    typingTestTextStoreList: vi.fn().mockResolvedValue({ success: true, data: [] }),
+  } as typeof window.vialAPI
+})
 
 describe('TypingTestHistory', () => {
   it('shows no results message when empty', () => {
@@ -744,6 +762,149 @@ describe('TypingTestHistory', () => {
       fireEvent.keyDown(analysisTab, { key: 'Home' })
       expect(document.activeElement).toBe(resultsTab)
       expect(resultsTab.getAttribute('aria-selected')).toBe('true')
+    })
+  })
+
+  describe('source tabs: Tatoeba and Aozora split out of MonkeyType/File Import', () => {
+    it('classifies mode "tatoeba" rows into their own tab, out of MonkeyType', () => {
+      const results = [
+        makeResult({ wpm: 81, mode: 'words', mode2: 30 }),
+        makeResult({ wpm: 77, mode: 'tatoeba', mode2: 'english|lines|5', language: 'english' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+
+      // MonkeyType tab (default): only the words row.
+      expect(screen.getAllByText('81').length).toBeGreaterThan(0)
+      expect(screen.queryByText('77')).toBeNull()
+
+      // Tatoeba tab: only the tatoeba row.
+      fireEvent.click(screen.getByTestId('history-tab-tatoeba'))
+      expect(screen.getAllByText('77').length).toBeGreaterThan(0)
+      expect(screen.queryByText('81')).toBeNull()
+    })
+
+    it('classifies a fileImport row whose text meta has source.provider "aozora" into the Aozora tab, not File Import', async () => {
+      window.vialAPI.typingTestTextStoreList = vi.fn().mockResolvedValue({
+        success: true,
+        data: [textMeta('aozora-1', 'Kokoro', { provider: 'aozora', workId: 'works/42' })],
+      })
+      const results = [
+        makeResult({ wpm: 55, mode: 'fileImport', mode2: 'aozora-1', fileImportTextName: 'Kokoro' }),
+        makeResult({ wpm: 66, mode: 'fileImport', mode2: 'plain-1', fileImportTextName: 'my-notes.txt' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      await waitFor(() => expect(window.vialAPI.typingTestTextStoreList).toHaveBeenCalled())
+
+      // Aozora tab: only the aozora-provider row.
+      fireEvent.click(screen.getByTestId('history-tab-aozora'))
+      await waitFor(() => expect(screen.getAllByText('55').length).toBeGreaterThan(0))
+      expect(screen.queryByText('66')).toBeNull()
+
+      // File Import tab: only the plain (non-aozora) row.
+      fireEvent.click(screen.getByTestId('history-tab-text'))
+      expect(screen.getAllByText('66').length).toBeGreaterThan(0)
+      expect(screen.queryByText('55')).toBeNull()
+    })
+
+    it('classifies a fileImport row with no resolvable text meta, and a legacy mode "custom" row, into File Import', async () => {
+      window.vialAPI.typingTestTextStoreList = vi.fn().mockResolvedValue({ success: true, data: [] })
+      const results = [
+        // fileImport row whose textId isn't in the text store (e.g. deleted text).
+        makeResult({ wpm: 71, mode: 'fileImport', mode2: 'gone-1', fileImportTextName: 'deleted.txt' }),
+        // Pre-rename legacy row — mode 'custom' predates the fileImport rename
+        // and must not fall through to MonkeyType.
+        makeResult({ wpm: 72, mode: 'custom' as TypingTestResult['mode'], mode2: 'legacy-1' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      await waitFor(() => expect(window.vialAPI.typingTestTextStoreList).toHaveBeenCalled())
+
+      // Neither row shows under MonkeyType.
+      expect(screen.queryByText('71')).toBeNull()
+      expect(screen.queryByText('72')).toBeNull()
+
+      // Both show under File Import.
+      fireEvent.click(screen.getByTestId('history-tab-text'))
+      expect(screen.getAllByText('71').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('72').length).toBeGreaterThan(0)
+
+      // Neither shows under Aozora.
+      fireEvent.click(screen.getByTestId('history-tab-aozora'))
+      expect(screen.queryByText('71')).toBeNull()
+      expect(screen.queryByText('72')).toBeNull()
+    })
+
+    it('hides the sub-filter dropdown entirely on the Tatoeba tab', () => {
+      const results = [
+        makeResult({ mode: 'tatoeba', mode2: 'english|lines|5', language: 'english' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      fireEvent.click(screen.getByTestId('history-tab-tatoeba'))
+      expect(screen.queryByTestId('history-filter-mode')).toBeNull()
+      expect(screen.queryByTestId('history-filter-text')).toBeNull()
+    })
+
+    it('scopes the Aozora and File Import text dropdowns to only their own tab\'s texts', async () => {
+      window.vialAPI.typingTestTextStoreList = vi.fn().mockResolvedValue({
+        success: true,
+        data: [textMeta('aozora-1', 'Kokoro', { provider: 'aozora', workId: 'works/42' })],
+      })
+      const results = [
+        makeResult({ wpm: 55, mode: 'fileImport', mode2: 'aozora-1', fileImportTextName: 'Kokoro' }),
+        makeResult({ wpm: 66, mode: 'fileImport', mode2: 'plain-1', fileImportTextName: 'my-notes.txt' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      await waitFor(() => expect(window.vialAPI.typingTestTextStoreList).toHaveBeenCalled())
+
+      fireEvent.click(screen.getByTestId('history-tab-aozora'))
+      await waitFor(() => expect(screen.getByTestId('history-filter-text')).toBeTruthy())
+      let options = Array.from((screen.getByTestId('history-filter-text') as HTMLSelectElement).options).map((o) => o.value)
+      expect(options).toEqual(['all', 'aozora-1'])
+
+      fireEvent.click(screen.getByTestId('history-tab-text'))
+      options = Array.from((screen.getByTestId('history-filter-text') as HTMLSelectElement).options).map((o) => o.value)
+      expect(options).toEqual(['all', 'plain-1'])
+    })
+
+    it('feeds the Analysis view from the active source tab\'s results (Tatoeba)', () => {
+      const results = [
+        makeResult({ wpm: 81, mode: 'words', mode2: 30, accuracy: 90, mistakes: { a: 3 } }),
+        makeResult({ wpm: 77, mode: 'tatoeba', mode2: 'english|lines|5', language: 'english', accuracy: 88, mistakes: { b: 2 } }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      fireEvent.click(screen.getByTestId('history-tab-tatoeba'))
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
+      expect(screen.getByTestId('history-sections')).toBeTruthy()
+      // The condition selector only has the tatoeba row's condition available
+      // when Tatoeba is the active source tab.
+      const select = screen.getByTestId('history-condition-filter') as HTMLSelectElement
+      expect(Array.from(select.options).every((o) => o.value.startsWith('tatoeba|'))).toBe(true)
+    })
+
+    it('extends the export filename slug for the new tabs (tatoeba, aozora / aozora-<textId>)', async () => {
+      window.vialAPI.typingTestTextStoreList = vi.fn().mockResolvedValue({
+        success: true,
+        data: [textMeta('aozora-1', 'Kokoro', { provider: 'aozora', workId: 'works/42' })],
+      })
+      const onExportCsv = vi.fn()
+      const results = [
+        makeResult({ wpm: 77, mode: 'tatoeba', mode2: 'english|lines|5', language: 'english' }),
+        makeResult({ wpm: 55, mode: 'fileImport', mode2: 'aozora-1', fileImportTextName: 'Kokoro' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+      await waitFor(() => expect(window.vialAPI.typingTestTextStoreList).toHaveBeenCalled())
+
+      fireEvent.click(screen.getByTestId('history-tab-tatoeba'))
+      fireEvent.click(screen.getByTestId('history-export-csv'))
+      expect(onExportCsv.mock.calls.at(-1)?.[1]).toBe('tatoeba')
+
+      fireEvent.click(screen.getByTestId('history-tab-aozora'))
+      await waitFor(() => expect(screen.getByTestId('history-export-csv')).toBeTruthy())
+      fireEvent.click(screen.getByTestId('history-export-csv'))
+      expect(onExportCsv.mock.calls.at(-1)?.[1]).toBe('aozora')
+
+      fireEvent.change(screen.getByTestId('history-filter-text'), { target: { value: 'aozora-1' } })
+      fireEvent.click(screen.getByTestId('history-export-csv'))
+      expect(onExportCsv.mock.calls.at(-1)?.[1]).toBe('aozora-Kokoro')
     })
   })
 })

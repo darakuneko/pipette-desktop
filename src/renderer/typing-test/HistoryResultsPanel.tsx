@@ -19,7 +19,15 @@ import { WpmSparkline } from './WpmSparkline'
 type ModeFilter = 'all' | 'words' | 'time' | 'quote'
 type SortColumn = 'date' | 'wpm' | 'kpm' | 'accuracy' | 'mode' | 'duration'
 type SortDirection = 'asc' | 'desc'
-export type { SortColumn, SortDirection }
+/** Source-tab split: MonkeyType (words/time/quote) keeps the mode dropdown;
+ *  Tatoeba has no sub-filter (the Analysis condition selector already
+ *  covers per-condition grouping); Aozora and File Import both scope the
+ *  text dropdown to their own subset of imported texts (source.provider
+ *  'aozora' vs everything else — see TypingTestHistory's classification).
+ *  'text' (not 'fileImport') is kept as the File Import tab's key to avoid
+ *  churn across existing testids/CSV slugs. */
+type HistoryTab = 'monkeytype' | 'tatoeba' | 'aozora' | 'text'
+export type { SortColumn, SortDirection, HistoryTab }
 
 const MAX_TABLE_ROWS = 20
 const MAX_SPARKLINE_RESULTS = 50
@@ -39,9 +47,11 @@ function modeDetail(r: TypingTestResult): string {
 }
 
 interface Props {
-  /** Mode filter (Monkeytype tab) vs text filter (Text tab) — the parent owns
-   *  the state and the filtered result set; this panel only renders the UI. */
-  isText: boolean
+  /** Active source tab. Drives which sub-filter (mode dropdown / text
+   *  dropdown / none) renders and the Mode-vs-Text column label below — the
+   *  parent owns the state and the filtered result set; this panel only
+   *  renders the UI. */
+  tab: HistoryTab
   modeFilter: ModeFilter
   onModeFilterChange: (mode: ModeFilter) => void
   /** Text-tab filter value, already resolved against `fileImportTexts` by the
@@ -83,7 +93,7 @@ interface Props {
  *  switch) stays under the 500-line component cap
  *  (`.claude/rules/file-splitting.md`). */
 export function HistoryResultsPanel({
-  isText,
+  tab,
   modeFilter,
   onModeFilterChange,
   effectiveTextFilter,
@@ -104,6 +114,13 @@ export function HistoryResultsPanel({
 }: Props) {
   const { t } = useTranslation()
   const [confirmDeleteDate, setConfirmDeleteDate] = useState<string | null>(null)
+
+  // Text-style rendering (imported-text name in the Mode/Text column instead
+  // of the mode label) applies to both Aozora and File Import — they're the
+  // same fileImport row shape, just scoped to a different text subset.
+  const isText = tab === 'aozora' || tab === 'text'
+  const showModeFilter = tab === 'monkeytype'
+  const showTextFilter = isText
 
   const stats = useMemo(() => computeStats(filtered), [filtered])
   const sparklineResults = useMemo(
@@ -154,7 +171,7 @@ export function HistoryResultsPanel({
           per-tab export. Both selects feed `filtered`, so the stats row and the
           sparkline reflect the current selection too. */}
       <div className="flex items-center gap-2">
-        {!isText && (
+        {showModeFilter && (
           <select
             data-testid="history-filter-mode"
             aria-label={t('editor.typingTest.history.filterMode')}
@@ -171,7 +188,7 @@ export function HistoryResultsPanel({
             ))}
           </select>
         )}
-        {isText && fileImportTexts.length > 0 && (
+        {showTextFilter && fileImportTexts.length > 0 && (
           <select
             data-testid="history-filter-text"
             aria-label={t('editor.typingTest.history.filterText')}

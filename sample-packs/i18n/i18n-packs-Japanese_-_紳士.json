@@ -1,5 +1,5 @@
 {
-  "version": "0.1.59",
+  "version": "0.1.60",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -492,6 +492,8 @@
         "unnamed": "名もなし",
         "mode": "形式",
         "tabMonkeytype": "MonkeyType",
+        "tabTatoeba": "Tatoeba",
+        "tabAozora": "青空文庫",
         "tabFileImport": "書類の取込",
         "tabText": "文言",
         "tabResults": "結果",

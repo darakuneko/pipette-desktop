@@ -1,5 +1,5 @@
 {
-  "version": "0.1.59",
+  "version": "0.1.60",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -492,6 +492,8 @@
         "unnamed": "名称未設定",
         "mode": "モード",
         "tabMonkeytype": "MonkeyType",
+        "tabTatoeba": "Tatoeba",
+        "tabAozora": "青空文庫",
         "tabFileImport": "ファイル取込",
         "tabText": "テキスト",
         "tabResults": "結果",
