@@ -7,12 +7,7 @@ import type { TypingTestConfig } from './types'
 import type { ComparisonStats } from './comparison'
 import { isTimeBoundedRun } from './types'
 import { formatKspc } from '../../shared/kspc'
-
-// Completion screen's "missed characters" list (Phase 1 of mistake
-// analysis — see TypingTestState.mistakes) caps how many distinct
-// mistake keys are shown, so a run with many small errors doesn't turn
-// the results row into an unbounded wall of text.
-const MAX_MISTAKE_ENTRIES = 12
+import { MissedCharsList, ErrorClassLine } from './mistake-summary'
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60)
@@ -83,17 +78,6 @@ export function TypingTestStatsRow({
     sum += Math.min(state.currentWordIndex, Math.max(0, state.words.length - 1)) // separators passed
     return Math.min(sum, totalChars)
   }, [charProgress, state.words, state.currentWordIndex, state.currentInput, totalChars])
-
-  // Completion screen's missed-characters list: sorted by count DESC then
-  // key ASC (ties break deterministically instead of on object insertion
-  // order), capped to the top MAX_MISTAKE_ENTRIES.
-  const mistakeEntries = useMemo(
-    () =>
-      Object.entries(state.mistakes)
-        .sort(([keyA, countA], [keyB, countB]) => countB - countA || keyA.localeCompare(keyB))
-        .slice(0, MAX_MISTAKE_ENTRIES),
-    [state.mistakes],
-  )
 
   const displayTime = isTimeBoundedRun(config) && remainingSeconds !== null
     ? formatTime(remainingSeconds)
@@ -174,29 +158,8 @@ export function TypingTestStatsRow({
           </span>
         )}
       </div>
-      {state.status === 'finished' && mistakeEntries.length > 0 && (
-        <div data-testid="typing-test-mistakes" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-content-muted">
-          <span>{t('editor.typingTest.results.mistakesLabel')}:</span>
-          {mistakeEntries.map(([key, count]) => (
-            <span key={key} data-testid={`typing-test-mistake-${key}`} className="font-mono">
-              {key}:{count}
-            </span>
-          ))}
-        </div>
-      )}
-      {state.status === 'finished' && errorClasses && (
-        <div data-testid="typing-test-error-classes" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-content-muted">
-          <span data-testid="typing-test-error-substitutions">
-            {t('editor.typingTest.results.errorSubstitutions', { count: errorClasses.substitutions })}
-          </span>
-          <span data-testid="typing-test-error-omissions">
-            {t('editor.typingTest.results.errorOmissions', { count: errorClasses.omissions })}
-          </span>
-          <span data-testid="typing-test-error-insertions">
-            {t('editor.typingTest.results.errorInsertions', { count: errorClasses.insertions })}
-          </span>
-        </div>
-      )}
+      {state.status === 'finished' && <MissedCharsList mistakes={state.mistakes} />}
+      {state.status === 'finished' && errorClasses && <ErrorClassLine errorClasses={errorClasses} />}
     </div>
   )
 }
