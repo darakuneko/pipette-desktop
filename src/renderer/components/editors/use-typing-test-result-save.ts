@@ -2,12 +2,94 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type { RefObject } from 'react'
-import type { useTypingTest } from '../../typing-test/useTypingTest'
+import type { useTypingTest, TypingTestState } from '../../typing-test/useTypingTest'
 import { buildTypingTestResult, isPbForConfig } from '../../typing-test/result-builder'
 import { isRomajiInputActive } from '../../typing-test/romaji-input'
+import type { TypingTestConfig } from '../../typing-test/types'
+import type { LineSnapshot } from '../../typing-test/TypingTestView'
 import type { TypingTestResult, TypingTestMemory } from '../../../shared/types/pipette-settings'
 import type { TypingAnalyticsKeyboard } from '../../../shared/types/typing-analytics'
 import type { UseRunLogRecorderReturn } from './use-run-log-recorder'
+
+/** A run's config carries REAL line semantics (a newline in the source
+ *  text advances via Enter, not Space) only for `fileImport` and
+ *  `tatoeba` — the only two `createWordsForConfig*` branches
+ *  (word-supply.ts) that ever populate `WordsForConfig.lineBreaks` with
+ *  anything non-empty:
+ *   - `fileImportTextToWords` (word-supply.ts) forwards
+ *     `data.lineBreaks`, itself produced by `parseFileImportText`
+ *     (typing-test-text-store.ts) — used for BOTH a user's own imported
+ *     `.txt` file and an Aozora Bunko import (aozora-import.ts saves the
+ *     cleaned text through the same typing-test-text-store, so it's
+ *     just another `fileImport` `textId` by the time a run reads it —
+ *     no separate discriminator needed).
+ *   - `tatobaWordsForConfig` (word-supply.ts) spreads `tatoebaRun`
+ *     (tatoeba-pack.ts), which ALSO calls `parseFileImportText` under
+ *     the hood (one sampled sentence per line) — true for both the
+ *     Lines and Time tatoeba patterns, and for `refillTimeModeWords`'s
+ *     own tatoeba-time refill batches.
+ *  `quote`/`words`/`time` always return `lineBreaks: []` from every
+ *  `createWordsForConfig*` branch — never real, regardless of whether
+ *  `state.lineBreaks` happens to be empty at the moment this reads it.
+ *  This is why the source must be chosen by `config.mode`, not by
+ *  `state.lineBreaks.size` — an emptiness check can't tell "single-line
+ *  real text" (must still persist as explicit `[]`) apart from "no real
+ *  line source at all" (must fall through to the snapshot, or omit). */
+function hasRealLineStructure(mode: TypingTestConfig['mode']): boolean {
+  return mode === 'fileImport' || mode === 'tatoeba'
+}
+
+/** Derive `RunKeystrokeLog.lineBreaks` for the just-finished run —
+ *  Plan-line-keystroke-timeline PR1. Two sources, chosen by
+ *  `config.mode` (see `hasRealLineStructure`), both clamped to
+ *  `persistedWordCount` (the run can end with an in-flight word —
+ *  `wordResults` itself never counts it — see the caller) with a
+ *  STRICT bound: an index must be `< persistedWordCount - 1`, not just
+ *  `< persistedWordCount`. A line break describes where a line ENDS
+ *  before ANOTHER FOLLOWS — the run's own last persisted word can never
+ *  be one, mirroring `parseFileImportText`'s own terminal-break removal
+ *  (typing-test-text-store.ts) and `isValidLineBreaks`'s matching bound
+ *  (typing-run-log-store.ts):
+ *   1. `hasRealLineStructure(config.mode)` — REAL line breaks
+ *      (tatoeba/fileImport text, `state.lineBreaks`). Always used for
+ *      these modes, persisted EVEN WHEN EMPTY (a genuinely single-line
+ *      run) — `[]` is not "no line source", it means "one line".
+ *   2. Otherwise (`words`/`time`/`quote` — no real line source of their
+ *      own): the monkeytype line-row snapshot TypingTestView wrote into
+ *      `lineSnapshotRef`, only trusted when it's tagged for THIS exact
+ *      run (`runId` and `wordCount` both match the live state), so a
+ *      stale snapshot left over from a previous render (or run) can
+ *      never be misattributed. Line-end index = each row's own last
+ *      word index, EXCEPT the final row (its end is the run's own end,
+ *      not a line break) — the strict clamp above then also drops any
+ *      row whose last index still lands exactly on the persisted
+ *      boundary (e.g. a time-bounded run interrupted mid-row, before
+ *      `state.words` itself ran out).
+ *  Returns `undefined` (omit — the saved log falls back to per-word
+ *  rendering) when neither source applies. An empty REAL-source result
+ *  is returned as `[]`, never collapsed to `undefined` — see
+ *  `RunKeystrokeLog.lineBreaks`'s own doc comment. */
+function deriveLineBreaksForLog(
+  config: TypingTestConfig, state: TypingTestState, persistedWordCount: number, snapshot: LineSnapshot | null,
+): number[] | undefined {
+  if (hasRealLineStructure(config.mode)) {
+    return [...state.lineBreaks].filter((i) => i < persistedWordCount - 1).sort((a, b) => a - b)
+  }
+  if (
+    snapshot && snapshot.lines != null
+    && snapshot.runId === state.runId && snapshot.wordCount === state.words.length
+  ) {
+    const ends: number[] = []
+    // Every row but the last — the last row's own end is the run's end,
+    // not a line break.
+    for (let i = 0; i < snapshot.lines.length - 1; i++) {
+      const row = snapshot.lines[i]
+      if (row.length > 0) ends.push(row[row.length - 1])
+    }
+    return ends.filter((i) => i < persistedWordCount - 1)
+  }
+  return undefined
+}
 
 export interface UseTypingTestResultSaveOptions {
   typingTest: ReturnType<typeof useTypingTest>
@@ -26,6 +108,11 @@ export interface UseTypingTestResultSaveOptions {
   keyboardRef: RefObject<TypingAnalyticsKeyboard | undefined>
   flushAfterPendingEmits: (drained: Promise<void>, uid: string) => void
   runLog: UseRunLogRecorderReturn
+  /** TypingTestView's own realized-lines snapshot (monkeytype modes only
+   *  — see `deriveLineBreaksForLog`). Optional so a caller that never
+   *  renders TypingTestView (or an older test) doesn't have to thread
+   *  one. */
+  lineSnapshotRef?: RefObject<LineSnapshot | null>
 }
 
 export interface UseTypingTestResultSaveReturn {
@@ -56,6 +143,7 @@ export function useTypingTestResultSave({
   keyboardRef,
   flushAfterPendingEmits,
   runLog,
+  lineSnapshotRef,
 }: UseTypingTestResultSaveOptions): UseTypingTestResultSaveReturn {
   const { resetMatrixPressTracking } = typingTest
 
@@ -116,6 +204,15 @@ export function useTypingTestResultSave({
       const inFlightWord = typingTest.state.currentWordIndex < typingTest.state.words.length && typedSoFar.length > 0
         ? { display: typingTest.state.words[typingTest.state.currentWordIndex], typed: typedSoFar }
         : undefined
+      // Line structure for the saved log (Plan-line-keystroke-timeline
+      // PR1) — see `deriveLineBreaksForLog`'s own doc comment for the two
+      // sources and the persisted-word clamp (`wordResults` plus the
+      // in-flight word above, exactly what `runLog.finishAndSave` is
+      // about to persist as `words`).
+      const persistedWordCount = typingTest.state.wordResults.length + (inFlightWord ? 1 : 0)
+      const lineBreaksForLog = deriveLineBreaksForLog(
+        typingTest.config, typingTest.state, persistedWordCount, lineSnapshotRef?.current ?? null,
+      )
       // Finalize the per-run raw keystroke log — discards outright when
       // there's no active keyboard uid to save under; otherwise builds and
       // saves it (itself a no-op unless this run was actually
@@ -133,6 +230,7 @@ export function useTypingTestResultSave({
         // see RunLogFinishMeta.romajiInput's own doc comment.
         romajiInput: result.romajiInput === true,
         inFlightWord,
+        lineBreaks: lineBreaksForLog,
       })
       // A completed test makes any saved pause snapshot obsolete.
       if (savedMemoryRef.current) onMemoryChangeRef.current?.(undefined)

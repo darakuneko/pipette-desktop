@@ -678,6 +678,35 @@ describe('RunLogRecorder', () => {
     })
   })
 
+  describe('lineBreaks passthrough (line timeline PR1)', () => {
+    it('forwards a non-empty meta.lineBreaks verbatim into the saved log', () => {
+      const recorder = new RunLogRecorder()
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a')
+      recorder.record(ctx(), matrixPress())
+
+      const log = recorder.finish(oneWordResult(), finishMeta({ lineBreaks: [1, 3] }))
+      expect(log?.lineBreaks).toEqual([1, 3])
+    })
+
+    it('forwards an explicit empty meta.lineBreaks as [] (not collapsed to omitted)', () => {
+      const recorder = new RunLogRecorder()
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a')
+      recorder.record(ctx(), matrixPress())
+
+      const log = recorder.finish(oneWordResult(), finishMeta({ lineBreaks: [] }))
+      expect(log?.lineBreaks).toEqual([])
+    })
+
+    it('leaves lineBreaks undefined when meta omits it (legacy / no known line structure)', () => {
+      const recorder = new RunLogRecorder()
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a')
+      recorder.record(ctx(), matrixPress())
+
+      const log = recorder.finish(oneWordResult(), finishMeta())
+      expect(log?.lineBreaks).toBeUndefined()
+    })
+  })
+
   describe('discard()', () => {
     it('clears the buffer (unmount / keyboard-switch cleanup)', () => {
       const recorder = new RunLogRecorder()

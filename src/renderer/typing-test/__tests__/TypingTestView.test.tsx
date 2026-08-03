@@ -6,6 +6,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '../../i18n'
 import { TypingTestView } from '../TypingTestView'
+import type { LineSnapshot } from '../TypingTestView'
 import type { TypingTestState } from '../useTypingTest'
 import type { TypingTestConfig } from '../types'
 import { DEFAULT_CONFIG } from '../types'
@@ -872,6 +873,71 @@ describe('TypingTestView — imported fileImport text (line breaks)', () => {
     expect(container.querySelectorAll('[data-line-row]')).toHaveLength(0)
     // Flat word-flow still uses the shared var-driven window (no line rows).
     expect(screen.getByTestId('typing-test-words').className).toContain('typing-multiline-window')
+  })
+})
+
+// Plan-line-keystroke-timeline PR1: TypingTestView snapshots its own
+// realized `lines` into a caller-owned ref (consumed at finish time by
+// use-typing-test-result-save.ts) via a useLayoutEffect, never during
+// render.
+describe('TypingTestView — lineSnapshotRef (line timeline PR1)', () => {
+  it('writes {runId, wordCount, lines} once real (state.lineBreaks) lines render', () => {
+    const ref: { current: LineSnapshot | null } = { current: null }
+    renderView({
+      lineSnapshotRef: ref,
+      state: makeState({
+        status: 'running',
+        runId: 'run-xyz',
+        words: ['a', 'b', 'c', 'd'],
+        lineBreaks: new Set([1]),
+      }),
+    })
+    expect(ref.current).toEqual({ runId: 'run-xyz', wordCount: 4, lines: [[0, 1], [2, 3]] })
+  })
+
+  it('writes null lines when content is flat/unmeasured (jsdom monkeytype fallback)', () => {
+    const ref: { current: LineSnapshot | null } = { current: null }
+    renderView({
+      lineSnapshotRef: ref,
+      state: makeState({
+        status: 'running',
+        runId: 'run-flat',
+        words: ['a', 'b'],
+        lineBreaks: new Set(),
+      }),
+    })
+    expect(ref.current).toEqual({ runId: 'run-flat', wordCount: 2, lines: null })
+  })
+
+  it('updates the ref when runId/words change across a rerender', () => {
+    const ref: { current: LineSnapshot | null } = { current: null }
+    const { rerender } = renderView({
+      lineSnapshotRef: ref,
+      state: makeState({ status: 'running', runId: 'run-1', words: ['a', 'b'], lineBreaks: new Set([0]) }),
+    })
+    expect(ref.current).toEqual({ runId: 'run-1', wordCount: 2, lines: [[0], [1]] })
+
+    rerender(
+      <I18nextProvider i18n={i18n}>
+        <TypingTestView
+          lineSnapshotRef={ref}
+          state={makeState({ status: 'running', runId: 'run-2', words: ['x', 'y', 'z'], lineBreaks: new Set([1]) })}
+          wpm={0}
+          accuracy={100}
+          elapsedSeconds={0}
+          remainingSeconds={null}
+          config={DEFAULT_CONFIG}
+          paused={false}
+        />
+      </I18nextProvider>,
+    )
+    expect(ref.current).toEqual({ runId: 'run-2', wordCount: 3, lines: [[0, 1], [2]] })
+  })
+
+  it('does nothing when lineSnapshotRef is not provided (optional prop)', () => {
+    expect(() => renderView({
+      state: makeState({ status: 'running', words: ['a', 'b'], lineBreaks: new Set([0]) }),
+    })).not.toThrow()
   })
 })
 

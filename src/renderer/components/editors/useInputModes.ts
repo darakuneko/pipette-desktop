@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import type { RefObject } from 'react'
 import { useTypingTest } from '../../typing-test/useTypingTest'
 import type { TypingTestConfig } from '../../typing-test/types'
+import type { LineSnapshot } from '../../typing-test/TypingTestView'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from '../../typing-test/types'
 import { useMatrixTester } from './use-matrix-tester'
 import { useTypingAnalyticsSink, typingTestAnalyticsLabel } from './use-typing-analytics-sink'
@@ -55,6 +57,10 @@ export interface UseInputModesOptions {
    * keystroke log (see run-log-recorder.ts), independently of and
    * stricter than `typingRecordEnabled`'s per-minute analytics gate. */
   recordingConsentAccepted?: boolean
+  /** Owned by the caller (KeymapEditor) — the lowest common ancestor of
+   *  this hook and the TypingTestView it drives. Forwarded to
+   *  useTypingTestResultSave; see LineSnapshot's own doc comment. */
+  lineSnapshotRef?: RefObject<LineSnapshot | null>
 }
 
 export interface UseInputModesReturn {
@@ -106,6 +112,7 @@ export function useInputModes({
   onRecKeystroke,
   tappingTermMs,
   recordingConsentAccepted = false,
+  lineSnapshotRef,
 }: UseInputModesOptions): UseInputModesReturn {
   // --- Matrix tester ---
   const {
@@ -302,6 +309,7 @@ export function useInputModes({
     keyboardRef,
     flushAfterPendingEmits,
     runLog,
+    lineSnapshotRef,
   })
 
   // Sync saved config/language from device prefs into useTypingTest

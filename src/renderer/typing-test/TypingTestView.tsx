@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingTestState } from './useTypingTest'
 import type { RomajiGuide, TypingTestConfig } from './types'
@@ -13,6 +13,28 @@ import { TypingTestStatsRow } from './TypingTestStatsRow'
 import { useVisualLines } from './useVisualLines'
 import { useLogicalWindowHeight } from './useLogicalWindowHeight'
 
+
+/** A tagged snapshot of this view's own realized line rows (`lines` below
+ *  — real or synthetic, same `number[][]` shape either way), written by
+ *  a `useLayoutEffect` (never during render) into a caller-owned ref.
+ *  `use-typing-test-result-save.ts` reads it at finish time to derive
+ *  `RunKeystrokeLog.lineBreaks` for monkeytype modes (words/time/quote),
+ *  which have no real `state.lineBreaks` of their own — see that file's
+ *  own doc comment for the runId/wordCount match it requires before
+ *  trusting a stale snapshot. `runId`/`wordCount` are the tag: a
+ *  consumer must check both against its own current state before using
+ *  `lines`, since this ref can otherwise still hold the PREVIOUS run's
+ *  last-measured value for one render (the effect that clears it runs
+ *  after the consumer's own effect in the same commit is not guaranteed
+ *  to have fired first). `lines: null` means unmeasured (jsdom, or
+ *  before the first paint) — distinct from an absent snapshot
+ *  altogether (`lineSnapshotRef.current === null`, i.e. the effect has
+ *  never run at all). */
+export interface LineSnapshot {
+  runId: string
+  wordCount: number
+  lines: number[][] | null
+}
 
 interface Props {
   state: TypingTestState
@@ -71,6 +93,10 @@ interface Props {
    *  KSPC) "the metric doesn't apply to this run" is common, not an
    *  in-progress state. */
   errorClasses?: { substitutions: number; omissions: number; insertions: number } | null
+  /** Host-owned ref this view snapshots its own realized `lines` into —
+   *  see `LineSnapshot`'s own doc comment. Optional so every existing
+   *  mount (tests included) stays valid without threading it. */
+  lineSnapshotRef?: RefObject<LineSnapshot | null>
 }
 
 /** Group flat word indices into logical lines using the line-break set
@@ -129,6 +155,7 @@ export function TypingTestView({
   onResume,
   hasSavedMemory,
   errorClasses = null,
+  lineSnapshotRef,
 }: Props) {
   const { t } = useTranslation()
   const wordsRef = useRef<HTMLDivElement>(null)
@@ -159,6 +186,17 @@ export function TypingTestView({
   const monkeytypeActive = realLines === null
   const { lines: visualLines, mirrorRef } = useVisualLines(wordsRef, state.words, fontSize, monkeytypeActive)
   const lines = realLines ?? visualLines
+  // Snapshot this view's own realized `lines` into the host-owned ref —
+  // see `LineSnapshot`'s doc comment. A pure ref write (never setState),
+  // and deliberately in a layout effect (not during render, not a plain
+  // effect): render must stay a pure function of props/state, and a
+  // layout effect (vs. a passive one) guarantees the snapshot is current
+  // before the browser paints, matching the other layout effects in this
+  // component that also read post-render measurements.
+  useLayoutEffect(() => {
+    if (!lineSnapshotRef) return
+    lineSnapshotRef.current = { runId: state.runId, wordCount: state.words.length, lines }
+  }, [lineSnapshotRef, lines, state.runId, state.words.length])
   // Romaji guide line-sync: which line rows to preview in the guide row
   // below the reading window, anchored to whichever row the current word
   // sits on (real or synthetic — same `lines` shape either way). `null`

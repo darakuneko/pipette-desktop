@@ -110,6 +110,28 @@ export interface RunKeystrokeLog {
    *  the pre-existing (and only slightly wrong, not nonsensical) verbatim
    *  scoring is preferred over guessing. */
   romajiInput?: boolean
+  /** Sorted, unique, ascending line-end word indices (into `words`) — the
+   *  reading window's logical line structure at the moment this run
+   *  finished, so a saved run can later be re-rendered as per-line
+   *  timeline rows instead of one flat per-word list. Every index is
+   *  STRICTLY less than `words.length - 1` — a line break describes
+   *  where a line ENDS before ANOTHER FOLLOWS, so the last word in
+   *  `words` (which has nothing after it) can never be one; see
+   *  `isValidLineBreaks` (typing-run-log-store.ts) for the enforced
+   *  bound and `parseFileImportText`'s matching terminal-break removal
+   *  (typing-test-text-store.ts). FIELD PRESENCE (not emptiness)
+   *  selects rendering mode: `[]` legitimately means "the run was one
+   *  line" (still line-mode — a single row), while the field being
+   *  absent altogether means a log saved before this feature existed,
+   *  which falls back to the original per-word rendering. Never sent to
+   *  Hub — this field lives inside the same opaque log payload that
+   *  already isn't (see the module doc comment). See
+   *  TypingTestView.tsx's `LineSnapshot` (the live source for
+   *  monkeytype modes) and `useTypingTestResultSave`'s
+   *  `deriveLineBreaksForLog` (real `state.lineBreaks` for
+   *  tatoeba/fileImport — chosen by `config.mode`, never by whether
+   *  `state.lineBreaks` happens to be empty — the snapshot otherwise). */
+  lineBreaks?: number[]
   words: RunWord[]
 }
 

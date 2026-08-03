@@ -272,6 +272,86 @@ describe('typing-run-log-store', () => {
     })
   })
 
+  describe('lineBreaks (line timeline PR1)', () => {
+    // 4 words (indices 0-3) so the terminal boundary (words.length - 1 = 3)
+    // and the entry just before it (words.length - 2 = 2) are both
+    // meaningful against `words.length`.
+    function fourWordLog(overrides?: Partial<RunKeystrokeLog>): RunKeystrokeLog {
+      return makeLog({
+        words: [0, 1, 2, 3].map((i) => ({
+          index: i, display: `w${i}`, typed: `w${i}`, correct: true, keystrokes: [],
+        })),
+        ...overrides,
+      })
+    }
+
+    it('roundtrips a non-empty lineBreaks array', async () => {
+      const result = await saveRunLog('kb-1', fourWordLog({ lineBreaks: [1, 2] }))
+      expect(result.success).toBe(true)
+      const fetched = await getRunLog('kb-1', 'run-1')
+      expect(fetched.data?.lineBreaks).toEqual([1, 2])
+    })
+
+    it('roundtrips an explicit empty lineBreaks array ("one line", not omitted)', async () => {
+      const result = await saveRunLog('kb-1', fourWordLog({ lineBreaks: [] }))
+      expect(result.success).toBe(true)
+      const fetched = await getRunLog('kb-1', 'run-1')
+      expect(fetched.data?.lineBreaks).toEqual([])
+    })
+
+    it('accepts an absent lineBreaks (legacy log, falls back to per-word rendering)', async () => {
+      const result = await saveRunLog('kb-1', makeLog())
+      expect(result.success).toBe(true)
+      const fetched = await getRunLog('kb-1', 'run-1')
+      expect(fetched.data?.lineBreaks).toBeUndefined()
+    })
+
+    it('rejects a non-array lineBreaks', async () => {
+      const malformed = { ...fourWordLog(), lineBreaks: 'nope' }
+      const result = await saveRunLog('kb-1', malformed)
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects a non-integer entry', async () => {
+      const result = await saveRunLog('kb-1', fourWordLog({ lineBreaks: [1.5] }))
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects an unsorted lineBreaks array', async () => {
+      const result = await saveRunLog('kb-1', fourWordLog({ lineBreaks: [2, 1] }))
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects duplicate entries (not strictly ascending)', async () => {
+      const result = await saveRunLog('kb-1', fourWordLog({ lineBreaks: [1, 1] }))
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects an out-of-range entry (>= words.length)', async () => {
+      const result = await saveRunLog('kb-1', fourWordLog({ lineBreaks: [4] }))
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects a negative entry', async () => {
+      const result = await saveRunLog('kb-1', fourWordLog({ lineBreaks: [-1] }))
+      expect(result.success).toBe(false)
+    })
+
+    // P2-2 (codex review): a line break must have at least one word after
+    // it — the log's own last word (words.length - 1) can never be one.
+    it('rejects a terminal entry (index === words.length - 1, no word follows it)', async () => {
+      const result = await saveRunLog('kb-1', fourWordLog({ lineBreaks: [3] }))
+      expect(result.success).toBe(false)
+    })
+
+    it('accepts an entry one before the terminal (index === words.length - 2)', async () => {
+      const result = await saveRunLog('kb-1', fourWordLog({ lineBreaks: [2] }))
+      expect(result.success).toBe(true)
+      const fetched = await getRunLog('kb-1', 'run-1')
+      expect(fetched.data?.lineBreaks).toEqual([2])
+    })
+  })
+
   describe('list / get roundtrip', () => {
     it('lists newest-first and gets the full payload', async () => {
       await saveRunLog('kb-1', makeLog({ runId: 'run-1', startedAt: '2026-01-01T00:00:00.000Z' }))

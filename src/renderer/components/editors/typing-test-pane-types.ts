@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import type { RefObject } from 'react'
 import type { TypingTestResult, TypingViewMenuTab, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { KleKey } from '../../../shared/kle/types'
 import type { useTypingTest } from '../../typing-test/useTypingTest'
+import type { LineSnapshot } from '../../typing-test/TypingTestView'
 import type { AnalyticsOrigin } from './keymap-editor-types'
 import type { TimelineHandoff } from '../../hooks/useRunTimelineHandoff'
 
@@ -127,4 +129,10 @@ export interface TypingTestPaneProps {
    * forwarded straight to HistoryToggle, which auto-opens History and
    * this run's keystroke timeline for it. */
   timelineHandoff?: TimelineHandoff | null
+  /** Forwarded to `TypingTestView` — see `LineSnapshot`'s own doc comment
+   *  and `useTypingTestResultSave`'s consumption of it at finish time
+   *  (Plan-line-keystroke-timeline PR1). Owned by `KeymapEditor` (the
+   *  lowest common ancestor of this view and `useInputModes`), not this
+   *  pane. */
+  lineSnapshotRef?: RefObject<LineSnapshot | null>
 }
