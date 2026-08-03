@@ -7,10 +7,7 @@ import { ICON_SM } from '../constants/ui-tokens'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import { buildCsv } from '../../shared/csv-export'
 import { computeStats } from './history-stats'
-import { WpmSparkline } from './WpmSparkline'
-import { AccuracyTrendSection } from './AccuracyTrendSection'
-import { MistakeRankingSection } from './MistakeRankingSection'
-import { ErrorMixSection } from './ErrorMixSection'
+import { HistorySections } from './HistorySections'
 import { formatDate, ACTION_BTN, DELETE_BTN, CONFIRM_DELETE_BTN, FILTER_SELECT_CLASS } from '../components/editors/store-modal-shared'
 import { resultKpm, resultKspc, buildResultNameChips } from './result-builder'
 import { formatKspc } from '../../shared/kspc'
@@ -207,8 +204,16 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
     }).slice(0, MAX_TABLE_ROWS)
   }, [filtered, sortColumn, sortDirection])
 
+  // min-h-0 flex-1 (not h-full) on the root below: this is a flex child of
+  // HistoryToggle's `flex h-modal-80vh flex-col` modal box, sitting below
+  // the title row. h-full resolves to 100% of the modal's own content-box
+  // height, ignoring the title row's share of that flex column, which
+  // pushed this div (and everything below it) a constant ~20px past the
+  // modal's bottom edge regardless of content or window size. flex-1
+  // (flex-basis:0 + grow) makes it consume exactly the space left over
+  // after the title row instead.
   return (
-    <div data-testid="typing-test-history" className="flex h-full max-w-4xl flex-col gap-3">
+    <div data-testid="typing-test-history" className="flex min-h-0 flex-1 max-w-4xl flex-col gap-3">
       {/* Top tabs: Monkeytype (words/time/quote) vs imported Text (fileImport). */}
       <div className="flex items-center gap-4 border-b border-edge">
         {(['monkeytype', 'text'] as HistoryTab[]).map((tb) => (
@@ -276,28 +281,10 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
         )}
       </div>
 
-      {/* Sparkline — chart-above-stats, matching every other Analyze section's order */}
-      {sparklineResults.length >= 2 && (
-        <div className="flex justify-center" data-testid="history-sparkline">
-          <WpmSparkline results={sparklineResults} width={400} height={50} />
-        </div>
-      )}
+      <HistorySections tabResults={tabResults} stats={stats} sparklineResults={sparklineResults} />
 
-      {/* Stats summary */}
-      <div className="flex flex-wrap items-center gap-6 text-sm" data-testid="history-stats">
-        <StatItem label={t('editor.typingTest.history.bestWpm')} value={stats.bestWpm} highlight />
-        <StatItem label={t('editor.typingTest.history.avgWpm')} value={stats.avgWpm} />
-        <StatItem label={t('editor.typingTest.history.last10Avg')} value={stats.last10Avg} />
-        <StatItem label={t('editor.typingTest.history.totalTests')} value={stats.totalTests} />
-        <StatItem label={t('editor.typingTest.history.avgAccuracy')} value={`${stats.avgAccuracy}%`} />
-      </div>
-
-      <AccuracyTrendSection results={tabResults} />
-      <MistakeRankingSection results={tabResults} />
-      <ErrorMixSection results={tabResults} />
-
-      {/* Results table — fills remaining height */}
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-edge">
+      {/* Results table — fills remaining height, never collapses below min-h-48 */}
+      <div className="min-h-48 flex-1 overflow-y-auto rounded-lg border border-edge">
         {sorted.length > 0 ? (
           <table className="w-full text-left text-xs">
             <thead className="sticky top-0 bg-surface-alt text-content-muted">
@@ -423,23 +410,6 @@ function SortableHeader({
         {label}{isActive ? sortIndicator(sortDirection) : ''}
       </button>
     </th>
-  )
-}
-
-interface StatItemProps {
-  label: string
-  value: number | string
-  highlight?: boolean
-}
-
-function StatItem({ label, value, highlight }: StatItemProps) {
-  return (
-    // Baseline-align so the mono value digits sit level with the sans label
-    // (their font metrics differ, so items-center looks vertically off).
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-content-muted">{label}:</span>
-      <span className={`font-mono font-semibold ${highlight ? 'text-accent' : ''}`}>{value}</span>
-    </div>
   )
 }
 
