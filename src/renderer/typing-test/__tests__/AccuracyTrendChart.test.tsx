@@ -57,4 +57,15 @@ describe('AccuracyTrendChart', () => {
     renderWithI18n(<AccuracyTrendChart results={results} />)
     expect(screen.getByTestId('accuracy-trend-chart')).toBeTruthy()
   })
+
+  it('suppresses the focus-ring outline on the chart wrapper (recharts accessibilityLayer regression guard)', () => {
+    const results = [
+      makeResult({ date: '2026-06-18T00:00:00.000Z', accuracy: 90 }),
+      makeResult({ date: '2026-06-19T00:00:00.000Z', accuracy: 95 }),
+    ]
+    renderWithI18n(<AccuracyTrendChart results={results} />)
+    const wrapper = screen.getByTestId('accuracy-trend-chart')
+    expect(wrapper.className).toContain('[&_*]:focus:outline-none')
+    expect(wrapper.className).toContain('[&_*]:focus-visible:outline-none')
+  })
 })

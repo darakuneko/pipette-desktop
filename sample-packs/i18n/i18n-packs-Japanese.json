@@ -1,5 +1,5 @@
 {
-  "version": "0.1.61",
+  "version": "0.1.65",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -499,6 +499,7 @@
         "tabResults": "結果",
         "tabAnalysis": "分析",
         "viewTabsAriaLabel": "履歴の表示切替",
+        "sourceFilterLabel": "ソースで絞り込み",
         "noResults": "結果がありません",
         "pb": "PB",
         "allModes": "すべて",
@@ -507,6 +508,7 @@
         "exportCsv": "CSV出力",
         "delete": "削除",
         "accuracyTrendTitle": "正確性の推移",
+        "wpmTrendTitle": "WPMの推移",
         "conditionFilterLabel": "条件で絞り込み",
         "conditionPunctuation": "+句読点",
         "conditionNumbers": "+数字",
@@ -516,12 +518,22 @@
         "mistakeRankingEmpty": "ミスの記録はまだありません",
         "errorMixTitle": "誤り種別",
         "errorMixEmpty": "対象となる結果はまだありません",
-        "errorMixSubstitutionRow": "置換 {{pct}}%（母集団平均 {{avgPct}}%）",
-        "errorMixOmissionRow": "脱字 {{pct}}%（母集団平均 {{avgPct}}%）",
-        "errorMixInsertionRow": "衍字 {{pct}}%（母集団平均 {{avgPct}}%）",
+        "errorMixColumnType": "種別",
+        "errorMixColumnYou": "あなた",
+        "errorMixColumnPopAvg": "母平均",
+        "errorMixLabelSubstitution": "置換",
+        "errorMixLabelOmission": "脱字",
+        "errorMixLabelInsertion": "衍字",
+        "errorMixDescSubstitution": "置換とは、その位置で本来のキーと異なる文字を打ってしまう誤りです。",
+        "errorMixAdviceSubstitution": "隣接するキーの押し間違いが多い原因です。スピードよりも正確さを意識して、そのキーだけ少し慎重に打ってみましょう。",
+        "errorMixDescOmission": "脱字とは、対象の文字を打たずに飛ばしてしまう誤りです。",
+        "errorMixAdviceOmission": "焦って打鍵した際に起こりがちです。他のキーより深く押し込む必要がないか確認してみましょう。",
+        "errorMixDescInsertion": "衍字とは、対象の文字列にない余分な文字を打ってしまう誤りです。",
+        "errorMixAdviceInsertion": "キーの二度押しが原因のことが多いです。意図せず連打してしまっていないか注意してみましょう。",
         "timeline": {
           "modalTitle": "打鍵タイムライン",
           "openButton": "打鍵タイムラインを開く",
+          "linkLabel": "タイムライン",
           "loading": "タイムラインを読み込み中…",
           "error": "このランの打鍵ログを読み込めませんでした。",
           "partialBadge": "未完了",
@@ -942,6 +954,13 @@
         "average": "平均的",
         "above": "平均より多い",
         "farAbove": "平均よりかなり多い"
+      },
+      "positionRateShort": {
+        "farBelow": "かなり少なめ",
+        "below": "やや少なめ",
+        "average": "平均的",
+        "above": "やや多め",
+        "farAbove": "かなり多め"
       },
       "referenceLineLabel": "全体平均",
       "toggleAria": "全体平均の基準線を表示"

@@ -14,7 +14,7 @@ import { Tooltip } from '../components/ui/Tooltip'
 import { formatDuration } from '../components/analyze/analyze-format'
 import { HistoryTimelineCell } from './HistoryTimelineCell'
 import { EMPTY_RUN_ID_SET } from '../hooks/useRunLogAvailability'
-import { WpmSparkline } from './WpmSparkline'
+import { WpmTrendChart } from './WpmTrendChart'
 
 type ModeFilter = 'all' | 'words' | 'time' | 'quote'
 type SortColumn = 'date' | 'wpm' | 'kpm' | 'accuracy' | 'mode' | 'duration'
@@ -121,6 +121,10 @@ export function HistoryResultsPanel({
   const isText = tab === 'aozora' || tab === 'text'
   const showModeFilter = tab === 'monkeytype'
   const showTextFilter = isText
+  // Tatoeba has no sub-filter dropdown at all — without this guard the
+  // filter row would render as an empty div (no dropdown, no button now
+  // that Export CSV lives on the stats row instead).
+  const showFilterRow = showModeFilter || (showTextFilter && fileImportTexts.length > 0)
 
   const stats = useMemo(() => computeStats(filtered), [filtered])
   const sparklineResults = useMemo(
@@ -167,43 +171,69 @@ export function HistoryResultsPanel({
       aria-labelledby={ariaLabelledBy}
       className="flex min-h-0 flex-1 flex-col gap-3"
     >
-      {/* Sub-filter (mode dropdown for Monkeytype, text dropdown for Text) +
-          per-tab export. Both selects feed `filtered`, so the stats row and the
-          sparkline reflect the current selection too. */}
-      <div className="flex items-center gap-2">
-        {showModeFilter && (
-          <select
-            data-testid="history-filter-mode"
-            aria-label={t('editor.typingTest.history.filterMode')}
-            className={FILTER_SELECT_CLASS}
-            value={modeFilter}
-            onChange={(e) => onModeFilterChange(e.target.value as ModeFilter)}
-          >
-            {MODE_FILTERS.map((mode) => (
-              <option key={mode} value={mode}>
-                {mode === 'all'
-                  ? t('editor.typingTest.history.allModes')
-                  : t(`editor.typingTest.mode.${mode}`)}
-              </option>
-            ))}
-          </select>
-        )}
-        {showTextFilter && fileImportTexts.length > 0 && (
-          <select
-            data-testid="history-filter-text"
-            aria-label={t('editor.typingTest.history.filterText')}
-            className={FILTER_SELECT_CLASS}
-            value={effectiveTextFilter}
-            onChange={(e) => onTextFilterChange(e.target.value)}
-          >
-            <option value="all">{t('editor.typingTest.history.allModes')}</option>
-            {fileImportTexts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name || t('editor.typingTest.history.unnamed')}
-              </option>
-            ))}
-          </select>
-        )}
+      {/* Sub-filter — mode dropdown for Monkeytype, text dropdown for Text.
+          Both selects feed `filtered`, so the stats row and the sparkline
+          reflect the current selection too. Tatoeba has neither dropdown, so
+          the row is omitted entirely rather than rendering empty
+          (see `showFilterRow`). */}
+      {showFilterRow && (
+        <div className="flex items-center gap-2">
+          {showModeFilter && (
+            <select
+              data-testid="history-filter-mode"
+              aria-label={t('editor.typingTest.history.filterMode')}
+              className={FILTER_SELECT_CLASS}
+              value={modeFilter}
+              onChange={(e) => onModeFilterChange(e.target.value as ModeFilter)}
+            >
+              {MODE_FILTERS.map((mode) => (
+                <option key={mode} value={mode}>
+                  {mode === 'all'
+                    ? t('editor.typingTest.history.allModes')
+                    : t(`editor.typingTest.mode.${mode}`)}
+                </option>
+              ))}
+            </select>
+          )}
+          {showTextFilter && fileImportTexts.length > 0 && (
+            <select
+              data-testid="history-filter-text"
+              aria-label={t('editor.typingTest.history.filterText')}
+              className={FILTER_SELECT_CLASS}
+              value={effectiveTextFilter}
+              onChange={(e) => onTextFilterChange(e.target.value)}
+            >
+              <option value="all">{t('editor.typingTest.history.allModes')}</option>
+              {fileImportTexts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name || t('editor.typingTest.history.unnamed')}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {/* WPM trend — chart-above-stats, matching every other Analyze section's
+          order (and the Accuracy Trend section's own heading + chart shape). */}
+      {sparklineResults.length >= 2 && (
+        <div className="flex flex-col gap-2" data-testid="history-sparkline">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-content-muted">
+            {t('editor.typingTest.history.wpmTrendTitle')}
+          </h3>
+          <WpmTrendChart results={sparklineResults} />
+        </div>
+      )}
+
+      {/* Stats summary — Export CSV rides along at the right end (ml-auto) so
+          it stays on the same line as the stats instead of the now-optional
+          sub-filter row above. */}
+      <div className="flex flex-wrap items-center gap-6 text-sm" data-testid="history-stats">
+        <StatItem label={t('editor.typingTest.history.bestWpm')} value={stats.bestWpm} highlight />
+        <StatItem label={t('editor.typingTest.history.avgWpm')} value={stats.avgWpm} />
+        <StatItem label={t('editor.typingTest.history.last10Avg')} value={stats.last10Avg} />
+        <StatItem label={t('editor.typingTest.history.totalTests')} value={stats.totalTests} />
+        <StatItem label={t('editor.typingTest.history.avgAccuracy')} value={`${stats.avgAccuracy}%`} />
         {onExport && (
           <button
             type="button"
@@ -214,22 +244,6 @@ export function HistoryResultsPanel({
             {t('editor.typingTest.history.exportCsv')}
           </button>
         )}
-      </div>
-
-      {/* Sparkline — chart-above-stats, matching every other Analyze section's order */}
-      {sparklineResults.length >= 2 && (
-        <div className="flex justify-center" data-testid="history-sparkline">
-          <WpmSparkline results={sparklineResults} width={400} height={50} />
-        </div>
-      )}
-
-      {/* Stats summary */}
-      <div className="flex flex-wrap items-center gap-6 text-sm" data-testid="history-stats">
-        <StatItem label={t('editor.typingTest.history.bestWpm')} value={stats.bestWpm} highlight />
-        <StatItem label={t('editor.typingTest.history.avgWpm')} value={stats.avgWpm} />
-        <StatItem label={t('editor.typingTest.history.last10Avg')} value={stats.last10Avg} />
-        <StatItem label={t('editor.typingTest.history.totalTests')} value={stats.totalTests} />
-        <StatItem label={t('editor.typingTest.history.avgAccuracy')} value={`${stats.avgAccuracy}%`} />
       </div>
 
       {/* Results table — fills remaining height, never collapses below min-h-48 */}

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.61",
+  "version": "0.1.65",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -499,6 +499,7 @@
         "tabResults": "結果",
         "tabAnalysis": "分析",
         "viewTabsAriaLabel": "履歴の表示切替",
+        "sourceFilterLabel": "ソースで絞り込む",
         "noResults": "記録はございません",
         "pb": "自己最高",
         "allModes": "すべて",
@@ -507,6 +508,7 @@
         "exportCsv": "書付を出す (CSV)",
         "delete": "抹消",
         "accuracyTrendTitle": "正確性の推移",
+        "wpmTrendTitle": "速度の推移",
         "conditionFilterLabel": "条件による絞り込み",
         "conditionPunctuation": "+句読点",
         "conditionNumbers": "+数字",
@@ -516,12 +518,22 @@
         "mistakeRankingEmpty": "過ちの記録はまだございません",
         "errorMixTitle": "誤りの種別",
         "errorMixEmpty": "対象となる結果はまだございません",
-        "errorMixSubstitutionRow": "置換 {{pct}}%（母集団平均 {{avgPct}}%）でございます",
-        "errorMixOmissionRow": "脱字 {{pct}}%（母集団平均 {{avgPct}}%）でございます",
-        "errorMixInsertionRow": "衍字 {{pct}}%（母集団平均 {{avgPct}}%）でございます",
+        "errorMixColumnType": "種別",
+        "errorMixColumnYou": "あなた",
+        "errorMixColumnPopAvg": "母平均",
+        "errorMixLabelSubstitution": "置換",
+        "errorMixLabelOmission": "脱字",
+        "errorMixLabelInsertion": "衍字",
+        "errorMixDescSubstitution": "置換とは、その位置において本来とは異なる文字を入力してしまう誤りでございます。",
+        "errorMixAdviceSubstitution": "隣接するキーとの押し間違いが多い原因でございます。速さよりも正確さを意識し、そのキーだけ少し慎重にお打ちくださいませ。",
+        "errorMixDescOmission": "脱字とは、対象の文字を入力せずに飛ばしてしまう誤りでございます。",
+        "errorMixAdviceOmission": "急いで入力した際に生じやすいものでございます。そのキーが他より深く押し込む必要がないか、ご確認くださいませ。",
+        "errorMixDescInsertion": "衍字とは、対象の文字列にない余分な文字を入力してしまう誤りでございます。",
+        "errorMixAdviceInsertion": "キーの二度押しが原因であることが多うございます。意図せず連打していないか、ご注意くださいませ。",
         "timeline": {
           "modalTitle": "打鍵の足跡",
           "openButton": "打鍵の足跡を開く",
+          "linkLabel": "足跡",
           "loading": "読み込んでおります…",
           "error": "このランの打鍵記録を読み込めませんでした。",
           "partialBadge": "未完了",
@@ -932,6 +944,13 @@
         "average": "平均的でございます",
         "above": "平均より多めでございます",
         "farAbove": "平均よりかなり多うございます"
+      },
+      "positionRateShort": {
+        "farBelow": "かなり少なめ",
+        "below": "やや少なめ",
+        "average": "平均的",
+        "above": "やや多め",
+        "farAbove": "かなり多め"
       },
       "referenceLineLabel": "全体平均",
       "toggleAria": "全体平均の基準線を表示いたします"

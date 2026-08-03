@@ -9,44 +9,36 @@ import { ANALYZE_TOOLTIP_DEFAULTS, boldValue } from '../components/analyze/analy
 import { CHART_TICK_FONT_SIZE } from '../utils/chart-palette'
 
 interface Props {
-  /** Results sharing a single test condition (already filtered by the
-   *  caller), in any order — sorted ascending by date here so the
-   *  trend reads oldest-to-newest left to right. */
+  /** Results in any order (sorted ascending by date here, mirroring
+   *  AccuracyTrendChart) so the trend reads oldest-to-newest left to right. */
   results: TypingTestResult[]
 }
 
-interface AccuracyPoint {
+interface WpmPoint {
   timestampMs: number
-  accuracy: number
+  wpm: number
 }
 
-// Round the y-axis floor down to this step so it lands on a tidy tick
-// instead of the exact minimum accuracy.
-const Y_AXIS_FLOOR_STEP = 5
-
-function AccuracyTrendChartInner({ results }: Props) {
+function WpmTrendChartInner({ results }: Props) {
   const { t } = useTranslation()
 
-  const { data, yMin } = useMemo(() => {
-    const points: AccuracyPoint[] = results
-      .map((r) => ({ timestampMs: new Date(r.date).getTime(), accuracy: r.accuracy }))
-      .sort((a, b) => a.timestampMs - b.timestampMs)
-    const minAccuracy = points.length > 0 ? Math.min(...points.map((d) => d.accuracy)) : 0
-    return { data: points, yMin: Math.max(0, Math.floor(minAccuracy / Y_AXIS_FLOOR_STEP) * Y_AXIS_FLOOR_STEP) }
-  }, [results])
+  const data = useMemo<WpmPoint[]>(
+    () => results
+      .map((r) => ({ timestampMs: new Date(r.date).getTime(), wpm: r.wpm }))
+      .sort((a, b) => a.timestampMs - b.timestampMs),
+    [results],
+  )
 
-  // Mirrors WpmTrendChart: a trend line needs at least 2 points.
+  // Mirrors AccuracyTrendChart: a trend line needs at least 2 points.
   if (data.length < 2) return null
 
   return (
     // The `[&_*]:focus:outline-none` pair suppresses the browser's default
     // focus ring that recharts v3's `accessibilityLayer` (on by default)
     // draws on the chart surface once it's focused via click/tab — same
-    // fix AnalyzePane.tsx already applies to its own chart wrapper
-    // (`[&_*]:focus:outline-none [&_*]:focus-visible:outline-none` on the
-    // `analyze-chart` container); this chart lives outside that container
-    // so it never inherited the suppression and needs its own copy.
-    <div className="h-40 w-full [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid="accuracy-trend-chart">
+    // fix AnalyzePane.tsx already applies to its own chart wrapper, so a
+    // trend chart living outside that container doesn't regress the same way.
+    <div className="h-32 w-full [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid="wpm-trend-chart">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 10, right: 20, bottom: 0, left: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" />
@@ -59,21 +51,19 @@ function AccuracyTrendChartInner({ results }: Props) {
             tickFormatter={(v: number) => formatDateShort(v)}
           />
           <YAxis
-            domain={[yMin, 100]}
             tick={{ fontSize: CHART_TICK_FONT_SIZE, fill: 'var(--color-content-muted)' }}
             stroke="var(--color-edge)"
-            tickFormatter={(v: number) => `${v}%`}
             width={40}
           />
           <Tooltip
             {...ANALYZE_TOOLTIP_DEFAULTS}
             labelFormatter={(v) => formatDate(v as number)}
-            formatter={(value) => [boldValue(`${String(value)}%`), t('editor.typingTest.accuracy')]}
+            formatter={(value) => [boldValue(String(value)), t('editor.typingTest.wpm')]}
           />
           <Line
             type="monotone"
-            dataKey="accuracy"
-            name={t('editor.typingTest.accuracy')}
+            dataKey="wpm"
+            name={t('editor.typingTest.wpm')}
             stroke="var(--color-accent)"
             strokeWidth={2}
             dot={{ r: 3 }}
@@ -86,4 +76,4 @@ function AccuracyTrendChartInner({ results }: Props) {
   )
 }
 
-export const AccuracyTrendChart = memo(AccuracyTrendChartInner)
+export const WpmTrendChart = memo(WpmTrendChartInner)

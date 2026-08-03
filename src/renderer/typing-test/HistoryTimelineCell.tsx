@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // History-row cell that opens the per-word keystroke timeline
 // (WordTimelineView) for a run — mirrors TypingTestHistory's own
-// `NameCell`: a small icon button + local open/closed state. Rendered
+// `NameCell`: a text-action button + local open/closed state. Rendered
 // only when the run actually has a saved keystroke log (requirement 7:
 // the affordance must be invisible, not disabled, for a run with none).
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChartNoAxesGantt } from 'lucide-react'
-import { ICON_SM } from '../constants/ui-tokens'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import { Tooltip } from '../components/ui/Tooltip'
+import { LOAD_BTN } from '../components/editors/store-modal-shared'
 import { WordTimelineView } from './WordTimelineView'
 
 interface Props {
@@ -30,15 +29,22 @@ export function HistoryTimelineCell({ result, uid, availableRunIds }: Props) {
 
   return (
     <td className="px-3 py-1.5">
+      {/* Text link (not an icon button) matching the row's other text-action
+       *  conventions (Delete/Load in HistoryResultsPanel) — LOAD_BTN is the
+       *  accent-colored twin of DELETE_BTN, the same row-button shape used
+       *  for non-destructive actions elsewhere in these History rows. The
+       *  Tooltip is kept even though the link now has visible text: its
+       *  copy ("Open keystroke timeline") clarifies WHAT opens beyond the
+       *  short "Timeline" label. No aria-label on the button itself — the
+       *  visible text already supplies its accessible name. */}
       <Tooltip content={t('editor.typingTest.history.timeline.openButton')}>
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded p-1 text-content-muted transition-colors hover:text-content"
-          aria-label={t('editor.typingTest.history.timeline.openButton')}
+          className={LOAD_BTN}
           data-testid={`history-timeline-open-${result.date}`}
         >
-          <ChartNoAxesGantt size={ICON_SM} aria-hidden="true" />
+          {t('editor.typingTest.history.timeline.linkLabel')}
         </button>
       </Tooltip>
       {open && (
