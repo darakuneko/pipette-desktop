@@ -165,6 +165,20 @@ export interface RunLogFinishMeta {
    *  this as a trailing `partial: true` RunWord instead of silently
    *  dropping its keystrokes. */
   inFlightWord?: { display: string; typed: string }
+  /** Forwarded verbatim to `RunKeystrokeLog.lineBreaks` — `finish()` does
+   *  no derivation or clamping of its own; the caller (see
+   *  `useTypingTestResultSave`'s `deriveLineBreaksForLog`) has already
+   *  chosen the source by `config.mode` (never by `state.lineBreaks`
+   *  emptiness — an empty REAL source is a legitimate single-line `[]`,
+   *  not "no line structure") and clamped every index to be STRICTLY
+   *  less than the last persisted word's own index (`persistedWordCount
+   *  - 1`), since a line break can never legitimately land on the run's
+   *  own final word. Omitted (not `undefined`-then-dropped — it's
+   *  already optional) for a run with no known line structure, same
+   *  convention as this module's other optional fields; an explicit `[]`
+   *  is preserved as-is (see that field's own doc comment for why it
+   *  must not collapse to omitted). */
+  lineBreaks?: number[]
 }
 
 /** Buffered keystroke, kept in absolute-ms form (`Date.now()` values)
@@ -690,6 +704,7 @@ export class RunLogRecorder {
       language: meta.language,
       charCorrelationUnavailable: meta.charCorrelationUnavailable || undefined,
       romajiInput: meta.romajiInput || undefined,
+      lineBreaks: meta.lineBreaks,
       words,
     }
   }

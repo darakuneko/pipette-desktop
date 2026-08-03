@@ -84,6 +84,7 @@ export function TypingTestPane({
   onViewAnalytics,
   keyboardUid,
   timelineHandoff,
+  lineSnapshotRef,
 }: TypingTestPaneProps) {
   const { t } = useTranslation()
 
@@ -271,6 +272,7 @@ export function TypingTestPane({
           onPause={() => onPauseTest?.()}
           onResume={() => setShowResumeModal(true)}
           hasSavedMemory={hasSavedMemory}
+          lineSnapshotRef={lineSnapshotRef}
         />
       )}
       <div

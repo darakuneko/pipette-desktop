@@ -29,6 +29,7 @@ import { useKeymapRewrite } from './use-keymap-rewrite'
 import { useKeymapPackTabs } from './use-keymap-pack-tabs'
 import { KeymapPickerRegion } from './KeymapPickerRegion'
 import { KeymapPrimaryPane } from './KeymapPrimaryPane'
+import type { LineSnapshot } from '../../typing-test/TypingTestView'
 
 export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEditorHandle, Props>(function KeymapEditor(props, ref) {
   // Kept as a whole object (not just destructured) so the typing-test
@@ -75,6 +76,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   } = props
   const { t } = useTranslation()
   const keyboardContentRef = useRef<HTMLDivElement>(null)
+  // Owned here — the lowest common ancestor of TypingTestView (written by,
+  // via KeymapTypingTestPane) and useInputModes's useTypingTestResultSave
+  // (read by, at finish time). See LineSnapshot's own doc comment.
+  const lineSnapshotRef = useRef<LineSnapshot | null>(null)
 
   // --- Input modes (matrix tester + typing test) ---
   const {
@@ -99,6 +104,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         }
       : undefined,
     tappingTermMs,
+    lineSnapshotRef,
   })
 
   // --- Layout options ---
@@ -387,6 +393,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               onPauseTest={pauseTypingTest}
               onResumeTest={resumeTypingTest}
               onRestartTestFromStart={restartTypingTestFromStart}
+              lineSnapshotRef={lineSnapshotRef}
             />
           ) : (
             <>

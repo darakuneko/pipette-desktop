@@ -7,6 +7,7 @@ import type { KleKey } from '../../../shared/kle/types'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 import type { useTypingTest } from '../../typing-test/useTypingTest'
+import type { LineSnapshot } from '../../typing-test/TypingTestView'
 
 /** `KeymapEditorProps` covers every plain pass-through field below (layers,
  *  layerNames, typingTestHistory, every "typingTest"/"onTypingTest"-prefixed
@@ -36,6 +37,9 @@ export interface KeymapTypingTestPaneProps extends KeymapEditorProps {
   onPauseTest?: () => void
   onResumeTest?: () => void
   onRestartTestFromStart?: () => void
+  /** Owned by `KeymapEditor` (lowest common ancestor of this pane and
+   *  `useInputModes`) — see `LineSnapshot`'s own doc comment. */
+  lineSnapshotRef?: RefObject<LineSnapshot | null>
 }
 
 /** Renders the typing-test surface inside `KeymapEditor`'s keymap-surface
@@ -69,6 +73,7 @@ export function KeymapTypingTestPane({
   typingTrayResident, onTypingTrayResidentChange, typingStartInTray, onTypingStartInTrayChange,
   typingViewMenuTab, onTypingViewMenuTabChange,
   onViewAnalytics, keyboardUid, timelineHandoff,
+  lineSnapshotRef,
 }: KeymapTypingTestPaneProps): JSX.Element {
   return (
     <TypingTestPane
@@ -138,6 +143,7 @@ export function KeymapTypingTestPane({
       onViewAnalytics={onViewAnalytics}
       keyboardUid={keyboardUid}
       timelineHandoff={timelineHandoff}
+      lineSnapshotRef={lineSnapshotRef}
     />
   )
 }

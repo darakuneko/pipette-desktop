@@ -144,6 +144,34 @@ function isValidKeystroke(value: unknown, durationMs: number): value is RunKeyst
   return true
 }
 
+/** `RunKeystrokeLog.lineBreaks` validation — sorted, unique, strictly
+ *  ascending, and every index STRICTLY less than `wordCount - 1` (the
+ *  log's OWN `words.length`, the same `persistedWordCount` the renderer
+ *  already clamped to before saving — see run-log-recorder.ts's
+ *  `RunLogFinishMeta.lineBreaks` doc comment). The `- 1` is deliberate,
+ *  not `wordCount` itself: a line break marks where a line ENDS before
+ *  ANOTHER FOLLOWS, so the log's own last word (index `wordCount - 1`,
+ *  which by definition has nothing after it) can never legitimately be
+ *  one — same bound `deriveLineBreaksForLog` (use-typing-test-result-
+ *  save.ts) enforces on the renderer side and `parseFileImportText`
+ *  enforces at its own source (typing-test-text-store.ts). Malformed
+ *  input rejects the WHOLE log (consistent with this function's
+ *  existing strictness for every other field), rather than silently
+ *  dropping just this one. */
+function isValidLineBreaks(value: unknown, wordCount: number): value is number[] {
+  if (!Array.isArray(value)) return false
+  let prev = -1
+  for (const entry of value) {
+    if (typeof entry !== 'number' || !Number.isInteger(entry)) return false
+    // Strictly greater than the previous entry enforces both ascending
+    // order and uniqueness in one comparison.
+    if (entry <= prev) return false
+    if (entry < 0 || entry >= wordCount - 1) return false
+    prev = entry
+  }
+  return true
+}
+
 function isValidWord(value: unknown, durationMs: number): value is RunWord {
   if (!value || typeof value !== 'object') return false
   const w = value as Record<string, unknown>
@@ -192,6 +220,15 @@ function validateRunLog(
   }
   if (eventCount > MAX_RUN_LOG_EVENTS) return { ok: false, error: 'Too many keystrokes' }
 
+  // Bounds-checked against `words.length` (the already-validated array
+  // above, including any trailing partial word) — this is exactly the
+  // `persistedWordCount` the renderer clamped lineBreaks to before saving.
+  let lineBreaks: number[] | undefined
+  if (log.lineBreaks !== undefined) {
+    if (!isValidLineBreaks(log.lineBreaks, words.length)) return { ok: false, error: 'Invalid lineBreaks' }
+    lineBreaks = log.lineBreaks
+  }
+
   let serialized: string
   try {
     serialized = JSON.stringify(log)
@@ -211,6 +248,11 @@ function validateRunLog(
       language: log.language,
       charCorrelationUnavailable: log.charCorrelationUnavailable,
       romajiInput: log.romajiInput,
+      // Explicit: the whitelist rebuild above drops any field not listed
+      // here, so an EMPTY `[]` (a legitimate "one line" value, distinct
+      // from omitted — see the field's own doc comment) must still be
+      // assigned, not left to fall through as undefined.
+      lineBreaks,
       words,
     },
     serialized,
