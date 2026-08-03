@@ -16,6 +16,7 @@ import {
 import type { WordPositionAggregate } from './analyze-bigram-word-position'
 import { EMPTY_STAT_VALUE } from './analyze-constants'
 import { fmtMs } from './analyze-format'
+import { Tooltip } from '../ui/Tooltip'
 
 interface BigramClassesQuadrantProps {
   /** Classes aggregate computed once by the parent `BigramsChart` and
@@ -169,15 +170,16 @@ function BigramClassesTable({
           ))}
         </tbody>
       </table>
-      <div
-        className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-content-muted"
-        data-testid="analyze-bigrams-classes-delta"
-        title={t('analyze.bigrams.classes.deltaTooltip')}
-      >
-        <span>{t('analyze.bigrams.classes.deltaLeft')}: {fmtDelta(deltaLeft)}</span>
-        <span>{t('analyze.bigrams.classes.deltaRight')}: {fmtDelta(deltaRight)}</span>
-        <span>{t('analyze.bigrams.classes.deltaInitiation')}: {fmtDelta(deltaInitiation)}</span>
-      </div>
+      <Tooltip content={t('analyze.bigrams.classes.deltaTooltip')} wrapperClassName="block w-full">
+        <div
+          className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-content-muted"
+          data-testid="analyze-bigrams-classes-delta"
+        >
+          <span>{t('analyze.bigrams.classes.deltaLeft')}: {fmtDelta(deltaLeft)}</span>
+          <span>{t('analyze.bigrams.classes.deltaRight')}: {fmtDelta(deltaRight)}</span>
+          <span>{t('analyze.bigrams.classes.deltaInitiation')}: {fmtDelta(deltaInitiation)}</span>
+        </div>
+      </Tooltip>
       {wordPositionAggregate.excludedCount > 0 && (
         <div className="text-xs text-content-muted" data-testid="analyze-bigrams-classes-excluded-note">
           {t('analyze.bigrams.classes.excludedNote', { count: wordPositionAggregate.excludedCount })}

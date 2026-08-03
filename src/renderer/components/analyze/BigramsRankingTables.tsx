@@ -10,6 +10,7 @@ import { bigramPairLabels, rolloverRatioFromEntry } from './analyze-bigram-forma
 import { avgIkiAtOrAboveThreshold, percentileFromHist } from './analyze-bigram-heatmap'
 import { fmtMs, formatPercentLabel } from './analyze-format'
 import { EmptyQuadrant } from './bigrams-quadrant-ui'
+import { Tooltip } from '../ui/Tooltip'
 
 type SortKey = 'count' | 'avgIki' | 'sd' | 'p95' | 'rollover'
 /** Columns `TopRanking` sorts on. */
@@ -59,25 +60,24 @@ interface SortHeaderProps {
   align: 'left' | 'right'
   active: boolean
   onClick: () => void
-  /** Header tooltip (native `title`). Absent by default — only the
-   * trigram Avg IKI header sets one today. */
+  /** Header tooltip. Absent by default — only the trigram Avg IKI header
+   * sets one today. */
   title?: string
 }
 
 function SortHeader({ label, indicator, align, active, onClick, title }: SortHeaderProps): JSX.Element {
   return (
-    <th
-      className={`select-none px-2 py-1 font-medium ${align === 'right' ? 'text-right' : 'text-left'}`}
-      title={title}
-    >
-      <button
-        type="button"
-        onClick={onClick}
-        className={`cursor-pointer ${active ? 'text-content' : 'text-content-muted hover:text-content'}`}
-      >
-        {label}
-        {indicator}
-      </button>
+    <th className={`select-none px-2 py-1 font-medium ${align === 'right' ? 'text-right' : 'text-left'}`}>
+      <Tooltip content={title ?? ''} disabled={!title}>
+        <button
+          type="button"
+          onClick={onClick}
+          className={`cursor-pointer ${active ? 'text-content' : 'text-content-muted hover:text-content'}`}
+        >
+          {label}
+          {indicator}
+        </button>
+      </Tooltip>
     </th>
   )
 }

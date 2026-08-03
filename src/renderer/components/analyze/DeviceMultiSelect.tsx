@@ -104,7 +104,6 @@ export function DeviceMultiSelect({
           <option
             key={info.machineHash}
             value={optionValue}
-            title={info.machineHash}
             data-testid={`${testId}-option-${optionValue}`}
           >
             {formatDeviceLabel(info)}

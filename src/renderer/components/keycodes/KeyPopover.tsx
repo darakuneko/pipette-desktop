@@ -9,6 +9,7 @@ import { PopoverTabCode } from './PopoverTabCode'
 import { ModifierCheckboxStrip } from './ModifierCheckboxStrip'
 import { LayerSelector } from './LayerSelector'
 import { usePopoverKeycodeWorkflow, type WrapperMode } from './use-popover-keycode-workflow'
+import { Tooltip } from '../ui/Tooltip'
 
 type Tab = 'key' | 'code'
 
@@ -232,20 +233,20 @@ export function KeyPopover({
           data-testid="popover-layer-sidebar"
         >
           {Array.from({ length: layers }, (_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => handleLayerSidebarClick(i)}
-              className={`w-8 shrink-0 rounded-md border flex items-center justify-center py-1.5 text-xs font-semibold tabular-nums transition-colors ${
-                currentLayer === i
-                  ? 'border-accent bg-accent text-content-inverse'
-                  : 'border-edge bg-surface/20 text-content-muted hover:bg-surface-dim'
-              }`}
-              title={layerNames?.[i] || undefined}
-              data-testid={`popover-layer-${i}`}
-            >
-              {i}
-            </button>
+            <Tooltip key={i} content={layerNames?.[i] || ''} disabled={!layerNames?.[i]} side="right">
+              <button
+                type="button"
+                onClick={() => handleLayerSidebarClick(i)}
+                className={`w-8 shrink-0 rounded-md border flex items-center justify-center py-1.5 text-xs font-semibold tabular-nums transition-colors ${
+                  currentLayer === i
+                    ? 'border-accent bg-accent text-content-inverse'
+                    : 'border-edge bg-surface/20 text-content-muted hover:bg-surface-dim'
+                }`}
+                data-testid={`popover-layer-${i}`}
+              >
+                {i}
+              </button>
+            </Tooltip>
           ))}
         </div>
       )}

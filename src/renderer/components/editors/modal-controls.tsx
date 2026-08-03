@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import { Tooltip } from '../ui/Tooltip'
+
 const TOGGLE_TRACK_BASE = 'relative inline-flex h-5 w-9 items-center rounded-full transition-colors'
 const TOGGLE_KNOB_BASE = 'inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform'
 
@@ -31,18 +33,19 @@ export function ToggleRow({ label, on, onToggle, title, testid }: {
   return (
     <div className={`${ROW_CLASS} w-full`} data-testid={`${testid}-row`}>
       <span className="min-w-0 truncate text-sm font-medium text-content">{label}</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={on}
-        aria-label={label}
-        title={title}
-        className={`${toggleTrackClass(on)} shrink-0`}
-        onClick={onToggle}
-        data-testid={testid}
-      >
-        <span className={toggleKnobClass(on)} />
-      </button>
+      <Tooltip content={title ?? ''} disabled={!title}>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-label={label}
+          className={`${toggleTrackClass(on)} shrink-0`}
+          onClick={onToggle}
+          data-testid={testid}
+        >
+          <span className={toggleKnobClass(on)} />
+        </button>
+      </Tooltip>
     </div>
   )
 }

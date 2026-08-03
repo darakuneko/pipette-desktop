@@ -44,4 +44,13 @@ describe('HistoryTimelineCell', () => {
     fireEvent.click(btn)
     expect(screen.getByTestId('word-timeline-modal')).toBeTruthy()
   })
+
+  it('has no native title attribute and exposes the label via the shared Tooltip instead', () => {
+    renderWithI18n(<HistoryTimelineCell result={makeResult({ runId: 'run-1' })} uid="uid-1" availableRunIds={new Set(['run-1'])} />)
+    const btn = screen.getByTestId('history-timeline-open-2026-01-01T00:00:00.000Z')
+    expect(btn).not.toHaveAttribute('title')
+    const bubble = screen.getByRole('tooltip')
+    expect(bubble.textContent).toBe(i18n.t('editor.typingTest.history.timeline.openButton'))
+    expect(btn.getAttribute('aria-describedby')).toBe(bubble.id)
+  })
 })

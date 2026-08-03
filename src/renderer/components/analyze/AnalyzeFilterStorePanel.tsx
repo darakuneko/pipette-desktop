@@ -22,6 +22,7 @@ import { BTN_PRIMARY_XS, BTN_DANGER_XS } from '../../constants/ui-tokens'
 import type { HubEntryResult } from '../editors/layout-store-types'
 import type { AnalyzeFilterSnapshotMeta } from '../../../shared/types/analyze-filter-store'
 import { AnalyzeFilterStoreHubRow } from './AnalyzeFilterStoreHubRow'
+import { Tooltip } from '../ui/Tooltip'
 
 // Only one tab today — kept as a single-element tab bar for visual
 // parity with the keymap editor's overlay and so the structure is
@@ -273,14 +274,15 @@ export function AnalyzeFilterStorePanel({
                                 data-testid={`analyze-filter-store-rename-input-${entry.id}`}
                               />
                             ) : (
-                              <div
-                                className="cursor-pointer truncate text-sm font-semibold text-content"
-                                onClick={() => rename.startRename(entry.id, entry.label)}
-                                data-testid={`analyze-filter-store-entry-label-${entry.id}`}
-                                title={entry.label}
-                              >
-                                {entry.label || t('common.noLabel')}
-                              </div>
+                              <Tooltip content={entry.label} disabled={!entry.label} wrapperClassName="block max-w-full">
+                                <div
+                                  className="cursor-pointer truncate text-sm font-semibold text-content"
+                                  onClick={() => rename.startRename(entry.id, entry.label)}
+                                  data-testid={`analyze-filter-store-entry-label-${entry.id}`}
+                                >
+                                  {entry.label || t('common.noLabel')}
+                                </div>
+                              </Tooltip>
                             )}
                           </div>
 
@@ -332,13 +334,14 @@ export function AnalyzeFilterStorePanel({
                         </div>
 
                         {entry.summary && (
-                          <div
-                            className="mb-1 truncate text-xs text-content-muted"
-                            title={entry.summary}
-                            data-testid={`analyze-filter-store-entry-summary-${entry.id}`}
-                          >
-                            {entry.summary}
-                          </div>
+                          <Tooltip content={entry.summary} wrapperClassName="block max-w-full">
+                            <div
+                              className="mb-1 truncate text-xs text-content-muted"
+                              data-testid={`analyze-filter-store-entry-summary-${entry.id}`}
+                            >
+                              {entry.summary}
+                            </div>
+                          </Tooltip>
                         )}
 
                         {/* Row 2: date + .csv export */}
