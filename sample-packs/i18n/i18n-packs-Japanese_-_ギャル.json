@@ -1,5 +1,5 @@
 {
-  "version": "0.1.58",
+  "version": "0.1.59",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -494,6 +494,9 @@
         "tabMonkeytype": "MonkeyType",
         "tabFileImport": "ファイル取込っしょ",
         "tabText": "テキスト",
+        "tabResults": "結果☆",
+        "tabAnalysis": "分析☆",
+        "viewTabsAriaLabel": "履歴の表示を切り替えるっしょ",
         "noResults": "結果ないじゃん",
         "pb": "PB☆",
         "allModes": "全部",

@@ -1,29 +1,29 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useId, useRef } from 'react'
+import type { KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Trophy, SquarePen } from 'lucide-react'
-import { ICON_SM } from '../constants/ui-tokens'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import { buildCsv } from '../../shared/csv-export'
-import { computeStats } from './history-stats'
-import { HistorySections } from './HistorySections'
-import { formatDate, ACTION_BTN, DELETE_BTN, CONFIRM_DELETE_BTN, FILTER_SELECT_CLASS } from '../components/editors/store-modal-shared'
-import { resultKpm, resultKspc, buildResultNameChips } from './result-builder'
+import { resultKpm, resultKspc } from './result-builder'
 import { formatKspc } from '../../shared/kspc'
-import { formatConditionLabel } from './condition-label'
-import { ResultNameModal } from './ResultNameModal'
-import { Tooltip } from '../components/ui/Tooltip'
-import { formatDuration } from '../components/analyze/analyze-format'
-import { HistoryTimelineCell } from './HistoryTimelineCell'
-import { EMPTY_RUN_ID_SET } from '../hooks/useRunLogAvailability'
+import { HistorySections } from './HistorySections'
+import { HistoryResultsPanel } from './HistoryResultsPanel'
+import type { ModeFilter, SortColumn, SortDirection } from './HistoryResultsPanel'
 
-type ModeFilter = 'all' | 'words' | 'time' | 'quote'
-type SortColumn = 'date' | 'wpm' | 'kpm' | 'accuracy' | 'mode' | 'duration'
-type SortDirection = 'asc' | 'desc'
 /** Top-level split: Monkeytype (words/time/quote) vs imported Text (fileImport).
  *  Their baselines aren't comparable, so stats / chart / export are separate. */
 type HistoryTab = 'monkeytype' | 'text'
+
+/** Secondary split, below the source tabs: Results (filter/sparkline/stats/
+ *  table) vs Analysis (accuracy trend / mistake ranking / error mix). Local
+ *  state, defaults to 'results', and persists across source-tab switches —
+ *  it's a separate axis from `tab` above. */
+type HistoryView = 'results' | 'analysis'
+
+/** Tab order for the secondary view tablist — drives both the rendered
+ *  button order and the APG roving-tabindex arrow-key navigation below. */
+const VIEW_TABS: HistoryView[] = ['results', 'analysis']
 
 interface Props {
   results: TypingTestResult[]
@@ -40,23 +40,6 @@ interface Props {
    *  `HistoryToggle`) — the timeline column is omitted when `uid` is unset. */
   uid?: string
   availableRunIds?: ReadonlySet<string>
-}
-
-const MAX_TABLE_ROWS = 20
-
-const EXPORT_BTN_CLASS = 'inline-flex h-8 items-center rounded-md border border-edge px-2.5 text-xs text-content-secondary transition-colors hover:text-content'
-
-const MAX_SPARKLINE_RESULTS = 50
-
-/** Mode-column detail. FileImport (imported-text) runs show the snapshotted text
- *  name (falling back to the stable textId for legacy rows saved before the
- *  name was captured); words/time/quote show their `mode2` value verbatim.
- *  Tatoeba is NOT handled here — its `mode2` is a composite
- *  `language|pattern|count` (see `deriveMode2`), so the Mode column renders
- *  it via `formatConditionLabel` instead of this raw value. */
-function modeDetail(r: TypingTestResult): string {
-  if (r.mode === 'fileImport') return r.fileImportTextName ?? (r.mode2 != null ? String(r.mode2) : '')
-  return r.mode2 != null ? String(r.mode2) : ''
 }
 
 /** Stable filter key for an imported-text (fileImport) run; its textId is `mode2`. */
@@ -81,8 +64,6 @@ function exportFilterSlug(
   }
   return modeFilter === 'all' ? 'monkeytype' : `monkeytype-${modeFilter}`
 }
-
-const MODE_FILTERS: ModeFilter[] = ['all', 'words', 'time', 'quote']
 
 // errorSubstitutions/errorOmissions/errorInsertions/errorTargetChars are
 // exported as their RAW counts (not a derived per-row rate like `kspc`
@@ -111,21 +92,69 @@ function buildResultsCsv(results: TypingTestResult[]): string {
   )
 }
 
+const VIEW_TAB_ACTIVE = 'border-b-2 border-accent px-1 pb-1 text-xs font-medium text-accent'
+const VIEW_TAB_INACTIVE = 'border-b-2 border-transparent px-1 pb-1 text-xs text-content-muted hover:text-content'
+
 export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, deviceName, uid, availableRunIds }: Props) {
   const { t } = useTranslation()
   const [tab, setTab] = useState<HistoryTab>('monkeytype')
+  const [view, setView] = useState<HistoryView>('results')
   const [modeFilter, setModeFilter] = useState<ModeFilter>('all')
   // Text-tab filter, keyed by the stable textId (mode2). 'all' = no filter.
   const [textFilter, setTextFilter] = useState<string>('all')
-  const [sortColumn, setSortColumn] = useState<SortColumn>('date')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [confirmDeleteDate, setConfirmDeleteDate] = useState<string | null>(null)
   const isText = tab === 'text'
 
+  // Sort state lives here (not in HistoryResultsPanel) because that panel
+  // unmounts while the Analysis view is active (conditional render below) —
+  // panel-local state would silently reset the sort on every
+  // Results→Analysis→Results round trip. Delete-confirm and the rename
+  // modal stay panel-local; both are transient interactions where a reset
+  // on tab switch is expected/safe, unlike a deliberate sort choice.
+  const [sortColumn, setSortColumn] = useState<SortColumn>('date')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const handleSort = useCallback((column: SortColumn) => {
     setSortDirection((prev) => (sortColumn === column && prev === 'desc') ? 'asc' : 'desc')
     setSortColumn(column)
   }, [sortColumn])
+
+  // Unique per-instance ids for the view tabs/panels (React 19 useId), so
+  // aria-controls/aria-labelledby never collide if two History modals ever
+  // mount at once — unlike the pre-existing source tabs above, which use
+  // static ids/no `role` and are left untouched (out of scope here).
+  const viewTabsIdBase = useId()
+  const viewTabId = useCallback((v: HistoryView) => `${viewTabsIdBase}-tab-${v}`, [viewTabsIdBase])
+  const viewPanelId = useCallback((v: HistoryView) => `${viewTabsIdBase}-panel-${v}`, [viewTabsIdBase])
+
+  // APG tabs pattern (automatic activation): arrow keys move focus AND
+  // selection between the two view tabs; Home/End jump to the first/last.
+  // Roving tabIndex (0 on the active tab, -1 otherwise) keeps the tablist a
+  // single Tab stop, per https://www.w3.org/WAI/ARIA/apg/patterns/tabs/.
+  const viewTabRefs = useRef<Partial<Record<HistoryView, HTMLButtonElement>>>({})
+  const focusAndSelectView = useCallback((v: HistoryView) => {
+    setView(v)
+    viewTabRefs.current[v]?.focus()
+  }, [])
+  const handleViewTabKeyDown = useCallback((e: KeyboardEvent<HTMLButtonElement>, current: HistoryView) => {
+    const idx = VIEW_TABS.indexOf(current)
+    switch (e.key) {
+      case 'ArrowRight':
+        e.preventDefault()
+        focusAndSelectView(VIEW_TABS[(idx + 1) % VIEW_TABS.length])
+        break
+      case 'ArrowLeft':
+        e.preventDefault()
+        focusAndSelectView(VIEW_TABS[(idx - 1 + VIEW_TABS.length) % VIEW_TABS.length])
+        break
+      case 'Home':
+        e.preventDefault()
+        focusAndSelectView(VIEW_TABS[0])
+        break
+      case 'End':
+        e.preventDefault()
+        focusAndSelectView(VIEW_TABS[VIEW_TABS.length - 1])
+        break
+    }
+  }, [focusAndSelectView])
 
   // Active tab's rows: fileImport for Text, everything else for Monkeytype.
   const tabResults = useMemo(
@@ -166,44 +195,6 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
     onExportCsv?.(buildResultsCsv(filtered), exportFilterSlug(isText, modeFilter, effectiveTextFilter, fileImportTexts))
   }, [filtered, onExportCsv, isText, modeFilter, effectiveTextFilter, fileImportTexts])
 
-  const stats = useMemo(() => computeStats(filtered), [filtered])
-  const sparklineResults = useMemo(
-    () => filtered.slice(0, MAX_SPARKLINE_RESULTS).reverse(),
-    [filtered],
-  )
-
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
-      let cmp = 0
-      switch (sortColumn) {
-        case 'date':
-          cmp = new Date(a.date).getTime() - new Date(b.date).getTime()
-          break
-        case 'wpm':
-          cmp = a.wpm - b.wpm
-          break
-        case 'kpm':
-          cmp = resultKpm(a) - resultKpm(b)
-          break
-        case 'accuracy':
-          cmp = a.accuracy - b.accuracy
-          break
-        case 'mode': {
-          // Sort by what the Mode column actually shows (text name for fileImport),
-          // so fileImport rows order by name rather than an opaque textId.
-          const modeA = `${a.mode ?? ''}${modeDetail(a)}`
-          const modeB = `${b.mode ?? ''}${modeDetail(b)}`
-          cmp = modeA.localeCompare(modeB)
-          break
-        }
-        case 'duration':
-          cmp = a.durationSeconds - b.durationSeconds
-          break
-      }
-      return sortDirection === 'asc' ? cmp : -cmp
-    }).slice(0, MAX_TABLE_ROWS)
-  }, [filtered, sortColumn, sortDirection])
-
   // min-h-0 flex-1 (not h-full) on the root below: this is a flex child of
   // HistoryToggle's `flex h-modal-80vh flex-col` modal box, sitting below
   // the title row. h-full resolves to 100% of the modal's own content-box
@@ -232,234 +223,73 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
         ))}
       </div>
 
-      {/* Sub-filter (mode dropdown for Monkeytype, text dropdown for Text) +
-          per-tab export. Both selects feed `filtered`, so the stats row and the
-          sparkline reflect the current selection too. */}
-      <div className="flex items-center gap-2">
-        {!isText && (
-          <select
-            data-testid="history-filter-mode"
-            aria-label={t('editor.typingTest.history.filterMode')}
-            className={FILTER_SELECT_CLASS}
-            value={modeFilter}
-            onChange={(e) => setModeFilter(e.target.value as ModeFilter)}
-          >
-            {MODE_FILTERS.map((mode) => (
-              <option key={mode} value={mode}>
-                {mode === 'all'
-                  ? t('editor.typingTest.history.allModes')
-                  : t(`editor.typingTest.mode.${mode}`)}
-              </option>
-            ))}
-          </select>
-        )}
-        {isText && fileImportTexts.length > 0 && (
-          <select
-            data-testid="history-filter-text"
-            aria-label={t('editor.typingTest.history.filterText')}
-            className={FILTER_SELECT_CLASS}
-            value={effectiveTextFilter}
-            onChange={(e) => setTextFilter(e.target.value)}
-          >
-            <option value="all">{t('editor.typingTest.history.allModes')}</option>
-            {fileImportTexts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name || t('editor.typingTest.history.unnamed')}
-              </option>
-            ))}
-          </select>
-        )}
-        {onExportCsv && (
-          <button
-            type="button"
-            data-testid="history-export-csv"
-            className={`ml-auto ${EXPORT_BTN_CLASS}`}
-            onClick={handleExport}
-          >
-            {t('editor.typingTest.history.exportCsv')}
-          </button>
-        )}
-      </div>
-
-      <HistorySections tabResults={tabResults} stats={stats} sparklineResults={sparklineResults} />
-
-      {/* Results table — fills remaining height, never collapses below min-h-48 */}
-      <div className="min-h-48 flex-1 overflow-y-auto rounded-lg border border-edge">
-        {sorted.length > 0 ? (
-          <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 bg-surface-alt text-content-muted">
-              <tr>
-                <th className="px-3 py-1.5">{t('editor.typingTest.history.name')}</th>
-                <SortableHeader column="date" label={t('editor.typingTest.history.date')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
-                <SortableHeader column="wpm" label={t('editor.typingTest.wpm')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
-                <SortableHeader column="kpm" label={t('editor.typingTest.kpm')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
-                <SortableHeader column="accuracy" label={t('editor.typingTest.accuracy')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
-                <SortableHeader column="mode" label={isText ? t('editor.typingTest.history.tabText') : t('editor.typingTest.history.mode')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
-                <SortableHeader column="duration" label={t('editor.typingTest.time')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
-                <th className="px-3 py-1.5">{t('editor.typingTest.history.pb')}</th>
-                {uid && <th className="px-3 py-1.5" aria-label={t('editor.typingTest.history.timeline.modalTitle')} />}
-                {onDelete && <th className="px-3 py-1.5" aria-label={t('editor.typingTest.history.delete')} />}
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((r) => (
-                <tr
-                  key={r.date}
-                  className="border-t border-edge/50 transition-colors hover:bg-surface-alt/50"
-                >
-                  <NameCell result={r} onRename={onRename} deviceName={deviceName} />
-                  <td className="whitespace-nowrap px-3 py-1.5 text-content-muted">{formatDate(r.date)}</td>
-                  <td className="whitespace-nowrap px-3 py-1.5 font-mono font-semibold text-accent">{r.wpm}</td>
-                  <td className="whitespace-nowrap px-3 py-1.5 font-mono font-semibold text-accent">{resultKpm(r)}</td>
-                  <td className="whitespace-nowrap px-3 py-1.5 font-mono">{r.accuracy}%</td>
-                  <td className="whitespace-nowrap px-3 py-1.5 text-content-muted">
-                    {isText
-                      ? (modeDetail(r) || t('editor.typingTest.history.unnamed'))
-                      // Tatoeba's mode2 is a composite (language|pattern|count, see
-                      // deriveMode2) — formatConditionLabel already knows how to
-                      // render it (e.g. "Tatoeba 5 Lines (english)").
-                      : (r.mode === 'tatoeba'
-                        ? formatConditionLabel(r, t)
-                        : `${t(`editor.typingTest.mode.${r.mode ?? 'words'}`)}${modeDetail(r) ? ` ${modeDetail(r)}` : ''}`)}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-1.5 font-mono text-content-muted">
-                    {formatDuration(r.durationSeconds)}
-                  </td>
-                  <td className="px-3 py-1.5">
-                    {r.isPb && <Trophy role="img" className="inline-block size-3.5 text-warning" aria-label={t('editor.typingTest.history.pb')} />}
-                  </td>
-                  {uid && <HistoryTimelineCell result={r} uid={uid} availableRunIds={availableRunIds ?? EMPTY_RUN_ID_SET} />}
-                  {onDelete && (
-                    <td className="px-3 py-1.5">
-                      {confirmDeleteDate === r.date ? (
-                        <div className="flex items-center gap-0.5">
-                          <button
-                            type="button"
-                            className={CONFIRM_DELETE_BTN}
-                            onClick={() => { onDelete(r.date); setConfirmDeleteDate(null) }}
-                            data-testid={`history-delete-confirm-${r.date}`}
-                          >
-                            {t('common.confirmDelete')}
-                          </button>
-                          <button
-                            type="button"
-                            className={ACTION_BTN}
-                            onClick={() => setConfirmDeleteDate(null)}
-                            data-testid={`history-delete-cancel-${r.date}`}
-                          >
-                            {t('common.cancel')}
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className={DELETE_BTN}
-                          onClick={() => setConfirmDeleteDate(r.date)}
-                          data-testid={`history-delete-${r.date}`}
-                        >
-                          {t('common.delete')}
-                        </button>
-                      )}
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p className="p-6 text-center text-sm text-content-muted">
-            {t('editor.typingTest.history.noResults')}
-          </p>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function sortIndicator(direction: SortDirection): string {
-  return direction === 'asc' ? ' \u25B2' : ' \u25BC'
-}
-
-interface SortableHeaderProps {
-  column: SortColumn
-  label: string
-  sortColumn: SortColumn
-  sortDirection: SortDirection
-  onSort: (column: SortColumn) => void
-}
-
-function SortableHeader({
-  column,
-  label,
-  sortColumn,
-  sortDirection,
-  onSort,
-}: SortableHeaderProps) {
-  const isActive = column === sortColumn
-  const ariaSort = isActive
-    ? (sortDirection === 'asc' ? 'ascending' : 'descending')
-    : 'none'
-
-  return (
-    <th className="px-3 py-1.5" aria-sort={ariaSort}>
-      <button
-        type="button"
-        className="cursor-pointer select-none bg-transparent text-inherit"
-        onClick={() => onSort(column)}
+      {/* Secondary tabs: Results (filter/sparkline/stats/table) vs Analysis
+          (accuracy trend / mistake ranking / error mix). Visually subordinate
+          to the source tabs above (smaller text, lighter weight) while
+          keeping the same border-b-2 accent indicator pattern
+          (.claude/DESIGN.md "Tabs"). Local state, persists across source-tab
+          switches. */}
+      <div
+        role="tablist"
+        aria-label={t('editor.typingTest.history.viewTabsAriaLabel')}
+        className="flex items-center gap-3 border-b border-edge/60"
       >
-        {label}{isActive ? sortIndicator(sortDirection) : ''}
-      </button>
-    </th>
-  )
-}
+        {VIEW_TABS.map((v) => (
+          <button
+            key={v}
+            ref={(el) => { viewTabRefs.current[v] = el ?? undefined }}
+            type="button"
+            role="tab"
+            id={viewTabId(v)}
+            aria-selected={view === v}
+            aria-controls={viewPanelId(v)}
+            tabIndex={view === v ? 0 : -1}
+            data-testid={`history-view-tab-${v}`}
+            className={view === v ? VIEW_TAB_ACTIVE : VIEW_TAB_INACTIVE}
+            onClick={() => setView(v)}
+            onKeyDown={(e) => handleViewTabKeyDown(e, v)}
+          >
+            {t(v === 'results' ? 'editor.typingTest.history.tabResults' : 'editor.typingTest.history.tabAnalysis')}
+          </button>
+        ))}
+      </div>
 
-interface NameCellProps {
-  result: TypingTestResult
-  onRename?: (date: string, name: string) => void
-  deviceName?: string
-}
-
-/** Result label cell. A button (edit icon + current name / "Unnamed") that
- *  opens the naming modal with quick-insert chips. Read-only when no rename
- *  handler is provided. */
-function NameCell({ result, onRename, deviceName }: NameCellProps) {
-  const { t } = useTranslation()
-  const [modalOpen, setModalOpen] = useState(false)
-  const placeholder = t('editor.typingTest.history.unnamed')
-
-  const display = result.name || placeholder
-
-  if (!onRename) {
-    return (
-      <td className="max-w-[14rem] px-3 py-1.5 text-content-muted">
-        <Tooltip content={display} wrapperClassName="block max-w-full">
-          <span className="block truncate">{display}</span>
-        </Tooltip>
-      </td>
-    )
-  }
-
-  return (
-    <td className="max-w-[14rem] px-3 py-1.5">
-      <Tooltip content={display} wrapperClassName="block max-w-full">
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className={`flex w-full items-center gap-1.5 text-left transition-colors hover:text-content ${result.name ? 'text-content-secondary' : 'text-content-muted'}`}
-          data-testid={`history-name-${result.date}`}
-        >
-          <SquarePen size={ICON_SM} aria-hidden="true" className="shrink-0" />
-          <span className="min-w-0 truncate">{display}</span>
-        </button>
-      </Tooltip>
-      {modalOpen && (
-        <ResultNameModal
-          initialName={result.name ?? ''}
-          chips={buildResultNameChips(result, t, deviceName)}
-          onSave={(name) => onRename(result.date, name)}
-          onClose={() => setModalOpen(false)}
+      {/* No extra wrapper div here: each panel component applies its own
+          role="tabpanel"/id/aria-labelledby directly to its existing root
+          div (which is already `flex ... min-h-0 ...`, part of this root's
+          flex-col chain). An intermediate plain block div would break that
+          chain — its default `display: block` can't propagate the
+          min-h-0/shrink sizing needed for HistorySections' overflow-y-auto
+          to actually engage, which silently reintroduces the #377 modal
+          overflow bug (confirmed via screenshot regression on this branch). */}
+      {view === 'results' ? (
+        <HistoryResultsPanel
+          id={viewPanelId('results')}
+          ariaLabelledBy={viewTabId('results')}
+          isText={isText}
+          modeFilter={modeFilter}
+          onModeFilterChange={setModeFilter}
+          effectiveTextFilter={effectiveTextFilter}
+          onTextFilterChange={setTextFilter}
+          fileImportTexts={fileImportTexts}
+          filtered={filtered}
+          sortColumn={sortColumn}
+          sortDirection={sortDirection}
+          onSort={handleSort}
+          onExport={onExportCsv ? handleExport : undefined}
+          onRename={onRename}
+          onDelete={onDelete}
+          deviceName={deviceName}
+          uid={uid}
+          availableRunIds={availableRunIds}
+        />
+      ) : (
+        <HistorySections
+          id={viewPanelId('analysis')}
+          ariaLabelledBy={viewTabId('analysis')}
+          tabResults={tabResults}
         />
       )}
-    </td>
+    </div>
   )
 }
