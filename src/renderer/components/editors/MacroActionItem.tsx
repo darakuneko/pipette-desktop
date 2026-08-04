@@ -116,7 +116,7 @@ export function MacroActionItem({
               />
             ))}
             {onEditClick && (
-              <Tooltip content={t('editor.macro.addKeycode')} side="bottom" openDelay={0}>
+              <Tooltip content={t('editor.macro.addKeycode')} side="bottom">
                 <button
                   type="button"
                   data-testid="macro-edit-action"
@@ -176,7 +176,7 @@ export function MacroActionItem({
               />
             )
           })}
-          <Tooltip content={t('editor.macro.addKeycode')} side="bottom" openDelay={0}>
+          <Tooltip content={t('editor.macro.addKeycode')} side="bottom">
             <button
               type="button"
               data-testid="macro-add-keycode"

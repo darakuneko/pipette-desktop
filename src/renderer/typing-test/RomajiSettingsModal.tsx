@@ -243,7 +243,7 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
                 separates the two groups (per design feedback). */}
             <div className={STYLE_GRID_CLASS}>
               {BASE_STYLES.map((style) => (
-                <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full" className="max-w-sm">
+                <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full">
                   <button
                     type="button"
                     data-testid={`romaji-guide-base-${style}`}
@@ -259,7 +259,7 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
 
             <div className={`${STYLE_GRID_CLASS} mt-3`}>
               {OPTION_STYLES.map((style) => (
-                <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full" className="max-w-sm">
+                <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full">
                   <button
                     type="button"
                     data-testid={`romaji-guide-${style}`}
@@ -288,7 +288,7 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
               {BASE_STYLES.map((style) => {
                 const baseEnabled = !disabledStyles.has(style)
                 return (
-                  <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full" className="max-w-sm">
+                  <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full">
                     <button
                       type="button"
                       data-testid={`romaji-base-${style}`}
@@ -305,7 +305,7 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
 
             <div className={`${STYLE_GRID_CLASS} mt-3`}>
               {OPTION_STYLES.map((style) => (
-                <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full" className="max-w-sm">
+                <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full">
                   <button
                     type="button"
                     data-testid={`romaji-input-${style}`}

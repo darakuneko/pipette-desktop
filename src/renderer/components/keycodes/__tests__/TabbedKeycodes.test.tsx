@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 
 const mockBasicKeycodes = [
   { qmkId: 'KC_A', label: 'A', hidden: false },
@@ -230,5 +230,39 @@ describe('TabbedKeycodes', () => {
         allKeycodes.forEach((kc) => { kc.hidden = false })
       }
     })
+  })
+})
+
+describe('TabbedKeycodes hover tooltip (canonicalized shared bubble)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('does not show the tooltip immediately on hover', () => {
+    render(<TabbedKeycodes />)
+    fireEvent.mouseEnter(screen.getByText('A').closest('button')!)
+    expect(screen.queryByRole('tooltip')).toBeNull()
+  })
+
+  it('shows a role="tooltip" bubble with the qmkId after the 300ms open delay', () => {
+    render(<TabbedKeycodes />)
+    fireEvent.mouseEnter(screen.getByText('A').closest('button')!)
+    act(() => { vi.advanceTimersByTime(300) })
+    const bubble = screen.getByRole('tooltip')
+    expect(bubble).toHaveTextContent('KC_A')
+  })
+
+  it('closes instantly on mouse leave, even mid-delay', () => {
+    render(<TabbedKeycodes />)
+    const button = screen.getByText('A').closest('button')!
+    fireEvent.mouseEnter(button)
+    act(() => { vi.advanceTimersByTime(150) })
+    fireEvent.mouseLeave(button)
+    act(() => { vi.advanceTimersByTime(300) })
+    expect(screen.queryByRole('tooltip')).toBeNull()
   })
 })

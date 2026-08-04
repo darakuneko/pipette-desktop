@@ -129,6 +129,26 @@ describe('Tooltip', () => {
     expect(bubble.className).toContain('opacity-0')
   })
 
+  it('defaults the bubble to max-w-sm so long dynamic content wraps instead of overflowing', () => {
+    render(
+      <Tooltip content="Help">
+        <button type="button">Trigger</button>
+      </Tooltip>,
+    )
+    const bubble = screen.getByRole('tooltip')
+    expect(bubble.className).toContain('max-w-sm')
+  })
+
+  it('lets an explicit max-w-xs className win over the default max-w-sm', () => {
+    render(
+      <Tooltip content="Help" className="max-w-xs">
+        <button type="button">Trigger</button>
+      </Tooltip>,
+    )
+    const bubble = screen.getByRole('tooltip')
+    expect(bubble.className).toContain('max-w-xs')
+  })
+
   it('merges additional className into bubble', () => {
     render(
       <Tooltip content="Help" className="custom-bubble">

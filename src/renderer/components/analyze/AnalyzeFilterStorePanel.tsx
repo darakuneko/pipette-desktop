@@ -275,13 +275,14 @@ export function AnalyzeFilterStorePanel({
                               />
                             ) : (
                               <Tooltip content={entry.label} disabled={!entry.label} wrapperClassName="block max-w-full">
-                                <div
-                                  className="cursor-pointer truncate text-sm font-semibold text-content"
+                                <button
+                                  type="button"
+                                  className="block w-full truncate text-left text-sm font-semibold text-content"
                                   onClick={() => rename.startRename(entry.id, entry.label)}
                                   data-testid={`analyze-filter-store-entry-label-${entry.id}`}
                                 >
                                   {entry.label || t('common.noLabel')}
-                                </div>
+                                </button>
                               </Tooltip>
                             )}
                           </div>

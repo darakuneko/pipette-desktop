@@ -112,7 +112,7 @@ export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMa
         aria-pressed={selected}
         data-testid="keycode-field"
         disabled={disabled}
-        className={`flex shrink-0 rounded ring-1 ${disabled ? 'cursor-default' : 'cursor-pointer'} ${selected ? 'ring-accent' : `ring-picker-item-border ${disabled ? '' : 'hover:ring-accent'}`}`}
+        className={`flex shrink-0 rounded ring-1 disabled:cursor-not-allowed ${selected ? 'ring-accent' : `ring-picker-item-border ${disabled ? '' : 'hover:ring-accent'}`}`}
         onClick={handleClick}
         onDoubleClick={isMasked ? undefined : handleDoubleClick}
       >
