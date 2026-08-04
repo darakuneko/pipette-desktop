@@ -9,6 +9,7 @@ Screenshots were taken using the software-emulated GPK60-63R keyboard, displayed
 
 ## Table of Contents
 
+- [System Requirements](#system-requirements)
 - [Feature Availability](#feature-availability)
 - [1. Device Connection](#1-device-connection)
   - [1.1 Device Selection Screen](#11-device-selection-screen)
@@ -66,6 +67,14 @@ Screenshots were taken using the software-emulated GPK60-63R keyboard, displayed
   - [Unlock Dialog Protection](#unlock-dialog-protection)
   - [Escape Suppression During Busy Flows](#escape-suppression-during-busy-flows)
 - [9. Status Bar](#9-status-bar)
+
+---
+
+## System Requirements
+
+Pipette's window has a minimum size of **1280×1024**, and defaults to **1440×1024** (or larger is recommended) on first launch.
+
+It might feel a bit large — but keyboards are wide, so this is what it takes to work with them comfortably. Sorry!
 
 ---
 

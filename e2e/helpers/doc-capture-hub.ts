@@ -432,7 +432,7 @@ async function main(): Promise<void> {
 
     const page = await app.firstWindow()
     await page.waitForLoadState('domcontentloaded')
-    await page.setViewportSize({ width: 1320, height: 960 })
+    await page.setViewportSize({ width: 1440, height: 1024 })
     // The renderer reads the app config once on mount and may have loaded
     // before the hubEnabled seed landed — reload so it picks the flag up
     // deterministically.
