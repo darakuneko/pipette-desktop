@@ -376,9 +376,9 @@ export function useInputModes({
     pendingDrainRef.current = resetMatrixPressTracking()
   }, [keymap, recordingActive, resetMatrixPressTracking])
 
-  // When recording transitions off (either the toggle flips or the user
-  // leaves view-only mode), finalize the open session in main and flush
-  // its data for the active keyboard. Must wait for the drain the effect
+  // When recording transitions off (the footer's Record toggle flips —
+  // leaving a view no longer deactivates it), finalize the open session
+  // in main and flush its data for the active keyboard. Must wait for the drain the effect
   // above just kicked off (same recordingActive dependency, so it always
   // runs first in this commit) — see flushAfterPendingEmits for why.
   const prevRecordingActiveRef = useRef(recordingActive)

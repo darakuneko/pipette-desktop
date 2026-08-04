@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Typing View "record" toggle persistence + snapshot capture + system
+// Footer "Record" toggle persistence + snapshot capture + system
 // tray status. Split out of App.tsx (Task-split-app-tsx).
 
 import { useCallback, useEffect, useRef } from 'react'
