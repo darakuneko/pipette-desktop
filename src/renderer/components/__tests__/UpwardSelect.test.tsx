@@ -67,4 +67,23 @@ describe('UpwardSelect', () => {
       expect(trigger).not.toHaveTextContent('Write')
     })
   })
+
+  describe('footer overflow (Task-typing-record-footer min-width fix)', () => {
+    it('truncates the trigger label to one line instead of wrapping when the footer runs out of room', () => {
+      render(<UpwardSelect value="eucalyn-id" onChange={vi.fn()} options={OPTIONS} aria-label="Keyboard Layout" />)
+      const trigger = screen.getByRole('button', { name: 'Keyboard Layout' })
+      expect(trigger.className).toContain('min-w-16')
+      const label = trigger.querySelector('span')
+      expect(label?.className).toContain('truncate')
+      expect(label?.className).toContain('min-w-0')
+      expect(label?.className).toContain('flex-1')
+    })
+
+    it('keeps the chevron icon shrink-0 so truncation never swallows it', () => {
+      render(<UpwardSelect value="eucalyn-id" onChange={vi.fn()} options={OPTIONS} aria-label="Keyboard Layout" />)
+      const trigger = screen.getByRole('button', { name: 'Keyboard Layout' })
+      const chevron = trigger.querySelector('svg')
+      expect(chevron?.getAttribute('class')).toContain('shrink-0')
+    })
+  })
 })

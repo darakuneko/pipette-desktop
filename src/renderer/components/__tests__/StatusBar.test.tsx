@@ -364,4 +364,47 @@ describe('StatusBar', () => {
     })
   })
 
+  describe('footer overflow (Task-typing-record-footer min-width fix)', () => {
+    it('keeps the bar root and both sides as a single non-wrapping flex row with a min-w-0 shrink chain', () => {
+      const { container } = render(<StatusBar {...defaultProps} />)
+      const root = container.firstElementChild as HTMLElement
+      expect(root.className).toContain('flex-nowrap')
+      const [left, right] = Array.from(root.children) as HTMLElement[]
+      expect(left.className).toContain('min-w-0')
+      expect(left.className).toContain('flex-nowrap')
+      expect(right.className).toContain('min-w-0')
+      expect(right.className).toContain('flex-nowrap')
+    })
+
+    it('truncates the device name instead of letting it wrap, while giving it a shrink floor', () => {
+      render(<StatusBar {...defaultProps} deviceName="leneko54R" />)
+      const name = screen.getByTestId('status-device-name')
+      expect(name.className).toContain('truncate')
+      expect(name.className).toContain('min-w-10')
+      expect(name.className).toContain('flex-1')
+    })
+
+    it('marks fixed-size status text and separators shrink-0 so only the device name gives up space', () => {
+      render(<StatusBar {...defaultProps} syncStatus="synced" hubConnected={true} />)
+      expect(screen.getByTestId('lock-status').className).toContain('shrink-0')
+      expect(screen.getByTestId('sync-status').className).toContain('shrink-0')
+      expect(screen.getByTestId('hub-status').className).toContain('shrink-0')
+    })
+
+    it('marks the typing-mode buttons and disconnect button shrink-0 so they never shrink or wrap', () => {
+      render(
+        <StatusBar
+          {...defaultProps}
+          hasMatrixTester={true}
+          onTypingTestModeChange={vi.fn()}
+          onDisconnect={vi.fn()}
+        />,
+      )
+      expect(screen.getByTestId('typing-test-button').className).toContain('shrink-0')
+      expect(screen.getByTestId('typing-test-button').className).toContain('whitespace-nowrap')
+      expect(screen.getByTestId('disconnect-button').className).toContain('shrink-0')
+      expect(screen.getByTestId('disconnect-button').className).toContain('whitespace-nowrap')
+    })
+  })
+
 })

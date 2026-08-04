@@ -18,7 +18,7 @@ import type { ThemeSelection } from '../hooks/useTheme'
 import type { KeyboardLayoutId } from '../hooks/useKeyboardLayout'
 
 const BUTTON_CLASS =
-  'flex items-center justify-center rounded border border-edge px-2.5 py-1 text-xs leading-none text-content-secondary transition-colors hover:text-content focus:border-accent focus:outline-none'
+  'flex shrink-0 items-center justify-center whitespace-nowrap rounded border border-edge px-2.5 py-1 text-xs leading-none text-content-secondary transition-colors hover:text-content focus:border-accent focus:outline-none'
 
 type ActiveModal = 'language' | 'theme' | 'keyLabels' | null
 
@@ -120,7 +120,7 @@ export function QuickSettingsSelects({
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 flex-nowrap items-center gap-2">
         {editMode ? (
           <>
             <button type="button" className={BUTTON_CLASS} onClick={() => setActiveModal('language')}>
@@ -159,7 +159,7 @@ export function QuickSettingsSelects({
         )}
         <button
           type="button"
-          className={`flex items-center justify-center rounded border px-2.5 py-1 text-xs leading-none transition-colors focus:outline-none ${
+          className={`flex shrink-0 items-center justify-center whitespace-nowrap rounded border px-2.5 py-1 text-xs leading-none transition-colors focus:outline-none ${
             editMode
               ? 'border-accent text-accent'
               : 'border-edge text-content-secondary hover:text-content'

@@ -50,11 +50,11 @@ export function UpwardSelect({ value, onChange, options, 'aria-label': ariaLabel
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex items-center gap-1 rounded border border-edge bg-surface-alt px-1.5 py-0.5 text-xs text-content-secondary transition-colors hover:text-content focus:border-accent focus:outline-none"
+        className="flex min-w-16 items-center gap-1 rounded border border-edge bg-surface-alt px-1.5 py-0.5 text-xs text-content-secondary transition-colors hover:text-content focus:border-accent focus:outline-none"
         onClick={() => setOpen((v) => !v)}
       >
-        <span>{currentName}</span>
-        <ChevronUp size={ICON_XS} className={open ? 'opacity-100' : 'opacity-50'} />
+        <span className="min-w-0 flex-1 truncate">{currentName}</span>
+        <ChevronUp size={ICON_XS} className={`shrink-0 ${open ? 'opacity-100' : 'opacity-50'}`} />
       </button>
       <AnchoredPopover
         anchorRef={triggerRef}
