@@ -1,5 +1,5 @@
 {
-  "version": "0.1.73",
+  "version": "0.1.74",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -550,11 +550,15 @@
           "legend": {
             "normal": "通常の打鍵",
             "mistake": "ミス",
-            "overlap": "重複打鍵（前のキーを離す前に押した）",
-            "unjudged": "未判定（正誤データなし）",
-            "blank": "ブランク（圧縮表示）",
+            "overlap": "重複打鍵",
+            "overlapTooltip": "前のキーを離す前に押した",
+            "unjudged": "未判定",
+            "unjudgedTooltip": "正誤データなし",
+            "blank": "ブランク",
+            "blankTooltip": "圧縮表示",
             "leadIn": "ワード前の間",
-            "blankLine": "ブランク（250ms超、圧縮表示）",
+            "blankLine": "ブランク",
+            "blankLineTooltip": "250ms超、圧縮表示",
             "leadInLine": "行前の間",
             "correctedNote": "ミスの印には提出前に修正された打鍵も含まれます。ミスの印があっても正確度100%になることがあります。",
             "infoAriaLabel": "凡例の補足情報"

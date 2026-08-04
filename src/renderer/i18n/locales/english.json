@@ -1,5 +1,5 @@
 {
-  "version": "0.1.73",
+  "version": "0.1.74",
   "name": "English",
   "common": {
     "save": "Save",
@@ -550,11 +550,15 @@
           "legend": {
             "normal": "Normal keystroke",
             "mistake": "Mistake",
-            "overlap": "Overlapped (pressed before the previous key released)",
-            "unjudged": "Unjudged (no correctness data)",
-            "blank": "Pause (shown compressed)",
+            "overlap": "Overlapped",
+            "overlapTooltip": "Pressed before the previous key released",
+            "unjudged": "Unjudged",
+            "unjudgedTooltip": "No correctness data",
+            "blank": "Pause",
+            "blankTooltip": "Shown compressed",
             "leadIn": "Pause before this word",
-            "blankLine": "Pause (>250ms, shown compressed)",
+            "blankLine": "Pause",
+            "blankLineTooltip": "More than 250ms, shown compressed",
             "leadInLine": "Pause before this line",
             "correctedNote": "Mistake markers include keystrokes later corrected before submit — a word can show markers and still be 100% accuracy.",
             "infoAriaLabel": "Legend notes"

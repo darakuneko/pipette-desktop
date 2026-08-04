@@ -33,6 +33,12 @@ export interface TimelineLegendEntry {
    *  needs an extra opacity modifier its swatch fill doesn't. */
   swatchClass: string
   labelKey: string
+  /** i18n key for this entry's former parenthetical explanation — now
+   *  shown via a hover tooltip on the label instead of inline text (see
+   *  `LegendSwatch` in KeystrokeTimelinePanel.tsx). Undefined for entries
+   *  whose head word alone was already the whole label (`normal`,
+   *  `mistake`, `leadIn`). */
+  tooltipKey?: string
 }
 
 /** Legend entries in on-screen order — `WordTimelineView` maps over this
@@ -40,9 +46,21 @@ export interface TimelineLegendEntry {
 export const TIMELINE_LEGEND: Record<TimelineFillKind, TimelineLegendEntry> = {
   normal: { swatchClass: 'bg-accent', labelKey: 'editor.typingTest.history.timeline.legend.normal' },
   mistake: { swatchClass: 'bg-danger', labelKey: 'editor.typingTest.history.timeline.legend.mistake' },
-  overlap: { swatchClass: 'bg-warning', labelKey: 'editor.typingTest.history.timeline.legend.overlap' },
-  unjudged: { swatchClass: 'bg-content-muted', labelKey: 'editor.typingTest.history.timeline.legend.unjudged' },
-  blank: { swatchClass: 'bg-content-muted opacity-40', labelKey: 'editor.typingTest.history.timeline.legend.blank' },
+  overlap: {
+    swatchClass: 'bg-warning',
+    labelKey: 'editor.typingTest.history.timeline.legend.overlap',
+    tooltipKey: 'editor.typingTest.history.timeline.legend.overlapTooltip',
+  },
+  unjudged: {
+    swatchClass: 'bg-content-muted',
+    labelKey: 'editor.typingTest.history.timeline.legend.unjudged',
+    tooltipKey: 'editor.typingTest.history.timeline.legend.unjudgedTooltip',
+  },
+  blank: {
+    swatchClass: 'bg-content-muted opacity-40',
+    labelKey: 'editor.typingTest.history.timeline.legend.blank',
+    tooltipKey: 'editor.typingTest.history.timeline.legend.blankTooltip',
+  },
   leadIn: { swatchClass: 'bg-edge-strong', labelKey: 'editor.typingTest.history.timeline.legend.leadIn' },
 }
 
