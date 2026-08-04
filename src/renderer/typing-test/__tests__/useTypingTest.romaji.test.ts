@@ -229,17 +229,17 @@ describe('useTypingTest — romaji input mode', () => {
     await seedKanaLanguage(KANA_LANGUAGE, ['でぃなー'])
     const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
 
-    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'dhina-', kanaCompleted: 0, words: ['dhina-'], lineCount: 2, showRow: true })
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'dhina-', kanaCompleted: 0, words: ['dhina-'], lineCount: 1, showRow: true })
 
     press(result, 'd')
     press(result, 'h')
     press(result, 'i') // commits でぃ as one 2-kana digraph segment
     // `words` (the full-run table) is unaffected by keystroke progress —
     // only typed/remaining/kanaCompleted track the current word.
-    expect(result.current.romajiGuide).toEqual({ typed: 'dhi', remaining: 'na-', kanaCompleted: 2, words: ['dhina-'], lineCount: 2, showRow: true })
+    expect(result.current.romajiGuide).toEqual({ typed: 'dhi', remaining: 'na-', kanaCompleted: 2, words: ['dhina-'], lineCount: 1, showRow: true })
   })
 
-  it('exposes the full-run words table unbounded (not capped by guideLineCount), default guideLineCount 2', async () => {
+  it('exposes the full-run words table unbounded (not capped by guideLineCount), default guideLineCount 1', async () => {
     // Single-word lists sample deterministically (see sampleWords), so a
     // 3-word run against the same word gives full control over the queue
     // without needing to control random word selection.
@@ -251,7 +251,7 @@ describe('useTypingTest — romaji input mode', () => {
     // ones — TypingTestView (not this table) slices the visible window
     // against the reading window's own line structure.
     expect(result.current.romajiGuide?.words).toEqual(['ai', 'ai', 'ai'])
-    expect(result.current.romajiGuide?.lineCount).toBe(2)
+    expect(result.current.romajiGuide?.lineCount).toBe(1)
     expect(result.current.romajiGuide?.showRow).toBe(true)
 
     type(result, 'ai')
@@ -504,7 +504,7 @@ describe('useTypingTest — config.romaji wiring', () => {
       KANA_LANGUAGE,
     ))
 
-    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'si', kanaCompleted: 0, words: ['si'], lineCount: 2, showRow: true })
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'si', kanaCompleted: 0, words: ['si'], lineCount: 1, showRow: true })
 
     // The canonical spelling is still accepted even though the guide shows 'si'.
     type(result, 'shi')
@@ -519,9 +519,9 @@ describe('useTypingTest — config.romaji wiring', () => {
       KANA_LANGUAGE,
     ))
 
-    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'AI', kanaCompleted: 0, words: ['AI'], lineCount: 2, showRow: true })
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'AI', kanaCompleted: 0, words: ['AI'], lineCount: 1, showRow: true })
     press(result, 'a')
-    expect(result.current.romajiGuide).toEqual({ typed: 'A', remaining: 'I', kanaCompleted: 1, words: ['AI'], lineCount: 2, showRow: true })
+    expect(result.current.romajiGuide).toEqual({ typed: 'A', remaining: 'I', kanaCompleted: 1, words: ['AI'], lineCount: 1, showRow: true })
     // Lowercase 'a' is still what's accepted — the transform never reaches acceptance.
     expect(result.current.state.incorrectChars).toBe(0)
   })
@@ -534,12 +534,12 @@ describe('useTypingTest — config.romaji wiring', () => {
     ))
 
     // Nothing typed yet — the capital lands on the first char of `remaining`.
-    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'Ai', kanaCompleted: 0, words: ['Ai'], lineCount: 2, showRow: true })
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'Ai', kanaCompleted: 0, words: ['Ai'], lineCount: 1, showRow: true })
 
     press(result, 'a')
     // Once something is typed, the capital moves onto `typed`'s first char
     // and `remaining` goes back to lowercase.
-    expect(result.current.romajiGuide).toEqual({ typed: 'A', remaining: 'i', kanaCompleted: 1, words: ['Ai'], lineCount: 2, showRow: true })
+    expect(result.current.romajiGuide).toEqual({ typed: 'A', remaining: 'i', kanaCompleted: 1, words: ['Ai'], lineCount: 1, showRow: true })
   })
 
   it('applies caseStyle to every words-table entry too, upper and capital alike', async () => {

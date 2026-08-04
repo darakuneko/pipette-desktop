@@ -28,7 +28,7 @@ const CASE_STYLES: readonly RomajiCaseStyle[] = ['upper', 'capital', 'lower']
 
 // Total line count offered by the guide row (the line the current word
 // sits on included), 0-3: 0 hides the row, 1 shows only the current line,
-// 2/3 add one/two upcoming lines. Default 2 (see pruneRomaji) — one fewer
+// 2/3 add one/two upcoming lines. Default 1 (see pruneRomaji) — two fewer
 // than the fixed behaviour before this setting existed (which always
 // showed the current word plus two upcoming).
 const GUIDE_LINE_OPTIONS = [0, 1, 2, 3] as const
@@ -66,7 +66,7 @@ function pruneRomaji(next: RomajiDetailSettings): RomajiDetailSettings | undefin
   if (next.caseStyle !== undefined && next.caseStyle !== 'lower') pruned.caseStyle = next.caseStyle
   if (next.guideStyles !== undefined && next.guideStyles.length > 0) pruned.guideStyles = next.guideStyles
   if (next.disabledStyles !== undefined && next.disabledStyles.length > 0) pruned.disabledStyles = next.disabledStyles
-  if (next.guideLineCount !== undefined && next.guideLineCount !== 2) pruned.guideLineCount = next.guideLineCount
+  if (next.guideLineCount !== undefined && next.guideLineCount !== 1) pruned.guideLineCount = next.guideLineCount
   return Object.keys(pruned).length > 0 ? pruned : undefined
 }
 
@@ -93,7 +93,7 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
   // it back on persists `true`.
   const enabled = isRomajiInputEnabled(config)
   const caseStyle = romaji.caseStyle ?? 'lower'
-  const guideLineCount = romaji.guideLineCount ?? 2
+  const guideLineCount = romaji.guideLineCount ?? 1
   const guideStyles = new Set(romaji.guideStyles ?? [])
   const disabledStyles = new Set(romaji.disabledStyles ?? [])
 

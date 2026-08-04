@@ -277,7 +277,7 @@ export function buildRomajiWordsTable(config: TypingTestConfig, language: string
  *  the accepted keystroke history on every call rather than stored on
  *  state directly — see `buildRomajiMatcher`. `lineCount` is the total
  *  number of guide lines to show (`RomajiDetailSettings.guideLineCount`,
- *  default 2); `showRow` is false only at count 0 — kanaCompleted (for
+ *  default 1); `showRow` is false only at count 0 — kanaCompleted (for
  *  WordDisplay's coloring) is always computed regardless, since it must
  *  keep working even when the row itself is hidden. Returns null once
  *  romaji judging isn't active for this config/language, or the run has no
@@ -291,7 +291,7 @@ export function buildRomajiGuideProgress(config: TypingTestConfig, language: str
   const word = state.words[state.currentWordIndex]
   const detail = romajiDetail(config)
   const matcher = buildRomajiMatcher(word, state.romajiKeystrokes, detail)
-  const lineCount = detail?.guideLineCount ?? 2
+  const lineCount = detail?.guideLineCount ?? 1
   return {
     typed: matcher.typedRomaji(),
     remaining: matcher.remainingGuide(),
