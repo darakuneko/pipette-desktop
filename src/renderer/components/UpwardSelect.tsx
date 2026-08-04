@@ -26,14 +26,25 @@ interface Props {
   onChange: (value: string) => void
   options: UpwardSelectOption[]
   'aria-label': string
+  /**
+   * Overrides the closed trigger's label without touching the dropdown
+   * options. Used by the Keyboard Layout select to hide the built-in
+   * QWERTY entry's "(Default)" suffix on the trigger while keeping
+   * "QWERTY (Default)" in the option list — see
+   * `QuickSettingsSelects.tsx`'s `layoutTriggerName`.
+   */
+  triggerName?: string
 }
 
-export function UpwardSelect({ value, onChange, options, 'aria-label': ariaLabel }: Props) {
+export function UpwardSelect({ value, onChange, options, 'aria-label': ariaLabel, triggerName }: Props) {
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const handleClose = useCallback(() => setOpen(false), [])
 
-  const currentName = useMemo(() => options.find((o) => o.id === value)?.name ?? value, [options, value])
+  const currentName = useMemo(
+    () => triggerName ?? options.find((o) => o.id === value)?.name ?? value,
+    [options, value, triggerName],
+  )
 
   // A tagged list caps its width so long names truncate instead of
   // pushing the tag column out of alignment (see UpwardSelect.test.tsx

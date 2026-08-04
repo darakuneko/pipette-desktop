@@ -155,6 +155,33 @@ describe('QuickSettingsSelects — Keyboard Layout select passthrough (Plan-qwer
     })
   })
 
+  describe('Keyboard Layout select — closed trigger hides the "(Default)" suffix (Task-qwerty-trigger-hide-default)', () => {
+    it('shows plain "QWERTY" on the closed trigger while the open list keeps "QWERTY (Default)"', () => {
+      renderComponent()
+      const trigger = screen.getByRole('button', { name: 'keyLabels.title' })
+      expect(trigger).toHaveTextContent('QWERTY')
+      expect(trigger).not.toHaveTextContent('keyLabels.qwertyDefaultName')
+
+      fireEvent.click(trigger)
+      const option = screen
+        .getAllByRole('option')
+        .find((o) => o.textContent?.startsWith('keyLabels.qwertyDefaultName'))
+      expect(option?.textContent).toBe('keyLabels.qwertyDefaultName')
+    })
+
+    it('shows the normal stored name on the trigger for a non-QWERTY layout', () => {
+      render(
+        <QuickSettingsSelects
+          onThemeChange={vi.fn()}
+          keyboardLayout="colemak-id"
+          onKeyboardLayoutChange={onKeyboardLayoutChange}
+        />,
+      )
+      const trigger = screen.getByRole('button', { name: 'keyLabels.title' })
+      expect(trigger).toHaveTextContent('Colemak')
+    })
+  })
+
   describe('footer overflow (Task-typing-record-footer min-width fix)', () => {
     it('lets the select row shrink (min-w-0, no wrap) instead of forcing the footer onto two lines', () => {
       const { container } = renderComponent()

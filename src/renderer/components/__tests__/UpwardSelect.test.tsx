@@ -68,6 +68,43 @@ describe('UpwardSelect', () => {
     })
   })
 
+  describe('triggerName override (Task-qwerty-trigger-hide-default)', () => {
+    const DEFAULT_SUFFIXED_OPTIONS = [
+      { id: 'qwerty', name: 'QWERTY (Default)' },
+      { id: 'eucalyn-id', name: 'Eucalyn' },
+    ]
+
+    it('shows the override on the closed trigger while the dropdown option keeps its own name', () => {
+      render(
+        <UpwardSelect
+          value="qwerty"
+          onChange={vi.fn()}
+          options={DEFAULT_SUFFIXED_OPTIONS}
+          aria-label="Keyboard Layout"
+          triggerName="QWERTY"
+        />,
+      )
+      const trigger = screen.getByRole('button', { name: 'Keyboard Layout' })
+      expect(trigger).toHaveTextContent('QWERTY')
+      expect(trigger).not.toHaveTextContent('QWERTY (Default)')
+
+      fireEvent.click(trigger)
+      expect(screen.getByRole('option', { name: 'QWERTY (Default)' })).toBeTruthy()
+    })
+
+    it('falls back to the matching option\'s own name when no override is passed', () => {
+      render(
+        <UpwardSelect
+          value="qwerty"
+          onChange={vi.fn()}
+          options={DEFAULT_SUFFIXED_OPTIONS}
+          aria-label="Keyboard Layout"
+        />,
+      )
+      expect(screen.getByRole('button', { name: 'Keyboard Layout' })).toHaveTextContent('QWERTY (Default)')
+    })
+  })
+
   describe('footer overflow (Task-typing-record-footer min-width fix)', () => {
     it('truncates the trigger label to one line instead of wrapping when the footer runs out of room', () => {
       render(<UpwardSelect value="eucalyn-id" onChange={vi.fn()} options={OPTIONS} aria-label="Keyboard Layout" />)
