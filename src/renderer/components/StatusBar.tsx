@@ -85,7 +85,7 @@ export function StatusBar({
 
   return (
     <>
-    <div className="flex flex-nowrap items-center justify-between border-t border-edge bg-surface-alt px-4 py-1.5 text-xs leading-none text-content-secondary" data-testid="status-bar">
+    <div className="flex flex-nowrap items-center justify-between gap-3 border-t border-edge bg-surface-alt px-4 py-1.5 text-xs leading-none text-content-secondary" data-testid="status-bar">
       <div className="flex min-w-0 flex-nowrap items-center gap-3">
         <span className="min-w-10 flex-1 truncate" data-testid="status-device-name">{deviceName}</span>
         {loadedLabel && (
