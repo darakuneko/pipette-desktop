@@ -13,12 +13,12 @@ import { useKeyLabels } from '../hooks/useKeyLabels'
 import { useKeyLabelLookup, type UseKeyLabelLookupReturn } from '../hooks/useKeyLabelLookup'
 import { useLanguageOptions } from '../hooks/useLanguageOptions'
 import { useLayoutOptions } from '../hooks/useLayoutOptions'
-import { LAYOUT_BY_ID } from '../data/keyboard-layouts'
+import { LAYOUT_BY_ID, BUILTIN_QWERTY_LAYOUT_ID } from '../data/keyboard-layouts'
 import type { ThemeSelection } from '../hooks/useTheme'
 import type { KeyboardLayoutId } from '../hooks/useKeyboardLayout'
 
 const BUTTON_CLASS =
-  'flex items-center justify-center rounded border border-edge px-2.5 py-1 text-xs leading-none text-content-secondary transition-colors hover:text-content focus:border-accent focus:outline-none'
+  'flex shrink-0 items-center justify-center whitespace-nowrap rounded border border-edge px-2.5 py-1 text-xs leading-none text-content-secondary transition-colors hover:text-content focus:border-accent focus:outline-none'
 
 type ActiveModal = 'language' | 'theme' | 'keyLabels' | null
 
@@ -91,6 +91,23 @@ export function QuickSettingsSelects({
     [layoutOptions, keyLabelLookup, t],
   )
 
+  // Closed-trigger override for the built-in QWERTY baseline: the option
+  // list keeps showing the localized "QWERTY (Default)" (via
+  // `useLayoutOptions`'s `resolveLayoutDisplayName`), but the trigger
+  // itself shows just the stored name ("QWERTY") so the suffix doesn't
+  // eat footer width on every render. Reads the stored name from
+  // `keyLabels.metas` first (the source `ensureQwertyEntry` writes to),
+  // falling back to the `KEYBOARD_LAYOUTS` def in case the store hasn't
+  // seeded the entry yet. Undefined for every other layout, leaving
+  // `UpwardSelect`'s own derivation in charge.
+  const layoutTriggerName = useMemo(() => {
+    if (keyboardLayout !== BUILTIN_QWERTY_LAYOUT_ID) return undefined
+    return (
+      keyLabels.metas.find((m) => m.id === keyboardLayout)?.name ??
+      LAYOUT_BY_ID.get(keyboardLayout)?.name
+    )
+  }, [keyboardLayout, keyLabels.metas])
+
   const themeOptions = useMemo(() => {
     const opts: { id: string; name: string }[] = [
       { id: 'system', name: t('theme.system') },
@@ -120,7 +137,7 @@ export function QuickSettingsSelects({
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 flex-nowrap items-center gap-2">
         {editMode ? (
           <>
             <button type="button" className={BUTTON_CLASS} onClick={() => setActiveModal('language')}>
@@ -153,13 +170,14 @@ export function QuickSettingsSelects({
                 value={keyboardLayout}
                 options={layoutOptionsWithTags}
                 onChange={onKeyboardLayoutChange}
+                triggerName={layoutTriggerName}
               />
             )}
           </>
         )}
         <button
           type="button"
-          className={`flex items-center justify-center rounded border px-2.5 py-1 text-xs leading-none transition-colors focus:outline-none ${
+          className={`flex shrink-0 items-center justify-center whitespace-nowrap rounded border px-2.5 py-1 text-xs leading-none transition-colors focus:outline-none ${
             editMode
               ? 'border-accent text-accent'
               : 'border-edge text-content-secondary hover:text-content'

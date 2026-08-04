@@ -7,9 +7,16 @@ import { StatusBar } from '../StatusBar'
 
 const TRANSLATIONS: Record<string, string> = {
   'editor.typingTest.switchToTypingMode': 'Switch to Typing Mode',
+  'editor.typingTest.exitTypingMode': 'Exit Typing Test',
+  'editor.typingTest.viewOnly': 'Typing View',
+  'editor.typingTest.recordingIndicator': 'Recording',
   'statusBar.autoAdvance': 'Auto Move',
   'statusBar.locked': 'Locked',
   'statusBar.unlocked': 'Unlocked',
+  'statusBar.typingGroup': 'Typing:',
+  'statusBar.typingViewShort': 'View',
+  'statusBar.typingTestShort': 'Test',
+  'statusBar.typingRecordShort': 'Record',
   'editor.keyTester.title': 'Key Tester',
   'app.analyzeTab': 'Analyze',
   'statusBar.sync.pending': 'Pending',
@@ -32,6 +39,14 @@ vi.mock('../QuickSettingsSelects', () => ({
   QuickSettingsSelects: () => null,
 }))
 
+vi.mock('../TypingRecordModal', () => ({
+  TypingRecordModal: ({ onClose }: { onClose: () => void }) => (
+    <div data-testid="typing-record-modal-stub">
+      <button type="button" data-testid="typing-record-modal-stub-close" onClick={onClose}>close</button>
+    </div>
+  ),
+}))
+
 describe('StatusBar', () => {
   const defaultProps = {
     deviceName: 'My Keyboard',
@@ -49,8 +64,10 @@ describe('StatusBar', () => {
 
   it('renders typing mode button when hasMatrixTester and onTypingTestModeChange', () => {
     render(<StatusBar {...defaultProps} hasMatrixTester={true} onTypingTestModeChange={vi.fn()} />)
-    expect(screen.getByTestId('typing-test-button')).toBeInTheDocument()
-    expect(screen.getByText('Switch to Typing Mode')).toBeInTheDocument()
+    const button = screen.getByTestId('typing-test-button')
+    expect(button).toBeInTheDocument()
+    expect(button).toHaveTextContent('Test')
+    expect(button).toHaveAttribute('aria-label', 'Switch to Typing Mode')
   })
 
   it('calls onTypingTestModeChange when typing mode button clicked', () => {
@@ -205,12 +222,61 @@ describe('StatusBar', () => {
       expect(screen.getByTestId('status-analyze-button')).not.toBeDisabled()
     })
 
-    it('renders before the view-only button (Analyze | Typing View | Typing Test order)', () => {
+    it('renders before the Typing group (Analyze | Typing: View Test Record order)', () => {
       render(
         <StatusBar
           {...defaultProps}
           onOpenAnalyze={vi.fn()}
           onViewOnlyChange={vi.fn()}
+          onTypingTestModeChange={vi.fn()}
+          onTypingRecordEnabledChange={vi.fn()}
+          hasMatrixTester={true}
+        />
+      )
+      const rightSection = screen.getByTestId('status-bar').lastElementChild!
+      const items = Array.from(rightSection.children)
+      const analyzeIdx = items.findIndex(el => el.getAttribute('data-testid') === 'status-analyze-button')
+      const groupLabelIdx = items.findIndex(el => el.textContent === 'Typing:')
+      const viewOnlyIdx = items.findIndex(el => el.getAttribute('data-testid') === 'view-only-button')
+      const typingTestIdx = items.findIndex(el => el.getAttribute('data-testid') === 'typing-test-button')
+      const recordIdx = items.findIndex(el => el.getAttribute('data-testid') === 'typing-record-button')
+      expect(analyzeIdx).toBeGreaterThanOrEqual(0)
+      expect(analyzeIdx).toBeLessThan(groupLabelIdx)
+      expect(groupLabelIdx).toBeLessThan(viewOnlyIdx)
+      expect(viewOnlyIdx).toBeLessThan(typingTestIdx)
+      expect(typingTestIdx).toBeLessThan(recordIdx)
+    })
+
+    it('keeps the typing-test-mode Analyze (view-analytics) before the Typing group too', () => {
+      render(
+        <StatusBar
+          {...defaultProps}
+          typingTestMode={true}
+          onViewAnalytics={vi.fn()}
+          onTypingTestModeChange={vi.fn()}
+          onTypingRecordEnabledChange={vi.fn()}
+          hasMatrixTester={true}
+        />
+      )
+      const rightSection = screen.getByTestId('status-bar').lastElementChild!
+      const items = Array.from(rightSection.children)
+      const analyzeIdx = items.findIndex(el => el.getAttribute('data-testid') === 'status-view-analytics')
+      const groupLabelIdx = items.findIndex(el => el.textContent === 'Typing:')
+      const typingTestIdx = items.findIndex(el => el.getAttribute('data-testid') === 'typing-test-button')
+      const recordIdx = items.findIndex(el => el.getAttribute('data-testid') === 'typing-record-button')
+      expect(analyzeIdx).toBeGreaterThanOrEqual(0)
+      expect(analyzeIdx).toBeLessThan(groupLabelIdx)
+      // The separator between the Analyze slot and the group label exists.
+      expect(items.slice(analyzeIdx + 1, groupLabelIdx).some(el => el.textContent === '|')).toBe(true)
+      expect(groupLabelIdx).toBeLessThan(typingTestIdx)
+      expect(typingTestIdx).toBeLessThan(recordIdx)
+    })
+
+    it('shows a separator between the Analyze button and the Typing group', () => {
+      render(
+        <StatusBar
+          {...defaultProps}
+          onOpenAnalyze={vi.fn()}
           onTypingTestModeChange={vi.fn()}
           hasMatrixTester={true}
         />
@@ -218,11 +284,10 @@ describe('StatusBar', () => {
       const rightSection = screen.getByTestId('status-bar').lastElementChild!
       const items = Array.from(rightSection.children)
       const analyzeIdx = items.findIndex(el => el.getAttribute('data-testid') === 'status-analyze-button')
-      const viewOnlyIdx = items.findIndex(el => el.getAttribute('data-testid') === 'view-only-button')
-      const typingTestIdx = items.findIndex(el => el.getAttribute('data-testid') === 'typing-test-button')
-      expect(analyzeIdx).toBeGreaterThanOrEqual(0)
-      expect(analyzeIdx).toBeLessThan(viewOnlyIdx)
-      expect(viewOnlyIdx).toBeLessThan(typingTestIdx)
+      const groupLabelIdx = items.findIndex(el => el.textContent === 'Typing:')
+      const separatorIdx = items.findIndex((el, i) => i > analyzeIdx && i < groupLabelIdx && el.tagName === 'SPAN' && el.textContent === '|')
+      expect(separatorIdx).toBeGreaterThan(analyzeIdx)
+      expect(separatorIdx).toBeLessThan(groupLabelIdx)
     })
 
     it('shows a separator between quick settings and the Analyze button even without matrix tester support', () => {
@@ -244,6 +309,69 @@ describe('StatusBar', () => {
     })
   })
 
+  describe('record button and modal', () => {
+    it('is not rendered when onTypingRecordEnabledChange is not provided', () => {
+      render(<StatusBar {...defaultProps} hasMatrixTester={true} />)
+      expect(screen.queryByTestId('typing-record-button')).not.toBeInTheDocument()
+    })
+
+    it('is not rendered when hasMatrixTester is false', () => {
+      render(<StatusBar {...defaultProps} onTypingRecordEnabledChange={vi.fn()} />)
+      expect(screen.queryByTestId('typing-record-button')).not.toBeInTheDocument()
+    })
+
+    it('renders with the short "Record" label and aria-haspopup="dialog"', () => {
+      render(<StatusBar {...defaultProps} hasMatrixTester={true} onTypingRecordEnabledChange={vi.fn()} />)
+      const button = screen.getByTestId('typing-record-button')
+      expect(button).toHaveTextContent('Record')
+      expect(button).toHaveAttribute('aria-haspopup', 'dialog')
+    })
+
+    it('uses the active style when typingRecordEnabled is true', () => {
+      render(<StatusBar {...defaultProps} hasMatrixTester={true} onTypingRecordEnabledChange={vi.fn()} typingRecordEnabled={true} />)
+      expect(screen.getByTestId('typing-record-button').className).toContain('text-accent')
+    })
+
+    it('uses the inactive style when typingRecordEnabled is false', () => {
+      render(<StatusBar {...defaultProps} hasMatrixTester={true} onTypingRecordEnabledChange={vi.fn()} typingRecordEnabled={false} />)
+      expect(screen.getByTestId('typing-record-button').className).not.toContain('text-accent')
+    })
+
+    it('opens the TypingRecordModal when clicked, and the modal can close itself', () => {
+      render(<StatusBar {...defaultProps} hasMatrixTester={true} onTypingRecordEnabledChange={vi.fn()} />)
+      expect(screen.queryByTestId('typing-record-modal-stub')).not.toBeInTheDocument()
+      fireEvent.click(screen.getByTestId('typing-record-button'))
+      expect(screen.getByTestId('typing-record-modal-stub')).toBeInTheDocument()
+      fireEvent.click(screen.getByTestId('typing-record-modal-stub-close'))
+      expect(screen.queryByTestId('typing-record-modal-stub')).not.toBeInTheDocument()
+    })
+
+    it('is present under the same condition as the Test button even outside typing test mode', () => {
+      render(<StatusBar {...defaultProps} hasMatrixTester={true} onTypingRecordEnabledChange={vi.fn()} typingTestMode={true} />)
+      expect(screen.getByTestId('typing-record-button')).toBeInTheDocument()
+    })
+  })
+
+  describe('recording status (footer left side)', () => {
+    it('does not render when typingRecordEnabled is false', () => {
+      render(<StatusBar {...defaultProps} typingRecordEnabled={false} />)
+      expect(screen.queryByTestId('recording-status')).not.toBeInTheDocument()
+    })
+
+    it('renders "Recording" when typingRecordEnabled is true, regardless of hubConnected', () => {
+      render(<StatusBar {...defaultProps} typingRecordEnabled={true} />)
+      const status = screen.getByTestId('recording-status')
+      expect(status).toHaveTextContent('Recording')
+      expect(status.className).toContain('text-accent')
+    })
+
+    it('renders alongside the hub status when both are present', () => {
+      render(<StatusBar {...defaultProps} typingRecordEnabled={true} hubConnected={false} />)
+      expect(screen.getByTestId('hub-status')).toBeInTheDocument()
+      expect(screen.getByTestId('recording-status')).toBeInTheDocument()
+    })
+  })
+
   describe('loaded label', () => {
     it('shows loaded label next to device name when provided', () => {
       render(<StatusBar {...defaultProps} loadedLabel="My Layout" />)
@@ -258,6 +386,49 @@ describe('StatusBar', () => {
     it('does not render loaded label when not provided', () => {
       render(<StatusBar {...defaultProps} />)
       expect(screen.queryByTestId('loaded-label')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('footer overflow (Task-typing-record-footer min-width fix)', () => {
+    it('keeps the bar root and both sides as a single non-wrapping flex row with a min-w-0 shrink chain', () => {
+      const { container } = render(<StatusBar {...defaultProps} />)
+      const root = container.firstElementChild as HTMLElement
+      expect(root.className).toContain('flex-nowrap')
+      const [left, right] = Array.from(root.children) as HTMLElement[]
+      expect(left.className).toContain('min-w-0')
+      expect(left.className).toContain('flex-nowrap')
+      expect(right.className).toContain('min-w-0')
+      expect(right.className).toContain('flex-nowrap')
+    })
+
+    it('truncates the device name instead of letting it wrap, while giving it a shrink floor', () => {
+      render(<StatusBar {...defaultProps} deviceName="leneko54R" />)
+      const name = screen.getByTestId('status-device-name')
+      expect(name.className).toContain('truncate')
+      expect(name.className).toContain('min-w-10')
+      expect(name.className).toContain('flex-1')
+    })
+
+    it('marks fixed-size status text and separators shrink-0 so only the device name gives up space', () => {
+      render(<StatusBar {...defaultProps} syncStatus="synced" hubConnected={true} />)
+      expect(screen.getByTestId('lock-status').className).toContain('shrink-0')
+      expect(screen.getByTestId('sync-status').className).toContain('shrink-0')
+      expect(screen.getByTestId('hub-status').className).toContain('shrink-0')
+    })
+
+    it('marks the typing-mode buttons and disconnect button shrink-0 so they never shrink or wrap', () => {
+      render(
+        <StatusBar
+          {...defaultProps}
+          hasMatrixTester={true}
+          onTypingTestModeChange={vi.fn()}
+          onDisconnect={vi.fn()}
+        />,
+      )
+      expect(screen.getByTestId('typing-test-button').className).toContain('shrink-0')
+      expect(screen.getByTestId('typing-test-button').className).toContain('whitespace-nowrap')
+      expect(screen.getByTestId('disconnect-button').className).toContain('shrink-0')
+      expect(screen.getByTestId('disconnect-button').className).toContain('whitespace-nowrap')
     })
   })
 

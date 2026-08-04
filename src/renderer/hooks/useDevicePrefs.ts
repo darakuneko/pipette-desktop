@@ -53,7 +53,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     typingTestComparisonBaselines, updateTypingTestComparisonBaselines, typingTestComparisonBaselinesRef,
     typingTestSettingsPanelOpen, updateTypingTestSettingsPanelOpen, typingTestSettingsPanelOpenRef,
     typingRecordEnabled, updateTypingRecordEnabled, typingRecordEnabledRef,
-    typingViewMenuTab, updateTypingViewMenuTab, typingViewMenuTabRef,
     viewMode, updateViewMode, viewModeRef,
     keyEditorZoom, updateKeyEditorZoom, keyEditorZoomRef,
     viewMatrix, updateViewMatrix,
@@ -125,7 +124,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setTypingTestComparisonBaseline,
     setTypingTestSettingsPanelOpen,
     setTypingRecordEnabled,
-    setTypingViewMenuTab,
   } = useTypingTestPrefs({
     typingTestResultsRef, updateTypingTestResults,
     typingTestConfigRef, updateTypingTestConfig, updateTypingTestMonkeytypeConfig,
@@ -143,7 +141,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     typingTestComparisonBaselinesRef, updateTypingTestComparisonBaselines,
     typingTestSettingsPanelOpenRef, updateTypingTestSettingsPanelOpen,
     typingRecordEnabledRef, updateTypingRecordEnabled,
-    typingViewMenuTabRef, updateTypingViewMenuTab,
     saveCurrentPrefs,
   })
 
@@ -202,7 +199,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingTestComparisonBaselines: {},
       typingTestSettingsPanelOpen: true,
       typingRecordEnabled: false,
-      typingViewMenuTab: 'window',
       viewMode: 'editor',
     }
     applyValidated(resolved)
@@ -248,7 +244,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     typingTestComparisonBaselines,
     typingTestSettingsPanelOpen,
     typingRecordEnabled,
-    typingViewMenuTab,
     viewMode,
     keyEditorZoom,
     viewMatrix,
@@ -279,7 +274,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setTypingTestComparisonBaseline,
     setTypingTestSettingsPanelOpen,
     setTypingRecordEnabled,
-    setTypingViewMenuTab,
     setViewMode,
     setViewMatrix,
     setKeyEditorZoom,

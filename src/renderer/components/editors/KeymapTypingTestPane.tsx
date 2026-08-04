@@ -73,13 +73,10 @@ export function KeymapTypingTestPane({
   typingTestViewOnly, onTypingTestViewOnlyChange,
   typingTestViewOnlyWindowSize, onTypingTestViewOnlyWindowSizeChange,
   typingTestViewOnlyAlwaysOnTop, onTypingTestViewOnlyAlwaysOnTopChange,
-  typingRecordEnabled, onTypingRecordEnabledChange,
-  typingRecordingConsentAccepted, onTypingRecordingConsentAccepted,
-  typingHeatmapWindowMin, onTypingHeatmapWindowMinChange,
-  typingMonitorAppEnabled, onTypingMonitorAppEnabledChange,
-  typingTrayResident, onTypingTrayResidentChange, typingStartInTray, onTypingStartInTrayChange,
-  typingViewMenuTab, onTypingViewMenuTabChange,
-  onViewAnalytics, keyboardUid, timelineHandoff,
+  typingRecordEnabled,
+  typingHeatmapWindowMin,
+  onViewAnalytics,
+  keyboardUid, timelineHandoff,
   lineSnapshotRef,
 }: KeymapTypingTestPaneProps): JSX.Element {
   return (
@@ -135,19 +132,7 @@ export function KeymapTypingTestPane({
       viewOnlyAlwaysOnTop={typingTestViewOnlyAlwaysOnTop}
       onViewOnlyAlwaysOnTopChange={onTypingTestViewOnlyAlwaysOnTopChange}
       recordEnabled={typingRecordEnabled}
-      onRecordEnabledChange={onTypingRecordEnabledChange}
-      recordingConsentAccepted={typingRecordingConsentAccepted}
-      onRecordingConsentAccepted={onTypingRecordingConsentAccepted}
       heatmapWindowMin={typingHeatmapWindowMin}
-      onHeatmapWindowMinChange={onTypingHeatmapWindowMinChange}
-      monitorAppEnabled={typingMonitorAppEnabled}
-      onMonitorAppEnabledChange={onTypingMonitorAppEnabledChange}
-      trayResident={typingTrayResident}
-      onTrayResidentChange={onTypingTrayResidentChange}
-      startInTray={typingStartInTray}
-      onStartInTrayChange={onTypingStartInTrayChange}
-      menuTab={typingViewMenuTab}
-      onMenuTabChange={onTypingViewMenuTabChange}
       onViewAnalytics={onViewAnalytics}
       keyboardUid={keyboardUid}
       timelineHandoff={timelineHandoff}

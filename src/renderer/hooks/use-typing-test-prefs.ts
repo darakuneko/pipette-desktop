@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useCallback } from 'react'
-import type { TypingTestResult, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines, TypingViewMenuTab } from '../../shared/types/pipette-settings'
+import type { TypingTestResult, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../shared/types/pipette-settings'
 import { trimResults } from '../typing-test/result-builder'
 import type { TypingTestConfig } from '../typing-test/types'
 import { clampDisplayLines, clampFontSize } from '../typing-test/types'
@@ -37,8 +37,6 @@ interface UseTypingTestPrefsArgs {
   updateTypingTestSettingsPanelOpen: (open: boolean) => void
   typingRecordEnabledRef: React.RefObject<boolean>
   updateTypingRecordEnabled: (enabled: boolean) => void
-  typingViewMenuTabRef: React.RefObject<TypingViewMenuTab>
-  updateTypingViewMenuTab: (tab: TypingViewMenuTab) => void
   saveCurrentPrefs: () => void
 }
 
@@ -62,7 +60,6 @@ export function useTypingTestPrefs(args: UseTypingTestPrefsArgs) {
     typingTestComparisonBaselinesRef, updateTypingTestComparisonBaselines,
     typingTestSettingsPanelOpenRef, updateTypingTestSettingsPanelOpen,
     typingRecordEnabledRef, updateTypingRecordEnabled,
-    typingViewMenuTabRef, updateTypingViewMenuTab,
     saveCurrentPrefs,
   } = args
 
@@ -192,12 +189,6 @@ export function useTypingTestPrefs(args: UseTypingTestPrefsArgs) {
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateTypingRecordEnabled])
 
-  const setTypingViewMenuTab = useCallback((tab: TypingViewMenuTab) => {
-    if (typingViewMenuTabRef.current === tab) return
-    updateTypingViewMenuTab(tab)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingViewMenuTab])
-
   return {
     addTypingTestResult,
     renameTypingTestResult,
@@ -217,6 +208,5 @@ export function useTypingTestPrefs(args: UseTypingTestPrefsArgs) {
     setTypingTestComparisonBaseline,
     setTypingTestSettingsPanelOpen,
     setTypingRecordEnabled,
-    setTypingViewMenuTab,
   }
 }

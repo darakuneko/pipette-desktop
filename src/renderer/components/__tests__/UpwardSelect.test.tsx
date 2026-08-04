@@ -67,4 +67,60 @@ describe('UpwardSelect', () => {
       expect(trigger).not.toHaveTextContent('Write')
     })
   })
+
+  describe('triggerName override (Task-qwerty-trigger-hide-default)', () => {
+    const DEFAULT_SUFFIXED_OPTIONS = [
+      { id: 'qwerty', name: 'QWERTY (Default)' },
+      { id: 'eucalyn-id', name: 'Eucalyn' },
+    ]
+
+    it('shows the override on the closed trigger while the dropdown option keeps its own name', () => {
+      render(
+        <UpwardSelect
+          value="qwerty"
+          onChange={vi.fn()}
+          options={DEFAULT_SUFFIXED_OPTIONS}
+          aria-label="Keyboard Layout"
+          triggerName="QWERTY"
+        />,
+      )
+      const trigger = screen.getByRole('button', { name: 'Keyboard Layout' })
+      expect(trigger).toHaveTextContent('QWERTY')
+      expect(trigger).not.toHaveTextContent('QWERTY (Default)')
+
+      fireEvent.click(trigger)
+      expect(screen.getByRole('option', { name: 'QWERTY (Default)' })).toBeTruthy()
+    })
+
+    it('falls back to the matching option\'s own name when no override is passed', () => {
+      render(
+        <UpwardSelect
+          value="qwerty"
+          onChange={vi.fn()}
+          options={DEFAULT_SUFFIXED_OPTIONS}
+          aria-label="Keyboard Layout"
+        />,
+      )
+      expect(screen.getByRole('button', { name: 'Keyboard Layout' })).toHaveTextContent('QWERTY (Default)')
+    })
+  })
+
+  describe('footer overflow (Task-typing-record-footer min-width fix)', () => {
+    it('truncates the trigger label to one line instead of wrapping when the footer runs out of room', () => {
+      render(<UpwardSelect value="eucalyn-id" onChange={vi.fn()} options={OPTIONS} aria-label="Keyboard Layout" />)
+      const trigger = screen.getByRole('button', { name: 'Keyboard Layout' })
+      expect(trigger.className).toContain('min-w-16')
+      const label = trigger.querySelector('span')
+      expect(label?.className).toContain('truncate')
+      expect(label?.className).toContain('min-w-0')
+      expect(label?.className).toContain('flex-1')
+    })
+
+    it('keeps the chevron icon shrink-0 so truncation never swallows it', () => {
+      render(<UpwardSelect value="eucalyn-id" onChange={vi.fn()} options={OPTIONS} aria-label="Keyboard Layout" />)
+      const trigger = screen.getByRole('button', { name: 'Keyboard Layout' })
+      const chevron = trigger.querySelector('svg')
+      expect(chevron?.getAttribute('class')).toContain('shrink-0')
+    })
+  })
 })

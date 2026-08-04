@@ -76,7 +76,6 @@ function renderViewOnly(overrides: Partial<TypingTestPaneProps> = {}) {
     keys: [],
     layerLabel: '',
     viewOnly: true,
-    menuTab: 'window',
   }
   return render(<TypingTestPane {...defaults} {...overrides} />)
 }
@@ -112,5 +111,43 @@ describe('TypingTestPaneViewOnlyMenu — inert while closed', () => {
       typeof call[0] === 'string' && call[0].includes('empty string for a boolean attribute'))
     expect(inertWarning).toBe(false)
     spy.mockRestore()
+  })
+})
+
+describe('TypingTestPaneViewOnlyMenu — Analyze button', () => {
+  it('does not render without an onViewAnalytics handler', () => {
+    const { container } = renderViewOnly()
+    clickPaneToToggleControls(container)
+    expect(screen.queryByTestId('view-analytics')).not.toBeInTheDocument()
+  })
+
+  it('renders below the Base row and fires onViewAnalytics with typingView when clicked', () => {
+    const onViewAnalytics = vi.fn()
+    const onViewOnlyChange = vi.fn()
+    const { container } = renderViewOnly({ layers: 2, onViewAnalytics, onViewOnlyChange })
+    clickPaneToToggleControls(container)
+
+    const menu = screen.getByRole('menu')
+    const baseLayerSelect = screen.getByTestId('base-layer-select')
+    const analyzeButton = screen.getByTestId('view-analytics')
+    const exitButton = screen.getByTestId('view-only-toggle')
+
+    // DOCUMENT_POSITION_FOLLOWING (4) means the second node comes after
+    // the first in source order — asserts Base -> Analyze -> Exit.
+    expect(baseLayerSelect.compareDocumentPosition(analyzeButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(analyzeButton.compareDocumentPosition(exitButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(menu).toContainElement(analyzeButton)
+
+    fireEvent.click(analyzeButton)
+    expect(onViewAnalytics).toHaveBeenCalledWith('typingView')
+  })
+
+  it('renders even when there is only one layer (no Base row)', () => {
+    const onViewAnalytics = vi.fn()
+    const { container } = renderViewOnly({ layers: 1, onViewAnalytics })
+    clickPaneToToggleControls(container)
+
+    expect(screen.queryByTestId('base-layer-select')).not.toBeInTheDocument()
+    expect(screen.getByTestId('view-analytics')).toBeInTheDocument()
   })
 })

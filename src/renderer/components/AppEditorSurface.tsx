@@ -56,7 +56,6 @@ interface Props {
   handleKeymapApplyCancel: () => void
   keymapApplyError: string | null
   keymapApplyBusy: boolean
-  handleTypingRecordEnabledChange: (enabled: boolean) => void
   recKeystroke: ReturnType<typeof useRecKeystrokeCounter>
   onTypingTestViewOnlyChange: (enabled: boolean) => void
   handleViewAnalytics: (origin: AnalyticsOrigin) => void
@@ -89,7 +88,6 @@ export function AppEditorSurface({
   handleKeymapApplyCancel,
   keymapApplyError,
   keymapApplyBusy,
-  handleTypingRecordEnabledChange,
   recKeystroke,
   onTypingTestViewOnlyChange,
   handleViewAnalytics,
@@ -314,20 +312,9 @@ export function AppEditorSurface({
         typingTestSettingsPanelOpen={devicePrefs.typingTestSettingsPanelOpen}
         onTypingTestSettingsPanelOpenChange={devicePrefs.setTypingTestSettingsPanelOpen}
         typingRecordEnabled={devicePrefs.typingRecordEnabled}
-        onTypingRecordEnabledChange={handleTypingRecordEnabledChange}
         onRecKeystroke={recKeystroke.increment}
         typingHeatmapWindowMin={appConfig.config.typingHeatmapWindowMin}
-        onTypingHeatmapWindowMinChange={(m) => appConfig.set('typingHeatmapWindowMin', m as typeof appConfig.config.typingHeatmapWindowMin)}
         typingRecordingConsentAccepted={appConfig.config.typingRecordingConsentAccepted}
-        onTypingRecordingConsentAccepted={() => appConfig.set('typingRecordingConsentAccepted', true)}
-        typingMonitorAppEnabled={appConfig.config.typingMonitorAppEnabled}
-        onTypingMonitorAppEnabledChange={(enabled) => appConfig.set('typingMonitorAppEnabled', enabled)}
-        typingTrayResident={appConfig.config.trayResident}
-        onTypingTrayResidentChange={(enabled) => appConfig.set('trayResident', enabled)}
-        typingStartInTray={appConfig.config.startInTray}
-        onTypingStartInTrayChange={(enabled) => appConfig.set('startInTray', enabled)}
-        typingViewMenuTab={devicePrefs.typingViewMenuTab}
-        onTypingViewMenuTabChange={devicePrefs.setTypingViewMenuTab}
         onViewAnalytics={handleViewAnalytics}
         timelineHandoff={timelineHandoff}
         onTypingTestRunningChange={setTypingTestRunning}

@@ -1787,18 +1787,13 @@ describe('useDevicePrefs', () => {
     })
   })
 
-  describe('typingViewMenuTab', () => {
-    it('defaults to "window" when not in storage', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.typingViewMenuTab).toBe('window')
-    })
-
-    it('restores stored typingViewMenuTab from IPC', async () => {
+  describe('stale typingViewMenuTab tolerance (Task-typing-record-footer)', () => {
+    // The REC tab (and its persisted `typingViewMenuTab` pane pref) was
+    // removed once the Record toggle moved to the footer. A settings JSON
+    // written by an older build can still carry the field on disk — it
+    // must be silently ignored on load rather than rejecting the whole
+    // record or leaking onto the returned prefs object.
+    it('loads normally, ignoring a stale typingViewMenuTab field', async () => {
       setupMocks()
       mockPipetteSettingsGet.mockResolvedValue({
         _rev: 1,
@@ -1813,61 +1808,10 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      expect(result.current.typingViewMenuTab).toBe('rec')
-    })
 
-    it('falls back to "window" for an unknown typingViewMenuTab value', async () => {
-      setupMocks()
-      mockPipetteSettingsGet.mockResolvedValue({
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        typingViewMenuTab: 'bogus',
-      } as never)
-
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      expect(result.current.typingViewMenuTab).toBe('window')
-    })
-
-    it('setTypingViewMenuTab saves via IPC and updates state', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      mockPipetteSettingsPatch.mockClear()
-
-      act(() => {
-        result.current.setTypingViewMenuTab('rec')
-      })
-
-      expect(result.current.typingViewMenuTab).toBe('rec')
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        typingViewMenuTab: 'rec',
-      }))
-    })
-
-    it('setTypingViewMenuTab skips the IPC save when the value is unchanged', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      mockPipetteSettingsPatch.mockClear()
-
-      act(() => {
-        result.current.setTypingViewMenuTab('window')
-      })
-
-      expect(result.current.typingViewMenuTab).toBe('window')
-      expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
+      expect(result.current.layout).toBe('qwerty')
+      expect(result.current.autoAdvance).toBe(true)
+      expect(result.current as unknown as Record<string, unknown>).not.toHaveProperty('typingViewMenuTab')
     })
   })
 

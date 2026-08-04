@@ -7,7 +7,7 @@ import type { MacroAction } from '../../../preload/macro'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry, DeviceInfo } from '../../../shared/types/protocol'
 import type { FavoriteType } from '../../../shared/types/favorite-store'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
-import type { TypingTestResult, TypingViewMenuTab, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../../shared/types/pipette-settings'
+import type { TypingTestResult, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 import type { KeymapRewriteTable } from '../../../shared/keymap/keymap-apply'
@@ -226,43 +226,28 @@ export interface KeymapEditorProps {
   onTypingTestComparisonBaselineChange?: (conditionKey: string, baseline: TypingTestComparisonBaseline) => void
   typingTestSettingsPanelOpen?: boolean
   onTypingTestSettingsPanelOpenChange?: (open: boolean) => void
+  /** REC toggle — owned by the footer's Record button/modal
+   *  (TypingRecordModal), not by this editor tree. Still read here so
+   *  useInputModes' recording gate (`recordingActive`) can authorize
+   *  ambient analytics wherever matrix frames flow. */
   typingRecordEnabled?: boolean
-  onTypingRecordEnabledChange?: (enabled: boolean) => void
   /** Called once per matrix keystroke recorded while REC is active, so
    *  the host (App) can drive the tray's session keystroke count. See
    *  UseInputModesOptions.onRecKeystroke for the exact gating. */
   onRecKeystroke?: () => void
   /** AppConfig flag — true once the user has accepted the recording
-   * disclosure, so the REC tab Start button can skip the modal. */
+   * disclosure. Read by useInputModes to gate the per-run raw keystroke
+   * log; the consent flow itself (and persisting acceptance) now lives
+   * entirely in the footer's TypingRecordModal. */
   typingRecordingConsentAccepted?: boolean
-  onTypingRecordingConsentAccepted?: () => void
-  /** Window length in minutes for the typing-view heatmap. Flows
-   * through AppConfig so the choice survives app restarts. */
+  /** Window length in minutes for the typing-view heatmap overlay and its
+   * legend text. The value itself (and its editor, the footer's
+   * TypingRecordModal) lives in AppConfig. */
   typingHeatmapWindowMin?: number
-  onTypingHeatmapWindowMinChange?: (minutes: number) => void
-  /** AppConfig flag for the Monitor App tab. When true (and REC is
-   * running) the analytics service tags each minute with the active
-   * application name. Disabling stops new tags but does not erase
-   * historical data. The toggle in the typing-view popover is greyed
-   * out until REC starts so the user has a single, predictable point
-   * where data collection begins. */
-  typingMonitorAppEnabled?: boolean
-  onTypingMonitorAppEnabledChange?: (enabled: boolean) => void
-  /** AppConfig fields for the REC tab's tray toggles — same source and
-   * linked-clear semantics as Settings > Tools (SettingsToolsTab). */
-  typingTrayResident?: boolean
-  onTypingTrayResidentChange?: (enabled: boolean) => void
-  typingStartInTray?: boolean
-  onTypingStartInTrayChange?: (enabled: boolean) => void
-  typingViewMenuTab?: TypingViewMenuTab
-  onTypingViewMenuTabChange?: (tab: TypingViewMenuTab) => void
-  /** Called when "View Analytics" is triggered, from either the compact
-   * Typing View REC tab (`'typingView'`) or the full-screen Typing Test
-   * header (`'typingTest'`). KeymapEditor forwards to the App shell, which
-   * swaps to the analytics page and remembers the origin so Back returns
-   * there. The record toggle is preserved across the navigation — leaving
-   * the compact window stops the sink via typingTestViewOnly without
-   * touching the persisted preference. */
+  /** Called when "View Analytics" is triggered from the compact Typing
+   * View popover (`'typingView'`). KeymapEditor forwards to the App
+   * shell, which swaps to the analytics page and remembers the origin
+   * so Back returns there. */
   onViewAnalytics?: (origin: AnalyticsOrigin) => void
   /** Analyze -> Typing Test "open timeline" handoff (consume-once),
    * forwarded to TypingTestPane -> HistoryToggle. */

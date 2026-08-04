@@ -154,4 +154,62 @@ describe('QuickSettingsSelects — Keyboard Layout select passthrough (Plan-qwer
       expect(findOption('keyLabels.qwertyDefaultName')?.textContent).toBe('keyLabels.qwertyDefaultName')
     })
   })
+
+  describe('Keyboard Layout select — closed trigger hides the "(Default)" suffix (Task-qwerty-trigger-hide-default)', () => {
+    it('shows plain "QWERTY" on the closed trigger while the open list keeps "QWERTY (Default)"', () => {
+      renderComponent()
+      const trigger = screen.getByRole('button', { name: 'keyLabels.title' })
+      expect(trigger).toHaveTextContent('QWERTY')
+      expect(trigger).not.toHaveTextContent('keyLabels.qwertyDefaultName')
+
+      fireEvent.click(trigger)
+      const option = screen
+        .getAllByRole('option')
+        .find((o) => o.textContent?.startsWith('keyLabels.qwertyDefaultName'))
+      expect(option?.textContent).toBe('keyLabels.qwertyDefaultName')
+    })
+
+    it('shows the normal stored name on the trigger for a non-QWERTY layout', () => {
+      render(
+        <QuickSettingsSelects
+          onThemeChange={vi.fn()}
+          keyboardLayout="colemak-id"
+          onKeyboardLayoutChange={onKeyboardLayoutChange}
+        />,
+      )
+      const trigger = screen.getByRole('button', { name: 'keyLabels.title' })
+      expect(trigger).toHaveTextContent('Colemak')
+    })
+  })
+
+  describe('footer overflow (Task-typing-record-footer min-width fix)', () => {
+    it('lets the select row shrink (min-w-0, no wrap) instead of forcing the footer onto two lines', () => {
+      const { container } = renderComponent()
+      const row = container.firstElementChild as HTMLElement
+      expect(row.className).toContain('min-w-0')
+      expect(row.className).toContain('flex-nowrap')
+    })
+
+    it('gives the Language / Theme / Keyboard Layout triggers a truncating single-line label with a shrink floor', () => {
+      renderComponent()
+      const triggers = [
+        screen.getByRole('button', { name: 'i18n.modalTitle' }),
+        screen.getByRole('button', { name: 'themePacks.title' }),
+        screen.getByRole('button', { name: 'keyLabels.title' }),
+      ]
+      for (const trigger of triggers) {
+        expect(trigger.className).toContain('min-w-16')
+        const label = trigger.querySelector('span')
+        expect(label?.className).toContain('truncate')
+        expect(label?.className).toContain('min-w-0')
+      }
+    })
+
+    it('keeps the Edit/Done toggle fixed-size and non-wrapping (not a shrink target)', () => {
+      renderComponent()
+      const toggle = screen.getByRole('button', { name: 'common.edit' })
+      expect(toggle.className).toContain('shrink-0')
+      expect(toggle.className).toContain('whitespace-nowrap')
+    })
+  })
 })
