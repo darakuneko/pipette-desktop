@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
-import type { TypingTestResult, TypingViewMenuTab, ViewMode, TypingTestMemory, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
+import type { TypingTestResult, ViewMode, TypingTestMemory, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../typing-test/types'
 import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE } from '../typing-test/types'
 import type { BasicViewType, SplitKeyMode } from '../../shared/types/app-config'
@@ -58,7 +58,6 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
   const [typingTestComparisonBaselines, updateTypingTestComparisonBaselines, typingTestComparisonBaselinesRef] = useStateRef<TypingTestComparisonBaselines>({})
   const [typingTestSettingsPanelOpen, updateTypingTestSettingsPanelOpen, typingTestSettingsPanelOpenRef] = useStateRef<boolean>(true)
   const [typingRecordEnabled, updateTypingRecordEnabled, typingRecordEnabledRef] = useStateRef<boolean>(false)
-  const [typingViewMenuTab, updateTypingViewMenuTab, typingViewMenuTabRef] = useStateRef<TypingViewMenuTab>('window')
   const [viewMode, updateViewMode, viewModeRef] = useStateRef<ViewMode>('editor')
   const [keyEditorZoom, updateKeyEditorZoom, keyEditorZoomRef] = useStateRef<number | undefined>(undefined)
   const [viewMatrix, updateViewMatrix, viewMatrixRef] = useStateRef<Record<string, ViewMatrixCell> | undefined>(undefined)
@@ -101,7 +100,6 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
       typingTestComparisonBaselines: typingTestComparisonBaselinesRef.current,
       typingTestSettingsPanelOpen: typingTestSettingsPanelOpenRef.current,
       typingRecordEnabled: typingRecordEnabledRef.current,
-      typingViewMenuTab: typingViewMenuTabRef.current,
       viewMode: viewModeRef.current,
       // `null` clears the persisted overrides when the ref holds `undefined`
       // (reset), mirroring `typingTestMemory` above — a bare `undefined`
@@ -142,7 +140,6 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
     updateTypingTestComparisonBaselines(resolved.typingTestComparisonBaselines)
     updateTypingTestSettingsPanelOpen(resolved.typingTestSettingsPanelOpen)
     updateTypingRecordEnabled(resolved.typingRecordEnabled)
-    updateTypingViewMenuTab(resolved.typingViewMenuTab)
     updateViewMode(resolved.viewMode)
     updateKeyEditorZoom(resolved.keyEditorZoom)
     updateViewMatrix(resolved.viewMatrix)
@@ -174,7 +171,6 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
     typingTestComparisonBaselines, updateTypingTestComparisonBaselines, typingTestComparisonBaselinesRef,
     typingTestSettingsPanelOpen, updateTypingTestSettingsPanelOpen, typingTestSettingsPanelOpenRef,
     typingRecordEnabled, updateTypingRecordEnabled, typingRecordEnabledRef,
-    typingViewMenuTab, updateTypingViewMenuTab, typingViewMenuTabRef,
     viewMode, updateViewMode, viewModeRef,
     keyEditorZoom, updateKeyEditorZoom, keyEditorZoomRef,
     viewMatrix, updateViewMatrix, viewMatrixRef,

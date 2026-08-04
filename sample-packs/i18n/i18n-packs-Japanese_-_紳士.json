@@ -1,5 +1,5 @@
 {
-  "version": "0.1.74",
+  "version": "0.1.75",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -388,12 +388,9 @@
       "viewOnly": "打鍵の観賞",
       "exitViewOnly": "観賞を終える",
       "alwaysOnTop": "最前面に",
+      "recordModalTitle": "打鍵記録の設定",
       "recordStart": "記録開始",
       "recordStop": "記録停止",
-      "tab": {
-        "window": "小窓",
-        "rec": "録画"
-      },
       "monitorApp": {
         "label": "見守りアプリ"
       },
@@ -718,6 +715,10 @@
     "autoAdvance": "自動巡回",
     "locked": "封印中",
     "unlocked": "開放済み",
+    "typingGroup": "打鍵項目:",
+    "typingViewShort": "View",
+    "typingTestShort": "Test",
+    "typingRecordShort": "Record",
     "sync": {
       "pending": "足並みの待ち",
       "syncing": "足並みを揃えております...",

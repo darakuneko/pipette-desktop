@@ -27,6 +27,7 @@ interface Props {
   onStatusBarViewOnlyChange: () => void
   onStatusBarTypingTestModeChange: () => void
   handleViewAnalytics: (origin: AnalyticsOrigin) => void
+  handleTypingRecordEnabledChange: (enabled: boolean) => void
   handleKeyboardLayoutSelectChange: (v: string) => void
   // Also gates the footer's Analyze button while a Key Label "apply to
   // keymap" rewrite is mid-flight (see the `analyzeDisabled` prop comment
@@ -49,6 +50,7 @@ export function AppStatusBar({
   onStatusBarViewOnlyChange,
   onStatusBarTypingTestModeChange,
   handleViewAnalytics,
+  handleTypingRecordEnabledChange,
   handleKeyboardLayoutSelectChange,
   keymapApplyBusy,
   typingTestRunning,
@@ -87,6 +89,8 @@ export function AppStatusBar({
       onViewAnalytics={() => handleViewAnalytics('typingTest')}
       viewAnalyticsDisabled={typingTestRunning}
       onDisconnect={editorUI.typingTestMode ? undefined : lifecycle.handleDisconnect}
+      typingRecordEnabled={devicePrefs.typingRecordEnabled ?? false}
+      onTypingRecordEnabledChange={handleTypingRecordEnabledChange}
       quickSettings={{
         onThemeChange: themeCtx.setTheme,
         hubDisplayName: hub.hubDisplayName,

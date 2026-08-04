@@ -1,5 +1,5 @@
 {
-  "version": "0.1.74",
+  "version": "0.1.75",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -388,12 +388,9 @@
       "viewOnly": "タイピングビュー",
       "exitViewOnly": "タイピングビュー終了",
       "alwaysOnTop": "最前面",
+      "recordModalTitle": "記録設定",
       "recordStart": "開始",
       "recordStop": "停止",
-      "tab": {
-        "window": "ウィンドウ",
-        "rec": "REC"
-      },
       "monitorApp": {
         "label": "Monitor App"
       },
@@ -718,6 +715,10 @@
     "autoAdvance": "自動移動",
     "locked": "ロック中",
     "unlocked": "アンロック",
+    "typingGroup": "タイピング:",
+    "typingViewShort": "View",
+    "typingTestShort": "Test",
+    "typingRecordShort": "Record",
     "sync": {
       "pending": "同期待ち",
       "syncing": "同期中...",

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.74",
+  "version": "0.1.75",
   "name": "English",
   "common": {
     "save": "Save",
@@ -388,12 +388,9 @@
       "viewOnly": "Typing View",
       "exitViewOnly": "Exit Typing View",
       "alwaysOnTop": "top",
+      "recordModalTitle": "Recording Settings",
       "recordStart": "Start",
       "recordStop": "Stop",
-      "tab": {
-        "window": "Window",
-        "rec": "REC"
-      },
       "monitorApp": {
         "label": "Monitor App"
       },
@@ -718,6 +715,10 @@
     "autoAdvance": "Auto Move",
     "locked": "Locked",
     "unlocked": "Unlocked",
+    "typingGroup": "Typing:",
+    "typingViewShort": "View",
+    "typingTestShort": "Test",
+    "typingRecordShort": "Record",
     "sync": {
       "pending": "Pending",
       "syncing": "Syncing...",

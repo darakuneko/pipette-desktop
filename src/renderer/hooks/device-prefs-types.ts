@@ -3,7 +3,7 @@
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
 import type { KeymapRewriteTable } from '../../shared/keymap/keymap-apply'
 import type { RemapKind } from '../components/keyboard/constants'
-import type { TypingTestResult, TypingViewMenuTab, ViewMode, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
+import type { TypingTestResult, ViewMode, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../typing-test/types'
 import type { AutoLockMinutes, BasicViewType, SplitKeyMode } from '../../shared/types/app-config'
 
@@ -35,7 +35,6 @@ export interface UseDevicePrefsReturn {
   typingTestComparisonBaselines: TypingTestComparisonBaselines
   typingTestSettingsPanelOpen: boolean
   typingRecordEnabled: boolean
-  typingViewMenuTab: TypingViewMenuTab
   viewMode: ViewMode
   keyEditorZoom: number | undefined
   viewMatrix: Record<string, ViewMatrixCell> | undefined
@@ -66,7 +65,6 @@ export interface UseDevicePrefsReturn {
   setTypingTestComparisonBaseline: (conditionKey: string, baseline: TypingTestComparisonBaseline) => void
   setTypingTestSettingsPanelOpen: (open: boolean) => void
   setTypingRecordEnabled: (enabled: boolean) => void
-  setTypingViewMenuTab: (tab: TypingViewMenuTab) => void
   setViewMode: (mode: ViewMode) => void
   setKeyEditorZoom: (zoom: number) => void
   setViewMatrix: (next: Record<string, ViewMatrixCell> | undefined) => void

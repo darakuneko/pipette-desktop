@@ -249,15 +249,26 @@ export function useInputModes({
     }
   }, [typingTestMode, unlocked, resetMatrixState, beginTypingTest, onTypingTestModeChange, onUnlock])
 
-  // Feed matrix frames to typing test
+  // Feed matrix frames to typing test. This `typingTestMode` gate is what
+  // keeps `recordingActive` below inert in Key Tester and the plain editor
+  // even while REC is armed — see that comment for the other half of the
+  // link. Changing this gate to also fire outside Typing View/Typing Test
+  // would silently widen where REC actually records.
   useEffect(() => {
     if (!typingTestMode) return
     processMatrixFrame(pressedKeys, keymap)
   }, [pressedKeys, typingTestMode, processMatrixFrame, keymap])
 
-  // Effective recording condition: view-only + record toggle on. Anything
-  // else leaves the analytics pipeline idle.
-  const recordingActive = (typingRecordEnabled ?? false) && (typingTestViewOnly ?? false)
+  // Effective recording condition: the REC toggle alone (Task-typing-
+  // record-footer — REC now lives in the keymap-editor footer, not the
+  // Typing View popover, so it's no longer scoped to view-only). REC
+  // being on authorizes ambient per-minute analytics wherever matrix
+  // frames actually flow: Typing View AND the editor Typing Test screen.
+  // Key Tester and the plain editor never reach this gate at all —
+  // `processMatrixFrame` above is itself gated on `typingTestMode`, so
+  // REC being armed there is inert until the user enters Typing View or
+  // Typing Test.
+  const recordingActive = typingRecordEnabled ?? false
   // Keep the sink's refs current (the sink itself is a stable callback).
   recordingActiveRef.current = recordingActive
   // A test in the editor (not the REC view) is the tagged input source — but

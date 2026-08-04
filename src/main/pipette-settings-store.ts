@@ -13,7 +13,7 @@ import { isRecord } from '../shared/vil-file'
 import { getActiveKeyboardMetaMap, readKeyboardMetaIndex, resolveKeyboardDisplayName } from './sync/keyboard-meta'
 import { getTypingAnalyticsDB } from './typing-analytics/db/typing-analytics-db'
 import type { PipetteSettings, PipetteSettingsPatch, ViewMode, PooledTypingTestResult } from '../shared/types/pipette-settings'
-import { VIEW_MODES, DEFAULT_PIPETTE_SETTINGS, isTypingSyncSpanDays, isTypingViewMenuTab, isTypingTestComparisonBaselines } from '../shared/types/pipette-settings'
+import { VIEW_MODES, DEFAULT_PIPETTE_SETTINGS, isTypingSyncSpanDays, isTypingTestComparisonBaselines } from '../shared/types/pipette-settings'
 import { isPositiveInt, isValidAnalyzeFilterSettings } from '../shared/types/analyze-filters'
 import { isFingerType, isPosKey } from '../shared/kle/kle-ergonomics'
 
@@ -112,7 +112,6 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
   if ('typingTestSettingsPanelOpen' in obj && obj.typingTestSettingsPanelOpen != null && typeof obj.typingTestSettingsPanelOpen !== 'boolean') return false
   if ('typingRecordEnabled' in obj && obj.typingRecordEnabled != null && typeof obj.typingRecordEnabled !== 'boolean') return false
   if ('typingSyncSpanDays' in obj && obj.typingSyncSpanDays != null && !isTypingSyncSpanDays(obj.typingSyncSpanDays)) return false
-  if ('typingViewMenuTab' in obj && obj.typingViewMenuTab != null && !isTypingViewMenuTab(obj.typingViewMenuTab)) return false
   if ('viewMode' in obj && obj.viewMode != null && !VIEW_MODES.includes(obj.viewMode as ViewMode)) return false
   if ('analyze' in obj && !isValidAnalyzeSettings(obj.analyze)) return false
   if ('viewMatrix' in obj && !isValidViewMatrix(obj.viewMatrix)) return false
@@ -169,7 +168,6 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       typingTestSettingsPanelOpen: parsed.typingTestSettingsPanelOpen,
       typingRecordEnabled: parsed.typingRecordEnabled,
       typingSyncSpanDays: parsed.typingSyncSpanDays,
-      typingViewMenuTab: parsed.typingViewMenuTab,
       viewMode: parsed.viewMode,
       analyze: parsed.analyze,
       viewMatrix: parsed.viewMatrix,

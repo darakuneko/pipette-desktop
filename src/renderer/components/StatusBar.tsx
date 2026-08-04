@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SYNC_STATUS_CLASS } from './sync-ui'
 import { QuickSettingsSelects, type QuickSettingsSelectsProps } from './QuickSettingsSelects'
+import { TypingRecordModal } from './TypingRecordModal'
 import type { SyncStatusType } from '../../shared/types/sync'
 
 const TYPING_TEST_BASE = 'flex items-center justify-center gap-1 rounded border px-2.5 py-1 text-xs leading-none transition-colors'
@@ -39,6 +41,10 @@ interface Props {
   onViewAnalytics?: () => void
   viewAnalyticsDisabled?: boolean
   onDisconnect?: () => void
+  /** REC toggle state, shown as the footer "Record" button/modal and the
+   *  left-side "Recording" indicator (Task-typing-record-footer). */
+  typingRecordEnabled?: boolean
+  onTypingRecordEnabledChange?: (enabled: boolean) => void
   quickSettings?: QuickSettingsSelectsProps
 }
 
@@ -63,16 +69,22 @@ export function StatusBar({
   onViewAnalytics,
   viewAnalyticsDisabled,
   onDisconnect,
+  typingRecordEnabled,
+  onTypingRecordEnabledChange,
   quickSettings,
 }: Props) {
   const { t } = useTranslation()
+  const [recordModalOpen, setRecordModalOpen] = useState(false)
 
   const showAnalyzeButton = !!onOpenAnalyze && !typingTestMode
   const showViewOnlyButton = !!onViewOnlyChange && !!hasMatrixTester && !typingTestMode
   const showTypingTestButton = !!onTypingTestModeChange && !!hasMatrixTester
-  const hasLeadingButtons = showAnalyzeButton || showViewOnlyButton || showTypingTestButton
+  const showRecordButton = !!onTypingRecordEnabledChange && !!hasMatrixTester
+  const hasTypingGroup = showViewOnlyButton || showTypingTestButton || showRecordButton
+  const hasLeadingButtons = showAnalyzeButton || hasTypingGroup
 
   return (
+    <>
     <div className="flex items-center justify-between border-t border-edge bg-surface-alt px-4 py-1.5 text-xs leading-none text-content-secondary" data-testid="status-bar">
       <div className="flex items-center gap-3">
         <span>{deviceName}</span>
@@ -136,6 +148,14 @@ export function StatusBar({
             </span>
           </>
         )}
+        {typingRecordEnabled && (
+          <>
+            <span className="text-edge">|</span>
+            <span className="text-accent" data-testid="recording-status">
+              {t('editor.typingTest.recordingIndicator')}
+            </span>
+          </>
+        )}
       </div>
       <div className="flex items-center gap-3">
         {quickSettings && <QuickSettingsSelects {...quickSettings} />}
@@ -153,6 +173,12 @@ export function StatusBar({
             {t('app.analyzeTab')}
           </button>
         )}
+        {showAnalyzeButton && hasTypingGroup && (
+          <span className="text-edge">|</span>
+        )}
+        {hasTypingGroup && (
+          <span className="text-content-muted">{t('statusBar.typingGroup')}</span>
+        )}
         {showViewOnlyButton && (
           <button
             type="button"
@@ -161,7 +187,7 @@ export function StatusBar({
             className={viewOnly ? TYPING_TEST_ACTIVE : TYPING_TEST_INACTIVE}
             onClick={onViewOnlyChange}
           >
-            {t('editor.typingTest.viewOnly')}
+            {t('statusBar.typingViewShort')}
           </button>
         )}
         {typingTestMode && onViewAnalytics && (
@@ -184,7 +210,18 @@ export function StatusBar({
             className={typingTestMode ? TYPING_TEST_ACTIVE : TYPING_TEST_INACTIVE}
             onClick={onTypingTestModeChange}
           >
-            {typingTestMode ? t('editor.typingTest.exitTypingMode') : t('editor.typingTest.switchToTypingMode')}
+            {t('statusBar.typingTestShort')}
+          </button>
+        )}
+        {showRecordButton && (
+          <button
+            type="button"
+            data-testid="typing-record-button"
+            aria-haspopup="dialog"
+            className={typingRecordEnabled ? TYPING_TEST_ACTIVE : TYPING_TEST_INACTIVE}
+            onClick={() => setRecordModalOpen(true)}
+          >
+            {t('statusBar.typingRecordShort')}
           </button>
         )}
         {onDisconnect && hasLeadingButtons && (
@@ -202,5 +239,13 @@ export function StatusBar({
         )}
       </div>
     </div>
+    {recordModalOpen && onTypingRecordEnabledChange && (
+      <TypingRecordModal
+        onClose={() => setRecordModalOpen(false)}
+        typingRecordEnabled={typingRecordEnabled ?? false}
+        onTypingRecordEnabledChange={onTypingRecordEnabledChange}
+      />
+    )}
+    </>
   )
 }

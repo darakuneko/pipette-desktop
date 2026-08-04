@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import type { RefObject } from 'react'
-import type { TypingTestResult, TypingViewMenuTab, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../../shared/types/pipette-settings'
+import type { TypingTestResult, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../../shared/types/pipette-settings'
 import type { RunKeystrokeLog } from '../../../shared/types/typing-run-log'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { KleKey } from '../../../shared/kle/types'
 import type { useTypingTest } from '../../typing-test/useTypingTest'
 import type { LineSnapshot } from '../../typing-test/TypingTestView'
-import type { AnalyticsOrigin } from './keymap-editor-types'
 import type { TimelineHandoff } from '../../hooks/useRunTimelineHandoff'
 
 export interface TypingTestPaneProps {
@@ -85,49 +84,15 @@ export interface TypingTestPaneProps {
   onViewOnlyWindowSizeChange?: (size: { width: number; height: number }) => void
   viewOnlyAlwaysOnTop?: boolean
   onViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
+  /** REC toggle state — drives the heatmap overlay (enabled only in
+   *  view-only + recording) and the panel's hint text. The toggle
+   *  itself lives in the footer's Record button/modal, not here. */
   recordEnabled?: boolean
-  onRecordEnabledChange?: (enabled: boolean) => void
-  /** Whether the user has accepted the typing-recording disclosure.
-   * The REC tab Start button gates on this — first-time enable opens
-   * the consent modal, subsequent enables skip it. */
-  recordingConsentAccepted?: boolean
-  onRecordingConsentAccepted?: () => void
-  /** Window length in minutes for the typing-view heatmap overlay.
-   * Exposed as a REC-tab dropdown so the user can dial how far back
-   * the overlay reaches; data older than the window is dropped, data
-   * within decays smoothly. Backed by
-   * AppConfig.typingHeatmapWindowMin. */
+  /** Window length in minutes for the typing-view heatmap overlay and
+   * its legend text; data older than the window is dropped, data
+   * within decays smoothly. Backed by AppConfig.typingHeatmapWindowMin
+   * — edited from the footer's TypingRecordModal, read-only here. */
   heatmapWindowMin?: number
-  onHeatmapWindowMinChange?: (minutes: number) => void
-  /** AppConfig flag — when on (and REC running), the analytics
-   * service tags every minute payload with the active application
-   * name. Toggle is intentionally inert until REC starts so the user
-   * controls one switch at a time. */
-  monitorAppEnabled?: boolean
-  onMonitorAppEnabledChange?: (enabled: boolean) => void
-  /** AppConfig flag — keeps Pipette running in the tray after the last
-   * window closes. Mirrors Settings > Tools; surfaced here too since the
-   * view-only window is often the last one open. */
-  trayResident?: boolean
-  onTrayResidentChange?: (enabled: boolean) => void
-  /** AppConfig flag — launch resident in the tray without opening a
-   * window. Disabled while trayResident is off; turning trayResident off
-   * also clears this when set, since a hidden window with no tray icon
-   * to reopen it would be unreachable. Same linked-clear logic as
-   * SettingsToolsTab — keep both in sync. */
-  startInTray?: boolean
-  onStartInTrayChange?: (enabled: boolean) => void
-  /** Which tab of the view-only menu is currently open. Window shows
-   * size / always-on-top controls; REC shows the recording toggle and
-   * the entry point to the analytics page; Monitor App shows the
-   * active-application capture toggle. Persisted per keyboard via
-   * PipetteSettings. */
-  menuTab?: TypingViewMenuTab
-  onMenuTabChange?: (tab: TypingViewMenuTab) => void
-  /** Called when the user picks "View Analytics" from the REC tab.
-   * The parent owns the navigation — the pane only surfaces the
-   * entry point. */
-  onViewAnalytics?: (origin: AnalyticsOrigin) => void
   /** Keyboard uid used for the typing-view heatmap query. The heatmap
    * stays hidden while this is unset or recording is off so a session
    * without a device never sees stale overlay data. */

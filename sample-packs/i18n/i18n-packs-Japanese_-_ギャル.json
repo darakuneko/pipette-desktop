@@ -1,5 +1,5 @@
 {
-  "version": "0.1.74",
+  "version": "0.1.75",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -388,12 +388,9 @@
       "viewOnly": "タイピングビュー☆",
       "exitViewOnly": "ビュー終わりっしょ！",
       "alwaysOnTop": "最前面☆",
+      "recordModalTitle": "記録セッティング☆",
       "recordStart": "記録開始！",
       "recordStop": "ストップ☆",
-      "tab": {
-        "window": "ウィンドウ",
-        "rec": "REC☆"
-      },
       "monitorApp": {
         "label": "Monitor App"
       },
@@ -718,6 +715,10 @@
     "autoAdvance": "自動移動☆",
     "locked": "ロックちう",
     "unlocked": "アンロックっしょ",
+    "typingGroup": "タイピング☆:",
+    "typingViewShort": "View",
+    "typingTestShort": "Test",
+    "typingRecordShort": "Record",
     "sync": {
       "pending": "同期待ちっしょ",
       "syncing": "同期ちう…",

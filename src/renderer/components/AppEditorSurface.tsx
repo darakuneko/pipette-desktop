@@ -12,7 +12,6 @@ import { LayoutStoreContent } from './editors/LayoutStoreModal'
 import { IMPORT_BTN } from './editors/layout-store-types'
 import { ROW_CLASS } from './editors/modal-controls'
 import { KeymapEditor, type KeymapEditorHandle } from './editors/KeymapEditor'
-import type { AnalyticsOrigin } from './editors/keymap-editor-types'
 import type { TimelineHandoff } from '../hooks/useRunTimelineHandoff'
 import type { useDeviceConnection } from '../hooks/useDeviceConnection'
 import type { useKeyboard } from '../hooks/useKeyboard'
@@ -56,10 +55,8 @@ interface Props {
   handleKeymapApplyCancel: () => void
   keymapApplyError: string | null
   keymapApplyBusy: boolean
-  handleTypingRecordEnabledChange: (enabled: boolean) => void
   recKeystroke: ReturnType<typeof useRecKeystrokeCounter>
   onTypingTestViewOnlyChange: (enabled: boolean) => void
-  handleViewAnalytics: (origin: AnalyticsOrigin) => void
   timelineHandoff: TimelineHandoff | null
   setTypingTestRunning: (running: boolean) => void
 }
@@ -89,10 +86,8 @@ export function AppEditorSurface({
   handleKeymapApplyCancel,
   keymapApplyError,
   keymapApplyBusy,
-  handleTypingRecordEnabledChange,
   recKeystroke,
   onTypingTestViewOnlyChange,
-  handleViewAnalytics,
   timelineHandoff,
   setTypingTestRunning,
 }: Props) {
@@ -314,21 +309,9 @@ export function AppEditorSurface({
         typingTestSettingsPanelOpen={devicePrefs.typingTestSettingsPanelOpen}
         onTypingTestSettingsPanelOpenChange={devicePrefs.setTypingTestSettingsPanelOpen}
         typingRecordEnabled={devicePrefs.typingRecordEnabled}
-        onTypingRecordEnabledChange={handleTypingRecordEnabledChange}
         onRecKeystroke={recKeystroke.increment}
         typingHeatmapWindowMin={appConfig.config.typingHeatmapWindowMin}
-        onTypingHeatmapWindowMinChange={(m) => appConfig.set('typingHeatmapWindowMin', m as typeof appConfig.config.typingHeatmapWindowMin)}
         typingRecordingConsentAccepted={appConfig.config.typingRecordingConsentAccepted}
-        onTypingRecordingConsentAccepted={() => appConfig.set('typingRecordingConsentAccepted', true)}
-        typingMonitorAppEnabled={appConfig.config.typingMonitorAppEnabled}
-        onTypingMonitorAppEnabledChange={(enabled) => appConfig.set('typingMonitorAppEnabled', enabled)}
-        typingTrayResident={appConfig.config.trayResident}
-        onTypingTrayResidentChange={(enabled) => appConfig.set('trayResident', enabled)}
-        typingStartInTray={appConfig.config.startInTray}
-        onTypingStartInTrayChange={(enabled) => appConfig.set('startInTray', enabled)}
-        typingViewMenuTab={devicePrefs.typingViewMenuTab}
-        onTypingViewMenuTabChange={devicePrefs.setTypingViewMenuTab}
-        onViewAnalytics={handleViewAnalytics}
         timelineHandoff={timelineHandoff}
         onTypingTestRunningChange={setTypingTestRunning}
         deviceName={deviceName}

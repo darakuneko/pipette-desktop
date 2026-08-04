@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { TypingTestControlsRow } from '../../typing-test/TypingTestControlsRow'
 import { buildResultNameChips } from '../../typing-test/result-builder'
 import { PauseResumeModal } from '../../typing-test/PauseResumeModal'
-import { TypingRecordingConsentModal } from '../../typing-test/TypingRecordingConsentModal'
 import { errorClassGroup } from '../../typing-test/error-classify'
 import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
 import { KeyboardPane } from './KeyboardPane'
@@ -70,20 +69,7 @@ export function TypingTestPane({
   viewOnlyAlwaysOnTop,
   onViewOnlyAlwaysOnTopChange,
   recordEnabled,
-  onRecordEnabledChange,
-  recordingConsentAccepted,
-  onRecordingConsentAccepted,
   heatmapWindowMin,
-  onHeatmapWindowMinChange,
-  monitorAppEnabled,
-  onMonitorAppEnabledChange,
-  trayResident,
-  onTrayResidentChange,
-  startInTray,
-  onStartInTrayChange,
-  menuTab = 'window',
-  onMenuTabChange,
-  onViewAnalytics,
   keyboardUid,
   timelineHandoff,
   lineSnapshotRef,
@@ -106,7 +92,6 @@ export function TypingTestPane({
   })
   const heatmapActive = heatmapMaxTotal > 0
   const [showLanguageModal, setShowLanguageModal] = useState(false)
-  const [showConsentModal, setShowConsentModal] = useState(false)
   const [showResumeModal, setShowResumeModal] = useState(false)
 
   const {
@@ -142,49 +127,6 @@ export function TypingTestPane({
     onViewOnlyChange,
   })
 
-  const handleRecordToggle = useCallback(() => {
-    if (!onRecordEnabledChange) return
-    // Stopping is always allowed without re-prompting; only the
-    // first transition from "off → on" needs the disclosure.
-    if (recordEnabled) {
-      onRecordEnabledChange(false)
-      return
-    }
-    if (!recordingConsentAccepted) {
-      // Hide the REC overlay so the modal isn't visually overlapped
-      // by the popover; the cancel/accept handlers reopen it so the
-      // user lands back where they started.
-      setViewOnlyControlsOpen(false)
-      setShowConsentModal(true)
-      return
-    }
-    onRecordEnabledChange(true)
-  }, [onRecordEnabledChange, recordEnabled, recordingConsentAccepted])
-
-  const handleTrayResidentToggle = useCallback(() => {
-    if (!onTrayResidentChange) return
-    const next = !trayResident
-    onTrayResidentChange(next)
-    // Mirrors SettingsToolsTab: a hidden window with no tray icon to
-    // reopen it would be unreachable, so turning tray residency off
-    // also clears startInTray when it was on.
-    if (!next && startInTray) {
-      onStartInTrayChange?.(false)
-    }
-  }, [onTrayResidentChange, trayResident, startInTray, onStartInTrayChange])
-
-  const handleConsentAccept = useCallback(() => {
-    onRecordingConsentAccepted?.()
-    setShowConsentModal(false)
-    setViewOnlyControlsOpen(true)
-    onRecordEnabledChange?.(true)
-  }, [onRecordingConsentAccepted, onRecordEnabledChange])
-
-  const handleConsentCancel = useCallback(() => {
-    setShowConsentModal(false)
-    setViewOnlyControlsOpen(true)
-  }, [])
-
   // Completion screen (Plan-completion-timeline-view PR-B): the keymap
   // pane + its layer-tracking note describe the KEYMAP, which is no
   // longer the point once a run finishes and the reading window gives
@@ -197,12 +139,6 @@ export function TypingTestPane({
 
   return (
     <>
-      {showConsentModal && (
-        <TypingRecordingConsentModal
-          onAccept={handleConsentAccept}
-          onCancel={handleConsentCancel}
-        />
-      )}
       {showResumeModal && (
         <PauseResumeModal
           wordIndex={typingTest.state.currentWordIndex}
@@ -397,26 +333,12 @@ export function TypingTestPane({
           mouseOver={mouseOver}
           viewOnlyControlsOpen={viewOnlyControlsOpen}
           setViewOnlyControlsOpen={setViewOnlyControlsOpen}
-          menuTab={menuTab}
-          onMenuTabChange={onMenuTabChange}
           getDefaultCompactSize={getDefaultCompactSize}
           onViewOnlyWindowSizeChange={onViewOnlyWindowSizeChange}
           alwaysOnTopSupported={alwaysOnTopSupported}
           viewOnlyAlwaysOnTop={viewOnlyAlwaysOnTop}
           onViewOnlyAlwaysOnTopChange={onViewOnlyAlwaysOnTopChange}
           recordEnabled={recordEnabled}
-          onRecordEnabledChange={onRecordEnabledChange}
-          handleRecordToggle={handleRecordToggle}
-          monitorAppEnabled={monitorAppEnabled}
-          onMonitorAppEnabledChange={onMonitorAppEnabledChange}
-          trayResident={trayResident}
-          onTrayResidentChange={onTrayResidentChange}
-          handleTrayResidentToggle={handleTrayResidentToggle}
-          startInTray={startInTray}
-          onStartInTrayChange={onStartInTrayChange}
-          onViewAnalytics={onViewAnalytics}
-          heatmapWindowMin={heatmapWindowMin}
-          onHeatmapWindowMinChange={onHeatmapWindowMinChange}
           layers={layers}
           layerNames={layerNames}
           onViewOnlyChange={onViewOnlyChange}

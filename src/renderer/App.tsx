@@ -436,10 +436,8 @@ export function App() {
             handleKeymapApplyCancel={handleKeymapApplyCancel}
             keymapApplyError={keymapApplyError}
             keymapApplyBusy={keymapApplyBusy}
-            handleTypingRecordEnabledChange={handleTypingRecordEnabledChange}
             recKeystroke={recKeystroke}
             onTypingTestViewOnlyChange={onTypingTestViewOnlyChange}
-            handleViewAnalytics={handleViewAnalytics}
             timelineHandoff={timelineHandoff}
             setTypingTestRunning={setTypingTestRunning}
           />
@@ -465,6 +463,7 @@ export function App() {
         onStatusBarViewOnlyChange={onStatusBarViewOnlyChange}
         onStatusBarTypingTestModeChange={onStatusBarTypingTestModeChange}
         handleViewAnalytics={handleViewAnalytics}
+        handleTypingRecordEnabledChange={handleTypingRecordEnabledChange}
         handleKeyboardLayoutSelectChange={handleKeyboardLayoutSelectChange}
         keymapApplyBusy={keymapApplyBusy}
         typingTestRunning={typingTestRunning}

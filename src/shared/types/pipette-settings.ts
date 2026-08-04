@@ -124,17 +124,6 @@ export function isTypingTestComparisonBaselines(value: unknown): value is Typing
 
 export const DEFAULT_COMPARISON_BASELINE: TypingTestComparisonBaseline = { kind: 'previous' }
 
-/** Which tab of the typing-view menu is currently open. Persisted so
- * the next entry restores the user's last-chosen pane (Window controls
- * vs. recording + analytics). The Monitor App toggle lives inline in
- * the REC tab — it is not its own pane. */
-export const TYPING_VIEW_MENU_TABS = ['window', 'rec'] as const
-export type TypingViewMenuTab = typeof TYPING_VIEW_MENU_TABS[number]
-
-export function isTypingViewMenuTab(value: unknown): value is TypingViewMenuTab {
-  return typeof value === 'string' && (TYPING_VIEW_MENU_TABS as readonly string[]).includes(value)
-}
-
 export function isTypingSyncSpanDays(value: unknown): value is TypingSyncSpanDays {
   return typeof value === 'number' && (ALLOWED_TYPING_SYNC_SPAN_DAYS as readonly number[]).includes(value)
 }
@@ -311,7 +300,6 @@ export interface PipetteSettings {
    * without touching this value. See the "Record lifecycle" section
    * in .claude/plans/typing-analytics.md. */
   typingRecordEnabled?: boolean
-  typingViewMenuTab?: TypingViewMenuTab
   typingSyncSpanDays?: TypingSyncSpanDays
   layerPanelOpen?: boolean
   basicViewType?: 'ansi' | 'iso' | 'jis' | 'list'

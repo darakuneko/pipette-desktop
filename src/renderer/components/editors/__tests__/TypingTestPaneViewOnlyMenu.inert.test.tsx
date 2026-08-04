@@ -76,7 +76,6 @@ function renderViewOnly(overrides: Partial<TypingTestPaneProps> = {}) {
     keys: [],
     layerLabel: '',
     viewOnly: true,
-    menuTab: 'window',
   }
   return render(<TypingTestPane {...defaults} {...overrides} />)
 }
