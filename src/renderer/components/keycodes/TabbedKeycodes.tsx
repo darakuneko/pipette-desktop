@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { findKeycode, type Keycode, getKeycodeRevision, isBasic, getAvailableLMMods, deserialize } from '../../../shared/keycodes/keycodes'
 import { parseKle } from '../../../shared/kle/kle-parser'
@@ -14,6 +14,8 @@ import { UpwardSelect } from '../UpwardSelect'
 import { KeycodeGrid } from './KeycodeGrid'
 import { BasicKeyboardView } from './BasicKeyboardView'
 import { isShiftedKeycode, getShiftedKeycode } from './SplitKey'
+import { BUBBLE_BASE, computeBubblePosition } from '../ui/Tooltip'
+import { useSharedHoverBubble } from '../../hooks/use-shared-hover-bubble'
 
 export interface KeycodeIndexEntry { baseIdx: number; shiftedIdx?: number }
 
@@ -93,13 +95,17 @@ const LM_CATEGORY: KeycodeCategory = {
   getKeycodes: getAvailableLMMods,
 }
 
-const TOOLTIP_VERTICAL_GAP = 4
-
+// Shared bubble contract (see .claude/DESIGN.md "Tooltip" section): 8px
+// offset, `computeBubblePosition` viewport clamping, `BUBBLE_BASE` skin,
+// 300ms open delay via `useSharedHoverBubble`. A canonicalized shared
+// bubble rather than per-key `Tooltip` wraps — every category's key grid
+// mounts simultaneously (inactive tabs stay in the DOM, just visually
+// hidden, to keep tab-switch instant and preserve scroll position), so a
+// per-key `Tooltip` would multiply its portal + effects across hundreds
+// of tiles that are never all visible at once.
 interface TooltipState {
   keycode: Keycode
-  top: number
-  left: number
-  containerWidth: number
+  rect: DOMRect
 }
 
 interface Props {
@@ -162,7 +168,9 @@ export function TabbedKeycodes({
     { id: 'list', name: t('settings.basicViewTypeList') },
   ], [t])
   const [activeTab, setActiveTab] = useState('basic')
-  const [tooltip, setTooltip] = useState<TooltipState | null>(null)
+  const { target: tooltip, show: showTooltip, hide: hideTooltip } = useSharedHoverBubble<TooltipState>()
+  const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null)
+  const tooltipId = useId()
   const containerRef = useRef<HTMLDivElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
   // Guard against spurious double-clicks right after mount (layout shift can
@@ -177,13 +185,20 @@ export function TabbedKeycodes({
     }
   }, [onKeycodeDoubleClick])
 
-  // Clamp tooltip horizontally after render so it never overflows the container
+  // Position the bubble centered above the hovered key, clamped to the
+  // VIEWPORT (not just this container) so it never clips at the screen's
+  // left/right edge — same contract every canonical `Tooltip` follows.
   useLayoutEffect(() => {
     const el = tooltipRef.current
-    if (!el || !tooltip) return
-    const w = el.offsetWidth
-    const clampedLeft = Math.max(0, Math.min(tooltip.left - w / 2, tooltip.containerWidth - w))
-    el.style.left = `${clampedLeft}px`
+    if (!el || !tooltip) { setTooltipPos(null); return }
+    setTooltipPos(computeBubblePosition(
+      tooltip.rect,
+      el.getBoundingClientRect(),
+      'top',
+      'center',
+      8,
+      { width: window.innerWidth, height: window.innerHeight },
+    ))
   }, [tooltip])
 
   // Enter key confirms current selection and closes the picker.
@@ -331,35 +346,28 @@ export function TabbedKeycodes({
   // Clear any open tooltip whenever the rendered tab changes, whether from a
   // user click or an automatic fallback/restore driven by effectiveTab.
   useEffect(() => {
-    setTooltip(null)
-  }, [effectiveTab])
+    hideTooltip()
+  }, [effectiveTab, hideTooltip])
 
   const selectTab = useCallback(
     (id: string) => {
       onTabChange?.()
       setActiveTab(id)
-      setTooltip(null)
+      hideTooltip()
     },
-    [onTabChange],
+    [onTabChange, hideTooltip],
   )
 
   const handleKeycodeHover = useCallback(
     (kc: Keycode, rect: DOMRect) => {
-      const containerRect = containerRef.current?.getBoundingClientRect()
-      if (!containerRect) return
-      setTooltip({
-        keycode: kc,
-        top: rect.top - containerRect.top,
-        left: rect.left - containerRect.left + rect.width / 2,
-        containerWidth: containerRect.width,
-      })
+      showTooltip({ keycode: kc, rect })
     },
-    [],
+    [showTooltip],
   )
 
   const handleKeycodeHoverEnd = useCallback(() => {
-    setTooltip(null)
-  }, [])
+    hideTooltip()
+  }, [hideTooltip])
 
   const activeTabKeycodeNumbers = useMemo(
     () => activeTabKeycodes.map((kc) => deserialize(kc.qmkId)),
@@ -575,15 +583,20 @@ export function TabbedKeycodes({
         {panelOverlay}
       </div>
 
-      {/* Tooltip — rendered outside the scroll container to avoid clipping */}
+      {/* Tooltip — rendered outside the scroll container to avoid clipping.
+          `BUBBLE_BASE` already positions `fixed`, so this needs no
+          container-relative math (unlike the old absolute-positioned
+          version) — `tooltipPos` is computed straight from the hovered
+          key's own viewport rect via `computeBubblePosition`. */}
       {tooltip && (
         <div
           ref={tooltipRef}
-          className="pointer-events-none absolute z-50 rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg"
+          role="tooltip"
+          id={tooltipId}
+          className={BUBBLE_BASE}
           style={{
-            top: tooltip.top - TOOLTIP_VERTICAL_GAP,
-            left: tooltip.left,
-            transform: 'translateY(-100%)',
+            top: tooltipPos?.top ?? tooltip.rect.top,
+            left: tooltipPos?.left ?? tooltip.rect.left,
           }}
         >
           <div className="text-2xs leading-snug text-content-muted whitespace-nowrap">

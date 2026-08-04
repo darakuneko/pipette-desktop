@@ -259,7 +259,7 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
       tooltipRef.current.getBoundingClientRect(),
       'bottom',
       'start',
-      6,
+      8,
       { width: window.innerWidth, height: window.innerHeight },
     ))
   }, [hover])
@@ -513,8 +513,8 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
           {hover && (
             <div
               ref={tooltipRef}
-              className="pointer-events-none fixed z-70"
-              style={{ left: tooltipPos?.left ?? hover.rect.left, top: tooltipPos?.top ?? hover.rect.bottom + 6 }}
+              className="pointer-events-none fixed z-50"
+              style={{ left: tooltipPos?.left ?? hover.rect.left, top: tooltipPos?.top ?? hover.rect.bottom + 8 }}
               data-testid="word-timeline-tooltip"
             >
               {hover.segment.kind === 'keystroke'

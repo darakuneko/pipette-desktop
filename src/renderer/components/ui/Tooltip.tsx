@@ -43,8 +43,16 @@ export interface TooltipProps {
   describedByOn?: 'trigger' | 'wrapper'
 }
 
-const BUBBLE_BASE =
-  'pointer-events-none fixed z-50 w-max rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg text-xs font-medium text-content whitespace-pre-line transition-opacity'
+// Exported so the handful of hand-rolled shared-bubble tooltips (perf-
+// sensitive surfaces that render one bubble over many hover targets
+// instead of wrapping each target in its own `Tooltip`, e.g. the keycode
+// picker) can match this exact skin instead of drifting into their own
+// ad-hoc styling. `max-w-sm` is the default cap for dynamic/long content
+// (filter summaries, snapshot labels, …); callers needing a narrower
+// bubble still pass their own `max-w-xs` via `className`, which wins
+// because it's appended after this base string.
+export const BUBBLE_BASE =
+  'pointer-events-none fixed z-50 w-max max-w-sm rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg text-xs font-medium text-content whitespace-pre-line transition-opacity'
 
 const WRAPPER_BASE = 'relative inline-block'
 

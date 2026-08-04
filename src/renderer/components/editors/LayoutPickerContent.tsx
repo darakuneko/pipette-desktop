@@ -4,12 +4,13 @@
 // browse views plus the keyboard-as-keycode-picker itself. Pure props in,
 // JSX out; all state and handlers live in `useLayoutPicker`.
 
+import { useId, useLayoutEffect, useRef, useState } from 'react'
 import type { KleKey } from '../../../shared/kle/types'
 import type { DeviceInfo } from '../../../shared/types/protocol'
 import type { StoredKeyboardInfo } from '../../../shared/types/sync'
 import type { SnapshotMeta } from '../../../shared/types/snapshot-store'
 import { KeyboardPane } from './KeyboardPane'
-import { Tooltip } from '../ui/Tooltip'
+import { BUBBLE_BASE, computeBubblePosition, Tooltip } from '../ui/Tooltip'
 import { ScaleInput, ghostZoomButtonClass } from './keymap-editor-toolbar'
 import { MIN_SCALE, MAX_SCALE } from './keymap-editor-types'
 import { ZoomIn, ZoomOut } from 'lucide-react'
@@ -53,7 +54,7 @@ export interface LayoutPickerContentProps {
   handlePickerKeyClick: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   handlePickerHover: (key: KleKey, keycode: string, rect: DOMRect) => void
   handlePickerHoverEnd: () => void
-  pickerTooltip: { keycode: string; top: number; left: number } | null
+  pickerTooltip: { keycode: string; rect: DOMRect } | null
   setPickerSource: (source: 'file' | 'device') => void
   setPickerLayer: (layer: number) => void
   setPickerFileData: (data: PickerFileData) => void
@@ -75,6 +76,27 @@ export function LayoutPickerContent({
   pickerBrowseMode, onScaleChange, clearPickerSelection,
 }: LayoutPickerContentProps) {
   const { t } = useTranslation()
+
+  // Canonicalized shared bubble (see .claude/DESIGN.md "Tooltip" section):
+  // same `computeBubblePosition` viewport clamping every canonical
+  // `Tooltip` uses, kept as a hand-rolled single bubble (not a per-key
+  // `Tooltip` wrap) since `KeyboardPane` reports hover via one callback
+  // across the whole rendered layout rather than per-key trigger elements.
+  const pickerTooltipRef = useRef<HTMLDivElement>(null)
+  const pickerTooltipId = useId()
+  const [pickerTooltipPos, setPickerTooltipPos] = useState<{ top: number; left: number } | null>(null)
+  useLayoutEffect(() => {
+    const el = pickerTooltipRef.current
+    if (!el || !pickerTooltip) { setPickerTooltipPos(null); return }
+    setPickerTooltipPos(computeBubblePosition(
+      pickerTooltip.rect,
+      el.getBoundingClientRect(),
+      'top',
+      'center',
+      8,
+      { width: window.innerWidth, height: window.innerHeight },
+    ))
+  }, [pickerTooltip])
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -165,8 +187,14 @@ export function LayoutPickerContent({
             />
             {pickerTooltip && (
               <div
-                className="pointer-events-none absolute z-50 rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg"
-                style={{ top: pickerTooltip.top - 4, left: pickerTooltip.left, transform: 'translate(-50%, -100%)' }}
+                ref={pickerTooltipRef}
+                role="tooltip"
+                id={pickerTooltipId}
+                className={BUBBLE_BASE}
+                style={{
+                  top: pickerTooltipPos?.top ?? pickerTooltip.rect.top,
+                  left: pickerTooltipPos?.left ?? pickerTooltip.rect.left,
+                }}
               >
                 <div className="text-2xs leading-snug text-content-muted whitespace-nowrap">{pickerTooltip.keycode}</div>
               </div>

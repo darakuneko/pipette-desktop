@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 
 vi.mock('react-i18next', () => ({
@@ -856,6 +856,58 @@ describe('KeyPopover — remount on Auto Move advance (key prop change)', () => 
 // re-derive wrapper mode / selected layer / any buffered pick for the new
 // layer's keycode, via `usePopoverKeycodeWorkflow`'s own `currentLayer` effect.
 // ---------------------------------------------------------------------------
+
+describe('PopoverTabKey — truncated detail hover tooltip (canonicalized shared bubble)', () => {
+  // jsdom never computes real layout, so `scrollWidth`/`clientWidth` both
+  // default to 0 — force a "truncated" reading (scrollWidth > clientWidth)
+  // on the hovered detail span so `handleDetailMouseEnter`'s early-return
+  // guard doesn't skip the tooltip.
+  function markTruncated(el: Element): void {
+    Object.defineProperty(el, 'scrollWidth', { configurable: true, value: 200 })
+    Object.defineProperty(el, 'clientWidth', { configurable: true, value: 100 })
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('does not show a tooltip for a non-truncated detail span', () => {
+    render(<PopoverTabKey currentKeycode={4} onKeycodeSelect={vi.fn()} />)
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: 'enter' } })
+    const detail = screen.getByTestId('popover-result-KC_ENTER').querySelector('span:last-child')!
+    fireEvent.mouseEnter(detail)
+    act(() => { vi.advanceTimersByTime(300) })
+    expect(screen.queryByRole('tooltip')).toBeNull()
+  })
+
+  it('shows a role="tooltip" bubble with the full detail text after the 300ms open delay', () => {
+    render(<PopoverTabKey currentKeycode={4} onKeycodeSelect={vi.fn()} />)
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: 'enter' } })
+    const detail = screen.getByTestId('popover-result-KC_ENTER').querySelector('span:last-child')!
+    markTruncated(detail)
+    fireEvent.mouseEnter(detail)
+    expect(screen.queryByRole('tooltip')).toBeNull()
+    act(() => { vi.advanceTimersByTime(300) })
+    const bubble = screen.getByRole('tooltip')
+    expect(bubble).toHaveTextContent('Return')
+  })
+
+  it('closes instantly on mouse leave, even mid-delay', () => {
+    render(<PopoverTabKey currentKeycode={4} onKeycodeSelect={vi.fn()} />)
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: 'enter' } })
+    const detail = screen.getByTestId('popover-result-KC_ENTER').querySelector('span:last-child')!
+    markTruncated(detail)
+    fireEvent.mouseEnter(detail)
+    act(() => { vi.advanceTimersByTime(150) })
+    fireEvent.mouseLeave(detail)
+    act(() => { vi.advanceTimersByTime(300) })
+    expect(screen.queryByRole('tooltip')).toBeNull()
+  })
+})
 
 describe('KeyPopover — layer sidebar change (currentLayer prop, same instance)', () => {
   it('keeps the active tab on Code across a layer change', () => {

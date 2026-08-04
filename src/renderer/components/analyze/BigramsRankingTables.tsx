@@ -72,7 +72,7 @@ function SortHeader({ label, indicator, align, active, onClick, title }: SortHea
         <button
           type="button"
           onClick={onClick}
-          className={`cursor-pointer ${active ? 'text-content' : 'text-content-muted hover:text-content'}`}
+          className={active ? 'text-content' : 'text-content-muted hover:text-content'}
         >
           {label}
           {indicator}

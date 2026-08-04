@@ -7,6 +7,7 @@
 // to thread it into `TabbedKeycodes`' `keyboardPickerContent` prop.
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useSharedHoverBubble } from '../../hooks/use-shared-hover-bubble'
 import { useTranslation } from 'react-i18next'
 import { serialize, findKeycode } from '../../../shared/keycodes/keycodes'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
@@ -79,21 +80,17 @@ export function useLayoutPicker({
   const [probeStatus, setProbeStatus] = useState<'idle' | 'probing' | 'error'>('idle')
   const [deviceBrowsing, setDeviceBrowsing] = useState(true)
   const [pickerScale, setPickerScale] = useState<number | undefined>(undefined)
-  const [pickerTooltip, setPickerTooltip] = useState<{ keycode: string; top: number; left: number } | null>(null)
+  // Canonicalized shared bubble (see .claude/DESIGN.md "Tooltip" section)
+  // rather than a per-key `Tooltip` wrap — the picker keyboard renders
+  // every key of the layout at once purely for hover, so one shared
+  // bubble covers it the same way TabbedKeycodes/PopoverTabKey do.
+  const { target: pickerTooltip, show: showPickerTooltip, hide: handlePickerHoverEnd } = useSharedHoverBubble<{ keycode: string; rect: DOMRect }>()
   // pickerClickedPositions removed — now tracked via pickerSelectedIndices in useKeymapMultiSelect
   const pickerContainerRef = useRef<HTMLDivElement>(null)
 
   const handlePickerHover = useCallback((_key: KleKey, keycode: string, rect: DOMRect) => {
-    const containerRect = pickerContainerRef.current?.getBoundingClientRect()
-    if (!containerRect) return
-    setPickerTooltip({
-      keycode,
-      top: rect.top - containerRect.top,
-      left: rect.left - containerRect.left + rect.width / 2,
-    })
-  }, [])
-
-  const handlePickerHoverEnd = useCallback(() => { setPickerTooltip(null) }, [])
+    showPickerTooltip({ keycode, rect })
+  }, [showPickerTooltip])
 
   // --- Notify parent when device list browsing state changes ---
   useEffect(() => {
