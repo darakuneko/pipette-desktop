@@ -7,13 +7,19 @@ import { IpcChannels } from '../shared/ipc/channels'
 import { DEFAULT_APP_CONFIG, SETTABLE_APP_CONFIG_KEYS, type AppConfig, type WindowState } from '../shared/types/app-config'
 import { secureHandle } from './ipc-guard'
 
-export const MIN_WIDTH = 1360
+export const MIN_WIDTH = 1280
 export const MIN_HEIGHT = 1024
+
+/** Default window width for a fresh launch (no saved window state).
+ * Wider than the enforced {@link MIN_WIDTH} floor because keyboards are
+ * physically wide, and the extra room keeps the keymap editor comfortable
+ * out of the box. */
+const DEFAULT_WIDTH = 1440
 
 const DEFAULT_STATE: WindowState = {
   x: -1,
   y: -1,
-  width: MIN_WIDTH,
+  width: DEFAULT_WIDTH,
   height: MIN_HEIGHT,
 }
 
