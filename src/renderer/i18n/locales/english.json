@@ -410,7 +410,7 @@
       "unitsLines": "Units(Lines)",
       "optionLabel": "Option",
       "baseLayerShort": "Base",
-      "heatmapWindow": "Heatmap window (minutes)",
+      "heatmapWindow": "Typing View Heatmap window (minutes)",
       "heatmapWindowShort": "HeatMap",
       "heatmapWindowOption": "{{minutes}} min",
       "consent": {

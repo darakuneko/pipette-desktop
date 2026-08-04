@@ -410,7 +410,7 @@
       "unitsLines": "単位(行)",
       "optionLabel": "オプション",
       "baseLayerShort": "Base",
-      "heatmapWindow": "ヒートマップの表示期間（分）",
+      "heatmapWindow": "タイピングビューのヒートマップの表示期間（分）",
       "heatmapWindowShort": "HeatMap",
       "heatmapWindowOption": "{{minutes}} 分どすえ",
       "consent": {
