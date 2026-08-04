@@ -77,11 +77,16 @@ export function StatusBar({
   const [recordModalOpen, setRecordModalOpen] = useState(false)
 
   const showAnalyzeButton = !!onOpenAnalyze && !typingTestMode
+  const showViewAnalyticsButton = !!typingTestMode && !!onViewAnalytics
   const showViewOnlyButton = !!onViewOnlyChange && !!hasMatrixTester && !typingTestMode
   const showTypingTestButton = !!onTypingTestModeChange && !!hasMatrixTester
   const showRecordButton = !!onTypingRecordEnabledChange && !!hasMatrixTester
   const hasTypingGroup = showViewOnlyButton || showTypingTestButton || showRecordButton
-  const hasLeadingButtons = showAnalyzeButton || hasTypingGroup
+  // Exactly one of the two Analyze entry points renders per mode (editor
+  // vs typing test); both sit BEFORE the Typing group separator so the
+  // footer keeps the same `| Analyze | Typing: …` order in both modes.
+  const hasAnalyzeSlot = showAnalyzeButton || showViewAnalyticsButton
+  const hasLeadingButtons = hasAnalyzeSlot || hasTypingGroup
 
   return (
     <>
@@ -173,7 +178,18 @@ export function StatusBar({
             {t('app.analyzeTab')}
           </button>
         )}
-        {showAnalyzeButton && hasTypingGroup && (
+        {showViewAnalyticsButton && (
+          <button
+            type="button"
+            data-testid="status-view-analytics"
+            className={`${TYPING_TEST_INACTIVE} disabled:cursor-not-allowed disabled:opacity-40`}
+            disabled={viewAnalyticsDisabled}
+            onClick={onViewAnalytics}
+          >
+            {t('app.analyzeTab')}
+          </button>
+        )}
+        {hasAnalyzeSlot && hasTypingGroup && (
           <span className="shrink-0 text-edge">|</span>
         )}
         {hasTypingGroup && (
@@ -188,17 +204,6 @@ export function StatusBar({
             onClick={onViewOnlyChange}
           >
             {t('statusBar.typingViewShort')}
-          </button>
-        )}
-        {typingTestMode && onViewAnalytics && (
-          <button
-            type="button"
-            data-testid="status-view-analytics"
-            className={`${TYPING_TEST_INACTIVE} disabled:cursor-not-allowed disabled:opacity-40`}
-            disabled={viewAnalyticsDisabled}
-            onClick={onViewAnalytics}
-          >
-            {t('app.analyzeTab')}
           </button>
         )}
         {showTypingTestButton && (

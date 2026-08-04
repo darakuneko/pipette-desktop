@@ -247,6 +247,31 @@ describe('StatusBar', () => {
       expect(typingTestIdx).toBeLessThan(recordIdx)
     })
 
+    it('keeps the typing-test-mode Analyze (view-analytics) before the Typing group too', () => {
+      render(
+        <StatusBar
+          {...defaultProps}
+          typingTestMode={true}
+          onViewAnalytics={vi.fn()}
+          onTypingTestModeChange={vi.fn()}
+          onTypingRecordEnabledChange={vi.fn()}
+          hasMatrixTester={true}
+        />
+      )
+      const rightSection = screen.getByTestId('status-bar').lastElementChild!
+      const items = Array.from(rightSection.children)
+      const analyzeIdx = items.findIndex(el => el.getAttribute('data-testid') === 'status-view-analytics')
+      const groupLabelIdx = items.findIndex(el => el.textContent === 'Typing:')
+      const typingTestIdx = items.findIndex(el => el.getAttribute('data-testid') === 'typing-test-button')
+      const recordIdx = items.findIndex(el => el.getAttribute('data-testid') === 'typing-record-button')
+      expect(analyzeIdx).toBeGreaterThanOrEqual(0)
+      expect(analyzeIdx).toBeLessThan(groupLabelIdx)
+      // The separator between the Analyze slot and the group label exists.
+      expect(items.slice(analyzeIdx + 1, groupLabelIdx).some(el => el.textContent === '|')).toBe(true)
+      expect(groupLabelIdx).toBeLessThan(typingTestIdx)
+      expect(typingTestIdx).toBeLessThan(recordIdx)
+    })
+
     it('shows a separator between the Analyze button and the Typing group', () => {
       render(
         <StatusBar
