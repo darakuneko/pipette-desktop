@@ -41,6 +41,8 @@ import {
   KEYCODES_BEHAVIOR,
   KEYCODES_LIGHTING,
   KEYCODES_SYSTEM,
+  KEYCODES_SYSTEM_APP,
+  KEYCODES_SYSTEM_BROWSER,
   KEYCODES_MIDI_BASIC,
   KEYCODES_MIDI_ADVANCED,
   KEYCODES_MACRO_BASE,
@@ -361,6 +363,14 @@ describe('Core keycode system', () => {
     expect(KEYCODES_HIDDEN.length).toBe(256)
     expect(KEYCODES_MIDI_BASIC.length).toBeGreaterThan(10)
     expect(KEYCODES_MIDI_ADVANCED.length).toBeGreaterThan(10)
+  })
+
+  it('KEYCODES_SYSTEM_APP and KEYCODES_SYSTEM_BROWSER split the former appBrowser group without losing keycodes', () => {
+    expect(KEYCODES_SYSTEM_APP.map((kc) => kc.qmkId)).toEqual(['KC_CALC', 'KC_MAIL', 'KC_MSEL', 'KC_MYCM', 'KC_BRIU', 'KC_BRID'])
+    expect(KEYCODES_SYSTEM_BROWSER.map((kc) => kc.qmkId)).toEqual(['KC_WSCH', 'KC_WHOM', 'KC_WBAK', 'KC_WFWD', 'KC_WSTP', 'KC_WREF', 'KC_WFAV'])
+    for (const kc of [...KEYCODES_SYSTEM_APP, ...KEYCODES_SYSTEM_BROWSER]) {
+      expect(KEYCODES_SYSTEM).toContain(kc)
+    }
   })
 })
 
