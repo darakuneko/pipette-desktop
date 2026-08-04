@@ -131,6 +131,18 @@ export function romajiDetail(config: TypingTestConfig): RomajiDetailSettings | u
   return config.mode === 'quote' ? undefined : config.romaji
 }
 
+/** True when a LINE-END word must hold until Enter commits it (the
+ *  Task-romaji-line-end-enter behaviour) rather than auto-advancing on
+ *  completion like every other word. Reads `RomajiDetailSettings.lineEndEnter`
+ *  via `romajiDetail` — default ON: undefined counts as required, and only
+ *  an explicit `false` (the Romaji Settings modal's new toggle) opts out.
+ *  The single gate both `handleRomajiChar`'s complete-branch hold and
+ *  `processRomajiKeyEvent`'s Enter-at-line-end branch check, so the two stay
+ *  in sync by construction rather than by convention. */
+function isLineEndEnterRequired(config: TypingTestConfig): boolean {
+  return romajiDetail(config)?.lineEndEnter !== false
+}
+
 /** Romaji-mode key semantics, dispatched once from `processKeyEvent`'s
  *  updater instead of checking `isRomajiInputActive` separately at each key
  *  kind. Space and Backspace are always no-ops in this mode — rejected
@@ -139,7 +151,14 @@ export function romajiDetail(config: TypingTestConfig): RomajiDetailSettings | u
  *  a no-op everywhere EXCEPT to commit a LINE-END word (`state.lineBreaks`)
  *  whose romaji has reached `isComplete()` — such a word holds instead of
  *  auto-advancing on completion (see `handleRomajiChar`), matching the
- *  non-romaji Enter-at-line-end convention (Task-romaji-line-end-enter). A
+ *  non-romaji Enter-at-line-end convention (Task-romaji-line-end-enter). Both
+ *  the hold and this commit are additionally gated on
+ *  `isLineEndEnterRequired` (the Romaji Settings modal's "Enter at line
+ *  ends" toggle, default on): when the user has turned it off, a line-end
+ *  word never holds in the first place (see `handleRomajiChar`), so
+ *  `currentWordIndex` has already moved past it by the time Enter is
+ *  pressed — the explicit check below is belt-and-suspenders documentation
+ *  of that invariant, not a second independent gate. A
  *  printable character starts the run from 'waiting' before being fed to
  *  the matcher; Enter never starts the run from 'waiting' (mirrors the
  *  pre-existing romaji policy of only a printable char doing so). Every
@@ -153,7 +172,7 @@ export function processRomajiKeyEvent(state: TypingTestState, key: string, confi
     if (state.currentWordIndex >= state.words.length) return state
     const word = state.words[state.currentWordIndex]
     const matcher = buildRomajiMatcher(word, state.romajiKeystrokes, romajiDetail(config))
-    if (matcher.isComplete() && state.lineBreaks.has(state.currentWordIndex)) {
+    if (matcher.isComplete() && state.lineBreaks.has(state.currentWordIndex) && isLineEndEnterRequired(config)) {
       return commitRomajiWord(state, matcher, config, language)
     }
     return state
@@ -197,14 +216,18 @@ function commitRomajiWord(state: TypingTestState, matcher: RomajiMatcher, config
  *  matcher's position untouched (nothing is appended to currentInput or
  *  the keystroke buffer). Completing the whole word auto-advances via
  *  `commitRomajiWord` — UNLESS the current word is a LINE-END word
- *  (`state.lineBreaks`, real lines from tatoeba/fileImport): that word
- *  instead holds (keystrokes still accumulate, so a printable char typed
- *  while held keeps flowing through the matcher normally — see below) until
- *  `processRomajiKeyEvent`'s Enter handler commits it, matching the
- *  non-romaji Enter-at-line-end convention (Task-romaji-line-end-enter).
- *  Space is blocked in this mode regardless (see `processRomajiKeyEvent`),
- *  so there is no separate Space-triggered finalize path to keep in sync
- *  for non-line-end words.
+ *  (`state.lineBreaks`, real lines from tatoeba/fileImport) AND
+ *  `isLineEndEnterRequired(config)` (the Romaji Settings modal's "Enter at
+ *  line ends" toggle, default on): such a word instead holds (keystrokes
+ *  still accumulate, so a printable char typed while held keeps flowing
+ *  through the matcher normally — see below) until `processRomajiKeyEvent`'s
+ *  Enter handler commits it, matching the non-romaji Enter-at-line-end
+ *  convention (Task-romaji-line-end-enter). With the toggle off, a line-end
+ *  word commits immediately on completion exactly like any other word, and
+ *  Enter goes back to being a no-op everywhere (see
+ *  `processRomajiKeyEvent`'s doc comment). Space is blocked in this mode
+ *  regardless (see `processRomajiKeyEvent`), so there is no separate
+ *  Space-triggered finalize path to keep in sync for non-line-end words.
  *
  *  Mistake tracking (romaji mode): a rejected keystroke marks
  *  `romajiSegmentErred` true for the kana segment currently in progress,
@@ -257,7 +280,7 @@ function handleRomajiChar(state: TypingTestState, char: string, config: TypingTe
   }
 
   if (result === 'complete' && matcher.isComplete()) {
-    if (state.lineBreaks.has(state.currentWordIndex)) return held
+    if (state.lineBreaks.has(state.currentWordIndex) && isLineEndEnterRequired(config)) return held
     return commitRomajiWord(held, matcher, config, language)
   }
 

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.72",
+  "version": "0.1.73",
   "name": "English",
   "common": {
     "save": "Save",
@@ -337,6 +337,8 @@
           "lower": "romaji"
         },
         "guideLinesLabel": "Lines shown",
+        "lineEndEnterLabel": "Require Enter at line ends",
+        "lineEndEnterHint": "When on, a line-end word holds until Enter commits it. Turn off to auto-advance like any other word.",
         "guideLabel": "Guide spelling pattern",
         "guideHint": "Display only — typing any accepted pattern is still correct",
         "inputLabel": "Accepted input patterns",

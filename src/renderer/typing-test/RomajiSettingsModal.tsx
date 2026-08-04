@@ -67,6 +67,7 @@ function pruneRomaji(next: RomajiDetailSettings): RomajiDetailSettings | undefin
   if (next.guideStyles !== undefined && next.guideStyles.length > 0) pruned.guideStyles = next.guideStyles
   if (next.disabledStyles !== undefined && next.disabledStyles.length > 0) pruned.disabledStyles = next.disabledStyles
   if (next.guideLineCount !== undefined && next.guideLineCount !== 1) pruned.guideLineCount = next.guideLineCount
+  if (next.lineEndEnter !== undefined && next.lineEndEnter !== true) pruned.lineEndEnter = next.lineEndEnter
   return Object.keys(pruned).length > 0 ? pruned : undefined
 }
 
@@ -94,6 +95,9 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
   const enabled = isRomajiInputEnabled(config)
   const caseStyle = romaji.caseStyle ?? 'lower'
   const guideLineCount = romaji.guideLineCount ?? 1
+  // Default ON (Enter required at line ends) — mirrors `enabled` above:
+  // undefined counts as the default, only an explicit false flips it.
+  const lineEndEnter = romaji.lineEndEnter !== false
   const guideStyles = new Set(romaji.guideStyles ?? [])
   const disabledStyles = new Set(romaji.disabledStyles ?? [])
 
@@ -170,6 +174,19 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
             label={t('editor.typingTest.romaji.toggle')}
             on={enabled}
             onToggle={() => onConfigChange({ ...config, romajiInput: !enabled })}
+          />
+
+          {/* Line-end Enter — whether a line-end word (tatoeba/fileImport
+              real lines) holds until Enter commits it, or auto-advances
+              like every other word. Boolean, so same ToggleRow pattern as
+              the master enable above rather than the button-row pattern
+              used by Displayed case / Lines shown. */}
+          <ToggleRow
+            testid="romaji-line-end-enter"
+            label={t('editor.typingTest.romajiSettings.lineEndEnterLabel')}
+            title={t('editor.typingTest.romajiSettings.lineEndEnterHint')}
+            on={lineEndEnter}
+            onToggle={() => applyRomaji({ lineEndEnter: !lineEndEnter })}
           />
 
           {/* Display case — sample text itself is the label (ROMAJI / Romaji

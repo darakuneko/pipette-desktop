@@ -93,6 +93,9 @@ function validateRomajiDetailSettings(raw: unknown): RomajiDetailSettings | unde
   ) {
     result.guideLineCount = obj.guideWordCount
   }
+  if (typeof obj.lineEndEnter === 'boolean') {
+    result.lineEndEnter = obj.lineEndEnter
+  }
   return Object.keys(result).length > 0 ? result : undefined
 }
 

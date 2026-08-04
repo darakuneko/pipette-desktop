@@ -53,8 +53,10 @@ let fileImportRomajiCounter = 0
  *  text, possibly multi-line so `parseFileImportText` produces genuine
  *  `lineBreaks` (unlike the monkeytype words/time configs above, whose
  *  `lineBreaks` is always empty). This is the harness for the line-end
- *  Enter semantics tests below (Task-romaji-line-end-enter). */
-async function renderFileImportRomaji(text: string) {
+ *  Enter semantics tests below (Task-romaji-line-end-enter). `romaji` is an
+ *  optional detail-settings passthrough — used by the "Enter at line ends"
+ *  toggle tests to set `lineEndEnter: false`. */
+async function renderFileImportRomaji(text: string, romaji?: { lineEndEnter?: boolean }) {
   const textId = `line-end-${fileImportRomajiCounter++}`
   mockTypingTestTextStoreGet.mockResolvedValue({
     success: true,
@@ -62,7 +64,7 @@ async function renderFileImportRomaji(text: string) {
   })
   const { result } = renderHook(() => useTypingTest(undefined, 'english'))
   await act(async () => {
-    await result.current.setConfig({ mode: 'fileImport', textId, romajiInput: true })
+    await result.current.setConfig({ mode: 'fileImport', textId, romajiInput: true, ...(romaji ? { romaji } : {}) })
   })
   return result
 }
@@ -830,5 +832,52 @@ describe('useTypingTest — romaji input mode (line-end Enter semantics)', () =>
     expect(result.current.state.currentWordIndex).toBe(3)
     press(result, 'Enter')
     expect(result.current.state.currentWordIndex).toBe(4)
+  })
+})
+
+// Task: the Romaji Settings modal's "Enter at line ends" toggle
+// (`RomajiDetailSettings.lineEndEnter`) lets the user turn OFF the
+// Task-romaji-line-end-enter hold above — with the toggle off, a line-end
+// word auto-advances on completion just like any other word, and Enter goes
+// back to being a no-op everywhere. Default (undefined/true) behaviour is
+// covered exhaustively by the describe block above and stays unmodified.
+describe('useTypingTest — romaji input mode (lineEndEnter: false auto-advances)', () => {
+  it('auto-advances a line-end word once its romaji completes, without Enter', async () => {
+    const result = await renderFileImportRomaji('か\nか', { lineEndEnter: false })
+    expect([...result.current.state.lineBreaks]).toEqual([0])
+
+    type(result, 'ka')
+
+    expect(result.current.state.currentWordIndex).toBe(1)
+    expect(result.current.state.wordResults).toEqual([{ word: 'か', typed: 'ka', correct: true }])
+    expect(result.current.state.romajiKeystrokes).toBe('')
+  })
+
+  it('Enter is a no-op once the toggle is off', async () => {
+    const result = await renderFileImportRomaji('か\nか', { lineEndEnter: false })
+    type(result, 'ka') // word 0 already auto-advanced to word 1
+
+    press(result, 'Enter')
+
+    expect(result.current.state.currentWordIndex).toBe(1)
+    expect(result.current.state.wordResults).toEqual([{ word: 'か', typed: 'ka', correct: true }])
+  })
+
+  it('the run finishes without any Enter presses when every line-end word auto-advances', async () => {
+    const result = await renderFileImportRomaji('か き\nさ', { lineEndEnter: false })
+    expect([...result.current.state.lineBreaks]).toEqual([1])
+
+    type(result, 'ka')
+    expect(result.current.state.currentWordIndex).toBe(1)
+    type(result, 'ki') // word 1, line-end — auto-advances (toggle off)
+    expect(result.current.state.currentWordIndex).toBe(2)
+    type(result, 'sa')
+
+    expect(result.current.state.status).toBe('finished')
+    expect(result.current.state.wordResults).toEqual([
+      { word: 'か', typed: 'ka', correct: true },
+      { word: 'き', typed: 'ki', correct: true },
+      { word: 'さ', typed: 'sa', correct: true },
+    ])
   })
 })
