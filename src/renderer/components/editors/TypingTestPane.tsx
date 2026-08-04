@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TypingTestView } from '../../typing-test/TypingTestView'
+import { TypingTestControlsRow } from '../../typing-test/TypingTestControlsRow'
 import { buildResultNameChips } from '../../typing-test/result-builder'
 import { PauseResumeModal } from '../../typing-test/PauseResumeModal'
 import { TypingRecordingConsentModal } from '../../typing-test/TypingRecordingConsentModal'
@@ -55,6 +56,7 @@ export function TypingTestPane({
   onToggleSaveUnnamed,
   finishedResult,
   onNameFinishedResult,
+  lastFinishedLog,
   comparisonBaselines,
   onComparisonBaselineChange,
   settingsPanelOpen = true,
@@ -183,6 +185,16 @@ export function TypingTestPane({
     setViewOnlyControlsOpen(true)
   }, [])
 
+  // Completion screen (Plan-completion-timeline-view PR-B): the keymap
+  // pane + its layer-tracking note describe the KEYMAP, which is no
+  // longer the point once a run finishes and the reading window gives
+  // way to the inline keystroke timeline (see TypingTestView) — hidden
+  // alongside it. Editor-only: view-only's own keyboard display is
+  // deliberately independent of both `hideKeymap` and this (see the
+  // existing "Keymap hidden only in the editor view" comment below), so
+  // a view-only run reaching 'finished' keeps showing its keyboard.
+  const hideKeyboardForFinish = !viewOnly && typingTest.state.status === 'finished'
+
   return (
     <>
       {showConsentModal && (
@@ -239,11 +251,18 @@ export function TypingTestPane({
           handleComparisonChange={handleComparisonChange}
         />
       )}
-      <div className={viewOnly ? 'contents' : 'flex min-w-0 flex-1 flex-col items-center'}>
+      {/* `min-h-0` (added alongside the pre-existing `flex-1`) is part of
+          the completion screen's flex-height chain — see
+          TypingTestView.tsx's own "Completion screen" comment for the
+          full chain this is one link of. Without it, this flex item
+          defaults to `min-height: auto` (its own content's natural
+          height), which can grow past what its parent (KeymapEditor's
+          `overflow-auto` content pane, several levels up) actually has
+          available, instead of correctly deferring to it. */}
+      <div className={viewOnly ? 'contents' : 'flex min-h-0 min-w-0 flex-1 flex-col items-center'}>
       {!viewOnly && (
         <TypingTestView
           hideStatsRow={hideStatsRow}
-          hideControls={hideControls}
           comparison={comparison}
           state={typingTest.state}
           wpm={typingTest.wpm}
@@ -273,6 +292,8 @@ export function TypingTestPane({
           onResume={() => setShowResumeModal(true)}
           hasSavedMemory={hasSavedMemory}
           lineSnapshotRef={lineSnapshotRef}
+          lastFinishedLog={lastFinishedLog}
+          finishedResult={finishedResult}
         />
       )}
       <div
@@ -293,8 +314,10 @@ export function TypingTestPane({
           <div className="shrink-0">
           <div className="w-fit">
           {/* Keymap hidden only in the editor view — view-only mode is
-              keyboard-focused, so the toggle never applies there. */}
-          {!(hideKeymap && !viewOnly) && (
+              keyboard-focused, so the toggle never applies there. Same
+              editor-only carve-out for the finished-state hide (see
+              `hideKeyboardForFinish`'s own doc comment above). */}
+          {!(hideKeymap && !viewOnly) && !hideKeyboardForFinish && (
             <KeyboardPane
               paneId="primary"
               isActive={false}
@@ -332,8 +355,10 @@ export function TypingTestPane({
               {t('editor.typingTest.heatmap.legend', { minutes: heatmapWindowMin ?? 5 })}
             </p>
           )}
-          {/* Layer-tracking note describes the keymap, so hide it with the keymap. */}
-          {!viewOnly && !hideKeymap && (
+          {/* Layer-tracking note describes the keymap, so hide it with the
+              keymap — and, like the keymap itself, with the finished
+              completion screen. */}
+          {!viewOnly && !hideKeymap && !hideKeyboardForFinish && (
             <p data-testid="typing-test-layer-note" className="text-center text-xs text-content-muted">
               {t('editor.typingTest.layerNote')}
             </p>
@@ -341,6 +366,29 @@ export function TypingTestPane({
         </div>
         </div>
       </div>
+      {/* Non-finished controls row (Next Test / Pause / Resume / Restart) —
+          moved here, BELOW the keyboard pane and its layer note, so the
+          reading window sits directly above the keyboard the user is
+          actually typing on. The finished-state row is unaffected — it
+          still renders inside TypingTestView, at the very bottom of the
+          completion screen (below the timeline panel), since the keyboard
+          itself is hidden once finished (hideKeyboardForFinish). Gated the
+          same way the old in-TypingTestView row was: !viewOnly (view-only
+          never showed this row) and !hideControls (the "operation"
+          toggle), plus the finished check TypingTestView itself no longer
+          needs to make since this row never renders for it. */}
+      {!viewOnly && typingTest.state.status !== 'finished' && !hideControls && (
+        <div className="mt-2 flex w-full justify-center">
+          <TypingTestControlsRow
+            state={typingTest.state}
+            config={typingTest.config}
+            onStart={() => typingTest.restart()}
+            onPause={() => onPauseTest?.()}
+            onResume={() => setShowResumeModal(true)}
+            hasSavedMemory={hasSavedMemory}
+          />
+        </div>
+      )}
       </div>
       </div>
       {viewOnly && (

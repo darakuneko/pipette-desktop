@@ -1,5 +1,5 @@
 {
-  "version": "0.1.65",
+  "version": "0.1.67",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -270,7 +270,6 @@
       "exitTypingMode": "試練を終える",
       "restart": "初めから",
       "nextTest": "次なる試練へ",
-      "complete": "成就",
       "collapseSettings": "設定を畳む",
       "expandSettings": "設定を広げる",
       "keymapToggle": "配列表",
@@ -555,7 +554,8 @@
             "leadIn": "ワード前の間",
             "blankLine": "間（250ms超、圧縮して表示）",
             "leadInLine": "行前の間",
-            "correctedNote": "誤りの印には提出前に訂正された打鍵も含まれております。印があっても正確度100%となることがございます。"
+            "correctedNote": "誤りの印には提出前に訂正された打鍵も含まれております。印があっても正確度100%となることがございます。",
+            "infoAriaLabel": "凡例の補足情報"
           },
           "axisNote": "間は軸上で圧縮して表示しておりますが、表示される時間はいずれも実際の値でございます。",
           "correlationUnreliable": "このランは正誤の印が不正確な場合がございます（IME変換を経た入力が含まれております）。",
@@ -586,7 +586,8 @@
         "mistakesLabel": "過ちの文字",
         "errorSubstitutions": "置換 {{count}}",
         "errorOmissions": "脱字 {{count}}",
-        "errorInsertions": "衍字 {{count}}"
+        "errorInsertions": "衍字 {{count}}",
+        "timelineConsentHint": "打鍵タイムラインをご覧いただくには、タイピングの記録をお許しくださいませ。"
       }
     }
   },

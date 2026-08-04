@@ -19,8 +19,12 @@ describe('clampDisplayLines', () => {
   })
   it('clamps below/above the range', () => {
     expect(clampDisplayLines(0)).toBe(DISPLAY_LINES_MIN)
-    expect(clampDisplayLines(1)).toBe(DISPLAY_LINES_MIN)
+    expect(clampDisplayLines(-5)).toBe(DISPLAY_LINES_MIN)
     expect(clampDisplayLines(99)).toBe(DISPLAY_LINES_MAX)
+  })
+  it('accepts 1 (a single visible line) without clamping it upward', () => {
+    expect(DISPLAY_LINES_MIN).toBe(1)
+    expect(clampDisplayLines(1)).toBe(1)
   })
   it('rounds fractional values', () => {
     expect(clampDisplayLines(4.6)).toBe(5)

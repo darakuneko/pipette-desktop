@@ -105,6 +105,32 @@
   }
 }
 
+/* Line timeline header pinning (KeystrokeTimelinePanel's scrollport +
+   LineTimelineRow.tsx): only the SVG bar strip below each row's header
+   should scroll/stretch with zoom — the header itself (index badge + line
+   text + right-aligned stats + optional romaji sub-line) must stay
+   pinned to the scrollport's own VISIBLE width at all times, even though
+   its row (a flex child stretched to the zoomed canvas's width) can be
+   far wider than the viewport. `.keystroke-timeline-scrollport` opts the
+   scrollport into `container-type: inline-size` so `100cqw` below
+   resolves to ITS width (the visible viewport, unaffected by zoom), not
+   the row's own zoomed width. `.line-timeline-header-sticky` then pins
+   the header horizontally (`position: sticky; left: 0`) within that
+   scrollport as the user scrolls right, and caps its own width to the
+   viewport so the header's `ml-auto` stats span lands at the visible
+   right edge, not the zoomed row's actual (offscreen) right edge. Applied
+   to the LINE view only — the word view's analogous per-word header (see
+   word-timeline-row.tsx) is a separate component with its own, shorter
+   stats string that hasn't been reported as scrolling out of view. */
+.keystroke-timeline-scrollport {
+  container-type: inline-size;
+}
+.line-timeline-header-sticky {
+  position: sticky;
+  left: 0;
+  width: 100cqw;
+}
+
 /* Interactive elements use pointer cursor */
 button:not(:disabled),
 a,

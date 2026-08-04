@@ -28,6 +28,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import type { RefObject } from 'react'
 import { RunLogRecorder, type RunLogRecordContext, type RunLogFinishMeta } from '../../typing-test/run-log-recorder'
 import type { TypingAnalyticsEventPayload } from '../../../shared/types/typing-analytics'
+import type { RunKeystrokeLog } from '../../../shared/types/typing-run-log'
 import type { WordResult } from '../../typing-test/run-state'
 
 export interface UseRunLogRecorderOptions {
@@ -36,7 +37,11 @@ export interface UseRunLogRecorderOptions {
   /** Active keyboard's uid, if any — the buffer is discarded (never
    *  saved) whenever this changes. */
   keyboardUid?: string
-  /** `useInputModes`'s own testLabelRef, forwarded BY REFERENCE (not by
+  /** `useInputModes`'s own `runLogLabelRef` — the run-log's OWN, broader
+   *  tag (running OR armed-waiting; see that ref's own doc comment in
+   *  useInputModes.ts and `PreparedAnalyticsContext`'s in
+   *  use-typing-analytics-sink.ts for why this is a SEPARATE ref from
+   *  `testLabelRef`, not the same one), forwarded BY REFERENCE (not by
    *  value): `noteRegistration` is called directly as useTypingTest's
    *  option, with no notion of tagging, so it must read the label live at
    *  invocation time rather than whatever it was when this hook last
@@ -53,7 +58,14 @@ export interface UseRunLogRecorderReturn {
   noteCharContext: (
     runId: string, wordIndex: number, getExpectedChar: () => string | undefined, windowFocused: boolean,
   ) => void
-  finishAndSave: (uid: string | undefined, wordResults: readonly WordResult[], meta: Omit<RunLogFinishMeta, 'uid'>) => void
+  /** Returns the just-finished log (whatever `RunLogRecorder.finish`
+   *  produced), or null when there's no uid to save under or nothing was
+   *  actually saveable (see `finish()`'s own doc comment for every null
+   *  case) — the caller (`useTypingTestResultSave`) surfaces this as
+   *  `lastFinishedLog` for the completion screen's inline timeline panel
+   *  (Plan-completion-timeline-view PR-B), no IPC round-trip needed since
+   *  this is the exact object already handed to `typingRunLogSave`. */
+  finishAndSave: (uid: string | undefined, wordResults: readonly WordResult[], meta: Omit<RunLogFinishMeta, 'uid'>) => RunKeystrokeLog | null
   /** Discard `runId`'s buffer and block it from being re-buffered later
    *  under the same id — see the module doc comment's `discardRun`
    *  bullet and run-log-recorder.ts's `discardRun()`. */
@@ -112,13 +124,14 @@ export function useRunLogRecorder({
 
   const finishAndSave = useCallback((
     uid: string | undefined, wordResults: readonly WordResult[], meta: Omit<RunLogFinishMeta, 'uid'>,
-  ) => {
+  ): RunKeystrokeLog | null => {
     if (!uid) {
       recorderRef.current.discard()
-      return
+      return null
     }
     const log = recorderRef.current.finish(wordResults, { ...meta, uid })
     if (log) void window.vialAPI.typingRunLogSave(uid, log)
+    return log
   }, [])
 
   const discardRun = useCallback((runId: string) => {

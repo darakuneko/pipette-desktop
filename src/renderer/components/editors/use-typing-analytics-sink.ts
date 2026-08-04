@@ -27,11 +27,39 @@ export function typingTestAnalyticsLabel(
 /** Context captured by prepareAnalyticsEvent at press time and carried
  *  opaquely through useTypingTest's ordering queue to emitAnalyticsEvent.
  *  `typingTest`/`runId` are null for ordinary REC input (untagged); an
- *  editor typing-test keystroke always has both set together. */
+ *  editor typing-test keystroke always has both set together.
+ *
+ *  GATE SPLIT (codex safety review of the missing-first-keystroke fix):
+ *  `typingTest` is the narrow, PER-MINUTE-ANALYTICS tag — non-null only
+ *  while `status === 'running'`, restored to its exact original (#203)
+ *  meaning. `runLogTest` is a SEPARATE, broader tag used ONLY by the
+ *  run-log recorder — non-null while running OR already "armed waiting"
+ *  for the run's first keystroke (see useInputModes.ts's
+ *  `runLogLabelRef`/`isArmedWaiting`). The two are deliberately allowed
+ *  to disagree (`runLogTest` non-null while `typingTest` is still null)
+ *  for exactly one narrow window per run — the armed-waiting keystrokes
+ *  before `status` flips to `running` — so the run-log can capture that
+ *  run's own first keystroke without also reopening the per-minute
+ *  pipeline's pre-start cutoff (a run-log-only event must never reach
+ *  `window.vialAPI.typingAnalyticsEvent` — see `perMinuteAuthorized` and
+ *  `emitAnalyticsEvent`'s own gate). */
 export interface PreparedAnalyticsContext {
   keyboard: TypingAnalyticsKeyboard
   typingTest: string | null
+  /** Run-log-only tag — see the module doc comment above. Always non-null
+   *  whenever `typingTest` is (running implies armed), but can be
+   *  non-null on its own during armed-waiting. */
+  runLogTest: string | null
+  /** Shared run id for both `typingTest` and `runLogTest` — the exact
+   *  same run either way, so one field suffices; non-null whenever
+   *  EITHER tag is non-null. */
   runId: string | null
+  /** Whether this event may reach the per-minute analytics pipeline at
+   *  all (REC toggle active OR `typingTest` non-null) — independent of
+   *  `runLogTest`. `emitAnalyticsEvent` must skip
+   *  `window.vialAPI.typingAnalyticsEvent` entirely when this is false,
+   *  even though `runLog.record` still runs — see its own gate for why. */
+  perMinuteAuthorized: boolean
   /** Window-focus state snapshotted at press time (see useTypingTest's
    *  `onPrepareAnalyticsEvent` doc comment) — carried through to
    *  `emitAnalyticsEvent` so the run-log recorder's defense-in-depth gate
@@ -76,8 +104,16 @@ export interface UseTypingAnalyticsSinkReturn {
    *  visible to the same render's queue processing. */
   testLabelRef: RefObject<string | null>
   /** Travels with `testLabelRef` (run id) so each run's keystrokes are
-   *  separable — same host-assigns-render-phase contract. */
+   *  separable — same host-assigns-render-phase contract. Also doubles
+   *  as `runLogLabelRef`'s own run id (see that ref's doc comment): both
+   *  reference the exact same run, so one id ref suffices. */
   testRunIdRef: RefObject<string | null>
+  /** GATE SPLIT: run-log-only tag, broader than `testLabelRef` — see
+   *  `PreparedAnalyticsContext`'s own doc comment for why these two must
+   *  stay separate. Same host-assigns-render-phase contract as
+   *  `testLabelRef`; passed to `useRunLogRecorder` as its
+   *  `typingTestLabelRef` INSTEAD of `testLabelRef`. */
+  runLogLabelRef: RefObject<string | null>
   prepareAnalyticsEvent: (kind: 'matrix' | 'char', windowFocused: boolean) => PreparedAnalyticsContext | null
   emitAnalyticsEvent: (context: PreparedAnalyticsContext, payload: TypingAnalyticsEventPayload) => Promise<void>
   flushAfterPendingEmits: (drained: Promise<void>, uid: string) => void
@@ -111,15 +147,22 @@ export function useTypingAnalyticsSink({
   const recordingActiveRef = useRef(false)
   const testLabelRef = useRef<string | null>(null)
   const testRunIdRef = useRef<string | null>(null)
+  // GATE SPLIT: the run-log's OWN, broader tag — see
+  // `PreparedAnalyticsContext`'s doc comment. Kept as a fully separate ref
+  // (not derived from testLabelRef here) because the host
+  // (useInputModes.ts) computes it from a different condition
+  // (running OR armed-waiting) than testLabelRef (running only).
+  const runLogLabelRef = useRef<string | null>(null)
   const onRecKeystrokeRef = useRef(onRecKeystroke)
   onRecKeystrokeRef.current = onRecKeystroke
   // Per-run raw keystroke log recorder (see run-log-recorder.ts and
   // use-run-log-recorder.ts) — one instance per editor session, mirroring
-  // matrixQueueRef's construction style in useTypingTest.ts.
+  // matrixQueueRef's construction style in useTypingTest.ts. Fed
+  // `runLogLabelRef`, NOT `testLabelRef` — see the GATE SPLIT note above.
   const runLog = useRunLogRecorder({
     recordingConsentAccepted,
     keyboardUid: typingRecordKeyboard?.uid,
-    typingTestLabelRef: testLabelRef,
+    typingTestLabelRef: runLogLabelRef,
   })
   // The sink used to read recordingActiveRef / testLabelRef / testRunIdRef
   // at the moment an event was actually sent, but a matrix event can now
@@ -140,7 +183,17 @@ export function useTypingAnalyticsSink({
     const keyboard = keyboardRef.current
     if (!keyboard) return null
     const label = testLabelRef.current
-    if (!recordingActiveRef.current && !label) return null
+    const runLogLabel = runLogLabelRef.current
+    // GATE SPLIT: `perMinuteAuthorized` is EXACTLY the original (#203)
+    // authorization condition for the per-minute analytics pipeline —
+    // REC toggle active, or a running editor test. `runLogLabel` (broader
+    // — see PreparedAnalyticsContext's doc comment) can ALSO keep this
+    // function from returning null on its own, during armed-waiting, but
+    // must never by itself authorize a per-minute send — see
+    // emitAnalyticsEvent's own `perMinuteAuthorized` gate below, which is
+    // what actually enforces that split.
+    const perMinuteAuthorized = recordingActiveRef.current || label !== null
+    if (!perMinuteAuthorized && !runLogLabel) return null
     // Tray keystroke count tracks REC only (untagged matrix events), not
     // the editor typing-test practice mode — matches recordingActive's
     // narrower definition (typingRecordEnabled && typingTestViewOnly).
@@ -148,17 +201,18 @@ export function useTypingAnalyticsSink({
     // leaves the queue: the count is a live tray readout of physical
     // keystrokes, and a masked key can otherwise sit unresolved for up to
     // the tapping term before its emit — the user would see the tray lag
-    // behind their own typing. Firing once per authorized press here
-    // matches the previous call frequency (once per event that used to
-    // reach the sink) without that lag, and can't double-fire or fire for
-    // an unauthorized press since this whole branch is unreachable when
-    // this function returns null above.
-    if (!label && kind === 'matrix') {
+    // behind their own typing. Explicitly re-checks recordingActiveRef
+    // (not just `!label`) because reaching this line no longer implies
+    // recordingActiveRef is true — a run-log-only armed-waiting press
+    // (recordingActiveRef false, label null, runLogLabel non-null) must
+    // never count toward the REC tray, only genuine untagged REC presses.
+    if (!label && kind === 'matrix' && recordingActiveRef.current) {
       onRecKeystrokeRef.current?.()
     }
-    // A test keystroke carries both its material label and its run id; REC
-    // input carries neither (so it lands as the null run / null test).
-    return { keyboard, typingTest: label, runId: label ? testRunIdRef.current : null, windowFocused }
+    // A test keystroke (either tag) carries the shared run id; REC input
+    // carries none (so it lands as the null run).
+    const runId = (label !== null || runLogLabel !== null) ? testRunIdRef.current : null
+    return { keyboard, typingTest: label, runLogTest: runLogLabel, runId, perMinuteAuthorized, windowFocused }
   }, [])
   // Ordering contract, not an optimization: chaining every emit behind the
   // previous one's IPC guarantees at most one typingAnalyticsEvent invoke
@@ -184,10 +238,19 @@ export function useTypingAnalyticsSink({
   const chainRef = useRef<Promise<void>>(Promise.resolve())
   const emitAnalyticsEvent = useCallback((context: PreparedAnalyticsContext, payload: TypingAnalyticsEventPayload): Promise<void> => {
     // Run-keystroke-log capture — gates itself independently (see
-    // RunLogRecordContext); a no-op for ordinary REC input (context.typingTest
-    // null), without recording consent, or without window focus (see
-    // context.windowFocused's doc comment).
-    runLog.record({ typingTestLabel: context.typingTest, runId: context.runId, windowFocused: context.windowFocused }, payload)
+    // RunLogRecordContext), fed `runLogTest` (the broader, run-log-only
+    // tag), NOT `typingTest` — a no-op for ordinary REC input
+    // (context.runLogTest null), without recording consent, or without
+    // window focus (see context.windowFocused's doc comment).
+    runLog.record({ typingTestLabel: context.runLogTest, runId: context.runId, windowFocused: context.windowFocused }, payload)
+    // GATE SPLIT: a run-log-only event (armed-waiting, `perMinuteAuthorized`
+    // false) must never reach the per-minute analytics pipeline — this is
+    // what restores #203's original pre-start cutoff for that pipeline
+    // (codex safety review P2) even though prepareAnalyticsEvent no longer
+    // returns null for it. `chainRef` is deliberately left untouched here:
+    // this event was never sent, so it has nothing to add to the IPC
+    // ordering chain.
+    if (!context.perMinuteAuthorized) return Promise.resolve()
     const event = context.typingTest
       ? { ...payload, keyboard: context.keyboard, typingTest: context.typingTest, runId: context.runId ?? undefined }
       : { ...payload, keyboard: context.keyboard }
@@ -235,6 +298,7 @@ export function useTypingAnalyticsSink({
     recordingActiveRef,
     testLabelRef,
     testRunIdRef,
+    runLogLabelRef,
     prepareAnalyticsEvent,
     emitAnalyticsEvent,
     flushAfterPendingEmits,

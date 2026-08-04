@@ -9,6 +9,7 @@ import type { TypingTestConfig } from '../../typing-test/types'
 import type { LineSnapshot } from '../../typing-test/TypingTestView'
 import type { TypingTestResult, TypingTestMemory } from '../../../shared/types/pipette-settings'
 import type { TypingAnalyticsKeyboard } from '../../../shared/types/typing-analytics'
+import type { RunKeystrokeLog } from '../../../shared/types/typing-run-log'
 import type { UseRunLogRecorderReturn } from './use-run-log-recorder'
 
 /** A run's config carries REAL line semantics (a newline in the source
@@ -122,6 +123,18 @@ export interface UseTypingTestResultSaveReturn {
   /** Name the just-finished result: persists a held unsaved result under the
    *  name (save-unnamed off; blank → discarded) or renames the saved latest. */
   nameFinishedResult: (name: string) => void
+  /** The in-memory log `runLog.finishAndSave` just built for the run that
+   *  finished (null when recording consent was off / view-only / nothing
+   *  saveable) — surfaced so the completion screen can render the shared
+   *  `KeystrokeTimelinePanel` inline, without an IPC round-trip for the
+   *  log it already holds (Plan-completion-timeline-view PR-B). Cleared
+   *  in the same `status !== 'finished'` branch that resets
+   *  `savedResultRef`, so a Next Test / Restart never leaves a stale run's
+   *  log rendering on the fresh one — callers should also check
+   *  `lastFinishedLog.runId` against the current run before rendering it
+   *  (see the codex-review note in Plan-completion-timeline-view.md), as
+   *  a belt-and-braces guard against the effect's own timing. */
+  lastFinishedLog: RunKeystrokeLog | null
 }
 
 /** Owns the auto-save-on-finish lifecycle for an editor typing test run:
@@ -153,6 +166,7 @@ export function useTypingTestResultSave({
   // names it (commitPendingResult), so an unnamed run is discarded.
   const savedResultRef = useRef(false)
   const [pendingUnnamedResult, setPendingUnnamedResult] = useState<TypingTestResult | null>(null)
+  const [lastFinishedLog, setLastFinishedLog] = useState<RunKeystrokeLog | null>(null)
   useEffect(() => {
     if (typingTestViewOnly) return
     if (typingTest.state.status === 'finished' && !savedResultRef.current && onSaveTypingTestResult) {
@@ -218,7 +232,7 @@ export function useTypingTestResultSave({
       // saves it (itself a no-op unless this run was actually
       // recorder-gated — see `record`'s own gate). Never
       // truncated-and-saved: finish() refuses instead.
-      runLog.finishAndSave(uid, typingTest.state.wordResults, {
+      const finishedLog = runLog.finishAndSave(uid, typingTest.state.wordResults, {
         runId: typingTest.state.runId,
         startedAtMs: typingTest.state.startTime ?? Date.now(),
         durationMs: elapsed,
@@ -232,6 +246,7 @@ export function useTypingTestResultSave({
         inFlightWord,
         lineBreaks: lineBreaksForLog,
       })
+      setLastFinishedLog(finishedLog)
       // A completed test makes any saved pause snapshot obsolete.
       if (savedMemoryRef.current) onMemoryChangeRef.current?.(undefined)
     }
@@ -240,6 +255,10 @@ export function useTypingTestResultSave({
       // Leaving the finished state (next test / restart) drops an unsaved,
       // still-unnamed result.
       if (pendingUnnamedResult) setPendingUnnamedResult(null)
+      // ...and the just-finished run's raw log, so the completion screen's
+      // timeline panel never renders a stale run's data once a fresh one
+      // starts (see `lastFinishedLog`'s own doc comment).
+      if (lastFinishedLog) setLastFinishedLog(null)
     }
   }, [typingTest.state.status, typingTest.state.startTime, typingTest.state.endTime,
     typingTest.state.correctChars, typingTest.state.incorrectChars,
@@ -249,7 +268,7 @@ export function useTypingTestResultSave({
     typingTest.state.currentInput, typingTest.state.romajiKeystrokes, typingTest.state.words,
     typingTest.wpm, typingTest.accuracy,
     typingTest.config, typingTest.language,
-    typingTestHistory, onSaveTypingTestResult, saveUnnamed, pendingUnnamedResult,
+    typingTestHistory, onSaveTypingTestResult, saveUnnamed, pendingUnnamedResult, lastFinishedLog,
     resetMatrixPressTracking, flushAfterPendingEmits, runLog.finishAndSave])
 
   // The just-finished result, exposed so the pane can build name chips: the
@@ -273,5 +292,5 @@ export function useTypingTestResultSave({
     if (date) onRenameTypingTestResult?.(date, name)
   }, [pendingUnnamedResult, onSaveTypingTestResult, onRenameTypingTestResult, typingTestHistory])
 
-  return { finishedResult, nameFinishedResult }
+  return { finishedResult, nameFinishedResult, lastFinishedLog }
 }

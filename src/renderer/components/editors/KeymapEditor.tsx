@@ -86,7 +86,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     matrixMode, pressedKeys, everPressedKeys, hasMatrixTester,
     handleMatrixToggle, handleTypingTestToggle,
     typingTest, handleTypingTestConfigChange, handleTypingTestLanguageChange,
-    finishedResult, nameFinishedResult,
+    finishedResult, nameFinishedResult, lastFinishedLog,
     pauseTypingTest, resumeTypingTest, restartTypingTestFromStart,
   } = useInputModes({
     rows, cols, getMatrixState, unlocked, onUnlock, onMatrixModeChange, keymap,
@@ -390,6 +390,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               hasSavedMemory={!!savedTypingTestMemory}
               finishedResult={finishedResult}
               onNameFinishedResult={nameFinishedResult}
+              lastFinishedLog={lastFinishedLog}
               onPauseTest={pauseTypingTest}
               onResumeTest={resumeTypingTest}
               onRestartTestFromStart={restartTypingTestFromStart}

@@ -207,6 +207,21 @@ describe('WordTimelineView', () => {
     expect(screen.getAllByTestId('line-timeline-keystroke')).toHaveLength(4)
   })
 
+  it('never caps the rows scrollport with a viewport-relative max-height — the modal box (h-modal-80vh) already bounds it via flex-1 min-h-0', async () => {
+    // KeystrokeTimelinePanel never applies a fixed vh cap to its rows
+    // scrollport (removed — a fixed vh figure can't adapt to how much
+    // other chrome a given run has). This modal's own `h-modal-80vh` box
+    // already bounds the panel via the ordinary flex-1/min-h-0 chain, the
+    // same mechanism the completion screen (TypingTestView) now also
+    // uses instead of a cap.
+    renderWithI18n(<WordTimelineView uid="uid-1" runId="run-1" onClose={() => {}} />)
+    await waitFor(() => expect(screen.getByTestId('word-timeline-canvas')).toBeTruthy())
+    const scrollport = screen.getByTestId('word-timeline-canvas').parentElement!
+    expect(scrollport.className).not.toMatch(/\bmax-h-/)
+    expect(scrollport.className).toContain('flex-1')
+    expect(scrollport.className).toContain('min-h-0')
+  })
+
   it('closes only itself on Escape, leaving an outer modal open (nested-modal Escape isolation)', async () => {
     const onCloseTimeline = vi.fn()
     const onCloseOuter = vi.fn()

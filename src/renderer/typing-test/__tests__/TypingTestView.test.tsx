@@ -10,6 +10,7 @@ import type { LineSnapshot } from '../TypingTestView'
 import type { TypingTestState } from '../useTypingTest'
 import type { TypingTestConfig } from '../types'
 import { DEFAULT_CONFIG } from '../types'
+import type { RunKeystrokeLog } from '../../../shared/types/typing-run-log'
 
 function makeState(overrides: Partial<TypingTestState> = {}): TypingTestState {
   return {
@@ -411,31 +412,14 @@ describe('TypingTestView error-class line', () => {
   })
 })
 
-describe('TypingTestView controls row (state-based)', () => {
+describe('TypingTestView controls row (finished state only)', () => {
+  // Non-finished-status coverage (Next Test / Pause / Resume / Restart)
+  // moved to TypingTestControlsRow.test.tsx — TypingTestView no longer
+  // renders that row for any non-finished status (it moved to
+  // TypingTestPane, below the keyboard pane; see
+  // TypingTestPane.controls-row-order.test.tsx for its placement there).
+  // The finished-state row stays here since TypingTestView still owns it.
   const fileImportConfig: TypingTestConfig = { mode: 'fileImport', textId: 'abc' }
-
-  it('shows Next Test (not Restart) before a run starts', () => {
-    renderView({ config: fileImportConfig, state: makeState({ status: 'waiting' }) })
-    expect(screen.getByTestId('typing-test-start')).toBeInTheDocument()
-    expect(screen.queryByTestId('typing-test-restart')).toBeNull()
-  })
-
-  it('shows Pause + Restart while running (fileImport)', () => {
-    renderView({ config: fileImportConfig, state: makeState({ status: 'running' }) })
-    expect(screen.getByTestId('typing-memory-pause')).toBeInTheDocument()
-    expect(screen.getByTestId('typing-test-restart')).toBeInTheDocument()
-  })
-
-  it('shows Resume + Restart while paused (fileImport)', () => {
-    renderView({ config: fileImportConfig, state: makeState({ status: 'paused' }) })
-    expect(screen.getByTestId('typing-memory-resume')).toBeInTheDocument()
-    expect(screen.getByTestId('typing-test-restart')).toBeInTheDocument()
-  })
-
-  it('shows Resume in the waiting state when a fileImport run is saved', () => {
-    renderView({ config: fileImportConfig, state: makeState({ status: 'waiting' }), hasSavedMemory: true })
-    expect(screen.getByTestId('typing-memory-resume')).toBeInTheDocument()
-  })
 
   it('shows the result name field on finish for normal modes too', () => {
     const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
@@ -443,14 +427,10 @@ describe('TypingTestView controls row (state-based)', () => {
     expect(screen.getByTestId('typing-test-result-name')).toBeInTheDocument()
   })
 
-  it('shows the Complete message on the finished screen', () => {
+  it('renders no Complete heading on the finished screen (removed)', () => {
     renderView({ config: fileImportConfig, state: makeState({ status: 'finished' }) })
-    expect(screen.getByTestId('typing-test-complete')).toBeInTheDocument()
-  })
-
-  it('hides the Complete message while running', () => {
-    renderView({ config: fileImportConfig, state: makeState({ status: 'running' }) })
     expect(screen.queryByTestId('typing-test-complete')).toBeNull()
+    expect(screen.queryByText('Complete')).toBeNull()
   })
 
   it('never shows Resume on the finished screen, even with a saved memory', () => {
@@ -458,6 +438,17 @@ describe('TypingTestView controls row (state-based)', () => {
     expect(screen.queryByTestId('typing-memory-resume')).toBeNull()
     expect(screen.getByTestId('typing-test-result-name')).toBeInTheDocument()
     expect(screen.getByTestId('typing-test-start')).toBeInTheDocument()
+  })
+
+  it('centers the finished-screen wrapper (Unnamed / Next Test row) instead of stretching it left', () => {
+    renderView({ config: fileImportConfig, state: makeState({ status: 'finished' }) })
+    const wrapper = screen.getByTestId('typing-test-finished-wrapper')
+    expect(wrapper.className).toContain('items-center')
+    // The row itself has no explicit width, so it relies on the wrapper's
+    // items-center to avoid stretching full-width and left-aligning its
+    // (justify-start) content.
+    const controlsRow = screen.getByTestId('typing-test-result-name').closest('.gap-2')
+    expect(controlsRow?.className).not.toContain('w-full')
   })
 })
 
@@ -1165,5 +1156,145 @@ describe('TypingTestView — logical-line window height (measured, synthetic mon
       state: makeState({ status: 'running', words: ['a', 'b', 'c'], lineBreaks: new Set() }),
     })
     expect(screen.getByTestId('typing-test-words').style.height).toBe('48px')
+  })
+})
+
+// Plan-completion-timeline-view PR-B: once a run finishes, the reading
+// window/romaji-guide give way to the shared KeystrokeTimelinePanel
+// (rendered inline, from the in-memory log — no IPC) whenever
+// `lastFinishedLog` is present AND its `runId` matches the current run
+// (the codex-review stale-flash guard). Without a matching log, the old
+// compact stats row + a consent hint render instead, same as before this
+// feature for the words/controls area.
+describe('TypingTestView — completion screen timeline panel (Plan-completion-timeline-view PR-B)', () => {
+  const SAMPLE_LOG: RunKeystrokeLog = {
+    runId: 'run-1',
+    uid: 'uid-1',
+    startedAt: '2026-01-01T00:00:00.000Z',
+    durationMs: 5000,
+    mode: 'words',
+    language: 'english',
+    words: [
+      {
+        index: 0,
+        display: 'hi',
+        typed: 'hi',
+        correct: true,
+        keystrokes: [
+          { pressMs: 0, releaseMs: 60, keycode: 0, row: 0, col: 0, correct: true, expectedChar: 'h' },
+          { pressMs: 80, releaseMs: 140, keycode: 0, row: 0, col: 1, correct: true, expectedChar: 'i' },
+        ],
+      },
+    ],
+  }
+
+  it('hides the words/reading area once finished, regardless of whether a log is available', () => {
+    renderView({ state: makeState({ status: 'finished', runId: 'run-1' }), lastFinishedLog: null })
+    expect(screen.queryByTestId('typing-test-words')).toBeNull()
+  })
+
+  it('renders the timeline panel (and hides the old stats row) when the log matches the finished run', () => {
+    renderView({
+      state: makeState({ status: 'finished', runId: 'run-1' }),
+      lastFinishedLog: SAMPLE_LOG,
+    })
+    expect(screen.getByTestId('typing-test-timeline-panel')).toBeInTheDocument()
+    expect(screen.queryByTestId('typing-test-results')).toBeNull()
+    expect(screen.queryByTestId('typing-test-timeline-consent-hint')).toBeNull()
+    // The controls row stays, but the Complete heading is gone entirely.
+    expect(screen.queryByTestId('typing-test-complete')).toBeNull()
+    expect(screen.getByTestId('typing-test-start')).toBeInTheDocument()
+  })
+
+  it('builds an unbroken flex-height chain from the view root down to the rows scrollport once finished (no fixed vh cap)', () => {
+    renderView({
+      state: makeState({ status: 'finished', runId: 'run-1' }),
+      lastFinishedLog: SAMPLE_LOG,
+    })
+    // The view's own root gains min-h-0/flex-1 only once finished — see
+    // its className comment in TypingTestView.tsx.
+    const view = screen.getByTestId('typing-test-view')
+    expect(view.className).toContain('min-h-0')
+    expect(view.className).toContain('flex-1')
+
+    // The new finished-state wrapper (panel + controls row) is the chain's
+    // next link.
+    const panelTestid = screen.getByTestId('typing-test-timeline-panel')
+    const finishedWrapper = panelTestid.parentElement!
+    expect(finishedWrapper.className).toContain('min-h-0')
+    expect(finishedWrapper.className).toContain('flex-1')
+    expect(finishedWrapper.className).toContain('flex-col')
+    // Both the panel wrapper and the panel's own root stretch too.
+    expect(panelTestid.className).toContain('min-h-0')
+    expect(panelTestid.className).toContain('flex-1')
+
+    // No fixed viewport-relative cap anywhere in the chain — the
+    // scrollport is the only element that ever scrolls, sized purely by
+    // the flex chain above it.
+    const scrollport = screen.getByTestId('word-timeline-canvas').parentElement!
+    expect(scrollport.className).not.toMatch(/\bmax-h-/)
+    expect(scrollport.className).toContain('flex-1')
+    expect(scrollport.className).toContain('min-h-0')
+    expect(scrollport.className).toContain('overflow-auto')
+  })
+
+  it('does NOT add min-h-0/flex-1 to the view root while a run is still in progress (unaffected by the finished-only chain)', () => {
+    renderView({ state: makeState({ status: 'running' }) })
+    const view = screen.getByTestId('typing-test-view')
+    expect(view.className).not.toContain('min-h-0')
+    expect(view.className).not.toMatch(/\bflex-1\b/)
+  })
+
+  it('renders the Unnamed / Next Test controls row AFTER the timeline panel, as the last content block', () => {
+    renderView({
+      state: makeState({ status: 'finished', runId: 'run-1' }),
+      lastFinishedLog: SAMPLE_LOG,
+    })
+    const view = screen.getByTestId('typing-test-view')
+    const panel = screen.getByTestId('typing-test-timeline-panel')
+    const startButton = screen.getByTestId('typing-test-start')
+    expect(panel.compareDocumentPosition(startButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(view.lastElementChild?.contains(startButton)).toBe(true)
+  })
+
+  it('falls back to the old stats row + a consent hint when there is no log at all', () => {
+    renderView({
+      state: makeState({ status: 'finished', runId: 'run-1' }),
+      lastFinishedLog: null,
+    })
+    expect(screen.queryByTestId('typing-test-timeline-panel')).toBeNull()
+    expect(screen.getByTestId('typing-test-results')).toBeInTheDocument()
+    expect(screen.getByTestId('typing-test-timeline-consent-hint')).toBeInTheDocument()
+  })
+
+  it('renders the controls row AFTER the fallback stats row + consent hint, as the last content block', () => {
+    renderView({
+      state: makeState({ status: 'finished', runId: 'run-1' }),
+      lastFinishedLog: null,
+    })
+    const view = screen.getByTestId('typing-test-view')
+    const hint = screen.getByTestId('typing-test-timeline-consent-hint')
+    const startButton = screen.getByTestId('typing-test-start')
+    expect(hint.compareDocumentPosition(startButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(view.lastElementChild?.contains(startButton)).toBe(true)
+  })
+
+  it('never renders a stale-runId log\'s panel (Next Test already advanced to a new run)', () => {
+    renderView({
+      state: makeState({ status: 'finished', runId: 'run-2' }),
+      lastFinishedLog: { ...SAMPLE_LOG, runId: 'run-1' },
+    })
+    expect(screen.queryByTestId('typing-test-timeline-panel')).toBeNull()
+    // Falls back to the old stats row, same as the no-log case.
+    expect(screen.getByTestId('typing-test-results')).toBeInTheDocument()
+  })
+
+  it('never renders the panel while a run is still in progress, even if a stale log prop is passed', () => {
+    renderView({
+      state: makeState({ status: 'running', runId: 'run-1' }),
+      lastFinishedLog: SAMPLE_LOG,
+    })
+    expect(screen.queryByTestId('typing-test-timeline-panel')).toBeNull()
+    expect(screen.getByTestId('typing-test-words')).toBeInTheDocument()
   })
 })

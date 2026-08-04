@@ -26,6 +26,7 @@ import type { LineSnapshot } from '../../../typing-test/TypingTestView'
 import { DEFAULT_CONFIG } from '../../../typing-test/types'
 import type { TypingTestConfig } from '../../../typing-test/types'
 import type { UseRunLogRecorderReturn } from '../use-run-log-recorder'
+import type { RunKeystrokeLog } from '../../../../shared/types/typing-run-log'
 
 // Real-line sources (word-supply.ts): both route through
 // parseFileImportText (typing-test-text-store.ts), so both carry genuine
@@ -309,5 +310,62 @@ describe('useTypingTestResultSave — lineBreaks derivation (line timeline PR1)'
       const { finishAndSave } = run({ lineBreaks: new Set(), runId: 'run-1', words: ['a', 'b', 'c', 'd'] }, null)
       expect(lineBreaksArg(finishAndSave)).toBeUndefined()
     })
+  })
+})
+
+// Plan-completion-timeline-view PR-B: `lastFinishedLog` surfaces whatever
+// `runLog.finishAndSave` returned for the just-finished run — a direct
+// passthrough (not re-derived), so the completion screen can render the
+// shared timeline panel from it inline. Cleared in the same
+// `status !== 'finished'` branch that resets `savedResultRef`.
+describe('useTypingTestResultSave — lastFinishedLog (completion timeline PR-B)', () => {
+  const FAKE_LOG: RunKeystrokeLog = {
+    runId: 'run-1', uid: 'kb-1', startedAt: new Date(1000).toISOString(), durationMs: 500,
+    mode: 'words', language: 'english', words: [],
+  }
+
+  function renderWithFinishAndSave(status: TypingTestState['status'], finishAndSaveReturn: RunKeystrokeLog | null) {
+    const finishAndSave = vi.fn().mockReturnValue(finishAndSaveReturn)
+    const runLog: UseRunLogRecorderReturn = {
+      record: vi.fn(), noteRegistration: vi.fn(), noteCharContext: vi.fn(), finishAndSave, discardRun: vi.fn(),
+    }
+    const buildOptions = (s: TypingTestState['status']): UseTypingTestResultSaveOptions => ({
+      typingTest: makeTypingTest({ status: s }, DEFAULT_CONFIG),
+      onSaveTypingTestResult: vi.fn(),
+      saveUnnamed: true,
+      savedMemoryRef: { current: undefined } as RefObject<undefined>,
+      onMemoryChangeRef: { current: undefined } as RefObject<undefined>,
+      keyboardRef: { current: { uid: 'kb-1', vendorId: 1, productId: 1, productName: 'x' } } as UseTypingTestResultSaveOptions['keyboardRef'],
+      flushAfterPendingEmits: vi.fn(),
+      runLog,
+    })
+    const rendered = renderHook(
+      ({ s }: { s: TypingTestState['status'] }) => useTypingTestResultSave(buildOptions(s)),
+      { initialProps: { s: status } },
+    )
+    return { ...rendered, finishAndSave }
+  }
+
+  it('exposes the log finishAndSave returned once the run finishes', () => {
+    const { result } = renderWithFinishAndSave('finished', FAKE_LOG)
+    expect(result.current.lastFinishedLog).toBe(FAKE_LOG)
+  })
+
+  it('is null when finishAndSave returned null (no consent / no uid / nothing saveable)', () => {
+    const { result } = renderWithFinishAndSave('finished', null)
+    expect(result.current.lastFinishedLog).toBeNull()
+  })
+
+  it('clears lastFinishedLog once status leaves finished (Next Test / Restart)', () => {
+    const { result, rerender } = renderWithFinishAndSave('finished', FAKE_LOG)
+    expect(result.current.lastFinishedLog).toBe(FAKE_LOG)
+
+    rerender({ s: 'running' })
+    expect(result.current.lastFinishedLog).toBeNull()
+  })
+
+  it('starts null before any run has ever finished', () => {
+    const { result } = renderWithFinishAndSave('waiting', FAKE_LOG)
+    expect(result.current.lastFinishedLog).toBeNull()
   })
 })

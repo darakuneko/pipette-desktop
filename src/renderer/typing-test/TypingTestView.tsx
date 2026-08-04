@@ -10,8 +10,11 @@ import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE } from './types'
 import { WordDisplay } from './WordDisplay'
 import { TypingTestControlsRow } from './TypingTestControlsRow'
 import { TypingTestStatsRow } from './TypingTestStatsRow'
+import { KeystrokeTimelinePanel } from './KeystrokeTimelinePanel'
 import { useVisualLines } from './useVisualLines'
 import { useLogicalWindowHeight } from './useLogicalWindowHeight'
+import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
+import type { TypingTestResult } from '../../shared/types/pipette-settings'
 
 
 /** A tagged snapshot of this view's own realized line rows (`lines` below
@@ -51,9 +54,6 @@ interface Props {
   paused: boolean
   /** Hide the stats / results (WPM) row. Persisted per keyboard. */
   hideStatsRow?: boolean
-  /** Hide the operation (Next Test button) controls row. Persisted per
-   *  keyboard. Force-shown once a test finishes. */
-  hideControls?: boolean
   /** Baseline metrics for the Measurement-row comparison delta, or null when
    *  comparison is off / no matching history. */
   comparison?: ComparisonStats | null
@@ -97,6 +97,20 @@ interface Props {
    *  see `LineSnapshot`'s own doc comment. Optional so every existing
    *  mount (tests included) stays valid without threading it. */
   lineSnapshotRef?: RefObject<LineSnapshot | null>
+  /** The just-finished run's in-memory raw keystroke log (Plan-completion-
+   *  timeline-view PR-B) — null when recording consent was off, view-only,
+   *  or nothing was saveable. Rendered as the shared `KeystrokeTimelinePanel`
+   *  in place of the old stats row ONLY while `status === 'finished'` AND
+   *  `runId` matches the current run's own (see the codex-review note in
+   *  Plan-completion-timeline-view.md): a fresh run's finish effect can
+   *  otherwise briefly still be carrying the PREVIOUS run's log for one
+   *  render, which this guard exists to catch. */
+  lastFinishedLog?: RunKeystrokeLog | null
+  /** The just-finished result, reused as the panel's own `result` prop so
+   *  the completion screen's unified stat block reads exactly like
+   *  History's timeline modal for the same run (see
+   *  `KeystrokeTimelinePanel`'s own doc comment on that prop). */
+  finishedResult?: TypingTestResult | null
 }
 
 /** Group flat word indices into logical lines using the line-break set
@@ -139,7 +153,6 @@ export function TypingTestView({
   config,
   paused,
   hideStatsRow,
-  hideControls,
   comparison,
   onCompositionStart,
   onCompositionUpdate,
@@ -156,8 +169,19 @@ export function TypingTestView({
   hasSavedMemory,
   errorClasses = null,
   lineSnapshotRef,
+  lastFinishedLog = null,
+  finishedResult = null,
 }: Props) {
   const { t } = useTranslation()
+  // Completion screen (Plan-completion-timeline-view PR-B): once a run
+  // finishes, the reading window/romaji guide give way to the inline
+  // keystroke timeline — see the JSX below for where each is gated.
+  // `timelineLog` additionally requires the log's own `runId` to match
+  // the CURRENT run (see `lastFinishedLog`'s own doc comment on the
+  // stale-flash guard this exists to prevent); `isFinished` alone gates
+  // the reading window regardless of whether a log ends up available.
+  const isFinished = state.status === 'finished'
+  const timelineLog = isFinished && lastFinishedLog && lastFinishedLog.runId === state.runId ? lastFinishedLog : null
   const wordsRef = useRef<HTMLDivElement>(null)
   const imeInputRef = useRef<HTMLTextAreaElement>(null)
   const isComposingRef = useRef(false)
@@ -364,9 +388,20 @@ export function TypingTestView({
   }
 
   return (
-    <div data-testid="typing-test-view" className="flex w-full min-w-0 flex-col items-center gap-4 px-4 py-4">
+    // `min-h-0 flex-1` only once finished — see the "Completion screen"
+    // comment further down for why (the flex-height chain that lets the
+    // timeline panel's rows scroll internally instead of growing the
+    // whole pane). The running/waiting/paused states keep their original
+    // natural-content-height flow; they were never reported as
+    // overflowing and don't need this.
+    <div data-testid="typing-test-view" className={`flex w-full min-w-0 flex-col items-center gap-4 px-4 py-4${isFinished ? ' min-h-0 flex-1' : ''}`}>
       {/* Word display — fixed window with scroll. Word-flow modes show a
-          3-line window; imported fileImport text shows 4 lines (line-row layout). */}
+          3-line window; imported fileImport text shows 4 lines (line-row
+          layout). Hidden once the run finishes (Plan-completion-timeline-view
+          PR-B) — the completion screen's main content is the keystroke
+          timeline (or, without a log, the stats row below), not the
+          already-typed reading window. */}
+      {!isFinished && (
       <div
         data-testid="typing-test-words"
         className="relative w-full max-w-4xl font-mono leading-normal typing-multiline-window"
@@ -480,6 +515,7 @@ export function TypingTestView({
           </div>
         )}
       </div>
+      )}
 
       {/* Romaji guide — line-synchronized with the reading window's own
           word lines (real or synthetic — see `guideLines` above): each
@@ -503,8 +539,10 @@ export function TypingTestView({
           wrapping on wide windows, but its left edge is pinned to line up
           with the centered max-w-4xl reading window via the same
           --container-4xl token (pl-[calc((100%-min(var(--container-4xl),100%))/2)]
-          clamps to 0 once the pane is at or below that width). */}
-      {romajiGuide && (romajiGuide.showRow || imeDetected) && (
+          clamps to 0 once the pane is at or below that width). Hidden once
+          finished, alongside the reading window above (see its own
+          comment). */}
+      {!isFinished && romajiGuide && (romajiGuide.showRow || imeDetected) && (
         <div data-testid="typing-test-romaji-guide" className="flex w-full flex-col items-start gap-1 pl-[calc((100%-min(var(--container-4xl),100%))/2)] font-mono" style={romajiGuideStyle}>
           {romajiGuide.showRow && (
             guideLines ? (
@@ -533,48 +571,135 @@ export function TypingTestView({
         </div>
       )}
 
-      {/* State-based controls row, below the reading window:
-          - not started (waiting / countdown): Next Test (+ Resume if a run is
-            saved for imported fileImport text)
-          - in progress (running / paused): Pause or Resume (fileImport) + Restart
-          - finished: result name (fileImport) + Next Test
-          Next Test and Restart share the same action; only the label differs.
-          The "operation" toggle hides this controls row (and the Complete
-          message above it), but a finished test always shows it so the
-          result can be named and the next test started. */}
-      {(!hideControls || state.status === 'finished') && (
-        <TypingTestControlsRow
-          state={state}
-          config={config}
-          onNameResult={onNameResult}
-          resultNameChips={resultNameChips}
-          onStart={onStart}
-          onPause={onPause}
-          onResume={onResume}
-          hasSavedMemory={hasSavedMemory}
-        />
-      )}
+      {/* Non-finished controls row (not started: Next Test / Resume; in
+          progress: Pause or Resume / Restart) no longer renders here — it
+          moved to TypingTestPane, BELOW the keyboard pane and its layer
+          note, so the reading window sits directly above the keyboard the
+          user actually types on. TypingTestPane owns the `!hideControls`
+          gate for that row now (the "operation" toggle). The finished-state
+          row (result name + Next Test) stays here — it renders instead at
+          the BOTTOM of the completion screen, below the timeline panel (or
+          the fallback stats row) — see the render below — since the
+          keyboard itself is hidden once finished, so there's no "below the
+          keyboard" position for it to move to. */}
 
-      {/* Measurement / results row — below the reading window and the
-          Unnamed / Next Test row. Live metrics during a run; before measuring
-          (waiting / countdown) every value reads "-". The "measurement" toggle
-          hides the LIVE metrics during a run — once finished, the results
-          always show. */}
-      {(!hideStatsRow || state.status === 'finished') && (
-        <TypingTestStatsRow
-          state={state}
-          wpm={wpm}
-          kpm={kpm}
-          accuracy={accuracy}
-          kspc={kspc}
-          elapsedSeconds={elapsedSeconds}
-          remainingSeconds={remainingSeconds}
-          config={config}
-          comparison={comparison}
-          errorClasses={errorClasses}
-        />
-      )}
+      {/* Completion screen (Plan-completion-timeline-view PR-B): once a run
+          finishes WITH a matching in-memory log, the shared
+          KeystrokeTimelinePanel — same unified stat block, legend, zoom,
+          and rows as History's timeline modal — replaces the old compact
+          stats row entirely (it already contains the Missed/error-mix
+          lines the old row also showed, so both would otherwise
+          duplicate). Rendered above the finished-state controls row below
+          (moved to the bottom of the completion screen so the
+          timeline/stats content reads first).
 
+          FLEX-HEIGHT CHAIN (codex safety review of an earlier, fixed-vh
+          `rowsMaxHeightClass` cap — replaced because a fixed vh figure
+          can't adapt to how much OTHER chrome a given run actually has:
+          Lines=1 leaves less sidebar height claimed, an IME-composition
+          warning or the Missed-chars line adds MORE panel-internal
+          content, and the editor's own content pane doesn't reserve a
+          fixed fraction of the window either — any single vh number is
+          right for some combination of these and wrong for others). This
+          wrapper (`isFinished`-only) is the top of a chain that makes the
+          rows area the ONLY thing that scrolls, by making every link
+          between it and the nearest real bounded ancestor stretch instead
+          of taking its natural content height:
+            KeymapEditor.tsx's own `overflow-auto` content-pane row (the
+            true bound — pre-existing, unrelated to typing-test) → its
+            `keymap-surface` child (pre-existing `min-h-0 flex-1`) →
+            TypingTestPane.tsx's outer `items-stretch` row (pre-existing
+            `min-h-0 flex-1`) → TypingTestPane.tsx's `items-center` column
+            (now ALSO `min-h-0`, alongside its pre-existing `flex-1`) →
+            this component's own root (`min-h-0 flex-1`, but ONLY once
+            `isFinished` — see its own className comment above) → THIS
+            wrapper (`min-h-0 flex-1 flex-col`) → the timeline panel
+            (`min-h-0 flex-1`) → KeystrokeTimelinePanel's OWN root (already
+            `flex min-h-0 flex-1 flex-col gap-3` — unchanged) → its stat
+            grid / Missed-chars / legend / zoom (unchanged, naturally
+            sized — `shrink-0` by simply never being given `flex-1`) → the
+            rows scrollport (already `flex-1 min-h-0 overflow-auto` —
+            unchanged, this is the only element that actually scrolls).
+          The controls row below stays naturally sized (no flex-1) — it's
+          the last child of a `flex-col` wrapper, so it just takes
+          whatever height its own content needs and never grows, i.e. it
+          is `shrink-0` in effect without needing the class name (a flex
+          item's default `flex-shrink: 1` only matters when its siblings'
+          combined natural height already exceeds the wrapper — since the
+          rows area is the one absorbing the slack via its own `flex-1`,
+          the controls row is never asked to shrink below its content). */}
+      {isFinished ? (
+        <div data-testid="typing-test-finished-wrapper" className="flex min-h-0 w-full flex-1 flex-col items-center gap-4">
+          {timelineLog ? (
+            <div className="flex min-h-0 w-full flex-1 flex-col" data-testid="typing-test-timeline-panel">
+              <KeystrokeTimelinePanel log={timelineLog} result={finishedResult ?? undefined} />
+            </div>
+          ) : (
+            <>
+              <TypingTestStatsRow
+                state={state}
+                wpm={wpm}
+                kpm={kpm}
+                accuracy={accuracy}
+                kspc={kspc}
+                elapsedSeconds={elapsedSeconds}
+                remainingSeconds={remainingSeconds}
+                config={config}
+                comparison={comparison}
+                errorClasses={errorClasses}
+              />
+              {/* No log to show a timeline for (recording consent was off,
+                  view-only, or nothing saveable) — hint that enabling it
+                  would surface this same panel next time. Omitted for a
+                  stale-runId log (present but not yet matching this run)
+                  since that's a transient rendering edge, not "no
+                  consent". */}
+              {!lastFinishedLog && (
+                <p data-testid="typing-test-timeline-consent-hint" className="text-xs text-content-muted">
+                  {t('editor.typingTest.results.timelineConsentHint')}
+                </p>
+              )}
+            </>
+          )}
+          {/* Finished-state controls row (result name + Next Test) —
+              deliberately LAST, below the timeline panel (or the fallback
+              stats row + consent hint above), not above it — the
+              timeline/stats content is what the user reads first once a
+              run finishes; naming the result and starting the next one is
+              the closing action. */}
+          <TypingTestControlsRow
+            state={state}
+            config={config}
+            onNameResult={onNameResult}
+            resultNameChips={resultNameChips}
+            onStart={onStart}
+            onPause={onPause}
+            onResume={onResume}
+            hasSavedMemory={hasSavedMemory}
+          />
+        </div>
+      ) : (
+        // Measurement / results row — below the reading window, mid-run.
+        // Live metrics while running; before measuring (waiting /
+        // countdown) every value reads "-". The "operation"/"measurement"
+        // toggle (`hideStatsRow`) hides this row entirely while running —
+        // once finished, the branch above always shows a results summary
+        // regardless of that toggle, so there is nothing to gate here.
+        !hideStatsRow && (
+          <TypingTestStatsRow
+            state={state}
+            wpm={wpm}
+            kpm={kpm}
+            accuracy={accuracy}
+            kspc={kspc}
+            elapsedSeconds={elapsedSeconds}
+            remainingSeconds={remainingSeconds}
+            config={config}
+            comparison={comparison}
+            errorClasses={errorClasses}
+          />
+        )
+      )}
     </div>
   )
 }
