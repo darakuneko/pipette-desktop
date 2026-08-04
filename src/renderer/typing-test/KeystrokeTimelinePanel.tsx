@@ -12,11 +12,13 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Info } from 'lucide-react'
 import { AnalyzeStatGrid } from '../components/analyze/stat-card'
 import { TooltipShell, Stat } from '../components/analyze/analyze-tooltip'
-import { computeBubblePosition } from '../components/ui/Tooltip'
+import { Tooltip, computeBubblePosition } from '../components/ui/Tooltip'
 import { fmtMs } from '../components/analyze/analyze-format'
 import { EMPTY_STAT_VALUE } from '../components/analyze/analyze-constants'
+import { ICON_SM } from '../constants/ui-tokens'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
 import type { KeystrokeSegment } from './word-timeline'
@@ -25,7 +27,7 @@ import { LineTimelineRow, type LineHoverTarget } from './LineTimelineRow'
 import { TIMELINE_LEGEND, type TimelineFillKind } from './word-timeline-colors'
 import { useTimelineModel } from './use-timeline-model'
 import { buildTimelineStatItems } from './keystroke-timeline-stats'
-import { MissedCharsList, ErrorClassLine, type ErrorClassCounts } from './mistake-summary'
+import { MissedCharsList } from './mistake-summary'
 
 /** Floor for the "fit" zoom level's canvas width — a run with a very
  *  short `maxDisplayMs` (e.g. a single short word) would otherwise
@@ -235,19 +237,16 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
     ))
   }, [hover])
 
+  // Substitution/Omission/Insertion now render as three more stat cards in
+  // `summaryItems` (see keystroke-timeline-stats.ts), not as their own
+  // line below — see the module's own doc comment for the fallback rule.
   const summaryItems = useMemo(() => buildTimelineStatItems(result, summary, log), [result, summary, log])
 
-  // Both-or-neither, mirroring `TypingTestResult.errorSubstitutions`
-  // et al.'s own storage contract — a result saved before error-class
-  // tracking existed (or a romaji/no-finalized-word run) has none of the
-  // three fields, and this reads that as "omit the line entirely" rather
-  // than fabricating a partial breakdown.
-  const errorClasses: ErrorClassCounts | null = result
-    && result.errorSubstitutions !== undefined
-    && result.errorOmissions !== undefined
-    && result.errorInsertions !== undefined
-    ? { substitutions: result.errorSubstitutions, omissions: result.errorOmissions, insertions: result.errorInsertions }
-    : null
+  // The legend's info icon tooltip content — both former standalone note
+  // paragraphs (corrected-mistake markers, compressed-pause axis), joined
+  // with a newline so BUBBLE_BASE's `whitespace-pre-line` renders them as
+  // two lines rather than one run-on sentence.
+  const legendNotes = `${t('editor.typingTest.history.timeline.legend.correctedNote')}\n${t('editor.typingTest.history.timeline.axisNote')}`
 
   if (!displayMode) return null
 
@@ -261,14 +260,6 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
           reaching the scrollable, flex-grow canvas below. */}
       <AnalyzeStatGrid items={summaryItems} ariaLabelKey="editor.typingTest.history.timeline.modalTitle" />
 
-      {/* Missed characters / error-mix — result-only (see the module doc
-          comment): reconstructing either from the raw log would re-derive
-          scoring rules run-state.ts already owns. Both components render
-          nothing when their data is absent/empty, same convention the
-          completion screen (`TypingTestStatsRow`) already follows. */}
-      <MissedCharsList mistakes={result?.mistakes ?? {}} />
-      {errorClasses && <ErrorClassLine errorClasses={errorClasses} />}
-
       {activeCharCorrelationUnavailable && (
         <p className="text-2xs text-warning" data-testid="word-timeline-correlation-note">
           {t('editor.typingTest.history.timeline.correlationUnreliable')}
@@ -281,14 +272,30 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
           lead-in wording to the line-view's own meaning (a 250ms
           cut and "before this line", not the word view's 1000ms /
           "before this word") — every other entry, and the word
-          view's own wording, stays unchanged. */}
+          view's own wording, stays unchanged. The two longer-form
+          notes (corrected-mistake markers, compressed-pause axis)
+          used to render as their own paragraph lines below the
+          legend — collapsed into this single info icon (`ml-auto`,
+          right end of the row) so the legend reads as one compact
+          line; both notes still live in the tooltip, joined with a
+          newline (BUBBLE_BASE's `whitespace-pre-line` renders it as
+          two lines), same idiom as ErrorMixSection's row-label
+          tooltip. */}
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-edge bg-surface px-3 py-1.5">
         {LEGEND_ORDER.map((kind) => (
           <LegendSwatch key={kind} colorClass={TIMELINE_LEGEND[kind].swatchClass} labelKey={lineLegendLabelKey(kind, displayMode)} />
         ))}
+        <Tooltip content={legendNotes} className="max-w-xs">
+          <button
+            type="button"
+            data-testid="word-timeline-legend-info"
+            aria-label={t('editor.typingTest.history.timeline.legend.infoAriaLabel')}
+            className="ml-auto rounded p-1 text-content-muted hover:text-content transition-colors"
+          >
+            <Info size={ICON_SM} aria-hidden="true" />
+          </button>
+        </Tooltip>
       </div>
-      <p className="text-2xs text-content-muted">{t('editor.typingTest.history.timeline.legend.correctedNote')}</p>
-      <p className="text-2xs text-content-muted">{t('editor.typingTest.history.timeline.axisNote')}</p>
 
       {/* Zoom — same row shape as RGBConfigurator's brightness
           slider (the only existing range-input precedent). The
@@ -317,7 +324,37 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
         </div>
       )}
 
-      <div ref={containerRef} className="relative min-h-0 flex-1 overflow-auto rounded-md border border-edge bg-surface p-2">
+      {/* `keystroke-timeline-scrollport` (style.css) opts this scroll
+          container into `container-type: inline-size` — the LINE view's
+          per-row header pins itself to this container's own visible
+          width via `100cqw` (see LineTimelineRow.tsx and
+          .line-timeline-header-sticky's own doc comment), independent of
+          how wide the zoomed canvas inside it grows. `overflow-auto`
+          already covers BOTH axes — a many-row run scrolls vertically
+          within this same element, not just horizontally on zoom; the
+          sticky header's `left: 0` pin is horizontal-axis only, so it is
+          unaffected by (and stays correctly positioned through) vertical
+          scrolling here.
+          `flex-1 min-h-0` is what makes that vertical scroll trigger AT
+          ALL — it relies entirely on an unbroken flex-height chain from
+          this element up to a real bounded ancestor (the editor's own
+          overflow-auto content pane). A fixed viewport-relative max-height
+          cap used to live here for the completion screen specifically
+          (which lacked that chain), but a fixed vh figure can't adapt to
+          how much OTHER chrome (Lines/Font sidebar controls, an
+          IME-composition warning, the Missed-chars line, ...) a given run
+          actually has above/below it — it either wastes space or (on a
+          shorter window, or a run with more of that chrome) still
+          overflows the pane. TypingTestView.tsx now instead extends this
+          same flex chain up through its own finished-state wrapper, so
+          this scrollport ends up correctly sized without any cap at all,
+          in both the modal and the completion-screen contexts alike —
+          see TypingTestView.tsx's own "Completion screen" comment for the
+          exact chain. */}
+      <div
+        ref={containerRef}
+        className="keystroke-timeline-scrollport relative min-h-0 flex-1 overflow-auto rounded-md border border-edge bg-surface p-2"
+      >
         <div ref={setCanvasNode} data-testid="word-timeline-canvas" className="flex flex-col gap-2">
           {displayMode === 'line' && lineModel
             ? lineModel.lines.map((line) => (
@@ -367,6 +404,22 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
               )}
           </div>
         )}
+      </div>
+
+      {/* Missed characters — result-only (see the module doc comment):
+          reconstructing it from the raw log would re-derive scoring rules
+          run-state.ts already owns. Renders nothing when the result has
+          no mistakes, same convention the completion screen
+          (`TypingTestStatsRow`) already follows for its own copy of this
+          list. Substitution/Omission/Insertion render above, as stat
+          cards in `summaryItems`, not here. Moved below the rows
+          scrollport (was between the stat-card grid and the legend) so
+          the timeline itself reads first; `shrink-0` keeps it from being
+          squeezed by the scrollport's own `flex-1`, which must keep
+          absorbing all the remaining height in the flex-height chain
+          (see the scrollport's own comment above). */}
+      <div className="shrink-0">
+        <MissedCharsList mistakes={result?.mistakes ?? {}} />
       </div>
     </div>
   )

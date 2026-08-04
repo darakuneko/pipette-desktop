@@ -150,6 +150,152 @@ describe('useInputModes — run-log recording', () => {
     expect(savedLog.romajiInput).toBeUndefined()
   })
 
+  it('captures the run\'s very first keystroke — the one that transitions waiting -> running — not just the ones after it', async () => {
+    // Regression coverage for the missing-first-bar bug (user report: a
+    // run's first word always renders one bar short in the keystroke
+    // timeline). Root cause: useInputModes's testLabelRef gate (feeding
+    // both onNoteKeystrokeRegistration and prepareAnalyticsEvent) used to
+    // read `typingTest.state.status === 'running'` only — while status is
+    // still 'waiting' (true for every keystroke up to and including the
+    // one that flips it to 'running'), noteRegistration/prepare see a null
+    // label and drop the press outright, so the very first matrix press of
+    // any run was never buffered at all. Drives matrix-then-char per
+    // character (the same order the P1 test above uses) so this reliably
+    // exercises the registration gate, not just char-correlation.
+    const { result } = renderRunLogHook({ consent: true, wordCount: 1 })
+    const keymap = buildKeymap()
+
+    // Let useInputModes's mount-time "sync saved config" effect settle
+    // first — same reason the P1 test above does this: it fires once per
+    // mount and calls typingTest.setConfig(), which mints a fresh runId
+    // asynchronously (see pristineRunIdRef's own comment in
+    // useInputModes.ts). A real user's first keystroke always lands well
+    // after this microtask-scale async settles (human reaction time
+    // dwarfs it); only a synchronous test driver racing it without this
+    // await would see the still-pristine runId.
+    await flushMicrotasks()
+    act(() => {
+      result.current.typingTest.setWindowFocused(true)
+    })
+    const [word] = result.current.typingTest.state.words
+    for (const char of word) {
+      act(() => {
+        result.current.typingTest.processMatrixFrame(new Set(['0,0']), keymap)
+      })
+      act(() => {
+        result.current.typingTest.processMatrixFrame(new Set(), keymap)
+      })
+      act(() => {
+        result.current.typingTest.processKeyEvent(char, false, false, false)
+      })
+    }
+    expect(result.current.typingTest.state.status).toBe('finished')
+    await flushMicrotasks()
+
+    expect(mockTypingRunLogSave).toHaveBeenCalledTimes(1)
+    const [, savedLog] = mockTypingRunLogSave.mock.calls[0] as [string, { words: { keystrokes: unknown[] }[] }]
+    // Every character of the word must have produced a keystroke bar —
+    // not `word.length - 1`.
+    expect(savedLog.words[0].keystrokes).toHaveLength(word.length)
+  })
+
+  it('a config switch\'s async word-list load window never lets a phantom keystroke leak into the next real run\'s saved log (gate split: P1 verified safe)', async () => {
+    // codex safety review P1: setConfig updates `typingTest.config`
+    // synchronously, but `typingTest.state` (status/runId/words) stays
+    // whatever it was until the async createWordsForConfig() call
+    // resolves and calls setState(freshState(...)). During that narrow
+    // window, runLogLabelRef's `isArmedWaiting` can read true pairing the
+    // OLD (already non-pristine) runId with the NEW config's label — a
+    // transient phantom combination. This test proves that combination
+    // can never actually leak into a SAVED result: any keystroke
+    // registered under it is buffered under the OLD runId
+    // (RunLogRecorder.noteRegistration mints a buffer keyed by whatever
+    // runId it's given), which can never match the REAL run's own
+    // brand-new runId once the load resolves — RunLogRecorder.finish()'s
+    // `buf.runId !== meta.runId` check silently discards it, so only the
+    // real run's own keystrokes ever reach typingRunLogSave.
+    const onSaveTypingTestResult = vi.fn()
+    const keymap = buildKeymap()
+    const configA = { mode: 'words' as const, wordCount: 1, punctuation: false, numbers: false }
+    const configB = { mode: 'words' as const, wordCount: 2, punctuation: false, numbers: false }
+    const { result, rerender } = renderHook(
+      ({ savedTypingTestConfig }: { savedTypingTestConfig: typeof configA | typeof configB }) => useInputModes({
+        rows: 1,
+        cols: 1,
+        keymap,
+        unlocked: true,
+        typingTestMode: true,
+        typingTestViewOnly: false,
+        typingRecordKeyboard: sampleKeyboard,
+        onSaveTypingTestResult,
+        savedTypingTestConfig,
+        recordingConsentAccepted: true,
+      }),
+      { initialProps: { savedTypingTestConfig: configA } },
+    )
+
+    // Let the mount-time config-sync settle — status is now
+    // genuinely-armed 'waiting' under configA, non-pristine runId.
+    await flushMicrotasks()
+    act(() => {
+      result.current.typingTest.setWindowFocused(true)
+    })
+    expect(result.current.typingTest.state.status).toBe('waiting')
+    const runIdBeforeSwitch = result.current.typingTest.state.runId
+
+    // Switch config — `typingTest.config` updates towards configB
+    // essentially immediately (setConfigState is synchronous), but
+    // `typingTest.state` (status/runId/words) stays configA's until
+    // createWordsForConfig resolves. This is the P1 window.
+    rerender({ savedTypingTestConfig: configB })
+    expect(result.current.typingTest.state.runId).toBe(runIdBeforeSwitch)
+
+    // A press RIGHT NOW, before awaiting anything — the phantom-tag
+    // window the P1 review flagged.
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(['0,0']), keymap)
+    })
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(), keymap)
+    })
+
+    // Let configB's load resolve — a genuinely fresh runId mints.
+    await flushMicrotasks()
+    expect(result.current.typingTest.state.runId).not.toBe(runIdBeforeSwitch)
+    expect(result.current.typingTest.state.words).toHaveLength(2)
+
+    // Complete a REAL run under configB normally.
+    const [word1, word2] = result.current.typingTest.state.words
+    for (const word of [word1, word2]) {
+      for (const char of word) {
+        act(() => {
+          result.current.typingTest.processMatrixFrame(new Set(['0,0']), keymap)
+        })
+        act(() => {
+          result.current.typingTest.processMatrixFrame(new Set(), keymap)
+        })
+        act(() => {
+          result.current.typingTest.processKeyEvent(char, false, false, false)
+        })
+      }
+      if (word !== word2) {
+        act(() => {
+          result.current.typingTest.processKeyEvent(' ', false, false, false)
+        })
+      }
+    }
+    expect(result.current.typingTest.state.status).toBe('finished')
+    await flushMicrotasks()
+
+    expect(mockTypingRunLogSave).toHaveBeenCalledTimes(1)
+    const [, savedLog] = mockTypingRunLogSave.mock.calls[0] as [string, { runId: string; words: { keystrokes: unknown[] }[] }]
+    expect(savedLog.runId).toBe(result.current.typingTest.state.runId)
+    const totalKeystrokes = savedLog.words.reduce((sum, w) => sum + w.keystrokes.length, 0)
+    // Exactly word1.length + word2.length — no extra keystroke leaked in
+    // from the phantom-tagged press made during the config-switch window.
+    expect(totalKeystrokes).toBe(word1.length + word2.length)
+  })
+
   it('never saves a run log without recording consent, even for a completed practice run', async () => {
     const { result } = renderRunLogHook({ consent: false, wordCount: 1 })
     const keymap = buildKeymap()
@@ -229,10 +375,7 @@ describe('useInputModes — run-log recording', () => {
   it('does not attribute matrix keystrokes registered while unfocused, but resumes once refocused (P1)', async () => {
     // Two words: the first is typed and submitted entirely while
     // focused, which puts the run solidly mid-'running' (regardless of
-    // either word's length) before the unfocused phase — avoids the
-    // waiting->running transition edge (see testLabelRef's own gating
-    // comment in useInputModes.ts), where the very first keystroke of a
-    // run goes untagged for an unrelated, pre-existing reason.
+    // either word's length) before the unfocused phase.
     const { result } = renderRunLogHook({ consent: true, wordCount: 2 })
     const keymap = buildKeymap()
 
@@ -310,12 +453,11 @@ describe('useInputModes — run-log recording', () => {
     expect(mockTypingRunLogSave).toHaveBeenCalledTimes(1)
     const [, savedLog] = mockTypingRunLogSave.mock.calls[0] as [string, { words: { keystrokes: unknown[] }[] }]
     const totalKeystrokes = savedLog.words.reduce((sum, w) => sum + w.keystrokes.length, 0)
-    // The very first char of word1 lands while status is still 'waiting'
-    // (untagged — an existing, unrelated trade-off, see testLabelRef's
-    // own comment), so exactly `word1.length - 1 + word2.length` presses
-    // are attributable in this exact drive pattern. The point of this
-    // assertion is that the unfocused press did not add a spurious +1.
-    expect(totalKeystrokes).toBe(word1.length - 1 + word2.length)
+    // Every char of both words is attributable (including word1's very
+    // first, transition-causing keystroke — see testLabelRef's own gating
+    // comment in useInputModes.ts) — the point of this assertion is that
+    // the unfocused press in between did not add a spurious +1.
+    expect(totalKeystrokes).toBe(word1.length + word2.length)
   })
 
   it('discards the buffer on pause, so a resumed-then-finished run saves no raw log (P3)', async () => {

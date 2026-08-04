@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { SquarePen, Pause, Play, CircleCheck } from 'lucide-react'
-import { ICON_SM, ICON_LG } from '../constants/ui-tokens'
+import { SquarePen, Pause, Play } from 'lucide-react'
+import { ICON_SM } from '../constants/ui-tokens'
 import type { TypingTestState } from './useTypingTest'
 import type { TypingTestConfig } from './types'
 import { ResultNameModal } from './ResultNameModal'
@@ -51,50 +51,42 @@ export function TypingTestControlsRow({
   const { t } = useTranslation()
 
   return (
-    <>
-      {state.status === 'finished' && (
-        <p data-testid="typing-test-complete" className="flex items-center gap-1.5 text-lg font-semibold text-accent">
-          <CircleCheck size={ICON_LG} aria-hidden="true" />
-          {t('editor.typingTest.complete')}
-        </p>
+    <div className="flex items-center gap-2">
+      {config.mode === 'fileImport' && (
+        state.status === 'running' ? (
+          <button
+            type="button"
+            data-testid="typing-memory-pause"
+            className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
+            onClick={onPause}
+          >
+            <Pause size={ICON_SM} aria-hidden="true" />
+            <span>{t('editor.typingTest.memory.pause')}</span>
+          </button>
+        ) : (state.status === 'paused' || ((state.status === 'waiting' || state.status === 'countdown') && hasSavedMemory)) ? (
+          <button
+            type="button"
+            data-testid="typing-memory-resume"
+            className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-accent transition-colors hover:text-accent/80"
+            onClick={onResume}
+          >
+            <Play size={ICON_SM} aria-hidden="true" />
+            <span>{t('editor.typingTest.memory.resumeButton')}</span>
+          </button>
+        ) : null
       )}
-      <div className="flex items-center gap-2">
-        {config.mode === 'fileImport' && (
-          state.status === 'running' ? (
-            <button
-              type="button"
-              data-testid="typing-memory-pause"
-              className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
-              onClick={onPause}
-            >
-              <Pause size={ICON_SM} aria-hidden="true" />
-              <span>{t('editor.typingTest.memory.pause')}</span>
-            </button>
-          ) : (state.status === 'paused' || ((state.status === 'waiting' || state.status === 'countdown') && hasSavedMemory)) ? (
-            <button
-              type="button"
-              data-testid="typing-memory-resume"
-              className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-accent transition-colors hover:text-accent/80"
-              onClick={onResume}
-            >
-              <Play size={ICON_SM} aria-hidden="true" />
-              <span>{t('editor.typingTest.memory.resumeButton')}</span>
-            </button>
-          ) : null
-        )}
-        {state.status === 'finished' && (
-          <ResultNameField key={state.startTime ?? 'none'} onName={onNameResult} chips={resultNameChips} />
-        )}
-        <button
-          type="button"
-          data-testid={state.status === 'running' || state.status === 'paused' ? 'typing-test-restart' : 'typing-test-start'}
-          className="flex h-8 items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
-          onClick={onStart}
-        >
-          {t(state.status === 'running' || state.status === 'paused' ? 'editor.typingTest.restart' : 'editor.typingTest.nextTest')}
-        </button>
-      </div>
-    </>
+      {state.status === 'finished' && (
+        <ResultNameField key={state.startTime ?? 'none'} onName={onNameResult} chips={resultNameChips} />
+      )}
+      <button
+        type="button"
+        data-testid={state.status === 'running' || state.status === 'paused' ? 'typing-test-restart' : 'typing-test-start'}
+        className="flex h-8 items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
+        onClick={onStart}
+      >
+        {t(state.status === 'running' || state.status === 'paused' ? 'editor.typingTest.restart' : 'editor.typingTest.nextTest')}
+      </button>
+    </div>
   )
 }
 

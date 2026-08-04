@@ -78,24 +78,34 @@ function LineTimelineRowInner({ line, maxDisplayMs, romajiInput, onHover, onHove
 
   return (
     <div className="flex flex-col gap-0.5" data-testid={`line-timeline-row-${line.lineIndex}`}>
-      <div className="flex items-baseline gap-2">
-        <span
-          className="rounded-full bg-surface-dim px-1.5 text-2xs font-semibold text-content-secondary"
-          aria-label={t('editor.typingTest.history.timeline.line.indexAria', { n: line.lineIndex + 1 })}
-        >
-          {line.lineIndex + 1}
-        </span>
-        <span className="font-mono text-xs text-content">{lineText || EMPTY_STAT_VALUE}</span>
-        <span className="text-2xs text-content-muted">{statParts.join(' · ')}</span>
+      {/* Header (index badge + line text + right-aligned stats + romaji
+          sub-line) — pinned to the scrollport's own visible width via
+          `line-timeline-header-sticky` (style.css), so it never scrolls
+          out of view alongside the zoomed bar strip below it, which is
+          the only part of this row meant to stretch/scroll with zoom.
+          See that class's own doc comment for the container-query
+          mechanism (`.keystroke-timeline-scrollport` on the ancestor
+          scroll container). */}
+      <div className="line-timeline-header-sticky flex flex-col gap-0.5 bg-surface" data-testid={`line-timeline-header-${line.lineIndex}`}>
+        <div className="flex items-baseline gap-2">
+          <span
+            className="rounded-full bg-surface-dim px-1.5 text-2xs font-semibold text-content-secondary"
+            aria-label={t('editor.typingTest.history.timeline.line.indexAria', { n: line.lineIndex + 1 })}
+          >
+            {line.lineIndex + 1}
+          </span>
+          <span className="font-mono text-xs text-content">{lineText || EMPTY_STAT_VALUE}</span>
+          <span className="ml-auto text-2xs text-content-muted" data-testid={`line-timeline-stats-${line.lineIndex}`}>{statParts.join(' · ')}</span>
+        </div>
+        {romajiText !== null && (
+          <span
+            className="font-mono text-2xs text-content-muted"
+            aria-label={t('editor.typingTest.history.timeline.line.romajiAria', { text: romajiText })}
+          >
+            {romajiText || EMPTY_STAT_VALUE}
+          </span>
+        )}
       </div>
-      {romajiText !== null && (
-        <span
-          className="font-mono text-2xs text-content-muted"
-          aria-label={t('editor.typingTest.history.timeline.line.romajiAria', { text: romajiText })}
-        >
-          {romajiText || EMPTY_STAT_VALUE}
-        </span>
-      )}
       <div className="relative">
         <svg
           width="100%"

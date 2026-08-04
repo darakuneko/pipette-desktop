@@ -144,7 +144,7 @@ describe('useInputModes — typing analytics dispatch', () => {
     expect(mockTypingAnalyticsEvent).not.toHaveBeenCalled()
   })
 
-  it('does not tag editor-test keystrokes before the test is running', () => {
+  it('does not tag editor-test keystrokes before the test is running', async () => {
     // Entering the test view auto-starts a countdown on the default config,
     // so a press made before the run starts must NOT be recorded — otherwise
     // it lands as a phantom material (e.g. `words (english)`) for a run that
@@ -157,6 +157,42 @@ describe('useInputModes — typing analytics dispatch', () => {
     act(() => {
       result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
     })
+    await flushMicrotasks()
+
+    expect(mockTypingAnalyticsEvent).not.toHaveBeenCalled()
+  })
+
+  it('does not tag (or even send) a per-minute analytics event for a press made while genuinely armed-waiting (gate split: P2 restored)', async () => {
+    // Distinct from the "pristine, never-restarted" case above: this
+    // scenario has ALREADY gone through the mount-time config-sync effect
+    // (flushed below), so `runLogLabelRef` (the run-log's own, broader
+    // tag — see useInputModes.ts) reads non-null here — status is
+    // genuinely-armed 'waiting', not the untouched pristine value. The
+    // per-minute analytics pipeline must still see nothing at all: no
+    // per-minute pre-start cutoff would otherwise let a modifier/no-op
+    // press during armed-waiting leak into the heatmap (codex safety
+    // review P2) — testLabelRef (this pipeline's OWN, narrower tag) stays
+    // 'running'-only regardless of runLogLabelRef.
+    const { result } = renderHook(() => useInputModes({
+      rows: 1,
+      cols: 1,
+      keymap: buildKeymap(),
+      typingTestMode: true,
+      typingTestViewOnly: false,
+      typingRecordKeyboard: sampleKeyboard,
+      typingRecordEnabled: false,
+      savedTypingTestConfig: { mode: 'time', duration: 30, punctuation: false, numbers: false },
+    }))
+    await flushMicrotasks()
+    expect(result.current.typingTest.state.status).toBe('waiting')
+
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
+    })
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(), buildKeymap())
+    })
+    await flushMicrotasks()
 
     expect(mockTypingAnalyticsEvent).not.toHaveBeenCalled()
   })

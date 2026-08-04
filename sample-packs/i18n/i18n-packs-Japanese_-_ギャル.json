@@ -1,5 +1,5 @@
 {
-  "version": "0.1.65",
+  "version": "0.1.67",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -270,7 +270,6 @@
       "exitTypingMode": "テスト終わりっしょ！",
       "restart": "もう一回☆",
       "nextTest": "次のテストいくよ☆",
-      "complete": "できたし！",
       "collapseSettings": "設定閉じるっしょ",
       "expandSettings": "設定開くっしょ",
       "keymapToggle": "キーマップ☆",
@@ -555,7 +554,8 @@
             "leadIn": "ワード前の間",
             "blankLine": "ブランク（250ms超、圧縮表示だよ）",
             "leadInLine": "行前の間じゃん",
-            "correctedNote": "ミスの印、提出前に直したのも入ってるから、印あっても正確度100%になることあるよ"
+            "correctedNote": "ミスの印、提出前に直したのも入ってるから、印あっても正確度100%になることあるよ",
+            "infoAriaLabel": "凡例の補足情報"
           },
           "axisNote": "ブランクは軸上で圧縮して表示してるけど、出てる時間は全部リアルな値だよ",
           "correlationUnreliable": "このラン、正誤の印あてにならないかも（IME変換通った入力あるから）",
@@ -586,7 +586,8 @@
         "mistakesLabel": "ミスった文字ｗ",
         "errorSubstitutions": "置換 {{count}}こ",
         "errorOmissions": "脱字 {{count}}こ",
-        "errorInsertions": "衍字 {{count}}こ"
+        "errorInsertions": "衍字 {{count}}こ",
+        "timelineConsentHint": "打鍵タイムライン見たいなら、タイピング記録オンにしてね☆"
       }
     }
   },

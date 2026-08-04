@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Builds the unified stat-card list `KeystrokeTimelinePanel` shows — the
-// same seven figures (WPM, KPM, Accuracy, KSPC, Time, Words, Overlap) in
-// both the History timeline modal and (a later PR) the inline completion
-// screen, so a run reads identically in either place. See
-// .claude/plans/Plan-completion-timeline-view.md PR-A spec point 2.
+// same ten figures (WPM, KPM, Accuracy, KSPC, Time, Words, Overlap,
+// Substitution, Omission, Insertion) in both the History timeline modal
+// and the inline completion screen, so a run reads identically in either
+// place. See .claude/plans/Plan-completion-timeline-view.md PR-A spec
+// point 2.
 //
 // Fallback scope is deliberately narrow: only WPM, Accuracy, Time, and
 // Overlap have a value when `result` is absent —
@@ -16,13 +17,22 @@
 //    `KeystrokeTimelinePanel` always receives the log itself.
 //  - Overlap has no `TypingTestResult` equivalent at all (that field was
 //    never recorded on the result), so it is ALWAYS model-derived.
-// KPM, KSPC, and Words stay result-only: reconstructing them from the raw
-// log would mean re-deriving scoring rules run-state.ts already owns
-// (confirmed-char counting, romaji segment credit, KSPC's
-// IME-uncomputable gate, ...) — a second, possibly-diverging
-// implementation of the same math that this module deliberately avoids.
-// Without a result these three read as `EMPTY_STAT_VALUE`, the same
-// convention History already uses for a legacy/uncomputable row.
+// KPM, KSPC, and the three error-class counts stay result-only:
+// reconstructing them from the raw log would mean re-deriving scoring
+// rules run-state.ts already owns (confirmed-char counting, romaji
+// segment credit, KSPC's IME-uncomputable gate, WER/CER-style error
+// classification, ...) — a second, possibly-diverging implementation of
+// the same math that this module deliberately avoids. Without a result
+// (or on a result predating error-class tracking, e.g. a romaji run)
+// these read as `EMPTY_STAT_VALUE`, the same convention History already
+// uses for a legacy/uncomputable row — unlike `MissedCharsList`/the
+// former `ErrorClassLine` row below, these three are always-present
+// cards (same as Overlap), never omitted as a block.
+// The 7th card (Words/Lines) is the one exception to "result-only": when
+// `log.lineBreaks` is present it derives straight from the LOG (see
+// `wordsOrLinesCard`'s own doc comment), unconditionally — a line-based
+// run's line count is knowable even without a `result` at all, unlike
+// KPM/KSPC/error-class, which have no raw-log equivalent to fall back to.
 
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
@@ -33,6 +43,43 @@ import { formatWpm } from '../components/analyze/analyze-wpm'
 import { formatKspc } from '../../shared/kspc'
 import { EMPTY_STAT_VALUE } from '../components/analyze/analyze-constants'
 import { resultKpm, resultKspc } from './result-builder'
+
+/** The 7th card's caption + value — "Words" for a normal (Monkeytype-style)
+ *  run, "Lines" for a line-based one (fileImport with real line structure,
+ *  or a tatoeba Lines-pattern run — each tatoeba "word" unit IS one line).
+ *  Reuses `editor.typingTest.lines`, the sidebar's own bare "Lines"
+ *  caption — no new i18n key needed, it's already the same shape as
+ *  `editor.typingTest.words` ("Words"), just for the other unit.
+ *
+ *  Two-tier signal, most-authoritative first:
+ *   1. `log.lineBreaks !== undefined` — the line-based signal actually
+ *      PERSISTED on this run's own log (see `RunKeystrokeLog.lineBreaks`'s
+ *      own doc comment). When present, the line count comes directly from
+ *      it (`lineBreaks.length + 1` — N breaks divide the run into N+1
+ *      lines), regardless of `result`/mode: this is ground truth for
+ *      exactly this run, the same way `deriveLineBreaksForLog` decided at
+ *      save time.
+ *   2. `result?.mode` — a coarser fallback for when the log itself carries
+ *      no `lineBreaks` (e.g. a legacy log saved before that field
+ *      existed). `'tatoeba'` can still be labeled Lines because that
+ *      mode's own word-flow architecture always maps 1 unit to 1 line, so
+ *      `result.wordCount` doubles as the line count without needing the
+ *      log's own field. `'fileImport'` WITHOUT a persisted `lineBreaks`
+ *      cannot: a fileImport text's own line layout (words per line) isn't
+ *      fixed, so there is no way to recover line count from `wordCount`
+ *      alone — this case deliberately falls through to the ordinary Words
+ *      card, "line count unknowable" rather than guessing. Monkeytype
+ *      modes (words/time/quote) and a missing `result` both fall through
+ *      to Words too, unchanged from before this card existed. */
+function wordsOrLinesCard(result: TypingTestResult | undefined, log: RunKeystrokeLog): AnalyzeSummaryItem {
+  if (log.lineBreaks !== undefined) {
+    return { labelKey: 'editor.typingTest.lines', value: log.lineBreaks.length + 1 }
+  }
+  if (result?.mode === 'tatoeba') {
+    return { labelKey: 'editor.typingTest.lines', value: result.wordCount }
+  }
+  return { labelKey: 'editor.typingTest.words', value: result ? result.wordCount : EMPTY_STAT_VALUE }
+}
 
 /** Ordered stat cards for `AnalyzeStatGrid` — see the module doc comment
  *  for the fallback rule each card follows. `summary` is `null` only
@@ -81,13 +128,26 @@ export function buildTimelineStatItems(
       labelKey: 'editor.typingTest.time',
       value: formatDuration(durationSeconds),
     },
-    {
-      labelKey: 'editor.typingTest.words',
-      value: result ? result.wordCount : EMPTY_STAT_VALUE,
-    },
+    wordsOrLinesCard(result, log),
     {
       labelKey: 'editor.typingTest.history.timeline.stats.overlap',
       value: formatPercentLabel(summary.avgOverlap),
+    },
+    // Reuses ErrorMixSection's own per-class caption keys (#332) rather
+    // than the `results.errorSubstitutions` et al. keys — those are
+    // "Substitution {{count}}"-style interpolated sentences meant for the
+    // completion screen's inline mistake line, not a bare card caption.
+    {
+      labelKey: 'editor.typingTest.history.errorMixLabelSubstitution',
+      value: result?.errorSubstitutions ?? EMPTY_STAT_VALUE,
+    },
+    {
+      labelKey: 'editor.typingTest.history.errorMixLabelOmission',
+      value: result?.errorOmissions ?? EMPTY_STAT_VALUE,
+    },
+    {
+      labelKey: 'editor.typingTest.history.errorMixLabelInsertion',
+      value: result?.errorInsertions ?? EMPTY_STAT_VALUE,
     },
   ]
 }

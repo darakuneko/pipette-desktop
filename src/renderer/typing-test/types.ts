@@ -170,7 +170,10 @@ export function applyRomajiCaseStyle(guide: RomajiGuide, caseStyle: RomajiCaseSt
 }
 
 // Imported file-import-text display preferences (fileImport mode only).
-export const DISPLAY_LINES_MIN = 2
+// 1 is a valid choice — a single visible reading-window line — and is
+// handled generically by clampDisplayLines/logicalWindowHeight/the
+// --tt-lines CSS floor below; none of them special-case a >=2 minimum.
+export const DISPLAY_LINES_MIN = 1
 export const DISPLAY_LINES_MAX = 10
 export const DEFAULT_DISPLAY_LINES = 4
 export const FONT_SIZE_MIN = 14

@@ -6,6 +6,7 @@ import type { KeymapEditorProps } from './keymap-editor-types'
 import type { KleKey } from '../../../shared/kle/types'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
+import type { RunKeystrokeLog } from '../../../shared/types/typing-run-log'
 import type { useTypingTest } from '../../typing-test/useTypingTest'
 import type { LineSnapshot } from '../../typing-test/TypingTestView'
 
@@ -34,6 +35,12 @@ export interface KeymapTypingTestPaneProps extends KeymapEditorProps {
   hasSavedMemory?: boolean
   finishedResult?: TypingTestResult | null
   onNameFinishedResult?: (name: string) => void
+  /** The just-finished run's in-memory raw keystroke log — forwarded to
+   *  `TypingTestPane`/`TypingTestView` so the completion screen can render
+   *  the shared `KeystrokeTimelinePanel` inline, no IPC round-trip needed
+   *  (Plan-completion-timeline-view PR-B). See `useTypingTestResultSave`'s
+   *  own doc comment on `lastFinishedLog`. */
+  lastFinishedLog?: RunKeystrokeLog | null
   onPauseTest?: () => void
   onResumeTest?: () => void
   onRestartTestFromStart?: () => void
@@ -59,7 +66,7 @@ export function KeymapTypingTestPane({
   remapLabel, layoutOptions, scale, keys, layerLabel, contentRef,
   hasSavedMemory, typingTestDisplayLines, typingTestFontSize, onTypingTestDisplayLinesChange, onTypingTestFontSizeChange,
   typingTestHideKeymap, typingTestHideStatsRow, typingTestHideControls, typingTestSaveUnnamed,
-  finishedResult, onNameFinishedResult, typingTestComparisonBaselines,
+  finishedResult, onNameFinishedResult, lastFinishedLog, typingTestComparisonBaselines,
   onTypingTestHideKeymapChange, onTypingTestHideStatsRowChange, onTypingTestHideControlsChange, onTypingTestSaveUnnamedChange, onTypingTestComparisonBaselineChange,
   typingTestSettingsPanelOpen, onTypingTestSettingsPanelOpenChange,
   onPauseTest, onResumeTest, onRestartTestFromStart,
@@ -109,6 +116,7 @@ export function KeymapTypingTestPane({
       saveUnnamed={typingTestSaveUnnamed}
       finishedResult={finishedResult}
       onNameFinishedResult={onNameFinishedResult}
+      lastFinishedLog={lastFinishedLog}
       comparisonBaselines={typingTestComparisonBaselines}
       onToggleHideKeymap={onTypingTestHideKeymapChange}
       onToggleHideStatsRow={onTypingTestHideStatsRowChange}

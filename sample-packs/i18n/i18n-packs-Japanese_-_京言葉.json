@@ -1,5 +1,5 @@
 {
-  "version": "0.1.65",
+  "version": "0.1.67",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -270,7 +270,6 @@
       "exitTypingMode": "テスト終わりどすえ",
       "restart": "もういっぺんどすえ",
       "nextTest": "次のテストどすえ",
-      "complete": "できましたえ",
       "collapseSettings": "設定を閉じますえ",
       "expandSettings": "設定を開きますえ",
       "keymapToggle": "キーマップ",
@@ -555,7 +554,8 @@
             "leadIn": "ワード前の間どすえ",
             "blankLine": "ブランク（250ms超、圧縮して表示どすえ）",
             "leadInLine": "行前の間どすえ",
-            "correctedNote": "ミスの印には提出前に直さはった打鍵も入ってますよって、印があっても正確度100%になることがおすえ"
+            "correctedNote": "ミスの印には提出前に直さはった打鍵も入ってますよって、印があっても正確度100%になることがおすえ",
+            "infoAriaLabel": "凡例の補足情報"
           },
           "axisNote": "ブランクはこの軸の上で圧縮して表示してますけど、出てる時間はどれも本当の値どすえ",
           "correlationUnreliable": "このランは正誤の印が正しないことがおすえ（IME変換を通した入力が入ってますよって）",
@@ -586,7 +586,8 @@
         "mistakesLabel": "ミス文字どすえ",
         "errorSubstitutions": "置換 {{count}}どす",
         "errorOmissions": "脱字 {{count}}どす",
-        "errorInsertions": "衍字 {{count}}どす"
+        "errorInsertions": "衍字 {{count}}どす",
+        "timelineConsentHint": "打鍵タイムラインを見とうおすなら、タイピングの記録を有効にしておくれやすどす。"
       }
     }
   },

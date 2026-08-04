@@ -31,6 +31,60 @@ function makeLine(segments: LineTimelineLine['segments'], laneCount = 1): LineTi
   }
 }
 
+describe('LineTimelineRow — header layout', () => {
+  it('right-aligns the per-line stats span within the header row (ml-auto)', () => {
+    const line = makeLine([keystroke({ startMs: 0, endMs: 100, label: 'h' })])
+    renderWithI18n(
+      <LineTimelineRow line={line} maxDisplayMs={1000} romajiInput={false} onHover={vi.fn()} onHoverEnd={vi.fn()} />,
+    )
+    const stats = screen.getByTestId('line-timeline-stats-0')
+    expect(stats.className).toContain('ml-auto')
+    // Sits after the line-text span, as the header row's last child — the
+    // index badge and line text stay in their original (start) position;
+    // only the stats span moves to the row's right end.
+    const header = stats.parentElement!
+    expect(header.className).toContain('flex')
+    expect(header.lastElementChild).toBe(stats)
+  })
+
+  it('pins the header (badge + line text + stats + romaji sub-line) to the scrollport via sticky + cqw, not the zoomed canvas', () => {
+    const line = makeLine([keystroke({ startMs: 0, endMs: 100, label: 'h' })])
+    renderWithI18n(
+      <LineTimelineRow line={line} maxDisplayMs={1000} romajiInput={false} onHover={vi.fn()} onHoverEnd={vi.fn()} />,
+    )
+    const header = screen.getByTestId('line-timeline-header-0')
+    // `.line-timeline-header-sticky` (style.css) is `position: sticky;
+    // left: 0; width: 100cqw` — asserted here as class presence, since
+    // jsdom doesn't compute container-query/sticky layout; the actual
+    // pinned position is verified by the E2E completion-timeline script.
+    expect(header.className).toContain('line-timeline-header-sticky')
+    // The stats span (and the rest of the header) live INSIDE this pinned
+    // wrapper, not as a loose sibling.
+    expect(header.contains(screen.getByTestId('line-timeline-stats-0'))).toBe(true)
+  })
+
+  it('keeps the romaji sub-line inside the same pinned header wrapper as the badge/text/stats', () => {
+    const line = makeLine([keystroke({ startMs: 0, endMs: 100, label: 'h' })])
+    renderWithI18n(
+      <LineTimelineRow line={line} maxDisplayMs={1000} romajiInput onHover={vi.fn()} onHoverEnd={vi.fn()} />,
+    )
+    const header = screen.getByTestId('line-timeline-header-0')
+    const romajiLine = screen.getByLabelText(/Romaji:/)
+    expect(header.contains(romajiLine)).toBe(true)
+  })
+
+  it('never makes the SVG bar strip itself sticky — only the header pins, the strip keeps scrolling/zooming with the canvas', () => {
+    const line = makeLine([keystroke({ startMs: 0, endMs: 100, label: 'h' })])
+    renderWithI18n(
+      <LineTimelineRow line={line} maxDisplayMs={1000} romajiInput={false} onHover={vi.fn()} onHoverEnd={vi.fn()} />,
+    )
+    const header = screen.getByTestId('line-timeline-header-0')
+    const svg = screen.getByTestId('line-timeline-svg-0')
+    expect(header.contains(svg)).toBe(false)
+    expect(svg.closest('.line-timeline-header-sticky')).toBeNull()
+  })
+})
+
 describe('LineTimelineRow — on-bar keystroke labels', () => {
   it('renders one label overlay cell per keystroke segment, with the segment label as its text', () => {
     const line = makeLine([

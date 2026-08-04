@@ -2,6 +2,7 @@
 
 import type { RefObject } from 'react'
 import type { TypingTestResult, TypingViewMenuTab, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../../shared/types/pipette-settings'
+import type { RunKeystrokeLog } from '../../../shared/types/typing-run-log'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { KleKey } from '../../../shared/kle/types'
 import type { useTypingTest } from '../../typing-test/useTypingTest'
@@ -60,6 +61,12 @@ export interface TypingTestPaneProps {
   finishedResult?: TypingTestResult | null
   /** Name the just-finished result (save under name when held, else rename). */
   onNameFinishedResult?: (name: string) => void
+  /** The just-finished run's in-memory raw keystroke log — forwarded to
+   *  `TypingTestView` so the completion screen can render the shared
+   *  `KeystrokeTimelinePanel` inline, no IPC round-trip needed
+   *  (Plan-completion-timeline-view PR-B). See `useTypingTestResultSave`'s
+   *  own doc comment on `lastFinishedLog`. */
+  lastFinishedLog?: RunKeystrokeLog | null
   /** Per-condition Measurement-row comparison baselines (persisted per
    *  keyboard, synced). Keyed by condition; the current condition's baseline
    *  is looked up and applied. */
