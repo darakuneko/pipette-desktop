@@ -31,6 +31,15 @@ export interface RomajiDetailSettings {
    *  row anchors to the same line structure as the reading window — see
    *  `RomajiGuide`. */
   guideLineCount?: number
+  /** Whether a LINE-END word (real lines from tatoeba/fileImport, tracked
+   *  via `state.lineBreaks`) holds once its romaji completes until Enter
+   *  commits it, instead of auto-advancing like every other word (see
+   *  `processRomajiKeyEvent`/`handleRomajiChar` in romaji-input.ts, and
+   *  Task-romaji-line-end-enter). Default: true (Enter required) — this is
+   *  the behaviour that existed before the setting did, so an absent value
+   *  changes nothing for existing configs. Only an explicit `false` opts
+   *  out and auto-advances at line ends too. */
+  lineEndEnter?: boolean
 }
 
 export type TypingTestConfig =

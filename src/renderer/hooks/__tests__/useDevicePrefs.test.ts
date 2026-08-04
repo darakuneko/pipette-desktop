@@ -1226,6 +1226,71 @@ describe('useDevicePrefs', () => {
       })
     })
 
+    // Task: lineEndEnter (romaji "Enter at line ends" toggle) — default
+    // true, prune-at-default (only an explicit false persists), same
+    // convention as guideLineCount's default of 1 above.
+    it('round-trips an explicit lineEndEnter: false', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romaji: { lineEndEnter: false },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { lineEndEnter: false },
+      })
+    })
+
+    it('drops a non-boolean lineEndEnter but keeps the rest of romaji', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romaji: { caseStyle: 'capital', lineEndEnter: 'nope' },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { caseStyle: 'capital' },
+      })
+    })
+
     it('drops individually invalid romaji fields but keeps the ones that validate', async () => {
       setupMocks()
       mockPipetteSettingsGet.mockResolvedValue({

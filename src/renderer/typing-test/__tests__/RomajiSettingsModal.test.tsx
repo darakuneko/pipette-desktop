@@ -66,6 +66,21 @@ describe('RomajiSettingsModal defaults', () => {
     expect(screen.getByTestId('romaji-guide-lines-1').className).not.toContain('text-accent')
   })
 
+  it('shows the line-end Enter toggle on by default when lineEndEnter is not set', () => {
+    renderModal()
+    expect(screen.getByTestId('romaji-line-end-enter')).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('shows the line-end Enter toggle on when lineEndEnter is explicitly true', () => {
+    renderModal({ config: { ...BASE_CONFIG, romaji: { lineEndEnter: true } } })
+    expect(screen.getByTestId('romaji-line-end-enter')).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('shows the line-end Enter toggle off when lineEndEnter is explicitly false', () => {
+    renderModal({ config: { ...BASE_CONFIG, romaji: { lineEndEnter: false } } })
+    expect(screen.getByTestId('romaji-line-end-enter')).toHaveAttribute('aria-checked', 'false')
+  })
+
   it('defaults the guide Base selector to Hepburn, with every Option off', () => {
     renderModal()
     expect(screen.getByTestId('romaji-guide-base-hepburn')).toHaveAttribute('aria-pressed', 'true')
@@ -159,6 +174,30 @@ describe('RomajiSettingsModal edits', () => {
     fireEvent.click(screen.getByTestId('romaji-guide-lines-1'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
     if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
+  })
+
+  it('toggles the line-end Enter setting off from the default-on state (writes an explicit false)', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-line-end-enter'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') expect(arg.romaji).toEqual({ lineEndEnter: false })
+  })
+
+  it('toggling line-end Enter back on from an explicit false prunes the field back to unset', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ config: { ...BASE_CONFIG, romaji: { lineEndEnter: false } }, onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-line-end-enter'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
+  })
+
+  it('toggling line-end Enter off preserves an existing romaji field alongside it', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ config: { ...BASE_CONFIG, romaji: { caseStyle: 'capital' } }, onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-line-end-enter'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') expect(arg.romaji).toEqual({ caseStyle: 'capital', lineEndEnter: false })
   })
 
   it('selecting Kunrei as the guide Base adds kunrei to guideStyles', () => {

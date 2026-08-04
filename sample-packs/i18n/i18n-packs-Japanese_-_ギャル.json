@@ -1,5 +1,5 @@
 {
-  "version": "0.1.72",
+  "version": "0.1.73",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -337,6 +337,8 @@
           "lower": "romaji"
         },
         "guideLinesLabel": "表示行数っしょ",
+        "lineEndEnterLabel": "行末でEnter必須にするっしょ",
+        "lineEndEnterHint": "オンだと行末の単語はEnter押すまで確定しないよん☆ オフれば他の単語と同じで自動で次いくよ☆",
         "guideLabel": "表示パターンっしょ",
         "guideHint": "表示だけだから、他の入力パターンでも正解になるよん☆",
         "inputLabel": "入力パターンっしょ",

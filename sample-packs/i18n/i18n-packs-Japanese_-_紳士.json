@@ -1,5 +1,5 @@
 {
-  "version": "0.1.72",
+  "version": "0.1.73",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -337,6 +337,8 @@
           "lower": "romaji"
         },
         "guideLinesLabel": "表示行数",
+        "lineEndEnterLabel": "行末でEnterを必須とする",
+        "lineEndEnterHint": "オンの場合、行末の単語はEnterにて確定するまで保持されます。オフになさると他の単語同様、自動で次へ進みます",
         "guideLabel": "表示する綴りの型",
         "guideHint": "表示のみにございます。他の入力パターンでも正解となります",
         "inputLabel": "受理する入力の型",

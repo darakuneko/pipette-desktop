@@ -1,5 +1,5 @@
 {
-  "version": "0.1.72",
+  "version": "0.1.73",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -337,6 +337,8 @@
           "lower": "romaji"
         },
         "guideLinesLabel": "表示行数どす",
+        "lineEndEnterLabel": "行末でEnterを必須にしますえ",
+        "lineEndEnterHint": "オンやと行末の単語はEnterで確定するまで待っとくれやす。オフにしたら他の単語と同じですぐ次へ進みますえ",
         "guideLabel": "表示パターン",
         "guideHint": "表示だけどすえ。他の入力パターンでも正解になりますえ",
         "inputLabel": "入力パターン",

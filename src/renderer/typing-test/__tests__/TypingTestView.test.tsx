@@ -824,6 +824,51 @@ describe('TypingTestView — imported fileImport text (line breaks)', () => {
     expect(screen.getByTestId('typing-test-words').className).toContain('typing-multiline-window')
   })
 
+  // Task: the ⏎ glyph is only truthful while Enter is actually required at
+  // a real line end. Romaji input's "Enter at line ends" toggle
+  // (RomajiDetailSettings.lineEndEnter, default true) can turn that
+  // requirement off — `romajiGuide != null` stands in for "romaji input is
+  // active" (see showLineEndGlyph's own doc comment in TypingTestView.tsx).
+  const ROMAJI_GUIDE_STUB = {
+    typed: '', remaining: 'か', kanaCompleted: 0, words: ['か', 'か'], lineCount: 1, showRow: true,
+  }
+
+  it('still shows ⏎ when romaji is active and lineEndEnter is unset (default on)', () => {
+    const { container } = renderView({
+      config: { mode: 'fileImport', textId: 'x', romajiInput: true },
+      romajiGuide: ROMAJI_GUIDE_STUB,
+      state: makeState({ status: 'running', words: ['a', 'b', 'c', 'd'], lineBreaks: new Set([1]) }),
+    })
+    expect(container.textContent).toContain('⏎')
+  })
+
+  it('still shows ⏎ when romaji is active and lineEndEnter is explicitly true', () => {
+    const { container } = renderView({
+      config: { mode: 'fileImport', textId: 'x', romajiInput: true, romaji: { lineEndEnter: true } },
+      romajiGuide: ROMAJI_GUIDE_STUB,
+      state: makeState({ status: 'running', words: ['a', 'b', 'c', 'd'], lineBreaks: new Set([1]) }),
+    })
+    expect(container.textContent).toContain('⏎')
+  })
+
+  it('hides ⏎ when romaji is active and lineEndEnter is explicitly false', () => {
+    const { container } = renderView({
+      config: { mode: 'fileImport', textId: 'x', romajiInput: true, romaji: { lineEndEnter: false } },
+      romajiGuide: ROMAJI_GUIDE_STUB,
+      state: makeState({ status: 'running', words: ['a', 'b', 'c', 'd'], lineBreaks: new Set([1]) }),
+    })
+    expect(container.textContent).not.toContain('⏎')
+  })
+
+  it('still shows ⏎ when lineEndEnter is false but romaji input is NOT active (romajiGuide null)', () => {
+    const { container } = renderView({
+      config: { mode: 'fileImport', textId: 'x', romajiInput: true, romaji: { lineEndEnter: false } },
+      romajiGuide: null,
+      state: makeState({ status: 'running', words: ['a', 'b', 'c', 'd'], lineBreaks: new Set([1]) }),
+    })
+    expect(container.textContent).toContain('⏎')
+  })
+
   it('applies font size and line count as CSS vars on the fileImport window', () => {
     renderView({
       displayLines: 6,

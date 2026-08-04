@@ -1,5 +1,5 @@
 {
-  "version": "0.1.72",
+  "version": "0.1.73",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -337,6 +337,8 @@
           "lower": "romaji"
         },
         "guideLinesLabel": "表示行数",
+        "lineEndEnterLabel": "行末でEnterを必須にする",
+        "lineEndEnterHint": "オンの場合、行末の単語はEnterで確定するまで保持されます。オフにすると他の単語と同様に自動で次へ進みます",
         "guideLabel": "表示パターン",
         "guideHint": "表示のみです。他の入力パターンでも正解になります",
         "inputLabel": "入力パターン",

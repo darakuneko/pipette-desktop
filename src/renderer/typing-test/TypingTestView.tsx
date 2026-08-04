@@ -7,6 +7,7 @@ import type { TypingTestState } from './useTypingTest'
 import type { RomajiGuide, TypingTestConfig } from './types'
 import type { ComparisonStats } from './comparison'
 import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE } from './types'
+import { romajiDetail } from './romaji-input'
 import { WordDisplay } from './WordDisplay'
 import { TypingTestControlsRow } from './TypingTestControlsRow'
 import { TypingTestStatsRow } from './TypingTestStatsRow'
@@ -202,6 +203,16 @@ export function TypingTestView({
     () => (state.lineBreaks.size > 0 ? groupIntoLines(state.words, state.lineBreaks) : null),
     [state.words, state.lineBreaks],
   )
+  // The ⏎ glyph is only truthful while Enter is actually required at a real
+  // line end. Romaji input mode's "Enter at line ends" toggle (default on)
+  // can turn that requirement off (see isLineEndEnterRequired in
+  // romaji-input.ts) — a line-end word then auto-advances on completion
+  // like any other word, so showing ⏎ would be a lie. `romajiGuide != null`
+  // is the established 1:1 stand-in for "romaji input is active" (romaji
+  // guide selectors return null exactly when `isRomajiInputActive` is
+  // false — see buildRomajiGuideProgress); when romaji is off entirely the
+  // config's `romaji` field is irrelevant and the glyph renders as before.
+  const showLineEndGlyph = realLines !== null && (romajiGuide == null || romajiDetail(config)?.lineEndEnter !== false)
   // Monkeytype modes (words/time/quote — lineBreaks empty) render synthetic
   // line rows too, derived from a hidden-mirror measurement (see
   // useVisualLines) instead of the flat CSS word-flow, so the reading
@@ -464,13 +475,15 @@ export function TypingTestView({
               {lines ? (
                 // Real (fileImport/tatoeba) or synthetic (monkeytype, measured
                 // via useVisualLines) line rows. ⏎ marks a real line end
-                // (Enter, not Space, advances there) — gated on `realLines`
-                // rather than lineWordIdxs' last-word membership in
-                // state.lineBreaks, so it can never fire for the synthetic
-                // monkeytype rows even in the (real-lines-only) edge case
-                // where the very last word happens to be a recorded break.
-                // line-indent-* is fileImport-only for the same "no real
-                // lines" reason: state.lineIndents stays empty elsewhere.
+                // (Enter, not Space, advances there) — gated on
+                // `showLineEndGlyph` (real lines AND Enter actually required
+                // there — see that const's own doc comment) rather than
+                // lineWordIdxs' last-word membership in state.lineBreaks, so
+                // it can never fire for the synthetic monkeytype rows even
+                // in the (real-lines-only) edge case where the very last
+                // word happens to be a recorded break. line-indent-* is
+                // fileImport-only for the same "no real lines" reason:
+                // state.lineIndents stays empty elsewhere.
                 lines.map((lineWordIdxs, lineIdx) => (
                   <div key={lineIdx} data-line-row={lineIdx} className="flex flex-wrap gap-x-3">
                     {state.lineIndents[lineIdx] && (
@@ -479,7 +492,7 @@ export function TypingTestView({
                       <span data-testid={`line-indent-${lineIdx}`} className="-mr-3 select-none whitespace-pre text-content-muted/40" aria-hidden="true">{state.lineIndents[lineIdx]}</span>
                     )}
                     {lineWordIdxs.map(renderWord)}
-                    {Boolean(realLines) && lineIdx < lines.length - 1 && (
+                    {showLineEndGlyph && lineIdx < lines.length - 1 && (
                       <span className="select-none text-content-muted/40" aria-hidden="true">⏎</span>
                     )}
                   </div>
