@@ -121,9 +121,28 @@
    right edge, not the zoomed row's actual (offscreen) right edge. Applied
    to the LINE view only — the word view's analogous per-word header (see
    word-timeline-row.tsx) is a separate component with its own, shorter
-   stats string that hasn't been reported as scrolling out of view. */
+   stats string that hasn't been reported as scrolling out of view.
+
+   `scrollbar-gutter: stable` — measured (not guessed) root cause of the
+   header's right-aligned stats getting clipped whenever a classic
+   (non-overlay) vertical scrollbar actually appears: Chromium resolves
+   `100cqw` against this container's box as it would be with NO scrollbar,
+   and never re-measures it once a real scrollbar carves that width back
+   out of `clientWidth` — a DOM measurement in the built app showed the
+   SAME `100cqw` pixel value (and the same header/stats right edge) with
+   and without an active vertical scrollbar, while the scrollport's own
+   `clientWidth` dropped by the scrollbar's ~15-17px only in the
+   scrollbar-present case, clipping the stats span by that same amount.
+   `scrollbar-gutter: stable` reserves that gutter unconditionally — with
+   or without actual vertical overflow — so `clientWidth` (and therefore
+   what `100cqw` resolves against) is identical in both states and never
+   changes out from under the sticky header when scrolling starts/stops.
+   The tradeoff is a small permanent gap on the right in the
+   no-scrollbar case (the reserved-but-unused gutter) — accepted as
+   symmetric and preferable to intermittent clipping. */
 .keystroke-timeline-scrollport {
   container-type: inline-size;
+  scrollbar-gutter: stable;
 }
 .line-timeline-header-sticky {
   position: sticky;

@@ -77,7 +77,7 @@ function validateRomajiDetailSettings(raw: unknown): RomajiDetailSettings | unde
   // and "0 = hidden" meaning) so a persisted config written before the
   // rename doesn't silently lose its explicit guide setting. A malformed
   // value in either field is simply dropped (falls through to "not set" /
-  // the modal's default of 2), same as every other field here.
+  // the modal's default of 1), same as every other field here.
   if (
     typeof obj.guideLineCount === 'number'
     && Number.isInteger(obj.guideLineCount)
