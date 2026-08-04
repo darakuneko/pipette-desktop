@@ -194,6 +194,24 @@ interface MissedTableProps {
    *  `'typing-test-mistake-ranking'` contract (TypingTestHistory.tsx's
    *  Results/Analysis tab switch depends on it structurally). */
   testId?: string
+  /** Scrollport's own max-height Tailwind class. Defaults to
+   *  `MISSED_TABLE_MAX_HEIGHT` (`max-h-56`, ~8-10 rows) — History's
+   *  "Most missed" Analysis-tab usage, which has no sibling competing for
+   *  the same bounded space. `KeystrokeTimelinePanel` passes a smaller
+   *  cap (`max-h-40`) for its own bounded-modal instance, so this table's
+   *  worst-case footprint stays comfortably under the sibling timeline
+   *  box's own `min-h-64` height floor — see that call site's own
+   *  height-priority comment for the full mechanism. */
+  maxHeightClass?: string
+  /** Whether the scrollport itself carries its own `rounded-md border
+   *  border-edge` frame. Defaults to `true` — History's "Most missed"
+   *  section has no outer box of its own (see `MistakeRankingSection`'s
+   *  doc comment: it sits among unboxed section-heading siblings), so
+   *  the scrollport's border is its ONLY framing. `KeystrokeTimelinePanel`
+   *  passes `false`: its own Missed section wrapper already frames the
+   *  whole thing (see that call site), so the scrollport's own border
+   *  was a redundant inner border double-stacked against the outer one. */
+  bordered?: boolean
 }
 
 /** Bounds the row list's own scroll container to roughly 8-10 rows'
@@ -248,18 +266,35 @@ export function MissedTable({
   mistakes, details,
   titleKey = 'editor.typingTest.results.mistakesLabel',
   testId = 'typing-test-missed-table',
+  maxHeightClass = MISSED_TABLE_MAX_HEIGHT,
+  bordered = true,
 }: MissedTableProps) {
   const { t } = useTranslation()
   const entries = useMemo(() => allSortedMistakeEntries(mistakes), [mistakes])
   if (entries.length === 0) return null
   const maxCount = entries[0][1]
+  const scrollportClass = [
+    'missed-table-scrollport',
+    'min-h-0',
+    maxHeightClass,
+    'overflow-y-auto',
+    bordered ? 'rounded-md border border-edge' : null,
+    'bg-surface p-2',
+  ].filter(Boolean).join(' ')
   return (
-    <div className="flex flex-col gap-2" data-testid={testId}>
+    // `min-h-0` (harmless when this root isn't nested inside a
+    // height-constrained flex ancestor, e.g. MistakeRankingSection's plain
+    // block placement in History) is what lets `KeystrokeTimelinePanel`'s
+    // own bounded-modal instance shrink this whole table below its natural
+    // content size instead of overflowing — see that call site's own
+    // height-priority comment (`typing-test-missed-box`'s `min-h-0`, not
+    // `shrink-0`) for the full mechanism this propagates.
+    <div className="flex min-h-0 flex-col gap-2" data-testid={testId}>
       <h3 className="text-xs font-semibold uppercase tracking-widest text-content-muted">
         {t(titleKey)}
       </h3>
       <div
-        className={`missed-table-scrollport ${MISSED_TABLE_MAX_HEIGHT} overflow-y-auto rounded-md border border-edge bg-surface p-2`}
+        className={scrollportClass}
         data-testid="missed-table-scrollport"
       >
         <div className="flex flex-col gap-1">

@@ -53,14 +53,30 @@ interface Props {
 interface LegendSwatchProps {
   colorClass: string
   labelKey: string
+  /** When set, the label's former parenthetical explanation — hidden
+   *  behind a hover/focus tooltip instead of always-visible inline text.
+   *  Rendered PLAIN, no visual affordance on the label itself (no
+   *  underline, no special cursor) — same idiom every other tooltip
+   *  trigger in this codebase uses (ErrorMixSection's type labels,
+   *  CoverageBadge, the Missed table's own bar rows below): the tooltip
+   *  showing up on hover/focus IS the affordance, nothing on the trigger
+   *  itself hints at it in advance. */
+  tooltipKey?: string
 }
 
-function LegendSwatch({ colorClass, labelKey }: LegendSwatchProps) {
+function LegendSwatch({ colorClass, labelKey, tooltipKey }: LegendSwatchProps) {
   const { t } = useTranslation()
+  const label = tooltipKey
+    ? (
+      <Tooltip content={t(tooltipKey)}>
+        <span>{t(labelKey)}</span>
+      </Tooltip>
+    )
+    : t(labelKey)
   return (
     <span className="flex items-center gap-1.5 text-2xs text-content-secondary">
       <span className={`inline-block h-2.5 w-2.5 rounded-sm ${colorClass}`} aria-hidden="true" />
-      {t(labelKey)}
+      {label}
     </span>
   )
 }
@@ -88,6 +104,16 @@ function lineLegendLabelKey(kind: TimelineFillKind, displayMode: 'line' | 'word'
   if (displayMode === 'line' && kind === 'blank') return 'editor.typingTest.history.timeline.legend.blankLine'
   if (displayMode === 'line' && kind === 'leadIn') return 'editor.typingTest.history.timeline.legend.leadInLine'
   return TIMELINE_LEGEND[kind].labelKey
+}
+
+/** Sibling of `lineLegendLabelKey` for the tooltip half of the split —
+ *  `blank`'s line-mode variant (`blankLine`) carries a different cutoff
+ *  (250ms vs the word view's 1000ms) in its own tooltip text, same as the
+ *  label swap above. `leadIn` has no tooltip in either mode (its label
+ *  never carried a parenthetical to begin with). */
+function lineLegendTooltipKey(kind: TimelineFillKind, displayMode: 'line' | 'word'): string | undefined {
+  if (displayMode === 'line' && kind === 'blank') return 'editor.typingTest.history.timeline.legend.blankLineTooltip'
+  return TIMELINE_LEGEND[kind].tooltipKey
 }
 
 function keystrokeTooltipBody(word: string, seg: KeystrokeSegment, t: (key: string, opts?: Record<string, unknown>) => string) {
@@ -292,7 +318,50 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
           participates in the flex-height chain (`flex-1 min-h-0
           flex-col`) so the rows scrollport inside it can still absorb
           all the remaining height — title/zoom/legend keep their natural
-          height, same as before. */}
+          height, same as before.
+
+          HEIGHT PRIORITY (polish item: in a bounded ancestor — the
+          History modal's `h-modal-80vh` — this box and the Missed box
+          below both compete for the SAME leftover space, and the Missed
+          box used to win: it was `shrink-0` (flex-shrink: 0) with its own
+          internal scroll capped at ~8-10 rows (`MISSED_TABLE_MAX_HEIGHT`),
+          so its natural height was reserved OFF THE TOP, non-negotiably,
+          before this box's `flex-1` ever saw the remainder — a run with
+          many distinct mistake keys could squeeze this box down to a
+          single visible row.
+
+          FLAGGED DEAD END: a `min-h-64` floor on THIS box (an earlier
+          version of this fix) does guarantee dominance whenever both
+          boxes fit, but doesn't actually prevent overflow — a `min-height`
+          is a hard floor, not a suggestion, so on a short enough window
+          (verified via the panel-polish E2E script's 800px case) the
+          Missed box's own `shrink-0` rigidity plus this floor together
+          summed to MORE than the available space, and — since neither
+          box had anywhere left to give — their rendered content visually
+          OVERLAPPED the finished-state controls row below instead of
+          properly stacking. A hard floor can only ever win a fixed-sum
+          contest against an equally rigid sibling; it can't make the
+          sibling actually yield.
+
+          FIX: make the Missed box wrapper (below) properly shrinkable
+          instead — drop its `shrink-0` for `min-h-0` (default
+          `flex-shrink: 1` already applies; `min-h-0` is what lets it
+          shrink below its own natural content size instead of hard-
+          flooring there, same reason every OTHER link in this flex chain
+          already carries `min-h-0`). With both boxes now genuinely
+          shrinkable, a real space deficit gets distributed
+          PROPORTIONALLY between them (flexbox's default shrink algorithm,
+          weighted by each box's own content size) instead of one box
+          refusing to give at all — which naturally keeps this box (whose
+          content is usually taller — timeline rows vs a handful of Missed
+          rows) LARGER post-shrink too, without ever risking overflow: a
+          `min-h-0` box can always still compress toward 0 rather than
+          spill past its container. The Missed table's own scrollport cap
+          is ALSO tightened for this call site (`max-h-40` vs the
+          component's own `max-h-56` default, see the `MissedTable` call
+          below) so it claims less of the ROOMY-window case too, biasing
+          the split toward this box even when nothing is actually
+          squeezed. */}
       <div
         className="flex min-h-0 flex-1 flex-col gap-3 rounded-md border border-edge bg-surface p-3"
         data-testid="typing-test-timeline-box"
@@ -330,32 +399,60 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
 
         {/* Legend — color alone never carries meaning elsewhere in
             this view (tooltips spell everything out too), but this
-            is the at-a-glance key. Line-mode overrides the blank/
-            lead-in wording to the line-view's own meaning (a 250ms
-            cut and "before this line", not the word view's 1000ms /
-            "before this word") — every other entry, and the word
-            view's own wording, stays unchanged. The two longer-form
-            notes (corrected-mistake markers, compressed-pause axis)
-            used to render as their own paragraph lines below the
-            legend — collapsed into this single info icon (`ml-auto`,
+            is the at-a-glance key. Every item shows only its head
+            word ("Overlapped" / "Unjudged" / "Pause") — the former
+            parenthetical explanation moved into a per-item hover
+            tooltip (`LegendSwatch`'s own `tooltipKey`), rendered PLAIN
+            with no visual affordance on the label itself (matching every
+            other tooltip trigger in this codebase — ErrorMixSection's
+            row labels, CoverageBadge, the Missed table's own bar rows —
+            none of which carry an underline or a special cursor; the
+            tooltip appearing on hover/focus is the only signal) so the
+            row stays a compact single line instead of wrapping under
+            long inline text.
+            "Normal keystroke" / "Mistake" / "Pause before this
+            word(/line)" never carried a parenthetical, so those three
+            have no tooltip. Line-mode overrides the blank/lead-in
+            wording (both label AND tooltip) to the line-view's own
+            meaning (a 250ms cut and "before this line", not the word
+            view's 1000ms / "before this word") — every other entry, and
+            the word view's own wording, stays unchanged. The two
+            longer-form notes (corrected-mistake markers, compressed-
+            pause axis) used to render as their own paragraph lines below
+            the legend — collapsed into this single info glyph (`ml-auto`,
             right end of the row) so the legend reads as one compact
             line; both notes still live in the tooltip, joined with a
             newline (BUBBLE_BASE's `whitespace-pre-line` renders it as
             two lines), same idiom as ErrorMixSection's row-label
-            tooltip. */}
+            tooltip. Rendered as a plain, non-interactive `<span>` (not a
+            `<button>`) for the same reason the legend labels above are
+            plain — this codebase's `button:not(:disabled) { cursor:
+            pointer }` global rule (style.css) would otherwise put an
+            interactive-looking cursor on a glyph that does nothing on
+            click, same inconsistency CoverageBadge's plain-span trigger
+            already avoids. `aria-label` still supplies its accessible
+            name (the `Info` icon itself is `aria-hidden`); like
+            CoverageBadge/ErrorMixSection's own triggers, this means
+            hover discovers it but Tab does not — no `tabIndex` is added,
+            since none of this codebase's other non-button tooltip
+            triggers add one either. */}
         <div className="flex flex-wrap items-center gap-3" data-testid="word-timeline-legend">
           {LEGEND_ORDER.map((kind) => (
-            <LegendSwatch key={kind} colorClass={TIMELINE_LEGEND[kind].swatchClass} labelKey={lineLegendLabelKey(kind, displayMode)} />
+            <LegendSwatch
+              key={kind}
+              colorClass={TIMELINE_LEGEND[kind].swatchClass}
+              labelKey={lineLegendLabelKey(kind, displayMode)}
+              tooltipKey={lineLegendTooltipKey(kind, displayMode)}
+            />
           ))}
           <Tooltip content={legendNotes} className="max-w-xs">
-            <button
-              type="button"
+            <span
               data-testid="word-timeline-legend-info"
               aria-label={t('editor.typingTest.history.timeline.legend.infoAriaLabel')}
               className="ml-auto rounded p-1 text-content-muted hover:text-content transition-colors"
             >
               <Info size={ICON_SM} aria-hidden="true" />
-            </button>
+            </span>
           </Tooltip>
         </div>
 
@@ -450,10 +547,17 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
           list. Substitution/Omission/Insertion render above, as stat
           cards in `summaryItems`, not here. Stays in the same position it
           held as a chip list (below the timeline box) so the timeline
-          itself reads first; `shrink-0` keeps it from being squeezed by
-          the box's own `flex-1`, which must keep absorbing all the
-          remaining height in the flex-height chain (see the scrollport's
-          own comment above).
+          itself reads first.
+
+          `min-h-0` (NOT `shrink-0` — see the timeline box's own
+          HEIGHT PRIORITY comment for why that flip matters) lets this box
+          shrink below its own natural content size in a bounded ancestor
+          instead of hard-flooring there; the DEFAULT `flex-shrink: 1`
+          (unset, so this is just the browser default) is what actually
+          does the shrinking once space runs short, proportional to this
+          box's own content size vs the timeline box's — which keeps the
+          timeline box bigger post-shrink too, without either box ever
+          overflowing its container.
 
           Wrapped in the SAME bordered-box treatment as the timeline box
           above (`rounded-md border border-edge bg-surface p-3`,
@@ -462,10 +566,27 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
           by `MistakeRankingSection` (History's Analysis tab "Most missed"
           section, which sits among unboxed section-heading siblings —
           ACCURACY TREND / ERROR MIX — and must stay that way), so the box
-          is added here around the render, not inside `MissedTable`. */}
+          is added here around the render, not inside `MissedTable`.
+
+          `maxHeightClass="max-h-40"` (vs `MissedTable`'s own `max-h-56`
+          default) and `bordered={false}` are this call site's own polish
+          tweaks: a tighter cap biases the ROOMY-window case toward the
+          timeline box too (less reserved by Missed even when nothing is
+          actually squeezed), and `bordered={false}` drops the
+          scrollport's inner border since THIS wrapper already frames the
+          whole section — the two together used to double-stack a border
+          around the same content. Neither prop is passed at
+          `MistakeRankingSection`'s call site, which keeps `MissedTable`'s
+          unbounded defaults (`max-h-56`, its own border) since that
+          section has no competing sibling and no outer box of its own. */}
       {hasMistakes && (
-        <div className="shrink-0 rounded-md border border-edge bg-surface p-3" data-testid="typing-test-missed-box">
-          <MissedTable mistakes={result?.mistakes ?? {}} details={missedDetails} />
+        <div className="min-h-0 rounded-md border border-edge bg-surface p-3" data-testid="typing-test-missed-box">
+          <MissedTable
+            mistakes={result?.mistakes ?? {}}
+            details={missedDetails}
+            maxHeightClass="max-h-40"
+            bordered={false}
+          />
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.73",
+  "version": "0.1.74",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -550,11 +550,15 @@
           "legend": {
             "normal": "通常の打鍵どすえ",
             "mistake": "ミスどすえ",
-            "overlap": "重複打鍵（前のキーを離さんうちに押さはったん）",
-            "unjudged": "未判定（正誤のデータがおへん）",
-            "blank": "ブランク（圧縮して表示どすえ）",
+            "overlap": "重複打鍵",
+            "overlapTooltip": "前のキーを離さんうちに押さはったん",
+            "unjudged": "未判定",
+            "unjudgedTooltip": "正誤のデータがおへん",
+            "blank": "ブランク",
+            "blankTooltip": "圧縮して表示どすえ",
             "leadIn": "ワード前の間どすえ",
-            "blankLine": "ブランク（250ms超、圧縮して表示どすえ）",
+            "blankLine": "ブランク",
+            "blankLineTooltip": "250ms超、圧縮して表示どすえ",
             "leadInLine": "行前の間どすえ",
             "correctedNote": "ミスの印には提出前に直さはった打鍵も入ってますよって、印があっても正確度100%になることがおすえ",
             "infoAriaLabel": "凡例の補足情報"

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.73",
+  "version": "0.1.74",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -550,11 +550,15 @@
           "legend": {
             "normal": "通常の打鍵",
             "mistake": "誤り",
-            "overlap": "重複打鍵（前のキーを離す前に押したもの）",
-            "unjudged": "未判定（正誤のデータなし）",
-            "blank": "間（圧縮して表示）",
+            "overlap": "重複打鍵",
+            "overlapTooltip": "前のキーを離す前に押したもの",
+            "unjudged": "未判定",
+            "unjudgedTooltip": "正誤のデータなし",
+            "blank": "間",
+            "blankTooltip": "圧縮して表示",
             "leadIn": "ワード前の間",
-            "blankLine": "間（250ms超、圧縮して表示）",
+            "blankLine": "間",
+            "blankLineTooltip": "250ms超、圧縮して表示",
             "leadInLine": "行前の間",
             "correctedNote": "誤りの印には提出前に訂正された打鍵も含まれております。印があっても正確度100%となることがございます。",
             "infoAriaLabel": "凡例の補足情報"

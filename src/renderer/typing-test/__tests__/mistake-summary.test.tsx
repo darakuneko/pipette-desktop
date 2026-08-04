@@ -251,6 +251,39 @@ describe('MissedTable (bar-graph rows: Word / typed chars / stacked bar / Cnt)',
     })
   })
 
+  // `bordered`/`maxHeightClass` (timeline-panel polish items 2 & 3):
+  // KeystrokeTimelinePanel passes `maxHeightClass="max-h-40"
+  // bordered={false}` for its own bounded-modal instance (see
+  // KeystrokeTimelinePanel.test.tsx) — this describe block covers the
+  // props themselves, on `MissedTable` directly, independent of that
+  // caller.
+  describe('bordered / maxHeightClass (scrollport framing + height cap, caller-overridable)', () => {
+    it('defaults to bordered=true (rounded-md border border-edge) and max-h-56, matching History\'s unboxed "Most missed" usage', () => {
+      renderWithI18n(<MissedTable mistakes={{ h: 1 }} />)
+      const scrollport = screen.getByTestId('missed-table-scrollport')
+      expect(scrollport.className).toContain('rounded-md')
+      expect(scrollport.className).toContain('border')
+      expect(scrollport.className).toContain('border-edge')
+      expect(scrollport.className).toContain('max-h-56')
+    })
+
+    it('bordered={false} drops the rounded/border classes but keeps scroll/padding', () => {
+      renderWithI18n(<MissedTable mistakes={{ h: 1 }} bordered={false} />)
+      const scrollport = screen.getByTestId('missed-table-scrollport')
+      expect(scrollport.className).not.toContain('border')
+      expect(scrollport.className).not.toContain('rounded-md')
+      expect(scrollport.className).toContain('overflow-y-auto')
+      expect(scrollport.className).toContain('p-2')
+    })
+
+    it('maxHeightClass overrides the default max-h-56 cap', () => {
+      renderWithI18n(<MissedTable mistakes={{ h: 1 }} maxHeightClass="max-h-40" />)
+      const scrollport = screen.getByTestId('missed-table-scrollport')
+      expect(scrollport.className).toContain('max-h-40')
+      expect(scrollport.className).not.toContain('max-h-56')
+    })
+  })
+
   // Shared-component reuse (MistakeRankingSection, History's Analysis tab)
   // — proves the same row list renders correctly under the cross-run
   // caller's own titleKey/testId, not just the single-run defaults

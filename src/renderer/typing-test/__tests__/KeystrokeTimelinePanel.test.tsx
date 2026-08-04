@@ -2,7 +2,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, fireEvent } from '@testing-library/react'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '../../i18n'
 import { KeystrokeTimelinePanel } from '../KeystrokeTimelinePanel'
@@ -123,6 +123,79 @@ describe('KeystrokeTimelinePanel', () => {
     expect(screen.getAllByTestId('word-timeline-keystroke')).toHaveLength(2)
   })
 
+  // Polish item 1: legend items that used to carry a parenthetical
+  // explanation inline now show only their head word, with the
+  // explanation moved into a hover tooltip (aria-describedby, not
+  // always-visible text).
+  describe('legend labels (head word only, parenthetical text moved to a hover tooltip)', () => {
+    function hoverLegendLabel(text: string): HTMLElement {
+      const label = screen.getByText(text)
+      fireEvent.mouseEnter(label)
+      const describedBy = label.getAttribute('aria-describedby')
+      expect(describedBy).toBeTruthy()
+      return document.getElementById(describedBy!)!
+    }
+
+    it('shows bare head words for Overlapped/Unjudged/Pause, with no parenthetical text anywhere in the legend row', () => {
+      renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
+      const legendRow = screen.getByTestId('word-timeline-legend')
+      expect(within(legendRow).getByText('Overlapped')).toBeTruthy()
+      expect(within(legendRow).getByText('Unjudged')).toBeTruthy()
+      expect(within(legendRow).getByText('Pause')).toBeTruthy()
+      expect(legendRow.textContent).not.toContain('(')
+      expect(legendRow.textContent).not.toContain(')')
+    })
+
+    it('leaves Normal keystroke / Mistake / Pause before this word unwrapped (no tooltip, since they never carried a parenthetical)', () => {
+      renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
+      expect(screen.getByText('Normal keystroke').getAttribute('aria-describedby')).toBeNull()
+      expect(screen.getByText('Mistake').getAttribute('aria-describedby')).toBeNull()
+      expect(screen.getByText('Pause before this word').getAttribute('aria-describedby')).toBeNull()
+    })
+
+    it('opens the Overlapped tooltip with the former parenthetical text on hover', () => {
+      renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
+      const tooltip = hoverLegendLabel('Overlapped')
+      expect(tooltip.textContent).toBe('Pressed before the previous key released')
+    })
+
+    it('opens the Unjudged tooltip with the former parenthetical text on hover', () => {
+      renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
+      const tooltip = hoverLegendLabel('Unjudged')
+      expect(tooltip.textContent).toBe('No correctness data')
+    })
+
+    it('opens the word-view Pause tooltip ("Shown compressed") when no lineBreaks field is present', () => {
+      renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
+      const tooltip = hoverLegendLabel('Pause')
+      expect(tooltip.textContent).toBe('Shown compressed')
+    })
+
+    it('opens the line-view Pause tooltip ("More than 250ms, shown compressed") when the log carries lineBreaks', () => {
+      const lineLog: RunKeystrokeLog = { ...SAMPLE_LOG, lineBreaks: [0] }
+      renderWithI18n(<KeystrokeTimelinePanel log={lineLog} />)
+      const tooltip = hoverLegendLabel('Pause')
+      expect(tooltip.textContent).toBe('More than 250ms, shown compressed')
+    })
+
+    // FLAG (consistency fix): the tooltip-bearing label used to carry a
+    // dotted-underline + `cursor-help` affordance — no other tooltip
+    // trigger in this codebase does that (ErrorMixSection's type labels,
+    // CoverageBadge, the Missed table's own bar rows are all plain), so
+    // it was removed. The tooltip itself (hover -> aria-describedby ->
+    // portaled bubble) still works identically; only the label's own
+    // visual styling changed.
+    it('renders the tooltip-bearing label plain, with no underline/cursor-help decoration, while the tooltip still opens on hover', () => {
+      renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
+      const label = screen.getByText('Overlapped')
+      expect(label.className).not.toContain('cursor-help')
+      expect(label.className).not.toContain('underline')
+      expect(label.className).not.toContain('decoration-dotted')
+      const tooltip = hoverLegendLabel('Overlapped')
+      expect(tooltip.textContent).toBe('Pressed before the previous key released')
+    })
+  })
+
   it('opts the scroll container into container-type: inline-size, so a LINE row\'s sticky header can pin to its visible width via cqw', () => {
     const { container } = renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
     const canvas = screen.getByTestId('word-timeline-canvas')
@@ -173,10 +246,16 @@ describe('KeystrokeTimelinePanel', () => {
     // inline text in the flow.
     expect(within(container).queryByText(/Mistake markers include keystrokes later corrected/)).toBeNull()
     expect(within(container).queryByText(/Pauses are shown compressed on this axis/)).toBeNull()
-    // The info icon button sits at the legend row's right end, with an
-    // accessible name (no native title attribute — lint forbids it).
+    // FLAG (consistency fix): the info glyph used to be a `<button>`,
+    // which this codebase's global `button:not(:disabled) { cursor:
+    // pointer }` rule (style.css) put a pointer cursor on — inconsistent
+    // with every other tooltip-only trigger (CoverageBadge,
+    // ErrorMixSection's row labels), none of which are buttons. Now a
+    // plain, non-interactive `<span>` — sits at the legend row's right
+    // end, with an accessible name via `aria-label` (no native title
+    // attribute — lint forbids it).
     const infoButton = screen.getByTestId('word-timeline-legend-info')
-    expect(infoButton.tagName).toBe('BUTTON')
+    expect(infoButton.tagName).toBe('SPAN')
     expect(infoButton.getAttribute('title')).toBeNull()
     expect(infoButton).toHaveAccessibleName()
     // Right end of the legend row (`ml-auto`), after every swatch. The
@@ -257,9 +336,21 @@ describe('KeystrokeTimelinePanel', () => {
     expect(warning.compareDocumentPosition(statLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
+  // FLAG (polish item 1): `getByRole('tooltip')` used to be safe because
+  // the info icon was the panel's only `Tooltip` consumer. Now that the
+  // legend's own Overlapped/Unjudged/Pause labels each carry their own
+  // `Tooltip` too (portaled to `document.body` unconditionally once
+  // mounted, per Tooltip.tsx's own comment — `role="tooltip"` exists in
+  // the DOM before any hover), several `role="tooltip"` elements coexist
+  // and the single-role query throws. Scoped instead via the info
+  // button's own `aria-describedby`, same technique the legend-tooltip
+  // tests above use.
   it('shows both note texts, joined as two lines, in the legend info tooltip', () => {
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
-    const tooltip = screen.getByRole('tooltip')
+    const infoButton = screen.getByTestId('word-timeline-legend-info')
+    const describedBy = infoButton.getAttribute('aria-describedby')
+    expect(describedBy).toBeTruthy()
+    const tooltip = document.getElementById(describedBy!)!
     expect(tooltip.className).toContain('whitespace-pre-line')
     expect(tooltip.textContent).toBe(
       'Mistake markers include keystrokes later corrected before submit — a word can show markers and still be 100% accuracy.'
@@ -339,7 +430,14 @@ describe('KeystrokeTimelinePanel', () => {
   // as the timeline box above. `MistakeRankingSection` (History's "Most
   // missed") renders the same `MissedTable` unboxed — see
   // MistakeRankingSection.test.tsx, unchanged by this tweak.
-  it('wraps the Missed table in its own bordered box matching the timeline box treatment, keeping shrink-0', () => {
+  // FLAG (polish item 2, height-priority fix): `shrink-0` (flex-shrink: 0)
+  // became `min-h-0` — `shrink-0` refused to compress at all, which
+  // (verified via the E2E script's 800px-window case) could overflow past
+  // the finished-state controls row below in a bounded ancestor with a
+  // real content-heavy Missed table. `min-h-0` keeps the default
+  // `flex-shrink: 1` in effect, so this box can shrink proportionally
+  // instead of forcing an overflow — see the box's own doc comment.
+  it('wraps the Missed table in its own bordered box matching the timeline box treatment, with min-h-0 (not shrink-0)', () => {
     const result = makeResult({ mistakes: { a: 3 } })
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={result} />)
 
@@ -351,12 +449,69 @@ describe('KeystrokeTimelinePanel', () => {
     expect(missedBox.className).toContain('border')
     expect(missedBox.className).toContain('border-edge')
     expect(missedBox.className).toContain('bg-surface')
-    expect(missedBox.className).toContain('shrink-0')
+    expect(missedBox.className).toContain('min-h-0')
+    expect(missedBox.className).not.toContain('shrink-0')
   })
 
   it('omits the Missed box entirely (no empty bordered box) when the result has no mistakes', () => {
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={makeResult()} />)
     expect(screen.queryByTestId('typing-test-missed-box')).toBeNull()
+  })
+
+  // Polish item 2: in a bounded ancestor (the History modal's
+  // `h-modal-80vh`), the timeline box and the Missed box compete for the
+  // same leftover flex space — the timeline box must win, WITHOUT ever
+  // overflowing the ancestor at a short window (see the timeline box's own
+  // doc comment for the flagged `min-h-64` dead end this replaced). Both
+  // boxes now carry `min-h-0` (genuinely shrinkable, default
+  // `flex-shrink: 1`, no `shrink-0` anywhere in this pair) so a real space
+  // deficit distributes proportionally instead of one box refusing to
+  // give at all; this call site also tightens the Missed table's own
+  // scrollport cap (`max-h-40`, vs its `max-h-56` default) so it claims
+  // less even in the roomy case. jsdom has no layout engine, so this only
+  // asserts the STRUCTURAL classes that implement the mechanism, not
+  // actual rendered pixel heights (that's the E2E script's job, run
+  // against the real, built app — see panel-polish-e2e.ts, which measured
+  // 268px timeline vs 182px Missed in the modal, and confirmed zero
+  // overflow/overlap at both a normal and an 800px-tall window on the
+  // completion screen).
+  it('keeps both the timeline box and the Missed box genuinely shrinkable (min-h-0, no shrink-0), with a tighter max-h-40 cap on the Missed table', () => {
+    const result = makeResult({ mistakes: { a: 3 } })
+    renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={result} />)
+
+    const timelineBox = screen.getByTestId('typing-test-timeline-box')
+    expect(timelineBox.className).toContain('min-h-0')
+    expect(timelineBox.className).toContain('flex-1')
+
+    const missedBox = screen.getByTestId('typing-test-missed-box')
+    expect(missedBox.className).toContain('min-h-0')
+    expect(missedBox.className).not.toContain('shrink-0')
+
+    const missedScrollport = screen.getByTestId('missed-table-scrollport')
+    expect(missedScrollport.className).toContain('max-h-40')
+    expect(missedScrollport.className).not.toContain('max-h-56')
+  })
+
+  // Polish item 3: the Missed section used to show a border on its OWN
+  // outer box (`typing-test-missed-box`, asserted above) AND an inner
+  // border on the table's own scroll container — a visible double
+  // border around the same content. The scrollport keeps its scroll/
+  // padding but loses the border/rounded classes at THIS call site only
+  // (History's own unboxed "Most missed" instance keeps its border —
+  // see mistake-summary.test.tsx's `bordered` describe block).
+  it('removes the Missed table scrollport\'s own inner border (the outer Missed box is the only frame)', () => {
+    const result = makeResult({ mistakes: { a: 3 } })
+    renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={result} />)
+
+    const missedScrollport = screen.getByTestId('missed-table-scrollport')
+    expect(missedScrollport.className).not.toContain('border')
+    expect(missedScrollport.className).not.toContain('rounded-md')
+    // Still scrollable, still padded — only the border/rounded frame is gone.
+    expect(missedScrollport.className).toContain('overflow-y-auto')
+    expect(missedScrollport.className).toContain('p-2')
+
+    const missedBox = screen.getByTestId('typing-test-missed-box')
+    expect(missedBox.contains(missedScrollport)).toBe(true)
   })
 
   it('shows Substitution/Omission/Insertion as stat cards, sourced from the result', () => {
