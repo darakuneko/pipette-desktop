@@ -1,5 +1,5 @@
 {
-  "version": "0.1.67",
+  "version": "0.1.72",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -538,7 +538,7 @@
           "partialBadge": "未完了どすえ",
           "stats": {
             "wordPace": "ワード速度どすえ",
-            "runWpm": "ラン全体のWPMどすえ",
+            "runWpm": "WPM",
             "accuracy": "正確度どすえ",
             "overlap": "重複率どすえ",
             "duration": "所要時間どすえ",
@@ -587,7 +587,11 @@
         "errorSubstitutions": "置換 {{count}}どす",
         "errorOmissions": "脱字 {{count}}どす",
         "errorInsertions": "衍字 {{count}}どす",
-        "timelineConsentHint": "打鍵タイムラインを見とうおすなら、タイピングの記録を有効にしておくれやすどす。"
+        "timelineConsentHint": "打鍵タイムラインを見とうおすなら、タイピングの記録を有効にしておくれやすどす。",
+        "missedBarTypedLine": "代わりに打ちはったんは: {{chars}}",
+        "missedBarCorrectedLine": "Backspaceで直しはったんは: {{count}}どす",
+        "missedBarMovedOnLine": "直さんまま次へ行かはったんは: {{count}}どす",
+        "missedBarNoDetail": "この記録には打鍵ごとの詳細がおへんどす"
       }
     }
   },

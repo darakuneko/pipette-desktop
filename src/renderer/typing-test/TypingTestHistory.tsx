@@ -404,6 +404,8 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
           ariaLabelledBy={viewTabId('analysis')}
           tabResults={tabResults}
           selectedCondition={effectiveConditionKey}
+          uid={uid}
+          availableRunIds={availableRunIds}
         />
       )}
     </div>

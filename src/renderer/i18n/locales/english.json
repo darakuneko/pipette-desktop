@@ -1,5 +1,5 @@
 {
-  "version": "0.1.67",
+  "version": "0.1.72",
   "name": "English",
   "common": {
     "save": "Save",
@@ -538,7 +538,7 @@
           "partialBadge": "Partial",
           "stats": {
             "wordPace": "Word Pace",
-            "runWpm": "Run WPM",
+            "runWpm": "WPM",
             "accuracy": "Accuracy",
             "overlap": "Overlap",
             "duration": "Duration",
@@ -587,7 +587,11 @@
         "errorSubstitutions": "Substitution {{count}}",
         "errorOmissions": "Omission {{count}}",
         "errorInsertions": "Insertion {{count}}",
-        "timelineConsentHint": "Enable typing recording to see the keystroke timeline here."
+        "timelineConsentHint": "Enable typing recording to see the keystroke timeline here.",
+        "missedBarTypedLine": "Typed instead: {{chars}}",
+        "missedBarCorrectedLine": "Corrected with Backspace: {{count}}",
+        "missedBarMovedOnLine": "Moved on uncorrected: {{count}}",
+        "missedBarNoDetail": "No per-keystroke detail available for this run"
       }
     }
   },

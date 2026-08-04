@@ -1899,7 +1899,8 @@ describe('useTypingTest onNoteKeystrokeRegistration / window focus gate (P1)', (
     act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
 
     expect(noteRegistration).toHaveBeenCalledTimes(1)
-    const windowFocusedArg = noteRegistration.mock.calls[0][6] as boolean
+    // Args: (runId, row, col, ts, wordIndex, getExpectedChar, getMistakeKey, windowFocused).
+    const windowFocusedArg = noteRegistration.mock.calls[0][7] as boolean
     expect(windowFocusedArg).toBe(true)
   })
 

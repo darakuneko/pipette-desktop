@@ -974,6 +974,26 @@ export interface RomajiMatcher {
    *  can't be mapped back to a kana count; the UI uses this instead to
    *  color the word's kana characters up through what's actually locked in. */
   completedKanaCount(): number
+  /** Canonical romaji spelling of the kana segment currently being
+   *  attempted at this matcher's live position/buffer — the same
+   *  candidate `remainingGuide()`/`nextGuideChar()` read off, resolved to
+   *  its full kana span and re-canonicalized style-agnostically (see
+   *  `canonicalRomaji`) so it matches the spelling a real completed
+   *  segment would tally under in `TypingTestState.mistakes`
+   *  (`handleRomajiChar` in run-state.ts). Used by run-log-recorder.ts
+   *  (via `deriveMistakeKey`/`currentRomajiMistakeKey`) to attribute a
+   *  REJECTED keystroke to the eventual mistake-map key without waiting
+   *  for the segment to actually finish — this is exactly the
+   *  "recorded at input time" design this feature deliberately chose
+   *  over replaying the saved log afterward (non-deterministic for
+   *  romaji: which alternate spelling family a segment resolves under
+   *  depends on what the user goes on to type). Best-effort, not a
+   *  guarantee: if the user later abandons this candidate for an
+   *  entirely different spelling family, the segment that eventually
+   *  completes could resolve a different kana span than the one
+   *  snapshotted here. Returns undefined once the word is already fully
+   *  matched. */
+  currentSegmentCanonicalKey(): string | undefined
 }
 
 interface ConsumeResult {
@@ -1116,6 +1136,13 @@ export function createRomajiMatcher(word: string, opts?: RomajiMatcherOptions): 
 
     completedKanaCount(): number {
       return position
+    },
+
+    currentSegmentCanonicalKey(): string | undefined {
+      if (position >= kana.length) return undefined
+      const winner = representativeAt(kana, position, buffer, disabledStyles, guideStyles)
+      if (!winner) return undefined
+      return canonicalRomaji(word.slice(position, position + winner.length))
     },
   }
 }

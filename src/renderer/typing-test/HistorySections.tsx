@@ -26,6 +26,11 @@ interface Props {
    *  reappearing through this new layer). */
   id: string
   ariaLabelledBy: string
+  /** Forwarded to `MistakeRankingSection` — see its own prop docs. The
+   *  same `uid`/`availableRunIds` `TypingTestHistory` already threads to
+   *  `HistoryResultsPanel` for the Results view's timeline column. */
+  uid?: string
+  availableRunIds?: ReadonlySet<string>
 }
 
 /** The History modal's "Analysis" view: accuracy trend, mistake ranking,
@@ -33,7 +38,7 @@ interface Props {
  *  a tall stack (e.g. many mistake-ranking rows) scrolls independently
  *  instead of pushing past the modal's bottom edge (flex children don't
  *  shrink below their content height otherwise). */
-export function HistorySections({ tabResults, selectedCondition, id, ariaLabelledBy }: Props) {
+export function HistorySections({ tabResults, selectedCondition, id, ariaLabelledBy, uid, availableRunIds }: Props) {
   return (
     <div
       role="tabpanel"
@@ -43,7 +48,7 @@ export function HistorySections({ tabResults, selectedCondition, id, ariaLabelle
       data-testid="history-sections"
     >
       <AccuracyTrendSection results={tabResults} selectedCondition={selectedCondition} />
-      <MistakeRankingSection results={tabResults} />
+      <MistakeRankingSection results={tabResults} uid={uid} availableRunIds={availableRunIds} />
       <ErrorMixSection results={tabResults} />
     </div>
   )

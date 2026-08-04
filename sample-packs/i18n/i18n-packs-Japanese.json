@@ -1,5 +1,5 @@
 {
-  "version": "0.1.67",
+  "version": "0.1.72",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -538,7 +538,7 @@
           "partialBadge": "未完了",
           "stats": {
             "wordPace": "ワード速度",
-            "runWpm": "ラン全体のWPM",
+            "runWpm": "WPM",
             "accuracy": "正確度",
             "overlap": "重複率",
             "duration": "所要時間",
@@ -587,7 +587,11 @@
         "errorSubstitutions": "置換 {{count}}",
         "errorOmissions": "脱字 {{count}}",
         "errorInsertions": "衍字 {{count}}",
-        "timelineConsentHint": "打鍵タイムラインを表示するには、タイピングの記録を有効にしてください。"
+        "timelineConsentHint": "打鍵タイムラインを表示するには、タイピングの記録を有効にしてください。",
+        "missedBarTypedLine": "代わりに入力: {{chars}}",
+        "missedBarCorrectedLine": "Backspaceで修正: {{count}}",
+        "missedBarMovedOnLine": "未修正のまま次へ: {{count}}",
+        "missedBarNoDetail": "この記録には打鍵ごとの詳細がありません"
       }
     }
   },

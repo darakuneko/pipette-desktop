@@ -139,17 +139,17 @@ describe('WordTimelineView', () => {
     expect(parseFloat(canvas.style.width)).toBeGreaterThan(parseFloat(widthBefore))
   })
 
-  it('labels the pace card "Run WPM" (not "Word Pace") when a History result is supplied, since it shows result.wpm — a different metric', async () => {
+  it('labels the pace card "WPM" (not "Word Pace") when a History result is supplied, since it shows result.wpm — a different metric', async () => {
     const result = { date: '2026-01-01', wpm: 42, accuracy: 95, wordCount: 10, correctChars: 50, incorrectChars: 2, durationSeconds: 10 }
     renderWithI18n(<WordTimelineView uid="uid-1" runId="run-1" result={result} onClose={() => {}} />)
-    await waitFor(() => expect(screen.getByText('Run WPM')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('WPM')).toBeTruthy())
     expect(screen.queryByText('Word Pace')).toBeNull()
   })
 
   it('labels the pace card "Word Pace" (the model-derived fallback) when no result is supplied', async () => {
     renderWithI18n(<WordTimelineView uid="uid-1" runId="run-1" onClose={() => {}} />)
     await waitFor(() => expect(screen.getByText('Word Pace')).toBeTruthy())
-    expect(screen.queryByText('Run WPM')).toBeNull()
+    expect(screen.queryByText('WPM')).toBeNull()
   })
 
   it('hides the entire Zoom row (including its label) when the log has zero drawable content', async () => {

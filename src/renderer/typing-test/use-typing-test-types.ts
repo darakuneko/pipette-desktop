@@ -38,19 +38,23 @@ export interface UseTypingTestOptions<TPreparedEvent = unknown> {
    * useInputModes) of a matrix press at REGISTRATION time, so a later
    * (possibly TAPPING_TERM-delayed) analytics event can still be joined
    * back to the word it was actually typed against. See
-   * run-log-recorder.ts's `noteRegistration`. `getExpectedChar` is a
-   * thunk (not an already-computed value) so its — possibly expensive,
-   * for romaji — derivation is free whenever the recorder is gated off;
-   * the recorder invokes it only once it has confirmed recording is
-   * actually active. Only ever called while `windowFocused` (this
-   * hook's own live focus state) is true — see the call site in
-   * `processMatrixFrame` — so `windowFocused` is always `true` here too;
-   * threaded through anyway so the recorder's own gate (defense in
-   * depth, see run-log-recorder.ts's PRIVACY note) doesn't have to
-   * assume the caller's discipline. */
+   * run-log-recorder.ts's `noteRegistration`. `getExpectedChar`/
+   * `getMistakeKey` are thunks (not already-computed values) so their —
+   * possibly expensive, for romaji — derivation is free whenever the
+   * recorder is gated off; the recorder invokes each only once it has
+   * confirmed recording is actually active. `getMistakeKey` mirrors
+   * `getExpectedChar`'s shape but derives a DIFFERENT value in romaji
+   * mode (the in-progress kana segment's canonical spelling, not the
+   * single next romaji char) — see expected-char.ts's `deriveMistakeKey`.
+   * Only ever called while `windowFocused` (this hook's own live focus
+   * state) is true — see the call site in `processMatrixFrame` — so
+   * `windowFocused` is always `true` here too; threaded through anyway
+   * so the recorder's own gate (defense in depth, see
+   * run-log-recorder.ts's PRIVACY note) doesn't have to assume the
+   * caller's discipline. */
   onNoteKeystrokeRegistration?: (
     runId: string, row: number, col: number, ts: number, wordIndex: number,
-    getExpectedChar: () => string | undefined, windowFocused: boolean,
+    getExpectedChar: () => string | undefined, getMistakeKey: () => string | undefined, windowFocused: boolean,
   ) => void
   /** Notifies the run-keystroke-log recorder of a char-producing
    * keystroke's word attribution, snapshotted immediately BEFORE this
@@ -61,9 +65,12 @@ export interface UseTypingTestOptions<TPreparedEvent = unknown> {
    * run first, not merely before the emit. See run-log-recorder.ts's
    * `noteCharContext`. `getExpectedChar` is a thunk for the same reason
    * as `onNoteKeystrokeRegistration`'s. Only ever called while
-   * `windowFocused` is true, same as `onNoteKeystrokeRegistration`. */
+   * `windowFocused` is true, same as `onNoteKeystrokeRegistration`.
+   * `getMistakeKey` mirrors `getExpectedChar`'s shape — see this
+   * interface's `onNoteKeystrokeRegistration` doc comment above. */
   onNoteCharContext?: (
-    runId: string, wordIndex: number, getExpectedChar: () => string | undefined, windowFocused: boolean,
+    runId: string, wordIndex: number,
+    getExpectedChar: () => string | undefined, getMistakeKey: () => string | undefined, windowFocused: boolean,
   ) => void
   /** TAPPING_TERM (ms) used to classify masked-key presses as tap vs
    * hold against a deadline fixed at press time (pressTs + this value,

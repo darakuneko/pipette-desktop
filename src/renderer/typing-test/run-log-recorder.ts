@@ -194,11 +194,30 @@ export interface RunLogFinishMeta {
  *  strips it before persisting. */
 interface BufferedKeystroke extends RunKeystroke {
   wordIndex: number
+  /** Candidate mistake-map key from registration/char-context — NOT part
+   *  of the persisted `RunKeystroke` shape (unlike `mistakeKey` itself,
+   *  which this field feeds). `applyCharVerdict` promotes this into the
+   *  real `mistakeKey` field ONLY when the verdict lands on `correct ===
+   *  false`; kept as a separate field (rather than writing straight onto
+   *  `mistakeKey` and clearing it back out on every other outcome) so a
+   *  keystroke that never reaches a verdict at all (e.g. a bare
+   *  modifier, never char-producing, so `applyCharVerdict` is never even
+   *  called for it) can never leak a stale `mistakeKey` onto the
+   *  persisted shape — see `RunKeystroke.mistakeKey`'s own doc comment
+   *  ("set ONLY on incorrect keystrokes"). */
+  mistakeKeyCandidate?: string
 }
 
 interface RegistrationAnnotation {
   wordIndex: number
   expectedChar: string | undefined
+  /** Candidate mistake-map key (see `RunKeystroke.mistakeKey`'s own doc
+   *  comment), threaded alongside `expectedChar` from the same
+   *  registration/char-context snapshot. Only ever SURVIVES onto the
+   *  persisted keystroke when `applyCharVerdict` later finds `correct ===
+   *  false` for it — kept here unconditionally (same as `expectedChar`)
+   *  since the verdict isn't known yet at snapshot time. */
+  mistakeKey: string | undefined
 }
 
 /** Bound on how many char-producing keystrokes may sit unconfirmed in
@@ -239,6 +258,10 @@ interface PendingChar {
   key: string
   wordIndex: number | null
   expectedChar: string | undefined
+  /** Mirrors `RegistrationAnnotation.mistakeKey` — see that field's own
+   *  doc comment. `wordIndex: null` (no annotation captured) implies this
+   *  is `undefined` too, same as `expectedChar`. */
+  mistakeKey: string | undefined
 }
 
 interface RunLogBuffer {
@@ -279,11 +302,20 @@ function pressKey(row: number, col: number, keycode: number): string {
 /** Rough per-keystroke byte estimate for the {@link MAX_RUN_LOG_BYTES}
  *  running total — doesn't need to be exact, only a cheap, monotonic
  *  proxy for the final serialized size. A flat constant (the fields
- *  other than `expectedChar` vary little in width) plus the one field
- *  whose length actually varies, rather than paying for a real
- *  `JSON.stringify` on every keystroke just to measure it. */
+ *  other than `expectedChar`/`typedChar`/`mistakeKey` vary little in
+ *  width) plus the fields whose length actually varies, rather than
+ *  paying for a real `JSON.stringify` on every keystroke just to measure
+ *  it. `typedChar`/`mistakeKey` are candidate values at push time (not
+ *  yet cleared by `applyCharVerdict` for a correct keystroke — see that
+ *  method's own doc comment), so this can transiently overcount before
+ *  the verdict lands; harmless for a monotonic cap estimate. */
 function approxByteSize(k: BufferedKeystroke): number {
-  return 110 + (k.expectedChar?.length ?? 0)
+  // `mistakeKeyCandidate` approximates BOTH `mistakeKey` and `typedChar`'s
+  // eventual contribution once `applyCharVerdict` promotes them —
+  // `typedChar` is virtually always a single character, so folding its
+  // width into this same term rather than tracking it separately stays a
+  // safe overestimate, not an undercount.
+  return 110 + (k.expectedChar?.length ?? 0) + (k.mistakeKeyCandidate?.length ?? 0)
 }
 
 export class RunLogRecorder {
@@ -344,6 +376,7 @@ export class RunLogRecorder {
   noteRegistration(
     context: RunLogRecordContext, row: number, col: number, ts: number, wordIndex: number,
     getExpectedChar: () => string | undefined,
+    getMistakeKey?: () => string | undefined,
   ): void {
     if (!context.typingTestLabel) return
     if (!context.consentAccepted) return
@@ -358,7 +391,10 @@ export class RunLogRecorder {
       // this field's own doc comment.
       this.pendingCharAnnotation = null
     }
-    this.buffer.registrations.set(registrationKey(row, col, ts), { wordIndex, expectedChar: getExpectedChar() })
+    this.buffer.registrations.set(
+      registrationKey(row, col, ts),
+      { wordIndex, expectedChar: getExpectedChar(), mistakeKey: getMistakeKey?.() },
+    )
   }
 
   /** Snapshot a char-producing keystroke's word attribution immediately
@@ -379,13 +415,16 @@ export class RunLogRecorder {
    *  between to observe or clobber it. Never mints/advances the buffer
    *  itself (that happens in `record`, see its own doc comment) — this
    *  method only ever writes the slot. */
-  noteCharContext(context: RunLogRecordContext, wordIndex: number, expectedChar: string | undefined): void {
+  noteCharContext(
+    context: RunLogRecordContext, wordIndex: number, expectedChar: string | undefined,
+    mistakeKey?: string | undefined,
+  ): void {
     if (!context.typingTestLabel) return
     if (!context.consentAccepted) return
     if (!context.windowFocused) return
     if (!context.runId) return
     if (context.runId === this.poisonedRunId) return
-    this.pendingCharAnnotation = { wordIndex, expectedChar }
+    this.pendingCharAnnotation = { wordIndex, expectedChar, mistakeKey }
   }
 
   /** Record one analytics event already destined for the per-minute
@@ -448,6 +487,7 @@ export class RunLogRecorder {
       col: payload.col,
       wordIndex: reg.wordIndex,
       expectedChar: reg.expectedChar,
+      mistakeKeyCandidate: reg.mistakeKey,
       overlapped: payload.overlap,
     }
     this.pushKeystroke(buf, keystroke)
@@ -496,6 +536,7 @@ export class RunLogRecorder {
         if (pendingChar.wordIndex !== null) {
           keystroke.wordIndex = pendingChar.wordIndex
           keystroke.expectedChar = pendingChar.expectedChar
+          keystroke.mistakeKeyCandidate = pendingChar.mistakeKey
         }
         this.applyCharVerdict(keystroke, pendingChar.key)
       } else {
@@ -537,6 +578,15 @@ export class RunLogRecorder {
    *  confirms nothing, in either direction — the keystroke it lands on is
    *  still consumed (to keep the surrounding queue aligned) just without
    *  a misleading correctness verdict. */
+  /** Also decides whether `typedChar`/`mistakeKey` land on this keystroke
+   *  at all — both start UNSET (see `mistakeKeyCandidate`'s own doc
+   *  comment: the candidate lives in a separate field until promoted
+   *  here), and are only ever written when the verdict actually lands on
+   *  `correct === false` (see `RunKeystroke.typedChar`/`mistakeKey`'s own
+   *  doc comments: set ONLY on an incorrect keystroke, never on a
+   *  correct OR unjudged one — a keystroke this method is never called
+   *  for at all, e.g. a bare modifier press, therefore correctly never
+   *  gets either field either). */
   private applyCharVerdict(keystroke: BufferedKeystroke, key: string): void {
     if (key === 'Backspace') return
     if (keystroke.expectedChar !== undefined) {
@@ -550,6 +600,13 @@ export class RunLogRecorder {
       // compare false here — a known, accepted limitation, not fixed by
       // this comparison.
       keystroke.correct = key === keystroke.expectedChar
+    }
+    if (keystroke.correct === false) {
+      // `key` here is the actual DOM char produced by this press — the
+      // same value just compared against expectedChar above, never a
+      // keycode reverse-mapping (see `typedChar`'s own doc comment).
+      keystroke.typedChar = key
+      keystroke.mistakeKey = keystroke.mistakeKeyCandidate
     }
   }
 
@@ -569,7 +626,10 @@ export class RunLogRecorder {
       // dropping it (which is what caused the permanent off-by-one this
       // queue exists to fix — pairing this char to whatever unrelated
       // press happens to come next).
-      buf.pendingChars.push({ key: payload.key, wordIndex: annotation?.wordIndex ?? null, expectedChar: annotation?.expectedChar })
+      buf.pendingChars.push({
+        key: payload.key, wordIndex: annotation?.wordIndex ?? null,
+        expectedChar: annotation?.expectedChar, mistakeKey: annotation?.mistakeKey,
+      })
       if (buf.pendingChars.length > MAX_PENDING_CHAR_CONFIRMATIONS) buf.pendingChars.shift()
       return
     }
@@ -579,6 +639,7 @@ export class RunLogRecorder {
     if (annotation) {
       keystroke.wordIndex = annotation.wordIndex
       keystroke.expectedChar = annotation.expectedChar
+      keystroke.mistakeKeyCandidate = annotation.mistakeKey
     }
     this.applyCharVerdict(keystroke, payload.key)
   }
@@ -636,6 +697,8 @@ export class RunLogRecorder {
         expectedChar: k.expectedChar,
         correct: k.correct,
         overlapped: k.overlapped,
+        typedChar: k.typedChar,
+        mistakeKey: k.mistakeKey,
       }))
   }
 

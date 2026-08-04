@@ -223,6 +223,69 @@ describe('typing-run-log-store', () => {
       expect(result.error).toMatch(/romajiInput/i)
     })
 
+    it('accepts and persists typedChar/mistakeKey on an incorrect keystroke', async () => {
+      const result = await saveRunLog('kb-1', makeLog({
+        words: [{
+          index: 0, display: 'hello', typed: 'xello', correct: false,
+          keystrokes: [
+            { pressMs: 0, keycode: 1, row: 0, col: 0, expectedChar: 'h', correct: false, typedChar: 'x', mistakeKey: 'h' },
+          ],
+        }],
+      }))
+      expect(result.success).toBe(true)
+
+      const dataPath = join(mockUserDataPath, 'sync', 'keyboards', 'kb-1', 'runs', result.entry!.filename)
+      const saved = JSON.parse(await readFile(dataPath, 'utf-8')) as RunKeystrokeLog
+      const [k] = saved.words[0].keystrokes
+      expect(k.typedChar).toBe('x')
+      expect(k.mistakeKey).toBe('h')
+    })
+
+    it('accepts an absent typedChar/mistakeKey (legacy log, pre-dating the field)', async () => {
+      const result = await saveRunLog('kb-1', makeLog())
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects a non-string typedChar', async () => {
+      const result = await saveRunLog('kb-1', makeLog({
+        words: [{
+          index: 0, display: 'x', typed: 'y', correct: false,
+          keystrokes: [{ pressMs: 0, keycode: 1, row: 0, col: 0, typedChar: 42 as unknown as string }],
+        }],
+      }))
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects a non-string mistakeKey', async () => {
+      const result = await saveRunLog('kb-1', makeLog({
+        words: [{
+          index: 0, display: 'x', typed: 'y', correct: false,
+          keystrokes: [{ pressMs: 0, keycode: 1, row: 0, col: 0, mistakeKey: 42 as unknown as string }],
+        }],
+      }))
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects an absurdly long typedChar', async () => {
+      const result = await saveRunLog('kb-1', makeLog({
+        words: [{
+          index: 0, display: 'x', typed: 'y', correct: false,
+          keystrokes: [{ pressMs: 0, keycode: 1, row: 0, col: 0, typedChar: 'x'.repeat(1000) }],
+        }],
+      }))
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects an absurdly long mistakeKey', async () => {
+      const result = await saveRunLog('kb-1', makeLog({
+        words: [{
+          index: 0, display: 'x', typed: 'y', correct: false,
+          keystrokes: [{ pressMs: 0, keycode: 1, row: 0, col: 0, mistakeKey: 'x'.repeat(1000) }],
+        }],
+      }))
+      expect(result.success).toBe(false)
+    })
+
     it('saving the same runId twice leaves exactly one payload file on disk (P7)', async () => {
       // Fake timers guarantee the two saves land at different millisecond
       // timestamps — the filename prefix — so the second save's filename
