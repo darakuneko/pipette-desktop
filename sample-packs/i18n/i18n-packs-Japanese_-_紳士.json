@@ -1,5 +1,5 @@
 {
-  "version": "0.1.75",
+  "version": "0.1.76",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -669,7 +669,8 @@
       "rgbLighting": "彩飾灯",
       "rgbMatrix": "彩飾の陣",
       "systemControl": "統治",
-      "appBrowser": "巡回と閲覧",
+      "app": "巡回",
+      "browser": "閲覧",
       "mediaPlayback": "奏でる",
       "mouse": "鼠 (Mouse)",
       "lockingKeys": "封印の鍵",

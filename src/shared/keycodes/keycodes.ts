@@ -954,6 +954,15 @@ export const KEYCODES_SYSTEM_APP: Keycode[] = [
     alias: ['KC_MEDIA_SELECT'],
   }),
   K('KC_MYCM', 'My\nPC', 'Launch My Computer (Windows)', { alias: ['KC_MY_COMPUTER'] }),
+  K('KC_BRIU', 'Bright.\nUp', 'Increase the brightness of screen (Laptop)', {
+    alias: ['KC_BRIGHTNESS_UP'],
+  }),
+  K('KC_BRID', 'Bright.\nDown', 'Decrease the brightness of screen (Laptop)', {
+    alias: ['KC_BRIGHTNESS_DOWN'],
+  }),
+]
+
+export const KEYCODES_SYSTEM_BROWSER: Keycode[] = [
   K('KC_WSCH', 'Browser\nSearch', 'Browser Search (Windows)', { alias: ['KC_WWW_SEARCH'] }),
   K('KC_WHOM', 'Browser\nHome', 'Browser Home (Windows)', { alias: ['KC_WWW_HOME'] }),
   K('KC_WBAK', 'Browser\nBack', 'Browser Back (Windows)', { alias: ['KC_WWW_BACK'] }),
@@ -966,12 +975,6 @@ export const KEYCODES_SYSTEM_APP: Keycode[] = [
   }),
   K('KC_WFAV', 'Browser\nFav.', 'Browser Favorites (Windows)', {
     alias: ['KC_WWW_FAVORITES'],
-  }),
-  K('KC_BRIU', 'Bright.\nUp', 'Increase the brightness of screen (Laptop)', {
-    alias: ['KC_BRIGHTNESS_UP'],
-  }),
-  K('KC_BRID', 'Bright.\nDown', 'Decrease the brightness of screen (Laptop)', {
-    alias: ['KC_BRIGHTNESS_DOWN'],
   }),
 ]
 
@@ -1034,6 +1037,7 @@ export const KEYCODES_SYSTEM: Keycode[] = [
   ...KEYCODES_SYSTEM_FKEYS,
   ...KEYCODES_SYSTEM_CONTROL,
   ...KEYCODES_SYSTEM_APP,
+  ...KEYCODES_SYSTEM_BROWSER,
   ...KEYCODES_SYSTEM_PLAYBACK,
   ...KEYCODES_SYSTEM_MOUSE,
   ...KEYCODES_SYSTEM_LOCK,
