@@ -8,6 +8,7 @@ import type { KleKey } from '../../../shared/kle/types'
 import type { useTypingTest } from '../../typing-test/useTypingTest'
 import type { LineSnapshot } from '../../typing-test/TypingTestView'
 import type { TimelineHandoff } from '../../hooks/useRunTimelineHandoff'
+import type { AnalyticsOrigin } from './keymap-editor-types'
 
 export interface TypingTestPaneProps {
   typingTest: ReturnType<typeof useTypingTest>
@@ -93,6 +94,9 @@ export interface TypingTestPaneProps {
    * within decays smoothly. Backed by AppConfig.typingHeatmapWindowMin
    * — edited from the footer's TypingRecordModal, read-only here. */
   heatmapWindowMin?: number
+  /** Called when "View Analytics" is triggered from the view-only
+   * popover's Analyze button. Forwarded to `TypingTestPaneViewOnlyMenu`. */
+  onViewAnalytics?: (origin: AnalyticsOrigin) => void
   /** Keyboard uid used for the typing-view heatmap query. The heatmap
    * stays hidden while this is unset or recording is off so a session
    * without a device never sees stale overlay data. */

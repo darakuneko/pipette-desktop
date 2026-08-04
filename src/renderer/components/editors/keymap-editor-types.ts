@@ -244,6 +244,11 @@ export interface KeymapEditorProps {
    * legend text. The value itself (and its editor, the footer's
    * TypingRecordModal) lives in AppConfig. */
   typingHeatmapWindowMin?: number
+  /** Called when "View Analytics" is triggered from the compact Typing
+   * View popover (`'typingView'`). KeymapEditor forwards to the App
+   * shell, which swaps to the analytics page and remembers the origin
+   * so Back returns there. */
+  onViewAnalytics?: (origin: AnalyticsOrigin) => void
   /** Analyze -> Typing Test "open timeline" handoff (consume-once),
    * forwarded to TypingTestPane -> HistoryToggle. */
   timelineHandoff?: TimelineHandoff | null

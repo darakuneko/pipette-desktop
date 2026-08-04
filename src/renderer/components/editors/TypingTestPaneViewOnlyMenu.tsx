@@ -3,6 +3,7 @@
 import { useTranslation } from 'react-i18next'
 import { BTN_TOGGLE_ACTIVE, BTN_TOGGLE_INACTIVE } from '../../constants/ui-tokens'
 import type { useTypingTest } from '../../typing-test/useTypingTest'
+import type { AnalyticsOrigin } from './keymap-editor-types'
 
 interface TypingTestPaneViewOnlyMenuProps {
   typingTest: ReturnType<typeof useTypingTest>
@@ -17,6 +18,7 @@ interface TypingTestPaneViewOnlyMenuProps {
   recordEnabled?: boolean
   layers: number
   layerNames?: string[]
+  onViewAnalytics?: (origin: AnalyticsOrigin) => void
   onViewOnlyChange?: (enabled: boolean) => void
   handleViewOnlyToggle: () => void
 }
@@ -28,7 +30,10 @@ interface TypingTestPaneViewOnlyMenuProps {
  *  The REC tab (recording toggle, Monitor App, tray toggles, HeatMap
  *  window select) moved to the footer's Record button/modal
  *  (Task-typing-record-footer) — this panel now only ever shows the
- *  former Window tab's content, so the tab strip is gone too. */
+ *  former Window tab's content, so the tab strip is gone too. The
+ *  Analyze button (View Analytics from Typing View) stayed behind —
+ *  the footer's Record button is hidden while in Typing View, so this
+ *  popover remains the only entry point back to Analyze from here. */
 export function TypingTestPaneViewOnlyMenu({
   typingTest,
   mouseOver,
@@ -42,6 +47,7 @@ export function TypingTestPaneViewOnlyMenu({
   recordEnabled,
   layers,
   layerNames,
+  onViewAnalytics,
   onViewOnlyChange,
   handleViewOnlyToggle,
 }: TypingTestPaneViewOnlyMenuProps) {
@@ -131,6 +137,21 @@ export function TypingTestPaneViewOnlyMenu({
               ))}
             </select>
           </div>
+        )}
+
+        {onViewAnalytics && (
+          <button
+            type="button"
+            role="menuitem"
+            data-testid="view-analytics"
+            className={`whitespace-nowrap ${BTN_TOGGLE_INACTIVE}`}
+            onClick={() => {
+              setViewOnlyControlsOpen(false)
+              onViewAnalytics('typingView')
+            }}
+          >
+            {t('app.analyzeTab')}
+          </button>
         )}
 
         {onViewOnlyChange && (

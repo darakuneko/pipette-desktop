@@ -438,6 +438,7 @@ export function App() {
             keymapApplyBusy={keymapApplyBusy}
             recKeystroke={recKeystroke}
             onTypingTestViewOnlyChange={onTypingTestViewOnlyChange}
+            handleViewAnalytics={handleViewAnalytics}
             timelineHandoff={timelineHandoff}
             setTypingTestRunning={setTypingTestRunning}
           />

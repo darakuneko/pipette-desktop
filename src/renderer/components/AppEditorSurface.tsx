@@ -12,6 +12,7 @@ import { LayoutStoreContent } from './editors/LayoutStoreModal'
 import { IMPORT_BTN } from './editors/layout-store-types'
 import { ROW_CLASS } from './editors/modal-controls'
 import { KeymapEditor, type KeymapEditorHandle } from './editors/KeymapEditor'
+import type { AnalyticsOrigin } from './editors/keymap-editor-types'
 import type { TimelineHandoff } from '../hooks/useRunTimelineHandoff'
 import type { useDeviceConnection } from '../hooks/useDeviceConnection'
 import type { useKeyboard } from '../hooks/useKeyboard'
@@ -57,6 +58,7 @@ interface Props {
   keymapApplyBusy: boolean
   recKeystroke: ReturnType<typeof useRecKeystrokeCounter>
   onTypingTestViewOnlyChange: (enabled: boolean) => void
+  handleViewAnalytics: (origin: AnalyticsOrigin) => void
   timelineHandoff: TimelineHandoff | null
   setTypingTestRunning: (running: boolean) => void
 }
@@ -88,6 +90,7 @@ export function AppEditorSurface({
   keymapApplyBusy,
   recKeystroke,
   onTypingTestViewOnlyChange,
+  handleViewAnalytics,
   timelineHandoff,
   setTypingTestRunning,
 }: Props) {
@@ -312,6 +315,7 @@ export function AppEditorSurface({
         onRecKeystroke={recKeystroke.increment}
         typingHeatmapWindowMin={appConfig.config.typingHeatmapWindowMin}
         typingRecordingConsentAccepted={appConfig.config.typingRecordingConsentAccepted}
+        onViewAnalytics={handleViewAnalytics}
         timelineHandoff={timelineHandoff}
         onTypingTestRunningChange={setTypingTestRunning}
         deviceName={deviceName}

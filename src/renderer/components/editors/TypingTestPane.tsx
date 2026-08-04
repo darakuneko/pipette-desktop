@@ -70,6 +70,7 @@ export function TypingTestPane({
   onViewOnlyAlwaysOnTopChange,
   recordEnabled,
   heatmapWindowMin,
+  onViewAnalytics,
   keyboardUid,
   timelineHandoff,
   lineSnapshotRef,
@@ -341,6 +342,7 @@ export function TypingTestPane({
           recordEnabled={recordEnabled}
           layers={layers}
           layerNames={layerNames}
+          onViewAnalytics={onViewAnalytics}
           onViewOnlyChange={onViewOnlyChange}
           handleViewOnlyToggle={handleViewOnlyToggle}
         />

@@ -75,6 +75,7 @@ export function KeymapTypingTestPane({
   typingTestViewOnlyAlwaysOnTop, onTypingTestViewOnlyAlwaysOnTopChange,
   typingRecordEnabled,
   typingHeatmapWindowMin,
+  onViewAnalytics,
   keyboardUid, timelineHandoff,
   lineSnapshotRef,
 }: KeymapTypingTestPaneProps): JSX.Element {
@@ -132,6 +133,7 @@ export function KeymapTypingTestPane({
       onViewOnlyAlwaysOnTopChange={onTypingTestViewOnlyAlwaysOnTopChange}
       recordEnabled={typingRecordEnabled}
       heatmapWindowMin={typingHeatmapWindowMin}
+      onViewAnalytics={onViewAnalytics}
       keyboardUid={keyboardUid}
       timelineHandoff={timelineHandoff}
       lineSnapshotRef={lineSnapshotRef}
