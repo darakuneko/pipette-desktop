@@ -21,7 +21,7 @@ const DEFAULT_LABEL = 'words (english)'
 function register(
   recorder: RunLogRecorder, runId: string, row: number, col: number, ts: number, wordIndex: number,
   expectedChar: string | undefined,
-  gate?: { typingTestLabel?: string | null; consentAccepted?: boolean; windowFocused?: boolean },
+  gate?: { typingTestLabel?: string | null; consentAccepted?: boolean; windowFocused?: boolean; mistakeKey?: string },
 ): void {
   recorder.noteRegistration(
     {
@@ -30,7 +30,7 @@ function register(
       consentAccepted: gate?.consentAccepted ?? true,
       windowFocused: gate?.windowFocused ?? true,
     },
-    row, col, ts, wordIndex, () => expectedChar,
+    row, col, ts, wordIndex, () => expectedChar, () => gate?.mistakeKey,
   )
 }
 
@@ -41,7 +41,7 @@ function register(
  *  `register`. */
 function noteChar(
   recorder: RunLogRecorder, runId: string, wordIndex: number, expectedChar: string | undefined,
-  gate?: { typingTestLabel?: string | null; consentAccepted?: boolean; windowFocused?: boolean },
+  gate?: { typingTestLabel?: string | null; consentAccepted?: boolean; windowFocused?: boolean; mistakeKey?: string },
 ): void {
   recorder.noteCharContext(
     {
@@ -50,7 +50,7 @@ function noteChar(
       consentAccepted: gate?.consentAccepted ?? true,
       windowFocused: gate?.windowFocused ?? true,
     },
-    wordIndex, expectedChar,
+    wordIndex, expectedChar, gate?.mistakeKey,
   )
 }
 
@@ -704,6 +704,93 @@ describe('RunLogRecorder', () => {
 
       const log = recorder.finish(oneWordResult(), finishMeta())
       expect(log?.lineBreaks).toBeUndefined()
+    })
+  })
+
+  describe('typedChar / mistakeKey (missed-details detail capture)', () => {
+    it('sets typedChar and mistakeKey only on an incorrect keystroke (matrix-then-char)', () => {
+      const recorder = new RunLogRecorder()
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a', { mistakeKey: 'a' })
+      recorder.record(ctx(), matrixPress({ ts: 1000 }))
+      recorder.record(ctx(), charEvent('z'))
+
+      const log = recorder.finish(oneWordResult('z', false), finishMeta())
+      const [k] = log!.words[0].keystrokes
+      expect(k.correct).toBe(false)
+      expect(k.typedChar).toBe('z')
+      expect(k.mistakeKey).toBe('a')
+    })
+
+    it('leaves typedChar and mistakeKey undefined on a correct keystroke', () => {
+      const recorder = new RunLogRecorder()
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a', { mistakeKey: 'a' })
+      recorder.record(ctx(), matrixPress({ ts: 1000 }))
+      recorder.record(ctx(), charEvent('a'))
+
+      const log = recorder.finish(oneWordResult(), finishMeta())
+      const [k] = log!.words[0].keystrokes
+      expect(k.correct).toBe(true)
+      expect(k.typedChar).toBeUndefined()
+      expect(k.mistakeKey).toBeUndefined()
+    })
+
+    it('leaves typedChar and mistakeKey undefined on an unjudged keystroke (no expectedChar)', () => {
+      const recorder = new RunLogRecorder()
+      register(recorder, 'run-1', 0, 0, 1000, 0, undefined, { mistakeKey: 'a' })
+      recorder.record(ctx(), matrixPress({ ts: 1000, keycode: KC_LSFT }))
+
+      const log = recorder.finish(oneWordResult(), finishMeta())
+      const [k] = log!.words[0].keystrokes
+      expect(k.correct).toBeUndefined()
+      expect(k.typedChar).toBeUndefined()
+      expect(k.mistakeKey).toBeUndefined()
+    })
+
+    it('never sets typedChar/mistakeKey for a Backspace, even though it consumes the queue slot', () => {
+      const recorder = new RunLogRecorder()
+      const KC_BSPC = deserialize('KC_BSPC')
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a', { mistakeKey: 'a' })
+      recorder.record(ctx(), matrixPress({ ts: 1000, keycode: KC_BSPC }))
+      recorder.record(ctx(), charEvent('Backspace'))
+
+      const log = recorder.finish(oneWordResult(), finishMeta())
+      const [k] = log!.words[0].keystrokes
+      expect(k.correct).toBeUndefined()
+      expect(k.typedChar).toBeUndefined()
+      expect(k.mistakeKey).toBeUndefined()
+    })
+
+    it('uses the char-first pre-advance mistakeKey annotation (noteCharContext), overriding the registration snapshot — romaji segment key case', () => {
+      const recorder = new RunLogRecorder()
+      // Registration snapshot carries a stale/absent mistakeKey; the
+      // char-context annotation (captured immediately before this same
+      // key's own state advance, same ordering as expectedChar) is the
+      // more accurate one and must win — mirrors expectedChar's own
+      // override precedent.
+      noteChar(recorder, 'run-1', 0, 'a', { mistakeKey: 'kya' })
+      recorder.record(ctx(), charEvent('z', 995))
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a', { mistakeKey: 'stale' })
+      recorder.record(ctx(), matrixPress({ ts: 1000 }))
+
+      const log = recorder.finish(oneWordResult('z', false), finishMeta())
+      const [k] = log!.words[0].keystrokes
+      expect(k.correct).toBe(false)
+      expect(k.typedChar).toBe('z')
+      expect(k.mistakeKey).toBe('kya')
+    })
+
+    it('carries mistakeKey through the pendingChars queue when the char arrives before any registration exists', () => {
+      const recorder = new RunLogRecorder()
+      noteChar(recorder, 'run-1', 0, 'a', { mistakeKey: 'a' })
+      recorder.record(ctx(), charEvent('z', 995))
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a')
+      recorder.record(ctx(), matrixPress({ ts: 1000 }))
+
+      const log = recorder.finish(oneWordResult('z', false), finishMeta())
+      const [k] = log!.words[0].keystrokes
+      expect(k.correct).toBe(false)
+      expect(k.typedChar).toBe('z')
+      expect(k.mistakeKey).toBe('a')
     })
   })
 

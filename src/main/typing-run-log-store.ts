@@ -46,6 +46,14 @@ import {
  *  absolute-time leak) — see `validateRunLog`. */
 const TIMESTAMP_SLACK_MS = 5000
 
+/** Max length for `RunKeystroke.typedChar`/`mistakeKey` — both are
+ *  ordinarily a single character (verbatim) or a handful (a romaji kana
+ *  segment's canonical spelling, e.g. "kyaa"); this is a generous
+ *  multiple of the longest real spelling, just enough to reject an
+ *  absurd/malicious payload rather than to fit any legitimate value
+ *  exactly. See `isValidKeystroke`. */
+const MAX_MISTAKE_FIELD_LENGTH = 32
+
 function getStoreDir(uid: string): string {
   return join(app.getPath('userData'), 'sync', 'keyboards', uid, 'runs')
 }
@@ -141,6 +149,8 @@ function isValidKeystroke(value: unknown, durationMs: number): value is RunKeyst
   if (k.expectedChar !== undefined && typeof k.expectedChar !== 'string') return false
   if (k.correct !== undefined && typeof k.correct !== 'boolean') return false
   if (k.overlapped !== undefined && typeof k.overlapped !== 'boolean') return false
+  if (k.typedChar !== undefined && (typeof k.typedChar !== 'string' || k.typedChar.length > MAX_MISTAKE_FIELD_LENGTH)) return false
+  if (k.mistakeKey !== undefined && (typeof k.mistakeKey !== 'string' || k.mistakeKey.length > MAX_MISTAKE_FIELD_LENGTH)) return false
   return true
 }
 

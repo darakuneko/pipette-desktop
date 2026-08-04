@@ -1,5 +1,5 @@
 {
-  "version": "0.1.67",
+  "version": "0.1.72",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -538,7 +538,7 @@
           "partialBadge": "未完了",
           "stats": {
             "wordPace": "ワード速度",
-            "runWpm": "ラン全体のWPM",
+            "runWpm": "WPM",
             "accuracy": "正確度",
             "overlap": "重複率",
             "duration": "所要時間",
@@ -587,7 +587,11 @@
         "errorSubstitutions": "置換 {{count}}",
         "errorOmissions": "脱字 {{count}}",
         "errorInsertions": "衍字 {{count}}",
-        "timelineConsentHint": "打鍵タイムラインをご覧いただくには、タイピングの記録をお許しくださいませ。"
+        "timelineConsentHint": "打鍵タイムラインをご覧いただくには、タイピングの記録をお許しくださいませ。",
+        "missedBarTypedLine": "代わりに入力された文字: {{chars}}",
+        "missedBarCorrectedLine": "Backspaceで修正された回数: {{count}}",
+        "missedBarMovedOnLine": "未修正のまま進まれた回数: {{count}}",
+        "missedBarNoDetail": "この記録には打鍵ごとの詳細情報がございません"
       }
     }
   },

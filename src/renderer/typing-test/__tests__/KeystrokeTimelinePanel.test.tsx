@@ -72,7 +72,7 @@ describe('KeystrokeTimelinePanel', () => {
     })
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={result} />)
 
-    expect(statCardText('Run WPM')).toContain('42.0')
+    expect(statCardText('WPM')).toContain('42.0')
     expect(statCardText('KPM')).toContain('300') // (50 correctChars * 60) / 10s
     expect(statCardText('Accuracy')).toContain('95.0%')
     expect(statCardText('KSPC')).toContain('1.20') // 12 keystrokes / 10 chars
@@ -107,7 +107,7 @@ describe('KeystrokeTimelinePanel', () => {
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
 
     expect(screen.getByText('Word Pace')).toBeTruthy()
-    expect(screen.queryByText('Run WPM')).toBeNull()
+    expect(screen.queryByText('WPM')).toBeNull()
     // Time falls back to the resolved log's own durationMs (5000ms -> 5s).
     expect(statCardText('Time')).toContain('0:05')
     expect(statCardText('KPM')).toContain('—')
@@ -179,10 +179,82 @@ describe('KeystrokeTimelinePanel', () => {
     expect(infoButton.tagName).toBe('BUTTON')
     expect(infoButton.getAttribute('title')).toBeNull()
     expect(infoButton).toHaveAccessibleName()
-    // Right end of the legend row (`ml-auto`), after every swatch.
+    // Right end of the legend row (`ml-auto`), after every swatch. The
+    // legend row itself no longer carries its own border/bg (that moved up
+    // to the timeline box — see the box-order test below).
     expect(infoButton.className).toContain('ml-auto')
-    const legendRow = infoButton.closest('.rounded-md.border.border-edge.bg-surface')
-    expect(legendRow?.lastElementChild).toBe(infoButton.parentElement)
+    const legendRow = screen.getByTestId('word-timeline-legend')
+    expect(legendRow.contains(infoButton)).toBe(true)
+    expect(legendRow.lastElementChild).toBe(infoButton.parentElement)
+  })
+
+  describe('the timeline box (title / zoom / legend / rows in one bordered container)', () => {
+    it('wraps title, zoom, legend, and the rows scrollport in a single bordered container, in that order', () => {
+      renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
+      const box = screen.getByTestId('typing-test-timeline-box')
+      expect(box.className).toContain('rounded-md')
+      expect(box.className).toContain('border')
+      expect(box.className).toContain('border-edge')
+      expect(box.className).toContain('bg-surface')
+
+      const title = within(box).getByTestId('typing-test-timeline-title')
+      const zoomRow = within(box).getByTestId('word-timeline-zoom-row')
+      const legendRow = within(box).getByTestId('word-timeline-legend')
+      const canvas = within(box).getByTestId('word-timeline-canvas')
+
+      // Everything the box wraps must actually be INSIDE it (not just
+      // rendered somewhere else in the tree)...
+      expect(box.contains(title)).toBe(true)
+      expect(box.contains(zoomRow)).toBe(true)
+      expect(box.contains(legendRow)).toBe(true)
+      expect(box.contains(canvas)).toBe(true)
+
+      // ...and in the sketch's own order: title, then zoom, then legend,
+      // then rows (swapped from the pre-existing legend-before-zoom order).
+      expect(title.compareDocumentPosition(zoomRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(zoomRow.compareDocumentPosition(legendRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(legendRow.compareDocumentPosition(canvas) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+
+    it('the box participates in the flex-height chain (flex-1 min-h-0 flex-col), so the rows scrollport inside it still absorbs the remaining height', () => {
+      renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
+      const box = screen.getByTestId('typing-test-timeline-box')
+      expect(box.className).toContain('flex-1')
+      expect(box.className).toContain('min-h-0')
+      expect(box.className).toContain('flex-col')
+      const scrollport = screen.getByTestId('word-timeline-canvas').parentElement!
+      expect(scrollport.className).toContain('flex-1')
+      expect(scrollport.className).toContain('min-h-0')
+    })
+
+    it('the stat cards stay OUTSIDE/above the box', () => {
+      const result = makeResult()
+      const { container } = renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={result} />)
+      const box = screen.getByTestId('typing-test-timeline-box')
+      const statLabel = screen.getByText('WPM')
+      expect(box.contains(statLabel)).toBe(false)
+      expect(container.contains(statLabel)).toBe(true)
+      expect(statLabel.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+  })
+
+  // Coordinator-requested layout tweak (real-device screenshot review):
+  // the correlation-unreliable warning used to sit between the stat grid
+  // and the timeline box — moved to the very top of the panel, above the
+  // stat grid, since it qualifies every stat card's own correctness-
+  // derived figures too, not just the timeline box below it.
+  it('renders the correlation-unreliable warning ABOVE the stat-card grid, at the very top of the panel', () => {
+    const unreliableLog: RunKeystrokeLog = { ...SAMPLE_LOG, charCorrelationUnavailable: true }
+    const result = makeResult()
+    const { container } = renderWithI18n(<KeystrokeTimelinePanel log={unreliableLog} result={result} />)
+
+    const warning = screen.getByTestId('word-timeline-correlation-note')
+    const statLabel = screen.getByText('WPM')
+
+    // The warning is the panel root's first child...
+    expect(container.firstElementChild?.firstElementChild).toBe(warning)
+    // ...and precedes the stat grid in document order.
+    expect(warning.compareDocumentPosition(statLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('shows both note texts, joined as two lines, in the legend info tooltip', () => {
@@ -195,7 +267,14 @@ describe('KeystrokeTimelinePanel', () => {
     )
   })
 
-  it('shows the Missed characters list when the result carries mistakes', () => {
+  // FLAG (coordinator-requested layout change): these four cases used to
+  // assert on `typing-test-mistakes` (MissedCharsList's chip+tooltip
+  // presentation). KeystrokeTimelinePanel now renders `MissedTable`
+  // instead (see mistake-summary.tsx) — updated in place to the table's
+  // own testids rather than being dropped; MissedTable's own detailed
+  // table-structure coverage (headers, EMPTY_STAT_VALUE placeholders,
+  // shared grid tracks) lives in mistake-summary.test.tsx.
+  it('shows the Missed table when the result carries mistakes', () => {
     const result = makeResult({
       mistakes: { a: 3, b: 1 },
       errorSubstitutions: 2,
@@ -205,30 +284,79 @@ describe('KeystrokeTimelinePanel', () => {
     })
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={result} />)
 
-    expect(screen.getByTestId('typing-test-mistakes')).toBeTruthy()
-    expect(screen.getByTestId('typing-test-mistake-a').textContent).toBe('a:3')
+    expect(screen.getByTestId('typing-test-missed-table')).toBeTruthy()
+    const row = screen.getByTestId('missed-table-row-a')
+    expect(within(row).getByTestId('missed-table-row-a-word').textContent).toBe('a')
+    expect(within(row).getByTestId('missed-table-row-a-count').textContent).toBe('3')
   })
 
-  it('omits the Missed characters list entirely when the result has none (not a "-" placeholder)', () => {
+  // FLAG (coordinator-requested bar-graph rewrite): the "Typed instead"
+  // cell used to show "x: 1" (char + count together); the mockup moved
+  // counts into the bar's own hover tooltip, so the row's inline cell now
+  // reads "→ x" (chars only) instead.
+  it('wires buildMissedDetails(log) end to end: a keystroke\'s typedChar/mistakeKey surfaces in the row\'s typed cell and bar split', () => {
+    const logWithDetail: RunKeystrokeLog = {
+      ...SAMPLE_LOG,
+      words: [{
+        index: 0, display: 'hi', typed: 'xi', correct: false,
+        keystrokes: [
+          { pressMs: 0, keycode: 0, row: 0, col: 0, correct: false, expectedChar: 'h', typedChar: 'x', mistakeKey: 'h' },
+        ],
+      }],
+    }
+    const result = makeResult({ mistakes: { h: 1 } })
+    renderWithI18n(<KeystrokeTimelinePanel log={logWithDetail} result={result} />)
+
+    const row = screen.getByTestId('missed-table-row-h')
+    expect(within(row).getByTestId('missed-table-row-h-typed').textContent).toBe('→ x')
+  })
+
+  it('omits the Missed table entirely when the result has none (not a "-" placeholder)', () => {
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={makeResult()} />)
-    expect(screen.queryByTestId('typing-test-mistakes')).toBeNull()
+    expect(screen.queryByTestId('typing-test-missed-table')).toBeNull()
   })
 
-  it('omits the Missed characters list when no result is supplied at all', () => {
+  it('omits the Missed table when no result is supplied at all', () => {
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
-    expect(screen.queryByTestId('typing-test-mistakes')).toBeNull()
+    expect(screen.queryByTestId('typing-test-missed-table')).toBeNull()
   })
 
-  it('renders the Missed characters list AFTER the legend and the rows scrollport, not between the stat grid and the legend', () => {
+  it('renders the Missed table AFTER the timeline box (below it, same position the old chip list held)', () => {
     const result = makeResult({ mistakes: { a: 3 } })
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={result} />)
 
-    const legendInfo = screen.getByTestId('word-timeline-legend-info')
-    const canvas = screen.getByTestId('word-timeline-canvas')
-    const mistakes = screen.getByTestId('typing-test-mistakes')
+    const box = screen.getByTestId('typing-test-timeline-box')
+    const missedTable = screen.getByTestId('typing-test-missed-table')
 
-    expect(legendInfo.compareDocumentPosition(mistakes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(canvas.compareDocumentPosition(mistakes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(box.compareDocumentPosition(missedTable) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(box.contains(missedTable)).toBe(false)
+  })
+
+  // Coordinator-requested layout tweak (real-device screenshot review):
+  // the Missed section used to sit outside any container. Wrapped here
+  // (at THIS call site only — see the wrapper's own doc comment in
+  // KeystrokeTimelinePanel.tsx) in the exact same bordered-box treatment
+  // as the timeline box above. `MistakeRankingSection` (History's "Most
+  // missed") renders the same `MissedTable` unboxed — see
+  // MistakeRankingSection.test.tsx, unchanged by this tweak.
+  it('wraps the Missed table in its own bordered box matching the timeline box treatment, keeping shrink-0', () => {
+    const result = makeResult({ mistakes: { a: 3 } })
+    renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={result} />)
+
+    const missedBox = screen.getByTestId('typing-test-missed-box')
+    const missedTable = screen.getByTestId('typing-test-missed-table')
+
+    expect(missedBox.contains(missedTable)).toBe(true)
+    expect(missedBox.className).toContain('rounded-md')
+    expect(missedBox.className).toContain('border')
+    expect(missedBox.className).toContain('border-edge')
+    expect(missedBox.className).toContain('bg-surface')
+    expect(missedBox.className).toContain('shrink-0')
+  })
+
+  it('omits the Missed box entirely (no empty bordered box) when the result has no mistakes', () => {
+    renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={makeResult()} />)
+    expect(screen.queryByTestId('typing-test-missed-box')).toBeNull()
   })
 
   it('shows Substitution/Omission/Insertion as stat cards, sourced from the result', () => {

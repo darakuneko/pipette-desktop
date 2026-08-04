@@ -38,7 +38,7 @@ function renderRecorder(recordingConsentAccepted = true) {
  *  through the hook's own call shapes — mirrors how useTypingTest wires
  *  these three seams in useInputModes.ts. */
 function driveOneKeystroke(result: ReturnType<typeof renderRecorder>['result'], runId: string, wordIndex: number): void {
-  result.current.noteRegistration(runId, 0, 0, 1000, wordIndex, () => 'a', true)
+  result.current.noteRegistration(runId, 0, 0, 1000, wordIndex, () => 'a', () => undefined, true)
   result.current.record({ typingTestLabel: 'words (english)', runId, windowFocused: true }, {
     kind: 'matrix', row: 0, col: 0, layer: 0, keycode: KC_A, ts: 1000,
   })

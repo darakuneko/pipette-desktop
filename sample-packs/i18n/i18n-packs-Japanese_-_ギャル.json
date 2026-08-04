@@ -1,5 +1,5 @@
 {
-  "version": "0.1.67",
+  "version": "0.1.72",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -538,7 +538,7 @@
           "partialBadge": "途中",
           "stats": {
             "wordPace": "ワード速度☆",
-            "runWpm": "ラン全体のWPMじゃん☆",
+            "runWpm": "WPM",
             "accuracy": "正確度☆",
             "overlap": "重複率☆",
             "duration": "所要時間☆",
@@ -587,7 +587,11 @@
         "errorSubstitutions": "置換 {{count}}こ",
         "errorOmissions": "脱字 {{count}}こ",
         "errorInsertions": "衍字 {{count}}こ",
-        "timelineConsentHint": "打鍵タイムライン見たいなら、タイピング記録オンにしてね☆"
+        "timelineConsentHint": "打鍵タイムライン見たいなら、タイピング記録オンにしてね☆",
+        "missedBarTypedLine": "代わりに打ってたの: {{chars}}",
+        "missedBarCorrectedLine": "Backspaceで直したの: {{count}}こ",
+        "missedBarMovedOnLine": "直さず次いっちゃったの: {{count}}こ",
+        "missedBarNoDetail": "この記録、打鍵ごとの詳細ないみたい"
       }
     }
   },

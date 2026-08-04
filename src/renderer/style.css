@@ -150,6 +150,20 @@
   width: 100cqw;
 }
 
+/* MissedTable's own scroll container (mistake-summary.tsx) — same
+   `scrollbar-gutter: stable` lesson as `.keystroke-timeline-scrollport`
+   above, applied to a VERTICAL scrollbar this time: the table's
+   right-aligned "Moved on" column must land at the same x position
+   whether or not a real scrollbar is currently showing, so the gutter is
+   reserved unconditionally rather than only once content actually
+   overflows (which would otherwise shift/clip that column's edge the
+   moment the row count crosses the scroll threshold). No
+   `container-type` needed here — MissedTable has no cqw-based sticky
+   horizontal header the way the line timeline's `100cqw` header does. */
+.missed-table-scrollport {
+  scrollbar-gutter: stable;
+}
+
 /* Interactive elements use pointer cursor */
 button:not(:disabled),
 a,

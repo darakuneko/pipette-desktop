@@ -109,6 +109,15 @@ export function romajiNextExpectedChar(word: string, keystrokes: string, opts?: 
   return buildRomajiMatcher(word, keystrokes, opts).nextGuideChar()
 }
 
+/** The mistake-map key for a REJECTED keystroke at this exact point in
+ *  `word` (given what's been typed so far) —
+ *  `buildRomajiMatcher(...).currentSegmentCanonicalKey()`. Used by
+ *  expected-char.ts's `deriveMistakeKey` for the romaji branch; see that
+ *  matcher method's own doc comment for the best-effort caveat. */
+export function currentRomajiMistakeKey(word: string, keystrokes: string, opts?: RomajiMatcherOptions): string | undefined {
+  return buildRomajiMatcher(word, keystrokes, opts).currentSegmentCanonicalKey()
+}
+
 /** Romaji Settings modal detail fields (disabledStyles / guideStyles /
  *  caseStyle), read only while `romajiInput` is honored (see
  *  `isRomajiInputActive`) — the config shape guarantees `romaji` only

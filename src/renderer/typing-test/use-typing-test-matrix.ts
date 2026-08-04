@@ -24,7 +24,7 @@ import {
 import { MatrixAnalyticsQueue } from './matrix-analytics-queue'
 import { PressDurationTracker } from './matrix-press-duration'
 import { MatrixLayerLatch } from './matrix-layer-latch'
-import { deriveExpectedChar } from './expected-char'
+import { deriveExpectedChar, deriveMistakeKey } from './expected-char'
 import type { UseTypingTestOptions } from './use-typing-test-types'
 
 export interface TypingTestMatrixParams<TPreparedEvent> {
@@ -150,6 +150,7 @@ export function useTypingTestMatrix<TPreparedEvent>(
         noteKeystrokeRegistrationRef.current?.(
           stateRef.current.runId, edge.row, edge.col, ts, stateRef.current.currentWordIndex,
           () => deriveExpectedChar(stateRef.current, configRef.current, languageRef.current),
+          () => deriveMistakeKey(stateRef.current, configRef.current, languageRef.current),
           windowFocusedRef.current,
         )
       }

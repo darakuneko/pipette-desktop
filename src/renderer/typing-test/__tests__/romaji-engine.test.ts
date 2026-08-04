@@ -336,6 +336,49 @@ describe('completedKanaCount', () => {
   })
 })
 
+describe('currentSegmentCanonicalKey', () => {
+  it('returns the first segment\'s canonical spelling before any keystroke', () => {
+    const matcher = createRomajiMatcher('あい')
+    expect(matcher.currentSegmentCanonicalKey()).toBe('a')
+  })
+
+  it('resolves to the digraph winner once the buffer commits to it (でぃ = "dhi", 2 kana)', () => {
+    const matcher = createRomajiMatcher('でぃなーにいく')
+    matcher.acceptChar('d')
+    matcher.acceptChar('h')
+    expect(matcher.currentSegmentCanonicalKey()).toBe('dhi')
+  })
+
+  it('advances to the next segment\'s key once the previous segment commits', () => {
+    const matcher = createRomajiMatcher('でぃなーにいく')
+    matcher.acceptChar('d')
+    matcher.acceptChar('h')
+    matcher.acceptChar('i') // commits でぃ
+    expect(matcher.currentSegmentCanonicalKey()).toBe('na')
+  })
+
+  it('reflects the decomposed single-kana path once the buffer has committed to it, not the digraph', () => {
+    const matcher = createRomajiMatcher('でぃなーにいく')
+    matcher.acceptChar('d')
+    matcher.acceptChar('e') // commits で alone (1 kana), decomposed path
+    expect(matcher.currentSegmentCanonicalKey()).toBe(canonicalRomaji('ぃ'))
+  })
+
+  it('stays unaffected by a reject (buffer/position untouched)', () => {
+    const matcher = createRomajiMatcher('あい')
+    expect(matcher.acceptChar('z')).toBe('reject')
+    expect(matcher.currentSegmentCanonicalKey()).toBe('a')
+  })
+
+  it('returns undefined once the whole word is matched', () => {
+    const matcher = createRomajiMatcher('あい')
+    matcher.acceptChar('a')
+    matcher.acceptChar('i')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.currentSegmentCanonicalKey()).toBeUndefined()
+  })
+})
+
 describe('あ行 alternate spellings (wu/whu for う)', () => {
   it('accepts wu and whu for う alongside the canonical u, inside a word', () => {
     const wu = type('あう', 'awu')

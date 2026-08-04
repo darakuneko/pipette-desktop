@@ -60,6 +60,35 @@ export interface RunKeystroke {
    *  when this one landed — mirrors
    *  `TypingAnalyticsEventPayload['overlap']`'s tri-state semantics. */
   overlapped?: boolean
+  /** The character this press actually produced, set ONLY when `correct
+   *  === false` (never on a correct or unjudged keystroke) — see
+   *  run-log-recorder.ts's `applyCharVerdict`. Sourced from the char
+   *  analytics pipeline's real DOM 'char' event (the same `key` compared
+   *  against `expectedChar` to decide `correct`), NEVER reverse-mapped
+   *  from `keycode` — a keycode alone can't recover what character a
+   *  layer/shift/dead-key combination actually produced. Optional:
+   *  absent on every log saved before this field existed (legacy), and
+   *  a consumer must treat that the same as "no per-key detail
+   *  available" rather than "typed nothing wrong" — see
+   *  `buildMissedDetails` (missed-details.ts). Never sent to Hub, same
+   *  privacy class as the rest of this payload (see the module doc
+   *  comment). */
+  typedChar?: string
+  /** The key this mistake aggregates under, set ONLY when `correct ===
+   *  false` — matches the run's own `TypingTestState.mistakes` map key
+   *  EXACTLY for the same input (verbatim mode: the expected char at
+   *  this position, i.e. the same value as `expectedChar`; romaji mode:
+   *  the canonical romaji spelling of the kana segment in progress at
+   *  this exact keystroke — see `romaji-engine.ts`'s
+   *  `currentSegmentCanonicalKey`/`canonicalRomaji`), computed AT INPUT
+   *  TIME from live reducer state, not derived later by replaying this
+   *  log (log replay was rejected as non-deterministic for romaji — a
+   *  segment's eventual canonical spelling can depend on which of
+   *  several live alternate spellings the user goes on to complete, so
+   *  only the reducer's own in-the-moment state can name it reliably).
+   *  Optional for the same legacy-log reason as `typedChar`; the two are
+   *  always set or omitted together. */
+  mistakeKey?: string
 }
 
 /** One finalized word's keystrokes, joined against its `WordResult`. */

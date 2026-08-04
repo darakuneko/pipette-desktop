@@ -18,7 +18,7 @@ import {
   tryFinishLastWord,
 } from './run-state'
 import { isRomajiInputActive, processRomajiKeyEvent, buildRomajiWordsTable, buildRomajiGuideProgress, romajiDetail } from './romaji-input'
-import { deriveExpectedChar } from './expected-char'
+import { deriveExpectedChar, deriveMistakeKey } from './expected-char'
 import { useTypingTestMatrix } from './use-typing-test-matrix'
 import { useTypingTestMetrics } from './use-typing-test-metrics'
 import { buildMemorySnapshot, buildRestoredState } from './typing-test-memory'
@@ -216,6 +216,7 @@ export function useTypingTest<TPreparedEvent = unknown>(
           noteCharContextRef.current?.(
             stateRef.current.runId, stateRef.current.currentWordIndex,
             () => deriveExpectedChar(stateRef.current, configRef.current, languageRef.current),
+            () => deriveMistakeKey(stateRef.current, configRef.current, languageRef.current),
             windowFocusedRef.current,
           )
         }

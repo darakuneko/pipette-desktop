@@ -53,10 +53,11 @@ export interface UseRunLogRecorderReturn {
   record: (tag: Pick<RunLogRecordContext, 'typingTestLabel' | 'runId' | 'windowFocused'>, payload: TypingAnalyticsEventPayload) => void
   noteRegistration: (
     runId: string, row: number, col: number, ts: number, wordIndex: number,
-    getExpectedChar: () => string | undefined, windowFocused: boolean,
+    getExpectedChar: () => string | undefined, getMistakeKey: () => string | undefined, windowFocused: boolean,
   ) => void
   noteCharContext: (
-    runId: string, wordIndex: number, getExpectedChar: () => string | undefined, windowFocused: boolean,
+    runId: string, wordIndex: number,
+    getExpectedChar: () => string | undefined, getMistakeKey: () => string | undefined, windowFocused: boolean,
   ) => void
   /** Returns the just-finished log (whatever `RunLogRecorder.finish`
    *  produced), or null when there's no uid to save under or nothing was
@@ -98,27 +99,28 @@ export function useRunLogRecorder({
 
   const noteRegistration = useCallback((
     runId: string, row: number, col: number, ts: number, wordIndex: number,
-    getExpectedChar: () => string | undefined, windowFocused: boolean,
+    getExpectedChar: () => string | undefined, getMistakeKey: () => string | undefined, windowFocused: boolean,
   ) => {
     const typingTestLabel = typingTestLabelRef.current
     recorderRef.current.noteRegistration(
       { typingTestLabel, runId: typingTestLabel ? runId : null, consentAccepted: consentRef.current, windowFocused },
-      row, col, ts, wordIndex, getExpectedChar,
+      row, col, ts, wordIndex, getExpectedChar, getMistakeKey,
     )
   }, [typingTestLabelRef])
 
   const noteCharContext = useCallback((
-    runId: string, wordIndex: number, getExpectedChar: () => string | undefined, windowFocused: boolean,
+    runId: string, wordIndex: number,
+    getExpectedChar: () => string | undefined, getMistakeKey: () => string | undefined, windowFocused: boolean,
   ) => {
     const typingTestLabel = typingTestLabelRef.current
     // Skip the (possibly expensive, for romaji) derivation whenever no
     // test label is active, same as noteRegistration's `runId` gate
-    // below — the recorder's own `noteCharContext` takes an
-    // already-resolved value rather than a thunk (see its doc comment),
-    // so this wrapper is what has to defer calling `getExpectedChar`.
+    // below — the recorder's own `noteCharContext` takes already-resolved
+    // values rather than thunks (see its doc comment), so this wrapper is
+    // what has to defer calling `getExpectedChar`/`getMistakeKey`.
     recorderRef.current.noteCharContext(
       { typingTestLabel, runId: typingTestLabel ? runId : null, consentAccepted: consentRef.current, windowFocused },
-      wordIndex, typingTestLabel ? getExpectedChar() : undefined,
+      wordIndex, typingTestLabel ? getExpectedChar() : undefined, typingTestLabel ? getMistakeKey() : undefined,
     )
   }, [typingTestLabelRef])
 

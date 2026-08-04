@@ -27,7 +27,8 @@ import { LineTimelineRow, type LineHoverTarget } from './LineTimelineRow'
 import { TIMELINE_LEGEND, type TimelineFillKind } from './word-timeline-colors'
 import { useTimelineModel } from './use-timeline-model'
 import { buildTimelineStatItems } from './keystroke-timeline-stats'
-import { MissedCharsList } from './mistake-summary'
+import { MissedTable } from './mistake-summary'
+import { buildMissedDetails } from './missed-details'
 
 /** Floor for the "fit" zoom level's canvas width — a run with a very
  *  short `maxDisplayMs` (e.g. a single short word) would otherwise
@@ -241,6 +242,16 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
   // `summaryItems` (see keystroke-timeline-stats.ts), not as their own
   // line below — see the module's own doc comment for the fallback rule.
   const summaryItems = useMemo(() => buildTimelineStatItems(result, summary, log), [result, summary, log])
+  // Per-key detail for the Missed table below — derived from this run's
+  // own raw log (see buildMissedDetails's own doc comment for why this is
+  // computed at input time, not by replaying the log after the fact).
+  const missedDetails = useMemo(() => buildMissedDetails(log), [log])
+  // Gates the Missed section's own bordered wrapper below — `MissedTable`
+  // itself renders nothing when there are no mistakes (see its own doc
+  // comment), but a wrapper `div` around it would still paint an empty
+  // bordered box if left unconditional. Mirrors `MissedTable`'s own
+  // `entries.length === 0` check without duplicating its sort.
+  const hasMistakes = Object.keys(result?.mistakes ?? {}).length > 0
 
   // The legend's info icon tooltip content — both former standalone note
   // paragraphs (corrected-mistake markers, compressed-pause axis), joined
@@ -252,6 +263,18 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
+      {/* Correctness-markers-unreliable warning — sits at the VERY TOP of
+          the panel (above the stat-card grid, coordinator-requested layout
+          tweak from a real-device screenshot review), since it qualifies
+          EVERY figure below it (the stat cards' own correctness-derived
+          values, and the timeline's own mistake/overlap markers), not just
+          the timeline box specifically. */}
+      {activeCharCorrelationUnavailable && (
+        <p className="text-2xs text-warning" data-testid="word-timeline-correlation-note">
+          {t('editor.typingTest.history.timeline.correlationUnreliable')}
+        </p>
+      )}
+
       {/* Deliberate exception to the Analyze chart-above-stats rule
           (.claude/tasks/backlog/Task-analyze-section-layout-consistency.md):
           this grid is the panel's summary header, not a chart-adjacent
@@ -260,167 +283,191 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
           reaching the scrollable, flex-grow canvas below. */}
       <AnalyzeStatGrid items={summaryItems} ariaLabelKey="editor.typingTest.history.timeline.modalTitle" />
 
-      {activeCharCorrelationUnavailable && (
-        <p className="text-2xs text-warning" data-testid="word-timeline-correlation-note">
-          {t('editor.typingTest.history.timeline.correlationUnreliable')}
-        </p>
-      )}
-
-      {/* Legend — color alone never carries meaning elsewhere in
-          this view (tooltips spell everything out too), but this
-          is the at-a-glance key. Line-mode overrides the blank/
-          lead-in wording to the line-view's own meaning (a 250ms
-          cut and "before this line", not the word view's 1000ms /
-          "before this word") — every other entry, and the word
-          view's own wording, stays unchanged. The two longer-form
-          notes (corrected-mistake markers, compressed-pause axis)
-          used to render as their own paragraph lines below the
-          legend — collapsed into this single info icon (`ml-auto`,
-          right end of the row) so the legend reads as one compact
-          line; both notes still live in the tooltip, joined with a
-          newline (BUBBLE_BASE's `whitespace-pre-line` renders it as
-          two lines), same idiom as ErrorMixSection's row-label
-          tooltip. */}
-      <div className="flex flex-wrap items-center gap-3 rounded-md border border-edge bg-surface px-3 py-1.5">
-        {LEGEND_ORDER.map((kind) => (
-          <LegendSwatch key={kind} colorClass={TIMELINE_LEGEND[kind].swatchClass} labelKey={lineLegendLabelKey(kind, displayMode)} />
-        ))}
-        <Tooltip content={legendNotes} className="max-w-xs">
-          <button
-            type="button"
-            data-testid="word-timeline-legend-info"
-            aria-label={t('editor.typingTest.history.timeline.legend.infoAriaLabel')}
-            className="ml-auto rounded p-1 text-content-muted hover:text-content transition-colors"
-          >
-            <Info size={ICON_SM} aria-hidden="true" />
-          </button>
-        </Tooltip>
-      </div>
-
-      {/* Zoom — same row shape as RGBConfigurator's brightness
-          slider (the only existing range-input precedent). The
-          slider only mounts once `fitPxPerMs` is known, so its
-          (uncontrolled) `defaultValue` is always correct at
-          first paint — no remount-on-resolve hack needed. The
-          WHOLE row (including its label) is gated on `fitPxPerMs`,
-          not just the input — a log with zero drawable content
-          (`maxDisplayMs <= 0`) never computes a fit level, and an
-          orphan "Zoom" label with no control under it read as
-          broken rather than as "nothing to zoom". */}
-      {fitPxPerMs !== null && (
-        <div className="flex items-center gap-3">
-          <label className="text-sm text-content-secondary">{t('editor.typingTest.history.timeline.zoom.label')}</label>
-          <input
-            type="range"
-            data-testid="word-timeline-zoom"
-            aria-label={t('editor.typingTest.history.timeline.zoom.aria')}
-            min={fitPxPerMs}
-            max={fitPxPerMs * ZOOM_MAX_FACTOR}
-            step={fitPxPerMs / 20}
-            defaultValue={fitPxPerMs}
-            onChange={handleZoomInput}
-            className="flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          />
-        </div>
-      )}
-
-      {/* `keystroke-timeline-scrollport` (style.css) opts this scroll
-          container into `container-type: inline-size` — the LINE view's
-          per-row header pins itself to this container's own visible
-          width via `100cqw` (see LineTimelineRow.tsx and
-          .line-timeline-header-sticky's own doc comment), independent of
-          how wide the zoomed canvas inside it grows. `overflow-auto`
-          already covers BOTH axes — a many-row run scrolls vertically
-          within this same element, not just horizontally on zoom; the
-          sticky header's `left: 0` pin is horizontal-axis only, so it is
-          unaffected by (and stays correctly positioned through) vertical
-          scrolling here.
-          `flex-1 min-h-0` is what makes that vertical scroll trigger AT
-          ALL — it relies entirely on an unbroken flex-height chain from
-          this element up to a real bounded ancestor (the editor's own
-          overflow-auto content pane). A fixed viewport-relative max-height
-          cap used to live here for the completion screen specifically
-          (which lacked that chain), but a fixed vh figure can't adapt to
-          how much OTHER chrome (Lines/Font sidebar controls, an
-          IME-composition warning, the Missed-chars line, ...) a given run
-          actually has above/below it — it either wastes space or (on a
-          shorter window, or a run with more of that chrome) still
-          overflows the pane. TypingTestView.tsx now instead extends this
-          same flex chain up through its own finished-state wrapper, so
-          this scrollport ends up correctly sized without any cap at all,
-          in both the modal and the completion-screen contexts alike —
-          see TypingTestView.tsx's own "Completion screen" comment for the
-          exact chain. */}
+      {/* Single bordered box: Title, Zoom, Legend, rows scrollport — the
+          box's own `rounded-md border border-edge bg-surface` is the
+          same styling the legend row and the rows scrollport used to
+          each carry independently (generalized up to this one wrapper so
+          the four pieces read as one card instead of two separately
+          bordered boxes stacked on top of each other). The box itself
+          participates in the flex-height chain (`flex-1 min-h-0
+          flex-col`) so the rows scrollport inside it can still absorb
+          all the remaining height — title/zoom/legend keep their natural
+          height, same as before. */}
       <div
-        ref={containerRef}
-        className="keystroke-timeline-scrollport relative min-h-0 flex-1 overflow-auto rounded-md border border-edge bg-surface p-2"
+        className="flex min-h-0 flex-1 flex-col gap-3 rounded-md border border-edge bg-surface p-3"
+        data-testid="typing-test-timeline-box"
       >
-        <div ref={setCanvasNode} data-testid="word-timeline-canvas" className="flex flex-col gap-2">
-          {displayMode === 'line' && lineModel
-            ? lineModel.lines.map((line) => (
-              <LineTimelineRow
-                key={line.lineIndex}
-                line={line}
-                maxDisplayMs={lineModel.maxDisplayMs}
-                romajiInput={log.romajiInput === true}
-                onHover={handleLineHover}
-                onHoverEnd={handleHoverEnd}
-              />
-            ))
-            : wordModel?.words.map((word) => (
-              <WordTimelineRow
-                key={word.index}
-                word={word}
-                maxDisplayMs={wordModel.maxDisplayMs}
-                onHover={handleWordHover}
-                onHoverEnd={handleHoverEnd}
-              />
-            ))}
-        </div>
+        <h3 data-testid="typing-test-timeline-title" className="text-xs font-semibold uppercase tracking-widest text-content-muted">
+          {t('editor.typingTest.history.timeline.modalTitle')}
+        </h3>
 
-        {hover && (
-          <div
-            ref={tooltipRef}
-            className="pointer-events-none fixed z-70"
-            style={{ left: tooltipPos?.left ?? hover.rect.left, top: tooltipPos?.top ?? hover.rect.bottom + 6 }}
-            data-testid="word-timeline-tooltip"
-          >
-            {hover.segment.kind === 'keystroke'
-              ? keystrokeTooltipBody(hover.kind === 'word' ? hover.word.display : hover.lineText, hover.segment, t)
-              : (
-                <TooltipShell>
-                  <Stat
-                    label={t(lineLegendLabelKey(hover.segment.kind === 'blank' ? 'blank' : 'leadIn', hover.kind === 'line' ? 'line' : 'word'))}
-                    value={t(
-                      hover.segment.kind === 'blank'
-                        ? 'editor.typingTest.history.timeline.tooltip.blankDuration'
-                        : (hover.kind === 'line'
-                          ? 'editor.typingTest.history.timeline.tooltip.leadInLineDuration'
-                          : 'editor.typingTest.history.timeline.tooltip.leadInDuration'),
-                      { ms: Math.round(hover.segment.trueDurationMs) },
-                    )}
-                  />
-                </TooltipShell>
-              )}
+        {/* Zoom — same row shape as RGBConfigurator's brightness
+            slider (the only existing range-input precedent). The
+            slider only mounts once `fitPxPerMs` is known, so its
+            (uncontrolled) `defaultValue` is always correct at
+            first paint — no remount-on-resolve hack needed. The
+            WHOLE row (including its label) is gated on `fitPxPerMs`,
+            not just the input — a log with zero drawable content
+            (`maxDisplayMs <= 0`) never computes a fit level, and an
+            orphan "Zoom" label with no control under it read as
+            broken rather than as "nothing to zoom". */}
+        {fitPxPerMs !== null && (
+          <div className="flex items-center gap-3" data-testid="word-timeline-zoom-row">
+            <label className="text-sm text-content-secondary">{t('editor.typingTest.history.timeline.zoom.label')}</label>
+            <input
+              type="range"
+              data-testid="word-timeline-zoom"
+              aria-label={t('editor.typingTest.history.timeline.zoom.aria')}
+              min={fitPxPerMs}
+              max={fitPxPerMs * ZOOM_MAX_FACTOR}
+              step={fitPxPerMs / 20}
+              defaultValue={fitPxPerMs}
+              onChange={handleZoomInput}
+              className="flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            />
           </div>
         )}
+
+        {/* Legend — color alone never carries meaning elsewhere in
+            this view (tooltips spell everything out too), but this
+            is the at-a-glance key. Line-mode overrides the blank/
+            lead-in wording to the line-view's own meaning (a 250ms
+            cut and "before this line", not the word view's 1000ms /
+            "before this word") — every other entry, and the word
+            view's own wording, stays unchanged. The two longer-form
+            notes (corrected-mistake markers, compressed-pause axis)
+            used to render as their own paragraph lines below the
+            legend — collapsed into this single info icon (`ml-auto`,
+            right end of the row) so the legend reads as one compact
+            line; both notes still live in the tooltip, joined with a
+            newline (BUBBLE_BASE's `whitespace-pre-line` renders it as
+            two lines), same idiom as ErrorMixSection's row-label
+            tooltip. */}
+        <div className="flex flex-wrap items-center gap-3" data-testid="word-timeline-legend">
+          {LEGEND_ORDER.map((kind) => (
+            <LegendSwatch key={kind} colorClass={TIMELINE_LEGEND[kind].swatchClass} labelKey={lineLegendLabelKey(kind, displayMode)} />
+          ))}
+          <Tooltip content={legendNotes} className="max-w-xs">
+            <button
+              type="button"
+              data-testid="word-timeline-legend-info"
+              aria-label={t('editor.typingTest.history.timeline.legend.infoAriaLabel')}
+              className="ml-auto rounded p-1 text-content-muted hover:text-content transition-colors"
+            >
+              <Info size={ICON_SM} aria-hidden="true" />
+            </button>
+          </Tooltip>
+        </div>
+
+        {/* `keystroke-timeline-scrollport` (style.css) opts this scroll
+            container into `container-type: inline-size` — the LINE view's
+            per-row header pins itself to this container's own visible
+            width via `100cqw` (see LineTimelineRow.tsx and
+            .line-timeline-header-sticky's own doc comment), independent of
+            how wide the zoomed canvas inside it grows. `overflow-auto`
+            already covers BOTH axes — a many-row run scrolls vertically
+            within this same element, not just horizontally on zoom; the
+            sticky header's `left: 0` pin is horizontal-axis only, so it is
+            unaffected by (and stays correctly positioned through) vertical
+            scrolling here.
+            `flex-1 min-h-0` is what makes that vertical scroll trigger AT
+            ALL — it relies entirely on an unbroken flex-height chain from
+            this element up through the box above to a real bounded
+            ancestor (the editor's own overflow-auto content pane). A fixed
+            viewport-relative max-height cap used to live here for the
+            completion screen specifically (which lacked that chain), but a
+            fixed vh figure can't adapt to how much OTHER chrome
+            (Lines/Font sidebar controls, an IME-composition warning, the
+            Missed table, ...) a given run actually has above/below it — it
+            either wastes space or (on a shorter window, or a run with more
+            of that chrome) still overflows the pane. TypingTestView.tsx
+            now instead extends this same flex chain up through its own
+            finished-state wrapper, so this scrollport ends up correctly
+            sized without any cap at all, in both the modal and the
+            completion-screen contexts alike — see TypingTestView.tsx's own
+            "Completion screen" comment for the exact chain. */}
+        <div
+          ref={containerRef}
+          className="keystroke-timeline-scrollport relative min-h-0 flex-1 overflow-auto p-2"
+        >
+          <div ref={setCanvasNode} data-testid="word-timeline-canvas" className="flex flex-col gap-2">
+            {displayMode === 'line' && lineModel
+              ? lineModel.lines.map((line) => (
+                <LineTimelineRow
+                  key={line.lineIndex}
+                  line={line}
+                  maxDisplayMs={lineModel.maxDisplayMs}
+                  romajiInput={log.romajiInput === true}
+                  onHover={handleLineHover}
+                  onHoverEnd={handleHoverEnd}
+                />
+              ))
+              : wordModel?.words.map((word) => (
+                <WordTimelineRow
+                  key={word.index}
+                  word={word}
+                  maxDisplayMs={wordModel.maxDisplayMs}
+                  onHover={handleWordHover}
+                  onHoverEnd={handleHoverEnd}
+                />
+              ))}
+          </div>
+
+          {hover && (
+            <div
+              ref={tooltipRef}
+              className="pointer-events-none fixed z-70"
+              style={{ left: tooltipPos?.left ?? hover.rect.left, top: tooltipPos?.top ?? hover.rect.bottom + 6 }}
+              data-testid="word-timeline-tooltip"
+            >
+              {hover.segment.kind === 'keystroke'
+                ? keystrokeTooltipBody(hover.kind === 'word' ? hover.word.display : hover.lineText, hover.segment, t)
+                : (
+                  <TooltipShell>
+                    <Stat
+                      label={t(lineLegendLabelKey(hover.segment.kind === 'blank' ? 'blank' : 'leadIn', hover.kind === 'line' ? 'line' : 'word'))}
+                      value={t(
+                        hover.segment.kind === 'blank'
+                          ? 'editor.typingTest.history.timeline.tooltip.blankDuration'
+                          : (hover.kind === 'line'
+                            ? 'editor.typingTest.history.timeline.tooltip.leadInLineDuration'
+                            : 'editor.typingTest.history.timeline.tooltip.leadInDuration'),
+                        { ms: Math.round(hover.segment.trueDurationMs) },
+                      )}
+                    />
+                  </TooltipShell>
+                )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Missed characters — result-only (see the module doc comment):
+      {/* Missed table — result-only (see the module doc comment):
           reconstructing it from the raw log would re-derive scoring rules
           run-state.ts already owns. Renders nothing when the result has
           no mistakes, same convention the completion screen
           (`TypingTestStatsRow`) already follows for its own copy of this
           list. Substitution/Omission/Insertion render above, as stat
-          cards in `summaryItems`, not here. Moved below the rows
-          scrollport (was between the stat-card grid and the legend) so
-          the timeline itself reads first; `shrink-0` keeps it from being
-          squeezed by the scrollport's own `flex-1`, which must keep
-          absorbing all the remaining height in the flex-height chain
-          (see the scrollport's own comment above). */}
-      <div className="shrink-0">
-        <MissedCharsList mistakes={result?.mistakes ?? {}} />
-      </div>
+          cards in `summaryItems`, not here. Stays in the same position it
+          held as a chip list (below the timeline box) so the timeline
+          itself reads first; `shrink-0` keeps it from being squeezed by
+          the box's own `flex-1`, which must keep absorbing all the
+          remaining height in the flex-height chain (see the scrollport's
+          own comment above).
+
+          Wrapped in the SAME bordered-box treatment as the timeline box
+          above (`rounded-md border border-edge bg-surface p-3`,
+          coordinator-requested layout tweak) — but only at THIS call
+          site. `MissedTable` itself stays unwrapped: it's also rendered
+          by `MistakeRankingSection` (History's Analysis tab "Most missed"
+          section, which sits among unboxed section-heading siblings —
+          ACCURACY TREND / ERROR MIX — and must stay that way), so the box
+          is added here around the render, not inside `MissedTable`. */}
+      {hasMistakes && (
+        <div className="shrink-0 rounded-md border border-edge bg-surface p-3" data-testid="typing-test-missed-box">
+          <MissedTable mistakes={result?.mistakes ?? {}} details={missedDetails} />
+        </div>
+      )}
     </div>
   )
 }
