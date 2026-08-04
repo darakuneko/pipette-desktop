@@ -19,6 +19,7 @@ Communicates with Vial keyboards via USB HID to configure keymaps, macros, light
 ## Table of Contents
 
 - [Installation](#installation)
+- [System Requirements](#system-requirements)
 - [Usage](#usage)
 - [Operation Guide](#operation-guide)
 - [Platform Setup](#platform-setup)
@@ -47,6 +48,12 @@ Download the latest release for your platform:
 
 - **Linux (x86_64 AppImage)**  
   https://github.com/darakuneko/pipette-desktop/releases/latest/download/Pipette-linux-x86_64.AppImage
+
+## System Requirements
+
+Pipette's window has a minimum size of **1280×1024**, and defaults to **1440×1024** (or larger is recommended) on first launch.
+
+It might feel a bit large — but keyboards are wide, so this is what it takes to work with them comfortably. Sorry!
 
 ## Usage
 
