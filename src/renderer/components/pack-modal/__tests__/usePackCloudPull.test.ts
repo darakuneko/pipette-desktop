@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { usePackCloudPull } from '../usePackCloudPull'
 
 const t = ((key: string) => key) as unknown as Parameters<typeof usePackCloudPull>[1]
 
 describe('usePackCloudPull', () => {
-  let setActionError: ReturnType<typeof vi.fn>
+  let setActionError: Mock<(error: string | null) => void>
   let syncExecute: ReturnType<typeof vi.fn>
 
   beforeEach(() => {

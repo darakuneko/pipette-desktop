@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, type Mock } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useDeviceLifecycle } from '../useDeviceLifecycle'
 import type { DeviceInfo, KeyboardDefinition, VilFile } from '../../../shared/types/protocol'
+import type { SyncScope, SyncOperationResult } from '../../../shared/types/sync'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -19,11 +20,11 @@ const mockDevice: DeviceInfo = {
 }
 
 interface Mocks {
-  connectDevice: ReturnType<typeof vi.fn>
-  disconnectDevice: ReturnType<typeof vi.fn>
-  keyboardReload: ReturnType<typeof vi.fn>
-  applyDevicePrefs: ReturnType<typeof vi.fn>
-  syncNow: ReturnType<typeof vi.fn>
+  connectDevice: Mock<(dev: DeviceInfo) => Promise<boolean>>
+  disconnectDevice: Mock<() => Promise<void>>
+  keyboardReload: Mock<() => Promise<string | null>>
+  applyDevicePrefs: Mock<(uid: string) => Promise<void>>
+  syncNow: Mock<(direction: 'download' | 'upload', scope?: SyncScope) => Promise<SyncOperationResult>>
 }
 
 function makeOptions(overrides: Partial<{
@@ -36,7 +37,7 @@ function makeOptions(overrides: Partial<{
   // syncNow('download', 'packs') call it never asserts on. The dedicated
   // "packs auto-fire" describe block below overrides this to false.
   packsPulledOnce: boolean
-}> = {}, mocks?: Partial<Mocks> & { markPacksPulledOnce?: ReturnType<typeof vi.fn> }) {
+}> = {}, mocks?: Partial<Mocks> & { markPacksPulledOnce?: Mock<() => void> }) {
   const connectDevice = mocks?.connectDevice ?? vi.fn().mockResolvedValue(true)
   const disconnectDevice = mocks?.disconnectDevice ?? vi.fn().mockResolvedValue(undefined)
   const keyboardReload = mocks?.keyboardReload ??

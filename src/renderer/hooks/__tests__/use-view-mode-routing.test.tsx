@@ -2,7 +2,7 @@
 // @vitest-environment jsdom
 
 import { StrictMode } from 'react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { useViewModeRouting } from '../use-view-mode-routing'
 import type { DeviceInfo, UnlockStatus } from '../../../shared/types/protocol'
@@ -72,10 +72,10 @@ interface Overrides {
   typingTestViewOnlyWindowSize?: { width: number; height: number }
   typingTestMode?: boolean
   zoomFactor?: number
-  setViewMode?: ReturnType<typeof vi.fn>
-  setTypingTestViewOnly?: ReturnType<typeof vi.fn>
-  resetUIState?: ReturnType<typeof vi.fn>
-  setShowUnlockDialog?: ReturnType<typeof vi.fn>
+  setViewMode?: Mock<(mode: ViewMode) => void>
+  setTypingTestViewOnly?: Mock<(enabled: boolean) => void>
+  resetUIState?: Mock<() => void>
+  setShowUnlockDialog?: Mock<(visible: boolean) => void>
   toggleTypingTest?: ReturnType<typeof vi.fn>
   keymapEditorRef?: { current: KeymapEditorHandle | null }
 }

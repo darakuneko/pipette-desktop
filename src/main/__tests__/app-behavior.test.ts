@@ -39,7 +39,11 @@ vi.mock('node:os', async () => {
 })
 
 vi.mock('electron', () => {
-  const Tray = vi.fn().mockImplementation(() => {
+  // Vitest 4 requires a real `function` (not an arrow function) here — the
+  // mock is invoked with `new Tray(icon)` in the real code, and only a
+  // proper function/class can be called via Reflect.construct to honor
+  // that explicit return-object-overrides-`this` pattern.
+  const Tray = vi.fn().mockImplementation(function TrayMock() {
     const handlers = new Map<string, () => void>()
     const instance = {
       setToolTip: vi.fn(),
