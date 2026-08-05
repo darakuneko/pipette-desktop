@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
+import type { MacroAction } from '../../../../preload/macro'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -44,8 +45,8 @@ vi.mock('../../../../preload/macro', () => ({
 import { MacroEditor } from '../MacroEditor'
 
 describe('MacroEditor unlock', () => {
-  let onSaveMacros: ReturnType<typeof vi.fn>
-  let onUnlock: ReturnType<typeof vi.fn>
+  let onSaveMacros: Mock<(buffer: number[], parsedMacros?: MacroAction[][]) => Promise<void>>
+  let onUnlock: Mock<() => void>
 
   beforeEach(() => {
     onSaveMacros = vi.fn().mockResolvedValue(undefined)

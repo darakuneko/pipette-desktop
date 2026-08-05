@@ -57,10 +57,10 @@
   },
   "devDependencies": {
     "@electron/rebuild": "4.0.3",
-    "@playwright/mcp": "0.0.64",
-    "@playwright/test": "^1.58.2",
+    "@playwright/mcp": "0.0.78",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.1.18",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.15.0",
@@ -79,7 +79,7 @@
     "sql.js": "^1.14.1",
     "tailwindcss": "^4.1.18",
     "typescript": "^6.0.3",
-    "vitest": "^3.2.0"
+    "vitest": "^4.1.10"
   },
   "build": {
     "appId": "app.pipette.desktop",

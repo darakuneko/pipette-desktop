@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SettingsModal } from '../SettingsModal'
 import type { UseSyncReturn } from '../../hooks/useSync'
@@ -155,7 +155,7 @@ const defaultProps = {
 }
 
 describe('SettingsModal', () => {
-  let onClose: ReturnType<typeof vi.fn>
+  let onClose: Mock<() => void>
 
   beforeEach(() => {
     vi.clearAllMocks()

@@ -46,11 +46,18 @@ export default defineConfig({
     ],
     // Retry timer/concurrency-sensitive tests up to 3 times before failing the suite.
     retry: 3,
-    poolOptions: {
-      threads: {
-        maxThreads: TEST_MAX_THREADS,
-        minThreads: 1,
-      },
-    },
+    // Vitest 4's pool rework moved poolOptions.threads.{maxThreads,minThreads}
+    // to this top-level option; minThreads has no replacement (removed).
+    maxWorkers: TEST_MAX_THREADS,
+    // Vitest 4 changed vi.restoreAllMocks() to only restore vi.spyOn() spies
+    // — it no longer clears call history for plain vi.fn() mocks (many test
+    // files call vi.restoreAllMocks() in their own local afterEach, relying
+    // on the Vitest 3 behavior of also resetting those). clearMocks runs
+    // vi.clearAllMocks() before every test to restore that call-history
+    // reset regardless of restoreAllMocks' narrower v4 scope; restoreMocks
+    // is kept alongside it so spies still get their original implementation
+    // back between tests.
+    clearMocks: true,
+    restoreMocks: true,
   },
 })
