@@ -143,7 +143,7 @@ export function TypingAnalyticsView({ initialUid, onBack, connectedTappingTerm, 
       className="flex h-full min-h-modal-70vh flex-col"
       data-testid="analyze-view"
     >
-      <div className="flex flex-1 min-h-0 min-w-0 gap-4">
+      <main className="flex flex-1 min-h-0 min-w-0 gap-4 p-8 pb-4">
         <AnalyzePane
           paneKey="A"
           keyboards={keyboards}
@@ -166,10 +166,16 @@ export function TypingAnalyticsView({ initialUid, onBack, connectedTappingTerm, 
             onOpenRunTimeline={onOpenRunTimeline}
           />
         )}
-      </div>
-      <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-edge pt-2">
+      </main>
+      {/* Full-bleed footer bar (mirrors the keymap editor's StatusBar
+       * visual language) so Split View / Back read as a docked bar
+       * instead of buttons floating at the end of the scroll content. */}
+      <footer
+        className="flex shrink-0 items-center justify-between gap-2 border-t border-edge bg-surface-alt px-4 py-1.5 text-xs leading-none text-content-secondary"
+        data-testid="analyze-footer"
+      >
         <div
-          className="min-w-0 flex-1 truncate text-left text-xs text-content-muted"
+          className="min-w-0 flex-1 truncate text-left text-content-muted"
           data-testid="analyze-skip-warning"
         >
           {skipWarningMessage}

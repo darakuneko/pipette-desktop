@@ -261,6 +261,34 @@ describe('TypingAnalyticsView', () => {
     expect(screen.queryByTestId('analyze-keyheatmap-empty')).toBeNull()
   })
 
+  it('renders Split View / Back inside a docked footer bar, not the scrollable content', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    const onBack = vi.fn()
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView onBack={onBack} />)
+    await waitFor(() => expect(screen.getByTestId('mock-summary')).toBeInTheDocument())
+
+    const footer = screen.getByTestId('analyze-footer')
+    expect(footer.tagName).toBe('FOOTER')
+    // Styled like the keymap editor's StatusBar (border-t + bg-surface-alt
+    // bar) rather than a bare border-t row floating in the scroll content.
+    expect(footer.className).toContain('border-t')
+    expect(footer.className).toContain('border-edge')
+    expect(footer.className).toContain('bg-surface-alt')
+
+    const splitToggle = screen.getByTestId('analyze-split-toggle')
+    const backButton = screen.getByTestId('analyze-back')
+    expect(footer.contains(splitToggle)).toBe(true)
+    expect(footer.contains(backButton)).toBe(true)
+
+    // Content (the panes) renders in a separate container, not inside footer.
+    const content = screen.getByTestId('mock-summary')
+    expect(footer.contains(content)).toBe(false)
+
+    fireEvent.click(backButton)
+    expect(onBack).toHaveBeenCalledTimes(1)
+  })
+
   it('renders the mocked KeyHeatmapChart after switching to the Heatmap tab when a snapshot is available', async () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     mockGetSnapshot.mockResolvedValue(SNAPSHOT)
