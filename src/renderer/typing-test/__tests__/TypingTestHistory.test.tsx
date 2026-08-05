@@ -548,6 +548,42 @@ describe('TypingTestHistory', () => {
     expect(screen.queryByTestId('history-delete-d1')).toBeNull()
   })
 
+  // Delete-confirm now collapses PB+Timeline+Delete into one colSpan cell
+  // (instead of living inside Delete's own column) so the confirm/cancel
+  // strings get the combined width — some packs' confirm question runs
+  // considerably longer than English's "Delete?" (up to 紳士's 19-character
+  // "こちらを抹消してもよろしいでしょうか？").
+  it('collapses PB+Timeline+Delete into one colSpan=3 cell during delete-confirm when uid is set', () => {
+    const date = '2025-05-05T01:02:03.000Z'
+    const onDelete = vi.fn()
+    renderWithI18nAllTime(<TypingTestHistory results={[makeResult({ date })]} onDelete={onDelete} uid="uid-1" />)
+    const row = screen.getByTestId(`history-delete-${date}`).closest('tr')!
+    // Normal state: NAME/DATE/WPM/KPM/ACCURACY/AKH/MODE/DURATION/PB/TIMELINE/DELETE.
+    expect(row.querySelectorAll('td')).toHaveLength(11)
+
+    fireEvent.click(screen.getByTestId(`history-delete-${date}`))
+    const confirmTd = screen.getByTestId(`history-delete-confirm-${date}`).closest('td') as HTMLTableCellElement
+    expect(confirmTd.colSpan).toBe(3)
+    // PB+TIMELINE+DELETE merged into the one colSpan cell above.
+    expect(row.querySelectorAll('td')).toHaveLength(9)
+    // Right-aligned (justify-end) so the confirm/cancel pair hugs the
+    // table's right edge — Delete is the last column, and the plain
+    // Delete button above sits there, so the confirm state should read as
+    // occupying the same visual position rather than floating at the left
+    // of the now much wider combined cell.
+    const flexContainer = screen.getByTestId(`history-delete-confirm-${date}`).parentElement
+    expect(flexContainer).toHaveClass('justify-end')
+  })
+
+  it('collapses PB+Delete into one colSpan=2 cell during delete-confirm when uid is unset', () => {
+    const date = '2025-06-06T01:02:03.000Z'
+    const onDelete = vi.fn()
+    renderWithI18nAllTime(<TypingTestHistory results={[makeResult({ date })]} onDelete={onDelete} />)
+    fireEvent.click(screen.getByTestId(`history-delete-${date}`))
+    const confirmTd = screen.getByTestId(`history-delete-confirm-${date}`).closest('td') as HTMLTableCellElement
+    expect(confirmTd.colSpan).toBe(2)
+  })
+
   // Regression guard: pins sparkline-then-stats order, matching the Analyze
   // chart-above-stats convention (RolloverSection's order-lock test is the
   // original of this pattern).

@@ -47,7 +47,7 @@ const EXPORT_BTN_CLASS = 'inline-flex h-8 items-center rounded-md border border-
 // see NameCell/ModeCell); every other column is sized to its known-narrow
 // content (numeric values, short buttons/icons). Sums to 100%.
 // NAME/MODE keep the flexible majority share but give up some of it below
-// to TIMELINE/PB/DELETE, whose action labels must render on one line (see
+// to TIMELINE/PB/DELETE, whose action content must render on one line (see
 // the whitespace-nowrap cells below) — Name/Mode already ellipsis-truncate
 // via Tooltip when their content doesn't fit, so narrowing them just means
 // truncation kicks in a little sooner, not a broken layout.
@@ -66,23 +66,41 @@ const COL_AKH = 'w-[6%]'
 const COL_MODE = 'w-[11%]'
 const COL_DURATION = 'w-[6%]'
 // The header label (t('editor.typingTest.history.pb'), whitespace-nowrap
-// below) is "PB" in most packs but 4 kanji in 紳士's "自己最高" — 5% left it
-// wrapping onto two lines at this table's font size. Bumped to 7%.
+// below) is "PB" in most packs but 4 kanji in 紳士's "自己最高" — re-measured
+// (real font, live budget calc) and 7% turns out to already be the
+// minimum that fits 自己最高 on one line, so it's unchanged from #408.
 const COL_PB = 'w-[7%]'
-// The Timeline link's label (whitespace-nowrap in HistoryTimelineCell) is
-// the longest action string across the built-in packs: 京言葉's
-// "タイムラインどすえ" (9 chars) needs more room than English's "Timeline"
-// (8 chars) suggests. Bumped from 7% to fit that string plus button/cell
-// padding on one line, funded by shrinking Name/Mode's share above.
+// The Timeline link (HistoryTimelineCell) is now a variable-width cell like
+// Name/Mode: `truncate` + a Tooltip surfacing the full label when it
+// overflows, instead of a hard whitespace-nowrap minimum sized to the
+// longest built-in pack string. On its OWN per-cell content, 10% is
+// already enough to fit English "Timeline" / standard Japanese
+// "タイムライン" without truncating (longer persona strings like 京言葉's
+// 9-char "タイムラインどすえ" are allowed to ellipsis, same tradeoff
+// Name/Mode already make) — but this column doesn't actually get to shrink
+// that far: it's the PB+TIMELINE+DELETE trio's COMBINED width (see the
+// confirm-delete colSpan cell below) that has to fit 紳士's 19-character
+// confirm question on one line, and that combined-width floor (~31%, see
+// COL_DELETE below) is stricter than Timeline's own 10% floor. The extra
+// goes here rather than PB/DELETE because a variable-width truncating
+// column absorbs slack more gracefully than two short fixed-label ones.
 const COL_TIMELINE = 'w-[14%]'
-// The confirm-delete state (see below) packs two buttons — labels come
-// from i18n (common.confirmDelete/cancel) and run considerably longer in
-// some packs than English's "Delete?"/"Cancel" (up to 紳士's 19-character
-// confirm string) — but that row keeps its existing flex-wrap tolerance
-// (Cancel drops to its own line rather than forcing the column wider), so
-// this column only needs to comfortably fit the plain, single-line Delete
-// button (longest: ギャル's "ポイっちょ☆", 6 chars) on one line. Trimmed
-// from 12% to 10%, the saved 2% going to TIMELINE above.
+// Sized for only the plain, single-line Delete button (longest: ギャル's
+// "ポイっちょ☆", re-measured against the real font/padding) — the
+// confirm-delete state no longer lives in this column at all, it renders
+// in a `colSpan` cell spanning PB+TIMELINE+DELETE instead (see below), so
+// COL_DELETE never has to fit the (much longer) confirm/cancel strings.
+// Unchanged from #408's 10% (which was already sized for exactly the
+// plain label, per that PR's own comment — the confirm state never drove
+// this constant even before this change).
+//
+// PB(7%) + TIMELINE(14%) + DELETE(10%) = 31%: this is the real floor for
+// all three combined, driven by the confirm-delete colSpan cell needing
+// 紳士's confirm ("こちらを抹消してもよろしいでしょうか？") + cancel
+// ("お取りやめ") strings side by side on one line. PB and DELETE are
+// already at their own individual minimums (7%/10%), so this 31% combined
+// floor is what actually caps how much width Name/Mode can reclaim below
+// — not any of these three columns' own per-cell content.
 const COL_DELETE = 'w-[10%]'
 
 /** Mode-column detail. FileImport (imported-text) runs show the snapshotted text
@@ -163,6 +181,11 @@ export function HistoryResultsPanel({
 }: Props) {
   const { t } = useTranslation()
   const [confirmDeleteDate, setConfirmDeleteDate] = useState<string | null>(null)
+  // Column count the confirm-delete state's colSpan cell needs to cover:
+  // PB (always rendered) + Timeline (only when `uid`) + Delete itself.
+  // Plain arithmetic on props, not memoized — recomputing it is cheaper
+  // than the useMemo bookkeeping would be.
+  const confirmColSpan = 1 + (uid ? 1 : 0) + 1
 
   // Text-style rendering (imported-text name in the Mode/Text column instead
   // of the mode label) applies to both Aozora and File Import — they're the
@@ -353,55 +376,67 @@ export function HistoryResultsPanel({
                   <td className="whitespace-nowrap px-3 py-1.5 font-mono text-content-muted">
                     {formatDuration(r.durationSeconds)}
                   </td>
-                  <td className="px-3 py-1.5">
-                    {r.isPb && <Trophy role="img" className="inline-block size-3.5 text-warning" aria-label={t('editor.typingTest.history.pb')} />}
-                  </td>
-                  {uid && <HistoryTimelineCell result={r} uid={uid} availableRunIds={availableRunIds ?? EMPTY_RUN_ID_SET} />}
-                  {onDelete && (
-                    <td className="px-3 py-1.5">
-                      {confirmDeleteDate === r.date ? (
-                        // flex-wrap: the confirm/cancel labels come from
-                        // i18n (common.confirmDelete/cancel) and some
-                        // packs run considerably longer than English's
-                        // "Delete?"/"Cancel" — with the column's width now
-                        // hard-capped by table-fixed (COL_DELETE), letting
-                        // Cancel wrap to its own line degrades gracefully
-                        // instead of overflowing past the table's edge.
-                        <div className="flex flex-wrap items-center gap-0.5">
-                          <button
-                            type="button"
-                            className={CONFIRM_DELETE_BTN}
-                            onClick={() => { onDelete(r.date); setConfirmDeleteDate(null) }}
-                            data-testid={`history-delete-confirm-${r.date}`}
-                          >
-                            {t('common.confirmDelete')}
-                          </button>
-                          <button
-                            type="button"
-                            className={ACTION_BTN}
-                            onClick={() => setConfirmDeleteDate(null)}
-                            data-testid={`history-delete-cancel-${r.date}`}
-                          >
-                            {t('common.cancel')}
-                          </button>
-                        </div>
-                      ) : (
-                        // whitespace-nowrap: the plain (non-confirm) Delete
-                        // link must never wrap mid-word — COL_DELETE is
-                        // sized to fit every built-in pack's common.delete
-                        // label on one line (see the constant above). The
-                        // confirm-state buttons below intentionally keep
-                        // their default wrap tolerance instead.
+                  {onDelete && confirmDeleteDate === r.date ? (
+                    // Confirm-delete state spans PB+Timeline(if present)+Delete
+                    // as one cell instead of living in DELETE's own (now much
+                    // narrower, plain-label-only — see COL_DELETE) column.
+                    // Some packs' confirm/cancel strings run well past what
+                    // DELETE alone could ever hold on one line (紳士's confirm
+                    // question is 19 characters); the combined width fits
+                    // every built-in pack's string on one line at this
+                    // table's font size. flex-wrap stays as a safety net
+                    // (Cancel can still drop to its own line) rather than a
+                    // hard requirement. justify-end: Delete is the table's
+                    // last column, so the plain (non-confirm) Delete button
+                    // above sits at the table's right edge — right-aligning
+                    // the confirm/cancel pair keeps the action anchored to
+                    // that same edge instead of floating at the left of the
+                    // now much wider combined cell.
+                    <td colSpan={confirmColSpan} className="px-3 py-1.5">
+                      <div className="flex flex-wrap items-center justify-end gap-1.5">
                         <button
                           type="button"
-                          className={`${DELETE_BTN} whitespace-nowrap`}
-                          onClick={() => setConfirmDeleteDate(r.date)}
-                          data-testid={`history-delete-${r.date}`}
+                          className={`${CONFIRM_DELETE_BTN} whitespace-nowrap`}
+                          onClick={() => { onDelete(r.date); setConfirmDeleteDate(null) }}
+                          data-testid={`history-delete-confirm-${r.date}`}
                         >
-                          {t('common.delete')}
+                          {t('common.confirmDelete')}
                         </button>
-                      )}
+                        <button
+                          type="button"
+                          className={`${ACTION_BTN} whitespace-nowrap`}
+                          onClick={() => setConfirmDeleteDate(null)}
+                          data-testid={`history-delete-cancel-${r.date}`}
+                        >
+                          {t('common.cancel')}
+                        </button>
+                      </div>
                     </td>
+                  ) : (
+                    <>
+                      <td className="px-3 py-1.5">
+                        {r.isPb && <Trophy role="img" className="inline-block size-3.5 text-warning" aria-label={t('editor.typingTest.history.pb')} />}
+                      </td>
+                      {uid && <HistoryTimelineCell result={r} uid={uid} availableRunIds={availableRunIds ?? EMPTY_RUN_ID_SET} />}
+                      {onDelete && (
+                        <td className="px-3 py-1.5">
+                          {/* whitespace-nowrap: the plain (non-confirm) Delete
+                           *  link must never wrap mid-word — COL_DELETE is
+                           *  sized to fit every built-in pack's common.delete
+                           *  label on one line (see the constant above). The
+                           *  confirm state above renders in its own colSpan
+                           *  cell instead of fighting this column's width. */}
+                          <button
+                            type="button"
+                            className={`${DELETE_BTN} whitespace-nowrap`}
+                            onClick={() => setConfirmDeleteDate(r.date)}
+                            data-testid={`history-delete-${r.date}`}
+                          >
+                            {t('common.delete')}
+                          </button>
+                        </td>
+                      )}
+                    </>
                   )}
                 </tr>
               ))}

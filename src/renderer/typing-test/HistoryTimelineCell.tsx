@@ -26,31 +26,33 @@ export function HistoryTimelineCell({ result, uid, availableRunIds }: Props) {
     return <td className="px-3 py-1.5" />
   }
   const runId = result.runId
+  const label = t('editor.typingTest.history.timeline.linkLabel')
 
   return (
     <td className="px-3 py-1.5">
       {/* Text link (not an icon button) matching the row's other text-action
        *  conventions (Delete/Load in HistoryResultsPanel) — LOAD_BTN is the
        *  accent-colored twin of DELETE_BTN, the same row-button shape used
-       *  for non-destructive actions elsewhere in these History rows. The
-       *  Tooltip is kept even though the link now has visible text: its
-       *  copy ("Open keystroke timeline") clarifies WHAT opens beyond the
-       *  short "Timeline" label. No aria-label on the button itself — the
-       *  visible text already supplies its accessible name. */}
-      <Tooltip content={t('editor.typingTest.history.timeline.openButton')}>
-        {/* whitespace-nowrap: with the fixed-layout table's narrow COL_TIMELINE
-         *  share, some i18n packs' Timeline label (e.g. 京言葉's
-         *  "タイムラインどすえ") is long enough that the default wrap would break
-         *  it mid-word onto two lines. COL_TIMELINE is sized to fit the
-         *  longest built-in pack string on one line (see HistoryResultsPanel),
-         *  so this never needs to clip. */}
+       *  for non-destructive actions elsewhere in these History rows.
+       *
+       *  Variable-width like Name/Mode (NameCell/ModeCell in
+       *  HistoryResultsPanel): `truncate` (which already implies
+       *  whitespace-nowrap, so the label can never break mid-word) plus a
+       *  Tooltip surfacing the full label when it overflows. COL_TIMELINE is
+       *  sized to fit English "Timeline" / standard Japanese "タイムライン"
+       *  without truncating — longer persona strings (e.g. 京言葉's 9-char
+       *  "タイムラインどすえ") may ellipsis, same tradeoff Name/Mode already
+       *  make. No aria-label on the button — its own (possibly truncated)
+       *  text plus the Tooltip's full-text bubble already supply the
+       *  accessible name/description. */}
+      <Tooltip content={label} wrapperClassName="block max-w-full">
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className={`${LOAD_BTN} whitespace-nowrap`}
+          className={`${LOAD_BTN} block w-full text-left`}
           data-testid={`history-timeline-open-${result.date}`}
         >
-          {t('editor.typingTest.history.timeline.linkLabel')}
+          <span className="block truncate">{label}</span>
         </button>
       </Tooltip>
       {open && (

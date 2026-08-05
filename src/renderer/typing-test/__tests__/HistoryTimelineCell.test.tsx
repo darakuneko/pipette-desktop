@@ -45,20 +45,22 @@ describe('HistoryTimelineCell', () => {
     expect(screen.getByTestId('word-timeline-modal')).toBeTruthy()
   })
 
-  it('has no native title attribute and exposes the label via the shared Tooltip instead', () => {
+  it('has no native title attribute and exposes the full label via the shared Tooltip instead', () => {
+    // Variable-width cell now (like Name/Mode): the Tooltip carries the
+    // label itself (not a separate "Open keystroke timeline" description)
+    // so the full text is reachable even when COL_TIMELINE truncates it.
     renderWithI18n(<HistoryTimelineCell result={makeResult({ runId: 'run-1' })} uid="uid-1" availableRunIds={new Set(['run-1'])} />)
     const btn = screen.getByTestId('history-timeline-open-2026-01-01T00:00:00.000Z')
     expect(btn).not.toHaveAttribute('title')
     const bubble = screen.getByRole('tooltip')
-    expect(bubble.textContent).toBe(i18n.t('editor.typingTest.history.timeline.openButton'))
+    expect(bubble.textContent).toBe(i18n.t('editor.typingTest.history.timeline.linkLabel'))
     expect(btn.getAttribute('aria-describedby')).toBe(bubble.id)
   })
 
   // Icon -> text link: the row now shows a short visible label ("Timeline")
-  // instead of the ChartNoAxesGantt icon. The Tooltip above still carries
-  // the longer "Open keystroke timeline" copy, but the button itself no
-  // longer needs an aria-label since its own text supplies the accessible
-  // name.
+  // instead of the ChartNoAxesGantt icon. The button itself doesn't need an
+  // aria-label since its own (truncate-wrapped) text supplies the
+  // accessible name.
   it('renders a text link (no icon) with the visible timeline label', () => {
     renderWithI18n(<HistoryTimelineCell result={makeResult({ runId: 'run-1' })} uid="uid-1" availableRunIds={new Set(['run-1'])} />)
     const btn = screen.getByTestId('history-timeline-open-2026-01-01T00:00:00.000Z')
