@@ -1,11 +1,11 @@
 {
-  "version": "0.1.82",
+  "version": "0.1.83",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
     "saved": "保存しましたえ",
     "cancel": "やめときますわ",
-    "delete": "消しますえ",
+    "delete": "消すえ",
     "confirmDelete": "消してもよろしおすか？",
     "close": "閉じますえ",
     "reset": "戻しますえ",
@@ -304,7 +304,7 @@
       },
       "wpm": "WPM",
       "kpm": "KPM",
-      "accuracy": "正確さどすえ",
+      "accuracy": "正確どすえ",
       "kspc": "KSPC",
       "time": "時間",
       "words": "単語",
@@ -552,7 +552,7 @@
         "timeline": {
           "modalTitle": "打鍵タイムラインどすえ",
           "openButton": "打鍵タイムラインを開きますえ",
-          "linkLabel": "タイムラインどすえ",
+          "linkLabel": "足あとどすえ",
           "loading": "タイムラインを読み込み中どすえ…",
           "error": "このランの打鍵ログが読み込めしまへんどした。",
           "partialBadge": "未完了どすえ",

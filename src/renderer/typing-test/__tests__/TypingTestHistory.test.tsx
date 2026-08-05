@@ -280,9 +280,12 @@ describe('TypingTestHistory', () => {
 
     // The Mode column header carries the column's width share (the
     // fixed-layout algorithm reads column widths from the header row only).
+    // Mode is one of only two flexible (percentage-width, possibly
+    // decimal — e.g. "17.74%") columns; every other History column is a
+    // fixed px width sized to show its content in full without truncating.
     const modeHeader = screen.getByRole('button', { name: /Mode/i }).closest('th')
     expect(modeHeader).toBeTruthy()
-    expect(modeHeader!.className).toMatch(/w-\[\d+%\]/)
+    expect(modeHeader!.className).toMatch(/w-\[\d+(\.\d+)?%\]/)
 
     const modeCell = Array.from(history.querySelectorAll('tbody td')).find((td) => td.textContent === fullText)
     expect(modeCell).toBeTruthy()
