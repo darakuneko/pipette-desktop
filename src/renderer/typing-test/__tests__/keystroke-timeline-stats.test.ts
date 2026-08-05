@@ -103,3 +103,38 @@ describe('buildTimelineStatItems — Words/Lines card branch table', () => {
     expect(item.value).toBe(4)
   })
 })
+
+/** The 11th (Avg Key Hold) card is always the last entry in
+ *  buildTimelineStatItems' fixed ordering. */
+function avgHoldItem(result: TypingTestResult | undefined, summary: WordTimelineSummary, log: RunKeystrokeLog) {
+  return buildTimelineStatItems(result, summary, log)[10]
+}
+
+describe('buildTimelineStatItems — Avg Key Hold card', () => {
+  it('prefers the persisted result raw pair over the model summary when both are present', () => {
+    const result = makeResult({ holdSumMs: 240, holdSamples: 3 }) // mean 80
+    const summary: WordTimelineSummary = { avgHoldMs: 999 }
+    const item = avgHoldItem(result, summary, makeLog())
+    expect(item.labelKey).toBe('editor.typingTest.history.timeline.stats.avgHold')
+    expect(item.value).toBe('80 ms')
+    expect(item.descriptionKey).toBe('editor.typingTest.history.timeline.stats.avgHoldTooltip')
+  })
+
+  it('falls back to the model summary when no result is available', () => {
+    const summary: WordTimelineSummary = { avgHoldMs: 142 }
+    const item = avgHoldItem(undefined, summary, makeLog())
+    expect(item.value).toBe('142 ms')
+  })
+
+  it('falls back to the model summary when a result is present but predates this field (legacy row)', () => {
+    const result = makeResult()
+    const summary: WordTimelineSummary = { avgHoldMs: 55 }
+    const item = avgHoldItem(result, summary, makeLog())
+    expect(item.value).toBe('55 ms')
+  })
+
+  it('shows the empty placeholder when neither the result nor the model summary has a sample', () => {
+    const item = avgHoldItem(makeResult(), SUMMARY, makeLog())
+    expect(item.value).toBe(EMPTY_STAT_VALUE)
+  })
+})

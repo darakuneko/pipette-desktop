@@ -171,6 +171,32 @@ describe('TypingTestHistory', () => {
     expect(rows()).toEqual([60, 75, 90])
   })
 
+  it('renders and sorts the Avg Hold column, formatted "N ms", with a legacy (no raw fields) row sorting to the low end', () => {
+    const results = [
+      makeResult({ wpm: 60, date: '2025-01-03T00:00:00Z', holdSumMs: 300, holdSamples: 3 }), // 100 ms
+      makeResult({ wpm: 90, date: '2025-01-02T00:00:00Z', holdSumMs: 800, holdSamples: 5 }), // 160 ms
+      makeResult({ wpm: 75, date: '2025-01-01T00:00:00Z' }), // legacy, no raw fields
+    ]
+    renderWithI18n(<TypingTestHistory results={results} />)
+
+    const cellsFor = (idx: number) => {
+      const history = screen.getByTestId('typing-test-history')
+      const trs = history.querySelectorAll('tbody tr')
+      return Array.from(trs).map((tr) => tr.querySelectorAll('td')[idx].textContent)
+    }
+
+    // Column order: Name, Date, WPM, KPM, Accuracy, Avg Hold, Mode, Duration, PB.
+    // Default sort is date desc → 100ms, 160ms, legacy(—).
+    expect(cellsFor(5)).toEqual(['100 ms', '160 ms', '—'])
+
+    const avgHoldButton = screen.getByRole('button', { name: /Avg Key Hold/i })
+    fireEvent.click(avgHoldButton) // desc
+    expect(cellsFor(5)).toEqual(['160 ms', '100 ms', '—'])
+
+    fireEvent.click(avgHoldButton) // asc — the legacy row (treated as lowest) sorts first
+    expect(cellsFor(5)).toEqual(['—', '100 ms', '160 ms'])
+  })
+
   it('sets aria-sort on active sort column', () => {
     const results = [makeResult({ wpm: 60 })]
     renderWithI18n(<TypingTestHistory results={results} />)
@@ -184,7 +210,7 @@ describe('TypingTestHistory', () => {
 
     // Other sortable headers should be 'none'
     const noneHeaders = Array.from(headers).filter((h) => h.getAttribute('aria-sort') === 'none')
-    expect(noneHeaders.length).toBe(5) // wpm, kpm, accuracy, mode, duration
+    expect(noneHeaders.length).toBe(6) // wpm, kpm, accuracy, avgHold, mode, duration
   })
 
   it('computes stats from filtered data', () => {
@@ -250,6 +276,35 @@ describe('TypingTestHistory', () => {
     const headers = csv.split('\n')[0].split(',')
     const kspcIndex = headers.indexOf('kspc')
     expect(dataLine.split(',')[kspcIndex]).toBe('')
+  })
+
+  it('includes an avgHoldMs CSV column, rounded to the nearest ms, for a result carrying the raw fields', () => {
+    const onExportCsv = vi.fn()
+    const results = [
+      makeResult({ wpm: 80, date: '2025-01-01T00:00:00Z', holdSumMs: 241, holdSamples: 3 }), // 80.33... -> 80
+    ]
+    renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+
+    fireEvent.click(screen.getByTestId('history-export-csv'))
+    const csv = onExportCsv.mock.calls[0][0] as string
+    const [headerLine, dataLine] = csv.split('\n')
+    const headers = headerLine.split(',')
+    expect(headers).toContain('avgHoldMs')
+    expect(dataLine.split(',')[headers.indexOf('avgHoldMs')]).toBe('80')
+  })
+
+  it('leaves the avgHoldMs CSV cell empty for a legacy result with no raw fields', () => {
+    const onExportCsv = vi.fn()
+    const results = [
+      makeResult({ wpm: 80, date: '2025-01-01T00:00:00Z' }), // no holdSumMs/holdSamples
+    ]
+    renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+
+    fireEvent.click(screen.getByTestId('history-export-csv'))
+    const csv = onExportCsv.mock.calls[0][0] as string
+    const [headerLine, dataLine] = csv.split('\n')
+    const headers = headerLine.split(',')
+    expect(dataLine.split(',')[headers.indexOf('avgHoldMs')]).toBe('')
   })
 
   it('includes raw error-class CSV columns for a result carrying the 4-field group', () => {

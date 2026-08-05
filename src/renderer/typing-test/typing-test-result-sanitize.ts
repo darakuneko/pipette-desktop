@@ -63,6 +63,25 @@ function sanitizeKspcFields(result: TypingTestResult): { kspcKeystrokes?: number
   return {}
 }
 
+/** Validates a result's optional `holdSumMs`/`holdSamples` pair:
+ *  both-or-neither, `holdSumMs` a non-negative finite number (a
+ *  millisecond sum, not necessarily an integer boundary in practice but
+ *  never required to be one here), `holdSamples` a non-negative integer
+ *  > 0 (matches `computeKspc`'s zero-division guard precedent). Returns
+ *  `{}` for anything else so a malformed pair degrades to "not set",
+ *  same treatment as `sanitizeKspcFields` above. */
+function sanitizeHoldFields(result: TypingTestResult): { holdSumMs?: number; holdSamples?: number } {
+  const { holdSumMs, holdSamples } = result
+  if (holdSumMs === undefined && holdSamples === undefined) return {}
+  if (
+    typeof holdSumMs === 'number' && Number.isFinite(holdSumMs) && holdSumMs >= 0
+    && isNonNegInt(holdSamples) && holdSamples > 0
+  ) {
+    return { holdSumMs, holdSamples }
+  }
+  return {}
+}
+
 /** Validates a result's optional 4-field error-class raw group
  *  (`errorSubstitutions`/`errorOmissions`/`errorInsertions`/
  *  `errorTargetChars` — see `TypingTestResult`'s doc comment): all-or-
@@ -104,12 +123,15 @@ function sanitizeErrorClassFields(result: TypingTestResult): {
  *  entirely. */
 export function sanitizeTypingTestResult(result: TypingTestResult): TypingTestResult {
   const { kspcKeystrokes, kspcChars } = sanitizeKspcFields(result)
+  const { holdSumMs, holdSamples } = sanitizeHoldFields(result)
   const { errorSubstitutions, errorOmissions, errorInsertions, errorTargetChars } = sanitizeErrorClassFields(result)
   return {
     ...result,
     mistakes: sanitizeMistakes(result.mistakes),
     kspcKeystrokes,
     kspcChars,
+    holdSumMs,
+    holdSamples,
     errorSubstitutions,
     errorOmissions,
     errorInsertions,

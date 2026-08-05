@@ -57,6 +57,16 @@ export function resultKspc(r: TypingTestResult): number | null {
   return computeKspc(r.kspcKeystrokes, r.kspcChars)
 }
 
+/** Derives a saved result's average key-hold duration (ms) from its raw
+ *  `holdSumMs`/`holdSamples` pair — same derived-field precedent as
+ *  `resultKpm`/`resultKspc`. `null` when either is absent (legacy row, or
+ *  the run had no qualifying keystroke) or `holdSamples` is not positive
+ *  (division-by-zero guard). */
+export function resultAvgHoldMs(r: TypingTestResult): number | null {
+  if (r.holdSumMs === undefined || r.holdSamples === undefined || r.holdSamples <= 0) return null
+  return r.holdSumMs / r.holdSamples
+}
+
 /** Compact `YYYYMMDDHHmmss` timestamp from a result's ISO date. */
 function compactTimestamp(iso: string): string {
   const d = new Date(iso)
@@ -164,6 +174,15 @@ export interface BuildTypingTestResultInput {
    *  thread it through; an empty (or omitted) list stores nothing, same
    *  as a romaji run (see `buildTypingTestResult`). */
   wordResults?: readonly WordResult[]
+  /** Raw average-key-hold-duration pair, pooled from the run's raw
+   *  keystroke log (see `RunLogRecorder.currentRunHoldStats` — the log is
+   *  finalized AFTER this function runs, so the caller snapshots the
+   *  still-buffered sums first). Optional and defaulted to "store
+   *  nothing" so existing callers/tests that don't care about hold
+   *  duration don't have to thread it through, same precedent as
+   *  `wordResults`. A zero-sample pair (nothing observed this run, e.g.
+   *  recording was off) stores neither field — see `buildTypingTestResult`. */
+  holdStats?: { holdSumMs: number; holdSamples: number }
 }
 
 /** Narrows to the 'words' / 'time' config variants — the only ones carrying
@@ -229,6 +248,8 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
     mistakes: Object.keys(input.mistakes).length > 0 ? input.mistakes : undefined,
     kspcKeystrokes: kspc !== null ? input.totalKeystrokes : undefined,
     kspcChars: kspc !== null ? input.confirmedChars : undefined,
+    holdSumMs: input.holdStats && input.holdStats.holdSamples > 0 ? input.holdStats.holdSumMs : undefined,
+    holdSamples: input.holdStats && input.holdStats.holdSamples > 0 ? input.holdStats.holdSamples : undefined,
     errorSubstitutions: errorClasses?.substitutions,
     errorOmissions: errorClasses?.omissions,
     errorInsertions: errorClasses?.insertions,

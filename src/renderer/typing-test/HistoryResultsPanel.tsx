@@ -7,17 +7,17 @@ import { ICON_SM } from '../constants/ui-tokens'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import { computeStats } from './history-stats'
 import { formatDate, ACTION_BTN, DELETE_BTN, CONFIRM_DELETE_BTN, FILTER_SELECT_CLASS } from '../components/editors/store-modal-shared'
-import { resultKpm, buildResultNameChips } from './result-builder'
+import { resultKpm, resultAvgHoldMs, buildResultNameChips } from './result-builder'
 import { formatConditionLabel } from './condition-label'
 import { ResultNameModal } from './ResultNameModal'
 import { Tooltip } from '../components/ui/Tooltip'
-import { formatDuration } from '../components/analyze/analyze-format'
+import { formatDuration, fmtMs } from '../components/analyze/analyze-format'
 import { HistoryTimelineCell } from './HistoryTimelineCell'
 import { EMPTY_RUN_ID_SET } from '../hooks/useRunLogAvailability'
 import { WpmTrendChart } from './WpmTrendChart'
 
 type ModeFilter = 'all' | 'words' | 'time' | 'quote'
-type SortColumn = 'date' | 'wpm' | 'kpm' | 'accuracy' | 'mode' | 'duration'
+type SortColumn = 'date' | 'wpm' | 'kpm' | 'accuracy' | 'avgHold' | 'mode' | 'duration'
 type SortDirection = 'asc' | 'desc'
 /** Source-tab split: MonkeyType (words/time/quote) keeps the mode dropdown;
  *  Tatoeba has no sub-filter (the Analysis condition selector already
@@ -148,6 +148,15 @@ export function HistoryResultsPanel({
         case 'accuracy':
           cmp = a.accuracy - b.accuracy
           break
+        case 'avgHold': {
+          // A legacy row with no raw holdSumMs/holdSamples pair sorts as
+          // the lowest possible value (-1, below any real non-negative
+          // ms mean) rather than being excluded from sort order entirely.
+          const a1 = resultAvgHoldMs(a) ?? -1
+          const b1 = resultAvgHoldMs(b) ?? -1
+          cmp = a1 - b1
+          break
+        }
         case 'mode': {
           // Sort by what the Mode column actually shows (text name for fileImport),
           // so fileImport rows order by name rather than an opaque textId.
@@ -257,6 +266,7 @@ export function HistoryResultsPanel({
                 <SortableHeader column="wpm" label={t('editor.typingTest.wpm')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
                 <SortableHeader column="kpm" label={t('editor.typingTest.kpm')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
                 <SortableHeader column="accuracy" label={t('editor.typingTest.accuracy')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
+                <SortableHeader column="avgHold" label={t('editor.typingTest.history.avgHold')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
                 <SortableHeader column="mode" label={isText ? t('editor.typingTest.history.tabText') : t('editor.typingTest.history.mode')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
                 <SortableHeader column="duration" label={t('editor.typingTest.time')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
                 <th className="px-3 py-1.5">{t('editor.typingTest.history.pb')}</th>
@@ -275,6 +285,7 @@ export function HistoryResultsPanel({
                   <td className="whitespace-nowrap px-3 py-1.5 font-mono font-semibold text-accent">{r.wpm}</td>
                   <td className="whitespace-nowrap px-3 py-1.5 font-mono font-semibold text-accent">{resultKpm(r)}</td>
                   <td className="whitespace-nowrap px-3 py-1.5 font-mono">{r.accuracy}%</td>
+                  <td className="whitespace-nowrap px-3 py-1.5 font-mono text-content-muted">{fmtMs(resultAvgHoldMs(r))}</td>
                   <td className="whitespace-nowrap px-3 py-1.5 text-content-muted">
                     {isText
                       ? (modeDetail(r) || t('editor.typingTest.history.unnamed'))

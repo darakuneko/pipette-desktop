@@ -58,6 +58,19 @@ export interface TypingTestResult {
    *  run-state.ts/romaji-input.ts as each mode confirms a character). See
    *  `kspcKeystrokes` for the both-or-neither contract. */
   kspcChars?: number
+  /** Average key-hold-duration raw pair (press→release ms), both-or-neither
+   *  same shape as `kspcKeystrokes`/`kspcChars`: `holdSumMs` sums every
+   *  keystroke's `releaseMs - pressMs` this run where a release was
+   *  actually observed and the duration was positive (see
+   *  `word-timeline.ts`'s `WordTimelineStats.holdSumMs`/`holdSamples` for
+   *  the per-word raw counters this pools from), `holdSamples` is the
+   *  qualifying keystroke count. The displayed mean is derived via
+   *  `resultAvgHoldMs` rather than precomputed, mirroring the KPM
+   *  (`resultKpm`)/KSPC (`resultKspc`) precedent. Omitted for a run with
+   *  no qualifying keystroke (e.g. every key still held at run end) or one
+   *  saved before this field existed. */
+  holdSumMs?: number
+  holdSamples?: number
   /** Error-class breakdown (see `error-classify.ts`'s `classifyWordResults`),
    *  a 4-field all-or-nothing raw group (same both-or-neither shape as
    *  `kspcKeystrokes`/`kspcChars`, just with four fields instead of two):

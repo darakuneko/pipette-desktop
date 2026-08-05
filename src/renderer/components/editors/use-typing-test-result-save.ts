@@ -192,6 +192,12 @@ export function useTypingTestResultSave({
         confirmedChars: typingTest.state.confirmedChars,
         kspcUncomputable: typingTest.state.kspcUncomputable,
         wordResults: typingTest.state.wordResults,
+        // Snapshotted from the recorder's still-buffered keystrokes BEFORE
+        // `runLog.finishAndSave` runs below — the run log is only
+        // finalized (and its buffer cleared) AFTER this result is built,
+        // so this is the one chance to read it (see
+        // `RunLogRecorder.currentRunHoldStats`'s own doc comment).
+        holdStats: runLog.currentRunHoldStats(typingTest.state.runId),
       })
       result.isPb = isPbForConfig(result, typingTestHistory ?? [])
       if (saveUnnamed) {
@@ -269,7 +275,7 @@ export function useTypingTestResultSave({
     typingTest.wpm, typingTest.accuracy,
     typingTest.config, typingTest.language,
     typingTestHistory, onSaveTypingTestResult, saveUnnamed, pendingUnnamedResult, lastFinishedLog,
-    resetMatrixPressTracking, flushAfterPendingEmits, runLog.finishAndSave])
+    resetMatrixPressTracking, flushAfterPendingEmits, runLog.finishAndSave, runLog.currentRunHoldStats])
 
   // The just-finished result, exposed so the pane can build name chips: the
   // held unsaved one (save-unnamed off) until named, else the saved latest.

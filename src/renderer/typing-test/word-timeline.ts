@@ -12,6 +12,7 @@
 import type { RunKeystroke, RunKeystrokeLog, RunWord } from '../../shared/types/typing-run-log'
 import { computeWordCharCounts } from './run-state'
 import { resolveCharFromKeycode } from './keycode-char-map'
+import { qualifyingHoldMs } from './keystroke-hold'
 
 /** A press with no observed release renders as a fixed-width sliver so it
  *  has SOMETHING to show — never treat this width as a real duration (see
@@ -142,6 +143,17 @@ export interface WordTimelineStats {
    *  keystroke the same as one with 20. */
   overlapObserved?: number
   overlapTrue?: number
+  /** Sum of `releaseMs - pressMs` over every keystroke in this word whose
+   *  release was actually observed AND whose duration is positive — the
+   *  raw pair (with `holdSamples`) backing `WordTimelineSummary.avgHoldMs`,
+   *  pooled the same Σ/Σ way as `overlapObserved`/`overlapTrue` (a mean of
+   *  each word's own average would weight a 1-keystroke word the same as
+   *  a 20-keystroke one). Undefined — not zero — when the word has no
+   *  qualifying sample, the same tri-state convention `overlapObserved`
+   *  uses. Orthogonal to a word being `partial`/scored: a hold duration is
+   *  measurable regardless of whether the word was ever judged. */
+  holdSumMs?: number
+  holdSamples?: number
   /** Raw char counts backing `accuracy` (post separator-credit
    *  adjustment — see the run-last-word rule in `buildStats`) — undefined
    *  exactly when `accuracy` is. Lets `buildWordTimelineSummary` pool
@@ -191,6 +203,12 @@ export interface WordTimelineSummary {
    *  doc comment for the bug this pooling fixes). Undefined when no word
    *  has one. */
   avgOverlap?: number
+  /** Keystroke-weighted average key-hold duration (ms) across ALL words
+   *  (not just scored ones) with a qualifying sample — Σ holdSumMs / Σ
+   *  holdSamples, same pooling shape and same "orthogonal to scoring" rule
+   *  as `avgOverlap`. Undefined when no word has one (e.g. every keystroke
+   *  in the run is still open-ended). */
+  avgHoldMs?: number
 }
 
 export interface WordTimelineModel {
@@ -252,6 +270,9 @@ interface WordBuildResult {
   overlapRate?: number
   overlapObserved?: number
   overlapTrue?: number
+  /** See `WordTimelineStats.holdSumMs`/`holdSamples`. */
+  holdSumMs?: number
+  holdSamples?: number
   /** True ms of this word's own last observed boundary — carried forward
    *  as the next word's lead-in comparison point. Undefined when the
    *  word had no keystrokes at all (an empty word never updates the
@@ -291,6 +312,10 @@ export interface KeystrokeStreamResult {
   lastObservedTrueMs: number
   overlapObserved?: number
   overlapTrue?: number
+  /** See `WordTimelineStats.holdSumMs`/`holdSamples` — same Σ/Σ pooling,
+   *  computed over this stream's own keystrokes. */
+  holdSumMs?: number
+  holdSamples?: number
 }
 
 /** Builds one continuous run of keystroke + blank segments over an
@@ -315,6 +340,8 @@ export function buildKeystrokeStream(
   let displayCursor = startCursor
   let observedOverlapCount = 0
   let overlappedTrueCount = 0
+  let holdSumMs = 0
+  let holdSamples = 0
 
   keystrokes.forEach((k, i) => {
     if (i > 0) {
@@ -361,6 +388,19 @@ export function buildKeystrokeStream(
       if (k.overlapped) overlappedTrueCount++
     }
 
+    // Hold duration is always the TRUE press-to-release span — never the
+    // display-compressed `startMs`/`endMs` this loop also computes above
+    // (those can shrink an `openEnded` bar to MIN_BAR_MS, which must never
+    // be mistaken for a real duration — see KeystrokeSegment.openEnded).
+    // Qualification rule lives in keystroke-hold.ts, shared with
+    // run-log-recorder.ts's `currentRunHoldStats` so the two independent
+    // accumulation sites can't drift apart.
+    const trueHoldMs = qualifyingHoldMs(k.pressMs, k.releaseMs)
+    if (trueHoldMs !== undefined) {
+      holdSumMs += trueHoldMs
+      holdSamples++
+    }
+
     keystrokeSegments.push({
       kind: 'keystroke',
       startMs,
@@ -386,6 +426,8 @@ export function buildKeystrokeStream(
     lastObservedTrueMs,
     overlapObserved: observedOverlapCount > 0 ? observedOverlapCount : undefined,
     overlapTrue: observedOverlapCount > 0 ? overlappedTrueCount : undefined,
+    holdSumMs: holdSamples > 0 ? holdSumMs : undefined,
+    holdSamples: holdSamples > 0 ? holdSamples : undefined,
   }
 }
 
@@ -428,6 +470,8 @@ function buildWord(word: RunWord, crossWordLastObservedMs: number | null): WordB
     overlapRate: stream.overlapObserved !== undefined ? stream.overlapTrue! / stream.overlapObserved : undefined,
     overlapObserved: stream.overlapObserved,
     overlapTrue: stream.overlapTrue,
+    holdSumMs: stream.holdSumMs,
+    holdSamples: stream.holdSamples,
     lastObservedTrueMs: stream.lastObservedTrueMs,
   }
 }
@@ -435,6 +479,9 @@ function buildWord(word: RunWord, crossWordLastObservedMs: number | null): WordB
 interface BuildStatsExtras {
   overlapObserved?: number
   overlapTrue?: number
+  /** See `WordTimelineStats.holdSumMs`/`holdSamples`. */
+  holdSumMs?: number
+  holdSamples?: number
   /** True for the log's own last `RunWord` entry — the ONLY word
    *  `computeWordCharCounts`'s +1 separator credit must be withheld from,
    *  mirroring `run-state.ts`'s own two submit paths exactly: every word
@@ -478,7 +525,7 @@ export function computeScoredWordCharCounts(word: RunWord, isRunLastWord: boolea
 }
 
 function buildStats(word: RunWord, durationMs: number, extras: BuildStatsExtras): WordTimelineStats {
-  const { overlapObserved, overlapTrue } = extras
+  const { overlapObserved, overlapTrue, holdSumMs, holdSamples } = extras
   const overlapRate = overlapObserved !== undefined ? overlapTrue! / overlapObserved : undefined
   // A partial (unsubmitted, interrupted) word is never scored — see
   // RunWord.partial's doc comment. Its keystrokes/segments still render;
@@ -490,7 +537,7 @@ function buildStats(word: RunWord, durationMs: number, extras: BuildStatsExtras)
   // `BuildStatsExtras.romajiInput`'s doc comment.
   const scored = computeScoredWordCharCounts(word, extras.isRunLastWord, extras.romajiInput)
   if (!scored) {
-    return { durationMs, overlapRate, overlapObserved, overlapTrue }
+    return { durationMs, overlapRate, overlapObserved, overlapTrue, holdSumMs, holdSamples }
   }
 
   const { correct, incorrect } = scored
@@ -505,6 +552,8 @@ function buildStats(word: RunWord, durationMs: number, extras: BuildStatsExtras)
     overlapRate,
     overlapObserved,
     overlapTrue,
+    holdSumMs,
+    holdSamples,
     correctChars: totalChars > 0 ? correct : undefined,
     incorrectChars: totalChars > 0 ? incorrect : undefined,
     durationMs,
@@ -534,6 +583,8 @@ export function buildWordTimeline(log: RunKeystrokeLog): WordTimelineModel {
       stats: buildStats(word, built.durationMs, {
         overlapObserved: built.overlapObserved,
         overlapTrue: built.overlapTrue,
+        holdSumMs: built.holdSumMs,
+        holdSamples: built.holdSamples,
         isRunLastWord: i === log.words.length - 1,
         romajiInput: log.romajiInput === true,
       }),
@@ -590,5 +641,10 @@ export function buildWordTimelineSummary(model: WordTimelineModel): WordTimeline
   const overlapTrueSum = sum(overlapWords.map((w) => w.stats.overlapTrue!))
   const avgOverlap = overlapObservedSum > 0 ? overlapTrueSum / overlapObservedSum : undefined
 
-  return { avgPace, avgAccuracy, avgOverlap }
+  const holdWords = model.words.filter((w) => w.stats.holdSamples !== undefined)
+  const holdSumMsTotal = sum(holdWords.map((w) => w.stats.holdSumMs!))
+  const holdSamplesTotal = sum(holdWords.map((w) => w.stats.holdSamples!))
+  const avgHoldMs = holdSamplesTotal > 0 ? holdSumMsTotal / holdSamplesTotal : undefined
+
+  return { avgPace, avgAccuracy, avgOverlap, avgHoldMs }
 }

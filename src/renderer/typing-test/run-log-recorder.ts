@@ -101,6 +101,7 @@ import type { RunKeystroke, RunKeystrokeLog, RunWord } from '../../shared/types/
 import { MAX_RUN_LOG_BYTES, MAX_RUN_LOG_EVENTS } from '../../shared/types/typing-run-log'
 import { producesChar } from './keycode-char-map'
 import type { WordResult } from './run-state'
+import { qualifyingHoldMs } from './keystroke-hold'
 
 /** Context carried into every `record` call — mirrors the gate/tag
  *  decision `useInputModes.emitAnalyticsEvent` already makes for the
@@ -700,6 +701,34 @@ export class RunLogRecorder {
         typedChar: k.typedChar,
         mistakeKey: k.mistakeKey,
       }))
+  }
+
+  /** Read-only snapshot of `runId`'s currently-buffered average-key-hold
+   *  raw pair — sums `releaseMs - pressMs` (still in absolute-epoch `Date.now()`
+   *  form at this point; the difference is unaffected by the eventual
+   *  run-relative conversion `finish()` performs) over every buffered
+   *  keystroke with an observed, positive-duration release. Unlike
+   *  `finish()`, does NOT clear the buffer: `useTypingTestResultSave`
+   *  calls this BEFORE `finish()` because `buildTypingTestResult` (which
+   *  needs this pair) runs first, and the run log is only finalized
+   *  afterward — see that hook's own ordering note. Returns a zeroed pair
+   *  (never null) for an unknown/mismatched runId — the natural "nothing
+   *  was recorded" case (no buffer yet, consent off, view-only, or a
+   *  fresh run already replaced the buffer), the same both-or-neither-
+   *  friendly shape `buildTypingTestResult` already expects (zero
+   *  `holdSamples` drops the pair, see its own doc comment). */
+  currentRunHoldStats(runId: string): { holdSumMs: number; holdSamples: number } {
+    if (!this.buffer || this.buffer.runId !== runId) return { holdSumMs: 0, holdSamples: 0 }
+    let holdSumMs = 0
+    let holdSamples = 0
+    for (const k of this.buffer.keystrokes) {
+      const holdMs = qualifyingHoldMs(k.pressMs, k.releaseMs)
+      if (holdMs !== undefined) {
+        holdSumMs += holdMs
+        holdSamples++
+      }
+    }
+    return { holdSumMs, holdSamples }
   }
 
   /** Finalize the current run's buffer into a saveable log, joining each

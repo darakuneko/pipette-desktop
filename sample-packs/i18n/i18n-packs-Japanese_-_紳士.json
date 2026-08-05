@@ -1,5 +1,5 @@
 {
-  "version": "0.1.76",
+  "version": "0.1.77",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -485,6 +485,7 @@
         "last10Avg": "直近十回",
         "totalTests": "試練の数",
         "avgAccuracy": "平均正確さ",
+        "avgHold": "平均押鍵時間",
         "date": "日時",
         "name": "名",
         "unnamed": "名もなし",
@@ -542,7 +543,9 @@
             "overlap": "重複率",
             "duration": "所要時間",
             "kpm": "1分あたりの打鍵数",
-            "durationSeconds": "{{s}}秒"
+            "durationSeconds": "{{s}}秒",
+            "avgHold": "平均押鍵時間",
+            "avgHoldTooltip": "キーを押してから離すまでの平均時間（ミリ秒）でございます。"
           },
           "legend": {
             "normal": "通常の打鍵",

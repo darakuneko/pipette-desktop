@@ -113,6 +113,7 @@ function run(
     noteRegistration: vi.fn(),
     noteCharContext: vi.fn(),
     finishAndSave,
+    currentRunHoldStats: vi.fn().mockReturnValue({ holdSumMs: 0, holdSamples: 0 }),
     discardRun: vi.fn(),
   }
   const options: UseTypingTestResultSaveOptions = {
@@ -327,7 +328,8 @@ describe('useTypingTestResultSave — lastFinishedLog (completion timeline PR-B)
   function renderWithFinishAndSave(status: TypingTestState['status'], finishAndSaveReturn: RunKeystrokeLog | null) {
     const finishAndSave = vi.fn().mockReturnValue(finishAndSaveReturn)
     const runLog: UseRunLogRecorderReturn = {
-      record: vi.fn(), noteRegistration: vi.fn(), noteCharContext: vi.fn(), finishAndSave, discardRun: vi.fn(),
+      record: vi.fn(), noteRegistration: vi.fn(), noteCharContext: vi.fn(), finishAndSave,
+      currentRunHoldStats: vi.fn().mockReturnValue({ holdSumMs: 0, holdSamples: 0 }), discardRun: vi.fn(),
     }
     const buildOptions = (s: TypingTestState['status']): UseTypingTestResultSaveOptions => ({
       typingTest: makeTypingTest({ status: s }, DEFAULT_CONFIG),
@@ -367,5 +369,57 @@ describe('useTypingTestResultSave — lastFinishedLog (completion timeline PR-B)
   it('starts null before any run has ever finished', () => {
     const { result } = renderWithFinishAndSave('waiting', FAKE_LOG)
     expect(result.current.lastFinishedLog).toBeNull()
+  })
+})
+
+// Average key-hold duration: `currentRunHoldStats` is snapshotted BEFORE
+// `finishAndSave` (see run-log-recorder.ts's own ordering note) so the
+// still-buffered raw pair makes it onto the saved TypingTestResult.
+describe('useTypingTestResultSave — average key-hold duration wiring', () => {
+  function renderWithHoldStats(holdStats: { holdSumMs: number; holdSamples: number }) {
+    const callOrder: string[] = []
+    const currentRunHoldStats = vi.fn((runId: string) => {
+      callOrder.push('currentRunHoldStats')
+      expect(runId).toBe('run-1')
+      return holdStats
+    })
+    const finishAndSave = vi.fn(() => {
+      callOrder.push('finishAndSave')
+      return null
+    })
+    const onSaveTypingTestResult = vi.fn()
+    const runLog: UseRunLogRecorderReturn = {
+      record: vi.fn(), noteRegistration: vi.fn(), noteCharContext: vi.fn(),
+      finishAndSave, currentRunHoldStats, discardRun: vi.fn(),
+    }
+    const options: UseTypingTestResultSaveOptions = {
+      typingTest: makeTypingTest({}, DEFAULT_CONFIG),
+      onSaveTypingTestResult,
+      saveUnnamed: true,
+      savedMemoryRef: { current: undefined } as RefObject<undefined>,
+      onMemoryChangeRef: { current: undefined } as RefObject<undefined>,
+      keyboardRef: { current: { uid: 'kb-1', vendorId: 1, productId: 1, productName: 'x' } } as UseTypingTestResultSaveOptions['keyboardRef'],
+      flushAfterPendingEmits: vi.fn(),
+      runLog,
+    }
+    renderHook(() => useTypingTestResultSave(options))
+    return { onSaveTypingTestResult, currentRunHoldStats, callOrder }
+  }
+
+  it('reads the recorder\'s current-run hold stats before finishAndSave, and stores the pair on the saved result', () => {
+    const { onSaveTypingTestResult, currentRunHoldStats, callOrder } = renderWithHoldStats({ holdSumMs: 240, holdSamples: 3 })
+    expect(currentRunHoldStats).toHaveBeenCalledWith('run-1')
+    expect(callOrder).toEqual(['currentRunHoldStats', 'finishAndSave'])
+    expect(onSaveTypingTestResult).toHaveBeenCalledTimes(1)
+    const saved = onSaveTypingTestResult.mock.calls[0][0]
+    expect(saved.holdSumMs).toBe(240)
+    expect(saved.holdSamples).toBe(3)
+  })
+
+  it('stores neither field when nothing was observed this run (zero samples)', () => {
+    const { onSaveTypingTestResult } = renderWithHoldStats({ holdSumMs: 0, holdSamples: 0 })
+    const saved = onSaveTypingTestResult.mock.calls[0][0]
+    expect(saved.holdSumMs).toBeUndefined()
+    expect(saved.holdSamples).toBeUndefined()
   })
 })

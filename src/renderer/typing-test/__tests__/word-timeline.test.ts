@@ -535,4 +535,68 @@ describe('buildWordTimelineSummary', () => {
     expect(summary.avgAccuracy).toBeUndefined()
     expect(summary.avgOverlap).toBe(1)
   })
+
+  it('pools average key-hold duration (Σ hold / Σ samples) across all words, skipping keystrokes with no observed release', () => {
+    const model = buildWordTimeline(log([
+      // Word 0: two qualifying holds (50ms, 100ms) plus one open-ended
+      // keystroke (no releaseMs) that must not contribute a sample.
+      word({
+        index: 0,
+        keystrokes: [
+          keystroke({ pressMs: 0, releaseMs: 50 }),
+          keystroke({ pressMs: 60, releaseMs: 160 }),
+          keystroke({ pressMs: 200 }),
+        ],
+      }),
+      // Word 1: one more qualifying hold (30ms).
+      word({ index: 1, keystrokes: [keystroke({ pressMs: 1000, releaseMs: 1030 })] }),
+    ]))
+    expect(model.words[0].stats.holdSumMs).toBe(150)
+    expect(model.words[0].stats.holdSamples).toBe(2)
+    expect(model.words[1].stats.holdSumMs).toBe(30)
+    expect(model.words[1].stats.holdSamples).toBe(1)
+    // Pooled by sample count, not a mean of each word's own mean: (150 + 30) / (2 + 1) = 60.
+    expect(buildWordTimelineSummary(model).avgHoldMs).toBeCloseTo(60, 5)
+  })
+
+  it('skips a non-positive hold duration (a release observed at or before its own press) as a sample', () => {
+    const model = buildWordTimeline(log([
+      word({
+        index: 0,
+        keystrokes: [
+          // Zero-duration and (defensively) negative-duration releases
+          // never contribute a hold sample — only a strictly positive
+          // press-to-release span counts.
+          keystroke({ pressMs: 0, releaseMs: 0 }),
+          keystroke({ pressMs: 100, releaseMs: 90 }),
+        ],
+      }),
+    ]))
+    expect(model.words[0].stats.holdSumMs).toBeUndefined()
+    expect(model.words[0].stats.holdSamples).toBeUndefined()
+  })
+
+  it('leaves holdSumMs/holdSamples undefined (not zero) for a word with no qualifying release, and avgHoldMs undefined when no word in the run has one', () => {
+    const model = buildWordTimeline(log([
+      word({ index: 0, keystrokes: [keystroke({ pressMs: 0 })] }),
+    ]))
+    expect(model.words[0].stats.holdSumMs).toBeUndefined()
+    expect(model.words[0].stats.holdSamples).toBeUndefined()
+    expect(buildWordTimelineSummary(model).avgHoldMs).toBeUndefined()
+  })
+
+  it('pools hold duration across a partial word too — orthogonal to scoring, same as overlap', () => {
+    const model = buildWordTimeline(log([
+      word({
+        index: 0,
+        partial: true,
+        display: 'wor',
+        typed: 'wo',
+        keystrokes: [keystroke({ pressMs: 0, releaseMs: 40 })],
+      }),
+    ]))
+    expect(model.words[0].stats.holdSumMs).toBe(40)
+    expect(model.words[0].stats.holdSamples).toBe(1)
+    expect(buildWordTimelineSummary(model).avgHoldMs).toBe(40)
+  })
 })
