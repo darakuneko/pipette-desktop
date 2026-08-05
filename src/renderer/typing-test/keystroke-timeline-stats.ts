@@ -141,15 +141,6 @@ export function buildTimelineStatItems(
       labelKey: 'editor.typingTest.kspc',
       value: kspc !== null ? formatKspc(kspc) : EMPTY_STAT_VALUE,
     },
-    {
-      labelKey: 'editor.typingTest.time',
-      value: formatDuration(durationSeconds),
-    },
-    wordsOrLinesCard(result, log),
-    {
-      labelKey: 'editor.typingTest.history.timeline.stats.overlap',
-      value: formatPercentLabel(summary.avgOverlap),
-    },
     // Reuses ErrorMixSection's own per-class caption keys (#332) rather
     // than the `results.errorSubstitutions` et al. keys — those are
     // "Substitution {{count}}"-style interpolated sentences meant for the
@@ -167,9 +158,18 @@ export function buildTimelineStatItems(
       value: result?.errorInsertions ?? EMPTY_STAT_VALUE,
     },
     {
+      labelKey: 'editor.typingTest.history.timeline.stats.overlap',
+      value: formatPercentLabel(summary.avgOverlap),
+    },
+    {
       labelKey: 'editor.typingTest.history.timeline.stats.avgHold',
       value: fmtMs(avgHoldMsFor(result, summary)),
       descriptionKey: 'editor.typingTest.history.timeline.stats.avgHoldTooltip',
     },
+    {
+      labelKey: 'editor.typingTest.time',
+      value: formatDuration(durationSeconds),
+    },
+    wordsOrLinesCard(result, log),
   ]
 }
