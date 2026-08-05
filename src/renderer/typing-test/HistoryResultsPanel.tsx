@@ -46,7 +46,12 @@ const EXPORT_BTN_CLASS = 'inline-flex h-8 items-center rounded-md border border-
 // variable-width and ellipsis-truncates via Tooltip when it doesn't fit,
 // see NameCell/ModeCell); every other column is sized to its known-narrow
 // content (numeric values, short buttons/icons). Sums to 100%.
-const COL_NAME = 'w-[16%]'
+// NAME/MODE keep the flexible majority share but give up some of it below
+// to TIMELINE/PB/DELETE, whose action labels must render on one line (see
+// the whitespace-nowrap cells below) — Name/Mode already ellipsis-truncate
+// via Tooltip when their content doesn't fit, so narrowing them just means
+// truncation kicks in a little sooner, not a broken layout.
+const COL_NAME = 'w-[12%]'
 const COL_DATE = 'w-[13%]'
 const COL_WPM = 'w-[6%]'
 const COL_KPM = 'w-[6%]'
@@ -58,15 +63,27 @@ const COL_KPM = 'w-[6%]'
 // width the wider modal was meant to buy back.
 const COL_ACCURACY = 'w-[9%]'
 const COL_AKH = 'w-[6%]'
-const COL_MODE = 'w-[14%]'
+const COL_MODE = 'w-[11%]'
 const COL_DURATION = 'w-[6%]'
-const COL_PB = 'w-[5%]'
-const COL_TIMELINE = 'w-[7%]'
+// The header label (t('editor.typingTest.history.pb'), whitespace-nowrap
+// below) is "PB" in most packs but 4 kanji in 紳士's "自己最高" — 5% left it
+// wrapping onto two lines at this table's font size. Bumped to 7%.
+const COL_PB = 'w-[7%]'
+// The Timeline link's label (whitespace-nowrap in HistoryTimelineCell) is
+// the longest action string across the built-in packs: 京言葉's
+// "タイムラインどすえ" (9 chars) needs more room than English's "Timeline"
+// (8 chars) suggests. Bumped from 7% to fit that string plus button/cell
+// padding on one line, funded by shrinking Name/Mode's share above.
+const COL_TIMELINE = 'w-[14%]'
 // The confirm-delete state (see below) packs two buttons — labels come
 // from i18n (common.confirmDelete/cancel) and run considerably longer in
-// some packs than English's "Delete?"/"Cancel" — bumped from the plain
-// Delete button's minimum, borrowed from Name/Mode's generous share.
-const COL_DELETE = 'w-[12%]'
+// some packs than English's "Delete?"/"Cancel" (up to 紳士's 19-character
+// confirm string) — but that row keeps its existing flex-wrap tolerance
+// (Cancel drops to its own line rather than forcing the column wider), so
+// this column only needs to comfortably fit the plain, single-line Delete
+// button (longest: ギャル's "ポイっちょ☆", 6 chars) on one line. Trimmed
+// from 12% to 10%, the saved 2% going to TIMELINE above.
+const COL_DELETE = 'w-[10%]'
 
 /** Mode-column detail. FileImport (imported-text) runs show the snapshotted text
  *  name (falling back to the stable textId for legacy rows saved before the
@@ -315,7 +332,7 @@ export function HistoryResultsPanel({
                 />
                 <SortableHeader widthClassName={COL_MODE} column="mode" label={isText ? t('editor.typingTest.history.tabText') : t('editor.typingTest.history.mode')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
                 <SortableHeader widthClassName={COL_DURATION} column="duration" label={t('editor.typingTest.time')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
-                <th className={`${COL_PB} px-3 py-1.5`}>{t('editor.typingTest.history.pb')}</th>
+                <th className={`${COL_PB} px-3 py-1.5 whitespace-nowrap`}>{t('editor.typingTest.history.pb')}</th>
                 {uid && <th className={`${COL_TIMELINE} px-3 py-1.5`} aria-label={t('editor.typingTest.history.timeline.modalTitle')} />}
                 {onDelete && <th className={`${COL_DELETE} px-3 py-1.5`} aria-label={t('editor.typingTest.history.delete')} />}
               </tr>
@@ -369,9 +386,15 @@ export function HistoryResultsPanel({
                           </button>
                         </div>
                       ) : (
+                        // whitespace-nowrap: the plain (non-confirm) Delete
+                        // link must never wrap mid-word — COL_DELETE is
+                        // sized to fit every built-in pack's common.delete
+                        // label on one line (see the constant above). The
+                        // confirm-state buttons below intentionally keep
+                        // their default wrap tolerance instead.
                         <button
                           type="button"
-                          className={DELETE_BTN}
+                          className={`${DELETE_BTN} whitespace-nowrap`}
                           onClick={() => setConfirmDeleteDate(r.date)}
                           data-testid={`history-delete-${r.date}`}
                         >

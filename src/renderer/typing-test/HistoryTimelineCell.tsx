@@ -38,10 +38,16 @@ export function HistoryTimelineCell({ result, uid, availableRunIds }: Props) {
        *  short "Timeline" label. No aria-label on the button itself — the
        *  visible text already supplies its accessible name. */}
       <Tooltip content={t('editor.typingTest.history.timeline.openButton')}>
+        {/* whitespace-nowrap: with the fixed-layout table's narrow COL_TIMELINE
+         *  share, some i18n packs' Timeline label (e.g. 京言葉's
+         *  "タイムラインどすえ") is long enough that the default wrap would break
+         *  it mid-word onto two lines. COL_TIMELINE is sized to fit the
+         *  longest built-in pack string on one line (see HistoryResultsPanel),
+         *  so this never needs to clip. */}
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className={LOAD_BTN}
+          className={`${LOAD_BTN} whitespace-nowrap`}
           data-testid={`history-timeline-open-${result.date}`}
         >
           {t('editor.typingTest.history.timeline.linkLabel')}
