@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Detail settings for romaji-keystroke judging: the master enable, the
-// guide row's display case, which spelling the guide prefers to show, and
-// which alternate-spelling families are accepted as input. The guide row's
-// font size always tracks the shared Settings > Font size — no separate
-// control here. Opened from the Option section's full-width Romaji button
-// in TypingTestSettingsBar, shown only while the current mode/content is
+// Japanese input settings: the unified 3-way method selector (Direct /
+// Romaji / Kana — resolveJapaneseInputMethod in romaji-input.ts), plus
+// each method's own detail settings — Line-end Enter and Lines shown are
+// shared by Romaji/Kana (meaningless for Direct, which has no keystroke
+// guide at all); Displayed case, the guide's preferred spelling, and
+// which alternate spellings are accepted are Romaji-only (かな has no
+// case or alternate-spelling concept). The guide row's font size always
+// tracks the shared Settings > Font size — no separate control here.
+// Opened from the Option section's full-width Japanese Input button in
+// TypingTestSettingsBar, shown only while the current mode/content is
 // romaji-capable — words/time by kana word pack, tatoeba by the pack's
-// kana language id, fileImport by the loaded text's own kana-pure content
-// — see isRomajiCapable in romaji-input.ts.
+// kana language id, fileImport by the loaded text's own kana-pure
+// content — see isRomajiCapable in romaji-input.ts (the SAME capability
+// check both engines share — see isKanaCapable's own doc comment in
+// kana-input.ts).
 
 import { useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -19,12 +25,16 @@ import { Tooltip } from '../components/ui/Tooltip'
 import { BASE_STYLES, type RomajiStyle } from './romaji-engine'
 import type { RomajiCaseStyle, RomajiDetailSettings, TypingTestConfig } from './types'
 import { optionButtonClass } from './TypingTestSettingsBar'
-import { isRomajiInputEnabled } from './romaji-input'
+import { resolveJapaneseInputMethod, type JapaneseInputMethod } from './romaji-input'
 
 // Display order matches the plan's spec ("大文字・先頭大文字・小文字"); the
 // i18n values for these keys are the fixed sample spellings ROMAJI / Romaji
 // / romaji, identical in every locale (see english.json + the Japanese pack).
 const CASE_STYLES: readonly RomajiCaseStyle[] = ['upper', 'capital', 'lower']
+
+// Unified 3-way selector (resolveJapaneseInputMethod, romaji-input.ts) —
+// shown first, since it decides which section below even applies.
+const INPUT_METHODS: readonly JapaneseInputMethod[] = ['direct', 'romaji', 'kana']
 
 // Total line count offered by the guide row (the line the current word
 // sits on included), 0-3: 0 hides the row, 1 shows only the current line,
@@ -68,6 +78,7 @@ function pruneRomaji(next: RomajiDetailSettings): RomajiDetailSettings | undefin
   if (next.disabledStyles !== undefined && next.disabledStyles.length > 0) pruned.disabledStyles = next.disabledStyles
   if (next.guideLineCount !== undefined && next.guideLineCount !== 1) pruned.guideLineCount = next.guideLineCount
   if (next.lineEndEnter !== undefined && next.lineEndEnter !== true) pruned.lineEndEnter = next.lineEndEnter
+  if (next.inputMethod !== undefined && next.inputMethod !== 'romaji') pruned.inputMethod = next.inputMethod
   return Object.keys(pruned).length > 0 ? pruned : undefined
 }
 
@@ -88,14 +99,12 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
   }, [onClose])
 
   const romaji = config.romaji ?? {}
-  // Default ON: undefined counts as opted-in, only an explicit false is off
-  // (see isRomajiInputEnabled). The toggle below writes the opposite boolean
-  // back — so turning a default-on config off persists `false`, and turning
-  // it back on persists `true`.
-  const enabled = isRomajiInputEnabled(config)
+  const method = resolveJapaneseInputMethod(config)
+  const isDirect = method === 'direct'
+  const isRomajiMethod = method === 'romaji'
   const caseStyle = romaji.caseStyle ?? 'lower'
   const guideLineCount = romaji.guideLineCount ?? 1
-  // Default ON (Enter required at line ends) — mirrors `enabled` above:
+  // Default ON (Enter required at line ends) — mirrors the master flag:
   // undefined counts as the default, only an explicit false flips it.
   const lineEndEnter = romaji.lineEndEnter !== false
   const guideStyles = new Set(romaji.guideStyles ?? [])
@@ -105,6 +114,20 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
     const merged = pruneRomaji({ ...romaji, ...patch })
     const { romaji: _current, ...rest } = config
     onConfigChange(merged ? { ...rest, romaji: merged } : rest)
+  }, [config, romaji, onConfigChange])
+
+  // Writes `romajiInput`/`romaji.inputMethod` TOGETHER as one coherent
+  // pair (see resolveJapaneseInputMethod's own doc comment) — the single
+  // write path for the unified selector, replacing the old independent
+  // master-toggle + 2-way-picker pair that could leave a stale
+  // `inputMethod` sitting inert while `romajiInput` was false. Always
+  // prunes `inputMethod` back out for 'direct'/'romaji' so a later
+  // re-selection of 'kana' is the only way it reappears, rather than an
+  // old value quietly resurfacing.
+  const selectInputMethod = useCallback((next: JapaneseInputMethod) => {
+    const merged = pruneRomaji({ ...romaji, inputMethod: next === 'kana' ? 'kana' : undefined })
+    const { romaji: _current, ...rest } = config
+    onConfigChange({ ...rest, romajiInput: next !== 'direct', ...(merged ? { romaji: merged } : {}) })
   }, [config, romaji, onConfigChange])
 
   const toggleInputStyle = useCallback((style: RomajiStyle) => {
@@ -168,74 +191,106 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
         </div>
 
         <div className="flex flex-col gap-4 overflow-y-auto p-4">
-          {/* Master enable */}
-          <ToggleRow
-            testid="romaji-settings-enabled"
-            label={t('editor.typingTest.romaji.toggle')}
-            on={enabled}
-            onToggle={() => onConfigChange({ ...config, romajiInput: !enabled })}
-          />
-
-          {/* Line-end Enter — whether a line-end word (tatoeba/fileImport
-              real lines) holds until Enter commits it, or auto-advances
-              like every other word. Boolean, so same ToggleRow pattern as
-              the master enable above rather than the button-row pattern
-              used by Displayed case / Lines shown. */}
-          <ToggleRow
-            testid="romaji-line-end-enter"
-            label={t('editor.typingTest.romajiSettings.lineEndEnterLabel')}
-            title={t('editor.typingTest.romajiSettings.lineEndEnterHint')}
-            on={lineEndEnter}
-            onToggle={() => applyRomaji({ lineEndEnter: !lineEndEnter })}
-          />
-
-          {/* Display case — sample text itself is the label (ROMAJI / Romaji
-              / romaji), invariant across locales; the key still routes
-              through t() so it participates in the i18n pipeline. */}
+          {/* Input method — the single 3-way selector (Direct / Romaji /
+              Kana) replacing the old independent master-enable toggle +
+              2-way engine picker. Shown first: every section below either
+              applies to both engines (Line-end Enter, Lines shown — hidden
+              for Direct, which has no keystroke guide at all) or only to
+              Romaji (Displayed case, Guide/Accepted input patterns — かな
+              has no alternate spellings or case to configure, and Direct
+              has no engine at all). */}
           <section className="flex flex-col gap-1.5">
-            <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.caseLabel')}</span>
+            <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.inputMethodLabel')}</span>
             <div className="flex flex-wrap gap-1">
-              {CASE_STYLES.map((value) => (
+              {INPUT_METHODS.map((value) => (
                 <button
                   key={value}
                   type="button"
-                  data-testid={`romaji-case-${value}`}
-                  className={optionButtonClass(caseStyle === value, 'px-2.5')}
-                  onClick={() => applyRomaji({ caseStyle: value })}
+                  data-testid={`japanese-input-method-${value}`}
+                  className={optionButtonClass(method === value, 'px-2.5')}
+                  onClick={() => selectInputMethod(value)}
                 >
-                  {t(`editor.typingTest.romajiSettings.case.${value}`)}
+                  {t(`editor.typingTest.romajiSettings.inputMethod.${value}`)}
                 </button>
               ))}
             </div>
           </section>
+
+          {/* Line-end Enter — whether a line-end word (tatoeba/fileImport
+              real lines) holds until Enter commits it, or auto-advances
+              like every other word. Meaningless for Direct: verbatim mode
+              always requires Enter at a real line end unconditionally (see
+              useTypingTest's non-engine submit-key branch), so there is no
+              toggle-able behavior for this setting to affect there. */}
+          {!isDirect && (
+            <ToggleRow
+              testid="romaji-line-end-enter"
+              label={t('editor.typingTest.romajiSettings.lineEndEnterLabel')}
+              title={t('editor.typingTest.romajiSettings.lineEndEnterHint')}
+              on={lineEndEnter}
+              onToggle={() => applyRomaji({ lineEndEnter: !lineEndEnter })}
+            />
+          )}
+
+          {/* Display case — romaji-only (かな has no upper/lower case
+              concept, and Direct has no guide row to case at all). Sample
+              text itself is the label (ROMAJI / Romaji / romaji), invariant
+              across locales; the key still routes through t() so it
+              participates in the i18n pipeline. */}
+          {isRomajiMethod && (
+            <section className="flex flex-col gap-1.5">
+              <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.caseLabel')}</span>
+              <div className="flex flex-wrap gap-1">
+                {CASE_STYLES.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    data-testid={`romaji-case-${value}`}
+                    className={optionButtonClass(caseStyle === value, 'px-2.5')}
+                    onClick={() => applyRomaji({ caseStyle: value })}
+                  >
+                    {t(`editor.typingTest.romajiSettings.case.${value}`)}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Guide line count — the total number of guide lines shown,
               line-synchronized with the reading window's own word lines
-              (see useTypingTest's romajiGuide selector). Same button-row
-              pattern as Display case above. */}
-          <section className="flex flex-col gap-1.5">
-            <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.guideLinesLabel')}</span>
-            <div className="flex flex-wrap gap-1">
-              {GUIDE_LINE_OPTIONS.map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  data-testid={`romaji-guide-lines-${n}`}
-                  className={optionButtonClass(guideLineCount === n, 'px-2.5')}
-                  onClick={() => applyRomaji({ guideLineCount: n })}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-          </section>
+              (see useTypingTest's romajiGuide/kanaGuide selectors). Shared
+              by Romaji/Kana, meaningless for Direct (no guide row exists
+              at all — neither engine is judging keystrokes). Same
+              button-row pattern as Display case above. */}
+          {!isDirect && (
+            <section className="flex flex-col gap-1.5">
+              <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.guideLinesLabel')}</span>
+              <div className="flex flex-wrap gap-1">
+                {GUIDE_LINE_OPTIONS.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    data-testid={`romaji-guide-lines-${n}`}
+                    className={optionButtonClass(guideLineCount === n, 'px-2.5')}
+                    onClick={() => applyRomaji({ guideLineCount: n })}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
 
-          {/* Guide display pattern — same Base/Options row split as
-              Accepted input patterns below. Base is a single select
-              (exactly one of hepburn/kunrei is always the active
-              representative spelling); Options toggle independently and
-              may all be off at once. Display only — the guide never
-              affects what acceptChar() accepts. */}
+          {/* Guide display pattern — romaji-only (かな has one fixed
+              physical-key spelling, no alternate spelling families to
+              prefer, and Direct has no guide at all), so hidden outside
+              Romaji. Same Base/Options row split as Accepted input
+              patterns below. Base is a single select (exactly one of
+              hepburn/kunrei is always the active representative spelling);
+              Options toggle independently and may all be off at once.
+              Display only — the guide never affects what acceptChar()
+              accepts. */}
+          {isRomajiMethod && (
           <section className="flex flex-col gap-1.5">
             <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.guideLabel')}</span>
 
@@ -275,10 +330,13 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
 
             <p className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.guideHint')}</p>
           </section>
+          )}
 
-          {/* Accepted input patterns — split into Base (hepburn/kunrei,
-              at least one always on) and Options (default all on, may all
-              be turned off at once). */}
+          {/* Accepted input patterns — romaji-only, same reasoning as Guide
+              display pattern above (hidden outside Romaji). Split into
+              Base (hepburn/kunrei, at least one always on) and Options
+              (default all on, may all be turned off at once). */}
+          {isRomajiMethod && (
           <section className="flex flex-col gap-1.5">
             <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.inputLabel')}</span>
 
@@ -321,6 +379,7 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
 
             <p className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputHint')}</p>
           </section>
+          )}
         </div>
       </div>
     </div>

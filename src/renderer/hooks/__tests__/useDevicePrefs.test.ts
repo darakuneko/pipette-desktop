@@ -1128,6 +1128,72 @@ describe('useDevicePrefs', () => {
       })
     })
 
+    // The unified 3-way input-method selector (RomajiSettingsModal) only
+    // ever persists inputMethod: 'kana' (or omits the field entirely for
+    // Direct/Romaji — see pruneRomaji) — round-trips through the same
+    // sanitize path as every other romaji field.
+    it('round-trips inputMethod: kana', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romaji: { inputMethod: 'kana' },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { inputMethod: 'kana' },
+      })
+    })
+
+    it.each(['romaji', 'direct', 'bogus', 1])('drops an invalid inputMethod (%p) but keeps the rest of romaji', async (inputMethod) => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romaji: { caseStyle: 'capital', inputMethod },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { caseStyle: 'capital' },
+      })
+    })
+
     // Plan-romaji-guide-line-sync: guideWordCount was renamed to
     // guideLineCount (same 0-3 int range, same "0 = hidden" meaning). A
     // config persisted before the rename only carries the legacy field, so

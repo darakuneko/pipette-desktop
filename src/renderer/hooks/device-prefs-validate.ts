@@ -96,6 +96,13 @@ function validateRomajiDetailSettings(raw: unknown): RomajiDetailSettings | unde
   if (typeof obj.lineEndEnter === 'boolean') {
     result.lineEndEnter = obj.lineEndEnter
   }
+  // 'romaji' is never persisted (it's the pruned default — see
+  // RomajiSettingsModal's selectInputMethod/pruneRomaji), so only 'kana' is
+  // a valid stored value; anything else (including a malformed string) is
+  // dropped, same as every other field here.
+  if (obj.inputMethod === 'kana') {
+    result.inputMethod = 'kana'
+  }
   return Object.keys(result).length > 0 ? result : undefined
 }
 
