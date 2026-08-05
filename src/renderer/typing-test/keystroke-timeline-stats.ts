@@ -33,16 +33,26 @@
 // `wordsOrLinesCard`'s own doc comment), unconditionally — a line-based
 // run's line count is knowable even without a `result` at all, unlike
 // KPM/KSPC/error-class, which have no raw-log equivalent to fall back to.
+// The 11th card (Avg Key Hold) is a THIRD fallback shape, distinct from
+// both of the above: unlike KPM/KSPC/error-class (result-only, no model
+// equivalent exists) it DOES have an always-available model equivalent
+// (`summary.avgHoldMs`, pooled straight from the log already loaded here);
+// unlike WPM/Accuracy (fall back only when `result` itself is entirely
+// absent, since those fields are never optional on an existing result) its
+// own result field (`holdSumMs`/`holdSamples`) can be legacy-absent even
+// when `result` exists. So it falls back per-VALUE: prefer the result's
+// own derived mean when present, else the model summary, regardless of
+// whether `result` exists at all — see `avgHoldMsFor` below.
 
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
 import type { WordTimelineSummary } from './word-timeline'
 import type { AnalyzeSummaryItem } from '../components/analyze/analyze-summary-table'
-import { formatDuration, formatPercentLabel } from '../components/analyze/analyze-format'
+import { formatDuration, formatPercentLabel, fmtMs } from '../components/analyze/analyze-format'
 import { formatWpm } from '../components/analyze/analyze-wpm'
 import { formatKspc } from '../../shared/kspc'
 import { EMPTY_STAT_VALUE } from '../components/analyze/analyze-constants'
-import { resultKpm, resultKspc } from './result-builder'
+import { resultKpm, resultKspc, resultAvgHoldMs } from './result-builder'
 
 /** The 7th card's caption + value — "Words" for a normal (Monkeytype-style)
  *  run, "Lines" for a line-based one (fileImport with real line structure,
@@ -79,6 +89,14 @@ function wordsOrLinesCard(result: TypingTestResult | undefined, log: RunKeystrok
     return { labelKey: 'editor.typingTest.lines', value: result.wordCount }
   }
   return { labelKey: 'editor.typingTest.words', value: result ? result.wordCount : EMPTY_STAT_VALUE }
+}
+
+/** `TypingTestResult`-preferred, `WordTimelineSummary`-fallback mean hold
+ *  duration for the 11th card — see the module doc comment's paragraph on
+ *  this card's distinct fallback shape. */
+function avgHoldMsFor(result: TypingTestResult | undefined, summary: WordTimelineSummary): number | null {
+  const fromResult = result ? resultAvgHoldMs(result) : null
+  return fromResult ?? summary.avgHoldMs ?? null
 }
 
 /** Ordered stat cards for `AnalyzeStatGrid` — see the module doc comment
@@ -148,6 +166,11 @@ export function buildTimelineStatItems(
     {
       labelKey: 'editor.typingTest.history.errorMixLabelInsertion',
       value: result?.errorInsertions ?? EMPTY_STAT_VALUE,
+    },
+    {
+      labelKey: 'editor.typingTest.history.timeline.stats.avgHold',
+      value: fmtMs(avgHoldMsFor(result, summary)),
+      descriptionKey: 'editor.typingTest.history.timeline.stats.avgHoldTooltip',
     },
   ]
 }

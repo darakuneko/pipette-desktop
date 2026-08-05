@@ -1,5 +1,5 @@
 {
-  "version": "0.1.76",
+  "version": "0.1.77",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -485,6 +485,7 @@
         "last10Avg": "直近10回",
         "totalTests": "テスト数",
         "avgAccuracy": "平均正確さ",
+        "avgHold": "平均キー押下時間どすえ",
         "date": "日時",
         "name": "名前",
         "unnamed": "名なしどすえ",
@@ -542,7 +543,9 @@
             "overlap": "重複率どすえ",
             "duration": "所要時間どすえ",
             "kpm": "1分あたりの打鍵数どすえ",
-            "durationSeconds": "{{s}}秒"
+            "durationSeconds": "{{s}}秒",
+            "avgHold": "平均キー押下時間どすえ",
+            "avgHoldTooltip": "キーを押してから離すまでの平均の時間（ミリ秒）どすえ。"
           },
           "legend": {
             "normal": "通常の打鍵どすえ",

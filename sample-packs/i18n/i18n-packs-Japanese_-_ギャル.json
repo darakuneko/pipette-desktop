@@ -1,5 +1,5 @@
 {
-  "version": "0.1.76",
+  "version": "0.1.77",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -485,6 +485,7 @@
         "last10Avg": "最近の10回",
         "totalTests": "テスト数☆",
         "avgAccuracy": "平均ガチ度",
+        "avgHold": "平均押しっぱ時間☆",
         "date": "いつ？",
         "name": "名前",
         "unnamed": "名前なし☆",
@@ -542,7 +543,9 @@
             "overlap": "重複率☆",
             "duration": "所要時間☆",
             "kpm": "1分の打鍵数☆",
-            "durationSeconds": "{{s}}秒"
+            "durationSeconds": "{{s}}秒",
+            "avgHold": "平均押しっぱ時間☆",
+            "avgHoldTooltip": "キー押してから離すまでの平均時間（ミリ秒）だよ☆"
           },
           "legend": {
             "normal": "普通の打鍵",

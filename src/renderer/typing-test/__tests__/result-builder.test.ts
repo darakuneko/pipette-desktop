@@ -11,6 +11,7 @@ import {
   resultKpm,
   buildResultNameChips,
   resultKspc,
+  resultAvgHoldMs,
 } from '../result-builder'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../types'
@@ -436,6 +437,54 @@ describe('buildTypingTestResult — KSPC raw fields', () => {
     })
     expect(result.kspcKeystrokes).toBeUndefined()
     expect(result.kspcChars).toBeUndefined()
+  })
+})
+
+describe('resultAvgHoldMs', () => {
+  const base: TypingTestResult = {
+    date: '2026-01-01T00:00:00.000Z', wpm: 50, accuracy: 95, wordCount: 10,
+    correctChars: 50, incorrectChars: 2, durationSeconds: 30,
+  }
+  it('derives the mean from the stored raw pair', () => {
+    expect(resultAvgHoldMs({ ...base, holdSumMs: 300, holdSamples: 4 })).toBe(75)
+  })
+
+  it('returns null when either raw field is missing (legacy result)', () => {
+    expect(resultAvgHoldMs(base)).toBeNull()
+    expect(resultAvgHoldMs({ ...base, holdSumMs: 300 })).toBeNull()
+    expect(resultAvgHoldMs({ ...base, holdSamples: 4 })).toBeNull()
+  })
+
+  it('returns null when holdSamples is zero (no division by zero)', () => {
+    expect(resultAvgHoldMs({ ...base, holdSumMs: 0, holdSamples: 0 })).toBeNull()
+  })
+})
+
+describe('buildTypingTestResult — average key-hold raw fields', () => {
+  const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+  const baseInput = {
+    wordCount: 5, wpm: 40, accuracy: 90, elapsedMs: 20000,
+    config: wordsConfig, language: 'english', wpmHistory: [], mistakes: {},
+    correctChars: 4, incorrectChars: 0, confirmedChars: 4, totalKeystrokes: 6, kspcUncomputable: false,
+  }
+
+  it('stores the raw pair verbatim when holdStats carries at least one sample', () => {
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, holdStats: { holdSumMs: 240, holdSamples: 3 } })
+    expect(result.holdSumMs).toBe(240)
+    expect(result.holdSamples).toBe(3)
+    expect(resultAvgHoldMs(result)).toBe(80)
+  })
+
+  it('omits both fields when holdStats has zero samples (nothing observed this run)', () => {
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, holdStats: { holdSumMs: 0, holdSamples: 0 } })
+    expect(result.holdSumMs).toBeUndefined()
+    expect(result.holdSamples).toBeUndefined()
+  })
+
+  it('omits both fields when holdStats is not provided (caller opted out)', () => {
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: false })
+    expect(result.holdSumMs).toBeUndefined()
+    expect(result.holdSamples).toBeUndefined()
   })
 })
 

@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import type { TypingTestTextMeta } from '../../shared/types/typing-test-text-store'
 import { buildCsv } from '../../shared/csv-export'
-import { resultKpm, resultKspc } from './result-builder'
+import { resultKpm, resultKspc, resultAvgHoldMs } from './result-builder'
 import { formatKspc } from '../../shared/kspc'
 import { useTypingTestTexts } from '../hooks/useTypingTestTexts'
 import { HistorySections } from './HistorySections'
@@ -113,7 +113,7 @@ function exportFilterSlug(
 // shared denominator let a spreadsheet compute the same char-weighted
 // Σ/Σ rate this app itself uses. Empty (not 0) for a result missing the
 // group, same treatment as `kspc`.
-const CSV_HEADERS = ['date', 'name', 'wpm', 'kpm', 'accuracy', 'kspc', 'wordCount', 'correctChars', 'incorrectChars', 'durationSeconds', 'rawWpm', 'mode', 'mode2', 'fileImportTextName', 'language', 'punctuation', 'numbers', 'consistency', 'isPb', 'errorSubstitutions', 'errorOmissions', 'errorInsertions', 'errorTargetChars'] as const
+const CSV_HEADERS = ['date', 'name', 'wpm', 'kpm', 'accuracy', 'kspc', 'avgHoldMs', 'wordCount', 'correctChars', 'incorrectChars', 'durationSeconds', 'rawWpm', 'mode', 'mode2', 'fileImportTextName', 'language', 'punctuation', 'numbers', 'consistency', 'isPb', 'errorSubstitutions', 'errorOmissions', 'errorInsertions', 'errorTargetChars'] as const
 
 function buildResultsCsv(results: TypingTestResult[]): string {
   return buildCsv(
@@ -125,6 +125,13 @@ function buildResultsCsv(results: TypingTestResult[]): string {
       if (key === 'kspc') {
         const kspc = resultKspc(r)
         return kspc === null ? '' : formatKspc(kspc)
+      }
+      // Derived mean, rounded to the nearest ms — empty (not 0) for a
+      // legacy result with no raw holdSumMs/holdSamples pair, same
+      // both-or-neither treatment as kspc above.
+      if (key === 'avgHoldMs') {
+        const avgHold = resultAvgHoldMs(r)
+        return avgHold === null ? '' : Math.round(avgHold)
       }
       return r[key as keyof TypingTestResult]
     })),

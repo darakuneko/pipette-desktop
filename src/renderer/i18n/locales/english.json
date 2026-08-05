@@ -1,5 +1,5 @@
 {
-  "version": "0.1.76",
+  "version": "0.1.77",
   "name": "English",
   "common": {
     "save": "Save",
@@ -485,6 +485,7 @@
         "last10Avg": "Last 10",
         "totalTests": "Tests",
         "avgAccuracy": "Avg Acc",
+        "avgHold": "Avg Key Hold",
         "date": "Date",
         "name": "Name",
         "unnamed": "Unnamed",
@@ -542,7 +543,9 @@
             "overlap": "Overlap",
             "duration": "Duration",
             "kpm": "Keystrokes/min",
-            "durationSeconds": "{{s}}s"
+            "durationSeconds": "{{s}}s",
+            "avgHold": "Avg Key Hold",
+            "avgHoldTooltip": "Average time a key is held down (press to release), in milliseconds."
           },
           "legend": {
             "normal": "Normal keystroke",

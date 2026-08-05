@@ -1,5 +1,5 @@
 {
-  "version": "0.1.76",
+  "version": "0.1.77",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -485,6 +485,7 @@
         "last10Avg": "直近10回",
         "totalTests": "テスト数",
         "avgAccuracy": "平均正確性",
+        "avgHold": "平均キー押下時間",
         "date": "日時",
         "name": "名前",
         "unnamed": "名称未設定",
@@ -542,7 +543,9 @@
             "overlap": "重複率",
             "duration": "所要時間",
             "kpm": "1分あたりの打鍵数",
-            "durationSeconds": "{{s}}秒"
+            "durationSeconds": "{{s}}秒",
+            "avgHold": "平均キー押下時間",
+            "avgHoldTooltip": "キーを押してから離すまでの平均時間（ミリ秒）。"
           },
           "legend": {
             "normal": "通常の打鍵",

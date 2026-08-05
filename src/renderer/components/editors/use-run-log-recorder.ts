@@ -67,6 +67,14 @@ export interface UseRunLogRecorderReturn {
    *  (Plan-completion-timeline-view PR-B), no IPC round-trip needed since
    *  this is the exact object already handed to `typingRunLogSave`. */
   finishAndSave: (uid: string | undefined, wordResults: readonly WordResult[], meta: Omit<RunLogFinishMeta, 'uid'>) => RunKeystrokeLog | null
+  /** Direct passthrough to `RunLogRecorder.currentRunHoldStats` — a
+   *  read-only snapshot of the average-key-hold raw pair for `runId`'s
+   *  still-buffered keystrokes, callable BEFORE `finishAndSave` (see that
+   *  method's own doc comment for why `useTypingTestResultSave` needs the
+   *  ordering). `startedAtMs` must be the exact same value the caller is
+   *  about to pass as `finishAndSave`'s own `meta.startedAtMs` — see
+   *  `currentRunHoldStats`'s own doc comment for why the two must agree. */
+  currentRunHoldStats: (runId: string, startedAtMs: number) => { holdSumMs: number; holdSamples: number }
   /** Discard `runId`'s buffer and block it from being re-buffered later
    *  under the same id — see the module doc comment's `discardRun`
    *  bullet and run-log-recorder.ts's `discardRun()`. */
@@ -140,5 +148,9 @@ export function useRunLogRecorder({
     recorderRef.current.discardRun(runId)
   }, [])
 
-  return { record, noteRegistration, noteCharContext, finishAndSave, discardRun }
+  const currentRunHoldStats = useCallback((runId: string, startedAtMs: number) => {
+    return recorderRef.current.currentRunHoldStats(runId, startedAtMs)
+  }, [])
+
+  return { record, noteRegistration, noteCharContext, finishAndSave, currentRunHoldStats, discardRun }
 }

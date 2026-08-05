@@ -58,6 +58,41 @@ describe('sanitizeTypingTestResult KSPC fields', () => {
   })
 })
 
+describe('sanitizeTypingTestResult average key-hold fields', () => {
+  it('keeps a valid holdSumMs/holdSamples pair', () => {
+    const result = sanitizeTypingTestResult(baseResult({ holdSumMs: 240, holdSamples: 3 }))
+    expect(result.holdSumMs).toBe(240)
+    expect(result.holdSamples).toBe(3)
+  })
+
+  it('leaves both fields undefined when neither is present', () => {
+    const result = sanitizeTypingTestResult(baseResult())
+    expect(result.holdSumMs).toBeUndefined()
+    expect(result.holdSamples).toBeUndefined()
+  })
+
+  it('drops the pair when only one of the two fields is present', () => {
+    expect(sanitizeTypingTestResult(baseResult({ holdSumMs: 240 })).holdSumMs).toBeUndefined()
+    expect(sanitizeTypingTestResult(baseResult({ holdSamples: 3 })).holdSamples).toBeUndefined()
+  })
+
+  it('drops the pair when holdSamples is 0 (division-by-zero guard)', () => {
+    const result = sanitizeTypingTestResult(baseResult({ holdSumMs: 0, holdSamples: 0 }))
+    expect(result.holdSumMs).toBeUndefined()
+    expect(result.holdSamples).toBeUndefined()
+  })
+
+  it('drops the pair when holdSamples is fractional or negative', () => {
+    expect(sanitizeTypingTestResult(baseResult({ holdSumMs: 240, holdSamples: 3.5 })).holdSamples).toBeUndefined()
+    expect(sanitizeTypingTestResult(baseResult({ holdSumMs: 240, holdSamples: -1 })).holdSamples).toBeUndefined()
+  })
+
+  it('drops the pair when holdSumMs is negative or non-finite', () => {
+    expect(sanitizeTypingTestResult(baseResult({ holdSumMs: -10, holdSamples: 3 })).holdSumMs).toBeUndefined()
+    expect(sanitizeTypingTestResult(baseResult({ holdSumMs: Number.NaN, holdSamples: 3 })).holdSumMs).toBeUndefined()
+  })
+})
+
 describe('sanitizeTypingTestResult error-class fields', () => {
   it('keeps a valid all-four error-class group', () => {
     const result = sanitizeTypingTestResult(baseResult({

@@ -803,4 +803,122 @@ describe('RunLogRecorder', () => {
       expect(recorder.finish(oneWordResult(), finishMeta())).toBeNull()
     })
   })
+
+  describe('currentRunHoldStats()', () => {
+    it('sums press-to-release durations for the currently-buffered run, read-only (does not clear the buffer)', () => {
+      const recorder = new RunLogRecorder()
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a')
+      recorder.record(ctx(), matrixPress({ ts: 1000 }))
+      recorder.record(ctx(), matrixRelease({ ts: 1050, durationMs: 50 }))
+
+      register(recorder, 'run-1', 0, 1, 1100, 1, 'b')
+      recorder.record(ctx(), matrixPress({ row: 0, col: 1, ts: 1100, keycode: KC_B }))
+      recorder.record(ctx(), matrixRelease({ row: 0, col: 1, ts: 1200, durationMs: 100, keycode: KC_B }))
+
+      expect(recorder.currentRunHoldStats('run-1', 1000)).toEqual({ holdSumMs: 150, holdSamples: 2 })
+      // Read-only: a second call sees the exact same buffer, and finish()
+      // afterward still has everything (proves the accessor never cleared
+      // it — this is what lets useTypingTestResultSave call it BEFORE
+      // finish() runs).
+      expect(recorder.currentRunHoldStats('run-1', 1000)).toEqual({ holdSumMs: 150, holdSamples: 2 })
+      const log = recorder.finish(
+        [{ word: 'a', typed: 'a', correct: true }, { word: 'b', typed: 'b', correct: true }],
+        finishMeta({ startedAtMs: 1000 }),
+      )
+      expect(log?.words[0].keystrokes).toHaveLength(1)
+      expect(log?.words[1].keystrokes).toHaveLength(1)
+    })
+
+    it('skips a still-open press with no observed release', () => {
+      const recorder = new RunLogRecorder()
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a')
+      recorder.record(ctx(), matrixPress({ ts: 1000 }))
+      // No matrix-release event — the key is still held.
+      expect(recorder.currentRunHoldStats('run-1', 1000)).toEqual({ holdSumMs: 0, holdSamples: 0 })
+    })
+
+    it('returns a zeroed pair for an unknown/absent buffer (no recording happened this run)', () => {
+      const recorder = new RunLogRecorder()
+      expect(recorder.currentRunHoldStats('run-1', 1000)).toEqual({ holdSumMs: 0, holdSamples: 0 })
+    })
+
+    it('resets once the buffer is discarded (pause / consent revoked / keyboard switch)', () => {
+      const recorder = new RunLogRecorder()
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a')
+      recorder.record(ctx(), matrixPress({ ts: 1000 }))
+      recorder.record(ctx(), matrixRelease({ ts: 1050, durationMs: 50 }))
+      expect(recorder.currentRunHoldStats('run-1', 1000)).toEqual({ holdSumMs: 50, holdSamples: 1 })
+
+      recorder.discard()
+      expect(recorder.currentRunHoldStats('run-1', 1000)).toEqual({ holdSumMs: 0, holdSamples: 0 })
+    })
+
+    it('resets once a NEW run starts under a different runId (never leaks the previous run\'s sums)', () => {
+      const recorder = new RunLogRecorder()
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a')
+      recorder.record(ctx(), matrixPress({ ts: 1000 }))
+      recorder.record(ctx(), matrixRelease({ ts: 1050, durationMs: 50 }))
+      expect(recorder.currentRunHoldStats('run-1', 1000)).toEqual({ holdSumMs: 50, holdSamples: 1 })
+
+      // A fresh noteRegistration under a new runId replaces the buffer
+      // outright (see the module doc comment) — the old run's id must now
+      // read as "no buffer for it".
+      register(recorder, 'run-2', 0, 0, 2000, 0, 'x')
+      expect(recorder.currentRunHoldStats('run-1', 1000)).toEqual({ holdSumMs: 0, holdSamples: 0 })
+      expect(recorder.currentRunHoldStats('run-2', 2000)).toEqual({ holdSumMs: 0, holdSamples: 0 })
+    })
+
+    it('resets after finish() clears the buffer', () => {
+      const recorder = new RunLogRecorder()
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a')
+      recorder.record(ctx(), matrixPress({ ts: 1000 }))
+      recorder.record(ctx(), matrixRelease({ ts: 1050, durationMs: 50 }))
+      recorder.finish(oneWordResult(), finishMeta({ startedAtMs: 1000 }))
+      expect(recorder.currentRunHoldStats('run-1', 1000)).toEqual({ holdSumMs: 0, holdSamples: 0 })
+    })
+
+    it('does not count a zero or negative duration as a sample', () => {
+      const recorder = new RunLogRecorder()
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a')
+      recorder.record(ctx(), matrixPress({ ts: 1000 }))
+      recorder.record(ctx(), matrixRelease({ ts: 1000, durationMs: 0 }))
+      expect(recorder.currentRunHoldStats('run-1', 1000)).toEqual({ holdSumMs: 0, holdSamples: 0 })
+    })
+
+    it('excludes a keystroke pressed before the run\'s own start time — mirrors convertKeystrokes\' pre-start drop, so the History value and the saved timeline agree', () => {
+      const recorder = new RunLogRecorder()
+      // Pressed at absolute ts=900, but the run's own startedAtMs is
+      // 1000 (e.g. a key held during armed-waiting, before the run
+      // actually began) — finish()'s convertKeystrokes drops this
+      // keystroke entirely (`k.pressMs - startedAtMs >= 0`), so the
+      // accessor must agree rather than reading it back into the mean.
+      register(recorder, 'run-1', 0, 0, 900, 0, 'a')
+      recorder.record(ctx(), matrixPress({ ts: 900 }))
+      recorder.record(ctx(), matrixRelease({ ts: 950, durationMs: 50 }))
+
+      // A second, qualifying keystroke pressed AFTER start.
+      register(recorder, 'run-1', 0, 1, 1100, 0, 'b')
+      recorder.record(ctx(), matrixPress({ row: 0, col: 1, ts: 1100, keycode: KC_B }))
+      recorder.record(ctx(), matrixRelease({ row: 0, col: 1, ts: 1170, durationMs: 70, keycode: KC_B }))
+
+      expect(recorder.currentRunHoldStats('run-1', 1000)).toEqual({ holdSumMs: 70, holdSamples: 1 })
+    })
+
+    it('returns a zeroed pair (not partial data) once the buffer has exceeded its cap — mirrors finish()\'s own rejection', () => {
+      const recorder = new RunLogRecorder()
+      for (let i = 0; i <= MAX_RUN_LOG_EVENTS; i++) {
+        register(recorder, 'run-1', 0, 0, 1000 + i * 100, 0, 'a')
+        recorder.record(ctx(), matrixPress({ ts: 1000 + i * 100 }))
+        recorder.record(ctx(), matrixRelease({ ts: 1000 + i * 100 + 50, durationMs: 50 }))
+      }
+      // The buffer still holds many real, positive-duration holds
+      // recorded before the cap tripped — without the exceeded guard
+      // this would return a large non-zero pair instead of zero.
+      expect(recorder.currentRunHoldStats('run-1', 1000)).toEqual({ holdSumMs: 0, holdSamples: 0 })
+      // Confirm this really is the same overflow finish() itself refuses
+      // (a silently-truncated log is never saved — see finish()'s own
+      // doc comment) — the accessor's rejection mirrors it exactly.
+      expect(recorder.finish(oneWordResult(), finishMeta())).toBeNull()
+    })
+  })
 })
