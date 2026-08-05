@@ -278,14 +278,13 @@ describe('TypingTestHistory', () => {
     expect(table).toBeTruthy()
     expect(table!.className).toContain('table-fixed')
 
-    // The Mode column header carries the column's width share (the
-    // fixed-layout algorithm reads column widths from the header row only).
-    // Mode is one of only two flexible (percentage-width, possibly
-    // decimal — e.g. "17.74%") columns; every other History column is a
-    // fixed px width sized to show its content in full without truncating.
+    // Mode (like Name) deliberately carries NO width — class or style —
+    // so table-fixed gives the flexible pair everything the snug columns
+    // (runtime-measured px widths, see useHistoryColumnWidths) leave over.
     const modeHeader = screen.getByRole('button', { name: /Mode/i }).closest('th')
     expect(modeHeader).toBeTruthy()
-    expect(modeHeader!.className).toMatch(/w-\[\d+(\.\d+)?%\]/)
+    expect(modeHeader!.className).not.toMatch(/w-\[/)
+    expect(modeHeader!.style.width).toBe('')
 
     const modeCell = Array.from(history.querySelectorAll('tbody td')).find((td) => td.textContent === fullText)
     expect(modeCell).toBeTruthy()
@@ -551,12 +550,11 @@ describe('TypingTestHistory', () => {
     expect(screen.queryByTestId('history-delete-d1')).toBeNull()
   })
 
-  // Delete-confirm now collapses PB+Timeline+Delete into one colSpan cell
-  // (instead of living inside Delete's own column) so the confirm/cancel
-  // strings get the combined width — some packs' confirm question runs
-  // considerably longer than English's "Delete?" (up to 紳士's 19-character
-  // "こちらを抹消してもよろしいでしょうか？").
-  it('collapses PB+Timeline+Delete into one colSpan=3 cell during delete-confirm when uid is set', () => {
+  // Delete-confirm replaces the WHOLE row with one full-width colSpan cell
+  // — the confirm/cancel strings compete only with the entire table width,
+  // so no pack's confirm question (however long) can constrain any
+  // individual column's width.
+  it('replaces the whole row with one full-width colSpan cell during delete-confirm when uid is set', () => {
     const date = '2025-05-05T01:02:03.000Z'
     const onDelete = vi.fn()
     renderWithI18nAllTime(<TypingTestHistory results={[makeResult({ date })]} onDelete={onDelete} uid="uid-1" />)
@@ -566,25 +564,24 @@ describe('TypingTestHistory', () => {
 
     fireEvent.click(screen.getByTestId(`history-delete-${date}`))
     const confirmTd = screen.getByTestId(`history-delete-confirm-${date}`).closest('td') as HTMLTableCellElement
-    expect(confirmTd.colSpan).toBe(3)
-    // PB+TIMELINE+DELETE merged into the one colSpan cell above.
-    expect(row.querySelectorAll('td')).toHaveLength(9)
+    expect(confirmTd.colSpan).toBe(11)
+    // The entire row collapsed into the one colSpan cell above.
+    expect(row.querySelectorAll('td')).toHaveLength(1)
     // Right-aligned (justify-end) so the confirm/cancel pair hugs the
-    // table's right edge — Delete is the last column, and the plain
-    // Delete button above sits there, so the confirm state should read as
-    // occupying the same visual position rather than floating at the left
-    // of the now much wider combined cell.
+    // table's right edge, where the plain Delete button it replaces sits —
+    // the confirm state reads as occupying the same visual position rather
+    // than drifting left across the full-width cell.
     const flexContainer = screen.getByTestId(`history-delete-confirm-${date}`).parentElement
     expect(flexContainer).toHaveClass('justify-end')
   })
 
-  it('collapses PB+Delete into one colSpan=2 cell during delete-confirm when uid is unset', () => {
+  it('spans one column fewer during delete-confirm when uid is unset (no Timeline column)', () => {
     const date = '2025-06-06T01:02:03.000Z'
     const onDelete = vi.fn()
     renderWithI18nAllTime(<TypingTestHistory results={[makeResult({ date })]} onDelete={onDelete} />)
     fireEvent.click(screen.getByTestId(`history-delete-${date}`))
     const confirmTd = screen.getByTestId(`history-delete-confirm-${date}`).closest('td') as HTMLTableCellElement
-    expect(confirmTd.colSpan).toBe(2)
+    expect(confirmTd.colSpan).toBe(10)
   })
 
   // Regression guard: pins sparkline-then-stats order, matching the Analyze
