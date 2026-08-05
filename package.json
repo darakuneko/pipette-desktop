@@ -78,7 +78,7 @@
     "prettier": "^3.9.6",
     "sql.js": "^1.14.1",
     "tailwindcss": "^4.1.18",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "vitest": "^3.2.0"
   },
   "build": {

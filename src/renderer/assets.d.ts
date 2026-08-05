@@ -16,3 +16,9 @@ declare module '*?url' {
   const src: string
   export default src
 }
+
+// Side-effect-only CSS import (`import './style.css'` in index.tsx, handled
+// by Vite's CSS pipeline at build time). TypeScript 6 added a stricter
+// diagnostic (TS2882) for side-effect imports of modules it can't resolve,
+// which this ambient declaration satisfies without introducing any exports.
+declare module '*.css'
