@@ -342,8 +342,17 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
   // modal's bottom edge regardless of content or window size. flex-1
   // (flex-basis:0 + grow) makes it consume exactly the space left over
   // after the title row instead.
+  //
+  // No max-w cap here on purpose: this root is a flex-col child of
+  // HistoryToggle's modal box (default align-items:stretch already sizes
+  // it to the modal's full content width), so any max-w narrower than that
+  // content width leaves dead space to the right of the Results table
+  // instead of a benign safety cap. A leftover `max-w-5xl` (1024px) did
+  // exactly that once the modal widened to MODAL_2XL (#401, 1200px width /
+  // ~1152px content box) without this div being widened to match — a
+  // ~128px gap between the table's right edge and the modal's inner edge.
   return (
-    <div data-testid="typing-test-history" className="flex min-h-0 flex-1 max-w-5xl flex-col gap-3">
+    <div data-testid="typing-test-history" className="flex min-h-0 flex-1 flex-col gap-3">
       {/* Single header row: Results/Analysis tabs on the left, selects at
           the right end (ml-auto group). The source tabs (MonkeyType /
           Tatoeba / Aozora / File Import) that used to be their own row
