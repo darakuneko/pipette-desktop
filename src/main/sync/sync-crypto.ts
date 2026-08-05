@@ -6,7 +6,7 @@ import { randomBytes, pbkdf2, createCipheriv, createDecipheriv } from 'node:cryp
 import { writeFile, readFile, unlink, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
-import { zxcvbn, zxcvbnOptions } from '@zxcvbn-ts/core'
+import { ZxcvbnFactory } from '@zxcvbn-ts/core'
 import * as zxcvbnCommonPackage from '@zxcvbn-ts/language-common'
 import * as zxcvbnEnPackage from '@zxcvbn-ts/language-en'
 import type { SyncCredentialResult, SyncEnvelope } from '../../shared/types/sync'
@@ -22,8 +22,10 @@ const ALGORITHM = 'aes-256-gcm'
 const AUTH_TAG_LENGTH = 16
 const PASSWORD_FILE = 'sync-password.enc'
 
-// Initialize zxcvbn options
-zxcvbnOptions.setOptions({
+// @zxcvbn-ts/core v4 replaced the singleton zxcvbn()/zxcvbnOptions API with
+// an instantiable ZxcvbnFactory — options are now passed to the constructor
+// instead of a global setOptions() call.
+const zxcvbnInstance = new ZxcvbnFactory({
   translations: zxcvbnEnPackage.translations,
   graphs: zxcvbnCommonPackage.adjacencyGraphs,
   dictionary: {
@@ -152,7 +154,7 @@ export function checkPasswordStrength(password: string): PasswordStrength {
   if (password === '') {
     return { score: 0, feedback: [] }
   }
-  const result = zxcvbn(password)
+  const result = zxcvbnInstance.check(password)
   return {
     score: result.score,
     feedback: [
