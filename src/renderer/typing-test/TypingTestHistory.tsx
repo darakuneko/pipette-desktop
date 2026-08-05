@@ -13,6 +13,8 @@ import { HistorySections } from './HistorySections'
 import { HistoryResultsPanel } from './HistoryResultsPanel'
 import type { ModeFilter, SortColumn, SortDirection, HistoryTab } from './HistoryResultsPanel'
 import { deriveDistinctConditions } from './AccuracyTrendSection'
+import { PERIOD_FILTERS, DEFAULT_PERIOD_FILTER, filterResultsByPeriod } from './history-period-filter'
+import type { PeriodFilter } from './history-period-filter'
 
 // Tab order for the source tablist — MonkeyType (words/time/quote), Tatoeba
 // (mode 'tatoeba'), Aozora (fileImport rows whose text meta was imported via
@@ -26,6 +28,14 @@ const HISTORY_TAB_LABEL_KEYS: Record<HistoryTab, string> = {
   tatoeba: 'editor.typingTest.history.tabTatoeba',
   aozora: 'editor.typingTest.history.tabAozora',
   text: 'editor.typingTest.history.tabFileImport',
+}
+
+const PERIOD_FILTER_LABEL_KEYS: Record<PeriodFilter, string> = {
+  '1w': 'editor.typingTest.history.period1Week',
+  '1m': 'editor.typingTest.history.period1Month',
+  '3m': 'editor.typingTest.history.period3Months',
+  '1y': 'editor.typingTest.history.period1Year',
+  all: 'editor.typingTest.history.periodAll',
 }
 
 /** Set on a `TypingTestTextMeta.source.provider` when the text was imported
@@ -168,6 +178,32 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
   // pick-with-fallback shape as `textFilter`/`effectiveTextFilter` above.
   const [conditionFilter, setConditionFilter] = useState<string>('')
 
+  // Period filter — rightmost select in the header's right-end group.
+  // Scopes EVERYTHING below the header row (WPM Trend chart, stats summary,
+  // Results table, CSV export, and the entire Analysis tab) to a rolling
+  // window, not just the Results table — see periodResults below, which
+  // every other derived value in this file is built from instead of the raw
+  // `results` prop. Defaults to '1m' (1 month) on every mount; since
+  // HistoryToggle only mounts this component while the modal is open (see
+  // its `{showHistory && (...)}` guard), that also means "1 month" is the
+  // starting point on every fresh History open, not a one-time default —
+  // matching the source select above, which is likewise local, non-
+  // persisted state.
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>(DEFAULT_PERIOD_FILTER)
+
+  // Anchor timestamp for the period filter, computed once when this
+  // component mounts (i.e. once per History open, per the mount note
+  // above) rather than re-read on every render or ticked via an interval —
+  // the window's far edge doesn't need to advance while the modal stays
+  // open, and a stable anchor keeps the visible set from shifting under the
+  // user mid-session as they switch between periods.
+  const [now] = useState(() => Date.now())
+
+  const periodResults = useMemo(
+    () => filterResultsByPeriod(results, periodFilter, now),
+    [results, periodFilter, now],
+  )
+
   // Imported-text metas, used to tell an Aozora-catalog fileImport row apart
   // from a plain File Import one (see classifyResultTab above).
   const { metas: textMetas } = useTypingTestTexts()
@@ -225,21 +261,24 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
     }
   }, [focusAndSelectView])
 
-  // Active tab's rows, per classifyResultTab above.
+  // Active tab's rows, per classifyResultTab above. Built from
+  // periodResults (not the raw `results` prop) so the period filter applies
+  // before source-tab classification.
   const tabResults = useMemo(
-    () => results.filter((r) => classifyResultTab(r, textMetaById) === tab),
-    [results, tab, textMetaById],
+    () => periodResults.filter((r) => classifyResultTab(r, textMetaById) === tab),
+    [periodResults, tab, textMetaById],
   )
 
   // Distinct imported texts (fileImport rows), keyed by stable textId,
   // displayed by the snapshotted name — scoped to the active tab (Aozora
   // gets only source.provider 'aozora' texts, File Import gets the rest).
   // Drives that tab's filter dropdown; empty (and thus hidden) for
-  // MonkeyType/Tatoeba.
+  // MonkeyType/Tatoeba. Scoped to periodResults so a text with no results
+  // inside the current period drops out of the dropdown too.
   const fileImportTexts = useMemo(() => {
     if (tab !== 'aozora' && tab !== 'text') return []
     const seen = new Map<string, string>()
-    for (const r of results) {
+    for (const r of periodResults) {
       if (r.mode !== 'fileImport') continue
       const id = fileImportTextId(r)
       const isAozoraText = textMetaById.get(id)?.source?.provider === AOZORA_PROVIDER
@@ -247,7 +286,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
       if (!seen.has(id)) seen.set(id, r.fileImportTextName ?? id)
     }
     return Array.from(seen, ([id, name]) => ({ id, name }))
-  }, [results, tab, textMetaById])
+  }, [periodResults, tab, textMetaById])
 
   // Fall back to 'all' when the selected text no longer exists in this tab
   // (e.g. all its rows were deleted, or the tab was just switched to one
@@ -316,7 +355,10 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
           order matters here (source first, condition second) per the
           approved redesign sketch. The condition select carries no visible
           label (aria-label only); the "ACCURACY TREND" heading stays above
-          the chart in AccuracyTrendSection itself. */}
+          the chart in AccuracyTrendSection itself. The period select is
+          always last, in both Results and Analysis (see its own comment
+          below) — it's the one selector in this group that scopes every
+          view, not just Analysis. */}
       <div className="flex items-center gap-3 border-b border-edge/60">
         <div
           role="tablist"
@@ -373,6 +415,22 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
               ))}
             </select>
           )}
+          {/* Period filter — always the rightmost select, in both Results
+              and Analysis (unlike the condition select above, which only
+              applies to Analysis). Scopes periodResults, which every value
+              below this row is ultimately derived from — see the
+              periodResults doc comment above. */}
+          <select
+            data-testid="history-filter-period"
+            aria-label={t('editor.typingTest.history.periodFilterLabel')}
+            className={HEADER_SELECT_CLASS}
+            value={periodFilter}
+            onChange={(e) => setPeriodFilter(e.target.value as PeriodFilter)}
+          >
+            {PERIOD_FILTERS.map((p) => (
+              <option key={p} value={p}>{t(PERIOD_FILTER_LABEL_KEYS[p])}</option>
+            ))}
+          </select>
         </div>
       </div>
 

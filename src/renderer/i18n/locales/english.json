@@ -1,5 +1,5 @@
 {
-  "version": "0.1.79",
+  "version": "0.1.80",
   "name": "English",
   "common": {
     "save": "Save",
@@ -508,6 +508,12 @@
         "tabAnalysis": "Analysis",
         "viewTabsAriaLabel": "History view",
         "sourceFilterLabel": "Filter by source",
+        "periodFilterLabel": "Filter by period",
+        "period1Week": "1 Week",
+        "period1Month": "1 Month",
+        "period3Months": "3 Months",
+        "period1Year": "1 Year",
+        "periodAll": "All Time",
         "noResults": "No results yet",
         "pb": "PB",
         "allModes": "All",

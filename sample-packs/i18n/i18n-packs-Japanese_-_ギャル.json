@@ -1,5 +1,5 @@
 {
-  "version": "0.1.79",
+  "version": "0.1.80",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -508,6 +508,12 @@
         "tabAnalysis": "分析☆",
         "viewTabsAriaLabel": "履歴の表示を切り替えるっしょ",
         "sourceFilterLabel": "ソースで絞り込むっしょ",
+        "periodFilterLabel": "期間で絞り込むっしょ",
+        "period1Week": "1週間☆",
+        "period1Month": "1ヶ月☆",
+        "period3Months": "3ヶ月☆",
+        "period1Year": "1年☆",
+        "periodAll": "全期間☆",
         "noResults": "結果ないじゃん",
         "pb": "PB☆",
         "allModes": "全部",
