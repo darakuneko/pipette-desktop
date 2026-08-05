@@ -56,10 +56,10 @@
     "xz-decompress": "^0.2.3"
   },
   "devDependencies": {
-    "@electron/rebuild": "4.0.3",
+    "@electron/rebuild": "4.2.0",
     "@playwright/mcp": "0.0.78",
     "@playwright/test": "^1.62.1",
-    "@tailwindcss/vite": "^4.1.18",
+    "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@types/better-sqlite3": "^7.6.13",
@@ -71,13 +71,13 @@
     "@typescript-eslint/parser": "^8.66.0",
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "~41.7.1",
-    "electron-builder": "^26.7.0",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "eslint": "^10.8.0",
     "jsdom": "^30.0.1",
     "prettier": "^3.9.6",
     "sql.js": "^1.14.1",
-    "tailwindcss": "^4.1.18",
+    "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   },
