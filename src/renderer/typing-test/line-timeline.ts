@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Pure log → display model for the per-LINE keystroke timeline (see
-// .claude/tasks/backlog/Task-line-timeline-pr2-line-view.md and
-// .claude/plans/Plan-line-keystroke-timeline.md). Sibling of
+// Pure log → display model for the per-LINE keystroke timeline. Sibling of
 // `word-timeline.ts`: a "line" groups one or more `RunWord`s onto ONE
 // shared display-ms axis (built once via `buildKeystrokeStream`, never
 // per-word — see that function's own doc comment), rather than resetting

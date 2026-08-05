@@ -2,11 +2,9 @@
 // @vitest-environment jsdom
 //
 // Focused unit coverage for useTypingTestResultSave's `lineBreaks`
-// derivation at finish time (Plan-line-keystroke-timeline PR1) — see
-// .claude/tasks/backlog/Task-line-timeline-pr1-persist-linebreaks.md and
-// the P2 codex-review fixes: the source is chosen by `config.mode` (never
-// by `state.lineBreaks.size`, which can't tell "real single-line text"
-// apart from "no real line source"), and every clamp is STRICT
+// derivation at finish time — codex-review fixes: the source is chosen
+// by `config.mode` (never by `state.lineBreaks.size`, which can't tell
+// "real single-line text" apart from "no real line source"), and every clamp is STRICT
 // (`< persistedWordCount - 1`, not `< persistedWordCount`) since a line
 // break can never legitimately land on the run's own last persisted word.
 // Every other existing behavior of this hook (result build/save,

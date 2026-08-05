@@ -5,8 +5,7 @@
 // extracts the common shell (PackManagerModal / PackListRow /
 // PackHubTab) while keeping every existing per-feature asymmetry
 // (delete cascade, hub search ordering, installed-detection, columns,
-// drag) exactly as it behaves today. See
-// `.claude/plans/Plan-pack-modal-unification.md`.
+// drag) exactly as it behaves today.
 
 /** Inline per-row success/error feedback shown under the Hub action line. */
 export interface PackActionResult {

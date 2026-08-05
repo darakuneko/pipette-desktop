@@ -28,9 +28,8 @@ const COLEMAK: Record<string, string> = {
 // Real Dvorak entry from pipette-hub's data/key-labels-seed.json (the
 // "Dvorak" pack, `keymap_applicable: true`) — 33 entries. NOT closed:
 // `KC_RBRACKET -> "="` and `KC_QUOTE -> "-"` resolve to targets KC_EQUAL /
-// KC_MINUS, but neither has a source entry of its own (see
-// pipette-hub's .claude/plan/key-label-dvorak-closure-fix.md, the real
-// bug this fixture reproduces). Applying this map as-is would duplicate
+// KC_MINUS, but neither has a source entry of its own — the real closure
+// bug this fixture reproduces. Applying this map as-is would duplicate
 // `-`/`=` on two keys each while no key sends `[`/`]` anymore. KC_A/KC_M
 // are present as harmless identity entries in the real pack (not part of
 // the defect).

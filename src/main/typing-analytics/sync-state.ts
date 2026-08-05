@@ -2,8 +2,7 @@
 // Persistent bookkeeping for the typing-analytics sync pipeline.
 // Tracks per-keyboard own-hash upload state so the sync pass can tell
 // "never uploaded" apart from "uploaded then remotely deleted", plus a
-// reconcile-pending timestamp per own hash. See
-// .claude/plans/typing-analytics.md.
+// reconcile-pending timestamp per own hash.
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'

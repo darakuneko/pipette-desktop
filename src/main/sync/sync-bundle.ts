@@ -211,19 +211,16 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
  * parser so the shape (including `utcDay` validation) is single-sourced
  * and drifts with the parser, not with a separate regex. Connect-time
  * initial sync and 3-minute polling skip these; the Analyze panel pulls
- * them on demand via `executeAnalyticsSync`. See
- * `.claude/rules/settings-persistence.md`. */
+ * them on demand via `executeAnalyticsSync`. */
 export function isAnalyticsSyncUnit(syncUnit: string): boolean {
   return parseTypingAnalyticsDeviceDaySyncUnit(syncUnit) !== null
 }
 
 /** Per-run raw keystroke log units (`keyboards/{uid}/runs`). Excluded
  * from connect-time initial sync and 3-minute polling for the same
- * reason as `isAnalyticsSyncUnit` — see
- * `.claude/rules/settings-persistence.md`'s trigger matrix. Unlike
- * typing-analytics units, this data has no dedicated on-demand sync
- * entry point yet (Row F: "no dedicated sync") — it only syncs via the
- * generic before-quit flush and manual "sync now". */
+ * reason as `isAnalyticsSyncUnit`. Unlike typing-analytics units, this
+ * data has no dedicated on-demand sync entry point — it only syncs via
+ * the generic before-quit flush and manual "sync now". */
 export function isRunLogSyncUnit(syncUnit: string): boolean {
   return /^keyboards\/[^/]+\/runs$/.test(syncUnit)
 }

@@ -77,7 +77,7 @@ export function LayoutPickerContent({
 }: LayoutPickerContentProps) {
   const { t } = useTranslation()
 
-  // Canonicalized shared bubble (see .claude/DESIGN.md "Tooltip" section):
+  // Canonicalized shared bubble:
   // same `computeBubblePosition` viewport clamping every canonical
   // `Tooltip` uses, kept as a hand-rolled single bubble (not a per-key
   // `Tooltip` wrap) since `KeyboardPane` reports hover via one callback

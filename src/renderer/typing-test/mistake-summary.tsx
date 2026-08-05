@@ -4,7 +4,6 @@
 // completion screen's finished-state summary) so `KeystrokeTimelinePanel`
 // can show a consistent presentation for a `TypingTestResult` without a
 // second, drifting implementation of the same sort/slice/testid logic.
-// See .claude/plans/Plan-completion-timeline-view.md PR-A spec point 2.
 //
 // Two presentations of the same sorted mistake list:
 //  - `MissedCharsList` — the original inline chip line, still used by

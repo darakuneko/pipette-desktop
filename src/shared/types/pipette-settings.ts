@@ -321,8 +321,7 @@ export interface PipetteSettings {
    * survives reloads and follows the keyboard across machines. Actual
    * recording is gated additionally on typingTestViewOnly at the
    * analyticsSink layer — leaving the typing view stops recording
-   * without touching this value. See the "Record lifecycle" section
-   * in .claude/plans/typing-analytics.md. */
+   * without touching this value. */
   typingRecordEnabled?: boolean
   typingSyncSpanDays?: TypingSyncSpanDays
   layerPanelOpen?: boolean

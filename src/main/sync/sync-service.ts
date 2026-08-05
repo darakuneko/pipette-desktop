@@ -22,9 +22,9 @@
 // extends — not here. External consumers (sync-ipc.ts, main/index.ts,
 // the 9+ store files that call `notifyChange`, and every test file's
 // whole-module mock of this facade path) must keep importing this
-// facade path, never a submodule directly. See
-// .claude/tasks/backlog/Task-split-sync-service.md and
-// .claude/rules/file-splitting.md for the split rationale.
+// facade path, never a submodule directly — this facade/sibling split
+// keeps every file under the project's 800-line Service/Util size
+// ceiling while preserving one stable import path for consumers.
 //
 // New module-private mutable state must either live on `syncRuntime`
 // (sync-runtime-state.ts) or ship its own `*ForTests` reset seam called

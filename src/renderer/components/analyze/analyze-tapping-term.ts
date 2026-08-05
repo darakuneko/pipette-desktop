@@ -2,9 +2,7 @@
 // Analyze > Interval > TAPPING_TERM advisor — Pipette-only diagnosis
 // that checks whether a keyboard's configured TAPPING_TERM (the QMK
 // tap/hold decision window) fits the user's own measured keypress
-// durations on its tap-hold keys (LT / MT / SH_T). See
-// .claude/plans/Plan-typing-metrics-chi2018.md Phase 2 and
-// .claude/tasks/backlog/Task-tm-phase2-tapping-term-advisor.md.
+// durations on its tap-hold keys (LT / MT / SH_T).
 //
 // Observation-structure facts that drive every decision below:
 //

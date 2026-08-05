@@ -241,10 +241,9 @@ export interface HubUpdateFavoritePostParams extends HubUploadFavoritePostParams
 
 // --- Analytics post types ---
 //
-// Wire format for "Analyze 集計データ" uploads. The full contract lives in
-// `.claude/docs/HUB-ANALYTICS-API.md` (Hub agent's source of truth). The
-// types below mirror that contract; the validators in
-// `src/main/hub/hub-analytics.ts` enforce the runtime invariants.
+// Wire format for "Analyze 集計データ" uploads, the payload shape shared
+// with pipette-hub. The types below mirror that contract; the validators
+// in `src/main/hub/hub-analytics.ts` enforce the runtime invariants.
 
 /** Hub-side `analytics-export-v1.json` payload. */
 export interface HubAnalyticsExportV1 {

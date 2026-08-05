@@ -216,7 +216,8 @@ describe('DurationSection', () => {
   })
 
   // Regression guard: pins chart-then-stat order, same as RolloverSection's
-  // equivalent test (.claude/tasks/backlog/Task-analyze-section-layout-consistency.md).
+  // equivalent test, per the Analyze convention that a chart always
+  // renders above its stat numbers.
   it('renders the chart above the stat card, matching every other section\'s chart-then-numbers order', async () => {
     durationFetchSpy.mockResolvedValue([
       cell({ hist: [1, 0, 0, 0, 0, 0, 0, 0], durationSamples: 1, sum: 80, sumSq: 6_400 }),

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Per-sync-unit upload/merge/dispatch: uploading a bundle, merging a
 // downloaded remote bundle into local state by sync-unit shape, and the
-// upload-or-merge-with-remote decision. Split out of sync-service.ts
-// (Task-split-sync-service) — see .claude/rules/file-splitting.md.
+// upload-or-merge-with-remote decision. Split out of sync-service.ts to
+// keep it under the project's 800-line Service/Util size ceiling.
 
 import { app } from 'electron'
 import { join } from 'node:path'

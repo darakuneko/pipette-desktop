@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Per-run raw keystroke log for a Typing Test run — the timeline data a
 // per-minute aggregate cannot reconstruct (order and inter-keystroke
-// gaps are lost once folded into a minute bucket). See
-// .claude/tasks/backlog/Task-tm-phase5-run-keystroke-log.md and
-// .claude/plans/Plan-typing-metrics-chi2018.md Phase 5.
+// gaps are lost once folded into a minute bucket).
 //
 // PRIVACY (read before touching this file): this is the highest
 // input-content-recovery-risk data in the app — higher than trigrams.

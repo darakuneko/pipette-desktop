@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Per-minute in-memory aggregator: accumulates char/matrix events and raw
 // keystroke intervals, then flushes a compact snapshot to the SQLite store
-// when a minute rolls over or the service is closed. See
-// .claude/plans/typing-analytics.md for the retention/aggregation design.
+// when a minute rolls over or the service is closed. Aggregation stops at
+// 1-minute granularity — no raw per-keystroke timing survives past this
+// buffer's own lifetime — so the exported/synced data is always derived,
+// never a raw event log.
 
 import type {
   TypingAnalyticsEvent,

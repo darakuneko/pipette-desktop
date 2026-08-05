@@ -5,8 +5,8 @@
 // outside its declaring module (an imported binding is read-only), so
 // every module-scoped flag that's read/written across the split lives
 // on `syncRuntime` instead of as a bare top-level `let`. Split out of
-// sync-service.ts (Task-split-sync-service) — see
-// .claude/rules/file-splitting.md.
+// sync-service.ts to keep it under the project's 800-line Service/Util
+// size ceiling.
 
 import { IpcChannels } from '../../shared/ipc/channels'
 import { broadcastToAllWindows } from '../utils/broadcast'

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Merge strategies for the i18n/theme index + pack-body bundle shapes.
-// Split out of sync-service.ts (Task-sync-unit-filename-gap) so these
-// bundle-variant merge branches don't push an already-oversized file
-// further past its budget — see .claude/rules/file-splitting.md.
+// Split out of sync-service.ts so these bundle-variant merge branches
+// don't push it past the project's 800-line Service/Util size ceiling.
 //
 // This module owns only the merge/LWW decision and the post-write
 // broadcast — every path/mkdir/writeFile concern lives in

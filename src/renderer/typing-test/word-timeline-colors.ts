@@ -69,8 +69,7 @@ export const TIMELINE_LEGEND: Record<TimelineFillKind, TimelineLegendEntry> = {
  *  keystrokes end and the next begins on the line's shared axis), not a
  *  semantic "kind" like the ones above, so it has no `TIMELINE_LEGEND`
  *  entry of its own. Uses the same subtle hairline-divider token
- *  `style.css` reserves for this purpose elsewhere (`--color-edge-subtle`
- *  — see `.claude/DESIGN.md`'s Elevation & Depth table). */
+ *  `style.css` reserves for this purpose elsewhere (`--color-edge-subtle`). */
 export const WORD_SEPARATOR_FILL = 'var(--color-edge-subtle)'
 
 /** Priority order for a keystroke's fill when more than one condition
@@ -88,7 +87,7 @@ export function fillForKeystroke(seg: KeystrokeSegment): string {
 
 /** Per-fill-kind label TEXT color for the LINE view's on-bar keystroke
  *  labels (`LineTimelineRow.tsx`) — same philosophy as `KeyWidget`'s
- *  `FILL_INVERT_TABLE` (`.claude/rules/coding-ui.md`): every fill a
+ *  `FILL_INVERT_TABLE`: every fill a
  *  keystroke can render as gets an explicit, theme-aware class instead of
  *  one default that quietly breaks on fills bright enough to need dark
  *  text. `normal`/`mistake` are safe with the plain inverse token in both

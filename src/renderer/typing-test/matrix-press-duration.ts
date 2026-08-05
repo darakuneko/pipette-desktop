@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 /** Per-key press-duration + physical-overlap tracking for matrix analytics.
- *  Split out of useTypingTest.ts (see .claude/rules/file-splitting.md) —
- *  this owns state the queue-based tap/hold classifier
+ *  Split out of useTypingTest.ts to keep it under the project's 600-line
+ *  custom-hook size ceiling — this owns state the queue-based tap/hold classifier
  *  (matrix-analytics-queue.ts) doesn't need: how long every physical
  *  press (masked or not) stays down, and whether consecutive presses
  *  physically overlapped. Both are read straight off the `pressed` set

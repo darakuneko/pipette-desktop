@@ -4,8 +4,8 @@
 // PRESENCE (see that field's own doc comment in typing-run-log.ts: `[]`
 // means "one line", still line-mode; absent means a legacy log, always
 // word-mode). Extracted out of the view component itself to keep
-// WordTimelineView.tsx under its file-splitting cap (see
-// .claude/rules/file-splitting.md) — this hook owns every `useMemo` that
+// WordTimelineView.tsx under the project's 500-line UI-component size
+// cap — this hook owns every `useMemo` that
 // derives from `log`, the view owns only rendering + zoom/hover DOM
 // wiring.
 

@@ -176,9 +176,9 @@ describe('IntervalChart distribution mode layout', () => {
     expect(screen.getByText('analyze.interval.timeSeries.sectionTitle')).toBeTruthy()
   })
 
-  // Regression guard, same pattern as RolloverSection's order-lock test
-  // (.claude/tasks/backlog/Task-analyze-section-layout-consistency.md):
-  // pins chart-then-stat order in both viewModes.
+  // Regression guard, same pattern as RolloverSection's order-lock test:
+  // pins chart-then-stat order in both viewModes, per the Analyze
+  // convention that a chart always renders above its stat numbers.
   it('renders the chart above the stat card in timeSeries mode', async () => {
     renderChart({ viewMode: 'timeSeries' })
     await waitFor(() => {

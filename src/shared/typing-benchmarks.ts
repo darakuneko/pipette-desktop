@@ -133,8 +133,9 @@ export type TypistClusterId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
  * The paper's own cluster label (e.g. "SLOW CARELESS HAND ALTERNATORS")
  * and participant count `N` are NOT fields on this interface — they're
  * transcription provenance too, but evaluative label strings like that
- * are exactly the vocabulary `.claude/rules/coding-ui.md` bars from
- * reaching a renderer bundle or any future render path. Keeping them as
+ * are exactly the kind of hardcoded, non-i18n user-facing text the
+ * project's i18n rule already bars from reaching a renderer bundle (all
+ * UI text must go through `t()`) or any future render path. Keeping them as
  * a `//` comment on each `TYPIST_CLUSTER_CENTROIDS` row preserves the
  * same provenance without shipping the string or giving any future code
  * path something to read and render. */

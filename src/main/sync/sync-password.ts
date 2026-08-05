@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Sync credentials and the password-check sentinel file: verifying the
 // stored password against the remote password-check unit, and the
-// non-destructive change-password flow. Split out of sync-service.ts
-// (Task-split-sync-service) — see .claude/rules/file-splitting.md.
+// non-destructive change-password flow. Split out of sync-service.ts to
+// keep it under the project's 800-line Service/Util size ceiling.
 
 import { encrypt, decrypt, retrievePasswordResult, storePassword, clearPassword } from './sync-crypto'
 import { getAuthStatus } from './google-auth'

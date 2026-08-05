@@ -4,7 +4,9 @@
 // Shape: keyboards/{uid}/devices/{machineHash}/days/{YYYY-MM-DD}
 //   (one unit per (uid, hash, day), bundles a single per-day file)
 //
-// See .claude/plans/typing-analytics.md.
+// Per-day units (not per-device) keep sync granular: a remote device's
+// typing history is fetched and merged one day-file at a time instead
+// of as a single, ever-growing blob.
 
 import type { UtcDay } from './jsonl/utc-day'
 import { isUtcDay } from './jsonl/utc-day'

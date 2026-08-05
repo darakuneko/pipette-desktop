@@ -7,8 +7,7 @@
 // of a reassigned local either) — `minuteBuffer` below is reassigned
 // wholesale (see resetTypingAnalyticsForTests), so every other field is
 // folded into the same object rather than mixing two different state-
-// sharing conventions across the split. See
-// .claude/plans/typing-analytics.md for the design rationale.
+// sharing conventions across the split.
 
 import type { TypingAnalyticsFingerprint } from '../../shared/types/typing-analytics'
 import { MinuteBuffer } from './minute-buffer'

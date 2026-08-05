@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Hub IPC: favorite (feature) post upload/update, plus the shared
 // `prepareFavoritePost` assembly step reused by the private-upload
-// handler. Split out of hub-ipc.ts (Task-split-hub-ipc) — see
-// .claude/rules/file-splitting.md.
+// handler. Split out of hub-ipc.ts to keep it under the project's
+// 800-line Service/Util size ceiling.
 
 import { secureHandle } from '../ipc-guard'
 import { IpcChannels } from '../../shared/ipc/channels'

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Focused coverage for the run-log sync unit (keyboards/{uid}/runs) —
-// see .claude/tasks/backlog/Task-tm-phase5-run-keystroke-log.md. Mirrors
-// sync-bundle.test.ts's scoping/mocking approach.
+// Focused coverage for the run-log sync unit (keyboards/{uid}/runs).
+// Mirrors sync-bundle.test.ts's scoping/mocking approach.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'

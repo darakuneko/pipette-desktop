@@ -2,9 +2,8 @@
 //
 // Hub Analytics export builder. Assembles the
 // `analytics-export-v1.json` payload that the desktop ships to
-// pipette-hub. The full wire contract lives in
-// `.claude/docs/HUB-ANALYTICS-API.md`; this module is the only
-// production producer of that shape.
+// pipette-hub, which treats this shape as its wire contract; this
+// module is the only production producer of that shape.
 //
 // The export is *all derived data*. We never include raw events:
 // minute-level (1 minute) is the smallest granularity, and bigram

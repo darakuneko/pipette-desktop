@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Typing analytics shared types — see .claude/plans/typing-analytics.md.
+// Typing analytics shared types, used by both the renderer (Analyze view)
+// and main (ingestion, SQLite cache, sync).
 
 import type { FingerType, RowCategory } from '../kle/kle-ergonomics'
 

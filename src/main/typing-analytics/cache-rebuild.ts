@@ -3,7 +3,7 @@
 // cache is always derivable from the JSONL files, so a missing /
 // stale / machine-migrated cache is never fatal: this module drops the
 // user rows, re-reads every master file, and re-applies every row via
-// the LWW merge path. See .claude/plans/typing-analytics.md.
+// the LWW merge path.
 
 import { applyRowsToCache } from './jsonl/apply-to-cache'
 import { readRows } from './jsonl/jsonl-reader'

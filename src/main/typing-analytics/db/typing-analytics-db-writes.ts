@@ -4,8 +4,7 @@
 // export selects, and authoritative LWW sync-merge writes. Extends
 // TypingAnalyticsDbBase so it can reach `this.db` (for db.transaction)
 // and `this.stmts` (every prepared statement group). Split out of what
-// used to be one 3,255-line file/class — see
-// .claude/tasks/done/Task-split-typing-analytics-db.md.
+// used to be one 3,255-line file/class.
 
 import { emptyTombstoneResult } from '../../../shared/types/typing-analytics'
 import type { TypingTombstoneResult } from '../../../shared/types/typing-analytics'

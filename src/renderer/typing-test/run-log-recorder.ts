@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-/** In-memory buffer + join logic for the per-run raw keystroke log (see
- *  `.claude/tasks/backlog/Task-tm-phase5-run-keystroke-log.md`). Owned by
+/** In-memory buffer + join logic for the per-run raw keystroke log. Owned by
  *  `useInputModes` (one instance per editor session) and fed from three
  *  seams already wired for the existing per-minute analytics pipeline:
  *

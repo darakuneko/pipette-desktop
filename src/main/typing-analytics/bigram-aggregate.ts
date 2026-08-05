@@ -3,7 +3,6 @@
 // functions over NgramMinuteCellRow arrays — no DB / IPC concerns.
 // Histogram boundaries are imported from bigram-bucket so the merge,
 // emit, and aggregation layers all share the same bucket layout.
-// See .claude/plans/Plan-analyze-bigram.md for the metric design.
 
 import {
   BIGRAM_BUCKET_CENTERS_MS,

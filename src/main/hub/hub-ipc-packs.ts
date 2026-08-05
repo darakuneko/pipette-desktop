@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Hub IPC: i18n language pack + theme pack handlers. Split out of
-// hub-ipc.ts (Task-split-hub-ipc) — see .claude/rules/file-splitting.md.
+// hub-ipc.ts to keep it under the project's 800-line Service/Util size
+// ceiling.
 //
 // Targets the standalone /api/i18n-packs and /api/theme-packs
 // endpoints. The pack body (HubI18nPackBody / HubThemePackBody) carries

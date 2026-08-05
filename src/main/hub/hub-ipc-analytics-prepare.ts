@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Hub IPC: shared analytics-export assembly path used by the upload,
 // update, preview and private-upload analytics handlers. Split out of
-// hub-ipc.ts (Task-split-hub-ipc) — see .claude/rules/file-splitting.md.
+// hub-ipc.ts to keep it under the project's 800-line Service/Util size
+// ceiling.
 
 import type {
   HubUploadAnalyticsPostParams, HubPreviewAnalyticsPostParams,

@@ -31,8 +31,9 @@ function flattenLabel(label: string): string {
   return label.split('\n').map((line) => line.trim()).filter(Boolean).join(' ')
 }
 
-// Shared bubble contract (see .claude/DESIGN.md "Tooltip" section): a
-// canonicalized shared bubble, not a per-row `Tooltip` wrap — up to
+// Shared bubble contract: a canonicalized shared bubble (same
+// BUBBLE_BASE skin, computeBubblePosition viewport clamping, 300ms open
+// delay as the canonical `Tooltip`), not a per-row `Tooltip` wrap — up to
 // MAX_RESULTS (50) rows can be mounted at once, each with its own
 // truncated-detail hover target, so a per-row `Tooltip` would mount that
 // many portals + effects for a hover affordance only ever one row shows
