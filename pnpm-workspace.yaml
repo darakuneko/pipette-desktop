@@ -19,14 +19,16 @@ minimumReleaseAgeExclude:
 
 # Replaces the old package.json pnpm.onlyBuiltDependencies / this file's
 # own allowedBuiltDependencies list (pnpm 11 superseded both with this
-# per-package map). Native modules and esbuild's binary install need their
-# scripts; core-js's postinstall is just a sponsorship console message
-# (no build); electron-winstaller's copies a bundled 7z binary for the
-# Windows NSIS/Squirrel packaging step electron-builder needs.
+# per-package map). Native modules, electron's own binary download, and
+# esbuild's binary install all need their scripts; core-js's postinstall
+# is just a sponsorship console message (no build); electron-winstaller's
+# copies a bundled 7z binary for the Windows NSIS/Squirrel packaging step
+# electron-builder needs.
 allowBuilds:
   '@paymoapp/active-window': true
   better-sqlite3: true
   core-js: false
+  electron: true
   electron-winstaller: true
   esbuild: true
   node-hid: true
