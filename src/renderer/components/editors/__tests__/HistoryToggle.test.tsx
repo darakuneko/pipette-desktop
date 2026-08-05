@@ -41,6 +41,18 @@ describe('HistoryToggle — Analyze run-timeline handoff', () => {
     expect(screen.queryByTestId('history-modal')).toBeNull()
   })
 
+  // The Results table gained the Avg Hold/AKH column alongside KPM and
+  // Accuracy, crowding MODAL_XL (960px) — bumped one width tier to
+  // MODAL_2XL (1200px) so the wider table doesn't force cell truncation
+  // more aggressively than necessary.
+  it('opens the History modal at the MODAL_2XL width tier', () => {
+    renderWithI18n(<HistoryToggle results={[]} />)
+    fireEvent.click(screen.getByTestId('typing-test-history-toggle'))
+    const modal = screen.getByTestId('history-modal')
+    expect(modal.className).toContain('w-modal-2xl')
+    expect(modal.className).not.toContain('w-modal-xl ')
+  })
+
   it('auto-opens History and the timeline for a pending timelineHandoff', async () => {
     renderWithI18n(
       <HistoryToggle

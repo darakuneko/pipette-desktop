@@ -203,12 +203,95 @@ describe('TypingTestHistory', () => {
     // Default sort is date desc → 100ms, 160ms, legacy(—).
     expect(cellsFor(5)).toEqual(['100 ms', '160 ms', '—'])
 
-    const avgHoldButton = screen.getByRole('button', { name: /Avg Key Hold/i })
+    // Header shows the abbreviated "AKH" label (see the dedicated header
+    // test below for the full-label tooltip); the accessible name comes
+    // from the button's own rendered text, not the portaled tooltip bubble.
+    const avgHoldButton = screen.getByRole('button', { name: /AKH/i })
     fireEvent.click(avgHoldButton) // desc
     expect(cellsFor(5)).toEqual(['160 ms', '100 ms', '—'])
 
     fireEvent.click(avgHoldButton) // asc — the legacy row (treated as lowest) sorts first
     expect(cellsFor(5)).toEqual(['—', '100 ms', '160 ms'])
+  })
+
+  // Header polish: the Avg Key Hold column header abbreviates to "AKH" (the
+  // full column gained width pressure once KPM/Accuracy/Avg Hold all landed
+  // side by side), with the full label available via hover tooltip so the
+  // abbreviation isn't a dead end. Sorting must keep working off the same
+  // button.
+  it('abbreviates the Avg Hold header to "AKH" with a tooltip showing the full label, sorting still works', () => {
+    const results = [
+      makeResult({ wpm: 60, date: '2025-01-03T00:00:00Z', holdSumMs: 300, holdSamples: 3 }), // 100 ms
+      makeResult({ wpm: 90, date: '2025-01-02T00:00:00Z', holdSumMs: 800, holdSamples: 5 }), // 160 ms
+    ]
+    renderWithI18nAllTime(<TypingTestHistory results={results} />)
+
+    const avgHoldButton = screen.getByRole('button', { name: 'AKH' })
+    expect(avgHoldButton.textContent).toContain('AKH')
+    expect(avgHoldButton.textContent).not.toContain('Avg Key Hold')
+
+    // The full label surfaces via the tooltip bubble (portaled, always in
+    // the DOM per the Tooltip component — see NameCell's "kept" test for
+    // the same assertion shape).
+    const tooltipBubble = screen.getByText('Avg Key Hold')
+    expect(tooltipBubble.getAttribute('role')).toBe('tooltip')
+
+    // Tooltip wraps the button itself (not an inner span) — aria-describedby
+    // must land on the focusable, sortable button so assistive tech and
+    // keyboard focus both reach the full-label description.
+    expect(avgHoldButton.getAttribute('aria-describedby')).toBe(tooltipBubble.id)
+
+    // Sorting is unaffected by the label swap.
+    const cellsFor = (idx: number) => {
+      const history = screen.getByTestId('typing-test-history')
+      const trs = history.querySelectorAll('tbody tr')
+      return Array.from(trs).map((tr) => tr.querySelectorAll('td')[idx].textContent)
+    }
+    expect(cellsFor(5)).toEqual(['100 ms', '160 ms'])
+    fireEvent.click(avgHoldButton)
+    expect(cellsFor(5)).toEqual(['160 ms', '100 ms'])
+  })
+
+  // Mode column carries variable-width strings (e.g. Tatoeba's composite
+  // "Tatoeba 10 Lines (japanese_hiragana)" label) that must ellipsis-
+  // truncate instead of wrapping/stretching the table, with the full text
+  // reachable via hover tooltip — same treatment as the Name column. The
+  // table is `table-fixed` with a proportional width on each header cell
+  // (not a hard max-w cap on the td — see COL_MODE in HistoryResultsPanel)
+  // so the column, and thus the truncation point, scales with the modal's
+  // actual width instead of stopping at a fixed rem value.
+  it('truncates a long Mode cell and exposes the full text via tooltip', () => {
+    const results = [
+      makeResult({
+        mode: 'tatoeba',
+        mode2: 'japanese_hiragana|lines|10',
+        language: 'japanese_hiragana',
+        date: '2025-01-01T00:00:00Z',
+      }),
+    ]
+    renderWithI18nAllTime(<TypingTestHistory results={results} />)
+    fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'tatoeba' } })
+
+    const fullText = 'Tatoeba 10 Lines (japanese_hiragana)'
+    const history = screen.getByTestId('typing-test-history')
+    const table = history.querySelector('table')
+    expect(table).toBeTruthy()
+    expect(table!.className).toContain('table-fixed')
+
+    // The Mode column header carries the column's width share (the
+    // fixed-layout algorithm reads column widths from the header row only).
+    const modeHeader = screen.getByRole('button', { name: /Mode/i }).closest('th')
+    expect(modeHeader).toBeTruthy()
+    expect(modeHeader!.className).toMatch(/w-\[\d+%\]/)
+
+    const modeCell = Array.from(history.querySelectorAll('tbody td')).find((td) => td.textContent === fullText)
+    expect(modeCell).toBeTruthy()
+    const truncatedSpan = modeCell!.querySelector('span')
+    expect(truncatedSpan).toBeTruthy()
+    expect(truncatedSpan!.className).toContain('truncate')
+
+    // Full text is duplicated into the (always-mounted) tooltip bubble.
+    expect(screen.getAllByText(fullText).length).toBeGreaterThan(1)
   })
 
   it('sets aria-sort on active sort column', () => {
@@ -407,8 +490,10 @@ describe('TypingTestHistory', () => {
     renderWithI18n(<TypingTestHistory results={results} />)
     // FileImport rows live under the Text tab, not Monkeytype (the default).
     fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'text' } })
-    // The name shows in the table row (the dropdown also lists it as an option).
-    expect(screen.getByText('my-novel.txt', { selector: 'td' })).toBeTruthy()
+    // The name shows in the table row (the dropdown also lists it as an
+    // option) — the Mode/Text cell truncates via a nested span, so the text
+    // itself lives there rather than directly on the td.
+    expect(screen.getByText('my-novel.txt', { selector: 'span' })).toBeTruthy()
     expect(screen.queryByText(/b286fff1/)).toBeNull()
   })
 
@@ -429,8 +514,10 @@ describe('TypingTestHistory', () => {
     expect(screen.queryByText('novel.txt')).toBeNull()
     // Switch the source select to File Import: fileImport result shown, words hidden.
     fireEvent.change(screen.getByTestId('history-filter-source'), { target: { value: 'text' } })
-    // The name shows in the table row (the dropdown also lists it as an option).
-    expect(screen.getByText('novel.txt', { selector: 'td' })).toBeTruthy()
+    // The name shows in the table row (the dropdown also lists it as an
+    // option) — the Mode/Text cell truncates via a nested span, so the text
+    // itself lives there rather than directly on the td.
+    expect(screen.getByText('novel.txt', { selector: 'span' })).toBeTruthy()
     expect(screen.queryByText('81')).toBeNull()
   })
 
