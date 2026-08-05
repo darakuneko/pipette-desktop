@@ -31,6 +31,15 @@ function renderModal(props: Partial<Parameters<typeof RomajiSettingsModal>[0]> =
 }
 
 describe('RomajiSettingsModal — unified 3-way input method selector', () => {
+  it('renders the methods in Romaji, Kana, Direct order', () => {
+    renderModal()
+    const romaji = screen.getByTestId('japanese-input-method-romaji')
+    const kana = screen.getByTestId('japanese-input-method-kana')
+    const direct = screen.getByTestId('japanese-input-method-direct')
+    expect(romaji.compareDocumentPosition(kana) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(kana.compareDocumentPosition(direct) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('defaults to Romaji when romajiInput/inputMethod are both unset', () => {
     renderModal()
     expect(screen.getByTestId('japanese-input-method-romaji').className).toContain('text-accent')

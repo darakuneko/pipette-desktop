@@ -33,8 +33,9 @@ import { resolveJapaneseInputMethod, type JapaneseInputMethod } from './romaji-i
 const CASE_STYLES: readonly RomajiCaseStyle[] = ['upper', 'capital', 'lower']
 
 // Unified 3-way selector (resolveJapaneseInputMethod, romaji-input.ts) —
-// shown first, since it decides which section below even applies.
-const INPUT_METHODS: readonly JapaneseInputMethod[] = ['direct', 'romaji', 'kana']
+// shown first, since it decides which section below even applies. Ordered
+// by expected usage: Romaji (default), Kana, then Direct.
+const INPUT_METHODS: readonly JapaneseInputMethod[] = ['romaji', 'kana', 'direct']
 
 // Total line count offered by the guide row (the line the current word
 // sits on included), 0-3: 0 hides the row, 1 shows only the current line,
