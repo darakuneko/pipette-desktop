@@ -35,12 +35,32 @@ function makeResult(overrides: Partial<TypingTestResult> = {}): TypingTestResult
   }
 }
 
-/** The 7th (Words/Lines) card is always index 5 in buildTimelineStatItems'
- *  own fixed ordering (WPM, KPM, Accuracy, KSPC, Time, Words/Lines,
- *  Overlap, Substitution, Omission, Insertion). */
+/** The Words/Lines card is always LAST (index 10) in
+ *  buildTimelineStatItems' own fixed ordering (WPM, KPM, Accuracy, KSPC,
+ *  Substitution, Omission, Insertion, Overlap, Avg Key Hold, Time,
+ *  Words/Lines). */
 function wordsOrLinesItem(result: TypingTestResult | undefined, log: RunKeystrokeLog) {
-  return buildTimelineStatItems(result, SUMMARY, log)[5]
+  return buildTimelineStatItems(result, SUMMARY, log)[10]
 }
+
+describe('buildTimelineStatItems — card order', () => {
+  it('renders the fixed related-metric order ending in Time and Words/Lines', () => {
+    const items = buildTimelineStatItems(makeResult({}), SUMMARY, makeLog({}))
+    expect(items.map((i) => i.labelKey)).toEqual([
+      'editor.typingTest.history.timeline.stats.runWpm',
+      'editor.typingTest.kpm',
+      'editor.typingTest.history.timeline.stats.accuracy',
+      'editor.typingTest.kspc',
+      'editor.typingTest.history.errorMixLabelSubstitution',
+      'editor.typingTest.history.errorMixLabelOmission',
+      'editor.typingTest.history.errorMixLabelInsertion',
+      'editor.typingTest.history.timeline.stats.overlap',
+      'editor.typingTest.history.timeline.stats.avgHold',
+      'editor.typingTest.time',
+      'editor.typingTest.words',
+    ])
+  })
+})
 
 describe('buildTimelineStatItems — Words/Lines card branch table', () => {
   it('branch 1: log.lineBreaks present -> Lines, value = lineBreaks.length + 1, REGARDLESS of result.mode', () => {
@@ -104,10 +124,10 @@ describe('buildTimelineStatItems — Words/Lines card branch table', () => {
   })
 })
 
-/** The 11th (Avg Key Hold) card is always the last entry in
- *  buildTimelineStatItems' fixed ordering. */
+/** The Avg Key Hold card sits at index 8 in buildTimelineStatItems'
+ *  fixed ordering (between Overlap and Time). */
 function avgHoldItem(result: TypingTestResult | undefined, summary: WordTimelineSummary, log: RunKeystrokeLog) {
-  return buildTimelineStatItems(result, summary, log)[10]
+  return buildTimelineStatItems(result, summary, log)[8]
 }
 
 describe('buildTimelineStatItems — Avg Key Hold card', () => {
