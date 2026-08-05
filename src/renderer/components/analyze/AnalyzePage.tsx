@@ -3,8 +3,14 @@
 // the DeviceSelector shell (top of app) and the typing-view chrome so
 // the two entry points render identical content; callers just supply
 // an `onBack` target and (optionally) a keyboard to preselect. The
-// Back button itself lives in the sidebar of TypingAnalyticsView so
+// Back button itself lives in TypingAnalyticsView's own footer bar so
 // this page stays header-less.
+//
+// The padded `<main>` wrapper only surrounds the scrollable content —
+// TypingAnalyticsView's footer bar renders full-bleed below it (edge
+// to edge like the keymap editor's StatusBar) so it reads as a docked
+// bar instead of a pair of buttons floating at the end of the scroll
+// content.
 
 import { TypingAnalyticsView } from './TypingAnalyticsView'
 import type { ConnectedTappingTerm } from './analyze-types'
@@ -19,9 +25,7 @@ interface Props {
 export function AnalyzePage({ onBack, initialUid, connectedTappingTerm, onOpenRunTimeline }: Props) {
   return (
     <div className="flex h-screen flex-col bg-surface" data-testid="analyze-page">
-      <main className="flex-1 min-h-0 p-8">
-        <TypingAnalyticsView initialUid={initialUid} onBack={onBack} connectedTappingTerm={connectedTappingTerm} onOpenRunTimeline={onOpenRunTimeline} />
-      </main>
+      <TypingAnalyticsView initialUid={initialUid} onBack={onBack} connectedTappingTerm={connectedTappingTerm} onOpenRunTimeline={onOpenRunTimeline} />
     </div>
   )
 }
