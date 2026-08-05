@@ -16,7 +16,12 @@ export async function generatePdfThumbnail(pdfBase64: string): Promise<string> {
   const raw = atob(pdfBase64)
   const data = Uint8Array.from(raw, (ch) => ch.charCodeAt(0))
 
-  const doc = await pdfjsLib.getDocument({ data }).promise
+  // pdfjs-dist 6 dropped PDFDocumentProxy.destroy() — only the loading task
+  // (the object getDocument() returns before its promise resolves) still
+  // exposes destroy(), so the reference has to be kept separately from the
+  // resolved document.
+  const loadingTask = pdfjsLib.getDocument({ data })
+  const doc = await loadingTask.promise
   try {
     const page = await doc.getPage(1)
     const viewport = page.getViewport({ scale: 1.0 })
@@ -32,6 +37,6 @@ export async function generatePdfThumbnail(pdfBase64: string): Promise<string> {
     const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
     return dataUrl.replace(/^data:image\/jpeg;base64,/, '')
   } finally {
-    await doc.destroy()
+    await loadingTask.destroy()
   }
 }
