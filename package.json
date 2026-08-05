@@ -70,7 +70,7 @@
     "@typescript-eslint/eslint-plugin": "^8.66.0",
     "@typescript-eslint/parser": "^8.66.0",
     "@vitejs/plugin-react": "^5.2.0",
-    "electron": "~41.7.1",
+    "electron": "~43.3.0",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "eslint": "^10.8.0",
@@ -155,7 +155,8 @@
       "node-hid"
     ],
     "overrides": {
-      "node-hid>node-addon-api": "^8.7.0"
+      "node-hid>node-addon-api": "^8.7.0",
+      "node-abi": "^4.33.0"
     }
   }
 }
