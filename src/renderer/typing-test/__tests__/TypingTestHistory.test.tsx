@@ -552,9 +552,13 @@ describe('TypingTestHistory', () => {
   // chart-above-stats convention (RolloverSection's order-lock test is the
   // original of this pattern).
   it('renders the sparkline above the stats row', () => {
+    // Two distinct local calendar days — the WPM Trend chart now groups
+    // results per day (see wpm-daily-trend.ts), so two same-day results
+    // would collapse into a single point and never clear the chart's own
+    // "at least 2 days" floor.
     const results = [
       makeResult({ wpm: 80 }),
-      makeResult({ wpm: 60 }),
+      makeResult({ wpm: 60, date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() }),
     ]
     renderWithI18n(<TypingTestHistory results={results} />)
     const sparkline = screen.getByTestId('history-sparkline')
@@ -568,10 +572,10 @@ describe('TypingTestHistory', () => {
   // the Accuracy Trend chart): the Results view now shows an uppercase
   // "WPM Trend" heading above a chart carrying the same tooltip machinery,
   // instead of a bare unlabeled SVG polyline.
-  it('shows the WPM Trend heading and a tooltip-bearing chart once 2+ results exist', () => {
+  it('shows the WPM Trend heading and a tooltip-bearing chart once 2+ days of results exist', () => {
     const results = [
       makeResult({ wpm: 80 }),
-      makeResult({ wpm: 60 }),
+      makeResult({ wpm: 60, date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() }),
     ]
     renderWithI18n(<TypingTestHistory results={results} />)
     const sparkline = screen.getByTestId('history-sparkline')
@@ -737,7 +741,7 @@ describe('TypingTestHistory', () => {
     it('defaults to the Results view: table + sparkline/stats visible, analysis sections absent', () => {
       const results = [
         makeResult({ wpm: 80 }),
-        makeResult({ wpm: 60 }),
+        makeResult({ wpm: 60, date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() }),
       ]
       renderWithI18n(<TypingTestHistory results={results} />)
       const history = screen.getByTestId('typing-test-history')
@@ -752,7 +756,7 @@ describe('TypingTestHistory', () => {
     it('switching to Analysis shows the three sections and hides the table/filter/sparkline/stats, then switching back restores Results', () => {
       const results = [
         makeResult({ wpm: 60, accuracy: 90, mistakes: { a: 3, b: 2 } }),
-        makeResult({ wpm: 65, accuracy: 92, mistakes: { a: 1 } }),
+        makeResult({ wpm: 65, accuracy: 92, mistakes: { a: 1 }, date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() }),
       ]
       renderWithI18n(<TypingTestHistory results={results} />)
 

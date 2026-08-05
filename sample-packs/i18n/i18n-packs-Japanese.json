@@ -1,5 +1,5 @@
 {
-  "version": "0.1.81",
+  "version": "0.1.82",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -524,6 +524,9 @@
         "delete": "削除",
         "accuracyTrendTitle": "正確性の推移",
         "wpmTrendTitle": "WPMの推移",
+        "trendBest": "最高",
+        "trendWorst": "最低",
+        "trendAvg": "平均",
         "conditionFilterLabel": "条件で絞り込み",
         "conditionPunctuation": "+句読点",
         "conditionNumbers": "+数字",

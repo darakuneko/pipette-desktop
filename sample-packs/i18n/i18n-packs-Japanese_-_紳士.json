@@ -1,5 +1,5 @@
 {
-  "version": "0.1.81",
+  "version": "0.1.82",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -524,6 +524,9 @@
         "delete": "抹消",
         "accuracyTrendTitle": "正確性の推移",
         "wpmTrendTitle": "速度の推移",
+        "trendBest": "最速",
+        "trendWorst": "最遅",
+        "trendAvg": "平均",
         "conditionFilterLabel": "条件による絞り込み",
         "conditionPunctuation": "+句読点",
         "conditionNumbers": "+数字",

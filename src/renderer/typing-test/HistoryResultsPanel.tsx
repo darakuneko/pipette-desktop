@@ -15,6 +15,7 @@ import { formatDuration, fmtMs } from '../components/analyze/analyze-format'
 import { HistoryTimelineCell } from './HistoryTimelineCell'
 import { EMPTY_RUN_ID_SET } from '../hooks/useRunLogAvailability'
 import { WpmTrendChart } from './WpmTrendChart'
+import { aggregateWpmByDay } from './wpm-daily-trend'
 
 type ModeFilter = 'all' | 'words' | 'time' | 'quote'
 type SortColumn = 'date' | 'wpm' | 'kpm' | 'accuracy' | 'avgHold' | 'mode' | 'duration'
@@ -30,7 +31,6 @@ type HistoryTab = 'monkeytype' | 'tatoeba' | 'aozora' | 'text'
 export type { SortColumn, SortDirection, HistoryTab }
 
 const MAX_TABLE_ROWS = 20
-const MAX_SPARKLINE_RESULTS = 50
 const MODE_FILTERS: ModeFilter[] = ['all', 'words', 'time', 'quote']
 
 const EXPORT_BTN_CLASS = 'inline-flex h-8 items-center rounded-md border border-edge px-2.5 text-xs text-content-secondary transition-colors hover:text-content'
@@ -159,10 +159,11 @@ export function HistoryResultsPanel({
   const showFilterRow = showModeFilter || (showTextFilter && fileImportTexts.length > 0)
 
   const stats = useMemo(() => computeStats(filtered), [filtered])
-  const sparklineResults = useMemo(
-    () => filtered.slice(0, MAX_SPARKLINE_RESULTS).reverse(),
-    [filtered],
-  )
+  // Computed once here (not inside WpmTrendChart) so the same per-day
+  // grouping drives both the "WPM Trend" heading's visibility gate and the
+  // chart's own data — a single pass over `filtered` instead of running
+  // the identical aggregation twice per render.
+  const dailyTrend = useMemo(() => aggregateWpmByDay(filtered), [filtered])
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -256,13 +257,18 @@ export function HistoryResultsPanel({
       )}
 
       {/* WPM trend — chart-above-stats, matching every other Analyze section's
-          order (and the Accuracy Trend section's own heading + chart shape). */}
-      {sparklineResults.length >= 2 && (
+          order (and the Accuracy Trend section's own heading + chart shape).
+          `dailyTrend` is derived from the same `filtered` set the table/stats
+          row below uses (not a separately-capped slice), grouped into one
+          best/worst/avg point per local calendar day — a busy multi-test day
+          collapses to a single point instead of stacking a vertical cluster
+          of raw results. */}
+      {dailyTrend.length >= 2 && (
         <div className="flex flex-col gap-2" data-testid="history-sparkline">
           <h3 className="text-xs font-semibold uppercase tracking-widest text-content-muted">
             {t('editor.typingTest.history.wpmTrendTitle')}
           </h3>
-          <WpmTrendChart results={sparklineResults} />
+          <WpmTrendChart data={dailyTrend} />
         </div>
       )}
 

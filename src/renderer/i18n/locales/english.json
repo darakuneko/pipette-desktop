@@ -1,5 +1,5 @@
 {
-  "version": "0.1.81",
+  "version": "0.1.82",
   "name": "English",
   "common": {
     "save": "Save",
@@ -524,6 +524,9 @@
         "delete": "Delete",
         "accuracyTrendTitle": "Accuracy Trend",
         "wpmTrendTitle": "WPM Trend",
+        "trendBest": "Best",
+        "trendWorst": "Worst",
+        "trendAvg": "Avg",
         "conditionFilterLabel": "Filter by condition",
         "conditionPunctuation": "+punct",
         "conditionNumbers": "+nums",

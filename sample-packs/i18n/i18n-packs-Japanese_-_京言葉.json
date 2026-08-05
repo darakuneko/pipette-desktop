@@ -1,5 +1,5 @@
 {
-  "version": "0.1.81",
+  "version": "0.1.82",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -524,6 +524,9 @@
         "delete": "消しますえ",
         "accuracyTrendTitle": "正確性の推移どすえ",
         "wpmTrendTitle": "WPMの推移どすえ",
+        "trendBest": "最高どすえ",
+        "trendWorst": "最低どすえ",
+        "trendAvg": "平均どすえ",
         "conditionFilterLabel": "条件で絞り込みますえ",
         "conditionPunctuation": "+句読点",
         "conditionNumbers": "+数字",
