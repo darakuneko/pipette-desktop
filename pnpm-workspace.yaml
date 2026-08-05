@@ -1,5 +1,32 @@
-allowedBuiltDependencies:
-  - better-sqlite3
-  - electron
-  - esbuild
-  - node-hid
+overrides:
+  "node-hid>node-addon-api": "^8.7.0"
+  # @electron/rebuild's own node-abi dependency doesn't yet map newer
+  # Electron majors' ABI numbers (e.g. 43.x) — force a version whose
+  # registry includes them so native module rebuilds don't fail with
+  # "Could not detect abi for version <electron version>".
+  node-abi: "^4.33.0"
+
+# pnpm 11's default minimumReleaseAge cooldown rejects lockfile entries
+# published too recently. These three were resolved during a deliberate
+# 2026-08 dependency upgrade pass (electron 41 -> 43, better-sqlite3 12 -> 13,
+# electron-builder 26.7 -> 26.15 which pulls a fresher pvutils transitively)
+# and were reviewed as part of that PR, not picked up incidentally — the
+# cooldown otherwise stays active for future updates.
+minimumReleaseAgeExclude:
+  - electron@43.3.0
+  - better-sqlite3@13.0.3
+  - pvutils@1.2.0
+
+# Replaces the old package.json pnpm.onlyBuiltDependencies / this file's
+# own allowedBuiltDependencies list (pnpm 11 superseded both with this
+# per-package map). Native modules and esbuild's binary install need their
+# scripts; core-js's postinstall is just a sponsorship console message
+# (no build); electron-winstaller's copies a bundled 7z binary for the
+# Windows NSIS/Squirrel packaging step electron-builder needs.
+allowBuilds:
+  '@paymoapp/active-window': true
+  better-sqlite3: true
+  core-js: false
+  electron-winstaller: true
+  esbuild: true
+  node-hid: true
