@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type { RefObject } from 'react'
 import { useTypingTest } from '../../typing-test/useTypingTest'
+import { isKanaInputActive } from '../../typing-test/kana-input'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { LineSnapshot } from '../../typing-test/TypingTestView'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from '../../typing-test/types'
@@ -139,6 +140,7 @@ export function useInputModes({
     testLabelRef,
     testRunIdRef,
     runLogLabelRef,
+    kanaInputRef,
     prepareAnalyticsEvent,
     emitAnalyticsEvent,
     flushAfterPendingEmits,
@@ -366,6 +368,16 @@ export function useInputModes({
   // reads this alongside each tag.
   testRunIdRef.current = (testLabelRef.current !== null || runLogLabelRef.current !== null) ? typingTest.state.runId : null
 
+  // Kana mode's own tag, read by use-typing-analytics-sink's
+  // prepareAnalyticsEvent — see RunLogRecordContext.kanaInput's own doc
+  // comment (run-log-recorder.ts) for what this actually gates
+  // (recognizing JIS-position keycodes as char-producing). Deliberately
+  // NOT gated on typingTestMode/status the way testLabelRef/runLogLabelRef
+  // are: kana-vs-romaji is a config CHOICE, independent of whether a run
+  // is currently active, and `producesChar` is meaningless to gate on run
+  // status anyway (it decides a static fact about a keycode).
+  kanaInputRef.current = isKanaInputActive(typingTest.config, typingTest.language, typingTest.state.romajiCapable)
+
   // Reset matrix press-edge tracking when keymap changes or recording toggles
   // so the next frame doesn't emit stale press events against an old state.
   // The drain's completion promise is captured so the record-off effect
@@ -410,7 +422,9 @@ export function useInputModes({
       if (e.ctrlKey && !e.altKey) return
       e.preventDefault()
       e.stopPropagation()
-      processKeyEvent(key, e.ctrlKey, e.altKey, e.metaKey)
+      // code/shiftKey are used only by kana mode's stroke resolution
+      // (kana-input.ts) — see processKeyEvent's own doc comment.
+      processKeyEvent(key, e.ctrlKey, e.altKey, e.metaKey, e.code, e.shiftKey)
     }
     document.addEventListener('keydown', handler, true)
     return () => document.removeEventListener('keydown', handler, true)

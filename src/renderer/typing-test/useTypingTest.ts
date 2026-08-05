@@ -18,7 +18,8 @@ import {
   tryFinishLastWord,
 } from './run-state'
 import { isRomajiInputActive, processRomajiKeyEvent, buildRomajiWordsTable, buildRomajiGuideProgress, romajiDetail } from './romaji-input'
-import { deriveExpectedChar, deriveMistakeKey } from './expected-char'
+import { isKanaInputActive, processKanaKeyEvent, buildKanaWordsTable, buildKanaGuideProgress } from './kana-input'
+import { deriveExpectedChar, deriveMistakeKey, deriveKanaCorrectOverride } from './expected-char'
 import { useTypingTestMatrix } from './use-typing-test-matrix'
 import { useTypingTestMetrics } from './use-typing-test-metrics'
 import { buildMemorySnapshot, buildRestoredState } from './typing-test-memory'
@@ -189,7 +190,7 @@ export function useTypingTest<TPreparedEvent = unknown>(
     windowFocusedRef.current = focused
   }, [])
 
-  const processKeyEvent = useCallback((key: string, ctrlKey: boolean, altKey: boolean, metaKey: boolean) => {
+  const processKeyEvent = useCallback((key: string, ctrlKey: boolean, altKey: boolean, metaKey: boolean, code?: string, shiftKey?: boolean) => {
     if (!windowFocusedRef.current) return
     // Ignore modifier combos, but allow AltGr (Ctrl+Alt) when it produces a printable character
     if (metaKey) return
@@ -218,6 +219,7 @@ export function useTypingTest<TPreparedEvent = unknown>(
             () => deriveExpectedChar(stateRef.current, configRef.current, languageRef.current),
             () => deriveMistakeKey(stateRef.current, configRef.current, languageRef.current),
             windowFocusedRef.current,
+            () => deriveKanaCorrectOverride(stateRef.current, configRef.current, languageRef.current, key, code, shiftKey === true),
           )
         }
         emitAnalyticsEventRef.current?.(prepared, { kind: 'char', key, ts: Date.now() })
@@ -245,6 +247,15 @@ export function useTypingTest<TPreparedEvent = unknown>(
       // text that actually produced `s.words`, even mid-async-load.
       if (isRomajiInputActive(configRef.current, languageRef.current, s.romajiCapable)) {
         return processRomajiKeyEvent(s, key, configRef.current, languageRef.current)
+      }
+
+      // Kana mode has its own key semantics too — see
+      // processKanaKeyEvent's doc comment in kana-input.ts. Judges from
+      // `code`/`shiftKey` (physical position), never from `key` beyond
+      // the Enter/Backspace/Space/multi-char-name checks it shares with
+      // processRomajiKeyEvent's own dispatch shape.
+      if (isKanaInputActive(configRef.current, languageRef.current, s.romajiCapable)) {
+        return processKanaKeyEvent(s, key, code, shiftKey === true, configRef.current, languageRef.current)
       }
 
       // Space and Enter both advance a word, but they are distinct: at a
@@ -369,6 +380,21 @@ export function useTypingTest<TPreparedEvent = unknown>(
     return applyRomajiCaseStyle({ ...progress, words: romajiWordsTable }, detail?.caseStyle)
   }, [config, language, state.words, state.currentWordIndex, state.romajiKeystrokes, state.romajiCapable, romajiWordsTable])
 
+  // Kana mode's own words table / guide progress — mirrors
+  // romajiWordsTable/romajiGuide's split exactly (see buildKanaWordsTable's
+  // own doc comment for why the full-run table is a separate, less
+  // frequently rebuilt memo). No case-styling step (kana has no
+  // RomajiCaseStyle-equivalent setting — かな has no upper/lower case).
+  const kanaWordsTable = useMemo(
+    () => buildKanaWordsTable(config, language, state),
+    [config, language, state.words, state.romajiCapable],
+  )
+  const kanaGuide = useMemo(() => {
+    const progress = buildKanaGuideProgress(config, language, state, kanaWordsTable)
+    if (!progress || !kanaWordsTable) return null
+    return { ...progress, words: kanaWordsTable }
+  }, [config, language, state.words, state.currentWordIndex, state.kanaCharIndex, state.romajiCapable, kanaWordsTable])
+
   return {
     state,
     wpm,
@@ -376,6 +402,7 @@ export function useTypingTest<TPreparedEvent = unknown>(
     accuracy,
     kspc,
     romajiGuide,
+    kanaGuide,
     elapsedSeconds,
     remainingSeconds,
     config,

@@ -921,4 +921,90 @@ describe('RunLogRecorder', () => {
       expect(recorder.finish(oneWordResult(), finishMeta())).toBeNull()
     })
   })
+
+  describe('kana mode: context.kanaInput / correctOverride', () => {
+    const KC_RO = deserialize('KC_RO')
+
+    it('BUG (no kanaInput): a JIS-position keystroke (KC_RO) never joins the pairing queue, orphaning its own char and desyncing the NEXT keystroke\'s verdict by one', () => {
+      const recorder = new RunLogRecorder()
+      // Real ordering: char arrives before its own matrix press (see the
+      // module doc comment). Press 1 (ろ, KC_RO) — its char has nowhere to
+      // be claimed from once the press registers, since producesChar(KC_RO)
+      // is false without kanaInput.
+      recorder.record(ctx(), charEvent('ろ', 995))
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'ろ')
+      recorder.record(ctx(), matrixPress({ ts: 1000, keycode: KC_RO }))
+      // Press 2 (a, KC_A) — its own char also arrives first as usual.
+      recorder.record(ctx(), charEvent('a', 1005))
+      register(recorder, 'run-1', 0, 1, 1010, 0, 'a')
+      recorder.record(ctx(), matrixPress({ row: 0, col: 1, ts: 1010, keycode: KC_A }))
+
+      const log = recorder.finish(
+        [{ word: 'ろa', typed: 'ろa', correct: true }],
+        finishMeta({ startedAtMs: 1000 }),
+      )
+      const [k1, k2] = log?.words[0].keystrokes ?? []
+      // Press 1 never entered char confirmation at all — no verdict.
+      expect(k1.correct).toBeUndefined()
+      // Press 2 wrongly claims press 1's orphaned 'ろ' char instead of its
+      // own 'a' — the exact permanent off-by-one this fix exists to stop.
+      expect(k2.correct).toBe(false)
+    })
+
+    it('FIXED (kanaInput: true): the same sequence pairs every keystroke to its own char, no desync', () => {
+      const recorder = new RunLogRecorder()
+      const kanaCtx = ctx({ kanaInput: true })
+      recorder.record(kanaCtx, charEvent('ろ', 995))
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'ろ')
+      recorder.record(kanaCtx, matrixPress({ ts: 1000, keycode: KC_RO }))
+      recorder.record(kanaCtx, charEvent('a', 1005))
+      register(recorder, 'run-1', 0, 1, 1010, 0, 'a')
+      recorder.record(kanaCtx, matrixPress({ row: 0, col: 1, ts: 1010, keycode: KC_A }))
+
+      const log = recorder.finish(
+        [{ word: 'ろa', typed: 'ろa', correct: true }],
+        finishMeta({ startedAtMs: 1000 }),
+      )
+      const [k1, k2] = log?.words[0].keystrokes ?? []
+      expect(k1.correct).toBe(true)
+      expect(k2.correct).toBe(true)
+    })
+
+    it('correctOverride (via noteCharContext) wins over the default key===expectedChar comparison in both directions', () => {
+      // Kana mode's own DOM `key` (whatever ASCII/symbol the OS layout
+      // reports for the physical position) is structurally unrelated to
+      // the かな glyph in expectedChar — see kanaStrokeCorrect's own doc
+      // comment (kana-input.ts). A physically-CORRECT stroke (code+shift
+      // matched) whose raw `key` happens to differ from the displayed
+      // かな glyph must still be recorded correct via the override...
+      const recorderA = new RunLogRecorder()
+      register(recorderA, 'run-1', 0, 0, 1000, 0, 'ぁ')
+      recorderA.noteCharContext(ctx(), 0, 'ぁ', undefined, true)
+      recorderA.record(ctx(), charEvent('#', 995)) // raw OS key, unrelated to ぁ
+      recorderA.record(ctx(), matrixPress({ ts: 1000 }))
+      const logA = recorderA.finish(oneWordResult('ぁ'), finishMeta())
+      expect(logA?.words[0].keystrokes[0].correct).toBe(true)
+
+      // ...and a physically-WRONG stroke whose raw `key` happens to
+      // accidentally string-match expectedChar must still be recorded
+      // incorrect via the override.
+      const recorderB = new RunLogRecorder()
+      register(recorderB, 'run-1', 0, 0, 1000, 0, 'a')
+      recorderB.noteCharContext(ctx(), 0, 'a', undefined, false)
+      recorderB.record(ctx(), charEvent('a', 995)) // accidental string match
+      recorderB.record(ctx(), matrixPress({ ts: 1000 }))
+      const logB = recorderB.finish(oneWordResult('a'), finishMeta())
+      expect(logB?.words[0].keystrokes[0].correct).toBe(false)
+    })
+
+    it('an absent correctOverride (romaji/verbatim runs) falls through to the default comparison unchanged', () => {
+      const recorder = new RunLogRecorder()
+      register(recorder, 'run-1', 0, 0, 1000, 0, 'a')
+      recorder.noteCharContext(ctx(), 0, 'a') // no getCorrect thunk at all
+      recorder.record(ctx(), charEvent('a', 995))
+      recorder.record(ctx(), matrixPress({ ts: 1000 }))
+      const log = recorder.finish(oneWordResult('a'), finishMeta())
+      expect(log?.words[0].keystrokes[0].correct).toBe(true)
+    })
+  })
 })

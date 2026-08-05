@@ -88,6 +88,25 @@ export interface TypingTestState {
    *  a live matcher instance, so state transitions stay pure — see
    *  `buildRomajiMatcher`. Reset to '' whenever the word advances. */
   romajiKeystrokes: string
+  /** Kana mode only (kana-input.ts): number of かな characters of the
+   *  CURRENT word fully confirmed so far. Unlike romaji mode's
+   *  `romajiKeystrokes` (a replayed keystroke log — see buildRomajiMatcher's
+   *  own doc comment for why romaji needs replay), kana resolution is fully
+   *  deterministic per physical keystroke, so this is just a plain index
+   *  mutated directly by the reducer rather than derived by replaying a
+   *  history — see kana-input.ts's own module doc comment. Reset to 0
+   *  whenever the word advances. */
+  kanaCharIndex: number
+  /** Kana mode only: true after the FIRST of a 濁音/半濁音 かな's two
+   *  strokes has landed, while the dakuten/handakuten mark stroke is still
+   *  pending. Reset to false on every completed かな character (including
+   *  a single-stroke one, where it never becomes true at all). */
+  kanaAwaitingMark: boolean
+  /** Kana mode only: true once any stroke within the CURRENT かな character
+   *  has been rejected, until that character completes — mirrors
+   *  `romajiSegmentErred` exactly (see that field's own doc comment), one
+   *  かな character standing in for one romaji "segment". */
+  kanaSegmentErred: boolean
   /** Whether the currently loaded text is romaji-capable (fileImport mode
    *  only — false for every other mode, which derive capability from
    *  `language`/`config.language` instead; see `isRomajiCapable`). Sourced
@@ -139,6 +158,9 @@ export function freshState({ words, quote, lineBreaks, lineIndents, romajiCapabl
     lineBreaks: new Set(lineBreaks),
     lineIndents,
     romajiKeystrokes: '',
+    kanaCharIndex: 0,
+    kanaAwaitingMark: false,
+    kanaSegmentErred: false,
     romajiCapable,
     mistakes: {},
     romajiSegmentErred: false,

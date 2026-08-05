@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { resolveCharFromMatrix, isShiftKeycode, extractMOLayer, extractLTLayer, extractLMLayer } from '../keycode-char-map'
+import { resolveCharFromMatrix, isShiftKeycode, extractMOLayer, extractLTLayer, extractLMLayer, producesChar } from '../keycode-char-map'
 import { deserialize } from '../../../shared/keycodes/keycodes'
 
 function buildKeymap(entries: Array<[number, number, string]>): Map<string, number> {
@@ -283,4 +283,30 @@ describe('extractLMLayer', () => {
   it('returns null for LT(1,KC_A)', () => {
     expect(extractLMLayer(deserialize('LT(1,KC_A)'))).toBeNull()
   })
+})
+
+describe('producesChar', () => {
+  it('true for an ordinary printable keycode', () => {
+    expect(producesChar(deserialize('KC_A'))).toBe(true)
+  })
+
+  it('false for a bare modifier', () => {
+    expect(producesChar(deserialize('KC_LSHIFT'))).toBe(false)
+  })
+
+  it('false for Enter even though it resolves to the space action', () => {
+    expect(producesChar(deserialize('KC_ENTER'))).toBe(false)
+  })
+
+  // JIS-position keycodes (KC_RO, KC_JYEN, ...) declare no `printable`
+  // legend in keycodes.ts, so producesChar correctly stays mode-agnostic
+  // and never recognizes them — see isKanaPhysicalPositionKeycode's own
+  // tests in kana-input.test.ts (and its own doc comment) for the
+  // kana-mode-aware OR that run-log-recorder.ts layers on top of this.
+  it.each(['KC_RO', 'KC_JYEN', 'KC_NONUS_HASH', 'KC_NONUS_BSLASH'])(
+    '%s: false — no printable legend, and this function has no notion of input method',
+    (qmkId) => {
+      expect(producesChar(deserialize(qmkId))).toBe(false)
+    },
+  )
 })

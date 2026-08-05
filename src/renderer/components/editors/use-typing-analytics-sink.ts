@@ -67,6 +67,12 @@ export interface PreparedAnalyticsContext {
    *  when this keystroke actually happened, not whatever focus is by the
    *  time a queued masked-key event finally ships. */
   windowFocused: boolean
+  /** Whether kana direct-input mode was active at press time — carried
+   *  through to `emitAnalyticsEvent`'s `RunLogRecordContext.kanaInput`
+   *  (see that field's own doc comment). Snapshotted here, same as
+   *  `windowFocused`, so a queued masked-key event's eventual emit uses
+   *  the mode as of when the keystroke actually happened. */
+  kanaInput: boolean
 }
 
 export interface UseTypingAnalyticsSinkOptions {
@@ -114,6 +120,11 @@ export interface UseTypingAnalyticsSinkReturn {
    *  `testLabelRef`; passed to `useRunLogRecorder` as its
    *  `typingTestLabelRef` INSTEAD of `testLabelRef`. */
   runLogLabelRef: RefObject<string | null>
+  /** Host-assigns-render-phase, same contract as `testLabelRef` — set from
+   *  `isKanaInputActive(typingTest.config, typingTest.language,
+   *  typingTest.state.romajiCapable)` in useInputModes.ts. Read by
+   *  `prepareAnalyticsEvent` to snapshot `PreparedAnalyticsContext.kanaInput`. */
+  kanaInputRef: RefObject<boolean>
   prepareAnalyticsEvent: (kind: 'matrix' | 'char', windowFocused: boolean) => PreparedAnalyticsContext | null
   emitAnalyticsEvent: (context: PreparedAnalyticsContext, payload: TypingAnalyticsEventPayload) => Promise<void>
   flushAfterPendingEmits: (drained: Promise<void>, uid: string) => void
@@ -153,6 +164,7 @@ export function useTypingAnalyticsSink({
   // (useInputModes.ts) computes it from a different condition
   // (running OR armed-waiting) than testLabelRef (running only).
   const runLogLabelRef = useRef<string | null>(null)
+  const kanaInputRef = useRef(false)
   const onRecKeystrokeRef = useRef(onRecKeystroke)
   onRecKeystrokeRef.current = onRecKeystroke
   // Per-run raw keystroke log recorder (see run-log-recorder.ts and
@@ -212,7 +224,7 @@ export function useTypingAnalyticsSink({
     // A test keystroke (either tag) carries the shared run id; REC input
     // carries none (so it lands as the null run).
     const runId = (label !== null || runLogLabel !== null) ? testRunIdRef.current : null
-    return { keyboard, typingTest: label, runLogTest: runLogLabel, runId, perMinuteAuthorized, windowFocused }
+    return { keyboard, typingTest: label, runLogTest: runLogLabel, runId, perMinuteAuthorized, windowFocused, kanaInput: kanaInputRef.current }
   }, [])
   // Ordering contract, not an optimization: chaining every emit behind the
   // previous one's IPC guarantees at most one typingAnalyticsEvent invoke
@@ -242,7 +254,10 @@ export function useTypingAnalyticsSink({
     // tag), NOT `typingTest` — a no-op for ordinary REC input
     // (context.runLogTest null), without recording consent, or without
     // window focus (see context.windowFocused's doc comment).
-    runLog.record({ typingTestLabel: context.runLogTest, runId: context.runId, windowFocused: context.windowFocused }, payload)
+    runLog.record({
+      typingTestLabel: context.runLogTest, runId: context.runId, windowFocused: context.windowFocused,
+      kanaInput: context.kanaInput,
+    }, payload)
     // GATE SPLIT: a run-log-only event (armed-waiting, `perMinuteAuthorized`
     // false) must never reach the per-minute analytics pipeline — this is
     // what restores #203's original pre-start cutoff for that pipeline
@@ -299,6 +314,7 @@ export function useTypingAnalyticsSink({
     testLabelRef,
     testRunIdRef,
     runLogLabelRef,
+    kanaInputRef,
     prepareAnalyticsEvent,
     emitAnalyticsEvent,
     flushAfterPendingEmits,

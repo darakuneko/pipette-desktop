@@ -50,7 +50,7 @@ export interface UseRunLogRecorderOptions {
 }
 
 export interface UseRunLogRecorderReturn {
-  record: (tag: Pick<RunLogRecordContext, 'typingTestLabel' | 'runId' | 'windowFocused'>, payload: TypingAnalyticsEventPayload) => void
+  record: (tag: Pick<RunLogRecordContext, 'typingTestLabel' | 'runId' | 'windowFocused' | 'kanaInput'>, payload: TypingAnalyticsEventPayload) => void
   noteRegistration: (
     runId: string, row: number, col: number, ts: number, wordIndex: number,
     getExpectedChar: () => string | undefined, getMistakeKey: () => string | undefined, windowFocused: boolean,
@@ -58,6 +58,11 @@ export interface UseRunLogRecorderReturn {
   noteCharContext: (
     runId: string, wordIndex: number,
     getExpectedChar: () => string | undefined, getMistakeKey: () => string | undefined, windowFocused: boolean,
+    /** Kana mode only — see RegistrationAnnotation.correctOverride's own
+     *  doc comment (run-log-recorder.ts). Optional/undefined for every
+     *  non-kana caller, same deferred-thunk treatment as
+     *  getExpectedChar/getMistakeKey. */
+    getCorrect?: () => boolean | undefined,
   ) => void
   /** Returns the just-finished log (whatever `RunLogRecorder.finish`
    *  produced), or null when there's no uid to save under or nothing was
@@ -119,16 +124,18 @@ export function useRunLogRecorder({
   const noteCharContext = useCallback((
     runId: string, wordIndex: number,
     getExpectedChar: () => string | undefined, getMistakeKey: () => string | undefined, windowFocused: boolean,
+    getCorrect?: () => boolean | undefined,
   ) => {
     const typingTestLabel = typingTestLabelRef.current
     // Skip the (possibly expensive, for romaji) derivation whenever no
     // test label is active, same as noteRegistration's `runId` gate
     // below — the recorder's own `noteCharContext` takes already-resolved
     // values rather than thunks (see its doc comment), so this wrapper is
-    // what has to defer calling `getExpectedChar`/`getMistakeKey`.
+    // what has to defer calling `getExpectedChar`/`getMistakeKey`/`getCorrect`.
     recorderRef.current.noteCharContext(
       { typingTestLabel, runId: typingTestLabel ? runId : null, consentAccepted: consentRef.current, windowFocused },
       wordIndex, typingTestLabel ? getExpectedChar() : undefined, typingTestLabel ? getMistakeKey() : undefined,
+      typingTestLabel ? getCorrect?.() : undefined,
     )
   }, [typingTestLabelRef])
 
