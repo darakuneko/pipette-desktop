@@ -71,8 +71,10 @@ export interface UseRunLogRecorderReturn {
    *  read-only snapshot of the average-key-hold raw pair for `runId`'s
    *  still-buffered keystrokes, callable BEFORE `finishAndSave` (see that
    *  method's own doc comment for why `useTypingTestResultSave` needs the
-   *  ordering). */
-  currentRunHoldStats: (runId: string) => { holdSumMs: number; holdSamples: number }
+   *  ordering). `startedAtMs` must be the exact same value the caller is
+   *  about to pass as `finishAndSave`'s own `meta.startedAtMs` — see
+   *  `currentRunHoldStats`'s own doc comment for why the two must agree. */
+  currentRunHoldStats: (runId: string, startedAtMs: number) => { holdSumMs: number; holdSamples: number }
   /** Discard `runId`'s buffer and block it from being re-buffered later
    *  under the same id — see the module doc comment's `discardRun`
    *  bullet and run-log-recorder.ts's `discardRun()`. */
@@ -146,8 +148,8 @@ export function useRunLogRecorder({
     recorderRef.current.discardRun(runId)
   }, [])
 
-  const currentRunHoldStats = useCallback((runId: string) => {
-    return recorderRef.current.currentRunHoldStats(runId)
+  const currentRunHoldStats = useCallback((runId: string, startedAtMs: number) => {
+    return recorderRef.current.currentRunHoldStats(runId, startedAtMs)
   }, [])
 
   return { record, noteRegistration, noteCharContext, finishAndSave, currentRunHoldStats, discardRun }

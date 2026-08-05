@@ -115,18 +115,18 @@ describe('useRunLogRecorder — currentRunHoldStats passthrough', () => {
       kind: 'matrix-release', row: 0, col: 0, layer: 0, keycode: KC_A, ts: 1080, durationMs: 80,
     })
 
-    expect(result.current.currentRunHoldStats('run-1')).toEqual({ holdSumMs: 80, holdSamples: 1 })
+    expect(result.current.currentRunHoldStats('run-1', 1000)).toEqual({ holdSumMs: 80, holdSamples: 1 })
 
     result.current.finishAndSave('kb-1', wordResults, {
       runId: 'run-1', startedAtMs: 1000, durationMs: 500, mode: 'words', language: 'english',
       charCorrelationUnavailable: false, romajiInput: false,
     })
     // finishAndSave cleared the buffer — the same runId now reads zeroed.
-    expect(result.current.currentRunHoldStats('run-1')).toEqual({ holdSumMs: 0, holdSamples: 0 })
+    expect(result.current.currentRunHoldStats('run-1', 1000)).toEqual({ holdSumMs: 0, holdSamples: 0 })
   })
 
   it('returns a zeroed pair for a runId with nothing buffered', () => {
     const { result } = renderRecorder(true)
-    expect(result.current.currentRunHoldStats('run-1')).toEqual({ holdSumMs: 0, holdSamples: 0 })
+    expect(result.current.currentRunHoldStats('run-1', 1000)).toEqual({ holdSumMs: 0, holdSamples: 0 })
   })
 })

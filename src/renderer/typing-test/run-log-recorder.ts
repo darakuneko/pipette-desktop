@@ -716,12 +716,29 @@ export class RunLogRecorder {
    *  was recorded" case (no buffer yet, consent off, view-only, or a
    *  fresh run already replaced the buffer), the same both-or-neither-
    *  friendly shape `buildTypingTestResult` already expects (zero
-   *  `holdSamples` drops the pair, see its own doc comment). */
-  currentRunHoldStats(runId: string): { holdSumMs: number; holdSamples: number } {
+   *  `holdSamples` drops the pair, see its own doc comment).
+   *
+   *  Two rules mirror `finish()`/`convertKeystrokes` exactly, so this
+   *  snapshot never disagrees with the log `finish()` goes on to save
+   *  (the History value and the timeline it links to must agree):
+   *   - `startedAtMs` (the same value the caller is about to pass as
+   *     `RunLogFinishMeta.startedAtMs`) drops any keystroke pressed
+   *     before the run's own start (e.g. a key held during armed-
+   *     waiting) — same `pressMs - startedAtMs >= 0` bound
+   *     `convertKeystrokes` applies.
+   *   - A buffer already past {@link MAX_RUN_LOG_EVENTS}/{@link
+   *     MAX_RUN_LOG_BYTES} (`exceeded`) returns a zeroed pair rather
+   *     than partial pre-cap data — `finish()` refuses to save a
+   *     silently-truncated log outright (see its own doc comment); a
+   *     hold mean derived from that same truncated prefix must be
+   *     refused the same way, not leak into the persisted result. */
+  currentRunHoldStats(runId: string, startedAtMs: number): { holdSumMs: number; holdSamples: number } {
     if (!this.buffer || this.buffer.runId !== runId) return { holdSumMs: 0, holdSamples: 0 }
+    if (this.buffer.exceeded) return { holdSumMs: 0, holdSamples: 0 }
     let holdSumMs = 0
     let holdSamples = 0
     for (const k of this.buffer.keystrokes) {
+      if (k.pressMs - startedAtMs < 0) continue
       const holdMs = qualifyingHoldMs(k.pressMs, k.releaseMs)
       if (holdMs !== undefined) {
         holdSumMs += holdMs

@@ -174,6 +174,31 @@ export function useTypingTestResultSave({
       const elapsed = typingTest.state.startTime && typingTest.state.endTime
         ? typingTest.state.endTime - typingTest.state.startTime
         : 0
+      // The same instant `finishAndSave`'s own `meta.startedAtMs` gets
+      // below — computed ONCE and reused for both, rather than calling
+      // `Date.now()` twice (which could disagree by a few ms and make the
+      // hold-stats snapshot's pre-start filter and `convertKeystrokes`'
+      // own filter draw the boundary in two slightly different places).
+      const startedAtMs = typingTest.state.startTime ?? Date.now()
+
+      // Drain any matrix event still sitting in the tap-hold ordering
+      // queue BEFORE snapshotting the recorder's hold stats below —
+      // `resetMatrixPressTracking`'s drain (see its own doc comment /
+      // MatrixAnalyticsQueue.drainAll) settles every queued item
+      // SYNCHRONOUSLY, and each settled item reaches `runLog.record`
+      // (appending it to the very buffer `currentRunHoldStats` is about
+      // to read) before emitAnalyticsEvent's own async IPC send — see
+      // use-typing-analytics-sink.ts's `emitAnalyticsEvent`, which calls
+      // `runLog.record` as its very first statement. Reading the hold
+      // stats before this drain could miss a keystroke that the SAVED
+      // log (via `finishAndSave` below, itself downstream of this same
+      // drained buffer) still includes — the History value and the
+      // timeline it links to must agree. Only drained when there's an
+      // active keyboard uid to flush for below, matching the original
+      // (pre-hold-stats) gating exactly.
+      const uid = keyboardRef.current?.uid
+      const drained = uid ? resetMatrixPressTracking() : undefined
+
       const result = buildTypingTestResult({
         correctChars: typingTest.state.correctChars,
         incorrectChars: typingTest.state.incorrectChars,
@@ -192,12 +217,13 @@ export function useTypingTestResultSave({
         confirmedChars: typingTest.state.confirmedChars,
         kspcUncomputable: typingTest.state.kspcUncomputable,
         wordResults: typingTest.state.wordResults,
-        // Snapshotted from the recorder's still-buffered keystrokes BEFORE
-        // `runLog.finishAndSave` runs below — the run log is only
-        // finalized (and its buffer cleared) AFTER this result is built,
-        // so this is the one chance to read it (see
-        // `RunLogRecorder.currentRunHoldStats`'s own doc comment).
-        holdStats: runLog.currentRunHoldStats(typingTest.state.runId),
+        // Snapshotted AFTER the drain above, still BEFORE
+        // `runLog.finishAndSave` runs below clears the buffer — the run
+        // log is only finalized afterward, so this is the one chance to
+        // read it (see `RunLogRecorder.currentRunHoldStats`'s own doc
+        // comment). `startedAtMs` matches `finishAndSave`'s own meta
+        // field exactly (see that const's own comment above).
+        holdStats: runLog.currentRunHoldStats(typingTest.state.runId, startedAtMs),
       })
       result.isPb = isPbForConfig(result, typingTestHistory ?? [])
       if (saveUnnamed) {
@@ -211,8 +237,7 @@ export function useTypingTestResultSave({
       // regardless of whether the result row is saved. See
       // flushAfterPendingEmits for why the drain and the chain tail must
       // both settle first.
-      const uid = keyboardRef.current?.uid
-      if (uid) flushAfterPendingEmits(resetMatrixPressTracking(), uid)
+      if (uid && drained) flushAfterPendingEmits(drained, uid)
       // The word the run ended on without submitting (e.g. a timed run
       // expiring mid-word) — undefined when the run ended cleanly on a
       // word boundary (currentWordIndex === words.length, every
@@ -240,7 +265,11 @@ export function useTypingTestResultSave({
       // truncated-and-saved: finish() refuses instead.
       const finishedLog = runLog.finishAndSave(uid, typingTest.state.wordResults, {
         runId: typingTest.state.runId,
-        startedAtMs: typingTest.state.startTime ?? Date.now(),
+        // Reuses the exact same value already passed to
+        // `currentRunHoldStats` above — see that const's own comment for
+        // why a second, separately-evaluated `Date.now()` here would risk
+        // disagreeing with it by a few ms.
+        startedAtMs,
         durationMs: elapsed,
         mode: typingTest.config.mode,
         language: typingTest.language,
