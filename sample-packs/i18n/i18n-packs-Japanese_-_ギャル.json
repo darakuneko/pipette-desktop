@@ -1,5 +1,5 @@
 {
-  "version": "0.1.77",
+  "version": "0.1.78",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -45,7 +45,7 @@
     "importBatchFailed_other": "{{count}}個、入れられんかったよ…",
     "importSummary_one": "{{count}}個入れたよん☆(成功{{success}}、失敗{{failure}})",
     "importSummary_other": "{{count}}個入れたよん☆(成功{{success}}、失敗{{failure}})",
-    "pullFromCloud": "クラウドから取ってくる☆",
+    "pullFromCloud": "Google Driveから取ってくる☆",
     "pulling": "取得中だよん..."
   },
   "app": {
@@ -829,10 +829,10 @@
     "retry": "もう一回！",
     "pullError": {
       "busy": "今ちょうど同期ちうだから、ちょい待ってもっかい押して☆",
-      "unauthenticated": "クラウドから取ってくるにはGoogle入ってから☆",
-      "noPasswordFile": "クラウドから取ってくるには同期パスワード決めてよｗ",
+      "unauthenticated": "Google Driveから取ってくるにはGoogle入ってから☆",
+      "noPasswordFile": "Google Driveから取ってくるには同期パスワード決めてよｗ",
       "decryptFailed": "保存したパスワード読めなかったんですけどｗ",
-      "keystoreUnavailable": "OSのキーチェーン使えなくて、ここじゃ取ってこれないっぽい…",
+      "keystoreUnavailable": "OSのキーチェーン使えなくて、ここじゃGoogle Driveから取ってこれないっぽい…",
       "remoteCheckFailed": "Google Driveにつながんない…また後でやってみて！",
       "partial": "一部のパック取得失敗…サゲ。。もっかい試して！"
     }
