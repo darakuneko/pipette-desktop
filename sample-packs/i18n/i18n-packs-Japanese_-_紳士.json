@@ -1,5 +1,5 @@
 {
-  "version": "0.1.77",
+  "version": "0.1.78",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -45,7 +45,7 @@
     "importBatchFailed_other": "誠に恐縮ながら、{{count}} 件のファイルをお受け取りできませんでした。",
     "importSummary_one": "{{count}} 件のファイルをお受け取りいたしました (成功 {{success}} 件、失敗 {{failure}} 件)。",
     "importSummary_other": "{{count}} 件のファイルをお受け取りいたしました (成功 {{success}} 件、失敗 {{failure}} 件)。",
-    "pullFromCloud": "クラウドより頂戴する",
+    "pullFromCloud": "Google Drive より頂戴する",
     "pulling": "頂戴中でございます..."
   },
   "app": {
@@ -829,10 +829,10 @@
     "retry": "再試行",
     "pullError": {
       "busy": "ただいま揃えている最中でございます。しばしお待ちを。",
-      "unauthenticated": "雲上より取り寄せるには、まず Google へ御挨拶を。",
-      "noPasswordFile": "雲上より取り寄せるには、合言葉を定めてくださいませ。",
+      "unauthenticated": "Google Drive より取り寄せるには、まず Google へ御挨拶を。",
+      "noPasswordFile": "Google Drive より取り寄せるには、合言葉を定めてくださいませ。",
       "decryptFailed": "保管された合言葉を読み取れませんでした。",
-      "keystoreUnavailable": "OSの錠前が使えぬため、ここでは雲上より取り寄せられませぬ。",
+      "keystoreUnavailable": "OSの錠前が使えぬため、ここでは Google Drive より取り寄せられませぬ。",
       "remoteCheckFailed": "あちらへ繋がりませんでした。しばし後にもう一度お試しを。",
       "partial": "一部の包みが取り寄せられませんでした。今一度お試しくださいませ。"
     }

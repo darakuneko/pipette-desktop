@@ -1,5 +1,5 @@
 {
-  "version": "0.1.77",
+  "version": "0.1.78",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -45,7 +45,7 @@
     "importBatchFailed_other": "{{count}} 件、インポートできまへんでしたわ",
     "importSummary_one": "{{count}} 件インポートしましたえ (成功{{success}}、失敗{{failure}})",
     "importSummary_other": "{{count}} 件インポートしましたえ (成功{{success}}、失敗{{failure}})",
-    "pullFromCloud": "クラウドから取ってきますえ",
+    "pullFromCloud": "Google Driveから取ってきますえ",
     "pulling": "取ってきてますえ..."
   },
   "app": {
@@ -829,10 +829,10 @@
     "retry": "もういっぺんやりますえ",
     "pullError": {
       "busy": "いま同期してますさかい、ちょっと待っておくれやす。",
-      "unauthenticated": "クラウドから取ってくるにはGoogleにつないでおくれやす。",
-      "noPasswordFile": "クラウドから取ってくるには同期パスワードを設定しておくれやす。",
+      "unauthenticated": "Google Driveから取ってくるにはGoogleにつないでおくれやす。",
+      "noPasswordFile": "Google Driveから取ってくるには同期パスワードを設定しておくれやす。",
       "decryptFailed": "保存してあるパスワードが読めまへんでしたえ。",
-      "keystoreUnavailable": "OSのキーチェーンが使えへんさかい、ここではクラウドから取ってこれまへんなぁ。",
+      "keystoreUnavailable": "OSのキーチェーンが使えへんさかい、ここではGoogle Driveから取ってこれまへんなぁ。",
       "remoteCheckFailed": "Google Driveにつながりまへんでした。また後でやっておくれやす。",
       "partial": "一部のパックの取得があきまへんでしたえ。もういっぺん試しておくれやす。"
     }

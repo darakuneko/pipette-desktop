@@ -1,5 +1,5 @@
 {
-  "version": "0.1.77",
+  "version": "0.1.78",
   "name": "English",
   "common": {
     "save": "Save",
@@ -45,7 +45,7 @@
     "importBatchFailed_other": "{{count}} files could not be imported:",
     "importSummary_one": "Imported {{count}} file (success {{success}}, failure {{failure}})",
     "importSummary_other": "Imported {{count}} files (success {{success}}, failure {{failure}})",
-    "pullFromCloud": "Pull from Cloud",
+    "pullFromCloud": "Pull from Google Drive",
     "pulling": "Pulling..."
   },
   "app": {
@@ -839,10 +839,10 @@
     "retry": "Retry",
     "pullError": {
       "busy": "A sync is already running. Try again in a moment.",
-      "unauthenticated": "Sign in to Google to pull from cloud.",
-      "noPasswordFile": "Set a sync password to pull from cloud.",
+      "unauthenticated": "Sign in to Google to pull from Google Drive.",
+      "noPasswordFile": "Set a sync password to pull from Google Drive.",
       "decryptFailed": "Couldn't read the saved sync password.",
-      "keystoreUnavailable": "OS keychain is not available; cloud pull is disabled here.",
+      "keystoreUnavailable": "OS keychain is not available; Google Drive pull is disabled here.",
       "remoteCheckFailed": "Couldn't reach Google Drive. Try again later.",
       "partial": "Some packs failed to pull. Try again."
     }

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.77",
+  "version": "0.1.78",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -45,7 +45,7 @@
     "importBatchFailed_other": "{{count}} 件のファイルをインポートできませんでした：",
     "importSummary_one": "{{count}} 件インポートしました (成功 {{success}}, 失敗 {{failure}})",
     "importSummary_other": "{{count}} 件インポートしました (成功 {{success}}, 失敗 {{failure}})",
-    "pullFromCloud": "クラウドから取得",
+    "pullFromCloud": "Google Drive から取得",
     "pulling": "取得中..."
   },
   "app": {
@@ -839,10 +839,10 @@
     "retry": "再試行",
     "pullError": {
       "busy": "同期を実行中です。少し待ってからもう一度お試しください。",
-      "unauthenticated": "クラウドから取得するには Google にサインインしてください。",
-      "noPasswordFile": "クラウドから取得するには同期パスワードを設定してください。",
+      "unauthenticated": "Google Drive から取得するには Google にサインインしてください。",
+      "noPasswordFile": "Google Drive から取得するには同期パスワードを設定してください。",
       "decryptFailed": "保存された同期パスワードを読み取れませんでした。",
-      "keystoreUnavailable": "OSキーチェーンが利用できないため、ここではクラウド取得を行えません。",
+      "keystoreUnavailable": "OSキーチェーンが利用できないため、ここでは Google Drive からの取得を行えません。",
       "remoteCheckFailed": "Google Drive に接続できませんでした。しばらくしてから再試行してください。",
       "partial": "一部のパックの取得に失敗しました。もう一度お試しください。"
     }
