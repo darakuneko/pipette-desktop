@@ -1,5 +1,5 @@
 {
-  "version": "0.1.78",
+  "version": "0.1.79",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -324,12 +324,21 @@
       },
       "punctuation": "句読点☆",
       "numbers": "数字っしょ",
+      "japaneseInputToggle": "日本語入力☆",
       "romaji": {
-        "toggle": "ローマ字入力☆",
         "imeHint": "ローマ字入力モードの時はOSのIMEオフにしといてね☆"
       },
+      "kana": {
+        "imeHint": "かな入力モードの時はOSのIMEオフにしといてね☆"
+      },
       "romajiSettings": {
-        "title": "ローマ字入力の詳細設定☆",
+        "title": "日本語入力の詳細設定☆",
+        "inputMethodLabel": "入力方式っしょ",
+        "inputMethod": {
+          "direct": "直接入力っしょ",
+          "romaji": "ローマ字っしょ",
+          "kana": "かなっしょ"
+        },
         "caseLabel": "表示する文字っしょ",
         "case": {
           "upper": "ROMAJI",
@@ -512,6 +521,7 @@
         "conditionPunctuation": "+句読点☆",
         "conditionNumbers": "+数字っしょ",
         "conditionRomaji": "+ローマ字入力☆",
+        "conditionKana": "+かな☆",
         "conditionTatoeba": "Tatoeba",
         "mistakeRankingTitle": "苦手な文字☆",
         "mistakeRankingEmpty": "まだミスってないっしょ",

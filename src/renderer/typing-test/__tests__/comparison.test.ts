@@ -4,7 +4,8 @@ import { describe, it, expect } from 'vitest'
 import { computeComparison, matchingResults, conditionKey, resultConditionKey } from '../comparison'
 import { buildTypingTestResult, configKey } from '../result-builder'
 import { isRomajiInputActive } from '../romaji-input'
-import type { TypingTestResult } from '../../../shared/types/pipette-settings'
+import { isKanaInputActive } from '../kana-input'
+import type { TypingTestResult, TypingTestComparisonBaselines } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../types'
 
 function makeResult(overrides: Partial<TypingTestResult> = {}): TypingTestResult {
@@ -183,11 +184,13 @@ describe('conditionKey / resultConditionKey agreement', () => {
     confirmedChars: 105,
     totalKeystrokes: 105,
     kspcUncomputable: false,
-    // Mirrors the real call site (useInputModes.ts): romajiActive is always
-    // the effective isRomajiInputActive state, not the raw config flag — a
-    // config with an explicit `romajiInput: true` on a non-capable language
-    // (as below) is still inactive, and conditionKey must agree.
+    // Mirrors the real call site (useInputModes.ts): romajiActive/kanaActive
+    // are always the effective isRomajiInputActive/isKanaInputActive state,
+    // not the raw config flags — a config with an explicit `romajiInput:
+    // true` on a non-capable language (as below) is still inactive, and
+    // conditionKey must agree.
     romajiActive: isRomajiInputActive(config, 'english', undefined),
+    kanaActive: isKanaInputActive(config, 'english', undefined),
   })
 
   it('agrees for every mode', () => {
@@ -225,11 +228,45 @@ describe('conditionKey / resultConditionKey agreement', () => {
       language,
       wpmHistory: [60],
       romajiActive,
+      kanaActive: false,
       mistakes: {},
       confirmedChars: 105,
       totalKeystrokes: 105,
       kspcUncomputable: false,
     })
+    expect(conditionKey(config, language)).toBe(resultConditionKey(result))
+    expect(conditionKey(config, language)).toBe(configKey(result))
+  })
+
+  it('groups a default-ON kana INPUT METHOD run with its own saved result (regression)', () => {
+    // Same regression as above, for kana-input.ts's own engine (not the
+    // kana word-language pack the test above exercises) — inputMethod:
+    // 'kana' selected via the unified 3-way selector.
+    const config: TypingTestConfig = {
+      mode: 'words', wordCount: 30, punctuation: false, numbers: false, romaji: { inputMethod: 'kana' },
+    }
+    const language = 'japanese_hiragana'
+    const kanaActive = isKanaInputActive(config, language, undefined)
+    expect(kanaActive).toBe(true)
+    const result = buildTypingTestResult({
+      correctChars: 100,
+      incorrectChars: 5,
+      wordCount: 20,
+      wpm: 60,
+      accuracy: 95,
+      elapsedMs: 20_000,
+      config,
+      language,
+      wpmHistory: [60],
+      romajiActive: false,
+      kanaActive,
+      mistakes: {},
+      confirmedChars: 105,
+      totalKeystrokes: 105,
+      kspcUncomputable: false,
+    })
+    expect(result.romajiInput).toBeUndefined()
+    expect(result.kanaInput).toBe(true)
     expect(conditionKey(config, language)).toBe(resultConditionKey(result))
     expect(conditionKey(config, language)).toBe(configKey(result))
   })
@@ -275,5 +312,35 @@ describe('computeComparison', () => {
   it('no matching history → null', () => {
     const out = computeComparison([], wordsConfig, 'english', { kind: 'previous' })
     expect(out).toBeNull()
+  })
+})
+
+describe('configKey backward compatibility (kanaInput must not reshape existing keys)', () => {
+  // Regression coverage for the codex finding: configKey used to append an
+  // UNCONDITIONAL 7th `|${kanaInput ?? false}` segment, which changed every
+  // non-kana result's key at once and silently orphaned every
+  // comparison-baseline preference saved before kana mode existed (they're
+  // stored keyed by this exact string — see
+  // TypingTestComparisonBaselines/use-typing-test-pane-comparison.ts). The
+  // fix appends a `|kana` segment ONLY when kanaInput is true.
+
+  it('a non-kana run\'s key is byte-identical to the pre-kana literal shape (hardcoded, not re-derived)', () => {
+    expect(configKey(makeResult())).toBe('words|30|english|false|false|false')
+  })
+
+  it('a kana run\'s key differs from the equivalent non-kana key', () => {
+    const nonKana = makeResult({ language: 'japanese_hiragana' })
+    const kana = { ...nonKana, kanaInput: true }
+    expect(configKey(kana)).not.toBe(configKey(nonKana))
+    expect(configKey(kana)).toBe('words|30|japanese_hiragana|false|false|false|kana')
+  })
+
+  it('a comparison baseline saved under the legacy (pre-kana) key still resolves for a live non-kana run', () => {
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+    const legacyKey = 'words|30|english|false|false|false'
+    const baselines: TypingTestComparisonBaselines = { [legacyKey]: { kind: 'previous' } }
+    const liveKey = conditionKey(config, 'english')
+    expect(liveKey).toBe(legacyKey)
+    expect(baselines[liveKey]).toEqual({ kind: 'previous' })
   })
 })

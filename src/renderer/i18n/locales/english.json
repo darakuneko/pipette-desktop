@@ -1,5 +1,5 @@
 {
-  "version": "0.1.78",
+  "version": "0.1.79",
   "name": "English",
   "common": {
     "save": "Save",
@@ -324,12 +324,21 @@
       },
       "punctuation": "punctuation",
       "numbers": "numbers",
+      "japaneseInputToggle": "Japanese Input",
       "romaji": {
-        "toggle": "Romaji",
         "imeHint": "Turn off your OS IME to type in romaji input mode"
       },
+      "kana": {
+        "imeHint": "Turn off your OS IME to type in kana input mode"
+      },
       "romajiSettings": {
-        "title": "Romaji Settings",
+        "title": "Japanese Input Settings",
+        "inputMethodLabel": "Input method",
+        "inputMethod": {
+          "direct": "Direct",
+          "romaji": "Romaji",
+          "kana": "Kana"
+        },
         "caseLabel": "Displayed case",
         "case": {
           "upper": "ROMAJI",
@@ -512,6 +521,7 @@
         "conditionPunctuation": "+punct",
         "conditionNumbers": "+nums",
         "conditionRomaji": "+romaji",
+        "conditionKana": "+kana",
         "conditionTatoeba": "Tatoeba",
         "mistakeRankingTitle": "Most missed",
         "mistakeRankingEmpty": "No mistakes recorded yet",

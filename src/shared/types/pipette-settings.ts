@@ -32,8 +32,19 @@ export interface TypingTestResult {
    *  kana packs only — see `ROMAJI_INPUT_LANGUAGES`). Kept alongside
    *  punctuation/numbers so PB grouping (`configKey`) and condition
    *  grouping (`resultConditionKey`) never mix romaji and verbatim runs of
-   *  the same kana pack. */
+   *  the same kana pack. Mutually exclusive with `kanaInput` by
+   *  construction (a run is never both — see `isRomajiInputActive`/
+   *  `isKanaInputActive`); both are undefined for a Direct (verbatim) run. */
   romajiInput?: boolean
+  /** JIS かな direct-input judging (kana-input.ts) was on for this run —
+   *  the sibling flag to `romajiInput` above, kept separate (not folded
+   *  into a single tri-state field) so existing `romajiInput` consumers
+   *  stay exactly as they were for legacy rows that predate this field.
+   *  Same PB/condition-grouping rationale as `romajiInput`: without this,
+   *  a kana run and a plain verbatim run of the same kana pack would
+   *  share one `configKey`/`resultConditionKey` and get averaged/PB'd
+   *  together despite being different tests. */
+  kanaInput?: boolean
   consistency?: number
   isPb?: boolean
   wpmHistory?: number[]

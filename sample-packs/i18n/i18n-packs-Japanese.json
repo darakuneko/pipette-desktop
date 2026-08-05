@@ -1,5 +1,5 @@
 {
-  "version": "0.1.78",
+  "version": "0.1.79",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -324,12 +324,21 @@
       },
       "punctuation": "句読点",
       "numbers": "数字",
+      "japaneseInputToggle": "日本語入力",
       "romaji": {
-        "toggle": "ローマ字入力",
         "imeHint": "ローマ字入力モードでは OS の IME をオフにしてください"
       },
+      "kana": {
+        "imeHint": "かな入力モードでは OS の IME をオフにしてください"
+      },
       "romajiSettings": {
-        "title": "ローマ字入力の詳細設定",
+        "title": "日本語入力の詳細設定",
+        "inputMethodLabel": "入力方式",
+        "inputMethod": {
+          "direct": "直接入力",
+          "romaji": "ローマ字",
+          "kana": "かな"
+        },
         "caseLabel": "表示する文字列",
         "case": {
           "upper": "ROMAJI",
@@ -512,6 +521,7 @@
         "conditionPunctuation": "+句読点",
         "conditionNumbers": "+数字",
         "conditionRomaji": "+ローマ字入力",
+        "conditionKana": "+かな",
         "conditionTatoeba": "Tatoeba",
         "mistakeRankingTitle": "苦手な文字",
         "mistakeRankingEmpty": "ミスの記録はまだありません",

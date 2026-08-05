@@ -47,6 +47,11 @@ describe('formatConditionLabel', () => {
       .toBe('30 editor.typingTest.mode.words (english) editor.typingTest.history.conditionPunctuation editor.typingTest.history.conditionNumbers editor.typingTest.history.conditionRomaji')
   })
 
+  it('appends the kana suffix for a kanaInput run, never alongside the romaji suffix', () => {
+    expect(formatConditionLabel(makeResult({ mode2: 30, language: 'japanese_hiragana', kanaInput: true }), identityT))
+      .toBe('30 editor.typingTest.mode.words (japanese_hiragana) editor.typingTest.history.conditionKana')
+  })
+
   it('formats quote with the length label and no toggle suffix', () => {
     expect(formatConditionLabel(makeResult({ mode: 'quote', mode2: 'medium', punctuation: undefined, numbers: undefined }), identityT))
       .toBe('editor.typingTest.quoteLength.medium editor.typingTest.mode.quote (english)')
