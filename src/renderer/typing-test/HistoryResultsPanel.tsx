@@ -35,6 +35,39 @@ const MODE_FILTERS: ModeFilter[] = ['all', 'words', 'time', 'quote']
 
 const EXPORT_BTN_CLASS = 'inline-flex h-8 items-center rounded-md border border-edge px-2.5 text-xs text-content-secondary transition-colors hover:text-content'
 
+// Column width allocation for the fixed-layout Results table (`table-fixed`
+// below) — every header cell carries one of these so the table always spans
+// the full available width (no leftover space, no horizontal scroll)
+// instead of auto-sizing to content. With table-fixed, ONLY the header
+// row's widths matter (subsequent rows never affect column sizing per the
+// CSS table-layout algorithm), so these constants are applied to the
+// `<th>` elements only — body `<td>`s inherit their column's width for
+// free. Name/Mode get the flexible majority share (their text is
+// variable-width and ellipsis-truncates via Tooltip when it doesn't fit,
+// see NameCell/ModeCell); every other column is sized to its known-narrow
+// content (numeric values, short buttons/icons). Sums to 100%.
+const COL_NAME = 'w-[16%]'
+const COL_DATE = 'w-[13%]'
+const COL_WPM = 'w-[6%]'
+const COL_KPM = 'w-[6%]'
+// "Accuracy" (8 chars) is the longest plain-word header in the row — at
+// 7% its own sortable button (block + truncate, so it strictly respects
+// the column's fixed width — see SortableHeader) ellipsized even at the
+// full MODAL_2XL width. Bumped to 9%, borrowed from Name/Mode's generous
+// share, rather than ship a header that truncates at the un-narrowed
+// width the wider modal was meant to buy back.
+const COL_ACCURACY = 'w-[9%]'
+const COL_AKH = 'w-[6%]'
+const COL_MODE = 'w-[14%]'
+const COL_DURATION = 'w-[6%]'
+const COL_PB = 'w-[5%]'
+const COL_TIMELINE = 'w-[7%]'
+// The confirm-delete state (see below) packs two buttons — labels come
+// from i18n (common.confirmDelete/cancel) and run considerably longer in
+// some packs than English's "Delete?"/"Cancel" — bumped from the plain
+// Delete button's minimum, borrowed from Name/Mode's generous share.
+const COL_DELETE = 'w-[12%]'
+
 /** Mode-column detail. FileImport (imported-text) runs show the snapshotted text
  *  name (falling back to the stable textId for legacy rows saved before the
  *  name was captured); words/time/quote show their `mode2` value verbatim.
@@ -257,15 +290,16 @@ export function HistoryResultsPanel({
       {/* Results table — fills remaining height, never collapses below min-h-48 */}
       <div className="min-h-48 flex-1 overflow-y-auto rounded-lg border border-edge">
         {sorted.length > 0 ? (
-          <table className="w-full text-left text-xs">
+          <table className="w-full table-fixed text-left text-xs">
             <thead className="sticky top-0 bg-surface-alt text-content-muted">
               <tr>
-                <th className="px-3 py-1.5">{t('editor.typingTest.history.name')}</th>
-                <SortableHeader column="date" label={t('editor.typingTest.history.date')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
-                <SortableHeader column="wpm" label={t('editor.typingTest.wpm')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
-                <SortableHeader column="kpm" label={t('editor.typingTest.kpm')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
-                <SortableHeader column="accuracy" label={t('editor.typingTest.accuracy')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
+                <th className={`${COL_NAME} px-3 py-1.5`}>{t('editor.typingTest.history.name')}</th>
+                <SortableHeader widthClassName={COL_DATE} column="date" label={t('editor.typingTest.history.date')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
+                <SortableHeader widthClassName={COL_WPM} column="wpm" label={t('editor.typingTest.wpm')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
+                <SortableHeader widthClassName={COL_KPM} column="kpm" label={t('editor.typingTest.kpm')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
+                <SortableHeader widthClassName={COL_ACCURACY} column="accuracy" label={t('editor.typingTest.accuracy')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
                 <SortableHeader
+                  widthClassName={COL_AKH}
                   column="avgHold"
                   label={t('editor.typingTest.history.avgHoldAbbr')}
                   tooltip={t('editor.typingTest.history.avgHold')}
@@ -273,11 +307,11 @@ export function HistoryResultsPanel({
                   sortDirection={sortDirection}
                   onSort={onSort}
                 />
-                <SortableHeader column="mode" label={isText ? t('editor.typingTest.history.tabText') : t('editor.typingTest.history.mode')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
-                <SortableHeader column="duration" label={t('editor.typingTest.time')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
-                <th className="px-3 py-1.5">{t('editor.typingTest.history.pb')}</th>
-                {uid && <th className="px-3 py-1.5" aria-label={t('editor.typingTest.history.timeline.modalTitle')} />}
-                {onDelete && <th className="px-3 py-1.5" aria-label={t('editor.typingTest.history.delete')} />}
+                <SortableHeader widthClassName={COL_MODE} column="mode" label={isText ? t('editor.typingTest.history.tabText') : t('editor.typingTest.history.mode')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
+                <SortableHeader widthClassName={COL_DURATION} column="duration" label={t('editor.typingTest.time')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
+                <th className={`${COL_PB} px-3 py-1.5`}>{t('editor.typingTest.history.pb')}</th>
+                {uid && <th className={`${COL_TIMELINE} px-3 py-1.5`} aria-label={t('editor.typingTest.history.timeline.modalTitle')} />}
+                {onDelete && <th className={`${COL_DELETE} px-3 py-1.5`} aria-label={t('editor.typingTest.history.delete')} />}
               </tr>
             </thead>
             <tbody>
@@ -303,7 +337,14 @@ export function HistoryResultsPanel({
                   {onDelete && (
                     <td className="px-3 py-1.5">
                       {confirmDeleteDate === r.date ? (
-                        <div className="flex items-center gap-0.5">
+                        // flex-wrap: the confirm/cancel labels come from
+                        // i18n (common.confirmDelete/cancel) and some
+                        // packs run considerably longer than English's
+                        // "Delete?"/"Cancel" — with the column's width now
+                        // hard-capped by table-fixed (COL_DELETE), letting
+                        // Cancel wrap to its own line degrades gracefully
+                        // instead of overflowing past the table's edge.
+                        <div className="flex flex-wrap items-center gap-0.5">
                           <button
                             type="button"
                             className={CONFIRM_DELETE_BTN}
@@ -375,6 +416,11 @@ interface SortableHeaderProps {
    *  abbreviation (e.g. avgHold's "AKH" header) — omitted for every other
    *  column, whose label is already the full text. */
   tooltip?: string
+  /** This column's share of the fixed-layout table's width (one of the
+   *  `COL_*` constants above) — required so every column call site stays
+   *  accounted for in the 100% allocation; there's no sane default width
+   *  for an arbitrary column. */
+  widthClassName: string
   sortColumn: SortColumn
   sortDirection: SortDirection
   onSort: (column: SortColumn) => void
@@ -384,6 +430,7 @@ function SortableHeader({
   column,
   label,
   tooltip,
+  widthClassName,
   sortColumn,
   sortDirection,
   onSort,
@@ -396,7 +443,15 @@ function SortableHeader({
   const button = (
     <button
       type="button"
-      className="cursor-pointer select-none bg-transparent text-inherit"
+      // `block w-full truncate` — a plain <button> is inline-block by
+      // default, which shrink-to-fits to its text content and ignores the
+      // fixed-layout `<th>`'s own (narrower, percentage-based) width. Left
+      // as inline-block, a long label like "Accuracy" visually overflows
+      // into the neighboring column once the table gets narrow enough
+      // (e.g. the modal near its 95vw viewport floor). Forcing block +
+      // w-full ties the button to its th's real width, and truncate
+      // ellipsizes gracefully instead of bleeding into the next column.
+      className="block w-full truncate text-left cursor-pointer select-none bg-transparent text-inherit"
       onClick={() => onSort(column)}
     >
       {label}{isActive ? sortIndicator(sortDirection) : ''}
@@ -404,7 +459,7 @@ function SortableHeader({
   )
 
   return (
-    <th className="px-3 py-1.5" aria-sort={ariaSort}>
+    <th className={`${widthClassName} px-3 py-1.5`} aria-sort={ariaSort}>
       {/* Tooltip must wrap the button itself (not an inner span) — its
        *  wrapper renders a div, and a div can't legally nest inside a
        *  button; wrapping the span also left aria-describedby on a
@@ -424,7 +479,11 @@ interface NameCellProps {
 
 /** Result label cell. A button (edit icon + current name / "Unnamed") that
  *  opens the naming modal with quick-insert chips. Read-only when no rename
- *  handler is provided. */
+ *  handler is provided. No max-w cap on the `<td>` here — the table is
+ *  `table-fixed` (see COL_NAME above), so this column's width is already
+ *  fixed by the header row; the inner `block truncate` span gets its
+ *  definite width for free from that fixed cell, and only ellipsizes once
+ *  the name actually exceeds its allocated share. */
 function NameCell({ result, onRename, deviceName }: NameCellProps) {
   const { t } = useTranslation()
   const [modalOpen, setModalOpen] = useState(false)
@@ -434,7 +493,7 @@ function NameCell({ result, onRename, deviceName }: NameCellProps) {
 
   if (!onRename) {
     return (
-      <td className="max-w-[14rem] px-3 py-1.5 text-content-muted">
+      <td className="px-3 py-1.5 text-content-muted">
         <Tooltip content={display} wrapperClassName="block max-w-full">
           <span className="block truncate">{display}</span>
         </Tooltip>
@@ -443,7 +502,7 @@ function NameCell({ result, onRename, deviceName }: NameCellProps) {
   }
 
   return (
-    <td className="max-w-[14rem] px-3 py-1.5">
+    <td className="px-3 py-1.5">
       <Tooltip content={display} wrapperClassName="block max-w-full">
         <button
           type="button"
@@ -475,7 +534,9 @@ interface ModeCellProps {
 /** Mode/Text column cell. Its text is variable-width (a Tatoeba row's
  *  composite label can run to "Tatoeba 10 Lines (japanese_hiragana)") — same
  *  truncate + hover-tooltip treatment as the Name column, so a long value
- *  ellipsizes instead of stretching or wrapping the table. */
+ *  ellipsizes instead of stretching or wrapping the table. Same no-max-w
+ *  reasoning as NameCell above: COL_MODE on the header fixes this column's
+ *  width, so the `<td>` needs no cap of its own. */
 function ModeCell({ r, isText }: ModeCellProps) {
   const { t } = useTranslation()
   const text = isText
@@ -488,7 +549,7 @@ function ModeCell({ r, isText }: ModeCellProps) {
       : `${t(`editor.typingTest.mode.${r.mode ?? 'words'}`)}${modeDetail(r) ? ` ${modeDetail(r)}` : ''}`)
 
   return (
-    <td className="max-w-[16rem] px-3 py-1.5 text-content-muted">
+    <td className="px-3 py-1.5 text-content-muted">
       <Tooltip content={text} wrapperClassName="block max-w-full">
         <span className="block truncate">{text}</span>
       </Tooltip>

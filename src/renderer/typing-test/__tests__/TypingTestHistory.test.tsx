@@ -255,7 +255,11 @@ describe('TypingTestHistory', () => {
   // Mode column carries variable-width strings (e.g. Tatoeba's composite
   // "Tatoeba 10 Lines (japanese_hiragana)" label) that must ellipsis-
   // truncate instead of wrapping/stretching the table, with the full text
-  // reachable via hover tooltip — same treatment as the Name column.
+  // reachable via hover tooltip — same treatment as the Name column. The
+  // table is `table-fixed` with a proportional width on each header cell
+  // (not a hard max-w cap on the td — see COL_MODE in HistoryResultsPanel)
+  // so the column, and thus the truncation point, scales with the modal's
+  // actual width instead of stopping at a fixed rem value.
   it('truncates a long Mode cell and exposes the full text via tooltip', () => {
     const results = [
       makeResult({
@@ -270,9 +274,18 @@ describe('TypingTestHistory', () => {
 
     const fullText = 'Tatoeba 10 Lines (japanese_hiragana)'
     const history = screen.getByTestId('typing-test-history')
+    const table = history.querySelector('table')
+    expect(table).toBeTruthy()
+    expect(table!.className).toContain('table-fixed')
+
+    // The Mode column header carries the column's width share (the
+    // fixed-layout algorithm reads column widths from the header row only).
+    const modeHeader = screen.getByRole('button', { name: /Mode/i }).closest('th')
+    expect(modeHeader).toBeTruthy()
+    expect(modeHeader!.className).toMatch(/w-\[\d+%\]/)
+
     const modeCell = Array.from(history.querySelectorAll('tbody td')).find((td) => td.textContent === fullText)
     expect(modeCell).toBeTruthy()
-    expect(modeCell!.className).toContain('max-w-')
     const truncatedSpan = modeCell!.querySelector('span')
     expect(truncatedSpan).toBeTruthy()
     expect(truncatedSpan!.className).toContain('truncate')
