@@ -2,8 +2,8 @@
 // Debounced auto-sync upload (notifyChange → flushPendingChanges) and
 // the before-quit handler that flushes pending changes and runs
 // registered finalizers before the app is allowed to exit. Split out
-// of sync-service.ts (Task-split-sync-service) — see
-// .claude/rules/file-splitting.md.
+// of sync-service.ts to keep it under the project's 800-line
+// Service/Util size ceiling.
 
 import { app } from 'electron'
 import { listFiles } from './google-drive'

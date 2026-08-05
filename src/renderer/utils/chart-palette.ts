@@ -9,7 +9,8 @@
 // lightness so the ramp reads against both light and dark surfaces.
 // The saturation/lightness constants come from the project palette
 // spec — if you tweak them, keep `fill-luminance.ts`'s HSL thresholds
-// in sync (see `.claude/rules/coding-ui.md`).
+// in sync (it inverts label text below l=60% in light mode and above
+// l=42% in dark mode).
 
 import type { EffectiveTheme } from '../hooks/useEffectiveTheme'
 

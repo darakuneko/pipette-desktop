@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Row-opened detail view for a single run's per-word keystroke timeline
-// (see .claude/tasks/backlog/Task-tm-phase5-word-timeline-ui.md). Nests
-// inside the History modal (opened from `HistoryTimelineCell`), so its
+// Row-opened detail view for a single run's per-word keystroke timeline.
+// Nests inside the History modal (opened from `HistoryTimelineCell`), so its
 // own Escape handling must consume the keydown before it can bubble up
 // to the History modal's own bubble-phase `useEscapeClose` — this
 // mirrors `JsonEditorModal`'s capture-phase + `stopPropagation` handler,
@@ -13,9 +12,8 @@
 // This component owns only the modal shell (backdrop, title, close
 // button) and the log fetch/loading/error states — the actual timeline
 // content (stat block, legend, zoom, rows) lives in
-// `KeystrokeTimelinePanel`, extracted out so a later PR can render the
-// identical content inline on the completion screen (see
-// .claude/plans/Plan-completion-timeline-view.md).
+// `KeystrokeTimelinePanel`, extracted out so the identical content can
+// also render inline on the completion screen.
 
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'

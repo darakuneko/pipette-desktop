@@ -5,9 +5,11 @@
 // plus a single dynamic branch for heatmap HSL values: unknown fills are
 // returned as `false` so callers keep the default label color. This
 // matches the rule that new key colours must register themselves here
-// explicitly rather than relying on a generic luminance formula.
-//
-// See `.claude/rules/coding-ui.md` (Key fill palette) for the rule.
+// explicitly rather than relying on a generic luminance formula: every
+// new fill color must get an explicit `{ light, dark }` legibility
+// decision added to `FILL_INVERT_TABLE` below, decided per theme rather
+// than derived, so an untested fill silently keeps the default label
+// instead of guessing.
 
 import type { EffectiveTheme } from '../../hooks/useEffectiveTheme'
 

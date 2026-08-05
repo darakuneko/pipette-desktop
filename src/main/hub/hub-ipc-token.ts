@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Hub IPC: JWT cache + auth-retry wrapper shared across every
-// hub-ipc-*.ts sibling. Split out of hub-ipc.ts (Task-split-hub-ipc) —
-// see .claude/rules/file-splitting.md.
+// hub-ipc-*.ts sibling. Split out of hub-ipc.ts to keep it under the
+// project's 800-line Service/Util size ceiling.
 //
 // Module state lives on the exported `hubAuthState` object (mirrors
 // sync-runtime-state.ts's `syncRuntime` convention) since a plain

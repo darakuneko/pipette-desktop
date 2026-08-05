@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Hub IPC: analytics post upload/update/preview handlers. Split out of
-// hub-ipc.ts (Task-split-hub-ipc) — see .claude/rules/file-splitting.md.
+// hub-ipc.ts to keep it under the project's 800-line Service/Util size
+// ceiling.
 //
 // Pattern mirrors the favorite-post upload: validate inputs → assemble
 // payload → withTokenRetry → save the postId on success. Distinct

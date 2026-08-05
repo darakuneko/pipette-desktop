@@ -80,7 +80,8 @@ export function useLayoutPicker({
   const [probeStatus, setProbeStatus] = useState<'idle' | 'probing' | 'error'>('idle')
   const [deviceBrowsing, setDeviceBrowsing] = useState(true)
   const [pickerScale, setPickerScale] = useState<number | undefined>(undefined)
-  // Canonicalized shared bubble (see .claude/DESIGN.md "Tooltip" section)
+  // Canonicalized shared bubble (same BUBBLE_BASE skin, computeBubblePosition
+  // viewport clamping, and 300ms open delay as the canonical `Tooltip`)
   // rather than a per-key `Tooltip` wrap — the picker keyboard renders
   // every key of the layout at once purely for hover, so one shared
   // bubble covers it the same way TabbedKeycodes/PopoverTabKey do.

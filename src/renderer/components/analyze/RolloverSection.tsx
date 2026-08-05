@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Analyze > Interval > Observed rollover rate — Pipette-only metric
 // derived from bigram physical-overlap sampling (see
-// .claude/plans/Plan-typing-metrics-chi2018.md Phase 2 and
 // bigram-aggregate.ts's `observedRolloverRatio` for the "observed, not
 // true" framing this section must never drop). Mounted below
 // IntervalChart, only in timeSeries mode — the same gate AnalyzePane

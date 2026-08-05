@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Analyze-panel-triggered typing-analytics sync: pulls + pushes one
 // keyboard's analytics bundles on its own per-uid mutex, independent
-// from the global sync lock. Split out of sync-service.ts
-// (Task-split-sync-service) — see .claude/rules/file-splitting.md.
+// from the global sync lock. Split out of sync-service.ts to keep it
+// under the project's 800-line Service/Util size ceiling.
 
 import { listFiles, driveFilenamePrefix, syncUnitFromFileName } from './google-drive'
 import { pLimit } from '../../shared/concurrency'

@@ -7,8 +7,7 @@
 // per-keyboard and remote reset affordances live in KeyboardSavesContent
 // ("Delete All") and CloudDataContent respectively, and Local >
 // Application's own reset is the single-target AppSettingsReset below.
-// That dead half is pruned here; see
-// .claude/tasks/backlog/Task-sync-remote-reset-and-discovery-gaps.md.
+// That dead half is pruned here.
 
 import { useState, useCallback } from 'react'
 

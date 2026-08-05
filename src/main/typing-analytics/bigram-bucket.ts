@@ -2,8 +2,7 @@
 // Bigram inter-key interval (IKI) bucketing. Raw IKIs are accumulated by
 // MinuteBuffer and bucketized here at flush time before being persisted
 // as a fixed-size histogram. The boundary set is log-scale so the slow
-// tail (300ms+) is preserved without inflating storage. See
-// .claude/plans/Plan-analyze-bigram.md for the bucket rationale.
+// tail (300ms+) is preserved without inflating storage.
 
 import { BIGRAM_HIST_BUCKETS } from './jsonl/jsonl-row'
 // The duration grid itself lives in shared/duration-buckets.ts (the

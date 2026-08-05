@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Hub IPC: input validators + small pure helpers shared across every
-// hub-ipc-*.ts sibling. Split out of hub-ipc.ts (Task-split-hub-ipc) —
-// see .claude/rules/file-splitting.md.
+// hub-ipc-*.ts sibling. Split out of hub-ipc.ts to keep it under the
+// project's 800-line Service/Util size ceiling.
 
 import type { HubUploadPostParams } from '../../shared/types/hub'
 import type { HubUploadFiles } from './hub-client'

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Pure log → display model for the per-word keystroke timeline (see
-// .claude/tasks/backlog/Task-tm-phase5-word-timeline-ui.md). Every
+// Pure log → display model for the per-word keystroke timeline. Every
 // coordinate this module produces is in "display-ms" space: a single
 // shared, zoom-independent horizontal axis that the view scales by a
 // pixel-per-ms factor without ever recomputing bar positions (see

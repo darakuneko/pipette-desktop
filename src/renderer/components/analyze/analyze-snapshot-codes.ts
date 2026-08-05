@@ -2,8 +2,10 @@
 // Resolves Speed-ranking / bigram-pair labels straight from a
 // snapshot's OWN recorded qmk strings, instead of round-tripping a
 // numeric code back through the CURRENT session's `RAWCODES_MAP`
-// (option B from .claude/tasks/backlog/Task-speed-ranking-snapshot-labels.md,
-// the keyboard-shape follow-up to #359's protocol-version fix).
+// (the keyboard-shape follow-up to #359's protocol-version fix, chosen
+// over patching the round-trip because the snapshot already carries
+// everything needed to resolve its own labels without depending on the
+// live session's keyboard context).
 //
 // The round-trip breaks whenever the snapshot's keyboard had more
 // layers/macros/tap-dances than the currently connected session:

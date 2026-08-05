@@ -7,7 +7,10 @@
 // BSD-3-Clause; redistribution with attribution permitted). When mozc
 // updates its table, re-copy the file and re-run this suite — any drift
 // between the fixture and KANA_TABLE / sokuon / ん handling fails here.
-// Policy and scope details: .claude/docs/ROMAJI-ENGINE.md.
+// Policy: mozc's own table is the single source of truth for accepted
+// spellings — a spelling that's orthographically correct romanization
+// but that mozc's IME can't actually type (e.g. ぢ's "ji", which mozc
+// resolves to じ) is excluded even though it's valid on paper.
 //
 // TSV format: `input \t output \t pending?`. Three row classes matter:
 // - plain kana rows (2 columns, kana output) → KANA_TABLE entries

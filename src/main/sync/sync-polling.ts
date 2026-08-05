@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // 3-minute background polling for remote changes. Split out of
-// sync-service.ts (Task-split-sync-service) — see
-// .claude/rules/file-splitting.md.
+// sync-service.ts to keep it under the project's 800-line Service/Util
+// size ceiling.
 
 import { listFiles, syncUnitFromFileName } from './google-drive'
 import { pLimit } from '../../shared/concurrency'

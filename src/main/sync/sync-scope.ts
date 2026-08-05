@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Sync-unit scope matching: which sync units a given SyncScope covers,
 // and which remote units are worth downloading given what's stored
-// locally. Split out of sync-service.ts (Task-split-sync-service) — see
-// .claude/rules/file-splitting.md.
+// locally. Split out of sync-service.ts to keep it under the project's
+// 800-line Service/Util size ceiling.
 
 import { app } from 'electron'
 import { join } from 'node:path'
@@ -24,8 +24,6 @@ export function matchesScope(syncUnit: string | null, scope: SyncScope): boolean
   // checks don't otherwise care what scope was asked for. Returning here
   // also means 'packs' never falls through to the i18n/themes rejection
   // further down, and never matches anything else (favorites/keyboards).
-  // See .claude/docs/DATA-INVENTORY.md §3.7's packs-scope definition for
-  // the full discovery-route writeup this ordering exists to support.
   if (scope === 'packs') {
     return syncUnit.startsWith(I18N_SYNC_UNIT_PREFIX) || syncUnit.startsWith(THEME_SYNC_UNIT_PREFIX)
   }
@@ -37,9 +35,11 @@ export function matchesScope(syncUnit: string | null, scope: SyncScope): boolean
   // by the 3-minute poll alone despite it using 'all': polling only merges
   // a CHANGED modifiedTime since its own last snapshot, so a pack already
   // on Drive before this machine's first poll is invisible to it forever.
-  // See matchesScope's doc in .claude/docs/DATA-INVENTORY.md §3.7 (and
-  // .claude/rules/settings-persistence.md) for the full writeup and the
-  // 'packs'-scope discovery routes that actually close this gap.
+  // What actually closes the gap is the 'packs' scope above: an
+  // automatic pull on first device connection (AppConfig.packsPulledOnce)
+  // and the Language/Theme Packs modal's "Pull from Cloud" button both
+  // use it to fetch i18n/theme packs directly, without depending on
+  // poll-detected diffs.
   if (syncUnit.startsWith(I18N_SYNC_UNIT_PREFIX) || syncUnit.startsWith(THEME_SYNC_UNIT_PREFIX)) return false
   if (scope === 'favorites') return syncUnit.startsWith('favorites/')
   if (typeof scope === 'object' && 'favorites' in scope) {
@@ -73,7 +73,7 @@ export function shouldDownloadSyncUnit(
   // separately when the Analyze panel opens — skip it here so the
   // connect progress bar stays short. Run logs are excluded the same
   // way (no per-uid keystroke count to show on the connect progress
-  // bar either) — see .claude/rules/settings-persistence.md Row E.
+  // bar either).
   if (typeof scope === 'object' && 'favorites' in scope && (isAnalyticsSyncUnit(syncUnit) || isRunLogSyncUnit(syncUnit))) {
     return false
   }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Full-pass sync execution: the manual/initial download and upload
 // sync passes driven by executeSync (IPC-facing entry point). Split
-// out of sync-service.ts (Task-split-sync-service) — see
-// .claude/rules/file-splitting.md.
+// out of sync-service.ts to keep it under the project's 800-line
+// Service/Util size ceiling.
 
 import { app } from 'electron'
 import { listFiles, syncUnitFromFileName, type DriveFile } from './google-drive'

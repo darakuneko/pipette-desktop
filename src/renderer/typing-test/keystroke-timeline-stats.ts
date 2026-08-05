@@ -3,8 +3,7 @@
 // same ten figures (WPM, KPM, Accuracy, KSPC, Time, Words, Overlap,
 // Substitution, Omission, Insertion) in both the History timeline modal
 // and the inline completion screen, so a run reads identically in either
-// place. See .claude/plans/Plan-completion-timeline-view.md PR-A spec
-// point 2.
+// place.
 //
 // Fallback scope is deliberately narrow: only WPM, Accuracy, Time, and
 // Overlap have a value when `result` is absent —

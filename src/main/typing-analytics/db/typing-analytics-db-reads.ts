@@ -5,8 +5,7 @@
 // n-gram range queries, sessions, peak records, remote device info) plus
 // the sync-facing scope/live-row listers. Extends TypingAnalyticsDbWrites
 // so it inherits the write methods without duplicating `this.stmts`.
-// Split out of what used to be one 3,255-line file/class — see
-// .claude/tasks/done/Task-split-typing-analytics-db.md.
+// Split out of what used to be one 3,255-line file/class.
 
 import type {
   TypingKeyboardSummary,

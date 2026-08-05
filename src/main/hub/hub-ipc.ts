@@ -17,9 +17,9 @@
 // New Hub IPC logic belongs in the sibling module whose responsibility
 // it extends — not here. External consumers (sync-ipc.ts, main/index.ts,
 // and every test file's mock of this facade path) must keep importing
-// this facade path, never a submodule directly. See
-// .claude/tasks/backlog/Task-split-hub-ipc.md and
-// .claude/rules/file-splitting.md for the split rationale.
+// this facade path, never a submodule directly — this facade/sibling
+// split keeps every file under the project's 800-line Service/Util size
+// ceiling while preserving one stable import path for consumers.
 
 import { registerHubPostHandlers } from './hub-ipc-posts'
 import { registerHubFavoriteHandlers } from './hub-ipc-favorite'

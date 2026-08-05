@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Hub IPC: private (unlisted) upload handlers. Split out of hub-ipc.ts
-// (Task-split-hub-ipc) — see .claude/rules/file-splitting.md.
+// to keep it under the project's 800-line Service/Util size ceiling.
 //
 // Each uploads to `/api/private/*` and returns the relative share URL
 // + expiry. Persisting the link onto the local entry is the renderer's

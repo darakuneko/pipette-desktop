@@ -95,7 +95,7 @@ const LM_CATEGORY: KeycodeCategory = {
   getKeycodes: getAvailableLMMods,
 }
 
-// Shared bubble contract (see .claude/DESIGN.md "Tooltip" section): 8px
+// Shared bubble contract: 8px
 // offset, `computeBubblePosition` viewport clamping, `BUBBLE_BASE` skin,
 // 300ms open delay via `useSharedHoverBubble`. A canonicalized shared
 // bubble rather than per-key `Tooltip` wraps — every category's key grid

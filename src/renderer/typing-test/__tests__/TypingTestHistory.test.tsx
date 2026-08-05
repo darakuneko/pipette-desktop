@@ -449,8 +449,7 @@ describe('TypingTestHistory', () => {
 
   // Regression guard: pins sparkline-then-stats order, matching the Analyze
   // chart-above-stats convention (RolloverSection's order-lock test is the
-  // original of this pattern; see
-  // .claude/tasks/backlog/Task-analyze-section-layout-consistency.md).
+  // original of this pattern).
   it('renders the sparkline above the stats row', () => {
     const results = [
       makeResult({ wpm: 80 }),

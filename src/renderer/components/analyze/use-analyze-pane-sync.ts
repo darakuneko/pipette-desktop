@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Analytics-only sync trigger for the Analyze pane's selected keyboard.
-// Runs on mount / keyboard switch (see .claude/rules/settings-persistence.md)
-// and exposes the uid-scoped sync progress subscription so the pane's
-// ConnectingOverlay can show `syncing` accurately. Split out of
-// AnalyzePane.tsx (Task-split-analyze-pane).
+// Runs on mount / keyboard switch — typing-analytics sync units are
+// excluded from the 3-minute background poll and the keyboard-connect
+// initial sync (so the connect progress bar stays short), so this is
+// the only place that actually pulls/pushes them. Also exposes the
+// uid-scoped sync progress subscription so the pane's ConnectingOverlay
+// can show `syncing` accurately. Split out of AnalyzePane.tsx.
 
 import { useEffect, useState } from 'react'
 import type { SyncProgress } from '../../../shared/types/sync'
@@ -46,9 +48,10 @@ export function useAnalyzePaneSync(selectedUid: string | null): UseAnalyzePaneSy
     })
   }, [selectedUid])
 
-  // Analytics-only sync runs on Analyze mount (see
-  // .claude/rules/settings-persistence.md). The per-uid rate-limit map
-  // lives at module scope so split-view panes that share a uid don't
+  // Analytics-only sync runs on Analyze mount, the dedicated trigger
+  // that pulls typing-analytics data the 3-minute poll and connect-time
+  // sync both skip. The per-uid rate-limit map lives at module scope so
+  // split-view panes that share a uid don't
   // both fire the IPC. `syncingAnalytics` gates this pane's filter row
   // the same way `filtersReady` does.
   const [syncingAnalytics, setSyncingAnalytics] = useState(false)

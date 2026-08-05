@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Analyze > Interval > TAPPING_TERM advisor — Pipette-only diagnosis
 // checking a keyboard's configured TAPPING_TERM against the user's own
-// measured keypress durations on its tap-hold keys. See
-// .claude/plans/Plan-typing-metrics-chi2018.md Phase 2 and the pure
+// measured keypress durations on its tap-hold keys. See the pure
 // logic in analyze-tapping-term.ts, which owns every statistical
 // decision made here — this component only fetches, filters to
 // tap-hold cells, and renders.

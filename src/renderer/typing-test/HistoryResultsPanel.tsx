@@ -90,8 +90,7 @@ interface Props {
 /** Results view of the History modal: sub-filter row (mode/text dropdown +
  *  Export CSV), sparkline, stats summary, results table. Split out of
  *  `TypingTestHistory` so that file (which also owns the Analysis view
- *  switch) stays under the 500-line component cap
- *  (`.claude/rules/file-splitting.md`). */
+ *  switch) stays under the project's 500-line UI-component size cap. */
 export function HistoryResultsPanel({
   tab,
   modeFilter,

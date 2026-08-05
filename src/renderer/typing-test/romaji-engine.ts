@@ -33,9 +33,13 @@
 // (mozc/src/data/preedit/romanji-hiragana.tsv) — IME keystroke input, not
 // romanization orthography — so every accepted spelling here is something
 // a real IME actually accepts, not merely a valid way to transliterate the
-// finished word. See `.claude/docs/ROMAJI-ENGINE.md` for the mapping
-// rationale and `__tests__/romaji-engine-mozc.test.ts` for the compliance
-// sweep against that table.
+// finished word: mozc's table (not orthography guides) is the single
+// source of truth for what counts as an accepted spelling, so a
+// spelling that's correct romanization but not IME-typable (e.g. ぢ's
+// orthographic "ji", which mozc's IME resolves to じ instead) is
+// deliberately excluded even though it looks valid on paper. See
+// `__tests__/romaji-engine-mozc.test.ts` for the compliance sweep
+// against that table.
 
 import { toHiragana } from './kana-script'
 import { ROMAJI_PUNCTUATION, isRomajiPunctuation } from '../../shared/kana-purity'
@@ -351,7 +355,7 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
 // KANA_TABLE gains a non-kana key). mozc's own romaji table maps "."/","
 // to 。/、; ？/！ aren't part of that kana table, but "?"/"!" are their
 // natural direct-keystroke spelling. One canonical ASCII spelling each, no
-// style variants — see .claude/docs/ROMAJI-ENGINE.md. Keys are type-locked
+// style variants — the settings modal has nothing to toggle here. Keys are type-locked
 // to ROMAJI_PUNCTUATION (shared with isKanaOnlyText in shared/kana-purity)
 // so the two lists can't drift apart.
 export const PUNCTUATION_TABLE: Record<(typeof ROMAJI_PUNCTUATION)[number], readonly string[]> = {

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Ingest validation, event ingestion, and the debounced flush pipeline that
 // drains the in-memory MinuteBuffer + session queue to the per-device JSONL
-// master file and the local SQLite cache. See
-// .claude/plans/typing-analytics.md for the design rationale.
+// master file and the local SQLite cache.
 
 import { app } from 'electron'
 import type {

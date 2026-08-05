@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Typing analytics service — orchestrates the per-minute in-memory buffer,
-// session detector, and SQLite persistence. See
-// .claude/plans/typing-analytics.md for the design rationale.
+// session detector, and SQLite persistence.
 //
 // This file is the facade: it owns async bootstrap (`setupTypingAnalytics`),
 // the top-level IPC registration entry point (`setupTypingAnalyticsIpc`,

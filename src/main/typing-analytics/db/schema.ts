@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// SQLite schema for the typing analytics database. See
-// .claude/plans/typing-analytics.md for the design rationale.
+// SQLite schema for the typing analytics database — a rebuildable
+// cache over the per-day JSONL master files
+// (sync/keyboards/{uid}/devices/{hash}/{date}.jsonl); every table here
+// can be safely truncated and repopulated from those files via LWW merge.
 
 export const SCHEMA_VERSION = 8
 

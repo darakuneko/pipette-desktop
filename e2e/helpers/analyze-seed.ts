@@ -8,8 +8,6 @@
 // SQLite cache on next launch. Cleanup deletes the cache + sync_state so
 // the next launch starts from empty — restoring them would race against
 // the Electron process's own shutdown writes.
-//
-// See `.claude/docs/TESTING-POLICY.md` §7 for the full rationale.
 
 import { mkdirSync, writeFileSync, readFileSync, rmSync, unlinkSync, existsSync } from 'node:fs'
 import { join } from 'node:path'

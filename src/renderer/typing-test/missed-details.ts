@@ -9,8 +9,7 @@
 // alternate spellings the user goes on to complete, which only the live
 // reducer state at the moment of the keystroke can name reliably — a
 // codex-reviewed design decision, not an oversight. See
-// .claude/plans/Plan-completion-timeline-view.md and mistake-summary.tsx's
-// `MissedCharsList`, the sole consumer.
+// mistake-summary.tsx's `MissedCharsList`, the sole consumer.
 
 import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
 

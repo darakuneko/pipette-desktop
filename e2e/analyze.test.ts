@@ -3,8 +3,7 @@
 // Analyze page e2e tests. Runs without a physical keyboard: dummy
 // typing-analytics data + keymap snapshot are seeded into the userData
 // directory before the first window loads, so `ensureCacheIsFresh`
-// rebuilds the SQLite cache from our JSONL master. See
-// `.claude/docs/TESTING-POLICY.md` §7 for the strategy.
+// rebuilds the SQLite cache from our JSONL master.
 
 import { test, expect } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'

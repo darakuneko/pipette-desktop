@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Content of the per-run keystroke timeline — unified stat block, legend,
 // zoom slider, and the line/word rows with their hover tooltip. Extracted
-// out of `WordTimelineView` (see .claude/plans/Plan-completion-timeline-view.md
-// PR-A spec point 1) so a later PR can render the identical content
-// inline on the typing-test completion screen, not only inside the
+// out of `WordTimelineView` so this content can also render inline on
+// the typing-test completion screen, not only inside the
 // History modal. Deliberately has NO modal-specific assumptions: the
 // zoom's DOM-width-write invariant and the horizontal-scroll `overflow-auto`
 // wrapper both key off this component's own container width via
@@ -301,9 +300,9 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
         </p>
       )}
 
-      {/* Deliberate exception to the Analyze chart-above-stats rule
-          (.claude/tasks/backlog/Task-analyze-section-layout-consistency.md):
-          this grid is the panel's summary header, not a chart-adjacent
+      {/* Deliberate exception to the Analyze chart-above-stats convention
+          (a chart renders above its stat numbers everywhere else in
+          Analyze): this grid is the panel's summary header, not a chart-adjacent
           stat row — it must sit above the legend/zoom controls and the
           canvas, all of which the user reads top-to-bottom before ever
           reaching the scrollable, flex-grow canvas below. */}

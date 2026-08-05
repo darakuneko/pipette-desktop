@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // JSONL row format for the per-device typing-analytics master files. Each
 // line is a single self-contained row with a composite id, a kind tag, the
-// payload, and an updated_at timestamp. See .claude/plans/typing-analytics.md
-// for the design rationale (JSONL master + SQLite cache).
+// payload, and an updated_at timestamp, so the file itself is a fully
+// self-describing source of truth — the SQLite cache is a disposable
+// index that can always be rebuilt by replaying rows in order.
 
 export const JSONL_SCHEMA_VERSION = 1
 

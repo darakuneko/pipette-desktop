@@ -2,8 +2,7 @@
 // Base of the TypingAnalyticsDB class chain: owns the SQLite connection,
 // the 3-phase migration-aware constructor, and the prepared-statement
 // bundle every derived class reads from `this.stmts`. Split out of what
-// used to be one 3,255-line file/class — see
-// .claude/tasks/done/Task-split-typing-analytics-db.md.
+// used to be one 3,255-line file/class.
 //
 // typing-analytics-db-writes.ts extends this with the ingest/tombstone/
 // export/merge write methods, typing-analytics-db-reads.ts extends that
