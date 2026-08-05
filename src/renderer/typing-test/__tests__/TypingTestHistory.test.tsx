@@ -28,6 +28,20 @@ function renderWithI18n(ui: React.ReactElement) {
   return render(<I18nextProvider i18n={i18n}>{ui}</I18nextProvider>)
 }
 
+/** Same as renderWithI18n, but also switches the period filter to "All
+ *  Time". The period filter defaults to "1 month" (see
+ *  history-period-filter.ts), so any test using a fixture `date` more than
+ *  a month before the real wall-clock "now" — most of the ones below, which
+ *  pin specific ISO strings to assert sort order / CSV content rather than
+ *  to exercise the period feature itself — needs this to keep its rows
+ *  visible. Tests that specifically cover the period filter render with
+ *  plain renderWithI18n instead, so its default stays exercised. */
+function renderWithI18nAllTime(ui: React.ReactElement) {
+  const result = renderWithI18n(ui)
+  fireEvent.change(screen.getByTestId('history-filter-period'), { target: { value: 'all' } })
+  return result
+}
+
 /** Minimal TypingTestTextMeta builder for source-tab classification tests —
  *  only `source` (aozora-provider detection) and `id` matter here. */
 function textMeta(id: string, name: string, source?: { provider: string; workId: string }): TypingTestTextMeta {
@@ -146,7 +160,7 @@ describe('TypingTestHistory', () => {
       makeResult({ wpm: 90, date: '2025-01-02T00:00:00Z' }),
       makeResult({ wpm: 75, date: '2025-01-01T00:00:00Z' }),
     ]
-    renderWithI18n(<TypingTestHistory results={results} />)
+    renderWithI18nAllTime(<TypingTestHistory results={results} />)
 
     const rows = () => {
       const history = screen.getByTestId('typing-test-history')
@@ -177,7 +191,7 @@ describe('TypingTestHistory', () => {
       makeResult({ wpm: 90, date: '2025-01-02T00:00:00Z', holdSumMs: 800, holdSamples: 5 }), // 160 ms
       makeResult({ wpm: 75, date: '2025-01-01T00:00:00Z' }), // legacy, no raw fields
     ]
-    renderWithI18n(<TypingTestHistory results={results} />)
+    renderWithI18nAllTime(<TypingTestHistory results={results} />)
 
     const cellsFor = (idx: number) => {
       const history = screen.getByTestId('typing-test-history')
@@ -234,7 +248,7 @@ describe('TypingTestHistory', () => {
     const results = [
       makeResult({ wpm: 80, date: '2025-01-01T00:00:00Z', mode: 'words', mode2: 30 }),
     ]
-    renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+    renderWithI18nAllTime(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
 
     const exportBtn = screen.getByTestId('history-export-csv')
     expect(exportBtn).toBeTruthy()
@@ -255,7 +269,7 @@ describe('TypingTestHistory', () => {
     const results = [
       makeResult({ wpm: 80, date: '2025-01-01T00:00:00Z', kspcKeystrokes: 6, kspcChars: 4 }),
     ]
-    renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+    renderWithI18nAllTime(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
 
     fireEvent.click(screen.getByTestId('history-export-csv'))
     const csv = onExportCsv.mock.calls[0][0] as string
@@ -268,7 +282,7 @@ describe('TypingTestHistory', () => {
     const results = [
       makeResult({ wpm: 80, date: '2025-01-01T00:00:00Z' }), // no kspcKeystrokes/kspcChars
     ]
-    renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+    renderWithI18nAllTime(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
 
     fireEvent.click(screen.getByTestId('history-export-csv'))
     const csv = onExportCsv.mock.calls[0][0] as string
@@ -283,7 +297,7 @@ describe('TypingTestHistory', () => {
     const results = [
       makeResult({ wpm: 80, date: '2025-01-01T00:00:00Z', holdSumMs: 241, holdSamples: 3 }), // 80.33... -> 80
     ]
-    renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+    renderWithI18nAllTime(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
 
     fireEvent.click(screen.getByTestId('history-export-csv'))
     const csv = onExportCsv.mock.calls[0][0] as string
@@ -298,7 +312,7 @@ describe('TypingTestHistory', () => {
     const results = [
       makeResult({ wpm: 80, date: '2025-01-01T00:00:00Z' }), // no holdSumMs/holdSamples
     ]
-    renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+    renderWithI18nAllTime(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
 
     fireEvent.click(screen.getByTestId('history-export-csv'))
     const csv = onExportCsv.mock.calls[0][0] as string
@@ -315,7 +329,7 @@ describe('TypingTestHistory', () => {
         errorSubstitutions: 2, errorOmissions: 1, errorInsertions: 0, errorTargetChars: 40,
       }),
     ]
-    renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+    renderWithI18nAllTime(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
 
     fireEvent.click(screen.getByTestId('history-export-csv'))
     const csv = onExportCsv.mock.calls[0][0] as string
@@ -337,7 +351,7 @@ describe('TypingTestHistory', () => {
     const results = [
       makeResult({ wpm: 80, date: '2025-01-01T00:00:00Z' }),
     ]
-    renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+    renderWithI18nAllTime(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
 
     fireEvent.click(screen.getByTestId('history-export-csv'))
     const csv = onExportCsv.mock.calls[0][0] as string
@@ -375,7 +389,7 @@ describe('TypingTestHistory', () => {
   it('renames a result via the naming modal and calls onRename', () => {
     const date = '2025-02-02T03:04:05.000Z'
     const onRename = vi.fn()
-    renderWithI18n(<TypingTestHistory results={[makeResult({ date })]} onRename={onRename} />)
+    renderWithI18nAllTime(<TypingTestHistory results={[makeResult({ date })]} onRename={onRename} />)
     // The name cell opens the naming modal; type and Save commits.
     fireEvent.click(screen.getByTestId(`history-name-${date}`))
     const input = screen.getByTestId('result-name-modal-input')
@@ -423,7 +437,7 @@ describe('TypingTestHistory', () => {
   it('deletes a result only after confirmation', () => {
     const date = '2025-03-03T01:02:03.000Z'
     const onDelete = vi.fn()
-    renderWithI18n(<TypingTestHistory results={[makeResult({ date })]} onDelete={onDelete} />)
+    renderWithI18nAllTime(<TypingTestHistory results={[makeResult({ date })]} onDelete={onDelete} />)
     // First click asks for confirmation, does not delete yet.
     fireEvent.click(screen.getByTestId(`history-delete-${date}`))
     expect(onDelete).not.toHaveBeenCalled()
@@ -434,7 +448,7 @@ describe('TypingTestHistory', () => {
   it('cancels deletion when cancel is clicked', () => {
     const date = '2025-04-04T01:02:03.000Z'
     const onDelete = vi.fn()
-    renderWithI18n(<TypingTestHistory results={[makeResult({ date })]} onDelete={onDelete} />)
+    renderWithI18nAllTime(<TypingTestHistory results={[makeResult({ date })]} onDelete={onDelete} />)
     fireEvent.click(screen.getByTestId(`history-delete-${date}`))
     fireEvent.click(screen.getByTestId(`history-delete-cancel-${date}`))
     expect(onDelete).not.toHaveBeenCalled()
@@ -480,7 +494,12 @@ describe('TypingTestHistory', () => {
   })
 
   it('renders the name read-only (no edit) when no onRename handler', () => {
-    renderWithI18n(<TypingTestHistory results={[makeResult({ date: 'x', name: 'kept' })]} />)
+    // date: 'x' here is a non-date identifier (drives the `history-name-x`
+    // testid below), not a real timestamp — renderWithI18nAllTime is
+    // required so the period filter's "unparseable date" drop (see
+    // history-period-filter.ts) doesn't exclude this row under the default
+    // 1-month window.
+    renderWithI18nAllTime(<TypingTestHistory results={[makeResult({ date: 'x', name: 'kept' })]} />)
     expect(screen.queryByTestId('history-name-x')).toBeNull()
     // The name shows in the cell (and again in its hover tooltip bubble).
     expect(screen.getAllByText('kept').length).toBeGreaterThan(0)
@@ -562,7 +581,7 @@ describe('TypingTestHistory', () => {
         makeResult({ wpm: 65, accuracy: 92, mode: 'words', mode2: 30, language: 'english', date: '2026-01-02T00:00:00.000Z' }),
         makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english', date: '2026-01-01T00:00:00.000Z' }),
       ]
-      renderWithI18n(<TypingTestHistory results={results} />)
+      renderWithI18nAllTime(<TypingTestHistory results={results} />)
       fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
       const select = screen.getByTestId('history-condition-filter') as HTMLSelectElement
       expect(select.options.length).toBe(2)
@@ -577,7 +596,7 @@ describe('TypingTestHistory', () => {
         makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english', date: '2026-01-01T00:00:00.000Z' }),
         makeResult({ wpm: 65, accuracy: 92, mode: 'words', mode2: 30, language: 'english', date: '2026-01-02T00:00:00.000Z' }),
       ]
-      renderWithI18n(<TypingTestHistory results={results} />)
+      renderWithI18nAllTime(<TypingTestHistory results={results} />)
       fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
       expect(screen.getByTestId('accuracy-trend-chart')).toBeTruthy()
     })
@@ -590,7 +609,7 @@ describe('TypingTestHistory', () => {
         makeResult({ wpm: 65, accuracy: 92, mode: 'words', mode2: 30, language: 'english', date: '2026-01-02T00:00:00.000Z' }),
         makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english', date: '2026-01-01T00:00:00.000Z' }),
       ]
-      renderWithI18n(<TypingTestHistory results={results} />)
+      renderWithI18nAllTime(<TypingTestHistory results={results} />)
       fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
       // Default (latest = time|60) has only 1 run → no chart yet.
       expect(screen.queryByTestId('accuracy-trend-chart')).toBeNull()
@@ -607,7 +626,7 @@ describe('TypingTestHistory', () => {
         makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english', date: '2026-01-01T00:00:00.000Z' }),
         makeResult({ wpm: 65, accuracy: 92, mode: 'words', mode2: 30, language: 'english', date: '2026-01-02T00:00:00.000Z' }),
       ]
-      renderWithI18n(<TypingTestHistory results={results} />)
+      renderWithI18nAllTime(<TypingTestHistory results={results} />)
       fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
       expect(screen.getByTestId('accuracy-trend-chart')).toBeTruthy()
       // The mode filter dropdown lives in the Results view — switch there to
@@ -771,7 +790,7 @@ describe('TypingTestHistory', () => {
         makeResult({ wpm: 90, date: '2025-01-02T00:00:00Z' }),
         makeResult({ wpm: 75, date: '2025-01-01T00:00:00Z' }),
       ]
-      renderWithI18n(<TypingTestHistory results={results} />)
+      renderWithI18nAllTime(<TypingTestHistory results={results} />)
 
       const rows = () => {
         const history = screen.getByTestId('typing-test-history')
@@ -1050,7 +1069,7 @@ describe('TypingTestHistory', () => {
         makeResult({ wpm: 65, accuracy: 92, mode: 'words', mode2: 30, language: 'english', date: '2026-01-02T00:00:00.000Z' }),
         makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english', date: '2026-01-01T00:00:00.000Z' }),
       ]
-      renderWithI18n(<TypingTestHistory results={results} />)
+      renderWithI18nAllTime(<TypingTestHistory results={results} />)
       fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
 
       // Default (latest = time|60) has only 1 run → no chart yet.
@@ -1086,6 +1105,119 @@ describe('TypingTestHistory', () => {
       // The heading lives inside the Analysis tabpanel (history-sections),
       // not in the always-visible header row alongside the selects.
       expect(screen.getByTestId('history-sections').contains(heading)).toBe(true)
+    })
+  })
+
+  describe('period filter', () => {
+    const DAY_MS = 24 * 60 * 60 * 1000
+
+    it('renders the period select as the rightmost item in the header, with 5 options in order, defaulting to 1 Month', () => {
+      renderWithI18n(<TypingTestHistory results={[makeResult()]} />)
+      const select = screen.getByTestId('history-filter-period') as HTMLSelectElement
+      expect(Array.from(select.options).map((o) => o.value)).toEqual(['1w', '1m', '3m', '1y', 'all'])
+      expect(select.value).toBe('1m')
+
+      // Rightmost: it comes after the source select in document order, in
+      // both the Results view (no condition select) and the Analysis view
+      // (source, condition, period).
+      const sourceSelect = screen.getByTestId('history-filter-source')
+      expect(sourceSelect.compareDocumentPosition(select) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
+      const conditionSelect = screen.getByTestId('history-condition-filter')
+      const periodSelectInAnalysis = screen.getByTestId('history-filter-period')
+      expect(conditionSelect.compareDocumentPosition(periodSelectInAnalysis) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+
+    it('excludes a result older than the default 1-month window from the table and stats, while a recent one stays', () => {
+      const results = [
+        makeResult({ wpm: 80, date: new Date(Date.now() - 2 * DAY_MS).toISOString() }), // 2 days ago — inside 1m
+        makeResult({ wpm: 55, date: new Date(Date.now() - 40 * DAY_MS).toISOString() }), // 40 days ago — outside 1m
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+
+      // Default period (1 Month, no interaction needed): only the recent row shows.
+      expect(screen.getAllByText('80').length).toBeGreaterThan(0)
+      expect(screen.queryByText('55')).toBeNull()
+      const stats = screen.getByTestId('history-stats')
+      expect(stats.textContent).toContain('Tests:1')
+    })
+
+    it('shows every result, regardless of age, once "All Time" is selected', () => {
+      const results = [
+        makeResult({ wpm: 80, date: new Date(Date.now() - 2 * DAY_MS).toISOString() }),
+        makeResult({ wpm: 55, date: new Date(Date.now() - 400 * DAY_MS).toISOString() }), // well past 1y too
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      expect(screen.queryByText('55')).toBeNull()
+
+      fireEvent.change(screen.getByTestId('history-filter-period'), { target: { value: 'all' } })
+      expect(screen.getAllByText('80').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('55').length).toBeGreaterThan(0)
+      const stats = screen.getByTestId('history-stats')
+      expect(stats.textContent).toContain('Tests:2')
+    })
+
+    it('excludes a result from the WPM Trend chart once it falls outside the selected period', () => {
+      const results = [
+        makeResult({ wpm: 80, date: new Date(Date.now() - 1 * DAY_MS).toISOString() }),
+        makeResult({ wpm: 82, date: new Date(Date.now() - 2 * DAY_MS).toISOString() }),
+        makeResult({ wpm: 55, date: new Date(Date.now() - 40 * DAY_MS).toISOString() }), // outside 1m
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      // 2 in-window results → the chart renders (needs >= 2 points).
+      expect(screen.getByTestId('wpm-trend-chart')).toBeTruthy()
+
+      // Narrow to 1 Week: still 2 in-window results (1 and 2 days ago), so
+      // the chart keeps rendering — this only pins that the chart re-derives
+      // from the filtered set, not a specific point count.
+      fireEvent.change(screen.getByTestId('history-filter-period'), { target: { value: '1w' } })
+      expect(screen.getByTestId('wpm-trend-chart')).toBeTruthy()
+    })
+
+    it('feeds the Analysis tab from period-filtered results only — a condition outside the window drops out of the condition select', () => {
+      const results = [
+        makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english', date: new Date(Date.now() - 1 * DAY_MS).toISOString() }),
+        // Only 'quote' result, dated outside the default 1-month window.
+        makeResult({ wpm: 50, accuracy: 85, mode: 'quote', mode2: 'short', language: 'english', date: new Date(Date.now() - 40 * DAY_MS).toISOString() }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
+
+      const select = screen.getByTestId('history-condition-filter') as HTMLSelectElement
+      const values = Array.from(select.options).map((o) => o.value)
+      expect(values.some((v) => v.startsWith('words|'))).toBe(true)
+      expect(values.some((v) => v.startsWith('quote|'))).toBe(false)
+
+      // Switching to All Time brings the older condition back into view.
+      fireEvent.click(screen.getByTestId('history-view-tab-results'))
+      fireEvent.change(screen.getByTestId('history-filter-period'), { target: { value: 'all' } })
+      fireEvent.click(screen.getByTestId('history-view-tab-analysis'))
+      const valuesAllTime = Array.from((screen.getByTestId('history-condition-filter') as HTMLSelectElement).options).map((o) => o.value)
+      expect(valuesAllTime.some((v) => v.startsWith('quote|'))).toBe(true)
+    })
+
+    it('exports only the results within the selected period as CSV', () => {
+      const onExportCsv = vi.fn()
+      const recentDate = new Date(Date.now() - 1 * DAY_MS).toISOString()
+      const oldDate = new Date(Date.now() - 40 * DAY_MS).toISOString()
+      const results = [
+        makeResult({ wpm: 80, date: recentDate }),
+        makeResult({ wpm: 55, date: oldDate }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+
+      fireEvent.click(screen.getByTestId('history-export-csv'))
+      const csv = onExportCsv.mock.calls[0][0] as string
+      expect(csv).toContain(recentDate)
+      expect(csv).not.toContain(oldDate)
+
+      // Widening to All Time brings the older row into the export too.
+      fireEvent.change(screen.getByTestId('history-filter-period'), { target: { value: 'all' } })
+      fireEvent.click(screen.getByTestId('history-export-csv'))
+      const csvAllTime = onExportCsv.mock.calls[1][0] as string
+      expect(csvAllTime).toContain(recentDate)
+      expect(csvAllTime).toContain(oldDate)
     })
   })
 })
