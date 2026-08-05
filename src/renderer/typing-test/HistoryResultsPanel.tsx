@@ -265,7 +265,14 @@ export function HistoryResultsPanel({
                 <SortableHeader column="wpm" label={t('editor.typingTest.wpm')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
                 <SortableHeader column="kpm" label={t('editor.typingTest.kpm')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
                 <SortableHeader column="accuracy" label={t('editor.typingTest.accuracy')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
-                <SortableHeader column="avgHold" label={t('editor.typingTest.history.avgHold')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
+                <SortableHeader
+                  column="avgHold"
+                  label={t('editor.typingTest.history.avgHoldAbbr')}
+                  tooltip={t('editor.typingTest.history.avgHold')}
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={onSort}
+                />
                 <SortableHeader column="mode" label={isText ? t('editor.typingTest.history.tabText') : t('editor.typingTest.history.mode')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
                 <SortableHeader column="duration" label={t('editor.typingTest.time')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
                 <th className="px-3 py-1.5">{t('editor.typingTest.history.pb')}</th>
@@ -285,16 +292,7 @@ export function HistoryResultsPanel({
                   <td className="whitespace-nowrap px-3 py-1.5 font-mono font-semibold text-accent">{resultKpm(r)}</td>
                   <td className="whitespace-nowrap px-3 py-1.5 font-mono">{r.accuracy}%</td>
                   <td className="whitespace-nowrap px-3 py-1.5 font-mono text-content-muted">{fmtMs(resultAvgHoldMs(r))}</td>
-                  <td className="whitespace-nowrap px-3 py-1.5 text-content-muted">
-                    {isText
-                      ? (modeDetail(r) || t('editor.typingTest.history.unnamed'))
-                      // Tatoeba's mode2 is a composite (language|pattern|count, see
-                      // deriveMode2) — formatConditionLabel already knows how to
-                      // render it (e.g. "Tatoeba 5 Lines (english)").
-                      : (r.mode === 'tatoeba'
-                        ? formatConditionLabel(r, t)
-                        : `${t(`editor.typingTest.mode.${r.mode ?? 'words'}`)}${modeDetail(r) ? ` ${modeDetail(r)}` : ''}`)}
-                  </td>
+                  <ModeCell r={r} isText={isText} />
                   <td className="whitespace-nowrap px-3 py-1.5 font-mono text-content-muted">
                     {formatDuration(r.durationSeconds)}
                   </td>
@@ -373,6 +371,10 @@ function sortIndicator(direction: SortDirection): string {
 interface SortableHeaderProps {
   column: SortColumn
   label: string
+  /** Full-length label shown via hover tooltip when `label` itself is an
+   *  abbreviation (e.g. avgHold's "AKH" header) — omitted for every other
+   *  column, whose label is already the full text. */
+  tooltip?: string
   sortColumn: SortColumn
   sortDirection: SortDirection
   onSort: (column: SortColumn) => void
@@ -381,6 +383,7 @@ interface SortableHeaderProps {
 function SortableHeader({
   column,
   label,
+  tooltip,
   sortColumn,
   sortDirection,
   onSort,
@@ -390,15 +393,25 @@ function SortableHeader({
     ? (sortDirection === 'asc' ? 'ascending' : 'descending')
     : 'none'
 
+  const button = (
+    <button
+      type="button"
+      className="cursor-pointer select-none bg-transparent text-inherit"
+      onClick={() => onSort(column)}
+    >
+      {label}{isActive ? sortIndicator(sortDirection) : ''}
+    </button>
+  )
+
   return (
     <th className="px-3 py-1.5" aria-sort={ariaSort}>
-      <button
-        type="button"
-        className="cursor-pointer select-none bg-transparent text-inherit"
-        onClick={() => onSort(column)}
-      >
-        {label}{isActive ? sortIndicator(sortDirection) : ''}
-      </button>
+      {/* Tooltip must wrap the button itself (not an inner span) — its
+       *  wrapper renders a div, and a div can't legally nest inside a
+       *  button; wrapping the span also left aria-describedby on a
+       *  non-focusable element, so neither assistive tech nor keyboard
+       *  focus could reach the full-label description. Same pattern
+       *  NameCell already uses below for its rename button. */}
+      {tooltip ? <Tooltip content={tooltip}>{button}</Tooltip> : button}
     </th>
   )
 }
@@ -450,6 +463,35 @@ function NameCell({ result, onRename, deviceName }: NameCellProps) {
           onClose={() => setModalOpen(false)}
         />
       )}
+    </td>
+  )
+}
+
+interface ModeCellProps {
+  r: TypingTestResult
+  isText: boolean
+}
+
+/** Mode/Text column cell. Its text is variable-width (a Tatoeba row's
+ *  composite label can run to "Tatoeba 10 Lines (japanese_hiragana)") — same
+ *  truncate + hover-tooltip treatment as the Name column, so a long value
+ *  ellipsizes instead of stretching or wrapping the table. */
+function ModeCell({ r, isText }: ModeCellProps) {
+  const { t } = useTranslation()
+  const text = isText
+    ? (modeDetail(r) || t('editor.typingTest.history.unnamed'))
+    // Tatoeba's mode2 is a composite (language|pattern|count, see
+    // deriveMode2) — formatConditionLabel already knows how to
+    // render it (e.g. "Tatoeba 5 Lines (english)").
+    : (r.mode === 'tatoeba'
+      ? formatConditionLabel(r, t)
+      : `${t(`editor.typingTest.mode.${r.mode ?? 'words'}`)}${modeDetail(r) ? ` ${modeDetail(r)}` : ''}`)
+
+  return (
+    <td className="max-w-[16rem] px-3 py-1.5 text-content-muted">
+      <Tooltip content={text} wrapperClassName="block max-w-full">
+        <span className="block truncate">{text}</span>
+      </Tooltip>
     </td>
   )
 }

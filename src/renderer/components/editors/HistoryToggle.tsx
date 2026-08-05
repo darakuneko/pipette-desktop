@@ -8,7 +8,7 @@ import type { TimelineHandoff } from '../../hooks/useRunTimelineHandoff'
 import { TypingTestHistory } from '../../typing-test/TypingTestHistory'
 import { WordTimelineView } from '../../typing-test/WordTimelineView'
 import { ModalCloseButton } from './ModalCloseButton'
-import { MODAL_XL } from './store-modal-shared'
+import { MODAL_2XL } from './store-modal-shared'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 
 // History opens a modal — it is a dialog trigger, not a stateful toggle, so the
@@ -94,7 +94,7 @@ export function HistoryToggle({
           onClick={closeHistory}
         >
           <div
-            className={`flex h-modal-80vh ${MODAL_XL} flex-col rounded-lg bg-surface-alt p-6 shadow-xl`}
+            className={`flex h-modal-80vh ${MODAL_2XL} flex-col rounded-lg bg-surface-alt p-6 shadow-xl`}
             data-testid="history-modal"
             onClick={(e) => e.stopPropagation()}
           >

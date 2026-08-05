@@ -1,5 +1,5 @@
 {
-  "version": "0.1.80",
+  "version": "0.1.81",
   "name": "English",
   "common": {
     "save": "Save",
@@ -495,6 +495,7 @@
         "totalTests": "Tests",
         "avgAccuracy": "Avg Acc",
         "avgHold": "Avg Key Hold",
+        "avgHoldAbbr": "AKH",
         "date": "Date",
         "name": "Name",
         "unnamed": "Unnamed",
