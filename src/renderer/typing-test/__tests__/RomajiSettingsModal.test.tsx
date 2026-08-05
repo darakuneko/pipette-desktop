@@ -30,22 +30,109 @@ function renderModal(props: Partial<Parameters<typeof RomajiSettingsModal>[0]> =
   return merged
 }
 
-describe('RomajiSettingsModal defaults', () => {
-  it('shows the master enable on by default when romajiInput is not set', () => {
+describe('RomajiSettingsModal — unified 3-way input method selector', () => {
+  it('defaults to Romaji when romajiInput/inputMethod are both unset', () => {
     renderModal()
-    expect(screen.getByTestId('romaji-settings-enabled')).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByTestId('japanese-input-method-romaji').className).toContain('text-accent')
+    expect(screen.getByTestId('japanese-input-method-direct').className).not.toContain('text-accent')
+    expect(screen.getByTestId('japanese-input-method-kana').className).not.toContain('text-accent')
   })
 
-  it('shows the master enable on when romajiInput is true', () => {
+  it('resolves legacy romajiInput: true (no inputMethod) to Romaji', () => {
     renderModal({ config: { ...BASE_CONFIG, romajiInput: true } })
-    expect(screen.getByTestId('romaji-settings-enabled')).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByTestId('japanese-input-method-romaji').className).toContain('text-accent')
   })
 
-  it('shows the master enable off when romajiInput is explicitly false', () => {
+  it('resolves legacy romajiInput: false to Direct', () => {
     renderModal({ config: { ...BASE_CONFIG, romajiInput: false } })
-    expect(screen.getByTestId('romaji-settings-enabled')).toHaveAttribute('aria-checked', 'false')
+    expect(screen.getByTestId('japanese-input-method-direct').className).toContain('text-accent')
   })
 
+  it('resolves romajiInput: false to Direct regardless of a stale inputMethod', () => {
+    // A leftover inputMethod: 'kana' from before this 3-way selector existed
+    // must not resurface as "Kana selected" while the master flag is off —
+    // the incoherent state this selector replaces must stay unrepresentable.
+    renderModal({ config: { ...BASE_CONFIG, romajiInput: false, romaji: { inputMethod: 'kana' } } })
+    expect(screen.getByTestId('japanese-input-method-direct').className).toContain('text-accent')
+    expect(screen.getByTestId('japanese-input-method-kana').className).not.toContain('text-accent')
+  })
+
+  it('resolves inputMethod: kana (with romajiInput on) to Kana', () => {
+    renderModal({ config: { ...BASE_CONFIG, romaji: { inputMethod: 'kana' } } })
+    expect(screen.getByTestId('japanese-input-method-kana').className).toContain('text-accent')
+  })
+
+  it('selecting Direct writes romajiInput: false and prunes inputMethod', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ config: { ...BASE_CONFIG, romaji: { inputMethod: 'kana' } }, onConfigChange })
+    fireEvent.click(screen.getByTestId('japanese-input-method-direct'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    expect(arg.mode).toBe('words')
+    if (arg.mode === 'words') {
+      expect(arg.romajiInput).toBe(false)
+      expect(arg.romaji).toBeUndefined()
+    }
+  })
+
+  it('selecting Romaji from Direct writes romajiInput: true with no inputMethod', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ config: { ...BASE_CONFIG, romajiInput: false }, onConfigChange })
+    fireEvent.click(screen.getByTestId('japanese-input-method-romaji'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') {
+      expect(arg.romajiInput).toBe(true)
+      expect(arg.romaji).toBeUndefined()
+    }
+  })
+
+  it('selecting Kana writes romajiInput: true with inputMethod: kana', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ onConfigChange })
+    fireEvent.click(screen.getByTestId('japanese-input-method-kana'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') {
+      expect(arg.romajiInput).toBe(true)
+      expect(arg.romaji).toEqual({ inputMethod: 'kana' })
+    }
+  })
+
+  it('selecting Kana preserves existing romaji detail fields alongside inputMethod', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ config: { ...BASE_CONFIG, romaji: { lineEndEnter: false } }, onConfigChange })
+    fireEvent.click(screen.getByTestId('japanese-input-method-kana'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') expect(arg.romaji).toEqual({ lineEndEnter: false, inputMethod: 'kana' })
+  })
+
+  it('Direct hides Line-end Enter, Lines shown, and every romaji-only section', () => {
+    renderModal({ config: { ...BASE_CONFIG, romajiInput: false } })
+    expect(screen.queryByTestId('romaji-line-end-enter')).toBeNull()
+    expect(screen.queryByTestId('romaji-guide-lines-1')).toBeNull()
+    expect(screen.queryByTestId('romaji-case-lower')).toBeNull()
+    expect(screen.queryByTestId('romaji-guide-base-hepburn')).toBeNull()
+    expect(screen.queryByTestId('romaji-base-hepburn')).toBeNull()
+  })
+
+  it('Kana shows Line-end Enter and Lines shown, but hides romaji-only sections', () => {
+    renderModal({ config: { ...BASE_CONFIG, romaji: { inputMethod: 'kana' } } })
+    expect(screen.getByTestId('romaji-line-end-enter')).toBeInTheDocument()
+    expect(screen.getByTestId('romaji-guide-lines-1')).toBeInTheDocument()
+    expect(screen.queryByTestId('romaji-case-lower')).toBeNull()
+    expect(screen.queryByTestId('romaji-guide-base-hepburn')).toBeNull()
+    expect(screen.queryByTestId('romaji-base-hepburn')).toBeNull()
+  })
+
+  it('Romaji shows every section', () => {
+    renderModal()
+    expect(screen.getByTestId('romaji-line-end-enter')).toBeInTheDocument()
+    expect(screen.getByTestId('romaji-guide-lines-1')).toBeInTheDocument()
+    expect(screen.getByTestId('romaji-case-lower')).toBeInTheDocument()
+    expect(screen.getByTestId('romaji-guide-base-hepburn')).toBeInTheDocument()
+    expect(screen.getByTestId('romaji-base-hepburn')).toBeInTheDocument()
+  })
+})
+
+describe('RomajiSettingsModal defaults', () => {
   it('defaults the case selector to lower', () => {
     renderModal()
     expect(screen.getByTestId('romaji-case-lower').className).toContain('text-accent')
@@ -116,24 +203,6 @@ describe('RomajiSettingsModal defaults', () => {
 })
 
 describe('RomajiSettingsModal edits', () => {
-  it('toggles the master enable off from the default-on state (writes an explicit false)', () => {
-    const onConfigChange = vi.fn()
-    renderModal({ onConfigChange })
-    fireEvent.click(screen.getByTestId('romaji-settings-enabled'))
-    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    expect(arg.mode).toBe('words')
-    if (arg.mode === 'words') expect(arg.romajiInput).toBe(false)
-  })
-
-  it('toggles the master enable back on from an explicit false', () => {
-    const onConfigChange = vi.fn()
-    renderModal({ config: { ...BASE_CONFIG, romajiInput: false }, onConfigChange })
-    fireEvent.click(screen.getByTestId('romaji-settings-enabled'))
-    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    expect(arg.mode).toBe('words')
-    if (arg.mode === 'words') expect(arg.romajiInput).toBe(true)
-  })
-
   it('sets caseStyle when a non-default case is picked, and omits it when lower is re-picked', () => {
     const onConfigChange = vi.fn()
     renderModal({ config: { ...BASE_CONFIG, romaji: { caseStyle: 'upper' } }, onConfigChange })

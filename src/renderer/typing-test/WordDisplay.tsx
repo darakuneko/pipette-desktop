@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import type { WordResult } from './useTypingTest'
-import type { RomajiGuide } from './types'
 
 const COMPOSITION_CHAR_CLASS = 'text-accent/60 underline decoration-accent/30'
 const ERROR_CHAR_CLASS = 'text-danger underline decoration-danger/50 decoration-2 underline-offset-2'
@@ -14,18 +13,21 @@ interface WordDisplayProps {
   wordResults: WordResult[]
   cursorBlink: boolean
   compositionText?: string
-  /** Romaji-keystroke progress for this word (romajiInput mode only), or
-   *  null/undefined for every other word and every other mode. When set,
-   *  the current word's confirmed input is derived as `word.slice(0,
-   *  kanaCompleted)` instead of using `currentInput` directly — romaji mode
-   *  never writes to `currentInput` (see `handleRomajiChar`), and composition
-   *  is treated as empty even if the OS IME fired a stray composition event
+  /** Keystroke-judging progress for this word (romajiInput/kana mode
+   *  only — RomajiGuide or KanaGuide, both of which carry a `kanaCompleted`
+   *  count with the identical meaning), or null/undefined for every other
+   *  word and every other mode. Narrowed to just that one field since it's
+   *  all this component reads. When set, the current word's confirmed
+   *  input is derived as `word.slice(0, kanaCompleted)` instead of using
+   *  `currentInput` directly — neither engine ever writes to `currentInput`
+   *  (see `handleRomajiChar`/`handleKanaStroke`), and composition is
+   *  treated as empty even if the OS IME fired a stray composition event
    *  (rejected keystrokes never appear anywhere, so there is no per-char
    *  error color either). */
-  romajiGuide?: RomajiGuide | null
+  guideProgress?: { kanaCompleted: number } | null
 }
 
-export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, wordResults, cursorBlink, compositionText = '', romajiGuide = null }: WordDisplayProps) {
+export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, wordResults, cursorBlink, compositionText = '', guideProgress = null }: WordDisplayProps) {
   const testId = `word-${wordIndex}`
 
   // Completed word — per-character coloring
@@ -60,8 +62,8 @@ export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, w
   // is nothing to show and no per-char error color either, matching the
   // dedicated romaji branch this replaced.
   if (wordIndex === currentWordIndex) {
-    const effectiveInput = romajiGuide ? word.slice(0, romajiGuide.kanaCompleted) : currentInput
-    const effectiveComposition = romajiGuide ? '' : compositionText
+    const effectiveInput = guideProgress ? word.slice(0, guideProgress.kanaCompleted) : currentInput
+    const effectiveComposition = guideProgress ? '' : compositionText
     const typedLength = effectiveInput.length
     const compositionChars = Array.from(effectiveComposition)
     const compositionLength = compositionChars.length

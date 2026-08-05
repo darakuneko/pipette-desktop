@@ -5,6 +5,7 @@ import type { RefObject } from 'react'
 import type { useTypingTest, TypingTestState } from '../../typing-test/useTypingTest'
 import { buildTypingTestResult, isPbForConfig } from '../../typing-test/result-builder'
 import { isRomajiInputActive } from '../../typing-test/romaji-input'
+import { isKanaInputActive } from '../../typing-test/kana-input'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { LineSnapshot } from '../../typing-test/TypingTestView'
 import type { TypingTestResult, TypingTestMemory } from '../../../shared/types/pipette-settings'
@@ -212,6 +213,7 @@ export function useTypingTestResultSave({
         fileImportTextName: typingTest.config.mode === 'fileImport' ? typingTest.state.currentQuote?.source : undefined,
         runId: typingTest.state.runId,
         romajiActive: isRomajiInputActive(typingTest.config, typingTest.language, typingTest.state.romajiCapable),
+        kanaActive: isKanaInputActive(typingTest.config, typingTest.language, typingTest.state.romajiCapable),
         mistakes: typingTest.state.mistakes,
         totalKeystrokes: typingTest.state.totalKeystrokes,
         confirmedChars: typingTest.state.confirmedChars,

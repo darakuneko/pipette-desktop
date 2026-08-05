@@ -92,8 +92,21 @@ export function buildResultNameChips(result: TypingTestResult, t: (key: string) 
   return chips
 }
 
+/** `kanaInput` is deliberately appended ONLY when true (asymmetric — every
+ *  other segment is always present) rather than as an unconditional 7th
+ *  `|${result.kanaInput ?? false}` segment: this key is also the storage
+ *  key for persisted comparison-baseline preferences
+ *  (`TypingTestComparisonBaselines`, keyed by this exact string — see
+ *  `use-typing-test-pane-comparison.ts`'s `conditionKey` call). Appending
+ *  an unconditional new segment would change the key for every existing
+ *  (non-kana) result at once, silently orphaning every baseline saved
+ *  before kana mode existed. Appending only for kana runs keeps a
+ *  non-kana key byte-identical to its pre-kana shape while still giving
+ *  kana its own distinct key (no legacy key can end with the literal
+ *  `|kana` — the field it replaces is a stringified boolean). */
 export function configKey(result: TypingTestResult): string {
-  return `${result.mode ?? 'words'}|${result.mode2 ?? ''}|${result.language ?? ''}|${result.punctuation ?? false}|${result.numbers ?? false}|${result.romajiInput ?? false}`
+  const base = `${result.mode ?? 'words'}|${result.mode2 ?? ''}|${result.language ?? ''}|${result.punctuation ?? false}|${result.numbers ?? false}|${result.romajiInput ?? false}`
+  return result.kanaInput ? `${base}|kana` : base
 }
 
 export function isPbForConfig(result: TypingTestResult, history: TypingTestResult[]): boolean {
@@ -150,6 +163,11 @@ export interface BuildTypingTestResultInput {
    *  (including tatoeba/fileImport, which never recorded this before) is
    *  now grouped/labeled consistently with words/time runs. */
   romajiActive: boolean
+  /** Whether kana direct-input judging (kana-input.ts) was actually in
+   *  effect for this run (see `isKanaInputActive`) — the sibling of
+   *  `romajiActive` above; mutually exclusive with it by construction.
+   *  Recorded verbatim as `kanaInput` below. */
+  kanaActive: boolean
   /** Per-run mistake tally (see `TypingTestState.mistakes`). Stored on the
    *  result only when non-empty — see `buildTypingTestResult`. */
   mistakes: Record<string, number>
@@ -211,11 +229,18 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
   // legacy result.
   const kspc = input.kspcUncomputable ? null : computeKspc(input.totalKeystrokes, input.confirmedChars)
 
-  // Error-class breakdown: non-romaji runs only, with at least one
+  // Error-class breakdown: verbatim (Direct) runs only, with at least one
   // finalized word (see error-classify.ts's module header for the romaji
   // rationale, classifyWordResults for the in-flight-word exclusion).
+  // Kana mode excluded for the identical reason romaji is: handleKanaStroke
+  // (kana-input.ts) also rejects an invalid stroke in place rather than
+  // writing it into the word, so a kana run's `wordResults` are always
+  // `typed === word` (100% "correct" by construction) exactly like romaji's
+  // — comparing them would always report zero errors regardless of how
+  // many strokes were actually rejected along the way, misrepresenting a
+  // "not measured" run as a "measured, flawless" one.
   const wordResults = input.wordResults ?? []
-  const rawErrorClasses = !input.romajiActive && wordResults.length > 0
+  const rawErrorClasses = !input.romajiActive && !input.kanaActive && wordResults.length > 0
     ? classifyWordResults(wordResults)
     : null
   // Same division-by-zero guard as kspcChars above: a target-length sum
@@ -243,6 +268,7 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
     punctuation: hasPunctuation,
     numbers: hasNumbers,
     romajiInput: input.romajiActive ? true : undefined,
+    kanaInput: input.kanaActive ? true : undefined,
     consistency,
     wpmHistory: input.wpmHistory,
     mistakes: Object.keys(input.mistakes).length > 0 ? input.mistakes : undefined,

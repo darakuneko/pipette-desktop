@@ -6,6 +6,7 @@
  *  useTypingTest.ts so no consumer import needs to change. */
 
 import type { TypingTestConfig, RomajiGuide } from './types'
+import type { KanaGuide } from './kana-input'
 import type { TypingTestState } from './run-state'
 import type { TypingTestMemory } from '../../shared/types/pipette-settings'
 import type { TypingAnalyticsEventPayload } from '../../shared/types/typing-analytics'
@@ -71,6 +72,12 @@ export interface UseTypingTestOptions<TPreparedEvent = unknown> {
   onNoteCharContext?: (
     runId: string, wordIndex: number,
     getExpectedChar: () => string | undefined, getMistakeKey: () => string | undefined, windowFocused: boolean,
+    /** Kana mode only — see run-log-recorder.ts's
+     * `RegistrationAnnotation.correctOverride` doc comment for why kana
+     * mode needs its own authoritative correctness verdict instead of the
+     * default `key === expectedChar` comparison. Undefined for every
+     * other mode, same deferred-thunk treatment as the two above. */
+    getCorrect?: () => boolean | undefined,
   ) => void
   /** TAPPING_TERM (ms) used to classify masked-key presses as tap vs
    * hold against a deadline fixed at press time (pressTs + this value,
@@ -95,6 +102,11 @@ export interface UseTypingTestReturn {
   /** Current word's romaji progress (romajiInput mode only); null otherwise
    *  or once all words are done. */
   romajiGuide: RomajiGuide | null
+  /** Current word's kana stroke guide (kana mode only — kana-input.ts);
+   *  null otherwise or once all words are done. Mutually exclusive with
+   *  `romajiGuide` by construction (isKanaInputActive/isRomajiInputActive
+   *  can never both be true). */
+  kanaGuide: KanaGuide | null
   elapsedSeconds: number
   remainingSeconds: number | null
   config: TypingTestConfig
@@ -110,7 +122,12 @@ export interface UseTypingTestReturn {
    * flush must await it; a caller that just wants edge-tracking reset
    * (e.g. a keymap change) can ignore the return value. */
   resetMatrixPressTracking: () => Promise<void>
-  processKeyEvent: (key: string, ctrlKey: boolean, altKey: boolean, metaKey: boolean) => void
+  /** `code`/`shiftKey` (KeyboardEvent.code / .shiftKey) are optional and
+   *  used only by kana mode's stroke resolution (kana-input.ts) — every
+   *  other mode judges from `key` alone, unaffected by their presence or
+   *  absence. See useInputModes.ts's capture-phase keydown handler for
+   *  the call site that supplies them. */
+  processKeyEvent: (key: string, ctrlKey: boolean, altKey: boolean, metaKey: boolean, code?: string, shiftKey?: boolean) => void
   processCompositionStart: () => void
   processCompositionUpdate: (data: string) => void
   processCompositionEnd: (data: string) => void

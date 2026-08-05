@@ -57,15 +57,59 @@ export function isRomajiInputEnabled(config: TypingTestConfig): boolean {
   return config.mode === 'quote' ? false : config.romajiInput !== false
 }
 
+/** True when the config's Japanese input method choice
+ *  (`RomajiDetailSettings.inputMethod`, see kana-input.ts) is explicitly
+ *  'kana'. Default is 'romaji' — undefined (never opted into kana) reads
+ *  false here, same "undefined = default" convention as every other
+ *  RomajiDetailSettings field. Used by `isRomajiInputActive` below (kana
+ *  selection excludes the romaji engine) and by kana-input.ts's own
+ *  `isKanaInputActive` (kana selection is required for the kana engine) —
+ *  the two are mutually exclusive by construction since both read this
+ *  same predicate. */
+export function isKanaInputSelected(config: TypingTestConfig): boolean {
+  return romajiDetail(config)?.inputMethod === 'kana'
+}
+
+/** The three keystroke-judging methods a Japanese-capable config can be
+ *  set to: 'direct' (plain verbatim typing, both engines off — what
+ *  `romajiInput: false` already meant), 'romaji', or 'kana'. Purely a
+ *  read-side view for the settings UI's single 3-way selector — the
+ *  persisted shape is unchanged (still `romajiInput` + `romaji.inputMethod`,
+ *  the same two fields `isRomajiInputActive`/`isKanaInputActive`
+ *  (kana-input.ts) already read); see `resolveJapaneseInputMethod`. */
+export type JapaneseInputMethod = 'direct' | 'romaji' | 'kana'
+
+/** Derives the unified 3-way selection from the config's existing
+ *  `romajiInput`/`romaji.inputMethod` fields — deterministic for any
+ *  stored value, including one written before this 3-way model existed
+ *  (a bare `romajiInput: true`/unset config with no `inputMethod` at all
+ *  resolves to 'romaji', its long-standing default; `romajiInput: false`
+ *  resolves to 'direct' regardless of whatever `inputMethod` happens to
+ *  still be sitting in `romaji`, since that field was always inert while
+ *  the master flag was off). Not a new decision: this exactly mirrors the
+ *  precedence `isRomajiInputEnabled` + `isKanaInputSelected` already
+ *  apply inside `isRomajiInputActive`/`isKanaInputActive` — this function
+ *  only exists so the settings UI has one read to build its selector
+ *  from instead of re-deriving the same two-step check itself. */
+export function resolveJapaneseInputMethod(config: TypingTestConfig): JapaneseInputMethod {
+  if (!isRomajiInputEnabled(config)) return 'direct'
+  return isKanaInputSelected(config) ? 'kana' : 'romaji'
+}
+
 /** True when the config opts into sequential romaji-keystroke judging
  *  (`isRomajiInputEnabled`) AND the mode/content combination is actually
- *  capable of it (`isRomajiCapable`). This is what actually gates whether
- *  keystrokes are judged romaji-style — the flag itself is never stripped
- *  while incapable (see `isRomajiInputEnabled`), and comes back into effect
- *  automatically once a capable language/text is selected again, without
- *  the user needing to re-toggle it. */
+ *  capable of it (`isRomajiCapable`) AND kana has not been selected as the
+ *  input method instead (`isKanaInputSelected`, see kana-input.ts) — this
+ *  is what actually gates whether keystrokes are judged romaji-style. The
+ *  flag itself is never stripped while incapable (see
+ *  `isRomajiInputEnabled`), and comes back into effect automatically once
+ *  a capable language/text is selected again, without the user needing to
+ *  re-toggle it. Romaji and kana are mutually exclusive engines sharing
+ *  the same master enable flag and capability domain, so exactly one of
+ *  `isRomajiInputActive`/`isKanaInputActive` (kana-input.ts) can ever be
+ *  true for a given config/language/text combination. */
 export function isRomajiInputActive(config: TypingTestConfig, language: string, textRomajiCapable: boolean | undefined): boolean {
-  return isRomajiInputEnabled(config) && isRomajiCapable(config, language, textRomajiCapable)
+  return isRomajiInputEnabled(config) && isRomajiCapable(config, language, textRomajiCapable) && !isKanaInputSelected(config)
 }
 
 /** Carries a config's `romajiInput`/`romaji` choice into a freshly built
@@ -138,8 +182,14 @@ export function romajiDetail(config: TypingTestConfig): RomajiDetailSettings | u
  *  an explicit `false` (the Romaji Settings modal's new toggle) opts out.
  *  The single gate both `handleRomajiChar`'s complete-branch hold and
  *  `processRomajiKeyEvent`'s Enter-at-line-end branch check, so the two stay
- *  in sync by construction rather than by convention. */
-function isLineEndEnterRequired(config: TypingTestConfig): boolean {
+ *  in sync by construction rather than by convention.
+ *
+ *  Exported so kana-input.ts's processKanaKeyEvent/handleKanaStroke can
+ *  share this exact gate — `lineEndEnter` lives on the same
+ *  `RomajiDetailSettings` object both input methods read, so there is only
+ *  ever one "require Enter at line ends" setting regardless of which
+ *  engine is active. */
+export function isLineEndEnterRequired(config: TypingTestConfig): boolean {
   return romajiDetail(config)?.lineEndEnter !== false
 }
 

@@ -40,6 +40,15 @@ export interface RomajiDetailSettings {
    *  changes nothing for existing configs. Only an explicit `false` opts
    *  out and auto-advances at line ends too. */
   lineEndEnter?: boolean
+  /** Japanese input method: 'romaji' (sequential romaji-keystroke judging
+   *  — romaji-input.ts) or 'kana' (JIS かな direct input, judged from
+   *  physical KeyboardEvent.code + shiftKey — kana-input.ts). Default:
+   *  'romaji' (undefined and 'romaji' are equivalent — see
+   *  isKanaInputSelected in romaji-input.ts). Only meaningful while
+   *  isRomajiInputEnabled is true; a mode/content combination incapable of
+   *  either engine ignores this the same way it ignores romajiInput
+   *  itself (see isRomajiCapable). */
+  inputMethod?: 'romaji' | 'kana'
 }
 
 export type TypingTestConfig =

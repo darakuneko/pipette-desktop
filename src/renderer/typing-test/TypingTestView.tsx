@@ -5,12 +5,14 @@ import type { CSSProperties, RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingTestState } from './useTypingTest'
 import type { RomajiGuide, TypingTestConfig } from './types'
+import type { KanaGuide } from './kana-input'
 import type { ComparisonStats } from './comparison'
 import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE } from './types'
 import { romajiDetail } from './romaji-input'
 import { WordDisplay } from './WordDisplay'
 import { TypingTestControlsRow } from './TypingTestControlsRow'
 import { TypingTestStatsRow } from './TypingTestStatsRow'
+import { TypingTestGuideRows } from './TypingTestGuideRows'
 import { KeystrokeTimelinePanel } from './KeystrokeTimelinePanel'
 import { useVisualLines } from './useVisualLines'
 import { useLogicalWindowHeight } from './useLogicalWindowHeight'
@@ -66,6 +68,13 @@ interface Props {
    *  (forwarded to `WordDisplay`) and the typed/remaining romaji guide line
    *  shown below the reading window. */
   romajiGuide?: RomajiGuide | null
+  /** Current word's kana-mode stroke progress (kana mode only — see
+   *  kana-input.ts), or null otherwise. Mutually exclusive with
+   *  `romajiGuide` by construction (isKanaInputActive/isRomajiInputActive
+   *  can never both be true) — drives the same current-word kana coloring
+   *  (forwarded to `WordDisplay`) plus the kana stroke guide row shown
+   *  below the reading window. */
+  kanaGuide?: KanaGuide | null
   /** Called when Space is input via IME (keydown swallowed by the IME layer). */
   onImeSpaceKey?: () => void
   /** Imported-text display: visible line count + font size (px). Ignored
@@ -159,6 +168,7 @@ export function TypingTestView({
   onCompositionUpdate,
   onCompositionEnd,
   romajiGuide = null,
+  kanaGuide = null,
   onImeSpaceKey,
   displayLines = DEFAULT_DISPLAY_LINES,
   fontSize = DEFAULT_FONT_SIZE,
@@ -204,15 +214,16 @@ export function TypingTestView({
     [state.words, state.lineBreaks],
   )
   // The ⏎ glyph is only truthful while Enter is actually required at a real
-  // line end. Romaji input mode's "Enter at line ends" toggle (default on)
-  // can turn that requirement off (see isLineEndEnterRequired in
-  // romaji-input.ts) — a line-end word then auto-advances on completion
-  // like any other word, so showing ⏎ would be a lie. `romajiGuide != null`
-  // is the established 1:1 stand-in for "romaji input is active" (romaji
-  // guide selectors return null exactly when `isRomajiInputActive` is
-  // false — see buildRomajiGuideProgress); when romaji is off entirely the
-  // config's `romaji` field is irrelevant and the glyph renders as before.
-  const showLineEndGlyph = realLines !== null && (romajiGuide == null || romajiDetail(config)?.lineEndEnter !== false)
+  // line end. Romaji/kana input mode's "Enter at line ends" toggle (default
+  // on, shared between both engines — see isLineEndEnterRequired in
+  // romaji-input.ts) can turn that requirement off — a line-end word then
+  // auto-advances on completion like any other word, so showing ⏎ would be
+  // a lie. `romajiGuide != null` / `kanaGuide != null` are the established
+  // 1:1 stand-ins for "romaji/kana input is active" (both guide selectors
+  // return null exactly when their own isRomajiInputActive/isKanaInputActive
+  // is false); when NEITHER is active the config's `romaji` field is
+  // irrelevant and the glyph renders as before.
+  const showLineEndGlyph = realLines !== null && ((romajiGuide == null && kanaGuide == null) || romajiDetail(config)?.lineEndEnter !== false)
   // Monkeytype modes (words/time/quote — lineBreaks empty) render synthetic
   // line rows too, derived from a hidden-mirror measurement (see
   // useVisualLines) instead of the flat CSS word-flow, so the reading
@@ -365,38 +376,9 @@ export function TypingTestView({
       wordResults={state.wordResults}
       cursorBlink={state.status === 'waiting'}
       compositionText={wordIdx === state.currentWordIndex ? state.compositionText : ''}
-      romajiGuide={wordIdx === state.currentWordIndex ? romajiGuide : null}
+      guideProgress={wordIdx === state.currentWordIndex ? (romajiGuide ?? kanaGuide) : null}
     />
   )
-
-  // One word's worth of the line-synchronized romaji guide row — 4-tier
-  // coloring by position relative to the current word: done (dimmed
-  // success tone), current (typed/remaining split, same as before), and
-  // upcoming (dimmed muted tone, same `typing-test-romaji-lookahead` testid
-  // the flat fallback below also uses, so both paths satisfy the same
-  // selector contract). `isFirst` suppresses the inter-word leading space
-  // for the first word on a line — words after it get one, same convention
-  // the old lookahead rendering used.
-  const renderGuideWord = (guide: RomajiGuide, wordIdx: number, isFirst: boolean) => {
-    const prefix = isFirst ? '' : ' '
-    if (wordIdx === state.currentWordIndex) {
-      return (
-        <span key={wordIdx}>
-          <span className="text-success">{prefix + guide.typed}</span>
-          <span className="text-content-muted">{guide.remaining}</span>
-        </span>
-      )
-    }
-    const word = guide.words[wordIdx] ?? ''
-    if (wordIdx < state.currentWordIndex) {
-      return <span key={wordIdx} className="text-success/60">{prefix + word}</span>
-    }
-    return (
-      <span key={wordIdx} data-testid="typing-test-romaji-lookahead" className="text-content-muted/40">
-        {prefix + word}
-      </span>
-    )
-  }
 
   return (
     // `min-h-0 flex-1` only once finished — see the "Completion screen"
@@ -431,11 +413,11 @@ export function TypingTestView({
           aria-label="IME input"
           onCompositionStart={() => {
             isComposingRef.current = true
-            // An IME composition starting during romaji mode means the OS
-            // IME is on — direct keystrokes won't reach processKeyEvent
-            // (see isRomajiInputActive's composition-blocking in
-            // useTypingTest). Surface the hint once detected.
-            if (romajiGuide) setImeDetected(true)
+            // An IME composition starting during romaji/kana mode means the
+            // OS IME is on — direct keystrokes won't reach processKeyEvent
+            // (see isRomajiInputActive/isKanaInputActive's composition-
+            // blocking in useTypingTest). Surface the hint once detected.
+            if (romajiGuide || kanaGuide) setImeDetected(true)
             onCompositionStart?.()
           }}
           onCompositionUpdate={(e) => onCompositionUpdate?.(e.data)}
@@ -530,59 +512,15 @@ export function TypingTestView({
       </div>
       )}
 
-      {/* Romaji guide — line-synchronized with the reading window's own
-          word lines (real or synthetic — see `guideLines` above): each
-          guide line previews the same words that line shows in the reading
-          window, anchored to start at the line the current word sits on.
-          Falls back to the old single-flow rendering (current word's
-          typed/remaining plus a flat lookahead slice of `words`) whenever
-          `lines` itself is unmeasured (jsdom, or before first paint) — same
-          fallback the reading window uses. Plus an IME-on hint once a
-          composition event proves direct keystrokes aren't reaching the
-          matcher. The spelling row is gated on `showRow` (lineCount === 0
-          hides it), but the IME hint always shows once detected — it's a
-          warning about input not landing, which stays relevant even with
-          the guide row hidden. Every guide line tracks the Font setting via
-          the same --tt-font var as the reading window (romajiGuideStyle —
-          deliberately NOT multilineStyle, which also carries the reading
-          window's own inline height); the IME hint stays a fixed small size
-          since it's a hint, not reading content. The guide row is
-          deliberately left un-capped in width (unlike the reading window's
-          max-w-4xl above) so a whole romaji line fits on one row without
-          wrapping on wide windows, but its left edge is pinned to line up
-          with the centered max-w-4xl reading window via the same
-          --container-4xl token (pl-[calc((100%-min(var(--container-4xl),100%))/2)]
-          clamps to 0 once the pane is at or below that width). Hidden once
-          finished, alongside the reading window above (see its own
-          comment). */}
-      {!isFinished && romajiGuide && (romajiGuide.showRow || imeDetected) && (
-        <div data-testid="typing-test-romaji-guide" className="flex w-full flex-col items-start gap-1 pl-[calc((100%-min(var(--container-4xl),100%))/2)] font-mono" style={romajiGuideStyle}>
-          {romajiGuide.showRow && (
-            guideLines ? (
-              guideLines.map((lineWordIdxs, lineIdx) => (
-                <p key={lineIdx} data-testid={`typing-test-romaji-guide-line-${lineIdx}`} className="typing-romaji-guide-text">
-                  {lineWordIdxs.map((wordIdx, j) => renderGuideWord(romajiGuide, wordIdx, j === 0))}
-                </p>
-              ))
-            ) : (
-              <p className="typing-romaji-guide-text break-all">
-                <span className="text-success">{romajiGuide.typed}</span>
-                <span className="text-content-muted">{romajiGuide.remaining}</span>
-                {romajiGuide.words
-                  .slice(state.currentWordIndex + 1, state.currentWordIndex + romajiGuide.lineCount)
-                  .map((word, i) => (
-                    <span key={i} data-testid="typing-test-romaji-lookahead" className="text-content-muted/40">{' ' + word}</span>
-                  ))}
-              </p>
-            )
-          )}
-          {imeDetected && (
-            <p data-testid="typing-test-romaji-ime-hint" className="text-xs text-warning">
-              {t('editor.typingTest.romaji.imeHint')}
-            </p>
-          )}
-        </div>
-      )}
+      {/* Romaji/kana keystroke-judging guide rows — see
+          TypingTestGuideRows's own module doc comment for the full
+          rendering contract (line-sync, IME hint, mutual exclusivity).
+          Hidden once finished, alongside the reading window above (see
+          its own comment). */}
+      <TypingTestGuideRows
+        isFinished={isFinished} romajiGuide={romajiGuide} kanaGuide={kanaGuide} imeDetected={imeDetected}
+        guideLines={guideLines} currentWordIndex={state.currentWordIndex} style={romajiGuideStyle}
+      />
 
       {/* Non-finished controls row (not started: Next Test / Resume; in
           progress: Pause or Resume / Restart) no longer renders here — it

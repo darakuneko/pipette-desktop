@@ -107,6 +107,39 @@ describe('useRunLogRecorder — finishAndSave return value', () => {
   })
 })
 
+describe('useRunLogRecorder — noteCharContext getCorrect passthrough', () => {
+  it('forwards a resolved getCorrect() thunk value through to the finished log\'s correct verdict (kana mode\'s correctOverride)', () => {
+    const { result } = renderRecorder(true)
+    result.current.noteRegistration('run-1', 0, 0, 1000, 0, () => 'ぁ', () => undefined, true)
+    // getCorrect resolves true even though the eventual char ('#') would
+    // never string-match expectedChar ('ぁ') — see kanaStrokeCorrect's own
+    // doc comment (kana-input.ts) for why kana mode needs this bypass.
+    result.current.noteCharContext('run-1', 0, () => 'ぁ', () => undefined, true, () => true)
+    result.current.record({ typingTestLabel: 'words (english)', runId: 'run-1', windowFocused: true }, {
+      kind: 'matrix', row: 0, col: 0, layer: 0, keycode: KC_A, ts: 1000,
+    })
+    result.current.record({ typingTestLabel: 'words (english)', runId: 'run-1', windowFocused: true }, {
+      kind: 'char', key: '#', ts: 1005,
+    })
+
+    const log = result.current.finishAndSave('kb-1', [{ word: 'ぁ', typed: 'ぁ', correct: true }], {
+      runId: 'run-1', startedAtMs: 1000, durationMs: 500, mode: 'words', language: 'japanese_hiragana',
+      charCorrelationUnavailable: false, romajiInput: false,
+    })
+    expect(log?.words[0].keystrokes[0].correct).toBe(true)
+  })
+
+  it('an absent getCorrect thunk falls through to the default key===expectedChar comparison', () => {
+    const { result } = renderRecorder(true)
+    driveOneKeystroke(result, 'run-1', 0)
+    const log = result.current.finishAndSave('kb-1', wordResults, {
+      runId: 'run-1', startedAtMs: 1000, durationMs: 500, mode: 'words', language: 'english',
+      charCorrelationUnavailable: false, romajiInput: false,
+    })
+    expect(log?.words[0].keystrokes[0].correct).toBe(true)
+  })
+})
+
 describe('useRunLogRecorder — currentRunHoldStats passthrough', () => {
   it('reads the buffered hold sums for the active run, before finishAndSave clears it', () => {
     const { result } = renderRecorder(true)

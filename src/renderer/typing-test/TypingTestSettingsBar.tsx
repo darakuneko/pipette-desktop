@@ -267,11 +267,14 @@ export function TypingTestSettingsBar({ config, onConfigChange, language, textRo
               </button>
             </div>
           )}
-          {/* Romaji — a dialog trigger (opens the detail settings modal),
-              not a stateful toggle, so it keeps the full-width DATA-section
-              button convention (see HistoryToggle) rather than the compact
-              option buttons above. Active (accent) whenever romajiInput is
-              on, so the state is visible without opening the modal. */}
+          {/* Japanese Input — a dialog trigger (opens the 3-way Direct/
+              Romaji/Kana settings modal), not a stateful toggle, so it
+              keeps the full-width DATA-section button convention (see
+              HistoryToggle) rather than the compact option buttons above.
+              Active (accent) whenever the selection isn't Direct — see
+              resolveJapaneseInputMethod in romaji-input.ts, whose 'direct'
+              case is exactly isRomajiInputEnabled's own false case — so
+              the state is visible without opening the modal. */}
           {showRomajiToggle && isNotQuote && (
             <button
               type="button"
@@ -281,7 +284,7 @@ export function TypingTestSettingsBar({ config, onConfigChange, language, textRo
               aria-haspopup="dialog"
               aria-expanded={showRomajiModal}
             >
-              {t('editor.typingTest.romaji.toggle')}
+              {t('editor.typingTest.japaneseInputToggle')}
             </button>
           )}
         </div>

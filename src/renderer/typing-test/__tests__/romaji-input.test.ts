@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { isRomajiCapable, isRomajiInputEnabled, isRomajiInputActive, romajiDetail, carryRomajiFields } from '../romaji-input'
+import {
+  isRomajiCapable, isRomajiInputEnabled, isRomajiInputActive, romajiDetail, carryRomajiFields,
+  resolveJapaneseInputMethod,
+} from '../romaji-input'
 import type { RomajiDetailSettings, TypingTestConfig } from '../types'
 
 // Each helper takes `romaji` directly (rather than spreading its return
@@ -136,5 +139,32 @@ describe('romajiDetail', () => {
     expect(romajiDetail(wordsConfig())).toBeUndefined()
     expect(romajiDetail(tatoebaConfig('japanese_hiragana'))).toBeUndefined()
     expect(romajiDetail(fileImportConfig())).toBeUndefined()
+  })
+})
+
+describe('resolveJapaneseInputMethod — legacy-pref mapping for the unified 3-way selector', () => {
+  it('a brand-new config (romajiInput/inputMethod both unset) resolves to romaji, the long-standing default', () => {
+    expect(resolveJapaneseInputMethod(wordsConfig())).toBe('romaji')
+  })
+
+  it('legacy romajiInput: true (no inputMethod field) resolves to romaji', () => {
+    expect(resolveJapaneseInputMethod(wordsConfig(true))).toBe('romaji')
+  })
+
+  it('legacy romajiInput: false resolves to direct', () => {
+    expect(resolveJapaneseInputMethod(wordsConfig(false))).toBe('direct')
+  })
+
+  it('romajiInput: false resolves to direct even with a stale inputMethod: kana left over from before this field was master-gated', () => {
+    expect(resolveJapaneseInputMethod(wordsConfig(false, { inputMethod: 'kana' }))).toBe('direct')
+  })
+
+  it('romajiInput true/unset with inputMethod: kana resolves to kana', () => {
+    expect(resolveJapaneseInputMethod(wordsConfig(undefined, { inputMethod: 'kana' }))).toBe('kana')
+    expect(resolveJapaneseInputMethod(wordsConfig(true, { inputMethod: 'kana' }))).toBe('kana')
+  })
+
+  it('quote mode (no romaji field at all) resolves to direct', () => {
+    expect(resolveJapaneseInputMethod(quoteConfig())).toBe('direct')
   })
 })

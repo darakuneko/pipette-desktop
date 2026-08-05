@@ -129,7 +129,13 @@ function resolveCodeWithTapFallback(code: number, shifted: boolean): CharResult 
  * (length 5, never passes it) — so Enter never actually produces a
  * `char` event despite resolving to an action here. Unshifted only —
  * its only caller (the run-log recorder) has no notion of shift state
- * for a matrix press and only ever needs the yes/no answer. */
+ * for a matrix press and only ever needs the yes/no answer.
+ *
+ * Mode-agnostic by design: kana mode ADDITIONALLY treats a handful of
+ * JIS-specific keycodes as char-producing while it's active, but that is
+ * a kana-input.ts concern (see `isKanaPhysicalPositionKeycode` there) —
+ * this function doesn't know about input methods, only about whether
+ * `resolveCode`'s printable-character domain covers `code`. */
 export function producesChar(code: number): boolean {
   const qmkId = serialize(code)
   if (qmkId && ENTER_QMKIDS.has(qmkId)) return false

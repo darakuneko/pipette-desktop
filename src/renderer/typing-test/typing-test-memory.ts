@@ -79,6 +79,13 @@ export function buildRestoredState(memory: TypingTestMemory, resume: boolean, te
     lineBreaks: new Set(lineBreaks),
     lineIndents,
     romajiKeystrokes: '',
+    // Same "word-level progress preserved, current-word keystroke progress
+    // reset" rule as romajiKeystrokes above — kana-input.ts's kanaCharIndex
+    // isn't part of TypingTestMemory either, so a paused mid-word kana
+    // character restarts from its first stroke on resume.
+    kanaCharIndex: 0,
+    kanaAwaitingMark: false,
+    kanaSegmentErred: false,
     romajiCapable,
     // Pause/resume memory doesn't carry per-run mistake tracking (it was
     // never part of TypingTestMemory) — any mistakes tallied before the

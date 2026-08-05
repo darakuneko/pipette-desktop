@@ -214,6 +214,7 @@ export function TypingTestPane({
           onCompositionUpdate={typingTest.processCompositionUpdate}
           onCompositionEnd={typingTest.processCompositionEnd}
           romajiGuide={typingTest.romajiGuide}
+          kanaGuide={typingTest.kanaGuide}
           onImeSpaceKey={() => typingTest.processKeyEvent(' ', false, false, false)}
           displayLines={displayLines}
           fontSize={fontSize}

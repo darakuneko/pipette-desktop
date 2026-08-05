@@ -9,17 +9,21 @@
  *  comment for the consumer this exists to serve. */
 
 import { isRomajiInputActive, romajiNextExpectedChar, currentRomajiMistakeKey, romajiDetail } from './romaji-input'
+import { isKanaInputActive, kanaNextExpectedChar, currentKanaMistakeKey, kanaStrokeCorrect } from './kana-input'
 import type { TypingTestConfig } from './types'
 import type { TypingTestState } from './run-state'
 
 /** Returns undefined once the run has no current word (defensive; the
- *  caller never registers past the last word) or, in romaji mode, once
- *  the current word's kana are already fully matched. */
+ *  caller never registers past the last word) or, in romaji/kana mode,
+ *  once the current word's かな are already fully matched. */
 export function deriveExpectedChar(state: TypingTestState, config: TypingTestConfig, language: string): string | undefined {
   const word = state.words[state.currentWordIndex]
   if (word === undefined) return undefined
   if (isRomajiInputActive(config, language, state.romajiCapable)) {
     return romajiNextExpectedChar(word, state.romajiKeystrokes, romajiDetail(config))
+  }
+  if (isKanaInputActive(config, language, state.romajiCapable)) {
+    return kanaNextExpectedChar(word, state.kanaCharIndex, state.kanaAwaitingMark)
   }
   return word[state.currentInput.length]
 }
@@ -37,12 +41,33 @@ export function deriveExpectedChar(state: TypingTestState, config: TypingTestCon
  *  SEGMENT (e.g. "kya") regardless of which of its keystrokes was
  *  rejected — see `currentRomajiMistakeKey`'s own best-effort caveat.
  *  Verbatim mode has no such distinction: the position's own target char
- *  IS its own mistake key, identical to `deriveExpectedChar`. */
+ *  IS its own mistake key, identical to `deriveExpectedChar`. Kana mode
+ *  also has no such distinction (unlike romaji): a mistake always tallies
+ *  against the whole かな CHARACTER regardless of which of its 1-2
+ *  physical strokes was rejected — see `currentKanaMistakeKey`. */
 export function deriveMistakeKey(state: TypingTestState, config: TypingTestConfig, language: string): string | undefined {
   const word = state.words[state.currentWordIndex]
   if (word === undefined) return undefined
   if (isRomajiInputActive(config, language, state.romajiCapable)) {
     return currentRomajiMistakeKey(word, state.romajiKeystrokes, romajiDetail(config))
   }
+  if (isKanaInputActive(config, language, state.romajiCapable)) {
+    return currentKanaMistakeKey(word, state.kanaCharIndex)
+  }
   return word[state.currentInput.length]
+}
+
+/** Authoritative correctness override for the run-log recorder's
+ *  `applyCharVerdict` (see that method's own doc comment and
+ *  `kanaStrokeCorrect`'s own doc comment in kana-input.ts for WHY kana
+ *  mode needs this instead of the default `key === expectedChar` string
+ *  comparison). Undefined for every mode but kana — including when kana
+ *  mode isn't active at all — so `applyCharVerdict` falls through to its
+ *  existing default comparison completely unchanged for romaji/verbatim
+ *  runs. */
+export function deriveKanaCorrectOverride(
+  state: TypingTestState, config: TypingTestConfig, language: string, key: string, code: string | undefined, shift: boolean,
+): boolean | undefined {
+  if (!isKanaInputActive(config, language, state.romajiCapable)) return undefined
+  return kanaStrokeCorrect(state, key, code, shift)
 }

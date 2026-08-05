@@ -100,6 +100,7 @@ import type { TypingAnalyticsEventPayload } from '../../shared/types/typing-anal
 import type { RunKeystroke, RunKeystrokeLog, RunWord } from '../../shared/types/typing-run-log'
 import { MAX_RUN_LOG_BYTES, MAX_RUN_LOG_EVENTS } from '../../shared/types/typing-run-log'
 import { producesChar } from './keycode-char-map'
+import { isKanaPhysicalPositionKeycode } from './kana-input'
 import type { WordResult } from './run-state'
 import { qualifyingHoldMs } from './keystroke-hold'
 
@@ -126,6 +127,17 @@ export interface RunLogRecordContext {
    *  comment's PRIVACY paragraph for why HID matrix polling continuing
    *  while unfocused makes this mandatory, not optional. */
   windowFocused: boolean
+  /** Whether kana direct-input mode (kana-input.ts) is active for the
+   *  current run — read only by `recordMatrixPress`'s `producesChar`
+   *  check. Optional/defaults to false so every existing call site
+   *  (romaji/verbatim runs, and every pre-existing test) is unaffected;
+   *  only the kana-aware caller in use-typing-analytics-sink.ts sets it.
+   *  See `producesChar`'s own doc comment in keycode-char-map.ts for why
+   *  a JIS-position keycode (KC_RO, KC_JYEN, ...) needs this to be
+   *  recognized as char-producing ONLY while kana mode is actually the
+   *  one typing through it — outside kana mode those same keycodes
+   *  correctly stay non-char-producing for verbatim/romaji runs. */
+  kanaInput?: boolean
 }
 
 /** Caller-supplied envelope fields `finish()` can't derive from the
@@ -219,6 +231,15 @@ interface RegistrationAnnotation {
    *  false` for it — kept here unconditionally (same as `expectedChar`)
    *  since the verdict isn't known yet at snapshot time. */
   mistakeKey: string | undefined
+  /** Authoritative correctness verdict for kana-mode runs, snapshotted at
+   *  the same char-context moment as `expectedChar`/`mistakeKey` — see
+   *  `kanaStrokeCorrect`'s own doc comment (kana-input.ts) for why kana
+   *  mode can't rely on `applyCharVerdict`'s default `key === expectedChar`
+   *  comparison. Undefined for every non-kana annotation (romaji/verbatim
+   *  runs, and every registration-only annotation — only `noteCharContext`
+   *  ever sets this), in which case `applyCharVerdict` falls through to
+   *  its default comparison exactly as before this field existed. */
+  correctOverride: boolean | undefined
 }
 
 /** Bound on how many char-producing keystrokes may sit unconfirmed in
@@ -263,6 +284,9 @@ interface PendingChar {
    *  doc comment. `wordIndex: null` (no annotation captured) implies this
    *  is `undefined` too, same as `expectedChar`. */
   mistakeKey: string | undefined
+  /** Mirrors `RegistrationAnnotation.correctOverride` — see that field's
+   *  own doc comment. */
+  correctOverride: boolean | undefined
 }
 
 interface RunLogBuffer {
@@ -394,7 +418,10 @@ export class RunLogRecorder {
     }
     this.buffer.registrations.set(
       registrationKey(row, col, ts),
-      { wordIndex, expectedChar: getExpectedChar(), mistakeKey: getMistakeKey?.() },
+      // correctOverride is always undefined here — a matrix registration
+      // has no notion of kana-mode DOM code/shift to judge with; only
+      // noteCharContext (below) ever sets it.
+      { wordIndex, expectedChar: getExpectedChar(), mistakeKey: getMistakeKey?.(), correctOverride: undefined },
     )
   }
 
@@ -418,14 +445,14 @@ export class RunLogRecorder {
    *  method only ever writes the slot. */
   noteCharContext(
     context: RunLogRecordContext, wordIndex: number, expectedChar: string | undefined,
-    mistakeKey?: string | undefined,
+    mistakeKey?: string | undefined, correctOverride?: boolean | undefined,
   ): void {
     if (!context.typingTestLabel) return
     if (!context.consentAccepted) return
     if (!context.windowFocused) return
     if (!context.runId) return
     if (context.runId === this.poisonedRunId) return
-    this.pendingCharAnnotation = { wordIndex, expectedChar, mistakeKey }
+    this.pendingCharAnnotation = { wordIndex, expectedChar, mistakeKey, correctOverride }
   }
 
   /** Record one analytics event already destined for the per-minute
@@ -451,7 +478,7 @@ export class RunLogRecorder {
     if (buf.exceeded) return
     switch (payload.kind) {
       case 'matrix':
-        this.recordMatrixPress(buf, payload)
+        this.recordMatrixPress(buf, payload, context)
         break
       case 'matrix-release':
         this.recordMatrixRelease(buf, payload)
@@ -472,7 +499,9 @@ export class RunLogRecorder {
     buf.keystrokes.push(keystroke)
   }
 
-  private recordMatrixPress(buf: RunLogBuffer, payload: Extract<TypingAnalyticsEventPayload, { kind: 'matrix' }>): void {
+  private recordMatrixPress(
+    buf: RunLogBuffer, payload: Extract<TypingAnalyticsEventPayload, { kind: 'matrix' }>, context: RunLogRecordContext,
+  ): void {
     const key = registrationKey(payload.row, payload.col, payload.ts)
     const reg = buf.registrations.get(key)
     buf.registrations.delete(key)
@@ -516,7 +545,13 @@ export class RunLogRecorder {
     // A masked key resolved as `hold` never commits a character (it's a
     // layer switch), so it must never enter char confirmation at all —
     // see the module doc comment's char-correlation note, mitigation 1.
-    const mayProduceChar = payload.action !== 'hold' && producesChar(payload.keycode)
+    // `producesChar` itself stays mode-agnostic; `context.kanaInput` ORs
+    // in `isKanaPhysicalPositionKeycode` (kana-input.ts) so a JIS-position
+    // keycode (KC_RO, KC_JYEN, ...) with no `printable` legend of its own
+    // is ALSO recognized as char-producing while kana mode is typing
+    // through it — see that function's own doc comment.
+    const mayProduceChar = payload.action !== 'hold'
+      && (producesChar(payload.keycode) || (context.kanaInput === true && isKanaPhysicalPositionKeycode(payload.keycode)))
     if (mayProduceChar) {
       // Check `pendingChars` FIRST — the real, usual ordering (see the
       // module doc comment) is char-before-matrix, so the char this
@@ -539,7 +574,7 @@ export class RunLogRecorder {
           keystroke.expectedChar = pendingChar.expectedChar
           keystroke.mistakeKeyCandidate = pendingChar.mistakeKey
         }
-        this.applyCharVerdict(keystroke, pendingChar.key)
+        this.applyCharVerdict(keystroke, pendingChar.key, pendingChar.correctOverride)
       } else {
         buf.awaitingChar.push(keystroke)
         // The single push above can grow the queue past the cap by at
@@ -588,9 +623,18 @@ export class RunLogRecorder {
    *  correct OR unjudged one — a keystroke this method is never called
    *  for at all, e.g. a bare modifier press, therefore correctly never
    *  gets either field either). */
-  private applyCharVerdict(keystroke: BufferedKeystroke, key: string): void {
+  private applyCharVerdict(keystroke: BufferedKeystroke, key: string, correctOverride?: boolean): void {
     if (key === 'Backspace') return
-    if (keystroke.expectedChar !== undefined) {
+    if (correctOverride !== undefined) {
+      // Kana mode only (see RegistrationAnnotation.correctOverride's own
+      // doc comment) — `key` there is whatever ASCII/symbol the OS
+      // layout reports for the physical position, structurally unrelated
+      // to the かな glyph in `expectedChar`, so the default string
+      // comparison below would be wrong almost always rather than merely
+      // approximate. Bypasses that comparison entirely with the
+      // authoritative verdict `kanaStrokeCorrect` already computed.
+      keystroke.correct = correctOverride
+    } else if (keystroke.expectedChar !== undefined) {
       // expectedChar (deriveExpectedChar / romajiNextExpectedChar) is
       // always the canonical, unstyled character — romaji's own
       // remainingGuide()/nextGuideChar() are never case-styled
@@ -630,6 +674,7 @@ export class RunLogRecorder {
       buf.pendingChars.push({
         key: payload.key, wordIndex: annotation?.wordIndex ?? null,
         expectedChar: annotation?.expectedChar, mistakeKey: annotation?.mistakeKey,
+        correctOverride: annotation?.correctOverride,
       })
       if (buf.pendingChars.length > MAX_PENDING_CHAR_CONFIRMATIONS) buf.pendingChars.shift()
       return
@@ -642,7 +687,7 @@ export class RunLogRecorder {
       keystroke.expectedChar = annotation.expectedChar
       keystroke.mistakeKeyCandidate = annotation.mistakeKey
     }
-    this.applyCharVerdict(keystroke, payload.key)
+    this.applyCharVerdict(keystroke, payload.key, annotation?.correctOverride)
   }
 
   /** Discard the current run's buffer without saving anything. Call on

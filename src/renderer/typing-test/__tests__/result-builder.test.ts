@@ -151,6 +151,12 @@ describe('isPbForConfig', () => {
     const result = { ...makeResult(60), romajiInput: false }
     expect(isPbForConfig(result, history)).toBe(true)
   })
+
+  it('distinguishes by kanaInput (a kana run is never a PB candidate against a Direct/romaji run of the same condition)', () => {
+    const history = [{ ...makeResult(100), kanaInput: true }]
+    const result = { ...makeResult(60) }
+    expect(isPbForConfig(result, history)).toBe(true)
+  })
 })
 
 describe('trimResults', () => {
@@ -185,7 +191,7 @@ describe('buildTypingTestResult', () => {
       config,
       language: 'english',
       wpmHistory: [55, 58, 60, 62],
-      romajiActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
+      romajiActive: false, kanaActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
 
     expect(result.wpm).toBe(60)
@@ -209,7 +215,7 @@ describe('buildTypingTestResult', () => {
     const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
     const baseInput = {
       correctChars: 20, incorrectChars: 2, wordCount: 5, wpm: 40, accuracy: 90, elapsedMs: 20000,
-      config, language: 'english', wpmHistory: [], romajiActive: false,
+      config, language: 'english', wpmHistory: [], romajiActive: false, kanaActive: false,
       confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     }
 
@@ -224,20 +230,20 @@ describe('buildTypingTestResult', () => {
     const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
     const withRomaji = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
-      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: true, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
+      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: true, kanaActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(withRomaji.romajiInput).toBe(true)
 
     const notActive = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
-      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
+      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: false, kanaActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(notActive.romajiInput).toBeUndefined()
 
     const quoteConfig: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }
     const quoteResult = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
-      config: quoteConfig, language: 'english', wpmHistory: [], romajiActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
+      config: quoteConfig, language: 'english', wpmHistory: [], romajiActive: false, kanaActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(quoteResult.romajiInput).toBeUndefined()
   })
@@ -246,9 +252,29 @@ describe('buildTypingTestResult', () => {
     const tatoebaCfg: TypingTestConfig = { mode: 'tatoeba', language: 'japanese_hiragana', pattern: 'lines', lineCount: 5, duration: 30 }
     const result = buildTypingTestResult({
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
-      config: tatoebaCfg, language: 'english', wpmHistory: [], romajiActive: true, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
+      config: tatoebaCfg, language: 'english', wpmHistory: [], romajiActive: true, kanaActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(result.romajiInput).toBe(true)
+  })
+
+  it('records kanaInput from the kanaActive input, and never alongside romajiInput', () => {
+    const wordsConfig: TypingTestConfig = {
+      mode: 'words', wordCount: 30, punctuation: false, numbers: false, romaji: { inputMethod: 'kana' },
+    }
+    const withKana = buildTypingTestResult({
+      correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
+      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: false, kanaActive: true, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
+    })
+    // The requirement this test pins: a kana run must never be recorded as
+    // romaji (romajiInput stays undefined) and must carry its own flag.
+    expect(withKana.kanaInput).toBe(true)
+    expect(withKana.romajiInput).toBeUndefined()
+
+    const notActive = buildTypingTestResult({
+      correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
+      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [], romajiActive: false, kanaActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
+    })
+    expect(notActive.kanaInput).toBeUndefined()
   })
 
   it('derives mode2 from time config', () => {
@@ -263,7 +289,7 @@ describe('buildTypingTestResult', () => {
       config,
       language: 'english',
       wpmHistory: [],
-      romajiActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
+      romajiActive: false, kanaActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(result.mode).toBe('time')
     expect(result.mode2).toBe(60)
@@ -281,7 +307,7 @@ describe('buildTypingTestResult', () => {
       config,
       language: 'english',
       wpmHistory: [],
-      romajiActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
+      romajiActive: false, kanaActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(result.mode).toBe('quote')
     expect(result.mode2).toBe('medium')
@@ -300,7 +326,7 @@ describe('buildTypingTestResult', () => {
       // The top-level (MonkeyType) language is irrelevant for tatoeba.
       language: 'german',
       wpmHistory: [],
-      romajiActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
+      romajiActive: false, kanaActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(result.mode).toBe('tatoeba')
     expect(result.mode2).toBe('english|lines|5')
@@ -320,7 +346,7 @@ describe('buildTypingTestResult', () => {
       config,
       language: 'japanese',
       wpmHistory: [],
-      romajiActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
+      romajiActive: false, kanaActive: false, mistakes: {}, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(result.mode2).toBe('japanese|time|30')
   })
@@ -398,7 +424,7 @@ describe('buildTypingTestResult — KSPC raw fields', () => {
     // (1 separator + 3 match), incorrect 0 — confirmedChars is that sum (4),
     // accumulated by run-state.ts's handleSpace, not derived here.
     const result = buildTypingTestResult({
-      ...baseInput, romajiActive: false,
+      ...baseInput, romajiActive: false, kanaActive: false,
       correctChars: 4, incorrectChars: 0, confirmedChars: 4, totalKeystrokes: 6, kspcUncomputable: false,
     })
     expect(result.kspcKeystrokes).toBe(6)
@@ -413,7 +439,7 @@ describe('buildTypingTestResult — KSPC raw fields', () => {
     // rejects don't count), incorrectChars=1 is a separate cumulative
     // rejected-keystroke tally unrelated to confirmedChars, totalKeystrokes=6 (3+1+2).
     const result = buildTypingTestResult({
-      ...baseInput, romajiActive: true,
+      ...baseInput, romajiActive: true, kanaActive: false,
       correctChars: 5, incorrectChars: 1, confirmedChars: 5, totalKeystrokes: 6, kspcUncomputable: false,
     })
     expect(result.kspcKeystrokes).toBe(6)
@@ -423,7 +449,7 @@ describe('buildTypingTestResult — KSPC raw fields', () => {
 
   it('omits both fields on zero confirmed chars (no division by zero)', () => {
     const result = buildTypingTestResult({
-      ...baseInput, romajiActive: false,
+      ...baseInput, romajiActive: false, kanaActive: false,
       correctChars: 0, incorrectChars: 0, confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     })
     expect(result.kspcKeystrokes).toBeUndefined()
@@ -432,7 +458,7 @@ describe('buildTypingTestResult — KSPC raw fields', () => {
 
   it('omits both fields when the run was KSPC-uncomputable (IME composition fired), regardless of the numbers', () => {
     const result = buildTypingTestResult({
-      ...baseInput, romajiActive: false,
+      ...baseInput, romajiActive: false, kanaActive: false,
       correctChars: 4, incorrectChars: 0, confirmedChars: 4, totalKeystrokes: 6, kspcUncomputable: true,
     })
     expect(result.kspcKeystrokes).toBeUndefined()
@@ -469,20 +495,20 @@ describe('buildTypingTestResult — average key-hold raw fields', () => {
   }
 
   it('stores the raw pair verbatim when holdStats carries at least one sample', () => {
-    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, holdStats: { holdSumMs: 240, holdSamples: 3 } })
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, kanaActive: false, holdStats: { holdSumMs: 240, holdSamples: 3 } })
     expect(result.holdSumMs).toBe(240)
     expect(result.holdSamples).toBe(3)
     expect(resultAvgHoldMs(result)).toBe(80)
   })
 
   it('omits both fields when holdStats has zero samples (nothing observed this run)', () => {
-    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, holdStats: { holdSumMs: 0, holdSamples: 0 } })
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, kanaActive: false, holdStats: { holdSumMs: 0, holdSamples: 0 } })
     expect(result.holdSumMs).toBeUndefined()
     expect(result.holdSamples).toBeUndefined()
   })
 
   it('omits both fields when holdStats is not provided (caller opted out)', () => {
-    const result = buildTypingTestResult({ ...baseInput, romajiActive: false })
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, kanaActive: false })
     expect(result.holdSumMs).toBeUndefined()
     expect(result.holdSamples).toBeUndefined()
   })
@@ -501,7 +527,7 @@ describe('buildTypingTestResult — error-class raw fields', () => {
       { word: 'road', typed: 'riad', correct: false },
       { word: 'string', typed: 'strring', correct: false },
     ]
-    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, wordResults })
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, kanaActive: false, wordResults })
     expect(result.errorSubstitutions).toBe(1)
     expect(result.errorOmissions).toBe(0)
     expect(result.errorInsertions).toBe(1)
@@ -509,7 +535,7 @@ describe('buildTypingTestResult — error-class raw fields', () => {
   })
 
   it('stores nothing when wordResults is omitted', () => {
-    const result = buildTypingTestResult({ ...baseInput, romajiActive: false })
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, kanaActive: false })
     expect(result.errorSubstitutions).toBeUndefined()
     expect(result.errorOmissions).toBeUndefined()
     expect(result.errorInsertions).toBeUndefined()
@@ -517,14 +543,14 @@ describe('buildTypingTestResult — error-class raw fields', () => {
   })
 
   it('stores nothing when wordResults is empty', () => {
-    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, wordResults: [] })
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, kanaActive: false, wordResults: [] })
     expect(result.errorSubstitutions).toBeUndefined()
     expect(result.errorTargetChars).toBeUndefined()
   })
 
   it('stores nothing for a romaji-active run, even with finalized words', () => {
     const wordResults: WordResult[] = [{ word: 'road', typed: 'riad', correct: false }]
-    const result = buildTypingTestResult({ ...baseInput, romajiActive: true, wordResults })
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: true, kanaActive: false, wordResults })
     expect(result.errorSubstitutions).toBeUndefined()
     expect(result.errorOmissions).toBeUndefined()
     expect(result.errorInsertions).toBeUndefined()
@@ -533,10 +559,24 @@ describe('buildTypingTestResult — error-class raw fields', () => {
 
   it('stores all-zero counts for an all-correct run (no false "nothing set")', () => {
     const wordResults: WordResult[] = [{ word: 'hello', typed: 'hello', correct: true }]
-    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, wordResults })
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, kanaActive: false, wordResults })
     expect(result.errorSubstitutions).toBe(0)
     expect(result.errorOmissions).toBe(0)
     expect(result.errorInsertions).toBe(0)
     expect(result.errorTargetChars).toBe(5)
+  })
+
+  it('stores nothing for a kana-active run either, for the identical reason romaji is excluded', () => {
+    // Kana mode also rejects an invalid stroke in place (handleKanaStroke,
+    // kana-input.ts) rather than writing it into the word, so a kana run's
+    // wordResults are always typed === word — comparing them would always
+    // report zero errors regardless of how many strokes were actually
+    // rejected, misrepresenting a "not measured" run as "measured, flawless".
+    const wordResults: WordResult[] = [{ word: 'がっこう', typed: 'がっこう', correct: true }]
+    const result = buildTypingTestResult({ ...baseInput, romajiActive: false, kanaActive: true, wordResults })
+    expect(result.errorSubstitutions).toBeUndefined()
+    expect(result.errorOmissions).toBeUndefined()
+    expect(result.errorInsertions).toBeUndefined()
+    expect(result.errorTargetChars).toBeUndefined()
   })
 })
