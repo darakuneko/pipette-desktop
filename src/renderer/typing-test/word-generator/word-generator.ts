@@ -191,8 +191,9 @@ export function generateWordsSync(
 ): GeneratedWords {
   const fallback = english as LanguageData
   const langData = language ? (getLanguageDataSync(language) ?? fallback) : fallback
-  const words = applyOptions(sampleWords(langData.words, wordCount, weakSpotProfile, seedLastWord), options)
-  return { words }
+  const rawWords = sampleWords(langData.words, wordCount, weakSpotProfile, seedLastWord)
+  const words = applyOptions(rawWords, options)
+  return { words, lastRawWord: rawWords[rawWords.length - 1] }
 }
 
 export async function generateWords(
@@ -203,6 +204,7 @@ export async function generateWords(
   seedLastWord?: string,
 ): Promise<GeneratedWords> {
   const langData = language ? await getLanguageData(language) : (english as LanguageData)
-  const words = applyOptions(sampleWords(langData.words, wordCount, weakSpotProfile, seedLastWord), options)
-  return { words }
+  const rawWords = sampleWords(langData.words, wordCount, weakSpotProfile, seedLastWord)
+  const words = applyOptions(rawWords, options)
+  return { words, lastRawWord: rawWords[rawWords.length - 1] }
 }

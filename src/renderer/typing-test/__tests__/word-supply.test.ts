@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createWordsForConfigSync, createWordsForConfig, refillTimeModeWords } from '../word-supply'
-import { getTatoebaPack } from '../word-generator'
+import { getTatoebaPack, getLanguageData } from '../word-generator'
 import type { TypingTestConfig } from '../types'
 import type { WeakSpotBiasProfile } from '../word-generator/weak-spot-weighting'
 
@@ -114,20 +114,69 @@ describe('refillTimeModeWords', () => {
     expect(refill!.lineBreaks.slice().sort((a, b) => a - b)).toEqual([5, 7, 9])
   })
 
-  it('monkeytype time: never repeats the previous batch\'s own last word as the refill\'s first word', () => {
-    // Force the refill to start with the exact word already at the tail of
-    // `words` by controlling nothing about content (english word list is
-    // large) but instead asserting the invariant holds across many runs:
-    // no refill's first word may equal the seed word passed in as the
-    // existing tail.
+  it('monkeytype time: given the seedLastRawWord it was asked for, never repeats it as the refill\'s first word', () => {
+    // Explicitly threading the seed (the 6th arg) — without it, the retry
+    // loop has nothing to compare against and this proves nothing.
     const config: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false }
     for (let i = 0; i < 20; i++) {
       const seedBatch = createWordsForConfigSync(config, 'english')
       const tailWord = seedBatch.words[seedBatch.words.length - 1]
       const words = [tailWord]
-      const refill = refillTimeModeWords(words, 0, config, 'english')
+      const refill = refillTimeModeWords(words, 0, config, 'english', undefined, tailWord)
       expect(refill).not.toBeNull()
       expect(refill!.words[1]).not.toBe(tailWord)
+    }
+  })
+
+  // codex regression: refillTimeModeWords used to seed its own repeat-
+  // avoidance with `words[words.length - 1]` — the DECORATED tail of the
+  // PREVIOUS batch (post injectPunctuation/injectNumbers) — while
+  // sampleWords always compares that seed against RAW candidates pulled
+  // straight from the language word list. A decorated seed (capitalized /
+  // trailing punctuation / digit-replaced) almost never string-matches a
+  // raw candidate, so the anti-repeat check silently became a no-op across
+  // every refill boundary whenever punctuation/numbers was on — a refill
+  // could immediately re-draw the exact same source word that just ended
+  // the previous batch. The fix threads the RAW word via
+  // `WordsForConfig.lastRawWord`/`TypingTestState.lastRawWord` instead of
+  // reading it off the decorated `words` tail.
+  it('with punctuation ON, a refill never repeats the previous batch\'s RAW source word at the boundary', async () => {
+    // Normalizes ONLY for this test's own comparison (never in production
+    // code) — strips capitalization (injectPunctuation always capitalizes
+    // the first word of a new batch) and any trailing sentence/comma
+    // punctuation, to recover the underlying source word from a decorated
+    // one so the boundary check can compare like-for-like against the
+    // already-raw `lastRawWord`.
+    const stripDecoration = (word: string): string => word.toLowerCase().replace(/[.,!?]+$/, '')
+
+    // A tiny 3-word pack (not 'english's 200 words) so a raw collision at
+    // the boundary is near-certain without the fix (~1/3 chance per trial
+    // instead of ~1/200) — this is what makes the test actually catch a
+    // regression, not just pass by the large word list's own low collision
+    // odds.
+    const words3 = ['alpha', 'bravo', 'charlie']
+    mockLangGet.mockResolvedValue({ name: 'tiny-punct-pack', words: words3 })
+    await getLanguageData('tiny-punct-pack')
+
+    const config: TypingTestConfig = { mode: 'time', duration: 30, punctuation: true, numbers: false }
+    for (let i = 0; i < 30; i++) {
+      const seedBatch = createWordsForConfigSync(config, 'tiny-punct-pack')
+      expect(seedBatch.lastRawWord).toBeDefined()
+      expect(words3).toContain(seedBatch.lastRawWord)
+      // Sanity: lastRawWord is genuinely the undecorated source word, not
+      // a copy of the (possibly punctuated) decorated tail.
+      expect(seedBatch.lastRawWord).toBe(stripDecoration(seedBatch.lastRawWord!))
+
+      // Minimal "words so far" array (below TIME_MODE_EXTEND_THRESHOLD so
+      // the refill actually fires) — its one entry is the DECORATED tail
+      // (what `state.words` would really hold), while the seed passed
+      // alongside is the separately-tracked RAW form, exactly how
+      // `advanceAfterWord` threads `TypingTestState.lastRawWord` in.
+      const decoratedTail = seedBatch.words[seedBatch.words.length - 1]
+      const refill = refillTimeModeWords([decoratedTail], 0, config, 'tiny-punct-pack', undefined, seedBatch.lastRawWord)
+      expect(refill).not.toBeNull()
+      const firstOfRefill = refill!.words[1]
+      expect(stripDecoration(firstOfRefill)).not.toBe(seedBatch.lastRawWord)
     }
   })
 

@@ -144,6 +144,17 @@ export interface TypingTestState {
    *  means "sample normally", never a lie about data availability (that
    *  distinction lives in the UI-facing `weakSpotGate`, not here). */
   weakSpotProfile?: WeakSpotBiasProfile
+  /** RAW (pre-decoration) word the run's word supply most recently ended
+   *  on — see `WordsForConfig.lastRawWord`/`GeneratedWords.lastRawWord`.
+   *  Threaded into every time-mode refill (`advanceAfterWord` ->
+   *  `refillTimeModeWords`) so a refill's own immediate-repeat-avoidance
+   *  seed is always compared against the RAW candidate pool, never a
+   *  decorated (capitalized/punctuated/digit-replaced) word — a decorated
+   *  seed would almost never string-match a raw candidate, silently
+   *  defeating the repeat check across the refill boundary. Updated after
+   *  every refill from that refill's own `lastRawWord`; `undefined` for
+   *  every mode but words/time (no decoration concept elsewhere). */
+  lastRawWord?: string
 }
 
 export function createInitialState(
@@ -153,7 +164,7 @@ export function createInitialState(
 }
 
 export function freshState(
-  { words, quote, lineBreaks, lineIndents, romajiCapable }: WordsForConfig,
+  { words, quote, lineBreaks, lineIndents, romajiCapable, lastRawWord }: WordsForConfig,
   status: TypingTestStatus = 'waiting',
   weakSpotProfile?: WeakSpotBiasProfile,
 ): TypingTestState {
@@ -185,6 +196,7 @@ export function freshState(
     romajiSegmentErred: false,
     missedPositions: [],
     weakSpotProfile,
+    lastRawWord,
   }
 }
 
@@ -240,12 +252,13 @@ export function advanceAfterWord(base: TypingTestState, config: TypingTestConfig
   // Time-bounded runs (monkeytype time mode, or tatoeba's Time pattern):
   // extend words if running low, never finish from words.
   if (isTimeBoundedRun(config)) {
-    const refilled = refillTimeModeWords(base.words, nextIndex, config, language, base.weakSpotProfile)
+    const refilled = refillTimeModeWords(base.words, nextIndex, config, language, base.weakSpotProfile, base.lastRawWord)
     if (!refilled) return base
-    if (refilled.lineBreaks.length === 0) return { ...base, words: refilled.words }
+    const lastRawWord = refilled.lastRawWord ?? base.lastRawWord
+    if (refilled.lineBreaks.length === 0) return { ...base, words: refilled.words, lastRawWord }
     const lineBreaks = new Set(base.lineBreaks)
     for (const b of refilled.lineBreaks) lineBreaks.add(b)
-    return { ...base, words: refilled.words, lineBreaks }
+    return { ...base, words: refilled.words, lineBreaks, lastRawWord }
   }
 
   // Words and quote modes: finish when all words typed

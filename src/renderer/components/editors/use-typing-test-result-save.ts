@@ -6,7 +6,6 @@ import type { useTypingTest, TypingTestState } from '../../typing-test/useTyping
 import { buildTypingTestResult, isPbForConfig } from '../../typing-test/result-builder'
 import { isRomajiInputActive } from '../../typing-test/romaji-input'
 import { isKanaInputActive } from '../../typing-test/kana-input'
-import { isWeakSpotTrainingActive } from '../../typing-test/types'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { LineSnapshot } from '../../typing-test/TypingTestView'
 import type { TypingTestResult, TypingTestMemory } from '../../../shared/types/pipette-settings'
@@ -215,7 +214,19 @@ export function useTypingTestResultSave({
         runId: typingTest.state.runId,
         romajiActive: isRomajiInputActive(typingTest.config, typingTest.language, typingTest.state.romajiCapable),
         kanaActive: isKanaInputActive(typingTest.config, typingTest.language, typingTest.state.romajiCapable),
-        weakSpotTraining: isWeakSpotTrainingActive(typingTest.config),
+        // NOT `isWeakSpotTrainingActive(typingTest.config)` — that only
+        // reflects the toggle, which can be on while the run actually
+        // sampled normally (gate unavailable/insufficient at run-start —
+        // see resolveWeakSpotProfileArg in useTypingTest.ts). The run's
+        // own immutable snapshot (`state.weakSpotProfile`, set once by
+        // freshState and non-null only when a profile actually cleared
+        // the keystroke gate) is the one source of truth for whether this
+        // SPECIFIC run's word pool was actually biased — a codex review
+        // finding: persisting the flag from the toggle alone wrongly split
+        // an unbiased (gate-not-met) run into the weak-spot PB/comparison
+        // condition (configKey/resultConditionKey) alongside genuinely
+        // biased runs.
+        weakSpotTraining: typingTest.state.weakSpotProfile != null,
         mistakes: typingTest.state.mistakes,
         totalKeystrokes: typingTest.state.totalKeystrokes,
         confirmedChars: typingTest.state.confirmedChars,

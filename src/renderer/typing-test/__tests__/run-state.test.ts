@@ -221,3 +221,35 @@ describe('advanceAfterWord — weakSpotProfile threading', () => {
     expect(next.words.length).toBeGreaterThan(state.words.length)
   })
 })
+
+// codex regression: refillTimeModeWords used to derive its repeat-
+// avoidance seed from `words[words.length - 1]` — the DECORATED batch
+// tail — instead of the separately-tracked RAW word. advanceAfterWord is
+// the one place that threads `state.lastRawWord` in (word-supply.test.ts
+// covers refillTimeModeWords's own seed-comparison behavior directly);
+// this covers the state-level round trip.
+describe('advanceAfterWord — lastRawWord threading', () => {
+  const punctuatedConfig: TypingTestConfig = { mode: 'time', duration: 30, punctuation: true, numbers: false }
+
+  it('updates state.lastRawWord from the refill\'s own raw tail (not left stale)', () => {
+    const state = makeState({ words: ['placeholder.'], currentWordIndex: 1, lastRawWord: 'placeholder' })
+    const next = advanceAfterWord(state, punctuatedConfig, 'english')
+    expect(next.lastRawWord).toBeDefined()
+  })
+
+  it('seeds the refill with state.lastRawWord (RAW), never a word derived from the decorated words tail', () => {
+    const stripDecoration = (word: string): string => word.toLowerCase().replace(/[.,!?]+$/, '')
+    // 'the' is in the bundled english word list — a real raw seed a refill
+    // could plausibly redraw if the seed were ignored/mismatched.
+    const rawSeed = 'the'
+    // Deliberately a DIFFERENT decorated stand-in for the words[] tail
+    // (as if injectPunctuation had run on it already) — if advanceAfterWord
+    // derived its seed from `words` instead of `state.lastRawWord`, this
+    // wrong value ('placeholder', not 'the') would be what leaks through.
+    const state = makeState({ words: ['Placeholder,'], currentWordIndex: 1, lastRawWord: rawSeed })
+    for (let i = 0; i < 20; i++) {
+      const next = advanceAfterWord(state, punctuatedConfig, 'english')
+      expect(stripDecoration(next.words[1])).not.toBe(rawSeed)
+    }
+  })
+})
