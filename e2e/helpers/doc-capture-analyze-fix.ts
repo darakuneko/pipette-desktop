@@ -117,6 +117,27 @@ async function captureErgonomicsLearning(page: Page): Promise<void> {
   await viewModeSelect.selectOption('snapshot').catch(() => { /* best effort */ })
 }
 
+/** Captures the docked footer bar (Task-analyze-footer-bar) with Split
+ *  View turned on, so the shot shows both the footer's own visual
+ *  treatment (full-bleed, distinct from the scrollable content above it)
+ *  and what Split View actually does — a second, independent Analyze pane
+ *  next to the first. The viewport here (1320px, see main()) is above the
+ *  1280px width floor the toggle requires to be enabled at all. Toggled
+ *  back off afterward so it doesn't leak into any capture that follows in
+ *  the same run. */
+async function captureFooter(page: Page): Promise<void> {
+  const splitToggle = page.locator('[data-testid="analyze-split-toggle"]')
+  if (!(await isAvailable(splitToggle))) {
+    console.log('  [skip] analyze-split-toggle not found')
+    return
+  }
+  await splitToggle.click()
+  await page.waitForTimeout(800)
+  await capture(page, 'analyze-footer')
+  await splitToggle.click().catch(() => { /* best effort */ })
+  await page.waitForTimeout(300)
+}
+
 async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
@@ -151,6 +172,9 @@ async function main(): Promise<void> {
 
     console.log('\n--- analyze-ergonomics-learning ---')
     await captureErgonomicsLearning(page)
+
+    console.log('\n--- analyze-footer ---')
+    await captureFooter(page)
 
     console.log(`\nScreenshots saved to: ${SCREENSHOT_DIR}`)
   } finally {
