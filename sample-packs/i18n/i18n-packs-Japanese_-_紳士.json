@@ -1,5 +1,5 @@
 {
-  "version": "0.1.85",
+  "version": "0.1.87",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -324,12 +324,7 @@
       },
       "punctuation": "句読点",
       "numbers": "数字",
-      "weakSpotTraining": "苦手克服鍛錬",
-      "weakSpotTooltip": "保存された結果をもとに、現在の言語と入力方式で検出された苦手な文字を含む単語を優先的に出題いたします。\nある文字（ローマ字入力においては綴りの区切り単位）は2回以上ミスをすると苦手と判定されます。また、タイミング記録がある場合（15回以上のサンプル）、普段のペースより1.5倍以上遅い、あるいは停滞（普段の2倍を超える間隔）がサンプルの20%以上で生じた場合も苦手と判定されます。\n単語と時間のパターンに適用されます。単語の選定は排他的ではなく偏りをつけるものであり、苦手な文字が一つ以上検出されて初めて変化いたします。",
-      "weakSpotHintNoWeak": "苦手な点は見受けられません",
-      "weakSpotHintActive": "苦手点: {{tokens}}",
-      "weakSpotTokenJoin": "・",
-      "weakSpotInfoAriaLabel": "苦手克服鍛錬についての説明",
+      "weakSpotTraining": "苦手克服モード",
       "japaneseInputToggle": "日本語入力",
       "romaji": {
         "imeHint": "ローマ字入力の折には、OSのIMEをお切りください"
@@ -388,6 +383,36 @@
           "xn": "ん:xn",
           "nApos": "ん:n'"
         }
+      },
+      "weakSpotSettings": {
+        "title": "苦手克服モード",
+        "tokenJoin": "・",
+        "tokenOverflow": " ほか{{extra}}件",
+        "notApplicableNote": "単語パターンおよび時間パターンにおいてのみご利用いただけます。",
+        "statusUnavailable": "履歴の読み込みが完了しておりません。今しばらくお待ちくださいませ。",
+        "statusNoWeakSpots": "苦手な点は見受けられません",
+        "statusActive": "苦手な点を検出いたしました（{{tokenCount}}件）: {{tokens}}",
+        "statusActiveNoTokens": "苦手な点を検出いたしました。",
+        "description": "ある文字（ローマ字入力においては綴りの区切り単位）は{{missThreshold}}回以上ミスをすると苦手と判定されます。また、タイミング記録がある場合（{{minTimingSamples}}回以上のサンプル）、普段のペースより{{slownessRatio}}倍以上遅い、あるいは停滞（普段の{{stallMultiple}}倍を超える間隔）がサンプルの{{stallRatePercent}}%以上で生じた場合も苦手と判定されます。",
+        "windowDescription": "判定には直近{{count}}回分の該当する記録のみを使用いたします。",
+        "windowDescriptionAll": "判定には該当するすべての記録を使用いたします。",
+        "decayDescription": "古いミスほど重みが小さくなり、{{days}}日ごとに半減いたします。",
+        "biasDescription": "有効にいたしますと、出題される単語のうち約{{percent}}%が苦手な文字から選ばれます。",
+        "historyRetentionNote": "上記の範囲設定や減衰設定にかかわらず、履歴自体が直近{{max}}件までしか保持いたしませんので、それより古い記録は判定の対象から完全に外れてしまいます。",
+        "sectionDetection": "判定条件",
+        "sectionWindow": "データの範囲",
+        "sectionSampling": "出題",
+        "missThresholdLabel": "ミス回数のしきい値（回）",
+        "slownessRatioLabel": "遅さの倍率（倍）",
+        "stallRateLabel": "停滞率（%）",
+        "stallMultipleLabel": "停滞判定の倍率（倍）",
+        "minTimingSamplesLabel": "最低タイミングサンプル数",
+        "missWindowLabel": "集計範囲（直近の回数）",
+        "missWindowAll": "すべて",
+        "decayLabel": "時間による重みの減衰（半減期・日）",
+        "decayNone": "オフ",
+        "biasRatioLabel": "苦手な文字を含む出題割合（%）",
+        "resetButton": "既定値に戻す"
       },
       "quoteLength": {
         "short": "短め",
@@ -495,6 +520,7 @@
       },
       "history": {
         "title": "過去の足跡",
+        "retentionNote": "履歴は直近{{max}}件までしか保持いたしません",
         "bestWpm": "最速",
         "avgWpm": "平均",
         "last10Avg": "直近十回",
@@ -538,7 +564,7 @@
         "conditionNumbers": "+数字",
         "conditionRomaji": "+ローマ字入力",
         "conditionKana": "+かな",
-        "conditionWeakSpot": "+苦手強化",
+        "conditionWeakSpot": "+苦手克服モード",
         "conditionTatoeba": "Tatoeba",
         "mistakeRankingTitle": "苦手とする文字",
         "mistakeRankingEmpty": "過ちの記録はまだございません",

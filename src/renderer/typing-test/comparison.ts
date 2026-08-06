@@ -44,7 +44,7 @@ export interface ConditionKeyOpts {
    *  — i.e. `TypingTestState.weakSpotProfile != null` — as opposed to
    *  merely having the toggle on while the keystroke gate wasn't met (see
    *  weak-spot-profile.ts's `WeakSpotGateInfo`). Persisted results only
-   *  ever set `weakSpotTraining: true` for the same reason (see
+   *  ever set `weakSpotTrainingMode: true` for the same reason (see
    *  use-typing-test-result-save.ts), so the live key must match that
    *  same effective signal or a gated (toggle-on, unbiased) run's own
    *  save can never find itself in PB/comparison grouping. */
@@ -60,7 +60,7 @@ export interface ConditionKeyOpts {
 export function conditionKey(config: TypingTestConfig, language: string, opts?: ConditionKeyOpts): string {
   const hasToggles = config.mode === 'words' || config.mode === 'time'
   // resultConditionKey only reads these 7 fields (configKey appends
-  // `|kana`/`|weakspot` segments ONLY when kanaInput/weakSpotTraining are
+  // `|kana`/`|weakspot` segments ONLY when kanaInput/weakSpotTrainingMode are
   // true — see its own doc comment for why that's asymmetric rather than
   // an unconditional segment), so a config-shaped partial is enough.
   // romajiInput/kanaInput must be the effective active state
@@ -68,7 +68,7 @@ export function conditionKey(config: TypingTestConfig, language: string, opts?: 
   // buildTypingTestResult records romajiActive/kanaActive (same
   // derivation), and the two need to land on the same key for a
   // default-ON kana word-language pack run to group with its own saved
-  // result. weakSpotTraining needs the same "effective, not raw" treatment
+  // result. weakSpotTrainingMode needs the same "effective, not raw" treatment
   // for the identical reason — `opts.weakSpotActive` carries it in when the
   // caller has a live run to read it from (see ConditionKeyOpts); when
   // omitted (e.g. this module's own unit tests constructing a bare config
@@ -87,7 +87,7 @@ export function conditionKey(config: TypingTestConfig, language: string, opts?: 
     numbers: hasToggles ? config.numbers : undefined,
     romajiInput: hasToggles ? isRomajiInputActive(config, language, undefined) : undefined,
     kanaInput: hasToggles ? isKanaInputActive(config, language, undefined) : undefined,
-    weakSpotTraining: hasToggles ? weakSpotActive : undefined,
+    weakSpotTrainingMode: hasToggles ? weakSpotActive : undefined,
   } as TypingTestResult)
 }
 

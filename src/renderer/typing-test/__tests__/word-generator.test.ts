@@ -113,7 +113,7 @@ describe('generateWords — weak-spot-biased sampling', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('zero-weight profile (no matched tokens) falls back to fully uniform sampling', () => {
-    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { ' ': 1 } }
+    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { ' ': 1 }, biasRatio: 0.6 }
     const result = generateWordsSync(50, undefined, undefined, profile)
     expect(result.words).toHaveLength(50)
     for (const word of result.words) {
@@ -125,7 +125,7 @@ describe('generateWords — weak-spot-biased sampling', () => {
     // English words are common, everyday words — 'e' is extremely frequent,
     // so a large weight on it should visibly skew the sampled batch toward
     // words containing 'e', without asserting an exact count (probabilistic).
-    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { e: 1000 } }
+    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { e: 1000 }, biasRatio: 0.6 }
     const result = generateWordsSync(300, undefined, undefined, profile)
     const withE = result.words.filter((w) => w.includes('e')).length
     // Roughly 60% biased draws should all match (since 'e' is so heavily
@@ -135,7 +135,7 @@ describe('generateWords — weak-spot-biased sampling', () => {
   })
 
   it('mixture ratio is deterministic under a mocked Math.random (always-biased vs always-uniform)', () => {
-    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { z: 1 } }
+    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { z: 1 }, biasRatio: 0.6 }
     // Math.random() < 0.6 always true -> every draw uses the biased path,
     // which (given only 'z'-weighted words score >0) must resolve to a
     // word containing 'z' every time pickWeightedIndex's own Math.random

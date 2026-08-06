@@ -182,7 +182,7 @@ describe('refillTimeModeWords', () => {
 
   it('monkeytype time: threads a weakSpotProfile into the refill batch (biases toward matched words)', () => {
     const config: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false }
-    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { e: 1000 } }
+    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { e: 1000 }, biasRatio: 0.6 }
     const words = Array.from({ length: 10 }, (_, i) => `w${i}`)
     const refill = refillTimeModeWords(words, 8, config, 'english', profile)
     expect(refill).not.toBeNull()
@@ -197,7 +197,7 @@ describe('refillTimeModeWords', () => {
     await getTatoebaPack('weakspot-gate-pack')
     const config: TypingTestConfig = { mode: 'tatoeba', language: 'weakspot-gate-pack', pattern: 'time', lineCount: 5, duration: 30 }
     const initial = createWordsForConfigSync(config, 'english')
-    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { zzz: 999 } }
+    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { zzz: 999 }, biasRatio: 0.6 }
     // Same deterministic-small-pack shape as the unbiased test above —
     // passing a profile must not change the tatoeba branch's own output.
     const refill = refillTimeModeWords(initial.words, 1, config, 'english', profile)
@@ -209,7 +209,7 @@ describe('refillTimeModeWords', () => {
 })
 
 describe('createWordsForConfig(Sync) — weakSpotProfile gating', () => {
-  const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { e: 1000 } }
+  const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { e: 1000 }, biasRatio: 0.6 }
 
   it('quote mode ignores a weakSpotProfile (fixed corpus, not this module\'s sampler)', () => {
     const config: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }

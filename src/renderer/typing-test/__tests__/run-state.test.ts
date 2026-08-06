@@ -202,10 +202,10 @@ describe('confirmedChars', () => {
 // snapshot (set once by freshState at run start — see useTypingTest.ts)
 // must be reused verbatim by every time-mode refill, never recomputed.
 describe('advanceAfterWord — weakSpotProfile threading', () => {
-  const timeConfig: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+  const timeConfig: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false, weakSpotTrainingMode: true }
 
   it('carries state.weakSpotProfile into the time-mode refill, biasing the extended batch', () => {
-    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { e: 1000 } }
+    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { e: 1000 }, biasRatio: 0.6 }
     // Tail well below TIME_MODE_EXTEND_THRESHOLD (10) so a refill fires.
     const state = makeState({ words: ['w0', 'w1'], currentWordIndex: 2, weakSpotProfile: profile })
     const next = advanceAfterWord(state, timeConfig, 'english')

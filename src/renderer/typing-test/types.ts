@@ -51,6 +51,55 @@ export interface RomajiDetailSettings {
   inputMethod?: 'romaji' | 'kana'
 }
 
+/** Rolling-window size for Weak Spot Training's mistake-count aggregation
+ *  (see weak-spot-profile.ts's `computeWeaknessProfile`) — the newest N
+ *  scoped history rows, by `date` desc, or `'all'` for the pre-existing
+ *  unbounded behaviour. Applies to BOTH the miss and timing signals
+ *  identically (one shared row set, not two independently-windowed ones). */
+export type WeakSpotMissWindow = 10 | 25 | 50 | 100 | 'all'
+
+/** Half-life (days) for Weak Spot Training's miss-count time decay, or
+ *  `'none'` to disable decay entirely (every miss counts at full weight
+ *  regardless of age — the pre-existing behaviour). See
+ *  weak-spot-profile.ts's decay weighting for the exact formula. */
+export type WeakSpotDecayHalfLife = 7 | 14 | 30 | 'none'
+
+/** Weak Spot Settings modal fields (words/time modes only). Every field is
+ *  optional and undefined means "use the built-in default" — same
+ *  undefined-is-default contract as `RomajiDetailSettings`, so a stored
+ *  config only ever carries what the user actually changed from the
+ *  default. See weak-spot-settings.ts for the concrete default values and
+ *  the resolution helpers that fill these in. */
+export interface WeakSpotDetailSettings {
+  /** Aggregated mistake count a token needs to reach before the miss
+   *  signal alone counts it weak. Default: 2. */
+  missThreshold?: number
+  /** How many times slower than the scope-wide median a token's own
+   *  median pre-token interval must be for the slowness signal to count
+   *  it weak. Default: 1.5. */
+  slownessRatio?: number
+  /** Share of a token's own timed intervals that must exceed
+   *  `stallMultiple` × the scope median for the stall signal to count it
+   *  weak. Default: 0.2 (20%). */
+  stallRate?: number
+  /** How many times the scope-wide median an interval must exceed to
+   *  count as a "stall" for the stall-rate calculation above. Default: 2. */
+  stallMultiple?: number
+  /** Minimum timed samples a token needs before either timing signal
+   *  (slowness/stall) is trusted at all — also the shrinkage pseudo-count
+   *  the composite score dampens low-n estimates by. Default: 15. */
+  minTimingSamples?: number
+  /** Rolling window of newest history rows (by scope) the mistake/timing
+   *  aggregation is limited to. Default: 50. */
+  missWindow?: WeakSpotMissWindow
+  /** Half-life for time-decaying a miss's contribution to the aggregated
+   *  count, or `'none'` to disable decay. Default: 'none'. */
+  decayHalfLifeDays?: WeakSpotDecayHalfLife
+  /** Share of sampling draws pulled from the weak-spot-weighted pool
+   *  rather than uniformly, once biasing is active. Default: 0.6 (60%). */
+  biasRatio?: number
+}
+
 export type TypingTestConfig =
   // `romajiInput` opts into sequential romaji-keystroke judging for kana
   // packs (japanese_hiragana / japanese_katakana). Defaults ON when unset:
@@ -59,15 +108,15 @@ export type TypingTestConfig =
   // verbatim-string matching behaviour. `romaji` holds the Romaji Settings
   // modal's detail fields and is only ever read while `romajiInput` is
   // honored (see `isRomajiInputActive`).
-  // `weakSpotTraining` biases word sampling toward characters/tokens the
+  // `weakSpotTrainingMode` biases word sampling toward characters/tokens the
   // user frequently mistypes (see weak-spot-profile.ts /
   // word-generator/weak-spot-weighting.ts) — words/time modes only, since
   // biasing needs a sampled word POOL to bias within (quote/fileImport/
   // tatoeba play fixed/imported text verbatim). Optional, default off
   // (unlike romajiInput's default-on): an absent/false value is the
   // pre-existing behaviour, so no legacy config is silently reinterpreted.
-  | { mode: 'words'; wordCount: number; punctuation: boolean; numbers: boolean; weakSpotTraining?: boolean; romajiInput?: boolean; romaji?: RomajiDetailSettings }
-  | { mode: 'time'; duration: number; punctuation: boolean; numbers: boolean; weakSpotTraining?: boolean; romajiInput?: boolean; romaji?: RomajiDetailSettings }
+  | { mode: 'words'; wordCount: number; punctuation: boolean; numbers: boolean; weakSpotTrainingMode?: boolean; weakSpot?: WeakSpotDetailSettings; romajiInput?: boolean; romaji?: RomajiDetailSettings }
+  | { mode: 'time'; duration: number; punctuation: boolean; numbers: boolean; weakSpotTrainingMode?: boolean; weakSpot?: WeakSpotDetailSettings; romajiInput?: boolean; romaji?: RomajiDetailSettings }
   | { mode: 'quote'; quoteLength: QuoteLength }
   // Imported user text, played verbatim in order via the quote rendering
   // path. `textId` references an entry in the typing-test-texts store.
@@ -126,9 +175,19 @@ export function runDurationSeconds(config: TypingTestConfig): number | null {
  *  Centralizes the mode-guard so callers (togglesRef carry, conditionKey,
  *  the sampling call sites, buildTypingTestResult) never have to repeat
  *  `(config.mode === 'words' || config.mode === 'time') &&
- *  config.weakSpotTraining` inline. */
+ *  config.weakSpotTrainingMode` inline. */
 export function isWeakSpotTrainingActive(config: TypingTestConfig): boolean {
-  return (config.mode === 'words' || config.mode === 'time') && config.weakSpotTraining === true
+  return (config.mode === 'words' || config.mode === 'time') && config.weakSpotTrainingMode === true
+}
+
+/** Narrows to the 'words'/'time' variants — the only ones carrying
+ *  `weakSpotTrainingMode`/`weakSpot` (and, incidentally, `punctuation`/
+ *  `numbers`/`romajiInput`/`romaji`). Centralizes what would otherwise be
+ *  re-spelled inline (`config.mode === 'words' || config.mode === 'time'`,
+ *  or the equivalent `'weakSpot' in config`) at every call site that needs
+ *  the words/time slice of `TypingTestConfig` as a real type guard. */
+export function hasWeakSpotFields(config: TypingTestConfig): config is Extract<TypingTestConfig, { mode: 'words' | 'time' }> {
+  return config.mode === 'words' || config.mode === 'time'
 }
 
 /** Word-language packs the romaji-keystroke matcher supports (kana word
@@ -216,6 +275,13 @@ export const FONT_SIZE_MIN = 14
 export const FONT_SIZE_MAX = 48
 export const FONT_SIZE_STEP = 2
 export const DEFAULT_FONT_SIZE = 24
+
+/** Saved-result retention cap (see `trimResults` in result-builder.ts,
+ *  applied on every new save regardless of period filter or Weak Spot's
+ *  own rolling window/decay settings) — exported here so History's header
+ *  note and the Weak Spot Training description can both interpolate the
+ *  real number instead of hardcoding it twice. */
+export const MAX_TYPING_TEST_RESULTS = 500
 
 /** Every selectable font size (px), in ascending order — shared by every
  *  font-size <select> (the reading window's Settings > Font and the Romaji

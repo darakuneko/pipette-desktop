@@ -2,6 +2,7 @@
 
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import type { TypingTestConfig } from './types'
+import { hasWeakSpotFields } from './types'
 import type { WordResult } from './run-state'
 import { computeKspc } from '../../shared/kspc'
 import { classifyWordResults } from './error-classify'
@@ -92,7 +93,7 @@ export function buildResultNameChips(result: TypingTestResult, t: (key: string) 
   return chips
 }
 
-/** `kanaInput`/`weakSpotTraining` are deliberately appended ONLY when true
+/** `kanaInput`/`weakSpotTrainingMode` are deliberately appended ONLY when true
  *  (asymmetric — every other segment is always present) rather than as an
  *  unconditional segment (e.g. `|${result.kanaInput ?? false}`): this key
  *  is also the storage key for persisted comparison-baseline preferences
@@ -104,14 +105,14 @@ export function buildResultNameChips(result: TypingTestResult, t: (key: string) 
  *  byte-identical to its prior shape while still giving the new condition
  *  its own distinct key (no legacy key can end with the literal `|kana`
  *  or `|weakspot` — the fields they replace are stringified booleans).
- *  `weakSpotTraining` is checked on the ALREADY-kana-extended key (chained
+ *  `weakSpotTrainingMode` is checked on the ALREADY-kana-extended key (chained
  *  after `|kana`, not independently off `base`) so a hypothetical kana +
  *  weak-spot run still gets its own distinct 3-segment-deep key rather
  *  than colliding with a non-kana weak-spot run. */
 export function configKey(result: TypingTestResult): string {
   const base = `${result.mode ?? 'words'}|${result.mode2 ?? ''}|${result.language ?? ''}|${result.punctuation ?? false}|${result.numbers ?? false}|${result.romajiInput ?? false}`
   const withKana = result.kanaInput ? `${base}|kana` : base
-  return result.weakSpotTraining ? `${withKana}|weakspot` : withKana
+  return result.weakSpotTrainingMode ? `${withKana}|weakspot` : withKana
 }
 
 export function isPbForConfig(result: TypingTestResult, history: TypingTestResult[]): boolean {
@@ -212,19 +213,15 @@ export interface BuildTypingTestResultInput {
    *  above are the caller's own effective-state derivation rather than a
    *  raw config flag. Optional, default `false`, so existing callers/tests
    *  that predate this field keep building a result with no
-   *  `weakSpotTraining` set — same "store nothing" precedent as
+   *  `weakSpotTrainingMode` set — same "store nothing" precedent as
    *  `wordResults`/`holdStats`. */
-  weakSpotTraining?: boolean
-}
-
-/** Narrows to the 'words' / 'time' config variants — the only ones carrying
- * punctuation/numbers toggles. A plain `mode === 'words' || mode === 'time'`
- * boolean stored in a separate variable doesn't narrow `config` itself at
- * the read site, so this needs to be a real type guard. */
-function hasWordTimeToggles(
-  config: TypingTestConfig,
-): config is Extract<TypingTestConfig, { mode: 'words' | 'time' }> {
-  return config.mode === 'words' || config.mode === 'time'
+  weakSpotTrainingMode?: boolean
+  /** Effective (fully-resolved) Weak Spot Training settings this run used
+   *  — see `TypingTestResult.weakSpotSettings`'s own doc comment for the
+   *  both-or-neither-with-`weakSpotTrainingMode` storage contract and why
+   *  PB/condition grouping never reads this. Optional, defaults to
+   *  "store nothing", same precedent as `weakSpotTrainingMode`/`holdStats`. */
+  weakSpotSettings?: TypingTestResult['weakSpotSettings']
 }
 
 export function buildTypingTestResult(input: BuildTypingTestResultInput): TypingTestResult {
@@ -232,7 +229,7 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
   const rawWpm = computeRawWpm(totalChars, input.elapsedMs)
   const consistency = computeConsistency(input.wpmHistory)
   const config = input.config
-  const wordTimeConfig = hasWordTimeToggles(config) ? config : undefined
+  const wordTimeConfig = hasWeakSpotFields(config) ? config : undefined
   const hasPunctuation = wordTimeConfig?.punctuation
   const hasNumbers = wordTimeConfig?.numbers
 
@@ -283,7 +280,8 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
     numbers: hasNumbers,
     romajiInput: input.romajiActive ? true : undefined,
     kanaInput: input.kanaActive ? true : undefined,
-    weakSpotTraining: input.weakSpotTraining ? true : undefined,
+    weakSpotTrainingMode: input.weakSpotTrainingMode ? true : undefined,
+    weakSpotSettings: input.weakSpotTrainingMode ? input.weakSpotSettings : undefined,
     consistency,
     wpmHistory: input.wpmHistory,
     mistakes: Object.keys(input.mistakes).length > 0 ? input.mistakes : undefined,

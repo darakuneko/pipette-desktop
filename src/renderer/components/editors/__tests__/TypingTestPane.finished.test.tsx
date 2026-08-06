@@ -72,6 +72,10 @@ function fakeTypingTest(status: 'waiting' | 'running' | 'finished') {
     captureMemory: vi.fn(),
     pause: vi.fn(),
     restoreState: vi.fn(),
+    // Real (non-optional) fixture — TypingTestPaneSettingsPanel reads
+    // `weakSpotGate.topWeakTokens` unconditionally once mounted (its status
+    // line, rendered below the DATA-section button).
+    weakSpotGate: { applicable: true, status: 'unavailable' },
   } as unknown as TypingTestPaneProps['typingTest']
 }
 

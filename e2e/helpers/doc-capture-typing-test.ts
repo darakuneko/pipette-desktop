@@ -678,16 +678,20 @@ async function enterTypingTestOnFreshApp(page: Page, app: Awaited<ReturnType<typ
   await page.waitForTimeout(500)
 }
 
-/** Weak Spot Training — "toggle ON, biased words visible" capture
- *  (`typing-test-weak-spot-toggle.png`, referenced from the Weak Spot
+/** Weak Spot Training — "DATA-section button ON" + "settings modal, active
+ *  state" captures (`typing-test-weak-spot-toggle.png` /
+ *  `typing-test-weak-spot-modal.png`, referenced from the Weak Spot
  *  Training subsection under MonkeyType in both OPERATION-GUIDE files).
  *  Seeds 3 same-condition `words` runs whose combined mistakes push the
- *  letter 'k' well past MIN_MISS_COUNT (see weak-spot-scoring.ts), so the
- *  miss-only signal alone is enough to put the gate into 'active' without
- *  needing a saved keystroke log. Switches to word count 120 first so the
- *  biased sampling reads clearly across more displayed words. */
+ *  letter 'k' well past the default miss threshold (see
+ *  weak-spot-scoring.ts's DEFAULT_MIN_MISS_COUNT), so the miss-only signal
+ *  alone is enough to bring detection to 'active' without needing a saved
+ *  keystroke log. Opens the modal, enables the setting there (only
+ *  possible once detection is active), captures the modal itself in that
+ *  active state, then closes it and captures the DATA-section button on
+ *  its own now that it carries the accent (ON) styling. */
 async function captureWeakSpotToggleScreenshot(): Promise<void> {
-  console.log('\n--- Weak Spot Training: toggle + biased sampling ---')
+  console.log('\n--- Weak Spot Training: DATA button + settings modal (active) ---')
   const { app, userDataPath, lastDeviceBackup } = await launchCaptureAppWithFreshLastDevice()
   const settingsBackup = backupVirtualDeviceSettings(userDataPath)
   seedWeakSpotHistory(settingsBackup, [
@@ -718,41 +722,46 @@ async function captureWeakSpotToggleScreenshot(): Promise<void> {
     await enterTypingTestOnFreshApp(page, app)
     await expandSettingsPanelIfCollapsed(page)
 
-    const wc120 = page.locator('[data-testid="word-count-120"]')
-    if (await wc120.isVisible().catch(() => false)) {
-      await wc120.click()
-      await page.waitForTimeout(500)
-    }
+    const dataButton = page.locator('[data-testid="weak-spot-settings-toggle"]')
+    await dataButton.waitFor({ state: 'visible', timeout: 5000 })
+    await dataButton.click()
+    await page.waitForTimeout(400)
 
-    const toggle = page.locator('[data-testid="toggle-weak-spot-training"]')
-    await toggle.waitFor({ state: 'visible', timeout: 5000 })
+    const modal = page.locator('[data-testid="weak-spot-settings-modal"]')
+    await modal.waitFor({ state: 'visible', timeout: 5000 })
+
+    const enableToggle = page.locator('[data-testid="weak-spot-enable-toggle"]')
     // The toggle's enabled-ness depends on the async History load reaching
-    // gate status 'active' — if seedWeakSpotHistory's miss-count threshold
-    // is never crossed, Playwright's actionability wait on the click below
-    // would otherwise stall for the full 30s default timeout with no hint
-    // as to why. Poll for enabled state and fail fast with an explanatory
-    // error instead.
+    // detection status 'active' — if seedWeakSpotHistory's miss-count
+    // threshold is never crossed, Playwright's actionability wait on the
+    // click below would otherwise stall for the full 30s default timeout
+    // with no hint as to why. Poll for enabled state and fail fast with an
+    // explanatory error instead.
     const enabledDeadline = Date.now() + 5000
     let becameEnabled = false
     while (Date.now() < enabledDeadline) {
-      if (await toggle.isEnabled().catch(() => false)) {
+      if (await enableToggle.isEnabled().catch(() => false)) {
         becameEnabled = true
         break
       }
       await page.waitForTimeout(200)
     }
     if (!becameEnabled) {
-      throw new Error("toggle-weak-spot-training stayed disabled — seedWeakSpotHistory's 3 same-condition mistake runs should push 'k' past MIN_MISS_COUNT and bring the gate to 'active'")
+      throw new Error("weak-spot-enable-toggle stayed disabled — seedWeakSpotHistory's 3 same-condition mistake runs should push 'k' past the default miss threshold and bring detection to 'active'")
     }
-    await toggle.click()
-    await page.waitForTimeout(600)
-    // The active hint (detected tokens, e.g. "Weak spots: k") renders from
-    // the same gate that just enabled the toggle above, so it should
-    // already be present — wait explicitly anyway so the capture never
-    // races a slow re-render.
-    await page.locator('[data-testid="weak-spot-hint-active"]').waitFor({ state: 'visible', timeout: 5000 })
-    // Move the cursor off the settings area so the info icon's 300ms-delay tooltip doesn't bake into the screenshot.
+    await enableToggle.click()
+    await page.waitForTimeout(400)
+    // The status line moved out of the modal (see WeakSpotSettingsModal's
+    // own doc comment) — wait on the Reset button instead, the modal's own
+    // last-rendered element, as the render-complete signal.
+    await page.locator('[data-testid="weak-spot-settings-reset"]').waitFor({ state: 'visible', timeout: 5000 })
+    // Move the cursor off the modal so no incidental hover state bakes into the screenshot.
     await page.mouse.move(0, 0)
+    await page.waitForTimeout(200)
+    await capture(page, 'typing-test-weak-spot-modal')
+
+    await page.locator('[data-testid="weak-spot-settings-modal-close"]').click()
+    await modal.waitFor({ state: 'hidden', timeout: 5000 })
     await page.waitForTimeout(200)
     await capture(page, 'typing-test-weak-spot-toggle')
   } finally {
@@ -770,14 +779,16 @@ async function captureWeakSpotToggleScreenshot(): Promise<void> {
   }
 }
 
-/** Weak Spot Training — "no weak spots detected" hint capture
- *  (`typing-test-weak-spot-hint.png`). Seeds a single mistake-free `words`
- *  run so History is loaded (ruling out the silent 'unavailable' state)
- *  but no token crosses any weakness threshold (gate 'no-weak-spots'). The
- *  toggle stays disabled at this gate status — no click needed — so the
- *  capture shows the disabled toggle alongside the info icon and hint. */
+/** Weak Spot Training — "status hint below the DATA button, no weak spots"
+ *  capture (`typing-test-weak-spot-hint.png`). The status line now renders
+ *  directly under the DATA section's button in TypingTestPaneSettingsPanel
+ *  (moved out of WeakSpotSettingsModal — see that component's own doc
+ *  comment), so this capture reads it there without opening the modal at
+ *  all. Seeds a single mistake-free `words` run so History is loaded
+ *  (ruling out the silent 'unavailable' status, which renders nothing) but
+ *  no token crosses any weakness threshold (status 'no-weak-spots'). */
 async function captureWeakSpotHintScreenshot(): Promise<void> {
-  console.log('\n--- Weak Spot Training: no-weak-spots hint ---')
+  console.log('\n--- Weak Spot Training: status hint below the DATA button (no weak spots) ---')
   const { app, userDataPath, lastDeviceBackup } = await launchCaptureAppWithFreshLastDevice()
   const settingsBackup = backupVirtualDeviceSettings(userDataPath)
   seedWeakSpotHistory(settingsBackup, [{
@@ -794,15 +805,15 @@ async function captureWeakSpotHintScreenshot(): Promise<void> {
     await enterTypingTestOnFreshApp(page, app)
     await expandSettingsPanelIfCollapsed(page)
 
-    const toggle = page.locator('[data-testid="toggle-weak-spot-training"]')
-    await toggle.waitFor({ state: 'visible', timeout: 5000 })
-    const hint = page.locator('[data-testid="weak-spot-hint"]')
-    if (!(await hint.isVisible().catch(() => false))) {
-      throw new Error("weak-spot-hint did not appear — seedWeakSpotHistory guarantees a mistake-free scoped run, so the gate should read 'no-weak-spots'")
+    const dataButton = page.locator('[data-testid="weak-spot-settings-toggle"]')
+    await dataButton.waitFor({ state: 'visible', timeout: 5000 })
+
+    const status = page.locator('[data-testid="weak-spot-status"]')
+    await status.waitFor({ state: 'visible', timeout: 5000 })
+    const statusText = await status.textContent()
+    if (!statusText || !statusText.includes('No weak spots')) {
+      throw new Error("weak-spot-status did not read 'no weak spots' — seedWeakSpotHistory guarantees a mistake-free scoped run, so status should read 'no-weak-spots'")
     }
-    await page.waitForTimeout(300)
-    // Move the cursor off the settings area so the info icon's 300ms-delay tooltip doesn't bake into the screenshot.
-    await page.mouse.move(0, 0)
     await page.waitForTimeout(200)
     await capture(page, 'typing-test-weak-spot-hint')
   } finally {

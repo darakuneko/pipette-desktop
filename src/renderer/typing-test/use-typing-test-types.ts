@@ -11,6 +11,7 @@ import type { TypingTestState } from './run-state'
 import type { TypingTestMemory } from '../../shared/types/pipette-settings'
 import type { TypingAnalyticsEventPayload } from '../../shared/types/typing-analytics'
 import type { MistakeProfile, WeakSpotInputMethod, WeakSpotGateInfo } from './weak-spot-profile'
+import type { WeakSpotDetectionSettings } from './weak-spot-settings'
 
 export type { WeakSpotGateInfo } from './weak-spot-profile'
 
@@ -97,8 +98,17 @@ export interface UseTypingTestOptions<TPreparedEvent = unknown> {
    * (useInputModes.ts, from `typingTestHistory`) via a memoized
    * `MistakeProfileCache` and passed down; useTypingTest calls it fresh
    * at each run-start decision point (never caches its own copy) so a
-   * newly saved result is picked up by the very next run. */
-  getMistakeProfile?: (language: string, inputMethod: WeakSpotInputMethod) => MistakeProfile | undefined
+   * newly saved result is picked up by the very next run. `settings` is
+   * the CURRENT config's resolved detection settings (Weak Spot Settings
+   * modal — see weak-spot-settings.ts's `resolveWeakSpotDetectionSettings`),
+   * threaded straight through to the caller's `MistakeProfileCache` so a
+   * settings edit invalidates/re-scopes the memoized profile the same way
+   * a config/language change already does. Required (not optional) — the
+   * caller always resolves it first via `resolveWeakSpotDetectionSettings`
+   * before calling in, matching weak-spot-settings.ts's settings-required
+   * policy; a caller that wants the built-in defaults passes
+   * `DEFAULT_WEAK_SPOT_DETECTION_SETTINGS` explicitly. */
+  getMistakeProfile?: (language: string, inputMethod: WeakSpotInputMethod, settings: WeakSpotDetectionSettings) => MistakeProfile | undefined
 }
 
 export interface UseTypingTestReturn {

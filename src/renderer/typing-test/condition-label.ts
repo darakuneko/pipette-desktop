@@ -10,7 +10,7 @@ function toggleSuffix(result: TypingTestResult, t: (key: string) => string): str
   if (result.numbers) parts.push(t('editor.typingTest.history.conditionNumbers'))
   if (result.romajiInput) parts.push(t('editor.typingTest.history.conditionRomaji'))
   if (result.kanaInput) parts.push(t('editor.typingTest.history.conditionKana'))
-  if (result.weakSpotTraining) parts.push(t('editor.typingTest.history.conditionWeakSpot'))
+  if (result.weakSpotTrainingMode) parts.push(t('editor.typingTest.history.conditionWeakSpot'))
   return parts.length > 0 ? ` ${parts.join(' ')}` : ''
 }
 

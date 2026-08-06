@@ -4,7 +4,7 @@
 // Weak Spot Training (Plan-miss-focus-mode) end-to-end coverage at the
 // useInputModes layer: the getMistakeProfile thunk built from
 // typingTestHistory reaches useTypingTest, and a finished run's
-// weakSpotTraining flag reaches the saved TypingTestResult. Drives a real
+// weakSpotTrainingMode flag reaches the saved TypingTestResult. Drives a real
 // 1-word practice run the same way useInputModes.run-log.test.tsx does.
 // These fixtures use MISS-based weakness (not timing) — the mistake
 // signal needs no run log, keeping this file free of IPC mocking; the
@@ -16,7 +16,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useInputModes } from '../useInputModes'
 import { configKey } from '../../../typing-test/result-builder'
-import { MIN_MISS_COUNT } from '../../../typing-test/weak-spot-scoring'
+import { DEFAULT_MIN_MISS_COUNT } from '../../../typing-test/weak-spot-scoring'
 import type { TypingTestResult } from '../../../../shared/types/pipette-settings'
 
 function buildKeymap(): Map<string, number> {
@@ -45,12 +45,12 @@ afterEach(() => {
  *  always undefined and it never touches `window.vialAPI` — these tests
  *  exercise the miss-only path deliberately. */
 async function runOneWordToCompletion(
-  weakSpotTraining: boolean | undefined,
+  weakSpotTrainingMode: boolean | undefined,
   typingTestHistory?: TypingTestResult[],
 ): Promise<TypingTestResult> {
   const onSaveTypingTestResult = vi.fn()
   const keymap = buildKeymap()
-  const config = { mode: 'words' as const, wordCount: 1, punctuation: false, numbers: false, weakSpotTraining }
+  const config = { mode: 'words' as const, wordCount: 1, punctuation: false, numbers: false, weakSpotTrainingMode }
   const { result } = renderHook(() => useInputModes({
     rows: 1,
     cols: 1,
@@ -88,14 +88,14 @@ async function runOneWordToCompletion(
   return onSaveTypingTestResult.mock.calls[0][0] as TypingTestResult
 }
 
-// english/direct scope, one token ('a') crossing MIN_MISS_COUNT — gate
+// english/direct scope, one token ('a') crossing DEFAULT_MIN_MISS_COUNT — gate
 // 'active'.
 function activeHistory(): TypingTestResult[] {
   return [{
     date: '2025-01-01T00:00:00.000Z',
     wpm: 50, accuracy: 95, wordCount: 30, correctChars: 90, incorrectChars: 10,
     durationSeconds: 30, mode: 'words', mode2: 30, language: 'english',
-    punctuation: false, numbers: false, mistakes: { a: MIN_MISS_COUNT },
+    punctuation: false, numbers: false, mistakes: { a: DEFAULT_MIN_MISS_COUNT },
   }]
 }
 
@@ -110,7 +110,7 @@ function noWeakSpotsHistory(): TypingTestResult[] {
   }]
 }
 
-describe('useInputModes — weakSpotTraining passthrough into the saved result', () => {
+describe('useInputModes — weakSpotTrainingMode passthrough into the saved result', () => {
   // codex regression: the saved flag used to come straight from the
   // config toggle (isWeakSpotTrainingActive), so a run started with the
   // toggle ON but the gate NOT met (sampled normally — state.weakSpotProfile
@@ -121,34 +121,47 @@ describe('useInputModes — weakSpotTraining passthrough into the saved result',
 
   it('toggle ON + gate no-weak-spots: the run sampled normally, so NO flag is saved and it groups with normal runs', async () => {
     const saved = await runOneWordToCompletion(true, noWeakSpotsHistory())
-    expect(saved.weakSpotTraining).toBeUndefined()
+    expect(saved.weakSpotTrainingMode).toBeUndefined()
     // Groups with a plain (toggle-never-touched) run of the same
     // condition — same configKey, no `|weakspot` split into a separate
     // PB/comparison pool.
-    const plainRun: TypingTestResult = { ...saved, weakSpotTraining: undefined }
+    const plainRun: TypingTestResult = { ...saved, weakSpotTrainingMode: undefined }
     expect(configKey(saved)).toBe(configKey(plainRun))
     expect(configKey(saved)).not.toMatch(/\|weakspot$/)
   })
 
   it('toggle ON + gate unavailable (no history loaded at all): NO flag is saved either', async () => {
     const saved = await runOneWordToCompletion(true)
-    expect(saved.weakSpotTraining).toBeUndefined()
+    expect(saved.weakSpotTrainingMode).toBeUndefined()
   })
 
   it('toggle ON + gate active: the run actually sampled biased, so the flag IS saved', async () => {
     const saved = await runOneWordToCompletion(true, activeHistory())
-    expect(saved.weakSpotTraining).toBe(true)
+    expect(saved.weakSpotTrainingMode).toBe(true)
     expect(configKey(saved)).toMatch(/\|weakspot$/)
   })
 
-  it('a run with weakSpotTraining: false saves weakSpotTraining: undefined (asymmetric), even with an active gate', async () => {
-    const saved = await runOneWordToCompletion(false, activeHistory())
-    expect(saved.weakSpotTraining).toBeUndefined()
+  it('toggle ON + gate active: the effective settings snapshot is saved alongside the flag, using the DEFAULT values since no weakSpot detail was configured', async () => {
+    const saved = await runOneWordToCompletion(true, activeHistory())
+    expect(saved.weakSpotSettings).toEqual({
+      missThreshold: 2, slownessRatio: 1.5, stallRate: 0.2, stallMultiple: 2, minTimingSamples: 15,
+      missWindow: 50, decayHalfLifeDays: 'none', biasRatio: 0.6,
+    })
   })
 
-  it('a run with weakSpotTraining unset saves weakSpotTraining: undefined', async () => {
+  it('a run that sampled normally (no snapshot flag) saves no settings snapshot either (both-or-neither)', async () => {
+    const saved = await runOneWordToCompletion(true, noWeakSpotsHistory())
+    expect(saved.weakSpotSettings).toBeUndefined()
+  })
+
+  it('a run with weakSpotTrainingMode: false saves weakSpotTrainingMode: undefined (asymmetric), even with an active gate', async () => {
+    const saved = await runOneWordToCompletion(false, activeHistory())
+    expect(saved.weakSpotTrainingMode).toBeUndefined()
+  })
+
+  it('a run with weakSpotTrainingMode unset saves weakSpotTrainingMode: undefined', async () => {
     const saved = await runOneWordToCompletion(undefined)
-    expect(saved.weakSpotTraining).toBeUndefined()
+    expect(saved.weakSpotTrainingMode).toBeUndefined()
   })
 })
 

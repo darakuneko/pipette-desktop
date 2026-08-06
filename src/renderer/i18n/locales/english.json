@@ -1,5 +1,5 @@
 {
-  "version": "0.1.85",
+  "version": "0.1.87",
   "name": "English",
   "common": {
     "save": "Save",
@@ -324,12 +324,7 @@
       },
       "punctuation": "punctuation",
       "numbers": "numbers",
-      "weakSpotTraining": "Weak Spot Training",
-      "weakSpotTooltip": "Prioritizes words containing your detected weak spots for the current language and input method, based on your saved results.\nA character (or romaji sequence) counts as a weak spot when you've missed it 2+ times, or — when recorded timing is available (15+ timed samples) — typing it runs 1.5× slower than your typical pace, or it stalls (a pause over 2× your pace) on 20%+ of its timed samples.\nApplies to the Words and Time patterns; word selection is biased (not exclusive) and only changes once at least one weak spot is detected.",
-      "weakSpotHintNoWeak": "No weak spots detected — nice!",
-      "weakSpotHintActive": "Weak spots: {{tokens}}",
-      "weakSpotTokenJoin": ", ",
-      "weakSpotInfoAriaLabel": "Weak Spot Training info",
+      "weakSpotTraining": "Weak Spot Training Mode",
       "japaneseInputToggle": "Japanese Input",
       "romaji": {
         "imeHint": "Turn off your OS IME to type in romaji input mode"
@@ -388,6 +383,36 @@
           "xn": "ん:xn",
           "nApos": "ん:n'"
         }
+      },
+      "weakSpotSettings": {
+        "title": "Weak Spot Training Mode",
+        "tokenJoin": ", ",
+        "tokenOverflow": " +{{extra}}",
+        "notApplicableNote": "Only available in the Words and Time patterns.",
+        "statusUnavailable": "History hasn't finished loading yet — nothing to report.",
+        "statusNoWeakSpots": "No weak spots detected — nice!",
+        "statusActive": "Weak spots detected ({{tokenCount}}): {{tokens}}",
+        "statusActiveNoTokens": "Weak spots detected.",
+        "description": "A character (or romaji sequence) counts as a weak spot when you've missed it {{missThreshold}}+ times, or — when recorded timing is available ({{minTimingSamples}}+ timed samples) — typing it runs {{slownessRatio}}× slower than your typical pace, or it stalls (a pause over {{stallMultiple}}× your pace) on {{stallRatePercent}}%+ of its timed samples.",
+        "windowDescription": "Detection only looks at your {{count}} most recent matching runs.",
+        "windowDescriptionAll": "Detection looks at your entire matching history.",
+        "decayDescription": "Older misses count for less — their weight halves every {{days}} days.",
+        "biasDescription": "About {{percent}}% of sampled words are pulled from your weak spots once active.",
+        "historyRetentionNote": "Regardless of the window and decay settings above, History only ever keeps your {{max}} most recent results — anything older is gone from detection entirely.",
+        "sectionDetection": "Detection thresholds",
+        "sectionWindow": "Data window",
+        "sectionSampling": "Sampling",
+        "missThresholdLabel": "Miss threshold (times)",
+        "slownessRatioLabel": "Slowness ratio (×)",
+        "stallRateLabel": "Stall rate (%)",
+        "stallMultipleLabel": "Stall multiple (×)",
+        "minTimingSamplesLabel": "Min. timed samples",
+        "missWindowLabel": "Rolling window (runs)",
+        "missWindowAll": "All",
+        "decayLabel": "Time decay (half-life, days)",
+        "decayNone": "Off",
+        "biasRatioLabel": "Weak spot word share (%)",
+        "resetButton": "Reset to defaults"
       },
       "quoteLength": {
         "short": "short",
@@ -495,6 +520,7 @@
       },
       "history": {
         "title": "History",
+        "retentionNote": "Keeps up to {{max}} most recent results",
         "bestWpm": "Best",
         "avgWpm": "Avg",
         "last10Avg": "Last 10",

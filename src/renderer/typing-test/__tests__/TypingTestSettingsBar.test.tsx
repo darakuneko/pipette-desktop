@@ -130,148 +130,15 @@ describe('TypingTestSettingsBar toggles', () => {
   })
 })
 
-describe('TypingTestSettingsBar weak spot training toggle', () => {
-  it('shows the toggle in words mode and time mode, hides it in quote mode', () => {
-    renderBar()
-    expect(screen.getByTestId('toggle-weak-spot-training')).toBeInTheDocument()
-    // Resolves through the real i18n instance (not a raw key fallback).
-    expect(screen.getByTestId('toggle-weak-spot-training').textContent).toBe('Weak Spot Training')
-
-    const timeConfig: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false }
-    renderBar({ config: timeConfig })
-    expect(screen.getAllByTestId('toggle-weak-spot-training').length).toBeGreaterThan(0)
-
-    const quoteConfig: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }
-    const { container } = renderBar({ config: quoteConfig })
-    expect(container.querySelector('[data-testid="toggle-weak-spot-training"]')).toBeNull()
-  })
-
-  it('highlights the toggle when weakSpotTraining is true', () => {
-    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: true }
-    renderBar({ config })
-    expect(screen.getByTestId('toggle-weak-spot-training').className).toContain('text-accent')
-  })
-
-  it('does not highlight the toggle when unset (default off)', () => {
-    renderBar()
-    expect(screen.getByTestId('toggle-weak-spot-training').className).not.toContain('text-accent')
-  })
-
-  it('calls onConfigChange flipping weakSpotTraining on click', () => {
+// Weak Spot Training's own toggle/status UI moved into WeakSpotSettingsModal
+// (opened from the DATA-section button in TypingTestPaneSettingsPanel) — see
+// WeakSpotSettingsModal.test.tsx for that coverage. This bar only still owns
+// the mode-switch carry-through of weakSpotTrainingMode/weakSpot (togglesRef),
+// exactly mirroring how it carries romajiInput/romaji.
+describe('TypingTestSettingsBar weak spot training carry-through', () => {
+  it('preserves weakSpotTrainingMode when switching words -> quote -> time', () => {
     const onConfigChange = vi.fn()
-    renderBar({ onConfigChange, weakSpotGate: { applicable: true, status: 'active' } })
-    fireEvent.click(screen.getByTestId('toggle-weak-spot-training'))
-    expect(onConfigChange).toHaveBeenCalledTimes(1)
-    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    if (arg.mode === 'words') {
-      expect(arg.weakSpotTraining).toBe(true)
-    }
-  })
-
-  it('disables the toggle for gate status unavailable and no-weak-spots, enables it for active', () => {
-    renderBar({ weakSpotGate: { applicable: true, status: 'unavailable' } })
-    expect(screen.getByTestId('toggle-weak-spot-training')).toBeDisabled()
-
-    renderBar({ weakSpotGate: { applicable: true, status: 'no-weak-spots' } })
-    expect(screen.getAllByTestId('toggle-weak-spot-training').at(-1)).toBeDisabled()
-
-    renderBar({ weakSpotGate: { applicable: true, status: 'active' } })
-    expect(screen.getAllByTestId('toggle-weak-spot-training').at(-1)).not.toBeDisabled()
-  })
-
-  it('does not call onConfigChange when clicking a disabled toggle', () => {
-    const onConfigChange = vi.fn()
-    renderBar({ onConfigChange, weakSpotGate: { applicable: true, status: 'unavailable' } })
-    fireEvent.click(screen.getByTestId('toggle-weak-spot-training'))
-    expect(onConfigChange).not.toHaveBeenCalled()
-  })
-
-  it('does not call onConfigChange when clicking a disabled toggle with no weak spots found', () => {
-    // 'no-weak-spots' is the state most users actually land in (history loaded,
-    // nothing crossed the detection threshold) — distinct from 'unavailable'
-    // (history still loading), so it needs its own click-is-inert coverage.
-    const onConfigChange = vi.fn()
-    renderBar({ onConfigChange, weakSpotGate: { applicable: true, status: 'no-weak-spots' } })
-    fireEvent.click(screen.getByTestId('toggle-weak-spot-training'))
-    expect(onConfigChange).not.toHaveBeenCalled()
-  })
-
-  it('keeps a persisted weakSpotTraining=true accent-styled but disabled while the gate is inactive', () => {
-    // A config saved from an earlier active scope stays legible (accent
-    // styling) rather than vanishing, but the button itself must stay
-    // inert until the gate reaches 'active' again — see the component
-    // comment above the toggle for why.
-    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: true }
-    renderBar({ config, weakSpotGate: { applicable: true, status: 'no-weak-spots' } })
-    const button = screen.getByTestId('toggle-weak-spot-training')
-    expect(button.className).toContain('text-accent')
-    expect(button).toBeDisabled()
-  })
-
-  it('shows a tooltip on the info icon describing when Weak Spot Training activates', () => {
-    renderBar()
-    const bubble = screen.getByRole('tooltip')
-    expect(bubble.textContent).toContain('based on your saved results')
-    const icon = screen.getByTestId('weak-spot-info')
-    expect(icon.getAttribute('aria-describedby')).toBe(bubble.id)
-
-    // The bubble is portaled unconditionally and only fades via opacity, so
-    // presence alone doesn't prove the tooltip opens — assert the class swap.
-    // Hover handlers live on the Tooltip wrapper (icon's parent), not the
-    // icon itself — same pattern as Tooltip.test.tsx.
-    expect(bubble.className).toContain('opacity-0')
-    fireEvent.mouseEnter(icon.parentElement!)
-    expect(bubble.className).toContain('opacity-100')
-    fireEvent.mouseLeave(icon.parentElement!)
-    expect(bubble.className).toContain('opacity-0')
-  })
-
-  it('shows the "no weak spots" hint when the gate found nothing weak', () => {
-    renderBar({ weakSpotGate: { applicable: true, status: 'no-weak-spots' } })
-    const hint = screen.getByTestId('weak-spot-hint')
-    expect(hint).toBeInTheDocument()
-    expect(hint.textContent).toBe('No weak spots detected — nice!')
-    expect(screen.getByTestId('weak-spot-info')).toBeInTheDocument()
-  })
-
-  it('hides the hint when the gate is unavailable (history not loaded — never claims "no weak spots" without data), but still shows the info icon', () => {
-    renderBar({ weakSpotGate: { applicable: true, status: 'unavailable' } })
-    expect(screen.queryByTestId('weak-spot-hint')).not.toBeInTheDocument()
-    expect(screen.getByTestId('weak-spot-info')).toBeInTheDocument()
-  })
-
-  it('hides the "no weak spots" hint once the gate is active, but still shows the info icon', () => {
-    renderBar({ weakSpotGate: { applicable: true, status: 'active', topWeakTokens: ['k', 'r', 'sha'], weakTokenCount: 5 } })
-    expect(screen.queryByTestId('weak-spot-hint')).not.toBeInTheDocument()
-    expect(screen.getByTestId('weak-spot-info')).toBeInTheDocument()
-  })
-
-  it('defaults to no hint when weakSpotGate is not passed at all', () => {
-    renderBar()
-    expect(screen.queryByTestId('weak-spot-hint')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('weak-spot-hint-active')).not.toBeInTheDocument()
-  })
-
-  it('shows the active hint with the detected tokens and a "+N" overflow when weakTokenCount exceeds the shown tokens', () => {
-    renderBar({ weakSpotGate: { applicable: true, status: 'active', topWeakTokens: ['k', 'r', 'sha'], weakTokenCount: 5 } })
-    const hint = screen.getByTestId('weak-spot-hint-active')
-    expect(hint.textContent).toBe('Weak spots: k, r, sha +2')
-  })
-
-  it('shows the active hint without an overflow suffix when weakTokenCount equals the shown tokens', () => {
-    renderBar({ weakSpotGate: { applicable: true, status: 'active', topWeakTokens: ['k', 'r'], weakTokenCount: 2 } })
-    const hint = screen.getByTestId('weak-spot-hint-active')
-    expect(hint.textContent).toBe('Weak spots: k, r')
-  })
-
-  it('shows no active hint for an active gate without topWeakTokens (legacy/sentinel shape)', () => {
-    renderBar({ weakSpotGate: { applicable: true, status: 'active' } })
-    expect(screen.queryByTestId('weak-spot-hint-active')).not.toBeInTheDocument()
-  })
-
-  it('preserves weakSpotTraining when switching words -> quote -> time', () => {
-    const onConfigChange = vi.fn()
-    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTrainingMode: true }
     const { rerender } = render(
       <I18nextProvider i18n={i18n}>
         <TypingTestSettingsBar config={config} onConfigChange={onConfigChange} language="english" textRomajiCapable={false} />
@@ -293,7 +160,38 @@ describe('TypingTestSettingsBar weak spot training toggle', () => {
     const timeConfig = onConfigChange.mock.calls[0][0] as TypingTestConfig
     expect(timeConfig.mode).toBe('time')
     if (timeConfig.mode === 'time') {
-      expect(timeConfig.weakSpotTraining).toBe(true)
+      expect(timeConfig.weakSpotTrainingMode).toBe(true)
+    }
+  })
+
+  it('preserves the weakSpot detail settings when switching words -> quote -> time', () => {
+    const onConfigChange = vi.fn()
+    const config: TypingTestConfig = {
+      mode: 'words', wordCount: 30, punctuation: false, numbers: false,
+      weakSpotTrainingMode: true, weakSpot: { missThreshold: 4, missWindow: 100 },
+    }
+    const { rerender } = render(
+      <I18nextProvider i18n={i18n}>
+        <TypingTestSettingsBar config={config} onConfigChange={onConfigChange} language="english" textRomajiCapable={false} />
+      </I18nextProvider>,
+    )
+
+    fireEvent.click(screen.getByTestId('mode-quote'))
+    const quoteConfig = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    expect(quoteConfig.mode).toBe('quote')
+
+    onConfigChange.mockClear()
+    rerender(
+      <I18nextProvider i18n={i18n}>
+        <TypingTestSettingsBar config={quoteConfig} onConfigChange={onConfigChange} language="english" textRomajiCapable={false} />
+      </I18nextProvider>,
+    )
+
+    fireEvent.click(screen.getByTestId('mode-time'))
+    const timeConfig = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    expect(timeConfig.mode).toBe('time')
+    if (timeConfig.mode === 'time') {
+      expect(timeConfig.weakSpot).toEqual({ missThreshold: 4, missWindow: 100 })
     }
   })
 })

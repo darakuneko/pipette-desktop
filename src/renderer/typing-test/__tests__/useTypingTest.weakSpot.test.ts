@@ -15,15 +15,20 @@ import { useTypingTest } from '../useTypingTest'
 import type { TypingTestConfig } from '../types'
 import type { MistakeProfile, WeakSpotInputMethod } from '../weak-spot-profile'
 
-const ACTIVE_PROFILE: MistakeProfile = { weights: { e: 1000 }, weakTokenCount: 1 }
-const NO_WEAK_SPOTS_PROFILE: MistakeProfile = { weights: {}, weakTokenCount: 0 }
+const ACTIVE_PROFILE: MistakeProfile = { weights: { e: 1000 }, weakTokenCount: 1, topWeakTokens: ['e'] }
+const NO_WEAK_SPOTS_PROFILE: MistakeProfile = { weights: {}, weakTokenCount: 0, topWeakTokens: [] }
 // Five weak tokens so the top-3 slice and the "+N" overflow both have
 // something to prove. 'r' and 'b' share a score (50) to exercise the
 // plain-string tie-break — 'b' sorts before 'r' and must win the 3rd slot
 // ahead of it, despite 'r' being declared first in the object.
+// `topWeakTokens` is now precomputed by the profile itself (see
+// weak-spot-profile.ts's `computeWeaknessProfile`) — this mock bypasses
+// that function entirely, so it supplies the already-sorted result
+// directly, matching what computeWeaknessProfile would have produced.
 const MANY_WEAK_PROFILE: MistakeProfile = {
   weights: { k: 80, sha: 65, r: 50, b: 50, a: 40 },
   weakTokenCount: 5,
+  topWeakTokens: ['k', 'sha', 'b'],
 }
 
 function activeThunk(): (language: string, inputMethod: WeakSpotInputMethod) => MistakeProfile | undefined {
@@ -82,15 +87,15 @@ describe('useTypingTest — biased sampling end-to-end', () => {
     vi.setSystemTime(new Date('2025-01-01T00:00:00.000Z'))
   })
 
-  it('setConfig with weakSpotTraining ON + an active profile visibly skews the sampled words', async () => {
+  it('setConfig with weakSpotTrainingMode ON + an active profile visibly skews the sampled words', async () => {
     const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: activeThunk() }))
-    const config: TypingTestConfig = { mode: 'words', wordCount: 300, punctuation: false, numbers: false, weakSpotTraining: true }
+    const config: TypingTestConfig = { mode: 'words', wordCount: 300, punctuation: false, numbers: false, weakSpotTrainingMode: true }
     await act(async () => result.current.setConfig(config))
     const withE = result.current.state.words.filter((w) => w.includes('e')).length
     expect(withE / result.current.state.words.length).toBeGreaterThan(0.5)
   })
 
-  it('weakSpotTraining ON but the toggle-off default (no weakSpotTraining field) samples normally', async () => {
+  it('weakSpotTrainingMode ON but the toggle-off default (no weakSpotTrainingMode field) samples normally', async () => {
     const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: activeThunk() }))
     const config: TypingTestConfig = { mode: 'words', wordCount: 300, punctuation: false, numbers: false }
     await act(async () => result.current.setConfig(config))
@@ -100,11 +105,11 @@ describe('useTypingTest — biased sampling end-to-end', () => {
     expect(withE / result.current.state.words.length).toBeLessThan(0.5)
   })
 
-  it('weakSpotTraining ON but the profile has no weak tokens: samples normally (gate not active)', async () => {
+  it('weakSpotTrainingMode ON but the profile has no weak tokens: samples normally (gate not active)', async () => {
     const { result } = renderHook(() => useTypingTest(undefined, undefined, {
       getMistakeProfile: () => NO_WEAK_SPOTS_PROFILE,
     }))
-    const config: TypingTestConfig = { mode: 'words', wordCount: 300, punctuation: false, numbers: false, weakSpotTraining: true }
+    const config: TypingTestConfig = { mode: 'words', wordCount: 300, punctuation: false, numbers: false, weakSpotTrainingMode: true }
     await act(async () => result.current.setConfig(config))
     const withE = result.current.state.words.filter((w) => w.includes('e')).length
     expect(withE / result.current.state.words.length).toBeLessThan(0.5)
@@ -112,7 +117,7 @@ describe('useTypingTest — biased sampling end-to-end', () => {
 
   it('the run\'s weakSpotProfile snapshot survives a time-mode refill unchanged (immutability)', async () => {
     const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: activeThunk() }))
-    const config: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+    const config: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false, weakSpotTrainingMode: true }
     await act(async () => result.current.setConfig(config))
     const snapshotBefore = result.current.state.weakSpotProfile
     expect(snapshotBefore).toBeDefined()
@@ -129,8 +134,30 @@ describe('useTypingTest — biased sampling end-to-end', () => {
     expect(result.current.state.weakSpotProfile).toEqual(snapshotBefore)
   })
 
-  it('is gated OUT of quote mode even with weakSpotTraining nominally set on a stale words config carried over', async () => {
-    // weakSpotTraining only exists on words/time in the type union; quote
+  it('a genuine weakSpot-only change while weakSpotTrainingMode is OFF does not reset the in-progress run', async () => {
+    const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: activeThunk() }))
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+    await act(async () => result.current.setConfig(config))
+    const runIdBefore = result.current.state.runId
+
+    const tuned: TypingTestConfig = { ...config, weakSpot: { missThreshold: 5 } }
+    await act(async () => result.current.setConfig(tuned))
+    expect(result.current.state.runId).toBe(runIdBefore)
+  })
+
+  it('the SAME weakSpot-only change while weakSpotTrainingMode is ON does reset the run', async () => {
+    const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: activeThunk() }))
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTrainingMode: true }
+    await act(async () => result.current.setConfig(config))
+    const runIdBefore = result.current.state.runId
+
+    const tuned: TypingTestConfig = { ...config, weakSpot: { missThreshold: 5 } }
+    await act(async () => result.current.setConfig(tuned))
+    expect(result.current.state.runId).not.toBe(runIdBefore)
+  })
+
+  it('is gated OUT of quote mode even with weakSpotTrainingMode nominally set on a stale words config carried over', async () => {
+    // weakSpotTrainingMode only exists on words/time in the type union; quote
     // mode's own config object structurally can't carry it. Just confirm
     // quote mode never biases regardless of an active profile.
     const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: activeThunk() }))

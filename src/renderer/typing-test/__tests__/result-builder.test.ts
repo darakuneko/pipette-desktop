@@ -277,22 +277,22 @@ describe('buildTypingTestResult', () => {
     expect(notActive.kanaInput).toBeUndefined()
   })
 
-  it('records weakSpotTraining only when the input is explicitly true (asymmetric, same as romajiInput/kanaInput)', () => {
-    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+  it('records weakSpotTrainingMode only when the input is explicitly true (asymmetric, same as romajiInput/kanaInput)', () => {
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTrainingMode: true }
     const baseInput = {
       correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
       config, language: 'english', wpmHistory: [], romajiActive: false, kanaActive: false, mistakes: {},
       confirmedChars: 0, totalKeystrokes: 0, kspcUncomputable: false,
     }
-    const on = buildTypingTestResult({ ...baseInput, weakSpotTraining: true })
-    expect(on.weakSpotTraining).toBe(true)
+    const on = buildTypingTestResult({ ...baseInput, weakSpotTrainingMode: true })
+    expect(on.weakSpotTrainingMode).toBe(true)
 
-    const off = buildTypingTestResult({ ...baseInput, weakSpotTraining: false })
-    expect(off.weakSpotTraining).toBeUndefined()
+    const off = buildTypingTestResult({ ...baseInput, weakSpotTrainingMode: false })
+    expect(off.weakSpotTrainingMode).toBeUndefined()
 
     // Existing callers/tests that predate this field (never pass it at all).
     const omitted = buildTypingTestResult(baseInput)
-    expect(omitted.weakSpotTraining).toBeUndefined()
+    expect(omitted.weakSpotTrainingMode).toBeUndefined()
   })
 
   it('derives mode2 from time config', () => {

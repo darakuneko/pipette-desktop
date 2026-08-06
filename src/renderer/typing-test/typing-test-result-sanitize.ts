@@ -10,6 +10,7 @@
 // just to sanitize a fetched array.
 
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
+import { WEAK_SPOT_FIELD_SPECS, WEAK_SPOT_FIELD_KEYS, type WeakSpotFieldSpec } from './weak-spot-settings'
 
 /** A non-negative integer — the base shape shared by every raw
  *  KSPC/memory counter field (`totalKeystrokes`/`confirmedChars`/
@@ -115,6 +116,41 @@ function sanitizeErrorClassFields(result: TypingTestResult): {
   return {}
 }
 
+/** A field's raw snapshot value is acceptable when it's a finite number, or
+ *  — for the two fields whose spec carries a literal-string escape value
+ *  (`missWindow`'s `'all'`, `decayHalfLifeDays`'s `'none'`) — exactly that
+ *  string. Deliberately looser than `WEAK_SPOT_FIELD_SPECS`' own discrete
+ *  option sets (unlike device-prefs-validate.ts's field-level validator,
+ *  which DOES check exact membership): this is a frozen metadata snapshot
+ *  of values already resolved/validated at save time under whatever
+ *  option set was live THEN, so a since-narrowed option set must not
+ *  retroactively invalidate an old snapshot. */
+function isValidWeakSpotSnapshotField(spec: WeakSpotFieldSpec, value: unknown): boolean {
+  if (typeof value === 'number') return Number.isFinite(value)
+  return typeof value === 'string' && (spec.options as readonly unknown[]).includes(value)
+}
+
+/** Validates a result's optional `weakSpotSettings` metadata snapshot: a
+ *  plain object with every one of its 8 fields present and individually
+ *  well-typed (see `isValidWeakSpotSnapshotField`). All-or-nothing (not
+ *  field-by-field like `validateWeakSpotDetailSettings` in
+ *  device-prefs-validate.ts) since this is a frozen METADATA snapshot of
+ *  values that were already resolved/validated at save time — a partially
+ *  corrupted snapshot has no sensible per-field fallback the way a live
+ *  editable config does, so it degrades to "not set" as a whole. Returns
+ *  undefined for anything else. */
+function sanitizeWeakSpotSettings(raw: unknown): TypingTestResult['weakSpotSettings'] {
+  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return undefined
+  const o = raw as Record<string, unknown>
+  const out: Record<string, unknown> = {}
+  for (const key of WEAK_SPOT_FIELD_KEYS) {
+    const value = o[key]
+    if (!isValidWeakSpotSnapshotField(WEAK_SPOT_FIELD_SPECS[key], value)) return undefined
+    out[key] = value
+  }
+  return out as unknown as TypingTestResult['weakSpotSettings']
+}
+
 /** Replaces a malformed `mistakes` / `kspcKeystrokes`+`kspcChars` /
  *  error-class field with `undefined` (rather than discarding the rest of
  *  an already-`isValidTypingTestResult`-checked result). Applied after
@@ -125,6 +161,13 @@ export function sanitizeTypingTestResult(result: TypingTestResult): TypingTestRe
   const { kspcKeystrokes, kspcChars } = sanitizeKspcFields(result)
   const { holdSumMs, holdSamples } = sanitizeHoldFields(result)
   const { errorSubstitutions, errorOmissions, errorInsertions, errorTargetChars } = sanitizeErrorClassFields(result)
+  // Same asymmetric-true-only convention buildTypingTestResult writes
+  // (see result-builder.ts) — a non-`true` persisted value (corrupted
+  // data, hand-edited file) degrades to "not set" rather than being
+  // trusted verbatim, since a stray truthy-but-not-`true` value would
+  // otherwise flow into configKey/resultConditionKey's `|weakspot`
+  // branch check (`result.weakSpotTrainingMode ?`) with unintended results.
+  const weakSpotTrainingMode = result.weakSpotTrainingMode === true ? true : undefined
   return {
     ...result,
     mistakes: sanitizeMistakes(result.mistakes),
@@ -136,12 +179,9 @@ export function sanitizeTypingTestResult(result: TypingTestResult): TypingTestRe
     errorOmissions,
     errorInsertions,
     errorTargetChars,
-    // Same asymmetric-true-only convention buildTypingTestResult writes
-    // (see result-builder.ts) — a non-`true` persisted value (corrupted
-    // data, hand-edited file) degrades to "not set" rather than being
-    // trusted verbatim, since a stray truthy-but-not-`true` value would
-    // otherwise flow into configKey/resultConditionKey's `|weakspot`
-    // branch check (`result.weakSpotTraining ?`) with unintended results.
-    weakSpotTraining: result.weakSpotTraining === true ? true : undefined,
+    weakSpotTrainingMode,
+    // Both-or-neither with `weakSpotTrainingMode` itself, same as
+    // `buildTypingTestResult` only ever writes it alongside a true flag.
+    weakSpotSettings: weakSpotTrainingMode ? sanitizeWeakSpotSettings(result.weakSpotSettings) : undefined,
   }
 }

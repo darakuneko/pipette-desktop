@@ -4,6 +4,28 @@ import type { FingerType } from '../kle/kle-ergonomics'
 import type { AnalyzeFilterSettings } from './analyze-filters'
 import { ALLOWED_TYPING_SYNC_SPAN_DAYS, type TypingSyncSpanDays } from './typing-analytics'
 
+/** The canonical, fully-resolved shape of every Weak Spot Training
+ *  tunable — all 8 fields always present, no optionality. This is the ONE
+ *  declaration of the field set; renderer/typing-test/weak-spot-settings.ts
+ *  derives `WeakSpotDetectionSettings` (`Omit<_, 'biasRatio'>`) and the
+ *  scoring layer's `WeakSpotScoringSettings` from it rather than
+ *  re-declaring the fields, and its own `WeakSpotDetailSettings` (the
+ *  possibly-partial persisted-config shape) mirrors these same field names
+ *  field-for-field. Declared here (shared, not renderer) since this module
+ *  is imported from both the renderer's config layer and this file's own
+ *  `TypingTestResult.weakSpotSettings` snapshot, and shared code must not
+ *  depend on renderer-only modules. */
+export interface WeakSpotResolvedSettings {
+  missThreshold: number
+  slownessRatio: number
+  stallRate: number
+  stallMultiple: number
+  minTimingSamples: number
+  missWindow: number | 'all'
+  decayHalfLifeDays: number | 'none'
+  biasRatio: number
+}
+
 export interface TypingTestResult {
   date: string
   /** Run id linking this History entry to its analytics keystrokes
@@ -54,7 +76,18 @@ export interface TypingTestResult {
    *  biased run's word pool is skewed toward the user's own mistakes, so
    *  its WPM/accuracy aren't a fair PB/comparison candidate against a
    *  normal run. */
-  weakSpotTraining?: boolean
+  weakSpotTrainingMode?: boolean
+  /** Snapshot of the EFFECTIVE (fully-resolved, defaults filled in) Weak
+   *  Spot Training parameters this run actually used — stored only
+   *  alongside `weakSpotTrainingMode: true` (see `buildTypingTestResult`).
+   *  Documentation/metadata only: PB grouping (`configKey`) and condition
+   *  grouping (`resultConditionKey`) key on the `weakSpotTrainingMode` flag
+   *  alone, NOT on these values — a run biased at 20% and one biased at
+   *  100% still land in the same "+weak spot" group/condition even though
+   *  their word selection was meaningfully different. This field exists
+   *  so that non-homogeneity is at least visible after the fact (e.g. a
+   *  future per-run detail view), not to re-partition history. */
+  weakSpotSettings?: WeakSpotResolvedSettings
   consistency?: number
   isPb?: boolean
   wpmHistory?: number[]
