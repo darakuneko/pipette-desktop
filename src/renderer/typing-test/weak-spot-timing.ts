@@ -31,7 +31,19 @@
  *  timing data — expected and fine, since a mistyped token's weakness is
  *  already captured by the miss signal; the timing signals exist
  *  specifically to catch tokens that are slow despite being typed
- *  correctly, which the miss signal can't see at all. */
+ *  correctly, which the miss signal can't see at all.
+ *
+ *  A romaji word can also pass that total-count check while still having
+ *  drifted internally: an accepted ALTERNATE spelling whose own keystroke
+ *  count differs from its canonical form's (し typed "si" instead of
+ *  canonical "shi") can be exactly offset by another token in the same
+ *  word going the other way (ん typed "nn" instead of canonical "n"),
+ *  leaving the WORD's total untouched while every token boundary after
+ *  the drift point silently shifts — misattributing a within-token
+ *  composition gap as a cross-token interval. `romajiSpellingMatchesKeystrokes`
+ *  catches this the same conservative way, by comparing each consumed
+ *  keystroke's `expectedChar` against its token's own canonical spelling
+ *  and excluding the whole word on any mismatch. */
 
 import type { RunKeystrokeLog, RunKeystroke, RunWord } from '../../shared/types/typing-run-log'
 import { toHiragana } from './kana-script'
@@ -103,6 +115,35 @@ function isCleanWord(word: RunWord, expected: readonly ExpectedToken[]): boolean
   return true
 }
 
+/** Romaji-only: true when every consumed keystroke's `expectedChar`
+ *  matches the corresponding character of its own token's canonical
+ *  spelling (`key`, which for a romaji token IS that canonical spelling —
+ *  see `expectedTokensForWord`'s romaji branch). Guards against an
+ *  accepted ALTERNATE spelling whose own keystroke count differs from its
+ *  canonical form's (し typed "si" instead of canonical "shi") — the
+ *  word's TOTAL keystroke count can still coincidentally match the
+ *  canonical total (another token elsewhere absorbing the opposite delta,
+ *  e.g. ん typed "nn" instead of canonical "n"), which `isCleanWord`
+ *  alone can't catch, while every token's onset boundary after the drift
+ *  point silently shifts — misattributing a within-token composition gap
+ *  as a cross-token interval. `key` is always ASCII romaji, so per-char
+ *  indexing is safe. Only called after `isCleanWord` has already
+ *  confirmed the total keystroke count matches, so every `strokeIndex +
+ *  i` below is in bounds by construction. Direct/kana tokens never call
+ *  this (see `collectWordIntervals`) — their single-char keys can't drift
+ *  this way, kana's own `strokeCount` already accounting for a
+ *  dakuten/handakuten unit's 2 physical strokes. */
+function romajiSpellingMatchesKeystrokes(word: RunWord, expected: readonly ExpectedToken[]): boolean {
+  let strokeIndex = 0
+  for (const token of expected) {
+    for (let i = 0; i < token.strokeCount; i++) {
+      if (word.keystrokes[strokeIndex + i].expectedChar !== token.key[i]) return false
+    }
+    strokeIndex += token.strokeCount
+  }
+  return true
+}
+
 /** Per-word interval extraction — appends `[token, intervalMs]` pairs
  *  into `sink` for every non-word-initial token whose PRECEDING interval
  *  is valid (see `isValidInterval`). Word-initial (the word's very first
@@ -116,6 +157,7 @@ function collectWordIntervals(word: RunWord, inputMethod: WeakSpotInputMethod, s
   const expected = expectedTokensForWord(word.display, inputMethod)
   if (expected.length === 0) return
   if (!isCleanWord(word, expected)) return
+  if (inputMethod === 'romaji' && !romajiSpellingMatchesKeystrokes(word, expected)) return
 
   const keystrokes: readonly RunKeystroke[] = word.keystrokes
   let strokeIndex = 0

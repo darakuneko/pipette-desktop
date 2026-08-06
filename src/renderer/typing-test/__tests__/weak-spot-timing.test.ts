@@ -211,6 +211,73 @@ describe('extractTokenIntervals — romaji mode', () => {
     const result = extractTokenIntervals(log([w]), 'romaji')
     expect(result.size).toBe(0)
   })
+
+  it('excludes a word typed with an alternate spelling whose per-segment boundaries drift even though the TOTAL keystroke count still matches canonical (し "si" vs canonical "shi", offset by ん "nn" vs canonical "n")', () => {
+    // "しんか" -> canonical segments ["shi","n","ka"] (strokeCounts 3,1,2,
+    // total 6). Typed "sinnka": し as "si" (2 strokes, 1 short of
+    // canonical "shi"'s 3) exactly offset by ん as "nn" (2 strokes, 1 over
+    // canonical "n"'s 1) — the word's total stays 6, passing the plain
+    // count check, but the canonical-stroke-count walk would misassign
+    // the second 'n' (really ん's own second stroke) as か's onset trigger
+    // and the first 'n' (really ん's own first stroke) as "n"'s own onset
+    // — an intra-token gap read as a cross-token interval. `expectedChar`
+    // below (2nd `ks` arg) is what the live romaji matcher actually
+    // predicts at each step given what's been typed so far (see
+    // weak-spot-timing.ts's module doc comment) — it diverges from the
+    // canonical "shi"/"n"/"ka" spelling from the 3rd consumed keystroke
+    // onward, which the fix must detect and exclude on. `correct` (3rd
+    // arg) is irrelevant to this check — only its non-`undefined`-ness
+    // matters, to `isCleanWord`.
+    const w = word('しんか', 'しんか', [
+      ks(0, 's', true),
+      ks(150, 'h', false), // diverges from canonical "shi"'s 2nd char
+      ks(300, 'n', true),
+      ks(450, 'k', false), // diverges from canonical "n"'s (only) char
+      ks(600, 'k', true),
+      ks(750, 'a', true),
+    ])
+    const result = extractTokenIntervals(log([w]), 'romaji')
+    expect(result.size).toBe(0)
+  })
+
+  it('attributes a canonically-spelled word normally (no drift — every expectedChar matches its token\'s own canonical spelling)', () => {
+    // Same word "しんか", typed with the exact canonical spelling
+    // "shinka": し="shi" (3), ん="n" (1), か="ka" (2) — every consumed
+    // keystroke's expectedChar equals the corresponding canonical char,
+    // so the fix's new check is a no-op and attribution proceeds as
+    // before: "n"'s interval is measured from "shi"'s last stroke, "ka"'s
+    // from "n"'s only stroke.
+    const w = word('しんか', 'しんか', [
+      ks(0, 's', true),
+      ks(100, 'h', true),
+      ks(180, 'i', true), // completes "shi" — word-initial, not measured
+      ks(500, 'n', true), // "n" onset — interval 500-180
+      ks(650, 'k', true), // "ka" onset — interval 650-500
+      ks(700, 'a', true),
+    ])
+    const result = extractTokenIntervals(log([w]), 'romaji')
+    expect(result.get('shi')).toBeUndefined()
+    expect(result.get('n')).toEqual([320])
+    expect(result.get('ka')).toEqual([150])
+  })
+
+  it('excludes a second, independent alternate-spelling drift (う "wu" vs canonical "u", offset by し "si" vs canonical "shi")', () => {
+    // "うし" -> canonical segments ["u","shi"] (strokeCounts 1,3, total
+    // 4). Typed "wusi": う as "wu" (2 strokes, 1 over canonical "u"'s 1)
+    // exactly offset by し as "si" (2 strokes, 1 short of canonical
+    // "shi"'s 3) — total stays 4. Isolates the same drift mechanism as
+    // the しんか/sinnka case above with a different token pair (the
+    // canonical-vs-alternate direction is reversed: the LONGER alternate
+    // now comes first), confirming detection isn't specific to ん.
+    const w = word('うし', 'うし', [
+      ks(0, 'u', false), // diverges from canonical "u"'s (only) char
+      ks(150, 'u', true),
+      ks(300, 's', true),
+      ks(450, 'h', false), // diverges from canonical "shi"'s 2nd char
+    ])
+    const result = extractTokenIntervals(log([w]), 'romaji')
+    expect(result.size).toBe(0)
+  })
 })
 
 describe('mergeTokenIntervals', () => {
