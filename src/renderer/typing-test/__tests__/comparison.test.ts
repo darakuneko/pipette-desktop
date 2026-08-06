@@ -125,6 +125,77 @@ describe('conditionKey', () => {
   })
 })
 
+// codex regression: conditionKey used to key weakSpotTraining straight off
+// the raw config toggle (isWeakSpotTrainingActive), but a saved result only
+// ever sets weakSpotTraining when the run's OWN state.weakSpotProfile
+// snapshot was non-null (use-typing-test-result-save.ts — the toggle can be
+// on while the keystroke gate isn't met, in which case the run samples
+// normally and saves with NO flag). Without an effective-state override, the
+// toggle-on/gate-unmet live key would carry `|weakspot` while every
+// comparable saved result (including the one this exact run produces) never
+// does — breaking PB/comparison grouping for that state. `opts.weakSpotActive`
+// lets a caller with a live run (use-typing-test-pane-comparison.ts) supply
+// the effective signal instead.
+describe('conditionKey — weakSpotActive override (effective gate signal, not the raw toggle)', () => {
+  const weakSpotToggleOn: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+  const weakSpotToggleOff: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: false }
+
+  it('toggle ON + gate unmet (weakSpotActive: false): the live key equals the normal (no-suffix) key', () => {
+    const gated = conditionKey(weakSpotToggleOn, 'english', { weakSpotActive: false })
+    const normal = conditionKey(weakSpotToggleOff, 'english')
+    expect(gated).toBe(normal)
+    expect(gated).not.toMatch(/\|weakspot$/)
+  })
+
+  it('toggle ON + gate met (weakSpotActive: true): the live key carries |weakspot', () => {
+    const key = conditionKey(weakSpotToggleOn, 'english', { weakSpotActive: true })
+    expect(key).toMatch(/\|weakspot$/)
+  })
+
+  it('with no opts at all, falls back to the raw toggle (pre-existing behavior, unchanged)', () => {
+    expect(conditionKey(weakSpotToggleOn, 'english')).toMatch(/\|weakspot$/)
+    expect(conditionKey(weakSpotToggleOff, 'english')).not.toMatch(/\|weakspot$/)
+  })
+
+  it('the gated live key matches configKey(result) for the SAME run\'s own (unbiased) saved result', () => {
+    const liveKey = conditionKey(weakSpotToggleOn, 'english', { weakSpotActive: false })
+    const savedUnbiased = makeResult({ mode2: 30, weakSpotTraining: undefined })
+    expect(liveKey).toBe(configKey(savedUnbiased))
+  })
+
+  it('the met live key matches configKey(result) for the SAME run\'s own (biased) saved result', () => {
+    const liveKey = conditionKey(weakSpotToggleOn, 'english', { weakSpotActive: true })
+    const savedBiased = makeResult({ mode2: 30, weakSpotTraining: true })
+    expect(liveKey).toBe(configKey(savedBiased))
+  })
+})
+
+describe('matchingResults / computeComparison — weakSpotActive override forwarding', () => {
+  const weakSpotToggleOn: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+  // Distinct wpm per row so computeComparison's own test below can tell
+  // which pool member actually got picked, not just that SOMETHING did.
+  const normalResult = makeResult({ mode2: 30, wpm: 40 })
+  const biasedResult = makeResult({ mode2: 30, weakSpotTraining: true, wpm: 90 })
+  const pool = [normalResult, biasedResult]
+
+  it('matchingResults with weakSpotActive:false only matches the normal (no-flag) result', () => {
+    const out = matchingResults(pool, weakSpotToggleOn, 'english', undefined, { weakSpotActive: false })
+    expect(out).toEqual([normalResult])
+  })
+
+  it('matchingResults with weakSpotActive:true only matches the biased (flagged) result', () => {
+    const out = matchingResults(pool, weakSpotToggleOn, 'english', undefined, { weakSpotActive: true })
+    expect(out).toEqual([biasedResult])
+  })
+
+  it('computeComparison forwards the override through to its own matchingResults call', () => {
+    const gated = computeComparison(pool, weakSpotToggleOn, 'english', { kind: 'best' }, undefined, { weakSpotActive: false })
+    expect(gated?.wpm).toBe(normalResult.wpm)
+    const met = computeComparison(pool, weakSpotToggleOn, 'english', { kind: 'best' }, undefined, { weakSpotActive: true })
+    expect(met?.wpm).toBe(biasedResult.wpm)
+  })
+})
+
 describe('resultConditionKey', () => {
   it('keys normal modes on mode + params + language + toggles', () => {
     expect(resultConditionKey(makeResult())).toBe('words|30|english|false|false|false')
