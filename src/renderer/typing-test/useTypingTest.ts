@@ -460,7 +460,15 @@ export function useTypingTest<TPreparedEvent = unknown>(
     const inputMethod = effectiveWeakSpotInputMethod(config, language)
     const raw = options?.getMistakeProfile?.(language, inputMethod)
     if (!raw) return { applicable: true, status: 'unavailable' }
-    if (raw.weakTokenCount >= 1) return { applicable: true, status: 'active' }
+    if (raw.weakTokenCount >= 1) {
+      // Score DESC; ties broken by plain string comparison (not
+      // localeCompare, which would make the order locale-dependent).
+      const topWeakTokens = Object.entries(raw.weights)
+        .sort(([tokenA, scoreA], [tokenB, scoreB]) => scoreB - scoreA || (tokenA < tokenB ? -1 : 1))
+        .slice(0, 3)
+        .map(([token]) => token)
+      return { applicable: true, status: 'active', topWeakTokens, weakTokenCount: raw.weakTokenCount }
+    }
     return { applicable: true, status: 'no-weak-spots' }
   }, [config, language, options?.getMistakeProfile])
 

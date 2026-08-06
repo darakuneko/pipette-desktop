@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   median, shrink, computeTokenTimingStats, evaluateTokenWeakness,
-  MIN_TIMING_OBSERVATIONS, SLOWNESS_RATIO_THRESHOLD, STALL_RATE_THRESHOLD, MIN_MISS_COUNT,
+  MIN_TIMING_OBSERVATIONS, SLOWNESS_RATIO_THRESHOLD, STALL_RATE_THRESHOLD, STALL_MULTIPLE, MIN_MISS_COUNT,
 } from '../weak-spot-scoring'
 
 describe('median', () => {
@@ -211,5 +211,19 @@ describe('evaluateTokenWeakness — combined signals', () => {
     const both = evaluateTokenWeakness(10, timing, 200)
     expect(both.score).toBeGreaterThan(missOnly.score)
     expect(both.score).toBeGreaterThan(timingOnly.score)
+  })
+})
+
+describe('threshold values quoted in user-facing copy', () => {
+  // The editor.typingTest.weakSpotTooltip copy (english.json + every
+  // sample pack) quotes these values as literals ("2+ times", "15+ timed
+  // samples", "1.5× slower", "2× your pace", "20%+"). If any of
+  // these assertions fails, update that copy in all locales in lockstep.
+  it('pins the constants the tooltip copy quotes', () => {
+    expect(MIN_MISS_COUNT).toBe(2)
+    expect(MIN_TIMING_OBSERVATIONS).toBe(15)
+    expect(SLOWNESS_RATIO_THRESHOLD).toBe(1.5)
+    expect(STALL_MULTIPLE).toBe(2)
+    expect(STALL_RATE_THRESHOLD).toBe(0.2)
   })
 })

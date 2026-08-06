@@ -726,8 +726,34 @@ async function captureWeakSpotToggleScreenshot(): Promise<void> {
 
     const toggle = page.locator('[data-testid="toggle-weak-spot-training"]')
     await toggle.waitFor({ state: 'visible', timeout: 5000 })
+    // The toggle's enabled-ness depends on the async History load reaching
+    // gate status 'active' — if seedWeakSpotHistory's miss-count threshold
+    // is never crossed, Playwright's actionability wait on the click below
+    // would otherwise stall for the full 30s default timeout with no hint
+    // as to why. Poll for enabled state and fail fast with an explanatory
+    // error instead.
+    const enabledDeadline = Date.now() + 5000
+    let becameEnabled = false
+    while (Date.now() < enabledDeadline) {
+      if (await toggle.isEnabled().catch(() => false)) {
+        becameEnabled = true
+        break
+      }
+      await page.waitForTimeout(200)
+    }
+    if (!becameEnabled) {
+      throw new Error("toggle-weak-spot-training stayed disabled — seedWeakSpotHistory's 3 same-condition mistake runs should push 'k' past MIN_MISS_COUNT and bring the gate to 'active'")
+    }
     await toggle.click()
     await page.waitForTimeout(600)
+    // The active hint (detected tokens, e.g. "Weak spots: k") renders from
+    // the same gate that just enabled the toggle above, so it should
+    // already be present — wait explicitly anyway so the capture never
+    // races a slow re-render.
+    await page.locator('[data-testid="weak-spot-hint-active"]').waitFor({ state: 'visible', timeout: 5000 })
+    // Move the cursor off the settings area so the info icon's 300ms-delay tooltip doesn't bake into the screenshot.
+    await page.mouse.move(0, 0)
+    await page.waitForTimeout(200)
     await capture(page, 'typing-test-weak-spot-toggle')
   } finally {
     await app.close().catch((err: unknown) => console.error('  [cleanup] app.close failed:', err))
@@ -747,8 +773,9 @@ async function captureWeakSpotToggleScreenshot(): Promise<void> {
 /** Weak Spot Training — "no weak spots detected" hint capture
  *  (`typing-test-weak-spot-hint.png`). Seeds a single mistake-free `words`
  *  run so History is loaded (ruling out the silent 'unavailable' state)
- *  but no token crosses any weakness threshold (gate 'no-weak-spots'),
- *  then turns the toggle on to surface the positive hint text below it. */
+ *  but no token crosses any weakness threshold (gate 'no-weak-spots'). The
+ *  toggle stays disabled at this gate status — no click needed — so the
+ *  capture shows the disabled toggle alongside the info icon and hint. */
 async function captureWeakSpotHintScreenshot(): Promise<void> {
   console.log('\n--- Weak Spot Training: no-weak-spots hint ---')
   const { app, userDataPath, lastDeviceBackup } = await launchCaptureAppWithFreshLastDevice()
@@ -769,13 +796,14 @@ async function captureWeakSpotHintScreenshot(): Promise<void> {
 
     const toggle = page.locator('[data-testid="toggle-weak-spot-training"]')
     await toggle.waitFor({ state: 'visible', timeout: 5000 })
-    await toggle.click()
-    await page.waitForTimeout(300)
     const hint = page.locator('[data-testid="weak-spot-hint"]')
     if (!(await hint.isVisible().catch(() => false))) {
       throw new Error("weak-spot-hint did not appear — seedWeakSpotHistory guarantees a mistake-free scoped run, so the gate should read 'no-weak-spots'")
     }
     await page.waitForTimeout(300)
+    // Move the cursor off the settings area so the info icon's 300ms-delay tooltip doesn't bake into the screenshot.
+    await page.mouse.move(0, 0)
+    await page.waitForTimeout(200)
     await capture(page, 'typing-test-weak-spot-hint')
   } finally {
     await app.close().catch((err: unknown) => console.error('  [cleanup] app.close failed:', err))

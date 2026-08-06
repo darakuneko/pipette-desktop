@@ -58,6 +58,19 @@ export interface WeakSpotGateInfo {
    *  exist elsewhere (see `isWeakSpotTrainingActive`). */
   applicable: boolean
   status: 'unavailable' | 'no-weak-spots' | 'active'
+  /** Top detected weak tokens (score DESC), present only when `status ===
+   *  'active'` AND the gate was built from a real `MistakeProfile` (see
+   *  useTypingTest's `weakSpotGate` memo) — the non-applicable sentinel
+   *  `{ applicable: false, status: 'active' }` returned for non-words/time
+   *  modes carries no profile at all, so this stays optional rather than
+   *  ever defaulting to an empty array there. */
+  topWeakTokens?: string[]
+  /** Total weak-token count the profile detected (`MistakeProfile.
+   *  weakTokenCount`), independent of how many `topWeakTokens` actually
+   *  shows — lets the UI compute an accurate "+N" overflow without
+   *  hard-coding the shown-token count. Same optionality as
+   *  `topWeakTokens` for the same reason. */
+  weakTokenCount?: number
 }
 
 /** A mistake key produced by a synthetic decoration (injectNumbers/

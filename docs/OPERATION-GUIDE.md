@@ -1275,14 +1275,16 @@ A token counts as weak by any of three signals, each measured against your own t
 
 The two timing-based signals need a saved per-run keystroke log, which only exists for runs recorded after Recording Consent was turned on (see **Typing analytics recording** below — the same app-wide consent flag also gates the raw log for an ordinary Typing Test run, not only for REC). Without any saved logs, the toggle still works from the miss signal alone.
 
-The toggle itself always appears wherever the Option row does, regardless of whether a weakness has actually been found yet, so it can be turned on ahead of time. The text below it reflects what's currently known:
+The toggle always appears wherever the Option row does, but stays disabled until at least one weak spot has actually been detected for the current language and input method — there's nothing to turn on ahead of time. Below the toggle, an info icon explains the same three detection signals on hover, and is always available regardless of gate status. What's shown beside the icon reflects what's currently known:
 
-- **No hint** — History hasn't finished loading yet, so nothing is claimed either way
-- **"No weak spots detected — nice!"** — History is loaded and no token crossed any of the three thresholds
+- **No hint, toggle disabled** — History hasn't finished loading yet, so nothing is claimed either way
+- **"No weak spots detected — nice!", toggle disabled** — History is loaded and no token crossed any of the three thresholds
 
 ![Typing Test — Weak Spot Training hint](screenshots/typing-test-weak-spot-hint.png)
 
-- **No hint, biasing active** — at least one weak token was found; the toggle takes on its active (accent) styling and sampling is biased accordingly
+- **"Weak spots: k, r, sha +2", toggle enabled** — at least one weak token was found; the toggle becomes clickable. The hint names up to the 3 highest-scoring detected tokens, with a trailing `+N` for any additional ones beyond those three, so you can see what's driving the bias before turning it on. Turning the toggle on gives it the active (accent) styling with sampling biased accordingly
+
+If the toggle was already on from an earlier session where a weak spot existed, it keeps its accent styling but goes back to disabled once the gate drops below `active` — the setting isn't lost, and biasing resumes on its own the next time a weak spot is detected, with nothing to re-enable.
 
 Because it changes what you actually type, a run made with Weak Spot Training active is tracked as its own test condition, separate from your ordinary runs of the same mode/settings — its Personal Best, Compare baseline, History filter, and Accuracy Trend entry are all their own. The condition label carries a `+weak spot` suffix (e.g. "50 words (english) +weak spot"), the same convention as the `+punct` / `+nums` / `+romaji` / `+kana` suffixes described elsewhere on this page.
 

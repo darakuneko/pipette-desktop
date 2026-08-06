@@ -17,6 +17,14 @@ import type { MistakeProfile, WeakSpotInputMethod } from '../weak-spot-profile'
 
 const ACTIVE_PROFILE: MistakeProfile = { weights: { e: 1000 }, weakTokenCount: 1 }
 const NO_WEAK_SPOTS_PROFILE: MistakeProfile = { weights: {}, weakTokenCount: 0 }
+// Five weak tokens so the top-3 slice and the "+N" overflow both have
+// something to prove. 'r' and 'b' share a score (50) to exercise the
+// plain-string tie-break — 'b' sorts before 'r' and must win the 3rd slot
+// ahead of it, despite 'r' being declared first in the object.
+const MANY_WEAK_PROFILE: MistakeProfile = {
+  weights: { k: 80, sha: 65, r: 50, b: 50, a: 40 },
+  weakTokenCount: 5,
+}
 
 function activeThunk(): (language: string, inputMethod: WeakSpotInputMethod) => MistakeProfile | undefined {
   return () => ACTIVE_PROFILE
@@ -50,6 +58,21 @@ describe('useTypingTest — weakSpotGate', () => {
   it('is "active" once the scoped profile has at least one weak token', () => {
     const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: activeThunk() }))
     expect(result.current.weakSpotGate.status).toBe('active')
+  })
+
+  it('exposes the top 3 weak tokens (score DESC, deterministic tie-break) and the total weak-token count', () => {
+    const { result } = renderHook(() => useTypingTest(undefined, undefined, {
+      getMistakeProfile: () => MANY_WEAK_PROFILE,
+    }))
+    expect(result.current.weakSpotGate.topWeakTokens).toEqual(['k', 'sha', 'b'])
+    expect(result.current.weakSpotGate.weakTokenCount).toBe(5)
+  })
+
+  it('omits topWeakTokens/weakTokenCount entirely for the non-applicable sentinel (quote mode)', () => {
+    const config: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }
+    const { result } = renderHook(() => useTypingTest(config, 'english', { getMistakeProfile: () => MANY_WEAK_PROFILE }))
+    expect(result.current.weakSpotGate.topWeakTokens).toBeUndefined()
+    expect(result.current.weakSpotGate.weakTokenCount).toBeUndefined()
   })
 })
 

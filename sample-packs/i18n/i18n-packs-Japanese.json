@@ -1,5 +1,5 @@
 {
-  "version": "0.1.84",
+  "version": "0.1.85",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -325,7 +325,11 @@
       "punctuation": "句読点",
       "numbers": "数字",
       "weakSpotTraining": "苦手強化",
+      "weakSpotTooltip": "保存した結果をもとに、現在の言語と入力方式で検出された苦手な文字を含む単語を優先的に出題します。\n文字（ローマ字入力では綴りの区切り単位）は2回以上ミスすると苦手判定になります。またタイミング記録がある場合（15回以上のサンプル）、普段のペースより1.5倍以上遅い、またはつまずき（普段の2倍を超える間隔）がサンプルの20%以上で発生した場合も苦手判定になります。\n単語と時間のパターンに適用されます。単語の選び方は完全な絞り込みではなく偏りをつける形で、苦手な文字が1つ以上検出されて初めて変化します。",
       "weakSpotHintNoWeak": "苦手は検出されませんでした！",
+      "weakSpotHintActive": "苦手: {{tokens}}",
+      "weakSpotTokenJoin": "・",
+      "weakSpotInfoAriaLabel": "苦手強化についての説明",
       "japaneseInputToggle": "日本語入力",
       "romaji": {
         "imeHint": "ローマ字入力モードでは OS の IME をオフにしてください"

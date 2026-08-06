@@ -1,5 +1,5 @@
 {
-  "version": "0.1.84",
+  "version": "0.1.85",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -325,7 +325,11 @@
       "punctuation": "句読点☆",
       "numbers": "数字っしょ",
       "weakSpotTraining": "苦手強化☆",
+      "weakSpotTooltip": "保存した結果から、今の言語と入力方式で見つかった苦手な文字が入ってる単語を優先的に出すっしょ☆\n2回以上ミスった文字（ローマ字入力だと綴りの区切り単位ね）は苦手認定！タイミング記録があれば（15回以上のサンプル）、普段のペースより1.5倍以上遅い、またはつまずき（普段の2倍超の間隔）がサンプルの20%以上あっても苦手認定になるよん☆\n単語と時間のパターンで効くっしょ！単語選びは完全に絞るんじゃなくて偏らせる感じで、苦手な文字が1つでも見つかって初めて変わるよ☆",
       "weakSpotHintNoWeak": "苦手ゼロだし☆",
+      "weakSpotHintActive": "苦手: {{tokens}}☆",
+      "weakSpotTokenJoin": "・",
+      "weakSpotInfoAriaLabel": "苦手強化の説明っしょ☆",
       "japaneseInputToggle": "日本語入力☆",
       "romaji": {
         "imeHint": "ローマ字入力モードの時はOSのIMEオフにしといてね☆"

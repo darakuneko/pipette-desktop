@@ -1,5 +1,5 @@
 {
-  "version": "0.1.84",
+  "version": "0.1.85",
   "name": "English",
   "common": {
     "save": "Save",
@@ -325,7 +325,11 @@
       "punctuation": "punctuation",
       "numbers": "numbers",
       "weakSpotTraining": "Weak Spot Training",
+      "weakSpotTooltip": "Prioritizes words containing your detected weak spots for the current language and input method, based on your saved results.\nA character (or romaji sequence) counts as a weak spot when you've missed it 2+ times, or — when recorded timing is available (15+ timed samples) — typing it runs 1.5× slower than your typical pace, or it stalls (a pause over 2× your pace) on 20%+ of its timed samples.\nApplies to the Words and Time patterns; word selection is biased (not exclusive) and only changes once at least one weak spot is detected.",
       "weakSpotHintNoWeak": "No weak spots detected — nice!",
+      "weakSpotHintActive": "Weak spots: {{tokens}}",
+      "weakSpotTokenJoin": ", ",
+      "weakSpotInfoAriaLabel": "Weak Spot Training info",
       "japaneseInputToggle": "Japanese Input",
       "romaji": {
         "imeHint": "Turn off your OS IME to type in romaji input mode"

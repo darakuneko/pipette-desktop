@@ -16,6 +16,9 @@ import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS, TATOEBA_LINE_OPTIONS } from 
 import { isRomajiCapable, isRomajiInputEnabled } from './romaji-input'
 import { RomajiSettingsModal } from './RomajiSettingsModal'
 import type { WeakSpotGateInfo } from './weak-spot-profile'
+import { Tooltip } from '../components/ui/Tooltip'
+import { Info } from 'lucide-react'
+import { ICON_SM } from '../constants/ui-tokens'
 
 const DEFAULT_WEAK_SPOT_GATE: WeakSpotGateInfo = { applicable: false, status: 'unavailable' }
 
@@ -117,6 +120,17 @@ export function TypingTestSettingsBar({
     : config.mode === 'time'
     ? t('editor.typingTest.unitsSec')
     : t('editor.typingTest.units')
+
+  // Active-gate hint text — the "+N" overflow is derived from
+  // weakTokenCount minus however many tokens are actually shown, never a
+  // hard-coded 3, so it stays correct if the memo's own slice size ever
+  // changes. Only meaningful when topWeakTokens is present (see
+  // WeakSpotGateInfo); falls back to an empty list otherwise so the
+  // fields below stay unconditionally computed.
+  const shownWeakTokens = weakSpotGate.topWeakTokens ?? []
+  const weakTokenOverflow = (weakSpotGate.weakTokenCount ?? shownWeakTokens.length) - shownWeakTokens.length
+  const activeWeakSpotTokensText = shownWeakTokens.join(t('editor.typingTest.weakSpotTokenJoin'))
+    + (weakTokenOverflow > 0 ? ` +${weakTokenOverflow}` : '')
 
   return (
     <div className="flex w-full flex-col items-start gap-3">
@@ -283,29 +297,62 @@ export function TypingTestSettingsBar({
           {/* Weak Spot Training — biases word sampling toward tokens
               detected as weak (frequent misses, or — when a run log is
               available — slower/stall-prone than the user's own baseline;
-              see weak-spot-profile.ts). Shown regardless of gate status
-              (unlike the hint below it) so the user can turn it on ahead
-              of any weakness being detected. The hint shows for
-              'no-weak-spots' (a positive "nothing detected" message) —
-              never for 'unavailable' (history not loaded yet: claiming
-              "no weak spots" there would be a guess, not a fact — see
-              WeakSpotGateInfo) and never for 'active' (nothing more
-              useful to say once biasing is already in effect). */}
+              see weak-spot-profile.ts). Always VISIBLE (so a persisted
+              `weakSpotTraining: true` from an earlier active scope stays
+              legible and accent-styled rather than vanishing), but
+              DISABLED until the gate reaches 'active' — a config with
+              weakSpotTraining already true simply sits inert (no results
+              are ever tagged as weak-spot-biased while the profile is
+              inactive; see useTypingTest) and resumes biasing on its own
+              the moment a weak spot is detected again, with nothing for
+              the user to re-enable. The info icon below is a permanent
+              fixture (not gated on status) that always explains the
+              activation conditions on hover, since the button itself
+              carries no tooltip of its own. The hint text beside it shows
+              for 'no-weak-spots' (a positive "nothing detected" message)
+              and for 'active' (lists the detected tokens themselves, up
+              to the memo's top-3 slice plus a "+N" overflow) — never for
+              'unavailable' (history not loaded yet: claiming "no weak
+              spots" there would be a guess, not a fact — see
+              WeakSpotGateInfo). The active hint additionally requires
+              `topWeakTokens` to be present, since a caller-supplied gate
+              predating this field (or the non-applicable sentinel) is
+              still a valid 'active' shape without it. */}
           {hasPunctuationNumbers && (
             <div className="flex w-full flex-col items-start gap-1">
               <button
                 type="button"
                 data-testid="toggle-weak-spot-training"
-                className={`${optionButtonClass(config.weakSpotTraining === true)} w-full justify-center`}
+                disabled={weakSpotGate.status !== 'active'}
+                className={`${optionButtonClass(config.weakSpotTraining === true)} w-full justify-center disabled:cursor-not-allowed disabled:opacity-50`}
                 onClick={() => onConfigChange({ ...config, weakSpotTraining: !config.weakSpotTraining })}
               >
                 {t('editor.typingTest.weakSpotTraining')}
               </button>
-              {weakSpotGate.status === 'no-weak-spots' && (
-                <span className="text-xs text-content-muted" data-testid="weak-spot-hint">
-                  {t('editor.typingTest.weakSpotHintNoWeak')}
-                </span>
-              )}
+              {/* No padding on the icon span — the row must keep the exact
+                  height of the bare text-xs hint line it replaced, so the
+                  icon only adds width, not vertical rhythm. */}
+              <div className="flex items-center gap-1">
+                <Tooltip content={t('editor.typingTest.weakSpotTooltip')}>
+                  <span
+                    data-testid="weak-spot-info"
+                    aria-label={t('editor.typingTest.weakSpotInfoAriaLabel')}
+                    className="text-content-muted hover:text-content transition-colors"
+                  >
+                    <Info size={ICON_SM} aria-hidden="true" />
+                  </span>
+                </Tooltip>
+                {weakSpotGate.status === 'no-weak-spots' && (
+                  <span className="text-xs text-content-muted" data-testid="weak-spot-hint">
+                    {t('editor.typingTest.weakSpotHintNoWeak')}
+                  </span>
+                )}
+                {weakSpotGate.status === 'active' && shownWeakTokens.length > 0 && (
+                  <span className="text-xs text-content-muted" data-testid="weak-spot-hint-active">
+                    {t('editor.typingTest.weakSpotHintActive', { tokens: activeWeakSpotTokensText })}
+                  </span>
+                )}
+              </div>
             </div>
           )}
           {/* Japanese Input — a dialog trigger (opens the 3-way Direct/
