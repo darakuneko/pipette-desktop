@@ -5,6 +5,7 @@ import type { TypingTestConfig } from './types'
 import { configKey, deriveMode2, resultKpm } from './result-builder'
 import { isRomajiInputActive } from './romaji-input'
 import { isKanaInputActive } from './kana-input'
+import { isWeakSpotTrainingActive } from './types'
 
 /** Headline metrics of the chosen baseline, compared against the live run. */
 export interface ComparisonStats {
@@ -39,16 +40,20 @@ export function resultConditionKey(result: TypingTestResult): string {
  *  pinnable choices stay in lockstep. */
 export function conditionKey(config: TypingTestConfig, language: string): string {
   const hasToggles = config.mode === 'words' || config.mode === 'time'
-  // resultConditionKey only reads these 6 fields (configKey appends a 7th,
-  // literal `|kana`, ONLY when kanaInput is true — see its own doc comment
-  // for why that's asymmetric rather than an unconditional segment), so a
-  // config-shaped partial is enough. romajiInput/kanaInput must be the
-  // effective active state (isRomajiInputActive/isKanaInputActive), not
-  // the raw config fields — buildTypingTestResult records
-  // romajiActive/kanaActive (same derivation), and the two need to land on the same
-  // key for a default-ON kana word-language pack run to group with its own saved
-  // result. `undefined` for textRomajiCapable is exact here: hasToggles restricts
-  // this to words/time, whose isRomajiCapable/isKanaCapable branch never reads it.
+  // resultConditionKey only reads these 7 fields (configKey appends
+  // `|kana`/`|weakspot` segments ONLY when kanaInput/weakSpotTraining are
+  // true — see its own doc comment for why that's asymmetric rather than
+  // an unconditional segment), so a config-shaped partial is enough.
+  // romajiInput/kanaInput must be the effective active state
+  // (isRomajiInputActive/isKanaInputActive), not the raw config fields —
+  // buildTypingTestResult records romajiActive/kanaActive (same
+  // derivation), and the two need to land on the same key for a
+  // default-ON kana word-language pack run to group with its own saved
+  // result. weakSpotTraining has no such capability gate (isWeakSpotTrainingActive
+  // is a plain mode+field check), so it reads straight off `config` like
+  // punctuation/numbers do. `undefined` for textRomajiCapable is exact
+  // here: hasToggles restricts this to words/time, whose
+  // isRomajiCapable/isKanaCapable branch never reads it.
   return resultConditionKey({
     mode: config.mode,
     mode2: deriveMode2(config),
@@ -57,6 +62,7 @@ export function conditionKey(config: TypingTestConfig, language: string): string
     numbers: hasToggles ? config.numbers : undefined,
     romajiInput: hasToggles ? isRomajiInputActive(config, language, undefined) : undefined,
     kanaInput: hasToggles ? isKanaInputActive(config, language, undefined) : undefined,
+    weakSpotTraining: hasToggles ? isWeakSpotTrainingActive(config) : undefined,
   } as TypingTestResult)
 }
 

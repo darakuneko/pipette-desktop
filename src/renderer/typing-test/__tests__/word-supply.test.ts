@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createWordsForConfigSync, createWordsForConfig, refillTimeModeWords } from '../word-supply'
 import { getTatoebaPack } from '../word-generator'
 import type { TypingTestConfig } from '../types'
+import type { WeakSpotBiasProfile } from '../word-generator/weak-spot-weighting'
 
 const mockLangGet = vi.fn()
 const originalVialAPI = window.vialAPI
@@ -111,5 +112,74 @@ describe('refillTimeModeWords', () => {
     // The seam (5, the old last word) plus the new batch's own internal
     // breaks offset by 6 (7, 9).
     expect(refill!.lineBreaks.slice().sort((a, b) => a - b)).toEqual([5, 7, 9])
+  })
+
+  it('monkeytype time: never repeats the previous batch\'s own last word as the refill\'s first word', () => {
+    // Force the refill to start with the exact word already at the tail of
+    // `words` by controlling nothing about content (english word list is
+    // large) but instead asserting the invariant holds across many runs:
+    // no refill's first word may equal the seed word passed in as the
+    // existing tail.
+    const config: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false }
+    for (let i = 0; i < 20; i++) {
+      const seedBatch = createWordsForConfigSync(config, 'english')
+      const tailWord = seedBatch.words[seedBatch.words.length - 1]
+      const words = [tailWord]
+      const refill = refillTimeModeWords(words, 0, config, 'english')
+      expect(refill).not.toBeNull()
+      expect(refill!.words[1]).not.toBe(tailWord)
+    }
+  })
+
+  it('monkeytype time: threads a weakSpotProfile into the refill batch (biases toward matched words)', () => {
+    const config: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false }
+    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { e: 1000 } }
+    const words = Array.from({ length: 10 }, (_, i) => `w${i}`)
+    const refill = refillTimeModeWords(words, 8, config, 'english', profile)
+    expect(refill).not.toBeNull()
+    const refilledOnly = refill!.words.slice(words.length)
+    const withE = refilledOnly.filter((w) => w.includes('e')).length
+    expect(withE / refilledOnly.length).toBeGreaterThan(0.5)
+  })
+
+  it('tatoeba time refill ignores a weakSpotProfile entirely (explicitly gated out)', async () => {
+    const words = ['s0a s0b', 's1a s1b', 's2a s2b']
+    mockLangGet.mockResolvedValue({ name: 'weakspot-gate-pack', words })
+    await getTatoebaPack('weakspot-gate-pack')
+    const config: TypingTestConfig = { mode: 'tatoeba', language: 'weakspot-gate-pack', pattern: 'time', lineCount: 5, duration: 30 }
+    const initial = createWordsForConfigSync(config, 'english')
+    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { zzz: 999 } }
+    // Same deterministic-small-pack shape as the unbiased test above —
+    // passing a profile must not change the tatoeba branch's own output.
+    const refill = refillTimeModeWords(initial.words, 1, config, 'english', profile)
+    expect(refill).not.toBeNull()
+    expect(refill!.words).toEqual([
+      's0a', 's0b', 's1a', 's1b', 's2a', 's2b', 's0a', 's0b', 's1a', 's1b', 's2a', 's2b',
+    ])
+  })
+})
+
+describe('createWordsForConfig(Sync) — weakSpotProfile gating', () => {
+  const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { e: 1000 } }
+
+  it('quote mode ignores a weakSpotProfile (fixed corpus, not this module\'s sampler)', () => {
+    const config: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }
+    // Must not throw and must produce the same shape as without a profile.
+    const withProfile = createWordsForConfigSync(config, 'english', profile)
+    expect(withProfile.words.length).toBeGreaterThan(0)
+  })
+
+  it('words mode threads the profile into sampling (biases toward matched words)', () => {
+    const config: TypingTestConfig = { mode: 'words', wordCount: 300, punctuation: false, numbers: false }
+    const result = createWordsForConfigSync(config, 'english', profile)
+    const withE = result.words.filter((w) => w.includes('e')).length
+    expect(withE / result.words.length).toBeGreaterThan(0.5)
+  })
+
+  it('time mode (initial batch) threads the profile into sampling too', async () => {
+    const config: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false }
+    const result = await createWordsForConfig(config, 'english', profile)
+    const withE = result.words.filter((w) => w.includes('e')).length
+    expect(withE / result.words.length).toBeGreaterThan(0.5)
   })
 })

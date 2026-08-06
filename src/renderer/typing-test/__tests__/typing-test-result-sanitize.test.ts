@@ -135,3 +135,22 @@ describe('sanitizeTypingTestResult error-class fields', () => {
     expect(result.errorTargetChars).toBeUndefined()
   })
 })
+
+describe('sanitizeTypingTestResult — weakSpotTraining', () => {
+  it('passes through an explicit true', () => {
+    expect(sanitizeTypingTestResult(baseResult({ weakSpotTraining: true })).weakSpotTraining).toBe(true)
+  })
+
+  it('coerces false to undefined (asymmetric true-only convention)', () => {
+    expect(sanitizeTypingTestResult(baseResult({ weakSpotTraining: false })).weakSpotTraining).toBeUndefined()
+  })
+
+  it('is undefined when absent', () => {
+    expect(sanitizeTypingTestResult(baseResult()).weakSpotTraining).toBeUndefined()
+  })
+
+  it('coerces a malformed (non-boolean) value to undefined', () => {
+    const corrupted = { ...baseResult(), weakSpotTraining: 'yes' } as unknown as TypingTestResult
+    expect(sanitizeTypingTestResult(corrupted).weakSpotTraining).toBeUndefined()
+  })
+})

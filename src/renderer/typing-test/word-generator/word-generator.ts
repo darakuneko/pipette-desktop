@@ -4,6 +4,7 @@
 import type { LanguageData, GenerateOptions, GeneratedWords } from './types'
 import english from '../languages/english.json'
 import { randomInt } from './random'
+import { wordWeakSpotScore, pickWeightedIndex, WEAK_SPOT_BIAS_RATIO, type WeakSpotBiasProfile } from './weak-spot-weighting'
 
 const languageCache = new Map<string, LanguageData>()
 languageCache.set('english', english as LanguageData)
@@ -39,9 +40,41 @@ export function clearLanguageCache(name: string): void {
   languageCache.delete(name)
 }
 
+/** Uniform-random word draw, shared by both the plain and weak-spot-biased
+ *  paths below when a biased draw isn't taken (or biasing isn't active at
+ *  all). */
+function randomWord(wordList: readonly string[]): string {
+  return wordList[randomInt(0, wordList.length - 1)]
+}
+
+/** Weighted-random word draw against precomputed per-word scores (see
+ *  `wordWeakSpotScore`) — `totalWeight` is the caller's already-summed
+ *  total, so this never resums per draw. */
+function biasedWord(wordList: readonly string[], weights: readonly number[], totalWeight: number): string {
+  return wordList[pickWeightedIndex(weights, totalWeight)]
+}
+
+/** Samples `count` words from `wordList`, avoiding an immediate repeat of
+ *  the previous pick (up to 100 retries, then accepts the repeat rather
+ *  than looping forever — matches the pre-existing behaviour for a small
+ *  or heavily-skewed list). `seedLastWord` seeds the repeat-avoidance
+ *  window with the caller's own preceding word (e.g. a time-mode refill's
+ *  last already-generated word — see word-supply.ts's
+ *  `refillTimeModeWords`), so the immediate-repeat guarantee holds across
+ *  a refill boundary, not just within one batch.
+ *
+ *  When `weakSpotProfile` is given, each draw independently has a
+ *  WEAK_SPOT_BIAS_RATIO (60%) chance of being pulled from the
+ *  weak-spot-weighted pool instead of the uniform one — see
+ *  weak-spot-weighting.ts's module doc comment for why a fixed mixture
+ *  (not pure proportional weighting) is used. Falls back to fully uniform
+ *  sampling when every word in `wordList` scores 0 (no matched mistake
+ *  tokens at all — nothing to bias toward). */
 function sampleWords(
   wordList: readonly string[],
   count: number,
+  weakSpotProfile?: WeakSpotBiasProfile,
+  seedLastWord?: string,
 ): string[] {
   if (wordList.length === 0) {
     throw new Error('Word list is empty')
@@ -51,15 +84,24 @@ function sampleWords(
     return Array(count).fill(wordList[0]) as string[]
   }
 
+  let weights: number[] | undefined
+  let totalWeight = 0
+  if (weakSpotProfile) {
+    weights = wordList.map((w) => wordWeakSpotScore(w, weakSpotProfile))
+    totalWeight = weights.reduce((a, b) => a + b, 0)
+  }
+  const biasActive = weights !== undefined && totalWeight > 0
+
   const result: string[] = []
-  let lastWord = ''
+  let lastWord = seedLastWord ?? ''
 
   for (let i = 0; i < count; i++) {
+    const useBiased = biasActive && Math.random() < WEAK_SPOT_BIAS_RATIO
     let word: string
     let attempts = 0
 
     do {
-      word = wordList[randomInt(0, wordList.length - 1)]
+      word = useBiased ? biasedWord(wordList, weights!, totalWeight) : randomWord(wordList)
       attempts++
     } while (word === lastWord && attempts < 100)
 
@@ -140,15 +182,27 @@ function applyOptions(words: string[], options?: GenerateOptions): string[] {
   return result
 }
 
-export function generateWordsSync(wordCount: number = 30, options?: GenerateOptions, language?: string): GeneratedWords {
+export function generateWordsSync(
+  wordCount: number = 30,
+  options?: GenerateOptions,
+  language?: string,
+  weakSpotProfile?: WeakSpotBiasProfile,
+  seedLastWord?: string,
+): GeneratedWords {
   const fallback = english as LanguageData
   const langData = language ? (getLanguageDataSync(language) ?? fallback) : fallback
-  const words = applyOptions(sampleWords(langData.words, wordCount), options)
+  const words = applyOptions(sampleWords(langData.words, wordCount, weakSpotProfile, seedLastWord), options)
   return { words }
 }
 
-export async function generateWords(wordCount: number = 30, options?: GenerateOptions, language?: string): Promise<GeneratedWords> {
+export async function generateWords(
+  wordCount: number = 30,
+  options?: GenerateOptions,
+  language?: string,
+  weakSpotProfile?: WeakSpotBiasProfile,
+  seedLastWord?: string,
+): Promise<GeneratedWords> {
   const langData = language ? await getLanguageData(language) : (english as LanguageData)
-  const words = applyOptions(sampleWords(langData.words, wordCount), options)
+  const words = applyOptions(sampleWords(langData.words, wordCount, weakSpotProfile, seedLastWord), options)
   return { words }
 }

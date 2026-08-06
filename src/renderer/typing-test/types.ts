@@ -59,8 +59,15 @@ export type TypingTestConfig =
   // verbatim-string matching behaviour. `romaji` holds the Romaji Settings
   // modal's detail fields and is only ever read while `romajiInput` is
   // honored (see `isRomajiInputActive`).
-  | { mode: 'words'; wordCount: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean; romaji?: RomajiDetailSettings }
-  | { mode: 'time'; duration: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean; romaji?: RomajiDetailSettings }
+  // `weakSpotTraining` biases word sampling toward characters/tokens the
+  // user frequently mistypes (see weak-spot-profile.ts /
+  // word-generator/weak-spot-weighting.ts) — words/time modes only, since
+  // biasing needs a sampled word POOL to bias within (quote/fileImport/
+  // tatoeba play fixed/imported text verbatim). Optional, default off
+  // (unlike romajiInput's default-on): an absent/false value is the
+  // pre-existing behaviour, so no legacy config is silently reinterpreted.
+  | { mode: 'words'; wordCount: number; punctuation: boolean; numbers: boolean; weakSpotTraining?: boolean; romajiInput?: boolean; romaji?: RomajiDetailSettings }
+  | { mode: 'time'; duration: number; punctuation: boolean; numbers: boolean; weakSpotTraining?: boolean; romajiInput?: boolean; romaji?: RomajiDetailSettings }
   | { mode: 'quote'; quoteLength: QuoteLength }
   // Imported user text, played verbatim in order via the quote rendering
   // path. `textId` references an entry in the typing-test-texts store.
@@ -111,6 +118,17 @@ export function isTimeBoundedRun(
  *  the predicate so the two never disagree. */
 export function runDurationSeconds(config: TypingTestConfig): number | null {
   return isTimeBoundedRun(config) ? config.duration : null
+}
+
+/** Whether Weak Spot Training is actually in effect for `config` — words/
+ *  time modes only (the field doesn't exist on any other variant), and
+ *  only when explicitly `true` (absent/false is the default-off state).
+ *  Centralizes the mode-guard so callers (togglesRef carry, conditionKey,
+ *  the sampling call sites, buildTypingTestResult) never have to repeat
+ *  `(config.mode === 'words' || config.mode === 'time') &&
+ *  config.weakSpotTraining` inline. */
+export function isWeakSpotTrainingActive(config: TypingTestConfig): boolean {
+  return (config.mode === 'words' || config.mode === 'time') && config.weakSpotTraining === true
 }
 
 /** Word-language packs the romaji-keystroke matcher supports (kana word

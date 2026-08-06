@@ -7,6 +7,8 @@ import { isKanaInputActive } from '../../typing-test/kana-input'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { LineSnapshot } from '../../typing-test/TypingTestView'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from '../../typing-test/types'
+import { createMistakeProfileCache } from '../../typing-test/weak-spot-profile'
+import type { MistakeProfile, WeakSpotInputMethod } from '../../typing-test/weak-spot-profile'
 import { useMatrixTester } from './use-matrix-tester'
 import { useTypingAnalyticsSink, typingTestAnalyticsLabel } from './use-typing-analytics-sink'
 import { useTypingTestResultSave } from './use-typing-test-result-save'
@@ -148,6 +150,21 @@ export function useInputModes({
   } = useTypingAnalyticsSink({ typingRecordKeyboard, onRecKeystroke, recordingConsentAccepted })
 
   // --- Typing test ---
+  // Weak Spot Training's mistake-profile lookup: one memoized cache
+  // instance per useInputModes mount (see weak-spot-profile.ts's
+  // MistakeProfileCache — keyed by the typingTestHistory array's own
+  // identity + a language|inputMethod scope key), shared by both
+  // useTypingTest's per-run sampling snapshot and its live weakSpotGate.
+  // undefined (not the empty-array default) means "history hasn't loaded
+  // yet" — distinguished from a loaded-but-empty history, which produces a
+  // real zero-keystroke profile — so the Option section's hint never
+  // guesses a deficit before there's real data to compute one from.
+  const mistakeProfileCacheRef = useRef(createMistakeProfileCache())
+  const getMistakeProfile = useCallback((language: string, inputMethod: WeakSpotInputMethod): MistakeProfile | undefined => {
+    if (typingTestHistory === undefined) return undefined
+    return mistakeProfileCacheRef.current.get(typingTestHistory, language, inputMethod)
+  }, [typingTestHistory])
+
   const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage, {
     onPrepareAnalyticsEvent: prepareAnalyticsEvent,
     onEmitAnalyticsEvent: emitAnalyticsEvent,
@@ -163,6 +180,7 @@ export function useInputModes({
     onNoteKeystrokeRegistration: runLog.noteRegistration,
     onNoteCharContext: runLog.noteCharContext,
     tappingTermMs,
+    getMistakeProfile,
   })
   const {
     restart: restartTypingTest,

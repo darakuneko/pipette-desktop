@@ -6,6 +6,7 @@ import type { useTypingTest, TypingTestState } from '../../typing-test/useTyping
 import { buildTypingTestResult, isPbForConfig } from '../../typing-test/result-builder'
 import { isRomajiInputActive } from '../../typing-test/romaji-input'
 import { isKanaInputActive } from '../../typing-test/kana-input'
+import { isWeakSpotTrainingActive } from '../../typing-test/types'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { LineSnapshot } from '../../typing-test/TypingTestView'
 import type { TypingTestResult, TypingTestMemory } from '../../../shared/types/pipette-settings'
@@ -214,6 +215,7 @@ export function useTypingTestResultSave({
         runId: typingTest.state.runId,
         romajiActive: isRomajiInputActive(typingTest.config, typingTest.language, typingTest.state.romajiCapable),
         kanaActive: isKanaInputActive(typingTest.config, typingTest.language, typingTest.state.romajiCapable),
+        weakSpotTraining: isWeakSpotTrainingActive(typingTest.config),
         mistakes: typingTest.state.mistakes,
         totalKeystrokes: typingTest.state.totalKeystrokes,
         confirmedChars: typingTest.state.confirmedChars,

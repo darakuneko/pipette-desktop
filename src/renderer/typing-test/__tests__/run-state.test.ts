@@ -6,8 +6,9 @@
 // already tallied via Backspace).
 
 import { describe, it, expect } from 'vitest'
-import { handleBackspace, handleSpace, tryFinishLastWord, type TypingTestState } from '../run-state'
+import { handleBackspace, handleSpace, tryFinishLastWord, advanceAfterWord, type TypingTestState } from '../run-state'
 import type { TypingTestConfig } from '../types'
+import type { WeakSpotBiasProfile } from '../word-generator'
 
 function makeState(overrides: Partial<TypingTestState> = {}): TypingTestState {
   return {
@@ -194,5 +195,29 @@ describe('confirmedChars', () => {
     const full = tryFinishLastWord(state)
     expect(full).not.toBeNull()
     expect(full!.confirmedChars).toBe(7) // 4 + 3 (last word, no separator)
+  })
+})
+
+// Weak Spot Training (Plan-miss-focus-mode): the run's weakSpotProfile
+// snapshot (set once by freshState at run start — see useTypingTest.ts)
+// must be reused verbatim by every time-mode refill, never recomputed.
+describe('advanceAfterWord — weakSpotProfile threading', () => {
+  const timeConfig: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+
+  it('carries state.weakSpotProfile into the time-mode refill, biasing the extended batch', () => {
+    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { e: 1000 } }
+    // Tail well below TIME_MODE_EXTEND_THRESHOLD (10) so a refill fires.
+    const state = makeState({ words: ['w0', 'w1'], currentWordIndex: 2, weakSpotProfile: profile })
+    const next = advanceAfterWord(state, timeConfig, 'english')
+    expect(next.words.length).toBeGreaterThan(state.words.length)
+    const refilled = next.words.slice(state.words.length)
+    const withE = refilled.filter((w) => w.includes('e')).length
+    expect(withE / refilled.length).toBeGreaterThan(0.5)
+  })
+
+  it('a run with no weakSpotProfile (toggle off / gate unmet) refills normally without one', () => {
+    const state = makeState({ words: ['w0', 'w1'], currentWordIndex: 2, weakSpotProfile: undefined })
+    const next = advanceAfterWord(state, timeConfig, 'english')
+    expect(next.words.length).toBeGreaterThan(state.words.length)
   })
 })

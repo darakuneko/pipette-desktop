@@ -10,6 +10,9 @@ import type { KanaGuide } from './kana-input'
 import type { TypingTestState } from './run-state'
 import type { TypingTestMemory } from '../../shared/types/pipette-settings'
 import type { TypingAnalyticsEventPayload } from '../../shared/types/typing-analytics'
+import type { MistakeProfile, WeakSpotInputMethod, WeakSpotGateInfo } from './weak-spot-profile'
+
+export type { WeakSpotGateInfo } from './weak-spot-profile'
 
 export interface UseTypingTestOptions<TPreparedEvent = unknown> {
   /** Authorizes and tags a keystroke at the moment it is detected — before
@@ -86,6 +89,16 @@ export interface UseTypingTestOptions<TPreparedEvent = unknown> {
    * 200 ms; the KeymapEditor passes the live value pulled from the
    * keyboard's QMK settings when available. */
   tappingTermMs?: number
+  /** Returns the aggregated Weak Spot Training mistake profile for a
+   * given language + effective input method scope (see
+   * weak-spot-profile.ts), or undefined when history hasn't loaded yet —
+   * distinguished from a loaded-but-empty scope, which returns a real
+   * `{ weights: {}, keystrokes: 0 }`. Built once by the caller
+   * (useInputModes.ts, from `typingTestHistory`) via a memoized
+   * `MistakeProfileCache` and passed down; useTypingTest calls it fresh
+   * at each run-start decision point (never caches its own copy) so a
+   * newly saved result is picked up by the very next run. */
+  getMistakeProfile?: (language: string, inputMethod: WeakSpotInputMethod) => MistakeProfile | undefined
 }
 
 export interface UseTypingTestReturn {
@@ -140,4 +153,10 @@ export interface UseTypingTestReturn {
   captureMemory: () => TypingTestMemory | null
   pause: () => void
   restoreState: (memory: TypingTestMemory, resume: boolean) => Promise<boolean>
+  /** Live Weak Spot Training gate status for the CURRENT config/language
+   *  (see weak-spot-profile.ts's `WeakSpotGateInfo`) — recomputed on every
+   *  config/language change, independent of the active run's own
+   *  immutable `state.weakSpotProfile` snapshot. Drives the Option
+   *  section's toggle availability hint (TypingTestSettingsBar). */
+  weakSpotGate: WeakSpotGateInfo
 }

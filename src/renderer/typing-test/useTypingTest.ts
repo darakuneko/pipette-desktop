@@ -2,9 +2,10 @@
 
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { getLanguageData } from './word-generator'
+import type { WeakSpotBiasProfile } from './word-generator'
 import { DEFAULT_TAPPING_TERM_MS } from '../../shared/qmk-settings-tapping-term'
 import type { TypingTestConfig } from './types'
-import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, isTimeBoundedRun, applyRomajiCaseStyle } from './types'
+import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, isTimeBoundedRun, applyRomajiCaseStyle, isWeakSpotTrainingActive } from './types'
 import type { TypingTestMemory } from '../../shared/types/pipette-settings'
 import { createWordsForConfig } from './word-supply'
 import {
@@ -23,7 +24,32 @@ import { deriveExpectedChar, deriveMistakeKey, deriveKanaCorrectOverride } from 
 import { useTypingTestMatrix } from './use-typing-test-matrix'
 import { useTypingTestMetrics } from './use-typing-test-metrics'
 import { buildMemorySnapshot, buildRestoredState } from './typing-test-memory'
+import { effectiveWeakSpotInputMethod, meetsWeakSpotThreshold, weakSpotKeystrokeDeficit, type WeakSpotGateInfo, type MistakeProfile, type WeakSpotInputMethod } from './weak-spot-profile'
 import type { UseTypingTestOptions, UseTypingTestReturn } from './use-typing-test-types'
+
+type GetMistakeProfileFn = (language: string, inputMethod: WeakSpotInputMethod) => MistakeProfile | undefined
+
+/** Resolves the immutable per-run Weak Spot Training snapshot for a
+ *  words/time run about to start under `config`/`language` — undefined
+ *  (sample normally) unless the toggle is on AND a loaded profile meets
+ *  the keystroke gate. Called fresh at every run-start decision point
+ *  (never cached across calls) so a newly saved result is honored by the
+ *  very next run; the caller then threads the SAME returned value into
+ *  both the initial word batch (`createWordsForConfig`) and the run
+ *  state (`freshState`/`createInitialState`), which is what makes it a
+ *  snapshot — nothing re-resolves it mid-run (see `refillTimeModeWords`,
+ *  which only ever reads `TypingTestState.weakSpotProfile` back). */
+function resolveWeakSpotProfileArg(
+  config: TypingTestConfig,
+  language: string,
+  getMistakeProfile: GetMistakeProfileFn | undefined,
+): WeakSpotBiasProfile | undefined {
+  if (!isWeakSpotTrainingActive(config)) return undefined
+  const inputMethod = effectiveWeakSpotInputMethod(config, language)
+  const raw = getMistakeProfile?.(language, inputMethod)
+  if (!raw || !meetsWeakSpotThreshold(raw.keystrokes)) return undefined
+  return { inputMethod, weights: raw.weights }
+}
 
 export type { WordResult, TypingTestState, TypingTestStatus } from './run-state'
 export type { UseTypingTestOptions, UseTypingTestReturn } from './use-typing-test-types'
@@ -45,9 +71,12 @@ export function useTypingTest<TPreparedEvent = unknown>(
   const [isLanguageLoading, setIsLanguageLoading] = useState(false)
   const [baseLayer, setBaseLayerState] = useState(0)
   const [windowFocused, setWindowFocusedState] = useState(true)
-  const [state, setState] = useState<TypingTestState>(() =>
-    createInitialState(initialConfig ?? DEFAULT_CONFIG, initialLanguage ?? DEFAULT_LANGUAGE),
-  )
+  const getMistakeProfileRef = useRef(options?.getMistakeProfile)
+  const [state, setState] = useState<TypingTestState>(() => {
+    const initCfg = initialConfig ?? DEFAULT_CONFIG
+    const initLang = initialLanguage ?? DEFAULT_LANGUAGE
+    return createInitialState(initCfg, initLang, undefined, resolveWeakSpotProfileArg(initCfg, initLang, getMistakeProfileRef.current))
+  })
   const configRef = useRef(config)
   const stateRef = useRef(state)
   const languageRef = useRef(language)
@@ -70,12 +99,14 @@ export function useTypingTest<TPreparedEvent = unknown>(
   noteKeystrokeRegistrationRef.current = options?.onNoteKeystrokeRegistration
   noteCharContextRef.current = options?.onNoteCharContext
   tappingTermMsRef.current = options?.tappingTermMs ?? DEFAULT_TAPPING_TERM_MS
+  getMistakeProfileRef.current = options?.getMistakeProfile
 
   const restartAsync = useCallback(async () => {
     const seq = ++seqRef.current
-    const result = await createWordsForConfig(configRef.current, languageRef.current)
+    const weakSpotProfile = resolveWeakSpotProfileArg(configRef.current, languageRef.current, getMistakeProfileRef.current)
+    const result = await createWordsForConfig(configRef.current, languageRef.current, weakSpotProfile)
     if (seqRef.current !== seq) return
-    setState(freshState(result))
+    setState(freshState(result, undefined, weakSpotProfile))
   }, [])
 
   const restart = useCallback(() => {
@@ -84,9 +115,10 @@ export function useTypingTest<TPreparedEvent = unknown>(
 
   const restartWithCountdown = useCallback(async () => {
     const seq = ++seqRef.current
-    const result = await createWordsForConfig(configRef.current, languageRef.current)
+    const weakSpotProfile = resolveWeakSpotProfileArg(configRef.current, languageRef.current, getMistakeProfileRef.current)
+    const result = await createWordsForConfig(configRef.current, languageRef.current, weakSpotProfile)
     if (seqRef.current !== seq) return
-    setState(freshState(result, 'countdown'))
+    setState(freshState(result, 'countdown', weakSpotProfile))
   }, [])
 
   // Transition from countdown to waiting after delay
@@ -104,9 +136,10 @@ export function useTypingTest<TPreparedEvent = unknown>(
     setConfigState(newConfig)
     configRef.current = newConfig
     const seq = ++seqRef.current
-    const result = await createWordsForConfig(newConfig, languageRef.current)
+    const weakSpotProfile = resolveWeakSpotProfileArg(newConfig, languageRef.current, getMistakeProfileRef.current)
+    const result = await createWordsForConfig(newConfig, languageRef.current, weakSpotProfile)
     if (seqRef.current !== seq) return
-    setState(freshState(result))
+    setState(freshState(result, undefined, weakSpotProfile))
   }, [])
 
   const setLanguage = useCallback(async (newLanguage: string): Promise<string> => {
@@ -118,15 +151,17 @@ export function useTypingTest<TPreparedEvent = unknown>(
     const langSeq = ++langLoadSeqRef.current
     try {
       await getLanguageData(newLanguage)
-      const result = await createWordsForConfig(configRef.current, newLanguage)
+      const weakSpotProfile = resolveWeakSpotProfileArg(configRef.current, newLanguage, getMistakeProfileRef.current)
+      const result = await createWordsForConfig(configRef.current, newLanguage, weakSpotProfile)
       if (seqRef.current !== seq) return languageRef.current
-      setState(freshState(result))
+      setState(freshState(result, undefined, weakSpotProfile))
       return newLanguage
     } catch {
       if (seqRef.current !== seq) return languageRef.current
       languageRef.current = DEFAULT_LANGUAGE
       setLanguageState(DEFAULT_LANGUAGE)
-      setState(createInitialState(configRef.current, DEFAULT_LANGUAGE))
+      const fallbackProfile = resolveWeakSpotProfileArg(configRef.current, DEFAULT_LANGUAGE, getMistakeProfileRef.current)
+      setState(createInitialState(configRef.current, DEFAULT_LANGUAGE, undefined, fallbackProfile))
       return DEFAULT_LANGUAGE
     } finally {
       if (langLoadSeqRef.current === langSeq) {
@@ -149,9 +184,10 @@ export function useTypingTest<TPreparedEvent = unknown>(
     // see MatrixLayerLatch.displayLayer via applyBaseLayer.
     applyBaseLayer(layer)
     const seq = ++seqRef.current
-    const result = await createWordsForConfig(configRef.current, languageRef.current)
+    const weakSpotProfile = resolveWeakSpotProfileArg(configRef.current, languageRef.current, getMistakeProfileRef.current)
+    const result = await createWordsForConfig(configRef.current, languageRef.current, weakSpotProfile)
     if (seqRef.current !== seq) return
-    setState(freshState(result))
+    setState(freshState(result, undefined, weakSpotProfile))
   }, [])
 
   // --- Memory mode (imported fileImport text only): pause / capture / restore ---
@@ -395,6 +431,22 @@ export function useTypingTest<TPreparedEvent = unknown>(
     return { ...progress, words: kanaWordsTable }
   }, [config, language, state.words, state.currentWordIndex, state.kanaCharIndex, state.romajiCapable, kanaWordsTable])
 
+  // Live Weak Spot Training gate for the Option section's toggle/hint —
+  // recomputed from the CURRENT config/language (not the possibly-stale
+  // snapshot an in-progress run's own state.weakSpotProfile carries). See
+  // weak-spot-profile.ts's WeakSpotGateInfo doc comment for the
+  // unavailable/insufficient/met distinction.
+  const weakSpotGate = useMemo((): WeakSpotGateInfo => {
+    if (config.mode !== 'words' && config.mode !== 'time') {
+      return { applicable: false, status: 'met', deficit: null }
+    }
+    const inputMethod = effectiveWeakSpotInputMethod(config, language)
+    const raw = options?.getMistakeProfile?.(language, inputMethod)
+    if (!raw) return { applicable: true, status: 'unavailable', deficit: null }
+    if (meetsWeakSpotThreshold(raw.keystrokes)) return { applicable: true, status: 'met', deficit: null }
+    return { applicable: true, status: 'insufficient', deficit: weakSpotKeystrokeDeficit(raw.keystrokes) }
+  }, [config, language, options?.getMistakeProfile])
+
   return {
     state,
     wpm,
@@ -426,5 +478,6 @@ export function useTypingTest<TPreparedEvent = unknown>(
     captureMemory,
     pause,
     restoreState,
+    weakSpotGate,
   }
 }

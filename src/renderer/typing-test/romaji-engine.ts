@@ -898,6 +898,31 @@ export function canonicalRomaji(kana: string): string {
   return canonicalGuideFrom(kanaArr, 0, undefined, undefined)
 }
 
+/** Same segmentation walk as {@link canonicalRomaji} (identical winner
+ *  selection at each position — no disabled/guide styles, so this always
+ *  matches the canonical spelling `handleRomajiChar` tallies a mistake
+ *  under), but returns each segment's own canonical token separately
+ *  instead of concatenating them into one string — e.g. "きゃっぷ" ->
+ *  `["kya", "p", "pu"]`. Joining the result reproduces
+ *  `canonicalRomaji(kana)` exactly, since both walks share the same
+ *  `representativeAt` recursion; only the accumulation differs (array push
+ *  vs string concat). Used to tokenize a CANDIDATE word into the same
+ *  segment units `mistakes` keys are recorded under, for exact-token
+ *  weak-spot matching (never flat substring matching — see
+ *  weak-spot-weighting.ts). */
+export function canonicalRomajiSegments(kana: string): string[] {
+  const kanaArr = [...kana].map(toHiragana)
+  const segments: string[] = []
+  let index = 0
+  while (index < kanaArr.length) {
+    const winner = representativeAt(kanaArr, index, '', undefined, undefined)
+    if (!winner) break
+    segments.push(winner.pattern)
+    index += winner.length
+  }
+  return segments
+}
+
 /** The winning pattern that exactly matches `buffer` as a full spelling at
  *  `index`, or null when nothing does. Shared by the retroactive-commit
  *  path in `stepAt`/`tryConsume` and by `isComplete`, both of which need to

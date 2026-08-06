@@ -6,6 +6,7 @@
 import type { TypingTestConfig, Quote } from './types'
 import { isTimeBoundedRun } from './types'
 import { type WordsForConfig, createWordsForConfigSync, refillTimeModeWords } from './word-supply'
+import type { WeakSpotBiasProfile } from './word-generator'
 
 export type TypingTestStatus = 'countdown' | 'waiting' | 'running' | 'finished' | 'paused'
 
@@ -131,13 +132,31 @@ export interface TypingTestState {
    *  into `mistakes` via Backspace, so the word-submit pass doesn't
    *  double-count them. Reset on word advance / new run. */
   missedPositions: number[]
+  /** Weak Spot Training's immutable per-run snapshot (see
+   *  weak-spot-profile.ts) — resolved once when this run started (by
+   *  whichever `useTypingTest` call site built this state via
+   *  `freshState`/`createInitialState`) and carried unchanged through
+   *  every time-mode refill via `advanceAfterWord` -> `refillTimeModeWords`,
+   *  so a run's bias can never shift mid-run even if the underlying
+   *  history changes. `undefined` when the mode isn't words/time, the
+   *  toggle is off, or the keystroke gate isn't met (see
+   *  `isWeakSpotTrainingActive`/`meetsWeakSpotThreshold`) — absence simply
+   *  means "sample normally", never a lie about data availability (that
+   *  distinction lives in the UI-facing `weakSpotGate`, not here). */
+  weakSpotProfile?: WeakSpotBiasProfile
 }
 
-export function createInitialState(config: TypingTestConfig, language: string, status: TypingTestStatus = 'waiting'): TypingTestState {
-  return freshState(createWordsForConfigSync(config, language), status)
+export function createInitialState(
+  config: TypingTestConfig, language: string, status: TypingTestStatus = 'waiting', weakSpotProfile?: WeakSpotBiasProfile,
+): TypingTestState {
+  return freshState(createWordsForConfigSync(config, language, weakSpotProfile), status, weakSpotProfile)
 }
 
-export function freshState({ words, quote, lineBreaks, lineIndents, romajiCapable }: WordsForConfig, status: TypingTestStatus = 'waiting'): TypingTestState {
+export function freshState(
+  { words, quote, lineBreaks, lineIndents, romajiCapable }: WordsForConfig,
+  status: TypingTestStatus = 'waiting',
+  weakSpotProfile?: WeakSpotBiasProfile,
+): TypingTestState {
   return {
     status,
     runId: crypto.randomUUID(),
@@ -165,6 +184,7 @@ export function freshState({ words, quote, lineBreaks, lineIndents, romajiCapabl
     mistakes: {},
     romajiSegmentErred: false,
     missedPositions: [],
+    weakSpotProfile,
   }
 }
 
@@ -220,7 +240,7 @@ export function advanceAfterWord(base: TypingTestState, config: TypingTestConfig
   // Time-bounded runs (monkeytype time mode, or tatoeba's Time pattern):
   // extend words if running low, never finish from words.
   if (isTimeBoundedRun(config)) {
-    const refilled = refillTimeModeWords(base.words, nextIndex, config, language)
+    const refilled = refillTimeModeWords(base.words, nextIndex, config, language, base.weakSpotProfile)
     if (!refilled) return base
     if (refilled.lineBreaks.length === 0) return { ...base, words: refilled.words }
     const lineBreaks = new Set(base.lineBreaks)

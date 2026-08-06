@@ -270,6 +270,36 @@ describe('conditionKey / resultConditionKey agreement', () => {
     expect(conditionKey(config, language)).toBe(resultConditionKey(result))
     expect(conditionKey(config, language)).toBe(configKey(result))
   })
+
+  it('groups a weakSpotTraining run with its own saved result (regression)', () => {
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+    const language = 'english'
+    const result = buildTypingTestResult({
+      correctChars: 100,
+      incorrectChars: 5,
+      wordCount: 20,
+      wpm: 60,
+      accuracy: 95,
+      elapsedMs: 20_000,
+      config,
+      language,
+      wpmHistory: [60],
+      romajiActive: false,
+      kanaActive: false,
+      mistakes: {},
+      confirmedChars: 105,
+      totalKeystrokes: 105,
+      kspcUncomputable: false,
+      weakSpotTraining: true,
+    })
+    expect(result.weakSpotTraining).toBe(true)
+    expect(conditionKey(config, language)).toBe(resultConditionKey(result))
+    expect(conditionKey(config, language)).toBe(configKey(result))
+    // And a plain (toggle-off) run of the same condition must NOT share
+    // the biased run's key/pool.
+    const normalConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+    expect(conditionKey(normalConfig, language)).not.toBe(conditionKey(config, language))
+  })
 })
 
 describe('computeComparison', () => {
@@ -342,5 +372,47 @@ describe('configKey backward compatibility (kanaInput must not reshape existing 
     const liveKey = conditionKey(config, 'english')
     expect(liveKey).toBe(legacyKey)
     expect(baselines[liveKey]).toEqual({ kind: 'previous' })
+  })
+})
+
+describe('configKey backward compatibility (weakSpotTraining must not reshape existing keys)', () => {
+  // Same regression shape as the kanaInput block above — weakSpotTraining
+  // appends a `|weakspot` segment ONLY when true.
+
+  it('a non-weak-spot run\'s key is byte-identical to the pre-weak-spot literal shape (hardcoded, not re-derived)', () => {
+    expect(configKey(makeResult())).toBe('words|30|english|false|false|false')
+  })
+
+  it('a weak-spot run\'s key differs from the equivalent non-weak-spot key', () => {
+    const normal = makeResult()
+    const weakSpot = { ...normal, weakSpotTraining: true }
+    expect(configKey(weakSpot)).not.toBe(configKey(normal))
+    expect(configKey(weakSpot)).toBe('words|30|english|false|false|false|weakspot')
+  })
+
+  it('a kana AND weak-spot run gets its own distinct key, chained after the |kana segment', () => {
+    const kanaOnly = { ...makeResult({ language: 'japanese_hiragana' }), kanaInput: true }
+    const kanaAndWeakSpot = { ...kanaOnly, weakSpotTraining: true }
+    expect(configKey(kanaAndWeakSpot)).toBe('words|30|japanese_hiragana|false|false|false|kana|weakspot')
+    expect(configKey(kanaAndWeakSpot)).not.toBe(configKey(kanaOnly))
+  })
+
+  it('a comparison baseline saved under the legacy (pre-weak-spot) key still resolves for a live non-weak-spot run', () => {
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+    const legacyKey = 'words|30|english|false|false|false'
+    const baselines: TypingTestComparisonBaselines = { [legacyKey]: { kind: 'previous' } }
+    const liveKey = conditionKey(config, 'english')
+    expect(liveKey).toBe(legacyKey)
+    expect(baselines[liveKey]).toEqual({ kind: 'previous' })
+  })
+
+  it('conditionKey reflects a live weakSpotTraining: true config', () => {
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+    expect(conditionKey(config, 'english')).toBe('words|30|english|false|false|false|weakspot')
+  })
+
+  it('conditionKey ignores weakSpotTraining for modes that don\'t carry the field (quote)', () => {
+    const withField = { mode: 'quote', quoteLength: 'medium', weakSpotTraining: true } as unknown as TypingTestConfig
+    expect(conditionKey(withField, 'english')).toBe(conditionKey({ mode: 'quote', quoteLength: 'medium' }, 'english'))
   })
 })

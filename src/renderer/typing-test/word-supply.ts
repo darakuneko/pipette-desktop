@@ -6,7 +6,7 @@
  *  (store round-trip) variants. */
 
 import { generateWords, generateWordsSync, selectQuote, quoteToWords, getFileImportTextData, getFileImportTextDataSync, getTatoebaPack, getTatoebaPackSync, tatoebaRun } from './word-generator'
-import type { FileImportTextData } from './word-generator'
+import type { FileImportTextData, WeakSpotBiasProfile } from './word-generator'
 import type { TypingTestConfig, Quote } from './types'
 
 const TIME_MODE_BATCH_SIZE = 60
@@ -42,12 +42,22 @@ export interface WordsRefill {
  *  one more batch; returns null when no refill is due, or (tatoeba) the
  *  pack isn't cached / sampled empty, so the caller can keep its state
  *  object untouched. Keeps the batch/threshold policy private to this
- *  module. */
+ *  module.
+ *
+ *  `weakSpotProfile` is the SAME immutable snapshot the run's initial word
+ *  batch was sampled with (see `TypingTestState.weakSpotProfile`, threaded
+ *  in by `advanceAfterWord`) — never recomputed per refill, so a run's
+ *  bias can't shift mid-run even if the underlying history changes.
+ *  Deliberately NOT read for the tatoeba branch above: tatoeba samples
+ *  whole sentences from its own pack, not this module's word-list
+ *  sampler, and Weak Spot Training is words/time-only by design (see
+ *  `isWeakSpotTrainingActive`). */
 export function refillTimeModeWords(
   words: readonly string[],
   nextIndex: number,
   config: TypingTestConfig,
   language: string,
+  weakSpotProfile?: WeakSpotBiasProfile,
 ): WordsRefill | null {
   if (words.length - nextIndex >= TIME_MODE_EXTEND_THRESHOLD) return null
 
@@ -69,7 +79,13 @@ export function refillTimeModeWords(
 
   if (config.mode !== 'time') return null
   const { opts } = wordGenParams(config)
-  const { words: moreWords } = generateWordsSync(TIME_MODE_BATCH_SIZE, opts, language)
+  // Seeds the new batch's own immediate-repeat avoidance with the
+  // PREVIOUS batch's actual last word, so the guarantee holds across this
+  // refill boundary too — without this, generateWordsSync would start a
+  // fresh `lastWord = ''` and could draw the same word that already sits
+  // at `words`'s current tail right next to it.
+  const seedLastWord = words.length > 0 ? words[words.length - 1] : undefined
+  const { words: moreWords } = generateWordsSync(TIME_MODE_BATCH_SIZE, opts, language, weakSpotProfile, seedLastWord)
   return { words: [...words, ...moreWords], lineBreaks: [] }
 }
 
@@ -120,7 +136,11 @@ function tatoebaSampleCount(config: TypingTestConfig & { mode: 'tatoeba' }): num
   return config.pattern === 'time' ? TATOEBA_TIME_BATCH_SIZE : config.lineCount
 }
 
-export function createWordsForConfigSync(config: TypingTestConfig, language: string): WordsForConfig {
+/** `weakSpotProfile` is only ever consulted in the final words/time
+ *  fallthrough below — quote/fileImport/tatoeba all return earlier,
+ *  explicitly excluded from Weak Spot Training's biasing (fixed/imported
+ *  text, no word pool to bias within — see `isWeakSpotTrainingActive`). */
+export function createWordsForConfigSync(config: TypingTestConfig, language: string, weakSpotProfile?: WeakSpotBiasProfile): WordsForConfig {
   if (config.mode === 'quote') {
     const quote = selectQuote(config.quoteLength)
     return { words: quoteToWords(quote), quote, lineBreaks: [], lineIndents: [], romajiCapable: false }
@@ -136,11 +156,13 @@ export function createWordsForConfigSync(config: TypingTestConfig, language: str
     return tatoebaWordsForConfig(getTatoebaPackSync(config.language), tatoebaSampleCount(config))
   }
   const { count, opts } = wordGenParams(config)
-  const { words } = generateWordsSync(count, opts, language)
+  const { words } = generateWordsSync(count, opts, language, weakSpotProfile)
   return { words, quote: null, lineBreaks: [], lineIndents: [], romajiCapable: false }
 }
 
-export async function createWordsForConfig(config: TypingTestConfig, language: string): Promise<WordsForConfig> {
+/** Async counterpart of `createWordsForConfigSync` — see its own doc
+ *  comment for the `weakSpotProfile` gating (words/time only). */
+export async function createWordsForConfig(config: TypingTestConfig, language: string, weakSpotProfile?: WeakSpotBiasProfile): Promise<WordsForConfig> {
   if (config.mode === 'quote') {
     const quote = selectQuote(config.quoteLength)
     return { words: quoteToWords(quote), quote, lineBreaks: [], lineIndents: [], romajiCapable: false }
@@ -153,6 +175,6 @@ export async function createWordsForConfig(config: TypingTestConfig, language: s
     return tatoebaWordsForConfig(await getTatoebaPack(config.language), tatoebaSampleCount(config))
   }
   const { count, opts } = wordGenParams(config)
-  const { words } = await generateWords(count, opts, language)
+  const { words } = await generateWords(count, opts, language, weakSpotProfile)
   return { words, quote: null, lineBreaks: [], lineIndents: [], romajiCapable: false }
 }

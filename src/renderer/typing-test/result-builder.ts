@@ -92,21 +92,26 @@ export function buildResultNameChips(result: TypingTestResult, t: (key: string) 
   return chips
 }
 
-/** `kanaInput` is deliberately appended ONLY when true (asymmetric — every
- *  other segment is always present) rather than as an unconditional 7th
- *  `|${result.kanaInput ?? false}` segment: this key is also the storage
- *  key for persisted comparison-baseline preferences
+/** `kanaInput`/`weakSpotTraining` are deliberately appended ONLY when true
+ *  (asymmetric — every other segment is always present) rather than as an
+ *  unconditional segment (e.g. `|${result.kanaInput ?? false}`): this key
+ *  is also the storage key for persisted comparison-baseline preferences
  *  (`TypingTestComparisonBaselines`, keyed by this exact string — see
  *  `use-typing-test-pane-comparison.ts`'s `conditionKey` call). Appending
  *  an unconditional new segment would change the key for every existing
- *  (non-kana) result at once, silently orphaning every baseline saved
- *  before kana mode existed. Appending only for kana runs keeps a
- *  non-kana key byte-identical to its pre-kana shape while still giving
- *  kana its own distinct key (no legacy key can end with the literal
- *  `|kana` — the field it replaces is a stringified boolean). */
+ *  result at once, silently orphaning every baseline saved before that
+ *  field existed. Appending only when true keeps every pre-existing key
+ *  byte-identical to its prior shape while still giving the new condition
+ *  its own distinct key (no legacy key can end with the literal `|kana`
+ *  or `|weakspot` — the fields they replace are stringified booleans).
+ *  `weakSpotTraining` is checked on the ALREADY-kana-extended key (chained
+ *  after `|kana`, not independently off `base`) so a hypothetical kana +
+ *  weak-spot run still gets its own distinct 3-segment-deep key rather
+ *  than colliding with a non-kana weak-spot run. */
 export function configKey(result: TypingTestResult): string {
   const base = `${result.mode ?? 'words'}|${result.mode2 ?? ''}|${result.language ?? ''}|${result.punctuation ?? false}|${result.numbers ?? false}|${result.romajiInput ?? false}`
-  return result.kanaInput ? `${base}|kana` : base
+  const withKana = result.kanaInput ? `${base}|kana` : base
+  return result.weakSpotTraining ? `${withKana}|weakspot` : withKana
 }
 
 export function isPbForConfig(result: TypingTestResult, history: TypingTestResult[]): boolean {
@@ -201,6 +206,15 @@ export interface BuildTypingTestResultInput {
    *  `wordResults`. A zero-sample pair (nothing observed this run, e.g.
    *  recording was off) stores neither field — see `buildTypingTestResult`. */
   holdStats?: { holdSumMs: number; holdSamples: number }
+  /** Whether Weak Spot Training's biased sampling was actually in effect
+   *  for this run (see `isWeakSpotTrainingActive`) — not read from
+   *  `config` directly here, mirroring how `romajiActive`/`kanaActive`
+   *  above are the caller's own effective-state derivation rather than a
+   *  raw config flag. Optional, default `false`, so existing callers/tests
+   *  that predate this field keep building a result with no
+   *  `weakSpotTraining` set — same "store nothing" precedent as
+   *  `wordResults`/`holdStats`. */
+  weakSpotTraining?: boolean
 }
 
 /** Narrows to the 'words' / 'time' config variants — the only ones carrying
@@ -269,6 +283,7 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
     numbers: hasNumbers,
     romajiInput: input.romajiActive ? true : undefined,
     kanaInput: input.kanaActive ? true : undefined,
+    weakSpotTraining: input.weakSpotTraining ? true : undefined,
     consistency,
     wpmHistory: input.wpmHistory,
     mistakes: Object.keys(input.mistakes).length > 0 ? input.mistakes : undefined,
