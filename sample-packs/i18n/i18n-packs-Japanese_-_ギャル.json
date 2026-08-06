@@ -1,11 +1,11 @@
 {
-  "version": "0.1.82",
+  "version": "0.1.83",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
     "saved": "保存したよん！",
     "cancel": "やめとく〜",
-    "delete": "ポイっちょ☆",
+    "delete": "ポイ☆",
     "confirmDelete": "消しちゃっていい？☆",
     "close": "閉じるっしょ",
     "reset": "リセット☆",

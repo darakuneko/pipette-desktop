@@ -8,7 +8,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
-import { Tooltip } from '../components/ui/Tooltip'
 import { LOAD_BTN } from '../components/editors/store-modal-shared'
 import { WordTimelineView } from './WordTimelineView'
 
@@ -32,27 +31,25 @@ export function HistoryTimelineCell({ result, uid, availableRunIds }: Props) {
       {/* Text link (not an icon button) matching the row's other text-action
        *  conventions (Delete/Load in HistoryResultsPanel) — LOAD_BTN is the
        *  accent-colored twin of DELETE_BTN, the same row-button shape used
-       *  for non-destructive actions elsewhere in these History rows. The
-       *  Tooltip is kept even though the link now has visible text: its
-       *  copy ("Open keystroke timeline") clarifies WHAT opens beyond the
-       *  short "Timeline" label. No aria-label on the button itself — the
-       *  visible text already supplies its accessible name. */}
-      <Tooltip content={t('editor.typingTest.history.timeline.openButton')}>
-        {/* whitespace-nowrap: with the fixed-layout table's narrow COL_TIMELINE
-         *  share, some i18n packs' Timeline label (e.g. 京言葉's
-         *  "タイムラインどすえ") is long enough that the default wrap would break
-         *  it mid-word onto two lines. COL_TIMELINE is sized to fit the
-         *  longest built-in pack string on one line (see HistoryResultsPanel),
-         *  so this never needs to clip. */}
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className={`${LOAD_BTN} whitespace-nowrap`}
-          data-testid={`history-timeline-open-${result.date}`}
-        >
-          {t('editor.typingTest.history.timeline.linkLabel')}
-        </button>
-      </Tooltip>
+       *  for non-destructive actions elsewhere in these History rows.
+       *
+       *  Plain full label, no truncation, no Tooltip: COL_TIMELINE is a
+       *  snug fixed-width column sized to fit every built-in pack's
+       *  Timeline label in full at this table's font size (see
+       *  HistoryResultsPanel) — the strings themselves are kept within
+       *  that budget (persona packs that ran long, e.g. 京言葉's original
+       *  9-char "タイムラインどすえ", were shortened instead of the column
+       *  being widened to fit them), so there's never anything left to
+       *  truncate or need a tooltip for. No aria-label on the button — its
+       *  own visible text already supplies the accessible name. */}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={`${LOAD_BTN} whitespace-nowrap`}
+        data-testid={`history-timeline-open-${result.date}`}
+      >
+        {t('editor.typingTest.history.timeline.linkLabel')}
+      </button>
       {open && (
         <WordTimelineView
           uid={uid}

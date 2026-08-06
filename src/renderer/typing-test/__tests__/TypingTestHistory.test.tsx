@@ -278,11 +278,13 @@ describe('TypingTestHistory', () => {
     expect(table).toBeTruthy()
     expect(table!.className).toContain('table-fixed')
 
-    // The Mode column header carries the column's width share (the
-    // fixed-layout algorithm reads column widths from the header row only).
+    // Mode (like Name) deliberately carries NO width — class or style —
+    // so table-fixed gives the flexible pair everything the snug columns
+    // (runtime-measured px widths, see useHistoryColumnWidths) leave over.
     const modeHeader = screen.getByRole('button', { name: /Mode/i }).closest('th')
     expect(modeHeader).toBeTruthy()
-    expect(modeHeader!.className).toMatch(/w-\[\d+%\]/)
+    expect(modeHeader!.className).not.toMatch(/w-\[/)
+    expect(modeHeader!.style.width).toBe('')
 
     const modeCell = Array.from(history.querySelectorAll('tbody td')).find((td) => td.textContent === fullText)
     expect(modeCell).toBeTruthy()
@@ -546,6 +548,40 @@ describe('TypingTestHistory', () => {
   it('shows no delete button when no onDelete handler', () => {
     renderWithI18n(<TypingTestHistory results={[makeResult({ date: 'd1' })]} />)
     expect(screen.queryByTestId('history-delete-d1')).toBeNull()
+  })
+
+  // Delete-confirm replaces the WHOLE row with one full-width colSpan cell
+  // — the confirm/cancel strings compete only with the entire table width,
+  // so no pack's confirm question (however long) can constrain any
+  // individual column's width.
+  it('replaces the whole row with one full-width colSpan cell during delete-confirm when uid is set', () => {
+    const date = '2025-05-05T01:02:03.000Z'
+    const onDelete = vi.fn()
+    renderWithI18nAllTime(<TypingTestHistory results={[makeResult({ date })]} onDelete={onDelete} uid="uid-1" />)
+    const row = screen.getByTestId(`history-delete-${date}`).closest('tr')!
+    // Normal state: NAME/DATE/WPM/KPM/ACCURACY/AKH/MODE/DURATION/PB/TIMELINE/DELETE.
+    expect(row.querySelectorAll('td')).toHaveLength(11)
+
+    fireEvent.click(screen.getByTestId(`history-delete-${date}`))
+    const confirmTd = screen.getByTestId(`history-delete-confirm-${date}`).closest('td') as HTMLTableCellElement
+    expect(confirmTd.colSpan).toBe(11)
+    // The entire row collapsed into the one colSpan cell above.
+    expect(row.querySelectorAll('td')).toHaveLength(1)
+    // Right-aligned (justify-end) so the confirm/cancel pair hugs the
+    // table's right edge, where the plain Delete button it replaces sits —
+    // the confirm state reads as occupying the same visual position rather
+    // than drifting left across the full-width cell.
+    const flexContainer = screen.getByTestId(`history-delete-confirm-${date}`).parentElement
+    expect(flexContainer).toHaveClass('justify-end')
+  })
+
+  it('spans one column fewer during delete-confirm when uid is unset (no Timeline column)', () => {
+    const date = '2025-06-06T01:02:03.000Z'
+    const onDelete = vi.fn()
+    renderWithI18nAllTime(<TypingTestHistory results={[makeResult({ date })]} onDelete={onDelete} />)
+    fireEvent.click(screen.getByTestId(`history-delete-${date}`))
+    const confirmTd = screen.getByTestId(`history-delete-confirm-${date}`).closest('td') as HTMLTableCellElement
+    expect(confirmTd.colSpan).toBe(10)
   })
 
   // Regression guard: pins sparkline-then-stats order, matching the Analyze

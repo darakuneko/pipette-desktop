@@ -13,6 +13,7 @@ import { ResultNameModal } from './ResultNameModal'
 import { Tooltip } from '../components/ui/Tooltip'
 import { formatDuration, fmtMs } from '../components/analyze/analyze-format'
 import { HistoryTimelineCell } from './HistoryTimelineCell'
+import { useHistoryColumnWidths } from './history-column-widths'
 import { EMPTY_RUN_ID_SET } from '../hooks/useRunLogAvailability'
 import { WpmTrendChart } from './WpmTrendChart'
 import { aggregateWpmByDay } from './wpm-daily-trend'
@@ -35,55 +36,38 @@ const MODE_FILTERS: ModeFilter[] = ['all', 'words', 'time', 'quote']
 
 const EXPORT_BTN_CLASS = 'inline-flex h-8 items-center rounded-md border border-edge px-2.5 text-xs text-content-secondary transition-colors hover:text-content'
 
-// Column width allocation for the fixed-layout Results table (`table-fixed`
-// below) — every header cell carries one of these so the table always spans
-// the full available width (no leftover space, no horizontal scroll)
-// instead of auto-sizing to content. With table-fixed, ONLY the header
-// row's widths matter (subsequent rows never affect column sizing per the
-// CSS table-layout algorithm), so these constants are applied to the
-// `<th>` elements only — body `<td>`s inherit their column's width for
-// free. Name/Mode get the flexible majority share (their text is
-// variable-width and ellipsis-truncates via Tooltip when it doesn't fit,
-// see NameCell/ModeCell); every other column is sized to its known-narrow
-// content (numeric values, short buttons/icons). Sums to 100%.
-// NAME/MODE keep the flexible majority share but give up some of it below
-// to TIMELINE/PB/DELETE, whose action labels must render on one line (see
-// the whitespace-nowrap cells below) — Name/Mode already ellipsis-truncate
-// via Tooltip when their content doesn't fit, so narrowing them just means
-// truncation kicks in a little sooner, not a broken layout.
-const COL_NAME = 'w-[12%]'
-const COL_DATE = 'w-[13%]'
-const COL_WPM = 'w-[6%]'
-const COL_KPM = 'w-[6%]'
-// "Accuracy" (8 chars) is the longest plain-word header in the row — at
-// 7% its own sortable button (block + truncate, so it strictly respects
-// the column's fixed width — see SortableHeader) ellipsized even at the
-// full MODAL_2XL width. Bumped to 9%, borrowed from Name/Mode's generous
-// share, rather than ship a header that truncates at the un-narrowed
-// width the wider modal was meant to buy back.
-const COL_ACCURACY = 'w-[9%]'
-const COL_AKH = 'w-[6%]'
-const COL_MODE = 'w-[11%]'
-const COL_DURATION = 'w-[6%]'
-// The header label (t('editor.typingTest.history.pb'), whitespace-nowrap
-// below) is "PB" in most packs but 4 kanji in 紳士's "自己最高" — 5% left it
-// wrapping onto two lines at this table's font size. Bumped to 7%.
-const COL_PB = 'w-[7%]'
-// The Timeline link's label (whitespace-nowrap in HistoryTimelineCell) is
-// the longest action string across the built-in packs: 京言葉's
-// "タイムラインどすえ" (9 chars) needs more room than English's "Timeline"
-// (8 chars) suggests. Bumped from 7% to fit that string plus button/cell
-// padding on one line, funded by shrinking Name/Mode's share above.
-const COL_TIMELINE = 'w-[14%]'
-// The confirm-delete state (see below) packs two buttons — labels come
-// from i18n (common.confirmDelete/cancel) and run considerably longer in
-// some packs than English's "Delete?"/"Cancel" (up to 紳士's 19-character
-// confirm string) — but that row keeps its existing flex-wrap tolerance
-// (Cancel drops to its own line rather than forcing the column wider), so
-// this column only needs to comfortably fit the plain, single-line Delete
-// button (longest: ギャル's "ポイっちょ☆", 6 chars) on one line. Trimmed
-// from 12% to 10%, the saved 2% going to TIMELINE above.
-const COL_DELETE = 'w-[10%]'
+// Column widths for the fixed-layout Results table (`table-fixed` below).
+//
+// The snug columns (Date/WPM/KPM/Accuracy/AKH/Duration/PB/Timeline/
+// Delete) are sized AT RUNTIME to the active locale's actual rendered
+// strings (useHistoryColumnWidths) — each is exactly content + padding
+// wide, never budgeted for another pack's longer string, re-measured on
+// language change. NAME and MODE carry no width at all: under
+// `table-fixed`, columns without a specified width split all remaining
+// table width equally (the 1:1 flexible pair), and they are the only two
+// columns that ever ellipsis-truncate (via their existing Tooltips in
+// NameCell/ModeCell).
+//
+// The FALLBACK_* classes below apply only when runtime measurement is
+// unavailable (jsdom in tests measures every probe as 0 and the hook
+// returns null) — an inline `style.width` from the hook always overrides
+// them. Values are the last statically measured EN/standard-JA budgets,
+// kept so tests still exercise a realistic fixed layout.
+//
+// Delete-confirm no longer constrains ANY column: the confirm state
+// replaces the entire row with one full-width colSpan cell (see the row
+// render below), so even the longest pack's confirm string only ever
+// competes with the whole table width, not with PB/Timeline/Delete.
+const FALLBACK_DATE = 'w-[150px]'
+const FALLBACK_WPM = 'w-[64px]'
+const FALLBACK_KPM = 'w-[64px]'
+const FALLBACK_ACCURACY = 'w-[92px]'
+const FALLBACK_AKH = 'w-[76px]'
+const FALLBACK_DURATION = 'w-[68px]'
+const FALLBACK_PB = 'w-[68px]'
+const FALLBACK_TIMELINE = 'w-[110px]'
+const FALLBACK_DELETE = 'w-[88px]'
+
 
 /** Mode-column detail. FileImport (imported-text) runs show the snapshotted text
  *  name (falling back to the stable textId for legacy rows saved before the
@@ -163,6 +147,13 @@ export function HistoryResultsPanel({
 }: Props) {
   const { t } = useTranslation()
   const [confirmDeleteDate, setConfirmDeleteDate] = useState<string | null>(null)
+  const colWidths = useHistoryColumnWidths()
+  // The confirm-delete state replaces the WHOLE row with one colSpan cell
+  // (all 9 base columns + Timeline when `uid` + Delete itself), so its
+  // width requirement never constrains any individual column. Plain
+  // arithmetic on props, not memoized — recomputing it is cheaper than
+  // the useMemo bookkeeping would be.
+  const confirmColSpan = 9 + (uid ? 1 : 0) + (onDelete ? 1 : 0)
 
   // Text-style rendering (imported-text name in the Mode/Text column instead
   // of the mode label) applies to both Aozora and File Import — they're the
@@ -316,13 +307,17 @@ export function HistoryResultsPanel({
           <table className="w-full table-fixed text-left text-xs">
             <thead className="sticky top-0 bg-surface-alt text-content-muted">
               <tr>
-                <th className={`${COL_NAME} px-3 py-1.5`}>{t('editor.typingTest.history.name')}</th>
-                <SortableHeader widthClassName={COL_DATE} column="date" label={t('editor.typingTest.history.date')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
-                <SortableHeader widthClassName={COL_WPM} column="wpm" label={t('editor.typingTest.wpm')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
-                <SortableHeader widthClassName={COL_KPM} column="kpm" label={t('editor.typingTest.kpm')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
-                <SortableHeader widthClassName={COL_ACCURACY} column="accuracy" label={t('editor.typingTest.accuracy')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
+                {/* Name and Mode intentionally carry NO width (class or
+                 *  style): with table-fixed they split all width the snug
+                 *  columns leave over, 1:1. */}
+                <th className="px-3 py-1.5">{t('editor.typingTest.history.name')}</th>
+                <SortableHeader widthClassName={FALLBACK_DATE} width={colWidths?.date} column="date" label={t('editor.typingTest.history.date')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
+                <SortableHeader widthClassName={FALLBACK_WPM} width={colWidths?.wpm} column="wpm" label={t('editor.typingTest.wpm')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
+                <SortableHeader widthClassName={FALLBACK_KPM} width={colWidths?.kpm} column="kpm" label={t('editor.typingTest.kpm')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
+                <SortableHeader widthClassName={FALLBACK_ACCURACY} width={colWidths?.accuracy} column="accuracy" label={t('editor.typingTest.accuracy')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
                 <SortableHeader
-                  widthClassName={COL_AKH}
+                  widthClassName={FALLBACK_AKH}
+                  width={colWidths?.akh}
                   column="avgHold"
                   label={t('editor.typingTest.history.avgHoldAbbr')}
                   tooltip={t('editor.typingTest.history.avgHold')}
@@ -330,11 +325,11 @@ export function HistoryResultsPanel({
                   sortDirection={sortDirection}
                   onSort={onSort}
                 />
-                <SortableHeader widthClassName={COL_MODE} column="mode" label={isText ? t('editor.typingTest.history.tabText') : t('editor.typingTest.history.mode')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
-                <SortableHeader widthClassName={COL_DURATION} column="duration" label={t('editor.typingTest.time')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
-                <th className={`${COL_PB} px-3 py-1.5 whitespace-nowrap`}>{t('editor.typingTest.history.pb')}</th>
-                {uid && <th className={`${COL_TIMELINE} px-3 py-1.5`} aria-label={t('editor.typingTest.history.timeline.modalTitle')} />}
-                {onDelete && <th className={`${COL_DELETE} px-3 py-1.5`} aria-label={t('editor.typingTest.history.delete')} />}
+                <SortableHeader column="mode" label={isText ? t('editor.typingTest.history.tabText') : t('editor.typingTest.history.mode')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
+                <SortableHeader widthClassName={FALLBACK_DURATION} width={colWidths?.duration} column="duration" label={t('editor.typingTest.time')} sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} />
+                <th className={`${colWidths ? '' : FALLBACK_PB} px-3 py-1.5 whitespace-nowrap`} style={colWidths ? { width: colWidths.pb } : undefined}>{t('editor.typingTest.history.pb')}</th>
+                {uid && <th className={`${colWidths ? '' : FALLBACK_TIMELINE} px-3 py-1.5`} style={colWidths ? { width: colWidths.timeline } : undefined} aria-label={t('editor.typingTest.history.timeline.modalTitle')} />}
+                {onDelete && <th className={`${colWidths ? '' : FALLBACK_DELETE} px-3 py-1.5`} style={colWidths ? { width: colWidths.delete } : undefined} aria-label={t('editor.typingTest.history.delete')} />}
               </tr>
             </thead>
             <tbody>
@@ -343,65 +338,71 @@ export function HistoryResultsPanel({
                   key={r.date}
                   className="border-t border-edge/50 transition-colors hover:bg-surface-alt/50"
                 >
-                  <NameCell result={r} onRename={onRename} deviceName={deviceName} />
-                  <td className="whitespace-nowrap px-3 py-1.5 text-content-muted">{formatDate(r.date)}</td>
-                  <td className="whitespace-nowrap px-3 py-1.5 font-mono font-semibold text-accent">{r.wpm}</td>
-                  <td className="whitespace-nowrap px-3 py-1.5 font-mono font-semibold text-accent">{resultKpm(r)}</td>
-                  <td className="whitespace-nowrap px-3 py-1.5 font-mono">{r.accuracy}%</td>
-                  <td className="whitespace-nowrap px-3 py-1.5 font-mono text-content-muted">{fmtMs(resultAvgHoldMs(r))}</td>
-                  <ModeCell r={r} isText={isText} />
-                  <td className="whitespace-nowrap px-3 py-1.5 font-mono text-content-muted">
-                    {formatDuration(r.durationSeconds)}
-                  </td>
-                  <td className="px-3 py-1.5">
-                    {r.isPb && <Trophy role="img" className="inline-block size-3.5 text-warning" aria-label={t('editor.typingTest.history.pb')} />}
-                  </td>
-                  {uid && <HistoryTimelineCell result={r} uid={uid} availableRunIds={availableRunIds ?? EMPTY_RUN_ID_SET} />}
-                  {onDelete && (
-                    <td className="px-3 py-1.5">
-                      {confirmDeleteDate === r.date ? (
-                        // flex-wrap: the confirm/cancel labels come from
-                        // i18n (common.confirmDelete/cancel) and some
-                        // packs run considerably longer than English's
-                        // "Delete?"/"Cancel" — with the column's width now
-                        // hard-capped by table-fixed (COL_DELETE), letting
-                        // Cancel wrap to its own line degrades gracefully
-                        // instead of overflowing past the table's edge.
-                        <div className="flex flex-wrap items-center gap-0.5">
-                          <button
-                            type="button"
-                            className={CONFIRM_DELETE_BTN}
-                            onClick={() => { onDelete(r.date); setConfirmDeleteDate(null) }}
-                            data-testid={`history-delete-confirm-${r.date}`}
-                          >
-                            {t('common.confirmDelete')}
-                          </button>
-                          <button
-                            type="button"
-                            className={ACTION_BTN}
-                            onClick={() => setConfirmDeleteDate(null)}
-                            data-testid={`history-delete-cancel-${r.date}`}
-                          >
-                            {t('common.cancel')}
-                          </button>
-                        </div>
-                      ) : (
-                        // whitespace-nowrap: the plain (non-confirm) Delete
-                        // link must never wrap mid-word — COL_DELETE is
-                        // sized to fit every built-in pack's common.delete
-                        // label on one line (see the constant above). The
-                        // confirm-state buttons below intentionally keep
-                        // their default wrap tolerance instead.
+                  {onDelete && confirmDeleteDate === r.date ? (
+                    // Confirm-delete state replaces the WHOLE row with one
+                    // full-width cell: the question + confirm/cancel pair
+                    // gets the entire table width, so no pack's confirm
+                    // string can ever constrain an individual column's
+                    // width — and it renders on one line for every
+                    // built-in pack. justify-end anchors the action to the
+                    // table's right edge, where the plain Delete button it
+                    // replaces sits. flex-wrap stays as a safety net for
+                    // extreme user-installed packs, not a layout the
+                    // built-ins ever reach.
+                    <td colSpan={confirmColSpan} className="px-3 py-1.5">
+                      <div className="flex flex-wrap items-center justify-end gap-1.5">
                         <button
                           type="button"
-                          className={`${DELETE_BTN} whitespace-nowrap`}
-                          onClick={() => setConfirmDeleteDate(r.date)}
-                          data-testid={`history-delete-${r.date}`}
+                          className={`${CONFIRM_DELETE_BTN} whitespace-nowrap`}
+                          onClick={() => { onDelete(r.date); setConfirmDeleteDate(null) }}
+                          data-testid={`history-delete-confirm-${r.date}`}
                         >
-                          {t('common.delete')}
+                          {t('common.confirmDelete')}
                         </button>
-                      )}
+                        <button
+                          type="button"
+                          className={`${ACTION_BTN} whitespace-nowrap`}
+                          onClick={() => setConfirmDeleteDate(null)}
+                          data-testid={`history-delete-cancel-${r.date}`}
+                        >
+                          {t('common.cancel')}
+                        </button>
+                      </div>
                     </td>
+                  ) : (
+                    <>
+                      <NameCell result={r} onRename={onRename} deviceName={deviceName} />
+                      <td className="whitespace-nowrap px-3 py-1.5 text-content-muted">{formatDate(r.date)}</td>
+                      <td className="whitespace-nowrap px-3 py-1.5 font-mono font-semibold text-accent">{r.wpm}</td>
+                      <td className="whitespace-nowrap px-3 py-1.5 font-mono font-semibold text-accent">{resultKpm(r)}</td>
+                      <td className="whitespace-nowrap px-3 py-1.5 font-mono">{r.accuracy}%</td>
+                      <td className="whitespace-nowrap px-3 py-1.5 font-mono text-content-muted">{fmtMs(resultAvgHoldMs(r))}</td>
+                      <ModeCell r={r} isText={isText} />
+                      <td className="whitespace-nowrap px-3 py-1.5 font-mono text-content-muted">
+                        {formatDuration(r.durationSeconds)}
+                      </td>
+                      <td className="px-3 py-1.5">
+                        {r.isPb && <Trophy role="img" className="inline-block size-3.5 text-warning" aria-label={t('editor.typingTest.history.pb')} />}
+                      </td>
+                      {uid && <HistoryTimelineCell result={r} uid={uid} availableRunIds={availableRunIds ?? EMPTY_RUN_ID_SET} />}
+                      {onDelete && (
+                        <td className="px-3 py-1.5">
+                          {/* whitespace-nowrap: the plain Delete link never
+                           *  wraps mid-word — its column is measured to fit
+                           *  the active locale's label on one line. The
+                           *  confirm state replaces the whole row instead
+                           *  of fighting this column's width. */}
+                          <button
+                            type="button"
+                            className={`${DELETE_BTN} whitespace-nowrap`}
+                            onClick={() => setConfirmDeleteDate(r.date)}
+                            data-testid={`history-delete-${r.date}`}
+                          >
+                            {t('common.delete')}
+                          </button>
+                        </td>
+                      )}
+                    </>
                   )}
                 </tr>
               ))}
@@ -445,11 +446,14 @@ interface SortableHeaderProps {
    *  abbreviation (e.g. avgHold's "AKH" header) — omitted for every other
    *  column, whose label is already the full text. */
   tooltip?: string
-  /** This column's share of the fixed-layout table's width (one of the
-   *  `COL_*` constants above) — required so every column call site stays
-   *  accounted for in the 100% allocation; there's no sane default width
-   *  for an arbitrary column. */
-  widthClassName: string
+  /** Fallback width class used only while `width` is absent (jsdom /
+   *  pre-measurement render). Omitted entirely for the flexible Mode
+   *  column, which must stay width-less so table-fixed lets it share the
+   *  leftover width with Name. */
+  widthClassName?: string
+  /** Measured runtime width (px) for this snug column from
+   *  useHistoryColumnWidths — wins over `widthClassName` when present. */
+  width?: number
   sortColumn: SortColumn
   sortDirection: SortDirection
   onSort: (column: SortColumn) => void
@@ -460,6 +464,7 @@ function SortableHeader({
   label,
   tooltip,
   widthClassName,
+  width,
   sortColumn,
   sortDirection,
   onSort,
@@ -488,7 +493,11 @@ function SortableHeader({
   )
 
   return (
-    <th className={`${widthClassName} px-3 py-1.5`} aria-sort={ariaSort}>
+    <th
+      className={`${width == null ? widthClassName ?? '' : ''} px-3 py-1.5`}
+      style={width != null ? { width } : undefined}
+      aria-sort={ariaSort}
+    >
       {/* Tooltip must wrap the button itself (not an inner span) — its
        *  wrapper renders a div, and a div can't legally nest inside a
        *  button; wrapping the span also left aria-describedby on a
