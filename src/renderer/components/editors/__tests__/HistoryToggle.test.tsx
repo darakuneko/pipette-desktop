@@ -9,6 +9,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '../../../i18n'
 import { HistoryToggle } from '../HistoryToggle'
+import { MAX_TYPING_TEST_RESULTS } from '../../../typing-test/types'
 import type { TypingTestResult } from '../../../../shared/types/pipette-settings'
 
 function renderWithI18n(ui: React.ReactElement) {
@@ -51,6 +52,12 @@ describe('HistoryToggle — Analyze run-timeline handoff', () => {
     const modal = screen.getByTestId('history-modal')
     expect(modal.className).toContain('w-modal-2xl')
     expect(modal.className).not.toContain('w-modal-xl ')
+  })
+
+  it('shows the retention note with the real result cap next to the title', () => {
+    renderWithI18n(<HistoryToggle results={[]} />)
+    fireEvent.click(screen.getByTestId('typing-test-history-toggle'))
+    expect(screen.getByTestId('history-retention-note').textContent).toContain(String(MAX_TYPING_TEST_RESULTS))
   })
 
   it('auto-opens History and the timeline for a pending timelineHandoff', async () => {

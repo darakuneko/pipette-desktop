@@ -4,7 +4,7 @@ import { useCallback } from 'react'
 import type { TypingTestResult, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../shared/types/pipette-settings'
 import { trimResults } from '../typing-test/result-builder'
 import type { TypingTestConfig } from '../typing-test/types'
-import { clampDisplayLines, clampFontSize } from '../typing-test/types'
+import { clampDisplayLines, clampFontSize, MAX_TYPING_TEST_RESULTS } from '../typing-test/types'
 import { isMonkeytypeMode } from './device-prefs-validate'
 
 interface UseTypingTestPrefsArgs {
@@ -39,8 +39,6 @@ interface UseTypingTestPrefsArgs {
   updateTypingRecordEnabled: (enabled: boolean) => void
   saveCurrentPrefs: () => void
 }
-
-const MAX_TYPING_TEST_RESULTS = 500
 
 export function useTypingTestPrefs(args: UseTypingTestPrefsArgs) {
   const {

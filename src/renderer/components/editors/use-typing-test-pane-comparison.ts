@@ -39,7 +39,7 @@ export function useTypingTestPaneComparison({
   // The EFFECTIVE bias state of the current run — NOT `isWeakSpotTrainingActive
   // (typingTest.config)` (the toggle alone): a run started with the toggle on
   // but the keystroke gate not met samples normally, and
-  // use-typing-test-result-save.ts only ever persists `weakSpotTraining: true`
+  // use-typing-test-result-save.ts only ever persists `weakSpotTrainingMode: true`
   // for a run whose OWN `state.weakSpotProfile` snapshot was actually non-null
   // (see that file's own comment). The live condition key must use the same
   // effective signal, or a gated (toggle-on, unbiased) run can never find its

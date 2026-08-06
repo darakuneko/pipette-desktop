@@ -7,6 +7,8 @@ import { buildTypingTestResult, isPbForConfig } from '../../typing-test/result-b
 import { isRomajiInputActive } from '../../typing-test/romaji-input'
 import { isKanaInputActive } from '../../typing-test/kana-input'
 import type { TypingTestConfig } from '../../typing-test/types'
+import { hasWeakSpotFields } from '../../typing-test/types'
+import { resolveWeakSpotSettings } from '../../typing-test/weak-spot-settings'
 import type { LineSnapshot } from '../../typing-test/TypingTestView'
 import type { TypingTestResult, TypingTestMemory } from '../../../shared/types/pipette-settings'
 import type { TypingAnalyticsKeyboard } from '../../../shared/types/typing-analytics'
@@ -39,6 +41,21 @@ import type { UseRunLogRecorderReturn } from './use-run-log-recorder'
  *  line source at all" (must fall through to the snapshot, or omit). */
 function hasRealLineStructure(mode: TypingTestConfig['mode']): boolean {
   return mode === 'fileImport' || mode === 'tatoeba'
+}
+
+/** The effective (fully-resolved) Weak Spot Training settings for
+ *  `config` — undefined for every mode but words/time, the only variants
+ *  carrying `weakSpot` at all (see types.ts). Only meaningful when the
+ *  caller already knows this run actually sampled biased (see the call
+ *  site's `state.weakSpotProfile != null` gate) — this reads the CURRENT
+ *  config, which is the same immutable snapshot `state.weakSpotProfile`
+ *  itself was resolved from at run-start (setConfig/restart always
+ *  produce a fresh run state together with the config that seeded it —
+ *  see useTypingTest.ts's `loadRunState`), so the two never disagree for
+ *  the run that just finished. */
+function effectiveWeakSpotSettings(config: TypingTestConfig): TypingTestResult['weakSpotSettings'] {
+  if (!hasWeakSpotFields(config)) return undefined
+  return resolveWeakSpotSettings(config.weakSpot)
 }
 
 /** Derive `RunKeystrokeLog.lineBreaks` for the just-finished run —
@@ -226,7 +243,8 @@ export function useTypingTestResultSave({
         // an unbiased (gate-not-met) run into the weak-spot PB/comparison
         // condition (configKey/resultConditionKey) alongside genuinely
         // biased runs.
-        weakSpotTraining: typingTest.state.weakSpotProfile != null,
+        weakSpotTrainingMode: typingTest.state.weakSpotProfile != null,
+        weakSpotSettings: typingTest.state.weakSpotProfile != null ? effectiveWeakSpotSettings(typingTest.config) : undefined,
         mistakes: typingTest.state.mistakes,
         totalKeystrokes: typingTest.state.totalKeystrokes,
         confirmedChars: typingTest.state.confirmedChars,

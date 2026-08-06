@@ -1,5 +1,5 @@
 {
-  "version": "0.1.84",
+  "version": "0.1.87",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -324,8 +324,7 @@
       },
       "punctuation": "句読点",
       "numbers": "数字",
-      "weakSpotTraining": "苦手強化どす",
-      "weakSpotHintNoWeak": "苦手なとこ、おへんどすえ",
+      "weakSpotTraining": "苦手克服モードどす",
       "japaneseInputToggle": "日本語入力どす",
       "romaji": {
         "imeHint": "ローマ字入力モードの時は、OSのIMEを切っておくれやす"
@@ -384,6 +383,36 @@
           "xn": "ん:xn",
           "nApos": "ん:n'"
         }
+      },
+      "weakSpotSettings": {
+        "title": "苦手克服モードどす",
+        "tokenJoin": "・",
+        "tokenOverflow": " ほか{{extra}}件どすえ",
+        "notApplicableNote": "単語パターンと時間パターンでしか使えしまへん。",
+        "statusUnavailable": "履歴の読み込み、まだどすえ。もうちょっと待っとくれやす。",
+        "statusNoWeakSpots": "苦手なとこ、おへんどすえ",
+        "statusActive": "苦手なとこ見つかりましたえ（{{tokenCount}}件）: {{tokens}}",
+        "statusActiveNoTokens": "苦手なとこ見つかりましたえ。",
+        "description": "文字（ローマ字入力やと綴りの区切り単位どすえ）は{{missThreshold}}回以上ミスしはったら苦手認定どすえ。タイミング記録がある場合（{{minTimingSamples}}回以上のサンプル）は、普段のペースより{{slownessRatio}}倍以上遅い、またはつまずき（普段の{{stallMultiple}}倍を超える間隔）がサンプルの{{stallRatePercent}}%以上で起きても苦手認定どすえ。",
+        "windowDescription": "判定は直近{{count}}回分の記録どすえ、それだけ見させてもろてます。",
+        "windowDescriptionAll": "判定は今まで全部の記録を見させてもろてますえ。",
+        "decayDescription": "古いミスはだんだん軽うなっていきますえ、{{days}}日ごとに半分どすえ。",
+        "biasDescription": "有効にしはったら、出題される単語の約{{percent}}%が苦手な文字から選ばれますえ。",
+        "historyRetentionNote": "上の範囲設定や減衰設定とは関係のう、履歴自体が直近{{max}}件までしか残りまへんよって、それより古い記録は判定から外れてしまいますえ。",
+        "sectionDetection": "判定の条件",
+        "sectionWindow": "データの範囲",
+        "sectionSampling": "出題の按配",
+        "missThresholdLabel": "ミス回数のしきい値（回）",
+        "slownessRatioLabel": "遅さの倍率（倍）",
+        "stallRateLabel": "詰まり率（%）",
+        "stallMultipleLabel": "詰まり判定の倍率（倍）",
+        "minTimingSamplesLabel": "最低サンプル数",
+        "missWindowLabel": "集計する範囲（直近の回数）",
+        "missWindowAll": "ぜんぶ",
+        "decayLabel": "時間による重みの減衰（半減期・日）",
+        "decayNone": "オフ",
+        "biasRatioLabel": "苦手な文字の出題割合（%）",
+        "resetButton": "元の設定に戻す"
       },
       "quoteLength": {
         "short": "短いのん",
@@ -491,6 +520,7 @@
       },
       "history": {
         "title": "履歴どすえ",
+        "retentionNote": "履歴は直近{{max}}件までしか残りまへんえ",
         "bestWpm": "最高どすえ",
         "avgWpm": "平均どすえ",
         "last10Avg": "直近10回",
@@ -534,7 +564,7 @@
         "conditionNumbers": "+数字",
         "conditionRomaji": "+ローマ字入力",
         "conditionKana": "+かな",
-        "conditionWeakSpot": "+苦手強化",
+        "conditionWeakSpot": "+苦手克服モード",
         "conditionTatoeba": "Tatoeba",
         "mistakeRankingTitle": "苦手な文字どすえ",
         "mistakeRankingEmpty": "ミスの記録はまだおへんなぁ",

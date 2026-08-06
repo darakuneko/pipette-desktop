@@ -5,9 +5,10 @@ import { MIN_SCALE, MAX_SCALE } from '../components/editors/keymap-editor-types'
 import type { TypingTestResult, ViewMode, TypingTestMemory, TypingTestMemoryWord, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
 import { VIEW_MODES, isTypingTestComparisonBaselines } from '../../shared/types/pipette-settings'
 import { isNonNegInt, isValidTypingTestResult, sanitizeTypingTestResult } from '../typing-test/typing-test-result-sanitize'
-import type { TypingTestConfig, RomajiDetailSettings, RomajiCaseStyle } from '../typing-test/types'
+import type { TypingTestConfig, RomajiDetailSettings, RomajiCaseStyle, WeakSpotDetailSettings } from '../typing-test/types'
 import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, clampDisplayLines, clampFontSize } from '../typing-test/types'
 import type { RomajiStyle } from '../typing-test/romaji-engine'
+import { WEAK_SPOT_FIELD_SPECS, WEAK_SPOT_FIELD_KEYS } from '../typing-test/weak-spot-settings'
 import type { BasicViewType, SplitKeyMode } from '../../shared/types/app-config'
 import { clampZoomFactor } from '../../shared/types/app-config'
 
@@ -106,6 +107,33 @@ function validateRomajiDetailSettings(raw: unknown): RomajiDetailSettings | unde
   return Object.keys(result).length > 0 ? result : undefined
 }
 
+/** Validates `config.weakSpot` (Weak Spot Settings modal fields)
+ *  field-by-field, mirroring `validateRomajiDetailSettings` exactly: an
+ *  unknown/out-of-range field is dropped individually (falls back to its
+ *  own default at read time — see weak-spot-settings.ts's
+ *  `resolveWeakSpotDetectionSettings`/`resolveWeakSpotBiasRatio`) rather
+ *  than rejecting the whole nested object, so a stray/corrupted field
+ *  never takes out fields that did validate. Returns undefined when `raw`
+ *  isn't a plausible object, or every field turned out invalid. A single
+ *  membership check (`spec.options.includes(value)`) against
+ *  `WEAK_SPOT_FIELD_SPECS` replaces 8 hand-written per-field range checks
+ *  — this ALSO closes a real gap the old min/max range checks had: the
+ *  modal's selects have a discrete STEP (e.g. slownessRatio 0.1,
+ *  stallMultiple 0.5), so a persisted value that passed the old range
+ *  check but landed between two steps (e.g. `stallMultiple: 1.7`) matched
+ *  no `<option>` and rendered an unselected select; membership against the
+ *  exact option set can't admit an off-step value in the first place. */
+function validateWeakSpotDetailSettings(raw: unknown): WeakSpotDetailSettings | undefined {
+  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return undefined
+  const obj = raw as Record<string, unknown>
+  const result: Record<string, unknown> = {}
+  for (const key of WEAK_SPOT_FIELD_KEYS) {
+    const value = obj[key]
+    if ((WEAK_SPOT_FIELD_SPECS[key].options as readonly unknown[]).includes(value)) result[key] = value
+  }
+  return Object.keys(result).length > 0 ? (result as WeakSpotDetailSettings) : undefined
+}
+
 function validateTypingTestConfig(raw: unknown): TypingTestConfig | undefined {
   if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return undefined
   const obj = raw as Record<string, unknown>
@@ -118,18 +146,24 @@ function validateTypingTestConfig(raw: unknown): TypingTestConfig | undefined {
   const romaji = validateRomajiDetailSettings(obj.romaji)
   const romajiDetail = romaji ? { romaji } : {}
   // Same optional carry-through treatment as romajiInput above, but only
-  // ever spread into the words/time branches below — weakSpotTraining
+  // ever spread into the words/time branches below — weakSpotTrainingMode
   // doesn't exist on any other TypingTestConfig variant (see types.ts),
   // so a malformed/stray value on a fileImport/tatoeba/quote payload is
   // silently dropped along with every other unrecognized field there.
-  const weakSpotTraining = typeof obj.weakSpotTraining === 'boolean' ? { weakSpotTraining: obj.weakSpotTraining } : {}
+  const weakSpotTrainingMode = typeof obj.weakSpotTrainingMode === 'boolean' ? { weakSpotTrainingMode: obj.weakSpotTrainingMode } : {}
+  // Same optional carry-through treatment, nested-object variant (see
+  // validateRomajiDetailSettings's own field-level validation) — only
+  // ever spread into the words/time branches below, since `weakSpot`
+  // doesn't exist on any other TypingTestConfig variant (see types.ts).
+  const weakSpotDetail = validateWeakSpotDetailSettings(obj.weakSpot)
+  const weakSpot = weakSpotDetail ? { weakSpot: weakSpotDetail } : {}
   switch (obj.mode) {
     case 'words':
       if (!isFinitePositiveInt(obj.wordCount) || !hasBooleanFields(obj, 'punctuation', 'numbers')) return undefined
-      return { mode: 'words', wordCount: obj.wordCount, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean, ...weakSpotTraining, ...romajiInput, ...romajiDetail }
+      return { mode: 'words', wordCount: obj.wordCount, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean, ...weakSpotTrainingMode, ...romajiInput, ...romajiDetail, ...weakSpot }
     case 'time':
       if (!isFinitePositiveInt(obj.duration) || !hasBooleanFields(obj, 'punctuation', 'numbers')) return undefined
-      return { mode: 'time', duration: obj.duration, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean, ...weakSpotTraining, ...romajiInput, ...romajiDetail }
+      return { mode: 'time', duration: obj.duration, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean, ...weakSpotTrainingMode, ...romajiInput, ...romajiDetail, ...weakSpot }
     case 'quote':
       if (typeof obj.quoteLength !== 'string' || !VALID_QUOTE_LENGTHS.has(obj.quoteLength)) return undefined
       return { mode: 'quote', quoteLength: obj.quoteLength as 'short' | 'medium' | 'long' | 'all' }

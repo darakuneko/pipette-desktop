@@ -1,17 +1,21 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { ICON_SM } from '../../constants/ui-tokens'
-import { TypingTestSettingsBar } from '../../typing-test/TypingTestSettingsBar'
+import { TypingTestSettingsBar, optionButtonClass } from '../../typing-test/TypingTestSettingsBar'
 import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
 import { isRomajiCapable, carryRomajiFields } from '../../typing-test/romaji-input'
+import { WeakSpotSettingsModal } from '../../typing-test/WeakSpotSettingsModal'
 import { HistoryToggle } from './HistoryToggle'
 import { ComparisonToggle } from './ComparisonToggle'
 import type { TypingTestResult, TypingTestComparisonBaseline, PooledTypingTestResult } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
-import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, DISPLAY_LINES_MIN, DISPLAY_LINES_MAX, FONT_OPTIONS } from '../../typing-test/types'
+import {
+  DEFAULT_CONFIG, DEFAULT_LANGUAGE, DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE,
+  DISPLAY_LINES_MIN, DISPLAY_LINES_MAX, FONT_OPTIONS, isWeakSpotTrainingActive,
+} from '../../typing-test/types'
 import type { useTypingTest } from '../../typing-test/useTypingTest'
 import { ToggleRow } from './modal-controls'
 import { PANEL_COLLAPSED_WIDTH } from './keymap-editor-types'
@@ -109,6 +113,19 @@ export function TypingTestPaneSettingsPanel({
   handleComparisonChange,
 }: TypingTestPaneSettingsPanelProps) {
   const { t } = useTranslation()
+  const [showWeakSpotModal, setShowWeakSpotModal] = useState(false)
+
+  // Weak Spot Training Mode's live status line, rendered directly below the
+  // DATA-section button (moved out of WeakSpotSettingsModal — see that
+  // component's own doc comment) so it's visible without opening the
+  // modal. Mirrors the gate's three states: 'unavailable' (History still
+  // loading) renders nothing at all — claiming "no weak spots" here would
+  // be a guess, not a fact; the other two render a compact hint line below.
+  const weakSpotGate = typingTest.weakSpotGate
+  const shownWeakSpotTokens = weakSpotGate.topWeakTokens ?? []
+  const weakSpotTokenOverflow = (weakSpotGate.weakTokenCount ?? shownWeakSpotTokens.length) - shownWeakSpotTokens.length
+  const weakSpotActiveTokensText = shownWeakSpotTokens.join(t('editor.typingTest.weakSpotSettings.tokenJoin'))
+    + (weakSpotTokenOverflow > 0 ? t('editor.typingTest.weakSpotSettings.tokenOverflow', { extra: weakSpotTokenOverflow }) : '')
 
   // Data Source / language. The mode kind (FileImport / Normal) goes in the label —
   // "Data Source(FileImport)" — and the button shows just the source (file name or
@@ -256,7 +273,6 @@ export function TypingTestPaneSettingsPanel({
             onConfigChange={onConfigChange}
             language={typingTest.language}
             textRomajiCapable={typingTest.state.romajiCapable}
-            weakSpotGate={typingTest.weakSpotGate}
           />
         )}
       </PanelSection>
@@ -278,6 +294,48 @@ export function TypingTestPaneSettingsPanel({
           baseline={comparisonBaselineValue}
           onChange={handleComparisonChange}
         />
+        {/* Weak Spot Training — a dialog trigger (opens the enable toggle +
+            tunable-parameter modal), same full-width DATA-section button
+            convention as the Japanese Input button above (see that
+            button's own doc comment in TypingTestSettingsBar.tsx) rather
+            than the compact Option-row toggles. Shown for every mode so
+            the modal's own explanation stays reachable even outside
+            words/time (see WeakSpotSettingsModal's "words/time only"
+            note); active (accent) purely from the config flag, matching
+            the Japanese Input button's own accent rule — not from
+            `weakSpotGate`, since the gate only decides whether the ON
+            toggle INSIDE the modal is currently clickable, not whether
+            the setting itself is on. */}
+        <button
+          type="button"
+          data-testid="weak-spot-settings-toggle"
+          className={`${optionButtonClass(isWeakSpotTrainingActive(typingTest.config))} w-full justify-center`}
+          onClick={() => setShowWeakSpotModal(true)}
+          aria-haspopup="dialog"
+          aria-expanded={showWeakSpotModal}
+        >
+          {t('editor.typingTest.weakSpotTraining')}
+        </button>
+        {showWeakSpotModal && (
+          <WeakSpotSettingsModal
+            config={typingTest.config}
+            onConfigChange={onConfigChange}
+            weakSpotGate={typingTest.weakSpotGate}
+            onClose={() => setShowWeakSpotModal(false)}
+          />
+        )}
+        {weakSpotGate.applicable && weakSpotGate.status === 'no-weak-spots' && (
+          <p className="text-xs text-content-muted" data-testid="weak-spot-status">
+            {t('editor.typingTest.weakSpotSettings.statusNoWeakSpots')}
+          </p>
+        )}
+        {weakSpotGate.applicable && weakSpotGate.status === 'active' && (
+          <p className="text-xs text-content-muted" data-testid="weak-spot-status">
+            {shownWeakSpotTokens.length > 0
+              ? t('editor.typingTest.weakSpotSettings.statusActive', { tokenCount: weakSpotGate.weakTokenCount ?? shownWeakSpotTokens.length, tokens: weakSpotActiveTokensText })
+              : t('editor.typingTest.weakSpotSettings.statusActiveNoTokens')}
+          </p>
+        )}
         {/* Save Unnamed — when on (default), a finished result is auto-saved
             even without a name; when off, only named results are kept. */}
         <ToggleRow

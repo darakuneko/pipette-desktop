@@ -2,7 +2,7 @@
 // @vitest-environment jsdom
 
 // codex regression coverage: useTypingTestPaneComparison's currentConditionKey
-// (and matchingResults/computeComparison calls) used to key weakSpotTraining
+// (and matchingResults/computeComparison calls) used to key weakSpotTrainingMode
 // off the raw toggle (isWeakSpotTrainingActive), while a saved result only
 // ever sets the flag when the run's OWN state.weakSpotProfile snapshot was
 // actually non-null (use-typing-test-result-save.ts). With the toggle on but
@@ -20,7 +20,7 @@ import type { TypingTestResult, TypingTestComparisonBaselines } from '../../../.
 import type { TypingTestConfig } from '../../../typing-test/types'
 import type { MistakeProfile } from '../../../typing-test/weak-spot-profile'
 
-const MET_PROFILE: MistakeProfile = { weights: { e: 1000 }, weakTokenCount: 1 }
+const MET_PROFILE: MistakeProfile = { weights: { e: 1000 }, weakTokenCount: 1, topWeakTokens: ['e'] }
 
 const mockPipetteSettingsListAllTypingResults = vi.fn<() => Promise<TypingTestResult[]>>()
 
@@ -41,7 +41,7 @@ async function flushMicrotasks(rounds = 5): Promise<void> {
   for (let i = 0; i < rounds; i++) await Promise.resolve()
 }
 
-const weakSpotConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+const weakSpotConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTrainingMode: true }
 
 /** The legacy (no-suffix) key a plain, non-weak-spot 30-word English run
  *  keys under — hardcoded the same way comparison.test.ts's own backward-
@@ -98,7 +98,7 @@ describe('useTypingTestPaneComparison — weakSpotActive wiring', () => {
       correctChars: 100, incorrectChars: 5, durationSeconds: 30,
       mode: 'words', mode2: 30, language: 'english', punctuation: false, numbers: false,
     }
-    const biasedResult: TypingTestResult = { ...normalResult, wpm: 90, weakSpotTraining: true }
+    const biasedResult: TypingTestResult = { ...normalResult, wpm: 90, weakSpotTrainingMode: true }
     mockPipetteSettingsListAllTypingResults.mockResolvedValue([normalResult, biasedResult])
 
     const { result, rerender } = renderCombined({ gateMet: false })
@@ -113,7 +113,7 @@ describe('useTypingTestPaneComparison — weakSpotActive wiring', () => {
       correctChars: 100, incorrectChars: 5, durationSeconds: 30,
       mode: 'words', mode2: 30, language: 'english', punctuation: false, numbers: false,
     }
-    const biasedResult: TypingTestResult = { ...normalResult, wpm: 90, weakSpotTraining: true }
+    const biasedResult: TypingTestResult = { ...normalResult, wpm: 90, weakSpotTrainingMode: true }
     mockPipetteSettingsListAllTypingResults.mockResolvedValue([normalResult, biasedResult])
 
     const { result, rerender } = renderCombined({ gateMet: true })

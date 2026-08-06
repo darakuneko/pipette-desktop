@@ -1162,14 +1162,16 @@ Click the **Typing Test** button in the status bar to enter typing test mode.
 The left side of the typing-test screen is a collapsible **Settings** panel. The chevron button at its bottom collapses it to a thin rail and expands it again; the state is saved per keyboard. The panel groups the test controls into three sections:
 
 - **Settings** — the **Data Source** row (see below); **Layer** (the base layer used by the on-screen keymap, shown when the keyboard has more than one layer); and **Lines** / **Font** (line count and font size of the reading window — these two apply in every mode). With a MonkeyType language active, the **Pattern** / **Units** / **Option** rows described under **MonkeyType** also appear here; with a Tatoeba pack active, Tatoeba's own **Pattern** / **Units** rows appear instead (see **Tatoeba** below)
-- **Data** — **History** opens the saved-results modal (see **History** below). **Compare** picks the comparison baseline — **Previous**, **Best**, **Average**, a pinned **Result**, or **Off**; while a baseline is set, colored ▲ / ▼ deltas appear next to WPM / KPM / Accuracy in the stats row, and the **Compare** button itself takes on an accent border and text whenever the baseline isn't Off. The baseline choice is remembered per test condition (mode + settings + language, or per imported text). **Save Unnamed** (default on) auto-saves finished results even without a name; switched off, only named results are kept
+- **Data** — **History** opens the saved-results modal (see **History** below). **Compare** picks the comparison baseline — **Previous**, **Best**, **Average**, a pinned **Result**, or **Off**; while a baseline is set, colored ▲ / ▼ deltas appear next to WPM / KPM / Accuracy in the stats row, and the **Compare** button itself takes on an accent border and text whenever the baseline isn't Off. The baseline choice is remembered per test condition (mode + settings + language, or per imported text). **Weak Spot Training Mode** opens a settings modal, shown in every mode, for biasing word sampling toward your own detected weak spots — the modal's Enable toggle and tunable parameters only take effect in the words/time patterns; a status line below the button shows what's currently detected (see **Weak Spot Training Mode** below). **Save Unnamed** (default on) auto-saves finished results even without a name; switched off, only named results are kept
 - **View** — three switches: **Operation** (the controls row below the reading window), **Measurement** (the live stats row), and **Keymap** (the keyboard pane). Each hides its area when switched off; a finished test always shows the controls and the results regardless
 
 #### History
 
 ![Typing Test — History (Results)](screenshots/typing-test-history-results.png)
 
-The History modal opens on a single header row: **Results** / **Analysis** tabs on the left, and a right-end group of selects — a source select (**MonkeyType** / **Tatoeba** / **Aozora** / **File Import**) that scopes every section in the modal to one source, then (only while **Analysis** is active) the Accuracy Trend's own condition select, then a **period filter** (always the rightmost select, in both tabs): **1 Week** / **1 Month** (default) / **3 Months** / **1 Year** / **All Time**. The period filter resets to 1 Month every time the modal reopens, and it scopes everything below the header row — the WPM Trend chart, the stats row, the Results table, **Export CSV**, and the entire Analysis tab. Runs from different sources aren't comparable to each other, so every stat, chart, and export in the modal stays scoped to whichever source is currently picked.
+The History modal opens on a single header row: **Results** / **Analysis** tabs on the left, a small note next to the title stating the retention cap (see below), and a right-end group of selects — a source select (**MonkeyType** / **Tatoeba** / **Aozora** / **File Import**) that scopes every section in the modal to one source, then (only while **Analysis** is active) the Accuracy Trend's own condition select, then a **period filter** (always the rightmost select, in both tabs): **1 Week** / **1 Month** (default) / **3 Months** / **1 Year** / **All Time**. The period filter resets to 1 Month every time the modal reopens, and it scopes everything below the header row — the WPM Trend chart, the stats row, the Results table, **Export CSV**, and the entire Analysis tab. Runs from different sources aren't comparable to each other, so every stat, chart, and export in the modal stays scoped to whichever source is currently picked.
+
+Regardless of period filter or source, History itself keeps only the 500 most recent results overall — once that cap is reached, saving a new result silently drops the oldest one. This limit is independent of any filter above: it's not that older results are hidden from view, they're gone from storage entirely.
 
 **Results** tab — the run list:
 
@@ -1261,30 +1263,55 @@ In the words and time patterns, the Settings panel's **Option** row adds toggles
 
 The Option row is hidden in the quote pattern (which uses the original text as-is) and in the Tatoeba / Aozora Bunko / File Import modes.
 
-**Weak Spot Training**
+**Weak Spot Training Mode**
 
-![Typing Test — Weak Spot Training toggle](screenshots/typing-test-weak-spot-toggle.png)
+![Typing Test — Weak Spot Training Mode button](screenshots/typing-test-weak-spot-toggle.png)
 
-Also words/time only, a full-width **Weak Spot Training** toggle sits below Punctuation/Numbers in the Option row. Turning it on biases word sampling toward tokens your own History shows you're weak at, scoped to the current language and effective input method (Direct / Romaji / Kana) — it doesn't change what words exist, only how often each one is picked.
+A full-width **Weak Spot Training Mode** button sits in the Settings panel's **Data** section, below **Compare**, in every pattern — the button itself renders regardless of mode; only the setting it controls is words/time-only. It's a dialog trigger (not a toggle itself) — clicking it opens the **Weak Spot Training Mode** modal, where the feature is actually turned on/off and tuned. The button takes on the active (accent) styling whenever the setting is currently on, so its state is visible without opening the modal. Directly below the button, a status line reflects what's currently known (hidden entirely while History hasn't finished loading — nothing is claimed either way until it's ready):
 
-A token counts as weak by any of three signals, each measured against your own typing rather than a fixed benchmark:
+- **"No weak spots detected — nice!"** — History is loaded and no token crossed any of the detection thresholds (shown in the modal)
+- **"Weak spots detected (N): k, r, sha"** — at least one weak token was found; the modal's Enable toggle becomes clickable
 
-- **Misses** — it's been recorded as a mistake a couple of times or more in History
-- **Noticeably slower** — with a saved keystroke log available, your typical pace on it runs meaningfully behind your own overall median
-- **Hesitation** — with a saved keystroke log available, it produces a long pause more often than the rest of your typing
+Opened from any other pattern, the modal shows the same shell but replaces the description/toggle/parameters with a short note explaining the feature only applies to words/time.
 
-The two timing-based signals need a saved per-run keystroke log, which only exists for runs recorded after Recording Consent was turned on (see **Typing analytics recording** below — the same app-wide consent flag also gates the raw log for an ordinary Typing Test run, not only for REC). Without any saved logs, the toggle still works from the miss signal alone.
+Turning the setting on (inside the modal) biases word sampling toward tokens your own History shows you're weak at, scoped to the current language and effective input method (Direct / Romaji / Kana) — it doesn't change what words exist, only how often each one is picked.
 
-The toggle itself always appears wherever the Option row does, regardless of whether a weakness has actually been found yet, so it can be turned on ahead of time. The text below it reflects what's currently known:
+![Typing Test — Weak Spot Training Mode button, no weak spots detected below it](screenshots/typing-test-weak-spot-hint.png)
 
-- **No hint** — History hasn't finished loading yet, so nothing is claimed either way
-- **"No weak spots detected — nice!"** — History is loaded and no token crossed any of the three thresholds
+The modal opens with the detection-signal explanation, then the **Enable** toggle below it, then the tunable parameters. The toggle can always be turned OFF, but turning it ON requires at least one weak spot to have actually been detected for the current language and input method — there's nothing to turn on ahead of time, and a parameter change that later drops detection back to nothing never leaves the toggle stuck on with no way to turn it off.
 
-![Typing Test — Weak Spot Training hint](screenshots/typing-test-weak-spot-hint.png)
+A token counts as weak by any of three signals, each measured against your own typing rather than a fixed benchmark, and explained in the modal itself with your CURRENTLY configured threshold values filled in:
 
-- **No hint, biasing active** — at least one weak token was found; the toggle takes on its active (accent) styling and sampling is biased accordingly
+- **Misses** — it's been recorded as a mistake enough times in History (default: 2+)
+- **Noticeably slower** — with a saved keystroke log available, your typical pace on it runs meaningfully behind your own overall median (default: 1.5× or slower, needs 15+ timed samples)
+- **Hesitation** — with a saved keystroke log available, it produces a long pause more often than the rest of your typing (default: over 2× your pace, on 20%+ of its timed samples)
 
-Because it changes what you actually type, a run made with Weak Spot Training active is tracked as its own test condition, separate from your ordinary runs of the same mode/settings — its Personal Best, Compare baseline, History filter, and Accuracy Trend entry are all their own. The condition label carries a `+weak spot` suffix (e.g. "50 words (english) +weak spot"), the same convention as the `+punct` / `+nums` / `+romaji` / `+kana` suffixes described elsewhere on this page.
+The two timing-based signals need a saved per-run keystroke log, which only exists for runs recorded after Recording Consent was turned on (see **Typing analytics recording** below — the same app-wide consent flag also gates the raw log for an ordinary Typing Test run, not only for REC). Without any saved logs, detection still works from the miss signal alone.
+
+![Typing Test — Weak Spot Training Mode modal (active, with parameters)](screenshots/typing-test-weak-spot-modal.png)
+
+Below the Enable toggle, the modal exposes every detection/sampling parameter as its own button row (two per line within each section), along with a **Reset to defaults** button:
+
+The button labels below are exactly what the modal renders — plain numbers, with no `×` / `%` / unit suffix on the button itself (the unit is named in the parameter row's own label instead):
+
+| Section | Parameter | Default | Choices |
+|---|---|---|---|
+| Detection thresholds | Miss threshold (times) | 2 | 1 / 2 / 3 / 5 / 10 |
+| Detection thresholds | Slowness ratio (×) | 1.5 | 1.2 / 1.5 / 2 / 2.5 / 3 |
+| Detection thresholds | Stall rate (%) | 20 | 10 / 20 / 30 / 40 / 50 |
+| Detection thresholds | Stall multiple (×) | 2 | 1.5 / 2 / 2.5 / 3 / 4 |
+| Detection thresholds | Min. timed samples | 15 | 5 / 10 / 15 / 25 / 50 |
+| Data window | Rolling window (runs) | 50 | 10 / 25 / 50 / 100 / All |
+| Data window | Time decay (half-life, days) | Off | Off / 7 / 14 / 30 |
+| Sampling | Weak spot word share (%) | 60 | 20 / 40 / 60 / 80 / 100 |
+
+**Rolling window** limits detection to only your N most recent matching runs (by both the miss and timing signals together) instead of your entire matching History — the default of 50 keeps a weak spot you've since overcome from lingering forever just because it still shows up somewhere far back in your history. **Time decay** additionally down-weights older misses within that window on a half-life curve (a miss recorded today always counts at full weight; one recorded one half-life ago counts at roughly half) — off by default, so every miss in the window counts equally unless you turn it on. **Weak spot word share** controls how large a fraction of sampled words are pulled from the biased pool once the setting is active, rather than uniformly — the default 60/40 split keeps a run representative of ordinary typing even while biased.
+
+None of the above changes what History itself retains: regardless of Rolling window or Time decay, History only ever keeps your 500 most recent results (see **History** above), so detection can never look further back than that — a run older than the 500-result cap is gone from consideration entirely, not just outside the configured window.
+
+Whether a parameter change reaches your CURRENT run depends on whether Weak Spot Training Mode is on. While it's off, a parameter change only takes effect on your next run (same as any other Settings-panel change) — it can't be sampling from a pool it isn't using yet, so the run in progress is unaffected. While it's on, a parameter change immediately restarts the current run under the new parameters, the same way switching Pattern or Units would. Changing parameters is always allowed, whether or not detection currently reads as active.
+
+Because it changes what you actually type, a run made with Weak Spot Training Mode active is tracked as its own test condition, separate from your ordinary runs of the same mode/settings — its Personal Best, Compare baseline, History filter, and Accuracy Trend entry are all their own. The condition label carries a `+weak spot` suffix (e.g. "50 words (english) +weak spot"), the same convention as the `+punct` / `+nums` / `+romaji` / `+kana` suffixes described elsewhere on this page. This grouping is by the on/off flag alone, not by the parameters used — a run biased at a 20% word share and one biased at 100% still share the same condition even though their word selection was meaningfully different; each saved result quietly keeps a record of the exact parameters it ran under, for reference, without splitting the grouping further.
 
 **Japanese Input**
 

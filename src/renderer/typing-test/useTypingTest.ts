@@ -5,7 +5,9 @@ import { getLanguageData } from './word-generator'
 import type { WeakSpotBiasProfile } from './word-generator'
 import { DEFAULT_TAPPING_TERM_MS } from '../../shared/qmk-settings-tapping-term'
 import type { TypingTestConfig } from './types'
-import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, isTimeBoundedRun, applyRomajiCaseStyle, isWeakSpotTrainingActive } from './types'
+import {
+  DEFAULT_CONFIG, DEFAULT_LANGUAGE, isTimeBoundedRun, applyRomajiCaseStyle, isWeakSpotTrainingActive, hasWeakSpotFields,
+} from './types'
 import type { TypingTestMemory } from '../../shared/types/pipette-settings'
 import { createWordsForConfig } from './word-supply'
 import {
@@ -24,10 +26,11 @@ import { deriveExpectedChar, deriveMistakeKey, deriveKanaCorrectOverride } from 
 import { useTypingTestMatrix } from './use-typing-test-matrix'
 import { useTypingTestMetrics } from './use-typing-test-metrics'
 import { buildMemorySnapshot, buildRestoredState } from './typing-test-memory'
-import { effectiveWeakSpotInputMethod, type WeakSpotGateInfo, type MistakeProfile, type WeakSpotInputMethod } from './weak-spot-profile'
+import { effectiveWeakSpotInputMethod, type WeakSpotGateInfo } from './weak-spot-profile'
+import { resolveWeakSpotSettings } from './weak-spot-settings'
 import type { UseTypingTestOptions, UseTypingTestReturn } from './use-typing-test-types'
 
-type GetMistakeProfileFn = (language: string, inputMethod: WeakSpotInputMethod) => MistakeProfile | undefined
+type GetMistakeProfileFn = UseTypingTestOptions['getMistakeProfile']
 
 /** Resolves the immutable per-run Weak Spot Training snapshot for a
  *  words/time run about to start under `config`/`language` — undefined
@@ -49,9 +52,48 @@ function resolveWeakSpotProfileArg(
 ): WeakSpotBiasProfile | undefined {
   if (!isWeakSpotTrainingActive(config)) return undefined
   const inputMethod = effectiveWeakSpotInputMethod(config, language)
-  const raw = getMistakeProfile?.(language, inputMethod)
+  // config.mode is words/time here (isWeakSpotTrainingActive already
+  // narrowed it), the only variant hasWeakSpotFields recognizes.
+  const weakSpotSettings = hasWeakSpotFields(config) ? config.weakSpot : undefined
+  // One resolve call for both the detection settings (passed to
+  // getMistakeProfile below — its extra `biasRatio` field is simply
+  // ignored, structural typing) and the bias ratio the returned profile
+  // carries, instead of two separate resolveWeakSpot*/resolveWeakSpot*
+  // calls over the same raw settings.
+  const resolved = resolveWeakSpotSettings(weakSpotSettings)
+  const raw = getMistakeProfile?.(language, inputMethod, resolved)
   if (!raw || raw.weakTokenCount < 1) return undefined
-  return { inputMethod, weights: raw.weights }
+  return { inputMethod, weights: raw.weights, biasRatio: resolved.biasRatio }
+}
+
+/** True when `next` differs from `prev` ONLY inside the `weakSpot` tuning
+ *  subtree — a REAL difference there, not merely "nothing else changed"
+ *  (see the trailing check below) — AND `weakSpotTrainingMode` is off in BOTH
+ *  (never actually biasing in either) — the one case setConfig can skip a
+ *  full run restart for: `resolveWeakSpotProfileArg` only ever reads
+ *  `weakSpot` at all when `isWeakSpotTrainingActive` is true (see its own
+ *  gate above), so a weakSpot-only edit while the toggle is off provably
+ *  cannot change the sampled word list. Every other field is compared
+ *  explicitly (not a generic/reflective diff) since `weakSpot` is the only
+ *  nested subtree besides `romaji`, which — untouched by the Weak Spot
+ *  Settings modal — is safe to compare by reference (every call site that
+ *  changes `romaji` replaces the whole object, never mutates it in
+ *  place). */
+function isOnlyWeakSpotTuningChange(prev: TypingTestConfig, next: TypingTestConfig): boolean {
+  if (!hasWeakSpotFields(prev) || !hasWeakSpotFields(next)) return false
+  if (prev.weakSpotTrainingMode === true || next.weakSpotTrainingMode === true) return false
+  if (prev.mode !== next.mode) return false
+  if (prev.punctuation !== next.punctuation || prev.numbers !== next.numbers) return false
+  if (prev.romajiInput !== next.romajiInput || prev.romaji !== next.romaji) return false
+  if (prev.mode === 'words' && next.mode === 'words' && prev.wordCount !== next.wordCount) return false
+  if (prev.mode === 'time' && next.mode === 'time' && prev.duration !== next.duration) return false
+  // A call where NOTHING changed at all — e.g. useInputModes's mount-time
+  // "sync saved config" effect, which unconditionally calls setConfig
+  // once even when the config is already identical, relying on the
+  // resulting restart to mint a fresh (non-pristine) runId — must still
+  // go through the normal restart path; only a GENUINE weakSpot-subtree
+  // edit is safe to short-circuit.
+  return JSON.stringify(prev.weakSpot) !== JSON.stringify(next.weakSpot)
 }
 
 /** Every async run-start site (restart, setConfig, setLanguage,
@@ -153,8 +195,17 @@ export function useTypingTest<TPreparedEvent = unknown>(
   const setConfig = useCallback(async (newConfig: TypingTestConfig) => {
     // Taken at face value — see isRomajiInputActive for why romajiInput
     // doesn't need to be paired with the active language here.
+    const prevConfig = configRef.current
     setConfigState(newConfig)
     configRef.current = newConfig
+
+    // A Weak Spot Settings modal parameter click while the toggle is off
+    // is provably a no-op for sampling (see isOnlyWeakSpotTuningChange's
+    // own doc comment) — skip the full word-list regen + run restart so
+    // adjusting a threshold doesn't reset the in-progress run underneath
+    // the user for a change that can't affect it.
+    if (isOnlyWeakSpotTuningChange(prevConfig, newConfig)) return
+
     const seq = ++seqRef.current
     const nextState = await loadRunState(newConfig, languageRef.current, getMistakeProfileRef.current)
     if (seqRef.current !== seq) return
@@ -454,13 +505,21 @@ export function useTypingTest<TPreparedEvent = unknown>(
   // weak-spot-profile.ts's WeakSpotGateInfo doc comment for the
   // unavailable/no-weak-spots/active distinction.
   const weakSpotGate = useMemo((): WeakSpotGateInfo => {
-    if (config.mode !== 'words' && config.mode !== 'time') {
+    if (!hasWeakSpotFields(config)) {
       return { applicable: false, status: 'active' }
     }
     const inputMethod = effectiveWeakSpotInputMethod(config, language)
-    const raw = options?.getMistakeProfile?.(language, inputMethod)
+    // One resolve call, reused for the cache lookup below — see
+    // resolveWeakSpotProfileArg's identical pattern above.
+    const resolved = resolveWeakSpotSettings(config.weakSpot)
+    const raw = options?.getMistakeProfile?.(language, inputMethod, resolved)
     if (!raw) return { applicable: true, status: 'unavailable' }
-    if (raw.weakTokenCount >= 1) return { applicable: true, status: 'active' }
+    if (raw.weakTokenCount >= 1) {
+      // Top tokens + count are precomputed on the profile itself (see
+      // MistakeProfile.topWeakTokens) rather than re-sorted here on every
+      // config/language change.
+      return { applicable: true, status: 'active', topWeakTokens: raw.topWeakTokens, weakTokenCount: raw.weakTokenCount }
+    }
     return { applicable: true, status: 'no-weak-spots' }
   }, [config, language, options?.getMistakeProfile])
 

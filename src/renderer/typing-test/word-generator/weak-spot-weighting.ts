@@ -33,13 +33,25 @@ export type WeakSpotInputMethod = 'direct' | 'romaji' | 'kana'
 export interface WeakSpotBiasProfile {
   inputMethod: WeakSpotInputMethod
   weights: Readonly<Record<string, number>>
+  /** Share of draws pulled from the weighted pool rather than uniformly
+   *  once biasing is active — user-tunable via the Weak Spot Settings
+   *  modal (weak-spot-settings.ts's `resolveWeakSpotBiasRatio`). Required
+   *  — the one production call site that builds this profile
+   *  (useTypingTest.ts's `resolveWeakSpotProfileArg`) always resolves it
+   *  first, same as every other Weak Spot Training setting (see
+   *  weak-spot-settings.ts's settings-required policy); a caller that
+   *  wants the built-in default passes {@link DEFAULT_WEAK_SPOT_BIAS_RATIO}
+   *  explicitly. */
+  biasRatio: number
 }
 
-/** Expected share of draws pulled from the weighted pool rather than
- *  uniformly — a fixed 60/40 mixture (not pure proportional weighting)
- *  so a single very-high-frequency miss can't dominate every drawn word;
- *  the other 40% keeps the run representative of ordinary typing. */
-export const WEAK_SPOT_BIAS_RATIO = 0.6
+/** Default share of draws pulled from the weighted pool rather than
+ *  uniformly — a fixed 60/40 mixture (not pure proportional weighting) by
+ *  default, so a single very-high-frequency miss can't dominate every
+ *  drawn word on its own; the remaining 40% keeps the run representative
+ *  of ordinary typing. User-tunable (20%-100%) via `WeakSpotBiasProfile.
+ *  biasRatio` above — this is only the built-in starting point. */
+export const DEFAULT_WEAK_SPOT_BIAS_RATIO = 0.6
 
 /** Caps a word's raw matched-weight sum before log-scaling, so one
  *  extreme-frequency mistake token can't make its words astronomically

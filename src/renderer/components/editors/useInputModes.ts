@@ -9,6 +9,7 @@ import type { LineSnapshot } from '../../typing-test/TypingTestView'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from '../../typing-test/types'
 import { createMistakeProfileCache } from '../../typing-test/weak-spot-profile'
 import type { MistakeProfile, WeakSpotInputMethod } from '../../typing-test/weak-spot-profile'
+import type { WeakSpotDetectionSettings } from '../../typing-test/weak-spot-settings'
 import { useWeakSpotRunLogs } from './use-weak-spot-run-logs'
 import { useMatrixTester } from './use-matrix-tester'
 import { useTypingAnalyticsSink, typingTestAnalyticsLabel } from './use-typing-analytics-sink'
@@ -178,9 +179,11 @@ export function useInputModes({
   // far more often than the single time its result is actually used).
   const mistakeProfileCacheRef = useRef<ReturnType<typeof createMistakeProfileCache> | null>(null)
   mistakeProfileCacheRef.current ??= createMistakeProfileCache()
-  const getMistakeProfile = useCallback((language: string, inputMethod: WeakSpotInputMethod): MistakeProfile | undefined => {
+  const getMistakeProfile = useCallback((
+    language: string, inputMethod: WeakSpotInputMethod, settings: WeakSpotDetectionSettings,
+  ): MistakeProfile | undefined => {
     if (typingTestHistory === undefined) return undefined
-    return mistakeProfileCacheRef.current!.get(typingTestHistory, weakSpotRunLogs, language, inputMethod)
+    return mistakeProfileCacheRef.current!.get(typingTestHistory, weakSpotRunLogs, language, inputMethod, settings)
   }, [typingTestHistory, weakSpotRunLogs])
 
   const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage, {

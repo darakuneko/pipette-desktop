@@ -4,7 +4,7 @@
 import type { LanguageData, GenerateOptions, GeneratedWords } from './types'
 import english from '../languages/english.json'
 import { randomInt } from './random'
-import { wordWeakSpotScore, pickWeightedIndex, WEAK_SPOT_BIAS_RATIO, type WeakSpotBiasProfile } from './weak-spot-weighting'
+import { wordWeakSpotScore, pickWeightedIndex, DEFAULT_WEAK_SPOT_BIAS_RATIO, type WeakSpotBiasProfile } from './weak-spot-weighting'
 
 const languageCache = new Map<string, LanguageData>()
 languageCache.set('english', english as LanguageData)
@@ -64,12 +64,12 @@ function biasedWord(wordList: readonly string[], weights: readonly number[], tot
  *  a refill boundary, not just within one batch.
  *
  *  When `weakSpotProfile` is given, each draw independently has a
- *  WEAK_SPOT_BIAS_RATIO (60%) chance of being pulled from the
- *  weak-spot-weighted pool instead of the uniform one — see
- *  weak-spot-weighting.ts's module doc comment for why a fixed mixture
- *  (not pure proportional weighting) is used. Falls back to fully uniform
- *  sampling when every word in `wordList` scores 0 (no matched mistake
- *  tokens at all — nothing to bias toward). */
+ *  `weakSpotProfile.biasRatio` (default 60%, see DEFAULT_WEAK_SPOT_BIAS_RATIO)
+ *  chance of being pulled from the weak-spot-weighted pool instead of the
+ *  uniform one — see weak-spot-weighting.ts's module doc comment for why
+ *  a fixed mixture (not pure proportional weighting) is used. Falls back
+ *  to fully uniform sampling when every word in `wordList` scores 0 (no
+ *  matched mistake tokens at all — nothing to bias toward). */
 function sampleWords(
   wordList: readonly string[],
   count: number,
@@ -91,12 +91,13 @@ function sampleWords(
     totalWeight = weights.reduce((a, b) => a + b, 0)
   }
   const biasActive = weights !== undefined && totalWeight > 0
+  const biasRatio = weakSpotProfile?.biasRatio ?? DEFAULT_WEAK_SPOT_BIAS_RATIO
 
   const result: string[] = []
   let lastWord = seedLastWord ?? ''
 
   for (let i = 0; i < count; i++) {
-    const useBiased = biasActive && Math.random() < WEAK_SPOT_BIAS_RATIO
+    const useBiased = biasActive && Math.random() < biasRatio
     let word: string
     let attempts = 0
 

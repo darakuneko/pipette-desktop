@@ -6,6 +6,7 @@ import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { useRunLogAvailability } from '../../hooks/useRunLogAvailability'
 import type { TimelineHandoff } from '../../hooks/useRunTimelineHandoff'
 import { TypingTestHistory } from '../../typing-test/TypingTestHistory'
+import { MAX_TYPING_TEST_RESULTS } from '../../typing-test/types'
 import { WordTimelineView } from '../../typing-test/WordTimelineView'
 import { ModalCloseButton } from './ModalCloseButton'
 import { MODAL_2XL } from './store-modal-shared'
@@ -99,7 +100,12 @@ export function HistoryToggle({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h3 id="history-modal-title" className="text-lg font-semibold">{t('editor.typingTest.history.title')}</h3>
+              <div className="flex items-baseline gap-2">
+                <h3 id="history-modal-title" className="text-lg font-semibold">{t('editor.typingTest.history.title')}</h3>
+                <span className="text-xs text-content-muted" data-testid="history-retention-note">
+                  {t('editor.typingTest.history.retentionNote', { max: MAX_TYPING_TEST_RESULTS })}
+                </span>
+              </div>
               <ModalCloseButton testid="history-modal-close" onClick={closeHistory} />
             </div>
             <TypingTestHistory results={results} onExportCsv={handleExportCsv} onRename={onRename} onDelete={onDelete} deviceName={deviceName} uid={uid} availableRunIds={availableRunIds} />

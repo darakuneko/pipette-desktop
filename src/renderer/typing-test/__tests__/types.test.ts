@@ -58,12 +58,12 @@ describe('isWeakSpotTrainingActive', () => {
   })
 
   it('is false when explicitly false', () => {
-    expect(isWeakSpotTrainingActive({ ...wordsConfig, weakSpotTraining: false })).toBe(false)
+    expect(isWeakSpotTrainingActive({ ...wordsConfig, weakSpotTrainingMode: false })).toBe(false)
   })
 
   it('is true for words/time when explicitly true', () => {
-    expect(isWeakSpotTrainingActive({ ...wordsConfig, weakSpotTraining: true })).toBe(true)
-    expect(isWeakSpotTrainingActive({ ...timeConfig, weakSpotTraining: true })).toBe(true)
+    expect(isWeakSpotTrainingActive({ ...wordsConfig, weakSpotTrainingMode: true })).toBe(true)
+    expect(isWeakSpotTrainingActive({ ...timeConfig, weakSpotTrainingMode: true })).toBe(true)
   })
 
   it('is false for quote/fileImport/tatoeba — the field does not exist on those variants', () => {

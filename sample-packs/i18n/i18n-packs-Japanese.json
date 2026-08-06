@@ -1,5 +1,5 @@
 {
-  "version": "0.1.84",
+  "version": "0.1.87",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -324,8 +324,7 @@
       },
       "punctuation": "句読点",
       "numbers": "数字",
-      "weakSpotTraining": "苦手強化",
-      "weakSpotHintNoWeak": "苦手は検出されませんでした！",
+      "weakSpotTraining": "苦手克服モード",
       "japaneseInputToggle": "日本語入力",
       "romaji": {
         "imeHint": "ローマ字入力モードでは OS の IME をオフにしてください"
@@ -384,6 +383,36 @@
           "xn": "ん:xn",
           "nApos": "ん:n'"
         }
+      },
+      "weakSpotSettings": {
+        "title": "苦手克服モード",
+        "tokenJoin": "・",
+        "tokenOverflow": " 他{{extra}}件",
+        "notApplicableNote": "単語パターンと時間パターンでのみ利用できます。",
+        "statusUnavailable": "履歴の読み込みがまだ完了していません。判定中です。",
+        "statusNoWeakSpots": "苦手は検出されませんでした！",
+        "statusActive": "苦手を検出しました（{{tokenCount}}件）: {{tokens}}",
+        "statusActiveNoTokens": "苦手を検出しました。",
+        "description": "文字（ローマ字入力では綴りの区切り単位）は{{missThreshold}}回以上ミスすると苦手判定になります。またタイミング記録がある場合（{{minTimingSamples}}回以上のサンプル）、普段のペースより{{slownessRatio}}倍以上遅い、またはつまずき（普段の{{stallMultiple}}倍を超える間隔）がサンプルの{{stallRatePercent}}%以上で発生した場合も苦手判定になります。",
+        "windowDescription": "判定には直近{{count}}回分の該当する記録のみを使用します。",
+        "windowDescriptionAll": "判定には該当するすべての記録を使用します。",
+        "decayDescription": "古いミスほど重みが小さくなり、{{days}}日ごとに半分になります。",
+        "biasDescription": "有効化すると、出題される単語のうち約{{percent}}%が苦手な文字から選ばれます。",
+        "historyRetentionNote": "上記の範囲設定や減衰設定に関わらず、履歴自体が直近{{max}}件までしか保持しないため、それより古い記録は判定対象から完全に外れます。",
+        "sectionDetection": "判定条件",
+        "sectionWindow": "データの範囲",
+        "sectionSampling": "出題",
+        "missThresholdLabel": "ミス回数のしきい値（回）",
+        "slownessRatioLabel": "遅さの倍率（倍）",
+        "stallRateLabel": "詰まり率（%）",
+        "stallMultipleLabel": "詰まり判定の倍率（倍）",
+        "minTimingSamplesLabel": "最低タイミングサンプル数",
+        "missWindowLabel": "集計範囲（直近の回数）",
+        "missWindowAll": "すべて",
+        "decayLabel": "時間による重みの減衰（半減期・日）",
+        "decayNone": "オフ",
+        "biasRatioLabel": "苦手な文字を含む出題割合（%）",
+        "resetButton": "既定値に戻す"
       },
       "quoteLength": {
         "short": "短い",
@@ -491,6 +520,7 @@
       },
       "history": {
         "title": "履歴",
+        "retentionNote": "履歴は直近{{max}}件までしか保持されません",
         "bestWpm": "最高",
         "avgWpm": "平均",
         "last10Avg": "直近10回",
@@ -534,7 +564,7 @@
         "conditionNumbers": "+数字",
         "conditionRomaji": "+ローマ字入力",
         "conditionKana": "+かな",
-        "conditionWeakSpot": "+苦手強化",
+        "conditionWeakSpot": "+苦手克服モード",
         "conditionTatoeba": "Tatoeba",
         "mistakeRankingTitle": "苦手な文字",
         "mistakeRankingEmpty": "ミスの記録はまだありません",

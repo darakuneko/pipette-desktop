@@ -11,13 +11,10 @@
 
 import { useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { TypingTestConfig, TypingTestMode, QuoteLength, RomajiDetailSettings } from './types'
+import type { TypingTestConfig, TypingTestMode, QuoteLength, RomajiDetailSettings, WeakSpotDetailSettings } from './types'
 import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS, TATOEBA_LINE_OPTIONS } from './types'
 import { isRomajiCapable, isRomajiInputEnabled } from './romaji-input'
 import { RomajiSettingsModal } from './RomajiSettingsModal'
-import type { WeakSpotGateInfo } from './weak-spot-profile'
-
-const DEFAULT_WEAK_SPOT_GATE: WeakSpotGateInfo = { applicable: false, status: 'unavailable' }
 
 const MODES: TypingTestMode[] = ['words', 'time', 'quote']
 const QUOTE_LENGTHS: QuoteLength[] = ['short', 'medium', 'long', 'all']
@@ -44,29 +41,25 @@ interface Props {
   /** Whether the currently loaded fileImport text is kana-pure (see
    *  `TypingTestState.romajiCapable`); ignored for every other mode. */
   textRomajiCapable: boolean
-  /** Live Weak Spot Training gate (see `useTypingTest`'s own field of the
-   *  same name) — drives the "N more keystrokes" hint under the toggle.
-   *  Optional so existing call sites/tests that predate this feature
-   *  don't have to thread a value through; defaults to the inert
-   *  "unavailable" state, same as a caller that never wires up
-   *  `getMistakeProfile` would naturally produce. */
-  weakSpotGate?: WeakSpotGateInfo
 }
 
 export function TypingTestSettingsBar({
-  config, onConfigChange, language, textRomajiCapable, weakSpotGate = DEFAULT_WEAK_SPOT_GATE,
+  config, onConfigChange, language, textRomajiCapable,
 }: Props) {
   const { t } = useTranslation()
   const [showRomajiModal, setShowRomajiModal] = useState(false)
 
-  // Remember toggle state (incl. the Romaji Settings detail fields) so it
-  // persists through quote mode (which has no toggles at all). punctuation/
-  // numbers/weakSpotTraining only ever come from words/time (the only modes
-  // that have them); romajiInput/romaji are carried from every mode but
-  // quote, since tatoeba and fileImport carry those fields too now (see
-  // TypingTestConfig).
-  const togglesRef = useRef<{ punctuation: boolean; numbers: boolean; weakSpotTraining: boolean; romajiInput: boolean; romaji?: RomajiDetailSettings }>(
-    { punctuation: false, numbers: false, weakSpotTraining: false, romajiInput: true },
+  // Remember toggle state (incl. the Romaji Settings / Weak Spot Settings
+  // detail fields) so it persists through quote mode (which has no toggles
+  // at all). punctuation/numbers/weakSpotTrainingMode/weakSpot only ever come
+  // from words/time (the only modes that have them); romajiInput/romaji
+  // are carried from every mode but quote, since tatoeba and fileImport
+  // carry those fields too now (see TypingTestConfig).
+  const togglesRef = useRef<{
+    punctuation: boolean; numbers: boolean; weakSpotTrainingMode: boolean; weakSpot?: WeakSpotDetailSettings
+    romajiInput: boolean; romaji?: RomajiDetailSettings
+  }>(
+    { punctuation: false, numbers: false, weakSpotTrainingMode: false, romajiInput: true },
   )
   if (config.mode !== 'quote') {
     togglesRef.current = {
@@ -76,20 +69,24 @@ export function TypingTestSettingsBar({
       romajiInput: isRomajiInputEnabled(config),
       romaji: config.romaji,
       ...(config.mode === 'words' || config.mode === 'time'
-        ? { punctuation: config.punctuation, numbers: config.numbers, weakSpotTraining: config.weakSpotTraining === true }
+        ? {
+          punctuation: config.punctuation, numbers: config.numbers,
+          weakSpotTrainingMode: config.weakSpotTrainingMode === true, weakSpot: config.weakSpot,
+        }
         : {}),
     }
   }
 
   const handleModeChange = useCallback((mode: TypingTestMode) => {
-    const { punctuation, numbers, weakSpotTraining, romajiInput, romaji } = togglesRef.current
+    const { punctuation, numbers, weakSpotTrainingMode, weakSpot, romajiInput, romaji } = togglesRef.current
     const romajiDetail = romaji ? { romaji } : {}
+    const weakSpotDetail = weakSpot ? { weakSpot } : {}
     switch (mode) {
       case 'words':
-        onConfigChange({ mode: 'words', wordCount: config.mode === 'words' ? config.wordCount : 30, punctuation, numbers, weakSpotTraining, romajiInput, ...romajiDetail })
+        onConfigChange({ mode: 'words', wordCount: config.mode === 'words' ? config.wordCount : 30, punctuation, numbers, weakSpotTrainingMode, romajiInput, ...romajiDetail, ...weakSpotDetail })
         break
       case 'time':
-        onConfigChange({ mode: 'time', duration: config.mode === 'time' ? config.duration : 30, punctuation, numbers, weakSpotTraining, romajiInput, ...romajiDetail })
+        onConfigChange({ mode: 'time', duration: config.mode === 'time' ? config.duration : 30, punctuation, numbers, weakSpotTrainingMode, romajiInput, ...romajiDetail, ...weakSpotDetail })
         break
       case 'quote':
         onConfigChange({ mode: 'quote', quoteLength: config.mode === 'quote' ? config.quoteLength : 'medium' })
@@ -278,34 +275,6 @@ export function TypingTestSettingsBar({
               >
                 {t('editor.typingTest.numbers')}
               </button>
-            </div>
-          )}
-          {/* Weak Spot Training — biases word sampling toward tokens
-              detected as weak (frequent misses, or — when a run log is
-              available — slower/stall-prone than the user's own baseline;
-              see weak-spot-profile.ts). Shown regardless of gate status
-              (unlike the hint below it) so the user can turn it on ahead
-              of any weakness being detected. The hint shows for
-              'no-weak-spots' (a positive "nothing detected" message) —
-              never for 'unavailable' (history not loaded yet: claiming
-              "no weak spots" there would be a guess, not a fact — see
-              WeakSpotGateInfo) and never for 'active' (nothing more
-              useful to say once biasing is already in effect). */}
-          {hasPunctuationNumbers && (
-            <div className="flex w-full flex-col items-start gap-1">
-              <button
-                type="button"
-                data-testid="toggle-weak-spot-training"
-                className={`${optionButtonClass(config.weakSpotTraining === true)} w-full justify-center`}
-                onClick={() => onConfigChange({ ...config, weakSpotTraining: !config.weakSpotTraining })}
-              >
-                {t('editor.typingTest.weakSpotTraining')}
-              </button>
-              {weakSpotGate.status === 'no-weak-spots' && (
-                <span className="text-xs text-content-muted" data-testid="weak-spot-hint">
-                  {t('editor.typingTest.weakSpotHintNoWeak')}
-                </span>
-              )}
             </div>
           )}
           {/* Japanese Input — a dialog trigger (opens the 3-way Direct/
