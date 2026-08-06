@@ -36,7 +36,15 @@ const EMPTY_LOGS: ReadonlyMap<string, RunKeystrokeLog> = new Map()
  *  comment). `uid` changing (keyboard switch) resets caching implicitly:
  *  a fresh `runIds` set for the new uid naturally has nothing cached yet,
  *  and stale entries from the previous uid are simply never read again
- *  (never actively cleared — harmless, bounded by history size). */
+ *  (never actively cleared — harmless, bounded by history size).
+ *
+ *  The `uid`'s available-run-id INDEX (as opposed to the per-runId log
+ *  cache above) is also re-fetched whenever `results.length` changes —
+ *  see the first effect's own doc comment — so a result saved later in
+ *  the same session (no remount in between) enters the index instead of
+ *  being permanently invisible to this hook until the next mount. This
+ *  never re-fetches an already-cached runId's LOG, only the cheaper
+ *  id-list index itself. */
 export function useWeakSpotRunLogs(
   uid: string | undefined,
   results: readonly TypingTestResult[],
@@ -56,7 +64,20 @@ export function useWeakSpotRunLogs(
     return ids
   }, [results])
 
-  // Fetch the uid's available-run-id index once per uid.
+  // Fetch the uid's available-run-id index once per uid, AND whenever
+  // `results` grows/shrinks — a run saved later in the same session (the
+  // user keeps typing without remounting this hook's owner) would
+  // otherwise never enter the index: without this, `results.length`
+  // staying out of the dependency list meant a runId minted after the
+  // one-time fetch could never satisfy the second effect's `available.has
+  // (runId)` gate below, no matter how long the component stayed mounted.
+  // `results.length` (not the `results` array reference itself) is the
+  // lightweight invalidation signal, deliberately — results is appended
+  // to, never reordered/mutated in place, so a length change is exactly
+  // "a new result arrived" without over-firing on incidental re-renders
+  // that pass a new array instance with the same content (e.g. the call
+  // site's own `typingTestHistory ?? []` fallback minting a fresh empty
+  // array on every render when there's no history at all).
   useEffect(() => {
     availableRunIdsRef.current = null
     if (!uid) return
@@ -73,7 +94,7 @@ export function useWeakSpotRunLogs(
         setVersion((v) => v + 1)
       })
     return () => { cancelled = true }
-  }, [uid])
+  }, [uid, results.length])
 
   useEffect(() => {
     if (!uid) return
