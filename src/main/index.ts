@@ -55,9 +55,13 @@ app.setDesktopName('pipette')
 
 // Single-instance guard: a second launch exits immediately and silently
 // (app.exit skips before-quit/will-quit — nothing is set up yet at this
-// point); the running instance is left untouched.
+// point); the surviving instance reveals its window instead. Electron only
+// emits 'second-instance' on the lock holder and never before 'ready', so
+// registering at module top level is safe.
 if (!app.requestSingleInstanceLock()) {
   app.exit(0)
+} else {
+  app.on('second-instance', revealApp)
 }
 
 // Distinguishes a user-initiated quit from a plain window close so the
@@ -196,6 +200,25 @@ function createWindow(): void {
   if (isDev) win.webContents.openDevTools()
 
   win.webContents.setZoomFactor(clampZoomFactor(cfg.zoomFactor) / 100)
+}
+
+// Bring the app to the user's attention: reveal the existing window
+// (hidden tray-resident, or minimized) or create one when none exists.
+// Shared by both relaunch paths — 'second-instance' (Windows/Linux spawn
+// a second process that loses the lock) and macOS 'activate' (a Dock/
+// Finder relaunch re-activates the running process instead) — so every
+// platform gives the same visible feedback when the user launches the
+// app while it is already running.
+function revealApp(): void {
+  // A relaunch attempt racing this instance's own startup can arrive
+  // before 'ready'; creating a BrowserWindow then would throw, and the
+  // startup sequence is about to produce the window anyway.
+  if (!app.isReady()) return
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow()
+  } else {
+    showWindow(getFirstWindow)
+  }
 }
 
 interface WindowSize { width: number; height: number }
@@ -477,11 +500,7 @@ app.whenReady().then(() => {
   // checks the Hub version when its tab is shown and surfaces a manual
   // "Update" button (see TYPING_DATASET_CHECK / TYPING_DATASET_UPDATE).
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
-    }
-  })
+  app.on('activate', revealApp)
 })
 
 app.on('window-all-closed', () => {

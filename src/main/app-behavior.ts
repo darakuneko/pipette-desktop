@@ -83,16 +83,19 @@ export function appIconPath(): string {
 
 let trayInstance: Tray | null = null
 
-/** Show and focus the given window. Shared by the tray menu/click
- * handlers and the WINDOW_SHOW IPC handler so a hidden (start-in-tray)
- * window and the tray icon reveal it the same way. Returns whether the
- * window actually transitioned from hidden to shown, so callers that only
- * want to act on a genuine hidden→visible edge (e.g. the boot-hidden Unlock
- * dialog flow) can tell that apart from a window that was already visible. */
+/** Show and focus the given window. Shared by every reveal path (tray,
+ * WINDOW_SHOW IPC, app relaunch) so a hidden (start-in-tray) window is
+ * revealed the same way regardless of trigger. Restores a minimized
+ * window first — `show()` alone does not un-minimize on every platform.
+ * Returns whether the window actually transitioned from hidden to shown,
+ * so callers that only want to act on a genuine hidden→visible edge
+ * (e.g. the boot-hidden Unlock dialog flow) can tell that apart from a
+ * window that was already visible. */
 export function showWindow(getWindow: () => BrowserWindow | null): boolean {
   const win = getWindow()
   if (!win) return false
   const wasVisible = win.isVisible()
+  if (win.isMinimized()) win.restore()
   win.show()
   win.focus()
   return !wasVisible
