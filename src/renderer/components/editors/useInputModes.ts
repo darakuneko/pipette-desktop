@@ -159,10 +159,16 @@ export function useInputModes({
   // yet" — distinguished from a loaded-but-empty history, which produces a
   // real zero-keystroke profile — so the Option section's hint never
   // guesses a deficit before there's real data to compute one from.
-  const mistakeProfileCacheRef = useRef(createMistakeProfileCache())
+  // Lazy-initialized (not `useRef(createMistakeProfileCache())`, which
+  // would allocate a fresh cache object + Map on every render just to
+  // discard it — useInputModes re-renders on every keystroke via
+  // useTypingTest's own state, so that argument expression is evaluated
+  // far more often than the single time its result is actually used).
+  const mistakeProfileCacheRef = useRef<ReturnType<typeof createMistakeProfileCache> | null>(null)
+  mistakeProfileCacheRef.current ??= createMistakeProfileCache()
   const getMistakeProfile = useCallback((language: string, inputMethod: WeakSpotInputMethod): MistakeProfile | undefined => {
     if (typingTestHistory === undefined) return undefined
-    return mistakeProfileCacheRef.current.get(typingTestHistory, language, inputMethod)
+    return mistakeProfileCacheRef.current!.get(typingTestHistory, language, inputMethod)
   }, [typingTestHistory])
 
   const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage, {

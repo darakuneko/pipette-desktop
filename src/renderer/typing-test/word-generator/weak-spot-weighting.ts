@@ -12,6 +12,17 @@
 import { toHiragana } from '../kana-script'
 import { canonicalRomajiSegments } from '../romaji-engine'
 
+// Structurally identical to `JapaneseInputMethod` (romaji-input.ts) — kept
+// as a separate declaration rather than importing that one, since
+// romaji-input.ts pulls in the whole TypingTestConfig/run-state layer this
+// module deliberately stays free of (see the module doc comment above).
+// `JapaneseInputMethod`'s own derivation (`resolveJapaneseInputMethod`) is
+// NOT reusable here regardless: it's a capability-UNAWARE read of the
+// config's raw choice, whereas Weak Spot Training's scope needs the
+// capability-gated ACTIVE state (see weak-spot-profile.ts's
+// `effectiveWeakSpotInputMethod`, which composes `isRomajiInputActive`/
+// `isKanaInputActive` instead). If a 4th input method is ever added, update
+// both.
 export type WeakSpotInputMethod = 'direct' | 'romaji' | 'kana'
 
 /** The scope a mistake weight map was aggregated for, plus the weights

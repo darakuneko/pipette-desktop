@@ -15,6 +15,7 @@ import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import type { TypingTestConfig } from './types'
 import { isRomajiInputActive } from './romaji-input'
 import { isKanaInputActive } from './kana-input'
+import { aggregateMistakeTotals } from './MistakeRankingSection'
 import type { WeakSpotInputMethod } from './word-generator/weak-spot-weighting'
 
 export type { WeakSpotInputMethod }
@@ -82,10 +83,7 @@ export interface WeakSpotGateInfo {
  *  contributes its own single-digit key) — the `/^[0-9]+$/` test catches
  *  both a single stray digit and a longer numeric key. */
 function isSyntheticDecorationKey(key: string): boolean {
-  if (/^[0-9]+$/.test(key)) return true
-  if (key.length === 1 && (key === '.' || key === ',' || key === '?' || key === '!')) return true
-  if (key.length === 1 && key >= 'A' && key <= 'Z') return true
-  return false
+  return /^(?:[0-9]+|[.,?!]|[A-Z])$/.test(key)
 }
 
 /** A history row's own recorded input method — read from the flags
@@ -115,17 +113,17 @@ function aggregateMistakeProfile(
   language: string,
   inputMethod: WeakSpotInputMethod,
 ): MistakeProfile {
-  const weights: Record<string, number> = {}
+  const scoped = history.filter((r) => (r.language ?? '') === language && resultInputMethod(r) === inputMethod)
   let keystrokes = 0
-  for (const r of history) {
-    if ((r.language ?? '') !== language) continue
-    if (resultInputMethod(r) !== inputMethod) continue
-    keystrokes += resultKeystrokeCount(r)
-    if (!r.mistakes) continue
-    for (const [key, count] of Object.entries(r.mistakes)) {
-      if (isSyntheticDecorationKey(key)) continue
-      weights[key] = (weights[key] ?? 0) + count
-    }
+  for (const r of scoped) keystrokes += resultKeystrokeCount(r)
+  // Reuses MistakeRankingSection.tsx's own mistakes-summation loop (same
+  // shape, already exported for this exact purpose) rather than
+  // re-implementing it — this only adds the scope filter above and the
+  // synthetic-decoration-key filter below, on top of that shared summation.
+  const weights: Record<string, number> = {}
+  for (const [key, count] of Object.entries(aggregateMistakeTotals(scoped))) {
+    if (isSyntheticDecorationKey(key)) continue
+    weights[key] = count
   }
   return { weights, keystrokes }
 }
@@ -145,12 +143,19 @@ export function effectiveWeakSpotInputMethod(config: TypingTestConfig, language:
 
 /** Memoized profile lookup, keyed by the `history` array's own identity
  *  plus a `language|inputMethod` scope key — a fresh cache instance per
- *  consumer (see useInputModes.ts, which owns one via `useRef`) so
- *  repeated calls against the SAME (unsaved) history during a render burst
- *  — or across an active run's every time-mode refill, since nothing
- *  mutates history mid-run — never re-scan `history` from scratch.
- *  Invalidated wholesale the moment `history`'s reference changes (a new
- *  result was saved), never partially. */
+ *  consumer (see useInputModes.ts, which owns one via `useRef`) so repeated
+ *  calls against the SAME (unsaved) history never re-scan it from scratch.
+ *  Two independent call sites hit the same scope during ordinary use:
+ *  `useTypingTest`'s live `weakSpotGate` (recomputed on config/language
+ *  changes) and `resolveWeakSpotProfileArg` (at every run-start decision
+ *  point) — without this cache each would rescan `history` on its own. Note
+ *  this is NOT what makes a single run's sampling immutable across
+ *  time-mode refills — `refillTimeModeWords` never calls back into this
+ *  cache at all; it reuses the frozen `TypingTestState.weakSpotProfile`
+ *  object threaded through since the run started (see run-state.ts's
+ *  `freshState`/`advanceAfterWord`). Invalidated wholesale the moment
+ *  `history`'s reference changes (a new result was saved), never
+ *  partially. */
 export interface MistakeProfileCache {
   get(history: readonly TypingTestResult[], language: string, inputMethod: WeakSpotInputMethod): MistakeProfile
 }

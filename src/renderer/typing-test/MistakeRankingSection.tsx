@@ -30,8 +30,12 @@ interface Props {
  *  (`allSortedMistakeEntries`) — every entry renders, reachable via the
  *  row list's own internal scroll rather than a top-N cap — this only
  *  builds the raw totals record `MissedTable` expects, the same shape a
- *  single run's own `TypingTestResult.mistakes` already has. */
-function aggregateMistakeTotals(results: TypingTestResult[]): Record<string, number> {
+ *  single run's own `TypingTestResult.mistakes` already has. Exported for
+ *  weak-spot-profile.ts's `aggregateMistakeProfile`, which layers its own
+ *  language/input-method scope filter (applied to `results` before calling
+ *  this) and synthetic-decoration-key filter (applied to the totals this
+ *  returns) on top of the same accumulation, rather than re-writing it. */
+export function aggregateMistakeTotals(results: TypingTestResult[]): Record<string, number> {
   const totals: Record<string, number> = {}
   for (const r of results) {
     if (!r.mistakes) continue

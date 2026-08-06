@@ -51,6 +51,25 @@ function resolveWeakSpotProfileArg(
   return { inputMethod, weights: raw.weights }
 }
 
+/** Every async run-start site (restart, setConfig, setLanguage,
+ *  setBaseLayer) needs the exact same three steps in the exact same order
+ *  — resolve this run's Weak Spot Training snapshot, sample its word batch
+ *  with that snapshot, then build the resulting run state with that SAME
+ *  snapshot — so this is the one place that does all three, instead of
+ *  each call site repeating the resolve-then-thread-into-two-calls
+ *  sequence by hand (a shape that's easy to accidentally drop the profile
+ *  from one of the two calls while editing). */
+async function loadRunState(
+  config: TypingTestConfig,
+  language: string,
+  getMistakeProfile: GetMistakeProfileFn | undefined,
+  status?: TypingTestState['status'],
+): Promise<TypingTestState> {
+  const weakSpotProfile = resolveWeakSpotProfileArg(config, language, getMistakeProfile)
+  const result = await createWordsForConfig(config, language, weakSpotProfile)
+  return freshState(result, status, weakSpotProfile)
+}
+
 export type { WordResult, TypingTestState, TypingTestStatus } from './run-state'
 export type { UseTypingTestOptions, UseTypingTestReturn } from './use-typing-test-types'
 
@@ -103,10 +122,9 @@ export function useTypingTest<TPreparedEvent = unknown>(
 
   const restartAsync = useCallback(async () => {
     const seq = ++seqRef.current
-    const weakSpotProfile = resolveWeakSpotProfileArg(configRef.current, languageRef.current, getMistakeProfileRef.current)
-    const result = await createWordsForConfig(configRef.current, languageRef.current, weakSpotProfile)
+    const nextState = await loadRunState(configRef.current, languageRef.current, getMistakeProfileRef.current)
     if (seqRef.current !== seq) return
-    setState(freshState(result, undefined, weakSpotProfile))
+    setState(nextState)
   }, [])
 
   const restart = useCallback(() => {
@@ -115,10 +133,9 @@ export function useTypingTest<TPreparedEvent = unknown>(
 
   const restartWithCountdown = useCallback(async () => {
     const seq = ++seqRef.current
-    const weakSpotProfile = resolveWeakSpotProfileArg(configRef.current, languageRef.current, getMistakeProfileRef.current)
-    const result = await createWordsForConfig(configRef.current, languageRef.current, weakSpotProfile)
+    const nextState = await loadRunState(configRef.current, languageRef.current, getMistakeProfileRef.current, 'countdown')
     if (seqRef.current !== seq) return
-    setState(freshState(result, 'countdown', weakSpotProfile))
+    setState(nextState)
   }, [])
 
   // Transition from countdown to waiting after delay
@@ -136,10 +153,9 @@ export function useTypingTest<TPreparedEvent = unknown>(
     setConfigState(newConfig)
     configRef.current = newConfig
     const seq = ++seqRef.current
-    const weakSpotProfile = resolveWeakSpotProfileArg(newConfig, languageRef.current, getMistakeProfileRef.current)
-    const result = await createWordsForConfig(newConfig, languageRef.current, weakSpotProfile)
+    const nextState = await loadRunState(newConfig, languageRef.current, getMistakeProfileRef.current)
     if (seqRef.current !== seq) return
-    setState(freshState(result, undefined, weakSpotProfile))
+    setState(nextState)
   }, [])
 
   const setLanguage = useCallback(async (newLanguage: string): Promise<string> => {
@@ -151,10 +167,9 @@ export function useTypingTest<TPreparedEvent = unknown>(
     const langSeq = ++langLoadSeqRef.current
     try {
       await getLanguageData(newLanguage)
-      const weakSpotProfile = resolveWeakSpotProfileArg(configRef.current, newLanguage, getMistakeProfileRef.current)
-      const result = await createWordsForConfig(configRef.current, newLanguage, weakSpotProfile)
+      const nextState = await loadRunState(configRef.current, newLanguage, getMistakeProfileRef.current)
       if (seqRef.current !== seq) return languageRef.current
-      setState(freshState(result, undefined, weakSpotProfile))
+      setState(nextState)
       return newLanguage
     } catch {
       if (seqRef.current !== seq) return languageRef.current
@@ -184,10 +199,9 @@ export function useTypingTest<TPreparedEvent = unknown>(
     // see MatrixLayerLatch.displayLayer via applyBaseLayer.
     applyBaseLayer(layer)
     const seq = ++seqRef.current
-    const weakSpotProfile = resolveWeakSpotProfileArg(configRef.current, languageRef.current, getMistakeProfileRef.current)
-    const result = await createWordsForConfig(configRef.current, languageRef.current, weakSpotProfile)
+    const nextState = await loadRunState(configRef.current, languageRef.current, getMistakeProfileRef.current)
     if (seqRef.current !== seq) return
-    setState(freshState(result, undefined, weakSpotProfile))
+    setState(nextState)
   }, [])
 
   // --- Memory mode (imported fileImport text only): pause / capture / restore ---
