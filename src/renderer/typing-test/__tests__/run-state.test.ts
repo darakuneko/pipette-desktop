@@ -6,8 +6,9 @@
 // already tallied via Backspace).
 
 import { describe, it, expect } from 'vitest'
-import { handleBackspace, handleSpace, tryFinishLastWord, type TypingTestState } from '../run-state'
+import { handleBackspace, handleSpace, tryFinishLastWord, advanceAfterWord, type TypingTestState } from '../run-state'
 import type { TypingTestConfig } from '../types'
+import type { WeakSpotBiasProfile } from '../word-generator'
 
 function makeState(overrides: Partial<TypingTestState> = {}): TypingTestState {
   return {
@@ -194,5 +195,61 @@ describe('confirmedChars', () => {
     const full = tryFinishLastWord(state)
     expect(full).not.toBeNull()
     expect(full!.confirmedChars).toBe(7) // 4 + 3 (last word, no separator)
+  })
+})
+
+// Weak Spot Training (Plan-miss-focus-mode): the run's weakSpotProfile
+// snapshot (set once by freshState at run start — see useTypingTest.ts)
+// must be reused verbatim by every time-mode refill, never recomputed.
+describe('advanceAfterWord — weakSpotProfile threading', () => {
+  const timeConfig: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+
+  it('carries state.weakSpotProfile into the time-mode refill, biasing the extended batch', () => {
+    const profile: WeakSpotBiasProfile = { inputMethod: 'direct', weights: { e: 1000 } }
+    // Tail well below TIME_MODE_EXTEND_THRESHOLD (10) so a refill fires.
+    const state = makeState({ words: ['w0', 'w1'], currentWordIndex: 2, weakSpotProfile: profile })
+    const next = advanceAfterWord(state, timeConfig, 'english')
+    expect(next.words.length).toBeGreaterThan(state.words.length)
+    const refilled = next.words.slice(state.words.length)
+    const withE = refilled.filter((w) => w.includes('e')).length
+    expect(withE / refilled.length).toBeGreaterThan(0.5)
+  })
+
+  it('a run with no weakSpotProfile (toggle off / gate unmet) refills normally without one', () => {
+    const state = makeState({ words: ['w0', 'w1'], currentWordIndex: 2, weakSpotProfile: undefined })
+    const next = advanceAfterWord(state, timeConfig, 'english')
+    expect(next.words.length).toBeGreaterThan(state.words.length)
+  })
+})
+
+// codex regression: refillTimeModeWords used to derive its repeat-
+// avoidance seed from `words[words.length - 1]` — the DECORATED batch
+// tail — instead of the separately-tracked RAW word. advanceAfterWord is
+// the one place that threads `state.lastRawWord` in (word-supply.test.ts
+// covers refillTimeModeWords's own seed-comparison behavior directly);
+// this covers the state-level round trip.
+describe('advanceAfterWord — lastRawWord threading', () => {
+  const punctuatedConfig: TypingTestConfig = { mode: 'time', duration: 30, punctuation: true, numbers: false }
+
+  it('updates state.lastRawWord from the refill\'s own raw tail (not left stale)', () => {
+    const state = makeState({ words: ['placeholder.'], currentWordIndex: 1, lastRawWord: 'placeholder' })
+    const next = advanceAfterWord(state, punctuatedConfig, 'english')
+    expect(next.lastRawWord).toBeDefined()
+  })
+
+  it('seeds the refill with state.lastRawWord (RAW), never a word derived from the decorated words tail', () => {
+    const stripDecoration = (word: string): string => word.toLowerCase().replace(/[.,!?]+$/, '')
+    // 'the' is in the bundled english word list — a real raw seed a refill
+    // could plausibly redraw if the seed were ignored/mismatched.
+    const rawSeed = 'the'
+    // Deliberately a DIFFERENT decorated stand-in for the words[] tail
+    // (as if injectPunctuation had run on it already) — if advanceAfterWord
+    // derived its seed from `words` instead of `state.lastRawWord`, this
+    // wrong value ('placeholder', not 'the') would be what leaks through.
+    const state = makeState({ words: ['Placeholder,'], currentWordIndex: 1, lastRawWord: rawSeed })
+    for (let i = 0; i < 20; i++) {
+      const next = advanceAfterWord(state, punctuatedConfig, 'english')
+      expect(stripDecoration(next.words[1])).not.toBe(rawSeed)
+    }
   })
 })

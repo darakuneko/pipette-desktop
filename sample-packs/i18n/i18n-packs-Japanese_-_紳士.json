@@ -1,5 +1,5 @@
 {
-  "version": "0.1.83",
+  "version": "0.1.84",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -324,6 +324,8 @@
       },
       "punctuation": "句読点",
       "numbers": "数字",
+      "weakSpotTraining": "苦手克服鍛錬",
+      "weakSpotHintNoWeak": "苦手な点は見受けられません",
       "japaneseInputToggle": "日本語入力",
       "romaji": {
         "imeHint": "ローマ字入力の折には、OSのIMEをお切りください"
@@ -532,6 +534,7 @@
         "conditionNumbers": "+数字",
         "conditionRomaji": "+ローマ字入力",
         "conditionKana": "+かな",
+        "conditionWeakSpot": "+苦手強化",
         "conditionTatoeba": "Tatoeba",
         "mistakeRankingTitle": "苦手とする文字",
         "mistakeRankingEmpty": "過ちの記録はまだございません",

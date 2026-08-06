@@ -125,6 +125,77 @@ describe('conditionKey', () => {
   })
 })
 
+// codex regression: conditionKey used to key weakSpotTraining straight off
+// the raw config toggle (isWeakSpotTrainingActive), but a saved result only
+// ever sets weakSpotTraining when the run's OWN state.weakSpotProfile
+// snapshot was non-null (use-typing-test-result-save.ts — the toggle can be
+// on while the keystroke gate isn't met, in which case the run samples
+// normally and saves with NO flag). Without an effective-state override, the
+// toggle-on/gate-unmet live key would carry `|weakspot` while every
+// comparable saved result (including the one this exact run produces) never
+// does — breaking PB/comparison grouping for that state. `opts.weakSpotActive`
+// lets a caller with a live run (use-typing-test-pane-comparison.ts) supply
+// the effective signal instead.
+describe('conditionKey — weakSpotActive override (effective gate signal, not the raw toggle)', () => {
+  const weakSpotToggleOn: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+  const weakSpotToggleOff: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: false }
+
+  it('toggle ON + gate unmet (weakSpotActive: false): the live key equals the normal (no-suffix) key', () => {
+    const gated = conditionKey(weakSpotToggleOn, 'english', { weakSpotActive: false })
+    const normal = conditionKey(weakSpotToggleOff, 'english')
+    expect(gated).toBe(normal)
+    expect(gated).not.toMatch(/\|weakspot$/)
+  })
+
+  it('toggle ON + gate met (weakSpotActive: true): the live key carries |weakspot', () => {
+    const key = conditionKey(weakSpotToggleOn, 'english', { weakSpotActive: true })
+    expect(key).toMatch(/\|weakspot$/)
+  })
+
+  it('with no opts at all, falls back to the raw toggle (pre-existing behavior, unchanged)', () => {
+    expect(conditionKey(weakSpotToggleOn, 'english')).toMatch(/\|weakspot$/)
+    expect(conditionKey(weakSpotToggleOff, 'english')).not.toMatch(/\|weakspot$/)
+  })
+
+  it('the gated live key matches configKey(result) for the SAME run\'s own (unbiased) saved result', () => {
+    const liveKey = conditionKey(weakSpotToggleOn, 'english', { weakSpotActive: false })
+    const savedUnbiased = makeResult({ mode2: 30, weakSpotTraining: undefined })
+    expect(liveKey).toBe(configKey(savedUnbiased))
+  })
+
+  it('the met live key matches configKey(result) for the SAME run\'s own (biased) saved result', () => {
+    const liveKey = conditionKey(weakSpotToggleOn, 'english', { weakSpotActive: true })
+    const savedBiased = makeResult({ mode2: 30, weakSpotTraining: true })
+    expect(liveKey).toBe(configKey(savedBiased))
+  })
+})
+
+describe('matchingResults / computeComparison — weakSpotActive override forwarding', () => {
+  const weakSpotToggleOn: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+  // Distinct wpm per row so computeComparison's own test below can tell
+  // which pool member actually got picked, not just that SOMETHING did.
+  const normalResult = makeResult({ mode2: 30, wpm: 40 })
+  const biasedResult = makeResult({ mode2: 30, weakSpotTraining: true, wpm: 90 })
+  const pool = [normalResult, biasedResult]
+
+  it('matchingResults with weakSpotActive:false only matches the normal (no-flag) result', () => {
+    const out = matchingResults(pool, weakSpotToggleOn, 'english', undefined, { weakSpotActive: false })
+    expect(out).toEqual([normalResult])
+  })
+
+  it('matchingResults with weakSpotActive:true only matches the biased (flagged) result', () => {
+    const out = matchingResults(pool, weakSpotToggleOn, 'english', undefined, { weakSpotActive: true })
+    expect(out).toEqual([biasedResult])
+  })
+
+  it('computeComparison forwards the override through to its own matchingResults call', () => {
+    const gated = computeComparison(pool, weakSpotToggleOn, 'english', { kind: 'best' }, undefined, { weakSpotActive: false })
+    expect(gated?.wpm).toBe(normalResult.wpm)
+    const met = computeComparison(pool, weakSpotToggleOn, 'english', { kind: 'best' }, undefined, { weakSpotActive: true })
+    expect(met?.wpm).toBe(biasedResult.wpm)
+  })
+})
+
 describe('resultConditionKey', () => {
   it('keys normal modes on mode + params + language + toggles', () => {
     expect(resultConditionKey(makeResult())).toBe('words|30|english|false|false|false')
@@ -270,6 +341,36 @@ describe('conditionKey / resultConditionKey agreement', () => {
     expect(conditionKey(config, language)).toBe(resultConditionKey(result))
     expect(conditionKey(config, language)).toBe(configKey(result))
   })
+
+  it('groups a weakSpotTraining run with its own saved result (regression)', () => {
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+    const language = 'english'
+    const result = buildTypingTestResult({
+      correctChars: 100,
+      incorrectChars: 5,
+      wordCount: 20,
+      wpm: 60,
+      accuracy: 95,
+      elapsedMs: 20_000,
+      config,
+      language,
+      wpmHistory: [60],
+      romajiActive: false,
+      kanaActive: false,
+      mistakes: {},
+      confirmedChars: 105,
+      totalKeystrokes: 105,
+      kspcUncomputable: false,
+      weakSpotTraining: true,
+    })
+    expect(result.weakSpotTraining).toBe(true)
+    expect(conditionKey(config, language)).toBe(resultConditionKey(result))
+    expect(conditionKey(config, language)).toBe(configKey(result))
+    // And a plain (toggle-off) run of the same condition must NOT share
+    // the biased run's key/pool.
+    const normalConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+    expect(conditionKey(normalConfig, language)).not.toBe(conditionKey(config, language))
+  })
 })
 
 describe('computeComparison', () => {
@@ -342,5 +443,47 @@ describe('configKey backward compatibility (kanaInput must not reshape existing 
     const liveKey = conditionKey(config, 'english')
     expect(liveKey).toBe(legacyKey)
     expect(baselines[liveKey]).toEqual({ kind: 'previous' })
+  })
+})
+
+describe('configKey backward compatibility (weakSpotTraining must not reshape existing keys)', () => {
+  // Same regression shape as the kanaInput block above — weakSpotTraining
+  // appends a `|weakspot` segment ONLY when true.
+
+  it('a non-weak-spot run\'s key is byte-identical to the pre-weak-spot literal shape (hardcoded, not re-derived)', () => {
+    expect(configKey(makeResult())).toBe('words|30|english|false|false|false')
+  })
+
+  it('a weak-spot run\'s key differs from the equivalent non-weak-spot key', () => {
+    const normal = makeResult()
+    const weakSpot = { ...normal, weakSpotTraining: true }
+    expect(configKey(weakSpot)).not.toBe(configKey(normal))
+    expect(configKey(weakSpot)).toBe('words|30|english|false|false|false|weakspot')
+  })
+
+  it('a kana AND weak-spot run gets its own distinct key, chained after the |kana segment', () => {
+    const kanaOnly = { ...makeResult({ language: 'japanese_hiragana' }), kanaInput: true }
+    const kanaAndWeakSpot = { ...kanaOnly, weakSpotTraining: true }
+    expect(configKey(kanaAndWeakSpot)).toBe('words|30|japanese_hiragana|false|false|false|kana|weakspot')
+    expect(configKey(kanaAndWeakSpot)).not.toBe(configKey(kanaOnly))
+  })
+
+  it('a comparison baseline saved under the legacy (pre-weak-spot) key still resolves for a live non-weak-spot run', () => {
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+    const legacyKey = 'words|30|english|false|false|false'
+    const baselines: TypingTestComparisonBaselines = { [legacyKey]: { kind: 'previous' } }
+    const liveKey = conditionKey(config, 'english')
+    expect(liveKey).toBe(legacyKey)
+    expect(baselines[liveKey]).toEqual({ kind: 'previous' })
+  })
+
+  it('conditionKey reflects a live weakSpotTraining: true config', () => {
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+    expect(conditionKey(config, 'english')).toBe('words|30|english|false|false|false|weakspot')
+  })
+
+  it('conditionKey ignores weakSpotTraining for modes that don\'t carry the field (quote)', () => {
+    const withField = { mode: 'quote', quoteLength: 'medium', weakSpotTraining: true } as unknown as TypingTestConfig
+    expect(conditionKey(withField, 'english')).toBe(conditionKey({ mode: 'quote', quoteLength: 'medium' }, 'english'))
   })
 })

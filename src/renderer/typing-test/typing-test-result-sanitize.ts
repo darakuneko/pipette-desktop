@@ -136,5 +136,12 @@ export function sanitizeTypingTestResult(result: TypingTestResult): TypingTestRe
     errorOmissions,
     errorInsertions,
     errorTargetChars,
+    // Same asymmetric-true-only convention buildTypingTestResult writes
+    // (see result-builder.ts) — a non-`true` persisted value (corrupted
+    // data, hand-edited file) degrades to "not set" rather than being
+    // trusted verbatim, since a stray truthy-but-not-`true` value would
+    // otherwise flow into configKey/resultConditionKey's `|weakspot`
+    // branch check (`result.weakSpotTraining ?`) with unintended results.
+    weakSpotTraining: result.weakSpotTraining === true ? true : undefined,
   }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { isTimeBoundedRun, runDurationSeconds } from '../types'
+import { isTimeBoundedRun, runDurationSeconds, isWeakSpotTrainingActive } from '../types'
 import type { TypingTestConfig } from '../types'
 
 const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
@@ -48,5 +48,27 @@ describe('runDurationSeconds', () => {
     expect(runDurationSeconds(wordsConfig)).toBeNull()
     expect(runDurationSeconds(quoteConfig)).toBeNull()
     expect(runDurationSeconds(fileImportConfig)).toBeNull()
+  })
+})
+
+describe('isWeakSpotTrainingActive', () => {
+  it('is false when unset (default off)', () => {
+    expect(isWeakSpotTrainingActive(wordsConfig)).toBe(false)
+    expect(isWeakSpotTrainingActive(timeConfig)).toBe(false)
+  })
+
+  it('is false when explicitly false', () => {
+    expect(isWeakSpotTrainingActive({ ...wordsConfig, weakSpotTraining: false })).toBe(false)
+  })
+
+  it('is true for words/time when explicitly true', () => {
+    expect(isWeakSpotTrainingActive({ ...wordsConfig, weakSpotTraining: true })).toBe(true)
+    expect(isWeakSpotTrainingActive({ ...timeConfig, weakSpotTraining: true })).toBe(true)
+  })
+
+  it('is false for quote/fileImport/tatoeba — the field does not exist on those variants', () => {
+    expect(isWeakSpotTrainingActive(quoteConfig)).toBe(false)
+    expect(isWeakSpotTrainingActive(fileImportConfig)).toBe(false)
+    expect(isWeakSpotTrainingActive(tatoebaLinesConfig)).toBe(false)
   })
 })

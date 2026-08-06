@@ -256,6 +256,7 @@ export function TypingTestPaneSettingsPanel({
             onConfigChange={onConfigChange}
             language={typingTest.language}
             textRomajiCapable={typingTest.state.romajiCapable}
+            weakSpotGate={typingTest.weakSpotGate}
           />
         )}
       </PanelSection>

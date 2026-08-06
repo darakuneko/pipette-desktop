@@ -130,6 +130,95 @@ describe('TypingTestSettingsBar toggles', () => {
   })
 })
 
+describe('TypingTestSettingsBar weak spot training toggle', () => {
+  it('shows the toggle in words mode and time mode, hides it in quote mode', () => {
+    renderBar()
+    expect(screen.getByTestId('toggle-weak-spot-training')).toBeInTheDocument()
+    // Resolves through the real i18n instance (not a raw key fallback).
+    expect(screen.getByTestId('toggle-weak-spot-training').textContent).toBe('Weak Spot Training')
+
+    const timeConfig: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false }
+    renderBar({ config: timeConfig })
+    expect(screen.getAllByTestId('toggle-weak-spot-training').length).toBeGreaterThan(0)
+
+    const quoteConfig: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }
+    const { container } = renderBar({ config: quoteConfig })
+    expect(container.querySelector('[data-testid="toggle-weak-spot-training"]')).toBeNull()
+  })
+
+  it('highlights the toggle when weakSpotTraining is true', () => {
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+    renderBar({ config })
+    expect(screen.getByTestId('toggle-weak-spot-training').className).toContain('text-accent')
+  })
+
+  it('does not highlight the toggle when unset (default off)', () => {
+    renderBar()
+    expect(screen.getByTestId('toggle-weak-spot-training').className).not.toContain('text-accent')
+  })
+
+  it('calls onConfigChange flipping weakSpotTraining on click', () => {
+    const onConfigChange = vi.fn()
+    renderBar({ onConfigChange })
+    fireEvent.click(screen.getByTestId('toggle-weak-spot-training'))
+    expect(onConfigChange).toHaveBeenCalledTimes(1)
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') {
+      expect(arg.weakSpotTraining).toBe(true)
+    }
+  })
+
+  it('shows the "no weak spots" hint when the gate found nothing weak', () => {
+    renderBar({ weakSpotGate: { applicable: true, status: 'no-weak-spots' } })
+    const hint = screen.getByTestId('weak-spot-hint')
+    expect(hint).toBeInTheDocument()
+    expect(hint.textContent).toBe('No weak spots detected — nice!')
+  })
+
+  it('hides the hint when the gate is unavailable (history not loaded — never claims "no weak spots" without data)', () => {
+    renderBar({ weakSpotGate: { applicable: true, status: 'unavailable' } })
+    expect(screen.queryByTestId('weak-spot-hint')).not.toBeInTheDocument()
+  })
+
+  it('hides the hint once the gate is active (a weak spot was found — nothing more useful to say)', () => {
+    renderBar({ weakSpotGate: { applicable: true, status: 'active' } })
+    expect(screen.queryByTestId('weak-spot-hint')).not.toBeInTheDocument()
+  })
+
+  it('defaults to no hint when weakSpotGate is not passed at all', () => {
+    renderBar()
+    expect(screen.queryByTestId('weak-spot-hint')).not.toBeInTheDocument()
+  })
+
+  it('preserves weakSpotTraining when switching words -> quote -> time', () => {
+    const onConfigChange = vi.fn()
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTraining: true }
+    const { rerender } = render(
+      <I18nextProvider i18n={i18n}>
+        <TypingTestSettingsBar config={config} onConfigChange={onConfigChange} language="english" textRomajiCapable={false} />
+      </I18nextProvider>,
+    )
+
+    fireEvent.click(screen.getByTestId('mode-quote'))
+    const quoteConfig = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    expect(quoteConfig.mode).toBe('quote')
+
+    onConfigChange.mockClear()
+    rerender(
+      <I18nextProvider i18n={i18n}>
+        <TypingTestSettingsBar config={quoteConfig} onConfigChange={onConfigChange} language="english" textRomajiCapable={false} />
+      </I18nextProvider>,
+    )
+
+    fireEvent.click(screen.getByTestId('mode-time'))
+    const timeConfig = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    expect(timeConfig.mode).toBe('time')
+    if (timeConfig.mode === 'time') {
+      expect(timeConfig.weakSpotTraining).toBe(true)
+    }
+  })
+})
+
 describe('TypingTestSettingsBar romaji settings button', () => {
   it('hides the romaji button for a non-kana language', () => {
     renderBar({ language: 'english' })

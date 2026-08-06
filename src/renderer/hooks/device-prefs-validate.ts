@@ -117,13 +117,19 @@ function validateTypingTestConfig(raw: unknown): TypingTestConfig | undefined {
   const romajiInput = typeof obj.romajiInput === 'boolean' ? { romajiInput: obj.romajiInput } : {}
   const romaji = validateRomajiDetailSettings(obj.romaji)
   const romajiDetail = romaji ? { romaji } : {}
+  // Same optional carry-through treatment as romajiInput above, but only
+  // ever spread into the words/time branches below — weakSpotTraining
+  // doesn't exist on any other TypingTestConfig variant (see types.ts),
+  // so a malformed/stray value on a fileImport/tatoeba/quote payload is
+  // silently dropped along with every other unrecognized field there.
+  const weakSpotTraining = typeof obj.weakSpotTraining === 'boolean' ? { weakSpotTraining: obj.weakSpotTraining } : {}
   switch (obj.mode) {
     case 'words':
       if (!isFinitePositiveInt(obj.wordCount) || !hasBooleanFields(obj, 'punctuation', 'numbers')) return undefined
-      return { mode: 'words', wordCount: obj.wordCount, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean, ...romajiInput, ...romajiDetail }
+      return { mode: 'words', wordCount: obj.wordCount, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean, ...weakSpotTraining, ...romajiInput, ...romajiDetail }
     case 'time':
       if (!isFinitePositiveInt(obj.duration) || !hasBooleanFields(obj, 'punctuation', 'numbers')) return undefined
-      return { mode: 'time', duration: obj.duration, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean, ...romajiInput, ...romajiDetail }
+      return { mode: 'time', duration: obj.duration, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean, ...weakSpotTraining, ...romajiInput, ...romajiDetail }
     case 'quote':
       if (typeof obj.quoteLength !== 'string' || !VALID_QUOTE_LENGTHS.has(obj.quoteLength)) return undefined
       return { mode: 'quote', quoteLength: obj.quoteLength as 'short' | 'medium' | 'long' | 'all' }
