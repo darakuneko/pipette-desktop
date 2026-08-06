@@ -188,7 +188,7 @@ A **breadcrumb navigation** at the top of the content area shows the current pat
 
 ### 1.4 Analyze
 
-The Analyze page shows how you actually type — per-key heatmaps, WPM trends, inter-keystroke intervals, hour-by-day activity, per-finger load, key-pair (bigram) timing, and per-layer usage. Data comes from two sources feeding the same stream: typing tests run in the editor are always recorded (each keystroke tagged with the test material and run), while ambient typing is recorded only while you are in Typing View (the compact window opened from the status bar) with the REC toggle set to Start — the REC toggle gates the Typing View stream only, not typing tests.
+The Analyze page shows how you actually type — per-key heatmaps, WPM trends, inter-keystroke intervals, hour-by-day activity, per-finger load, key-pair (bigram) timing, and per-layer usage. Data comes from two sources feeding the same stream: typing tests run in the editor are always recorded (each keystroke tagged with the test material and run), regardless of the Record toggle. Ambient (untagged) typing is recorded whenever the footer's **Record** control (§4.3) is set to Start and keystrokes are actually flowing through Typing View or Typing Test — Record is a keymap-editor footer button now, not something scoped to opening Typing View first, so it can be armed from the plain editor and then carried into either view.
 
 **Access**
 
@@ -199,7 +199,17 @@ There are two entry points:
 
 **Keyboard selector**
 
-The **Keyboard** row inside the filter conditions modal (see **Filter conditions modal** below) lists every keyboard that has recorded typing data — pick one to populate the charts. Keyboards with no data never appear in the list. Switching keyboards there resets the Device / Source / Keymap / Period rows below it to that keyboard's own defaults, since a device or app picked for the previous keyboard may not even apply to the new one. The Back button at the bottom of the page returns to the previous view (e.g. the device selector).
+The **Keyboard** row inside the filter conditions modal (see **Filter conditions modal** below) lists every keyboard that has recorded typing data — pick one to populate the charts. Keyboards with no data never appear in the list. Switching keyboards there resets the Device / Source / Keymap / Period rows below it to that keyboard's own defaults, since a device or app picked for the previous keyboard may not even apply to the new one.
+
+**Footer bar**
+
+![Analyze — Footer](screenshots/analyze-footer.png)
+
+A docked footer bar (the same visual treatment as the keymap editor's status bar) sits below the page content, not inside its scroll area:
+
+- A truncating skip-warning message on the left, shown when part of the selected range had to be skipped
+- **Split View** — shows a second, fully independent Analyze pane side by side with the first, each with its own keyboard / filter / tab selection (only the fetched keyboard list is shared). The choice resets every time you reopen Analyze. The toggle is disabled below roughly 1280px of window width, with a tooltip explaining the window is too narrow
+- **Back** — returns to the previous view (e.g. the device selector)
 
 **Analysis tabs**
 
@@ -909,15 +919,13 @@ Keycodes for mouse control, media playback, system utilities, and audio/haptic f
 
 ![System Tab](screenshots/tab-system.png)
 
-- **Mouse**: buttons, movement, and scrolling
+Groups render as five rows, pairing related groups side by side:
+
+- **Mouse** (buttons, movement, scrolling) / **Boot** (enter bootloader mode, QK_BOOT)
 - **Joystick**: axis and button keycodes
-- **Audio**: audio toggle and control keycodes
-- **Haptic**: haptic feedback toggle and control keycodes
-- **Media Playback**: play/stop/volume/track controls
-- **Locking Keys**: Locking Caps Lock, Num Lock, Scroll Lock
-- **App / Browser**: application launcher and browser navigation keys
-- **System Control**: system power, sleep, wake
-- **Boot**: enter bootloader mode (QK_BOOT)
+- **Audio**: audio toggle and control keycodes / **Haptic**: haptic feedback toggle and control keycodes
+- **Media Playback**: play/stop/volume/track controls / **Browser**: browser navigation keys
+- **System Control**: system power, sleep, wake / **Locking Keys**: Locking Caps Lock, Num Lock, Scroll Lock / **App**: application launcher keys
 
 > **Note**: The MIDI tab is only displayed for MIDI-capable keyboards. When available, it appears between System and Lighting.
 
@@ -1161,32 +1169,38 @@ The left side of the typing-test screen is a collapsible **Settings** panel. The
 
 ![Typing Test — History (Results)](screenshots/typing-test-history-results.png)
 
-The History modal opens on a single header row: **Results** / **Analysis** tabs on the left, and a right-end group of selects — a source select (**MonkeyType** / **Tatoeba** / **Aozora** / **File Import**) that scopes every section in the modal to one source, plus (only while **Analysis** is active) the Accuracy Trend's own condition select. Runs from different sources aren't comparable to each other, so every stat, chart, and export in the modal stays scoped to whichever source is currently picked.
+The History modal opens on a single header row: **Results** / **Analysis** tabs on the left, and a right-end group of selects — a source select (**MonkeyType** / **Tatoeba** / **Aozora** / **File Import**) that scopes every section in the modal to one source, then (only while **Analysis** is active) the Accuracy Trend's own condition select, then a **period filter** (always the rightmost select, in both tabs): **1 Week** / **1 Month** (default) / **3 Months** / **1 Year** / **All Time**. The period filter resets to 1 Month every time the modal reopens, and it scopes everything below the header row — the WPM Trend chart, the stats row, the Results table, **Export CSV**, and the entire Analysis tab. Runs from different sources aren't comparable to each other, so every stat, chart, and export in the modal stays scoped to whichever source is currently picked.
 
 **Results** tab — the run list:
 
 - A sub-filter row sits above the table for two of the four sources: a mode dropdown (All / Words / Time / Quote) for **MonkeyType**, a text dropdown for **Aozora** / **File Import**. **Tatoeba** has neither — its own Accuracy Trend condition selector (on the Analysis tab) already covers per-condition grouping
-- A titled **WPM Trend** chart plots WPM over time for the filtered runs, with the exact value on hover; it appears once there are 2 or more results
-- A stats row (Best / Avg / Last 10 / Tests / Avg Acc) follows, with **Export CSV** at its right end — the export always matches whatever the sub-filter and source select currently show
-- The table lists up to 20 rows under whichever sort is active — click any column header to change it, defaulting to most recent first. A run with a saved keystroke log shows a **Timeline** text link in its own column; clicking it opens the **Keystroke Timeline** (see below). A row shows nothing in that column instead — never a disabled link — when its run has no saved log at all: recorded before Recording Consent was ever accepted (see **Typing analytics recording** below — the same app-wide consent flag also gates the raw log for an ordinary Typing Test run, not only for REC), recorded before this feature existed, or paused/interrupted without finishing. Each row can also be renamed (same naming modal as the finished screen) or deleted
+- A titled **WPM Trend** chart aggregates the filtered runs **per calendar day**, plotting three lines — **Best** / **Worst** / **Avg** — with the exact value on hover; on a day with only one run, all three lines coincide at that point. It appears once there are 2 or more days with data
+- A stats row (Best / Avg / Last 10 / Tests / Avg Acc) follows, with **Export CSV** at its right end — the export always matches whatever the sub-filter, source select, and period filter currently show
+- The table lists up to 20 rows under whichever sort is active — click any column header to change it, defaulting to most recent first. Column widths are measured from the active language pack's own strings at runtime, so labels stay on one line regardless of locale. Besides Name / Date / Mode / PB, the table carries WPM, KPM, Accuracy, and an abbreviated **AKH** column (Avg Key Hold — the run's mean key press-to-release duration; hover the header for the full name). A run with a saved keystroke log shows a **Timeline** text link in its own column; clicking it opens the **Keystroke Timeline** (see below). A row shows nothing in that column instead — never a disabled link — when its run has no saved log at all: recorded before Recording Consent was ever accepted (see **Typing Record** below — the same app-wide consent flag also gates the raw log for an ordinary Typing Test run, not only for ambient recording), recorded before this feature existed, or paused/interrupted without finishing. Each row can also be renamed (same naming modal as the finished screen) or deleted
 
 ![Typing Test — History (Analysis)](screenshots/typing-test-history-analysis.png)
 
-**Analysis** tab — three aggregate sections, all scoped to whichever source is picked in the header (not to the Results tab's own sub-filter):
+**Analysis** tab — three aggregate sections, all scoped to whichever source and period is picked in the header (not to the Results tab's own sub-filter):
 
 - **Accuracy Trend** plots accuracy over time for a single test condition, picked from the header's condition select (e.g. "50 words (english) +punct" or "30s (english)"; the label format varies by mode). It always lists every condition the active source has, defaults to the most recent run's condition, and the chart appears once the selected condition has 2 or more saved runs
-- **Most missed** ranks up to the top 15 missed characters (or, in Romaji mode, the missed kana's romaji, e.g. "shi") as proportional bars, aggregated across every result in the active source rather than one condition. Hidden when the source has no results at all; shows a brief empty message when there are results but none of them recorded a mistake
+- **Most missed** lists every missed character (or, in Romaji mode, the missed kana's romaji, e.g. "shi") as a bar-graph row — key, the character(s) actually typed instead, a stacked bar, and the count — aggregated across every result in the active source rather than one condition, sorted by count and scrolling internally rather than capped at a fixed number. Each bar splits red (moved on to the next character without correcting the mistake) / gray (corrected with Backspace) whenever per-keystroke detail is available for the runs behind that key; hovering a bar shows the exact typed-instead characters and the corrected/moved-on counts. A legacy run with no per-keystroke detail renders its bar fully gray with a tooltip noting the detail isn't available, rather than guessing. Hidden when the source has no results at all; shows a brief empty message when there are results but none of them recorded a mistake
 - **Error mix** is a TYPE / YOU / POP. AVG table of substitution / omission / insertion rates (each a share of the target characters classified), char-weighted across every result in the active source. **YOU** is the aggregated rate and **POP. AVG** the population mean for context; a colored verdict pill (Far below average / Below average / Average / Above average / Far above average) reads the standard-deviation distance between the two, and hovering a row's label shows a tooltip explaining what that error class means and how to improve it. Hidden when the source has no results at all; shows a brief empty message when there are results but none of them qualify (e.g. every result predates error-class tracking, or the source is Romaji-only, whose runs never carry this figure)
 
 #### Keystroke Timeline
 
 ![Typing Test — Keystroke Timeline](screenshots/typing-test-timeline.png)
 
-Opened from a **Timeline** link in the History Results table (see **History** above). A run saved with its typing-test line grouping renders one horizontal bar strip **per line**: a shared time axis for every word on that line, a subtle divider at each word boundary, and a per-line stat fragment in the row's own header — keystrokes/min, accuracy, and overlap rate where they can be computed, plus the line's own duration in seconds, always shown. A Romaji-input run also shows a second monospace row with the typed romaji beneath each line's kana. A run saved before line grouping existed (a legacy log) falls back to the original **per-word** view instead — one strip per word, with no per-line figures.
+The same timeline panel appears in two places: opened from a **Timeline** link in the History Results table (see **History** above), in its own modal; and inline, as the main view of the completion screen itself, for a run that just finished with a saved keystroke log (see **During a Test** below). Both show identical content — only the surrounding chrome differs (a modal frame with a close button vs. embedded directly in the typing-test pane).
+
+A run saved with its typing-test line grouping renders one horizontal bar strip **per line**: a shared time axis for every word on that line, a subtle divider at each word boundary, and a per-line stat fragment in the row's own header — keystrokes/min, accuracy, and overlap rate where they can be computed, plus the line's own duration in seconds, always shown. A Romaji-input run also shows a second monospace row with the typed romaji beneath each line's kana. A run saved before line grouping existed (a legacy log) falls back to the original **per-word** view instead — one strip per word, with no per-line figures.
 
 Bar color reads the keystroke's outcome — normal, mistake, overlapped (pressed before the previous key was released), or unjudged (no correctness data, e.g. mid-IME-composition) — and a legend spells out each color plus the pause markers. The line view treats a gap of **250ms or longer** as a pause (shown compressed on the axis) and a pause crossing into a new line as a lead-in marker before that line; the per-word view uses a coarser **1000ms** cut and "before this word" wording instead, since one word's own axis is much shorter than a line's. Either way, every duration shown — in the row/line headers and in the hover tooltip over any bar or marker — is still the real, uncompressed value, never the compressed on-screen one.
 
-In the line view only, each keystroke bar also shows its own key label once the bar is wide enough to fit one, so zooming in on a fast-typed cluster reveals every key rather than just spacing the bars out — the per-word view has no such label overlay. A **Zoom** slider (fit → 10×) drives this. Above the rows, a stat grid shows the run's own WPM / Accuracy / Duration figures alongside an overlap rate the table doesn't otherwise show.
+In the line view only, each keystroke bar also shows its own key label once the bar is wide enough to fit one, so zooming in on a fast-typed cluster reveals every key rather than just spacing the bars out — the per-word view has no such label overlay. A **Zoom** slider (fit → 10×) drives this.
+
+Above the rows, a stat grid shows eleven figures in a fixed order: **WPM**, **KPM**, **Accuracy**, **KSPC**, **Substitution**, **Omission**, **Insertion**, **Overlap**, **AKH** (Avg Key Hold — the run's mean key press-to-release duration, in ms; hover for the tooltip explaining it), **Time**, and **Words** (or **Lines**, for a line-based run — the same distinction the reading window itself uses). A card reads as empty (`—`) rather than being omitted when its figure can't be computed for that run (e.g. KPM/KSPC/the error-class trio on a run predating that tracking).
+
+Below the stat grid, a **Missed** box lists this run's mistakes as the same bar-graph rows described under History's **Most missed** above (key / typed-instead chars / red-gray bar / count), omitted entirely when the run had no mistakes.
 
 #### Data Source
 
@@ -1204,9 +1218,9 @@ The modal opens on the tab matching the currently active mode. An Aozora Bunko i
 The **MonkeyType** and **Tatoeba** tabs share the same language-pack list:
 
 - A search box filters the list by name
-- Below the search box, a **Romaji** filter toggle narrows the list to Romaji-input-capable entries only (see **Romaji Input** under **MonkeyType** below). The **File Import** tab has the same toggle below its import button; the **Aozora Bunko** tab keeps its kana-row filter instead (see **Aozora Bunko** below)
+- Below the search box, a **Romaji** filter toggle narrows the list to Japanese-input-capable entries only (see **Japanese Input** under **MonkeyType** below). The **File Import** tab has the same toggle below its import button; the **Aozora Bunko** tab keeps its kana-row filter instead (see **Aozora Bunko** below)
 - Packs are split into **Downloaded** and **Available** sections
-- Each row shows the pack name and its word count; right-to-left languages also show an **RTL** badge, and kana packs (hiragana / katakana) that support Romaji input show a **Romaji** badge (see **Romaji Input** below)
+- Each row shows the pack name and its word count; right-to-left languages also show an **RTL** badge, and kana packs (hiragana / katakana) that support Japanese input show a **Romaji** badge (see **Japanese Input** below)
 - Click the download icon on an Available row to download it. Rows you downloaded yourself show a trash icon to delete them; packs bundled with the app (such as MonkeyType's english) are also listed under Downloaded but cannot be deleted
 - If a newer dataset manifest is available, a banner reading "An update is available for the word lists." appears above the list with an **Update** button. This check runs automatically each time the tab is opened (a successful check is cached for the app session, so it won't repeatedly hit the network; a failed check — e.g. while offline — is not cached, and reopening the tab retries). Nothing downloads until you click **Update**
 - Applying an update replaces the pack manifest and also removes that provider's previously downloaded packs, since they belong to the old dataset version — download them again from the refreshed list as needed
@@ -1247,20 +1261,30 @@ In the words and time patterns, the Settings panel's **Option** row adds toggles
 
 The Option row is hidden in the quote pattern (which uses the original text as-is) and in the Tatoeba / Aozora Bunko / File Import modes.
 
-**Romaji Input**
+**Japanese Input**
 
 ![Typing Test — Romaji input](screenshots/typing-test-romaji.png)
 
-Romaji input is not limited to the MonkeyType tab: with a romaji-capable source loaded — a **hiragana** or **katakana** MonkeyType language pack (words/time patterns), a kana **Tatoeba** pack, or a kana-only **File Import** / **Aozora Bunko** text — the Option row gains a full-width **Romaji** button. Romaji input **defaults on** for any capable source, so the button is already accent-colored the first time you load one — you don't need to turn it on yourself. Capable language packs and imported texts are marked with a **Romaji** badge wherever they're listed (see the shared language-pack list above, and the File Import / Aozora Bunko sections below), so you can spot them before selecting one. For an imported text, capability is computed locally from the text's own content the moment it's listed — it is never stored or synced, so it can't drift from the content it describes. Clicking the Romaji button opens the **Romaji Settings** modal rather than toggling judging directly; turning off the modal's master switch is the only way to opt out, and that choice persists across language and import switches until you turn it back on.
+Japanese input is not limited to the MonkeyType tab: with a romaji-capable source loaded — a **hiragana** or **katakana** MonkeyType language pack (words/time patterns), a kana **Tatoeba** pack, or a kana-only **File Import** / **Aozora Bunko** text — the Option row gains a full-width **Japanese Input** button. Capable language packs and imported texts are marked with a **Romaji** badge wherever they're listed (see the shared language-pack list above, and the File Import / Aozora Bunko sections below), so you can spot them before selecting one. For an imported text, capability is computed locally from the text's own content the moment it's listed — it is never stored or synced, so it can't drift from the content it describes. Clicking the button opens the **Japanese Input Settings** modal.
 
-Japanese punctuation is typeable in Romaji mode too: 。、？！ map to `.` `,` `?` `!`, and a kana text containing them alongside kana is still counted as Romaji-capable.
+Japanese punctuation is typeable alongside kana in every method: 。、？！ map to `.` `,` `?` `!`, and a kana text containing them is still counted as romaji-capable.
 
-![Typing Test — Romaji settings](screenshots/typing-test-romaji-settings.png)
+![Typing Test — Japanese Input settings](screenshots/typing-test-romaji-settings.png)
 
-The modal has four settings, in addition to the Romaji input master switch. The guide row's font size always tracks the shared **Settings > Font** size — there is no separate control for it.
+The modal opens on a 3-way **Input method** selector, in this order: **Romaji** (default), **Kana**, **Direct**. Selecting one applies it immediately — there is no separate master on/off switch; Direct is the functional equivalent of turning judging off entirely. Every setting below the selector shows only for the method(s) it applies to. The guide row's font size always tracks the shared **Settings > Font** size — there is no separate control for it.
+
+- **Romaji** — sequential romaji-keystroke matching: each keystroke is checked against the current kana as you type, and any of its currently-accepted spellings is accepted interchangeably (for example でぃ accepts `dhi`, `deli`, or `dexi`, whichever you type). The current word's kana are colored per confirmed segment, and a romaji guide row below the reading window mirrors the reading window's own line layout, re-anchoring on every keystroke.
+- **Kana** — types the physical JIS かな-layout key positions directly (`KeyboardEvent.code` + Shift state), matched against a fixed かな layout table rather than any spelling. A simpler one-current-line kana stroke guide replaces the romaji guide row; a character whose physical key needs Shift held for that stroke (the small-kana/dakuten row) is colored to flag it. Shift tolerance is per-key, not timing-based: a key with no shifted かな of its own ignores the actual Shift state entirely, so holding Shift across an unrelated stroke doesn't cost you anything — only keys that genuinely carry a shifted かな require Shift to match.
+- **Direct** — no judging engine at all: literal/verbatim matching against the displayed kana, the same as a non-Japanese text. Requires an OS IME or a kana-producing physical keyboard layout to actually type kana. None of the settings below apply to Direct.
+
+Both Romaji and Kana show:
+
+- **Require Enter at line ends** (default **on**): when on, a line-end word (the **⏎** marker in Tatoeba / Aozora Bunko / File Import runs) holds once complete until you press **Enter**, same as non-Japanese mode. Turn it off to auto-advance a line-end word immediately on completion, like any other word — Space still does nothing in either method, since neither ever uses Space to submit.
+- **Lines shown**: how many guide lines are displayed, line-synchronized with the reading window's own word lines — the line the current word sits on, plus that many more lines below it. `0` hides the guide row entirely, `1` (default) shows only the current line, `2` adds the next line, and `3` adds the next two lines. Within the current line, words already typed render in a dimmer tone than the current word's own guide; words not yet reached — later on the current line, or on a following guide line — render fainter still.
+
+Romaji only shows three more settings, since かな has one fixed spelling and Direct has no guide at all:
 
 - **Displayed case**: how the guide row's romaji is rendered — **ROMAJI** (upper case), **Romaji** (capitalized), or **romaji** (lower case, default). Display only; it never changes which keystrokes are accepted.
-- **Lines shown**: how many guide lines are displayed, line-synchronized with the reading window's own word lines — the line the current word sits on, plus that many more lines below it. `0` hides the guide row entirely, `1` (default) shows only the current line, `2` adds the next line, and `3` adds the next two lines. Within the current line, words already typed render in a dimmer tone than the current word's own guide; words not yet reached — later on the current line, or on a following guide line — render fainter still.
 - **Guide spelling pattern**: split into two rows, mirroring Accepted input patterns below.
   - **Base**: a single-select choice between **Hepburn** (shi/chi) and **Kunrei** (si/ti) — exactly one is always active, and it picks which base system's spelling the guide line shows for kana with multiple accepted spellings. **Hepburn is the default.**
   - **Options**: **C** (ca), **Q** (qu), **Digraph** (jya), **Small x** (xa), **Small l** (la), **W** (wi), **V** (va), **F** (fa), **YE** (ye), **Nasal x** (xn), and **N separator** (n') — independent alternate-spelling preferences layered on top of the selected Base, off by default. Multiple can be selected at once — e.g. selecting both Small x and the Kunrei base applies each preference to whichever kana it matches, in the same guide. Each button's label shows one example spelling; hover it for the full spelling list it covers.
@@ -1269,14 +1293,13 @@ The modal has four settings, in addition to the Romaji input master switch. The 
   - **Base**: **Hepburn** (shi/chi) and **Kunrei** (si/ti), either of which can spell every kana on its own. Both are enabled by default. Clicks are selection-first: clicking an enabled base while both are on keeps **only** that base (one click switches to Kunrei alone), clicking a disabled base brings it back so both are accepted, and **at least one base always stays enabled** (clicking the sole enabled base does nothing).
   - **Options**: the same eleven families as the guide row above — **C**, **Q**, **Digraph**, **Small x**, **Small l**, **W**, **V**, **F**, **YE**, **Nasal x**, and **N separator** — all enabled by default. Turning any of them off rejects that family's spellings as input; unlike the base row, every option can be turned off at once, since the enabled base(s) already cover every kana on their own. Disabling a whole loanword family (W/V/F/YE) still leaves its kana typable via the decomposed spelling — e.g. with F off, ふぁ still completes as `fu` + `xa`.
 
-Turning on Romaji input switches judging from literal text matching to sequential romaji-keystroke matching: each keystroke is checked against the current kana as you type, and any of its currently-accepted spellings is accepted interchangeably — for example でぃ accepts `dhi`, `deli`, or `dexi`, whichever you happen to type (subject to the Accepted input patterns above).
+Notes that apply to Romaji and Kana alike:
 
-- The current word's kana are colored per confirmed segment, and the guide row below the reading window mirrors the reading window's own line layout — it shows the romaji accepted so far plus the canonical spelling for the rest of the current word, with already-typed words earlier on that line and upcoming words further ahead rendered in progressively fainter tones. It re-anchors to whichever line the current word is on and updates on every keystroke, including when a mid-word branch (like でぃ above) narrows down which spelling you're typing
-- **Turn off your OS IME before typing.** Romaji input judges direct keystrokes, and an active IME composition intercepts them before they ever reach the matcher. If a composition event is detected while Romaji input is active, a hint appears below the guide line reminding you to turn the IME off
+- **Turn off your OS IME before typing.** Both engines judge direct keystrokes, and an active IME composition intercepts them before they ever reach the matcher. If a composition event is detected while either is active, a hint appears below the guide line reminding you to turn the IME off
 - A rejected keystroke does not advance the guide, and it stays counted against Accuracy — Backspace cannot undo it, so keep typing the current kana until it's accepted
-- Words advance automatically as soon as their kana are complete; Space is not needed — except at a line-end word (the **⏎** marker shown in Tatoeba / Aozora Bunko / File Import runs), which holds once complete until you press **Enter**, same as non-Romaji mode
-- Because WPM tracks keystroke rate rather than confirmed word length in this mode, Romaji runs get their own personal best and history grouping (labeled with a `+romaji` suffix, e.g. "30 words (japanese_hiragana) +romaji") instead of being compared against non-Romaji runs
-- This grouping does not track which Accepted input patterns were enabled — runs typed with different style restrictions still share the same personal best, Compare baseline, history filter, and Accuracy trend entries as long as everything else (mode, word count/duration, language, punctuation/numbers) matches
+- Words advance automatically as soon as their kana are complete; Space is not needed — line-end behavior instead follows the **Require Enter at line ends** setting above
+- Because WPM tracks keystroke rate rather than confirmed word length in these methods, Romaji runs get their own personal best and history grouping (a `+romaji` suffix, e.g. "30 words (japanese_hiragana) +romaji") and Kana runs get their own (`+kana`), each tracked separately from plain/Direct runs of the same material
+- This grouping does not track which Accepted input patterns were enabled (Romaji only) — runs typed with different style restrictions still share the same personal best, Compare baseline, history filter, and Accuracy trend entries as long as everything else (mode, word count/duration, language, punctuation/numbers) matches
 
 #### Tatoeba
 
@@ -1291,7 +1314,7 @@ Personal bests, History, and the Accuracy Trend group Tatoeba runs by language +
 - Each sampled sentence renders on its own line
 - A **⏎** marker appears at the end of every line except the last; press **Enter** (not Space) there to advance to the next sentence. Elsewhere, Space still advances between words as usual
 - Attribution and license details for the Tatoeba packs are shown on the About / legal screen
-- The **japanese_hiragana** and **japanese_katakana** Tatoeba packs are kana-pure and marked with a **Romaji** badge in the pack list — see **Romaji Input** under MonkeyType above for how it works
+- The **japanese_hiragana** and **japanese_katakana** Tatoeba packs are kana-pure and marked with a **Romaji** badge in the pack list — see **Japanese Input** under MonkeyType above for how it works
 
 #### Aozora Bunko
 
@@ -1308,7 +1331,7 @@ Browse and import public-domain Japanese literary works from the [Aozora Bunko](
 - A downloaded work plays back exactly like an imported File Import text, including the per-line Enter-to-advance behavior, but it is only listed and deleted from this **Aozora Bunko** tab — it does not appear in the **File Import** tab
 - Click the trash icon on a Downloaded row to remove it; it returns to Available and can be re-imported later
 - The dataset-update banner described under **Data Source** also applies here — updating refreshes the catalog listing itself, not any already-imported works
-- Once imported, a work whose content turns out to be pure kana (rare — most Aozora Bunko literature mixes kanji and kana) shows a **Romaji** badge in the Downloaded section, same as a kana File Import text — see **Romaji Input** under MonkeyType above
+- Once imported, a work whose content turns out to be pure kana (rare — most Aozora Bunko literature mixes kanji and kana) shows a **Romaji** badge in the Downloaded section, same as a kana File Import text — see **Japanese Input** under MonkeyType above
 
 #### File Import
 
@@ -1322,7 +1345,7 @@ Import your own plain-text `.txt` file (UTF-8 only) to type against it — usefu
 - Importing a file whose name matches an existing entry prompts for confirmation before overwriting it
 - Each row shows the text's name and length — **words** for space-separated text (e.g. English), or **lines** for text with no spaces to count words by (e.g. Japanese prose); click a row to select it, or click the trash icon to delete it
 - This list only shows texts you imported directly here — Aozora Bunko imports are managed from the **Aozora Bunko** tab instead
-- A text whose content is pure kana shows a **Romaji** badge and unlocks Romaji input for it — see **Romaji Input** under MonkeyType above. This is checked locally from the text's own content each time it's listed, not stored or synced
+- A text whose content is pure kana shows a **Romaji** badge and unlocks Japanese input for it — see **Japanese Input** under MonkeyType above. This is checked locally from the text's own content each time it's listed, not stored or synced
 
 #### During a Test
 
@@ -1345,7 +1368,13 @@ The controls row below the reading window changes with the test state:
 
 - **Before a run starts**: **Next Test** generates a fresh test. When a paused File Import run is saved, a **Resume** button appears beside it
 - **While running or paused**: **Restart** starts the test over. In File Import mode a **Pause** (running) or **Resume** (paused) button joins it — pausing saves the run, and resuming asks whether to continue from the saved position or start over
-- **When finished**: a result-name field opens the naming modal, with quick-insert chips for the keyboard name, the test material, a timestamp, and the run's WPM / KPM / Accuracy; **Next Test** starts the next run. If the run had any mistakes, a **Missed** row appears below the stats, listing each missed character (or, in Romaji mode, each missed kana's romaji, e.g. "shi") with its count — counted when a wrong character is deleted with Backspace or left wrong when the word is submitted. Below that, a **Substitution / Omission / Insertion** row shows the run's error-class breakdown, computed by comparing each finished word's target text against what was actually typed. This row is omitted for a Romaji-input run (its committed text is always one of the accepted spellings for the target, so there's no difference left to classify) and for a run with no finished words at all
+- **When finished**: a result-name field opens the naming modal, with quick-insert chips for the keyboard name, the test material, a timestamp, and the run's WPM / KPM / Accuracy; **Next Test** starts the next run
+
+**Completion screen**
+
+![Typing Test — Completion Timeline](screenshots/typing-test-completion-timeline.png)
+
+Once a run finishes, if a keystroke log was saved for it (recording consent accepted — see **Typing Record** below), the reading window, the keyboard pane, and the Japanese-input guide row all hide, and the **Keystroke Timeline** panel (see below) becomes the main view instead: its stat grid, timeline rows, and (when the run had mistakes) **Missed** box, with the naming/Next Test controls now at the very bottom of the screen rather than directly under a compact stats row. The rows area is the only part that scrolls — the stat grid, legend, and controls stay in place. If no log was saved for the run (recording consent was never accepted, the run was in Typing View, or nothing was saveable), the completion screen falls back to a compact stats row instead, with a hint that enabling typing recording would show the timeline here next time. That fallback row still shows a **Missed** chip line — each missed character (or, in Romaji mode, each missed kana's romaji, e.g. "shi") with its count, counted when a wrong character is deleted with Backspace or left wrong when the word is submitted — and, below it, a **Substitution / Omission / Insertion** line with the run's error-class breakdown, computed by comparing each finished word's target text against what was actually typed. That line is omitted for a Romaji-input run (its committed text is always one of the accepted spellings for the target, so there's no difference left to classify) and for a run with no finished words at all.
 
 Additional notes:
 
@@ -1357,7 +1386,7 @@ Additional notes:
 
 Typing View displays only the keyboard layout in a compact, resizable window — ideal for overlaying on top of other applications while practicing.
 
-Click the **Typing View** button in the status bar (visible when Typing Test is not active) to enter view-only mode.
+Click the **View** button in the status bar's **Typing:** group (visible when Typing Test is not active) to enter view-only mode.
 
 ![View-Only — Compact Window](screenshots/view-only-compact.png)
 
@@ -1369,38 +1398,30 @@ Click the **Typing View** button in the status bar (visible when Typing Test is 
 
 ![View-Only — Controls](screenshots/view-only-controls.png)
 
-Click anywhere on the keyboard area to toggle the menu pane (bottom-right popup). The pane is split into **Window** and **REC** tabs at the top, with a shared **Base** layer selector and **Exit Typing View** button at the bottom.
-
-**Window tab** (default)
+Click anywhere on the keyboard area to toggle the menu pane (bottom-right popup). It's a single flat panel — no tabs — since recording controls now live in the footer's **Record** button (§4.3) instead of here:
 
 - **Default Size**: Reset the window to its default calculated size
 - **Fit Size**: Adjust the window height to match the current width while preserving the aspect ratio
 - **Top**: Keep the window above other windows (always-on-top; not available on Wayland)
-
-**REC tab**
-
-Recording controls and the Monitor App toggle. Detailed in **Typing analytics recording** below.
-
-**Shared controls** (visible in both tabs)
-
 - **Base**: Select which layer to display (when the keyboard has multiple layers)
+- **Analyze**: Jumps directly to the Analyze page for this keyboard so you can review the stream you just recorded. Going back returns you to Typing View
 - **Exit Typing View**: Return to the full editor
 
 > **Note**: The keyboard layout's live layer indicator follows momentary layer keys (`MO`, `LT`, `LM`) only, while they are held. Persistent layer switches (`TO`, `TG`, `DF`) are not tracked — the VIA/Vial protocol offers no way to read the keyboard's live layer state back, so a persistent switch triggered outside the app would silently desync from what's shown. Use **Base** above to tell the view which base layer the keyboard is actually on.
 
-Press Escape or click the keyboard area again to close the pane. A hint text appears at the bottom when hovering over the window. The window size, always-on-top preference, and the active menu tab are saved per keyboard.
+Press Escape or click the keyboard area again to close the pane. A hint text appears at the bottom when hovering over the window. The window size and always-on-top preference are saved per keyboard.
 
 > **Note**: Auto-lock is suspended while in Typing View mode. If the keyboard is disconnected while in view-only mode, the window automatically restores to its normal size.
 
-#### Typing analytics recording
+#### Typing Record
 
-While Typing View is open, the **REC** tab in the Menu Pane records per-key and per-minute statistics that feed the Analyze page (§1.4). Recording stays off by default.
+Click **Record** in the status bar's **Typing:** group (alongside **View** and **Test** — visible whenever the keyboard has matrix tester support, in both the plain editor and Typing Test) to open the **Recording Settings** modal. It records per-key and per-minute statistics that feed the Analyze page (§1.4). Recording stays off by default, and — since the button lives in the shared footer rather than inside Typing View — it can now be armed from the plain editor and carried into either Typing View or Typing Test, instead of only being reachable from inside Typing View.
 
-![Typing Test — REC Tab](screenshots/typing-test-rec-tab.png)
+![Typing Test — Recording Settings](screenshots/typing-test-rec-tab.png)
 
 **Start / Stop**
 
-Press the toggle once to start recording — the button shows **Start** while idle and **Stop** while recording. The Recording indicator appears at the top of the Typing View window so you can tell at a glance whether data is being captured.
+Press the toggle once to start recording — the button shows **Start** while idle and **Stop** while recording. A **Recording** indicator then appears in the status bar's left-hand indicator group. While the compact Typing View window is open (which hides the main status bar entirely), its own bottom-of-window hint text doubles as the recording indicator there instead.
 
 The very first time you press Start, a consent dialog appears:
 
@@ -1413,13 +1434,13 @@ The very first time you press Start, a consent dialog appears:
 
 Click **Enable** to opt in — your consent is persisted in app settings (not synced) and the dialog never appears again. Click **Cancel** to back out without starting; you can press Start later to see the dialog again.
 
-This same consent flag also gates the per-run raw keystroke log behind History's **Keystroke Timeline** (§4.3) for an ordinary Typing Test run in the editor — not only REC's own ambient recording here in Typing View. Until you've accepted it at least once, no Typing Test run saves a keystroke log at all, so no History row shows a **Timeline** link, regardless of whether REC itself is on.
+This same consent flag also gates the per-run raw keystroke log behind History's **Keystroke Timeline** (§4.3) and the typing-test completion screen's own inline timeline, for an ordinary Typing Test run in the editor — not only this modal's own ambient recording. Until you've accepted it at least once, no Typing Test run saves a keystroke log at all, so no History row shows a **Timeline** link and the completion screen always falls back to its compact stats row, regardless of whether Record itself is on.
 
 **Monitor App**
 
-When the Monitor App toggle is on (and REC is in the Stop / recording state), Pipette resolves the foreground application name once per data flush so each minute can be tagged with the app that owned the keystrokes. Minutes that observed only one app carry that app's name; minutes that observed multiple apps are tagged as `Unknown / Mixed`. The tags drive the **App** filter and the **By App** tab in Analyze.
+When the Monitor App toggle is on (and recording is in the Stop / recording state), Pipette resolves the foreground application name once per data flush so each minute can be tagged with the app that owned the keystrokes. Minutes that observed only one app carry that app's name; minutes that observed multiple apps are tagged as `Unknown / Mixed`. The tags drive the **App** filter and the **By App** tab in Analyze.
 
-- The button is greyed out while REC is **Start** (not recording) state — turning it on without REC has no effect, so the UI funnels you through Start first
+- The button is greyed out while recording is in the **Start** (not recording) state — turning it on without recording active has no effect, so the UI funnels you through Start first
 - The on/off state is global (AppConfig), not per-keyboard, and is **not** synced to other machines
 - **Linux / Wayland**: requires the FocusedWindow GNOME Shell extension (see README). Without it, every minute is recorded as `null`
 - **macOS**: requires the Accessibility permission (see README). Without it, every minute is recorded as `null`
@@ -1427,11 +1448,15 @@ When the Monitor App toggle is on (and REC is in the Stop / recording state), Pi
 
 **Tray toggles**
 
-Directly below Monitor App, the REC tab also has **Stay in System Tray** and **Start Hidden in Tray** toggles — the same settings as Settings → Tools (§6.6), with the same linked-disable behavior (Start Hidden in Tray is disabled while Stay in System Tray is off, and turning Stay in System Tray off also turns Start Hidden in Tray off). They're surfaced here too since the Typing View window is often the last one open before you reach for the tray.
+Directly below Monitor App, the modal also has **Stay in System Tray** and **Start Hidden in Tray** toggles — the same settings as Settings → Tools (§6.6), with the same linked-disable behavior (Start Hidden in Tray is disabled while Stay in System Tray is off, and turning Stay in System Tray off also turns Start Hidden in Tray off). They're surfaced here too since a recording session is often the reason to reach for the tray.
+
+**Heatmap window**
+
+A select at the bottom of the modal picks how many minutes of Typing View's live per-key heatmap overlay to show at once.
 
 **Analyze**
 
-Jumps directly to the Analyze page for this keyboard so you can review the stream you just recorded. Going back returns you to Typing View.
+While in Typing View, its own Menu Pane keeps a separate **Analyze** entry (§4.3) that jumps directly to the Analyze page for this keyboard — the footer's own Analyze/Record buttons are hidden while Typing View is open, so this stays the only way back to Analyze from there. Going back returns you to Typing View. Elsewhere, use the status bar's own **Analyze** button (§9).
 
 #### View Mode Memory and Auto-Restore
 
@@ -1841,7 +1866,7 @@ The Name button's three states (ascending/descending triangle, or a plain "Name"
 
 The **Import** button in the toolbar opens a file dialog that accepts **one or more** `.json` language packs at once. Re-importing a pack with the same `name` overwrites the existing entry. While the import runs, the list locks and the toolbar shows an **Importing…** indicator; a batch of two or more files shows a summary once it finishes — "Imported N files (success N, failure N)" — instead of the per-name feedback, and no row is auto-scrolled into view (see Key Labels §6.2 for the full behavior).
 
-A **Pull from Cloud** button sits next to Import (installed tab only). It runs a one-off download of every language and theme pack from Google Drive, so a pack another device already synced but this device hasn't seen yet shows up immediately, without waiting for the periodic background sync — it fails with an error if Cloud Sync isn't configured. The button shows a **Pulling…** state while it runs and disables during an in-flight import. The app also runs this same pull automatically, once, the first time a keyboard connects after Cloud Sync credentials are ready — after that first successful pull it doesn't run again automatically (a failure is retried on the next connection). Either path only affects language/theme packs — favorites, keyboard data, and other synced content are unaffected.
+A **Pull from Google Drive** button sits next to Import (installed tab only). It runs a one-off download of every language and theme pack from Google Drive, so a pack another device already synced but this device hasn't seen yet shows up immediately, without waiting for the periodic background sync — it fails with an error if Cloud Sync isn't configured. The button shows a **Pulling…** state while it runs and disables during an in-flight import. The app also runs this same pull automatically, once, the first time a keyboard connects after Cloud Sync credentials are ready — after that first successful pull it doesn't run again automatically (a failure is retried on the next connection). Either path only affects language/theme packs — favorites, keyboard data, and other synced content are unaffected.
 
 **Find on Hub tab**
 
@@ -1908,7 +1933,7 @@ The Name button's three states (ascending/descending triangle, or a plain "Name"
 
 The **Import** button in the toolbar opens a file dialog that accepts **one or more** `.json` theme packs at once. Re-importing a pack with the same `name` overwrites the existing entry. While the import runs, the list locks and the toolbar shows an **Importing…** indicator; a batch of two or more files shows a summary once it finishes — "Imported N files (success N, failure N)" — instead of the per-name feedback, and no row is auto-scrolled into view (see Key Labels §6.2 for the full behavior).
 
-A **Pull from Cloud** button sits next to Import, with the same one-off download behavior (and the same automatic first-connection pull) described for Language Packs in §6.3 — a single pull refreshes both language and theme packs together.
+A **Pull from Google Drive** button sits next to Import, with the same one-off download behavior (and the same automatic first-connection pull) described for Language Packs in §6.3 — a single pull refreshes both language and theme packs together.
 
 **Find on Hub tab**
 
@@ -1996,7 +2021,7 @@ The Tools tab shows a **Zoom** row below Theme Packs. This setting scales the en
 The Tools tab shows four toggles below the Theme Packs and Zoom rows:
 
 - **Launch at Login**: Start Pipette automatically when you sign in to the OS. On Windows and macOS this registers a login item; on Linux it manages an XDG autostart entry (`~/.config/autostart/pipette.desktop`). This works in installed (packaged) builds only — the toggle has no effect when running from source.
-- **Stay in System Tray**: While ON, closing the window hides Pipette to the system tray and the app keeps running. Click the tray icon, or choose **Show** from its menu, to bring the window back. Hovering the tray icon shows a live tooltip: just `Pipette` when idle, `Pipette — {keyboard name}` once a keyboard is connected, and `Pipette — {keyboard name} — Cnt: X · KPM: Y` while the REC tab (§4.3) is recording. The tray menu itself is **Show**, a separator, the connected keyboard's name (when one is connected) — with **Recording** / **Cnt: N** / **KPM: N** rows added while recording — another separator, then **Quit**. Menu and tooltip labels are fixed English text for now, not translated.
+- **Stay in System Tray**: While ON, closing the window hides Pipette to the system tray and the app keeps running. Click the tray icon, or choose **Show** from its menu, to bring the window back. Hovering the tray icon shows a live tooltip: just `Pipette` when idle, `Pipette — {keyboard name}` once a keyboard is connected, and `Pipette — {keyboard name} — Cnt: X · KPM: Y` while Typing Record (§4.3) is recording. The tray menu itself is **Show**, a separator, the connected keyboard's name (when one is connected) — with **Recording** / **Cnt: N** / **KPM: N** rows added while recording — another separator, then **Quit**. Menu and tooltip labels are fixed English text for now, not translated.
 - **Restore Last Session** (default ON): While ON, Pipette remembers the last keyboard you connected and automatically reconnects it the next time the app starts. Toggling this in Settings only affects the *next* launch — it never triggers a reconnect during the current session. Because the screen you were on is already remembered per keyboard, reconnecting also brings back the last screen you used with that keyboard. If the keyboard is not found within about 10 seconds of launch, Pipette gives up silently — no warning is shown, and the device selection screen stays as usual. Disconnecting a keyboard manually clears the remembered device.
 - **Start Hidden in Tray**: While ON, Pipette launches resident in the system tray without opening the window. This requires **Stay in System Tray** — the toggle is disabled while Stay in System Tray is OFF, and turning Stay in System Tray OFF also turns this toggle OFF. If a session restore (see above) needs the Unlock dialog, the window appears just for that dialog and hides again once it is resolved. Once you show the window yourself (e.g. from the tray icon), it stays open — Pipette never auto-hides a window you opened.
 
@@ -2167,6 +2192,7 @@ The status bar at the bottom of the screen shows connection information and acti
 - **Locked / Unlocked**: Keyboard lock status (prevents accidental changes to dangerous keycodes)
 - **Sync status**: Cloud sync status (shown only when sync is configured)
 - **Hub connection**: Pipette Hub connection status (shown only when Hub is configured)
+- **Recording**: Shown while Typing Record (§4.3) is active
 
 **Quick Settings** (right side, shown when a keyboard is connected)
 
@@ -2181,6 +2207,8 @@ Inline selectors for common per-session preferences. A `|` separator divides the
 
 - **Key Tester**: Toggle button for Matrix Tester mode (requires matrix tester support; hidden when Typing Test is active)
 - **Analyze**: Jumps straight to the Analyze page (§1.4) for the connected keyboard; hidden when Typing Test is active. Back returns to the editor
-- **Typing View**: Toggle button to enter view-only mode — a compact window showing only the keyboard layout (see §4.3). Requires matrix tester support; hidden when Typing Test is active
-- **Typing Test**: Toggle button for Typing Test mode (requires matrix tester support)
+- **Typing:** — a labeled group of three buttons (requires matrix tester support):
+  - **View**: Toggle button to enter view-only mode — a compact window showing only the keyboard layout (see §4.3). Hidden while Typing Test is active
+  - **Test**: Toggle button for Typing Test mode
+  - **Record**: Opens the **Recording Settings** modal (see **Typing Record**, §4.3)
 - **Disconnect button**: Disconnects from the keyboard and returns to the device selection screen (hidden while Typing Test is active)
