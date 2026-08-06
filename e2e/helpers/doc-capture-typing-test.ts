@@ -28,6 +28,8 @@ import {
   waitForUnlockDialog,
 } from './doc-capture-common'
 import type { RunKeystrokeLog, RunLogIndex } from '../../src/shared/types/typing-run-log'
+import { normalizeFileImportText } from '../../src/shared/types/typing-test-text-store'
+import type { TypingTestTextEntryFile, TypingTestTextIndex, TypingTestTextMeta } from '../../src/shared/types/typing-test-text-store'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
@@ -269,13 +271,15 @@ async function captureRomajiInputScreenshot(page: Page): Promise<void> {
   await page.locator('[data-testid="mode-words"]').click()
   await page.waitForTimeout(300)
 
-  // The Romaji button opens the Romaji Settings modal rather than toggling
-  // judging directly (see RomajiSettingsModal.tsx) — open it, capture the
-  // modal itself with its default (all-styles-enabled) state, enable the
-  // master switch, then close it before typing.
+  // The Japanese Input button opens the Japanese Input Settings modal
+  // rather than toggling judging directly (see RomajiSettingsModal.tsx) —
+  // open it, explicitly select the Romaji method (of the 3-way Romaji /
+  // Kana / Direct selector — Romaji is already the default for a capable
+  // source, but click it anyway for a deterministic starting state), then
+  // close it before typing.
   await page.locator('[data-testid="romaji-settings-toggle"]').click()
   await page.locator('[data-testid="romaji-settings-modal"]').waitFor({ state: 'visible', timeout: 5_000 })
-  await page.locator('[data-testid="romaji-settings-enabled"]').click()
+  await page.locator('[data-testid="japanese-input-method-romaji"]').click()
   await page.waitForTimeout(300)
   await capture(page, 'typing-test-romaji-settings')
   await page.locator('[data-testid="romaji-settings-modal-close"]').click()
@@ -286,6 +290,74 @@ async function captureRomajiInputScreenshot(page: Page): Promise<void> {
   await page.keyboard.type('dhina-', { delay: 100 })
   await page.waitForTimeout(500)
   await capture(page, 'typing-test-romaji')
+}
+
+// Physical-key strokes for でぃな — a prefix of ROMAJI_DEMO_WORD
+// (でぃなーにいく), reused here rather than seeding a separate kana-only
+// word: re-seeding and reselecting the SAME already-downloaded
+// `japanese_hiragana` pack id mid-script does not reliably force a fresh
+// read (the renderer appears to keep its own per-id word-list state from
+// the earlier Romaji capture), so the reliable path is to keep typing
+// against whatever content is already loaded and just resolve which
+// physical keys produce its first few kana under Kana mode's own
+// KANA_LAYOUT (kana-input.ts): KeyW ('て') + BracketLeft (dakuten -> 'で'),
+// Shift+KeyE ('ぃ'), KeyU ('な'). The word's own ー (long vowel mark) needs
+// IntlYen, which — per the virtual GPK60-63R's own default keymap — has no
+// mapped physical position, so this stops short of it; three kana is
+// already enough to show real in-progress state in the stroke guide.
+// kana-input.ts judges straight off DOM `KeyboardEvent.code`/`shiftKey` —
+// never off matrix/HID data — so a synthetic Playwright keypress alone is
+// sufficient here (unlike an analytics/run-log verification, no
+// virtual-device matrix tap is needed for this screenshot).
+interface KanaStroke { code: string; shift: boolean }
+const KANA_STROKES_FOR_ROMAJI_DEMO_WORD: KanaStroke[] = [
+  { code: 'KeyW', shift: false }, // て (base of で)
+  { code: 'BracketLeft', shift: false }, // dakuten -> で
+  { code: 'KeyE', shift: true }, // ぃ
+  { code: 'KeyU', shift: false }, // な
+]
+
+async function typeKanaStroke(page: Page, stroke: KanaStroke): Promise<void> {
+  if (stroke.shift) await page.keyboard.down('Shift')
+  await page.keyboard.press(stroke.code)
+  if (stroke.shift) await page.keyboard.up('Shift')
+  await page.waitForTimeout(150)
+}
+
+/** Reselects the already-downloaded hiragana pack (still carrying
+ *  ROMAJI_DEMO_WORD from the earlier Romaji capture), switches the
+ *  Japanese Input method to Kana, and types the first few physical
+ *  strokes of the loaded word so the kana stroke guide row renders real
+ *  in-progress state — captures `typing-test-kana-input.png`. Leaves the
+ *  language switched back to english/words once done, mirroring
+ *  `captureRomajiInputScreenshot`'s own cleanup, so later captures (Mode
+ *  Modal etc.) start from the same known state as before this function
+ *  ran. */
+async function captureKanaInputScreenshot(page: Page): Promise<void> {
+  await expandSettingsPanelIfCollapsed(page)
+  const languageSelector = page.locator('[data-testid="language-selector"]:not([disabled])')
+  await languageSelector.waitFor({ state: 'visible', timeout: 10_000 })
+  await languageSelector.click()
+  await page.waitForTimeout(500)
+  await selectMonkeytypePack(page, 'japanese_hiragana')
+  await page.locator('[data-testid="mode-words"]').click()
+  await page.waitForTimeout(300)
+
+  await page.locator('[data-testid="romaji-settings-toggle"]').click()
+  await page.locator('[data-testid="romaji-settings-modal"]').waitFor({ state: 'visible', timeout: 5_000 })
+  await page.locator('[data-testid="japanese-input-method-kana"]').click()
+  await page.waitForTimeout(300)
+  await page.locator('[data-testid="romaji-settings-modal-close"]').click()
+  await page.waitForTimeout(300)
+
+  for (const stroke of KANA_STROKES_FOR_ROMAJI_DEMO_WORD) await typeKanaStroke(page, stroke)
+  await page.locator('[data-testid="typing-test-kana-guide"]').waitFor({ state: 'visible', timeout: 5_000 })
+  await page.waitForTimeout(300)
+  await capture(page, 'typing-test-kana-input')
+
+  await languageSelector.click()
+  await page.waitForTimeout(400)
+  await selectMonkeytypePack(page, 'english')
 }
 
 /** Applies the shared dataset-update banner on whichever Mode-modal tab is
@@ -402,6 +474,129 @@ async function captureModeModalScreenshots(page: Page): Promise<void> {
   }
 }
 
+const COMPLETION_DEMO_TEXT_ID = 'doc-capture-completion-demo'
+// Two short lines — enough to show the completion screen's per-line
+// timeline, a "Lines" stat card, and (via the deliberate typos typed
+// below) both Missed-bar colors: "teh" is typed then corrected with
+// Backspace before submitting (gray), "dgos" is left wrong when the last
+// word is submitted (red).
+const COMPLETION_DEMO_RAW_TEXT = 'the quick fox\njumps over dogs'
+
+/** Seeds a File Import text directly on disk (bypassing the file-picker
+ *  dialog), mirroring `seedKanaLanguagePack`'s approach for MonkeyType
+ *  packs — `typing-test-text-store.ts`'s `list`/`get` read straight off
+ *  disk, so a hand-written index + entry file is sufficient. Returns both
+ *  file backups for `restoreFile` in a `finally` block. */
+function seedCompletionDemoText(userDataPath: string): { indexBackup: FileBackup; entryBackup: FileBackup } {
+  const dir = join(userDataPath, 'sync', 'typing-test-texts')
+  const indexPath = join(dir, 'index.json')
+  const filename = `${COMPLETION_DEMO_TEXT_ID}.json`
+  const entryPath = join(dir, filename)
+  const indexBackup = backupFile(indexPath)
+  const entryBackup = backupFile(entryPath)
+  mkdirSync(dir, { recursive: true })
+
+  const { text, wordCount, lineCount } = normalizeFileImportText(COMPLETION_DEMO_RAW_TEXT)
+  const now = new Date().toISOString()
+  const meta: TypingTestTextMeta = {
+    id: COMPLETION_DEMO_TEXT_ID,
+    name: 'Completion Demo',
+    wordCount,
+    lineCount,
+    filename,
+    savedAt: now,
+    updatedAt: now,
+  }
+  const existingIndex: TypingTestTextIndex = indexBackup.content
+    ? (JSON.parse(indexBackup.content) as TypingTestTextIndex)
+    : { entries: [] }
+  const newIndex: TypingTestTextIndex = {
+    entries: [...existingIndex.entries.filter((e) => e.id !== COMPLETION_DEMO_TEXT_ID), meta],
+  }
+  writeFileSync(indexPath, JSON.stringify(newIndex, null, 2), 'utf-8')
+  const entryData: TypingTestTextEntryFile = { name: meta.name, text }
+  writeFileSync(entryPath, JSON.stringify(entryData), 'utf-8')
+  return { indexBackup, entryBackup }
+}
+
+/** Types the seeded two-line File Import demo through to completion, with
+ *  one corrected mistake ("teh" -> Backspace x3 -> "the", gray in the
+ *  Missed bar) and one left uncorrected ("dgos" for "dogs", red in the
+ *  Missed bar), so the completion screen's inline Keystroke Timeline has
+ *  real Missed-table data to show. Waits for the timeline panel itself
+ *  (not just the generic finished wrapper) since that's the signal that a
+ *  keystroke log actually matched this run (recording consent must
+ *  already be accepted — see `main`'s consent flow below). */
+async function runCompletionDemoToFinish(page: Page): Promise<void> {
+  await page.keyboard.type('teh', { delay: 60 })
+  await page.waitForTimeout(200)
+  await page.keyboard.press('Backspace')
+  await page.keyboard.press('Backspace')
+  await page.keyboard.press('Backspace')
+  await page.waitForTimeout(200)
+  await page.keyboard.type('the quick ', { delay: 60 })
+  await page.keyboard.type('fox', { delay: 60 })
+  await page.keyboard.press('Enter') // line-end word — Enter, not Space
+  await page.waitForTimeout(300)
+  await page.keyboard.type('jumps over ', { delay: 60 })
+  await page.keyboard.type('dgos', { delay: 60 }) // deliberate typo, left uncorrected
+  await page.keyboard.press(' ')
+
+  const timelinePanel = page.locator('[data-testid="typing-test-timeline-panel"]')
+  const finishedWrapper = page.locator('[data-testid="typing-test-finished-wrapper"]')
+  await finishedWrapper.waitFor({ state: 'visible', timeout: 10_000 })
+  if (!(await timelinePanel.isVisible().catch(() => false))) {
+    // Fallback: some builds may require Enter to submit the final word too.
+    await page.keyboard.press('Enter')
+    await timelinePanel.waitFor({ state: 'visible', timeout: 5_000 })
+  }
+}
+
+/** Captures the completion screen's inline Keystroke Timeline
+ *  (Task-completion-timeline-view) — the finished-test view now used in
+ *  place of the old compact stats row whenever a keystroke log was saved
+ *  for the run. Requires recording consent already accepted (see
+ *  `main`'s footer-record-modal step, which accepts it via the real
+ *  Enable button before calling this). */
+async function captureCompletionTimelineScreenshot(page: Page, userDataPath: string): Promise<void> {
+  const { indexBackup, entryBackup } = seedCompletionDemoText(userDataPath)
+  try {
+    await expandSettingsPanelIfCollapsed(page)
+    const languageSelector = page.locator('[data-testid="language-selector"]:not([disabled])')
+    await languageSelector.waitFor({ state: 'visible', timeout: 10_000 })
+    await languageSelector.click()
+    await page.waitForTimeout(500)
+    await page.locator('[data-testid="language-tab-import"]').click()
+    await page.waitForTimeout(300)
+    await page.locator(`[data-testid="typing-text-row-${COMPLETION_DEMO_TEXT_ID}"]`).click()
+    await page.waitForTimeout(500)
+    // Selecting a row may not auto-close the modal (unlike the MonkeyType/
+    // Tatoeba tabs) — close it defensively if it's still open.
+    const closeBtn = page.locator('[data-testid="language-modal-close"]')
+    if (await closeBtn.isVisible().catch(() => false)) {
+      await closeBtn.click()
+      await page.waitForTimeout(300)
+    }
+
+    await runCompletionDemoToFinish(page)
+    await page.waitForTimeout(500)
+    await capture(page, 'typing-test-completion-timeline')
+
+    // Reset back to english/words for anything after this in the script —
+    // switching language away is sufficient (mirrors captureRomajiInputScreenshot
+    // and captureKanaInputScreenshot's own cleanup), no explicit Next Test
+    // click needed first.
+    await expandSettingsPanelIfCollapsed(page)
+    await languageSelector.waitFor({ state: 'visible', timeout: 10_000 })
+    await languageSelector.click()
+    await page.waitForTimeout(400)
+    await selectMonkeytypePack(page, 'english')
+  } finally {
+    restoreFile(indexBackup)
+    restoreFile(entryBackup)
+  }
+}
+
 async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
@@ -417,6 +612,12 @@ async function main(): Promise<void> {
   seedAccuracyTrendHistory(settingsBackup)
   const kanaPackBackup = seedKanaLanguagePack(userDataPath)
   const runLogBackup = seedRunKeystrokeLog(userDataPath)
+  // Snapshot config.json (recording consent flag) so the real Enable click
+  // in the footer-record-modal step below — needed to drive a genuinely
+  // live, judged run for the completion-timeline capture — doesn't leave
+  // this machine's dev profile with consent permanently accepted.
+  const configPath = join(userDataPath, 'config.json')
+  const configBackup: FileBackup = backupFile(configPath)
 
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
@@ -426,11 +627,21 @@ async function main(): Promise<void> {
   try {
     await dismissNotificationModal(page, { waitForAppearMs: 3000 })
 
-    // Connect to device
-    console.log(`Looking for ${DEVICE_NAME}...`)
-    const connected = await connectToDevice(page, DEVICE_NAME)
-    if (!connected) throw new Error(`Device "${DEVICE_NAME}" not found`)
-    console.log(`Connected to ${DEVICE_NAME}`)
+    // Connect to device — a prior run's "Restore Last Session" state can
+    // leave this userData profile already on the editor (auto-reconnected
+    // to the virtual device before this script ever gets to the device
+    // selection screen), so check for that first rather than waiting out
+    // connectToDevice's full timeout only to fail on a device that's
+    // already connected.
+    const alreadyConnected = await page.locator('[data-testid="editor-content"]').isVisible().catch(() => false)
+    if (alreadyConnected) {
+      console.log(`Already connected (auto-connect, sole enumerated device).`)
+    } else {
+      console.log(`Looking for ${DEVICE_NAME}...`)
+      const connected = await connectToDevice(page, DEVICE_NAME)
+      if (!connected) throw new Error(`Device "${DEVICE_NAME}" not found`)
+      console.log(`Connected to ${DEVICE_NAME}`)
+    }
 
     await dismissNotificationModal(page)
     // The virtual device resets to locked on every launch, so a viewMode
@@ -537,6 +748,10 @@ async function main(): Promise<void> {
     await page.waitForTimeout(400)
     await selectMonkeytypePack(page, 'english')
 
+    // 5c. Kana input — hiragana pack, Kana method, physical-key stroke guide
+    console.log('\n--- Typing Test Kana Input ---')
+    await captureKanaInputScreenshot(page)
+
     // 6. Mode modal — MonkeyType / Tatoeba / Aozora Bunko / File Import tabs
     console.log('\n--- Typing Test Mode Modal ---')
     await captureModeModalScreenshots(page)
@@ -554,14 +769,20 @@ async function main(): Promise<void> {
       await page.waitForTimeout(500)
     }
 
+    let consentAccepted = false
     const recordBtn = page.locator('[data-testid="typing-record-button"]')
     if (await recordBtn.isVisible().catch(() => false)) {
       await recordBtn.click()
       await page.waitForTimeout(400)
       await capture(page, 'typing-test-rec-tab')
 
-      // Toggle Start to surface the consent modal. Cancel it after the
-      // screenshot so REC stays off and no analytics are written.
+      // Toggle Start to surface the consent modal. Accept it (real Enable
+      // click, not Cancel) — the completion-timeline capture below (step 8)
+      // needs recording consent genuinely accepted so an ordinary Typing
+      // Test run saves a keystroke log. Accepting also flips Record on
+      // (see TypingRecordModal.handleConsentAccept), so it's toggled back
+      // off right after, leaving consent accepted but Record itself off —
+      // same end state the rest of the script otherwise expects.
       const recordToggle = page.locator('[data-testid="typing-record-toggle"]')
       if (await recordToggle.isVisible().catch(() => false)) {
         await recordToggle.click()
@@ -571,13 +792,20 @@ async function main(): Promise<void> {
           await consentModal.screenshot({ path: consentPath })
           console.log('  [ok] typing-test-rec-consent.png')
 
-          const cancelBtn = page.locator('[data-testid="typing-consent-cancel"]')
-          if (await cancelBtn.isVisible().catch(() => false)) {
-            await cancelBtn.click()
+          const acceptBtn = page.locator('[data-testid="typing-consent-accept"]')
+          if (await acceptBtn.isVisible().catch(() => false)) {
+            await acceptBtn.click()
             await page.waitForTimeout(300)
+            consentAccepted = true
+            // Consent-accept also turned Record on — toggle it back off.
+            if (await recordToggle.isVisible().catch(() => false)) {
+              await recordToggle.click()
+              await page.waitForTimeout(200)
+            }
           }
         } else {
-          console.log('  [warn] typing-consent-modal did not appear (consent may already be accepted)')
+          console.log('  [info] typing-consent-modal did not appear (consent already accepted)')
+          consentAccepted = true
         }
       } else {
         console.log('  [warn] typing-record-toggle not found')
@@ -590,6 +818,20 @@ async function main(): Promise<void> {
       }
     } else {
       console.log('  [skip] typing-record-button not found — Record modal capture skipped')
+    }
+
+    // 8. Completion screen — inline Keystroke Timeline, once a run finishes
+    // with a saved keystroke log (requires the consent accepted just above).
+    console.log('\n--- Typing Test Completion Timeline ---')
+    if (consentAccepted) {
+      await clickThroughUnlock(app, page, typingTestBtn)
+      await page.waitForTimeout(1000)
+      await dismissNotificationModal(page)
+      await typingTestView.waitFor({ state: 'visible', timeout: 10_000 })
+      await waitForTypingTestCountdown(page)
+      await captureCompletionTimelineScreenshot(page, userDataPath)
+    } else {
+      console.log('  [skip] recording consent was not accepted — completion-timeline capture skipped')
     }
 
     console.log(`\nScreenshots saved to: ${SCREENSHOT_DIR}`)
@@ -612,6 +854,11 @@ async function main(): Promise<void> {
       restoreFile(runLogBackup.payloadBackup)
     } catch (err) {
       console.error('  [cleanup] restore seeded run log failed:', err)
+    }
+    try {
+      restoreFile(configBackup)
+    } catch (err) {
+      console.error('  [cleanup] restore recording consent flag failed:', err)
     }
   }
 }
