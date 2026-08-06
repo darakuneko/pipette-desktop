@@ -21,10 +21,10 @@
 
 import { test, expect } from '@playwright/test'
 import type { ElectronApplication } from '@playwright/test'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { homedir } from 'node:os'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { execSync } from 'node:child_process'
+import { execSync, spawnSync } from 'node:child_process'
 import { launchApp } from './helpers/electron'
 import {
   connectToDevice,
@@ -39,6 +39,7 @@ import {
   type FileBackup,
 } from './helpers/doc-capture-common'
 
+const PROJECT_ROOT = resolve(import.meta.dirname, '..')
 const USER_DATA = join(homedir(), '.config', 'Electron')
 const CONFIG_PATH = join(USER_DATA, 'config.json')
 const SETTINGS_PATH = join(USER_DATA, 'sync', 'keyboards', VIRTUAL_DEVICE_UID, 'pipette_settings.json')
@@ -97,7 +98,7 @@ let app: ElectronApplication | null = null
 let configBackup: FileBackup
 let settingsBackup: FileBackup
 
-test.describe.serial('tray start-in-tray unlock reveal', () => {
+test.describe.serial('tray start-in-tray unlock reveal', { tag: '@virtual' }, () => {
   test.setTimeout(180_000)
 
   test.beforeAll(() => {
@@ -264,6 +265,47 @@ test.describe.serial('tray start-in-tray unlock reveal', () => {
       expect(dialogUp, `Unlock dialog appeared on sample ${sample}`).toBe(false)
       await page.waitForTimeout(1000)
     }
+
+    await quitApp(app)
+    app = null
+  })
+
+  test('second-instance reveal: relaunching a tray-resident hidden app reveals the running instance\'s window', async () => {
+    // Persisted viewMode is still 'editor' from the previous test, so the
+    // primary instance boots hidden with no Unlock dialog in play — the
+    // only thing that can make its window visible here is the
+    // 'second-instance' handler reacting to the relaunch attempt below.
+    const launched = await launchApp({ env: { PIPETTE_VIRTUAL_DEVICE: 'only' } })
+    app = launched.app
+    const page = launched.page
+
+    await page.locator('[data-testid="editor-content"]').waitFor({ state: 'visible', timeout: 25_000 })
+
+    const bootVisible = await app!.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows().some((w) => w.isVisible()))
+    expect(bootVisible, 'expected the primary instance to boot hidden').toBe(false)
+
+    // Spawn a second instance as a raw child process rather than through
+    // launchApp — Playwright's electron.launch would try to attach to this
+    // process, but the single-instance lock makes it exit immediately
+    // (before creating any window) once it loses the lock race.
+    const electronBin = resolve(PROJECT_ROOT, 'node_modules', '.bin', 'electron')
+    const second = spawnSync(electronBin, ['out/main/index.js', '--no-sandbox', '--disable-gpu-sandbox'], {
+      cwd: PROJECT_ROOT,
+      env: { ...process.env, PIPETTE_VIRTUAL_DEVICE: 'only' },
+      stdio: 'ignore',
+      // The loser of the single-instance lock race exits within ~a second;
+      // the timeout only bounds a pathological hang so it cannot block the
+      // whole (synchronous) spawn past the suite budget.
+      timeout: 30_000,
+    })
+    expect(second.status).toBe(0)
+
+    await expect.poll(async () => {
+      const winVisible = await app!.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows().map((w) => w.isVisible()))
+      return winVisible.some(Boolean)
+    }, { message: 'expected the primary instance\'s window to become visible after a second launch attempt', timeout: 15_000, intervals: [1000] }).toBe(true)
 
     await quitApp(app)
     app = null
