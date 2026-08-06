@@ -15,11 +15,11 @@ import { useTypingTest } from '../useTypingTest'
 import type { TypingTestConfig } from '../types'
 import type { MistakeProfile, WeakSpotInputMethod } from '../weak-spot-profile'
 
-const MET_PROFILE: MistakeProfile = { weights: { e: 1000 }, keystrokes: 500 }
-const INSUFFICIENT_PROFILE: MistakeProfile = { weights: { e: 1000 }, keystrokes: 50 }
+const ACTIVE_PROFILE: MistakeProfile = { weights: { e: 1000 }, weakTokenCount: 1 }
+const NO_WEAK_SPOTS_PROFILE: MistakeProfile = { weights: {}, weakTokenCount: 0 }
 
-function metThunk(): (language: string, inputMethod: WeakSpotInputMethod) => MistakeProfile | undefined {
-  return () => MET_PROFILE
+function activeThunk(): (language: string, inputMethod: WeakSpotInputMethod) => MistakeProfile | undefined {
+  return () => ACTIVE_PROFILE
 }
 
 describe('useTypingTest — weakSpotGate', () => {
@@ -30,29 +30,26 @@ describe('useTypingTest — weakSpotGate', () => {
 
   it('is not applicable in quote mode', () => {
     const config: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }
-    const { result } = renderHook(() => useTypingTest(config, 'english', { getMistakeProfile: metThunk() }))
+    const { result } = renderHook(() => useTypingTest(config, 'english', { getMistakeProfile: activeThunk() }))
     expect(result.current.weakSpotGate.applicable).toBe(false)
   })
 
-  it('is "unavailable" (no hint) when no getMistakeProfile thunk is given — never lies about a deficit', () => {
+  it('is "unavailable" (no hint) when no getMistakeProfile thunk is given — never claims "no weak spots" without data', () => {
     const { result } = renderHook(() => useTypingTest())
     expect(result.current.weakSpotGate.applicable).toBe(true)
     expect(result.current.weakSpotGate.status).toBe('unavailable')
-    expect(result.current.weakSpotGate.deficit).toBeNull()
   })
 
-  it('is "insufficient" with the exact deficit when the scoped profile is below threshold', () => {
+  it('is "no-weak-spots" when the scoped profile has zero weak tokens', () => {
     const { result } = renderHook(() => useTypingTest(undefined, undefined, {
-      getMistakeProfile: () => INSUFFICIENT_PROFILE,
+      getMistakeProfile: () => NO_WEAK_SPOTS_PROFILE,
     }))
-    expect(result.current.weakSpotGate.status).toBe('insufficient')
-    expect(result.current.weakSpotGate.deficit).toBe(150) // 200 - 50
+    expect(result.current.weakSpotGate.status).toBe('no-weak-spots')
   })
 
-  it('is "met" once the scoped profile clears the threshold', () => {
-    const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: metThunk() }))
-    expect(result.current.weakSpotGate.status).toBe('met')
-    expect(result.current.weakSpotGate.deficit).toBeNull()
+  it('is "active" once the scoped profile has at least one weak token', () => {
+    const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: activeThunk() }))
+    expect(result.current.weakSpotGate.status).toBe('active')
   })
 })
 
@@ -62,8 +59,8 @@ describe('useTypingTest — biased sampling end-to-end', () => {
     vi.setSystemTime(new Date('2025-01-01T00:00:00.000Z'))
   })
 
-  it('setConfig with weakSpotTraining ON + a met profile visibly skews the sampled words', async () => {
-    const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: metThunk() }))
+  it('setConfig with weakSpotTraining ON + an active profile visibly skews the sampled words', async () => {
+    const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: activeThunk() }))
     const config: TypingTestConfig = { mode: 'words', wordCount: 300, punctuation: false, numbers: false, weakSpotTraining: true }
     await act(async () => result.current.setConfig(config))
     const withE = result.current.state.words.filter((w) => w.includes('e')).length
@@ -71,7 +68,7 @@ describe('useTypingTest — biased sampling end-to-end', () => {
   })
 
   it('weakSpotTraining ON but the toggle-off default (no weakSpotTraining field) samples normally', async () => {
-    const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: metThunk() }))
+    const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: activeThunk() }))
     const config: TypingTestConfig = { mode: 'words', wordCount: 300, punctuation: false, numbers: false }
     await act(async () => result.current.setConfig(config))
     const withE = result.current.state.words.filter((w) => w.includes('e')).length
@@ -80,9 +77,9 @@ describe('useTypingTest — biased sampling end-to-end', () => {
     expect(withE / result.current.state.words.length).toBeLessThan(0.5)
   })
 
-  it('weakSpotTraining ON but the profile is below threshold: samples normally (gate not met)', async () => {
+  it('weakSpotTraining ON but the profile has no weak tokens: samples normally (gate not active)', async () => {
     const { result } = renderHook(() => useTypingTest(undefined, undefined, {
-      getMistakeProfile: () => INSUFFICIENT_PROFILE,
+      getMistakeProfile: () => NO_WEAK_SPOTS_PROFILE,
     }))
     const config: TypingTestConfig = { mode: 'words', wordCount: 300, punctuation: false, numbers: false, weakSpotTraining: true }
     await act(async () => result.current.setConfig(config))
@@ -91,7 +88,7 @@ describe('useTypingTest — biased sampling end-to-end', () => {
   })
 
   it('the run\'s weakSpotProfile snapshot survives a time-mode refill unchanged (immutability)', async () => {
-    const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: metThunk() }))
+    const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: activeThunk() }))
     const config: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false, weakSpotTraining: true }
     await act(async () => result.current.setConfig(config))
     const snapshotBefore = result.current.state.weakSpotProfile
@@ -112,8 +109,8 @@ describe('useTypingTest — biased sampling end-to-end', () => {
   it('is gated OUT of quote mode even with weakSpotTraining nominally set on a stale words config carried over', async () => {
     // weakSpotTraining only exists on words/time in the type union; quote
     // mode's own config object structurally can't carry it. Just confirm
-    // quote mode never biases regardless of a met profile.
-    const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: metThunk() }))
+    // quote mode never biases regardless of an active profile.
+    const { result } = renderHook(() => useTypingTest(undefined, undefined, { getMistakeProfile: activeThunk() }))
     const config: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }
     await act(async () => result.current.setConfig(config))
     expect(result.current.state.weakSpotProfile).toBeUndefined()

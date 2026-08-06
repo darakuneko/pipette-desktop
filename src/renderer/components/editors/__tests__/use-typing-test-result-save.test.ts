@@ -101,7 +101,7 @@ function makeTypingTest(stateOverrides: Partial<TypingTestState>, config: Typing
     captureMemory: vi.fn(),
     pause: vi.fn(),
     restoreState: vi.fn(),
-    weakSpotGate: { applicable: false, status: 'met', deficit: null },
+    weakSpotGate: { applicable: false, status: 'active' },
   }
 }
 

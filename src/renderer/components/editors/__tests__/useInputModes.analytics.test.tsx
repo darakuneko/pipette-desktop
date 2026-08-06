@@ -8,6 +8,11 @@ import { deserialize } from '../../../../shared/keycodes/keycodes'
 
 const mockTypingAnalyticsEvent = vi.fn<(event: unknown) => Promise<void>>()
 const mockTypingAnalyticsFlush = vi.fn<(uid: string) => Promise<void>>()
+// Weak Spot Training's useWeakSpotRunLogs (useInputModes.ts) fetches these
+// unconditionally whenever a keyboard uid is present — not under test here,
+// so both resolve empty (no saved logs, no crash).
+const mockTypingRunLogList = vi.fn<(uid: string) => Promise<{ success: boolean; entries: [] }>>()
+const mockTypingRunLogGet = vi.fn<(uid: string, runId: string) => Promise<{ success: boolean }>>()
 
 /** Whether `matrix-release` events reach `mockTypingAnalyticsEvent` at all
  *  — see {@link installVialApi}. Reset to the default (excluded) every
@@ -37,6 +42,8 @@ function installVialApi(options?: { includeReleases?: boolean }): void {
         return mockTypingAnalyticsEvent(event)
       },
       typingAnalyticsFlush: mockTypingAnalyticsFlush,
+      typingRunLogList: mockTypingRunLogList,
+      typingRunLogGet: mockTypingRunLogGet,
     },
     writable: true,
     configurable: true,
@@ -48,6 +55,8 @@ beforeEach(() => {
   mockTypingAnalyticsFlush.mockReset()
   mockTypingAnalyticsEvent.mockResolvedValue(undefined)
   mockTypingAnalyticsFlush.mockResolvedValue(undefined)
+  mockTypingRunLogList.mockReset().mockResolvedValue({ success: true, entries: [] })
+  mockTypingRunLogGet.mockReset().mockResolvedValue({ success: false })
   installVialApi()
   // Fake ONLY Date (not setTimeout/setImmediate — several tests below rely
   // on those firing for real via flushMicrotasks). Deterministic durations

@@ -168,20 +168,20 @@ describe('TypingTestSettingsBar weak spot training toggle', () => {
     }
   })
 
-  it('shows the "N more keystrokes" hint when the gate is insufficient', () => {
-    renderBar({ weakSpotGate: { applicable: true, status: 'insufficient', deficit: 42 } })
+  it('shows the "no weak spots" hint when the gate found nothing weak', () => {
+    renderBar({ weakSpotGate: { applicable: true, status: 'no-weak-spots' } })
     const hint = screen.getByTestId('weak-spot-hint')
     expect(hint).toBeInTheDocument()
-    expect(hint.textContent).toBe('42 more keystrokes to unlock')
+    expect(hint.textContent).toBe('No weak spots detected — nice!')
   })
 
-  it('hides the hint when the gate is unavailable (history not loaded — never guesses a count)', () => {
-    renderBar({ weakSpotGate: { applicable: true, status: 'unavailable', deficit: null } })
+  it('hides the hint when the gate is unavailable (history not loaded — never claims "no weak spots" without data)', () => {
+    renderBar({ weakSpotGate: { applicable: true, status: 'unavailable' } })
     expect(screen.queryByTestId('weak-spot-hint')).not.toBeInTheDocument()
   })
 
-  it('hides the hint once the gate is met', () => {
-    renderBar({ weakSpotGate: { applicable: true, status: 'met', deficit: null } })
+  it('hides the hint once the gate is active (a weak spot was found — nothing more useful to say)', () => {
+    renderBar({ weakSpotGate: { applicable: true, status: 'active' } })
     expect(screen.queryByTestId('weak-spot-hint')).not.toBeInTheDocument()
   })
 

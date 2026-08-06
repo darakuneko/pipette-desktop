@@ -6,11 +6,17 @@
 // typingTestHistory reaches useTypingTest, and a finished run's
 // weakSpotTraining flag reaches the saved TypingTestResult. Drives a real
 // 1-word practice run the same way useInputModes.run-log.test.tsx does.
+// These fixtures use MISS-based weakness (not timing) — the mistake
+// signal needs no run log, keeping this file free of IPC mocking; the
+// timing-signal path has its own dedicated coverage in
+// weak-spot-timing.test.ts / weak-spot-scoring.test.ts /
+// weak-spot-profile.test.ts (composite aggregation).
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useInputModes } from '../useInputModes'
 import { configKey } from '../../../typing-test/result-builder'
+import { MIN_MISS_COUNT } from '../../../typing-test/weak-spot-scoring'
 import type { TypingTestResult } from '../../../../shared/types/pipette-settings'
 
 function buildKeymap(): Map<string, number> {
@@ -34,7 +40,10 @@ afterEach(() => {
  *  helper shape. Returns the finished result recorded via
  *  onSaveTypingTestResult. `typingTestHistory` (omitted by default) feeds
  *  the getMistakeProfile thunk the same way a real caller's device-prefs
- *  history would — required to reach a 'met' gate at all. */
+ *  history would — required to reach an 'active' gate at all. No
+ *  `typingRecordKeyboard` is ever passed, so useWeakSpotRunLogs's uid is
+ *  always undefined and it never touches `window.vialAPI` — these tests
+ *  exercise the miss-only path deliberately. */
 async function runOneWordToCompletion(
   weakSpotTraining: boolean | undefined,
   typingTestHistory?: TypingTestResult[],
@@ -79,25 +88,25 @@ async function runOneWordToCompletion(
   return onSaveTypingTestResult.mock.calls[0][0] as TypingTestResult
 }
 
-// A history whose scope (english/direct) sums to >= the 200-keystroke gate
-// — mirrors the "getMistakeProfile thunk wiring" describe block below.
-function sufficientHistory(): TypingTestResult[] {
-  return Array.from({ length: 5 }, (_, i) => ({
-    date: `2025-01-0${i + 1}T00:00:00.000Z`,
-    wpm: 50, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 0,
-    durationSeconds: 30, mode: 'words', mode2: 30, language: 'english',
-    punctuation: false, numbers: false, kspcKeystrokes: 200,
-  }))
-}
-
-// Same scope, deliberately under the threshold (1 row * 50 keystrokes = 50
-// < 200) — gate 'insufficient', not 'unavailable' (history IS loaded).
-function insufficientHistory(): TypingTestResult[] {
+// english/direct scope, one token ('a') crossing MIN_MISS_COUNT — gate
+// 'active'.
+function activeHistory(): TypingTestResult[] {
   return [{
     date: '2025-01-01T00:00:00.000Z',
-    wpm: 50, accuracy: 95, wordCount: 30, correctChars: 45, incorrectChars: 5,
+    wpm: 50, accuracy: 95, wordCount: 30, correctChars: 90, incorrectChars: 10,
     durationSeconds: 30, mode: 'words', mode2: 30, language: 'english',
-    punctuation: false, numbers: false, kspcKeystrokes: 50,
+    punctuation: false, numbers: false, mistakes: { a: MIN_MISS_COUNT },
+  }]
+}
+
+// Same scope, loaded but with no mistakes at all — gate 'no-weak-spots'
+// (not 'unavailable' — history IS loaded).
+function noWeakSpotsHistory(): TypingTestResult[] {
+  return [{
+    date: '2025-01-01T00:00:00.000Z',
+    wpm: 50, accuracy: 95, wordCount: 30, correctChars: 100, incorrectChars: 0,
+    durationSeconds: 30, mode: 'words', mode2: 30, language: 'english',
+    punctuation: false, numbers: false,
   }]
 }
 
@@ -110,8 +119,8 @@ describe('useInputModes — weakSpotTraining passthrough into the saved result',
   // biased runs. The flag must now reflect whether the run's own snapshot
   // profile (`state.weakSpotProfile`) was actually non-null.
 
-  it('toggle ON + gate insufficient: the run sampled normally, so NO flag is saved and it groups with normal runs', async () => {
-    const saved = await runOneWordToCompletion(true, insufficientHistory())
+  it('toggle ON + gate no-weak-spots: the run sampled normally, so NO flag is saved and it groups with normal runs', async () => {
+    const saved = await runOneWordToCompletion(true, noWeakSpotsHistory())
     expect(saved.weakSpotTraining).toBeUndefined()
     // Groups with a plain (toggle-never-touched) run of the same
     // condition — same configKey, no `|weakspot` split into a separate
@@ -126,14 +135,14 @@ describe('useInputModes — weakSpotTraining passthrough into the saved result',
     expect(saved.weakSpotTraining).toBeUndefined()
   })
 
-  it('toggle ON + gate met: the run actually sampled biased, so the flag IS saved', async () => {
-    const saved = await runOneWordToCompletion(true, sufficientHistory())
+  it('toggle ON + gate active: the run actually sampled biased, so the flag IS saved', async () => {
+    const saved = await runOneWordToCompletion(true, activeHistory())
     expect(saved.weakSpotTraining).toBe(true)
     expect(configKey(saved)).toMatch(/\|weakspot$/)
   })
 
-  it('a run with weakSpotTraining: false saves weakSpotTraining: undefined (asymmetric), even with a met gate', async () => {
-    const saved = await runOneWordToCompletion(false, sufficientHistory())
+  it('a run with weakSpotTraining: false saves weakSpotTraining: undefined (asymmetric), even with an active gate', async () => {
+    const saved = await runOneWordToCompletion(false, activeHistory())
     expect(saved.weakSpotTraining).toBeUndefined()
   })
 
@@ -158,20 +167,18 @@ describe('useInputModes — getMistakeProfile thunk wiring', () => {
     const { result } = renderHook(() => useInputModes({
       rows: 1, cols: 1, keymap, unlocked: true, typingTestMode: true,
       savedTypingTestConfig: { mode: 'words', wordCount: 30, punctuation: false, numbers: false },
-      typingTestHistory: sufficientHistory(),
+      typingTestHistory: activeHistory(),
     }))
-    // 5 rows * 200 keystrokes = 1000 >= threshold (200) -> gate met.
-    expect(result.current.typingTest.weakSpotGate.status).toBe('met')
+    expect(result.current.typingTest.weakSpotGate.status).toBe('active')
   })
 
-  it('weakSpotGate is "insufficient" (not "unavailable") when history is loaded but under threshold', () => {
+  it('weakSpotGate is "no-weak-spots" (not "unavailable") when history is loaded but nothing is weak', () => {
     const keymap = buildKeymap()
     const { result } = renderHook(() => useInputModes({
       rows: 1, cols: 1, keymap, unlocked: true, typingTestMode: true,
       savedTypingTestConfig: { mode: 'words', wordCount: 30, punctuation: false, numbers: false },
-      typingTestHistory: insufficientHistory(),
+      typingTestHistory: noWeakSpotsHistory(),
     }))
-    expect(result.current.typingTest.weakSpotGate.status).toBe('insufficient')
-    expect(result.current.typingTest.weakSpotGate.deficit).toBe(150)
+    expect(result.current.typingTest.weakSpotGate.status).toBe('no-weak-spots')
   })
 })

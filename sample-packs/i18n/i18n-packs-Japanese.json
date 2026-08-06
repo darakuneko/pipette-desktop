@@ -325,7 +325,7 @@
       "punctuation": "句読点",
       "numbers": "数字",
       "weakSpotTraining": "苦手強化",
-      "weakSpotHint": "あと{{count}}打で有効",
+      "weakSpotHintNoWeak": "苦手は検出されませんでした！",
       "japaneseInputToggle": "日本語入力",
       "romaji": {
         "imeHint": "ローマ字入力モードでは OS の IME をオフにしてください"

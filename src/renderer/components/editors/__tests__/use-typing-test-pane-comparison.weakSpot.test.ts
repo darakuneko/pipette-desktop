@@ -20,7 +20,7 @@ import type { TypingTestResult, TypingTestComparisonBaselines } from '../../../.
 import type { TypingTestConfig } from '../../../typing-test/types'
 import type { MistakeProfile } from '../../../typing-test/weak-spot-profile'
 
-const MET_PROFILE: MistakeProfile = { weights: { e: 1000 }, keystrokes: 500 }
+const MET_PROFILE: MistakeProfile = { weights: { e: 1000 }, weakTokenCount: 1 }
 
 const mockPipetteSettingsListAllTypingResults = vi.fn<() => Promise<TypingTestResult[]>>()
 

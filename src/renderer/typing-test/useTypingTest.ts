@@ -24,19 +24,22 @@ import { deriveExpectedChar, deriveMistakeKey, deriveKanaCorrectOverride } from 
 import { useTypingTestMatrix } from './use-typing-test-matrix'
 import { useTypingTestMetrics } from './use-typing-test-metrics'
 import { buildMemorySnapshot, buildRestoredState } from './typing-test-memory'
-import { effectiveWeakSpotInputMethod, meetsWeakSpotThreshold, weakSpotKeystrokeDeficit, type WeakSpotGateInfo, type MistakeProfile, type WeakSpotInputMethod } from './weak-spot-profile'
+import { effectiveWeakSpotInputMethod, type WeakSpotGateInfo, type MistakeProfile, type WeakSpotInputMethod } from './weak-spot-profile'
 import type { UseTypingTestOptions, UseTypingTestReturn } from './use-typing-test-types'
 
 type GetMistakeProfileFn = (language: string, inputMethod: WeakSpotInputMethod) => MistakeProfile | undefined
 
 /** Resolves the immutable per-run Weak Spot Training snapshot for a
  *  words/time run about to start under `config`/`language` — undefined
- *  (sample normally) unless the toggle is on AND a loaded profile meets
- *  the keystroke gate. Called fresh at every run-start decision point
- *  (never cached across calls) so a newly saved result is honored by the
- *  very next run; the caller then threads the SAME returned value into
- *  both the initial word batch (`createWordsForConfig`) and the run
- *  state (`freshState`/`createInitialState`), which is what makes it a
+ *  (sample normally) unless the toggle is on AND the loaded profile has
+ *  at least one weak token (see `MistakeProfile.weakTokenCount` —
+ *  replaces the original fixed-200-keystroke gate; 200 keystrokes of
+ *  fast, accurate typing alone no longer activates biasing). Called
+ *  fresh at every run-start decision point (never cached across calls)
+ *  so a newly saved result is honored by the very next run; the caller
+ *  then threads the SAME returned value into both the initial word batch
+ *  (`createWordsForConfig`) and the run state
+ *  (`freshState`/`createInitialState`), which is what makes it a
  *  snapshot — nothing re-resolves it mid-run (see `refillTimeModeWords`,
  *  which only ever reads `TypingTestState.weakSpotProfile` back). */
 function resolveWeakSpotProfileArg(
@@ -47,7 +50,7 @@ function resolveWeakSpotProfileArg(
   if (!isWeakSpotTrainingActive(config)) return undefined
   const inputMethod = effectiveWeakSpotInputMethod(config, language)
   const raw = getMistakeProfile?.(language, inputMethod)
-  if (!raw || !meetsWeakSpotThreshold(raw.keystrokes)) return undefined
+  if (!raw || raw.weakTokenCount < 1) return undefined
   return { inputMethod, weights: raw.weights }
 }
 
@@ -449,16 +452,16 @@ export function useTypingTest<TPreparedEvent = unknown>(
   // recomputed from the CURRENT config/language (not the possibly-stale
   // snapshot an in-progress run's own state.weakSpotProfile carries). See
   // weak-spot-profile.ts's WeakSpotGateInfo doc comment for the
-  // unavailable/insufficient/met distinction.
+  // unavailable/no-weak-spots/active distinction.
   const weakSpotGate = useMemo((): WeakSpotGateInfo => {
     if (config.mode !== 'words' && config.mode !== 'time') {
-      return { applicable: false, status: 'met', deficit: null }
+      return { applicable: false, status: 'active' }
     }
     const inputMethod = effectiveWeakSpotInputMethod(config, language)
     const raw = options?.getMistakeProfile?.(language, inputMethod)
-    if (!raw) return { applicable: true, status: 'unavailable', deficit: null }
-    if (meetsWeakSpotThreshold(raw.keystrokes)) return { applicable: true, status: 'met', deficit: null }
-    return { applicable: true, status: 'insufficient', deficit: weakSpotKeystrokeDeficit(raw.keystrokes) }
+    if (!raw) return { applicable: true, status: 'unavailable' }
+    if (raw.weakTokenCount >= 1) return { applicable: true, status: 'active' }
+    return { applicable: true, status: 'no-weak-spots' }
   }, [config, language, options?.getMistakeProfile])
 
   return {

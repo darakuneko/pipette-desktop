@@ -325,7 +325,7 @@
       "punctuation": "punctuation",
       "numbers": "numbers",
       "weakSpotTraining": "Weak Spot Training",
-      "weakSpotHint": "{{count}} more keystrokes to unlock",
+      "weakSpotHintNoWeak": "No weak spots detected — nice!",
       "japaneseInputToggle": "Japanese Input",
       "romaji": {
         "imeHint": "Turn off your OS IME to type in romaji input mode"

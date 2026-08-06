@@ -1,50 +1,42 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-/** Mistake-profile aggregation for Weak Spot Training (see
+/** Composite weakness-profile aggregation for Weak Spot Training (see
  *  word-generator/weak-spot-weighting.ts for the sampling side that
- *  consumes the profile this module produces). Scans `typingTestHistory`
- *  for a given language + effective input method scope, sums each row's
- *  `mistakes` tally (skipping synthetic decoration keys — digits/
- *  punctuation/capitalization — which are never a "real" character weak
- *  spot), and totals the scope's keystroke count (per-row
- *  `kspcKeystrokes ?? correctChars + incorrectChars`, summed AFTER the
- *  per-row fallback, never the other way around) to gate whether biasing
- *  should engage at all. */
+ *  consumes the profile this module produces, weak-spot-timing.ts for
+ *  the per-run interval extraction, and weak-spot-scoring.ts for the
+ *  pure median/shrinkage/weakness-verdict statistics). Scans
+ *  `typingTestHistory` for a given language + effective input method
+ *  scope, combines its mistake tallies with whatever per-token timing
+ *  data the scope's saved run logs provide, and gates biased sampling on
+ *  whether at least one token actually came out weak — replacing the
+ *  original fixed-200-keystroke gate (2026-08-06 user-approved revision:
+ *  200 keystrokes of fast, accurate typing should never activate the
+ *  mode; activation must be driven by an actual detected weakness). */
 
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
+import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
 import type { TypingTestConfig } from './types'
 import { isRomajiInputActive } from './romaji-input'
 import { isKanaInputActive } from './kana-input'
 import { aggregateMistakeTotals } from './MistakeRankingSection'
+import { extractTokenIntervals, mergeTokenIntervals } from './weak-spot-timing'
+import { median, computeTokenTimingStats, evaluateTokenWeakness } from './weak-spot-scoring'
 import type { WeakSpotInputMethod } from './word-generator/weak-spot-weighting'
 
 export type { WeakSpotInputMethod }
 
-/** Cumulative scope keystrokes required before Weak Spot Training's
- *  biased sampling engages — below this, the toggle stays inert (normal
- *  sampling) and the UI shows a "N more keystrokes" hint instead of
- *  silently doing nothing. */
-export const WEAK_SPOT_KEYSTROKE_THRESHOLD = 200
-
 export interface MistakeProfile {
-  /** Mistake-token -> summed count, scoped to one language + input method
-   *  and already filtered of synthetic decoration keys. */
+  /** Composite weakness score per token, scoped to one language + input
+   *  method and already filtered of synthetic decoration keys — WEAK
+   *  tokens only (see `evaluateTokenWeakness`); a token that isn't weak
+   *  contributes nothing and is simply absent, exactly like a token with
+   *  zero matched weight already behaves in `wordWeakSpotScore`. */
   weights: Record<string, number>
-  /** Cumulative keystrokes across every history row in scope — the gate's
-   *  numerator (see WEAK_SPOT_KEYSTROKE_THRESHOLD). */
-  keystrokes: number
-}
-
-export function meetsWeakSpotThreshold(keystrokes: number): boolean {
-  return keystrokes >= WEAK_SPOT_KEYSTROKE_THRESHOLD
-}
-
-/** Keystrokes still needed to reach the gate — 0 once already met. Only
- *  meaningful when a profile actually exists (history loaded); see
- *  `MistakeProfileCache` callers for the "unavailable" case this doesn't
- *  cover. */
-export function weakSpotKeystrokeDeficit(keystrokes: number): number {
-  return Math.max(0, WEAK_SPOT_KEYSTROKE_THRESHOLD - keystrokes)
+  /** Count of weak tokens in this scope — the gate's own trigger (see
+   *  `WeakSpotGateInfo`): `>= 1` means at least one weakness was
+   *  detected. Equivalent to `Object.keys(weights).length`, kept as its
+   *  own field so callers never have to re-derive it via `Object.keys`. */
+  weakTokenCount: number
 }
 
 /** Live UI-facing gate status for the Option section's toggle/hint —
@@ -54,19 +46,18 @@ export function weakSpotKeystrokeDeficit(keystrokes: number): number {
  *  distinguishes three states the hint text must never conflate:
  *  - `'unavailable'`: history hasn't loaded yet (no `getMistakeProfile`
  *    thunk, or it returned undefined) — nothing is known yet, so no hint
- *    is shown (showing "N more keystrokes" here would be a guess, not a
- *    fact).
- *  - `'insufficient'`: history IS loaded and the scope is real, but under
- *    WEAK_SPOT_KEYSTROKE_THRESHOLD — `deficit` is the exact remaining
- *    count for the "N more keystrokes" hint.
- *  - `'met'`: biasing is (or would be, once the toggle is on) active. */
+ *    is shown at all (claiming "no weak spots" here would be a guess,
+ *    not a fact — the data was simply never examined).
+ *  - `'no-weak-spots'`: history IS loaded and the scope is real, but no
+ *    token cleared any of the three weakness signals — normal sampling,
+ *    with a positive ("nothing to fix!") hint.
+ *  - `'active'`: at least one weak token was detected — biased sampling
+ *    is (or would be, once the toggle is on) in effect. */
 export interface WeakSpotGateInfo {
   /** False for every mode but words/time — the toggle itself doesn't
    *  exist elsewhere (see `isWeakSpotTrainingActive`). */
   applicable: boolean
-  status: 'unavailable' | 'insufficient' | 'met'
-  /** Only non-null when `status === 'insufficient'`. */
-  deficit: number | null
+  status: 'unavailable' | 'no-weak-spots' | 'active'
 }
 
 /** A mistake key produced by a synthetic decoration (injectNumbers/
@@ -76,12 +67,15 @@ export interface WeakSpotGateInfo {
  *  punctuation/capital-letter slot isn't a "weak spot" in the language's
  *  own characters, and biasing toward it would just mean sampling more
  *  words hoping for another decoration draw (which sampleWords doesn't
- *  even control — decoration is applied AFTER sampling). A digit-replaced
- *  word's mistake key is the ENTIRE numeric string (verbatim mode tallies
- *  per-position, but a decorated "number word" is typed as as a whole
- *  token replacing the sampled word, so every mismatched digit position
- *  contributes its own single-digit key) — the `/^[0-9]+$/` test catches
- *  both a single stray digit and a longer numeric key. */
+ *  even control — decoration is applied AFTER sampling). Applied to BOTH
+ *  the mistake-count map and the timing-interval map — a decorated
+ *  trailing-punctuation or digit-replaced token can accumulate timing
+ *  samples too, not just mistakes. A digit-replaced word's mistake key
+ *  is the ENTIRE numeric string (verbatim mode tallies per-position, but
+ *  a decorated "number word" is typed as a whole token replacing the
+ *  sampled word, so every mismatched digit position contributes its own
+ *  single-digit key) — the `/^[0-9]+$/` test catches both a single stray
+ *  digit and a longer numeric key. */
 function isSyntheticDecorationKey(key: string): boolean {
   return /^(?:[0-9]+|[.,?!]|[A-Z])$/.test(key)
 }
@@ -99,33 +93,59 @@ function resultInputMethod(r: TypingTestResult): WeakSpotInputMethod {
   return 'direct'
 }
 
-/** Same per-result keystroke fallback as KSPC's own display path
- *  (`resultKspc`), but applied per-row BEFORE summing across the scope —
- *  summing first and falling back on the total would let a handful of
- *  legacy rows without `kspcKeystrokes` silently zero out an otherwise
- *  countable scope. */
-function resultKeystrokeCount(r: TypingTestResult): number {
-  return r.kspcKeystrokes ?? (r.correctChars + r.incorrectChars)
-}
-
-function aggregateMistakeProfile(
+/** Composite aggregation: scope-filters `history`, sums mistake counts
+ *  (reusing `MistakeRankingSection.tsx`'s own summation loop) and merges
+ *  whatever timing data the scope's available run logs provide (a row
+ *  with no `runId`, or one `runLogs` doesn't have — recording consent
+ *  was off, the run predates the log feature, or retention evicted it —
+ *  simply contributes no timing data; mistakes-only weakness still
+ *  applies for it, per the plan's explicit "log absent -> mistakes-only"
+ *  rule). Every token appearing in EITHER source is evaluated once via
+ *  `evaluateTokenWeakness`; only weak tokens make it into the returned
+ *  `weights`. */
+function computeWeaknessProfile(
   history: readonly TypingTestResult[],
+  runLogs: ReadonlyMap<string, RunKeystrokeLog>,
   language: string,
   inputMethod: WeakSpotInputMethod,
 ): MistakeProfile {
   const scoped = history.filter((r) => (r.language ?? '') === language && resultInputMethod(r) === inputMethod)
-  let keystrokes = 0
-  for (const r of scoped) keystrokes += resultKeystrokeCount(r)
-  // Reuses MistakeRankingSection.tsx's own mistakes-summation loop (same
-  // shape, already exported for this exact purpose) rather than
-  // re-implementing it — this only adds the scope filter above and the
-  // synthetic-decoration-key filter below, on top of that shared summation.
-  const weights: Record<string, number> = {}
+
+  const missCounts: Record<string, number> = {}
   for (const [key, count] of Object.entries(aggregateMistakeTotals(scoped))) {
     if (isSyntheticDecorationKey(key)) continue
-    weights[key] = count
+    missCounts[key] = count
   }
-  return { weights, keystrokes }
+
+  const perLogIntervals: Map<string, number[]>[] = []
+  for (const r of scoped) {
+    if (!r.runId) continue
+    const log = runLogs.get(r.runId)
+    if (!log) continue
+    perLogIntervals.push(extractTokenIntervals(log, inputMethod))
+  }
+  const mergedIntervals = mergeTokenIntervals(perLogIntervals)
+  for (const key of [...mergedIntervals.keys()]) {
+    if (isSyntheticDecorationKey(key)) mergedIntervals.delete(key)
+  }
+
+  const allValidIntervals: number[] = []
+  for (const intervals of mergedIntervals.values()) allValidIntervals.push(...intervals)
+  const scopeMedianMs = median(allValidIntervals)
+
+  const weights: Record<string, number> = {}
+  let weakTokenCount = 0
+  const allTokens = new Set([...Object.keys(missCounts), ...mergedIntervals.keys()])
+  for (const token of allTokens) {
+    const missCount = missCounts[token] ?? 0
+    const timing = computeTokenTimingStats(mergedIntervals.get(token) ?? [], scopeMedianMs)
+    const verdict = evaluateTokenWeakness(missCount, timing, scopeMedianMs)
+    if (!verdict.isWeak) continue
+    weakTokenCount++
+    weights[token] = verdict.score
+  }
+
+  return { weights, weakTokenCount }
 }
 
 /** The effective input method a words/time run under `config`/`language`
@@ -141,38 +161,46 @@ export function effectiveWeakSpotInputMethod(config: TypingTestConfig, language:
   return 'direct'
 }
 
-/** Memoized profile lookup, keyed by the `history` array's own identity
+/** Memoized profile lookup, keyed by the `history`/`runLogs` references
  *  plus a `language|inputMethod` scope key — a fresh cache instance per
  *  consumer (see useInputModes.ts, which owns one via `useRef`) so repeated
- *  calls against the SAME (unsaved) history never re-scan it from scratch.
- *  Two independent call sites hit the same scope during ordinary use:
- *  `useTypingTest`'s live `weakSpotGate` (recomputed on config/language
- *  changes) and `resolveWeakSpotProfileArg` (at every run-start decision
- *  point) — without this cache each would rescan `history` on its own. Note
- *  this is NOT what makes a single run's sampling immutable across
- *  time-mode refills — `refillTimeModeWords` never calls back into this
- *  cache at all; it reuses the frozen `TypingTestState.weakSpotProfile`
- *  object threaded through since the run started (see run-state.ts's
- *  `freshState`/`advanceAfterWord`). Invalidated wholesale the moment
- *  `history`'s reference changes (a new result was saved), never
- *  partially. */
+ *  calls against the SAME (unchanged) history/logs never re-scan them
+ *  from scratch. Two independent call sites hit the same scope during
+ *  ordinary use: `useTypingTest`'s live `weakSpotGate` (recomputed on
+ *  config/language changes) and `resolveWeakSpotProfileArg` (at every
+ *  run-start decision point) — without this cache each would rescan on
+ *  its own. Note this is NOT what makes a single run's sampling
+ *  immutable across time-mode refills — `refillTimeModeWords` never
+ *  calls back into this cache at all; it reuses the frozen
+ *  `TypingTestState.weakSpotProfile` object threaded through since the
+ *  run started (see run-state.ts's `freshState`/`advanceAfterWord`).
+ *  Invalidated wholesale the moment EITHER `history` or `runLogs`
+ *  changes reference (a new result was saved, or another run log
+ *  finished fetching), never partially. */
 export interface MistakeProfileCache {
-  get(history: readonly TypingTestResult[], language: string, inputMethod: WeakSpotInputMethod): MistakeProfile
+  get(
+    history: readonly TypingTestResult[],
+    runLogs: ReadonlyMap<string, RunKeystrokeLog>,
+    language: string,
+    inputMethod: WeakSpotInputMethod,
+  ): MistakeProfile
 }
 
 export function createMistakeProfileCache(): MistakeProfileCache {
   let cachedHistory: readonly TypingTestResult[] | undefined
+  let cachedRunLogs: ReadonlyMap<string, RunKeystrokeLog> | undefined
   let cache = new Map<string, MistakeProfile>()
   return {
-    get(history, language, inputMethod) {
-      if (cachedHistory !== history) {
+    get(history, runLogs, language, inputMethod) {
+      if (cachedHistory !== history || cachedRunLogs !== runLogs) {
         cachedHistory = history
+        cachedRunLogs = runLogs
         cache = new Map()
       }
       const key = `${language}|${inputMethod}`
       const cached = cache.get(key)
       if (cached) return cached
-      const result = aggregateMistakeProfile(history, language, inputMethod)
+      const result = computeWeaknessProfile(history, runLogs, language, inputMethod)
       cache.set(key, result)
       return result
     },

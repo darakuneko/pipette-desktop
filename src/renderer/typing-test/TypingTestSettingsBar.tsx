@@ -17,7 +17,7 @@ import { isRomajiCapable, isRomajiInputEnabled } from './romaji-input'
 import { RomajiSettingsModal } from './RomajiSettingsModal'
 import type { WeakSpotGateInfo } from './weak-spot-profile'
 
-const DEFAULT_WEAK_SPOT_GATE: WeakSpotGateInfo = { applicable: false, status: 'unavailable', deficit: null }
+const DEFAULT_WEAK_SPOT_GATE: WeakSpotGateInfo = { applicable: false, status: 'unavailable' }
 
 const MODES: TypingTestMode[] = ['words', 'time', 'quote']
 const QUOTE_LENGTHS: QuoteLength[] = ['short', 'medium', 'long', 'all']
@@ -280,14 +280,17 @@ export function TypingTestSettingsBar({
               </button>
             </div>
           )}
-          {/* Weak Spot Training — biases word sampling toward the user's
-              own frequent mistakes (see weak-spot-profile.ts). Shown
-              regardless of gate status (unlike the hint below it) so the
-              user can turn it on ahead of clearing the keystroke
-              threshold. The hint shows whenever the scope is confirmed
-              below-threshold ('insufficient') — never for 'unavailable'
-              (history not loaded yet: showing a specific count there
-              would be a guess, not a fact — see WeakSpotGateInfo). */}
+          {/* Weak Spot Training — biases word sampling toward tokens
+              detected as weak (frequent misses, or — when a run log is
+              available — slower/stall-prone than the user's own baseline;
+              see weak-spot-profile.ts). Shown regardless of gate status
+              (unlike the hint below it) so the user can turn it on ahead
+              of any weakness being detected. The hint shows for
+              'no-weak-spots' (a positive "nothing detected" message) —
+              never for 'unavailable' (history not loaded yet: claiming
+              "no weak spots" there would be a guess, not a fact — see
+              WeakSpotGateInfo) and never for 'active' (nothing more
+              useful to say once biasing is already in effect). */}
           {hasPunctuationNumbers && (
             <div className="flex w-full flex-col items-start gap-1">
               <button
@@ -298,9 +301,9 @@ export function TypingTestSettingsBar({
               >
                 {t('editor.typingTest.weakSpotTraining')}
               </button>
-              {weakSpotGate.status === 'insufficient' && weakSpotGate.deficit !== null && (
+              {weakSpotGate.status === 'no-weak-spots' && (
                 <span className="text-xs text-content-muted" data-testid="weak-spot-hint">
-                  {t('editor.typingTest.weakSpotHint', { count: weakSpotGate.deficit })}
+                  {t('editor.typingTest.weakSpotHintNoWeak')}
                 </span>
               )}
             </div>

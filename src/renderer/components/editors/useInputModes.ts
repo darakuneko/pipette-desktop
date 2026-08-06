@@ -9,6 +9,7 @@ import type { LineSnapshot } from '../../typing-test/TypingTestView'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from '../../typing-test/types'
 import { createMistakeProfileCache } from '../../typing-test/weak-spot-profile'
 import type { MistakeProfile, WeakSpotInputMethod } from '../../typing-test/weak-spot-profile'
+import { useWeakSpotRunLogs } from './use-weak-spot-run-logs'
 import { useMatrixTester } from './use-matrix-tester'
 import { useTypingAnalyticsSink, typingTestAnalyticsLabel } from './use-typing-analytics-sink'
 import { useTypingTestResultSave } from './use-typing-test-result-save'
@@ -150,15 +151,26 @@ export function useInputModes({
   } = useTypingAnalyticsSink({ typingRecordKeyboard, onRecKeystroke, recordingConsentAccepted })
 
   // --- Typing test ---
+  // Weak Spot Training's timing signals (slowness/stall) source their raw
+  // per-token intervals from the same saved run logs the History Analysis
+  // tab's mistake ranking already fetches (see useAggregatedMissedDetails)
+  // — but fetched independently here, gated only on `typingRecordKeyboard`'s
+  // uid, so the feature works whether or not History is ever opened. When
+  // no uid is available (recording never configured this session) this
+  // simply returns an empty map — weak-spot-profile.ts's aggregation
+  // already treats that the same as "no log for this run," degrading to
+  // mistakes-only weakness, exactly per the plan's own explicit rule.
+  const weakSpotRunLogs = useWeakSpotRunLogs(typingRecordKeyboard?.uid, typingTestHistory ?? [])
+
   // Weak Spot Training's mistake-profile lookup: one memoized cache
   // instance per useInputModes mount (see weak-spot-profile.ts's
-  // MistakeProfileCache — keyed by the typingTestHistory array's own
-  // identity + a language|inputMethod scope key), shared by both
+  // MistakeProfileCache — keyed by the typingTestHistory/weakSpotRunLogs
+  // references + a language|inputMethod scope key), shared by both
   // useTypingTest's per-run sampling snapshot and its live weakSpotGate.
   // undefined (not the empty-array default) means "history hasn't loaded
   // yet" — distinguished from a loaded-but-empty history, which produces a
-  // real zero-keystroke profile — so the Option section's hint never
-  // guesses a deficit before there's real data to compute one from.
+  // real zero-weak-token profile — so the Option section's hint never
+  // claims "no weak spots" before there's real data to compute one from.
   // Lazy-initialized (not `useRef(createMistakeProfileCache())`, which
   // would allocate a fresh cache object + Map on every render just to
   // discard it — useInputModes re-renders on every keystroke via
@@ -168,8 +180,8 @@ export function useInputModes({
   mistakeProfileCacheRef.current ??= createMistakeProfileCache()
   const getMistakeProfile = useCallback((language: string, inputMethod: WeakSpotInputMethod): MistakeProfile | undefined => {
     if (typingTestHistory === undefined) return undefined
-    return mistakeProfileCacheRef.current!.get(typingTestHistory, language, inputMethod)
-  }, [typingTestHistory])
+    return mistakeProfileCacheRef.current!.get(typingTestHistory, weakSpotRunLogs, language, inputMethod)
+  }, [typingTestHistory, weakSpotRunLogs])
 
   const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage, {
     onPrepareAnalyticsEvent: prepareAnalyticsEvent,
