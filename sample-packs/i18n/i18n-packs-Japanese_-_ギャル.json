@@ -1,5 +1,5 @@
 {
-  "version": "0.1.83",
+  "version": "0.1.84",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -324,6 +324,8 @@
       },
       "punctuation": "句読点☆",
       "numbers": "数字っしょ",
+      "weakSpotTraining": "苦手強化☆",
+      "weakSpotHint": "あと{{count}}打っしょ☆",
       "japaneseInputToggle": "日本語入力☆",
       "romaji": {
         "imeHint": "ローマ字入力モードの時はOSのIMEオフにしといてね☆"
@@ -532,6 +534,7 @@
         "conditionNumbers": "+数字っしょ",
         "conditionRomaji": "+ローマ字入力☆",
         "conditionKana": "+かな☆",
+        "conditionWeakSpot": "+苦手強化☆",
         "conditionTatoeba": "Tatoeba",
         "mistakeRankingTitle": "苦手な文字☆",
         "mistakeRankingEmpty": "まだミスってないっしょ",

@@ -134,6 +134,8 @@ describe('TypingTestSettingsBar weak spot training toggle', () => {
   it('shows the toggle in words mode and time mode, hides it in quote mode', () => {
     renderBar()
     expect(screen.getByTestId('toggle-weak-spot-training')).toBeInTheDocument()
+    // Resolves through the real i18n instance (not a raw key fallback).
+    expect(screen.getByTestId('toggle-weak-spot-training').textContent).toBe('Weak Spot Training')
 
     const timeConfig: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false }
     renderBar({ config: timeConfig })
@@ -168,7 +170,9 @@ describe('TypingTestSettingsBar weak spot training toggle', () => {
 
   it('shows the "N more keystrokes" hint when the gate is insufficient', () => {
     renderBar({ weakSpotGate: { applicable: true, status: 'insufficient', deficit: 42 } })
-    expect(screen.getByTestId('weak-spot-hint')).toBeInTheDocument()
+    const hint = screen.getByTestId('weak-spot-hint')
+    expect(hint).toBeInTheDocument()
+    expect(hint.textContent).toBe('42 more keystrokes to unlock')
   })
 
   it('hides the hint when the gate is unavailable (history not loaded — never guesses a count)', () => {

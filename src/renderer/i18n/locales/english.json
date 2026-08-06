@@ -1,5 +1,5 @@
 {
-  "version": "0.1.83",
+  "version": "0.1.84",
   "name": "English",
   "common": {
     "save": "Save",
@@ -324,6 +324,8 @@
       },
       "punctuation": "punctuation",
       "numbers": "numbers",
+      "weakSpotTraining": "Weak Spot Training",
+      "weakSpotHint": "{{count}} more keystrokes to unlock",
       "japaneseInputToggle": "Japanese Input",
       "romaji": {
         "imeHint": "Turn off your OS IME to type in romaji input mode"
@@ -532,6 +534,7 @@
         "conditionNumbers": "+nums",
         "conditionRomaji": "+romaji",
         "conditionKana": "+kana",
+        "conditionWeakSpot": "+weak spot",
         "conditionTatoeba": "Tatoeba",
         "mistakeRankingTitle": "Most missed",
         "mistakeRankingEmpty": "No mistakes recorded yet",
