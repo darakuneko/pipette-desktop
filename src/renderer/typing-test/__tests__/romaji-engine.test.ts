@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { createRomajiMatcher, canonicalRomaji, KANA_TABLE, type RomajiAcceptResult } from '../romaji-engine'
+import { createRomajiMatcher, canonicalRomaji, canonicalRomajiSegments, KANA_TABLE, type RomajiAcceptResult } from '../romaji-engine'
 
 /** Types every character of `keys` into a fresh matcher for `word` and
  *  returns the matcher plus the per-keystroke result sequence. */
@@ -591,6 +591,45 @@ describe('canonicalRomaji', () => {
 
   it('handles a multi-kana word by concatenating each segment\'s canonical spelling', () => {
     expect(canonicalRomaji('あい')).toBe('ai')
+  })
+})
+
+// Weak-spot-training word matching (Plan-miss-focus-mode) tokenizes a
+// candidate word into the same per-segment units mistake-tally keys are
+// recorded under — canonicalRomajiSegments must walk the identical
+// segmentation as canonicalRomaji, just without concatenating.
+describe('canonicalRomajiSegments', () => {
+  it('returns one token per single-kana segment', () => {
+    expect(canonicalRomajiSegments('あい')).toEqual(['a', 'i'])
+  })
+
+  it('returns one token for a 拗音 digraph segment', () => {
+    expect(canonicalRomajiSegments('きゃ')).toEqual(['kya'])
+  })
+
+  it('splits a 促音 (っ) into a doubled-consonant segment fused with the following kana', () => {
+    // きって -> き, っ+て (doubled t fused into "tte")
+    expect(canonicalRomajiSegments('きって')).toEqual(['ki', 'tte'])
+  })
+
+  it('resolves ん as its own single-token segment', () => {
+    expect(canonicalRomajiSegments('かんじ')).toEqual(['ka', 'n', 'ji'])
+  })
+
+  it('handles katakana input the same as its hiragana equivalent', () => {
+    expect(canonicalRomajiSegments('シ')).toEqual(['shi'])
+    expect(canonicalRomajiSegments('ギャ')).toEqual(['gya'])
+  })
+
+  it('joining every segment reproduces canonicalRomaji\'s whole-word spelling exactly', () => {
+    const words = ['あい', 'きゃっぷ', 'がっこう', 'かんじ', 'しゃしん', 'きって', 'まんな', 'コンピューター']
+    for (const word of words) {
+      expect(canonicalRomajiSegments(word).join('')).toBe(canonicalRomaji(word))
+    }
+  })
+
+  it('returns an empty array for an empty string', () => {
+    expect(canonicalRomajiSegments('')).toEqual([])
   })
 })
 

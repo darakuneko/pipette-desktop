@@ -17,9 +17,12 @@ import {
   connectToDevice,
   dismissNotificationModal,
   FileBackup,
+  LastDeviceBackup,
   launchCaptureApp,
+  nullifyLastDeviceConfig,
   resetToEditorMode,
   restoreFile,
+  restoreLastDeviceConfig,
   restoreVirtualDeviceSettings,
   VIRTUAL_DEVICE_DISPLAY_NAME,
   VIRTUAL_DEVICE_UID,
@@ -39,6 +42,34 @@ async function capture(page: Page, name: string): Promise<void> {
   const path = resolve(SCREENSHOT_DIR, `${name}.png`)
   await page.screenshot({ path, fullPage: true })
   console.log(`  [ok] ${name}.png`)
+}
+
+/** Resolves userData via a throwaway "primer" launch, nulls out any stale
+ *  `lastDevice` on disk, then launches the REAL capture app fresh — see
+ *  `nullifyLastDeviceConfig`'s doc comment (mirrors doc-capture.ts's own
+ *  primer pattern) for why the order matters: `lastDevice` must be nulled
+ *  BEFORE the capture app's renderer boots, since `restoreLastSession`'s
+ *  auto-reconnect effect runs on mount and would otherwise race — or simply
+ *  outrun — a write attempted after the real app has already launched,
+ *  silently skipping the device-selection screen every capture below
+ *  depends on. Returns the real app, its userData path, and the
+ *  `lastDevice` backup to restore (via `restoreLastDeviceConfig`) once the
+ *  real app has closed. */
+async function launchCaptureAppWithFreshLastDevice(): Promise<{
+  app: Awaited<ReturnType<typeof launchCaptureApp>>
+  userDataPath: string
+  lastDeviceBackup: LastDeviceBackup
+}> {
+  const primerApp = await launchCaptureApp()
+  let userDataPath: string
+  try {
+    userDataPath = await primerApp.evaluate(async ({ app: a }) => a.getPath('userData'))
+  } finally {
+    await primerApp.close()
+  }
+  const lastDeviceBackup = nullifyLastDeviceConfig(userDataPath)
+  const app = await launchCaptureApp()
+  return { app, userDataPath, lastDeviceBackup }
 }
 
 // [daysAgo, wpm, accuracy, correctChars, incorrectChars] for each seeded run — all
@@ -273,10 +304,10 @@ async function captureRomajiInputScreenshot(page: Page): Promise<void> {
 
   // The Japanese Input button opens the Japanese Input Settings modal
   // rather than toggling judging directly (see RomajiSettingsModal.tsx) —
-  // open it, explicitly select the Romaji method (of the 3-way Romaji /
-  // Kana / Direct selector — Romaji is already the default for a capable
-  // source, but click it anyway for a deterministic starting state), then
-  // close it before typing.
+  // open it, capture the modal itself, explicitly pick the Romaji method
+  // on the unified 3-way Direct/Romaji/Kana selector (Romaji is already
+  // the default for a freshly-loaded kana-capable pack, but selecting it
+  // keeps the capture deterministic), then close the modal before typing.
   await page.locator('[data-testid="romaji-settings-toggle"]').click()
   await page.locator('[data-testid="romaji-settings-modal"]').waitFor({ state: 'visible', timeout: 5_000 })
   await page.locator('[data-testid="japanese-input-method-romaji"]').click()
@@ -597,17 +628,180 @@ async function captureCompletionTimelineScreenshot(page: Page, userDataPath: str
   }
 }
 
+/** Seeds a fresh `typingTestResults` array (overwriting whatever the
+ *  virtual device profile already has) for the Weak Spot Training
+ *  captures below. Unlike `seedAccuracyTrendHistory`, these always run on
+ *  their OWN freshly-launched app instance rather than reusing `main()`'s
+ *  shared one — History is only read once at device-connect time, so
+ *  swapping between a mistake-free ("no weak spots") seed and a
+ *  mistake-heavy ("active") seed mid-session would need a live re-fetch
+ *  the app doesn't do on a raw file rewrite. */
+function seedWeakSpotHistory(settingsBackup: VirtualDeviceSettingsBackup, results: Record<string, unknown>[]): void {
+  mkdirSync(dirname(settingsBackup.path), { recursive: true })
+  const existing = settingsBackup.content != null
+    ? (JSON.parse(settingsBackup.content) as Record<string, unknown>)
+    : {}
+  // Same required-baseline-fields caveat as seedAccuracyTrendHistory above.
+  existing._rev ??= 1
+  existing.keyboardLayout ??= 'qwerty'
+  existing.autoAdvance ??= true
+  existing.layerNames ??= []
+  existing.typingTestResults = results
+  writeFileSync(settingsBackup.path, JSON.stringify(existing), 'utf-8')
+}
+
+/** Connects to the virtual device and enters Typing Test / words mode —
+ *  the same connect/unlock/enter sequence `main()` runs on its own shared
+ *  app instance, factored out here since each Weak Spot Training capture
+ *  below needs it on its own fresh instance (see `seedWeakSpotHistory`'s
+ *  doc comment for why). */
+async function enterTypingTestOnFreshApp(page: Page, app: Awaited<ReturnType<typeof launchCaptureApp>>): Promise<void> {
+  await dismissNotificationModal(page, { waitForAppearMs: 3000 })
+  console.log(`Looking for ${DEVICE_NAME}...`)
+  const connected = await connectToDevice(page, DEVICE_NAME)
+  if (!connected) throw new Error(`Device "${DEVICE_NAME}" not found`)
+  await dismissNotificationModal(page)
+  await waitForUnlockDialog(app, page)
+  await dismissNotificationModal(page)
+  await resetToEditorMode(page)
+
+  const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
+  await typingTestBtn.waitFor({ state: 'visible', timeout: 10_000 })
+  await clickThroughUnlock(app, page, typingTestBtn)
+  await page.waitForTimeout(1000)
+  await dismissNotificationModal(page)
+
+  const typingTestView = page.locator('[data-testid="typing-test-view"]')
+  await typingTestView.waitFor({ state: 'visible', timeout: 10_000 })
+  await waitForTypingTestCountdown(page)
+  await page.locator('[data-testid="mode-words"]').click()
+  await page.waitForTimeout(500)
+}
+
+/** Weak Spot Training — "toggle ON, biased words visible" capture
+ *  (`typing-test-weak-spot-toggle.png`, referenced from the Weak Spot
+ *  Training subsection under MonkeyType in both OPERATION-GUIDE files).
+ *  Seeds 3 same-condition `words` runs whose combined mistakes push the
+ *  letter 'k' well past MIN_MISS_COUNT (see weak-spot-scoring.ts), so the
+ *  miss-only signal alone is enough to put the gate into 'active' without
+ *  needing a saved keystroke log. Switches to word count 120 first so the
+ *  biased sampling reads clearly across more displayed words. */
+async function captureWeakSpotToggleScreenshot(): Promise<void> {
+  console.log('\n--- Weak Spot Training: toggle + biased sampling ---')
+  const { app, userDataPath, lastDeviceBackup } = await launchCaptureAppWithFreshLastDevice()
+  const settingsBackup = backupVirtualDeviceSettings(userDataPath)
+  seedWeakSpotHistory(settingsBackup, [
+    {
+      date: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+      wpm: 50, accuracy: 88, wordCount: 20, correctChars: 90, incorrectChars: 10,
+      durationSeconds: 20, mode: 'words', mode2: 20, language: 'english',
+      punctuation: false, numbers: false, mistakes: { k: 25 },
+    },
+    {
+      date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+      wpm: 52, accuracy: 87, wordCount: 20, correctChars: 90, incorrectChars: 10,
+      durationSeconds: 20, mode: 'words', mode2: 20, language: 'english',
+      punctuation: false, numbers: false, mistakes: { k: 22 },
+    },
+    {
+      date: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+      wpm: 54, accuracy: 89, wordCount: 20, correctChars: 90, incorrectChars: 10,
+      durationSeconds: 20, mode: 'words', mode2: 20, language: 'english',
+      punctuation: false, numbers: false, mistakes: { k: 18 },
+    },
+  ])
+  const page = await app.firstWindow()
+  await page.waitForLoadState('domcontentloaded')
+  await page.setViewportSize({ width: 1440, height: 1024 })
+  await page.waitForTimeout(2000)
+  try {
+    await enterTypingTestOnFreshApp(page, app)
+    await expandSettingsPanelIfCollapsed(page)
+
+    const wc120 = page.locator('[data-testid="word-count-120"]')
+    if (await wc120.isVisible().catch(() => false)) {
+      await wc120.click()
+      await page.waitForTimeout(500)
+    }
+
+    const toggle = page.locator('[data-testid="toggle-weak-spot-training"]')
+    await toggle.waitFor({ state: 'visible', timeout: 5000 })
+    await toggle.click()
+    await page.waitForTimeout(600)
+    await capture(page, 'typing-test-weak-spot-toggle')
+  } finally {
+    await app.close().catch((err: unknown) => console.error('  [cleanup] app.close failed:', err))
+    try {
+      restoreVirtualDeviceSettings(settingsBackup)
+    } catch (err) {
+      console.error('  [cleanup] restore virtual device settings failed:', err)
+    }
+    try {
+      restoreLastDeviceConfig(lastDeviceBackup)
+    } catch (err) {
+      console.error('  [cleanup] restore lastDevice config failed:', err)
+    }
+  }
+}
+
+/** Weak Spot Training — "no weak spots detected" hint capture
+ *  (`typing-test-weak-spot-hint.png`). Seeds a single mistake-free `words`
+ *  run so History is loaded (ruling out the silent 'unavailable' state)
+ *  but no token crosses any weakness threshold (gate 'no-weak-spots'),
+ *  then turns the toggle on to surface the positive hint text below it. */
+async function captureWeakSpotHintScreenshot(): Promise<void> {
+  console.log('\n--- Weak Spot Training: no-weak-spots hint ---')
+  const { app, userDataPath, lastDeviceBackup } = await launchCaptureAppWithFreshLastDevice()
+  const settingsBackup = backupVirtualDeviceSettings(userDataPath)
+  seedWeakSpotHistory(settingsBackup, [{
+    date: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    wpm: 68, accuracy: 100, wordCount: 20, correctChars: 100, incorrectChars: 0,
+    durationSeconds: 20, mode: 'words', mode2: 20, language: 'english',
+    punctuation: false, numbers: false,
+  }])
+  const page = await app.firstWindow()
+  await page.waitForLoadState('domcontentloaded')
+  await page.setViewportSize({ width: 1440, height: 1024 })
+  await page.waitForTimeout(2000)
+  try {
+    await enterTypingTestOnFreshApp(page, app)
+    await expandSettingsPanelIfCollapsed(page)
+
+    const toggle = page.locator('[data-testid="toggle-weak-spot-training"]')
+    await toggle.waitFor({ state: 'visible', timeout: 5000 })
+    await toggle.click()
+    await page.waitForTimeout(300)
+    const hint = page.locator('[data-testid="weak-spot-hint"]')
+    if (!(await hint.isVisible().catch(() => false))) {
+      throw new Error("weak-spot-hint did not appear — seedWeakSpotHistory guarantees a mistake-free scoped run, so the gate should read 'no-weak-spots'")
+    }
+    await page.waitForTimeout(300)
+    await capture(page, 'typing-test-weak-spot-hint')
+  } finally {
+    await app.close().catch((err: unknown) => console.error('  [cleanup] app.close failed:', err))
+    try {
+      restoreVirtualDeviceSettings(settingsBackup)
+    } catch (err) {
+      console.error('  [cleanup] restore virtual device settings failed:', err)
+    }
+    try {
+      restoreLastDeviceConfig(lastDeviceBackup)
+    } catch (err) {
+      console.error('  [cleanup] restore lastDevice config failed:', err)
+    }
+  }
+}
+
 async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
   console.log('Launching Electron app (virtual device)...')
-  const app = await launchCaptureApp()
+  const { app, userDataPath, lastDeviceBackup } = await launchCaptureAppWithFreshLastDevice()
 
   // Snapshot the virtual device's PipetteSettings before this script enters
   // Typing Test / Typing View — those modes persist `viewMode` into the same
   // userData tree e2e/virtual-device.test.ts reads on connect, and this
   // helper's viewMode is not the state a later test run should inherit.
-  const userDataPath = await app.evaluate(async ({ app: a }) => a.getPath('userData'))
   const settingsBackup = backupVirtualDeviceSettings(userDataPath)
   seedAccuracyTrendHistory(settingsBackup)
   const kanaPackBackup = seedKanaLanguagePack(userDataPath)
@@ -860,7 +1054,19 @@ async function main(): Promise<void> {
     } catch (err) {
       console.error('  [cleanup] restore recording consent flag failed:', err)
     }
+    try {
+      restoreLastDeviceConfig(lastDeviceBackup)
+    } catch (err) {
+      console.error('  [cleanup] restore lastDevice config failed:', err)
+    }
   }
+
+  // Weak Spot Training — each capture launches and cleans up its own app
+  // instance (see captureWeakSpotToggleScreenshot's doc comment for why),
+  // so these run after the shared instance above has fully closed.
+  console.log('\n--- Weak Spot Training Screenshots ---')
+  await captureWeakSpotToggleScreenshot()
+  await captureWeakSpotHintScreenshot()
 }
 
 main().catch((err: unknown) => {

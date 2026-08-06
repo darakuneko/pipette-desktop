@@ -10,6 +10,11 @@ import type { TypingTestMemory } from '../../../../shared/types/pipette-settings
 const mockTypingAnalyticsEvent = vi.fn<(event: unknown) => Promise<void>>()
 const mockTypingAnalyticsFlush = vi.fn<(uid: string) => Promise<void>>()
 const mockTypingRunLogSave = vi.fn<(uid: string, log: unknown) => Promise<{ success: boolean }>>()
+// Weak Spot Training's useWeakSpotRunLogs (useInputModes.ts) fetches these
+// unconditionally whenever a keyboard uid is present — not under test here,
+// so both resolve empty (no saved logs, no crash).
+const mockTypingRunLogList = vi.fn<(uid: string) => Promise<{ success: boolean; entries: [] }>>()
+const mockTypingRunLogGet = vi.fn<(uid: string, runId: string) => Promise<{ success: boolean }>>()
 
 function installVialApi(): void {
   Object.defineProperty(window, 'vialAPI', {
@@ -17,6 +22,8 @@ function installVialApi(): void {
       typingAnalyticsEvent: mockTypingAnalyticsEvent,
       typingAnalyticsFlush: mockTypingAnalyticsFlush,
       typingRunLogSave: mockTypingRunLogSave,
+      typingRunLogList: mockTypingRunLogList,
+      typingRunLogGet: mockTypingRunLogGet,
     },
     writable: true,
     configurable: true,
@@ -27,6 +34,8 @@ beforeEach(() => {
   mockTypingAnalyticsEvent.mockReset().mockResolvedValue(undefined)
   mockTypingAnalyticsFlush.mockReset().mockResolvedValue(undefined)
   mockTypingRunLogSave.mockReset().mockResolvedValue({ success: true })
+  mockTypingRunLogList.mockReset().mockResolvedValue({ success: true, entries: [] })
+  mockTypingRunLogGet.mockReset().mockResolvedValue({ success: false })
   installVialApi()
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))

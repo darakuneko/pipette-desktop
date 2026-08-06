@@ -45,6 +45,16 @@ export interface TypingTestResult {
    *  share one `configKey`/`resultConditionKey` and get averaged/PB'd
    *  together despite being different tests. */
   kanaInput?: boolean
+  /** Weak Spot Training was on for this run (words/time modes only — see
+   *  `isWeakSpotTrainingActive` in typing-test/types.ts). Stored only when
+   *  `true` (asymmetric, same convention as `romajiInput`/`kanaInput`
+   *  above being `undefined` rather than `false`) so PB grouping
+   *  (`configKey`) and condition grouping (`resultConditionKey`) separate
+   *  a biased-sampling run from a normal one of the same condition — a
+   *  biased run's word pool is skewed toward the user's own mistakes, so
+   *  its WPM/accuracy aren't a fair PB/comparison candidate against a
+   *  normal run. */
+  weakSpotTraining?: boolean
   consistency?: number
   isPb?: boolean
   wpmHistory?: number[]

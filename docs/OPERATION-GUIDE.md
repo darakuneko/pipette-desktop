@@ -1261,6 +1261,31 @@ In the words and time patterns, the Settings panel's **Option** row adds toggles
 
 The Option row is hidden in the quote pattern (which uses the original text as-is) and in the Tatoeba / Aozora Bunko / File Import modes.
 
+**Weak Spot Training**
+
+![Typing Test — Weak Spot Training toggle](screenshots/typing-test-weak-spot-toggle.png)
+
+Also words/time only, a full-width **Weak Spot Training** toggle sits below Punctuation/Numbers in the Option row. Turning it on biases word sampling toward tokens your own History shows you're weak at, scoped to the current language and effective input method (Direct / Romaji / Kana) — it doesn't change what words exist, only how often each one is picked.
+
+A token counts as weak by any of three signals, each measured against your own typing rather than a fixed benchmark:
+
+- **Misses** — it's been recorded as a mistake a couple of times or more in History
+- **Noticeably slower** — with a saved keystroke log available, your typical pace on it runs meaningfully behind your own overall median
+- **Hesitation** — with a saved keystroke log available, it produces a long pause more often than the rest of your typing
+
+The two timing-based signals need a saved per-run keystroke log, which only exists for runs recorded after Recording Consent was turned on (see **Typing analytics recording** below — the same app-wide consent flag also gates the raw log for an ordinary Typing Test run, not only for REC). Without any saved logs, the toggle still works from the miss signal alone.
+
+The toggle itself always appears wherever the Option row does, regardless of whether a weakness has actually been found yet, so it can be turned on ahead of time. The text below it reflects what's currently known:
+
+- **No hint** — History hasn't finished loading yet, so nothing is claimed either way
+- **"No weak spots detected — nice!"** — History is loaded and no token crossed any of the three thresholds
+
+![Typing Test — Weak Spot Training hint](screenshots/typing-test-weak-spot-hint.png)
+
+- **No hint, biasing active** — at least one weak token was found; the toggle takes on its active (accent) styling and sampling is biased accordingly
+
+Because it changes what you actually type, a run made with Weak Spot Training active is tracked as its own test condition, separate from your ordinary runs of the same mode/settings — its Personal Best, Compare baseline, History filter, and Accuracy Trend entry are all their own. The condition label carries a `+weak spot` suffix (e.g. "50 words (english) +weak spot"), the same convention as the `+punct` / `+nums` / `+romaji` / `+kana` suffixes described elsewhere on this page.
+
 **Japanese Input**
 
 ![Typing Test — Romaji input](screenshots/typing-test-romaji.png)
@@ -1276,6 +1301,8 @@ The modal opens on a 3-way **Input method** selector, in this order: **Romaji** 
 - **Romaji** — sequential romaji-keystroke matching: each keystroke is checked against the current kana as you type, and any of its currently-accepted spellings is accepted interchangeably (for example でぃ accepts `dhi`, `deli`, or `dexi`, whichever you type). The current word's kana are colored per confirmed segment, and a romaji guide row below the reading window mirrors the reading window's own line layout, re-anchoring on every keystroke.
 - **Kana** — types the physical JIS かな-layout key positions directly (`KeyboardEvent.code` + Shift state), matched against a fixed かな layout table rather than any spelling. A simpler one-current-line kana stroke guide replaces the romaji guide row; a character whose physical key needs Shift held for that stroke (the small-kana/dakuten row) is colored to flag it. Shift tolerance is per-key, not timing-based: a key with no shifted かな of its own ignores the actual Shift state entirely, so holding Shift across an unrelated stroke doesn't cost you anything — only keys that genuinely carry a shifted かな require Shift to match.
 - **Direct** — no judging engine at all: literal/verbatim matching against the displayed kana, the same as a non-Japanese text. Requires an OS IME or a kana-producing physical keyboard layout to actually type kana. None of the settings below apply to Direct.
+
+![Typing Test — Kana input](screenshots/typing-test-kana-input.png)
 
 Both Romaji and Kana show:
 

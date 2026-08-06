@@ -874,16 +874,33 @@ function representativeAt(
   return alive.length > 0 ? pickGuideWinner(alive, guideStyles) : null
 }
 
+/** The single segmentation walk every canonical-spelling reader (guide
+ *  string, mistake-tally key, weak-spot candidate tokenization) shares:
+ *  each recursive step picks the winning pattern at `index` via
+ *  `representativeAt` and returns it alongside every following segment's
+ *  own token, so the two accumulation shapes below (`canonicalGuideFrom`'s
+ *  joined string, `canonicalRomajiSegments`' array) can never drift apart
+ *  — there is exactly one place that decides where a segment boundary
+ *  falls. */
+function canonicalSegmentsFrom(
+  kana: readonly string[],
+  index: number,
+  disabledStyles: ReadonlySet<RomajiStyle> | undefined,
+  guideStyles: ReadonlySet<RomajiStyle> | undefined,
+): string[] {
+  if (index >= kana.length) return []
+  const winner = representativeAt(kana, index, '', disabledStyles, guideStyles)
+  if (!winner) return []
+  return [winner.pattern, ...canonicalSegmentsFrom(kana, index + winner.length, disabledStyles, guideStyles)]
+}
+
 function canonicalGuideFrom(
   kana: readonly string[],
   index: number,
   disabledStyles: ReadonlySet<RomajiStyle> | undefined,
   guideStyles: ReadonlySet<RomajiStyle> | undefined,
 ): string {
-  if (index >= kana.length) return ''
-  const winner = representativeAt(kana, index, '', disabledStyles, guideStyles)
-  if (!winner) return ''
-  return winner.pattern + canonicalGuideFrom(kana, index + winner.length, disabledStyles, guideStyles)
+  return canonicalSegmentsFrom(kana, index, disabledStyles, guideStyles).join('')
 }
 
 /** Canonical romaji spelling of a kana substring (e.g. a single completed
@@ -896,6 +913,19 @@ function canonicalGuideFrom(
 export function canonicalRomaji(kana: string): string {
   const kanaArr = [...kana].map(toHiragana)
   return canonicalGuideFrom(kanaArr, 0, undefined, undefined)
+}
+
+/** Same segmentation walk as {@link canonicalRomaji} — literally the same
+ *  `canonicalSegmentsFrom` call, just left as an array instead of joined
+ *  into one string — e.g. "きゃっぷ" -> `["kya", "p", "pu"]`. Joining the
+ *  result reproduces `canonicalRomaji(kana)` exactly, by construction (see
+ *  `canonicalGuideFrom`'s own one-line implementation above). Used to
+ *  tokenize a CANDIDATE word into the same segment units `mistakes` keys
+ *  are recorded under, for exact-token weak-spot matching (never flat
+ *  substring matching — see weak-spot-weighting.ts). */
+export function canonicalRomajiSegments(kana: string): string[] {
+  const kanaArr = [...kana].map(toHiragana)
+  return canonicalSegmentsFrom(kanaArr, 0, undefined, undefined)
 }
 
 /** The winning pattern that exactly matches `buffer` as a full spelling at

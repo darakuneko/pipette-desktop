@@ -52,6 +52,22 @@ describe('formatConditionLabel', () => {
       .toBe('30 editor.typingTest.mode.words (japanese_hiragana) editor.typingTest.history.conditionKana')
   })
 
+  it('appends the weak-spot suffix for a weakSpotTraining run', () => {
+    expect(formatConditionLabel(makeResult({ mode2: 30, weakSpotTraining: true }), identityT))
+      .toBe('30 editor.typingTest.mode.words (english) editor.typingTest.history.conditionWeakSpot')
+  })
+
+  it('combines the weak-spot suffix with punctuation/numbers/romaji, in order', () => {
+    expect(formatConditionLabel(
+      makeResult({ mode2: 30, punctuation: true, numbers: true, romajiInput: true, weakSpotTraining: true }),
+      identityT,
+    )).toBe(
+      '30 editor.typingTest.mode.words (english) editor.typingTest.history.conditionPunctuation '
+      + 'editor.typingTest.history.conditionNumbers editor.typingTest.history.conditionRomaji '
+      + 'editor.typingTest.history.conditionWeakSpot',
+    )
+  })
+
   it('formats quote with the length label and no toggle suffix', () => {
     expect(formatConditionLabel(makeResult({ mode: 'quote', mode2: 'medium', punctuation: undefined, numbers: undefined }), identityT))
       .toBe('editor.typingTest.quoteLength.medium editor.typingTest.mode.quote (english)')

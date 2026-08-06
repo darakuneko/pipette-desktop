@@ -1,5 +1,5 @@
 {
-  "version": "0.1.83",
+  "version": "0.1.84",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -324,6 +324,8 @@
       },
       "punctuation": "句読点",
       "numbers": "数字",
+      "weakSpotTraining": "苦手強化どす",
+      "weakSpotHintNoWeak": "苦手なとこ、おへんどすえ",
       "japaneseInputToggle": "日本語入力どす",
       "romaji": {
         "imeHint": "ローマ字入力モードの時は、OSのIMEを切っておくれやす"
@@ -532,6 +534,7 @@
         "conditionNumbers": "+数字",
         "conditionRomaji": "+ローマ字入力",
         "conditionKana": "+かな",
+        "conditionWeakSpot": "+苦手強化",
         "conditionTatoeba": "Tatoeba",
         "mistakeRankingTitle": "苦手な文字どすえ",
         "mistakeRankingEmpty": "ミスの記録はまだおへんなぁ",
