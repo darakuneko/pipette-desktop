@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, afterEach, type Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useDeviceLifecycle } from '../useDeviceLifecycle'
 import type { DeviceInfo, KeyboardDefinition, VilFile } from '../../../shared/types/protocol'
@@ -37,6 +37,7 @@ function makeOptions(overrides: Partial<{
   // syncNow('download', 'packs') call it never asserts on. The dedicated
   // "packs auto-fire" describe block below overrides this to false.
   packsPulledOnce: boolean
+  typingRecordEnabled: boolean
 }> = {}, mocks?: Partial<Mocks> & { markPacksPulledOnce?: Mock<() => void> }) {
   const connectDevice = mocks?.connectDevice ?? vi.fn().mockResolvedValue(true)
   const disconnectDevice = mocks?.disconnectDevice ?? vi.fn().mockResolvedValue(undefined)
@@ -82,6 +83,7 @@ function makeOptions(overrides: Partial<{
       matrixMode: false,
       typingTestMode: false,
       typingTestViewOnly: false,
+      typingRecordEnabled: overrides.typingRecordEnabled ?? false,
       saveLastDevice: vi.fn(),
       clearLastDevice: vi.fn(),
     },
@@ -194,6 +196,38 @@ describe('useDeviceLifecycle.handleConnect — issue #190 regression', () => {
     })
 
     expect(options.clearLastDevice).toHaveBeenCalled()
+  })
+})
+
+describe('useDeviceLifecycle — REC-armed auto-lock suspend', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('suspends the auto-lock timer while REC is armed', () => {
+    const { options } = makeOptions({ typingRecordEnabled: true })
+    options.unlocked = true
+    options.autoLockTime = 1
+    renderHook(() => useDeviceLifecycle(options))
+
+    vi.advanceTimersByTime(60_000 + 1000)
+
+    expect(window.vialAPI.lock).not.toHaveBeenCalled()
+  })
+
+  it('auto-locks as usual when REC is not armed', () => {
+    const { options } = makeOptions({ typingRecordEnabled: false })
+    options.unlocked = true
+    options.autoLockTime = 1
+    renderHook(() => useDeviceLifecycle(options))
+
+    vi.advanceTimersByTime(60_000 + 1000)
+
+    expect(window.vialAPI.lock).toHaveBeenCalledOnce()
   })
 })
 

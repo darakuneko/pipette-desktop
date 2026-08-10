@@ -543,6 +543,66 @@ describe('useViewModeRouting', () => {
       expect(mocks.setShowUnlockDialog).not.toHaveBeenCalled()
       expect(vialAPIStub.setWindowCompactMode).not.toHaveBeenCalled()
     })
+
+    it('retries the typingView restore once unlockStatusKnown flips true, proving the one-shot guard was not burned by the unknown-status skip', () => {
+      const { mocks, update } = renderRouting({
+        viewMode: 'typingView', unlocked: false, unlockStatusKnown: false, uid: 'UID1', appliedUid: 'UID1',
+      })
+
+      // Unknown status: skip without consuming restoreRequestedUidRef.
+      expect(mocks.setShowUnlockDialog).not.toHaveBeenCalled()
+
+      // Unlock status resolves to locked-but-known — the deferred effect
+      // rerun (unlockStatusKnown is a dep) must now perform the restore
+      // instead of finding the guard already burned.
+      act(() => { update({ unlockStatusKnown: true }) })
+
+      expect(mocks.setShowUnlockDialog).toHaveBeenCalledWith(true)
+      expect(mocks.setShowUnlockDialog).toHaveBeenCalledTimes(1)
+
+      // One-shot semantics still hold once the retry actually consumes the
+      // guard: a further unrelated rerender must not fire it again.
+      act(() => { update({ typingTestMode: true }) })
+      expect(mocks.setShowUnlockDialog).toHaveBeenCalledTimes(1)
+    })
+
+    it('behaves as today for typingTest restore: unlocked calls toggleTypingTest immediately', () => {
+      const { mocks } = renderRouting({
+        viewMode: 'typingTest', unlocked: true, unlockStatusKnown: true, uid: 'UID1', appliedUid: 'UID1',
+      })
+
+      expect(mocks.toggleTypingTest).toHaveBeenCalledTimes(1)
+    })
+
+    it('behaves as today for typingTest restore: locked-but-known calls toggleTypingTest immediately (unlock is requested by useInputModes downstream)', () => {
+      const { mocks } = renderRouting({
+        viewMode: 'typingTest', unlocked: false, unlockStatusKnown: true, uid: 'UID1', appliedUid: 'UID1',
+      })
+
+      expect(mocks.toggleTypingTest).toHaveBeenCalledTimes(1)
+    })
+
+    it('skips the typingTest restore entirely when the unlock status is unknown, without burning the one-shot guard', () => {
+      const { mocks, update } = renderRouting({
+        viewMode: 'typingTest', unlocked: false, unlockStatusKnown: false, uid: 'UID1', appliedUid: 'UID1',
+      })
+
+      expect(mocks.toggleTypingTest).not.toHaveBeenCalled()
+
+      // A further rerender while still unknown must keep skipping.
+      act(() => { update({ typingTestMode: false }) })
+      expect(mocks.toggleTypingTest).not.toHaveBeenCalled()
+
+      // unlockStatusKnown flips true — the effect reruns (it's a dep) and,
+      // since restoreRequestedUidRef was never set for this uid while
+      // unknown, the restore fires now instead of being skipped forever.
+      act(() => { update({ unlockStatusKnown: true }) })
+      expect(mocks.toggleTypingTest).toHaveBeenCalledTimes(1)
+
+      // One-shot: a further unrelated rerender must not restore again.
+      act(() => { update({ typingTestMode: true }) })
+      expect(mocks.toggleTypingTest).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('window zoom effect', () => {

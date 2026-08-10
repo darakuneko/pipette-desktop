@@ -48,6 +48,10 @@ interface Options {
   matrixMode: boolean
   typingTestMode: boolean
   typingTestViewOnly: boolean
+  // REC armed means the user intends to record keystrokes on the plain
+  // editor. If auto-lock fired mid-recording, the unlock gate would
+  // immediately re-prompt for unlock, producing a lock/unlock loop.
+  typingRecordEnabled: boolean
   // Last-device persistence (restoreLastSession). Called on a genuine
   // real-device connect success / user-initiated disconnect only — the
   // dummy and pipette-file paths never call handleConnect/handleDisconnect
@@ -86,6 +90,7 @@ export function useDeviceLifecycle(options: Options) {
     matrixMode,
     typingTestMode,
     typingTestViewOnly,
+    typingRecordEnabled,
     saveLastDevice,
     clearLastDevice,
   } = options
@@ -197,7 +202,7 @@ export function useDeviceLifecycle(options: Options) {
     unlocked,
     autoLockMinutes: autoLockTime,
     activityCounter: activityCount,
-    suspended: matrixMode || typingTestMode || typingTestViewOnly,
+    suspended: matrixMode || typingTestMode || typingTestViewOnly || typingRecordEnabled,
     onLock: handleLock,
   })
 

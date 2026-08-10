@@ -41,6 +41,11 @@ interface Props {
   onToggleMatrix?: () => void
   unlocked: boolean
   onLock?: () => void
+  // REC (Typing Record) armed — disables the Lock button while true. Locking
+  // while REC is armed would immediately re-trigger the unlock gate and
+  // reopen the inescapable UnlockDialog, so this button follows the same
+  // "REC armed ⇒ no locking" invariant as auto-lock suspend.
+  typingRecordEnabled?: boolean
   isDummy?: boolean
   keyEditorZoom?: number
   onKeyEditorZoomChange?: (zoom: number) => void
@@ -71,6 +76,7 @@ export function KeycodesOverlayPanel({
   onToggleMatrix,
   unlocked,
   onLock,
+  typingRecordEnabled,
   isDummy,
   keyEditorZoom,
   onKeyEditorZoomChange,
@@ -332,7 +338,7 @@ export function KeycodesOverlayPanel({
                 </div>
                 <button
                   type="button"
-                  disabled={!unlocked}
+                  disabled={!unlocked || typingRecordEnabled}
                   className={`${IMPORT_BTN} disabled:opacity-50`}
                   onClick={onLock}
                   data-testid="overlay-lock-button"

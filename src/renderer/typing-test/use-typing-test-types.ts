@@ -138,7 +138,10 @@ export interface UseTypingTestReturn {
   baseLayer: number
   effectiveLayer: number
   windowFocused: boolean
-  processMatrixFrame: (pressed: ReadonlySet<string>, keymap: Map<string, number>) => void
+  /** `options.ambient` skips the layer indicator's state write for this
+   *  frame — see {@link TypingTestMatrixResult.processMatrixFrame}'s own
+   *  doc comment (use-typing-test-matrix.ts) for what that means and why. */
+  processMatrixFrame: (pressed: ReadonlySet<string>, keymap: Map<string, number>, options?: { ambient?: boolean }) => void
   /** Returns a promise that resolves once every drained item's emit has
    * settled — see {@link MatrixAnalyticsQueue.drainAll}. A caller that
    * finalizes a session (record-off, test-finish) before requesting a

@@ -11,6 +11,7 @@ import { createMistakeProfileCache } from '../../typing-test/weak-spot-profile'
 import type { MistakeProfile, WeakSpotInputMethod } from '../../typing-test/weak-spot-profile'
 import type { WeakSpotDetectionSettings } from '../../typing-test/weak-spot-settings'
 import { useWeakSpotRunLogs } from './use-weak-spot-run-logs'
+import { useAmbientMatrixFeed } from './use-ambient-matrix-feed'
 import { useMatrixTester } from './use-matrix-tester'
 import { useTypingAnalyticsSink, typingTestAnalyticsLabel } from './use-typing-analytics-sink'
 import { useTypingTestResultSave } from './use-typing-test-result-save'
@@ -125,6 +126,26 @@ export function useInputModes({
   recordingConsentAccepted = false,
   lineSnapshotRef,
 }: UseInputModesOptions): UseInputModesReturn {
+  // Effective recording condition: the REC toggle alone (REC lives in the
+  // keymap-editor footer, not the Typing View popover, so it's no longer
+  // scoped to view-only). REC being on authorizes ambient per-minute
+  // analytics wherever matrix frames flow EXCEPT Key Tester: Typing View
+  // and the editor Typing Test screen (state-driven effect further down,
+  // gated on typingTestMode), and now the plain keymap editor too (via
+  // onAmbientFrame below, gated on neither typingTestMode nor matrixMode).
+  // Key Tester alone stays excluded — matrixMode is true there, and
+  // onAmbientFrame already refuses to fire while it is — so an armed REC
+  // toggle has nothing wired to feed it on that one screen. Computed here,
+  // at the top, since useMatrixTester's ambient polling gate below needs
+  // it before the state-driven effect (further down) exists.
+  const recordingActive = typingRecordEnabled ?? false
+
+  // Ambient frame plumbing (use-ambient-matrix-feed.ts) — built before
+  // useMatrixTester so its onAmbientFrame option gets a stable identity;
+  // processMatrixFrameRef is filled in below, once useTypingTest exists to
+  // read from.
+  const { onAmbientFrame, processMatrixFrameRef } = useAmbientMatrixFeed(typingTestMode, keymap)
+
   // --- Matrix tester ---
   const {
     matrixMode,
@@ -134,7 +155,10 @@ export function useInputModes({
     handleMatrixToggle,
     enterMatrixMode,
     resetMatrixState,
-  } = useMatrixTester({ rows, cols, getMatrixState, unlocked, onUnlock, onMatrixModeChange })
+  } = useMatrixTester({
+    rows, cols, getMatrixState, unlocked, onUnlock, onMatrixModeChange,
+    recordingActive, onAmbientFrame,
+  })
 
   // --- Analytics sink (must be called before useTypingTest so its refs
   // exist for useTypingTest to capture the stable callbacks below). ---
@@ -150,6 +174,66 @@ export function useInputModes({
     flushAfterPendingEmits,
     runLog,
   } = useTypingAnalyticsSink({ typingRecordKeyboard, onRecKeystroke, recordingConsentAccepted })
+
+  // Ref bridge to reach resetMatrixPressTracking (defined only once
+  // useTypingTest is called, further down) from the unmount drain effect
+  // immediately below — same idiom as processMatrixFrameRef
+  // (use-ambient-matrix-feed.ts). Filled in render-phase right after the
+  // useTypingTest() call, alongside processMatrixFrameRef.current.
+  const resetMatrixPressTrackingRef = useRef<(() => Promise<void>) | null>(null)
+
+  // Drain-then-flush on unmount: mirrors the REC-off effect further down
+  // in this hook for the case where this hook unmounts (e.g. the keyboard
+  // disconnects — see App.tsx's early-return disconnected view, which
+  // unmounts KeymapEditor with it) while recording was still active. A
+  // fresh resetMatrixPressTracking() call here — not pendingDrainRef.current,
+  // which may reflect a long-since-resolved earlier drain — finalizes any
+  // masked key still unresolved in the queue plus any open per-cell
+  // duration sample, then flushAfterPendingEmits closes the session out in
+  // main. Reads recordingActiveRef/keyboardRef (kept current every render
+  // by the sink/props above) INSIDE the cleanup, not by closing over
+  // recordingActive/typingRecordKeyboard directly: this effect runs once
+  // (mount, empty deps) and its cleanup once (unmount), so the refs are
+  // the only way to see values as of the actual unmount. If the REC-off
+  // effect further down already flushed this session (recordingActiveRef
+  // reads false here), this is a no-op — no double flush.
+  //
+  // MUST be declared here, BEFORE the useTypingTest() call below, not
+  // merely somewhere in this hook's body: React runs a component's own
+  // unmount cleanups in the order their effects were registered during
+  // render, and useTypingTest's own matrix engine (useTypingTestMatrix,
+  // called from inside useTypingTest) registers its own unmount cleanup
+  // that calls matrixQueueRef.current.dispose() — which empties the queue
+  // WITHOUT emitting anything (see MatrixAnalyticsQueue.dispose's own doc
+  // comment). If that cleanup ran first, this effect's own
+  // resetMatrixPressTracking() → drainAll() would find an already-emptied
+  // queue and silently lose a still-pending masked (LT/MT) key's press —
+  // the exact regression this ordering exists to prevent. Reaching
+  // resetMatrixPressTracking through a ref (rather than destructuring it
+  // directly, which isn't possible yet — useTypingTest hasn't been called
+  // at this point in the function body) is what lets this effect register
+  // early while still calling the real, current function once it exists.
+  //
+  // Dev-only StrictMode note: StrictMode's mount→unmount→remount replay
+  // can run this cleanup once against a session that never actually
+  // recorded anything (the replay happens before any real HID poll frame
+  // lands). That is harmless, not merely low-impact: flushAfterPendingEmits
+  // ends up calling closeSessionsForUid(uid) in main
+  // (typing-analytics-pipeline.ts), which returns immediately when the
+  // session detector has no open session for that uid — no state is
+  // touched and no IPC-visible side effect occurs, so a redundant call
+  // from the replay is a genuine no-op rather than merely a safe one. This
+  // is why no separate "session dirty" ref is introduced here — it would
+  // add tracking complexity to skip a call that already costs nothing.
+  useEffect(() => {
+    return () => {
+      if (!recordingActiveRef.current) return
+      const uid = keyboardRef.current?.uid
+      if (!uid) return
+      const drained = resetMatrixPressTrackingRef.current?.() ?? Promise.resolve()
+      flushAfterPendingEmits(drained, uid)
+    }
+  }, [])
 
   // --- Typing test ---
   // Weak Spot Training's timing signals (slowness/stall) source their raw
@@ -211,6 +295,13 @@ export function useInputModes({
     processKeyEvent,
     setWindowFocused,
   } = typingTest
+  // Fills in use-ambient-matrix-feed.ts's ref — see its own doc comment.
+  processMatrixFrameRef.current = processMatrixFrame
+  // Fills in resetMatrixPressTrackingRef, declared above (before this
+  // useTypingTest() call) so the unmount drain effect registers — and
+  // therefore its cleanup runs — before useTypingTestMatrix's own queue-
+  // dispose cleanup. See that effect's own doc comment for why.
+  resetMatrixPressTrackingRef.current = resetMatrixPressTracking
 
   // The runId useTypingTest minted for its own untouched initial mount —
   // `useRef`'s initializer runs once, so this never changes afterward,
@@ -290,26 +381,22 @@ export function useInputModes({
     }
   }, [typingTestMode, unlocked, resetMatrixState, beginTypingTest, onTypingTestModeChange, onUnlock])
 
-  // Feed matrix frames to typing test. This `typingTestMode` gate is what
-  // keeps `recordingActive` below inert in Key Tester and the plain editor
-  // even while REC is armed — see that comment for the other half of the
-  // link. Changing this gate to also fire outside Typing View/Typing Test
-  // would silently widen where REC actually records.
+  // Feed matrix frames to typing test — the state-driven half of the
+  // frame-supply split with onAmbientFrame (use-ambient-matrix-feed.ts).
+  // This path owns Typing View and the editor Typing Test screen (both
+  // route pressedKeys/everPressedKeys through matrixMode — see
+  // beginTypingTest's enterMatrixMode call); onAmbientFrame owns
+  // everything else REC can reach. The two never fire for the same frame
+  // (see onAmbientFrame's own exclusivity guard) and share the same
+  // processMatrixFrame instance rather than each holding a separate one —
+  // see that shared instance's own doc comment (use-ambient-matrix-feed.ts)
+  // for exactly how that, plus useMatrixTester's own ambient-frame seeding,
+  // buys full continuity across a switch (no phantom release+press pair).
   useEffect(() => {
     if (!typingTestMode) return
     processMatrixFrame(pressedKeys, keymap)
   }, [pressedKeys, typingTestMode, processMatrixFrame, keymap])
 
-  // Effective recording condition: the REC toggle alone (Task-typing-
-  // record-footer — REC now lives in the keymap-editor footer, not the
-  // Typing View popover, so it's no longer scoped to view-only). REC
-  // being on authorizes ambient per-minute analytics wherever matrix
-  // frames actually flow: Typing View AND the editor Typing Test screen.
-  // Key Tester and the plain editor never reach this gate at all —
-  // `processMatrixFrame` above is itself gated on `typingTestMode`, so
-  // REC being armed there is inert until the user enters Typing View or
-  // Typing Test.
-  const recordingActive = typingRecordEnabled ?? false
   // Keep the sink's refs current (the sink itself is a stable callback).
   recordingActiveRef.current = recordingActive
   // A test in the editor (not the REC view) is the tagged input source — but
