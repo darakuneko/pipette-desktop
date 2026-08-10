@@ -188,7 +188,7 @@ A **breadcrumb navigation** at the top of the content area shows the current pat
 
 ### 1.4 Analyze
 
-The Analyze page shows how you actually type — per-key heatmaps, WPM trends, inter-keystroke intervals, hour-by-day activity, per-finger load, key-pair (bigram) timing, and per-layer usage. Data comes from two sources feeding the same stream: typing tests run in the editor are always recorded (each keystroke tagged with the test material and run), regardless of the Record toggle. Ambient (untagged) typing is recorded whenever the footer's **Record** control (§4.3) is set to Start and keystrokes are actually flowing through Typing View or Typing Test — Record is a keymap-editor footer button now, not something scoped to opening Typing View first, so it can be armed from the plain editor and then carried into either view.
+The Analyze page shows how you actually type — per-key heatmaps, WPM trends, inter-keystroke intervals, hour-by-day activity, per-finger load, key-pair (bigram) timing, and per-layer usage. Data comes from two sources feeding the same stream: typing tests run in the editor are always recorded (each keystroke tagged with the test material and run), regardless of the Record toggle. Ambient (untagged) typing is recorded whenever the footer's **Record** control (§4.3) is set to Start and the keyboard is unlocked — Record is a keymap-editor footer button, not scoped to any one screen, so it now records on the plain editor as well as Typing View and Typing Test. Key Tester is the one screen that stays excluded even with Record on. A locked keyboard never records at all; see **Typing Record** (§4.3) for how Record interacts with the Unlock dialog.
 
 **Access**
 
@@ -1101,7 +1101,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 - **Instant Key Selection**: Toggle instant key selection mode (see §2.2 for behavior details)
 - **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
 - **Key Tester**: Toggle Matrix Tester mode (supported keyboards only)
-- **Security**: Shows lock status (Locked/Unlocked) with a Lock button
+- **Security**: Shows lock status (Locked/Unlocked) with a Lock button. The Lock button is unavailable (disabled) while Typing Record (§4.3) is on, since locking would immediately reopen the Unlock dialog
 - **Import**: Restore from `.vil` files or sideload custom JSON definitions
 - **Reset Keyboard Data**: Reset keyboard to factory defaults
 
@@ -1469,13 +1469,17 @@ Press Escape or click the keyboard area again to close the pane. A hint text app
 
 #### Typing Record
 
-Click **Record** in the status bar's **Typing:** group (alongside **View** and **Test** — visible whenever the keyboard has matrix tester support, in both the plain editor and Typing Test) to open the **Recording Settings** modal. It records per-key and per-minute statistics that feed the Analyze page (§1.4). Recording stays off by default, and — since the button lives in the shared footer rather than inside Typing View — it can now be armed from the plain editor and carried into either Typing View or Typing Test, instead of only being reachable from inside Typing View.
+Click **Record** in the status bar's **Typing:** group (alongside **View** and **Test** — visible whenever the keyboard has matrix tester support, in both the plain editor and Typing Test) to open the **Recording Settings** modal. It records per-key and per-minute statistics that feed the Analyze page (§1.4). Recording stays off by default. Since Record lives in the shared footer, it records on whichever screen you're on — the plain editor, Typing View, or Typing Test — as long as the keyboard is unlocked; Key Tester is the one screen it always skips.
 
 ![Typing Test — Recording Settings](screenshots/typing-test-rec-tab.png)
 
 **Start / Stop**
 
 Press the toggle once to start recording — the button shows **Start** while idle and **Stop** while recording. A **Recording** indicator then appears in the status bar's left-hand indicator group. While the compact Typing View window is open (which hides the main status bar entirely), its own bottom-of-window hint text doubles as the recording indicator there instead.
+
+Recording requires the keyboard to be unlocked. Turning Record on while the keyboard is locked opens the Unlock dialog immediately, and so does starting or reconnecting Pipette with Record already on and the keyboard still locked — this applies on every screen, including the plain editor, which otherwise never prompts for an unlock on its own. In a tray-resident hidden start (§6.6), the window appears just long enough to show that dialog and hides again once you unlock.
+
+> **Note**: Auto-lock does not fire while Record is on, so an unattended recording session on the plain editor is never interrupted by a lock/unlock loop.
 
 The very first time you press Start, a consent dialog appears:
 
@@ -1516,7 +1520,7 @@ While in Typing View, its own Menu Pane keeps a separate **Analyze** entry (§4.
 
 The last view mode (Editor / Typing Test / Typing View) is remembered per keyboard and automatically restored the next time you connect that keyboard:
 
-- **Editor**: The editor view is shown as usual
+- **Editor**: The editor view is shown as usual. If Typing Record (§4.3) is on and the keyboard is locked, the Unlock dialog still appears first — Record's own unlock requirement applies even on this screen
 - **Typing Test**: Typing Test mode is re-entered automatically. If the keyboard is locked, the Unlock dialog appears first and the test starts after unlocking
 - **Typing View**: The compact view-only window is re-entered automatically. If the keyboard is locked, the Unlock dialog appears first
 
@@ -2077,7 +2081,7 @@ The Tools tab shows four toggles below the Theme Packs and Zoom rows:
 - **Launch at Login**: Start Pipette automatically when you sign in to the OS. On Windows and macOS this registers a login item; on Linux it manages an XDG autostart entry (`~/.config/autostart/pipette.desktop`). This works in installed (packaged) builds only — the toggle has no effect when running from source.
 - **Stay in System Tray**: While ON, closing the window hides Pipette to the system tray and the app keeps running. Click the tray icon, or choose **Show** from its menu, to bring the window back. Hovering the tray icon shows a live tooltip: just `Pipette` when idle, `Pipette — {keyboard name}` once a keyboard is connected, and `Pipette — {keyboard name} — Cnt: X · KPM: Y` while Typing Record (§4.3) is recording. The tray menu itself is **Show**, a separator, the connected keyboard's name (when one is connected) — with **Recording** / **Cnt: N** / **KPM: N** rows added while recording — another separator, then **Quit**. Menu and tooltip labels are fixed English text for now, not translated.
 - **Restore Last Session** (default ON): While ON, Pipette remembers the last keyboard you connected and automatically reconnects it the next time the app starts. Toggling this in Settings only affects the *next* launch — it never triggers a reconnect during the current session. Because the screen you were on is already remembered per keyboard, reconnecting also brings back the last screen you used with that keyboard. If the keyboard is not found within about 10 seconds of launch, Pipette gives up silently — no warning is shown, and the device selection screen stays as usual. Disconnecting a keyboard manually clears the remembered device.
-- **Start Hidden in Tray**: While ON, Pipette launches resident in the system tray without opening the window. This requires **Stay in System Tray** — the toggle is disabled while Stay in System Tray is OFF, and turning Stay in System Tray OFF also turns this toggle OFF. If a session restore (see above) needs the Unlock dialog, the window appears just for that dialog and hides again once it is resolved. Once you show the window yourself (e.g. from the tray icon), it stays open — Pipette never auto-hides a window you opened.
+- **Start Hidden in Tray**: While ON, Pipette launches resident in the system tray without opening the window. This requires **Stay in System Tray** — the toggle is disabled while Stay in System Tray is OFF, and turning Stay in System Tray OFF also turns this toggle OFF. If a session restore (see above) needs the Unlock dialog — including because Typing Record (§4.3) is on for a keyboard that reconnects locked — the window appears just for that dialog and hides again once it is resolved. Once you show the window yourself (e.g. from the tray icon), it stays open — Pipette never auto-hides a window you opened.
 
 All four are machine-local settings — they are not synced to other devices via Cloud Sync.
 

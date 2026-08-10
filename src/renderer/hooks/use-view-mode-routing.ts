@@ -189,24 +189,35 @@ export function useViewModeRouting({
     if (keyboard.loading || keyboard.uid === EMPTY_UID) return
     if (devicePrefs.appliedUid !== keyboard.uid) return
     if (restoreRequestedUidRef.current === keyboard.uid) return
+
+    const mode = devicePrefs.viewMode
+    // Unknown unlock status (getUnlockStatus failed or hasn't resolved yet)
+    // — skip the restore rather than prompting for an unlock that may not
+    // be needed. Checked BEFORE the guard below is set, and deliberately
+    // does not consume restoreRequestedUidRef: unlockStatusKnown is a dep
+    // of this effect, so once it flips true the effect reruns and retries
+    // the restore. Consuming the guard here would make that retry
+    // permanently skipped instead.
+    if ((mode === 'typingTest' || mode === 'typingView')
+      && !keyboard.unlockStatus.unlocked && !keyboard.unlockStatusKnown) return
+
     restoreRequestedUidRef.current = keyboard.uid
     // Restore is not a user intent — clear any stale pending save flags so the
     // watcher above does not misattribute the restore's state change to a user click.
     pendingTypingTestSaveRef.current = false
     pendingViewOnlyRef.current = false
 
-    const mode = devicePrefs.viewMode
     if (mode === 'typingTest') {
+      // Unlock (when locked) is requested by useInputModes downstream.
       keymapEditorRef.current?.toggleTypingTest()
     } else if (mode === 'typingView') {
       if (keyboard.unlockStatus.unlocked) {
         enterTypingViewOnly()
-      } else if (keyboard.unlockStatusKnown) {
+      } else {
+        // Locked but unlockStatusKnown (the unknown case already returned above).
         pendingViewOnlyRef.current = true
         editorUI.setShowUnlockDialog(true)
       }
-      // Unknown unlock status (getUnlockStatus failed) — skip the restore
-      // rather than prompting for an unlock that may not be needed.
     }
   }, [
     device.connectedDevice,

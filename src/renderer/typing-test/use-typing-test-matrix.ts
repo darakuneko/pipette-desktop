@@ -44,7 +44,13 @@ export interface TypingTestMatrixResult {
   /** Re-derive the layer indicator for a new base layer — the only
    * cross-cluster edge from the host's setBaseLayer into this hook. */
   applyBaseLayer: (layer: number) => void
-  processMatrixFrame: (pressed: ReadonlySet<string>, keymap: Map<string, number>) => void
+  /** `options.ambient` skips this frame's `setEffectiveLayer` state write
+   * — used by background (non-UI) recording so a poll tick outside
+   * Typing View/Test never re-renders the editor. Layer resolution itself
+   * still runs unconditionally either way (the resolved `eventLayer` is
+   * needed for analytics tagging regardless of who's watching the
+   * indicator); only the indicator's own React state write is skipped. */
+  processMatrixFrame: (pressed: ReadonlySet<string>, keymap: Map<string, number>, options?: { ambient?: boolean }) => void
   /** Returns a promise that resolves once every drained item's emit has
    * settled — see {@link MatrixAnalyticsQueue.drainAll}. A caller that
    * finalizes a session (record-off, test-finish) before requesting a
@@ -79,7 +85,7 @@ export function useTypingTestMatrix<TPreparedEvent>(
   // of needing to arrive in order. See matrix-press-duration.ts.
   const matrixDurationRef = useRef(new PressDurationTracker<TPreparedEvent>())
 
-  const processMatrixFrame = useCallback((pressed: ReadonlySet<string>, keymap: Map<string, number>) => {
+  const processMatrixFrame = useCallback((pressed: ReadonlySet<string>, keymap: Map<string, number>, options?: { ambient?: boolean }) => {
     const bl = baseLayerRef.current
     const prev = prevPressedRef.current
     const latched = latchedLayersRef.current
@@ -207,7 +213,16 @@ export function useTypingTestMatrix<TPreparedEvent>(
       }
     }
 
-    setEffectiveLayer(latched.displayLayer(bl))
+    // Ambient (background) frames skip this state write entirely: the
+    // layer indicator is editor UI, and setEffectiveLayer would re-render
+    // the whole editor on every ~20ms poll tick outside Typing View/Test.
+    // Every edge above (latched.latch/activeLayers, the resolved
+    // eventLayer per press) already ran unconditionally, so analytics
+    // tagging is unaffected either way — only this state write is
+    // conditional.
+    if (!options?.ambient) {
+      setEffectiveLayer(latched.displayLayer(bl))
+    }
     // `pressed` is a fresh Set the caller builds every poll and never
     // mutates afterward (see parseMatrixState in matrix-utils.ts), so
     // adopting the reference is safe and skips a same-size Set clone on

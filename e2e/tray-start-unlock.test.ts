@@ -270,6 +270,67 @@ test.describe.serial('tray start-in-tray unlock reveal', { tag: '@virtual' }, ()
     app = null
   })
 
+  test('REC gate + editor restore: relaunch reveals the Unlock dialog, hides back to tray, and the Recording indicator lights up', async () => {
+    // Arm the REC-unlock gate: typingRecordEnabled=true while the keyboard
+    // is locked must request an unlock even for the plain editor, which on
+    // its own never prompts (see the 'editor restore path' test above).
+    // The persisted view mode is already 'editor' from that test, but set
+    // it explicitly here so this test does not depend on suite ordering.
+    const prefs = readJson(SETTINGS_PATH)
+    expect(prefs).not.toBeNull()
+    if (prefs) {
+      prefs.viewMode = 'editor'
+      prefs.typingRecordEnabled = true
+      writeFileSync(SETTINGS_PATH, JSON.stringify(prefs, null, 2))
+    }
+
+    const launched = await launchApp({ env: { PIPETTE_VIRTUAL_DEVICE: 'only' } })
+    app = launched.app
+    const page = launched.page
+
+    let dialogSeenVisible = false
+    await expect.poll(async () => {
+      const winVisible = await app!.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows().map((w) => w.isVisible()))
+      const dialogUp = (await unlockDialogHeading(page).count()) > 0
+      if (dialogUp && winVisible.some(Boolean)) dialogSeenVisible = true
+      return dialogSeenVisible
+    }, { message: 'expected the Unlock dialog to appear in a visible window', timeout: 25_000, intervals: [1000] }).toBe(true)
+
+    await waitForUnlockDialog(app, page)
+
+    await expect.poll(async () => {
+      const winVisible = await app!.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows().map((w) => w.isVisible()))
+      return winVisible.some(Boolean)
+    }, { message: 'expected the window to hide back to the tray after unlock', timeout: 15_000, intervals: [1000] }).toBe(false)
+    await expect(unlockDialogHeading(page)).toHaveCount(0)
+
+    // This only proves the REC pref itself survived the gate/unlock/hide
+    // sequence (the footer's Recording indicator is wired straight to
+    // devicePrefs.typingRecordEnabled with no view-mode or lock-status
+    // condition, so it stays queryable through Playwright's CDP connection
+    // even while the BrowserWindow itself is hidden in the tray — the DOM
+    // keeps running, only the OS window surface is hidden). It does NOT
+    // exercise the ambient matrix-recording pipeline itself (no keystrokes
+    // are simulated here) — see the unit/component suites for that
+    // (useInputModes's ambient-frame tests, use-matrix-tester's polling
+    // tests) — this assertion is scoped to: the gate fired, the window
+    // revealed then hid again, and REC stayed on throughout.
+    await expect(page.locator('[data-testid="recording-status"]')).toHaveCount(1)
+
+    await quitApp(app)
+    app = null
+
+    // Turn the gate back off so the next test (which relies on a boot-hidden
+    // launch producing no dialog at all) isn't re-armed by this test's seed.
+    const postPrefs = readJson(SETTINGS_PATH)
+    if (postPrefs) {
+      postPrefs.typingRecordEnabled = false
+      writeFileSync(SETTINGS_PATH, JSON.stringify(postPrefs, null, 2))
+    }
+  })
+
   test('second-instance reveal: relaunching a tray-resident hidden app reveals the running instance\'s window', async () => {
     // Persisted viewMode is still 'editor' from the previous test, so the
     // primary instance boots hidden with no Unlock dialog in play — the

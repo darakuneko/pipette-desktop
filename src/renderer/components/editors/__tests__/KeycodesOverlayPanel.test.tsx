@@ -126,6 +126,18 @@ describe('KeycodesOverlayPanel', () => {
     expect(screen.queryByTestId('overlay-lock-row')).not.toBeInTheDocument()
   })
 
+  it('disables the Lock button while REC (typingRecordEnabled) is armed, even though the keyboard is unlocked', () => {
+    render(<KeycodesOverlayPanel {...DEFAULT_PROPS} unlocked typingRecordEnabled />)
+
+    expect(screen.getByTestId('overlay-lock-button')).toBeDisabled()
+  })
+
+  it('keeps the Lock button enabled when unlocked and REC is off', () => {
+    render(<KeycodesOverlayPanel {...DEFAULT_PROPS} unlocked typingRecordEnabled={false} />)
+
+    expect(screen.getByTestId('overlay-lock-button')).toBeEnabled()
+  })
+
   it('shows matrix tester toggle when hasMatrixTester', () => {
     render(<KeycodesOverlayPanel {...DEFAULT_PROPS} hasMatrixTester onToggleMatrix={vi.fn()} />)
 

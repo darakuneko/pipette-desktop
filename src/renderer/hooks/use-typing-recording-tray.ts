@@ -9,13 +9,17 @@ import { useRecKeystrokeCounter } from './useRecKeystrokeCounter'
 import { useTrayStatus } from './useTrayStatus'
 import { buildKeymapSnapshot } from '../components/analyze/keymap-snapshot-builder'
 import type { DeviceInfo } from '../../shared/types/protocol'
+import { EMPTY_UID } from '../../shared/constants/protocol'
 
 interface Params {
   keyboard: ReturnType<typeof useKeyboard>
-  devicePrefs: Pick<UseDevicePrefsReturn, 'typingRecordEnabled' | 'setTypingRecordEnabled'>
+  devicePrefs: Pick<UseDevicePrefsReturn, 'typingRecordEnabled' | 'setTypingRecordEnabled' | 'appliedUid'>
   typingTestMode: boolean
   isDummy: boolean
   connectedDevice: DeviceInfo | null
+  // Called on the rising edge of the REC-unlock gate (see the effect below).
+  // App.tsx wires this to editorUI.setShowUnlockDialog(true).
+  onRequestUnlockDialog: () => void
 }
 
 export function useTypingRecordingTray({
@@ -24,6 +28,7 @@ export function useTypingRecordingTray({
   typingTestMode,
   isDummy,
   connectedDevice,
+  onRequestUnlockDialog,
 }: Params) {
   // Persist the record toggle — snapshot capture is handled by the
   // recording-active effect below so any path that activates recording
@@ -65,6 +70,60 @@ export function useTypingRecordingTray({
     if (!snap) return
     void window.vialAPI.typingAnalyticsSaveKeymapSnapshot(snap).catch(() => { /* main logs */ })
   }, [devicePrefs.typingRecordEnabled, typingTestMode, keyboard])
+
+  // REC-unlock gate: unlocking is a hard precondition for REC to have any
+  // effect (a locked keyboard never emits matrix frames), so this fires the
+  // unlock dialog once per uid on the rising edge of "REC armed while
+  // locked" — regardless of which screen is active. Covers session restore
+  // into the plain editor with REC already on, REC toggled on while locked,
+  // and reconnecting a still-locked keyboard with REC still armed.
+  //
+  // The "already requested" marker is uid-scoped (not a bare boolean) so
+  // switching to a different locked keyboard while REC stays armed prompts
+  // again for the new uid instead of silently inheriting the previous
+  // keyboard's already-consumed prompt: a stale uid simply fails the
+  // equality check below and is treated as "not yet prompted for this
+  // uid," no separate mismatch branch needed. It resets to null on: the
+  // gate condition going false (REC turned off, or the keyboard got
+  // unlocked through some other path) or a disconnect — so the dialog is
+  // not re-requested on every unrelated re-render while the condition
+  // stays continuously true, including across a dismiss (the unlock
+  // dialog has no cancel path other than disconnecting).
+  // Guard must survive StrictMode's double-invoke: the ref keeps the prior
+  // prompted uid across the extra mount/cleanup/mount pass, so the second
+  // pass still sees an already-consumed prompt for the same uid.
+  const promptedUidRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!connectedDevice) {
+      promptedUidRef.current = null
+      return
+    }
+    const uid = keyboard.uid
+    const gateActive = !isDummy
+      && !keyboard.loading
+      && uid !== EMPTY_UID
+      && devicePrefs.appliedUid === uid
+      && keyboard.unlockStatusKnown
+      && !keyboard.unlockStatus.unlocked
+      && devicePrefs.typingRecordEnabled
+    if (!gateActive) {
+      promptedUidRef.current = null
+      return
+    }
+    if (promptedUidRef.current === uid) return
+    promptedUidRef.current = uid
+    onRequestUnlockDialog()
+  }, [
+    connectedDevice,
+    isDummy,
+    keyboard.loading,
+    keyboard.uid,
+    keyboard.unlockStatusKnown,
+    keyboard.unlockStatus.unlocked,
+    devicePrefs.appliedUid,
+    devicePrefs.typingRecordEnabled,
+    onRequestUnlockDialog,
+  ])
 
   // System tray: connected-keyboard name + live REC keystroke count.
   // recordingActive mirrors useInputModes' authoritative definition

@@ -79,7 +79,7 @@ export function KeymapPickerRegion(props: KeymapPickerRegionProps): JSX.Element 
     hasLayoutOptions, parsedLayoutOptions, layoutValues, handleLayoutOptionChange,
     autoAdvance, onAutoAdvanceChange, viewMatrixActive, onToggleViewMatrixMode,
     quickSelect, onQuickSelectChange, matrixMode, hasMatrixTester, handleMatrixToggle,
-    unlocked, onLock, isDummy, toolsExtra, dataPanel, keyEditorZoom, onKeyEditorZoomChange,
+    unlocked, onLock, typingRecordEnabled, isDummy, toolsExtra, dataPanel, keyEditorZoom, onKeyEditorZoomChange,
     onExportLayoutPdfAll, onExportLayoutPdfCurrent,
   } = props
   const { t } = useTranslation()
@@ -129,7 +129,7 @@ export function KeymapPickerRegion(props: KeymapPickerRegionProps): JSX.Element 
               splitKeyMode={splitKeyMode} onSplitKeyModeChange={onSplitKeyModeChange}
               quickSelect={quickSelect} onQuickSelectChange={onQuickSelectChange}
               matrixMode={matrixMode} hasMatrixTester={hasMatrixTester} onToggleMatrix={viewMatrixActive ? undefined : handleMatrixToggle}
-              unlocked={unlocked ?? false} onLock={onLock} isDummy={isDummy}
+              unlocked={unlocked ?? false} onLock={onLock} typingRecordEnabled={typingRecordEnabled} isDummy={isDummy}
               toolsExtra={toolsExtra} dataPanel={dataPanel}
               keyEditorZoom={keyEditorZoom} onKeyEditorZoomChange={onKeyEditorZoomChange}
               onExportLayoutPdfAll={onExportLayoutPdfAll} onExportLayoutPdfCurrent={onExportLayoutPdfCurrent}

@@ -179,6 +179,7 @@ export function App() {
     matrixMode: editorUI.matrixState.matrixMode,
     typingTestMode: editorUI.typingTestMode,
     typingTestViewOnly: devicePrefs.typingTestViewOnly,
+    typingRecordEnabled: devicePrefs.typingRecordEnabled ?? false,
     // Same-value guards: every appConfig.set rewrites the whole config
     // file and re-renders all useAppConfig consumers, so skip the write
     // when reconnecting the same keyboard / disconnecting with nothing
@@ -287,12 +288,20 @@ export function App() {
     [device.connectedDevice, device.isPipetteFile, keyboard.uid, tappingTerm],
   )
 
+  // REC-unlock gate's callback (use-typing-recording-tray.ts) — reuses the
+  // same dialog as the boot-guard/restore paths above, just requested from
+  // a different trigger.
+  const requestUnlockDialog = useCallback(() => {
+    editorUI.setShowUnlockDialog(true)
+  }, [editorUI.setShowUnlockDialog])
+
   const { handleTypingRecordEnabledChange, recKeystroke } = useTypingRecordingTray({
     keyboard,
     devicePrefs,
     typingTestMode: editorUI.typingTestMode,
     isDummy: device.isDummy,
     connectedDevice: device.connectedDevice,
+    onRequestUnlockDialog: requestUnlockDialog,
   })
 
   // Whether an editor typing test is mid-run — surfaced from KeymapEditor so
