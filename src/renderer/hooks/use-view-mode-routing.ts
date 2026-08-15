@@ -44,13 +44,20 @@ export function useViewModeRouting({
   // Typing View or the full-screen Typing Test.
   const analyticsOriginRef = useRef<AnalyticsOrigin>('typingView')
 
+  // Live mirror for reads inside rAF/IPC continuations, where the closure
+  // value can be several frames stale by the time it runs.
+  const typingTestModeRef = useRef(editorUI.typingTestMode)
+  typingTestModeRef.current = editorUI.typingTestMode
+
   // Exit view-only mode: hide content → wait for paint → resize → show editor
   const exitViewOnlyMode = useCallback(() => {
     setViewExitTransition(true)
     requestAnimationFrame(() => { requestAnimationFrame(() => {
       window.vialAPI.setWindowCompactMode(false).then(() => {
         devicePrefs.setTypingTestViewOnly(false)
-        keymapEditorRef.current?.toggleTypingTest()
+        // toggleTypingTest is a toggle, not a setter — skip when already off
+        // (a lock auto-exit clears typing test but leaves view-only set).
+        if (typingTestModeRef.current) keymapEditorRef.current?.toggleTypingTest()
         setViewExitTransition(false)
       }).catch(() => { setViewExitTransition(false) })
     }) })
@@ -67,23 +74,23 @@ export function useViewModeRouting({
         // to 'editor' too so the next session-restore doesn't reopen
         // the compact window behind the analytics page.
         devicePrefs.setViewMode('editor')
-        if (editorUI.typingTestMode) keymapEditorRef.current?.toggleTypingTest()
+        if (typingTestModeRef.current) keymapEditorRef.current?.toggleTypingTest()
         setAnalyticsPageOpen(true)
         setViewExitTransition(false)
       }).catch(() => { setViewExitTransition(false) })
     }) })
-  }, [devicePrefs, editorUI.typingTestMode])
+  }, [devicePrefs])
 
   // Enter typing view-only mode (compact window + typing test). Assumes unlocked.
   const { typingTestViewOnlyWindowSize, setTypingTestViewOnly } = devicePrefs
   const enterTypingViewOnly = useCallback(() => {
     window.vialAPI.setWindowCompactMode(true, typingTestViewOnlyWindowSize).then(() => {
       setTypingTestViewOnly(true)
-      if (!editorUI.typingTestMode) {
+      if (!typingTestModeRef.current) {
         keymapEditorRef.current?.toggleTypingTest()
       }
     }).catch(() => {})
-  }, [typingTestViewOnlyWindowSize, setTypingTestViewOnly, editorUI.typingTestMode])
+  }, [typingTestViewOnlyWindowSize, setTypingTestViewOnly])
 
   // One-shot guard: prevents re-restoring the same uid after an initial restore.
   // Must survive StrictMode's double-invoke — the ref persists across the
@@ -266,10 +273,12 @@ export function useViewModeRouting({
   // StatusBar's `onViewOnlyChange` prop
   const onStatusBarViewOnlyChange = () => {
     pendingTypingTestSaveRef.current = false
-    if (editorUI.typingTestMode && devicePrefs.typingTestViewOnly) {
-      pendingViewOnlyRef.current = false
-      setViewMode('editor')
-      exitViewOnlyMode()
+    // typingTestViewOnly can outlive typingTestMode (a lock auto-exit clears
+    // only the latter), and exiting never requires an unlock. Gating this on
+    // typingTestMode too was dead anyway: AppStatusBar unmounts this bar
+    // while both flags are true.
+    if (devicePrefs.typingTestViewOnly) {
+      onTypingTestViewOnlyChange(false)
     } else if (!keyboard.unlockStatus.unlocked) {
       pendingViewOnlyRef.current = true
       editorUI.setShowUnlockDialog(true)

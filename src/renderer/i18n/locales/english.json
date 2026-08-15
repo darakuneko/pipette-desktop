@@ -1,5 +1,5 @@
 {
-  "version": "0.1.87",
+  "version": "0.1.88",
   "name": "English",
   "common": {
     "save": "Save",
@@ -775,6 +775,7 @@
     "typingGroup": "Typing:",
     "typingViewShort": "View",
     "typingTestShort": "Test",
+    "typingTestExitShort": "Exit Test",
     "typingRecordShort": "Record",
     "sync": {
       "pending": "Pending",

@@ -215,7 +215,7 @@ export function StatusBar({
             className={typingTestMode ? TYPING_TEST_ACTIVE : TYPING_TEST_INACTIVE}
             onClick={onTypingTestModeChange}
           >
-            {t('statusBar.typingTestShort')}
+            {typingTestMode ? t('statusBar.typingTestExitShort') : t('statusBar.typingTestShort')}
           </button>
         )}
         {showRecordButton && (

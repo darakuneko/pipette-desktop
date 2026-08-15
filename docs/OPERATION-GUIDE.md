@@ -1432,8 +1432,8 @@ Once a run finishes, if a keystroke log was saved for it (recording consent acce
 
 Additional notes:
 
-- Press Escape to exit typing test mode
-- The status bar's Disconnect button is hidden while Typing Test is active. To disconnect, first return to the editor with Escape or the Typing Test button
+- Click **Exit Test** in the status bar's **Typing:** group to exit typing test mode (the button's label switches from **Test** to **Exit Test** while the test is active)
+- The status bar's Disconnect button is hidden while Typing Test is active. To disconnect, first return to the editor with the **Exit Test** button
 - The keyboard layout below the test area shows key presses in real time via the Vial matrix tester protocol
 
 #### Typing View (View-Only Mode)

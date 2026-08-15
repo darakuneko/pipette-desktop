@@ -16,6 +16,7 @@ const TRANSLATIONS: Record<string, string> = {
   'statusBar.typingGroup': 'Typing:',
   'statusBar.typingViewShort': 'View',
   'statusBar.typingTestShort': 'Test',
+  'statusBar.typingTestExitShort': 'Exit Test',
   'statusBar.typingRecordShort': 'Record',
   'editor.keyTester.title': 'Key Tester',
   'app.analyzeTab': 'Analyze',
@@ -68,6 +69,13 @@ describe('StatusBar', () => {
     expect(button).toBeInTheDocument()
     expect(button).toHaveTextContent('Test')
     expect(button).toHaveAttribute('aria-label', 'Switch to Typing Mode')
+  })
+
+  it('shows "Exit Test" label when typing test mode is active', () => {
+    render(<StatusBar {...defaultProps} hasMatrixTester={true} onTypingTestModeChange={vi.fn()} typingTestMode={true} />)
+    const button = screen.getByTestId('typing-test-button')
+    expect(button.textContent).toBe('Exit Test')
+    expect(button).toHaveAttribute('aria-label', 'Exit Typing Test')
   })
 
   it('calls onTypingTestModeChange when typing mode button clicked', () => {
