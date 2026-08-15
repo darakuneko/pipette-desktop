@@ -215,16 +215,6 @@ describe('useViewModeRouting', () => {
         appliedUid: 'UID1',
       })
 
-      // Arm pendingViewOnlyRef too, for realism (a locked click on the
-      // StatusBar view-only toggle) — but this half is NOT what this test
-      // pins: the deferred-view-only effect's own `if (!device.connectedDevice)
-      // { pendingViewOnlyRef.current = false; return }` early return clears
-      // it independently on every disconnect, so "no deferred entry after
-      // reconnect" would hold even if the disconnect-cleanup effect's own
-      // reset of this ref were deleted.
-      act(() => { result.current.onStatusBarViewOnlyChange() })
-      expect(mocks.setShowUnlockDialog).toHaveBeenCalledWith(true)
-
       // Arm pendingTypingTestSaveRef via a real user action (StatusBar
       // typing-test toggle while not yet in typing-test mode). This half
       // IS what this test pins — nothing else clears it on disconnect.
@@ -651,7 +641,9 @@ describe('useViewModeRouting', () => {
 
   describe('onTypingTestViewOnlyChange (KeymapEditor prop)', () => {
     it('disabling exits view-only: setViewMode("editor") then the exit teardown', async () => {
-      const { result, mocks } = renderRouting()
+      // Realistic: this callback fires from within an active typing test
+      // (KeymapEditor owns the toggle), so typingTestMode is true here.
+      const { result, mocks } = renderRouting({ typingTestMode: true })
 
       act(() => { result.current.onTypingTestViewOnlyChange(false) })
       expect(mocks.setViewMode).toHaveBeenCalledWith('editor')
@@ -685,6 +677,26 @@ describe('useViewModeRouting', () => {
 
       await flushMicrotasks()
       expect(vialAPIStub.setWindowCompactMode).toHaveBeenCalledWith(false)
+    })
+
+    it('exits view-only even after a lock auto-exit (typingTestMode already false, still locked) instead of opening the unlock dialog (issue #418)', async () => {
+      // Mirrors the state left behind by a lock auto-exit: typingTestMode
+      // flips false but typingTestViewOnly stays true, and the keyboard is
+      // locked. Pressing the status-bar View toggle here must exit, not
+      // reopen the unlock dialog and re-enter view-only.
+      const { result, mocks } = renderRouting({ typingTestMode: false, typingTestViewOnly: true, unlocked: false })
+
+      act(() => { result.current.onStatusBarViewOnlyChange() })
+
+      expect(mocks.setShowUnlockDialog).not.toHaveBeenCalled()
+      expect(mocks.setViewMode).toHaveBeenCalledWith('editor')
+
+      await flushMicrotasks()
+      expect(vialAPIStub.setWindowCompactMode).toHaveBeenCalledWith(false)
+      expect(mocks.setTypingTestViewOnly).toHaveBeenCalledWith(false)
+      // typingTestMode was already false — the exit teardown must not
+      // re-toggle typing test back on.
+      expect(mocks.toggleTypingTest).not.toHaveBeenCalled()
     })
 
     it('shows the unlock dialog instead of entering when locked', () => {

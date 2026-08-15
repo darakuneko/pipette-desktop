@@ -1,5 +1,5 @@
 {
-  "version": "0.1.87",
+  "version": "0.1.88",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -775,6 +775,7 @@
     "typingGroup": "タイピング:",
     "typingViewShort": "View",
     "typingTestShort": "Test",
+    "typingTestExitShort": "Exit Test",
     "typingRecordShort": "Record",
     "sync": {
       "pending": "同期待ちどすえ",
