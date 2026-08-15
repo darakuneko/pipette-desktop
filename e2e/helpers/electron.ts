@@ -2,6 +2,8 @@
 
 import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'
+import { execSync } from 'node:child_process'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -63,4 +65,47 @@ export async function launchApp(opts: LaunchAppOptions = {}): Promise<{
   await page.waitForLoadState('domcontentloaded')
 
   return { app, page }
+}
+
+/** Reads and parses a userData JSON file (config.json, pipette_settings.json,
+ * etc.), returning null when the file is missing or not valid JSON — the
+ * common shape every suite that mutates userData directly needs to inspect
+ * what a previous session persisted. */
+export function readJson(path: string): Record<string, unknown> | null {
+  if (!existsSync(path)) return null
+  try { return JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown> } catch { return null }
+}
+
+/** Whether the app's Electron process is currently running (matched by its
+ * command line, not a PID we hold) — used to serialize test sessions that
+ * mutate the shared userData dir and must never overlap. */
+export function electronRunning(): boolean {
+  try {
+    // [n] bracket trick keeps this pgrep's own `sh -c` wrapper (whose
+    // command line contains the pattern text) from matching itself.
+    execSync('pgrep -f "electron/dist/electro[n].*out/main/index.js"', { stdio: 'pipe' })
+    return true
+  } catch { return false }
+}
+
+/** Blocks until no matching Electron process remains, polling rather than a
+ * fixed sleep since process teardown time varies with system load. */
+export async function waitForElectronExit(timeoutMs = 30_000): Promise<void> {
+  const start = Date.now()
+  while (electronRunning()) {
+    if (Date.now() - start > timeoutMs) throw new Error('previous electron instance did not exit')
+    await new Promise((r) => setTimeout(r, 500))
+  }
+}
+
+/**
+ * Quit the launched app and wait for its Electron process to fully exit.
+ * userData (~/.config/Electron) is shared with every other e2e suite —
+ * files under it must not be restored while a process that might still be
+ * writing to them (e.g. a close handler persisting windowState) is alive.
+ */
+export async function quitApp(app: ElectronApplication): Promise<void> {
+  await app.evaluate(({ app: a }) => { a.quit() }).catch(() => {})
+  await app.close().catch(() => { /* already gone */ })
+  await waitForElectronExit()
 }

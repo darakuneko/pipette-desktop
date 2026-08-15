@@ -76,6 +76,8 @@ Pipette's window has a minimum size of **1280×1024**, and defaults to **1440×1
 
 It might feel a bit large — but keyboards are wide, so this is what it takes to work with them comfortably. Sorry!
 
+On a display whose usable work area (screen space minus the Dock, taskbar, or menu bar) is smaller than that minimum — common on smaller MacBook screens — the window is clamped to fit the visible area instead.
+
 ---
 
 ## Feature Availability

@@ -23,9 +23,9 @@ import { test, expect } from '@playwright/test'
 import type { ElectronApplication } from '@playwright/test'
 import { join, resolve } from 'node:path'
 import { homedir } from 'node:os'
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { execSync, spawnSync } from 'node:child_process'
-import { launchApp } from './helpers/electron'
+import { writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { launchApp, readJson, electronRunning, quitApp as quitAppProcess } from './helpers/electron'
 import {
   connectToDevice,
   clickThroughUnlock,
@@ -43,11 +43,6 @@ const PROJECT_ROOT = resolve(import.meta.dirname, '..')
 const USER_DATA = join(homedir(), '.config', 'Electron')
 const CONFIG_PATH = join(USER_DATA, 'config.json')
 const SETTINGS_PATH = join(USER_DATA, 'sync', 'keyboards', VIRTUAL_DEVICE_UID, 'pipette_settings.json')
-
-function readJson(path: string): Record<string, unknown> | null {
-  if (!existsSync(path)) return null
-  try { return JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown> } catch { return null }
-}
 
 // Reset flags a previous (crashed) run may have left behind so the setup
 // session starts as a normal visible launch with a device list.
@@ -70,28 +65,14 @@ function cleanTestFlags(): void {
   }
 }
 
-function electronRunning(): boolean {
-  try {
-    // [n] bracket trick: keeps this pgrep's own sh -c wrapper (whose
-    // command line contains the pattern text) from matching itself.
-    execSync('pgrep -f "electron/dist/electro[n].*out/main/index.js"', { stdio: 'pipe' })
-    return true
-  } catch { return false }
-}
-
-async function waitForElectronExit(timeoutMs = 30_000): Promise<void> {
-  const start = Date.now()
-  while (electronRunning()) {
-    if (Date.now() - start > timeoutMs) throw new Error('previous electron instance did not exit')
-    await new Promise((r) => setTimeout(r, 500))
-  }
-}
-
+// This suite's relaunch-across-sessions pattern needs a short grace period
+// after requesting quit (before the Playwright connection is torn down) for
+// the close handler's windowState/pipette-settings writes to land — unlike
+// the shared quitApp, which closes immediately after requesting quit.
 async function quitApp(app: ElectronApplication): Promise<void> {
   await app.evaluate(({ app: a }) => { a.quit() }).catch(() => {})
   await new Promise((r) => setTimeout(r, 2000))
-  await app.close().catch(() => { /* already gone */ })
-  await waitForElectronExit()
+  await quitAppProcess(app)
 }
 
 let app: ElectronApplication | null = null

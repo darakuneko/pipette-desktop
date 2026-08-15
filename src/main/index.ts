@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, session, shell } from 'electron'
+import { app, BrowserWindow, Menu, screen, session, shell } from 'electron'
 import { join, resolve, dirname } from 'node:path'
 import { statSync } from 'node:fs'
 import { IpcChannels } from '../shared/ipc/channels'
@@ -23,7 +23,8 @@ import { setupNotificationStore } from './notification-store'
 import { buildCsp, securityHeaders } from './csp'
 import { log, logHidPacket } from './logger'
 import type { LogLevel } from './logger'
-import { loadWindowState, saveWindowState, setupAppConfigIpc, loadAppConfig, onAppConfigChange, MIN_WIDTH, MIN_HEIGHT } from './app-config'
+import { loadWindowState, saveWindowState, setupAppConfigIpc, loadAppConfig, onAppConfigChange, hasSavedWindowPosition, MIN_WIDTH, MIN_HEIGHT } from './app-config'
+import { effectiveMinSize, clampBoundsToWorkArea } from './window-bounds'
 import { clampZoomFactor } from '../shared/types/app-config'
 import {
   applyAutoLaunch,
@@ -112,11 +113,33 @@ function hideMenuBar(): void {
 function createWindow(): void {
   const cfg = loadAppConfig()
   const saved = loadWindowState()
+  const hasSavedPosition = hasSavedWindowPosition(saved)
+  // With a saved position, resolve the display it actually overlaps via the
+  // shared helper. With no saved position, `saved` is the -1/-1 sentinel
+  // rect, which getDisplayMatching would resolve arbitrarily — Electron
+  // centers position-less windows on the primary display instead, so that's
+  // the correct clamp target here.
+  let display: Electron.Display
+  let minSize: Electron.Size
+  if (hasSavedPosition) {
+    ;({ display, minSize } = minSizeForBounds(saved))
+  } else {
+    display = screen.getPrimaryDisplay()
+    minSize = effectiveMinSize(display.workArea, MIN_WIDTH, MIN_HEIGHT)
+  }
+  // Clamp size (and, when a saved position exists, origin) into the target
+  // display's work area — on a display whose usable area is smaller than
+  // the nominal 1280x1024 minimum (e.g. a MacBook's built-in screen under
+  // the Dock), this keeps the window from being created oversized and
+  // spilling under OS chrome. With no saved position, clamp against the
+  // display's own origin instead of the -1/-1 sentinel.
+  const boundsToClamp = hasSavedPosition ? saved : { ...saved, x: display.workArea.x, y: display.workArea.y }
+  const clampedBounds = clampBoundsToWorkArea(boundsToClamp, display.workArea)
   const winOpts: Electron.BrowserWindowConstructorOptions = {
-    width: saved.width,
-    height: saved.height,
-    minWidth: MIN_WIDTH,
-    minHeight: MIN_HEIGHT,
+    width: clampedBounds.width,
+    height: clampedBounds.height,
+    minWidth: minSize.width,
+    minHeight: minSize.height,
     icon: appIconPath(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.cjs'),
@@ -125,9 +148,9 @@ function createWindow(): void {
       sandbox: true,
     },
   }
-  if (saved.x >= 0 && saved.y >= 0) {
-    winOpts.x = saved.x
-    winOpts.y = saved.y
+  if (hasSavedPosition) {
+    winOpts.x = clampedBounds.x
+    winOpts.y = clampedBounds.y
   }
   // Only start hidden when the tray can actually reopen the window — a
   // hidden window with no tray icon would be unreachable. The tray is
@@ -139,6 +162,7 @@ function createWindow(): void {
   }
   setWindowStartedHidden(startHidden)
   const win = new BrowserWindow(winOpts)
+  lastAppliedMinSize = minSize
 
   // document.visibilityState is unreliable for windows created with
   // show: false (notably on Linux, it still reports 'visible'), so the
@@ -200,6 +224,43 @@ function createWindow(): void {
   if (isDev) win.webContents.openDevTools()
 
   win.webContents.setZoomFactor(clampZoomFactor(cfg.zoomFactor) / 100)
+
+  // Re-derive the effective minimum size whenever the window may have
+  // landed on a different display (dragged across monitors). 'moved' rather
+  // than 'move' — the latter fires on every intermediate drag frame,
+  // 'moved' only once the drag settles. Skipped while compact mode owns the
+  // minimum size (normalWindowSize non-null).
+  win.on('moved', () => {
+    if (win.isDestroyed() || normalWindowSize) return
+    const { minSize } = minSizeForBounds(win.getBounds())
+    applyMinSizeIfChanged(win, minSize)
+  })
+
+  // A display's work area itself changing (Dock auto-hide toggled, external
+  // monitor (dis)connected) can both shrink the effective minimum and leave
+  // the window's current bounds spilling outside the new work area, so this
+  // re-applies the minimum size and re-clamps bounds. Also skipped while
+  // compact mode is active, and never fights a maximized/fullscreen window
+  // (the OS already owns its bounds there). The screen listener is
+  // process-wide, so it must be torn down with this window instead of
+  // leaking across window lifetimes.
+  const handleDisplayMetricsChanged = (): void => {
+    if (win.isDestroyed() || normalWindowSize) return
+    if (win.isMaximized() || win.isFullScreen()) return
+    const { display, minSize } = minSizeForBounds(win.getBounds())
+    applyMinSizeIfChanged(win, minSize)
+    const current = win.getBounds()
+    const clamped = clampBoundsToWorkArea(current, display.workArea)
+    if (clamped.x !== current.x || clamped.y !== current.y || clamped.width !== current.width || clamped.height !== current.height) {
+      win.setBounds(clamped)
+    }
+  }
+  screen.on('display-metrics-changed', handleDisplayMetricsChanged)
+  win.on('closed', () => {
+    screen.removeListener('display-metrics-changed', handleDisplayMetricsChanged)
+    lastAppliedMinSize = null
+    normalWindowSize = null
+  })
 }
 
 // Bring the app to the user's attention: reveal the existing window
@@ -221,16 +282,21 @@ function revealApp(): void {
   }
 }
 
-interface WindowSize { width: number; height: number }
-
 let activeAnimationId = 0
 
+/** @param onComplete Called exactly once per animation, with `completed` true
+ * only when this animation actually ran to the end as the still-active
+ * animation on a still-live window — false when a later `animateBounds` call
+ * superseded it (or the window was destroyed) before it finished. Callers
+ * that mutate shared state (e.g. `normalWindowSize`) on completion must gate
+ * that mutation on `completed` so a superseded animation can't stomp on
+ * state a newer animation already owns. */
 function animateBounds(
   win: BrowserWindow,
   from: Electron.Rectangle,
   to: { x: number; y: number; width: number; height: number },
   duration = 200,
-  onComplete?: () => void,
+  onComplete?: (completed: boolean) => void,
 ): void {
   const id = ++activeAnimationId
   const steps = Math.max(1, Math.round(duration / 16))
@@ -239,7 +305,7 @@ function animateBounds(
   const easeOut = (t: number): number => 1 - (1 - t) ** 2
 
   const tick = (): void => {
-    if (id !== activeAnimationId || win.isDestroyed()) { onComplete?.(); return }
+    if (id !== activeAnimationId || win.isDestroyed()) { onComplete?.(false); return }
     step++
     const t = easeOut(Math.min(step / steps, 1))
     win.setBounds({
@@ -251,12 +317,41 @@ function animateBounds(
     if (step < steps) {
       setTimeout(tick, 16)
     } else {
-      onComplete?.()
+      onComplete?.(true)
     }
   }
   tick()
 }
-let normalWindowSize: WindowSize | null = null
+let normalWindowSize: Electron.Size | null = null
+
+/** Resolves the display a rect currently overlaps and the effective
+ * minimum size for that display's work area. The single place the
+ * screen.getDisplayMatching + effectiveMinSize pair is computed — shared by
+ * createWindow, both compact-exit branches, and the display-change
+ * listeners. Callers that must not fight compact mode's own minimum size
+ * (300x100) guard on `normalWindowSize` themselves before calling this. */
+function minSizeForBounds(bounds: Electron.Rectangle): { display: Electron.Display; minSize: Electron.Size } {
+  const display = screen.getDisplayMatching(bounds)
+  const minSize = effectiveMinSize(display.workArea, MIN_WIDTH, MIN_HEIGHT)
+  return { display, minSize }
+}
+
+/** The minimum size this module last applied to a window via setMinimumSize,
+ * so bursts of identical re-applies (display-metrics-changed firing
+ * repeatedly, or a compact-exit setBounds re-triggering 'moved' with the
+ * same bounds) can skip the redundant native call. Reset whenever a window
+ * is created or closed. */
+let lastAppliedMinSize: Electron.Size | null = null
+
+/** Applies `minSize` to `win` unless it is identical to the size this
+ * module last applied — see {@link lastAppliedMinSize}. */
+function applyMinSizeIfChanged(win: BrowserWindow, minSize: Electron.Size): void {
+  if (lastAppliedMinSize && lastAppliedMinSize.width === minSize.width && lastAppliedMinSize.height === minSize.height) {
+    return
+  }
+  win.setMinimumSize(minSize.width, minSize.height)
+  lastAppliedMinSize = minSize
+}
 
 /** The main window, shared by the tray (show-from-tray) and the
  * show/hide IPC handlers. This app only ever has one top-level window,
@@ -279,7 +374,7 @@ function setupWindowIpc(): void {
       if (enabled) {
         if (!normalWindowSize) {
           normalWindowSize = { width: bounds.width, height: bounds.height }
-          win.setMinimumSize(COMPACT_MIN_WIDTH, COMPACT_MIN_HEIGHT)
+          applyMinSizeIfChanged(win, { width: COMPACT_MIN_WIDTH, height: COMPACT_MIN_HEIGHT })
         }
         if (compactSize && compactSize.width > 0 && compactSize.height > 0) {
           const contentBounds = win.getContentBounds()
@@ -294,23 +389,36 @@ function setupWindowIpc(): void {
         return null
       } else {
         const compactBounds = { width: bounds.width, height: bounds.height }
+        const { display, minSize } = minSizeForBounds(bounds)
         if (normalWindowSize) {
-          const newW = Math.max(normalWindowSize.width, MIN_WIDTH)
-          const newH = Math.max(normalWindowSize.height, MIN_HEIGHT)
+          const newW = Math.max(normalWindowSize.width, minSize.width)
+          const newH = Math.max(normalWindowSize.height, minSize.height)
           const targetX = bounds.x - Math.round((newW - bounds.width) / 2)
           const targetY = bounds.y - Math.round((newH - bounds.height) / 2)
+          const target = clampBoundsToWorkArea({ x: targetX, y: targetY, width: newW, height: newH }, display.workArea)
           await new Promise<void>((resolve) => {
-            animateBounds(win, bounds, { x: targetX, y: targetY, width: newW, height: newH }, 300, () => {
-              win.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
+            animateBounds(win, bounds, target, 300, (completed) => {
+              // A superseded animation (a new compact-enter started before
+              // this exit finished) must not re-apply the full-size minimum
+              // or clear normalWindowSize out from under it.
+              if (completed) {
+                applyMinSizeIfChanged(win, minSize)
+                normalWindowSize = null
+              }
               resolve()
             })
           })
-          normalWindowSize = null
         } else {
-          win.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
+          applyMinSizeIfChanged(win, minSize)
           const [w, h] = win.getSize()
-          if (w < MIN_WIDTH || h < MIN_HEIGHT) {
-            win.setSize(Math.max(w, MIN_WIDTH), Math.max(h, MIN_HEIGHT))
+          // The minimum is display-aware; only correct the size when it
+          // actually falls below that, leaving an in-range window alone.
+          if (w < minSize.width || h < minSize.height) {
+            const target = clampBoundsToWorkArea(
+              { x: bounds.x, y: bounds.y, width: Math.max(w, minSize.width), height: Math.max(h, minSize.height) },
+              display.workArea,
+            )
+            win.setBounds(target)
           }
         }
         return compactBounds
@@ -349,7 +457,7 @@ function setupWindowIpc(): void {
     (event, width: number, height: number) => {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (!win) return
-      win.setMinimumSize(Math.max(width, 1), Math.max(height, 1))
+      applyMinSizeIfChanged(win, { width: Math.max(width, 1), height: Math.max(height, 1) })
     },
   )
 
