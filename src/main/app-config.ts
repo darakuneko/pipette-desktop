@@ -23,6 +23,13 @@ const DEFAULT_STATE: WindowState = {
   height: MIN_HEIGHT,
 }
 
+/** True when `state` holds a real saved position rather than DEFAULT_STATE's
+ * -1/-1 "never saved" marker (a real position on a display left of/above the
+ * primary one can be negative on one axis without being the sentinel). */
+export function hasSavedWindowPosition(state: WindowState): boolean {
+  return state.x !== -1 || state.y !== -1
+}
+
 const store = new Store<AppConfig>({
   name: 'config',
   defaults: DEFAULT_APP_CONFIG,
@@ -114,6 +121,8 @@ export function loadWindowState(): WindowState {
 /**
  * Persist the current window bounds.
  * Called during window close — errors are silently ignored since window state is non-critical.
+ * The saved size is the effective (possibly display-clamped) size actually
+ * applied to the window; the nominal minimum is re-applied on load.
  */
 export function saveWindowState(bounds: Electron.Rectangle): void {
   const state: WindowState = {
