@@ -169,6 +169,14 @@ export interface KeymapEditorProps {
    *  `useKeymapApplyPrompt().applyError`. Shown near the Apply button. */
   keymapApplyError?: string | null
   onLock?: () => void
+  /** Turns the footer Record toggle off. Used by the Security row's
+   *  lock-confirm flow so REC never stays armed once the lock lands. */
+  onTypingRecordDisarm?: () => void
+  /** True once the device's unlock status has actually been read. Before
+   *  that, `unlocked` is a locked-looking placeholder with no unlock-combo
+   *  keys yet, so the Security row's Unlock button stays disabled to avoid
+   *  opening the non-cancelable UnlockDialog with nothing to unlock with. */
+  unlockStatusKnown?: boolean
   onMatrixModeChange?: (matrixMode: boolean, hasMatrixTester: boolean) => void
   onOpenLighting?: () => void
   comboEntries?: ComboEntry[]

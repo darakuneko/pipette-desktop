@@ -8,6 +8,7 @@ import type { LayoutOption } from '../../../shared/layout-options'
 import { LayoutOptionsPanel } from './LayoutOptionsPanel'
 import { IMPORT_BTN } from './layout-store-types'
 import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from './modal-controls'
+import { LockRecOffConfirmModal } from './LockRecOffConfirmModal'
 
 type OverlayTab = 'layout' | 'tools' | 'data'
 
@@ -41,10 +42,14 @@ interface Props {
   onToggleMatrix?: () => void
   unlocked: boolean
   onLock?: () => void
-  // REC (Typing Record) armed — disables the Lock button while true. Locking
-  // while REC is armed would immediately re-trigger the unlock gate and
-  // reopen the inescapable UnlockDialog, so this button follows the same
-  // "REC armed ⇒ no locking" invariant as auto-lock suspend.
+  onUnlock?: () => void
+  onTypingRecordDisarm?: () => void
+  unlockStatusKnown?: boolean
+  // REC (Typing Record) armed. Locking directly while REC is armed would
+  // immediately re-trigger the unlock gate and reopen the inescapable
+  // UnlockDialog, so the Security row's Lock button instead opens a
+  // confirmation that disarms REC first and only then locks — the lock
+  // itself never lands while REC is still armed.
   typingRecordEnabled?: boolean
   isDummy?: boolean
   keyEditorZoom?: number
@@ -76,6 +81,9 @@ export function KeycodesOverlayPanel({
   onToggleMatrix,
   unlocked,
   onLock,
+  onUnlock,
+  onTypingRecordDisarm,
+  unlockStatusKnown,
   typingRecordEnabled,
   isDummy,
   keyEditorZoom,
@@ -109,6 +117,7 @@ export function KeycodesOverlayPanel({
   }
   const hasData = dataPanel != null
   const [activeTab, setActiveTab] = useState<OverlayTab>(hasLayoutOptions ? 'layout' : hasData ? 'data' : 'tools')
+  const [showLockConfirm, setShowLockConfirm] = useState(false)
 
   // Reset to next leftmost tab if current tab disappears at runtime
   useEffect(() => {
@@ -338,15 +347,37 @@ export function KeycodesOverlayPanel({
                 </div>
                 <button
                   type="button"
-                  disabled={!unlocked || typingRecordEnabled}
+                  // Before unlockStatusKnown, the device's unlock state is
+                  // a locked-looking placeholder with no unlock-combo keys
+                  // read yet — opening the non-cancelable UnlockDialog at
+                  // that point would strand the user, so the Unlock side
+                  // stays disabled until the real status has landed.
+                  disabled={!unlocked && !unlockStatusKnown}
                   className={`${IMPORT_BTN} disabled:opacity-50`}
-                  onClick={onLock}
+                  onClick={() => {
+                    if (!unlocked) onUnlock?.()
+                    else if (typingRecordEnabled) setShowLockConfirm(true)
+                    else onLock?.()
+                  }}
                   data-testid="overlay-lock-button"
                 >
-                  {t('security.lock')}
+                  {unlocked ? t('security.lock') : t('security.unlock')}
                 </button>
               </div>
             )}
+            <LockRecOffConfirmModal
+              open={showLockConfirm}
+              onConfirm={() => {
+                // Close first so a double-click on Confirm can't re-fire —
+                // then disarm REC before locking so the Record flag is
+                // already committed false by the time the lock status lands
+                // and the unlock gate cannot re-trigger.
+                setShowLockConfirm(false)
+                onTypingRecordDisarm?.()
+                onLock?.()
+              }}
+              onCancel={() => setShowLockConfirm(false)}
+            />
 
             {toolsExtra}
           </div>

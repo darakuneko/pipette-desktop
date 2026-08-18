@@ -1102,7 +1102,7 @@ Keyboard タブを開くと、接続中の Vial 対応キーボードの一覧�
 - **Instant Key Selection**: キーの即時選択モードの切替 (動作の詳細は §2.2 参照)
 - **キーピッカーでShiftキーを分離**: 複合キーコードの分割表示を切替 (例: Mod-Tap を 2 つに分けて表示)
 - **Key Tester**: Matrix Tester モードの切替 (対応キーボードのみ)
-- **Security**: ロック状態 (Locked/Unlocked) の表示と Lock ボタン。Typing Record（§4.3）が ON の間は Lock ボタンが無効化されます — ロックすると即座に Unlock ダイアログが再表示されてしまうためです
+- **Security**: ロック状態 (Locked/Unlocked) の表示と、それに連動するボタン — ロック中は **Unlock**、アンロック中は **Lock** になります。Unlock は Unlock ダイアログを開きます（ロック状態が確定するまでは無効のまま — 未確定の仮の状態に対してダイアログを開いてしまわないための措置です）。Lock は Typing Record（§4.3）が OFF ならそのまま即座にロックし、ON の場合は確認ダイアログ（「Turn off Record and lock?」）を表示し、確定すると Record を OFF にしてからロックします
 - **Import**: `.vil` ファイルからの復元、またはカスタム JSON 定義のサイドロード
 - **Reset Keyboard Data**: キーボードを初期状態に戻す
 

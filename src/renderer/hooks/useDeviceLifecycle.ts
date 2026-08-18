@@ -193,6 +193,12 @@ export function useDeviceLifecycle(options: Options) {
      packsPulledOnce, markPacksPulledOnce],
   )
 
+  // Locking while REC (typingRecordEnabled) is armed re-triggers the
+  // REC-unlock gate and reopens the non-cancelable UnlockDialog, so any
+  // caller that can run while REC is armed must disarm it first — auto-lock
+  // below suspends on the flag, and the Security row's manual Lock goes
+  // through a confirm that disarms REC before calling this (see
+  // KeycodesOverlayPanel). A new Lock entry point must do the same.
   const handleLock = useCallback(async () => {
     await window.vialAPI.lock()
     await refreshUnlockStatus()
