@@ -1,5 +1,5 @@
 {
-  "version": "0.1.88",
+  "version": "0.1.89",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -786,7 +786,10 @@
     }
   },
   "security": {
-    "lock": "ロック"
+    "lock": "ロック",
+    "unlock": "ロック解除",
+    "lockRecConfirmTitle": "Record をオフにしてロックしますか？",
+    "lockRecConfirmBody": "Record がオンです。キーボードをロックすると Record はオフになります。"
   },
   "theme": {
     "label": "テーマ",

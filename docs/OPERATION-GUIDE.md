@@ -1103,7 +1103,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 - **Instant Key Selection**: Toggle instant key selection mode (see §2.2 for behavior details)
 - **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
 - **Key Tester**: Toggle Matrix Tester mode (supported keyboards only)
-- **Security**: Shows lock status (Locked/Unlocked) with a Lock button. The Lock button is unavailable (disabled) while Typing Record (§4.3) is on, since locking would immediately reopen the Unlock dialog
+- **Security**: Shows lock status (Locked/Unlocked) with a button that follows it — **Unlock** while locked, **Lock** while unlocked. Unlock opens the Unlock dialog (stays disabled until the lock status has been confirmed, to avoid opening it against a stale placeholder state). Lock locks immediately if Typing Record (§4.3) is off; if Typing Record is on, it instead asks for confirmation ("Turn off Record and lock?") and, once confirmed, turns Record off before locking
 - **Import**: Restore from `.vil` files or sideload custom JSON definitions
 - **Reset Keyboard Data**: Reset keyboard to factory defaults
 

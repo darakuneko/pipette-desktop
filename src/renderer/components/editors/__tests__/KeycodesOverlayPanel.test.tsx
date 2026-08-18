@@ -17,8 +17,12 @@ vi.mock('react-i18next', () => ({
         'editor.keyTester.title': 'Key Tester',
         'settings.security': 'Security',
         'security.lock': 'Lock',
+        'security.unlock': 'Unlock',
+        'security.lockRecConfirmTitle': 'Turn off Record and lock?',
+        'security.lockRecConfirmBody': 'Record is on. Locking the keyboard turns Record off.',
         'statusBar.locked': 'Locked',
         'statusBar.unlocked': 'Unlocked',
+        'common.cancel': 'Cancel',
       }
       return map[key] ?? key
     },
@@ -126,16 +130,175 @@ describe('KeycodesOverlayPanel', () => {
     expect(screen.queryByTestId('overlay-lock-row')).not.toBeInTheDocument()
   })
 
-  it('disables the Lock button while REC (typingRecordEnabled) is armed, even though the keyboard is unlocked', () => {
-    render(<KeycodesOverlayPanel {...DEFAULT_PROPS} unlocked typingRecordEnabled />)
+  it('keeps the Lock button enabled while REC (typingRecordEnabled) is armed, and opens a confirm modal instead of locking directly', () => {
+    const onLock = vi.fn()
+    render(<KeycodesOverlayPanel {...DEFAULT_PROPS} unlocked typingRecordEnabled onLock={onLock} />)
 
-    expect(screen.getByTestId('overlay-lock-button')).toBeDisabled()
+    const lockButton = screen.getByTestId('overlay-lock-button')
+    expect(lockButton).toBeEnabled()
+
+    fireEvent.click(lockButton)
+
+    expect(onLock).not.toHaveBeenCalled()
+    expect(screen.getByTestId('lock-rec-confirm-modal')).toBeInTheDocument()
   })
 
   it('keeps the Lock button enabled when unlocked and REC is off', () => {
     render(<KeycodesOverlayPanel {...DEFAULT_PROPS} unlocked typingRecordEnabled={false} />)
 
     expect(screen.getByTestId('overlay-lock-button')).toBeEnabled()
+  })
+
+  describe('Security row — locked state', () => {
+    it('shows an enabled Unlock button when unlockStatusKnown, and clicking it fires onUnlock only', () => {
+      const onUnlock = vi.fn()
+      const onLock = vi.fn()
+      render(
+        <KeycodesOverlayPanel
+          {...DEFAULT_PROPS}
+          unlocked={false}
+          unlockStatusKnown
+          onUnlock={onUnlock}
+          onLock={onLock}
+        />,
+      )
+
+      const button = screen.getByTestId('overlay-lock-button')
+      expect(button).toHaveTextContent('Unlock')
+      expect(button).toBeEnabled()
+
+      fireEvent.click(button)
+
+      expect(onUnlock).toHaveBeenCalledTimes(1)
+      expect(onLock).not.toHaveBeenCalled()
+    })
+
+    it('disables the Unlock button until unlockStatusKnown, and a click fires nothing', () => {
+      const onUnlock = vi.fn()
+      render(
+        <KeycodesOverlayPanel
+          {...DEFAULT_PROPS}
+          unlocked={false}
+          unlockStatusKnown={false}
+          onUnlock={onUnlock}
+        />,
+      )
+
+      const button = screen.getByTestId('overlay-lock-button')
+      expect(button).toBeDisabled()
+
+      fireEvent.click(button)
+
+      expect(onUnlock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Security row — unlocked state', () => {
+    it('shows a Lock button that calls onLock directly when REC is off, without opening the confirm modal', () => {
+      const onLock = vi.fn()
+      render(<KeycodesOverlayPanel {...DEFAULT_PROPS} unlocked typingRecordEnabled={false} onLock={onLock} />)
+
+      const button = screen.getByTestId('overlay-lock-button')
+      expect(button).toHaveTextContent('Lock')
+
+      fireEvent.click(button)
+
+      expect(onLock).toHaveBeenCalledTimes(1)
+      expect(screen.queryByTestId('lock-rec-confirm-modal')).not.toBeInTheDocument()
+    })
+
+    it('opens the confirm modal instead of locking when REC is armed, without calling onLock or onTypingRecordDisarm yet', () => {
+      const onLock = vi.fn()
+      const onTypingRecordDisarm = vi.fn()
+      render(
+        <KeycodesOverlayPanel
+          {...DEFAULT_PROPS}
+          unlocked
+          typingRecordEnabled
+          onLock={onLock}
+          onTypingRecordDisarm={onTypingRecordDisarm}
+        />,
+      )
+
+      expect(screen.queryByTestId('lock-rec-confirm-modal')).not.toBeInTheDocument()
+
+      fireEvent.click(screen.getByTestId('overlay-lock-button'))
+
+      expect(screen.getByTestId('lock-rec-confirm-modal')).toBeInTheDocument()
+      expect(onLock).not.toHaveBeenCalled()
+      expect(onTypingRecordDisarm).not.toHaveBeenCalled()
+    })
+
+    it('confirm flow: closes the modal and calls onTypingRecordDisarm then onLock, each once, in order', () => {
+      const calls: string[] = []
+      const onLock = vi.fn(() => { calls.push('onLock') })
+      const onTypingRecordDisarm = vi.fn(() => { calls.push('onTypingRecordDisarm') })
+      render(
+        <KeycodesOverlayPanel
+          {...DEFAULT_PROPS}
+          unlocked
+          typingRecordEnabled
+          onLock={onLock}
+          onTypingRecordDisarm={onTypingRecordDisarm}
+        />,
+      )
+
+      fireEvent.click(screen.getByTestId('overlay-lock-button'))
+      expect(screen.getByTestId('lock-rec-confirm-modal')).toBeInTheDocument()
+
+      fireEvent.click(screen.getByTestId('lock-rec-confirm-confirm'))
+
+      expect(screen.queryByTestId('lock-rec-confirm-modal')).not.toBeInTheDocument()
+      expect(onTypingRecordDisarm).toHaveBeenCalledTimes(1)
+      expect(onLock).toHaveBeenCalledTimes(1)
+      expect(calls).toEqual(['onTypingRecordDisarm', 'onLock'])
+    })
+
+    it('cancel flow: clicking Cancel closes the modal without calling onLock or onTypingRecordDisarm', () => {
+      const onLock = vi.fn()
+      const onTypingRecordDisarm = vi.fn()
+      render(
+        <KeycodesOverlayPanel
+          {...DEFAULT_PROPS}
+          unlocked
+          typingRecordEnabled
+          onLock={onLock}
+          onTypingRecordDisarm={onTypingRecordDisarm}
+        />,
+      )
+
+      fireEvent.click(screen.getByTestId('overlay-lock-button'))
+      expect(screen.getByTestId('lock-rec-confirm-modal')).toBeInTheDocument()
+
+      fireEvent.click(screen.getByTestId('lock-rec-confirm-cancel'))
+
+      expect(screen.queryByTestId('lock-rec-confirm-modal')).not.toBeInTheDocument()
+      expect(onLock).not.toHaveBeenCalled()
+      expect(onTypingRecordDisarm).not.toHaveBeenCalled()
+    })
+
+    it('cancel flow: clicking the backdrop closes the modal without calling onLock or onTypingRecordDisarm', () => {
+      const onLock = vi.fn()
+      const onTypingRecordDisarm = vi.fn()
+      render(
+        <KeycodesOverlayPanel
+          {...DEFAULT_PROPS}
+          unlocked
+          typingRecordEnabled
+          onLock={onLock}
+          onTypingRecordDisarm={onTypingRecordDisarm}
+        />,
+      )
+
+      fireEvent.click(screen.getByTestId('overlay-lock-button'))
+      expect(screen.getByTestId('lock-rec-confirm-modal')).toBeInTheDocument()
+
+      fireEvent.click(screen.getByTestId('lock-rec-confirm-backdrop'))
+
+      expect(screen.queryByTestId('lock-rec-confirm-modal')).not.toBeInTheDocument()
+      expect(onLock).not.toHaveBeenCalled()
+      expect(onTypingRecordDisarm).not.toHaveBeenCalled()
+    })
   })
 
   it('shows matrix tester toggle when hasMatrixTester', () => {

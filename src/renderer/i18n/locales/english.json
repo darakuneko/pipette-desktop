@@ -1,5 +1,5 @@
 {
-  "version": "0.1.88",
+  "version": "0.1.89",
   "name": "English",
   "common": {
     "save": "Save",
@@ -786,7 +786,10 @@
     }
   },
   "security": {
-    "lock": "Lock"
+    "lock": "Lock",
+    "unlock": "Unlock",
+    "lockRecConfirmTitle": "Turn off Record and lock?",
+    "lockRecConfirmBody": "Record is on. Locking the keyboard turns Record off."
   },
   "theme": {
     "label": "Theme",

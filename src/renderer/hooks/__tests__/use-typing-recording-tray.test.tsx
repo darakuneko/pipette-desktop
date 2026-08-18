@@ -275,4 +275,50 @@ describe('useTypingRecordingTray — REC-unlock gate', () => {
 
     expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
   })
+
+  it('manual-lock flow: disarming REC before the lock status lands never re-triggers the gate', () => {
+    // Pins the Security row's manual Lock flow (KeycodesOverlayPanel /
+    // LockRecOffConfirmModal): REC is disarmed first, and only then does
+    // the lock land. If REC were still armed by the time `unlocked` flips
+    // to false, this same gate would fire and reopen the unlock dialog —
+    // the disarm-before-lock ordering must prevent that.
+    const { mocks, update } = renderTray({
+      connectedDevice: makeDevice(),
+      unlocked: true,
+      unlockStatusKnown: true,
+      typingRecordEnabled: true,
+      uid: 'UID1',
+      appliedUid: 'UID1',
+    })
+    expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
+
+    // REC disarmed first (LockRecOffConfirmModal's onConfirm calls
+    // onTypingRecordDisarm before onLock).
+    act(() => { update({ typingRecordEnabled: false }) })
+    expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
+
+    // Lock status lands afterward.
+    act(() => { update({ unlocked: false }) })
+
+    expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
+  })
+
+  it('control: if REC were still armed when the lock status lands, the gate would fire once', () => {
+    // Inverse of the manual-lock flow test above — proves the sequence
+    // actually exercises the gate rather than passing vacuously.
+    const { mocks, update } = renderTray({
+      connectedDevice: makeDevice(),
+      unlocked: true,
+      unlockStatusKnown: true,
+      typingRecordEnabled: true,
+      uid: 'UID1',
+      appliedUid: 'UID1',
+    })
+    expect(mocks.onRequestUnlockDialog).not.toHaveBeenCalled()
+
+    // REC left armed while the lock status lands.
+    act(() => { update({ unlocked: false }) })
+
+    expect(mocks.onRequestUnlockDialog).toHaveBeenCalledTimes(1)
+  })
 })

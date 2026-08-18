@@ -1,5 +1,5 @@
 {
-  "version": "0.1.88",
+  "version": "0.1.89",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -786,7 +786,10 @@
     }
   },
   "security": {
-    "lock": "封印"
+    "lock": "封印",
+    "unlock": "封印解除",
+    "lockRecConfirmTitle": "記録を止めて封印いたしましょうか？",
+    "lockRecConfirmBody": "記録が進行中でございます。キーボードを封印いたしますと、記録は停止いたします。"
   },
   "theme": {
     "label": "意匠",

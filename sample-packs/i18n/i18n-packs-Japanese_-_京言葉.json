@@ -1,5 +1,5 @@
 {
-  "version": "0.1.88",
+  "version": "0.1.89",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -786,7 +786,10 @@
     }
   },
   "security": {
-    "lock": "ロック"
+    "lock": "ロック",
+    "unlock": "ロック解除",
+    "lockRecConfirmTitle": "記録をオフにしてロックしはりますか？",
+    "lockRecConfirmBody": "記録が入ってますえ。キーボードをロックすると記録はオフになりますえ。"
   },
   "theme": {
     "label": "テーマ",
