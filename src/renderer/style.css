@@ -396,7 +396,6 @@ label:has(> input[type="radio"]:not(:disabled)) {
   /* Typography */
   --text-2xs: 10px;      /* micro labels: badges, section headers */
   --text-3xs: 9px;       /* tile grid keycode text */
-  --text-4xs: 8px;       /* tile grid index labels */
   --text-heading-md: 15px; /* settings section headings */
 
   /* Spacing */
