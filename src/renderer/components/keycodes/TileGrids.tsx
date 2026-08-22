@@ -6,18 +6,21 @@ import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } f
 import { codeToLabel, findKeycode, type Keycode } from '../../../shared/keycodes/keycodes'
 import type { MacroAction } from '../../../preload/macro'
 
-const MIN_VISIBLE_MACRO_ACTIONS = 6
+const MAX_VISIBLE_MACRO_ACTIONS = 6
 const GRID_COLUMNS = 12
-const GRID_GAP_PX = 4
-const TILE_PADDING_TOP = 4
-const TILE_LABEL_HEIGHT = 12
-const TILE_CONTENT_MT = 8
-const MACRO_LINE_HEIGHT = 12
-const MACRO_MORE_ROW_HEIGHT = 12
+const GRID_GAP_PX = 4 // gap-1
+const TILE_BORDER_Y = 2 // border (1px top + 1px bottom)
+const TILE_PADDING_TOP = 4 // p-1
+const TILE_PADDING_BOTTOM = 4 // p-1
+const TILE_CONTENT_MT = 12 // mt-3 on TILE_CONTENT; clears the absolute text-xs leading-none index label
+const MACRO_LINE_HEIGHT = 12.375 // text-3xs 9px × leading-snug 1.375
 
 const TILE_ENABLED = 'justify-start border-accent bg-accent/20 text-accent font-semibold hover:bg-accent/30'
 const TILE_DISABLED = 'justify-start border-accent/50 bg-accent/10 text-accent/70 font-semibold hover:bg-accent/15'
 const TILE_EMPTY = 'justify-center border-accent/30 bg-accent/5 text-content-secondary hover:bg-accent/10'
+const TILE_BASE = 'relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-3xs leading-snug transition-colors'
+const TILE_INDEX_LABEL = 'absolute top-0.5 left-1 text-xs leading-none font-medium text-content-secondary'
+const TILE_CONTENT = 'mt-3 inline-grid grid-cols-auto-1fr gap-x-1 overflow-hidden'
 
 function SettingsNote() {
   const { t } = useTranslation()
@@ -54,12 +57,12 @@ function SettingsTileGrid<T>({ entries, fields, isConfigured, isEnabled, onOpen,
               type="button"
               data-testid={`${testIdPrefix}-tile-${i}`}
               data-configured={configured || undefined}
-              className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-3xs leading-snug transition-colors ${tileStyle(configured, enabled)}`}
+              className={`${TILE_BASE} ${tileStyle(configured, enabled)}`}
               onClick={() => onOpen(i)}
             >
-              <span className="absolute top-0.5 left-1 text-4xs text-content-secondary/60">{i}</span>
+              <span className={TILE_INDEX_LABEL}>{i}</span>
               {configured ? (
-                <span className="mt-2 inline-grid grid-cols-auto-1fr gap-x-1 gap-y-px overflow-hidden">
+                <span className={`${TILE_CONTENT} gap-y-0`}>
                   {fields.map(({ key, prefix }) => (
                     <Fragment key={key}>
                       <span className="text-left text-content-secondary/60">{prefix}</span>
@@ -144,13 +147,13 @@ export function TdTileGrid({ entries, onSelect, onDoubleClick }: TdTileGridProps
             type="button"
             data-testid={`td-tile-${i}`}
             data-configured={configured || undefined}
-            className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-3xs leading-snug transition-colors ${configured ? TILE_ENABLED : TILE_EMPTY}`}
+            className={`${TILE_BASE} ${configured ? TILE_ENABLED : TILE_EMPTY}`}
             onClick={select}
             onDoubleClick={commit}
           >
-            <span className="absolute top-0.5 left-1 text-4xs text-content-secondary/60">TD({i})</span>
+            <span className={TILE_INDEX_LABEL}>TD({i})</span>
             {configured ? (
-              <span className="mt-2 inline-grid grid-cols-auto-1fr gap-x-1 gap-y-px">
+              <span className={`${TILE_CONTENT} gap-y-px`}>
                 {TD_FIELDS.map(({ key, prefix }) => (
                   <Fragment key={key}>
                     <span className="text-left text-content-secondary/60">{prefix}</span>
@@ -177,8 +180,8 @@ interface MacroTileGridProps {
   onDoubleClick?: (keycode: Keycode) => void
 }
 
-function useMacroVisibleLines(gridRef: React.RefObject<HTMLDivElement | null>): number {
-  const [visibleLines, setVisibleLines] = useState(MIN_VISIBLE_MACRO_ACTIONS)
+function useMacroFitLines(gridRef: React.RefObject<HTMLDivElement | null>): number {
+  const [fitLines, setFitLines] = useState(MAX_VISIBLE_MACRO_ACTIONS)
 
   useEffect(() => {
     const el = gridRef.current
@@ -188,27 +191,28 @@ function useMacroVisibleLines(gridRef: React.RefObject<HTMLDivElement | null>): 
         const gridWidth = entry.contentRect.width
         const tileWidth = (gridWidth - GRID_GAP_PX * (GRID_COLUMNS - 1)) / GRID_COLUMNS
         const tileHeight = tileWidth
-        const contentHeight = tileHeight - TILE_PADDING_TOP - TILE_LABEL_HEIGHT - TILE_CONTENT_MT
-        const actionLines = Math.floor((contentHeight - MACRO_MORE_ROW_HEIGHT) / MACRO_LINE_HEIGHT)
-        const next = Math.max(MIN_VISIBLE_MACRO_ACTIONS, actionLines)
-        setVisibleLines((prev) => prev !== next ? next : prev)
+        const contentHeight = tileHeight - TILE_BORDER_Y - TILE_PADDING_TOP - TILE_CONTENT_MT - TILE_PADDING_BOTTOM
+        const next = Math.min(MAX_VISIBLE_MACRO_ACTIONS, Math.max(1, Math.floor(contentHeight / MACRO_LINE_HEIGHT)))
+        setFitLines((prev) => prev !== next ? next : prev)
       }
     })
     observer.observe(el)
     return () => observer.disconnect()
   }, [gridRef])
 
-  return visibleLines
+  return fitLines
 }
 
 export function MacroTileGrid({ macros, onSelect, onDoubleClick }: MacroTileGridProps) {
   const { t } = useTranslation()
   const gridRef = useRef<HTMLDivElement>(null)
-  const maxVisible = useMacroVisibleLines(gridRef)
+  const fitLines = useMacroFitLines(gridRef)
   return (
     <div ref={gridRef} className="grid grid-cols-12 auto-rows-fr gap-1">
       {macros.map((actions, i) => {
         const configured = actions.length > 0
+        const visible = actions.length <= fitLines ? actions : actions.slice(0, fitLines - 1)
+        const hidden = actions.length - visible.length
         const kc = findKeycode(`M${i}`)
         const select = kc ? () => onSelect(kc) : undefined
         const commit = kc && onDoubleClick ? () => onDoubleClick(kc) : undefined
@@ -218,21 +222,21 @@ export function MacroTileGrid({ macros, onSelect, onDoubleClick }: MacroTileGrid
             type="button"
             data-testid={`macro-tile-${i}`}
             data-configured={configured || undefined}
-            className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-3xs leading-snug transition-colors ${configured ? TILE_ENABLED : TILE_EMPTY}`}
+            className={`${TILE_BASE} ${configured ? TILE_ENABLED : TILE_EMPTY}`}
             onClick={select}
             onDoubleClick={commit}
           >
-            <span className="absolute top-0.5 left-1 text-4xs text-content-secondary/60">M{i}</span>
+            <span className={TILE_INDEX_LABEL}>M{i}</span>
             {configured ? (
-              <span className="mt-2 inline-grid grid-cols-auto-1fr gap-x-1 gap-y-0 overflow-hidden">
-                {actions.slice(0, maxVisible).map((action, j) => (
+              <span className={`${TILE_CONTENT} gap-y-0`}>
+                {visible.map((action, j) => (
                   <Fragment key={j}>
                     <span className="text-left text-content-secondary/60">{MACRO_PREFIX[action.type]}</span>
                     <span className="truncate text-left">{macroActionLabel(action)}</span>
                   </Fragment>
                 ))}
-                {actions.length > maxVisible && (
-                  <span className="col-span-2 text-center text-content-secondary/60">{t('keycodes.macroMoreActions', { count: actions.length - maxVisible })}</span>
+                {hidden > 0 && (
+                  <span className="col-span-2 truncate text-center text-content-secondary/60">{t('keycodes.macroMoreActions', { count: hidden })}</span>
                 )}
               </span>
             ) : (
