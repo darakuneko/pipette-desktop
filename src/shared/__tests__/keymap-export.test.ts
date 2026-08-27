@@ -2,26 +2,6 @@
 
 import { describe, it, expect } from 'vitest'
 import { generateKeymapC, type KeymapExportInput } from '../keymap-export'
-import type { KleKey } from '../kle/types'
-
-function makeKey(overrides: Partial<KleKey> = {}): KleKey {
-  return {
-    x: 0, y: 0,
-    width: 1, height: 1,
-    x2: 0, y2: 0,
-    width2: 1, height2: 1,
-    rotation: 0, rotationX: 0, rotationY: 0,
-    color: '#cccccc',
-    labels: Array(12).fill(null),
-    textColor: Array(12).fill(null),
-    textSize: Array(12).fill(null),
-    row: 0, col: 0,
-    encoderIdx: -1, encoderDir: -1,
-    layoutIndex: -1, layoutOption: -1,
-    decal: false, nub: false, stepped: false, ghost: false,
-    ...overrides,
-  }
-}
 
 function mockSerialize(code: number): string {
   const names: Record<number, string> = {
@@ -45,16 +25,7 @@ function mockSerialize(code: number): string {
 }
 
 function createBasicInput(overrides: Partial<KeymapExportInput> = {}): KeymapExportInput {
-  // 2x3 grid: row0=(0,0)(0,1)(0,2), row1=(1,0)(1,1)(1,2)
-  const keys: KleKey[] = [
-    makeKey({ x: 0, y: 0, row: 0, col: 0 }),
-    makeKey({ x: 1, y: 0, row: 0, col: 1 }),
-    makeKey({ x: 2, y: 0, row: 0, col: 2 }),
-    makeKey({ x: 0, y: 1, row: 1, col: 0 }),
-    makeKey({ x: 1, y: 1, row: 1, col: 1 }),
-    makeKey({ x: 2, y: 1, row: 1, col: 2 }),
-  ]
-
+  // 2x3 matrix: row0=(0,0)(0,1)(0,2), row1=(1,0)(1,1)(1,2)
   const keymap = new Map<string, number>([
     ['0,0,0', 0x29], ['0,0,1', 0x04], ['0,0,2', 0x05],
     ['0,1,0', 0x2B], ['0,1,1', 0x06], ['0,1,2', 0x07],
@@ -62,11 +33,11 @@ function createBasicInput(overrides: Partial<KeymapExportInput> = {}): KeymapExp
 
   return {
     layers: 1,
-    keys,
+    matrixRows: 2,
+    matrixCols: 3,
     keymap,
     encoderLayout: new Map(),
     encoderCount: 0,
-    layoutOptions: new Map(),
     serializeKeycode: mockSerialize,
     ...overrides,
   }
@@ -78,9 +49,9 @@ describe('generateKeymapC', () => {
 
     expect(result).toContain('#include QMK_KEYBOARD_H')
     expect(result).toContain('PROGMEM')
-    expect(result).toContain('[0] = LAYOUT(')
-    expect(result).toContain('KC_ESC, KC_A, KC_B')
-    expect(result).toContain('KC_TAB, KC_C, KC_D')
+    expect(result).toContain('[0] = {')
+    expect(result).toContain('{ KC_ESC, KC_A, KC_B }')
+    expect(result).toContain('{ KC_TAB, KC_C, KC_D }')
   })
 
   it('generates header with SPDX and include', () => {
@@ -101,52 +72,45 @@ describe('generateKeymapC', () => {
 
     const result = generateKeymapC(createBasicInput({ layers: 2, keymap }))
 
-    expect(result).toContain('[0] = LAYOUT(')
-    expect(result).toContain('[1] = LAYOUT(')
-    expect(result).toContain('KC_GRV, KC_1, KC_2')
-    expect(result).toContain('KC_TRNS, KC_E, KC_F')
+    expect(result).toContain('[0] = {')
+    expect(result).toContain('[1] = {')
+    expect(result).toContain('{ KC_GRV, KC_1, KC_2 }')
+    expect(result).toContain('{ KC_TRNS, KC_E, KC_F }')
   })
 
-  it('filters keys by layout options', () => {
-    const keys: KleKey[] = [
-      makeKey({ x: 0, y: 0, row: 0, col: 0 }),
-      makeKey({ x: 1, y: 0, row: 0, col: 1, layoutIndex: 0, layoutOption: 0 }),
-      makeKey({ x: 1, y: 0, row: 0, col: 2, layoutIndex: 0, layoutOption: 1 }),
-    ]
+  it('emits a full grid in row-then-col order using designated initializers', () => {
+    const result = generateKeymapC(createBasicInput())
 
-    const keymap = new Map<string, number>([
-      ['0,0,0', 0x29],
-      ['0,0,1', 0x04],
-      ['0,0,2', 0x05],
-    ])
-
-    // Select layoutOption 1 for layoutIndex 0
-    const layoutOptions = new Map<number, number>([[0, 1]])
-
-    const result = generateKeymapC(createBasicInput({ keys, keymap, layoutOptions }))
-
-    // col 2 (option 1) should be included, col 1 (option 0) should not
-    expect(result).toContain('KC_ESC, KC_B')
-    expect(result).not.toContain('KC_A')
+    expect(result).toContain(
+      '[0] = {\n        { KC_ESC, KC_A, KC_B },\n        { KC_TAB, KC_C, KC_D }\n    }',
+    )
   })
 
-  it('excludes decal keys', () => {
-    const keys: KleKey[] = [
-      makeKey({ x: 0, y: 0, row: 0, col: 0 }),
-      makeKey({ x: 1, y: 0, row: 0, col: 1, decal: true }),
-      makeKey({ x: 2, y: 0, row: 0, col: 2 }),
-    ]
-
+  it('defaults missing Map entries to KC_NO at their coordinates', () => {
     const keymap = new Map<string, number>([
-      ['0,0,0', 0x29],
-      ['0,0,1', 0x04],
-      ['0,0,2', 0x05],
+      ['0,0,0', 0x29], ['0,0,1', 0x04],
+      // 0,0,2 intentionally missing
+      ['0,1,0', 0x2B], ['0,1,1', 0x06], ['0,1,2', 0x07],
     ])
 
-    const result = generateKeymapC(createBasicInput({ keys, keymap }))
+    const result = generateKeymapC(createBasicInput({ keymap }))
 
-    expect(result).toContain('KC_ESC, KC_B')
-    expect(result).not.toContain('KC_A')
+    expect(result).toContain('{ KC_ESC, KC_A, KC_NO }')
+  })
+
+  it('emits a full KC_NO grid for a layer whose entries are all missing', () => {
+    const result = generateKeymapC(createBasicInput({ layers: 2, keymap: new Map() }))
+
+    expect(result).toContain('[0] = {')
+    expect(result).toContain('[1] = {')
+    expect(result).toContain('{ KC_NO, KC_NO, KC_NO }')
+  })
+
+  it('throws when matrix dimensions are unavailable or invalid', () => {
+    expect(() => generateKeymapC(createBasicInput({ matrixRows: 0 }))).toThrow()
+    expect(() => generateKeymapC(createBasicInput({ matrixCols: 0 }))).toThrow()
+    expect(() => generateKeymapC(createBasicInput({ matrixRows: Number.NaN }))).toThrow()
+    expect(() => generateKeymapC(createBasicInput({ matrixCols: 1.5 }))).toThrow()
   })
 
   it('generates encoder_map when encoders exist', () => {
@@ -198,117 +162,6 @@ describe('generateKeymapC', () => {
 
     expect(result).toContain('[0] = { ENCODER_CCW_CW(KC_VOLD, KC_VOLU) }')
     expect(result).toContain('[1] = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS) }')
-  })
-
-  it('groups keys by y coordinate (visual rows)', () => {
-    // Keys on same visual row (y difference <= 0.3)
-    const keys: KleKey[] = [
-      makeKey({ x: 0, y: 0, row: 0, col: 0 }),
-      makeKey({ x: 1, y: 0.1, row: 0, col: 1 }), // close y => same row
-      makeKey({ x: 0, y: 1.5, row: 1, col: 0 }),   // far y => new row
-    ]
-
-    const keymap = new Map<string, number>([
-      ['0,0,0', 0x29],
-      ['0,0,1', 0x04],
-      ['0,1,0', 0x05],
-    ])
-
-    const result = generateKeymapC(createBasicInput({ keys, keymap }))
-
-    // Row 1: ESC, A (same visual row)
-    // Row 2: B (new visual row)
-    const lines = result.split('\n')
-    const layoutLine1 = lines.find(l => l.includes('KC_ESC'))!
-    expect(layoutLine1).toContain('KC_A')
-    const layoutLine2 = lines.find(l => l.includes('KC_B') && !l.includes('KC_ESC'))!
-    expect(layoutLine2).toBeDefined()
-  })
-
-  it('separates normal keys from encoder keys', () => {
-    const keys: KleKey[] = [
-      makeKey({ x: 0, y: 0, row: 0, col: 0 }),
-      makeKey({ x: 1, y: 0, row: 0, col: 1 }),
-      makeKey({ x: 2, y: 0, row: 0, col: 2, encoderIdx: 0, encoderDir: 0 }),
-      makeKey({ x: 3, y: 0, row: 0, col: 3, encoderIdx: 0, encoderDir: 1 }),
-    ]
-
-    const keymap = new Map<string, number>([
-      ['0,0,0', 0x29],
-      ['0,0,1', 0x04],
-      ['0,0,2', 0x80],
-      ['0,0,3', 0x81],
-    ])
-
-    const result = generateKeymapC(createBasicInput({ keys, keymap }))
-
-    // LAYOUT should only contain normal keys
-    const layoutSection = result.split('};')[0]
-    expect(layoutSection).toContain('KC_ESC, KC_A')
-    // Encoder keys should not appear in LAYOUT
-    expect(layoutSection).not.toContain('KC_VOLD')
-  })
-
-  it('defaults keycode to 0 (KC_NO) for missing keys', () => {
-    const keys: KleKey[] = [
-      makeKey({ x: 0, y: 0, row: 0, col: 0 }),
-    ]
-
-    const result = generateKeymapC(createBasicInput({
-      keys,
-      keymap: new Map(), // empty keymap
-    }))
-
-    expect(result).toContain('KC_NO')
-  })
-
-  it('includes all keys when layoutOptions is empty (matches KeyboardWidget)', () => {
-    const keys: KleKey[] = [
-      makeKey({ x: 0, y: 0, row: 0, col: 0 }),
-      makeKey({ x: 1, y: 0, row: 0, col: 1, layoutIndex: 0, layoutOption: 0 }),
-      makeKey({ x: 2, y: 0, row: 0, col: 2, layoutIndex: 0, layoutOption: 1 }),
-    ]
-
-    const keymap = new Map<string, number>([
-      ['0,0,0', 0x29],
-      ['0,0,1', 0x04],
-      ['0,0,2', 0x05],
-    ])
-
-    // Empty layoutOptions → include all keys regardless of layoutOption
-    const result = generateKeymapC(createBasicInput({ keys, keymap, layoutOptions: new Map() }))
-
-    expect(result).toContain('KC_ESC, KC_A, KC_B')
-  })
-
-  it('does not chain-merge rows with gradual y offsets', () => {
-    // Keys at y=0.0, 0.2, 0.4 — should split into rows based on distance from row start
-    const keys: KleKey[] = [
-      makeKey({ x: 0, y: 0.0, row: 0, col: 0 }),
-      makeKey({ x: 1, y: 0.2, row: 0, col: 1 }),
-      makeKey({ x: 2, y: 0.4, row: 0, col: 2 }), // > 0.3 from row start (0.0)
-    ]
-
-    const keymap = new Map<string, number>([
-      ['0,0,0', 0x29],
-      ['0,0,1', 0x04],
-      ['0,0,2', 0x05],
-    ])
-
-    const result = generateKeymapC(createBasicInput({ keys, keymap }))
-
-    // First two keys in same row, third in new row
-    const lines = result.split('\n')
-    const escLine = lines.find(l => l.includes('KC_ESC'))!
-    expect(escLine).toContain('KC_A')
-    expect(escLine).not.toContain('KC_B')
-  })
-
-  it('handles empty keys array', () => {
-    const result = generateKeymapC(createBasicInput({ keys: [], keymap: new Map() }))
-
-    expect(result).toContain('LAYOUT(')
-    expect(result).toContain('#include QMK_KEYBOARD_H')
   })
 
   it('ends output with newline', () => {

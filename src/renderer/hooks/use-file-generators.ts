@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Keymap-C / PDF export generator callbacks fed into useFileIO. Split out
-// of App.tsx (Task-split-app-tsx) — pure move, same generators and
-// dependency arrays as before.
+// of App.tsx (Task-split-app-tsx).
 
 import { useCallback } from 'react'
 import type { useKeyboard } from './useKeyboard'
@@ -29,15 +28,15 @@ export function useFileGenerators({ keyboard, deviceName, decodedLayoutOptions, 
   const keymapCGenerator = useCallback(
     () => generateKeymapC({
       layers: keyboard.layers,
-      keys: keyboard.layout?.keys ?? [],
+      matrixRows: keyboard.rows,
+      matrixCols: keyboard.cols,
       keymap: keyboard.keymap,
       encoderLayout: keyboard.encoderLayout,
       encoderCount: keyboard.encoderCount,
-      layoutOptions: decodedLayoutOptions,
       serializeKeycode: serializeForCExport,
       customKeycodes: keyboard.definition?.customKeycodes,
     }),
-    [keyboard.layers, keyboard.layout, keyboard.keymap, keyboard.encoderLayout, keyboard.encoderCount, decodedLayoutOptions, keyboard.definition?.customKeycodes],
+    [keyboard.layers, keyboard.rows, keyboard.cols, keyboard.keymap, keyboard.encoderLayout, keyboard.encoderCount, keyboard.definition?.customKeycodes],
   )
 
   const pdfGenerator = useCallback(

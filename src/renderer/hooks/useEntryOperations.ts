@@ -116,11 +116,15 @@ export function useEntryOperations(options: Options) {
     return `${deviceName}_${suffix}`
   }, [deviceName, layoutStoreEntries])
 
+  // Superset param object shared by the keymap.c / PDF / hub export paths;
+  // keys and layoutOptions are consumed only by the PDF generator.
   const buildEntryParams = useCallback((vilData: VilFile) => {
     const labels = definition?.layouts?.labels
     return {
       layers: deriveLayerCount(vilData.keymap),
       keys: layout?.keys ?? [],
+      matrixRows: vilData.definition?.matrix.rows ?? rows,
+      matrixCols: vilData.definition?.matrix.cols ?? cols,
       keymap: recordToMap(vilData.keymap),
       encoderLayout: recordToMap(vilData.encoderLayout),
       encoderCount,
@@ -138,14 +142,16 @@ export function useEntryOperations(options: Options) {
         : splitMacroBuffer(vilData.macros, macroCount)
             .map((m) => deserializeMacro(m, vialProtocol)),
     }
-  }, [definition, layout, encoderCount, macroCount, vialProtocol])
+  }, [definition, layout, encoderCount, macroCount, vialProtocol, rows, cols])
 
   const buildVilExportContext = useCallback((vilData: VilFile) => {
     const macroActions = splitMacroBuffer(vilData.macros, macroCount)
       .map((m) => JSON.parse(macroActionsToJson(deserializeMacro(m, vialProtocol))) as unknown[])
     return {
-      rows,
-      cols,
+      // Match buildEntryParams: prefer the snapshot's own matrix so the
+      // exported vil JSON and keymap.c describe the same dimensions.
+      rows: vilData.definition?.matrix.rows ?? rows,
+      cols: vilData.definition?.matrix.cols ?? cols,
       layers: deriveLayerCount(vilData.keymap),
       encoderCount,
       vialProtocol,

@@ -47,6 +47,8 @@ function loadVilData(uid: string, entryId: string): Promise<VilFile | null> {
   }).catch(() => null)
 }
 
+// Superset param object shared by the keymap.c / PDF / hub export paths;
+// keys and layoutOptions are consumed only by the PDF generator.
 function buildParams(vilData: VilFile) {
   const def = vilData.definition!
   const kleResult = parseKle(def.layouts.keymap as unknown[][])
@@ -60,6 +62,8 @@ function buildParams(vilData: VilFile) {
   return {
     layers: deriveLayerCount(vilData.keymap),
     keys: kleResult.keys,
+    matrixRows: def.matrix.rows,
+    matrixCols: def.matrix.cols,
     keymap: recordToMap(vilData.keymap),
     encoderLayout: recordToMap(vilData.encoderLayout),
     encoderCount,
@@ -84,13 +88,10 @@ export function useSnapshotActions({ uid, deviceName }: Options) {
     try {
       const vilData = await loadVilData(uid, entryId)
       if (!vilData) return
-      const def = vilData.definition!
       const macroCount = FALLBACK_MACRO_COUNT
       const vialProtocol = vilData.vialProtocol ?? FALLBACK_VIAL_PROTOCOL
       const viaProtocol = vilData.viaProtocol ?? 12
-      const rows = def.matrix?.rows ?? 0
-      const cols = def.matrix?.cols ?? 0
-      const encoderCount = buildParams(vilData).encoderCount
+      const { matrixRows: rows, matrixCols: cols, encoderCount } = buildParams(vilData)
       const macroActions = splitMacroBuffer(vilData.macros, macroCount)
         .map((m) => JSON.parse(macroActionsToJson(deserializeMacro(m, vialProtocol))) as unknown[])
       const json = vilToVialGuiJson(vilData, {
@@ -144,13 +145,10 @@ export function useSnapshotActions({ uid, deviceName }: Options) {
         findOuterKeycode,
         findInnerKeycode,
       })
-      const def = vilData.definition!
       const macroCount = FALLBACK_MACRO_COUNT
       const vialProtocol = vilData.vialProtocol ?? FALLBACK_VIAL_PROTOCOL
       const viaProtocol = vilData.viaProtocol ?? 12
-      const rows = def.matrix?.rows ?? 0
-      const cols = def.matrix?.cols ?? 0
-      const encoderCount = params.encoderCount
+      const { matrixRows: rows, matrixCols: cols, encoderCount } = params
       const macroActions = splitMacroBuffer(vilData.macros, macroCount)
         .map((m) => JSON.parse(macroActionsToJson(deserializeMacro(m, vialProtocol))) as unknown[])
       const thumbnailBase64 = await generatePdfThumbnail(pdfBase64)
@@ -183,13 +181,10 @@ export function useSnapshotActions({ uid, deviceName }: Options) {
         findOuterKeycode,
         findInnerKeycode,
       })
-      const def = vilData.definition!
       const macroCount = FALLBACK_MACRO_COUNT
       const vialProtocol = vilData.vialProtocol ?? FALLBACK_VIAL_PROTOCOL
       const viaProtocol = vilData.viaProtocol ?? 12
-      const rows = def.matrix?.rows ?? 0
-      const cols = def.matrix?.cols ?? 0
-      const encoderCount = params.encoderCount
+      const { matrixRows: rows, matrixCols: cols, encoderCount } = params
       const macroActions = splitMacroBuffer(vilData.macros, macroCount)
         .map((m) => JSON.parse(macroActionsToJson(deserializeMacro(m, vialProtocol))) as unknown[])
       const thumbnailBase64 = await generatePdfThumbnail(pdfBase64)
