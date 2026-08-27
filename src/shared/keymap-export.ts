@@ -1,62 +1,34 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Generate QMK-compatible keymap.c from current keymap state
 
-import type { KleKey } from './kle/types'
 import type { CustomKeycodeDefinition } from './keycodes/keycodes'
-import { filterVisibleKeys } from './kle/filter-keys'
 
 export interface KeymapExportInput {
   layers: number
-  keys: KleKey[]
+  matrixRows: number
+  matrixCols: number
   keymap: Map<string, number>
   encoderLayout: Map<string, number>
   encoderCount: number
-  layoutOptions: Map<number, number>
   serializeKeycode: (code: number) => string
   customKeycodes?: CustomKeycodeDefinition[]
 }
 
-function groupKeysByRow(keys: KleKey[]): KleKey[][] {
-  if (keys.length === 0) return []
-
-  const sorted = [...keys].sort((a, b) => {
-    if (a.y !== b.y) return a.y - b.y
-    return a.x - b.x
-  })
-
-  const rows: KleKey[][] = [[sorted[0]]]
-  for (let i = 1; i < sorted.length; i++) {
-    const rowStart = rows[rows.length - 1][0]
-    const curr = sorted[i]
-    if (Math.abs(curr.y - rowStart.y) > 0.3) {
-      rows.push([curr])
-    } else {
-      rows[rows.length - 1].push(curr)
-    }
-  }
-
-  return rows
-}
-
-function generateLayerLayout(
+function generateLayerMatrix(
   layer: number,
-  normalKeys: KleKey[],
+  matrixRows: number,
+  matrixCols: number,
   keymap: Map<string, number>,
   serializeKeycode: (code: number) => string,
 ): string {
-  const rows = groupKeysByRow(normalKeys)
-  const lines: string[] = []
+  const rowLines = Array.from({ length: matrixRows }, (_, r) => {
+    const codes = Array.from({ length: matrixCols }, (_, c) =>
+      serializeKeycode(keymap.get(`${layer},${r},${c}`) ?? 0),
+    )
+    return `        { ${codes.join(', ')} }`
+  })
 
-  for (let r = 0; r < rows.length; r++) {
-    const codes = rows[r].map((key) => {
-      const code = keymap.get(`${layer},${key.row},${key.col}`) ?? 0
-      return serializeKeycode(code)
-    })
-    const suffix = r < rows.length - 1 ? ',' : ''
-    lines.push(`        ${codes.join(', ')}${suffix}`)
-  }
-
-  return `    [${layer}] = LAYOUT(\n${lines.join('\n')}\n    )`
+  return `    [${layer}] = {\n${rowLines.join(',\n')}\n    }`
 }
 
 function generateEncoderLayer(
@@ -89,20 +61,21 @@ function generateCustomKeycodeEnum(customKeycodes: CustomKeycodeDefinition[]): s
 export function generateKeymapC(input: KeymapExportInput): string {
   const {
     layers,
-    keys,
+    matrixRows,
+    matrixCols,
     keymap,
     encoderLayout,
     encoderCount,
-    layoutOptions,
     serializeKeycode,
     customKeycodes,
   } = input
 
-  const visibleKeys = filterVisibleKeys(keys, layoutOptions)
-  const normalKeys = visibleKeys.filter((k) => k.encoderIdx === -1)
+  if (!Number.isInteger(matrixRows) || !Number.isInteger(matrixCols) || matrixRows <= 0 || matrixCols <= 0) {
+    throw new Error('matrix dimensions unavailable')
+  }
 
   const layerBlocks = Array.from({ length: layers }, (_, l) =>
-    generateLayerLayout(l, normalKeys, keymap, serializeKeycode),
+    generateLayerMatrix(l, matrixRows, matrixCols, keymap, serializeKeycode),
   )
 
   const sections = [
@@ -117,6 +90,8 @@ export function generateKeymapC(input: KeymapExportInput): string {
   }
 
   sections.push(
+    `/* Keymap is written in raw matrix order, keymaps[layer][row][col]; unwired`,
+    ` * matrix positions are KC_NO. This is what the LAYOUT() macro expands to. */`,
     `const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {`,
     `${layerBlocks.join(',\n')},`,
     `};`,
