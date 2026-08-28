@@ -137,13 +137,9 @@ export function App() {
   const entryOps = useEntryOperations({
     keyboardUid: keyboard.uid,
     definition: keyboard.definition,
-    layout: keyboard.layout,
-    encoderCount: keyboard.encoderCount,
     macroCount: keyboard.macroCount,
     vialProtocol: keyboard.vialProtocol,
     viaProtocol: keyboard.viaProtocol,
-    rows: keyboard.rows,
-    cols: keyboard.cols,
     qmkSettingsValues: keyboard.qmkSettingsValues,
     dynamicCountsFeatureFlags: keyboard.dynamicCounts.featureFlags,
     layoutStoreEntries: layoutStore.entries,
