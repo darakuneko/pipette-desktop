@@ -2,28 +2,23 @@
 // Standalone snapshot export/hub actions for Data modal (works with v2 VilFiles only)
 
 import { useCallback } from 'react'
-import { decodeLayoutOptions } from '../../../shared/kle/layout-options'
 import { generateKeymapC } from '../../../shared/keymap-export'
 import { generateKeymapPdf } from '../../../shared/pdf-export'
-import { generatePdfThumbnail } from '../../utils/pdf-thumbnail'
-import { isVilFile, recordToMap, deriveLayerCount } from '../../../shared/vil-file'
+import { isVilFile } from '../../../shared/vil-file'
 import { vilToVialGuiJson } from '../../../shared/vil-compat'
 import { FALLBACK_VIAL_PROTOCOL } from '../../../shared/favorite-data'
 import {
-  splitMacroBuffer,
-  deserializeMacro,
-  macroActionsToJson,
-  jsonToMacroActions,
-} from '../../../preload/macro'
-import {
-  serialize as serializeKeycode,
   serializeForCExport,
   keycodeLabel,
   isMask,
   findOuterKeycode,
   findInnerKeycode,
 } from '../../../shared/keycodes/keycodes'
-import { parseDefinitionLayout } from '../../../shared/kle/definition-layout'
+import {
+  buildSnapshotExportParams,
+  buildVilExportContext,
+} from '../../export/snapshot-export-params'
+import { buildHubPostPayload } from '../../export/snapshot-hub-payload'
 import type { VilFile } from '../../../shared/types/protocol'
 
 interface Options {
@@ -37,6 +32,10 @@ interface Options {
 // common VIA/Vial default).
 const FALLBACK_MACRO_COUNT = 16
 
+// useKeyboardLoaders.ts falls back to 9 for the live-keyboard read path;
+// this is the snapshot-export fallback and intentionally differs.
+const FALLBACK_VIA_PROTOCOL = 12
+
 function loadVilData(uid: string, entryId: string): Promise<VilFile | null> {
   return window.vialAPI.snapshotStoreLoad(uid, entryId).then((result) => {
     if (!result.success || !result.data) return null
@@ -47,37 +46,31 @@ function loadVilData(uid: string, entryId: string): Promise<VilFile | null> {
   }).catch(() => null)
 }
 
-// Superset param object shared by the keymap.c / PDF / hub export paths;
-// keys and layoutOptions are consumed only by the PDF generator.
-function buildParams(vilData: VilFile) {
-  const def = vilData.definition!
-  const { layout, encoderCount } = parseDefinitionLayout(def)
-  const labels = def.layouts?.labels
-  const macroCount = FALLBACK_MACRO_COUNT
-  const vialProtocol = vilData.vialProtocol ?? FALLBACK_VIAL_PROTOCOL
-
+// Export protocol values a loaded snapshot resolves to: vial/via protocol are
+// read from the snapshot's own recorded values, falling back to the shared
+// default when a snapshot predates that field. Macro count has no
+// definition-level source (dynamic_keymap_macro_get_count is a live protocol
+// query, not part of the definition file) so it always falls back to 16 (the
+// common VIA/Vial default).
+function resolveExportProtocols(vilData: VilFile) {
   return {
-    layers: deriveLayerCount(vilData.keymap),
-    keys: layout?.keys ?? [],
-    matrixRows: def.matrix.rows,
-    matrixCols: def.matrix.cols,
-    keymap: recordToMap(vilData.keymap),
-    encoderLayout: recordToMap(vilData.encoderLayout),
-    encoderCount,
-    layoutOptions: labels
-      ? decodeLayoutOptions(vilData.layoutOptions, labels)
-      : new Map<number, number>(),
-    serializeKeycode,
-    customKeycodes: def.customKeycodes,
-    tapDance: vilData.tapDance,
-    combo: vilData.combo,
-    keyOverride: vilData.keyOverride,
-    altRepeatKey: vilData.altRepeatKey,
-    macros: vilData.macroJson
-      ? vilData.macroJson.map((m) => jsonToMacroActions(JSON.stringify(m)) ?? [])
-      : splitMacroBuffer(vilData.macros, macroCount)
-          .map((m) => deserializeMacro(m, vialProtocol)),
+    macroCount: FALLBACK_MACRO_COUNT,
+    vialProtocol: vilData.vialProtocol ?? FALLBACK_VIAL_PROTOCOL,
+    viaProtocol: vilData.viaProtocol ?? FALLBACK_VIA_PROTOCOL,
   }
+}
+
+// `loadVilData` guarantees a v2 snapshot with its own embedded definition,
+// so there is no live-definition fallback here. Resolves protocols once so
+// every caller reuses the same params/protocols pair for the action.
+function buildExportBundle(vilData: VilFile) {
+  const protocols = resolveExportProtocols(vilData)
+  const params = buildSnapshotExportParams(vilData, {
+    fallbackDefinition: null,
+    macroCount: protocols.macroCount,
+    vialProtocol: protocols.vialProtocol,
+  })
+  return { params, protocols }
 }
 
 export function useSnapshotActions({ uid, deviceName }: Options) {
@@ -85,23 +78,8 @@ export function useSnapshotActions({ uid, deviceName }: Options) {
     try {
       const vilData = await loadVilData(uid, entryId)
       if (!vilData) return
-      const def = vilData.definition!
-      const macroCount = FALLBACK_MACRO_COUNT
-      const vialProtocol = vilData.vialProtocol ?? FALLBACK_VIAL_PROTOCOL
-      const viaProtocol = vilData.viaProtocol ?? 12
-      const { rows, cols } = def.matrix
-      const { encoderCount } = parseDefinitionLayout(def)
-      const macroActions = splitMacroBuffer(vilData.macros, macroCount)
-        .map((m) => JSON.parse(macroActionsToJson(deserializeMacro(m, vialProtocol))) as unknown[])
-      const json = vilToVialGuiJson(vilData, {
-        rows,
-        cols,
-        layers: deriveLayerCount(vilData.keymap),
-        encoderCount,
-        vialProtocol,
-        viaProtocol,
-        macroActions,
-      })
+      const { params, protocols } = buildExportBundle(vilData)
+      const json = vilToVialGuiJson(vilData, buildVilExportContext(vilData, params, protocols))
       await window.vialAPI.saveLayout(json, deviceName)
     } catch { /* non-critical */ }
   }, [uid, deviceName])
@@ -110,7 +88,8 @@ export function useSnapshotActions({ uid, deviceName }: Options) {
     try {
       const vilData = await loadVilData(uid, entryId)
       if (!vilData) return
-      const content = generateKeymapC({ ...buildParams(vilData), serializeKeycode: serializeForCExport })
+      const { params } = buildExportBundle(vilData)
+      const content = generateKeymapC({ ...params, serializeKeycode: serializeForCExport })
       await window.vialAPI.exportKeymapC(content, deviceName)
     } catch { /* non-critical */ }
   }, [uid, deviceName])
@@ -119,8 +98,9 @@ export function useSnapshotActions({ uid, deviceName }: Options) {
     try {
       const vilData = await loadVilData(uid, entryId)
       if (!vilData) return
+      const { params } = buildExportBundle(vilData)
       const base64 = generateKeymapPdf({
-        ...buildParams(vilData),
+        ...params,
         deviceName,
         keycodeLabel,
         isMask,
@@ -135,31 +115,9 @@ export function useSnapshotActions({ uid, deviceName }: Options) {
     try {
       const vilData = await loadVilData(uid, entryId)
       if (!vilData) return
-      const params = buildParams(vilData)
-      const pdfBase64 = generateKeymapPdf({
-        ...params,
-        deviceName,
-        keycodeLabel,
-        isMask,
-        findOuterKeycode,
-        findInnerKeycode,
-      })
-      const macroCount = FALLBACK_MACRO_COUNT
-      const vialProtocol = vilData.vialProtocol ?? FALLBACK_VIAL_PROTOCOL
-      const viaProtocol = vilData.viaProtocol ?? 12
-      const { matrixRows: rows, matrixCols: cols, encoderCount } = params
-      const macroActions = splitMacroBuffer(vilData.macros, macroCount)
-        .map((m) => JSON.parse(macroActionsToJson(deserializeMacro(m, vialProtocol))) as unknown[])
-      const thumbnailBase64 = await generatePdfThumbnail(pdfBase64)
-      await window.vialAPI.hubUploadPost({
-        title: label || deviceName,
-        keyboardName: deviceName,
-        vilJson: vilToVialGuiJson(vilData, { rows, cols, layers: deriveLayerCount(vilData.keymap), encoderCount, vialProtocol, viaProtocol, macroActions }),
-        pipetteJson: JSON.stringify(vilData, null, 2),
-        keymapC: generateKeymapC({ ...params, serializeKeycode: serializeForCExport }),
-        pdfBase64,
-        thumbnailBase64,
-      })
+      const { params, protocols } = buildExportBundle(vilData)
+      const payload = await buildHubPostPayload(vilData, params, protocols, { label, deviceName })
+      await window.vialAPI.hubUploadPost(payload)
     } catch { /* non-critical */ }
   }, [uid, deviceName])
 
@@ -167,32 +125,9 @@ export function useSnapshotActions({ uid, deviceName }: Options) {
     try {
       const vilData = await loadVilData(uid, entryId)
       if (!vilData) return
-      const params = buildParams(vilData)
-      const pdfBase64 = generateKeymapPdf({
-        ...params,
-        deviceName,
-        keycodeLabel,
-        isMask,
-        findOuterKeycode,
-        findInnerKeycode,
-      })
-      const macroCount = FALLBACK_MACRO_COUNT
-      const vialProtocol = vilData.vialProtocol ?? FALLBACK_VIAL_PROTOCOL
-      const viaProtocol = vilData.viaProtocol ?? 12
-      const { matrixRows: rows, matrixCols: cols, encoderCount } = params
-      const macroActions = splitMacroBuffer(vilData.macros, macroCount)
-        .map((m) => JSON.parse(macroActionsToJson(deserializeMacro(m, vialProtocol))) as unknown[])
-      const thumbnailBase64 = await generatePdfThumbnail(pdfBase64)
-      await window.vialAPI.hubUpdatePost({
-        postId: hubPostId,
-        title: label || deviceName,
-        keyboardName: deviceName,
-        vilJson: vilToVialGuiJson(vilData, { rows, cols, layers: deriveLayerCount(vilData.keymap), encoderCount, vialProtocol, viaProtocol, macroActions }),
-        pipetteJson: JSON.stringify(vilData, null, 2),
-        keymapC: generateKeymapC({ ...params, serializeKeycode: serializeForCExport }),
-        pdfBase64,
-        thumbnailBase64,
-      })
+      const { params, protocols } = buildExportBundle(vilData)
+      const payload = await buildHubPostPayload(vilData, params, protocols, { label, deviceName })
+      await window.vialAPI.hubUpdatePost({ postId: hubPostId, ...payload })
     } catch { /* non-critical */ }
   }, [uid, deviceName])
 

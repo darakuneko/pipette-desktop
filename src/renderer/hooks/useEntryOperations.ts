@@ -1,33 +1,27 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useCallback } from 'react'
-import { decodeLayoutOptions } from '../../shared/kle/layout-options'
 import { generateKeymapC } from '../../shared/keymap-export'
 import { generateKeymapPdf } from '../../shared/pdf-export'
-import { generatePdfThumbnail } from '../utils/pdf-thumbnail'
 import {
   isVilFile,
   isVilFileV1,
   migrateVilFileToV2,
-  recordToMap,
-  deriveLayerCount,
 } from '../../shared/vil-file'
 import { vilToVialGuiJson } from '../../shared/vil-compat'
-import { parseDefinitionLayout } from '../../shared/kle/definition-layout'
 import {
-  splitMacroBuffer,
-  deserializeMacro,
-  macroActionsToJson,
-  jsonToMacroActions,
-} from '../../preload/macro'
-import {
-  serialize as serializeKeycode,
   serializeForCExport,
   keycodeLabel,
   isMask,
   findOuterKeycode,
   findInnerKeycode,
 } from '../../shared/keycodes/keycodes'
+import {
+  buildSnapshotExportParams,
+  buildVilExportContext as buildVilExportContextShared,
+  type SnapshotExportParams,
+} from '../export/snapshot-export-params'
+import { buildHubPostPayload } from '../export/snapshot-hub-payload'
 import type { VilFile, KeyboardDefinition } from '../../shared/types/protocol'
 import type { SnapshotMeta } from '../../shared/types/snapshot-store'
 
@@ -108,58 +102,20 @@ export function useEntryOperations(options: Options) {
     return `${deviceName}_${suffix}`
   }, [deviceName, layoutStoreEntries])
 
-  // Superset param object shared by the keymap.c / PDF / hub export paths;
-  // keys and layoutOptions are consumed only by the PDF generator.
-  // The whole geometry (keys, matrix, labels, custom keycodes, encoders)
-  // comes from one definition: a v2 snapshot's own embedded one, with the
-  // live definition backfilling v1 snapshots only.
-  const buildEntryParams = useCallback((vilData: VilFile) => {
-    const def = vilData.definition ?? definition
-    const { layout: defLayout, encoderCount: defEncoderCount } = def
-      ? parseDefinitionLayout(def)
-      : { layout: null, encoderCount: 0 }
-    const labels = def?.layouts?.labels
-    return {
-      layers: deriveLayerCount(vilData.keymap),
-      keys: defLayout?.keys ?? [],
-      matrixRows: def?.matrix.rows ?? 0,
-      matrixCols: def?.matrix.cols ?? 0,
-      keymap: recordToMap(vilData.keymap),
-      encoderLayout: recordToMap(vilData.encoderLayout),
-      encoderCount: defEncoderCount,
-      layoutOptions: labels
-        ? decodeLayoutOptions(vilData.layoutOptions, labels)
-        : new Map<number, number>(),
-      serializeKeycode,
-      customKeycodes: def?.customKeycodes,
-      tapDance: vilData.tapDance,
-      combo: vilData.combo,
-      keyOverride: vilData.keyOverride,
-      altRepeatKey: vilData.altRepeatKey,
-      macros: vilData.macroJson
-        ? vilData.macroJson.map((m) => jsonToMacroActions(JSON.stringify(m)) ?? [])
-        : splitMacroBuffer(vilData.macros, macroCount)
-            .map((m) => deserializeMacro(m, vialProtocol)),
-    }
-  }, [definition, macroCount, vialProtocol])
+  const buildEntryParams = useCallback((vilData: VilFile) => (
+    buildSnapshotExportParams(vilData, { fallbackDefinition: definition, macroCount, vialProtocol })
+  ), [definition, macroCount, vialProtocol])
 
   const buildVilExportContext = useCallback((
     vilData: VilFile,
-    params?: ReturnType<typeof buildEntryParams>,
-  ) => {
-    const macroActions = splitMacroBuffer(vilData.macros, macroCount)
-      .map((m) => JSON.parse(macroActionsToJson(deserializeMacro(m, vialProtocol))) as unknown[])
-    const p = params ?? buildEntryParams(vilData)
-    return {
-      rows: p.matrixRows,
-      cols: p.matrixCols,
-      layers: p.layers,
-      encoderCount: p.encoderCount,
+    params?: SnapshotExportParams,
+  ) => (
+    buildVilExportContextShared(vilData, params ?? buildEntryParams(vilData), {
       vialProtocol,
       viaProtocol,
-      macroActions,
-    }
-  }, [macroCount, vialProtocol, viaProtocol, buildEntryParams])
+      macroCount,
+    })
+  ), [macroCount, vialProtocol, viaProtocol, buildEntryParams])
 
   const handleExportEntryVil = useCallback(async (entryId: string) => {
     try {
@@ -204,25 +160,11 @@ export function useEntryOperations(options: Options) {
 
   const buildHubPostParams = useCallback(async (entry: { label: string }, vilData: VilFile) => {
     const params = buildEntryParams(vilData)
-    const pdfBase64 = generateKeymapPdf({
-      ...params,
+    return buildHubPostPayload(vilData, params, { vialProtocol, viaProtocol, macroCount }, {
+      label: entry.label,
       deviceName,
-      keycodeLabel,
-      isMask,
-      findOuterKeycode,
-      findInnerKeycode,
     })
-    const thumbnailBase64 = await generatePdfThumbnail(pdfBase64)
-    return {
-      title: entry.label || deviceName,
-      keyboardName: deviceName,
-      vilJson: vilToVialGuiJson(vilData, buildVilExportContext(vilData, params)),
-      pipetteJson: JSON.stringify(vilData, null, 2),
-      keymapC: generateKeymapC({ ...params, serializeKeycode: serializeForCExport }),
-      pdfBase64,
-      thumbnailBase64,
-    }
-  }, [buildEntryParams, buildVilExportContext, deviceName])
+  }, [buildEntryParams, vialProtocol, viaProtocol, macroCount, deviceName])
 
   return {
     backfillQmkSettings,
