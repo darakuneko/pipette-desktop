@@ -8,13 +8,11 @@ import type { Keycode } from '../../../shared/keycodes/keycodes'
 import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
-import type { ViewMatrixCell } from '../../../shared/types/pipette-settings'
 import type { MacroAction } from '../../../preload/macro'
 import { hasModifierKey } from './KeyboardPane'
 import type { PopoverState } from './keymap-editor-types'
 import type { UseKeymapMultiSelectReturn } from './useKeymapMultiSelect'
 import type { UseKeymapHistoryReturn, SingleHistoryEntry } from './useKeymapHistory'
-import { sortKeysByViewMatrix } from './view-matrix'
 import { nextAdvanceKey, getKeyAnchorRect } from './keymap-auto-advance'
 import { useKeymapHistoryActions } from './use-keymap-history-actions'
 
@@ -35,13 +33,12 @@ export interface UseKeymapSelectionOptions {
   keymap: Map<string, number>
   encoderLayout: Map<string, number>
   currentLayer: number
-  selectableKeys: KleKey[]
   // Key operations
   autoAdvance: boolean
-  /** Auto Move order override — see `PipetteSettings.viewMatrix`. Sorts
-   *  `advancableKeys` by each key's effective (override ?? physical)
-   *  position instead of raw definition order. */
-  viewMatrix?: Record<string, ViewMatrixCell>
+  /** The editor's single ordered key domain (`KeymapEditor`'s hoisted
+   *  `sortKeysByViewMatrix(selectableKeys, viewMatrix)`) — backs
+   *  auto-advance, popover follow-along, Shift-range, and paste targets. */
+  advancableKeys: KleKey[]
   onSetKey: (layer: number, row: number, col: number, keycode: number) => Promise<void>
   onSetKeysBulk: (entries: BulkKeyEntry[]) => Promise<void>
   onSetEncoder: (layer: number, idx: number, dir: number, keycode: number) => Promise<void>
@@ -75,9 +72,8 @@ export function useKeymapSelectionHandlers({
   keymap,
   encoderLayout,
   currentLayer,
-  selectableKeys,
   autoAdvance,
-  viewMatrix,
+  advancableKeys,
   onSetKey,
   onSetKeysBulk,
   onSetEncoder,
@@ -220,16 +216,8 @@ export function useKeymapSelectionHandlers({
     return newCode
   }
 
-  // --- Auto-advance ---
-  // Walk `selectableKeys` (already layout-option/decal/encoder filtered),
-  // not raw `layout.keys` — otherwise Auto Move can land on a key hidden by
-  // the current layout option (e.g. the unselected ISO/ANSI or split
-  // spacebar variant), leaving the selection highlight invisible.
-  const advancableKeys = useMemo(
-    () => sortKeysByViewMatrix(selectableKeys, viewMatrix),
-    [selectableKeys, viewMatrix],
-  )
-
+  // --- Auto-advance, popover follow-along, Shift-range, and paste targets
+  // (all share `advancableKeys`) ---
   const advanceToNextKey = useCallback(() => {
     if (!autoAdvance || !selectedKey) return
     const next = nextAdvanceKey(advancableKeys, selectedKey)
@@ -304,10 +292,14 @@ export function useKeymapSelectionHandlers({
   }, [])
 
   const handlePickerPaste = useCallback(async (targetKey: KleKey) => {
-    const targetIdx = selectableKeys.findIndex((k) => k.row === targetKey.row && k.col === targetKey.col)
+    // Target positions walk `advancableKeys` — the same domain the picker's
+    // own source list is built from, so a source key and its eventual
+    // target key share one traversal order.
+    const targetIdx = advancableKeys.findIndex((k) => k.row === targetKey.row && k.col === targetKey.col)
     if (targetIdx < 0) return
     const sortedEntries = [...pickerSelected.entries()].sort((a, b) => a[0] - b[0])
-    const targetPositions = selectableKeys.slice(targetIdx, targetIdx + sortedEntries.length)
+    // Over-long selections truncate at the end of the list (intended).
+    const targetPositions = advancableKeys.slice(targetIdx, targetIdx + sortedEntries.length)
     await runCopy(async () => {
       const entries: BulkKeyEntry[] = []
       const histEntries: SingleHistoryEntry[] = []
@@ -323,7 +315,7 @@ export function useKeymapSelectionHandlers({
     })
     clearPickerSelection()
     setSelectedKey(null); setSelectedMaskPart(false); setSelectedEncoder(null)
-  }, [pickerSelected, selectableKeys, currentLayer, keymap, onSetKeysBulk, runCopy, clearPickerSelection, history])
+  }, [pickerSelected, advancableKeys, currentLayer, keymap, onSetKeysBulk, runCopy, clearPickerSelection, history])
 
   // --- Click handlers ---
   const handleKeyClick = useCallback(
@@ -337,12 +329,13 @@ export function useKeymapSelectionHandlers({
       }
       if (event?.shiftKey && !selectedKey && selectionAnchor) {
         clearPickerSelection()
-        const anchorIdx = selectableKeys.findIndex((k) => k.row === selectionAnchor.row && k.col === selectionAnchor.col)
-        const currentIdx = selectableKeys.findIndex((k) => k.row === key.row && k.col === key.col)
+        // Range walks `advancableKeys`, same order Auto Move traverses.
+        const anchorIdx = advancableKeys.findIndex((k) => k.row === selectionAnchor.row && k.col === selectionAnchor.col)
+        const currentIdx = advancableKeys.findIndex((k) => k.row === key.row && k.col === key.col)
         if (anchorIdx >= 0 && currentIdx >= 0) {
           const start = Math.min(anchorIdx, currentIdx); const end = Math.max(anchorIdx, currentIdx)
           const next = new Set(multiSelectedKeys)
-          for (let i = start; i <= end; i++) next.add(`${selectableKeys[i].row},${selectableKeys[i].col}`)
+          for (let i = start; i <= end; i++) next.add(posKey(advancableKeys[i].row, advancableKeys[i].col))
           setMultiSelectedKeys(next)
         }
         setSelectionSourcePane('primary'); setSelectionMode('shift'); return
@@ -359,7 +352,7 @@ export function useKeymapSelectionHandlers({
         selectedEncoder: null,
       })
     },
-    [selectedKey, selectionAnchor, selectableKeys, multiSelectedKeys, pickerSelected, handlePickerPaste, clearPickerSelection, setMultiSelectedKeys, setSelectionAnchor, setSelectionSourcePane, setSelectionMode, applySelectionChange],
+    [selectedKey, selectionAnchor, advancableKeys, multiSelectedKeys, pickerSelected, handlePickerPaste, clearPickerSelection, setMultiSelectedKeys, setSelectionAnchor, setSelectionSourcePane, setSelectionMode, applySelectionChange],
   )
 
   const handleEncoderClick = useCallback((_key: KleKey, dir: number, maskClicked: boolean) => {

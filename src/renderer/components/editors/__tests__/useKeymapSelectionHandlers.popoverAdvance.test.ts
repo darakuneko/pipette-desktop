@@ -109,7 +109,7 @@ function useHarness(overrides: HarnessOverrides) {
     keymap: new Map(),
     encoderLayout: new Map(),
     currentLayer: 0,
-    selectableKeys: SELECTABLE_KEYS,
+    advancableKeys: SELECTABLE_KEYS,
     autoAdvance: true,
     onSetKey: vi.fn().mockResolvedValue(undefined),
     onSetKeysBulk: vi.fn().mockResolvedValue(undefined),

@@ -15,6 +15,7 @@ import { parseKle } from '../../../shared/kle/kle-parser'
 import { decodeLayoutOptions } from '../../../shared/kle/layout-options'
 import { posKey } from '../../../shared/kle/pos-key'
 import { filterSelectableKeys } from './selectable-keys'
+import { sortKeysByViewMatrix } from './view-matrix'
 import { isVilFile, isVilFileV1, recordToMap, deriveLayerCount } from '../../../shared/vil-file'
 import type { KleKey, KeyboardLayout } from '../../../shared/kle/types'
 import type { DeviceInfo } from '../../../shared/types/protocol'
@@ -29,6 +30,11 @@ export interface UseLayoutPickerOptions {
   layerNames?: string[]
   keymap: Map<string, number>
   effectiveLayoutOptions: Map<number, number>
+  /** The editor's single ordered key domain (`KeymapEditor`'s hoisted
+   *  `sortKeysByViewMatrix(selectableKeys, viewMatrix)`) — the live-device
+   *  source falls back to this by construction, sharing identity with the
+   *  paste target's domain. */
+  advancableKeys: KleKey[]
   remapLabel?: (qmkId: string) => string
   scale: number
   onScaleChange?: (delta: number) => void
@@ -62,7 +68,7 @@ export interface UseLayoutPickerReturn {
 }
 
 export function useLayoutPicker({
-  layout, layers, layerNames, keymap, effectiveLayoutOptions, remapLabel, scale, onScaleChange,
+  layout, layers, layerNames, keymap, effectiveLayoutOptions, advancableKeys, remapLabel, scale, onScaleChange,
   devices, connectedDevice, onDeviceListActiveChange,
   selectedKey, selectedEncoder, handleKeycodeSelect, handlePickerMultiSelect,
   pickerSelectedIndices, clearPickerSelection,
@@ -255,14 +261,18 @@ export function useLayoutPicker({
     () => buildEncoderKeycodesForLayer(pickerLayer), [buildEncoderKeycodesForLayer, pickerLayer])
 
   // Single ordered list every picker multi-select index is counted against.
-  // Built with the same `filterSelectableKeys` predicate as the paste
-  // target's `selectableKeys` (`useLayoutOptionsPanel`), so a source key and
-  // its eventual target key always share one index domain. A loaded
-  // file/probed device uses its own layout + decoded layout options.
-  const pickerSourceKeys = useMemo(() => (pickerFileData
-    ? filterSelectableKeys(pickerFileData.layout.keys, pickerFileData.layoutOptions)
-    : filterSelectableKeys(layout?.keys ?? [], effectiveLayoutOptions)
-  ), [pickerFileData, layout, effectiveLayoutOptions])
+  // Shares identity with the paste target's domain by construction (the
+  // live-device branch IS `advancableKeys`); a loaded file/probed device has
+  // no per-file view matrix, so that branch sorts in physical matrix order.
+  const pickerSourceKeys = useMemo(() => (
+    pickerFileData
+      ? sortKeysByViewMatrix(filterSelectableKeys(pickerFileData.layout.keys, pickerFileData.layoutOptions), undefined)
+      : advancableKeys
+  ), [pickerFileData, advancableKeys])
+
+  // Indices from an old source domain would point at different keys after a
+  // layout / layout-option / view-matrix / picker-source swap.
+  useEffect(() => { clearPickerSelection() }, [pickerSourceKeys, clearPickerSelection])
 
   // Build ordered keycode numbers for picker multi-select (Shift+click range).
   // Unmapped positions emit 0 (KC_NO) so indices stay aligned with the list.
