@@ -29,6 +29,7 @@ import {
 import { logHidPacket } from './logger'
 import type { DeviceInfo, DeviceType, KeyboardDefinition, ProbeResult } from '../shared/types/protocol'
 import { decompressLzma, decompressXz, hasXzMagic } from './lzma'
+import { parseDefinitionLayout } from '../shared/kle/definition-layout'
 import {
   isVirtualDeviceEnabled,
   isVirtualDeviceExclusive,
@@ -461,26 +462,11 @@ export async function probeDevice(vendorId: number, productId: number, serialNum
     const layoutResp = await probeSendReceive(cmd(CMD_VIA_GET_KEYBOARD_VALUE, VIA_LAYOUT_OPTIONS))
     const layoutOptions = readBE32(layoutResp, 2)
 
-    // 7. Get encoders — derive count from KLE definition (labels[4] === "e")
+    // 7. Get encoders — derive indices via the canonical KLE layout parser
     const encoderLayout: Record<string, number> = {}
-    const encoderIndices = new Set<number>()
-    if (definition.layouts?.keymap) {
-      for (const row of definition.layouts.keymap) {
-        if (!Array.isArray(row)) continue
-        for (const item of row) {
-          if (typeof item === 'string') {
-            // KLE labels: "idx,dir\n\n\n\ne" (labels[4] = "e" marks encoder)
-            const labels = item.split('\n')
-            if (labels[4] === 'e' && labels[0]?.includes(',')) {
-              const idx = parseInt(labels[0].split(',')[0], 10)
-              if (!isNaN(idx)) encoderIndices.add(idx)
-            }
-          }
-        }
-      }
-    }
-    const encoderCount = encoderIndices.size
-    for (const idx of encoderIndices) {
+    const { encoderIdx } = parseDefinitionLayout(definition)
+    const encoderCount = encoderIdx.size
+    for (const idx of encoderIdx) {
       for (let layer = 0; layer < layers; layer++) {
         const resp = await probeSendReceive(cmd(CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_ENCODER, layer, idx))
         encoderLayout[`${layer},${idx},0`] = readBE16(resp, 0)

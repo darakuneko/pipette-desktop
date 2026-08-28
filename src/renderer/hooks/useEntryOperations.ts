@@ -13,7 +13,7 @@ import {
   deriveLayerCount,
 } from '../../shared/vil-file'
 import { vilToVialGuiJson } from '../../shared/vil-compat'
-import { parseDefinitionLayout } from './keyboard-state-helpers'
+import { parseDefinitionLayout } from '../../shared/kle/definition-layout'
 import {
   splitMacroBuffer,
   deserializeMacro,

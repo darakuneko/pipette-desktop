@@ -23,7 +23,7 @@ import {
   findOuterKeycode,
   findInnerKeycode,
 } from '../../../shared/keycodes/keycodes'
-import { parseDefinitionLayout } from '../../hooks/keyboard-state-helpers'
+import { parseDefinitionLayout } from '../../../shared/kle/definition-layout'
 import type { VilFile } from '../../../shared/types/protocol'
 
 interface Options {

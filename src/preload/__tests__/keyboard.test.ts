@@ -49,18 +49,19 @@ import type {
   AltRepeatKeyEntry,
 } from '../../shared/types/protocol'
 import { BUFFER_FETCH_CHUNK } from '../../shared/constants/protocol'
+import { encoderLabel } from '../../shared/kle/__tests__/encoder-label'
 
 // Helper: build a mock definition JSON string for LZMA decompression
 function mockDefinitionJson(opts?: {
   rows?: number
   cols?: number
-  encoderKeys?: number
+  encoders?: number
   name?: string
 }): string {
   const rows = opts?.rows ?? 2
   const cols = opts?.cols ?? 2
   const name = opts?.name ?? 'Test KB'
-  // Build a keymap layout. If encoderKeys > 0, add encoder objects (e property).
+  // Build a keymap layout. If encoders > 0, add encoder key labels.
   // Each encoder takes 2 entries (CW + CCW) in the KLE format.
   const keymapRow: unknown[] = []
   for (let r = 0; r < rows; r++) {
@@ -69,9 +70,10 @@ function mockDefinitionJson(opts?: {
     }
   }
   // Add encoder entries if requested
-  const encoderCount = opts?.encoderKeys ?? 0
-  for (let i = 0; i < encoderCount * 2; i++) {
-    keymapRow.push({ e: Math.floor(i / 2) })
+  const encoders = opts?.encoders ?? 0
+  for (let i = 0; i < encoders; i++) {
+    keymapRow.push(encoderLabel(i, 0))
+    keymapRow.push(encoderLabel(i, 1))
   }
   return JSON.stringify({
     name,
@@ -129,7 +131,7 @@ function setupReloadMocks(opts?: {
         mockDefinitionJson({
           rows,
           cols,
-          encoderKeys: encoderCount,
+          encoders: encoderCount,
         }),
       )
     },
@@ -728,7 +730,7 @@ describe('Keyboard', () => {
       const kb = new Keyboard()
       await kb.reload()
 
-      // Our mock generates 3 * 2 = 6 encoder entries, countEncoders divides by 2 -> 3
+      // Our mock generates 3 distinct encoder indices (CW/CCW label pairs each)
       expect(kb.state.encoderCount).toBe(3)
     })
 

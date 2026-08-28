@@ -30,6 +30,7 @@ import {
   VIAL_PROTOCOL_DYNAMIC,
   EMPTY_UID,
 } from '../shared/constants/protocol'
+import { parseDefinitionLayout } from '../shared/kle/definition-layout'
 
 export interface KeyboardState {
   // Protocol
@@ -125,7 +126,7 @@ export class Keyboard {
     if (this.state.definition) {
       this.state.rows = this.state.definition.matrix.rows
       this.state.cols = this.state.definition.matrix.cols
-      this.state.encoderCount = this.countEncoders(this.state.definition)
+      this.state.encoderCount = parseDefinitionLayout(this.state.definition).encoderCount
     }
 
     // Phase 2: Layer count + macro metadata
@@ -318,23 +319,6 @@ export class Keyboard {
         }
       })
     })
-  }
-
-  /** Count encoders from the keyboard definition. */
-  private countEncoders(def: KeyboardDefinition): number {
-    // Encoders are represented as special keys in the KLE layout with "e" property
-    let count = 0
-    if (def.layouts?.keymap) {
-      for (const row of def.layouts.keymap) {
-        for (const item of row) {
-          if (typeof item === 'object' && item !== null && 'e' in item) {
-            count++
-          }
-        }
-      }
-    }
-    // Divide by 2 because each encoder has CW and CCW entries
-    return Math.ceil(count / 2)
   }
 
   // --- Save/Restore Layout ---

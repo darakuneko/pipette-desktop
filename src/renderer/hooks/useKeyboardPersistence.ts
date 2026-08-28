@@ -5,7 +5,7 @@ import type { KeyboardDefinition, VilFile } from '../../shared/types/protocol'
 import { mapToRecord, recordToMap, VILFILE_CURRENT_VERSION } from '../../shared/vil-file'
 import { vilToVialGuiJson } from '../../shared/vil-compat'
 import { splitMacroBuffer, deserializeMacro, macroActionsToJson, jsonToMacroActions } from '../../preload/macro'
-import { parseDefinitionLayout } from './keyboard-state-helpers'
+import { parseDefinitionLayout } from '../../shared/kle/definition-layout'
 import type { SetState, KeyboardRefs, BootGuardRef } from './keyboard-types'
 import { emptyState } from './keyboard-types'
 
