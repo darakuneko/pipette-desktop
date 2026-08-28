@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, act } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, act, fireEvent } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import type { Keycode } from '../../../../shared/keycodes/keycodes'
+import type { DeviceInfo } from '../../../../shared/types/protocol'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -27,6 +29,12 @@ vi.mock('../../../hooks/useAppConfig', () => ({
 
 let capturedWidgetProps: Array<Record<string, unknown>> = []
 let capturedTabbedProps: Record<string, unknown> = {}
+// Opt-in switch for the Keyboard-tab source-domain tests below: mounting the
+// picker's own `<KeyboardPane>` (via `keyboardPickerContent`) pulls in real
+// `LayoutPickerContent` chrome (Tooltip, ScaleInput, lucide icons) that the
+// rest of this file's tests have no need for, so it stays off by default and
+// each test that needs it flips it on in its own `beforeEach`.
+let renderKeyboardPickerContent = false
 
 vi.mock('../../keyboard/KeyboardWidget', () => ({
   KeyboardWidget: (props: Record<string, unknown>) => {
@@ -38,7 +46,12 @@ vi.mock('../../keyboard/KeyboardWidget', () => ({
 vi.mock('../../keycodes/TabbedKeycodes', () => ({
   TabbedKeycodes: (props: Record<string, unknown>) => {
     capturedTabbedProps = props
-    return <div data-testid="tabbed-keycodes">TabbedKeycodes</div>
+    return (
+      <div data-testid="tabbed-keycodes">
+        TabbedKeycodes
+        {renderKeyboardPickerContent ? (props.keyboardPickerContent as ReactNode) : null}
+      </div>
+    )
   },
 }))
 
@@ -82,8 +95,11 @@ const KEY_DEFAULTS: KleKey = {
   textColor: [], textSize: [], nub: false, stepped: false, ghost: false,
 }
 
-function makeKey(x: number, col: number): KleKey {
-  return { ...KEY_DEFAULTS, x, col }
+// Encoder/decal keys keep `parseKle`'s `row: 0, col: 0` defaults (only a
+// normal key's `labels[0]` "row,col" pair overwrites them) — pass col 0 with
+// the encoder/decal fields in `extra` to mirror that.
+function makeKey(x: number, col: number, extra: Partial<KleKey> = {}): KleKey {
+  return { ...KEY_DEFAULTS, x, col, ...extra }
 }
 
 const makeLayout = () => ({
@@ -495,5 +511,165 @@ describe('KeymapEditor — picker paste', () => {
     expect(rangeSelected.has(3)).toBe(true)
     expect(rangeSelected.has(4)).toBe(true)
     expect(rangeSelected.size).toBe(3)
+  })
+})
+
+// Regression coverage for the Keyboard-tab picker's SOURCE index domain
+// (`useLayoutPicker`'s `handlePickerKeyClick`/`pickerTabKeycodeNumbers`) —
+// distinct from every test above, which exercises `onKeycodeMultiSelect`
+// directly and never touches that source-side index computation at all.
+// These render the picker's own `<KeyboardPane>` (via `keyboardPickerContent`,
+// opted in through `renderKeyboardPickerContent`) and drive its real
+// `onKeyClick` handler, transitioning past the device-browse screen onto the
+// live connected device exactly like a user would.
+describe('KeymapEditor — picker paste (Keyboard tab source index domain)', () => {
+  const onSetKey = vi.fn().mockResolvedValue(undefined)
+  const onSetKeysBulk = vi.fn().mockResolvedValue(undefined)
+
+  const PICKER_DEVICE: DeviceInfo = {
+    vendorId: 1, productId: 2, serialNumber: 'picker-dev', productName: 'Picker Device', type: 'vial',
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    capturedWidgetProps = []
+    capturedTabbedProps = {}
+    renderKeyboardPickerContent = true
+  })
+
+  afterEach(() => {
+    renderKeyboardPickerContent = false
+  })
+
+  type OnKeyClick = (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
+
+  /** The most recent same-commit [primary pane, picker pane] `onKeyClick`
+   *  pair — both panes always define `onKeyClick` and always render as a
+   *  contiguous pair (primary declared before the picker in `KeymapEditor`'s
+   *  JSX), so the last two `onKeyClick`-bearing captures from any render are
+   *  exactly this pair. Only valid to call once the picker's Keyboard view
+   *  has actually mounted (see `transitionToKeyboardView` below). */
+  function latestPair(): { primary?: OnKeyClick; secondary?: OnKeyClick } {
+    const withClick = capturedWidgetProps.filter((p) => p.onKeyClick != null)
+    return {
+      primary: withClick[withClick.length - 2]?.onKeyClick as OnKeyClick | undefined,
+      secondary: withClick[withClick.length - 1]?.onKeyClick as OnKeyClick | undefined,
+    }
+  }
+
+  function transitionToKeyboardView(getByText: (text: string) => HTMLElement) {
+    act(() => { fireEvent.click(getByText(PICKER_DEVICE.productName)) })
+  }
+
+  it('Shift-range picker selection straddling an encoder pair + decal pastes onto the correct target positions', async () => {
+    // KLE declaration order: real key, encoder CW, encoder CCW, decal, then
+    // three more real keys — the encoder pair + decal sit strictly between
+    // the two keys the test selects.
+    const layout = {
+      keys: [
+        makeKey(0, 0),
+        makeKey(1, 0, { encoderIdx: 0, encoderDir: 0 }),
+        makeKey(1, 0, { encoderIdx: 0, encoderDir: 1 }),
+        makeKey(1, 0, { decal: true }),
+        makeKey(2, 1),
+        makeKey(3, 2),
+        makeKey(4, 3),
+      ],
+    }
+    const keymap = new Map([
+      ['0,0,0', 1],
+      ['0,0,1', 2],
+      ['0,0,2', 3],
+      ['0,0,3', 4],
+    ])
+
+    const { getByText } = render(
+      <KeymapEditor
+        layout={layout} layers={4} currentLayer={0} keymap={keymap}
+        encoderLayout={new Map<string, number>()} encoderCount={1}
+        layoutOptions={new Map<number, number>()}
+        onSetKey={onSetKey} onSetKeysBulk={onSetKeysBulk} onSetEncoder={vi.fn().mockResolvedValue(undefined)}
+        devices={[PICKER_DEVICE]} connectedDevice={PICKER_DEVICE}
+      />,
+    )
+
+    transitionToKeyboardView(getByText)
+    const pickerClick = latestPair().secondary!
+
+    // Ctrl+click col 0 (anchor), Shift+click col 1 — a plain 2-key range
+    // that straddles the encoder pair + decal in KLE order.
+    act(() => { pickerClick({ ...KEY_DEFAULTS, row: 0, col: 0 }, false, { ctrlKey: true, shiftKey: false }) })
+    act(() => { pickerClick({ ...KEY_DEFAULTS, row: 0, col: 1 }, false, { ctrlKey: false, shiftKey: true }) })
+
+    const targetClick = latestPair().primary!
+
+    // Paste starting at col 2 — two consecutive target slots, distinct from
+    // the source positions so a shift really would be visible.
+    await act(async () => {
+      targetClick({ ...KEY_DEFAULTS, row: 0, col: 2 }, false, { ctrlKey: false, shiftKey: false })
+    })
+
+    expect(onSetKeysBulk).toHaveBeenCalledTimes(1)
+    expect(onSetKeysBulk).toHaveBeenCalledWith([
+      { layer: 0, row: 0, col: 2, keycode: 1 }, // col 0's code
+      { layer: 0, row: 0, col: 3, keycode: 2 }, // col 1's code
+    ])
+  })
+
+  it('Shift-range picker selection straddling an unselected layout-option alternate does not consume an extra index', async () => {
+    // KLE declaration order: real key, an UNSELECTED layoutOption alternate
+    // sharing the selected variant's (row, col), the selected variant
+    // itself, then two more real keys.
+    const layout = {
+      keys: [
+        makeKey(0, 0),
+        makeKey(1, 1, { layoutIndex: 0, layoutOption: 1 }), // unselected alternate
+        makeKey(1, 1, { layoutIndex: 0, layoutOption: 0 }), // selected variant
+        makeKey(2, 2),
+        makeKey(3, 3),
+      ],
+    }
+    const keymap = new Map([
+      ['0,0,0', 1],
+      ['0,0,1', 2],
+      ['0,0,2', 3],
+      ['0,0,3', 4],
+    ])
+
+    const { getByText } = render(
+      <KeymapEditor
+        layout={layout} layers={4} currentLayer={0} keymap={keymap}
+        encoderLayout={new Map<string, number>()} encoderCount={0}
+        // Empty map: no explicit selection for layoutIndex 0 → option 0 is
+        // the default-selected variant (matches `filterSelectableKeys`).
+        layoutOptions={new Map<number, number>()}
+        onSetKey={onSetKey} onSetKeysBulk={onSetKeysBulk} onSetEncoder={vi.fn().mockResolvedValue(undefined)}
+        devices={[PICKER_DEVICE]} connectedDevice={PICKER_DEVICE}
+      />,
+    )
+
+    transitionToKeyboardView(getByText)
+    const pickerClick = latestPair().secondary!
+
+    // Ctrl+click col 0 (anchor), Shift+click col 2 — a 3-key range (col 0,
+    // the selected col 1 variant, col 2) that straddles the unselected
+    // col 1 alternate in KLE order.
+    act(() => { pickerClick({ ...KEY_DEFAULTS, row: 0, col: 0 }, false, { ctrlKey: true, shiftKey: false }) })
+    act(() => { pickerClick({ ...KEY_DEFAULTS, row: 0, col: 2 }, false, { ctrlKey: false, shiftKey: true }) })
+
+    const targetClick = latestPair().primary!
+
+    // Paste back onto col 0 — should round-trip exactly the 3 selected
+    // keys' own codes onto themselves, touching nothing past col 2.
+    await act(async () => {
+      targetClick({ ...KEY_DEFAULTS, row: 0, col: 0 }, false, { ctrlKey: false, shiftKey: false })
+    })
+
+    expect(onSetKeysBulk).toHaveBeenCalledTimes(1)
+    expect(onSetKeysBulk).toHaveBeenCalledWith([
+      { layer: 0, row: 0, col: 0, keycode: 1 },
+      { layer: 0, row: 0, col: 1, keycode: 2 },
+      { layer: 0, row: 0, col: 2, keycode: 3 },
+    ])
   })
 })
