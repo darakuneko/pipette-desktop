@@ -23,7 +23,7 @@ import {
   findOuterKeycode,
   findInnerKeycode,
 } from '../../../shared/keycodes/keycodes'
-import { parseKle } from '../../../shared/kle/kle-parser'
+import { parseDefinitionLayout } from '../../hooks/keyboard-state-helpers'
 import type { VilFile } from '../../../shared/types/protocol'
 
 interface Options {
@@ -51,17 +51,14 @@ function loadVilData(uid: string, entryId: string): Promise<VilFile | null> {
 // keys and layoutOptions are consumed only by the PDF generator.
 function buildParams(vilData: VilFile) {
   const def = vilData.definition!
-  const kleResult = parseKle(def.layouts.keymap as unknown[][])
+  const { layout, encoderCount } = parseDefinitionLayout(def)
   const labels = def.layouts?.labels
-  const encoderCount = def.layouts?.keymap
-    ? (def.layouts.keymap as unknown[][]).flat().filter((k) => typeof k === 'string' && k.includes('\n\n\n\n\n\n\n\n\n\ne')).length
-    : 0
   const macroCount = FALLBACK_MACRO_COUNT
   const vialProtocol = vilData.vialProtocol ?? FALLBACK_VIAL_PROTOCOL
 
   return {
     layers: deriveLayerCount(vilData.keymap),
-    keys: kleResult.keys,
+    keys: layout?.keys ?? [],
     matrixRows: def.matrix.rows,
     matrixCols: def.matrix.cols,
     keymap: recordToMap(vilData.keymap),
@@ -88,10 +85,12 @@ export function useSnapshotActions({ uid, deviceName }: Options) {
     try {
       const vilData = await loadVilData(uid, entryId)
       if (!vilData) return
+      const def = vilData.definition!
       const macroCount = FALLBACK_MACRO_COUNT
       const vialProtocol = vilData.vialProtocol ?? FALLBACK_VIAL_PROTOCOL
       const viaProtocol = vilData.viaProtocol ?? 12
-      const { matrixRows: rows, matrixCols: cols, encoderCount } = buildParams(vilData)
+      const { rows, cols } = def.matrix
+      const { encoderCount } = parseDefinitionLayout(def)
       const macroActions = splitMacroBuffer(vilData.macros, macroCount)
         .map((m) => JSON.parse(macroActionsToJson(deserializeMacro(m, vialProtocol))) as unknown[])
       const json = vilToVialGuiJson(vilData, {
@@ -161,10 +160,6 @@ export function useSnapshotActions({ uid, deviceName }: Options) {
         pdfBase64,
         thumbnailBase64,
       })
-      // Update hubPostId in snapshot after upload
-      const listResult = await window.vialAPI.snapshotStoreList(uid)
-      const _entry = listResult.entries?.find((e) => e.id === entryId)
-      // hubPostId is updated server-side via the upload response
     } catch { /* non-critical */ }
   }, [uid, deviceName])
 
