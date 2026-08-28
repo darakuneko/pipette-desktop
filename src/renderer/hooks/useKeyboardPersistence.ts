@@ -5,7 +5,7 @@ import type { KeyboardDefinition, VilFile } from '../../shared/types/protocol'
 import { mapToRecord, recordToMap, VILFILE_CURRENT_VERSION } from '../../shared/vil-file'
 import { vilToVialGuiJson } from '../../shared/vil-compat'
 import { splitMacroBuffer, deserializeMacro, macroActionsToJson, jsonToMacroActions } from '../../preload/macro'
-import { parseKle } from '../../shared/kle/kle-parser'
+import { parseDefinitionLayout } from './keyboard-state-helpers'
 import type { SetState, KeyboardRefs, BootGuardRef } from './keyboard-types'
 import { emptyState } from './keyboard-types'
 
@@ -65,13 +65,10 @@ export function useKeyboardPersistence(
       const newState = { ...s, definition: def }
       newState.rows = def.matrix.rows
       newState.cols = def.matrix.cols
-      if (def.layouts?.keymap) {
-        newState.layout = parseKle(def.layouts.keymap)
-        const indices = new Set<number>()
-        for (const key of newState.layout.keys) {
-          if (key.encoderIdx >= 0) indices.add(key.encoderIdx)
-        }
-        newState.encoderCount = indices.size
+      const { layout, encoderCount } = parseDefinitionLayout(def)
+      if (layout) {
+        newState.layout = layout
+        newState.encoderCount = encoderCount
       }
       return newState
     })
