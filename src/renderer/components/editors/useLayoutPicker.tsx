@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next'
 import { serialize, findKeycode } from '../../../shared/keycodes/keycodes'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
 import { parseKle } from '../../../shared/kle/kle-parser'
+import { encoderIndices } from '../../../shared/kle/definition-layout'
 import { decodeLayoutOptions } from '../../../shared/kle/layout-options'
 import { posKey } from '../../../shared/kle/pos-key'
 import { filterSelectableKeys } from './selectable-keys'
@@ -65,6 +66,25 @@ export interface UseLayoutPickerOptions {
 
 export interface UseLayoutPickerReturn {
   layoutPickerContent: React.ReactNode
+}
+
+// Encoder indices can be sparse, so this walks the parsed layout's actual
+// indices rather than a dense 0..encoderCount-1 range.
+function buildEncoderKeycodesMap(
+  layout: KeyboardLayout,
+  encMap: Map<string, number>,
+  layerCount: number,
+  remap: (qmkId: string) => string,
+): Map<string, [string, string]> {
+  const encoderKeycodes = new Map<string, [string, string]>()
+  for (const i of encoderIndices(layout)) {
+    for (let layer = 0; layer < layerCount; layer++) {
+      const cw = encMap.get(`${layer},${i},0`) ?? 0
+      const ccw = encMap.get(`${layer},${i},1`) ?? 0
+      encoderKeycodes.set(`${layer},${i}`, [remap(serialize(cw)), remap(serialize(ccw))])
+    }
+  }
+  return encoderKeycodes
 }
 
 export function useLayoutPicker({
@@ -143,18 +163,9 @@ export function useLayoutPicker({
       const fileKeymap = recordToMap(parsed.keymap)
       const fileLayers = deriveLayerCount(parsed.keymap)
       const remap = remapLabel ?? ((id: string) => id)
-      const encoderKeycodes = new Map<string, [string, string]>()
-      if (parsed.encoderLayout) {
-        const encMap = recordToMap(parsed.encoderLayout)
-        const encCount = new Set([...encMap.keys()].map((k) => k.split(',')[1])).size
-        for (let i = 0; i < encCount; i++) {
-          for (let layer = 0; layer < fileLayers; layer++) {
-            const cw = encMap.get(`${layer},${i},0`) ?? 0
-            const ccw = encMap.get(`${layer},${i},1`) ?? 0
-            encoderKeycodes.set(`${layer},${i}`, [remap(serialize(cw)), remap(serialize(ccw))])
-          }
-        }
-      }
+      const encoderKeycodes = parsed.encoderLayout
+        ? buildEncoderKeycodesMap(fileLayout, recordToMap(parsed.encoderLayout), fileLayers, remap)
+        : new Map<string, [string, string]>()
       const fileUid = typeof parsed.uid === 'string' ? parsed.uid : undefined
       setPickerFileData({
         layout: fileLayout, keymap: fileKeymap, layers: fileLayers, encoderKeycodes,
@@ -206,15 +217,12 @@ export function useLayoutPicker({
       const fileLayout = parseKle(result.definition.layouts.keymap)
       const fileKeymap = new Map<string, number>(Object.entries(result.keymap))
       const remap = remapLabel ?? ((id: string) => id)
-      const encoderKeycodes = new Map<string, [string, string]>()
-      const encMap = new Map<string, number>(Object.entries(result.encoderLayout))
-      for (let i = 0; i < result.encoderCount; i++) {
-        for (let layer = 0; layer < result.layers; layer++) {
-          const cw = encMap.get(`${layer},${i},0`) ?? 0
-          const ccw = encMap.get(`${layer},${i},1`) ?? 0
-          encoderKeycodes.set(`${layer},${i}`, [remap(serialize(cw)), remap(serialize(ccw))])
-        }
-      }
+      const encoderKeycodes = buildEncoderKeycodesMap(
+        fileLayout,
+        new Map<string, number>(Object.entries(result.encoderLayout)),
+        result.layers,
+        remap,
+      )
       let probeKeymapScale: number | undefined
       if (result.uid) {
         try {
@@ -259,6 +267,20 @@ export function useLayoutPicker({
     () => buildKeycodesForLayer(pickerLayer), [buildKeycodesForLayer, pickerLayer])
   const pickerEncoderKeycodes = useMemo(
     () => buildEncoderKeycodesForLayer(pickerLayer), [buildEncoderKeycodesForLayer, pickerLayer])
+
+  // A loaded file/probed device carries its own "layer,idx"-keyed encoder
+  // map; slice the picker's current layer into the "idx"-keyed shape
+  // KeyboardWidget consumes, so the preview shows the source keyboard's
+  // encoder assignments instead of the live one's.
+  const filePickerEncoderKeycodes = useMemo(() => {
+    if (!pickerFileData) return pickerEncoderKeycodes
+    const map = new Map<string, [string, string]>()
+    for (const [key, pair] of pickerFileData.encoderKeycodes) {
+      const [layer, idx] = key.split(',')
+      if (Number(layer) === pickerLayer) map.set(idx, pair)
+    }
+    return map
+  }, [pickerFileData, pickerLayer, pickerEncoderKeycodes])
 
   // Single ordered list every picker multi-select index is counted against.
   // Shares identity with the paste target's domain by construction (the
@@ -328,7 +350,7 @@ export function useLayoutPicker({
 
   // Layout picker: keyboard-as-keycode-picker shown inside the picker panel
   const pickerData: PickerData = pickerFileData
-    ? { keys: pickerFileData.layout.keys, keycodes: pickerKeycodes, encoderKeycodes: pickerEncoderKeycodes, remapped: pickerRemapped, layoutOpts: pickerFileData.layoutOptions, totalLayers: pickerFileData.layers, names: pickerFileData.layerNames }
+    ? { keys: pickerFileData.layout.keys, keycodes: pickerKeycodes, encoderKeycodes: filePickerEncoderKeycodes, remapped: pickerRemapped, layoutOpts: pickerFileData.layoutOptions, totalLayers: pickerFileData.layers, names: pickerFileData.layerNames }
     : { keys: layout?.keys ?? [], keycodes: pickerKeycodes, encoderKeycodes: pickerEncoderKeycodes, remapped: pickerRemapped, layoutOpts: effectiveLayoutOptions, totalLayers: layers, names: layerNames }
 
   const pickerEffectiveScale = pickerFileData ? (pickerScale ?? scale) : scale

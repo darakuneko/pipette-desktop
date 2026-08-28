@@ -17,7 +17,7 @@ import { recreateKeyboardKeycodes } from '../../shared/keycodes/keycodes'
 import { normalizeQmkSettingData } from '../../shared/qmk-settings-normalize'
 import { emptyState, isEchoDetected } from './keyboard-types'
 import type { SetState, KeyboardRefs } from './keyboard-types'
-import { parseDefinitionLayout } from './keyboard-state-helpers'
+import { parseDefinitionLayout } from '../../shared/kle/definition-layout'
 
 export function useKeyboardReload(
   setState: SetState,

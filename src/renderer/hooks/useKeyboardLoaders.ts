@@ -10,7 +10,7 @@ import { splitMacroBuffer, jsonToMacroActions } from '../../preload/macro'
 import { recreateKeyboardKeycodes } from '../../shared/keycodes/keycodes'
 import { emptyState } from './keyboard-types'
 import type { SetState, KeyboardRefs } from './keyboard-types'
-import { parseDefinitionLayout } from './keyboard-state-helpers'
+import { parseDefinitionLayout } from '../../shared/kle/definition-layout'
 
 export function useKeyboardLoaders(
   setState: SetState,

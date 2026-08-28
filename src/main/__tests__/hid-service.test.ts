@@ -12,7 +12,10 @@ import {
   HID_OPEN_RETRY_DELAY_MS,
   VIAL_SERIAL_MAGIC,
   BOOTLOADER_SERIAL_MAGIC,
+  CMD_VIA_VIAL_PREFIX,
+  CMD_VIAL_GET_ENCODER,
 } from '../../shared/constants/protocol'
+import { encoderLabel } from '../../shared/kle/__tests__/encoder-label'
 
 // --- Mock node-hid ---
 
@@ -39,6 +42,19 @@ vi.mock('../../main/logger', () => ({
   logHidPacket: vi.fn(),
 }))
 
+// --- Mock LZMA/XZ decompression (probeDevice's definition JSON is supplied
+// directly by the mock, so no real compression is needed in tests) ---
+
+const mockHasXzMagic = vi.fn()
+const mockDecompressLzma = vi.fn()
+const mockDecompressXz = vi.fn()
+
+vi.mock('../lzma', () => ({
+  hasXzMagic: (...args: unknown[]) => mockHasXzMagic(...args),
+  decompressLzma: (...args: unknown[]) => mockDecompressLzma(...args),
+  decompressXz: (...args: unknown[]) => mockDecompressXz(...args),
+}))
+
 // --- Import after mocking ---
 
 import {
@@ -49,6 +65,7 @@ import {
   send,
   isDeviceOpen,
   validateHidData,
+  probeDevice,
 } from '../hid-service'
 
 function createMockDeviceInfo(overrides?: Record<string, unknown>) {
@@ -556,5 +573,96 @@ describe('isDeviceOpen', () => {
     mockDevicesAsync.mockResolvedValue([])
 
     await expect(isDeviceOpen()).resolves.toBe(false)
+  })
+})
+
+describe('probeDevice', () => {
+  // Queues the 6 fixed probe-phase reads (id, size, def block, layer count,
+  // keymap, layout options) plus one read per encoder response, and points
+  // LZMA decompression at the given definition JSON.
+  function queueProbeReads(definitionJson: string, ...encoderResps: Buffer[]): void {
+    mockDecompressLzma.mockResolvedValue(definitionJson)
+
+    const idResp = Buffer.alloc(MSG_LEN)
+    const sizeResp = Buffer.alloc(MSG_LEN)
+    sizeResp[0] = 1 // defSize = 1 byte -> 1 definition block
+    const defBlockResp = Buffer.alloc(MSG_LEN) // content unused (decompress is mocked)
+    const layerResp = Buffer.alloc(MSG_LEN)
+    layerResp[1] = 1 // layers = 1
+    const keymapResp = Buffer.alloc(MSG_LEN)
+    keymapResp[4] = 0x00
+    keymapResp[5] = 0x04 // keycode 0x0004 at layer 0, row 0, col 0
+    const layoutResp = Buffer.alloc(MSG_LEN) // layoutOptions = 0
+
+    mockRead
+      .mockResolvedValueOnce(idResp)
+      .mockResolvedValueOnce(sizeResp)
+      .mockResolvedValueOnce(defBlockResp)
+      .mockResolvedValueOnce(layerResp)
+      .mockResolvedValueOnce(keymapResp)
+      .mockResolvedValueOnce(layoutResp)
+    for (const resp of encoderResps) {
+      mockRead.mockResolvedValueOnce(resp)
+    }
+  }
+
+  function findEncoderWrite(): number[] | undefined {
+    const call = mockWrite.mock.calls.find((c) => {
+      const arg = c[0] as number[]
+      return arg[1] === CMD_VIA_VIAL_PREFIX && arg[2] === CMD_VIAL_GET_ENCODER
+    })
+    return call?.[0] as number[] | undefined
+  }
+
+  beforeEach(() => {
+    mockHasXzMagic.mockReturnValue(false)
+    mockDevicesAsync.mockResolvedValue([createMockDeviceInfo()])
+    mockHIDAsyncOpen.mockResolvedValue(createMockOpenDevice())
+  })
+
+  it('derives encoder count and reads from real Vial KLE labels', async () => {
+    const definitionJson = JSON.stringify({
+      name: 'Probe KB',
+      matrix: { rows: 1, cols: 1 },
+      layouts: { keymap: [[encoderLabel(0, 0), encoderLabel(0, 1)]] },
+    })
+
+    const encoderResp = Buffer.alloc(MSG_LEN)
+    encoderResp[0] = 0x11
+    encoderResp[1] = 0x11 // cw = 0x1111
+    encoderResp[2] = 0x22
+    encoderResp[3] = 0x22 // ccw = 0x2222
+    queueProbeReads(definitionJson, encoderResp)
+
+    const result = await probeDevice(0x1234, 0x5678)
+
+    expect(result.layers).toBe(1)
+    expect(result.rows).toBe(1)
+    expect(result.cols).toBe(1)
+    expect(result.keymap['0,0,0']).toBe(0x0004)
+    // Encoder indices come from the parsed layout's canonical positions, not raw label scanning.
+    expect(result.encoderCount).toBe(1)
+    expect(result.encoderLayout['0,0,0']).toBe(0x1111)
+    expect(result.encoderLayout['0,0,1']).toBe(0x2222)
+
+    const encoderWriteArg = findEncoderWrite()
+    expect(encoderWriteArg).toBeDefined()
+    expect(encoderWriteArg![3]).toBe(0) // layer
+    expect(encoderWriteArg![4]).toBe(0) // idx
+  })
+
+  it('derives zero encoders and issues no encoder reads for a keymap with only normal keys', async () => {
+    const definitionJson = JSON.stringify({
+      name: 'No Encoder KB',
+      matrix: { rows: 1, cols: 1 },
+      layouts: { keymap: [['0,0']] },
+    })
+    queueProbeReads(definitionJson)
+
+    const result = await probeDevice(0x1234, 0x5678)
+
+    expect(result.encoderCount).toBe(0)
+    expect(result.encoderLayout).toEqual({})
+    expect(findEncoderWrite()).toBeUndefined()
   })
 })
