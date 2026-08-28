@@ -41,6 +41,7 @@ function Host(props: Partial<UseLayoutPickerOptions>) {
     layerNames: [],
     keymap: new Map([['0,0,0', 4]]),
     effectiveLayoutOptions: new Map(),
+    advancableKeys: [KEY],
     scale: 1,
     devices: [CONNECTED_DEVICE],
     connectedDevice: CONNECTED_DEVICE,

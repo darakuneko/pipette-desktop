@@ -74,8 +74,12 @@ export function useViewMatrixEditing({
     _maskClicked: boolean,
     event?: { ctrlKey: boolean; shiftKey: boolean },
   ) => {
+    // Hidden layout-option alternates never reach this handler —
+    // KeyboardWidget only wires rendered keys.
     if (key.decal || key.encoderIdx >= 0) return
     if (event?.ctrlKey) { viewMatrixMode.toggleKeySelection(key.row, key.col); return }
+    // Declaration-order on purpose — ranging by the view order being edited
+    // would shift the range domain mid-edit.
     if (event?.shiftKey) { viewMatrixMode.extendSelection(key.row, key.col, selectableKeys); return }
     viewMatrixMode.selectKey(key.row, key.col)
     // The hook's setters are useCallback-stable; depending on the wrapper
@@ -134,6 +138,8 @@ export function useViewMatrixEditing({
     // Effective position -> physical "row,col" keys resolving to it, used
     // below to find every key involved in a collision (group size > 1).
     const groups = new Map<string, string[]>()
+    // Deliberately wider than `filterSelectableKeys` — covers unselected
+    // layout-option alternates too, so the legend stays correct for those.
     for (const key of layout.keys) {
       if (key.decal || key.encoderIdx >= 0) continue
       const physPos = posKey(key.row, key.col)
