@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useUploadConfirm } from '../../hooks/useUploadConfirm'
 import { parseLayoutLabels, unpackLayoutOptions, packLayoutOptions } from '../../../shared/layout-options'
 import { filterVisibleKeys, repositionLayoutKeys } from '../../../shared/kle/filter-keys'
+import { filterSelectableKeys } from './selectable-keys'
 import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from '../keyboard/constants'
 import type { KeyboardLayout } from '../../../shared/kle/types'
 
@@ -119,15 +120,7 @@ export function useLayoutOptionsPanel({
   // Visible non-encoder, non-decal keys for selection
   const selectableKeys = useMemo(() => {
     if (!layout) return []
-    const opts = effectiveLayoutOptions
-    return layout.keys.filter((key) => {
-      if (key.encoderIdx >= 0 || key.decal) return false
-      if (key.layoutIndex >= 0) {
-        const sel = opts.get(key.layoutIndex)
-        return sel === undefined ? key.layoutOption === 0 : key.layoutOption === sel
-      }
-      return true
-    })
+    return filterSelectableKeys(layout.keys, effectiveLayoutOptions)
   }, [layout, effectiveLayoutOptions])
 
   // Layout overlay panel state
