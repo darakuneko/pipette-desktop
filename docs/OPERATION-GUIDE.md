@@ -848,6 +848,14 @@ To edit the View Matrix, open the Keycodes Overlay Panel (§3.14) and click **Ed
 
 Only keys you change are stored — every other key keeps its physical matrix position in the ordering. Encoders and decorative keys are not part of the Auto Move order and cannot be edited in this mode. The View Matrix is saved per keyboard and included in cloud sync (§6.1).
 
+**Wires**
+
+The View Matrix row (§3.14) also has a **Wires** toggle, to the right of the **Edit** button. Turning it on draws the keyboard's matrix wiring over the keymap: a hollow dot at the center of every key, one line per matrix row joining that row's keys in column order, and one line per matrix column joining that column's keys in row order, with row numbers in a gutter on the left and column numbers along the top. Row and column wires are drawn in distinct colors that follow the active theme pack (§6.4).
+
+![View Matrix Wires](screenshots/view-matrix-wires.png)
+
+The wiring follows each key's *effective* View Matrix position — the custom position from an override when one exists, otherwise the physical matrix position — so the overlay updates immediately as you edit the View Matrix. It's a display-only overlay: keys underneath stay fully clickable, and turning it on doesn't gate or change anything else about editing. It also keeps showing while View Matrix Edit mode is active, on top of the `R`/`C` legends. The toggle itself is saved per keyboard, but it isn't reachable while Edit mode is active — the Settings/Import tab (and with it, the toggle) is hidden for the duration — so turn Wires on or off before clicking **Edit**, not during.
+
 ---
 
 ## 3. Keycode Palette
@@ -1099,7 +1107,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 
 - **Key Editor Zoom**: Set the UI zoom level (50–200%) applied while in key editor mode. Defaults to the global UI zoom (§6.5) when not configured. Saved and synced per keyboard
 - **Auto Move**: Toggle automatic advancement to the next key after assigning a keycode
-- **View Matrix**: Enter or leave View Matrix mode (**Edit** / **Done**) to customize the Auto Move key order (see §2.6)
+- **View Matrix**: **Edit** / **Done** enters or leaves View Matrix mode to customize the Auto Move key order; the **Wires** toggle on the same row shows or hides the matrix wiring overlay on the keymap, independently of Edit mode (see §2.6)
 - **Instant Key Selection**: Toggle instant key selection mode (see §2.2 for behavior details)
 - **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
 - **Key Tester**: Toggle Matrix Tester mode (supported keyboards only)
@@ -2060,7 +2068,7 @@ A theme pack `.json` defines a `name`, `version`, and a `colors` object mapping 
 | `colorScheme` | Yes | `"light"` or `"dark"` — declares the intended brightness of the pack |
 | `colors` | Yes | Object mapping colour tokens to CSS colour values (`#hex`, `rgb()`, or `hsl()`) |
 
-35 colour tokens are required — export any installed pack (row → `.json`) to get a complete template. One additional token, `key-label-simulated` (the permutation-pack Display Only tint — see §6.2 above), is **optional**: if a pack omits it, Pipette automatically derives one from that pack's `key-label-remap` (a hue-rotated complement, clamped for readability against the pack's own `colorScheme`) so every pack still gets a distinct simulated tint even without authoring one by hand. Ready-to-use example theme packs (Kanagawa Wave / Dragon / Lotus and Solarized Light / Dark) are also available in the [`sample-packs/themes/`](../sample-packs/themes/) directory in the repository — every sample pack defines its own `key-label-simulated` explicitly.
+35 colour tokens are required — export any installed pack (row → `.json`) to get a complete template. Three additional tokens are **optional**: `key-label-simulated` (the permutation-pack Display Only tint — see §6.2 above), and `wire-row` / `wire-col` (the View Matrix Wires overlay's row and column line + gutter-number colors — see §2.6). If a pack omits `key-label-simulated`, Pipette automatically derives one from that pack's `key-label-remap` (a hue-rotated complement, clamped for readability against the pack's own `colorScheme`). If a pack omits `wire-row`, it falls back to that pack's `accent`; if it omits `wire-col`, it falls back to the same hue-rotated-complement derivation applied to `accent` instead. This means every pack still gets distinct simulated, row-wire, and column-wire tints even without authoring them by hand. Ready-to-use example theme packs (Kanagawa Wave / Dragon / Lotus and Solarized Light / Dark) are also available in the [`sample-packs/themes/`](../sample-packs/themes/) directory in the repository — every sample pack defines its own `key-label-simulated` explicitly (none currently define `wire-row` / `wire-col`, so they use the fallback).
 
 ### 6.5 Zoom (UI Scale)
 

@@ -16,6 +16,7 @@ import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
   backupVirtualDeviceSettings,
+  closeKeycodesOverlay,
   connectToDevice,
   dismissNotificationModal,
   launchCaptureApp,
@@ -67,6 +68,22 @@ async function enterViewMatrixMode(page: Page): Promise<void> {
   await page.waitForTimeout(500)
 }
 
+/** Open the Tools tab and set the View Matrix Wires toggle to `on`,
+ *  idempotently (reads `aria-checked` first so a call that finds it already
+ *  in the target state is a no-op click-wise). Leaves the overlay panel
+ *  open — callers close it themselves once they're done with the tab. */
+async function setViewMatrixWires(page: Page, on: boolean): Promise<void> {
+  if (!(await openOverlayTab(page, 'tools'))) {
+    throw new Error(overlayTabNotFoundMessage('tools'))
+  }
+  const toggle = page.locator('[data-testid="overlay-view-matrix-wires-toggle"]')
+  const checked = (await toggle.getAttribute('aria-checked')) === 'true'
+  if (checked !== on) {
+    await toggle.click()
+    await page.waitForTimeout(300)
+  }
+}
+
 /** Click the keymap key at physical matrix position "row,col" — in View
  *  Matrix mode this selects it for the panel's Row/Col selects. Scoped to
  *  the editor content; the keycode picker (which also renders data-key-pos
@@ -82,10 +99,12 @@ async function captureVirtualDeviceScene(): Promise<void> {
   console.log('\n=== Scene A: View Matrix on the virtual device ===')
   const app = await launchCaptureApp()
 
-  // The panel's Row/Col edits persist into the virtual device's
-  // pipette_settings.json (viewMatrix via PipetteSettings). The in-scene
-  // Reset already clears them, but snapshot/restore the file anyway so an
-  // aborted run can't leak overrides into later helper/test runs.
+  // The panel's Row/Col edits, and the Wires toggle below, both persist
+  // into the virtual device's pipette_settings.json (viewMatrix /
+  // viewMatrixWires via PipetteSettings). The in-scene Reset and the
+  // explicit toggle-off below already clear them, but snapshot/restore the
+  // whole file anyway so an aborted run can't leak overrides into later
+  // helper/test runs.
   const userDataPath = await app.evaluate(async ({ app: a }) => a.getPath('userData'))
   const settingsBackup = backupVirtualDeviceSettings(userDataPath)
 
@@ -104,6 +123,19 @@ async function captureVirtualDeviceScene(): Promise<void> {
     await dismissNotificationModal(page)
     await waitForUnlockDialog(app, page)
     await resetToEditorMode(page)
+
+    // Wires overlay — captured during normal editing (Wires stays in effect
+    // through View Matrix Edit mode too, but this shot is meant to show it
+    // over an ordinary keymap, not the Edit mode's R/C legends). Close the
+    // overlay panel first so it doesn't obstruct the keymap in the shot,
+    // then turn the toggle back off before entering Edit mode below — the
+    // existing view-matrix-mode/selected/duplicate shots were taken without
+    // the overlay and stay that way.
+    await setViewMatrixWires(page, true)
+    await closeKeycodesOverlay(page)
+    await capture(page, 'view-matrix-wires')
+    await setViewMatrixWires(page, false)
+    await closeKeycodesOverlay(page)
 
     await enterViewMatrixMode(page)
     // Two-pane overview: R/C key legends, panel with blank Row/Col selects,
