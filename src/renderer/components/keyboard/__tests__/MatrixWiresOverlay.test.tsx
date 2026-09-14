@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import { MatrixWiresOverlay } from '../MatrixWiresOverlay'
 import { buildMatrixWires, type MatrixWiresLayout } from '../matrix-wires'
+import { WIRE_ROW_COLOR, WIRE_COL_COLOR, WIRE_NODE_COLOR } from '../constants'
 import { makeKey, NO_GUTTER, IDENTITY_CELLS, loadVirtualDeviceLayout } from './kle-test-keys'
 
 /** Renders inside a bare <svg> — `<g>`/`<polyline>`/`<circle>`/`<text>`
@@ -44,7 +45,7 @@ describe('MatrixWiresOverlay — virtual device GPK60-63R fixture', () => {
     expect(circles.length).toBe(layout.nodes.length)
     for (const circle of circles) {
       expect(circle.getAttribute('fill')).toBe('none')
-      expect(circle.getAttribute('stroke')).toBe('var(--content-secondary)')
+      expect(circle.getAttribute('stroke')).toBe(WIRE_NODE_COLOR)
     }
   })
 
@@ -54,8 +55,8 @@ describe('MatrixWiresOverlay — virtual device GPK60-63R fixture', () => {
     // Row wires are drawn before col wires (5 + 14 total, first 5 are rows).
     const rowStrokes = new Set(polylines.slice(0, 5).map((p) => p.getAttribute('stroke')))
     const colStrokes = new Set(polylines.slice(5).map((p) => p.getAttribute('stroke')))
-    expect(rowStrokes).toEqual(new Set(['var(--wire-row)']))
-    expect(colStrokes).toEqual(new Set(['var(--wire-col)']))
+    expect(rowStrokes).toEqual(new Set([WIRE_ROW_COLOR]))
+    expect(colStrokes).toEqual(new Set([WIRE_COL_COLOR]))
   })
 
   it('is wrapped in a pointer-events-none, opacity-60 group with the matrix-wires testid', () => {
@@ -91,8 +92,8 @@ describe('MatrixWiresOverlay — label styling', () => {
     const layout = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER)
     const { container } = renderOverlay(layout, 1, 11)
     const texts = [...container.querySelectorAll('text')]
-    const rowLabel = texts.find((t) => t.textContent === '0' && t.getAttribute('fill') === 'var(--wire-row)')
-    const colLabels = texts.filter((t) => t.getAttribute('fill') === 'var(--wire-col)')
+    const rowLabel = texts.find((t) => t.textContent === '0' && t.getAttribute('fill') === WIRE_ROW_COLOR)
+    const colLabels = texts.filter((t) => t.getAttribute('fill') === WIRE_COL_COLOR)
     expect(rowLabel).toBeDefined()
     expect(colLabels).toHaveLength(2)
     for (const text of texts) {

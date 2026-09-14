@@ -426,4 +426,23 @@ describe('KeymapEditor — View Matrix mode', () => {
     rerender(<KeymapEditor {...defaultProps} viewMatrix={undefined} />)
     expect(capturedKeyColors).toBeUndefined()
   })
+
+  it('does not flag two layout-option alternates sharing a physical position as colliding', () => {
+    // Only one of a pair of layout-option alternates is ever visible at a
+    // time, but `effectiveCells` is built from the full `layout.keys` list
+    // (not the filtered/visible set) and keyed by physical "row,col" — so
+    // two alternates occupying the same physical position collapse into a
+    // single map entry instead of tripping the duplicate-fill warning.
+    const layout = {
+      keys: [
+        { ...KEY_DEFAULTS, x: 0, row: 0, col: 0, layoutIndex: 0, layoutOption: 0 },
+        { ...KEY_DEFAULTS, x: 0, row: 0, col: 0, layoutIndex: 0, layoutOption: 1 },
+        makeKey(2, 2),
+      ],
+    }
+    render(<KeymapEditor {...defaultProps} layout={layout} />)
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+
+    expect(capturedKeyColors).toBeUndefined()
+  })
 })

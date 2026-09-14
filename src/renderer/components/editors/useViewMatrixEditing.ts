@@ -143,7 +143,9 @@ export function useViewMatrixEditing({
   // whenever either consumer needs it: the mode being active, or the
   // wiring overlay's persisted toggle being on. Deliberately wider than
   // `filterSelectableKeys` — covers unselected layout-option alternates
-  // too, so the legend and overlay stay correct for those.
+  // too, so the legend stays correct for those (the overlay itself never
+  // sees them — `buildMatrixWires` only iterates the visible keys
+  // `KeyboardWidget` actually renders).
   const effectiveCells = useMemo(() => {
     if (!layout || !(viewMatrixMode.active || viewMatrixWires)) return undefined
     const cells = new Map<string, ViewMatrixCell>()

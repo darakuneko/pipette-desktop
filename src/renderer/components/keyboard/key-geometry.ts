@@ -5,10 +5,6 @@ import { hasSecondaryRect } from '../../../shared/kle/filter-keys'
 import { rotatePoint } from '../../../shared/kle/rotate-point'
 import { KEY_UNIT, KEY_SPACING } from './constants'
 
-// Re-exported so existing importers of this module's own `rotatePoint`
-// (KeyboardWidget/matrix-wires and their tests) keep working unchanged.
-export { rotatePoint }
-
 /** Compute bounding-box corners of a key (both rects), accounting for rotation. */
 export function keyCorners(
   key: KleKey,

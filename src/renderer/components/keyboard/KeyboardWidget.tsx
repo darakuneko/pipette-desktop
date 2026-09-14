@@ -133,9 +133,10 @@ function KeyboardWidgetInner({
   // they sit next to.
   const matrixWiresFontSize = keyLabelFontSize(scale)
   // The label gutter only exists while the overlay is on. Sized to fit
-  // two staggered lines of gutter numbers (see matrix-wires.ts's label
-  // overlap handling) or half a key unit, whichever is larger.
-  const matrixWiresGutter = matrixWires ? Math.max(KEY_UNIT * 0.5 * scale, matrixWiresFontSize * 2.5) : 0
+  // two staggered lines of gutter numbers, symmetric around the gutter's
+  // own center (see matrix-wires.ts's label overlap handling), or half a
+  // key unit, whichever is larger.
+  const matrixWiresGutter = matrixWires ? Math.max(KEY_UNIT * 0.5 * scale, matrixWiresFontSize * 3) : 0
 
   // Calculate SVG bounds (track min to normalize position)
   const bounds = useMemo(() => {

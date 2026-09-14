@@ -6,10 +6,10 @@ import { join } from 'node:path'
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { KeyboardWidget } from '../KeyboardWidget'
-import { rotatePoint } from '../key-geometry'
 import { KEY_UNIT, KEY_SPACING, KEY_SIZE_RATIO, KEY_SPACING_RATIO, KEYBOARD_PADDING, KEY_TEXT_COLOR, KEY_REMAP_COLOR, keyLabelFontSize } from '../constants'
 import { parseKle } from '../../../../shared/kle/kle-parser'
 import { posKey } from '../../../../shared/kle/pos-key'
+import { rotatePoint } from '../../../../shared/kle/rotate-point'
 import type { KleKey } from '../../../../shared/kle/types'
 import { makeKey } from './kle-test-keys'
 
@@ -272,10 +272,11 @@ describe('KeyboardWidget matrixWires prop', () => {
   const spacing = KEY_SPACING * scale
   const pad2 = KEYBOARD_PADDING * 2
   // Same formulas KeyboardWidget itself uses: fontSize is the shared label
-  // clamp, gutter is the larger of half a key unit or 2.5 gutter lines of
-  // that font size.
+  // clamp, gutter is the larger of half a key unit or three gutter lines
+  // of that font size (two staggered label lines, symmetric around the
+  // gutter's own center).
   const expectedFontSize = keyLabelFontSize(scale)
-  const expectedGutter = Math.max(KEY_UNIT * 0.5 * scale, expectedFontSize * 2.5)
+  const expectedGutter = Math.max(KEY_UNIT * 0.5 * scale, expectedFontSize * 3)
 
   it('leaves bounds numerically identical to the no-overlay case when matrixWires is undefined', () => {
     const { container } = render(<KeyboardWidget keys={keys} keycodes={keycodes} scale={scale} />)

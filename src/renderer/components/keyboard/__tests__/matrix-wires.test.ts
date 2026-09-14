@@ -2,9 +2,9 @@
 
 import { describe, it, expect } from 'vitest'
 import { buildMatrixWires, type MatrixWiresGutter } from '../matrix-wires'
-import { rotatePoint } from '../key-geometry'
 import { KEY_UNIT, KEY_SPACING } from '../constants'
 import { posKey } from '../../../../shared/kle/pos-key'
+import { rotatePoint } from '../../../../shared/kle/rotate-point'
 import { makeKey, NO_GUTTER, IDENTITY_CELLS, loadVirtualDeviceLayout } from './kle-test-keys'
 
 describe('buildMatrixWires — virtual device GPK60-63R fixture', () => {
@@ -187,7 +187,7 @@ describe('buildMatrixWires — row/col ordering of output arrays', () => {
 })
 
 describe('buildMatrixWires — label placement', () => {
-  it('places the row label at the leftmost point y and originX + size/2', () => {
+  it('places the row label at the leftmost point y, line 0 (fontSize/2 above gutter center)', () => {
     const keys = [
       makeKey({ row: 0, col: 0, x: 5, y: 0 }),
       makeKey({ row: 0, col: 1, x: 0, y: 0 }), // leftmost (x smallest), but higher col index
@@ -196,11 +196,11 @@ describe('buildMatrixWires — label placement', () => {
     const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, gutter)
     const row0 = rows.find((r) => r.index === 0)!
     const leftMost = row0.points.reduce((min, p) => (p.x < min.x ? p : min), row0.points[0])
-    expect(row0.label.x).toBeCloseTo(gutter.originX + gutter.size / 2)
+    expect(row0.label.x).toBeCloseTo(gutter.originX + gutter.size / 2 - gutter.fontSize / 2)
     expect(row0.label.y).toBeCloseTo(leftMost.y)
   })
 
-  it('places the col label at the topmost point x and originY + size/2', () => {
+  it('places the col label at the topmost point x, line 0 (fontSize/2 left of gutter center)', () => {
     const keys = [
       makeKey({ row: 0, col: 0, x: 0, y: 5 }),
       makeKey({ row: 1, col: 0, x: 0, y: 0 }), // topmost (y smallest)
@@ -209,13 +209,15 @@ describe('buildMatrixWires — label placement', () => {
     const { cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, gutter)
     const col0 = cols.find((c) => c.index === 0)!
     const topMost = col0.points.reduce((min, p) => (p.y < min.y ? p : min), col0.points[0])
-    expect(col0.label.y).toBeCloseTo(gutter.originY + gutter.size / 2)
+    expect(col0.label.y).toBeCloseTo(gutter.originY + gutter.size / 2 - gutter.fontSize / 2)
     expect(col0.label.x).toBeCloseTo(topMost.x)
   })
 
-  it('alternates overlapping row labels onto a second line offset by fontSize', () => {
+  it('moves overlapping row labels onto a second line, capping at two lines even when all three overlap the first', () => {
     // Three single-key rows stacked so close together (0.05u apart) that
-    // every consecutive pair's label y is closer than fontSize.
+    // every pair's label y — not just consecutive ones — is closer than
+    // fontSize, so rows 1 and 2 both end up on line 1 once row 0 claims
+    // line 0 (two lines is the cap; see matrix-wires.ts's assignLabelLines).
     const keys = [
       makeKey({ row: 0, col: 0, x: 0, y: 0 }),
       makeKey({ row: 1, col: 0, x: 0, y: 0.05 }),
@@ -223,13 +225,15 @@ describe('buildMatrixWires — label placement', () => {
     ]
     const gutter: MatrixWiresGutter = { originX: -20, originY: -20, size: 16, fontSize: 20 }
     const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, gutter)
-    const baseX = gutter.originX + gutter.size / 2
-    expect(rows[0].label.x).toBeCloseTo(baseX)
-    expect(rows[1].label.x).toBeCloseTo(baseX + gutter.fontSize)
-    expect(rows[2].label.x).toBeCloseTo(baseX)
+    const center = gutter.originX + gutter.size / 2
+    const line0X = center - gutter.fontSize / 2
+    const line1X = center + gutter.fontSize / 2
+    expect(rows[0].label.x).toBeCloseTo(line0X)
+    expect(rows[1].label.x).toBeCloseTo(line1X)
+    expect(rows[2].label.x).toBeCloseTo(line1X)
   })
 
-  it('alternates overlapping col labels onto a second line offset by fontSize', () => {
+  it('moves overlapping col labels onto a second line, capping at two lines even when all three overlap the first', () => {
     const keys = [
       makeKey({ row: 0, col: 0, x: 0, y: 0 }),
       makeKey({ row: 0, col: 1, x: 0.05, y: 0 }),
@@ -237,21 +241,69 @@ describe('buildMatrixWires — label placement', () => {
     ]
     const gutter: MatrixWiresGutter = { originX: -20, originY: -20, size: 16, fontSize: 20 }
     const { cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, gutter)
-    const baseY = gutter.originY + gutter.size / 2
-    expect(cols[0].label.y).toBeCloseTo(baseY)
-    expect(cols[1].label.y).toBeCloseTo(baseY + gutter.fontSize)
-    expect(cols[2].label.y).toBeCloseTo(baseY)
+    const center = gutter.originY + gutter.size / 2
+    const line0Y = center - gutter.fontSize / 2
+    const line1Y = center + gutter.fontSize / 2
+    expect(cols[0].label.y).toBeCloseTo(line0Y)
+    expect(cols[1].label.y).toBeCloseTo(line1Y)
+    expect(cols[2].label.y).toBeCloseTo(line1Y)
   })
 
-  it('does not offset labels that are farther apart than fontSize', () => {
+  it('does not offset labels that are farther apart than fontSize (both stay on line 0)', () => {
     const keys = [
       makeKey({ row: 0, col: 0, x: 0, y: 0 }),
       makeKey({ row: 1, col: 0, x: 0, y: 5 }),
     ]
     const gutter: MatrixWiresGutter = { originX: -20, originY: -20, size: 16, fontSize: 8 }
     const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, gutter)
-    const baseX = gutter.originX + gutter.size / 2
-    expect(rows[0].label.x).toBeCloseTo(baseX)
-    expect(rows[1].label.x).toBeCloseTo(baseX)
+    const line0X = gutter.originX + gutter.size / 2 - gutter.fontSize / 2
+    expect(rows[0].label.x).toBeCloseTo(line0X)
+    expect(rows[1].label.x).toBeCloseTo(line0X)
+  })
+
+  it('places labels by coordinate order, not index order, so far-apart indices with coinciding positions still collide', () => {
+    // Row 0 and row 2 share the same y (0); row 1 sits a full key unit
+    // away in between them index-wise. An index-adjacent comparison would
+    // only ever check row0-vs-row1 and row1-vs-row2 (neither collides),
+    // missing that row 0 and row 2 land on the exact same position.
+    const keys = [
+      makeKey({ row: 0, col: 0, x: 0, y: 0 }),
+      makeKey({ row: 1, col: 0, x: 0, y: 1 }),
+      makeKey({ row: 2, col: 0, x: 0, y: 0 }),
+    ]
+    const gutter: MatrixWiresGutter = { originX: -20, originY: -20, size: 16, fontSize: 10 }
+    const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, gutter)
+    const center = gutter.originX + gutter.size / 2
+    const row0 = rows.find((r) => r.index === 0)!
+    const row1 = rows.find((r) => r.index === 1)!
+    const row2 = rows.find((r) => r.index === 2)!
+    expect(row0.label.x).toBeCloseTo(center - gutter.fontSize / 2)
+    expect(row1.label.x).toBeCloseTo(center - gutter.fontSize / 2)
+    expect(row2.label.x).toBeCloseTo(center + gutter.fontSize / 2)
+  })
+
+  it('resolves three close labels onto at most two lines without two same-line labels colliding', () => {
+    // Adjacent pairs (rows 0/1 and 1/2, 0.1u ~ 5.4px apart) are each
+    // closer than fontSize, but the head and tail (rows 0/2, ~10.8px
+    // apart) are not — the walk should keep row 0 and row 2 together on
+    // line 0 rather than spilling row 2 onto line 1 too.
+    const keys = [
+      makeKey({ row: 0, col: 0, x: 0, y: 0 }),
+      makeKey({ row: 1, col: 0, x: 0, y: 0.1 }),
+      makeKey({ row: 2, col: 0, x: 0, y: 0.2 }),
+    ]
+    const gutter: MatrixWiresGutter = { originX: -20, originY: -20, size: 16, fontSize: 8 }
+    const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, gutter)
+    const row0 = rows.find((r) => r.index === 0)!
+    const row1 = rows.find((r) => r.index === 1)!
+    const row2 = rows.find((r) => r.index === 2)!
+
+    const lines = new Set([row0.label.x, row1.label.x, row2.label.x])
+    expect(lines.size).toBeLessThanOrEqual(2)
+    expect(row0.label.x).toBeCloseTo(row2.label.x)
+    expect(row1.label.x).not.toBeCloseTo(row0.label.x)
+    // Row 0 and row 2 share a line but their actual y positions are
+    // farther apart than fontSize, so they don't visually collide.
+    expect(Math.abs(row0.label.y - row2.label.y)).toBeGreaterThanOrEqual(gutter.fontSize)
   })
 })

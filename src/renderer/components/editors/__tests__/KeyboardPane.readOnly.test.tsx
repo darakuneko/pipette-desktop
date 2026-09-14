@@ -11,6 +11,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, fireEvent } from '@testing-library/react'
 import { KeyboardPane } from '../KeyboardPane'
 import type { KleKey } from '../../../../shared/kle/types'
+import { posKey } from '../../../../shared/kle/pos-key'
 
 vi.mock('../../../../shared/keycodes/keycodes', () => ({
   keycodeLabel: (kc: string) => kc,
@@ -137,7 +138,7 @@ describe('KeyboardPane — readOnly (Plan-qwerty-select-no-rewrite v7)', () => {
   })
 
   it('threads matrixWires through to KeyboardWidget, rendering the wiring overlay', () => {
-    const matrixWires = new Map([['0,0', { row: 0, col: 0 }]])
+    const matrixWires = new Map([[posKey(0, 0), { row: 0, col: 0 }]])
     const { container } = render(
       <KeyboardPane {...baseProps()} matrixWires={matrixWires} />,
     )

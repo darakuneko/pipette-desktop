@@ -46,6 +46,12 @@ export const KEY_REMAP_COLOR = 'var(--key-label-remap)'
 export const KEY_MASK_RECT_COLOR = 'var(--key-mask-bg)'
 export const KEY_HOVER_COLOR = 'var(--key-bg-hover)'
 
+// View Matrix wiring overlay: row wires, column wires, and the hollow
+// per-key node dot drawn where they cross.
+export const WIRE_ROW_COLOR = 'var(--wire-row)'
+export const WIRE_COL_COLOR = 'var(--wire-col)'
+export const WIRE_NODE_COLOR = 'var(--content-secondary)'
+
 /** Which remap tint the active keymap surface uses. `'actual'` (the
  *  default) is the existing `key-label-remap` tint — JIS-type display
  *  remaps and the key picker: the shown legend is truthful, the physical

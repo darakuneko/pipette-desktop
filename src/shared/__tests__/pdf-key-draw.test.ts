@@ -8,7 +8,6 @@ import {
   computeBounds,
   keyCorners,
   degreesToRadians,
-  rotatePoint,
   formatTimestamp,
   drawKeyOutline,
   drawEncoderOutline,
@@ -17,6 +16,7 @@ import {
   ROUNDNESS,
   KAPPA,
 } from '../pdf-key-draw'
+import { rotatePoint } from '../kle/rotate-point'
 
 function makeKey(overrides: Partial<KleKey> = {}): KleKey {
   return {

@@ -93,17 +93,25 @@ function groupAndOrder(
   return groups
 }
 
-/** Alternates a "line" (0 or 1) assignment across a sequence of
- *  already-ordered label positions: whenever two consecutive positions
- *  are closer than `fontSize`, the later one flips to the other line;
- *  otherwise the run resets to line 0. Keeps a cluster of overlapping
- *  labels legible with just two lines instead of drifting further with
- *  every additional close neighbor. */
+/** Assigns each label position a "line" (0 or 1), walking the positions in
+ *  ascending coordinate order rather than the caller's index order —
+ *  comparing only index-adjacent neighbors misses collisions between
+ *  labels whose matrix indices are far apart but whose coordinates
+ *  coincide (split boards, reordered View Matrix positions). A label
+ *  stays on line 0 unless it lands closer than `fontSize` to the last
+ *  label already placed on line 0, in which case it moves to line 1 —
+ *  even if that also collides with the last label on line 1, since two
+ *  lines is the cap. The returned array is aligned back to the input's
+ *  original order. */
 function assignLabelLines(positions: readonly number[], fontSize: number): number[] {
+  const order = positions.map((_, index) => index).sort((a, b) => positions[a] - positions[b])
   const lines = new Array<number>(positions.length).fill(0)
-  for (let i = 1; i < positions.length; i++) {
-    const overlaps = Math.abs(positions[i] - positions[i - 1]) < fontSize
-    lines[i] = overlaps ? (lines[i - 1] === 0 ? 1 : 0) : 0
+  const lastOnLine: [number | null, number | null] = [null, null]
+  for (const index of order) {
+    const pos = positions[index]
+    const line = lastOnLine[0] !== null && Math.abs(pos - lastOnLine[0]) < fontSize ? 1 : 0
+    lines[index] = line
+    lastOnLine[line] = pos
   }
   return lines
 }
@@ -135,10 +143,12 @@ function buildAxisWires(
     return across(anchor)
   })
   const lines = assignLabelLines(labelPositions, gutter.fontSize)
-  const base = axis === 'row' ? gutter.originX + gutter.size / 2 : gutter.originY + gutter.size / 2
+  // The gutter's two label lines sit symmetrically around its own center
+  // line so neither one leans further into the key area than the other.
+  const center = axis === 'row' ? gutter.originX + gutter.size / 2 : gutter.originY + gutter.size / 2
 
   return indices.map((index, i) => {
-    const alongGutterPos = lines[i] === 1 ? base + gutter.fontSize : base
+    const alongGutterPos = center + (lines[i] === 1 ? gutter.fontSize / 2 : -gutter.fontSize / 2)
     return {
       index,
       points: groups.get(index)!.map((p) => ({ x: p.x, y: p.y })),

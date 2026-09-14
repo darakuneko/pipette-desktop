@@ -8,11 +8,6 @@ import { hasSecondaryRect } from './kle/filter-keys'
 import { computeUnionPolygon, insetAxisAlignedPolygon } from './kle/rect-union'
 import { rotatePoint } from './kle/rotate-point'
 
-// Re-exported so existing importers of this module's own `rotatePoint`
-// keep working unchanged now that the implementation lives in `kle/rotate-
-// point.ts` (shared with the renderer's key-placement geometry).
-export { rotatePoint }
-
 // ── Constants ────────────────────────────────────────────────────────
 
 export const SPACING_FRACTION = 0.2 / 3.4
