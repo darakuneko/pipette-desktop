@@ -1,5 +1,5 @@
 {
-  "version": "0.1.91",
+  "version": "0.1.92",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -43,6 +43,8 @@
     "updatedNamed": "{{name}} を更新しました",
     "importBatchFailed_one": "{{count}} 件のファイルをインポートできませんでした：",
     "importBatchFailed_other": "{{count}} 件のファイルをインポートできませんでした：",
+    "importBatchHubSyncFailed_one": "{{count}} 件は保存しましたが Hub への同期に失敗しました：",
+    "importBatchHubSyncFailed_other": "{{count}} 件は保存しましたが Hub への同期に失敗しました：",
     "importSummary_one": "{{count}} 件インポートしました (成功 {{success}}, 失敗 {{failure}})",
     "importSummary_other": "{{count}} 件インポートしました (成功 {{success}}, 失敗 {{failure}})",
     "pullFromCloud": "Google Drive から取得",
@@ -904,6 +906,13 @@
       "keystoreUnavailable": "OSキーチェーンが利用できないため、ここでは Google Drive からの取得を行えません。",
       "remoteCheckFailed": "Google Drive に接続できませんでした。しばらくしてから再試行してください。",
       "partial": "一部のパックの取得に失敗しました。もう一度お試しください。"
+    },
+    "readiness": {
+      "unauthenticated": "同期を有効にするには Google アカウントを接続してください",
+      "noPasswordFile": "同期を有効にするには同期パスワードを設定してください",
+      "decryptFailed": "保存された同期パスワードを読み取れませんでした",
+      "keystoreUnavailable": "OSキーチェーンが利用できないため、ここでは同期が無効です",
+      "remoteCheckFailed": "Google Drive に接続できないため、同期を一時停止しています"
     }
   },
   "settings": {
@@ -1922,6 +1931,7 @@
     "authDisplayNameConflict": "Googleアカウント名が既存の投稿者名と重複しています。別の投稿者名を設定してください。",
     "accountDeactivated": "アカウントが無効化されています。サポートにお問い合わせください。",
     "rateLimited": "リクエストが多すぎます。しばらくしてからもう一度お試しください。",
+    "notSignedIn": "Hub と同期するには Google アカウントを接続してください。",
     "error": {
       "keystrokesBelow": "この期間の打鍵数が足りません（100 打鍵以上が必要です）。",
       "rangeExceeds": "選択した期間が 30 日を超えています。期間を短くして条件を保存し直してください。",

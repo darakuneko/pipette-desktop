@@ -1,5 +1,5 @@
 {
-  "version": "0.1.91",
+  "version": "0.1.92",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -43,6 +43,8 @@
     "updatedNamed": "{{name}} 更新したよん☆",
     "importBatchFailed_one": "{{count}}個、入れられんかったよ…",
     "importBatchFailed_other": "{{count}}個、入れられんかったよ…",
+    "importBatchHubSyncFailed_one": "{{count}}個は保存したけどHubへの同期は失敗…サゲ。。",
+    "importBatchHubSyncFailed_other": "{{count}}個は保存したけどHubへの同期は失敗…サゲ。。",
     "importSummary_one": "{{count}}個入れたよん☆(成功{{success}}、失敗{{failure}})",
     "importSummary_other": "{{count}}個入れたよん☆(成功{{success}}、失敗{{failure}})",
     "pullFromCloud": "Google Driveから取ってくる☆",
@@ -894,6 +896,13 @@
       "keystoreUnavailable": "OSのキーチェーン使えなくて、ここじゃGoogle Driveから取ってこれないっぽい…",
       "remoteCheckFailed": "Google Driveにつながんない…また後でやってみて！",
       "partial": "一部のパック取得失敗…サゲ。。もっかい試して！"
+    },
+    "readiness": {
+      "unauthenticated": "同期オンにするにはGoogle入ってから☆",
+      "noPasswordFile": "同期オンにするには同期パスワード決めてよｗ",
+      "decryptFailed": "保存したパスワード読めないんですけどｗ",
+      "keystoreUnavailable": "OSのキーチェーン使えなくて、ここじゃ同期できないっぽい…",
+      "remoteCheckFailed": "Google Driveにつながんない…同期ストップ中！"
     }
   },
   "settings": {
@@ -1888,6 +1897,7 @@
     "authDisplayNameConflict": "Googleの名前とかぶってるんだけど！変えてよｗ",
     "accountDeactivated": "アカウント死んでるっぽいｗサポートに言って☆",
     "rateLimited": "リクエスト多すぎｗちょっと待ってからにして☆",
+    "notSignedIn": "Hubと同期するにはGoogle入ってから☆",
     "error": {
       "keystrokesBelow": "打鍵数足りなくね？（100打鍵以上してｗ）",
       "rangeExceeds": "期間長すぎｗ 30日以内にして☆",

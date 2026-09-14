@@ -256,6 +256,37 @@ describe('useImportBatch', () => {
     expect(banner).toContain('network down')
   })
 
+  it('a batch with only a hub-sync failure (nothing unsaved) surfaces only the Hub-sync banner, never the "could not be imported" header', async () => {
+    const placement = makePlacement()
+    const setActionError = vi.fn()
+    const hubSync = vi.fn().mockResolvedValue({ success: false, error: 'network down' })
+    const collectResults = vi.fn().mockResolvedValue({
+      successes: [{ fileName: 'good.json', meta: { id: 'g', name: 'Good', hubPostId: 'hp' } }],
+      notSavedFailures: [],
+      snapshot: { entries: [], direction: 'asc' },
+    } satisfies CollectedImportBatch<FakeMeta>)
+
+    const { result } = renderHook(() => useImportBatch<FakeMeta>({
+      open: true,
+      placement,
+      setLastResult: vi.fn(),
+      setActionError,
+      t,
+      collectResults,
+      hubSync,
+    }))
+
+    await act(async () => { await result.current.runImport() })
+
+    const banner = setActionError.mock.calls.at(-1)?.[0] as string
+    expect(banner).toContain('good.json')
+    expect(banner).toContain('network down')
+    // The saved-but-not-synced case must never claim the file "could not
+    // be imported" — that header belongs only to notSavedFailures.
+    expect(banner).not.toContain('common.importBatchFailed')
+    expect(banner).toContain('common.importBatchHubSyncFailed')
+  })
+
   it('a meta with no hubPostId never invokes hubSync, even when one is provided', async () => {
     const placement = makePlacement()
     const hubSync = vi.fn()

@@ -226,7 +226,7 @@ export function useImportBatch<TMeta extends ImportBatchMeta>({
       const summary = buildImportSummary(t, successes.length, notSavedFailures)
       if (summary) setImportSummary(summary)
 
-      const failureSummary = buildImportBatchFailureSummary(t, [...notSavedFailures, ...hubSyncFailures])
+      const failureSummary = buildImportBatchFailureSummary(t, notSavedFailures, hubSyncFailures)
       if (failureSummary) setActionError(failureSummary)
     } finally {
       importInFlightRef.current = false

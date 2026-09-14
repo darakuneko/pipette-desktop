@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest'
 import {
   HUB_ERROR_ACCOUNT_DEACTIVATED,
   HUB_ERROR_RATE_LIMITED,
+  HUB_ERROR_NOT_AUTHENTICATED,
 } from '../../../shared/types/hub'
 import { localizeHubError } from '../hub-error-i18n'
 
@@ -23,6 +24,11 @@ describe('localizeHubError', () => {
   it('maps server sentinels to the dedicated key', () => {
     expect(localizeHubError(HUB_ERROR_ACCOUNT_DEACTIVATED, 'hub.uploadFailed', tIdentity)).toBe('hub.accountDeactivated')
     expect(localizeHubError(HUB_ERROR_RATE_LIMITED, 'hub.uploadFailed', tIdentity)).toBe('hub.rateLimited')
+  })
+
+  it('maps the not-signed-in-to-Google sentinel to its dedicated key regardless of the fallback', () => {
+    expect(localizeHubError(HUB_ERROR_NOT_AUTHENTICATED, 'hub.uploadFailed', tIdentity)).toBe('hub.notSignedIn')
+    expect(localizeHubError(HUB_ERROR_NOT_AUTHENTICATED, 'hub.updateFailed', tIdentity)).toBe('hub.notSignedIn')
   })
 
   it('maps prepareAnalyticsExport rejections to user-readable copy', () => {

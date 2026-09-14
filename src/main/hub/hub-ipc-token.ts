@@ -7,12 +7,15 @@
 // sync-runtime-state.ts's `syncRuntime` convention) since a plain
 // `export let x` cannot be reassigned from outside its declaring module.
 
-import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
+import {
+  HUB_ERROR_DISPLAY_NAME_CONFLICT,
+  HUB_ERROR_ACCOUNT_DEACTIVATED,
+  HUB_ERROR_RATE_LIMITED,
+  HUB_ERROR_NOT_AUTHENTICATED,
+} from '../../shared/types/hub'
 import { getIdToken } from '../sync/google-auth'
 import { Hub401Error, Hub403Error, Hub409Error, Hub429Error, authenticateWithHub } from './hub-client'
 import type { HubAuthResult } from './hub-client'
-
-const AUTH_ERROR = 'Not authenticated with Google. Please sign in again.'
 
 // Cache Hub JWT to avoid redundant /api/auth/token round-trips.
 // Hub JWT is valid for 7 days; we cache for 24 hours.
@@ -37,7 +40,7 @@ export async function getHubToken(): Promise<string> {
   const p = (async () => {
     try {
       const idToken = await getIdToken()
-      if (!idToken) throw new Error(AUTH_ERROR)
+      if (!idToken) throw new Error(HUB_ERROR_NOT_AUTHENTICATED)
       let auth: HubAuthResult
       try {
         auth = await authenticateWithHub(idToken, hubAuthState.pendingAuthDisplayName ?? undefined)

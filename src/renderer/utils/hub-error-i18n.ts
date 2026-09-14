@@ -4,7 +4,8 @@
 // Hub errors arrive at the renderer in three shapes:
 //
 //   1. Bare sentinel constants for "well-known" auth/quota issues
-//      (e.g. `HUB_ERROR_ACCOUNT_DEACTIVATED`, `HUB_ERROR_RATE_LIMITED`).
+//      (e.g. `HUB_ERROR_ACCOUNT_DEACTIVATED`, `HUB_ERROR_RATE_LIMITED`,
+//      `HUB_ERROR_NOT_AUTHENTICATED`).
 //   2. Formatted HubHttpError strings from `hub-client.ts`:
 //      `<label>: <status> <body>` (e.g. `"Hub analytics upload failed:
 //      400 {\"ok\":false,\"error\":\"INVALID_PAYLOAD: keystrokes
@@ -22,6 +23,7 @@ import {
   HUB_ERROR_ACCOUNT_DEACTIVATED,
   HUB_ERROR_DISPLAY_NAME_CONFLICT,
   HUB_ERROR_RATE_LIMITED,
+  HUB_ERROR_NOT_AUTHENTICATED,
 } from '../../shared/types/hub'
 
 /** INVALID_PAYLOAD reasons the Hub server emits and the i18n key each
@@ -40,6 +42,7 @@ const SENTINEL_KEYS: Record<string, string> = {
   [HUB_ERROR_ACCOUNT_DEACTIVATED]: 'hub.accountDeactivated',
   [HUB_ERROR_RATE_LIMITED]: 'hub.rateLimited',
   [HUB_ERROR_DISPLAY_NAME_CONFLICT]: 'hub.displayNameTaken',
+  [HUB_ERROR_NOT_AUTHENTICATED]: 'hub.notSignedIn',
   // Main-side prepareAnalyticsExport rejections.
   'Saved filter entry not found': 'hub.error.entryNotFound',
   'Saved filter payload is not valid JSON': 'hub.error.malformedSavedPayload',

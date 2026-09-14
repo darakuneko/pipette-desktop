@@ -1,5 +1,5 @@
 {
-  "version": "0.1.91",
+  "version": "0.1.92",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -43,6 +43,8 @@
     "updatedNamed": "{{name}} を更新いたしました",
     "importBatchFailed_one": "誠に恐縮ながら、{{count}} 件のファイルをお受け取りできませんでした。",
     "importBatchFailed_other": "誠に恐縮ながら、{{count}} 件のファイルをお受け取りできませんでした。",
+    "importBatchHubSyncFailed_one": "誠に恐縮ながら、{{count}} 件は保存いたしましたが、Hub とは揃えられませんでした。",
+    "importBatchHubSyncFailed_other": "誠に恐縮ながら、{{count}} 件は保存いたしましたが、Hub とは揃えられませんでした。",
     "importSummary_one": "{{count}} 件のファイルをお受け取りいたしました (成功 {{success}} 件、失敗 {{failure}} 件)。",
     "importSummary_other": "{{count}} 件のファイルをお受け取りいたしました (成功 {{success}} 件、失敗 {{failure}} 件)。",
     "pullFromCloud": "Google Drive より頂戴する",
@@ -894,6 +896,13 @@
       "keystoreUnavailable": "OSの錠前が使えぬため、ここでは Google Drive より取り寄せられませぬ。",
       "remoteCheckFailed": "あちらへ繋がりませんでした。しばし後にもう一度お試しを。",
       "partial": "一部の包みが取り寄せられませんでした。今一度お試しくださいませ。"
+    },
+    "readiness": {
+      "unauthenticated": "同期を有効にするには、まず Google へ御挨拶を",
+      "noPasswordFile": "同期を有効にするには、合言葉を定めてくださいませ",
+      "decryptFailed": "保管された合言葉を読み取れませんでした",
+      "keystoreUnavailable": "OSの錠前が使えぬため、ここでは同期がかないませぬ",
+      "remoteCheckFailed": "あちらへ繋がらぬため、同期を控えております"
     }
   },
   "settings": {
@@ -1888,6 +1897,7 @@
     "authDisplayNameConflict": "既存のお名前と重複しております。別のお名前をお決めください。",
     "accountDeactivated": "お席が無効になっております。お問い合わせください。",
     "rateLimited": "少々お急ぎすぎのようです。一息ついてからお試しください。",
+    "notSignedIn": "Hub と同期するには、まず Google へ御挨拶を。",
     "error": {
       "keystrokesBelow": "打鍵が少なすぎます（百回以上は必要かと）。",
       "rangeExceeds": "期間が長すぎます。三十日以内におさめてくださいませ。",

@@ -39,19 +39,37 @@ export function dedupeByIdKeepLast<T>(items: T[], getId: (item: T) => string): T
   return [...byId.values()]
 }
 
+/** Renders one `<headerKey> {{count}}` header + `fileName: reason` lines
+ *  block, or null when `failures` is empty — the shared shape behind
+ *  both blocks `buildImportBatchFailureSummary` can emit. `t` is only
+ *  invoked when there is actually a block to render. */
+function buildFailureBlock(t: TFunction, headerKey: string, failures: ImportBatchFailure[]): string | null {
+  if (failures.length === 0) return null
+  const header = t(headerKey, { count: failures.length })
+  const lines = failures.map((f) => `${f.fileName}: ${f.reason}`)
+  return [header, ...lines].join('\n')
+}
+
 /**
- * Builds the "{{count}} file(s) could not be imported:" header plus one
- * `fileName: reason` line per failure. Returns null when there are no
- * failures so callers can leave `actionError` untouched in that case.
+ * Builds the import-batch failure banner shown in the modal's error
+ * area. `notSavedFailures` (files that never landed on disk — parse /
+ * validate / store errors) get the `common.importBatchFailed` header
+ * ("N files could not be imported:"); `hubSyncFailures` (files that DID
+ * save locally, but pushing the update to their already-linked Hub post
+ * failed) get the separate `common.importBatchHubSyncFailed` header, so
+ * the banner never claims a saved file "could not be imported" when
+ * only its Hub sync failed. Either list may be empty. Returns null when
+ * both are, so callers can leave `actionError` untouched in that case.
  */
 export function buildImportBatchFailureSummary(
   t: TFunction,
-  failures: ImportBatchFailure[],
+  notSavedFailures: ImportBatchFailure[],
+  hubSyncFailures: ImportBatchFailure[],
 ): string | null {
-  if (failures.length === 0) return null
-  const header = t('common.importBatchFailed', { count: failures.length })
-  const lines = failures.map((f) => `${f.fileName}: ${f.reason}`)
-  return [header, ...lines].join('\n')
+  const notSavedBlock = buildFailureBlock(t, 'common.importBatchFailed', notSavedFailures)
+  const hubSyncBlock = buildFailureBlock(t, 'common.importBatchHubSyncFailed', hubSyncFailures)
+  if (!notSavedBlock && !hubSyncBlock) return null
+  return [notSavedBlock, hubSyncBlock].filter((block): block is string => block !== null).join('\n\n')
 }
 
 /**

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.91",
+  "version": "0.1.92",
   "name": "English",
   "common": {
     "save": "Save",
@@ -43,6 +43,8 @@
     "updatedNamed": "Updated {{name}}",
     "importBatchFailed_one": "{{count}} file could not be imported:",
     "importBatchFailed_other": "{{count}} files could not be imported:",
+    "importBatchHubSyncFailed_one": "{{count}} file was saved but could not be synced to the Hub:",
+    "importBatchHubSyncFailed_other": "{{count}} files were saved but could not be synced to the Hub:",
     "importSummary_one": "Imported {{count}} file (success {{success}}, failure {{failure}})",
     "importSummary_other": "Imported {{count}} files (success {{success}}, failure {{failure}})",
     "pullFromCloud": "Pull from Google Drive",
@@ -904,6 +906,13 @@
       "keystoreUnavailable": "OS keychain is not available; Google Drive pull is disabled here.",
       "remoteCheckFailed": "Couldn't reach Google Drive. Try again later.",
       "partial": "Some packs failed to pull. Try again."
+    },
+    "readiness": {
+      "unauthenticated": "Connect your Google account to enable sync",
+      "noPasswordFile": "Set a sync password to enable sync",
+      "decryptFailed": "Couldn't read the saved sync password",
+      "keystoreUnavailable": "OS keychain is not available; sync is disabled here",
+      "remoteCheckFailed": "Couldn't reach Google Drive; sync is paused"
     }
   },
   "settings": {
@@ -1922,6 +1931,7 @@
     "authDisplayNameConflict": "Your Google account name conflicts with an existing display name. Please choose a different display name to continue.",
     "accountDeactivated": "Your account has been deactivated. Please contact support for assistance.",
     "rateLimited": "Too many requests. Please try again later.",
+    "notSignedIn": "Connect your Google account to sync with the Hub.",
     "error": {
       "keystrokesBelow": "Not enough keystrokes recorded for this period (at least 100 are required).",
       "rangeExceeds": "The selected period is longer than 30 days. Pick a shorter range and save the condition again.",
