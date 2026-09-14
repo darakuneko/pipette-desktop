@@ -4,7 +4,12 @@
 // visible keys and each key's effective (View Matrix) row/col, build one
 // polyline per matrix row, one per matrix column, and one node per key.
 // No React/DOM here so the overlay component and its tests can both build
-// on a plain, side-effect-free function.
+// on a plain, side-effect-free function. Label *placement* (which of
+// possibly several stacked lines a row/col number lands on) is computed
+// here too, since it depends on the same effective-position geometry; the
+// label's actual screen coordinates are left to the caller (`KeyboardWidget`
+// sizes the gutter band, `MatrixWiresOverlay` centers each stack inside it)
+// since neither is needed to decide which keys share a matrix row/column.
 
 import type { KleKey } from '../../../shared/kle/types'
 import { posKey } from '../../../shared/kle/pos-key'
@@ -15,10 +20,23 @@ export interface WirePoint {
   y: number
 }
 
+/** A wire's label position, expressed independently of the gutter's own
+ *  screen geometry: `across` is the anchor coordinate perpendicular to the
+ *  gutter (the same axis `points` already carries — a row label's `y`, a
+ *  col label's `x`), and `line` is which stacked gutter line the label
+ *  landed on (0-based, in placement order — not necessarily draw order).
+ *  The caller turns `{ across, line }` into an actual `{x, y}` once it
+ *  knows the gutter's band geometry and how many lines the axis needed in
+ *  total (`MatrixWiresLayout.rowLineCount` / `colLineCount`). */
+export interface MatrixWireLabel {
+  across: number
+  line: number
+}
+
 export interface MatrixWire {
   index: number
   points: WirePoint[]
-  label: WirePoint
+  label: MatrixWireLabel
 }
 
 export interface MatrixNode {
@@ -31,17 +49,46 @@ export interface MatrixWiresLayout {
   rows: MatrixWire[]
   cols: MatrixWire[]
   nodes: MatrixNode[]
+  /** How many stacked lines the row-number gutter (left side) needed to
+   *  keep every row label legible — 1 when no two row labels' `y`
+   *  positions collided, more when several matrix rows share a physical
+   *  y. Unbounded: as many lines as actually needed, never capped. */
+  rowLineCount: number
+  /** Same as `rowLineCount` but for the col-number gutter (top side) —
+   *  how many stacked lines several matrix columns sharing a physical x
+   *  needed. */
+  colLineCount: number
 }
 
-/** The label gutter band the overlay draws row/col numbers into. The
- *  caller owns sizing and positioning the band (it widens the SVG bounds
- *  by `size` on every side so the keyboard stays centered while the
- *  overlay is on); this module only reads it to place labels. */
+/** The label gutter band `MatrixWiresOverlay` draws row/col numbers into.
+ *  `left`/`top` are the band's own thickness on each side (sized by the
+ *  caller, `KeyboardWidget`, to fit however many lines `rowLineCount` /
+ *  `colLineCount` actually need); `originX`/`originY` are the SVG
+ *  viewBox's own origin, since the gutter sits flush against it. This
+ *  module never reads this type itself — it only produces the
+ *  `{ across, line }` labels the overlay turns into coordinates against
+ *  this geometry. */
 export interface MatrixWiresGutter {
   originX: number
   originY: number
-  size: number
+  left: number
+  top: number
   fontSize: number
+}
+
+/** Col labels stack vertically (one number's height per line); row labels
+ *  stack horizontally, and a two-digit row number is wider than it is
+ *  tall, so its stacking pitch is wider than a col label's. Both
+ *  `buildMatrixWires` (deciding which labels collide) and
+ *  `MatrixWiresOverlay` (turning a line index into a screen offset) must
+ *  agree on the same pitch, hence the shared helpers instead of each side
+ *  hard-coding its own multiplier. */
+export function rowLabelPitch(fontSize: number): number {
+  return fontSize * 1.4
+}
+
+export function colLabelPitch(fontSize: number): number {
+  return fontSize
 }
 
 /** A key placed for wiring purposes: its physical identity, the
@@ -93,27 +140,34 @@ function groupAndOrder(
   return groups
 }
 
-/** Assigns each label position a "line" (0 or 1), walking the positions in
+/** Assigns each label position a stacking "line", walking the positions in
  *  ascending coordinate order rather than the caller's index order —
  *  comparing only index-adjacent neighbors misses collisions between
  *  labels whose matrix indices are far apart but whose coordinates
- *  coincide (split boards, reordered View Matrix positions). A label
- *  stays on line 0 unless it lands closer than `fontSize` to the last
- *  label already placed on line 0, in which case it moves to line 1 —
- *  even if that also collides with the last label on line 1, since two
- *  lines is the cap. The returned array is aligned back to the input's
- *  original order. */
-function assignLabelLines(positions: readonly number[], fontSize: number): number[] {
+ *  coincide (split boards, reordered View Matrix positions). Greedy and
+ *  unbounded: each label goes on the lowest-numbered line whose
+ *  most-recently-placed label is at least `pitch` away, and only opens a
+ *  new line when every existing line is still too close — so three or
+ *  more matrix rows/cols anchored at the same physical coordinate stack
+ *  onto as many lines as they need instead of the third one landing back
+ *  on top of the second. The returned `lines` array is aligned back to
+ *  the input's original order; `lineCount` is the total number of lines
+ *  opened. */
+function assignLabelLines(
+  positions: readonly number[],
+  pitch: number,
+): { lines: number[]; lineCount: number } {
   const order = positions.map((_, index) => index).sort((a, b) => positions[a] - positions[b])
   const lines = new Array<number>(positions.length).fill(0)
-  const lastOnLine: [number | null, number | null] = [null, null]
+  const lastOnLine: number[] = []
   for (const index of order) {
     const pos = positions[index]
-    const line = lastOnLine[0] !== null && Math.abs(pos - lastOnLine[0]) < fontSize ? 1 : 0
+    let line = lastOnLine.findIndex((last) => Math.abs(pos - last) >= pitch)
+    if (line === -1) line = lastOnLine.length
     lines[index] = line
     lastOnLine[line] = pos
   }
-  return lines
+  return { lines, lineCount: lastOnLine.length }
 }
 
 /** Builds one axis's wires (row or col) from the same placed-key list.
@@ -127,8 +181,8 @@ function assignLabelLines(positions: readonly number[], fontSize: number): numbe
 function buildAxisWires(
   placed: readonly PlacedKey[],
   axis: 'row' | 'col',
-  gutter: MatrixWiresGutter,
-): MatrixWire[] {
+  fontSize: number,
+): { wires: MatrixWire[]; lineCount: number } {
   const groupBy = axis === 'row' ? (p: PlacedKey) => p.effectiveRow : (p: PlacedKey) => p.effectiveCol
   const orderBy = axis === 'row' ? (p: PlacedKey) => p.effectiveCol : (p: PlacedKey) => p.effectiveRow
   const along = axis === 'row' ? (p: PlacedKey) => p.x : (p: PlacedKey) => p.y
@@ -142,28 +196,22 @@ function buildAxisWires(
     const anchor = members.reduce((min, p) => (along(p) < along(min) ? p : min), members[0])
     return across(anchor)
   })
-  const lines = assignLabelLines(labelPositions, gutter.fontSize)
-  // The gutter's two label lines sit symmetrically around its own center
-  // line so neither one leans further into the key area than the other.
-  const center = axis === 'row' ? gutter.originX + gutter.size / 2 : gutter.originY + gutter.size / 2
+  const pitch = axis === 'row' ? rowLabelPitch(fontSize) : colLabelPitch(fontSize)
+  const { lines, lineCount } = assignLabelLines(labelPositions, pitch)
 
-  return indices.map((index, i) => {
-    const alongGutterPos = center + (lines[i] === 1 ? gutter.fontSize / 2 : -gutter.fontSize / 2)
-    return {
-      index,
-      points: groups.get(index)!.map((p) => ({ x: p.x, y: p.y })),
-      label: axis === 'row'
-        ? { x: alongGutterPos, y: labelPositions[i] }
-        : { x: labelPositions[i], y: alongGutterPos },
-    }
-  })
+  const wires = indices.map((index, i) => ({
+    index,
+    points: groups.get(index)!.map((p) => ({ x: p.x, y: p.y })),
+    label: { across: labelPositions[i], line: lines[i] },
+  }))
+  return { wires, lineCount }
 }
 
 export function buildMatrixWires(
   visibleKeys: readonly KleKey[],
   cells: ReadonlyMap<string, { row: number; col: number }>,
   scale: number,
-  gutter: MatrixWiresGutter,
+  fontSize: number,
 ): MatrixWiresLayout {
   const seen = new Set<string>()
   const placed: PlacedKey[] = []
@@ -179,9 +227,14 @@ export function buildMatrixWires(
     placed.push({ posKey: pos, effectiveRow: effective.row, effectiveCol: effective.col, ...center })
   }
 
+  const { wires: rows, lineCount: rowLineCount } = buildAxisWires(placed, 'row', fontSize)
+  const { wires: cols, lineCount: colLineCount } = buildAxisWires(placed, 'col', fontSize)
+
   return {
-    rows: buildAxisWires(placed, 'row', gutter),
-    cols: buildAxisWires(placed, 'col', gutter),
+    rows,
+    cols,
     nodes: placed.map(({ posKey, x, y }) => ({ posKey, x, y })),
+    rowLineCount,
+    colLineCount,
   }
 }

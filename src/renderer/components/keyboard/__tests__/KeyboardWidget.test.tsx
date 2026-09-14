@@ -7,6 +7,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { KeyboardWidget } from '../KeyboardWidget'
 import { KEY_UNIT, KEY_SPACING, KEY_SIZE_RATIO, KEY_SPACING_RATIO, KEYBOARD_PADDING, KEY_TEXT_COLOR, KEY_REMAP_COLOR, keyLabelFontSize } from '../constants'
+import { buildMatrixWires, rowLabelPitch, colLabelPitch } from '../matrix-wires'
 import { parseKle } from '../../../../shared/kle/kle-parser'
 import { posKey } from '../../../../shared/kle/pos-key'
 import { rotatePoint } from '../../../../shared/kle/rotate-point'
@@ -272,11 +273,23 @@ describe('KeyboardWidget matrixWires prop', () => {
   const spacing = KEY_SPACING * scale
   const pad2 = KEYBOARD_PADDING * 2
   // Same formulas KeyboardWidget itself uses: fontSize is the shared label
-  // clamp, gutter is the larger of half a key unit or three gutter lines
-  // of that font size (two staggered label lines, symmetric around the
-  // gutter's own center).
+  // clamp, and each axis's gutter is the larger of half a key unit or
+  // that axis's own stacked label lines (from buildMatrixWires, using this
+  // fixture's actual keys/matrixWires) plus one fontSize of breathing room.
   const expectedFontSize = keyLabelFontSize(scale)
-  const expectedGutter = Math.max(KEY_UNIT * 0.5 * scale, expectedFontSize * 3)
+  const matrixWiresForBoundsTest = new Map([
+    [posKey(0, 0), { row: 0, col: 0 }],
+    [posKey(0, 1), { row: 0, col: 1 }],
+  ])
+  const expectedLayout = buildMatrixWires(keys, matrixWiresForBoundsTest, scale, expectedFontSize)
+  const expectedGutterLeft = Math.max(
+    KEY_UNIT * 0.5 * scale,
+    expectedLayout.rowLineCount * rowLabelPitch(expectedFontSize) + expectedFontSize,
+  )
+  const expectedGutterTop = Math.max(
+    KEY_UNIT * 0.5 * scale,
+    expectedLayout.colLineCount * colLabelPitch(expectedFontSize) + expectedFontSize,
+  )
 
   it('leaves bounds numerically identical to the no-overlay case when matrixWires is undefined', () => {
     const { container } = render(<KeyboardWidget keys={keys} keycodes={keycodes} scale={scale} />)
@@ -289,29 +302,21 @@ describe('KeyboardWidget matrixWires prop', () => {
     expect(container.querySelector('[data-testid="matrix-wires"]')).toBeNull()
   })
 
-  it('grows all four sides of the bounds by the gutter when matrixWires is provided', () => {
-    const matrixWires = new Map([
-      [posKey(0, 0), { row: 0, col: 0 }],
-      [posKey(0, 1), { row: 0, col: 1 }],
-    ])
+  it('grows the bounds by each axis\'s own gutter (left horizontally, top vertically) when matrixWires is provided', () => {
     const { container } = render(
-      <KeyboardWidget keys={keys} keycodes={keycodes} scale={scale} matrixWires={matrixWires} />,
+      <KeyboardWidget keys={keys} keycodes={keycodes} scale={scale} matrixWires={matrixWiresForBoundsTest} />,
     )
     const svg = container.querySelector('svg')!
     const [originX, originY, width, height] = svg.getAttribute('viewBox')!.split(' ').map(Number)
-    expect(originX).toBeCloseTo(-KEYBOARD_PADDING - expectedGutter)
-    expect(originY).toBeCloseTo(-KEYBOARD_PADDING - expectedGutter)
-    expect(width).toBeCloseTo(s * 2 - spacing + pad2 + expectedGutter * 2)
-    expect(height).toBeCloseTo(s * 1 - spacing + pad2 + expectedGutter * 2)
+    expect(originX).toBeCloseTo(-KEYBOARD_PADDING - expectedGutterLeft)
+    expect(originY).toBeCloseTo(-KEYBOARD_PADDING - expectedGutterTop)
+    expect(width).toBeCloseTo(s * 2 - spacing + pad2 + expectedGutterLeft * 2)
+    expect(height).toBeCloseTo(s * 1 - spacing + pad2 + expectedGutterTop * 2)
   })
 
   it('renders the matrix-wires overlay as the last child of the svg', () => {
-    const matrixWires = new Map([
-      [posKey(0, 0), { row: 0, col: 0 }],
-      [posKey(0, 1), { row: 0, col: 1 }],
-    ])
     const { container } = render(
-      <KeyboardWidget keys={keys} keycodes={keycodes} scale={scale} matrixWires={matrixWires} />,
+      <KeyboardWidget keys={keys} keycodes={keycodes} scale={scale} matrixWires={matrixWiresForBoundsTest} />,
     )
     const svg = container.querySelector('svg')!
     const lastChild = svg.lastElementChild!

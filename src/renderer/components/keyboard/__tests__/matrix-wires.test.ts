@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { buildMatrixWires, type MatrixWiresGutter } from '../matrix-wires'
+import { buildMatrixWires, rowLabelPitch } from '../matrix-wires'
 import { KEY_UNIT, KEY_SPACING } from '../constants'
 import { posKey } from '../../../../shared/kle/pos-key'
 import { rotatePoint } from '../../../../shared/kle/rotate-point'
-import { makeKey, NO_GUTTER, IDENTITY_CELLS, loadVirtualDeviceLayout } from './kle-test-keys'
+import { makeKey, makeColumnStackKeys, NO_GUTTER_FONT_SIZE, IDENTITY_CELLS, loadVirtualDeviceLayout } from './kle-test-keys'
 
 describe('buildMatrixWires — virtual device GPK60-63R fixture', () => {
   const layout = loadVirtualDeviceLayout()
 
   it('reflects the sparse row 4 (cols 0,1,2,4,6,7,8,9,10,11 — no 3/5/12/13)', () => {
     const keys = layout.keys
-    const { rows, cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER)
+    const { rows, cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER_FONT_SIZE)
 
     const row4 = rows.find((r) => r.index === 4)!
     expect(row4.points).toHaveLength(10)
@@ -35,7 +35,7 @@ describe('buildMatrixWires — virtual device GPK60-63R fixture', () => {
 
   it('orders row 4 points by ascending column', () => {
     const keys = layout.keys
-    const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER)
+    const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER_FONT_SIZE)
     const row4 = rows.find((r) => r.index === 4)!
     const expectedCols = [0, 1, 2, 4, 6, 7, 8, 9, 10, 11]
     const s = KEY_UNIT
@@ -61,7 +61,7 @@ describe('buildMatrixWires — key center geometry', () => {
       rotationY: 1.5,
     })
     const scale = 1
-    const { nodes } = buildMatrixWires([key], IDENTITY_CELLS, scale, NO_GUTTER)
+    const { nodes } = buildMatrixWires([key], IDENTITY_CELLS, scale, NO_GUTTER_FONT_SIZE)
 
     const s = KEY_UNIT * scale
     const spacing = KEY_SPACING * scale
@@ -87,7 +87,7 @@ describe('buildMatrixWires — key center geometry', () => {
       width2: 1,
       height2: 2,
     })
-    const { nodes } = buildMatrixWires([key], IDENTITY_CELLS, 1, NO_GUTTER)
+    const { nodes } = buildMatrixWires([key], IDENTITY_CELLS, 1, NO_GUTTER_FONT_SIZE)
     const s = KEY_UNIT
     const spacing = KEY_SPACING
     expect(nodes[0].x).toBeCloseTo(s * (0 + 1.25 / 2) - spacing / 2)
@@ -101,7 +101,7 @@ describe('buildMatrixWires — exclusions and dedup', () => {
       makeKey({ row: 0, col: 0, x: 0 }),
       makeKey({ row: 0, col: 1, x: 1, decal: true }),
     ]
-    const { nodes } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER)
+    const { nodes } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER_FONT_SIZE)
     expect(nodes).toHaveLength(1)
     expect(nodes[0].posKey).toBe(posKey(0, 0))
   })
@@ -111,7 +111,7 @@ describe('buildMatrixWires — exclusions and dedup', () => {
       makeKey({ row: 0, col: 0, x: 0 }),
       makeKey({ row: -1, col: -1, x: 1, encoderIdx: 0, encoderDir: 0 }),
     ]
-    const { nodes } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER)
+    const { nodes } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER_FONT_SIZE)
     expect(nodes).toHaveLength(1)
     expect(nodes[0].posKey).toBe(posKey(0, 0))
   })
@@ -121,7 +121,7 @@ describe('buildMatrixWires — exclusions and dedup', () => {
       makeKey({ row: 0, col: 0, x: 0 }),
       makeKey({ row: 0, col: 0, x: 5 }), // same physical position, later in array
     ]
-    const { nodes, rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER)
+    const { nodes, rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER_FONT_SIZE)
     expect(nodes).toHaveLength(1)
     const s = KEY_UNIT
     const spacing = KEY_SPACING
@@ -133,7 +133,7 @@ describe('buildMatrixWires — exclusions and dedup', () => {
 describe('buildMatrixWires — effective position (View Matrix override)', () => {
   it('falls back to the physical position when a key is missing from cells', () => {
     const keys = [makeKey({ row: 2, col: 5, x: 0, y: 0 })]
-    const { rows, cols } = buildMatrixWires(keys, new Map(), 1, NO_GUTTER)
+    const { rows, cols } = buildMatrixWires(keys, new Map(), 1, NO_GUTTER_FONT_SIZE)
     expect(rows.map((r) => r.index)).toEqual([2])
     expect(cols.map((c) => c.index)).toEqual([5])
   })
@@ -150,7 +150,7 @@ describe('buildMatrixWires — effective position (View Matrix override)', () =>
       [posKey(0, 0), { row: 9, col: 1 }],
       [posKey(1, 1), { row: 9, col: 0 }],
     ])
-    const { rows } = buildMatrixWires(keys, cells, 1, NO_GUTTER)
+    const { rows } = buildMatrixWires(keys, cells, 1, NO_GUTTER_FONT_SIZE)
     expect(rows).toHaveLength(1)
     expect(rows[0].index).toBe(9)
     // Ordered by effective col ascending: (1,1)->col0 first, (0,0)->col1 second.
@@ -165,7 +165,7 @@ describe('buildMatrixWires — effective position (View Matrix override)', () =>
 describe('buildMatrixWires — single-point wires', () => {
   it('keeps a wire with a single member (points.length === 1)', () => {
     const keys = [makeKey({ row: 0, col: 0, x: 0 })]
-    const { rows, cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER)
+    const { rows, cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER_FONT_SIZE)
     expect(rows).toHaveLength(1)
     expect(rows[0].points).toHaveLength(1)
     expect(cols).toHaveLength(1)
@@ -180,85 +180,84 @@ describe('buildMatrixWires — row/col ordering of output arrays', () => {
       makeKey({ row: 0, col: 2, x: 2, y: 0 }),
       makeKey({ row: 1, col: 1, x: 1, y: 1 }),
     ]
-    const { rows, cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER)
+    const { rows, cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER_FONT_SIZE)
     expect(rows.map((r) => r.index)).toEqual([0, 1, 3])
     expect(cols.map((c) => c.index)).toEqual([0, 1, 2])
   })
 })
 
 describe('buildMatrixWires — label placement', () => {
-  it('places the row label at the leftmost point y, line 0 (fontSize/2 above gutter center)', () => {
+  it('places the row label anchor at the leftmost point y, on line 0 when nothing collides', () => {
     const keys = [
       makeKey({ row: 0, col: 0, x: 5, y: 0 }),
       makeKey({ row: 0, col: 1, x: 0, y: 0 }), // leftmost (x smallest), but higher col index
     ]
-    const gutter: MatrixWiresGutter = { originX: -20, originY: -20, size: 16, fontSize: 8 }
-    const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, gutter)
+    const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 8)
     const row0 = rows.find((r) => r.index === 0)!
     const leftMost = row0.points.reduce((min, p) => (p.x < min.x ? p : min), row0.points[0])
-    expect(row0.label.x).toBeCloseTo(gutter.originX + gutter.size / 2 - gutter.fontSize / 2)
-    expect(row0.label.y).toBeCloseTo(leftMost.y)
+    expect(row0.label.line).toBe(0)
+    expect(row0.label.across).toBeCloseTo(leftMost.y)
   })
 
-  it('places the col label at the topmost point x, line 0 (fontSize/2 left of gutter center)', () => {
+  it('places the col label anchor at the topmost point x, on line 0 when nothing collides', () => {
     const keys = [
       makeKey({ row: 0, col: 0, x: 0, y: 5 }),
       makeKey({ row: 1, col: 0, x: 0, y: 0 }), // topmost (y smallest)
     ]
-    const gutter: MatrixWiresGutter = { originX: -20, originY: -20, size: 16, fontSize: 8 }
-    const { cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, gutter)
+    const { cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 8)
     const col0 = cols.find((c) => c.index === 0)!
     const topMost = col0.points.reduce((min, p) => (p.y < min.y ? p : min), col0.points[0])
-    expect(col0.label.y).toBeCloseTo(gutter.originY + gutter.size / 2 - gutter.fontSize / 2)
-    expect(col0.label.x).toBeCloseTo(topMost.x)
+    expect(col0.label.line).toBe(0)
+    expect(col0.label.across).toBeCloseTo(topMost.x)
   })
 
-  it('moves overlapping row labels onto a second line, capping at two lines even when all three overlap the first', () => {
-    // Three single-key rows stacked so close together (0.05u apart) that
-    // every pair's label y — not just consecutive ones — is closer than
-    // fontSize, so rows 1 and 2 both end up on line 1 once row 0 claims
-    // line 0 (two lines is the cap; see matrix-wires.ts's assignLabelLines).
+  it('stacks three row labels anchored at the exact same y onto three separate lines', () => {
+    // Three single-key rows, all sharing y=0 — every pair collides, so
+    // each one needs its own line rather than the third landing back on
+    // top of the second (the old two-line cap this replaces).
     const keys = [
       makeKey({ row: 0, col: 0, x: 0, y: 0 }),
-      makeKey({ row: 1, col: 0, x: 0, y: 0.05 }),
-      makeKey({ row: 2, col: 0, x: 0, y: 0.1 }),
+      makeKey({ row: 1, col: 1, x: 1, y: 0 }),
+      makeKey({ row: 2, col: 2, x: 2, y: 0 }),
     ]
-    const gutter: MatrixWiresGutter = { originX: -20, originY: -20, size: 16, fontSize: 20 }
-    const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, gutter)
-    const center = gutter.originX + gutter.size / 2
-    const line0X = center - gutter.fontSize / 2
-    const line1X = center + gutter.fontSize / 2
-    expect(rows[0].label.x).toBeCloseTo(line0X)
-    expect(rows[1].label.x).toBeCloseTo(line1X)
-    expect(rows[2].label.x).toBeCloseTo(line1X)
+    const { rows, rowLineCount } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 20)
+    const lines = [0, 1, 2].map((index) => rows.find((r) => r.index === index)!.label.line)
+    expect(new Set(lines)).toEqual(new Set([0, 1, 2]))
+    expect(rowLineCount).toBe(3)
   })
 
-  it('moves overlapping col labels onto a second line, capping at two lines even when all three overlap the first', () => {
+  it('stacks three col labels anchored at the exact same x onto three separate lines', () => {
     const keys = [
       makeKey({ row: 0, col: 0, x: 0, y: 0 }),
-      makeKey({ row: 0, col: 1, x: 0.05, y: 0 }),
-      makeKey({ row: 0, col: 2, x: 0.1, y: 0 }),
+      makeKey({ row: 1, col: 1, x: 0, y: 1 }),
+      makeKey({ row: 2, col: 2, x: 0, y: 2 }),
     ]
-    const gutter: MatrixWiresGutter = { originX: -20, originY: -20, size: 16, fontSize: 20 }
-    const { cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, gutter)
-    const center = gutter.originY + gutter.size / 2
-    const line0Y = center - gutter.fontSize / 2
-    const line1Y = center + gutter.fontSize / 2
-    expect(cols[0].label.y).toBeCloseTo(line0Y)
-    expect(cols[1].label.y).toBeCloseTo(line1Y)
-    expect(cols[2].label.y).toBeCloseTo(line1Y)
+    const { cols, colLineCount } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 20)
+    const lines = [0, 1, 2].map((index) => cols.find((c) => c.index === index)!.label.line)
+    expect(new Set(lines)).toEqual(new Set([0, 1, 2]))
+    expect(colLineCount).toBe(3)
   })
 
-  it('does not offset labels that are farther apart than fontSize (both stay on line 0)', () => {
+  it('stacks the reported physical-column overlap (matrix cols 1, 3, 7 sharing one x) onto three lines', () => {
+    // Regression for the user-reported gutter overlap: several matrix
+    // columns anchored at the same physical column must not collapse
+    // their third label back onto the second.
+    const keys = makeColumnStackKeys()
+    const { cols, colLineCount } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 20)
+    const lines = [1, 3, 7].map((index) => cols.find((c) => c.index === index)!.label.line)
+    expect(new Set(lines)).toEqual(new Set([0, 1, 2]))
+    expect(colLineCount).toBe(3)
+  })
+
+  it('keeps labels farther apart than the pitch on line 0, with lineCount 1', () => {
     const keys = [
       makeKey({ row: 0, col: 0, x: 0, y: 0 }),
       makeKey({ row: 1, col: 0, x: 0, y: 5 }),
     ]
-    const gutter: MatrixWiresGutter = { originX: -20, originY: -20, size: 16, fontSize: 8 }
-    const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, gutter)
-    const line0X = gutter.originX + gutter.size / 2 - gutter.fontSize / 2
-    expect(rows[0].label.x).toBeCloseTo(line0X)
-    expect(rows[1].label.x).toBeCloseTo(line0X)
+    const { rows, rowLineCount } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 8)
+    expect(rows[0].label.line).toBe(0)
+    expect(rows[1].label.line).toBe(0)
+    expect(rowLineCount).toBe(1)
   })
 
   it('places labels by coordinate order, not index order, so far-apart indices with coinciding positions still collide', () => {
@@ -271,39 +270,36 @@ describe('buildMatrixWires — label placement', () => {
       makeKey({ row: 1, col: 0, x: 0, y: 1 }),
       makeKey({ row: 2, col: 0, x: 0, y: 0 }),
     ]
-    const gutter: MatrixWiresGutter = { originX: -20, originY: -20, size: 16, fontSize: 10 }
-    const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, gutter)
-    const center = gutter.originX + gutter.size / 2
+    const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 10)
     const row0 = rows.find((r) => r.index === 0)!
     const row1 = rows.find((r) => r.index === 1)!
     const row2 = rows.find((r) => r.index === 2)!
-    expect(row0.label.x).toBeCloseTo(center - gutter.fontSize / 2)
-    expect(row1.label.x).toBeCloseTo(center - gutter.fontSize / 2)
-    expect(row2.label.x).toBeCloseTo(center + gutter.fontSize / 2)
+    expect(row0.label.line).toBe(0)
+    expect(row1.label.line).toBe(0)
+    expect(row2.label.line).toBe(1)
   })
 
   it('resolves three close labels onto at most two lines without two same-line labels colliding', () => {
-    // Adjacent pairs (rows 0/1 and 1/2, 0.1u ~ 5.4px apart) are each
-    // closer than fontSize, but the head and tail (rows 0/2, ~10.8px
-    // apart) are not — the walk should keep row 0 and row 2 together on
-    // line 0 rather than spilling row 2 onto line 1 too.
+    // fontSize 10 => row pitch 14px. Adjacent pairs (rows 0/1 and 1/2, 8px
+    // apart) are each closer than the pitch, but the head and tail (rows
+    // 0/2, 16px apart) are not — the walk should keep row 0 and row 2
+    // together on line 0 rather than spilling row 2 onto line 1 too.
+    const fontSize = 10
     const keys = [
       makeKey({ row: 0, col: 0, x: 0, y: 0 }),
-      makeKey({ row: 1, col: 0, x: 0, y: 0.1 }),
-      makeKey({ row: 2, col: 0, x: 0, y: 0.2 }),
+      makeKey({ row: 1, col: 0, x: 0, y: 8 / KEY_UNIT }),
+      makeKey({ row: 2, col: 0, x: 0, y: 16 / KEY_UNIT }),
     ]
-    const gutter: MatrixWiresGutter = { originX: -20, originY: -20, size: 16, fontSize: 8 }
-    const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, gutter)
+    const { rows, rowLineCount } = buildMatrixWires(keys, IDENTITY_CELLS, 1, fontSize)
     const row0 = rows.find((r) => r.index === 0)!
     const row1 = rows.find((r) => r.index === 1)!
     const row2 = rows.find((r) => r.index === 2)!
 
-    const lines = new Set([row0.label.x, row1.label.x, row2.label.x])
-    expect(lines.size).toBeLessThanOrEqual(2)
-    expect(row0.label.x).toBeCloseTo(row2.label.x)
-    expect(row1.label.x).not.toBeCloseTo(row0.label.x)
+    expect(rowLineCount).toBeLessThanOrEqual(2)
+    expect(row0.label.line).toBe(row2.label.line)
+    expect(row1.label.line).not.toBe(row0.label.line)
     // Row 0 and row 2 share a line but their actual y positions are
-    // farther apart than fontSize, so they don't visually collide.
-    expect(Math.abs(row0.label.y - row2.label.y)).toBeGreaterThanOrEqual(gutter.fontSize)
+    // farther apart than the row pitch, so they don't visually collide.
+    expect(Math.abs(row0.label.across - row2.label.across)).toBeGreaterThanOrEqual(rowLabelPitch(fontSize))
   })
 })

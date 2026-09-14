@@ -12,7 +12,7 @@ import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
 import { flashPropsFor, type KeyFlashState } from './key-flash'
 import { keyCorners } from './key-geometry'
-import { buildMatrixWires } from './matrix-wires'
+import { buildMatrixWires, rowLabelPitch, colLabelPitch } from './matrix-wires'
 import { MatrixWiresOverlay } from './MatrixWiresOverlay'
 
 interface Props {
@@ -132,25 +132,46 @@ function KeyboardWidgetInner({
   // gutter numbers read at a consistent size relative to the key legends
   // they sit next to.
   const matrixWiresFontSize = keyLabelFontSize(scale)
-  // The label gutter only exists while the overlay is on. Sized to fit
-  // two staggered lines of gutter numbers, symmetric around the gutter's
-  // own center (see matrix-wires.ts's label overlap handling), or half a
-  // key unit, whichever is larger.
-  const matrixWiresGutter = matrixWires ? Math.max(KEY_UNIT * 0.5 * scale, matrixWiresFontSize * 3) : 0
+
+  // Computed before `bounds`: sizing the gutter needs to know how many
+  // label lines each axis actually stacks onto (unbounded — matrix rows/
+  // cols whose labels all collide keep opening new lines rather than a
+  // third label landing back on top of the second), and `bounds` needs
+  // that line count to size the gutter band it reserves.
+  const matrixWiresLayout = useMemo(() => {
+    if (!matrixWires) return null
+    return buildMatrixWires(visibleKeys, matrixWires, scale, matrixWiresFontSize)
+  }, [visibleKeys, matrixWires, scale, matrixWiresFontSize])
+
+  // The label gutter only exists while the overlay is on, and each axis is
+  // sized independently from the other: enough room for that axis's own
+  // stacked label lines (plus one fontSize of breathing room beyond the
+  // last line), or half a key unit, whichever is larger. `gutterLeft`
+  // sizes the row-number gutter on the left (row labels stack
+  // horizontally, using the wider row pitch); `gutterTop` sizes the
+  // col-number gutter on top (col labels stack vertically, the narrower
+  // col pitch). See matrix-wires.ts for the pitch values themselves.
+  const gutterLeft = matrixWiresLayout
+    ? Math.max(KEY_UNIT * 0.5 * scale, matrixWiresLayout.rowLineCount * rowLabelPitch(matrixWiresFontSize) + matrixWiresFontSize)
+    : 0
+  const gutterTop = matrixWiresLayout
+    ? Math.max(KEY_UNIT * 0.5 * scale, matrixWiresLayout.colLineCount * colLabelPitch(matrixWiresFontSize) + matrixWiresFontSize)
+    : 0
 
   // Calculate SVG bounds (track min to normalize position)
   const bounds = useMemo(() => {
-    // The gutter widens the bounds symmetrically on all four sides — even
-    // though labels only ever draw into the left/top bands — so the
-    // keyboard stays horizontally/vertically centered inside its
+    // Each axis's gutter widens the bounds symmetrically on its own two
+    // sides — even though labels only ever draw into the left/top bands —
+    // so the keyboard stays horizontally/vertically centered inside its
     // `justify-center` wrapper when the overlay is toggled on and off.
-    const pad = KEYBOARD_PADDING + matrixWiresGutter
+    const padX = KEYBOARD_PADDING + gutterLeft
+    const padY = KEYBOARD_PADDING + gutterTop
     if (visibleKeys.length === 0) {
       return {
-        width: pad * 2,
-        height: pad * 2,
-        originX: -pad,
-        originY: -pad,
+        width: padX * 2,
+        height: padY * 2,
+        originX: -padX,
+        originY: -padY,
       }
     }
     let minX = Infinity
@@ -168,22 +189,12 @@ function KeyboardWidgetInner({
       }
     }
     return {
-      width: maxX - minX + pad * 2,
-      height: maxY - minY + pad * 2,
-      originX: minX - pad,
-      originY: minY - pad,
+      width: maxX - minX + padX * 2,
+      height: maxY - minY + padY * 2,
+      originX: minX - padX,
+      originY: minY - padY,
     }
-  }, [visibleKeys, scale, matrixWiresGutter])
-
-  const matrixWiresLayout = useMemo(() => {
-    if (!matrixWires) return null
-    return buildMatrixWires(visibleKeys, matrixWires, scale, {
-      originX: bounds.originX,
-      originY: bounds.originY,
-      size: matrixWiresGutter,
-      fontSize: matrixWiresFontSize,
-    })
-  }, [visibleKeys, matrixWires, scale, bounds, matrixWiresGutter, matrixWiresFontSize])
+  }, [visibleKeys, scale, gutterLeft, gutterTop])
 
   return (
     <svg
@@ -306,7 +317,17 @@ function KeyboardWidgetInner({
         )
       })}
       {matrixWiresLayout && (
-        <MatrixWiresOverlay layout={matrixWiresLayout} scale={scale} fontSize={matrixWiresFontSize} />
+        <MatrixWiresOverlay
+          layout={matrixWiresLayout}
+          scale={scale}
+          gutter={{
+            originX: bounds.originX,
+            originY: bounds.originY,
+            left: gutterLeft,
+            top: gutterTop,
+            fontSize: matrixWiresFontSize,
+          }}
+        />
       )}
     </svg>
   )

@@ -9,7 +9,6 @@ import { join } from 'node:path'
 import type { KleKey, KeyboardLayout } from '../../../../shared/kle/types'
 import { parseDefinitionLayout } from '../../../../shared/kle/definition-layout'
 import type { KeyboardDefinition } from '../../../../shared/types/protocol'
-import type { MatrixWiresGutter } from '../matrix-wires'
 
 export function makeKey(overrides: Partial<KleKey> = {}): KleKey {
   return {
@@ -42,14 +41,27 @@ export function makeKey(overrides: Partial<KleKey> = {}): KleKey {
   }
 }
 
-/** A gutter fixture wide enough for label-placement math without a real
- *  KeyboardWidget render — used by suites that don't care about the exact
- *  gutter size, only that one is present. */
-export const NO_GUTTER: MatrixWiresGutter = { originX: -10, originY: -10, size: 20, fontSize: 10 }
+/** A font size fixture used by suites that don't care about label
+ *  stacking specifics, only that `buildMatrixWires` receives one. */
+export const NO_GUTTER_FONT_SIZE = 10
 
 /** No overrides — every key's effective position is its own physical
  *  (row, col), matching `buildMatrixWires`'s documented fallback. */
 export const IDENTITY_CELLS = new Map<string, { row: number; col: number }>()
+
+/** Three keys anchored at the same physical x (one full physical column)
+ *  but wired to three different matrix columns — the View Matrix layout
+ *  that produces overlapping column-number gutter labels (issue report:
+ *  several matrix columns sharing one physical column stack past the old
+ *  two-line cap). Each key gets its own row so they don't also collide on
+ *  the row axis. */
+export function makeColumnStackKeys(): KleKey[] {
+  return [
+    makeKey({ row: 0, col: 1, x: 0, y: 0 }),
+    makeKey({ row: 1, col: 3, x: 0, y: 1 }),
+    makeKey({ row: 2, col: 7, x: 0, y: 2 }),
+  ]
+}
 
 /** Loads the virtual GPK60-63R device's keyboard layout — a real,
  *  non-trivial definition (sparse rows, encoders) shared by suites that

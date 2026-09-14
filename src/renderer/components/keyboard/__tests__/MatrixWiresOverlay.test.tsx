@@ -4,29 +4,31 @@
 import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import { MatrixWiresOverlay } from '../MatrixWiresOverlay'
-import { buildMatrixWires, type MatrixWiresLayout } from '../matrix-wires'
+import { buildMatrixWires, colLabelPitch, type MatrixWiresLayout, type MatrixWiresGutter } from '../matrix-wires'
 import { WIRE_ROW_COLOR, WIRE_COL_COLOR, WIRE_NODE_COLOR } from '../constants'
-import { makeKey, NO_GUTTER, IDENTITY_CELLS, loadVirtualDeviceLayout } from './kle-test-keys'
+import { makeKey, makeColumnStackKeys, NO_GUTTER_FONT_SIZE, IDENTITY_CELLS, loadVirtualDeviceLayout } from './kle-test-keys'
+
+/** A gutter fixture wide enough for label-placement math without a real
+ *  KeyboardWidget render — used by suites that don't care about the exact
+ *  band size, only that one is present. */
+function makeGutter(overrides: Partial<MatrixWiresGutter> = {}): MatrixWiresGutter {
+  return { originX: -20, originY: -20, left: 30, top: 30, fontSize: 10, ...overrides }
+}
 
 /** Renders inside a bare <svg> — `<g>`/`<polyline>`/`<circle>`/`<text>`
  *  are only valid SVG children, and jsdom's querySelector needs a real
  *  SVG namespace context to find them by tag name. */
-function renderOverlay(layout: MatrixWiresLayout, scale = 1, fontSize = 10) {
+function renderOverlay(layout: MatrixWiresLayout, gutter: MatrixWiresGutter = makeGutter(), scale = 1) {
   return render(
     <svg>
-      <MatrixWiresOverlay layout={layout} scale={scale} fontSize={fontSize} />
+      <MatrixWiresOverlay layout={layout} scale={scale} gutter={gutter} />
     </svg>,
   )
 }
 
 describe('MatrixWiresOverlay — virtual device GPK60-63R fixture', () => {
   const kleLayout = loadVirtualDeviceLayout()
-  const layout = buildMatrixWires(kleLayout.keys, IDENTITY_CELLS, 1, {
-    originX: -20,
-    originY: -20,
-    size: 30,
-    fontSize: 10,
-  })
+  const layout = buildMatrixWires(kleLayout.keys, IDENTITY_CELLS, 1, 10)
 
   it('renders one polyline per row (5) and one per col (14)', () => {
     const { container } = renderOverlay(layout)
@@ -71,7 +73,7 @@ describe('MatrixWiresOverlay — virtual device GPK60-63R fixture', () => {
 describe('MatrixWiresOverlay — single-point wire', () => {
   it('produces no polyline but still produces a label for a lone key', () => {
     const key = makeKey({ row: 0, col: 0, x: 0, y: 0 })
-    const layout = buildMatrixWires([key], IDENTITY_CELLS, 1, NO_GUTTER)
+    const layout = buildMatrixWires([key], IDENTITY_CELLS, 1, NO_GUTTER_FONT_SIZE)
     expect(layout.cols[0].points).toHaveLength(1)
 
     const { container } = renderOverlay(layout)
@@ -89,8 +91,8 @@ describe('MatrixWiresOverlay — label styling', () => {
       makeKey({ row: 0, col: 0, x: 0, y: 0 }),
       makeKey({ row: 0, col: 1, x: 1, y: 0 }),
     ]
-    const layout = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER)
-    const { container } = renderOverlay(layout, 1, 11)
+    const layout = buildMatrixWires(keys, IDENTITY_CELLS, 1, 11)
+    const { container } = renderOverlay(layout, makeGutter({ fontSize: 11 }))
     const texts = [...container.querySelectorAll('text')]
     const rowLabel = texts.find((t) => t.textContent === '0' && t.getAttribute('fill') === WIRE_ROW_COLOR)
     const colLabels = texts.filter((t) => t.getAttribute('fill') === WIRE_COL_COLOR)
@@ -100,6 +102,48 @@ describe('MatrixWiresOverlay — label styling', () => {
       expect(text.getAttribute('text-anchor')).toBe('middle')
       expect(text.getAttribute('dominant-baseline')).toBe('central')
       expect(text.getAttribute('font-size')).toBe('11')
+    }
+  })
+})
+
+describe('MatrixWiresOverlay — label coordinates', () => {
+  it('positions a single-line label at the gutter band center (line 0 of 1)', () => {
+    const key = makeKey({ row: 0, col: 0, x: 0, y: 0 })
+    const layout = buildMatrixWires([key], IDENTITY_CELLS, 1, 10)
+    const gutter = makeGutter({ originX: -20, originY: -20, left: 30, top: 30, fontSize: 10 })
+    const { container } = renderOverlay(layout, gutter)
+    const texts = [...container.querySelectorAll('text')]
+    const rowText = texts.find((t) => t.getAttribute('fill') === WIRE_ROW_COLOR)!
+    const colText = texts.find((t) => t.getAttribute('fill') === WIRE_COL_COLOR)!
+
+    // Single line (rowLineCount/colLineCount === 1) means the centering
+    // offset is exactly zero — the label sits on the band's own midline.
+    expect(Number(rowText.getAttribute('x'))).toBeCloseTo(gutter.originX + gutter.left / 2)
+    expect(Number(rowText.getAttribute('y'))).toBeCloseTo(layout.rows[0].label.across)
+    expect(Number(colText.getAttribute('x'))).toBeCloseTo(layout.cols[0].label.across)
+    expect(Number(colText.getAttribute('y'))).toBeCloseTo(gutter.originY + gutter.top / 2)
+  })
+
+  it('centers a three-line label stack around the gutter band middle', () => {
+    // Regression fixture for the reported gutter overlap: matrix cols
+    // 1, 3, 7 anchored at the same physical column stack onto three
+    // lines instead of the old two-line cap.
+    const keys = makeColumnStackKeys()
+    const fontSize = 20
+    const layout = buildMatrixWires(keys, IDENTITY_CELLS, 1, fontSize)
+    expect(layout.colLineCount).toBe(3)
+    const gutter = makeGutter({ originX: -40, originY: -40, left: 90, top: 90, fontSize })
+    const { container } = renderOverlay(layout, gutter)
+    const pitch = colLabelPitch(fontSize)
+    const center = gutter.originY + gutter.top / 2
+    const texts = [...container.querySelectorAll('text')]
+
+    for (const colIndex of [1, 3, 7]) {
+      const wire = layout.cols.find((c) => c.index === colIndex)!
+      const text = texts.find((t) => t.getAttribute('fill') === WIRE_COL_COLOR && t.textContent === String(colIndex))!
+      const expectedY = center + (wire.label.line - (layout.colLineCount - 1) / 2) * pitch
+      expect(Number(text.getAttribute('y'))).toBeCloseTo(expectedY)
+      expect(Number(text.getAttribute('x'))).toBeCloseTo(wire.label.across)
     }
   })
 })
