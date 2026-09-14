@@ -1,5 +1,5 @@
 {
-  "version": "0.1.89",
+  "version": "0.1.90",
   "name": "English",
   "common": {
     "save": "Save",
@@ -83,7 +83,8 @@
       "done": "Done",
       "rowLabel": "Row",
       "colLabel": "Col",
-      "blankOption": "—"
+      "blankOption": "—",
+      "wires": "Wires"
     },
     "keymap": {
       "title": "Keymap",

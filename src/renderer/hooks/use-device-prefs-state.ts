@@ -61,6 +61,7 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
   const [viewMode, updateViewMode, viewModeRef] = useStateRef<ViewMode>('editor')
   const [keyEditorZoom, updateKeyEditorZoom, keyEditorZoomRef] = useStateRef<number | undefined>(undefined)
   const [viewMatrix, updateViewMatrix, viewMatrixRef] = useStateRef<Record<string, ViewMatrixCell> | undefined>(undefined)
+  const [viewMatrixWires, updateViewMatrixWires, viewMatrixWiresRef] = useStateRef<boolean>(false)
   const [appliedUid, setAppliedUid] = useState<string | null>(null)
 
   const uidRef = useRef('')
@@ -105,6 +106,10 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
       // (reset), mirroring `typingTestMemory` above — a bare `undefined`
       // would leave a stale map on disk instead of clearing it.
       viewMatrix: viewMatrixRef.current ?? null,
+      // Always sent explicitly (never `undefined`) so turning the toggle
+      // OFF actually persists `false` instead of being skipped by the
+      // field-level PATCH's "undefined leaves the field untouched" rule.
+      viewMatrixWires: viewMatrixWiresRef.current,
     }).catch(() => {
       // IPC failure — best-effort save
     })
@@ -143,6 +148,7 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
     updateViewMode(resolved.viewMode)
     updateKeyEditorZoom(resolved.keyEditorZoom)
     updateViewMatrix(resolved.viewMatrix)
+    updateViewMatrixWires(resolved.viewMatrixWires)
   }, [])
 
   return {
@@ -174,6 +180,7 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
     viewMode, updateViewMode, viewModeRef,
     keyEditorZoom, updateKeyEditorZoom, keyEditorZoomRef,
     viewMatrix, updateViewMatrix, viewMatrixRef,
+    viewMatrixWires, updateViewMatrixWires, viewMatrixWiresRef,
     appliedUid, setAppliedUid,
     uidRef, applySeqRef,
     saveCurrentPrefs,

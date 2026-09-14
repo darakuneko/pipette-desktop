@@ -282,10 +282,11 @@ export interface ValidatedPrefs {
   viewMode: ViewMode
   keyEditorZoom?: number
   viewMatrix?: Record<string, ViewMatrixCell>
+  viewMatrixWires: boolean
 }
 
 export function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestMonkeytypeConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; viewMode?: unknown; viewMatrix?: Record<string, ViewMatrixCell> } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestMonkeytypeConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; viewMode?: unknown; viewMatrix?: Record<string, ViewMatrixCell>; viewMatrixWires?: unknown } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
@@ -375,6 +376,7 @@ export function validateIpcPrefs(
     // isValidViewMatrix) is the single validator for this shape, same as
     // the other store-validated per-keyboard fields.
     viewMatrix: data.viewMatrix,
+    viewMatrixWires: typeof data.viewMatrixWires === 'boolean' ? data.viewMatrixWires : false,
   }
 }
 

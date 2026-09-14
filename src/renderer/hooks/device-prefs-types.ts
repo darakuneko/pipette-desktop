@@ -38,6 +38,9 @@ export interface UseDevicePrefsReturn {
   viewMode: ViewMode
   keyEditorZoom: number | undefined
   viewMatrix: Record<string, ViewMatrixCell> | undefined
+  /** Shows the View Matrix wiring overlay on the keymap surface — see
+   *  `PipetteSettings.viewMatrixWires`. Defaults to false. */
+  viewMatrixWires: boolean
   appliedUid: string | null
   setLayout: (id: KeyboardLayoutId) => void
   setAutoAdvance: (enabled: boolean) => void
@@ -68,6 +71,7 @@ export interface UseDevicePrefsReturn {
   setViewMode: (mode: ViewMode) => void
   setKeyEditorZoom: (zoom: number) => void
   setViewMatrix: (next: Record<string, ViewMatrixCell> | undefined) => void
+  setViewMatrixWires: (next: boolean) => void
   defaultLayout: KeyboardLayoutId
   defaultAutoAdvance: boolean
   defaultLayerPanelOpen: boolean

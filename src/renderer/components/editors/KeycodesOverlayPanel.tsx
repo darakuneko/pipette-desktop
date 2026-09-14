@@ -33,6 +33,10 @@ interface Props {
   // View Matrix mode toggle (Edit / Done)
   viewMatrixActive?: boolean
   onToggleViewMatrixMode?: () => void
+  // View Matrix wiring overlay — persisted display toggle, independent of
+  // Edit/Done mode above (it stays in effect through the mode too).
+  viewMatrixWires?: boolean
+  onViewMatrixWiresChange?: (next: boolean) => void
   splitKeyMode?: SplitKeyMode
   onSplitKeyModeChange?: (mode: SplitKeyMode) => void
   quickSelect?: boolean
@@ -72,6 +76,8 @@ export function KeycodesOverlayPanel({
   onAutoAdvanceChange,
   viewMatrixActive,
   onToggleViewMatrixMode,
+  viewMatrixWires,
+  onViewMatrixWiresChange,
   splitKeyMode,
   onSplitKeyModeChange,
   quickSelect,
@@ -253,20 +259,36 @@ export function KeycodesOverlayPanel({
               </button>
             </div>
 
-            {/* View Matrix mode toggle */}
+            {/* View Matrix row: label + Edit/Done button on the left, the
+                persisted wiring-overlay toggle on the right — independent
+                of each other (the toggle stays in effect through Edit
+                mode, and Edit mode doesn't touch the toggle). */}
             {onToggleViewMatrixMode && (
               <div className={ROW_CLASS} data-testid="overlay-view-matrix-row">
-                <span className="text-sm font-medium text-content">
-                  {t('editor.viewMatrix.label')}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-content">
+                    {t('editor.viewMatrix.label')}
+                  </span>
+                  <button
+                    type="button"
+                    aria-pressed={!!viewMatrixActive}
+                    className={IMPORT_BTN}
+                    onClick={onToggleViewMatrixMode}
+                    data-testid="overlay-view-matrix-edit-button"
+                  >
+                    {viewMatrixActive ? t('editor.viewMatrix.done') : t('editor.viewMatrix.edit')}
+                  </button>
+                </div>
                 <button
                   type="button"
-                  aria-pressed={!!viewMatrixActive}
-                  className={IMPORT_BTN}
-                  onClick={onToggleViewMatrixMode}
-                  data-testid="overlay-view-matrix-edit-button"
+                  role="switch"
+                  aria-checked={!!viewMatrixWires}
+                  aria-label={t('editor.viewMatrix.wires')}
+                  className={toggleTrackClass(!!viewMatrixWires)}
+                  onClick={() => onViewMatrixWiresChange?.(!viewMatrixWires)}
+                  data-testid="overlay-view-matrix-wires-toggle"
                 >
-                  {viewMatrixActive ? t('editor.viewMatrix.done') : t('editor.viewMatrix.edit')}
+                  <span className={toggleKnobClass(!!viewMatrixWires)} />
                 </button>
               </div>
             )}

@@ -56,6 +56,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     viewMode, updateViewMode, viewModeRef,
     keyEditorZoom, updateKeyEditorZoom, keyEditorZoomRef,
     viewMatrix, updateViewMatrix,
+    viewMatrixWires, updateViewMatrixWires,
     appliedUid, setAppliedUid,
     uidRef, applySeqRef,
     saveCurrentPrefs,
@@ -156,6 +157,11 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateViewMatrix])
 
+  const setViewMatrixWires = useCallback((next: boolean) => {
+    updateViewMatrixWires(next)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateViewMatrixWires])
+
   const setKeyEditorZoom = useCallback((zoom: number) => {
     const clamped = clampZoomFactor(zoom)
     if (keyEditorZoomRef.current === clamped) return
@@ -200,6 +206,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingTestSettingsPanelOpen: true,
       typingRecordEnabled: false,
       viewMode: 'editor',
+      viewMatrixWires: false,
     }
     applyValidated(resolved)
     setAppliedUid(uid)
@@ -247,6 +254,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     viewMode,
     keyEditorZoom,
     viewMatrix,
+    viewMatrixWires,
     appliedUid,
     setLayout,
     setAutoAdvance,
@@ -276,6 +284,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setTypingRecordEnabled,
     setViewMode,
     setViewMatrix,
+    setViewMatrixWires,
     setKeyEditorZoom,
     defaultLayout,
     defaultAutoAdvance,

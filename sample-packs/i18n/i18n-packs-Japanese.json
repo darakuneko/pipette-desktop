@@ -1,5 +1,5 @@
 {
-  "version": "0.1.89",
+  "version": "0.1.90",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -83,7 +83,8 @@
       "done": "完了",
       "rowLabel": "行",
       "colLabel": "列",
-      "blankOption": "—"
+      "blankOption": "—",
+      "wires": "配線"
     },
     "keymap": {
       "title": "キーマップ",

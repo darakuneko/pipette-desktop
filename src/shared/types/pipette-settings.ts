@@ -380,6 +380,11 @@ export interface PipetteSettings {
    * Vial matrix row/col for ordering purposes. The value is the logical
    * (row, col) the key should sort by instead. */
   viewMatrix?: Record<string, ViewMatrixCell>
+  /** Shows the matrix wiring overlay (row/col wires + node dots) on top of
+   * the keymap surface, using the View Matrix effective position for every
+   * key. Purely a display toggle — it never gates editing, and stays in
+   * effect during View Matrix Edit mode too. Absent means off. */
+  viewMatrixWires?: boolean
   analyze?: AnalyzeSettings
   _updatedAt?: string // ISO 8601 — last update time
 }

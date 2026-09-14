@@ -1,5 +1,5 @@
 {
-  "version": "0.1.89",
+  "version": "0.1.90",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -83,7 +83,8 @@
       "done": "完了しましたえ",
       "rowLabel": "行",
       "colLabel": "列",
-      "blankOption": "—"
+      "blankOption": "—",
+      "wires": "配線どすえ"
     },
     "keymap": {
       "title": "キーマップ",

@@ -48,7 +48,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     tapHoldSupported, mouseKeysSupported, magicSupported, graveEscapeSupported,
     autoShiftSupported, oneShotKeysSupported, comboSettingsSupported,
     supportedQsids, qmkSettingsGet, qmkSettingsSet, qmkSettingsReset, onSettingsUpdate,
-    autoAdvance = true, viewMatrix, onViewMatrixChange,
+    autoAdvance = true, viewMatrix, onViewMatrixChange, viewMatrixWires,
     basicViewType, splitKeyMode,
     quickSelect, keyboardLayout = 'qwerty',
     keymapPackName, onRequestKeymapApply,
@@ -159,12 +159,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   // --- View Matrix mode ---
   const {
-    viewMatrixMode, handleToggleViewMatrixMode, handleViewMatrixKeyClick,
-    viewMatrixSelectedPositions, viewMatrixEffectiveSingle, handleViewMatrixAxisChange,
-    viewMatrixAxisOptionCount, viewMatrixLabelOverrides, viewMatrixDuplicateKeyColors,
-    gatedHandleKeycodeSelect,
+    viewMatrixMode, handleToggleViewMatrixMode, gatedHandleKeycodeSelect,
+    panelProps: viewMatrixPanelProps, paneProps: viewMatrixPaneProps,
   } = useViewMatrixEditing({
-    layout, viewMatrix, onViewMatrixChange, rows, cols, selectableKeys,
+    layout, viewMatrix, onViewMatrixChange, viewMatrixWires, rows, cols, selectableKeys,
     matrixMode, handleMatrixToggle, handleDeselect, handleKeycodeSelect,
   })
 
@@ -338,16 +336,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             to normal editing now that the overlay panel's own toggle is
             hidden along with the rest of the picker. */}
         {!typingTestMode && viewMatrixMode.active && (
-          <ViewMatrixPanel
-            onReset={() => onViewMatrixChange?.(undefined)}
-            onToggle={handleToggleViewMatrixMode}
-            selectionCount={viewMatrixSelectedPositions.length}
-            effectiveRow={viewMatrixEffectiveSingle?.row ?? 0}
-            effectiveCol={viewMatrixEffectiveSingle?.col ?? 0}
-            matrixRows={viewMatrixAxisOptionCount}
-            matrixCols={viewMatrixAxisOptionCount}
-            onAxisChange={handleViewMatrixAxisChange}
-          />
+          <ViewMatrixPanel onReset={() => onViewMatrixChange?.(undefined)} {...viewMatrixPanelProps} />
         )}
         {/* Single container for the active keymap surface (TypingTestPane OR
             KeyboardPane — only one renders at a time). `remap-simulated`
@@ -426,12 +415,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                 primaryKeycodes={primaryKeycodes} primaryEncoderKeycodes={primaryEncoderKeycodes}
                 selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
                 primaryRemappedKeys={primaryRemappedKeys} primaryRemappedEncoders={primaryRemappedEncoders}
-                flash={flash} viewMatrixMode={viewMatrixMode} multiSelectedKeys={multiSelectedKeys}
-                viewMatrixLabelOverrides={viewMatrixLabelOverrides} viewMatrixDuplicateKeyColors={viewMatrixDuplicateKeyColors}
-                primaryRemapLabel={primaryRemapLabel}
-                handleViewMatrixKeyClick={handleViewMatrixKeyClick} handleKeyClick={handleKeyClick}
-                handleKeyDoubleClick={handleKeyDoubleClick} handleEncoderClick={handleEncoderClick} handleEncoderDoubleClick={handleEncoderDoubleClick}
+                flash={flash} multiSelectedKeys={multiSelectedKeys} primaryRemapLabel={primaryRemapLabel}
+                handleKeyClick={handleKeyClick} handleKeyDoubleClick={handleKeyDoubleClick} handleEncoderClick={handleEncoderClick} handleEncoderDoubleClick={handleEncoderDoubleClick}
                 handleDeselect={handleDeselect} handlePackTabChange={handlePackTabChange} keymapPackName={keymapPackName}
+                {...viewMatrixPaneProps}
               />
               {/* The relocated zoom row the toolbar comment above points to
                   — see `ViewMatrixZoomRow` for what it contains and why. */}

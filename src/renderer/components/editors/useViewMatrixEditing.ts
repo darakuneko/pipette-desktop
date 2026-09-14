@@ -19,6 +19,9 @@ export interface UseViewMatrixEditingOptions {
   layout: KeyboardLayout | null
   viewMatrix?: Record<string, ViewMatrixCell>
   onViewMatrixChange?: (next: Record<string, ViewMatrixCell> | undefined) => void
+  /** Persisted wiring-overlay toggle (`PipetteSettings.viewMatrixWires`) —
+   *  purely a display switch, independent of `viewMatrixMode.active`. */
+  viewMatrixWires?: boolean
   rows?: number
   cols?: number
   selectableKeys: KleKey[]
@@ -28,23 +31,42 @@ export interface UseViewMatrixEditingOptions {
   handleKeycodeSelect: (kc: Pick<Keycode, 'qmkId'>) => Promise<void>
 }
 
+/** Everything `ViewMatrixPanel` needs beyond `onReset` (which KeymapEditor
+ *  builds inline from its own `onViewMatrixChange`, since this hook holds
+ *  no opinion on how a reset should behave). */
+export interface ViewMatrixEditingPanelProps {
+  onToggle: () => void
+  selectionCount: number
+  effectiveRow: number
+  effectiveCol: number
+  matrixRows: number
+  matrixCols: number
+  onAxisChange: (axis: 'row' | 'col', value: number) => void
+}
+
+/** Everything `KeymapPrimaryPane` needs from View Matrix mode/wiring —
+ *  spread onto it alongside the plain pass-through props KeymapEditor
+ *  still wires individually (selection state, remap labels, ...). */
+export interface ViewMatrixEditingPaneProps {
+  viewMatrixMode: UseViewMatrixModeReturn
+  viewMatrixLabelOverrides?: Map<string, { outer: string; inner: string; masked: boolean }>
+  viewMatrixDuplicateKeyColors?: Map<string, string>
+  matrixWires?: ReadonlyMap<string, { row: number; col: number }>
+  handleViewMatrixKeyClick: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
+}
+
 export interface UseViewMatrixEditingReturn {
   viewMatrixMode: UseViewMatrixModeReturn
   handleToggleViewMatrixMode: () => void
-  handleViewMatrixKeyClick: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
-  viewMatrixSelectedPositions: { row: number; col: number }[]
-  viewMatrixEffectiveSingle: { row: number; col: number } | null
-  handleViewMatrixAxisChange: (axis: 'row' | 'col', value: number) => void
-  viewMatrixAxisOptionCount: number
-  viewMatrixLabelOverrides: Map<string, { outer: string; inner: string; masked: boolean }> | undefined
-  viewMatrixDuplicateKeyColors: Map<string, string> | undefined
   /** Keycode palette selection is a no-op while the mode is active — see
    *  the no-op wrapper below. */
   gatedHandleKeycodeSelect: (kc: Keycode) => void
+  panelProps: ViewMatrixEditingPanelProps
+  paneProps: ViewMatrixEditingPaneProps
 }
 
 export function useViewMatrixEditing({
-  layout, viewMatrix, onViewMatrixChange, rows, cols, selectableKeys,
+  layout, viewMatrix, onViewMatrixChange, viewMatrixWires, rows, cols, selectableKeys,
   matrixMode, handleMatrixToggle, handleDeselect, handleKeycodeSelect,
 }: UseViewMatrixEditingOptions): UseViewMatrixEditingReturn {
   const viewMatrixMode = useViewMatrixMode()
@@ -167,10 +189,56 @@ export function useViewMatrixEditing({
   const noopKeycodeSelect = useCallback(() => {}, [])
   const gatedHandleKeycodeSelect = viewMatrixMode.active ? noopKeycodeSelect : handleKeycodeSelect
 
+  // The wiring overlay's per-key Map, built separately from the legend
+  // `useMemo` above — that one early-returns `undefined` whenever the mode
+  // is INACTIVE, so folding the wires computation into it would mean the
+  // overlay never shows during normal (non-Edit) editing, defeating the
+  // whole point of it being a persisted display toggle rather than part of
+  // the mode itself. Covers every non-decal, non-encoder key in the full
+  // layout (unselected layout-option alternates included), same domain as
+  // the legend loop above.
+  const viewMatrixWiresCells = useMemo(() => {
+    if (!viewMatrixWires || !layout) return undefined
+    const cells = new Map<string, { row: number; col: number }>()
+    for (const key of layout.keys) {
+      if (key.decal || key.encoderIdx >= 0) continue
+      cells.set(posKey(key.row, key.col), effectiveViewPos(viewMatrix, key.row, key.col))
+    }
+    return cells
+  }, [viewMatrixWires, layout, viewMatrix])
+
+  // Grouped so KeymapEditor spreads one object onto `ViewMatrixPanel`
+  // instead of wiring 6 individual props — `onReset` is deliberately left
+  // out (KeymapEditor builds it inline from its own `onViewMatrixChange`).
+  const panelProps: ViewMatrixEditingPanelProps = useMemo(() => ({
+    onToggle: handleToggleViewMatrixMode,
+    selectionCount: viewMatrixSelectedPositions.length,
+    effectiveRow: viewMatrixEffectiveSingle?.row ?? 0,
+    effectiveCol: viewMatrixEffectiveSingle?.col ?? 0,
+    matrixRows: viewMatrixAxisOptionCount,
+    matrixCols: viewMatrixAxisOptionCount,
+    onAxisChange: handleViewMatrixAxisChange,
+  }), [
+    handleToggleViewMatrixMode, viewMatrixSelectedPositions.length, viewMatrixEffectiveSingle,
+    viewMatrixAxisOptionCount, handleViewMatrixAxisChange,
+  ])
+
+  // Grouped so KeymapEditor spreads one object onto `KeymapPrimaryPane`
+  // instead of wiring 5 individual props (4 existing + the new
+  // `matrixWires`). `viewMatrixMode` itself is a fresh object every render
+  // (see `useViewMatrixMode`), so this memo already recomputes every
+  // render regardless — no regression from grouping it alongside the
+  // other, genuinely memoized fields.
+  const paneProps: ViewMatrixEditingPaneProps = useMemo(() => ({
+    viewMatrixMode,
+    viewMatrixLabelOverrides,
+    viewMatrixDuplicateKeyColors,
+    matrixWires: viewMatrixWiresCells,
+    handleViewMatrixKeyClick,
+  }), [viewMatrixMode, viewMatrixLabelOverrides, viewMatrixDuplicateKeyColors, viewMatrixWiresCells, handleViewMatrixKeyClick])
+
   return {
-    viewMatrixMode, handleToggleViewMatrixMode, handleViewMatrixKeyClick,
-    viewMatrixSelectedPositions, viewMatrixEffectiveSingle, handleViewMatrixAxisChange,
-    viewMatrixAxisOptionCount, viewMatrixLabelOverrides, viewMatrixDuplicateKeyColors,
-    gatedHandleKeycodeSelect,
+    viewMatrixMode, handleToggleViewMatrixMode, gatedHandleKeycodeSelect,
+    panelProps, paneProps,
   }
 }

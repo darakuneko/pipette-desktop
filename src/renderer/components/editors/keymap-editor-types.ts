@@ -138,6 +138,11 @@ export interface KeymapEditorProps {
    *  effective-position display and edit modal. */
   viewMatrix?: Record<string, ViewMatrixCell>
   onViewMatrixChange?: (next: Record<string, ViewMatrixCell> | undefined) => void
+  /** Shows the View Matrix wiring overlay (row/col wires + node dots) on
+   *  the primary keymap surface, regardless of whether View Matrix Edit
+   *  mode is active — see `PipetteSettings.viewMatrixWires`. */
+  viewMatrixWires?: boolean
+  onViewMatrixWiresChange?: (next: boolean) => void
   basicViewType?: BasicViewType
   onBasicViewTypeChange?: (type: BasicViewType) => void
   splitKeyMode?: SplitKeyMode
