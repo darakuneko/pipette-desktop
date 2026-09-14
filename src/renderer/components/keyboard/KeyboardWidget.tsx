@@ -6,7 +6,7 @@ import { filterVisibleKeys, repositionLayoutKeys } from '../../../shared/kle/fil
 import { posKey, encoderPosKey } from '../../../shared/kle/pos-key'
 import { KeyWidget } from './KeyWidget'
 import { EncoderWidget } from './EncoderWidget'
-import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from './constants'
+import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING, keyLabelFontSize } from './constants'
 import { innerHeatmapFillForCell, outerHeatmapFillForCell } from './heatmap-fill'
 import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
@@ -14,12 +14,6 @@ import { flashPropsFor, type KeyFlashState } from './key-flash'
 import { keyCorners } from './key-geometry'
 import { buildMatrixWires } from './matrix-wires'
 import { MatrixWiresOverlay } from './MatrixWiresOverlay'
-
-// `rotatePoint` used to live here; it moved to `key-geometry.ts` so the
-// matrix-wires geometry module can share it without importing this
-// component (and its React/DOM dependencies). Re-exported so existing
-// callers/tests keep working unchanged.
-export { rotatePoint } from './key-geometry'
 
 interface Props {
   keys: KleKey[]
@@ -134,10 +128,10 @@ function KeyboardWidgetInner({
     return filterVisibleKeys(repositionLayoutKeys(keys, opts), opts)
   }, [keys, layoutOptions])
 
-  // Same clamp KeyWidget uses for its own label text — kept in sync so the
+  // Same clamp KeyWidget/EncoderWidget use for their own label text, so the
   // gutter numbers read at a consistent size relative to the key legends
   // they sit next to.
-  const matrixWiresFontSize = Math.max(8, Math.min(12, 12 * scale))
+  const matrixWiresFontSize = keyLabelFontSize(scale)
   // The label gutter only exists while the overlay is on. Sized to fit
   // two staggered lines of gutter numbers (see matrix-wires.ts's label
   // overlap handling) or half a key unit, whichever is larger.
@@ -145,13 +139,17 @@ function KeyboardWidgetInner({
 
   // Calculate SVG bounds (track min to normalize position)
   const bounds = useMemo(() => {
-    const pad2 = KEYBOARD_PADDING * 2
+    // The gutter widens the bounds symmetrically on all four sides — even
+    // though labels only ever draw into the left/top bands — so the
+    // keyboard stays horizontally/vertically centered inside its
+    // `justify-center` wrapper when the overlay is toggled on and off.
+    const pad = KEYBOARD_PADDING + matrixWiresGutter
     if (visibleKeys.length === 0) {
       return {
-        width: pad2 + matrixWiresGutter * 2,
-        height: pad2 + matrixWiresGutter * 2,
-        originX: -KEYBOARD_PADDING - matrixWiresGutter,
-        originY: -KEYBOARD_PADDING - matrixWiresGutter,
+        width: pad * 2,
+        height: pad * 2,
+        originX: -pad,
+        originY: -pad,
       }
     }
     let minX = Infinity
@@ -168,15 +166,11 @@ function KeyboardWidgetInner({
         if (cy > maxY) maxY = cy
       }
     }
-    // The gutter widens the bounds symmetrically on all four sides — even
-    // though labels only ever draw into the left/top bands — so the
-    // keyboard stays horizontally/vertically centered inside its
-    // `justify-center` wrapper when the overlay is toggled on and off.
     return {
-      width: maxX - minX + pad2 + matrixWiresGutter * 2,
-      height: maxY - minY + pad2 + matrixWiresGutter * 2,
-      originX: minX - KEYBOARD_PADDING - matrixWiresGutter,
-      originY: minY - KEYBOARD_PADDING - matrixWiresGutter,
+      width: maxX - minX + pad * 2,
+      height: maxY - minY + pad * 2,
+      originX: minX - pad,
+      originY: minY - pad,
     }
   }, [visibleKeys, scale, matrixWiresGutter])
 

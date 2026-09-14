@@ -18,6 +18,15 @@ export const DEFAULT_SIMULATED_COLOR: Record<ThemeColorScheme, string> = {
   dark: '#c084fc',
 }
 
+/** `wire-col` default, used as `deriveSimulatedColor`'s fallback instead of
+ *  `DEFAULT_SIMULATED_COLOR` when deriving the View Matrix overlay's col
+ *  colour from a pack's accent — matches the `--wire-col` defaults in
+ *  `style.css`. */
+export const DEFAULT_WIRE_COL_COLOR: Record<ThemeColorScheme, string> = {
+  light: '#eaa715',
+  dark: '#ffbe4c',
+}
+
 /** Below this saturation the source colour is treated as achromatic (grey/
  *  black/white) — a hue rotation on a colour with no hue to speak of would
  *  just return the same grey, so this falls back to the fixed default
@@ -168,14 +177,21 @@ function parseColor(value: string): Hsl | null {
   return null
 }
 
-/** Derives the "simulated" remap tint from a theme's "actual" remap tint
- *  (`key-label-remap`) by rotating hue 180° and clamping lightness for
- *  readability. Falls back to `DEFAULT_SIMULATED_COLOR[mode]` when the
- *  source colour is unparseable or achromatic (a hue rotation on a
- *  colour with no hue would just return the same grey). */
-export function deriveSimulatedColor(remapColor: string, mode: ThemeColorScheme): string {
+/** Derives a "simulated"-style complement colour from a source colour by
+ *  rotating hue 180° and clamping lightness for readability. Falls back to
+ *  `fallback[mode]` (default `DEFAULT_SIMULATED_COLOR`) when the source
+ *  colour is unparseable or achromatic (a hue rotation on a colour with no
+ *  hue would just return the same grey) — callers deriving a different
+ *  token (e.g. the View Matrix overlay's `wire-col`) pass their own
+ *  fallback so an achromatic source doesn't default to the unrelated
+ *  key-label-simulated purple. */
+export function deriveSimulatedColor(
+  remapColor: string,
+  mode: ThemeColorScheme,
+  fallback: Record<ThemeColorScheme, string> = DEFAULT_SIMULATED_COLOR,
+): string {
   const hsl = parseColor(remapColor)
-  if (!hsl || hsl.s < ACHROMATIC_SATURATION_THRESHOLD) return DEFAULT_SIMULATED_COLOR[mode]
+  if (!hsl || hsl.s < ACHROMATIC_SATURATION_THRESHOLD) return fallback[mode]
   const rotatedHue = (hsl.h + 180) % 360
   const clampedLightness = mode === 'light'
     ? Math.min(hsl.l, LIGHT_MAX_LIGHTNESS)

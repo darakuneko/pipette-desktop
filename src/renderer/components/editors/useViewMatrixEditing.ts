@@ -14,6 +14,8 @@ import type { ViewMatrixCell } from '../../../shared/types/pipette-settings'
 import { KEY_DUPLICATE_COLOR } from '../keyboard/constants'
 import { applyViewMatrixAxisToSelection, effectiveViewPos } from './view-matrix'
 import { useViewMatrixMode, type UseViewMatrixModeReturn } from './useViewMatrixMode'
+import type { ViewMatrixPanelProps } from './ViewMatrixPanel'
+import type { KeymapPrimaryPaneProps } from './KeymapPrimaryPane'
 
 export interface UseViewMatrixEditingOptions {
   layout: KeyboardLayout | null
@@ -34,26 +36,15 @@ export interface UseViewMatrixEditingOptions {
 /** Everything `ViewMatrixPanel` needs beyond `onReset` (which KeymapEditor
  *  builds inline from its own `onViewMatrixChange`, since this hook holds
  *  no opinion on how a reset should behave). */
-export interface ViewMatrixEditingPanelProps {
-  onToggle: () => void
-  selectionCount: number
-  effectiveRow: number
-  effectiveCol: number
-  matrixRows: number
-  matrixCols: number
-  onAxisChange: (axis: 'row' | 'col', value: number) => void
-}
+export type ViewMatrixEditingPanelProps = Omit<ViewMatrixPanelProps, 'onReset'>
 
 /** Everything `KeymapPrimaryPane` needs from View Matrix mode/wiring —
  *  spread onto it alongside the plain pass-through props KeymapEditor
  *  still wires individually (selection state, remap labels, ...). */
-export interface ViewMatrixEditingPaneProps {
-  viewMatrixMode: UseViewMatrixModeReturn
-  viewMatrixLabelOverrides?: Map<string, { outer: string; inner: string; masked: boolean }>
-  viewMatrixDuplicateKeyColors?: Map<string, string>
-  matrixWires?: ReadonlyMap<string, { row: number; col: number }>
-  handleViewMatrixKeyClick: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
-}
+export type ViewMatrixEditingPaneProps = Pick<
+  KeymapPrimaryPaneProps,
+  'viewMatrixMode' | 'viewMatrixLabelOverrides' | 'viewMatrixDuplicateKeyColors' | 'matrixWires' | 'handleViewMatrixKeyClick'
+>
 
 export interface UseViewMatrixEditingReturn {
   viewMatrixMode: UseViewMatrixModeReturn
@@ -144,28 +135,39 @@ export function useViewMatrixEditing({
   // same option count: the larger of the two physical dimensions.
   const viewMatrixAxisOptionCount = Math.max(rows ?? 0, cols ?? 0)
 
-  // One pass over the layout builds both mode legend artifacts — they
-  // share the same inputs and always recompute together: the per-key R/C
-  // label override showing each non-decal, non-encoder key's effective
-  // position, and the fill colour map that flags keys whose effective
-  // position collides with another key's (the Auto Move order between
-  // colliding keys is ambiguous until resolved). The collision grouping
-  // happens in this same loop (rather than a second pass over the keys)
-  // so `effectiveViewPos` is computed once per key.
+  // Every non-decal, non-encoder key's effective (View Matrix override, or
+  // physical when absent) position, keyed by its physical "row,col" —
+  // shared by the mode's R/C legend, its duplicate-position detection, and
+  // the wiring overlay below, so `effectiveViewPos` is computed once per
+  // key regardless of how many of those three are active at once. Computed
+  // whenever either consumer needs it: the mode being active, or the
+  // wiring overlay's persisted toggle being on. Deliberately wider than
+  // `filterSelectableKeys` — covers unselected layout-option alternates
+  // too, so the legend and overlay stay correct for those.
+  const effectiveCells = useMemo(() => {
+    if (!layout || !(viewMatrixMode.active || viewMatrixWires)) return undefined
+    const cells = new Map<string, ViewMatrixCell>()
+    for (const key of layout.keys) {
+      if (key.decal || key.encoderIdx >= 0) continue
+      cells.set(posKey(key.row, key.col), effectiveViewPos(viewMatrix, key.row, key.col))
+    }
+    return cells
+  }, [layout, viewMatrixMode.active, viewMatrixWires, viewMatrix])
+
+  // One pass over `effectiveCells` builds both mode legend artifacts — they
+  // share the same input and always recompute together: the per-key R/C
+  // label override, and the fill colour map that flags keys whose
+  // effective position collides with another key's (the Auto Move order
+  // between colliding keys is ambiguous until resolved).
   const { viewMatrixLabelOverrides, viewMatrixDuplicateKeyColors } = useMemo(() => {
-    if (!viewMatrixMode.active || !layout) {
+    if (!viewMatrixMode.active || !effectiveCells) {
       return { viewMatrixLabelOverrides: undefined, viewMatrixDuplicateKeyColors: undefined }
     }
     const overrides = new Map<string, { outer: string; inner: string; masked: boolean }>()
     // Effective position -> physical "row,col" keys resolving to it, used
     // below to find every key involved in a collision (group size > 1).
     const groups = new Map<string, string[]>()
-    // Deliberately wider than `filterSelectableKeys` — covers unselected
-    // layout-option alternates too, so the legend stays correct for those.
-    for (const key of layout.keys) {
-      if (key.decal || key.encoderIdx >= 0) continue
-      const physPos = posKey(key.row, key.col)
-      const effective = effectiveViewPos(viewMatrix, key.row, key.col)
+    for (const [physPos, effective] of effectiveCells) {
       overrides.set(physPos, { outer: `R ${effective.row}\nC ${effective.col}`, inner: '', masked: false })
       const effPos = posKey(effective.row, effective.col)
       const group = groups.get(effPos)
@@ -181,7 +183,7 @@ export function useViewMatrixEditing({
       viewMatrixLabelOverrides: overrides,
       viewMatrixDuplicateKeyColors: duplicateKeyColors.size > 0 ? duplicateKeyColors : undefined,
     }
-  }, [viewMatrixMode.active, layout, viewMatrix])
+  }, [viewMatrixMode.active, effectiveCells])
 
   // Keycode palette selection is a no-op while in the mode — nothing is
   // ever selected (selectedKey/selectedEncoder stay null), so this mostly
@@ -189,28 +191,10 @@ export function useViewMatrixEditing({
   const noopKeycodeSelect = useCallback(() => {}, [])
   const gatedHandleKeycodeSelect = viewMatrixMode.active ? noopKeycodeSelect : handleKeycodeSelect
 
-  // The wiring overlay's per-key Map, built separately from the legend
-  // `useMemo` above — that one early-returns `undefined` whenever the mode
-  // is INACTIVE, so folding the wires computation into it would mean the
-  // overlay never shows during normal (non-Edit) editing, defeating the
-  // whole point of it being a persisted display toggle rather than part of
-  // the mode itself. Covers every non-decal, non-encoder key in the full
-  // layout (unselected layout-option alternates included), same domain as
-  // the legend loop above.
-  const viewMatrixWiresCells = useMemo(() => {
-    if (!viewMatrixWires || !layout) return undefined
-    const cells = new Map<string, { row: number; col: number }>()
-    for (const key of layout.keys) {
-      if (key.decal || key.encoderIdx >= 0) continue
-      cells.set(posKey(key.row, key.col), effectiveViewPos(viewMatrix, key.row, key.col))
-    }
-    return cells
-  }, [viewMatrixWires, layout, viewMatrix])
-
   // Grouped so KeymapEditor spreads one object onto `ViewMatrixPanel`
   // instead of wiring 6 individual props — `onReset` is deliberately left
   // out (KeymapEditor builds it inline from its own `onViewMatrixChange`).
-  const panelProps: ViewMatrixEditingPanelProps = useMemo(() => ({
+  const panelProps: ViewMatrixEditingPanelProps = {
     onToggle: handleToggleViewMatrixMode,
     selectionCount: viewMatrixSelectedPositions.length,
     effectiveRow: viewMatrixEffectiveSingle?.row ?? 0,
@@ -218,24 +202,17 @@ export function useViewMatrixEditing({
     matrixRows: viewMatrixAxisOptionCount,
     matrixCols: viewMatrixAxisOptionCount,
     onAxisChange: handleViewMatrixAxisChange,
-  }), [
-    handleToggleViewMatrixMode, viewMatrixSelectedPositions.length, viewMatrixEffectiveSingle,
-    viewMatrixAxisOptionCount, handleViewMatrixAxisChange,
-  ])
+  }
 
   // Grouped so KeymapEditor spreads one object onto `KeymapPrimaryPane`
-  // instead of wiring 5 individual props (4 existing + the new
-  // `matrixWires`). `viewMatrixMode` itself is a fresh object every render
-  // (see `useViewMatrixMode`), so this memo already recomputes every
-  // render regardless — no regression from grouping it alongside the
-  // other, genuinely memoized fields.
-  const paneProps: ViewMatrixEditingPaneProps = useMemo(() => ({
+  // instead of wiring 5 individual props.
+  const paneProps: ViewMatrixEditingPaneProps = {
     viewMatrixMode,
     viewMatrixLabelOverrides,
     viewMatrixDuplicateKeyColors,
-    matrixWires: viewMatrixWiresCells,
+    matrixWires: viewMatrixWires ? effectiveCells : undefined,
     handleViewMatrixKeyClick,
-  }), [viewMatrixMode, viewMatrixLabelOverrides, viewMatrixDuplicateKeyColors, viewMatrixWiresCells, handleViewMatrixKeyClick])
+  }
 
   return {
     viewMatrixMode, handleToggleViewMatrixMode, gatedHandleKeycodeSelect,

@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAppConfig } from './useAppConfig'
 import type { ThemeMode, ThemeSelection } from '../../shared/types/app-config'
-import { THEME_COLOR_KEYS } from '../../shared/types/theme-store'
+import { ALL_THEME_COLOR_KEYS, THEME_COLOR_KEYS } from '../../shared/types/theme-store'
 import type { ThemeColorScheme, ThemePackColors, ThemePackEntryFile } from '../../shared/types/theme-store'
 import { useEffectiveTheme, type EffectiveTheme } from './useEffectiveTheme'
-import { deriveSimulatedColor } from '../utils/simulated-color'
+import { deriveSimulatedColor, DEFAULT_WIRE_COL_COLOR } from '../utils/simulated-color'
 
 export type { ThemeMode, ThemeSelection }
 export type { EffectiveTheme }
@@ -46,25 +46,30 @@ export function applyPackColors(colors: ThemePackColors, colorScheme: ThemeColor
   const simulatedColor = colors['key-label-simulated'] ?? deriveSimulatedColor(colors['key-label-remap'], colorScheme)
   root.style.setProperty('--key-label-simulated', simulatedColor)
   // Optional wire-row/wire-col: the View Matrix wiring overlay's row/col
-  // colors. A pack's own values win; otherwise row falls back to the
-  // pack's accent and col to a hue-rotated complement of accent (same
-  // derivation as key-label-simulated above, just rooted at accent
-  // instead of key-label-remap).
-  const wireRowColor = colors['wire-row'] ?? colors['accent']
-  const wireColColor = colors['wire-col'] ?? deriveSimulatedColor(colors['accent'], colorScheme)
-  root.style.setProperty('--wire-row', wireRowColor)
+  // colors. A pack's own wire-row value wins; otherwise the property is
+  // left unset so the stylesheet default (`var(--accent)`) applies,
+  // resolving through the pack's own inline `--accent` above — no need to
+  // duplicate that "row = accent" rule here. wire-col has no matching
+  // stylesheet default (a plain accent-derived colour needs no fallback of
+  // its own), so it keeps deriving one via a hue-rotated complement of
+  // accent when the pack omits it, clamped to `DEFAULT_WIRE_COL_COLOR`
+  // instead of the (purple) simulated-color default for achromatic or
+  // unparseable accents.
+  if (colors['wire-row']) {
+    root.style.setProperty('--wire-row', colors['wire-row'])
+  } else {
+    root.style.removeProperty('--wire-row')
+  }
+  const wireColColor = colors['wire-col'] ?? deriveSimulatedColor(colors['accent'], colorScheme, DEFAULT_WIRE_COL_COLOR)
   root.style.setProperty('--wire-col', wireColColor)
   root.style.setProperty('color-scheme', colorScheme)
 }
 
 export function clearPackColors(): void {
   const root = document.documentElement
-  for (const key of THEME_COLOR_KEYS) {
+  for (const key of ALL_THEME_COLOR_KEYS) {
     root.style.removeProperty(`--${key}`)
   }
-  root.style.removeProperty('--key-label-simulated')
-  root.style.removeProperty('--wire-row')
-  root.style.removeProperty('--wire-col')
   root.style.removeProperty('color-scheme')
 }
 

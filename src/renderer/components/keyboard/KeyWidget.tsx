@@ -26,6 +26,7 @@ import {
   KEY_REMAP_COLOR,
   KEY_MASK_RECT_COLOR,
   KEY_HOVER_COLOR,
+  keyLabelFontSize,
 } from './constants'
 import { shouldInvertText } from './fill-luminance'
 import type { EffectiveTheme } from '../../hooks/useEffectiveTheme'
@@ -234,7 +235,7 @@ function KeyWidgetInner({
   //   4 parts: 2 × 2 quadrants (TL, TR, BL, BR; "" leaves a slot empty)
   // Excess parts beyond 4 are dropped — the layout has no slot for them.
   const labelLines = outerLabel.split('\n').slice(0, 4)
-  const fontSize = Math.max(8, Math.min(12, 12 * scale))
+  const fontSize = keyLabelFontSize(scale)
 
   // Rotation transform
   const hasRotation = kleKey.rotation !== 0

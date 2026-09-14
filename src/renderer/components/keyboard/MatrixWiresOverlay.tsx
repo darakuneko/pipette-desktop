@@ -1,12 +1,24 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { memo } from 'react'
-import type { MatrixWiresLayout } from './matrix-wires'
+import type { MatrixWire, MatrixWiresLayout } from './matrix-wires'
 
 interface Props {
   layout: MatrixWiresLayout
   scale: number
   fontSize: number
+}
+
+/** One entry per wire axis — row wires/labels are drawn first, then col,
+ *  matching the overlay's documented DOM order (polylines, nodes, then
+ *  labels drawn in this same row-then-col order). */
+const AXES: readonly { kind: 'row' | 'col'; color: string }[] = [
+  { kind: 'row', color: 'var(--wire-row)' },
+  { kind: 'col', color: 'var(--wire-col)' },
+]
+
+function wiresFor(layout: MatrixWiresLayout, kind: 'row' | 'col'): MatrixWire[] {
+  return kind === 'row' ? layout.rows : layout.cols
 }
 
 /** Renders the View Matrix wiring overlay: row wires, then col wires,
@@ -22,29 +34,19 @@ function MatrixWiresOverlayInner({ layout, scale, fontSize }: Props) {
 
   return (
     <g className="pointer-events-none opacity-60" data-testid="matrix-wires">
-      {layout.rows.map((wire) =>
-        wire.points.length >= 2 ? (
-          <polyline
-            key={`row-${wire.index}`}
-            points={wire.points.map((p) => `${p.x},${p.y}`).join(' ')}
-            stroke="var(--wire-row)"
-            strokeWidth={strokeWidth}
-            fill="none"
-            strokeLinejoin="round"
-          />
-        ) : null,
-      )}
-      {layout.cols.map((wire) =>
-        wire.points.length >= 2 ? (
-          <polyline
-            key={`col-${wire.index}`}
-            points={wire.points.map((p) => `${p.x},${p.y}`).join(' ')}
-            stroke="var(--wire-col)"
-            strokeWidth={strokeWidth}
-            fill="none"
-            strokeLinejoin="round"
-          />
-        ) : null,
+      {AXES.map((axis) =>
+        wiresFor(layout, axis.kind).map((wire) =>
+          wire.points.length >= 2 ? (
+            <polyline
+              key={`${axis.kind}-${wire.index}`}
+              points={wire.points.map((p) => `${p.x},${p.y}`).join(' ')}
+              stroke={axis.color}
+              strokeWidth={strokeWidth}
+              fill="none"
+              strokeLinejoin="round"
+            />
+          ) : null,
+        ),
       )}
       {layout.nodes.map((node) => (
         <circle
@@ -57,34 +59,22 @@ function MatrixWiresOverlayInner({ layout, scale, fontSize }: Props) {
           strokeWidth={strokeWidth}
         />
       ))}
-      {layout.rows.map((wire) => (
-        <text
-          key={`row-${wire.index}`}
-          x={wire.label.x}
-          y={wire.label.y}
-          fontSize={fontSize}
-          fontFamily="sans-serif"
-          fill="var(--wire-row)"
-          textAnchor="middle"
-          dominantBaseline="central"
-        >
-          {wire.index}
-        </text>
-      ))}
-      {layout.cols.map((wire) => (
-        <text
-          key={`col-${wire.index}`}
-          x={wire.label.x}
-          y={wire.label.y}
-          fontSize={fontSize}
-          fontFamily="sans-serif"
-          fill="var(--wire-col)"
-          textAnchor="middle"
-          dominantBaseline="central"
-        >
-          {wire.index}
-        </text>
-      ))}
+      {AXES.map((axis) =>
+        wiresFor(layout, axis.kind).map((wire) => (
+          <text
+            key={`${axis.kind}-${wire.index}`}
+            x={wire.label.x}
+            y={wire.label.y}
+            fontSize={fontSize}
+            fontFamily="sans-serif"
+            fill={axis.color}
+            textAnchor="middle"
+            dominantBaseline="central"
+          >
+            {wire.index}
+          </text>
+        )),
+      )}
     </g>
   )
 }

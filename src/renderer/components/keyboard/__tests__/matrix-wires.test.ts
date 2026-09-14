@@ -1,63 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import { buildMatrixWires, type MatrixWiresGutter } from '../matrix-wires'
 import { rotatePoint } from '../key-geometry'
 import { KEY_UNIT, KEY_SPACING } from '../constants'
-import { parseDefinitionLayout } from '../../../../shared/kle/definition-layout'
 import { posKey } from '../../../../shared/kle/pos-key'
-import type { KleKey } from '../../../../shared/kle/types'
-import type { KeyboardDefinition } from '../../../../shared/types/protocol'
-
-function makeKey(overrides: Partial<KleKey> = {}): KleKey {
-  return {
-    x: 0,
-    y: 0,
-    width: 1,
-    height: 1,
-    x2: 0,
-    y2: 0,
-    width2: 1,
-    height2: 1,
-    rotation: 0,
-    rotationX: 0,
-    rotationY: 0,
-    color: '',
-    labels: [],
-    textColor: [],
-    textSize: [],
-    row: 0,
-    col: 0,
-    encoderIdx: -1,
-    encoderDir: -1,
-    layoutIndex: -1,
-    layoutOption: -1,
-    decal: false,
-    nub: false,
-    stepped: false,
-    ghost: false,
-    ...overrides,
-  }
-}
-
-const NO_GUTTER: MatrixWiresGutter = { originX: -10, originY: -10, size: 20, fontSize: 10 }
-
-/** No overrides — every key's effective position is its own physical
- *  (row, col), matching `buildMatrixWires`'s documented fallback. */
-const IDENTITY_CELLS = new Map<string, { row: number; col: number }>()
+import { makeKey, NO_GUTTER, IDENTITY_CELLS, loadVirtualDeviceLayout } from './kle-test-keys'
 
 describe('buildMatrixWires — virtual device GPK60-63R fixture', () => {
-  const fixturePath = join(
-    __dirname,
-    '../../../../main/virtual-device/gpk60-63r-definition.json',
-  )
-  const definition = JSON.parse(readFileSync(fixturePath, 'utf-8')) as KeyboardDefinition
-  const { layout } = parseDefinitionLayout(definition)
+  const layout = loadVirtualDeviceLayout()
 
   it('reflects the sparse row 4 (cols 0,1,2,4,6,7,8,9,10,11 — no 3/5/12/13)', () => {
-    const keys = layout!.keys
+    const keys = layout.keys
     const { rows, cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER)
 
     const row4 = rows.find((r) => r.index === 4)!
@@ -80,7 +34,7 @@ describe('buildMatrixWires — virtual device GPK60-63R fixture', () => {
   })
 
   it('orders row 4 points by ascending column', () => {
-    const keys = layout!.keys
+    const keys = layout.keys
     const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER)
     const row4 = rows.find((r) => r.index === 4)!
     const expectedCols = [0, 1, 2, 4, 6, 7, 8, 9, 10, 11]

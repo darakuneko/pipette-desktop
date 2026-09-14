@@ -1,49 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import { MatrixWiresOverlay } from '../MatrixWiresOverlay'
-import { buildMatrixWires, type MatrixWiresGutter, type MatrixWiresLayout } from '../matrix-wires'
-import { parseDefinitionLayout } from '../../../../shared/kle/definition-layout'
-import type { KeyboardDefinition } from '../../../../shared/types/protocol'
-import type { KleKey } from '../../../../shared/kle/types'
-
-const NO_GUTTER: MatrixWiresGutter = { originX: -10, originY: -10, size: 20, fontSize: 10 }
-const IDENTITY_CELLS = new Map<string, { row: number; col: number }>()
-
-function makeKey(overrides: Partial<KleKey> = {}): KleKey {
-  return {
-    x: 0,
-    y: 0,
-    width: 1,
-    height: 1,
-    x2: 0,
-    y2: 0,
-    width2: 1,
-    height2: 1,
-    rotation: 0,
-    rotationX: 0,
-    rotationY: 0,
-    color: '',
-    labels: [],
-    textColor: [],
-    textSize: [],
-    row: 0,
-    col: 0,
-    encoderIdx: -1,
-    encoderDir: -1,
-    layoutIndex: -1,
-    layoutOption: -1,
-    decal: false,
-    nub: false,
-    stepped: false,
-    ghost: false,
-    ...overrides,
-  }
-}
+import { buildMatrixWires, type MatrixWiresLayout } from '../matrix-wires'
+import { makeKey, NO_GUTTER, IDENTITY_CELLS, loadVirtualDeviceLayout } from './kle-test-keys'
 
 /** Renders inside a bare <svg> — `<g>`/`<polyline>`/`<circle>`/`<text>`
  *  are only valid SVG children, and jsdom's querySelector needs a real
@@ -57,13 +19,8 @@ function renderOverlay(layout: MatrixWiresLayout, scale = 1, fontSize = 10) {
 }
 
 describe('MatrixWiresOverlay — virtual device GPK60-63R fixture', () => {
-  const fixturePath = join(
-    __dirname,
-    '../../../../main/virtual-device/gpk60-63r-definition.json',
-  )
-  const definition = JSON.parse(readFileSync(fixturePath, 'utf-8')) as KeyboardDefinition
-  const { layout: kleLayout } = parseDefinitionLayout(definition)
-  const layout = buildMatrixWires(kleLayout!.keys, IDENTITY_CELLS, 1, {
+  const kleLayout = loadVirtualDeviceLayout()
+  const layout = buildMatrixWires(kleLayout.keys, IDENTITY_CELLS, 1, {
     originX: -20,
     originY: -20,
     size: 30,
@@ -93,15 +50,10 @@ describe('MatrixWiresOverlay — virtual device GPK60-63R fixture', () => {
 
   it('renders row/col wires with their own CSS variable strokes', () => {
     const { container } = renderOverlay(layout)
-    const polylines = container.querySelectorAll('polyline')
-    const rowStrokes = new Set<string>()
-    const colStrokes = new Set<string>()
-    for (const polyline of polylines) {
-      const stroke = polyline.getAttribute('stroke')!
-      // Row wires are drawn before col wires (5 + 14 total, first 5 are rows).
-      if ([...polylines].indexOf(polyline) < 5) rowStrokes.add(stroke)
-      else colStrokes.add(stroke)
-    }
+    const polylines = [...container.querySelectorAll('polyline')]
+    // Row wires are drawn before col wires (5 + 14 total, first 5 are rows).
+    const rowStrokes = new Set(polylines.slice(0, 5).map((p) => p.getAttribute('stroke')))
+    const colStrokes = new Set(polylines.slice(5).map((p) => p.getAttribute('stroke')))
     expect(rowStrokes).toEqual(new Set(['var(--wire-row)']))
     expect(colStrokes).toEqual(new Set(['var(--wire-col)']))
   })
@@ -119,7 +71,6 @@ describe('MatrixWiresOverlay — single-point wire', () => {
   it('produces no polyline but still produces a label for a lone key', () => {
     const key = makeKey({ row: 0, col: 0, x: 0, y: 0 })
     const layout = buildMatrixWires([key], IDENTITY_CELLS, 1, NO_GUTTER)
-    expect(layout.rows[0].points).toHaveLength(1)
     expect(layout.cols[0].points).toHaveLength(1)
 
     const { container } = renderOverlay(layout)

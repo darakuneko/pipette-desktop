@@ -1,22 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import type { KleKey } from '../../../shared/kle/types'
+import { hasSecondaryRect } from '../../../shared/kle/filter-keys'
+import { rotatePoint } from '../../../shared/kle/rotate-point'
+import { KEY_UNIT, KEY_SPACING } from './constants'
 
-/** Rotate point (px, py) by `angle` degrees around center (cx, cy). */
-export function rotatePoint(
-  px: number,
-  py: number,
-  angle: number,
-  cx: number,
-  cy: number,
-): [number, number] {
-  const rad = (angle * Math.PI) / 180
-  const cos = Math.cos(rad)
-  const sin = Math.sin(rad)
-  const dx = px - cx
-  const dy = py - cy
-  return [cx + dx * cos - dy * sin, cy + dx * sin + dy * cos]
-}
+// Re-exported so existing importers of this module's own `rotatePoint`
+// (KeyboardWidget/matrix-wires and their tests) keep working unchanged.
+export { rotatePoint }
 
 /** Compute bounding-box corners of a key (both rects), accounting for rotation. */
 export function keyCorners(
@@ -35,12 +26,7 @@ export function keyCorners(
     [x0, y1],
   ]
   // Include secondary rect corners for stepped/ISO keys
-  const has2 =
-    key.width2 !== key.width ||
-    key.height2 !== key.height ||
-    key.x2 !== 0 ||
-    key.y2 !== 0
-  if (has2) {
+  if (hasSecondaryRect(key)) {
     const sx0 = x0 + s * key.x2
     const sy0 = y0 + s * key.y2
     const sx1 = s * (key.x + key.x2 + key.width2) - spacing
@@ -51,4 +37,16 @@ export function keyCorners(
   const cx = s * key.rotationX
   const cy = s * key.rotationY
   return corners.map(([px, py]) => rotatePoint(px, py, key.rotation, cx, cy))
+}
+
+/** A key's own rotated center point. Always the main rect's center, even
+ *  for stepped/ISO keys with a secondary rect. */
+export function keyCenter(key: KleKey, scale: number): { x: number; y: number } {
+  const s = KEY_UNIT * scale
+  const spacing = KEY_SPACING * scale
+  const cx = s * (key.x + key.width / 2) - spacing / 2
+  const cy = s * (key.y + key.height / 2) - spacing / 2
+  if (key.rotation === 0) return { x: cx, y: cy }
+  const [x, y] = rotatePoint(cx, cy, key.rotation, s * key.rotationX, s * key.rotationY)
+  return { x, y }
 }

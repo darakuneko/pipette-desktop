@@ -23,6 +23,13 @@ export const KEY_FACE_INSET =
 // Widget padding
 export const KEYBOARD_PADDING = 5
 
+/** Shared label font-size clamp used by `KeyWidget`, `EncoderWidget`, and
+ *  the View Matrix wiring overlay's gutter numbers, so every legend on the
+ *  keyboard scales together and stays within a readable 8-12px range. */
+export function keyLabelFontSize(scale: number): number {
+  return Math.max(8, Math.min(12, 12 * scale))
+}
+
 // Colors — use CSS custom properties for theme-aware rendering
 export const KEY_BG_COLOR = 'var(--key-bg)'
 export const KEY_BORDER_COLOR = 'var(--key-border)'

@@ -70,8 +70,9 @@ async function enterViewMatrixMode(page: Page): Promise<void> {
 
 /** Open the Tools tab and set the View Matrix Wires toggle to `on`,
  *  idempotently (reads `aria-checked` first so a call that finds it already
- *  in the target state is a no-op click-wise). Leaves the overlay panel
- *  open — callers close it themselves once they're done with the tab. */
+ *  in the target state is a no-op click-wise). Closes the overlay panel
+ *  again before returning — it opened it, so callers don't need their own
+ *  `closeKeycodesOverlay` afterwards. */
 async function setViewMatrixWires(page: Page, on: boolean): Promise<void> {
   if (!(await openOverlayTab(page, 'tools'))) {
     throw new Error(overlayTabNotFoundMessage('tools'))
@@ -82,6 +83,7 @@ async function setViewMatrixWires(page: Page, on: boolean): Promise<void> {
     await toggle.click()
     await page.waitForTimeout(300)
   }
+  await closeKeycodesOverlay(page)
 }
 
 /** Click the keymap key at physical matrix position "row,col" — in View
@@ -132,10 +134,8 @@ async function captureVirtualDeviceScene(): Promise<void> {
     // existing view-matrix-mode/selected/duplicate shots were taken without
     // the overlay and stay that way.
     await setViewMatrixWires(page, true)
-    await closeKeycodesOverlay(page)
     await capture(page, 'view-matrix-wires')
     await setViewMatrixWires(page, false)
-    await closeKeycodesOverlay(page)
 
     await enterViewMatrixMode(page)
     // Two-pane overview: R/C key legends, panel with blank Row/Col selects,

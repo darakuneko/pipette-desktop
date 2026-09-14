@@ -13,6 +13,7 @@ import {
   KEY_INVERTED_TEXT_COLOR,
   KEY_REMAP_COLOR,
   KEY_MASK_RECT_COLOR,
+  keyLabelFontSize,
 } from './constants'
 import { flashAnimationDelayMs } from './key-flash'
 
@@ -79,7 +80,7 @@ function EncoderWidgetInner({
   const labelColor = selected && !innerSelected
     ? KEY_INVERTED_TEXT_COLOR
     : remapped ? KEY_REMAP_COLOR : KEY_TEXT_COLOR
-  const fontSize = Math.max(8, Math.min(12, 12 * scale))
+  const fontSize = keyLabelFontSize(scale)
   const outerBorderActive = selected && !innerSelected
 
   // Rotation transform

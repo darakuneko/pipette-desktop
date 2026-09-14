@@ -8,8 +8,7 @@
 
 import type { KleKey } from '../../../shared/kle/types'
 import { posKey } from '../../../shared/kle/pos-key'
-import { KEY_UNIT, KEY_SPACING } from './constants'
-import { rotatePoint } from './key-geometry'
+import { keyCenter } from './key-geometry'
 
 export interface WirePoint {
   x: number
@@ -55,18 +54,6 @@ interface PlacedKey {
   effectiveCol: number
   x: number
   y: number
-}
-
-/** A key's own rotated center point. Always the main rect's center, even
- *  for stepped/ISO keys with a secondary rect. */
-function keyCenter(key: KleKey, scale: number): WirePoint {
-  const s = KEY_UNIT * scale
-  const spacing = KEY_SPACING * scale
-  const cx = s * (key.x + key.width / 2) - spacing / 2
-  const cy = s * (key.y + key.height / 2) - spacing / 2
-  if (key.rotation === 0) return { x: cx, y: cy }
-  const [x, y] = rotatePoint(cx, cy, key.rotation, s * key.rotationX, s * key.rotationY)
-  return { x, y }
 }
 
 function comparePosKey(a: string, b: string): number {
@@ -121,6 +108,47 @@ function assignLabelLines(positions: readonly number[], fontSize: number): numbe
   return lines
 }
 
+/** Builds one axis's wires (row or col) from the same placed-key list.
+ *  Row wires group by effective row, order members left-to-right (x),
+ *  and anchor their label at the leftmost member's y; col wires are the
+ *  mirror image, grouping by effective col, ordering top-to-bottom (y),
+ *  anchoring at the topmost member's x. `along` is both the ordering
+ *  tie-break axis and the axis used to find each wire's label anchor
+ *  (the member nearest the gutter); `across` is the anchor's other
+ *  coordinate, which becomes the label's fixed position along the wire. */
+function buildAxisWires(
+  placed: readonly PlacedKey[],
+  axis: 'row' | 'col',
+  gutter: MatrixWiresGutter,
+): MatrixWire[] {
+  const groupBy = axis === 'row' ? (p: PlacedKey) => p.effectiveRow : (p: PlacedKey) => p.effectiveCol
+  const orderBy = axis === 'row' ? (p: PlacedKey) => p.effectiveCol : (p: PlacedKey) => p.effectiveRow
+  const along = axis === 'row' ? (p: PlacedKey) => p.x : (p: PlacedKey) => p.y
+  const across = axis === 'row' ? (p: PlacedKey) => p.y : (p: PlacedKey) => p.x
+
+  const groups = groupAndOrder(placed, groupBy, orderBy, along)
+  const indices = [...groups.keys()].sort((a, b) => a - b)
+
+  const labelPositions = indices.map((index) => {
+    const members = groups.get(index)!
+    const anchor = members.reduce((min, p) => (along(p) < along(min) ? p : min), members[0])
+    return across(anchor)
+  })
+  const lines = assignLabelLines(labelPositions, gutter.fontSize)
+  const base = axis === 'row' ? gutter.originX + gutter.size / 2 : gutter.originY + gutter.size / 2
+
+  return indices.map((index, i) => {
+    const alongGutterPos = lines[i] === 1 ? base + gutter.fontSize : base
+    return {
+      index,
+      points: groups.get(index)!.map((p) => ({ x: p.x, y: p.y })),
+      label: axis === 'row'
+        ? { x: alongGutterPos, y: labelPositions[i] }
+        : { x: labelPositions[i], y: alongGutterPos },
+    }
+  })
+}
+
 export function buildMatrixWires(
   visibleKeys: readonly KleKey[],
   cells: ReadonlyMap<string, { row: number; col: number }>,
@@ -129,7 +157,6 @@ export function buildMatrixWires(
 ): MatrixWiresLayout {
   const seen = new Set<string>()
   const placed: PlacedKey[] = []
-  const nodes: MatrixNode[] = []
 
   for (const key of visibleKeys) {
     if (key.decal || key.encoderIdx >= 0) continue
@@ -140,60 +167,11 @@ export function buildMatrixWires(
     const center = keyCenter(key, scale)
     const effective = cells.get(pos) ?? { row: key.row, col: key.col }
     placed.push({ posKey: pos, effectiveRow: effective.row, effectiveCol: effective.col, ...center })
-    nodes.push({ posKey: pos, x: center.x, y: center.y })
   }
 
-  const rowGroups = groupAndOrder(
-    placed,
-    (p) => p.effectiveRow,
-    (p) => p.effectiveCol,
-    (p) => p.x,
-  )
-  const colGroups = groupAndOrder(
-    placed,
-    (p) => p.effectiveCol,
-    (p) => p.effectiveRow,
-    (p) => p.y,
-  )
-
-  const rowIndices = [...rowGroups.keys()].sort((a, b) => a - b)
-  const colIndices = [...colGroups.keys()].sort((a, b) => a - b)
-
-  // Row labels sit at the leftmost (min-x) member's y; col labels sit at
-  // the topmost (min-y) member's x. Computed up front so the overlap
-  // pass can alternate lines across the whole index-ordered sequence.
-  const rowLabelPositions = rowIndices.map((index) => {
-    const members = rowGroups.get(index)!
-    return members.reduce((min, p) => (p.x < min.x ? p : min), members[0]).y
-  })
-  const colLabelPositions = colIndices.map((index) => {
-    const members = colGroups.get(index)!
-    return members.reduce((min, p) => (p.y < min.y ? p : min), members[0]).x
-  })
-
-  const rowLines = assignLabelLines(rowLabelPositions, gutter.fontSize)
-  const colLines = assignLabelLines(colLabelPositions, gutter.fontSize)
-
-  const rowBaseX = gutter.originX + gutter.size / 2
-  const colBaseY = gutter.originY + gutter.size / 2
-
-  const rows: MatrixWire[] = rowIndices.map((index, i) => ({
-    index,
-    points: rowGroups.get(index)!.map((p) => ({ x: p.x, y: p.y })),
-    label: {
-      x: rowLines[i] === 1 ? rowBaseX + gutter.fontSize : rowBaseX,
-      y: rowLabelPositions[i],
-    },
-  }))
-
-  const cols: MatrixWire[] = colIndices.map((index, i) => ({
-    index,
-    points: colGroups.get(index)!.map((p) => ({ x: p.x, y: p.y })),
-    label: {
-      x: colLabelPositions[i],
-      y: colLines[i] === 1 ? colBaseY + gutter.fontSize : colBaseY,
-    },
-  }))
-
-  return { rows, cols, nodes }
+  return {
+    rows: buildAxisWires(placed, 'row', gutter),
+    cols: buildAxisWires(placed, 'col', gutter),
+    nodes: placed.map(({ posKey, x, y }) => ({ posKey, x, y })),
+  }
 }

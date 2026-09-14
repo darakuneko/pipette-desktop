@@ -58,14 +58,16 @@ describe('applyPackColors / clearPackColors', () => {
     expect(root.style.getPropertyValue('color-scheme')).toBe('')
   })
 
-  it('derives wire-row from accent and wire-col from a hue-rotated complement of accent when the pack omits both', () => {
+  it('leaves wire-row unset (falls through to the stylesheet accent default) and derives wire-col when the pack omits both', () => {
     // baseColors() sets every required key (including accent) to
-    // '#123456' — wire-row should just echo that back, and wire-col
-    // should be deriveSimulatedColor('#123456', 'dark'), not a literal
-    // re-derivation here (that would just duplicate the implementation).
+    // '#123456'. wire-row is left unset inline so style.css's own
+    // `var(--accent)` default applies via the cascade; wire-col should be
+    // deriveSimulatedColor('#123456', 'dark', DEFAULT_WIRE_COL_COLOR), not
+    // a literal re-derivation here (that would just duplicate the
+    // implementation).
     applyPackColors(baseColors(), 'dark')
     const root = document.documentElement
-    expect(root.style.getPropertyValue('--wire-row')).toBe('#123456')
+    expect(root.style.getPropertyValue('--wire-row')).toBe('')
     expect(root.style.getPropertyValue('--wire-col')).not.toBe('')
     expect(root.style.getPropertyValue('--wire-col')).not.toBe('#123456')
   })

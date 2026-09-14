@@ -5,11 +5,13 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
-import { rotatePoint, KeyboardWidget } from '../KeyboardWidget'
-import { KEY_UNIT, KEY_SPACING, KEY_SIZE_RATIO, KEY_SPACING_RATIO, KEYBOARD_PADDING, KEY_TEXT_COLOR, KEY_REMAP_COLOR } from '../constants'
+import { KeyboardWidget } from '../KeyboardWidget'
+import { rotatePoint } from '../key-geometry'
+import { KEY_UNIT, KEY_SPACING, KEY_SIZE_RATIO, KEY_SPACING_RATIO, KEYBOARD_PADDING, KEY_TEXT_COLOR, KEY_REMAP_COLOR, keyLabelFontSize } from '../constants'
 import { parseKle } from '../../../../shared/kle/kle-parser'
 import { posKey } from '../../../../shared/kle/pos-key'
 import type { KleKey } from '../../../../shared/kle/types'
+import { makeKey } from './kle-test-keys'
 
 vi.mock('../../../../shared/keycodes/keycodes', () => ({
   keycodeLabel: (kc: string) => kc,
@@ -17,37 +19,6 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   findOuterKeycode: () => ({ qmkId: 'LT0' }),
   findInnerKeycode: () => ({ qmkId: 'KC_A' }),
 }))
-
-function makeKey(overrides: Partial<KleKey> = {}): KleKey {
-  return {
-    x: 0,
-    y: 0,
-    width: 1,
-    height: 1,
-    x2: 0,
-    y2: 0,
-    width2: 1,
-    height2: 1,
-    rotation: 0,
-    rotationX: 0,
-    rotationY: 0,
-    color: '',
-    labels: [],
-    textColor: [],
-    textSize: [],
-    row: 0,
-    col: 0,
-    encoderIdx: -1,
-    encoderDir: -1,
-    layoutIndex: -1,
-    layoutOption: -1,
-    decal: false,
-    nub: false,
-    stepped: false,
-    ghost: false,
-    ...overrides,
-  }
-}
 
 describe('rotatePoint', () => {
   it('returns same point when angle is 0', () => {
@@ -300,10 +271,10 @@ describe('KeyboardWidget matrixWires prop', () => {
   const s = KEY_UNIT * scale
   const spacing = KEY_SPACING * scale
   const pad2 = KEYBOARD_PADDING * 2
-  // Same formulas KeyboardWidget itself uses: fontSize is KeyWidget's own
-  // label clamp, gutter is the larger of half a key unit or 2.5 gutter
-  // lines of that font size.
-  const expectedFontSize = Math.max(8, Math.min(12, 12 * scale))
+  // Same formulas KeyboardWidget itself uses: fontSize is the shared label
+  // clamp, gutter is the larger of half a key unit or 2.5 gutter lines of
+  // that font size.
+  const expectedFontSize = keyLabelFontSize(scale)
   const expectedGutter = Math.max(KEY_UNIT * 0.5 * scale, expectedFontSize * 2.5)
 
   it('leaves bounds numerically identical to the no-overlay case when matrixWires is undefined', () => {

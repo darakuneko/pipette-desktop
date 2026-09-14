@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { deriveSimulatedColor, DEFAULT_SIMULATED_COLOR } from '../simulated-color'
+import { deriveSimulatedColor, DEFAULT_SIMULATED_COLOR, DEFAULT_WIRE_COL_COLOR } from '../simulated-color'
 
 describe('deriveSimulatedColor', () => {
   it('rotates a pure blue remap color to a clamped yellow on light theme', () => {
@@ -69,6 +69,17 @@ describe('deriveSimulatedColor', () => {
   it('clamps a dark-theme source that already falls below 60% lightness', () => {
     const result = deriveSimulatedColor('#1a2b8f', 'dark')
     expect(result).toMatch(/^#[0-9a-f]{6}$/)
+  })
+
+  describe('custom fallback parameter', () => {
+    it('falls back to the given fallback table (not DEFAULT_SIMULATED_COLOR) for a grey source', () => {
+      expect(deriveSimulatedColor('#808080', 'light', DEFAULT_WIRE_COL_COLOR)).toBe(DEFAULT_WIRE_COL_COLOR.light)
+      expect(deriveSimulatedColor('#808080', 'dark', DEFAULT_WIRE_COL_COLOR)).toBe(DEFAULT_WIRE_COL_COLOR.dark)
+    })
+
+    it('still rotates a chromatic source normally regardless of the fallback table', () => {
+      expect(deriveSimulatedColor('#0000ff', 'light', DEFAULT_WIRE_COL_COLOR)).toBe('#ffff00')
+    })
   })
 
   describe('hsl() hue unit suffixes', () => {

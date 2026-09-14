@@ -569,35 +569,20 @@ describe('pipette-settings-store', () => {
       expect(result.error).toContain('Invalid prefs')
     })
 
-    it('accepts viewMatrixWires boolean and round-trips it (true)', async () => {
+    it.each([true, false])('round-trips viewMatrixWires=%s (readData() must echo it back, not drop it)', async (value) => {
       const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await setter(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'qwerty',
         autoAdvance: true,
         layerNames: [],
-        viewMatrixWires: true,
+        viewMatrixWires: value,
       }) as { success: boolean }
       expect(result.success).toBe(true)
 
       const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
       const prefs = await getter(fakeEvent, 'uid-1') as { viewMatrixWires: boolean }
-      expect(prefs.viewMatrixWires).toBe(true)
-    })
-
-    it('round-trips viewMatrixWires=false (readData() must echo it back, not drop it)', async () => {
-      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
-      await setter(fakeEvent, 'uid-1', {
-        _rev: 1,
-        keyboardLayout: 'qwerty',
-        autoAdvance: true,
-        layerNames: [],
-        viewMatrixWires: false,
-      })
-
-      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
-      const prefs = await getter(fakeEvent, 'uid-1') as { viewMatrixWires: boolean }
-      expect(prefs.viewMatrixWires).toBe(false)
+      expect(prefs.viewMatrixWires).toBe(value)
     })
 
     it('rejects prefs with non-boolean viewMatrixWires', async () => {
