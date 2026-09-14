@@ -318,13 +318,12 @@ describe('KeycodesOverlayPanel', () => {
       onViewMatrixWiresChange: vi.fn(),
     }
 
-    it('shows a visible "Wires" label next to the wiring toggle', () => {
+    it('exposes the wiring toggle by accessible name only, with no visible label', () => {
       render(<KeycodesOverlayPanel {...viewMatrixProps} viewMatrixWires={false} />)
 
       const toggle = screen.getByTestId('overlay-view-matrix-wires-toggle')
-      const label = screen.getByText('Wires')
-      expect(label).toBeInTheDocument()
-      expect(label.parentElement).toContainElement(toggle)
+      expect(toggle).toHaveAttribute('aria-label', 'Wires')
+      expect(screen.queryByText('Wires')).not.toBeInTheDocument()
     })
 
     it('clicking Edit calls onToggleViewMatrixMode without touching the wires toggle', () => {

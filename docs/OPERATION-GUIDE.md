@@ -850,7 +850,7 @@ Only keys you change are stored — every other key keeps its physical matrix po
 
 **Wires**
 
-The View Matrix row (§3.14) also has a **Wires** toggle, to the right of the **Edit** button. Turning it on draws the keyboard's matrix wiring over the keymap: a hollow dot at the center of every key, one line per matrix row joining that row's keys in column order, and one line per matrix column joining that column's keys in row order, with row numbers in a gutter on the left and column numbers along the top. Row and column wires are drawn in distinct colors that follow the active theme pack (§6.4).
+The View Matrix row (§3.14) also has a toggle switch at its right edge (its accessible name is **Wires**; the switch itself carries no text label). Turning it on draws the keyboard's matrix wiring over the keymap: a hollow dot at the center of every key, one line per matrix row joining that row's keys in column order, and one line per matrix column joining that column's keys in row order, with row numbers in a gutter on the left and column numbers along the top. Row and column wires are drawn in distinct colors that follow the active theme pack (§6.4).
 
 ![View Matrix Wires](screenshots/view-matrix-wires.png)
 
@@ -1107,7 +1107,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 
 - **Key Editor Zoom**: Set the UI zoom level (50–200%) applied while in key editor mode. Defaults to the global UI zoom (§6.5) when not configured. Saved and synced per keyboard
 - **Auto Move**: Toggle automatic advancement to the next key after assigning a keycode
-- **View Matrix**: **Edit** / **Done** enters or leaves View Matrix mode to customize the Auto Move key order; the **Wires** toggle on the same row shows or hides the matrix wiring overlay on the keymap, independently of Edit mode (see §2.6)
+- **View Matrix**: **Edit** / **Done** enters or leaves View Matrix mode to customize the Auto Move key order; the unlabelled toggle switch at the right edge of the same row (**Wires**) shows or hides the matrix wiring overlay on the keymap, independently of Edit mode (see §2.6)
 - **Instant Key Selection**: Toggle instant key selection mode (see §2.2 for behavior details)
 - **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
 - **Key Tester**: Toggle Matrix Tester mode (supported keyboards only)

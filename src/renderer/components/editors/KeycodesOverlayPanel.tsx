@@ -279,22 +279,17 @@ export function KeycodesOverlayPanel({
                     {viewMatrixActive ? t('editor.viewMatrix.done') : t('editor.viewMatrix.edit')}
                   </button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-content">
-                    {t('editor.viewMatrix.wires')}
-                  </span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={!!viewMatrixWires}
-                    aria-label={t('editor.viewMatrix.wires')}
-                    className={toggleTrackClass(!!viewMatrixWires)}
-                    onClick={() => onViewMatrixWiresChange?.(!viewMatrixWires)}
-                    data-testid="overlay-view-matrix-wires-toggle"
-                  >
-                    <span className={toggleKnobClass(!!viewMatrixWires)} />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={!!viewMatrixWires}
+                  aria-label={t('editor.viewMatrix.wires')}
+                  className={toggleTrackClass(!!viewMatrixWires)}
+                  onClick={() => onViewMatrixWiresChange?.(!viewMatrixWires)}
+                  data-testid="overlay-view-matrix-wires-toggle"
+                >
+                  <span className={toggleKnobClass(!!viewMatrixWires)} />
+                </button>
               </div>
             )}
 
