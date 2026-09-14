@@ -132,7 +132,9 @@ export interface ViewMatrixZoomRowProps {
  *  pane — plus the same Ctrl/Shift multi-select hint the keycode picker
  *  shows in normal mode (reused key: the picker is hidden entirely for the
  *  mode's duration, but the Ctrl+click / Shift+click gestures it describes
- *  still drive this mode's own multi-selection). */
+ *  still drive this mode's own multi-selection). Ends with a Pipette-only
+ *  disclosure notice, last in document order so it sits at the very bottom
+ *  of the keymap area for the mode's duration. */
 export function ViewMatrixZoomRow({ scale, onScaleChange }: ViewMatrixZoomRowProps) {
   const { t } = useTranslation()
   return (
@@ -157,6 +159,9 @@ export function ViewMatrixZoomRow({ scale, onScaleChange }: ViewMatrixZoomRowPro
           </Tooltip>
         </div>
       )}
+      <p className="max-w-prose text-center text-xs text-content-muted" data-testid="view-matrix-notice">
+        {t('editor.viewMatrix.notice')}
+      </p>
     </div>
   )
 }

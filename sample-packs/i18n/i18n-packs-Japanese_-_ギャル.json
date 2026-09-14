@@ -1,5 +1,5 @@
 {
-  "version": "0.1.90",
+  "version": "0.1.91",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -84,7 +84,8 @@
       "rowLabel": "行",
       "colLabel": "列",
       "blankOption": "—",
-      "wires": "配線っしょ☆"
+      "wires": "配線っしょ☆",
+      "notice": "View Matrixっしょ、Pipetteの中だけの設定でキーボード本体には何も変わんないっしょ☆ カスタム位置が変えるのはPipetteがキーをたどる順番だけっしょ — Auto Move（キーポップオーバーの次のキーもね）、Shift+クリックの範囲選択、複数キーまとめてペーストする時の順番のことね。配線（Wires）はそれに合わせて描き直されるけど、キーボード本体のホントの配線はそのままっしょ☆"
     },
     "keymap": {
       "title": "キーマップっしょ",

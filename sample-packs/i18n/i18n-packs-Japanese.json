@@ -1,5 +1,5 @@
 {
-  "version": "0.1.90",
+  "version": "0.1.91",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -84,7 +84,8 @@
       "rowLabel": "行",
       "colLabel": "列",
       "blankOption": "—",
-      "wires": "配線"
+      "wires": "配線",
+      "notice": "View Matrix は Pipette 内だけの設定で、キーボード本体には何も変更を加えません。カスタム位置が変えるのは Pipette がキーを辿る順序だけです — Auto Move（キーポップオーバーの次のキーも含む）、Shift+クリックの範囲選択、複数キーの一括ペーストの順序です。配線（Wires）オーバーレイはそれに合わせて再描画されますが、キーボード本体の実際のマトリクス配線はそのままです。"
     },
     "keymap": {
       "title": "キーマップ",

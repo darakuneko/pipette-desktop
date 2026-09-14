@@ -1,5 +1,5 @@
 {
-  "version": "0.1.90",
+  "version": "0.1.91",
   "name": "English",
   "common": {
     "save": "Save",
@@ -84,7 +84,8 @@
       "rowLabel": "Row",
       "colLabel": "Col",
       "blankOption": "—",
-      "wires": "Wires"
+      "wires": "Wires",
+      "notice": "The View Matrix lives only in Pipette and changes nothing on the keyboard. Custom positions only change the order Pipette walks keys in — Auto Move (including the key popover's next key), Shift+click range selection, and multi-key paste. The Wires overlay redraws to match, but the keyboard's real matrix wiring stays as it is."
     },
     "keymap": {
       "title": "Keymap",
