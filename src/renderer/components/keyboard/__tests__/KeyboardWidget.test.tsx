@@ -8,6 +8,7 @@ import { render } from '@testing-library/react'
 import { rotatePoint, KeyboardWidget } from '../KeyboardWidget'
 import { KEY_UNIT, KEY_SPACING, KEY_SIZE_RATIO, KEY_SPACING_RATIO, KEYBOARD_PADDING, KEY_TEXT_COLOR, KEY_REMAP_COLOR } from '../constants'
 import { parseKle } from '../../../../shared/kle/kle-parser'
+import { posKey } from '../../../../shared/kle/pos-key'
 import type { KleKey } from '../../../../shared/kle/types'
 
 vi.mock('../../../../shared/keycodes/keycodes', () => ({
@@ -286,5 +287,62 @@ describe('KeyboardWidget remappedEncoders threading', () => {
     )
     const text = container.querySelector('text')!
     expect(text.getAttribute('fill')).toBe(KEY_TEXT_COLOR)
+  })
+})
+
+describe('KeyboardWidget matrixWires prop', () => {
+  const keys: KleKey[] = [
+    makeKey({ x: 0, y: 0, row: 0, col: 0 }),
+    makeKey({ x: 1, y: 0, row: 0, col: 1 }),
+  ]
+  const keycodes = new Map([['0,0', 'KC_A'], ['0,1', 'KC_B']])
+  const scale = 1
+  const s = KEY_UNIT * scale
+  const spacing = KEY_SPACING * scale
+  const pad2 = KEYBOARD_PADDING * 2
+  // Same formulas KeyboardWidget itself uses: fontSize is KeyWidget's own
+  // label clamp, gutter is the larger of half a key unit or 2.5 gutter
+  // lines of that font size.
+  const expectedFontSize = Math.max(8, Math.min(12, 12 * scale))
+  const expectedGutter = Math.max(KEY_UNIT * 0.5 * scale, expectedFontSize * 2.5)
+
+  it('leaves bounds numerically identical to the no-overlay case when matrixWires is undefined', () => {
+    const { container } = render(<KeyboardWidget keys={keys} keycodes={keycodes} scale={scale} />)
+    const svg = container.querySelector('svg')!
+    const [originX, originY, width, height] = svg.getAttribute('viewBox')!.split(' ').map(Number)
+    expect(originX).toBeCloseTo(-KEYBOARD_PADDING)
+    expect(originY).toBeCloseTo(-KEYBOARD_PADDING)
+    expect(width).toBeCloseTo(s * 2 - spacing + pad2)
+    expect(height).toBeCloseTo(s * 1 - spacing + pad2)
+    expect(container.querySelector('[data-testid="matrix-wires"]')).toBeNull()
+  })
+
+  it('grows all four sides of the bounds by the gutter when matrixWires is provided', () => {
+    const matrixWires = new Map([
+      [posKey(0, 0), { row: 0, col: 0 }],
+      [posKey(0, 1), { row: 0, col: 1 }],
+    ])
+    const { container } = render(
+      <KeyboardWidget keys={keys} keycodes={keycodes} scale={scale} matrixWires={matrixWires} />,
+    )
+    const svg = container.querySelector('svg')!
+    const [originX, originY, width, height] = svg.getAttribute('viewBox')!.split(' ').map(Number)
+    expect(originX).toBeCloseTo(-KEYBOARD_PADDING - expectedGutter)
+    expect(originY).toBeCloseTo(-KEYBOARD_PADDING - expectedGutter)
+    expect(width).toBeCloseTo(s * 2 - spacing + pad2 + expectedGutter * 2)
+    expect(height).toBeCloseTo(s * 1 - spacing + pad2 + expectedGutter * 2)
+  })
+
+  it('renders the matrix-wires overlay as the last child of the svg', () => {
+    const matrixWires = new Map([
+      [posKey(0, 0), { row: 0, col: 0 }],
+      [posKey(0, 1), { row: 0, col: 1 }],
+    ])
+    const { container } = render(
+      <KeyboardWidget keys={keys} keycodes={keycodes} scale={scale} matrixWires={matrixWires} />,
+    )
+    const svg = container.querySelector('svg')!
+    const lastChild = svg.lastElementChild!
+    expect(lastChild.getAttribute('data-testid')).toBe('matrix-wires')
   })
 })

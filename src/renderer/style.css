@@ -224,6 +224,13 @@ label:has(> input[type="radio"]:not(:disabled)) {
   /* View Matrix's duplicate-position warning fill — derived from the
      warning token rather than a new raw hue. */
   --key-bg-duplicate: color-mix(in srgb, var(--warning) 45%, var(--key-bg) 55%);
+  /* View Matrix wiring overlay: row wires reuse the accent token directly.
+     Col wires use a fixed hue-rotated complement of accent, precomputed
+     the same way simulated-color.ts derives key-label-simulated from
+     key-label-remap (rotate 180°, clamp lightness to <=50 for light) so
+     row and col are never the same color even for a custom accent. */
+  --wire-row: var(--accent);
+  --wire-col: #eaa715;
 
   --tab-bg-active: #2563eb;
   --tab-text: #6b7280;
@@ -274,6 +281,10 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --key-bg-multi-selected: #3a6fcf;
   --key-mask-bg: color-mix(in srgb, var(--key-bg) 70%, var(--surface) 30%);
   --key-bg-duplicate: color-mix(in srgb, var(--warning) 45%, var(--key-bg) 55%);
+  /* Same derivation as :root above, computed for the dark accent
+     (#4c8dff): rotate 180°, clamp lightness to >=60 for dark. */
+  --wire-row: var(--accent);
+  --wire-col: #ffbe4c;
 
   --tab-bg-active: #4c8dff;
   --tab-text: #8892a8;
@@ -380,6 +391,8 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --color-key-label-simulated: var(--key-label-simulated);
   --color-key-bg-multi-selected: var(--key-bg-multi-selected);
   --color-key-bg-duplicate: var(--key-bg-duplicate);
+  --color-wire-row: var(--wire-row);
+  --color-wire-col: var(--wire-col);
 
   /* Tab */
   --color-tab-bg-active: var(--tab-bg-active);

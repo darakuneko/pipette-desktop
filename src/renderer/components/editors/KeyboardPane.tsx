@@ -49,6 +49,8 @@ export interface KeyboardPaneProps {
   heatmapMaxTotal?: number
   heatmapMaxTap?: number
   heatmapMaxHold?: number
+  /** View Matrix wiring overlay — see `KeyboardWidget`'s `matrixWires`. */
+  matrixWires?: ReadonlyMap<string, { row: number; col: number }>
   scale: number
   /** Current-layer label shown below the keymap. Omitted in View Matrix
    *  mode, which has no layer concept (layer switching is disabled for
@@ -111,6 +113,7 @@ export function KeyboardPane({
   heatmapMaxTotal,
   heatmapMaxTap,
   heatmapMaxHold,
+  matrixWires,
   scale,
   layerLabel,
   layerLabelTestId,
@@ -159,6 +162,7 @@ export function KeyboardPane({
           heatmapMaxTotal={heatmapMaxTotal}
           heatmapMaxTap={heatmapMaxTap}
           heatmapMaxHold={heatmapMaxHold}
+          matrixWires={matrixWires}
           scale={scale}
           readOnly={readOnly}
           onKeyClick={isActive ? onKeyClick : undefined}

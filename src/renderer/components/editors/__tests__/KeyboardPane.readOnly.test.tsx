@@ -135,4 +135,17 @@ describe('KeyboardPane — readOnly (Plan-qwerty-select-no-rewrite v7)', () => {
     expect(getByTestId('layer-label')).toHaveTextContent('Layer 0')
     expect(getByTestId('layer-label')).not.toHaveTextContent('Preview')
   })
+
+  it('threads matrixWires through to KeyboardWidget, rendering the wiring overlay', () => {
+    const matrixWires = new Map([['0,0', { row: 0, col: 0 }]])
+    const { container } = render(
+      <KeyboardPane {...baseProps()} matrixWires={matrixWires} />,
+    )
+    expect(container.querySelector('[data-testid="matrix-wires"]')).not.toBeNull()
+  })
+
+  it('renders no wiring overlay when matrixWires is omitted', () => {
+    const { container } = render(<KeyboardPane {...baseProps()} />)
+    expect(container.querySelector('[data-testid="matrix-wires"]')).toBeNull()
+  })
 })

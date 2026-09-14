@@ -39,8 +39,12 @@ export type ThemeColorKey = (typeof THEME_COLOR_KEYS)[number]
  *  "Display Only" tint, distinct from the `key-label-remap` "actual"
  *  tint) falls back to an automatic complement of `key-label-remap` when
  *  absent — see `deriveSimulatedColor` in `simulated-color.ts` and
- *  `applyPackColors` in `useTheme.ts`. */
-export const OPTIONAL_THEME_COLOR_KEYS = ['key-label-simulated'] as const
+ *  `applyPackColors` in `useTheme.ts`. `wire-row` and `wire-col` are the
+ *  View Matrix wiring overlay's row/col line + gutter-number colors: a
+ *  pack that omits them falls back to `accent` (row) and a hue-rotated
+ *  complement of `accent` (col), the same complement derivation as
+ *  `key-label-simulated` — see `applyPackColors` in `useTheme.ts`. */
+export const OPTIONAL_THEME_COLOR_KEYS = ['key-label-simulated', 'wire-row', 'wire-col'] as const
 
 export type OptionalThemeColorKey = (typeof OPTIONAL_THEME_COLOR_KEYS)[number]
 

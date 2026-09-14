@@ -12,6 +12,8 @@ import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
 import { flashPropsFor, type KeyFlashState } from './key-flash'
 import { keyCorners } from './key-geometry'
+import { buildMatrixWires } from './matrix-wires'
+import { MatrixWiresOverlay } from './MatrixWiresOverlay'
 
 // `rotatePoint` used to live here; it moved to `key-geometry.ts` so the
 // matrix-wires geometry module can share it without importing this
@@ -78,6 +80,14 @@ interface Props {
   onKeyHoverEnd?: () => void
   readOnly?: boolean
   scale?: number
+  /** View Matrix wiring overlay: each physical key's effective (row, col)
+   *  — the View Matrix override when one exists, otherwise the physical
+   *  position itself — keyed by `posKey(key.row, key.col)`. Undefined
+   *  turns the overlay off entirely (no gutter, no wires, bounds
+   *  identical to before this prop existed); a Map (even an empty one)
+   *  turns it on. The caller (`useViewMatrixEditing`) owns building this
+   *  Map — this component has no idea what View Matrix mode is. */
+  matrixWires?: ReadonlyMap<string, { row: number; col: number }>
 }
 
 function KeyboardWidgetInner({
@@ -111,6 +121,7 @@ function KeyboardWidgetInner({
   onKeyHoverEnd,
   readOnly = false,
   scale = 1,
+  matrixWires,
 }: Props) {
   const effectiveTheme = useEffectiveTheme()
 
@@ -123,11 +134,25 @@ function KeyboardWidgetInner({
     return filterVisibleKeys(repositionLayoutKeys(keys, opts), opts)
   }, [keys, layoutOptions])
 
+  // Same clamp KeyWidget uses for its own label text — kept in sync so the
+  // gutter numbers read at a consistent size relative to the key legends
+  // they sit next to.
+  const matrixWiresFontSize = Math.max(8, Math.min(12, 12 * scale))
+  // The label gutter only exists while the overlay is on. Sized to fit
+  // two staggered lines of gutter numbers (see matrix-wires.ts's label
+  // overlap handling) or half a key unit, whichever is larger.
+  const matrixWiresGutter = matrixWires ? Math.max(KEY_UNIT * 0.5 * scale, matrixWiresFontSize * 2.5) : 0
+
   // Calculate SVG bounds (track min to normalize position)
   const bounds = useMemo(() => {
     const pad2 = KEYBOARD_PADDING * 2
     if (visibleKeys.length === 0) {
-      return { width: pad2, height: pad2, originX: -KEYBOARD_PADDING, originY: -KEYBOARD_PADDING }
+      return {
+        width: pad2 + matrixWiresGutter * 2,
+        height: pad2 + matrixWiresGutter * 2,
+        originX: -KEYBOARD_PADDING - matrixWiresGutter,
+        originY: -KEYBOARD_PADDING - matrixWiresGutter,
+      }
     }
     let minX = Infinity
     let minY = Infinity
@@ -143,13 +168,27 @@ function KeyboardWidgetInner({
         if (cy > maxY) maxY = cy
       }
     }
+    // The gutter widens the bounds symmetrically on all four sides — even
+    // though labels only ever draw into the left/top bands — so the
+    // keyboard stays horizontally/vertically centered inside its
+    // `justify-center` wrapper when the overlay is toggled on and off.
     return {
-      width: maxX - minX + pad2,
-      height: maxY - minY + pad2,
-      originX: minX - KEYBOARD_PADDING,
-      originY: minY - KEYBOARD_PADDING,
+      width: maxX - minX + pad2 + matrixWiresGutter * 2,
+      height: maxY - minY + pad2 + matrixWiresGutter * 2,
+      originX: minX - KEYBOARD_PADDING - matrixWiresGutter,
+      originY: minY - KEYBOARD_PADDING - matrixWiresGutter,
     }
-  }, [visibleKeys, scale])
+  }, [visibleKeys, scale, matrixWiresGutter])
+
+  const matrixWiresLayout = useMemo(() => {
+    if (!matrixWires) return null
+    return buildMatrixWires(visibleKeys, matrixWires, scale, {
+      originX: bounds.originX,
+      originY: bounds.originY,
+      size: matrixWiresGutter,
+      fontSize: matrixWiresFontSize,
+    })
+  }, [visibleKeys, matrixWires, scale, bounds, matrixWiresGutter, matrixWiresFontSize])
 
   return (
     <svg
@@ -271,6 +310,9 @@ function KeyboardWidgetInner({
           />
         )
       })}
+      {matrixWiresLayout && (
+        <MatrixWiresOverlay layout={matrixWiresLayout} scale={scale} fontSize={matrixWiresFontSize} />
+      )}
     </svg>
   )
 }

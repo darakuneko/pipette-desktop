@@ -45,6 +45,15 @@ export function applyPackColors(colors: ThemePackColors, colorScheme: ThemeColor
   // clamped for the pack's own colorScheme (see simulated-color.ts).
   const simulatedColor = colors['key-label-simulated'] ?? deriveSimulatedColor(colors['key-label-remap'], colorScheme)
   root.style.setProperty('--key-label-simulated', simulatedColor)
+  // Optional wire-row/wire-col: the View Matrix wiring overlay's row/col
+  // colors. A pack's own values win; otherwise row falls back to the
+  // pack's accent and col to a hue-rotated complement of accent (same
+  // derivation as key-label-simulated above, just rooted at accent
+  // instead of key-label-remap).
+  const wireRowColor = colors['wire-row'] ?? colors['accent']
+  const wireColColor = colors['wire-col'] ?? deriveSimulatedColor(colors['accent'], colorScheme)
+  root.style.setProperty('--wire-row', wireRowColor)
+  root.style.setProperty('--wire-col', wireColColor)
   root.style.setProperty('color-scheme', colorScheme)
 }
 
@@ -54,6 +63,8 @@ export function clearPackColors(): void {
     root.style.removeProperty(`--${key}`)
   }
   root.style.removeProperty('--key-label-simulated')
+  root.style.removeProperty('--wire-row')
+  root.style.removeProperty('--wire-col')
   root.style.removeProperty('color-scheme')
 }
 
