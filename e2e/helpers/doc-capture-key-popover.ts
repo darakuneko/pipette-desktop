@@ -2,8 +2,8 @@
 
 // Re-capture Key Popover screenshots for the operation guide.
 // Connects to the virtual "Virtual Keyboard" device (PIPETTE_VIRTUAL_DEVICE=only)
-// and captures popover screenshots with sequential numbering matching the
-// existing guide. No real hardware required.
+// and captures popover screenshots under the plain names referenced by the
+// guide. No real hardware required.
 //
 // Usage: pnpm build && npx tsx e2e/helpers/doc-capture-key-popover.ts
 
@@ -70,15 +70,24 @@ async function main(): Promise<void> {
       await page.waitForTimeout(300)
     }
 
-    // Double-click a key to open the popover
-    const keyLabel = editorContent.locator('svg text').first()
-    if (!(await isAvailable(keyLabel))) {
-      throw new Error('No key label found in layout')
+    // Double-click a key to open the popover. Resolve the key's own `<g
+    // data-key-pos="row,col">` group by its literal row/col rather than by
+    // DOM position (`.first()`) — selecting a key re-parents its group to
+    // the end of the SVG for z-index stacking, so a position-based locator
+    // silently starts pointing at a different physical key the moment the
+    // popover opens. Pin down the row/col up front and keep addressing the
+    // same key by that value for the rest of the run (needed below to
+    // re-open the same key after Undo).
+    const firstKey = editorContent.locator('[data-key-pos]').first()
+    if (!(await isAvailable(firstKey))) {
+      throw new Error('No key found in layout')
     }
     await page.evaluate(() => window.scrollTo(0, 0))
     await page.waitForTimeout(300)
+    const targetKeyPos = await firstKey.getAttribute('data-key-pos')
+    const targetKey = editorContent.locator(`[data-key-pos="${targetKeyPos}"]`)
 
-    await keyLabel.evaluate((el) => {
+    await targetKey.evaluate((el) => {
       el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }))
     })
     await page.waitForTimeout(500)
@@ -93,15 +102,15 @@ async function main(): Promise<void> {
     // Layer sidebar (popover with layer buttons on the left)
     await capture(page, 'key-popover-layer-sidebar')
 
-    // 32: Key tab (default, shows all mode buttons)
-    await capture(page, '32-key-popover-key')
+    // Key tab (default, shows all mode buttons)
+    await capture(page, 'key-popover-key')
 
-    // 33: Code tab
+    // Code tab
     await page.locator('[data-testid="popover-tab-code"]').click()
     await page.waitForTimeout(300)
-    await capture(page, '33-key-popover-code')
+    await capture(page, 'key-popover-code')
 
-    // 34: Mod Mask mode with modifier selected
+    // Mod Mask mode with modifier selected
     await page.locator('[data-testid="popover-tab-key"]').click()
     await page.waitForTimeout(200)
     await page.locator('[data-testid="popover-mode-mod-mask"]').click()
@@ -111,16 +120,16 @@ async function main(): Promise<void> {
       await lSftBtn.click()
       await page.waitForTimeout(200)
     }
-    await capture(page, '34-key-popover-modifier')
+    await capture(page, 'key-popover-modifier')
 
-    // 35: LT mode with layer selector
+    // LT mode with layer selector
     await page.locator('[data-testid="popover-mode-mod-mask"]').click()
     await page.waitForTimeout(200)
     await page.locator('[data-testid="popover-mode-lt"]').click()
     await page.waitForTimeout(300)
-    await capture(page, '35-key-popover-lt')
+    await capture(page, 'key-popover-lt')
 
-    // 36: Undo button visible after keycode change
+    // Undo button visible after keycode change
     // Switch back to Key tab default mode, select a different keycode to trigger undo recording
     await page.locator('[data-testid="popover-mode-lt"]').click()
     await page.waitForTimeout(200)
@@ -135,25 +144,24 @@ async function main(): Promise<void> {
     // Undo button should now be visible at the bottom of the popover
     const undoBtn = page.locator('[data-testid="popover-undo"]')
     if (await isAvailable(undoBtn)) {
-      await capture(page, '36-key-popover-undo')
+      await capture(page, 'key-popover-undo')
     } else {
       console.warn('  [skip] undo button not visible — could not capture')
     }
 
-    // 37: Redo button visible after undo + re-open
-    // Close the popover, undo via Ctrl+Z, then re-open to show redo
+    // Redo button visible after undo + re-open
+    // Close the popover, undo via Ctrl+Z, then re-open the same key to show redo
     await page.keyboard.press('Escape')
     await page.waitForTimeout(500)
     await page.keyboard.press('Control+z')
     await page.waitForTimeout(500)
-    const keyLabel2 = editorContent.locator('svg text').first()
-    if (await isAvailable(keyLabel2)) {
-      await keyLabel2.dblclick({ force: true })
+    if (await isAvailable(targetKey)) {
+      await targetKey.dblclick({ force: true })
       await page.waitForTimeout(1000)
     }
     const redoBtn = page.locator('[data-testid="popover-redo"]')
     if (await isAvailable(redoBtn)) {
-      await capture(page, '37-key-popover-redo')
+      await capture(page, 'key-popover-redo')
     } else {
       console.warn('  [skip] redo button not visible — could not capture')
     }

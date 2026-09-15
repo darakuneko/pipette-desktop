@@ -326,7 +326,8 @@ async function captureEditorDataTab(page: Page): Promise<void> {
 
     await page.locator('[data-testid="layout-store-save-submit"]').click()
     await page.waitForTimeout(1500)
-    await capture(page, 'hub-02-saved-default', { fullPage: true })
+    // The saved-entry state is what hub-03-upload-button.png shows next, so
+    // no separate capture here.
   }
 
   console.log('\n--- Hub Upload ---')
@@ -348,14 +349,12 @@ async function captureEditorDataTab(page: Page): Promise<void> {
     }
     await page.waitForTimeout(5000)
     await capture(page, 'hub-04-uploaded', { fullPage: true })
-
-    const shareLink = page.locator('[data-testid="layout-store-hub-share-link"]').first()
-    if (await isAvailable(shareLink)) {
-      await capture(page, 'hub-05-share-link', { fullPage: true })
-    }
+    // hub-04-uploaded.png already shows the Open / Update / Remove row, so
+    // the share-link state needs no extra capture.
   } else {
+    // No fallback screenshot: an unauthenticated run would only produce a
+    // stale, unreferenced image under docs/screenshots.
     console.log('  [skip] Upload button not available (Hub not configured or display name not set)')
-    await capture(page, 'hub-03-no-upload', { fullPage: true })
   }
 }
 

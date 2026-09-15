@@ -1061,8 +1061,9 @@ async function captureLayerNavigation(page: Page): Promise<void> {
 
 // --- Phase 4: Keycode Category Tabs ---
 
+// Basic is captured separately as basic-ansi-view.png (and the ISO / JIS /
+// list variants), so it is not part of this generic tab-${id} pass.
 const KEYCODE_TABS = [
-  { id: 'basic', label: 'Basic' },
   { id: 'layers', label: 'Layers' },
   { id: 'modifiers', label: 'Modifiers' },
   { id: 'system', label: 'System' },

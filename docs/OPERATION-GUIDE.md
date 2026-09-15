@@ -173,6 +173,9 @@ The left sidebar provides a **tree navigation** with the following structure:
   - **Application**: Import/export local data, or reset application settings
 - **Sync** (when Cloud Sync is configured): Lists keyboards that exist only in Google Drive (not yet downloaded on this device). Each entry is labeled with the keyboard's real name, resolved from the synced name index rather than from the raw UID. Click a remote-only keyboard to download it on demand — a spinner is shown while fetching, and a failure message appears inline if the download cannot complete. Once downloaded, the keyboard moves into the **Local › Keyboards** branch
   - **Cloud Data**: Reset targets that aren't tied to one keyboard — Favorites, Language Packs, Theme Packs, Key Labels, and imported Typing Test Texts. Only the targets actually present on Google Drive are listed. Each row has its own **Reset** button with a two-step confirmation (click Reset, then confirm or cancel); resetting removes that target's data from Google Drive only — local copies on this device are untouched, and a local copy that still exists re-uploads on the next sync (the same behavior Favorites already has). This is also where **Undecryptable Files** are listed and cleaned up: files that cannot be decrypted with the current password (e.g. encrypted with a forgotten previous password) appear as their own rows with a filename and a **Delete** button (two-step confirmation, one file at a time)
+
+![Data — Sync](screenshots/data-sidebar-sync.png)
+
 - **Hub** (when Hub is connected): Manage Hub posts grouped by keyboard name
 
 Keyboards are shown by display name everywhere in this panel: on connect, a keyboard that has no saved name yet is automatically named from its USB product name, so even keyboards that never saved anything show a real name instead of a raw uid — including in the **Sync** list. Every keyboard list is sorted A–Z by display name (case-insensitive).
@@ -240,6 +243,8 @@ When the **Source** dimension is set to **TypingTest** and its **Results** drill
 
 **Filter conditions modal**
 
+![Analyze — Filter conditions modal](screenshots/analyze-app-filter.png)
+
 The modal edits a draft copy of the filters — nothing on the page changes until you press **Save**. **Reset** returns the Device and Source rows (and the App/TypingTest toggle) to their defaults — the Keyboard, Keymap, and Period rows keep their current draft values. Pressing Esc, the close button, or clicking outside the modal discards the whole draft instead. Rows, top to bottom:
 
 - **Keyboard** — see **Keyboard selector** above
@@ -254,6 +259,8 @@ The modal edits a draft copy of the filters — nothing on the page changes unti
 Individual tabs still add their own filters above the chart (view mode, granularity, unit, etc.), outside the modal; those are described per tab in the sections below. The Heatmap tab keeps its **Normalize** / **Aggregate** / **Group** / **Top N** controls with the ranking row underneath the keyboard itself.
 
 **Saved search conditions**
+
+![Analyze — Save panel](screenshots/analyze-filter-store.png)
 
 The bookmark icon in the panel header opens the **Saved search conditions** side panel. Save the active filters under a label, restore a saved set later, rename / delete entries, or export the current condition's chart data as CSV. Each saved entry shows a one-line summary of the filters (device, app, snapshot, range) under its label; the entry itself captures the full filter state — including the App / TypingTest dimension and its test / run selections — and restores all of it on Load.
 
@@ -281,6 +288,8 @@ The Summary tab is the default landing view. It collects four read-only cards bu
   - **Error mix** — substitution / omission / insertion rates (each a share of the target characters classified), char-weighted the same way as KSPC across every saved Typing Test result in the window. Each rate's population average is shown alongside as plain text — unlike Speed and KSPC, this card doesn't show a position label here: with three rates packed into one grid cell, three long labels (Far below average / Below average / Average / Above average / Far above average) would triple the cell's height, and there's no compact form to fall back on. Each rate's position label is shown instead in the Typing Test's own History → Error mix rows (see below). Reads `Not enough data` when no saved result in the window carries this figure. Like KSPC, it's **not filtered by Device/App**, and Romaji-input runs are excluded — a Romaji run's committed text is always one of the accepted spellings for its target, so there's no target/typed difference left to classify
   - **Typing style** — the nearest population typing-style profile to your recent speed, rhythm, and error patterns (rollover is not part of the comparison). Shows one of a small set of named styles, `No match` (your typing doesn't closely resemble any reference profile) or `Between styles` (it sits about equally between two of them), or `Not enough data` when there isn't yet enough speed/rhythm data to compare. The tooltip notes when a match didn't use any error data (e.g. no qualifying saved Typing Test results in the window)
 - **Goal streak record** — Current cycle progress (`current / goalDays`), longest historical streak, and editable Goal settings (consecutive days × keystrokes/day). Changing the goal clears the current cycle counter. The **Achievement history** button opens a modal that lists every completed cycle with period, goal, days, total keystrokes, and average per day
+
+![Analyze — Goal achievement history](screenshots/analyze-goal-achievements.png)
 
 The Summary tab respects the App filter — selecting one or more apps narrows every card to minutes tagged with those apps (the Typing profile card's KSPC and Error mix read-outs are the exception — see above; Typing style sits in between, since its speed/rhythm inputs follow the App filter but its error-pattern input comes from the same unfiltered History source as Error mix).
 
@@ -677,6 +686,8 @@ The **Export** button on the panel header opens a category-pick modal that write
 - **Layer** — per-layer keystroke or activation counts
 - **Layout Comparison** — per-finger / row / hand deltas (snapshot-bound; reflects manual finger overrides)
 
+![Analyze — Export categories](screenshots/analyze-export-modal.png)
+
 The modal lists the active conditions (Device, App, Keymap, Period) above the category list so the file you save is unambiguous about which slice it captures. Heatmap, Ergonomics, and Layout Comparison entries are unavailable when the range has no overlapping snapshot — the modal shows a "snapshot missing" notice for those categories. Manual finger overrides are noted next to the Ergonomics row.
 
 **Upload mode**
@@ -990,6 +1001,10 @@ Opening a macro action brings up the Macro Modal with two display modes that sha
 - **List mode** (default): The action's keycodes are shown as clickable tiles followed by a dashed **add slot**. Single-click a keycode tile to switch that index into edit mode. Single-click the dashed add slot to select it; double-click the dashed slot to open the keycode popover with an empty query (mirrors the keymap editor). The pencil "edit" icon from earlier versions is gone — clicking is the only affordance
 - **Edit mode**: The keycode picker stays visible below the row. Each keycode tile shows a hover **X** button to delete that index, and the Tap row exposes a **Close** button to leave edit mode. Picker and popover selections are **staged** — they update the row visually but are not committed until you press the bottom **Save** button or **Enter**. The footer also shows a **Revert** ConfirmButton when you are editing an action that already existed (it is hidden when you just added the action via Add Action, since there is nothing prior to revert to). Save and Revert are disabled until a pick actually changes something. Pressing **Escape**, the per-row **Close** button, **Revert**, or clicking outside the picker / action list / footer / key popover rolls back the entire in-flight edit — including newly-appended Add-keycode slots or an entirely newly-added action — and leaves edit mode. Deleting a slot during edit shifts the selection so the session continues rather than exiting.
 
+![Macro Modal — List Mode](screenshots/macro-list-mode.png)
+
+![Macro Modal — Edit Mode](screenshots/macro-edit-mode.png)
+
 Empty keycode actions are tolerated while editing; they are normalized out silently when the macro is saved or exported to a favorite.
 
 #### Recording Lock
@@ -1016,6 +1031,8 @@ The Combo tab displays a **tile grid preview** showing all entries. A note reads
 - **Settings: Configuration** button at the bottom opens a settings modal for combo-related timeout configuration (e.g., Combo time out period)
 - **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
 
+![Combo Tile Grid](screenshots/combo-tile-grid.png)
+
 ### 3.9 Key Override
 
 Key Override keycodes for replacing key outputs when specific modifiers are held.
@@ -1027,6 +1044,8 @@ The Key Override tab displays a **tile grid preview** showing all entries and a 
 - Each tile shows the override number and a summary
 - Click a tile to open the Key Override edit modal directly to that entry (§5.3)
 - **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
+
+![Key Override Tile Grid](screenshots/ko-tile-grid.png)
 
 ### 3.10 Alt Repeat Key
 
@@ -1040,9 +1059,13 @@ The Alt Repeat Key tab displays a **tile grid preview** showing all entries and 
 - Click a tile to open the Alt Repeat Key edit modal directly to that entry (§5.4)
 - **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
 
+![Alt Repeat Key Tile Grid](screenshots/ar-tile-grid.png)
+
 ### 3.11 Behavior
 
 Keycodes for advanced QMK behavior features.
+
+![Behavior Tab](screenshots/tab-behavior.png)
 
 - **Magic**: Magic keycodes for swapping and toggling keyboard behaviors
 - **Mode**: NKRO toggle, mode switching keycodes
@@ -1167,6 +1190,8 @@ The keymap editor automatically records a history of keycode changes. You can na
 A typing practice feature. Test your typing with the current keymap while viewing the keyboard layout below. The layout highlights key presses in real time, so you can verify that your physical keymap matches the on-screen display.
 
 Click the **Typing Test** button in the status bar to enter typing test mode.
+
+![Typing Test](screenshots/typing-test.png)
 
 #### Settings Panel
 
@@ -2118,6 +2143,8 @@ To upload a keymap to Hub:
 1. Connect to your keyboard and open the editor settings (gear icon in the keymap editor)
 2. Switch to the **Data** tab
 3. Save the current state with a label (e.g., "Default")
+
+![Save current state](screenshots/hub-01-save-default.png)
 
 ![Upload Button](screenshots/hub-03-upload-button.png)
 
