@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { MatrixWiresOverlay } from '../MatrixWiresOverlay'
 import { buildMatrixWires, colLabelPitch, type MatrixWiresLayout, type MatrixWiresGutter } from '../matrix-wires'
 import { WIRE_ROW_COLOR, WIRE_COL_COLOR, WIRE_NODE_COLOR } from '../constants'
 import { makeKey, makeColumnStackKeys, NO_GUTTER_FONT_SIZE, IDENTITY_CELLS, loadVirtualDeviceLayout } from './kle-test-keys'
+import { posKey } from '../../../../shared/kle/pos-key'
 
 /** A gutter fixture wide enough for label-placement math without a real
  *  KeyboardWidget render — used by suites that don't care about the exact
@@ -119,8 +120,8 @@ describe('MatrixWiresOverlay — label coordinates', () => {
     // Single line (rowLineCount/colLineCount === 1) means the centering
     // offset is exactly zero — the label sits on the band's own midline.
     expect(Number(rowText.getAttribute('x'))).toBeCloseTo(gutter.originX + gutter.left / 2)
-    expect(Number(rowText.getAttribute('y'))).toBeCloseTo(layout.rows[0].label.across)
-    expect(Number(colText.getAttribute('x'))).toBeCloseTo(layout.cols[0].label.across)
+    expect(Number(rowText.getAttribute('y'))).toBeCloseTo(layout.rows[0].labels[0].across)
+    expect(Number(colText.getAttribute('x'))).toBeCloseTo(layout.cols[0].labels[0].across)
     expect(Number(colText.getAttribute('y'))).toBeCloseTo(gutter.originY + gutter.top / 2)
   })
 
@@ -141,9 +142,43 @@ describe('MatrixWiresOverlay — label coordinates', () => {
     for (const colIndex of [1, 3, 7]) {
       const wire = layout.cols.find((c) => c.index === colIndex)!
       const text = texts.find((t) => t.getAttribute('fill') === WIRE_COL_COLOR && t.textContent === String(colIndex))!
-      const expectedY = center + (wire.label.line - (layout.colLineCount - 1) / 2) * pitch
+      const expectedY = center + (wire.labels[0].line - (layout.colLineCount - 1) / 2) * pitch
       expect(Number(text.getAttribute('y'))).toBeCloseTo(expectedY)
-      expect(Number(text.getAttribute('x'))).toBeCloseTo(wire.label.across)
+      expect(Number(text.getAttribute('x'))).toBeCloseTo(wire.labels[0].across)
+    }
+  })
+})
+
+describe('MatrixWiresOverlay — multiple labels per wire', () => {
+  it('renders one <text> per label with no duplicate React keys', () => {
+    // Two physical top-row keys sharing an effective col: buildMatrixWires
+    // gives that wire 2 labels, and the overlay must render both. React
+    // warns to the console (not by throwing) when two siblings share a key,
+    // so the spy below is what actually proves there's no duplicate among
+    // them — the DOM output alone only proves the count and text match.
+    const keys = [
+      makeKey({ row: 0, col: 0, x: 0, y: 0 }),
+      makeKey({ row: 0, col: 1, x: 10, y: 0 }),
+    ]
+    const cells = new Map<string, { row: number; col: number }>([
+      [posKey(0, 0), { row: 0, col: 0 }],
+      [posKey(0, 1), { row: 0, col: 0 }],
+    ])
+    const layout = buildMatrixWires(keys, cells, 1, NO_GUTTER_FONT_SIZE)
+    const col0 = layout.cols.find((c) => c.index === 0)!
+    expect(col0.labels).toHaveLength(2)
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { container } = renderOverlay(layout)
+    expect(errorSpy).not.toHaveBeenCalled()
+    errorSpy.mockRestore()
+
+    const colTexts = [...container.querySelectorAll('text')].filter(
+      (t) => t.getAttribute('fill') === WIRE_COL_COLOR,
+    )
+    expect(colTexts).toHaveLength(2)
+    for (const text of colTexts) {
+      expect(text.textContent).toBe('0')
     }
   })
 })

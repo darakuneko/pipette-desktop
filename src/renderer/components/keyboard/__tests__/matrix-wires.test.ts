@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { buildMatrixWires, rowLabelPitch } from '../matrix-wires'
+import { buildMatrixWires, rowLabelPitch, colLabelPitch } from '../matrix-wires'
 import { KEY_UNIT, KEY_SPACING } from '../constants'
 import { posKey } from '../../../../shared/kle/pos-key'
 import { rotatePoint } from '../../../../shared/kle/rotate-point'
+import { parseKle } from '../../../../shared/kle'
 import {
   makeKey,
   makeColumnStackKeys,
@@ -51,6 +52,16 @@ describe('buildMatrixWires — virtual device GPK60-63R fixture', () => {
       return s * (key.x + key.width / 2) - (KEY_SPACING / 2)
     })
     expect(row4.points.map((p) => p.x)).toEqual(expectedXs)
+  })
+
+  it('gives every col wire exactly one label on this single-piece board', () => {
+    // Regression: the top-row rule must not double up labels on a board
+    // whose topmost physical row already coincides with every column's
+    // own topmost member.
+    const { cols } = buildMatrixWires(layout.keys, IDENTITY_CELLS, 1, NO_GUTTER_FONT_SIZE)
+    for (const col of cols) {
+      expect(col.labels).toHaveLength(1)
+    }
   })
 })
 
@@ -202,8 +213,9 @@ describe('buildMatrixWires — label placement', () => {
     const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 8)
     const row0 = rows.find((r) => r.index === 0)!
     const leftMost = row0.points.reduce((min, p) => (p.x < min.x ? p : min), row0.points[0])
-    expect(row0.label.line).toBe(0)
-    expect(row0.label.across).toBeCloseTo(leftMost.y)
+    expect(row0.labels).toHaveLength(1)
+    expect(row0.labels[0].line).toBe(0)
+    expect(row0.labels[0].across).toBeCloseTo(leftMost.y)
   })
 
   it('places the col label anchor at the topmost point x, on line 0 when nothing collides', () => {
@@ -214,8 +226,9 @@ describe('buildMatrixWires — label placement', () => {
     const { cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 8)
     const col0 = cols.find((c) => c.index === 0)!
     const topMost = col0.points.reduce((min, p) => (p.y < min.y ? p : min), col0.points[0])
-    expect(col0.label.line).toBe(0)
-    expect(col0.label.across).toBeCloseTo(topMost.x)
+    expect(col0.labels).toHaveLength(1)
+    expect(col0.labels[0].line).toBe(0)
+    expect(col0.labels[0].across).toBeCloseTo(topMost.x)
   })
 
   it('stacks three row labels anchored at the exact same y onto three separate lines', () => {
@@ -228,7 +241,7 @@ describe('buildMatrixWires — label placement', () => {
       makeKey({ row: 2, col: 2, x: 2, y: 0 }),
     ]
     const { rows, rowLineCount } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 20)
-    const lines = [0, 1, 2].map((index) => rows.find((r) => r.index === index)!.label.line)
+    const lines = [0, 1, 2].map((index) => rows.find((r) => r.index === index)!.labels[0].line)
     expect(lines).toEqual([0, 1, 2])
     expect(rowLineCount).toBe(3)
   })
@@ -240,7 +253,7 @@ describe('buildMatrixWires — label placement', () => {
       makeKey({ row: 2, col: 2, x: 0, y: 2 }),
     ]
     const { cols, colLineCount } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 20)
-    const lines = [0, 1, 2].map((index) => cols.find((c) => c.index === index)!.label.line)
+    const lines = [0, 1, 2].map((index) => cols.find((c) => c.index === index)!.labels[0].line)
     expect(lines).toEqual([0, 1, 2])
     expect(colLineCount).toBe(3)
   })
@@ -251,7 +264,7 @@ describe('buildMatrixWires — label placement', () => {
     // their third label back onto the second.
     const keys = makeColumnStackKeys()
     const { cols, colLineCount } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 20)
-    const lines = [1, 3, 7].map((index) => cols.find((c) => c.index === index)!.label.line)
+    const lines = [1, 3, 7].map((index) => cols.find((c) => c.index === index)!.labels[0].line)
     expect(lines).toEqual([0, 1, 2])
     expect(colLineCount).toBe(3)
   })
@@ -262,8 +275,8 @@ describe('buildMatrixWires — label placement', () => {
       makeKey({ row: 1, col: 0, x: 0, y: 5 }),
     ]
     const { rows, rowLineCount } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 8)
-    expect(rows[0].label.line).toBe(0)
-    expect(rows[1].label.line).toBe(0)
+    expect(rows[0].labels[0].line).toBe(0)
+    expect(rows[1].labels[0].line).toBe(0)
     expect(rowLineCount).toBe(1)
   })
 
@@ -281,9 +294,9 @@ describe('buildMatrixWires — label placement', () => {
     const row0 = rows.find((r) => r.index === 0)!
     const row1 = rows.find((r) => r.index === 1)!
     const row2 = rows.find((r) => r.index === 2)!
-    expect(row0.label.line).toBe(0)
-    expect(row1.label.line).toBe(0)
-    expect(row2.label.line).toBe(1)
+    expect(row0.labels[0].line).toBe(0)
+    expect(row1.labels[0].line).toBe(0)
+    expect(row2.labels[0].line).toBe(1)
   })
 
   it('walks a chain of overlapping labels into an ascending staircase of lines', () => {
@@ -306,9 +319,9 @@ describe('buildMatrixWires — label placement', () => {
     const row1 = rows.find((r) => r.index === 1)!
     const row2 = rows.find((r) => r.index === 2)!
 
-    expect(row0.label.line).toBe(0)
-    expect(row1.label.line).toBe(1)
-    expect(row2.label.line).toBe(2)
+    expect(row0.labels[0].line).toBe(0)
+    expect(row1.labels[0].line).toBe(1)
+    expect(row2.labels[0].line).toBe(2)
     expect(rowLineCount).toBe(3)
   })
 
@@ -329,9 +342,9 @@ describe('buildMatrixWires — label placement', () => {
     // Pin the premise: the two anchors really are exactly one pitch apart,
     // so a future change to the pitch constant can't silently turn this
     // into a just-over/just-under test without failing here first.
-    expect(Math.abs(row0.label.across - row1.label.across)).toBe(pitch)
-    expect(row0.label.line).toBe(0)
-    expect(row1.label.line).toBe(0)
+    expect(Math.abs(row0.labels[0].across - row1.labels[0].across)).toBe(pitch)
+    expect(row0.labels[0].line).toBe(0)
+    expect(row1.labels[0].line).toBe(0)
     expect(rowLineCount).toBe(1)
   })
 
@@ -352,8 +365,8 @@ describe('buildMatrixWires — label placement', () => {
       makeKey({ row: 7, col: 0, x: 0, y: 3 - 0.3 / KEY_UNIT }),
     ]
     const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 8)
-    expect(rows.find((r) => r.index === 3)!.label.line).toBe(0)
-    expect(rows.find((r) => r.index === 7)!.label.line).toBe(1)
+    expect(rows.find((r) => r.index === 3)!.labels[0].line).toBe(0)
+    expect(rows.find((r) => r.index === 7)!.labels[0].line).toBe(1)
   })
 
   it('keeps a sub-pixel col-coordinate difference from deciding which of two colliding col labels lands on top', () => {
@@ -363,8 +376,8 @@ describe('buildMatrixWires — label placement', () => {
       makeKey({ row: 0, col: 7, x: 3 - 0.3 / KEY_UNIT, y: 0 }),
     ]
     const { cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 8)
-    expect(cols.find((c) => c.index === 3)!.label.line).toBe(0)
-    expect(cols.find((c) => c.index === 7)!.label.line).toBe(1)
+    expect(cols.find((c) => c.index === 3)!.labels[0].line).toBe(0)
+    expect(cols.find((c) => c.index === 7)!.labels[0].line).toBe(1)
   })
 })
 
@@ -382,15 +395,183 @@ describe('buildMatrixWires — split-board label order regression', () => {
     for (const a of rows) {
       for (const b of rows) {
         if (a.index >= b.index) continue
-        if (Math.abs(a.label.across - b.label.across) < pitch) {
-          expect(a.label.line).toBeLessThan(b.label.line)
+        if (Math.abs(a.labels[0].across - b.labels[0].across) < pitch) {
+          expect(a.labels[0].line).toBeLessThan(b.labels[0].line)
         }
       }
     }
 
     const row3 = rows.find((r) => r.index === 3)!
     const row7 = rows.find((r) => r.index === 7)!
-    expect(row3.label.line).toBe(0)
-    expect(row7.label.line).toBe(1)
+    expect(row3.labels[0].line).toBe(0)
+    expect(row7.labels[0].line).toBe(1)
+  })
+})
+
+describe('buildMatrixWires — top-row col labels', () => {
+  it('gives every col wire on the split-thumb fixture 2 labels (one per half) and every row wire 1', () => {
+    // Regression for the split-board report: cols 0-4 are shared by both
+    // halves, and each half's topmost key must get its own gutter number.
+    const layout = loadSplitThumbLayout()
+    const { rows, cols, nodes } = buildMatrixWires(layout.keys, IDENTITY_CELLS, 1, NO_GUTTER_FONT_SIZE)
+    const nodeByPos = new Map(nodes.map((n) => [n.posKey, n]))
+
+    for (const row of rows) {
+      expect(row.labels).toHaveLength(1)
+    }
+
+    for (let col = 0; col <= 4; col++) {
+      const wire = cols.find((c) => c.index === col)!
+      const leftX = nodeByPos.get(posKey(0, col))!.x
+      const rightX = nodeByPos.get(posKey(4, col))!.x
+      const acrossValues = wire.labels.map((l) => l.across).sort((a, b) => a - b)
+      expect(acrossValues).toHaveLength(2)
+      expect(acrossValues[0]).toBeCloseTo(Math.min(leftX, rightX))
+      expect(acrossValues[1]).toBeCloseTo(Math.max(leftX, rightX))
+    }
+  })
+
+  it('keeps exactly one label for a column that only exists in a lower row (no top-row member)', () => {
+    const keys = [
+      makeKey({ row: 0, col: 0, x: 0, y: 0 }), // top row, a different column
+      makeKey({ row: 1, col: 1, x: 1, y: 1 }), // the column under test, one row down
+    ]
+    const { cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER_FONT_SIZE)
+    const col1 = cols.find((c) => c.index === 1)!
+    expect(col1.labels).toHaveLength(1)
+    expect(col1.labels[0].across).toBeCloseTo(col1.points[0].x)
+  })
+
+  it('collapses to one label when the wire anchor is itself the top-row member', () => {
+    const keys = [
+      makeKey({ row: 0, col: 0, x: 0, y: 0 }), // topmost row and this col's own anchor
+      makeKey({ row: 1, col: 0, x: 0, y: 1 }),
+    ]
+    const { cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER_FONT_SIZE)
+    expect(cols.find((c) => c.index === 0)!.labels).toHaveLength(1)
+  })
+
+  it('keeps both ends of a non-transitive dedupe chain (0, 0.75 pitch, 1.5 pitch) when 0 is the anchor', () => {
+    // Closeness isn't transitive: 0.75 pitch collides with the anchor at 0
+    // and is dropped before 1.5 pitch is even considered, so both ends
+    // survive here regardless of whether every kept candidate is checked or
+    // only the most recently kept one — this case alone doesn't tell the two
+    // strategies apart. The 1.2/0/1.0 pitch cluster below does.
+    const fontSize = 8
+    const pitch = colLabelPitch(fontSize)
+    const toDeltaUnits = (px: number) => px / KEY_UNIT
+    const keys = [
+      makeKey({ row: 0, col: 10, x: 0, y: 0 }),
+      makeKey({ row: 1, col: 11, x: toDeltaUnits(pitch * 0.75), y: 0 }),
+      makeKey({ row: 2, col: 12, x: toDeltaUnits(pitch * 1.5), y: 0 }),
+    ]
+    const cells = new Map<string, { row: number; col: number }>([
+      [posKey(0, 10), { row: 0, col: 0 }],
+      [posKey(1, 11), { row: 1, col: 0 }],
+      [posKey(2, 12), { row: 2, col: 0 }],
+    ])
+    const { cols, nodes } = buildMatrixWires(keys, cells, 1, fontSize)
+    const nodeByPos = new Map(nodes.map((n) => [n.posKey, n]))
+    const col0 = cols.find((c) => c.index === 0)!
+    expect(col0.labels).toHaveLength(2)
+    const acrossValues = col0.labels.map((l) => l.across).sort((a, b) => a - b)
+    expect(acrossValues[0]).toBeCloseTo(nodeByPos.get(posKey(0, 10))!.x)
+    expect(acrossValues[1]).toBeCloseTo(nodeByPos.get(posKey(2, 12))!.x)
+  })
+
+  it('drops a candidate close to the anchor even when it is a full pitch from the previously kept candidate', () => {
+    // Distinguishes "compare against every kept candidate" from "compare
+    // against only the most recently kept one": the anchor (topmost, so
+    // smallest y) sits at 1.2 pitch, one member sits at 0 (1.2 pitch from
+    // the anchor — kept) and the other at 1.0 pitch (0.2 pitch from the
+    // anchor — must be dropped, even though it's a full pitch from the
+    // already-kept 0). Candidates are walked anchor-first, so a check
+    // against only the previously kept candidate (0, at the time 1.0 pitch
+    // is considered) would wrongly keep it. y = 0 for the anchor and 0.25
+    // for the other two keeps all three in one top-row cluster (threshold
+    // 0.5u) while still making the first key the topmost.
+    const fontSize = 8
+    const pitch = colLabelPitch(fontSize)
+    const toDeltaUnits = (px: number) => px / KEY_UNIT
+    const keys = [
+      makeKey({ row: 0, col: 20, x: toDeltaUnits(pitch * 1.2), y: 0 }), // anchor
+      makeKey({ row: 1, col: 21, x: 0, y: 0.25 }),
+      makeKey({ row: 2, col: 22, x: toDeltaUnits(pitch * 1.0), y: 0.25 }),
+    ]
+    const cells = new Map<string, { row: number; col: number }>([
+      [posKey(0, 20), { row: 0, col: 0 }],
+      [posKey(1, 21), { row: 1, col: 0 }],
+      [posKey(2, 22), { row: 2, col: 0 }],
+    ])
+    const { cols, nodes } = buildMatrixWires(keys, cells, 1, fontSize)
+    const nodeByPos = new Map(nodes.map((n) => [n.posKey, n]))
+    const col0 = cols.find((c) => c.index === 0)!
+    expect(col0.labels).toHaveLength(2)
+    const acrossValues = col0.labels.map((l) => l.across).sort((a, b) => a - b)
+    expect(acrossValues[0]).toBeCloseTo(nodeByPos.get(posKey(1, 21))!.x)
+    expect(acrossValues[1]).toBeCloseTo(nodeByPos.get(posKey(0, 20))!.x)
+  })
+
+  it('labels both halves when each half is rotated as a rigid block', () => {
+    // Each half's rows are rotated together around its own origin, so
+    // their rotated y ranges overlap the row below — the top row has to
+    // come from the unrotated grid, not the final on-screen position.
+    const deg = 15
+    const half = (r: number, rx: number, rowBase: number): unknown[][] => [
+      [{ r, rx, ry: 1, y: -1, x: 0 }, ...[0, 1, 2, 3, 4].map((c) => `${rowBase},${c}`)],
+      [0, 1, 2, 3, 4].map((c) => `${rowBase + 1},${c}`),
+      [0, 1, 2, 3, 4].map((c) => `${rowBase + 2},${c}`),
+    ]
+    const { keys } = parseKle([...half(deg, 1, 0), ...half(-deg, 8, 3)])
+
+    const { cols, colLineCount } = buildMatrixWires(keys, IDENTITY_CELLS, 1, NO_GUTTER_FONT_SIZE)
+    for (let col = 0; col <= 4; col++) {
+      expect(cols.find((c) => c.index === col)!.labels).toHaveLength(2)
+    }
+    expect(colLineCount).toBe(1)
+  })
+
+  it('assigns both labels of the same wire to line 0 when they collide with nothing else', () => {
+    const keys = [
+      makeKey({ row: 0, col: 0, x: 0, y: 0 }),
+      makeKey({ row: 4, col: 0, x: 10, y: 0 }), // same top row, same effective col, far apart in x
+    ]
+    const { cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 8)
+    const col0 = cols.find((c) => c.index === 0)!
+    expect(col0.labels).toHaveLength(2)
+    for (const label of col0.labels) {
+      expect(label.line).toBe(0)
+    }
+  })
+
+  it('lets colliding labels from two different col wires land on separate lines together', () => {
+    // Two col wires, each carrying two top-row labels of its own,
+    // interleaved within one pitch of each other: col 0's members sit at 0
+    // and 500px, col 1's sit half a pitch to the right of each — so every
+    // col-1 label collides with its col-0 counterpart, not just with its own
+    // wire's other label.
+    const fontSize = 8
+    const pitch = colLabelPitch(fontSize)
+    const toDeltaUnits = (px: number) => px / KEY_UNIT
+    const keys = [
+      makeKey({ row: 0, col: 50, x: 0, y: 0 }),
+      makeKey({ row: 1, col: 51, x: toDeltaUnits(500), y: 0 }),
+      makeKey({ row: 2, col: 52, x: toDeltaUnits(pitch * 0.5), y: 0 }),
+      makeKey({ row: 3, col: 53, x: toDeltaUnits(500 + pitch * 0.5), y: 0 }),
+    ]
+    const cells = new Map<string, { row: number; col: number }>([
+      [posKey(0, 50), { row: 0, col: 0 }],
+      [posKey(1, 51), { row: 1, col: 0 }],
+      [posKey(2, 52), { row: 2, col: 1 }],
+      [posKey(3, 53), { row: 3, col: 1 }],
+    ])
+    const { cols, colLineCount } = buildMatrixWires(keys, cells, 1, fontSize)
+    const col0 = cols.find((c) => c.index === 0)!
+    const col1 = cols.find((c) => c.index === 1)!
+    expect(col0.labels).toHaveLength(2)
+    expect(col1.labels).toHaveLength(2)
+    for (const label of col0.labels) expect(label.line).toBe(0)
+    for (const label of col1.labels) expect(label.line).toBe(1)
+    expect(colLineCount).toBe(2)
   })
 })

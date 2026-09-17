@@ -862,7 +862,7 @@ Only keys you change are stored — every other key keeps its physical matrix po
 
 **Wires**
 
-The View Matrix row (§3.14) also has a toggle switch at its right edge (its accessible name is **Wires**; the switch itself carries no text label). Turning it on draws the keyboard's matrix wiring over the keymap: a hollow dot at the center of every key, one line per matrix row joining that row's keys in column order, and one line per matrix column joining that column's keys in row order, with row numbers in a gutter on the left and column numbers along the top. Row and column wires are drawn in distinct colors that follow the active theme pack (§6.4).
+The View Matrix row (§3.14) also has a toggle switch at its right edge (its accessible name is **Wires**; the switch itself carries no text label). Turning it on draws the keyboard's matrix wiring over the keymap: a hollow dot at the center of every key, one line per matrix row joining that row's keys in column order, and one line per matrix column joining that column's keys in row order, with row numbers in a gutter on the left and column numbers along the top. Column numbers are shown above the keys of the top row, so on a split keyboard whose halves share matrix columns the same numbers appear above both halves; different numbers that would overlap stack in ascending order. Row and column wires are drawn in distinct colors that follow the active theme pack (§6.4).
 
 ![View Matrix Wires](screenshots/view-matrix-wires.png)
 

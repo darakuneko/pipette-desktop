@@ -10,9 +10,14 @@
 // label's actual screen coordinates are left to the caller (`KeyboardWidget`
 // sizes the gutter band, `MatrixWiresOverlay` centers each stack inside it)
 // since neither is needed to decide which keys share a matrix row/column.
+// A col wire can carry more than one label: the keys in the physical top
+// row get their column number above them, so a split board sharing
+// columns across both halves shows the number over both (see
+// computeTopRowPosKeys).
 
 import type { KleKey } from '../../../shared/kle/types'
 import { posKey } from '../../../shared/kle/pos-key'
+import { clusterRowsByY } from '../../../shared/kle/kle-ergonomics'
 import { keyCenter } from './key-geometry'
 
 export interface WirePoint {
@@ -37,7 +42,11 @@ export interface MatrixWireLabel {
 export interface MatrixWire {
   index: number
   points: WirePoint[]
-  label: MatrixWireLabel
+  /** Row wires always carry exactly one label. Col wires carry one per
+   *  physical top-row key on this wire (plus the wire's own anchor when it
+   *  isn't one of them), minus any closer together than the label pitch —
+   *  see `buildAxisWires`. Sorted ascending by `across`. */
+  labels: MatrixWireLabel[]
 }
 
 export interface MatrixNode {
@@ -184,6 +193,20 @@ function assignLabelLines(
   return { lines, lineCount }
 }
 
+/** The posKeys of the physical top row — the keys that get a column number
+ *  above them. "Top row" is `clusterRowsByY`'s first cluster, deliberately
+ *  taken from the unrotated layout grid: a half rotated as a rigid block
+ *  keeps its own top row there, whereas its rotated y ranges overlap the
+ *  row below and would chain every row together. It is a heuristic — a
+ *  column-stagger chain can pull in a second physical row (extra but
+ *  correctly numbered labels), and a low-sitting top-row key can fall out
+ *  (its column still gets the anchor label). `wiredKeys` must be the same
+ *  deduped list `placed` is built from. */
+function computeTopRowPosKeys(wiredKeys: KleKey[]): Set<string> {
+  const topRow = clusterRowsByY(wiredKeys)[0] ?? []
+  return new Set(topRow.map((key) => posKey(key.row, key.col)))
+}
+
 /** Builds one axis's wires (row or col) from the same placed-key list.
  *  Row wires group by effective row, order members left-to-right (x),
  *  and anchor their label at the leftmost member's y; col wires are the
@@ -191,11 +214,20 @@ function assignLabelLines(
  *  anchoring at the topmost member's x. `along` is both the ordering
  *  tie-break axis and the axis used to find each wire's label anchor
  *  (the member nearest the gutter); `across` is the anchor's other
- *  coordinate, which becomes the label's fixed position along the wire. */
+ *  coordinate, which becomes a label's fixed position along the wire.
+ *
+ *  Each wire gets one label per candidate in `[anchor, ...members in
+ *  extraAnchors, ascending across]` that survives a pitch-distance dedup
+ *  against every already-kept candidate (not just the previous one —
+ *  closeness isn't transitive: candidates at 0, 0.75 pitch and 1.5 pitch
+ *  must keep both ends when 0 is the anchor). `buildMatrixWires` passes
+ *  the physical top row as `extraAnchors` for the col axis, and nothing
+ *  for the row axis. */
 function buildAxisWires(
   placed: readonly PlacedKey[],
   axis: 'row' | 'col',
   fontSize: number,
+  extraAnchors?: ReadonlySet<string>,
 ): { wires: MatrixWire[]; lineCount: number } {
   const groupBy = axis === 'row' ? (p: PlacedKey) => p.effectiveRow : (p: PlacedKey) => p.effectiveCol
   const orderBy = axis === 'row' ? (p: PlacedKey) => p.effectiveCol : (p: PlacedKey) => p.effectiveRow
@@ -206,20 +238,37 @@ function buildAxisWires(
   // Ascending order here is what assignLabelLines relies on to keep
   // colliding labels in index order (lower index -> lower line).
   const indices = [...groups.keys()].sort((a, b) => a - b)
+  const pitch = axis === 'row' ? rowLabelPitch(fontSize) : colLabelPitch(fontSize)
 
-  const labelPositions = indices.map((index) => {
+  const keptAcrossByWire = indices.map((index) => {
     const members = groups.get(index)!
     const anchor = members.reduce((min, p) => (along(p) < along(min) ? p : min), members[0])
-    return across(anchor)
+    const candidates = [
+      anchor,
+      ...members.filter((p) => extraAnchors?.has(p.posKey) ?? false).sort((a, b) => across(a) - across(b)),
+    ]
+    const kept: number[] = []
+    for (const candidate of candidates) {
+      const value = across(candidate)
+      if (kept.some((k) => Math.abs(k - value) < pitch)) continue
+      kept.push(value)
+    }
+    return kept.sort((a, b) => a - b)
   })
-  const pitch = axis === 'row' ? rowLabelPitch(fontSize) : colLabelPitch(fontSize)
-  const { lines, lineCount } = assignLabelLines(labelPositions, pitch)
 
-  const wires = indices.map((index, i) => ({
-    index,
-    points: groups.get(index)!.map((p) => ({ x: p.x, y: p.y })),
-    label: { across: labelPositions[i], line: lines[i] },
-  }))
+  // keptAcrossByWire is already ordered (wire index ascending, across
+  // ascending within each wire); flat() preserves that order so a
+  // collision between two different wires' labels still keeps the lower
+  // wire index on the lower line.
+  const { lines, lineCount } = assignLabelLines(keptAcrossByWire.flat(), pitch)
+
+  let cursor = 0
+  const wires = indices.map((index, i) => {
+    const kept = keptAcrossByWire[i]
+    const labels = kept.map((value, k) => ({ across: value, line: lines[cursor + k] }))
+    cursor += kept.length
+    return { index, points: groups.get(index)!.map((p) => ({ x: p.x, y: p.y })), labels }
+  })
   return { wires, lineCount }
 }
 
@@ -231,6 +280,7 @@ export function buildMatrixWires(
 ): MatrixWiresLayout {
   const seen = new Set<string>()
   const placed: PlacedKey[] = []
+  const wiredKeys: KleKey[] = []
 
   for (const key of visibleKeys) {
     if (key.decal || key.encoderIdx >= 0) continue
@@ -238,13 +288,15 @@ export function buildMatrixWires(
     if (seen.has(pos)) continue
     seen.add(pos)
 
+    wiredKeys.push(key)
     const center = keyCenter(key, scale)
     const effective = cells.get(pos) ?? { row: key.row, col: key.col }
     placed.push({ posKey: pos, effectiveRow: effective.row, effectiveCol: effective.col, ...center })
   }
 
+  const topRow = computeTopRowPosKeys(wiredKeys)
   const { wires: rows, lineCount: rowLineCount } = buildAxisWires(placed, 'row', fontSize)
-  const { wires: cols, lineCount: colLineCount } = buildAxisWires(placed, 'col', fontSize)
+  const { wires: cols, lineCount: colLineCount } = buildAxisWires(placed, 'col', fontSize, topRow)
 
   return {
     rows,

@@ -96,33 +96,40 @@ async function enableMatrixWires(): Promise<void> {
   await closeKeycodesOverlay(page)
 }
 
-/** One row label's matrix index and on-screen bounding box. */
-interface RowLabel {
+/** One gutter label's matrix index and on-screen bounding box. */
+interface WireLabel {
   index: number
   box: { x: number; y: number; width: number; height: number }
 }
 
-/** Reads every row-number label out of the wires overlay. Row labels are
- *  every `<text>` painted with the row wire color (`WIRE_ROW_COLOR` in
- *  matrix-wires constants) — filtering on that `fill` attribute is robust
- *  against the overlay's own draw order instead of assuming "first N
- *  texts are rows" (`MatrixWiresOverlay` happens to draw rows before cols,
- *  but this test shouldn't need to know that). `expectedCount` is awaited
+/** Reads every label of one wire axis out of the overlay. Labels are
+ *  every `<text>` painted with that axis's own wire color (`fill`, a CSS
+ *  variable defined in matrix-wires constants) — filtering on `fill` is
+ *  robust against the overlay's own draw order instead of assuming a
+ *  fixed slice of texts belongs to one axis. `expectedCount` is awaited
  *  via `toHaveCount` before reading, since `locator.count()` alone doesn't
  *  auto-wait for the overlay to finish rendering all of its labels. */
-async function readRowLabels(expectedCount: number): Promise<RowLabel[]> {
-  const locator = page.locator('[data-testid="matrix-wires"] text[fill="var(--wire-row)"]')
+async function readWireLabels(fill: string, expectedCount: number): Promise<WireLabel[]> {
+  const locator = page.locator(`[data-testid="matrix-wires"] text[fill="${fill}"]`)
   await expect(locator).toHaveCount(expectedCount)
   const count = await locator.count()
-  const labels: RowLabel[] = []
+  const labels: WireLabel[] = []
   for (let i = 0; i < count; i++) {
     const el = locator.nth(i)
     const text = await el.textContent()
     const box = await el.boundingBox()
-    if (text === null || box === null) throw new Error(`row label ${i} has no text/box`)
+    if (text === null || box === null) throw new Error(`wire label ${i} has no text/box`)
     labels.push({ index: Number(text), box })
   }
   return labels
+}
+
+async function readRowLabels(expectedCount: number): Promise<WireLabel[]> {
+  return readWireLabels('var(--wire-row)', expectedCount)
+}
+
+async function readColLabels(expectedCount: number): Promise<WireLabel[]> {
+  return readWireLabels('var(--wire-col)', expectedCount)
 }
 
 // Tagged @virtual so it runs in CI with the other self-contained specs
@@ -160,5 +167,45 @@ test.describe('View Matrix Wires — split-board gutter label order', { tag: '@v
     expect(row3.box.x).toBeLessThan(row7.box.x)
 
     await capture(page.locator('[data-testid="primary-pane"]'), 'view-matrix-wires-split')
+  })
+
+  test('shows a column number above every top-row key on both halves', async () => {
+    // enableMatrixWires is idempotent, so this test doesn't depend on the
+    // toggle already being on from the previous one.
+    await enableMatrixWires()
+
+    const labels = await readColLabels(10)
+
+    for (let col = 0; col <= 4; col++) {
+      const matches = labels.filter((l) => l.index === col)
+      expect(matches).toHaveLength(2)
+      const labelCenters = matches.map((l) => l.box.x + l.box.width / 2).sort((a, b) => a - b)
+
+      const leftKeyBox = await page
+        .locator(`[data-testid="editor-content"] g[data-key-pos="0,${col}"]`)
+        .boundingBox()
+      const rightKeyBox = await page
+        .locator(`[data-testid="editor-content"] g[data-key-pos="4,${col}"]`)
+        .boundingBox()
+      if (leftKeyBox === null || rightKeyBox === null) throw new Error(`key box missing for column ${col}`)
+      const keyBoxesSorted = [leftKeyBox, rightKeyBox].sort(
+        (a, b) => a.x + a.width / 2 - (b.x + b.width / 2),
+      )
+      const keyCenters = keyBoxesSorted.map((box) => box.x + box.width / 2)
+
+      expect(Math.abs(labelCenters[0] - keyCenters[0])).toBeLessThan(5)
+      expect(Math.abs(labelCenters[1] - keyCenters[1])).toBeLessThan(5)
+
+      // "Above" means above: each label's box must sit at or higher than
+      // the top of the key it labels, not just horizontally aligned with it.
+      const matchesSorted = [...matches].sort(
+        (a, b) => a.box.x + a.box.width / 2 - (b.box.x + b.box.width / 2),
+      )
+      for (let i = 0; i < matchesSorted.length; i++) {
+        expect(matchesSorted[i].box.y + matchesSorted[i].box.height).toBeLessThanOrEqual(keyBoxesSorted[i].y)
+      }
+    }
+
+    await capture(page.locator('[data-testid="primary-pane"]'), 'view-matrix-wires-split-col-labels')
   })
 })
