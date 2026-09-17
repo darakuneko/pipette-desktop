@@ -47,9 +47,9 @@ describe('useHubSearchList', () => {
         { initialProps: baseOptions({ fetchPage, onError }) },
       )
 
-      await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(1))
+      await waitFor(() => expect(onError).toHaveBeenCalledWith('nope'))
+      expect(fetchPage).toHaveBeenCalledTimes(1)
       expect(result.current.hubSearched).toBe(false)
-      expect(onError).toHaveBeenCalledWith('nope')
 
       // Leave the Hub tab, then come back.
       rerender(baseOptions({ fetchPage, onError, activeTab: 'installed' }))
@@ -66,8 +66,8 @@ describe('useHubSearchList', () => {
         { initialProps: baseOptions({ fetchPage, onError, markSearchedOnFailure: true }) },
       )
 
-      await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(1))
-      expect(result.current.hubSearched).toBe(true)
+      await waitFor(() => expect(result.current.hubSearched).toBe(true))
+      expect(fetchPage).toHaveBeenCalledTimes(1)
 
       rerender(baseOptions({ fetchPage, onError, markSearchedOnFailure: true, activeTab: 'installed' }))
       rerender(baseOptions({ fetchPage, onError, markSearchedOnFailure: true, activeTab: 'hub' }))
@@ -84,9 +84,9 @@ describe('useHubSearchList', () => {
         { initialProps: baseOptions({ fetchPage }) },
       )
 
-      await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(1))
+      await waitFor(() => expect(result.current.hubResults).toEqual([{ id: 'a', name: 'A' }]))
       expect(result.current.hubSearched).toBe(true)
-      expect(result.current.hubResults).toEqual([{ id: 'a', name: 'A' }])
+      expect(fetchPage).toHaveBeenCalledTimes(1)
 
       rerender(baseOptions({ fetchPage, activeTab: 'installed' }))
       rerender(baseOptions({ fetchPage, activeTab: 'hub' }))
