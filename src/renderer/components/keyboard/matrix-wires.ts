@@ -24,7 +24,8 @@ export interface WirePoint {
  *  screen geometry: `across` is the anchor coordinate perpendicular to the
  *  gutter (the same axis `points` already carries — a row label's `y`, a
  *  col label's `x`), and `line` is which stacked gutter line the label
- *  landed on (0-based, in placement order — not necessarily draw order).
+ *  landed on (0-based; assigned in ascending wire-index order, so two
+ *  colliding labels always keep the lower index on the lower line).
  *  The caller turns `{ across, line }` into an actual `{x, y}` once it
  *  knows the gutter's band geometry and how many lines the axis needed in
  *  total (`MatrixWiresLayout.rowLineCount` / `colLineCount`). */
@@ -50,9 +51,10 @@ export interface MatrixWiresLayout {
   cols: MatrixWire[]
   nodes: MatrixNode[]
   /** How many stacked lines the row-number gutter (left side) needed to
-   *  keep every row label legible — 1 when no two row labels' `y`
-   *  positions collided, more when several matrix rows share a physical
-   *  y. Unbounded: as many lines as actually needed, never capped. */
+   *  keep every row label legible — 0 when the axis has no wires at all,
+   *  1 when no two row labels' `y` positions collided, more when several
+   *  matrix rows share a physical y. Unbounded: as many lines as
+   *  actually needed, never capped. */
   rowLineCount: number
   /** Same as `rowLineCount` but for the col-number gutter (top side) —
    *  how many stacked lines several matrix columns sharing a physical x
@@ -140,34 +142,46 @@ function groupAndOrder(
   return groups
 }
 
-/** Assigns each label position a stacking "line", walking the positions in
- *  ascending coordinate order rather than the caller's index order —
- *  comparing only index-adjacent neighbors misses collisions between
- *  labels whose matrix indices are far apart but whose coordinates
- *  coincide (split boards, reordered View Matrix positions). Greedy and
- *  unbounded: each label goes on the lowest-numbered line whose
- *  most-recently-placed label is at least `pitch` away, and only opens a
- *  new line when every existing line is still too close — so three or
- *  more matrix rows/cols anchored at the same physical coordinate stack
- *  onto as many lines as they need instead of the third one landing back
- *  on top of the second. The returned `lines` array is aligned back to
- *  the input's original order; `lineCount` is the total number of lines
- *  opened. */
+/** Assigns each label position a stacking "line", walking positions in the
+ *  caller's own ascending wire-index order (not coordinate order) and
+ *  comparing each label against every earlier one, not just its
+ *  immediate neighbor — that still catches a collision between far-apart
+ *  indices whose coordinates coincide (split boards, reordered View
+ *  Matrix positions). Each label lands one line past the highest line of
+ *  any earlier label within `pitch` of it (line 0 when it collides with
+ *  none), so it never drops back to or below the line of a label it
+ *  collides with — though it may still share a line with labels it
+ *  doesn't collide with.
+ *
+ *  Two guarantees follow: two labels sharing a line are never closer than
+ *  `pitch`, and for any colliding pair the lower index always lands on
+ *  the lower line — immune to a sub-pixel coordinate difference (e.g. two
+ *  split-board thumb rows whose rotated anchors differ by a fraction of a
+ *  pixel) flipping that order. The trade-off is that a chain of collisions
+ *  spends one line per link instead of dropping back onto a line that
+ *  looks free, and the gutter grows to fit `lineCount` — e.g. positions
+ *  `[0, 8, 16]` with `pitch` 14 use 3 lines, not the 2 a reuse strategy
+ *  could pack them into.
+ *
+ *  `lines` is aligned to the input order; `lineCount` is one past the
+ *  highest line opened, 0 when `positions` is empty. */
 function assignLabelLines(
   positions: readonly number[],
   pitch: number,
 ): { lines: number[]; lineCount: number } {
-  const order = positions.map((_, index) => index).sort((a, b) => positions[a] - positions[b])
   const lines = new Array<number>(positions.length).fill(0)
-  const lastOnLine: number[] = []
-  for (const index of order) {
-    const pos = positions[index]
-    let line = lastOnLine.findIndex((last) => Math.abs(pos - last) >= pitch)
-    if (line === -1) line = lastOnLine.length
-    lines[index] = line
-    lastOnLine[line] = pos
+  let lineCount = 0
+  for (let i = 0; i < positions.length; i++) {
+    let line = 0
+    for (let j = 0; j < i; j++) {
+      if (Math.abs(positions[i] - positions[j]) < pitch) {
+        line = Math.max(line, lines[j] + 1)
+      }
+    }
+    lines[i] = line
+    lineCount = Math.max(lineCount, line + 1)
   }
-  return { lines, lineCount: lastOnLine.length }
+  return { lines, lineCount }
 }
 
 /** Builds one axis's wires (row or col) from the same placed-key list.
@@ -189,6 +203,8 @@ function buildAxisWires(
   const across = axis === 'row' ? (p: PlacedKey) => p.y : (p: PlacedKey) => p.x
 
   const groups = groupAndOrder(placed, groupBy, orderBy, along)
+  // Ascending order here is what assignLabelLines relies on to keep
+  // colliding labels in index order (lower index -> lower line).
   const indices = [...groups.keys()].sort((a, b) => a - b)
 
   const labelPositions = indices.map((index) => {

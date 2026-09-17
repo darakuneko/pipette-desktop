@@ -5,7 +5,14 @@ import { buildMatrixWires, rowLabelPitch } from '../matrix-wires'
 import { KEY_UNIT, KEY_SPACING } from '../constants'
 import { posKey } from '../../../../shared/kle/pos-key'
 import { rotatePoint } from '../../../../shared/kle/rotate-point'
-import { makeKey, makeColumnStackKeys, NO_GUTTER_FONT_SIZE, IDENTITY_CELLS, loadVirtualDeviceLayout } from './kle-test-keys'
+import {
+  makeKey,
+  makeColumnStackKeys,
+  NO_GUTTER_FONT_SIZE,
+  IDENTITY_CELLS,
+  loadVirtualDeviceLayout,
+  loadSplitThumbLayout,
+} from './kle-test-keys'
 
 describe('buildMatrixWires — virtual device GPK60-63R fixture', () => {
   const layout = loadVirtualDeviceLayout()
@@ -222,7 +229,7 @@ describe('buildMatrixWires — label placement', () => {
     ]
     const { rows, rowLineCount } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 20)
     const lines = [0, 1, 2].map((index) => rows.find((r) => r.index === index)!.label.line)
-    expect(new Set(lines)).toEqual(new Set([0, 1, 2]))
+    expect(lines).toEqual([0, 1, 2])
     expect(rowLineCount).toBe(3)
   })
 
@@ -234,7 +241,7 @@ describe('buildMatrixWires — label placement', () => {
     ]
     const { cols, colLineCount } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 20)
     const lines = [0, 1, 2].map((index) => cols.find((c) => c.index === index)!.label.line)
-    expect(new Set(lines)).toEqual(new Set([0, 1, 2]))
+    expect(lines).toEqual([0, 1, 2])
     expect(colLineCount).toBe(3)
   })
 
@@ -245,7 +252,7 @@ describe('buildMatrixWires — label placement', () => {
     const keys = makeColumnStackKeys()
     const { cols, colLineCount } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 20)
     const lines = [1, 3, 7].map((index) => cols.find((c) => c.index === index)!.label.line)
-    expect(new Set(lines)).toEqual(new Set([0, 1, 2]))
+    expect(lines).toEqual([0, 1, 2])
     expect(colLineCount).toBe(3)
   })
 
@@ -260,10 +267,10 @@ describe('buildMatrixWires — label placement', () => {
     expect(rowLineCount).toBe(1)
   })
 
-  it('places labels by coordinate order, not index order, so far-apart indices with coinciding positions still collide', () => {
+  it('detects a collision between far-apart indices whose positions coincide, not just adjacent-index neighbors', () => {
     // Row 0 and row 2 share the same y (0); row 1 sits a full key unit
-    // away in between them index-wise. An index-adjacent comparison would
-    // only ever check row0-vs-row1 and row1-vs-row2 (neither collides),
+    // away in between them index-wise. An index-adjacent-only comparison
+    // would only check row0-vs-row1 and row1-vs-row2 (neither collides),
     // missing that row 0 and row 2 land on the exact same position.
     const keys = [
       makeKey({ row: 0, col: 0, x: 0, y: 0 }),
@@ -279,11 +286,15 @@ describe('buildMatrixWires — label placement', () => {
     expect(row2.label.line).toBe(1)
   })
 
-  it('resolves three close labels onto at most two lines without two same-line labels colliding', () => {
+  it('walks a chain of overlapping labels into an ascending staircase of lines', () => {
     // fontSize 10 => row pitch 14px. Adjacent pairs (rows 0/1 and 1/2, 8px
-    // apart) are each closer than the pitch, but the head and tail (rows
-    // 0/2, 16px apart) are not — the walk should keep row 0 and row 2
-    // together on line 0 rather than spilling row 2 onto line 1 too.
+    // apart) each collide, but the head and tail (rows 0/2, 16px apart) do
+    // not. Reusing row 0's now-free line for row 2 would still break the
+    // ascending-index guarantee here: lowest-free-line reuse gives lines
+    // [0, 1, 0], putting the colliding pair rows 1 and 2 in descending
+    // order (row 1 on line 1, row 2 on line 0). Placing each label one
+    // line past the highest line any colliding predecessor used avoids
+    // that, so the chain climbs in a strict staircase.
     const fontSize = 10
     const keys = [
       makeKey({ row: 0, col: 0, x: 0, y: 0 }),
@@ -295,11 +306,91 @@ describe('buildMatrixWires — label placement', () => {
     const row1 = rows.find((r) => r.index === 1)!
     const row2 = rows.find((r) => r.index === 2)!
 
-    expect(rowLineCount).toBeLessThanOrEqual(2)
-    expect(row0.label.line).toBe(row2.label.line)
-    expect(row1.label.line).not.toBe(row0.label.line)
-    // Row 0 and row 2 share a line but their actual y positions are
-    // farther apart than the row pitch, so they don't visually collide.
-    expect(Math.abs(row0.label.across - row2.label.across)).toBeGreaterThanOrEqual(rowLabelPitch(fontSize))
+    expect(row0.label.line).toBe(0)
+    expect(row1.label.line).toBe(1)
+    expect(row2.label.line).toBe(2)
+    expect(rowLineCount).toBe(3)
+  })
+
+  it('does not treat labels exactly one pitch apart as colliding', () => {
+    const fontSize = 10
+    const pitch = rowLabelPitch(fontSize)
+    // height: 0 keeps each key's across-anchor a plain `s * y` (keyCenter's
+    // `+ height / 2` term would otherwise add a rounding step that lands
+    // the two anchors a hair off `pitch`, breaking the exact-boundary
+    // premise this test pins below).
+    const keys = [
+      makeKey({ row: 0, col: 0, x: 0, y: 0, height: 0 }),
+      makeKey({ row: 1, col: 0, x: 0, y: pitch / KEY_UNIT, height: 0 }),
+    ]
+    const { rows, rowLineCount } = buildMatrixWires(keys, IDENTITY_CELLS, 1, fontSize)
+    const row0 = rows.find((r) => r.index === 0)!
+    const row1 = rows.find((r) => r.index === 1)!
+    // Pin the premise: the two anchors really are exactly one pitch apart,
+    // so a future change to the pitch constant can't silently turn this
+    // into a just-over/just-under test without failing here first.
+    expect(Math.abs(row0.label.across - row1.label.across)).toBe(pitch)
+    expect(row0.label.line).toBe(0)
+    expect(row1.label.line).toBe(0)
+    expect(rowLineCount).toBe(1)
+  })
+
+  it('reports zero lines on both axes when there are no keys', () => {
+    const { rowLineCount, colLineCount } = buildMatrixWires([], IDENTITY_CELLS, 1, 12)
+    expect(rowLineCount).toBe(0)
+    expect(colLineCount).toBe(0)
+  })
+
+  it('keeps a sub-pixel row-coordinate difference from deciding which of two colliding row labels lands to the left', () => {
+    // Row 7's anchor y is a fraction of a pixel smaller than row 3's.
+    // Walking labels in coordinate order would let row 7's slightly
+    // smaller y claim line 0 first; walking in index order keeps row 3
+    // (the lower index) on the lower line regardless of which one sits
+    // fractionally higher.
+    const keys = [
+      makeKey({ row: 3, col: 0, x: 0, y: 3 }),
+      makeKey({ row: 7, col: 0, x: 0, y: 3 - 0.3 / KEY_UNIT }),
+    ]
+    const { rows } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 8)
+    expect(rows.find((r) => r.index === 3)!.label.line).toBe(0)
+    expect(rows.find((r) => r.index === 7)!.label.line).toBe(1)
+  })
+
+  it('keeps a sub-pixel col-coordinate difference from deciding which of two colliding col labels lands on top', () => {
+    // Mirror of the row-axis case above, for the top gutter.
+    const keys = [
+      makeKey({ row: 0, col: 3, x: 3, y: 0 }),
+      makeKey({ row: 0, col: 7, x: 3 - 0.3 / KEY_UNIT, y: 0 }),
+    ]
+    const { cols } = buildMatrixWires(keys, IDENTITY_CELLS, 1, 8)
+    expect(cols.find((c) => c.index === 3)!.label.line).toBe(0)
+    expect(cols.find((c) => c.index === 7)!.label.line).toBe(1)
+  })
+})
+
+describe('buildMatrixWires — split-board label order regression', () => {
+  const layout = loadSplitThumbLayout()
+
+  it('keeps every colliding row-label pair on the split-thumb fixture in ascending index order', () => {
+    // Regression guard: the fixture's thumb rows (3 and 7) have label
+    // anchors a fraction of a pixel apart, which used to render row 7
+    // before row 3 in the left gutter.
+    const fontSize = 12
+    const { rows } = buildMatrixWires(layout.keys, IDENTITY_CELLS, 1, fontSize)
+    const pitch = rowLabelPitch(fontSize)
+
+    for (const a of rows) {
+      for (const b of rows) {
+        if (a.index >= b.index) continue
+        if (Math.abs(a.label.across - b.label.across) < pitch) {
+          expect(a.label.line).toBeLessThan(b.label.line)
+        }
+      }
+    }
+
+    const row3 = rows.find((r) => r.index === 3)!
+    const row7 = rows.find((r) => r.index === 7)!
+    expect(row3.label.line).toBe(0)
+    expect(row7.label.line).toBe(1)
   })
 })

@@ -63,14 +63,28 @@ export function makeColumnStackKeys(): KleKey[] {
   ]
 }
 
+function loadLayoutFixture(fixturePath: string, label: string): KeyboardLayout {
+  const definition = JSON.parse(readFileSync(fixturePath, 'utf-8')) as KeyboardDefinition
+  const { layout } = parseDefinitionLayout(definition)
+  if (!layout) throw new Error(`${label} produced no layout`)
+  return layout
+}
+
 /** Loads the virtual GPK60-63R device's keyboard layout — a real,
  *  non-trivial definition (sparse rows, encoders) shared by suites that
  *  exercise matrix-wires geometry against actual keyboard data instead of
  *  hand-built fixtures. */
 export function loadVirtualDeviceLayout(): KeyboardLayout {
   const fixturePath = join(__dirname, '../../../../main/virtual-device/gpk60-63r-definition.json')
-  const definition = JSON.parse(readFileSync(fixturePath, 'utf-8')) as KeyboardDefinition
-  const { layout } = parseDefinitionLayout(definition)
-  if (!layout) throw new Error('gpk60-63r-definition.json produced no layout')
-  return layout
+  return loadLayoutFixture(fixturePath, 'gpk60-63r-definition.json')
+}
+
+/** Loads the split-keyboard e2e fixture (rows 0-3 left half, rows 4-7
+ *  right half, cols 0-4 shared) shared by this suite's label-order
+ *  regression test and the View Matrix Wires e2e test. Its thumb rows (3
+ *  and 7) carry asymmetric rotation origins, so their label anchors land
+ *  a fraction of a pixel apart. */
+export function loadSplitThumbLayout(): KeyboardLayout {
+  const fixturePath = join(__dirname, '../../../../../e2e/fixtures/e2e_test_split_thumb.json')
+  return loadLayoutFixture(fixturePath, 'e2e_test_split_thumb.json')
 }
