@@ -675,7 +675,8 @@
     "deviceLoadFailed": "Failed to read data from the keyboard. Check the USB cable and try connecting again."
   },
   "warning": {
-    "echoDetected": "Communication error detected. Please check your USB cable and reconnect the device."
+    "echoDetected": "Communication error detected. Please check your USB cable and reconnect the device.",
+    "partialLoad": "Some settings could not be read from the keyboard. Reconnect to try again."
   },
   "keycodes": {
     "basic": "Basic",

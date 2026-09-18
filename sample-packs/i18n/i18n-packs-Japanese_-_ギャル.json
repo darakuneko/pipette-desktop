@@ -675,7 +675,8 @@
     "deviceLoadFailed": "キーボードからデータ読み込めなかった…ケーブル確認してもう一回繋いで〜！"
   },
   "warning": {
-    "echoDetected": "通信エラー！？ケーブル確認して差し直して〜！"
+    "echoDetected": "通信エラー！？ケーブル確認して差し直して〜！",
+    "partialLoad": "一部の設定読み込めてないかも…再接続したら直るかもよ？"
   },
   "keycodes": {
     "basic": "Basic☆",

@@ -32,6 +32,18 @@ const ENCODER_DEFINITION: KeyboardDefinition = {
   },
 }
 
+const LIGHTING_DEFINITION: KeyboardDefinition = {
+  ...BASE_DEFINITION,
+  name: 'Test KB w/ lighting',
+  lighting: 'qmk_backlight',
+}
+
+/** A qmkSettingsQuery response that reports exactly one supported qsid and
+ * then the 0xffff terminator, ending discovery in a single round trip. */
+function qmkQueryWithOneSupported(qsid: number) {
+  return vi.fn().mockResolvedValue([qsid & 0xff, (qsid >> 8) & 0xff, 0xff, 0xff])
+}
+
 /** Full happy-path read surface for window.vialAPI. Each test overrides only
  * the methods it needs to fail. */
 function makeApi(overrides: Record<string, unknown> = {}) {
@@ -91,6 +103,7 @@ function makeRefs(): Pick<KeyboardRefs, 'stateRef' | 'qmkSettingsBaselineRef'> {
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
 describe('useKeyboardReload', () => {
@@ -315,5 +328,87 @@ describe('useKeyboardReload', () => {
     const reloadResult = await result.current.reload()
 
     expect(reloadResult).toEqual({ ok: false, reason: 'loadFailed' })
+  })
+
+  it('case 11: continues with warning.partialLoad when lighting data fails to load', async () => {
+    ;(window as unknown as { vialAPI: unknown }).vialAPI = makeApi({
+      getDefinition: vi.fn().mockResolvedValue(LIGHTING_DEFINITION),
+      getLightingValue: vi.fn().mockRejectedValue(new Error('no response')),
+    })
+    const { setState, getState } = createStateRecorder()
+    const { result } = renderHook(() => useKeyboardReload(setState, makeRefs()))
+
+    const reloadResult = await result.current.reload()
+
+    expect(reloadResult).toEqual({ ok: true, uid: 'uid-1' })
+    expect(getState().connectionWarning).toBe('warning.partialLoad')
+  })
+
+  it('case 12: clears qmkSettingsValues and the baseline when one qsid fails to read', async () => {
+    const refs = makeRefs()
+    ;(window as unknown as { vialAPI: unknown }).vialAPI = makeApi({
+      qmkSettingsQuery: qmkQueryWithOneSupported(1),
+      qmkSettingsGet: vi.fn().mockRejectedValue(new Error('no response')),
+    })
+    const { setState, getState } = createStateRecorder()
+    const { result } = renderHook(() => useKeyboardReload(setState, refs))
+
+    const reloadResult = await result.current.reload()
+
+    expect(reloadResult).toEqual({ ok: true, uid: 'uid-1' })
+    expect(getState().connectionWarning).toBe('warning.partialLoad')
+    expect(getState().qmkSettingsValues).toEqual({})
+    expect(refs.qmkSettingsBaselineRef.current).toEqual({})
+  })
+
+  it('case 13: keeps warning.echoDetected when a QMK settings discovery echo follows a lighting failure', async () => {
+    ;(window as unknown as { vialAPI: unknown }).vialAPI = makeApi({
+      getDefinition: vi.fn().mockResolvedValue(LIGHTING_DEFINITION),
+      getLightingValue: vi.fn().mockRejectedValue(new Error('no response')),
+      qmkSettingsQuery: vi.fn().mockRejectedValue(new Error(ECHO_DETECTED_MSG)),
+    })
+    const { setState, getState } = createStateRecorder()
+    const { result } = renderHook(() => useKeyboardReload(setState, makeRefs()))
+
+    const reloadResult = await result.current.reload()
+
+    expect(reloadResult).toEqual({ ok: true, uid: 'uid-1' })
+    expect(getState().connectionWarning).toBe('warning.echoDetected')
+  })
+
+  it('case 16: keeps warning.echoDetected when dynamic entry count echo follows a lighting failure', async () => {
+    ;(window as unknown as { vialAPI: unknown }).vialAPI = makeApi({
+      getDefinition: vi.fn().mockResolvedValue(LIGHTING_DEFINITION),
+      getLightingValue: vi.fn().mockRejectedValue(new Error('no response')),
+      getDynamicEntryCount: vi.fn().mockRejectedValue(new Error(ECHO_DETECTED_MSG)),
+    })
+    const { setState, getState } = createStateRecorder()
+    const { result } = renderHook(() => useKeyboardReload(setState, makeRefs()))
+
+    const reloadResult = await result.current.reload()
+
+    expect(reloadResult).toEqual({ ok: true, uid: 'uid-1' })
+    expect(getState().connectionWarning).toBe('warning.echoDetected')
+  })
+
+  it('case 17: clears qmkSettingsValues when the value fetch is cut off at the 5s timeout', async () => {
+    vi.useFakeTimers()
+    const refs = makeRefs()
+    ;(window as unknown as { vialAPI: unknown }).vialAPI = makeApi({
+      qmkSettingsQuery: qmkQueryWithOneSupported(1),
+      // Never resolves — the 5s Promise.race timeout must cut it off.
+      qmkSettingsGet: vi.fn().mockImplementation(() => new Promise(() => {})),
+    })
+    const { setState, getState } = createStateRecorder()
+    const { result } = renderHook(() => useKeyboardReload(setState, refs))
+
+    const reloadPromise = result.current.reload()
+    await vi.advanceTimersByTimeAsync(5000)
+    const reloadResult = await reloadPromise
+
+    expect(reloadResult).toEqual({ ok: true, uid: 'uid-1' })
+    expect(getState().connectionWarning).toBe('warning.partialLoad')
+    expect(getState().qmkSettingsValues).toEqual({})
+    expect(refs.qmkSettingsBaselineRef.current).toEqual({})
   })
 })

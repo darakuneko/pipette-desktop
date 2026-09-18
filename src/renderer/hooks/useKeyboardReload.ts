@@ -48,6 +48,17 @@ export function useKeyboardReload(
       const newState = emptyState()
       newState.loading = true
 
+      // Sets the connection warning banner. Echo always wins (it means the
+      // firmware couldn't be talked to reliably at all), but a plain
+      // partial-load warning only sets the banner if nothing else already
+      // claimed it — so an echo detected earlier in the reload is never
+      // quietly replaced by a later, less severe partial-load warning.
+      const warn = (key: 'warning.echoDetected' | 'warning.partialLoad') => {
+        if (key === 'warning.echoDetected' || !newState.connectionWarning) {
+          newState.connectionWarning = key
+        }
+      }
+
       // Phase 1: Protocol + identity
       newState.viaProtocol = await api.getProtocolVersion()
       const kbId = await api.getKeyboardId()
@@ -130,6 +141,7 @@ export function useKeyboardReload(
         }
       } catch (err) {
         console.error('[KB] lighting data load failed:', err)
+        warn('warning.partialLoad')
       }
 
       // Phase 3: Layout options
@@ -178,7 +190,7 @@ export function useKeyboardReload(
           newState.dynamicCounts = await api.getDynamicEntryCount()
         } catch (err) {
           if (isEchoDetected(err)) {
-            newState.connectionWarning = 'warning.echoDetected'
+            warn('warning.echoDetected')
           } else {
             throw err
           }
@@ -260,16 +272,23 @@ export function useKeyboardReload(
           newState.supportedQsids = supported
         } catch (err) {
           if (isEchoDetected(err)) {
-            newState.connectionWarning = 'warning.echoDetected'
+            warn('warning.echoDetected')
           } else {
             console.error('[KB] QMK settings discovery failed:', err)
+            warn('warning.partialLoad')
           }
         }
 
-        // Phase 8b: Fetch current values for each supported QSID.
+        // Phase 8b: Fetch current values for each supported QSID. A qsid
+        // that fails to read, or a timeout that cuts the fetch off early,
+        // discards the whole batch rather than keeping a partial record —
+        // backfillQmkSettings() only ever runs once qmkSettingsValues is
+        // non-empty, so a partial record here would freeze the missing
+        // qsids out of every future backfill instead of retrying them.
         if (newState.supportedQsids.size > 0) {
           const values: Record<string, number[]> = {}
           let cancelled = false
+          let incomplete = false
           let timer: ReturnType<typeof setTimeout> | undefined
           try {
             await Promise.race([
@@ -283,6 +302,7 @@ export function useKeyboardReload(
                     }
                   } catch {
                     console.warn(`[KB] Failed to read QMK setting ${qsid}, skipping`)
+                    incomplete = true
                   }
                 }
               })(),
@@ -292,14 +312,21 @@ export function useKeyboardReload(
             ])
           } catch {
             cancelled = true
-            console.warn('[KB] QMK settings value fetch timed out, using partial data')
+            incomplete = true
+            console.warn('[KB] QMK settings value fetch timed out, discarding partial data')
           } finally {
             clearTimeout(timer)
           }
-          newState.qmkSettingsValues = values
-          qmkSettingsBaselineRef.current = Object.fromEntries(
-            Object.entries(values).map(([k, v]) => [k, [...v]]),
-          )
+          if (incomplete) {
+            newState.qmkSettingsValues = {}
+            qmkSettingsBaselineRef.current = {}
+            warn('warning.partialLoad')
+          } else {
+            newState.qmkSettingsValues = values
+            qmkSettingsBaselineRef.current = Object.fromEntries(
+              Object.entries(values).map(([k, v]) => [k, [...v]]),
+            )
+          }
         } else {
           // No supported QSIDs — clear stale baseline from prior reload
           newState.qmkSettingsValues = {}
