@@ -8,17 +8,16 @@ import { ConfirmButton } from './ConfirmButton'
 import settingsDefs from '../../../shared/qmk-settings-defs.json'
 import { BTN_PRIMARY } from '../../constants/ui-tokens'
 
-type SaveStatus = 'idle' | 'saving' | 'saved' | 'failed'
+type SaveStatus = 'idle' | 'saving' | 'resetting' | 'saved' | 'failed'
 
-// Flash duration for the 'saved' status — matches LayoutStoreContent's
-// flashSaved().
+// Flash duration for the 'saved' status before it fades back to idle.
 const SAVED_FLASH_MS = 2000
 
-function saveStatusClassName(status: SaveStatus): string {
-  if (status === 'saving') return 'text-xs text-content-muted'
-  if (status === 'saved') return 'text-xs font-medium text-success'
-  if (status === 'failed') return 'text-xs font-medium text-danger'
-  return 'text-xs'
+function saveStatusColorClass(status: SaveStatus): string {
+  if (status === 'saving') return 'text-content-muted'
+  if (status === 'saved') return 'text-success'
+  if (status === 'failed') return 'text-danger'
+  return ''
 }
 
 interface Props {
@@ -59,11 +58,11 @@ export function QmkSettings({
   const [editedValues, setEditedValues] = useState<Map<number, number>>(new Map())
   const [loading, setLoading] = useState(true)
   const [status, setStatusState] = useState<SaveStatus>('idle')
-  const [resetting, setResetting] = useState(false)
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const mountedRef = useRef(true)
 
   useEffect(() => {
+    mountedRef.current = true
     return () => {
       mountedRef.current = false
       clearTimeout(savedTimerRef.current)
@@ -77,11 +76,22 @@ export function QmkSettings({
     clearTimeout(savedTimerRef.current)
     setStatusState(next)
     if (next === 'saved') {
+      // The unmount cleanup above already clears this timer, so no
+      // mountedRef guard is needed here.
       savedTimerRef.current = setTimeout(() => {
-        if (mountedRef.current) setStatusState('idle')
+        setStatusState('idle')
       }, SAVED_FLASH_MS)
     }
   }, [])
+
+  // 'failed' never owns a timer, so clearing it needs no clearTimeout —
+  // just fall back to 'idle' when it's the current status.
+  const clearFailure = useCallback(
+    () => setStatusState((s) => (s === 'failed' ? 'idle' : s)),
+    [],
+  )
+
+  const busy = status === 'saving' || status === 'resetting'
 
   const tabs = (settingsDefs as { tabs: QmkSettingsTab[] }).tabs
 
@@ -133,7 +143,7 @@ export function QmkSettings({
 
   const handleBooleanChange = useCallback(
     (field: QmkSettingsField, checked: boolean) => {
-      if (status === 'failed') setStatus('idle')
+      clearFailure()
       setEditedValues((prev) => {
         const next = new Map(prev)
         const current = next.get(field.qsid) ?? 0
@@ -145,12 +155,12 @@ export function QmkSettings({
         return next
       })
     },
-    [status, setStatus],
+    [clearFailure],
   )
 
   const handleIntegerChange = useCallback(
     (field: QmkSettingsField, value: number) => {
-      if (status === 'failed') setStatus('idle')
+      clearFailure()
       const min = field.min ?? 0
       const max = field.max ?? Infinity
       const clamped = Math.max(min, Math.min(max, value))
@@ -160,48 +170,44 @@ export function QmkSettings({
         return next
       })
     },
-    [status, setStatus],
+    [clearFailure],
   )
 
   const handleSave = useCallback(async () => {
     setStatus('saving')
     const written = new Map(values)
     let failed = false
-    try {
-      for (const [qsid, val] of editedValues) {
-        if (values.get(qsid) === val) continue
-        const field = findFieldByQsid(tabs, qsid)
-        const width = field?.width ?? 1
-        const data = serializeValue(val, width)
-        try {
-          await qmkSettingsSet(qsid, data)
-        } catch (err) {
-          failed = true
-          console.error(`[QmkSettings] save failed for qsid ${qsid}:`, err)
-          break
-        }
-        onSettingsUpdate?.(qsid, data)
-        written.set(qsid, val)
+    let wrote = false
+    for (const [qsid, val] of editedValues) {
+      if (values.get(qsid) === val) continue
+      const field = findFieldByQsid(tabs, qsid)
+      const width = field?.width ?? 1
+      const data = serializeValue(val, width)
+      try {
+        await qmkSettingsSet(qsid, data)
+      } catch (err) {
+        failed = true
+        console.error(`[QmkSettings] save failed for qsid ${qsid}:`, err)
+        break
       }
-    } finally {
-      if (mountedRef.current) {
-        setValues(written)
-        setStatus(failed ? 'failed' : 'saved')
-      }
+      onSettingsUpdate?.(qsid, data)
+      written.set(qsid, val)
+      wrote = true
     }
+    if (!mountedRef.current) return
+    if (wrote) setValues(written)
+    setStatus(failed ? 'failed' : 'saved')
   }, [editedValues, values, tabs, qmkSettingsSet, onSettingsUpdate, setStatus])
 
   const handleUndo = useCallback(() => {
-    if (status === 'failed') setStatus('idle')
+    clearFailure()
     setEditedValues(new Map(values))
-  }, [status, setStatus, values])
+  }, [clearFailure, values])
 
   const handleReset = useCallback(async () => {
-    if (status === 'failed') setStatus('idle')
-    setResetting(true)
+    setStatus('resetting')
     try {
       await qmkSettingsReset()
-      // Reload values after reset
       const vals = new Map<number, number>()
       for (const qsid of allQsids) {
         if (supportedQsids.has(qsid)) {
@@ -217,9 +223,9 @@ export function QmkSettings({
         setEditedValues(new Map(vals))
       }
     } finally {
-      if (mountedRef.current) setResetting(false)
+      if (mountedRef.current) setStatus('idle')
     }
-  }, [status, setStatus, qmkSettingsReset, qmkSettingsGet, allQsids, supportedQsids, tabs, onSettingsUpdate])
+  }, [setStatus, qmkSettingsReset, qmkSettingsGet, allQsids, supportedQsids, tabs, onSettingsUpdate])
 
   const resetAction = useConfirmAction(handleReset)
   const revertAction = useConfirmAction(handleUndo)
@@ -268,7 +274,10 @@ export function QmkSettings({
       </div>
 
       <div className="flex items-center justify-between pt-2">
-        <span className={saveStatusClassName(status)} data-testid="qmk-save-status">
+        <span
+          className={`text-xs font-medium ${saveStatusColorClass(status)}`}
+          data-testid="qmk-save-status"
+        >
           {status === 'saving' && t('common.saving')}
           {status === 'saved' && t('common.saved')}
           {status === 'failed' && t('editor.keymap.qmkSettingsSaveFailed')}
@@ -280,7 +289,7 @@ export function QmkSettings({
             onClick={() => { revertAction.reset(); resetAction.trigger() }}
             labelKey="common.reset"
             confirmLabelKey="common.confirmReset"
-            disabled={status === 'saving' || resetting}
+            disabled={busy}
           />
           <ConfirmButton
             testId="qmk-revert"
@@ -288,14 +297,14 @@ export function QmkSettings({
             onClick={() => { resetAction.reset(); revertAction.trigger() }}
             labelKey="common.revert"
             confirmLabelKey="common.confirmRevert"
-            disabled={status === 'saving' || resetting}
+            disabled={busy}
           />
           <button
             type="button"
             data-testid="qmk-save"
             className={BTN_PRIMARY}
             onClick={handleSave}
-            disabled={status === 'saving' || resetting || !hasChanges}
+            disabled={busy || !hasChanges}
           >
             {t('common.save')}
           </button>

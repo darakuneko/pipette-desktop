@@ -131,7 +131,7 @@ export function useKeyboardPersistence(
 
       // Apply QMK settings — skip qsids the connected firmware doesn't
       // support (e.g. a .vil saved from a different keyboard or a newer
-      // firmware build). qmkSettingsSet now rejects on a non-zero status
+      // firmware build). qmkSettingsSet rejects on a non-zero status
       // byte, so sending an unsupported qsid would abort the rest of the
       // restore instead of just leaving that one setting untouched.
       for (const [qsid, data] of Object.entries(vil.qmkSettings)) {
