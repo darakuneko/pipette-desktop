@@ -2,12 +2,71 @@
 
 import { useCallback } from 'react'
 import type { KeyboardDefinition, VilFile } from '../../shared/types/protocol'
+import type { VialAPI } from '../../shared/types/vial-api'
 import { mapToRecord, recordToMap, VILFILE_CURRENT_VERSION } from '../../shared/vil-file'
 import { vilToVialGuiJson } from '../../shared/vil-compat'
 import { splitMacroBuffer, deserializeMacro, macroActionsToJson, jsonToMacroActions } from '../../preload/macro'
 import { parseDefinitionLayout } from '../../shared/kle/definition-layout'
-import type { SetState, KeyboardRefs, BootGuardRef } from './keyboard-types'
+import type { SetState, KeyboardRefs, BootGuardRef, ApplyVilResult } from './keyboard-types'
 import { emptyState } from './keyboard-types'
+
+/** Writes every device-facing field of `vil` over HID, in the same order
+ *  `applyVilFile` always has. Used both for the real apply (whatever the
+ *  caller passes as `vil.qmkSettings` — already filtered to supported
+ *  qsids) and for rollback (writing a pre-apply `serialize()` snapshot
+ *  back). `opts.padMacrosTo`, when a positive length is given, always
+ *  writes exactly that many macro bytes (truncating or zero-padding
+ *  `vil.macros` to fit) instead of the normal "skip if empty" rule —
+ *  rollback needs this because a `serialize()` backup's macro buffer can
+ *  be shorter than the device's actual buffer size (`setMacroBuffer`
+ *  stores whatever array it was given, so a shorter post-edit write
+ *  leaves state shorter than `macroBufferSize`); writing only the short
+ *  backup back would leave the tail of a longer, since-applied macro
+ *  buffer on the device. */
+async function writeVilToDevice(api: VialAPI, vil: VilFile, opts?: { padMacrosTo?: number }): Promise<void> {
+  const keymap = recordToMap(vil.keymap)
+  const encoderLayout = recordToMap(vil.encoderLayout)
+
+  for (const [key, keycode] of keymap) {
+    const [layer, row, col] = key.split(',').map(Number)
+    await api.setKeycode(layer, row, col, keycode)
+  }
+
+  for (const [key, keycode] of encoderLayout) {
+    const [layer, idx, direction] = key.split(',').map(Number)
+    await api.setEncoder(layer, idx, direction, keycode)
+  }
+
+  if (opts?.padMacrosTo && opts.padMacrosTo > 0) {
+    const padded = vil.macros.slice(0, opts.padMacrosTo)
+    while (padded.length < opts.padMacrosTo) padded.push(0)
+    await api.setMacroBuffer(padded)
+  } else if (vil.macros.length > 0) {
+    await api.setMacroBuffer(vil.macros)
+  }
+
+  await api.setLayoutOptions(vil.layoutOptions)
+
+  for (let i = 0; i < vil.tapDance.length; i++) {
+    await api.setTapDance(i, vil.tapDance[i])
+  }
+
+  for (let i = 0; i < vil.combo.length; i++) {
+    await api.setCombo(i, vil.combo[i])
+  }
+
+  for (let i = 0; i < vil.keyOverride.length; i++) {
+    await api.setKeyOverride(i, vil.keyOverride[i])
+  }
+
+  for (let i = 0; i < vil.altRepeatKey.length; i++) {
+    await api.setAltRepeatKey(i, vil.altRepeatKey[i])
+  }
+
+  for (const [qsid, data] of Object.entries(vil.qmkSettings)) {
+    await api.qmkSettingsSet(Number(qsid), data)
+  }
+}
 
 export function useKeyboardPersistence(
   setState: SetState,
@@ -74,7 +133,7 @@ export function useKeyboardPersistence(
     })
   }, [setState])
 
-  const applyVilFile = useCallback(async (vil: VilFile) => {
+  const applyVilFile = useCallback(async (vil: VilFile): Promise<ApplyVilResult> => {
     const isDummy = stateRef.current.isDummy
 
     const keymap = recordToMap(vil.keymap)
@@ -107,49 +166,28 @@ export function useKeyboardPersistence(
 
       const api = window.vialAPI
 
-      // Apply keymap
-      for (const [key, keycode] of keymap) {
-        const [layer, row, col] = key.split(',').map(Number)
-        await api.setKeycode(layer, row, col, keycode)
-      }
+      // Snapshot of "what Pipette believes the device currently holds",
+      // taken before the first write — serialize() is pure/synchronous, so
+      // this can never itself fail. If the apply below fails partway
+      // through, this is written back to restore the device instead of
+      // leaving it half-changed while the screen still shows the old
+      // (now wrong) state.
+      const backup = serialize()
 
-      // Apply encoder layout
-      for (const [key, keycode] of encoderLayout) {
-        const [layer, idx, direction] = key.split(',').map(Number)
-        await api.setEncoder(layer, idx, direction, keycode)
-      }
-
-      // Apply macros
-      if (vil.macros.length > 0) {
-        await api.setMacroBuffer(vil.macros)
-      }
-
-      // Apply layout options
-      await api.setLayoutOptions(vil.layoutOptions)
-
-      // Apply tap dance entries
-      for (let i = 0; i < vil.tapDance.length; i++) {
-        await api.setTapDance(i, vil.tapDance[i])
-      }
-
-      // Apply combo entries
-      for (let i = 0; i < vil.combo.length; i++) {
-        await api.setCombo(i, vil.combo[i])
-      }
-
-      // Apply key override entries
-      for (let i = 0; i < vil.keyOverride.length; i++) {
-        await api.setKeyOverride(i, vil.keyOverride[i])
-      }
-
-      // Apply alt repeat key entries
-      for (let i = 0; i < vil.altRepeatKey.length; i++) {
-        await api.setAltRepeatKey(i, vil.altRepeatKey[i])
-      }
-
-      // Apply QMK settings (already filtered to supported qsids above).
-      for (const [qsid, data] of Object.entries(appliedQmkSettings)) {
-        await api.qmkSettingsSet(Number(qsid), data)
+      try {
+        await writeVilToDevice(api, { ...vil, qmkSettings: appliedQmkSettings })
+      } catch (err) {
+        console.error('[Persistence] apply failed:', err)
+        try {
+          // macroBufferSize (not backup.macros.length) is the pad target —
+          // see writeVilToDevice's doc for why a shorter post-edit buffer
+          // must still be padded to the device's real buffer length.
+          await writeVilToDevice(api, backup, { padMacrosTo: stateRef.current.macroBufferSize })
+          return { ok: false, rolledBack: true }
+        } catch (rollbackErr) {
+          console.error('[Persistence] rollback failed:', rollbackErr)
+          return { ok: false, rolledBack: false }
+        }
       }
     }
 
@@ -180,7 +218,9 @@ export function useKeyboardPersistence(
       // effect keys off of).
       keymapRestoreSeq: s.keymapRestoreSeq + 1,
     }))
-  }, [setState, stateRef, saveLayerNamesRef])
+
+    return { ok: true }
+  }, [setState, stateRef, saveLayerNamesRef, serialize])
 
   const reset = useCallback(() => {
     // `keymapRestoreSeq` is monotonic for the whole session (see

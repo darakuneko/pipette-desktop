@@ -155,6 +155,16 @@ export type ReloadResult =
   | { ok: true; uid: string }
   | { ok: false; reason: 'notVial' | 'loadFailed' }
 
+/** Outcome of `applyVilFile`. `rolledBack` is only meaningful when
+ *  `ok: false`: `true` means the device was successfully restored to
+ *  its pre-apply state (so the screen, which was never updated, still
+ *  matches the device); `false` means the restore itself also failed —
+ *  the device and the screen may now disagree, and the caller must tell
+ *  the user rather than silently treating it as a normal load failure. */
+export type ApplyVilResult =
+  | { ok: true }
+  | { ok: false; rolledBack: boolean }
+
 export interface KeyboardRefs {
   stateRef: React.MutableRefObject<KeyboardState>
   qmkSettingsBaselineRef: React.MutableRefObject<Record<string, number[]>>

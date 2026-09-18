@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useLayoutStore, type UseLayoutStoreOptions } from '../useLayoutStore'
+import type { ApplyVilResult } from '../keyboard-types'
 import {
   VALID_VIL,
   VALID_VIL_JSON,
@@ -53,7 +54,7 @@ function createHookOptions(overrides?: Partial<UseLayoutStoreOptions>) {
     deviceUid: VALID_VIL.uid,
     deviceName: 'Test Keyboard',
     serialize: vi.fn(() => VALID_VIL),
-    applyVilFile: vi.fn(async () => {}),
+    applyVilFile: vi.fn(async (): Promise<ApplyVilResult> => ({ ok: true })),
     currentDefinition: null,
     ...overrides,
   }

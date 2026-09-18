@@ -12,7 +12,7 @@
 //    supports, and keeping local state in sync with what was actually
 //    written to the device.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useState, useRef } from 'react'
 import { useKeyboardPersistence } from '../useKeyboardPersistence'
@@ -146,5 +146,216 @@ describe('applyVilFile qmk settings', () => {
     } finally {
       window.vialAPI = originalVialAPI
     }
+  })
+})
+
+// Task-irr-4 (Plan-import-restore-rollback.md §B tests B1-B5): applyVilFile's
+// backup-before-write / rollback-on-failure behavior for a real (non-dummy)
+// device. Each test installs its own window.vialAPI mock since the write
+// sequence itself — and where it's made to fail — is the point under test.
+describe('applyVilFile HID backup and rollback', () => {
+  const originalVialAPI = window.vialAPI
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    window.vialAPI = originalVialAPI
+  })
+
+  function baseHidState(overrides?: Partial<KeyboardState>): Partial<KeyboardState> {
+    return {
+      isDummy: false,
+      unlockStatus: { unlocked: true, inProgress: false, keys: [] },
+      supportedQsids: new Set([1, 2]),
+      // parsedMacros: [] sidesteps splitMacroBuffer/deserializeMacro entirely
+      // for serialize()'s macroJson field — irrelevant to these tests, which
+      // only care about the raw macroBuffer array passed to setMacroBuffer.
+      parsedMacros: [],
+      ...overrides,
+    }
+  }
+
+  it('B1: a fully successful apply returns { ok: true } and updates state', async () => {
+    const setKeycode = vi.fn(async () => {})
+    window.vialAPI = {
+      setKeycode,
+      setEncoder: vi.fn(async () => {}),
+      setMacroBuffer: vi.fn(async () => {}),
+      setLayoutOptions: vi.fn(async () => {}),
+      setTapDance: vi.fn(async () => {}),
+      setCombo: vi.fn(async () => {}),
+      setKeyOverride: vi.fn(async () => {}),
+      setAltRepeatKey: vi.fn(async () => {}),
+      qmkSettingsSet: vi.fn(async () => {}),
+    } as unknown as typeof window.vialAPI
+
+    const { result } = renderHook(() => useHarness(baseHidState()))
+
+    let applyResult: Awaited<ReturnType<typeof result.current.applyVilFile>> | undefined
+    await act(async () => {
+      applyResult = await result.current.applyVilFile(VALID_VIL)
+    })
+
+    expect(applyResult).toEqual({ ok: true })
+    expect(setKeycode).toHaveBeenCalledWith(0, 0, 0, 0x4f)
+    expect(result.current.state.keymap.get('0,0,0')).toBe(0x4f)
+    expect(result.current.state.keymapRestoreSeq).toBe(1)
+  })
+
+  it('B2: a mid-apply setKeycode failure rewrites the backup keymap and reports rolledBack: true, leaving state unchanged', async () => {
+    const setKeycode = vi.fn(async (_layer: number, row: number, col: number) => {
+      // Fails on the 5th distinct keymap entry (layer 0, row 1, col 5 —
+      // VALID_VIL's keycode for '0,1,5') so the first four keys and the
+      // rollback's own (single) backup key are all still observable.
+      if (row === 1 && col === 5) throw new Error('device write failed')
+    })
+    window.vialAPI = {
+      setKeycode,
+      setEncoder: vi.fn(async () => {}),
+      setMacroBuffer: vi.fn(async () => {}),
+      setLayoutOptions: vi.fn(async () => {}),
+      setTapDance: vi.fn(async () => {}),
+      setCombo: vi.fn(async () => {}),
+      setKeyOverride: vi.fn(async () => {}),
+      setAltRepeatKey: vi.fn(async () => {}),
+      qmkSettingsSet: vi.fn(async () => {}),
+    } as unknown as typeof window.vialAPI
+
+    const { result } = renderHook(() =>
+      useHarness(baseHidState({
+        keymap: new Map([['0,0,0', 5]]),
+        macroBufferSize: 0,
+      })),
+    )
+
+    let applyResult: Awaited<ReturnType<typeof result.current.applyVilFile>> | undefined
+    await act(async () => {
+      applyResult = await result.current.applyVilFile(VALID_VIL)
+    })
+
+    expect(applyResult).toEqual({ ok: false, rolledBack: true })
+    // The rollback writes the pre-apply backup value back — the last
+    // setKeycode call must be the backup's own (0,0,0) -> 5, not anything
+    // from VALID_VIL.
+    const lastCall = setKeycode.mock.calls[setKeycode.mock.calls.length - 1]
+    expect(lastCall).toEqual([0, 0, 0, 5])
+    // Local state was never updated — the failed apply must not leave the
+    // screen claiming a keymap the device doesn't actually hold.
+    expect(result.current.state.keymap.get('0,0,0')).toBe(5)
+    expect(result.current.state.keymapRestoreSeq).toBe(0)
+  })
+
+  it('B3: a failure during rollback itself reports rolledBack: false and still leaves state unchanged', async () => {
+    const setKeycode = vi.fn(async () => { throw new Error('apply failed') })
+    const setLayoutOptions = vi.fn(async () => { throw new Error('rollback failed') })
+    window.vialAPI = {
+      setKeycode,
+      setEncoder: vi.fn(async () => {}),
+      setMacroBuffer: vi.fn(async () => {}),
+      setLayoutOptions,
+      setTapDance: vi.fn(async () => {}),
+      setCombo: vi.fn(async () => {}),
+      setKeyOverride: vi.fn(async () => {}),
+      setAltRepeatKey: vi.fn(async () => {}),
+      qmkSettingsSet: vi.fn(async () => {}),
+    } as unknown as typeof window.vialAPI
+
+    const { result } = renderHook(() =>
+      useHarness(baseHidState({ macroBufferSize: 0 })),
+    )
+
+    let applyResult: Awaited<ReturnType<typeof result.current.applyVilFile>> | undefined
+    await act(async () => {
+      applyResult = await result.current.applyVilFile(VALID_VIL)
+    })
+
+    expect(applyResult).toEqual({ ok: false, rolledBack: false })
+    expect(result.current.state.keymapRestoreSeq).toBe(0)
+  })
+
+  it('B4: rollback pads a shorter backup macro buffer with zeros up to macroBufferSize', async () => {
+    const setKeycode = vi.fn(async () => { throw new Error('apply failed') })
+    const setMacroBuffer = vi.fn(async () => {})
+    window.vialAPI = {
+      setKeycode,
+      setEncoder: vi.fn(async () => {}),
+      setMacroBuffer,
+      setLayoutOptions: vi.fn(async () => {}),
+      setTapDance: vi.fn(async () => {}),
+      setCombo: vi.fn(async () => {}),
+      setKeyOverride: vi.fn(async () => {}),
+      setAltRepeatKey: vi.fn(async () => {}),
+      qmkSettingsSet: vi.fn(async () => {}),
+    } as unknown as typeof window.vialAPI
+
+    const { result } = renderHook(() =>
+      useHarness(baseHidState({
+        macroBuffer: [1, 2, 3],
+        macroBufferSize: 6,
+      })),
+    )
+
+    await act(async () => {
+      await result.current.applyVilFile(VALID_VIL)
+    })
+
+    expect(setMacroBuffer).toHaveBeenCalledWith([1, 2, 3, 0, 0, 0])
+  })
+
+  it('B4b: rollback does not write macros at all when macroBufferSize is 0', async () => {
+    const setKeycode = vi.fn(async () => { throw new Error('apply failed') })
+    const setMacroBuffer = vi.fn(async () => {})
+    window.vialAPI = {
+      setKeycode,
+      setEncoder: vi.fn(async () => {}),
+      setMacroBuffer,
+      setLayoutOptions: vi.fn(async () => {}),
+      setTapDance: vi.fn(async () => {}),
+      setCombo: vi.fn(async () => {}),
+      setKeyOverride: vi.fn(async () => {}),
+      setAltRepeatKey: vi.fn(async () => {}),
+      qmkSettingsSet: vi.fn(async () => {}),
+    } as unknown as typeof window.vialAPI
+
+    const { result } = renderHook(() =>
+      useHarness(baseHidState({
+        macroBuffer: [],
+        macroBufferSize: 0,
+      })),
+    )
+
+    await act(async () => {
+      await result.current.applyVilFile(VALID_VIL)
+    })
+
+    expect(setMacroBuffer).not.toHaveBeenCalled()
+  })
+
+  it('B5: a dummy/file-mode device never touches HID and still returns { ok: true }', async () => {
+    const setKeycode = vi.fn(async () => {})
+    window.vialAPI = {
+      setKeycode,
+      setEncoder: vi.fn(async () => {}),
+      setMacroBuffer: vi.fn(async () => {}),
+      setLayoutOptions: vi.fn(async () => {}),
+      setTapDance: vi.fn(async () => {}),
+      setCombo: vi.fn(async () => {}),
+      setKeyOverride: vi.fn(async () => {}),
+      setAltRepeatKey: vi.fn(async () => {}),
+      qmkSettingsSet: vi.fn(async () => {}),
+    } as unknown as typeof window.vialAPI
+
+    const { result } = renderHook(() => useHarness({ isDummy: true }))
+
+    let applyResult: Awaited<ReturnType<typeof result.current.applyVilFile>> | undefined
+    await act(async () => {
+      applyResult = await result.current.applyVilFile(VALID_VIL)
+    })
+
+    expect(applyResult).toEqual({ ok: true })
+    expect(setKeycode).not.toHaveBeenCalled()
+    expect(result.current.state.keymap.get('0,0,0')).toBe(0x4f)
   })
 })

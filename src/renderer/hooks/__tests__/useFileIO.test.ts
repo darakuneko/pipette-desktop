@@ -6,6 +6,7 @@ import { renderHook, act } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { useFileIO, type UseFileIOOptions } from '../useFileIO'
+import type { ApplyVilResult } from '../keyboard-types'
 import { isVilFile } from '../../../shared/vil-file'
 import {
   VALID_VIL,
@@ -45,7 +46,7 @@ function createHookOptions(overrides?: Partial<UseFileIOOptions>) {
     deviceUid: VALID_VIL.uid,
     deviceName: 'Test Keyboard',
     serialize: vi.fn(() => VALID_VIL),
-    applyVilFile: vi.fn(async () => {}),
+    applyVilFile: vi.fn(async (): Promise<ApplyVilResult> => ({ ok: true })),
     ...overrides,
   }
 }

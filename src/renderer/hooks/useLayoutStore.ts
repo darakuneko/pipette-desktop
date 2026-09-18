@@ -5,12 +5,13 @@ import { useTranslation } from 'react-i18next'
 import type { KeyboardDefinition, VilFile } from '../../shared/types/protocol'
 import type { SnapshotMeta } from '../../shared/types/snapshot-store'
 import { isVilFile, isVilFileV1, migrateVilFileToV2 } from '../../shared/vil-file'
+import type { ApplyVilResult } from './keyboard-types'
 
 export interface UseLayoutStoreOptions {
   deviceUid: string
   deviceName: string
   serialize: () => VilFile
-  applyVilFile: (vil: VilFile) => Promise<void>
+  applyVilFile: (vil: VilFile) => Promise<ApplyVilResult>
   /** Current device definition — used for v1→v2 auto-migration */
   currentDefinition: KeyboardDefinition | null
 }
