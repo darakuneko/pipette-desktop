@@ -467,9 +467,8 @@ export function setupSyncIpc(): void {
   // --- Import local data ---
   // A cancelled file picker isn't an error, so the wrapped fn returns a
   // `cancelled` payload instead of throwing — wrapIpc merges it into the
-  // success result, giving the same `cancelled` outcome distinct from
-  // `success`/`error` that this handler used to build by hand. See
-  // ImportLocalDataResult's doc.
+  // success result, keeping `cancelled` distinct from a real success or
+  // an error. See ImportLocalDataResult's doc.
   secureHandle(IpcChannels.IMPORT_LOCAL_DATA, async (): Promise<ImportLocalDataResult> =>
     wrapIpc<{ cancelled?: true }>('Import failed', async () => {
       const dialogOpts = {

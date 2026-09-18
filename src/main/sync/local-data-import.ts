@@ -175,22 +175,19 @@ async function planIndexBundle<T extends EntryMeta>(
  *  `_updatedAt`. Returns `null` when the remote payload is missing or not
  *  newer than the local one (nothing to write).
  *
- *  Every failure mode below is deliberately handled differently, since
- *  conflating them used to mean any local read failure — not just a
- *  genuinely missing file — was treated as "no local file" and could
- *  overwrite (and a rollback would then unlink) a real settings file the
- *  import just couldn't read for some other reason (permissions, I/O
- *  error):
+ *  Each failure mode is handled separately. Treating every local read
+ *  failure as "no local file" would plan a `create` for a settings file
+ *  that exists but couldn't be read (permissions, I/O error), and a later
+ *  rollback would then unlink it:
  *   - local file missing (ENOENT): absent, plan a `create`
  *   - local file exists but some other read error: abort the whole
  *     import (throw) rather than risk destroying it
- *   - local file exists but fails to *parse*: kept as the existing
- *     behaviour — plan an `overwrite` with its raw (unparsed) content as
- *     the rollback backup, so a corrupted local file still gets replaced
+ *   - local file exists but fails to *parse*: plan an `overwrite` with
+ *     its raw (unparsed) content as the rollback backup, so a corrupted
+ *     local file still gets replaced
  *   - remote payload isn't valid JSON: abort (throw) before writing
- *     anything — this used to fall into the same catch as "no local
- *     file" and silently overwrite a healthy local settings file with
- *     unparseable content */
+ *     anything, so a healthy local settings file is never overwritten
+ *     with unparseable content */
 async function planSettingsBundle(
   uid: string,
   bundle: unknown,
