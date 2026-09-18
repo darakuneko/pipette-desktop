@@ -165,7 +165,7 @@ File タブでは、物理キーボードを接続せずに `.pipette` ファイ
 - **「This device may not be a Vial-compatible keyboard.」** — キーボードが Vial であることを一度も応答しなかった、または有効なキーボード定義を返さなかった場合
 - **「Failed to read data from the keyboard. Check the USB cable and try connecting again.」** — キーボードは Vial だと応答したものの、キーマップ・エンコーダ・マクロ、または Tap Dance / Combo / Key Override / Alt Repeat Key のいずれかの読み込みが途中で失敗した場合
 
-エディタは開いたものの、ライティングデータ・QMK Settings・ロック状態のいずれかが読み込めなかった場合は、代わりにエディタ上部に黄色のバナーが表示されます: **「Some settings could not be read from the keyboard. Reconnect to try again.」**（この場合 QMK Settings の値は空のままになります）。同じ接続で両方が起きた場合は、既存の **「Communication error detected. Please check your USB cable and reconnect the device.」** バナーが優先されます — エコーが検出された場合は、特定の項目ではなく接続全体が不安定である可能性が高いためです。
+エディタは開いたものの、ライティングデータ・QMK Settings・ロック状態のいずれかが読み込めなかった場合は、代わりにエディタ上部に黄色のバナーが表示されます: **「Some settings could not be read from the keyboard. Reconnect to try again.」**（読み込めなかったのが QMK Settings の場合、値は一部だけ埋まった状態にはならず、空のままになります）。同じ接続で両方が起きた場合は、既存の **「Communication error detected. Please check your USB cable and reconnect the device.」** バナーが優先されます — エコーが検出された場合は、特定の項目ではなく接続全体が不安定である可能性が高いためです。
 
 ### 1.3 データ
 
@@ -1151,7 +1151,7 @@ Keyboard タブを開くと、接続中の Vial 対応キーボードの一覧�
 - **キーピッカーでShiftキーを分離**: 複合キーコードの分割表示を切替 (例: Mod-Tap を 2 つに分けて表示)
 - **Key Tester**: Matrix Tester モードの切替 (対応キーボードのみ)
 - **Security**: ロック状態 (Locked/Unlocked) の表示と、それに連動するボタン — ロック中は **Unlock**、アンロック中は **Lock** になります。Unlock は Unlock ダイアログを開きます（ロック状態が確定するまでは無効のまま — 未確定の仮の状態に対してダイアログを開いてしまわないための措置です）。Lock は Typing Record（§4.3）が OFF ならそのまま即座にロックし、ON の場合は確認ダイアログ（「Turn off Record and lock?」）を表示し、確定すると Record を OFF にしてからロックします
-- **Import**: `.vil` ファイルからの復元、またはカスタム JSON 定義のサイドロード。`.vil` ファイルの復元はその内容をフィールドごとにキーボードへ書き込みます。途中で書き込みが失敗した場合、Pipette は復元を開始する直前に取得しておいたデバイスの状態を書き戻します（キーボードの形状が変わっていないことを前提とした処理で、バイト単位で完全に元通りになることを保証するものではありません）。その書き戻し自体が成功したかどうかに応じて、次のいずれかのメッセージが表示されます: **「Writing to the keyboard failed. The previous settings were restored.」**、または書き戻しも失敗した場合は **「Writing to the keyboard failed and the previous settings could not be restored. Reconnect the keyboard and load a saved snapshot.」**
+- **Import**: `.vil` ファイルからの復元、またはカスタム JSON 定義のサイドロード。`.vil` ファイルの復元はその内容をフィールドごとにキーボードへ書き込みます。途中で書き込みが失敗した場合、Pipette は復元を開始する直前にアプリが保持していたキーボードの状態（エディタに表示されていた状態で、デバイスから読み直したものではありません）を書き戻します（キーボードの形状が変わっていないことを前提とした処理で、バイト単位で完全に元通りになることを保証するものではありません）。その書き戻し自体が成功したかどうかに応じて、次のいずれかのメッセージが表示されます: **「Writing to the keyboard failed. The previous settings were restored.」**、または書き戻しも失敗した場合は **「Writing to the keyboard failed and the previous settings could not be restored. Reconnect the keyboard and load a saved snapshot.」**
 - **Reset Keyboard Data**: キーボードを初期状態に戻す
 
 **Save タブ**
