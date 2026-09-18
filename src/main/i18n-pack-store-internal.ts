@@ -11,9 +11,10 @@
 
 import { app } from 'electron'
 import { join } from 'node:path'
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 import { notifyChange } from './sync/sync-service'
 import { isSafePackId } from './utils/safe-filename'
+import { writeFileAtomic } from './utils/write-file-atomic'
 import {
   BUILTIN_ENGLISH_PACK_ID,
   type I18nPackIndex,
@@ -95,16 +96,11 @@ export async function withIndexWriteLock<T>(fn: () => Promise<T>): Promise<T> {
   return next
 }
 
-/** Write `content` to `path` via a temp-file-then-rename so a reader can
- *  never observe a torn (partially-written) file — a plain `writeFile`
- *  racing a concurrent read is how `readIndex`'s parse-failure fallback
- *  (`{ metas: [] }`) could otherwise get persisted right over a real
- *  roster by a subsequent read-modify-write. */
-export async function writeFileAtomic(path: string, content: string): Promise<void> {
-  const tmpPath = `${path}.tmp`
-  await writeFile(tmpPath, content, 'utf-8')
-  await rename(tmpPath, path)
-}
+// Re-exported from the shared util (see its doc for the full rationale —
+// temp-file-then-rename so a reader can never observe a torn file, plus
+// best-effort `.tmp` cleanup on a rename failure) so existing call sites
+// in this module keep importing it from here.
+export { writeFileAtomic }
 
 // --- Result type -------------------------------------------------------------
 

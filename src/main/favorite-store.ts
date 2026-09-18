@@ -10,6 +10,7 @@ import { isValidFavoriteType, isValidVialProtocol, isFavoriteDataFile, FAV_EXPOR
 import { serialize as serializeKeycode, deserialize as deserializeKeycode } from '../shared/keycodes/keycodes'
 import { withDeserializeProtocol, withSerializeProtocol } from '../shared/keycodes/with-protocol'
 import { notifyChange } from './sync/sync-service'
+import { withWriteLock } from './per-uid-write-lock'
 import { secureHandle } from './ipc-guard'
 import { isSafePathSegment, tsForFilename, tsForExportFilename } from './utils/safe-filename'
 import type { FavoriteType, SavedFavoriteMeta, FavoriteIndex, FavoriteExportEntry, FavoriteImportResult } from '../shared/types/favorite-store'
@@ -82,31 +83,37 @@ export function setupFavoriteStore(): void {
     ): Promise<{ success: boolean; entry?: SavedFavoriteMeta; error?: string }> => {
       try {
         validateType(type)
-        const dir = getFavoriteDir(type)
-        await mkdir(dir, { recursive: true })
+        // Locked against a concurrent local-data import touching the same
+        // `favorites/{type}` unit — both read-modify-write the index, and
+        // without the shared lock one writer's read can be stale by the
+        // time it writes, silently dropping the other's entry.
+        return await withWriteLock(`favorites/${type}`, async () => {
+          const dir = getFavoriteDir(type)
+          await mkdir(dir, { recursive: true })
 
-        const now = new Date()
-        const timestamp = tsForFilename(now)
-        const filename = `${type}_${timestamp}_${randomUUID().slice(0, 8)}.json`
-        const filePath = getSafeFilePath(type, filename)
+          const now = new Date()
+          const timestamp = tsForFilename(now)
+          const filename = `${type}_${timestamp}_${randomUUID().slice(0, 8)}.json`
+          const filePath = getSafeFilePath(type, filename)
 
-        await writeFile(filePath, json, 'utf-8')
+          await writeFile(filePath, json, 'utf-8')
 
-        const nowIso = now.toISOString()
-        const entry: SavedFavoriteMeta = {
-          id: randomUUID(),
-          label,
-          filename,
-          savedAt: nowIso,
-          updatedAt: nowIso,
-        }
+          const nowIso = now.toISOString()
+          const entry: SavedFavoriteMeta = {
+            id: randomUUID(),
+            label,
+            filename,
+            savedAt: nowIso,
+            updatedAt: nowIso,
+          }
 
-        const index = await readIndex(type)
-        index.entries.unshift(entry)
-        await writeIndex(type, index)
+          const index = await readIndex(type)
+          index.entries.unshift(entry)
+          await writeIndex(type, index)
 
-        notifyChange(`favorites/${type}`)
-        return { success: true, entry }
+          notifyChange(`favorites/${type}`)
+          return { success: true, entry }
+        })
       } catch (err) {
         return { success: false, error: String(err) }
       }

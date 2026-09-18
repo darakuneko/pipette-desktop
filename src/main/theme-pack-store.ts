@@ -13,13 +13,14 @@
 
 import { app, dialog, BrowserWindow } from 'electron'
 import { join } from 'node:path'
-import { mkdir, readdir, readFile, rename, rm, stat, unlink, utimes, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rm, stat, unlink, utimes, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { notifyChange } from './sync/sync-service'
 import { gcTombstones, mergeEntries, MalformedSyncBundleError } from './sync/merge'
 import { log } from './logger'
 import { safeFilename, isSafePackId } from './utils/safe-filename'
 import { sweepOrphanFiles } from './utils/sweep-orphan-pack-bodies'
+import { writeFileAtomic } from './utils/write-file-atomic'
 import { validateThemePack } from '../shared/theme/validate'
 import {
   THEME_INDEX_SYNC_UNIT,
@@ -94,15 +95,6 @@ async function withIndexWriteLock<T>(fn: () => Promise<T>): Promise<T> {
   const next = indexWriteChain.then(() => fn(), () => fn())
   indexWriteChain = next.catch(() => undefined)
   return next
-}
-
-/** Write `content` to `path` via a temp-file-then-rename so a reader can
- *  never observe a torn (partially-written) file. See the i18n-pack-store
- *  equivalent for the full rationale. */
-async function writeFileAtomic(path: string, content: string): Promise<void> {
-  const tmpPath = `${path}.tmp`
-  await writeFile(tmpPath, content, 'utf-8')
-  await rename(tmpPath, path)
 }
 
 // --- Sync entry points (pack-bundle-merge.ts) --------------------------------
