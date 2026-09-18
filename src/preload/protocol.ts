@@ -717,7 +717,8 @@ export async function qmkSettingsSet(qsid: number, data: number[]): Promise<void
   for (let i = 0; i < data.length && 4 + i < MSG_LEN; i++) {
     pkt[4 + i] = data[i]
   }
-  await sendReceive(pkt)
+  const resp = await sendReceive(pkt)
+  if (resp[0] !== 0) throw new Error(`Failed to set QMK setting ${qsid}`)
 }
 
 /** Reset all QMK settings to defaults. */

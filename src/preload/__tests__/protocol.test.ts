@@ -1207,6 +1207,12 @@ describe('QMK Settings Commands', () => {
       expect(pkt[5]).toBe(0xbb)
       expect(pkt[6]).toBe(0xcc)
     })
+
+    it('throws when status byte is non-zero', async () => {
+      mockSendReceive.mockResolvedValueOnce(resp(0xff))
+
+      await expect(qmkSettingsSet(0x0200, [0xaa])).rejects.toThrow('Failed to set QMK setting')
+    })
   })
 
   describe('qmkSettingsReset', () => {
