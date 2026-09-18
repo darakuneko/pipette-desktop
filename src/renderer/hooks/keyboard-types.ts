@@ -151,6 +151,10 @@ export interface BootGuardRef {
 
 export type SetState = React.Dispatch<React.SetStateAction<KeyboardState>>
 
+export type ReloadResult =
+  | { ok: true; uid: string }
+  | { ok: false; reason: 'notVial' | 'loadFailed' }
+
 export interface KeyboardRefs {
   stateRef: React.MutableRefObject<KeyboardState>
   qmkSettingsBaselineRef: React.MutableRefObject<Record<string, number[]>>

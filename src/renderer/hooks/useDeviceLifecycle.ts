@@ -7,7 +7,7 @@ import { isKeyboardDefinition, isVilFile, isVilFileV1, VILFILE_CURRENT_VERSION }
 import type { DeviceInfo, VilFile, KeyboardDefinition } from '../../shared/types/protocol'
 import type { SyncScope, SyncOperationResult } from '../../shared/types/sync'
 import type { PipetteFileKeyboard, PipetteFileEntry } from '../app-types'
-import type { ReloadResult } from './useKeyboardReload'
+import type { ReloadResult } from './keyboard-types'
 
 interface Options {
   // Device connection
