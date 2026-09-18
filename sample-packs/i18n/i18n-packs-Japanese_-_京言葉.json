@@ -1,5 +1,5 @@
 {
-  "version": "0.1.94",
+  "version": "0.1.95",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -673,7 +673,9 @@
     "sideloadFailed": "JSONの読み込みがあきまへんでしたえ",
     "sideloadInvalidDefinition": "キーボード定義がちゃいますえ。必須のもんが足りまへん。",
     "notVialCompatible": "Vial対応やないかもしれまへんなぁ",
-    "deviceLoadFailed": "キーボードからのデータ読み込みがあきまへんでしたえ。USBケーブルを確認して、もういっぺん繋いどくれやす。"
+    "deviceLoadFailed": "キーボードからのデータ読み込みがあきまへんでしたえ。USBケーブルを確認して、もういっぺん繋いどくれやす。",
+    "applyRolledBack": "キーボードへの書き込みがあきまへんどした。以前の設定に戻させてもろてます。",
+    "applyNotRolledBack": "キーボードへの書き込みがあきまへんどして、以前の設定にも戻せまへんどした。キーボードを繋ぎ直して、保存しといたスナップショットを読み込んどくれやす。"
   },
   "warning": {
     "echoDetected": "通信がおかしゅうなりましたえ。USBケーブルを確認して差し直しておくれやす。",

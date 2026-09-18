@@ -93,11 +93,19 @@ export function useLayoutStore({
           JSON.stringify(migrated, null, 2),
           migrated.version,
         ).then((r) => { if (!r.success) console.warn('[Snapshot] v1→v2 migration failed:', r.error) })
-        await applyVilFile(migrated)
+        const migratedResult = await applyVilFile(migrated)
+        if (!migratedResult.ok) {
+          setError(t(migratedResult.rolledBack ? 'error.applyRolledBack' : 'error.applyNotRolledBack'))
+          return false
+        }
         return true
       }
 
-      await applyVilFile(parsed)
+      const r = await applyVilFile(parsed)
+      if (!r.ok) {
+        setError(t(r.rolledBack ? 'error.applyRolledBack' : 'error.applyNotRolledBack'))
+        return false
+      }
       return true
     } catch {
       setError(t('layoutStore.loadFailed'))

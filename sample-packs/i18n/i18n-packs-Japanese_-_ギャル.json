@@ -1,5 +1,5 @@
 {
-  "version": "0.1.94",
+  "version": "0.1.95",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -673,7 +673,9 @@
     "sideloadFailed": "JSON読み込めなかったっしょ…",
     "sideloadInvalidDefinition": "定義バグってるっぽい？必須項目なくね？",
     "notVialCompatible": "Vial対応してなくね？ワンチャンある☆",
-    "deviceLoadFailed": "キーボードからデータ読み込めなかった…ケーブル確認してもう一回繋いで〜！"
+    "deviceLoadFailed": "キーボードからデータ読み込めなかった…ケーブル確認してもう一回繋いで〜！",
+    "applyRolledBack": "キーボードへの書き込み失敗したー！でも前の設定に戻せたから安心して〜",
+    "applyNotRolledBack": "キーボードへの書き込み失敗して、前の設定にも戻せなかった…マジサゲ。。もう一回繋ぎ直して、保存してたスナップショット読み込んでみて！"
   },
   "warning": {
     "echoDetected": "通信エラー！？ケーブル確認して差し直して〜！",

@@ -108,7 +108,11 @@ export function useFileIO({
         }
       }
 
-      await applyVilFile(vil)
+      const r = await applyVilFile(vil)
+      if (!r.ok) {
+        setError(t(r.rolledBack ? 'error.applyRolledBack' : 'error.applyNotRolledBack'))
+        return false
+      }
       return true
     } catch {
       setError(t('error.loadFailed'))

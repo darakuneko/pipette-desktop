@@ -205,6 +205,42 @@ describe('useLayoutStore – loadLayout', () => {
     expect(opts.applyVilFile).not.toHaveBeenCalled()
   })
 
+  // Task-irr-5 (Plan-import-restore-rollback.md §B call-site table, B6):
+  // applyVilFile resolving { ok: false, ... } (a failed-and-possibly-rolled-
+  // back HID apply) is distinct from the parse/format-error path above,
+  // which always maps to the generic layoutStore.loadFailed.
+  it('sets error.applyRolledBack when applyVilFile resolves rolledBack: true', async () => {
+    mockSnapshotStoreLoad.mockResolvedValueOnce({ success: true, data: VALID_VIL_JSON })
+    const opts = createHookOptions({
+      applyVilFile: vi.fn(async (): Promise<ApplyVilResult> => ({ ok: false, rolledBack: true })),
+    })
+    const { result } = renderHook(() => useLayoutStore(opts))
+
+    let ok: boolean | undefined
+    await act(async () => {
+      ok = await result.current.loadLayout('entry-1')
+    })
+
+    expect(ok).toBe(false)
+    expect(result.current.error).toBe('error.applyRolledBack')
+  })
+
+  it('sets error.applyNotRolledBack when applyVilFile resolves rolledBack: false', async () => {
+    mockSnapshotStoreLoad.mockResolvedValueOnce({ success: true, data: VALID_VIL_JSON })
+    const opts = createHookOptions({
+      applyVilFile: vi.fn(async (): Promise<ApplyVilResult> => ({ ok: false, rolledBack: false })),
+    })
+    const { result } = renderHook(() => useLayoutStore(opts))
+
+    let ok: boolean | undefined
+    await act(async () => {
+      ok = await result.current.loadLayout('entry-1')
+    })
+
+    expect(ok).toBe(false)
+    expect(result.current.error).toBe('error.applyNotRolledBack')
+  })
+
   it('manages loading flag', async () => {
     let resolveIpc!: (v: unknown) => void
     mockSnapshotStoreLoad.mockReturnValueOnce(

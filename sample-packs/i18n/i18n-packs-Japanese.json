@@ -1,5 +1,5 @@
 {
-  "version": "0.1.94",
+  "version": "0.1.95",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -673,7 +673,9 @@
     "sideloadFailed": "JSON定義ファイルの読み込みに失敗しました",
     "sideloadInvalidDefinition": "無効なキーボード定義: 必須フィールド（matrix, layouts）がありません",
     "notVialCompatible": "Vial対応キーボードではない可能性があります",
-    "deviceLoadFailed": "キーボードからのデータ読み込みに失敗しました。USBケーブルを確認し、再接続してください。"
+    "deviceLoadFailed": "キーボードからのデータ読み込みに失敗しました。USBケーブルを確認し、再接続してください。",
+    "applyRolledBack": "キーボードへの書き込みに失敗しました。以前の設定に復元されました。",
+    "applyNotRolledBack": "キーボードへの書き込みに失敗し、以前の設定を復元できませんでした。キーボードを再接続し、保存したスナップショットを読み込んでください。"
   },
   "warning": {
     "echoDetected": "通信エラーが検出されました。USBケーブルを確認し、デバイスを再接続してください。",

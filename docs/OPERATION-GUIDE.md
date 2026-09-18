@@ -170,7 +170,7 @@ The left sidebar provides a **tree navigation** with the following structure:
   - **Keyboards**: Browse saved keyboard snapshots. Click a keyboard to view, load, export, or delete entries
   - **Typing**: Recorded typing-analytics data per keyboard — a per-day list (date, keystrokes, active time) with day selection for deleting, plus export / import of the recorded days
   - **Favorites**: Tap Dance, Macro, Combo, Key Override, Alt Repeat Key — each type shows its saved entries with rename, delete, export, and Hub actions
-  - **Application**: Import/export local data, or reset application settings
+  - **Application**: Import/export local data, or reset application settings. A failed import rolls back everything it already wrote, leaving local data unchanged
 - **Sync** (when Cloud Sync is configured): Lists keyboards that exist only in Google Drive (not yet downloaded on this device). Each entry is labeled with the keyboard's real name, resolved from the synced name index rather than from the raw UID. Click a remote-only keyboard to download it on demand — a spinner is shown while fetching, and a failure message appears inline if the download cannot complete. Once downloaded, the keyboard moves into the **Local › Keyboards** branch
   - **Cloud Data**: Reset targets that aren't tied to one keyboard — Favorites, Language Packs, Theme Packs, Key Labels, and imported Typing Test Texts. Only the targets actually present on Google Drive are listed. Each row has its own **Reset** button with a two-step confirmation (click Reset, then confirm or cancel); resetting removes that target's data from Google Drive only — local copies on this device are untouched, and a local copy that still exists re-uploads on the next sync (the same behavior Favorites already has). This is also where **Undecryptable Files** are listed and cleaned up: files that cannot be decrypted with the current password (e.g. encrypted with a forgotten previous password) appear as their own rows with a filename and a **Delete** button (two-step confirmation, one file at a time)
 
@@ -1137,7 +1137,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 - **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
 - **Key Tester**: Toggle Matrix Tester mode (supported keyboards only)
 - **Security**: Shows lock status (Locked/Unlocked) with a button that follows it — **Unlock** while locked, **Lock** while unlocked. Unlock opens the Unlock dialog (stays disabled until the lock status has been confirmed, to avoid opening it against a stale placeholder state). Lock locks immediately if Typing Record (§4.3) is off; if Typing Record is on, it instead asks for confirmation ("Turn off Record and lock?") and, once confirmed, turns Record off before locking
-- **Import**: Restore from `.vil` files or sideload custom JSON definitions
+- **Import**: Restore from `.vil` files or sideload custom JSON definitions. If writing the restored layout to the keyboard fails partway through, Pipette tries to restore the device to its state from just before the load and reports whether that restore succeeded
 - **Reset Keyboard Data**: Reset keyboard to factory defaults
 
 **Save Tab**
@@ -1146,7 +1146,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 
 - **Export Current State**: Download keymap as `.vil`, `keymap.c`, PDF keymap cheat sheet, or PDF layout export (key outlines with summary pages for Tap Dance, Macro, Combo, Key Override, and Alt Repeat Key entries)
 - **Save Current State**: Save a snapshot of the current keyboard state with a label
-- **Synced Data**: List of saved snapshots with Load, Rename, Delete, and Export actions
+- **Synced Data**: List of saved snapshots with Load, Rename, Delete, and Export actions. A Load that fails partway through is handled the same way as `.vil` Import above — the device is restored to its pre-load state when possible, and the result is reported
 - This is the same Save panel as the standalone editor settings (§6)
 
 **Layout Tab** (when available)
@@ -1697,7 +1697,7 @@ The editor settings panel now provides a single **Save** panel with the followin
 
 - **Export Current State**: Download keymap as `.vil`, `keymap.c`, PDF keymap cheat sheet, or PDF layout export (key outlines with summary pages for Tap Dance, Macro, Combo, Key Override, and Alt Repeat Key entries). An "Exported" inline feedback message appears after a successful export.
 - **Save Current State**: Save a snapshot of the current keyboard state with a label. Enter a name in the Label field and click Save. If the Label field is left empty, the Save button is disabled. Saved snapshots appear in the Synced Data list below and can be loaded or deleted later
-- **Synced Data**: List of saved snapshots. Click to load, rename, or delete entries
+- **Synced Data**: List of saved snapshots. Click to load, rename, or delete entries. A Load that fails partway through tries to restore the device to its pre-load state and reports whether that restore succeeded
 - **Reset Keyboard Data**: Reset keyboard to factory defaults (use with caution)
 
 > **Note**: Tool settings (auto advance, key tester, security) are in the Keycodes Overlay Panel (§3.14). Keyboard layout is available in the status bar quick settings (§9); Basic tab view type is selectable at the bottom of the Basic tab. Zoom is available in the toolbar (§4.1). Layer settings are managed directly via the layer panel on the left side of the editor.
