@@ -1,5 +1,5 @@
 {
-  "version": "0.1.93",
+  "version": "0.1.94",
   "name": "English",
   "common": {
     "save": "Save",
@@ -110,6 +110,7 @@
       "oneShotKeysLabel": "One Shot Keys",
       "comboSettings": "Combo",
       "comboLabel": "Combo",
+      "qmkSettingsSaveFailed": "Failed to save settings. Check the connection and try again.",
       "previousLayers": "Previous layers",
       "nextLayers": "Next layers",
       "layerN": "Layer {{n}}",

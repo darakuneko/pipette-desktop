@@ -1,5 +1,5 @@
 {
-  "version": "0.1.93",
+  "version": "0.1.94",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -110,6 +110,7 @@
       "oneShotKeysLabel": "一撃鍵",
       "comboSettings": "組手",
       "comboLabel": "組手",
+      "qmkSettingsSaveFailed": "設定の保存に失敗いたしました。つながりをお確かめのうえ、今一度お試しください。",
       "previousLayers": "前の階層",
       "nextLayers": "次の階層",
       "layerN": "階層 {{n}}",

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.93",
+  "version": "0.1.94",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -110,6 +110,7 @@
       "oneShotKeysLabel": "One Shot Keys",
       "comboSettings": "Combo",
       "comboLabel": "Combo",
+      "qmkSettingsSaveFailed": "設定保存できなかったっしょ…接続確認してもっかい試して☆",
       "previousLayers": "前のレイヤーっしょ",
       "nextLayers": "次のレイヤー☆",
       "layerN": "レイヤー {{n}}",

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.93",
+  "version": "0.1.94",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -110,6 +110,7 @@
       "oneShotKeysLabel": "One Shot Keys",
       "comboSettings": "Combo",
       "comboLabel": "Combo",
+      "qmkSettingsSaveFailed": "設定の保存に失敗しました。接続を確認して再度お試しください。",
       "previousLayers": "前のレイヤー",
       "nextLayers": "次のレイヤー",
       "layerN": "Layer {{n}}",

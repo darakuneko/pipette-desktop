@@ -1,5 +1,5 @@
 {
-  "version": "0.1.93",
+  "version": "0.1.94",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -110,6 +110,7 @@
       "oneShotKeysLabel": "One Shot Keys",
       "comboSettings": "Combo",
       "comboLabel": "Combo",
+      "qmkSettingsSaveFailed": "設定の保存があきまへんでした。つながりを確かめてもういっぺんお試しやす。",
       "previousLayers": "前のレイヤーどすえ",
       "nextLayers": "次のレイヤーどすえ",
       "layerN": "Layer {{n}}",
