@@ -41,10 +41,11 @@ export function useKeyboardReload(
       return { ok: false, reason }
     }
 
-    // Phase 1: Protocol + identity. A failure here means we may not be
-    // talking to a Vial keyboard at all, so it gets its own boundary —
-    // everything after it can assume the keyboard identified itself as
-    // Vial, so a failure there is a broken read, not "not Vial compatible".
+    // Phase 1: Protocol + identity. getKeyboardId() doesn't validate
+    // anything, so a VIA-only board can echo it back and "succeed" —
+    // the definition load below is what actually proves Vial support.
+    // A failure here, or a null definition, is classified notVial; any
+    // other failure past that point is loadFailed.
     let viaProtocol: number
     let vialProtocol: number
     let uid: string
@@ -63,6 +64,7 @@ export function useKeyboardReload(
     try {
       const newState = emptyState()
       newState.loading = true
+      qmkSettingsBaselineRef.current = {}
       newState.viaProtocol = viaProtocol
       newState.vialProtocol = vialProtocol
       newState.uid = uid
@@ -80,11 +82,12 @@ export function useKeyboardReload(
 
       // Phase 2.5: Definition load + KLE parse. getDefinition() never
       // throws — it swallows transport, LZMA, and JSON failures into a
-      // null return — but the definition is required to continue, so a
-      // null result throws here to route through the outer catch below.
+      // null return — but a null definition means the board never
+      // proved it speaks Vial, so this reports notVial directly
+      // instead of routing through the loadFailed catch below.
       newState.definition = await api.getDefinition()
       if (!newState.definition) {
-        throw new Error('definition load failed')
+        return fail('notVial', new Error('definition load failed'))
       }
       newState.rows = newState.definition.matrix.rows
       newState.cols = newState.definition.matrix.cols
@@ -241,12 +244,15 @@ export function useKeyboardReload(
       // Phase 8a: QMK Settings discovery (matches Python reload_settings)
       progress('loading.settings')
       if (newState.vialProtocol >= VIAL_PROTOCOL_QMK_SETTINGS) {
+        let discoveryCancelled = false
+        let discoveryTimer: ReturnType<typeof setTimeout> | undefined
         try {
           const supported = new Set<number>()
           await Promise.race([
             (async () => {
               let cur = 0
               while (cur !== 0xffff) {
+                if (discoveryCancelled) break
                 const result = await api.qmkSettingsQuery(cur)
                 const prevCur = cur
                 for (let i = 0; i + 1 < result.length; i += 2) {
@@ -259,27 +265,36 @@ export function useKeyboardReload(
                 if (cur === prevCur) break
               }
             })(),
-            new Promise<void>((_, reject) =>
-              setTimeout(() => reject(new Error('QMK settings discovery timeout')), 5000),
-            ),
+            new Promise<void>((_, reject) => {
+              discoveryTimer = setTimeout(
+                () => reject(new Error('QMK settings discovery timeout')),
+                5000,
+              )
+            }),
           ])
           newState.supportedQsids = supported
         } catch (err) {
+          // Stop the detached loop above from querying further pages
+          // after a timeout — it keeps running otherwise since nothing
+          // else cancels it.
+          discoveryCancelled = true
           if (isEchoDetected(err)) {
             newState.connectionWarning = 'warning.echoDetected'
           } else {
             console.error('[KB] QMK settings discovery failed:', err)
             newState.connectionWarning ??= 'warning.partialLoad'
           }
+        } finally {
+          clearTimeout(discoveryTimer)
         }
 
         // Phase 8b: Fetch current values for each supported QSID. A qsid
         // that fails to read, or a timeout that cuts the fetch off early,
         // discards the whole batch rather than keeping a partial record —
-        // backfillQmkSettings() only ever runs once qmkSettingsValues is
-        // non-empty, so a partial record here would freeze the missing
-        // qsids out of every future backfill instead of retrying them.
-        qmkSettingsBaselineRef.current = {}
+        // backfillQmkSettings() copies these values into a snapshot only
+        // while the snapshot has none, and never touches it again once
+        // it has any, so a partial record here would freeze the missing
+        // qsids out of that snapshot for good.
         if (newState.supportedQsids.size > 0) {
           const values: Record<string, number[]> = {}
           let cancelled = false
@@ -290,6 +305,10 @@ export function useKeyboardReload(
                 for (const qsid of newState.supportedQsids) {
                   if (cancelled) break
                   const data = await api.qmkSettingsGet(qsid)
+                  // A read that resolves after the 5s timeout already fired
+                  // still lands here, but that's harmless — the catch below
+                  // never copies `values` into newState.qmkSettingsValues,
+                  // so this write is simply discarded.
                   values[String(qsid)] = normalizeQmkSettingData(qsid, data)
                 }
               })(),

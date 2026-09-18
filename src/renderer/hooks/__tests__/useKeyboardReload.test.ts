@@ -46,10 +46,11 @@ const KEY_OVERRIDE_ENTRY = {
 }
 const ALT_REPEAT_ENTRY = { lastKey: 0, altKey: 0, allowedMods: 0, options: 0, enabled: false }
 
-/** A qmkSettingsQuery response that reports exactly one supported qsid and
+/** A qmkSettingsQuery response that reports the given supported qsids and
  * then the 0xffff terminator, ending discovery in a single round trip. */
-function qmkQueryWithOneSupported(qsid: number) {
-  return vi.fn().mockResolvedValue([qsid & 0xff, (qsid >> 8) & 0xff, 0xff, 0xff])
+function qmkQueryWithSupported(qsids: number[]) {
+  const pairs = qsids.flatMap((qsid) => [qsid & 0xff, (qsid >> 8) & 0xff])
+  return vi.fn().mockResolvedValue([...pairs, 0xff, 0xff])
 }
 
 /** A mock that resolves `entry` for every call except `index`, which rejects. */
@@ -127,21 +128,32 @@ function setupApi(overrides: Record<string, unknown> = {}) {
 }
 
 /** Starts a reload without awaiting it, for tests that need to drive fake
- * timers before the promise settles. */
-function startReload(overrides: Record<string, unknown> = {}) {
+ * timers before the promise settles. `initialBaseline`, when given, seeds
+ * refs.qmkSettingsBaselineRef.current before reload() runs, so a test can
+ * prove the baseline was actually cleared rather than merely left empty. */
+function startReload(
+  overrides: Record<string, unknown> = {},
+  initialBaseline?: Record<string, number[]>,
+) {
   setupApi(overrides)
   const { setState, getState } = createStateRecorder()
   const refs = makeRefs()
+  if (initialBaseline) {
+    refs.qmkSettingsBaselineRef.current = initialBaseline
+  }
   const { result } = renderHook(() => useKeyboardReload(setState, refs))
   return { promise: result.current.reload(), getState, refs }
 }
 
-async function runReload(overrides: Record<string, unknown> = {}): Promise<{
+async function runReload(
+  overrides: Record<string, unknown> = {},
+  initialBaseline?: Record<string, number[]>,
+): Promise<{
   result: ReloadResult
   getState: () => KeyboardState
   refs: Pick<KeyboardRefs, 'qmkSettingsBaselineRef'>
 }> {
-  const { promise, getState, refs } = startReload(overrides)
+  const { promise, getState, refs } = startReload(overrides, initialBaseline)
   const result = await promise
   return { result, getState, refs }
 }
@@ -173,25 +185,28 @@ describe('useKeyboardReload', () => {
   })
 
   describe('failure classification', () => {
-    it('reports notVial and resets loading when getKeyboardId rejects', async () => {
-      const { result, getState } = await runReload({ getKeyboardId: noResponse() })
-
-      expect(result).toEqual({ ok: false, reason: 'notVial' })
-      expect(getState().loading).toBe(false)
-    })
-
-    const boundaryCases: Array<[string, Record<string, unknown>]> = [
-      ['getLayerCount rejects', { getLayerCount: noResponse() }],
+    // getKeyboardId() doesn't validate anything, so a VIA-only board can
+    // echo it back and "succeed" — the definition load is what actually
+    // proves Vial support. Both failures are classified notVial.
+    const notVialCases: Array<[string, Record<string, unknown>]> = [
+      ['getKeyboardId rejects', { getKeyboardId: noResponse() }],
       ['getDefinition resolves null', { getDefinition: vi.fn().mockResolvedValue(null) }],
     ]
 
-    it.each(boundaryCases)(
-      'reports loadFailed (not notVial) when %s after the keyboard id is known',
+    it.each(notVialCases)(
+      'reports notVial and resets loading when %s',
       async (_label, overrides) => {
-        const { result } = await runReload(overrides)
-        expect(result).toEqual({ ok: false, reason: 'loadFailed' })
+        const { result, getState } = await runReload(overrides)
+
+        expect(result).toEqual({ ok: false, reason: 'notVial' })
+        expect(getState().loading).toBe(false)
       },
     )
+
+    it('reports loadFailed (not notVial) when getLayerCount rejects after the keyboard id is known', async () => {
+      const { result } = await runReload({ getLayerCount: noResponse() })
+      expect(result).toEqual({ ok: false, reason: 'loadFailed' })
+    })
   })
 
   describe('fatal sections', () => {
@@ -202,9 +217,13 @@ describe('useKeyboardReload', () => {
       })
 
       expect(result).toEqual({ ok: false, reason: 'loadFailed' })
-      // The committed state must never carry the partial buffer this reload
-      // built up before it failed.
-      expect(getState().macroBuffer).toEqual([])
+      // Assert on fields that would differ if the partial state had been
+      // committed — `macroBuffer` alone can't tell, since `[]` is both its
+      // recorder-initial value and its would-be committed value here.
+      // `definition`/`layers` stay at emptyState()'s initial values only if
+      // setState(newState) was never called.
+      expect(getState().definition).toBeNull()
+      expect(getState().layers).toBe(0)
       expect(getState().loading).toBe(false)
     })
 
@@ -290,13 +309,22 @@ describe('useKeyboardReload', () => {
       expect(getState().connectionWarning).toBe('warning.partialLoad')
     })
 
+    it('continues with warning.partialLoad and no supported qsids when QMK settings discovery fails with a non-echo error', async () => {
+      const { result, getState } = await runReload({ qmkSettingsQuery: noResponse() })
+
+      expect(result).toEqual({ ok: true, uid: 'uid-1' })
+      expect(getState().connectionWarning).toBe('warning.partialLoad')
+      expect(getState().supportedQsids.size).toBe(0)
+      expect(getState().qmkSettingsValues).toEqual({})
+    })
+
     const echoMethods: Array<[string, string]> = [
       ['qmkSettingsQuery', 'qmkSettingsQuery'],
       ['getDynamicEntryCount', 'getDynamicEntryCount'],
     ]
 
     it.each(echoMethods)(
-      'keeps warning.echoDetected when %s echoes after a lighting failure',
+      'promotes warning.partialLoad to warning.echoDetected when %s echoes after a lighting failure',
       async (_label, method) => {
         const { result, getState } = await runReload({
           getDefinition: vi.fn().mockResolvedValue(LIGHTING_DEFINITION),
@@ -309,23 +337,44 @@ describe('useKeyboardReload', () => {
       },
     )
 
-    it('clears qmkSettingsValues and the baseline when one qsid fails to read', async () => {
-      const { result, getState, refs } = await runReload({
-        qmkSettingsQuery: qmkQueryWithOneSupported(1),
-        qmkSettingsGet: noResponse(),
+    it('keeps warning.echoDetected when it fires before a later unlock status failure', async () => {
+      const { result, getState } = await runReload({
+        getDynamicEntryCount: vi.fn().mockRejectedValue(new Error(ECHO_DETECTED_MSG)),
+        getUnlockStatus: noResponse(),
       })
+
+      expect(result).toEqual({ ok: true, uid: 'uid-1' })
+      expect(getState().connectionWarning).toBe('warning.echoDetected')
+    })
+
+    it('clears qmkSettingsValues and the baseline when one qsid fails to read after another already succeeded', async () => {
+      const { result, getState, refs } = await runReload(
+        {
+          qmkSettingsQuery: qmkQueryWithSupported([1, 2]),
+          qmkSettingsGet: vi.fn().mockImplementation((qsid: number) =>
+            qsid === 2 ? Promise.reject(new Error('no response')) : Promise.resolve([0]),
+          ),
+        },
+        { '99': [1] },
+      )
 
       expect(result).toEqual({ ok: true, uid: 'uid-1' })
       expectQmkDiscarded(getState, refs)
     })
 
-    it('clears qmkSettingsValues when the value fetch is cut off at the 5s timeout', async () => {
+    it('clears qmkSettingsValues when the value fetch is cut off at the 5s timeout after one qsid already succeeded', async () => {
       vi.useFakeTimers()
-      const { promise, getState, refs } = startReload({
-        qmkSettingsQuery: qmkQueryWithOneSupported(1),
-        // Never resolves — the 5s Promise.race timeout must cut it off.
-        qmkSettingsGet: vi.fn().mockImplementation(() => new Promise(() => {})),
-      })
+      const { promise, getState, refs } = startReload(
+        {
+          qmkSettingsQuery: qmkQueryWithSupported([1, 2]),
+          qmkSettingsGet: vi.fn().mockImplementation((qsid: number) =>
+            // qsid 1 resolves immediately; qsid 2 never resolves — the 5s
+            // Promise.race timeout must cut it off.
+            qsid === 2 ? new Promise(() => {}) : Promise.resolve([0]),
+          ),
+        },
+        { '99': [1] },
+      )
 
       await vi.advanceTimersByTimeAsync(5000)
       const result = await promise
