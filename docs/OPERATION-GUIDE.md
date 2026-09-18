@@ -158,6 +158,15 @@ Click a keyboard name in the list to open the keymap editor. A connecting overla
 
 If Cloud Sync is configured, sync progress is also displayed during connection (favorites first, then keyboard-specific data).
 
+**If connection fails**
+
+Selecting a device can fail before the editor opens. In that case the connection is aborted — never opened with only partial data — and a message appears under the device list on the device-selection screen; selecting the device again retries:
+
+- **"This device may not be a Vial-compatible keyboard."** — the keyboard never identified itself as Vial, or reported no usable keyboard definition
+- **"Failed to read data from the keyboard. Check the USB cable and try connecting again."** — the keyboard did identify itself as Vial, but reading its keymap, encoders, macros, or Tap Dance / Combo / Key Override / Alt Repeat Key entries failed partway through
+
+If the editor does open but lighting data, QMK settings, or the lock status couldn't be read, a yellow banner appears at the top of the editor instead: **"Some settings could not be read from the keyboard. Reconnect to try again."** (QMK settings values are left empty in that case.) The existing **"Communication error detected. Please check your USB cable and reconnect the device."** banner takes priority over this one when both happen during the same connection, since an echoed request usually means the whole connection is unreliable rather than one section.
+
 ### 1.3 Data
 
 The Data button on the device selection screen opens the Data panel for centralized management of keyboards, favorites, sync data, and Hub posts.
@@ -170,7 +179,7 @@ The left sidebar provides a **tree navigation** with the following structure:
   - **Keyboards**: Browse saved keyboard snapshots. Click a keyboard to view, load, export, or delete entries
   - **Typing**: Recorded typing-analytics data per keyboard — a per-day list (date, keystrokes, active time) with day selection for deleting, plus export / import of the recorded days
   - **Favorites**: Tap Dance, Macro, Combo, Key Override, Alt Repeat Key — each type shows its saved entries with rename, delete, export, and Hub actions
-  - **Application**: Import/export local data, or reset application settings. A failed import rolls back everything it already wrote, leaving local data unchanged; if the rollback itself fails, the error message says so
+  - **Application**: Import/export local data, or reset application settings. Cancelling the Import file picker changes nothing — local data is untouched and whatever result was already shown stays displayed. A failed import rolls back everything it already wrote, leaving local data unchanged, and shows the underlying error text under **Import failed** (if the rollback itself also fails, that failure is folded into the same message)
 - **Sync** (when Cloud Sync is configured): Lists keyboards that exist only in Google Drive (not yet downloaded on this device). Each entry is labeled with the keyboard's real name, resolved from the synced name index rather than from the raw UID. Click a remote-only keyboard to download it on demand — a spinner is shown while fetching, and a failure message appears inline if the download cannot complete. Once downloaded, the keyboard moves into the **Local › Keyboards** branch
   - **Cloud Data**: Reset targets that aren't tied to one keyboard — Favorites, Language Packs, Theme Packs, Key Labels, and imported Typing Test Texts. Only the targets actually present on Google Drive are listed. Each row has its own **Reset** button with a two-step confirmation (click Reset, then confirm or cancel); resetting removes that target's data from Google Drive only — local copies on this device are untouched, and a local copy that still exists re-uploads on the next sync (the same behavior Favorites already has). This is also where **Undecryptable Files** are listed and cleaned up: files that cannot be decrypted with the current password (e.g. encrypted with a forgotten previous password) appear as their own rows with a filename and a **Delete** button (two-step confirmation, one file at a time)
 
@@ -978,6 +987,12 @@ The Tap Dance section displays a **tile grid preview** showing all entries at a 
 - Configure tap, hold, double-tap, and other actions for each entry
 - **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
 
+**Tap-Hold Settings**
+
+![Tap-Hold Settings](screenshots/tap-hold-settings.png)
+
+A **Tap-Hold** button next to Edit JSON opens the **Tap-Hold Settings** modal for QMK tap-hold behavior (e.g. Tapping Term, Permissive Hold). It's one of seven QMK settings modals that share the same layout and Save behavior — the others are Mouse Keys, Magic, Grave Escape, Auto Shift, One Shot Keys, and the Combo timeout modal (§3.8, §5.2). **Reset** and **Revert** each need a second click to confirm; **Save** writes the changed fields to the keyboard. All three buttons are disabled while a save or reset is in progress, and the result of the last Save is shown to their left: a brief "Saved" that fades after about 2 seconds, or an error message that stays until the next edit, Save, or a confirmed Reset/Revert.
+
 ### 3.7 Macro
 
 Macro keycodes.
@@ -1029,7 +1044,7 @@ The Combo tab displays a **tile grid preview** showing all entries. A note reads
 - Click a tile to open the Combo edit modal directly to that entry (§5.2)
 - Combo keycodes (CMB_000–CMB_031) can be assigned to keys for triggering combos
 - **Settings: Configuration** button at the bottom opens a settings modal for combo-related timeout configuration (e.g., Combo time out period)
-- Saving in that timeout modal — and the six other QMK settings modals that share its layout (Tap-Hold, Mouse Keys, Magic, Grave Escape, Auto Shift, One Shot Keys) — shows a brief confirmation, or an error message, to the left of the Reset / Revert / Save buttons
+- Saving in that timeout modal shows the same Save-result display described for the Tap-Hold Settings modal (§3.6) — a brief confirmation, or an error message, to the left of the Reset / Revert / Save buttons
 - **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
 
 ![Combo Tile Grid](screenshots/combo-tile-grid.png)
@@ -1137,7 +1152,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 - **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
 - **Key Tester**: Toggle Matrix Tester mode (supported keyboards only)
 - **Security**: Shows lock status (Locked/Unlocked) with a button that follows it — **Unlock** while locked, **Lock** while unlocked. Unlock opens the Unlock dialog (stays disabled until the lock status has been confirmed, to avoid opening it against a stale placeholder state). Lock locks immediately if Typing Record (§4.3) is off; if Typing Record is on, it instead asks for confirmation ("Turn off Record and lock?") and, once confirmed, turns Record off before locking
-- **Import**: Restore from `.vil` files or sideload custom JSON definitions. If writing the restored layout to the keyboard fails partway through, Pipette tries to restore the device to its state from just before the load and reports whether that restore succeeded
+- **Import**: Restore from `.vil` files or sideload custom JSON definitions. Restoring a `.vil` file writes it to the keyboard field by field; if a write fails partway through, Pipette writes back the device state it captured just before the restore started (this assumes the keyboard's shape hasn't changed — it is not a guaranteed byte-exact restore) and shows one of two messages depending on whether that write-back itself succeeded: **"Writing to the keyboard failed. The previous settings were restored."**, or, if the write-back also failed, **"Writing to the keyboard failed and the previous settings could not be restored. Reconnect the keyboard and load a saved snapshot."**
 - **Reset Keyboard Data**: Reset keyboard to factory defaults
 
 **Save Tab**
@@ -1146,7 +1161,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 
 - **Export Current State**: Download keymap as `.vil`, `keymap.c`, PDF keymap cheat sheet, or PDF layout export (key outlines with summary pages for Tap Dance, Macro, Combo, Key Override, and Alt Repeat Key entries)
 - **Save Current State**: Save a snapshot of the current keyboard state with a label
-- **Synced Data**: List of saved snapshots with Load, Rename, Delete, and Export actions. A Load that fails partway through is handled the same way as `.vil` Import above — the device is restored to its pre-load state when possible, and the result is reported
+- **Synced Data**: List of saved snapshots with Load, Rename, Delete, and Export actions. A Load that fails partway through is handled the same way as `.vil` Import above — the same pre-load write-back, and the same two possible messages
 - This is the same Save panel as the standalone editor settings (§6)
 
 **Layout Tab** (when available)
@@ -1588,7 +1603,7 @@ Configure simultaneous key press combinations to trigger different keys. The Com
 
 ![Combo List](screenshots/combo-modal.png)
 
-The Combo tab shows entries as a numbered list (0--31). Configured entries display a summary (e.g., "A + B → C"). Click an entry to open the detail editor. Combo keycodes (Combo On, Combo Off, Combo Toggle) are shown below the list. A **Settings: Configuration** button at the bottom opens a settings modal for QMK Combo timeout configuration (e.g., Combo time out period). Saving here — like every QMK settings modal that shares this layout (Tap-Hold, Mouse Keys, Magic, Grave Escape, Auto Shift, One Shot Keys) — shows a brief confirmation next to the Reset / Revert / Save buttons, or an error message if the write fails.
+The Combo tab shows entries as a numbered list (0--31). Configured entries display a summary (e.g., "A + B → C"). Click an entry to open the detail editor. Combo keycodes (Combo On, Combo Off, Combo Toggle) are shown below the list. A **Settings: Configuration** button at the bottom opens a settings modal for QMK Combo timeout configuration (e.g., Combo time out period). Saving here behaves the same as the Tap-Hold Settings modal (§3.6): a brief confirmation next to the Reset / Revert / Save buttons, or an error message if the write fails.
 
 **Detail Editor**
 
@@ -1697,7 +1712,7 @@ The editor settings panel now provides a single **Save** panel with the followin
 
 - **Export Current State**: Download keymap as `.vil`, `keymap.c`, PDF keymap cheat sheet, or PDF layout export (key outlines with summary pages for Tap Dance, Macro, Combo, Key Override, and Alt Repeat Key entries). An "Exported" inline feedback message appears after a successful export.
 - **Save Current State**: Save a snapshot of the current keyboard state with a label. Enter a name in the Label field and click Save. If the Label field is left empty, the Save button is disabled. Saved snapshots appear in the Synced Data list below and can be loaded or deleted later
-- **Synced Data**: List of saved snapshots. Click to load, rename, or delete entries. A Load that fails partway through tries to restore the device to its pre-load state and reports whether that restore succeeded
+- **Synced Data**: List of saved snapshots. Click to load, rename, or delete entries. A Load that fails partway through is handled the same way as `.vil` Import (§3.14) — the same pre-load write-back, and the same two possible messages
 - **Reset Keyboard Data**: Reset keyboard to factory defaults (use with caution)
 
 > **Note**: Tool settings (auto advance, key tester, security) are in the Keycodes Overlay Panel (§3.14). Keyboard layout is available in the status bar quick settings (§9); Basic tab view type is selectable at the bottom of the Basic tab. Zoom is available in the toolbar (§4.1). Layer settings are managed directly via the layer panel on the left side of the editor.

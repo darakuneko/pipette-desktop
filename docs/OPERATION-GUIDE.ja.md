@@ -158,6 +158,15 @@ File タブでは、物理キーボードを接続せずに `.pipette` ファイ
 
 クラウド同期が設定されている場合、接続時に同期進捗も表示されます（お気に入りを先に同期し、次にキーボード固有データを同期）。
 
+**接続に失敗した場合**
+
+デバイスの選択がエディタを開く前に失敗することがあります。その場合、接続は中断されます（一部だけ読み込んだ状態でエディタが開くことはありません）。デバイス選択画面の一覧の下にメッセージが表示され、もう一度同じデバイスを選択すると再試行できます:
+
+- **「This device may not be a Vial-compatible keyboard.」** — キーボードが Vial であることを一度も応答しなかった、または有効なキーボード定義を返さなかった場合
+- **「Failed to read data from the keyboard. Check the USB cable and try connecting again.」** — キーボードは Vial だと応答したものの、キーマップ・エンコーダ・マクロ、または Tap Dance / Combo / Key Override / Alt Repeat Key のいずれかの読み込みが途中で失敗した場合
+
+エディタは開いたものの、ライティングデータ・QMK Settings・ロック状態のいずれかが読み込めなかった場合は、代わりにエディタ上部に黄色のバナーが表示されます: **「Some settings could not be read from the keyboard. Reconnect to try again.」**（この場合 QMK Settings の値は空のままになります）。同じ接続で両方が起きた場合は、既存の **「Communication error detected. Please check your USB cable and reconnect the device.」** バナーが優先されます — エコーが検出された場合は、特定の項目ではなく接続全体が不安定である可能性が高いためです。
+
 ### 1.3 データ
 
 デバイス選択画面の Data ボタンをクリックすると、キーボード・お気に入り・同期データ・Hub 投稿を一元管理するデータパネルが開きます。
@@ -170,7 +179,7 @@ File タブでは、物理キーボードを接続せずに `.pipette` ファイ
   - **Keyboards**: 保存済みキーボードスナップショットの閲覧。クリックでロード、エクスポート、削除
   - **Typing（タイピング）**: キーボードごとの打鍵記録データ。日別リスト（日付、打鍵数、アクティブ時間）を表示し、日を選択して削除したり、記録日のエクスポート / インポートができます
   - **Favorites**: Tap Dance、Macro、Combo、Key Override、Alt Repeat Key — タイプごとにリネーム、削除、エクスポート、Hub アクションが可能
-  - **Application**: ローカルデータのインポート/エクスポート、またはアプリケーション設定のリセット。インポートが途中で失敗した場合、すでに書き込まれた分はすべてロールバックされ、ローカルデータは変更前のまま残ります。ロールバック自体が失敗した場合は、その旨がエラーメッセージに表示されます
+  - **Application**: ローカルデータのインポート/エクスポート、またはアプリケーション設定のリセット。Import のファイル選択をキャンセルした場合は何も変わりません — ローカルデータも、それまで表示されていた結果もそのままです。インポートが途中で失敗した場合、すでに書き込まれた分はすべてロールバックされてローカルデータは変更前のまま残り、元になったエラーメッセージが **Import failed** の下に表示されます（ロールバック自体も失敗した場合は、その旨が同じメッセージに含まれます）
 - **Sync** (クラウド同期設定時): このデバイスにまだダウンロードされていない Google Drive 上のキーボードを一覧表示します。各エントリは UID ではなく、同期された名前インデックスから解決された**実際のキーボード名**で表示されます。リモートのみのキーボードをクリックするとオンデマンドでダウンロードされ、取得中はスピナーが表示され、失敗時はインラインでエラーが表示されます。ダウンロードが完了すると、そのキーボードは **Local › Keyboards** に移動します
   - **Cloud Data（クラウドデータ）**: 特定のキーボードに紐づかないリセット対象 — Favorites、Language Packs、Theme Packs、Key Labels、インポート済み Typing Test Texts。Google Drive 上に実際に存在する対象のみが表示されます。各行には 2 段階確認付きの **Reset** ボタンがあります（クリックして確認、または取消）。リセットすると Google Drive 上のそのデータのみ削除され、このデバイスのローカルコピーはそのまま残ります（ローカルにコピーが残っていれば次回同期時に再アップロードされます — Favorites と同じ挙動です）。**復号不能ファイル (Undecryptable Files)** の一覧・削除もここで行います: 現在のパスワードで復号できないファイル（例: 以前のパスワードで暗号化されたまま残ったファイル）がファイル名付きの行として表示され、2 段階確認付きの **Delete** ボタンで 1 件ずつ削除できます
 
@@ -978,6 +987,12 @@ Tap Dance セクションは全エントリを一覧表示する**タイルグ�
 - 各エントリにタップ・ホールド・ダブルタップなどの動作を設定できます
 - 下部の **Edit JSON** ボタンで全エントリを JSON として一括編集できます (§5.6)
 
+**Tap-Hold Settings**
+
+![Tap-Hold Settings](screenshots/tap-hold-settings.png)
+
+Edit JSON の隣にある **Tap-Hold** ボタンから、QMK の tap-hold 挙動（Tapping Term、Permissive Hold など）を設定する **Tap-Hold Settings** モーダルが開きます。これは同じレイアウトと保存挙動を共有する 7 つの QMK 設定モーダルの一つです — 他は Mouse Keys・Magic・Grave Escape・Auto Shift・One Shot Keys、および Combo タイムアウト設定モーダル（§3.8、§5.2）です。**Reset** と **Revert** はそれぞれ 2 回目のクリックで確定し、**Save** は変更したフィールドをキーボードに書き込みます。保存または reset の実行中はこの 3 つのボタンすべてが disabled になり、その左側に直前の保存結果が表示されます: 成功時は「Saved」が約 2 秒で消え、失敗時はエラーメッセージが次の編集・Save・確定した Reset/Revert のいずれかまで残ります。
+
 ### 3.7 Macro
 
 マクロキーコードです。
@@ -1029,7 +1044,7 @@ Combo タブは全エントリを一覧表示する**タイルグリッドプレ
 - タイルをクリックして対応するエントリの Combo 編集モーダルを直接開きます (§5.2)
 - Combo キーコード (CMB_000〜CMB_031) をキーに割り当てて Combo をトリガーできます
 - 下部の **Settings: Configuration** ボタンから Combo タイムアウト設定モーダル（例: Combo time out period）を開けます
-- このタイムアウト設定モーダル、および同じレイアウトを共有する他の 6 つの QMK 設定モーダル（Tap-Hold・Mouse Keys・Magic・Grave Escape・Auto Shift・One Shot Keys）で保存すると、Reset / Revert / Save ボタンの左側に結果が表示されます。成功時は「Saved」が数秒で消え、失敗時はエラーメッセージが次の操作まで残ります
+- このタイムアウト設定モーダルでの保存は Tap-Hold Settings モーダル（§3.6）と同じ挙動です — Reset / Revert / Save ボタンの左側に結果が表示されます
 - 下部の **Edit JSON** ボタンで全エントリを JSON として一括編集できます (§5.6)
 
 ![Combo タイルグリッド](screenshots/combo-tile-grid.png)
@@ -1136,7 +1151,7 @@ Keyboard タブを開くと、接続中の Vial 対応キーボードの一覧�
 - **キーピッカーでShiftキーを分離**: 複合キーコードの分割表示を切替 (例: Mod-Tap を 2 つに分けて表示)
 - **Key Tester**: Matrix Tester モードの切替 (対応キーボードのみ)
 - **Security**: ロック状態 (Locked/Unlocked) の表示と、それに連動するボタン — ロック中は **Unlock**、アンロック中は **Lock** になります。Unlock は Unlock ダイアログを開きます（ロック状態が確定するまでは無効のまま — 未確定の仮の状態に対してダイアログを開いてしまわないための措置です）。Lock は Typing Record（§4.3）が OFF ならそのまま即座にロックし、ON の場合は確認ダイアログ（「Turn off Record and lock?」）を表示し、確定すると Record を OFF にしてからロックします
-- **Import**: `.vil` ファイルからの復元、またはカスタム JSON 定義のサイドロード。復元したレイアウトのキーボードへの書き込みが途中で失敗した場合、Pipette は読み込み直前の状態への復元を試み、その復元が成功したかどうかを画面に表示します
+- **Import**: `.vil` ファイルからの復元、またはカスタム JSON 定義のサイドロード。`.vil` ファイルの復元はその内容をフィールドごとにキーボードへ書き込みます。途中で書き込みが失敗した場合、Pipette は復元を開始する直前に取得しておいたデバイスの状態を書き戻します（キーボードの形状が変わっていないことを前提とした処理で、バイト単位で完全に元通りになることを保証するものではありません）。その書き戻し自体が成功したかどうかに応じて、次のいずれかのメッセージが表示されます: **「Writing to the keyboard failed. The previous settings were restored.」**、または書き戻しも失敗した場合は **「Writing to the keyboard failed and the previous settings could not be restored. Reconnect the keyboard and load a saved snapshot.」**
 - **Reset Keyboard Data**: キーボードを初期状態に戻す
 
 **Save タブ**
@@ -1145,7 +1160,7 @@ Keyboard タブを開くと、接続中の Vial 対応キーボードの一覧�
 
 - **Export Current State**: キーマップを `.vil`、`keymap.c`、PDF キーマップチートシート、PDF レイアウトエクスポート（キーアウトラインと Tap Dance・Macro・Combo・Key Override・Alt Repeat Key のサマリーページ付き）としてダウンロード
 - **Save Current State**: 現在のキーボード状態をラベル付きで保存
-- **Synced Data**: 保存済みスナップショットの一覧。Load・Rename・Delete・Export の操作が可能。Load が途中で失敗した場合も上の `.vil` Import と同様に扱われます — 可能であればキーボードを読み込み直前の状態へ復元し、その結果を画面に表示します
+- **Synced Data**: 保存済みスナップショットの一覧。Load・Rename・Delete・Export の操作が可能。Load が途中で失敗した場合も上の `.vil` Import と同様に扱われます — 同じ書き戻し処理、同じ 2 種類のメッセージです
 - エディタ設定パネル (§6) と同じ Save パネルです
 
 **Layout タブ** (利用可能時)
@@ -1587,7 +1602,7 @@ Lighting タブの **Settings: Configuration** ボタンから開きます。RGB
 
 ![Combo 一覧](screenshots/combo-modal.png)
 
-Combo タブに番号付きリスト (0--31) が表示されます。設定済みエントリはサマリー表示（例: 「A + B → C」）。エントリをクリックして詳細エディタへ。Combo キーコード (Combo On, Combo Off, Combo Toggle) がリストの下に表示されます。下部の **Settings: Configuration** ボタンから QMK の Combo タイムアウト設定モーダル（例: Combo time out period）を開けます。ここでの保存も、同じレイアウトを共有する他の QMK 設定モーダル（Tap-Hold・Mouse Keys・Magic・Grave Escape・Auto Shift・One Shot Keys）と同様に、Reset / Revert / Save ボタンの横に結果が表示されます。成功時は「Saved」が数秒で消え、失敗時はエラーメッセージが次の操作まで残ります。
+Combo タブに番号付きリスト (0--31) が表示されます。設定済みエントリはサマリー表示（例: 「A + B → C」）。エントリをクリックして詳細エディタへ。Combo キーコード (Combo On, Combo Off, Combo Toggle) がリストの下に表示されます。下部の **Settings: Configuration** ボタンから QMK の Combo タイムアウト設定モーダル（例: Combo time out period）を開けます。ここでの保存は Tap-Hold Settings モーダル（§3.6）と同じ挙動です — Reset / Revert / Save ボタンの横に結果が表示されます。
 
 **詳細エディタ**
 
@@ -1699,7 +1714,7 @@ Macro の場合、変更を保存するにはキーボードのアンロック�
 
 - **Export Current State**: キーマップを `.vil`、`keymap.c`、PDF キーマップチートシート、PDF レイアウトエクスポート（キーアウトラインと Tap Dance・Macro・Combo・Key Override・Alt Repeat Key のサマリーページ付き）としてダウンロード。エクスポート成功時に「Exported」のインラインフィードバックが表示されます。
 - **Save Current State**: 現在のキーボード状態をラベル付きで保存します。Label フィールドに名前を入力して Save をクリックします。Label が空の場合は Save ボタンが無効になります。保存したスナップショットは下の Synced Data リストに表示され、読み込みや削除ができます
-- **Synced Data**: 保存済みスナップショットの一覧。クリックで読み込み・名前変更・削除。読み込みが途中で失敗した場合、キーボードを読み込み直前の状態へ復元を試み、その復元が成功したかどうかを画面に表示します
+- **Synced Data**: 保存済みスナップショットの一覧。クリックで読み込み・名前変更・削除。読み込みが途中で失敗した場合も `.vil` Import（§3.14）と同じ扱いです — 同じ書き戻し処理、同じ 2 種類のメッセージです
 - **キーボードデータリセット**: キーボードを初期状態に戻す (要注意)
 
 > **Note**: ツール設定 (Auto Move、Key Tester、セキュリティ) はキーコードオーバーレイパネル (§3.14) にあります。キーボードレイアウトはステータスバーのクイック設定 (§9) から変更できます。Basic タブのビュータイプは Basic タブ下部のセレクターで切り替えます。ズームはツールバー (§4.1) で操作できます。レイヤー設定はエディタ左側のレイヤーパネルから直接管理します。
