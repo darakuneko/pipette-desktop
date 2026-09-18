@@ -241,94 +241,57 @@ export function useKeyboardReload(
         supportedFeatures,
       })
 
-      // Phase 8a: QMK Settings discovery (matches Python reload_settings)
+      // Phase 8a: QMK Settings discovery (matches Python reload_settings).
+      // Relies on the transport's own retry loop rather than a local
+      // deadline — a slow-but-alive keyboard is worth waiting for, and
+      // there's no way to cancel an already-issued HID command anyway.
       progress('loading.settings')
       if (newState.vialProtocol >= VIAL_PROTOCOL_QMK_SETTINGS) {
-        let discoveryCancelled = false
-        let discoveryTimer: ReturnType<typeof setTimeout> | undefined
         try {
           const supported = new Set<number>()
-          await Promise.race([
-            (async () => {
-              let cur = 0
-              while (cur !== 0xffff) {
-                if (discoveryCancelled) break
-                const result = await api.qmkSettingsQuery(cur)
-                const prevCur = cur
-                for (let i = 0; i + 1 < result.length; i += 2) {
-                  const qsid = result[i] | (result[i + 1] << 8)
-                  cur = Math.max(cur, qsid)
-                  if (qsid !== 0xffff) {
-                    supported.add(qsid)
-                  }
-                }
-                if (cur === prevCur) break
+          let cur = 0
+          while (cur !== 0xffff) {
+            const result = await api.qmkSettingsQuery(cur)
+            const prevCur = cur
+            for (let i = 0; i + 1 < result.length; i += 2) {
+              const qsid = result[i] | (result[i + 1] << 8)
+              cur = Math.max(cur, qsid)
+              if (qsid !== 0xffff) {
+                supported.add(qsid)
               }
-            })(),
-            new Promise<void>((_, reject) => {
-              discoveryTimer = setTimeout(
-                () => reject(new Error('QMK settings discovery timeout')),
-                5000,
-              )
-            }),
-          ])
+            }
+            if (cur === prevCur) break
+          }
           newState.supportedQsids = supported
         } catch (err) {
-          // Stop the detached loop above from querying further pages
-          // after a timeout — it keeps running otherwise since nothing
-          // else cancels it.
-          discoveryCancelled = true
           if (isEchoDetected(err)) {
             newState.connectionWarning = 'warning.echoDetected'
           } else {
             console.error('[KB] QMK settings discovery failed:', err)
             newState.connectionWarning ??= 'warning.partialLoad'
           }
-        } finally {
-          clearTimeout(discoveryTimer)
         }
 
         // Phase 8b: Fetch current values for each supported QSID. A qsid
-        // that fails to read, or a timeout that cuts the fetch off early,
-        // discards the whole batch rather than keeping a partial record —
-        // backfillQmkSettings() copies these values into a snapshot only
-        // while the snapshot has none, and never touches it again once
-        // it has any, so a partial record here would freeze the missing
-        // qsids out of that snapshot for good.
+        // that fails to read discards the whole batch rather than keeping
+        // a partial record — backfillQmkSettings() copies these values
+        // into a snapshot only while the snapshot has none, and never
+        // touches it again once it has any, so a partial record here would
+        // freeze the missing qsids out of that snapshot for good.
         if (newState.supportedQsids.size > 0) {
           const values: Record<string, number[]> = {}
-          let cancelled = false
-          let timer: ReturnType<typeof setTimeout> | undefined
           try {
-            await Promise.race([
-              (async () => {
-                for (const qsid of newState.supportedQsids) {
-                  if (cancelled) break
-                  const data = await api.qmkSettingsGet(qsid)
-                  // A read that resolves after the 5s timeout already fired
-                  // still lands here, but that's harmless — the catch below
-                  // never copies `values` into newState.qmkSettingsValues,
-                  // so this write is simply discarded.
-                  values[String(qsid)] = normalizeQmkSettingData(qsid, data)
-                }
-              })(),
-              new Promise<void>((_, reject) => {
-                timer = setTimeout(() => reject(new Error('QMK settings value fetch timeout')), 5000)
-              }),
-            ])
+            for (const qsid of newState.supportedQsids) {
+              const data = await api.qmkSettingsGet(qsid)
+              values[String(qsid)] = normalizeQmkSettingData(qsid, data)
+            }
             newState.qmkSettingsValues = values
             qmkSettingsBaselineRef.current = Object.fromEntries(
               Object.entries(values).map(([k, v]) => [k, [...v]]),
             )
           } catch {
-            // Stop the detached loop above from reading further qsids
-            // after a timeout — it keeps running otherwise since nothing
-            // else cancels it.
-            cancelled = true
-            console.warn('[KB] QMK settings value fetch failed or timed out, discarding partial data')
+            console.warn('[KB] QMK settings value fetch failed, discarding partial data')
             newState.connectionWarning ??= 'warning.partialLoad'
-          } finally {
-            clearTimeout(timer)
           }
         }
       }

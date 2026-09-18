@@ -158,9 +158,8 @@ async function runReload(
   return { result, getState, refs }
 }
 
-/** Shared assertion for the "QMK settings batch discarded" outcome — reused
- * by the mid-fetch rejection and 5s-timeout cases, which differ only in how
- * the fetch is cut short. */
+/** Shared assertion for the "QMK settings batch discarded" outcome, used
+ * when a mid-fetch rejection cuts the batch short. */
 function expectQmkDiscarded(
   getState: () => KeyboardState,
   refs: Pick<KeyboardRefs, 'qmkSettingsBaselineRef'>,
@@ -362,25 +361,40 @@ describe('useKeyboardReload', () => {
       expectQmkDiscarded(getState, refs)
     })
 
-    it('clears qmkSettingsValues when the value fetch is cut off at the 5s timeout after one qsid already succeeded', async () => {
+    it('keeps the value read when qmkSettingsGet resolves after 8s instead of being cut off', async () => {
       vi.useFakeTimers()
-      const { promise, getState, refs } = startReload(
-        {
-          qmkSettingsQuery: qmkQueryWithSupported([1, 2]),
-          qmkSettingsGet: vi.fn().mockImplementation((qsid: number) =>
-            // qsid 1 resolves immediately; qsid 2 never resolves — the 5s
-            // Promise.race timeout must cut it off.
-            qsid === 2 ? new Promise(() => {}) : Promise.resolve([0]),
-          ),
-        },
-        { '99': [1] },
-      )
+      const { promise, getState, refs } = startReload({
+        qmkSettingsQuery: qmkQueryWithSupported([1]),
+        qmkSettingsGet: vi.fn().mockImplementation(
+          (qsid: number) =>
+            new Promise((resolve) => setTimeout(() => resolve([qsid]), 8000)),
+        ),
+      })
 
-      await vi.advanceTimersByTimeAsync(5000)
+      await vi.advanceTimersByTimeAsync(8000)
       const result = await promise
 
       expect(result).toEqual({ ok: true, uid: 'uid-1' })
-      expectQmkDiscarded(getState, refs)
+      expect(getState().connectionWarning).toBeNull()
+      expect(getState().qmkSettingsValues).toEqual({ '1': [1] })
+      expect(refs.qmkSettingsBaselineRef.current).toEqual({ '1': [1] })
+    })
+
+    it('keeps discovery results when qmkSettingsQuery resolves after 8s instead of being cut off', async () => {
+      vi.useFakeTimers()
+      const { promise, getState } = startReload({
+        qmkSettingsQuery: vi.fn().mockImplementation(
+          () =>
+            new Promise((resolve) => setTimeout(() => resolve([1, 0, 0xff, 0xff]), 8000)),
+        ),
+      })
+
+      await vi.advanceTimersByTimeAsync(8000)
+      const result = await promise
+
+      expect(result).toEqual({ ok: true, uid: 'uid-1' })
+      expect(getState().connectionWarning).toBeNull()
+      expect(getState().supportedQsids).toEqual(new Set([1]))
     })
 
     it('continues with warning.partialLoad and unlockStatusKnown false when getUnlockStatus rejects', async () => {
