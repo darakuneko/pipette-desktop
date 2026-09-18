@@ -2,8 +2,8 @@
 // IPC handler registration for sync operations
 
 import { BrowserWindow, app, dialog } from 'electron'
-import { rm, readFile, readdir, writeFile, mkdir } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { rm, readFile, readdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { loadAppConfig, getAppConfigStore, onAppConfigChange } from '../app-config'
 import {
@@ -27,7 +27,6 @@ import {
   stopPolling,
   collectAllSyncUnits,
   bundleSyncUnit,
-  readIndexFile,
   resetPasswordCheckCache,
   listUndecryptableFiles,
   scanRemoteData,
@@ -43,6 +42,7 @@ import {
   listRemoteFileNames,
   SyncCredentialError,
 } from './sync-service'
+import { importLocalData } from './local-data-import'
 import { exportTypingDataForKeyboard, importTypingDataFiles, type ImportResult } from '../typing-analytics/import-export'
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import { ensureCacheIsFresh } from '../typing-analytics/cache-rebuild'
@@ -50,8 +50,8 @@ import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db
 import { deleteAllTypingForKeyboard } from '../typing-analytics/typing-analytics-service'
 import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle, SyncOperationResult } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
-import type { FavoriteIndex, SavedFavoriteMeta } from '../../shared/types/favorite-store'
-import type { SnapshotIndex, SnapshotMeta } from '../../shared/types/snapshot-store'
+import type { FavoriteIndex } from '../../shared/types/favorite-store'
+import type { SnapshotIndex } from '../../shared/types/snapshot-store'
 import {
   extractDeviceNameFromFilename,
   getActiveKeyboardMetaMap,
@@ -89,13 +89,6 @@ function getDialogWindow(): BrowserWindow | undefined {
   return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
 }
 
-type EntryMeta = SavedFavoriteMeta | SnapshotMeta
-
-interface ImportBundle<T extends EntryMeta> {
-  index: { entries: T[] }
-  files: Record<string, string>
-}
-
 const SAFE_UID_RE = /^[\w-]+$/
 
 /** `SyncResetTargets`' optional boolean fields — every one of them
@@ -120,55 +113,8 @@ function validateSyncScope(raw: unknown): SyncScope | undefined {
   return undefined
 }
 
-const SAFE_FILENAME_RE = /^[\w.()-]+$/
-
-function isSafePath(basePath: string, filename: string): boolean {
-  if (!SAFE_FILENAME_RE.test(filename)) return false
-  const resolved = resolve(basePath, filename)
-  return resolved.startsWith(basePath + '/')
-}
-
 function isSafeKey(key: string): boolean {
   return /^[\w-]+$/.test(key) && !key.includes('..')
-}
-
-async function mergeImportEntries<T extends EntryMeta>(
-  basePath: string,
-  bundle: ImportBundle<T>,
-  buildIndex: (localIndex: FavoriteIndex | SnapshotIndex | null, entries: T[]) => FavoriteIndex | SnapshotIndex,
-): Promise<boolean> {
-  await mkdir(basePath, { recursive: true })
-
-  const localIndex = await readIndexFile(basePath) as FavoriteIndex | SnapshotIndex | null
-  const localEntries = (localIndex?.entries ?? []) as T[]
-  const localMap = new Map(localEntries.map((e) => [e.id, e]))
-  let changed = false
-
-  for (const entry of bundle.index.entries) {
-    if (!isSafePath(basePath, entry.filename)) continue
-
-    const existing = localMap.get(entry.id)
-    if (existing && !existing.deletedAt) continue
-
-    if (existing) {
-      const idx = localEntries.indexOf(existing)
-      localEntries[idx] = entry
-    } else {
-      localEntries.push(entry)
-    }
-
-    if (entry.filename in bundle.files) {
-      await writeFile(join(basePath, entry.filename), bundle.files[entry.filename], 'utf-8')
-    }
-    changed = true
-  }
-
-  if (changed) {
-    const mergedIndex = buildIndex(localIndex, localEntries)
-    await writeFile(join(basePath, 'index.json'), JSON.stringify(mergedIndex, null, 2), 'utf-8')
-  }
-
-  return changed
 }
 
 export function setupSyncIpc(): void {
@@ -531,77 +477,8 @@ export function setupSyncIpc(): void {
       const raw = await readFile(result.filePaths[0], 'utf-8')
       const data: unknown = JSON.parse(raw)
 
-      if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-        throw new Error('Invalid export file format')
-      }
-      const obj = data as Record<string, unknown>
-      if (obj.version !== 1) {
-        throw new Error('Unsupported export version')
-      }
-
       const userData = app.getPath('userData')
-      const changedUnits: string[] = []
-
-      // Import snapshots (index-based, keyed by uid)
-      if (obj.snapshots && typeof obj.snapshots === 'object' && !Array.isArray(obj.snapshots)) {
-        const snapshots = obj.snapshots as Record<string, ImportBundle<SnapshotMeta>>
-        for (const [uid, bundle] of Object.entries(snapshots)) {
-          if (!isSafeKey(uid)) continue
-          const changed = await mergeImportEntries(
-            join(userData, 'sync', 'keyboards', uid, 'snapshots'),
-            bundle,
-            (local, merged) => local
-              ? { ...local, entries: merged } as SnapshotIndex
-              : { uid, entries: merged } as SnapshotIndex,
-          )
-          if (changed) changedUnits.push(`keyboards/${uid}/snapshots`)
-        }
-      }
-
-      // Import settings (single-file LWW, keyed by uid)
-      if (obj.settings && typeof obj.settings === 'object' && !Array.isArray(obj.settings)) {
-        const settings = obj.settings as Record<string, { files: Record<string, string> }>
-        for (const [uid, bundle] of Object.entries(settings)) {
-          if (!isSafeKey(uid)) continue
-          const remoteContent = bundle.files['pipette_settings.json']
-          if (!remoteContent) continue
-
-          const dir = join(userData, 'sync', 'keyboards', uid)
-          await mkdir(dir, { recursive: true })
-          const filePath = join(dir, 'pipette_settings.json')
-
-          let shouldWrite = true
-          try {
-            const localRaw = await readFile(filePath, 'utf-8')
-            const localSettings = JSON.parse(localRaw) as { _updatedAt?: string }
-            const remoteSettings = JSON.parse(remoteContent) as { _updatedAt?: string }
-            const localTime = localSettings._updatedAt ? new Date(localSettings._updatedAt).getTime() : 0
-            const remoteTime = remoteSettings._updatedAt ? new Date(remoteSettings._updatedAt).getTime() : 0
-            shouldWrite = remoteTime > localTime
-          } catch { /* no local — write */ }
-
-          if (shouldWrite) {
-            await writeFile(filePath, remoteContent, 'utf-8')
-            changedUnits.push(`keyboards/${uid}/settings`)
-          }
-        }
-      }
-
-      // Import favorites (index-based, keyed by type)
-      if (obj.favorites && typeof obj.favorites === 'object' && !Array.isArray(obj.favorites)) {
-        const favorites = obj.favorites as Record<string, ImportBundle<SavedFavoriteMeta>>
-        for (const [type, bundle] of Object.entries(favorites)) {
-          if (!isSafeKey(type)) continue
-          const changed = await mergeImportEntries(
-            join(userData, 'sync', 'favorites', type),
-            bundle,
-            (local, merged) => local
-              ? { ...local, entries: merged } as FavoriteIndex
-              : { type: type as FavoriteIndex['type'], entries: merged } as FavoriteIndex,
-          )
-          if (changed) changedUnits.push(`favorites/${type}`)
-        }
-      }
+      const { changedUnits } = await importLocalData(data, userData)
 
       for (const unit of changedUnits) {
         notifyChange(unit)
