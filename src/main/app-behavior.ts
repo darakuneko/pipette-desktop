@@ -7,6 +7,7 @@ import { mkdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { homedir } from 'node:os'
 import { log } from './logger'
+import { isEnoent } from './utils/is-enoent'
 import type { TrayStatus } from '../shared/types/vial-api'
 
 /** Path to the XDG autostart desktop entry used on Linux. Exported so
@@ -32,10 +33,6 @@ function buildAutostartDesktopEntry(): string {
   ].join('\n')
 }
 
-function isEnoentError(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as NodeJS.ErrnoException).code === 'ENOENT'
-}
-
 function applyLinuxAutostart(enabled: boolean): void {
   const target = autostartDesktopPath()
   try {
@@ -47,7 +44,7 @@ function applyLinuxAutostart(enabled: boolean): void {
     }
   } catch (err: unknown) {
     // Disabling an autostart entry that was never created is not an error.
-    if (!enabled && isEnoentError(err)) return
+    if (!enabled && isEnoent(err)) return
     const detail = err instanceof Error ? err.message : String(err)
     log('error', `auto-launch: failed to update Linux autostart entry: ${detail}`)
   }

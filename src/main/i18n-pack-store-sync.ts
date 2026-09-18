@@ -20,6 +20,7 @@ import { mkdir, stat, utimes } from 'node:fs/promises'
 import { gcTombstones, mergeEntries, MalformedSyncBundleError } from './sync/merge'
 import { log } from './logger'
 import { isSafePackId } from './utils/safe-filename'
+import { writeFileAtomic } from './utils/write-file-atomic'
 import { I18N_INDEX_SYNC_UNIT, type I18nPackMeta } from '../shared/types/i18n-store'
 import {
   PACKS_DIRNAME,
@@ -31,7 +32,6 @@ import {
   packSyncUnit,
   readIndex,
   withIndexWriteLock,
-  writeFileAtomic,
 } from './i18n-pack-store-internal'
 
 /** Entry-level LWW merge + persist for a synced remote index. Replaces

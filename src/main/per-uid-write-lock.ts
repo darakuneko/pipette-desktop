@@ -24,3 +24,25 @@ export function withWriteLock<T>(uid: string, task: () => Promise<T>): Promise<T
   })
   return result
 }
+
+/** Nests `withWriteLock` over every key in `keys`, held for the whole span
+ * of `task` (not released between keys) — a multi-unit operation (e.g. a
+ * local-data import touching several uids and favorite types at once)
+ * needs every touched key locked from its first read to its last write,
+ * or a concurrent single-key writer could observe a stale read partway
+ * through the multi-key operation. Deduped and sorted here, inside the
+ * lock helper, rather than trusted from the caller: a duplicate key would
+ * deadlock against itself (`withWriteLock` is not reentrant), and two
+ * concurrent multi-key callers that share some keys but acquire them in
+ * different orders can deadlock each other — sorting gives every caller
+ * the same fixed acquisition order regardless of the order `keys` arrived
+ * in. */
+export function withWriteLocks<T>(keys: readonly string[], task: () => Promise<T>): Promise<T> {
+  const ordered = [...new Set(keys)].sort()
+  const run = (remaining: readonly string[]): Promise<T> => {
+    if (remaining.length === 0) return task()
+    const [key, ...rest] = remaining
+    return withWriteLock(key, () => run(rest))
+  }
+  return run(ordered)
+}

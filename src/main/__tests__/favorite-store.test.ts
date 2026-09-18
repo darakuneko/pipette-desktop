@@ -326,6 +326,38 @@ describe('favorite-store', () => {
     })
   })
 
+  describe('concurrency', () => {
+    it('a rename racing a save for the same type both land', async () => {
+      const saveHandler = getHandler(IpcChannels.FAVORITE_STORE_SAVE)
+      const renameHandler = getHandler(IpcChannels.FAVORITE_STORE_RENAME)
+      const listHandler = getHandler(IpcChannels.FAVORITE_STORE_LIST)
+
+      const saved = await saveHandler(fakeEvent, 'tapDance', '{}', 'Original') as {
+        entry: { id: string }
+      }
+
+      // Both calls are issued synchronously (before either awaits its own
+      // lock), so the shared `favorites/tapDance` write-lock chain queues
+      // them strictly one after the other instead of interleaving their
+      // read-modify-writes of the index.
+      const renamePromise = renameHandler(fakeEvent, 'tapDance', saved.entry.id, 'Renamed')
+      const secondSavePromise = saveHandler(fakeEvent, 'tapDance', '{}', 'Second')
+
+      const [renameResult, secondSaveResult] = await Promise.all([renamePromise, secondSavePromise]) as [
+        { success: boolean },
+        { success: boolean; entry: { id: string } },
+      ]
+      expect(renameResult.success).toBe(true)
+      expect(secondSaveResult.success).toBe(true)
+
+      const list = await listHandler(fakeEvent, 'tapDance') as { entries: Array<{ id: string; label: string }> }
+      expect(list.entries).toHaveLength(2)
+      const renamed = list.entries.find((e) => e.id === saved.entry.id)
+      expect(renamed?.label).toBe('Renamed')
+      expect(list.entries.some((e) => e.id === secondSaveResult.entry.id)).toBe(true)
+    })
+  })
+
   describe('path traversal prevention', () => {
     it('rejects an entry whose stored filename escapes the favorites directory', async () => {
       const dir = join(mockUserDataPath, 'sync', 'favorites', 'tapDance')

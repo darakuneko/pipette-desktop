@@ -96,12 +96,6 @@ export async function withIndexWriteLock<T>(fn: () => Promise<T>): Promise<T> {
   return next
 }
 
-// Re-exported from the shared util (see its doc for the full rationale —
-// temp-file-then-rename so a reader can never observe a torn file, plus
-// best-effort `.tmp` cleanup on a rename failure) so existing call sites
-// in this module keep importing it from here.
-export { writeFileAtomic }
-
 // --- Result type -------------------------------------------------------------
 
 export type I18nPackStoreErrorCode = SharedErrorCode

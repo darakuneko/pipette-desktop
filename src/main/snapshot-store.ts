@@ -12,6 +12,7 @@ import { upsertKeyboardMeta } from './sync/keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT } from '../shared/types/keyboard-meta'
 import { secureHandle } from './ipc-guard'
 import { isSafePathSegment, tsForFilename } from './utils/safe-filename'
+import { writeFileAtomic } from './utils/write-file-atomic'
 import type { SnapshotMeta, SnapshotIndex } from '../shared/types/snapshot-store'
 import type { HubPrivateLink } from '../shared/types/hub-private'
 
@@ -58,7 +59,7 @@ async function readIndex(uid: string): Promise<SnapshotIndex> {
 async function writeIndex(uid: string, index: SnapshotIndex): Promise<void> {
   const dir = getSnapshotDir(uid)
   await mkdir(dir, { recursive: true })
-  await writeFile(getIndexPath(uid), JSON.stringify(index, null, 2), 'utf-8')
+  await writeFileAtomic(getIndexPath(uid), JSON.stringify(index, null, 2))
 }
 
 async function updateEntry(

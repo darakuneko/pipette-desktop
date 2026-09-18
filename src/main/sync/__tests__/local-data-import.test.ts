@@ -7,7 +7,7 @@
 // still hits the real filesystem.
 
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 
@@ -58,8 +58,8 @@ async function readJson(path: string): Promise<unknown> {
   return JSON.parse(await readFile(path, 'utf-8'))
 }
 
-async function writeJson(path: string, dirPath: string, value: unknown): Promise<void> {
-  await mkdir(dirPath, { recursive: true })
+async function writeJson(path: string, value: unknown): Promise<void> {
+  await mkdir(dirname(path), { recursive: true })
   await actualFs.writeFile(path, JSON.stringify(value, null, 2), 'utf-8')
 }
 
@@ -70,6 +70,17 @@ async function exists(path: string): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+/** Builds the `snapshots.{uid}` bundle shape repeated across most cases
+ *  below — an index of entries plus their payload files. */
+function snapshotExport(entries: Array<{ id: string; label: string; filename: string; savedAt: string }>, files: Record<string, string>) {
+  return { index: { entries }, files }
+}
+
+/** Same shape as `snapshotExport`, for `favorites.{type}` bundles. */
+function favoritesExport(entries: Array<{ id: string; label: string; filename: string; savedAt: string }>, files: Record<string, string>) {
+  return { index: { entries }, files }
 }
 
 describe('importLocalData', () => {
@@ -87,16 +98,16 @@ describe('importLocalData', () => {
     const exportObj = {
       version: 1,
       snapshots: {
-        uid1: {
-          index: { entries: [{ id: 'e1', label: 'L1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }] },
-          files: { 'e1.pipette': '{"vil":true}' },
-        },
+        uid1: snapshotExport(
+          [{ id: 'e1', label: 'L1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
+          { 'e1.pipette': '{"vil":true}' },
+        ),
       },
       favorites: {
-        macro: {
-          index: { entries: [{ id: 'f1', label: 'F1', filename: 'f1.json', savedAt: '2020-01-01T00:00:00.000Z' }] },
-          files: { 'f1.json': '{"data":1}' },
-        },
+        macro: favoritesExport(
+          [{ id: 'f1', label: 'F1', filename: 'f1.json', savedAt: '2020-01-01T00:00:00.000Z' }],
+          { 'f1.json': '{"data":1}' },
+        ),
       },
       settings: {
         uid1: { files: { 'pipette_settings.json': JSON.stringify({ _updatedAt: '2020-01-01T00:00:00.000Z', foo: 1 }) } },
@@ -128,22 +139,19 @@ describe('importLocalData', () => {
   it('A2: a failed 2nd payload write unlinks the 1st payload and leaves the index untouched', async () => {
     const snapDir = join(mockUserDataPath, 'sync', 'keyboards', 'uid1', 'snapshots')
     const originalIndex = { uid: 'uid1', entries: [{ id: 'e0', label: 'Existing', filename: 'e0.pipette', savedAt: '2019-01-01T00:00:00.000Z' }] }
-    await writeJson(join(snapDir, 'index.json'), snapDir, originalIndex)
-    await mkdir(snapDir, { recursive: true })
+    await writeJson(join(snapDir, 'index.json'), originalIndex)
     await actualFs.writeFile(join(snapDir, 'e0.pipette'), 'ORIGINAL', 'utf-8')
 
     const exportObj = {
       version: 1,
       snapshots: {
-        uid1: {
-          index: {
-            entries: [
-              { id: 'e1', label: 'New1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' },
-              { id: 'e2', label: 'New2', filename: 'e2.pipette', savedAt: '2020-01-02T00:00:00.000Z' },
-            ],
-          },
-          files: { 'e1.pipette': 'PAYLOAD1', 'e2.pipette': 'PAYLOAD2' },
-        },
+        uid1: snapshotExport(
+          [
+            { id: 'e1', label: 'New1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' },
+            { id: 'e2', label: 'New2', filename: 'e2.pipette', savedAt: '2020-01-02T00:00:00.000Z' },
+          ],
+          { 'e1.pipette': 'PAYLOAD1', 'e2.pipette': 'PAYLOAD2' },
+        ),
       },
     }
 
@@ -160,20 +168,20 @@ describe('importLocalData', () => {
   it('A3: a failed settings write rolls back the snapshots written earlier in the same import', async () => {
     const snapDir = join(mockUserDataPath, 'sync', 'keyboards', 'uid1', 'snapshots')
     const originalIndex = { uid: 'uid1', entries: [] as unknown[] }
-    await writeJson(join(snapDir, 'index.json'), snapDir, originalIndex)
+    await writeJson(join(snapDir, 'index.json'), originalIndex)
 
     const settingsDir = join(mockUserDataPath, 'sync', 'keyboards', 'uid1')
     const settingsPath = join(settingsDir, 'pipette_settings.json')
     const originalSettings = { _updatedAt: '2019-01-01T00:00:00.000Z', foo: 'old' }
-    await writeJson(settingsPath, settingsDir, originalSettings)
+    await writeJson(settingsPath, originalSettings)
 
     const exportObj = {
       version: 1,
       snapshots: {
-        uid1: {
-          index: { entries: [{ id: 'e1', label: 'New1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }] },
-          files: { 'e1.pipette': 'PAYLOAD1' },
-        },
+        uid1: snapshotExport(
+          [{ id: 'e1', label: 'New1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
+          { 'e1.pipette': 'PAYLOAD1' },
+        ),
       },
       settings: {
         uid1: { files: { 'pipette_settings.json': JSON.stringify({ _updatedAt: '2020-01-01T00:00:00.000Z', foo: 'new' }) } },
@@ -198,10 +206,10 @@ describe('importLocalData', () => {
     const exportObj = {
       version: 1,
       snapshots: {
-        uid1: {
-          index: { entries: [{ id: 'e1', label: 'New1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }] },
-          files: { 'e1.pipette': 'PAYLOAD1' },
-        },
+        uid1: snapshotExport(
+          [{ id: 'e1', label: 'New1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
+          { 'e1.pipette': 'PAYLOAD1' },
+        ),
       },
     }
 
@@ -214,16 +222,16 @@ describe('importLocalData', () => {
   it('A5: an existing active entry with the same id is skipped (local wins)', async () => {
     const snapDir = join(mockUserDataPath, 'sync', 'keyboards', 'uid1', 'snapshots')
     const originalIndex = { uid: 'uid1', entries: [{ id: 'e1', label: 'Local', filename: 'e1.pipette', savedAt: '2019-01-01T00:00:00.000Z' }] }
-    await writeJson(join(snapDir, 'index.json'), snapDir, originalIndex)
+    await writeJson(join(snapDir, 'index.json'), originalIndex)
     await actualFs.writeFile(join(snapDir, 'e1.pipette'), 'ORIGINAL', 'utf-8')
 
     const exportObj = {
       version: 1,
       snapshots: {
-        uid1: {
-          index: { entries: [{ id: 'e1', label: 'Remote', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }] },
-          files: { 'e1.pipette': 'REMOTE_PAYLOAD' },
-        },
+        uid1: snapshotExport(
+          [{ id: 'e1', label: 'Remote', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
+          { 'e1.pipette': 'REMOTE_PAYLOAD' },
+        ),
       },
     }
 
@@ -240,15 +248,13 @@ describe('importLocalData', () => {
     const exportObj = {
       version: 1,
       snapshots: {
-        uid1: {
-          index: {
-            entries: [
-              { id: 'e1', label: 'New1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' },
-              { id: 'e2', label: 'New2', filename: 'e2.pipette', savedAt: '2020-01-02T00:00:00.000Z' },
-            ],
-          },
-          files: { 'e1.pipette': 'PAYLOAD1', 'e2.pipette': 'PAYLOAD2' },
-        },
+        uid1: snapshotExport(
+          [
+            { id: 'e1', label: 'New1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' },
+            { id: 'e2', label: 'New2', filename: 'e2.pipette', savedAt: '2020-01-02T00:00:00.000Z' },
+          ],
+          { 'e1.pipette': 'PAYLOAD1', 'e2.pipette': 'PAYLOAD2' },
+        ),
       },
     }
 
@@ -276,7 +282,7 @@ describe('importLocalData', () => {
     const settingsDir = join(mockUserDataPath, 'sync', 'keyboards', 'uid1')
     const settingsPath = join(settingsDir, 'pipette_settings.json')
     const originalSettings = { _updatedAt: '2024-01-01T00:00:00.000Z', foo: 'newer' }
-    await writeJson(settingsPath, settingsDir, originalSettings)
+    await writeJson(settingsPath, originalSettings)
 
     const exportObj = {
       version: 1,
@@ -303,10 +309,10 @@ describe('importLocalData', () => {
       const exportObj = {
         version: 1,
         snapshots: {
-          uid1: {
-            index: { entries: [{ id: 'imported-1', label: 'Imported', filename: 'imported-1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }] },
-            files: { 'imported-1.pipette': 'IMPORTED_PAYLOAD' },
-          },
+          uid1: snapshotExport(
+            [{ id: 'imported-1', label: 'Imported', filename: 'imported-1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
+            { 'imported-1.pipette': 'IMPORTED_PAYLOAD' },
+          ),
         },
       }
 

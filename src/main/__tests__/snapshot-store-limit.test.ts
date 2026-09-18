@@ -21,14 +21,17 @@ vi.mock('../ipc-guard', async () => {
   return { secureHandle: ipcMain.handle }
 })
 
-// Mock fs/promises
+// Mock fs/promises — `rename` is needed because the index write now goes
+// through `writeFileAtomic` (temp-file-then-rename), not a plain `writeFile`.
 const mockMkdir = vi.fn().mockResolvedValue(undefined)
 const mockWriteFile = vi.fn().mockResolvedValue(undefined)
 const mockReadFile = vi.fn()
+const mockRename = vi.fn().mockResolvedValue(undefined)
 vi.mock('node:fs/promises', () => ({
   mkdir: (...args: unknown[]) => mockMkdir(...args),
   writeFile: (...args: unknown[]) => mockWriteFile(...args),
   readFile: (...args: unknown[]) => mockReadFile(...args),
+  rename: (...args: unknown[]) => mockRename(...args),
 }))
 
 import { ipcMain } from 'electron'

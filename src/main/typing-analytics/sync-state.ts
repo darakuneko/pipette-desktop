@@ -4,8 +4,9 @@
 // "never uploaded" apart from "uploaded then remotely deleted", plus a
 // reconcile-pending timestamp per own hash.
 
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { writeFileAtomic } from '../utils/write-file-atomic'
 import { readPointerKey } from './jsonl/paths'
 import { isUtcDay, type UtcDay } from './jsonl/utc-day'
 
@@ -141,10 +142,7 @@ export async function saveSyncState(
 ): Promise<void> {
   const path = syncStatePath(userDataDir)
   await mkdir(dirname(path), { recursive: true })
-  const tmp = `${path}.tmp`
-  await writeFile(tmp, JSON.stringify(state, null, 2), 'utf-8')
-  const { rename } = await import('node:fs/promises')
-  await rename(tmp, path)
+  await writeFileAtomic(path, JSON.stringify(state, null, 2))
 }
 
 /** True when the own-hash upload pass must run an orphan reconcile

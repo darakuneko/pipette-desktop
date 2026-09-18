@@ -66,6 +66,7 @@ import { I18N_SYNC_UNIT_PREFIX } from '../../shared/types/i18n-store'
 import { THEME_SYNC_UNIT_PREFIX } from '../../shared/types/theme-store'
 import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
 import { TYPING_TEST_TEXT_SYNC_UNIT } from '../typing-test-text-store'
+import { isSafeKey } from '../utils/safe-filename'
 
 interface IpcResult {
   success: boolean
@@ -73,23 +74,27 @@ interface IpcResult {
   reason?: SyncCredentialFailureReason
 }
 
-async function wrapIpc(fallbackMessage: string, fn: () => Promise<void>): Promise<IpcResult> {
+// `T` lets a handler pass a payload back through the same success/failure
+// wrapping every other handler uses, instead of bypassing wrapIpc entirely
+// just to add one extra field (the pre-existing IMPORT_LOCAL_DATA handler
+// did this to return `cancelled`). Most callers don't need it and leave T
+// at its default — `fn` returning `void` merges nothing extra in, exactly
+// as before.
+async function wrapIpc<T extends object = object>(fallbackMessage: string, fn: () => Promise<T | void>): Promise<IpcResult & T> {
   try {
-    await fn()
-    return { success: true }
+    const payload = await fn()
+    return { success: true, ...(payload ?? {}) } as IpcResult & T
   } catch (err) {
     if (err instanceof SyncCredentialError) {
-      return { success: false, error: err.message, reason: err.reason }
+      return { success: false, error: err.message, reason: err.reason } as IpcResult & T
     }
-    return { success: false, error: err instanceof Error ? err.message : fallbackMessage }
+    return { success: false, error: err instanceof Error ? err.message : fallbackMessage } as IpcResult & T
   }
 }
 
 function getDialogWindow(): BrowserWindow | undefined {
   return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
 }
-
-const SAFE_UID_RE = /^[\w-]+$/
 
 /** `SyncResetTargets`' optional boolean fields — every one of them
  *  follows the identical "boolean or absent" validation and the same
@@ -103,7 +108,7 @@ function validateSyncScope(raw: unknown): SyncScope | undefined {
   if (raw === 'all' || raw === 'favorites' || raw === 'packs') return raw
   if (typeof raw === 'object' && 'keyboard' in raw) {
     const { keyboard } = raw as Record<string, unknown>
-    if (typeof keyboard === 'string' && SAFE_UID_RE.test(keyboard)) {
+    if (typeof keyboard === 'string' && isSafeKey(keyboard)) {
       if ('favorites' in raw && raw.favorites === true) {
         return { favorites: true, keyboard }
       }
@@ -111,10 +116,6 @@ function validateSyncScope(raw: unknown): SyncScope | undefined {
     }
   }
   return undefined
-}
-
-function isSafeKey(key: string): boolean {
-  return /^[\w-]+$/.test(key) && !key.includes('..')
 }
 
 export function setupSyncIpc(): void {
@@ -462,11 +463,13 @@ export function setupSyncIpc(): void {
   )
 
   // --- Import local data ---
-  // Not routed through wrapIpc: a cancelled file picker isn't an error, so
-  // this needs a `cancelled` outcome distinct from `success`/`error` — see
+  // A cancelled file picker isn't an error, so the wrapped fn returns a
+  // `cancelled` payload instead of throwing — wrapIpc merges it into the
+  // success result, giving the same `cancelled` outcome distinct from
+  // `success`/`error` that this handler used to build by hand. See
   // ImportLocalDataResult's doc.
-  secureHandle(IpcChannels.IMPORT_LOCAL_DATA, async (): Promise<ImportLocalDataResult> => {
-    try {
+  secureHandle(IpcChannels.IMPORT_LOCAL_DATA, async (): Promise<ImportLocalDataResult> =>
+    wrapIpc<{ cancelled?: true }>('Import failed', async () => {
       const dialogOpts = {
         filters: [{ name: 'JSON', extensions: ['json'] }],
         properties: ['openFile' as const],
@@ -476,7 +479,7 @@ export function setupSyncIpc(): void {
         ? await dialog.showOpenDialog(win, dialogOpts)
         : await dialog.showOpenDialog(dialogOpts)
       if (result.canceled || result.filePaths.length === 0) {
-        return { success: true, cancelled: true }
+        return { cancelled: true }
       }
 
       const raw = await readFile(result.filePaths[0], 'utf-8')
@@ -488,11 +491,8 @@ export function setupSyncIpc(): void {
       for (const unit of changedUnits) {
         notifyChange(unit)
       }
-      return { success: true }
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : 'Import failed' }
-    }
-  })
+    }) as Promise<ImportLocalDataResult>,
+  )
 
   // --- Undecryptable files ---
   secureHandle(IpcChannels.SYNC_LIST_UNDECRYPTABLE, () => listUndecryptableFiles())
