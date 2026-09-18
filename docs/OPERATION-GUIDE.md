@@ -1029,6 +1029,7 @@ The Combo tab displays a **tile grid preview** showing all entries. A note reads
 - Click a tile to open the Combo edit modal directly to that entry (§5.2)
 - Combo keycodes (CMB_000–CMB_031) can be assigned to keys for triggering combos
 - **Settings: Configuration** button at the bottom opens a settings modal for combo-related timeout configuration (e.g., Combo time out period)
+- Saving in that timeout modal — and the six other QMK settings modals that share its layout (Tap-Hold, Mouse Keys, Magic, Grave Escape, Auto Shift, One Shot Keys) — shows a brief confirmation, or an error message, to the left of the Reset / Revert / Save buttons
 - **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
 
 ![Combo Tile Grid](screenshots/combo-tile-grid.png)
@@ -1587,7 +1588,7 @@ Configure simultaneous key press combinations to trigger different keys. The Com
 
 ![Combo List](screenshots/combo-modal.png)
 
-The Combo tab shows entries as a numbered list (0--31). Configured entries display a summary (e.g., "A + B → C"). Click an entry to open the detail editor. Combo keycodes (Combo On, Combo Off, Combo Toggle) are shown below the list. A **Settings: Configuration** button at the bottom opens a settings modal for QMK Combo timeout configuration (e.g., Combo time out period).
+The Combo tab shows entries as a numbered list (0--31). Configured entries display a summary (e.g., "A + B → C"). Click an entry to open the detail editor. Combo keycodes (Combo On, Combo Off, Combo Toggle) are shown below the list. A **Settings: Configuration** button at the bottom opens a settings modal for QMK Combo timeout configuration (e.g., Combo time out period). Saving here — like every QMK settings modal that shares this layout (Tap-Hold, Mouse Keys, Magic, Grave Escape, Auto Shift, One Shot Keys) — shows a brief confirmation next to the Reset / Revert / Save buttons, or an error message if the write fails.
 
 **Detail Editor**
 

@@ -1029,6 +1029,7 @@ Combo タブは全エントリを一覧表示する**タイルグリッドプレ
 - タイルをクリックして対応するエントリの Combo 編集モーダルを直接開きます (§5.2)
 - Combo キーコード (CMB_000〜CMB_031) をキーに割り当てて Combo をトリガーできます
 - 下部の **Settings: Configuration** ボタンから Combo タイムアウト設定モーダル（例: Combo time out period）を開けます
+- このタイムアウト設定モーダル、および同じレイアウトを共有する他の 6 つの QMK 設定モーダル（Tap-Hold・Mouse Keys・Magic・Grave Escape・Auto Shift・One Shot Keys）で保存すると、Reset / Revert / Save ボタンの左側に結果（成功、または失敗時はエラーメッセージ）が一時的に表示されます
 - 下部の **Edit JSON** ボタンで全エントリを JSON として一括編集できます (§5.6)
 
 ![Combo タイルグリッド](screenshots/combo-tile-grid.png)
@@ -1586,7 +1587,7 @@ Lighting タブの **Settings: Configuration** ボタンから開きます。RGB
 
 ![Combo 一覧](screenshots/combo-modal.png)
 
-Combo タブに番号付きリスト (0--31) が表示されます。設定済みエントリはサマリー表示（例: 「A + B → C」）。エントリをクリックして詳細エディタへ。Combo キーコード (Combo On, Combo Off, Combo Toggle) がリストの下に表示されます。下部の **Settings: Configuration** ボタンから QMK の Combo タイムアウト設定モーダル（例: Combo time out period）を開けます。
+Combo タブに番号付きリスト (0--31) が表示されます。設定済みエントリはサマリー表示（例: 「A + B → C」）。エントリをクリックして詳細エディタへ。Combo キーコード (Combo On, Combo Off, Combo Toggle) がリストの下に表示されます。下部の **Settings: Configuration** ボタンから QMK の Combo タイムアウト設定モーダル（例: Combo time out period）を開けます。ここでの保存も、同じレイアウトを共有する他の QMK 設定モーダル（Tap-Hold・Mouse Keys・Magic・Grave Escape・Auto Shift・One Shot Keys）と同様に、Reset / Revert / Save ボタンの横に結果が一時的に表示されます（失敗時はエラーメッセージ）。
 
 **詳細エディタ**
 
