@@ -7,6 +7,8 @@ import { useKeyboardReload } from '../useKeyboardReload'
 import { emptyState } from '../keyboard-types'
 import type { KeyboardState, KeyboardRefs } from '../keyboard-types'
 import type { KeyboardDefinition } from '../../../shared/types/protocol'
+import { encoderLabel } from '../../../shared/kle/__tests__/encoder-label'
+import { ECHO_DETECTED_MSG } from '../../../shared/constants/protocol'
 
 const BASE_DEFINITION: KeyboardDefinition = {
   name: 'Test KB',
@@ -15,6 +17,17 @@ const BASE_DEFINITION: KeyboardDefinition = {
     keymap: [
       ['0,0', '0,1', '0,2'],
       ['1,0', '1,1', '1,2'],
+    ],
+  },
+}
+
+const ENCODER_DEFINITION: KeyboardDefinition = {
+  name: 'Test KB w/ encoder',
+  matrix: { rows: 2, cols: 3 },
+  layouts: {
+    keymap: [
+      ['0,0', '0,1', '0,2'],
+      ['1,0', '1,1', encoderLabel(0, 0)],
     ],
   },
 }
@@ -132,6 +145,169 @@ describe('useKeyboardReload', () => {
   it('case 15: reports loadFailed (not notVial) when getLayerCount rejects after the keyboard id is known', async () => {
     ;(window as unknown as { vialAPI: unknown }).vialAPI = makeApi({
       getLayerCount: vi.fn().mockRejectedValue(new Error('no response')),
+    })
+    const { setState } = createStateRecorder()
+    const { result } = renderHook(() => useKeyboardReload(setState, makeRefs()))
+
+    const reloadResult = await result.current.reload()
+
+    expect(reloadResult).toEqual({ ok: false, reason: 'loadFailed' })
+  })
+
+  it('case 2: reports loadFailed and does not commit a completed state when getMacroBuffer rejects', async () => {
+    ;(window as unknown as { vialAPI: unknown }).vialAPI = makeApi({
+      getMacroBufferSize: vi.fn().mockResolvedValue(4),
+      getMacroBuffer: vi.fn().mockRejectedValue(new Error('no response')),
+    })
+    const { setState, getState } = createStateRecorder()
+    const { result } = renderHook(() => useKeyboardReload(setState, makeRefs()))
+
+    const reloadResult = await result.current.reload()
+
+    expect(reloadResult).toEqual({ ok: false, reason: 'loadFailed' })
+    // The committed state must never carry the partial buffer this reload
+    // built up before it failed.
+    expect(getState().macroBuffer).toEqual([])
+    expect(getState().loading).toBe(false)
+  })
+
+  it('case 3: reports loadFailed when a tap dance entry mid-range rejects', async () => {
+    ;(window as unknown as { vialAPI: unknown }).vialAPI = makeApi({
+      getDynamicEntryCount: vi.fn().mockResolvedValue({
+        tapDance: 3, combo: 0, keyOverride: 0, altRepeatKey: 0, featureFlags: 0,
+      }),
+      getTapDance: vi.fn().mockImplementation((index: number) =>
+        index === 1
+          ? Promise.reject(new Error('no response'))
+          : Promise.resolve({ onTap: 0, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 }),
+      ),
+    })
+    const { setState } = createStateRecorder()
+    const { result } = renderHook(() => useKeyboardReload(setState, makeRefs()))
+
+    const reloadResult = await result.current.reload()
+
+    expect(reloadResult).toEqual({ ok: false, reason: 'loadFailed' })
+  })
+
+  it('case 4: reports loadFailed when a combo entry mid-range rejects', async () => {
+    ;(window as unknown as { vialAPI: unknown }).vialAPI = makeApi({
+      getDynamicEntryCount: vi.fn().mockResolvedValue({
+        tapDance: 0, combo: 2, keyOverride: 0, altRepeatKey: 0, featureFlags: 0,
+      }),
+      getCombo: vi.fn().mockImplementation((index: number) =>
+        index === 1
+          ? Promise.reject(new Error('no response'))
+          : Promise.resolve({ key1: 0, key2: 0, key3: 0, key4: 0, output: 0 }),
+      ),
+    })
+    const { setState } = createStateRecorder()
+    const { result } = renderHook(() => useKeyboardReload(setState, makeRefs()))
+
+    const reloadResult = await result.current.reload()
+
+    expect(reloadResult).toEqual({ ok: false, reason: 'loadFailed' })
+  })
+
+  it('case 4b: reports loadFailed when a key override entry mid-range rejects', async () => {
+    ;(window as unknown as { vialAPI: unknown }).vialAPI = makeApi({
+      getDynamicEntryCount: vi.fn().mockResolvedValue({
+        tapDance: 0, combo: 0, keyOverride: 2, altRepeatKey: 0, featureFlags: 0,
+      }),
+      getKeyOverride: vi.fn().mockImplementation((index: number) =>
+        index === 1
+          ? Promise.reject(new Error('no response'))
+          : Promise.resolve({
+            triggerKey: 0, replacementKey: 0, layers: 0, triggerMods: 0,
+            negativeMods: 0, suppressedMods: 0, options: 0, enabled: false,
+          }),
+      ),
+    })
+    const { setState } = createStateRecorder()
+    const { result } = renderHook(() => useKeyboardReload(setState, makeRefs()))
+
+    const reloadResult = await result.current.reload()
+
+    expect(reloadResult).toEqual({ ok: false, reason: 'loadFailed' })
+  })
+
+  it('case 4c: reports loadFailed when an alt repeat key entry mid-range rejects', async () => {
+    ;(window as unknown as { vialAPI: unknown }).vialAPI = makeApi({
+      getDynamicEntryCount: vi.fn().mockResolvedValue({
+        tapDance: 0, combo: 0, keyOverride: 0, altRepeatKey: 2, featureFlags: 0,
+      }),
+      getAltRepeatKey: vi.fn().mockImplementation((index: number) =>
+        index === 1
+          ? Promise.reject(new Error('no response'))
+          : Promise.resolve({ lastKey: 0, altKey: 0, allowedMods: 0, options: 0, enabled: false }),
+      ),
+    })
+    const { setState } = createStateRecorder()
+    const { result } = renderHook(() => useKeyboardReload(setState, makeRefs()))
+
+    const reloadResult = await result.current.reload()
+
+    expect(reloadResult).toEqual({ ok: false, reason: 'loadFailed' })
+  })
+
+  it('case 5: reports loadFailed when the keymap buffer fetch rejects on a later chunk', async () => {
+    const bigDefinition: KeyboardDefinition = {
+      name: 'Big KB',
+      matrix: { rows: 4, cols: 4 },
+      layouts: {
+        keymap: Array.from({ length: 4 }, (_, row) =>
+          Array.from({ length: 4 }, (_, col) => `${row},${col}`),
+        ),
+      },
+    }
+    ;(window as unknown as { vialAPI: unknown }).vialAPI = makeApi({
+      getDefinition: vi.fn().mockResolvedValue(bigDefinition),
+      getLayerCount: vi.fn().mockResolvedValue(2),
+      // totalSize = 2 * 4 * 4 * 2 = 64, so this needs 3 chunks (28/28/8) —
+      // reject on the 2nd chunk.
+      getKeymapBuffer: vi.fn().mockImplementation((offset: number, size: number) =>
+        offset === 28
+          ? Promise.reject(new Error('no response'))
+          : Promise.resolve(new Array(size).fill(0)),
+      ),
+    })
+    const { setState } = createStateRecorder()
+    const { result } = renderHook(() => useKeyboardReload(setState, makeRefs()))
+
+    const reloadResult = await result.current.reload()
+
+    expect(reloadResult).toEqual({ ok: false, reason: 'loadFailed' })
+  })
+
+  it('case 6: reports loadFailed when an encoder read rejects', async () => {
+    ;(window as unknown as { vialAPI: unknown }).vialAPI = makeApi({
+      getDefinition: vi.fn().mockResolvedValue(ENCODER_DEFINITION),
+      getEncoder: vi.fn().mockRejectedValue(new Error('no response')),
+    })
+    const { setState } = createStateRecorder()
+    const { result } = renderHook(() => useKeyboardReload(setState, makeRefs()))
+
+    const reloadResult = await result.current.reload()
+
+    expect(reloadResult).toEqual({ ok: false, reason: 'loadFailed' })
+  })
+
+  it('case 7: keeps echoDetected handling for getDynamicEntryCount (unchanged)', async () => {
+    ;(window as unknown as { vialAPI: unknown }).vialAPI = makeApi({
+      getDynamicEntryCount: vi.fn().mockRejectedValue(new Error(ECHO_DETECTED_MSG)),
+    })
+    const { setState, getState } = createStateRecorder()
+    const { result } = renderHook(() => useKeyboardReload(setState, makeRefs()))
+
+    const reloadResult = await result.current.reload()
+
+    expect(reloadResult).toEqual({ ok: true, uid: 'uid-1' })
+    expect(getState().connectionWarning).toBe('warning.echoDetected')
+  })
+
+  it('case 8: reports loadFailed when getDynamicEntryCount rejects with a non-echo error', async () => {
+    ;(window as unknown as { vialAPI: unknown }).vialAPI = makeApi({
+      getDynamicEntryCount: vi.fn().mockRejectedValue(new Error('no response')),
     })
     const { setState } = createStateRecorder()
     const { result } = renderHook(() => useKeyboardReload(setState, makeRefs()))

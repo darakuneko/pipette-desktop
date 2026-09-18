@@ -140,30 +140,21 @@ export function useKeyboardReload(
       if (newState.rows > 0 && newState.cols > 0 && newState.layers > 0) {
         const totalSize = newState.layers * newState.rows * newState.cols * 2
         const buffer: number[] = []
-        let fetchFailed = false
         for (let offset = 0; offset < totalSize; offset += BUFFER_FETCH_CHUNK) {
           const chunkSize = Math.min(BUFFER_FETCH_CHUNK, totalSize - offset)
-          try {
-            const chunk = await api.getKeymapBuffer(offset, chunkSize)
-            buffer.push(...chunk)
-          } catch (err) {
-            console.error('[KB] keymap buffer fetch failed at offset', offset, err)
-            fetchFailed = true
-            break
-          }
+          const chunk = await api.getKeymapBuffer(offset, chunkSize)
+          buffer.push(...chunk)
         }
-        if (!fetchFailed) {
-          for (let layer = 0; layer < newState.layers; layer++) {
-            for (let row = 0; row < newState.rows; row++) {
-              for (let col = 0; col < newState.cols; col++) {
-                const idx =
-                  (layer * newState.rows * newState.cols + row * newState.cols + col) * 2
-                if (idx + 1 < buffer.length) {
-                  newState.keymap.set(
-                    `${layer},${row},${col}`,
-                    (buffer[idx] << 8) | buffer[idx + 1],
-                  )
-                }
+        for (let layer = 0; layer < newState.layers; layer++) {
+          for (let row = 0; row < newState.rows; row++) {
+            for (let col = 0; col < newState.cols; col++) {
+              const idx =
+                (layer * newState.rows * newState.cols + row * newState.cols + col) * 2
+              if (idx + 1 < buffer.length) {
+                newState.keymap.set(
+                  `${layer},${row},${col}`,
+                  (buffer[idx] << 8) | buffer[idx + 1],
+                )
               }
             }
           }
@@ -174,13 +165,9 @@ export function useKeyboardReload(
       if (newState.encoderCount > 0 && newState.layers > 0) {
         for (let layer = 0; layer < newState.layers; layer++) {
           for (let idx = 0; idx < newState.encoderCount; idx++) {
-            try {
-              const [cw, ccw] = await api.getEncoder(layer, idx)
-              newState.encoderLayout.set(`${layer},${idx},0`, cw)
-              newState.encoderLayout.set(`${layer},${idx},1`, ccw)
-            } catch {
-              // skip
-            }
+            const [cw, ccw] = await api.getEncoder(layer, idx)
+            newState.encoderLayout.set(`${layer},${idx},0`, cw)
+            newState.encoderLayout.set(`${layer},${idx},1`, ccw)
           }
         }
       }
@@ -193,19 +180,15 @@ export function useKeyboardReload(
           if (isEchoDetected(err)) {
             newState.connectionWarning = 'warning.echoDetected'
           } else {
-            console.error('[KB] dynamic entry count failed:', err)
+            throw err
           }
         }
       }
 
-      // Phase 5: Macro buffer (non-fatal: empty buffer if fetch fails)
+      // Phase 5: Macro buffer
       progress('loading.macros')
       if (newState.macroBufferSize > 0) {
-        try {
-          newState.macroBuffer = await api.getMacroBuffer(newState.macroBufferSize)
-        } catch (err) {
-          console.error('[KB] macro buffer fetch failed:', err)
-        }
+        newState.macroBuffer = await api.getMacroBuffer(newState.macroBufferSize)
       }
 
       // Phase 6: Dynamic entries (Vial protocol >= 4)
@@ -214,32 +197,16 @@ export function useKeyboardReload(
         const { tapDance, combo, keyOverride, altRepeatKey } = newState.dynamicCounts
 
         for (let i = 0; i < tapDance; i++) {
-          try {
-            newState.tapDanceEntries.push(await api.getTapDance(i))
-          } catch {
-            // Skip failed entry
-          }
+          newState.tapDanceEntries.push(await api.getTapDance(i))
         }
         for (let i = 0; i < combo; i++) {
-          try {
-            newState.comboEntries.push(await api.getCombo(i))
-          } catch {
-            // Skip failed entry
-          }
+          newState.comboEntries.push(await api.getCombo(i))
         }
         for (let i = 0; i < keyOverride; i++) {
-          try {
-            newState.keyOverrideEntries.push(await api.getKeyOverride(i))
-          } catch {
-            // Skip failed entry
-          }
+          newState.keyOverrideEntries.push(await api.getKeyOverride(i))
         }
         for (let i = 0; i < altRepeatKey; i++) {
-          try {
-            newState.altRepeatKeyEntries.push(await api.getAltRepeatKey(i))
-          } catch {
-            // Skip failed entry
-          }
+          newState.altRepeatKeyEntries.push(await api.getAltRepeatKey(i))
         }
       }
 
