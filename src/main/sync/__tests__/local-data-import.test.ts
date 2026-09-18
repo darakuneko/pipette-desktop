@@ -27,7 +27,7 @@ vi.mock('../../ipc-guard', async () => {
 
 vi.mock('node:fs/promises', async () => {
   const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
-  return { ...actual, writeFile: vi.fn(actual.writeFile), unlink: vi.fn(actual.unlink) }
+  return { ...actual, readFile: vi.fn(actual.readFile), writeFile: vi.fn(actual.writeFile), unlink: vi.fn(actual.unlink) }
 })
 
 import { unlink } from 'node:fs/promises'
@@ -52,6 +52,15 @@ function failWriteFileOnCall(n: number, err: Error) {
 
 function failUnlinkAlways(err: Error) {
   vi.mocked(unlink).mockImplementation(async () => { throw err })
+}
+
+/** Makes `readFile` reject with `err` only when called for `path`, every
+ *  other call passing through to the real implementation. */
+function failReadFileFor(path: string, err: Error) {
+  vi.mocked(readFile).mockImplementation(async (...args: Parameters<typeof actualFs.readFile>) => {
+    if (args[0] === path) throw err
+    return actualFs.readFile(...args)
+  })
 }
 
 async function readJson(path: string): Promise<unknown> {
@@ -85,6 +94,7 @@ function favoritesExport(entries: Array<{ id: string; label: string; filename: s
 
 describe('importLocalData', () => {
   beforeEach(async () => {
+    vi.mocked(readFile).mockImplementation(actualFs.readFile)
     vi.mocked(writeFile).mockImplementation(actualFs.writeFile)
     vi.mocked(unlink).mockImplementation(actualFs.unlink)
     mockUserDataPath = await mkdtemp(join(tmpdir(), 'local-data-import-test-'))
@@ -219,6 +229,29 @@ describe('importLocalData', () => {
     expect(await exists(join(snapDir, 'e1.pipette'))).toBe(false)
   })
 
+  it('F3: a non-ENOENT index read failure is reported distinctly from a parse failure', async () => {
+    const snapDir = join(mockUserDataPath, 'sync', 'keyboards', 'uid1', 'snapshots')
+    const indexPath = join(snapDir, 'index.json')
+    await writeJson(indexPath, { uid: 'uid1', entries: [] })
+
+    const exportObj = {
+      version: 1,
+      snapshots: {
+        uid1: snapshotExport(
+          [{ id: 'e1', label: 'New1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
+          { 'e1.pipette': 'PAYLOAD1' },
+        ),
+      },
+    }
+
+    failReadFileFor(indexPath, Object.assign(new Error('permission denied'), { code: 'EACCES' }))
+
+    await expect(importLocalData(exportObj, mockUserDataPath)).rejects.toThrow(
+      /Cannot read index: .*permission denied/,
+    )
+    expect(await exists(join(snapDir, 'e1.pipette'))).toBe(false)
+  })
+
   it('A5: an existing active entry with the same id is skipped (local wins)', async () => {
     const snapDir = join(mockUserDataPath, 'sync', 'keyboards', 'uid1', 'snapshots')
     const originalIndex = { uid: 'uid1', entries: [{ id: 'e1', label: 'Local', filename: 'e1.pipette', savedAt: '2019-01-01T00:00:00.000Z' }] }
@@ -295,6 +328,79 @@ describe('importLocalData', () => {
 
     expect(result.changedUnits).toEqual([])
     expect(await readJson(settingsPath)).toEqual(originalSettings)
+  })
+
+  it('F1: a non-ENOENT read error on local settings aborts the import without writing anything', async () => {
+    const settingsDir = join(mockUserDataPath, 'sync', 'keyboards', 'uid1')
+    const settingsPath = join(settingsDir, 'pipette_settings.json')
+    const originalSettings = { _updatedAt: '2019-01-01T00:00:00.000Z', foo: 'old' }
+    await writeJson(settingsPath, originalSettings)
+
+    const exportObj = {
+      version: 1,
+      settings: {
+        uid1: { files: { 'pipette_settings.json': JSON.stringify({ _updatedAt: '2020-01-01T00:00:00.000Z', foo: 'new' }) } },
+      },
+    }
+
+    failReadFileFor(settingsPath, Object.assign(new Error('permission denied'), { code: 'EACCES' }))
+
+    await expect(importLocalData(exportObj, mockUserDataPath)).rejects.toThrow('permission denied')
+
+    // The mocked failure above only targets the import's own read — verify
+    // the file itself with the real filesystem, not the still-installed mock.
+    expect(JSON.parse(await actualFs.readFile(settingsPath, 'utf-8'))).toEqual(originalSettings)
+  })
+
+  it('F2: an invalid-JSON remote settings payload aborts the import instead of overwriting a healthy local file', async () => {
+    const settingsDir = join(mockUserDataPath, 'sync', 'keyboards', 'uid1')
+    const settingsPath = join(settingsDir, 'pipette_settings.json')
+    const originalSettings = { _updatedAt: '2019-01-01T00:00:00.000Z', foo: 'old' }
+    await writeJson(settingsPath, originalSettings)
+
+    const exportObj = {
+      version: 1,
+      settings: {
+        uid1: { files: { 'pipette_settings.json': '{not valid json' } },
+      },
+    }
+
+    await expect(importLocalData(exportObj, mockUserDataPath)).rejects.toThrow('Invalid export file format')
+    expect(await readJson(settingsPath)).toEqual(originalSettings)
+  })
+
+  it('F4: a bundle whose index.entries is missing throws Invalid export file format and writes nothing', async () => {
+    const exportObj = {
+      version: 1,
+      snapshots: {
+        uid1: { index: {}, files: {} },
+      },
+    }
+
+    await expect(importLocalData(exportObj, mockUserDataPath)).rejects.toThrow('Invalid export file format')
+    expect(await exists(join(mockUserDataPath, 'sync', 'keyboards', 'uid1', 'snapshots', 'index.json'))).toBe(false)
+  })
+
+  it('F4: an entry with a non-string filename is skipped and never lands in the index', async () => {
+    const exportObj = {
+      version: 1,
+      snapshots: {
+        uid1: snapshotExport(
+          [
+            { id: 'e1', label: 'Bad', filename: undefined, savedAt: '2020-01-01T00:00:00.000Z' } as unknown as { id: string; label: string; filename: string; savedAt: string },
+            { id: 'e2', label: 'Good', filename: 'e2.pipette', savedAt: '2020-01-02T00:00:00.000Z' },
+          ],
+          { 'e2.pipette': 'PAYLOAD2' },
+        ),
+      },
+    }
+
+    const result = await importLocalData(exportObj, mockUserDataPath)
+
+    expect(result.changedUnits).toEqual(['keyboards/uid1/snapshots'])
+    const snapDir = join(mockUserDataPath, 'sync', 'keyboards', 'uid1', 'snapshots')
+    const index = await readJson(join(snapDir, 'index.json')) as { entries: { id: string }[] }
+    expect(index.entries.map((e) => e.id)).toEqual(['e2'])
   })
 
   describe('A8: concurrent snapshot-store save for the same uid', () => {

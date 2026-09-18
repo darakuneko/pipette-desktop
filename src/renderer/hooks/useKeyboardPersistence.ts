@@ -206,22 +206,28 @@ export function useKeyboardPersistence(
       // pure/synchronous, so this can never itself fail. If the apply below
       // fails partway through, this is written back to restore the device
       // instead of leaving it half-changed while the screen still shows the
-      // old (now wrong) state.
+      // old (now wrong) state. macroBufferSize is captured here too, at the
+      // same moment as the backup — reading it later, from inside the catch
+      // below, would risk a value that a disconnect (or anything else that
+      // resets state mid-apply) already changed out from under the pending
+      // write, silently shrinking how much of the macro buffer the rollback
+      // pads and writes back.
       const backup = serializeDeviceFields()
+      const backupMacroBufferSize = stateRef.current.macroBufferSize
 
       try {
         await writeVilToDevice(api, { ...vil, qmkSettings: appliedQmkSettings }, { keymap, encoderLayout })
       } catch (err) {
         console.error('[Persistence] apply failed:', err)
         try {
-          // macroBufferSize (not backup.macros.length) is the pad target —
-          // see writeVilToDevice's doc for why a shorter post-edit buffer
-          // must still be padded to the device's real buffer length.
+          // backupMacroBufferSize (not backup.macros.length) is the pad
+          // target — see writeVilToDevice's doc for why a shorter post-edit
+          // buffer must still be padded to the device's real buffer length.
           await writeVilToDevice(
             api,
             backup,
             { keymap: recordToMap(backup.keymap), encoderLayout: recordToMap(backup.encoderLayout) },
-            { padMacrosTo: stateRef.current.macroBufferSize },
+            { padMacrosTo: backupMacroBufferSize },
           )
           return { ok: false, rolledBack: true }
         } catch (rollbackErr) {

@@ -28,14 +28,12 @@ describe('withWriteLock', () => {
 describe('withWriteLocks', () => {
   it('dedupes a repeated key so it is only locked once', async () => {
     const calls: string[] = []
-    const acquireOrder: string[] = []
     // Wrap withWriteLock's tracked chain state indirectly: run two
     // withWriteLocks calls sharing a duplicate key and confirm the task
     // still runs exactly once (a non-deduped repeat would deadlock,
     // since withWriteLock is not reentrant for the same key).
     await withWriteLocks(['a', 'a', 'a'], async () => {
       calls.push('task')
-      acquireOrder.push('a')
     })
     expect(calls).toEqual(['task'])
   })

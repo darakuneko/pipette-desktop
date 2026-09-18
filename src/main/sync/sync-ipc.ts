@@ -76,11 +76,13 @@ interface IpcResult {
 
 // `T` lets a handler pass a payload back through the same success/failure
 // wrapping every other handler uses, instead of bypassing wrapIpc entirely
-// just to add one extra field (the pre-existing IMPORT_LOCAL_DATA handler
-// did this to return `cancelled`). Most callers don't need it and leave T
-// at its default — `fn` returning `void` merges nothing extra in, exactly
-// as before.
-async function wrapIpc<T extends object = object>(fallbackMessage: string, fn: () => Promise<T | void>): Promise<IpcResult & T> {
+// just to add one extra field (IMPORT_LOCAL_DATA uses this to return
+// `cancelled`). Most callers don't need it and leave T at its default —
+// `fn` returning `void` merges nothing extra in. `Omit<T, keyof IpcResult>`
+// keeps a handler's payload from clobbering the envelope: `fn` can't
+// declare its own `success`/`error`/`reason` field, so the spread below can
+// never overwrite the ones this wrapper sets.
+async function wrapIpc<T extends object = object>(fallbackMessage: string, fn: () => Promise<Omit<T, keyof IpcResult> | void>): Promise<IpcResult & T> {
   try {
     const payload = await fn()
     return { success: true, ...(payload ?? {}) } as IpcResult & T

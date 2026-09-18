@@ -273,6 +273,61 @@ describe('applyVilFile HID backup and rollback', () => {
     expect(setMacroBuffer).toHaveBeenCalledWith([1, 2, 3, 0, 0, 0])
   })
 
+  it('F7: rollback still pads to the macroBufferSize captured before the first write, even if state changes mid-apply', async () => {
+    let capturedStateRef: { current: KeyboardState } | undefined
+    const setMacroBuffer = vi.fn(async () => {})
+    // The apply's first write (setKeycode) reaches directly into the
+    // harness's stateRef and shrinks macroBufferSize before it fails —
+    // simulating a disconnect resetting state partway through, after the
+    // backup should already have captured the pre-apply value. Mutating
+    // the ref directly (rather than going through setState) sidesteps
+    // React's update-flush timing, which otherwise makes this race hard
+    // to reproduce deterministically in a test.
+    const setKeycode = vi.fn(async () => {
+      if (capturedStateRef) capturedStateRef.current = { ...capturedStateRef.current, macroBufferSize: 0 }
+      throw new Error('device write failed')
+    })
+    window.vialAPI = stubVialAPI({ setKeycode, setMacroBuffer })
+
+    function useHarnessWithRefAccess(initial?: Partial<KeyboardState>) {
+      const [state, setState] = useState<KeyboardState>({ ...emptyState(), isDummy: true, ...initial })
+      const stateRef = useRef(state)
+      stateRef.current = state
+      capturedStateRef = stateRef
+      const qmkSettingsBaselineRef = useRef<Record<string, number[]>>({})
+      const saveLayerNamesRef = useRef<((names: string[]) => void) | null>(null)
+      const bootGuardRef = useRef<BootGuardRef>({ onUnlock: null })
+      const waitForUnlock = vi.fn(async () => {})
+      const bumpActivity = vi.fn()
+
+      const persistence = useKeyboardPersistence(
+        setState,
+        { stateRef, qmkSettingsBaselineRef, saveLayerNamesRef },
+        bumpActivity,
+        bootGuardRef,
+        waitForUnlock,
+      )
+
+      return { state, ...persistence }
+    }
+
+    const { result } = renderHook(() =>
+      useHarnessWithRefAccess(baseHidState({
+        macroBuffer: [1, 2, 3],
+        macroBufferSize: 6,
+      })),
+    )
+
+    await act(async () => {
+      await result.current.applyVilFile(VALID_VIL)
+    })
+
+    // Even though macroBufferSize was reset to 0 by the time the catch
+    // block would have read stateRef.current, the rollback must still pad
+    // to 6 (the value captured alongside the backup, before any write).
+    expect(setMacroBuffer).toHaveBeenCalledWith([1, 2, 3, 0, 0, 0])
+  })
+
   it('B4b: rollback does not write macros at all when macroBufferSize is 0', async () => {
     const setKeycode = vi.fn(async () => { throw new Error('apply failed') })
     const setMacroBuffer = vi.fn(async () => {})

@@ -39,9 +39,14 @@ export function isSafePathSegment(segment: string): boolean {
 
 /** True when `key` is safe to use as a lock key or directory segment
  *  sourced from an untrusted import file (a keyboard uid or favorite
- *  type) — word characters and `-` only. */
+ *  type) — word characters and `-` only. The `typeof` check matters here
+ *  even though the parameter is typed `string`: every real call site
+ *  passes a JSON-parsed, untrusted value that TypeScript can't verify at
+ *  runtime, and `RegExp.test` coerces a non-string argument (e.g.
+ *  `undefined`) to its string form instead of failing, which would
+ *  otherwise let a malformed value slip through as "safe". */
 export function isSafeKey(key: string): boolean {
-  return /^[\w-]+$/.test(key)
+  return typeof key === 'string' && /^[\w-]+$/.test(key)
 }
 
 /** True when `filename` is safe to join onto a base directory as a single
@@ -52,9 +57,15 @@ export function isSafeKey(key: string): boolean {
  *  self/parent-reference forms, rejected explicitly below (equivalent to
  *  resolving the joined path and checking it stays under the base — but
  *  without a `node:path` dependency, since this module is also imported
- *  by the renderer). */
-export function isSafePath(filename: string): boolean {
-  if (!/^[\w.()-]+$/.test(filename)) return false
+ *  by the renderer). Takes `unknown` (rather than `string`) and narrows
+ *  via a type predicate — the same untrusted-JSON case as `isSafeKey`
+ *  above, but made a compile-time guarantee here since every call site
+ *  reads `filename` straight out of a JSON-parsed, untrusted index entry
+ *  whose field could be missing or the wrong type. A non-string value
+ *  must not pass through to a `path.join` call, which throws a raw
+ *  `TypeError` on a non-string argument instead of failing cleanly. */
+export function isSafePath(filename: unknown): filename is string {
+  if (typeof filename !== 'string' || !/^[\w.()-]+$/.test(filename)) return false
   return filename !== '.' && filename !== '..'
 }
 

@@ -156,11 +156,14 @@ export type ReloadResult =
   | { ok: false; reason: 'notVial' | 'loadFailed' }
 
 /** Outcome of `applyVilFile`. `rolledBack` is only meaningful when
- *  `ok: false`: `true` means the device was successfully restored to
- *  its pre-apply state (so the screen, which was never updated, still
- *  matches the device); `false` means the restore itself also failed —
- *  the device and the screen may now disagree, and the caller must tell
- *  the user rather than silently treating it as a normal load failure. */
+ *  `ok: false`: `true` means the pre-apply backup was written back to the
+ *  device without a further HID error — not a guaranteed byte-exact
+ *  restore. The rollback only rewrites the positions/entries the backup
+ *  itself held, so it assumes the applied file and the device share the
+ *  same shape (the same keyboard); `false` means the restore write itself
+ *  also failed — the device and the screen may now disagree, and the
+ *  caller must tell the user rather than silently treating it as a normal
+ *  load failure. */
 export type ApplyVilResult =
   | { ok: true }
   | { ok: false; rolledBack: boolean }

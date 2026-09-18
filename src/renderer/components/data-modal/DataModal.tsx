@@ -340,7 +340,7 @@ function LocalApplicationContent({
         <p className="text-sm text-content-secondary mb-3">{t('dataModal.importExportDesc')}</p>
         <div className="flex items-center justify-between mb-3">
           {troubleshoot.importOutcome ? (
-            <div>
+            <div className="min-w-0">
               <span
                 className={`text-sm ${troubleshoot.importOutcome.status === 'success' ? 'text-accent' : 'text-danger'}`}
                 data-testid="local-data-import-result"
@@ -348,7 +348,7 @@ function LocalApplicationContent({
                 {troubleshoot.importOutcome.status === 'success' ? t('sync.importComplete') : t('sync.importFailed')}
               </span>
               {troubleshoot.importOutcome.status === 'error' ? (
-                <span className="block text-xs text-content-muted" data-testid="local-data-import-error">
+                <span className="block break-all text-xs text-content-muted" data-testid="local-data-import-error">
                   {troubleshoot.importOutcome.message}
                 </span>
               ) : null}

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { safeFilename, isSafePathSegment, isSafePackId, tsForFilename, tsForExportFilename } from '../safe-filename'
+import { safeFilename, isSafeKey, isSafePath, isSafePathSegment, isSafePackId, tsForFilename, tsForExportFilename } from '../safe-filename'
 
 describe('isSafePathSegment', () => {
   it('rejects empty string', () => {
@@ -30,6 +30,26 @@ describe('isSafePathSegment', () => {
 
   it('accepts unicode segments', () => {
     expect(isSafePathSegment('キーボード設定')).toBe(true)
+  })
+})
+
+describe('isSafeKey', () => {
+  it('accepts word characters and hyphens', () => {
+    expect(isSafeKey('uid-1_abc')).toBe(true)
+  })
+
+  it('rejects a non-string value coerced from untrusted JSON', () => {
+    expect(isSafeKey(undefined as unknown as string)).toBe(false)
+  })
+})
+
+describe('isSafePath', () => {
+  it('accepts a normal filename', () => {
+    expect(isSafePath('e1.pipette')).toBe(true)
+  })
+
+  it('rejects a non-string value coerced from untrusted JSON', () => {
+    expect(isSafePath(undefined as unknown as string)).toBe(false)
   })
 })
 

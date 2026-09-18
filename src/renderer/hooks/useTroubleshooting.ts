@@ -11,11 +11,9 @@
 
 import { useState, useCallback } from 'react'
 
-/** `importResult`/`importError` used to be two independently-settable
- *  states, which let them briefly disagree (e.g. a stale error message
- *  surviving a switch to 'success'). They only ever change together, so
- *  one union state makes that pairing structural instead of a convention
- *  callers have to maintain. */
+/** A single union state, since 'success' and 'error' only ever change
+ *  together — an error message is only meaningful alongside the 'error'
+ *  status, never left over once the outcome switches to 'success'. */
 type ImportOutcome = { status: 'success' } | { status: 'error'; message: string }
 
 export function useTroubleshooting() {
