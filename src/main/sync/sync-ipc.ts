@@ -48,7 +48,7 @@ import { getMachineHash } from '../typing-analytics/machine-hash'
 import { ensureCacheIsFresh } from '../typing-analytics/cache-rebuild'
 import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
 import { deleteAllTypingForKeyboard } from '../typing-analytics/typing-analytics-service'
-import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle, SyncOperationResult } from '../../shared/types/sync'
+import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle, SyncOperationResult, ImportLocalDataResult } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
 import type { FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
@@ -462,8 +462,11 @@ export function setupSyncIpc(): void {
   )
 
   // --- Import local data ---
-  secureHandle(IpcChannels.IMPORT_LOCAL_DATA, () =>
-    wrapIpc('Import failed', async () => {
+  // Not routed through wrapIpc: a cancelled file picker isn't an error, so
+  // this needs a `cancelled` outcome distinct from `success`/`error` — see
+  // ImportLocalDataResult's doc.
+  secureHandle(IpcChannels.IMPORT_LOCAL_DATA, async (): Promise<ImportLocalDataResult> => {
+    try {
       const dialogOpts = {
         filters: [{ name: 'JSON', extensions: ['json'] }],
         properties: ['openFile' as const],
@@ -472,7 +475,9 @@ export function setupSyncIpc(): void {
       const result = win
         ? await dialog.showOpenDialog(win, dialogOpts)
         : await dialog.showOpenDialog(dialogOpts)
-      if (result.canceled || result.filePaths.length === 0) return
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: true, cancelled: true }
+      }
 
       const raw = await readFile(result.filePaths[0], 'utf-8')
       const data: unknown = JSON.parse(raw)
@@ -483,8 +488,11 @@ export function setupSyncIpc(): void {
       for (const unit of changedUnits) {
         notifyChange(unit)
       }
-    }),
-  )
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Import failed' }
+    }
+  })
 
   // --- Undecryptable files ---
   secureHandle(IpcChannels.SYNC_LIST_UNDECRYPTABLE, () => listUndecryptableFiles())

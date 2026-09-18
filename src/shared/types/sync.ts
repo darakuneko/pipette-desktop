@@ -210,3 +210,13 @@ export interface SyncOperationResult {
   /** Populated when `status === 'skipped'`. */
   skipReason?: SyncSkipReason
 }
+
+/** IMPORT_LOCAL_DATA's result. Distinguishes "the user cancelled the file
+ *  picker" (not an error — the renderer must not touch the last import's
+ *  displayed result/error) from a real failure, which carries the raw
+ *  main-process error message so the renderer can show it as-is (this
+ *  message is log-detail, not user-facing copy — deliberately not
+ *  localized). */
+export type ImportLocalDataResult =
+  | { success: true; cancelled?: true }
+  | { success: false; error: string }

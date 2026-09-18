@@ -742,6 +742,30 @@ describe('DataModal', () => {
       expect(screen.getByTestId('local-data-import')).toBeInTheDocument()
       expect(screen.getByTestId('local-data-export')).toBeInTheDocument()
     })
+
+    it('shows the raw error message under the failed label when import fails', async () => {
+      mockImportLocalData.mockResolvedValueOnce({ success: false, error: 'Corrupted index: /tmp/foo/index.json' })
+      renderAndSwitchToApplication()
+
+      fireEvent.click(screen.getByTestId('local-data-import'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('local-data-import-result')).toHaveTextContent('sync.importFailed')
+      })
+      expect(screen.getByTestId('local-data-import-error')).toHaveTextContent('Corrupted index: /tmp/foo/index.json')
+    })
+
+    it('does not render an error detail on a successful import', async () => {
+      mockImportLocalData.mockResolvedValueOnce({ success: true })
+      renderAndSwitchToApplication()
+
+      fireEvent.click(screen.getByTestId('local-data-import'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('local-data-import-result')).toHaveTextContent('sync.importComplete')
+      })
+      expect(screen.queryByTestId('local-data-import-error')).not.toBeInTheDocument()
+    })
   })
 
   describe('sync tree', () => {

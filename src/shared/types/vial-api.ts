@@ -36,7 +36,7 @@ import type {
 } from './theme-store'
 import type { AppConfig } from './app-config'
 import type { DeviceScope } from './analyze-filters'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult } from './sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult } from './sync'
 import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } from './pipette-settings'
 import type {
   TypingActivityCell,
@@ -359,7 +359,7 @@ export interface VialAPI {
   resetKeyboardData(uid: string): Promise<{ success: boolean; error?: string }>
   resetLocalTargets(targets: LocalResetTargets): Promise<{ success: boolean; error?: string }>
   exportLocalData(): Promise<{ success: boolean; error?: string }>
-  importLocalData(): Promise<{ success: boolean; error?: string }>
+  importLocalData(): Promise<ImportLocalDataResult>
 
   // Hub
   hubUploadPost(params: HubUploadPostParams): Promise<HubUploadResult>

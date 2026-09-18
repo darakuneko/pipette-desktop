@@ -14,6 +14,7 @@ import { useState, useCallback } from 'react'
 export function useTroubleshooting() {
   const [busy, setBusy] = useState(false)
   const [importResult, setImportResult] = useState<'success' | 'error' | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
 
   const handleExport = useCallback(async () => {
     setBusy(true)
@@ -28,7 +29,16 @@ export function useTroubleshooting() {
     setBusy(true)
     try {
       const result = await window.vialAPI.importLocalData()
-      setImportResult(result.success ? 'success' : 'error')
+      if (result.success) {
+        // A cancelled file picker isn't an outcome — leave whatever result
+        // (success/error) is already displayed from a previous import alone.
+        if (result.cancelled) return
+        setImportResult('success')
+        setImportError(null)
+      } else {
+        setImportResult('error')
+        setImportError(result.error)
+      }
     } finally {
       setBusy(false)
     }
@@ -37,6 +47,7 @@ export function useTroubleshooting() {
   return {
     busy,
     importResult,
+    importError,
     handleExport,
     handleImport,
   }

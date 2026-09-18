@@ -54,7 +54,7 @@ import type {
 import type { HubPrivateLink } from '../shared/types/hub-private'
 import type { AppConfig } from '../shared/types/app-config'
 import type { DeviceScope } from '../shared/types/analyze-filters'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult } from '../shared/types/sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult } from '../shared/types/sync'
 import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } from '../shared/types/pipette-settings'
 import type {
   LayoutComparisonOptions,
@@ -791,7 +791,7 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.RESET_LOCAL_TARGETS, targets),
   exportLocalData: (): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.EXPORT_LOCAL_DATA),
-  importLocalData: (): Promise<{ success: boolean; error?: string }> =>
+  importLocalData: (): Promise<ImportLocalDataResult> =>
     ipcRenderer.invoke(IpcChannels.IMPORT_LOCAL_DATA),
 
   // --- Window Management ---
