@@ -13,10 +13,12 @@ type SaveStatus = 'idle' | 'saving' | 'resetting' | 'saved' | 'failed'
 // Flash duration for the 'saved' status before it fades back to idle.
 const SAVED_FLASH_MS = 2000
 
+// Full non-size class for each status (saving has no font-medium; saved/
+// failed do). Callers compose `text-xs ${...}` on top of this.
 function saveStatusColorClass(status: SaveStatus): string {
   if (status === 'saving') return 'text-content-muted'
-  if (status === 'saved') return 'text-success'
-  if (status === 'failed') return 'text-danger'
+  if (status === 'saved') return 'font-medium text-success'
+  if (status === 'failed') return 'font-medium text-danger'
   return ''
 }
 
@@ -59,6 +61,13 @@ export function QmkSettings({
   const [loading, setLoading] = useState(true)
   const [status, setStatusState] = useState<SaveStatus>('idle')
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  // Guards setState after unmount. Accepted trade-off: an in-flight save
+  // keeps writing to the device after the modal closes, and a reopened
+  // modal's load effect can read a qsid before that write lands — the old
+  // instance's onSettingsUpdate then overwrites the new instance's parent
+  // state. This is accepted because HID is serialized, so the packets
+  // themselves cannot interleave; only the order of the two independent
+  // instances' state updates can race.
   const mountedRef = useRef(true)
 
   useEffect(() => {
@@ -69,9 +78,11 @@ export function QmkSettings({
     }
   }, [])
 
-  // Single entry point for status transitions — always clears any pending
-  // saved-flash timer first so an old timer cannot clobber a newer
-  // 'saving'/'failed' state back to 'idle'.
+  // Entry point for status transitions that may own a timer — always
+  // clears any pending saved-flash timer first so an old timer cannot
+  // clobber a newer 'saving'/'failed' state back to 'idle'. clearFailure
+  // below is the only other writer of `status`; it's safe outside this
+  // function because 'failed' never owns a timer.
   const setStatus = useCallback((next: SaveStatus) => {
     clearTimeout(savedTimerRef.current)
     setStatusState(next)
@@ -178,25 +189,47 @@ export function QmkSettings({
     const written = new Map(values)
     let failed = false
     let wrote = false
-    for (const [qsid, val] of editedValues) {
-      if (values.get(qsid) === val) continue
-      const field = findFieldByQsid(tabs, qsid)
-      const width = field?.width ?? 1
-      const data = serializeValue(val, width)
-      try {
-        await qmkSettingsSet(qsid, data)
-      } catch (err) {
-        failed = true
-        console.error(`[QmkSettings] save failed for qsid ${qsid}:`, err)
-        break
+    // Outer try/finally: status must leave 'saving' even if something past
+    // the device write throws (onSettingsUpdate, or setValues below) —
+    // otherwise Save/Reset/Revert would stay disabled until the modal is
+    // closed.
+    try {
+      for (const [qsid, val] of editedValues) {
+        if (values.get(qsid) === val) continue
+        const field = findFieldByQsid(tabs, qsid)
+        const width = field?.width ?? 1
+        const data = serializeValue(val, width)
+        try {
+          await qmkSettingsSet(qsid, data)
+        } catch (err) {
+          failed = true
+          console.error(`[QmkSettings] save failed for qsid ${qsid}:`, err)
+          break
+        }
+        onSettingsUpdate?.(qsid, data)
+        written.set(qsid, val)
+        wrote = true
       }
-      onSettingsUpdate?.(qsid, data)
-      written.set(qsid, val)
-      wrote = true
+    } catch (err) {
+      // The device write for this qsid already succeeded (qmkSettingsSet's
+      // own try/catch above only covers that call), so a throw here means
+      // onSettingsUpdate itself failed. Surface it as a failed save rather
+      // than a silent 'saved' — the caller's state may not reflect what
+      // was actually written.
+      failed = true
+      console.error('[QmkSettings] save failed:', err)
+    } finally {
+      if (mountedRef.current) {
+        if (wrote) {
+          try {
+            setValues(written)
+          } catch (err) {
+            console.error('[QmkSettings] failed to apply written values:', err)
+          }
+        }
+        setStatus(failed ? 'failed' : 'saved')
+      }
     }
-    if (!mountedRef.current) return
-    if (wrote) setValues(written)
-    setStatus(failed ? 'failed' : 'saved')
   }, [editedValues, values, tabs, qmkSettingsSet, onSettingsUpdate, setStatus])
 
   const handleUndo = useCallback(() => {
@@ -275,7 +308,8 @@ export function QmkSettings({
 
       <div className="flex items-center justify-between pt-2">
         <span
-          className={`text-xs font-medium ${saveStatusColorClass(status)}`}
+          className={['text-xs', saveStatusColorClass(status)].filter(Boolean).join(' ')}
+          aria-live="polite"
           data-testid="qmk-save-status"
         >
           {status === 'saving' && t('common.saving')}

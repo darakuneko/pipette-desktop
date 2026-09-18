@@ -80,6 +80,24 @@ export function useKeyboardPersistence(
     const keymap = recordToMap(vil.keymap)
     const encoderLayout = recordToMap(vil.encoderLayout)
 
+    // QMK settings actually applied by this restore — computed once and
+    // shared by the write loop below and the setState at the end, so state
+    // (and serialize()/resolveTappingTerm downstream) never claims a value
+    // the device didn't accept. In file/dummy mode supportedQsids is
+    // derived from the file itself, so nothing is filtered out; on a real
+    // device we skip qsids the connected firmware doesn't support (e.g. a
+    // .vil saved from a different keyboard or a newer firmware build) —
+    // qmkSettingsSet rejects on a non-zero status byte, so sending an
+    // unsupported qsid would abort the rest of the restore instead of just
+    // leaving that one setting untouched.
+    const appliedQmkSettings = isDummy
+      ? vil.qmkSettings
+      : Object.fromEntries(
+          Object.entries(vil.qmkSettings).filter(
+            ([qsid]) => stateRef.current.supportedQsids.has(Number(qsid)),
+          ),
+        )
+
     if (!isDummy) {
       // Prompt unlock before writing to device
       if (stateRef.current.unlockStatus.unlocked === false) {
@@ -129,13 +147,8 @@ export function useKeyboardPersistence(
         await api.setAltRepeatKey(i, vil.altRepeatKey[i])
       }
 
-      // Apply QMK settings — skip qsids the connected firmware doesn't
-      // support (e.g. a .vil saved from a different keyboard or a newer
-      // firmware build). qmkSettingsSet rejects on a non-zero status
-      // byte, so sending an unsupported qsid would abort the rest of the
-      // restore instead of just leaving that one setting untouched.
-      for (const [qsid, data] of Object.entries(vil.qmkSettings)) {
-        if (!stateRef.current.supportedQsids.has(Number(qsid))) continue
+      // Apply QMK settings (already filtered to supported qsids above).
+      for (const [qsid, data] of Object.entries(appliedQmkSettings)) {
         await api.qmkSettingsSet(Number(qsid), data)
       }
     }
@@ -158,7 +171,7 @@ export function useKeyboardPersistence(
       comboEntries: vil.combo,
       keyOverrideEntries: vil.keyOverride,
       altRepeatKeyEntries: vil.altRepeatKey,
-      qmkSettingsValues: vil.qmkSettings,
+      qmkSettingsValues: appliedQmkSettings,
       layerNames,
       // Snapshot/layout-store restore and .vil import both converge here —
       // bump so App.tsx's restore-cleanup effect (Plan-qwerty-select-no-rewrite

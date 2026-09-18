@@ -274,7 +274,7 @@ describe('QmkSettings save status', () => {
     expect(screen.getByTestId('qmk-save-status')).toBeEmptyDOMElement()
   })
 
-  it('does not update state or throw after unmounting mid-save', async () => {
+  it('does not schedule the saved flash after unmounting mid-save', async () => {
     let resolveSet: (() => void) | undefined
     const setMock = vi.fn(() => new Promise<void>((resolve) => {
       resolveSet = resolve
@@ -297,5 +297,52 @@ describe('QmkSettings save status', () => {
     )
     expect(actWarnings).toHaveLength(0)
     consoleErrorSpy.mockRestore()
+
+    // Without the mountedRef guard, the resolved save would have called
+    // setStatus('saved') post-unmount, which schedules the 2s saved-flash
+    // timer. Nothing should be pending.
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('ends the save as failed (not stuck at saving) when onSettingsUpdate throws after a successful device write', async () => {
+    const onSettingsUpdate = vi.fn()
+    renderSettings({ onSettingsUpdate })
+    await flush() // load-time calls succeed so values/editedValues populate normally
+
+    // Only the save-time call (triggered below) should throw.
+    onSettingsUpdate.mockImplementation(() => {
+      throw new Error('boom')
+    })
+
+    fireEvent.click(permissiveHoldCheckbox())
+    await clickAndSettle('qmk-save')
+
+    // A throw past a successful device write is surfaced as 'failed'
+    // (documented in handleSave) rather than leaving status stuck at
+    // 'saving' — Save/Reset/Revert must re-enable either way.
+    expect(screen.getByTestId('qmk-save-status')).toHaveTextContent('editor.keymap.qmkSettingsSaveFailed')
+    expect(screen.getByTestId('qmk-reset')).not.toBeDisabled()
+    expect(screen.getByTestId('qmk-revert')).not.toBeDisabled()
+  })
+
+  it('renders the saving status without font-medium and the saved status with it', async () => {
+    let resolveSet: (() => void) | undefined
+    const setMock = vi.fn(() => new Promise<void>((resolve) => {
+      resolveSet = resolve
+    }))
+    renderSettings({ qmkSettingsSet: setMock })
+    await flush()
+
+    fireEvent.click(permissiveHoldCheckbox())
+    fireEvent.click(screen.getByTestId('qmk-save'))
+
+    const statusEl = screen.getByTestId('qmk-save-status')
+    expect(statusEl.className).not.toContain('font-medium')
+
+    await act(async () => {
+      resolveSet?.()
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(statusEl.className).toContain('font-medium')
   })
 })
