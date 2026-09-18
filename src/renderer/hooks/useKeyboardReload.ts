@@ -242,10 +242,11 @@ export function useKeyboardReload(
       })
 
       // Phase 8a: QMK Settings discovery (matches Python reload_settings).
-      // Relies on the transport's own retry loop rather than a local
-      // deadline — a slow-but-alive keyboard is worth waiting for, and
-      // there's no way to cancel an already-issued HID command anyway.
       progress('loading.settings')
+      // Phases 8a and 8b both run to completion: each HID command is
+      // bounded by the transport's own retry loop (read timeout × retry
+      // count in the main process), and an issued HID command cannot be
+      // cancelled, so a slow-but-alive keyboard is worth waiting for.
       if (newState.vialProtocol >= VIAL_PROTOCOL_QMK_SETTINGS) {
         try {
           const supported = new Set<number>()
