@@ -11,10 +11,16 @@
 
 import { useState, useCallback } from 'react'
 
+/** `importResult`/`importError` used to be two independently-settable
+ *  states, which let them briefly disagree (e.g. a stale error message
+ *  surviving a switch to 'success'). They only ever change together, so
+ *  one union state makes that pairing structural instead of a convention
+ *  callers have to maintain. */
+type ImportOutcome = { status: 'success' } | { status: 'error'; message: string }
+
 export function useTroubleshooting() {
   const [busy, setBusy] = useState(false)
-  const [importResult, setImportResult] = useState<'success' | 'error' | null>(null)
-  const [importError, setImportError] = useState<string | null>(null)
+  const [importOutcome, setImportOutcome] = useState<ImportOutcome | null>(null)
 
   const handleExport = useCallback(async () => {
     setBusy(true)
@@ -30,14 +36,12 @@ export function useTroubleshooting() {
     try {
       const result = await window.vialAPI.importLocalData()
       if (result.success) {
-        // A cancelled file picker isn't an outcome — leave whatever result
+        // A cancelled file picker isn't an outcome — leave whatever outcome
         // (success/error) is already displayed from a previous import alone.
         if (result.cancelled) return
-        setImportResult('success')
-        setImportError(null)
+        setImportOutcome({ status: 'success' })
       } else {
-        setImportResult('error')
-        setImportError(result.error)
+        setImportOutcome({ status: 'error', message: result.error })
       }
     } finally {
       setBusy(false)
@@ -46,8 +50,7 @@ export function useTroubleshooting() {
 
   return {
     busy,
-    importResult,
-    importError,
+    importOutcome,
     handleExport,
     handleImport,
   }

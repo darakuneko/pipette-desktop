@@ -165,6 +165,15 @@ export type ApplyVilResult =
   | { ok: true }
   | { ok: false; rolledBack: boolean }
 
+/** Maps a failed `applyVilFile` result to the i18n key describing whether
+ *  the device was restored. Every call site that surfaces an
+ *  `ApplyVilResult` failure to the user (useFileIO, useLayoutStore) shares
+ *  this instead of re-deriving the same ternary, so the two keys can't
+ *  drift out of sync between call sites. */
+export function applyVilErrorKey(r: Extract<ApplyVilResult, { ok: false }>): 'error.applyRolledBack' | 'error.applyNotRolledBack' {
+  return r.rolledBack ? 'error.applyRolledBack' : 'error.applyNotRolledBack'
+}
+
 export interface KeyboardRefs {
   stateRef: React.MutableRefObject<KeyboardState>
   qmkSettingsBaselineRef: React.MutableRefObject<Record<string, number[]>>

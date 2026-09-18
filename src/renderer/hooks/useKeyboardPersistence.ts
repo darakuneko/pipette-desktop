@@ -10,29 +10,52 @@ import { parseDefinitionLayout } from '../../shared/kle/definition-layout'
 import type { SetState, KeyboardRefs, BootGuardRef, ApplyVilResult } from './keyboard-types'
 import { emptyState } from './keyboard-types'
 
+/** The subset of `VilFile` that `writeVilToDevice` actually writes over
+ *  HID. `serializeDeviceFields()` produces exactly this — the fields
+ *  `serialize()` adds on top (`macroJson`, `layerNames`, protocol/feature
+ *  metadata, `definition`) are for file/snapshot storage and UI display,
+ *  never read by an apply or a rollback. */
+type DeviceVilFields = Pick<
+  VilFile,
+  | 'keymap'
+  | 'encoderLayout'
+  | 'macros'
+  | 'layoutOptions'
+  | 'tapDance'
+  | 'combo'
+  | 'keyOverride'
+  | 'altRepeatKey'
+  | 'qmkSettings'
+>
+
 /** Writes every device-facing field of `vil` over HID, in the same order
  *  `applyVilFile` always has. Used both for the real apply (whatever the
  *  caller passes as `vil.qmkSettings` — already filtered to supported
- *  qsids) and for rollback (writing a pre-apply `serialize()` snapshot
- *  back). `opts.padMacrosTo`, when a positive length is given, always
- *  writes exactly that many macro bytes (truncating or zero-padding
- *  `vil.macros` to fit) instead of the normal "skip if empty" rule —
- *  rollback needs this because a `serialize()` backup's macro buffer can
- *  be shorter than the device's actual buffer size (`setMacroBuffer`
- *  stores whatever array it was given, so a shorter post-edit write
- *  leaves state shorter than `macroBufferSize`); writing only the short
- *  backup back would leave the tail of a longer, since-applied macro
- *  buffer on the device. */
-async function writeVilToDevice(api: VialAPI, vil: VilFile, opts?: { padMacrosTo?: number }): Promise<void> {
-  const keymap = recordToMap(vil.keymap)
-  const encoderLayout = recordToMap(vil.encoderLayout)
-
-  for (const [key, keycode] of keymap) {
+ *  qsids) and for rollback (writing a pre-apply `serializeDeviceFields()`
+ *  snapshot back). `maps` are the already-converted keymap/encoderLayout
+ *  Maps — the caller computes these once (it needs them for `setState`
+ *  too, in the success case) rather than this function re-deriving them
+ *  from `vil.keymap`/`vil.encoderLayout` on every call. `opts.padMacrosTo`,
+ *  when a positive length is given, always writes exactly that many macro
+ *  bytes (truncating or zero-padding `vil.macros` to fit) instead of the
+ *  normal "skip if empty" rule — rollback needs this because a backup's
+ *  macro buffer can be shorter than the device's actual buffer size
+ *  (`setMacroBuffer` stores whatever array it was given, so a shorter
+ *  post-edit write leaves state shorter than `macroBufferSize`); writing
+ *  only the short backup back would leave the tail of a longer,
+ *  since-applied macro buffer on the device. */
+async function writeVilToDevice(
+  api: VialAPI,
+  vil: DeviceVilFields,
+  maps: { keymap: Map<string, number>; encoderLayout: Map<string, number> },
+  opts?: { padMacrosTo?: number },
+): Promise<void> {
+  for (const [key, keycode] of maps.keymap) {
     const [layer, row, col] = key.split(',').map(Number)
     await api.setKeycode(layer, row, col, keycode)
   }
 
-  for (const [key, keycode] of encoderLayout) {
+  for (const [key, keycode] of maps.encoderLayout) {
     const [layer, idx, direction] = key.split(',').map(Number)
     await api.setEncoder(layer, idx, direction, keycode)
   }
@@ -77,6 +100,26 @@ export function useKeyboardPersistence(
 ) {
   const { stateRef, qmkSettingsBaselineRef, saveLayerNamesRef } = refs
 
+  // Exactly the fields `writeVilToDevice` needs — split out of `serialize()`
+  // so an apply's pre-write backup (and `serialize()` itself) don't pay for
+  // building `macroJson` (a split + deserialize + JSON round trip per
+  // macro) on every apply, including the success path, when only a failed
+  // apply's rollback ever reads the backup.
+  const serializeDeviceFields = useCallback((): DeviceVilFields => {
+    const s = stateRef.current
+    return {
+      keymap: mapToRecord(s.keymap),
+      encoderLayout: mapToRecord(s.encoderLayout),
+      macros: s.macroBuffer,
+      layoutOptions: s.layoutOptions,
+      tapDance: s.tapDanceEntries,
+      combo: s.comboEntries,
+      keyOverride: s.keyOverrideEntries,
+      altRepeatKey: s.altRepeatKeyEntries,
+      qmkSettings: s.qmkSettingsValues,
+    }
+  }, [stateRef])
+
   const serialize = useCallback((): VilFile => {
     const s = stateRef.current
     const macrosSrc = s.parsedMacros
@@ -84,23 +127,15 @@ export function useKeyboardPersistence(
     return {
       version: VILFILE_CURRENT_VERSION,
       uid: s.uid,
-      keymap: mapToRecord(s.keymap),
-      encoderLayout: mapToRecord(s.encoderLayout),
-      macros: s.macroBuffer,
+      ...serializeDeviceFields(),
       macroJson: macrosSrc.map((m) => JSON.parse(macroActionsToJson(m)) as unknown[]),
-      layoutOptions: s.layoutOptions,
-      tapDance: s.tapDanceEntries,
-      combo: s.comboEntries,
-      keyOverride: s.keyOverrideEntries,
-      altRepeatKey: s.altRepeatKeyEntries,
-      qmkSettings: s.qmkSettingsValues,
       layerNames: s.layerNames,
       viaProtocol: s.viaProtocol,
       vialProtocol: s.vialProtocol,
       featureFlags: s.dynamicCounts.featureFlags,
       definition: s.definition ?? undefined,
     }
-  }, [stateRef])
+  }, [stateRef, serializeDeviceFields])
 
   const serializeVialGui = useCallback((): string => {
     const s = stateRef.current
@@ -167,22 +202,27 @@ export function useKeyboardPersistence(
       const api = window.vialAPI
 
       // Snapshot of "what Pipette believes the device currently holds",
-      // taken before the first write — serialize() is pure/synchronous, so
-      // this can never itself fail. If the apply below fails partway
-      // through, this is written back to restore the device instead of
-      // leaving it half-changed while the screen still shows the old
-      // (now wrong) state.
-      const backup = serialize()
+      // taken before the first write — serializeDeviceFields() is
+      // pure/synchronous, so this can never itself fail. If the apply below
+      // fails partway through, this is written back to restore the device
+      // instead of leaving it half-changed while the screen still shows the
+      // old (now wrong) state.
+      const backup = serializeDeviceFields()
 
       try {
-        await writeVilToDevice(api, { ...vil, qmkSettings: appliedQmkSettings })
+        await writeVilToDevice(api, { ...vil, qmkSettings: appliedQmkSettings }, { keymap, encoderLayout })
       } catch (err) {
         console.error('[Persistence] apply failed:', err)
         try {
           // macroBufferSize (not backup.macros.length) is the pad target —
           // see writeVilToDevice's doc for why a shorter post-edit buffer
           // must still be padded to the device's real buffer length.
-          await writeVilToDevice(api, backup, { padMacrosTo: stateRef.current.macroBufferSize })
+          await writeVilToDevice(
+            api,
+            backup,
+            { keymap: recordToMap(backup.keymap), encoderLayout: recordToMap(backup.encoderLayout) },
+            { padMacrosTo: stateRef.current.macroBufferSize },
+          )
           return { ok: false, rolledBack: true }
         } catch (rollbackErr) {
           console.error('[Persistence] rollback failed:', rollbackErr)
@@ -220,7 +260,7 @@ export function useKeyboardPersistence(
     }))
 
     return { ok: true }
-  }, [setState, stateRef, saveLayerNamesRef, serialize])
+  }, [setState, stateRef, saveLayerNamesRef, serializeDeviceFields])
 
   const reset = useCallback(() => {
     // `keymapRestoreSeq` is monotonic for the whole session (see

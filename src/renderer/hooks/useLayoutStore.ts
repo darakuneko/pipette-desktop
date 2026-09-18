@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import type { KeyboardDefinition, VilFile } from '../../shared/types/protocol'
 import type { SnapshotMeta } from '../../shared/types/snapshot-store'
 import { isVilFile, isVilFileV1, migrateVilFileToV2 } from '../../shared/vil-file'
-import type { ApplyVilResult } from './keyboard-types'
+import { applyVilErrorKey, type ApplyVilResult } from './keyboard-types'
 
 export interface UseLayoutStoreOptions {
   deviceUid: string
@@ -77,6 +77,7 @@ export function useLayoutStore({
         return false
       }
 
+      let toApply: VilFile = parsed
       // Auto-migrate v1 → v2: embed current device definition + protocol metadata
       if (isVilFileV1(parsed) && currentDefinition) {
         const current = serialize()
@@ -93,17 +94,12 @@ export function useLayoutStore({
           JSON.stringify(migrated, null, 2),
           migrated.version,
         ).then((r) => { if (!r.success) console.warn('[Snapshot] v1→v2 migration failed:', r.error) })
-        const migratedResult = await applyVilFile(migrated)
-        if (!migratedResult.ok) {
-          setError(t(migratedResult.rolledBack ? 'error.applyRolledBack' : 'error.applyNotRolledBack'))
-          return false
-        }
-        return true
+        toApply = migrated
       }
 
-      const r = await applyVilFile(parsed)
+      const r = await applyVilFile(toApply)
       if (!r.ok) {
-        setError(t(r.rolledBack ? 'error.applyRolledBack' : 'error.applyNotRolledBack'))
+        setError(t(applyVilErrorKey(r)))
         return false
       }
       return true

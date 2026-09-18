@@ -20,6 +20,25 @@ import { emptyState } from '../keyboard-types'
 import type { KeyboardState, BootGuardRef } from '../keyboard-types'
 import { VALID_VIL, MODIFIED_VIL } from './fixtures/valid-vil'
 
+/** A `window.vialAPI` stub covering the 9 HID-write methods `applyVilFile`
+ *  calls, each defaulting to a no-op success — the shape every test below
+ *  needs regardless of which specific method it's exercising. Pass
+ *  `overrides` for the methods a test needs to observe or fail. */
+function stubVialAPI(overrides?: Partial<typeof window.vialAPI>): typeof window.vialAPI {
+  return {
+    setKeycode: vi.fn(async () => {}),
+    setEncoder: vi.fn(async () => {}),
+    setMacroBuffer: vi.fn(async () => {}),
+    setLayoutOptions: vi.fn(async () => {}),
+    setTapDance: vi.fn(async () => {}),
+    setCombo: vi.fn(async () => {}),
+    setKeyOverride: vi.fn(async () => {}),
+    setAltRepeatKey: vi.fn(async () => {}),
+    qmkSettingsSet: vi.fn(async () => {}),
+    ...overrides,
+  } as unknown as typeof window.vialAPI
+}
+
 function useHarness(initial?: Partial<KeyboardState>) {
   const [state, setState] = useState<KeyboardState>({ ...emptyState(), isDummy: true, ...initial })
   const stateRef = useRef(state)
@@ -108,17 +127,7 @@ describe('applyVilFile qmk settings', () => {
   it('skips qmk settings qsids the connected firmware does not report as supported (HID path), and only stores the applied qsid in local state', async () => {
     const originalVialAPI = window.vialAPI
     const qmkSettingsSet = vi.fn(async () => {})
-    window.vialAPI = {
-      setKeycode: vi.fn(async () => {}),
-      setEncoder: vi.fn(async () => {}),
-      setMacroBuffer: vi.fn(async () => {}),
-      setLayoutOptions: vi.fn(async () => {}),
-      setTapDance: vi.fn(async () => {}),
-      setCombo: vi.fn(async () => {}),
-      setKeyOverride: vi.fn(async () => {}),
-      setAltRepeatKey: vi.fn(async () => {}),
-      qmkSettingsSet,
-    } as unknown as typeof window.vialAPI
+    window.vialAPI = stubVialAPI({ qmkSettingsSet })
 
     try {
       // VALID_VIL carries qsids '1' and '2'; only qsid 1 is reported as
@@ -179,17 +188,7 @@ describe('applyVilFile HID backup and rollback', () => {
 
   it('B1: a fully successful apply returns { ok: true } and updates state', async () => {
     const setKeycode = vi.fn(async () => {})
-    window.vialAPI = {
-      setKeycode,
-      setEncoder: vi.fn(async () => {}),
-      setMacroBuffer: vi.fn(async () => {}),
-      setLayoutOptions: vi.fn(async () => {}),
-      setTapDance: vi.fn(async () => {}),
-      setCombo: vi.fn(async () => {}),
-      setKeyOverride: vi.fn(async () => {}),
-      setAltRepeatKey: vi.fn(async () => {}),
-      qmkSettingsSet: vi.fn(async () => {}),
-    } as unknown as typeof window.vialAPI
+    window.vialAPI = stubVialAPI({ setKeycode })
 
     const { result } = renderHook(() => useHarness(baseHidState()))
 
@@ -211,17 +210,7 @@ describe('applyVilFile HID backup and rollback', () => {
       // rollback's own (single) backup key are all still observable.
       if (row === 1 && col === 5) throw new Error('device write failed')
     })
-    window.vialAPI = {
-      setKeycode,
-      setEncoder: vi.fn(async () => {}),
-      setMacroBuffer: vi.fn(async () => {}),
-      setLayoutOptions: vi.fn(async () => {}),
-      setTapDance: vi.fn(async () => {}),
-      setCombo: vi.fn(async () => {}),
-      setKeyOverride: vi.fn(async () => {}),
-      setAltRepeatKey: vi.fn(async () => {}),
-      qmkSettingsSet: vi.fn(async () => {}),
-    } as unknown as typeof window.vialAPI
+    window.vialAPI = stubVialAPI({ setKeycode })
 
     const { result } = renderHook(() =>
       useHarness(baseHidState({
@@ -250,17 +239,7 @@ describe('applyVilFile HID backup and rollback', () => {
   it('B3: a failure during rollback itself reports rolledBack: false and still leaves state unchanged', async () => {
     const setKeycode = vi.fn(async () => { throw new Error('apply failed') })
     const setLayoutOptions = vi.fn(async () => { throw new Error('rollback failed') })
-    window.vialAPI = {
-      setKeycode,
-      setEncoder: vi.fn(async () => {}),
-      setMacroBuffer: vi.fn(async () => {}),
-      setLayoutOptions,
-      setTapDance: vi.fn(async () => {}),
-      setCombo: vi.fn(async () => {}),
-      setKeyOverride: vi.fn(async () => {}),
-      setAltRepeatKey: vi.fn(async () => {}),
-      qmkSettingsSet: vi.fn(async () => {}),
-    } as unknown as typeof window.vialAPI
+    window.vialAPI = stubVialAPI({ setKeycode, setLayoutOptions })
 
     const { result } = renderHook(() =>
       useHarness(baseHidState({ macroBufferSize: 0 })),
@@ -278,17 +257,7 @@ describe('applyVilFile HID backup and rollback', () => {
   it('B4: rollback pads a shorter backup macro buffer with zeros up to macroBufferSize', async () => {
     const setKeycode = vi.fn(async () => { throw new Error('apply failed') })
     const setMacroBuffer = vi.fn(async () => {})
-    window.vialAPI = {
-      setKeycode,
-      setEncoder: vi.fn(async () => {}),
-      setMacroBuffer,
-      setLayoutOptions: vi.fn(async () => {}),
-      setTapDance: vi.fn(async () => {}),
-      setCombo: vi.fn(async () => {}),
-      setKeyOverride: vi.fn(async () => {}),
-      setAltRepeatKey: vi.fn(async () => {}),
-      qmkSettingsSet: vi.fn(async () => {}),
-    } as unknown as typeof window.vialAPI
+    window.vialAPI = stubVialAPI({ setKeycode, setMacroBuffer })
 
     const { result } = renderHook(() =>
       useHarness(baseHidState({
@@ -307,17 +276,7 @@ describe('applyVilFile HID backup and rollback', () => {
   it('B4b: rollback does not write macros at all when macroBufferSize is 0', async () => {
     const setKeycode = vi.fn(async () => { throw new Error('apply failed') })
     const setMacroBuffer = vi.fn(async () => {})
-    window.vialAPI = {
-      setKeycode,
-      setEncoder: vi.fn(async () => {}),
-      setMacroBuffer,
-      setLayoutOptions: vi.fn(async () => {}),
-      setTapDance: vi.fn(async () => {}),
-      setCombo: vi.fn(async () => {}),
-      setKeyOverride: vi.fn(async () => {}),
-      setAltRepeatKey: vi.fn(async () => {}),
-      qmkSettingsSet: vi.fn(async () => {}),
-    } as unknown as typeof window.vialAPI
+    window.vialAPI = stubVialAPI({ setKeycode, setMacroBuffer })
 
     const { result } = renderHook(() =>
       useHarness(baseHidState({
@@ -335,17 +294,7 @@ describe('applyVilFile HID backup and rollback', () => {
 
   it('B5: a dummy/file-mode device never touches HID and still returns { ok: true }', async () => {
     const setKeycode = vi.fn(async () => {})
-    window.vialAPI = {
-      setKeycode,
-      setEncoder: vi.fn(async () => {}),
-      setMacroBuffer: vi.fn(async () => {}),
-      setLayoutOptions: vi.fn(async () => {}),
-      setTapDance: vi.fn(async () => {}),
-      setCombo: vi.fn(async () => {}),
-      setKeyOverride: vi.fn(async () => {}),
-      setAltRepeatKey: vi.fn(async () => {}),
-      qmkSettingsSet: vi.fn(async () => {}),
-    } as unknown as typeof window.vialAPI
+    window.vialAPI = stubVialAPI({ setKeycode })
 
     const { result } = renderHook(() => useHarness({ isDummy: true }))
 

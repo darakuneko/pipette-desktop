@@ -6,7 +6,7 @@ import type { VilFile } from '../../shared/types/protocol'
 import { isVilFile } from '../../shared/vil-file'
 import { isVialGuiFile, vialGuiToVil } from '../../shared/vil-compat'
 import { serializeMacro, jsonToMacroActions } from '../../preload/macro'
-import type { ApplyVilResult } from './keyboard-types'
+import { applyVilErrorKey, type ApplyVilResult } from './keyboard-types'
 
 export interface UseFileIOOptions {
   deviceUid: string
@@ -110,7 +110,7 @@ export function useFileIO({
 
       const r = await applyVilFile(vil)
       if (!r.ok) {
-        setError(t(r.rolledBack ? 'error.applyRolledBack' : 'error.applyNotRolledBack'))
+        setError(t(applyVilErrorKey(r)))
         return false
       }
       return true

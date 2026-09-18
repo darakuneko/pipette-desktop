@@ -24,7 +24,7 @@ beforeEach(() => {
 })
 
 describe('useTroubleshooting — importLocalData outcomes', () => {
-  it('sets importResult to success and clears importError on a plain success', async () => {
+  it('sets importOutcome to success on a plain success', async () => {
     mockImportLocalData.mockResolvedValue({ success: true })
     const { result } = renderHook(() => useTroubleshooting())
 
@@ -32,19 +32,17 @@ describe('useTroubleshooting — importLocalData outcomes', () => {
       await result.current.handleImport()
     })
 
-    expect(result.current.importResult).toBe('success')
-    expect(result.current.importError).toBeNull()
+    expect(result.current.importOutcome).toEqual({ status: 'success' })
   })
 
-  it('leaves a prior result untouched when the file picker is cancelled', async () => {
+  it('leaves a prior outcome untouched when the file picker is cancelled', async () => {
     mockImportLocalData.mockResolvedValueOnce({ success: false, error: 'boom' })
     const { result } = renderHook(() => useTroubleshooting())
 
     await act(async () => {
       await result.current.handleImport()
     })
-    expect(result.current.importResult).toBe('error')
-    expect(result.current.importError).toBe('boom')
+    expect(result.current.importOutcome).toEqual({ status: 'error', message: 'boom' })
 
     mockImportLocalData.mockResolvedValueOnce({ success: true, cancelled: true })
     await act(async () => {
@@ -52,12 +50,11 @@ describe('useTroubleshooting — importLocalData outcomes', () => {
     })
 
     // Cancelling a second import attempt must not clear the previous
-    // failure's displayed result/error.
-    expect(result.current.importResult).toBe('error')
-    expect(result.current.importError).toBe('boom')
+    // failure's displayed outcome.
+    expect(result.current.importOutcome).toEqual({ status: 'error', message: 'boom' })
   })
 
-  it('sets importResult to error and stores the raw message on failure', async () => {
+  it('sets importOutcome to error and stores the raw message on failure', async () => {
     mockImportLocalData.mockResolvedValue({ success: false, error: 'Corrupted index: /tmp/foo' })
     const { result } = renderHook(() => useTroubleshooting())
 
@@ -65,8 +62,7 @@ describe('useTroubleshooting — importLocalData outcomes', () => {
       await result.current.handleImport()
     })
 
-    expect(result.current.importResult).toBe('error')
-    expect(result.current.importError).toBe('Corrupted index: /tmp/foo')
+    expect(result.current.importOutcome).toEqual({ status: 'error', message: 'Corrupted index: /tmp/foo' })
   })
 
   it('clears busy after import settles', async () => {
