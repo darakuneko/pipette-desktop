@@ -1,5 +1,5 @@
 {
-  "version": "0.1.92",
+  "version": "0.1.93",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -671,7 +671,8 @@
     "exportPdfFailed": "PDFの作成に失敗いたしました",
     "sideloadFailed": "JSON定義の読み取りに失敗いたしました",
     "sideloadInvalidDefinition": "機材の定義が不完全でございます",
-    "notVialCompatible": "Vialに対応していないやもしれませぬ"
+    "notVialCompatible": "Vialに対応していないやもしれませぬ",
+    "deviceLoadFailed": "キーボードよりデータを読み取ることが叶いませんでした。USBの紐をご確認の上、再びお繋ぎくださいませ。"
   },
   "warning": {
     "echoDetected": "お声がうまく届きませぬ。紐（ケーブル）を確認し、繋ぎ直していただけますか？"

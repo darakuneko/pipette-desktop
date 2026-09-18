@@ -6,6 +6,7 @@ import { renderHook, act } from '@testing-library/react'
 import { useDeviceLifecycle } from '../useDeviceLifecycle'
 import type { DeviceInfo, KeyboardDefinition, VilFile } from '../../../shared/types/protocol'
 import type { SyncScope, SyncOperationResult } from '../../../shared/types/sync'
+import type { ReloadResult } from '../useKeyboardReload'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -22,7 +23,7 @@ const mockDevice: DeviceInfo = {
 interface Mocks {
   connectDevice: Mock<(dev: DeviceInfo) => Promise<boolean>>
   disconnectDevice: Mock<() => Promise<void>>
-  keyboardReload: Mock<() => Promise<string | null>>
+  keyboardReload: Mock<() => Promise<ReloadResult>>
   applyDevicePrefs: Mock<(uid: string) => Promise<void>>
   syncNow: Mock<(direction: 'download' | 'upload', scope?: SyncScope) => Promise<SyncOperationResult>>
 }
@@ -42,7 +43,7 @@ function makeOptions(overrides: Partial<{
   const connectDevice = mocks?.connectDevice ?? vi.fn().mockResolvedValue(true)
   const disconnectDevice = mocks?.disconnectDevice ?? vi.fn().mockResolvedValue(undefined)
   const keyboardReload = mocks?.keyboardReload ??
-    vi.fn().mockResolvedValue(overrides.reloadUid ?? 'uid-1')
+    vi.fn().mockResolvedValue({ ok: true, uid: overrides.reloadUid ?? 'uid-1' })
   const applyDevicePrefs = mocks?.applyDevicePrefs ?? vi.fn().mockResolvedValue(undefined)
   const syncNow = mocks?.syncNow ?? vi.fn().mockResolvedValue(undefined)
   const markPacksPulledOnce = mocks?.markPacksPulledOnce ?? vi.fn()
@@ -167,7 +168,10 @@ describe('useDeviceLifecycle.handleConnect — issue #190 regression', () => {
   it('records the last device on a genuine connect, and keeps it through the not-Vial-compatible bailout', async () => {
     // makeOptions' reloadUid default swallows undefined (?? 'uid-1'), so
     // the no-uid bailout needs an explicit reload mock.
-    const { options } = makeOptions({}, { keyboardReload: vi.fn().mockResolvedValue(undefined) })
+    const { options } = makeOptions(
+      {},
+      { keyboardReload: vi.fn().mockResolvedValue({ ok: false, reason: 'notVial' }) },
+    )
     const { result } = renderHook(() => useDeviceLifecycle(options))
 
     await act(async () => {
@@ -196,6 +200,40 @@ describe('useDeviceLifecycle.handleConnect — issue #190 regression', () => {
     })
 
     expect(options.clearLastDevice).toHaveBeenCalled()
+  })
+})
+
+describe('useDeviceLifecycle.handleConnect — reload failure message split', () => {
+  it('shows the not-Vial-compatible message and disconnects when reload reports notVial', async () => {
+    const { options, mocks } = makeOptions(
+      {},
+      { keyboardReload: vi.fn().mockResolvedValue({ ok: false, reason: 'notVial' }) },
+    )
+    const { result } = renderHook(() => useDeviceLifecycle(options))
+
+    await act(async () => {
+      await result.current.handleConnect(mockDevice)
+    })
+
+    expect(result.current.deviceLoadError).toBe('error.notVialCompatible')
+    expect(options.keyboardReset).toHaveBeenCalled()
+    expect(mocks.disconnectDevice).toHaveBeenCalled()
+  })
+
+  it('shows the load-failed message and disconnects when reload reports loadFailed', async () => {
+    const { options, mocks } = makeOptions(
+      {},
+      { keyboardReload: vi.fn().mockResolvedValue({ ok: false, reason: 'loadFailed' }) },
+    )
+    const { result } = renderHook(() => useDeviceLifecycle(options))
+
+    await act(async () => {
+      await result.current.handleConnect(mockDevice)
+    })
+
+    expect(result.current.deviceLoadError).toBe('error.deviceLoadFailed')
+    expect(options.keyboardReset).toHaveBeenCalled()
+    expect(mocks.disconnectDevice).toHaveBeenCalled()
   })
 })
 

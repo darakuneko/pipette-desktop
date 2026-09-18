@@ -1,5 +1,5 @@
 {
-  "version": "0.1.92",
+  "version": "0.1.93",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -671,7 +671,8 @@
     "exportPdfFailed": "キーマップPDFのエクスポートに失敗しました",
     "sideloadFailed": "JSON定義ファイルの読み込みに失敗しました",
     "sideloadInvalidDefinition": "無効なキーボード定義: 必須フィールド（matrix, layouts）がありません",
-    "notVialCompatible": "Vial対応キーボードではない可能性があります"
+    "notVialCompatible": "Vial対応キーボードではない可能性があります",
+    "deviceLoadFailed": "キーボードからのデータ読み込みに失敗しました。USBケーブルを確認し、再接続してください。"
   },
   "warning": {
     "echoDetected": "通信エラーが検出されました。USBケーブルを確認し、デバイスを再接続してください。"

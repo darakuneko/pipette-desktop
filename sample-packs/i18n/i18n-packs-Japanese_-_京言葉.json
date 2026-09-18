@@ -1,5 +1,5 @@
 {
-  "version": "0.1.92",
+  "version": "0.1.93",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -671,7 +671,8 @@
     "exportPdfFailed": "PDFの書き出しがあきまへんでしたえ",
     "sideloadFailed": "JSONの読み込みがあきまへんでしたえ",
     "sideloadInvalidDefinition": "キーボード定義がちゃいますえ。必須のもんが足りまへん。",
-    "notVialCompatible": "Vial対応やないかもしれまへんなぁ"
+    "notVialCompatible": "Vial対応やないかもしれまへんなぁ",
+    "deviceLoadFailed": "キーボードからのデータ読み込みがあきまへんでしたえ。USBケーブルを確認して、もういっぺん繋いどくれやす。"
   },
   "warning": {
     "echoDetected": "通信がおかしゅうなりましたえ。USBケーブルを確認して差し直しておくれやす。"

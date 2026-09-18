@@ -19,18 +19,30 @@ import { emptyState, isEchoDetected } from './keyboard-types'
 import type { SetState, KeyboardRefs } from './keyboard-types'
 import { parseDefinitionLayout } from '../../shared/kle/definition-layout'
 
+export type ReloadResult =
+  | { ok: true; uid: string }
+  | { ok: false; reason: 'notVial' | 'loadFailed' }
+
 export function useKeyboardReload(
   setState: SetState,
   refs: Pick<KeyboardRefs, 'stateRef' | 'qmkSettingsBaselineRef'>,
-): { reload: () => Promise<string | null> } {
+): { reload: () => Promise<ReloadResult> } {
   const { qmkSettingsBaselineRef } = refs
 
-  const reload = useCallback(async (): Promise<string | null> => {
-    const progress = (key: string) =>
+  const reload = useCallback(async (): Promise<ReloadResult> => {
+    let currentPhase = 'loading.protocol'
+    const progress = (key: string) => {
+      currentPhase = key
       setState((s) => ({ ...s, loading: true, loadingProgress: key }))
+    }
 
     progress('loading.protocol')
     const api = window.vialAPI
+    // Whether getKeyboardId() has resolved: everything before it failing
+    // means we may not be talking to a Vial keyboard at all, everything
+    // after it failing means the keyboard identified itself as Vial but a
+    // later read broke down.
+    let keyboardIdKnown = false
 
     try {
       const newState = emptyState()
@@ -39,6 +51,7 @@ export function useKeyboardReload(
       // Phase 1: Protocol + identity
       newState.viaProtocol = await api.getProtocolVersion()
       const kbId = await api.getKeyboardId()
+      keyboardIdKnown = true
       newState.vialProtocol = kbId.vialProtocol
       newState.uid = kbId.uid
 
@@ -74,7 +87,7 @@ export function useKeyboardReload(
       if (!newState.definition) {
         console.error('[KB] definition load failed — aborting reload')
         setState((s) => ({ ...s, loading: false }))
-        return null
+        return { ok: false, reason: 'loadFailed' }
       }
 
       // Phase 2.6: Lighting data load
@@ -343,11 +356,11 @@ export function useKeyboardReload(
 
       newState.loading = false
       setState(newState)
-      return newState.uid
+      return { ok: true, uid: newState.uid }
     } catch (err) {
-      console.error('[KB] reload failed:', err)
+      console.error(`[KB] reload failed during ${currentPhase}:`, err)
       setState((s) => ({ ...s, loading: false }))
-      return null
+      return { ok: false, reason: keyboardIdKnown ? 'loadFailed' : 'notVial' }
     }
   }, [setState, qmkSettingsBaselineRef])
 

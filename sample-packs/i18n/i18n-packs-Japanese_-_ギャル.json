@@ -1,5 +1,5 @@
 {
-  "version": "0.1.92",
+  "version": "0.1.93",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -671,7 +671,8 @@
     "exportPdfFailed": "PDF書き出せなかった…マジサゲ。。",
     "sideloadFailed": "JSON読み込めなかったっしょ…",
     "sideloadInvalidDefinition": "定義バグってるっぽい？必須項目なくね？",
-    "notVialCompatible": "Vial対応してなくね？ワンチャンある☆"
+    "notVialCompatible": "Vial対応してなくね？ワンチャンある☆",
+    "deviceLoadFailed": "キーボードからデータ読み込めなかった…ケーブル確認してもう一回繋いで〜！"
   },
   "warning": {
     "echoDetected": "通信エラー！？ケーブル確認して差し直して〜！"

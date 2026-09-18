@@ -7,6 +7,7 @@ import { isKeyboardDefinition, isVilFile, isVilFileV1, VILFILE_CURRENT_VERSION }
 import type { DeviceInfo, VilFile, KeyboardDefinition } from '../../shared/types/protocol'
 import type { SyncScope, SyncOperationResult } from '../../shared/types/sync'
 import type { PipetteFileKeyboard, PipetteFileEntry } from '../app-types'
+import type { ReloadResult } from './useKeyboardReload'
 
 interface Options {
   // Device connection
@@ -17,7 +18,7 @@ interface Options {
   isPipetteFile: boolean
   // Keyboard
   keyboardUid: string | undefined
-  keyboardReload: () => Promise<string | null>
+  keyboardReload: () => Promise<ReloadResult>
   keyboardReset: () => void
   keyboardLoadDummy: (def: KeyboardDefinition) => void
   keyboardLoadPipetteFile: (vil: VilFile) => void
@@ -137,8 +138,9 @@ export function useDeviceLifecycle(options: Options) {
       setDeviceLoadError(null)
       const success = await connectDevice(dev)
       if (success) {
-        const uid = await keyboardReload()
-        if (uid) {
+        const reloadResult = await keyboardReload()
+        if (reloadResult.ok) {
+          const uid = reloadResult.uid
           // Name the keyboard from its USB product name on connect, so a board
           // that never saves a keymap still shows a name instead of its uid.
           // Fire-and-forget; the handler no-ops when a name already exists.
@@ -184,7 +186,9 @@ export function useDeviceLifecycle(options: Options) {
           await applyDevicePrefs(uid)
         } else {
           try { await handleDisconnect({ keepLastDevice: true }) } catch { /* cleanup best-effort */ }
-          setDeviceLoadError(t('error.notVialCompatible'))
+          setDeviceLoadError(
+            t(reloadResult.reason === 'notVial' ? 'error.notVialCompatible' : 'error.deviceLoadFailed'),
+          )
         }
       }
     },
