@@ -20,15 +20,28 @@ export function useKeyboardSetters(
   bootGuardRef: React.MutableRefObject<BootGuardRef>,
   waitForUnlock: () => Promise<void>,
 ) {
-  const guardedCall = useCallback(
-    async (keycode: number, fn: () => Promise<void>) => {
-      if (isResetKeycode(keycode) && stateRef.current.unlockStatus.unlocked === false) {
+  // Shared by every write path that can include a reset keycode: if the
+  // device is locked and at least one of `keycodes` is a reset keycode,
+  // trigger the boot-guard prompt and wait for the unlock before writing
+  // anything. A single-key call passes its one keycode; setKeysBulk passes
+  // the whole entry list so the gate runs once for the batch instead of
+  // per entry.
+  const ensureUnlockedFor = useCallback(
+    async (keycodes: number[]) => {
+      if (stateRef.current.unlockStatus.unlocked === false && keycodes.some(isResetKeycode)) {
         bootGuardRef.current.onUnlock?.()
         await waitForUnlock()
       }
-      await fn()
     },
     [stateRef, bootGuardRef, waitForUnlock],
+  )
+
+  const guardedCall = useCallback(
+    async (keycode: number, fn: () => Promise<void>) => {
+      await ensureUnlockedFor([keycode])
+      await fn()
+    },
+    [ensureUnlockedFor],
   )
 
   const setKey = useCallback(
@@ -58,6 +71,9 @@ export function useKeyboardSetters(
     bumpActivity()
   }, [setState, bumpActivity])
 
+  // Invariant callers rely on: every failure of the non-dummy path below
+  // (preflight unlock or a write mid-loop) rejects with a
+  // `BulkKeyWriteError`, never a bare error.
   const setKeysBulk = useCallback(
     async (entries: BulkKeyEntry[]) => {
       if (entries.length === 0) return
@@ -66,13 +82,10 @@ export function useKeyboardSetters(
         // unlock BEFORE anything is written, so a cancelled unlock fails
         // with nothing applied. Past this point the loop writes directly —
         // no entry needs an unlock wait of its own.
-        if (stateRef.current.unlockStatus.unlocked === false && entries.some(({ keycode }) => isResetKeycode(keycode))) {
-          bootGuardRef.current.onUnlock?.()
-          try {
-            await waitForUnlock()
-          } catch (err) {
-            throw new BulkKeyWriteError(0, err)
-          }
+        try {
+          await ensureUnlockedFor(entries.map(({ keycode }) => keycode))
+        } catch (err) {
+          throw new BulkKeyWriteError(0, err)
         }
         let appliedCount = 0
         try {
@@ -87,7 +100,7 @@ export function useKeyboardSetters(
       }
       applyBulkKeymap(entries)
     },
-    [stateRef, bootGuardRef, waitForUnlock, applyBulkKeymap],
+    [stateRef, ensureUnlockedFor, applyBulkKeymap],
   )
 
   const setEncoder = useCallback(

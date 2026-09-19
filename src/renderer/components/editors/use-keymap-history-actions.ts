@@ -155,17 +155,14 @@ export function useKeymapHistoryActions({
     if (isUndo) history.undo()
     else history.redo()
     closePopoverIfEpochMatches(epoch)
-    // Fire outside the try/finally above: a throw from `applyHistoryEntry`
-    // or the commit call propagates out of the `try` (after `finally`
-    // resets the in-flight guard) and skips everything below, so reaching
-    // this line already guarantees the apply + commit succeeded — no flag
-    // needed to gate it. Placement after the commit is what guarantees
-    // `onHistoryApplied` can no longer un-commit the undo/redo or leave the
-    // in-flight guard stuck. The flash it triggers is purely cosmetic, so a
-    // throw from the callback itself is swallowed here rather than
-    // rejecting `runHistoryStep`'s promise — the undo/redo already
-    // succeeded and must not be reported as failed just because the flash
-    // visual couldn't be shown.
+    // A failed apply returns (rather than throws) an `ApplyHistoryFailure`,
+    // which is handled above: `history.clear()` when it landed, then a
+    // rethrow — both happen before the commit, the popover close, and this
+    // callback. So reaching this line already guarantees the apply and the
+    // commit succeeded; the callback can no longer un-commit the undo/redo
+    // or leave the in-flight guard stuck. The flash it triggers is purely
+    // cosmetic, so a throw from the callback itself is swallowed here
+    // rather than rejecting `runHistoryStep`'s promise.
     try {
       onHistoryApplied?.(entry.kind === 'batch' ? entry.entries : [entry])
     } catch {
