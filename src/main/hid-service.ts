@@ -260,6 +260,11 @@ export function sendReceive(data: number[]): Promise<number[]> {
       if (!openDevice) {
         throw new Error('No HID device is open')
       }
+      // Pin the handle for the whole operation, including retries: openHidDevice()/
+      // closeHidDevice() reassign the module-level openDevice outside this mutex, so
+      // re-reading it after an await could point a retry at a handle that was closed
+      // or replaced mid-operation.
+      const device = openDevice
 
       const padded = padToMsgLen(data)
       logHidPacket('TX', new Uint8Array(padded))
@@ -267,9 +272,9 @@ export function sendReceive(data: number[]): Promise<number[]> {
       let lastError: Error | undefined
       for (let attempt = 0; attempt < HID_RETRY_COUNT; attempt++) {
         try {
-          openDevice.write([HID_REPORT_ID, ...padded])
+          await device.write([HID_REPORT_ID, ...padded])
 
-          const response = await openDevice.read(HID_TIMEOUT_MS)
+          const response = await device.read(HID_TIMEOUT_MS)
           if (!response || response.length === 0) {
             throw new HidReadTimeoutError()
           }
@@ -299,7 +304,7 @@ export function sendReceive(data: number[]): Promise<number[]> {
 export function send(data: number[]): Promise<void> {
   const { prev, release } = acquireMutex()
 
-  return prev.then(() => {
+  return prev.then(async () => {
     try {
       if (isVirtualDeviceOpen()) {
         const padded = padToMsgLen(data)
@@ -311,10 +316,11 @@ export function send(data: number[]): Promise<void> {
       if (!openDevice) {
         throw new Error('No HID device is open')
       }
+      const device = openDevice
 
       const padded = padToMsgLen(data)
       logHidPacket('TX', new Uint8Array(padded))
-      openDevice.write([HID_REPORT_ID, ...padded])
+      await device.write([HID_REPORT_ID, ...padded])
     } finally {
       release()
     }
@@ -362,7 +368,7 @@ export async function probeDevice(vendorId: number, productId: number, serialNum
     // Local send/receive helper for the temp device
     async function probeSendReceive(data: number[]): Promise<number[]> {
       const padded = padToMsgLen(data)
-      tempDevice.write([HID_REPORT_ID, ...padded])
+      await tempDevice.write([HID_REPORT_ID, ...padded])
       const response = await tempDevice.read(HID_TIMEOUT_MS)
       if (!response || response.length === 0) {
         throw new Error('HID read timeout during probe')
