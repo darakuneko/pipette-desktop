@@ -317,10 +317,13 @@ describe('sendReceive', () => {
   })
 
   it('retries on timeout', async () => {
+    // A genuine timeout is node-hid's read() RESOLVING with no data before
+    // HID_TIMEOUT_MS elapses — sendReceive itself raises the timeout error
+    // from that empty response, it is not a rejection from read().
     vi.useFakeTimers()
     mockRead
-      .mockRejectedValueOnce(new Error('HID read timeout'))
-      .mockRejectedValueOnce(new Error('HID read timeout'))
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(Buffer.alloc(0))
       .mockResolvedValueOnce(Buffer.alloc(MSG_LEN))
 
     const promise = sendReceive([0x01])
@@ -337,6 +340,18 @@ describe('sendReceive', () => {
 
     await expect(sendReceive([0x01])).rejects.toThrow('could not read')
     expect(mockWrite).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['Linux', 'could not read data from device: hid_read_timeout: unexpected poll error (device disconnected)'],
+    ['macOS', 'could not read data from device: hid_read_timeout: device disconnected'],
+    ['Windows', 'could not read data from device: hid_read_timeout/GetOverlappedResult'],
+  ])('throws immediately on a %s disconnect error, despite its "timeout" function name', async (_platform, message) => {
+    mockRead.mockRejectedValue(new Error(message))
+
+    await expect(sendReceive([0x01])).rejects.toThrow(message)
+    expect(mockWrite).toHaveBeenCalledTimes(1)
+    expect(mockRead).toHaveBeenCalledTimes(1)
   })
 
   it('throws immediately on write errors (not transient)', async () => {
@@ -356,7 +371,7 @@ describe('sendReceive', () => {
   it('adds delay between retries', async () => {
     vi.useFakeTimers()
     mockRead
-      .mockRejectedValueOnce(new Error('HID read timeout'))
+      .mockResolvedValueOnce(Buffer.alloc(0))
       .mockResolvedValueOnce(Buffer.alloc(MSG_LEN))
 
     const promise = sendReceive([0x01])
@@ -375,7 +390,7 @@ describe('sendReceive', () => {
 
   it('throws after exhausting retries', async () => {
     vi.useFakeTimers()
-    mockRead.mockImplementation(() => { throw new Error('HID read timeout') })
+    mockRead.mockResolvedValue(Buffer.alloc(0))
 
     const promise = sendReceive([0x01])
     const assertion = expect(promise).rejects.toThrow('timeout')

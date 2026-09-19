@@ -138,11 +138,25 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+/**
+ * Thrown when a HID read returns without data before HID_TIMEOUT_MS elapses.
+ * This is the only condition worth retrying — see isTransientError.
+ */
+class HidReadTimeoutError extends Error {
+  constructor() {
+    super('HID read timeout')
+    this.name = 'HidReadTimeoutError'
+  }
+}
+
+// Only an empty read (HidReadTimeoutError) is worth retrying. Every hidapi
+// error — a write failure, a disconnect, an I/O error — fails immediately
+// regardless of what its message says, since disconnect errors on Linux,
+// macOS and Windows all happen to embed the substring "timeout" in the
+// underlying hidapi function name (hid_read_timeout) even though they are
+// not timeouts at all. Retrying those just floods the mutex queue for ~10s.
 function isTransientError(err: Error): boolean {
-  const msg = err.message.toLowerCase()
-  // "cannot write" and "could not read" on a disconnected device are NOT transient —
-  // retrying just floods the mutex queue. Only timeout is worth retrying.
-  return msg.includes('timeout')
+  return err instanceof HidReadTimeoutError
 }
 
 /**
@@ -257,7 +271,7 @@ export function sendReceive(data: number[]): Promise<number[]> {
 
           const response = await openDevice.read(HID_TIMEOUT_MS)
           if (!response || response.length === 0) {
-            throw new Error('HID read timeout')
+            throw new HidReadTimeoutError()
           }
 
           const result = normalizeResponse(response, MSG_LEN)
