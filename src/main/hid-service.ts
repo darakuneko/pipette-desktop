@@ -139,7 +139,8 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
- * Thrown when a HID read returns without data before HID_TIMEOUT_MS elapses.
+ * Thrown when a read comes back empty: the HID_TIMEOUT_MS window passed with no
+ * report (hidapi on Linux also maps EAGAIN/EINPROGRESS to an empty read).
  * This is the only condition worth retrying — see isTransientError.
  */
 class HidReadTimeoutError extends Error {
@@ -149,12 +150,11 @@ class HidReadTimeoutError extends Error {
   }
 }
 
-// Only an empty read (HidReadTimeoutError) is worth retrying. Every hidapi
-// error — a write failure, a disconnect, an I/O error — fails immediately
-// regardless of what its message says, since disconnect errors on Linux,
-// macOS and Windows all happen to embed the substring "timeout" in the
-// underlying hidapi function name (hid_read_timeout) even though they are
-// not timeouts at all. Retrying those just floods the mutex queue for ~10s.
+// Only an empty read is retryable. Every hidapi rejection — write failure,
+// disconnect, I/O error — fails immediately whatever its message says: disconnect
+// errors on Linux, macOS and Windows all embed the hidapi function name
+// hid_read_timeout, so matching on the word "timeout" would retry a dead device
+// for ~10s and flood the mutex queue.
 function isTransientError(err: Error): boolean {
   return err instanceof HidReadTimeoutError
 }
@@ -260,10 +260,9 @@ export function sendReceive(data: number[]): Promise<number[]> {
       if (!openDevice) {
         throw new Error('No HID device is open')
       }
-      // Pin the handle for the whole operation, including retries: openHidDevice()/
-      // closeHidDevice() reassign the module-level openDevice outside this mutex, so
-      // re-reading it after an await could point a retry at a handle that was closed
-      // or replaced mid-operation.
+      // Pin the handle for the whole operation, retries included: openHidDevice() /
+      // closeHidDevice() reassign openDevice outside this mutex, so re-reading it
+      // after an await could aim a retry at a closed or replaced handle.
       const device = openDevice
 
       const padded = padToMsgLen(data)

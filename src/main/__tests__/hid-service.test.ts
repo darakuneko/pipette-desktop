@@ -323,9 +323,8 @@ describe('sendReceive', () => {
   })
 
   it('retries on timeout', async () => {
-    // A genuine timeout is node-hid's read() RESOLVING with no data before
-    // HID_TIMEOUT_MS elapses — sendReceive itself raises the timeout error
-    // from that empty response, it is not a rejection from read().
+    // A genuine timeout is read() resolving empty; sendReceive raises the timeout
+    // error itself from that empty response, read() never rejects with one.
     vi.useFakeTimers()
     mockRead
       .mockResolvedValueOnce(undefined)
@@ -480,12 +479,8 @@ describe('sendReceive', () => {
   })
 
   it('pins a retry to the handle the operation started with, not a device swapped in mid-flight', async () => {
-    // The pending device object is the one sendReceive pins internally when it
-    // starts, before the operation's first read has settled.
-    const pendingDevice = createMockOpenDevice()
-    mockHIDAsyncOpen.mockResolvedValueOnce(pendingDevice)
-    await openHidDevice(0x1234, 0x5678)
-
+    // The device opened in beforeEach — backed by mockWrite / mockRead — is the
+    // handle sendReceive pins when the operation starts.
     mockRead.mockResolvedValue(Buffer.alloc(MSG_LEN))
     let resolveFirstRead: ((buf: Buffer) => void) | null = null
     mockRead.mockImplementationOnce(
@@ -502,12 +497,11 @@ describe('sendReceive', () => {
     await closeHidDevice()
     const secondWrite = vi.fn().mockResolvedValue(MSG_LEN + 1)
     const secondRead = vi.fn().mockResolvedValue(Buffer.alloc(MSG_LEN))
-    const secondClose = vi.fn()
     mockDevicesAsync.mockResolvedValue([
       createMockDeviceInfo({ vendorId: 0xaaaa, productId: 0xbbbb, path: '/dev/hidraw1' }),
     ])
     mockHIDAsyncOpen.mockResolvedValueOnce(
-      createMockOpenDevice({ write: secondWrite, read: secondRead, close: secondClose }),
+      createMockOpenDevice({ write: secondWrite, read: secondRead }),
     )
     await openHidDevice(0xaaaa, 0xbbbb)
 
@@ -606,12 +600,10 @@ describe('send', () => {
     const sendPromise = send([0x01])
     const srPromise = sendReceive([0x02])
 
-    // Yield so the second operation's acquireMutex() call has registered its
-    // wait on the first operation's still-unresolved mutex release.
+    // Yield so the second operation has queued behind the first on the mutex.
     await new Promise((r) => setTimeout(r, 10))
 
-    // The second operation's write must not run while the first write is
-    // still pending — this is the write mutex-release ordering being tested.
+    // The second operation's write must not run while the first write is still pending.
     expect(mockWrite).toHaveBeenCalledTimes(1)
 
     resolveFirstWrite!(MSG_LEN + 1)
