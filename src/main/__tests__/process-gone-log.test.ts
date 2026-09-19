@@ -52,6 +52,37 @@ type FakeWin = FakeEmitter & {
   isMinimized: () => boolean
 }
 
+/** Builds a `FakeWin` whose `isVisible`/`isMinimized` throw, simulating a
+ * window torn down mid-quit. */
+function registeredWinWithThrowingVisibility(): FakeWin {
+  const win = new FakeEmitter() as FakeWin
+  win.webContents = makeWebContents()
+  win.isVisible = () => {
+    throw new Error('Object has been destroyed')
+  }
+  win.isMinimized = () => {
+    throw new Error('Object has been destroyed')
+  }
+  registerProcessGoneLogging(win as unknown as Electron.BrowserWindow)
+  return win
+}
+
+/** Builds a `FakeWin` whose `webContents` getter throws once read after
+ * registration, simulating a window destroyed between setup and a later
+ * `show` event. Registration itself needs a working `webContents` to attach
+ * the render-process-gone/unresponsive/responsive listeners. */
+function registeredWinWithThrowingWebContents(): FakeWin {
+  const win = new FakeEmitter() as FakeWin
+  win.webContents = makeWebContents()
+  registerProcessGoneLogging(win as unknown as Electron.BrowserWindow)
+  Object.defineProperty(win, 'webContents', {
+    get: () => {
+      throw new Error('Object has been destroyed')
+    },
+  })
+  return win
+}
+
 function makeMainFrame(opts: { destroyed?: boolean; detached?: boolean } = {}): unknown {
   return {
     isDestroyed: () => opts.destroyed ?? false,
@@ -72,7 +103,8 @@ function makeWebContents(mainFrame: unknown = makeMainFrame()): FakeWebContents 
 }
 
 function frameStateOf(mainFrame: unknown): string {
-  return describeMainFrameState(makeWebContents(mainFrame) as unknown as Electron.WebContents)
+  const webContents = makeWebContents(mainFrame) as unknown as Electron.WebContents
+  return describeMainFrameState(() => webContents)
 }
 
 /** Fake window with the module's window handlers already registered on it. */
@@ -161,30 +193,37 @@ describe('registerProcessGoneLogging', () => {
   it('logs render-process-gone at error level for a non-clean-exit reason', () => {
     const win = registeredWin()
     win.webContents.emit('render-process-gone', {}, { reason: 'crashed', exitCode: 1 })
+    expect(mockLog).toHaveBeenCalledTimes(1)
     expect(mockLog).toHaveBeenCalledWith('error', expect.stringContaining('crashed'))
+    expect(mockLog).toHaveBeenCalledWith('error', expect.stringContaining('visible=true'))
+    expect(mockLog).toHaveBeenCalledWith('error', expect.stringContaining('minimized=false'))
   })
 
   it('logs render-process-gone at info level for a clean-exit reason', () => {
     const win = registeredWin()
     win.webContents.emit('render-process-gone', {}, { reason: 'clean-exit', exitCode: 0 })
+    expect(mockLog).toHaveBeenCalledTimes(1)
     expect(mockLog).toHaveBeenCalledWith('info', expect.stringContaining('clean-exit'))
   })
 
   it('logs unresponsive at warn level', () => {
     const win = registeredWin()
     win.webContents.emit('unresponsive')
+    expect(mockLog).toHaveBeenCalledTimes(1)
     expect(mockLog).toHaveBeenCalledWith('warn', expect.any(String))
   })
 
   it('logs responsive at info level', () => {
     const win = registeredWin()
     win.webContents.emit('responsive')
+    expect(mockLog).toHaveBeenCalledTimes(1)
     expect(mockLog).toHaveBeenCalledWith('info', expect.any(String))
   })
 
   it('logs a warn line on show when the main frame is not available', () => {
     const win = registeredWin(makeMainFrame({ destroyed: true }))
     win.emit('show')
+    expect(mockLog).toHaveBeenCalledTimes(1)
     expect(mockLog).toHaveBeenCalledWith('warn', expect.stringContaining('destroyed'))
   })
 
@@ -194,20 +233,37 @@ describe('registerProcessGoneLogging', () => {
     expect(mockLog).not.toHaveBeenCalled()
   })
 
-  it('never throws out of the render-process-gone handler when the logger throws', () => {
+  it.each([
+    ['render-process-gone', () => registeredWin(), [{}, { reason: 'crashed', exitCode: 1 }]] as const,
+    ['unresponsive', () => registeredWin(), []] as const,
+    ['responsive', () => registeredWin(), []] as const,
+    ['show', () => registeredWin(makeMainFrame({ destroyed: true })), []] as const,
+  ])('never throws out of the %s handler when the logger throws', (event, buildWin, args) => {
     mockLog.mockImplementationOnce(() => {
       throw new Error('disk full')
     })
-    const win = registeredWin()
-    expect(() => win.webContents.emit('render-process-gone', {}, { reason: 'crashed', exitCode: 1 })).not.toThrow()
+    const win = buildWin()
+    const emitter = event === 'show' ? win : win.webContents
+    expect(() => emitter.emit(event, ...args)).not.toThrow()
   })
 
-  it('never throws out of the show handler when the logger throws', () => {
-    mockLog.mockImplementationOnce(() => {
-      throw new Error('disk full')
-    })
-    const win = registeredWin(makeMainFrame({ destroyed: true }))
+  it('logs render-process-gone with an unknown window context when isVisible/isMinimized throw', () => {
+    const win = registeredWinWithThrowingVisibility()
+    expect(() => win.webContents.emit('render-process-gone', {}, { reason: 'crashed', exitCode: 1 })).not.toThrow()
+    expect(mockLog).toHaveBeenCalledTimes(1)
+    expect(mockLog).toHaveBeenCalledWith(
+      'error',
+      expect.stringMatching(/visible=unknown.*minimized=unknown|minimized=unknown.*visible=unknown/),
+    )
+    expect(mockLog).toHaveBeenCalledWith('error', expect.stringContaining('crashed'))
+    expect(mockLog).toHaveBeenCalledWith('error', expect.stringMatching(/uptimeSec=\d+/))
+  })
+
+  it('logs a warn line on show when reading webContents throws', () => {
+    const win = registeredWinWithThrowingWebContents()
     expect(() => win.emit('show')).not.toThrow()
+    expect(mockLog).toHaveBeenCalledTimes(1)
+    expect(mockLog).toHaveBeenCalledWith('warn', expect.stringContaining('threw:'))
   })
 })
 
