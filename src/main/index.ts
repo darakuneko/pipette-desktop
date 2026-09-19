@@ -23,6 +23,7 @@ import { setupNotificationStore } from './notification-store'
 import { buildCsp, securityHeaders } from './csp'
 import { log, logHidPacket } from './logger'
 import type { LogLevel } from './logger'
+import { registerProcessGoneLogging, registerChildProcessGoneLogging } from './process-gone-log'
 import { loadWindowState, saveWindowState, setupAppConfigIpc, loadAppConfig, onAppConfigChange, hasSavedWindowPosition, MIN_WIDTH, MIN_HEIGHT } from './app-config'
 import { effectiveMinSize, clampBoundsToWorkArea } from './window-bounds'
 import { clampZoomFactor } from '../shared/types/app-config'
@@ -163,6 +164,8 @@ function createWindow(): void {
   setWindowStartedHidden(startHidden)
   const win = new BrowserWindow(winOpts)
   lastAppliedMinSize = minSize
+
+  registerProcessGoneLogging(win)
 
   // document.visibilityState is unreliable for windows created with
   // show: false (notably on Linux, it still reports 'visible'), so the
@@ -533,6 +536,7 @@ function setupLogIpc(): void {
 
 app.whenReady().then(() => {
   log('info', 'Pipette starting')
+  registerChildProcessGoneLogging()
   setupCsp()
   setupHidIpc()
   if (isVirtualDeviceEnabled()) {
