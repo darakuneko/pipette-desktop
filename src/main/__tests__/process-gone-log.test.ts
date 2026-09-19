@@ -27,9 +27,7 @@ import {
   registerChildProcessGoneLogging,
 } from '../process-gone-log'
 
-/** Minimal EventEmitter-style fake — enough to register a handler with
- * `on` and trigger it with `emit`, without pulling in node's EventEmitter
- * (whose extra surface isn't needed here). */
+/** Minimal EventEmitter stand-in: register with `on`, trigger with `emit`. */
 class FakeEmitter {
   private handlers = new Map<string, Array<(...args: never[]) => void>>()
 
@@ -46,18 +44,24 @@ class FakeEmitter {
   }
 }
 
-function makeMainFrame(opts: { destroyed?: boolean; detached?: boolean; throwMessage?: string } = {}): {
-  isDestroyed: () => boolean
-  detached: boolean
-} {
+type FakeWebContents = FakeEmitter & { mainFrame: unknown }
+
+type FakeWin = FakeEmitter & {
+  webContents: FakeWebContents
+  isVisible: () => boolean
+  isMinimized: () => boolean
+}
+
+function makeMainFrame(opts: { destroyed?: boolean; detached?: boolean } = {}): unknown {
   return {
     isDestroyed: () => opts.destroyed ?? false,
     detached: opts.detached ?? false,
   }
 }
 
-function makeWebContents(mainFrame: unknown = makeMainFrame()): FakeEmitter & { mainFrame: unknown } {
-  const wc = new FakeEmitter() as FakeEmitter & { mainFrame: unknown }
+/** Pass an `Error` as `mainFrame` to make the getter throw. */
+function makeWebContents(mainFrame: unknown = makeMainFrame()): FakeWebContents {
+  const wc = new FakeEmitter() as FakeWebContents
   Object.defineProperty(wc, 'mainFrame', {
     get: () => {
       if (mainFrame instanceof Error) throw mainFrame
@@ -67,20 +71,26 @@ function makeWebContents(mainFrame: unknown = makeMainFrame()): FakeEmitter & { 
   return wc
 }
 
-function makeWin(opts: { visible?: boolean; minimized?: boolean; mainFrame?: unknown } = {}): FakeEmitter & {
-  webContents: FakeEmitter & { mainFrame: unknown }
-  isVisible: () => boolean
-  isMinimized: () => boolean
-} {
-  const win = new FakeEmitter() as FakeEmitter & {
-    webContents: FakeEmitter & { mainFrame: unknown }
-    isVisible: () => boolean
-    isMinimized: () => boolean
-  }
-  win.webContents = makeWebContents(opts.mainFrame)
-  win.isVisible = () => opts.visible ?? true
-  win.isMinimized = () => opts.minimized ?? false
+function frameStateOf(mainFrame: unknown): string {
+  return describeMainFrameState(makeWebContents(mainFrame) as unknown as Electron.WebContents)
+}
+
+/** Fake window with the module's window handlers already registered on it. */
+function registeredWin(mainFrame?: unknown): FakeWin {
+  const win = new FakeEmitter() as FakeWin
+  win.webContents = makeWebContents(mainFrame)
+  win.isVisible = () => true
+  win.isMinimized = () => false
+  registerProcessGoneLogging(win as unknown as Electron.BrowserWindow)
   return win
+}
+
+/** Registers the app-wide handler and returns it. */
+function registeredChildHandler(): (...args: unknown[]) => void {
+  registerChildProcessGoneLogging()
+  const handler = appHandlers.get('child-process-gone')
+  expect(handler).toBeDefined()
+  return handler!
 }
 
 describe('formatRenderProcessGone', () => {
@@ -127,23 +137,19 @@ describe('formatChildProcessGone', () => {
 
 describe('describeMainFrameState', () => {
   it('returns "destroyed" when the frame is destroyed', () => {
-    const wc = makeWebContents(makeMainFrame({ destroyed: true }))
-    expect(describeMainFrameState(wc as unknown as Electron.WebContents)).toBe('destroyed')
+    expect(frameStateOf(makeMainFrame({ destroyed: true }))).toBe('destroyed')
   })
 
   it('returns "detached" when the frame is detached but not destroyed', () => {
-    const wc = makeWebContents(makeMainFrame({ detached: true }))
-    expect(describeMainFrameState(wc as unknown as Electron.WebContents)).toBe('detached')
+    expect(frameStateOf(makeMainFrame({ detached: true }))).toBe('detached')
   })
 
   it('returns "available" when the frame is neither destroyed nor detached', () => {
-    const wc = makeWebContents(makeMainFrame())
-    expect(describeMainFrameState(wc as unknown as Electron.WebContents)).toBe('available')
+    expect(frameStateOf(makeMainFrame())).toBe('available')
   })
 
   it('returns "threw: <message>" when accessing mainFrame throws', () => {
-    const wc = makeWebContents(new Error('Render frame was disposed'))
-    expect(describeMainFrameState(wc as unknown as Electron.WebContents)).toBe('threw: Render frame was disposed')
+    expect(frameStateOf(new Error('Render frame was disposed'))).toBe('threw: Render frame was disposed')
   })
 })
 
@@ -153,43 +159,37 @@ describe('registerProcessGoneLogging', () => {
   })
 
   it('logs render-process-gone at error level for a non-clean-exit reason', () => {
-    const win = makeWin()
-    registerProcessGoneLogging(win as unknown as Electron.BrowserWindow)
+    const win = registeredWin()
     win.webContents.emit('render-process-gone', {}, { reason: 'crashed', exitCode: 1 })
     expect(mockLog).toHaveBeenCalledWith('error', expect.stringContaining('crashed'))
   })
 
   it('logs render-process-gone at info level for a clean-exit reason', () => {
-    const win = makeWin()
-    registerProcessGoneLogging(win as unknown as Electron.BrowserWindow)
+    const win = registeredWin()
     win.webContents.emit('render-process-gone', {}, { reason: 'clean-exit', exitCode: 0 })
     expect(mockLog).toHaveBeenCalledWith('info', expect.stringContaining('clean-exit'))
   })
 
   it('logs unresponsive at warn level', () => {
-    const win = makeWin()
-    registerProcessGoneLogging(win as unknown as Electron.BrowserWindow)
+    const win = registeredWin()
     win.webContents.emit('unresponsive')
     expect(mockLog).toHaveBeenCalledWith('warn', expect.any(String))
   })
 
   it('logs responsive at info level', () => {
-    const win = makeWin()
-    registerProcessGoneLogging(win as unknown as Electron.BrowserWindow)
+    const win = registeredWin()
     win.webContents.emit('responsive')
     expect(mockLog).toHaveBeenCalledWith('info', expect.any(String))
   })
 
   it('logs a warn line on show when the main frame is not available', () => {
-    const win = makeWin({ mainFrame: makeMainFrame({ destroyed: true }) })
-    registerProcessGoneLogging(win as unknown as Electron.BrowserWindow)
+    const win = registeredWin(makeMainFrame({ destroyed: true }))
     win.emit('show')
     expect(mockLog).toHaveBeenCalledWith('warn', expect.stringContaining('destroyed'))
   })
 
   it('does not log on show when the main frame is available', () => {
-    const win = makeWin()
-    registerProcessGoneLogging(win as unknown as Electron.BrowserWindow)
+    const win = registeredWin()
     win.emit('show')
     expect(mockLog).not.toHaveBeenCalled()
   })
@@ -198,8 +198,7 @@ describe('registerProcessGoneLogging', () => {
     mockLog.mockImplementationOnce(() => {
       throw new Error('disk full')
     })
-    const win = makeWin()
-    registerProcessGoneLogging(win as unknown as Electron.BrowserWindow)
+    const win = registeredWin()
     expect(() => win.webContents.emit('render-process-gone', {}, { reason: 'crashed', exitCode: 1 })).not.toThrow()
   })
 
@@ -207,8 +206,7 @@ describe('registerProcessGoneLogging', () => {
     mockLog.mockImplementationOnce(() => {
       throw new Error('disk full')
     })
-    const win = makeWin({ mainFrame: makeMainFrame({ destroyed: true }) })
-    registerProcessGoneLogging(win as unknown as Electron.BrowserWindow)
+    const win = registeredWin(makeMainFrame({ destroyed: true }))
     expect(() => win.emit('show')).not.toThrow()
   })
 })
@@ -220,17 +218,14 @@ describe('registerChildProcessGoneLogging', () => {
   })
 
   it('registers a child-process-gone handler that logs via the shared logger', () => {
-    registerChildProcessGoneLogging()
-    const handler = appHandlers.get('child-process-gone')
-    expect(handler).toBeDefined()
-    handler!({}, { type: 'GPU', reason: 'crashed', exitCode: 1 })
+    const handler = registeredChildHandler()
+    handler({}, { type: 'GPU', reason: 'crashed', exitCode: 1 })
     expect(mockLog).toHaveBeenCalledWith('error', expect.stringContaining('GPU'))
   })
 
   it('logs at info level for a clean-exit child process reason', () => {
-    registerChildProcessGoneLogging()
-    const handler = appHandlers.get('child-process-gone')
-    handler!({}, { type: 'Utility', reason: 'clean-exit', exitCode: 0 })
+    const handler = registeredChildHandler()
+    handler({}, { type: 'Utility', reason: 'clean-exit', exitCode: 0 })
     expect(mockLog).toHaveBeenCalledWith('info', expect.any(String))
   })
 
@@ -238,8 +233,7 @@ describe('registerChildProcessGoneLogging', () => {
     mockLog.mockImplementationOnce(() => {
       throw new Error('disk full')
     })
-    registerChildProcessGoneLogging()
-    const handler = appHandlers.get('child-process-gone')
-    expect(() => handler!({}, { type: 'GPU', reason: 'crashed', exitCode: 1 })).not.toThrow()
+    const handler = registeredChildHandler()
+    expect(() => handler({}, { type: 'GPU', reason: 'crashed', exitCode: 1 })).not.toThrow()
   })
 })

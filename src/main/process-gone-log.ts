@@ -1,21 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Diagnostic logging for renderer and child process exits — one line per
-// event through the rotating logger. No recovery is attempted here; this
-// module only records what happened so a later crash can be diagnosed.
+// event through the rotating logger. Recording only; no recovery is attempted.
 
 import { app } from 'electron'
 import { log } from './logger'
 import type { LogLevel } from './logger'
 
-/** Routes through the shared rotating logger, but never lets a logging
- * failure (disk full, mkdir error) escape an Electron event handler. */
+/** Logs through the shared rotating logger, swallowing logger failures (disk
+ * full, mkdir error) so they never escape an Electron event handler. */
 function safeLog(level: LogLevel, message: string): void {
   try {
     log(level, message)
   } catch {
-    // Diagnostic logging is best-effort — a failure here must not crash
-    // the process it's trying to explain.
+    // Best-effort: a logging failure must not crash the process it explains.
   }
+}
+
+function levelForReason(reason: string): LogLevel {
+  return reason === 'clean-exit' ? 'info' : 'error'
 }
 
 export function formatRenderProcessGone(
@@ -32,10 +34,9 @@ export function formatChildProcessGone(details: Electron.Details): string {
   return line
 }
 
-/** Classifies the main frame's health without relying on `isCrashed()` or a
- * PID check, neither of which reflects whether the frame itself has been
- * disposed or replaced. Accessing `mainFrame` can itself throw when the
- * frame was disposed before the getter runs, so that path is caught too. */
+/** Classifies the main frame's health. `isCrashed()` and a PID check both miss
+ * a frame that was disposed or replaced, and reading `mainFrame` can itself
+ * throw once that happened, so that path is caught too. */
 export function describeMainFrameState(webContents: Electron.WebContents): string {
   try {
     const frame = webContents.mainFrame
@@ -48,12 +49,11 @@ export function describeMainFrameState(webContents: Electron.WebContents): strin
   }
 }
 
-/** Registers renderer-side diagnostics on one window: render process exits,
- * hang/recovery transitions, and — on every `show` — a warning when the
- * main frame is not `available`. A frame can be disposed or replaced
- * without the process itself exiting, so `render-process-gone` alone would
- * miss that case; the `show`-time frame check catches it. Nothing is logged
- * on a normal show where the frame is available. */
+/** Registers renderer diagnostics on one window: render process exits,
+ * hang/recovery transitions, and a warning on every `show` where the main
+ * frame is not `available`. A frame can be disposed or replaced without the
+ * process exiting, which `render-process-gone` alone would miss; the
+ * `show`-time check catches that. An available frame on show logs nothing. */
 export function registerProcessGoneLogging(win: Electron.BrowserWindow): void {
   win.webContents.on('render-process-gone', (_event, details) => {
     const ctx = {
@@ -61,8 +61,7 @@ export function registerProcessGoneLogging(win: Electron.BrowserWindow): void {
       minimized: win.isMinimized(),
       uptimeSec: Math.round(process.uptime()),
     }
-    const level: LogLevel = details.reason === 'clean-exit' ? 'info' : 'error'
-    safeLog(level, formatRenderProcessGone(details, ctx))
+    safeLog(levelForReason(details.reason), formatRenderProcessGone(details, ctx))
   })
 
   win.webContents.on('unresponsive', () => {
@@ -81,11 +80,10 @@ export function registerProcessGoneLogging(win: Electron.BrowserWindow): void {
   })
 }
 
-/** Registers app-wide child process diagnostics (GPU, Utility, etc.) —
- * called once for the whole app, not per window. */
+/** Registers app-wide child process diagnostics (GPU, Utility, etc.) — called
+ * once for the whole app, not per window. */
 export function registerChildProcessGoneLogging(): void {
   app.on('child-process-gone', (_event, details) => {
-    const level: LogLevel = details.reason === 'clean-exit' ? 'info' : 'error'
-    safeLog(level, formatChildProcessGone(details))
+    safeLog(levelForReason(details.reason), formatChildProcessGone(details))
   })
 }
