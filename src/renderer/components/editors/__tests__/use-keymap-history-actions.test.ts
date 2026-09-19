@@ -31,6 +31,7 @@ function renderHarness(overrides: HarnessOverrides = {}) {
   const onSetKeysBulk = overrides.onSetKeysBulk ?? vi.fn<SetKeysBulkFn>().mockResolvedValue(undefined)
   const onSetEncoder = overrides.onSetEncoder ?? vi.fn<SetEncoderFn>().mockResolvedValue(undefined)
   const onHistoryApplied = vi.fn()
+  const closePopoverIfEpochMatches = vi.fn()
 
   const rendered = renderHook(() => {
     const history = useKeymapHistory(100)
@@ -43,7 +44,7 @@ function renderHarness(overrides: HarnessOverrides = {}) {
       onSetEncoder,
       onHistoryApplied,
       getPopoverEpoch: () => 0,
-      closePopoverIfEpochMatches: () => {},
+      closePopoverIfEpochMatches,
     })
     return { history, ...actions }
   })
@@ -54,13 +55,13 @@ function renderHarness(overrides: HarnessOverrides = {}) {
     act(() => rendered.result.current.history.push({ kind: 'batch', entries }))
   }
 
-  return { ...rendered, pushBatch, onSetKey, onSetKeysBulk, onSetEncoder, onHistoryApplied }
+  return { ...rendered, pushBatch, onSetKey, onSetKeysBulk, onSetEncoder, onHistoryApplied, closePopoverIfEpochMatches }
 }
 
 describe('useKeymapHistoryActions — batch undo/redo partial-failure', () => {
   it('a batch undo where BulkKeyWriteError.appliedCount > 0 clears both stacks', async () => {
     const onSetKeysBulk = vi.fn<SetKeysBulkFn>()
-    const { result, pushBatch, onHistoryApplied } = renderHarness({ onSetKeysBulk })
+    const { result, pushBatch, onHistoryApplied, closePopoverIfEpochMatches } = renderHarness({ onSetKeysBulk })
     pushBatch([keyEntry(1, 4, 0, 0), keyEntry(2, 5, 0, 1), keyEntry(3, 6, 0, 2)])
     expect(result.current.history.canUndo).toBe(true)
 
@@ -74,11 +75,12 @@ describe('useKeymapHistoryActions — batch undo/redo partial-failure', () => {
     expect(result.current.history.canUndo).toBe(false)
     expect(result.current.history.canRedo).toBe(false)
     expect(onHistoryApplied).not.toHaveBeenCalled()
+    expect(closePopoverIfEpochMatches).not.toHaveBeenCalled()
   })
 
   it('a batch undo where BulkKeyWriteError.appliedCount === 0 leaves the entry in place for a retry', async () => {
     const onSetKeysBulk = vi.fn<SetKeysBulkFn>()
-    const { result, pushBatch } = renderHarness({ onSetKeysBulk })
+    const { result, pushBatch, closePopoverIfEpochMatches } = renderHarness({ onSetKeysBulk })
     pushBatch([keyEntry(1, 4, 0, 0), keyEntry(2, 5, 0, 1)])
 
     const failure = new BulkKeyWriteError(0, new Error('unlock cancelled'))
@@ -91,6 +93,7 @@ describe('useKeymapHistoryActions — batch undo/redo partial-failure', () => {
     // Nothing landed: the entry (and the in-flight guard) survive untouched.
     expect(result.current.history.canUndo).toBe(true)
     expect(result.current.history.canRedo).toBe(false)
+    expect(closePopoverIfEpochMatches).not.toHaveBeenCalled()
 
     // A retry (this time it succeeds) re-runs the SAME entry — proving the
     // failed attempt never silently popped it — and the in-flight guard was
@@ -105,12 +108,13 @@ describe('useKeymapHistoryActions — batch undo/redo partial-failure', () => {
     ])
     expect(result.current.history.canUndo).toBe(false)
     expect(result.current.history.canRedo).toBe(true)
+    expect(closePopoverIfEpochMatches).toHaveBeenCalledTimes(1)
   })
 
   it('keys succeed then the encoder write fails: both stacks are cleared', async () => {
     const onSetKeysBulk = vi.fn<SetKeysBulkFn>().mockResolvedValue(undefined)
     const onSetEncoder = vi.fn<SetEncoderFn>()
-    const { result, pushBatch } = renderHarness({ onSetKeysBulk, onSetEncoder })
+    const { result, pushBatch, closePopoverIfEpochMatches } = renderHarness({ onSetKeysBulk, onSetEncoder })
     pushBatch([keyEntry(1, 4, 0, 0), encoderEntry(9, 10)])
 
     const failure = new Error('encoder write failed')
@@ -123,11 +127,12 @@ describe('useKeymapHistoryActions — batch undo/redo partial-failure', () => {
     expect(onSetKeysBulk).toHaveBeenCalledTimes(1)
     expect(result.current.history.canUndo).toBe(false)
     expect(result.current.history.canRedo).toBe(false)
+    expect(closePopoverIfEpochMatches).not.toHaveBeenCalled()
   })
 
   it('the second of two encoder writes failing (no key entries) still counts as landed and clears', async () => {
     const onSetEncoder = vi.fn<SetEncoderFn>()
-    const { result, pushBatch } = renderHarness({ onSetEncoder })
+    const { result, pushBatch, closePopoverIfEpochMatches } = renderHarness({ onSetEncoder })
     pushBatch([encoderEntry(1, 2, 0, 0), encoderEntry(3, 4, 1, 0)])
 
     const failure = new Error('encoder write failed')
@@ -139,11 +144,12 @@ describe('useKeymapHistoryActions — batch undo/redo partial-failure', () => {
 
     expect(result.current.history.canUndo).toBe(false)
     expect(result.current.history.canRedo).toBe(false)
+    expect(closePopoverIfEpochMatches).not.toHaveBeenCalled()
   })
 
   it('the first of two encoder writes failing (no key entries, nothing landed) leaves the entry in place', async () => {
     const onSetEncoder = vi.fn<SetEncoderFn>()
-    const { result, pushBatch } = renderHarness({ onSetEncoder })
+    const { result, pushBatch, closePopoverIfEpochMatches } = renderHarness({ onSetEncoder })
     pushBatch([encoderEntry(1, 2, 0, 0), encoderEntry(3, 4, 1, 0)])
 
     const failure = new Error('encoder write failed')
@@ -154,21 +160,101 @@ describe('useKeymapHistoryActions — batch undo/redo partial-failure', () => {
     })
 
     expect(result.current.history.canUndo).toBe(true)
+    expect(closePopoverIfEpochMatches).not.toHaveBeenCalled()
   })
 
   it('the in-flight guard is released after a failed undo, allowing an immediate retry', async () => {
     const onSetKeysBulk = vi.fn<SetKeysBulkFn>()
-    const { result, pushBatch } = renderHarness({ onSetKeysBulk })
+    const { result, pushBatch, closePopoverIfEpochMatches } = renderHarness({ onSetKeysBulk })
     pushBatch([keyEntry(1, 4, 0, 0)])
 
     onSetKeysBulk.mockRejectedValueOnce(new BulkKeyWriteError(0, new Error('fail')))
     await act(async () => {
       await expect(result.current.handleUndo()).rejects.toThrow('fail')
     })
+    expect(closePopoverIfEpochMatches).not.toHaveBeenCalled()
 
     onSetKeysBulk.mockResolvedValueOnce(undefined)
     await act(async () => { await result.current.handleUndo() })
     expect(onSetKeysBulk).toHaveBeenCalledTimes(2)
     expect(result.current.history.canRedo).toBe(true)
+    expect(closePopoverIfEpochMatches).toHaveBeenCalledTimes(1)
+  })
+
+  it('a partial undo failure clears both stacks even when the redo stack already held an entry', async () => {
+    const onSetKeysBulk = vi.fn<SetKeysBulkFn>().mockResolvedValue(undefined)
+    const { result, pushBatch, closePopoverIfEpochMatches } = renderHarness({ onSetKeysBulk })
+    pushBatch([keyEntry(1, 4, 0, 0)])
+    pushBatch([keyEntry(2, 5, 0, 1)])
+
+    // Successfully undo the top entry so the redo stack is non-empty while
+    // one entry remains on the undo stack.
+    await act(async () => { await result.current.handleUndo() })
+    expect(result.current.history.canUndo).toBe(true)
+    expect(result.current.history.canRedo).toBe(true)
+
+    const failure = new BulkKeyWriteError(1, new Error('device write failed'))
+    onSetKeysBulk.mockRejectedValueOnce(failure)
+
+    await act(async () => {
+      await expect(result.current.handleUndo()).rejects.toBe(failure)
+    })
+
+    expect(result.current.history.canUndo).toBe(false)
+    expect(result.current.history.canRedo).toBe(false)
+    expect(closePopoverIfEpochMatches).toHaveBeenCalledTimes(1)
+  })
+
+  it('a batch redo where BulkKeyWriteError.appliedCount > 0 clears both stacks', async () => {
+    const onSetKeysBulk = vi.fn<SetKeysBulkFn>().mockResolvedValue(undefined)
+    const { result, pushBatch, closePopoverIfEpochMatches } = renderHarness({ onSetKeysBulk })
+    pushBatch([keyEntry(1, 4, 0, 0), keyEntry(2, 5, 0, 1)])
+    await act(async () => { await result.current.handleUndo() })
+    expect(result.current.history.canRedo).toBe(true)
+
+    const failure = new BulkKeyWriteError(1, new Error('device write failed'))
+    onSetKeysBulk.mockRejectedValueOnce(failure)
+
+    await act(async () => {
+      await expect(result.current.handleRedo()).rejects.toBe(failure)
+    })
+
+    expect(result.current.history.canUndo).toBe(false)
+    expect(result.current.history.canRedo).toBe(false)
+    expect(closePopoverIfEpochMatches).toHaveBeenCalledTimes(1) // only the earlier successful undo
+  })
+
+  it('a batch redo where BulkKeyWriteError.appliedCount === 0 leaves the entry in place for a retry', async () => {
+    const onSetKeysBulk = vi.fn<SetKeysBulkFn>().mockResolvedValue(undefined)
+    const { result, pushBatch, closePopoverIfEpochMatches } = renderHarness({ onSetKeysBulk })
+    pushBatch([keyEntry(1, 4, 0, 0), keyEntry(2, 5, 0, 1)])
+    await act(async () => { await result.current.handleUndo() })
+    expect(result.current.history.canRedo).toBe(true)
+    closePopoverIfEpochMatches.mockClear()
+
+    const failure = new BulkKeyWriteError(0, new Error('unlock cancelled'))
+    onSetKeysBulk.mockRejectedValueOnce(failure)
+
+    await act(async () => {
+      await expect(result.current.handleRedo()).rejects.toBe(failure)
+    })
+
+    // Nothing landed: the redo entry survives untouched for a retry.
+    expect(result.current.history.canUndo).toBe(false)
+    expect(result.current.history.canRedo).toBe(true)
+    expect(closePopoverIfEpochMatches).not.toHaveBeenCalled()
+
+    // A retry re-runs the SAME entry with its forward (new) values, in
+    // original order, and this time commits.
+    onSetKeysBulk.mockResolvedValueOnce(undefined)
+    await act(async () => { await result.current.handleRedo() })
+
+    expect(onSetKeysBulk).toHaveBeenLastCalledWith([
+      { layer: 0, row: 0, col: 0, keycode: 4 },
+      { layer: 0, row: 0, col: 1, keycode: 5 },
+    ])
+    expect(result.current.history.canUndo).toBe(true)
+    expect(result.current.history.canRedo).toBe(false)
+    expect(closePopoverIfEpochMatches).toHaveBeenCalledTimes(1)
   })
 })

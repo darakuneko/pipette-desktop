@@ -664,7 +664,7 @@ describe('KeymapEditor — picker paste', () => {
   // does for its own fire-and-forget IPC call, keeping it from failing this
   // test file.
   async function pasteOntoFirstKey() {
-    const rejectionHandler = vi.fn()
+    const rejectionHandler = () => {}
     process.on('unhandledRejection', rejectionHandler)
     const onKeyClick = getLatestOnKeyClick()!
     act(() => {
