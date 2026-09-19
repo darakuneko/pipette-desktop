@@ -7,7 +7,7 @@ import { useKeymapHistoryActions } from '../use-keymap-history-actions'
 import { useKeymapHistory } from '../useKeymapHistory'
 import { BulkKeyWriteError } from '../../../hooks/useKeyboard'
 import type { BulkKeyEntry } from '../../../hooks/useKeyboard'
-import type { HistoryEntry, SingleHistoryEntry } from '../useKeymapHistory'
+import type { SingleHistoryEntry } from '../useKeymapHistory'
 
 const keyEntry = (old: number, neu: number, row = 0, col = 0, layer = 0): SingleHistoryEntry => ({
   kind: 'key', layer, row, col, oldKeycode: old, newKeycode: neu,
@@ -22,17 +22,15 @@ type SetKeysBulkFn = (entries: BulkKeyEntry[]) => Promise<void>
 type SetEncoderFn = (layer: number, idx: number, dir: number, keycode: number) => Promise<void>
 
 interface HarnessOverrides {
-  onSetKey?: ReturnType<typeof vi.fn<SetKeyFn>>
   onSetKeysBulk?: ReturnType<typeof vi.fn<SetKeysBulkFn>>
   onSetEncoder?: ReturnType<typeof vi.fn<SetEncoderFn>>
-  onHistoryApplied?: ReturnType<typeof vi.fn<(entries: SingleHistoryEntry[]) => void>>
 }
 
 function renderHarness(overrides: HarnessOverrides = {}) {
-  const onSetKey = overrides.onSetKey ?? vi.fn<SetKeyFn>().mockResolvedValue(undefined)
+  const onSetKey = vi.fn<SetKeyFn>().mockResolvedValue(undefined)
   const onSetKeysBulk = overrides.onSetKeysBulk ?? vi.fn<SetKeysBulkFn>().mockResolvedValue(undefined)
   const onSetEncoder = overrides.onSetEncoder ?? vi.fn<SetEncoderFn>().mockResolvedValue(undefined)
-  const onHistoryApplied = overrides.onHistoryApplied ?? vi.fn()
+  const onHistoryApplied = vi.fn()
 
   const rendered = renderHook(() => {
     const history = useKeymapHistory(100)
@@ -50,18 +48,20 @@ function renderHarness(overrides: HarnessOverrides = {}) {
     return { history, ...actions }
   })
 
-  return { ...rendered, onSetKey, onSetKeysBulk, onSetEncoder, onHistoryApplied }
+  /** Pushes one batch entry onto the undo stack, the shape every test here
+   *  starts from. */
+  function pushBatch(entries: SingleHistoryEntry[]) {
+    act(() => rendered.result.current.history.push({ kind: 'batch', entries }))
+  }
+
+  return { ...rendered, pushBatch, onSetKey, onSetKeysBulk, onSetEncoder, onHistoryApplied }
 }
 
 describe('useKeymapHistoryActions — batch undo/redo partial-failure', () => {
   it('a batch undo where BulkKeyWriteError.appliedCount > 0 clears both stacks', async () => {
     const onSetKeysBulk = vi.fn<SetKeysBulkFn>()
-    const { result, onHistoryApplied } = renderHarness({ onSetKeysBulk })
-    const batch: HistoryEntry = {
-      kind: 'batch',
-      entries: [keyEntry(1, 4, 0, 0), keyEntry(2, 5, 0, 1), keyEntry(3, 6, 0, 2)],
-    }
-    act(() => result.current.history.push(batch))
+    const { result, pushBatch, onHistoryApplied } = renderHarness({ onSetKeysBulk })
+    pushBatch([keyEntry(1, 4, 0, 0), keyEntry(2, 5, 0, 1), keyEntry(3, 6, 0, 2)])
     expect(result.current.history.canUndo).toBe(true)
 
     const failure = new BulkKeyWriteError(2, new Error('device write failed'))
@@ -78,12 +78,8 @@ describe('useKeymapHistoryActions — batch undo/redo partial-failure', () => {
 
   it('a batch undo where BulkKeyWriteError.appliedCount === 0 leaves the entry in place for a retry', async () => {
     const onSetKeysBulk = vi.fn<SetKeysBulkFn>()
-    const { result } = renderHarness({ onSetKeysBulk })
-    const batch: HistoryEntry = {
-      kind: 'batch',
-      entries: [keyEntry(1, 4, 0, 0), keyEntry(2, 5, 0, 1)],
-    }
-    act(() => result.current.history.push(batch))
+    const { result, pushBatch } = renderHarness({ onSetKeysBulk })
+    pushBatch([keyEntry(1, 4, 0, 0), keyEntry(2, 5, 0, 1)])
 
     const failure = new BulkKeyWriteError(0, new Error('unlock cancelled'))
     onSetKeysBulk.mockRejectedValueOnce(failure)
@@ -114,12 +110,8 @@ describe('useKeymapHistoryActions — batch undo/redo partial-failure', () => {
   it('keys succeed then the encoder write fails: both stacks are cleared', async () => {
     const onSetKeysBulk = vi.fn<SetKeysBulkFn>().mockResolvedValue(undefined)
     const onSetEncoder = vi.fn<SetEncoderFn>()
-    const { result } = renderHarness({ onSetKeysBulk, onSetEncoder })
-    const batch: HistoryEntry = {
-      kind: 'batch',
-      entries: [keyEntry(1, 4, 0, 0), encoderEntry(9, 10)],
-    }
-    act(() => result.current.history.push(batch))
+    const { result, pushBatch } = renderHarness({ onSetKeysBulk, onSetEncoder })
+    pushBatch([keyEntry(1, 4, 0, 0), encoderEntry(9, 10)])
 
     const failure = new Error('encoder write failed')
     onSetEncoder.mockRejectedValueOnce(failure)
@@ -135,12 +127,8 @@ describe('useKeymapHistoryActions — batch undo/redo partial-failure', () => {
 
   it('the second of two encoder writes failing (no key entries) still counts as landed and clears', async () => {
     const onSetEncoder = vi.fn<SetEncoderFn>()
-    const { result } = renderHarness({ onSetEncoder })
-    const batch: HistoryEntry = {
-      kind: 'batch',
-      entries: [encoderEntry(1, 2, 0, 0), encoderEntry(3, 4, 1, 0)],
-    }
-    act(() => result.current.history.push(batch))
+    const { result, pushBatch } = renderHarness({ onSetEncoder })
+    pushBatch([encoderEntry(1, 2, 0, 0), encoderEntry(3, 4, 1, 0)])
 
     const failure = new Error('encoder write failed')
     onSetEncoder.mockResolvedValueOnce(undefined).mockRejectedValueOnce(failure)
@@ -155,12 +143,8 @@ describe('useKeymapHistoryActions — batch undo/redo partial-failure', () => {
 
   it('the first of two encoder writes failing (no key entries, nothing landed) leaves the entry in place', async () => {
     const onSetEncoder = vi.fn<SetEncoderFn>()
-    const { result } = renderHarness({ onSetEncoder })
-    const batch: HistoryEntry = {
-      kind: 'batch',
-      entries: [encoderEntry(1, 2, 0, 0), encoderEntry(3, 4, 1, 0)],
-    }
-    act(() => result.current.history.push(batch))
+    const { result, pushBatch } = renderHarness({ onSetEncoder })
+    pushBatch([encoderEntry(1, 2, 0, 0), encoderEntry(3, 4, 1, 0)])
 
     const failure = new Error('encoder write failed')
     onSetEncoder.mockRejectedValueOnce(failure)
@@ -174,9 +158,8 @@ describe('useKeymapHistoryActions — batch undo/redo partial-failure', () => {
 
   it('the in-flight guard is released after a failed undo, allowing an immediate retry', async () => {
     const onSetKeysBulk = vi.fn<SetKeysBulkFn>()
-    const { result } = renderHarness({ onSetKeysBulk })
-    const batch: HistoryEntry = { kind: 'batch', entries: [keyEntry(1, 4, 0, 0)] }
-    act(() => result.current.history.push(batch))
+    const { result, pushBatch } = renderHarness({ onSetKeysBulk })
+    pushBatch([keyEntry(1, 4, 0, 0)])
 
     onSetKeysBulk.mockRejectedValueOnce(new BulkKeyWriteError(0, new Error('fail')))
     await act(async () => {

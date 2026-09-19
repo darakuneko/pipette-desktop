@@ -148,9 +148,8 @@ export function isEchoDetected(err: unknown): boolean {
 /** Thrown by `setKeysBulk` when the write loop fails partway through.
  *  `appliedCount` is how many of the caller's entries landed on the device
  *  (and therefore in state) before the failure — 0 when the preflight
- *  unlock wait was rejected, since nothing was written in that case. The
- *  message mirrors the original failure; the original error is kept as
- *  `cause` for anything that wants the full detail. */
+ *  unlock wait was rejected, since nothing is written in that case. The
+ *  message mirrors the original failure, which is kept as `cause`. */
 export class BulkKeyWriteError extends Error {
   readonly appliedCount: number
 

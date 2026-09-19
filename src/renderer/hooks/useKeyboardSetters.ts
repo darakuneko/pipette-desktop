@@ -62,11 +62,10 @@ export function useKeyboardSetters(
     async (entries: BulkKeyEntry[]) => {
       if (entries.length === 0) return
       if (!stateRef.current.isDummy) {
-        // Preflight: if any entry needs an unlock (reset keycode) and the
-        // device is locked, wait for it BEFORE writing anything — a
-        // cancelled unlock then fails with nothing written, instead of
-        // leaving a partially-applied loop below. Once past this point the
-        // loop writes directly; no entry needs its own unlock wait.
+        // Preflight: a reset keycode on a locked device waits for the
+        // unlock BEFORE anything is written, so a cancelled unlock fails
+        // with nothing applied. Past this point the loop writes directly —
+        // no entry needs an unlock wait of its own.
         if (stateRef.current.unlockStatus.unlocked === false && entries.some(({ keycode }) => isResetKeycode(keycode))) {
           bootGuardRef.current.onUnlock?.()
           try {

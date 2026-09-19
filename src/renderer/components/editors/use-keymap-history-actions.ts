@@ -6,13 +6,15 @@ import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import type { PopoverState } from './keymap-editor-types'
 import type { UseKeymapHistoryReturn, SingleHistoryEntry, HistoryEntry } from './useKeymapHistory'
 
-/** Result of applying one undo/redo step. `landed: true` on failure means
- *  at least one of the entry's device writes actually reached the device
- *  (and state) before the failure — the undo/redo trail for that entry can
- *  no longer be trusted and must be discarded rather than retried. */
-type ApplyHistoryResult =
-  | { ok: true }
-  | { ok: false; landed: boolean; error: unknown }
+/** Why applying one undo/redo step failed; `null` means it succeeded.
+ *  `landed: true` means at least one of the entry's device writes reached
+ *  the device (and state) before the failure, so the undo/redo trail for
+ *  that entry can no longer be trusted and must be discarded rather than
+ *  retried. */
+interface ApplyHistoryFailure {
+  landed: boolean
+  error: unknown
+}
 
 /** Match a history entry against the current popover position, returning the keycode if matched. */
 function matchPopoverEntry(
@@ -74,7 +76,7 @@ export function useKeymapHistoryActions({
   )
 
   // --- Undo / redo ---
-  const applyHistoryEntry = useCallback(async (entry: HistoryEntry, isUndo: boolean): Promise<ApplyHistoryResult> => {
+  const applyHistoryEntry = useCallback(async (entry: HistoryEntry, isUndo: boolean): Promise<ApplyHistoryFailure | null> => {
     if (entry.kind === 'batch') {
       const items = isUndo ? [...entry.entries].reverse() : entry.entries
       const keyEntries: BulkKeyEntry[] = []
@@ -84,35 +86,33 @@ export function useKeymapHistoryActions({
         if (e.kind === 'key') keyEntries.push({ layer: e.layer, row: e.row, col: e.col, keycode: code })
         else encoderOps.push({ layer: e.layer, idx: e.idx, dir: e.dir, code })
       }
-      if (keyEntries.length > 0) {
-        try {
+      // Flips as soon as one write in the sequence completes; the bulk call
+      // either lands every key entry or reports its own landed prefix
+      // through `BulkKeyWriteError.appliedCount`.
+      let landed = false
+      try {
+        if (keyEntries.length > 0) {
           await onSetKeysBulk(keyEntries)
-        } catch (error) {
-          const landed = error instanceof BulkKeyWriteError && error.appliedCount > 0
-          return { ok: false, landed, error }
+          landed = true
         }
-      }
-      for (let i = 0; i < encoderOps.length; i++) {
-        const op = encoderOps[i]
-        try {
+        for (const op of encoderOps) {
           await onSetEncoder(op.layer, op.idx, op.dir, op.code)
-        } catch (error) {
-          // The key writes above (if any) already landed in full — the
-          // bulk call only reaches this point once it succeeds entirely —
-          // and any earlier encoder in this loop already landed too.
-          return { ok: false, landed: keyEntries.length > 0 || i > 0, error }
+          landed = true
         }
+      } catch (error) {
+        if (error instanceof BulkKeyWriteError && error.appliedCount > 0) landed = true
+        return { landed, error }
       }
-      return { ok: true }
+      return null
     }
     const code = isUndo ? entry.oldKeycode : entry.newKeycode
     try {
       if (entry.kind === 'key') await onSetKey(entry.layer, entry.row, entry.col, code)
       else await onSetEncoder(entry.layer, entry.idx, entry.dir, code)
     } catch (error) {
-      return { ok: false, landed: false, error }
+      return { landed: false, error }
     }
-    return { ok: true }
+    return null
   }, [onSetKey, onSetKeysBulk, onSetEncoder])
 
   // In-flight guard to prevent concurrent undo/redo
@@ -137,21 +137,19 @@ export function useKeymapHistoryActions({
     // `tryAdvancePopover`, `applySelectionChange`): a stale completion
     // must never clobber something newer.
     const epoch = getPopoverEpoch()
-    let result: ApplyHistoryResult
+    let failure: ApplyHistoryFailure | null
     try {
-      result = await applyHistoryEntry(entry, isUndo)
+      failure = await applyHistoryEntry(entry, isUndo)
     } finally { undoRedoInFlightRef.current = false }
-    if (!result.ok) {
-      // A batch that landed some of its writes before failing can no
-      // longer be trusted for a later undo/redo — the remaining half no
-      // longer matches what's on the device, and a redo/undo elsewhere in
-      // the stack could combine with it into a state nothing on screen
-      // represents. Clearing both stacks matches the Key Label rewrite's
-      // same "the undo trail is no longer trustworthy" rule. An entry that
-      // landed nothing (e.g. a cancelled unlock) is left in place so the
-      // same step can simply be retried.
-      if (result.landed) history.clear()
-      throw result.error
+    if (failure) {
+      // A step that landed only some of its writes leaves the rest of the
+      // stack describing keycodes the device no longer has, so the whole
+      // trail is dropped rather than replayed later — the same "the undo
+      // trail is no longer trustworthy" rule the Key Label rewrite
+      // follows. A step that landed nothing (e.g. a cancelled unlock)
+      // stays put so it can simply be retried.
+      if (failure.landed) history.clear()
+      throw failure.error
     }
     // Commit only after successful apply.
     if (isUndo) history.undo()

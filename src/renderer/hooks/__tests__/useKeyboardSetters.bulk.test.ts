@@ -11,6 +11,8 @@ import { useKeyboard } from '../useKeyboard'
 import type { KeyboardDefinition } from '../../../shared/types/protocol'
 
 const QK_BOOT_V6 = 0x7c00
+const UNLOCKED = { unlocked: true, inProgress: false, keys: [] }
+const LOCKED = { unlocked: false, inProgress: false, keys: [] }
 
 const mockSetKeycode = vi.fn<() => Promise<void>>()
 
@@ -48,9 +50,22 @@ function renderSetters(env: ReturnType<typeof setup>) {
   ))
 }
 
+/** Runs a rejecting `setKeysBulk` inside `act` and hands back what it threw. */
+async function catchWrite(write: () => Promise<void>): Promise<unknown> {
+  let caught: unknown
+  await act(async () => {
+    try {
+      await write()
+    } catch (err) {
+      caught = err
+    }
+  })
+  return caught
+}
+
 describe('useKeyboardSetters — setKeysBulk (non-dummy, unlocked)', () => {
   it('all entries succeed: keymap reflects every entry', async () => {
-    const env = setup({ unlockStatus: { unlocked: true, inProgress: false, keys: [] } })
+    const env = setup({ unlockStatus: UNLOCKED })
     const { result } = renderSetters(env)
 
     await act(async () => {
@@ -69,25 +84,18 @@ describe('useKeyboardSetters — setKeysBulk (non-dummy, unlocked)', () => {
   })
 
   it('failure at entry 2 of 3: appliedCount 1, cause is the original error, only entry 1 lands in state', async () => {
-    const env = setup({ unlockStatus: { unlocked: true, inProgress: false, keys: [] } })
+    const env = setup({ unlockStatus: UNLOCKED })
     const { result } = renderSetters(env)
     const original = new Error('transport dropped')
     mockSetKeycode
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(original)
 
-    let caught: unknown
-    await act(async () => {
-      try {
-        await result.current.setKeysBulk([
-          { layer: 0, row: 0, col: 0, keycode: 4 },
-          { layer: 0, row: 0, col: 1, keycode: 5 },
-          { layer: 0, row: 0, col: 2, keycode: 6 },
-        ])
-      } catch (err) {
-        caught = err
-      }
-    })
+    const caught = await catchWrite(() => result.current.setKeysBulk([
+      { layer: 0, row: 0, col: 0, keycode: 4 },
+      { layer: 0, row: 0, col: 1, keycode: 5 },
+      { layer: 0, row: 0, col: 2, keycode: 6 },
+    ]))
 
     expect(caught).toBeInstanceOf(BulkKeyWriteError)
     const err = caught as BulkKeyWriteError
@@ -101,22 +109,15 @@ describe('useKeyboardSetters — setKeysBulk (non-dummy, unlocked)', () => {
   })
 
   it('failure at entry 1 of 3: appliedCount 0, state untouched', async () => {
-    const env = setup({ unlockStatus: { unlocked: true, inProgress: false, keys: [] } })
+    const env = setup({ unlockStatus: UNLOCKED })
     const { result } = renderSetters(env)
     const original = new Error('transport dropped')
     mockSetKeycode.mockRejectedValueOnce(original)
 
-    let caught: unknown
-    await act(async () => {
-      try {
-        await result.current.setKeysBulk([
-          { layer: 0, row: 0, col: 0, keycode: 4 },
-          { layer: 0, row: 0, col: 1, keycode: 5 },
-        ])
-      } catch (err) {
-        caught = err
-      }
-    })
+    const caught = await catchWrite(() => result.current.setKeysBulk([
+      { layer: 0, row: 0, col: 0, keycode: 4 },
+      { layer: 0, row: 0, col: 1, keycode: 5 },
+    ]))
 
     expect(caught).toBeInstanceOf(BulkKeyWriteError)
     expect((caught as BulkKeyWriteError).appliedCount).toBe(0)
@@ -125,7 +126,7 @@ describe('useKeyboardSetters — setKeysBulk (non-dummy, unlocked)', () => {
   })
 
   it('empty entries: no-op', async () => {
-    const env = setup({ unlockStatus: { unlocked: true, inProgress: false, keys: [] } })
+    const env = setup({ unlockStatus: UNLOCKED })
     const { result } = renderSetters(env)
 
     await act(async () => {
@@ -139,7 +140,7 @@ describe('useKeyboardSetters — setKeysBulk (non-dummy, unlocked)', () => {
 
 describe('useKeyboardSetters — setKeysBulk preflight unlock (non-dummy, locked)', () => {
   it('a reset keycode while locked waits for unlock before any setKeycode call', async () => {
-    const env = setup({ unlockStatus: { unlocked: false, inProgress: false, keys: [] } })
+    const env = setup({ unlockStatus: LOCKED })
     const { result } = renderSetters(env)
 
     const callOrder: string[] = []
@@ -160,22 +161,15 @@ describe('useKeyboardSetters — setKeysBulk preflight unlock (non-dummy, locked
   })
 
   it('unlock cancelled: zero setKeycode calls, state untouched, appliedCount 0', async () => {
-    const env = setup({ unlockStatus: { unlocked: false, inProgress: false, keys: [] } })
+    const env = setup({ unlockStatus: LOCKED })
     const { result } = renderSetters(env)
     const cancelled = new Error('Unlock cancelled')
     env.waitForUnlock.mockRejectedValue(cancelled)
 
-    let caught: unknown
-    await act(async () => {
-      try {
-        await result.current.setKeysBulk([
-          { layer: 0, row: 0, col: 0, keycode: 4 },
-          { layer: 0, row: 0, col: 1, keycode: QK_BOOT_V6 },
-        ])
-      } catch (err) {
-        caught = err
-      }
-    })
+    const caught = await catchWrite(() => result.current.setKeysBulk([
+      { layer: 0, row: 0, col: 0, keycode: 4 },
+      { layer: 0, row: 0, col: 1, keycode: QK_BOOT_V6 },
+    ]))
 
     expect(mockSetKeycode).not.toHaveBeenCalled()
     expect(caught).toBeInstanceOf(BulkKeyWriteError)
@@ -186,7 +180,7 @@ describe('useKeyboardSetters — setKeysBulk preflight unlock (non-dummy, locked
   })
 
   it('no reset keycode among entries while locked: no unlock wait, writes proceed', async () => {
-    const env = setup({ unlockStatus: { unlocked: false, inProgress: false, keys: [] } })
+    const env = setup({ unlockStatus: LOCKED })
     const { result } = renderSetters(env)
 
     await act(async () => {
@@ -211,41 +205,6 @@ const dummyDefinition: KeyboardDefinition = {
 }
 
 describe('useKeyboardSetters — setKeysBulk (isDummy)', () => {
-  beforeEach(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(window as any).vialAPI = {
-      setKeycode: mockSetKeycode,
-      setEncoder: vi.fn().mockResolvedValue(undefined),
-      setLayoutOptions: vi.fn().mockResolvedValue(undefined),
-      setMacroBuffer: vi.fn().mockResolvedValue(undefined),
-      setTapDance: vi.fn().mockResolvedValue(undefined),
-      setCombo: vi.fn().mockResolvedValue(undefined),
-      setKeyOverride: vi.fn().mockResolvedValue(undefined),
-      setAltRepeatKey: vi.fn().mockResolvedValue(undefined),
-      getProtocolVersion: vi.fn().mockResolvedValue(12),
-      getVialProtocolVersion: vi.fn().mockResolvedValue(9),
-      getVialUID: vi.fn().mockResolvedValue('0000000000000001'),
-      getVialDefinitionSize: vi.fn().mockResolvedValue(0),
-      getVialDefinition: vi.fn().mockResolvedValue(new Uint8Array()),
-      getLayerCount: vi.fn().mockResolvedValue(2),
-      getKeycode: vi.fn().mockResolvedValue(0),
-      getEncoder: vi.fn().mockResolvedValue(0),
-      getLayoutOptions: vi.fn().mockResolvedValue(0),
-      getMacroCount: vi.fn().mockResolvedValue(0),
-      getMacroBufferSize: vi.fn().mockResolvedValue(0),
-      getMacroBuffer: vi.fn().mockResolvedValue([]),
-      getDynamicEntryCounts: vi.fn().mockResolvedValue({ tapDance: 0, combo: 0, keyOverride: 0, altRepeatKey: 0, featureFlags: 0 }),
-      getTapDance: vi.fn().mockResolvedValue({ onTap: 0, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 }),
-      getCombo: vi.fn().mockResolvedValue({ keys: [0, 0, 0, 0], keycode: 0 }),
-      getKeyOverride: vi.fn().mockResolvedValue({ trigger: 0, replacement: 0, layers: 0xffff, triggerMods: 0, negMods: 0, supMods: 0, options: 0 }),
-      getAltRepeatKey: vi.fn().mockResolvedValue({ source: 0, replacement: 0 }),
-      getUnlockStatus: vi.fn().mockResolvedValue({ unlocked: false, inProgress: false, keys: [] }),
-      unlockStart: vi.fn().mockResolvedValue(undefined),
-      unlockPoll: vi.fn().mockResolvedValue({ unlocked: false, inProgress: false }),
-      getMatrixState: vi.fn().mockResolvedValue(new Uint8Array()),
-    }
-  })
-
   it('writes state without calling HID', async () => {
     const { result } = renderHook(() => useKeyboard())
     await act(async () => { result.current.loadDummy(dummyDefinition) })

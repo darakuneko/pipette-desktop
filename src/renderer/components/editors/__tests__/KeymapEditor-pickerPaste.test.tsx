@@ -657,6 +657,25 @@ describe('KeymapEditor — picker paste', () => {
     expect(getPickerSelectedSet()!.size).toBe(1)
   })
 
+  // Pastes onto row 0 / col 0 and lets the failing write settle. The
+  // paste's rejection propagates out of the click handler uncaught (an
+  // existing, out-of-scope gap — the click handler is fire-and-forget), so
+  // it is swallowed here the same way `useInputModes.analytics.test.tsx`
+  // does for its own fire-and-forget IPC call, keeping it from failing this
+  // test file.
+  async function pasteOntoFirstKey() {
+    const rejectionHandler = vi.fn()
+    process.on('unhandledRejection', rejectionHandler)
+    const onKeyClick = getLatestOnKeyClick()!
+    act(() => {
+      onKeyClick({ row: 0, col: 0 } as KleKey, false, { ctrlKey: false, shiftKey: false })
+    })
+    // Let the internal catch (history.push) and the caller's uncaught
+    // rethrow both settle before asserting.
+    await act(async () => { await new Promise((resolve) => setImmediate(resolve)) })
+    process.off('unhandledRejection', rejectionHandler)
+  }
+
   it('a partial bulk write failure pushes only the applied prefix onto the undo stack, in the same target order', async () => {
     render(<KeymapEditor {...defaultProps} />)
     const multiSelect = getOnKeycodeMultiSelect()!
@@ -668,24 +687,8 @@ describe('KeymapEditor — picker paste', () => {
 
     // 2 of the 3 target writes (col 0, col 1) land before the 3rd fails.
     onSetKeysBulk.mockRejectedValueOnce(new BulkKeyWriteError(2, new Error('transport dropped')))
+    await pasteOntoFirstKey()
 
-    // The paste's rejection propagates out of the click handler uncaught
-    // (an existing, out-of-scope gap — the click handler is fire-and-forget)
-    // — swallow it here the same way `useInputModes.analytics.test.tsx`
-    // does for its own fire-and-forget IPC call, so it doesn't fail this
-    // test file.
-    const rejectionHandler = vi.fn()
-    process.on('unhandledRejection', rejectionHandler)
-
-    const onKeyClick = getLatestOnKeyClick()!
-    act(() => {
-      onKeyClick({ row: 0, col: 0 } as KleKey, false, { ctrlKey: false, shiftKey: false })
-    })
-    // Let the internal catch (history.push) and the caller's uncaught
-    // rethrow both settle before asserting.
-    await act(async () => { await new Promise((resolve) => setImmediate(resolve)) })
-
-    process.off('unhandledRejection', rejectionHandler)
     expect(capturedCanUndo).toBe(true)
 
     onSetKeysBulk.mockResolvedValueOnce(undefined)
@@ -706,17 +709,8 @@ describe('KeymapEditor — picker paste', () => {
     act(() => { multiSelect(0, TAB_KEYCODE_NUMBERS[0], { ctrlKey: true, shiftKey: false }, TAB_KEYCODE_NUMBERS) })
 
     onSetKeysBulk.mockRejectedValueOnce(new BulkKeyWriteError(0, new Error('transport dropped')))
+    await pasteOntoFirstKey()
 
-    const rejectionHandler = vi.fn()
-    process.on('unhandledRejection', rejectionHandler)
-
-    const onKeyClick = getLatestOnKeyClick()!
-    act(() => {
-      onKeyClick({ row: 0, col: 0 } as KleKey, false, { ctrlKey: false, shiftKey: false })
-    })
-    await act(async () => { await new Promise((resolve) => setImmediate(resolve)) })
-
-    process.off('unhandledRejection', rejectionHandler)
     expect(capturedCanUndo).toBe(false)
   })
 })
