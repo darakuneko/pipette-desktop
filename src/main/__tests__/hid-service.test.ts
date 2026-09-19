@@ -362,13 +362,27 @@ describe('sendReceive', () => {
   it('throws immediately on write errors (not transient), with no unhandled rejection', async () => {
     // node-hid's write() rejects on failure (it never throws synchronously); sendReceive
     // must await it so the rejection is caught here instead of becoming unhandled.
-    mockWrite.mockRejectedValue(new Error('Cannot write to hid device'))
+    //
+    // A vi.fn() spy is not used for the rejecting write: vitest attaches its own handler
+    // to the promise a mock returns, so a rejection from mockRejectedValue() never surfaces
+    // as an unhandled rejection even if sendReceive fails to await the write. A plain
+    // function's returned promise carries no such handler, so it actually exercises the
+    // await.
+    await closeHidDevice()
+    let plainWriteCalls = 0
+    const plainWrite = () => {
+      plainWriteCalls++
+      return Promise.reject(new Error('Cannot write to hid device'))
+    }
+    mockDevicesAsync.mockResolvedValue([createMockDeviceInfo()])
+    mockHIDAsyncOpen.mockResolvedValue(createMockOpenDevice({ write: plainWrite }))
+    await openHidDevice(0x1234, 0x5678)
 
     const unhandled = vi.fn()
     process.on('unhandledRejection', unhandled)
     try {
       await expect(sendReceive([0x01])).rejects.toThrow('Cannot write')
-      expect(mockWrite).toHaveBeenCalledTimes(1)
+      expect(plainWriteCalls).toBe(1)
       expect(mockRead).not.toHaveBeenCalled()
       await new Promise((resolve) => setImmediate(resolve))
       expect(unhandled).not.toHaveBeenCalled()
@@ -475,6 +489,32 @@ describe('sendReceive', () => {
     // After first completes, second should proceed
     await promise2
 
+    expect(mockWrite).toHaveBeenCalledTimes(2)
+  })
+
+  it('fails immediately when the device is closed mid-operation without a reopen', async () => {
+    // The device opened in this suite's beforeEach — backed by mockWrite / mockRead — is
+    // the handle sendReceive pins when the operation starts.
+    let resolveFirstRead: ((buf: Buffer) => void) | null = null
+    mockRead.mockImplementationOnce(
+      () =>
+        new Promise<Buffer>((resolve) => {
+          resolveFirstRead = resolve
+        }),
+    )
+
+    const srPromise = sendReceive([0x01])
+    await new Promise((r) => setTimeout(r, 10))
+
+    // Close with no reopen: node-hid rejects further writes to the closed handle.
+    await closeHidDevice()
+    mockWrite.mockRejectedValueOnce(new Error('device has been closed'))
+
+    // The pinned handle's first read resolves empty, forcing a retry against the
+    // now-closed handle.
+    resolveFirstRead!(Buffer.alloc(0))
+
+    await expect(srPromise).rejects.toThrow('device has been closed')
     expect(mockWrite).toHaveBeenCalledTimes(2)
   })
 

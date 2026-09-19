@@ -49,7 +49,7 @@ function createMockOpenDevice() {
 beforeEach(async () => {
   vi.clearAllMocks()
   vi.unstubAllEnvs()
-  mockWrite.mockReturnValue(MSG_LEN + 1)
+  mockWrite.mockResolvedValue(MSG_LEN + 1)
   mockDevicesAsync.mockResolvedValue([])
   await closeHidDevice()
 })

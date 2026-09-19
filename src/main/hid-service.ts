@@ -315,6 +315,8 @@ export function send(data: number[]): Promise<void> {
       if (!openDevice) {
         throw new Error('No HID device is open')
       }
+      // Pin the handle for this write, same rationale as sendReceive: openHidDevice() /
+      // closeHidDevice() reassign openDevice outside this mutex.
       const device = openDevice
 
       const padded = padToMsgLen(data)
