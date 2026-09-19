@@ -84,7 +84,29 @@ vi.mock('../../../../preload/macro', () => ({
   deserializeAllMacros: () => [],
 }))
 
+// Captures the toolbar's `onUndo`/`canUndo` (== `handleUndo`/`history.canUndo`
+// from useKeymapSelectionHandlers) for the partial-bulk-write tests below,
+// the same way `KeymapEditor-applyRewrite.test.tsx` does — calling the
+// captured function directly and awaiting it keeps a rejection inside this
+// test's own control flow instead of the real button's fire-and-forget
+// `onClick={() => void onUndo()}` wiring.
+let capturedOnUndo: (() => Promise<void>) | undefined
+let capturedCanUndo = false
+
+vi.mock('../keymap-editor-toolbar', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../keymap-editor-toolbar')>()
+  return {
+    ...actual,
+    KeymapToolbar: (props: { canUndo: boolean; onUndo: () => Promise<void> }) => {
+      capturedOnUndo = props.onUndo
+      capturedCanUndo = props.canUndo
+      return <div data-testid="keymap-toolbar" />
+    },
+  }
+})
+
 import { KeymapEditor } from '../KeymapEditor'
+import { BulkKeyWriteError } from '../../../hooks/useKeyboard'
 import type { KleKey } from '../../../../shared/kle/types'
 
 const KEY_DEFAULTS: KleKey = {
@@ -167,6 +189,8 @@ describe('KeymapEditor — picker paste', () => {
     vi.clearAllMocks()
     capturedWidgetProps = []
     capturedTabbedProps = {}
+    capturedOnUndo = undefined
+    capturedCanUndo = false
   })
 
   const TAB_KEYCODE_NUMBERS = TAB_KEYCODES.map((kc) => parseInt(kc.qmkId.replace(/\D/g, ''), 10))
@@ -631,6 +655,69 @@ describe('KeymapEditor — picker paste', () => {
     rerender(<KeymapEditor {...defaultProps} />)
 
     expect(getPickerSelectedSet()!.size).toBe(1)
+  })
+
+  it('a partial bulk write failure pushes only the applied prefix onto the undo stack, in the same target order', async () => {
+    render(<KeymapEditor {...defaultProps} />)
+    const multiSelect = getOnKeycodeMultiSelect()!
+
+    // Select KC_10, KC_11, KC_12 (indices 0, 1, 2).
+    act(() => { multiSelect(0, TAB_KEYCODE_NUMBERS[0], { ctrlKey: true, shiftKey: false }, TAB_KEYCODE_NUMBERS) })
+    act(() => { multiSelect(1, TAB_KEYCODE_NUMBERS[1], { ctrlKey: true, shiftKey: false }, TAB_KEYCODE_NUMBERS) })
+    act(() => { multiSelect(2, TAB_KEYCODE_NUMBERS[2], { ctrlKey: true, shiftKey: false }, TAB_KEYCODE_NUMBERS) })
+
+    // 2 of the 3 target writes (col 0, col 1) land before the 3rd fails.
+    onSetKeysBulk.mockRejectedValueOnce(new BulkKeyWriteError(2, new Error('transport dropped')))
+
+    // The paste's rejection propagates out of the click handler uncaught
+    // (an existing, out-of-scope gap — the click handler is fire-and-forget)
+    // — swallow it here the same way `useInputModes.analytics.test.tsx`
+    // does for its own fire-and-forget IPC call, so it doesn't fail this
+    // test file.
+    const rejectionHandler = vi.fn()
+    process.on('unhandledRejection', rejectionHandler)
+
+    const onKeyClick = getLatestOnKeyClick()!
+    act(() => {
+      onKeyClick({ row: 0, col: 0 } as KleKey, false, { ctrlKey: false, shiftKey: false })
+    })
+    // Let the internal catch (history.push) and the caller's uncaught
+    // rethrow both settle before asserting.
+    await act(async () => { await new Promise((resolve) => setImmediate(resolve)) })
+
+    process.off('unhandledRejection', rejectionHandler)
+    expect(capturedCanUndo).toBe(true)
+
+    onSetKeysBulk.mockResolvedValueOnce(undefined)
+    await act(async () => { await capturedOnUndo!() })
+
+    // Only the 2 landed entries are undone, in reverse (undo) order — col 2
+    // was never written, so it's absent from the batch entirely.
+    expect(onSetKeysBulk).toHaveBeenLastCalledWith([
+      { layer: 0, row: 0, col: 1, keycode: 2 },
+      { layer: 0, row: 0, col: 0, keycode: 1 },
+    ])
+  })
+
+  it('a fully-failed bulk write (appliedCount 0) pushes nothing onto the undo stack', async () => {
+    render(<KeymapEditor {...defaultProps} />)
+    const multiSelect = getOnKeycodeMultiSelect()!
+
+    act(() => { multiSelect(0, TAB_KEYCODE_NUMBERS[0], { ctrlKey: true, shiftKey: false }, TAB_KEYCODE_NUMBERS) })
+
+    onSetKeysBulk.mockRejectedValueOnce(new BulkKeyWriteError(0, new Error('transport dropped')))
+
+    const rejectionHandler = vi.fn()
+    process.on('unhandledRejection', rejectionHandler)
+
+    const onKeyClick = getLatestOnKeyClick()!
+    act(() => {
+      onKeyClick({ row: 0, col: 0 } as KleKey, false, { ctrlKey: false, shiftKey: false })
+    })
+    await act(async () => { await new Promise((resolve) => setImmediate(resolve)) })
+
+    process.off('unhandledRejection', rejectionHandler)
+    expect(capturedCanUndo).toBe(false)
   })
 })
 

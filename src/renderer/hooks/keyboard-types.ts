@@ -145,6 +145,22 @@ export function isEchoDetected(err: unknown): boolean {
   return err instanceof Error && err.message.includes(ECHO_DETECTED_MSG)
 }
 
+/** Thrown by `setKeysBulk` when the write loop fails partway through.
+ *  `appliedCount` is how many of the caller's entries landed on the device
+ *  (and therefore in state) before the failure — 0 when the preflight
+ *  unlock wait was rejected, since nothing was written in that case. The
+ *  message mirrors the original failure; the original error is kept as
+ *  `cause` for anything that wants the full detail. */
+export class BulkKeyWriteError extends Error {
+  readonly appliedCount: number
+
+  constructor(appliedCount: number, cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause), { cause })
+    this.name = 'BulkKeyWriteError'
+    this.appliedCount = appliedCount
+  }
+}
+
 export interface BootGuardRef {
   onUnlock: (() => void) | null
 }

@@ -9,6 +9,7 @@ import type {
 } from '../../shared/types/protocol'
 import type { MacroAction } from '../../preload/macro'
 import type { BootGuardRef, BulkKeyEntry, SetState, KeyboardState } from './keyboard-types'
+import { BulkKeyWriteError } from './keyboard-types'
 import { isResetKeycode } from '../../shared/keycodes/keycodes'
 
 export function useKeyboardSetters(
@@ -45,24 +46,49 @@ export function useKeyboardSetters(
     [setState, stateRef, bumpActivity, guardedCall],
   )
 
+  /** Commits `entries` (or a landed prefix of them) into `state.keymap`. */
+  const applyBulkKeymap = useCallback((entries: BulkKeyEntry[]) => {
+    setState((s) => {
+      const newKeymap = new Map(s.keymap)
+      for (const { layer, row, col, keycode } of entries) {
+        newKeymap.set(`${layer},${row},${col}`, keycode)
+      }
+      return { ...s, keymap: newKeymap }
+    })
+    bumpActivity()
+  }, [setState, bumpActivity])
+
   const setKeysBulk = useCallback(
     async (entries: BulkKeyEntry[]) => {
       if (entries.length === 0) return
       if (!stateRef.current.isDummy) {
-        for (const { layer, row, col, keycode } of entries) {
-          await guardedCall(keycode, () => window.vialAPI.setKeycode(layer, row, col, keycode))
+        // Preflight: if any entry needs an unlock (reset keycode) and the
+        // device is locked, wait for it BEFORE writing anything — a
+        // cancelled unlock then fails with nothing written, instead of
+        // leaving a partially-applied loop below. Once past this point the
+        // loop writes directly; no entry needs its own unlock wait.
+        if (stateRef.current.unlockStatus.unlocked === false && entries.some(({ keycode }) => isResetKeycode(keycode))) {
+          bootGuardRef.current.onUnlock?.()
+          try {
+            await waitForUnlock()
+          } catch (err) {
+            throw new BulkKeyWriteError(0, err)
+          }
+        }
+        let appliedCount = 0
+        try {
+          for (const { layer, row, col, keycode } of entries) {
+            await window.vialAPI.setKeycode(layer, row, col, keycode)
+            appliedCount++
+          }
+        } catch (err) {
+          if (appliedCount > 0) applyBulkKeymap(entries.slice(0, appliedCount))
+          throw new BulkKeyWriteError(appliedCount, err)
         }
       }
-      setState((s) => {
-        const newKeymap = new Map(s.keymap)
-        for (const { layer, row, col, keycode } of entries) {
-          newKeymap.set(`${layer},${row},${col}`, keycode)
-        }
-        return { ...s, keymap: newKeymap }
-      })
-      bumpActivity()
+      applyBulkKeymap(entries)
     },
-    [setState, stateRef, bumpActivity, guardedCall],
+    [stateRef, bootGuardRef, waitForUnlock, applyBulkKeymap],
   )
 
   const setEncoder = useCallback(

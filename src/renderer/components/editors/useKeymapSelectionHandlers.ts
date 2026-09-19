@@ -5,6 +5,7 @@ import type { KleKey } from '../../../shared/kle/types'
 import { posKey } from '../../../shared/kle/pos-key'
 import { serialize, deserialize, isMask, isTapDanceKeycode, getTapDanceIndex, isMacroKeycode, getMacroIndex, isLMKeycode, resolve, extractBasicKey, buildModMaskKeycode } from '../../../shared/keycodes/keycodes'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
+import { BulkKeyWriteError } from '../../hooks/useKeyboard'
 import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
@@ -310,7 +311,16 @@ export function useKeymapSelectionHandlers({
         entries.push({ layer: currentLayer, row, col, keycode: newCode })
         histEntries.push({ kind: 'key', layer: currentLayer, row, col, oldKeycode: oldCode, newKeycode: newCode })
       }
-      await onSetKeysBulk(entries)
+      try {
+        await onSetKeysBulk(entries)
+      } catch (err) {
+        // `entries` and `histEntries` share the same index order, so the
+        // landed prefix of one is the landed prefix of the other.
+        if (err instanceof BulkKeyWriteError && err.appliedCount > 0) {
+          history.push({ kind: 'batch', entries: histEntries.slice(0, err.appliedCount) })
+        }
+        throw err
+      }
       if (histEntries.length > 0) history.push({ kind: 'batch', entries: histEntries })
     })
     clearPickerSelection()
