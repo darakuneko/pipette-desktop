@@ -813,6 +813,8 @@ Click an active mode button to toggle it off and revert to a basic keycode.
 
 **Undo / Redo**: The popover footer shows context-sensitive **Undo** and **Redo** buttons. Undo displays the previous keycode and reverts to it; Redo displays the next keycode and re-applies it. These buttons only appear when the most recent undo/redo history entry matches the key currently open in the popover (i.e., the last single change). For multi-step history navigation, use the toolbar buttons or keyboard shortcuts (see §4.2).
 
+Middle-clicking a key or encoder on the keymap undoes that key's last single change under the same condition as the popover's Undo button — it does nothing when the most recent undo entry doesn't match that key.
+
 ![Key Popover — Undo](screenshots/key-popover-undo.png)
 ![Key Popover — Redo](screenshots/key-popover-redo.png)
 
@@ -1196,6 +1198,7 @@ The keymap editor automatically records a history of keycode changes. You can na
 | **Keyboard shortcuts** | Full history (up to Max Keymap History, default 100) | Ctrl/Cmd+Z (Undo), Ctrl+Y / Ctrl/Cmd+Shift+Z (Redo) |
 | **Toolbar buttons** | Full history | Undo / Redo buttons in the left toolbar |
 | **Popover buttons** | Last single change only (must match the open key) | Undo / Redo buttons in the popover footer (see §2.4) |
+| **Middle click on a key / encoder** | Last single change only (must be that key) | — |
 
 - History is cleared when switching keyboards, disconnecting, restoring a snapshot / loading a saved layout / importing a `.vil` file, or rewriting the keymap from a Key Label (see **Applying a Key Label to the Keymap** in §6.2) — each of these replaces some or all of the keymap, so there is nothing left in the old history that still applies. A keymap Rewrite is the one case where nothing is pushed back onto the (now-empty) stack afterward — see **Limitations** there
 - The maximum history size can be configured in Settings → Defaults → **Max Keymap History** (see §6.1)
