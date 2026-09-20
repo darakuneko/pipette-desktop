@@ -1198,7 +1198,7 @@ The keymap editor automatically records a history of keycode changes. You can na
 | **Keyboard shortcuts** | Full history (up to Max Keymap History, default 100) | Ctrl/Cmd+Z (Undo), Ctrl+Y / Ctrl/Cmd+Shift+Z (Redo) |
 | **Toolbar buttons** | Full history | Undo / Redo buttons in the left toolbar |
 | **Popover buttons** | Last single change only (must match the open key) | Undo / Redo buttons in the popover footer (see §2.4) |
-| **Middle click on a key / encoder** | Last single change only (must be that key) | — |
+| **Middle click on a key / encoder** | Last single change only (must be that key) | Middle-click the key / encoder on the keymap |
 
 - History is cleared when switching keyboards, disconnecting, restoring a snapshot / loading a saved layout / importing a `.vil` file, or rewriting the keymap from a Key Label (see **Applying a Key Label to the Keymap** in §6.2) — each of these replaces some or all of the keymap, so there is nothing left in the old history that still applies. A keymap Rewrite is the one case where nothing is pushed back onto the (now-empty) stack afterward — see **Limitations** there
 - The maximum history size can be configured in Settings → Defaults → **Max Keymap History** (see §6.1)
