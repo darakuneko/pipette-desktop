@@ -16,15 +16,14 @@ import {
   isValidMacroText,
 } from '../../../preload/macro'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
-import { BTN_PRIMARY } from '../../constants/ui-tokens'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
 import { useMacroKeycodeSelection } from '../../hooks/useMacroKeycodeSelection'
-import { ConfirmButton } from './ConfirmButton'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
 import { parseMacroBuffer, isKeycodeAction, normalizeMacros, normalizeMacroActions } from './macro-editor-utils'
 import type { Props } from './macro-editor-types'
+import { MacroEditorFooter } from './MacroEditorFooter'
 
 export function MacroEditor({
   macroCount,
@@ -389,52 +388,19 @@ export function MacroEditor({
           />
         </div>
 
-        {/* Fixed footer: Clear / Revert (list mode only) / Save (always visible) */}
-          <div data-macro-footer="true" className="shrink-0 px-6 py-3">
-            <div className="flex justify-end gap-2">
-              {!isEditing && (
-                <>
-                  <ConfirmButton
-                    testId="macro-clear"
-                    confirming={clearAction.confirming}
-                    onClick={() => { revertAction.reset(); clearAction.trigger() }}
-                    labelKey="common.clear"
-                    confirmLabelKey="common.confirmClear"
-                    disabled={isRecording}
-                  />
-                  <ConfirmButton
-                    testId="macro-revert"
-                    confirming={revertAction.confirming}
-                    onClick={() => { clearAction.reset(); revertAction.trigger() }}
-                    labelKey="common.revert"
-                    confirmLabelKey="common.confirmRevert"
-                    disabled={isRecording}
-                  />
-                </>
-              )}
-              {isEditing && isExistingEdit && (
-                <ConfirmButton
-                  testId="macro-edit-revert"
-                  confirming={editRevertAction.confirming}
-                  onClick={editRevertAction.trigger}
-                  labelKey="common.revert"
-                  confirmLabelKey="common.confirmRevert"
-                  disabled={isRecording || !hasPendingEdit}
-                />
-              )}
-              <button
-                type="button"
-                data-testid="macro-save"
-                className={BTN_PRIMARY}
-                onClick={isEditing ? commitAndDeselect : handleSave}
-                disabled={isEditing
-                  ? (isRecording || !hasPendingEdit)
-                  : (!dirty || hasInvalidText || isRecording)}
-              >
-                {t('common.save')}
-              </button>
-            </div>
-          </div>
+        <MacroEditorFooter
+          isEditing={isEditing}
+          isExistingEdit={isExistingEdit}
+          isRecording={isRecording}
+          hasPendingEdit={hasPendingEdit}
+          dirty={dirty}
+          hasInvalidText={hasInvalidText}
+          clearAction={clearAction}
+          revertAction={revertAction}
+          editRevertAction={editRevertAction}
+          commitAndDeselect={commitAndDeselect}
+          handleSave={handleSave}
+        />
 
         {popoverState !== null && (() => {
           const action = currentActions[popoverState.actionIndex]
