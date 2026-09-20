@@ -72,12 +72,13 @@ export interface KeyboardPaneProps {
   /** Extra content rendered next to `layerLabel` in the footer row — the
    *  simulation tab's Apply button (Plan-qwerty-select-no-rewrite v7). */
   footerExtra?: React.ReactNode
-  /** Blocks every edit path into this pane: no key/encoder click or
-   *  double-click handlers reach `KeyboardWidget` regardless of what's
-   *  passed in `onKeyClick`/etc below (see `KeyboardWidget`'s own
-   *  `readOnly`). Used by the simulation tab, which must stay completely
-   *  view-only — clicks, the popover, and multi-select all route through
-   *  those same handlers, so gating them here is the single choke point. */
+  /** Blocks every edit path into this pane: no key/encoder click,
+   *  double-click, or middle-click undo handler reaches `KeyboardWidget`
+   *  regardless of what's passed in `onKeyClick`/`onKeyAuxClick`/etc below
+   *  (see `KeyboardWidget`'s own `readOnly`). Used by the simulation tab,
+   *  which must stay completely view-only — clicks, the popover,
+   *  multi-select, and middle-click undo all route through those same
+   *  handlers, so gating them here is the single choke point. */
   readOnly?: boolean
   onKeyClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onKeyDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void

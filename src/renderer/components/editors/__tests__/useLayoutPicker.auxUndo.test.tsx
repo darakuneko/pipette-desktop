@@ -69,11 +69,11 @@ describe('useLayoutPicker — the Keyboard tab picker pane never gets middle-cli
     expect(keyGroup).not.toBeNull()
 
     // No `onKeyAuxClick` reaches this pane's `KeyboardWidget`, so the svg
-    // never attaches the mousedown/auxclick listeners in the first place —
-    // asserted by the mousedown default surviving, exactly like the
+    // never attaches the mousedown/mouseup/auxclick listeners in the first
+    // place — asserted by both defaults surviving, exactly like the
     // `readOnly`/no-handler case in KeyboardWidget.auxClick.test.tsx.
     const svg = container.querySelector('svg')!
     expect(dispatchMouse(svg, 'mousedown', 1).defaultPrevented).toBe(false)
-    expect(() => dispatchMouse(keyGroup!, 'auxclick', 1)).not.toThrow()
+    expect(dispatchMouse(svg, 'mouseup', 1).defaultPrevented).toBe(false)
   })
 })

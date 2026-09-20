@@ -101,13 +101,19 @@ describe('KeyboardWidget — middle-click undo delegation', () => {
   it('does not deliver an aux click for a key with no matrix position (row/col -1)', () => {
     const onKeyAuxClick = vi.fn()
     const onEncoderAuxClick = vi.fn()
-    const { container } = renderWidget({ onKeyAuxClick, onEncoderAuxClick })
-    // NO_POS_KEY renders without `data-key-pos` (KeyWidget only sets it
-    // when row/col are both >= 0) and it isn't an encoder either, so no
-    // `data-encoder-pos` ancestor exists — the svg-level click has nothing
-    // to resolve to.
+    const { container, getByText } = renderWidget({ onKeyAuxClick, onEncoderAuxClick })
+    // NO_POS_KEY is the only key without a `keycodes` entry (only "0,0"
+    // has one), so it renders the 'KC_NO' fallback label — that text
+    // node's own <g> is the group to dispatch on. It carries no
+    // `data-key-pos` (KeyWidget only sets that when row/col are both
+    // >= 0) and it isn't an encoder either, so it has no `data-encoder-pos`
+    // ancestor — confirmed below before using it as the dispatch target.
+    const noPosGroup = getByText('KC_NO').closest('g')!
     const svg = container.querySelector('svg')!
-    dispatchMouse(svg, 'auxclick', 1)
+    expect(svg.contains(noPosGroup)).toBe(true)
+    expect(noPosGroup.closest('[data-key-pos]')).toBeNull()
+    expect(noPosGroup.closest('[data-encoder-pos]')).toBeNull()
+    dispatchMouse(noPosGroup, 'auxclick', 1)
     expect(onKeyAuxClick).not.toHaveBeenCalled()
     expect(onEncoderAuxClick).not.toHaveBeenCalled()
   })

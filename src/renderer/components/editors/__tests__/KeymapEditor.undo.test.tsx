@@ -222,7 +222,8 @@ describe('KeymapEditor — undo after single-click selection', () => {
     await act(async () => { fireEvent.click(screen.getByTestId('kc-a')) })
     onSetKey.mockClear()
 
-    await act(async () => { capturedOnKeyAuxClick?.({ row: 0, col: 1 }) })
+    expect(capturedOnKeyAuxClick).toBeInstanceOf(Function)
+    await act(async () => { capturedOnKeyAuxClick!({ row: 0, col: 1 }) })
 
     expect(onSetKey).not.toHaveBeenCalled()
   })
