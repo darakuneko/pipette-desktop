@@ -362,4 +362,51 @@ describe('applyVilFile HID backup and rollback', () => {
     expect(setKeycode).not.toHaveBeenCalled()
     expect(result.current.state.keymap.get('0,0,0')).toBe(0x4f)
   })
+
+  it('a restored file with an empty macro array skips the macro write and leaves state\'s macro fields untouched', async () => {
+    const setKeycode = vi.fn(async () => {})
+    const setMacroBuffer = vi.fn(async () => {})
+    window.vialAPI = stubVialAPI({ setKeycode, setMacroBuffer })
+
+    const previousMacros = [1, 2, 3]
+    const previousParsedMacros = [[{ type: 'text', text: 'hi' }]] as unknown as KeyboardState['parsedMacros']
+    const { result } = renderHook(() =>
+      useHarness(baseHidState({
+        macroBuffer: previousMacros,
+        macroBufferSize: 3,
+        parsedMacros: previousParsedMacros,
+      })),
+    )
+
+    await act(async () => {
+      await result.current.applyVilFile({ ...VALID_VIL, macros: [] })
+    })
+
+    expect(setMacroBuffer).not.toHaveBeenCalled()
+    expect(result.current.state.macroBuffer).toBe(previousMacros)
+    expect(result.current.state.parsedMacros).toBe(previousParsedMacros)
+    // Everything else in the file is still applied as normal.
+    expect(result.current.state.keymap.get('0,0,0')).toBe(0x4f)
+  })
+
+  it('a restored file with a non-empty macro array still writes and updates state (regression)', async () => {
+    const setKeycode = vi.fn(async () => {})
+    const setMacroBuffer = vi.fn(async () => {})
+    window.vialAPI = stubVialAPI({ setKeycode, setMacroBuffer })
+
+    const { result } = renderHook(() =>
+      useHarness(baseHidState({
+        macroBuffer: [9, 9],
+        macroBufferSize: 2,
+        parsedMacros: [],
+      })),
+    )
+
+    await act(async () => {
+      await result.current.applyVilFile(VALID_VIL)
+    })
+
+    expect(setMacroBuffer).toHaveBeenCalledWith(VALID_VIL.macros)
+    expect(result.current.state.macroBuffer).toEqual(VALID_VIL.macros)
+  })
 })

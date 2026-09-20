@@ -7,7 +7,7 @@ import { mapToRecord, recordToMap, VILFILE_CURRENT_VERSION } from '../../shared/
 import { vilToVialGuiJson } from '../../shared/vil-compat'
 import { splitMacroBuffer, deserializeMacro, macroActionsToJson, jsonToMacroActions } from '../../preload/macro'
 import { parseDefinitionLayout } from '../../shared/kle/definition-layout'
-import type { SetState, KeyboardRefs, BootGuardRef, ApplyVilResult } from './keyboard-types'
+import type { SetState, KeyboardRefs, BootGuardRef, ApplyVilResult, KeyboardState } from './keyboard-types'
 import { emptyState } from './keyboard-types'
 
 /** The subset of `VilFile` that `writeVilToDevice` actually writes over
@@ -242,14 +242,28 @@ export function useKeyboardPersistence(
     const layerNames = Array.from({ length: currentLayers }, (_, i) => vil.layerNames?.[i] ?? '')
     saveLayerNamesRef.current?.(layerNames)
 
+    // writeVilToDevice above skips the macro buffer write when vil.macros is
+    // empty (its "skip if empty" rule). On a real device, following that
+    // skip with an unconditional macroBuffer/parsedMacros update would show
+    // no macros on screen while the device still holds whatever it had
+    // before this restore — so the two fields are left as they were. In
+    // dummy/file mode there is no device to diverge from, so the file's
+    // (possibly empty) macros are always the new truth.
+    const macroFields: Partial<Pick<KeyboardState, 'macroBuffer' | 'parsedMacros'>> =
+      !isDummy && vil.macros.length === 0
+        ? {}
+        : {
+            macroBuffer: vil.macros,
+            parsedMacros: vil.macroJson
+              ? vil.macroJson.map((m) => jsonToMacroActions(JSON.stringify(m)) ?? [])
+              : null,
+          }
+
     setState((s) => ({
       ...s,
       keymap,
       encoderLayout,
-      macroBuffer: vil.macros,
-      parsedMacros: vil.macroJson
-        ? vil.macroJson.map((m) => jsonToMacroActions(JSON.stringify(m)) ?? [])
-        : null,
+      ...macroFields,
       layoutOptions: vil.layoutOptions,
       tapDanceEntries: vil.tapDance,
       comboEntries: vil.combo,
