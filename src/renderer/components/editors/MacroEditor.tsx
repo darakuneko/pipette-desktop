@@ -20,10 +20,10 @@ import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
 import { useMacroKeycodeSelection } from '../../hooks/useMacroKeycodeSelection'
-import { FavoriteStoreContent } from './FavoriteStoreContent'
 import { parseMacroBuffer, isKeycodeAction, normalizeMacros, normalizeMacroActions } from './macro-editor-utils'
 import type { Props } from './macro-editor-types'
 import { MacroEditorFooter } from './MacroEditorFooter'
+import { MacroFavoritesPanel } from './MacroFavoritesPanel'
 
 export function MacroEditor({
   macroCount,
@@ -430,38 +430,21 @@ export function MacroEditor({
       </div>
 
       {!isDummy && (
-        <div
-          className={`w-macro-editor shrink-0 flex flex-col ${isEditing ? 'hidden' : isRecording ? 'invisible' : ''}`}
-          data-testid="macro-favorites-panel"
-        >
-          <FavoriteStoreContent
-            entries={favStore.entries}
-            loading={favStore.loading}
-            saving={favStore.saving}
-            canSave={currentActions.length > 0 && !hasInvalidText}
-            onSave={favStore.saveFavorite}
-            onLoad={favStore.loadFavorite}
-            onRename={favStore.renameEntry}
-            onDelete={favStore.deleteEntry}
-            onExport={favStore.exportFavorites}
-            onExportEntry={favStore.exportEntry}
-            onImport={favStore.importFavorites}
-            onExportCurrent={favStore.exportCurrent}
-            onImportCurrent={favStore.importCurrent}
-            exporting={favStore.exporting}
-            importing={favStore.importing}
-            importResult={favStore.importResult}
-            hubOrigin={hubOrigin}
-            hubNeedsDisplayName={hubNeedsDisplayName}
-            hubUploading={hubUploading}
-            hubUploadResult={hubUploadResult}
-            onUploadToHub={onUploadToHub}
-            onUpdateOnHub={onUpdateOnHub}
-            onRemoveFromHub={onRemoveFromHub}
-            onRenameOnHub={onRenameOnHub}
-            onRefreshEntries={favStore.refreshEntries}
-          />
-        </div>
+        <MacroFavoritesPanel
+          isEditing={isEditing}
+          isRecording={isRecording}
+          favStore={favStore}
+          currentActions={currentActions}
+          hasInvalidText={hasInvalidText}
+          hubOrigin={hubOrigin}
+          hubNeedsDisplayName={hubNeedsDisplayName}
+          hubUploading={hubUploading}
+          hubUploadResult={hubUploadResult}
+          onUploadToHub={onUploadToHub}
+          onUpdateOnHub={onUpdateOnHub}
+          onRemoveFromHub={onRemoveFromHub}
+          onRenameOnHub={onRenameOnHub}
+        />
       )}
     </>
   )
