@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import type { RefObject } from 'react'
+import { useCallback, type RefObject } from 'react'
 import { KeyboardPane } from './KeyboardPane'
 import { KeymapPackTabs, KeymapPackApplyButton, type KeymapPackTab } from './KeymapPackTabs'
 import type { KleKey } from '../../../shared/kle/types'
@@ -13,6 +13,19 @@ import type { UseViewMatrixModeReturn } from './useViewMatrixMode'
 export interface KeymapAuxUndoHandlers {
   onKeyAuxClick: (pos: { row: number; col: number }) => void
   onEncoderAuxClick: (pos: { idx: number; dir: number }) => void
+}
+
+/** Whether `pos` is the single currently selected key — the extra gate
+ *  middle-click undo applies on top of the history-stack-top match
+ *  `auxUndoHandlers` already does. Hovering an unselected key and
+ *  middle-clicking it must never touch that key's history. */
+function isSelectedKeyPos(selectedKey: { row: number; col: number } | null, pos: { row: number; col: number }): boolean {
+  return selectedKey != null && selectedKey.row === pos.row && selectedKey.col === pos.col
+}
+
+/** Encoder analogue of `isSelectedKeyPos`. */
+function isSelectedEncoderPos(selectedEncoder: { idx: number; dir: 0 | 1 } | null, pos: { idx: number; dir: number }): boolean {
+  return selectedEncoder != null && selectedEncoder.idx === pos.idx && selectedEncoder.dir === pos.dir
 }
 
 export interface KeymapPrimaryPaneProps {
@@ -62,7 +75,10 @@ export interface KeymapPrimaryPaneProps {
   /** Middle-click undo handlers. Reaches the normal/Base `KeyboardPane`
    *  branch only, never the pack simulation preview branch (which is
    *  `readOnly` and takes no selection props at all). The caller omits
-   *  this entirely while View Matrix mode is active. */
+   *  this entirely while View Matrix mode is active. Wrapped below with
+   *  `isSelectedKeyPos`/`isSelectedEncoderPos` before being handed to
+   *  `KeyboardPane` — middle-click only fires these for the currently
+   *  selected key/encoder, never for a merely hovered one. */
   auxUndoHandlers?: KeymapAuxUndoHandlers
   handleViewMatrixKeyClick: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   handleKeyClick: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
@@ -90,6 +106,17 @@ export function KeymapPrimaryPane({
   handleViewMatrixKeyClick, handleKeyClick, handleKeyDoubleClick, handleEncoderClick, handleEncoderDoubleClick,
   handleDeselect, handlePackTabChange, keymapPackName,
 }: KeymapPrimaryPaneProps): JSX.Element {
+  // Middle-click only undoes the key/encoder the user has actually
+  // selected — a stray middle click while merely hovering an unselected
+  // key must never change it. `auxUndoHandlers` itself still does the
+  // history-stack-top match; this gate runs first and simply drops the
+  // call through when the clicked position isn't the current selection.
+  const onKeyAuxClick = useCallback((pos: { row: number; col: number }) => {
+    if (isSelectedKeyPos(selectedKey, pos)) auxUndoHandlers?.onKeyAuxClick(pos)
+  }, [auxUndoHandlers, selectedKey])
+  const onEncoderAuxClick = useCallback((pos: { idx: number; dir: number }) => {
+    if (isSelectedEncoderPos(selectedEncoder, pos)) auxUndoHandlers?.onEncoderAuxClick(pos)
+  }, [auxUndoHandlers, selectedEncoder])
   return (
     <div className="flex items-stretch">
       {showPackTabs && packTab === 'pack' ? (
@@ -136,7 +163,7 @@ export function KeymapPrimaryPane({
           layoutOptions={layoutOptions} scale={scale}
           labelOverrides={viewMatrixLabelOverrides} keyColors={viewMatrixDuplicateKeyColors} remapLabel={primaryRemapLabel}
           matrixWires={matrixWires}
-          onKeyAuxClick={auxUndoHandlers?.onKeyAuxClick} onEncoderAuxClick={auxUndoHandlers?.onEncoderAuxClick}
+          onKeyAuxClick={auxUndoHandlers ? onKeyAuxClick : undefined} onEncoderAuxClick={auxUndoHandlers ? onEncoderAuxClick : undefined}
           layerLabel={viewMatrixMode.active ? undefined : currentLayerLabel} layerLabelTestId="layer-label"
           onKeyClick={viewMatrixMode.active ? handleViewMatrixKeyClick : handleKeyClick}
           onKeyDoubleClick={viewMatrixMode.active ? undefined : handleKeyDoubleClick}

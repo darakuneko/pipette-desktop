@@ -228,6 +228,24 @@ describe('KeymapEditor — undo after single-click selection', () => {
     expect(onSetKey).not.toHaveBeenCalled()
   })
 
+  it('middle-click on a key that was changed but is no longer selected does nothing', async () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    // Select [0,0] and assign KC_A — the undo stack's top entry is now for
+    // [0,0], but selecting [0,1] afterwards moves the current selection
+    // away from it.
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
+    await act(async () => { fireEvent.click(screen.getByTestId('kc-a')) })
+    act(() => capturedOnKeyClick?.({ row: 0, col: 1 }))
+    onSetKey.mockClear()
+
+    // Middle-clicking [0,0] again — the top-of-stack match still holds,
+    // but it's no longer the selected key, so nothing happens.
+    await act(async () => { capturedOnKeyAuxClick?.({ row: 0, col: 0 }) })
+
+    expect(onSetKey).not.toHaveBeenCalled()
+  })
+
   it('does NOT show undo when popover is opened without prior single-click assignment', () => {
     render(<KeymapEditor {...defaultProps} />)
 

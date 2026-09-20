@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-// `auxUndoHandlers` threading only: the editable KeyboardPane branch
-// receives the bundled middle-click undo handlers, the pack-tab simulation
-// preview branch never does (it takes no selection/edit props at all). The
-// caller's View Matrix gating is covered by KeymapEditor.viewMatrix.test.tsx.
+// `auxUndoHandlers` threading and the selection gate: the editable
+// KeyboardPane branch receives handlers wrapped so middle-click only fires
+// for the currently selected key/encoder, the pack-tab simulation preview
+// branch never receives anything (it takes no selection/edit props at
+// all). The caller's View Matrix gating is covered by
+// KeymapEditor.viewMatrix.test.tsx.
 
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
@@ -78,17 +80,22 @@ function baseProps() {
 }
 
 describe('KeymapPrimaryPane — auxUndoHandlers threading', () => {
-  it('threads the bundled handlers to the editable KeyboardPane branch', () => {
+  it('threads a wrapped handler to the editable KeyboardPane branch, which calls through for the selected key', () => {
     const onKeyAuxClick = vi.fn()
     const onEncoderAuxClick = vi.fn()
     render(
       <KeymapPrimaryPane
         {...baseProps()}
+        selectedKey={{ row: 1, col: 2 }}
         auxUndoHandlers={{ onKeyAuxClick, onEncoderAuxClick }}
       />,
     )
-    expect(capturedOnKeyAuxClick).toBe(onKeyAuxClick)
-    expect(capturedOnEncoderAuxClick).toBe(onEncoderAuxClick)
+    expect(capturedOnKeyAuxClick).toBeInstanceOf(Function)
+    // Wrapped for the selection gate below, so this is no longer the same
+    // function reference as the bundled `onKeyAuxClick` — assert behavior
+    // (calls through when the position matches the selection) instead.
+    capturedOnKeyAuxClick?.({ row: 1, col: 2 })
+    expect(onKeyAuxClick).toHaveBeenCalledWith({ row: 1, col: 2 })
   })
 
   it('leaves both undefined when auxUndoHandlers is omitted (e.g. View Matrix mode at the caller)', () => {
@@ -112,5 +119,90 @@ describe('KeymapPrimaryPane — auxUndoHandlers threading', () => {
     // it must not receive the aux handlers either.
     expect(capturedOnKeyAuxClick).toBeUndefined()
     expect(capturedOnEncoderAuxClick).toBeUndefined()
+  })
+})
+
+describe('KeymapPrimaryPane — middle-click undo only fires for the current selection', () => {
+  it('calls onKeyAuxClick when the middle-clicked position matches selectedKey', () => {
+    const onKeyAuxClick = vi.fn()
+    const onEncoderAuxClick = vi.fn()
+    render(
+      <KeymapPrimaryPane
+        {...baseProps()}
+        selectedKey={{ row: 1, col: 2 }}
+        auxUndoHandlers={{ onKeyAuxClick, onEncoderAuxClick }}
+      />,
+    )
+    capturedOnKeyAuxClick?.({ row: 1, col: 2 })
+    expect(onKeyAuxClick).toHaveBeenCalledWith({ row: 1, col: 2 })
+  })
+
+  it('does not call onKeyAuxClick when the middle-clicked key is a different, unselected key', () => {
+    const onKeyAuxClick = vi.fn()
+    const onEncoderAuxClick = vi.fn()
+    render(
+      <KeymapPrimaryPane
+        {...baseProps()}
+        selectedKey={{ row: 1, col: 2 }}
+        auxUndoHandlers={{ onKeyAuxClick, onEncoderAuxClick }}
+      />,
+    )
+    capturedOnKeyAuxClick?.({ row: 3, col: 4 })
+    expect(onKeyAuxClick).not.toHaveBeenCalled()
+  })
+
+  it('does not call onKeyAuxClick when nothing is selected', () => {
+    const onKeyAuxClick = vi.fn()
+    const onEncoderAuxClick = vi.fn()
+    render(
+      <KeymapPrimaryPane
+        {...baseProps()}
+        auxUndoHandlers={{ onKeyAuxClick, onEncoderAuxClick }}
+      />,
+    )
+    capturedOnKeyAuxClick?.({ row: 0, col: 0 })
+    expect(onKeyAuxClick).not.toHaveBeenCalled()
+  })
+
+  it('calls onEncoderAuxClick when the middle-clicked idx/dir matches selectedEncoder', () => {
+    const onKeyAuxClick = vi.fn()
+    const onEncoderAuxClick = vi.fn()
+    render(
+      <KeymapPrimaryPane
+        {...baseProps()}
+        selectedEncoder={{ idx: 2, dir: 1 }}
+        auxUndoHandlers={{ onKeyAuxClick, onEncoderAuxClick }}
+      />,
+    )
+    capturedOnEncoderAuxClick?.({ idx: 2, dir: 1 })
+    expect(onEncoderAuxClick).toHaveBeenCalledWith({ idx: 2, dir: 1 })
+  })
+
+  it('does not call onEncoderAuxClick when the same idx but a different dir is middle-clicked', () => {
+    const onKeyAuxClick = vi.fn()
+    const onEncoderAuxClick = vi.fn()
+    render(
+      <KeymapPrimaryPane
+        {...baseProps()}
+        selectedEncoder={{ idx: 2, dir: 1 }}
+        auxUndoHandlers={{ onKeyAuxClick, onEncoderAuxClick }}
+      />,
+    )
+    capturedOnEncoderAuxClick?.({ idx: 2, dir: 0 })
+    expect(onEncoderAuxClick).not.toHaveBeenCalled()
+  })
+
+  it('does not call onEncoderAuxClick when a key, not an encoder, is currently selected', () => {
+    const onKeyAuxClick = vi.fn()
+    const onEncoderAuxClick = vi.fn()
+    render(
+      <KeymapPrimaryPane
+        {...baseProps()}
+        selectedKey={{ row: 0, col: 0 }}
+        auxUndoHandlers={{ onKeyAuxClick, onEncoderAuxClick }}
+      />,
+    )
+    capturedOnEncoderAuxClick?.({ idx: 0, dir: 0 })
+    expect(onEncoderAuxClick).not.toHaveBeenCalled()
   })
 })
