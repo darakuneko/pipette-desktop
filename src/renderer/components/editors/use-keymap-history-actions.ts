@@ -18,14 +18,12 @@ interface ApplyHistoryFailure {
 
 /** A key or encoder position to match a history entry against — shared by
  *  the popover's top-only undo/redo and the keyboard's middle-click undo,
- *  so both read the exact same matching rule instead of each keeping its
- *  own copy. */
-export type HistoryMatchPosition =
+ *  so both read the exact same matching rule. */
+type HistoryMatchPosition =
   | { kind: 'key'; row: number; col: number }
   | { kind: 'encoder'; idx: number; dir: number }
 
-/** `PopoverState`'s position fields, read into the shared `HistoryMatchPosition`
- *  shape `matchEntryAtPosition` below expects. */
+/** `PopoverState`'s position fields in `HistoryMatchPosition` shape. */
 function popoverPosition(popoverState: PopoverState | null): HistoryMatchPosition | null {
   if (!popoverState) return null
   return popoverState.kind === 'key'
@@ -207,18 +205,16 @@ export function useKeymapHistoryActions({
   }, [popoverRedoKeycode, handleRedo])
 
   // --- Middle-click undo (keyboard/encoder widget) — the same top-only
-  // match as the popover's Undo button, just keyed by a clicked position
-  // instead of the open popover's. `!= null` (not truthiness) because a
+  // match as the popover's Undo button, keyed by the clicked position
+  // instead of the open popover's. `== null` (not truthiness) because a
   // matched old keycode of 0 (KC_NO) is a valid undo target. ---
   const handleKeyAuxUndo = useCallback((pos: { row: number; col: number }) => {
-    const matched = matchEntryAtPosition({ kind: 'key', row: pos.row, col: pos.col }, history.peekUndo, currentLayer, 'oldKeycode')
-    if (matched == null) return
+    if (matchEntryAtPosition({ kind: 'key', ...pos }, history.peekUndo, currentLayer, 'oldKeycode') == null) return
     void handleUndo()
   }, [history.peekUndo, currentLayer, handleUndo])
 
   const handleEncoderAuxUndo = useCallback((pos: { idx: number; dir: number }) => {
-    const matched = matchEntryAtPosition({ kind: 'encoder', idx: pos.idx, dir: pos.dir }, history.peekUndo, currentLayer, 'oldKeycode')
-    if (matched == null) return
+    if (matchEntryAtPosition({ kind: 'encoder', ...pos }, history.peekUndo, currentLayer, 'oldKeycode') == null) return
     void handleUndo()
   }, [history.peekUndo, currentLayer, handleUndo])
 

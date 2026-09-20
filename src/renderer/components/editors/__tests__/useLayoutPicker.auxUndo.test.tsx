@@ -4,12 +4,10 @@
 // Middle-click undo must never reach the picker panel's "Keyboard" tab
 // (`LayoutPickerContent`'s secondary `KeyboardPane`, built by
 // `useLayoutPicker`) — that pane is a copy-source browser, not an edit
-// target, so `KeymapPrimaryPane` only ever wires `auxUndoHandlers` into
-// the primary editing `KeyboardPane`. `useLayoutPicker`'s call into
-// `KeyboardPane` never passes `onKeyAuxClick`/`onEncoderAuxClick` at all,
-// so this exercises the real `KeyboardWidget` click path (not mocked) the
-// same way the sibling `useLayoutPicker.readOnly.test.tsx` does for the
-// left-click handlers.
+// target, so `KeymapPrimaryPane` only wires `auxUndoHandlers` into the
+// primary editing `KeyboardPane`. Exercised against the real (unmocked)
+// `KeyboardWidget` click path, like the sibling
+// `useLayoutPicker.readOnly.test.tsx` does for the left-click handlers.
 
 import { describe, it, expect, vi } from 'vitest'
 import { render, fireEvent, act } from '@testing-library/react'
@@ -31,6 +29,12 @@ const KEY: KleKey = {
 
 const CONNECTED_DEVICE: DeviceInfo = {
   vendorId: 1, productId: 2, serialNumber: 'abc', productName: 'Test KB', type: 'vial',
+}
+
+function dispatchMouse(el: Element, type: string, button: number): MouseEvent {
+  const event = new MouseEvent(type, { bubbles: true, cancelable: true, button })
+  act(() => { el.dispatchEvent(event) })
+  return event
 }
 
 function Host(props: Partial<UseLayoutPickerOptions>) {
@@ -69,13 +73,7 @@ describe('useLayoutPicker — the Keyboard tab picker pane never gets middle-cli
     // asserted by the mousedown default surviving, exactly like the
     // `readOnly`/no-handler case in KeyboardWidget.auxClick.test.tsx.
     const svg = container.querySelector('svg')!
-    const mousedown = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 1 })
-    act(() => { svg.dispatchEvent(mousedown) })
-    expect(mousedown.defaultPrevented).toBe(false)
-
-    expect(() => {
-      const auxclick = new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 })
-      act(() => { keyGroup!.dispatchEvent(auxclick) })
-    }).not.toThrow()
+    expect(dispatchMouse(svg, 'mousedown', 1).defaultPrevented).toBe(false)
+    expect(() => dispatchMouse(keyGroup!, 'auxclick', 1)).not.toThrow()
   })
 })

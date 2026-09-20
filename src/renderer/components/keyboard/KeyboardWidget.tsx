@@ -15,6 +15,13 @@ import { keyCorners } from './key-geometry'
 import { buildMatrixWires, rowLabelPitch, colLabelPitch } from './matrix-wires'
 import { MatrixWiresOverlay } from './MatrixWiresOverlay'
 
+/** A `data-key-pos` / `data-encoder-pos` attribute value (`"<a>,<b>"`) read
+ *  back into its two numbers, or null when either side isn't one. */
+function parsePosAttr(raw: string | null): [number, number] | null {
+  const [a, b] = (raw ?? '').split(',').map(Number)
+  return Number.isFinite(a) && Number.isFinite(b) ? [a, b] : null
+}
+
 interface Props {
   keys: KleKey[]
   keycodes: Map<string, string>
@@ -128,16 +135,13 @@ function KeyboardWidgetInner({
 }: Props) {
   const effectiveTheme = useEffectiveTheme()
 
-  // Middle-click undo: delegated on the root `<svg>` (rather than a handler
-  // per KeyWidget/EncoderWidget) since it only ever needs to resolve
-  // `event.target` back to a position via the `data-key-pos`/
-  // `data-encoder-pos` attributes those widgets already carry. `readOnly`
-  // is the single gate every other edit path here already goes through
-  // (`onClick={readOnly ? undefined : onKeyClick}` above/below), so aux
-  // click is withheld the same way — and only wired up at all when the
-  // caller actually passed one of the two handlers, so a plain read-only
-  // preview pane (which passes neither) never attaches a middle-button
-  // listener it has nothing to do with.
+  // Middle-click undo is delegated on the root `<svg>` rather than wired
+  // per KeyWidget/EncoderWidget: it only needs to resolve `event.target`
+  // back to a position through the `data-key-pos` / `data-encoder-pos`
+  // attributes those widgets already carry. `readOnly` gates it like every
+  // other edit path here (`onClick={readOnly ? undefined : onKeyClick}`),
+  // and it stays unwired unless the caller passed an aux handler, so a
+  // preview pane never attaches middle-button listeners it has no use for.
   const auxUndoEnabled = !readOnly && (onKeyAuxClick != null || onEncoderAuxClick != null)
 
   // Chromium starts its Linux-style autoscroll AND (separately) its
@@ -154,16 +158,14 @@ function KeyboardWidgetInner({
     const target = e.target as Element
     const keyEl = target.closest('[data-key-pos]')
     if (keyEl) {
-      const raw = keyEl.getAttribute('data-key-pos')
-      const [row, col] = raw ? raw.split(',').map(Number) : [NaN, NaN]
-      if (Number.isFinite(row) && Number.isFinite(col)) onKeyAuxClick?.({ row, col })
+      const pos = parsePosAttr(keyEl.getAttribute('data-key-pos'))
+      if (pos) onKeyAuxClick?.({ row: pos[0], col: pos[1] })
       return
     }
     const encEl = target.closest('[data-encoder-pos]')
     if (!encEl) return
-    const raw = encEl.getAttribute('data-encoder-pos')
-    const [idx, dir] = raw ? raw.split(',').map(Number) : [NaN, NaN]
-    if (Number.isFinite(idx) && Number.isFinite(dir)) onEncoderAuxClick?.({ idx, dir })
+    const pos = parsePosAttr(encEl.getAttribute('data-encoder-pos'))
+    if (pos) onEncoderAuxClick?.({ idx: pos[0], dir: pos[1] })
   }
 
   // Reposition runs on the full key list (including decals) so option 0's

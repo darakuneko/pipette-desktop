@@ -9,8 +9,7 @@
 // EncoderWidget branches can be exercised in the same file.
 
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
-import { act } from '@testing-library/react'
+import { render, act } from '@testing-library/react'
 import { KeyboardWidget } from '../KeyboardWidget'
 import type { KleKey } from '../../../../shared/kle/types'
 import { makeKey } from './kle-test-keys'

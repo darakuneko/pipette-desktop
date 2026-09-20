@@ -7,6 +7,14 @@ import type { KleKey } from '../../../shared/kle/types'
 import type { KeyFlashState } from '../keyboard/key-flash'
 import type { UseViewMatrixModeReturn } from './useViewMatrixMode'
 
+/** The two middle-click undo handlers, bundled so call sites thread a
+ *  single field — see `KeyboardWidget`'s `onKeyAuxClick`/`onEncoderAuxClick`
+ *  for what each one receives. */
+export interface KeymapAuxUndoHandlers {
+  onKeyAuxClick: (pos: { row: number; col: number }) => void
+  onEncoderAuxClick: (pos: { idx: number; dir: number }) => void
+}
+
 export interface KeymapPrimaryPaneProps {
   showPackTabs: boolean
   packTab: KeymapPackTab
@@ -51,14 +59,11 @@ export interface KeymapPrimaryPaneProps {
    *  Only reaches the normal/Base `KeyboardPane` branch below; the pack
    *  simulation preview branch never receives it. */
   matrixWires?: ReadonlyMap<string, { row: number; col: number }>
-  /** Middle-click undo handlers, bundled into one prop so `KeymapEditor.tsx`
-   *  (at its file line cap) only has to thread a single field through —
-   *  see `KeyboardWidget`'s `onKeyAuxClick`/`onEncoderAuxClick`. Reaches
-   *  the normal/Base `KeyboardPane` branch only, never the pack simulation
-   *  preview branch (which is `readOnly` and takes no selection props at
-   *  all). The caller omits this entirely while View Matrix mode is
-   *  active. */
-  auxUndoHandlers?: { onKeyAuxClick: (pos: { row: number; col: number }) => void; onEncoderAuxClick: (pos: { idx: number; dir: number }) => void }
+  /** Middle-click undo handlers. Reaches the normal/Base `KeyboardPane`
+   *  branch only, never the pack simulation preview branch (which is
+   *  `readOnly` and takes no selection props at all). The caller omits
+   *  this entirely while View Matrix mode is active. */
+  auxUndoHandlers?: KeymapAuxUndoHandlers
   handleViewMatrixKeyClick: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   handleKeyClick: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   handleKeyDoubleClick: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void

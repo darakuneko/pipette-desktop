@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-// `auxUndoHandlers` wiring: the editable KeyboardPane branch receives the
-// bundled middle-click undo handlers, the pack-tab simulation preview
-// branch never does (it takes no selection/edit props at all), and View
-// Matrix mode drops them entirely at the KeymapEditor call site — this
-// file only proves the pane itself thread the prop through correctly, not
-// the caller's View-Matrix gating (covered by KeymapEditor.viewMatrix.test.tsx
-// passing `auxUndoHandlers={undefined}` the same way it already omits
-// `onEncoderClick` while the mode is active).
+// `auxUndoHandlers` threading only: the editable KeyboardPane branch
+// receives the bundled middle-click undo handlers, the pack-tab simulation
+// preview branch never does (it takes no selection/edit props at all). The
+// caller's View Matrix gating is covered by KeymapEditor.viewMatrix.test.tsx.
 
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
