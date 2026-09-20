@@ -139,25 +139,42 @@ export function useKeyboardSetters(
   // writes, or an earlier call's write-back would land on the device after a
   // later call's save already succeeded.
   const macroWriteChainRef = useRef<Promise<void>>(Promise.resolve())
+  // How many `setMacroBuffer` calls are currently queued on or running
+  // through the chain above. A call queued while this is already nonzero
+  // resumes its chain turn within a microtask or two of the call ahead of
+  // it settling — well before `setState`'s effect reaches `stateRef`, which
+  // only happens on this component's next render (`stateRef.current = state`
+  // in useKeyboard.ts). `deviceMacroBufferRef` tracks what the device holds
+  // independently of any render for exactly that case.
+  const macroWritesInFlightRef = useRef(0)
+  const deviceMacroBufferRef = useRef<number[]>([])
 
   /** Writes `buffer` over HID and, if that fails, best-effort restores what
    *  the device held before, padded/truncated to its real buffer length (see
    *  padMacroBuffer). The caller always sees the original error — a failed
    *  write-back only adds a log line, since the caller can't act differently
-   *  on it and the device may simply be disconnected by then. */
-  const writeMacroBufferToDevice = useCallback(async (buffer: number[]) => {
-    // Read once this write's turn in the chain comes up, so a write-back
-    // targets what the device actually holds rather than a value an
-    // overlapping call already moved past.
-    const previousBuffer = stateRef.current.macroBuffer
+   *  on it and the device may simply be disconnected by then.
+   *
+   *  `chainWasIdle` is whether the chain was empty when this call queued.
+   *  If so, no other call's write could have moved the device past
+   *  `stateRef.current.macroBuffer` yet, so that's the buffer to restore.
+   *  Otherwise a call ahead of this one in the chain already ran (and this
+   *  one's own render may not have happened yet), so `deviceMacroBufferRef`
+   *  — updated synchronously below, not on a render — is what actually
+   *  reflects the device. */
+  const writeMacroBufferToDevice = useCallback(async (buffer: number[], chainWasIdle: boolean) => {
+    const previousBuffer = chainWasIdle ? stateRef.current.macroBuffer : deviceMacroBufferRef.current
     const previousSize = stateRef.current.macroBufferSize
 
     try {
       await window.vialAPI.setMacroBuffer(buffer)
+      deviceMacroBufferRef.current = buffer
     } catch (err) {
       if (previousSize > 0) {
+        const restored = padMacroBuffer(previousBuffer, previousSize)
         try {
-          await window.vialAPI.setMacroBuffer(padMacroBuffer(previousBuffer, previousSize))
+          await window.vialAPI.setMacroBuffer(restored)
+          deviceMacroBufferRef.current = restored
         } catch (writeBackErr) {
           console.error('[KB] macro buffer write-back failed:', writeBackErr)
         }
@@ -168,11 +185,17 @@ export function useKeyboardSetters(
 
   const setMacroBuffer = useCallback(async (buffer: number[], parsedMacros?: MacroAction[][]) => {
     if (!stateRef.current.isDummy) {
-      const write = macroWriteChainRef.current.then(() => writeMacroBufferToDevice(buffer))
+      const chainWasIdle = macroWritesInFlightRef.current === 0
+      macroWritesInFlightRef.current++
+      const write = macroWriteChainRef.current.then(() => writeMacroBufferToDevice(buffer, chainWasIdle))
       // The chain itself never rejects, so a failed write doesn't reject
       // every call queued behind it.
       macroWriteChainRef.current = write.catch(() => {})
-      await write
+      try {
+        await write
+      } finally {
+        macroWritesInFlightRef.current--
+      }
     }
     setState((s) => ({ ...s, macroBuffer: buffer, parsedMacros: parsedMacros ?? null }))
     bumpActivity()
