@@ -241,15 +241,14 @@ export function useKeyboardPersistence(
     const layerNames = Array.from({ length: currentLayers }, (_, i) => vil.layerNames?.[i] ?? '')
     saveLayerNamesRef.current?.(layerNames)
 
-    // writeVilToDevice above skips the macro buffer write when vil.macros is
-    // empty (its "skip if empty" rule). On a real device, following that
-    // skip with an unconditional macroBuffer/parsedMacros update would show
-    // no macros on screen while the device still holds whatever it had
-    // before this restore — so the two fields are left as they were. In
-    // dummy/file mode there is no device to diverge from, so the file's
-    // (possibly empty) macros are always the new truth.
+    // writeVilToDevice skips the macro buffer write when vil.macros is empty,
+    // so on a real device the two macro fields keep what they had: replacing
+    // them would show no macros on screen while the device still holds
+    // whatever it had before this restore. In dummy/file mode there is no
+    // device to diverge from, so the file's macros are always the new truth.
+    const macroWriteSkipped = !isDummy && vil.macros.length === 0
     const macroFields: Partial<Pick<KeyboardState, 'macroBuffer' | 'parsedMacros'>> =
-      !isDummy && vil.macros.length === 0
+      macroWriteSkipped
         ? {}
         : {
             macroBuffer: vil.macros,

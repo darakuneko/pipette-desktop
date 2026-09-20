@@ -44,9 +44,9 @@ function renderSetters(env: ReturnType<typeof setup>) {
   ))
 }
 
-/** Waits for every pending microtask to flush, without relying on a fixed
- *  number of `await Promise.resolve()` chains lining up with the
- *  implementation's own await count. */
+/** Yields a macrotask so every pending microtask has run — lets a test
+ *  observe what has started so far without counting the implementation's
+ *  own awaits. */
 function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0))
 }
