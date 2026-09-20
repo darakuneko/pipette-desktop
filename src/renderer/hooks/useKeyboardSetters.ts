@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import type {
   TapDanceEntry,
   ComboEntry,
@@ -11,6 +11,7 @@ import type { MacroAction } from '../../preload/macro'
 import type { BootGuardRef, BulkKeyEntry, SetState, KeyboardState } from './keyboard-types'
 import { BulkKeyWriteError } from './keyboard-types'
 import { isResetKeycode } from '../../shared/keycodes/keycodes'
+import { padMacroBuffer } from './pad-macro-buffer'
 
 export function useKeyboardSetters(
   setState: SetState,
@@ -131,10 +132,54 @@ export function useKeyboardSetters(
     bumpActivity()
   }, [setState, stateRef, bumpActivity])
 
+  // Chained (never rejecting) promise that serializes macro writes: a call
+  // in flight — its save and, if that fails, the write-back it triggers —
+  // always finishes before the next call's own HID write starts. Without
+  // this, two overlapping saves (e.g. the macro editor's Save button
+  // pressed twice) could interleave their 28-byte chunk writes, or an
+  // earlier call's write-back could land on the device after a later
+  // call's save already succeeded.
+  const macroWriteChainRef = useRef<Promise<void>>(Promise.resolve())
+
   const setMacroBuffer = useCallback(async (buffer: number[], parsedMacros?: MacroAction[][]) => {
-    if (!stateRef.current.isDummy) {
-      await window.vialAPI.setMacroBuffer(buffer)
+    if (stateRef.current.isDummy) {
+      setState((s) => ({ ...s, macroBuffer: buffer, parsedMacros: parsedMacros ?? null }))
+      bumpActivity()
+      return
     }
+
+    const previousChain = macroWriteChainRef.current
+    let releaseChain!: () => void
+    macroWriteChainRef.current = new Promise<void>((resolve) => { releaseChain = resolve })
+    await previousChain
+
+    // Captured after waiting for the previous call, so a write-back below
+    // targets what the device actually holds right now rather than a value
+    // an overlapping call already moved past.
+    const previousBuffer = stateRef.current.macroBuffer
+    const previousSize = stateRef.current.macroBufferSize
+
+    try {
+      await window.vialAPI.setMacroBuffer(buffer)
+    } catch (err) {
+      // Best-effort restore of what the device held before this failed
+      // write, padded/truncated to its real buffer length (see
+      // padMacroBuffer). The original error is always what the caller
+      // sees — a write-back failure only adds a log line, since the
+      // caller can't act differently on it and the device may simply be
+      // disconnected at this point.
+      if (previousSize > 0) {
+        try {
+          await window.vialAPI.setMacroBuffer(padMacroBuffer(previousBuffer, previousSize))
+        } catch (writeBackErr) {
+          console.error('[KB] macro buffer write-back failed:', writeBackErr)
+        }
+      }
+      throw err
+    } finally {
+      releaseChain()
+    }
+
     setState((s) => ({ ...s, macroBuffer: buffer, parsedMacros: parsedMacros ?? null }))
     bumpActivity()
   }, [setState, stateRef, bumpActivity])

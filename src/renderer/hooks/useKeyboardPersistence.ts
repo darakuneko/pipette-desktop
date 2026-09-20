@@ -9,6 +9,7 @@ import { splitMacroBuffer, deserializeMacro, macroActionsToJson, jsonToMacroActi
 import { parseDefinitionLayout } from '../../shared/kle/definition-layout'
 import type { SetState, KeyboardRefs, BootGuardRef, ApplyVilResult, KeyboardState } from './keyboard-types'
 import { emptyState } from './keyboard-types'
+import { padMacroBuffer } from './pad-macro-buffer'
 
 /** The subset of `VilFile` that `writeVilToDevice` actually writes over
  *  HID. `serializeDeviceFields()` produces exactly this — the fields
@@ -61,9 +62,7 @@ async function writeVilToDevice(
   }
 
   if (opts?.padMacrosTo && opts.padMacrosTo > 0) {
-    const padded = vil.macros.slice(0, opts.padMacrosTo)
-    while (padded.length < opts.padMacrosTo) padded.push(0)
-    await api.setMacroBuffer(padded)
+    await api.setMacroBuffer(padMacroBuffer(vil.macros, opts.padMacrosTo))
   } else if (vil.macros.length > 0) {
     await api.setMacroBuffer(vil.macros)
   }
