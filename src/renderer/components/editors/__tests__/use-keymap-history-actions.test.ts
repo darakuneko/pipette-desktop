@@ -8,6 +8,7 @@ import { useKeymapHistory } from '../useKeymapHistory'
 import { BulkKeyWriteError } from '../../../hooks/useKeyboard'
 import type { BulkKeyEntry } from '../../../hooks/useKeyboard'
 import type { SingleHistoryEntry } from '../useKeymapHistory'
+import type { PopoverState } from '../keymap-editor-types'
 
 const keyEntry = (old: number, neu: number, row = 0, col = 0, layer = 0): SingleHistoryEntry => ({
   kind: 'key', layer, row, col, oldKeycode: old, newKeycode: neu,
@@ -24,6 +25,8 @@ type SetEncoderFn = (layer: number, idx: number, dir: number, keycode: number) =
 interface HarnessOverrides {
   onSetKeysBulk?: ReturnType<typeof vi.fn<SetKeysBulkFn>>
   onSetEncoder?: ReturnType<typeof vi.fn<SetEncoderFn>>
+  popoverState?: PopoverState | null
+  currentLayer?: number
 }
 
 function renderHarness(overrides: HarnessOverrides = {}) {
@@ -37,8 +40,8 @@ function renderHarness(overrides: HarnessOverrides = {}) {
     const history = useKeymapHistory(100)
     const actions = useKeymapHistoryActions({
       history,
-      popoverState: null,
-      currentLayer: 0,
+      popoverState: overrides.popoverState ?? null,
+      currentLayer: overrides.currentLayer ?? 0,
       onSetKey,
       onSetKeysBulk,
       onSetEncoder,
@@ -55,7 +58,13 @@ function renderHarness(overrides: HarnessOverrides = {}) {
     act(() => rendered.result.current.history.push({ kind: 'batch', entries }))
   }
 
-  return { ...rendered, pushBatch, onSetKey, onSetKeysBulk, onSetEncoder, onHistoryApplied, closePopoverIfEpochMatches }
+  /** Pushes a single (non-batch) entry — the shape the aux-undo tests need,
+   *  since `matchEntryAtPosition` only ever matches a non-batch top entry. */
+  function pushSingle(entry: SingleHistoryEntry) {
+    act(() => rendered.result.current.history.push(entry))
+  }
+
+  return { ...rendered, pushBatch, pushSingle, onSetKey, onSetKeysBulk, onSetEncoder, onHistoryApplied, closePopoverIfEpochMatches }
 }
 
 describe('useKeymapHistoryActions — batch undo/redo partial-failure', () => {
@@ -256,5 +265,140 @@ describe('useKeymapHistoryActions — batch undo/redo partial-failure', () => {
     expect(result.current.history.canUndo).toBe(true)
     expect(result.current.history.canRedo).toBe(false)
     expect(closePopoverIfEpochMatches).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('useKeymapHistoryActions — middle-click undo (handleKeyAuxUndo)', () => {
+  it('undoes when the top undo entry is a single (non-batch) entry for the same key on the current layer: writes the old keycode and leaves a redo entry', async () => {
+    const { result, pushSingle, onSetKey } = renderHarness()
+    pushSingle(keyEntry(5, 9, 1, 2))
+
+    await act(async () => { result.current.handleKeyAuxUndo({ row: 1, col: 2 }) })
+
+    expect(onSetKey).toHaveBeenCalledWith(0, 1, 2, 5)
+    expect(result.current.history.canUndo).toBe(false)
+    expect(result.current.history.canRedo).toBe(true)
+  })
+
+  it('a subsequent redo re-applies the new keycode', async () => {
+    const { result, pushSingle, onSetKey } = renderHarness()
+    pushSingle(keyEntry(5, 9, 1, 2))
+    await act(async () => { result.current.handleKeyAuxUndo({ row: 1, col: 2 }) })
+    onSetKey.mockClear()
+
+    await act(async () => { await result.current.handleRedo() })
+
+    expect(onSetKey).toHaveBeenCalledWith(0, 1, 2, 9)
+  })
+
+  it('does nothing when the top entry is for a different key', async () => {
+    const { result, pushSingle, onSetKey } = renderHarness()
+    pushSingle(keyEntry(5, 9, 1, 2))
+
+    await act(async () => { result.current.handleKeyAuxUndo({ row: 3, col: 4 }) })
+
+    expect(onSetKey).not.toHaveBeenCalled()
+    expect(result.current.history.canUndo).toBe(true)
+  })
+
+  it('does nothing when the top entry is on a different layer', async () => {
+    const { result, pushSingle, onSetKey } = renderHarness({ currentLayer: 1 })
+    pushSingle(keyEntry(5, 9, 1, 2, 0))
+
+    await act(async () => { result.current.handleKeyAuxUndo({ row: 1, col: 2 }) })
+
+    expect(onSetKey).not.toHaveBeenCalled()
+  })
+
+  it('does nothing when the top entry is a batch', async () => {
+    const { result, pushBatch, onSetKeysBulk } = renderHarness()
+    pushBatch([keyEntry(5, 9, 1, 2)])
+
+    await act(async () => { result.current.handleKeyAuxUndo({ row: 1, col: 2 }) })
+
+    expect(onSetKeysBulk).not.toHaveBeenCalled()
+    expect(result.current.history.canUndo).toBe(true)
+  })
+
+  it('does nothing when history is empty', async () => {
+    const { result, onSetKey } = renderHarness()
+
+    await act(async () => { result.current.handleKeyAuxUndo({ row: 0, col: 0 }) })
+
+    expect(onSetKey).not.toHaveBeenCalled()
+  })
+
+  it('an old keycode of 0 (KC_NO) is still a valid undo target', async () => {
+    const { result, pushSingle, onSetKey } = renderHarness()
+    pushSingle(keyEntry(0, 4, 1, 2))
+
+    await act(async () => { result.current.handleKeyAuxUndo({ row: 1, col: 2 }) })
+
+    expect(onSetKey).toHaveBeenCalledWith(0, 1, 2, 0)
+  })
+})
+
+describe('useKeymapHistoryActions — middle-click undo (handleEncoderAuxUndo)', () => {
+  it('undoes when the top undo entry is a single entry for the same encoder position on the current layer', async () => {
+    const { result, pushSingle, onSetEncoder } = renderHarness()
+    pushSingle(encoderEntry(1, 2, 0, 1))
+
+    await act(async () => { result.current.handleEncoderAuxUndo({ idx: 0, dir: 1 }) })
+
+    expect(onSetEncoder).toHaveBeenCalledWith(0, 0, 1, 1)
+    expect(result.current.history.canRedo).toBe(true)
+  })
+
+  it('does nothing when the top entry is for a different encoder direction', async () => {
+    const { result, pushSingle, onSetEncoder } = renderHarness()
+    pushSingle(encoderEntry(1, 2, 0, 1))
+
+    await act(async () => { result.current.handleEncoderAuxUndo({ idx: 0, dir: 0 }) })
+
+    expect(onSetEncoder).not.toHaveBeenCalled()
+  })
+
+  it('does nothing when history is empty', async () => {
+    const { result, onSetEncoder } = renderHarness()
+
+    await act(async () => { result.current.handleEncoderAuxUndo({ idx: 0, dir: 0 }) })
+
+    expect(onSetEncoder).not.toHaveBeenCalled()
+  })
+})
+
+describe('useKeymapHistoryActions — popover top-only match regression', () => {
+  const keyPopover = (row: number, col: number): PopoverState => ({
+    anchorRect: {} as DOMRect, kind: 'key', row, col, maskClicked: false,
+  })
+  const encoderPopover = (idx: number, dir: 0 | 1): PopoverState => ({
+    anchorRect: {} as DOMRect, kind: 'encoder', idx, dir, maskClicked: false,
+  })
+
+  it('popoverUndoKeycode surfaces the old keycode for a matching key popover', () => {
+    const { result, pushSingle } = renderHarness({ popoverState: keyPopover(1, 2) })
+    pushSingle(keyEntry(5, 9, 1, 2))
+    expect(result.current.popoverUndoKeycode).toBe(5)
+  })
+
+  it('popoverUndoKeycode is undefined for a non-matching popover position', () => {
+    const { result, pushSingle } = renderHarness({ popoverState: keyPopover(9, 9) })
+    pushSingle(keyEntry(5, 9, 1, 2))
+    expect(result.current.popoverUndoKeycode).toBeUndefined()
+  })
+
+  it('popoverUndoKeycode surfaces the old keycode for a matching encoder popover', () => {
+    const { result, pushSingle } = renderHarness({ popoverState: encoderPopover(0, 1) })
+    pushSingle(encoderEntry(3, 4, 0, 1))
+    expect(result.current.popoverUndoKeycode).toBe(3)
+  })
+
+  it('handlePopoverUndo still writes through onSetKey for a matching key popover', async () => {
+    const { result, pushSingle, onSetKey } = renderHarness({ popoverState: keyPopover(1, 2) })
+    pushSingle(keyEntry(5, 9, 1, 2))
+
+    await act(async () => { result.current.handlePopoverUndo() })
+
+    expect(onSetKey).toHaveBeenCalledWith(0, 1, 2, 5)
   })
 })

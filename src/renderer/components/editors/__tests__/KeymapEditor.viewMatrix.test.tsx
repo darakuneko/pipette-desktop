@@ -41,16 +41,19 @@ type CapturedEvent = { ctrlKey: boolean; shiftKey: boolean }
 let capturedOnKeyClick: ((key: CapturedKey, maskClicked?: boolean, event?: CapturedEvent) => void) | undefined
 let capturedMultiSelectedKeys: Set<string> | undefined
 let capturedKeyColors: Map<string, string> | undefined
+let capturedOnKeyAuxClick: ((pos: { row: number; col: number }) => void) | undefined
 
 vi.mock('../../keyboard/KeyboardWidget', () => ({
   KeyboardWidget: (props: {
     onKeyClick?: (key: CapturedKey, maskClicked?: boolean, event?: CapturedEvent) => void
     multiSelectedKeys?: Set<string>
     keyColors?: Map<string, string>
+    onKeyAuxClick?: (pos: { row: number; col: number }) => void
   }) => {
     capturedOnKeyClick = props.onKeyClick
     capturedMultiSelectedKeys = props.multiSelectedKeys
     capturedKeyColors = props.keyColors
+    capturedOnKeyAuxClick = props.onKeyAuxClick
     return <div data-testid="keyboard-widget">KeyboardWidget</div>
   },
 }))
@@ -154,6 +157,15 @@ describe('KeymapEditor — View Matrix mode', () => {
     capturedOnKeyClick = undefined
     capturedMultiSelectedKeys = undefined
     capturedKeyColors = undefined
+    capturedOnKeyAuxClick = undefined
+  })
+
+  it('passes the middle-click undo handler in normal mode, and omits it entirely while View Matrix mode is active', () => {
+    render(<KeymapEditor {...defaultProps} />)
+    expect(capturedOnKeyAuxClick).toBeInstanceOf(Function)
+
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+    expect(capturedOnKeyAuxClick).toBeUndefined()
   })
 
   function enterMode() {

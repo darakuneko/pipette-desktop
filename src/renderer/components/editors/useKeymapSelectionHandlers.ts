@@ -534,6 +534,7 @@ export function useKeymapSelectionHandlers({
     popoverUndoKeycode, handlePopoverUndo,
     popoverRedoKeycode, handlePopoverRedo,
     handleUndo, handleRedo,
+    handleKeyAuxUndo, handleEncoderAuxUndo,
   } = useKeymapHistoryActions({
     history, popoverState, currentLayer,
     onSetKey, onSetKeysBulk, onSetEncoder,
@@ -577,6 +578,7 @@ export function useKeymapSelectionHandlers({
     handlePopoverRedo,
     handleUndo,
     handleRedo,
+    auxUndoHandlers: { onKeyAuxClick: handleKeyAuxUndo, onEncoderAuxClick: handleEncoderAuxUndo },
     // Deselect
     handleDeselect,
     handleDeselectClick,

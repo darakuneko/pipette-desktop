@@ -141,7 +141,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     handleKeycodeSelect, handlePopoverKeycodeSelect, handlePopoverRawKeycodeSelect,
     handlePopoverModMaskChange, popoverUndoKeycode, handlePopoverUndo,
     popoverRedoKeycode, handlePopoverRedo,
-    handleUndo, handleRedo,
+    handleUndo, handleRedo, auxUndoHandlers,
     handleDeselect, handleDeselectClick,
     tdModalIndex, macroModalIndex, handleTdModalSave, handleTdModalClose, handleMacroModalClose,
   } = useKeymapSelectionHandlers({
@@ -418,6 +418,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                 flash={flash} multiSelectedKeys={multiSelectedKeys} primaryRemapLabel={primaryRemapLabel}
                 handleKeyClick={handleKeyClick} handleKeyDoubleClick={handleKeyDoubleClick} handleEncoderClick={handleEncoderClick} handleEncoderDoubleClick={handleEncoderDoubleClick}
                 handleDeselect={handleDeselect} handlePackTabChange={handlePackTabChange} keymapPackName={keymapPackName}
+                auxUndoHandlers={viewMatrixMode.active ? undefined : auxUndoHandlers}
                 {...viewMatrixPaneProps}
               />
               {/* The relocated zoom row the toolbar comment above points to

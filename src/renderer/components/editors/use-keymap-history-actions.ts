@@ -16,16 +16,33 @@ interface ApplyHistoryFailure {
   error: unknown
 }
 
-/** Match a history entry against the current popover position, returning the keycode if matched. */
-function matchPopoverEntry(
-  popoverState: PopoverState | null,
+/** A key or encoder position to match a history entry against — shared by
+ *  the popover's top-only undo/redo and the keyboard's middle-click undo,
+ *  so both read the exact same matching rule instead of each keeping its
+ *  own copy. */
+export type HistoryMatchPosition =
+  | { kind: 'key'; row: number; col: number }
+  | { kind: 'encoder'; idx: number; dir: number }
+
+/** `PopoverState`'s position fields, read into the shared `HistoryMatchPosition`
+ *  shape `matchEntryAtPosition` below expects. */
+function popoverPosition(popoverState: PopoverState | null): HistoryMatchPosition | null {
+  if (!popoverState) return null
+  return popoverState.kind === 'key'
+    ? { kind: 'key', row: popoverState.row, col: popoverState.col }
+    : { kind: 'encoder', idx: popoverState.idx, dir: popoverState.dir }
+}
+
+/** Match a history entry against a position, returning the keycode if matched. */
+function matchEntryAtPosition(
+  position: HistoryMatchPosition | null,
   entry: HistoryEntry | null,
   currentLayer: number,
   field: 'oldKeycode' | 'newKeycode',
 ): number | undefined {
-  if (!popoverState || !entry || entry.kind === 'batch') return undefined
-  if (popoverState.kind === 'key' && entry.kind === 'key' && entry.layer === currentLayer && entry.row === popoverState.row && entry.col === popoverState.col) return entry[field]
-  if (popoverState.kind === 'encoder' && entry.kind === 'encoder' && entry.layer === currentLayer && entry.idx === popoverState.idx && entry.dir === popoverState.dir) return entry[field]
+  if (!position || !entry || entry.kind === 'batch') return undefined
+  if (position.kind === 'key' && entry.kind === 'key' && entry.layer === currentLayer && entry.row === position.row && entry.col === position.col) return entry[field]
+  if (position.kind === 'encoder' && entry.kind === 'encoder' && entry.layer === currentLayer && entry.idx === position.idx && entry.dir === position.dir) return entry[field]
   return undefined
 }
 
@@ -71,7 +88,7 @@ export function useKeymapHistoryActions({
 }: UseKeymapHistoryActionsOptions) {
   // --- History-derived popover undo ---
   const popoverUndoKeycode = useMemo(
-    () => matchPopoverEntry(popoverState, history.peekUndo, currentLayer, 'oldKeycode'),
+    () => matchEntryAtPosition(popoverPosition(popoverState), history.peekUndo, currentLayer, 'oldKeycode'),
     [popoverState, currentLayer, history.peekUndo],
   )
 
@@ -180,7 +197,7 @@ export function useKeymapHistoryActions({
 
   // --- History-derived popover redo (top-only) ---
   const popoverRedoKeycode = useMemo(
-    () => matchPopoverEntry(popoverState, history.peekRedo, currentLayer, 'newKeycode'),
+    () => matchEntryAtPosition(popoverPosition(popoverState), history.peekRedo, currentLayer, 'newKeycode'),
     [popoverState, currentLayer, history.peekRedo],
   )
 
@@ -188,6 +205,22 @@ export function useKeymapHistoryActions({
     if (popoverRedoKeycode == null) return
     void handleRedo()
   }, [popoverRedoKeycode, handleRedo])
+
+  // --- Middle-click undo (keyboard/encoder widget) — the same top-only
+  // match as the popover's Undo button, just keyed by a clicked position
+  // instead of the open popover's. `!= null` (not truthiness) because a
+  // matched old keycode of 0 (KC_NO) is a valid undo target. ---
+  const handleKeyAuxUndo = useCallback((pos: { row: number; col: number }) => {
+    const matched = matchEntryAtPosition({ kind: 'key', row: pos.row, col: pos.col }, history.peekUndo, currentLayer, 'oldKeycode')
+    if (matched == null) return
+    void handleUndo()
+  }, [history.peekUndo, currentLayer, handleUndo])
+
+  const handleEncoderAuxUndo = useCallback((pos: { idx: number; dir: number }) => {
+    const matched = matchEntryAtPosition({ kind: 'encoder', idx: pos.idx, dir: pos.dir }, history.peekUndo, currentLayer, 'oldKeycode')
+    if (matched == null) return
+    void handleUndo()
+  }, [history.peekUndo, currentLayer, handleUndo])
 
   // --- Keyboard shortcuts for undo/redo ---
   useEffect(() => {
@@ -213,5 +246,7 @@ export function useKeymapHistoryActions({
     handlePopoverRedo,
     handleUndo,
     handleRedo,
+    handleKeyAuxUndo,
+    handleEncoderAuxUndo,
   }
 }

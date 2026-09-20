@@ -83,6 +83,13 @@ export interface KeyboardPaneProps {
   onKeyDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
   onEncoderClick?: (key: KleKey, dir: number, maskClicked: boolean) => void
   onEncoderDoubleClick?: (key: KleKey, dir: number, rect: DOMRect, maskClicked: boolean) => void
+  /** Middle-click undo — see `KeyboardWidget`'s `onKeyAuxClick`. Reaches
+   *  `KeyboardWidget` only when `isActive`, the same gate `onKeyClick` etc.
+   *  already go through below. */
+  onKeyAuxClick?: (pos: { row: number; col: number }) => void
+  /** Encoder analogue of `onKeyAuxClick` — see `KeyboardWidget`'s
+   *  `onEncoderAuxClick`. */
+  onEncoderAuxClick?: (pos: { idx: number; dir: number }) => void
   onKeyHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
   onKeyHoverEnd?: () => void
   onDeselect?: () => void
@@ -124,6 +131,8 @@ export function KeyboardPane({
   onKeyDoubleClick,
   onEncoderClick,
   onEncoderDoubleClick,
+  onKeyAuxClick,
+  onEncoderAuxClick,
   onKeyHover,
   onKeyHoverEnd,
   onDeselect,
@@ -169,6 +178,8 @@ export function KeyboardPane({
           onKeyDoubleClick={isActive ? onKeyDoubleClick : undefined}
           onEncoderClick={isActive ? onEncoderClick : undefined}
           onEncoderDoubleClick={isActive ? onEncoderDoubleClick : undefined}
+          onKeyAuxClick={isActive ? onKeyAuxClick : undefined}
+          onEncoderAuxClick={isActive ? onEncoderAuxClick : undefined}
           onKeyHover={onKeyHover}
           onKeyHoverEnd={onKeyHoverEnd}
         />

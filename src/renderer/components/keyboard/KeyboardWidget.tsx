@@ -72,6 +72,13 @@ interface Props {
   onEncoderDoubleClick?: (key: KleKey, direction: number, rect: DOMRect, maskClicked: boolean) => void
   onKeyHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
   onKeyHoverEnd?: () => void
+  /** Middle-click (mouse button 1) on a key delegated from the root `<svg>`
+   *  — see the `auxclick`/`mousedown`/`mouseup` handlers below for why this
+   *  is delegated rather than a per-`KeyWidget` prop. Gated the same way as
+   *  `onKeyClick`: `readOnly` (or omitting both aux handlers) drops it. */
+  onKeyAuxClick?: (pos: { row: number; col: number }) => void
+  /** Encoder analogue of `onKeyAuxClick`. */
+  onEncoderAuxClick?: (pos: { idx: number; dir: number }) => void
   readOnly?: boolean
   scale?: number
   /** View Matrix wiring overlay: each physical key's effective (row, col)
@@ -113,11 +120,51 @@ function KeyboardWidgetInner({
   onEncoderDoubleClick,
   onKeyHover,
   onKeyHoverEnd,
+  onKeyAuxClick,
+  onEncoderAuxClick,
   readOnly = false,
   scale = 1,
   matrixWires,
 }: Props) {
   const effectiveTheme = useEffectiveTheme()
+
+  // Middle-click undo: delegated on the root `<svg>` (rather than a handler
+  // per KeyWidget/EncoderWidget) since it only ever needs to resolve
+  // `event.target` back to a position via the `data-key-pos`/
+  // `data-encoder-pos` attributes those widgets already carry. `readOnly`
+  // is the single gate every other edit path here already goes through
+  // (`onClick={readOnly ? undefined : onKeyClick}` above/below), so aux
+  // click is withheld the same way — and only wired up at all when the
+  // caller actually passed one of the two handlers, so a plain read-only
+  // preview pane (which passes neither) never attaches a middle-button
+  // listener it has nothing to do with.
+  const auxUndoEnabled = !readOnly && (onKeyAuxClick != null || onEncoderAuxClick != null)
+
+  // Chromium starts its Linux-style autoscroll AND (separately) its
+  // PRIMARY-selection paste from the middle-button press/release, not from
+  // `auxclick` — by the time `auxclick` fires both side effects have
+  // already run. `mousedown` cancels the autoscroll; `mouseup` cancels the
+  // paste. Left-button presses pass straight through untouched.
+  const cancelMiddleButtonDefault = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (e.button === 1) e.preventDefault()
+  }
+
+  const handleAuxClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (e.button !== 1) return
+    const target = e.target as Element
+    const keyEl = target.closest('[data-key-pos]')
+    if (keyEl) {
+      const raw = keyEl.getAttribute('data-key-pos')
+      const [row, col] = raw ? raw.split(',').map(Number) : [NaN, NaN]
+      if (Number.isFinite(row) && Number.isFinite(col)) onKeyAuxClick?.({ row, col })
+      return
+    }
+    const encEl = target.closest('[data-encoder-pos]')
+    if (!encEl) return
+    const raw = encEl.getAttribute('data-encoder-pos')
+    const [idx, dir] = raw ? raw.split(',').map(Number) : [NaN, NaN]
+    if (Number.isFinite(idx) && Number.isFinite(dir)) onEncoderAuxClick?.({ idx, dir })
+  }
 
   // Reposition runs on the full key list (including decals) so option 0's
   // bounding box is computed correctly; decals are dropped afterwards by
@@ -202,6 +249,9 @@ function KeyboardWidgetInner({
       height={bounds.height}
       viewBox={`${bounds.originX} ${bounds.originY} ${bounds.width} ${bounds.height}`}
       className="select-none"
+      onMouseDown={auxUndoEnabled ? cancelMiddleButtonDefault : undefined}
+      onMouseUp={auxUndoEnabled ? cancelMiddleButtonDefault : undefined}
+      onAuxClick={auxUndoEnabled ? handleAuxClick : undefined}
     >
       {/* Render non-selected keys first, then selected key on top so its
           stroke is never hidden by adjacent keys painted later in DOM order */}

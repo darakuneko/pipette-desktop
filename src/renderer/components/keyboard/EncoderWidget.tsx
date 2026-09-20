@@ -137,7 +137,13 @@ function EncoderWidgetInner({
   if (!masked) {
     const labelLines = keycodeLabel(keycode).split('\n')
     return (
-      <g transform={groupTransform} onClick={handleClick} onDoubleClick={handleDoubleClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
+      <g
+        transform={groupTransform}
+        data-encoder-pos={`${kleKey.encoderIdx},${kleKey.encoderDir}`}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        style={{ cursor: onClick ? 'pointer' : 'default' }}
+      >
         <circle cx={cx} cy={cy} r={r} fill={fillColor}
           stroke={outerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR} strokeWidth={outerBorderActive ? 2 : 1} />
         {flashOverlay}
@@ -179,7 +185,13 @@ function EncoderWidgetInner({
   }
 
   return (
-    <g transform={groupTransform} onClick={handleClick} onDoubleClick={handleDoubleClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
+    <g
+      transform={groupTransform}
+      data-encoder-pos={`${kleKey.encoderIdx},${kleKey.encoderDir}`}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
+      style={{ cursor: onClick ? 'pointer' : 'default' }}
+    >
       <defs>
         <clipPath id={clipId}>
           <circle cx={cx} cy={cy} r={r - 1} />

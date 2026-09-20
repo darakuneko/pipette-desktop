@@ -23,14 +23,17 @@ vi.mock('../../../hooks/useAppConfig', () => ({
 
 let capturedOnKeyClick: ((key: { row: number; col: number }) => void) | undefined
 let capturedOnKeyDoubleClick: ((key: { row: number; col: number }, rect: DOMRect, maskClicked?: boolean) => void) | undefined
+let capturedOnKeyAuxClick: ((pos: { row: number; col: number }) => void) | undefined
 
 vi.mock('../../keyboard/KeyboardWidget', () => ({
   KeyboardWidget: (props: {
     onKeyClick?: (key: { row: number; col: number }) => void
     onKeyDoubleClick?: (key: { row: number; col: number }, rect: DOMRect, maskClicked?: boolean) => void
+    onKeyAuxClick?: (pos: { row: number; col: number }) => void
   }) => {
     capturedOnKeyClick = props.onKeyClick
     capturedOnKeyDoubleClick = props.onKeyDoubleClick
+    capturedOnKeyAuxClick = props.onKeyAuxClick
     return <div data-testid="keyboard-widget">KeyboardWidget</div>
   },
 }))
@@ -170,6 +173,7 @@ describe('KeymapEditor — undo after single-click selection', () => {
     vi.clearAllMocks()
     capturedOnKeyClick = undefined
     capturedOnKeyDoubleClick = undefined
+    capturedOnKeyAuxClick = undefined
     capturedPreviousKeycode = undefined
     capturedNextKeycode = undefined
   })
@@ -196,6 +200,31 @@ describe('KeymapEditor — undo after single-click selection', () => {
     // Undo button should appear with previous keycode (5 = KC_B)
     expect(screen.getByTestId('popover-undo')).toBeInTheDocument()
     expect(capturedPreviousKeycode).toBe(5)
+  })
+
+  it('middle-click on the key undoes the single change just made to it', async () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
+    await act(async () => { fireEvent.click(screen.getByTestId('kc-a')) })
+    expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 4)
+    onSetKey.mockClear()
+
+    await act(async () => { capturedOnKeyAuxClick?.({ row: 0, col: 0 }) })
+
+    expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 5) // reverted to original
+  })
+
+  it('middle-click on a different key does nothing', async () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
+    await act(async () => { fireEvent.click(screen.getByTestId('kc-a')) })
+    onSetKey.mockClear()
+
+    await act(async () => { capturedOnKeyAuxClick?.({ row: 0, col: 1 }) })
+
+    expect(onSetKey).not.toHaveBeenCalled()
   })
 
   it('does NOT show undo when popover is opened without prior single-click assignment', () => {
@@ -282,6 +311,7 @@ describe('KeymapEditor — Ctrl+Z / Ctrl+Y keyboard shortcuts', () => {
     vi.clearAllMocks()
     capturedOnKeyClick = undefined
     capturedOnKeyDoubleClick = undefined
+    capturedOnKeyAuxClick = undefined
     capturedPreviousKeycode = undefined
     capturedNextKeycode = undefined
   })
@@ -432,6 +462,7 @@ describe('KeymapEditor — popover redo', () => {
     vi.clearAllMocks()
     capturedOnKeyClick = undefined
     capturedOnKeyDoubleClick = undefined
+    capturedOnKeyAuxClick = undefined
     capturedPreviousKeycode = undefined
     capturedNextKeycode = undefined
   })

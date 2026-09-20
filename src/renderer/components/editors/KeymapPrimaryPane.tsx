@@ -51,6 +51,14 @@ export interface KeymapPrimaryPaneProps {
    *  Only reaches the normal/Base `KeyboardPane` branch below; the pack
    *  simulation preview branch never receives it. */
   matrixWires?: ReadonlyMap<string, { row: number; col: number }>
+  /** Middle-click undo handlers, bundled into one prop so `KeymapEditor.tsx`
+   *  (at its file line cap) only has to thread a single field through —
+   *  see `KeyboardWidget`'s `onKeyAuxClick`/`onEncoderAuxClick`. Reaches
+   *  the normal/Base `KeyboardPane` branch only, never the pack simulation
+   *  preview branch (which is `readOnly` and takes no selection props at
+   *  all). The caller omits this entirely while View Matrix mode is
+   *  active. */
+  auxUndoHandlers?: { onKeyAuxClick: (pos: { row: number; col: number }) => void; onEncoderAuxClick: (pos: { idx: number; dir: number }) => void }
   handleViewMatrixKeyClick: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   handleKeyClick: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   handleKeyDoubleClick: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
@@ -73,7 +81,7 @@ export function KeymapPrimaryPane({
   onRequestKeymapApply, keymapApplyBusy, keymapApplyError, contentRef, primaryKeycodes, primaryEncoderKeycodes,
   selectedKey, selectedEncoder, selectedMaskPart, selectedKeycode,
   primaryRemappedKeys, primaryRemappedEncoders, flash, viewMatrixMode, multiSelectedKeys,
-  viewMatrixLabelOverrides, viewMatrixDuplicateKeyColors, primaryRemapLabel, matrixWires,
+  viewMatrixLabelOverrides, viewMatrixDuplicateKeyColors, primaryRemapLabel, matrixWires, auxUndoHandlers,
   handleViewMatrixKeyClick, handleKeyClick, handleKeyDoubleClick, handleEncoderClick, handleEncoderDoubleClick,
   handleDeselect, handlePackTabChange, keymapPackName,
 }: KeymapPrimaryPaneProps): JSX.Element {
@@ -123,6 +131,7 @@ export function KeymapPrimaryPane({
           layoutOptions={layoutOptions} scale={scale}
           labelOverrides={viewMatrixLabelOverrides} keyColors={viewMatrixDuplicateKeyColors} remapLabel={primaryRemapLabel}
           matrixWires={matrixWires}
+          onKeyAuxClick={auxUndoHandlers?.onKeyAuxClick} onEncoderAuxClick={auxUndoHandlers?.onEncoderAuxClick}
           layerLabel={viewMatrixMode.active ? undefined : currentLayerLabel} layerLabelTestId="layer-label"
           onKeyClick={viewMatrixMode.active ? handleViewMatrixKeyClick : handleKeyClick}
           onKeyDoubleClick={viewMatrixMode.active ? undefined : handleKeyDoubleClick}
