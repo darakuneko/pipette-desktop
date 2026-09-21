@@ -361,11 +361,11 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
             Missed table, ...) a given run actually has above/below it — it
             either wastes space or (on a shorter window, or a run with more
             of that chrome) still overflows the pane. TypingTestView.tsx
-            now instead extends this same flex chain up through its own
-            finished-state wrapper, so this scrollport ends up correctly
-            sized without any cap at all, in both the modal and the
-            completion-screen contexts alike — see TypingTestView.tsx's own
-            "Completion screen" comment for the exact chain. */}
+            extends this same flex chain up through the finished-state
+            wrapper in TypingTestFinishedSection.tsx, so this scrollport
+            ends up correctly sized without any cap at all, in both the
+            modal and the completion-screen contexts alike — see its
+            FLEX-HEIGHT CHAIN comment for the exact chain. */}
         <div
           ref={containerRef}
           className="keystroke-timeline-scrollport relative min-h-0 flex-1 overflow-auto p-2"
