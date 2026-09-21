@@ -73,8 +73,10 @@ interface FinishedSectionProps {
       PRIORITY section — covers how it and the Missed box below it
       share the remaining height; the scrollport's own comment
       explains why it is the one that scrolls internally. The Missed
-      box's own wrapper (`min-h-0`, `typing-test-missed-box`) shrinks
-      together with the timeline box above it; only its rows use a
+      box's own wrapper (`min-h-0`, `typing-test-missed-box`) keeps its
+      content size — the timeline box above it is the one carrying
+      `flex-1` and taking the remaining space — but being `min-h-0`
+      it can still shrink when space runs short; only its rows use a
       separately capped scrollport (`missed-table-scrollport`,
       `overflow-y-auto` with a `maxHeightClass`) in `MissedTable`
       (mistake-summary.tsx).
