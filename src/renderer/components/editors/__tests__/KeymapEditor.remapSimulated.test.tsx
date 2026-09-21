@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-// Task-kaw-sim-color (4-angle review follow-up): `remapKind` is applied as
-// a pure CSS cascade override — the `remap-simulated` class (style.css) on
-// the single container wrapping the active keymap surface — rather than
-// threaded as a prop through KeyboardPane/TypingTestPane/KeyboardWidget/
-// KeyWidget/EncoderWidget. This covers the container-level toggle; the
-// simulated/actual derivation itself is covered by useDevicePrefs.test.ts's
-// "remapKind (Task-kaw-sim-color)" block.
+// `remapKind` is applied as a pure CSS cascade override — the
+// `remap-simulated` class (style.css) on the single container wrapping
+// the active keymap surface — rather than threaded as a prop through
+// KeyboardPane/TypingTestPane/KeyboardWidget/KeyWidget/EncoderWidget. This
+// covers the container-level toggle; the simulated/actual derivation
+// itself is covered by useDevicePrefs.test.ts's "remapKind" block.
 
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'

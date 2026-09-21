@@ -156,11 +156,11 @@ describe('KeymapEditor — View Matrix wiring overlay toggle', () => {
   })
 
   it('is absent on the pack simulation preview branch, which never receives matrixWires', () => {
-    // Plan-qwerty-select-no-rewrite v7: remapKind="simulated" + a pack name
-    // defaults to the read-only simulation (pack) tab, which renders the
-    // OTHER `KeyboardPane` branch in `KeymapPrimaryPane` — the one that
-    // never threads `matrixWires` through, by design (the overlay is a
-    // Base/normal-editing-only surface, see KeymapPrimaryPaneProps).
+    // remapKind="simulated" + a pack name defaults to the read-only
+    // simulation (pack) tab, which renders the OTHER `KeyboardPane` branch
+    // in `KeymapPrimaryPane` — the one that never threads `matrixWires`
+    // through, by design (the overlay is a Base/normal-editing-only
+    // surface, see KeymapPrimaryPaneProps).
     render(
       <KeymapEditor
         {...defaultProps({ viewMatrixWires: true })}

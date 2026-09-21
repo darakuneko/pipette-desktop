@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-// Plan-qwerty-select-no-rewrite v7 — シミュレーションタブ方式: tab visibility
-// (gated by the SINGLE `remapKind === 'simulated'` predicate), default tab,
-// UID-change reset, layout-change reset, read-only enforcement on the
-// simulation tab, full editability on Base, and the Apply button / confirm
-// modal wiring.
+// Tab visibility (gated by the SINGLE `remapKind === 'simulated'`
+// predicate), default tab, UID-change reset, layout-change reset,
+// read-only enforcement on the simulation tab, full editability on Base,
+// and the Apply button / confirm modal wiring.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, act } from '@testing-library/react'
@@ -166,10 +165,10 @@ describe('KeymapEditor — pack tabs (Plan-qwerty-select-no-rewrite v7)', () => 
       expect(getByTestId('keymap-pack-tab-base')).toHaveTextContent('Default')
     })
 
-    // FIX C (external review): `requestApply` already no-ops when the
-    // keymap isn't editable (`keymapEditable` false) — tab/Apply-button
-    // VISIBILITY must fold in the same condition, or the UI offers a
-    // tabs+Apply surface that silently does nothing when clicked.
+    // `requestApply` already no-ops when the keymap isn't editable
+    // (`keymapEditable` false) — tab/Apply-button VISIBILITY must fold in
+    // the same condition, or the UI offers a tabs+Apply surface that
+    // silently does nothing when clicked.
     it('renders no tabs and no Apply button when the keymap is empty (not editable), even though remapKind is "simulated"', () => {
       const onRequestKeymapApply = vi.fn()
       const { queryByTestId } = render(
@@ -205,8 +204,8 @@ describe('KeymapEditor — pack tabs (Plan-qwerty-select-no-rewrite v7)', () => 
 
       // A different keyboardUid (reconnect to another keyboard) — the
       // editor does NOT remount, so this must be observed via the existing
-      // uid-watching effect (KeymapEditor ~line 172), same one that clears
-      // history / exits View Matrix mode.
+      // uid-watching effect, same one that clears history / exits View
+      // Matrix mode.
       rerender(
         <KeymapEditor {...defaultProps({ keyboardUid: 'uid-2' })} remapKind="simulated" keymapPackName="Dvorak" onRequestKeymapApply={onRequestKeymapApply} />,
       )
@@ -317,7 +316,7 @@ describe('KeymapEditor — pack tabs (Plan-qwerty-select-no-rewrite v7)', () => 
         />,
       )
       expect(getByTestId('keymap-apply-confirm-modal')).toBeTruthy()
-      // No Display Only button (Plan-qwerty-select-no-rewrite v7).
+      // No Display Only button.
       expect(document.querySelector('[data-testid="keymap-apply-confirm-display-only"]')).toBeNull()
 
       fireEvent.click(getByTestId('keymap-apply-confirm-apply'))
