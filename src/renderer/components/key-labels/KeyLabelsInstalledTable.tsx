@@ -3,10 +3,11 @@
 // Installed/Hub tab row + table components for KeyLabelsModal.tsx:
 // `InstalledTable`/`InstalledRowView` for the Installed tab (rename,
 // Hub upload/update/remove, delete, drag reorder) and `HubTable` for
-// the Find on Hub tab (open/download). Both build on the shared
-// PackHubActions/PackDeleteActions — `canWrite` and
+// the Find on Hub tab (open/download). Only `InstalledRowView` builds on
+// the shared PackHubActions/PackDeleteActions — `canWrite` and
 // `hideOthersWhileConfirmingRemove` (PackHubActions.tsx) are the two
-// opt-in props Key Labels passes beyond their defaults.
+// opt-in props Key Labels passes beyond their defaults; `HubTable` renders
+// its own open/download controls directly.
 
 import { useTranslation } from 'react-i18next'
 import { GripVertical } from 'lucide-react'

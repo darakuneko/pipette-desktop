@@ -29,9 +29,9 @@
 // the forced double-tap form for that context (see the retroactive-commit
 // branch of `tryConsume`).
 //
-// KANA_TABLE and PUNCTUATION_TABLE (romaji-tables.ts) supply every
-// segment's valid keystroke spellings — the source-of-truth rule for what
-// KANA_TABLE may contain is in the header of romaji-tables.ts.
+// The spelling tables KANA_TABLE and PUNCTUATION_TABLE live in
+// romaji-tables.ts; the source-of-truth rule for what KANA_TABLE may
+// contain is in that file's header.
 
 import { toHiragana } from './kana-script'
 import { isRomajiPunctuation } from '../../shared/kana-purity'
