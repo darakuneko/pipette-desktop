@@ -24,7 +24,7 @@ const KANA_CHAR_PATTERN = /^[ぁ-ゖー]$/
 const WHITESPACE_PATTERN = /^\s$/
 
 // The Japanese punctuation the romaji engine can type (see PUNCTUATION_TABLE
-// in renderer/typing-test/romaji-engine.ts, whose keys are type-locked to
+// in renderer/typing-test/romaji-tables.ts, whose keys are type-locked to
 // this list). Allowed inside otherwise-kana text so imported sentences with
 // punctuation still qualify for romaji input, but a text of only these marks
 // is not "kana" and stays non-capable.
