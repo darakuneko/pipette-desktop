@@ -109,10 +109,11 @@ function EncoderWidgetInner({
   // Flash overlay + border redraw (Key Label "apply to keymap" rewrite /
   // undo/redo): shared by both the masked and non-masked branches below —
   // painted on top of the outer fill/stroke but below the label text /
-  // inner mask rect, mirroring `KeyWidget`'s `key-flash-overlay`. The
-  // second circle redraws a stroke-only border on top since the overlay's
-  // opaque fill paints over the outer stroke too, keeping the border crisp
-  // for the whole flash (mirrors `KeyWidget`'s `flash-overlay-border`).
+  // inner mask rect, mirroring `KeyFlashOverlay`'s `key-flash-overlay`.
+  // The second circle redraws a stroke-only border on top since the
+  // overlay's opaque fill paints over the outer stroke too, keeping the
+  // border crisp for the whole flash (mirrors `KeyFlashOverlay`'s
+  // `flash-overlay-border`).
   const flashOverlay = flashed ? (
     <>
       <circle

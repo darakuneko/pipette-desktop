@@ -35,15 +35,16 @@ export function KeyFlashOverlay({
       {/* Post-rewrite flash overlay (Key Label "apply to keymap" bulk
           rewrite): painted on top of the outer fill/stroke above but
           below the inner mask rect and label text (both rendered later
-          in this group), matching its geometry (including the union path
-          for stepped/ISO keys) so it never leaks past the key's own
-          face. Opacity is driven purely by the `key-flash` CSS keyframe
-          (style.css) — mounted only while `flashed` is true; KeymapEditor
-          keeps it mounted for the keyframe's full duration before
-          clearing the flag. `key={flashGeneration}` forces a fresh DOM
-          node (and thus a restarted animation) on a re-apply that lands
-          while this position is already flashing. The negative
-          `animation-delay` (see `flashElapsedMs` above) syncs a
+          in the same `<g>` in KeyWidget.tsx), matching its geometry
+          (including the union path for stepped/ISO keys) so it never
+          leaks past the key's own face. Opacity is driven purely by the
+          `key-flash` CSS keyframe (style.css) — mounted only while
+          `flashed` is true; KeymapEditor keeps it mounted for the
+          keyframe's full duration before clearing the flag.
+          `key={flashGeneration}` forces a fresh DOM node (and thus a
+          restarted animation) on a re-apply that lands while this
+          position is already flashing. The negative `animation-delay`
+          (`flashElapsedMs`, computed in KeyWidget.tsx) syncs a
           late-mounted overlay to the SAME fade as everyone else's. */}
       {flashed && (
         unionPath ? (

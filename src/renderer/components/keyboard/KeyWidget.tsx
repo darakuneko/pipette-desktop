@@ -85,10 +85,11 @@ function KeyWidgetInner({
   // Heatmap sits below every interactive state so the typing-view
   // overlay can never mask immediate user feedback (pressed, selection).
   // For masked keys with inner selected, use default fill (stroke-only selection)
-  // `flashed` deliberately has no branch here — it's painted as a separate
-  // overlay below (the `key-flash-overlay` element) on top of whatever
-  // this chain resolves to, animated by a declarative CSS keyframe
-  // instead of participating in this priority chain.
+  // `flashed` deliberately has no branch here — it's painted by a
+  // separate component, KeyFlashOverlay (the `key-flash-overlay`
+  // element), on top of whatever this chain resolves to, animated by a
+  // declarative CSS keyframe instead of participating in this priority
+  // chain.
   const masked = labelOverride?.masked ?? isMask(keycode)
   const innerSelected = selected && selectedMaskPart && masked
   let fillColor = KEY_BG_COLOR
@@ -105,8 +106,9 @@ function KeyWidgetInner({
   // the default label (see `fill-luminance.ts`); otherwise pick the
   // remap tint for remapped keys and fall back to the default. While
   // flashed, the overlay covers the base fill with `KEY_SELECTED_COLOR`
-  // (below the label, see the render below), so the invert decision is
-  // made against that colour instead — the same visual `selected` gets.
+  // (below the label — see KeyFlashOverlay.tsx, rendered before the label
+  // in the same `<g>`), so the invert decision is made against that
+  // colour instead — the same visual `selected` gets.
   const invertText = shouldInvertText(flashed ? KEY_SELECTED_COLOR : fillColor, effectiveTheme)
   let labelColor = KEY_TEXT_COLOR
   if (invertText) labelColor = KEY_INVERTED_TEXT_COLOR
@@ -238,12 +240,12 @@ function KeyWidgetInner({
   // How far into the shared `key-flash` timeline this overlay is joining.
   // Computed once at render (a re-render is guaranteed at mount; the
   // animation runs off CSS afterwards, so no ticking timer is needed).
-  // Fed to `animation-delay` as a NEGATIVE value below — that starts the
-  // CSS animation already partway through, so an overlay mounted late
-  // (e.g. a layer switch revealing a different rewritten position
-  // mid-window) shows the correct mid-fade opacity immediately and
-  // finishes at the same wall-clock moment as every other overlay from
-  // this same flash, instead of restarting its own fade from full
+  // Fed to KeyFlashOverlay's `animation-delay` style as a NEGATIVE value —
+  // that starts the CSS animation already partway through, so an overlay
+  // mounted late (e.g. a layer switch revealing a different rewritten
+  // position mid-window) shows the correct mid-fade opacity immediately
+  // and finishes at the same wall-clock moment as every other overlay
+  // from this same flash, instead of restarting its own fade from full
   // opacity.
   const flashElapsedMs = flashed && flashStartedAt !== undefined
     ? flashAnimationDelayMs(flashStartedAt)

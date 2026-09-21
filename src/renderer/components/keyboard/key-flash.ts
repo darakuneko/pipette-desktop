@@ -12,8 +12,9 @@ export const KEY_FLASH_DURATION_MS = 700
 /** Post-rewrite key flash state (Key Label "apply to keymap" bulk
  *  rewrite, and undo/redo). Bundles the flashed positions with the
  *  generation/start-time every `KeyWidget`/`EncoderWidget` overlay needs to
- *  stay synced to the SAME CSS-keyframe timeline (see `KeyWidget`'s
- *  `key-flash-overlay` element) — one prop instead of three loose ones so
+ *  stay synced to the SAME CSS-keyframe timeline (see the
+ *  `key-flash-overlay` element in `KeyFlashOverlay.tsx`, and
+ *  `EncoderWidget`'s own copy) — one prop instead of three loose ones so
  *  it threads cleanly through `KeyboardPane` -> `KeyboardWidget`. */
 export interface KeyFlashState {
   /** Key positions to flash, pos-keyed like `highlightedKeys`. */
