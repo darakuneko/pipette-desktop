@@ -6,8 +6,19 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 import { useDeviceConnection, POLL_INTERVAL_MS } from '../useDeviceConnection'
 import type { DeviceInfo } from '../../../shared/types/protocol'
 
+// Switchable per-test so a stale-ref bug (the hook reading `t` from the
+// render that mounted it, instead of the latest one) is actually observable.
+// Each call to useTranslation() snapshots the current tPrefix into a fresh
+// `t` closure — mirroring real react-i18next, where `t` gets a new identity
+// per render — so a `t` captured on an earlier render keeps producing that
+// render's prefix even after tPrefix is later changed.
+let tPrefix = ''
+
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
+  useTranslation: () => {
+    const prefix = tPrefix
+    return { t: (k: string) => `${prefix}${k}` }
+  },
 }))
 
 const mockDevice: DeviceInfo = {
@@ -24,6 +35,7 @@ const mockCloseDevice = vi.fn<() => Promise<void>>()
 const mockIsDeviceOpen = vi.fn<() => Promise<boolean>>()
 
 beforeEach(() => {
+  tPrefix = ''
   mockListDevices.mockResolvedValue([])
   mockOpenDevice.mockResolvedValue(true)
   mockCloseDevice.mockResolvedValue(undefined)
@@ -445,6 +457,26 @@ describe('useDeviceConnection', () => {
       await waitFor(() => {
         expect(result.current.error).toBe('error.deviceListFailed')
       })
+    })
+  })
+
+  describe('translation ref freshness', () => {
+    it('uses the latest t after a re-render when a connect failure is translated', async () => {
+      const { result, rerender } = renderHook(() => useDeviceConnection())
+
+      await waitFor(() => {
+        expect(mockListDevices).toHaveBeenCalled()
+      })
+
+      tPrefix = 'v2:'
+      rerender()
+
+      mockOpenDevice.mockRejectedValue(new Error('boom'))
+      await act(async () => {
+        await result.current.connectDevice(mockDevice)
+      })
+
+      expect(result.current.error).toBe('v2:error.deviceOpenFailed')
     })
   })
 
