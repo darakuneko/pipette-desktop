@@ -84,14 +84,16 @@ export const LM_CATEGORY: KeycodeCategory = {
   getKeycodes: getAvailableLMMods,
 }
 
-// Shared bubble contract: 8px
-// offset, `computeBubblePosition` viewport clamping, `BUBBLE_BASE` skin,
-// 300ms open delay via `useSharedHoverBubble`. A canonicalized shared
-// bubble rather than per-key `Tooltip` wraps — every category's key grid
-// mounts simultaneously (inactive tabs stay in the DOM, just visually
-// hidden, to keep tab-switch instant and preserve scroll position), so a
-// per-key `Tooltip` would multiply its portal + effects across hundreds
-// of tiles that are never all visible at once.
+// Shared bubble contract used by TabbedKeycodes.tsx: 8px offset,
+// viewport clamping via `computeBubblePosition` and skin via
+// `BUBBLE_BASE` (both in `Tooltip.tsx`), 300ms open delay via
+// `useSharedHoverBubble` (`use-shared-hover-bubble.ts`). A
+// canonicalized shared bubble rather than per-key `Tooltip` wraps —
+// every category's key grid mounts simultaneously (inactive tabs stay
+// in the DOM, just visually hidden, to keep tab-switch instant and
+// preserve scroll position), so a per-key `Tooltip` would multiply its
+// portal + effects across hundreds of tiles that are never all visible
+// at once.
 export interface TooltipState {
   keycode: Keycode
   rect: DOMRect
