@@ -41,9 +41,9 @@ interface LegendSwatchProps {
    *  Rendered PLAIN, no visual affordance on the label itself (no
    *  underline, no special cursor) — same idiom every other tooltip
    *  trigger in this codebase uses (ErrorMixSection's type labels,
-   *  CoverageBadge, the Missed table's own bar rows in
-   *  KeystrokeTimelinePanel.tsx): the tooltip showing up on hover/focus
-   *  IS the affordance, nothing on the trigger itself hints at it in
+   *  CoverageBadge, the Missed table's own bar rows (`MissedTable` in
+   *  mistake-summary.tsx)): the tooltip showing up on hover/focus IS
+   *  the affordance, nothing on the trigger itself hints at it in
    *  advance. */
   tooltipKey?: string
 }

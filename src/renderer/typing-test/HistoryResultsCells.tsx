@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// SortableHeader, NameCell, and ModeCell for HistoryResultsPanel.tsx's
-// history table — the column header button and the two variable-width
-// text cells (Name, Mode) that rely on it for their table-fixed sizing.
+// SortableHeader, NameCell, ModeCell, StatItem, and modeDetail for
+// HistoryResultsPanel.tsx's history table — the column header button,
+// the two variable-width text cells (Name, Mode), the compact
+// label/value stat pair used elsewhere in the panel, and the Mode
+// column's text-derivation helper.
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'

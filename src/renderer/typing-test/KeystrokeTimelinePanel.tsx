@@ -147,7 +147,8 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
 
   // Substitution/Omission/Insertion now render as three more stat cards in
   // `summaryItems` (see keystroke-timeline-stats.ts), not as their own
-  // line below — see the module's own doc comment for the fallback rule.
+  // line below — see keystroke-timeline-stats.ts's own doc comment for
+  // the fallback rule.
   const summaryItems = useMemo(() => buildTimelineStatItems(result, summary, log), [result, summary, log])
   // Per-key detail for the Missed table below — derived from this run's
   // own raw log (see buildMissedDetails's own doc comment for why this is
