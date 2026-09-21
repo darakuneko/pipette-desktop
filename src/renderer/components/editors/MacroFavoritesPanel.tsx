@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Favorites list and Hub upload controls for the macro editor, rendered
-// by MacroEditor.tsx alongside the action list. Hidden while editing a
-// slot or while a recording is in progress.
+// by MacroEditor.tsx as a sibling of the editor column (not inside the
+// action list). Hidden (`display: none`) while editing a slot; while a
+// recording is in progress it stays laid out but `invisible`. Rendered
+// only when the connected device isn't the dummy device.
 
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
 import { FavoriteStoreContent } from './FavoriteStoreContent'

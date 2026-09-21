@@ -377,8 +377,8 @@ export function MacroEditor({
         </div>
 
         {/* Picker: shrink to content in edit mode so MacroEditorFooter sits
-             close to the keypicker content; list mode keeps the action
-             list area hidden via the sibling container. */}
+             close to the keypicker content; list mode hides the picker
+             itself, leaving the action list (sibling above) visible. */}
         <div ref={pickerRef} className={`overflow-y-auto px-6 pb-6 ${isEditing ? 'shrink-0' : 'hidden'}`}>
           <TabbedKeycodes
             onKeycodeSelect={maskedSelection.pickerSelect}

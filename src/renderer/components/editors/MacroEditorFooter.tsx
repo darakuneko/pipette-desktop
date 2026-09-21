@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Fixed footer for the macro editor (Clear / Revert / Save), rendered by
-// MacroEditor.tsx below the action list and the keycode picker. Kept
-// separate so the save/revert button logic stays independent of the
-// macro list and picker state MacroEditor.tsx owns.
+// MacroEditor.tsx below the action list and the keycode picker. Purely
+// presentational — every action handler and every enabled/disabled
+// condition is computed in MacroEditor.tsx and passed down as props.
 
 import { useTranslation } from 'react-i18next'
 import { BTN_PRIMARY } from '../../constants/ui-tokens'
