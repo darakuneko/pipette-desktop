@@ -89,11 +89,17 @@ export interface RunLogFinishMeta {
    *  not "no line structure") and clamped every index to be STRICTLY
    *  less than the last persisted word's own index (`persistedWordCount
    *  - 1`), since a line break can never legitimately land on the run's
-   *  own final word. Omitted (not `undefined`-then-dropped — it's
-   *  already optional) for a run with no known line structure, same
-   *  convention as `RunLogFinishMeta`'s other optional fields; an
-   *  explicit `[]` is preserved as-is (see that field's own doc comment
-   *  for why it must not collapse to omitted). */
+   *  own final word. `undefined` here means the caller found no line
+   *  source at all: `run-log-recorder.ts`'s `finish()` writes
+   *  `lineBreaks: meta.lineBreaks` as an explicit key on the
+   *  `RunKeystrokeLog` object it builds, so the key is present at that
+   *  layer even when the value is `undefined`. It disappears only once
+   *  the log is JSON-serialized for storage (`typing-run-log-store.ts`)
+   *  — `JSON.stringify` drops any object key whose value is `undefined`,
+   *  so the persisted log ends up with no `lineBreaks` key at all. An
+   *  explicit `[]` never carries an `undefined` value at any layer, so
+   *  it's preserved as-is through every step (see that field's own doc
+   *  comment for why it must not collapse to absent). */
   lineBreaks?: number[]
 }
 
