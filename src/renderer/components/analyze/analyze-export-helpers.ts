@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Export context type, per-category filter-snippet builders, and the
-// `pickBuilders` dispatcher backing AnalyzeExportModal.tsx. Kept separate
-// from the modal so the category/context logic is testable without
-// rendering the modal itself.
+// `pickBuilders` dispatcher backing AnalyzeExportModal.tsx.
 
 import type { TFunction } from 'i18next'
 import type { TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
