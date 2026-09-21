@@ -8,7 +8,7 @@
 // completion screen's inline timeline panel — no IPC round-trip needed.
 // The underlying join/finish logic itself is already exhaustively covered
 // by `typing-test/__tests__/run-log-recorder.test.ts`; this file only
-// exercises the hook's own new passthrough.
+// exercises the hook's own passthrough.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'

@@ -7,10 +7,9 @@
 // row AFTER the timeline panel..."). This row renders from TypingTestPane
 // itself, BELOW the keyboard pane and its layer note, so the reading
 // window sits directly above the keyboard the user is actually typing on.
-// The
-// finished-state row is unaffected — it stays inside TypingTestView, at
-// the bottom of the completion screen, since the keyboard is hidden once
-// finished (see TypingTestPane.finished.test.tsx).
+// The finished-state row is unaffected — it stays inside TypingTestView,
+// at the bottom of the completion screen, since the keyboard is hidden
+// once finished (see TypingTestPane.finished.test.tsx).
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'

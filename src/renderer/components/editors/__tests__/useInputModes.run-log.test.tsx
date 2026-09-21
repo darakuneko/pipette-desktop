@@ -259,8 +259,7 @@ describe('useInputModes — run-log recording', () => {
     rerender({ savedTypingTestConfig: configB })
     expect(result.current.typingTest.state.runId).toBe(runIdBeforeSwitch)
 
-    // A press RIGHT NOW, before awaiting anything — the phantom-tag
-    // window.
+    // A press RIGHT NOW, before awaiting anything — the phantom-tag window.
     act(() => {
       result.current.typingTest.processMatrixFrame(new Set(['0,0']), keymap)
     })
