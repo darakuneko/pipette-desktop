@@ -312,7 +312,7 @@ export function TypingTestPane({
           completion screen (below the timeline panel), since the keyboard
           itself is hidden once finished (hideKeyboardForFinish). Gated:
           !viewOnly (view-only never showed this row) and !hideControls
-          (the "operation" toggle). */}
+          (the "operation" toggle), plus the finished check. */}
       {!viewOnly && typingTest.state.status !== 'finished' && !hideControls && (
         <div className="mt-2 flex w-full justify-center">
           <TypingTestControlsRow

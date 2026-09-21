@@ -60,9 +60,8 @@ function effectiveWeakSpotSettings(config: TypingTestConfig): TypingTestResult['
 
 /** Derive `RunKeystrokeLog.lineBreaks` for the just-finished run. Two
  *  sources, chosen by `config.mode` (see `hasRealLineStructure`), both
- *  clamped to
- *  `persistedWordCount` (the run can end with an in-flight word —
- *  `wordResults` itself never counts it — see the caller) with a
+ *  clamped to `persistedWordCount` (the run can end with an in-flight
+ *  word — `wordResults` itself never counts it — see the caller) with a
  *  STRICT bound: an index must be `< persistedWordCount - 1`, not just
  *  `< persistedWordCount`. A line break describes where a line ENDS
  *  before ANOTHER FOLLOWS — the run's own last persisted word can never
@@ -238,7 +237,7 @@ export function useTypingTestResultSave({
         // freshState and non-null only when a profile actually cleared
         // the keystroke gate) is the one source of truth for whether this
         // SPECIFIC run's word pool was actually biased — persisting the
-        // flag from the toggle alone wrongly split an unbiased
+        // flag from the toggle alone wrongly splits an unbiased
         // (gate-not-met) run into the weak-spot PB/comparison condition
         // (configKey/resultConditionKey) alongside genuinely biased runs.
         weakSpotTrainingMode: typingTest.state.weakSpotProfile != null,

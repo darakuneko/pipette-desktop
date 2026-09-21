@@ -79,10 +79,9 @@ export function computeRecordingTags({
   // ('finished' is intentionally excluded so idle presses after a test can't
   // re-introduce a phantom record.)
   //
-  // GATE SPLIT: this condition is deliberately restored to EXACTLY its
-  // original shape. Broadening it to also cover armed-waiting (as
-  // a first attempt did) tags the per-minute analytics pipeline too
-  // eagerly in two ways that pipeline was never meant to tolerate:
+  // GATE SPLIT: Broadening it to also cover armed-waiting (as a first
+  // attempt did) tags the per-minute analytics pipeline too eagerly in
+  // two ways that pipeline was never meant to tolerate:
   //  - P1: `setConfig`/`setLanguage` update `config` synchronously but
   //    the STATE stays whatever it was (old runId, possibly already
   //    non-pristine from an earlier session) until their async word-list

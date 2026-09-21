@@ -111,7 +111,11 @@ function noWeakSpotsHistory(): TypingTestResult[] {
 }
 
 describe('useInputModes — weakSpotTrainingMode passthrough into the saved result', () => {
-  // The flag must reflect whether the run's own snapshot profile
+  // A run started with the toggle ON but the gate NOT met (sampled
+  // normally — state.weakSpotProfile stays undefined) must not be
+  // persisted as a weak-spot run, wrongly splitting it into the biased
+  // PB/comparison condition alongside genuinely biased runs. The flag
+  // must reflect whether the run's own snapshot profile
   // (`state.weakSpotProfile`) was actually non-null.
 
   it('toggle ON + gate no-weak-spots: the run sampled normally, so NO flag is saved and it groups with normal runs', async () => {
