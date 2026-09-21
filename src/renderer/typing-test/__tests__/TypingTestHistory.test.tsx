@@ -256,14 +256,18 @@ describe('TypingTestHistory', () => {
   // "Tatoeba 10 Lines (japanese_hiragana)" label) that must ellipsis-
   // truncate instead of wrapping/stretching the table, with the full text
   // reachable via hover tooltip — same treatment as the Name column. The
-  // table is `table-fixed`, and every other header cell (Date, WPM, KPM,
-  // Accuracy, Avg Hold, Duration, PB, Timeline, Delete) carries a width —
-  // measured px once `useHistoryColumnWidths` resolves, a `FALLBACK_*`
-  // class before that. The Name and Mode header cells carry no width at
-  // all (not a hard max-w cap on the td in HistoryResultsCells.tsx's
-  // ModeCell either — see the Mode header cell in HistoryResultsPanel.tsx)
-  // and split whatever width the other columns leave over, 1:1 — so the
-  // Mode column, and thus the truncation point, tracks the modal's actual
+  // table is `table-fixed`, and every other header cell (`date`, `wpm`,
+  // `kpm`, `accuracy`, `akh`, `duration`, `pb`, plus the icon-only
+  // `timeline`/`delete` cells that only exist when `uid`/`onDelete` are
+  // passed — the code-side column names, not their display labels) carries
+  // a width — measured px once `useHistoryColumnWidths` resolves, a
+  // `FALLBACK_*` class whenever that measurement isn't available (before
+  // it resolves, or when layout measurement itself is unavailable, e.g.
+  // jsdom). The Name and Mode header cells carry no width at all (not a
+  // hard max-w cap on the td in HistoryResultsCells.tsx's ModeCell either
+  // — see the Mode header cell in HistoryResultsPanel.tsx) and split
+  // whatever width the other columns leave over, 1:1 — so the Mode
+  // column, and thus the truncation point, tracks the modal's actual
   // width instead of stopping at a fixed rem value.
   it('truncates a long Mode cell and exposes the full text via tooltip', () => {
     const results = [
