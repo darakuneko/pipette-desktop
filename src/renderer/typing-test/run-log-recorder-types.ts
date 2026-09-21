@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+// Types, small helpers, and buffer caps backing run-log-recorder.ts's
+// in-memory run-log buffer. "The module doc comment" and "this module"
+// in the doc comments below mean run-log-recorder.ts, which carries the
+// actual PRIVACY / CHAR CORRELATION / ASYMMETRIC STALENESS notes these
+// types point back to.
 
 import type { RunKeystroke } from '../../shared/types/typing-run-log'
 
@@ -222,9 +227,10 @@ export function pressKey(row: number, col: number, keycode: number): string {
   return `${row},${col},${keycode}`
 }
 
-/** Rough per-keystroke byte estimate for the {@link MAX_RUN_LOG_BYTES}
- *  running total — doesn't need to be exact, only a cheap, monotonic
- *  proxy for the final serialized size. A flat constant (the fields
+/** Rough per-keystroke byte estimate for the running total against
+ *  `MAX_RUN_LOG_BYTES` (defined in `src/shared/types/typing-run-log.ts`)
+ *  — doesn't need to be exact, only a cheap, monotonic proxy for the
+ *  final serialized size. A flat constant (the fields
  *  other than `expectedChar`/`typedChar`/`mistakeKey` vary little in
  *  width) plus the fields whose length actually varies, rather than
  *  paying for a real `JSON.stringify` on every keystroke just to measure

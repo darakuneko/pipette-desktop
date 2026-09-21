@@ -157,8 +157,8 @@ function isValidKeystroke(value: unknown, durationMs: number): value is RunKeyst
 /** `RunKeystrokeLog.lineBreaks` validation — sorted, unique, strictly
  *  ascending, and every index STRICTLY less than `wordCount - 1` (the
  *  log's OWN `words.length`, the same `persistedWordCount` the renderer
- *  already clamped to before saving — see run-log-recorder.ts's
- *  `RunLogFinishMeta.lineBreaks` doc comment). The `- 1` is deliberate,
+ *  already clamped to before saving — see `RunLogFinishMeta.lineBreaks`'s
+ *  doc comment in run-log-recorder-types.ts). The `- 1` is deliberate,
  *  not `wordCount` itself: a line break marks where a line ENDS before
  *  ANOTHER FOLLOWS, so the log's own last word (index `wordCount - 1`,
  *  which by definition has nothing after it) can never legitimately be
@@ -197,7 +197,8 @@ function isValidWord(value: unknown, durationMs: number): value is RunWord {
 
 /** Structural + size + timestamp validation for a run log about to be
  *  saved — main-side defense in depth, independent of whatever the
- *  renderer already enforced (`run-log-recorder.ts`'s own caps).
+ *  renderer already enforced (`MAX_RUN_LOG_EVENTS`/`MAX_RUN_LOG_BYTES` in
+ *  `src/shared/types/typing-run-log.ts`, checked by run-log-recorder.ts).
  *  `expectedUid` must match the payload's own `uid` field. Returns the
  *  already-serialized JSON alongside the validated data so `saveRunLog`
  *  doesn't stringify the (potentially ~1MB) payload a second time. */
