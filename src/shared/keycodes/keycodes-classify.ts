@@ -7,8 +7,8 @@
 
 // LT/LM write the layer digit directly after the op (`LT1(kc)`); MO-family
 // ops put the layer inside parens (`MO(1)`) and carry no inner keycode.
-// Exported (not module-private) only so keycodes-utils.ts's own
-// `resolve`-adjacent helpers can share the same two patterns.
+// Exported (not module-private) only so `resolveSnapshotLabel`
+// (keycodes-utils.ts) can share the same two patterns.
 export const LAYER_MASK_RE = /^(LT|LM)(\d+)(?:\((.+)\))?$/
 export const LAYER_SINGLE_RE = /^(MO|DF|PDF|TG|TT|OSL|TO)\((\d+)\)$/
 
