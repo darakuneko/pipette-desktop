@@ -10,6 +10,7 @@ import type { DeviceInfo } from '../../../shared/types/protocol'
 import type { StoredKeyboardInfo } from '../../../shared/types/sync'
 import type { SnapshotMeta } from '../../../shared/types/snapshot-store'
 import { KeyboardPane } from './KeyboardPane'
+import { DismissibleError } from '../ui/DismissibleError'
 import { BUBBLE_BASE, computeBubblePosition, Tooltip } from '../ui/Tooltip'
 import { ScaleInput, ghostZoomButtonClass } from './keymap-editor-toolbar'
 import { MIN_SCALE, MAX_SCALE } from './keymap-editor-types'
@@ -127,11 +128,12 @@ export function LayoutPickerContent({
           /* --- File browse view --- */
           <div className="mx-auto flex w-full max-w-md flex-col px-3 py-3">
             <div className="flex min-h-device-list max-h-device-list flex-col gap-1.5 overflow-y-auto pb-2 pr-1">
-            {pickerLoadError && (
-              <div className="rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">
-                {pickerLoadError}
-              </div>
-            )}
+            <DismissibleError
+              message={pickerLoadError}
+              onDismiss={() => setPickerLoadError(null)}
+              className="rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger"
+              testid="picker-load-error"
+            />
             {fileBrowseView === 'list' && (
               <span className="mb-1 text-xs text-content-secondary">{t('editor.keymap.pickerSavedFiles')}</span>
             )}

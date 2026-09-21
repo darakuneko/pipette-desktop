@@ -873,3 +873,26 @@ describe('useFileIO – partial VilFile rejection', () => {
     })
   }
 })
+
+// ---------------------------------------------------------------------------
+// clearError
+// ---------------------------------------------------------------------------
+
+describe('useFileIO – clearError', () => {
+  it('clears a set error', async () => {
+    mockSaveLayout.mockResolvedValueOnce({ success: false, error: 'disk full' })
+    const opts = createHookOptions()
+    const { result } = renderHook(() => useFileIO(opts))
+
+    await act(async () => {
+      await result.current.saveLayout()
+    })
+    expect(result.current.error).toBe('error.saveFailed')
+
+    act(() => {
+      result.current.clearError()
+    })
+
+    expect(result.current.error).toBeNull()
+  })
+})

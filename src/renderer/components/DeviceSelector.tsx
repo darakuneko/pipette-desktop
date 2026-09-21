@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Settings, Database, ChevronRight, ChevronLeft } from 'lucide-react'
 import { ICON_XS, ICON_SM, ICON_MD } from '../constants/ui-tokens'
 import { SYNC_STATUS_CLASS } from './sync-ui'
+import { DismissibleError } from './ui/DismissibleError'
 import type { DeviceInfo } from '../../shared/types/protocol'
 import type { SyncStatusType } from '../../shared/types/sync'
 import type { PipetteFileKeyboard, PipetteFileEntry } from '../app-types'
@@ -38,7 +39,8 @@ function formatDate(iso: string): string {
 interface Props {
   devices: DeviceInfo[]
   connecting: boolean
-  error: string | null
+  fileLoadError: string | null
+  deviceError: string | null
   onConnect: (device: DeviceInfo) => void
   onLoadDummy: () => void
   onLoadPipetteFile: () => void
@@ -51,13 +53,15 @@ interface Props {
   onOpenData?: () => void
   syncStatus?: SyncStatusType
   deviceWarning?: string | null
-  onClearError?: () => void
+  onClearFileLoadError?: () => void
+  onClearDeviceError?: () => void
 }
 
 export function DeviceSelector({
   devices,
   connecting,
-  error,
+  fileLoadError,
+  deviceError,
   onConnect,
   onLoadDummy,
   onLoadPipetteFile,
@@ -70,7 +74,8 @@ export function DeviceSelector({
   onOpenData,
   syncStatus,
   deviceWarning,
-  onClearError,
+  onClearFileLoadError,
+  onClearDeviceError,
 }: Props) {
   const { t } = useTranslation()
   const [tab, setTab] = useState<'keyboard' | 'file' | 'analyze'>('keyboard')
@@ -143,18 +148,25 @@ export function DeviceSelector({
           </div>
         </div>
 
-        {error && (
-          <div className="mb-4 rounded-lg bg-danger/10 p-3 text-sm text-danger">
-            {error}
-          </div>
-        )}
+        <DismissibleError
+          message={fileLoadError}
+          onDismiss={() => onClearFileLoadError?.()}
+          className="mb-4 rounded-lg bg-danger/10 p-3 text-sm text-danger"
+          testid="file-load-error"
+        />
+        <DismissibleError
+          message={deviceError}
+          onDismiss={() => onClearDeviceError?.()}
+          className="mb-4 rounded-lg bg-danger/10 p-3 text-sm text-danger"
+          testid="device-error"
+        />
 
         {/* Tab selector */}
         <div className="mb-4 flex gap-1 rounded-lg bg-surface-dim p-1" data-testid="device-tabs">
           <button
             type="button"
             className={`${TAB_CLASS} ${tab === 'keyboard' ? TAB_ACTIVE : TAB_INACTIVE}`}
-            onClick={() => { setTab('keyboard'); onClearError?.() }}
+            onClick={() => { setTab('keyboard'); onClearFileLoadError?.() }}
             data-testid="tab-keyboard"
           >
             {t('app.keyboardTab')}
@@ -162,7 +174,7 @@ export function DeviceSelector({
           <button
             type="button"
             className={`${TAB_CLASS} ${tab === 'file' ? TAB_ACTIVE : TAB_INACTIVE}`}
-            onClick={() => { setTab('file'); onClearError?.() }}
+            onClick={() => { setTab('file'); onClearFileLoadError?.() }}
             data-testid="tab-file"
           >
             {t('app.fileTab')}
@@ -173,7 +185,7 @@ export function DeviceSelector({
             // return above, so by the time this button renders `tab` can
             // only be 'keyboard' | 'file' — the active style never applies.
             className={`${TAB_CLASS} ${TAB_INACTIVE}`}
-            onClick={() => { setTab('analyze'); onClearError?.() }}
+            onClick={() => { setTab('analyze'); onClearFileLoadError?.() }}
             data-testid="tab-analyze"
           >
             {t('app.analyzeTab')}
@@ -291,7 +303,7 @@ export function DeviceSelector({
                   type="button"
                   data-testid="file-back-button"
                   className="flex items-center gap-0.5 text-2xs font-semibold uppercase tracking-widest text-content-muted transition-colors hover:text-content-secondary"
-                  onClick={() => { setSelectedFileUid(null); onClearError?.() }}
+                  onClick={() => { setSelectedFileUid(null); onClearFileLoadError?.() }}
                 >
                   <ChevronLeft size={ICON_XS} aria-hidden="true" />
                   {t('common.back')}

@@ -7,7 +7,7 @@ import { isKeyboardDefinition } from '../../shared/vil-file'
 
 export function useSideloadJson(
   applyDefinition: (def: KeyboardDefinition) => void,
-): { sideloadJson: () => Promise<void>; error: string | null } {
+): { sideloadJson: () => Promise<void>; error: string | null; clearError: () => void } {
   const { t } = useTranslation()
   const [error, setError] = useState<string | null>(null)
 
@@ -31,5 +31,7 @@ export function useSideloadJson(
     }
   }, [applyDefinition, t])
 
-  return { sideloadJson, error }
+  const clearError = useCallback(() => setError(null), [])
+
+  return { sideloadJson, error, clearError }
 }

@@ -132,7 +132,9 @@ export function useFileIO({
     return runExport(pdfGenerator, window.vialAPI.exportPdf, 'error.exportPdfFailed')
   }, [pdfGenerator, deviceName, t])
 
-  return { saveLayout, loadLayout, exportKeymapC, exportPdf, error, saving, loading }
+  const clearError = useCallback(() => setError(null), [])
+
+  return { saveLayout, loadLayout, exportKeymapC, exportPdf, error, saving, loading, clearError }
 }
 
 function convertVialGuiMacros(macroJsonArrays: unknown[][], vialProtocol: number): number[] {

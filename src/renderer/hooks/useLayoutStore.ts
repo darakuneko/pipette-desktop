@@ -139,6 +139,8 @@ export function useLayoutStore({
     }
   }, [deviceUid, refreshEntries])
 
+  const clearError = useCallback(() => setError(null), [])
+
   return {
     entries,
     error,
@@ -149,5 +151,6 @@ export function useLayoutStore({
     loadLayout,
     renameEntry,
     deleteEntry,
+    clearError,
   }
 }

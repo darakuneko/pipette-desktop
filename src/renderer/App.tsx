@@ -25,6 +25,7 @@ import { useTypingRecordingTray } from './hooks/use-typing-recording-tray'
 import { useFileGenerators } from './hooks/use-file-generators'
 import { formatDeviceId } from './app-types'
 import { AppBanners } from './components/AppBanners'
+import { AppErrorBanner } from './components/AppErrorBanner'
 import { AppDisconnectedView } from './components/AppDisconnectedView'
 import { AppModals } from './components/AppModals'
 import { AppEditorSurface } from './components/AppEditorSurface'
@@ -449,11 +450,7 @@ export function App() {
           />
         )}
 
-        {(fileIO.error || sideload.error || layoutStore.error) && (
-          <div className="bg-danger/10 px-4 py-1.5 text-xs text-danger">
-            {fileIO.error || sideload.error || layoutStore.error}
-          </div>
-        )}
+        <AppErrorBanner fileIO={fileIO} sideload={sideload} layoutStore={layoutStore} />
       </div>
 
       <AppStatusBar

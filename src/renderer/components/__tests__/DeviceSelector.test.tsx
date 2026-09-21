@@ -59,7 +59,8 @@ describe('DeviceSelector', () => {
   const defaultProps = {
     devices: [] as DeviceInfo[],
     connecting: false,
-    error: null,
+    fileLoadError: null,
+    deviceError: null,
     onConnect: vi.fn(),
     onLoadDummy: vi.fn(),
     onLoadPipetteFile: vi.fn(),
@@ -116,14 +117,55 @@ describe('DeviceSelector', () => {
     expect(screen.queryByText('Connecting...')).not.toBeInTheDocument()
   })
 
-  it('displays error message when error is present', () => {
-    render(<DeviceSelector {...defaultProps} error="Connection failed" />)
+  it('displays fileLoadError message when present', () => {
+    render(<DeviceSelector {...defaultProps} fileLoadError="Connection failed" />)
     expect(screen.getByText('Connection failed')).toBeInTheDocument()
   })
 
-  it('does not display error when error is null', () => {
-    const { container } = render(<DeviceSelector {...defaultProps} error={null} />)
+  it('does not display an error box when both error sources are null', () => {
+    const { container } = render(<DeviceSelector {...defaultProps} fileLoadError={null} deviceError={null} />)
     expect(container.querySelector('.text-danger')).not.toBeInTheDocument()
+  })
+
+  it('displays fileLoadError and deviceError independently, each with its own close button', () => {
+    const onClearFileLoadError = vi.fn()
+    const onClearDeviceError = vi.fn()
+    render(
+      <DeviceSelector
+        {...defaultProps}
+        fileLoadError="File load failed"
+        deviceError="Failed to open device"
+        onClearFileLoadError={onClearFileLoadError}
+        onClearDeviceError={onClearDeviceError}
+      />,
+    )
+
+    const fileBox = screen.getByTestId('file-load-error')
+    const deviceBox = screen.getByTestId('device-error')
+    expect(fileBox).toHaveTextContent('File load failed')
+    expect(deviceBox).toHaveTextContent('Failed to open device')
+
+    fireEvent.click(deviceBox.querySelector('button')!)
+    expect(onClearDeviceError).toHaveBeenCalledOnce()
+    expect(onClearFileLoadError).not.toHaveBeenCalled()
+  })
+
+  it('clears only fileLoadError on tab switch, not deviceError', () => {
+    const onClearFileLoadError = vi.fn()
+    const onClearDeviceError = vi.fn()
+    render(
+      <DeviceSelector
+        {...defaultProps}
+        fileLoadError="File load failed"
+        deviceError="Failed to open device"
+        onClearFileLoadError={onClearFileLoadError}
+        onClearDeviceError={onClearDeviceError}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('tab-file'))
+    expect(onClearFileLoadError).toHaveBeenCalledOnce()
+    expect(onClearDeviceError).not.toHaveBeenCalled()
   })
 
   it('displays multiple devices', () => {

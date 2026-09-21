@@ -322,4 +322,47 @@ describe('useDeviceConnection', () => {
       expect(result.current.devices).toEqual([mockDevice])
     })
   })
+
+  describe('clearError', () => {
+    it('clears the error via clearError', async () => {
+      mockOpenDevice.mockResolvedValue(false)
+      const { result } = renderHook(() => useDeviceConnection())
+
+      await waitFor(() => {
+        expect(mockListDevices).toHaveBeenCalled()
+      })
+
+      await act(async () => {
+        await result.current.connectDevice(mockDevice)
+      })
+      expect(result.current.error).toBe('Failed to open device')
+
+      act(() => {
+        result.current.clearError()
+      })
+
+      expect(result.current.error).toBeNull()
+    })
+
+    it('clears the error at the start of the next connectDevice call', async () => {
+      mockOpenDevice.mockResolvedValueOnce(false)
+      const { result } = renderHook(() => useDeviceConnection())
+
+      await waitFor(() => {
+        expect(mockListDevices).toHaveBeenCalled()
+      })
+
+      await act(async () => {
+        await result.current.connectDevice(mockDevice)
+      })
+      expect(result.current.error).toBe('Failed to open device')
+
+      mockOpenDevice.mockResolvedValueOnce(true)
+      await act(async () => {
+        await result.current.connectDevice(mockDevice)
+      })
+
+      expect(result.current.error).toBeNull()
+    })
+  })
 })

@@ -327,3 +327,22 @@ describe('useLayoutStore – deleteEntry', () => {
     expect(ok).toBe(false)
   })
 })
+
+describe('useLayoutStore – clearError', () => {
+  it('clears a set error', async () => {
+    mockSnapshotStoreSave.mockResolvedValueOnce({ success: false, error: 'disk full' })
+    const opts = createHookOptions()
+    const { result } = renderHook(() => useLayoutStore(opts))
+
+    await act(async () => {
+      await result.current.saveLayout('test')
+    })
+    expect(result.current.error).toBe('layoutStore.saveFailed')
+
+    act(() => {
+      result.current.clearError()
+    })
+
+    expect(result.current.error).toBeNull()
+  })
+})

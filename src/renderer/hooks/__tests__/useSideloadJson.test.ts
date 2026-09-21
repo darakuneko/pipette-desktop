@@ -323,3 +323,28 @@ describe('useSideloadJson – error management', () => {
     expect(result.current.error).toBeNull()
   })
 })
+
+// ---------------------------------------------------------------------------
+// clearError
+// ---------------------------------------------------------------------------
+
+describe('useSideloadJson – clearError', () => {
+  it('clears a set error', async () => {
+    mockSideloadJson.mockResolvedValueOnce({
+      success: false,
+      error: 'read error',
+    })
+    const { result } = createHook()
+
+    await act(async () => {
+      await result.current.sideloadJson()
+    })
+    expect(result.current.error).toBe('error.sideloadFailed')
+
+    act(() => {
+      result.current.clearError()
+    })
+
+    expect(result.current.error).toBeNull()
+  })
+})

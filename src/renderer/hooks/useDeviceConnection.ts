@@ -238,6 +238,9 @@ export function useDeviceConnection() {
 
   const setDeviceListActive = useCallback((active: boolean) => { deviceListActiveRef.current = active }, [])
   const setPollSuspended = useCallback((suspended: boolean) => { pollSuspendedRef.current = suspended }, [])
+  const clearError = useCallback(() => {
+    if (mountedRef.current) setState((s) => ({ ...s, error: null }))
+  }, [])
 
   return {
     ...state,
@@ -248,5 +251,6 @@ export function useDeviceConnection() {
     disconnectDevice,
     setDeviceListActive,
     setPollSuspended,
+    clearError,
   }
 }

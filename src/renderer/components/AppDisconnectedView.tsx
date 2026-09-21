@@ -51,7 +51,8 @@ export function AppDisconnectedView({
       <DeviceSelector
         devices={device.devices}
         connecting={device.connecting}
-        error={lifecycle.fileLoadError || device.error}
+        fileLoadError={lifecycle.fileLoadError}
+        deviceError={device.error}
         onConnect={lifecycle.handleConnect}
         onLoadDummy={lifecycle.handleLoadDummy}
         onLoadPipetteFile={lifecycle.handleLoadPipetteFile}
@@ -64,7 +65,8 @@ export function AppDisconnectedView({
         onOpenData={lifecycle.handleOpenDataModal}
         syncStatus={sync.syncStatus}
         deviceWarning={lifecycle.deviceLoadError}
-        onClearError={lifecycle.clearFileLoadError}
+        onClearFileLoadError={lifecycle.clearFileLoadError}
+        onClearDeviceError={device.clearError}
       />
       {lifecycle.showSettings && (
         <SettingsModal
