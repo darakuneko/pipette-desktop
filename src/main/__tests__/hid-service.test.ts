@@ -99,6 +99,13 @@ function createMockOpenDevice(overrides?: {
 
 beforeEach(async () => {
   vi.clearAllMocks()
+  // clearAllMocks() only resets call history — a mockImplementation() (or an
+  // unconsumed …Once queue) set by an earlier test survives it and can leak
+  // into a later one. Reset these explicitly since several tests below set a
+  // throwing mockHIDAsyncOpen.mockImplementation.
+  mockHIDAsyncOpen.mockReset()
+  mockDevicesAsync.mockReset()
+  vi.mocked(log).mockReset()
   // HIDAsync.write() resolves with the byte count written; it never returns synchronously.
   mockWrite.mockResolvedValue(MSG_LEN + 1)
   await closeHidDevice()
@@ -202,6 +209,7 @@ describe('openHidDevice / closeHidDevice', () => {
 
     expect(result).toBe(false)
     await expect(isDeviceOpen()).resolves.toBe(false)
+    expect(log).not.toHaveBeenCalledWith('error', expect.anything())
   })
 
   it('returns false when device has no path', async () => {
@@ -212,6 +220,19 @@ describe('openHidDevice / closeHidDevice', () => {
     const result = await openHidDevice(0x1234, 0x5678)
 
     expect(result).toBe(false)
+    expect(log).not.toHaveBeenCalledWith('error', expect.anything())
+  })
+
+  it('logs and rethrows the same error object when device enumeration throws', async () => {
+    const err = new Error('cannot enumerate devices')
+    mockDevicesAsync.mockRejectedValue(err)
+
+    await expect(openHidDevice(0x1234, 0x5678)).rejects.toBe(err)
+
+    expect(mockHIDAsyncOpen).not.toHaveBeenCalled()
+    const errorCalls = vi.mocked(log).mock.calls.filter(([level]) => level === 'error')
+    expect(errorCalls).toHaveLength(1)
+    expect(errorCalls[0][1]).toBe('Failed to open HID device 0x1234:0x5678: cannot enumerate devices')
   })
 
   it('closes existing device before opening a new one', async () => {
@@ -250,31 +271,32 @@ describe('openHidDevice / closeHidDevice', () => {
   it('openHidDevice throws after exhausting retries', async () => {
     vi.useFakeTimers()
     mockDevicesAsync.mockResolvedValue([createMockDeviceInfo()])
-    mockHIDAsyncOpen.mockImplementation(() => { throw new Error('cannot open device') })
+    const err = new Error('cannot open device')
+    mockHIDAsyncOpen.mockImplementation(() => { throw err })
 
     const promise = openHidDevice(0x1234, 0x5678)
-    const assertion = expect(promise).rejects.toThrow('cannot open device')
+    const assertion = expect(promise).rejects.toBe(err)
     await vi.runAllTimersAsync()
 
     await assertion
     expect(mockHIDAsyncOpen).toHaveBeenCalledTimes(HID_OPEN_RETRY_COUNT)
   })
 
-  it('logs once, at error level, when every open attempt fails', async () => {
+  it('logs the exact open-failure message once, at error level, when every open attempt fails', async () => {
     vi.useFakeTimers()
-    mockDevicesAsync.mockResolvedValue([createMockDeviceInfo()])
+    mockDevicesAsync.mockResolvedValue([
+      createMockDeviceInfo({ vendorId: 0x1, productId: 0xab }),
+    ])
     mockHIDAsyncOpen.mockImplementation(() => { throw new Error('cannot open device') })
 
-    const promise = openHidDevice(0x1234, 0x5678)
+    const promise = openHidDevice(0x1, 0xab)
     const assertion = expect(promise).rejects.toThrow('cannot open device')
     await vi.runAllTimersAsync()
     await assertion
 
     const errorCalls = vi.mocked(log).mock.calls.filter(([level]) => level === 'error')
     expect(errorCalls).toHaveLength(1)
-    expect(errorCalls[0][1]).toContain('1234')
-    expect(errorCalls[0][1]).toContain('5678')
-    expect(errorCalls[0][1]).toContain('cannot open device')
+    expect(errorCalls[0][1]).toBe('Failed to open HID device 0x0001:0x00ab: cannot open device')
   })
 
   it('does not log an error when a retry eventually succeeds', async () => {
@@ -295,11 +317,12 @@ describe('openHidDevice / closeHidDevice', () => {
   it('still rejects with the original open error when log() itself throws', async () => {
     vi.useFakeTimers()
     mockDevicesAsync.mockResolvedValue([createMockDeviceInfo()])
-    mockHIDAsyncOpen.mockImplementation(() => { throw new Error('cannot open device') })
+    const err = new Error('cannot open device')
+    mockHIDAsyncOpen.mockImplementation(() => { throw err })
     vi.mocked(log).mockImplementationOnce(() => { throw new Error('disk full') })
 
     const promise = openHidDevice(0x1234, 0x5678)
-    const assertion = expect(promise).rejects.toThrow('cannot open device')
+    const assertion = expect(promise).rejects.toBe(err)
     await vi.runAllTimersAsync()
 
     await assertion

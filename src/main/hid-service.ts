@@ -160,15 +160,17 @@ function isTransientError(err: Error): boolean {
 }
 
 /**
- * Record the open failure that survived every retry.
- * Wrapped in try/catch so a logging failure never masks the original error.
+ * Record an open failure — either enumeration (HID.devicesAsync()) or the final
+ * retry of HID.HIDAsync.open() — so the raw cause isn't lost behind the
+ * renderer's translated message. Wrapped in try/catch so a logging failure
+ * never masks the original error.
  */
 function logOpenFailure(vendorId: number, productId: number, err: unknown): void {
   try {
     const vid = vendorId.toString(16).padStart(4, '0')
     const pid = productId.toString(16).padStart(4, '0')
     const message = err instanceof Error ? err.message : String(err)
-    log('error', `Failed to open HID device 0x${vid}:0x${pid} after ${HID_OPEN_RETRY_COUNT} attempts: ${message}`)
+    log('error', `Failed to open HID device 0x${vid}:0x${pid}: ${message}`)
   } catch {
     // Ignore logging failures.
   }
@@ -187,7 +189,13 @@ export async function openHidDevice(vendorId: number, productId: number): Promis
     return true
   }
 
-  const devices = await HID.devicesAsync()
+  let devices: Awaited<ReturnType<typeof HID.devicesAsync>>
+  try {
+    devices = await HID.devicesAsync()
+  } catch (err) {
+    logOpenFailure(vendorId, productId, err)
+    throw err
+  }
   const deviceInfo = devices.find(
     (d) =>
       d.vendorId === vendorId &&
