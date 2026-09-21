@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Installed/Hub tab row + table components for KeyLabelsModal, split
-// out per file-splitting.md (KeyLabelsModal.tsx exceeded the 750-line
-// "split immediately" threshold once Phase 2/3 added the sort button,
-// Author/Updated semantics, and cascade delete). Converged onto the
-// shared PackHubActions/PackDeleteActions in the Phase-3 follow-up
-// review, once the asymmetries that originally kept Key Labels'
-// HubLineActions/InstalledActions separate had all dissolved (see
-// `canWrite`/`hideOthersWhileConfirmingRemove` in PackHubActions.tsx
-// for the two that remained real and got promoted to opt-in props).
+// Installed/Hub tab row + table components for KeyLabelsModal.tsx:
+// `InstalledTable`/`InstalledRowView` for the Installed tab (rename,
+// Hub upload/update/remove, delete, drag reorder) and `HubTable` for
+// the Find on Hub tab (open/download). Both build on the shared
+// PackHubActions/PackDeleteActions — `canWrite` and
+// `hideOthersWhileConfirmingRemove` (PackHubActions.tsx) are the two
+// opt-in props Key Labels passes beyond their defaults.
 
 import { useTranslation } from 'react-i18next'
 import { GripVertical } from 'lucide-react'
