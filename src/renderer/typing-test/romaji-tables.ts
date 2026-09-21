@@ -238,9 +238,9 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
   // jyi/jye) are tagged individually where they occur. Each row here
   // lists only the digraph spelling itself (e.g. きぃ: ['kyi']); the
   // decomposed き + ぃ path (ki + xi/li/xyi/lyi) isn't listed here —
-  // romaji-engine.ts's getSegmentOptions always offers it as a second
-  // segmentation option alongside the digraph, and stepAt/tryConsume
-  // accept it subject to the same SPELLING_STYLES filtering. --
+  // getSegmentOptions offers き's own single-kana option alongside
+  // the digraph (filterByStyle can empty the digraph, never the
+  // single); ぃ's own spellings come from the next position. --
   きぃ: ['kyi'],
   きぇ: ['kye'],
   ぎぃ: ['gyi'],
