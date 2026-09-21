@@ -48,7 +48,7 @@ export function TypingTestView({
   finishedResult = null,
 }: Props) {
   const { t } = useTranslation()
-  // Completion screen (Plan-completion-timeline-view PR-B): once a run
+  // Completion screen: once a run
   // finishes, the reading window/romaji guide give way to the inline
   // keystroke timeline — see the JSX below for where each is gated.
   // `timelineLog` additionally requires the log's own `runId` to match
@@ -245,19 +245,18 @@ export function TypingTestView({
   )
 
   return (
-    // `min-h-0 flex-1` only once finished — see the "Completion screen"
-    // comment further down for why (the flex-height chain that lets the
-    // timeline panel's rows scroll internally instead of growing the
-    // whole pane). The running/waiting/paused states keep their original
+    // `min-h-0 flex-1` only once finished — see the FLEX-HEIGHT CHAIN
+    // comment in TypingTestFinishedSection.tsx for why (the flex-height
+    // chain that lets the timeline panel's rows scroll internally instead
+    // of growing the whole pane). The running/waiting/paused states keep their original
     // natural-content-height flow; they were never reported as
     // overflowing and don't need this.
     <div data-testid="typing-test-view" className={`flex w-full min-w-0 flex-col items-center gap-4 px-4 py-4${isFinished ? ' min-h-0 flex-1' : ''}`}>
       {/* Word display — fixed window with scroll. Word-flow modes show a
           3-line window; imported fileImport text shows 4 lines (line-row
-          layout). Hidden once the run finishes (Plan-completion-timeline-view
-          PR-B) — the completion screen's main content is the keystroke
-          timeline (or, without a log, the stats row below), not the
-          already-typed reading window. */}
+          layout). Hidden once the run finishes — the completion screen's
+          main content is the keystroke timeline (or, without a log, the
+          stats row below), not the already-typed reading window. */}
       {!isFinished && (
       <div
         data-testid="typing-test-words"

@@ -95,12 +95,11 @@ export interface Props {
    *  see `LineSnapshot`'s own doc comment. Optional so every existing
    *  mount (tests included) stays valid without threading it. */
   lineSnapshotRef?: RefObject<LineSnapshot | null>
-  /** The just-finished run's in-memory raw keystroke log (Plan-completion-
-   *  timeline-view PR-B) — null when recording consent was off, view-only,
-   *  or nothing was saveable. Rendered as the shared `KeystrokeTimelinePanel`
-   *  in place of the old stats row ONLY while `status === 'finished'` AND
-   *  `runId` matches the current run's own (see the codex-review note in
-   *  Plan-completion-timeline-view.md): a fresh run's finish effect can
+  /** The just-finished run's in-memory raw keystroke log — null when
+   *  recording consent was off, view-only, or nothing was saveable.
+   *  Rendered as the shared `KeystrokeTimelinePanel` in place of the
+   *  compact stats row ONLY while `status === 'finished'` AND `runId`
+   *  matches the current run's own: a fresh run's finish effect can
    *  otherwise briefly still be carrying the PREVIOUS run's log for one
    *  render, which this guard exists to catch. */
   lastFinishedLog?: RunKeystrokeLog | null

@@ -30,7 +30,7 @@ interface FinishedSectionProps {
   hasSavedMemory: Props['hasSavedMemory']
 }
 
-/* Completion screen (Plan-completion-timeline-view PR-B): once a run
+/* Completion screen: once a run
     finishes WITH a matching in-memory log, the shared
     KeystrokeTimelinePanel — same unified stat block, legend, zoom,
     and rows as History's timeline modal — replaces the old compact
@@ -58,8 +58,9 @@ interface FinishedSectionProps {
       TypingTestPane.tsx's outer `items-stretch` row (pre-existing
       `min-h-0 flex-1`) → TypingTestPane.tsx's `items-center` column
       (now ALSO `min-h-0`, alongside its pre-existing `flex-1`) →
-      this component's own root (`min-h-0 flex-1`, but ONLY once
-      `isFinished` — see its own className comment above) → THIS
+      TypingTestView's own root (`min-h-0 flex-1`, but ONLY once
+      `isFinished` — see the className comment above its root div in
+      TypingTestView.tsx) → THIS
       wrapper (`min-h-0 flex-1 flex-col`) → the timeline panel
       (`min-h-0 flex-1`) → KeystrokeTimelinePanel's OWN root (already
       `flex min-h-0 flex-1 flex-col gap-3` — unchanged) → its stat
