@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { DeviceInfo } from '../../shared/types/protocol'
 
 export interface DeviceConnectionState {
@@ -28,6 +29,14 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 export function useDeviceConnection() {
+  const { t } = useTranslation()
+  // Held in a ref so refreshDevices/connectDevice can keep stable [] deps —
+  // the mount effect depends on refreshDevices, and an unstable t would
+  // turn a language switch into a re-fetch loop (see DismissibleError's
+  // onDismissRef for the same pattern).
+  const tRef = useRef(t)
+  tRef.current = t
+
   const [state, setState] = useState<DeviceConnectionState>({
     devices: [],
     connectedDevice: null,
@@ -63,9 +72,9 @@ export function useDeviceConnection() {
       if (mountedRef.current) {
         setState((s) => ({ ...s, devices }))
       }
-    } catch (err) {
+    } catch {
       if (mountedRef.current) {
-        setState((s) => ({ ...s, error: String(err) }))
+        setState((s) => ({ ...s, error: tRef.current('error.deviceListFailed') }))
       }
     }
   }, [])
@@ -88,14 +97,14 @@ export function useDeviceConnection() {
           setState((s) => ({
             ...s,
             connecting: false,
-            error: 'Failed to open device',
+            error: tRef.current('error.deviceOpenFailed'),
           }))
         }
       }
       return success
-    } catch (err) {
+    } catch {
       if (mountedRef.current) {
-        setState((s) => ({ ...s, connecting: false, error: String(err) }))
+        setState((s) => ({ ...s, connecting: false, error: tRef.current('error.deviceOpenFailed') }))
       }
       return false
     }

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.95",
+  "version": "0.1.96",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -674,6 +674,8 @@
     "sideloadInvalidDefinition": "定義バグってるっぽい？必須項目なくね？",
     "notVialCompatible": "Vial対応してなくね？ワンチャンある☆",
     "deviceLoadFailed": "キーボードからデータ読み込めなかった…ケーブル確認してもう一回繋いで〜！",
+    "deviceOpenFailed": "キーボード開けなかったんだけど…他のアプリが使ってるか、アクセス拒否られてるかも！もう一回繋ぎ直してみて〜！",
+    "deviceListFailed": "繋がってるキーボードの一覧取れなかったー…",
     "applyRolledBack": "キーボードへの書き込み失敗したー！でも前の設定に戻せたから安心して〜",
     "applyNotRolledBack": "キーボードへの書き込み失敗して、前の設定にも戻せなかった…マジサゲ。。もう一回繋ぎ直して、保存してたスナップショット読み込んでみて！"
   },

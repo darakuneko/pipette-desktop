@@ -6,6 +6,10 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 import { useDeviceConnection, POLL_INTERVAL_MS } from '../useDeviceConnection'
 import type { DeviceInfo } from '../../../shared/types/protocol'
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (k: string) => k }),
+}))
+
 const mockDevice: DeviceInfo = {
   vendorId: 0x1234,
   productId: 0x5678,
@@ -335,7 +339,7 @@ describe('useDeviceConnection', () => {
       await act(async () => {
         await result.current.connectDevice(mockDevice)
       })
-      expect(result.current.error).toBe('Failed to open device')
+      expect(result.current.error).toBe('error.deviceOpenFailed')
 
       act(() => {
         result.current.clearError()
@@ -355,7 +359,7 @@ describe('useDeviceConnection', () => {
       await act(async () => {
         await result.current.connectDevice(mockDevice)
       })
-      expect(result.current.error).toBe('Failed to open device')
+      expect(result.current.error).toBe('error.deviceOpenFailed')
 
       mockOpenDevice.mockResolvedValueOnce(true)
       await act(async () => {
@@ -378,14 +382,14 @@ describe('useDeviceConnection', () => {
       await act(async () => {
         await result.current.connectDevice(mockDevice)
       })
-      expect(result.current.error).toBe('Failed to open device')
+      expect(result.current.error).toBe('error.deviceOpenFailed')
 
       mockListDevices.mockResolvedValue([mockDevice])
       await act(async () => {
         await result.current.refreshDevices()
       })
 
-      expect(result.current.error).toBe('Failed to open device')
+      expect(result.current.error).toBe('error.deviceOpenFailed')
     })
 
     it('keeps a connect failure visible across a subsequent successful poll tick', async () => {
@@ -399,7 +403,7 @@ describe('useDeviceConnection', () => {
       await act(async () => {
         await result.current.connectDevice(mockDevice)
       })
-      expect(result.current.error).toBe('Failed to open device')
+      expect(result.current.error).toBe('error.deviceOpenFailed')
 
       mockListDevices.mockClear()
       mockListDevices.mockResolvedValue([mockDevice])
@@ -410,7 +414,53 @@ describe('useDeviceConnection', () => {
         { timeout: 5000, interval: 200 },
       )
 
-      expect(result.current.error).toBe('Failed to open device')
+      expect(result.current.error).toBe('error.deviceOpenFailed')
+    })
+  })
+
+  describe('raw error strings never reach the UI', () => {
+    it('translates an openDevice rejection instead of surfacing the raw IPC error', async () => {
+      mockOpenDevice.mockRejectedValue(
+        new Error("Error invoking remote method 'hid:open': cannot open /dev/hidraw3"),
+      )
+      const { result } = renderHook(() => useDeviceConnection())
+
+      await waitFor(() => {
+        expect(mockListDevices).toHaveBeenCalled()
+      })
+
+      await act(async () => {
+        await result.current.connectDevice(mockDevice)
+      })
+
+      expect(result.current.error).toBe('error.deviceOpenFailed')
+      expect(result.current.error).not.toContain('hidraw')
+      expect(result.current.error).not.toContain('Error')
+    })
+
+    it('translates a listDevices rejection at mount', async () => {
+      mockListDevices.mockRejectedValue(new Error('USB enumeration failed'))
+      const { result } = renderHook(() => useDeviceConnection())
+
+      await waitFor(() => {
+        expect(result.current.error).toBe('error.deviceListFailed')
+      })
+    })
+  })
+
+  describe('callback identity', () => {
+    it('keeps connectDevice and refreshDevices identities stable across a re-render', async () => {
+      const { result, rerender } = renderHook(() => useDeviceConnection())
+
+      await waitFor(() => {
+        expect(mockListDevices).toHaveBeenCalled()
+      })
+
+      const { connectDevice, refreshDevices } = result.current
+      rerender()
+
+      expect(result.current.connectDevice).toBe(connectDevice)
+      expect(result.current.refreshDevices).toBe(refreshDevices)
     })
   })
 })

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.95",
+  "version": "0.1.96",
   "name": "English",
   "common": {
     "save": "Save",
@@ -674,6 +674,8 @@
     "sideloadInvalidDefinition": "Invalid keyboard definition: missing required fields (matrix, layouts)",
     "notVialCompatible": "This device may not be a Vial-compatible keyboard.",
     "deviceLoadFailed": "Failed to read data from the keyboard. Check the USB cable and try connecting again.",
+    "deviceOpenFailed": "Couldn't open the keyboard. Another app may be using it, or access may be denied. Reconnect it and try again.",
+    "deviceListFailed": "Couldn't list connected keyboards.",
     "applyRolledBack": "Writing to the keyboard failed. The previous settings were restored.",
     "applyNotRolledBack": "Writing to the keyboard failed and the previous settings could not be restored. Reconnect the keyboard and load a saved snapshot."
   },
