@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+// Canvas-sizing constants, legend ordering/labels, the LegendSwatch
+// component, and the keystroke tooltip body builder — all consumed by
+// KeystrokeTimelinePanel.tsx.
 
 import { useTranslation } from 'react-i18next'
 import { TooltipShell, Stat } from '../components/analyze/analyze-tooltip'
@@ -38,9 +41,10 @@ interface LegendSwatchProps {
    *  Rendered PLAIN, no visual affordance on the label itself (no
    *  underline, no special cursor) — same idiom every other tooltip
    *  trigger in this codebase uses (ErrorMixSection's type labels,
-   *  CoverageBadge, the Missed table's own bar rows below): the tooltip
-   *  showing up on hover/focus IS the affordance, nothing on the trigger
-   *  itself hints at it in advance. */
+   *  CoverageBadge, the Missed table's own bar rows in
+   *  KeystrokeTimelinePanel.tsx): the tooltip showing up on hover/focus
+   *  IS the affordance, nothing on the trigger itself hints at it in
+   *  advance. */
   tooltipKey?: string
 }
 

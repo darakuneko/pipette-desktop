@@ -283,8 +283,9 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
             is the at-a-glance key. Every item shows only its head
             word ("Overlapped" / "Unjudged" / "Pause") — the former
             parenthetical explanation moved into a per-item hover
-            tooltip (`LegendSwatch`'s own `tooltipKey`), rendered PLAIN
-            with no visual affordance on the label itself (matching every
+            tooltip (`LegendSwatch`'s own `tooltipKey`, defined in
+            keystroke-timeline-parts.tsx), rendered PLAIN with no
+            visual affordance on the label itself (matching every
             other tooltip trigger in this codebase — ErrorMixSection's
             row labels, CoverageBadge, the Missed table's own bar rows —
             none of which carry an underline or a special cursor; the

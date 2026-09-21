@@ -35,14 +35,15 @@ export interface TimelineLegendEntry {
   labelKey: string
   /** i18n key for this entry's former parenthetical explanation — now
    *  shown via a hover tooltip on the label instead of inline text (see
-   *  `LegendSwatch` in KeystrokeTimelinePanel.tsx). Undefined for entries
+   *  `LegendSwatch` in keystroke-timeline-parts.tsx). Undefined for entries
    *  whose head word alone was already the whole label (`normal`,
    *  `mistake`, `leadIn`). */
   tooltipKey?: string
 }
 
-/** Legend entries in on-screen order — `WordTimelineView` maps over this
- *  instead of hand-maintaining one `LegendSwatch` per kind in JSX. */
+/** Legend entries in on-screen order — `KeystrokeTimelinePanel` maps over
+ *  this (via `LEGEND_ORDER` in keystroke-timeline-parts.tsx) instead of
+ *  hand-maintaining one `LegendSwatch` per kind in JSX. */
 export const TIMELINE_LEGEND: Record<TimelineFillKind, TimelineLegendEntry> = {
   normal: { swatchClass: 'bg-accent', labelKey: 'editor.typingTest.history.timeline.legend.normal' },
   mistake: { swatchClass: 'bg-danger', labelKey: 'editor.typingTest.history.timeline.legend.mistake' },
