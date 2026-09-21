@@ -47,15 +47,33 @@ describe('AppErrorBanner', () => {
   it('renders two independent banners when two sources are set, each with its own auto-dismiss clock', () => {
     const fileIOClear = vi.fn()
     const sideloadClear = vi.fn()
-    render(<AppErrorBanner {...makeProps({ fileIOError: 'File error', sideloadError: 'Sideload error', fileIOClear, sideloadClear })} />)
+    const STAGGER_MS = 6_000
+
+    // Start with only the file-IO banner mounted, then let 6s of its clock
+    // elapse before the sideload banner appears. If the two banners shared
+    // a single clock (e.g. keyed off first-mount time), the sideload
+    // banner would inherit the elapsed 6s and fire 4s early below.
+    const { rerender } = render(<AppErrorBanner {...makeProps({ fileIOError: 'File error', fileIOClear })} />)
+    act(() => { vi.advanceTimersByTime(STAGGER_MS) })
+
+    rerender(<AppErrorBanner {...makeProps({ fileIOError: 'File error', sideloadError: 'Sideload error', fileIOClear, sideloadClear })} />)
 
     expect(screen.getByTestId('file-io-error-banner')).toHaveTextContent('File error')
     expect(screen.getByTestId('sideload-error-banner')).toHaveTextContent('Sideload error')
     expect(screen.queryByTestId('layout-store-error-banner')).not.toBeInTheDocument()
 
-    act(() => { vi.advanceTimersByTime(ERROR_DISMISS_MS) })
-
+    // File-IO's clock started at t=0, so it clears at t=10s — 4s from now.
+    act(() => { vi.advanceTimersByTime(ERROR_DISMISS_MS - STAGGER_MS) })
     expect(fileIOClear).toHaveBeenCalledTimes(1)
+    expect(sideloadClear).not.toHaveBeenCalled()
+
+    // Sideload's own clock started at t=6s, so it clears at t=16s —
+    // 5.999s from now. Confirm it hasn't fired a moment early…
+    act(() => { vi.advanceTimersByTime(STAGGER_MS - 1) })
+    expect(sideloadClear).not.toHaveBeenCalled()
+
+    // …then fires exactly on its own independent schedule.
+    act(() => { vi.advanceTimersByTime(1) })
     expect(sideloadClear).toHaveBeenCalledTimes(1)
   })
 

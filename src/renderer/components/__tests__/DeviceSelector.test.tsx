@@ -64,6 +64,8 @@ describe('DeviceSelector', () => {
     onConnect: vi.fn(),
     onLoadDummy: vi.fn(),
     onLoadPipetteFile: vi.fn(),
+    onClearFileLoadError: vi.fn(),
+    onClearDeviceError: vi.fn(),
   }
 
   it('renders title and section label', () => {

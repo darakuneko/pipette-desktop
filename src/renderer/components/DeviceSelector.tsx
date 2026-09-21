@@ -56,8 +56,8 @@ interface Props {
   onOpenData?: () => void
   syncStatus?: SyncStatusType
   deviceWarning?: string | null
-  onClearFileLoadError?: () => void
-  onClearDeviceError?: () => void
+  onClearFileLoadError: () => void
+  onClearDeviceError: () => void
 }
 
 export function DeviceSelector({
@@ -153,13 +153,13 @@ export function DeviceSelector({
 
         <DismissibleError
           message={fileLoadError}
-          onDismiss={() => onClearFileLoadError?.()}
+          onDismiss={onClearFileLoadError}
           className={ERROR_BOX_CLASS}
           testid="file-load-error"
         />
         <DismissibleError
           message={deviceError}
-          onDismiss={() => onClearDeviceError?.()}
+          onDismiss={onClearDeviceError}
           className={ERROR_BOX_CLASS}
           testid="device-error"
         />
@@ -169,7 +169,7 @@ export function DeviceSelector({
           <button
             type="button"
             className={`${TAB_CLASS} ${tab === 'keyboard' ? TAB_ACTIVE : TAB_INACTIVE}`}
-            onClick={() => { setTab('keyboard'); onClearFileLoadError?.() }}
+            onClick={() => { setTab('keyboard'); onClearFileLoadError() }}
             data-testid="tab-keyboard"
           >
             {t('app.keyboardTab')}
@@ -177,7 +177,7 @@ export function DeviceSelector({
           <button
             type="button"
             className={`${TAB_CLASS} ${tab === 'file' ? TAB_ACTIVE : TAB_INACTIVE}`}
-            onClick={() => { setTab('file'); onClearFileLoadError?.() }}
+            onClick={() => { setTab('file'); onClearFileLoadError() }}
             data-testid="tab-file"
           >
             {t('app.fileTab')}
@@ -188,7 +188,7 @@ export function DeviceSelector({
             // return above, so by the time this button renders `tab` can
             // only be 'keyboard' | 'file' — the active style never applies.
             className={`${TAB_CLASS} ${TAB_INACTIVE}`}
-            onClick={() => { setTab('analyze'); onClearFileLoadError?.() }}
+            onClick={() => { setTab('analyze'); onClearFileLoadError() }}
             data-testid="tab-analyze"
           >
             {t('app.analyzeTab')}
@@ -306,7 +306,7 @@ export function DeviceSelector({
                   type="button"
                   data-testid="file-back-button"
                   className="flex items-center gap-0.5 text-2xs font-semibold uppercase tracking-widest text-content-muted transition-colors hover:text-content-secondary"
-                  onClick={() => { setSelectedFileUid(null); onClearFileLoadError?.() }}
+                  onClick={() => { setSelectedFileUid(null); onClearFileLoadError() }}
                 >
                   <ChevronLeft size={ICON_XS} aria-hidden="true" />
                   {t('common.back')}
