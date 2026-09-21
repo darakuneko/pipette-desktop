@@ -166,7 +166,7 @@ describe('KeymapEditor — QK_BOOT unlock check', () => {
 
     fireEvent.click(screen.getByTestId('kc-boot'))
 
-    // Guard has moved to useKeyboardSetters; component calls onSetKey directly
+    // The guard lives in useKeyboardSetters; the component calls onSetKey directly
     expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, QK_BOOT)
   })
 
@@ -214,7 +214,7 @@ describe('KeymapEditor — QK_BOOT unlock check', () => {
     act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
     fireEvent.click(screen.getByTestId('kc-boot'))
 
-    // Guard has moved to useKeyboardSetters; component calls onSetKey directly
+    // The guard lives in useKeyboardSetters; the component calls onSetKey directly
     expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, QK_BOOT)
   })
 
