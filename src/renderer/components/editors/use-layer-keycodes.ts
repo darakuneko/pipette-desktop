@@ -22,7 +22,7 @@ import { EMPTY_KEYCODES, EMPTY_REMAPPED, EMPTY_ENCODER_KEYCODES } from './keymap
  *  legend (e.g. LSFT(KC_8) with KC_8 -> "(\n8"), which checking the
  *  composite string alone can't see. Shared by the key and encoder
  *  builders below so encoder CW/CCW legends get the same tint rule as
- *  keymap keys (#294/#295 follow-up). */
+ *  keymap keys. */
 function isQmkIdRemapped(qmkId: string, checkRemapped: (qmkId: string) => boolean): boolean {
   if (!isMask(qmkId)) return checkRemapped(qmkId)
   const innerQmkId = findInnerKeycode(qmkId)?.qmkId
@@ -55,9 +55,9 @@ export interface UseLayerKeycodesOptions {
    *  `layerEncoderRemapped` to their empty constants (and skips the
    *  `deserializeAllMacros` parse) when `false` — same idea as the
    *  `typingTestMode` gating below, generalized so a second call site that
-   *  isn't always needed (Plan-qwerty-select-no-rewrite v7's Base-tab raw
-   *  keycodes in `KeymapEditor.tsx`) can skip the O(keymap size) build
-   *  entirely while its output isn't being shown. Defaults to `true`. */
+   *  isn't always needed (Base-tab raw keycodes in `KeymapEditor.tsx`) can
+   *  skip the O(keymap size) build entirely while its output isn't being
+   *  shown. Defaults to `true`. */
   enabled?: boolean
 }
 
