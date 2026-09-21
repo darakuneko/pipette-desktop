@@ -257,8 +257,8 @@ describe('TypingTestHistory', () => {
   // truncate instead of wrapping/stretching the table, with the full text
   // reachable via hover tooltip — same treatment as the Name column. The
   // table is `table-fixed`, and every other header cell (`date`, `wpm`,
-  // `kpm`, `accuracy`, `akh`, `duration`, `pb`, plus the icon-only
-  // `timeline`/`delete` cells that only exist when `uid`/`onDelete` are
+  // `kpm`, `accuracy`, `akh`, `duration`, `pb`, plus the label-less
+  // `timeline`/`delete` header cells that only exist when `uid`/`onDelete` are
   // passed — the code-side column names, not their display labels) carries
   // a width — measured px once `useHistoryColumnWidths` resolves, a
   // `FALLBACK_*` class whenever that measurement isn't available (before
