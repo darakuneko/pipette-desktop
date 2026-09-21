@@ -61,7 +61,7 @@ export function useDeviceConnection() {
     try {
       const devices = await window.vialAPI.listDevices()
       if (mountedRef.current) {
-        setState((s) => ({ ...s, devices, error: null }))
+        setState((s) => ({ ...s, devices }))
       }
     } catch (err) {
       if (mountedRef.current) {
@@ -204,7 +204,7 @@ export function useDeviceConnection() {
             POLL_TIMEOUT_MS,
           )
           if (mountedRef.current) {
-            setState((s) => ({ ...s, devices, error: null }))
+            setState((s) => ({ ...s, devices }))
           }
         } catch {
           // Ignore polling errors (including timeouts) to avoid flooding the UI

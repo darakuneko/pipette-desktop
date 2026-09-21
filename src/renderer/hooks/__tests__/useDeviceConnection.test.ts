@@ -365,4 +365,52 @@ describe('useDeviceConnection', () => {
       expect(result.current.error).toBeNull()
     })
   })
+
+  describe('error persistence across list refreshes', () => {
+    it('keeps a connect failure visible across a subsequent successful refreshDevices', async () => {
+      mockOpenDevice.mockResolvedValue(false)
+      const { result } = renderHook(() => useDeviceConnection())
+
+      await waitFor(() => {
+        expect(mockListDevices).toHaveBeenCalled()
+      })
+
+      await act(async () => {
+        await result.current.connectDevice(mockDevice)
+      })
+      expect(result.current.error).toBe('Failed to open device')
+
+      mockListDevices.mockResolvedValue([mockDevice])
+      await act(async () => {
+        await result.current.refreshDevices()
+      })
+
+      expect(result.current.error).toBe('Failed to open device')
+    })
+
+    it('keeps a connect failure visible across a subsequent successful poll tick', async () => {
+      mockOpenDevice.mockResolvedValue(false)
+      const { result } = renderHook(() => useDeviceConnection())
+
+      await waitFor(() => {
+        expect(mockListDevices).toHaveBeenCalled()
+      })
+
+      await act(async () => {
+        await result.current.connectDevice(mockDevice)
+      })
+      expect(result.current.error).toBe('Failed to open device')
+
+      mockListDevices.mockClear()
+      mockListDevices.mockResolvedValue([mockDevice])
+      await waitFor(
+        () => {
+          expect(mockListDevices).toHaveBeenCalled()
+        },
+        { timeout: 5000, interval: 200 },
+      )
+
+      expect(result.current.error).toBe('Failed to open device')
+    })
+  })
 })
