@@ -13,9 +13,11 @@ import type { FavoriteType, SavedFavoriteMeta } from '../../shared/types/favorit
 interface Options {
   requestUploadOptions: ReturnType<typeof useUploadConfirm>['requestUploadOptions']
   t: TFunction
-  /** Sanitized Vial protocol version — never the raw `vialProtocol`
-   *  value. `-1` is the not-yet-connected sentinel, and the Hub API
-   *  rejects it. */
+  /** `vialProtocol` passed through `isValidHubVialProtocol` with a
+   *  fallback for the not-yet-connected sentinel (computed in
+   *  useHubState.ts) — never the raw `vialProtocol` value. `-1` is that
+   *  sentinel, and hub-ipc-favorite.ts's own `isValidHubVialProtocol`
+   *  guard rejects it outright. */
   favVialProtocol: number
   markAccountDeactivated: () => void
   hubReady: boolean
