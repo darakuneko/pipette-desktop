@@ -231,12 +231,16 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
   ゔょ: ['vyo'],
 
   // -- extended い/え-row digraphs, one consonant-pair per row (きぃ/きぇ,
-  // ぎぃ/ぎぇ, ...). Most of these have no toggleable family and no
-  // decomposition fallback beyond the digraph spelling itself, so they're
+  // ぎぃ/ぎぇ, ...). Most of these have no toggleable family, so they're
   // deliberately left untagged in SPELLING_STYLES below (see the comment
   // directly above SPELLING_STYLES for the untagged-IME-extension policy)
   // — the few that do share a family with an existing style (cyi/cye,
-  // jyi/jye) are tagged individually where they occur. --
+  // jyi/jye) are tagged individually where they occur. Each row here
+  // lists only the digraph spelling itself (e.g. きぃ: ['kyi']); the
+  // decomposed き + ぃ path (ki + xi/li/xyi/lyi) isn't listed here —
+  // romaji-engine.ts's getSegmentOptions always offers it as a second
+  // segmentation option alongside the digraph, and stepAt/tryConsume
+  // accept it subject to the same SPELLING_STYLES filtering. --
   きぃ: ['kyi'],
   きぇ: ['kye'],
   ぎぃ: ['gyi'],
