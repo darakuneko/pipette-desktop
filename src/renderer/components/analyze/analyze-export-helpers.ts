@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+// Export context type, per-category filter-snippet builders, and the
+// `pickBuilders` dispatcher backing AnalyzeExportModal.tsx. Kept separate
+// from the modal so the category/context logic is testable without
+// rendering the modal itself.
 
 import type { TFunction } from 'i18next'
 import type { TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
@@ -51,8 +55,9 @@ export interface AnalyzeExportContext {
   layer: { baseLayer: number }
   bigrams: { gram: 2 | 3 }
   // `Required<>` only strips the `?`, so `targetLayoutId` is still
-  // `string | null`. The runtime guard in pickBuilders (and
-  // isCategoryAvailable) narrows it before passing to the builder.
+  // `string | null`. The runtime guard in pickBuilders here (and in
+  // `isCategoryAvailable` in AnalyzeExportModal.tsx) narrows it before
+  // passing to the builder.
   layoutComparison: Required<LayoutComparisonFilters>
   fingerOverrides: Record<string, FingerType>
   /** Pre-formatted human-readable filter snapshot for the modal's
@@ -169,7 +174,7 @@ function granularityLabel(value: GranularityChoice, t: TFunction): string {
 
 // Per-category filter snippets — the bits unique to each chart that
 // affect the CSV output (slug or column shape). Common conditions
-// (device / keymap / range) live in the modal header.
+// (device / keymap / range) are rendered in AnalyzeExportModal's header.
 export function specificsFor(c: Category, ctx: AnalyzeExportContext, t: TFunction): string[] {
   switch (c) {
     case 'summary':
