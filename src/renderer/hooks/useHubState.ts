@@ -37,7 +37,9 @@ interface Options {
   }>
   activityCount: number
   pipetteFileSavedActivityRef: React.MutableRefObject<number>
-  /** Vial protocol of the live keyboard. Forwarded to favorite Hub uploads (v3 export). */
+  /** Vial protocol of the live keyboard. Sanitized into `favVialProtocol`
+   *  below and forwarded to useHubFavoriteHandlers's favorite Hub upload
+   *  handlers (use-hub-favorite-handlers.ts). */
   vialProtocol: number
 }
 
@@ -477,7 +479,8 @@ export function useHubState(options: Options) {
     return ok
   }, [layoutStoreEntries, getHubPostId, layoutStoreRenameEntry, hubReady, runHubOperation, refreshHubPosts, t])
 
-  // --- Favorite Hub handlers ---
+  // --- Favorite Hub handlers (delegated to useHubFavoriteHandlers,
+  //     use-hub-favorite-handlers.ts) ---
 
   const { handleFavUploadToHub, handleFavUpdateOnHub, handleFavRemoveFromHub, handleFavRenameOnHub } = useHubFavoriteHandlers({
     requestUploadOptions,

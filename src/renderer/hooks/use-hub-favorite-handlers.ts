@@ -13,9 +13,16 @@ import type { FavoriteType, SavedFavoriteMeta } from '../../shared/types/favorit
 interface Options {
   requestUploadOptions: ReturnType<typeof useUploadConfirm>['requestUploadOptions']
   t: TFunction
+  /** Sanitized Vial protocol version — never the raw `vialProtocol`
+   *  value. `-1` is the not-yet-connected sentinel, and the Hub API
+   *  rejects it. */
   favVialProtocol: number
   markAccountDeactivated: () => void
   hubReady: boolean
+  /** Stable references (a `useRef` object and `useState` setters) —
+   *  `runFavHubOperation` closes over all three without listing them as
+   *  `useCallback` dependencies, so they must never be passed a value
+   *  that changes identity across renders. */
   favHubUploadingRef: React.MutableRefObject<boolean>
   setFavHubUploading: React.Dispatch<React.SetStateAction<string | null>>
   setFavHubUploadResult: React.Dispatch<React.SetStateAction<FavHubEntryResult | null>>
