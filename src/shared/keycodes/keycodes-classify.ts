@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+// Pattern-based QMK id classification: layer-op target parsing
+// (getLayerOpTarget) and the Analyze ranking filter's high-level groups
+// (keycodeGroup). Depends on no state from keycodes.ts/keycodes-utils.ts
+// (no RAWCODES_MAP, no live keyboard registration), so it stays correct
+// for a snapshot viewer's composites too.
 
 // LT/LM write the layer digit directly after the op (`LT1(kc)`); MO-family
 // ops put the layer inside parens (`MO(1)`) and carry no inner keycode.
+// Exported (not module-private) only so keycodes-utils.ts's own
+// `resolve`-adjacent helpers can share the same two patterns.
 export const LAYER_MASK_RE = /^(LT|LM)(\d+)(?:\((.+)\))?$/
 export const LAYER_SINGLE_RE = /^(MO|DF|PDF|TG|TT|OSL|TO)\((\d+)\)$/
 
@@ -39,7 +46,8 @@ export interface LayerOpTarget {
  * plus which press category (full count vs. hold-only) contributes to
  * "the user activated that layer". Returns `null` for anything that
  * isn't a layer op. Purely pattern-based so it works without relying
- * on `RAWCODES_MAP` / `recreateKeycodes()` state. */
+ * on `RAWCODES_MAP` (keycodes.ts) / `recreateKeycodes()`
+ * (keycodes-utils.ts) state. */
 export function getLayerOpTarget(qmkId: string): LayerOpTarget | null {
   if (!qmkId) return null
   const mask = qmkId.match(LAYER_MASK_RE)
@@ -60,7 +68,8 @@ export function getLayerOpTarget(qmkId: string): LayerOpTarget | null {
 /** Classify a QMK id into one of the high-level groups the Analyze
  *  ranking filter offers. Pattern-based so it works without depending on
  *  the current keyboard registration (snapshot viewer may see composites
- *  that `findOuterKeycode` doesn't know about). Unknowns land in `other`. */
+ *  that `findOuterKeycode` (keycodes-utils.ts) doesn't know about).
+ *  Unknowns land in `other`. */
 export function keycodeGroup(qmkId: string): KeycodeGroup {
   if (!qmkId || qmkId === 'KC_NO' || qmkId === 'KC_TRNS' || qmkId === 'KC_TRANS') return 'other'
   if (LAYER_OP_PREFIX_RE.test(qmkId)) return 'layerOp'

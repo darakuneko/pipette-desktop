@@ -126,7 +126,7 @@ export interface AggregateLayerActivationsOptions {
  * target-layer activation counts. For each cell, the serialized QMK
  * id comes from `snapshot.keymap[layer][row][col]`; layer-op keycodes
  * dispatch to their target layer via
- * {@link import('../../../shared/keycodes/keycodes-utils').getLayerOpTarget}.
+ * {@link import('../../../shared/keycodes/keycodes-classify').getLayerOpTarget}.
  * Semantics:
  *
  *   - `MO(n)` / `TG(n)` / `TO(n)` / `DF(n)` / `PDF(n)` / `OSL(n)` /
