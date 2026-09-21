@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
-// Plan-completion-timeline-view PR-B, codex-review point (c): once a run
-// finishes, the keymap pane (and its layer-tracking note) give way to the
-// completion screen's inline keystroke timeline (rendered by
+// Once a run finishes, the keymap pane (and its layer-tracking note) give
+// way to the completion screen's inline keystroke timeline (rendered by
 // TypingTestView) — this only applies in the EDITOR view (`viewOnly`
 // false/undefined); view-only's own keyboard display stays independent of
 // both `hideKeymap` and the finished-state hide (see

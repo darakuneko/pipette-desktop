@@ -75,10 +75,9 @@ interface TypingTestPaneSettingsPanelProps {
 }
 
 /** Editor-mode left config sidebar (Settings / Data / View sections),
- *  split out of TypingTestPane (file-splitting.md cap) — see
- *  Task-split-typing-test-pane.md. Rendered only in editor mode — the
- *  caller keeps the `{!viewOnly && ...}` guard, this component always
- *  renders its content. */
+ *  split out of TypingTestPane (file-splitting.md cap). Rendered only in
+ *  editor mode — the caller keeps the `{!viewOnly && ...}` guard, this
+ *  component always renders its content. */
 export function TypingTestPaneSettingsPanel({
   typingTest,
   showLanguageModal,

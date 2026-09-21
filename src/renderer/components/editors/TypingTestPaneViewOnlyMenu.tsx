@@ -24,13 +24,12 @@ interface TypingTestPaneViewOnlyMenuProps {
 }
 
 /** View-only mode's fixed bottom-right menu (hint bar + panel), split
- *  out of TypingTestPane (file-splitting.md cap) — see
- *  Task-split-typing-test-pane.md. Renders a bare fragment: the two fixed
- *  divs must stay siblings in source order (z-40 hint under z-50 panel).
- *  The REC tab (recording toggle, Monitor App, tray toggles, HeatMap
- *  window select) moved to the footer's Record button/modal
- *  (Task-typing-record-footer) — this panel now only ever shows the
- *  former Window tab's content, so the tab strip is gone too. The
+ *  out of TypingTestPane (file-splitting.md cap). Renders a bare fragment:
+ *  the two fixed divs must stay siblings in source order (z-40 hint under
+ *  z-50 panel). The REC tab (recording toggle, Monitor App, tray toggles,
+ *  HeatMap window select) moved to the footer's Record button/modal —
+ *  this panel now only ever shows the former Window tab's content, so
+ *  the tab strip is gone too. The
  *  Analyze button (View Analytics from Typing View) stayed behind —
  *  the footer's Record button is hidden while in Typing View, so this
  *  popover remains the only entry point back to Analyze from here. */
