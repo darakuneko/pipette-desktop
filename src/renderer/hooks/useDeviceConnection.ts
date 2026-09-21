@@ -30,10 +30,10 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 export function useDeviceConnection() {
   const { t } = useTranslation()
-  // Held in a ref so refreshDevices/connectDevice can keep stable [] deps —
-  // the mount effect depends on refreshDevices, and an unstable t would
-  // turn a language switch into a re-fetch loop (see DismissibleError's
-  // onDismissRef for the same pattern).
+  // Read t through a ref so refreshDevices/connectDevice keep [] deps: the mount
+  // effect depends on refreshDevices, so listing t as a dependency would re-fetch
+  // the device list on every language switch — and on every render wherever t has
+  // no stable identity.
   const tRef = useRef(t)
   tRef.current = t
 
