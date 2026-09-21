@@ -27,9 +27,8 @@ export function effectiveViewPos(
 /**
  * Orders `keys` for the keymap editor's Auto Move (auto-advance) walk.
  *
- * This replaces the old definition-order walk (no vial-gui reference — this
- * is a Pipette-original feature, see issue #257). Each key's effective
- * position is its `viewMatrix` override (looked up by its physical
+ * No vial-gui reference — this is a Pipette-original feature. Each key's
+ * effective position is its `viewMatrix` override (looked up by its physical
  * `"row,col"`) when present, else its own physical position. Keys are
  * sorted ascending by (effective row, effective col); ties break on
  * (physical row, physical col), then on original array index, so the sort
