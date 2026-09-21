@@ -257,8 +257,9 @@ describe('TypingTestHistory', () => {
   // truncate instead of wrapping/stretching the table, with the full text
   // reachable via hover tooltip — same treatment as the Name column. The
   // table is `table-fixed` with a proportional width on each header cell
-  // (not a hard max-w cap on the td — see COL_MODE in HistoryResultsPanel)
-  // so the column, and thus the truncation point, scales with the modal's
+  // (not a hard max-w cap on the td in HistoryResultsCells.tsx's ModeCell
+  // — see the Mode header cell in HistoryResultsPanel.tsx) so the
+  // column, and thus the truncation point, scales with the modal's
   // actual width instead of stopping at a fixed rem value.
   it('truncates a long Mode cell and exposes the full text via tooltip', () => {
     const results = [

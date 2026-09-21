@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+// SortableHeader, NameCell, and ModeCell for HistoryResultsPanel.tsx's
+// history table — the column header button and the two variable-width
+// text cells (Name, Mode) that rely on it for their table-fixed sizing.
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -124,10 +127,11 @@ interface NameCellProps {
 /** Result label cell. A button (edit icon + current name / "Unnamed") that
  *  opens the naming modal with quick-insert chips. Read-only when no rename
  *  handler is provided. No max-w cap on the `<td>` here — the table is
- *  `table-fixed` (see COL_NAME above), so this column's width is already
- *  fixed by the header row; the inner `block truncate` span gets its
- *  definite width for free from that fixed cell, and only ellipsizes once
- *  the name actually exceeds its allocated share. */
+ *  `table-fixed` (see the Name header cell in HistoryResultsPanel.tsx,
+ *  which intentionally carries no width class), so this column's width
+ *  is already fixed by the header row; the inner `block truncate` span
+ *  gets its definite width for free from that fixed cell, and only
+ *  ellipsizes once the name actually exceeds its allocated share. */
 export function NameCell({ result, onRename, deviceName }: NameCellProps) {
   const { t } = useTranslation()
   const [modalOpen, setModalOpen] = useState(false)
@@ -179,8 +183,9 @@ interface ModeCellProps {
  *  composite label can run to "Tatoeba 10 Lines (japanese_hiragana)") — same
  *  truncate + hover-tooltip treatment as the Name column, so a long value
  *  ellipsizes instead of stretching or wrapping the table. Same no-max-w
- *  reasoning as NameCell above: COL_MODE on the header fixes this column's
- *  width, so the `<td>` needs no cap of its own. */
+ *  reasoning as NameCell above: the Mode header cell in
+ *  HistoryResultsPanel.tsx (also with no width class) fixes this
+ *  column's width, so the `<td>` needs no cap of its own. */
 export function ModeCell({ r, isText }: ModeCellProps) {
   const { t } = useTranslation()
   const text = isText
