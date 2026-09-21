@@ -62,40 +62,32 @@ function Host(props: Partial<UseLayoutPickerOptions>) {
   return <>{layoutPickerContent}</>
 }
 
-/** Renders the host and switches the picker source to File, which shows
- *  the file-browse view where `pickerLoadError` renders. */
-async function renderFileBrowseView() {
-  const utils = render(<Host />)
+/** Renders the host, switches the picker source to File (the browse view
+ *  where `pickerLoadError` renders), then triggers a file load that the
+ *  mocked `loadLayout` fails — leaving the error box on screen. */
+async function renderWithLoadError() {
+  render(<Host />)
   await act(async () => {
     fireEvent.click(screen.getByText('editor.keymap.pickerSourceFile'))
   })
-  return utils
+  await act(async () => {
+    fireEvent.click(screen.getByText('editor.keymap.pickerLoadFile'))
+  })
 }
 
 describe('LayoutPickerContent — pickerLoadError', () => {
   it('shows the error after a failed file load and auto-dismisses after 10 seconds', async () => {
-    await renderFileBrowseView()
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('editor.keymap.pickerLoadFile'))
-    })
-
-    const box = screen.getByTestId('picker-load-error')
-    expect(box).toHaveTextContent('error.loadFailed')
+    await renderWithLoadError()
+    expect(screen.getByTestId('picker-load-error')).toHaveTextContent('error.loadFailed')
 
     act(() => { vi.advanceTimersByTime(ERROR_DISMISS_MS) })
     expect(screen.queryByTestId('picker-load-error')).not.toBeInTheDocument()
   })
 
   it('dismisses immediately via the close button', async () => {
-    await renderFileBrowseView()
+    await renderWithLoadError()
 
-    await act(async () => {
-      fireEvent.click(screen.getByText('editor.keymap.pickerLoadFile'))
-    })
-
-    const box = screen.getByTestId('picker-load-error')
-    fireEvent.click(box.querySelector('button')!)
+    fireEvent.click(screen.getByTestId('picker-load-error').querySelector('button')!)
 
     expect(screen.queryByTestId('picker-load-error')).not.toBeInTheDocument()
   })

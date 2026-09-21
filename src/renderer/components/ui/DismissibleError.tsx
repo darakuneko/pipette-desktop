@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-// A single error message inside a container the caller styles (the
-// container's classes decide the color/size/spacing — this component only
-// adds the auto-dismiss timer and the close button). Each instance tracks
-// exactly one error source, so several can be stacked independently
-// without one source's dismissal or restart affecting another's.
+// A single error message in a caller-styled container: the caller's
+// classes decide color/size/spacing, this adds the auto-dismiss timer and
+// the close button. One instance tracks exactly one error source, so
+// several can be stacked without affecting each other's timers.
 
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -22,9 +21,9 @@ interface DismissibleErrorProps {
 
 export function DismissibleError({ message, onDismiss, className, testid }: DismissibleErrorProps) {
   const { t } = useTranslation()
-  // Keep the latest callback in a ref so the timer effect below can depend
-  // on `message` alone — depending on `onDismiss` directly would restart
-  // the timer on every render that hands in a fresh function identity.
+  // Held in a ref so the timer effect depends on `message` alone —
+  // depending on `onDismiss` would restart the timer whenever a caller
+  // hands in a fresh function identity.
   const onDismissRef = useRef(onDismiss)
   onDismissRef.current = onDismiss
 

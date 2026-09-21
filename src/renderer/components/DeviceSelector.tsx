@@ -29,6 +29,9 @@ const TAB_INACTIVE =
 const LIST_CLASS =
   'min-h-device-list max-h-device-list space-y-2 overflow-y-auto pb-2 pr-1'
 
+const ERROR_BOX_CLASS =
+  'mb-4 rounded-lg bg-danger/10 p-3 text-sm text-danger'
+
 function formatDate(iso: string): string {
   const d = new Date(iso)
   if (isNaN(d.getTime())) return iso
@@ -151,13 +154,13 @@ export function DeviceSelector({
         <DismissibleError
           message={fileLoadError}
           onDismiss={() => onClearFileLoadError?.()}
-          className="mb-4 rounded-lg bg-danger/10 p-3 text-sm text-danger"
+          className={ERROR_BOX_CLASS}
           testid="file-load-error"
         />
         <DismissibleError
           message={deviceError}
           onDismiss={() => onClearDeviceError?.()}
-          className="mb-4 rounded-lg bg-danger/10 p-3 text-sm text-danger"
+          className={ERROR_BOX_CLASS}
           testid="device-error"
         />
 

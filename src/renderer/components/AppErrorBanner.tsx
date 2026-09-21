@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Connected-view error banners for the three sources that can each fail
-// independently below the editor surface — file export/import, JSON
-// sideload, and the local layout store. Each renders its own
-// `DismissibleError` so one source's auto-dismiss timer or close button
-// never affects the other two.
+// Connected-view error banners below the editor surface for the three
+// sources that fail independently: file export/import, JSON sideload, and
+// the local layout store. Each gets its own `DismissibleError` so one
+// source's timer or close button never affects the other two.
 
 import { DismissibleError } from './ui/DismissibleError'
 import type { useFileIO } from '../hooks/useFileIO'
