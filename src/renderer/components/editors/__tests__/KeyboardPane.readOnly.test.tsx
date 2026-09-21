@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-// Plan-qwerty-select-no-rewrite v7 — シミュレーションタブ方式: `readOnly` is the
-// single choke point `KeymapEditor` relies on to make the simulation tab
-// completely view-only. This exercises it against the REAL `KeyboardWidget`
-// (not mocked, unlike most KeymapEditor-level tests) so the DOM click path
-// itself — not just prop threading — is proven blocked.
+// `readOnly` is the single choke point `KeymapEditor` relies on to make
+// the simulation tab completely view-only. This exercises it against the
+// REAL `KeyboardWidget` (not mocked, unlike most KeymapEditor-level tests)
+// so the DOM click path itself — not just prop threading — is proven
+// blocked.
 
 import { describe, it, expect, vi } from 'vitest'
 import { render, fireEvent } from '@testing-library/react'

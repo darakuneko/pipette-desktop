@@ -91,7 +91,7 @@ describe('KeymapPrimaryPane — auxUndoHandlers threading', () => {
       />,
     )
     expect(capturedOnKeyAuxClick).toBeInstanceOf(Function)
-    // Wrapped for the selection gate below, so this is no longer the same
+    // Wrapped for the selection gate below, so this isn't the same
     // function reference as the bundled `onKeyAuxClick` — assert behavior
     // (calls through when the position matches the selection) instead.
     capturedOnKeyAuxClick?.({ row: 1, col: 2 })
