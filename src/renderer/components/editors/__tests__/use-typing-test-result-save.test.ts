@@ -4,8 +4,8 @@
 // Focused unit coverage for useTypingTestResultSave's `lineBreaks`
 // derivation at finish time — the source is chosen by `config.mode` (never
 // by `state.lineBreaks.size`, which can't tell "real single-line text"
-// apart from "no real line source"), and every clamp is STRICT (`<
-// persistedWordCount - 1`, not `< persistedWordCount`) since a line break
+// apart from "no real line source"), and every clamp is STRICT
+// (`< persistedWordCount - 1`, not `< persistedWordCount`) since a line break
 // can never legitimately land on the run's own last persisted word. Every
 // other existing behavior of this hook (result build/save, pending-unnamed
 // naming, memory-clear-on-finish) is already covered end-to-end via
