@@ -127,7 +127,7 @@ export function useInputModes({
   lineSnapshotRef,
 }: UseInputModesOptions): UseInputModesReturn {
   // Effective recording condition: the REC toggle alone (REC lives in the
-  // keymap-editor footer, not the Typing View popover, so it's no longer
+  // keymap-editor footer, not the Typing View popover, so it isn't
   // scoped to view-only). REC being on authorizes ambient per-minute
   // analytics wherever matrix frames flow EXCEPT Key Tester: Typing View
   // and the editor Typing Test screen (state-driven effect further down,
@@ -427,7 +427,7 @@ export function useInputModes({
   }, [keymap, recordingActive, resetMatrixPressTracking])
 
   // When recording transitions off (the footer's Record toggle flips —
-  // leaving a view no longer deactivates it), finalize the open session
+  // leaving a view doesn't deactivate it), finalize the open session
   // in main and flush its data for the active keyboard. Must wait for the drain the effect
   // above just kicked off (same recordingActive dependency, so it always
   // runs first in this commit) — see flushAfterPendingEmits for why.
