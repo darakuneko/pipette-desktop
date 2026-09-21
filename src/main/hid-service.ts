@@ -26,7 +26,7 @@ import {
   CMD_VIAL_GET_DEFINITION,
   CMD_VIAL_GET_ENCODER,
 } from '../shared/constants/protocol'
-import { logHidPacket } from './logger'
+import { log, logHidPacket } from './logger'
 import type { DeviceInfo, DeviceType, KeyboardDefinition, ProbeResult } from '../shared/types/protocol'
 import { decompressLzma, decompressXz, hasXzMagic } from './lzma'
 import { parseDefinitionLayout } from '../shared/kle/definition-layout'
@@ -192,6 +192,14 @@ export async function openHidDevice(vendorId: number, productId: number): Promis
       if (attempt < HID_OPEN_RETRY_COUNT - 1) {
         await delay(HID_OPEN_RETRY_DELAY_MS)
       } else {
+        try {
+          const vid = vendorId.toString(16).padStart(4, '0')
+          const pid = productId.toString(16).padStart(4, '0')
+          const message = err instanceof Error ? err.message : String(err)
+          log('error', `Failed to open HID device 0x${vid}:0x${pid} after ${HID_OPEN_RETRY_COUNT} attempts: ${message}`)
+        } catch {
+          // Logging must never mask the original open failure.
+        }
         throw err
       }
     }

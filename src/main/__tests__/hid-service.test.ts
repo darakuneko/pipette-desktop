@@ -67,6 +67,7 @@ import {
   validateHidData,
   probeDevice,
 } from '../hid-service'
+import { log } from '../logger'
 
 function createMockDeviceInfo(overrides?: Record<string, unknown>) {
   return {
@@ -257,6 +258,51 @@ describe('openHidDevice / closeHidDevice', () => {
 
     await assertion
     expect(mockHIDAsyncOpen).toHaveBeenCalledTimes(HID_OPEN_RETRY_COUNT)
+  })
+
+  it('logs once, at error level, when every open attempt fails', async () => {
+    vi.useFakeTimers()
+    mockDevicesAsync.mockResolvedValue([createMockDeviceInfo()])
+    mockHIDAsyncOpen.mockImplementation(() => { throw new Error('cannot open device') })
+
+    const promise = openHidDevice(0x1234, 0x5678)
+    const assertion = expect(promise).rejects.toThrow('cannot open device')
+    await vi.runAllTimersAsync()
+    await assertion
+
+    const errorCalls = vi.mocked(log).mock.calls.filter(([level]) => level === 'error')
+    expect(errorCalls).toHaveLength(1)
+    expect(errorCalls[0][1]).toContain('1234')
+    expect(errorCalls[0][1]).toContain('5678')
+    expect(errorCalls[0][1]).toContain('cannot open device')
+  })
+
+  it('does not log an error when a retry eventually succeeds', async () => {
+    vi.useFakeTimers()
+    mockDevicesAsync.mockResolvedValue([createMockDeviceInfo()])
+    mockHIDAsyncOpen
+      .mockRejectedValueOnce(new Error('cannot open device'))
+      .mockResolvedValueOnce(createMockOpenDevice())
+
+    const promise = openHidDevice(0x1234, 0x5678)
+    await vi.advanceTimersByTimeAsync(HID_OPEN_RETRY_DELAY_MS)
+    await promise
+
+    const errorCalls = vi.mocked(log).mock.calls.filter(([level]) => level === 'error')
+    expect(errorCalls).toHaveLength(0)
+  })
+
+  it('still rejects with the original open error when log() itself throws', async () => {
+    vi.useFakeTimers()
+    mockDevicesAsync.mockResolvedValue([createMockDeviceInfo()])
+    mockHIDAsyncOpen.mockImplementation(() => { throw new Error('cannot open device') })
+    vi.mocked(log).mockImplementationOnce(() => { throw new Error('disk full') })
+
+    const promise = openHidDevice(0x1234, 0x5678)
+    const assertion = expect(promise).rejects.toThrow('cannot open device')
+    await vi.runAllTimersAsync()
+
+    await assertion
   })
 
   it('closeHidDevice resets state', async () => {
