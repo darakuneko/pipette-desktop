@@ -8,7 +8,7 @@ import type { ComparisonStats } from './comparison'
 import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 
-/** A tagged snapshot of this view's own realized line rows (`lines` below
+/** A tagged snapshot of TypingTestView's own realized line rows (`lines` below
  *  — real or synthetic, same `number[][]` shape either way), written by
  *  a `useLayoutEffect` (never during render) into a caller-owned ref.
  *  `use-typing-test-result-save.ts` reads it at finish time to derive
@@ -91,7 +91,7 @@ export interface Props {
    *  KSPC) "the metric doesn't apply to this run" is common, not an
    *  in-progress state. */
   errorClasses?: { substitutions: number; omissions: number; insertions: number } | null
-  /** Host-owned ref this view snapshots its own realized `lines` into —
+  /** Host-owned ref TypingTestView snapshots its own realized `lines` into —
    *  see `LineSnapshot`'s own doc comment. Optional so every existing
    *  mount (tests included) stays valid without threading it. */
   lineSnapshotRef?: RefObject<LineSnapshot | null>

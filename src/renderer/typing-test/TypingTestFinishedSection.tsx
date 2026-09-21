@@ -30,15 +30,14 @@ interface FinishedSectionProps {
   hasSavedMemory: Props['hasSavedMemory']
 }
 
-/* Completion screen: once a run
-    finishes WITH a matching in-memory log, the shared
-    KeystrokeTimelinePanel — same unified stat block, legend, zoom,
-    and rows as History's timeline modal — replaces the old compact
-    stats row entirely (it already contains the Missed/error-mix
-    lines the old row also showed, so both would otherwise
-    duplicate). Rendered above the finished-state controls row below
-    (moved to the bottom of the completion screen so the
-    timeline/stats content reads first).
+/* Completion screen: once a run finishes WITH a matching in-memory
+    log, the shared KeystrokeTimelinePanel — same unified stat block,
+    legend, zoom, and rows as History's timeline modal — renders in
+    place of the compact stats row (it already contains the
+    Missed/error-mix lines that row would otherwise duplicate). It
+    renders above the finished-state controls row below, which sits
+    at the bottom of the completion screen so the timeline/stats
+    content reads first.
 
     FLEX-HEIGHT CHAIN (codex safety review of an earlier, fixed-vh
     `rowsMaxHeightClass` cap — replaced because a fixed vh figure
