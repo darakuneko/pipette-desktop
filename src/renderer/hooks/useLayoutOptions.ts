@@ -18,9 +18,10 @@ import type { KeyLabelMeta } from '../../shared/types/key-label-store'
  * every surface that lists Key Label entries by id/name — the "pick a
  * layout" dropdowns this hook feeds (footer Keyboard Layout select,
  * Settings → Defaults) AND the Key Labels Manage modal's Installed list
- * (`KeyLabelsModal.tsx`, which reads `metas` directly rather than
- * through this hook) — can call the exact same override instead of each
- * re-deriving its own conditional and risking drift.
+ * (`buildInstalledRows` in `key-labels-modal-rows.ts`, which reads
+ * `metas` directly rather than through this hook) — can call the exact
+ * same override instead of each re-deriving its own conditional and
+ * risking drift.
  */
 export function resolveLayoutDisplayName(id: string, storedName: string, t: TFunction): string {
   return id === BUILTIN_QWERTY_LAYOUT_ID ? t('keyLabels.qwertyDefaultName') : storedName

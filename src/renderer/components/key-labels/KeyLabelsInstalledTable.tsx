@@ -36,10 +36,10 @@ export interface InstalledRow {
   isQwerty: boolean
   /** True when this pack can bulk-rewrite the keymap — the same
    *  `keymapApplicable && buildKeymapRewriteTable(map).ok` predicate
-   *  `useDevicePrefs.remapKind` uses for the active pack, re-derived
-   *  per row here (see `KeyLabelsModal.isKeymapWritable`). Drives the
-   *  "Keymap Write" / "View Only" type label at the left end of the
-   *  second line. */
+   *  `useDevicePrefs.remapKind` uses for the active pack, re-derived per
+   *  row by `buildInstalledRows` (key-labels-modal-rows.ts) via
+   *  `useKeyLabelLookup`'s `isKeymapWritable`. Drives the "Keymap Write"
+   *  / "View Only" type label at the left end of the second line. */
   keymapWritable: boolean
   meta?: KeyLabelMeta
 }

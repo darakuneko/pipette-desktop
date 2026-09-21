@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+// Row builders for KeyLabelsModal.tsx's Installed and Find on Hub tabs
+// (InstalledRow / HubRow, defined in KeyLabelsInstalledTable.tsx), plus
+// the shared Hub-error translator both tabs use.
 
 import type { TFunction } from 'i18next'
 import { resolveLayoutDisplayName } from '../../hooks/useLayoutOptions'
