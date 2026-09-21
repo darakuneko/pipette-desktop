@@ -20,9 +20,8 @@ interface UseTypingTestPaneWindowParams {
 }
 
 /** View-only window sizing/scaling + always-on-top + controls-open state.
- *  Split out of TypingTestPane (file-splitting.md cap) — see
- *  Task-split-typing-test-pane.md. Behavior-preserving: effects and dep
- *  arrays are copied verbatim from the pre-split Pane. */
+ *  Split out of TypingTestPane (file-splitting.md cap). Behavior-preserving:
+ *  effects and dep arrays are copied verbatim from the pre-split Pane. */
 export function useTypingTestPaneWindow({
   typingTest,
   viewOnly,

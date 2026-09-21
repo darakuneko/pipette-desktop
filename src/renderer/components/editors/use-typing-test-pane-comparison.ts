@@ -14,9 +14,8 @@ interface UseTypingTestPaneComparisonParams {
 }
 
 /** Measurement-row comparison pool + baseline resolution, split out of
- *  TypingTestPane (file-splitting.md cap) — see
- *  Task-split-typing-test-pane.md. Behavior-preserving: dep arrays are
- *  copied verbatim from the pre-split Pane. */
+ *  TypingTestPane (file-splitting.md cap). Behavior-preserving: dep arrays
+ *  are copied verbatim from the pre-split Pane. */
 export function useTypingTestPaneComparison({
   typingTest,
   typingTestHistory,

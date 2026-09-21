@@ -68,9 +68,9 @@ export interface UseRunLogRecorderReturn {
    *  produced), or null when there's no uid to save under or nothing was
    *  actually saveable (see `finish()`'s own doc comment for every null
    *  case) — the caller (`useTypingTestResultSave`) surfaces this as
-   *  `lastFinishedLog` for the completion screen's inline timeline panel
-   *  (Plan-completion-timeline-view PR-B), no IPC round-trip needed since
-   *  this is the exact object already handed to `typingRunLogSave`. */
+   *  `lastFinishedLog` for the completion screen's inline timeline panel,
+   *  no IPC round-trip needed since this is the exact object already
+   *  handed to `typingRunLogSave`. */
   finishAndSave: (uid: string | undefined, wordResults: readonly WordResult[], meta: Omit<RunLogFinishMeta, 'uid'>) => RunKeystrokeLog | null
   /** Direct passthrough to `RunLogRecorder.currentRunHoldStats` — a
    *  read-only snapshot of the average-key-hold raw pair for `runId`'s

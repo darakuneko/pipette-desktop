@@ -2,8 +2,8 @@
 // @vitest-environment jsdom
 //
 // Focused unit coverage for useTypingTestResultSave's `lineBreaks`
-// derivation at finish time — codex-review fixes: the source is chosen
-// by `config.mode` (never by `state.lineBreaks.size`, which can't tell
+// derivation at finish time — the source is chosen by `config.mode`
+// (never by `state.lineBreaks.size`, which can't tell
 // "real single-line text" apart from "no real line source"), and every clamp is STRICT
 // (`< persistedWordCount - 1`, not `< persistedWordCount`) since a line
 // break can never legitimately land on the run's own last persisted word.
@@ -317,10 +317,10 @@ describe('useTypingTestResultSave — lineBreaks derivation (line timeline PR1)'
   })
 })
 
-// Plan-completion-timeline-view PR-B: `lastFinishedLog` surfaces whatever
-// `runLog.finishAndSave` returned for the just-finished run — a direct
-// passthrough (not re-derived), so the completion screen can render the
-// shared timeline panel from it inline. Cleared in the same
+// `lastFinishedLog` surfaces whatever `runLog.finishAndSave` returned for
+// the just-finished run — a direct passthrough (not re-derived), so the
+// completion screen can render the shared timeline panel from it inline.
+// Cleared in the same
 // `status !== 'finished'` branch that resets `savedResultRef`.
 describe('useTypingTestResultSave — lastFinishedLog (completion timeline PR-B)', () => {
   const FAKE_LOG: RunKeystrokeLog = {
