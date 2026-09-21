@@ -188,10 +188,10 @@ export function TypingTestPane({
           handleComparisonChange={handleComparisonChange}
         />
       )}
-      {/* `min-h-0` (added alongside the pre-existing `flex-1`) is part of
-          the completion screen's flex-height chain — see
-          TypingTestView.tsx's own "Completion screen" comment for the
-          full chain this is one link of. Without it, this flex item
+      {/* `min-h-0` alongside `flex-1` is part of the completion screen's
+          flex-height chain — see the FLEX-HEIGHT CHAIN comment in
+          TypingTestFinishedSection.tsx for the full chain this is one
+          link of. Without it, this flex item
           defaults to `min-height: auto` (its own content's natural
           height), which can grow past what its parent (KeymapEditor's
           `overflow-auto` content pane, several levels up) actually has
