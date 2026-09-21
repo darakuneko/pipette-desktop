@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+//
+// Favorites list and Hub upload controls for the macro editor, rendered
+// by MacroEditor.tsx alongside the action list. Hidden while editing a
+// slot or while a recording is in progress.
 
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
 import { FavoriteStoreContent } from './FavoriteStoreContent'

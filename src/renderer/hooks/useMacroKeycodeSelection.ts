@@ -295,6 +295,8 @@ export function useMacroKeycodeSelection({
       const el = target instanceof Element ? target : target.parentElement
       if (el?.closest('[data-testid="keycode-field"]')) return
       if (el?.closest('[data-testid="macro-action-list"]')) return
+      // `data-macro-footer` is the root attribute MacroEditorFooter.tsx
+      // renders on itself.
       if (el?.closest('[data-macro-footer]')) return
       if (el?.closest('[data-popover="key"]')) return
       revertAndDeselect()

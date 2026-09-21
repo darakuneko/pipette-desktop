@@ -253,13 +253,15 @@ export function MacroEditor({
     setDirty(false)
   }, [macroBuffer, vialProtocol, macroCount, clearPending, setSelectedKey, setPopoverState]))
 
-  // Edit-mode Revert (per-slot) — confirms like the list-level Revert but
-  // only rolls back the in-flight picker edit via revertAndDeselect.
+  // Edit-mode Revert (per-slot) — confirms like the list-level Revert
+  // button in MacroEditorFooter.tsx but only rolls back the in-flight
+  // picker edit via revertAndDeselect.
   const editRevertAction = useConfirmAction(revertAndDeselect)
 
   // Enter in the picker commits the staged edit and exits edit mode,
-  // mirroring the Save button's enabled state so an empty commit can't
-  // sneak through.
+  // mirroring the Save button's disabled condition for the isEditing
+  // branch in MacroEditorFooter.tsx, so an empty commit can't sneak
+  // through.
   const pickerEnterCommit = useCallback(() => {
     if (isEditing && !isRecording && hasPendingEdit) commitAndDeselect()
   }, [isEditing, isRecording, hasPendingEdit, commitAndDeselect])
@@ -299,7 +301,8 @@ export function MacroEditor({
   return (
     <>
       <div className="flex-1 flex flex-col min-h-0" data-testid="editor-macro">
-        {/* Fixed header: memory + action buttons */}
+        {/* Fixed header: memory + action buttons (the paired fixed footer
+            is MacroEditorFooter.tsx, rendered below) */}
           <div className={`shrink-0 px-6 pt-2 pb-3 flex items-center gap-2 ${isEditing ? 'hidden' : ''}`}>
             <span className="text-xs text-content-muted" data-testid="macro-memory">
               {t('editor.macro.memoryUsage', {
@@ -373,9 +376,9 @@ export function MacroEditor({
           </div>
         </div>
 
-        {/* Picker: shrink to content in edit mode so the Save footer sits close
-             to the keypicker content; list mode keeps the action list area
-             hidden via the sibling container. */}
+        {/* Picker: shrink to content in edit mode so MacroEditorFooter sits
+             close to the keypicker content; list mode keeps the action
+             list area hidden via the sibling container. */}
         <div ref={pickerRef} className={`overflow-y-auto px-6 pb-6 ${isEditing ? 'shrink-0' : 'hidden'}`}>
           <TabbedKeycodes
             onKeycodeSelect={maskedSelection.pickerSelect}
