@@ -33,11 +33,10 @@ export interface TimelineLegendEntry {
    *  needs an extra opacity modifier its swatch fill doesn't. */
   swatchClass: string
   labelKey: string
-  /** i18n key for this entry's former parenthetical explanation — now
-   *  shown via a hover tooltip on the label instead of inline text (see
-   *  `LegendSwatch` in keystroke-timeline-parts.tsx). Undefined for entries
-   *  whose head word alone was already the whole label (`normal`,
-   *  `mistake`, `leadIn`). */
+  /** i18n key for this entry's explanation, shown in a hover tooltip on
+   *  the label (see `LegendSwatch` in keystroke-timeline-parts.tsx).
+   *  Undefined for entries whose head word alone is already the whole
+   *  label (`normal`, `mistake`, `leadIn`). */
   tooltipKey?: string
 }
 

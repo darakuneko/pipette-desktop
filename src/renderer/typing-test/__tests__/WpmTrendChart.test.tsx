@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
-// NOTE (per-day rework): the chart used to take raw results and plot every
-// individual one — with many tests in a single day the line zigzagged into
-// an unreadable vertical cluster. It now takes pre-aggregated per-day
-// points (one best/worst/avg triple per LOCAL calendar day) as its `data`
-// prop — the caller (HistoryResultsPanel) owns the TypingTestResult[] ->
-// DailyWpmPoint[] aggregation via aggregateWpmByDay (see
-// wpm-daily-trend.test.ts for its own unit tests) since it needs that same
-// grouping to decide whether to show the "WPM Trend" heading at all; this
-// component just draws whatever `data` it's given.
+// This chart's `data` prop takes pre-aggregated per-day points (one
+// best/worst/avg triple per LOCAL calendar day), not raw results — several
+// runs on the same day would otherwise plot as their own points and
+// zigzag into an unreadable vertical cluster. The caller
+// (HistoryResultsPanel) owns the TypingTestResult[] -> DailyWpmPoint[]
+// aggregation via aggregateWpmByDay (see wpm-daily-trend.test.ts for its
+// own unit tests) since it needs that same grouping to decide whether to
+// show the "WPM Trend" heading at all; this component draws the given
+// `data` (and renders nothing below two points — asserted below).
 //
 // recharts renders zero-size SVGs under jsdom (ResponsiveContainer has no
 // real layout to measure), so — same "avoid dragging recharts into jsdom"

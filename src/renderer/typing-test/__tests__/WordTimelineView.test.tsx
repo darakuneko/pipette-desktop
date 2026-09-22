@@ -163,13 +163,11 @@ describe('WordTimelineView', () => {
     expect(screen.queryByText('Zoom')).toBeNull()
   })
 
-  // The legend's blank/blankLine entries used to carry their
-  // line-vs-word distinction (250ms vs 1000ms cutoff) directly in the
-  // always-visible label text — both now show the bare head word "Pause"
-  // (see LegendSwatch), so the distinction only surfaces in the item's
-  // own hover tooltip. Rewritten to hover the "Pause" label and assert
-  // on the opened tooltip's text instead of `getByText` on the label
-  // itself.
+  // The legend's blank/blankLine entries both show the bare head word
+  // "Pause" (see LegendSwatch); the line-mode wording ("More than 250ms,
+  // shown compressed") surfaces only in the item's own tooltip, so this
+  // hovers the "Pause" label and asserts on the tooltip text reached via
+  // aria-describedby rather than `getByText` on the label itself.
   it('auto-selects line rows (never word rows) once the log has a lineBreaks field, and the legend\'s Pause tooltip uses the line-view wording', async () => {
     window.vialAPI.typingRunLogGet = vi.fn().mockResolvedValue({ success: true, data: SAMPLE_LOG_WITH_LINES })
     renderWithI18n(<WordTimelineView uid="uid-1" runId="run-1" onClose={() => {}} />)
@@ -192,8 +190,7 @@ describe('WordTimelineView', () => {
     expect(screen.queryByTestId('word-timeline-row-0')).toBeNull()
   })
 
-  // See the line-view test above —
-  // same rewrite, word-view wording.
+  // See the line-view test above — same check, word-view wording.
   it('falls back to word rows (and the word-view legend tooltip wording) for a legacy log with no lineBreaks field at all', async () => {
     renderWithI18n(<WordTimelineView uid="uid-1" runId="run-1" onClose={() => {}} />)
     await waitFor(() => expect(screen.getByTestId('word-timeline-row-0')).toBeTruthy())

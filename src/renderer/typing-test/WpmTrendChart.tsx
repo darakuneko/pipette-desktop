@@ -46,15 +46,15 @@ function WpmTrendChartInner({ data }: Props) {
     best: bestLabel, worst: worstLabel, avg: avgLabel,
   }
 
-  // Mirrors the prior per-result chart: a trend line needs at least 2
-  // points to read as a trend — here that's 2 distinct days with data, not
-  // 2 raw results (a single busy day now collapses to 1 point). Days with
-  // no results are simply absent from `data` (aggregateWpmByDay never
-  // inserts a null/gap entry for them), so — same as before this rework —
-  // the line draws straight through any gap between the two nearest days
-  // that DO have data, rather than breaking. That keeps sparse periods
-  // (e.g. a "1 Year" window with only a handful of active days) reading as
-  // one continuous trend instead of a field of disconnected segments.
+  // A trend line needs at least 2 points to read as a trend — here that's
+  // 2 distinct days with data, not 2 raw results (several runs on one day
+  // collapse to a single point, see aggregateWpmByDay). Days with no
+  // results are simply absent from `data` (aggregateWpmByDay never
+  // inserts a null/gap entry for them), so the line continues across any
+  // gap between the two nearest days that DO have data, rather than
+  // breaking. That keeps sparse periods (e.g. a "1 Year"
+  // window with only a handful of active days) reading as one continuous
+  // trend instead of a field of disconnected segments.
   if (data.length < 2) return null
 
   return (

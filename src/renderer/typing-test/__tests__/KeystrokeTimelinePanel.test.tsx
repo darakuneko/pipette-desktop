@@ -123,9 +123,9 @@ describe('KeystrokeTimelinePanel', () => {
     expect(screen.getAllByTestId('word-timeline-keystroke')).toHaveLength(2)
   })
 
-  // Legend items that used to carry a parenthetical explanation inline now
-  // show only their head word, with the explanation moved into a hover tooltip
-  // (aria-describedby, not always-visible text).
+  // Legend items that have an explanation show only their head word; the
+  // explanation lives in a hover tooltip (Normal keystroke / Mistake /
+  // Pause before this word have none).
   describe('legend labels (head word only, parenthetical text moved to a hover tooltip)', () => {
     function hoverLegendLabel(text: string): HTMLElement {
       const label = screen.getByText(text)
@@ -177,13 +177,11 @@ describe('KeystrokeTimelinePanel', () => {
       expect(tooltip.textContent).toBe('More than 250ms, shown compressed')
     })
 
-    // The tooltip-bearing label used to carry a
-    // dotted-underline + `cursor-help` affordance — no other tooltip
-    // trigger in this codebase does that (ErrorMixSection's type labels,
-    // CoverageBadge, the Missed table's own bar rows are all plain), so
-    // it was removed. The tooltip itself (hover -> aria-describedby ->
-    // portaled bubble) still works identically; only the label's own
-    // visual styling changed.
+    // The tooltip-bearing label carries no dotted-underline/`cursor-help`
+    // affordance — same plain styling as the other tooltip-only triggers
+    // (ErrorMixSection's type labels, CoverageBadge, the Missed table's
+    // own bar rows). The tooltip is still wired: hover opens it and
+    // aria-describedby links the label to the portaled bubble.
     it('renders the tooltip-bearing label plain, with no underline/cursor-help decoration, while the tooltip still opens on hover', () => {
       renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
       const label = screen.getByText('Overlapped')
@@ -204,7 +202,7 @@ describe('KeystrokeTimelinePanel', () => {
   })
 
   describe('rows scrollport height (flex-height chain, not a fixed cap)', () => {
-    // No `rowsMaxHeightClass`-style prop exists anymore (a fixed vh
+    // No `rowsMaxHeightClass`-style prop exists (a fixed vh
     // figure can't adapt to how much OTHER chrome a given run has, e.g.
     // an IME-composition warning or the Missed-chars line). Instead this
     // scrollport ALWAYS carries the same flex-1/min-h-0/overflow-auto
@@ -244,21 +242,20 @@ describe('KeystrokeTimelinePanel', () => {
     // inline text in the flow.
     expect(within(container).queryByText(/Mistake markers include keystrokes later corrected/)).toBeNull()
     expect(within(container).queryByText(/Pauses are shown compressed on this axis/)).toBeNull()
-    // The info glyph used to be a `<button>`,
-    // which this codebase's global `button:not(:disabled) { cursor:
-    // pointer }` rule (style.css) put a pointer cursor on — inconsistent
-    // with every other tooltip-only trigger (CoverageBadge,
-    // ErrorMixSection's row labels), none of which are buttons. A
-    // plain, non-interactive `<span>` — sits at the legend row's right
-    // end, with an accessible name via `aria-label` (no native title
-    // attribute — lint forbids it).
+    // The info glyph is a plain, non-interactive `<span>`, not a
+    // `<button>` — this codebase's global `button:not(:disabled) {
+    // cursor: pointer }` rule (style.css) would put a pointer cursor on
+    // it, inconsistent with the other tooltip-only triggers
+    // (CoverageBadge, ErrorMixSection's row labels), which are not
+    // buttons. It is the legend row's last item, with an accessible
+    // name via `aria-label` (no native title attribute — lint forbids it).
     const infoButton = screen.getByTestId('word-timeline-legend-info')
     expect(infoButton.tagName).toBe('SPAN')
     expect(infoButton.getAttribute('title')).toBeNull()
     expect(infoButton).toHaveAccessibleName()
     // Right end of the legend row (`ml-auto`), after every swatch. The
-    // legend row itself no longer carries its own border/bg (that moved up
-    // to the timeline box — see the box-order test below).
+    // legend row itself carries no border/bg of its own — the timeline box
+    // around it supplies that framing.
     expect(infoButton.className).toContain('ml-auto')
     const legendRow = screen.getByTestId('word-timeline-legend')
     expect(legendRow.contains(infoButton)).toBe(true)
@@ -315,10 +312,8 @@ describe('KeystrokeTimelinePanel', () => {
     })
   })
 
-  // The correlation-unreliable warning used to sit between the stat grid
-  // and the timeline box — moved to the very top of the panel, above the
-  // stat grid, since it qualifies every stat card's own correctness-
-  // derived figures too, not just the timeline box below it.
+  // The correlation-unreliable warning sits at the very top of the panel,
+  // above the stat grid, not just the timeline box below.
   it('renders the correlation-unreliable warning ABOVE the stat-card grid, at the very top of the panel', () => {
     const unreliableLog: RunKeystrokeLog = { ...SAMPLE_LOG, charCorrelationUnavailable: true }
     const result = makeResult()
@@ -352,12 +347,11 @@ describe('KeystrokeTimelinePanel', () => {
     )
   })
 
-  // These four cases used to assert on `typing-test-mistakes`
-  // (MissedCharsList's chip+tooltip presentation). KeystrokeTimelinePanel now
-  // renders `MissedTable` instead (see mistake-summary.tsx) — updated in place
-  // to the table's own testids rather than being dropped; MissedTable's own
-  // detailed table-structure coverage (headers, EMPTY_STAT_VALUE placeholders,
-  // shared grid tracks) lives in mistake-summary.test.tsx.
+  // KeystrokeTimelinePanel renders `MissedTable` (see mistake-summary.tsx)
+  // for its mistake list, so these cases assert on the table's own testids.
+  // MissedTable's own detailed table-structure coverage (no header row,
+  // EMPTY_STAT_VALUE placeholders, shared grid tracks) lives in
+  // mistake-summary.test.tsx.
   it('shows the Missed table when the result carries mistakes', () => {
     const result = makeResult({
       mistakes: { a: 3, b: 1 },
@@ -374,9 +368,9 @@ describe('KeystrokeTimelinePanel', () => {
     expect(within(row).getByTestId('missed-table-row-a-count').textContent).toBe('3')
   })
 
-  // The "Typed instead" cell used to show "x: 1" (char + count together); the
-  // mockup moved counts into the bar's own hover tooltip, so the row's inline
-  // cell now reads "→ x" (chars only) instead.
+  // The "Typed instead" cell shows the typed chars only ("→ x"); the
+  // per-char counts are in the bar's own hover tooltip (mistake-summary.tsx),
+  // not asserted here.
   it('wires buildMissedDetails(log) end to end: a keystroke\'s typedChar/mistakeKey surfaces in the row\'s typed cell and bar split', () => {
     const logWithDetail: RunKeystrokeLog = {
       ...SAMPLE_LOG,
@@ -415,19 +409,16 @@ describe('KeystrokeTimelinePanel', () => {
     expect(box.contains(missedTable)).toBe(false)
   })
 
-  // The Missed section used to sit outside any container. Wrapped here
-  // (at THIS call site only — see the wrapper's own doc comment in
-  // KeystrokeTimelinePanel.tsx) in the exact same bordered-box treatment
-  // as the timeline box above. `MistakeRankingSection` (History's "Most
-  // missed") renders the same `MissedTable` unboxed — see
-  // MistakeRankingSection.test.tsx, unchanged by this tweak.
-  // `shrink-0` (flex-shrink: 0) became `min-h-0` — `shrink-0` refused to
-  // compress at all, which (verified via the E2E script's 800px-window
-  // case) could overflow past the finished-state controls row below in a
-  // bounded ancestor with a real content-heavy Missed table. `min-h-0`
-  // keeps the default `flex-shrink: 1` in effect, so this box can shrink
-  // proportionally instead of forcing an overflow — see the box's own
-  // doc comment.
+  // The Missed section is wrapped (at THIS call site only — see the
+  // wrapper's own doc comment in KeystrokeTimelinePanel.tsx) in the exact
+  // same bordered-box treatment as the timeline box above.
+  // `MistakeRankingSection` (History's "Most missed") renders the same
+  // `MissedTable` unboxed instead — see MistakeRankingSection.tsx.
+  // The wrapper carries `min-h-0`, not `shrink-0`: `min-h-0` removes the
+  // automatic minimum size so the box can shrink below its content height
+  // when the ancestor runs short; `shrink-0` would hold it at full height
+  // instead — see the timeline box's HEIGHT PRIORITY comment in
+  // KeystrokeTimelinePanel.tsx.
   it('wraps the Missed table in its own bordered box matching the timeline box treatment, with min-h-0 (not shrink-0)', () => {
     const result = makeResult({ mistakes: { a: 3 } })
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={result} />)
@@ -449,23 +440,13 @@ describe('KeystrokeTimelinePanel', () => {
     expect(screen.queryByTestId('typing-test-missed-box')).toBeNull()
   })
 
-  // In a bounded ancestor (the History modal's
-  // `h-modal-80vh`), the timeline box and the Missed box compete for the
-  // same leftover flex space — the timeline box must win, WITHOUT ever
-  // overflowing the ancestor at a short window (see the timeline box's own
-  // doc comment for the flagged `min-h-64` dead end this replaced). Both
-  // boxes carry `min-h-0` (genuinely shrinkable, default
-  // `flex-shrink: 1`, no `shrink-0` anywhere in this pair) so a real space
-  // deficit distributes proportionally instead of one box refusing to
-  // give at all; this call site also tightens the Missed table's own
-  // scrollport cap (`max-h-40`, vs its `max-h-56` default) so it claims
-  // less even in the roomy case. jsdom has no layout engine, so this only
-  // asserts the STRUCTURAL classes that implement the mechanism, not
-  // actual rendered pixel heights (that's the E2E script's job, run
-  // against the real, built app — see panel-polish-e2e.ts, which measured
-  // 268px timeline vs 182px Missed in the modal, and confirmed zero
-  // overflow/overlap at both a normal and an 800px-tall window on the
-  // completion screen).
+  // Structural check for the split described in the timeline box's own
+  // HEIGHT PRIORITY doc comment (KeystrokeTimelinePanel.tsx): the
+  // timeline box carries `min-h-0` and `flex-1`, the Missed box carries
+  // `min-h-0` and not `shrink-0`, and the Missed table's own scrollport
+  // is `max-h-40` (vs its `max-h-56` default). jsdom has no layout
+  // engine, so this only asserts the STRUCTURAL classes that implement
+  // the mechanism, not actual rendered pixel heights.
   it('keeps both the timeline box and the Missed box genuinely shrinkable (min-h-0, no shrink-0), with a tighter max-h-40 cap on the Missed table', () => {
     const result = makeResult({ mistakes: { a: 3 } })
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={result} />)
@@ -494,7 +475,7 @@ describe('KeystrokeTimelinePanel', () => {
     const missedScrollport = screen.getByTestId('missed-table-scrollport')
     expect(missedScrollport.className).not.toContain('border')
     expect(missedScrollport.className).not.toContain('rounded-md')
-    // Still scrollable, still padded — only the border/rounded frame is gone.
+    // Still scrollable, still padded — only the border/rounded frame is absent.
     expect(missedScrollport.className).toContain('overflow-y-auto')
     expect(missedScrollport.className).toContain('p-2')
 

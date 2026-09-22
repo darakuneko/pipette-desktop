@@ -49,10 +49,12 @@ function textMeta(id: string, name: string, source?: { provider: string; workId:
 }
 
 beforeEach(() => {
-  // TypingTestHistory now calls useTypingTestTexts() to classify fileImport
-  // rows into Aozora vs File Import — default to no imported texts so
-  // pre-existing tests (which don't care about the Aozora split) are
-  // unaffected. Tests below override this per-case.
+  // TypingTestHistory calls useTypingTestTexts() to classify fileImport
+  // rows into Aozora vs File Import (see classifyResultTab in
+  // TypingTestHistory.tsx). Defaulting to no imported texts here means a
+  // fileImport row with no matching textMeta classifies as File Import,
+  // not Aozora, in tests that don't care about that split. Tests below
+  // override this per-case.
   window.vialAPI = {
     ...window.vialAPI,
     typingTestTextStoreList: vi.fn().mockResolvedValue({ success: true, data: [] }),
@@ -865,17 +867,14 @@ describe('TypingTestHistory', () => {
       expect(analysisPanel?.getAttribute('aria-labelledby')).toBe(analysisTab.id)
     })
 
-    // Regression guard: an earlier version of this split wrapped each panel
-    // component in its own plain `<div role="tabpanel" ...>` in
-    // TypingTestHistory, with the panel component's real content nested one
-    // level inside it. That extra div's default `display: block` broke the
-    // flex min-h-0/shrink chain HistorySections relies on for its
-    // overflow-y-auto scroll region to actually engage, silently
-    // reintroducing the modal-overflow bug (caught via screenshot, not
-    // by DOM presence/absence assertions — hence this structural check).
-    // The fix makes each panel component apply role=tabpanel/id/
-    // aria-labelledby directly to its OWN existing root div, so the
-    // tabpanel element IS the flex/scroll container, not a wrapper around it.
+    // Each panel component applies role=tabpanel/id/aria-labelledby
+    // directly to its OWN existing root div, so the tabpanel element IS
+    // the flex/scroll container, not a wrapper around it. A `<div
+    // role="tabpanel">` wrapper around the panel's content would default
+    // to `display: block`, breaking the flex min-h-0/shrink chain
+    // HistorySections relies on for its overflow-y-auto scroll region to
+    // engage — this asserts the structural classes directly since
+    // content-presence assertions would not catch that.
     it('keeps each view tabpanel as part of the flex sizing chain (no unconstrained wrapper div)', () => {
       const results = [
         makeResult({ wpm: 60, accuracy: 90, mistakes: { a: 3, b: 2 } }),
@@ -913,10 +912,12 @@ describe('TypingTestHistory', () => {
       expect(analysisPanel!.className).toContain('overflow-y-auto')
     })
 
-    // Sort state used to live inside HistoryResultsPanel, which unmounts whenever
-    // the Analysis view is active (conditional render) — so a chosen sort silently
-    // reset on every round trip through Analysis. The fix lifts
-    // sortColumn/sortDirection into TypingTestHistory itself, which never unmounts.
+    // sortColumn/sortDirection live in TypingTestHistory itself (which
+    // stays mounted across the Results/Analysis switch), not in
+    // HistoryResultsPanel (which unmounts whenever the Analysis view is
+    // active — see the state's own doc comment in TypingTestHistory.tsx),
+    // so a chosen sort survives a round trip through Analysis instead of
+    // silently resetting.
     it('preserves the results-table sort selection across a Results→Analysis→Results round trip', () => {
       const results = [
         makeResult({ wpm: 60, date: '2025-01-03T00:00:00Z' }),
@@ -1135,11 +1136,11 @@ describe('TypingTestHistory', () => {
     })
   })
 
-  // Header redesign: the source tabs (MonkeyType/Tatoeba/Aozora/File Import)
-  // that used to be their own row are gone entirely — source selection is
-  // now a `<select>` at the right end of the single Results/Analysis tab
-  // row, and (Analysis only) the Accuracy Trend condition select joins it
-  // as a second select in the same right-end group.
+  // Source selection (MonkeyType/Tatoeba/Aozora/File Import) is a
+  // `<select>` at the right end of the single Results/Analysis tab row,
+  // not its own row of tab buttons; in the Analysis view, when there are
+  // conditions to pick from, the Accuracy Trend condition select joins it
+  // in the same right-end group.
   describe('single header row: Results/Analysis tabs + right-end selects', () => {
     it('never renders a source-tab button anywhere in the document', () => {
       renderWithI18n(<TypingTestHistory results={[makeResult()]} />)

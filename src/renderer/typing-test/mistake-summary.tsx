@@ -194,10 +194,9 @@ interface MissedTableProps {
    *  `MISSED_TABLE_MAX_HEIGHT` (`max-h-56`, ~8-10 rows) — History's
    *  "Most missed" Analysis-tab usage, which has no sibling competing for
    *  the same bounded space. `KeystrokeTimelinePanel` passes a smaller
-   *  cap (`max-h-40`) for its own bounded-modal instance, so this table's
-   *  worst-case footprint stays comfortably under the sibling timeline
-   *  box's own `min-h-64` height floor — see that call site's own
-   *  height-priority comment for the full mechanism. */
+   *  cap (`max-h-40`) for its own bounded-modal instance, which keeps the
+   *  Missed box's natural height small so the timeline box gets more of
+   *  the modal (see HEIGHT PRIORITY in KeystrokeTimelinePanel.tsx). */
   maxHeightClass?: string
   /** Whether the scrollport itself carries its own `rounded-md border
    *  border-edge` frame. Defaults to `true` — History's "Most missed"
