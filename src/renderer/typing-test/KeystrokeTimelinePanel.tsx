@@ -81,10 +81,11 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
   // actually mounted. Keying only on `[displayMode]` breaks because the
   // log/model can resolve on a render where the section gating the canvas
   // hasn't yet painted it — `containerRef`/`canvasRef` are still null on
-  // that render, and the fit falls back to `CANVAS_MIN_WIDTH_PX` regardless
-  // of the real container width. Depending on the canvas's own mount
-  // (bumped from its ref callback) instead of just `displayMode` guarantees
-  // this runs again once the refs are live.
+  // that render, and both this effect and `computeAndApplyFit` return
+  // early on a null ref, leaving `fitPxPerMs` untouched instead of computing
+  // any width. Depending on the canvas's own mount (bumped from its ref
+  // callback) instead of just `displayMode` guarantees this runs again
+  // once the refs are live.
   useEffect(() => {
     if (!canvasRef.current) return
     computeAndApplyFit()

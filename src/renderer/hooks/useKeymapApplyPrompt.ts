@@ -12,10 +12,11 @@
 // including QWERTY (no per-value branching). Selecting a pack that
 // supports a rewrite instead surfaces `KeymapEditor`'s simulation/Base
 // tabs (gated by `useDevicePrefs.remapKind === 'simulated'`, the SAME
-// `keymapApplicable && buildKeymapRewriteTable(map).ok` predicate this
-// hook re-derives below) — the Apply button living on the simulation
-// tab's layer row is what calls `requestApply()`, the only entry point
-// left into this modal.
+// `keymapApplicable && buildKeymapRewriteTable(map).ok` predicate
+// use-device-prefs-remap.ts computes — this hook only reads the result via
+// `activeRewriteTable`, never re-derives it) — the Apply button living on
+// the simulation tab's layer row is what calls `requestApply()`, the only
+// entry point into this modal.
 //
 // A Rewrite is still a destructive one-shot: undo/redo history is wiped
 // the moment any write lands, and recovery is the user's own .vil/snapshot

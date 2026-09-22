@@ -11,7 +11,7 @@
 // e.g. `useDevicePrefs`'s `remapLabel`/`isRemapped`) would never recompute,
 // so the keymap legends and key picker would stay frozen on the pre-fetch
 // fallback until some unrelated prop forced a rebuild. Folding `version`
-// into the deps makes the identity change exactly once per fetch (or
+// into the deps makes the identity change on each successful fetch (or
 // store-change event) while staying stable across ordinary renders.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'

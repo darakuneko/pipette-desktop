@@ -498,8 +498,8 @@ export class RunLogRecorder {
    *  run-relative shape, dropping the buffer-only `wordIndex` field. A
    *  keystroke whose absolute `pressMs` precedes `startedAtMs` is
    *  DROPPED rather than clamped to 0 — belt-and-braces alongside the
-   *  pause-time discard() this module's callers do (see `finish()`'s
-   *  own doc comment): clamping would misrepresent a keystroke as having
+   *  pause-time `discardRun()` callers do (see that method's own doc
+   *  comment): clamping would misrepresent a keystroke as having
    *  happened at the exact instant the run started, silently corrupting
    *  the timeline instead of just omitting the one data point that can't
    *  be placed on it. `releaseMs` still gets a defensive `Math.max(0,

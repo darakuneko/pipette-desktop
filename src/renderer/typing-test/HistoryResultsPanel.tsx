@@ -106,8 +106,8 @@ interface Props {
   ariaLabelledBy: string
 }
 
-/** Results view of the History modal: sub-filter row (mode/text dropdown +
- *  Export CSV), sparkline, stats summary, results table. */
+/** Results view of the History modal: sub-filter row (mode/text dropdown),
+ *  sparkline, stats summary (Export CSV rides along), results table. */
 export function HistoryResultsPanel({
   tab,
   modeFilter,

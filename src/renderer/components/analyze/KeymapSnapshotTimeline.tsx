@@ -4,8 +4,9 @@
 // `selectedSavedAt` so the select reflects the explicit picker state
 // even when the user has narrowed the range inside the snapshot's
 // active window. Free-form ranges that escape a snapshot cannot
-// happen because the parent clamps every edit through
-// `clampRangeToSnapshot`.
+// happen because the parent clamps the saved range through
+// `clampRangeToBoundaries` (clamp-range.ts) whenever the snapshot's
+// boundaries resolve.
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'

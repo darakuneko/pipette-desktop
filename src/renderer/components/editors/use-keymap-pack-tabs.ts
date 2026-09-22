@@ -63,9 +63,11 @@ export interface UseKeymapPackTabsReturn {
 /** Simulation/Base tab. Which of the two vertical tabs (pack-name
  * simulation vs. the real "Base" keymap) is showing when
  * `remapKind === 'simulated'` shows them at all. Defaults to the
- * simulation tab; a user switch to Base persists only until the next
- * uid change (via `resetPackTab`) or a layout change (tracked
- * internally below), not across a select change or a re-render. */
+ * simulation tab; a user switch to Base persists across ordinary
+ * re-renders and stays until either `resetPackTab()` runs (called by the
+ * host on a uid change or when the keymap empties) or the `keyboardLayout`
+ * change effect below fires (an actual value change, not merely a
+ * re-render). */
 export function useKeymapPackTabs({
   keyboardLayout, remapKind, keymap, encoderLayout, encoderCount, currentLayer,
   typingTestMode, viewMatrixActive, handleDeselect,

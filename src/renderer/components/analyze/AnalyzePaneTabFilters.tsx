@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Row 2 of the Analyze pane's filter row: the per-tab filter controls
 // (WPM / Activity / Interval / Ergonomics / Layout Comparison / shared
-// Granularity) plus the finger-assignment button.
+// Granularity).
 //
 // Renders a FRAGMENT of the label sequence — the parent keeps the CSS
 // grid wrapper div (`gridTemplateColumns: repeat(10, max-content)`) so
@@ -12,9 +12,10 @@
 // flex SIBLING of the grid div (`ml-auto` pushes it to the far right
 // of the outer flex row), not as one of the grid's own children.
 // Folding it into this component's Fragment would place it inside the
-// grid div instead and turn it into an 11th grid-template column,
+// grid div instead, as one more grid item aligned to the filter columns
+// rather than a flex sibling pushed to the row's right edge (`ml-auto`),
 // which is a real (if subtle) layout regression — so it stays inline
-// in AnalyzePane.tsx.
+// in AnalyzePaneFilterRow.tsx.
 
 import { useTranslation } from 'react-i18next'
 import {

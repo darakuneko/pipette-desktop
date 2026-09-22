@@ -20,12 +20,14 @@ export interface UseKeymapRewriteReturn {
 }
 
 // --- Key Label "apply to keymap" bulk rewrite. Reachable from the
-// footer's layout select via the imperative handle in KeymapEditor, so
-// the write lands on this same `history` instance instead of a second
+// simulation tab's Apply button via the imperative handle in KeymapEditor,
+// so the write lands on this same `history` instance instead of a second
 // undo stack. Writes go through `onSetKey` /
 // `onSetEncoder` sequentially (not `onSetKeysBulk`) so a mid-way failure
-// leaves both the local keymap state and the pushed history entry
-// containing only the positions that actually succeeded.
+// leaves the local keymap state containing only the positions that
+// actually succeeded; no history entry is ever pushed for a rewrite — a
+// landed write instead clears both undo/redo stacks (see `history.clear()`
+// below for the exact conditions).
 export function useKeymapRewrite({
   keymap, encoderLayout, onSetKey, onSetEncoder, history, triggerFlash,
 }: UseKeymapRewriteOptions): UseKeymapRewriteReturn {

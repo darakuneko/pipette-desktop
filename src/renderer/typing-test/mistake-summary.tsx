@@ -15,9 +15,12 @@
 //    / stacked red-gray bar / Cnt), used by KeystrokeTimelinePanel
 //    (single run) AND MistakeRankingSection (History's Analysis tab,
 //    aggregated across every run in the active tab — see
-//    use-mistake-ranking-details.ts). Parameterized (`titleKey`/`testId`)
-//    rather than duplicated between the two callers, which differ only in
-//    heading text and (History's own contract) root testid.
+//    use-mistake-ranking-details.ts). Parameterized (`titleKey`/`testId`/
+//    `maxHeightClass`/`bordered`) rather than duplicated between the two
+//    callers, which differ in heading text, (History's own contract) root
+//    testid, and (KeystrokeTimelinePanel's own call site) a tighter
+//    `maxHeightClass` and no scrollport border — see that call
+//    site's own comment for why.
 //    UNCAPPED: every entry is reachable via the list's own internal
 //    vertical scroll (bounded max-height) instead of being truncated —
 //    see `allSortedMistakeEntries` and `MISSED_TABLE_MAX_HEIGHT`.
@@ -184,8 +187,8 @@ interface MissedTableProps {
   titleKey?: string
   /** Root element testid. Defaults to `'typing-test-missed-table'`;
    *  `MistakeRankingSection` overrides it to keep its own
-   *  `'typing-test-mistake-ranking'` contract (TypingTestHistory.tsx's
-   *  Results/Analysis tab switch depends on it structurally). */
+   *  `'typing-test-mistake-ranking'` contract (TypingTestHistory.test.tsx's
+   *  Results/Analysis tab-switch tests assert on this testid directly). */
   testId?: string
   /** Scrollport's own max-height Tailwind class. Defaults to
    *  `MISSED_TABLE_MAX_HEIGHT` (`max-h-56`, ~8-10 rows) — History's

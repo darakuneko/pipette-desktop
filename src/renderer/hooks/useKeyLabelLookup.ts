@@ -144,8 +144,10 @@ export function useKeyLabelLookup(): UseKeyLabelLookupReturn {
   // lazy-loaded pack's map/compositeLabels would arrive in `cacheRef` but
   // the keymap legends and key picker would stay frozen on the
   // pre-fetch fallback until some unrelated prop forced a rebuild.
-  // Including `version` makes the identity change exactly once per fetch
-  // (or store-change event) — still stable across every other render.
+  // Including `version` makes the identity change on each successful
+  // fetch (or REFRESH_EVENT store-change) — a fetch that fails or finds
+  // nothing (see `missingRef`) leaves it untouched — still stable across
+  // every other render.
   return useMemo(
     () => ({ ensure, ensureAll, getName, getMap, getCompositeLabels, getKeymapApplicable, isKeymapWritable }),
     [ensure, ensureAll, getName, getMap, getCompositeLabels, getKeymapApplicable, isKeymapWritable, version],

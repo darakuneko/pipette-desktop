@@ -96,7 +96,7 @@ export interface UseTypingAnalyticsSinkReturn {
   keyboardRef: RefObject<TypingAnalyticsKeyboard | undefined>
   /** Gates ambient REC input. Created here so `prepareAnalyticsEvent`
    *  closes over a stable ref, but the host assigns `.current` from
-   *  `recordingActive` (view-only + record toggle) render-phase, since
+   *  `recordingActive` (the REC toggle alone) render-phase, since
    *  useInputModes computes that condition itself. */
   recordingActiveRef: RefObject<boolean>
   /** Non-null while an editor typing-test run is the active tagged input
@@ -205,7 +205,8 @@ export function useTypingAnalyticsSink({
     if (!perMinuteAuthorized && !runLogLabel) return null
     // Tray keystroke count tracks REC only (untagged matrix events), not
     // the editor typing-test practice mode — matches recordingActive's
-    // narrower definition (typingRecordEnabled && typingTestViewOnly).
+    // definition (the REC toggle alone; see useInputModes.ts's own comment
+    // on why it isn't scoped to view-only).
     // Counted here, at press time, rather than when the event eventually
     // leaves the queue: the count is a live tray readout of physical
     // keystrokes, and a masked key can otherwise sit unresolved for up to

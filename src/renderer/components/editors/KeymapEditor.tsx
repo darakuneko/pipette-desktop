@@ -201,8 +201,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const toggleLayerPanel = useCallback(() => { onLayerPanelOpenChange?.(!layerPanelOpenProp) }, [onLayerPanelOpenChange, layerPanelOpenProp])
 
   // --- Key Label "apply to keymap" bulk rewrite. Reachable from the
-  // footer's layout select via the imperative handle below, so the write
-  // lands on this same `history` instance instead of a second undo stack.
+  // simulation tab's Apply button — its confirm modal's handleApplyConfirm
+  // (useKeymapApplyPrompt.ts) reaches this via App.tsx and the imperative
+  // handle below, so the write lands on this same `history` instance
+  // instead of a second undo stack.
   // See `useKeymapRewrite` for the full destructive-one-shot /
   // freshness-check / unmount-guard contract.
   const { applyKeymapRewrite } = useKeymapRewrite({
