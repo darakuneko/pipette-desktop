@@ -286,7 +286,6 @@ describe('useFileIO – loadLayout', () => {
     expect(result.current.error).toBe('error.loadFailed')
   })
 
-  // Task-irr-5 (Plan-import-restore-rollback.md §B call-site table, B6):
   // applyVilFile resolving { ok: false, ... } is a distinct outcome from it
   // throwing (the parse/format-error catch above) — the message must say
   // whether the device was restored.
