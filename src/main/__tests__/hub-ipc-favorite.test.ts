@@ -249,10 +249,8 @@ describe('hub-ipc favorite handlers', () => {
       expect(getIdToken).not.toHaveBeenCalled()
     })
 
-    // Regression: the Data modal (no keyboard connected) used to forward
-    // the emptyState sentinel -1 straight through to this handler, which
-    // reached the Hub server as `vial_protocol: -1` and got a confusing
-    // 400. It must now fail fast locally instead.
+    // Regression: the Data modal (no keyboard connected) must now fail
+    // fast locally instead.
     it('returns a local error for vialProtocol -1 instead of reaching the Hub', async () => {
       const handler = getHandler()
       const result = await handler({}, {
@@ -362,10 +360,7 @@ describe('hub-ipc favorite handlers', () => {
       expect(entry.data.tappingTerm).toBe(200)
     })
 
-    // Regression: the export body used to always serialize at main's
-    // global protocol (always 6) while the header stamped whatever
-    // `vialProtocol` was requested — a protocol-5 upload got header 5,
-    // body v6. Assert header and body now agree.
+    // Regression: Assert header and body now agree.
     it('serializes keycode fields at the requested protocol (header/body agreement)', async () => {
       mockHubAuth()
       mockFavoriteFs()

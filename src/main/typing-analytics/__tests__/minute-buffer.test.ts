@@ -347,10 +347,7 @@ describe('MinuteBuffer', () => {
       // Without drainClosed firing between events, the chain persists
       // across minutes, so the IKI-eligible pair lands in the snapshot
       // belonging to the later event. Attributing cross-minute pairs to
-      // the new minute is the accepted design tradeoff. (A rate for how
-      // often this happens used to be quoted here; it was derived when
-      // an interval could span up to 5 minutes, so it no longer holds
-      // now that NGRAM_MAX_IKI_MS caps eligibility at 5 s. Left
+      // the new minute is the accepted design tradeoff. (Left
       // unquantified rather than carried forward as a stale number.)
       const fp = fingerprint()
       addEv(matrixEvent(0, 0, 0, 4, 58_000), fp) // minute 0
