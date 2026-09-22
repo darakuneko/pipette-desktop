@@ -162,7 +162,7 @@ describe('TabbedKeycodes', () => {
     expect(onConfirm).toHaveBeenCalledTimes(1)
   })
 
-  // Tab selection survives transient unavailability (issue #311). The
+  // Tab selection survives transient unavailability. The
   // "behavior" category stands in for a real "Modifiers" tab: it only
   // contains QK_BOOT, which is non-basic, so it disappears entirely under
   // maskOnly — exactly like a real category being narrowed out during mask

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The disconnected-view shell (device picker + settings/data modals that
-// remain reachable without a live keyboard). Split out of App.tsx
-// (Task-split-app-tsx).
+// remain reachable without a live keyboard).
 
 import { ConnectingOverlay } from './ConnectingOverlay'
 import { DeviceSelector } from './DeviceSelector'

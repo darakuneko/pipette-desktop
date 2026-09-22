@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Connected-view overlay modals: Unlock dialog, lighting configurator,
 // Combo/AltRepeatKey/KeyOverride panels, startup notifications, the
-// missing-key-label dialog, and the ja-removed banner. Split out of
-// App.tsx (Task-split-app-tsx).
+// missing-key-label dialog, and the ja-removed banner.
 
 import { useTranslation } from 'react-i18next'
 import { UnlockDialog } from './editors/UnlockDialog'

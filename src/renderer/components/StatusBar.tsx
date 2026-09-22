@@ -42,7 +42,7 @@ interface Props {
   viewAnalyticsDisabled?: boolean
   onDisconnect?: () => void
   /** REC toggle state, shown as the footer "Record" button/modal and the
-   *  left-side "Recording" indicator (Task-typing-record-footer). */
+   *  left-side "Recording" indicator. */
   typingRecordEnabled?: boolean
   onTypingRecordEnabledChange?: (enabled: boolean) => void
   quickSettings?: QuickSettingsSelectsProps

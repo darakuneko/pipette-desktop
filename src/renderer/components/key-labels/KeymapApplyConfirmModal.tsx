@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Confirmation opened by the simulation tab's Apply button (Plan-qwerty-
-// select-no-rewrite v7 — シミュレーションタブ方式) once the active Key Label
-// pack's map has been validated as a pure QWERTY-keycode permutation (see
-// `buildKeymapRewriteTable` in shared/keymap/keymap-apply.ts). Rewrite is
-// the only affirmative action left here — simulated viewing is the tabs'
-// job now, not a modal button, so this is a plain Cancel / Rewrite choice.
+// Confirmation opened by the simulation tab's Apply button once the
+// active Key Label pack's map has been validated as a pure QWERTY-keycode
+// permutation (see `buildKeymapRewriteTable` in
+// shared/keymap/keymap-apply.ts). Rewrite is the only affirmative action
+// left here — simulated viewing is the tabs' job, not a modal button,
+// so this is a plain Cancel / Rewrite choice.
 
 import { useTranslation } from 'react-i18next'
 import { useEscapeClose } from '../../hooks/useEscapeClose'

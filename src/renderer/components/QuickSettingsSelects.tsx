@@ -27,11 +27,11 @@ export interface QuickSettingsSelectsProps {
   hubDisplayName?: string | null
   hubCanWrite?: boolean
   keyboardLayout?: KeyboardLayoutId
-  /** Plain display switch (Plan-qwerty-select-no-rewrite v7): the select
-   *  never opens the Rewrite confirm modal itself anymore — that lives on
-   *  `KeymapEditor`'s simulation tab Apply button instead. Callers
-   *  typically pass `useKeymapApplyPrompt().handleKeyboardLayoutChange`
-   *  straight through. */
+  /** Plain display switch: the select never opens the Rewrite confirm
+   *  modal itself — that lives on `KeymapEditor`'s simulation tab Apply
+   *  button instead. Callers typically pass
+   *  `useKeymapApplyPrompt().handleKeyboardLayoutChange` straight
+   *  through. */
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
 }
 
@@ -59,9 +59,7 @@ export function QuickSettingsSelects({
   // True exactly when the Keyboard Layout select renders below (the
   // `!editMode` branch, with both `keyboardLayout` and
   // `onKeyboardLayoutChange` supplied) — shared by the ensure-sweep effect
-  // and the JSX so the two can't drift apart again (they used to: the
-  // effect ignored `editMode` and kept sweeping every pack while the
-  // select was hidden behind the edit-mode buttons).
+  // and the JSX so the two can't drift apart.
   const showLayoutSelect = keyboardLayout != null && !!onKeyboardLayoutChange && !editMode
 
   // Kick off a lazy fetch for every pack the select can currently show,

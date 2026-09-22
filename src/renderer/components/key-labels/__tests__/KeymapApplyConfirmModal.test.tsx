@@ -80,9 +80,8 @@ describe('KeymapApplyConfirmModal', () => {
     expect(onApply).toHaveBeenCalledTimes(1)
   })
 
-  // Display Only is gone (Plan-qwerty-select-no-rewrite v7) — simulated
-  // viewing is the tabs' job now, not a modal button, so the modal is a
-  // plain Cancel / Rewrite choice.
+  // Simulated viewing is the tabs' job, not a modal button, so the modal
+  // is a plain Cancel / Rewrite choice.
   it('has no Display Only button', () => {
     render(
       <KeymapApplyConfirmModal

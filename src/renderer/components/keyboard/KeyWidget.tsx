@@ -121,7 +121,7 @@ function KeyWidgetInner({
   // upstream (`use-layer-keycodes.ts`) whenever either the composite
   // string itself or its inner basic keycode is affected by the active
   // pack, so this key's tap symbol getting the blue tint here stays
-  // consistent with the picker's row-level tinting (#294).
+  // consistent with the picker's row-level tinting.
   const innerFillColor =
     hoverMaskParts && hoveredPart === 'inner'
       ? KEY_HOVER_COLOR
@@ -141,7 +141,7 @@ function KeyWidgetInner({
   // resolve the inner basic keycode's own remap; `getRemapDisplayLabel`
   // (same helper the picker/grid already use, not re-derived) falls
   // back to the current unremapped behaviour whenever `remapLabel` is
-  // absent or the inner keycode isn't affected by the pack (issue #295).
+  // absent or the inner keycode isn't affected by the pack.
   const innerQmkId = findInnerKeycode(keycode)?.qmkId ?? ''
   const innerLabel = maskKeycode
     ? keycodeLabel(maskKeycode)
@@ -378,10 +378,10 @@ function KeyWidgetInner({
               pair ("(\n8") stacks vertically — shifted char on top,
               base below — matching Vial's convention (and `SplitKey`'s
               own base/shifted split elsewhere in the picker) instead of
-              cramming both onto one line ("issue #296"). A single part
-              renders centered as before; parts beyond 2 are dropped —
-              same "excess parts have no slot" convention the outer
-              label's own 2-part branch above already documents. */}
+              cramming both onto one line. A single part renders
+              centered; parts beyond 2 are dropped — same "excess parts
+              have no slot" convention the outer label's own 2-part
+              branch above already documents. */}
           {(() => {
             const innerParts = innerLabel.split('\n').slice(0, 2)
             if (innerParts.length === 2) {

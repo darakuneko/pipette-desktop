@@ -146,8 +146,8 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
         // own text, not just the default label/qmkId/tooltip \u2014
         // otherwise a search that only matches the *default* label of a
         // DIFFERENT keycode (e.g. default "( 9" for KC_9) can shadow
-        // the actually-relabeled key the user is looking for (issue
-        // #294). Each line of a multi-line remap becomes its own token
+        // the actually-relabeled key the user is looking for. Each line
+        // of a multi-line remap becomes its own token
         // so an exact match on either line (e.g. "(" or "8") ranks this
         // entry in the "exact" bucket, same as any other exact token
         // match \u2014 default label/qmkId/tooltip tokens are kept as-is so

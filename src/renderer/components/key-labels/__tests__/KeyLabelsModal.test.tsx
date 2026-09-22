@@ -332,7 +332,7 @@ describe('KeyLabelsModal', () => {
     await waitFor(() => expect(remove).toHaveBeenCalledWith('mine'))
   })
 
-  // --- Phase 3: Delete = Hub cascade (aligns Key Labels with Language/Theme Packs) ---
+  // --- Delete = Hub cascade (aligns Key Labels with Language/Theme Packs) ---
 
   it('Delete on a hub-linked entry cascades to hubDelete before the local remove', async () => {
     metas = [meta({ id: 'linked', name: 'Linked', uploaderName: 'me', hubPostId: 'hub-1' })]
@@ -388,13 +388,9 @@ describe('KeyLabelsModal', () => {
   })
 
   // --- regression: Delete must not cascade to Hub for entries the user
-  // does not own (fix/delete-ownership-gate). A downloaded label also
-  // carries hubPostId (for Sync/freshness linkage) but is never
-  // deletable on Hub by this user — the old code attempted the Hub
-  // delete regardless of ownership, which failed for a foreign post
-  // (or a deactivated uploader account, e.g. "Brazilian (QWERTY)" by
-  // pipette) and then blocked the local delete too, leaving the user
-  // unable to remove a downloaded label at all. ---
+  // does not own. A downloaded label also carries hubPostId (for
+  // Sync/freshness linkage) but is never deletable on Hub by this
+  // user. ---
 
   it('a label downloaded from someone else deletes locally only — no Hub call at all (THE regression)', async () => {
     metas = [meta({ id: 'foreign-del', name: 'Foreign Label', uploaderName: 'pipette', hubPostId: 'hub-foreign' })]
@@ -825,7 +821,7 @@ describe('KeyLabelsModal', () => {
     expect(screen.getByTestId('key-labels-error').textContent).toContain('existing.json')
   })
 
-  // --- Phase 2: Name sort (drag reorder itself predates this phase) -------
+  // --- Name sort -------
 
   it('the Name sort button sorts installed labels ascending on first click, including QWERTY', async () => {
     metas = [

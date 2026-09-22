@@ -145,9 +145,9 @@ describe('KeyboardWidget decal handling', () => {
     expect(renderedKeyGroups.length).toBe(2)
   })
 
-  // Regression for issue #129: MB-44 defines its bottom-row Blocker via the
-  // KLE `d: true` flag. The widget must skip those keys instead of rendering
-  // them as a small unlabelled cap.
+  // MB-44 defines its bottom-row Blocker via the KLE `d: true` flag. The
+  // widget must skip those keys instead of rendering them as a small
+  // unlabelled cap.
   it('does not render Blocker decal from MB-44 fixture (issue #129)', () => {
     const fixturePath = join(
       __dirname,
@@ -219,8 +219,6 @@ describe('KeyboardWidget flash threading', () => {
   })
 })
 
-// Plan-qwerty-select-no-rewrite "also" follow-up: encoder CW/CCW legends
-// gained the same remap tint keymap keys already have.
 describe('KeyboardWidget remappedEncoders threading', () => {
   const keys: KleKey[] = [
     makeKey({ x: 0, y: 0, row: -1, col: -1, encoderIdx: 0, encoderDir: 0 }),

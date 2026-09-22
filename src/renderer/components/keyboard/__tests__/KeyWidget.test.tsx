@@ -510,9 +510,9 @@ describe('KeyWidget', () => {
   })
 })
 
-// --- issue #295/#296: composite (masked) key inner label honors the
-// active Key Label pack's remap, and a two-part inner label (shift +
-// base) renders stacked instead of crammed onto one line. ---
+// --- composite (masked) key inner label honors the active Key Label
+// pack's remap, and a two-part inner label (shift + base) renders
+// stacked instead of crammed onto one line. ---
 
 describe('KeyWidget — inner label remap resolution (issue #295)', () => {
   it('resolves the inner label via remapLabel when the pack remaps the inner basic keycode', () => {

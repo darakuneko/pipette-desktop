@@ -63,9 +63,9 @@ export interface Props {
    *  upstream via `use-layer-keycodes.ts`'s `keycodes` map for the
    *  composite string as a whole — but a pack practically only ever
    *  remaps the plain inner basic keycode, not the full composite
-   *  string, so this is threaded here to resolve that specifically
-   *  (issue #295). Ignored for `labelOverride`/`maskKeycode` callers,
-   *  which already bypass keycode-table lookups entirely. */
+   *  string, so this is threaded here to resolve that specifically.
+   *  Ignored for `labelOverride`/`maskKeycode` callers, which already
+   *  bypass keycode-table lookups entirely. */
   remapLabel?: (qmkId: string) => string
   onClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void

@@ -51,10 +51,8 @@ export const IDENTITY_CELLS = new Map<string, { row: number; col: number }>()
 
 /** Three keys anchored at the same physical x (one full physical column)
  *  but wired to three different matrix columns — the View Matrix layout
- *  that produces overlapping column-number gutter labels (issue report:
- *  several matrix columns sharing one physical column stack past the old
- *  two-line cap). Each key gets its own row so they don't also collide on
- *  the row axis. */
+ *  that produces overlapping column-number gutter labels. Each key gets
+ *  its own row so they don't also collide on the row axis. */
 export function makeColumnStackKeys(): KleKey[] {
   return [
     makeKey({ row: 0, col: 1, x: 0, y: 0 }),

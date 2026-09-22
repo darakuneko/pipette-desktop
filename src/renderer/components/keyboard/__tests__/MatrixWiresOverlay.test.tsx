@@ -128,7 +128,7 @@ describe('MatrixWiresOverlay — label coordinates', () => {
   it('centers a three-line label stack around the gutter band middle', () => {
     // Regression fixture for the reported gutter overlap: matrix cols
     // 1, 3, 7 anchored at the same physical column stack onto three
-    // lines instead of the old two-line cap.
+    // lines.
     const keys = makeColumnStackKeys()
     const fontSize = 20
     const layout = buildMatrixWires(keys, IDENTITY_CELLS, 1, fontSize)

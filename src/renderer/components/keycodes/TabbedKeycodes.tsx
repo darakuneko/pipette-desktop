@@ -471,9 +471,8 @@ export function TabbedKeycodes({
 
       {/* Tooltip — rendered outside the scroll container to avoid clipping.
           `BUBBLE_BASE` already positions `fixed`, so this needs no
-          container-relative math (unlike the old absolute-positioned
-          version) — `tooltipPos` is computed straight from the hovered
-          key's own viewport rect via `computeBubblePosition`. */}
+          container-relative math — `tooltipPos` is computed straight from
+          the hovered key's own viewport rect via `computeBubblePosition`. */}
       {tooltip && (
         <div
           ref={tooltipRef}

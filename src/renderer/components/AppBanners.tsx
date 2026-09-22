@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Connected-view warning banners (dummy/pipette-file mode, unsaved
-// changes, example UID, protocol version, connection warning). Split out
-// of App.tsx (Task-split-app-tsx) to bring it under the file-splitting
-// line-count target.
+// changes, example UID, protocol version, connection warning).
 
 import { useTranslation } from 'react-i18next'
 import type { useDeviceConnection } from '../hooks/useDeviceConnection'

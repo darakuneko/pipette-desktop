@@ -9,14 +9,13 @@ export type TooltipAlign = 'start' | 'center' | 'end'
 export type TooltipElement = 'div' | 'span'
 
 /**
- * Shared tooltip for interactive icon/button triggers (v2).
+ * Shared tooltip for interactive icon/button triggers.
  *
  * The bubble is rendered into `document.body` via React Portal, with its
  * viewport coords computed against the wrapper's `getBoundingClientRect()`
  * each time it opens (and on scroll / resize while open). This means the
- * bubble is no longer clipped by ancestor `overflow: auto/clip/hidden`
- * containers — the historical CSS-only positioning was scoped to the
- * wrapper's stacking context and broke inside scrollable panels.
+ * bubble is not clipped by ancestor `overflow: auto/clip/hidden`
+ * containers.
  *
  * `describedByOn='trigger'` clones the child and merges `aria-describedby`;
  * `describedByOn='wrapper'` leaves the child alone and puts the reference

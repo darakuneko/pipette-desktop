@@ -234,7 +234,7 @@ describe('buildMatrixWires — label placement', () => {
   it('stacks three row labels anchored at the exact same y onto three separate lines', () => {
     // Three single-key rows, all sharing y=0 — every pair collides, so
     // each one needs its own line rather than the third landing back on
-    // top of the second (the old two-line cap this replaces).
+    // top of the second.
     const keys = [
       makeKey({ row: 0, col: 0, x: 0, y: 0 }),
       makeKey({ row: 1, col: 1, x: 1, y: 0 }),

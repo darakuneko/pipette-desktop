@@ -68,10 +68,10 @@ interface Props {
    *  with its finger colour. */
   keyColors?: Map<string, string>
   /** Active Key Label pack's per-key legend override — threaded straight
-   *  to `KeyWidget` for masked (composite) keys' inner label (issue
-   *  #295). The outer/plain label for non-masked keys is already
-   *  remapped upstream in the `keycodes` map itself (`use-layer-
-   *  keycodes.ts`), so this is only ever consulted for the inner path. */
+   *  to `KeyWidget` for masked (composite) keys' inner label. The
+   *  outer/plain label for non-masked keys is already remapped upstream
+   *  in the `keycodes` map itself (`use-layer-keycodes.ts`), so this is
+   *  only ever consulted for the inner path. */
   remapLabel?: (qmkId: string) => string
   onKeyClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onKeyDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
