@@ -51,9 +51,9 @@ vi.mock('../sync/google-drive', async () => {
   // `driveFileName`/`syncUnitFromFileName` are imported via `importActual`
   // (not hand-rolled) so this mock can never drift out of sync with the
   // real filename ↔ sync-unit mapping again — a stale hand-rolled regex
-  // here previously hid a fresh-machine discovery gap for several stores
-  // (see Task-sync-unit-filename-gap.md) because the test mock silently
-  // kept "supporting" a narrower set of filenames than production code.
+  // here hid a fresh-machine discovery gap for several stores because
+  // the test mock silently kept "supporting" a narrower set of filenames
+  // than production code.
   const actual = await vi.importActual<typeof import('../sync/google-drive')>('../sync/google-drive')
   return {
     listFiles: (...args: unknown[]) => mockListFiles(...args),
@@ -488,7 +488,7 @@ describe('sync-service', () => {
 
       await vi.advanceTimersByTimeAsync(200)
       const firstResult = await first
-      // M1/M2: the busy race must surface as a real, checkable status —
+      // The busy race must surface as a real, checkable status —
       // not a silent no-op indistinguishable from a completed sync.
       const secondResult = await second
       expect(firstResult).toEqual({ status: 'completed' })
@@ -637,10 +637,10 @@ describe('sync-service', () => {
       stopPolling()
     })
 
-    // Task-sync-unit-filename-gap: themes/i18n only match scope 'all',
-    // which the 3-minute poll always uses (see matchesScope) — so once
-    // syncUnitFromFileName recognizes their filenames, polling picks up
-    // changes for them exactly like any other scope-'all' unit.
+    // themes/i18n only match scope 'all', which the 3-minute poll always
+    // uses (see matchesScope) — so once syncUnitFromFileName recognizes
+    // their filenames, polling picks up changes for them exactly like
+    // any other scope-'all' unit.
     it('detects a changed themes/packs file on a subsequent poll and downloads it', async () => {
       const themePackFile = (modifiedTime: string): DriveFile =>
         ({ id: 'theme-pack-1', name: 'themes_packs_pack-a.enc', modifiedTime })
@@ -680,11 +680,10 @@ describe('sync-service', () => {
       stopPolling()
     })
 
-    // A key-labels-specific variant of this test previously lived here.
-    // Dropped as redundant: key-labels rides the same generic index-based
-    // poll-merge path already exercised above by favorites (this file's
-    // own "detects remote changes on subsequent polls and downloads"),
-    // and its filename recognition is pinned at the unit level in
+    // Key-labels rides the same generic index-based poll-merge path
+    // already exercised above by favorites (this file's own "detects
+    // remote changes on subsequent polls and downloads"), and its
+    // filename recognition is pinned at the unit level in
     // google-drive.test.ts's round-trip coverage.
 
     it('skips when no remote changes detected', async () => {
@@ -1048,7 +1047,7 @@ describe('sync-service', () => {
     })
   })
 
-  // M1/M2: executeSync's own return value must distinguish a real
+  // executeSync's own return value must distinguish a real
   // completion from a silent skip (busy race, missing credentials) or a
   // partial failure — callers (useDeviceLifecycle's packsPulledOnce
   // once-flag, usePackCloudPull's error state) branch on this instead of
@@ -1372,11 +1371,7 @@ describe('sync-service', () => {
       expect(result.undecryptable).toEqual([])
     })
 
-    // Task-sync-unit-filename-gap: scanRemoteData categorizes purely from
-    // syncUnitFromFileName — these previously fell through as unrecognized
-    // filenames (syncUnit === null) and were silently dropped from every
-    // category, including keyboards (for a uid that only has this file)
-    // and themePacks.
+    // scanRemoteData categorizes purely from syncUnitFromFileName.
     it('surfaces a uid whose only remote file is analyze_filters as a cloud keyboard', async () => {
       mockListFiles.mockResolvedValue([
         { id: 'f1', name: 'keyboards_uid-only-filters_analyze_filters.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
@@ -1647,7 +1642,7 @@ describe('sync-service', () => {
         expect(matchesScope(null, 'packs')).toBe(false)
       })
 
-      // C.1 / codex ordering trap: 'packs' must be checked BEFORE the
+      // Ordering trap: 'packs' must be checked BEFORE the
       // unconditional key-labels/typing-test-texts `true`s below it in
       // matchesScope — otherwise a 'packs'-scoped download would also
       // pull those unrelated global units in, since their own checks
@@ -1726,11 +1721,11 @@ describe('sync-service', () => {
         expect(shouldDownloadSyncUnit(runLogUnit, connectScope, local)).toBe(false)
       })
 
-      // Task-sync-unit-filename-gap: these three stores are discovery-included
-      // ("それ以外" column in settings-persistence.md's trigger matrix — no
-      // dedicated exclusion predicate like analytics/run-logs) — the fix here
-      // is purely that syncUnitFromFileName now recognizes their filenames at
-      // all; shouldDownloadSyncUnit's own logic needs no changes for them.
+      // These three stores are discovery-included ("それ以外" column in
+      // the trigger matrix — no dedicated exclusion predicate like
+      // analytics/run-logs) — the fix here is purely that
+      // syncUnitFromFileName now recognizes their filenames at all;
+      // shouldDownloadSyncUnit's own logic needs no changes for them.
       it('keeps key-labels, typing-test-texts, and analyze_filters under the connect-time scope shape', () => {
         const connectScope = { favorites: true as const, keyboard: 'uid-a' }
         expect(shouldDownloadSyncUnit('key-labels', connectScope, local)).toBe(true)
@@ -1743,9 +1738,7 @@ describe('sync-service', () => {
     })
 
     describe('executeSync with scope', () => {
-      // Task-sync-unit-filename-gap: fresh-machine discovery — a remote-only
-      // unit for these stores previously could never be found because
-      // syncUnitFromFileName didn't recognize their filenames at all.
+      // Fresh-machine discovery.
       it.each([
         {
           label: 'key-labels',
@@ -2721,7 +2714,7 @@ describe('sync-service', () => {
     })
   })
 
-  // Task-sync-unit-filename-gap / bundle-variant merge crash regression.
+  // Bundle-variant merge crash regression.
   // i18n-index / i18n-pack / theme-index / theme-pack bundles carry
   // `{ metas: [...] }` or a raw pack body, never `{ entries }` — so before
   // dedicated branches existed, mergeSyncUnit's generic index-based branch
@@ -2731,9 +2724,7 @@ describe('sync-service', () => {
   // asserts the fixed LWW behavior.
   describe('bundle-variant merge (i18n/theme index + pack)', () => {
     /** Builds a mock decrypted SyncEnvelope for any bundle shape (index
-     *  or pack-body). Replaces the four near-identical `make*Envelope`
-     *  factories this describe block used to carry, one per
-     *  i18n/theme × index/pack combination. */
+     *  or pack-body). */
     function makeBundleEnvelope(
       syncUnit: string,
       updatedAt: string,
@@ -2806,14 +2797,9 @@ describe('sync-service', () => {
         meta: { id: 't1', name: 'Ocean', version: '1.0.0', savedAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z' },
       },
     ])('$label-index: remote-only id merges alongside the pre-existing local id (union, not wholesale replace)', async ({ syncUnit, fileName, fileId, bundleType, dir, meta }) => {
-      // M1 fix: index merge used to be file-level LWW — "newer roster
-      // wins wholesale" — which meant a remote index arriving with a
-      // different id than local's simply erased the local-only entry
-      // forever (its body file became an orphan, unreachable because
-      // collectAllSyncUnits only walks ids present in the index). This
-      // is now entry-level LWW: both ids survive as a union, and since
-      // local has an id remote doesn't have yet, the merged index is
-      // marked for re-upload so remote converges too.
+      // This is now entry-level LWW: both ids survive as a union, and
+      // since local has an id remote doesn't have yet, the merged index
+      // is marked for re-upload so remote converges too.
       await mkdir(join(mockUserDataPath, 'sync', dir), { recursive: true })
       await writeFile(
         join(mockUserDataPath, 'sync', dir, 'index.json'),
@@ -3218,8 +3204,8 @@ describe('sync-service', () => {
     })
 
     it('S1: a hostile packId is contained on the poll path too — not retried every 3 minutes', async () => {
-      // Task M2's hostile-packId test above only exercises the manual
-      // sync path (executeSync). S1: applySyncedPackBody now THROWS
+      // The hostile-packId test above only exercises the manual
+      // sync path (executeSync). applySyncedPackBody now THROWS
       // MalformedSyncBundleError for a rejected packId instead of
       // returning false as a bare Error would — this lets the poll's
       // `instanceof MalformedSyncBundleError` branch recognize the
@@ -3313,7 +3299,7 @@ describe('sync-service', () => {
       // separator, producing a syncUnit like 'favorites/../../evil'.
       // Every `/`-split segment of `syncUnit` must be validated before
       // mergeSyncUnit's settings / generic branches join it into a
-      // filesystem path — this is the pre-existing exposure M2 closes
+      // filesystem path — this is the exposure M2 closes
       // centrally, independent of the i18n/theme pack-index fix above.
       const hostileFile = { id: 'evil1', name: 'favorites_../../evil.enc', modifiedTime: '2026-06-01T00:00:00.000Z' }
       mockListFiles.mockResolvedValue([hostileFile, PASSWORD_CHECK_DRIVE_FILE])

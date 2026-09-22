@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Focused coverage for the SYNC_RESET_TARGETS handler's keyLabels /
-// typingTestTexts cases (Task-sync-remote-reset-and-discovery-gaps §A).
-// sync-ipc.ts pulls in most of the main process's sync/typing-analytics
-// surface, so every dependency is stubbed to a bare vi.fn() — this file
-// intentionally does not attempt broader sync-ipc coverage.
+// typingTestTexts cases. sync-ipc.ts pulls in most of the main
+// process's sync/typing-analytics surface, so every dependency is
+// stubbed to a bare vi.fn() — this file intentionally does not attempt
+// broader sync-ipc coverage.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
