@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Task-irr-1: writeFileAtomic's rename-failure cleanup (plan §A9) —
-// the `.tmp` file must not survive a failed rename, and the original
-// error must still propagate to the caller.
+// writeFileAtomic's rename-failure cleanup — the `.tmp` file must not
+// survive a failed rename, and the original error must still
+// propagate to the caller.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'

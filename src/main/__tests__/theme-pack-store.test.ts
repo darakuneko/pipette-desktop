@@ -775,8 +775,6 @@ describe('theme-pack-store', () => {
     })
   })
 
-  // --- Task-sync-unit-discovery bugfix plan: fixes 1-3 ----------------------
-
   describe('sync robustness fixes (utimes degrade / pin CAS / malformed metas)', () => {
     // --- Fix 1: utimes failure degrades to accept-with-warn -----------------
 

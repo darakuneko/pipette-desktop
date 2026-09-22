@@ -400,8 +400,8 @@ describe('typing-run-log-store', () => {
       expect(result.success).toBe(false)
     })
 
-    // P2-2 (codex review): a line break must have at least one word after
-    // it — the log's own last word (words.length - 1) can never be one.
+    // A line break must have at least one word after it — the log's own
+    // last word (words.length - 1) can never be one.
     it('rejects a terminal entry (index === words.length - 1, no word follows it)', async () => {
       const result = await saveRunLog('kb-1', fourWordLog({ lineBreaks: [3] }))
       expect(result.success).toBe(false)

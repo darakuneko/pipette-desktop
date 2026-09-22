@@ -68,10 +68,9 @@ describe('clampBoundsToWorkArea', () => {
       { x: 10, y: 10, width: 800, height: 600 },
     ],
     [
-      // Mirrors issue #419: a windowState saved from a large external
-      // monitor, restored on a MacBook's smaller built-in work area — both
-      // dimensions overflow, so the clamp pins the window flush to the
-      // work area's own origin.
+      // A windowState saved from a large external monitor, restored on a
+      // MacBook's smaller built-in work area — both dimensions overflow,
+      // so the clamp pins the window flush to the work area's own origin.
       'saved state larger than the work area in both axes — pinned to the work area origin',
       { x: -200, y: -50, width: 1920, height: 1080 },
       { x: 0, y: 0, width: 1440, height: 900 },
