@@ -5,7 +5,10 @@
 // `useDevicePrefs` (the actual `remapLabel`/`isRemapped` source) straight
 // into `useLayerKeycodes` (the actual keymap-legend consumer) — the same
 // pairing `KeymapEditor` does — and simulates the async Key Label pack
-// fetch `ensure(layout)` triggers.
+// fetch `ensure(layout)` triggers. Before the fix, `layerKeycodes` /
+// `remappedKeys` stayed on their pre-fetch fallback (raw qmkId, no tint)
+// forever once the pack resolved, because `remapLabel`/`isRemapped` never
+// changed identity so `buildKeycodesForLayer`'s memo never reran.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act } from '@testing-library/react'
