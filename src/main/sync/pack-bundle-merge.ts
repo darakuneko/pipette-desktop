@@ -89,6 +89,14 @@ function broadcastPackChanged(isTheme: boolean): void {
  * every `mergeSyncUnit` branch shares (`true` = local has data remote
  * still needs, i.e. re-upload the unit).
  *
+ * Entry-level LWW: each pack's meta is merged independently by id, so
+ * an install on one machine and a concurrent install on another both
+ * survive the merge as a union, and only an actual same-id conflict
+ * (e.g. two ids that happen to collide, or a delete racing an edit) is
+ * resolved by comparing that one id's own timestamps — never by
+ * discarding an unrelated id's entry just because it arrived on the
+ * "losing" side of the whole file.
+ *
  * The built-in English meta (i18n only) rides along in this merge like
  * any other entry and needs no special-casing: every machine creates it
  * locally with its own first-seen timestamp, so two copies differ only

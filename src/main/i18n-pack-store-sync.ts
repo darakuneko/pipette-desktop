@@ -12,9 +12,7 @@
 // `isSafePackId` validation of a packId sourced from a remote Drive
 // filename (least-trusted input), and `withIndexWriteLock` so a merge
 // write can't land in the middle of this store's own read-modify-write
-// cycle (save/rename/delete/reorder/purge) — which, combined with the
-// old non-atomic write, is how a torn read could get persisted as an
-// empty index over a real roster.
+// cycle (save/rename/delete/reorder/purge).
 
 import { mkdir, stat, utimes } from 'node:fs/promises'
 import { gcTombstones, mergeEntries, MalformedSyncBundleError } from './sync/merge'
@@ -36,15 +34,15 @@ import {
 
 /** Entry-level LWW merge + persist for a synced remote index. Reuses
  *  the exact same `mergeEntries`/`gcTombstones` machinery every other
- *  entry-based sync unit (favorites, key-labels,
- *  etc.) already relies on — `I18nPackMeta` carries the same
+ *  entry-based sync unit (favorites, key-labels, etc.) already relies
+ *  on — `I18nPackMeta` carries the same
  *  id/filename/savedAt/updatedAt/deletedAt? shape `EntryMeta` requires.
  *  `preserveLocalOrder` is set because index order is user-meaningful
  *  (drag order), same as key-labels.
  *
  *  Reads, merges, and writes under the write lock as a single atomic
  *  step — not a separate outside-lock read followed by a decided
- *  "apply" call. That gap let a concurrent local mutation
+ *  "apply" call. That gap lets a concurrent local mutation
  *  (save/rename/delete/reorder) land between the caller's read and its
  *  write (TOCTOU); folding read→merge→write into one lock-held function
  *  closes it.
@@ -76,12 +74,11 @@ import {
  *  shape is never actually guaranteed. `isPackMetaCandidate` treats
  *  any non-object entry the same way as a rejected id: dropped via the
  *  same unit-name-only warn path below, never thrown. The `metas`
- *  field not being an array at all is
- *  a stronger malformation than a bad element and is rejected one layer
- *  up, by `mergePackIndexBundle` (pack-bundle-merge.ts), which throws
- *  `MalformedSyncBundleError` before this function is even called — see
- *  its own doc for why that one is poll-skip-permanent rather than
- *  silently-filtered.
+ *  field not being an array at all is a stronger malformation than a
+ *  bad element and is rejected one layer up, by `mergePackIndexBundle`
+ *  (pack-bundle-merge.ts), which throws `MalformedSyncBundleError`
+ *  before this function is even called — see its own doc for why that
+ *  one is poll-skip-permanent rather than silently-filtered.
  *
  *  Returns `applied: false` (never throws) only on an I/O failure
  *  writing the merged index — never for a rejected meta, since those

@@ -81,14 +81,10 @@ function nowIso(): string {
 // setHubPostId/reorder/purge) shares one promise chain so a concurrent
 // pair can't each read a stale snapshot and clobber the other's write —
 // mirrors `i18n-pack-store.ts`'s `withIndexWriteLock` (itself mirroring
-// `sync/keyboard-meta.ts`'s `withMetaWriteLock`). This store used to
-// scope the lock to only the two sync entry points below
-// (applySyncedIndex/applySyncedPackBody) on the theory that its other
-// mutation methods had no real second writer to race — but the
-// index-merge landed (mergeSyncedIndex below), which makes remote sync
-// a genuine concurrent writer of `themes/index.json`, so every method
-// that reads-then-writes the index needs the same lock the sync entry
-// points already had.
+// `sync/keyboard-meta.ts`'s `withMetaWriteLock`). The index-merge
+// (mergeSyncedIndex below) makes remote sync a genuine concurrent
+// writer of `themes/index.json`, so every method that reads-then-writes
+// the index needs the same lock.
 let indexWriteChain: Promise<unknown> = Promise.resolve()
 
 async function withIndexWriteLock<T>(fn: () => Promise<T>): Promise<T> {

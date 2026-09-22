@@ -19,13 +19,10 @@ import { log } from '../logger'
 import type { SyncScope, SyncExecuteStatus, SyncSkipReason } from '../../shared/types/sync'
 import { syncCredentialI18nKey } from '../../shared/types/sync'
 
-/** Real outcome of an `executeSync` call — distinct from the `void`
- *  return, which makes a busy-race skip and a missing-credentials skip
- *  both look identical to a fully-completed sync (neither throws; both
- *  just emit progress and return). Threaded
- *  through SYNC_EXECUTE's IPC result as `status`/`skipReason` — see
- *  `SyncOperationResult`'s doc in shared/types/sync.ts for why `success`
- *  itself is deliberately left alone. */
+/** Real outcome of an `executeSync` call. Threaded through SYNC_EXECUTE's
+ *  IPC result as `status`/`skipReason` — see `SyncOperationResult`'s doc
+ *  in shared/types/sync.ts for why `success` itself is deliberately left
+ *  alone. */
 export interface SyncExecuteResult {
   status: SyncExecuteStatus
   /** Populated only when `status === 'skipped'`. */

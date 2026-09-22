@@ -26,9 +26,6 @@
 // ever *removes* metas already past their own TTL and is index-only
 // (no pack-body filesystem scan), so it stays safe and idempotent even
 // when a sibling unit failed this pass.
-//
-// Pulled into its own module rather than growing sync-service.ts past
-// the project's 800-line Service/Util size ceiling.
 
 import { log } from '../logger'
 import { runGcUnderLock as runI18nGc } from '../i18n-pack-store'
