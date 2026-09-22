@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Char-resolution pipeline for Layout Comparison (Phase 1).
+// Char-resolution pipeline for Layout Comparison.
 //
 // Given a typing-analytics snapshot (qmkId-per-position) plus the
 // user's source layout and a target layout, translate each matrix
@@ -14,8 +14,6 @@
 // considers the layer-0 base char of each key — masked keycodes
 // (LSFT(...), LT(...)) collapse to their inner basic keycode via
 // findInnerKeycode.
-//
-// See Plan-analyze-layout-comparison §「char 解決パイプライン」.
 //
 // Note on Layout Comparison semantics: "target physical position" is
 // answered against the same snapshot the source resolves on. The

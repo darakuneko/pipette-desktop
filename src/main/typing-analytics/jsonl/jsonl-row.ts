@@ -114,8 +114,8 @@ export interface JsonlSessionPayload {
 }
 
 /** Per-bigram aggregate within a single minute. `c` = count of pair
- * occurrences. `h` = 8-bucket IKI histogram (log-scale buckets, see
- * Plan-analyze-bigram.md). `s` / `sq` are the sum and sum-of-squares of
+ * occurrences. `h` = 8-bucket IKI histogram (log-scale buckets).
+ * `s` / `sq` are the sum and sum-of-squares of
  * the raw IKI values that fed `h`, kept alongside the histogram so a
  * range aggregate can compute a true standard deviation instead of a
  * bucket-midpoint approximation. Optional and always a pair: rows

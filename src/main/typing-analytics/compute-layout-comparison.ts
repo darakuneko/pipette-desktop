@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Layout Comparison Phase 1 metric aggregation. Pure compute layer
+// Layout Comparison metric aggregation. Pure compute layer
 // that takes pre-fetched matrix counts + a snapshot + KleKey geometry
 // and folds them into per-target finger / hand / row distributions.
 //
@@ -10,8 +10,6 @@
 // `computeLayoutComparison` with the assembled inputs. Keeping the
 // compute step pure lets tests exercise the metric math without
 // faking IPC, DB, or filesystem.
-//
-// See Plan-analyze-layout-comparison §「metric 計算式」.
 
 import type { ErgonomicsMeta, FingerType, RowCategory } from '../../shared/kle/kle-ergonomics'
 import { posKey } from '../../shared/kle/pos-key'

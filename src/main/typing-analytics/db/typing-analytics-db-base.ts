@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Base of the TypingAnalyticsDB class chain: owns the SQLite connection,
 // the 3-phase migration-aware constructor, and the prepared-statement
-// bundle every derived class reads from `this.stmts`. Split out of what
-// used to be one 3,255-line file/class.
+// bundle every derived class reads from `this.stmts`.
 //
 // typing-analytics-db-writes.ts extends this with the ingest/tombstone/
 // export/merge write methods, typing-analytics-db-reads.ts extends that
@@ -163,8 +162,8 @@ export abstract class TypingAnalyticsDbBase {
       `)
       this.cacheNeedsRebuild = true
     }
-    // v6 -> v7: Add sum_iki / sumsq_iki to typing_bigram_minute (nullable —
-    // see Plan-trigram-and-iki-variance.md) and introduce typing_trigram_minute.
+    // v6 -> v7: Add sum_iki / sumsq_iki to typing_bigram_minute (nullable)
+    // and introduce typing_trigram_minute.
     // The new table is handled by CREATE_SCHEMA_SQL's unconditional
     // `CREATE TABLE IF NOT EXISTS`, same as any fresh install, so nothing to
     // do here for it. The ALTER below only applies when typing_bigram_minute
