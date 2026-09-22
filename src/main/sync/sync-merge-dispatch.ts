@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Per-sync-unit upload/merge/dispatch: uploading a bundle, merging a
 // downloaded remote bundle into local state by sync-unit shape, and the
-// upload-or-merge-with-remote decision. Split out of sync-service.ts to
-// keep it under the project's 800-line Service/Util size ceiling.
+// upload-or-merge-with-remote decision.
 
 import { app } from 'electron'
 import { join } from 'node:path'
@@ -208,8 +207,7 @@ async function mergeSyncUnit(
   // roster, entry-level LWW (same mergeEntries/gcTombstones machinery
   // as favorites/key-labels/etc. below, applied to the pack meta shape
   // instead of a whole-file "newer roster wins wholesale" comparison —
-  // see mergePackIndexBundle's doc for why the old file-level strategy
-  // was a data-loss bug).
+  // see mergePackIndexBundle's doc).
   if (syncUnit === I18N_INDEX_SYNC_UNIT || syncUnit === THEME_INDEX_SYNC_UNIT) {
     return mergePackIndexBundle(syncUnit, remoteBundle)
   }

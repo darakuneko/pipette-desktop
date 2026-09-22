@@ -40,10 +40,9 @@ export function getAppConfigStore(): Store<AppConfig> {
 }
 
 /** Migrate a legacy `language` value (e.g. `'en'`, `'ja'`) to the
- * `builtin:` / `pack:` namespace introduced when the bundled
- * `ja.json` was extracted into the language pack store. Returns the
- * canonical id and an optional `oneShotNotice` flag the UI surfaces
- * once before persisting `null` back. */
+ * `builtin:` / `pack:` namespace. Returns the canonical id and an
+ * optional `oneShotNotice` flag the UI surfaces once before
+ * persisting `null` back. */
 function migrateLanguage(raw: unknown): { id: string; oneShotNotice?: 'ja-removed' } {
   if (typeof raw !== 'string') return { id: 'builtin:en' }
   if (raw === 'en') return { id: 'builtin:en' }

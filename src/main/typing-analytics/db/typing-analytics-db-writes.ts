@@ -3,8 +3,7 @@
 // upsertScope / insertSession / retainOwnData), tombstone writes, sync
 // export selects, and authoritative LWW sync-merge writes. Extends
 // TypingAnalyticsDbBase so it can reach `this.db` (for db.transaction)
-// and `this.stmts` (every prepared statement group). Split out of what
-// used to be one 3,255-line file/class.
+// and `this.stmts` (every prepared statement group).
 
 import { emptyTombstoneResult } from '../../../shared/types/typing-analytics'
 import type { TypingTombstoneResult } from '../../../shared/types/typing-analytics'

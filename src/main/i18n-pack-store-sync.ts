@@ -7,14 +7,12 @@
 // the index anymore — see mergeSyncedIndex below) — these entry points
 // only know how to apply an already-decided winning write. Routing the
 // write through here (instead of pack-bundle-merge.ts joining
-// userData/sync/i18n/... and calling writeFile itself, as it used to)
-// gets two things pack-bundle-merge.ts cannot provide on its own:
+// userData/sync/i18n/... and calling writeFile itself) gets two things
+// pack-bundle-merge.ts cannot provide on its own:
 // `isSafePackId` validation of a packId sourced from a remote Drive
 // filename (least-trusted input), and `withIndexWriteLock` so a merge
 // write can't land in the middle of this store's own read-modify-write
-// cycle (save/rename/delete/reorder/purge) — which, combined with the
-// old non-atomic write, is how a torn read could get persisted as an
-// empty index over a real roster.
+// cycle (save/rename/delete/reorder/purge).
 
 import { mkdir, stat, utimes } from 'node:fs/promises'
 import { gcTombstones, mergeEntries, MalformedSyncBundleError } from './sync/merge'
@@ -34,22 +32,17 @@ import {
   withIndexWriteLock,
 } from './i18n-pack-store-internal'
 
-/** Entry-level LWW merge + persist for a synced remote index. Replaces
- *  the old whole-file "remote newer wholesale-replaces local" strategy,
- *  which silently destroyed the other side's roster whenever two
- *  machines each installed a different pack while offline — see
- *  pack-bundle-merge.ts's `mergePackIndexBundle` doc for the full
- *  writeup. Reuses the exact same `mergeEntries`/`gcTombstones`
- *  machinery every other entry-based sync unit (favorites, key-labels,
- *  etc.) already relies on — `I18nPackMeta` carries the same
+/** Entry-level LWW merge + persist for a synced remote index. Reuses
+ *  the exact same `mergeEntries`/`gcTombstones` machinery every other
+ *  entry-based sync unit (favorites, key-labels, etc.) already relies
+ *  on — `I18nPackMeta` carries the same
  *  id/filename/savedAt/updatedAt/deletedAt? shape `EntryMeta` requires.
  *  `preserveLocalOrder` is set because index order is user-meaningful
  *  (drag order), same as key-labels.
  *
  *  Reads, merges, and writes under the write lock as a single atomic
  *  step — not a separate outside-lock read followed by a decided
- *  "apply" call, which is what the old `applySyncedIndex(rawJson)`
- *  shape did. That gap let a concurrent local mutation
+ *  "apply" call. That gap lets a concurrent local mutation
  *  (save/rename/delete/reorder) land between the caller's read and its
  *  write (TOCTOU); folding read→merge→write into one lock-held function
  *  closes it.
@@ -78,16 +71,14 @@ import {
  *
  *  `remoteMetas` is typed `unknown[]` rather than `I18nPackMeta[]`
  *  because it is attacker-reachable data (a remote Drive file) whose
- *  shape is never actually guaranteed — a bare `metas: [null]` used to
- *  crash this function reading `m.id` off `null` before `isSafePackId`
- *  ever ran. `isPackMetaCandidate` treats any non-object entry the same
- *  way as a rejected id: dropped via the same unit-name-only warn path
- *  below, never thrown. The `metas` field not being an array at all is
- *  a stronger malformation than a bad element and is rejected one layer
- *  up, by `mergePackIndexBundle` (pack-bundle-merge.ts), which throws
- *  `MalformedSyncBundleError` before this function is even called — see
- *  its own doc for why that one is poll-skip-permanent rather than
- *  silently-filtered.
+ *  shape is never actually guaranteed. `isPackMetaCandidate` treats
+ *  any non-object entry the same way as a rejected id: dropped via the
+ *  same unit-name-only warn path below, never thrown. The `metas`
+ *  field not being an array at all is a stronger malformation than a
+ *  bad element and is rejected one layer up, by `mergePackIndexBundle`
+ *  (pack-bundle-merge.ts), which throws `MalformedSyncBundleError`
+ *  before this function is even called — see its own doc for why that
+ *  one is poll-skip-permanent rather than silently-filtered.
  *
  *  Returns `applied: false` (never throws) only on an I/O failure
  *  writing the merged index — never for a rejected meta, since those
@@ -144,11 +135,11 @@ export type ApplyPackBodyOutcome = 'applied' | 'local-wins' | 'io-error'
  *  layer's own filename parsing should never produce one, but this is
  *  the boundary where a remote Drive filename, the least-trusted input
  *  in the sync pipeline, actually gets joined into a filesystem path).
- *  Throwing here (rather than returning `false`, as this used to) lets
- *  the sync poll's `instanceof MalformedSyncBundleError` check recognize
- *  this as a permanently-rejected revision and stop retrying it every 3
- *  minutes — a bare `Error` previously looked identical to a transient
- *  I/O failure, which the poll deliberately DOES keep retrying.
+ *  Throwing here (rather than returning `false`) lets the sync poll's
+ *  `instanceof MalformedSyncBundleError` check recognize this as a
+ *  permanently-rejected revision and stop retrying it every 3 minutes —
+ *  a bare `Error` looks identical to a transient I/O failure, which the
+ *  poll deliberately DOES keep retrying.
  *
  *  Re-checks the local pack file's mtime against `remoteModifiedTime`
  *  again HERE, under the lock, immediately before writing (a

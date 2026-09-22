@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Merge strategies for the i18n/theme index + pack-body bundle shapes.
-// Split out of sync-service.ts so these bundle-variant merge branches
-// don't push it past the project's 800-line Service/Util size ceiling.
 //
 // This module owns only the merge/LWW decision and the post-write
 // broadcast — every path/mkdir/writeFile concern lives in
@@ -91,24 +89,13 @@ function broadcastPackChanged(isTheme: boolean): void {
  * every `mergeSyncUnit` branch shares (`true` = local has data remote
  * still needs, i.e. re-upload the unit).
  *
- * This used to be file-level LWW (whichever side had the newer
- * `metas[].updatedAt`/`savedAt` won wholesale, and the other side's
- * entire roster was discarded). That was a data-loss bug: two machines
- * that each installed a different pack while offline would
- * deterministically erase one of the two packs everywhere once both
- * had synced — whichever machine uploaded second overwrote the cloud
- * roster, and the first machine's next poll then overwrote its own
- * local roster with that incomplete cloud copy, permanently losing its
- * own pack (its body file became an orphan, unreachable because
- * `collectAllSyncUnits` only enumerates pack ids that appear in the
- * index). Entry-level LWW does not have this failure mode: each pack's
- * meta is merged independently by id, so an install on one machine and
- * a concurrent install on another both survive the merge as a union,
- * and only an actual same-id conflict (e.g. two ids that happen to
- * collide, or a delete racing an edit) is resolved by comparing that
- * one id's own timestamps — never by discarding an unrelated id's
- * entry just because it arrived on the "losing" side of the whole
- * file.
+ * Entry-level LWW: each pack's meta is merged independently by id, so
+ * an install on one machine and a concurrent install on another both
+ * survive the merge as a union, and only an actual same-id conflict
+ * (e.g. two ids that happen to collide, or a delete racing an edit) is
+ * resolved by comparing that one id's own timestamps — never by
+ * discarding an unrelated id's entry just because it arrived on the
+ * "losing" side of the whole file.
  *
  * The built-in English meta (i18n only) rides along in this merge like
  * any other entry and needs no special-casing: every machine creates it
@@ -120,9 +107,9 @@ function broadcastPackChanged(isTheme: boolean): void {
  * malformation than a bad individual element, which the stores' own
  * `mergeSyncedIndex` filters per-entry instead) throws
  * `MalformedSyncBundleError` here rather than silently defaulting to an
- * empty array — the latter used to make a corrupt remote index look
+ * empty array — the latter makes a corrupt remote index look
  * like a legitimately-empty one, which the sync poll's `instanceof`
- * check couldn't distinguish from "nothing to merge" to apply its
+ * check can't distinguish from "nothing to merge" to apply its
  * permanently-rejected-revision skip. This mirrors the generic
  * index-based tail in sync-merge-dispatch.ts, which throws the same way for a
  * non-array `.entries`.

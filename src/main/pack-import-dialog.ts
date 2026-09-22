@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Shared multi-select import dialog for Language Packs and Theme Packs:
-// both used to define byte-identical "open dialog -> read -> JSON.parse
-// each selected file" logic inline in their own *-ipc.ts. Key Labels'
-// import is deliberately NOT folded in here — it saves each file in
-// main and returns saved metas rather than raw parsed bodies (see
-// `importFromDialog` in `key-label-store.ts`), so its shape and
-// behaviour genuinely differ from this read-only dialog.
+// Shared multi-select import dialog for Language Packs and Theme Packs.
+// Key Labels' import is deliberately NOT folded in here — it saves
+// each file in main and returns saved metas rather than raw parsed
+// bodies (see `importFromDialog` in `key-label-store.ts`), so its
+// shape and behaviour genuinely differ from this read-only dialog.
 
 import type { BrowserWindow } from 'electron'
 import { dialog } from 'electron'

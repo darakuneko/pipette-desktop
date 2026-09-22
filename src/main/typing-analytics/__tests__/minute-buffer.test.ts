@@ -16,13 +16,12 @@ import { canonicalScopeKey } from '../../../shared/types/typing-analytics'
 // parameter at every call site.
 let buffer: MinuteBuffer
 
-/** Most of this suite predates the `nowMs` parameter `addEvent` gained for
- *  retention/eviction (see minute-buffer.ts). Defaulting `nowMs` to the
- *  event's own timestamp keeps every existing call site correct without
- *  editing each one individually: `nowMs` only matters when no live entry
- *  exists yet, and `event.ts` is always inside the grace/retention window
- *  of its own minute, so it never triggers the ultra-late drop. Tests that
- *  actually exercise retention/eviction pass an explicit `nowMs`. */
+/** Defaulting `nowMs` to the event's own timestamp keeps every existing
+ *  call site correct without editing each one individually: `nowMs`
+ *  only matters when no live entry exists yet, and `event.ts` is always
+ *  inside the grace/retention window of its own minute, so it never
+ *  triggers the ultra-late drop. Tests that actually exercise
+ *  retention/eviction pass an explicit `nowMs`. */
 function addEv(event: TypingAnalyticsEvent, fp: TypingAnalyticsFingerprint, nowMs?: number): void {
   buffer.addEvent(event, fp, nowMs ?? event.ts)
 }
@@ -347,11 +346,7 @@ describe('MinuteBuffer', () => {
       // Without drainClosed firing between events, the chain persists
       // across minutes, so the IKI-eligible pair lands in the snapshot
       // belonging to the later event. Attributing cross-minute pairs to
-      // the new minute is the accepted design tradeoff. (A rate for how
-      // often this happens used to be quoted here; it was derived when
-      // an interval could span up to 5 minutes, so it no longer holds
-      // now that NGRAM_MAX_IKI_MS caps eligibility at 5 s. Left
-      // unquantified rather than carried forward as a stale number.)
+      // the new minute is the accepted design tradeoff.
       const fp = fingerprint()
       addEv(matrixEvent(0, 0, 0, 4, 58_000), fp) // minute 0
       addEv(matrixEvent(0, 1, 0, 11, 61_000), fp) // minute 1, IKI=3000 → still <= NGRAM_MAX_IKI_MS

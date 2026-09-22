@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Shared-body coverage for `sweepOrphanFiles`, extracted from
-// i18n-pack-store.ts/theme-pack-store.ts's own sweepOrphans tests when
-// the sweep body moved here (both stores now keep only a thin
-// lock-behavior test of their own `runGcUnderLock`).
+// Shared-body coverage for `sweepOrphanFiles` (both stores keep
+// only a thin lock-behavior test of their own `runGcUnderLock`).
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'

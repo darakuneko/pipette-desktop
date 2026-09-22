@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Sync-unit scope matching: which sync units a given SyncScope covers,
 // and which remote units are worth downloading given what's stored
-// locally. Split out of sync-service.ts to keep it under the project's
-// 800-line Service/Util size ceiling.
+// locally.
 
 import { app } from 'electron'
 import { join } from 'node:path'

@@ -14,8 +14,7 @@ import type { ThemePackMeta } from '../../shared/types/theme-store'
 // member here (id / filename / savedAt / updatedAt / deletedAt?) — see
 // pack-bundle-merge.ts's mergePackIndexBundle, which reuses this same
 // mergeEntries/gcTombstones machinery for the i18n/theme pack roster
-// instead of the file-level whole-index LWW this module used to require
-// bundle-merge.ts to implement on its own.
+// instead of the file-level whole-index LWW.
 export type EntryMeta = SavedFavoriteMeta | SnapshotMeta | AnalyzeFilterSnapshotMeta | KeyLabelMeta | TypingTestTextMeta | RunLogMeta | I18nPackMeta | ThemePackMeta
 
 const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days

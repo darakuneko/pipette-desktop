@@ -4,9 +4,7 @@
 // malformed remote `metas` field (not an array, or missing entirely) must
 // throw MalformedSyncBundleError so the sync poll's unchanged-revision skip
 // applies — mirroring the generic index-based tail in sync-service.ts,
-// which already does this for a non-array `.entries`. Previously this
-// silently defaulted to an empty array, which made a corrupt remote index
-// indistinguishable from a legitimately-empty one.
+// which already does this for a non-array `.entries`.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 

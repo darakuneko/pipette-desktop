@@ -121,7 +121,7 @@ const fakeEvent = {} as Electron.IpcMainInvokeEvent
  *  most a tapping-term-plus-jitter after it fires), but this suite's
  *  events are timestamped by scenario (arbitrary calendar dates, small
  *  relative offsets), independent of when the test actually runs. Pinning
- *  the clock to each event's own `ts` keeps every pre-existing scenario's
+ *  the clock to each event's own `ts` keeps every existing scenario's
  *  "this is a normal, in-order event" assumption true without having to
  *  rewrite every literal timestamp in this file. Tests that specifically
  *  exercise retention/eviction pin the clock explicitly instead (see the

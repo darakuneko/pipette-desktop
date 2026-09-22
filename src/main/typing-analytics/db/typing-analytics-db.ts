@@ -7,13 +7,11 @@
 // prepared-statement bundle) -> TypingAnalyticsDbWrites (ingest / tombstone
 // / sync export / merge) -> TypingAnalyticsDbReads (every Analyze-facing
 // query). It exists so importers keep the single `TypingAnalyticsDB` name,
-// constructor signature, and full method surface they always have. The
-// 3,255-line original was split into this abstract-class chain to keep
-// each file under the project's 800-line Service/Util size ceiling.
-// External code must import this
-// facade path, never a db/ sibling directly; new DB logic belongs in the
-// appropriate sibling (a statement group under sql/, or the base/writes/
-// reads class it operates on), not here.
+// constructor signature, and full method surface they always have.
+// External code must import this facade path, never a db/ sibling
+// directly; new DB logic belongs in the appropriate sibling (a
+// statement group under sql/, or the base/writes/reads class it
+// operates on), not here.
 
 import { app } from 'electron'
 import { join } from 'node:path'

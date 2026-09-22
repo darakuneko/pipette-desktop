@@ -77,8 +77,8 @@ async function readIndexForGc(): Promise<{ ok: true; index: I18nPackIndex } | { 
  * once if anything changed) then sweep orphan pack-body files — all
  * inside ONE `withIndexWriteLock` acquisition instead of purge and
  * sweep each separately re-reading the index under their own lock.
- * Halves the lock/read round-trips `pack-gc.ts` previously needed per
- * store, and closes the purge→sweep interleave window a separate-lock
+ * Halves the lock/read round-trips `pack-gc.ts` needs per store, and
+ * closes the purge→sweep interleave window a separate-lock
  * sequence would otherwise leave open (a concurrent write landing
  * between the two could make the sweep see a stale, pre-purge index).
  * Wired at the PASS level only (never per sync unit) via `pack-gc.ts` —

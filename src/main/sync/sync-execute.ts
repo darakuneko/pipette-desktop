@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Full-pass sync execution: the manual/initial download and upload
-// sync passes driven by executeSync (IPC-facing entry point). Split
-// out of sync-service.ts to keep it under the project's 800-line
-// Service/Util size ceiling.
+// sync passes driven by executeSync (IPC-facing entry point).
 
 import { app } from 'electron'
 import { listFiles, syncUnitFromFileName, type DriveFile } from './google-drive'
@@ -21,13 +19,10 @@ import { log } from '../logger'
 import type { SyncScope, SyncExecuteStatus, SyncSkipReason } from '../../shared/types/sync'
 import { syncCredentialI18nKey } from '../../shared/types/sync'
 
-/** Real outcome of an `executeSync` call — distinct from the `void`
- *  return the caller used to get, which made a busy-race skip and a
- *  missing-credentials skip both look identical to a fully-completed
- *  sync (neither throws; both just emit progress and return). Threaded
- *  through SYNC_EXECUTE's IPC result as `status`/`skipReason` — see
- *  `SyncOperationResult`'s doc in shared/types/sync.ts for why `success`
- *  itself is deliberately left alone. */
+/** Real outcome of an `executeSync` call. Threaded through SYNC_EXECUTE's
+ *  IPC result as `status`/`skipReason` — see `SyncOperationResult`'s doc
+ *  in shared/types/sync.ts for why `success` itself is deliberately left
+ *  alone. */
 export interface SyncExecuteResult {
   status: SyncExecuteStatus
   /** Populated only when `status === 'skipped'`. */

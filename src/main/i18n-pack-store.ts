@@ -24,10 +24,7 @@
 // extends — not here. External consumers (i18n-pack-ipc.ts,
 // pack-bundle-merge.ts, pack-gc.ts, i18n-startup-sync.ts, hub-ipc-packs.ts,
 // and every test file's partial mock of this facade path) must keep
-// importing this facade path, never a submodule directly — this
-// facade/sibling split keeps every file under the project's 800-line
-// Service/Util size ceiling while preserving one stable import path for
-// consumers.
+// importing this facade path, never a submodule directly.
 
 export type { I18nPackRecord } from '../shared/types/i18n-store'
 
