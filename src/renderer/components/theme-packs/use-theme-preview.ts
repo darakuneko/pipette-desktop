@@ -3,9 +3,9 @@
 // Hub-preview plumbing for Theme Packs: applying/restoring live theme
 // colors while browsing the Find-on-Hub tab, and the caches that keep
 // repeat previews / the active theme's own colors from re-fetching.
-// Split out of ThemePacksModal (Task-split-pack-modals) — `previewPostId`
-// itself is one of the shell's 7 state atoms and stays there; this hook
-// owns the refs and the effects/handlers that read and clear them.
+// `previewPostId` itself is one of the shell's 7 state atoms and stays
+// there; this hook owns the refs and the effects/handlers that read
+// and clear them.
 
 import { useCallback, useEffect, useRef } from 'react'
 import type { Dispatch, SetStateAction } from 'react'

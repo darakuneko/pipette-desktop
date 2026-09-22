@@ -2,10 +2,9 @@
 //
 // Installed-tab row model (drag reorder / Name sort / import placement)
 // plus the Find-on-Hub browse list (search + freshness), and theme
-// selection. Split out of ThemePacksModal (Task-split-pack-modals) —
-// mirrors use-language-pack-list.ts; the built-in System/Light/Dark
-// selector bar itself stays in the shell's JSX since it isn't a store
-// row.
+// selection. Mirrors use-language-pack-list.ts; the built-in
+// System/Light/Dark selector bar itself stays in the shell's JSX since
+// it isn't a store row.
 
 import { useCallback, useMemo } from 'react'
 import type { TFunction } from 'i18next'
