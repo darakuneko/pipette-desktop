@@ -1,23 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
-// FLAG (coordinator-requested layout changes, cumulative history):
-//  1. This file originally tested a bar-ranking presentation
-//     (`mistake-rank-${key}` rows, a width%-based bar). Rewritten once to
-//     the intermediate column-table presentation (`missed-table-row-*`/
-//     `missed-table-header*` testids).
-//  2. Rewritten again for internal scroll + no top-N cap (the "caps the
-//     ranking at 15 entries" test became "renders EVERY entry").
-//  3. THIS REWRITE: the column-table gave way to the approved bar-graph
-//     mockup (MissedTable, mistake-summary.tsx) — every row/cell
-//     assertion below was updated to the bar-graph's own shape (a
-//     `-typed` cell with "→ chars" instead of "chars: count", a
-//     `-bar`/`-bar-movedon`/`-bar-corrected` triad instead of a separate
-//     `-movedon` cell). The aggregation (sum `mistakes` across results,
-//     sort DESC/key ASC) and empty-state behavior are unchanged, just
-//     re-asserted against the new DOM shape.
-//
-// New coverage below (not present before any rewrite): the row list
+// New coverage below: the row list
 // renders with per-key detail (bar split + typed chars) once
 // `typingRunLogGet` resolves, and a per-log fetch error is skipped
 // without breaking the rest of the list — see

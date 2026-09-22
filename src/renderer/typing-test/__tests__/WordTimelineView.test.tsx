@@ -163,13 +163,13 @@ describe('WordTimelineView', () => {
     expect(screen.queryByText('Zoom')).toBeNull()
   })
 
-  // FLAG (timeline-panel polish item 1): the legend's blank/blankLine
-  // entries used to carry their line-vs-word distinction (250ms vs
-  // 1000ms cutoff) directly in the always-visible label text — both now
-  // show the bare head word "Pause" (see LegendSwatch), so the
-  // distinction only surfaces in the item's own hover tooltip. Rewritten
-  // to hover the "Pause" label and assert on the opened tooltip's text
-  // instead of `getByText` on the label itself.
+  // The legend's blank/blankLine entries used to carry their
+  // line-vs-word distinction (250ms vs 1000ms cutoff) directly in the
+  // always-visible label text — both now show the bare head word "Pause"
+  // (see LegendSwatch), so the distinction only surfaces in the item's
+  // own hover tooltip. Rewritten to hover the "Pause" label and assert
+  // on the opened tooltip's text instead of `getByText` on the label
+  // itself.
   it('auto-selects line rows (never word rows) once the log has a lineBreaks field, and the legend\'s Pause tooltip uses the line-view wording', async () => {
     window.vialAPI.typingRunLogGet = vi.fn().mockResolvedValue({ success: true, data: SAMPLE_LOG_WITH_LINES })
     renderWithI18n(<WordTimelineView uid="uid-1" runId="run-1" onClose={() => {}} />)
@@ -192,7 +192,7 @@ describe('WordTimelineView', () => {
     expect(screen.queryByTestId('word-timeline-row-0')).toBeNull()
   })
 
-  // FLAG (timeline-panel polish item 1): see the line-view test above —
+  // See the line-view test above —
   // same rewrite, word-view wording.
   it('falls back to word rows (and the word-view legend tooltip wording) for a legacy log with no lineBreaks field at all', async () => {
     renderWithI18n(<WordTimelineView uid="uid-1" runId="run-1" onClose={() => {}} />)
@@ -224,10 +224,10 @@ describe('WordTimelineView', () => {
 
   it('never caps the rows scrollport with a viewport-relative max-height — the modal box (h-modal-80vh) already bounds it via flex-1 min-h-0', async () => {
     // KeystrokeTimelinePanel never applies a fixed vh cap to its rows
-    // scrollport (removed — a fixed vh figure can't adapt to how much
+    // scrollport (a fixed vh figure can't adapt to how much
     // other chrome a given run has). This modal's own `h-modal-80vh` box
     // already bounds the panel via the ordinary flex-1/min-h-0 chain, the
-    // same mechanism the completion screen (TypingTestView) now also
+    // same mechanism the completion screen (TypingTestView)
     // uses instead of a cap.
     renderWithI18n(<WordTimelineView uid="uid-1" runId="run-1" onClose={() => {}} />)
     await waitFor(() => expect(screen.getByTestId('word-timeline-canvas')).toBeTruthy())

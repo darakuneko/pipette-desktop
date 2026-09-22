@@ -79,11 +79,8 @@ describe('ErrorMixSection', () => {
     expect(screen.getByTestId('error-mix-substitution-value').textContent).toContain('4.00')
   })
 
-  // EDITED (was: "appends the far-above-average position label for a rate
-  // far past the population mean" — asserted the old pipe-prefixed verdict
-  // string "| Far above average"). The verdict is now a colored pill whose
-  // text is the SHORT form ("Far above avg", `positionRateShort` key set)
-  // and whose class carries the danger tone.
+  // The verdict is a colored pill whose text is the SHORT form ("Far above avg",
+  // `positionRateShort` key set) and whose class carries the danger tone.
   it('renders a danger-toned pill for a rate far past the population mean', () => {
     // Substitution population mean/SD is 1.65/1.43 — a 10% rate is ~5.8
     // SDs above the mean, well past the |z| > 1.5 far-above threshold.
@@ -136,11 +133,7 @@ describe('ErrorMixSection', () => {
     expect(pill.className).toContain('text-success')
   })
 
-  // EDITED (was: "lays each row out as label / right-aligned percent /
-  // pipe-prefixed verdict cells" — asserted the old 3-cell layout with a
-  // single fused "1.65% (pop. avg 1.65%)" value cell and a "| Average"
-  // verdict string). The row is now 4 cells: label / YOU / POP. AVG /
-  // verdict pill, each its own testid.
+  // The row is 4 cells: label / YOU / POP. AVG / verdict pill, each its own testid.
   it('lays each row out as label / right-aligned YOU / right-aligned POP. AVG / verdict pill', () => {
     const results = [
       makeResult({ errorSubstitutions: 33, errorOmissions: 0, errorInsertions: 0, errorTargetChars: 2000 }),

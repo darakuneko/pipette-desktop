@@ -72,7 +72,7 @@ export function TypingTestView({
   }, [state.runId])
 
   // Sources with real line breaks (tatoeba/fileImport) render as explicit
-  // line rows, unchanged from before. `null` = no real lines.
+  // line rows. `null` = no real lines.
   const realLines = useMemo(
     () => (state.lineBreaks.size > 0 ? groupIntoLines(state.words, state.lineBreaks) : null),
     [state.words, state.lineBreaks],
@@ -386,11 +386,11 @@ export function TypingTestView({
       />
 
       {/* Non-finished controls row (not started: Next Test / Resume; in
-          progress: Pause or Resume / Restart) no longer renders here — it
-          moved to TypingTestPane, BELOW the keyboard pane and its layer
-          note, so the reading window sits directly above the keyboard the
-          user actually types on. TypingTestPane owns the `!hideControls`
-          gate for that row now (the "operation" toggle). The finished-state
+          progress: Pause or Resume / Restart) renders in TypingTestPane,
+          BELOW the keyboard pane and its layer note, so the reading
+          window sits directly above the keyboard the user actually
+          types on. TypingTestPane owns the `!hideControls`
+          gate for that row (the "operation" toggle). The finished-state
           row (result name + Next Test) stays here — it renders instead at
           the BOTTOM of the completion screen, below the timeline panel (or
           the fallback stats row) — see the render below — since the

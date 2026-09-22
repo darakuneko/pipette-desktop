@@ -8,7 +8,7 @@
 // afterward: a romaji mistake key can depend on which of several live
 // alternate spellings the user goes on to complete, which only the live
 // reducer state at the moment of the keystroke can name reliably — a
-// codex-reviewed design decision, not an oversight. See
+// design decision, not an oversight. See
 // mistake-summary.tsx's `MissedCharsList`, the sole consumer.
 
 import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'

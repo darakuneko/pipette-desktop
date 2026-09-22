@@ -1,22 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
-//
-// FLAG (coordinator-requested layout changes, cumulative history):
-//  1. MissedCharsList's original chip+tooltip presentation was replaced
-//     by a column TABLE (MissedTable) for KeystrokeTimelinePanel's use.
-//     MissedCharsList itself was reverted to its original plain-chip
-//     shape (no `details` prop) since TypingTestStatsRow, its only
-//     remaining caller, never had detail data to show in the first
-//     place.
-//  2. The table gained internal scrolling + a sticky header (no more
-//     top-N truncation).
-//  3. THIS REWRITE: the column-table presentation (headers, a separate
-//     Moved-on column) was replaced by the approved bar-graph mockup —
-//     Word / "→ typed chars" / stacked red-gray bar / Cnt, no header row
-//     at all. Every table-era test below (header assertions, the
-//     separate `-movedon` cell, `formatTypedInstead`-with-counts in the
-//     row itself) was rewritten to the bar-graph's own shape; none were
-//     silently dropped.
 
 import { describe, it, expect } from 'vitest'
 import { render, screen, within, fireEvent } from '@testing-library/react'
@@ -66,8 +49,6 @@ describe('MissedTable (bar-graph rows: Word / typed chars / stacked bar / Cnt)',
     expect(screen.getByText('Missed')).toBeInTheDocument()
   })
 
-  // FLAG: replaces the old "renders a 4-column header row" test — the
-  // mockup has no header row at all.
   it('renders no header row', () => {
     renderWithI18n(<MissedTable mistakes={{ h: 1 }} />)
     expect(screen.queryByTestId('missed-table-header')).toBeNull()
@@ -251,7 +232,7 @@ describe('MissedTable (bar-graph rows: Word / typed chars / stacked bar / Cnt)',
     })
   })
 
-  // `bordered`/`maxHeightClass` (timeline-panel polish items 2 & 3):
+  // `bordered`/`maxHeightClass`:
   // KeystrokeTimelinePanel passes `maxHeightClass="max-h-40"
   // bordered={false}` for its own bounded-modal instance (see
   // KeystrokeTimelinePanel.test.tsx) — this describe block covers the

@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Shared "missed characters" presentations + error-class (Substitution/
-// Omission/Insertion) line — extracted out of `TypingTestStatsRow` (the
-// completion screen's finished-state summary) so `KeystrokeTimelinePanel`
-// can show a consistent presentation for a `TypingTestResult` without a
+// Omission/Insertion) line — `KeystrokeTimelinePanel` can show a
+// consistent presentation for a `TypingTestResult` without a
 // second, drifting implementation of the same sort/slice/testid logic.
 //
 // Two presentations of the same sorted mistake list:
-//  - `MissedCharsList` — the original inline chip line, still used by
+//  - `MissedCharsList` — the inline chip line, still used by
 //    TypingTestStatsRow's no-log fallback row (never has per-key detail
 //    to show, so a bare chip line is all that context needs). Still
 //    CAPPED (`MAX_MISTAKE_ENTRIES`) — a flex-wrap chip line has no scroll
@@ -18,13 +17,11 @@
 //    aggregated across every run in the active tab — see
 //    use-mistake-ranking-details.ts). Parameterized (`titleKey`/`testId`)
 //    rather than duplicated between the two callers, which differ only in
-//    heading text and (History's own pre-existing contract) root testid.
+//    heading text and (History's own contract) root testid.
 //    UNCAPPED: every entry is reachable via the list's own internal
 //    vertical scroll (bounded max-height) instead of being truncated —
 //    see `allSortedMistakeEntries` and `MISSED_TABLE_MAX_HEIGHT`.
-//    Replaces an earlier column-table presentation (headers + a separate
-//    Moved-on column; see git history) with the approved bar-graph
-//    mockup: the bar's own red/gray split communicates the
+//    The bar's own red/gray split communicates the
 //    corrected-vs-moved-on-uncorrected breakdown at a glance, with exact
 //    figures in a hover tooltip instead of their own column.
 
@@ -86,14 +83,13 @@ export function MissedCharsList({ mistakes }: MissedCharsListProps) {
 /** Fixed column widths (not `max-content`) so every row — each its own
  *  independent grid instance — lands on identical column boundaries
  *  without needing a single shared grid parent, same pattern as
- *  `ERROR_MIX_GRID` in ErrorMixSection.tsx. No header row anymore (the
- *  approved bar-graph mockup has none — see `MissedTable`'s own doc
- *  comment), so these widths only ever have to agree with each other, not
- *  with a caption row above them. Word/Cnt are fixed-width (short,
- *  bounded content); the typed-chars cell gets a bounded-but-flexible
- *  width (long enough for a handful of comma-joined chars before
- *  truncating); the bar takes the remaining space (`1fr`) since it's the
- *  row's main visual element. */
+ *  `ERROR_MIX_GRID` in ErrorMixSection.tsx. No header row, so these
+ *  widths only ever have to agree with each other, not with a caption
+ *  row above them. Word/Cnt are fixed-width (short, bounded content);
+ *  the typed-chars cell gets a bounded-but-flexible width (long enough
+ *  for a handful of comma-joined chars before truncating); the bar
+ *  takes the remaining space (`1fr`) since it's the row's main visual
+ *  element. */
 const MISSED_ROW_GRID = { gridTemplateColumns: '4.5rem 5rem 1fr 3rem' }
 
 /** "m: 1, n: 2" — sorted DESC by count, ties on `Object.entries`'
@@ -102,8 +98,7 @@ const MISSED_ROW_GRID = { gridTemplateColumns: '4.5rem 5rem 1fr 3rem' }
  *  explicit tie-break isn't worth the extra complexity here). Used for
  *  the hover tooltip's own "Typed instead" line (WITH counts) — see
  *  `formatTypedCharsOnly` for the row's own inline cell (chars only, no
- *  counts — the mockup keeps counts out of the row and moves them into
- *  the tooltip). Returns `EMPTY_STAT_VALUE` when there's no detail at all
+ *  counts). Returns `EMPTY_STAT_VALUE` when there's no detail at all
  *  for this key (legacy log, correlation-unavailable bailout) or the
  *  detail carries no typedCounts. */
 function formatTypedInstead(detail: MissedCharDetail | undefined): string {
@@ -129,10 +124,9 @@ function formatTypedCharsOnly(detail: MissedCharDetail | undefined): string | nu
  *  a row's own bar FILL, as percentages of the fill's own width (i.e. of
  *  `count`, not of the track) — the fill's own total width (relative to
  *  the track) is computed separately in `MissedTable` from `count` vs the
- *  list's own max, matching the old `MistakeRankingSection` bar's
- *  width-percent approach.
+ *  list's own max.
  *
- *  UNKNOWN-SPLIT ROWS (FLAGGED CHOICE): a row with no `detail` at all
+ *  UNKNOWN-SPLIT ROWS: a row with no `detail` at all
  *  (legacy log predating this feature, or every contributing run's log
  *  hit the `charCorrelationUnavailable` bailout) has no way to know its
  *  own corrected/moved-on split — rendered as 100% gray (i.e. IDENTICAL
@@ -189,7 +183,7 @@ interface MissedTableProps {
    *  exact row list for the cross-run ranking. */
   titleKey?: string
   /** Root element testid. Defaults to `'typing-test-missed-table'`;
-   *  `MistakeRankingSection` overrides it to keep its own pre-existing
+   *  `MistakeRankingSection` overrides it to keep its own
    *  `'typing-test-mistake-ranking'` contract (TypingTestHistory.tsx's
    *  Results/Analysis tab switch depends on it structurally). */
   testId?: string
@@ -218,8 +212,8 @@ interface MissedTableProps {
  *  (14rem, Tailwind's `max-h-56`, on the 4px grid) rather than a
  *  `vh`-relative figure, matching `KeystrokeTimelinePanel`'s own
  *  scrollport sizing philosophy of not depending on ambient viewport
- *  size. FLAGGED PICK: N rows at ~1.375rem each (`text-xs` + `gap-1`)
- *  fits comfortably within 14rem for 8-10 rows before scrolling engages —
+ *  size. N rows at ~1.375rem each (`text-xs` + `gap-1`) fits comfortably
+ *  within 14rem for 8-10 rows before scrolling engages —
  *  picked as a reasonable middle of the spec's own "~8-10 rows" range,
  *  not derived from a measured DOM constant. Unaffected by the header
  *  row's removal — it was never load-bearing for this figure, just one
@@ -227,26 +221,23 @@ interface MissedTableProps {
 const MISSED_TABLE_MAX_HEIGHT = 'max-h-56'
 
 /** Per-key mistake bar-graph row list: Word / "→ typed instead chars" /
- *  stacked bar / Cnt — approved mockup replacing the earlier column-table
- *  presentation (headers + a separate Moved-on column; see git history).
- *  Renders nothing when `mistakes` has no entries, same convention as
- *  `MissedCharsList`.
+ *  stacked bar / Cnt. Renders nothing when `mistakes` has no entries,
+ *  same convention as `MissedCharsList`.
  *
  *  BAR: total fill width is `count` normalized to the list's own max
- *  `count` (`(count / maxCount) * 100%` of the track) — the same
- *  width-percent approach the earlier bar-based `MistakeRankingSection`
- *  used before it became a table. WITHIN that fill, `barFillSplit` stacks
- *  two color segments: `bg-danger` (red) for `movedOnCount` (uncorrected)
+ *  `count` (`(count / maxCount) * 100%` of the track). WITHIN that fill,
+ *  `barFillSplit` stacks two color segments: `bg-danger` (red) for
+ *  `movedOnCount` (uncorrected)
  *  and `bg-content-muted` (gray) for the remainder (corrected with
  *  Backspace) — see that function's own doc comment for the
- *  unknown-split (no `detail`) case. FLAGGED COLOR CHOICE: the track
- *  itself stays `bg-surface-dim` (this codebase's established "subdued
- *  tint" track color, same as the old ranking bar and
+ *  unknown-split (no `detail`) case. The track itself stays
+ *  `bg-surface-dim` (this codebase's established "subdued
+ *  tint" track color, same as
  *  `ConnectingOverlay`'s progress track); the corrected segment uses
  *  `bg-content-muted` specifically so it reads as a distinct, visible
  *  gray FILL against that dimmer track background — there's no existing
  *  "neutral bar fill" token/precedent in this codebase to match exactly,
- *  so this reuses a token whose DESIGN.md role ("muted/disabled") is at
+ *  so this reuses a token whose role ("muted/disabled") is at
  *  least semantically adjacent, rather than introducing a new one.
  *
  *  UNCAPPED + internally scrollable (not truncated): every entry from
@@ -259,8 +250,7 @@ const MISSED_TABLE_MAX_HEIGHT = 'max-h-56'
  *  scrollbar's gutter unconditionally, same fix as
  *  `.keystroke-timeline-scrollport`, so the right-aligned Cnt column's
  *  edge never shifts the moment a real scrollbar appears. No sticky
- *  header anymore — the mockup has none, and the scroll container itself
- *  is otherwise unchanged from the earlier table version. */
+ *  header. */
 export function MissedTable({
   mistakes, details,
   titleKey = 'editor.typingTest.results.mistakesLabel',

@@ -123,10 +123,9 @@ describe('KeystrokeTimelinePanel', () => {
     expect(screen.getAllByTestId('word-timeline-keystroke')).toHaveLength(2)
   })
 
-  // Polish item 1: legend items that used to carry a parenthetical
-  // explanation inline now show only their head word, with the
-  // explanation moved into a hover tooltip (aria-describedby, not
-  // always-visible text).
+  // Legend items that used to carry a parenthetical explanation inline now
+  // show only their head word, with the explanation moved into a hover tooltip
+  // (aria-describedby, not always-visible text).
   describe('legend labels (head word only, parenthetical text moved to a hover tooltip)', () => {
     function hoverLegendLabel(text: string): HTMLElement {
       const label = screen.getByText(text)
@@ -178,7 +177,7 @@ describe('KeystrokeTimelinePanel', () => {
       expect(tooltip.textContent).toBe('More than 250ms, shown compressed')
     })
 
-    // FLAG (consistency fix): the tooltip-bearing label used to carry a
+    // The tooltip-bearing label used to carry a
     // dotted-underline + `cursor-help` affordance — no other tooltip
     // trigger in this codebase does that (ErrorMixSection's type labels,
     // CoverageBadge, the Missed table's own bar rows are all plain), so
@@ -205,13 +204,12 @@ describe('KeystrokeTimelinePanel', () => {
   })
 
   describe('rows scrollport height (flex-height chain, not a fixed cap)', () => {
-    // No `rowsMaxHeightClass`-style prop exists anymore (codex safety
-    // review of an earlier fixed-vh attempt — a fixed vh figure can't
-    // adapt to how much OTHER chrome a given run has, e.g. an
-    // IME-composition warning or the Missed-chars line). Instead this
+    // No `rowsMaxHeightClass`-style prop exists anymore (a fixed vh
+    // figure can't adapt to how much OTHER chrome a given run has, e.g.
+    // an IME-composition warning or the Missed-chars line). Instead this
     // scrollport ALWAYS carries the same flex-1/min-h-0/overflow-auto
     // classes regardless of caller — TypingTestView.tsx (completion
-    // screen) and WordTimelineView.tsx (History modal) now both provide
+    // screen) and WordTimelineView.tsx (History modal) both provide
     // a real bounded-height flex ancestor of their own, so this
     // component needs no caller-supplied sizing prop of any kind. See
     // TypingTestView.tsx's own "Completion screen" comment for that
@@ -240,17 +238,17 @@ describe('KeystrokeTimelinePanel', () => {
 
   it('collapses the two note paragraphs into a legend info icon, with no inline note text', () => {
     const { container } = renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
-    // The old standalone paragraphs are gone from the panel's own render
-    // tree entirely — the notes now live ONLY in the portaled tooltip
+    // The standalone paragraphs are gone from the panel's own render
+    // tree entirely — the notes live ONLY in the portaled tooltip
     // (outside `container`, which is the panel's own DOM subtree), not as
     // inline text in the flow.
     expect(within(container).queryByText(/Mistake markers include keystrokes later corrected/)).toBeNull()
     expect(within(container).queryByText(/Pauses are shown compressed on this axis/)).toBeNull()
-    // FLAG (consistency fix): the info glyph used to be a `<button>`,
+    // The info glyph used to be a `<button>`,
     // which this codebase's global `button:not(:disabled) { cursor:
     // pointer }` rule (style.css) put a pointer cursor on — inconsistent
     // with every other tooltip-only trigger (CoverageBadge,
-    // ErrorMixSection's row labels), none of which are buttons. Now a
+    // ErrorMixSection's row labels), none of which are buttons. A
     // plain, non-interactive `<span>` — sits at the legend row's right
     // end, with an accessible name via `aria-label` (no native title
     // attribute — lint forbids it).
@@ -288,8 +286,8 @@ describe('KeystrokeTimelinePanel', () => {
       expect(box.contains(legendRow)).toBe(true)
       expect(box.contains(canvas)).toBe(true)
 
-      // ...and in the sketch's own order: title, then zoom, then legend,
-      // then rows (swapped from the pre-existing legend-before-zoom order).
+      // ...and in the order: title, then zoom, then legend,
+      // then rows.
       expect(title.compareDocumentPosition(zoomRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
       expect(zoomRow.compareDocumentPosition(legendRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
       expect(legendRow.compareDocumentPosition(canvas) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -317,8 +315,7 @@ describe('KeystrokeTimelinePanel', () => {
     })
   })
 
-  // Coordinator-requested layout tweak (real-device screenshot review):
-  // the correlation-unreliable warning used to sit between the stat grid
+  // The correlation-unreliable warning used to sit between the stat grid
   // and the timeline box — moved to the very top of the panel, above the
   // stat grid, since it qualifies every stat card's own correctness-
   // derived figures too, not just the timeline box below it.
@@ -336,15 +333,12 @@ describe('KeystrokeTimelinePanel', () => {
     expect(warning.compareDocumentPosition(statLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  // FLAG (polish item 1): `getByRole('tooltip')` used to be safe because
-  // the info icon was the panel's only `Tooltip` consumer. Now that the
-  // legend's own Overlapped/Unjudged/Pause labels each carry their own
-  // `Tooltip` too (portaled to `document.body` unconditionally once
-  // mounted, per Tooltip.tsx's own comment — `role="tooltip"` exists in
-  // the DOM before any hover), several `role="tooltip"` elements coexist
-  // and the single-role query throws. Scoped instead via the info
-  // button's own `aria-describedby`, same technique the legend-tooltip
-  // tests above use.
+  // Now that the legend's own Overlapped/Unjudged/Pause labels each carry
+  // their own `Tooltip` too (portaled to `document.body` unconditionally once
+  // mounted, per Tooltip.tsx's own comment — `role="tooltip"` exists in the
+  // DOM before any hover), several `role="tooltip"` elements coexist and the
+  // single-role query throws. Scoped instead via the info button's own
+  // `aria-describedby`, same technique the legend-tooltip tests above use.
   it('shows both note texts, joined as two lines, in the legend info tooltip', () => {
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
     const infoButton = screen.getByTestId('word-timeline-legend-info')
@@ -358,12 +352,11 @@ describe('KeystrokeTimelinePanel', () => {
     )
   })
 
-  // FLAG (coordinator-requested layout change): these four cases used to
-  // assert on `typing-test-mistakes` (MissedCharsList's chip+tooltip
-  // presentation). KeystrokeTimelinePanel now renders `MissedTable`
-  // instead (see mistake-summary.tsx) — updated in place to the table's
-  // own testids rather than being dropped; MissedTable's own detailed
-  // table-structure coverage (headers, EMPTY_STAT_VALUE placeholders,
+  // These four cases used to assert on `typing-test-mistakes`
+  // (MissedCharsList's chip+tooltip presentation). KeystrokeTimelinePanel now
+  // renders `MissedTable` instead (see mistake-summary.tsx) — updated in place
+  // to the table's own testids rather than being dropped; MissedTable's own
+  // detailed table-structure coverage (headers, EMPTY_STAT_VALUE placeholders,
   // shared grid tracks) lives in mistake-summary.test.tsx.
   it('shows the Missed table when the result carries mistakes', () => {
     const result = makeResult({
@@ -381,10 +374,9 @@ describe('KeystrokeTimelinePanel', () => {
     expect(within(row).getByTestId('missed-table-row-a-count').textContent).toBe('3')
   })
 
-  // FLAG (coordinator-requested bar-graph rewrite): the "Typed instead"
-  // cell used to show "x: 1" (char + count together); the mockup moved
-  // counts into the bar's own hover tooltip, so the row's inline cell now
-  // reads "→ x" (chars only) instead.
+  // The "Typed instead" cell used to show "x: 1" (char + count together); the
+  // mockup moved counts into the bar's own hover tooltip, so the row's inline
+  // cell now reads "→ x" (chars only) instead.
   it('wires buildMissedDetails(log) end to end: a keystroke\'s typedChar/mistakeKey surfaces in the row\'s typed cell and bar split', () => {
     const logWithDetail: RunKeystrokeLog = {
       ...SAMPLE_LOG,
@@ -430,13 +422,13 @@ describe('KeystrokeTimelinePanel', () => {
   // as the timeline box above. `MistakeRankingSection` (History's "Most
   // missed") renders the same `MissedTable` unboxed — see
   // MistakeRankingSection.test.tsx, unchanged by this tweak.
-  // FLAG (polish item 2, height-priority fix): `shrink-0` (flex-shrink: 0)
-  // became `min-h-0` — `shrink-0` refused to compress at all, which
-  // (verified via the E2E script's 800px-window case) could overflow past
-  // the finished-state controls row below in a bounded ancestor with a
-  // real content-heavy Missed table. `min-h-0` keeps the default
-  // `flex-shrink: 1` in effect, so this box can shrink proportionally
-  // instead of forcing an overflow — see the box's own doc comment.
+  // `shrink-0` (flex-shrink: 0) became `min-h-0` — `shrink-0` refused to
+  // compress at all, which (verified via the E2E script's 800px-window
+  // case) could overflow past the finished-state controls row below in a
+  // bounded ancestor with a real content-heavy Missed table. `min-h-0`
+  // keeps the default `flex-shrink: 1` in effect, so this box can shrink
+  // proportionally instead of forcing an overflow — see the box's own
+  // doc comment.
   it('wraps the Missed table in its own bordered box matching the timeline box treatment, with min-h-0 (not shrink-0)', () => {
     const result = makeResult({ mistakes: { a: 3 } })
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={result} />)
@@ -458,12 +450,12 @@ describe('KeystrokeTimelinePanel', () => {
     expect(screen.queryByTestId('typing-test-missed-box')).toBeNull()
   })
 
-  // Polish item 2: in a bounded ancestor (the History modal's
+  // In a bounded ancestor (the History modal's
   // `h-modal-80vh`), the timeline box and the Missed box compete for the
   // same leftover flex space — the timeline box must win, WITHOUT ever
   // overflowing the ancestor at a short window (see the timeline box's own
   // doc comment for the flagged `min-h-64` dead end this replaced). Both
-  // boxes now carry `min-h-0` (genuinely shrinkable, default
+  // boxes carry `min-h-0` (genuinely shrinkable, default
   // `flex-shrink: 1`, no `shrink-0` anywhere in this pair) so a real space
   // deficit distributes proportionally instead of one box refusing to
   // give at all; this call site also tightens the Missed table's own
@@ -492,13 +484,10 @@ describe('KeystrokeTimelinePanel', () => {
     expect(missedScrollport.className).not.toContain('max-h-56')
   })
 
-  // Polish item 3: the Missed section used to show a border on its OWN
-  // outer box (`typing-test-missed-box`, asserted above) AND an inner
-  // border on the table's own scroll container — a visible double
-  // border around the same content. The scrollport keeps its scroll/
-  // padding but loses the border/rounded classes at THIS call site only
-  // (History's own unboxed "Most missed" instance keeps its border —
-  // see mistake-summary.test.tsx's `bordered` describe block).
+  // The scrollport keeps its scroll/padding but loses the border/rounded
+  // classes at THIS call site only (History's own unboxed "Most missed"
+  // instance keeps its border — see mistake-summary.test.tsx's
+  // `bordered` describe block).
   it('removes the Missed table scrollport\'s own inner border (the outer Missed box is the only frame)', () => {
     const result = makeResult({ mistakes: { a: 3 } })
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={result} />)
@@ -526,7 +515,7 @@ describe('KeystrokeTimelinePanel', () => {
     expect(statCardText('Substitution')).toContain('2')
     expect(statCardText('Omission')).toContain('1')
     expect(statCardText('Insertion')).toContain('0')
-    // The old standalone error-mix line is gone.
+    // The standalone error-mix line is gone.
     expect(screen.queryByTestId('typing-test-error-classes')).toBeNull()
   })
 

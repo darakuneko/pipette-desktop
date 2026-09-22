@@ -112,11 +112,10 @@ const ERROR_MIX_PILL_BASE = 'inline-flex items-center rounded px-2 py-0.5 text-x
  *
  *  Each row is a 4-column CSS grid (`ERROR_MIX_GRID`: label / YOU /
  *  POP. AVG / verdict pill), preceded by a matching header row of column
- *  captions — replacing the previous 3-column "Label X% (pop. avg Y%) |
- *  Verdict" flat layout so YOU and POP. AVG line up in their own
- *  right-aligned columns instead of being fused into one string. The
- *  label itself carries a `Tooltip` (definition + improvement advice)
- *  since the row no longer has room to spell either out inline. */
+ *  captions so YOU and POP. AVG line up in their own right-aligned
+ *  columns instead of being fused into one string. The label itself
+ *  carries a `Tooltip` (definition + improvement advice) since the row
+ *  does not have room to spell either out inline. */
 export function ErrorMixSection({ results }: Props) {
   const { t } = useTranslation()
   const totals = useMemo(() => sumErrorClassGroups(results), [results])

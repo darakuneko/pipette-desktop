@@ -10,7 +10,7 @@ interface Props {
    *  section below scopes/filters independently, matching their own
    *  prop docs in AccuracyTrendSection/MistakeRankingSection/ErrorMixSection). */
   tabResults: TypingTestResult[]
-  /** Forwarded to AccuracyTrendSection — the condition `<select>` itself now
+  /** Forwarded to AccuracyTrendSection — the condition `<select>` itself
    *  lives in TypingTestHistory's header (right-end group, next to the
    *  source select), so this is the parent-resolved key that section uses
    *  to pick its chart's series. */
@@ -22,8 +22,7 @@ interface Props {
    *  only take effect on a flex item, and the wrapper's default `display:
    *  block` meant this div's own `min-h-0 shrink overflow-y-auto` had no
    *  bounded height to measure against, so it grew to fit its content and
-   *  overflowed past the modal's bottom edge (the exact bug #377 fixed,
-   *  reappearing through this new layer). */
+   *  overflowed past the modal's bottom edge. */
   id: string
   ariaLabelledBy: string
   /** Forwarded to `MistakeRankingSection` — see its own prop docs. The

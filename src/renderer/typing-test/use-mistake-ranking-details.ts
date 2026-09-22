@@ -2,9 +2,9 @@
 // Aggregates buildMissedDetails(log) ACROSS every run log available for
 // the History Analysis tab's mistake ranking — unlike
 // KeystrokeTimelinePanel's single-run table, MistakeRankingSection.tsx's
-// own data source spans every result in the active tab. Split out of
-// MistakeRankingSection.tsx so the merge logic (mergeMissedDetails) stays
-// unit-testable without mounting a component or mocking IPC.
+// own data source spans every result in the active tab. The merge logic
+// (mergeMissedDetails) stays unit-testable without mounting a component
+// or mocking IPC.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'

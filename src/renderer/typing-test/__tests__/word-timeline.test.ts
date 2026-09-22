@@ -149,8 +149,7 @@ describe('buildWordTimeline', () => {
         keystrokes: [
           // True gap = 500ms — well below BLANK_THRESHOLD_MS (1000) so no
           // blank marker, but above GAP_DISPLAY_CAP_MS (250) so its axis
-          // contribution is still capped, unlike the old scheme where
-          // only >=BLANK_THRESHOLD_MS gaps were ever compressed.
+          // contribution is still capped.
           keystroke({ pressMs: 0, releaseMs: 50 }),
           keystroke({ pressMs: 550, releaseMs: 600 }),
         ],

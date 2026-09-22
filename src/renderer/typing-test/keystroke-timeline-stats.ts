@@ -8,9 +8,7 @@
 // Fallback scope is deliberately narrow: only WPM, Accuracy, Time, and
 // Overlap have a value when `result` is absent —
 //  - WPM/Accuracy fall back to the run-wide pooled figures
-//    `WordTimelineSummary` already computed pre-unification
-//    (`avgPace`/`avgAccuracy`), the same fallback the modal's summary
-//    cards used before this module existed.
+//    `WordTimelineSummary` already computed (`avgPace`/`avgAccuracy`).
 //  - Time falls back to the resolved log's own `durationMs` — a raw log
 //    fact, not a model derivation, but available unconditionally since
 //    `KeystrokeTimelinePanel` always receives the log itself.
@@ -79,7 +77,7 @@ import { resultKpm, resultKspc, resultAvgHoldMs } from './result-builder'
  *      alone — this case deliberately falls through to the ordinary Words
  *      card, "line count unknowable" rather than guessing. Monkeytype
  *      modes (words/time/quote) and a missing `result` both fall through
- *      to Words too, unchanged from before this card existed. */
+ *      to Words too. */
 function wordsOrLinesCard(result: TypingTestResult | undefined, log: RunKeystrokeLog): AnalyzeSummaryItem {
   if (log.lineBreaks !== undefined) {
     return { labelKey: 'editor.typingTest.lines', value: log.lineBreaks.length + 1 }
@@ -102,7 +100,7 @@ function avgHoldMsFor(result: TypingTestResult | undefined, summary: WordTimelin
  *  for the fallback rule each card follows. `summary` is `null` only
  *  while the model hasn't resolved yet (never true once
  *  `KeystrokeTimelinePanel` actually renders this row; kept nullable so
- *  callers can gate the whole grid on it same as before). */
+ *  callers can gate the whole grid on it). */
 export function buildTimelineStatItems(
   result: TypingTestResult | undefined,
   summary: WordTimelineSummary | null,
@@ -141,7 +139,7 @@ export function buildTimelineStatItems(
       labelKey: 'editor.typingTest.kspc',
       value: kspc !== null ? formatKspc(kspc) : EMPTY_STAT_VALUE,
     },
-    // Reuses ErrorMixSection's own per-class caption keys (#332) rather
+    // Reuses ErrorMixSection's own per-class caption keys rather
     // than the `results.errorSubstitutions` et al. keys — those are
     // "Substitution {{count}}"-style interpolated sentences meant for the
     // completion screen's inline mistake line, not a bare card caption.

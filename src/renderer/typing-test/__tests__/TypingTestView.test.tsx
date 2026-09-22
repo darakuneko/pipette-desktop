@@ -325,8 +325,8 @@ describe('TypingTestView kspc cell', () => {
   })
 })
 
-// Plan-typing-mistake-analysis Phase 1: the completion screen's "missed
-// characters" list, sourced from the just-finished run's state.mistakes.
+// The completion screen's "missed characters" list, sourced from the
+// just-finished run's state.mistakes.
 describe('TypingTestView mistakes list', () => {
   it('renders the mistakes list, sorted by count DESC then key ASC, when the run finished with mistakes', () => {
     renderView({
@@ -417,10 +417,10 @@ describe('TypingTestView error-class line', () => {
 
 describe('TypingTestView controls row (finished state only)', () => {
   // Non-finished-status coverage (Next Test / Pause / Resume / Restart)
-  // moved to TypingTestControlsRow.test.tsx — TypingTestView no longer
-  // renders that row for any non-finished status (it moved to
-  // TypingTestPane, below the keyboard pane; see
-  // TypingTestPane.controls-row-order.test.tsx for its placement there).
+  // lives in TypingTestControlsRow.test.tsx — TypingTestView renders
+  // that row in TypingTestPane for any non-finished status, below the
+  // keyboard pane; see TypingTestPane.controls-row-order.test.tsx for
+  // its placement there.
   // The finished-state row stays here since TypingTestView still owns it.
   const fileImportConfig: TypingTestConfig = { mode: 'fileImport', textId: 'abc' }
 
@@ -915,10 +915,9 @@ describe('TypingTestView — imported fileImport text (line breaks)', () => {
   })
 })
 
-// Plan-line-keystroke-timeline PR1: TypingTestView snapshots its own
-// realized `lines` into a caller-owned ref (consumed at finish time by
-// use-typing-test-result-save.ts) via a useLayoutEffect, never during
-// render.
+// TypingTestView snapshots its own realized `lines` into a caller-owned
+// ref (consumed at finish time by use-typing-test-result-save.ts) via a
+// useLayoutEffect, never during render.
 describe('TypingTestView — lineSnapshotRef (line timeline PR1)', () => {
   it('writes {runId, wordCount, lines} once real (state.lineBreaks) lines render', () => {
     const ref: { current: LineSnapshot | null } = { current: null }
@@ -1070,8 +1069,8 @@ describe('TypingTestView — monkeytype synthetic line rows (measured)', () => {
   })
 })
 
-// Plan-logical-line-window PR2: the Lines setting counts LOGICAL lines
-// (real or synthetic rows), not visual rows — see useLogicalWindowHeight.
+// The Lines setting counts LOGICAL lines (real or synthetic rows), not
+// visual rows — see useLogicalWindowHeight.
 // jsdom never lays elements out, so `[data-line-row]`'s own
 // getBoundingClientRect is stubbed per row (keyed by the row's own
 // data-line-row index) to feed the measurement a deterministic multi-row
@@ -1207,13 +1206,11 @@ describe('TypingTestView — logical-line window height (measured, synthetic mon
   })
 })
 
-// Plan-completion-timeline-view PR-B: once a run finishes, the reading
-// window/romaji-guide give way to the shared KeystrokeTimelinePanel
-// (rendered inline, from the in-memory log — no IPC) whenever
-// `lastFinishedLog` is present AND its `runId` matches the current run
-// (the codex-review stale-flash guard). Without a matching log, the old
-// compact stats row + a consent hint render instead, same as before this
-// feature for the words/controls area.
+// Once a run finishes, the reading window/romaji-guide give way to the
+// shared KeystrokeTimelinePanel (rendered inline, from the in-memory
+// log — no IPC) whenever `lastFinishedLog` is present AND its `runId`
+// matches the current run (the stale-flash guard). Without a matching
+// log, the compact stats row + a consent hint render instead.
 describe('TypingTestView — completion screen timeline panel (Plan-completion-timeline-view PR-B)', () => {
   const SAMPLE_LOG: RunKeystrokeLog = {
     runId: 'run-1',
@@ -1333,7 +1330,7 @@ describe('TypingTestView — completion screen timeline panel (Plan-completion-t
       lastFinishedLog: { ...SAMPLE_LOG, runId: 'run-1' },
     })
     expect(screen.queryByTestId('typing-test-timeline-panel')).toBeNull()
-    // Falls back to the old stats row, same as the no-log case.
+    // Falls back to the stats row, same as the no-log case.
     expect(screen.getByTestId('typing-test-results')).toBeInTheDocument()
   })
 

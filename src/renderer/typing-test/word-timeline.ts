@@ -609,7 +609,7 @@ function sum(values: number[]): number {
  *  Every figure here is POOLED across the underlying events (chars /
  *  keystrokes / true ms), never a plain mean of each word's own ratio —
  *  a mean-of-ratios would weight a 1-keystroke word the same as a
- *  20-keystroke word, which previously let a single truly-overlapped
+ *  20-keystroke word, which lets a single truly-overlapped
  *  keystroke in an otherwise-clean run report 100% overlap for the whole
  *  run instead of its true, much smaller share. */
 export function buildWordTimelineSummary(model: WordTimelineModel): WordTimelineSummary {

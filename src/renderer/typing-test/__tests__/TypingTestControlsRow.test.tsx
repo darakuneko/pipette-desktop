@@ -2,9 +2,8 @@
 // @vitest-environment jsdom
 //
 // Unit coverage for the per-status button set, independent of WHERE this
-// component is rendered — it used to be rendered inline by TypingTestView
-// for every non-finished status; it now renders from TypingTestPane
-// instead (below the keyboard pane — see TypingTestPane.controls-row-order
+// component is rendered — it renders from TypingTestPane (below the
+// keyboard pane — see TypingTestPane.controls-row-order
 // .test.tsx for that placement), while TypingTestView keeps rendering it
 // only for the finished state. Keeping this coverage at the component
 // level (not through either parent) means it stays valid regardless of

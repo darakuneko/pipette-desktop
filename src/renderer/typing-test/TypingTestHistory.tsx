@@ -170,10 +170,9 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
   // existing single-state pattern rather than adding a second filter state.
   const [textFilter, setTextFilter] = useState<string>('all')
 
-  // Accuracy Trend condition selector — lifted up from AccuracyTrendSection
-  // (header redesign: the `<select>` itself now renders in this header's
-  // right-end group, next to the source select, rather than inline above
-  // the chart). Raw pick, resolved below (effectiveConditionKey) against
+  // Accuracy Trend condition selector — the `<select>` itself renders in
+  // this header's right-end group, next to the source select.
+  // Raw pick, resolved below (effectiveConditionKey) against
   // whatever conditions the active tab currently has — same
   // pick-with-fallback shape as `textFilter`/`effectiveTextFilter` above.
   const [conditionFilter, setConditionFilter] = useState<string>('')
@@ -224,8 +223,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
 
   // Unique per-instance ids for the view tabs/panels (React 19 useId), so
   // aria-controls/aria-labelledby never collide if two History modals ever
-  // mount at once — unlike the pre-existing source tabs above, which use
-  // static ids/no `role` and are left untouched (out of scope here).
+  // mount at once.
   const viewTabsIdBase = useId()
   const viewTabId = useCallback((v: HistoryView) => `${viewTabsIdBase}-tab-${v}`, [viewTabsIdBase])
   const viewPanelId = useCallback((v: HistoryView) => `${viewTabsIdBase}-panel-${v}`, [viewTabsIdBase])
@@ -347,22 +345,16 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
   // HistoryToggle's modal box (default align-items:stretch already sizes
   // it to the modal's full content width), so any max-w narrower than that
   // content width leaves dead space to the right of the Results table
-  // instead of a benign safety cap. A leftover `max-w-5xl` (1024px) did
-  // exactly that once the modal widened to MODAL_2XL (#401, 1200px width /
-  // ~1152px content box) without this div being widened to match — a
-  // ~128px gap between the table's right edge and the modal's inner edge.
+  // instead of a benign safety cap.
   return (
     <div data-testid="typing-test-history" className="flex min-h-0 flex-1 flex-col gap-3">
       {/* Single header row: Results/Analysis tabs on the left, selects at
-          the right end (ml-auto group). The source tabs (MonkeyType /
-          Tatoeba / Aozora / File Import) that used to be their own row
-          above this one are gone — source selection is now the first
+          the right end (ml-auto group). Source selection is the first
           select in the right-end group, reusing the same tab i18n labels
           as its option labels. When Analysis is active, the Accuracy Trend
-          condition select (lifted out of AccuracyTrendSection, see
-          deriveDistinctConditions above) joins it as the second select —
-          order matters here (source first, condition second) per the
-          approved redesign sketch. The condition select carries no visible
+          condition select (see deriveDistinctConditions above) joins it as
+          the second select — order matters here (source first, condition
+          second). The condition select carries no visible
           label (aria-label only); the "ACCURACY TREND" heading stays above
           the chart in AccuracyTrendSection itself. The period select is
           always last, in both Results and Analysis (see its own comment
@@ -449,8 +441,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
           flex-col chain). An intermediate plain block div would break that
           chain — its default `display: block` can't propagate the
           min-h-0/shrink sizing needed for HistorySections' overflow-y-auto
-          to actually engage, which silently reintroduces the #377 modal
-          overflow bug (confirmed via screenshot regression on this branch). */}
+          to actually engage. */}
       {view === 'results' ? (
         <HistoryResultsPanel
           id={viewPanelId('results')}

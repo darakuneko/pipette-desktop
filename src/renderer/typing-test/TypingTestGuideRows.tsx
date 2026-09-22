@@ -4,9 +4,8 @@
  *  window (romajiGuide/kanaGuide are mutually exclusive by construction —
  *  see kana-input.ts's isKanaInputActive/romaji-input.ts's
  *  isRomajiInputActive — so at most one of the two rows below ever
- *  renders). Split out of TypingTestView.tsx (file-splitting.md) — this is
- *  pure, self-contained rendering, no state of its own beyond what its
- *  props already carry. */
+ *  renders). This is pure, self-contained rendering, no state of its own
+ *  beyond what its props already carry. */
 
 import type { CSSProperties, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -63,8 +62,8 @@ function GuideRow({ testid, showRow, imeDetected, imeHintTestId, imeHintKey, sty
  *  muted tone, same `typing-test-romaji-lookahead` testid the flat
  *  fallback below also uses, so both paths satisfy the same selector
  *  contract). `isFirst` suppresses the inter-word leading space for the
- *  first word on a line — words after it get one, same convention the old
- *  lookahead rendering used. */
+ *  first word on a line — words after it get one, same convention the
+ *  lookahead rendering uses. */
 function renderGuideWord(guide: RomajiGuide, wordIdx: number, isFirst: boolean, currentWordIndex: number) {
   const prefix = isFirst ? '' : ' '
   if (wordIdx === currentWordIndex) {
@@ -93,7 +92,7 @@ export function TypingTestGuideRows({ isFinished, romajiGuide, kanaGuide, imeDet
           word lines (real or synthetic — see `guideLines`): each guide
           line previews the same words that line shows in the reading
           window, anchored to start at the line the current word sits on.
-          Falls back to the old single-flow rendering (current word's
+          Falls back to the single-flow rendering (current word's
           typed/remaining plus a flat lookahead slice of `words`) whenever
           `guideLines` itself is unmeasured — same fallback the reading
           window uses. Plus an IME-on hint once a composition event proves

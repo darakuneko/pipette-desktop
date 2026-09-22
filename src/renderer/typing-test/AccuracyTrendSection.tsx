@@ -21,10 +21,10 @@ export interface DistinctCondition {
  *  seen per key is already its most recent — Map insertion order therefore
  *  matches "most recently used condition first" with no extra sort needed.
  *
- *  Exported so TypingTestHistory can build the condition `<select>` (now
- *  hoisted into the header's right-end group) from the same grouping this
- *  section uses to resolve the picked key into its chart's result set —
- *  a single source of truth for the grouping, called from two places. */
+ *  Exported so TypingTestHistory can build the condition `<select>`
+ *  from the same grouping this section uses to resolve the picked key
+ *  into its chart's result set — a single source of truth for the
+ *  grouping, called from two places. */
 export function deriveDistinctConditions(results: TypingTestResult[], t: TFunction): DistinctCondition[] {
   const map = new Map<string, DistinctCondition>()
   for (const r of results) {
@@ -56,9 +56,8 @@ interface Props {
  *  group; the chart itself hides when the selected condition has fewer
  *  than 2 runs to plot. The condition `<select>` itself is NOT rendered
  *  here — TypingTestHistory renders it in the header's right-end group
- *  (next to the source select) since the header redesign collapsed the
- *  modal to a single tab row with all selects at the right end; this
- *  section keeps only the "ACCURACY TREND" heading + chart. */
+ *  (next to the source select); this section keeps only the "ACCURACY
+ *  TREND" heading + chart. */
 export function AccuracyTrendSection({ results, selectedCondition }: Props) {
   const { t } = useTranslation()
 
