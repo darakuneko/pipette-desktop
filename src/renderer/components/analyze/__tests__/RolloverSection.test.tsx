@@ -200,10 +200,8 @@ describe('RolloverSection', () => {
     expect(screen.queryByTestId('analyze-rollover-under-bias-note')).toBeNull()
   })
 
-  // Regression guard: the chart used to render above the stat card,
-  // the only section on this tab that did — every sibling display here
-  // (chart above numbers) is the other way around. Pin chart-then-stat
-  // order so a future edit can't silently flip it back.
+  // Regression guard: Pin chart-then-stat order so a future edit can't
+  // silently flip it back.
   it('renders the chart above the stat card, matching every other section\'s chart-then-numbers order', async () => {
     rolloverFetchSpy.mockResolvedValue([{ minuteTs: 0, oc: 1, on: 2 }])
     renderSection()

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The "nothing to report" decision moved to each call site (`position &&
+// The "nothing to report" decision lives in each call site (`position &&
 // <BenchmarkSubline .../>`) — this component itself always renders once
 // reached, since a JSX element is always truthy and a null check performed
 // inside it can never be observed by a caller checking its own return value

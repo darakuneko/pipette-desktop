@@ -185,9 +185,9 @@ describe('analyzeTappingTerm', () => {
 
   describe('tap-side denominators (Opus counterexamples)', () => {
     it('does not issue a confident canLower from a hold-dominated key (5 tap samples, 195 hold samples)', () => {
-      // Blended total is 200 (clears the OLD, buggy blended floor);
-      // tap-side(+straddle) mass is only 5 — nowhere near the floor.
-      // This must resolve to insufficientSamples, never canLower.
+      // Blended total is 200; tap-side(+straddle) mass is only 5 —
+      // nowhere near the floor. This must resolve to
+      // insufficientSamples, never canLower.
       const hist = [5, 0, 0, 0, 0, 0, 0, 195]
       const result = analyzeTappingTerm(hist, 200)
       expect(result.verdict).toBe('unknown')
@@ -199,10 +199,8 @@ describe('analyzeTappingTerm', () => {
       // (190 below + 2 straddle + 8 in the gap bucket = 198 below-mass,
       // wait: belowMass=190+8=198, straddleMass=2, tapSideMass=200).
       // The 10-sample gap (8 below + 2 straddle) is 10/2200 ≈ 0.45% of
-      // the blended total — under the OLD buggy denominator that
-      // cleared the 1% clean-gap guard. Denominated against tap-side
-      // mass instead, the same gap is 10/200 = 5%, correctly blocking
-      // canLower.
+      // the blended total. Denominated against tap-side mass instead,
+      // the same gap is 10/200 = 5%, correctly blocking canLower.
       const hist = [190, 0, 0, 0, 8, 2, 0, 2000]
       const result = analyzeTappingTerm(hist, 200)
       expect(result.verdict).not.toBe('canLower')
@@ -213,10 +211,7 @@ describe('analyzeTappingTerm', () => {
 
 describe('clampBelowStrict', () => {
   it('floors to the largest step multiple strictly below a non-multiple bound (agy counterexample)', () => {
-    // The old implementation returned `boundExclusive - step` (173-5=168,
-    // not a multiple of 5) whenever `value` needed clamping — only
-    // correct when `boundExclusive` itself happens to be a step
-    // multiple. A real keyboard's TAPPING_TERM is an arbitrary u16, not
+    // A real keyboard's TAPPING_TERM is an arbitrary u16, not
     // constrained to multiples of 5.
     expect(clampBelowStrict(173, 173, 5)).toBe(170)
     expect(clampBelowStrict(200, 173, 5)).toBe(170)

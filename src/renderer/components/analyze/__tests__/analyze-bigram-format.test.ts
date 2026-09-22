@@ -91,8 +91,7 @@ describe('bigramPairLabel', () => {
   it('resolves a code from the snapshot\'s own qmk map instead of the session RAWCODES_MAP', () => {
     // Session only knows about 4 layers / 16 macros; the snapshot was
     // recorded by an 8-layer / 32-macro keyboard, so "M20" is a code
-    // this session can't round-trip through `serialize` on its own —
-    // see Task-speed-ranking-snapshot-labels.md.
+    // this session can't round-trip through `serialize` on its own.
     useSmallSessionKeyboard()
     const snapshot = snapshotWithKeymap([[['M20', 'KC_A']]])
     const qmkByCode = buildSnapshotQmkByCode(snapshot, snapshot.vialProtocol)
@@ -105,8 +104,8 @@ describe('bigramPairLabel', () => {
   })
 
   it('still falls back to codeToLabel for a code absent from the map (unedited call keeps working)', () => {
-    // No qmkByCode/vialProtocol passed — must match the pre-existing,
-    // wrapper-less behavior exactly.
+    // No qmkByCode/vialProtocol passed — must match the wrapper-less
+    // behavior exactly.
     expect(bigramPairLabel('4_11')).toBe('A → H')
   })
 })

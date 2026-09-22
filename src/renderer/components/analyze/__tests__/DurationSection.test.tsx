@@ -106,14 +106,11 @@ describe('DurationSection', () => {
     expect(text).toContain('2')
   })
 
-  // Regression guard: SD and Samples used to render as bare numbers
-  // with no explanation of what they mean (user feedback: "SD is not
-  // understandable without an explanation"). Both now carry a
-  // `descriptionKey`, rendered into a hover tooltip bubble that's
-  // always portaled to `document.body` (opacity-hidden until hover —
-  // see ui/Tooltip.tsx), so the assertion searches the whole document
-  // rather than the stat-grid container, same as RolloverSection's
-  // equivalent test.
+  // Regression guard: SD and Samples carry a `descriptionKey`,
+  // rendered into a hover tooltip bubble that's always portaled to
+  // `document.body` (opacity-hidden until hover — see ui/Tooltip.tsx),
+  // so the assertion searches the whole document rather than the
+  // stat-grid container, same as RolloverSection's equivalent test.
   it('describes SD and Samples in a hover tooltip', async () => {
     durationFetchSpy.mockResolvedValue([
       cell({ hist: [1, 0, 0, 0, 0, 0, 0, 0], durationSamples: 1, sum: 80, sumSq: 6_400 }),

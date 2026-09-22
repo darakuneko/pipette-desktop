@@ -164,13 +164,11 @@ describe('TappingTermCard', () => {
     expect(screen.queryByTestId('analyze-tapping-term-unreported-notice')).toBeNull()
   })
 
-  // Regression guard: "Observed tap p95" used to render as a bare
-  // millisecond range with no explanation of what the percentile means
-  // (same "bare statistical term" complaint pattern as DurationSection's
-  // SD stat). It now carries a `descriptionKey`, rendered into a hover
-  // tooltip bubble that's always portaled to `document.body` (opacity-
-  // hidden until hover — see ui/Tooltip.tsx), so the assertion searches
-  // the whole document rather than the stat-grid container.
+  // Regression guard: "Observed tap p95" carries a `descriptionKey`,
+  // rendered into a hover tooltip bubble that's always portaled to
+  // `document.body` (opacity-hidden until hover — see ui/Tooltip.tsx),
+  // so the assertion searches the whole document rather than the
+  // stat-grid container.
   it('describes the tap p95 stat in a hover tooltip', async () => {
     renderCard({ connectedTappingTerm: reportedTerm() })
     await waitFor(() => {

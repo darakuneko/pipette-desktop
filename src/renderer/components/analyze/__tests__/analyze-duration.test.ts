@@ -49,9 +49,8 @@ describe('sumDurationTotals', () => {
   })
 })
 
-// SD coverage now lives in shared/__tests__/stat-sums.test.ts —
-// DurationSection imports `sdFromSums` from shared/stat-sums directly
-// (see item 1 of the consolidation pass).
+// SD coverage lives in shared/__tests__/stat-sums.test.ts —
+// DurationSection imports `sdFromSums` from shared/stat-sums directly.
 
 describe('DURATION_BUCKET_BIN_IDS', () => {
   it('stays index-aligned with the shared duration grid (one id per bucket)', () => {

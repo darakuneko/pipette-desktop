@@ -162,8 +162,8 @@ describe('LayoutComparisonView', () => {
     await waitFor(() => {
       expect(onSkipPercentChange).toHaveBeenCalledWith(0.12)
     })
-    // The legacy inline banner is no longer rendered — the page footer
-    // owns the warning now (see TypingAnalyticsView).
+    // The legacy inline banner is not rendered — the page footer owns
+    // the warning (see TypingAnalyticsView).
     expect(screen.queryByTestId('analyze-layout-comparison-skip-warning')).toBeNull()
   })
 

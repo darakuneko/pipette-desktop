@@ -37,7 +37,7 @@ function deserializeUnderProtocol(qmkId: string, protocol: number): number {
 /** Registers the CURRENT session's keyboard as a small one — 4 layers,
  * 16 macros — the same shape a snapshot recorded by a bigger keyboard
  * (8 layers, 32 macros) leaves this session unable to fully resolve by
- * itself (see Task-speed-ranking-snapshot-labels.md). */
+ * itself. */
 function useSmallSessionKeyboard(): void {
   recreateKeyboardKeycodes({
     vialProtocol: 6,
@@ -241,9 +241,7 @@ describe('buildSpeedFillByPos', () => {
     // A snapshot recorded by a keyboard with 32 macros reports "M20" at
     // this position, but the current session only registered 16 --
     // `deserialize('M20')` silently returns 0 in that case (see
-    // decodeSnapshotQmkId's doc comment), which used to make this cell
-    // match whatever intensity happened to be keyed at 0 instead of
-    // painting nothing (or the correct M20 intensity).
+    // decodeSnapshotQmkId's doc comment).
     useSmallSessionKeyboard()
     expect(deserialize('M20')).toBe(0)
     const m20Code = decodeSnapshotQmkId('M20')!
@@ -318,7 +316,7 @@ describe('buildSpeedRanking', () => {
     // through `serialize` -- M20 lands on bare hex, MO(6) lands in the
     // 'other' group bucket instead of 'layerOp'. Building the map from
     // the snapshot's own recorded qmk strings sidesteps the round-trip
-    // entirely (see Task-speed-ranking-snapshot-labels.md).
+    // entirely.
     useSmallSessionKeyboard()
     const snapshot = snapshotWithKeymap([[['M20', 'MO(6)']]])
     const qmkByCode = buildSnapshotQmkByCode(snapshot, snapshot.vialProtocol)
@@ -343,7 +341,7 @@ describe('buildSpeedRanking', () => {
   })
 
   it('resolves RAG_T(KC_NO) to "RAG_T" (not the #359 fallback\'s "RAG_T(NO)") when the snapshot map has it', () => {
-    // Same 0x7c00-family collision code as the #359 test above, but
+    // Same 0x7c00-family collision code as the test above, but
     // this time the snapshot's own keymap literally recorded
     // "RAG_T(KC_NO)" at v5, so the snapshot-string path resolves it
     // directly instead of falling back to codeToLabel's serialize
