@@ -647,11 +647,10 @@ describe('TypingTestHistory', () => {
   // the tabs above and the results table below, so a tall stack of sections
   // can't push the table past the modal's bottom edge.
   //
-  // Updated for the Results/Analysis secondary-tab split: the three lower
-  // sections now render only under the Analysis view tab (the sparkline/
-  // stats moved into the Results view alongside the table), so this test
-  // checks the Results-view table floor first, then switches to Analysis to
-  // check the scroll wrapper.
+  // The three lower sections render only under the Analysis view tab
+  // (the sparkline/stats moved into the Results view alongside the
+  // table), so this test checks the Results-view table floor first,
+  // then switches to Analysis to check the scroll wrapper.
   it('wraps the Analysis sections in their own scroll container, and gives the Results table a min-height floor', () => {
     const results = [
       makeResult({ wpm: 60, accuracy: 90, mistakes: { a: 3, b: 2 } }),
@@ -691,7 +690,7 @@ describe('TypingTestHistory', () => {
     expect(sections.querySelector('[data-testid="typing-test-mistake-ranking"]')).toBeTruthy()
     expect(sections.querySelector('[data-testid="typing-test-error-mix"]')).toBeTruthy()
 
-    // The condition select itself now lives in the header's right-end
+    // The condition select itself lives in the header's right-end
     // group (sibling of the Results/Analysis tabs), not inside this scroll
     // wrapper — only the "ACCURACY TREND" heading + chart stay here.
     expect(sections.querySelector('[data-testid="history-condition-filter"]')).toBeNull()
@@ -873,7 +872,7 @@ describe('TypingTestHistory', () => {
     // level inside it. That extra div's default `display: block` broke the
     // flex min-h-0/shrink chain HistorySections relies on for its
     // overflow-y-auto scroll region to actually engage, silently
-    // reintroducing the #377 modal-overflow bug (caught via screenshot, not
+    // reintroducing the modal-overflow bug (caught via screenshot, not
     // by DOM presence/absence assertions — hence this structural check).
     // The fix makes each panel component apply role=tabpanel/id/
     // aria-labelledby directly to its OWN existing root div, so the
@@ -915,7 +914,7 @@ describe('TypingTestHistory', () => {
       expect(analysisPanel!.className).toContain('overflow-y-auto')
     })
 
-    // P2-1 (codex review): sort state used to live inside HistoryResultsPanel,
+    // Sort state used to live inside HistoryResultsPanel,
     // which unmounts whenever the Analysis view is active (conditional
     // render) — so a chosen sort silently reset on every round trip through
     // Analysis. The fix lifts sortColumn/sortDirection into TypingTestHistory
@@ -955,9 +954,9 @@ describe('TypingTestHistory', () => {
       expect(activeHeader?.textContent).toContain('WPM')
     })
 
-    // P2-2 (codex review): APG tabs pattern — arrow keys move focus AND
+    // APG tabs pattern — arrow keys move focus AND
     // selection between the two view tabs, roving tabIndex keeps the
-    // tablist a single Tab stop. Scoped to the NEW view tabs only; the
+    // tablist a single Tab stop. Scoped to the view tabs only; the
     // source select (MonkeyType/Tatoeba/Aozora/File Import) is a plain
     // `<select>`, not a tablist, and is untouched by this pattern.
     it('supports APG roving-tabindex arrow-key navigation between the view tabs', () => {
@@ -1164,8 +1163,7 @@ describe('TypingTestHistory', () => {
       expect(screen.getAllByText('81').length).toBeGreaterThan(0)
       expect(screen.queryByText('77')).toBeNull()
 
-      // Switching the select's value re-classifies which rows show, exactly
-      // like the old tab-click behavior did.
+      // Switching the select's value re-classifies which rows show.
       fireEvent.change(select, { target: { value: 'tatoeba' } })
       expect(screen.getAllByText('77').length).toBeGreaterThan(0)
       expect(screen.queryByText('81')).toBeNull()
@@ -1192,8 +1190,8 @@ describe('TypingTestHistory', () => {
       const sourceSelect = screen.getByTestId('history-filter-source')
       const conditionSelect = screen.getByTestId('history-condition-filter')
 
-      // Order per the approved redesign sketch: source select first, then
-      // the condition select. DOCUMENT_POSITION_FOLLOWING (4) set on
+      // Order: source select first, then the condition select.
+      // DOCUMENT_POSITION_FOLLOWING (4) set on
       // `conditionSelect` relative to `sourceSelect` means the source select
       // comes first in document order.
       expect(sourceSelect.compareDocumentPosition(conditionSelect) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
