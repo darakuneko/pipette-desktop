@@ -82,8 +82,8 @@ export function nowIso(): string {
 // chain so a concurrent pair can't each read a stale snapshot and
 // clobber the other's write — mirrors `sync/keyboard-meta.ts`'s
 // `withMetaWriteLock` precedent. Scoped to this store only; Key Labels
-// has the same pre-existing gap (see the module report, not fixed
-// here). Theme Packs used to share this gap too but now has its own
+// has the same gap (see the module report, not fixed here). Theme
+// Packs used to share this gap too but now has its own
 // equivalent lock across all mutation methods (`theme-pack-store.ts`'s
 // `withIndexWriteLock`) — that store gained a real second writer
 // (remote sync) once its index-merge landed, so its own lock could no
