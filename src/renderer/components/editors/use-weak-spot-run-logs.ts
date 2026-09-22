@@ -26,7 +26,7 @@ const EMPTY_LOGS: ReadonlyMap<string, RunKeystrokeLog> = new Map()
  *  recording consent was off, or retention evicted it), simply has no
  *  entry; `weak-spot-profile.ts`'s aggregation already treats a missing
  *  entry as "no timing data for this run" and falls back to mistakes-only
- *  weakness, exactly per the plan's "log absent" rule.
+ *  weakness.
  *
  *  LAZY/CACHED the same way `useAggregatedMissedDetails` is: a `useRef`
  *  Map survives re-renders without forcing one, only runIds not already

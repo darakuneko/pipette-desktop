@@ -244,7 +244,7 @@ export function useInputModes({
   // no uid is available (recording never configured this session) this
   // simply returns an empty map — weak-spot-profile.ts's aggregation
   // already treats that the same as "no log for this run," degrading to
-  // mistakes-only weakness, exactly per the plan's own explicit rule.
+  // mistakes-only weakness.
   const weakSpotRunLogs = useWeakSpotRunLogs(typingRecordKeyboard?.uid, typingTestHistory ?? [])
 
   // Weak Spot Training's mistake-profile lookup: one memoized cache

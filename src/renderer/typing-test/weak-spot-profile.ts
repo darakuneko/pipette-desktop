@@ -210,8 +210,7 @@ function aggregateDecayedMistakeTotals(
  *  row with no `runId`, or one `runLogs` doesn't have — recording consent
  *  was off, the run predates the log feature, or retention evicted it —
  *  simply contributes no timing data; mistakes-only weakness still
- *  applies for it, per the plan's explicit "log absent -> mistakes-only"
- *  rule; timing itself is never decayed — see
+ *  applies for it; timing itself is never decayed — see
  *  `WeakSpotDetailSettings.decayHalfLifeDays`'s own doc comment for why).
  *  Every token appearing in EITHER source is evaluated once via
  *  `evaluateTokenWeakness`; only weak tokens make it into the returned

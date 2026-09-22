@@ -154,11 +154,11 @@ describe('MissedTable (bar-graph rows: Word / typed chars / stacked bar / Cnt)',
       expect(screen.getByTestId('missed-table-row-h-bar-corrected').style.width).toBe('0%')
     })
 
-    // FLAGGED CHOICE (unknown-split rendering): a row with no detail data
-    // at all renders IDENTICALLY to a genuinely all-corrected row (100%
-    // gray) — there's no third "unknown" visual state. The tooltip is
-    // what actually distinguishes the two cases (see the tooltip
-    // describe block below).
+    // A row with no detail data at all renders IDENTICALLY to a
+    // genuinely all-corrected row (100% gray) — there's no third
+    // "unknown" visual state. The tooltip is what actually
+    // distinguishes the two cases (see the tooltip describe block
+    // below).
     it('a legacy/no-detail row renders its bar entirely gray — identical to a confirmed all-corrected row', () => {
       renderWithI18n(<MissedTable mistakes={{ h: 1 }} details={new Map()} />)
       expect(screen.getByTestId('missed-table-row-h-bar-movedon').style.width).toBe('0%')
@@ -195,9 +195,9 @@ describe('MissedTable (bar-graph rows: Word / typed chars / stacked bar / Cnt)',
       expect(tooltip.textContent).toContain('Moved on uncorrected: 3')
     })
 
-    // FLAGGED CHOICE, continued: the tooltip is where a legacy/no-detail
-    // row's bar becomes distinguishable from a confirmed all-corrected
-    // one, even though the bar itself renders identically for both.
+    // The tooltip is where a legacy/no-detail row's bar becomes
+    // distinguishable from a confirmed all-corrected one, even though
+    // the bar itself renders identically for both.
     it('a legacy/no-detail row shows a single distinct sentence instead of the normal 3-line breakdown', () => {
       renderWithI18n(<MissedTable mistakes={{ h: 1 }} details={new Map()} />)
       const tooltip = hoverBar('h')
