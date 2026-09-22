@@ -9,7 +9,7 @@
 // through a different call site: KeymapEditor's toggleTypingTest ->
 // onUnlock) — both unlock-gated — and plain editor (no view-mode restore
 // requires unlocking, so the window must stay hidden and no dialog must
-// appear — useBootHiddenWindow no longer opens the dialog on its own).
+// appear — useBootHiddenWindow does not open the dialog on its own).
 //
 // Uses the virtual device (PIPETTE_VIRTUAL_DEVICE='only'), which relocks
 // on every launch so the Unlock dialog is guaranteed to appear on each

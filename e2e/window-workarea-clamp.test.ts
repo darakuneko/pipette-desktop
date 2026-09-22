@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Regression coverage for the macOS window-overflow bug (issue #419): the
+// Regression coverage for the macOS window-overflow bug: the
 // window's nominal minimum size (1280x1024) is an intentional product
 // decision and must stay, but on a display whose usable work area is
 // smaller than that (small MacBook screens under the Dock; also reachable

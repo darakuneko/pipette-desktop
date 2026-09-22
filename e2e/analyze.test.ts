@@ -53,7 +53,7 @@ test.beforeAll(async () => {
   await expect(analyzePage).toBeVisible({ timeout: 10_000 })
 
   // Keyboard selection lives in the staged filter modal behind the
-  // summary chip (Plan-analyze-filter-modal): chip -> select -> Apply.
+  // summary chip: chip -> select -> Apply.
   await openFilterModal()
   const kbSelect = page.locator('[data-testid="analyze-filter-keyboard"]')
   await expect(kbSelect).toBeVisible({ timeout: 15_000 })

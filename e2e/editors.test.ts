@@ -326,7 +326,7 @@ test.describe('Status Bar', () => {
     const statusBar = page.locator('[data-testid="status-bar"]')
     await expect(statusBar).toBeVisible()
 
-    // Sideload JSON was moved to the Data modal
+    // Sideload JSON lives in the Data modal
     const sideloadBtn = statusBar.locator('[data-testid="sideload-json-btn"]')
     await expect(sideloadBtn).toHaveCount(0)
   })
