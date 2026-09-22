@@ -167,28 +167,24 @@ export function useTypingAnalyticsSink({
   onRecKeystrokeRef.current = onRecKeystroke
   // Per-run raw keystroke log recorder (see run-log-recorder.ts and
   // use-run-log-recorder.ts) — one instance per editor session, mirroring
-  // matrixQueueRef's construction style in useTypingTest.ts. Fed
+  // matrixQueueRef's construction style in use-typing-test-matrix.ts. Fed
   // `runLogLabelRef`, NOT `testLabelRef` — see the GATE SPLIT note above.
   const runLog = useRunLogRecorder({
     recordingConsentAccepted,
     keyboardUid: typingRecordKeyboard?.uid,
     typingTestLabelRef: runLogLabelRef,
   })
-  // The sink used to read recordingActiveRef / testLabelRef / testRunIdRef
-  // at the moment an event was actually sent, but a matrix event can now
-  // sit in useTypingTest's ordering queue for up to the tapping term
-  // (waiting on an unresolved tap-hold press ahead of it) before it gets
-  // that far. Reading live state that late meant a press authorized and
-  // tagged at press time could be silently dropped, or mistagged, by
-  // whatever the state had become by the time it was flushed — most
-  // visibly, stopping the record toggle mid-hold discarded every queued
-  // event instead of just the one it was meant to finalize.
-  //
-  // Splitting into prepare (called once, at press time) + emit (called
-  // once the event is actually ready to ship, immediately or off the
-  // back of the queue) fixes that: prepare captures the gate + tag
-  // decision when the keystroke happens and hands back an opaque
-  // context; emit only ever ships what prepare already decided.
+  // prepareAnalyticsEvent (called once, at press time) captures
+  // recordingActiveRef / testLabelRef / testRunIdRef into an opaque
+  // context; emitAnalyticsEvent (called once the event is actually ready
+  // to ship, immediately or off the back of the queue) ships only that
+  // captured context, never re-reading the refs. This matters because a
+  // matrix event can sit in useTypingTest's
+  // ordering queue (matrixQueueRef, use-typing-test-matrix.ts) for up to
+  // the tapping term — waiting on an unresolved tap-hold press ahead of
+  // it — before it reaches emit, and the refs can have moved on by then.
+  // Reading live state at emit time would silently drop or mistag a press
+  // that was authorized and tagged when it happened.
   const prepareAnalyticsEvent = useCallback((kind: 'matrix' | 'char', windowFocused: boolean): PreparedAnalyticsContext | null => {
     const keyboard = keyboardRef.current
     if (!keyboard) return null

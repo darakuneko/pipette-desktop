@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
-// Integration regression for the lazy-pack-load freeze. Wires
-// `useDevicePrefs` (the actual `remapLabel`/`isRemapped` source) straight
-// into `useLayerKeycodes` (the actual keymap-legend consumer) — the same
-// pairing `KeymapEditor` does — and simulates the async Key Label pack
-// fetch `ensure(layout)` triggers. Before the fix, `layerKeycodes` /
-// `remappedKeys` stayed on their pre-fetch fallback (raw qmkId, no tint)
-// forever once the pack resolved, because `remapLabel`/`isRemapped` never
-// changed identity so `buildKeycodesForLayer`'s memo never reran.
+// Wires `useDevicePrefs` (the actual `remapLabel`/`isRemapped` source)
+// straight into `useLayerKeycodes` (the actual keymap-legend consumer) —
+// the same pairing `KeymapEditor` does — and simulates the async Key
+// Label pack fetch `ensure(layout)` triggers. `buildKeycodesForLayer`'s
+// memo (use-layer-keycodes.ts) depends on the identity of
+// `remapLabel`/`isRemapped`, so once a lazily loaded pack resolves,
+// `remapLabel`/`isRemapped` must change identity — nothing else in those
+// deps changes on a pack load — or `layerKeycodes`/`remappedKeys` stay on
+// their pre-fetch fallback (raw qmkId, no tint).
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act } from '@testing-library/react'

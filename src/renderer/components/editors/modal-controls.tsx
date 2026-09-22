@@ -55,9 +55,10 @@ export function ToggleRow({ label, on, onToggle, title, testid }: {
 // the right. Row and toggle test ids are independent (unlike `ToggleRow`,
 // which derives the row id from the toggle id) so this matches the
 // `settings-*-row` / `settings-*-toggle` naming used across
-// SettingsToolsTab. `labelTone` mirrors the two label styles that were
-// hand-rolled there: rows with a description use the secondary tone, plain
-// rows use the default content tone.
+// SettingsToolsTab. `labelTone` selects between the two label styles used
+// across those rows: `'secondary'` (text-content-secondary, the default —
+// used by rows with a description) and `'content'` (text-content — used
+// by plain rows).
 export function SettingsToggleRow({
   rowTestId,
   toggleTestId,

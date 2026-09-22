@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-// Regression coverage: useTypingTestPaneComparison's currentConditionKey
-// (and matchingResults/computeComparison calls) used to key weakSpotTrainingMode
-// off the raw toggle (isWeakSpotTrainingActive), while a saved result only
-// ever sets the flag when the run's OWN state.weakSpotProfile snapshot was
-// actually non-null (use-typing-test-result-save.ts). With the toggle on but
-// the keystroke gate not met, the live key carried `|weakspot` while every
-// comparable saved result (including this exact run's own) never did —
-// breaking PB/comparison grouping. This exercises the REAL useTypingTest +
-// useTypingTestPaneComparison wiring (not just comparison.ts's own unit
-// tests) to prove the effective-state override actually reaches both hooks.
+// useTypingTestPaneComparison's currentConditionKey (and its
+// matchingResults/computeComparison calls) must key weakSpotTrainingMode
+// off typingTest.state.weakSpotProfile != null — the effective bias state
+// of the current run — not off the raw toggle (isWeakSpotTrainingActive):
+// a saved result only ever sets the flag when the run's OWN
+// state.weakSpotProfile snapshot was actually non-null
+// (use-typing-test-result-save.ts). With the toggle on but the keystroke
+// gate unmet, keying off the toggle alone would carry `|weakspot` on the
+// live key while every comparable saved result (including this exact
+// run's own) never does, breaking PB/comparison
+// grouping. This exercises the REAL useTypingTest + useTypingTestPaneComparison
+// wiring (not just comparison.ts's own unit tests) to prove the
+// effective-state override actually reaches both hooks.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'

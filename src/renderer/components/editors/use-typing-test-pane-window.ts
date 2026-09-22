@@ -190,8 +190,7 @@ export function useTypingTestPaneWindow({
     } else {
       onViewOnlyChange(false)
     }
-    // `typingTest` is unread by the body — kept in the deps verbatim from the
-    // pre-split Pane, which is also why the hook still takes it as a param.
+    // `typingTest` is a param and a dep of this callback; the callback body does not read it.
   }, [viewOnly, viewOnlyWindowSize, getDefaultCompactSize, onViewOnlyChange, typingTest])
 
   return {

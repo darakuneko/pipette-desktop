@@ -25,13 +25,15 @@ interface TypingTestPaneViewOnlyMenuProps {
 
 /** View-only mode's fixed bottom-right menu (hint bar + panel). Renders a
  *  bare fragment: the two fixed divs must stay siblings in source order
- *  (z-40 hint under z-50 panel). The REC tab (recording toggle, Monitor App,
- *  tray toggles, HeatMap window select) moved to the footer's Record
- *  button/modal — this panel now only ever shows the former Window tab's
- *  content, so the tab strip is gone too. The Analyze button (View Analytics
- *  from Typing View) stayed behind — the footer's Record button is hidden
- *  while in Typing View, so this popover remains the only entry point back
- *  to Analyze from here. */
+ *  (z-40 hint under z-50 panel). This panel's own controls are window
+ *  sizing, always-on-top, the base-layer select, Analyze and Exit Typing
+ *  View — recording controls (record toggle, Monitor App, tray toggles,
+ *  HeatMap window select) live in the footer's Record button/modal
+ *  (TypingRecordModal, opened from StatusBar.tsx) instead. The Analyze
+ *  button (View Analytics from Typing View) is here because AppStatusBar
+ *  (the footer, including its Record button) renders nothing while in
+ *  Typing View, so this popover is the only entry point back to Analyze
+ *  from here. */
 export function TypingTestPaneViewOnlyMenu({
   typingTest,
   mouseOver,

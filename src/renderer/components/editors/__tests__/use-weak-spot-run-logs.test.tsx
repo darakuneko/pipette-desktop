@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-// Regression coverage for the stale-availability-index bug: the hook used
-// to fetch `uid`'s run-id index exactly once (effect deps `[uid]` only),
-// so a run saved LATER in the same session (no remount of the hook's
-// owner in between) could never enter `availableRunIdsRef` — its runId
-// would forever fail the second effect's `available.has(runId)` gate,
-// even though a real log for it exists on disk. The fix re-runs the
-// index fetch whenever `results.length` changes too.
+// The uid's available-run-id index (availableRunIdsRef) must be re-fetched
+// whenever `results.length` changes, not just on a `uid` change — see the
+// first effect's own doc comment (use-weak-spot-run-logs.ts) for why
+// `results.length` is the invalidation signal. Otherwise a run saved
+// LATER in the same session (no remount of the hook's owner in between)
+// could never enter `availableRunIdsRef`, and its runId would forever
+// fail the second effect's `available.has(runId)` gate, even though a
+// real log for it exists on disk.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'

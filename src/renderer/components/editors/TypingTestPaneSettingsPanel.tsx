@@ -114,11 +114,12 @@ export function TypingTestPaneSettingsPanel({
   const [showWeakSpotModal, setShowWeakSpotModal] = useState(false)
 
   // Weak Spot Training Mode's live status line, rendered directly below the
-  // DATA-section button (moved out of WeakSpotSettingsModal — see that
-  // component's own doc comment) so it's visible without opening the
-  // modal. Mirrors the gate's three states: 'unavailable' (History still
-  // loading) renders nothing at all — claiming "no weak spots" here would
-  // be a guess, not a fact; the other two render a compact hint line below.
+  // DATA-section button so it's visible without opening the modal — not
+  // inside WeakSpotSettingsModal itself (see that component's own doc
+  // comment). Mirrors the gate's three states: 'unavailable' (History
+  // still loading) renders nothing at all — claiming "no weak spots" here
+  // would be a guess, not a fact; the other two render a compact hint
+  // line below.
   const weakSpotGate = typingTest.weakSpotGate
   const shownWeakSpotTokens = weakSpotGate.topWeakTokens ?? []
   const weakSpotTokenOverflow = (weakSpotGate.weakTokenCount ?? shownWeakSpotTokens.length) - shownWeakSpotTokens.length

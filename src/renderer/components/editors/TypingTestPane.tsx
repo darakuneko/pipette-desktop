@@ -304,15 +304,16 @@ export function TypingTestPane({
         </div>
         </div>
       </div>
-      {/* Non-finished controls row (Next Test / Pause / Resume / Restart) —
-          moved here, BELOW the keyboard pane and its layer note, so the
+      {/* Non-finished controls row (Next Test / Pause / Resume / Restart)
+          renders BELOW the keyboard pane and its layer note, so the
           reading window sits directly above the keyboard the user is
-          actually typing on. The finished-state row is unaffected — it
-          still renders inside TypingTestView, at the very bottom of the
-          completion screen (below the timeline panel), since the keyboard
-          itself is hidden once finished (hideKeyboardForFinish). Gated:
-          !viewOnly (view-only never showed this row) and !hideControls
-          (the "operation" toggle), plus the finished check. */}
+          actually typing on. The finished-state row renders separately,
+          inside TypingTestView (via TypingTestFinishedSection.tsx), at
+          the very bottom of the completion screen (below the timeline
+          panel), since the keyboard itself is
+          hidden once finished (hideKeyboardForFinish). Gated: !viewOnly
+          (view-only never shows this row) and !hideControls (the
+          "operation" toggle), plus the finished check. */}
       {!viewOnly && typingTest.state.status !== 'finished' && !hideControls && (
         <div className="mt-2 flex w-full justify-center">
           <TypingTestControlsRow

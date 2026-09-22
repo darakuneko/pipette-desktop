@@ -194,10 +194,10 @@ export function KeyboardPane({
           the right-hand cell rather than each owning a separate grid
           column; whichever is present renders flush against the right
           edge, matching the empty space that cell has whenever the other
-          isn't there. `justify-between` reproduces the old left/right
-          grid edges with plain flex, and the row's height still grows to
-          fully contain the button — no overflow past the panel's
-          border. */}
+          isn't there. `justify-between` puts the layer-label span flush
+          against the left edge and this shared right-hand span flush
+          against the right, and the row's height still grows to fully
+          contain the button — no overflow past the panel's border. */}
       <div className="flex items-center justify-between px-keyboard-px text-xs leading-none text-content-muted">
         <span className="flex items-center gap-2">
           {layerLabel !== undefined && (
