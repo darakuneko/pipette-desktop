@@ -100,8 +100,8 @@ const TIMELINE_SEED_RUN_ID = 'doc-capture-timeline-run'
 /** Seeds the Accuracy Trend seed runs above into the virtual device's
  *  pipette_settings.json, so the Accuracy Trend chart (History → Data
  *  section) has a real trend line to screenshot, and — since every run
- *  now also carries the error-class group — so the Error mix section
- *  below it shows real figures instead of its empty state. Merged onto
+ *  carries the error-class group — so the Error mix section below it
+ *  shows real figures instead of its empty state. Merged onto
  *  whatever the file already has — `settingsBackup` (the snapshot
  *  `backupVirtualDeviceSettings` took before this call) restores the
  *  pre-seed content (or removes the file) once the script is done,
@@ -159,7 +159,7 @@ function seedAccuracyTrendHistory(settingsBackup: VirtualDeviceSettingsBackup): 
  *  lead-in marker rather than an ordinary mid-line blank). `lineBreaks`
  *  being present at all is what selects the LINE-view renderer
  *  (`useTimelineModel`) over the legacy per-word one, so this seed's
- *  screenshot shows the current UI rather than the pre-#376 fallback.
+ *  screenshot shows the current UI rather than the fallback.
  *  Returns both file backups for `restoreFile` in a `finally` block. */
 function seedRunKeystrokeLog(userDataPath: string): { indexBackup: FileBackup; payloadBackup: FileBackup } {
   const runsDir = join(userDataPath, 'sync', 'keyboards', VIRTUAL_DEVICE_UID, 'runs')
@@ -583,12 +583,11 @@ async function runCompletionDemoToFinish(page: Page): Promise<void> {
   }
 }
 
-/** Captures the completion screen's inline Keystroke Timeline
- *  (Task-completion-timeline-view) — the finished-test view now used in
- *  place of the old compact stats row whenever a keystroke log was saved
- *  for the run. Requires recording consent already accepted (see
- *  `main`'s footer-record-modal step, which accepts it via the real
- *  Enable button before calling this). */
+/** Captures the completion screen's inline Keystroke Timeline — the
+ *  finished-test view used in place of the compact stats row whenever a
+ *  keystroke log was saved for the run. Requires recording consent
+ *  already accepted (see `main`'s footer-record-modal step, which
+ *  accepts it via the real Enable button before calling this). */
 async function captureCompletionTimelineScreenshot(page: Page, userDataPath: string): Promise<void> {
   const { indexBackup, entryBackup } = seedCompletionDemoText(userDataPath)
   try {
@@ -780,11 +779,10 @@ async function captureWeakSpotToggleScreenshot(): Promise<void> {
 }
 
 /** Weak Spot Training — "status hint below the DATA button, no weak spots"
- *  capture (`typing-test-weak-spot-hint.png`). The status line now renders
- *  directly under the DATA section's button in TypingTestPaneSettingsPanel
- *  (moved out of WeakSpotSettingsModal — see that component's own doc
- *  comment), so this capture reads it there without opening the modal at
- *  all. Seeds a single mistake-free `words` run so History is loaded
+ *  capture (`typing-test-weak-spot-hint.png`). The status line renders
+ *  directly under the DATA section's button in TypingTestPaneSettingsPanel,
+ *  so this capture reads it there without opening the modal at all. Seeds
+ *  a single mistake-free `words` run so History is loaded
  *  (ruling out the silent 'unavailable' status, which renders nothing) but
  *  no token crosses any weakness threshold (status 'no-weak-spots'). */
 async function captureWeakSpotHintScreenshot(): Promise<void> {
@@ -918,7 +916,7 @@ async function main(): Promise<void> {
     // 1c. Keystroke Timeline — opened from the seeded run's row (see
     // seedRunKeystrokeLog); its History row is the most recent Accuracy
     // Trend seed run above, tagged with TIMELINE_SEED_RUN_ID. The seeded
-    // log now carries `lineBreaks`, so this opens in the current per-LINE
+    // log carries `lineBreaks`, so this opens in the current per-LINE
     // view rather than the legacy per-word fallback.
     const timelineOpenBtn = page.locator('[data-testid^="history-timeline-open-"]').first()
     if (!(await timelineOpenBtn.isVisible().catch(() => false))) {
@@ -989,9 +987,8 @@ async function main(): Promise<void> {
     console.log('\n--- Typing Test Mode Modal ---')
     await captureModeModalScreenshots(page)
 
-    // 7. Footer Record modal + Recording Consent modal (Task-typing-record-
-    // footer: REC moved out of the Typing View popover's REC tab into the
-    // keymap-editor footer, so this no longer needs to enter Typing View —
+    // 7. Footer Record modal + Recording Consent modal (REC lives in the
+    // keymap-editor footer, so this does not need to enter Typing View —
     // the Record button lives in the plain editor's footer instead).
     console.log('\n--- Typing Record Modal ---')
 

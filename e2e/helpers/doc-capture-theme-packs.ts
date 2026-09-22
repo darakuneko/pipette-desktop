@@ -197,10 +197,7 @@ function launchElectronApp(userDataDir: string): ReturnType<typeof spawn> {
     `--remote-debugging-port=${DEBUG_PORT}`,
     // Always a disposable clone from `cloneUserDataForCapture` (see
     // `main` below) — see doc-capture-key-labels.ts's `launchElectronApp`
-    // for the full rationale (this used to touch the real profile
-    // directly, with an env-var escape hatch for the unconditional
-    // single-instance lock from #278 — no longer needed once the
-    // destination is always a fresh temp dir).
+    // for the full rationale.
     `--user-data-dir=${userDataDir}`,
   ]
   return spawn(electronPath, args, {
@@ -208,12 +205,12 @@ function launchElectronApp(userDataDir: string): ReturnType<typeof spawn> {
     stdio: 'ignore',
     detached: false,
     // Same virtual-device requirement as every other doc-capture helper
-    // (see `launchCaptureApp` in doc-capture-common.ts) — this helper was
-    // missing it, so a real HID device with a `lastDevice` persisted from
-    // an earlier non-capture session could get picked up by
-    // restoreLastSession instead of the virtual keyboard, landing on a
-    // stuck/blocked connected-editor screen (Unlock dialog, comms error)
-    // rather than the device selector.
+    // (see `launchCaptureApp` in doc-capture-common.ts): a real HID
+    // device with a `lastDevice` persisted from an earlier non-capture
+    // session could get picked up by restoreLastSession instead of the
+    // virtual keyboard, landing on a stuck/blocked connected-editor
+    // screen (Unlock dialog, comms error) rather than the device
+    // selector.
     env: { ...process.env, PIPETTE_VIRTUAL_DEVICE: 'only' },
   })
 }

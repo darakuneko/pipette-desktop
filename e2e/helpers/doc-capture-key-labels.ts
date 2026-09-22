@@ -263,10 +263,10 @@ function launchElectronApp(userDataDir: string): ReturnType<typeof spawn> {
     `--remote-debugging-port=${DEBUG_PORT}`,
     // Always a disposable clone from `cloneUserDataForCapture` (see
     // `main` below) — never the real profile. That also means the
-    // unconditional single-instance lock (since #278,
-    // `requestSingleInstanceLock` in src/main/index.ts) can no longer
-    // collide with an already-running real Pipette session; a fresh temp
-    // dir is never the same directory a live session owns.
+    // unconditional single-instance lock (`requestSingleInstanceLock` in
+    // src/main/index.ts) cannot collide with an already-running real
+    // Pipette session; a fresh temp dir is never the same directory a
+    // live session owns.
     `--user-data-dir=${userDataDir}`,
   ]
   return spawn(electronPath, args, {
@@ -274,12 +274,12 @@ function launchElectronApp(userDataDir: string): ReturnType<typeof spawn> {
     stdio: 'ignore',
     detached: false,
     // Same virtual-device requirement as every other doc-capture helper
-    // (see `launchCaptureApp` in doc-capture-common.ts) — this helper was
-    // missing it, so a real HID device with a `lastDevice` persisted from
-    // an earlier non-capture session could get picked up by
-    // restoreLastSession instead of the virtual keyboard, landing on a
-    // stuck/blocked connected-editor screen (Unlock dialog, comms error)
-    // rather than the device selector.
+    // (see `launchCaptureApp` in doc-capture-common.ts): a real HID
+    // device with a `lastDevice` persisted from an earlier non-capture
+    // session could get picked up by restoreLastSession instead of the
+    // virtual keyboard, landing on a stuck/blocked connected-editor
+    // screen (Unlock dialog, comms error) rather than the device
+    // selector.
     env: { ...process.env, PIPETTE_VIRTUAL_DEVICE: 'only' },
   })
 }
@@ -350,10 +350,8 @@ async function main(): Promise<void> {
 
   // Clone the real profile into a disposable temp dir and point every
   // launch at the CLONE — see `cloneUserDataForCapture`'s doc comment for
-  // why (this used to patch the real config.json's `language` key in
-  // place with a backup/restore that could not fully protect the user's
-  // real data on a crash or concurrent run). Force English in the clone
-  // — no backup/restore needed since the clone is thrown away afterward.
+  // why. Force English in the clone — no backup/restore needed since
+  // the clone is thrown away afterward.
   const { userDataDir, cleanup } = cloneUserDataForCapture('key-labels')
   try {
     forceEnglishLanguageInClone(userDataDir)
