@@ -48,8 +48,8 @@ export function useDevicePrefsRemap(layout: KeyboardLayoutId) {
   // Author-supplied "wants a keymap rewrite" hint — `false` for built-in
   // QWERTY and for any pack not yet loaded. Combined with
   // `packIsPurePermutation` below (the structural `.ok` verdict) into the
-  // single predicate: `keymapApplicable && buildKeymapRewriteTable(map)
-  // .ok`. That predicate — not `.ok` alone — is what `remapKind` gates on,
+  // single predicate: `keymapApplicable && buildKeymapRewriteTable(map).ok`.
+  // That predicate — not `.ok` alone — is what `remapKind` gates on,
   // so it doubles as the simulation-tab / Apply-eligibility signal
   // `KeymapEditor` consumes via `remapKind === 'simulated'` (tab
   // visibility, Apply button, and the simulated tint all read the exact

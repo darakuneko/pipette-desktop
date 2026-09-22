@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Covers the fetch/cancel/loading-flag contract extracted from
-// AnalyzePane into `useAnalyzeScopeOptions` — device infos + snapshot
+// Covers the fetch/cancel/loading-flag contract — device infos + snapshot
 // summaries for a single uid, including the "reset synchronously on uid
 // change" and "loaded stays false on error" semantics AnalyzePane's
 // downstream fallback/overlay logic depends on.

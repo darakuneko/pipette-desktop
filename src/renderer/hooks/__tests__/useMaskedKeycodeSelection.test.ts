@@ -261,7 +261,7 @@ describe('useMaskedKeycodeSelection', () => {
     expect(result.current.maskOnly).toBe(false)
   })
 
-  // --- New tests for initialValue auto-detection ---
+  // --- Tests for initialValue auto-detection ---
 
   it('auto-detects masked initialValue and enters inner editing', () => {
     const onUpdate = vi.fn()

@@ -131,14 +131,14 @@ export interface UseDevicePrefsReturn {
    *  ANSI (a symbol/label the picker can't already show as-is — JIS shift
    *  pairs, kana, ...). A pure QWERTY-keycode permutation pack (Colemak,
    *  Eucalyn, Dvorak, ...) swaps WHICH key sends a character, but every
-   *  character it swaps in already exists
-   *  somewhere in the picker — remapping the picker's own legends for
-   *  that case would just be noise (and would desync the picker's
-   *  legend from the keycode it actually inserts). So this identity-
-   *  passes for a permutation pack and only forwards to `remapLabel` once
-   *  the active pack fails the same `buildKeymapRewriteTable` check the
-   *  Key Label "apply to keymap" rewrite itself uses to decide
-   *  applicability — a deviation pack behaves exactly like `remapLabel`.
+   *  character it swaps in already exists somewhere in the picker —
+   *  remapping the picker's own legends for that case would just be noise
+   *  (and would desync the picker's legend from the keycode it actually
+   *  inserts). So this identity-passes for a permutation pack and only
+   *  forwards to `remapLabel` once the active pack fails the same
+   *  `buildKeymapRewriteTable` check the Key Label "apply to keymap"
+   *  rewrite itself uses to decide applicability — a deviation pack
+   *  behaves exactly like `remapLabel`.
    *  QWERTY/no pack has an empty map, which trivially passes the check
    *  (nothing to permute), so it already resolves to identity without a
    *  separate guard. */

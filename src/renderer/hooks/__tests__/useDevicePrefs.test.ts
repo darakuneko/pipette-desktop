@@ -2395,8 +2395,8 @@ describe('useDevicePrefs', () => {
 
   // `activeRewriteTable` lets `useKeymapApplyPrompt.requestApply` skip its
   // own async lookup/build — it must mirror `remapKind` exactly: defined
-  // (and matching `buildKeymapRewriteTable`'s own table) iff `remapKind
-  // === 'simulated'`, `undefined` in every 'actual' case.
+  // (and matching `buildKeymapRewriteTable`'s own table) iff
+  // `remapKind === 'simulated'`, `undefined` in every 'actual' case.
   describe('activeRewriteTable', () => {
     const COLEMAK: Record<string, string> = {
       KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',

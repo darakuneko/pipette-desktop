@@ -99,12 +99,11 @@ export function useKeyboardPersistence(
 ) {
   const { stateRef, qmkSettingsBaselineRef, saveLayerNamesRef } = refs
 
-  // Exactly the fields `writeVilToDevice` needs, a subset of what
-  // `serialize()` returns, so an apply's pre-write backup (and
-  // `serialize()` itself) don't pay for building `macroJson` (a split +
-  // deserialize + JSON round trip per macro) on every apply, including the
-  // success path, when only a failed apply's rollback ever reads the
-  // backup.
+  // Exactly the fields `writeVilToDevice` needs, so an apply's pre-write
+  // backup (and `serialize()` itself) don't pay for building `macroJson`
+  // (a split + deserialize + JSON round trip per macro) on every apply,
+  // including the success path, when only a failed apply's rollback ever
+  // reads the backup.
   const serializeDeviceFields = useCallback((): DeviceVilFields => {
     const s = stateRef.current
     return {

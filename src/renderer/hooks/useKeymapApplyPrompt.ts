@@ -120,20 +120,19 @@ export function useKeymapApplyPrompt({
   // or QWERTY, before the stale apply resolves) discards that apply's
   // result instead of clobbering the new selection back to QWERTY.
   // `requestApply` itself resolves synchronously off `activeRewriteTable`
-  // now (no lookup to supersede), but still bumps this on every call — see
+  // (no lookup to supersede), but still bumps this on every call — see
   // its own comment.
   const requestSeqRef = useRef(0)
 
-  // RACE: the select routes directly through `onKeyboardLayoutChange`
-  // without this hook's own onChange-time lookup — a value change can
-  // land at any time, including while the confirm modal for a DIFFERENT
-  // pack is already open (e.g. open Colemak's warning, then
-  // pick Dvorak from the select before confirming — the pending modal
-  // would otherwise go on to rewrite Colemak's table against a keymap the
-  // user has already moved away from). Watching the value itself — rather
-  // than only closing the modal inline inside `handleKeyboardLayoutChange`
-  // — catches every path that can change it, not just this hook's own
-  // setter call.
+  // RACE: the select does not route through this hook's own onChange-time
+  // lookup — a value change can land at any time, including while the
+  // confirm modal for a DIFFERENT pack is already open (e.g. open
+  // Colemak's warning, then pick Dvorak from the select before confirming
+  // — the pending modal would otherwise go on to rewrite Colemak's table
+  // against a keymap the user has already moved away from). Watching the
+  // value itself — rather than only closing the modal inline inside
+  // `handleKeyboardLayoutChange` — catches every path that can change it,
+  // not just this hook's own setter call.
   const keyboardLayoutRef = useRef(keyboardLayout)
   useEffect(() => {
     const prev = keyboardLayoutRef.current
@@ -189,7 +188,7 @@ export function useKeymapApplyPrompt({
     setPendingApply(null)
   }, [keymapRestoreSeq])
 
-  // Plain display switch for every value — QWERTY included, no more
+  // Plain display switch for every value — QWERTY included, no
   // per-value branching. The layout-watch effect above independently
   // closes any pending modal once `keyboardLayout` actually changes as a
   // result of this call; the explicit reset here is belt-and-braces so the
@@ -210,11 +209,11 @@ export function useKeymapApplyPrompt({
   // there is nothing left to look up here. Stays defensive (falls through
   // to a no-op) so a stray call against QWERTY, an ineligible pack, or a
   // pack whose table hasn't resolved yet can't open a bogus modal. Still
-  // bumps `requestSeqRef` on every call (even though this function itself
-  // has no async gap for it to guard): if a Confirm for a PRIOR request is
-  // somehow still in flight when this fires (the visible Apply button is
-  // disabled for that whole window, so not normally user-reachable), the
-  // bump makes that stale Confirm's eventual
+  // bumps `requestSeqRef` on every call (even though there's no async gap
+  // for it to guard within THIS function): if a Confirm for a PRIOR
+  // request is somehow still in flight when this fires (the visible Apply
+  // button is disabled for that whole window, so not normally
+  // user-reachable), the bump makes that stale Confirm's eventual
   // resolution skip the QWERTY-reset / error-surfacing branch instead of
   // clobbering whatever this fresh request leads to — though its own
   // unconditional `setPendingApply(null)` can still close a modal this

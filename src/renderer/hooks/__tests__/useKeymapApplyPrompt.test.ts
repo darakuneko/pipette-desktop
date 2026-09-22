@@ -49,10 +49,10 @@ function dvorakTable() {
 // `activeRewriteTable` as a prop (as opposed to `.toEqual()`-comparing a
 // freshly-built one, where identity doesn't matter): the hook watches
 // `activeRewriteTable`'s own identity to close the modal when the active
-// pack's data changes — calling `colemakTable()`/
-// `dvorakTable()` fresh at both `setup()` and a later `rerender()` for
-// what a test intends as "the same, unchanged pack" would produce two
-// different `Map` instances and spuriously trip that watcher.
+// pack's data changes — calling `colemakTable()`/`dvorakTable()` fresh at
+// both `setup()` and a later `rerender()` for what a test intends as "the
+// same, unchanged pack" would produce two different `Map` instances and
+// spuriously trip that watcher.
 const COLEMAK_TABLE = colemakTable()
 const DVORAK_TABLE = dvorakTable()
 
@@ -286,10 +286,10 @@ describe('useKeymapApplyPrompt — simulation tab Apply flow (Plan-qwerty-select
     })
   })
 
-  // --- RACE: the select routes directly through `onKeyboardLayoutChange`
-  // without this hook's onChange-time lookup, so a `keyboardLayout` change
-  // can land at any time — while the modal for a DIFFERENT pack is already
-  // open. Must be caught by watching the value itself. ---
+  // --- RACE: the select does not route through this hook's onChange-time
+  // lookup, so a `keyboardLayout` change can land at any time — while the
+  // modal for a DIFFERENT pack is already open. Must be caught by watching
+  // the value itself. ---
 
   describe('layout-change race', () => {
     it('a layout change while the confirm modal is open for a DIFFERENT pack closes it (open Colemak, select Dvorak, Confirm must not fire)', () => {
