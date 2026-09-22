@@ -36,7 +36,7 @@ export interface Props {
 interface LegendSwatchProps {
   colorClass: string
   labelKey: string
-  /** When set, the label's former parenthetical explanation — hidden
+  /** When set, the label's parenthetical explanation — hidden
    *  behind a hover/focus tooltip instead of always-visible inline text.
    *  Rendered PLAIN, no visual affordance on the label itself (no
    *  underline, no special cursor) — same idiom every other tooltip
@@ -66,8 +66,7 @@ export function LegendSwatch({ colorClass, labelKey, tooltipKey }: LegendSwatchP
 }
 
 /** Collapses a `boolean | undefined` tri-state into one of three i18n
- *  keys — shared shape for "correctness" and "overlap", which were
- *  previously two structurally identical nested ternaries. */
+ *  keys — shared shape for "correctness" and "overlap". */
 function triLabel(
   value: boolean | undefined,
   yesKey: string,
