@@ -2,9 +2,9 @@
 // Shared protocol-scoping helpers for keycode serialize/deserialize.
 // Both main (favorite import/export) and renderer (Analyze snapshot
 // resolution) need to run a body under a specific vial protocol version
-// -- not the current global one -- then restore. Consolidates the two
-// semantics that actually differ: deserialize-only (no RAWCODES_MAP
-// rebuild needed) and serialize-safe (rebuild required).
+// -- not the current global one -- then restore. The two semantics that
+// actually differ: deserialize-only (no RAWCODES_MAP rebuild needed)
+// and serialize-safe (rebuild required).
 
 import { getProtocol, getRawcodesProtocol, setProtocol, recreateKeycodes } from './keycodes'
 

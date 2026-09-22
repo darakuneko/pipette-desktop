@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Logic / utility functions extracted from keycodes.ts
+// Logic / utility functions.
 
 import { keycodesV5 } from './keycodes-v5'
 import { keycodesV6 } from './keycodes-v6'
