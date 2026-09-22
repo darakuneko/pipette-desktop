@@ -317,7 +317,8 @@ describe('RunLogRecorder', () => {
       // event arrives via ~20ms HID polling — so a char USUALLY precedes
       // its own matrix press, not the other way around. This is the
       // primary case (see the module doc comment's char-correlation
-      // note).
+      // note — a permanent off-by-one: every char confirms the NEXT
+      // press instead of its own).
       const recorder = new RunLogRecorder()
       register(recorder, 'run-1', 0, 0, 1000, 0, 'a')
       recorder.record(ctx(), charEvent('a', 995))
