@@ -200,7 +200,7 @@ describe('sync-ipc SYNC_RESET_TARGETS — keyLabels / typingTestTexts (Task §A)
     expect(mockDeleteFilesByExactName).toHaveBeenCalledWith(`${TYPING_TEST_TEXT_SYNC_UNIT}.enc`)
   })
 
-  // C1: a rejected Drive delete must surface as a reset failure with a
+  // A rejected Drive delete must surface as a reset failure with a
   // unit-name-only message — not be silently discarded by the
   // underlying Promise.allSettled inside deleteMatchingFiles.
   it('reports failure with a unit-name-only message when a delete batch had a rejection', async () => {

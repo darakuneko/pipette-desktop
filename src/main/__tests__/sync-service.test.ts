@@ -50,9 +50,9 @@ const mockDeleteFile = vi.fn(async (_fileId: string): Promise<void> => {})
 vi.mock('../sync/google-drive', async () => {
   // `driveFileName`/`syncUnitFromFileName` are imported via `importActual`
   // (not hand-rolled) so this mock can never drift out of sync with the
-  // real filename ↔ sync-unit mapping again — a stale hand-rolled regex
-  // here hid a fresh-machine discovery gap for several stores because
-  // the test mock silently kept "supporting" a narrower set of filenames
+  // real filename ↔ sync-unit mapping — a stale hand-rolled regex
+  // here hides a fresh-machine discovery gap for several stores because
+  // the test mock silently keeps "supporting" a narrower set of filenames
   // than production code.
   const actual = await vi.importActual<typeof import('../sync/google-drive')>('../sync/google-drive')
   return {
@@ -810,7 +810,7 @@ describe('sync-service', () => {
       expect(mockRunPackGcAfterPass.mock.calls[0][0]).toEqual(['favorites/tapDance'])
     })
 
-    // M3: a unit that failed to merge this pass must be threaded through
+    // A unit that failed to merge this pass must be threaded through
     // as the second argument so pack-gc.ts can skip that store's sweep
     // (see pack-gc.test.ts for the skipSweep-per-store behavior itself).
     it('passes the failed sync unit as the second argument on a download pass', async () => {
@@ -1047,11 +1047,11 @@ describe('sync-service', () => {
     })
   })
 
-  // executeSync's own return value must distinguish a real
-  // completion from a silent skip (busy race, missing credentials) or a
-  // partial failure — callers (useDeviceLifecycle's packsPulledOnce
-  // once-flag, usePackCloudPull's error state) branch on this instead of
-  // assuming any non-throwing call succeeded.
+  // executeSync's own return value must distinguish a real completion
+  // from a silent skip (busy race, missing credentials) or a partial
+  // failure — callers (useDeviceLifecycle's packsPulledOnce once-flag,
+  // usePackCloudPull's error state) branch on this instead of assuming
+  // any non-throwing call succeeded.
   describe('executeSync return value contract (M1/M2)', () => {
     it('returns status: completed when every unit succeeds', async () => {
       mockListFiles.mockResolvedValue([])
@@ -1290,7 +1290,7 @@ describe('sync-service', () => {
       expect(result.undecryptable[0].fileId).toBe('f5')
     })
 
-    // C2: the index file can outlive every pack id it once listed (all
+    // The index file can outlive every pack id it once listed (all
     // tombstoned and GC'd) — hasI18nData/hasThemesData must still report
     // `true` from the index file's own presence alone in that dead zone.
     it('reports hasI18nData/hasThemesData true from the index file alone, with zero pack ids', async () => {
@@ -1371,7 +1371,10 @@ describe('sync-service', () => {
       expect(result.undecryptable).toEqual([])
     })
 
-    // scanRemoteData categorizes purely from syncUnitFromFileName.
+    // scanRemoteData categorizes purely from syncUnitFromFileName —
+    // unrecognized filenames (syncUnit === null) are silently dropped
+    // from every category, including keyboards (for a uid that only has
+    // this file) and themePacks.
     it('surfaces a uid whose only remote file is analyze_filters as a cloud keyboard', async () => {
       mockListFiles.mockResolvedValue([
         { id: 'f1', name: 'keyboards_uid-only-filters_analyze_filters.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
@@ -1642,11 +1645,11 @@ describe('sync-service', () => {
         expect(matchesScope(null, 'packs')).toBe(false)
       })
 
-      // Ordering trap: 'packs' must be checked BEFORE the
-      // unconditional key-labels/typing-test-texts `true`s below it in
-      // matchesScope — otherwise a 'packs'-scoped download would also
-      // pull those unrelated global units in, since their own checks
-      // don't care what scope was asked for.
+      // Ordering trap: 'packs' must be checked BEFORE the unconditional
+      // key-labels/typing-test-texts `true`s below it in matchesScope —
+      // otherwise a 'packs'-scoped download would also pull those unrelated
+      // global units in, since their own checks don't care what scope was
+      // asked for.
       describe('scope "packs"', () => {
         it('admits i18n and theme sync units', () => {
           expect(matchesScope('i18n/index', 'packs')).toBe(true)
@@ -1677,7 +1680,7 @@ describe('sync-service', () => {
         expect(isAnalyticsSyncUnit('keyboards/0x1234/settings')).toBe(false)
         expect(isAnalyticsSyncUnit('keyboards/0x1234/snapshots')).toBe(false)
         expect(isAnalyticsSyncUnit('keyboards/0x1234')).toBe(false)
-        // Legacy flat device form (no `/days/...`) is no longer recognised.
+        // Legacy flat device form (no `/days/...`) is not recognised.
         expect(isAnalyticsSyncUnit('keyboards/uid-a/devices/machineHash-xyz')).toBe(false)
       })
 
@@ -1721,10 +1724,8 @@ describe('sync-service', () => {
         expect(shouldDownloadSyncUnit(runLogUnit, connectScope, local)).toBe(false)
       })
 
-      // These three stores are discovery-included ("それ以外" column in
-      // the trigger matrix — no dedicated exclusion predicate like
-      // analytics/run-logs) — the fix here is purely that
-      // syncUnitFromFileName now recognizes their filenames at all;
+      // These three stores are discovery-included (no dedicated
+      // exclusion predicate like analytics/run-logs) —
       // shouldDownloadSyncUnit's own logic needs no changes for them.
       it('keeps key-labels, typing-test-texts, and analyze_filters under the connect-time scope shape', () => {
         const connectScope = { favorites: true as const, keyboard: 'uid-a' }
@@ -2797,7 +2798,7 @@ describe('sync-service', () => {
         meta: { id: 't1', name: 'Ocean', version: '1.0.0', savedAt: '2026-06-01T00:00:00.000Z', updatedAt: '2026-06-01T00:00:00.000Z' },
       },
     ])('$label-index: remote-only id merges alongside the pre-existing local id (union, not wholesale replace)', async ({ syncUnit, fileName, fileId, bundleType, dir, meta }) => {
-      // This is now entry-level LWW: both ids survive as a union, and
+      // Index merge is entry-level LWW: both ids survive as a union, and
       // since local has an id remote doesn't have yet, the merged index
       // is marked for re-upload so remote converges too.
       await mkdir(join(mockUserDataPath, 'sync', dir), { recursive: true })
@@ -2831,13 +2832,13 @@ describe('sync-service', () => {
     })
 
     it('two machines each install a different pack while offline: next sync converges to the union, neither pack is lost', async () => {
-      // The headline M1 scenario: machine A installs pack 'pack-a'
-      // (already on remote); machine B (this process) independently
-      // installed 'pack-b' locally before ever syncing. A naive
-      // file-level LWW would have machine B's later local timestamp win
-      // wholesale, permanently erasing 'pack-a' from both the local
-      // index AND — once B uploads — from remote too, orphaning its
-      // pack body forever. Entry-level LWW must instead keep both.
+      // Machine A installs pack 'pack-a' (already on remote); machine B
+      // (this process) independently installed 'pack-b' locally before
+      // ever syncing. A naive file-level LWW would have machine B's
+      // later local timestamp win wholesale, permanently erasing
+      // 'pack-a' from both the local index AND — once B uploads — from
+      // remote too, orphaning its pack body forever. Entry-level LWW
+      // must instead keep both.
       await mkdir(join(mockUserDataPath, 'sync', 'i18n'), { recursive: true })
       await writeFile(
         join(mockUserDataPath, 'sync', 'i18n', 'index.json'),
@@ -3205,16 +3206,16 @@ describe('sync-service', () => {
 
     it('S1: a hostile packId is contained on the poll path too — not retried every 3 minutes', async () => {
       // The hostile-packId test above only exercises the manual
-      // sync path (executeSync). applySyncedPackBody now THROWS
+      // sync path (executeSync). applySyncedPackBody THROWS
       // MalformedSyncBundleError for a rejected packId instead of
       // returning false as a bare Error would — this lets the poll's
       // `instanceof MalformedSyncBundleError` branch recognize the
       // rejection as permanent and skip retrying it, exactly like the
-      // malformed-generic-bundle poll test above. Before this fix, a
-      // bare Error looked identical to a transient I/O failure, which
-      // the poll deliberately DOES keep retrying — so a hostile remote
-      // filename would have triggered a fresh download+decrypt attempt
-      // every 3 minutes forever.
+      // malformed-generic-bundle poll test above. A bare Error looks
+      // identical to a transient I/O failure, which the poll
+      // deliberately DOES keep retrying — so a hostile remote filename
+      // would trigger a fresh download+decrypt attempt every 3 minutes
+      // forever.
       const evilFile = { id: 'evil1', name: 'i18n_packs_../evil.enc', modifiedTime: '2026-06-01T00:00:00.000Z' }
       const evilEnvelope = makeBundleEnvelope('i18n/packs/../evil', '2026-06-01T00:00:00.000Z', {
         type: 'i18n-pack',
@@ -3299,8 +3300,8 @@ describe('sync-service', () => {
       // separator, producing a syncUnit like 'favorites/../../evil'.
       // Every `/`-split segment of `syncUnit` must be validated before
       // mergeSyncUnit's settings / generic branches join it into a
-      // filesystem path — this is the exposure M2 closes
-      // centrally, independent of the i18n/theme pack-index fix above.
+      // filesystem path — this is the exposure, independent of the
+      // i18n/theme pack-index fix above.
       const hostileFile = { id: 'evil1', name: 'favorites_../../evil.enc', modifiedTime: '2026-06-01T00:00:00.000Z' }
       mockListFiles.mockResolvedValue([hostileFile, PASSWORD_CHECK_DRIVE_FILE])
       mockDownloadFile

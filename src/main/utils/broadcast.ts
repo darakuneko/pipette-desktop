@@ -5,8 +5,9 @@ import { BrowserWindow } from 'electron'
 
 /**
  * Send `channel` (with optional `args`) to every open `BrowserWindow`.
- * The only intentional holdout is `sync-ipc.ts`'s `getDialogWindow()`
- * fallback
+ * `i18n-startup-sync.ts`, `theme-pack-ipc.ts`, and `sync-ipc.ts`'s
+ * progress-event emitter are unified onto this helper too — the only
+ * intentional holdout is `sync-ipc.ts`'s `getDialogWindow()` fallback
  * (`BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]`),
  * which anchors a native save/open DIALOG to one window and is not a
  * broadcast at all.

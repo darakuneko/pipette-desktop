@@ -92,8 +92,8 @@ describe('google-drive', () => {
     })
 
     it('returns null for the legacy flat device JSONL filename shape', () => {
-      // The flat `{hash}.enc` form (no `_days_` segment) was retired with
-      // the v7 cutover; it must no longer round-trip into a sync unit.
+      // The flat `{hash}.enc` form (no `_days_` segment) must not
+      // round-trip into a sync unit.
       expect(syncUnitFromFileName('keyboards_0x1234_devices_hash-abc.enc')).toBeNull()
     })
 
@@ -194,7 +194,7 @@ describe('google-drive', () => {
     })
   })
 
-  // S3: the local-wins pack-body upload path (sync-service.ts's
+  // The local-wins pack-body upload path (sync-service.ts's
   // uploadSyncUnit + pack-bundle-merge.ts's pinPackBodyMtimeAfterUpload)
   // pins the local file's mtime to whatever `modifiedTime` Drive just
   // assigned this revision — closing a clock-skew loop where a
@@ -321,8 +321,8 @@ describe('google-drive', () => {
 
   // A Drive listing spanning more than one page must be followed to
   // completion via `nextPageToken` — a single-page cap means a large
-  // appDataFolder (many keyboards/devices/per-day analytics
-  // files) silently loses everything past the first 1000 results.
+  // appDataFolder (many keyboards/devices/per-day analytics files)
+  // silently loses everything past the first 1000 results.
   describe('listFiles pagination', () => {
     afterEach(() => {
       vi.unstubAllGlobals()

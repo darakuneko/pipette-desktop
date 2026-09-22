@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Focused coverage for `collectAllSyncUnits`'s built-in English
-// exclusion: the entry's pack body is a
-// trivial placeholder every machine ensures identically, so it must
-// never be pushed as its own "i18n/packs/{id}" sync unit — only the
-// index unit (which carries its *position*) should include it. No
-// pre-existing test file covered `sync-bundle.ts` before this, so this
-// file stays scoped to that one behavior rather than attempting full
-// bundle coverage in the same pass.
+// exclusion: the entry's pack body is a trivial placeholder every
+// machine ensures identically, so it must never be pushed as its own
+// "i18n/packs/{id}" sync unit — only the index unit (which carries its
+// *position*) should include it. This file stays scoped to that one
+// behavior rather than attempting full bundle coverage.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
