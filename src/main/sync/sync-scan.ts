@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Remote data inspection: listing/categorizing what's on Drive without
 // merging it into local state (used by the sync settings scan UI and
-// the undecryptable-files diagnostic). Split out of sync-service.ts to
-// keep it under the project's 800-line Service/Util size ceiling.
+// the undecryptable-files diagnostic).
 
 import { decrypt } from './sync-crypto'
 import {

@@ -3,8 +3,6 @@
 // cloud state against local + `uploaded` state before an upload pass,
 // and the Sync > Typing lazy-expand UI's on-demand cloud reads (list
 // remote hashes/days, delete a remote day, fetch a single remote day).
-// Split out of sync-service.ts to keep it under the project's 800-line
-// Service/Util size ceiling.
 
 import { app } from 'electron'
 import { join } from 'node:path'
