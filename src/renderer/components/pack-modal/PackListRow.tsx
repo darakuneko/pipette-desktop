@@ -2,9 +2,8 @@
 //
 // Shared "one entry" row scaffold for the three pack modals' Installed
 // tab. Two shapes exist, differing only in their inner content layout
-// (both now support the same drag-grip `sideColumn` + `draggable`
-// wiring, per Phase 2 — see the plan's note that the shapes would
-// converge once reorder landed everywhere):
+// (both support the same drag-grip `sideColumn` + `draggable`
+// wiring):
 //   - "stacked" (Language Packs, Theme Packs): first line has an
 //     inline leading control (select circle) + name + metadata
 //     columns + primary actions, second line has the result badge +
@@ -16,10 +15,9 @@
 //     different wrapper classes, so it is passed through as-is rather
 //     than decomposed into badge/hubActions).
 //
-// Phase 3 may unify the second line further (Delete cascade, Updated
-// column, Author/isMine) — the shape discriminator still isn't
-// load-bearing API, just today's cheapest way to keep three rows'
-// worth of pre-existing markup pixel-identical.
+// The shape discriminator isn't load-bearing API, just today's
+// cheapest way to keep three rows' worth of pre-existing markup
+// pixel-identical.
 
 import type { ReactNode } from 'react'
 

@@ -5,18 +5,7 @@
 // snapshot the pre-operation id set → decide overwrite vs. insert →
 // compute the sorted-insert position (skipped for the 'free' Name-sort
 // state, or for an overwrite) → persist via `reorder` → toolbar
-// feedback text → scroll the affected row into view. This used to be
-// duplicated inline at all 5 call sites (LanguagePacksModal's
-// persistImportedPack covers both its own file-import and Hub-download
-// paths; Key Labels and Theme Packs each have one of each) — the
-// duplication had already drifted once (Theme Packs' Hub-download path
-// silently swallowed a failed reorder that the file-import path
-// checked; see the P2 note below).
-//
-// Also absorbs the (removed) useImportFeedback and useScrollRowIntoView
-// hooks — every site that needed one needed the other, so splitting
-// them into two hooks bought nothing but two extra call sites to keep
-// in sync.
+// feedback text → scroll the affected row into view.
 //
 // Each caller still owns the actual store call (validation, coverage
 // computation, Hub metadata enrichment, hub auto-sync — these differ
@@ -36,7 +25,7 @@
 //
 //   await placement.place({ id, name }, { alwaysInsert: true })
 //
-// RAPID-INSERT RACE (P1): two placements fired in quick succession (two
+// RAPID-INSERT RACE: two placements fired in quick succession (two
 // imports, or an import racing a Hub download) must not each compute
 // their insert position from a stale render closure — the second one
 // needs to see the first's already-inserted entry, or its `reorder`
@@ -70,7 +59,7 @@
 // rename auto-sync, etc.), where the race does not apply in practice —
 // those are separate user-triggered actions with real time between them.
 //
-// REORDER-FAILURE VISIBILITY (P2): a failed sorted-insert `reorder`
+// REORDER-FAILURE VISIBILITY: a failed sorted-insert `reorder`
 // call is surfaced via `onReorderError` (each site's existing
 // setActionError) but does NOT suppress the "Imported {{name}}"
 // feedback — the import/download itself genuinely succeeded (the file
@@ -79,7 +68,7 @@
 // coherent read: the entry is there (probably at the bottom, wherever
 // the store's own append landed it), the position just didn't stick.
 //
-// FEEDBACK/CLOSE RACE (P2): if a placement's `reorder` (or the whole
+// FEEDBACK/CLOSE RACE: if a placement's `reorder` (or the whole
 // call) resolves after the modal has already closed, showing feedback
 // then would surface stale text on the next open. `showFeedback` checks
 // an `open` ref at the moment it would actually display something, not
@@ -166,7 +155,7 @@ export interface UseImportPlacementResult {
    * Call after the store operation resolves with the placed entry's
    * `{ id, name }`. Serialized — queues behind any in-flight placement
    * so both compute their sorted-insert position against up-to-date
-   * data (see the P1 note in the module doc).
+   * data.
    */
   place: (result: NameSortEntry, opts?: PlacementOptions) => Promise<void>
   /**
@@ -185,12 +174,11 @@ export interface UseImportPlacementResult {
    * same-id dedupe collapsed `results`, so a 2-file selection that
    * happens to dedupe down to one placed result (both files overwrote
    * the same existing pack) still reads as a batch and does not scroll.
-   * Defaults to `results.length` — a caller with no dedupe step of its
-   * own (there is currently only one caller, `useImportBatch`, and it
-   * always passes this explicitly) sees identical behavior to before
-   * this parameter existed. Never affects the reorder computation or
-   * the last-result feedback anchor, both of which still operate on the
-   * actual (deduped) `results`.
+   * Defaults to `results.length` (there is currently only one caller,
+   * `useImportBatch`, and it always passes this explicitly). Never
+   * affects the reorder computation or the last-result feedback
+   * anchor, both of which still operate on the actual (deduped)
+   * `results`.
    */
   placeMany: (results: NameSortEntry[], snapshot: BatchSnapshot, originalCount?: number) => Promise<void>
 }
@@ -262,7 +250,7 @@ export function useImportPlacement({
   // Unmount: tear down any pending timer.
   useEffect(() => clearTimer, [clearTimer])
 
-  // Scroll-into-view (absorbed from the removed useScrollRowIntoView).
+  // Scroll-into-view.
   // An effect keyed off `scrollTarget` so it runs after the triggering
   // state update(s) — the sorted-insert reorder and the resulting
   // row-list re-render — have committed and painted; scrolling
@@ -349,14 +337,12 @@ export function useImportPlacement({
         : tRef.current('common.updatedNamed', { name: last.name }))
       // Auto-scroll only when the batch collapsed to a single result —
       // for a 2+ file batch there is no single "the" imported row to
-      // jump to (see the multi-import UX plan's no-auto-scroll
-      // requirement), so leave the user's scroll position alone rather
-      // than jumping to an arbitrary one of several new rows. Gated on
+      // jump to, so leave the user's scroll position alone rather than
+      // jumping to an arbitrary one of several new rows. Gated on
       // `originalCount`, NOT `results.length`: two files that both
       // overwrote the same existing pack still collapse `results` to a
       // single entry, but the user genuinely selected 2 files, so this
-      // must still read as a batch (see the P1 "count/scroll uses
-      // deduped set" fix note in useImportBatch.ts).
+      // must still read as a batch.
       if (originalCount <= 1) {
         scheduleScroll(`${rowTestidPrefixRef.current}-row-${last.id}`)
       }

@@ -49,8 +49,7 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
       // Merge cache-known hashes (immediate) with cloud-discovered
       // hashes (authoritative) so a device we've never fetched from
       // still appears in the Sync > Typing tree. Cache-known hashes come
-      // from the device-info bundle (the dedicated remote-hash IPC was
-      // dropped when the Analyze device filter moved to labelled infos).
+      // from the device-info bundle.
       const [infoBundle, cloud] = await Promise.all([
         window.vialAPI.typingAnalyticsListDeviceInfos(uid),
         window.vialAPI.typingAnalyticsListRemoteCloudHashes(uid),

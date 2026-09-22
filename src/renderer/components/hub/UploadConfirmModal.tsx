@@ -17,7 +17,7 @@ export type UploadVisibility = 'public' | 'private'
 export interface UploadChoice {
   visibility: UploadVisibility
   /** Private link lifetime in days (1–180). `null` for public uploads,
-   *  which have no expiry. The Hub no longer supports unlimited private
+   *  which have no expiry. The Hub does not support unlimited private
    *  links — omitting the value server-side applies the 180-day max. */
   expiresInDays: number | null
 }
@@ -35,7 +35,7 @@ interface Props {
 }
 
 /** Selectable private-link expiry presets, in days. The Hub caps private
- *  links at 180 days and no longer allows an unlimited option. */
+ *  links at 180 days and does not allow an unlimited option. */
 export const EXPIRY_PRESETS: number[] = [1, 3, 7, 30, 60, 90, 180]
 const DEFAULT_EXPIRY_DAYS = 7
 

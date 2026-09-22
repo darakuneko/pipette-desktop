@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Installed-tab row components for LanguagePacksModal, split out per
-// file-splitting.md (LanguagePacksModal.tsx alone exceeded the 750-line
-// "split immediately" threshold once Phase 3 added the Author column
-// and isMine gating). No behavior change — this is a pure move.
+// Installed-tab row components for LanguagePacksModal.
 
 import { useTranslation } from 'react-i18next'
 import { Circle, CheckCircle2, GripVertical } from 'lucide-react'

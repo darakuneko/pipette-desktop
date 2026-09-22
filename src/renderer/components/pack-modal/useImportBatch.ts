@@ -27,13 +27,12 @@
 // itself via `setActionError`, since it doesn't fit the per-file
 // success/failure shape below).
 //
-// RE-ENTRANCY (mirrors the keymap-apply latch, previously duplicated in
-// each modal): a double-click on Import before React re-renders the
-// now-disabled button must not queue a second concurrent batch on top
-// of the first. `importInFlightRef` is the actual guard, checked
-// synchronously; `importing` just mirrors it into render so the
-// disabled UI reflects it a frame sooner than a double-click could
-// slip through.
+// RE-ENTRANCY (mirrors the keymap-apply latch): a double-click on
+// Import before React re-renders the now-disabled button must not
+// queue a second concurrent batch on top of the first.
+// `importInFlightRef` is the actual guard, checked synchronously;
+// `importing` just mirrors it into render so the disabled UI reflects
+// it a frame sooner than a double-click could slip through.
 //
 // This same ref is exposed as `isImportingRef` for callers that need a
 // concurrent-safe "is a batch in flight" read outside of render — e.g.

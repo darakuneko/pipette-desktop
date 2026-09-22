@@ -6,11 +6,10 @@
 //   - Key Labels fetches exactly once on first mount, regardless of
 //     subsequent open/close cycles.
 // Both are preserved via the `onlyOnce` option rather than collapsed
-// into a single behaviour, per the Phase 1 "no visible/behavioural
-// change" rule. `onlyOnce` is a stable per-call-site choice (never
-// toggles at runtime), so two plain effects — one gated on it, one
-// gated on `open` — are clearer than folding both strategies into a
-// single effect via a computed dependency-array entry.
+// into a single behaviour. `onlyOnce` is a stable per-call-site choice
+// (never toggles at runtime), so two plain effects — one gated on it,
+// one gated on `open` — are clearer than folding both strategies into
+// a single effect via a computed dependency-array entry.
 
 import { useEffect, useState } from 'react'
 

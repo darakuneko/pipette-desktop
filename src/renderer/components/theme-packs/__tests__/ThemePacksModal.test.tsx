@@ -1081,13 +1081,9 @@ describe('ThemePacksModal', () => {
   })
 
   // --- regression: Delete must not cascade to Hub for packs the user
-  // does not own (fix/delete-ownership-gate). A downloaded pack also
-  // carries hubPostId (for Sync/freshness linkage) but is never
-  // deletable on Hub by this user — the old code attempted the Hub
-  // delete regardless of ownership, which failed for a foreign post
-  // (or a deactivated uploader account) and then blocked the local
-  // delete too, leaving the user unable to remove a downloaded pack at
-  // all. See KeyLabelsModal / LanguagePacksModal for the same pattern. ---
+  // does not own. A downloaded pack also carries hubPostId (for
+  // Sync/freshness linkage) but is never deletable on Hub by this
+  // user. See KeyLabelsModal / LanguagePacksModal for the same pattern. ---
 
   it('a pack downloaded from someone else deletes locally only — no Hub call at all (THE regression)', async () => {
     metas = [meta({ id: 'foreign-del', name: 'Foreign Pack', hubPostId: 'hp-foreign-del', uploaderName: 'pipette' })]
@@ -1145,7 +1141,7 @@ describe('ThemePacksModal', () => {
     expect(screen.getByTestId('theme-packs-hub-download-hp-del1')).toBeTruthy()
   })
 
-  // --- Phase 2: drag reorder + Name sort -----------------------------------
+  // --- drag reorder + Name sort --------------------------------------------
 
   it('renders a drag grip for every installed pack row', () => {
     metas = [meta({ id: 'p1', name: 'My Theme' })]

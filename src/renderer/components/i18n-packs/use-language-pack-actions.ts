@@ -2,8 +2,7 @@
 //
 // Per-row Installed-tab actions: Open on Hub, Sync / Update / Remove /
 // Upload / Delete, "not set keys" lookup, and Export (including the
-// built-in English browser-download branch). Split out of
-// LanguagePacksModal (Task-split-pack-modals) — `pushPackToHub` is
+// built-in English browser-download branch). `pushPackToHub` is
 // returned because the sibling import hook's rename-commit and
 // overwrite-reimport paths reuse it for their own auto-sync step.
 

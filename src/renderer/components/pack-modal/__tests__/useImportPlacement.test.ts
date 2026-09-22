@@ -471,7 +471,7 @@ describe('useImportPlacement', () => {
       // overwrote the same existing pack), but the caller passes the
       // true pre-dedupe count (2) explicitly — this must suppress the
       // scroll that a bare `results.length <= 1` inference would
-      // otherwise trigger (see useImportBatch.ts's P1 fix note).
+      // otherwise trigger.
       await act(async () => {
         const snapshot = result.current.snapshotEntries()
         await result.current.placeMany([{ id: 'd', name: 'Delta' }], snapshot, 2)

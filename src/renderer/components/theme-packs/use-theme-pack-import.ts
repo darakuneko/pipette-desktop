@@ -2,11 +2,10 @@
 //
 // Import surface for Theme Packs: multi-file import batch, inline
 // rename commit (auto-sync on a Hub-linked pack), the explicit cloud
-// pull, and Hub-download-to-import. Split out of ThemePacksModal
-// (Task-split-pack-modals) — mirrors use-language-pack-import.ts; rename
-// lives here rather than in the actions hook because it needs
-// `useImportBatch`'s own `isImportingRef` re-entrancy guard, which only
-// exists once this hook creates it.
+// pull, and Hub-download-to-import. Mirrors
+// use-language-pack-import.ts; rename lives here rather than in the
+// actions hook because it needs `useImportBatch`'s own `isImportingRef`
+// re-entrancy guard, which only exists once this hook creates it.
 
 import { useCallback, useEffect } from 'react'
 import type { TFunction } from 'i18next'

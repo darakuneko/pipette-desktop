@@ -847,13 +847,9 @@ describe('LanguagePacksModal', () => {
   })
 
   // --- regression: Delete must not cascade to Hub for packs the user
-  // does not own (fix/delete-ownership-gate). A downloaded pack also
-  // carries hubPostId (for Sync/freshness linkage) but is never
-  // deletable on Hub by this user — the old code attempted the Hub
-  // delete regardless of ownership, which failed for a foreign post
-  // (or a deactivated uploader account) and then blocked the local
-  // delete too, leaving the user unable to remove a downloaded pack at
-  // all. See KeyLabelsModal / ThemePacksModal for the same pattern. ---
+  // does not own. A downloaded pack also carries hubPostId (for
+  // Sync/freshness linkage) but is never deletable on Hub by this
+  // user. See KeyLabelsModal / ThemePacksModal for the same pattern. ---
 
   it('a pack downloaded from someone else deletes locally only — no Hub call at all (THE regression)', async () => {
     storeMetas = [meta({ id: 'foreign-del', name: 'Foreign Pack', hubPostId: 'hp-foreign-del', uploaderName: 'pipette' })]
@@ -1352,7 +1348,7 @@ describe('LanguagePacksModal', () => {
     expect(screen.queryByTestId('language-packs-error')).toBeNull()
   })
 
-  // --- Phase 2: drag reorder + Name sort -----------------------------------
+  // --- drag reorder + Name sort --------------------------------------------
 
   // These two only exercise the pre-load fallback: `storeMetas` here has
   // no real `builtin-english` entry (the mocked store never runs

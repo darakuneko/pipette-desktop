@@ -2,8 +2,7 @@
 //
 // Background recheck for installed language packs whose stored
 // `matchedBaseVersion` predates the current English baseline
-// (`BASE_REVISION` bump). Split out of LanguagePacksModal
-// (Task-split-pack-modals) — this effect only reads `store.metas` and
+// (`BASE_REVISION` bump). This effect only reads `store.metas` and
 // re-applies coverage-complete packs, so it does not touch any other
 // modal state.
 

@@ -10,8 +10,7 @@
 // `fetchPage` / `errorMessage` / `onSearchStart` / `onError` are kept in
 // refs so the effects only depend on the primitive `open` / `activeTab`
 // / `search` inputs — a fresh callback identity on every render must
-// not re-arm the debounce timer (this mirrors the ref pattern the
-// original KeyLabelsModal already used to avoid an update loop).
+// not re-arm the debounce timer.
 //
 // `clearResultsOnError` preserves a real asymmetry: Key Labels clears
 // the visible list on a failed search, i18n/theme packs leave the
@@ -29,18 +28,10 @@
 //
 // A rejected `fetchPage` promise is folded into the same failure path
 // as an unsuccessful `{ success: false }` response (see the inner
-// try/catch in `runSearch`). This is an intentional deviation from the
-// original per-modal code, which had no such handling:
-//   - i18n/theme wrapped the await in try/finally with no catch, so a
-//     rejection reset `hubSearching` but surfaced no error (silent,
-//     relying on an unhandled rejection).
-//   - Key Labels had no try/finally at all, so a rejection left
-//     `hubSearching` stuck `true` forever (a latent stuck-spinner bug).
-// Routing the rejection through the normal failure branch fixes both:
-// the spinner always clears, and the user now sees the translated
-// error message instead of silence — while `clearResultsOnError` and
+// try/catch in `runSearch`): the spinner always clears, and the user
+// sees the translated error message — while `clearResultsOnError` and
 // `markSearchedOnFailure` still apply exactly as they would for a
-// non-throwing failed response, so no other behaviour changes.
+// non-throwing failed response.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { compareNames } from './useNameSort'
@@ -109,10 +100,7 @@ export function useHubSearchList<TItem extends { name: string }>(
       }
       if (result.success && result.data) {
         setHubSearched(true)
-        // Name-sorted for all three modals (ports Key Labels' own
-        // `buildHubRows` sort into this shared path so i18n/theme Hub
-        // search results are no longer left in whatever order the
-        // server returned).
+        // Name-sorted for all three modals.
         const sorted = result.data.items.slice().sort((a, b) => compareNames(a.name, b.name))
         setHubResults(sorted)
         if (!query.trim()) setHubDefaultResults(sorted)

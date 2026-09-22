@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Per-row Installed-tab actions for Theme Packs: Export, Delete (with
-// the owned-post Hub cascade), Upload / Update / Sync / Remove.
-// Split out of ThemePacksModal (Task-split-pack-modals) — mirrors
+// the owned-post Hub cascade), Upload / Update / Sync / Remove. Mirrors
 // use-language-pack-actions.ts; `pushPackToHub` is returned because the
 // sibling import hook's rename-commit and multi-file batch reuse it for
 // their own auto-sync step.

@@ -2,9 +2,6 @@
 //
 // Find-on-Hub row for Theme Packs: wraps the shared PackHubResultRow
 // with a Preview toggle (leadingActions) ahead of the Download button.
-// Split out of ThemePacksModal (Task-split-pack-modals) — it was
-// already a standalone function component defined below the modal, so
-// this extraction only moves it into its own module.
 
 import { useTranslation } from 'react-i18next'
 import { PackHubResultRow } from '../pack-modal/PackHubResultRow'
