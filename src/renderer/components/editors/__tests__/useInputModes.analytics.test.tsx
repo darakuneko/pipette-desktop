@@ -171,7 +171,7 @@ describe('useInputModes — typing analytics dispatch', () => {
     expect(mockTypingAnalyticsEvent).not.toHaveBeenCalled()
   })
 
-  it('does not tag (or even send) a per-minute analytics event for a press made while genuinely armed-waiting (gate split: P2 restored)', async () => {
+  it('does not tag (or even send) a per-minute analytics event for a press made while genuinely armed-waiting', async () => {
     // Distinct from the "pristine, never-restarted" case above: this
     // scenario has ALREADY gone through the mount-time config-sync effect
     // (flushed below), so `runLogLabelRef` (the run-log's own, broader

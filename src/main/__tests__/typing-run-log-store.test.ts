@@ -335,7 +335,7 @@ describe('typing-run-log-store', () => {
     })
   })
 
-  describe('lineBreaks (line timeline PR1)', () => {
+  describe('lineBreaks', () => {
     // 4 words (indices 0-3) so the terminal boundary (words.length - 1 = 3)
     // and the entry just before it (words.length - 2 = 2) are both
     // meaningful against `words.length`.

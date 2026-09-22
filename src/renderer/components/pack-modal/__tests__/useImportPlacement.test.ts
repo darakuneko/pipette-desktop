@@ -99,7 +99,7 @@ describe('useImportPlacement', () => {
     expect(result.current.feedback).toBe('Imported Mu')
   })
 
-  it('P2 (theme DL bug): a failed reorder surfaces onReorderError but still shows "Imported" feedback', async () => {
+  it('a failed reorder surfaces onReorderError but still shows "Imported" feedback', async () => {
     const reorder = vi.fn().mockResolvedValue({ success: false, error: 'disk full' })
     const onReorderError = vi.fn()
     const { result } = renderHook(() => useImportPlacement({
@@ -124,7 +124,7 @@ describe('useImportPlacement', () => {
     expect(result.current.feedback).toBe('Imported Zeta')
   })
 
-  it('P1 race: a second rapid placement computes its order against the first\'s already-settled insert, not a stale list', async () => {
+  it('a second rapid placement computes its order against the first\'s already-settled insert, not a stale list', async () => {
     let resolveFirstReorder!: (value: { success: boolean }) => void
     const reorder = vi.fn()
       .mockImplementationOnce(() => new Promise<{ success: boolean }>((resolve) => { resolveFirstReorder = resolve }))
@@ -177,7 +177,7 @@ describe('useImportPlacement', () => {
     expect(onReorderError).not.toHaveBeenCalled()
   })
 
-  it('P2 close race: a placement resolving after close does not show feedback, even on reopen', async () => {
+  it('a placement resolving after close does not show feedback, even on reopen', async () => {
     let resolveReorder!: (value: { success: boolean }) => void
     const reorder = vi.fn().mockImplementation(() => new Promise<{ success: boolean }>((resolve) => { resolveReorder = resolve }))
 
@@ -251,7 +251,7 @@ describe('useImportPlacement', () => {
     expect(result.current.feedback).toBeNull()
   })
 
-  it('placeMany (P1 batch race fix): existing A,D; importing B then C lands fully sorted A,B,C,D in one reorder call, with no rerender in between', async () => {
+  it('placeMany (batch race fix): existing A,D; importing B then C lands fully sorted A,B,C,D in one reorder call, with no rerender in between', async () => {
     const reorder = vi.fn().mockResolvedValue({ success: true })
     const onReorderError = vi.fn()
     const { result } = renderHook(() => useImportPlacement({
@@ -450,7 +450,7 @@ describe('useImportPlacement', () => {
     }
   })
 
-  it('P1-a fix: an explicit originalCount overrides results.length for scroll suppression — a lone deduped result from a 2-file selection does not scroll', async () => {
+  it('an explicit originalCount overrides results.length for scroll suppression — a lone deduped result from a 2-file selection does not scroll', async () => {
     const reorder = vi.fn().mockResolvedValue({ success: true })
     const { result } = renderHook(() => useImportPlacement({
       open: true,

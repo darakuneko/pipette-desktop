@@ -66,7 +66,7 @@ function renderKeyboardView(props: Partial<UseLayoutPickerOptions>) {
   return utils
 }
 
-describe('useLayoutPicker — Keyboard tab read-only enforcement (Plan-qwerty-select-no-rewrite v7, FIX A)', () => {
+describe('useLayoutPicker — Keyboard tab read-only enforcement', () => {
   it('a plain click on the picker key does nothing when handleKeycodeSelect/handlePickerMultiSelect are both omitted (simulation tab)', () => {
     const handleKeycodeSelect = vi.fn()
     const handlePickerMultiSelect = vi.fn()

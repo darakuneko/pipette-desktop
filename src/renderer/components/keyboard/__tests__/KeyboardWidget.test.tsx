@@ -148,7 +148,7 @@ describe('KeyboardWidget decal handling', () => {
   // MB-44 defines its bottom-row Blocker via the KLE `d: true` flag. The
   // widget must skip those keys instead of rendering them as a small
   // unlabelled cap.
-  it('does not render Blocker decal from MB-44 fixture (issue #129)', () => {
+  it('does not render Blocker decal from MB-44 fixture', () => {
     const fixturePath = join(
       __dirname,
       '../../../../..',

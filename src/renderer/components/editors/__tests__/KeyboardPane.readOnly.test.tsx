@@ -58,7 +58,7 @@ function baseProps() {
   }
 }
 
-describe('KeyboardPane — readOnly (Plan-qwerty-select-no-rewrite v7)', () => {
+describe('KeyboardPane — readOnly', () => {
   it('readOnly blocks a real click on the rendered key from reaching onKeyClick', () => {
     const onKeyClick = vi.fn()
     const { container } = render(

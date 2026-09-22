@@ -330,7 +330,7 @@ describe('ThemePacksModal', () => {
     await waitFor(() => expect(importFromDialog).toHaveBeenCalled())
   })
 
-  it('P1-b: starting a rename then triggering an import cancels the edit instead of letting it commit mid-batch', async () => {
+  it('starting a rename then triggering an import cancels the edit instead of letting it commit mid-batch', async () => {
     metas = [meta({ id: 'r2', name: 'Old Name' })]
     let resolveDialog!: (value: { canceled: boolean; files: Array<{ filePath: string; raw?: unknown; parseError?: string }> }) => void
     importFromDialog.mockImplementationOnce(() => new Promise((resolve) => { resolveDialog = resolve }))
@@ -656,7 +656,7 @@ describe('ThemePacksModal', () => {
     expect(banner.textContent).toContain('Invalid theme colors')
   })
 
-  it('P1 fix: importing files that interleave with existing rows (existing A,D; import B,C) lands fully sorted A,B,C,D in one reorder call', async () => {
+  it('importing files that interleave with existing rows (existing A,D; import B,C) lands fully sorted A,B,C,D in one reorder call', async () => {
     metas = [meta({ id: 'a', name: 'Alpha' }), meta({ id: 'd', name: 'Delta' })]
     const rawB = { name: 'Beta', version: '1', colorScheme: 'dark', colors: {} }
     const rawC = { name: 'Charlie', version: '1', colorScheme: 'dark', colors: {} }
@@ -683,7 +683,7 @@ describe('ThemePacksModal', () => {
     expect(reorderFn).toHaveBeenCalledWith(['a', 'b', 'c', 'd'])
   })
 
-  it('hub-sync failure after import is reported against the originating filename, not the pack name (P2a)', async () => {
+  it('hub-sync failure after import is reported against the originating filename, not the pack name', async () => {
     metas = [meta({ id: 'a', name: 'Alpha' })]
     const raw = { name: 'Existing Pack', version: '1', colorScheme: 'dark', colors: {} }
     importFromDialog.mockResolvedValueOnce({
@@ -904,7 +904,7 @@ describe('ThemePacksModal', () => {
     await waitFor(() => expect(applyImport).toHaveBeenCalled())
   })
 
-  it('sync refreshes uploaderName/hubUpdatedAt via a name-matched Hub list lookup (Phase 3)', async () => {
+  it('sync refreshes uploaderName/hubUpdatedAt via a name-matched Hub list lookup', async () => {
     metas = [meta({ id: 'sy2', name: 'Sync Me', hubPostId: 'hp-sy2' })]
     vialAPI.hubDownloadThemePost.mockResolvedValueOnce({
       success: true,
@@ -1015,7 +1015,7 @@ describe('ThemePacksModal', () => {
     expect(screen.getByTestId('theme-packs-sync-nw2')).toBeTruthy()
   })
 
-  it('update and remove buttons are visible when hubCanWrite is true and the row is mine (isMine gate, Phase 3)', () => {
+  it('update and remove buttons are visible when hubCanWrite is true and the row is mine (isMine gate)', () => {
     metas = [meta({ id: 'w1', name: 'Write Hub', hubPostId: 'hp-w1', uploaderName: 'me' })]
     render(
       <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} hubCanWrite currentDisplayName="me" />,
@@ -1025,7 +1025,7 @@ describe('ThemePacksModal', () => {
     expect(screen.queryByTestId('theme-packs-sync-w1')).toBeNull()
   })
 
-  it('shows Sync instead of Update/Remove for a hub-linked row uploaded by someone else, even with hubCanWrite (isMine gate, Phase 3)', () => {
+  it('shows Sync instead of Update/Remove for a hub-linked row uploaded by someone else, even with hubCanWrite (isMine gate)', () => {
     metas = [meta({ id: 'foreign1', name: 'Foreign Pack', hubPostId: 'hp-foreign1', uploaderName: 'someone-else' })]
     render(
       <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} hubCanWrite currentDisplayName="me" />,

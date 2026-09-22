@@ -24,7 +24,7 @@ function baseOptions(overrides: Partial<UseHubSearchListOptions<Item>> = {}): Us
 }
 
 describe('useHubSearchList', () => {
-  describe('name sort (Phase 3 — ported from Key Labels\' buildHubRows)', () => {
+  describe('name sort', () => {
     it('sorts results by name (locale-aware, case-insensitive) regardless of server order', async () => {
       const fetchPage = vi.fn().mockResolvedValue({
         success: true,
@@ -38,7 +38,7 @@ describe('useHubSearchList', () => {
     })
   })
 
-  describe('markSearchedOnFailure policy (P1)', () => {
+  describe('markSearchedOnFailure policy', () => {
     it('i18n/theme policy (default false): a failed initial fetch does NOT mark hubSearched, so leaving and re-entering the Hub tab retries', async () => {
       const fetchPage = vi.fn().mockResolvedValue({ success: false, error: 'nope' })
       const onError = vi.fn()
@@ -96,7 +96,7 @@ describe('useHubSearchList', () => {
     })
   })
 
-  describe('rejected fetchPage (P2 — intentional deviation)', () => {
+  describe('rejected fetchPage (intentional deviation)', () => {
     it('routes a rejection through onError/errorMessage instead of leaving hubSearching stuck', async () => {
       const fetchPage = vi.fn().mockRejectedValue(new Error('network exploded'))
       const errorMessage = vi.fn((error: string | undefined) => `translated: ${error ?? 'unknown'}`)

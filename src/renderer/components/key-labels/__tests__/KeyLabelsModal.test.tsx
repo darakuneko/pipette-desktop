@@ -425,7 +425,7 @@ describe('KeyLabelsModal', () => {
     await waitFor(() => expect(importFromFile).toHaveBeenCalled())
   })
 
-  it('P1-b: starting a rename then triggering an import cancels the edit instead of letting it commit mid-batch', async () => {
+  it('starting a rename then triggering an import cancels the edit instead of letting it commit mid-batch', async () => {
     metas = [meta({ id: 'r2', name: 'Old Name', uploaderName: 'me' })]
     let resolveImport!: (value: { success: boolean; data?: { imported: unknown[]; rejections: unknown[] } }) => void
     importFromFile.mockImplementationOnce(() => new Promise((resolve) => { resolveImport = resolve }))
@@ -697,7 +697,7 @@ describe('KeyLabelsModal', () => {
     expect(screen.queryByTestId('key-labels-import-feedback')).toBeNull()
   })
 
-  it('P1 fix: importing files that interleave with existing rows (existing A,D; import B,C) lands fully sorted A,B,C,D in one reorder call', async () => {
+  it('importing files that interleave with existing rows (existing A,D; import B,C) lands fully sorted A,B,C,D in one reorder call', async () => {
     metas = [
       meta({ id: 'a', name: 'Alpha', uploaderName: 'me' }),
       meta({ id: 'd', name: 'Delta', uploaderName: 'me' }),
@@ -804,7 +804,7 @@ describe('KeyLabelsModal', () => {
     await waitFor(() => expect(hubUpdate).toHaveBeenCalledWith('existing'))
   })
 
-  it('shows error when hub auto-sync fails after import, reported against the originating filename (P2a)', async () => {
+  it('shows error when hub auto-sync fails after import, reported against the originating filename', async () => {
     const importedMeta = meta({ id: 'existing', name: 'Existing', hubPostId: 'hub-55' })
     importFromFile.mockResolvedValueOnce({ success: true, data: { imported: [{ fileName: 'existing.json', meta: importedMeta }], rejections: [] } })
     // An unrecognized raw error string falls back to the generic

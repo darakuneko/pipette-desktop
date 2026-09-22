@@ -137,7 +137,7 @@ beforeEach(() => {
   capturedTabbedProps = {}
 })
 
-describe('KeymapEditor — pack tabs (Plan-qwerty-select-no-rewrite v7)', () => {
+describe('KeymapEditor — pack tabs', () => {
   describe('tab visibility (SINGLE PREDICATE: remapKind)', () => {
     it('renders no tabs when remapKind is omitted (defaults to actual)', () => {
       const { queryByTestId } = render(<KeymapEditor {...defaultProps()} />)

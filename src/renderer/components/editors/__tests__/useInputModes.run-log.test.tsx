@@ -208,7 +208,7 @@ describe('useInputModes — run-log recording', () => {
     expect(savedLog.words[0].keystrokes).toHaveLength(word.length)
   })
 
-  it('a config switch\'s async word-list load window never lets a phantom keystroke leak into the next real run\'s saved log (gate split: P1 verified safe)', async () => {
+  it('a config switch\'s async word-list load window never lets a phantom keystroke leak into the next real run\'s saved log', async () => {
     // setConfig updates `typingTest.config` synchronously, but
     // `typingTest.state` (status/runId/words) stays whatever it was until
     // the async createWordsForConfig() call resolves and calls
@@ -380,7 +380,7 @@ describe('useInputModes — run-log recording', () => {
     expect(mockTypingRunLogSave).not.toHaveBeenCalled()
   })
 
-  it('does not attribute matrix keystrokes registered while unfocused, but resumes once refocused (P1)', async () => {
+  it('does not attribute matrix keystrokes registered while unfocused, but resumes once refocused', async () => {
     // Two words: the first is typed and submitted entirely while
     // focused, which puts the run solidly mid-'running' (regardless of
     // either word's length) before the unfocused phase.

@@ -50,7 +50,7 @@ describe('WeakSpotSettingsModal — enable toggle', () => {
     if (arg.mode === 'words') expect(arg.weakSpotTrainingMode).toBe(true)
   })
 
-  it('OFF is always reachable even while the gate is inactive (codex-flagged trap)', () => {
+  it('OFF is always reachable even while the gate is inactive', () => {
     // A config already ON (from an earlier active scope) must stay
     // turn-off-able even after a parameter change drops the gate back
     // out of 'active' — never strand the toggle stuck ON.

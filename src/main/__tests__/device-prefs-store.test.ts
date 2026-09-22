@@ -627,7 +627,7 @@ describe('pipette-settings-store', () => {
       expect(result.error).toContain('Invalid prefs')
     })
 
-    it('drops a stale on-disk appliedKeymapLayout on the next PATCH write (field removed, Plan-qwerty-select-no-rewrite v5)', async () => {
+    it('drops a stale on-disk appliedKeymapLayout on the next PATCH write (field removed)', async () => {
       // Simulates a settings file written by an older build that still had
       // the field — the store no longer validates or projects it, so it
       // silently drops out of the object returned to the renderer, and out

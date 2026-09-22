@@ -168,7 +168,7 @@ describe('RunLogRecorder', () => {
     })
   })
 
-  describe('finish() runId check (P2)', () => {
+  describe('finish() runId check', () => {
     it('refuses to finish (and clears the buffer) when meta.runId does not match the buffered run', () => {
       const recorder = new RunLogRecorder()
       register(recorder, 'run-A', 0, 0, 1000, 0, 'a')
@@ -678,7 +678,7 @@ describe('RunLogRecorder', () => {
     })
   })
 
-  describe('lineBreaks passthrough (line timeline PR1)', () => {
+  describe('lineBreaks passthrough', () => {
     it('forwards a non-empty meta.lineBreaks verbatim into the saved log', () => {
       const recorder = new RunLogRecorder()
       register(recorder, 'run-1', 0, 0, 1000, 0, 'a')

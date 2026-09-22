@@ -64,7 +64,7 @@ describe('computeUnionPolygon', () => {
     expect(verts).toHaveLength(4)
   })
 
-  it('returns 6 vertices for BAE key with y2 offset (issue #60)', () => {
+  it('returns 6 vertices for BAE key with y2 offset', () => {
     // BAE: primary w=1.5 h=2, secondary w2=2.25 h2=1 x2=-0.75 y2=1
     // Simulates the exact pixel coordinates that trigger FP precision bug:
     // r1b = 54*2 - spacing  vs  r2b = 54 + (54 - spacing)

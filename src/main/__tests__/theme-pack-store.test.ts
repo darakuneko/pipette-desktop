@@ -488,7 +488,7 @@ describe('theme-pack-store', () => {
     })
   })
 
-  describe('uploaderName (Phase 3)', () => {
+  describe('uploaderName', () => {
     it('savePack persists uploaderName on the meta', async () => {
       const saved = await savePack({ raw: makeValidPack({ name: 'Authored' }), uploaderName: 'alice' })
       expect(saved.data!.uploaderName).toBe('alice')

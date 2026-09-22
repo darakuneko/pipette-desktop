@@ -124,7 +124,7 @@ describe('useImportBatch', () => {
     expect(result.current.importSummary).toBe('common.importSummary:3:3:0')
   })
 
-  it('P1-a regression: two files that both overwrite the SAME existing pack still read as a genuine 2-file batch — summary shown, no auto-select, scroll suppressed via originalCount', async () => {
+  it('two files that both overwrite the SAME existing pack still read as a genuine 2-file batch — summary shown, no auto-select, scroll suppressed via originalCount', async () => {
     const placement = makePlacement()
     const setLastResult = vi.fn()
     const onCollapsedToOne = vi.fn()

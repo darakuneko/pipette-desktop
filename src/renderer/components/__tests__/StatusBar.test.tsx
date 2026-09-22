@@ -397,7 +397,7 @@ describe('StatusBar', () => {
     })
   })
 
-  describe('footer overflow (Task-typing-record-footer min-width fix)', () => {
+  describe('footer overflow', () => {
     it('keeps the bar root and both sides as a single non-wrapping flex row with a min-w-0 shrink chain', () => {
       const { container } = render(<StatusBar {...defaultProps} />)
       const root = container.firstElementChild as HTMLElement
