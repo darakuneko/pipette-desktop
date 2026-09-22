@@ -4,8 +4,7 @@
 // Focused coverage for `useLayerKeycodes`'s remap-tint computation: a
 // masked (composite) key whose INNER basic keycode is remapped by the
 // active Key Label pack must count as "remapped" for KeyWidget's blue
-// tint, same as any plain remapped key. This stays scoped to the
-// remap-tint behavior.
+// tint, same as any plain remapped key.
 
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'

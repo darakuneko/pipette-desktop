@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { ViewMatrixPanel } from './ViewMatrixPanel'
 
-// Extracted modules
 import type { KeymapEditorProps as Props } from './keymap-editor-types'
 import { PANEL_COLLAPSED_WIDTH } from './keymap-editor-types'
 export type { KeymapEditorHandle } from './keymap-editor-types'

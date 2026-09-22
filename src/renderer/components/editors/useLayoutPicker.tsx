@@ -113,7 +113,6 @@ export function useLayoutPicker({
   // every key of the layout at once purely for hover, so one shared
   // bubble covers it the same way TabbedKeycodes/PopoverTabKey do.
   const { target: pickerTooltip, show: showPickerTooltip, hide: handlePickerHoverEnd } = useSharedHoverBubble<{ keycode: string; rect: DOMRect }>()
-  // pickerClickedPositions removed — now tracked via pickerSelectedIndices in useKeymapMultiSelect
   const pickerContainerRef = useRef<HTMLDivElement>(null)
 
   const handlePickerHover = useCallback((_key: KleKey, keycode: string, rect: DOMRect) => {
