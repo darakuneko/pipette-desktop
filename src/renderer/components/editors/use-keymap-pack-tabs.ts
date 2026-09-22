@@ -61,11 +61,11 @@ export interface UseKeymapPackTabsReturn {
 }
 
 /** Simulation/Base tab. Which of the two vertical tabs (pack-name
- * simulation vs. the real "Base" keymap) is showing when `remapKind ===
- * 'simulated'` shows them at all. Defaults to the simulation tab; a user
- * switch to Base persists only until the next uid change (via
- * `resetPackTab`) or a layout change (tracked internally below), not
- * across a select change or a re-render. */
+ * simulation vs. the real "Base" keymap) is showing when
+ * `remapKind === 'simulated'` shows them at all. Defaults to the
+ * simulation tab; a user switch to Base persists only until the next
+ * uid change (via `resetPackTab`) or a layout change (tracked
+ * internally below), not across a select change or a re-render. */
 export function useKeymapPackTabs({
   keyboardLayout, remapKind, keymap, encoderLayout, encoderCount, currentLayer,
   typingTestMode, viewMatrixActive, handleDeselect,
@@ -134,12 +134,12 @@ export function useKeymapPackTabs({
   })
 
   // Base tab's data source: the SAME "no tabs" `<KeyboardPane>` JSX
-  // renders both the plain (no-tabs) state and `showPackTabs && packTab
-  // === 'base'` — only these source variables differ between the two.
-  // Raw/identity (`baseLayer*`, `EMPTY_REMAPPED`, `undefined` remapLabel)
-  // while on the Base tab; otherwise the normal `remapLabel`/`isRemapped`-
-  // driven values every other state (JIS, QWERTY, View Matrix, ...) already
-  // used.
+  // renders both the plain (no-tabs) state and
+  // `showPackTabs && packTab === 'base'` — only these source variables
+  // differ between the two. Raw/identity (`baseLayer*`, `EMPTY_REMAPPED`,
+  // `undefined` remapLabel) while on the Base tab; otherwise the normal
+  // `remapLabel`/`isRemapped`-driven values every other state (JIS,
+  // QWERTY, View Matrix, ...) already uses.
   const onBaseTab = showPackTabs && packTab === 'base'
   const primaryKeycodes = onBaseTab ? baseLayerKeycodes : layerKeycodes
   const primaryEncoderKeycodes = onBaseTab ? baseLayerEncoderKeycodes : layerEncoderKeycodes
