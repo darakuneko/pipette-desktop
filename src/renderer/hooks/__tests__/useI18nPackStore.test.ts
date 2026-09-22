@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
-// Focused hook-level coverage for `useI18nPackStore`'s `reorder`
-// (Phase 2 of the pack-modal-unification plan). Mirrors the
-// `reorder` describe block already covering `useKeyLabels`.
+// Focused hook-level coverage for `useI18nPackStore`'s `reorder`. Mirrors
+// the `reorder` describe block already covering `useKeyLabels`.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, waitFor } from '@testing-library/react'

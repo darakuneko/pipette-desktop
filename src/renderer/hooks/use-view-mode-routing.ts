@@ -2,7 +2,7 @@
 // View-mode routing/orchestration: Typing View (compact window) <-> full
 // Typing Test <-> Analyze page <-> plain editor, plus the deferred-intent
 // refs that carry a user action across an Unlock dialog or an
-// analytics-page unmount/remount. Split out of App.tsx (Task-split-app-tsx).
+// analytics-page unmount/remount.
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import type { AnalyticsOrigin } from '../components/editors/keymap-editor-types'

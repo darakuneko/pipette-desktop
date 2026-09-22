@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Keymap-C / PDF export generator callbacks fed into useFileIO. Split out
-// of App.tsx (Task-split-app-tsx).
+// Keymap-C / PDF export generator callbacks fed into useFileIO.
 
 import { useCallback } from 'react'
 import type { useKeyboard } from './useKeyboard'
