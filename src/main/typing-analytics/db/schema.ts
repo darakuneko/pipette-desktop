@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS typing_bigram_minute (
   bigram_id TEXT NOT NULL,
   count INTEGER NOT NULL,
   -- 8-bucket IKI histogram packed as little-endian u32 (32 bytes). Buckets
-  -- are log-scale (see Plan-analyze-bigram.md); count is the sum across
+  -- are log-scale; count is the sum across
   -- buckets and is denormalized for fast top-N ranking.
   hist BLOB NOT NULL,
   -- Sum / sum-of-squares of the raw IKI values (ms) that fed the hist
@@ -173,7 +173,7 @@ CREATE TABLE IF NOT EXISTS typing_bigram_minute (
   -- approximation.
   -- NULL for rows written before this field existed — a range that mixes
   -- such rows with sum-bearing ones reports SD as null rather than an
-  -- approximation (see Plan-trigram-and-iki-variance.md).
+  -- approximation.
   sum_iki REAL,
   sumsq_iki REAL,
   -- Physical-overlap accumulators (see OverlapCounts in minute-buffer.ts).
