@@ -128,9 +128,9 @@ describe('refillTimeModeWords', () => {
     }
   })
 
-  // codex regression: refillTimeModeWords used to seed its own repeat-
-  // avoidance with `words[words.length - 1]` — the DECORATED tail of the
-  // PREVIOUS batch (post injectPunctuation/injectNumbers) — while
+  // refillTimeModeWords used to seed its own repeat-avoidance with
+  // `words[words.length - 1]` — the DECORATED tail of the PREVIOUS batch
+  // (post injectPunctuation/injectNumbers) — while
   // sampleWords always compares that seed against RAW candidates pulled
   // straight from the language word list. A decorated seed (capitalized /
   // trailing punctuation / digit-replaced) almost never string-matches a

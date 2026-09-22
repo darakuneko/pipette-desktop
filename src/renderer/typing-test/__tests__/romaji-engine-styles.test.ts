@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Tests for the RomajiStyle spelling tags and the createRomajiMatcher
-// disabledStyles/guideStyles options (Plan-typing-romaji-settings-modal
-// Step 1, later subdivided into the 11-style Options layout). Complements
-// romaji-engine.test.ts, which covers the untagged, opts-less matcher
-// behaviour that must stay byte-for-byte unchanged.
+// disabledStyles/guideStyles options. Complements romaji-engine.test.ts,
+// which covers the untagged, opts-less matcher behaviour that must stay
+// byte-for-byte unchanged.
 
 import { describe, it, expect } from 'vitest'
 import english from '../../i18n/locales/english.json'
