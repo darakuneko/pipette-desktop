@@ -5,13 +5,7 @@
 // snapshot the pre-operation id set → decide overwrite vs. insert →
 // compute the sorted-insert position (skipped for the 'free' Name-sort
 // state, or for an overwrite) → persist via `reorder` → toolbar
-// feedback text → scroll the affected row into view. This used to be
-// duplicated inline at all 5 call sites (LanguagePacksModal's
-// persistImportedPack covers both its own file-import and Hub-download
-// paths; Key Labels and Theme Packs each have one of each) — the
-// duplication had already drifted once (Theme Packs' Hub-download path
-// silently swallowed a failed reorder that the file-import path
-// checked; see the P2 note below).
+// feedback text → scroll the affected row into view.
 //
 // Also absorbs the (removed) useImportFeedback and useScrollRowIntoView
 // hooks — every site that needed one needed the other, so splitting
@@ -349,14 +343,12 @@ export function useImportPlacement({
         : tRef.current('common.updatedNamed', { name: last.name }))
       // Auto-scroll only when the batch collapsed to a single result —
       // for a 2+ file batch there is no single "the" imported row to
-      // jump to (see the multi-import UX plan's no-auto-scroll
-      // requirement), so leave the user's scroll position alone rather
-      // than jumping to an arbitrary one of several new rows. Gated on
+      // jump to, so leave the user's scroll position alone rather than
+      // jumping to an arbitrary one of several new rows. Gated on
       // `originalCount`, NOT `results.length`: two files that both
       // overwrote the same existing pack still collapse `results` to a
       // single entry, but the user genuinely selected 2 files, so this
-      // must still read as a batch (see the P1 "count/scroll uses
-      // deduped set" fix note in useImportBatch.ts).
+      // must still read as a batch.
       if (originalCount <= 1) {
         scheduleScroll(`${rowTestidPrefixRef.current}-row-${last.id}`)
       }

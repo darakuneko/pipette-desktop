@@ -76,18 +76,16 @@ export function buildImportBatchFailureSummary(
  * Builds the toolbar "Imported N file(s) (success N, failure N)"
  * headline shown for a multi-file import batch, or `null` below the
  * 2-file threshold — mirroring its sibling `buildImportBatchFailureSummary`'s
- * self-gating null return, so call sites no longer need their own
+ * self-gating null return, so call sites do not need their own
  * `totalCount >= 2` check.
  *
  * `successCount` MUST be the original, pre-dedupe count of files that
  * actually saved — never the post-dedupe count. Two files that both
  * overwrote the same existing pack are still 2 successes here even
- * though they collapse to a single placed entry (see the P1
- * "count/scroll uses deduped set" fix note in useImportBatch.ts, the
- * one caller of this function). `notSavedFailures` is the files that
- * never got saved (parse/validate/store failures) — a saved file whose
- * Hub auto-sync later failed still counts toward `successCount` (its
- * failure is a separate concern surfaced by
+ * though they collapse to a single placed entry. `notSavedFailures` is
+ * the files that never got saved (parse/validate/store failures) — a
+ * saved file whose Hub auto-sync later failed still counts toward
+ * `successCount` (its failure is a separate concern surfaced by
  * `buildImportBatchFailureSummary`'s banner, not this headline).
  */
 export function buildImportSummary(
