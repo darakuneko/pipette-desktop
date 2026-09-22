@@ -7,10 +7,9 @@ import { validateThemePack } from '../validate'
 
 // sample-packs/themes/*.json ship as ready-to-use example theme packs
 // (docs/OPERATION-GUIDE.md §6.4). Every one of them must validate against
-// the same schema Pipette itself enforces on import/Hub-download, and —
-// since Task-kaw-sim-color — every one now defines an explicit, palette-
-// matched `key-label-simulated` token rather than relying on the
-// auto-complement fallback.
+// the same schema Pipette itself enforces on import/Hub-download, and
+// every one defines an explicit, palette-matched `key-label-simulated`
+// token rather than relying on the auto-complement fallback.
 const THEMES_DIR = join(__dirname, '../../../../sample-packs/themes')
 
 function loadThemeFiles(): { name: string; raw: unknown }[] {

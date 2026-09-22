@@ -160,8 +160,6 @@ export type SyncScope =
 
 /**
  * Why the sync subsystem cannot proceed without prompting the user.
- * The same UX surface ("Not synced yet" / "No stored password found") used to
- * collapse all of these into one string, hiding root cause from the user.
  * Values are camelCase so they slot directly into i18n keys
  * (`sync.readiness.<reason>`, `sync.changePasswordError.<reason>`).
  */

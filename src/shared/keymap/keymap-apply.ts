@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Pure rewrite-table engine for the Key Label "apply to keymap" feature
-// (Plan-key-label-keymap-apply). A Key Label map only overlays *display*
-// labels on top of the existing keymap — this module answers a stricter
-// question: is the map a pure QWERTY-keycode permutation (Colemak,
-// Dvorak, ...) that can be used to literally rewrite the keymap so the
-// physical keys emit the labelled characters directly?
+// Pure rewrite-table engine for the Key Label "apply to keymap" feature.
+// A Key Label map only overlays *display* labels on top of the existing
+// keymap — this module answers a stricter question: is the map a pure
+// QWERTY-keycode permutation (Colemak, Dvorak, ...) that can be used to
+// literally rewrite the keymap so the physical keys emit the labelled
+// characters directly?
 //
 // `keymapApplicable` on the stored file (see key-label-store.ts) is only
 // an author-supplied hint — this builder is the actual authority: it
@@ -73,10 +73,10 @@ export function buildKeymapRewriteTable(map: Record<string, string>): BuildKeyma
       return { ok: false, error: `${qmkId} is not a plain basic keycode` }
     }
 
-    // Authoring convention (see DATA-INVENTORY.md §3.6): a label value
-    // that is itself a keycode qmkId is a *display alias* pointing at
-    // that keycode's built-in label (e.g. compositeLabels["LALT(KC_L)"]
-    // = "KC_LALT"), not a character. It can never be a QWERTY char swap.
+    // Authoring convention: a label value that is itself a keycode qmkId
+    // is a *display alias* pointing at that keycode's built-in label
+    // (e.g. compositeLabels["LALT(KC_L)"] = "KC_LALT"), not a character.
+    // It can never be a QWERTY char swap.
     if (findKeycode(label)) {
       return { ok: false, error: `${qmkId}: "${label}" is a keycode passthrough, not a character` }
     }

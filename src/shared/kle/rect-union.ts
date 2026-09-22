@@ -72,7 +72,7 @@ export function computeUnionPolygon(
   // Unique sorted grid-line coordinates, snapped to eliminate FP noise.
   // Without snapping, nearly-equal coordinates (e.g. 104.82352941176471 vs
   // 104.8235294117647) create spuriously thin grid rows that break contour
-  // tracing and removeCollinear — see issue #60 (BAE key).
+  // tracing and removeCollinear.
   const xs = snapClose(
     [...new Set([r1l, r1r, r2l, r2r])].sort((a, b) => a - b),
   )

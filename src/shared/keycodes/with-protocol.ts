@@ -2,10 +2,9 @@
 // Shared protocol-scoping helpers for keycode serialize/deserialize.
 // Both main (favorite import/export) and renderer (Analyze snapshot
 // resolution) need to run a body under a specific vial protocol version
-// -- not the current global one -- then restore. Consolidates what used
-// to be four near-duplicate per-module helpers into the two semantics
-// that actually differ: deserialize-only (no RAWCODES_MAP rebuild
-// needed) and serialize-safe (rebuild required).
+// -- not the current global one -- then restore. Consolidates the two
+// semantics that actually differ: deserialize-only (no RAWCODES_MAP
+// rebuild needed) and serialize-safe (rebuild required).
 
 import { getProtocol, getRawcodesProtocol, setProtocol, recreateKeycodes } from './keycodes'
 
@@ -88,11 +87,11 @@ export function withDeserializeProtocol<T>(protocol: number | undefined, body: (
  * variable. The inner `try/finally` guarantees `prevProtocol` is
  * restored even if the restore-leg `recreateKeycodes()` itself throws.
  *
- * ENFORCED INVARIANT (formerly a nesting warning): nesting this
- * function inside a `withDeserializeProtocol` scope with a matching
- * protocol no longer fast-paths over a stale map -- the `prevBuilt`
- * check above forces the rebuild whenever the map doesn't already match
- * `protocol`. Use `withDeserializeProtocol` for deserialize-only bodies
+ * ENFORCED INVARIANT: nesting this function inside a
+ * `withDeserializeProtocol` scope with a matching protocol does not
+ * fast-path over a stale map -- the `prevBuilt` check above forces the
+ * rebuild whenever the map doesn't already match `protocol`. Use
+ * `withDeserializeProtocol` for deserialize-only bodies
  * (cheaper -- `deserialize` never reads `RAWCODES_MAP`); use this one
  * for bodies that serialize numeric codes back to qmkId/label strings.
  */

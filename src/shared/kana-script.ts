@@ -10,8 +10,8 @@
 //
 // Lives in shared/ (not renderer/typing-test/) so the main process can use
 // it too, without renderer code depending on main or vice versa. The
-// renderer's former copy at renderer/typing-test/kana-script.ts now
-// re-exports this module to avoid touching its three existing call sites.
+// renderer's copy at renderer/typing-test/kana-script.ts re-exports this
+// module to avoid touching its three existing call sites.
 
 const HIRAGANA_START = 0x3041 // ぁ
 const HIRAGANA_END = 0x3096 // ゖ

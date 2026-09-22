@@ -92,7 +92,7 @@ describe('computeUnionPolygon', () => {
   })
 
   it('snaps near-equal coordinates (FP noise) without merging distant ones', () => {
-    // L-shape where shared bottom differs by ~1e-14 (same mechanism as #60)
+    // L-shape where shared bottom differs by ~1e-14
     // Rect1: narrow tall (0,0)→(10,30), Rect2: wide lower (0,10)→(15,30+ε)
     const verts = computeUnionPolygon(
       0, 0, 10, 30,              // r1b = 30

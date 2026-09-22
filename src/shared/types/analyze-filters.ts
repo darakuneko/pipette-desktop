@@ -218,8 +218,8 @@ export type ActivityCalendarMonthsToShow = typeof ACTIVITY_CALENDAR_MONTHS_TO_SH
 export const LAYER_VIEW_MODES = ['keystrokes', 'activations'] as const
 export type LayerViewMode = typeof LAYER_VIEW_MODES[number]
 
-/** Ergonomics tab now hosts two views: the historical 4-pane snapshot
- * (hand balance / finger load / row usage / row load) and the new
+/** Ergonomics tab hosts two views: the historical 4-pane snapshot
+ * (hand balance / finger load / row usage / row load) and the
  * Learning Curve trend chart. The mode toggles them via the filter
  * row select; the snapshot view ignores `period`. */
 export const ERGONOMICS_VIEW_MODES = ['snapshot', 'learning'] as const
@@ -231,8 +231,8 @@ export type ErgonomicsViewMode = typeof ERGONOMICS_VIEW_MODES[number]
 export const ERGONOMICS_LEARNING_PERIODS = ['week', 'month'] as const
 export type ErgonomicsLearningPeriod = typeof ERGONOMICS_LEARNING_PERIODS[number]
 
-// Bigrams tab now renders all four sub-views in a 2x2 grid; the user
-// no longer picks one. The constant + type are retained for back-compat
+// Bigrams tab renders all four sub-views in a 2x2 grid; the user
+// does not pick one. The constant + type are retained for back-compat
 // in tests / docs but are not consumed by the live filter shape.
 export const BIGRAM_VIEWS = ['top', 'slow', 'fingerIki', 'heatmap'] as const
 export type BigramView = typeof BIGRAM_VIEWS[number]
@@ -333,8 +333,7 @@ export interface BigramFilters {
    * Slow ranking. Pairs with `avgIki < threshold` are hidden. `0`
    * disables the filter. The avgIki used for comparison is the bucket-
    * center weighted average from `avgIkiFromHist` — values are an
-   * approximation, not exact ms (see Task-P3-bigrams-pair-interval-
-   * threshold.md for rationale). */
+   * approximation, not exact ms. */
   pairIntervalThresholdMs?: number
   /** 2 = bigram, 3 = trigram — matches `TypingBigramAggregateOptions.gram`.
    * Absent (older persisted settings) normalizes to `2` via the
