@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The connected-view editor surface: the overlay's Import row
 // (`toolsExtra`), File tab (`dataPanel`), and the `editor-content` div
-// wrapping the ~130-prop KeymapEditor itself. Split out of App.tsx
-// (Task-split-app-tsx) — this is the highest-traffic e2e surface in the
-// app, so the `editor-content` testid div and its style-based
-// (never conditional-render) visibility toggle move verbatim.
+// wrapping the ~130-prop KeymapEditor itself. Split out of App.tsx — this
+// is the highest-traffic e2e surface in the app, so the `editor-content`
+// testid div and its style-based (never conditional-render) visibility
+// toggle move verbatim.
 
 import { useCallback, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'

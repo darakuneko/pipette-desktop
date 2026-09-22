@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-// Plan-qwerty-select-no-rewrite v7: the Rewrite confirm modal and its
-// lookup/validation live in `useKeymapApplyPrompt`, lifted to App.tsx now
-// that the Apply button is on KeymapEditor's simulation tab — see
-// `useKeymapApplyPrompt.test.ts` for that coverage. This component's own
-// contract shrank to a plain passthrough: the Keyboard Layout select's
+// The Rewrite confirm modal and its lookup/validation live in
+// `useKeymapApplyPrompt` — see `useKeymapApplyPrompt.test.ts` for that
+// coverage. This component's own contract: the Keyboard Layout select's
 // onChange is called with the raw selection, nothing more.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'

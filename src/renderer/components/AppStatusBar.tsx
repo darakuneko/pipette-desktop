@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The connected-view footer StatusBar wrapper (visibility gating +
-// the ~20-prop wiring from App's various hooks). Split out of App.tsx
-// (Task-split-app-tsx).
+// the ~20-prop wiring from App's various hooks).
 
 import { StatusBar } from './StatusBar'
 import type { DeviceInfo } from '../../shared/types/protocol'

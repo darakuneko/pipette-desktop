@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Footer "Record" modal — moved out of the Typing View popover's REC tab
-// into the keymap-editor status bar (Task-typing-record-footer). Content
-// is the former REC tab verbatim minus its own Analyze button (the footer
-// already has one): the Start/Stop toggle (with the same first-time
-// consent flow), Monitor App, the tray toggles, and the HeatMap window
-// select. Chrome copied from TypingRecordingConsentModal / store-modal-
-// shared; StatusBar owns the open/close boolean and only mounts this as
-// a sibling while open, same idiom as TypingTestPane's old consent modal.
+// Footer "Record" modal. Content: the Start/Stop toggle (with the same
+// first-time consent flow), Monitor App, the tray toggles, and the
+// HeatMap window select. StatusBar owns the open/close boolean and only
+// mounts this as a sibling while open.
 
 import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
