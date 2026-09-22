@@ -699,8 +699,6 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     console.log('  [skip] analyze-filter-store-toggle not found')
   }
 
-  // The snapshot pick lives in the filter modal's Keymap row.
-
   // Heatmap: requires a snapshot; empty state is captured if none exists.
   const heatmapTab = page.locator('[data-testid="analyze-tab-keyHeatmap"]')
   if (await isAvailable(heatmapTab)) {
@@ -1407,8 +1405,7 @@ async function captureStatusBar(page: Page): Promise<void> {
   }
 }
 
-// --- Phase 8b: Simulation/Base tabs + Key Label "Apply to Keymap" confirm
-// modal ---
+// --- Phase 8b: Simulation/Base tabs + Key Label "Apply to Keymap" confirm modal ---
 
 // Drives the footer's Keyboard Layout select to the seeded `keymapApplicable`
 // Colemak entry (see seedDummyKeyLabel above). Selecting it does not open

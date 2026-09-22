@@ -750,9 +750,8 @@ async function captureWeakSpotToggleScreenshot(): Promise<void> {
     }
     await enableToggle.click()
     await page.waitForTimeout(400)
-    // The status line moved out of the modal (see WeakSpotSettingsModal's
-    // own doc comment) — wait on the Reset button instead, the modal's own
-    // last-rendered element, as the render-complete signal.
+    // Wait on the Reset button, the modal's own last-rendered element, as
+    // the render-complete signal.
     await page.locator('[data-testid="weak-spot-settings-reset"]').waitFor({ state: 'visible', timeout: 5000 })
     // Move the cursor off the modal so no incidental hover state bakes into the screenshot.
     await page.mouse.move(0, 0)
@@ -988,8 +987,7 @@ async function main(): Promise<void> {
     await captureModeModalScreenshots(page)
 
     // 7. Footer Record modal + Recording Consent modal (REC lives in the
-    // keymap-editor footer, so this does not need to enter Typing View —
-    // the Record button lives in the plain editor's footer instead).
+    // keymap-editor footer, so this does not need to enter Typing View).
     console.log('\n--- Typing Record Modal ---')
 
     // Exit typing test back to the editor so the footer (hidden in

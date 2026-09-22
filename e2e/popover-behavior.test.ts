@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Regression coverage: Auto Move carries the key popover to the
-// next key without unmounting it. This drives the real Auto Move path
-// through the software-emulated Virtual Keyboard device (no real hardware
-// required) and asserts against internal popover state that only resets on
-// a genuine remount — a plain `keymap`/props assertion would pass whether
-// or not the fix is in place, since the displayed value is always resolved
-// from the (correct) target position regardless of remount.
+// Regression coverage: Auto Move carries the key popover to the next key
+// without unmounting it. This drives the real Auto Move path through the
+// software-emulated Virtual Keyboard device (no real hardware required) and
+// asserts against internal popover state that only resets on a genuine
+// remount — a plain `keymap`/props assertion would pass whether or not the
+// fix is in place, since the displayed value is always resolved from the
+// (correct) target position regardless of remount.
 
 import { test, expect } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'

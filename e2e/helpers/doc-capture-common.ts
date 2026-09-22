@@ -2,8 +2,8 @@
 
 // Shared helpers for doc-capture scripts.
 // Deduplicates the notification-modal dismissal, overlay dismissal,
-// availability-check, and virtual-device connect/unlock logic across
-// every doc-capture helper.
+// availability-check, and virtual-device connect/unlock logic across every
+// doc-capture helper.
 
 import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Locator, Page } from '@playwright/test'
@@ -125,7 +125,7 @@ export function restoreVirtualDeviceSettings(backup: VirtualDeviceSettingsBackup
 /**
  * Reset `keyboardLayout` / `appliedKeymapLayout` in the virtual device's
  * PipetteSettings file back to the built-in QWERTY default before a capture
- * run starts. The Keyboard Layout select is now WYSIWYG: nothing forces it
+ * run starts. The Keyboard Layout select is WYSIWYG: nothing forces it
  * back to QWERTY, so any earlier manual `pnpm dev` session against the
  * virtual device that picked (or Rewrote to) another Key Label pack
  * leaves that pack's id persisted here indefinitely.
@@ -287,16 +287,13 @@ export interface ClonedUserData {
  * Clone the real installed-app userData profile into a fresh, uniquely
  * named temp directory and return its path plus a cleanup callback.
  *
- * WHY a clone instead of touching the real profile directly: an earlier
- * version of `doc-capture-key-labels.ts` / `doc-capture-theme-packs.ts`
- * launched Electron with `--user-data-dir` pointed straight at the real
- * profile (needed for a *representative* Installed tab — see below) and
- * patched `config.json`'s `language` key in place, restoring it
- * afterward. That backup/restore was never actually safe for the user's
- * real data: a SIGKILL/crash skips the `finally` that restores it, two
- * concurrent runs would back up each other's already-forced value, and
- * even the graceful path raced the still-shutting-down Electron process
- * rewriting `config.json` after the restore already ran. A clone sidesteps
+ * WHY a clone instead of touching the real profile directly: patching
+ * `config.json`'s `language` key in place with a backup/restore is never
+ * safe for the user's real data: a SIGKILL/crash skips the `finally`
+ * that restores it, two concurrent runs would back up each other's
+ * already-forced value, and even the graceful path raced the
+ * still-shutting-down Electron process rewriting `config.json` after the
+ * restore already ran. A clone sidesteps
  * all three at once — every write this run makes (including forcing
  * `language: 'builtin:en'`) lands on the disposable copy, so the real
  * profile is physically unwritable by this run and there is nothing left
@@ -364,7 +361,8 @@ export function forceEnglishLanguageInClone(userDataDir: string): void {
 
 /**
  * Kill `child` and wait for it to actually exit before resolving — never
- * assumes exit from a timeout alone.
+ * assumes exit from a timeout alone (a process still alive after
+ * `graceMs` could rewrite files after a caller's own cleanup already ran).
  * Escalates from SIGTERM to SIGKILL if the process hasn't exited within
  * `graceMs`, then waits — unbounded — for the actual `'exit'` event; SIGKILL
  * cannot be ignored on Linux, so that final wait is guaranteed to resolve.
