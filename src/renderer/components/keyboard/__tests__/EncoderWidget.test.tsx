@@ -225,9 +225,9 @@ describe('EncoderWidget', () => {
     })
   })
 
-  // Plan-qwerty-select-no-rewrite "also" follow-up: encoder CW/CCW legends
-  // gained the same remap tint keymap keys already have (label color only —
-  // encoders have no inner-remap label path like masked KeyWidget keys).
+  // encoder CW/CCW legends gained the same remap tint keymap keys already
+  // have (label color only — encoders have no inner-remap label path like
+  // masked KeyWidget keys).
   describe('remapped (label color only)', () => {
     it('uses the default label color when remapped is unset', () => {
       const { container } = render(
