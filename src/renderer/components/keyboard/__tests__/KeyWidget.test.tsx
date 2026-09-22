@@ -514,7 +514,7 @@ describe('KeyWidget', () => {
 // pack's remap, and a two-part inner label (shift + base) renders
 // stacked instead of crammed onto one line. ---
 
-describe('KeyWidget — inner label remap resolution (issue #295)', () => {
+describe('KeyWidget — inner label remap resolution', () => {
   it('resolves the inner label via remapLabel when the pack remaps the inner basic keycode', () => {
     mockIsMask = true
     mockInnerKeycode = { qmkId: 'KC_8' }
@@ -556,7 +556,7 @@ describe('KeyWidget — inner label remap resolution (issue #295)', () => {
   })
 })
 
-describe('KeyWidget — stacked shift/base inner label (issue #296)', () => {
+describe('KeyWidget — stacked shift/base inner label', () => {
   it('renders a two-part inner label as two stacked text elements, shifted char above base', () => {
     mockIsMask = true
     mockInnerKeycode = { qmkId: 'KC_8' }
@@ -587,7 +587,7 @@ describe('KeyWidget — stacked shift/base inner label (issue #296)', () => {
   })
 })
 
-describe('KeyWidget — remap tint applies to the inner label too (consistency with #294)', () => {
+describe('KeyWidget — remap tint applies to the inner label too', () => {
   it('tints the inner label with the remap color when remapped=true', () => {
     mockIsMask = true
     mockInnerKeycode = { qmkId: 'KC_9' }

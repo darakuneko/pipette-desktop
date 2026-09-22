@@ -82,13 +82,13 @@ export function computeRecordingTags({
   // GATE SPLIT: Broadening it to also cover armed-waiting (as a first
   // attempt did) tags the per-minute analytics pipeline too eagerly in
   // two ways that pipeline was never meant to tolerate:
-  //  - P1: `setConfig`/`setLanguage` update `config` synchronously but
+  //  - `setConfig`/`setLanguage` update `config` synchronously but
   //    the STATE stays whatever it was (old runId, possibly already
   //    non-pristine from an earlier session) until their async word-list
   //    load resolves and calls `setState(freshState(...))` — during that
   //    window a broadened gate would tag the STALE run with the NEW
   //    config's label, producing a phantom/orphan analytics run.
-  //  - P2: the per-minute pipeline has no notion of "pre-start" content
+  //  - the per-minute pipeline has no notion of "pre-start" content
   //    filtering — a broadened gate would tag every modifier/no-op press
   //    made while armed-waiting (before the user's first real character)
   //    into the heatmap unboundedly, not just the one keystroke that
@@ -111,7 +111,7 @@ export function computeRecordingTags({
   //  - a 'waiting' that is still the component's untouched, pristine
   //    initial mount value, OR one whose config just changed but whose
   //    async word-list load (setConfig/setLanguage) hasn't resolved yet
-  //    (P1 above) — `runId !== pristineRunId` catches the mount case; the
+  //    — `runId !== pristineRunId` catches the mount case; the
   //    in-flight-reconfigure case is caught for free too, since
   //    `state.runId` doesn't change until that same async load itself
   //    calls `setState(freshState(...))` — until then, `state` (config,

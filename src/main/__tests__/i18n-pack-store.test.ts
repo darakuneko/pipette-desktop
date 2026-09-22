@@ -159,7 +159,7 @@ describe('i18n-pack-store reorderActive', () => {
   })
 })
 
-describe('i18n-pack-store uploaderName / setHubPostId (Phase 3)', () => {
+describe('i18n-pack-store uploaderName / setHubPostId', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     mockUserDataPath = await mkdtemp(join(tmpdir(), 'i18n-pack-store-test-'))

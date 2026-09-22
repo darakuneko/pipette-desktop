@@ -567,7 +567,7 @@ describe('useTypingTest layer tracking with MO/LT', () => {
 // A layer-switch key's action must be latched against the layer state
 // active at its OWN press time, then never re-resolved while it stays
 // held — even if the layer it activates redefines its own cell.
-describe('useTypingTest layer tracking — press-time latch (issue #333)', () => {
+describe('useTypingTest layer tracking — press-time latch', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2025-01-01T00:00:00.000Z'))
@@ -1860,7 +1860,7 @@ describe('useTypingTest windowFocused', () => {
   })
 })
 
-describe('useTypingTest onNoteKeystrokeRegistration / window focus gate (P1)', () => {
+describe('useTypingTest onNoteKeystrokeRegistration / window focus gate', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2025-01-01T00:00:00.000Z'))

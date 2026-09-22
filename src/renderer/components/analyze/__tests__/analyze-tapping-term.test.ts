@@ -148,7 +148,7 @@ describe('analyzeTappingTerm', () => {
     expect(result.holdP5Range).toEqual({ lo: 140, hi: 180 })
   })
 
-  it('falls back to ok when clamping a boundary suggestion would eat into its own margin (codex counterexample)', () => {
+  it('falls back to ok when clamping a boundary suggestion would eat into its own margin', () => {
     // p95 bucket [140,180] -> raw suggestion = 180 + 30 = 210. With
     // currentMs=210 the raw suggestion equals the term itself exactly
     // (hi(180) <= threshold(180), boundary inclusive, so the tap side
@@ -183,7 +183,7 @@ describe('analyzeTappingTerm', () => {
     expect(result.currentMs).toBe(173)
   })
 
-  describe('tap-side denominators (Opus counterexamples)', () => {
+  describe('tap-side denominators', () => {
     it('does not issue a confident canLower from a hold-dominated key (5 tap samples, 195 hold samples)', () => {
       // Blended total is 200 (clears the blended floor); tap-side(+straddle)
       // mass is only 5 — nowhere near the floor. This must resolve to
@@ -211,7 +211,7 @@ describe('analyzeTappingTerm', () => {
 })
 
 describe('clampBelowStrict', () => {
-  it('floors to the largest step multiple strictly below a non-multiple bound (agy counterexample)', () => {
+  it('floors to the largest step multiple strictly below a non-multiple bound', () => {
     // A real keyboard's TAPPING_TERM is an arbitrary u16, not constrained to
     // multiples of 5.
     expect(clampBelowStrict(173, 173, 5)).toBe(170)

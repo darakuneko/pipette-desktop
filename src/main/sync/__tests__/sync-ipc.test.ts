@@ -125,7 +125,7 @@ function getResetTargetsHandler(): ResetTargetsHandler {
   return match[1] as ResetTargetsHandler
 }
 
-describe('sync-ipc SYNC_RESET_TARGETS — keyLabels / typingTestTexts (Task §A)', () => {
+describe('sync-ipc SYNC_RESET_TARGETS — keyLabels / typingTestTexts', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsSyncInProgress.mockReturnValue(false)

@@ -342,7 +342,7 @@ describe('PopoverTabKey — search', () => {
   })
 })
 
-describe('PopoverTabKey — Key Label pack remap in search (issue #294)', () => {
+describe('PopoverTabKey — Key Label pack remap in search', () => {
   const onSelect = vi.fn()
   // Mirrors the reported bug: a Japanese (QWERTY)-style pack remaps
   // KC_8's legend to "(\n8". KC_9's own *unrelated* default label is

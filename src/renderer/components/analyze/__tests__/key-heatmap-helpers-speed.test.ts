@@ -340,7 +340,7 @@ describe('buildSpeedRanking', () => {
     expect(layerOpOnly[0].keyLabel).toBe('MO(6)')
   })
 
-  it('resolves RAG_T(KC_NO) to "RAG_T" (not the #359 fallback\'s "RAG_T(NO)") when the snapshot map has it', () => {
+  it('resolves RAG_T(KC_NO) to "RAG_T" (not the fallback\'s "RAG_T(NO)") when the snapshot map has it', () => {
     // Same 0x7c00-family collision code as the test above, but
     // this time the snapshot's own keymap literally recorded
     // "RAG_T(KC_NO)" at v5, so the snapshot-string path resolves it

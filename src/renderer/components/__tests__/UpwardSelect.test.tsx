@@ -68,7 +68,7 @@ describe('UpwardSelect', () => {
     })
   })
 
-  describe('triggerName override (Task-qwerty-trigger-hide-default)', () => {
+  describe('triggerName override', () => {
     const DEFAULT_SUFFIXED_OPTIONS = [
       { id: 'qwerty', name: 'QWERTY (Default)' },
       { id: 'eucalyn-id', name: 'Eucalyn' },
@@ -105,7 +105,7 @@ describe('UpwardSelect', () => {
     })
   })
 
-  describe('footer overflow (Task-typing-record-footer min-width fix)', () => {
+  describe('footer overflow', () => {
     it('truncates the trigger label to one line instead of wrapping when the footer runs out of room', () => {
       render(<UpwardSelect value="eucalyn-id" onChange={vi.fn()} options={OPTIONS} aria-label="Keyboard Layout" />)
       const trigger = screen.getByRole('button', { name: 'Keyboard Layout' })

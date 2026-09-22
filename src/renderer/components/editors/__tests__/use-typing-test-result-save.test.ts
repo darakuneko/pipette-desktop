@@ -139,7 +139,7 @@ function lineBreaksArg(finishAndSave: ReturnType<typeof vi.fn>): number[] | unde
   return meta.lineBreaks
 }
 
-describe('useTypingTestResultSave — lineBreaks derivation (line timeline PR1)', () => {
+describe('useTypingTestResultSave — lineBreaks derivation', () => {
   describe('real-line sources (config.mode, not state.lineBreaks.size, selects this path)', () => {
     it('fileImport: sorted, clamped strictly before the terminal word', () => {
       const { finishAndSave } = run({
@@ -321,7 +321,7 @@ describe('useTypingTestResultSave — lineBreaks derivation (line timeline PR1)'
 // completion screen can render the shared timeline panel from it inline.
 // Cleared in the same `status !== 'finished'` branch that resets
 // `savedResultRef`.
-describe('useTypingTestResultSave — lastFinishedLog (completion timeline PR-B)', () => {
+describe('useTypingTestResultSave — lastFinishedLog', () => {
   const FAKE_LOG: RunKeystrokeLog = {
     runId: 'run-1', uid: 'kb-1', startedAt: new Date(1000).toISOString(), durationMs: 500,
     mode: 'words', language: 'english', words: [],

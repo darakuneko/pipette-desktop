@@ -71,7 +71,7 @@ test.describe('Tooltip display', () => {
     await page.locator('body').click({ position: { x: 0, y: 0 }, force: true })
   })
 
-  test('undo button (Tooltip from Task-02) exposes role="tooltip" via aria-describedby', async () => {
+  test('undo button exposes role="tooltip" via aria-describedby', async () => {
     const undoBtn = page.locator('[data-testid="undo-button"]').first()
     await expect(undoBtn).toBeVisible()
 

@@ -50,7 +50,7 @@ describe('computeSortedInsertOrder', () => {
 })
 
 describe('computeSortedInsertOrderMany', () => {
-  it('interleaves multiple new entries among existing rows in one pass (P1 batch race regression)', () => {
+  it('interleaves multiple new entries among existing rows in one pass (batch race regression)', () => {
     // existing A,D ascending; import B then C (in that processing
     // order) — must land fully sorted A,B,C,D, not A,C,D,B (the
     // per-item bug: C computed from a stale [A,D] snapshot that never

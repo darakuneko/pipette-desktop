@@ -1852,7 +1852,7 @@ describe('useDevicePrefs', () => {
     })
   })
 
-  describe('stale typingViewMenuTab tolerance (Task-typing-record-footer)', () => {
+  describe('stale typingViewMenuTab tolerance', () => {
     // `typingViewMenuTab` isn't part of PipetteSettings, but a settings
     // JSON written by an older build can still carry the field on disk —
     // it must be silently ignored on load rather than rejecting the whole
@@ -2090,7 +2090,7 @@ describe('useDevicePrefs', () => {
   // for this to simulate, since it resets `layout` back to QWERTY on
   // success. Same fixture as `shared/keymap/__tests__/keymap-apply.test.ts`
   // (real Colemak data).
-  describe('remap-rendering (Plan-qwerty-select-no-rewrite v5, Display Only mode)', () => {
+  describe('remap-rendering (Display Only mode)', () => {
     const COLEMAK: Record<string, string> = {
       KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
       KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
@@ -2194,7 +2194,7 @@ describe('useDevicePrefs', () => {
   // exists in the picker somewhere. `pickerRemapLabel` is the gated
   // variant; `remapLabel` (the keymap-legend source) is unaffected either
   // way.
-  describe('pickerRemapLabel (Plan-qwerty-select-no-rewrite v6, Phase P)', () => {
+  describe('pickerRemapLabel', () => {
     const COLEMAK: Record<string, string> = {
       KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
       KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',
@@ -2286,7 +2286,7 @@ describe('useDevicePrefs', () => {
   // a Rewrite would produce, pressing still types the old character) iff a
   // non-empty pack map is loaded and it's a pure permutation; 'actual'
   // otherwise (JIS-type deviation packs, QWERTY/no pack).
-  describe('remapKind (Task-kaw-sim-color)', () => {
+  describe('remapKind', () => {
     const COLEMAK: Record<string, string> = {
       KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
       KC_P: ';', KC_S: 'R', KC_D: 'S', KC_F: 'T', KC_G: 'D', KC_J: 'N', KC_K: 'E',

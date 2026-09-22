@@ -240,7 +240,7 @@ describe('useViewModeRouting', () => {
       expect(mocks.setViewMode).not.toHaveBeenCalled()
     })
 
-    it('clears pendingTypingTestReentryRef on disconnect so a later unrelated Back does not spuriously re-enter the typing test (Task-clear-typing-reentry-ref-on-disconnect.md)', async () => {
+    it('clears pendingTypingTestReentryRef on disconnect so a later unrelated Back does not spuriously re-enter the typing test', async () => {
       // pendingTypingTestReentryRef has no public getter, so this pins the
       // fix through its one observable consequence: arm it while the
       // Analyze page is already closed (openRunTimeline's own
@@ -679,7 +679,7 @@ describe('useViewModeRouting', () => {
       expect(vialAPIStub.setWindowCompactMode).toHaveBeenCalledWith(false)
     })
 
-    it('exits view-only even after a lock auto-exit (typingTestMode already false, still locked) instead of opening the unlock dialog (issue #418)', async () => {
+    it('exits view-only even after a lock auto-exit (typingTestMode already false, still locked) instead of opening the unlock dialog', async () => {
       // Mirrors the state left behind by a lock auto-exit: typingTestMode
       // flips false but typingTestViewOnly stays true, and the keyboard is
       // locked. Pressing the status-bar View toggle here must exit, not

@@ -84,7 +84,7 @@ describe('useLayerKeycodes — remap tint includes inner-remapped masked keys', 
   })
 })
 
-describe('useLayerKeycodes — encoder remap tint (Plan-qwerty-select-no-rewrite "also" follow-up)', () => {
+describe('useLayerKeycodes — encoder remap tint', () => {
   const remapLabel = (qmkId: string) => (qmkId === 'KC_8' ? '(\n8' : qmkId)
   const isRemapped = (qmkId: string) => qmkId === 'KC_8'
 

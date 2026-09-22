@@ -94,7 +94,7 @@ describe('useNameSort', () => {
     expect(result.current.direction).toBe('free')
   })
 
-  describe('ready gating (P2: empty-latch on open)', () => {
+  describe('ready gating (empty-latch on open)', () => {
     it('does not latch a detection from an empty pre-load list — derives once real data arrives', () => {
       const reorder = vi.fn().mockResolvedValue({ success: true })
       const loaded = [{ id: 'a', name: 'Alpha' }, { id: 'z', name: 'Zeta' }]

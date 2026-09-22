@@ -918,7 +918,7 @@ describe('TypingTestView — imported fileImport text (line breaks)', () => {
 // TypingTestView snapshots its own realized `lines` into a caller-owned
 // ref (consumed at finish time by use-typing-test-result-save.ts) via a
 // useLayoutEffect, never during render.
-describe('TypingTestView — lineSnapshotRef (line timeline PR1)', () => {
+describe('TypingTestView — lineSnapshotRef', () => {
   it('writes {runId, wordCount, lines} once real (state.lineBreaks) lines render', () => {
     const ref: { current: LineSnapshot | null } = { current: null }
     renderView({
@@ -1211,7 +1211,7 @@ describe('TypingTestView — logical-line window height (measured, synthetic mon
 // log — no IPC) whenever `lastFinishedLog` is present AND its `runId`
 // matches the current run (the stale-flash guard). Without a matching
 // log, the compact stats row + a consent hint render instead.
-describe('TypingTestView — completion screen timeline panel (Plan-completion-timeline-view PR-B)', () => {
+describe('TypingTestView — completion screen timeline panel', () => {
   const SAMPLE_LOG: RunKeystrokeLog = {
     runId: 'run-1',
     uid: 'uid-1',

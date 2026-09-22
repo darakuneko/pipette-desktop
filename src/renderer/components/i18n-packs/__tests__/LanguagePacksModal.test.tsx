@@ -342,7 +342,7 @@ describe('LanguagePacksModal', () => {
     await waitFor(() => expect(applyImport).toHaveBeenCalled())
   })
 
-  it('import shows error on parse failure, using the actual parseError message (P2b)', async () => {
+  it('import shows error on parse failure, using the actual parseError message', async () => {
     importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'bad.json', parseError: 'EACCES: permission denied' }] })
     render(
       <LanguagePacksModal open onClose={vi.fn()} />,
@@ -725,7 +725,7 @@ describe('LanguagePacksModal', () => {
     expect(banner.textContent).toContain('bad.json')
   })
 
-  it('P1 fix: importing files that interleave with existing rows (existing A,D; import B,C) lands fully sorted A,B,C,D in one reorder call', async () => {
+  it('importing files that interleave with existing rows (existing A,D; import B,C) lands fully sorted A,B,C,D in one reorder call', async () => {
     storeMetas = [
       meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' }),
       meta({ id: 'd', name: 'Delta', matchedBaseVersion: '0.1.0' }),
@@ -755,7 +755,7 @@ describe('LanguagePacksModal', () => {
     expect(reorderFn).toHaveBeenCalledWith(['a', 'b', 'c', 'd'])
   })
 
-  it('hub-sync failure after import is reported against the originating filename, not the pack name (P2a)', async () => {
+  it('hub-sync failure after import is reported against the originating filename, not the pack name', async () => {
     storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
     const raw = { name: 'Existing Pack', version: '0.1.0', common: {} }
     importFromDialog.mockResolvedValueOnce({
@@ -918,7 +918,7 @@ describe('LanguagePacksModal', () => {
     await waitFor(() => expect(vialAPI.hubUpdateI18nPost).toHaveBeenCalled())
   })
 
-  it('update and remove buttons are visible when hubCanWrite is true and the row is mine (isMine gate, Phase 3)', () => {
+  it('update and remove buttons are visible when hubCanWrite is true and the row is mine (isMine gate)', () => {
     storeMetas = [meta({ id: 'w1', name: 'Write Hub', hubPostId: 'hp-w1', uploaderName: 'me' })]
     render(
       <LanguagePacksModal open onClose={vi.fn()} hubCanWrite currentDisplayName="me" />,
@@ -928,7 +928,7 @@ describe('LanguagePacksModal', () => {
     expect(screen.queryByTestId('language-packs-sync-w1')).toBeNull()
   })
 
-  it('shows Sync instead of Update/Remove for a hub-linked row uploaded by someone else, even with hubCanWrite (isMine gate, Phase 3)', () => {
+  it('shows Sync instead of Update/Remove for a hub-linked row uploaded by someone else, even with hubCanWrite (isMine gate)', () => {
     storeMetas = [meta({ id: 'foreign1', name: 'Foreign Pack', hubPostId: 'hp-foreign1', uploaderName: 'someone-else' })]
     render(
       <LanguagePacksModal open onClose={vi.fn()} hubCanWrite currentDisplayName="me" />,
@@ -958,7 +958,7 @@ describe('LanguagePacksModal', () => {
     await waitFor(() => expect(applyImport).toHaveBeenCalled())
   })
 
-  it('sync refreshes uploaderName/hubUpdatedAt via a name-matched Hub list lookup (Phase 3)', async () => {
+  it('sync refreshes uploaderName/hubUpdatedAt via a name-matched Hub list lookup', async () => {
     storeMetas = [meta({ id: 'sy2', name: 'Sync Me', hubPostId: 'hp-sy2' })]
     vialAPI.hubDownloadI18nPost.mockResolvedValueOnce({
       success: true,
@@ -1187,7 +1187,7 @@ describe('LanguagePacksModal', () => {
     await waitFor(() => expect(renameFn).toHaveBeenCalledWith('r1', 'New Name'))
   })
 
-  it('P1-b: starting a rename then triggering an import cancels the edit instead of letting it commit mid-batch', async () => {
+  it('starting a rename then triggering an import cancels the edit instead of letting it commit mid-batch', async () => {
     storeMetas = [meta({ id: 'r2', name: 'Old Name', matchedBaseVersion: '0.1.0' })]
     let resolveDialog!: (value: { canceled: boolean; files: Array<{ filePath: string; raw?: unknown; parseError?: string }> }) => void
     importFromDialog.mockImplementationOnce(() => new Promise((resolve) => { resolveDialog = resolve }))

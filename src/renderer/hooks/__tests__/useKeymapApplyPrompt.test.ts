@@ -56,7 +56,7 @@ function dvorakTable() {
 const COLEMAK_TABLE = colemakTable()
 const DVORAK_TABLE = dvorakTable()
 
-describe('useKeymapApplyPrompt — simulation tab Apply flow (Plan-qwerty-select-no-rewrite v7)', () => {
+describe('useKeymapApplyPrompt — simulation tab Apply flow', () => {
   const onKeyboardLayoutChange = vi.fn()
   const onApplyKeymapRewrite = vi.fn().mockResolvedValue({ appliedCount: 2 })
 
@@ -190,7 +190,7 @@ describe('useKeymapApplyPrompt — simulation tab Apply flow (Plan-qwerty-select
 
   // --- C1 / C2: apply-result handling ---
 
-  it('C1: partial failure leaves the select untouched (no forced QWERTY reset) and surfaces the error', async () => {
+  it('partial failure leaves the select untouched (no forced QWERTY reset) and surfaces the error', async () => {
     onApplyKeymapRewrite.mockResolvedValueOnce({ appliedCount: 1, error: 'device write failed' })
     const { result } = setup({ keyboardLayout: 'dvorak-id', activeRewriteTable: DVORAK_TABLE, activeLayoutName: 'Dvorak' })
     act(() => { result.current.requestApply() })
@@ -202,7 +202,7 @@ describe('useKeymapApplyPrompt — simulation tab Apply flow (Plan-qwerty-select
     expect(result.current.pendingApply).toBeNull()
   })
 
-  it('C2: a zero-count success (keymap already matched the target — Apply intent satisfied) still resets the select to QWERTY', async () => {
+  it('a zero-count success (keymap already matched the target — Apply intent satisfied) still resets the select to QWERTY', async () => {
     onApplyKeymapRewrite.mockResolvedValueOnce({ appliedCount: 0 })
     const { result } = setup({ keyboardLayout: 'dvorak-id', activeRewriteTable: DVORAK_TABLE, activeLayoutName: 'Dvorak' })
     act(() => { result.current.requestApply() })
@@ -323,7 +323,7 @@ describe('useKeymapApplyPrompt — simulation tab Apply flow (Plan-qwerty-select
     // the user has already moved on to a different pack must never
     // clobber that new selection back to QWERTY. ---
 
-    it('FIX B: a layout change mid-apply discards a later clean success — no QWERTY reset, the new selection stands', async () => {
+    it('a layout change mid-apply discards a later clean success — no QWERTY reset, the new selection stands', async () => {
       const { promise, resolve } = pendingApplyResult()
       onApplyKeymapRewrite.mockImplementationOnce(() => promise)
 
@@ -353,7 +353,7 @@ describe('useKeymapApplyPrompt — simulation tab Apply flow (Plan-qwerty-select
       expect(result.current.applyError).toBeNull()
     })
 
-    it('FIX B: a layout change mid-apply also discards a later partial failure — no stray error surfaced against the abandoned pack', async () => {
+    it('a layout change mid-apply also discards a later partial failure — no stray error surfaced against the abandoned pack', async () => {
       const { promise, resolve } = pendingApplyResult()
       onApplyKeymapRewrite.mockImplementationOnce(() => promise)
 
@@ -374,7 +374,7 @@ describe('useKeymapApplyPrompt — simulation tab Apply flow (Plan-qwerty-select
       expect(onKeyboardLayoutChange).not.toHaveBeenCalled()
     })
 
-    it('FIX B control: an unchanged layout still resets to QWERTY on clean success (baseline, unaffected by the new guard)', async () => {
+    it('an unchanged layout still resets to QWERTY on clean success (baseline, unaffected by the new guard)', async () => {
       const { result } = setup({ keyboardLayout: 'dvorak-id', activeRewriteTable: DVORAK_TABLE, activeLayoutName: 'Dvorak' })
       act(() => { result.current.requestApply() })
       expect(result.current.pendingApply).not.toBeNull()
@@ -391,7 +391,7 @@ describe('useKeymapApplyPrompt — simulation tab Apply flow (Plan-qwerty-select
   // by its own identity so Confirm can never fire a table that no longer
   // matches what `useDevicePrefs` currently resolves for this id. ---
 
-  describe('activeRewriteTable identity race (P2 fix)', () => {
+  describe('activeRewriteTable identity race', () => {
     it('the pack is deleted while the modal is open (activeRewriteTable becomes undefined): modal closes, Confirm cannot fire the stale table', () => {
       const { result, rerender } = setup({ keyboardLayout: 'colemak-id', activeRewriteTable: COLEMAK_TABLE, activeLayoutName: 'Colemak' })
       act(() => { result.current.requestApply() })

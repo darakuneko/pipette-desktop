@@ -101,7 +101,7 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe('useDeviceLifecycle.handleConnect — issue #190 regression', () => {
+describe('useDeviceLifecycle.handleConnect', () => {
   it('downloads cloud settings BEFORE applying device prefs when sync is ready', async () => {
     const callOrder: string[] = []
     const syncNow = vi.fn().mockImplementation(async () => {
