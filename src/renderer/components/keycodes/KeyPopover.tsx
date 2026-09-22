@@ -62,7 +62,7 @@ interface KeyPopoverProps {
   /** Active Key Label pack's per-key legend override — same source
    *  `KeycodeGrid`/`BasicKeyboardView` already receive, threaded here
    *  so the Key tab's search index and result rows agree with what
-   *  the keymap grid shows (issue #294). */
+   *  the keymap grid shows. */
   remapLabel?: (qmkId: string) => string
   /** Edit target identity, exposed as the `data-popover-target-key`
    *  attribute on the root element so e2e tests can observe which
