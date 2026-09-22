@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Footer "Record" toggle persistence + snapshot capture + system
-// tray status. Split out of App.tsx (Task-split-app-tsx).
+// tray status.
 
 import { useCallback, useEffect, useRef } from 'react'
 import type { UseDevicePrefsReturn } from './useDevicePrefs'
@@ -48,8 +48,7 @@ export function useTypingRecordingTray({
   // main dedupes by content, so re-firing on unrelated keyboard
   // state churn is cheap (no file write when the keymap is equal).
   //
-  // REC (the footer's Record toggle) is no longer scoped to Typing View
-  // (Task-typing-record-footer) — it authorizes recording wherever matrix
+  // REC (the footer's Record toggle) authorizes recording wherever matrix
   // frames flow, so `active` fires on the toggle alone. An editor typing
   // test counts too, independent of REC: it records matrix keystrokes
   // tagged by test/run, so without a snapshot the Analyze Heatmap /

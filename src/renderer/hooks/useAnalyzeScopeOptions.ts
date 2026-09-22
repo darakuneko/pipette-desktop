@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Device / Keymap-snapshot option data for a single Analyze uid.
-// Extracted from `AnalyzePane` (the Device select's labelled options and
-// the snapshot timeline's option list both used to live inline, bound to
-// the pane's committed keyboard) so the filter modal can resolve the
-// same option lists for a *draft* uid — the keyboard the user is about
-// to switch to, before Apply commits it as the pane's selection.
+// Shared by `AnalyzePane` (the Device select's labelled options and the
+// snapshot timeline's option list, bound to the pane's committed keyboard)
+// and the filter modal, which resolves the same option lists for a
+// *draft* uid — the keyboard the user is about to switch to, before Apply
+// commits it as the pane's selection.
 //
 // Deliberately narrow: this hook only owns the fetch/cancel/loading-flag
 // plumbing for the two option lists. Anything that reacts to the results

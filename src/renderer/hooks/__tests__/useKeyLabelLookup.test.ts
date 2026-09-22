@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
-// Regression coverage for the lazy-pack-load freeze (Plan-qwerty-select-
-// no-rewrite follow-up): the returned lookup object used to be memoized
-// only on its member callbacks, which are stable `useCallback`s over a
-// ref — so an async `ensure(id)` resolving into the cache never changed
-// the object's IDENTITY, even though calling a member directly afterwards
-// already returned the fresh data. A downstream consumer that memoizes on
-// THIS object (or on a callback derived from it, e.g. `useDevicePrefs`'s
-// `remapLabel`/`isRemapped`) never recomputed, so the keymap legends and
-// key picker stayed frozen on the pre-fetch fallback until some unrelated
-// prop forced a rebuild. The fix folds `version` into the returned
-// `useMemo`'s deps so the identity changes exactly once per fetch (or
+// Regression coverage for the lazy-pack-load freeze: without `version` in
+// useKeyLabelLookup's returned `useMemo` deps, the returned lookup object
+// would be memoized only on its member callbacks, which are stable
+// `useCallback`s over a ref — so an async `ensure(id)` resolving into the
+// cache would never change the object's IDENTITY, even though calling a
+// member directly afterwards already returns the fresh data. A downstream
+// consumer that memoizes on THIS object (or on a callback derived from it,
+// e.g. `useDevicePrefs`'s `remapLabel`/`isRemapped`) would never recompute,
+// so the keymap legends and key picker would stay frozen on the pre-fetch
+// fallback until some unrelated prop forced a rebuild. Folding `version`
+// into the deps makes the identity change exactly once per fetch (or
 // store-change event) while staying stable across ordinary renders.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'

@@ -36,7 +36,7 @@ describe('useMaskedKeycodeSelection', () => {
     })
 
     expect(onUpdate).toHaveBeenCalledWith(deserialize('KC_A'))
-    // Normal keys no longer auto-commit — user must call confirm()
+    // Normal keys do not auto-commit — user must call confirm()
     expect(onCommit).not.toHaveBeenCalled()
     expect(result.current.activeMask).toBeNull()
     expect(result.current.maskOnly).toBe(false)
@@ -82,7 +82,7 @@ describe('useMaskedKeycodeSelection', () => {
     const mask = deserialize('LSFT(kc)')
     const inner = deserialize('KC_A')
     expect(onUpdate).toHaveBeenLastCalledWith((mask & 0xff00) | (inner & 0x00ff))
-    // Step 2 no longer auto-commits — user must call confirm()
+    // Step 2 does not auto-commit — user must call confirm()
     expect(onCommit).not.toHaveBeenCalled()
     expect(result.current.activeMask).not.toBeNull()
     expect(result.current.editingPart).toBe('inner')
@@ -261,7 +261,7 @@ describe('useMaskedKeycodeSelection', () => {
     expect(result.current.maskOnly).toBe(false)
   })
 
-  // --- New tests for initialValue auto-detection ---
+  // --- Tests for initialValue auto-detection ---
 
   it('auto-detects masked initialValue and enters inner editing', () => {
     const onUpdate = vi.fn()

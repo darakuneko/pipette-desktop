@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
-// Task-irr-3: importLocalData's cancelled/error outcomes must be
-// distinguished by the renderer — a cancelled file picker leaves
-// whatever result was already displayed alone, while a failure both
-// flips the result to 'error' and stores the raw main-process message
-// for display.
+// importLocalData's cancelled/error outcomes must be distinguished by the
+// renderer — a cancelled file picker leaves whatever result was already
+// displayed alone, while a failure both flips the result to 'error' and
+// stores the raw main-process message for display.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'

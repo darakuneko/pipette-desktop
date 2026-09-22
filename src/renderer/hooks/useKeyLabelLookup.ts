@@ -33,8 +33,8 @@ export interface UseKeyLabelLookupReturn {
   getMap: (id: string) => Record<string, string> | undefined
   /** qmkId → label map for composite keycodes (e.g. `LALT(KC_L)`). */
   getCompositeLabels: (id: string) => Record<string, string> | undefined
-  /** Opt-in "applicable to keymap" marker (Plan-key-label-keymap-apply).
-   *  Always `false` for built-in `KEYBOARD_LAYOUTS` entries. */
+  /** Opt-in "applicable to keymap" marker. Always `false` for built-in
+   *  `KEYBOARD_LAYOUTS` entries. */
   getKeymapApplicable: (id: string) => boolean
   /** True when `id` can bulk-rewrite the keymap: `keymapApplicable` is the
    *  pack author's own claim, re-validated here against

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
-// Focused hook-level coverage for `useThemePackStore`'s `reorder`
-// (Phase 2 of the pack-modal-unification plan). Mirrors the
-// `reorder` describe block already covering `useKeyLabels`.
+// Focused hook-level coverage for `useThemePackStore`'s `reorder`. Mirrors
+// the `reorder` describe block already covering `useKeyLabels`.
 //
 // Unlike i18n/Key Labels, `reorder` here does not call `refresh()`
 // itself — the main-side handler broadcasts `THEME_PACK_CHANGED` on

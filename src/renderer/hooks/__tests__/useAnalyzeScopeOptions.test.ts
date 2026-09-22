@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Covers the fetch/cancel/loading-flag contract extracted from
-// AnalyzePane into `useAnalyzeScopeOptions` — device infos + snapshot
+// Covers the fetch/cancel/loading-flag contract — device infos + snapshot
 // summaries for a single uid, including the "reset synchronously on uid
 // change" and "loaded stays false on error" semantics AnalyzePane's
 // downstream fallback/overlay logic depends on.
@@ -103,9 +102,9 @@ describe('useAnalyzeScopeOptions', () => {
   })
 
   it('returns the empty/loading shape on the very first render after a uid switch (no effect lag)', async () => {
-    // Regression: the clear used to happen in an effect, so a consumer's
-    // effect in the same commit as the uid switch could still read the
-    // PREVIOUS uid's summaries (e.g. AnalyzePane's auto-range-per-uid
+    // Regression: an effect-based clear would lag one commit behind, so a
+    // consumer's effect in the same commit as the uid switch could still
+    // read the PREVIOUS uid's summaries (e.g. AnalyzePane's auto-range-per-uid
     // effect marking the new uid as auto-ranged using the old list).
     // Record what every render actually returned so the pre-effect
     // window is observable.

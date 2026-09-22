@@ -33,9 +33,9 @@ export function useDevicePrefsRemap(layout: KeyboardLayoutId) {
     [activeMap],
   )
 
-  // Picker-only gate (Plan-qwerty-select-no-rewrite v6, Phase P): a pure
-  // QWERTY-keycode permutation pack (Colemak, Eucalyn, Dvorak, ...) must
-  // leave the key PICKER raw — see `pickerRemapLabel`'s doc comment below.
+  // Picker-only gate: a pure QWERTY-keycode permutation pack (Colemak,
+  // Eucalyn, Dvorak, ...) must leave the key PICKER raw — see
+  // `pickerRemapLabel`'s doc comment below.
   // Re-derives the same `.ok` verdict `buildKeymapRewriteTable` already
   // computes for the Key Label "apply to keymap" rewrite, rather than
   // consulting `getKeymapApplicable` (an author-supplied hint the rewrite
@@ -45,16 +45,15 @@ export function useDevicePrefsRemap(layout: KeyboardLayoutId) {
   // regardless of this flag.
   const packIsPurePermutation = !rewriteTableResult || rewriteTableResult.ok
 
-  // Author-supplied "wants a keymap rewrite" hint (Plan-key-label-keymap-
-  // apply) — `false` for built-in QWERTY and for any pack not yet loaded.
-  // Combined with `packIsPurePermutation` below (the structural `.ok`
-  // verdict) into the single Plan-qwerty-select-no-rewrite v7 predicate:
-  // `keymapApplicable && buildKeymapRewriteTable(map).ok`. That predicate —
-  // not `.ok` alone — is what `remapKind` now gates on, so it doubles as
-  // the simulation-tab / Apply-eligibility signal `KeymapEditor` consumes
-  // via `remapKind === 'simulated'` (tab visibility, Apply button, and the
-  // simulated tint all read the exact same boolean, never three separately
-  // maintained checks).
+  // Author-supplied "wants a keymap rewrite" hint — `false` for built-in
+  // QWERTY and for any pack not yet loaded. Combined with
+  // `packIsPurePermutation` below (the structural `.ok` verdict) into the
+  // single predicate: `keymapApplicable && buildKeymapRewriteTable(map).ok`.
+  // That predicate — not `.ok` alone — is what `remapKind` gates on,
+  // so it doubles as the simulation-tab / Apply-eligibility signal
+  // `KeymapEditor` consumes via `remapKind === 'simulated'` (tab
+  // visibility, Apply button, and the simulated tint all read the exact
+  // same boolean, never three separately maintained checks).
   const keymapApplicable = !!activeMap && lookup.getKeymapApplicable(layout)
 
   // Which remap tint `isRemapped`-tinted keys use on the keymap surface
@@ -65,11 +64,11 @@ export function useDevicePrefsRemap(layout: KeyboardLayoutId) {
   // "non-empty" here avoids relying on `rewriteTableResult`'s undefined-
   // ness to mean "no pack" (it doesn't for QWERTY, which is why
   // `packIsPurePermutation`'s own doc comment calls that state out
-  // separately). `keymapApplicable` is the addition over the old
-  // `.ok`-only check: a pack that structurally permutes but was never
-  // flagged applicable (the author's own opt-out) now renders with the
-  // ACTUAL tint in place, same as a JIS-type deviation pack, instead of
-  // simulating a Rewrite nothing downstream will actually offer.
+  // separately). `keymapApplicable` narrows `packIsPurePermutation`
+  // further: a pack that structurally permutes but isn't flagged
+  // applicable (the author's own opt-out) renders with the ACTUAL tint in
+  // place, same as a JIS-type deviation pack, instead of simulating a
+  // Rewrite nothing downstream will actually offer.
   const remapKind: RemapKind = useMemo(() => {
     const hasActivePackMap = !!activeMap && Object.keys(activeMap).length > 0
     return hasActivePackMap && keymapApplicable && packIsPurePermutation ? 'simulated' : 'actual'
@@ -84,8 +83,7 @@ export function useDevicePrefsRemap(layout: KeyboardLayoutId) {
   // Apply button is reachable at all, `rewriteTableResult` above has
   // already built successfully for this exact `layout`, so there is
   // nothing left to look up. `undefined` (not `remapKind !== 'simulated'`
-  // alone) is the guard `requestApply` no-ops on, mirroring the old
-  // resolver's own null-return contract.
+  // alone) is the guard `requestApply` no-ops on.
   const activeRewriteTable = remapKind === 'simulated' && rewriteTableResult?.ok
     ? rewriteTableResult.table
     : undefined
@@ -103,12 +101,11 @@ export function useDevicePrefsRemap(layout: KeyboardLayoutId) {
   // resolves to identity without a separate guard. Feeds the key picker
   // unconditionally, and the keymap surface too EXCEPT `KeymapEditor`'s
   // Base tab, which reads its own raw/identity keycode builder instead of
-  // calling this at all (Plan-qwerty-select-no-rewrite v7 — シミュレーション
-  // タブ方式: the simulation tab shows exactly what this resolves to, Base
-  // shows the real keymap regardless of it). A Rewrite never leaves
-  // anything for this to simulate — it resets `layout` back to QWERTY on
-  // success (raw characters, no color, no tabs), the same clean state a
-  // snapshot/.vil restore leaves.
+  // calling this at all (the simulation tab shows exactly what this
+  // resolves to, Base shows the real keymap regardless of it). A Rewrite
+  // never leaves anything for this to simulate — it resets `layout` back
+  // to QWERTY on success (raw characters, no color, no tabs), the same
+  // clean state a snapshot/.vil restore leaves.
   const remapLabel = useCallback(
     (qmkId: string): string => {
       const composite = lookup.getCompositeLabels(layout)?.[qmkId]

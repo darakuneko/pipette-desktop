@@ -205,7 +205,6 @@ describe('useLayoutStore – loadLayout', () => {
     expect(opts.applyVilFile).not.toHaveBeenCalled()
   })
 
-  // Task-irr-5 (Plan-import-restore-rollback.md §B call-site table, B6):
   // applyVilFile resolving { ok: false, ... } (a failed-and-possibly-rolled-
   // back HID apply) is distinct from the parse/format-error path above,
   // which always maps to the generic layoutStore.loadFailed.

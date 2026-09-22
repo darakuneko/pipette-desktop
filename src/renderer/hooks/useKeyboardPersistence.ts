@@ -99,11 +99,11 @@ export function useKeyboardPersistence(
 ) {
   const { stateRef, qmkSettingsBaselineRef, saveLayerNamesRef } = refs
 
-  // Exactly the fields `writeVilToDevice` needs — split out of `serialize()`
-  // so an apply's pre-write backup (and `serialize()` itself) don't pay for
-  // building `macroJson` (a split + deserialize + JSON round trip per
-  // macro) on every apply, including the success path, when only a failed
-  // apply's rollback ever reads the backup.
+  // Exactly the fields `writeVilToDevice` needs, so an apply's pre-write
+  // backup (and `serialize()` itself) don't pay for building `macroJson`
+  // (a split + deserialize + JSON round trip per macro) on every apply,
+  // including the success path, when only a failed apply's rollback ever
+  // reads the backup.
   const serializeDeviceFields = useCallback((): DeviceVilFields => {
     const s = stateRef.current
     return {
@@ -270,8 +270,7 @@ export function useKeyboardPersistence(
       qmkSettingsValues: appliedQmkSettings,
       layerNames,
       // Snapshot/layout-store restore and .vil import both converge here —
-      // bump so App.tsx's restore-cleanup effect (Plan-qwerty-select-no-rewrite
-      // §snapshot/.vil 復元時のクリーンアップ) notices even though uid and
+      // bump so App.tsx's restore-cleanup effect notices even though uid and
       // keymap size are unchanged (the two things KeymapEditor's own clear
       // effect keys off of).
       keymapRestoreSeq: s.keymapRestoreSeq + 1,

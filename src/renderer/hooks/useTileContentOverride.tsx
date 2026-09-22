@@ -15,11 +15,11 @@ interface SettingsTabOptions {
   onOpenAltRepeatKey?: (index: number) => void
 }
 
-// Stable fallback when the caller omits `onSelect` (Plan-qwerty-select-no-
-// rewrite v7: the simulation tab is read-only, so `KeymapEditor` passes no
-// handler at all rather than threading a `packTabReadOnly` ternary down
-// into this hook) — `TdTileGrid`/`MacroTileGrid` both require a real
-// function, so this is what actually lands on the tile's click instead of
+// Stable fallback when the caller omits `onSelect` (the simulation tab is
+// read-only, so `KeymapEditor` passes no handler at all rather than
+// threading a `packTabReadOnly` ternary down into this hook) —
+// `TdTileGrid`/`MacroTileGrid` both require a real function, so this is
+// what actually lands on the tile's click instead of
 // `gatedHandleKeycodeSelect`.
 function noopSelect(): void {}
 

@@ -1194,11 +1194,10 @@ describe('useDevicePrefs', () => {
       })
     })
 
-    // Plan-romaji-guide-line-sync: guideWordCount was renamed to
-    // guideLineCount (same 0-3 int range, same "0 = hidden" meaning). A
-    // config persisted before the rename only carries the legacy field, so
-    // it's mapped over on read rather than silently losing the user's
-    // explicit choice — see validateRomajiDetailSettings.
+    // guideLineCount takes precedence over the legacy guideWordCount field
+    // (same 0-3 int range, same "0 = hidden" meaning). A config that only
+    // carries the legacy field is mapped over on read rather than silently
+    // losing the user's explicit choice — see validateRomajiDetailSettings.
     it('migrates a legacy guideWordCount to guideLineCount when guideLineCount is absent', async () => {
       setupMocks()
       mockPipetteSettingsGet.mockResolvedValue({
@@ -1854,10 +1853,9 @@ describe('useDevicePrefs', () => {
   })
 
   describe('stale typingViewMenuTab tolerance (Task-typing-record-footer)', () => {
-    // The REC tab (and its persisted `typingViewMenuTab` pane pref) was
-    // removed once the Record toggle moved to the footer. A settings JSON
-    // written by an older build can still carry the field on disk — it
-    // must be silently ignored on load rather than rejecting the whole
+    // `typingViewMenuTab` isn't part of PipetteSettings, but a settings
+    // JSON written by an older build can still carry the field on disk —
+    // it must be silently ignored on load rather than rejecting the whole
     // record or leaking onto the returned prefs object.
     it('loads normally, ignoring a stale typingViewMenuTab field', async () => {
       setupMocks()
@@ -2086,12 +2084,12 @@ describe('useDevicePrefs', () => {
     })
   })
 
-  // Plan-qwerty-select-no-rewrite v5 最終仕様: Display Only is the sole
-  // remap-rendering mode this block covers — `remapLabel`/`isRemapped`
-  // resolve through the active Key Label pack's own compositeLabels -> map
-  // lookup order. A Rewrite never leaves anything for this to simulate,
-  // since it resets `layout` back to QWERTY on success. Same fixture as
-  // `shared/keymap/__tests__/keymap-apply.test.ts` (real Colemak data).
+  // Display Only is the sole remap-rendering mode this block covers —
+  // `remapLabel`/`isRemapped` resolve through the active Key Label pack's
+  // own compositeLabels -> map lookup order. A Rewrite never leaves anything
+  // for this to simulate, since it resets `layout` back to QWERTY on
+  // success. Same fixture as `shared/keymap/__tests__/keymap-apply.test.ts`
+  // (real Colemak data).
   describe('remap-rendering (Plan-qwerty-select-no-rewrite v5, Display Only mode)', () => {
     const COLEMAK: Record<string, string> = {
       KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
@@ -2138,11 +2136,11 @@ describe('useDevicePrefs', () => {
       expect(result.current.isRemapped('KC_A')).toBe(false) // untouched key
     })
 
-    // Bug fix: `isRemapped` used to test membership (`qmkId in map`)
-    // instead of the value-difference rule every picker/palette consumer
-    // applies via `remapLabel(x) !== x`. A pack entry whose value is a
-    // passthrough identical to its own qmkId (present in the map but never
-    // actually changing the label) must not be marked either.
+    // `isRemapped` applies the value-difference rule every picker/palette
+    // consumer applies via `remapLabel(x) !== x`, not map membership. A
+    // pack entry whose value is a passthrough identical to its own qmkId
+    // (present in the map but never actually changing the label) must not
+    // be marked either.
     it('an identity passthrough entry (map value equal to its own qmkId) is not marked, matching remapLabel(x) === x', async () => {
       setupMocks()
       const PACK_WITH_PASSTHROUGH: Record<string, string> = { ...COLEMAK, KC_A: 'KC_A' }
@@ -2190,12 +2188,12 @@ describe('useDevicePrefs', () => {
     })
   })
 
-  // Plan-qwerty-select-no-rewrite v6 (Phase P): the key PICKER only ever
-  // changes for a pack that deviates from ANSI — a pure QWERTY-keycode
-  // permutation pack (Colemak et al.) leaves the picker raw in every mode,
-  // since every character it swaps in already exists in the picker
-  // somewhere. `pickerRemapLabel` is the gated variant; `remapLabel`
-  // (the keymap-legend source) is unaffected either way.
+  // The key PICKER only ever changes for a pack that deviates from ANSI —
+  // a pure QWERTY-keycode permutation pack (Colemak et al.) leaves the
+  // picker raw in every mode, since every character it swaps in already
+  // exists in the picker somewhere. `pickerRemapLabel` is the gated
+  // variant; `remapLabel` (the keymap-legend source) is unaffected either
+  // way.
   describe('pickerRemapLabel (Plan-qwerty-select-no-rewrite v6, Phase P)', () => {
     const COLEMAK: Record<string, string> = {
       KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
@@ -2283,12 +2281,11 @@ describe('useDevicePrefs', () => {
     })
   })
 
-  // Task-kaw-sim-color: `remapKind` picks WHICH remap tint the keymap
-  // surface uses — 'simulated' (the permutation-pack Display Only case:
-  // labels show what a Rewrite would produce, pressing still types the
-  // old character) iff a non-empty pack map is loaded and it's a pure
-  // permutation; 'actual' otherwise (JIS-type deviation packs, QWERTY/no
-  // pack).
+  // `remapKind` picks WHICH remap tint the keymap surface uses —
+  // 'simulated' (the permutation-pack Display Only case: labels show what
+  // a Rewrite would produce, pressing still types the old character) iff a
+  // non-empty pack map is loaded and it's a pure permutation; 'actual'
+  // otherwise (JIS-type deviation packs, QWERTY/no pack).
   describe('remapKind (Task-kaw-sim-color)', () => {
     const COLEMAK: Record<string, string> = {
       KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',
@@ -2375,11 +2372,11 @@ describe('useDevicePrefs', () => {
       expect(result.current.remapKind).toBe('actual')
     })
 
-    // Plan-qwerty-select-no-rewrite v7 SINGLE PREDICATE: a structurally
-    // pure permutation the author did NOT flag `keymapApplicable` must
-    // render with the actual tint (no simulation to offer, since nothing
-    // downstream will ever build an Apply table for it either) — the old
-    // `.ok`-only check would have wrongly returned 'simulated' here.
+    // A structurally pure permutation the author did NOT flag
+    // `keymapApplicable` must render with the actual tint (no simulation to
+    // offer, since nothing downstream will ever build an Apply table for it
+    // either) — a check that only tested `.ok` would wrongly return
+    // 'simulated' here.
     it('is "actual" for a pure permutation pack not flagged keymapApplicable (author opt-out)', async () => {
       setupMocks()
       mockKeyLabelPack('colemak-id', COLEMAK, false)
@@ -2396,11 +2393,10 @@ describe('useDevicePrefs', () => {
     })
   })
 
-  // Task-kaw-requestApply-reuse: `activeRewriteTable` lets
-  // `useKeymapApplyPrompt.requestApply` skip its own async lookup/build —
-  // it must mirror `remapKind` exactly: defined (and matching
-  // `buildKeymapRewriteTable`'s own table) iff `remapKind === 'simulated'`,
-  // `undefined` in every 'actual' case.
+  // `activeRewriteTable` lets `useKeymapApplyPrompt.requestApply` skip its
+  // own async lookup/build — it must mirror `remapKind` exactly: defined
+  // (and matching `buildKeymapRewriteTable`'s own table) iff
+  // `remapKind === 'simulated'`, `undefined` in every 'actual' case.
   describe('activeRewriteTable', () => {
     const COLEMAK: Record<string, string> = {
       KC_E: 'F', KC_R: 'P', KC_T: 'G', KC_Y: 'J', KC_U: 'L', KC_I: 'U', KC_O: 'Y',

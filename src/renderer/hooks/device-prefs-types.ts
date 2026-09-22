@@ -90,13 +90,13 @@ export interface UseDevicePrefsReturn {
   /** Display label for a qmkId: the active Key Label pack's own label
    *  (via `compositeLabels` -> `map`), falling back to the qmkId itself
    *  when neither has an entry. This is what feeds the keymap surface
-   *  regardless of which of `KeymapEditor`'s tabs is showing (Plan-qwerty-
-   *  select-no-rewrite v7 — シミュレーションタブ方式): the simulation tab
-   *  renders it as-is, while the Base tab bypasses it entirely (its own
-   *  raw/identity keycode builder — see `KeymapEditor`'s `baseLayerKeycodes`
-   *  — never calls this at all). A Rewrite never leaves anything for this
-   *  to simulate either way, since it resets `layout` back to QWERTY
-   *  (raw/no-color) on success, which also makes the tabs disappear. */
+   *  regardless of which of `KeymapEditor`'s tabs is showing: the
+   *  simulation tab renders it as-is, while the Base tab bypasses it
+   *  entirely (its own raw/identity keycode builder — see `KeymapEditor`'s
+   *  `baseLayerKeycodes` — never calls this at all). A Rewrite never
+   *  leaves anything for this to simulate either way, since it resets
+   *  `layout` back to QWERTY (raw/no-color) on success, which also makes
+   *  the tabs disappear. */
   remapLabel: (qmkId: string) => string
   /** The blue "remapped" tint source: true whenever `remapLabel(qmkId)`
    *  differs from `qmkId` itself — same rule every picker/palette consumer
@@ -127,18 +127,18 @@ export interface UseDevicePrefsReturn {
    *  legend itself (`useLayerKeycodes`, `KeyWidget`'s masked-inner label)
    *  keeps using `remapLabel` above unconditionally.
    *
-   *  Plan-qwerty-select-no-rewrite v6: the picker should only ever change
-   *  for a pack that deviates from ANSI (a symbol/label the picker can't
-   *  already show as-is — JIS shift pairs, kana, ...). A pure QWERTY-
-   *  keycode permutation pack (Colemak, Eucalyn, Dvorak, ...) swaps WHICH key
-   *  sends a character, but every character it swaps in already exists
-   *  somewhere in the picker — remapping the picker's own legends for
-   *  that case would just be noise (and would desync the picker's
-   *  legend from the keycode it actually inserts). So this identity-
-   *  passes for a permutation pack and only forwards to `remapLabel` once
-   *  the active pack fails the same `buildKeymapRewriteTable` check the
-   *  Key Label "apply to keymap" rewrite itself uses to decide
-   *  applicability — a deviation pack behaves exactly like `remapLabel`.
+   *  The picker should only ever change for a pack that deviates from
+   *  ANSI (a symbol/label the picker can't already show as-is — JIS shift
+   *  pairs, kana, ...). A pure QWERTY-keycode permutation pack (Colemak,
+   *  Eucalyn, Dvorak, ...) swaps WHICH key sends a character, but every
+   *  character it swaps in already exists somewhere in the picker —
+   *  remapping the picker's own legends for that case would just be noise
+   *  (and would desync the picker's legend from the keycode it actually
+   *  inserts). So this identity-passes for a permutation pack and only
+   *  forwards to `remapLabel` once the active pack fails the same
+   *  `buildKeymapRewriteTable` check the Key Label "apply to keymap"
+   *  rewrite itself uses to decide applicability — a deviation pack
+   *  behaves exactly like `remapLabel`.
    *  QWERTY/no pack has an empty map, which trivially passes the check
    *  (nothing to permute), so it already resolves to identity without a
    *  separate guard. */

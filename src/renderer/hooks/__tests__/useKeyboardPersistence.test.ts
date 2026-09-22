@@ -3,11 +3,10 @@
 //
 // Covers two things `applyVilFile` does on every restore:
 //  - the `keymapRestoreSeq` bump — the single signal App.tsx's
-//    restore-cleanup effect watches for (Plan-qwerty-select-no-rewrite
-//    §snapshot/.vil 復元時のクリーンアップ, D1). Snapshot/layout-store
-//    restore and `.vil` import both converge on this function, so proving
-//    the bump fires here covers both call sites without needing App.tsx's
-//    own harness.
+//    restore-cleanup effect watches for. Snapshot/layout-store restore and
+//    `.vil` import both converge on this function, so proving the bump
+//    fires here covers both call sites without needing App.tsx's own
+//    harness.
 //  - QMK settings restore only applying qsids the connected firmware
 //    supports, and keeping local state in sync with what was actually
 //    written to the device.
@@ -158,10 +157,10 @@ describe('applyVilFile qmk settings', () => {
   })
 })
 
-// Task-irr-4 (Plan-import-restore-rollback.md §B tests B1-B5): applyVilFile's
-// backup-before-write / rollback-on-failure behavior for a real (non-dummy)
-// device. Each test installs its own window.vialAPI mock since the write
-// sequence itself — and where it's made to fail — is the point under test.
+// applyVilFile's backup-before-write / rollback-on-failure behavior for a
+// real (non-dummy) device. Each test installs its own window.vialAPI mock
+// since the write sequence itself — and where it's made to fail — is the
+// point under test.
 describe('applyVilFile HID backup and rollback', () => {
   const originalVialAPI = window.vialAPI
 

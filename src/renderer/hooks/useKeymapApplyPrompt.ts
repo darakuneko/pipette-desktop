@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Owns the "does this Key Label pack want a keymap rewrite?" decision for
-// the simulation tab's Apply button (Plan-qwerty-select-no-rewrite v7 —
-// シミュレーションタブ方式): reads `activeRewriteTable` — already resolved
-// and validated by `useDevicePrefs` (`keymapApplicable && buildKeymapRewrite
-// Table(map).ok`, the same predicate `remapKind === 'simulated'` gates on)
-// — before deciding whether to prompt with KeymapApplyConfirmModal.
+// the simulation tab's Apply button: reads `activeRewriteTable` — already
+// resolved and validated by `useDevicePrefs`
+// (`keymapApplicable && buildKeymapRewriteTable(map).ok`, the same
+// predicate `remapKind === 'simulated'` gates on) — before deciding
+// whether to prompt with KeymapApplyConfirmModal.
 //
-// The footer's Keyboard Layout select never opens this modal itself
-// anymore — `handleKeyboardLayoutChange` is a plain display switch for
-// EVERY value, including QWERTY (no more per-value branching). Selecting a
-// pack that supports a rewrite instead surfaces `KeymapEditor`'s
-// simulation/Base tabs (gated by `useDevicePrefs.remapKind ===
-// 'simulated'`, the SAME `keymapApplicable && buildKeymapRewriteTable(map)
-// .ok` predicate this hook re-derives below) — the Apply button living on
-// the simulation tab's layer row is what calls `requestApply()`, the only
-// entry point left into this modal.
+// The footer's Keyboard Layout select never opens this modal itself —
+// `handleKeyboardLayoutChange` is a plain display switch for EVERY value,
+// including QWERTY (no per-value branching). Selecting a pack that
+// supports a rewrite instead surfaces `KeymapEditor`'s simulation/Base
+// tabs (gated by `useDevicePrefs.remapKind === 'simulated'`, the SAME
+// `keymapApplicable && buildKeymapRewriteTable(map).ok` predicate this
+// hook re-derives below) — the Apply button living on the simulation
+// tab's layer row is what calls `requestApply()`, the only entry point
+// left into this modal.
 //
 // A Rewrite is still a destructive one-shot: undo/redo history is wiped
 // the moment any write lands, and recovery is the user's own .vil/snapshot
@@ -43,11 +43,10 @@ export interface UseKeymapApplyPromptOptions {
   /** Bulk-rewrite the live keymap via `KeymapEditorHandle.applyKeymapRewrite`. */
   onApplyKeymapRewrite?: (table: KeymapRewriteTable) => Promise<KeymapApplyResult>
   /** `KeyboardState.keymapRestoreSeq` — bumped by `applyVilFile` on every
-   *  successful snapshot/layout-store restore or `.vil` import
-   *  (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時のクリーンアップ).
-   *  An increase closes an open confirm modal defensively: the restore
-   *  just replaced the whole keymap this modal's pending Apply would
-   *  otherwise act against. */
+   *  successful snapshot/layout-store restore or `.vil` import. An
+   *  increase closes an open confirm modal defensively: the restore just
+   *  replaced the whole keymap this modal's pending Apply would otherwise
+   *  act against. */
   keymapRestoreSeq?: number
   /** `useDevicePrefs.activeRewriteTable` — the CURRENT `keyboardLayout`'s
    *  own rewrite table, already resolved and validated by `useDevicePrefs`
@@ -121,20 +120,19 @@ export function useKeymapApplyPrompt({
   // or QWERTY, before the stale apply resolves) discards that apply's
   // result instead of clobbering the new selection back to QWERTY.
   // `requestApply` itself resolves synchronously off `activeRewriteTable`
-  // now (no lookup to supersede), but still bumps this on every call — see
+  // (no lookup to supersede), but still bumps this on every call — see
   // its own comment.
   const requestSeqRef = useRef(0)
 
-  // RACE (Plan-qwerty-select-no-rewrite v7, new/mandatory): the select no
-  // longer routes through this hook's own onChange-time lookup — a value
-  // change can now land at any time, including while the confirm modal for
-  // a DIFFERENT pack is already open (e.g. open Colemak's warning, then
-  // pick Dvorak from the select before confirming — the pending modal
-  // would otherwise go on to rewrite Colemak's table against a keymap the
-  // user has already moved away from). Watching the value itself — rather
-  // than only closing the modal inline inside `handleKeyboardLayoutChange`
-  // — catches every path that can change it, not just this hook's own
-  // setter call.
+  // RACE: the select does not route through this hook's own onChange-time
+  // lookup — a value change can land at any time, including while the
+  // confirm modal for a DIFFERENT pack is already open (e.g. open
+  // Colemak's warning, then pick Dvorak from the select before confirming
+  // — the pending modal would otherwise go on to rewrite Colemak's table
+  // against a keymap the user has already moved away from). Watching the
+  // value itself — rather than only closing the modal inline inside
+  // `handleKeyboardLayoutChange` — catches every path that can change it,
+  // not just this hook's own setter call.
   const keyboardLayoutRef = useRef(keyboardLayout)
   useEffect(() => {
     const prev = keyboardLayoutRef.current
@@ -144,12 +142,12 @@ export function useKeymapApplyPrompt({
     setPendingApply(null)
   }, [keyboardLayout])
 
-  // Defensive close (external review finding): the active pack's OWN data
-  // can change out from under an open modal without `keyboardLayout`
-  // itself changing — e.g. the same pack is edited or deleted (via the
-  // Key Labels modal, a Hub sync, or another window) while its confirm
-  // modal is still open. `useDevicePrefs.activeRewriteTable` recomputes
-  // to a new object (or `undefined`) whenever that happens, even though
+  // Defensive close: the active pack's OWN data can change out from under
+  // an open modal without `keyboardLayout` itself changing — e.g. the
+  // same pack is edited or deleted (via the Key Labels modal, a Hub sync,
+  // or another window) while its confirm modal is still open.
+  // `useDevicePrefs.activeRewriteTable` recomputes to a new object (or
+  // `undefined`) whenever that happens, even though
   // `keyboardLayout` still names the same id — the `keyboardLayout`
   // watcher above only fires on an actual id change, not a same-id data
   // edit, so it can't catch this on its own. Comparing THIS value's own
@@ -166,8 +164,7 @@ export function useKeymapApplyPrompt({
     setPendingApply(null)
   }, [activeRewriteTable])
 
-  // Defensive close (Plan-qwerty-select-no-rewrite §snapshot/.vil 復元時の
-  // クリーンアップ, D3): the counter is monotonic for the session (disconnect
+  // Defensive close: the counter is monotonic for the session (disconnect
   // carries it forward rather than zeroing it, see keyboard-types.ts), so
   // any change here means a new restore landed.
   //
@@ -191,7 +188,7 @@ export function useKeymapApplyPrompt({
     setPendingApply(null)
   }, [keymapRestoreSeq])
 
-  // Plain display switch for every value — QWERTY included, no more
+  // Plain display switch for every value — QWERTY included, no
   // per-value branching. The layout-watch effect above independently
   // closes any pending modal once `keyboardLayout` actually changes as a
   // result of this call; the explicit reset here is belt-and-braces so the
@@ -212,10 +209,10 @@ export function useKeymapApplyPrompt({
   // there is nothing left to look up here. Stays defensive (falls through
   // to a no-op) so a stray call against QWERTY, an ineligible pack, or a
   // pack whose table hasn't resolved yet can't open a bogus modal. Still
-  // bumps `requestSeqRef` on every call (even though there's no longer an
-  // async gap for it to guard within THIS function): if a Confirm for a
-  // PRIOR request is somehow still in flight when this fires (the visible
-  // Apply button is disabled for that whole window, so not normally
+  // bumps `requestSeqRef` on every call (even though there's no async gap
+  // for it to guard within THIS function): if a Confirm for a PRIOR
+  // request is somehow still in flight when this fires (the visible Apply
+  // button is disabled for that whole window, so not normally
   // user-reachable), the bump makes that stale Confirm's eventual
   // resolution skip the QWERTY-reset / error-surfacing branch instead of
   // clobbering whatever this fresh request leads to — though its own
@@ -257,15 +254,15 @@ export function useKeymapApplyPrompt({
     // entirely, rather than resetting the select on top of a keymap the
     // restore already replaced.
     const restoreSeqAtStart = keymapRestoreSeqRef.current
-    // Layout race (external review finding): the select is no longer
-    // locked while this apply is in flight — the user can pick a
-    // DIFFERENT pack (or QWERTY) before this Confirm's own
-    // `onApplyKeymapRewrite` settles. `requestSeqRef` is bumped by the
-    // layout-watch effect on every OBSERVED `keyboardLayout` change (and
-    // by the restore effect too, so this single snapshot doubles as a
-    // second, redundant-but-harmless restore-race check) — comparing it
-    // after the await is what stops a stale apply for the OLD pack from
-    // clobbering the NEW selection back to QWERTY on a clean success.
+    // Layout race: the select is not locked while this apply is in
+    // flight — the user can pick a DIFFERENT pack (or QWERTY) before this
+    // Confirm's own `onApplyKeymapRewrite` settles. `requestSeqRef` is
+    // bumped by the layout-watch effect on every OBSERVED `keyboardLayout`
+    // change (and by the restore effect too, so this single snapshot
+    // doubles as a second, redundant-but-harmless restore-race check) —
+    // comparing it after the await is what stops a stale apply for the
+    // OLD pack from clobbering the NEW selection back to QWERTY on a
+    // clean success.
     const requestSeqAtStart = requestSeqRef.current
     void (async () => {
       try {
@@ -286,11 +283,11 @@ export function useKeymapApplyPrompt({
           setApplyError(result.error)
           return
         }
-        // Clean success (and a zero-count success alike — Plan-kaw-v7-tabs
-        // point 6: an appliedCount of 0 means the keymap already matched the
-        // target arrangement, so the Apply intent is already satisfied):
-        // Rewrite is a destructive one-shot (v5 最終仕様) — the select resets
-        // to QWERTY, the same clean state a snapshot/.vil restore leaves.
+        // Clean success (and a zero-count success alike — an appliedCount
+        // of 0 means the keymap already matched the target arrangement,
+        // so the Apply intent is already satisfied): Rewrite is a
+        // destructive one-shot — the select resets to QWERTY, the same
+        // clean state a snapshot/.vil restore leaves.
         // `useDevicePrefs.remapKind` reverts to 'actual' for QWERTY, so the
         // simulation/Base tabs disappear along with it.
         onKeyboardLayoutChange?.(BUILTIN_QWERTY_LAYOUT_ID as KeyboardLayoutId)

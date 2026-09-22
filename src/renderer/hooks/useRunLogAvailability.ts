@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Which runs (by runId) have a saved keystroke log for this keyboard —
 // drives whether `HistoryTimelineCell` shows its "open timeline" button
-// at all (Task-tm-phase5-word-timeline-ui requirement 7: a run with no
-// log gets no affordance, not a disabled one).
+// at all (a run with no log gets no affordance, not a disabled one).
 
 import { useEffect, useState } from 'react'
 
