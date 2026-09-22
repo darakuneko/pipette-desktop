@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
+// FLAG (coordinator-requested layout changes, cumulative history):
 //  1. MissedCharsList's original chip+tooltip presentation was replaced
 //     by a column TABLE (MissedTable) for KeystrokeTimelinePanel's use.
 //     MissedCharsList itself was reverted to its original plain-chip
@@ -65,7 +66,6 @@ describe('MissedTable (bar-graph rows: Word / typed chars / stacked bar / Cnt)',
     expect(screen.getByText('Missed')).toBeInTheDocument()
   })
 
-  // The mockup has no header row at all.
   it('renders no header row', () => {
     renderWithI18n(<MissedTable mistakes={{ h: 1 }} />)
     expect(screen.queryByTestId('missed-table-header')).toBeNull()
@@ -249,7 +249,7 @@ describe('MissedTable (bar-graph rows: Word / typed chars / stacked bar / Cnt)',
     })
   })
 
-  // `bordered`/`maxHeightClass` (timeline-panel polish items 2 & 3):
+  // `bordered`/`maxHeightClass`:
   // KeystrokeTimelinePanel passes `maxHeightClass="max-h-40"
   // bordered={false}` for its own bounded-modal instance (see
   // KeystrokeTimelinePanel.test.tsx) — this describe block covers the

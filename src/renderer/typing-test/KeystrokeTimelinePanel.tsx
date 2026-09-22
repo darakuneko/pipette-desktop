@@ -3,11 +3,11 @@
 // zoom slider, and the line/word rows with their hover tooltip. This
 // content can also render inline on the typing-test completion screen,
 // not only inside the History modal. Deliberately has NO
-// modal-specific assumptions: the
-// zoom's DOM-width-write invariant and the horizontal-scroll `overflow-auto`
-// wrapper both key off this component's own container width via
-// `ResizeObserver`, which works the same whether that container is a
-// modal panel or an inline block on another screen.
+// modal-specific assumptions: the zoom's DOM-width-write invariant and
+// the horizontal-scroll `overflow-auto` wrapper both key off this
+// component's own container width via `ResizeObserver`, which works
+// the same whether that container is a modal panel or an inline block
+// on another screen.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -200,7 +200,7 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
           all the remaining height — title/zoom/legend keep their natural
           height.
 
-          HEIGHT PRIORITY (in a bounded ancestor — the History modal's
+          HEIGHT PRIORITY: in a bounded ancestor — the History modal's
           `h-modal-80vh` — this box and the Missed box below both compete
           for the SAME leftover space, and the Missed box used to win: it
           was `shrink-0` (flex-shrink: 0) with its own internal scroll
@@ -211,16 +211,15 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
 
           A `min-h-64` floor on THIS box (an earlier version of this fix)
           does guarantee dominance whenever both boxes fit, but doesn't
-          actually prevent overflow — a `min-height`
-          is a hard floor, not a suggestion, so on a short enough window
-          (verified via the panel-polish E2E script's 800px case) the
-          Missed box's own `shrink-0` rigidity plus this floor together
-          summed to MORE than the available space, and — since neither
-          box had anywhere left to give — their rendered content visually
-          OVERLAPPED the finished-state controls row below instead of
-          properly stacking. A hard floor can only ever win a fixed-sum
-          contest against an equally rigid sibling; it can't make the
-          sibling actually yield.
+          actually prevent overflow — a `min-height` is a hard floor, not
+          a suggestion, so on a short enough window the Missed box's own
+          `shrink-0` rigidity plus this floor together summed to MORE
+          than the available space, and — since neither box had anywhere
+          left to give — their rendered content visually OVERLAPPED the
+          finished-state controls row below instead of properly
+          stacking. A hard floor can only ever win a fixed-sum contest
+          against an equally rigid sibling; it can't make the sibling
+          actually yield.
 
           FIX: make the Missed box wrapper (below) properly shrinkable
           instead — drop its `shrink-0` for `min-h-0` (default
@@ -279,8 +278,8 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
         {/* Legend — color alone never carries meaning elsewhere in
             this view (tooltips spell everything out too), but this
             is the at-a-glance key. Every item shows only its head
-            word ("Overlapped" / "Unjudged" / "Pause") — the former
-            parenthetical explanation moved into a per-item hover
+            word ("Overlapped" / "Unjudged" / "Pause") — the
+            parenthetical explanation lives in a per-item hover
             tooltip (`LegendSwatch`'s own `tooltipKey`, defined in
             keystroke-timeline-parts.tsx), rendered PLAIN with no
             visual affordance on the label itself (matching every
@@ -350,16 +349,17 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
             `flex-1 min-h-0` is what makes that vertical scroll trigger AT
             ALL — it relies entirely on an unbroken flex-height chain from
             this element up through the box above to a real bounded
-            ancestor (the editor's own overflow-auto content pane). A fixed
-            viewport-relative max-height cap can't adapt to how much OTHER
-            chrome (Lines/Font sidebar controls, an IME-composition warning, the
-            Missed table, ...) a given run actually has above/below it — it
-            either wastes space or (on a shorter window, or a run with more
-            of that chrome) still overflows the pane. TypingTestView.tsx
-            extends this same flex chain up through the finished-state
-            wrapper in TypingTestFinishedSection.tsx, so this scrollport
-            ends up correctly sized without any cap at all, in both the
-            modal and the completion-screen contexts alike — see its
+            ancestor (the editor's own overflow-auto content pane). A
+            fixed viewport-relative max-height cap can't adapt to how
+            much OTHER chrome (Lines/Font sidebar controls, an
+            IME-composition warning, the Missed table, ...) a given run
+            actually has above/below it — it either wastes space or (on
+            a shorter window, or a run with more of that chrome) still
+            overflows the pane. TypingTestView.tsx extends this same
+            flex chain up through the finished-state wrapper in
+            TypingTestFinishedSection.tsx, so this scrollport ends up
+            correctly sized without any cap at all, in both the modal
+            and the completion-screen contexts alike — see its
             FLEX-HEIGHT CHAIN comment for the exact chain. */}
         <div
           ref={containerRef}
@@ -423,8 +423,8 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
           no mistakes, same convention the completion screen
           (`TypingTestStatsRow`) already follows for its own copy of this
           list. Substitution/Omission/Insertion render above, as stat
-          cards in `summaryItems`, not here. Stays in the same position
-          (below the timeline box) so the timeline itself reads first.
+          cards in `summaryItems`, not here. Stays below the timeline
+          box so the timeline itself reads first.
 
           `min-h-0` (NOT `shrink-0` — see the timeline box's own
           HEIGHT PRIORITY comment for why that flip matters) lets this box

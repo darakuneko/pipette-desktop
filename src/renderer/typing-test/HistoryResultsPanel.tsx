@@ -50,7 +50,7 @@ const EXPORT_BTN_CLASS = 'inline-flex h-8 items-center rounded-md border border-
 // them. Values are the last statically measured EN/standard-JA budgets,
 // kept so tests still exercise a realistic fixed layout.
 //
-// Delete-confirm no longer constrains ANY column: the confirm state
+// Delete-confirm does not constrain ANY column: the confirm state
 // replaces the entire row with one full-width colSpan cell (see the row
 // render below), so even the longest pack's confirm string only ever
 // competes with the whole table width, not with PB/Timeline/Delete.

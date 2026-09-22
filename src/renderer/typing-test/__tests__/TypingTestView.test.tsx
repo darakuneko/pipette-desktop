@@ -417,10 +417,10 @@ describe('TypingTestView error-class line', () => {
 
 describe('TypingTestView controls row (finished state only)', () => {
   // Non-finished-status coverage (Next Test / Pause / Resume / Restart)
-  // moved to TypingTestControlsRow.test.tsx — TypingTestView no longer
-  // renders that row for any non-finished status (it moved to
-  // TypingTestPane, below the keyboard pane; see
-  // TypingTestPane.controls-row-order.test.tsx for its placement there).
+  // lives in TypingTestControlsRow.test.tsx — TypingTestView renders
+  // that row in TypingTestPane for any non-finished status, below the
+  // keyboard pane; see TypingTestPane.controls-row-order.test.tsx for
+  // its placement there.
   // The finished-state row stays here since TypingTestView still owns it.
   const fileImportConfig: TypingTestConfig = { mode: 'fileImport', textId: 'abc' }
 

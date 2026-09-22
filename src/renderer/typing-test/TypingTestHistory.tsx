@@ -349,9 +349,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
   return (
     <div data-testid="typing-test-history" className="flex min-h-0 flex-1 flex-col gap-3">
       {/* Single header row: Results/Analysis tabs on the left, selects at
-          the right end (ml-auto group). The source tabs (MonkeyType /
-          Tatoeba / Aozora / File Import) that used to be their own row
-          above this one are gone — source selection is now the first
+          the right end (ml-auto group). Source selection is the first
           select in the right-end group, reusing the same tab i18n labels
           as its option labels. When Analysis is active, the Accuracy Trend
           condition select (see deriveDistinctConditions above) joins it as

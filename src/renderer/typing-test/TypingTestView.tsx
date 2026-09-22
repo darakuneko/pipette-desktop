@@ -386,10 +386,10 @@ export function TypingTestView({
       />
 
       {/* Non-finished controls row (not started: Next Test / Resume; in
-          progress: Pause or Resume / Restart) no longer renders here — it
-          moved to TypingTestPane, BELOW the keyboard pane and its layer
-          note, so the reading window sits directly above the keyboard the
-          user actually types on. TypingTestPane owns the `!hideControls`
+          progress: Pause or Resume / Restart) renders in TypingTestPane,
+          BELOW the keyboard pane and its layer note, so the reading
+          window sits directly above the keyboard the user actually
+          types on. TypingTestPane owns the `!hideControls`
           gate for that row (the "operation" toggle). The finished-state
           row (result name + Next Test) stays here — it renders instead at
           the BOTTOM of the completion screen, below the timeline panel (or

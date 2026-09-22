@@ -8,8 +8,7 @@
 // Fallback scope is deliberately narrow: only WPM, Accuracy, Time, and
 // Overlap have a value when `result` is absent —
 //  - WPM/Accuracy fall back to the run-wide pooled figures
-//    `WordTimelineSummary` already computed pre-unification
-//    (`avgPace`/`avgAccuracy`).
+//    `WordTimelineSummary` already computed (`avgPace`/`avgAccuracy`).
 //  - Time falls back to the resolved log's own `durationMs` — a raw log
 //    fact, not a model derivation, but available unconditionally since
 //    `KeystrokeTimelinePanel` always receives the log itself.

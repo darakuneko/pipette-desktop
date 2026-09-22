@@ -123,10 +123,9 @@ describe('KeystrokeTimelinePanel', () => {
     expect(screen.getAllByTestId('word-timeline-keystroke')).toHaveLength(2)
   })
 
-  // Legend items that used to carry a parenthetical
-  // explanation inline now show only their head word, with the
-  // explanation moved into a hover tooltip (aria-describedby, not
-  // always-visible text).
+  // Legend items that used to carry a parenthetical explanation inline now
+  // show only their head word, with the explanation moved into a hover tooltip
+  // (aria-describedby, not always-visible text).
   describe('legend labels (head word only, parenthetical text moved to a hover tooltip)', () => {
     function hoverLegendLabel(text: string): HTMLElement {
       const label = screen.getByText(text)
@@ -178,7 +177,7 @@ describe('KeystrokeTimelinePanel', () => {
       expect(tooltip.textContent).toBe('More than 250ms, shown compressed')
     })
 
-    // FLAG (consistency fix): the tooltip-bearing label used to carry a
+    // The tooltip-bearing label used to carry a
     // dotted-underline + `cursor-help` affordance — no other tooltip
     // trigger in this codebase does that (ErrorMixSection's type labels,
     // CoverageBadge, the Missed table's own bar rows are all plain), so
@@ -245,7 +244,7 @@ describe('KeystrokeTimelinePanel', () => {
     // inline text in the flow.
     expect(within(container).queryByText(/Mistake markers include keystrokes later corrected/)).toBeNull()
     expect(within(container).queryByText(/Pauses are shown compressed on this axis/)).toBeNull()
-    // FLAG (consistency fix): the info glyph used to be a `<button>`,
+    // The info glyph used to be a `<button>`,
     // which this codebase's global `button:not(:disabled) { cursor:
     // pointer }` rule (style.css) put a pointer cursor on — inconsistent
     // with every other tooltip-only trigger (CoverageBadge,
@@ -287,7 +286,7 @@ describe('KeystrokeTimelinePanel', () => {
       expect(box.contains(legendRow)).toBe(true)
       expect(box.contains(canvas)).toBe(true)
 
-      // ...and in the sketch's own order: title, then zoom, then legend,
+      // ...and in the order: title, then zoom, then legend,
       // then rows.
       expect(title.compareDocumentPosition(zoomRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
       expect(zoomRow.compareDocumentPosition(legendRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -334,14 +333,12 @@ describe('KeystrokeTimelinePanel', () => {
     expect(warning.compareDocumentPosition(statLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  // Now that the legend's own Overlapped/Unjudged/Pause labels each
-  // carry their own
-  // `Tooltip` too (portaled to `document.body` unconditionally once
-  // mounted, per Tooltip.tsx's own comment — `role="tooltip"` exists in
-  // the DOM before any hover), several `role="tooltip"` elements coexist
-  // and the single-role query throws. Scoped instead via the info
-  // button's own `aria-describedby`, same technique the legend-tooltip
-  // tests above use.
+  // Now that the legend's own Overlapped/Unjudged/Pause labels each carry
+  // their own `Tooltip` too (portaled to `document.body` unconditionally once
+  // mounted, per Tooltip.tsx's own comment — `role="tooltip"` exists in the
+  // DOM before any hover), several `role="tooltip"` elements coexist and the
+  // single-role query throws. Scoped instead via the info button's own
+  // `aria-describedby`, same technique the legend-tooltip tests above use.
   it('shows both note texts, joined as two lines, in the legend info tooltip', () => {
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} />)
     const infoButton = screen.getByTestId('word-timeline-legend-info')
@@ -355,12 +352,11 @@ describe('KeystrokeTimelinePanel', () => {
     )
   })
 
-  // These four cases used to
-  // assert on `typing-test-mistakes` (MissedCharsList's chip+tooltip
-  // presentation). KeystrokeTimelinePanel now renders `MissedTable`
-  // instead (see mistake-summary.tsx) — updated in place to the table's
-  // own testids rather than being dropped; MissedTable's own detailed
-  // table-structure coverage (headers, EMPTY_STAT_VALUE placeholders,
+  // These four cases used to assert on `typing-test-mistakes`
+  // (MissedCharsList's chip+tooltip presentation). KeystrokeTimelinePanel now
+  // renders `MissedTable` instead (see mistake-summary.tsx) — updated in place
+  // to the table's own testids rather than being dropped; MissedTable's own
+  // detailed table-structure coverage (headers, EMPTY_STAT_VALUE placeholders,
   // shared grid tracks) lives in mistake-summary.test.tsx.
   it('shows the Missed table when the result carries mistakes', () => {
     const result = makeResult({
@@ -378,10 +374,9 @@ describe('KeystrokeTimelinePanel', () => {
     expect(within(row).getByTestId('missed-table-row-a-count').textContent).toBe('3')
   })
 
-  // The "Typed instead"
-  // cell used to show "x: 1" (char + count together); the mockup moved
-  // counts into the bar's own hover tooltip, so the row's inline cell now
-  // reads "→ x" (chars only) instead.
+  // The "Typed instead" cell used to show "x: 1" (char + count together); the
+  // mockup moved counts into the bar's own hover tooltip, so the row's inline
+  // cell now reads "→ x" (chars only) instead.
   it('wires buildMissedDetails(log) end to end: a keystroke\'s typedChar/mistakeKey surfaces in the row\'s typed cell and bar split', () => {
     const logWithDetail: RunKeystrokeLog = {
       ...SAMPLE_LOG,
@@ -420,18 +415,20 @@ describe('KeystrokeTimelinePanel', () => {
     expect(box.contains(missedTable)).toBe(false)
   })
 
-  // Wrapped here (at THIS call site only — see the wrapper's own doc
-  // comment in KeystrokeTimelinePanel.tsx) in the exact same bordered-box
-  // treatment as the timeline box above. `MistakeRankingSection`
-  // (History's "Most missed") renders the same `MissedTable` unboxed —
-  // see MistakeRankingSection.test.tsx.
+  // Coordinator-requested layout tweak (real-device screenshot review):
+  // the Missed section used to sit outside any container. Wrapped here
+  // (at THIS call site only — see the wrapper's own doc comment in
+  // KeystrokeTimelinePanel.tsx) in the exact same bordered-box treatment
+  // as the timeline box above. `MistakeRankingSection` (History's "Most
+  // missed") renders the same `MissedTable` unboxed — see
+  // MistakeRankingSection.test.tsx, unchanged by this tweak.
   // `shrink-0` (flex-shrink: 0) became `min-h-0` — `shrink-0` refused to
-  // compress at all, which
-  // (verified via the E2E script's 800px-window case) could overflow past
-  // the finished-state controls row below in a bounded ancestor with a
-  // real content-heavy Missed table. `min-h-0` keeps the default
-  // `flex-shrink: 1` in effect, so this box can shrink proportionally
-  // instead of forcing an overflow — see the box's own doc comment.
+  // compress at all, which (verified via the E2E script's 800px-window
+  // case) could overflow past the finished-state controls row below in a
+  // bounded ancestor with a real content-heavy Missed table. `min-h-0`
+  // keeps the default `flex-shrink: 1` in effect, so this box can shrink
+  // proportionally instead of forcing an overflow — see the box's own
+  // doc comment.
   it('wraps the Missed table in its own bordered box matching the timeline box treatment, with min-h-0 (not shrink-0)', () => {
     const result = makeResult({ mistakes: { a: 3 } })
     renderWithI18n(<KeystrokeTimelinePanel log={SAMPLE_LOG} result={result} />)

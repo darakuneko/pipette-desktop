@@ -130,7 +130,7 @@ describe('TypingTestSettingsBar toggles', () => {
   })
 })
 
-// Weak Spot Training's own toggle/status UI moved into WeakSpotSettingsModal
+// Weak Spot Training's own toggle/status UI lives in WeakSpotSettingsModal
 // (opened from the DATA-section button in TypingTestPaneSettingsPanel) — see
 // WeakSpotSettingsModal.test.tsx for that coverage. This bar only still owns
 // the mode-switch carry-through of weakSpotTrainingMode/weakSpot (togglesRef),

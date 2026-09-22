@@ -63,7 +63,7 @@ function GuideRow({ testid, showRow, imeDetected, imeHintTestId, imeHintKey, sty
  *  fallback below also uses, so both paths satisfy the same selector
  *  contract). `isFirst` suppresses the inter-word leading space for the
  *  first word on a line — words after it get one, same convention the
- *  lookahead rendering used. */
+ *  lookahead rendering uses. */
 function renderGuideWord(guide: RomajiGuide, wordIdx: number, isFirst: boolean, currentWordIndex: number) {
   const prefix = isFirst ? '' : ' '
   if (wordIdx === currentWordIndex) {

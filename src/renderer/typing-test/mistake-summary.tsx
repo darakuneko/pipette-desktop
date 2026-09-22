@@ -83,14 +83,13 @@ export function MissedCharsList({ mistakes }: MissedCharsListProps) {
 /** Fixed column widths (not `max-content`) so every row — each its own
  *  independent grid instance — lands on identical column boundaries
  *  without needing a single shared grid parent, same pattern as
- *  `ERROR_MIX_GRID` in ErrorMixSection.tsx. No header row (see
- *  `MissedTable`'s own doc comment), so these widths only ever have to
- *  agree with each other, not with a caption row above them. Word/Cnt
- *  are fixed-width (short,
- *  bounded content); the typed-chars cell gets a bounded-but-flexible
- *  width (long enough for a handful of comma-joined chars before
- *  truncating); the bar takes the remaining space (`1fr`) since it's the
- *  row's main visual element. */
+ *  `ERROR_MIX_GRID` in ErrorMixSection.tsx. No header row, so these
+ *  widths only ever have to agree with each other, not with a caption
+ *  row above them. Word/Cnt are fixed-width (short, bounded content);
+ *  the typed-chars cell gets a bounded-but-flexible width (long enough
+ *  for a handful of comma-joined chars before truncating); the bar
+ *  takes the remaining space (`1fr`) since it's the row's main visual
+ *  element. */
 const MISSED_ROW_GRID = { gridTemplateColumns: '4.5rem 5rem 1fr 3rem' }
 
 /** "m: 1, n: 2" — sorted DESC by count, ties on `Object.entries`'
@@ -127,7 +126,7 @@ function formatTypedCharsOnly(detail: MissedCharDetail | undefined): string | nu
  *  the track) is computed separately in `MissedTable` from `count` vs the
  *  list's own max.
  *
- *  UNKNOWN-SPLIT ROWS (FLAGGED CHOICE): a row with no `detail` at all
+ *  UNKNOWN-SPLIT ROWS: a row with no `detail` at all
  *  (legacy log predating this feature, or every contributing run's log
  *  hit the `charCorrelationUnavailable` bailout) has no way to know its
  *  own corrected/moved-on split — rendered as 100% gray (i.e. IDENTICAL
@@ -213,8 +212,8 @@ interface MissedTableProps {
  *  (14rem, Tailwind's `max-h-56`, on the 4px grid) rather than a
  *  `vh`-relative figure, matching `KeystrokeTimelinePanel`'s own
  *  scrollport sizing philosophy of not depending on ambient viewport
- *  size. FLAGGED PICK: N rows at ~1.375rem each (`text-xs` + `gap-1`)
- *  fits comfortably within 14rem for 8-10 rows before scrolling engages —
+ *  size. N rows at ~1.375rem each (`text-xs` + `gap-1`) fits comfortably
+ *  within 14rem for 8-10 rows before scrolling engages —
  *  picked as a reasonable middle of the spec's own "~8-10 rows" range,
  *  not derived from a measured DOM constant. Unaffected by the header
  *  row's removal — it was never load-bearing for this figure, just one
@@ -231,8 +230,8 @@ const MISSED_TABLE_MAX_HEIGHT = 'max-h-56'
  *  `movedOnCount` (uncorrected)
  *  and `bg-content-muted` (gray) for the remainder (corrected with
  *  Backspace) — see that function's own doc comment for the
- *  unknown-split (no `detail`) case. FLAGGED COLOR CHOICE: the track
- *  itself stays `bg-surface-dim` (this codebase's established "subdued
+ *  unknown-split (no `detail`) case. The track itself stays
+ *  `bg-surface-dim` (this codebase's established "subdued
  *  tint" track color, same as
  *  `ConnectingOverlay`'s progress track); the corrected segment uses
  *  `bg-content-muted` specifically so it reads as a distinct, visible
