@@ -83,7 +83,7 @@ export function AppStatusBar({
       // fire the post-apply flash timer's setState after unmount.
       // Typing View / Typing Test don't unmount the editor, so they're
       // unaffected; Disconnect has the same mid-apply hazard but
-      // that's pre-existing and out of scope here.
+      // that's out of scope here.
       analyzeDisabled={keymapApplyBusy}
       onViewAnalytics={() => handleViewAnalytics('typingTest')}
       viewAnalyticsDisabled={typingTestRunning}

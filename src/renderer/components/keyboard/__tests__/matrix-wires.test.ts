@@ -386,7 +386,8 @@ describe('buildMatrixWires — split-board label order regression', () => {
 
   it('keeps every colliding row-label pair on the split-thumb fixture in ascending index order', () => {
     // Regression guard: the fixture's thumb rows (3 and 7) have label
-    // anchors a fraction of a pixel apart.
+    // anchors a fraction of a pixel apart, which used to render row 7
+    // before row 3 in the left gutter.
     const fontSize = 12
     const { rows } = buildMatrixWires(layout.keys, IDENTITY_CELLS, 1, fontSize)
     const pitch = rowLabelPitch(fontSize)

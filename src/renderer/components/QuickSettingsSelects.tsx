@@ -59,7 +59,7 @@ export function QuickSettingsSelects({
   // True exactly when the Keyboard Layout select renders below (the
   // `!editMode` branch, with both `keyboardLayout` and
   // `onKeyboardLayoutChange` supplied) — shared by the ensure-sweep effect
-  // and the JSX so the two can't drift apart again.
+  // and the JSX so the two can't drift apart.
   const showLayoutSelect = keyboardLayout != null && !!onKeyboardLayoutChange && !editMode
 
   // Kick off a lazy fetch for every pack the select can currently show,

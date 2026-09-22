@@ -80,8 +80,8 @@ describe('KeymapApplyConfirmModal', () => {
     expect(onApply).toHaveBeenCalledTimes(1)
   })
 
-  // Simulated viewing is the tabs' job, so the modal is a plain Cancel /
-  // Rewrite choice.
+  // Simulated viewing is the tabs' job, not a modal button, so the modal
+  // is a plain Cancel / Rewrite choice.
   it('has no Display Only button', () => {
     render(
       <KeymapApplyConfirmModal

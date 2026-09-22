@@ -378,10 +378,10 @@ function KeyWidgetInner({
               pair ("(\n8") stacks vertically — shifted char on top,
               base below — matching Vial's convention (and `SplitKey`'s
               own base/shifted split elsewhere in the picker) instead of
-              cramming both onto one line. A single part
-              renders centered as before; parts beyond 2 are dropped —
-              same "excess parts have no slot" convention the outer
-              label's own 2-part branch above already documents. */}
+              cramming both onto one line. A single part renders
+              centered; parts beyond 2 are dropped — same "excess parts
+              have no slot" convention the outer label's own 2-part
+              branch above already documents. */}
           {(() => {
             const innerParts = innerLabel.split('\n').slice(0, 2)
             if (innerParts.length === 2) {

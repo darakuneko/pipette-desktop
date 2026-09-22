@@ -219,7 +219,6 @@ describe('KeyboardWidget flash threading', () => {
   })
 })
 
-// encoder CW/CCW legends gained the same remap tint keymap keys already have.
 describe('KeyboardWidget remappedEncoders threading', () => {
   const keys: KleKey[] = [
     makeKey({ x: 0, y: 0, row: -1, col: -1, encoderIdx: 0, encoderDir: 0 }),

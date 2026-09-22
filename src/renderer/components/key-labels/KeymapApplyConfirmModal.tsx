@@ -4,8 +4,8 @@
 // active Key Label pack's map has been validated as a pure QWERTY-keycode
 // permutation (see `buildKeymapRewriteTable` in
 // shared/keymap/keymap-apply.ts). Rewrite is the only affirmative action
-// left here — simulated viewing is the tabs' job, so this is a plain
-// Cancel / Rewrite choice.
+// left here — simulated viewing is the tabs' job, not a modal button,
+// so this is a plain Cancel / Rewrite choice.
 
 import { useTranslation } from 'react-i18next'
 import { useEscapeClose } from '../../hooks/useEscapeClose'

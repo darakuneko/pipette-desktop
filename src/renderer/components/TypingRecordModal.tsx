@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Footer "Record" modal. Content: the Start/Stop toggle (with the same
-// first-time consent flow), Monitor App, the tray toggles, and the
-// HeatMap window select. StatusBar owns the open/close boolean and only
-// mounts this as a sibling while open.
+// Footer "Record" modal, minus its own Analyze button (the footer
+// already has one). Content: the Start/Stop toggle (with the first-time
+// consent flow), Monitor App, the tray toggles, and the HeatMap window
+// select. StatusBar owns the open/close boolean and only mounts this as
+// a sibling while open.
 
 import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
