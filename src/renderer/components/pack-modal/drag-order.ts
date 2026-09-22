@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Pure list-reordering helper shared by every draggable pack list
-// (Key Labels, and Language Packs / Theme Packs).
+// (Key Labels and Language Packs / Theme Packs).
 
 /**
  * Re-order `items` according to `order` (a list of ids in the desired

@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Shared "is this Hub result already installed locally?" check for the
-// three pack modals' Find-on-Hub tab. Both signals are real and worth
-// keeping — a renamed local copy of a downloaded pack no longer
-// matches by name, and a from-scratch local import that happens to
-// share a Hub pack's name has no `hubPostId` yet — so the unified
-// rule checks `hubPostId` first, then falls back to a case-insensitive
-// name match.
+// three pack modals' Find-on-Hub tab. A renamed local copy of a
+// downloaded pack no longer matches by name, and a from-scratch local
+// import that happens to share a Hub pack's name has no `hubPostId`
+// yet — so the rule checks `hubPostId` first, then falls back to a
+// case-insensitive name match.
 
 export interface InstalledDetectionEntry {
   hubPostId?: string

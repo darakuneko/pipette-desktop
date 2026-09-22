@@ -85,8 +85,7 @@ function idsMatch(a: string[], b: string[]): boolean {
  * itself, since a stable `Array.prototype.sort` leaves ties in their
  * original relative order in both directions. Asc is checked first, so
  * an all-equal list always resolves to 'asc' rather than 'free' — a
- * deliberate, documented convention (confirmed via review), not an
- * accidental fallthrough.
+ * deliberate, documented convention, not an accidental fallthrough.
  */
 export function detectSortState(entries: NameSortEntry[]): SortDirection {
   if (entries.length <= 1) return 'free'

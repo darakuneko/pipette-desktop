@@ -1348,7 +1348,7 @@ describe('LanguagePacksModal', () => {
     expect(screen.queryByTestId('language-packs-error')).toBeNull()
   })
 
-  // --- drag reorder + Name sort -----------------------------------
+  // --- drag reorder + Name sort --------------------------------------------
 
   // These two only exercise the pre-load fallback: `storeMetas` here has
   // no real `builtin-english` entry (the mocked store never runs

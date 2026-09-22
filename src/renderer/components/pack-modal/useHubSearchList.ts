@@ -28,7 +28,10 @@
 //
 // A rejected `fetchPage` promise is folded into the same failure path
 // as an unsuccessful `{ success: false }` response (see the inner
-// try/catch in `runSearch`).
+// try/catch in `runSearch`): the spinner always clears, and the user
+// sees the translated error message — while `clearResultsOnError` and
+// `markSearchedOnFailure` still apply exactly as they would for a
+// non-throwing failed response.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { compareNames } from './useNameSort'

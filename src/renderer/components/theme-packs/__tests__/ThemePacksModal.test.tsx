@@ -1141,7 +1141,7 @@ describe('ThemePacksModal', () => {
     expect(screen.getByTestId('theme-packs-hub-download-hp-del1')).toBeTruthy()
   })
 
-  // --- drag reorder + Name sort -----------------------------------
+  // --- drag reorder + Name sort --------------------------------------------
 
   it('renders a drag grip for every installed pack row', () => {
     metas = [meta({ id: 'p1', name: 'My Theme' })]
