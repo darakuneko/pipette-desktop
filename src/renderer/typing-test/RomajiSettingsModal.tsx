@@ -39,9 +39,7 @@ const INPUT_METHODS: readonly JapaneseInputMethod[] = ['romaji', 'kana', 'direct
 
 // Total line count offered by the guide row (the line the current word
 // sits on included), 0-3: 0 hides the row, 1 shows only the current line,
-// 2/3 add one/two upcoming lines. Default 1 (see pruneRomaji) — two fewer
-// than the fixed behaviour before this setting existed (which always
-// showed the current word plus two upcoming).
+// 2/3 add one/two upcoming lines. Default 1 (see pruneRomaji).
 const GUIDE_LINE_OPTIONS = [0, 1, 2, 3] as const
 
 // Both the Guide and the Accepted input patterns sections share the same
@@ -119,12 +117,9 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
 
   // Writes `romajiInput`/`romaji.inputMethod` TOGETHER as one coherent
   // pair (see resolveJapaneseInputMethod's own doc comment) — the single
-  // write path for the unified selector, replacing the old independent
-  // master-toggle + 2-way-picker pair that could leave a stale
-  // `inputMethod` sitting inert while `romajiInput` was false. Always
-  // prunes `inputMethod` back out for 'direct'/'romaji' so a later
-  // re-selection of 'kana' is the only way it reappears, rather than an
-  // old value quietly resurfacing.
+  // write path for the unified selector. Always prunes `inputMethod` back
+  // out for 'direct'/'romaji' so a later re-selection of 'kana' is the
+  // only way it reappears, rather than an old value quietly resurfacing.
   const selectInputMethod = useCallback((next: JapaneseInputMethod) => {
     const merged = pruneRomaji({ ...romaji, inputMethod: next === 'kana' ? 'kana' : undefined })
     const { romaji: _current, ...rest } = config
@@ -193,9 +188,8 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
 
         <div className="flex flex-col gap-4 overflow-y-auto p-4">
           {/* Input method — the single 3-way selector (Direct / Romaji /
-              Kana) replacing the old independent master-enable toggle +
-              2-way engine picker. Shown first: every section below either
-              applies to both engines (Line-end Enter, Lines shown — hidden
+              Kana). Shown first: every section below either applies to
+              both engines (Line-end Enter, Lines shown — hidden
               for Direct, which has no keystroke guide at all) or only to
               Romaji (Displayed case, Guide/Accepted input patterns — かな
               has no alternate spellings or case to configure, and Direct
