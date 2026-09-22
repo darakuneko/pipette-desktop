@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Hub IPC: shared analytics-export assembly path used by the upload,
-// update, preview and private-upload analytics handlers. Split out of
-// hub-ipc.ts to keep it under the project's 800-line Service/Util size
-// ceiling.
+// update, preview and private-upload analytics handlers.
 
 import type {
   HubUploadAnalyticsPostParams, HubPreviewAnalyticsPostParams,
@@ -178,9 +176,9 @@ function projectFiltersForHub(
   fingerOverrides: Record<string, string> | undefined,
 ): HubAnalyticsFilters {
   const f = payload.filters ?? {}
-  // Bigrams limits are fixed (10/10/20) per HUB-ANALYTICS-API.md §4.3
-  // — the desktop never sends user-tweaked counts so the Hub size /
-  // privacy surface stays predictable.
+  // Bigrams limits are fixed (10/10/20) — the desktop never sends
+  // user-tweaked counts so the Hub size / privacy surface stays
+  // predictable.
   const pairThreshold = typeof f.bigrams?.pairIntervalThresholdMs === 'number'
     ? f.bigrams.pairIntervalThresholdMs
     : undefined
