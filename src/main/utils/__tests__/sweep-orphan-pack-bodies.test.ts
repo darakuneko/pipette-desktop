@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Shared-body coverage for `sweepOrphanFiles` (both stores now keep
+// Shared-body coverage for `sweepOrphanFiles` (both stores keep
 // only a thin lock-behavior test of their own `runGcUnderLock`).
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
