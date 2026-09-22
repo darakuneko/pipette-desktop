@@ -30,10 +30,8 @@ function hasBooleanFields(obj: Record<string, unknown>, ...keys: string[]): bool
 /** Validates `config.romaji` (Romaji Settings modal fields) field-by-field:
  *  an unknown/malformed field is dropped individually instead of rejecting
  *  the whole nested object, so a stray/corrupted field never takes out
- *  fields that did validate (Plan-typing-romaji-settings-modal design
- *  judgement #9 — the same nested-config drop bug that hit `romajiInput`
- *  before it was carried through explicitly below). Returns undefined when
- *  `raw` isn't a plausible object, or every field turned out invalid. */
+ *  fields that did validate. Returns undefined when `raw` isn't a
+ *  plausible object, or every field turned out invalid. */
 function validateRomajiDetailSettings(raw: unknown): RomajiDetailSettings | undefined {
   if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return undefined
   const obj = raw as Record<string, unknown>

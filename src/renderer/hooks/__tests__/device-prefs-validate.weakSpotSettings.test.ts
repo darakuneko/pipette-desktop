@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-// Weak Spot Settings modal (Plan-weak-spot-settings-modal): field-level
-// validation of the optional `weakSpot` nested object on words/time
-// TypingTestConfig — mirrors device-prefs-validate.weakSpot.test.ts's own
-// coverage of the (unrelated) `weakSpotTrainingMode` boolean flag, kept as its
-// own file for the same "small focused suite" reason that one gives.
+// Weak Spot Settings modal: field-level validation of the optional
+// `weakSpot` nested object on words/time TypingTestConfig — mirrors
+// device-prefs-validate.weakSpot.test.ts's own coverage of the (unrelated)
+// `weakSpotTrainingMode` boolean flag, kept as its own file for the same
+// "small focused suite" reason that one gives.
 
 import { describe, it, expect } from 'vitest'
 import { validateIpcPrefs } from '../device-prefs-validate'

@@ -153,7 +153,7 @@ export function useDeviceLifecycle(options: Options) {
           // applying local prefs. Otherwise applyDevicePrefs sees a missing
           // local file, writes defaults with a fresh _updatedAt, and the
           // file-level LWW merge later overwrites the good remote copy with
-          // empty defaults (issue #190: layer names lost on PC switch).
+          // empty defaults (layer names lost on PC switch).
           // Covers favorites too because syncNow has a global `isSyncing`
           // mutex — running the two scopes here as one call avoids a race
           // with useDeviceAutoSync's parallel `syncNow` no-oping silently.

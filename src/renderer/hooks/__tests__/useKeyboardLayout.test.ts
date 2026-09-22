@@ -46,12 +46,11 @@ describe('remapKeycode', () => {
     })
   })
 
-  // Dvorak (and friends) are no longer built-in after the Key Labels
-  // migration; they are downloaded into the Key Label store at runtime.
-  // The store-aware path is exercised by useKeyLabelLookup integration
-  // tests, so the standalone `remapKeycode` helper falls back to qwerty
-  // identity for any non-built-in id and these expectations no longer
-  // apply.
+  // Dvorak (and friends) are not built-in — they are downloaded into the
+  // Key Label store at runtime. The store-aware path is exercised by
+  // useKeyLabelLookup integration tests; the standalone `remapKeycode`
+  // helper falls back to qwerty identity for any non-built-in id, so
+  // these expectations don't apply.
   describe.skip('Dvorak mapping (display strings)', () => {
     it('remaps letter keys to display strings', () => {
       expect(remapKeycode('KC_Q', 'dvorak')).toBe("'")
@@ -229,8 +228,8 @@ describe('remapLabel (composite override)', () => {
     expect(remapLabel('LALT(KC_L)', 'qwerty')).toBe('LALT(KC_L)')
   })
 
-  // Dvorak / Japanese have moved to the Key Label store; the standalone
-  // `remapLabel` helper now falls back to the qmkId for any non-built-in
+  // Dvorak / Japanese live in the Key Label store; the standalone
+  // `remapLabel` helper falls back to the qmkId for any non-built-in
   // id. Store-aware remapping is covered in useKeyLabelLookup tests.
   it.skip('preserves existing remapKeycode behavior on layouts that only define map (legacy)', () => {})
 

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-// Weak Spot Training (Plan-miss-focus-mode): validateTypingTestConfig's
-// optional carry-through for the new `weakSpotTrainingMode` boolean, exercised
-// through the only exported entry point that reaches it, validateIpcPrefs
-// — same "punctuation/numbers write path" the plan calls for. Kept as its
-// own small file rather than growing a monolithic device-prefs-validate
-// test suite that doesn't otherwise exist yet.
+// Weak Spot Training: validateTypingTestConfig's optional carry-through for
+// the `weakSpotTrainingMode` boolean, exercised through the only exported
+// entry point that reaches it, validateIpcPrefs — same punctuation/numbers
+// write path. Kept as its own small file rather than growing a monolithic
+// device-prefs-validate test suite that doesn't otherwise exist yet.
 
 import { describe, it, expect } from 'vitest'
 import { validateIpcPrefs } from '../device-prefs-validate'
