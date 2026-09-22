@@ -27,8 +27,7 @@ import type { RomajiCaseStyle, RomajiDetailSettings, TypingTestConfig } from './
 import { optionButtonClass } from './TypingTestSettingsBar'
 import { resolveJapaneseInputMethod, type JapaneseInputMethod } from './romaji-input'
 
-// Display order matches the plan's spec ("大文字・先頭大文字・小文字"); the
-// i18n values for these keys are the fixed sample spellings ROMAJI / Romaji
+// The i18n values for these keys are the fixed sample spellings ROMAJI / Romaji
 // / romaji, identical in every locale (see english.json + the Japanese pack).
 const CASE_STYLES: readonly RomajiCaseStyle[] = ['upper', 'capital', 'lower']
 
@@ -188,12 +187,12 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
 
         <div className="flex flex-col gap-4 overflow-y-auto p-4">
           {/* Input method — the single 3-way selector (Direct / Romaji /
-              Kana). Shown first: every section below either applies to
-              both engines (Line-end Enter, Lines shown — hidden
-              for Direct, which has no keystroke guide at all) or only to
-              Romaji (Displayed case, Guide/Accepted input patterns — かな
-              has no alternate spellings or case to configure, and Direct
-              has no engine at all). */}
+              Kana). Shown first: every section below either applies to both
+              engines (Line-end Enter, Lines shown — hidden for Direct, which
+              has no keystroke guide at all) or only to Romaji (Displayed
+              case, Guide/Accepted input patterns — かな has no alternate
+              spellings or case to configure, and Direct has no engine at
+              all). */}
           <section className="flex flex-col gap-1.5">
             <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.inputMethodLabel')}</span>
             <div className="flex flex-wrap gap-1">
