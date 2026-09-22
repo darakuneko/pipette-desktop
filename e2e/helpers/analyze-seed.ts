@@ -155,8 +155,8 @@ export interface TypingAnalyticsSeedBackup {
   syncStatePath: string
   dbPath: string
   /** Typing-test History entries for the seeded keyboard — see
-   * `buildPipetteSettingsContent`. `original` is the pre-existing file
-   * content (`null` when none existed) so cleanup can restore it. */
+   * `buildPipetteSettingsContent`. `original` is the file content
+   * (`null` when none existed) so cleanup can restore it. */
   pipetteSettingsPath: string
   pipetteSettingsOriginal: string | null
 }
@@ -683,8 +683,7 @@ function buildMinuteRows(
       intervalP75Ms: Math.round(avgIntervalMs * 1.44),
       intervalMaxMs: Math.round(avgIntervalMs * 2.89),
       // Effective sampling period (matrix poll gap), matching the real
-      // measured range from Task-tm-phase2-capture-duration-overlap's
-      // Step 0 (p50 23-24ms, p95 25-40ms) — varied per minute via
+      // measured range (p50 23-24ms, p95 25-40ms) — varied per minute via
       // `total` so the Interval tab's rollover caption isn't one flat
       // number across every bucket.
       pollP50Ms: 23 + (total % 3),
@@ -1015,8 +1014,8 @@ export async function seedDummyTypingAnalytics(
   }
 
   // Typing-test History entries for the seeded runs — back up whatever
-  // pre-existing file is there (should be none for this dummy uid) so
-  // cleanup restores it exactly.
+  // file is there (should be none for this dummy uid) so cleanup
+  // restores it exactly.
   const pipetteSettingsOriginal = existsSync(pipetteSettingsPath)
     ? readFileSync(pipetteSettingsPath, 'utf-8')
     : null

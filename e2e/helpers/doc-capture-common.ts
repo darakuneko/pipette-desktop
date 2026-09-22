@@ -2,8 +2,8 @@
 
 // Shared helpers for doc-capture scripts.
 // Deduplicates the notification-modal dismissal, overlay dismissal,
-// availability-check, and virtual-device connect/unlock logic that was
-// previously copy-pasted across every doc-capture helper.
+// availability-check, and virtual-device connect/unlock logic across
+// every doc-capture helper.
 
 import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Locator, Page } from '@playwright/test'
@@ -125,10 +125,10 @@ export function restoreVirtualDeviceSettings(backup: VirtualDeviceSettingsBackup
 /**
  * Reset `keyboardLayout` / `appliedKeymapLayout` in the virtual device's
  * PipetteSettings file back to the built-in QWERTY default before a capture
- * run starts. The Keyboard Layout select is now WYSIWYG (Plan-qwerty-select-
- * no-rewrite): nothing forces it back to QWERTY, so any earlier manual
- * `pnpm dev` session against the virtual device that picked (or Rewrote to)
- * another Key Label pack leaves that pack's id persisted here indefinitely.
+ * run starts. The Keyboard Layout select is now WYSIWYG: nothing forces it
+ * back to QWERTY, so any earlier manual `pnpm dev` session against the
+ * virtual device that picked (or Rewrote to) another Key Label pack
+ * leaves that pack's id persisted here indefinitely.
  * On the next capture run the renderer boots straight into
  * `MissingKeyLabelDialog` for a pack this run never seeded (its full-screen
  * backdrop then blocks every subsequent click, failing phases that have
@@ -321,9 +321,9 @@ export interface ClonedUserData {
  *
  * `PIPETTE_CAPTURE_USER_DATA_DIR` overrides which profile to clone FROM
  * (e.g. a curated fixture profile instead of the live developer one) — the
- * destination is always a fresh temp dir regardless, so unlike the old
- * design this env var is no longer needed to dodge the single-instance
- * lock (a temp dir can never collide with a running real session).
+ * destination is always a fresh temp dir regardless, so this env var is
+ * not needed to dodge the single-instance lock (a temp dir can never
+ * collide with a running real session).
  */
 export function cloneUserDataForCapture(label: string): ClonedUserData {
   const sourceDir = process.env.PIPETTE_CAPTURE_USER_DATA_DIR ?? join(homedir(), '.config', 'pipette-desktop')
@@ -364,10 +364,7 @@ export function forceEnglishLanguageInClone(userDataDir: string): void {
 
 /**
  * Kill `child` and wait for it to actually exit before resolving — never
- * assumes exit from a timeout alone (an earlier version of this helper,
- * duplicated in doc-capture-key-labels.ts / doc-capture-theme-packs.ts,
- * raced ahead after `graceMs` even if the process was still alive, which
- * could let it rewrite files after a caller's own cleanup already ran).
+ * assumes exit from a timeout alone.
  * Escalates from SIGTERM to SIGKILL if the process hasn't exited within
  * `graceMs`, then waits — unbounded — for the actual `'exit'` event; SIGKILL
  * cannot be ignored on Linux, so that final wait is guaranteed to resolve.
@@ -769,8 +766,7 @@ export async function selectKeyboardViaFilterModal(
 
 /**
  * Pick a keymap snapshot through the Analyze staged filter modal — the
- * modal's Keymap row is the only snapshot selector (the inline
- * quick-select next to the summary chip was removed). `optionIndex`
+ * modal's Keymap row is the only snapshot selector. `optionIndex`
  * addresses the modal select's option list (0 = "Current keymap",
  * 1 = newest older snapshot, ...).
  *
