@@ -421,7 +421,7 @@ export interface SpeedRankingEntry {
  * `speedMap` in its original (stable-sort-preserving) insertion order
  * builds the final entries from whichever path each code took. With
  * `qmkByCode` absent every code takes the miss path, reproducing the
- * pre-existing behavior exactly (byte-equivalent — see the #359
+ * pre-existing behavior exactly (byte-equivalent — see the
  * regression test in key-heatmap-helpers-speed.test.ts). */
 export function buildSpeedRanking(
   speedMap: ReadonlyMap<number, KeySpeedStat>,
@@ -572,9 +572,9 @@ export function buildDurationRanking(
 }
 
 // --- Layer selection / bonding (pure state transitions) ---------------
-// Extracted from KeyHeatmapChart.tsx so the component only wires
-// callbacks to `onHeatmapChange` / `setMergeCandidate` — the merge/bond
-// rules themselves are plain data transforms, independently testable.
+// The component only wires callbacks to `onHeatmapChange` /
+// `setMergeCandidate` — the merge/bond rules themselves are plain data
+// transforms, independently testable.
 
 export interface ToggleLayerResult {
   patch: Partial<HeatmapFilters>

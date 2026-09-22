@@ -27,8 +27,7 @@ const SPLIT_MIN_WIDTH_PX = 1280
 const FOOTER_BUTTON_BASE =
   'inline-flex items-center justify-center whitespace-nowrap rounded border px-2.5 py-1 text-xs leading-none transition-colors'
 
-// Hide the skip-rate warning until the unmappable share is meaningful;
-// matches the threshold the LayoutComparisonView used to apply inline.
+// Hide the skip-rate warning until the unmappable share is meaningful.
 const SKIP_RATE_WARNING_THRESHOLD = 0.05
 
 interface TypingAnalyticsViewProps {
@@ -118,7 +117,7 @@ export function TypingAnalyticsView({ initialUid, onBack, connectedTappingTerm, 
 
   // Combine the per-pane skip rates into a single footer line. The
   // pane prefix only appears when split-view is on so single-pane
-  // users see the bare percentage they used to get inside the panel.
+  // users see the bare percentage.
   const skipWarningMessage = useMemo(() => {
     const aOver = skipPercentA !== null && skipPercentA > SKIP_RATE_WARNING_THRESHOLD
     const bOver = splitVisible && skipPercentB !== null && skipPercentB > SKIP_RATE_WARNING_THRESHOLD

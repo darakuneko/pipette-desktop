@@ -2,9 +2,8 @@
 // Toolbar-row sub-components for the Analyze > Heatmap tab — the
 // Count/Speed/Duration mode toggle, the per-layer selection row, and
 // the "Frequently Used" ranking controls row. Split out of
-// key-heatmap-panels.tsx (which itself was split out of
-// KeyHeatmapChart.tsx) so neither file crosses the file-splitting size
-// guideline as the tab gains more mode toggles.
+// key-heatmap-panels.tsx so neither file crosses the file-splitting
+// size guideline as the tab gains more mode toggles.
 
 import { useTranslation } from 'react-i18next'
 import { SegmentedToggle } from './SegmentedToggle'

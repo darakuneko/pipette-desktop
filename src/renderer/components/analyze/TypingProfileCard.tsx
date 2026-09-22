@@ -91,8 +91,7 @@ const BIGRAM_FETCH_LIMIT = 5_000
 
 /** Derives the Typing style cell's `value` / `context` / `descriptionKey`
  * from a `TypistClassification` — one switch instead of the three
- * parallel nested-ternary chains (matched / noMatch / unknown) the value,
- * context, and descriptionKey used to each repeat independently. The
+ * parallel nested-ternary chains (matched / noMatch / unknown). The
  * 'matched' branch's descriptionKey follows `basis` (see
  * `analyze-typist-cluster.ts`: 'full' when all three error dimensions
  * fed the match, 'rhythmOnly' otherwise) so the tooltip stays honest

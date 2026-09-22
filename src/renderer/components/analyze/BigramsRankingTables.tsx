@@ -91,7 +91,7 @@ interface TopRankingProps {
    * snapshot's own recorded keymap instead of the session's
    * `RAWCODES_MAP`. Optional so existing callers/tests keep working
    * unedited — absent, `bigramPairLabels` falls back to its
-   * pre-existing behavior. */
+   * behavior. */
   qmkByCode?: ReadonlyMap<number, string>
   vialProtocol?: number
 }

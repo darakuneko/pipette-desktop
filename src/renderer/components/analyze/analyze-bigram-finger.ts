@@ -75,9 +75,9 @@ export type FingerPairTotal = HistTotal
  * the keycodeFinger map, plus whether the two keycodes are the same key
  * (needed by `classifyBigram` to detect a letter repeat). Either finger
  * comes back `undefined` when that half's keycode has no mapped finger.
- * Split out from `resolvePairFingers` so a caller that already parsed the
- * bigram id (e.g. `aggregateBigramClasses`, which needs the parsed pair
- * for its own filter) doesn't parse it a second time. */
+ * A caller that already parsed the bigram id (e.g.
+ * `aggregateBigramClasses`, which needs the parsed pair for its own
+ * filter) doesn't parse it a second time. */
 export function resolvePairFingersFromCodes(
   prev: number,
   curr: number,

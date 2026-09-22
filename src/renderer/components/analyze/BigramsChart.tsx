@@ -155,10 +155,8 @@ export function BigramsChart({
     : 'grid h-full min-h-0 grid-cols-2 grid-rows-1 gap-3'
 
   // Classes (hand-usage) aggregate — computed once here rather than
-  // separately inside BigramClassesCoverage and BigramClassesTable,
-  // which used to each run useKeycodeFingerMap + aggregateBigramClasses
-  // on their own, doubling the work whenever either sibling quadrant
-  // re-rendered. Both `snapshot` and `entries` fall back to a stable
+  // separately inside BigramClassesCoverage and BigramClassesTable.
+  // Both `snapshot` and `entries` fall back to a stable
   // empty value while the quadrant is hidden (gram === 3) so the memo
   // below settles on an empty aggregate instead of doing the fold for a
   // quadrant nobody sees.
@@ -168,7 +166,7 @@ export function BigramsChart({
   // Snapshot's own `code -> qmkId` map — threaded into Top/Slow pair
   // labels below so they resolve from the snapshot's own recorded
   // keymap strings instead of the session's `RAWCODES_MAP` (see
-  // analyze-snapshot-codes.ts / Task-speed-ranking-snapshot-labels.md).
+  // analyze-snapshot-codes.ts).
   const qmkByCode = useSnapshotQmkByCode(snapshot)
   const classesAggregate = useMemo(
     () => aggregateBigramClasses(classesEntries, classesFingerMap),

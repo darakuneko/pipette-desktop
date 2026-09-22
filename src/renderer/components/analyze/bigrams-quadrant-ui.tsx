@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Shared presentational shells for the Analyze Bigrams quadrants — the
 // generic quadrant card, its limit/threshold header controls, the
-// empty-state placeholder, and the 2-gram/3-gram toggle. Split out of
-// BigramsChart.tsx so the quadrant-specific implementations
-// (BigramsRankingTables.tsx, BigramsFingerQuadrant.tsx,
-// BigramsClassesQuadrant.tsx) can share these without duplicating them.
+// empty-state placeholder, and the 2-gram/3-gram toggle. The
+// quadrant-specific implementations (BigramsRankingTables.tsx,
+// BigramsFingerQuadrant.tsx, BigramsClassesQuadrant.tsx) can share
+// these without duplicating them.
 
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'

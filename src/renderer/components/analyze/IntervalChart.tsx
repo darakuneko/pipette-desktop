@@ -222,7 +222,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, typingTestS
       // Unlike the timeSeries branch below, this root deliberately does
       // NOT use `h-full` / `flex-1 min-h-0` for the chart: distribution
       // mode has no RolloverSection-style sibling that needs the chart
-      // to cede space (see #328), and DurationSection/TappingTermCard
+      // to cede space, and DurationSection/TappingTermCard
       // render below it as separate `shrink-0` siblings in AnalyzePane,
       // not inside this component. Stretching the chart to fill
       // whatever height AnalyzePane's flex-1 wrapper happened to

@@ -4,8 +4,8 @@
 // the all-devices aggregate) based on the discriminated `DeviceScope`;
 // without this helper every chart hand-rolled the same `isHashScope ?
 // ... : isOwnScope ? ... : ...` ternary, and adding compare-range to
-// WpmChart in C2 would have meant six near-identical copies in one
-// file alone.
+// WpmChart would have meant six near-identical copies in one file
+// alone.
 
 import type {
   LayoutComparisonOptions,

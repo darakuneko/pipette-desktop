@@ -86,8 +86,7 @@ export function LayoutComparisonFingerDiff({ current, target, targetLabel }: Pro
       </h4>
       {/* flex-1 + min-h-0 lets the chart absorb whatever vertical
        * space the parent panel leaves so the panel itself never
-       * needs a scrollbar — replaces a previously fixed 240px box
-       * that overflowed under tall split-view layouts. */}
+       * needs a scrollbar. */}
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart

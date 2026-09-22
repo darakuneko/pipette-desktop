@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Keymap snapshot select — owns the option list but no longer the
+// Keymap snapshot select — owns the option list but does not own the
 // "which snapshot is current" decision. The parent passes
 // `selectedSavedAt` so the select reflects the explicit picker state
 // even when the user has narrowed the range inside the snapshot's
-// active window. Free-form ranges that escape a snapshot can no
-// longer happen because the parent clamps every edit through
-// `clampRangeToSnapshot`, so the previous "— Custom range —" option
-// is no longer reachable and was removed.
+// active window. Free-form ranges that escape a snapshot cannot
+// happen because the parent clamps every edit through
+// `clampRangeToSnapshot`.
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'

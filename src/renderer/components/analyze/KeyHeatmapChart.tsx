@@ -179,9 +179,9 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTest
   // Snapshot's own `code -> qmkId` map — threaded into the Speed
   // ranking below so its labels/group-filter resolve from the
   // snapshot's own recorded keymap strings instead of the session's
-  // `RAWCODES_MAP` (see analyze-snapshot-codes.ts /
-  // Task-speed-ranking-snapshot-labels.md). `buildSpeedFillByPos`
-  // doesn't need it — it only matches numeric codes, never labels.
+  // `RAWCODES_MAP` (see analyze-snapshot-codes.ts).
+  // `buildSpeedFillByPos` doesn't need it — it only matches numeric
+  // codes, never labels.
   const qmkByCode = useSnapshotQmkByCode(snapshot)
 
   const layerKeycodes = useMemo(() => {

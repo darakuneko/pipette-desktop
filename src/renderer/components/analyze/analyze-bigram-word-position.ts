@@ -109,8 +109,8 @@ function separatorKeycodes(): Set<number> {
  *
  * Including `KC_ENTER` in the separator set makes this "after a
  * separator" rather than the CHI 2018 paper's strict space-only word
- * initiation — a deliberate, user-approved widening: a line break ends
- * a word exactly like a space does for this purpose.
+ * initiation — a deliberate widening: a line break ends a word exactly
+ * like a space does for this purpose.
  *
  * `unwrapTaps` controls whether `LT`/`MT`/`SH_T` keys are resolved to
  * the key they emit when tapped. Pass `true` only from inside a

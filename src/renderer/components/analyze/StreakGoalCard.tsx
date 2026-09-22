@@ -88,8 +88,7 @@ export function StreakGoalCard({ uid, daily, today }: Props) {
     // Keyboards without a prior settings file return null from
     // `pipetteSettingsGet`. Bootstrap a minimum valid PipetteSettings
     // so the first goal edit can create the file instead of silently
-    // dropping the write (which used to leave the draft stuck and the
-    // "changes cleared" warning visible).
+    // dropping the write.
     const fetched = await window.vialAPI.pipetteSettingsGet(uid)
     const current: PipetteSettings = fetched ?? settings ?? DEFAULT_PIPETTE_SETTINGS
     const prevAnalyze = current.analyze ?? {}
