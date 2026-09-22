@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The Analyze pane's trailing modals: the staged filter editor, the
 // finger-assignment editor, and the CSV-export / Hub-upload modal.
-// Split out of AnalyzePane.tsx (Task-split-analyze-pane, mechanical
-// follow-up pass to get the pane under the 500-line cap).
 //
 // The filter-snapshot store panel overlay (`AnalyzeFilterStorePanel`)
 // stays in AnalyzePane.tsx rather than joining this file: it's an

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Staged Analyze filter editor (Plan-analyze-filter-modal). Opened from
+// Staged Analyze filter editor. Opened from
 // `AnalyzeFilterSummaryChip`; every row here edits a *draft* copy of the
 // committed filter state — nothing leaves this component until Apply
 // hands the whole draft to `onApply` in one call. This mirrors

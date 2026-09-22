@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The Analyze pane's tab list + the filter-store slide-in panel's
-// toggle button. Split out of AnalyzePane.tsx (Task-split-analyze-pane,
-// mechanical follow-up pass to get the pane under the 500-line cap).
+// toggle button.
 
 import type { RefObject } from 'react'
 import { useTranslation } from 'react-i18next'

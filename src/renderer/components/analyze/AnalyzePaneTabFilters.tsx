@@ -1,23 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Row 2 of the Analyze pane's filter row: the per-tab filter controls
 // (WPM / Activity / Interval / Ergonomics / Layout Comparison / shared
-// Granularity) plus the finger-assignment button. Split out of
-// AnalyzePane.tsx (Task-split-analyze-pane).
+// Granularity) plus the finger-assignment button.
 //
-// Renders a FRAGMENT of the exact same label sequence the inline JSX
-// used to produce — the parent keeps the CSS grid wrapper div
-// (`gridTemplateColumns: repeat(10, max-content)`) so this component's
-// output slots into it unchanged; wrapping it in another element here
-// would collapse that layout.
+// Renders a FRAGMENT of the label sequence — the parent keeps the CSS
+// grid wrapper div (`gridTemplateColumns: repeat(10, max-content)`) so
+// this component's output slots into it unchanged; wrapping it in
+// another element here would collapse that layout.
 //
-// The finger-assignment button is NOT included here even though the
-// original cut plan grouped it with Row 2: it renders as a flex
-// SIBLING of the grid div (`ml-auto` pushes it to the far right of the
-// outer flex row), not as one of the grid's own children. Folding it
-// into this component's Fragment would place it inside the grid div
-// instead and turn it into an 11th grid-template column, which is a
-// real (if subtle) layout regression — so it stays inline in
-// AnalyzePane.tsx, a deliberate deviation from the line-range grouping.
+// The finger-assignment button is NOT included here: it renders as a
+// flex SIBLING of the grid div (`ml-auto` pushes it to the far right
+// of the outer flex row), not as one of the grid's own children.
+// Folding it into this component's Fragment would place it inside the
+// grid div instead and turn it into an 11th grid-template column,
+// which is a real (if subtle) layout regression — so it stays inline
+// in AnalyzePane.tsx.
 
 import { useTranslation } from 'react-i18next'
 import {
@@ -86,11 +83,8 @@ const GRANULARITY_OPTIONS: Array<{ value: GranularityChoice; labelKey: string }>
 ]
 
 // Interval > Distribution's section select reuses each section's own
-// `sectionTitle` key as its option label — the same string that used to
-// sit as an in-body <h3> before the switcher took over labeling (see
-// DurationSection.tsx / TappingTermCard.tsx / IntervalChart.tsx's
-// distribution branch), so the select and the content it reveals never
-// disagree on the section's name.
+// `sectionTitle` key as its option label, so the select and the
+// content it reveals never disagree on the section's name.
 const DISTRIBUTION_SECTION_LABEL_KEY: Record<DistributionSection, string> = {
   interval: 'analyze.interval.distribution.sectionTitle',
   duration: 'analyze.duration.sectionTitle',
@@ -154,8 +148,8 @@ export function AnalyzePaneTabFilters({
   )
 
   // Activity's per-tab filters render in two places: alongside Period
-  // on Row 2 in split mode, or on Row 3 in single mode. Extracted so
-  // the JSX stays in one place. Order: View → Range size + cursor
+  // on Row 2 in split mode, or on Row 3 in single mode. The JSX stays
+  // in one place. Order: View → Range size + cursor
   // (calendar only) → Metric → view-specific extras (calendar
   // normalize, or grid WPM min-sample).
   const activityFilters = (

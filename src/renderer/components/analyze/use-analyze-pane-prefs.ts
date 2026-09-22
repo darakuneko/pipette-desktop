@@ -3,8 +3,7 @@
 // finger-assignment overrides, the population-benchmark toggle, and
 // the saved Typing Test History used by SummaryView. Fetched once per
 // uid alongside each other (same `pipetteSettingsGet` payload) so
-// TypingProfileCard doesn't issue its own duplicate IPC. Split out of
-// AnalyzePane.tsx (Task-split-analyze-pane).
+// TypingProfileCard doesn't issue its own duplicate IPC.
 
 import { useCallback, useEffect, useState } from 'react'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'

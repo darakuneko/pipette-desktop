@@ -5,7 +5,7 @@
 // initial sync (so the connect progress bar stays short), so this is
 // the only place that actually pulls/pushes them. Also exposes the
 // uid-scoped sync progress subscription so the pane's ConnectingOverlay
-// can show `syncing` accurately. Split out of AnalyzePane.tsx.
+// can show `syncing` accurately.
 
 import { useEffect, useState } from 'react'
 import type { SyncProgress } from '../../../shared/types/sync'

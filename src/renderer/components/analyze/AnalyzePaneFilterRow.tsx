@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The Analyze pane's filter row: Row 1 (the collapsed summary chip +
 // optional "open run timeline" button) and Row 2 (the per-tab filter
-// controls + the finger-assignment button). Split out of
-// AnalyzePane.tsx (Task-split-analyze-pane, mechanical follow-up pass
-// to get the pane under the 500-line cap).
+// controls + the finger-assignment button).
 //
 // A plain flow element (no `position: absolute` / ref-based outside-
 // click wiring like the store panel overlay), so it moves cleanly.
@@ -113,8 +111,7 @@ export function AnalyzePaneFilterRow({
           <RunTimelineJumpButton runId={runIdScopes[0]} onOpen={onOpenRunTimeline} testId={tid('analyze-open-run-timeline')} />
         )}
       </div>
-      {/* Row 2: tab-specific filters, unchanged by the chip/modal
-       * restructure. Its own 10-column max-content grid keeps every
+      {/* Row 2: tab-specific filters. Its own 10-column max-content grid keeps every
        * row's labels left and values right as the per-tab filter set
        * changes shape across tabs. `min-w-max` on the outer flex
        * keeps the finger-assignment button from squeezing into (or
@@ -156,7 +153,7 @@ export function AnalyzePaneFilterRow({
             // e2e/analyze.test.ts, doc-capture.ts) that target the bare
             // `analyze-finger-assignment-open` id keep resolving to
             // pane A only; pane B's button gets the `-b` suffix so
-            // split view no longer renders a duplicate testid.
+            // split view does not render a duplicate testid.
             data-testid={tid('analyze-finger-assignment-open')}
           >
             {t('analyze.fingerAssignment.button')}

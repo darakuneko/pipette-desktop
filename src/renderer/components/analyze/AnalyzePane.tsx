@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // One Analyze "pane" — the keyboard select, filter row, tab bar, chart
-// area, and the modals tied to the pane's snapshot. Extracted from
-// TypingAnalyticsView so the parent can render multiple panes
-// side-by-side (Split View, Plan-P2-analyze-split-view).
+// area, and the modals tied to the pane's snapshot. The parent can render
+// multiple panes side-by-side (Split View).
 //
 // Each pane owns its own state: selected analysis tab, time range,
 // filters (via useAnalyzeFilters), keymap snapshot, device infos, sync
@@ -14,8 +13,8 @@
 // and subcomponents (`AnalyzePaneTabBar`, `AnalyzePaneFilterRow` [which
 // delegates Row 2 to `AnalyzePaneTabFilters`], `AnalyzePaneChart`,
 // `AnalyzePaneModals`) so this file stays the "tab switch + props
-// wiring" shell (Task-split-analyze-pane). The filter-store slide-in
-// panel overlay stays inline below — see its own comment for why.
+// wiring" shell. The filter-store slide-in panel overlay stays inline
+// below — see its own comment for why.
 
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -42,9 +41,9 @@ import { useAnalyzePaneStoreActions } from './use-analyze-pane-store-actions'
 import { useAnalyzePaneLabels } from './use-analyze-pane-labels'
 
 // Test seam re-export: TypingAnalyticsView.test.tsx imports this from
-// '../AnalyzePane' — the rate-limit map itself now lives in
-// use-analyze-pane-sync.ts (Task-split-analyze-pane), but the import
-// path is a public-ish test contract so it stays re-exported here.
+// '../AnalyzePane' — the rate-limit map itself lives in
+// use-analyze-pane-sync.ts, but the import path is a public-ish test
+// contract so it stays re-exported here.
 export { _resetAnalyticsSyncRateLimitForTests } from './use-analyze-pane-sync'
 
 /** Default analyze window: most keyboards generate enough data in a
@@ -192,8 +191,8 @@ export function AnalyzePane({
   } = useAnalyzePanePrefs(selectedUid)
 
   const [fingerModalOpen, setFingerModalOpen] = useState(false)
-  // Staged filter editor (Plan-analyze-filter-modal) — Row 1 collapsed
-  // to a summary chip; every filter row now lives behind this modal.
+  // Staged filter editor — Row 1 collapsed to a summary chip; every
+  // filter row lives behind this modal.
   // Conditionally mounted so its draft state re-seeds from committed
   // props on every open and its option fetches only run while open.
   const [filterModalOpen, setFilterModalOpen] = useState(false)

@@ -2,10 +2,6 @@
 // Display-label plumbing for the Analyze pane: run-id labels (History
 // name, or a formatted fallback date), the AnalyzeExportModal /
 // Hub-upload context snapshot, and the Row 1 summary chip's labels.
-// Split out of AnalyzePane.tsx (Task-split-analyze-pane, item ⑦ — the
-// pane still landed over the 500-line UI-component cap after the
-// snapshot / prefs / sync / store-actions hooks and the two
-// subcomponents, so this last slice was extracted too).
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'

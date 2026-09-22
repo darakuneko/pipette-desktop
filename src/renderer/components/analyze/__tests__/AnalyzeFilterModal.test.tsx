@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Staging-contract tests for `AnalyzeFilterModal` (Plan-analyze-filter-
-// modal): the whole draft leaves via a single `onApply(draft)` call and
+// Staging-contract tests for `AnalyzeFilterModal`: the whole draft
+// leaves via a single `onApply(draft)` call and
 // nothing leaves before Apply; Esc / backdrop discard the draft; Reset
 // returns the draft to `DEFAULT_ANALYZE_FILTERS`; a keyboard change
 // resets the dependent scope fields; disabled rows suppress their

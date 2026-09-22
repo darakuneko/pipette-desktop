@@ -74,7 +74,7 @@ vi.mock('../TappingTermCard', () => ({
 vi.mock('../ActivityChart', () => ({ ActivityChart: mockSummary('mock-activity') }))
 vi.mock('../KeyHeatmapChart', () => ({ KeyHeatmapChart: mockSummary('mock-keyheatmap') }))
 vi.mock('../ErgonomicsChart', () => ({
-  // The finger-assignment button now renders in AnalyzePane's Row 2
+  // The finger-assignment button renders in AnalyzePane's Row 2
   // filter row (not inside the chart), so the mock only needs the
   // usual identity/range probe — no callback forwarding here.
   ErgonomicsChart: (props: MockChartProps) => (
@@ -187,8 +187,8 @@ function text(testId: string): string {
   return screen.getByTestId(testId).textContent ?? ''
 }
 
-// Filter interactions now go chip -> staged modal -> control -> Apply
-// (Plan-analyze-filter-modal). `openFilterModal` opens pane A's modal;
+// Filter interactions go chip -> staged modal -> control -> Apply.
+// `openFilterModal` opens pane A's modal;
 // callers then change a control and click `analyze-filter-modal-apply`
 // to commit — nothing reaches the chart props before Apply.
 function openFilterModal(): void {
@@ -661,10 +661,9 @@ describe('TypingAnalyticsView', () => {
   })
 
   it('keeps the snapshot under the all-devices scope', async () => {
-    // Regression: the snapshot gate used to be `isOwnScope ? snap : null`
-    // which swallowed `'all'` too, even though `'all'` aggregates the
-    // own device in. The mock-chart only renders when the tab picks the
-    // non-null branch, so a returning testid proves the snapshot stayed.
+    // Regression: `'all'` aggregates the own device in. The mock-chart
+    // only renders when the tab picks the non-null branch, so a
+    // returning testid proves the snapshot stayed.
     mockListKeyboards.mockResolvedValue(SAMPLE)
     mockGetSnapshot.mockResolvedValue(SNAPSHOT)
     const { TypingAnalyticsView } = await importView()
@@ -855,7 +854,7 @@ describe('TypingAnalyticsView', () => {
     fireEvent.click(screen.getByTestId('analyze-open-run-timeline'))
     expect(onOpenRunTimeline).toHaveBeenCalledWith('run-123')
 
-    // The connected keyboard no longer matches the pane's selected uid
+    // The connected keyboard does not match the pane's selected uid
     // (Analyze may be showing a different, possibly disconnected,
     // keyboard's data) — there is no typing test view to re-enter for it.
     rerender(

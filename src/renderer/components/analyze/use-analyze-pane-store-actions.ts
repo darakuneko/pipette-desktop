@@ -3,9 +3,7 @@
 // the slide-in store panel's open state, save/overwrite/load/export
 // handlers for the panel's saved-condition entries, and the Hub upload
 // modal plumbing (origin resolution, upload input builder, per-entry
-// upload/update/remove actions). Split out of AnalyzePane.tsx
-// (Task-split-analyze-pane) — the panel and the Hub row are the two
-// heaviest, most self-contained blocks of the original file.
+// upload/update/remove actions).
 
 import type { Dispatch, SetStateAction } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'

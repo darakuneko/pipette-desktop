@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Closed-state summary for the Analyze filter row (Plan-analyze-filter-
-// modal). Replaces the old always-expanded keyboard/device/source grid
-// with a single "keyboard · device · source · period" chip; clicking it
-// opens `AnalyzeFilterModal` for the full staged editor. The Keymap
+// Closed-state summary for the Analyze filter row. Replaces the old
+// always-expanded keyboard/device/source grid with a single
+// "keyboard · device · source · period" chip; clicking it opens
+// `AnalyzeFilterModal` for the full staged editor. The Keymap
 // snapshot quick-selector stays outside this chip (rendered as a sibling
 // by `AnalyzePane`) since it has its own always-visible quick-pick UX.
 

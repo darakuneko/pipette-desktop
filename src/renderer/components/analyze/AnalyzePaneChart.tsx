@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The Analyze pane's chart area: the 10-way tab switch that renders
-// whichever chart matches the active `analysisTab`. Split out of
-// AnalyzePane.tsx (Task-split-analyze-pane).
+// whichever chart matches the active `analysisTab`.
 //
 // The wrapper div (`data-testid={tid("analyze-chart")}`) STAYS in
 // AnalyzePane — wpm-screenshot.ts depends on the recharts legend being
@@ -151,7 +150,7 @@ export function AnalyzePaneChart({
         // viewport and pushing RolloverSection below the fold.
         // `flex-1 min-h-0` lets the chart shrink to make room;
         // `shrink-0` keeps RolloverSection at its natural height
-        // rather than getting squeezed (the #328 contract).
+        // rather than getting squeezed.
         //
         // Distribution mode is structurally different: instead
         // of stacking IntervalChart / DurationSection /

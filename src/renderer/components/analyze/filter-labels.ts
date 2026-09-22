@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Shared, dimension-aware label builder for the Analyze filter summary
-// chip + the staged filter modal (Plan-analyze-filter-modal). Both
+// chip + the staged filter modal. Both
 // surfaces need to render the same four human-readable strings —
 // keyboard / device / source / period — from the same filter state, so
 // the resolution logic lives here once instead of being duplicated (or
@@ -90,9 +90,7 @@ function buildMultiSelectLabel(t: TFunction, i18nPrefix: string, labels: readonl
 }
 
 /** Human-readable Device label for a scope. Exported so `AnalyzePane`'s
- * export context echoes the exact same string as the summary chip (the
- * two used to re-implement this and drifted on the missing-hash
- * fallback). */
+ * export context echoes the exact same string as the summary chip. */
 export function buildDeviceLabel(
   t: TFunction,
   deviceScope: DeviceScope,
