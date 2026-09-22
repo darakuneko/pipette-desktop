@@ -90,8 +90,8 @@ export function buildRestoredState(memory: TypingTestMemory, resume: boolean, te
     // Pause/resume memory doesn't carry per-run mistake tracking (it was
     // never part of TypingTestMemory) — any mistakes tallied before the
     // pause are lost on resume, same as they would be on any other field
-    // absent from the persisted snapshot. Acceptable: Phase 1 mistake
-    // tracking is best-effort per run, not a durable record.
+    // absent from the persisted snapshot. Acceptable: mistake tracking is
+    // best-effort per run, not a durable record.
     mistakes: {},
     romajiSegmentErred: false,
     missedPositions: [],
