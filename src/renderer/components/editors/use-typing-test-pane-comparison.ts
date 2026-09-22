@@ -13,10 +13,7 @@ interface UseTypingTestPaneComparisonParams {
   onComparisonBaselineChange?: (conditionKey: string, baseline: TypingTestComparisonBaseline) => void
 }
 
-/** Measurement-row comparison pool + baseline resolution, split out of
- *  TypingTestPane (file-splitting.md cap) — see
- *  Task-split-typing-test-pane.md. Behavior-preserving: dep arrays are
- *  copied verbatim from the pre-split Pane. */
+/** Measurement-row comparison pool + baseline resolution. */
 export function useTypingTestPaneComparison({
   typingTest,
   typingTestHistory,

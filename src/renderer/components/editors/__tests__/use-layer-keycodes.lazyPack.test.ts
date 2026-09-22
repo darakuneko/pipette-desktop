@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
-// Integration regression for the lazy-pack-load freeze (Plan-qwerty-
-// select-no-rewrite follow-up, useKeyLabelLookup identity fix). Wires
+// Integration regression for the lazy-pack-load freeze. Wires
 // `useDevicePrefs` (the actual `remapLabel`/`isRemapped` source) straight
 // into `useLayerKeycodes` (the actual keymap-legend consumer) — the same
 // pairing `KeymapEditor` does — and simulates the async Key Label pack

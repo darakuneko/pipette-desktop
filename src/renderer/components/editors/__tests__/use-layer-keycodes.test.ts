@@ -1,15 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
-// Focused coverage for `useLayerKeycodes`'s remap-tint computation
-// (issue #295/#296 follow-up, fix/composite-inner-remap): a masked
-// (composite) key whose INNER basic keycode is remapped by the active
-// Key Label pack must count as "remapped" for KeyWidget's blue tint,
-// same as any plain remapped key — previously `!isMask(qmkId)` excluded
-// every masked position outright, so a pack-affected LSFT(KC_8) never
-// got the tint even after the label itself was fixed to display
-// correctly. No pre-existing test file covered this hook before, so
-// this stays scoped to the remap-tint behavior.
+// Focused coverage for `useLayerKeycodes`'s remap-tint computation: a
+// masked (composite) key whose INNER basic keycode is remapped by the
+// active Key Label pack must count as "remapped" for KeyWidget's blue
+// tint, same as any plain remapped key.
 
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'

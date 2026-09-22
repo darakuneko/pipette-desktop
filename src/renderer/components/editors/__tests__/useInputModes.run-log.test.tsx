@@ -209,10 +209,10 @@ describe('useInputModes — run-log recording', () => {
   })
 
   it('a config switch\'s async word-list load window never lets a phantom keystroke leak into the next real run\'s saved log (gate split: P1 verified safe)', async () => {
-    // codex safety review P1: setConfig updates `typingTest.config`
-    // synchronously, but `typingTest.state` (status/runId/words) stays
-    // whatever it was until the async createWordsForConfig() call
-    // resolves and calls setState(freshState(...)). During that narrow
+    // setConfig updates `typingTest.config` synchronously, but
+    // `typingTest.state` (status/runId/words) stays whatever it was until
+    // the async createWordsForConfig() call resolves and calls
+    // setState(freshState(...)). During that narrow
     // window, runLogLabelRef's `isArmedWaiting` can read true pairing the
     // OLD (already non-pristine) runId with the NEW config's label — a
     // transient phantom combination. This test proves that combination
@@ -259,8 +259,7 @@ describe('useInputModes — run-log recording', () => {
     rerender({ savedTypingTestConfig: configB })
     expect(result.current.typingTest.state.runId).toBe(runIdBeforeSwitch)
 
-    // A press RIGHT NOW, before awaiting anything — the phantom-tag
-    // window the P1 review flagged.
+    // A press RIGHT NOW, before awaiting anything — the phantom-tag window.
     act(() => {
       result.current.typingTest.processMatrixFrame(new Set(['0,0']), keymap)
     })

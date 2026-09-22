@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-// Weak Spot Training (Plan-miss-focus-mode) end-to-end coverage at the
-// useInputModes layer: the getMistakeProfile thunk built from
-// typingTestHistory reaches useTypingTest, and a finished run's
+// Weak Spot Training end-to-end coverage at the useInputModes layer: the
+// getMistakeProfile thunk built from typingTestHistory reaches
+// useTypingTest, and a finished run's
 // weakSpotTrainingMode flag reaches the saved TypingTestResult. Drives a real
 // 1-word practice run the same way useInputModes.run-log.test.tsx does.
 // These fixtures use MISS-based weakness (not timing) — the mistake
@@ -111,13 +111,12 @@ function noWeakSpotsHistory(): TypingTestResult[] {
 }
 
 describe('useInputModes — weakSpotTrainingMode passthrough into the saved result', () => {
-  // codex regression: the saved flag used to come straight from the
-  // config toggle (isWeakSpotTrainingActive), so a run started with the
-  // toggle ON but the gate NOT met (sampled normally — state.weakSpotProfile
-  // stayed undefined) was still persisted as a weak-spot run, wrongly
-  // splitting it into the biased PB/comparison condition alongside genuinely
-  // biased runs. The flag must now reflect whether the run's own snapshot
-  // profile (`state.weakSpotProfile`) was actually non-null.
+  // A run started with the toggle ON but the gate NOT met (sampled
+  // normally — state.weakSpotProfile stays undefined) must not be
+  // persisted as a weak-spot run, wrongly splitting it into the biased
+  // PB/comparison condition alongside genuinely biased runs. The flag
+  // must reflect whether the run's own snapshot profile
+  // (`state.weakSpotProfile`) was actually non-null.
 
   it('toggle ON + gate no-weak-spots: the run sampled normally, so NO flag is saved and it groups with normal runs', async () => {
     const saved = await runOneWordToCompletion(true, noWeakSpotsHistory())

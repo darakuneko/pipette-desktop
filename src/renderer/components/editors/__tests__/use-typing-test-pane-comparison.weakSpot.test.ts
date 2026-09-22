@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-// codex regression coverage: useTypingTestPaneComparison's currentConditionKey
+// Regression coverage: useTypingTestPaneComparison's currentConditionKey
 // (and matchingResults/computeComparison calls) used to key weakSpotTrainingMode
 // off the raw toggle (isWeakSpotTrainingActive), while a saved result only
 // ever sets the flag when the run's OWN state.weakSpotProfile snapshot was

@@ -37,8 +37,7 @@ export interface UseViewMatrixModeReturn {
  * selects. Deliberately holds no reference to `viewMatrix` data or
  * `setViewMatrix` itself: those are plain props threaded through
  * KeymapEditor, kept separate so this hook stays a pure UI-state concern
- * (no vial-gui reference — this is a Pipette-original feature, see issue
- * #257).
+ * (no vial-gui reference — this is a Pipette-original feature).
  */
 export function useViewMatrixMode(): UseViewMatrixModeReturn {
   const [active, setActive] = useState(false)

@@ -93,11 +93,10 @@ export function KeymapPickerRegion(props: KeymapPickerRegionProps): JSX.Element 
       )}
       <TabbedKeycodes
         keyboardPickerContent={layoutPickerContent}
-        // Simulation tab is completely read-only (Plan-qwerty-select-
-        // no-rewrite v7): no picker click can paste into the shared
-        // selection state, and no picker multi-select can accumulate a
-        // selection that would still be sitting there — pasteable —
-        // once the user switches back to Base.
+        // Simulation tab is completely read-only: no picker click can
+        // paste into the shared selection state, and no picker
+        // multi-select can accumulate a selection that would still be
+        // sitting there — pasteable — once the user switches back to Base.
         onKeycodeSelect={packTabReadOnly ? undefined : gatedHandleKeycodeSelect}
         onKeycodeMultiSelect={packTabReadOnly ? undefined : handlePickerMultiSelect}
         pickerSelectedIndices={pickerSelectedIndices}

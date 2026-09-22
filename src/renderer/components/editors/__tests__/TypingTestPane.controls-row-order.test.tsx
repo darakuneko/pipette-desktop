@@ -4,14 +4,12 @@
 // DOM-order coverage for the non-finished controls row (Next Test / Pause
 // / Resume / Restart), mirroring TypingTestView.test.tsx's own
 // finished-state order tests ("renders the Unnamed / Next Test controls
-// row AFTER the timeline panel..."). This row used to render inline
-// inside TypingTestView, above the keyboard pane (which TypingTestPane
-// renders separately); it now renders from TypingTestPane itself, BELOW
-// the keyboard pane and its layer note, so the reading window sits
-// directly above the keyboard the user is actually typing on. The
-// finished-state row is unaffected — it stays inside TypingTestView, at
-// the bottom of the completion screen, since the keyboard is hidden once
-// finished (see TypingTestPane.finished.test.tsx).
+// row AFTER the timeline panel..."). This row renders from TypingTestPane
+// itself, BELOW the keyboard pane and its layer note, so the reading
+// window sits directly above the keyboard the user is actually typing on.
+// The finished-state row is unaffected — it stays inside TypingTestView,
+// at the bottom of the completion screen, since the keyboard is hidden
+// once finished (see TypingTestPane.finished.test.tsx).
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'

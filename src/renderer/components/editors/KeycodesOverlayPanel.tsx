@@ -60,7 +60,7 @@ interface Props {
   onKeyEditorZoomChange?: (zoom: number) => void
   // Extra content appended to Tools tab (e.g. Import, Reset)
   toolsExtra?: React.ReactNode
-  // Save tab (formerly Data)
+  // Save tab
   dataPanel?: React.ReactNode
   // Layout PDF export callbacks
   onExportLayoutPdfAll?: () => void

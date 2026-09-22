@@ -63,9 +63,8 @@ export interface TypingTestPaneProps {
   onNameFinishedResult?: (name: string) => void
   /** The just-finished run's in-memory raw keystroke log — forwarded to
    *  `TypingTestView` so the completion screen can render the shared
-   *  `KeystrokeTimelinePanel` inline, no IPC round-trip needed
-   *  (Plan-completion-timeline-view PR-B). See `useTypingTestResultSave`'s
-   *  own doc comment on `lastFinishedLog`. */
+   *  `KeystrokeTimelinePanel` inline, no IPC round-trip needed. See
+   *  `useTypingTestResultSave`'s own doc comment on `lastFinishedLog`. */
   lastFinishedLog?: RunKeystrokeLog | null
   /** Per-condition Measurement-row comparison baselines (persisted per
    *  keyboard, synced). Keyed by condition; the current condition's baseline
@@ -106,9 +105,8 @@ export interface TypingTestPaneProps {
    * this run's keystroke timeline for it. */
   timelineHandoff?: TimelineHandoff | null
   /** Forwarded to `TypingTestView` — see `LineSnapshot`'s own doc comment
-   *  and `useTypingTestResultSave`'s consumption of it at finish time
-   *  (Plan-line-keystroke-timeline PR1). Owned by `KeymapEditor` (the
-   *  lowest common ancestor of this view and `useInputModes`), not this
-   *  pane. */
+   *  and `useTypingTestResultSave`'s consumption of it at finish time.
+   *  Owned by `KeymapEditor` (the lowest common ancestor of this view and
+   *  `useInputModes`), not this pane. */
   lineSnapshotRef?: RefObject<LineSnapshot | null>
 }

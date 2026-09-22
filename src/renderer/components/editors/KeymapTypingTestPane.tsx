@@ -37,9 +37,8 @@ export interface KeymapTypingTestPaneProps extends KeymapEditorProps {
   onNameFinishedResult?: (name: string) => void
   /** The just-finished run's in-memory raw keystroke log — forwarded to
    *  `TypingTestPane`/`TypingTestView` so the completion screen can render
-   *  the shared `KeystrokeTimelinePanel` inline, no IPC round-trip needed
-   *  (Plan-completion-timeline-view PR-B). See `useTypingTestResultSave`'s
-   *  own doc comment on `lastFinishedLog`. */
+   *  the shared `KeystrokeTimelinePanel` inline, no IPC round-trip needed.
+   *  See `useTypingTestResultSave`'s own doc comment on `lastFinishedLog`. */
   lastFinishedLog?: RunKeystrokeLog | null
   onPauseTest?: () => void
   onResumeTest?: () => void

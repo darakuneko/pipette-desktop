@@ -55,19 +55,17 @@ export interface KeymapEditorHandle {
   toggleTypingTest: () => void
   matrixMode: boolean
   hasMatrixTester: boolean
-  /** Bulk-rewrite every keymap/encoder position via `table` (Plan-key-
-   *  label-keymap-apply Phase 3). Destructive one-shot (Plan-qwerty-
-   *  select-no-rewrite v5 最終仕様): the moment any write actually lands,
-   *  the undo/redo stacks are wiped instead of gaining a revertible batch
-   *  entry — recovery is the user's own .vil/snapshot backup, not Undo. */
+  /** Bulk-rewrite every keymap/encoder position via `table`. Destructive
+   *  one-shot: the moment any write actually lands, the undo/redo stacks
+   *  are wiped instead of gaining a revertible batch entry — recovery is
+   *  the user's own .vil/snapshot backup, not Undo. */
   applyKeymapRewrite: (table: KeymapRewriteTable) => Promise<KeymapApplyResult>
   /** Wipes the undo/redo stack in place, without touching the keymap itself.
    *  Called by the host (App.tsx) after a snapshot/layout-store restore or
    *  `.vil` import replaces the whole keymap out from under this same
-   *  mounted editor instance (Plan-qwerty-select-no-rewrite §snapshot/.vil
-   *  復元時のクリーンアップ) — those flows keep the same uid and never empty
-   *  the keymap, so KeymapEditor's own uid/keymap-size clear effect never
-   *  fires on its own. */
+   *  mounted editor instance — those flows keep the same uid and never
+   *  empty the keymap, so KeymapEditor's own uid/keymap-size clear effect
+   *  never fires on its own. */
   clearHistory: () => void
 }
 
@@ -96,12 +94,11 @@ export interface KeymapEditorProps {
    *  EncoderWidget, which only ever know `--key-label-remap` via
    *  `KEY_REMAP_COLOR`. Defaults to `'actual'`. */
   remapKind?: RemapKind
-  /** Picker-only variant of `remapLabel` (Plan-qwerty-select-no-rewrite
-   *  v6, Phase P) — identity for a pure QWERTY-permutation pack, same as
-   *  `remapLabel` otherwise. Threaded ONLY to the picker surface
-   *  (`TabbedKeycodes`, the key popover); the keymap legend itself keeps
-   *  using `remapLabel` unconditionally. See `useDevicePrefs.ts` for the
-   *  full rationale. */
+  /** Picker-only variant of `remapLabel` — identity for a pure
+   *  QWERTY-permutation pack, same as `remapLabel` otherwise. Threaded
+   *  ONLY to the picker surface (`TabbedKeycodes`, the key popover); the
+   *  keymap legend itself keeps using `remapLabel` unconditionally. See
+   *  `useDevicePrefs.ts` for the full rationale. */
   pickerRemapLabel?: (qmkId: string) => string
   onSetKey: (layer: number, row: number, col: number, keycode: number) => Promise<void>
   onSetKeysBulk: (entries: BulkKeyEntry[]) => Promise<void>
@@ -152,8 +149,7 @@ export interface KeymapEditorProps {
   keyboardLayout?: KeyboardLayoutId
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
   /** Display name of the active Key Label pack — labels the simulation
-   *  tab's top button. Only read while `remapKind === 'simulated'`
-   *  (Plan-qwerty-select-no-rewrite v7). */
+   *  tab's top button. Only read while `remapKind === 'simulated'`. */
   keymapPackName?: string
   /** Opens the Rewrite confirm modal for the pack currently active in
    *  `keyboardLayout` — wired to `useKeymapApplyPrompt().requestApply`.
@@ -250,7 +246,7 @@ export interface KeymapEditorProps {
   onRecKeystroke?: () => void
   /** AppConfig flag — true once the user has accepted the recording
    * disclosure. Read by useInputModes to gate the per-run raw keystroke
-   * log; the consent flow itself (and persisting acceptance) now lives
+   * log; the consent flow itself (and persisting acceptance) lives
    * entirely in the footer's TypingRecordModal. */
   typingRecordingConsentAccepted?: boolean
   /** Window length in minutes for the typing-view heatmap overlay and its

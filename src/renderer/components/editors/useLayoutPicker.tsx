@@ -45,9 +45,9 @@ export interface UseLayoutPickerOptions {
   selectedKey: { row: number; col: number } | null
   selectedEncoder: { idx: number; dir: number } | null
   /** Omit to make the Keyboard tab's keyboard-as-picker completely
-   *  non-interactive (Plan-qwerty-select-no-rewrite v7 — simulation tab
-   *  read-only enforcement): clicking a key there normally either pastes
-   *  into whatever `selectedKey`/`selectedEncoder` is (shared state, so
+   *  non-interactive (simulation tab read-only enforcement): clicking a
+   *  key there normally either pastes into whatever
+   *  `selectedKey`/`selectedEncoder` is (shared state, so
    *  still reachable even while THIS surface shows nothing selected) or
    *  starts a picker multi-select. `handlePickerKeyClick` falls through to
    *  a no-op when both this and `handlePickerMultiSelect` are omitted. */
@@ -113,7 +113,6 @@ export function useLayoutPicker({
   // every key of the layout at once purely for hover, so one shared
   // bubble covers it the same way TabbedKeycodes/PopoverTabKey do.
   const { target: pickerTooltip, show: showPickerTooltip, hide: handlePickerHoverEnd } = useSharedHoverBubble<{ keycode: string; rect: DOMRect }>()
-  // pickerClickedPositions removed — now tracked via pickerSelectedIndices in useKeymapMultiSelect
   const pickerContainerRef = useRef<HTMLDivElement>(null)
 
   const handlePickerHover = useCallback((_key: KleKey, keycode: string, rect: DOMRect) => {

@@ -2,17 +2,16 @@
 // @vitest-environment jsdom
 //
 // Focused unit coverage for useTypingTestResultSave's `lineBreaks`
-// derivation at finish time — codex-review fixes: the source is chosen
-// by `config.mode` (never by `state.lineBreaks.size`, which can't tell
-// "real single-line text" apart from "no real line source"), and every clamp is STRICT
-// (`< persistedWordCount - 1`, not `< persistedWordCount`) since a line
-// break can never legitimately land on the run's own last persisted word.
-// Every other existing behavior of this hook (result build/save,
-// pending-unnamed naming, memory-clear-on-finish) is already covered
-// end-to-end via useInputModes.run-log.test.tsx and
-// useInputModes.analytics.test.tsx, so this file drives the hook
-// directly with a minimal stub `typingTest` rather than a full HID-driven
-// run.
+// derivation at finish time — the source is chosen by `config.mode` (never
+// by `state.lineBreaks.size`, which can't tell "real single-line text"
+// apart from "no real line source"), and every clamp is STRICT
+// (`< persistedWordCount - 1`, not `< persistedWordCount`) since a line break
+// can never legitimately land on the run's own last persisted word. Every
+// other existing behavior of this hook (result build/save, pending-unnamed
+// naming, memory-clear-on-finish) is already covered end-to-end via
+// useInputModes.run-log.test.tsx and useInputModes.analytics.test.tsx, so
+// this file drives the hook directly with a minimal stub `typingTest`
+// rather than a full HID-driven run.
 
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
@@ -317,11 +316,11 @@ describe('useTypingTestResultSave — lineBreaks derivation (line timeline PR1)'
   })
 })
 
-// Plan-completion-timeline-view PR-B: `lastFinishedLog` surfaces whatever
-// `runLog.finishAndSave` returned for the just-finished run — a direct
-// passthrough (not re-derived), so the completion screen can render the
-// shared timeline panel from it inline. Cleared in the same
-// `status !== 'finished'` branch that resets `savedResultRef`.
+// `lastFinishedLog` surfaces whatever `runLog.finishAndSave` returned for
+// the just-finished run — a direct passthrough (not re-derived), so the
+// completion screen can render the shared timeline panel from it inline.
+// Cleared in the same `status !== 'finished'` branch that resets
+// `savedResultRef`.
 describe('useTypingTestResultSave — lastFinishedLog (completion timeline PR-B)', () => {
   const FAKE_LOG: RunKeystrokeLog = {
     runId: 'run-1', uid: 'kb-1', startedAt: new Date(1000).toISOString(), durationMs: 500,

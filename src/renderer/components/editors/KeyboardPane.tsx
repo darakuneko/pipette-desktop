@@ -70,7 +70,7 @@ export interface KeyboardPaneProps {
    *  obvious without the user having to notice which tab is active. */
   preview?: boolean
   /** Extra content rendered next to `layerLabel` in the footer row — the
-   *  simulation tab's Apply button (Plan-qwerty-select-no-rewrite v7). */
+   *  simulation tab's Apply button. */
   footerExtra?: React.ReactNode
   /** Blocks every edit path into this pane: no key/encoder click,
    *  double-click, or middle-click undo handler reaches `KeyboardWidget`
@@ -196,8 +196,8 @@ export function KeyboardPane({
           edge, matching the empty space that cell has whenever the other
           isn't there. `justify-between` reproduces the old left/right
           grid edges with plain flex, and the row's height still grows to
-          fully contain the button — no overflow past the panel's border
-          (Plan-qwerty-select-no-rewrite v7 UI refinement). */}
+          fully contain the button — no overflow past the panel's
+          border. */}
       <div className="flex items-center justify-between px-keyboard-px text-xs leading-none text-content-muted">
         <span className="flex items-center gap-2">
           {layerLabel !== undefined && (

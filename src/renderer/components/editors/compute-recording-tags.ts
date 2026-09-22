@@ -11,7 +11,7 @@ export interface ComputeRecordingTagsOptions {
   typingTestViewOnly: boolean | undefined
   /** The REC toggle's own effective condition (`typingRecordEnabled ?? false`),
    *  computed by useInputModes.ts (this function's only caller) before this
-   *  call — see its own comment there for why REC's scope no longer needs
+   *  call — see its own comment there for why REC's scope doesn't need
    *  the view-only qualifier. */
   recordingActive: boolean
   /** The runId useInputModes.ts's own `pristineRunIdRef` captured on this
@@ -79,12 +79,9 @@ export function computeRecordingTags({
   // ('finished' is intentionally excluded so idle presses after a test can't
   // re-introduce a phantom record.)
   //
-  // GATE SPLIT (codex safety review of an earlier, broader-gate attempt at
-  // the missing-first-keystroke fix — see runLogLabelRef below for the
-  // actual fix): this condition is deliberately restored to EXACTLY its
-  // original (#203) shape. Broadening it to also cover armed-waiting (as
-  // a first attempt did) tags the per-minute analytics pipeline too
-  // eagerly in two ways that pipeline was never meant to tolerate:
+  // GATE SPLIT: Broadening it to also cover armed-waiting (as a first
+  // attempt did) tags the per-minute analytics pipeline too eagerly in
+  // two ways that pipeline was never meant to tolerate:
   //  - P1: `setConfig`/`setLanguage` update `config` synchronously but
   //    the STATE stays whatever it was (old runId, possibly already
   //    non-pristine from an earlier session) until their async word-list

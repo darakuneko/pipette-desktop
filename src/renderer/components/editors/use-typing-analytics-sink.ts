@@ -29,20 +29,18 @@ export function typingTestAnalyticsLabel(
  *  `typingTest`/`runId` are null for ordinary REC input (untagged); an
  *  editor typing-test keystroke always has both set together.
  *
- *  GATE SPLIT (codex safety review of the missing-first-keystroke fix):
- *  `typingTest` is the narrow, PER-MINUTE-ANALYTICS tag — non-null only
- *  while `status === 'running'`, restored to its exact original (#203)
- *  meaning. `runLogTest` is a SEPARATE, broader tag used ONLY by the
- *  run-log recorder — non-null while running OR already "armed waiting"
- *  for the run's first keystroke (see useInputModes.ts's
- *  `runLogLabelRef`/`isArmedWaiting`). The two are deliberately allowed
- *  to disagree (`runLogTest` non-null while `typingTest` is still null)
- *  for exactly one narrow window per run — the armed-waiting keystrokes
- *  before `status` flips to `running` — so the run-log can capture that
- *  run's own first keystroke without also reopening the per-minute
- *  pipeline's pre-start cutoff (a run-log-only event must never reach
- *  `window.vialAPI.typingAnalyticsEvent` — see `perMinuteAuthorized` and
- *  `emitAnalyticsEvent`'s own gate). */
+ *  GATE SPLIT: `typingTest` is the narrow, PER-MINUTE-ANALYTICS tag —
+ *  non-null only while `status === 'running'`. `runLogTest` is a SEPARATE,
+ *  broader tag used ONLY by the run-log recorder — non-null while running
+ *  OR already "armed waiting" for the run's first keystroke (see
+ *  useInputModes.ts's `runLogLabelRef`/`isArmedWaiting`). The two are
+ *  deliberately allowed to disagree (`runLogTest` non-null while
+ *  `typingTest` is still null) for exactly one narrow window per run — the
+ *  armed-waiting keystrokes before `status` flips to `running` — so the
+ *  run-log can capture that run's own first keystroke without also
+ *  reopening the per-minute pipeline's pre-start cutoff (a run-log-only
+ *  event must never reach `window.vialAPI.typingAnalyticsEvent` — see
+ *  `perMinuteAuthorized` and `emitAnalyticsEvent`'s own gate). */
 export interface PreparedAnalyticsContext {
   keyboard: TypingAnalyticsKeyboard
   typingTest: string | null
@@ -196,14 +194,13 @@ export function useTypingAnalyticsSink({
     if (!keyboard) return null
     const label = testLabelRef.current
     const runLogLabel = runLogLabelRef.current
-    // GATE SPLIT: `perMinuteAuthorized` is EXACTLY the original (#203)
-    // authorization condition for the per-minute analytics pipeline —
-    // REC toggle active, or a running editor test. `runLogLabel` (broader
-    // — see PreparedAnalyticsContext's doc comment) can ALSO keep this
-    // function from returning null on its own, during armed-waiting, but
-    // must never by itself authorize a per-minute send — see
-    // emitAnalyticsEvent's own `perMinuteAuthorized` gate below, which is
-    // what actually enforces that split.
+    // GATE SPLIT: `perMinuteAuthorized` is the authorization condition for
+    // the per-minute analytics pipeline — REC toggle active, or a running
+    // editor test. `runLogLabel` (broader — see PreparedAnalyticsContext's
+    // doc comment) can ALSO keep this function from returning null on its
+    // own, during armed-waiting, but must never by itself authorize a
+    // per-minute send — see emitAnalyticsEvent's own `perMinuteAuthorized`
+    // gate below, which is what actually enforces that split.
     const perMinuteAuthorized = recordingActiveRef.current || label !== null
     if (!perMinuteAuthorized && !runLogLabel) return null
     // Tray keystroke count tracks REC only (untagged matrix events), not
@@ -214,8 +211,7 @@ export function useTypingAnalyticsSink({
     // keystrokes, and a masked key can otherwise sit unresolved for up to
     // the tapping term before its emit — the user would see the tray lag
     // behind their own typing. Explicitly re-checks recordingActiveRef
-    // (not just `!label`) because reaching this line no longer implies
-    // recordingActiveRef is true — a run-log-only armed-waiting press
+    // (not just `!label`) because a run-log-only armed-waiting press
     // (recordingActiveRef false, label null, runLogLabel non-null) must
     // never count toward the REC tray, only genuine untagged REC presses.
     if (!label && kind === 'matrix' && recordingActiveRef.current) {
@@ -259,12 +255,10 @@ export function useTypingAnalyticsSink({
       kanaInput: context.kanaInput,
     }, payload)
     // GATE SPLIT: a run-log-only event (armed-waiting, `perMinuteAuthorized`
-    // false) must never reach the per-minute analytics pipeline — this is
-    // what restores #203's original pre-start cutoff for that pipeline
-    // (codex safety review P2) even though prepareAnalyticsEvent no longer
-    // returns null for it. `chainRef` is deliberately left untouched here:
-    // this event was never sent, so it has nothing to add to the IPC
-    // ordering chain.
+    // false) must never reach the per-minute analytics pipeline, even
+    // though prepareAnalyticsEvent doesn't return null for it.
+    // `chainRef` is deliberately left untouched here: this event was never
+    // sent, so it has nothing to add to the IPC ordering chain.
     if (!context.perMinuteAuthorized) return Promise.resolve()
     const event = context.typingTest
       ? { ...payload, keyboard: context.keyboard, typingTest: context.typingTest, runId: context.runId ?? undefined }

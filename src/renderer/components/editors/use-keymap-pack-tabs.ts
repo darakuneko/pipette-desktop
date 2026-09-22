@@ -33,13 +33,13 @@ export interface UseKeymapPackTabsOptions {
 
 export interface UseKeymapPackTabsReturn {
   packTab: KeymapPackTab
-  /** SINGLE PREDICATE (Plan-qwerty-select-no-rewrite v7): `remapKind` is
-   *  ALREADY the unified "does the active pack want a keymap rewrite"
-   *  signal (see `useDevicePrefs.ts` — it's gated on `keymapApplicable &&
-   *  buildKeymapRewriteTable(map).ok`, not `.ok` alone); combined with
-   *  `keymap.size > 0`, this is the SAME condition `requestApply` itself
-   *  requires, so tab AND Apply-button visibility both collapse onto this
-   *  one boolean rather than needing separate checks that could disagree.
+  /** SINGLE PREDICATE: `remapKind` is ALREADY the unified "does the
+   *  active pack want a keymap rewrite" signal (see `useDevicePrefs.ts`
+   *  — it's gated on `keymapApplicable && buildKeymapRewriteTable(map).ok`,
+   *  not `.ok` alone); combined with `keymap.size > 0`, this is the SAME
+   *  condition `requestApply` itself requires, so tab AND Apply-button
+   *  visibility both collapse onto this one boolean rather than needing
+   *  separate checks that could disagree.
    *  Suppressed during typing test / View Matrix mode too, neither of
    *  which has a concept of a second (Base) keymap surface to switch to. */
   showPackTabs: boolean
@@ -60,12 +60,12 @@ export interface UseKeymapPackTabsReturn {
   resetPackTab: () => void
 }
 
-/** Simulation/Base tab (Plan-qwerty-select-no-rewrite v7 — シミュレーション
- * タブ方式). Which of the two vertical tabs (pack-name simulation vs. the
- * real "Base" keymap) is showing when `remapKind === 'simulated'` shows them
- * at all. Defaults to the simulation tab; a user switch to Base persists
- * only until the next uid change (via `resetPackTab`) or a layout change
- * (tracked internally below), not across a select change or a re-render. */
+/** Simulation/Base tab. Which of the two vertical tabs (pack-name
+ * simulation vs. the real "Base" keymap) is showing when
+ * `remapKind === 'simulated'` shows them at all. Defaults to the
+ * simulation tab; a user switch to Base persists only until the next
+ * uid change (via `resetPackTab`) or a layout change (tracked
+ * internally below), not across a select change or a re-render. */
 export function useKeymapPackTabs({
   keyboardLayout, remapKind, keymap, encoderLayout, encoderCount, currentLayer,
   typingTestMode, viewMatrixActive, handleDeselect,
@@ -109,15 +109,12 @@ export function useKeymapPackTabs({
     }
   }, [keyboardLayout])
 
-  // FIX C (external review): a keymap must actually be loaded for a
-  // Rewrite to mean anything — `useKeymapApplyPrompt.requestApply` already
-  // no-ops when `keymapEditable` is false (App.tsx passes `keyboard.keymap
-  // .size > 0` into that hook), but nothing here previously folded that
-  // into tab/button VISIBILITY, so a permutation pack could show a
-  // tabs+Apply UI that silently did nothing when clicked. Derived straight
-  // from this component's own `keymap` prop — the exact same `Map` App.tsx
-  // reads `.size` off of for the hook — rather than a second prop that
-  // could drift out of sync with it.
+  // A keymap must actually be loaded for a Rewrite to mean anything —
+  // `useKeymapApplyPrompt.requestApply` already no-ops when
+  // `keymapEditable` is false (App.tsx passes `keyboard.keymap.size > 0`
+  // into that hook). Derived straight from this component's own `keymap`
+  // prop — the exact same `Map` App.tsx reads `.size` off of for the
+  // hook — rather than a second prop that could drift out of sync with it.
   const keymapEditable = keymap.size > 0
   const showPackTabs = remapKind === 'simulated' && keymapEditable && !typingTestMode && !viewMatrixActive
   const packTabReadOnly = showPackTabs && packTab === 'pack'
@@ -136,13 +133,13 @@ export function useKeymapPackTabs({
     enabled: showPackTabs && packTab === 'base',
   })
 
-  // Base tab's data source (Plan-qwerty-select-no-rewrite v7): the SAME
-  // "no tabs" `<KeyboardPane>` JSX renders both the plain (no-tabs) state
-  // and `showPackTabs && packTab === 'base'` — only these source variables
+  // Base tab's data source: the SAME "no tabs" `<KeyboardPane>` JSX
+  // renders both the plain (no-tabs) state and
+  // `showPackTabs && packTab === 'base'` — only these source variables
   // differ between the two. Raw/identity (`baseLayer*`, `EMPTY_REMAPPED`,
   // `undefined` remapLabel) while on the Base tab; otherwise the normal
-  // `remapLabel`/`isRemapped`-driven values every other state (JIS, QWERTY,
-  // View Matrix, ...) already used.
+  // `remapLabel`/`isRemapped`-driven values every other state (JIS,
+  // QWERTY, View Matrix, ...) already uses.
   const onBaseTab = showPackTabs && packTab === 'base'
   const primaryKeycodes = onBaseTab ? baseLayerKeycodes : layerKeycodes
   const primaryEncoderKeycodes = onBaseTab ? baseLayerEncoderKeycodes : layerEncoderKeycodes

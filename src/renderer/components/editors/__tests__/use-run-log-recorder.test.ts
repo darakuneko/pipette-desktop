@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
-// Focused unit coverage for `finishAndSave`'s return value
-// (Plan-completion-timeline-view PR-B): it now returns the same
-// `RunKeystrokeLog | null` that `RunLogRecorder.finish()` produced (and
-// still hands to `typingRunLogSave`), so `useTypingTestResultSave` can
-// surface it as `lastFinishedLog` for the completion screen's inline
-// timeline panel — no IPC round-trip needed. The underlying join/finish
-// logic itself is already exhaustively covered by
-// `typing-test/__tests__/run-log-recorder.test.ts`; this file only
-// exercises the hook's own new passthrough.
+// Focused unit coverage for `finishAndSave`'s return value: it returns
+// the same `RunKeystrokeLog | null` that `RunLogRecorder.finish()`
+// produced (and still hands to `typingRunLogSave`), so
+// `useTypingTestResultSave` can surface it as `lastFinishedLog` for the
+// completion screen's inline timeline panel — no IPC round-trip needed.
+// The underlying join/finish logic itself is already exhaustively covered
+// by `typing-test/__tests__/run-log-recorder.test.ts`; this file only
+// exercises the hook's own passthrough.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'

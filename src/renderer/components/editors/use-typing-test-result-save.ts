@@ -58,11 +58,10 @@ function effectiveWeakSpotSettings(config: TypingTestConfig): TypingTestResult['
   return resolveWeakSpotSettings(config.weakSpot)
 }
 
-/** Derive `RunKeystrokeLog.lineBreaks` for the just-finished run —
- *  Plan-line-keystroke-timeline PR1. Two sources, chosen by
- *  `config.mode` (see `hasRealLineStructure`), both clamped to
- *  `persistedWordCount` (the run can end with an in-flight word —
- *  `wordResults` itself never counts it — see the caller) with a
+/** Derive `RunKeystrokeLog.lineBreaks` for the just-finished run. Two
+ *  sources, chosen by `config.mode` (see `hasRealLineStructure`), both
+ *  clamped to `persistedWordCount` (the run can end with an in-flight
+ *  word — `wordResults` itself never counts it — see the caller) with a
  *  STRICT bound: an index must be `< persistedWordCount - 1`, not just
  *  `< persistedWordCount`. A line break describes where a line ENDS
  *  before ANOTHER FOLLOWS — the run's own last persisted word can never
@@ -145,13 +144,12 @@ export interface UseTypingTestResultSaveReturn {
    *  finished (null when recording consent was off / view-only / nothing
    *  saveable) — surfaced so the completion screen can render the shared
    *  `KeystrokeTimelinePanel` inline, without an IPC round-trip for the
-   *  log it already holds (Plan-completion-timeline-view PR-B). Cleared
-   *  in the same `status !== 'finished'` branch that resets
-   *  `savedResultRef`, so a Next Test / Restart never leaves a stale run's
-   *  log rendering on the fresh one — callers should also check
-   *  `lastFinishedLog.runId` against the current run before rendering it
-   *  (see the codex-review note in Plan-completion-timeline-view.md), as
-   *  a belt-and-braces guard against the effect's own timing. */
+   *  log it already holds. Cleared in the same `status !== 'finished'`
+   *  branch that resets `savedResultRef`, so a Next Test / Restart never
+   *  leaves a stale run's log rendering on the fresh one — callers should
+   *  also check `lastFinishedLog.runId` against the current run before
+   *  rendering it, as a belt-and-braces guard against the effect's own
+   *  timing. */
   lastFinishedLog: RunKeystrokeLog | null
 }
 
@@ -238,11 +236,10 @@ export function useTypingTestResultSave({
         // own immutable snapshot (`state.weakSpotProfile`, set once by
         // freshState and non-null only when a profile actually cleared
         // the keystroke gate) is the one source of truth for whether this
-        // SPECIFIC run's word pool was actually biased — a codex review
-        // finding: persisting the flag from the toggle alone wrongly split
-        // an unbiased (gate-not-met) run into the weak-spot PB/comparison
-        // condition (configKey/resultConditionKey) alongside genuinely
-        // biased runs.
+        // SPECIFIC run's word pool was actually biased — persisting the
+        // flag from the toggle alone wrongly splits an unbiased
+        // (gate-not-met) run into the weak-spot PB/comparison condition
+        // (configKey/resultConditionKey) alongside genuinely biased runs.
         weakSpotTrainingMode: typingTest.state.weakSpotProfile != null,
         weakSpotSettings: typingTest.state.weakSpotProfile != null ? effectiveWeakSpotSettings(typingTest.config) : undefined,
         mistakes: typingTest.state.mistakes,
@@ -282,11 +279,10 @@ export function useTypingTestResultSave({
       const inFlightWord = typingTest.state.currentWordIndex < typingTest.state.words.length && typedSoFar.length > 0
         ? { display: typingTest.state.words[typingTest.state.currentWordIndex], typed: typedSoFar }
         : undefined
-      // Line structure for the saved log (Plan-line-keystroke-timeline
-      // PR1) — see `deriveLineBreaksForLog`'s own doc comment for the two
-      // sources and the persisted-word clamp (`wordResults` plus the
-      // in-flight word above, exactly what `runLog.finishAndSave` is
-      // about to persist as `words`).
+      // Line structure for the saved log — see `deriveLineBreaksForLog`'s
+      // own doc comment for the two sources and the persisted-word clamp
+      // (`wordResults` plus the in-flight word above, exactly what
+      // `runLog.finishAndSave` is about to persist as `words`).
       const persistedWordCount = typingTest.state.wordResults.length + (inFlightWord ? 1 : 0)
       const lineBreaksForLog = deriveLineBreaksForLog(
         typingTest.config, typingTest.state, persistedWordCount, lineSnapshotRef?.current ?? null,

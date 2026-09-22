@@ -128,14 +128,14 @@ export function TypingTestPane({
     onViewOnlyChange,
   })
 
-  // Completion screen (Plan-completion-timeline-view PR-B): the keymap
-  // pane + its layer-tracking note describe the KEYMAP, which is no
-  // longer the point once a run finishes and the reading window gives
-  // way to the inline keystroke timeline (see TypingTestView) — hidden
-  // alongside it. Editor-only: view-only's own keyboard display is
-  // deliberately independent of both `hideKeymap` and this (see the
-  // existing "Keymap hidden only in the editor view" comment below), so
-  // a view-only run reaching 'finished' keeps showing its keyboard.
+  // Completion screen: the keymap pane + its layer-tracking note describe
+  // the KEYMAP, which is no longer the point once a run finishes and the
+  // reading window gives way to the inline keystroke timeline (see
+  // TypingTestView) — hidden alongside it. Editor-only: view-only's own
+  // keyboard display is deliberately independent of both `hideKeymap` and
+  // this (see the existing "Keymap hidden only in the editor view" comment
+  // below), so a view-only run reaching 'finished' keeps showing its
+  // keyboard.
   const hideKeyboardForFinish = !viewOnly && typingTest.state.status === 'finished'
 
   return (
@@ -310,11 +310,9 @@ export function TypingTestPane({
           actually typing on. The finished-state row is unaffected — it
           still renders inside TypingTestView, at the very bottom of the
           completion screen (below the timeline panel), since the keyboard
-          itself is hidden once finished (hideKeyboardForFinish). Gated the
-          same way the old in-TypingTestView row was: !viewOnly (view-only
-          never showed this row) and !hideControls (the "operation"
-          toggle), plus the finished check TypingTestView itself no longer
-          needs to make since this row never renders for it. */}
+          itself is hidden once finished (hideKeyboardForFinish). Gated:
+          !viewOnly (view-only never showed this row) and !hideControls
+          (the "operation" toggle), plus the finished check. */}
       {!viewOnly && typingTest.state.status !== 'finished' && !hideControls && (
         <div className="mt-2 flex w-full justify-center">
           <TypingTestControlsRow

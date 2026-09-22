@@ -19,10 +19,10 @@ export interface UseKeymapRewriteReturn {
   applyKeymapRewrite: (table: KeymapRewriteTable) => Promise<KeymapApplyResult>
 }
 
-// --- Key Label "apply to keymap" bulk rewrite (Plan-key-label-keymap-apply
-// Phase 3). Reachable from the footer's layout select via the imperative
-// handle in KeymapEditor, so the write lands on this same `history` instance
-// instead of a second undo stack. Writes go through `onSetKey` /
+// --- Key Label "apply to keymap" bulk rewrite. Reachable from the
+// footer's layout select via the imperative handle in KeymapEditor, so
+// the write lands on this same `history` instance instead of a second
+// undo stack. Writes go through `onSetKey` /
 // `onSetEncoder` sequentially (not `onSetKeysBulk`) so a mid-way failure
 // leaves both the local keymap state and the pushed history entry
 // containing only the positions that actually succeeded.
@@ -113,11 +113,11 @@ export function useKeymapRewrite({
       // partial-failure apply; the counts are still returned to the caller
       // for its own error surfacing.
       //
-      // Rewrite is a destructive one-shot (Plan-qwerty-select-no-rewrite v5
-      // 最終仕様), same class of operation as a snapshot/.vil restore: the
-      // moment ANY write actually landed, both undo/redo stacks are wiped
-      // rather than gaining a revertible batch entry — no history entry is
-      // ever pushed for a rewrite, success or partial failure alike.
+      // Rewrite is a destructive one-shot, same class of operation as a
+      // snapshot/.vil restore: the moment ANY write actually landed, both
+      // undo/redo stacks are wiped rather than gaining a revertible batch
+      // entry — no history entry is ever pushed for a rewrite, success or
+      // partial failure alike.
       // Recovery from a bad or partial rewrite is the user's own
       // .vil/snapshot backup (the confirm modal recommends saving before
       // applying), not Undo. A rewrite that touched nothing (table matched

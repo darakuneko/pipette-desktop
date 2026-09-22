@@ -389,11 +389,10 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
     expect(onSetKeysBulk).not.toHaveBeenCalled()
   })
 
-  // --- destructive one-shot history (Plan-qwerty-select-no-rewrite v5
-  // 最終仕様): a Rewrite never pushes an undoable entry, success or partial
-  // failure alike — the moment any write actually lands, both undo/redo
-  // stacks are wiped instead. Recovery is the user's own .vil/snapshot
-  // backup, not Undo. ---
+  // --- destructive one-shot history: a Rewrite never pushes an undoable
+  // entry, success or partial failure alike — the moment any write
+  // actually lands, both undo/redo stacks are wiped instead. Recovery is
+  // the user's own .vil/snapshot backup, not Undo. ---
 
   describe('destructive one-shot history (no batch push, ever)', () => {
     it('a successful rewrite wipes pre-existing undo AND redo entries, and pushes nothing itself — Undo has nothing left to revert', async () => {
@@ -716,11 +715,10 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
 
   // --- Undo/redo flash (onHistoryApplied → triggerFlash, useKeyFlash) ---
   // Builds a one-entry undo stack via an ordinary (non-rewrite) edit rather
-  // than `applyKeymapRewrite` — a Rewrite is a destructive one-shot (v5
-  // 最終仕様) that never leaves anything on the undo stack, so it can no
-  // longer serve as this fixture. `KeymapEditor.undo.test.tsx`'s
-  // `KeyboardWidget` mock doesn't capture `flash`, so this coverage lives
-  // here instead.
+  // than `applyKeymapRewrite` — a Rewrite is a destructive one-shot that
+  // never leaves anything on the undo stack, so it can't serve as this
+  // fixture. `KeymapEditor.undo.test.tsx`'s `KeyboardWidget` mock doesn't
+  // capture `flash`, so this coverage lives here instead.
 
   describe('undo/redo flash (onHistoryApplied → triggerFlash)', () => {
     afterEach(() => {
@@ -732,7 +730,7 @@ describe('KeymapEditor — applyKeymapRewrite (Key Label apply-to-keymap)', () =
     // a clean flash state with exactly one entry sitting on the undo stack.
     // A plain edit never itself flashes (only `applyKeymapRewrite` and
     // undo/redo do), so there is no post-apply flash window to wait out
-    // here, unlike the old rewrite-based fixture.
+    // here.
     async function renderWithEditedKey() {
       const ref = createRef<KeymapEditorHandle>()
       render(<KeymapEditor ref={ref} {...defaultProps} />)

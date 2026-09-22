@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Vertical index-tab strip shown to the right of the keymap surface
-// whenever a permutation Key Label pack is active (Plan-qwerty-select-
-// no-rewrite v7 — シミュレーションタブ方式, gated by `remapKind ===
-// 'simulated'` in `KeymapEditor`). Top button = the pack's own name
-// (simulation, read-only); bottom button = the real keymap, fully
+// whenever a permutation Key Label pack is active (gated by
+// `remapKind === 'simulated'` in `KeymapEditor`). Top button = the pack's
+// own name (simulation, read-only); bottom button = the real keymap, fully
 // editable — same neutral/no-remap layout as the footer Keyboard Layout
 // select's built-in QWERTY option, but labeled with the SHORT form
 // (`keyLabels.qwertyDefaultShort`, e.g. "Default") rather than the
