@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Task-irr-2: importLocalData's plan/backup/write/rollback behavior
-// (Plan-import-restore-rollback.md §A tests A1-A8). Real files under a
-// temp userData dir — `writeFile`/`unlink` are wrapped so individual
-// tests can inject a failure on a specific call while every other call
-// still hits the real filesystem.
+// importLocalData's plan/backup/write/rollback behavior. Real files
+// under a temp userData dir — `writeFile`/`unlink` are wrapped so
+// individual tests can inject a failure on a specific call while every
+// other call still hits the real filesystem.
 
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { dirname, join } from 'node:path'

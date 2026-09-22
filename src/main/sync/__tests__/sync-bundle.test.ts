@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Focused coverage for `collectAllSyncUnits`'s built-in English
-// exclusion (feat/english-pack-sortable): the entry's pack body is a
-// trivial placeholder every machine ensures identically, so it must
-// never be pushed as its own "i18n/packs/{id}" sync unit — only the
-// index unit (which carries its *position*) should include it. No
-// pre-existing test file covered `sync-bundle.ts` before this, so this
-// file stays scoped to that one behavior rather than attempting full
-// bundle coverage in the same pass.
+// exclusion: the entry's pack body is a trivial placeholder every
+// machine ensures identically, so it must never be pushed as its own
+// "i18n/packs/{id}" sync unit — only the index unit (which carries its
+// *position*) should include it. This file stays scoped to that one
+// behavior rather than attempting full bundle coverage.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
@@ -77,9 +75,9 @@ describe('collectAllSyncUnits — built-in English exclusion', () => {
     expect(units.some((u) => u.startsWith('i18n/'))).toBe(false)
   })
 
-  // codex review follow-up (issue 3): bundleSyncUnit itself refuses the
-  // built-in body defensively, even if a stale/future call site ever
-  // requests it directly (collectAllSyncUnits already never does).
+  // bundleSyncUnit itself refuses the built-in body defensively, even
+  // if a stale/future call site ever requests it directly
+  // (collectAllSyncUnits already never does).
   it('bundleSyncUnit refuses the built-in English pack-body unit even when the file exists on disk', async () => {
     const packsDir = join(mockUserDataPath, 'sync', 'i18n', 'packs')
     await mkdir(packsDir, { recursive: true })

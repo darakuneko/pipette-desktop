@@ -102,7 +102,7 @@ export interface BuildAnalyticsExportInput {
      * better positioned to do this — it already does it for the live
      * chart — so we accept the parsed result instead of re-parsing. */
     kleKeys: KleKey[]
-    /** Layer to read source labels from. Phase 1 of layout comparison
+    /** Layer to read source labels from. Layout comparison
      * uses layer 0; pass through whatever the live chart used. */
     layer?: number
   } | null
@@ -313,10 +313,10 @@ async function collectData(
       ? db.listBigramMinutesInRangeForUid(uid, fromMs, toMs, appScopes)
       : db.listBigramMinutesInRangeForUidAndHash(uid, machineHash, fromMs, toMs, appScopes)
     const bigramTotals = aggregatePairTotals(bigramRows)
-    // Hub's wire field is `bigramId` (see HUB-ANALYTICS-API.md); map it
-    // explicitly from the aggregator's `ngramId` instead of relying on
-    // structural assignability, so a future ngramId-only shape can't
-    // silently break this export.
+    // Hub's wire field is `bigramId`; map it explicitly from the
+    // aggregator's `ngramId` instead of relying on structural
+    // assignability, so a future ngramId-only shape can't silently
+    // break this export.
     bigramTop = rankBigramsByCount(bigramTotals, ANALYTICS_BIGRAM_TOP_LIMIT)
       .map(({ ngramId, count, hist, avgIki }) => ({ bigramId: ngramId, count, hist, avgIki }))
     bigramSlow = rankBigramsBySlow(
@@ -370,7 +370,7 @@ async function computeLayoutComparisonForExport(
   fingerOverrides: Record<string, FingerType> | undefined,
 ): Promise<LayoutComparisonResult | null> {
   if (inputs === null) return null
-  // Layer 0 is the Phase 1 default; the IPC handler does the same thing
+  // Layer 0 is the default; the IPC handler does the same thing
   // when the renderer doesn't override it.
   const layer = inputs.layer ?? 0
   // The live chart aligns to minute boundaries before reading matrix

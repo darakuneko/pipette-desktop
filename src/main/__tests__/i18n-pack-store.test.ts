@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Focused store-level coverage for `i18n-pack-store.ts`'s `reorderActive`
-// (Phase 2 of the pack-modal-unification plan). Mirrors the equivalent
-// `reorderActive` describe blocks in `key-label-store.test.ts` and
-// `theme-pack-store.test.ts` — no pre-existing test file covered this
-// store before, so this file stays scoped to reorder rather than
-// attempting full store coverage in the same pass.
+// Focused store-level coverage for `i18n-pack-store.ts`'s `reorderActive`.
+// Mirrors the equivalent `reorderActive` describe blocks in
+// `key-label-store.test.ts` and `theme-pack-store.test.ts` — this file
+// stays scoped to reorder rather than attempting full store coverage.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
@@ -282,7 +280,7 @@ describe('i18n-pack-store built-in English entry (ensureBuiltinEnglishEntry)', (
     expect(renamed.success).toBe(true)
   })
 
-  // --- codex review follow-up: name-collision guard (issue 1) -------------
+  // --- name-collision guard -----------------------------------------------
 
   it('rejects a same-named import (case-insensitive, no explicit id) instead of silently overwriting the built-in entry', async () => {
     await listMetas() // ensure the built-in entry exists
@@ -310,7 +308,7 @@ describe('i18n-pack-store built-in English entry (ensureBuiltinEnglishEntry)', (
     expect(metas.find((m) => m.id === BUILTIN_ENGLISH_PACK_ID)!.name).toBe('English')
   })
 
-  // --- codex review follow-up: serialized RMW paths (issue 2) -------------
+  // --- serialized RMW paths -----------------------------------------------
 
   it('two overlapping mutations (rename + reorder) are serialized — both land, neither clobbers the other', async () => {
     const a = await savePack({ pack: makePack({ name: 'Alpha' }) })
@@ -331,7 +329,7 @@ describe('i18n-pack-store built-in English entry (ensureBuiltinEnglishEntry)', (
     expect(activeIds.indexOf(b.data!.id)).toBeLessThan(activeIds.indexOf(a.data!.id))
   })
 
-  // --- codex review follow-up: complete the sync exclusion (issue 3) ------
+  // --- complete the sync exclusion ----------------------------------------
 
   it('renaming the built-in entry does not notifyChange its pack-body sync unit (only the index)', async () => {
     await listMetas()
@@ -351,7 +349,7 @@ describe('i18n-pack-store built-in English entry (ensureBuiltinEnglishEntry)', (
     expect(units).not.toContain(`i18n/packs/${BUILTIN_ENGLISH_PACK_ID}`)
   })
 
-  // --- codex review follow-up: ensure recreates a missing body (issue 4) --
+  // --- ensure recreates a missing body ------------------------------------
 
   it('self-heals a missing body file when the meta already exists (e.g. delivered by sync before the local body did)', async () => {
     // Simulate a synced index that delivered the meta with no local
@@ -378,8 +376,6 @@ describe('i18n-pack-store built-in English entry (ensureBuiltinEnglishEntry)', (
     expect(afterGet.data!.pack).toEqual({ name: 'English', version: '0.0.0' })
   })
 })
-
-// --- Task-sync-unit-discovery bugfix plan: fixes 1-3 ------------------------
 
 describe('i18n-pack-store sync robustness fixes (utimes degrade / pin CAS / malformed metas)', () => {
   beforeEach(async () => {
@@ -545,7 +541,7 @@ describe('i18n-pack-store runGcUnderLock (D.2/single-lock GC: wired post-pass, l
     expect(files).toContain(`${saveResult.data!.id}.json`)
   })
 
-  // M4: a corrupt/missing index must not be treated as "legitimately
+  // A corrupt/missing index must not be treated as "legitimately
   // empty" when pack bodies still exist on disk — an empty-roster
   // fallback there would make the sweep delete every one of them.
   it('skips both purge and sweep when index.json is truncated/unparseable, keeping every pack body intact', async () => {
@@ -577,7 +573,7 @@ describe('i18n-pack-store runGcUnderLock (D.2/single-lock GC: wired post-pass, l
     expect(result).toEqual({ purged: 0, swept: 0 })
   })
 
-  // M3: options.skipSweep — set by pack-gc.ts when a sibling sync unit
+  // options.skipSweep — set by pack-gc.ts when a sibling sync unit
   // for this store failed to merge this pass. Purge still runs (index
   // is trustworthy here — just possibly stale relative to a body still
   // in flight); only the sweep is withheld.

@@ -102,10 +102,10 @@ function isValidMatrixCommon(obj: Record<string, unknown>): boolean {
  * or classification artifact, not evidence the press itself didn't
  * happen. Rejecting the whole event over it would lose a real keystroke
  * to something the renderer could compute wrong — precisely the class of
- * bug #322/#323 already fixed elsewhere in this pipeline. Core fields
- * (row/col/layer/keycode, checked by isValidMatrixCommon before this
- * runs) are NOT sanitized: there is no safe fallback for "which cell was
- * this", so those still reject the whole event as before.
+ * bug already fixed elsewhere in this pipeline. Core fields
+ * (row/col/layer/keycode, checked by isValidMatrixCommon before this runs)
+ * are NOT sanitized: there is no safe fallback for "which cell was this",
+ * so those still reject the whole event as before.
  *
  * The pollGapMs bound (`0 < pollGapMs <= OBSERVATION_HOLE_MS`) reuses the
  * same shared constant the renderer's hole detection is built on (see
@@ -343,7 +343,7 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
     // themselves are NOT lost: minuteBuffer.reopenAll() flips every
     // 'retained' entry back to 'reopened', so the next drain re-finalizes
     // and re-sends the full cumulative minute rather than just whatever
-    // arrives after this point — a failed persist is no longer lossy for
+    // arrives after this point — a failed persist is not lossy for
     // retained minutes. (Reopening entries that weren't actually part of
     // this failed pass is harmless — see reopenAll's docblock — so this
     // can run unconditionally.) The one gap this doesn't cover: an entry

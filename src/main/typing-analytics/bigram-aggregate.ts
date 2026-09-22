@@ -16,7 +16,7 @@ import type {
 } from '../../shared/types/typing-analytics'
 import { sdFromSums } from '../../shared/stat-sums'
 
-// `sdFromSums` itself now lives in shared/stat-sums.ts (the renderer's
+// `sdFromSums` itself lives in shared/stat-sums.ts (the renderer's
 // Analyze duration section needs it too, and main can't be imported from
 // the renderer process) — re-exported here so this module's own call
 // sites and existing external importers don't need a second import path.
@@ -88,10 +88,9 @@ export function aggregatePairTotals(
       entry.sumSqIki += row.sumSqIki
     }
     // Deliberate deviation from the sumIki/sumSqIki null-poisoning rule
-    // above (codex P1 review — overrides the original task doc's "same
-    // rule as SD" instruction): `undefined` (trigram rows never carry
-    // these columns) and `null` (a bigram row that predates schema v8,
-    // or whose events never had a determined overlap) both just mean
+    // above: `undefined` (trigram rows never carry these columns) and
+    // `null` (a bigram row that predates schema v8, or whose events
+    // never had a determined overlap) both just mean
     // "this row observed nothing about overlap" and contribute 0 to
     // both accumulators, rather than poisoning the whole pair. Unlike
     // sumIki, there is no cross-row inconsistency possible here: each
@@ -121,25 +120,23 @@ export function aggregatePairTotals(
  * IPC field, any future CSV/UI column) because it is a SAMPLED
  * approximation of how often consecutive keys physically overlapped —
  * bounded by the renderer's polling cadence, not a measurement of true
- * rollover timing (see Plan-typing-metrics-chi2018.md "制約 2"). It must
- * never be presented as "the" rollover rate.
+ * rollover timing. It must never be presented as "the" rollover rate.
  *
- * Residual bias, even after the fixes above: a same-frame tie (two
- * presses landing in one polled frame, iki === 0 in
- * MinuteBuffer.recordNgramChain) folds its overlap into the TIED pair
- * rather than advancing the chain, so the tie key becomes stale for
- * whatever pair the chain completes next. Concretely — A and B pressed
- * in the same frame, then C pressed later: pair A_C's overlap sample
- * actually describes "was B still down when C was pressed", not
- * A's relationship to C. Full reference-key realignment (re-deriving
- * which physical key the NEXT pair should compare against after a tie)
- * was considered and rejected as machinery disproportionate to an
- * avowedly sampled, approximate metric. What remains after the tie fix
- * is this: the ratio no longer has a systematic downward bias (ties used
- * to discard the overlap evidence entirely), but it does carry
- * attribution noise — a small, non-systematic chance that a sample
- * counted toward one pair actually describes a different, adjacent one —
- * concentrated in fast chords where same-frame ties are common. */
+ * Residual bias: a same-frame tie (two presses landing in one polled
+ * frame, iki === 0 in MinuteBuffer.recordNgramChain) folds its overlap
+ * into the TIED pair rather than advancing the chain, so the tie key
+ * becomes stale for whatever pair the chain completes next. Concretely
+ * — A and B pressed in the same frame, then C pressed later: pair
+ * A_C's overlap sample actually describes "was B still down when C
+ * was pressed", not A's relationship to C. Full reference-key
+ * realignment (re-deriving which physical key the NEXT pair should
+ * compare against after a tie) was considered and rejected as
+ * machinery disproportionate to an avowedly sampled, approximate
+ * metric. What remains is this: the ratio does not have a systematic
+ * downward bias, but it does carry attribution noise — a small,
+ * non-systematic chance that a sample counted toward one pair actually
+ * describes a different, adjacent one — concentrated in fast chords
+ * where same-frame ties are common. */
 export function observedRolloverRatio(totals: ReadonlyMap<string, BigramPairTotal>): number | null {
   let oc = 0
   let on = 0

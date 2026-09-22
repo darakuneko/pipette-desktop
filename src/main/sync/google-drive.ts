@@ -225,12 +225,10 @@ export function syncUnitFromFileName(fileName: string): string | null {
   // "keyboards_0x1234_runs.enc" → "keyboards/0x1234/runs" (per-run raw
   // keystroke log)
   // "keyboards_0x1234_analyze_filters.enc" → "keyboards/0x1234/analyze_filters"
-  // (Task-sync-unit-filename-gap: closed the fresh-machine discovery gap
-  // for this store — see the task doc for the original report. The uid
-  // capture is non-greedy, so this alternation is only unambiguous as
+  // The uid capture is non-greedy, so this alternation is only unambiguous as
   // long as no future store name here is itself a suffix-composition of
   // another store name in this list (e.g. adding a bare 'filters' store
-  // would collide with 'analyze_filters') — pick distinct names.)
+  // would collide with 'analyze_filters') — pick distinct names.
   const kbMatch = fileName.match(/^keyboards_(.+?)_(settings|snapshots|runs|analyze_filters)\.enc$/)
   if (kbMatch) return `keyboards/${kbMatch[1]}/${kbMatch[2]}`
 

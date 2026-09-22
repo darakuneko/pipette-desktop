@@ -229,7 +229,7 @@ describe('importTypingDataFiles', () => {
 
   it('rejects a bigram-minute row whose minuteTs falls outside the day window', async () => {
     // Regression coverage: rowTimestamp() used to fall through to
-    // default:null for 'bigram-minute' (and now 'trigram-minute'),
+    // default:null for 'bigram-minute' (and 'trigram-minute'),
     // which made rowsFallInsideDay() skip the check entirely — a
     // bigram/trigram row from a completely different day would have
     // silently passed validation instead of being rejected.

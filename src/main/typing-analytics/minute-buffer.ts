@@ -199,9 +199,9 @@ interface Entry {
    * Two derived questions every consumer asks reduce to this one field:
    * dirty (needs a finalize) ⇔ `state !== 'retained'`; flushed (has
    * shipped at least one snapshot, so its counts already live in the DB)
-   * ⇔ `state !== 'open'`. Collapsing what used to be two independent
-   * booleans into one enum makes the fourth, meaningless combination
-   * (unflushed yet clean) unrepresentable. */
+   * ⇔ `state !== 'open'`. Collapsing two independent booleans into one
+   * enum makes the fourth, meaningless combination (unflushed yet
+   * clean) unrepresentable. */
   state: 'open' | 'retained' | 'reopened'
 }
 
@@ -277,10 +277,10 @@ export class MinuteBuffer {
   // incoming event closes the pair/triple. `prevIki` caches the
   // already-validated k1->k2 interval so a trigram emit never has to
   // recompute or re-check it — see recordNgramChain. Reset on minute
-  // close so cross-minute pairs are dropped per the design (see
-  // Plan-analyze-bigram.md — 0.3% loss accepted to keep the flush path
-  // simple), and also reset on a tap-hold `hold` event so its neighbours
-  // are never joined into a pair through it (see addEvent).
+  // close so cross-minute pairs are dropped per the design (0.3% loss
+  // accepted to keep the flush path simple), and also reset on a tap-hold
+  // `hold` event so its neighbours are never joined into a pair through it
+  // (see addEvent).
   private k1Keycode: number | null = null
   private k2Keycode: number | null = null
   private k2Ts: number | null = null
@@ -408,7 +408,7 @@ export class MinuteBuffer {
     // lastEventMs backwards (which would corrupt activeMs) or leave
     // firstEventMs above the real outer window. Intervals from out-of-order
     // events are intentionally dropped — reconstructing them would require
-    // re-sorting every flush. This guard is no longer expected to fire for
+    // re-sorting every flush. This guard is not expected to fire for
     // tap-hold keys once the renderer emits in press order; it stays as the
     // correct fallback for whatever genuinely out-of-order arrival still
     // reaches here (e.g. IPC scheduling jitter), not as the normal path.

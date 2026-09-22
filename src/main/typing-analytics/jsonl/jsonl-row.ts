@@ -114,14 +114,13 @@ export interface JsonlSessionPayload {
 }
 
 /** Per-bigram aggregate within a single minute. `c` = count of pair
- * occurrences. `h` = 8-bucket IKI histogram (log-scale buckets, see
- * Plan-analyze-bigram.md). `s` / `sq` are the sum and sum-of-squares of
- * the raw IKI values that fed `h`, kept alongside the histogram so a
- * range aggregate can compute a true standard deviation instead of a
- * bucket-midpoint approximation. Optional and always a pair: rows
- * written before this field existed (or merged from an older peer)
- * omit both, and SD then reads as null rather than an approximation —
- * see isBigramMinuteEntry / isNgramMinuteEntry.
+ * occurrences. `h` = 8-bucket IKI histogram (log-scale buckets). `s` /
+ * `sq` are the sum and sum-of-squares of the raw IKI values that fed `h`,
+ * kept alongside the histogram so a range aggregate can compute a true
+ * standard deviation instead of a bucket-midpoint approximation. Optional
+ * and always a pair: rows written before this field existed (or merged
+ * from an older peer) omit both, and SD then reads as null rather than an
+ * approximation — see isBigramMinuteEntry / isNgramMinuteEntry.
  *
  * `oc` / `on` are the physical-overlap accumulators for this pair (see
  * OverlapCounts in minute-buffer.ts) — populated for BIGRAM entries only.

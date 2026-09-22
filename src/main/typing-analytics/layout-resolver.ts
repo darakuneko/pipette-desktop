@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Char-resolution pipeline for Layout Comparison (Phase 1).
+// Char-resolution pipeline for Layout Comparison.
 //
 // Given a typing-analytics snapshot (qmkId-per-position) plus the
 // user's source layout and a target layout, translate each matrix
@@ -10,12 +10,10 @@
 // target position.
 //
 // The full result for every position is pre-computed at build time,
-// so `resolve(row, col)` is a single Map lookup. Phase 1 only
-// considers the layer-0 base char of each key — masked keycodes
+// so `resolve(row, col)` is a single Map lookup. Only considers the
+// layer-0 base char of each key — masked keycodes
 // (LSFT(...), LT(...)) collapse to their inner basic keycode via
 // findInnerKeycode.
-//
-// See Plan-analyze-layout-comparison §「char 解決パイプライン」.
 //
 // Note on Layout Comparison semantics: "target physical position" is
 // answered against the same snapshot the source resolves on. The
@@ -50,7 +48,7 @@ export interface LayoutResolverInput {
   kleKeys: KleKey[]
   sourceLayout: LayoutShape
   targetLayout: LayoutShape
-  /** Layer to resolve against. Phase 1 reads layer 0 only. */
+  /** Layer to resolve against. */
   layer?: number
   /** Per-cell finger overrides, keyed by the TARGET physical position's
    * posKey — same physical-key rule as the Ergonomics chart's

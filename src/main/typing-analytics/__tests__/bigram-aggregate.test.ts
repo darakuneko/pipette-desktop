@@ -155,8 +155,7 @@ describe('aggregatePairTotals', () => {
     expect(e.overlapN).toBe(5)
   })
 
-  // Deliberate deviation from the sumIki/sumSqIki null-poisoning rule
-  // (codex P1 — overrides the original task doc's "same rule as SD"):
+  // Deliberate deviation from the sumIki/sumSqIki null-poisoning rule:
   // a row with no overlap data contributes 0, it does not poison
   // whatever the OTHER rows for the same pair DID observe. See the
   // deviation comment at the aggregation site in bigram-aggregate.ts.

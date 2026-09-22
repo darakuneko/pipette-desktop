@@ -708,7 +708,7 @@ describe('theme-pack-store', () => {
       expect(afterIndex.metas[0].name).toBe('Keeper')
     })
 
-    // M4: a corrupt/missing index must not be treated as "legitimately
+    // A corrupt/missing index must not be treated as "legitimately
     // empty" when pack bodies still exist — an empty-roster fallback
     // there would make the sweep delete every one of them.
     it('skips both purge and sweep when index.json is truncated/unparseable, keeping every pack body intact', async () => {
@@ -740,7 +740,7 @@ describe('theme-pack-store', () => {
       expect(result).toEqual({ purged: 0, swept: 0 })
     })
 
-    // M3: options.skipSweep — set by pack-gc.ts when a sibling sync unit
+    // options.skipSweep — set by pack-gc.ts when a sibling sync unit
     // for this store failed to merge this pass. Purge still runs; only
     // the sweep is withheld.
     it('skips only the sweep (not purge) when options.skipSweep is set, index-fails-body-succeeds scenario', async () => {
@@ -774,8 +774,6 @@ describe('theme-pack-store', () => {
       expect(() => __testing.getPackPath('abc_def')).not.toThrow()
     })
   })
-
-  // --- Task-sync-unit-discovery bugfix plan: fixes 1-3 ----------------------
 
   describe('sync robustness fixes (utimes degrade / pin CAS / malformed metas)', () => {
     // --- Fix 1: utimes failure degrades to accept-with-warn -----------------

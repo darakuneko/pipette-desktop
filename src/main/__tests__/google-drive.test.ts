@@ -92,8 +92,8 @@ describe('google-drive', () => {
     })
 
     it('returns null for the legacy flat device JSONL filename shape', () => {
-      // The flat `{hash}.enc` form (no `_days_` segment) was retired with
-      // the v7 cutover; it must no longer round-trip into a sync unit.
+      // The flat `{hash}.enc` form (no `_days_` segment) must not
+      // round-trip into a sync unit.
       expect(syncUnitFromFileName('keyboards_0x1234_devices_hash-abc.enc')).toBeNull()
     })
 
@@ -109,11 +109,7 @@ describe('google-drive', () => {
       expect(syncUnitFromFileName('')).toBeNull()
     })
 
-    // Task-sync-unit-filename-gap: these five patterns were previously
-    // unmapped, so a fresh machine could never discover a remote-only
-    // unit for these stores via scanRemoteData / polling / manual sync
-    // (the store still uploaded fine — only the reverse mapping was
-    // missing). Each case round-trips through both directions since
+    // Each case round-trips through both directions since
     // driveFileName and syncUnitFromFileName are meant to be exact
     // inverses of each other.
     it.each<[syncUnit: string, fileName: string]>([
@@ -198,7 +194,7 @@ describe('google-drive', () => {
     })
   })
 
-  // S3: the local-wins pack-body upload path (sync-service.ts's
+  // The local-wins pack-body upload path (sync-service.ts's
   // uploadSyncUnit + pack-bundle-merge.ts's pinPackBodyMtimeAfterUpload)
   // pins the local file's mtime to whatever `modifiedTime` Drive just
   // assigned this revision — closing a clock-skew loop where a
@@ -299,7 +295,7 @@ describe('google-drive', () => {
       await expect(deleteFilesByExactName('key-labels.enc')).resolves.toEqual({ attempted: 0, failed: 0 })
     })
 
-    // C1: a rejected delete must be surfaced (`failed > 0`) rather than
+    // A rejected delete must be surfaced (`failed > 0`) rather than
     // silently discarded by the underlying Promise.allSettled.
     it('reports a failed count when a delete rejects', async () => {
       const fetchSpy = vi.fn(async (url: string | URL, init?: RequestInit) => {
@@ -323,10 +319,10 @@ describe('google-drive', () => {
     })
   })
 
-  // C1: a Drive listing spanning more than one page must be followed to
-  // completion via `nextPageToken` — a single-page cap previously meant
-  // a large appDataFolder (many keyboards/devices/per-day analytics
-  // files) silently lost everything past the first 1000 results.
+  // A Drive listing spanning more than one page must be followed to
+  // completion via `nextPageToken` — a single-page cap means a large
+  // appDataFolder (many keyboards/devices/per-day analytics files)
+  // silently loses everything past the first 1000 results.
   describe('listFiles pagination', () => {
     afterEach(() => {
       vi.unstubAllGlobals()
