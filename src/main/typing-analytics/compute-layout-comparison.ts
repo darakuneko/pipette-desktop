@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Layout Comparison metric aggregation. Pure compute layer
-// that takes pre-fetched matrix counts + a snapshot + KleKey geometry
-// and folds them into per-target finger / hand / row distributions.
+// Layout Comparison metric aggregation. Pure compute layer that takes
+// pre-fetched matrix counts + a snapshot + KleKey geometry and folds them
+// into per-target finger / hand / row distributions.
 //
 // The IPC handler in `typing-analytics-service.ts` is responsible for
 // resolving the machine hash, pulling the matrix counts and the
@@ -38,7 +38,7 @@ export interface ComputeLayoutComparisonInput {
   /** Subset of metrics to compute. Empty array yields just the
    * total / skipped event counts. */
   metrics: LayoutComparisonMetric[]
-  /** Layer to read from `snapshot.keymap`. Phase 1 reads layer 0. */
+  /** Layer to read from `snapshot.keymap`. */
   layer?: number
   /** Per-cell finger overrides forwarded to `buildLayoutResolver` —
    * see `LayoutResolverInput.fingerOverrides` for the exact rule. */

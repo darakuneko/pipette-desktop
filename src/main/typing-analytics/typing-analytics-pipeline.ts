@@ -103,9 +103,9 @@ function isValidMatrixCommon(obj: Record<string, unknown>): boolean {
  * happen. Rejecting the whole event over it would lose a real keystroke
  * to something the renderer could compute wrong — precisely the class of
  * bug already fixed elsewhere in this pipeline. Core fields
- * (row/col/layer/keycode, checked by isValidMatrixCommon before this
- * runs) are NOT sanitized: there is no safe fallback for "which cell was
- * this", so those still reject the whole event as before.
+ * (row/col/layer/keycode, checked by isValidMatrixCommon before this runs)
+ * are NOT sanitized: there is no safe fallback for "which cell was this",
+ * so those still reject the whole event as before.
  *
  * The pollGapMs bound (`0 < pollGapMs <= OBSERVATION_HOLE_MS`) reuses the
  * same shared constant the renderer's hole detection is built on (see

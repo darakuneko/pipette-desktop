@@ -278,9 +278,9 @@ export class MinuteBuffer {
   // already-validated k1->k2 interval so a trigram emit never has to
   // recompute or re-check it — see recordNgramChain. Reset on minute
   // close so cross-minute pairs are dropped per the design (0.3% loss
-  // accepted to keep the flush path simple), and also reset on a
-  // tap-hold `hold` event so its neighbours
-  // are never joined into a pair through it (see addEvent).
+  // accepted to keep the flush path simple), and also reset on a tap-hold
+  // `hold` event so its neighbours are never joined into a pair through it
+  // (see addEvent).
   private k1Keycode: number | null = null
   private k2Keycode: number | null = null
   private k2Ts: number | null = null
