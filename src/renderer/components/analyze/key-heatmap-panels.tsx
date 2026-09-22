@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Presentational sub-components for the Analyze > Heatmap tab — the
 // per-layer keyboard panel, and the Count/Speed/Duration ranking
-// tables. Split out of KeyHeatmapChart.tsx so the container component
-// (state, effects, data plumbing) stays under the file-splitting size
-// guideline; the mode toggle and toolbar-row controls live alongside
-// in key-heatmap-controls.tsx for the same reason.
+// tables. The mode toggle and toolbar-row controls live alongside
+// in key-heatmap-controls.tsx.
 
 import { memo, useMemo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'

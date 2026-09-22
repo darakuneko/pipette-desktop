@@ -144,9 +144,9 @@ export function effectiveSamplingPeriod(rows: readonly TypingMinuteStatsRow[]): 
 }
 
 /** Tooltip cell text for the rollover trend chart's y-value: `'12.3%'`
- * for a finite number, `'—'` for anything else. Extracted as its own
- * function (rather than inlined in the chart's `formatter` prop) so
- * the null case is pinned by a test: naively doing `Number(value)` on
+ * for a finite number, `'—'` for anything else. Its own function
+ * rather than inlined in the chart's `formatter` prop so the null case
+ * is pinned by a test: naively doing `Number(value)` on
  * a gap point's `null` coerces to `0` (`Number(null) === 0`), which
  * `Number.isFinite` accepts, silently rendering a fabricated "0.0%"
  * for a bucket that was never observed instead of "—". */

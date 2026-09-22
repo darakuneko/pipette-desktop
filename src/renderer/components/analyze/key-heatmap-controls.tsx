@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Toolbar-row sub-components for the Analyze > Heatmap tab — the
 // Count/Speed/Duration mode toggle, the per-layer selection row, and
-// the "Frequently Used" ranking controls row. Split out of
-// key-heatmap-panels.tsx so neither file crosses the file-splitting
-// size guideline as the tab gains more mode toggles.
+// the "Frequently Used" ranking controls row.
 
 import { useTranslation } from 'react-i18next'
 import { SegmentedToggle } from './SegmentedToggle'
@@ -49,9 +47,7 @@ export interface LayerToggleRowProps {
 }
 
 /** The per-layer selection button row above the ranking controls.
- * Extracted from KeyHeatmapChart.tsx (pure presentation, no state of
- * its own) to keep the container component under the file-splitting
- * size guideline. */
+ * (Pure presentation, no state of its own.) */
 export function LayerToggleRow({ layerOptions, selectedLayers, maxLayers, onToggle }: LayerToggleRowProps): JSX.Element {
   const { t } = useTranslation()
   return (
@@ -97,9 +93,7 @@ export interface RankingControlsProps {
 }
 
 /** The "Frequently Used" ranking controls row — normalization +
- * aggregate (Count mode only), key-group filter, and Top-N select.
- * Extracted from KeyHeatmapChart.tsx for the same file-size reason as
- * `LayerToggleRow`. */
+ * aggregate (Count mode only), key-group filter, and Top-N select. */
 export function RankingControls({
   mode, normalization, aggregateMode, keyGroupFilter, frequentUsedN, onHeatmapChange,
 }: RankingControlsProps): JSX.Element {

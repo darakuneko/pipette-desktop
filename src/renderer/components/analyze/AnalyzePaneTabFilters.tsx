@@ -83,8 +83,10 @@ const GRANULARITY_OPTIONS: Array<{ value: GranularityChoice; labelKey: string }>
 ]
 
 // Interval > Distribution's section select reuses each section's own
-// `sectionTitle` key as its option label, so the select and the
-// content it reveals never disagree on the section's name.
+// `sectionTitle` key as its option label (see DurationSection.tsx /
+// TappingTermCard.tsx / IntervalChart.tsx's distribution branch), so
+// the select and the content it reveals never disagree on the
+// section's name.
 const DISTRIBUTION_SECTION_LABEL_KEY: Record<DistributionSection, string> = {
   interval: 'analyze.interval.distribution.sectionTitle',
   duration: 'analyze.duration.sectionTitle',
@@ -147,11 +149,11 @@ export function AnalyzePaneTabFilters({
     </label>
   )
 
-  // Activity's per-tab filters render in two places: alongside Period
-  // on Row 2 in split mode, or on Row 3 in single mode. The JSX stays
-  // in one place. Order: View → Range size + cursor
-  // (calendar only) → Metric → view-specific extras (calendar
-  // normalize, or grid WPM min-sample).
+  // Activity's per-tab filters render in two places: alongside Period on
+  // Row 2 in split mode, or on Row 3 in single mode. The JSX stays in
+  // one place. Order: View → Range size + cursor (calendar only) →
+  // Metric → view-specific extras (calendar normalize, or grid WPM min-
+  // sample).
   const activityFilters = (
     <>
       <label className={FILTER_LABEL}>

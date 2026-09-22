@@ -188,9 +188,9 @@ function text(testId: string): string {
 }
 
 // Filter interactions go chip -> staged modal -> control -> Apply.
-// `openFilterModal` opens pane A's modal;
-// callers then change a control and click `analyze-filter-modal-apply`
-// to commit — nothing reaches the chart props before Apply.
+// `openFilterModal` opens pane A's modal; callers then change a control and
+// click `analyze-filter-modal-apply` to commit — nothing reaches the chart
+// props before Apply.
 function openFilterModal(): void {
   fireEvent.click(screen.getByTestId('analyze-filter-chip'))
 }

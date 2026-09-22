@@ -2,9 +2,9 @@
 // Bigram pattern quadrant for the Analyze Bigrams tab: hand usage
 // (Left / Right / Alternation / Repetition) and word position
 // (Initiation / In-word), rendered as two row groups of one table.
-// Split out of BigramsChart.tsx — see that file for the surrounding
-// grid and for the two aggregate memos, each computed once there and
-// passed down rather than recomputed per consumer.
+// See BigramsChart.tsx for the surrounding grid and for the two
+// aggregate memos, each computed once there and passed down rather
+// than recomputed per consumer.
 
 import { useTranslation } from 'react-i18next'
 import {

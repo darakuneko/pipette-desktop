@@ -15,12 +15,11 @@ import { filterDailyWindow, shiftLocalDate } from './analyze-streak-goal'
  * ends. */
 export const REPORT_DAYS = 7
 /** When the previous period has fewer keystrokes than this, we suppress
- * the percentage and arrow. The threshold matches the Phase 2 task doc
- * sketch ("前期間 100 events 未満なら N/A"); kept low so a single
- * decent typing day already counts. */
+ * the percentage and arrow. Kept low so a single decent typing day
+ * already counts. */
 export const REPORT_MIN_SAMPLE_KEYSTROKES = 100
 /** Below this absolute relative change the trend is rendered as
- * "flat". The number matches the task doc sketch (`±5%`). */
+ * "flat". */
 export const REPORT_FLAT_TOLERANCE_PCT = 5
 
 export type Trend = 'up' | 'down' | 'flat'

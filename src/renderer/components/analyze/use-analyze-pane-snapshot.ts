@@ -4,7 +4,7 @@
 // the device/snapshot option lists, and every value derived from them
 // (`effectiveSnapshot`, tap-hold availability, the Interval distribution
 // section switcher, and the snapshot's active-window boundaries used to
-// clamp `range`). The pane's own hook call stays a single line.
+// clamp `range`).
 
 import type { Dispatch, SetStateAction } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'

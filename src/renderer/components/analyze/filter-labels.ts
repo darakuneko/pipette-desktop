@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Shared, dimension-aware label builder for the Analyze filter summary
-// chip + the staged filter modal. Both
-// surfaces need to render the same four human-readable strings —
-// keyboard / device / source / period — from the same filter state, so
-// the resolution logic lives here once instead of being duplicated (or
-// drifting) between the chip and the modal.
+// chip + the staged filter modal. Both surfaces need to render the
+// same four human-readable strings — keyboard / device / source /
+// period — from the same filter state, so the resolution logic lives
+// here once instead of being duplicated (or drifting) between the chip
+// and the modal.
 //
 // `AnalyzeExportModal`'s `exportCtx.conditions` (AnalyzePane.tsx) builds
 // a *similar* but not equivalent set of labels for the CSV/upload
@@ -39,10 +39,7 @@ import { formatDateTime } from '../editors/store-modal-shared'
 const EMPTY_LABEL = '—'
 
 /** Glyph joining a TypingTest source label to its run qualifier (e.g.
- * `words (english) · 2026-04-01, 2026-04-03`). Mirrors the middot the
- * mockup uses to join the summary chip's own segments
- * (`keyboard · device · source · period`) — a layout separator, not
- * translated text, so it doesn't need an i18n key. */
+ * `words (english) · 2026-04-01, 2026-04-03`). */
 const SOURCE_RUN_SEPARATOR = ' · '
 
 export interface FilterConditionLabelInputs {

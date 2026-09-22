@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Trigger-truncation regression: the trigger button must clamp +
-// truncate and expose the full label via the shared Tooltip component
-// (src/renderer/components/ui/Tooltip.tsx) — native `title` attributes
-// on DOM elements are forbidden project-wide.
+// Trigger-truncation regression: a long single-selection label (e.g. a
+// TypingTest material name) used to render at full width with no cap,
+// which widened the whole filter grid (max-content columns). The trigger
+// button must clamp + truncate and expose the full label via the shared
+// Tooltip component (src/renderer/components/ui/Tooltip.tsx) — native
+// `title` attributes on DOM elements are forbidden project-wide.
 
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
@@ -58,6 +60,8 @@ describe('MultiSelectPopover trigger', () => {
 
 describe('MultiSelectPopover panel', () => {
   it('caps the panel width and wraps long option labels instead of widening', async () => {
+    // Regression: a long label used to widen the fit-content panel past the
+    // viewport's right edge (fixed-position portal), clipping the options.
     render(
       <MultiSelectPopover
         options={[{ value: 'long', label: LONG_LABEL }]}

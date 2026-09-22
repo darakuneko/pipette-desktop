@@ -130,12 +130,11 @@ describe('AnalyzeFilterStorePanel overwrite flow', () => {
 })
 
 describe('AnalyzeFilterStorePanel entry label rename trigger', () => {
-  // Coverage for the C1 tooltip-unification fix: the clickable label
-  // used to be a non-focusable `div` (mouse-only, cursor-pointer
-  // hardcoded on top of the Tooltip trigger) — now a real `button` so
-  // it picks up focusability and the pointer cursor from the global
-  // `button:not(:disabled) { cursor: pointer }` rule instead of an
-  // inline override.
+  // The clickable label used to be a non-focusable `div` (mouse-only,
+  // cursor-pointer hardcoded on top of the Tooltip trigger) — now a
+  // real `button` so it picks up focusability and the pointer cursor
+  // from the global `button:not(:disabled) { cursor: pointer }` rule
+  // instead of an inline override.
   it('renders the entry label as a focusable button, not a div', () => {
     renderPanel()
     const label = screen.getByTestId('analyze-filter-store-entry-label-entry-1')

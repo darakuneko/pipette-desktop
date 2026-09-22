@@ -111,10 +111,10 @@ export function AnalyzePaneFilterRow({
           <RunTimelineJumpButton runId={runIdScopes[0]} onOpen={onOpenRunTimeline} testId={tid('analyze-open-run-timeline')} />
         )}
       </div>
-      {/* Row 2: tab-specific filters. Its own 10-column max-content grid keeps every
-       * row's labels left and values right as the per-tab filter set
-       * changes shape across tabs. `min-w-max` on the outer flex
-       * keeps the finger-assignment button from squeezing into (or
+      {/* Row 2: tab-specific filters. Its own 10-column max-content grid
+       * keeps every row's labels left and values right as the per-tab
+       * filter set changes shape across tabs. `min-w-max` on the outer
+       * flex keeps the finger-assignment button from squeezing into (or
        * overlapping) the grid when this row's ancestor scrolls
        * horizontally (`overflow-x-auto` above). */}
       {selected && (

@@ -415,16 +415,17 @@ describe('KeystrokeTimelinePanel', () => {
     expect(box.contains(missedTable)).toBe(false)
   })
 
-  // Wrapped here (at THIS call site only — see the wrapper's own doc
-  // comment in KeystrokeTimelinePanel.tsx) in the exact same
-  // bordered-box treatment as the timeline box above.
-  // `MistakeRankingSection` (History's "Most missed") renders the same
-  // `MissedTable` unboxed — see MistakeRankingSection.test.tsx.
-  // `shrink-0` refused to compress at all, which (verified via the
-  // E2E script's 800px-window case) could overflow past the
-  // finished-state controls row below in a bounded ancestor with a
-  // real content-heavy Missed table. `min-h-0` keeps the default
-  // `flex-shrink: 1` in effect, so this box can shrink
+  // The Missed section used to sit outside any container. Wrapped here
+  // (at THIS call site only — see the wrapper's own doc comment in
+  // KeystrokeTimelinePanel.tsx) in the exact same bordered-box treatment
+  // as the timeline box above. `MistakeRankingSection` (History's "Most
+  // missed") renders the same `MissedTable` unboxed — see
+  // MistakeRankingSection.test.tsx, unchanged by this tweak.
+  // `shrink-0` (flex-shrink: 0) became `min-h-0` — `shrink-0` refused to
+  // compress at all, which (verified via the E2E script's 800px-window
+  // case) could overflow past the finished-state controls row below in a
+  // bounded ancestor with a real content-heavy Missed table. `min-h-0`
+  // keeps the default `flex-shrink: 1` in effect, so this box can shrink
   // proportionally instead of forcing an overflow — see the box's own
   // doc comment.
   it('wraps the Missed table in its own bordered box matching the timeline box treatment, with min-h-0 (not shrink-0)', () => {

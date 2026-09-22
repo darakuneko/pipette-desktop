@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Top pairs and Pair interval (slow) quadrants for the Analyze Bigrams
-// tab, plus the click-to-sort table header machinery they share. Split
-// out of BigramsChart.tsx — see that file for the surrounding grid.
+// tab, plus the click-to-sort table header machinery they share. See
+// BigramsChart.tsx for the surrounding grid.
 
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -91,7 +91,7 @@ interface TopRankingProps {
    * snapshot's own recorded keymap instead of the session's
    * `RAWCODES_MAP`. Optional so existing callers/tests keep working
    * unedited — absent, `bigramPairLabels` falls back to its
-   * behavior. */
+   * pre-existing behavior. */
   qmkByCode?: ReadonlyMap<number, string>
   vialProtocol?: number
 }

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Staged Analyze filter editor. Opened from
-// `AnalyzeFilterSummaryChip`; every row here edits a *draft* copy of the
-// committed filter state — nothing leaves this component until Apply
-// hands the whole draft to `onApply` in one call. This mirrors
-// `FingerAssignmentModal`'s local-draft pattern rather than the filter
-// row's historical immediate-apply behaviour.
+// Staged Analyze filter editor. Opened from `AnalyzeFilterSummaryChip`;
+// every row here edits a *draft* copy of the committed filter state —
+// nothing leaves this component until Apply hands the whole draft to
+// `onApply` in one call. This mirrors `FingerAssignmentModal`'s local-
+// draft pattern rather than the filter row's historical immediate-apply
+// behaviour.
 //
 // The component is a pure draft editor: the parent passes the committed
 // state in via `committed` (read once, at mount) and owns all commit

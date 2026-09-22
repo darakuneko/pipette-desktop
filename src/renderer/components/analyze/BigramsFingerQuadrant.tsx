@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Finger IKI quadrant for the Analyze Bigrams tab, plus the horizontal
 // bar-chart primitives (bar chart + cell tooltip) it renders through.
-// Split out of BigramsChart.tsx — see that file for the surrounding
-// grid.
+// See BigramsChart.tsx for the surrounding grid.
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'

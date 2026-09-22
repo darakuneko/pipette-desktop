@@ -155,11 +155,10 @@ export function BigramsChart({
     : 'grid h-full min-h-0 grid-cols-2 grid-rows-1 gap-3'
 
   // Classes (hand-usage) aggregate — computed once here rather than
-  // separately inside BigramClassesCoverage and BigramClassesTable.
-  // Both `snapshot` and `entries` fall back to a stable
-  // empty value while the quadrant is hidden (gram === 3) so the memo
-  // below settles on an empty aggregate instead of doing the fold for a
-  // quadrant nobody sees.
+  // separately inside BigramClassesCoverage and BigramClassesTable. Both
+  // `snapshot` and `entries` fall back to a stable empty value while the
+  // quadrant is hidden (gram === 3) so the memo below settles on an empty
+  // aggregate instead of doing the fold for a quadrant nobody sees.
   const classesFingerMap = useKeycodeFingerMap(showFingerIki ? snapshot : null, fingerOverrides)
   const classesEntries = showFingerIki ? entries : EMPTY_CLASSES_ENTRIES
 

@@ -1,13 +1,12 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Staging-contract tests for `AnalyzeFilterModal`: the whole draft
-// leaves via a single `onApply(draft)` call and
-// nothing leaves before Apply; Esc / backdrop discard the draft; Reset
-// returns the draft to `DEFAULT_ANALYZE_FILTERS`; a keyboard change
-// resets the dependent scope fields; disabled rows suppress their
-// controls. The parent (`AnalyzePane`) owns commit routing — covered by
-// the TypingAnalyticsView suite — so these tests only assert the draft
-// payload handed up.
+// Staging-contract tests for `AnalyzeFilterModal`: the whole draft leaves via
+// a single `onApply(draft)` call and nothing leaves before Apply; Esc /
+// backdrop discard the draft; Reset returns the draft to
+// `DEFAULT_ANALYZE_FILTERS`; a keyboard change resets the dependent scope
+// fields; disabled rows suppress their controls. The parent (`AnalyzePane`)
+// owns commit routing — covered by the TypingAnalyticsView suite — so these
+// tests only assert the draft payload handed up.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'

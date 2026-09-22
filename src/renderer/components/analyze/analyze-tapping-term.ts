@@ -52,10 +52,8 @@
 // bucket uses the same synthetic span DURATION_BUCKET_CENTERS_MS
 // assumes: centered on 600ms, so [400, 800)).
 //
-// Verdicts are deliberately merged down from the original task spec's
-// four-way split (ok / tooLong / tooShort / overlapping). A follow-up
-// statistical-honesty review found `tooShort` and `overlapping` to be
-// causally indistinguishable from this data — both describe "mass
+// Verdicts are deliberately merged down from the four-way split
+// (ok / tooLong / tooShort / overlapping). Both describe "mass
 // sits close to T on either side", which is exactly the one ambiguous
 // bucket fact #1 above describes — so they're one verdict, `nearTerm`,
 // here. `tooLong` survives as `canLower`, reframed as a candidate

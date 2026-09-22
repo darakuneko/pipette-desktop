@@ -572,7 +572,7 @@ export function buildDurationRanking(
 }
 
 // --- Layer selection / bonding (pure state transitions) ---------------
-// The component only wires callbacks to `onHeatmapChange` /
+// KeyHeatmapChart.tsx only wires callbacks to `onHeatmapChange` /
 // `setMergeCandidate` — the merge/bond rules themselves are plain data
 // transforms, independently testable.
 
