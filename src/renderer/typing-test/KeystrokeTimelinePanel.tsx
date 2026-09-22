@@ -351,10 +351,8 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
             ALL — it relies entirely on an unbroken flex-height chain from
             this element up through the box above to a real bounded
             ancestor (the editor's own overflow-auto content pane). A fixed
-            viewport-relative max-height cap used to live here for the
-            completion screen specifically (which lacked that chain), but a
-            fixed vh figure can't adapt to how much OTHER chrome
-            (Lines/Font sidebar controls, an IME-composition warning, the
+            viewport-relative max-height cap can't adapt to how much OTHER
+            chrome (Lines/Font sidebar controls, an IME-composition warning, the
             Missed table, ...) a given run actually has above/below it — it
             either wastes space or (on a shorter window, or a run with more
             of that chrome) still overflows the pane. TypingTestView.tsx
