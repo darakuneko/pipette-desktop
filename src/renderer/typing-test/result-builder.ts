@@ -164,10 +164,10 @@ export interface BuildTypingTestResultInput {
   runId?: string
   /** Whether romaji-keystroke judging was actually in effect for this run
    *  (see `isRomajiInputActive`) — not the raw `config.romajiInput` flag,
-   *  since that now defaults to on and must still be gated by capability.
+   *  since that defaults to on and must still be gated by capability.
    *  Recorded verbatim as `romajiInput` below, so a run under every mode
-   *  (including tatoeba/fileImport, which never recorded this before) is
-   *  now grouped/labeled consistently with words/time runs. */
+   *  (including tatoeba/fileImport) is grouped/labeled consistently with
+   *  words/time runs. */
   romajiActive: boolean
   /** Whether kana direct-input judging (kana-input.ts) was actually in
    *  effect for this run (see `isKanaInputActive`) — the sibling of

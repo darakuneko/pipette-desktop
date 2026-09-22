@@ -147,7 +147,7 @@ export interface RegistrationAnnotation {
    *  comparison. Undefined for every non-kana annotation (romaji/verbatim
    *  runs, and every registration-only annotation — only `noteCharContext`
    *  ever sets this), in which case `applyCharVerdict` falls through to
-   *  its default comparison exactly as before this field existed. */
+   *  its default comparison. */
   correctOverride: boolean | undefined
 }
 
@@ -183,8 +183,7 @@ interface ParkedRelease {
  *  properly-wired caller); `wordIndex: null` means no annotation was
  *  available, so `recordMatrixPress` falls back to the eventually-
  *  registering press's OWN registration-time snapshot instead of
- *  overriding it — the same behavior this module had before
- *  `noteCharContext` existed. */
+ *  overriding it. */
 interface PendingChar {
   key: string
   wordIndex: number | null

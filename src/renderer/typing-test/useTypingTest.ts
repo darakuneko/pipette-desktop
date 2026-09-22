@@ -35,9 +35,7 @@ type GetMistakeProfileFn = UseTypingTestOptions['getMistakeProfile']
 /** Resolves the immutable per-run Weak Spot Training snapshot for a
  *  words/time run about to start under `config`/`language` — undefined
  *  (sample normally) unless the toggle is on AND the loaded profile has
- *  at least one weak token (see `MistakeProfile.weakTokenCount` —
- *  replaces the original fixed-200-keystroke gate; 200 keystrokes of
- *  fast, accurate typing alone no longer activates biasing). Called
+ *  at least one weak token (see `MistakeProfile.weakTokenCount`). Called
  *  fresh at every run-start decision point (never cached across calls)
  *  so a newly saved result is honored by the very next run; the caller
  *  then threads the SAME returned value into both the initial word batch
@@ -473,10 +471,10 @@ export function useTypingTest<TPreparedEvent = unknown>(
 
   // Current word's romaji progress (romajiInput mode only) — see
   // buildRomajiGuideProgress's doc comment in romaji-input.ts for the
-  // guide-row derivation itself; this memo only pins the dependency set
-  // (unchanged from before the words-table split above). Composed with
-  // romajiWordsTable and case-styled once here, rather than inside either
-  // half, so the split above stays purely about the O(n) table build.
+  // guide-row derivation itself; this memo only pins the dependency set.
+  // Composed with romajiWordsTable and case-styled once here, rather than
+  // inside either half, so the split above stays purely about the O(n)
+  // table build.
   const romajiGuide = useMemo(() => {
     const progress = buildRomajiGuideProgress(config, language, state)
     if (!progress || !romajiWordsTable) return null

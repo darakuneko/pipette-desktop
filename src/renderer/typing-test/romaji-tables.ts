@@ -21,7 +21,7 @@
 
 import { ROMAJI_PUNCTUATION } from '../../shared/kana-purity'
 
-// Spelling-style groups used to let the Romaji settings modal (Step 2)
+// Spelling-style groups used to let the Romaji settings modal
 // selectively disable alternate spellings while keeping every word
 // completable. See SPELLING_STYLES below for the invariant that makes that
 // possible. 'hepburn' and 'kunrei' are the two base systems: either one
@@ -356,8 +356,7 @@ export const PUNCTUATION_TABLE: Record<(typeof ROMAJI_PUNCTUATION)[number], read
 // - hepburn / kunrei tag *both* sides of the syllables where the two base
 //   systems actually diverge (shi/si, chi/ti, tsu/tu, fu/hu, ji/zi and
 //   their sha/sya-family compounds) — including the canonical Hepburn
-//   forms, which used to be left untagged before 'hepburn' existed as a
-//   style. Spellings the two systems already agree on (ka, mi, ...) stay
+//   forms. Spellings the two systems already agree on (ka, mi, ...) stay
 //   untagged, and ぢ/づ (di/du) are untagged for a different reason: they're
 //   the sole IME-input spellings mozc's own romaji table lists for those
 //   two kana — unlike じ/じゃ, ぢ/ぢゃ have no hepburn/kunrei divergence to
@@ -457,8 +456,7 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'ちょ|tyo': 'kunrei',
 
   // -- digraph: alternate spellings of the youon j-row 2-kana table entries
-  // that don't fall into the kunrei/c/q families above (the loanword W
-  // digraphs うぃ/うぇ moved out of this family into 'w' below) --
+  // that don't fall into the kunrei/c/q families above --
   'じゃ|jya': 'digraph',
   'じゅ|jyu': 'digraph',
   'じょ|jyo': 'digraph',
@@ -550,14 +548,13 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'っ|ltu': 'lSmall',
   'っ|ltsu': 'lSmall',
 
-  // -- ん: 'n'/'nn' stay untagged (shared baseline, always accepted, so its
-  // set never empties and the guard never has to fire for it). 'xn' is its
-  // own style (no longer folded into xSmall — ん's explicit x-tap is a
-  // separate preference from standalone small-kana spellings). 'nApos' is
-  // the "n'" IME-style separator that disambiguates ん before a vowel
-  // (kan'i) without forcing a double tap. See SOKUON_EXPLICIT_PATTERNS and
-  // N_PATTERNS_SINGLE_OR_DOUBLE in romaji-engine.ts for the full pattern
-  // lists. --
+  // -- ん: 'n'/'nn' stay untagged (shared baseline, always accepted, so its set
+  // never empties and the guard never has to fire for it). 'xn' is its own
+  // style (ん's explicit x-tap is a separate preference from standalone
+  // small-kana spellings). 'nApos' is the "n'" IME-style separator that
+  // disambiguates ん before a vowel (kan'i) without forcing a double tap. See
+  // SOKUON_EXPLICIT_PATTERNS and N_PATTERNS_SINGLE_OR_DOUBLE in
+  // romaji-engine.ts for the full pattern lists. --
   'ん|xn': 'xn',
   "ん|n'": 'nApos',
 }

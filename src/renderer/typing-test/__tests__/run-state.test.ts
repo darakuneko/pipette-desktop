@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-// Plan-typing-mistake-analysis Phase 1: verbatim mode's per-position mistake
-// attribution (Backspace tallies a wrong char immediately; word-submit
-// tallies whatever is still wrong/missing at that point, skipping positions
-// already tallied via Backspace).
+// Verbatim mode's per-position mistake attribution (Backspace tallies a
+// wrong char immediately; word-submit tallies whatever is still
+// wrong/missing at that point, skipping positions already tallied via
+// Backspace).
 
 import { describe, it, expect } from 'vitest'
 import { handleBackspace, handleSpace, tryFinishLastWord, advanceAfterWord, type TypingTestState } from '../run-state'
@@ -198,9 +198,9 @@ describe('confirmedChars', () => {
   })
 })
 
-// Weak Spot Training (Plan-miss-focus-mode): the run's weakSpotProfile
-// snapshot (set once by freshState at run start — see useTypingTest.ts)
-// must be reused verbatim by every time-mode refill, never recomputed.
+// Weak Spot Training: the run's weakSpotProfile snapshot (set once
+// by freshState at run start — see useTypingTest.ts) must be reused
+// verbatim by every time-mode refill, never recomputed.
 describe('advanceAfterWord — weakSpotProfile threading', () => {
   const timeConfig: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false, weakSpotTrainingMode: true }
 
@@ -222,9 +222,9 @@ describe('advanceAfterWord — weakSpotProfile threading', () => {
   })
 })
 
-// codex regression: refillTimeModeWords used to derive its repeat-
-// avoidance seed from `words[words.length - 1]` — the DECORATED batch
-// tail — instead of the separately-tracked RAW word. advanceAfterWord is
+// refillTimeModeWords used to derive its repeat-avoidance seed from
+// `words[words.length - 1]` — the DECORATED batch tail — instead of the
+// separately-tracked RAW word. advanceAfterWord is
 // the one place that threads `state.lastRawWord` in (word-supply.test.ts
 // covers refillTimeModeWords's own seed-comparison behavior directly);
 // this covers the state-level round trip.

@@ -125,8 +125,8 @@ describe('conditionKey', () => {
   })
 })
 
-// codex regression: conditionKey used to key weakSpotTrainingMode straight off
-// the raw config toggle (isWeakSpotTrainingActive), but a saved result only
+// conditionKey used to key weakSpotTrainingMode straight off the raw
+// config toggle (isWeakSpotTrainingActive), but a saved result only
 // ever sets weakSpotTrainingMode when the run's OWN state.weakSpotProfile
 // snapshot was non-null (use-typing-test-result-save.ts — the toggle can be
 // on while the keystroke gate isn't met, in which case the run samples
@@ -417,13 +417,12 @@ describe('computeComparison', () => {
 })
 
 describe('configKey backward compatibility (kanaInput must not reshape existing keys)', () => {
-  // Regression coverage for the codex finding: configKey used to append an
-  // UNCONDITIONAL 7th `|${kanaInput ?? false}` segment, which changed every
-  // non-kana result's key at once and silently orphaned every
-  // comparison-baseline preference saved before kana mode existed (they're
-  // stored keyed by this exact string — see
-  // TypingTestComparisonBaselines/use-typing-test-pane-comparison.ts). The
-  // fix appends a `|kana` segment ONLY when kanaInput is true.
+  // Regression coverage: configKey used to append an UNCONDITIONAL 7th
+  // `|${kanaInput ?? false}` segment, which changed every non-kana result's
+  // key at once and silently orphaned every comparison-baseline preference
+  // saved before kana mode existed (they're stored keyed by this exact
+  // string — see TypingTestComparisonBaselines/use-typing-test-pane-comparison.ts).
+  // The fix appends a `|kana` segment ONLY when kanaInput is true.
 
   it('a non-kana run\'s key is byte-identical to the pre-kana literal shape (hardcoded, not re-derived)', () => {
     expect(configKey(makeResult())).toBe('words|30|english|false|false|false')

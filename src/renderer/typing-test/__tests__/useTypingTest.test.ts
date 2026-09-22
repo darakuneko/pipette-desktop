@@ -23,7 +23,7 @@ function pressKeys(keys: string[]): Set<string> {
   return new Set(keys)
 }
 
-/** useTypingTest's analytics options now split gate/tag (prepare, at press
+/** useTypingTest's analytics options split gate/tag (prepare, at press
  *  time) from shipping (emit, once the item is ready to leave the ordering
  *  queue) — see UseTypingTestOptions. These tests only exercise
  *  useTypingTest's own queueing/ordering/tap-hold logic, not the gating a
@@ -36,7 +36,7 @@ function pressKeys(keys: string[]): Set<string> {
  *  pre-existing test in this file was written against a world where a
  *  release edge never produced its own event, and pinning that behavior
  *  means those assertions (call counts especially) must keep seeing
- *  exactly what they saw before. Tests that specifically cover the new
+ *  exactly what they saw before. Tests that specifically cover the
  *  duration/release emit opt in via `includeReleases: true`. */
 function analyticsOptions(
   sink: (payload: TypingAnalyticsEventPayload) => void,
@@ -564,11 +564,9 @@ describe('useTypingTest layer tracking with MO/LT', () => {
   })
 })
 
-// Issue #333: a layer-switch key's action must be latched against the
-// layer state active at its OWN press time, then never re-resolved while
-// it stays held — even if the layer it activates redefines its own cell.
-// The old fixed-point activateLayers() violated this by re-resolving
-// already-held keys against layers they themselves had just activated.
+// A layer-switch key's action must be latched against the layer state
+// active at its OWN press time, then never re-resolved while it stays
+// held — even if the layer it activates redefines its own cell.
 describe('useTypingTest layer tracking — press-time latch (issue #333)', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -578,8 +576,7 @@ describe('useTypingTest layer tracking — press-time latch (issue #333)', () =>
   it('resolves a lone MO(2) press from the layer active at press time, not the layer it activates', () => {
     const { result } = renderHook(() => useTypingTest())
 
-    // (3,0) is MO(2) on layer 0, but the SAME cell is MO(5) on layer 2 —
-    // the exact keymap shape reported in issue #333.
+    // (3,0) is MO(2) on layer 0, but the SAME cell is MO(5) on layer 2.
     const keymap = buildMultiLayerKeymap([
       { layer: 0, entries: [[3, 0, 'MO(2)']] },
       { layer: 2, entries: [[3, 0, 'MO(5)']] },
@@ -1406,7 +1403,7 @@ describe('useTypingTest windowFocused', () => {
       act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
       expect(sink).toHaveBeenCalledTimes(1)
 
-      // resetMatrixPressTracking now returns a promise (so a record-off
+      // resetMatrixPressTracking returns a promise (so a record-off
       // caller can await the drain before flushing) — void it here since
       // this test only cares about the synchronous reset of prevPressed,
       // which happens before the promise settles.

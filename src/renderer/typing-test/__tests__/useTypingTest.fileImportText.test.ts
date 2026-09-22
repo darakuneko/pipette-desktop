@@ -78,10 +78,9 @@ describe('useTypingTest — imported fileImport text (line breaks)', () => {
   })
 })
 
-// Plan-typing-mistake-analysis Phase 1: verbatim-mode mistake tracking
-// end-to-end through processKeyEvent (Backspace / Space), not just the
-// run-state reducers directly (see run-state.test.ts for the reducer-level
-// coverage of the same rules).
+// Verbatim-mode mistake tracking end-to-end through processKeyEvent
+// (Backspace / Space), not just the run-state reducers directly (see
+// run-state.test.ts for the reducer-level coverage of the same rules).
 describe('useTypingTest — verbatim mistake tracking', () => {
   it('records a mistake for a wrong char typed then deleted, and does not double-count on resubmit', async () => {
     mockGet.mockResolvedValue({

@@ -342,8 +342,7 @@ export class RunLogRecorder {
         // state for it). `wordIndex: null` means no annotation was ever
         // captured (a caller that emits 'char' without `noteCharContext`
         // first) — keep the registration snapshot already on `keystroke`
-        // rather than overriding with nothing, the same behavior this
-        // module had before `noteCharContext` existed.
+        // rather than overriding with nothing.
         if (pendingChar.wordIndex !== null) {
           keystroke.wordIndex = pendingChar.wordIndex
           keystroke.expectedChar = pendingChar.expectedChar
@@ -365,10 +364,10 @@ export class RunLogRecorder {
    *  masked key can still be sitting in that queue awaiting its tap/hold
    *  classification — so a release can physically arrive here before
    *  `recordMatrixPress` has ever run for its own press. Parking it
-   *  (rather than dropping it, which is what happened before this fix)
-   *  lets `recordMatrixPress` claim it once the press finally registers,
-   *  instead of the keystroke permanently reading as "still open" (no
-   *  `releaseMs`) despite having actually been released. */
+   *  (rather than dropping it) lets `recordMatrixPress` claim it once the
+   *  press finally registers, instead of the keystroke permanently
+   *  reading as "still open" (no `releaseMs`) despite having actually
+   *  been released. */
   private recordMatrixRelease(buf: RunLogBuffer, payload: Extract<TypingAnalyticsEventPayload, { kind: 'matrix-release' }>): void {
     const key = pressKey(payload.row, payload.col, payload.keycode)
     const press = buf.openPresses.get(key)
@@ -499,7 +498,7 @@ export class RunLogRecorder {
    *  run-relative shape, dropping the buffer-only `wordIndex` field. A
    *  keystroke whose absolute `pressMs` precedes `startedAtMs` is
    *  DROPPED rather than clamped to 0 — belt-and-braces alongside the
-   *  pause-time discard() this module's callers now do (see `finish()`'s
+   *  pause-time discard() this module's callers do (see `finish()`'s
    *  own doc comment): clamping would misrepresent a keystroke as having
    *  happened at the exact instant the run started, silently corrupting
    *  the timeline instead of just omitting the one data point that can't

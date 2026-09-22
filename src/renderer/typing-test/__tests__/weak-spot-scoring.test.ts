@@ -223,7 +223,7 @@ describe('DEFAULT_* pin — Weak Spot Settings modal defaults', () => {
   // stallMultiple 2×, minTimingSamples 15) still depends on these DEFAULT_*
   // constants staying put, since weak-spot-settings.ts's field spec table
   // resolves an absent field straight from them. If any of these assertions
-  // fails, update the documented default table (plan + OPERATION-GUIDE) in
+  // fails, update the documented default table (OPERATION-GUIDE) in
   // lockstep.
   it('pins the DEFAULT_* constants the modal falls back to', () => {
     expect(DEFAULT_MIN_MISS_COUNT).toBe(2)

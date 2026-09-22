@@ -239,9 +239,8 @@ export function useTypingTestMatrix<TPreparedEvent>(
    * not vanish just because recording stopped mid-hold — a hold only
    * breaks the n-gram chain downstream, it never fabricates a pair),
    * then the whole queue is flushed in press order so ordinary keys
-   * queued behind it aren't dropped either. Simply clearing the maps,
-   * as before this queue existed, would have silently discarded more
-   * than just the pending press.
+   * queued behind it aren't dropped either. Simply clearing the maps
+   * would silently discard more than just the pending press.
    *
    * Each item ships with the `prepared` context its own press already
    * captured via onPrepareAnalyticsEvent — not whatever is live right

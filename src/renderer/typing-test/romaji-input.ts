@@ -81,12 +81,11 @@ export type JapaneseInputMethod = 'direct' | 'romaji' | 'kana'
 
 /** Derives the unified 3-way selection from the config's existing
  *  `romajiInput`/`romaji.inputMethod` fields — deterministic for any
- *  stored value, including one written before this 3-way model existed
- *  (a bare `romajiInput: true`/unset config with no `inputMethod` at all
- *  resolves to 'romaji', its long-standing default; `romajiInput: false`
- *  resolves to 'direct' regardless of whatever `inputMethod` happens to
- *  still be sitting in `romaji`, since that field was always inert while
- *  the master flag was off). Not a new decision: this exactly mirrors the
+ *  stored value (a bare `romajiInput: true`/unset config with no
+ *  `inputMethod` at all resolves to 'romaji', its long-standing default;
+ *  `romajiInput: false` resolves to 'direct' regardless of whatever
+ *  `inputMethod` happens to still be sitting in `romaji`, since that field
+ *  was always inert while the master flag was off). This exactly mirrors the
  *  precedence `isRomajiInputEnabled` + `isKanaInputSelected` already
  *  apply inside `isRomajiInputActive`/`isKanaInputActive` — this function
  *  only exists so the settings UI has one read to build its selector
@@ -175,11 +174,11 @@ export function romajiDetail(config: TypingTestConfig): RomajiDetailSettings | u
   return config.mode === 'quote' ? undefined : config.romaji
 }
 
-/** True when a LINE-END word must hold until Enter commits it (the
- *  Task-romaji-line-end-enter behaviour) rather than auto-advancing on
- *  completion like every other word. Reads `RomajiDetailSettings.lineEndEnter`
- *  via `romajiDetail` — default ON: undefined counts as required, and only
- *  an explicit `false` (the Romaji Settings modal's new toggle) opts out.
+/** True when a LINE-END word must hold until Enter commits it rather than
+ *  auto-advancing on completion like every other word. Reads
+ *  `RomajiDetailSettings.lineEndEnter` via `romajiDetail` — default ON:
+ *  undefined counts as required, and only an explicit `false` (the Romaji
+ *  Settings modal's toggle) opts out.
  *  The single gate both `handleRomajiChar`'s complete-branch hold and
  *  `processRomajiKeyEvent`'s Enter-at-line-end branch check, so the two stay
  *  in sync by construction rather than by convention.
@@ -201,20 +200,19 @@ export function isLineEndEnterRequired(config: TypingTestConfig): boolean {
  *  a no-op everywhere EXCEPT to commit a LINE-END word (`state.lineBreaks`)
  *  whose romaji has reached `isComplete()` — such a word holds instead of
  *  auto-advancing on completion (see `handleRomajiChar`), matching the
- *  non-romaji Enter-at-line-end convention (Task-romaji-line-end-enter). Both
- *  the hold and this commit are additionally gated on
- *  `isLineEndEnterRequired` (the Romaji Settings modal's "Enter at line
- *  ends" toggle, default on): when the user has turned it off, a line-end
- *  word never holds in the first place (see `handleRomajiChar`), so
- *  `currentWordIndex` has already moved past it by the time Enter is
- *  pressed — the explicit check below is belt-and-suspenders documentation
- *  of that invariant, not a second independent gate. A
- *  printable character starts the run from 'waiting' before being fed to
- *  the matcher; Enter never starts the run from 'waiting' (mirrors the
- *  pre-existing romaji policy of only a printable char doing so). Every
- *  other key (multi-char names like Shift/Control) passes through
- *  untouched, matching the non-romaji fallback. IME composition input is
- *  gated separately in `processCompositionEnd`, not here. */
+ *  non-romaji Enter-at-line-end convention. Both the hold and this commit
+ *  are additionally gated on `isLineEndEnterRequired` (the Romaji Settings
+ *  modal's "Enter at line ends" toggle, default on): when the user has
+ *  turned it off, a line-end word never holds in the first place (see
+ *  `handleRomajiChar`), so `currentWordIndex` has already moved past it by
+ *  the time Enter is pressed — the explicit check below is
+ *  belt-and-suspenders documentation of that invariant, not a second
+ *  independent gate. A printable character starts the run from 'waiting'
+ *  before being fed to the matcher; Enter never starts the run from
+ *  'waiting' (mirrors the romaji policy of only a printable char doing
+ *  so). Every other key (multi-char names like Shift/Control) passes
+ *  through untouched, matching the non-romaji fallback. IME composition
+ *  input is gated separately in `processCompositionEnd`, not here. */
 export function processRomajiKeyEvent(state: TypingTestState, key: string, config: TypingTestConfig, language: string): TypingTestState {
   if (isSubmitKey(key)) return state
   if (key === 'Enter') {
@@ -272,9 +270,9 @@ function commitRomajiWord(state: TypingTestState, matcher: RomajiMatcher, config
  *  still accumulate, so a printable char typed while held keeps flowing
  *  through the matcher normally — see below) until `processRomajiKeyEvent`'s
  *  Enter handler commits it, matching the non-romaji Enter-at-line-end
- *  convention (Task-romaji-line-end-enter). With the toggle off, a line-end
- *  word commits immediately on completion exactly like any other word, and
- *  Enter goes back to being a no-op everywhere (see
+ *  convention. With the toggle off, a line-end word commits immediately on
+ *  completion exactly like any other word, and Enter goes back to being a
+ *  no-op everywhere (see
  *  `processRomajiKeyEvent`'s doc comment). Space is blocked in this mode
  *  regardless (see `processRomajiKeyEvent`), so there is no separate
  *  Space-triggered finalize path to keep in sync for non-line-end words.
@@ -341,7 +339,7 @@ function handleRomajiChar(state: TypingTestState, char: string, config: TypingTe
  *  unbounded and index-aligned with `state.words` — the source `words`
  *  field of the guide `TypingTestView` line-synchronizes against the
  *  reading window's own line structure (see `RomajiGuide`'s doc comment).
- *  Deliberately split out from `buildRomajiGuideProgress` below: building
+ *  Deliberately separate from `buildRomajiGuideProgress` below: building
  *  this table runs a full `RomajiMatcher` over every word in the run
  *  (O(n) in word count), so it must only rebuild when the run's word list
  *  itself changes (fresh run / time-mode refill) — never on every

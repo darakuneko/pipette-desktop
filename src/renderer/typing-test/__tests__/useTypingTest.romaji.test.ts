@@ -53,9 +53,9 @@ let fileImportRomajiCounter = 0
  *  text, possibly multi-line so `parseFileImportText` produces genuine
  *  `lineBreaks` (unlike the monkeytype words/time configs above, whose
  *  `lineBreaks` is always empty). This is the harness for the line-end
- *  Enter semantics tests below (Task-romaji-line-end-enter). `romaji` is an
- *  optional detail-settings passthrough — used by the "Enter at line ends"
- *  toggle tests to set `lineEndEnter: false`. */
+ *  Enter semantics tests below. `romaji` is an optional detail-settings
+ *  passthrough — used by the "Enter at line ends" toggle tests to set
+ *  `lineEndEnter: false`. */
 async function renderFileImportRomaji(text: string, romaji?: { lineEndEnter?: boolean }) {
   const textId = `line-end-${fileImportRomajiCounter++}`
   mockTypingTestTextStoreGet.mockResolvedValue({
@@ -413,10 +413,10 @@ describe('useTypingTest — romaji input mode', () => {
   })
 })
 
-// Plan-typing-mistake-analysis Phase 1: a rejected keystroke marks the
-// in-progress kana segment as erred; once that segment completes, one
-// mistake is tallied (keyed by the segment's canonical romaji spelling),
-// regardless of how many rejected keystrokes it took to get there.
+// A rejected keystroke marks the in-progress kana segment as erred; once
+// that segment completes, one mistake is tallied (keyed by the segment's
+// canonical romaji spelling), regardless of how many rejected keystrokes it
+// took to get there.
 describe('useTypingTest — romaji mistake tracking', () => {
   it('records exactly 1 mistake for a segment typed with a wrong key then corrected', async () => {
     await seedKanaLanguage(KANA_LANGUAGE, ['か'])
@@ -465,9 +465,9 @@ describe('useTypingTest — romaji mistake tracking', () => {
   })
 })
 
-// Plan-typing-romaji-settings-modal Step 2: `config.romaji`'s disabledStyles
-// / guideStyles wired into the matcher (via `romajiMatcherOptions`), and
-// caseStyle applied as a display-only transform to the guide row.
+// `config.romaji`'s disabledStyles / guideStyles wired into the matcher
+// (via `romajiMatcherOptions`), and caseStyle applied as a display-only
+// transform to the guide row.
 describe('useTypingTest — config.romaji wiring', () => {
   it('rejects a kunrei-tagged spelling once disabledStyles includes kunrei, while the canonical spelling still completes the word', async () => {
     // し's spellings: 'shi' (canonical, hepburn), 'si' (kunrei), 'ci' (c).
@@ -561,11 +561,11 @@ describe('useTypingTest — config.romaji wiring', () => {
   })
 
   it('changing config.romaji via setConfig restarts the test, same as any other config field change', async () => {
-    // Plan-typing-romaji-settings-modal Step 2 design judgement: the Romaji
-    // Settings modal writes through the same onConfigChange -> setConfig
-    // path as punctuation/numbers/mode, which unconditionally regenerates
-    // words and resets state (see `setConfig` above) — so a disabledStyles
-    // edit mid-word already gets a full restart with no special-case code.
+    // The Romaji Settings modal writes through the same onConfigChange ->
+    // setConfig path as punctuation/numbers/mode, which unconditionally
+    // regenerates words and resets state (see `setConfig` above) — so a
+    // disabledStyles edit mid-word already gets a full restart with no
+    // special-case code.
     await seedKanaLanguage(KANA_LANGUAGE, ['し'])
     const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
 
@@ -604,10 +604,10 @@ describe('applyRomajiCaseStyle — words table', () => {
   })
 })
 
-// Plan-romaji-capability Phase 2: romaji judging extended beyond monkeytype
-// words/time to a fileImport text, gated on the text's own kana-pure
-// content (`textRomajiCapable`, threaded from the store's computed
-// `romajiCapable` meta field) rather than the active word-language pack.
+// Romaji judging extends beyond monkeytype words/time to a fileImport
+// text, gated on the text's own kana-pure content (`textRomajiCapable`,
+// threaded from the store's computed `romajiCapable` meta field) rather
+// than the active word-language pack.
 describe('useTypingTest — romaji input mode (fileImport)', () => {
   it('judges keystrokes through the romaji matcher for a kana-pure fileImport text', async () => {
     mockTypingTestTextStoreGet.mockResolvedValue({
@@ -651,11 +651,11 @@ describe('useTypingTest — romaji input mode (fileImport)', () => {
   })
 })
 
-// Task-romaji-line-end-enter: in romajiInput mode, a LINE-END word (real
-// lines from tatoeba/fileImport, tracked via `state.lineBreaks`) must not
-// auto-advance when its romaji completes — the user presses Enter, matching
-// non-romaji semantics. Non-line-end words and the run's final word (never
-// in `lineBreaks`, by word-supply.ts's seam convention) keep auto-advancing.
+// In romajiInput mode, a LINE-END word (real lines from tatoeba/fileImport,
+// tracked via `state.lineBreaks`) must not auto-advance when its romaji
+// completes — the user presses Enter, matching non-romaji semantics.
+// Non-line-end words and the run's final word (never in `lineBreaks`, by
+// word-supply.ts's seam convention) keep auto-advancing.
 describe('useTypingTest — romaji input mode (line-end Enter semantics)', () => {
   it('does not auto-advance a line-end word once its romaji completes', async () => {
     const result = await renderFileImportRomaji('か\nか')
@@ -835,12 +835,12 @@ describe('useTypingTest — romaji input mode (line-end Enter semantics)', () =>
   })
 })
 
-// Task: the Romaji Settings modal's "Enter at line ends" toggle
-// (`RomajiDetailSettings.lineEndEnter`) lets the user turn OFF the
-// Task-romaji-line-end-enter hold above — with the toggle off, a line-end
-// word auto-advances on completion just like any other word, and Enter goes
-// back to being a no-op everywhere. Default (undefined/true) behaviour is
-// covered exhaustively by the describe block above and stays unmodified.
+// The Romaji Settings modal's "Enter at line ends" toggle
+// (`RomajiDetailSettings.lineEndEnter`) lets the user turn OFF the hold
+// above — with the toggle off, a line-end word auto-advances on completion
+// just like any other word, and Enter goes back to being a no-op
+// everywhere. Default (undefined/true) behaviour is covered exhaustively by
+// the describe block above and stays unmodified.
 describe('useTypingTest — romaji input mode (lineEndEnter: false auto-advances)', () => {
   it('auto-advances a line-end word once its romaji completes, without Enter', async () => {
     const result = await renderFileImportRomaji('か\nか', { lineEndEnter: false })

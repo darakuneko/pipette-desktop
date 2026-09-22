@@ -1,21 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 /** Per-key press-duration + physical-overlap tracking for matrix analytics.
- *  Split out of useTypingTest.ts to keep it under the project's 600-line
- *  custom-hook size ceiling — this owns state the queue-based tap/hold classifier
+ *  This owns state the queue-based tap/hold classifier
  *  (matrix-analytics-queue.ts) doesn't need: how long every physical
  *  press (masked or not) stays down, and whether consecutive presses
- *  physically overlapped. Both are read straight off the `pressed` set
- *  processMatrixFrame already computes each frame — no new HID protocol,
- *  just carrying data through that used to be discarded on release.
+ *  physically overlapped. Both are read straight off the `pressed`
+ *  set processMatrixFrame already computes each frame — no new HID
+ *  protocol, just carrying data through.
  *
  *  ## Overlap
  *  Binary only: whether the immediately preceding press-edge key was
  *  still in the current frame's `pressed` set when the new key's press
  *  edge was observed. This says nothing about *how much* the two presses
  *  overlapped in time — sub-poll-interval timing isn't available from the
- *  HID layer, so no attempt is made to estimate it (see
- *  Plan-typing-metrics-chi2018.md "制約 2").
+ *  HID layer, so no attempt is made to estimate it.
  *
  *  ## Observation holes
  *  The renderer polls on a ~20ms cadence, but a HID read can block behind
@@ -34,9 +32,8 @@ import type { TypingAnalyticsEventPayload } from '../../shared/types/typing-anal
 import { OBSERVATION_HOLE_MS } from '../../shared/typing-analytics-timing'
 import type { PressStartRecord } from './matrix-layers'
 
-// Re-exported so existing imports (this module used to define the
-// constant itself) keep working — main's validator imports the same
-// constant directly from shared/typing-analytics-timing.ts.
+// Re-exported so existing imports keep working — main's validator imports
+// the same constant directly from shared/typing-analytics-timing.ts.
 export { OBSERVATION_HOLE_MS }
 
 interface PressRecord<TPreparedEvent> {

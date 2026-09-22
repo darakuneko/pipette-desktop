@@ -52,16 +52,15 @@ function toButtonValue(spec: WeakSpotFieldSpec<number>, value: number): number {
 
 /** One option-button row: a button per `options` entry, active-highlighted
  *  when it equals `value` — the shared renderer for every tunable
- *  parameter in this modal (the 6 formerly-`<select>` numeric fields via
- *  `FieldButtonRow` below, plus Rolling window and Time decay, which
- *  render through this component directly since their option sets aren't
- *  plain numbers). Each button carries `aria-pressed` so a screen reader
- *  announces the current selection the same way a native toggle-button
- *  group would. `groupLabelledBy`, when given, marks the row as a
- *  `role="group"` labelled by that id (see `FieldButtonRow`, the only
- *  current caller that passes it — Rolling window/Time decay render this
- *  directly without it since their own preceding `<span>` isn't wired up
- *  as a labelling id). */
+ *  parameter in this modal (the 6 numeric fields via `FieldButtonRow`
+ *  below, plus Rolling window and Time decay, which render through this
+ *  component directly since their option sets aren't plain numbers).
+ *  Each button carries `aria-pressed` so a screen reader announces the
+ *  current selection the same way a native toggle-button group would.
+ *  `groupLabelledBy`, when given, marks the row as a `role="group"` labelled
+ *  by that id (see `FieldButtonRow`, the only current caller that passes it —
+ *  Rolling window/Time decay render this directly without it since their own
+ *  preceding `<span>` isn't wired up as a labelling id). */
 function OptionButtonRow<T extends number | string>({
   options, value, onChange, testIdPrefix, renderLabel, groupLabelledBy,
 }: {

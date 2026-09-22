@@ -570,9 +570,8 @@ describe('ねっこ — full pattern enumeration', () => {
   })
 })
 
-// Plan-typing-mistake-analysis Phase 1: mistake tracking keys a mistyped
-// kana segment by its canonical romaji spelling, independent of which
-// alternate spelling the user actually typed.
+// Mistake tracking keys a mistyped kana segment by its canonical romaji
+// spelling, independent of which alternate spelling the user actually typed.
 describe('canonicalRomaji', () => {
   it('returns the canonical (first-listed) single-kana spelling', () => {
     expect(canonicalRomaji('し')).toBe('shi')
@@ -594,10 +593,10 @@ describe('canonicalRomaji', () => {
   })
 })
 
-// Weak-spot-training word matching (Plan-miss-focus-mode) tokenizes a
-// candidate word into the same per-segment units mistake-tally keys are
-// recorded under — canonicalRomajiSegments must walk the identical
-// segmentation as canonicalRomaji, just without concatenating.
+// Weak-spot-training word matching tokenizes a candidate word into the same
+// per-segment units mistake-tally keys are recorded under —
+// canonicalRomajiSegments must walk the identical segmentation as
+// canonicalRomaji, just without concatenating.
 describe('canonicalRomajiSegments', () => {
   it('returns one token per single-kana segment', () => {
     expect(canonicalRomajiSegments('あい')).toEqual(['a', 'i'])

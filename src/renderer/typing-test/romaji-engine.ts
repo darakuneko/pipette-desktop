@@ -520,9 +520,9 @@ export interface RomajiMatcherOptions {
    *  could tag distinct candidates within a single segment, precedence is
    *  `GUIDE_STYLE_PRIORITY`'s declaration order (see `pickGuideWinner`),
    *  not the order styles appear in this array. Undefined/empty (the
-   *  default) keeps the pre-existing canonical/longest-match tie-break —
-   *  i.e. the plain Hepburn-based spelling, replacing the old `'auto'`
-   *  sentinel. Display-only: never affects what `acceptChar` accepts. */
+   *  default) keeps the canonical/longest-match tie-break — i.e. the
+   *  plain Hepburn-based spelling. Display-only: never affects what
+   *  `acceptChar` accepts. */
   guideStyles?: readonly RomajiStyle[]
 }
 

@@ -8,10 +8,9 @@
  *  `typingTestHistory` for a given language + effective input method
  *  scope, combines its mistake tallies with whatever per-token timing
  *  data the scope's saved run logs provide, and gates biased sampling on
- *  whether at least one token actually came out weak — replacing the
- *  original fixed-200-keystroke gate (2026-08-06 user-approved revision:
- *  200 keystrokes of fast, accurate typing should never activate the
- *  mode; activation must be driven by an actual detected weakness). */
+ *  whether at least one token actually came out weak: 200 keystrokes of
+ *  fast, accurate typing should never activate the mode; activation must
+ *  be driven by an actual detected weakness. */
 
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
@@ -142,25 +141,23 @@ function floorUtcDay(ms: number): number {
 }
 
 /** Time-decay weight for one row's miss contribution:
- *  `0.5^(ageDays/halfLife)`, or 1 (no decay) when `decayHalfLifeDays ===
- *  'none'`. `ageDays` is the difference between `nowMs`'s and `dateIso`'s
- *  own UTC CALENDAR day (both via `floorUtcDay`), not a fractional/
- *  elapsed-ms division — a miss recorded minutes ago must land at EXACTLY
- *  weight 1.0, not 0.998, or a just-typed run's own miss count could
- *  silently slip under an integer `missThreshold` (codex-flagged
- *  calibration concern during design review: "the 2 misses I just typed
- *  shouldn't evaporate before I've even finished the run"). Calendar-day
- *  flooring (rather than "24h elapsed") is also what keeps this in
- *  lockstep with the cache's own day bucket: a row recorded 2 minutes
- *  before UTC midnight ages by a full day the INSTANT the calendar day
- *  rolls over — the same instant the cache bucket changes and the profile
- *  gets recomputed — instead of an elapsed-ms floor, which would have kept
- *  it at ageDays=0 for another ~24h, so the freshly-recomputed profile
- *  would still silently carry yesterday's weight. A malformed/unparseable
- *  `date` degrades to full weight (1) rather than dropping the row
- *  entirely — same "malformed field degrades gracefully" treatment every
- *  other optional field on a persisted result gets elsewhere in this
- *  codebase. */
+ *  `0.5^(ageDays/halfLife)`, or 1 (no decay) when
+ *  `decayHalfLifeDays === 'none'`. `ageDays` is the difference between
+ *  `nowMs`'s and `dateIso`'s own UTC CALENDAR day (both via `floorUtcDay`),
+ *  not a fractional/ elapsed-ms division — a miss recorded minutes ago must
+ *  land at EXACTLY weight 1.0, not 0.998, or a just-typed run's own miss
+ *  count could silently slip under an integer `missThreshold` ("the 2 misses
+ *  I just typed shouldn't evaporate before I've even finished the run").
+ *  Calendar-day flooring (rather than "24h elapsed") is also what keeps this
+ *  in lockstep with the cache's own day bucket: a row recorded 2 minutes
+ *  before UTC midnight ages by a full day the INSTANT the calendar day rolls
+ *  over — the same instant the cache bucket changes and the profile gets
+ *  recomputed — instead of an elapsed-ms floor, which would have kept it at
+ *  ageDays=0 for another ~24h, so the freshly-recomputed profile would still
+ *  silently carry yesterday's weight. A malformed/unparseable `date` degrades
+ *  to full weight (1) rather than dropping the row entirely — same "malformed
+ *  field degrades gracefully" treatment every other optional field on a
+ *  persisted result gets elsewhere in this codebase. */
 function decayWeight(
   dateIso: string, decayHalfLifeDays: WeakSpotDetectionSettings['decayHalfLifeDays'], nowMs: number,
 ): number {
@@ -318,7 +315,7 @@ export function effectiveWeakSpotInputMethod(config: TypingTestConfig, language:
  *  favors them once detected; keying on it would invalidate/duplicate
  *  cache entries for a change that can't actually affect this function's
  *  output. When decay is enabled, a UTC epoch-day bucket (via
- *  `floorUtcDay` — the exact granularity `decayWeight` itself now floors
+ *  `floorUtcDay` — the exact granularity `decayWeight` itself floors
  *  row ages to) is folded into the key too, so the memoized profile is
  *  recomputed with fresh decay weights the instant a UTC calendar-day
  *  boundary passes, even if the app has stayed open the whole time and
