@@ -3,11 +3,11 @@
 
 // Weak Spot Training integration coverage: the getMistakeProfile thunk
 // option, the live weakSpotGate exposed for the Option section's
-// toggle/hint, and end-to-end biased sampling through
-// setConfig/restart — the individual pieces (profile aggregation,
-// word scoring, sampling mixture) already have focused unit coverage in
-// weak-spot-profile.test.ts / word-generator/__tests__/weak-spot-weighting.test.ts
-// / word-generator.test.ts / word-supply.test.ts / run-state.test.ts.
+// toggle/hint, and end-to-end biased sampling through setConfig/restart —
+// the individual pieces (profile aggregation, word scoring, sampling
+// mixture) already have focused unit coverage in weak-spot-profile.test.ts /
+// word-generator/__tests__/weak-spot-weighting.test.ts /
+// word-generator.test.ts / word-supply.test.ts / run-state.test.ts.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'

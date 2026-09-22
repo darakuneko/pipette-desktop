@@ -4,9 +4,9 @@
  *  This owns state the queue-based tap/hold classifier
  *  (matrix-analytics-queue.ts) doesn't need: how long every physical
  *  press (masked or not) stays down, and whether consecutive presses
- *  physically overlapped. Both are read straight off the `pressed` set
- *  processMatrixFrame already computes each frame — no new HID protocol,
- *  just carrying data through.
+ *  physically overlapped. Both are read straight off the `pressed`
+ *  set processMatrixFrame already computes each frame — no new HID
+ *  protocol, just carrying data through.
  *
  *  ## Overlap
  *  Binary only: whether the immediately preceding press-edge key was

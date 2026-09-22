@@ -209,11 +209,10 @@ export function isLineEndEnterRequired(config: TypingTestConfig): boolean {
  *  belt-and-suspenders documentation of that invariant, not a second
  *  independent gate. A printable character starts the run from 'waiting'
  *  before being fed to the matcher; Enter never starts the run from
- *  'waiting' (mirrors the pre-existing romaji policy of only a printable
- *  char doing so). Every
- *  other key (multi-char names like Shift/Control) passes through
- *  untouched, matching the non-romaji fallback. IME composition input is
- *  gated separately in `processCompositionEnd`, not here. */
+ *  'waiting' (mirrors the romaji policy of only a printable char doing
+ *  so). Every other key (multi-char names like Shift/Control) passes
+ *  through untouched, matching the non-romaji fallback. IME composition
+ *  input is gated separately in `processCompositionEnd`, not here. */
 export function processRomajiKeyEvent(state: TypingTestState, key: string, config: TypingTestConfig, language: string): TypingTestState {
   if (isSubmitKey(key)) return state
   if (key === 'Enter') {
@@ -340,7 +339,7 @@ function handleRomajiChar(state: TypingTestState, char: string, config: TypingTe
  *  unbounded and index-aligned with `state.words` — the source `words`
  *  field of the guide `TypingTestView` line-synchronizes against the
  *  reading window's own line structure (see `RomajiGuide`'s doc comment).
- *  Deliberately split out from `buildRomajiGuideProgress` below: building
+ *  Deliberately separate from `buildRomajiGuideProgress` below: building
  *  this table runs a full `RomajiMatcher` over every word in the run
  *  (O(n) in word count), so it must only rebuild when the run's word list
  *  itself changes (fresh run / time-mode refill) — never on every

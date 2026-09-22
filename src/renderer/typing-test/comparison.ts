@@ -74,7 +74,7 @@ export function conditionKey(config: TypingTestConfig, language: string, opts?: 
   // omitted (e.g. this module's own unit tests constructing a bare config
   // with no run behind it), falls back to the toggle alone
   // (isWeakSpotTrainingActive) — a reasonable best-effort default that
-  // matches every pre-existing caller/test's expectations unchanged.
+  // matches every caller/test's expectations.
   // `undefined` for textRomajiCapable is exact here: hasToggles restricts
   // this to words/time, whose isRomajiCapable/isKanaCapable branch never
   // reads it.

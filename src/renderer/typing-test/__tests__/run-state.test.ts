@@ -198,9 +198,9 @@ describe('confirmedChars', () => {
   })
 })
 
-// Weak Spot Training: the run's weakSpotProfile snapshot (set once by
-// freshState at run start — see useTypingTest.ts) must be reused verbatim
-// by every time-mode refill, never recomputed.
+// Weak Spot Training: the run's weakSpotProfile snapshot (set once
+// by freshState at run start — see useTypingTest.ts) must be reused
+// verbatim by every time-mode refill, never recomputed.
 describe('advanceAfterWord — weakSpotProfile threading', () => {
   const timeConfig: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false, weakSpotTrainingMode: true }
 

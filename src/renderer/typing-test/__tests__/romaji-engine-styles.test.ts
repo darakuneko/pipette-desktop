@@ -109,7 +109,7 @@ describe('disabledStyles: per-style acceptance', () => {
   it('digraph OFF still accepts the canonical spelling of a single-spelling 2-kana entry (dhi for でぃ)', () => {
     // でぃ has only one spelling in KANA_TABLE (canonical, untagged), so
     // digraph OFF has nothing to remove here — completability is
-    // guaranteed by design decision #2 (canonical is always accepted).
+    // guaranteed (canonical is always accepted).
     const { matcher, results } = type('でぃ', 'dhi', { disabledStyles: ['digraph'] })
     expect(results.at(-1)).toBe('complete')
     expect(matcher.typedRomaji()).toBe('dhi')
@@ -427,7 +427,7 @@ describe('base toggle: hepburn OFF leaves kunrei-shiki a complete, self-sufficie
       // still-live alternate (e.g. "shi" and "si" both start with "s"), so
       // a stray keystroke can resync into completing a *different* valid
       // pattern rather than dead-ending outright — same prefix-collision
-      // shape as the pre-existing jya/ja and whi/wi cases above. Asserting
+      // shape as the jya/ja and whi/wi cases above. Asserting
       // a 'reject' shows up somewhere, and that the full hepburn spelling
       // was never actually typed, is what proves the alternate is gone.
       const rejected = type(kana, hepburnSpelling, opts)

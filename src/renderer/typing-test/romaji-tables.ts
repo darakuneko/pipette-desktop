@@ -548,14 +548,13 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'っ|ltu': 'lSmall',
   'っ|ltsu': 'lSmall',
 
-  // -- ん: 'n'/'nn' stay untagged (shared baseline, always accepted, so its
-  // set never empties and the guard never has to fire for it). 'xn' is its
-  // own style (ん's explicit x-tap is a separate preference from
-  // standalone small-kana spellings). 'nApos' is
-  // the "n'" IME-style separator that disambiguates ん before a vowel
-  // (kan'i) without forcing a double tap. See SOKUON_EXPLICIT_PATTERNS and
-  // N_PATTERNS_SINGLE_OR_DOUBLE in romaji-engine.ts for the full pattern
-  // lists. --
+  // -- ん: 'n'/'nn' stay untagged (shared baseline, always accepted, so its set
+  // never empties and the guard never has to fire for it). 'xn' is its own
+  // style (ん's explicit x-tap is a separate preference from standalone
+  // small-kana spellings). 'nApos' is the "n'" IME-style separator that
+  // disambiguates ん before a vowel (kan'i) without forcing a double tap. See
+  // SOKUON_EXPLICIT_PATTERNS and N_PATTERNS_SINGLE_OR_DOUBLE in
+  // romaji-engine.ts for the full pattern lists. --
   'ん|xn': 'xn',
   "ん|n'": 'nApos',
 }

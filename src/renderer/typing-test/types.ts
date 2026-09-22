@@ -52,14 +52,14 @@ export interface RomajiDetailSettings {
 
 /** Rolling-window size for Weak Spot Training's mistake-count aggregation
  *  (see weak-spot-profile.ts's `computeWeaknessProfile`) — the newest N
- *  scoped history rows, by `date` desc, or `'all'` for the pre-existing
- *  unbounded behaviour. Applies to BOTH the miss and timing signals
+ *  scoped history rows, by `date` desc, or `'all'` for the unbounded
+ *  behaviour. Applies to BOTH the miss and timing signals
  *  identically (one shared row set, not two independently-windowed ones). */
 export type WeakSpotMissWindow = 10 | 25 | 50 | 100 | 'all'
 
 /** Half-life (days) for Weak Spot Training's miss-count time decay, or
  *  `'none'` to disable decay entirely (every miss counts at full weight
- *  regardless of age — the pre-existing behaviour). See
+ *  regardless of age — the behaviour). See
  *  weak-spot-profile.ts's decay weighting for the exact formula. */
 export type WeakSpotDecayHalfLife = 7 | 14 | 30 | 'none'
 
@@ -113,7 +113,7 @@ export type TypingTestConfig =
   // biasing needs a sampled word POOL to bias within (quote/fileImport/
   // tatoeba play fixed/imported text verbatim). Optional, default off
   // (unlike romajiInput's default-on): an absent/false value is the
-  // pre-existing behaviour, so no legacy config is silently reinterpreted.
+  // behaviour, so no legacy config is silently reinterpreted.
   | { mode: 'words'; wordCount: number; punctuation: boolean; numbers: boolean; weakSpotTrainingMode?: boolean; weakSpot?: WeakSpotDetailSettings; romajiInput?: boolean; romaji?: RomajiDetailSettings }
   | { mode: 'time'; duration: number; punctuation: boolean; numbers: boolean; weakSpotTrainingMode?: boolean; weakSpot?: WeakSpotDetailSettings; romajiInput?: boolean; romaji?: RomajiDetailSettings }
   | { mode: 'quote'; quoteLength: QuoteLength }

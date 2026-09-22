@@ -56,8 +56,8 @@ function biasedWord(wordList: readonly string[], weights: readonly number[], tot
 
 /** Samples `count` words from `wordList`, avoiding an immediate repeat of
  *  the previous pick (up to 100 retries, then accepts the repeat rather
- *  than looping forever — matches the pre-existing behaviour for a small
- *  or heavily-skewed list). `seedLastWord` seeds the repeat-avoidance
+ *  than looping forever — matches the behaviour for a small or
+ *  heavily-skewed list). `seedLastWord` seeds the repeat-avoidance
  *  window with the caller's own preceding word (e.g. a time-mode refill's
  *  last already-generated word — see word-supply.ts's
  *  `refillTimeModeWords`), so the immediate-repeat guarantee holds across
