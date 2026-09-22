@@ -28,11 +28,11 @@ declare global {
     readonly env: ImportMetaEnv
   }
 
-  // @types/react 19 moved JSX typing into the `React.JSX` namespace and no
-  // longer declares a global `JSX` namespace (the old implicit-global
-  // behavior). This codebase annotates return types as bare `JSX.Element`
-  // throughout, so re-establish the global alias once here instead of
-  // rewriting every call site to `React.JSX.Element`.
+  // @types/react 19 moved JSX typing into the `React.JSX` namespace and
+  // does not declare a global `JSX` namespace. This codebase annotates
+  // return types as bare `JSX.Element` throughout, so re-establish the
+  // global alias once here instead of rewriting every call site to
+  // `React.JSX.Element`.
   namespace JSX {
     type Element = React.JSX.Element
     type ElementType = React.JSX.ElementType
