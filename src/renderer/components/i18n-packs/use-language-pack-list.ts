@@ -2,10 +2,10 @@
 //
 // Installed-tab row model (built-in English synthesis + imported packs)
 // plus drag reorder / Name sort / import placement, and the Find-on-Hub
-// browse list (search + freshness). Split out of LanguagePacksModal
-// (Task-split-pack-modals) — everything here derives from `store.metas`
-// and the active language, and is consumed by both the shell's JSX and
-// the sibling import hook (`placement`, `handleSelectLanguage`).
+// browse list (search + freshness). Everything here derives from
+// `store.metas` and the active language, and is consumed by both the
+// shell's JSX and the sibling import hook (`placement`,
+// `handleSelectLanguage`).
 
 import { useCallback, useMemo } from 'react'
 import type { TFunction } from 'i18next'

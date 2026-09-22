@@ -3,10 +3,10 @@
 // Import surface for Language Packs: inline rename commit (auto-sync on
 // a Hub-linked pack), single-item + multi-file import (validate →
 // coverage → persist → placement → Hub auto-sync), the explicit cloud
-// pull, and Hub-download-to-import. Split out of LanguagePacksModal
-// (Task-split-pack-modals) — rename lives here rather than in the
-// actions hook because it needs `useImportBatch`'s own `isImportingRef`
-// re-entrancy guard, which only exists once this hook creates it.
+// pull, and Hub-download-to-import. Rename lives here rather than in
+// the actions hook because it needs `useImportBatch`'s own
+// `isImportingRef` re-entrancy guard, which only exists once this hook
+// creates it.
 
 import { useCallback, useEffect } from 'react'
 import type { TFunction } from 'i18next'
@@ -136,7 +136,7 @@ export function useLanguagePackImport({
   }, [store, t])
 
   // Single-item import path: Hub download funnels through here (the
-  // toolbar's own multi-file import now goes through `importOnePack`
+  // toolbar's own multi-file import goes through `importOnePack`
   // directly — see `collectImportResults` below). Failures surface
   // through `setActionError` (the same banner KeyLabels uses) instead
   // of opening a separate confirmation modal.

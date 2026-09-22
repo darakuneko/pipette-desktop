@@ -14,8 +14,8 @@
 //
 // The row model (built-in + installed + Hub browse), the per-row
 // actions, and the import surface each live in their own sibling hook
-// (Task-split-pack-modals) — this shell only owns the 7 top-level
-// state atoms, the on-close reset, and the JSX.
+// — this shell only owns the 7 top-level state atoms, the on-close
+// reset, and the JSX.
 
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
