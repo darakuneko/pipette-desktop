@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
-// FLAG (coordinator-requested layout changes, cumulative history):
 //  1. MissedCharsList's original chip+tooltip presentation was replaced
 //     by a column TABLE (MissedTable) for KeystrokeTimelinePanel's use.
 //     MissedCharsList itself was reverted to its original plain-chip
@@ -66,8 +65,7 @@ describe('MissedTable (bar-graph rows: Word / typed chars / stacked bar / Cnt)',
     expect(screen.getByText('Missed')).toBeInTheDocument()
   })
 
-  // FLAG: replaces the old "renders a 4-column header row" test — the
-  // mockup has no header row at all.
+  // The mockup has no header row at all.
   it('renders no header row', () => {
     renderWithI18n(<MissedTable mistakes={{ h: 1 }} />)
     expect(screen.queryByTestId('missed-table-header')).toBeNull()

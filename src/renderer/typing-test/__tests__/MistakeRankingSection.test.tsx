@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
-// FLAG (coordinator-requested layout changes, cumulative history):
 //  1. This file originally tested a bar-ranking presentation
 //     (`mistake-rank-${key}` rows, a width%-based bar). Rewritten once to
 //     the intermediate column-table presentation (`missed-table-row-*`/
@@ -17,7 +16,7 @@
 //     sort DESC/key ASC) and empty-state behavior are unchanged, just
 //     re-asserted against the new DOM shape.
 //
-// New coverage below (not present before any rewrite): the row list
+// New coverage below: the row list
 // renders with per-key detail (bar split + typed chars) once
 // `typingRunLogGet` resolves, and a per-log fetch error is skipped
 // without breaking the rest of the list — see
