@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
-// Regression coverage for the Data-modal favorite-Hub vial_protocol bug:
-// the Data modal renders on the disconnected screen, where `vialProtocol`
-// is the emptyState sentinel -1. useHubState must not forward that raw
-// sentinel to the Hub IPC calls — it should substitute the shared
-// FALLBACK_VIAL_PROTOCOL (6) instead, while passing through any real
-// (non-negative integer) protocol unchanged.
+// useHubState must not forward the emptyState sentinel -1 for
+// `vialProtocol` (e.g. the Data modal renders on the disconnected screen,
+// where `vialProtocol` is that sentinel) to the Hub IPC calls — it
+// substitutes the shared FALLBACK_VIAL_PROTOCOL (6) instead, while
+// passing a real protocol (5 in these tests) through as-is.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'

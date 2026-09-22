@@ -387,10 +387,9 @@ describe('KeyLabelsModal', () => {
     expect(remove).not.toHaveBeenCalled()
   })
 
-  // --- regression: Delete must not cascade to Hub for entries the user
-  // does not own. A downloaded label also carries hubPostId (for
-  // Sync/freshness linkage) but is never deletable on Hub by this
-  // user. ---
+  // --- Delete must not cascade to Hub for entries the user does not own.
+  // A downloaded label also carries hubPostId (for Sync/freshness
+  // linkage) but is never deletable on Hub by this user. ---
 
   it('a label downloaded from someone else deletes locally only — no Hub call at all (THE regression)', async () => {
     metas = [meta({ id: 'foreign-del', name: 'Foreign Label', uploaderName: 'pipette', hubPostId: 'hub-foreign' })]

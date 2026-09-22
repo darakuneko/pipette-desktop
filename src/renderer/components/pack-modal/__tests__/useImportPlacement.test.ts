@@ -170,9 +170,9 @@ describe('useImportPlacement', () => {
     })
 
     expect(reorder).toHaveBeenNthCalledWith(1, ['a', 'b'])
-    // Without the fix, this would compute from the stale ['a'] list and
-    // persist ['a', 'c'] — silently dropping 'b' from the order (reorder
-    // is a full-list replacement, not a merge).
+    // If C's turn read the stale ['a'] list instead of the re-rendered
+    // one, it would call reorder with ['a', 'c'] instead of
+    // ['a', 'b', 'c'].
     expect(reorder).toHaveBeenNthCalledWith(2, ['a', 'b', 'c'])
     expect(onReorderError).not.toHaveBeenCalled()
   })
@@ -393,8 +393,8 @@ describe('useImportPlacement', () => {
 
     // Still fully ascending — frozen to the 'asc' snapshot taken at
     // batch start, not the live 'desc' direction that landed mid-flight.
-    // Without the fix, merging `toInsert` against the live direction
-    // while `beforeEntries` reflects the old one would produce a
+    // If `toInsert` were merged against the live direction while
+    // `beforeEntries` still reflected the old one, the result would be a
     // garbled, neither-direction order (e.g. ['c', 'b', 'a', 'z']).
     expect(reorder).toHaveBeenCalledTimes(1)
     expect(reorder).toHaveBeenCalledWith(['a', 'b', 'c', 'z'])

@@ -79,12 +79,10 @@ export function useEscapeClose(onClose: () => void, enabled = true): void {
  * `guardTypable` (default `true`) lets a caller opt OUT of the typable-
  * element check specifically, while always keeping the `isComposing`
  * check (IME protection is a strict improvement with no such tradeoff).
- * `JsonEditorModal` passes `false`: its only control is the textarea it
+ * `JsonEditorModal` passes `false`: its main control is the textarea it
  * edits JSON in, so with the default guard on, Escape could never close
- * it at all — every keydown while typing originates from inside that
- * same typable element. That IS a real regression from before this
- * component was switched onto this shared hook (its previous hand-rolled
- * handler had no typable guard), not a new tradeoff being introduced.
+ * it while typing — every such keydown originates from inside that
+ * typable element.
  */
 export function useEscapeCloseCapture(onClose: () => void, enabled = true, guardTypable = true): void {
   useEffect(() => {

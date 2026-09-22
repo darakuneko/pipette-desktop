@@ -676,9 +676,9 @@ describe('ThemePacksModal', () => {
 
     fireEvent.click(screen.getByTestId('theme-packs-import-button'))
     await waitFor(() => expect(reorderFn).toHaveBeenCalled())
-    // Without the fix, Charlie's position would be computed against a
-    // stale [Alpha, Delta] snapshot that never saw Beta's insert,
-    // persisting ['a', 'c', 'd'] and silently dropping Beta.
+    // If Charlie's position were computed against the stale [Alpha, Delta]
+    // snapshot that never saw Beta's insert, it would call reorder with
+    // ['a', 'c', 'd'] instead of ['a', 'b', 'c', 'd'].
     expect(reorderFn).toHaveBeenCalledTimes(1)
     expect(reorderFn).toHaveBeenCalledWith(['a', 'b', 'c', 'd'])
   })

@@ -1,31 +1,35 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Shared multi-file import batch handler for the three pack-management
-// modals (Language Packs, Theme Packs, Key Labels). Each modal's
-// `handleImportFile`/`handleImport` was ~80 lines, structurally
-// identical: an `importInFlightRef` latch → dedupe-by-id (keep-last) →
-// a hub-sync loop building per-row success badges + hub-sync failures
-// → `placement.placeMany` → single-result auto-select → a 2+ file
-// summary gate → failure-banner assembly. They differed only in:
+// modals (Language Packs, Theme Packs, Key Labels): an
+// `importInFlightRef` latch → dedupe-by-id (keep-last) → a hub-sync
+// loop building per-row success badges + hub-sync failures →
+// `placement.placeMany` → single-result auto-select → a 2+ file
+// summary gate → failure-banner assembly. Each modal differs only in:
 //
-//   (a) how the per-file raw results are obtained — Language/Theme run
-//       a `store.applyImport` loop over dialog-picked files; Key Labels
-//       reads a single main-side batch result (`imported`/`rejections`)
-//   (b) the hub-sync function (`pushPackToHub` vs `labels.hubUpdate`)
-//   (c) the optional single-result auto-select callback
-//       (`handleSelectLanguage`/`handleSelectTheme`; Key Labels has none)
+//   (a) `collectResults` — how the per-file raw results are obtained;
+//       Language/Theme run a `store.applyImport` loop over
+//       dialog-picked files, Key Labels reads a single main-side batch
+//       result (`imported`/`rejections`)
+//   (b) `hubSync` — the hub-sync function (`pushPackToHub` vs
+//       `labels.hubUpdate`)
+//   (c) `onCollapsedToOne` — the optional single-result auto-select
+//       callback (`handleSelectLanguage`/`handleSelectTheme`; Key
+//       Labels passes none)
 //
-// This hook owns everything else. `collectResults` is the seam for
-// (a): it runs the file-picker/save step (in whatever shape the
-// feature needs) and returns every per-file outcome plus the
-// placement snapshot, captured by the caller at the exact point its
-// own store mutation begins — see each modal's `collectResults` for
-// why that point differs (a per-file save loop vs. one batched IPC
-// call). Returning `null` means there is nothing to place: either the
-// user canceled, or the whole batch failed before any per-file outcome
-// existed (the callback is responsible for surfacing that failure
-// itself via `setActionError`, since it doesn't fit the per-file
-// success/failure shape below).
+// The rest of the pipeline is shared here (callers also pass `open`,
+// `placement`, the feedback setters and `t`). `collectResults` runs the
+// file-picker/save step (in whatever shape the feature needs) and
+// returns every per-file outcome plus the placement snapshot, captured
+// by the caller at the exact point its own store mutation begins — see
+// each modal's `collectImportResults` (use-language-pack-import.ts,
+// use-theme-pack-import.ts, KeyLabelsModal.tsx) for why that point
+// differs (a per-file save loop vs. one batched IPC call). Returning
+// `null` means there is nothing to place: either the user canceled, or
+// the whole batch failed before any per-file outcome existed (the
+// callback is responsible for surfacing that failure itself via
+// `setActionError`, since it doesn't fit the per-file success/failure
+// shape below).
 //
 // RE-ENTRANCY (mirrors the keymap-apply latch): a double-click on
 // Import before React re-renders the now-disabled button must not

@@ -1,18 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 //
-// Regression coverage for the lazy-pack-load freeze: without `version` in
-// useKeyLabelLookup's returned `useMemo` deps, the returned lookup object
-// would be memoized only on its member callbacks, which are stable
-// `useCallback`s over a ref — so an async `ensure(id)` resolving into the
-// cache would never change the object's IDENTITY, even though calling a
-// member directly afterwards already returns the fresh data. A downstream
-// consumer that memoizes on THIS object (or on a callback derived from it,
-// e.g. `useDevicePrefs`'s `remapLabel`/`isRemapped`) would never recompute,
-// so the keymap legends and key picker would stay frozen on the pre-fetch
-// fallback until some unrelated prop forced a rebuild. Folding `version`
-// into the deps makes the identity change on each successful fetch (or
-// store-change event) while staying stable across ordinary renders.
+// useKeyLabelLookup's returned object must change identity once a lazy
+// `ensure(id)` resolves into the cache (or on a store-change event) —
+// its members are stable `useCallback`s over a ref, so a downstream
+// consumer that memoizes on THIS object (or a callback derived from it,
+// e.g. `useDevicePrefs`'s `remapLabel`/`isRemapped`) would otherwise not
+// recompute even though calling a member directly already returns the
+// fresh data. `version` in the returned `useMemo`'s deps is
+// what drives that identity change (see useKeyLabelLookup.ts), while
+// staying stable across ordinary renders.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'

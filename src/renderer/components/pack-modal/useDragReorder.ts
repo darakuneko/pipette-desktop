@@ -1,21 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Shared drag-to-reorder state machine for the pack modals' Installed
-// lists. Ported from `KeyLabelsModal.tsx`'s `dragOrder` /
-// `handleDragStart` / `handleDragOver` / `handleDragEnd` trio (Phase 1
-// kept those Key-Labels-only; Phase 2 extends drag reorder to
-// Language Packs and Theme Packs, so the mechanism moves here).
+// lists (Key Labels, Language Packs, Theme Packs).
 //
 // `ids` is the caller's current *reorderable* id list in baseline
 // order (Key Labels: every meta including QWERTY; Language/Theme
 // Packs: store metas only — built-ins are never store entries and
 // must be filtered out by the caller before this hook sees them).
 //
-// The returned handlers are plain functions (not `useCallback`), same
-// as the original KeyLabelsModal code — they close over the latest
-// `dragOrder` / `ids` each render, which is simpler than threading a
-// ref through a memoized callback and costs nothing here (drag
-// handlers are not a hot re-render path).
+// The returned handlers are plain functions, not `useCallback` — they
+// close over the latest `dragOrder` / `ids` each render, which is
+// simpler than threading a ref through a memoized callback and costs
+// nothing here (drag handlers are not a hot re-render path).
 
 import { useRef, useState } from 'react'
 

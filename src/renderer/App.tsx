@@ -309,12 +309,12 @@ export function App() {
     return await (keymapEditorRef.current?.applyKeymapRewrite(table) ?? Promise.resolve({ appliedCount: 0 }))
   }, [])
 
-  // lifted out of QuickSettingsSelects (the footer's Keyboard Layout
-  // select) because the Apply button that now opens this modal lives on
-  // KeymapEditor's simulation tab instead — both need the same
-  // pending/apply state, so it is owned here and threaded down to each.
-  // `handleKeyboardLayoutChange` still goes to the select as a plain
-  // display switch; `requestApply` goes to KeymapEditor's Apply button.
+  // Owned here because two separate consumers share the same pending/apply
+  // state: the footer's Keyboard Layout select (QuickSettingsSelects, via
+  // AppStatusBar → StatusBar) and the Apply button on KeymapEditor's
+  // simulation tab (via AppEditorSurface). `handleKeyboardLayoutChange`
+  // goes to the select as a plain display switch; `requestApply` goes to
+  // KeymapEditor's Apply button.
   // `isApplying` (aliased `keymapApplyBusy` below) is also what gates the
   // footer's Analyze button while a rewrite is mid-flight (see its own
   // comment at the `analyzeDisabled` prop) — its true window fully

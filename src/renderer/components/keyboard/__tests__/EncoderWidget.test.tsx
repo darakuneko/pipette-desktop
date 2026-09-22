@@ -225,9 +225,9 @@ describe('EncoderWidget', () => {
     })
   })
 
-  // encoder CW/CCW legends gained the same remap tint keymap keys already
-  // have (label color only — encoders have no inner-remap label path like
-  // masked KeyWidget keys).
+  // Encoder CW/CCW legends carry the same remap tint as keymap keys (label
+  // color only — encoders have no inner-remap label path like masked
+  // KeyWidget keys).
   describe('remapped (label color only)', () => {
     it('uses the default label color when remapped is unset', () => {
       const { container } = render(

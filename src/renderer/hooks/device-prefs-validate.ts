@@ -71,12 +71,13 @@ function validateRomajiDetailSettings(raw: unknown): RomajiDetailSettings | unde
     }
     if (styles.length > 0) result.disabledStyles = styles
   }
-  // guideLineCount takes precedence when present and valid; otherwise fall
-  // back to a legacy guideWordCount (pre-rename field, same 0-3 int range
-  // and "0 = hidden" meaning) so a persisted config written before the
-  // rename doesn't silently lose its explicit guide setting. A malformed
-  // value in either field is simply dropped (falls through to "not set" /
-  // the modal's default of 1), same as every other field here.
+  // guideLineCount takes precedence when present and valid; otherwise falls
+  // back to guideWordCount — the field name older configs on disk use for
+  // the same 0-3 int range and "0 = hidden" meaning — so a config saved by
+  // an older build doesn't silently lose its explicit guide setting. A
+  // malformed value in a field is dropped; only when neither field
+  // supplies a valid value is the setting left unset (the modal then
+  // defaults to 1).
   if (
     typeof obj.guideLineCount === 'number'
     && Number.isInteger(obj.guideLineCount)
@@ -106,21 +107,19 @@ function validateRomajiDetailSettings(raw: unknown): RomajiDetailSettings | unde
 }
 
 /** Validates `config.weakSpot` (Weak Spot Settings modal fields)
- *  field-by-field, mirroring `validateRomajiDetailSettings` exactly: an
+ *  field-by-field, mirroring `validateRomajiDetailSettings`: an
  *  unknown/out-of-range field is dropped individually (falls back to its
  *  own default at read time — see weak-spot-settings.ts's
  *  `resolveWeakSpotDetectionSettings`/`resolveWeakSpotBiasRatio`) rather
  *  than rejecting the whole nested object, so a stray/corrupted field
  *  never takes out fields that did validate. Returns undefined when `raw`
- *  isn't a plausible object, or every field turned out invalid. A single
- *  membership check (`spec.options.includes(value)`) against
- *  `WEAK_SPOT_FIELD_SPECS` replaces 8 hand-written per-field range checks
- *  — this ALSO closes a real gap the old min/max range checks had: the
- *  modal's selects have a discrete STEP (e.g. slownessRatio 0.1,
- *  stallMultiple 0.5), so a persisted value that passed the old range
- *  check but landed between two steps (e.g. `stallMultiple: 1.7`) matched
- *  no `<option>` and rendered an unselected select; membership against the
- *  exact option set can't admit an off-step value in the first place. */
+ *  isn't a plausible object, or every field turned out invalid. Validation
+ *  is a membership check (`spec.options.includes(value)`) against
+ *  `WEAK_SPOT_FIELD_SPECS`, not a min/max range check: each field's modal
+ *  control is a fixed set of option buttons (e.g. `stallMultiple` only
+ *  offers 1.5/2/2.5/3/4), so a value that would pass a plain range check
+ *  but falls between two of those options (e.g. `stallMultiple: 1.7`)
+ *  matches none of the buttons and is rejected by this membership check. */
 function validateWeakSpotDetailSettings(raw: unknown): WeakSpotDetailSettings | undefined {
   if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return undefined
   const obj = raw as Record<string, unknown>

@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Shared types for the three pack-management modals (Language Packs,
-// Theme Packs, Key Labels). Phase 1 of the pack-modal-unification plan
-// extracts the common shell (PackManagerModal / PackListRow /
-// PackHubTab) while keeping every existing per-feature asymmetry
-// (delete cascade, hub search ordering, installed-detection, columns,
-// drag) exactly as it behaves today.
+// Theme Packs, Key Labels) and their common shell (`PackManagerModal`).
+// Each modal keeps its own delete cascade and row columns on top of this
+// shared shape.
 
 /** Inline per-row success/error feedback shown under the Hub action line. */
 export interface PackActionResult {

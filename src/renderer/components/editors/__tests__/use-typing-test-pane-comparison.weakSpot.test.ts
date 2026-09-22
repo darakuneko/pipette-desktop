@@ -7,8 +7,9 @@
 // of the current run — not off the raw toggle (isWeakSpotTrainingActive):
 // a saved result only ever sets the flag when the run's OWN
 // state.weakSpotProfile snapshot was actually non-null
-// (use-typing-test-result-save.ts). With the toggle on but the keystroke
-// gate unmet, keying off the toggle alone would carry `|weakspot` on the
+// (use-typing-test-result-save.ts). With the toggle on but the weak-token
+// gate (resolveWeakSpotProfileArg, useTypingTest.ts) unmet, keying off
+// the toggle alone would carry `|weakspot` on the
 // live key while every comparable saved result (including this exact
 // run's own) never does, breaking PB/comparison
 // grouping. This exercises the REAL useTypingTest + useTypingTestPaneComparison

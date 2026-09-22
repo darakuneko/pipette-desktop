@@ -792,9 +792,10 @@ describe('KeyPopover — LT/SH_T/LM wrapper modes', () => {
 // `key` it hands `<KeyPopover>` (via `popoverInstanceKey`) as the edit target
 // moves — layer is *not* part of that key (see the next describe block for
 // that case). These tests simulate the same `key` change directly on
-// `KeyPopover` and check the popover's own internal state — the regression
-// this closes left `wrapperMode`/`selectedLayer`/`pendingAction`/`activeTab`/
-// the search box behind on the previous target.
+// `KeyPopover` and check the popover's own internal state: advancing to a
+// new target must re-derive `wrapperMode`, drop any buffered
+// `pendingAction`, return `activeTab` to Key, and re-seed the search box
+// from the new target.
 // ---------------------------------------------------------------------------
 
 describe('KeyPopover — remount on Auto Move advance (key prop change)', () => {

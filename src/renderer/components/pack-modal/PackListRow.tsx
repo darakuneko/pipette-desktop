@@ -15,9 +15,11 @@
 //     different wrapper classes, so it is passed through as-is rather
 //     than decomposed into badge/hubActions).
 //
-// The shape discriminator isn't load-bearing API, just today's
-// cheapest way to keep three rows' worth of pre-existing markup
-// pixel-identical.
+// The shape discriminator isn't load-bearing API — it just selects
+// which of the two layouts above a given row (LanguageInstalledRow and
+// ThemePackRow.tsx's PackRow: "stacked"; KeyLabelsInstalledTable.tsx's
+// InstalledRowView: "sideColumn")
+// renders through.
 
 import type { ReactNode } from 'react'
 

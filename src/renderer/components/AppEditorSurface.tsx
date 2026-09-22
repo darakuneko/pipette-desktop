@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The connected-view editor surface: the overlay's Import row
 // (`toolsExtra`), File tab (`dataPanel`), and the `editor-content` div
-// wrapping the ~130-prop KeymapEditor itself. Split out of App.tsx — this
-// is the highest-traffic e2e surface in the app, so the `editor-content`
-// testid div and its style-based (never conditional-render) visibility
-// toggle move verbatim.
+// wrapping KeymapEditor itself. `editor-content` is the highest-traffic
+// e2e testid in the app. Within this component the div renders
+// unconditionally — the view→edit transition hides it via
+// `style={{ display: 'none' }}` rather than unmounting it — while App
+// itself still swaps the whole surface out for the Analyze page and the
+// disconnected view, so e2e waits on the div appearing as its connection
+// signal (see e2e/helpers/test-device.ts).
 
 import { useCallback, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
