@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Shared PDF key-drawing helpers extracted from pdf-export.ts
+// Shared PDF key-drawing helpers.
 
 import { jsPDF } from 'jspdf'
 import type { Matrix } from 'jspdf'

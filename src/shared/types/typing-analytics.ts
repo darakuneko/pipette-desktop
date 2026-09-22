@@ -509,8 +509,7 @@ export interface TypingDurationCell {
   sumSq: number
 }
 
-/** Phase 1 metrics for the Layout Comparison. Bigram-derived ones
- * (travel distance / SFB) are added in Phase 2. */
+/** Metrics for the Layout Comparison. */
 export type LayoutComparisonMetric =
   | 'fingerLoad'
   | 'handBalance'
