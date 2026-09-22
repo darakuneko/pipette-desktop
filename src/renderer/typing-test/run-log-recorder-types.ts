@@ -32,11 +32,11 @@ export interface RunLogRecordContext {
   windowFocused: boolean
   /** Whether kana direct-input mode (kana-input.ts) is active for the
    *  current run — read only by `recordMatrixPress`'s `producesChar`
-   *  check. Optional/defaults to false so every existing call site
-   *  (romaji/verbatim runs, and every pre-existing test) is unaffected;
-   *  only the kana-aware caller in use-typing-analytics-sink.ts sets it.
-   *  See `producesChar`'s own doc comment in keycode-char-map.ts for why
-   *  a JIS-position keycode (KC_RO, KC_JYEN, ...) needs this to be
+   *  check. Optional/defaults to false: `mayProduceChar` only ORs in the
+   *  kana-position check when this is `true`, so romaji/verbatim runs are
+   *  unaffected; the kana-aware caller in use-typing-analytics-sink.ts
+   *  sets it. See `producesChar`'s own doc comment in keycode-char-map.ts
+   *  for why a JIS-position keycode (KC_RO, KC_JYEN, ...) needs this to be
    *  recognized as char-producing ONLY while kana mode is actually the
    *  one typing through it — outside kana mode those same keycodes
    *  correctly stay non-char-producing for verbatim/romaji runs. */

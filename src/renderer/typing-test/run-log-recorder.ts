@@ -80,20 +80,22 @@
  *  advance the buffer but never a 'matrix' one): a matrix analytics event
  *  can physically arrive up to TAPPING_TERM after the press that produced
  *  it (queued behind an unresolved tap-hold classification — see
- *  useTypingTest.ts's own comment on the ordering queue), so letting it
- *  advance the buffer here risked resurrecting an already-abandoned run
- *  with a stale, unrelated press. A 'char' DOM event has no such
+ *  matrix-analytics-queue.ts's header and use-typing-test-matrix.ts's own
+ *  comment on the tap-hold wait), so letting it
+ *  advance the buffer here would risk resurrecting an already-abandoned
+ *  run with a stale, unrelated press. A 'char' DOM event has no such
  *  ordering queue — it is dispatched synchronously at keydown and reaches
- *  `record` immediately, so it can never be stale in that sense. Without
- *  this asymmetry a fresh run's very first keystroke was lost outright
- *  whenever its char arrived (the usual ordering) before ANY buffer
- *  existed: `record` refused to touch an absent buffer, `noteRegistration`
- *  (matrix-only) hadn't run yet either, so the char had nowhere to go —
- *  the following press then had to wait in `awaitingChar` for a char that
- *  would never come, permanently shifting every later confirmation by
- *  one. Only `noteRegistration` and a live 'char' payload may mint/
- *  advance the buffer now; `record`'s 'matrix'/'matrix-release' branches
- *  keep the original drop-on-absent/mismatch behavior. */
+ *  `record` immediately, so it can never be stale in that sense. With a
+ *  symmetric rule (neither kind allowed to mint the buffer), a fresh
+ *  run's very first keystroke would be lost outright whenever its char
+ *  arrives (the usual ordering) before ANY buffer exists: `record` would
+ *  refuse to touch an absent buffer, and `noteRegistration` (matrix-only)
+ *  would not have run yet either, so the char would have nowhere to go —
+ *  the following press would then wait in `awaitingChar` for a char that
+ *  never comes, misaligning the confirmations that follow.
+ *  Only `noteRegistration` and a live 'char' payload may mint/advance the
+ *  buffer; `record`'s 'matrix'/'matrix-release' branches drop on
+ *  absent/mismatch instead. */
 
 import type { TypingAnalyticsEventPayload } from '../../shared/types/typing-analytics'
 import type { RunKeystroke, RunKeystrokeLog, RunWord } from '../../shared/types/typing-run-log'
@@ -243,9 +245,9 @@ export class RunLogRecorder {
       // A 'char' payload may mint/advance the buffer here — see the
       // module doc comment's ASYMMETRIC STALENESS note for why this is
       // safe for 'char' specifically (never stale, unlike 'matrix'/
-      // 'matrix-release', which keep the original drop-on-absent/
-      // mismatch behavior below): only `noteRegistration` or a live
-      // 'char' payload may advance the buffer to a new run.
+      // 'matrix-release', which drop on absent/mismatch below): only
+      // `noteRegistration` or a live 'char' payload may advance the
+      // buffer to a new run.
       if (payload.kind !== 'char') return
       this.buffer = this.newBuffer(context.runId)
     }
@@ -359,8 +361,8 @@ export class RunLogRecorder {
   }
 
   /** `recordMatrixRelease` bypasses the tap-hold ordering queue (see
-   *  useTypingTest.ts's own comment on why release events ship straight
-   *  through `emit`), while the matching 'matrix' PRESS event for a
+   *  use-typing-test-matrix.ts's own comment on why release events ship
+   *  straight through `emit`), while the matching 'matrix' PRESS event for a
    *  masked key can still be sitting in that queue awaiting its tap/hold
    *  classification — so a release can physically arrive here before
    *  `recordMatrixPress` has ever run for its own press. Parking it

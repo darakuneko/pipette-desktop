@@ -39,7 +39,8 @@ export function formatConditionLabel(result: TypingTestResult, t: (key: string) 
       // mode2 is a composite `language|pattern|lineCount-or-duration`
       // (see deriveMode2) so the label distinguishes a 5-line run from a
       // 120s run of the same pack. Legacy rows stored the bare language in
-      // mode2 — fall back to the old label.
+      // mode2 (no `|` segments) — fall back to a plain "tatoeba (language)"
+      // label with no pattern/count.
       const raw = String(result.mode2 ?? language)
       const parts = raw.split('|')
       const tatoeba = t('editor.typingTest.history.conditionTatoeba')

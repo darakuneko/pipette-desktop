@@ -130,8 +130,7 @@ function kanaAt(kana: readonly string[], index: number): string | undefined {
  *  digraph option is safe because the decomposed single-kana + small-kana
  *  path is always available as a fallback segmentation (see the
  *  SPELLING_STYLES header comment). Returns `patterns` unchanged (no
- *  allocation) when nothing is disabled, so the no-opts path used by every
- *  pre-existing call site is exactly as before. */
+ *  allocation) when nothing is disabled. */
 function filterByStyle(
   scope: string,
   patterns: readonly string[],

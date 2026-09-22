@@ -217,14 +217,14 @@ describe('evaluateTokenWeakness — combined signals', () => {
 
 describe('DEFAULT_* pin — Weak Spot Settings modal defaults', () => {
   // The Weak Spot Settings modal (WeakSpotSettingsModal.tsx) interpolates
-  // the CURRENT config's resolved values into its description text, so a
-  // literal-copy pin no longer applies — but the modal's documented
-  // default table (missThreshold 2, slownessRatio 1.5×, stallRate 20%,
-  // stallMultiple 2×, minTimingSamples 15) still depends on these DEFAULT_*
-  // constants staying put, since weak-spot-settings.ts's field spec table
-  // resolves an absent field straight from them. If any of these assertions
-  // fails, update the documented default table (OPERATION-GUIDE) in
-  // lockstep.
+  // the CURRENT config's resolved values into its description text, so
+  // this test pins the DEFAULT_* constants themselves rather than the
+  // modal's rendered text. The modal's documented default table
+  // (missThreshold 2, slownessRatio 1.5×, stallRate 20%, stallMultiple 2×,
+  // minTimingSamples 15) depends on these DEFAULT_* constants staying put,
+  // since weak-spot-settings.ts's field spec table resolves an absent
+  // field straight from them. If any of these assertions fails, update the
+  // documented default table (OPERATION-GUIDE) in lockstep.
   it('pins the DEFAULT_* constants the modal falls back to', () => {
     expect(DEFAULT_MIN_MISS_COUNT).toBe(2)
     expect(DEFAULT_MIN_TIMING_OBSERVATIONS).toBe(15)

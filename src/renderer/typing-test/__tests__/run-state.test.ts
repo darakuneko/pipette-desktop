@@ -222,12 +222,12 @@ describe('advanceAfterWord — weakSpotProfile threading', () => {
   })
 })
 
-// refillTimeModeWords used to derive its repeat-avoidance seed from
-// `words[words.length - 1]` — the DECORATED batch tail — instead of the
-// separately-tracked RAW word. advanceAfterWord is
-// the one place that threads `state.lastRawWord` in (word-supply.test.ts
-// covers refillTimeModeWords's own seed-comparison behavior directly);
-// this covers the state-level round trip.
+// advanceAfterWord seeds refillTimeModeWords's repeat-avoidance with
+// `state.lastRawWord` (RAW, pre-decoration), never a word derived from the
+// decorated `words` tail — see `seedLastRawWord`'s own doc comment in
+// word-supply.ts. word-supply.test.ts covers refillTimeModeWords's own
+// seed-comparison behavior directly; this covers advanceAfterWord
+// threading the seed through.
 describe('advanceAfterWord — lastRawWord threading', () => {
   const punctuatedConfig: TypingTestConfig = { mode: 'time', duration: 30, punctuation: true, numbers: false }
 

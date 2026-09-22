@@ -125,17 +125,19 @@ describe('conditionKey', () => {
   })
 })
 
-// conditionKey used to key weakSpotTrainingMode straight off the raw
-// config toggle (isWeakSpotTrainingActive), but a saved result only
-// ever sets weakSpotTrainingMode when the run's OWN state.weakSpotProfile
-// snapshot was non-null (use-typing-test-result-save.ts — the toggle can be
-// on while the keystroke gate isn't met, in which case the run samples
-// normally and saves with NO flag). Without an effective-state override, the
-// toggle-on/gate-unmet live key would carry `|weakspot` while every
-// comparable saved result (including the one this exact run produces) never
-// does — breaking PB/comparison grouping for that state. `opts.weakSpotActive`
-// lets a caller with a live run (use-typing-test-pane-comparison.ts) supply
-// the effective signal instead.
+// conditionKey must key weakSpotTrainingMode off opts.weakSpotActive (the
+// run's effective bias state) when given, not the raw config toggle
+// (isWeakSpotTrainingActive): a saved result only ever sets
+// weakSpotTrainingMode when the run's OWN state.weakSpotProfile snapshot
+// was non-null (use-typing-test-result-save.ts — the toggle can be on
+// while the weak-token gate (resolveWeakSpotProfileArg, useTypingTest.ts)
+// isn't met, in which case the run samples normally and saves with NO
+// flag). Without opts.weakSpotActive, a
+// toggle-on/gate-unmet live key would carry `|weakspot` while the
+// comparable saved result never does — breaking PB/comparison grouping for
+// that state. `opts.weakSpotActive` lets a caller with a live run
+// (use-typing-test-pane-comparison.ts) supply the effective signal instead
+// of the toggle-only fallback.
 describe('conditionKey — weakSpotActive override (effective gate signal, not the raw toggle)', () => {
   const weakSpotToggleOn: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTrainingMode: true }
   const weakSpotToggleOff: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, weakSpotTrainingMode: false }
@@ -417,12 +419,11 @@ describe('computeComparison', () => {
 })
 
 describe('configKey backward compatibility (kanaInput must not reshape existing keys)', () => {
-  // Regression coverage: configKey used to append an UNCONDITIONAL 7th
-  // `|${kanaInput ?? false}` segment, which changed every non-kana result's
-  // key at once and silently orphaned every comparison-baseline preference
-  // saved before kana mode existed (they're stored keyed by this exact
-  // string — see TypingTestComparisonBaselines/use-typing-test-pane-comparison.ts).
-  // The fix appends a `|kana` segment ONLY when kanaInput is true.
+  // configKey appends a `|kana` segment only when kanaInput is true — see
+  // its own doc comment in result-builder.ts for why (it's also the
+  // storage key for TypingTestComparisonBaselines). These tests pin the
+  // exact literal key shapes for a non-kana and a kana run, and confirm a
+  // legacy (pre-kana) baseline key still resolves for a live non-kana run.
 
   it('a non-kana run\'s key is byte-identical to the pre-kana literal shape (hardcoded, not re-derived)', () => {
     expect(configKey(makeResult())).toBe('words|30|english|false|false|false')
@@ -446,8 +447,9 @@ describe('configKey backward compatibility (kanaInput must not reshape existing 
 })
 
 describe('configKey backward compatibility (weakSpotTrainingMode must not reshape existing keys)', () => {
-  // Same regression shape as the kanaInput block above — weakSpotTrainingMode
-  // appends a `|weakspot` segment ONLY when true.
+  // Same key-shape rule as the kanaInput block above (see result-builder.ts's
+  // configKey doc comment) — weakSpotTrainingMode appends a `|weakspot`
+  // segment ONLY when true.
 
   it('a non-weak-spot run\'s key is byte-identical to the pre-weak-spot literal shape (hardcoded, not re-derived)', () => {
     expect(configKey(makeResult())).toBe('words|30|english|false|false|false')

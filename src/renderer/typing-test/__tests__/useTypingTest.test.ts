@@ -28,16 +28,15 @@ function pressKeys(keys: string[]): Set<string> {
  *  queue) — see UseTypingTestOptions. These tests only exercise
  *  useTypingTest's own queueing/ordering/tap-hold logic, not the gating a
  *  real caller (useInputModes) layers on top, so prepare here always
- *  authorizes (opaque token `true`) and emit forwards the bare payload —
- *  reproducing the single-argument `sink(payload)` shape these tests were
- *  written against.
+ *  authorizes (opaque token `true`) and emit forwards the bare payload,
+ *  giving every sink callback in this file the single-argument
+ *  `sink(payload)` shape.
  *
- *  `kind: 'matrix-release'` events are filtered out by default: every
- *  pre-existing test in this file was written against a world where a
- *  release edge never produced its own event, and pinning that behavior
- *  means those assertions (call counts especially) must keep seeing
- *  exactly what they saw before. Tests that specifically cover the
- *  duration/release emit opt in via `includeReleases: true`. */
+ *  `kind: 'matrix-release'` events are filtered out by default: this
+ *  file's tests assert exact `sink` call counts for press/char events, so
+ *  a release event landing unfiltered in the same sink would shift those
+ *  counts. Tests that specifically cover the duration/release emit opt in
+ *  via `includeReleases: true`. */
 function analyticsOptions(
   sink: (payload: TypingAnalyticsEventPayload) => void,
   options?: { includeReleases?: boolean },

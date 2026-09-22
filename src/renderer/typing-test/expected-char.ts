@@ -62,9 +62,8 @@ export function deriveMistakeKey(state: TypingTestState, config: TypingTestConfi
  *  `kanaStrokeCorrect`'s own doc comment in kana-input.ts for WHY kana
  *  mode needs this instead of the default `key === expectedChar` string
  *  comparison). Undefined for every mode but kana — including when kana
- *  mode isn't active at all — so `applyCharVerdict` falls through to its
- *  existing default comparison completely unchanged for romaji/verbatim
- *  runs. */
+ *  mode isn't active at all — so `applyCharVerdict` uses its default
+ *  `key === expectedChar` comparison for romaji/verbatim runs. */
 export function deriveKanaCorrectOverride(
   state: TypingTestState, config: TypingTestConfig, language: string, key: string, code: string | undefined, shift: boolean,
 ): boolean | undefined {

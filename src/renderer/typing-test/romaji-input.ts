@@ -71,12 +71,12 @@ export function isKanaInputSelected(config: TypingTestConfig): boolean {
 }
 
 /** The three keystroke-judging methods a Japanese-capable config can be
- *  set to: 'direct' (plain verbatim typing, both engines off — what
- *  `romajiInput: false` already meant), 'romaji', or 'kana'. Purely a
- *  read-side view for the settings UI's single 3-way selector — the
- *  persisted shape is unchanged (still `romajiInput` + `romaji.inputMethod`,
- *  the same two fields `isRomajiInputActive`/`isKanaInputActive`
- *  (kana-input.ts) already read); see `resolveJapaneseInputMethod`. */
+ *  set to: 'direct' (plain verbatim typing, both engines off —
+ *  `romajiInput: false`), 'romaji', or 'kana'. The settings modal's single
+ *  3-way selector's representation (RomajiSettingsModal.tsx reads and
+ *  writes it) — persisted as `romajiInput` + `romaji.inputMethod`, the
+ *  same two fields `isRomajiInputActive`/`isKanaInputActive`
+ *  (kana-input.ts) read; see `resolveJapaneseInputMethod`. */
 export type JapaneseInputMethod = 'direct' | 'romaji' | 'kana'
 
 /** Derives the unified 3-way selection from the config's existing

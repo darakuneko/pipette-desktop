@@ -128,17 +128,13 @@ describe('refillTimeModeWords', () => {
     }
   })
 
-  // refillTimeModeWords used to seed its own repeat-avoidance with
-  // `words[words.length - 1]` — the DECORATED tail of the PREVIOUS batch (post
-  // injectPunctuation/injectNumbers) — while sampleWords always compares that
-  // seed against RAW candidates pulled straight from the language word list. A
-  // decorated seed (capitalized / trailing punctuation / digit-replaced)
-  // almost never string-matches a raw candidate, so the anti-repeat check
-  // silently became a no-op across every refill boundary whenever
-  // punctuation/numbers was on — a refill could immediately re-draw the exact
-  // same source word that just ended the previous batch. The fix threads the
-  // RAW word via `WordsForConfig.lastRawWord`/`TypingTestState.lastRawWord`
-  // instead of reading it off the decorated `words` tail.
+  // refillTimeModeWords seeds its repeat-avoidance with the RAW
+  // (pre-decoration) word, not the decorated `words` tail of the previous
+  // batch — see `seedLastRawWord`'s own doc comment in word-supply.ts for
+  // why: sampleWords always compares that seed against RAW candidates
+  // pulled straight from the language word list, and a decorated seed
+  // (capitalized / trailing punctuation / digit-replaced) would almost
+  // never string-match one.
   it('with punctuation ON, a refill never repeats the previous batch\'s RAW source word at the boundary', async () => {
     // Normalizes ONLY for this test's own comparison (never in production
     // code) — strips capitalization (injectPunctuation always capitalizes

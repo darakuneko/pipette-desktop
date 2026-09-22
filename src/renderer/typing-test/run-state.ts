@@ -76,9 +76,9 @@ export interface TypingTestState {
   kspcUncomputable: boolean
   currentQuote: Quote | null
   wpmHistory: number[]
-  /** Word indices that end a line (imported fileImport text only). At these
-   *  words Enter advances; elsewhere Space advances. Empty for every other
-   *  mode, so their submit behaviour is unchanged. */
+  /** Word indices that end a line (imported fileImport text and tatoeba
+   *  runs). At these words Enter advances; elsewhere Space advances. Empty
+   *  for the other modes. */
   lineBreaks: Set<number>
   /** Leading whitespace per logical line (imported fileImport text, display only).
    *  Indexed by line order; empty for every other mode. */

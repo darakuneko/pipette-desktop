@@ -292,9 +292,10 @@ describe('RunLogRecorder', () => {
       const recorder = new RunLogRecorder()
       // A keystroke buffered before meta.startedAtMs — the shape a
       // pause/resume startTime rebase would produce if the recorder's
-      // buffer were ever resurrected across a pause (it no longer is,
-      // see pauseTypingTest's discard() call, but this guard stays as
-      // defense in depth).
+      // buffer were ever resurrected across a pause. It never is:
+      // useInputModes's pauseTypingTest calls discardRun(), which poisons
+      // the runId so it can't be re-buffered — but this guard stays as
+      // defense in depth.
       register(recorder, 'run-1', 0, 0, 900, 0, 'a')
       recorder.record(ctx(), matrixPress({ ts: 900 }))
       register(recorder, 'run-1', 0, 1, 1100, 0, 'b')
