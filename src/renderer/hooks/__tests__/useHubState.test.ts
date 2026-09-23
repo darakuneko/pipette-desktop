@@ -327,4 +327,136 @@ describe('useHubState favorite Hub operation lock', () => {
     expect(mockHubPatchPost).toHaveBeenCalledTimes(2)
     expect(mockHubPatchPost).toHaveBeenLastCalledWith({ postId: 'post-1', title: 'Third' })
   })
+
+  it('releases the lock when the favorite list rejects during a remove', async () => {
+    mockFavoriteStoreList
+      .mockRejectedValueOnce(new Error('list failed'))
+      .mockResolvedValue({ success: true, entries: entriesWith({ hubPostId: 'post-1' }) })
+    mockHubDeletePost.mockResolvedValue({ success: true })
+
+    const { result } = renderHook(() => useHubState(baseOptions(5)))
+
+    await act(async () => {
+      await expect(result.current.handleFavRemoveFromHub('tapDance', 'e1')).rejects.toThrow('list failed')
+    })
+    expect(mockHubDeletePost).not.toHaveBeenCalled()
+    expect(result.current.favHubUploading).toBeNull()
+
+    await act(async () => {
+      await result.current.handleFavRemoveFromHub('tapDance', 'e1')
+    })
+    expect(mockHubDeletePost).toHaveBeenCalledTimes(1)
+  })
+
+  it('releases the lock when the locked favorite list rejects during an update', async () => {
+    // The update handler reads the list once before taking the lock and
+    // once more inside it; only the second read runs under the lock.
+    mockFavoriteStoreList
+      .mockResolvedValueOnce({ success: true, entries: entriesWith({ hubPostId: 'post-1' }) })
+      .mockRejectedValueOnce(new Error('list failed'))
+      .mockResolvedValue({ success: true, entries: entriesWith({ hubPostId: 'post-1' }) })
+    mockRequestUploadOptions.mockResolvedValue({ visibility: 'public', expiresInDays: null })
+    mockHubUpdateFavoritePost.mockResolvedValue({ success: true, postId: 'post-1' })
+
+    const { result } = renderHook(() => useHubState(baseOptions(5)))
+
+    await act(async () => {
+      await expect(result.current.handleFavUpdateOnHub('tapDance', 'e1')).rejects.toThrow('list failed')
+    })
+    expect(mockHubUpdateFavoritePost).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await result.current.handleFavUpdateOnHub('tapDance', 'e1')
+    })
+    expect(mockHubUpdateFavoritePost).toHaveBeenCalledTimes(1)
+  })
+
+  it('releases the lock when the entry is missing from the list', async () => {
+    mockFavoriteStoreList
+      .mockResolvedValueOnce({ success: true, entries: [] })
+      .mockResolvedValue({ success: true, entries: entriesWith({ hubPostId: 'post-1' }) })
+    mockHubDeletePost.mockResolvedValue({ success: true })
+
+    const { result } = renderHook(() => useHubState(baseOptions(5)))
+
+    await act(async () => {
+      await result.current.handleFavRemoveFromHub('tapDance', 'e1')
+    })
+    expect(mockHubDeletePost).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await result.current.handleFavRemoveFromHub('tapDance', 'e1')
+    })
+    expect(mockHubDeletePost).toHaveBeenCalledTimes(1)
+  })
+
+  it('releases the lock when the entry is not linked to the Hub', async () => {
+    mockFavoriteStoreList
+      .mockResolvedValueOnce({ success: true, entries: entriesWith() })
+      .mockResolvedValue({ success: true, entries: entriesWith({ hubPostId: 'post-1' }) })
+    mockHubDeletePost.mockResolvedValue({ success: true })
+
+    const { result } = renderHook(() => useHubState(baseOptions(5)))
+
+    await act(async () => {
+      await result.current.handleFavRemoveFromHub('tapDance', 'e1')
+    })
+    expect(mockHubDeletePost).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await result.current.handleFavRemoveFromHub('tapDance', 'e1')
+    })
+    expect(mockHubDeletePost).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears the uploading state and releases the lock after a failed operation', async () => {
+    mockFavoriteStoreList.mockResolvedValue({ success: true, entries: entriesWith({ hubPostId: 'post-1' }) })
+    mockHubDeletePost
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValue({ success: true })
+
+    const { result } = renderHook(() => useHubState(baseOptions(5)))
+
+    await act(async () => {
+      await result.current.handleFavRemoveFromHub('tapDance', 'e1')
+    })
+    expect(result.current.favHubUploading).toBeNull()
+    expect(result.current.favHubUploadResult).toEqual({ kind: 'error', message: 'hub.removeFailed', entryId: 'e1' })
+
+    await act(async () => {
+      await result.current.handleFavRemoveFromHub('tapDance', 'e1')
+    })
+    expect(mockHubDeletePost).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps the active call\'s lock and uploading state when a concurrent call is skipped', async () => {
+    mockFavoriteStoreList.mockResolvedValue({ success: true, entries: entriesWith({ hubPostId: 'post-1' }) })
+    const first = deferred<{ success: boolean }>()
+    mockHubDeletePost.mockReturnValueOnce(first.promise).mockResolvedValue({ success: true })
+
+    const { result } = renderHook(() => useHubState(baseOptions(5)))
+
+    let firstCall!: Promise<void>
+    act(() => {
+      firstCall = result.current.handleFavRemoveFromHub('tapDance', 'e1')
+    })
+    await waitFor(() => expect(result.current.favHubUploading).toBe('e1'))
+
+    await act(async () => {
+      await result.current.handleFavRemoveFromHub('tapDance', 'e1')
+    })
+    expect(result.current.favHubUploading).toBe('e1')
+
+    await act(async () => {
+      await result.current.handleFavRemoveFromHub('tapDance', 'e1')
+    })
+    expect(mockHubDeletePost).toHaveBeenCalledTimes(1)
+    expect(result.current.favHubUploading).toBe('e1')
+
+    await act(async () => {
+      first.resolve({ success: true })
+      await firstCall
+    })
+    expect(result.current.favHubUploading).toBeNull()
+  })
 })

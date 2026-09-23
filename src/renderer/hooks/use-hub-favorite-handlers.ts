@@ -68,20 +68,21 @@ export function useHubFavoriteHandlers(options: Options) {
   ) => {
     if (favHubUploadingRef.current) return
     favHubUploadingRef.current = true
-
-    const listResult = await window.vialAPI.favoriteStoreList(type)
-    const entry = listResult.entries?.find((e: SavedFavoriteMeta) => e.id === entryId)
-    if (!entry || (requireLinked && !entry.hubPostId && !entry.hubPrivate)) {
-      favHubUploadingRef.current = false
-      return
-    }
-
-    setFavHubUploading(entryId)
-    setFavHubUploadResult(null)
+    // Every exit past this point — including a rejected list read, which
+    // still propagates to the caller — must release the lock, or all
+    // favorite Hub operations stay ignored until this hook remounts.
+    let markedUploading = false
     try {
+      const listResult = await window.vialAPI.favoriteStoreList(type)
+      const entry = listResult.entries?.find((e: SavedFavoriteMeta) => e.id === entryId)
+      if (!entry || (requireLinked && !entry.hubPostId && !entry.hubPrivate)) return
+
+      setFavHubUploading(entryId)
+      markedUploading = true
+      setFavHubUploadResult(null)
       await operation(entry)
     } finally {
-      setFavHubUploading(null)
+      if (markedUploading) setFavHubUploading(null)
       favHubUploadingRef.current = false
     }
   }, [])
