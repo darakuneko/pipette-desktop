@@ -85,13 +85,15 @@ describe('useDismissErrorResult', () => {
     expect(result.current.lastResult).toBeNull()
   })
 
-  it('does not let a timer armed for an earlier result clear a newer one', () => {
+  it('gives a replaced error result its own full lifetime', () => {
     const { result } = renderWithState(error('a', 'first'))
     act(() => { vi.advanceTimersByTime(ERROR_DISMISS_MS / 2) })
     const newer = error('b', 'second')
     act(() => { result.current.setLastResult(newer) })
     act(() => { vi.advanceTimersByTime(ERROR_DISMISS_MS / 2) })
     expect(result.current.lastResult).toBe(newer)
+    act(() => { vi.advanceTimersByTime(ERROR_DISMISS_MS / 2) })
+    expect(result.current.lastResult).toBeNull()
   })
 
   it('clears its timer on unmount', () => {

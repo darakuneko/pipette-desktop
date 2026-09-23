@@ -895,22 +895,29 @@ describe('KeyLabelsModal', () => {
       expect(screen.getByTestId('key-labels-result-b').textContent).toBe('common.saved')
     })
 
-    it('closing and reopening the modal shows no stale error or row result', async () => {
-      metas = [meta({ id: 'mine', name: 'Mine', uploaderName: 'me' })]
-      hubUpload.mockResolvedValueOnce({ success: false, error: 'network error' })
+    it('closing and reopening the modal shows no stale error banner', async () => {
       importFromFile.mockResolvedValueOnce({
         success: true,
         data: { imported: [], rejections: [{ fileName: 'dup.json', errorCode: 'DUPLICATE_NAME', error: 'dup' }] },
       })
       const onClose = vi.fn()
       const { rerender } = render(<KeyLabelsModal open onClose={onClose} currentDisplayName="me" hubCanWrite />)
-      fireEvent.click(screen.getByTestId('key-labels-upload-mine'))
-      await waitFor(() => expect(screen.getByTestId('key-labels-result-mine')).toBeTruthy())
       fireEvent.click(screen.getByTestId('key-labels-import-button'))
       await waitFor(() => expect(screen.getByTestId('key-labels-error')).toBeTruthy())
       rerender(<KeyLabelsModal open={false} onClose={onClose} currentDisplayName="me" hubCanWrite />)
       rerender(<KeyLabelsModal open onClose={onClose} currentDisplayName="me" hubCanWrite />)
       expect(screen.queryByTestId('key-labels-error')).toBeNull()
+    })
+
+    it('closing and reopening the modal shows no stale row error badge', async () => {
+      metas = [meta({ id: 'mine', name: 'Mine', uploaderName: 'me' })]
+      hubUpload.mockResolvedValueOnce({ success: false, error: 'network error' })
+      const onClose = vi.fn()
+      const { rerender } = render(<KeyLabelsModal open onClose={onClose} currentDisplayName="me" hubCanWrite />)
+      fireEvent.click(screen.getByTestId('key-labels-upload-mine'))
+      await waitFor(() => expect(screen.getByTestId('key-labels-result-mine')).toBeTruthy())
+      rerender(<KeyLabelsModal open={false} onClose={onClose} currentDisplayName="me" hubCanWrite />)
+      rerender(<KeyLabelsModal open onClose={onClose} currentDisplayName="me" hubCanWrite />)
       expect(screen.queryByTestId('key-labels-result-mine')).toBeNull()
     })
   })
