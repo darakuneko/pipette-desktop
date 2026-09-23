@@ -7,12 +7,12 @@
 // must be clamped to fit the visible area instead of spilling under OS
 // chrome. Seeds a wildly oversized saved windowState directly into
 // config.json (mirrors the on-disk shape loadWindowState() reads), then
-// launches the real app and asserts the *requested* bounds — the ones the
-// app itself asked for — fit inside the current display's work area. Note:
-// the window manager on this Linux CI box also clamps oversized windows on
-// its own, so this only proves the clamp if it asserts on bounds the app
-// requested before the WM had a chance to intervene, which is exactly what
-// BrowserWindow.getBounds() reports from the main process.
+// launches the real app and asserts the window's bounds and minimum size
+// fit inside the current display's work area. BrowserWindow.getBounds()
+// reports the window's current bounds, which the window manager may already
+// have adjusted, so on a WM that clamps oversized windows on its own this
+// test can pass even without the app's clamp. The clamp logic itself is
+// unit-tested in src/main/__tests__/window-bounds.test.ts.
 
 import { test, expect } from '@playwright/test'
 import type { ElectronApplication } from '@playwright/test'
@@ -70,7 +70,7 @@ test.describe.serial('window clamps to the display work area', { tag: '@virtual'
     restoreFile(configBackup)
   })
 
-  test('requested bounds and minimum size fit inside the display work area', async () => {
+  test('window bounds and minimum size fit inside the display work area', async () => {
     const launched = await launchApp({ env: { PIPETTE_VIRTUAL_DEVICE: 'only' } })
     app = launched.app
     const page = launched.page
@@ -93,13 +93,13 @@ test.describe.serial('window clamps to the display work area', { tag: '@virtual'
     const { bounds, minWidth, minHeight, workArea } = geometry
 
     // The seeded windowState requested a 20000x20000 window — confirm the
-    // fix actually shrank it, not merely that the oversized request
+    // window ended up smaller, not merely that the oversized request
     // happened to fit by coincidence.
     expect(bounds.width).toBeLessThan(20000)
     expect(bounds.height).toBeLessThan(20000)
 
-    // The window never requested a size or position spilling past the
-    // work area's right/bottom edge...
+    // The window's current bounds do not spill past the work area's
+    // right/bottom edge...
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(workArea.x + workArea.width)
     expect(bounds.y + bounds.height).toBeLessThanOrEqual(workArea.y + workArea.height)
     // ...nor past its top/left edge.

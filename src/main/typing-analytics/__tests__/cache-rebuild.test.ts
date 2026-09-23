@@ -170,7 +170,7 @@ describe('rebuildCacheFromMasterFiles', () => {
     rmSync(tmpDir, { recursive: true, force: true })
   })
 
-  it('propagates bigram/trigram counters, which were previously dropped from the result', async () => {
+  it('rolls bigram/trigram minutes into the rebuild result', async () => {
     // rebuildCacheFromMasterFiles must roll applyRowsToCache's bigramMinutes
     // and trigramMinutes into its result (both asserted below), so a file
     // carrying bigram/trigram rows is reflected in the rebuild report.

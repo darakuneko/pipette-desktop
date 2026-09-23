@@ -469,7 +469,7 @@ describe('useInputModes — run-log recording', () => {
     expect(totalKeystrokes).toBe(word1.length + word2.length)
   })
 
-  it('discards the buffer on pause, so a resumed-then-finished run saves no raw log (P3)', async () => {
+  it('discards the buffer on pause, so a resumed-then-finished run saves no raw log', async () => {
     // Pause/resume (memory mode) only exists for imported fileImport
     // text — captureMemory() returns null for every other mode, so
     // pauseTypingTest() is a no-op there. Set up a one-word fileImport
