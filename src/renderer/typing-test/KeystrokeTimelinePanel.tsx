@@ -23,9 +23,30 @@ import { useTimelineModel } from './use-timeline-model'
 import { buildTimelineStatItems } from './keystroke-timeline-stats'
 import { MissedTable } from './mistake-summary'
 import { buildMissedDetails } from './missed-details'
-import { CANVAS_MIN_WIDTH_PX, ZOOM_MAX_FACTOR, LEGEND_ORDER, LegendSwatch, lineLegendLabelKey, lineLegendTooltipKey, keystrokeTooltipBody, type Props } from './keystroke-timeline-parts'
+import { LEGEND_ORDER, LegendSwatch, lineLegendLabelKey, lineLegendTooltipKey } from './keystroke-timeline-legend'
+import { keystrokeTooltipBody } from './keystroke-timeline-tooltip'
+import type { TypingTestResult } from '../../shared/types/pipette-settings'
+import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
 
-export function KeystrokeTimelinePanel({ log, result }: Props) {
+/** Floor for the "fit" zoom level's canvas width — a run with a very
+ *  short `maxDisplayMs` (e.g. a single short word) would otherwise
+ *  compute a fit width narrower than the panel itself. */
+const CANVAS_MIN_WIDTH_PX = 480
+/** The zoom slider's max is this many times the fit level — "10x the
+ *  whole run visible at once" comfortably reaches individual-keystroke
+ *  detail without an unbounded range that makes the slider imprecise. */
+const ZOOM_MAX_FACTOR = 10
+
+interface KeystrokeTimelinePanelProps {
+  log: RunKeystrokeLog
+  /** The already-displayed History row for this run, when known — reused
+   *  for the unified stat block so it reads identically to the row the
+   *  user opened this view from, rather than a second, possibly-divergent
+   *  computation over the same run. */
+  result?: TypingTestResult
+}
+
+export function KeystrokeTimelinePanel({ log, result }: KeystrokeTimelinePanelProps) {
   const { t } = useTranslation()
   const { displayMode, wordModel, lineModel, summary, activeMaxDisplayMs, activeCharCorrelationUnavailable } = useTimelineModel(log)
 
@@ -257,7 +278,7 @@ export function KeystrokeTimelinePanel({ log, result }: Props) {
             word ("Overlapped" / "Unjudged" / "Pause") — the
             parenthetical explanation lives in a per-item hover
             tooltip (`LegendSwatch`'s own `tooltipKey`, defined in
-            keystroke-timeline-parts.tsx), rendered PLAIN with no
+            keystroke-timeline-legend.tsx), rendered PLAIN with no
             visual affordance on the label itself (matching every
             other tooltip trigger in this codebase — ErrorMixSection's
             row labels, CoverageBadge, the Missed table's own bar rows —
