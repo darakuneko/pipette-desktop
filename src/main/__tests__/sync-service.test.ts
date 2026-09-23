@@ -246,24 +246,50 @@ async function flushIO(): Promise<void> {
   }
 }
 
+// Fake timers replace `Date` (see FAKE_TIMER_OPTS), so wait deadlines use
+// `performance.now`, which they leave alone. `setImmediate` is not faked
+// either, so yielding with it lets real fs I/O callbacks run between checks.
+const realNow = performance.now.bind(performance)
+const realSetImmediate = setImmediate
+// Kept below vitest's default 5 s test timeout so flushUntil's own
+// "timed out waiting for …" error fires before vitest aborts the test.
+const WAIT_TIMEOUT_MS = 3_000
+
 /**
- * Drains event-loop turns until `predicate` is true, then lets a couple
- * more turns run so any bookkeeping chained after the awaited condition
- * (e.g. remote-state updates that follow a download) settles too.
+ * Yields to the real event loop until `predicate` is true, then lets a
+ * couple more turns run so any bookkeeping chained after the awaited
+ * condition (e.g. remote-state updates that follow a download) settles too.
  *
- * `flushIO`'s fixed 10-turn drain assumes every awaited step resolves on
- * the microtask/`setImmediate` queue. Polling paths that hit real fs I/O
- * (the tests use a real mkdtemp userData dir) resolve via the libuv
- * threadpool instead, so under load a fixed drain can come up short.
- * This does not throw on timeout — it just falls through so the
- * caller's own assertion produces the meaningful failure message.
+ * Polling paths hit real fs I/O (the tests use a real mkdtemp userData
+ * dir), which resolves via the libuv threadpool and is not advanced by
+ * fake timers, so how many turns a pass needs depends on the machine.
+ * The bound is wall-clock time instead, and running out of it throws so a
+ * slow pass fails here rather than as a misleading assertion later.
  */
-async function flushUntil(predicate: () => boolean, maxTurns = 500): Promise<void> {
-  for (let i = 0; i < maxTurns && !predicate(); i++) {
-    await new Promise<void>((resolve) => setImmediate(resolve))
+async function flushUntil(
+  predicate: () => boolean,
+  description = 'condition',
+  timeoutMs = WAIT_TIMEOUT_MS,
+): Promise<void> {
+  const deadline = realNow() + timeoutMs
+  while (!predicate()) {
+    if (realNow() > deadline) {
+      throw new Error(`flushUntil: timed out after ${timeoutMs}ms waiting for ${description}`)
+    }
+    await new Promise<void>((resolve) => realSetImmediate(resolve))
   }
-  await new Promise<void>((resolve) => setImmediate(resolve))
-  await new Promise<void>((resolve) => setImmediate(resolve))
+  await new Promise<void>((resolve) => realSetImmediate(resolve))
+  await new Promise<void>((resolve) => realSetImmediate(resolve))
+}
+
+/**
+ * Waits until no poll pass (or other sync) holds the sync lock.
+ * `setInterval` starts each poll with `void pollForRemoteChanges()`, so
+ * advancing fake time never awaits the pass itself; the lock is released
+ * in the pass's `finally`, which makes it the observable end of a pass.
+ */
+async function waitForSyncIdle(): Promise<void> {
+  await flushUntil(() => !isSyncInProgress(), 'the sync lock to be released')
 }
 
 function makeRemoteEnvelope(
@@ -375,9 +401,19 @@ describe('sync-service', () => {
   })
 
   afterEach(async () => {
-    _resetForTests()
-    vi.useRealTimers()
-    await rm(mockUserDataPath, { recursive: true, force: true })
+    // A poll pass started by the test may still be doing real fs I/O;
+    // let it finish before the shared state and the tmp dir go away, or
+    // it can touch the next test's mocks.
+    // The reset, timer restore and tmp-dir removal run even when that
+    // wait times out, so a stuck pass does not leak into the next test.
+    stopPolling()
+    try {
+      await waitForSyncIdle()
+    } finally {
+      _resetForTests()
+      vi.useRealTimers()
+      await rm(mockUserDataPath, { recursive: true, force: true })
+    }
   })
 
   describe('notifyChange', () => {
@@ -602,9 +638,9 @@ describe('sync-service', () => {
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'pc-1'))
-      // Settle the rest of the tick so a hypothetical late data-file
+      // Wait for the whole pass so a hypothetical late data-file
       // download can't land after the count assertion below.
-      await flushIO()
+      await waitForSyncIdle()
 
       // Password-check downloaded for validation, but data file NOT downloaded
       expect(mockDownloadFile).toHaveBeenCalledTimes(1)
@@ -623,13 +659,13 @@ describe('sync-service', () => {
       // First poll: records state, no data download
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockListFiles.mock.calls.length >= 1)
-      await flushIO()
+      await waitForSyncIdle()
 
       // Second poll: detects modifiedTime change, downloads
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'file-1'))
-      // Settle the tick before the exact listFiles count assertion.
-      await flushIO()
+      // Wait for the whole pass before the exact listFiles count assertion.
+      await waitForSyncIdle()
 
       expect(mockListFiles).toHaveBeenCalledTimes(2)
       expect(mockDownloadFile).toHaveBeenCalledWith('file-1')
@@ -664,13 +700,13 @@ describe('sync-service', () => {
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockListFiles.mock.calls.length >= 1)
-      await flushIO()
+      await waitForSyncIdle()
 
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'theme-pack-1'))
       // The merge's file write is real disk I/O — wait for the poll's own
       // sync-lock release rather than a fixed tick count.
-      await flushUntil(() => !isSyncInProgress())
+      await waitForSyncIdle()
 
       expect(mockDownloadFile).toHaveBeenCalledWith('theme-pack-1')
       await expect(
@@ -695,13 +731,13 @@ describe('sync-service', () => {
       // tick completed and false-pass the negative count check below.
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockListFiles.mock.calls.length >= 1)
-      await flushIO()
+      await waitForSyncIdle()
 
       const downloadCallCount = mockDownloadFile.mock.calls.length
 
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockListFiles.mock.calls.length >= 2)
-      await flushIO()
+      await waitForSyncIdle()
 
       expect(mockDownloadFile.mock.calls.length).toBe(downloadCallCount)
 
@@ -787,12 +823,12 @@ describe('sync-service', () => {
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockListFiles.mock.calls.length >= 1)
-      await flushIO()
+      await waitForSyncIdle()
       expect(mockRunPackGcAfterPass).not.toHaveBeenCalled() // first poll: seed-only, no merge
 
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'theme-pack-1'))
-      await flushUntil(() => !isSyncInProgress())
+      await waitForSyncIdle()
 
       expect(mockRunPackGcAfterPass).toHaveBeenCalledTimes(1)
       expect(mockRunPackGcAfterPass.mock.calls[0][0]).toContain('themes/packs/pack-a')
@@ -837,11 +873,11 @@ describe('sync-service', () => {
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockListFiles.mock.calls.length >= 1)
-      await flushIO()
+      await waitForSyncIdle()
 
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'theme-pack-1'))
-      await flushUntil(() => !isSyncInProgress())
+      await waitForSyncIdle()
 
       expect(mockRunPackGcAfterPass).toHaveBeenCalledTimes(1)
       expect(mockRunPackGcAfterPass.mock.calls[0][1]).toEqual(['themes/packs/pack-a'])
@@ -1910,7 +1946,7 @@ describe('sync-service', () => {
         const listCallsAfterSync = mockListFiles.mock.calls.length
         await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
         await flushUntil(() => mockListFiles.mock.calls.length > listCallsAfterSync)
-        await flushIO()
+        await waitForSyncIdle()
         expect(mockDownloadFile).not.toHaveBeenCalledWith('f2')
 
         // Second poll after the keyboard file's modifiedTime changes:
@@ -1959,7 +1995,7 @@ describe('sync-service', () => {
         const listCallsBeforePoll = mockListFiles.mock.calls.length
         await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
         await flushUntil(() => mockListFiles.mock.calls.length > listCallsBeforePoll)
-        await flushIO()
+        await waitForSyncIdle()
 
         expect(mockDownloadFile).not.toHaveBeenCalledWith('f2')
         stopPolling()
@@ -3162,7 +3198,7 @@ describe('sync-service', () => {
       // First poll: records baseline state only (no download attempts).
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockListFiles.mock.calls.length >= 1)
-      await flushIO()
+      await waitForSyncIdle()
 
       // Second poll: badFile is now present and wasn't in the baseline,
       // so it's treated as "changed" — the merge fails with
@@ -3175,11 +3211,9 @@ describe('sync-service', () => {
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockDownloadFile.mock.calls.some((c) => c[0] === 'bad1'))
       // The failing merge itself is real disk I/O (readIndexFile against a
-      // real tmp dir), which resolves via the libuv threadpool rather than
-      // the microtask queue `flushIO` drains — wait for the poll's own
-      // sync-lock release, not just a fixed tick count, so poll 3 below
-      // never races a still-in-flight poll 2.
-      await flushUntil(() => !isSyncInProgress())
+      // real tmp dir) — wait for the poll's own sync-lock release so
+      // poll 3 below never races a still-in-flight poll 2.
+      await waitForSyncIdle()
       const attemptsAfterSecondPoll = mockDownloadFile.mock.calls.filter((c) => c[0] === 'bad1').length
       expect(attemptsAfterSecondPoll).toBeGreaterThan(0)
       // Contained per-unit with a warn naming only the sync unit — never
@@ -3189,7 +3223,7 @@ describe('sync-service', () => {
       // Third poll, same revision still on Drive — must NOT retry again.
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockListFiles.mock.calls.length >= 3)
-      await flushUntil(() => !isSyncInProgress())
+      await waitForSyncIdle()
       const attemptsAfterThirdPoll = mockDownloadFile.mock.calls.filter((c) => c[0] === 'bad1').length
       expect(attemptsAfterThirdPoll).toBe(attemptsAfterSecondPoll)
 
@@ -3228,19 +3262,19 @@ describe('sync-service', () => {
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockListFiles.mock.calls.length >= 1)
-      await flushIO()
+      await waitForSyncIdle()
 
       mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE, evilFile])
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockDownloadFile.mock.calls.some((c) => c[0] === 'evil1'))
-      await flushUntil(() => !isSyncInProgress())
+      await waitForSyncIdle()
       const attemptsAfterSecondPoll = mockDownloadFile.mock.calls.filter((c) => c[0] === 'evil1').length
       expect(attemptsAfterSecondPoll).toBeGreaterThan(0)
 
       // Same revision still on Drive on the next poll — must NOT retry.
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushUntil(() => mockListFiles.mock.calls.length >= 3)
-      await flushUntil(() => !isSyncInProgress())
+      await waitForSyncIdle()
       const attemptsAfterThirdPoll = mockDownloadFile.mock.calls.filter((c) => c[0] === 'evil1').length
       expect(attemptsAfterThirdPoll).toBe(attemptsAfterSecondPoll)
 
