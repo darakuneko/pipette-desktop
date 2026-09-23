@@ -110,15 +110,15 @@ import {
   MAX_PENDING_CHAR_CONFIRMATIONS,
   pressKey,
   registrationKey,
-} from './run-log-recorder-types'
+} from './run-log-recorder-model'
 import type {
   BufferedKeystroke,
   RegistrationAnnotation,
   RunLogBuffer,
   RunLogFinishMeta,
   RunLogRecordContext,
-} from './run-log-recorder-types'
-export type { RunLogFinishMeta, RunLogRecordContext } from './run-log-recorder-types'
+} from './run-log-recorder-model'
+export type { RunLogFinishMeta, RunLogRecordContext } from './run-log-recorder-model'
 
 export class RunLogRecorder {
   private buffer: RunLogBuffer | null = null
