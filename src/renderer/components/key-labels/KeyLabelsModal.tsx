@@ -73,9 +73,9 @@ export function KeyLabelsModal({
    */
   const [lastResult, setLastResult] = useState<PackActionResult | PackActionResult[] | null>(null)
   useDismissErrorResult(lastResult, setLastResult)
-  // The modal stays mounted while closed, so reopening must not show stale feedback.
+  // The modal stays mounted while closed; reopening starts with no feedback or pending confirm.
   useEffect(() => {
-    if (!open) { setActionError(null); setLastResult(null) }
+    if (!open) { setActionError(null); setLastResult(null); setConfirmDeleteId(null); setConfirmRemoveId(null) }
   }, [open])
 
   // Key Labels fetches the Hub origin once on first mount, unlike the
