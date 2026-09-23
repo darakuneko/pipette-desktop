@@ -295,14 +295,8 @@ function KeyWidgetInner({
 
       {flashed && (
         <KeyFlashOverlay
-          flashed={flashed}
-          unionPath={unionPath}
+          shape={unionPath ? { kind: 'path', d: unionPath } : { kind: 'rect', x, y, w, h, corner }}
           flashGeneration={flashGeneration}
-          x={x}
-          y={y}
-          w={w}
-          h={h}
-          corner={corner}
           flashElapsedMs={flashElapsedMs}
           outerStroke={outerStroke}
           outerStrokeWidth={outerStrokeWidth}

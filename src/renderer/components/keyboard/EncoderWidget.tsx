@@ -16,6 +16,7 @@ import {
   keyLabelFontSize,
 } from './constants'
 import { flashAnimationDelayMs } from './key-flash'
+import { KeyFlashOverlay } from './KeyFlashOverlay'
 
 interface Props {
   kleKey: KleKey
@@ -106,33 +107,17 @@ function EncoderWidgetInner({
     ? flashAnimationDelayMs(flashStartedAt)
     : 0
 
-  // Flash overlay + border redraw (Key Label "apply to keymap" rewrite /
-  // undo/redo): shared by both the masked and non-masked branches below —
-  // painted on top of the outer fill/stroke but below the label text /
-  // inner mask rect, mirroring `KeyFlashOverlay`'s `key-flash-overlay`.
-  // The second circle redraws a stroke-only border on top since the
-  // overlay's opaque fill paints over the outer stroke too, keeping the
-  // border crisp for the whole flash (mirrors `KeyFlashOverlay`'s
-  // `flash-overlay-border`).
+  // Flash overlay + border redraw (see `KeyFlashOverlay`), shared by both
+  // the masked and non-masked branches below: painted on top of the outer
+  // circle but below the label text / inner mask rect.
   const flashOverlay = flashed ? (
-    <>
-      <circle
-        key={flashGeneration}
-        cx={cx} cy={cy} r={r}
-        data-testid="flash-overlay"
-        className="key-flash-overlay"
-        fill={KEY_SELECTED_COLOR}
-        style={{ pointerEvents: 'none', animationDelay: `-${flashElapsedMs}ms` }}
-      />
-      <circle
-        cx={cx} cy={cy} r={r}
-        data-testid="flash-overlay-border"
-        fill="none"
-        stroke={outerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR}
-        strokeWidth={outerBorderActive ? 2 : 1}
-        style={{ pointerEvents: 'none' }}
-      />
-    </>
+    <KeyFlashOverlay
+      shape={{ kind: 'circle', cx, cy, r }}
+      flashGeneration={flashGeneration}
+      flashElapsedMs={flashElapsedMs}
+      outerStroke={outerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR}
+      outerStrokeWidth={outerBorderActive ? 2 : 1}
+    />
   ) : null
 
   if (!masked) {
