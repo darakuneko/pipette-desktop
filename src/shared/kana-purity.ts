@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Pure content check used to decide whether the romaji typing input can be
-// enabled for a piece of text. Previously the romaji engine only activated
-// for the built-in monkeytype kana packs; this predicate extends that to
-// any text (e.g. a file import or Tatoeba sentence) whose content is pure
-// kana, since the romaji matcher only understands hiragana input.
+// enabled for a piece of text. isKanaOnlyText backs the `romajiCapable`
+// flag the main process computes for imported/catalog texts (fileImport
+// mode); words/time and Tatoeba are gated by the `ROMAJI_INPUT_LANGUAGES`
+// whitelist (src/renderer/typing-test/types.ts) and quote mode is never
+// romaji-capable.
 //
-// Kept in shared/ (not main/ or renderer/) because both the main process
-// (computing the flag for imported texts) and the renderer (deciding which
-// built-in packs are romaji-capable) need the same rule.
+// Lives in shared/: the main process computes isKanaOnlyText for imported
+// texts, and the renderer's romaji engine uses `isRomajiPunctuation` and
+// type-locks `PUNCTUATION_TABLE` (romaji-tables.ts) to the same list.
 
 import { toHiragana } from './kana-script'
 

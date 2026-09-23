@@ -228,11 +228,10 @@ describe('importTypingDataFiles', () => {
   })
 
   it('rejects a bigram-minute row whose minuteTs falls outside the day window', async () => {
-    // Regression coverage: rowTimestamp() used to fall through to
-    // default:null for 'bigram-minute' (and 'trigram-minute'),
-    // which made rowsFallInsideDay() skip the check entirely — a
-    // bigram/trigram row from a completely different day would have
-    // silently passed validation instead of being rejected.
+    // rowTimestamp() must return the row's minuteTs for 'bigram-minute'
+    // (and 'trigram-minute') rows, not fall through to the default null,
+    // so rowsFallInsideDay() actually checks them instead of skipping the
+    // bounds check entirely.
     seedDay(userData, HASH, '2026-04-19', '{"id":"existing"}\n')
     const name = exportFileNameFor(UID, HASH, '2026-04-19')
     const wrongDayBody = bigramMinuteRow('2026-04-21')

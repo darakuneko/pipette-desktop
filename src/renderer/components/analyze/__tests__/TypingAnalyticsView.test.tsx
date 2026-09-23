@@ -661,15 +661,15 @@ describe('TypingAnalyticsView', () => {
   })
 
   it('keeps the snapshot under the all-devices scope', async () => {
-    // Regression: `'all'` aggregates the own device in. The mock-chart
-    // only renders when the tab picks the non-null branch, so a
-    // returning testid proves the snapshot stayed.
+    // `'all'` aggregates the own device in. The mock-chart only renders
+    // when the tab picks the non-null branch, so a returning testid proves
+    // the snapshot stayed.
     mockListKeyboards.mockResolvedValue(SAMPLE)
     mockGetSnapshot.mockResolvedValue(SNAPSHOT)
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
     // Summary is the default tab; switch to Heatmap to exercise the
-    // snapshot gate this regression test was written for.
+    // snapshot gate this test covers.
     await waitFor(() => expect(screen.getByTestId('mock-summary')).toBeInTheDocument())
     fireEvent.click(screen.getByTestId('analyze-tab-keyHeatmap'))
     await waitFor(() => expect(screen.getByTestId('mock-keyheatmap')).toBeInTheDocument())
@@ -755,11 +755,11 @@ describe('TypingAnalyticsView', () => {
   })
 
   it('labels a history-less run with its date stamp in the chip Source segment', async () => {
-    // Regression: a run filtered in Analyze that never recorded a
-    // History entry (unnamed run with Save Unnamed off) used to render
-    // as its raw runId UUID in the chip, while the modal's Results
-    // dropdown showed the date — both now resolve through
-    // useRunLabels.labelFor, so the chip gets the same date stamp.
+    // A run filtered in Analyze that never recorded a History entry still
+    // labels the chip's Source segment: with no History entry at all,
+    // useRunLabels.labelFor falls back to the run's first analytics-minute
+    // date stamp (the fetched run row supplies `firstMs`) instead of its raw
+    // runId UUID.
     mockListKeyboards.mockResolvedValue(SAMPLE)
     const firstMs = Date.UTC(2026, 3, 1, 9, 30)
     const getSpy = vi.spyOn(window.vialAPI, 'pipetteSettingsGet').mockResolvedValue({

@@ -420,9 +420,9 @@ export interface SpeedRankingEntry {
  * inside `withSerializeProtocol` isn't free — then a single pass over
  * `speedMap` in its original (stable-sort-preserving) insertion order
  * builds the final entries from whichever path each code took. With
- * `qmkByCode` absent every code takes the miss path, reproducing the
- * pre-existing behavior exactly (byte-equivalent — see the
- * regression test in key-heatmap-helpers-speed.test.ts). */
+ * `qmkByCode` absent every code takes the miss path, so the ranking is
+ * built entirely from the serialize/codeToLabel resolution above
+ * (exercised throughout key-heatmap-helpers-speed.test.ts). */
 export function buildSpeedRanking(
   speedMap: ReadonlyMap<number, KeySpeedStat>,
   keyGroupFilter: KeyGroupFilter,

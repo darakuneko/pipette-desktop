@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Regression coverage for the macOS window-overflow bug: the window's
-// nominal minimum size (1280x1024) is an intentional product decision and
-// must stay, but on a display whose usable work area is smaller than that
-// (small MacBook screens under the Dock; also reachable on any platform via
-// a corrupted/oversized saved windowState) the window must be clamped to
-// fit the visible area instead of spilling under OS chrome. Seeds a wildly
-// oversized saved windowState directly into config.json (mirrors the
-// on-disk shape loadWindowState() reads), then launches the real app and
-// asserts the *requested* bounds — the ones the app itself asked for — fit
-// inside the current display's work area. Note: the window manager on this
-// Linux CI box also clamps oversized windows on its own, so this only
-// proves the fix if it asserts on bounds the app requested before the WM
-// had a chance to intervene, which is exactly what
+// The window's nominal minimum size (1280x1024) is an intentional product
+// decision and must stay, but on a display whose usable work area is
+// smaller than that (small MacBook screens under the Dock; also reachable
+// on any platform via a corrupted/oversized saved windowState) the window
+// must be clamped to fit the visible area instead of spilling under OS
+// chrome. Seeds a wildly oversized saved windowState directly into
+// config.json (mirrors the on-disk shape loadWindowState() reads), then
+// launches the real app and asserts the *requested* bounds — the ones the
+// app itself asked for — fit inside the current display's work area. Note:
+// the window manager on this Linux CI box also clamps oversized windows on
+// its own, so this only proves the clamp if it asserts on bounds the app
+// requested before the WM had a chance to intervene, which is exactly what
 // BrowserWindow.getBounds() reports from the main process.
 
 import { test, expect } from '@playwright/test'

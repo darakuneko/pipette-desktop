@@ -20,11 +20,11 @@ export const MINUTE_MS = 60_000
  * accumulators. Mirrors the discard threshold used by the
  * typing-behaviour research the n-gram statistics are modeled on.
  *
- * This replaces SESSION_IDLE_GAP_MS for n-gram eligibility only. That
- * constant still decides when a *session* ends; this one decides which
- * single interval may become an n-gram. They were once the same value
- * and are no longer (5 min vs 5 s) — re-merging them would silently
- * put multi-minute idles back into the interval statistics. */
+ * Distinct from SESSION_IDLE_GAP_MS (5 min, session-detector.ts), which
+ * decides when a *session* ends; this constant (5 s) decides which single
+ * interval may become an n-gram. Using SESSION_IDLE_GAP_MS as the n-gram
+ * threshold would put multi-minute idles into the bigram/trigram interval
+ * statistics. */
 export const NGRAM_MAX_IKI_MS = 5000
 
 /** Margin added on top of {@link MAX_TAP_HOLD_DEFER_MS} to absorb IPC and

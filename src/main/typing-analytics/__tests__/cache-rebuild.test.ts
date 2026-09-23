@@ -171,11 +171,9 @@ describe('rebuildCacheFromMasterFiles', () => {
   })
 
   it('propagates bigram/trigram counters, which were previously dropped from the result', async () => {
-    // Regression coverage: rebuildCacheFromMasterFiles used to sum
-    // scopes/charMinutes/matrixMinutes/minuteStats/sessions but silently
-    // discarded applyRowsToCache's bigramMinutes (and trigramMinutes)
-    // counts, so a bigram/trigram-only file looked like a no-op in the
-    // rebuild report even though rows were actually applied.
+    // rebuildCacheFromMasterFiles must roll applyRowsToCache's bigramMinutes
+    // and trigramMinutes into its result (both asserted below), so a file
+    // carrying bigram/trigram rows is reflected in the rebuild report.
     await appendRowsToFile(deviceDayJsonlPath(tmpDir, UID_A, MY_HASH, SAMPLE_DAY), [
       scope(MY_HASH),
       bigram(MY_HASH),

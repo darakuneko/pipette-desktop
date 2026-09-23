@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Regression coverage for the View Matrix Wires gutter label order on a
-// split keyboard. The row-number gutter must always read in ascending
-// index order for any two labels that land close enough together to
-// collide — a sub-pixel difference between two rows' rotated label
-// anchors (the split-thumb fixture's rows 3 and 7) must never flip which
-// one appears to the left. Drives the dummy-JSON load path (no hardware or
-// virtual device required) with a fixture built specifically to reproduce
-// the reported "7 3" ordering.
+// The View Matrix Wires row-number gutter must read in ascending index
+// order for any two labels on a split keyboard that land close enough
+// together to collide — a sub-pixel difference between two rows' rotated
+// label anchors (the split-thumb fixture's rows 3 and 7) must never flip
+// which one appears to the left. A second test checks that each column's
+// number label appears above the top-row key on both halves, horizontally
+// centered over it. Drives the dummy-JSON load path (no hardware or
+// virtual device required) with a fixture built to exercise that
+// row-3/row-7 collision.
 
 import { test, expect } from '@playwright/test'
 import type { ElectronApplication, Locator, Page } from '@playwright/test'

@@ -168,10 +168,11 @@ test.describe.serial('tray start-in-tray unlock reveal', { tag: '@virtual' }, ()
   test('typingTest restore path: relaunch reveals the Unlock dialog then hides back to tray', async () => {
     // Rewrite the persisted view mode to typingTest. This restore path opens
     // the dialog through a different call site than typingView's own
-    // effect — App.tsx calls keymapEditorRef.current?.toggleTypingTest(),
-    // which (unlocked) delegates to useInputModes' handleTypingTestToggle,
-    // which calls the onUnlock callback wired to setShowUnlockDialog(true) —
-    // so it is worth its own regression coverage alongside typingView.
+    // effect — useViewModeRouting's auto-restore effect calls
+    // keymapEditorRef.current?.toggleTypingTest(), which is KeymapEditor's
+    // exposed handleTypingTestToggle (useInputModes); finding the keyboard
+    // locked, it calls the onUnlock callback wired in AppEditorSurface to
+    // setShowUnlockDialog(true).
     const prefs = readJson(SETTINGS_PATH)
     expect(prefs).not.toBeNull()
     if (prefs) {
@@ -229,9 +230,9 @@ test.describe.serial('tray start-in-tray unlock reveal', { tag: '@virtual' }, ()
     // the keymap/definition payloads have resolved in that same commit —
     // this is the established "connection complete" signal used elsewhere
     // in this suite (see helpers/test-device.ts:connectTestDevice). Waiting
-    // for it here means sampling starts only AFTER the point where the old
-    // buggy auto-open effect would have fired, instead of racing it on a
-    // fixed wall-clock guess.
+    // for it here means sampling starts only once `editor-content` is
+    // visible — the same signal `connectTestDevice` waits on — instead of
+    // a fixed wall-clock guess.
     await page.locator('[data-testid="editor-content"]').waitFor({ state: 'visible', timeout: 25_000 })
 
     // Sample repeatedly over a window matching the positive tests' ~25s

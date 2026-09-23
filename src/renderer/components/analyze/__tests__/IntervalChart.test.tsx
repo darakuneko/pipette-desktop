@@ -99,10 +99,10 @@ describe('IntervalChart benchmark reference line', () => {
     expect(screen.getByTestId('analyze-reference-line').getAttribute('data-y')).toBe('238.66')
   })
 
-  // Regression guard: the chart's y-axis switches its *tick label* text
-  // between ms and seconds via `unit`, but the plotted data (and thus the
-  // reference line) always stays in ms. A conversion applied here by
-  // mistake would put the line 1000x off whenever `unit === 'sec'`.
+  // The chart's y-axis switches its *tick label* text between ms and
+  // seconds via `unit`, but the plotted data (and thus the reference line)
+  // always stays in ms. A conversion applied here by mistake would put the
+  // line 1000x off whenever `unit === 'sec'`.
   it('keeps the reference line value in ms even when the display unit is seconds', async () => {
     renderChart({ unit: 'sec' })
     await waitFor(() => {
@@ -133,19 +133,9 @@ describe('IntervalChart distribution mode layout', () => {
     setVialAPI()
   })
 
-  // Regression guard: the distribution root previously used `h-full` with
-  // a `flex-1 min-h-0` chart wrapper, which stretched the BarChart to
-  // fill whatever height AnalyzePane's outer flex-1 wrapper happened to
-  // allocate — and that allocation shrank once DurationSection/
-  // TappingTermCard's own async data replaced their loading placeholders,
-  // producing a two-step reflow. That reflow both left a large empty gap
-  // above the summary grid (the reported whitespace defect) and left the
-  // "Longest session" card's shared-key Tooltip pinned to a stale
-  // intermediate position while it faded out (the reported stray-tooltip
-  // defect — see components/ui/Tooltip.tsx). The fix gives the chart a
-  // fixed height (matching DurationSection's own `h-64` convention)
-  // instead of stretching, so this must never regress back to `h-full`
-  // / `flex-1 min-h-0`.
+  // The distribution chart wrapper gets a fixed `h-64` height rather than
+  // `h-full`/`flex-1`, so it does not stretch to fill the parent's height —
+  // asserted as the classes present/absent below.
   it('sizes the distribution chart with a fixed height instead of stretching to fill the parent', async () => {
     renderChart({ viewMode: 'distribution' })
     const root = await waitFor(() => screen.getByTestId('analyze-interval-distribution'))
@@ -156,10 +146,10 @@ describe('IntervalChart distribution mode layout', () => {
     expect(chartWrapper?.className).not.toContain('flex-1')
   })
 
-  // Regression guard: AnalyzePane's "Section" filter-row select already
-  // labels the section with the same `sectionTitle` key. The name must
-  // still reach assistive tech though — via `aria-label` on the
-  // section itself — since there's no visible heading to navigate to.
+  // AnalyzePane's "Section" filter-row select already labels the section
+  // with the same `sectionTitle` key. The name must still reach assistive
+  // tech though — via `aria-label` on the section itself — since there's
+  // no visible heading to navigate to.
   it('has no visible section title, but exposes the same name via aria-label', async () => {
     renderChart({ viewMode: 'distribution' })
     const root = await waitFor(() => screen.getByTestId('analyze-interval-distribution'))
@@ -173,9 +163,9 @@ describe('IntervalChart distribution mode layout', () => {
     expect(screen.getByText('analyze.interval.timeSeries.sectionTitle')).toBeTruthy()
   })
 
-  // Regression guard, same pattern as RolloverSection's order-lock test:
-  // pins chart-then-stat order in both viewModes, per the Analyze
-  // convention that a chart always renders above its stat numbers.
+  // Same pattern as RolloverSection's order-lock test: pins chart-then-stat
+  // order in both viewModes, per the Analyze convention that a chart always
+  // renders above its stat numbers.
   it('renders the chart above the stat card in timeSeries mode', async () => {
     renderChart({ viewMode: 'timeSeries' })
     await waitFor(() => {

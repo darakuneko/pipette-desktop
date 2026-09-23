@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Regression coverage: Auto Move carries the key popover to the next key
-// without unmounting it. This drives the real Auto Move path through the
+// Two separate contracts: Auto Move remounts the popover on a new target key
+// (`popoverInstanceKey`, keymap-editor-popover.tsx), so `wrapperMode` must be
+// re-derived from the landed key; a layer-sidebar switch keeps the same
+// instance, so `activeTab` must survive it. A plain `keymap`/props assertion
+// can't tell these apart, since the displayed value resolves correctly from
+// the (new) target position either way. Drives the real path through the
 // software-emulated Virtual Keyboard device (no real hardware required) and
-// asserts against internal popover state that only resets on a genuine
-// remount — a plain `keymap`/props assertion would pass whether or not the
-// fix is in place, since the displayed value is always resolved from the
-// (correct) target position regardless of remount.
+// asserts against that internal state directly.
 
 import { test, expect } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'
@@ -142,13 +143,12 @@ async function closePopover(): Promise<void> {
 
 test.describe('Key popover behavior', { tag: '@virtual' }, () => {
   test('Auto Move does not carry the previous key\'s wrapper mode onto a plain landed key', async () => {
-    // Without the fix, `wrapperMode` is React state that survives the
-    // follow-along (no remount), so switching into Mod-Mask on the source
-    // key would still show the Mod-Mask checkbox strip after landing on a
-    // key whose own current keycode is plain — the exact "still showing
-    // the previous one" bug, just on the mode-button wrapper instead of
-    // the Code-tab value (which is prop-driven and would look correct
-    // either way).
+    // If the popover kept its state across the target change instead of
+    // remounting, switching into Mod-Mask on the source key would still show
+    // the Mod-Mask checkbox strip after landing on a key whose own current
+    // keycode is plain — visible on the mode-button wrapper, unlike the
+    // Code-tab value (which is prop-driven and would look correct either
+    // way).
     await ensureAutoMoveOn()
     await openPopoverOnFirstKey()
     const popover = page.locator('[data-testid="key-popover"]')

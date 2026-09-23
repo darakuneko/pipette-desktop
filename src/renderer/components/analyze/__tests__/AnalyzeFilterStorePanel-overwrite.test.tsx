@@ -130,11 +130,10 @@ describe('AnalyzeFilterStorePanel overwrite flow', () => {
 })
 
 describe('AnalyzeFilterStorePanel entry label rename trigger', () => {
-  // The clickable label used to be a non-focusable `div` (mouse-only,
-  // cursor-pointer hardcoded on top of the Tooltip trigger) — now a
-  // real `button` so it picks up focusability and the pointer cursor
-  // from the global `button:not(:disabled) { cursor: pointer }` rule
-  // instead of an inline override.
+  // The clickable label is a `button` (asserted below; that is what makes
+  // it focusable and keyboard-activatable) and carries no inline
+  // `cursor-pointer` class — the global `button:not(:disabled) { cursor:
+  // pointer }` rule (style.css) supplies the cursor.
   it('renders the entry label as a focusable button, not a div', () => {
     renderPanel()
     const label = screen.getByTestId('analyze-filter-store-entry-label-entry-1')
