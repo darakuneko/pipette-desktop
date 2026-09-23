@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import type { ReactNode } from 'react'
 import { type Keycode, getAvailableLMMods } from '../../../shared/keycodes/keycodes'
 import { parseKle } from '../../../shared/kle/kle-parser'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
@@ -99,7 +100,7 @@ export interface TooltipState {
   rect: DOMRect
 }
 
-export interface Props {
+export interface TabbedKeycodesProps {
   onKeycodeSelect?: (keycode: Keycode) => void
   onKeycodeDoubleClick?: (keycode: Keycode) => void
   onConfirm?: () => void // Confirm current selection (Enter key)
@@ -112,12 +113,12 @@ export interface Props {
   highlightedKeycodes?: Set<string>
   maskOnly?: boolean // When true, only show keycodes with value < 0xFF (for mask inner byte editing)
   lmMode?: boolean  // When true, show MOD_* keycodes for LM inner editing
-  tabFooterContent?: Record<string, React.ReactNode> // Tab-specific footer content keyed by tab ID
-  tabBarRight?: React.ReactNode // Content rendered at the right end of the tab bar
-  panelOverlay?: React.ReactNode // Content rendered as a right-side overlay over the keycodes grid
+  tabFooterContent?: Record<string, ReactNode> // Tab-specific footer content keyed by tab ID
+  tabBarRight?: ReactNode // Content rendered at the right end of the tab bar
+  panelOverlay?: ReactNode // Content rendered as a right-side overlay over the keycodes grid
   showHint?: boolean // Show multi-select usage hint at the bottom
-  keyboardPickerContent?: React.ReactNode // Keyboard layout picker shown in a "Keyboard" tab
-  tabContentOverride?: Record<string, React.ReactNode> // Custom content that replaces the keycode grid for specific tabs
+  keyboardPickerContent?: ReactNode // Keyboard layout picker shown in a "Keyboard" tab
+  tabContentOverride?: Record<string, ReactNode> // Custom content that replaces the keycode grid for specific tabs
   basicViewType?: BasicViewType // View type for the basic tab
   onBasicViewTypeChange?: (v: BasicViewType) => void
   splitKeyMode?: SplitKeyMode // 'split' (default) or 'flat' for individual buttons

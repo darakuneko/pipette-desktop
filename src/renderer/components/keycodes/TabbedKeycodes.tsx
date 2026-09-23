@@ -16,8 +16,7 @@ import { BasicKeyboardView } from './BasicKeyboardView'
 import { isShiftedKeycode } from './SplitKey'
 import { BUBBLE_BASE, computeBubblePosition } from '../ui/Tooltip'
 import { useSharedHoverBubble } from '../../hooks/use-shared-hover-bubble'
-import { expandGrouped, expandPerRow, LM_CATEGORY, type KeycodeIndexEntry, type Props, type TooltipState } from './tabbed-keycodes-model'
-export type { KeycodeIndexEntry } from './tabbed-keycodes-model'
+import { expandGrouped, expandPerRow, LM_CATEGORY, type KeycodeIndexEntry, type TabbedKeycodesProps, type TooltipState } from './tabbed-keycodes-model'
 
 export function TabbedKeycodes({
   onKeycodeSelect,
@@ -42,7 +41,7 @@ export function TabbedKeycodes({
   onBasicViewTypeChange,
   splitKeyMode,
   remapLabel,
-}: Props) {
+}: TabbedKeycodesProps) {
   const { t } = useTranslation()
   const { config } = useAppConfig()
   const resolvedBasicViewType = basicViewType ?? config.defaultBasicViewType
