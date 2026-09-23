@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { findKeycode, type Keycode, getKeycodeRevision, isBasic, deserialize } from '../../../shared/keycodes/keycodes'
 import { parseKle } from '../../../shared/kle/kle-parser'
@@ -274,7 +274,7 @@ export function TabbedKeycodes({
     [onKeycodeMultiSelect, onKeycodeSelect, activeTabKeycodeNumbers, pickerMultiSelectEnabled, onBackgroundClick],
   )
 
-  function renderKeycodeGrid(keycodes: Keycode[], tabId?: string): React.ReactNode {
+  function renderKeycodeGrid(keycodes: Keycode[], tabId?: string): ReactNode {
     const isActive = !tabId || tabId === effectiveTab
     return (
       <KeycodeGrid
@@ -293,7 +293,7 @@ export function TabbedKeycodes({
     )
   }
 
-  function renderGroup(group: KeycodeGroup, tabId?: string, hint?: string): React.ReactNode {
+  function renderGroup(group: KeycodeGroup, tabId?: string, hint?: string): ReactNode {
     return (
       <div key={group.labelKey}>
         <h4 className="text-xs font-normal text-content-muted px-1 pt-2 pb-1">
@@ -314,7 +314,7 @@ export function TabbedKeycodes({
     )
   }
 
-  function renderCategoryContent(category: KeycodeCategory): React.ReactNode {
+  function renderCategoryContent(category: KeycodeCategory): ReactNode {
     const isActive = category.id === effectiveTab
     // Keyboard view for basic tab (ANSI, ISO, or JIS)
     if (category.id === 'basic' && resolvedBasicViewType !== 'list' && resolvedBasicViewType != null && !lmMode) {
