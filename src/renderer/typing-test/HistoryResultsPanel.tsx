@@ -25,7 +25,7 @@ type ModeFilter = 'all' | 'words' | 'time' | 'quote'
  *  'text' (not 'fileImport') is kept as the File Import tab's key to avoid
  *  churn across existing testids/CSV slugs. */
 type HistoryTab = 'monkeytype' | 'tatoeba' | 'aozora' | 'text'
-export type { SortColumn, SortDirection, HistoryTab }
+export type { HistoryTab }
 
 const MAX_TABLE_ROWS = 20
 const MODE_FILTERS: ModeFilter[] = ['all', 'words', 'time', 'quote']
