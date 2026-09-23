@@ -451,7 +451,7 @@ export function TabbedKeycodes({
         )}
 
         {(showHint || (effectiveTab === 'basic' && onBasicViewTypeChange)) && (
-          <div className="flex items-center justify-between px-3 pb-1.5">
+          <div className={`flex items-center ${showHint ? 'justify-between' : 'justify-end'} px-3 pb-1.5`}>
             {showHint && (
               <p className="text-xs text-content-muted">{t('editor.keymap.pickerHint')}</p>
             )}

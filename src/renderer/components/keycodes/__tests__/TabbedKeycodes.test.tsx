@@ -162,6 +162,25 @@ describe('TabbedKeycodes', () => {
     expect(onConfirm).toHaveBeenCalledTimes(1)
   })
 
+  describe('basic view select footer row', () => {
+    const footerRow = () =>
+      screen.getByRole('button', { name: 'editorSettings.basicViewType' }).parentElement!
+
+    it('right-aligns the view select when the hint is hidden', () => {
+      render(<TabbedKeycodes onBasicViewTypeChange={vi.fn()} />)
+      expect(screen.queryByText('editor.keymap.pickerHint')).not.toBeInTheDocument()
+      expect(footerRow().className).toContain('justify-end')
+      expect(footerRow().className).not.toContain('justify-between')
+    })
+
+    it('spreads the hint and the view select apart when the hint is shown', () => {
+      render(<TabbedKeycodes showHint onBasicViewTypeChange={vi.fn()} />)
+      expect(screen.getByText('editor.keymap.pickerHint')).toBeInTheDocument()
+      expect(footerRow().className).toContain('justify-between')
+      expect(footerRow().className).not.toContain('justify-end')
+    })
+  })
+
   // Tab selection survives transient unavailability. The
   // "behavior" category stands in for a real "Modifiers" tab: it only
   // contains QK_BOOT, which is non-basic, so it disappears entirely under
