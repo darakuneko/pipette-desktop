@@ -59,13 +59,14 @@ export function mergeMissedDetails(perRunDetails: readonly Map<string, MissedCha
  *  (a tab switch, or new results being merged in, adds runIds
  *  incrementally rather than re-fetching everything already known).
  *
- *  BATCH, not progressive: on each `[uid, runIds]` change, every uncached
- *  log fetches in parallel via `Promise.allSettled`, and the merged
- *  result updates ONCE all of them settle, rather than committing a new
- *  merge after each individual fetch resolves. Trade-off: a slow fetch
- *  among many delays the whole update instead of only its own row —
- *  accepted since a typical tab has a bounded number of runs, and the
- *  progressive alternative would need incremental per-item state merging.
+ *  BATCH, not progressive: cached logs merge immediately; on a
+ *  `[uid, runIds]` change (with a truthy `uid`) every uncached log fetches
+ *  in parallel via `Promise.allSettled`, and they land together once all
+ *  settle (a cancelled batch commits nothing), rather than one merge per
+ *  fetch. Trade-off: a slow fetch among many delays the whole batch
+ *  instead of only its own row — accepted since a typical tab has a
+ *  bounded number of runs, and the progressive alternative would need
+ *  incremental per-item state merging.
  *
  *  A result with no `runId`, or a `runId` not in `availableRunIds` (the
  *  run predates the log feature, was evicted by retention, or was saved
