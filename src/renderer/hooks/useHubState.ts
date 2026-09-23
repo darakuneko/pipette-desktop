@@ -4,10 +4,11 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { HubMyPost, HubUploadResult, HubPaginationMeta, HubFetchMyPostsParams } from '../../shared/types/hub'
 import type { HubPrivateLink } from '../../shared/types/hub-private'
-import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
+import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED } from '../../shared/types/hub'
 import { FALLBACK_VIAL_PROTOCOL, isValidHubVialProtocol } from '../../shared/favorite-data'
 import { useUploadConfirm } from './useUploadConfirm'
 import { linkFromResult } from '../utils/hub-private-link'
+import { hubResultErrorMessage } from '../utils/hub-result-error'
 import type { HubEntryResult } from '../components/editors/LayoutStoreModal'
 import type { FavHubEntryResult } from '../components/editors/FavoriteHubActions'
 import type { SnapshotMeta } from '../../shared/types/snapshot-store'
@@ -243,15 +244,7 @@ export function useHubState(options: Options) {
       if (result.success) {
         setHubUploadResult({ kind: 'success', message: successMsg, entryId })
       } else {
-        let message: string
-        if (result.error === HUB_ERROR_ACCOUNT_DEACTIVATED) {
-          markAccountDeactivated()
-          message = t('hub.accountDeactivated')
-        } else if (result.error === HUB_ERROR_RATE_LIMITED) {
-          message = t('hub.rateLimited')
-        } else {
-          message = result.error || failMsg
-        }
+        const message = hubResultErrorMessage(result.error, failMsg, t, markAccountDeactivated)
         setHubUploadResult({ kind: 'error', message, entryId })
       }
     } catch {

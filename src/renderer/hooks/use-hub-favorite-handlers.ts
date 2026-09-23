@@ -2,11 +2,10 @@
 
 import { useCallback, useRef } from 'react'
 import type { TFunction } from 'i18next'
-import type { HubUploadResult } from '../../shared/types/hub'
 import type { HubPrivateLink } from '../../shared/types/hub-private'
-import { HUB_ERROR_ACCOUNT_DEACTIVATED, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
 import type { useUploadConfirm } from './useUploadConfirm'
 import { linkFromResult } from '../utils/hub-private-link'
+import { hubResultErrorMessage } from '../utils/hub-result-error'
 import type { FavHubEntryResult } from '../components/editors/FavoriteHubActions'
 import type { FavoriteType, SavedFavoriteMeta } from '../../shared/types/favorite-store'
 
@@ -51,15 +50,6 @@ export function useHubFavoriteHandlers(options: Options) {
     await window.vialAPI.favoriteStoreSetHubPrivate(type, entryId, link)
   }, [])
 
-  function hubResultErrorMessage(result: HubUploadResult, fallbackKey: string): string {
-    if (result.error === HUB_ERROR_ACCOUNT_DEACTIVATED) {
-      markAccountDeactivated()
-      return t('hub.accountDeactivated')
-    }
-    if (result.error === HUB_ERROR_RATE_LIMITED) return t('hub.rateLimited')
-    return result.error || t(fallbackKey)
-  }
-
   const runFavHubOperation = useCallback(async (
     type: FavoriteType,
     entryId: string,
@@ -100,7 +90,7 @@ export function useHubFavoriteHandlers(options: Options) {
             if (result.postId) await persistFavHubPostId(type, entryId, result.postId)
             setFavHubUploadResult({ kind: 'success', message: t('hub.uploadSuccess'), entryId })
           } else {
-            setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.uploadFailed'), entryId })
+            setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result.error, t('hub.uploadFailed'), t, markAccountDeactivated), entryId })
           }
           return
         }
@@ -111,7 +101,7 @@ export function useHubFavoriteHandlers(options: Options) {
           await persistFavHubPrivate(type, entryId, linkFromResult(result))
           setFavHubUploadResult({ kind: 'success', message: t('hub.uploadSuccess'), entryId })
         } else {
-          setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.uploadFailed'), entryId })
+          setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result.error, t('hub.uploadFailed'), t, markAccountDeactivated), entryId })
         }
       } catch {
         setFavHubUploadResult({ kind: 'error', message: t('hub.uploadFailed'), entryId })
@@ -140,7 +130,7 @@ export function useHubFavoriteHandlers(options: Options) {
           if (result.success) {
             setFavHubUploadResult({ kind: 'success', message: t('hub.updateSuccess'), entryId })
           } else {
-            setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.updateFailed'), entryId })
+            setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result.error, t('hub.updateFailed'), t, markAccountDeactivated), entryId })
           }
           return
         }
@@ -160,7 +150,7 @@ export function useHubFavoriteHandlers(options: Options) {
             if (result.postId) await persistFavHubPostId(type, entryId, result.postId)
             setFavHubUploadResult({ kind: 'success', message: t('hub.updateSuccess'), entryId })
           } else {
-            setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.updateFailed'), entryId })
+            setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result.error, t('hub.updateFailed'), t, markAccountDeactivated), entryId })
           }
           return
         }
@@ -171,7 +161,7 @@ export function useHubFavoriteHandlers(options: Options) {
           await persistFavHubPrivate(type, entryId, linkFromResult(result))
           setFavHubUploadResult({ kind: 'success', message: t('hub.updateSuccess'), entryId })
         } else {
-          setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.updateFailed'), entryId })
+          setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result.error, t('hub.updateFailed'), t, markAccountDeactivated), entryId })
         }
       } catch {
         setFavHubUploadResult({ kind: 'error', message: t('hub.updateFailed'), entryId })
@@ -188,7 +178,7 @@ export function useHubFavoriteHandlers(options: Options) {
             await persistFavHubPrivate(type, entryId, null)
             setFavHubUploadResult({ kind: 'success', message: t('hub.removeSuccess'), entryId })
           } else {
-            setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.removeFailed'), entryId })
+            setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result.error, t('hub.removeFailed'), t, markAccountDeactivated), entryId })
           }
           return
         }
@@ -197,7 +187,7 @@ export function useHubFavoriteHandlers(options: Options) {
           await persistFavHubPostId(type, entryId, null)
           setFavHubUploadResult({ kind: 'success', message: t('hub.removeSuccess'), entryId })
         } else {
-          setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.removeFailed'), entryId })
+          setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result.error, t('hub.removeFailed'), t, markAccountDeactivated), entryId })
         }
       } catch {
         setFavHubUploadResult({ kind: 'error', message: t('hub.removeFailed'), entryId })
@@ -215,7 +205,7 @@ export function useHubFavoriteHandlers(options: Options) {
       if (result.success) {
         setFavHubUploadResult({ kind: 'success', message: t('hub.hubSynced'), entryId })
       } else {
-        setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.renameFailed'), entryId })
+        setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result.error, t('hub.renameFailed'), t, markAccountDeactivated), entryId })
       }
     } catch {
       setFavHubUploadResult({ kind: 'error', message: t('hub.renameFailed'), entryId })

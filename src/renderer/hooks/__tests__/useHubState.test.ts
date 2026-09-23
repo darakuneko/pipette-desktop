@@ -515,3 +515,39 @@ describe('useHubState favorite Hub remove failures', () => {
     expect(mockFavoriteStoreSetHubPrivate).not.toHaveBeenCalled()
   })
 })
+
+// Layout snapshot Hub actions report the Hub error codes the same way.
+describe('useHubState snapshot Hub remove failures', () => {
+  const snapshotEntries = [{ id: 's1', label: 'Snap', filename: 's1', savedAt: '2026-01-01T00:00:00.000Z', hubPostId: 'post-1' }]
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockHubGetOrigin.mockResolvedValue('https://hub.example')
+  })
+
+  async function renderAndRemove() {
+    const { result } = renderHook(() => useHubState({ ...baseOptions(5), layoutStoreEntries: snapshotEntries }))
+    await act(async () => {
+      await result.current.handleRemoveFromHub('s1')
+    })
+    return result
+  }
+
+  it('marks the account deactivated', async () => {
+    mockHubDeletePost.mockResolvedValue({ success: false, error: HUB_ERROR_ACCOUNT_DEACTIVATED })
+
+    const result = await renderAndRemove()
+
+    expect(result.current.hubUploadResult).toEqual({ kind: 'error', message: 'hub.accountDeactivated', entryId: 's1' })
+    expect(result.current.hubAccountDeactivated).toBe(true)
+  })
+
+  it('reports the rate limit', async () => {
+    mockHubDeletePost.mockResolvedValue({ success: false, error: HUB_ERROR_RATE_LIMITED })
+
+    const result = await renderAndRemove()
+
+    expect(result.current.hubUploadResult).toEqual({ kind: 'error', message: 'hub.rateLimited', entryId: 's1' })
+    expect(result.current.hubAccountDeactivated).toBe(false)
+  })
+})
