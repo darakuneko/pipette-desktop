@@ -116,6 +116,7 @@ Object.defineProperty(window, 'vialAPI', { value: vialAPI, writable: true })
 
 import { ThemePacksModal } from '../ThemePacksModal'
 import { HUB_ERROR_RATE_LIMITED } from '../../../../shared/types/hub'
+import { ERROR_DISMISS_MS } from '../../ui/DismissibleError'
 
 function meta(over: Partial<{
   id: string
@@ -1200,6 +1201,57 @@ describe('ThemePacksModal', () => {
       fireEvent.click(screen.getByTestId('theme-packs-pull-button'))
 
       await waitFor(() => expect(screen.getByTestId('theme-packs-error')).toHaveTextContent('network down'))
+    })
+  })
+
+  describe('error auto-dismiss', () => {
+    beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: true }) })
+    afterEach(() => { vi.useRealTimers() })
+
+    async function advance(ms: number): Promise<void> {
+      await act(async () => { await vi.advanceTimersByTimeAsync(ms) })
+    }
+
+    it('removes the error banner after ERROR_DISMISS_MS', async () => {
+      importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'bad.json', parseError: 'Bad format' }] })
+      render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+      fireEvent.click(screen.getByTestId('theme-packs-import-button'))
+      await waitFor(() => expect(screen.getByTestId('theme-packs-error')).toBeTruthy())
+      await advance(ERROR_DISMISS_MS)
+      expect(screen.queryByTestId('theme-packs-error')).toBeNull()
+    })
+
+    it('removes a row error badge after ERROR_DISMISS_MS', async () => {
+      metas = [meta({ id: 'uf1', name: 'Upload Fail' })]
+      vialAPI.themePackGet.mockResolvedValueOnce({ success: false, error: 'Not found' })
+      render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} hubCanWrite />)
+      fireEvent.click(screen.getByTestId('theme-packs-upload-uf1'))
+      await waitFor(() => expect(screen.getByTestId('theme-packs-result-uf1')).toBeTruthy())
+      await advance(ERROR_DISMISS_MS)
+      expect(screen.queryByTestId('theme-packs-result-uf1')).toBeNull()
+    })
+
+    it('batch import: the banner goes away while the success badge stays', async () => {
+      metas = [meta({ id: 'a', name: 'Alpha' })]
+      const savedMeta = meta({ id: 'e', name: 'Existing' })
+      importFromDialog.mockResolvedValueOnce({
+        canceled: false,
+        files: [
+          { filePath: 'bad.json', parseError: 'Bad format' },
+          { filePath: 'my-upload.json', raw: { name: 'Existing', version: '1', colorScheme: 'dark', colors: {} } },
+        ],
+      })
+      applyImport.mockImplementationOnce(async () => {
+        metas = [...metas, savedMeta]
+        return { success: true, meta: savedMeta }
+      })
+      render(<ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />)
+      fireEvent.click(screen.getByTestId('theme-packs-import-button'))
+      await waitFor(() => expect(screen.getByTestId('theme-packs-result-e').textContent).toBe('common.saved'))
+      expect(screen.getByTestId('theme-packs-error')).toBeTruthy()
+      await advance(ERROR_DISMISS_MS)
+      expect(screen.queryByTestId('theme-packs-error')).toBeNull()
+      expect(screen.getByTestId('theme-packs-result-e').textContent).toBe('common.saved')
     })
   })
 })

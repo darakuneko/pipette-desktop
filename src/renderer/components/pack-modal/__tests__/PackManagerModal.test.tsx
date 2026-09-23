@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, screen, fireEvent, act, within } from '@testing-library/react'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
 import { PackManagerModal, type PackManagerModalProps } from '../PackManagerModal'
+import { ERROR_DISMISS_MS } from '../../ui/DismissibleError'
 import type { PackManagerTabId } from '../pack-modal-types'
 
 const TESTIDS: PackManagerModalProps['testids'] = {
@@ -48,6 +49,7 @@ function renderShell(overrides: Partial<PackManagerModalProps> = {}) {
     sortButton: <button data-testid="test-sort-button">Name</button>,
     importFeedback: null,
     actionError: null,
+    onDismissError: vi.fn(),
     children: <div data-testid="body-content">body</div>,
     ...overrides,
   }
@@ -137,6 +139,38 @@ describe('PackManagerModal', () => {
   it('shows the error banner with its testid when actionError is set', () => {
     renderShell({ actionError: 'Something broke' })
     expect(screen.getByTestId('test-error').textContent).toBe('Something broke')
+  })
+
+  it('renders the error banner as an alert', () => {
+    renderShell({ actionError: 'Something broke' })
+    expect(screen.getByRole('alert').textContent).toBe('Something broke')
+  })
+
+  it('renders no error banner when actionError is null', () => {
+    renderShell({ actionError: null })
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByTestId('test-error')).toBeNull()
+  })
+
+  describe('error banner dismissal', () => {
+    afterEach(() => { vi.useRealTimers() })
+
+    it('calls onDismissError after ERROR_DISMISS_MS', () => {
+      vi.useFakeTimers()
+      const onDismissError = vi.fn()
+      renderShell({ actionError: 'Something broke', onDismissError })
+      act(() => { vi.advanceTimersByTime(ERROR_DISMISS_MS - 1) })
+      expect(onDismissError).not.toHaveBeenCalled()
+      act(() => { vi.advanceTimersByTime(1) })
+      expect(onDismissError).toHaveBeenCalledTimes(1)
+    })
+
+    it('calls onDismissError when the close button is clicked', () => {
+      const onDismissError = vi.fn()
+      renderShell({ actionError: 'Something broke', onDismissError })
+      fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'common.close' }))
+      expect(onDismissError).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('omits the error banner testid when none is provided (Key Labels behaviour)', () => {

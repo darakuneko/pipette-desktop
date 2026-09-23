@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { buildKeymapRewriteTable } from '../../../../shared/keymap/keymap-apply'
 
 vi.mock('react-i18next', () => ({
@@ -102,6 +102,7 @@ vi.mock('../../../hooks/useKeyLabelLookup', () => ({
 }))
 
 import { KeyLabelsModal } from '../KeyLabelsModal'
+import { ERROR_DISMISS_MS } from '../../ui/DismissibleError'
 import { HUB_ERROR_RATE_LIMITED } from '../../../../shared/types/hub'
 
 function meta(over: Partial<{ id: string; name: string; uploaderName: string; hubPostId: string }> = {}) {
@@ -840,5 +841,77 @@ describe('KeyLabelsModal', () => {
     await waitFor(() => expect(reorder).toHaveBeenCalledWith(['a', 'z']))
     fireEvent.click(screen.getByTestId('key-labels-sort-button'))
     await waitFor(() => expect(reorder).toHaveBeenLastCalledWith(['z', 'a']))
+  })
+
+  describe('error auto-dismiss', () => {
+    beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: true }) })
+    afterEach(() => { vi.useRealTimers() })
+
+    async function advance(ms: number): Promise<void> {
+      await act(async () => { await vi.advanceTimersByTimeAsync(ms) })
+    }
+
+    it('removes the error banner after ERROR_DISMISS_MS', async () => {
+      importFromFile.mockResolvedValueOnce({
+        success: true,
+        data: { imported: [], rejections: [{ fileName: 'dup.json', errorCode: 'DUPLICATE_NAME', error: 'dup' }] },
+      })
+      render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+      fireEvent.click(screen.getByTestId('key-labels-import-button'))
+      await waitFor(() => expect(screen.getByTestId('key-labels-error')).toBeTruthy())
+      await advance(ERROR_DISMISS_MS)
+      expect(screen.queryByTestId('key-labels-error')).toBeNull()
+    })
+
+    it('removes a row error badge after ERROR_DISMISS_MS', async () => {
+      metas = [meta({ id: 'mine', name: 'Mine', uploaderName: 'me' })]
+      hubUpload.mockResolvedValueOnce({ success: false, error: 'network error' })
+      render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+      fireEvent.click(screen.getByTestId('key-labels-upload-mine'))
+      await waitFor(() => expect(screen.getByTestId('key-labels-result-mine')).toBeTruthy())
+      await advance(ERROR_DISMISS_MS)
+      expect(screen.queryByTestId('key-labels-result-mine')).toBeNull()
+    })
+
+    it('batch import: the banner goes away while the success badge stays', async () => {
+      metas = [meta({ id: 'a', name: 'Alpha', uploaderName: 'me' })]
+      const newMetaB = meta({ id: 'b', name: 'Beta' })
+      importFromFile.mockImplementationOnce(async () => {
+        metas = [...metas, newMetaB]
+        return {
+          success: true,
+          data: {
+            imported: [{ fileName: 'beta.json', meta: newMetaB }],
+            rejections: [{ fileName: 'broken.json', errorCode: 'INVALID_FILE', error: 'Invalid key label file' }],
+          },
+        }
+      })
+      render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+      fireEvent.click(screen.getByTestId('key-labels-import-button'))
+      await waitFor(() => expect(screen.getByTestId('key-labels-result-b').textContent).toBe('common.saved'))
+      expect(screen.getByTestId('key-labels-error')).toBeTruthy()
+      await advance(ERROR_DISMISS_MS)
+      expect(screen.queryByTestId('key-labels-error')).toBeNull()
+      expect(screen.getByTestId('key-labels-result-b').textContent).toBe('common.saved')
+    })
+
+    it('closing and reopening the modal shows no stale error or row result', async () => {
+      metas = [meta({ id: 'mine', name: 'Mine', uploaderName: 'me' })]
+      hubUpload.mockResolvedValueOnce({ success: false, error: 'network error' })
+      importFromFile.mockResolvedValueOnce({
+        success: true,
+        data: { imported: [], rejections: [{ fileName: 'dup.json', errorCode: 'DUPLICATE_NAME', error: 'dup' }] },
+      })
+      const onClose = vi.fn()
+      const { rerender } = render(<KeyLabelsModal open onClose={onClose} currentDisplayName="me" hubCanWrite />)
+      fireEvent.click(screen.getByTestId('key-labels-upload-mine'))
+      await waitFor(() => expect(screen.getByTestId('key-labels-result-mine')).toBeTruthy())
+      fireEvent.click(screen.getByTestId('key-labels-import-button'))
+      await waitFor(() => expect(screen.getByTestId('key-labels-error')).toBeTruthy())
+      rerender(<KeyLabelsModal open={false} onClose={onClose} currentDisplayName="me" hubCanWrite />)
+      rerender(<KeyLabelsModal open onClose={onClose} currentDisplayName="me" hubCanWrite />)
+      expect(screen.queryByTestId('key-labels-error')).toBeNull()
+      expect(screen.queryByTestId('key-labels-result-mine')).toBeNull()
+    })
   })
 })

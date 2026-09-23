@@ -11,6 +11,7 @@ import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { BTN_PRIMARY, PACK_TOOLBAR_BTN } from '../../constants/ui-tokens'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
+import { DismissibleError } from '../ui/DismissibleError'
 import { PackTabButton } from './PackTabButton'
 import type { PackManagerTabId } from './pack-modal-types'
 
@@ -85,6 +86,9 @@ export interface PackManagerModalProps {
    *  post-batch summary or per-name feedback. */
   importFeedback: string | null
   actionError: string | null
+  /** Clears `actionError`; fired by the banner's close button and its
+   *  auto-dismiss timer. */
+  onDismissError: () => void
   children: ReactNode
   /** Language Packs renders MissingKeysModal as a portal sibling after
    * the modal box; unused by Theme Packs / Key Labels. */
@@ -117,6 +121,7 @@ export function PackManagerModal({
   sortButton,
   importFeedback,
   actionError,
+  onDismissError,
   children,
   afterContent,
 }: PackManagerModalProps): JSX.Element | null {
@@ -214,14 +219,12 @@ export function PackManagerModal({
           </div>
         )}
 
-        {actionError && (
-          <div
-            className="mx-4 my-2 whitespace-pre-wrap rounded border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-700"
-            data-testid={testids.errorBanner}
-          >
-            {actionError}
-          </div>
-        )}
+        <DismissibleError
+          message={actionError}
+          onDismiss={onDismissError}
+          className="mx-4 my-2 whitespace-pre-wrap rounded border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-700"
+          testid={testids.errorBanner}
+        />
 
         <div className="flex-1 overflow-y-auto px-4 py-2">
           {children}

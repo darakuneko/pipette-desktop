@@ -30,6 +30,7 @@ import { PackHubTab } from '../pack-modal/PackHubTab'
 import { PackSortButton } from '../pack-modal/PackSortButton'
 import { useHubOrigin } from '../pack-modal/useHubOrigin'
 import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
+import { useDismissErrorResult } from '../pack-modal/use-dismiss-error-result'
 import { LanguageInstalledRow, LanguageHubRow } from './LanguageInstalledRow'
 import { useLanguagePackCoverage } from './use-language-pack-coverage'
 import { useLanguagePackList } from './use-language-pack-list'
@@ -62,6 +63,7 @@ export function LanguagePacksModal({
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [lastResult, setLastResult] = useState<PackActionResult | PackActionResult[] | null>(null)
+  useDismissErrorResult(lastResult, setLastResult)
   const [missingKeysFor, setMissingKeysFor] = useState<{ name: string; keys: string[] } | null>(null)
 
   const hubOrigin = useHubOrigin(open)
@@ -184,6 +186,7 @@ export function LanguagePacksModal({
       )}
       importFeedback={importing ? t('common.importing') : (importSummary ?? placement.feedback)}
       actionError={actionError}
+      onDismissError={() => setActionError(null)}
       afterContent={(
         <MissingKeysModal
           open={!!missingKeysFor}

@@ -31,6 +31,7 @@ import { useImportBatch, type CollectedImportBatch } from '../pack-modal/useImpo
 import type { ImportBatchFailure } from '../pack-modal/import-batch-summary'
 import { isOwnPack } from '../pack-modal/ownership'
 import type { PackActionResult, PackManagerTabId } from '../pack-modal/pack-modal-types'
+import { useDismissErrorResult } from '../pack-modal/use-dismiss-error-result'
 import {
   InstalledTable,
   HubTable,
@@ -68,9 +69,14 @@ export function KeyLabelsModal({
    * "Removed" or the localized error). Mirrors the FavoriteHubActions /
    * LayoutStoreHubActions feedback so the user sees confirmation right
    * under the affected row instead of hunting for a toast. Cleared at
-   * the start of the next operation.
+   * the start of the next operation; error entries also expire on a timer.
    */
   const [lastResult, setLastResult] = useState<PackActionResult | PackActionResult[] | null>(null)
+  useDismissErrorResult(lastResult, setLastResult)
+  // The modal stays mounted while closed, so reopening must not show stale feedback.
+  useEffect(() => {
+    if (!open) { setActionError(null); setLastResult(null) }
+  }, [open])
 
   // Key Labels fetches the Hub origin once on first mount, unlike the
   // i18n/theme pack modals which re-fetch each time the modal opens.
@@ -379,6 +385,7 @@ export function KeyLabelsModal({
       )}
       importFeedback={importing ? t('common.importing') : (importSummary ?? placement.feedback)}
       actionError={actionError}
+      onDismissError={() => setActionError(null)}
     >
       {activeTab === 'installed' ? (
         <InstalledTable

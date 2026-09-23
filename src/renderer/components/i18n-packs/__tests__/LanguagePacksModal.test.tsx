@@ -167,6 +167,7 @@ Object.defineProperty(window, 'vialAPI', { value: vialAPI, writable: true })
 import { LanguagePacksModal } from '../LanguagePacksModal'
 import { downloadJson } from '../../../utils/download-json'
 import { HUB_ERROR_RATE_LIMITED } from '../../../../shared/types/hub'
+import { ERROR_DISMISS_MS } from '../../ui/DismissibleError'
 
 function meta(over: Partial<{
   id: string
@@ -1480,6 +1481,57 @@ describe('LanguagePacksModal', () => {
       fireEvent.click(screen.getByTestId('language-packs-pull-button'))
 
       await waitFor(() => expect(screen.getByTestId('language-packs-error')).toHaveTextContent('network down'))
+    })
+  })
+
+  describe('error auto-dismiss', () => {
+    beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: true }) })
+    afterEach(() => { vi.useRealTimers() })
+
+    async function advance(ms: number): Promise<void> {
+      await act(async () => { await vi.advanceTimersByTimeAsync(ms) })
+    }
+
+    it('removes the error banner after ERROR_DISMISS_MS', async () => {
+      importFromDialog.mockResolvedValueOnce({ canceled: false, files: [{ filePath: 'bad.json', parseError: 'EACCES' }] })
+      render(<LanguagePacksModal open onClose={vi.fn()} />)
+      fireEvent.click(screen.getByTestId('language-packs-import-button'))
+      await waitFor(() => expect(screen.getByTestId('language-packs-error')).toBeTruthy())
+      await advance(ERROR_DISMISS_MS)
+      expect(screen.queryByTestId('language-packs-error')).toBeNull()
+    })
+
+    it('removes a row error badge after ERROR_DISMISS_MS', async () => {
+      storeMetas = [meta({ id: 'uf1', name: 'Upload Fail' })]
+      vialAPI.hubUploadI18nPost.mockResolvedValueOnce({ success: false, error: 'Upload rejected' })
+      render(<LanguagePacksModal open onClose={vi.fn()} hubCanWrite />)
+      fireEvent.click(screen.getByTestId('language-packs-upload-uf1'))
+      await waitFor(() => expect(screen.getByTestId('language-packs-result-uf1')).toBeTruthy())
+      await advance(ERROR_DISMISS_MS)
+      expect(screen.queryByTestId('language-packs-result-uf1')).toBeNull()
+    })
+
+    it('batch import: the banner goes away while the success badge stays', async () => {
+      storeMetas = [meta({ id: 'a', name: 'Alpha', matchedBaseVersion: '0.1.0' })]
+      const savedMeta = meta({ id: 'e', name: 'Existing', matchedBaseVersion: '0.1.0' })
+      importFromDialog.mockResolvedValueOnce({
+        canceled: false,
+        files: [
+          { filePath: 'bad.json', parseError: 'EACCES' },
+          { filePath: 'my-upload.json', raw: { name: 'Existing', version: '0.1.0', common: {} } },
+        ],
+      })
+      applyImport.mockImplementationOnce(async () => {
+        storeMetas = [...storeMetas, savedMeta]
+        return { success: true, meta: savedMeta }
+      })
+      render(<LanguagePacksModal open onClose={vi.fn()} />)
+      fireEvent.click(screen.getByTestId('language-packs-import-button'))
+      await waitFor(() => expect(screen.getByTestId('language-packs-result-e').textContent).toBe('common.saved'))
+      expect(screen.getByTestId('language-packs-error')).toBeTruthy()
+      await advance(ERROR_DISMISS_MS)
+      expect(screen.queryByTestId('language-packs-error')).toBeNull()
+      expect(screen.getByTestId('language-packs-result-e').textContent).toBe('common.saved')
     })
   })
 })
