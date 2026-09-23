@@ -8,7 +8,7 @@
 // passing a real protocol (5 in these tests) through as-is.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import { useHubState } from '../useHubState'
 import type { SavedFavoriteMeta } from '../../../shared/types/favorite-store'
 
@@ -33,6 +33,10 @@ const mockHubDeletePost = vi.fn()
 const mockHubDeletePrivatePost = vi.fn()
 const mockFavoriteStoreSetHubPostId = vi.fn().mockResolvedValue(undefined)
 const mockFavoriteStoreSetHubPrivate = vi.fn().mockResolvedValue(undefined)
+const mockHubPatchPost = vi.fn()
+const mockHubFetchMyPosts = vi.fn()
+const mockHubFetchMyKeyboardPosts = vi.fn()
+const mockHubFetchAuthMe = vi.fn()
 
 Object.defineProperty(window, 'vialAPI', {
   value: {
@@ -45,6 +49,10 @@ Object.defineProperty(window, 'vialAPI', {
     hubDeletePrivatePost: mockHubDeletePrivatePost,
     favoriteStoreSetHubPostId: mockFavoriteStoreSetHubPostId,
     favoriteStoreSetHubPrivate: mockFavoriteStoreSetHubPrivate,
+    hubPatchPost: mockHubPatchPost,
+    hubFetchMyPosts: mockHubFetchMyPosts,
+    hubFetchMyKeyboardPosts: mockHubFetchMyKeyboardPosts,
+    hubFetchAuthMe: mockHubFetchAuthMe,
   },
   writable: true,
 })
@@ -238,5 +246,82 @@ describe('useHubState favorite vialProtocol fallback', () => {
     expect(mockHubUploadPrivateFavoritePost).toHaveBeenCalledWith(
       expect.objectContaining({ vialProtocol: 5 }),
     )
+  })
+})
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((r) => { resolve = r })
+  return { promise, resolve }
+}
+
+// Favorite Hub operations share one in-flight lock: while one is pending,
+// another call returns without touching the Hub API.
+describe('useHubState favorite Hub operation lock', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockHubGetOrigin.mockResolvedValue('https://hub.example')
+    mockHubFetchMyPosts.mockResolvedValue({ success: true, posts: [] })
+    mockHubFetchMyKeyboardPosts.mockResolvedValue({ success: true, posts: [] })
+    mockHubFetchAuthMe.mockResolvedValue({ success: false })
+  })
+
+  it('ignores a second remove while the first is pending, then accepts a new one', async () => {
+    mockFavoriteStoreList.mockResolvedValue({ success: true, entries: entriesWith({ hubPostId: 'post-1' }) })
+    const first = deferred<{ success: boolean }>()
+    mockHubDeletePost.mockReturnValueOnce(first.promise).mockResolvedValue({ success: true })
+
+    const { result } = renderHook(() => useHubState(baseOptions(5)))
+
+    let firstCall!: Promise<void>
+    act(() => {
+      firstCall = result.current.handleFavRemoveFromHub('tapDance', 'e1')
+    })
+    await waitFor(() => expect(mockHubDeletePost).toHaveBeenCalledTimes(1))
+
+    await act(async () => {
+      await result.current.handleFavRemoveFromHub('tapDance', 'e1')
+    })
+    expect(mockHubDeletePost).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      first.resolve({ success: true })
+      await firstCall
+    })
+
+    await act(async () => {
+      await result.current.handleFavRemoveFromHub('tapDance', 'e1')
+    })
+    expect(mockHubDeletePost).toHaveBeenCalledTimes(2)
+  })
+
+  it('ignores a second rename while the first is pending, then accepts a new one', async () => {
+    const first = deferred<{ success: boolean }>()
+    mockHubPatchPost.mockReturnValueOnce(first.promise).mockResolvedValue({ success: true })
+
+    const { result } = renderHook(() => useHubState({ ...baseOptions(5), hubEnabled: true, authenticated: true }))
+    await waitFor(() => expect(result.current.hubReady).toBe(true))
+
+    let firstCall!: Promise<void>
+    act(() => {
+      firstCall = result.current.handleFavRenameOnHub('e1', 'post-1', 'First')
+    })
+    expect(mockHubPatchPost).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      await result.current.handleFavRenameOnHub('e1', 'post-1', 'Second')
+    })
+    expect(mockHubPatchPost).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      first.resolve({ success: true })
+      await firstCall
+    })
+
+    await act(async () => {
+      await result.current.handleFavRenameOnHub('e1', 'post-1', 'Third')
+    })
+    expect(mockHubPatchPost).toHaveBeenCalledTimes(2)
+    expect(mockHubPatchPost).toHaveBeenLastCalledWith({ postId: 'post-1', title: 'Third' })
   })
 })
