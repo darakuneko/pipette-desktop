@@ -806,26 +806,29 @@ describe('sync-service', () => {
       await waitForPollPassForTests()
       expect(mockListFiles).toHaveBeenCalledTimes(1)
 
+      // The gate exists before the pass reaches GC, so releasing it in
+      // `finally` unblocks the pass whenever an assertion fails.
       let releaseGc: () => void = () => {}
-      mockRunPackGcAfterPass.mockImplementationOnce(
-        () => new Promise<void>((resolve) => { releaseGc = resolve }),
-      )
+      const gcGate = new Promise<void>((resolve) => { releaseGc = resolve })
+      mockRunPackGcAfterPass.mockImplementationOnce(() => gcGate)
 
       // Second poll: nothing changed, so the pass goes straight to the GC
       // step and waits there.
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockRunPackGcAfterPass.mock.calls.length === 1, 'the GC step to start')
       const tracked = waitForPollPassForTests()
+      try {
+        await flushUntil(() => mockRunPackGcAfterPass.mock.calls.length === 1, 'the GC step to start')
 
-      // Third tick while the second pass is still running: no new pass, and
-      // the tracked promise is not replaced.
-      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      expect(mockListFiles).toHaveBeenCalledTimes(2)
-      expect(waitForPollPassForTests()).toBe(tracked)
-      await expect(settlesSoon(tracked)).resolves.toBe('pending')
-
-      releaseGc()
-      await tracked
+        // Third tick while the second pass is still running: no new pass,
+        // and the tracked promise is not replaced.
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+        expect(mockListFiles).toHaveBeenCalledTimes(2)
+        expect(waitForPollPassForTests()).toBe(tracked)
+        await expect(settlesSoon(tracked)).resolves.toBe('pending')
+      } finally {
+        releaseGc()
+        await tracked
+      }
       expect(isSyncInProgress()).toBe(false)
       await expect(settlesSoon(waitForPollPassForTests())).resolves.toBe('settled')
 
@@ -833,7 +836,7 @@ describe('sync-service', () => {
     })
 
     it('resolves when the pass fails internally', async () => {
-      mockListFiles.mockRejectedValue(new Error('network down'))
+      mockListFiles.mockRejectedValueOnce(new Error('network down'))
 
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
@@ -875,21 +878,22 @@ describe('sync-service', () => {
 
     it('resolves immediately after _resetForTests even while a pass is running', async () => {
       let releaseList: (files: DriveFile[]) => void = () => {}
-      mockListFiles.mockImplementationOnce(
-        () => new Promise<DriveFile[]>((resolve) => { releaseList = resolve }),
-      )
+      const listGate = new Promise<DriveFile[]>((resolve) => { releaseList = resolve })
+      mockListFiles.mockImplementationOnce(() => listGate)
 
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockListFiles.mock.calls.length === 1, 'the pass to reach listFiles')
       const running = waitForPollPassForTests()
+      try {
+        await flushUntil(() => mockListFiles.mock.calls.length === 1, 'the pass to reach listFiles')
 
-      _resetForTests()
-      await expect(settlesSoon(waitForPollPassForTests())).resolves.toBe('settled')
-
-      // Let the dropped pass finish so it can't touch the next test.
-      releaseList([])
-      await running
+        _resetForTests()
+        await expect(settlesSoon(waitForPollPassForTests())).resolves.toBe('settled')
+      } finally {
+        // Let the dropped pass finish so it can't touch the next test.
+        releaseList([])
+        await running
+      }
     })
   })
 

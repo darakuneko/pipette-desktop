@@ -53,8 +53,7 @@ export function _resetForTests(): void {
 
 // --- Public re-exports ---------------------------------------------------
 // Explicit named re-exports only (never `export *`) so the facade's public
-// surface is grep-able in one place and stays byte-identical to what it was
-// before the split.
+// surface is grep-able in one place.
 
 export { SyncCredentialError } from './sync-password'
 

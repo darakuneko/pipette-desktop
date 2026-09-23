@@ -13,8 +13,10 @@ import { listLocalKeyboardUids, shouldDownloadSyncUnit } from './sync-scope'
 import { mergeWithRemote } from './sync-merge-dispatch'
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
-// The pass the interval started and that has not settled yet. Kept only so
-// tests can await the exact pass; production never reads it.
+// The pass the interval started and that has not settled yet, kept so
+// tests can await the exact pass. Production behavior does not depend on
+// it: the tick guard in startPolling only skips a call that would return
+// at pollForRemoteChanges's lock check anyway.
 let inFlightPoll: Promise<void> | null = null
 
 async function pollForRemoteChanges(): Promise<void> {
