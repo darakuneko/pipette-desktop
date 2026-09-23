@@ -18,6 +18,7 @@ import {
   KEY_REMAP_COLOR,
 } from '../constants'
 import type { KleKey } from '../../../../shared/kle/types'
+import { attrs, FILL_STYLE, BORDER_STYLE } from './flash-overlay-test-utils'
 
 let mockIsMask = false
 let mockInnerKeycode: { qmkId: string } = { qmkId: 'KC_A' }
@@ -343,17 +344,11 @@ describe('KeyWidget', () => {
   // geometry (identical to the key's outer shape), the two layers' order
   // right after the outer shape, and which layer remounts on a re-apply.
   describe('flash overlay DOM contract', () => {
-    function attrs(el: Element): Record<string, string> {
-      return Object.fromEntries(Array.from(el.attributes, (a) => [a.name, a.value]))
-    }
-
     function pick(el: Element, names: string[]): Record<string, string | null> {
       return Object.fromEntries(names.map((n) => [n, el.getAttribute(n)]))
     }
 
     const RECT_GEOMETRY = ['x', 'y', 'width', 'height', 'rx', 'ry']
-    const FILL_STYLE = 'pointer-events: none; animation-delay: 0ms;'
-    const BORDER_STYLE = 'pointer-events: none;'
 
     function renderFlashed(kleKey: KleKey, extra: { selected?: boolean; flashGeneration?: number } = {}) {
       return render(

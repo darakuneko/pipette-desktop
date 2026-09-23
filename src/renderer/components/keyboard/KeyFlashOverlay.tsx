@@ -2,7 +2,6 @@
 
 import type { Key, SVGAttributes } from 'react'
 import { KEY_SELECTED_COLOR } from './constants'
-import type { Props } from './key-widget-types'
 
 /** Outline both overlay layers are drawn with: the union path of a
  *  stepped/ISO key, a plain key's rect, or an encoder's circle. */
@@ -13,7 +12,7 @@ export type FlashShape =
 
 interface KeyFlashOverlayProps {
   shape: FlashShape
-  flashGeneration: Props['flashGeneration']
+  flashGeneration: number | undefined
   flashElapsedMs: number
   outerStroke: string
   outerStrokeWidth: number

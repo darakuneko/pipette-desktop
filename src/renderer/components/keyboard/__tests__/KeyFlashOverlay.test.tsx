@@ -5,10 +5,7 @@ import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import { KeyFlashOverlay, type FlashShape } from '../KeyFlashOverlay'
 import { KEY_SELECTED_COLOR } from '../constants'
-
-function attrs(el: Element): Record<string, string> {
-  return Object.fromEntries(Array.from(el.attributes, (a) => [a.name, a.value]))
-}
+import { attrs } from './flash-overlay-test-utils'
 
 function renderOverlay(shape: FlashShape, flashGeneration = 1) {
   return (

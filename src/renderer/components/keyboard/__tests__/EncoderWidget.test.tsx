@@ -6,6 +6,7 @@ import { render } from '@testing-library/react'
 import { EncoderWidget } from '../EncoderWidget'
 import { KEY_SELECTED_COLOR, KEY_BORDER_COLOR, KEY_BG_COLOR, KEY_TEXT_COLOR, KEY_REMAP_COLOR, KEY_INVERTED_TEXT_COLOR } from '../constants'
 import type { KleKey } from '../../../../shared/kle/types'
+import { attrs, FILL_STYLE, BORDER_STYLE } from './flash-overlay-test-utils'
 
 let mockIsMask = false
 let mockInnerKeycode: { qmkId: string } = { qmkId: 'KC_A' }
@@ -229,16 +230,10 @@ describe('EncoderWidget', () => {
   // geometry (identical to the outer circle), the two layers' order right
   // after the outer circle, and which layer remounts on a re-apply.
   describe('flash overlay DOM contract', () => {
-    function attrs(el: Element): Record<string, string> {
-      return Object.fromEntries(Array.from(el.attributes, (a) => [a.name, a.value]))
-    }
-
     function circleGeometry(el: Element): Record<string, string | null> {
       return { cx: el.getAttribute('cx'), cy: el.getAttribute('cy'), r: el.getAttribute('r') }
     }
 
-    const FILL_STYLE = 'pointer-events: none; animation-delay: 0ms;'
-    const BORDER_STYLE = 'pointer-events: none;'
 
     function layers(container: HTMLElement) {
       const fill = container.querySelector('[data-testid="flash-overlay"]')!
