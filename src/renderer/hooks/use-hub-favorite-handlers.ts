@@ -21,10 +21,11 @@ interface Options {
   favVialProtocol: number
   markAccountDeactivated: () => void
   hubReady: boolean
-  /** `useState` setters, whose identity never changes — `runFavHubOperation`
-   *  closes over both without listing them as `useCallback` dependencies,
-   *  so they must never be passed a value that changes identity across
-   *  renders. */
+  /** `useState` setters, whose identity never changes. None of the
+   *  `useCallback`s below list them as dependencies: `runFavHubOperation`
+   *  and `handleFavRenameOnHub` close over both, and the upload / update /
+   *  remove handlers over `setFavHubUploadResult`. They must never be
+   *  passed a value that changes identity across renders. */
   setFavHubUploading: React.Dispatch<React.SetStateAction<string | null>>
   setFavHubUploadResult: React.Dispatch<React.SetStateAction<FavHubEntryResult | null>>
 }

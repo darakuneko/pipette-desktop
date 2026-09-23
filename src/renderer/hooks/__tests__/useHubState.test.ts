@@ -6,6 +6,9 @@
 // where `vialProtocol` is that sentinel) to the Hub IPC calls — it
 // substitutes the shared FALLBACK_VIAL_PROTOCOL (6) instead, while
 // passing a real protocol (5 in these tests) through as-is.
+//
+// It also pins the favorite Hub operation lock: a second concurrent call
+// is ignored until the first one settles.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
