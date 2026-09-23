@@ -188,7 +188,7 @@ export function useHubFavoriteHandlers(options: Options) {
             await persistFavHubPrivate(type, entryId, null)
             setFavHubUploadResult({ kind: 'success', message: t('hub.removeSuccess'), entryId })
           } else {
-            setFavHubUploadResult({ kind: 'error', message: result.error || t('hub.removeFailed'), entryId })
+            setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.removeFailed'), entryId })
           }
           return
         }
@@ -197,13 +197,13 @@ export function useHubFavoriteHandlers(options: Options) {
           await persistFavHubPostId(type, entryId, null)
           setFavHubUploadResult({ kind: 'success', message: t('hub.removeSuccess'), entryId })
         } else {
-          setFavHubUploadResult({ kind: 'error', message: result.error || t('hub.removeFailed'), entryId })
+          setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.removeFailed'), entryId })
         }
       } catch {
         setFavHubUploadResult({ kind: 'error', message: t('hub.removeFailed'), entryId })
       }
     })
-  }, [runFavHubOperation, persistFavHubPostId, persistFavHubPrivate, t])
+  }, [runFavHubOperation, persistFavHubPostId, persistFavHubPrivate, markAccountDeactivated, t])
 
   const handleFavRenameOnHub = useCallback(async (entryId: string, hubPostId: string, newLabel: string) => {
     if (!hubReady || favHubUploadingRef.current) return

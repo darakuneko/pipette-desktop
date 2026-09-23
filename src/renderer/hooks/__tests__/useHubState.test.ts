@@ -460,3 +460,57 @@ describe('useHubState favorite Hub operation lock', () => {
     expect(result.current.favHubUploading).toBeNull()
   })
 })
+
+// A failed favorite remove reports Hub error codes the same way as the
+// other favorite Hub actions and leaves the stored link in place.
+describe('useHubState favorite Hub remove failures', () => {
+  const privateLink = { id: 'priv-1', url: 'https://hub.example/p/priv-1', expiresAt: null }
+  const cases = [
+    { visibility: 'public', entry: { hubPostId: 'post-1' }, deleteMock: mockHubDeletePost },
+    { visibility: 'private', entry: { hubPrivate: privateLink }, deleteMock: mockHubDeletePrivatePost },
+  ] as const
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockHubGetOrigin.mockResolvedValue('https://hub.example')
+    mockHubFetchMyPosts.mockResolvedValue({ success: true, posts: [{ id: 'post-1' }] })
+    mockHubFetchMyKeyboardPosts.mockResolvedValue({ success: true, posts: [] })
+    mockHubFetchAuthMe.mockResolvedValue({ success: false })
+  })
+
+  async function renderAndRemove(entry: Partial<SavedFavoriteMeta>) {
+    mockFavoriteStoreList.mockResolvedValue({ success: true, entries: entriesWith(entry) })
+    const { result } = renderHook(() => useHubState({ ...baseOptions(5), hubEnabled: true, authenticated: true }))
+    await waitFor(() => expect(result.current.hubConnected).toBe(true))
+    expect(result.current.hubMyPosts).toHaveLength(1)
+
+    await act(async () => {
+      await result.current.handleFavRemoveFromHub('tapDance', 'e1')
+    })
+    return result
+  }
+
+  it.each(cases)('marks the account deactivated on a $visibility remove', async ({ entry, deleteMock }) => {
+    deleteMock.mockResolvedValue({ success: false, error: 'ACCOUNT_DEACTIVATED' })
+
+    const result = await renderAndRemove(entry)
+
+    expect(result.current.favHubUploadResult).toEqual({ kind: 'error', message: 'hub.accountDeactivated', entryId: 'e1' })
+    expect(result.current.hubAccountDeactivated).toBe(true)
+    expect(result.current.hubConnected).toBe(false)
+    expect(result.current.hubMyPosts).toEqual([])
+    expect(mockFavoriteStoreSetHubPostId).not.toHaveBeenCalled()
+    expect(mockFavoriteStoreSetHubPrivate).not.toHaveBeenCalled()
+  })
+
+  it.each(cases)('reports the rate limit on a $visibility remove', async ({ entry, deleteMock }) => {
+    deleteMock.mockResolvedValue({ success: false, error: 'RATE_LIMITED' })
+
+    const result = await renderAndRemove(entry)
+
+    expect(result.current.favHubUploadResult).toEqual({ kind: 'error', message: 'hub.rateLimited', entryId: 'e1' })
+    expect(result.current.hubAccountDeactivated).toBe(false)
+    expect(mockFavoriteStoreSetHubPostId).not.toHaveBeenCalled()
+    expect(mockFavoriteStoreSetHubPrivate).not.toHaveBeenCalled()
+  })
+})
