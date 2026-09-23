@@ -234,7 +234,6 @@ describe('EncoderWidget', () => {
       return { cx: el.getAttribute('cx'), cy: el.getAttribute('cy'), r: el.getAttribute('r') }
     }
 
-
     function layers(container: HTMLElement) {
       const fill = container.querySelector('[data-testid="flash-overlay"]')!
       const border = container.querySelector('[data-testid="flash-overlay-border"]')!
