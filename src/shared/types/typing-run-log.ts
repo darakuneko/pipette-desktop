@@ -134,8 +134,7 @@ export interface RunKeystrokeLog {
    *  is true. Optional and backward-compatible: a log saved before this
    *  field existed has no way to know its own romaji state, so it is
    *  treated as non-romaji (`undefined` reads the same as `false`) —
-   *  the pre-existing (and only slightly wrong, not nonsensical) verbatim
-   *  scoring is preferred over guessing. */
+   *  verbatim scoring is preferred over guessing. */
   romajiInput?: boolean
   /** Sorted, unique, ascending line-end word indices (into `words`) — the
    *  reading window's logical line structure at the moment this run
@@ -164,10 +163,11 @@ export interface RunKeystrokeLog {
 
 /** Index entry — deliberately `id` (not `runId`) to mirror every other
  *  index-based store's `EntryMeta` shape (`AnalyzeFilterSnapshotMeta`,
- *  `KeyLabelMeta`, ...) so this store's index can reuse the generic
- *  `mergeEntries`/`gcTombstones` helpers in `sync/merge.ts` unchanged —
- *  those key strictly on `.id`. `id` holds the same value as the
- *  matching `RunKeystrokeLog.runId`. */
+ *  `KeyLabelMeta`, ...) so this store's index merges through the generic
+ *  `mergeEntries`/`gcTombstones` helpers in `sync/merge.ts`;
+ *  `mergeEntries` keys strictly on `.id` (run logs additionally pass
+ *  `runLogRetentionMax`). `id` holds the same value as the matching
+ *  `RunKeystrokeLog.runId`. */
 export interface RunLogMeta {
   id: string
   /** ISO 8601, immutable for the entry's lifetime — the ranking key

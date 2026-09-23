@@ -147,8 +147,8 @@ export function BigramsChart({
 
   // Finger IKI has no defined meaning for trigrams (a 3-key finger pair
   // isn't a thing), so gram === 3 renders Top + Slow only. Dropping to a
-  // single row keeps the two quadrants full-height instead of leaving an
-  // empty grid cell where Finger IKI used to sit.
+  // single row keeps the two quadrants full-height instead of leaving the
+  // second row empty.
   const showFingerIki = gram === 2
   const gridClass = showFingerIki
     ? 'grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-3'

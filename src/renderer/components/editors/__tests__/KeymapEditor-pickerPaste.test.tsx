@@ -715,10 +715,10 @@ describe('KeymapEditor — picker paste', () => {
   })
 })
 
-// Regression coverage for the Keyboard-tab picker's SOURCE index domain
+// Covers the Keyboard-tab picker's SOURCE index domain
 // (`useLayoutPicker`'s `handlePickerKeyClick`/`pickerTabKeycodeNumbers`) —
-// distinct from every test above, which exercises `onKeycodeMultiSelect`
-// directly and never touches that source-side index computation at all.
+// distinct from the tests above, which drive `onKeycodeMultiSelect` or
+// the primary pane directly and never take that source-side click path.
 // These render the picker's own `<KeyboardPane>` (via `keyboardPickerContent`,
 // opted in through `renderKeyboardPickerContent`) and drive its real
 // `onKeyClick` handler, transitioning past the device-browse screen onto the
