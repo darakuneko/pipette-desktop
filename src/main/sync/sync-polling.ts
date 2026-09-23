@@ -13,6 +13,9 @@ import { listLocalKeyboardUids, shouldDownloadSyncUnit } from './sync-scope'
 import { mergeWithRemote } from './sync-merge-dispatch'
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
+// The pass the interval started and that has not settled yet. Kept only so
+// tests can await the exact pass; production never reads it.
+let inFlightPoll: Promise<void> | null = null
 
 async function pollForRemoteChanges(): Promise<void> {
   if (syncRuntime.isSyncing) return
@@ -110,7 +113,16 @@ async function pollForRemoteChanges(): Promise<void> {
 export function startPolling(): void {
   if (pollTimer) return
   pollTimer = setInterval(() => {
-    void pollForRemoteChanges()
+    // A tick while the tracked pass is still running is skipped: that pass
+    // holds `syncRuntime.isSyncing`, so a second call would return at its
+    // lock check without doing anything. pollForRemoteChanges catches its
+    // own errors, so the tracked promise never rejects.
+    if (inFlightPoll) return
+    const pass = pollForRemoteChanges().finally(() => {
+      // Only clear our own entry — a reset may have dropped it already.
+      if (inFlightPoll === pass) inFlightPoll = null
+    })
+    inFlightPoll = pass
   }, POLL_INTERVAL_MS)
 }
 
@@ -119,4 +131,16 @@ export function stopPolling(): void {
     clearInterval(pollTimer)
     pollTimer = null
   }
+}
+
+/** Test-only: resolves when the poll pass the interval started has
+ * settled (immediately when none is running). */
+export function waitForPollPassForTests(): Promise<void> {
+  return inFlightPoll ?? Promise.resolve()
+}
+
+/** Test-only reset for the tracked pass — called by the sync-service
+ * facade's `_resetForTests`. It does not stop a running pass. */
+export function clearInFlightPollForTests(): void {
+  inFlightPoll = null
 }

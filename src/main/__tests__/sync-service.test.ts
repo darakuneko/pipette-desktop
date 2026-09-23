@@ -230,6 +230,7 @@ import {
   registerBeforeQuitFinalizer,
   deleteRemoteTypingDay,
   fetchRemoteTypingDay,
+  waitForPollPassForTests,
   _resetForTests,
 } from '../sync/sync-service'
 import { app } from 'electron'
@@ -283,10 +284,9 @@ async function flushUntil(
 }
 
 /**
- * Waits until no poll pass (or other sync) holds the sync lock.
- * `setInterval` starts each poll with `void pollForRemoteChanges()`, so
- * advancing fake time never awaits the pass itself; the lock is released
- * in the pass's `finally`, which makes it the observable end of a pass.
+ * Waits until no sync of any kind (poll pass, executeSync, debounced
+ * flush) holds the sync lock. Tests that only need the poll pass the
+ * interval started await `waitForPollPassForTests` instead.
  */
 async function waitForSyncIdle(): Promise<void> {
   await flushUntil(() => !isSyncInProgress(), 'the sync lock to be released')
@@ -637,10 +637,8 @@ describe('sync-service', () => {
 
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'pc-1'))
-      // Wait for the whole pass so a hypothetical late data-file
-      // download can't land after the count assertion below.
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
 
       // Password-check downloaded for validation, but data file NOT downloaded
       expect(mockDownloadFile).toHaveBeenCalledTimes(1)
@@ -658,14 +656,12 @@ describe('sync-service', () => {
       startPolling()
       // First poll: records state, no data download
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockListFiles.mock.calls.length >= 1)
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
 
       // Second poll: detects modifiedTime change, downloads
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'file-1'))
-      // Wait for the whole pass before the exact listFiles count assertion.
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
 
       expect(mockListFiles).toHaveBeenCalledTimes(2)
       expect(mockDownloadFile).toHaveBeenCalledWith('file-1')
@@ -699,15 +695,15 @@ describe('sync-service', () => {
 
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockListFiles.mock.calls.length >= 1)
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
 
+      // The merge's file write is real disk I/O, so wait for the pass itself
+      // rather than a fixed tick count.
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'theme-pack-1'))
-      // The merge's file write is real disk I/O — wait for the poll's own
-      // sync-lock release rather than a fixed tick count.
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
 
+      expect(mockListFiles).toHaveBeenCalledTimes(2)
       expect(mockDownloadFile).toHaveBeenCalledWith('theme-pack-1')
       await expect(
         readFile(join(mockUserDataPath, 'sync', 'themes', 'packs', 'pack-a.json'), 'utf-8'),
@@ -726,18 +722,17 @@ describe('sync-service', () => {
       mockListFiles.mockResolvedValue([makeDriveFile('2025-01-01T00:00:00.000Z')])
 
       startPolling()
-      // Wait for the poll to actually run (listFiles fires at its start)
-      // before settling — a plain fixed drain could return before the
-      // tick completed and false-pass the negative count check below.
+      // The listFiles counts prove each poll actually ran, so the negative
+      // download check below can't false-pass on a skipped pass.
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockListFiles.mock.calls.length >= 1)
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
 
       const downloadCallCount = mockDownloadFile.mock.calls.length
 
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockListFiles.mock.calls.length >= 2)
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(2)
 
       expect(mockDownloadFile.mock.calls.length).toBe(downloadCallCount)
 
@@ -753,8 +748,11 @@ describe('sync-service', () => {
 
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      // The skipped pass settles at once even though the lock stays held.
+      await waitForPollPassForTests()
 
       expect(mockListFiles).toHaveBeenCalledTimes(1)
+      expect(isSyncInProgress()).toBe(true)
 
       stopPolling()
       await vi.advanceTimersByTimeAsync(5 * 60 * 1000)
@@ -777,6 +775,121 @@ describe('sync-service', () => {
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
 
       expect(mockListFiles).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('waitForPollPassForTests', () => {
+    // Resolves 'pending' unless `promise` has already settled after a few
+    // real event-loop turns.
+    async function settlesSoon(promise: Promise<void>): Promise<'settled' | 'pending'> {
+      const pending = new Promise<'pending'>((resolve) => {
+        realSetImmediate(() => realSetImmediate(() => realSetImmediate(() => resolve('pending'))))
+      })
+      return Promise.race([promise.then(() => 'settled' as const), pending])
+    }
+
+    it('resolves immediately before any tick', async () => {
+      await expect(settlesSoon(waitForPollPassForTests())).resolves.toBe('settled')
+
+      startPolling()
+      await expect(settlesSoon(waitForPollPassForTests())).resolves.toBe('settled')
+      expect(mockListFiles).not.toHaveBeenCalled()
+      stopPolling()
+    })
+
+    it('keeps tracking a pass that spans a later tick and resolves only after its GC step', async () => {
+      mockListFiles.mockResolvedValue([makeDriveFile('2026-01-01T00:00:00.000Z')])
+
+      startPolling()
+      // First poll only seeds the remote state.
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
+
+      let releaseGc: () => void = () => {}
+      mockRunPackGcAfterPass.mockImplementationOnce(
+        () => new Promise<void>((resolve) => { releaseGc = resolve }),
+      )
+
+      // Second poll: nothing changed, so the pass goes straight to the GC
+      // step and waits there.
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockRunPackGcAfterPass.mock.calls.length === 1, 'the GC step to start')
+      const tracked = waitForPollPassForTests()
+
+      // Third tick while the second pass is still running: no new pass, and
+      // the tracked promise is not replaced.
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      expect(mockListFiles).toHaveBeenCalledTimes(2)
+      expect(waitForPollPassForTests()).toBe(tracked)
+      await expect(settlesSoon(tracked)).resolves.toBe('pending')
+
+      releaseGc()
+      await tracked
+      expect(isSyncInProgress()).toBe(false)
+      await expect(settlesSoon(waitForPollPassForTests())).resolves.toBe('settled')
+
+      stopPolling()
+    })
+
+    it('resolves when the pass fails internally', async () => {
+      mockListFiles.mockRejectedValue(new Error('network down'))
+
+      startPolling()
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await expect(waitForPollPassForTests()).resolves.toBeUndefined()
+
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
+      expect(mockRunPackGcAfterPass).not.toHaveBeenCalled()
+      expect(isSyncInProgress()).toBe(false)
+
+      stopPolling()
+    })
+
+    it('resolves when the pass exits early on missing credentials', async () => {
+      mockGetAuthStatus.mockResolvedValueOnce({ authenticated: false })
+
+      startPolling()
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await expect(waitForPollPassForTests()).resolves.toBeUndefined()
+
+      expect(mockGetAuthStatus).toHaveBeenCalledTimes(1)
+      expect(mockListFiles).not.toHaveBeenCalled()
+      expect(isSyncInProgress()).toBe(false)
+
+      stopPolling()
+    })
+
+    it('resolves immediately after stopPolling once the last pass settled', async () => {
+      mockListFiles.mockResolvedValue([])
+
+      startPolling()
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await waitForPollPassForTests()
+      stopPolling()
+
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await expect(settlesSoon(waitForPollPassForTests())).resolves.toBe('settled')
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
+    })
+
+    it('resolves immediately after _resetForTests even while a pass is running', async () => {
+      let releaseList: (files: DriveFile[]) => void = () => {}
+      mockListFiles.mockImplementationOnce(
+        () => new Promise<DriveFile[]>((resolve) => { releaseList = resolve }),
+      )
+
+      startPolling()
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockListFiles.mock.calls.length === 1, 'the pass to reach listFiles')
+      const running = waitForPollPassForTests()
+
+      _resetForTests()
+      await expect(settlesSoon(waitForPollPassForTests())).resolves.toBe('settled')
+
+      // Let the dropped pass finish so it can't touch the next test.
+      releaseList([])
+      await running
     })
   })
 
@@ -822,13 +935,13 @@ describe('sync-service', () => {
 
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockListFiles.mock.calls.length >= 1)
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
       expect(mockRunPackGcAfterPass).not.toHaveBeenCalled() // first poll: seed-only, no merge
 
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'theme-pack-1'))
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
+      expect(mockDownloadFile).toHaveBeenCalledWith('theme-pack-1')
 
       expect(mockRunPackGcAfterPass).toHaveBeenCalledTimes(1)
       expect(mockRunPackGcAfterPass.mock.calls[0][0]).toContain('themes/packs/pack-a')
@@ -872,12 +985,12 @@ describe('sync-service', () => {
 
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockListFiles.mock.calls.length >= 1)
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
 
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'theme-pack-1'))
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
+      expect(mockDownloadFile).toHaveBeenCalledWith('theme-pack-1')
 
       expect(mockRunPackGcAfterPass).toHaveBeenCalledTimes(1)
       expect(mockRunPackGcAfterPass.mock.calls[0][1]).toEqual(['themes/packs/pack-a'])
@@ -1945,8 +2058,8 @@ describe('sync-service', () => {
         startPolling()
         const listCallsAfterSync = mockListFiles.mock.calls.length
         await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-        await flushUntil(() => mockListFiles.mock.calls.length > listCallsAfterSync)
-        await waitForSyncIdle()
+        await waitForPollPassForTests()
+        expect(mockListFiles).toHaveBeenCalledTimes(listCallsAfterSync + 1)
         expect(mockDownloadFile).not.toHaveBeenCalledWith('f2')
 
         // Second poll after the keyboard file's modifiedTime changes:
@@ -1960,8 +2073,9 @@ describe('sync-service', () => {
         mockDownloadFile.mockResolvedValue(makeSettingsEnvelope('0x1234', '2025-01-02T00:00:00.000Z'))
 
         await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-        await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'f2'))
+        await waitForPollPassForTests()
 
+        expect(mockListFiles).toHaveBeenCalledTimes(listCallsAfterSync + 2)
         expect(mockDownloadFile).toHaveBeenCalledWith('f2')
 
         stopPolling()
@@ -1990,12 +2104,12 @@ describe('sync-service', () => {
 
         mockDownloadFile.mockClear()
         startPolling()
-        // Wait for the poll to actually run before the negative assertion,
-        // otherwise an under-drained tick could false-pass it.
+        // The listFiles count proves the poll actually ran, so the negative
+        // assertion can't false-pass on a skipped pass.
         const listCallsBeforePoll = mockListFiles.mock.calls.length
         await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-        await flushUntil(() => mockListFiles.mock.calls.length > listCallsBeforePoll)
-        await waitForSyncIdle()
+        await waitForPollPassForTests()
+        expect(mockListFiles).toHaveBeenCalledTimes(listCallsBeforePoll + 1)
 
         expect(mockDownloadFile).not.toHaveBeenCalledWith('f2')
         stopPolling()
@@ -2198,7 +2312,8 @@ describe('sync-service', () => {
 
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'pc-1'))
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
 
       // Should have downloaded password-check for validation
       expect(mockDownloadFile).toHaveBeenCalledWith('pc-1')
@@ -3197,8 +3312,8 @@ describe('sync-service', () => {
       startPolling()
       // First poll: records baseline state only (no download attempts).
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockListFiles.mock.calls.length >= 1)
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
 
       // Second poll: badFile is now present and wasn't in the baseline,
       // so it's treated as "changed" — the merge fails with
@@ -3209,11 +3324,11 @@ describe('sync-service', () => {
       // retrying — no separate block-map data structure needed.
       mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE, badFile])
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockDownloadFile.mock.calls.some((c) => c[0] === 'bad1'))
       // The failing merge itself is real disk I/O (readIndexFile against a
-      // real tmp dir) — wait for the poll's own sync-lock release so
-      // poll 3 below never races a still-in-flight poll 2.
-      await waitForSyncIdle()
+      // real tmp dir) — wait for the whole pass so poll 3 below never races
+      // a still-in-flight poll 2.
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(2)
       const attemptsAfterSecondPoll = mockDownloadFile.mock.calls.filter((c) => c[0] === 'bad1').length
       expect(attemptsAfterSecondPoll).toBeGreaterThan(0)
       // Contained per-unit with a warn naming only the sync unit — never
@@ -3222,8 +3337,8 @@ describe('sync-service', () => {
 
       // Third poll, same revision still on Drive — must NOT retry again.
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockListFiles.mock.calls.length >= 3)
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(3)
       const attemptsAfterThirdPoll = mockDownloadFile.mock.calls.filter((c) => c[0] === 'bad1').length
       expect(attemptsAfterThirdPoll).toBe(attemptsAfterSecondPoll)
 
@@ -3231,7 +3346,8 @@ describe('sync-service', () => {
       const changedFile = { ...badFile, modifiedTime: '2026-01-02T00:00:00.000Z' }
       mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE, changedFile])
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockDownloadFile.mock.calls.filter((c) => c[0] === 'bad1').length > attemptsAfterThirdPoll)
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(4)
       const attemptsAfterFourthPoll = mockDownloadFile.mock.calls.filter((c) => c[0] === 'bad1').length
       expect(attemptsAfterFourthPoll).toBeGreaterThan(attemptsAfterThirdPoll)
 
@@ -3261,20 +3377,20 @@ describe('sync-service', () => {
 
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockListFiles.mock.calls.length >= 1)
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
 
       mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE, evilFile])
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockDownloadFile.mock.calls.some((c) => c[0] === 'evil1'))
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(2)
       const attemptsAfterSecondPoll = mockDownloadFile.mock.calls.filter((c) => c[0] === 'evil1').length
       expect(attemptsAfterSecondPoll).toBeGreaterThan(0)
 
       // Same revision still on Drive on the next poll — must NOT retry.
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushUntil(() => mockListFiles.mock.calls.length >= 3)
-      await waitForSyncIdle()
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(3)
       const attemptsAfterThirdPoll = mockDownloadFile.mock.calls.filter((c) => c[0] === 'evil1').length
       expect(attemptsAfterThirdPoll).toBe(attemptsAfterSecondPoll)
 

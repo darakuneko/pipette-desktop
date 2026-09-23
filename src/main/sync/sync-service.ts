@@ -30,7 +30,7 @@
 // typing-analytics-service.ts's facade split uses.
 
 import { syncRuntime } from './sync-runtime-state'
-import { stopPolling } from './sync-polling'
+import { stopPolling, clearInFlightPollForTests } from './sync-polling'
 import { clearQuitFinalizersForTests } from './sync-flush'
 
 // --- Test helpers -------------------------------------------------------
@@ -41,6 +41,7 @@ export function _resetForTests(): void {
     syncRuntime.debounceTimer = null
   }
   stopPolling()
+  clearInFlightPollForTests()
   syncRuntime.pendingChanges.clear()
   syncRuntime.lastKnownRemoteState.clear()
   syncRuntime.isSyncing = false
@@ -93,7 +94,7 @@ export {
   fetchRemoteTypingDay,
 } from './sync-typing-remote'
 
-export { startPolling, stopPolling } from './sync-polling'
+export { startPolling, stopPolling, waitForPollPassForTests } from './sync-polling'
 
 export { executeAnalyticsSync } from './sync-analytics'
 
