@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 import { EncoderWidget } from '../EncoderWidget'
-import { KEY_SELECTED_COLOR, KEY_BG_COLOR, KEY_TEXT_COLOR, KEY_REMAP_COLOR, KEY_INVERTED_TEXT_COLOR } from '../constants'
+import { KEY_SELECTED_COLOR, KEY_BORDER_COLOR, KEY_BG_COLOR, KEY_TEXT_COLOR, KEY_REMAP_COLOR, KEY_INVERTED_TEXT_COLOR } from '../constants'
 import type { KleKey } from '../../../../shared/kle/types'
 
 let mockIsMask = false
@@ -223,6 +223,98 @@ describe('EncoderWidget', () => {
         expect(container.querySelector('[data-testid="flash-overlay"]')).toBeNull()
       })
     })
+  })
+
+  // Pins the flash overlay markup attribute-by-attribute: element kind,
+  // geometry (identical to the outer circle), the two layers' order right
+  // after the outer circle, and which layer remounts on a re-apply.
+  describe('flash overlay DOM contract', () => {
+    function attrs(el: Element): Record<string, string> {
+      return Object.fromEntries(Array.from(el.attributes, (a) => [a.name, a.value]))
+    }
+
+    function circleGeometry(el: Element): Record<string, string | null> {
+      return { cx: el.getAttribute('cx'), cy: el.getAttribute('cy'), r: el.getAttribute('r') }
+    }
+
+    const FILL_STYLE = 'pointer-events: none; animation-delay: 0ms;'
+    const BORDER_STYLE = 'pointer-events: none;'
+
+    function layers(container: HTMLElement) {
+      const fill = container.querySelector('[data-testid="flash-overlay"]')!
+      const border = container.querySelector('[data-testid="flash-overlay-border"]')!
+      // The outer circle is the first circle directly under the group
+      // (the masked branch's clip circle lives inside <defs>).
+      const base = container.querySelector('g > circle')!
+      return { fill, border, base }
+    }
+
+    const cases = [
+      { name: 'unmasked', masked: false, keycode: 'KC_A' },
+      { name: 'masked', masked: true, keycode: 'LT0(KC_A)' },
+    ]
+    const borders = [
+      { name: 'outer border active', props: { selected: true }, stroke: KEY_SELECTED_COLOR, width: '2' },
+      { name: 'outer border inactive', props: {}, stroke: KEY_BORDER_COLOR, width: '1' },
+    ]
+    const maskedInnerSelected = {
+      name: 'inner part selected',
+      props: { selected: true, selectedMaskPart: true },
+      stroke: KEY_BORDER_COLOR,
+      width: '1',
+    }
+
+    for (const c of cases) {
+      for (const b of c.masked ? [...borders, maskedInnerSelected] : borders) {
+        it(`${c.name}, ${b.name}: both layers are circles matching the outer circle, directly after it`, () => {
+          mockIsMask = c.masked
+          const { container } = render(
+            <svg>
+              <EncoderWidget kleKey={makeKey()} keycode={c.keycode} flashed {...b.props} />
+            </svg>,
+          )
+          const { fill, border, base } = layers(container)
+          expect(fill.tagName).toBe('circle')
+          expect(border.tagName).toBe('circle')
+          expect(attrs(fill)).toEqual({
+            ...circleGeometry(base),
+            'data-testid': 'flash-overlay',
+            class: 'key-flash-overlay',
+            fill: KEY_SELECTED_COLOR,
+            style: FILL_STYLE,
+          })
+          expect(attrs(border)).toEqual({
+            ...circleGeometry(base),
+            'data-testid': 'flash-overlay-border',
+            fill: 'none',
+            stroke: b.stroke,
+            'stroke-width': b.width,
+            style: BORDER_STYLE,
+          })
+          expect(base.getAttribute('stroke')).toBe(b.stroke)
+          expect(base.nextElementSibling).toBe(fill)
+          expect(fill.nextElementSibling).toBe(border)
+        })
+      }
+
+      it(`${c.name}: replaces only the fill layer when flashGeneration changes`, () => {
+        mockIsMask = c.masked
+        const { container, rerender } = render(
+          <svg>
+            <EncoderWidget kleKey={makeKey()} keycode={c.keycode} flashed flashGeneration={1} />
+          </svg>,
+        )
+        const before = layers(container)
+        rerender(
+          <svg>
+            <EncoderWidget kleKey={makeKey()} keycode={c.keycode} flashed flashGeneration={2} />
+          </svg>,
+        )
+        const after = layers(container)
+        expect(after.fill).not.toBe(before.fill)
+        expect(after.border).toBe(before.border)
+      })
+    }
   })
 
   // Encoder CW/CCW legends carry the same remap tint as keymap keys (label
