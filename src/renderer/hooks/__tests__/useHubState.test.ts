@@ -14,6 +14,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useHubState } from '../useHubState'
 import type { SavedFavoriteMeta } from '../../../shared/types/favorite-store'
+import { HUB_ERROR_ACCOUNT_DEACTIVATED, HUB_ERROR_RATE_LIMITED } from '../../../shared/types/hub'
 
 const { mockRequestUploadOptions } = vi.hoisted(() => ({
   mockRequestUploadOptions: vi.fn(),
@@ -491,7 +492,7 @@ describe('useHubState favorite Hub remove failures', () => {
   }
 
   it.each(cases)('marks the account deactivated on a $visibility remove', async ({ entry, deleteMock }) => {
-    deleteMock.mockResolvedValue({ success: false, error: 'ACCOUNT_DEACTIVATED' })
+    deleteMock.mockResolvedValue({ success: false, error: HUB_ERROR_ACCOUNT_DEACTIVATED })
 
     const result = await renderAndRemove(entry)
 
@@ -504,7 +505,7 @@ describe('useHubState favorite Hub remove failures', () => {
   })
 
   it.each(cases)('reports the rate limit on a $visibility remove', async ({ entry, deleteMock }) => {
-    deleteMock.mockResolvedValue({ success: false, error: 'RATE_LIMITED' })
+    deleteMock.mockResolvedValue({ success: false, error: HUB_ERROR_RATE_LIMITED })
 
     const result = await renderAndRemove(entry)
 
