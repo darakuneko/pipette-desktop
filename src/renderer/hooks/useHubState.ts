@@ -88,7 +88,6 @@ export function useHubState(options: Options) {
   const hubUploadingRef = useRef(false)
   const [hubUploadResult, setHubUploadResult] = useState<HubEntryResult | null>(null)
   const [favHubUploading, setFavHubUploading] = useState<string | null>(null)
-  const favHubUploadingRef = useRef(false)
   const [favHubUploadResult, setFavHubUploadResult] = useState<FavHubEntryResult | null>(null)
 
   const clearHubPostsState = useCallback(() => {
@@ -489,7 +488,6 @@ export function useHubState(options: Options) {
     favVialProtocol,
     markAccountDeactivated,
     hubReady,
-    favHubUploadingRef,
     setFavHubUploading,
     setFavHubUploadResult,
   })

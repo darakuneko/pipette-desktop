@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import type { TFunction } from 'i18next'
 import type { HubUploadResult } from '../../shared/types/hub'
 import type { HubPrivateLink } from '../../shared/types/hub-private'
@@ -21,11 +21,10 @@ interface Options {
   favVialProtocol: number
   markAccountDeactivated: () => void
   hubReady: boolean
-  /** Stable references (a `useRef` object and `useState` setters) —
-   *  `runFavHubOperation` closes over all three without listing them as
-   *  `useCallback` dependencies, so they must never be passed a value
-   *  that changes identity across renders. */
-  favHubUploadingRef: React.MutableRefObject<boolean>
+  /** `useState` setters, whose identity never changes — `runFavHubOperation`
+   *  closes over both without listing them as `useCallback` dependencies,
+   *  so they must never be passed a value that changes identity across
+   *  renders. */
   setFavHubUploading: React.Dispatch<React.SetStateAction<string | null>>
   setFavHubUploadResult: React.Dispatch<React.SetStateAction<FavHubEntryResult | null>>
 }
@@ -37,10 +36,11 @@ export function useHubFavoriteHandlers(options: Options) {
     favVialProtocol,
     markAccountDeactivated,
     hubReady,
-    favHubUploadingRef,
     setFavHubUploading,
     setFavHubUploadResult,
   } = options
+
+  const favHubUploadingRef = useRef(false)
 
   const persistFavHubPostId = useCallback(async (type: FavoriteType, entryId: string, postId: string | null) => {
     await window.vialAPI.favoriteStoreSetHubPostId(type, entryId, postId)
