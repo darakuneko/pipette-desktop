@@ -251,7 +251,9 @@ async function flushIO(): Promise<void> {
 // either, so yielding with it lets real fs I/O callbacks run between checks.
 const realNow = performance.now.bind(performance)
 const realSetImmediate = setImmediate
-const WAIT_TIMEOUT_MS = 5_000
+// Kept below vitest's default 5 s test timeout so flushUntil's own
+// "timed out waiting for …" error fires before vitest aborts the test.
+const WAIT_TIMEOUT_MS = 3_000
 
 /**
  * Yields to the real event loop until `predicate` is true, then lets a
@@ -402,11 +404,16 @@ describe('sync-service', () => {
     // A poll pass started by the test may still be doing real fs I/O;
     // let it finish before the shared state and the tmp dir go away, or
     // it can touch the next test's mocks.
+    // The reset, timer restore and tmp-dir removal run even when that
+    // wait times out, so a stuck pass does not leak into the next test.
     stopPolling()
-    await waitForSyncIdle()
-    _resetForTests()
-    vi.useRealTimers()
-    await rm(mockUserDataPath, { recursive: true, force: true })
+    try {
+      await waitForSyncIdle()
+    } finally {
+      _resetForTests()
+      vi.useRealTimers()
+      await rm(mockUserDataPath, { recursive: true, force: true })
+    }
   })
 
   describe('notifyChange', () => {
