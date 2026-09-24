@@ -1511,6 +1511,7 @@ Click anywhere on the keyboard area to toggle the menu pane (bottom-right popup)
 
 - **Default Size**: Reset the window to its default calculated size
 - **Fit Size**: Adjust the window height to match the current width while preserving the aspect ratio
+- **Opacity**: Slider that sets the window opacity from 50% to 100% in 5% steps (default 100%). The window becomes see-through only while in Typing View and returns to fully opaque when you exit Typing View or the keyboard disconnects. It may have no visible effect in some environments, depending on the OS and window manager
 - **Top**: Keep the window above other windows (always-on-top; not available on Wayland)
 - **Base**: Select which layer to display (when the keyboard has multiple layers)
 - **Analyze**: Jumps directly to the Analyze page for this keyboard so you can review the stream you just recorded. Going back returns you to Typing View
@@ -1518,7 +1519,7 @@ Click anywhere on the keyboard area to toggle the menu pane (bottom-right popup)
 
 > **Note**: The keyboard layout's live layer indicator follows momentary layer keys (`MO`, `LT`, `LM`) only, while they are held. Persistent layer switches (`TO`, `TG`, `DF`) are not tracked — the VIA/Vial protocol offers no way to read the keyboard's live layer state back, so a persistent switch triggered outside the app would silently desync from what's shown. Use **Base** above to tell the view which base layer the keyboard is actually on.
 
-Press Escape or click the keyboard area again to close the pane. A hint text appears at the bottom when hovering over the window. The window size and always-on-top preference are saved per keyboard.
+Press Escape or click the keyboard area again to close the pane. A hint text appears at the bottom when hovering over the window. The window size, opacity and always-on-top preference are saved per keyboard.
 
 > **Note**: Auto-lock is suspended while in Typing View mode. If the keyboard is disconnected while in view-only mode, the window automatically restores to its normal size.
 

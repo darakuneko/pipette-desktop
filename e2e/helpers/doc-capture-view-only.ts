@@ -91,7 +91,7 @@ async function main(): Promise<void> {
     await keyboardArea.click()
     await page.waitForTimeout(500)
 
-    // 3. Controls panel open — shows Exit, Always on Top, Default/Fit Size, Base Layer
+    // 3. Controls panel open — shows Exit, Always on Top, Default/Fit Size, Opacity, Base Layer
     await capture(page, 'view-only-controls')
 
     console.log(`\nScreenshots saved to: ${SCREENSHOT_DIR}`)
