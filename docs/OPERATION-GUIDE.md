@@ -1071,7 +1071,7 @@ The Combo tab displays a **tile grid preview** showing all entries. A note reads
 - Each tile shows the combo number and a summary (e.g., "A + B → C")
 - Rest the pointer on a configured tile for about 0.3 seconds to see Keys 1–4 and the Output in a tooltip; empty keys read "None". Turn it off with **Fav Hover Details** (§3.14)
 - Click a tile to open the Combo edit modal directly to that entry (§5.2)
-- Combo keycodes (CMB_000–CMB_031) can be assigned to keys for triggering combos
+- The Combo keycodes shown below the tiles (Combo On, Combo Off, Combo Toggle — `CMB_ON` / `CMB_OFF` / `CMB_TOG`) can be assigned to keys to turn the Combo feature on or off. Combos themselves have no keycode: a combo fires when its keys are pressed together
 - **Settings: Configuration** button at the bottom opens a settings modal for combo-related timeout configuration (e.g., Combo time out period)
 - Saving in that timeout modal shows the same Save-result display described for the Tap-Hold Settings modal (§3.6) — a brief confirmation, or an error message, to the left of the Reset / Revert / Save buttons
 - **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
