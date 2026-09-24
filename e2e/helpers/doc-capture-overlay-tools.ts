@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Adhoc capture for `overlay-tools.png`. Mirrors doc-capture.ts but
-// stops after the keypicker overlay's Settings/Tools tab so we don't have
+// Adhoc capture for the keypicker overlay screenshots — `overlay-tools.png`
+// (Settings / Import tab) plus `overlay-save.png` and
+// `editor-settings-save.png` (Save tab). Mirrors doc-capture.ts but
+// stops after the overlay tabs so we don't have
 // to rerun the full multi-phase pipeline (which currently fails earlier on
 // the Analyze page when device data is sparse).
 //
@@ -88,6 +90,13 @@ async function main(): Promise<void> {
     }
 
     await capture(app, 'overlay-tools')
+
+    if (await openOverlayTab(page, 'data')) {
+      await capture(app, 'overlay-save')
+      await capture(app, 'editor-settings-save')
+    } else {
+      console.log(`  [skip] ${overlayTabNotFoundMessage('data')}`)
+    }
   } finally {
     await app.close().catch((err: unknown) => console.error('  [cleanup] app.close failed:', err))
   }

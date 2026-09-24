@@ -766,13 +766,13 @@ Click the collapse button (chevron) to minimize the layer panel to just numbers.
 
 **Layer preview on hover (Auto Layer Preview)**
 
-Rest the pointer on a layer key (`MO`, `LT`, `TG`, `TO`, `TT`, `OSL`, `DF`, `PDF`, `LM`) for about 0.3 seconds and the whole keyboard shows the layer that key switches to, with the label under the keymap reading **Preview - <layer name>**. The preview is display only — the current layer, the key selection and the undo history don't change.
+Rest the pointer on a layer key (`MO`, `LT`, `TG`, `TO`, `TT`, `OSL`, `DF`, `PDF`, `LM`) for about 0.3 seconds and the whole keyboard shows the layer that key switches to, with the label under the keymap reading "Preview - Layer N" (or "Preview - " followed by the layer's own name, if it has one). The preview is display only — the current layer, the key selection and the undo history don't change.
 
 - On keys with an inner part (e.g. `LT1(KC_SPC)`), only the upper (outer) part starts the preview; moving onto the inner key hides it so the inner key can be selected. The key under the pointer keeps showing its own content during the preview
 - Moving the pointer off the key returns to the current layer immediately
 - Clicks, double-clicks and middle-clicks always act on the current layer — the preview is dismissed first
 - Layer keys assigned to encoders don't start a preview
-- There is no preview in View Matrix mode, on the Key Label simulation tab, while keys are multi-selected or picked as paste targets, or while the Key Popover is open
+- There is no preview in View Matrix mode, on the Key Label simulation tab, while keys are multi-selected, while palette keycodes are selected for pasting, or while the Key Popover is open
 - Turn it on or off with **Auto Layer Preview** in the Keycodes Overlay Panel's Settings / Import tab (§3.14). Saved and synced per keyboard; on by default
 
 ### 2.4 Key Popover
