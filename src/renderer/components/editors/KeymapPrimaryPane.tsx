@@ -156,7 +156,7 @@ export function KeymapPrimaryPane({
     macros: hoverMacros, tapDance: hoverTapDance, enabled: entryHoverEnabled, disabled: hoverBlocked,
     currentLayer, keymap, encoderLayout, deviceKey, surfaceKey,
   })
-  const { onKeyHover: layerKeyHover, onEncoderHover: layerEncoderHover, onKeyHoverEnd: layerHoverEnd } = preview
+  const { onKeyHover: layerKeyHover, onEncoderHover: layerEncoderHover, onHoverEnd: layerHoverEnd } = preview
   const { onKeyHover: entryKeyHover, onEncoderHover: entryEncoderHover, hide: entryHide } = entryHover
   const onKeyHover = useCallback((key: KleKey, keycode: string, rect: DOMRect) => {
     layerKeyHover(key)

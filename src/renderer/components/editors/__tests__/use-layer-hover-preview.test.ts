@@ -100,7 +100,7 @@ describe('useLayerHoverPreview', () => {
     const { result } = setup()
     act(() => result.current.onKeyHover(key(0)))
     act(() => { vi.advanceTimersByTime(100) })
-    act(() => result.current.onKeyHoverEnd())
+    act(() => result.current.onHoverEnd())
     dwell()
     expect(result.current.previewLayer).toBeNull()
   })
@@ -110,7 +110,7 @@ describe('useLayerHoverPreview', () => {
     act(() => result.current.onKeyHover(key(0)))
     dwell()
     expect(result.current.previewLayer).toBe(1)
-    act(() => result.current.onKeyHoverEnd())
+    act(() => result.current.onHoverEnd())
     expect(result.current.previewLayer).toBeNull()
   })
 
@@ -118,7 +118,7 @@ describe('useLayerHoverPreview', () => {
     const { result } = setup()
     act(() => result.current.onKeyHover(key(0)))
     act(() => { vi.advanceTimersByTime(200) })
-    act(() => result.current.onKeyHoverEnd())
+    act(() => result.current.onHoverEnd())
     act(() => result.current.onKeyHover(key(2)))
     act(() => { vi.advanceTimersByTime(200) })
     expect(result.current.previewLayer).toBeNull()
@@ -243,11 +243,11 @@ describe('useLayerHoverPreview', () => {
 
   it('keeps the hover callbacks stable across keymap edits and layer changes', () => {
     const { result, rerender } = setup()
-    const { onKeyHover, onKeyHoverEnd } = result.current
+    const { onKeyHover, onHoverEnd } = result.current
     rerender(baseOptions({ currentLayer: 1 }))
     rerender(baseOptions({ keymap: makeKeymap() }))
     expect(result.current.onKeyHover).toBe(onKeyHover)
-    expect(result.current.onKeyHoverEnd).toBe(onKeyHoverEnd)
+    expect(result.current.onHoverEnd).toBe(onHoverEnd)
   })
 
   it('resolves the target from the raw code under a remapping pack, and remaps the preview', () => {
@@ -319,7 +319,7 @@ describe('useLayerHoverPreview', () => {
     const { result } = setup()
     act(() => result.current.onKeyHover(key(0)))
     dwell()
-    act(() => result.current.onKeyHoverEnd())
+    act(() => result.current.onHoverEnd())
     act(() => result.current.onKeyHover(key(5)))
     dwell()
     expect(result.current.previewLayer).toBe(1)

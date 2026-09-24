@@ -65,7 +65,7 @@ export interface UseLayerHoverPreviewReturn {
   onKeyHover: (key: KleKey) => void
   onEncoderHover: (encoderIdx: number, dir: number) => void
   /** Ends a key or encoder hover. */
-  onKeyHoverEnd: () => void
+  onHoverEnd: () => void
   /** Drops a pending or visible preview. */
   cancel: () => void
 }
@@ -196,8 +196,11 @@ export function useLayerHoverPreview({
 
   const source = previewLayer !== null && target ? target.source : null
   const previewPos = source?.kind === 'key' ? posKey(source.row, source.col) : null
-  const encoderIdx = source?.kind === 'encoder' ? source.idx : null
-  const encoderDir = source?.kind === 'encoder' ? source.dir : null
+  // Narrowed once to a real direction (0 = CW, 1 = CCW) so both encoder
+  // memos below share one guard.
+  const encoderSource = source?.kind === 'encoder' && (source.dir === 0 || source.dir === 1) ? source : null
+  const encoderIdx = encoderSource ? encoderSource.idx : null
+  const encoderDir = encoderSource ? (encoderSource.dir as 0 | 1) : null
   const builtRemapped = raw ? EMPTY_REMAPPED : built.remappedKeys
   const builtEncoderRemapped = raw ? EMPTY_REMAPPED : built.layerEncoderRemapped
   // Copies, so the maps cached by the builders are never mutated.
@@ -219,7 +222,7 @@ export function useLayerHoverPreview({
   // since the cached map shares its pairs.
   const encoderKeycodes = useMemo(() => {
     const base = built.layerEncoderKeycodes
-    if (encoderIdx === null || (encoderDir !== 0 && encoderDir !== 1)) return base
+    if (encoderIdx === null || encoderDir === null) return base
     const id = String(encoderIdx)
     const shown = base.get(id) ?? NO_ENCODER_KEYCODES
     const real = (realEncoderKeycodes.get(id) ?? NO_ENCODER_KEYCODES)[encoderDir]
@@ -242,7 +245,7 @@ export function useLayerHoverPreview({
     remappedEncoders,
     onKeyHover,
     onEncoderHover,
-    onKeyHoverEnd: hide,
+    onHoverEnd: hide,
     cancel: hide,
   }
 }

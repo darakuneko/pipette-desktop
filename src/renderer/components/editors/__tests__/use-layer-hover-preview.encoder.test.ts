@@ -123,7 +123,7 @@ describe('useLayerHoverPreview — encoders', () => {
     expect(result.current.previewLayer).toBeNull()
     act(() => result.current.onEncoderHover(0, 0))
     dwell()
-    act(() => result.current.onKeyHoverEnd())
+    act(() => result.current.onHoverEnd())
     expect(result.current.previewLayer).toBeNull()
   })
 
@@ -134,7 +134,7 @@ describe('useLayerHoverPreview — encoders', () => {
     dwell()
     expect(result.current.keycodes.get('0,1')).toBe('KC_2')
     expect(result.current.encoderKeycodes.get('0')?.[1]).toBe('LT2(KC_B)')
-    act(() => result.current.onKeyHoverEnd())
+    act(() => result.current.onHoverEnd())
     // Key "0,0" previews; encoder 0 CW ("0,0") shows the target layer.
     act(() => result.current.onKeyHover({ row: 0, col: 0 } as KleKey))
     dwell()
@@ -146,7 +146,7 @@ describe('useLayerHoverPreview — encoders', () => {
     const { result } = setup()
     act(() => result.current.onEncoderHover(0, 0))
     dwell()
-    act(() => result.current.onKeyHoverEnd())
+    act(() => result.current.onHoverEnd())
     act(() => result.current.onEncoderHover(1, 1))
     dwell()
     expect(result.current.previewLayer).toBe(1)
@@ -184,12 +184,12 @@ describe('useLayerHoverPreview — encoders', () => {
 
   it('keeps the hook callbacks stable across edits and layer changes', () => {
     const { result, rerender } = setup()
-    const { onEncoderHover, onKeyHover, onKeyHoverEnd } = result.current
+    const { onEncoderHover, onKeyHover, onHoverEnd } = result.current
     rerender(baseOptions({ currentLayer: 1 }))
     rerender(baseOptions({ encoderLayout: makeEncoders(), realEncoderKeycodes: new Map(REAL_ENCODERS) }))
     expect(result.current.onEncoderHover).toBe(onEncoderHover)
     expect(result.current.onKeyHover).toBe(onKeyHover)
-    expect(result.current.onKeyHoverEnd).toBe(onKeyHoverEnd)
+    expect(result.current.onHoverEnd).toBe(onHoverEnd)
   })
 
   it('an encoder edit cancels a visible and a pending encoder preview', () => {
