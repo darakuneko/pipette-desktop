@@ -42,6 +42,8 @@ const key = (col: number): KleKey => ({ row: 0, col } as KleKey)
 // The real layer as the pane displays it.
 const REAL_KEYCODES = new Map(LAYER0.map((code, col) => [`0,${col}`, CODES[code]]))
 const REAL_REMAPPED = new Set<string>()
+// Layer 0 has no encoder entries in `baseOptions`' layout.
+const REAL_ENCODER_KEYCODES = new Map<string, [string, string]>()
 
 function baseOptions(overrides: Partial<UseLayerHoverPreviewOptions> = {}): UseLayerHoverPreviewOptions {
   return {
@@ -56,6 +58,8 @@ function baseOptions(overrides: Partial<UseLayerHoverPreviewOptions> = {}): UseL
     deviceKey: 'uid-a',
     realKeycodes: REAL_KEYCODES,
     realRemappedKeys: REAL_REMAPPED,
+    realEncoderKeycodes: REAL_ENCODER_KEYCODES,
+    realRemappedEncoders: REAL_REMAPPED,
     ...overrides,
   }
 }
@@ -96,7 +100,7 @@ describe('useLayerHoverPreview', () => {
     const { result } = setup()
     act(() => result.current.onKeyHover(key(0)))
     act(() => { vi.advanceTimersByTime(100) })
-    act(() => result.current.onKeyHoverEnd())
+    act(() => result.current.onHoverEnd())
     dwell()
     expect(result.current.previewLayer).toBeNull()
   })
@@ -106,7 +110,7 @@ describe('useLayerHoverPreview', () => {
     act(() => result.current.onKeyHover(key(0)))
     dwell()
     expect(result.current.previewLayer).toBe(1)
-    act(() => result.current.onKeyHoverEnd())
+    act(() => result.current.onHoverEnd())
     expect(result.current.previewLayer).toBeNull()
   })
 
@@ -114,7 +118,7 @@ describe('useLayerHoverPreview', () => {
     const { result } = setup()
     act(() => result.current.onKeyHover(key(0)))
     act(() => { vi.advanceTimersByTime(200) })
-    act(() => result.current.onKeyHoverEnd())
+    act(() => result.current.onHoverEnd())
     act(() => result.current.onKeyHover(key(2)))
     act(() => { vi.advanceTimersByTime(200) })
     expect(result.current.previewLayer).toBeNull()
@@ -239,11 +243,11 @@ describe('useLayerHoverPreview', () => {
 
   it('keeps the hover callbacks stable across keymap edits and layer changes', () => {
     const { result, rerender } = setup()
-    const { onKeyHover, onKeyHoverEnd } = result.current
+    const { onKeyHover, onHoverEnd } = result.current
     rerender(baseOptions({ currentLayer: 1 }))
     rerender(baseOptions({ keymap: makeKeymap() }))
     expect(result.current.onKeyHover).toBe(onKeyHover)
-    expect(result.current.onKeyHoverEnd).toBe(onKeyHoverEnd)
+    expect(result.current.onHoverEnd).toBe(onHoverEnd)
   })
 
   it('resolves the target from the raw code under a remapping pack, and remaps the preview', () => {
@@ -315,7 +319,7 @@ describe('useLayerHoverPreview', () => {
     const { result } = setup()
     act(() => result.current.onKeyHover(key(0)))
     dwell()
-    act(() => result.current.onKeyHoverEnd())
+    act(() => result.current.onHoverEnd())
     act(() => result.current.onKeyHover(key(5)))
     dwell()
     expect(result.current.previewLayer).toBe(1)

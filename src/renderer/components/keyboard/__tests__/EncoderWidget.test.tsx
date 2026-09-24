@@ -387,6 +387,69 @@ describe('EncoderWidget', () => {
       expect(onHoverEnd).toHaveBeenCalledTimes(1)
     })
 
+    describe('hoverOuterPartOnly on a masked direction', () => {
+      function setup(hoverOuterPartOnly: boolean | undefined) {
+        mockIsMask = true
+        const onHover = vi.fn()
+        const onHoverEnd = vi.fn()
+        const onClick = vi.fn()
+        const { container } = render(
+          <svg data-testid="outside">
+            <EncoderWidget kleKey={makeKey()} keycode="LT1(KC_A)" onClick={onClick}
+              onHover={onHover} onHoverEnd={onHoverEnd} hoverOuterPartOnly={hoverOuterPartOnly} />
+          </svg>,
+        )
+        const g = container.querySelector('[data-encoder-pos="0,0"]')!
+        return {
+          onHover, onHoverEnd, onClick,
+          outside: container.querySelector('svg')!,
+          outer: g.querySelector(':scope > circle')!,
+          inner: g.querySelector(':scope > rect')!,
+        }
+      }
+
+      it('ends the hover on entering the inner rect and reports it again back on the outer part', () => {
+        const { onHover, onHoverEnd, outside, outer, inner } = setup(true)
+        fireEvent.mouseOut(outside, { relatedTarget: outer })
+        expect(onHover).toHaveBeenCalledTimes(1)
+        fireEvent.mouseOut(outer, { relatedTarget: inner })
+        expect(onHoverEnd).toHaveBeenCalledTimes(1)
+        fireEvent.mouseOut(inner, { relatedTarget: outer })
+        expect(onHover).toHaveBeenCalledTimes(2)
+        expect(onHover.mock.calls[1].slice(0, 2)).toEqual([0, 0])
+      })
+
+      it('entering straight into the inner rect reports the hover and ends it', () => {
+        const { onHover, onHoverEnd, outside, inner } = setup(true)
+        fireEvent.mouseOut(outside, { relatedTarget: inner })
+        expect(onHover).toHaveBeenCalledTimes(1)
+        expect(onHoverEnd).toHaveBeenCalledTimes(1)
+      })
+
+      it('leaving the window from the inner rect does not resume the hover', () => {
+        const { onHover, onHoverEnd, outside, inner } = setup(true)
+        fireEvent.mouseOut(outside, { relatedTarget: inner })
+        fireEvent.mouseOut(inner, { relatedTarget: null })
+        expect(onHover).toHaveBeenCalledTimes(1)
+        expect(onHoverEnd).toHaveBeenCalledTimes(2)
+      })
+
+      it('keeps the inner click reporting maskClicked=true', () => {
+        const { onClick, inner } = setup(true)
+        fireEvent.click(inner)
+        expect(onClick).toHaveBeenCalledTimes(1)
+        expect(onClick.mock.calls[0][2]).toBe(true)
+      })
+
+      it('without the flag, the inner rect is part of the hover', () => {
+        const { onHover, onHoverEnd, outside, outer, inner } = setup(undefined)
+        fireEvent.mouseOut(outside, { relatedTarget: inner })
+        fireEvent.mouseOut(inner, { relatedTarget: outer })
+        expect(onHover).toHaveBeenCalledTimes(1)
+        expect(onHoverEnd).not.toHaveBeenCalled()
+      })
+    })
+
     it('does nothing without hover callbacks', () => {
       const { container } = render(
         <svg>

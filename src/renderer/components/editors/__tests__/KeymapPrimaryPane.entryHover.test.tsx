@@ -226,7 +226,7 @@ describe('KeymapPrimaryPane — entry hover bubble (macros)', () => {
     expect(bubbleHeading()).toBe('M2')
   })
 
-  it('encoders never start the layer hover preview', () => {
+  it('a layer key on an encoder starts the layer hover preview, not the bubble', () => {
     const encoderLayout = new Map(ENCODERS)
     encoderLayout.set('0,0,0', 1)
     const { container } = renderPane({
@@ -234,7 +234,7 @@ describe('KeymapPrimaryPane — entry hover bubble (macros)', () => {
     })
     fireEvent.mouseEnter(encoderGroup(container, 0))
     dwell()
-    expect(screen.getByTestId('layer-label').textContent).toBe('Layer 0')
+    expect(screen.getByTestId('layer-label').textContent).toBe('Preview - Nav')
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
   })
 

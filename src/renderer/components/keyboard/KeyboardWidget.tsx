@@ -79,7 +79,7 @@ interface Props {
   onEncoderDoubleClick?: (key: KleKey, direction: number, rect: DOMRect, maskClicked: boolean) => void
   onKeyHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
   onKeyHoverEnd?: () => void
-  /** See `KeyWidget`'s `hoverOuterPartOnly`. */
+  /** See `KeyWidget`'s / `EncoderWidget`'s `hoverOuterPartOnly`. */
   hoverOuterPartOnly?: boolean
   /** See `EncoderWidget`'s `onHover` / `onHoverEnd`. */
   onEncoderHover?: (encoderIdx: number, direction: number, rect: DOMRect) => void
@@ -288,6 +288,7 @@ function KeyboardWidgetInner({
               onDoubleClick={readOnly ? undefined : onEncoderDoubleClick}
               onHover={onEncoderHover}
               onHoverEnd={onEncoderHoverEnd}
+              hoverOuterPartOnly={hoverOuterPartOnly}
               scale={scale}
             />
           )
@@ -347,6 +348,7 @@ function KeyboardWidgetInner({
               onDoubleClick={readOnly ? undefined : onEncoderDoubleClick}
               onHover={onEncoderHover}
               onHoverEnd={onEncoderHoverEnd}
+              hoverOuterPartOnly={hoverOuterPartOnly}
               scale={scale}
             />
           )

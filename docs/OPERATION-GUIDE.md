@@ -771,7 +771,7 @@ Rest the pointer on a layer key (`MO`, `LT`, `TG`, `TO`, `TT`, `OSL`, `DF`, `PDF
 - On keys with an inner part (e.g. `LT1(KC_SPC)`), only the upper (outer) part starts the preview; moving onto the inner key hides it so the inner key can be selected. The key under the pointer keeps showing its own content during the preview
 - Moving the pointer off the key returns to the current layer immediately
 - Clicks, double-clicks and middle-clicks always act on the current layer — the preview is dismissed first
-- Layer keys assigned to encoders don't start a preview
+- The half of an encoder (clockwise or counter-clockwise) works the same way when that direction is assigned a layer key. For an `LT`-style keycode only the upper (outer) part of that half starts the preview, and during the preview that half keeps showing its own keycode while the other half shows the target layer's
 - There is no preview in View Matrix mode, on the Key Label simulation tab, while keys are multi-selected, while palette keycodes are selected for pasting, or while the Key Popover is open
 - Turn it on or off with **Auto Layer Preview** in the Keycodes Overlay Panel's Settings / Import tab (§3.14). Saved and synced per keyboard; on by default
 
