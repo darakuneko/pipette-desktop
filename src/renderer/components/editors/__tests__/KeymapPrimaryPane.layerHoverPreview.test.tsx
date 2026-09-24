@@ -1,0 +1,165 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// @vitest-environment jsdom
+
+// Layer hover preview wired through the REAL KeyboardPane / KeyboardWidget
+// tree: dwelling on a layer key redraws the board with the target layer and
+// the footer reads "Preview - <layer>"; clicks act on the real layer.
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, fireEvent, act, screen } from '@testing-library/react'
+import { KeymapPrimaryPane, type KeymapPrimaryPaneProps } from '../KeymapPrimaryPane'
+import { SHARED_BUBBLE_OPEN_DELAY_MS } from '../../../hooks/use-shared-hover-bubble'
+import type { UseViewMatrixModeReturn } from '../useViewMatrixMode'
+import type { KleKey } from '../../../../shared/kle/types'
+
+const CODES: Record<number, string> = { 1: 'MO(1)', 10: 'KC_A', 11: 'KC_1', 12: 'KC_2' }
+
+vi.mock('../../../../shared/keycodes/keycodes', () => ({
+  serialize: (code: number) => CODES[code] ?? 'KC_NO',
+  keycodeLabel: (kc: string) => kc,
+  isMask: () => false,
+  findOuterKeycode: () => undefined,
+  findInnerKeycode: () => undefined,
+}))
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: Record<string, unknown>) => {
+      if (key === 'editor.keymap.layerPreview') return `Preview - ${String(opts?.label ?? '')}`
+      if (key === 'editor.keymap.layerN') return `Layer ${String(opts?.n ?? '')}`
+      return key
+    },
+  }),
+}))
+
+vi.mock('../KeymapPackTabs', () => ({
+  KeymapPackTabs: () => <div data-testid="pack-tabs" />,
+  KeymapPackApplyButton: () => null,
+}))
+
+function makeKey(col: number): KleKey {
+  return {
+    x: col, y: 0, width: 1, height: 1, row: 0, col,
+    encoderIdx: -1, encoderDir: -1, layoutIndex: -1, layoutOption: -1,
+    decal: false, labels: [], x2: 0, y2: 0, width2: 1, height2: 1,
+    rotation: 0, rotationX: 0, rotationY: 0, color: '',
+    textColor: [], textSize: [], nub: false, stepped: false, ghost: false,
+  }
+}
+
+const viewMatrixMode: UseViewMatrixModeReturn = {
+  active: false,
+  enter: vi.fn(),
+  exit: vi.fn(),
+  toggle: vi.fn(),
+  selectedKeys: new Set(),
+  selectKey: vi.fn(),
+  toggleKeySelection: vi.fn(),
+  extendSelection: vi.fn(),
+  clearSelection: vi.fn(),
+}
+
+// Layer 0: MO(1), KC_A. Layer 1: KC_1, KC_2.
+const KEYMAP = new Map<string, number>([['0,0,0', 1], ['0,0,1', 10], ['1,0,0', 11], ['1,0,1', 12]])
+
+function baseProps(overrides: Partial<KeymapPrimaryPaneProps> = {}): KeymapPrimaryPaneProps {
+  return {
+    showPackTabs: false,
+    packTab: 'pack',
+    keys: [makeKey(0), makeKey(1)],
+    layerKeycodes: new Map([['0,0', 'MO(1)'], ['0,1', 'KC_A']]),
+    layerEncoderKeycodes: new Map(),
+    remappedKeys: new Set(),
+    layerEncoderRemapped: new Set(),
+    matrixMode: false,
+    pressedKeys: new Set(),
+    everPressedKeys: new Set(),
+    layoutOptions: new Map(),
+    scale: 1,
+    currentLayerLabel: 'Layer 0',
+    primaryKeycodes: new Map([['0,0', 'MO(1)'], ['0,1', 'KC_A']]),
+    primaryEncoderKeycodes: new Map(),
+    selectedKey: null,
+    selectedEncoder: null,
+    selectedMaskPart: false,
+    selectedKeycode: null,
+    primaryRemappedKeys: new Set(),
+    primaryRemappedEncoders: new Set(),
+    viewMatrixMode,
+    multiSelectedKeys: new Set(),
+    handleViewMatrixKeyClick: vi.fn(),
+    handleKeyClick: vi.fn(),
+    handleKeyDoubleClick: vi.fn(),
+    handleEncoderClick: vi.fn(),
+    handleEncoderDoubleClick: vi.fn(),
+    handleDeselect: vi.fn(),
+    handlePackTabChange: vi.fn(),
+    layerHoverPreview: {
+      layers: 2, currentLayer: 0, keymap: KEYMAP, encoderLayout: new Map(), encoderCount: 0,
+      layerNames: ['', 'Nav'], deviceKey: 'uid', blocked: false,
+    },
+    ...overrides,
+  }
+}
+
+function keyGroup(container: HTMLElement, col: number): Element {
+  const g = container.querySelector(`[data-key-pos="0,${col}"]`)
+  if (!g) throw new Error(`key 0,${col} not rendered`)
+  return g
+}
+
+function hoverAndDwell(container: HTMLElement, col: number): void {
+  fireEvent.mouseEnter(keyGroup(container, col))
+  act(() => { vi.advanceTimersByTime(SHARED_BUBBLE_OPEN_DELAY_MS) })
+}
+
+describe('KeymapPrimaryPane — layer hover preview', () => {
+  beforeEach(() => { vi.useFakeTimers() })
+  afterEach(() => { vi.useRealTimers() })
+
+  it('renders the target layer and the Preview footer after the dwell, and restores on leave', () => {
+    const { container } = render(<KeymapPrimaryPane {...baseProps()} />)
+    expect(screen.getByTestId('layer-label').textContent).toBe('Layer 0')
+
+    hoverAndDwell(container, 0)
+    expect(keyGroup(container, 0).textContent).toContain('KC_1')
+    expect(keyGroup(container, 1).textContent).toContain('KC_2')
+    expect(screen.getByTestId('layer-label').textContent).toBe('Preview - Nav')
+
+    fireEvent.mouseLeave(keyGroup(container, 0))
+    expect(keyGroup(container, 1).textContent).toContain('KC_A')
+    expect(screen.getByTestId('layer-label').textContent).toBe('Layer 0')
+  })
+
+  it('clicking during a preview cancels it and acts on the real layer', () => {
+    const handleKeyClick = vi.fn()
+    const { container } = render(<KeymapPrimaryPane {...baseProps({ handleKeyClick })} />)
+    hoverAndDwell(container, 0)
+    expect(screen.getByTestId('layer-label').textContent).toBe('Preview - Nav')
+
+    fireEvent.click(keyGroup(container, 1))
+    expect(handleKeyClick).toHaveBeenCalledTimes(1)
+    expect(handleKeyClick.mock.calls[0][0]).toMatchObject({ row: 0, col: 1 })
+    expect(screen.getByTestId('layer-label').textContent).toBe('Layer 0')
+    expect(keyGroup(container, 1).textContent).toContain('KC_A')
+  })
+
+  it.each([
+    ['View Matrix mode', { viewMatrixMode: { ...viewMatrixMode, active: true } }],
+    ['a multi-selection', { multiSelectedKeys: new Set(['0,1']) }],
+    ['the popover or a picker selection', {
+      layerHoverPreview: { ...baseProps().layerHoverPreview!, blocked: true },
+    }],
+  ] as const)('does not preview during %s', (_label, overrides) => {
+    const { container } = render(<KeymapPrimaryPane {...baseProps(overrides as Partial<KeymapPrimaryPaneProps>)} />)
+    hoverAndDwell(container, 0)
+    expect(keyGroup(container, 1).textContent).toContain('KC_A')
+    expect(container.textContent).not.toContain('Preview - ')
+  })
+
+  it('does not preview without preview input', () => {
+    const { container } = render(<KeymapPrimaryPane {...baseProps({ layerHoverPreview: undefined })} />)
+    hoverAndDwell(container, 0)
+    expect(keyGroup(container, 1).textContent).toContain('KC_A')
+  })
+})

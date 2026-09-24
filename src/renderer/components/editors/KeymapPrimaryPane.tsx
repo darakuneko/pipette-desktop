@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useCallback, type RefObject } from 'react'
+import { useTranslation } from 'react-i18next'
 import { KeyboardPane } from './KeyboardPane'
+import { useLayerHoverPreview, type LayerHoverPreviewInput } from './use-layer-hover-preview'
 import { KeymapPackTabs, KeymapPackApplyButton, type KeymapPackTab } from './KeymapPackTabs'
 import type { KleKey } from '../../../shared/kle/types'
 import type { KeyFlashState } from '../keyboard/key-flash'
@@ -88,6 +90,13 @@ export interface KeymapPrimaryPaneProps {
   handleDeselect: () => void
   handlePackTabChange: (tab: KeymapPackTab) => void
   keymapPackName?: string
+  /** Inputs for the layer hover preview on the editable branch. Omitted
+   *  means no preview. */
+  layerHoverPreview?: LayerHoverPreviewInput
+}
+
+const NO_LAYER_HOVER_PREVIEW: LayerHoverPreviewInput = {
+  layers: 0, currentLayer: 0, keymap: new Map(), encoderLayout: new Map(), encoderCount: 0, blocked: true,
 }
 
 /** The dual `KeyboardPane` branches (simulation-tab preview vs. the real,
@@ -104,19 +113,55 @@ export function KeymapPrimaryPane({
   primaryRemappedKeys, primaryRemappedEncoders, flash, viewMatrixMode, multiSelectedKeys,
   viewMatrixLabelOverrides, viewMatrixDuplicateKeyColors, primaryRemapLabel, matrixWires, auxUndoHandlers,
   handleViewMatrixKeyClick, handleKeyClick, handleKeyDoubleClick, handleEncoderClick, handleEncoderDoubleClick,
-  handleDeselect, handlePackTabChange, keymapPackName,
+  handleDeselect, handlePackTabChange, keymapPackName, layerHoverPreview,
 }: KeymapPrimaryPaneProps): JSX.Element {
+  const { t } = useTranslation()
+  const hoverInput = layerHoverPreview ?? NO_LAYER_HOVER_PREVIEW
+  const onBaseTab = showPackTabs && packTab === 'base'
+  const preview = useLayerHoverPreview({
+    ...hoverInput,
+    remapLabel,
+    raw: onBaseTab,
+    disabled: hoverInput.blocked || viewMatrixMode.active || multiSelectedKeys.size > 0 || (showPackTabs && packTab === 'pack'),
+    surfaceKey: showPackTabs ? packTab : 'none',
+  })
+  const { previewLayer } = preview
+  const previewing = previewLayer !== null
+  const previewLabel = previewLayer === null
+    ? undefined
+    : hoverInput.layerNames?.[previewLayer] || t('editor.keymap.layerN', { n: previewLayer })
+  // Clicks always act on the real layer: drop the preview first so the
+  // board shows what the click is about to edit.
+  const { cancel } = preview
+  const onKeyClick = useCallback<KeymapPrimaryPaneProps['handleKeyClick']>((...args) => {
+    cancel()
+    handleKeyClick(...args)
+  }, [cancel, handleKeyClick])
+  const onKeyDoubleClick = useCallback<KeymapPrimaryPaneProps['handleKeyDoubleClick']>((...args) => {
+    cancel()
+    handleKeyDoubleClick(...args)
+  }, [cancel, handleKeyDoubleClick])
+  const onEncoderClick = useCallback<KeymapPrimaryPaneProps['handleEncoderClick']>((...args) => {
+    cancel()
+    handleEncoderClick(...args)
+  }, [cancel, handleEncoderClick])
+  const onEncoderDoubleClick = useCallback<KeymapPrimaryPaneProps['handleEncoderDoubleClick']>((...args) => {
+    cancel()
+    handleEncoderDoubleClick(...args)
+  }, [cancel, handleEncoderDoubleClick])
   // Middle-click only undoes the key/encoder the user has actually
   // selected — a stray middle click while merely hovering an unselected
   // key must never change it. `auxUndoHandlers` itself still does the
   // history-stack-top match; this gate runs first and simply drops the
   // call through when the clicked position isn't the current selection.
   const onKeyAuxClick = useCallback((pos: { row: number; col: number }) => {
+    cancel()
     if (isSelectedKeyPos(selectedKey, pos)) auxUndoHandlers?.onKeyAuxClick(pos)
-  }, [auxUndoHandlers, selectedKey])
+  }, [cancel, auxUndoHandlers, selectedKey])
   const onEncoderAuxClick = useCallback((pos: { idx: number; dir: number }) => {
+    cancel()
     if (isSelectedEncoderPos(selectedEncoder, pos)) auxUndoHandlers?.onEncoderAuxClick(pos)
-  }, [auxUndoHandlers, selectedEncoder])
+  }, [cancel, auxUndoHandlers, selectedEncoder])
   return (
     <div className="flex items-stretch">
       {showPackTabs && packTab === 'pack' ? (
@@ -156,19 +201,28 @@ export function KeymapPrimaryPane({
         // swapping only the keycode/remap source variables below
         // (`primaryKeycodes` etc.) for the Base tab's raw data.
         <KeyboardPane
-          paneId="primary" isActive={true} keys={keys} keycodes={primaryKeycodes} encoderKeycodes={primaryEncoderKeycodes}
+          paneId="primary" isActive={true} keys={keys}
+          keycodes={previewing ? preview.keycodes : primaryKeycodes} encoderKeycodes={previewing ? preview.encoderKeycodes : primaryEncoderKeycodes}
           selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
           pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
-          remappedKeys={primaryRemappedKeys} remappedEncoders={primaryRemappedEncoders} flash={flash} multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
+          remappedKeys={previewing ? preview.remappedKeys : primaryRemappedKeys}
+          remappedEncoders={previewing ? preview.remappedEncoders : primaryRemappedEncoders}
+          // A flash marks positions on the real layer, so it would light
+          // unrelated keys of the previewed one.
+          flash={previewing ? undefined : flash}
+          multiSelectedKeys={viewMatrixMode.active ? viewMatrixMode.selectedKeys : multiSelectedKeys}
           layoutOptions={layoutOptions} scale={scale}
           labelOverrides={viewMatrixLabelOverrides} keyColors={viewMatrixDuplicateKeyColors} remapLabel={primaryRemapLabel}
           matrixWires={matrixWires}
           onKeyAuxClick={auxUndoHandlers ? onKeyAuxClick : undefined} onEncoderAuxClick={auxUndoHandlers ? onEncoderAuxClick : undefined}
-          layerLabel={viewMatrixMode.active ? undefined : currentLayerLabel} layerLabelTestId="layer-label"
-          onKeyClick={viewMatrixMode.active ? handleViewMatrixKeyClick : handleKeyClick}
-          onKeyDoubleClick={viewMatrixMode.active ? undefined : handleKeyDoubleClick}
-          onEncoderClick={viewMatrixMode.active ? undefined : handleEncoderClick}
-          onEncoderDoubleClick={viewMatrixMode.active ? undefined : handleEncoderDoubleClick}
+          layerLabel={viewMatrixMode.active ? undefined : (previewLabel ?? currentLayerLabel)} layerLabelTestId="layer-label"
+          preview={previewing}
+          onKeyClick={viewMatrixMode.active ? handleViewMatrixKeyClick : onKeyClick}
+          onKeyDoubleClick={viewMatrixMode.active ? undefined : onKeyDoubleClick}
+          onEncoderClick={viewMatrixMode.active ? undefined : onEncoderClick}
+          onEncoderDoubleClick={viewMatrixMode.active ? undefined : onEncoderDoubleClick}
+          onKeyHover={layerHoverPreview ? preview.onKeyHover : undefined}
+          onKeyHoverEnd={layerHoverPreview ? preview.onKeyHoverEnd : undefined}
           onDeselect={viewMatrixMode.active ? viewMatrixMode.clearSelection : handleDeselect} contentRef={contentRef}
         />
       )}
