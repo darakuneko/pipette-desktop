@@ -2,7 +2,7 @@
 // @vitest-environment jsdom
 
 // The entry hover bubble inside a real TabbedKeycodes: one bubble per
-// picker, rendered by the picker and gone with it.
+// picker, rendered by the picker, gone with it and closed by a tab switch.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
@@ -103,5 +103,67 @@ describe('TabbedKeycodes — entry hover bubble', () => {
     second.unmount()
     dwell()
     expect(bubble()).toBeNull()
+  })
+})
+
+function clickTab(labelKey: string): void {
+  fireEvent.click(screen.getByRole('button', { name: labelKey }))
+}
+
+describe('TabbedKeycodes — a tab switch closes the entry hover bubble', () => {
+  beforeEach(() => { vi.useFakeTimers() })
+  afterEach(() => { vi.useRealTimers() })
+
+  it('clicking another tab closes a shown bubble', () => {
+    render(<Picker />)
+    hoverMacro(0)
+    dwell()
+    expect(bubble()).not.toBeNull()
+    clickTab('keycodes.behavior')
+    expect(bubble()).toBeNull()
+  })
+
+  it('clicking another tab drops a pending open', () => {
+    render(<Picker />)
+    hoverMacro(0)
+    dwell(100)
+    clickTab('keycodes.behavior')
+    dwell()
+    expect(bubble()).toBeNull()
+  })
+
+  it.each([
+    ['shown', SHARED_BUBBLE_OPEN_DELAY_MS],
+    ['pending', 100],
+  ])('an automatic fallback (lmMode hides the Macro tab) closes a %s bubble', (_label, ms) => {
+    const { rerender } = render(<Picker />)
+    hoverMacro(0)
+    dwell(ms)
+    rerender(<Picker lmMode />)
+    dwell()
+    expect(bubble()).toBeNull()
+  })
+
+  it.each([
+    ['shown', SHARED_BUBBLE_OPEN_DELAY_MS],
+    ['pending', 100],
+  ])('an automatic restore (maskOnly clears) closes a %s bubble', (_label, ms) => {
+    const { rerender } = render(<Picker />)
+    clickTab('keycodes.behavior')
+    // maskOnly removes Behavior, so the picker falls back to the Macro tab.
+    rerender(<Picker maskOnly />)
+    hoverMacro(0)
+    dwell(ms)
+    rerender(<Picker />)
+    dwell()
+    expect(bubble()).toBeNull()
+  })
+
+  it('a re-render that keeps the same tab leaves the bubble open', () => {
+    const { rerender } = render(<Picker />)
+    hoverMacro(0)
+    dwell()
+    rerender(<Picker maskOnly />)
+    expect(bubble()).not.toBeNull()
   })
 })
