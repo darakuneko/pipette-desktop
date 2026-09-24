@@ -51,6 +51,11 @@ interface Props {
    *  Omitted means no hover handling at all. */
   onHover?: (encoderIdx: number, direction: number, rect: DOMRect) => void
   onHoverEnd?: () => void
+  /** For a masked (LT-style) keycode, report hover only while the pointer
+   *  is over the outer part: entering the inner rect calls `onHoverEnd`,
+   *  and moving from the inner rect back to the outer part calls `onHover`
+   *  again. Same contract as `KeyWidget`'s `hoverOuterPartOnly`. */
+  hoverOuterPartOnly?: boolean
   scale?: number
 }
 
@@ -67,6 +72,7 @@ function EncoderWidgetInner({
   onDoubleClick,
   onHover,
   onHoverEnd,
+  hoverOuterPartOnly,
   scale = 1,
 }: Props) {
   const clipId = useId()
@@ -106,8 +112,9 @@ function EncoderWidgetInner({
     if (onDoubleClick) { e.stopPropagation(); onDoubleClick(kleKey, kleKey.encoderDir, e.currentTarget.getBoundingClientRect(), false) }
   }
 
+  const emitHover = (group: Element) => onHover?.(kleKey.encoderIdx, kleKey.encoderDir, group.getBoundingClientRect())
   const handleMouseEnter = onHover
-    ? (e: React.MouseEvent<SVGGElement>) => onHover(kleKey.encoderIdx, kleKey.encoderDir, e.currentTarget.getBoundingClientRect())
+    ? (e: React.MouseEvent<SVGGElement>) => emitHover(e.currentTarget)
     : undefined
 
   // How far into the shared `key-flash` timeline this overlay is joining —
@@ -173,6 +180,18 @@ function EncoderWidgetInner({
   const handleInnerClick = (e: React.MouseEvent) => {
     if (onClick) { e.stopPropagation(); onClick(kleKey, kleKey.encoderDir, true) }
   }
+  const outerHoverOnly = !!hoverOuterPartOnly && !!onHover
+  const handleInnerMouseEnter = outerHoverOnly ? () => onHoverEnd?.() : undefined
+  const handleInnerMouseLeave = outerHoverOnly
+    ? (e: React.MouseEvent<SVGRectElement>) => {
+        // Only a move onto the outer part of this same direction resumes
+        // the hover; leaving through the inner rect gets the group's own
+        // mouseleave instead.
+        const group = e.currentTarget.closest('g')
+        const next = e.relatedTarget
+        if (group && next instanceof Node && group.contains(next)) emitHover(group)
+      }
+    : undefined
   const handleInnerDoubleClick = (e: React.MouseEvent<SVGRectElement>) => {
     e.stopPropagation()
     if (onDoubleClick) {
@@ -211,7 +230,9 @@ function EncoderWidgetInner({
         fill={KEY_MASK_RECT_COLOR}
         stroke={innerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR} strokeWidth={innerBorderActive ? 2 : 1}
         clipPath={`url(#${clipId})`}
-        onClick={handleInnerClick} onDoubleClick={handleInnerDoubleClick} style={{ cursor: onClick ? 'pointer' : 'default' }} />
+        onClick={handleInnerClick} onDoubleClick={handleInnerDoubleClick}
+        onMouseEnter={handleInnerMouseEnter} onMouseLeave={handleInnerMouseLeave}
+        style={{ cursor: onClick ? 'pointer' : 'default' }} />
       {/* Outer label (modifier) */}
       <text x={cx} y={outerLabelY} textAnchor="middle" dominantBaseline="central"
         fill={labelColor} fontSize={fontSize * 0.85} fontFamily="sans-serif" style={{ pointerEvents: 'none' }}>

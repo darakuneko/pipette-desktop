@@ -94,7 +94,7 @@ export interface KeyboardPaneProps {
   onEncoderAuxClick?: (pos: { idx: number; dir: number }) => void
   onKeyHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
   onKeyHoverEnd?: () => void
-  /** See `KeyWidget`'s `hoverOuterPartOnly`. */
+  /** See `KeyWidget`'s / `EncoderWidget`'s `hoverOuterPartOnly`. */
   hoverOuterPartOnly?: boolean
   /** See `EncoderWidget`'s `onHover` / `onHoverEnd`. */
   onEncoderHover?: (encoderIdx: number, direction: number, rect: DOMRect) => void

@@ -148,22 +148,28 @@ export function KeymapPrimaryPane({
     surfaceKey,
     realKeycodes: primaryKeycodes,
     realRemappedKeys: primaryRemappedKeys,
+    realEncoderKeycodes: primaryEncoderKeycodes,
+    realRemappedEncoders: primaryRemappedEncoders,
   })
   const entryHoverEnabled = useEntryHoverPreviewEnabled()
   const entryHover = useKeymapEntryHover({
     macros: hoverMacros, tapDance: hoverTapDance, enabled: entryHoverEnabled, disabled: hoverBlocked,
     currentLayer, keymap, encoderLayout, deviceKey, surfaceKey,
   })
-  const { onKeyHover: layerKeyHover, onKeyHoverEnd: layerKeyHoverEnd } = preview
-  const { onKeyHover: entryKeyHover, hide: entryHide } = entryHover
+  const { onKeyHover: layerKeyHover, onEncoderHover: layerEncoderHover, onKeyHoverEnd: layerHoverEnd } = preview
+  const { onKeyHover: entryKeyHover, onEncoderHover: entryEncoderHover, hide: entryHide } = entryHover
   const onKeyHover = useCallback((key: KleKey, keycode: string, rect: DOMRect) => {
     layerKeyHover(key)
     entryKeyHover(key, keycode, rect)
   }, [layerKeyHover, entryKeyHover])
-  const onKeyHoverEnd = useCallback(() => {
-    layerKeyHoverEnd()
+  const onEncoderHover = useCallback((encoderIdx: number, dir: number, rect: DOMRect) => {
+    layerEncoderHover(encoderIdx, dir)
+    entryEncoderHover(encoderIdx, dir, rect)
+  }, [layerEncoderHover, entryEncoderHover])
+  const onHoverEnd = useCallback(() => {
+    layerHoverEnd()
     entryHide()
-  }, [layerKeyHoverEnd, entryHide])
+  }, [layerHoverEnd, entryHide])
   const { previewLayer } = preview
   const previewing = previewLayer !== null
   const previewLabel = previewLayer === null ? undefined : layerLabel(previewLayer)
@@ -247,10 +253,10 @@ export function KeymapPrimaryPane({
           onEncoderClick={viewMatrixMode.active ? undefined : onEncoderClick}
           onEncoderDoubleClick={viewMatrixMode.active ? undefined : onEncoderDoubleClick}
           onKeyHover={layerHoverPreview ? onKeyHover : undefined}
-          onKeyHoverEnd={layerHoverPreview ? onKeyHoverEnd : undefined}
+          onKeyHoverEnd={layerHoverPreview ? onHoverEnd : undefined}
           hoverOuterPartOnly={!!layerHoverPreview}
-          onEncoderHover={layerHoverPreview ? entryHover.onEncoderHover : undefined}
-          onEncoderHoverEnd={layerHoverPreview ? entryHide : undefined}
+          onEncoderHover={layerHoverPreview ? onEncoderHover : undefined}
+          onEncoderHoverEnd={layerHoverPreview ? onHoverEnd : undefined}
           onDeselect={viewMatrixMode.active ? viewMatrixMode.clearSelection : handleDeselect} contentRef={contentRef}
         />
       )}

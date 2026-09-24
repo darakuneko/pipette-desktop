@@ -42,6 +42,8 @@ const key = (col: number): KleKey => ({ row: 0, col } as KleKey)
 // The real layer as the pane displays it.
 const REAL_KEYCODES = new Map(LAYER0.map((code, col) => [`0,${col}`, CODES[code]]))
 const REAL_REMAPPED = new Set<string>()
+// Layer 0 has no encoder entries in `baseOptions`' layout.
+const REAL_ENCODER_KEYCODES = new Map<string, [string, string]>()
 
 function baseOptions(overrides: Partial<UseLayerHoverPreviewOptions> = {}): UseLayerHoverPreviewOptions {
   return {
@@ -56,6 +58,8 @@ function baseOptions(overrides: Partial<UseLayerHoverPreviewOptions> = {}): UseL
     deviceKey: 'uid-a',
     realKeycodes: REAL_KEYCODES,
     realRemappedKeys: REAL_REMAPPED,
+    realEncoderKeycodes: REAL_ENCODER_KEYCODES,
+    realRemappedEncoders: REAL_REMAPPED,
     ...overrides,
   }
 }

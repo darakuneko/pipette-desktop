@@ -49,6 +49,7 @@ describe('layer hover preview — real keycode parsing', () => {
       const { result } = renderHook(() => useLayerHoverPreview({
         layers: 3, currentLayer: 0, keymap, encoderLayout, encoderCount: 0,
         raw: false, disabled: false, surfaceKey: 'none', realKeycodes, realRemappedKeys,
+        realEncoderKeycodes: new Map(), realRemappedEncoders: new Set(),
       }))
       act(() => result.current.onKeyHover({ row: 0, col: 0 } as KleKey))
       act(() => { vi.advanceTimersByTime(SHARED_BUBBLE_OPEN_DELAY_MS) })
