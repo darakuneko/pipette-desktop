@@ -6,7 +6,7 @@
 // undo history. Leaving the key restores the real layer immediately.
 //
 // Only key hovers reach this hook — `KeymapPrimaryPane` sends encoder
-// hovers to the macro bubble alone — so layer keys placed on encoders never
+// hovers to the entry hover bubble alone — so layer keys placed on encoders never
 // start a preview.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
@@ -31,7 +31,7 @@ export interface LayerHoverPreviewInput {
   /** Changes when the connected keyboard changes. */
   deviceKey?: string
   /** True while the Key Popover is open or the picker holds paste
-   *  targets. `KeymapPrimaryPane` hides the macro hover bubble while it
+   *  targets. `KeymapPrimaryPane` hides the entry hover bubble while it
    *  is true as well. */
   blocked: boolean
   /** The Auto Layer Preview toggle. Omitted means on. */

@@ -659,6 +659,11 @@
         "missedBarMovedOnLine": "直さず次いっちゃったの: {{count}}こ",
         "missedBarNoDetail": "この記録、打鍵ごとの詳細ないみたい"
       }
+    },
+    "hoverDetails": {
+      "none": "なしっしょ",
+      "on": "オン☆",
+      "off": "オフ〜"
     }
   },
   "error": {
@@ -1865,7 +1870,7 @@
     "splitKeyMode": "Shiftキー分離っしょ",
     "quickSelect": "爆速選択☆",
     "layerHoverPreview": "レイヤー勝手にチラ見せ☆",
-    "macroHoverPreview": "マクロ中身チラ見せ☆",
+    "entryHoverPreview": "ホバーで中身チラ見せ☆",
     "keyEditorZoom": "エディタズーム☆"
   },
   "hub": {

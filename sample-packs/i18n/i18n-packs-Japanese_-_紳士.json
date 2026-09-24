@@ -659,6 +659,11 @@
         "missedBarMovedOnLine": "未修正のまま進まれた回数: {{count}}",
         "missedBarNoDetail": "この記録には打鍵ごとの詳細情報がございません"
       }
+    },
+    "hoverDetails": {
+      "none": "ございません",
+      "on": "有効",
+      "off": "無効"
     }
   },
   "error": {
@@ -1865,7 +1870,7 @@
     "splitKeyMode": "Shift を分離",
     "quickSelect": "即座の選択",
     "layerHoverPreview": "階層の自動内覧",
-    "macroHoverPreview": "呪文の内覧",
+    "entryHoverPreview": "詳細の内覧",
     "keyEditorZoom": "エディタ表示倍率"
   },
   "hub": {

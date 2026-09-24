@@ -659,6 +659,11 @@
         "missedBarMovedOnLine": "Moved on uncorrected: {{count}}",
         "missedBarNoDetail": "No per-keystroke detail available for this run"
       }
+    },
+    "hoverDetails": {
+      "none": "None",
+      "on": "On",
+      "off": "Off"
     }
   },
   "error": {
@@ -1875,7 +1880,7 @@
     "splitKeyMode": "Separate Shift in Key Picker",
     "quickSelect": "Instant Key Selection",
     "layerHoverPreview": "Auto Layer Preview",
-    "macroHoverPreview": "Macro Hover Preview",
+    "entryHoverPreview": "Hover Details",
     "keyEditorZoom": "Key Editor Zoom"
   },
   "hub": {

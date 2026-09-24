@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
+import { LAYER_MASK_COUNT } from './entry-flag-names'
 
 interface Props {
   value: number
@@ -9,7 +10,6 @@ interface Props {
   horizontal?: boolean
 }
 
-const LAYER_COUNT = 16
 
 export function LayerPicker({ value, onChange, label, horizontal }: Props) {
   const { t } = useTranslation()
@@ -47,7 +47,7 @@ export function LayerPicker({ value, onChange, label, horizontal }: Props) {
 
   const grid = (
     <div className="grid grid-cols-8 gap-x-3 gap-y-1">
-      {Array.from({ length: LAYER_COUNT }, (_, bit) => (
+      {Array.from({ length: LAYER_MASK_COUNT }, (_, bit) => (
         <label key={bit} className="flex items-center gap-1.5 text-sm">
           <input
             type="checkbox"

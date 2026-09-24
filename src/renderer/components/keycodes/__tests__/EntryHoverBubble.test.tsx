@@ -5,9 +5,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { MacroTileGrid } from '../TileGrids'
 import {
-  MACRO_BUBBLE_CLASS, MAX_MACRO_BUBBLE_COLUMNS, MacroHoverBubble, nextMacroBubbleColumns,
-} from '../MacroHoverBubble'
-import { MacroHoverPreviewContext } from '../macro-hover-context'
+  ENTRY_BUBBLE_CLASS, MAX_ENTRY_BUBBLE_COLUMNS, EntryHoverBubble, nextEntryBubbleColumns,
+} from '../EntryHoverBubble'
+import { EntryHoverPreviewContext } from '../entry-hover-context'
 import { useTileContentOverride } from '../../../hooks/useTileContentOverride'
 import { SHARED_BUBBLE_OPEN_DELAY_MS } from '../../../hooks/use-shared-hover-bubble'
 import type { MacroAction } from '../../../../preload/macro'
@@ -49,7 +49,7 @@ function tile(i: number): HTMLElement {
 }
 
 function bubbleLines(): string[] {
-  return screen.getAllByTestId('macro-hover-line').map((el) => el.textContent ?? '')
+  return screen.getAllByTestId('entry-hover-line').map((el) => el.textContent ?? '')
 }
 
 describe('MacroTileGrid hover bubble', () => {
@@ -78,7 +78,7 @@ describe('MacroTileGrid hover bubble', () => {
     ])
     // Nothing is cut: no "+N more" line and no truncation on any label.
     expect(bubble.textContent).not.toContain('keycodes.macroMoreActions')
-    const textLabel = screen.getAllByTestId('macro-hover-line')[4].lastElementChild!
+    const textLabel = screen.getAllByTestId('entry-hover-line')[4].lastElementChild!
     expect(textLabel.className).toContain('whitespace-pre-wrap')
     expect(textLabel.className).toContain('break-words')
     expect(textLabel.className).not.toContain('truncate')
@@ -184,11 +184,11 @@ describe('useTileContentOverride — macro hover setting', () => {
   beforeEach(() => { vi.useFakeTimers() })
   afterEach(() => { vi.useRealTimers() })
 
-  it('turns the bubble on from MacroHoverPreviewContext', () => {
+  it('turns the bubble on from EntryHoverPreviewContext', () => {
     render(
-      <MacroHoverPreviewContext.Provider value>
+      <EntryHoverPreviewContext.Provider value>
         <OverrideHost macros={MACROS} />
-      </MacroHoverPreviewContext.Provider>,
+      </EntryHoverPreviewContext.Provider>,
     )
     fireEvent.mouseEnter(tile(2))
     dwell()
@@ -198,7 +198,7 @@ describe('useTileContentOverride — macro hover setting', () => {
   it.each([
     ['without a provider', (node: JSX.Element) => node],
     ['with the setting off', (node: JSX.Element) => (
-      <MacroHoverPreviewContext.Provider value={false}>{node}</MacroHoverPreviewContext.Provider>
+      <EntryHoverPreviewContext.Provider value={false}>{node}</EntryHoverPreviewContext.Provider>
     )],
   ])('shows nothing %s', (_label, wrap) => {
     render(wrap(<OverrideHost macros={MACROS} />))
@@ -208,9 +208,9 @@ describe('useTileContentOverride — macro hover setting', () => {
   })
 })
 
-describe('MacroHoverBubble', () => {
+describe('EntryHoverBubble', () => {
   it('uses the shared bubble skin above every modal tier and caps its size at the viewport', () => {
-    const classes = MACRO_BUBBLE_CLASS.split(' ')
+    const classes = ENTRY_BUBBLE_CLASS.split(' ')
     expect(classes).toContain('z-70')
     expect(classes).not.toContain('z-50')
     expect(classes).toContain('max-w-tooltip-viewport')
@@ -221,7 +221,7 @@ describe('MacroHoverBubble', () => {
   })
 
   it('renders nothing without a bubble', () => {
-    render(<MacroHoverBubble bubble={null} />)
+    render(<EntryHoverBubble bubble={null} />)
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
   })
 
@@ -239,7 +239,7 @@ describe('MacroHoverBubble', () => {
       Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
         configurable: true,
         get(this: HTMLElement) {
-          const bubble = this.closest('[data-testid="macro-hover-bubble"]') as HTMLElement | null
+          const bubble = this.closest('[data-testid="entry-hover-bubble"]') as HTMLElement | null
           if (!bubble) return 0
           const columns = Number(bubble.dataset.columns ?? '1')
           const list = listHeight / columns
@@ -251,7 +251,7 @@ describe('MacroHoverBubble', () => {
       const realStyle = window.getComputedStyle.bind(window)
       const styleSpy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el, pseudo) => {
         const style = realStyle(el, pseudo)
-        if (!(el instanceof HTMLElement) || el.dataset.testid !== 'macro-hover-bubble') return style
+        if (!(el instanceof HTMLElement) || el.dataset.testid !== 'entry-hover-bubble') return style
         return { ...style, paddingTop: '6px', paddingBottom: '6px', borderTopWidth: '1px', borderBottomWidth: '1px' } as CSSStyleDeclaration
       })
       restore = () => {
@@ -263,41 +263,41 @@ describe('MacroHoverBubble', () => {
     it('flows into as many columns as it takes to fit', () => {
       mockHeights(2000)
       const actions = Array.from({ length: 120 }, (_, i): MacroAction => ({ type: 'tap', keycodes: [i] }))
-      render(<MacroHoverBubble bubble={{ index: 3, actions, rect: new DOMRect(10, 10, 20, 20) }} />)
+      render(<EntryHoverBubble bubble={{ index: 3, entry: { kind: 'macro', value: actions }, rect: new DOMRect(10, 10, 20, 20) }} />)
       const bubble = screen.getByRole('tooltip')
       // jsdom's viewport is 768px tall: 768 - 16 margin - 26 chrome = 726,
       // so 2000px needs 3 columns even though the capped bubble is 752px.
       expect(bubble.dataset.columns).toBe('3')
       expect(bubble.children[1].className).toContain('columns-3')
-      expect(screen.getAllByTestId('macro-hover-line')).toHaveLength(120)
+      expect(screen.getAllByTestId('entry-hover-line')).toHaveLength(120)
     })
 
     it('stays in one column when it fits', () => {
       mockHeights(300)
-      render(<MacroHoverBubble bubble={{ index: 0, actions: MACROS[0], rect: new DOMRect(10, 10, 20, 20) }} />)
+      render(<EntryHoverBubble bubble={{ index: 0, entry: { kind: 'macro', value: MACROS[0] }, rect: new DOMRect(10, 10, 20, 20) }} />)
       expect(screen.getByRole('tooltip').dataset.columns).toBe('1')
     })
   })
 })
 
-describe('nextMacroBubbleColumns', () => {
+describe('nextEntryBubbleColumns', () => {
   it('keeps the count when the list fits', () => {
-    expect(nextMacroBubbleColumns(1, 500, 700)).toBe(1)
-    expect(nextMacroBubbleColumns(3, 700, 700)).toBe(3)
+    expect(nextEntryBubbleColumns(1, 500, 700)).toBe(1)
+    expect(nextEntryBubbleColumns(3, 700, 700)).toBe(3)
   })
 
   it('jumps from one column to the height ratio, at least two', () => {
-    expect(nextMacroBubbleColumns(1, 2000, 700)).toBe(3)
-    expect(nextMacroBubbleColumns(1, 710, 700)).toBe(2)
+    expect(nextEntryBubbleColumns(1, 2000, 700)).toBe(3)
+    expect(nextEntryBubbleColumns(1, 710, 700)).toBe(2)
   })
 
   it('adds one column at a time once split', () => {
-    expect(nextMacroBubbleColumns(3, 800, 700)).toBe(4)
+    expect(nextEntryBubbleColumns(3, 800, 700)).toBe(4)
   })
 
   it('stops at the cap and with no room at all', () => {
-    expect(nextMacroBubbleColumns(1, 100000, 700)).toBe(MAX_MACRO_BUBBLE_COLUMNS)
-    expect(nextMacroBubbleColumns(MAX_MACRO_BUBBLE_COLUMNS, 100000, 700)).toBe(MAX_MACRO_BUBBLE_COLUMNS)
-    expect(nextMacroBubbleColumns(1, 500, 0)).toBe(1)
+    expect(nextEntryBubbleColumns(1, 100000, 700)).toBe(MAX_ENTRY_BUBBLE_COLUMNS)
+    expect(nextEntryBubbleColumns(MAX_ENTRY_BUBBLE_COLUMNS, 100000, 700)).toBe(MAX_ENTRY_BUBBLE_COLUMNS)
+    expect(nextEntryBubbleColumns(1, 500, 0)).toBe(1)
   })
 })

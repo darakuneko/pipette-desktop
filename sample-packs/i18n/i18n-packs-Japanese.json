@@ -659,6 +659,11 @@
         "missedBarMovedOnLine": "未修正のまま次へ: {{count}}",
         "missedBarNoDetail": "この記録には打鍵ごとの詳細がありません"
       }
+    },
+    "hoverDetails": {
+      "none": "なし",
+      "on": "オン",
+      "off": "オフ"
     }
   },
   "error": {
@@ -1875,7 +1880,7 @@
     "splitKeyMode": "キーピッカーでShiftキーを分離",
     "quickSelect": "キーの即時選択",
     "layerHoverPreview": "レイヤーの自動プレビュー",
-    "macroHoverPreview": "マクロのホバープレビュー",
+    "entryHoverPreview": "ホバーで詳細表示",
     "keyEditorZoom": "キーエディタ ズーム"
   },
   "hub": {

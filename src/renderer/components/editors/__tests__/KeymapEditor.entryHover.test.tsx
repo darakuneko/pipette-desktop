@@ -21,7 +21,7 @@ vi.mock('react-i18next', () => ({
       if (key === 'editor.keymap.layerN' && opts) return `Layer ${opts.n ?? ''}`
       if (key === 'editor.keymap.layerPreview' && opts) return `Preview - ${String(opts.label ?? '')}`
       if (key === 'editorSettings.layerHoverPreview') return 'Auto Layer Preview'
-      if (key === 'editorSettings.macroHoverPreview') return 'Macro Hover Preview'
+      if (key === 'editorSettings.entryHoverPreview') return 'Hover Details'
       return map[key] ?? key
     },
   }),
@@ -65,8 +65,8 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   isMask: () => false,
   isLMKeycode: () => false,
   resolve: () => 0,
-  isTapDanceKeycode: () => false,
-  getTapDanceIndex: () => -1,
+  isTapDanceKeycode: (code: number) => (code & 0xff00) === 0x5700,
+  getTapDanceIndex: (code: number) => code & 0xff,
   isMacroKeycode: (code: number) => code === 0x7700,
   getMacroIndex: (code: number) => (code === 0x7700 ? 0 : -1),
   codeToLabel: (code: number) => `KC_${code}`,
@@ -93,7 +93,7 @@ vi.mock('../TapDanceModal', () => ({ TapDanceModal: () => null }))
 vi.mock('../MacroModal', () => ({ MacroModal: () => null }))
 
 import { KeymapEditor } from '../KeymapEditor'
-import { MacroHoverPreviewContext } from '../../keycodes/macro-hover-context'
+import { EntryHoverPreviewContext } from '../../keycodes/entry-hover-context'
 import { SHARED_BUBBLE_OPEN_DELAY_MS } from '../../../hooks/use-shared-hover-bubble'
 import type { KleKey } from '../../../../shared/kle/types'
 import type { MacroAction } from '../../../../preload/macro'
@@ -137,7 +137,7 @@ function defaultProps(overrides: Record<string, unknown> = {}) {
 
 function editor(overrides: Record<string, unknown> = {}, enabled: boolean | null = true): JSX.Element {
   const node = <KeymapEditor {...defaultProps(overrides)} />
-  return enabled === null ? node : <MacroHoverPreviewContext.Provider value={enabled}>{node}</MacroHoverPreviewContext.Provider>
+  return enabled === null ? node : <EntryHoverPreviewContext.Provider value={enabled}>{node}</EntryHoverPreviewContext.Provider>
 }
 
 function dwell(): void {
@@ -145,10 +145,10 @@ function dwell(): void {
 }
 
 function bubble(): HTMLElement | null {
-  return screen.queryByTestId('macro-hover-bubble')
+  return screen.queryByTestId('entry-hover-bubble')
 }
 
-describe('KeymapEditor — macro hover bubble', () => {
+describe('KeymapEditor — entry hover bubble', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
@@ -160,7 +160,18 @@ describe('KeymapEditor — macro hover bubble', () => {
     act(() => hoverKey?.(makeKey(1, 1), 'M0', new DOMRect()))
     dwell()
     expect(bubble()).toHaveTextContent('M0')
-    expect(screen.getAllByTestId('macro-hover-line').map((el) => el.textContent)).toEqual(['TKC_4', 'W20ms'])
+    expect(screen.getAllByTestId('entry-hover-line').map((el) => el.textContent)).toEqual(['TKC_4', 'W20ms'])
+  })
+
+  it('shows a Tap Dance key in full while the keyboard is locked', () => {
+    const tapDanceEntries = [{ onTap: 4, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 210 }]
+    render(editor({ tapDanceEntries, keymap: new Map([...KEYMAP, ['0,0,1', 0x5700]]) }))
+    act(() => hoverKey?.(makeKey(1, 1), 'TD(0)', new DOMRect()))
+    dwell()
+    expect(bubble()).not.toBeNull()
+    expect(screen.getAllByTestId('entry-hover-line').map((el) => el.lastElementChild?.textContent)).toEqual([
+      'KC_4', 'editor.hoverDetails.none', 'editor.hoverDetails.none', 'editor.hoverDetails.none', '210',
+    ])
   })
 
   it('shows the macro of a hovered encoder direction', () => {
@@ -192,11 +203,11 @@ describe('KeymapEditor — macro hover bubble', () => {
   })
 
   it('shows the setting in the Settings / Import tab and reports changes', () => {
-    const onMacroHoverPreviewChange = vi.fn()
-    render(editor({ macroHoverPreview: false, onMacroHoverPreviewChange }))
-    const toggle = screen.getByTestId('overlay-macro-hover-preview-toggle')
+    const onEntryHoverPreviewChange = vi.fn()
+    render(editor({ entryHoverPreview: false, onEntryHoverPreviewChange }))
+    const toggle = screen.getByTestId('overlay-entry-hover-preview-toggle')
     expect(toggle).toHaveAttribute('aria-checked', 'false')
     fireEvent.click(toggle)
-    expect(onMacroHoverPreviewChange).toHaveBeenCalledWith(true)
+    expect(onEntryHoverPreviewChange).toHaveBeenCalledWith(true)
   })
 })

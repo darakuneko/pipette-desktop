@@ -144,12 +144,13 @@ export interface KeymapEditorProps {
    *  `PipetteSettings.layerHoverPreview`. Omitted means on. */
   layerHoverPreview?: boolean
   onLayerHoverPreviewChange?: (enabled: boolean) => void
-  /** Hovering a macro shows its full contents — see
-   *  `PipetteSettings.macroHoverPreview`. Only drives the Settings / Import
-   *  toggle; the hover surfaces read the value from `MacroHoverPreviewContext`
-   *  (`macro-hover-context.ts`). Omitted means on. */
-  macroHoverPreview?: boolean
-  onMacroHoverPreviewChange?: (enabled: boolean) => void
+  /** Hovering a macro, Tap Dance, Combo, Key Override or Alt Repeat Key
+   *  shows it in full — see
+   *  `PipetteSettings.entryHoverPreview`. Only drives the Settings / Import
+   *  toggle; the hover surfaces read the value from `EntryHoverPreviewContext`
+   *  (`entry-hover-context.ts`). Omitted means on. */
+  entryHoverPreview?: boolean
+  onEntryHoverPreviewChange?: (enabled: boolean) => void
   basicViewType?: BasicViewType
   onBasicViewTypeChange?: (type: BasicViewType) => void
   splitKeyMode?: SplitKeyMode

@@ -659,6 +659,11 @@
         "missedBarMovedOnLine": "直さんまま次へ行かはったんは: {{count}}どす",
         "missedBarNoDetail": "この記録には打鍵ごとの詳細がおへんどす"
       }
+    },
+    "hoverDetails": {
+      "none": "あらしまへん",
+      "on": "入り",
+      "off": "切り"
     }
   },
   "error": {
@@ -1865,7 +1870,7 @@
     "splitKeyMode": "キーピッカーでShiftキーを分離",
     "quickSelect": "キーの即時選択",
     "layerHoverPreview": "レイヤーの自動お披露目",
-    "macroHoverPreview": "マクロの中身お披露目",
+    "entryHoverPreview": "ホバーで中身お披露目",
     "keyEditorZoom": "エディタズーム"
   },
   "hub": {

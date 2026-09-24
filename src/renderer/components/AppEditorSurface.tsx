@@ -244,8 +244,8 @@ export function AppEditorSurface({
         onViewMatrixWiresChange={devicePrefs.setViewMatrixWires}
         layerHoverPreview={devicePrefs.layerHoverPreview}
         onLayerHoverPreviewChange={devicePrefs.setLayerHoverPreview}
-        macroHoverPreview={devicePrefs.macroHoverPreview}
-        onMacroHoverPreviewChange={devicePrefs.setMacroHoverPreview}
+        entryHoverPreview={devicePrefs.entryHoverPreview}
+        onEntryHoverPreviewChange={devicePrefs.setEntryHoverPreview}
         basicViewType={devicePrefs.basicViewType}
         onBasicViewTypeChange={devicePrefs.setBasicViewType}
         splitKeyMode={devicePrefs.splitKeyMode}

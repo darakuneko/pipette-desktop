@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, act, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { KeymapPrimaryPane, type KeymapPrimaryPaneProps } from '../KeymapPrimaryPane'
-import { MacroHoverPreviewContext } from '../../keycodes/macro-hover-context'
+import { EntryHoverPreviewContext } from '../../keycodes/entry-hover-context'
 import { SHARED_BUBBLE_OPEN_DELAY_MS } from '../../../hooks/use-shared-hover-bubble'
 import type { UseViewMatrixModeReturn } from '../useViewMatrixMode'
 import type { KleKey } from '../../../../shared/kle/types'
@@ -26,6 +26,8 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   isMask: () => false,
   findOuterKeycode: () => undefined,
   findInnerKeycode: () => undefined,
+  isTapDanceKeycode: (code: number) => (code & 0xff00) === 0x5700,
+  getTapDanceIndex: (code: number) => code & 0xff,
   getMacroIndex: (code: number) => {
     const m = /^M(\d+)$/.exec(CODES[code] ?? '')
     return m ? Number(m[1]) : -1
@@ -126,7 +128,7 @@ function baseProps(overrides: Partial<KeymapPrimaryPaneProps> = {}): KeymapPrima
 }
 
 function withSetting(node: ReactNode, enabled = true): JSX.Element {
-  return <MacroHoverPreviewContext.Provider value={enabled}>{node}</MacroHoverPreviewContext.Provider>
+  return <EntryHoverPreviewContext.Provider value={enabled}>{node}</EntryHoverPreviewContext.Provider>
 }
 
 function renderPane(overrides: Partial<KeymapPrimaryPaneProps> = {}, enabled = true) {
@@ -153,7 +155,7 @@ function bubbleHeading(): string | null {
   return screen.queryByRole('tooltip')?.firstElementChild?.textContent ?? null
 }
 
-describe('KeymapPrimaryPane — macro hover bubble', () => {
+describe('KeymapPrimaryPane — entry hover bubble (macros)', () => {
   beforeEach(() => { vi.useFakeTimers() })
   afterEach(() => { vi.useRealTimers() })
 
@@ -164,7 +166,7 @@ describe('KeymapPrimaryPane — macro hover bubble', () => {
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
     dwell(1)
     expect(bubbleHeading()).toBe('M0')
-    expect(screen.getAllByTestId('macro-hover-line').map((el) => el.textContent)).toEqual(['TKC_A', 'Txhello world'])
+    expect(screen.getAllByTestId('entry-hover-line').map((el) => el.textContent)).toEqual(['TKC_A', 'Txhello world'])
     fireEvent.mouseLeave(keyGroup(container, 1))
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
   })
@@ -204,7 +206,7 @@ describe('KeymapPrimaryPane — macro hover bubble', () => {
     fireEvent.mouseEnter(encoderGroup(container, 1))
     dwell()
     expect(bubbleHeading()).toBe('M2')
-    expect(screen.getAllByTestId('macro-hover-line').map((el) => el.textContent)).toEqual(['W40ms'])
+    expect(screen.getAllByTestId('entry-hover-line').map((el) => el.textContent)).toEqual(['W40ms'])
   })
 
   it('uses the current layer for keys and encoders', () => {
@@ -363,5 +365,101 @@ describe('KeymapPrimaryPane — macro hover bubble', () => {
     fireEvent.doubleClick(keyGroup(container, 1))
     expect(handleKeyClick.mock.calls[0][0]).toMatchObject({ row: 0, col: 1 })
     expect(handleKeyDoubleClick.mock.calls[0][0]).toMatchObject({ row: 0, col: 1 })
+  })
+})
+
+describe('KeymapPrimaryPane — entry hover bubble (Tap Dance keys)', () => {
+  beforeEach(() => { vi.useFakeTimers() })
+  afterEach(() => { vi.useRealTimers() })
+
+  // Layer 0: col 2 = TD(0), col 3 = TD(1) (not configured), col 4 = TD(5)
+  // (no such entry). Encoder 0: CW = TD(0), CCW = M0.
+  const TD_KEYMAP = new Map(KEYMAP)
+  TD_KEYMAP.set('0,0,2', 0x5700)
+  TD_KEYMAP.set('0,0,3', 0x5701)
+  TD_KEYMAP.set('0,0,4', 0x5705)
+  const TD_ENCODERS = new Map(ENCODERS)
+  TD_ENCODERS.set('0,0,0', 0x5700)
+  TD_ENCODERS.set('0,0,1', 20)
+  const TAP_DANCE = [
+    { onTap: 10, onHold: 11, onDoubleTap: 0, onTapHold: 0, tappingTerm: 190 },
+    { onTap: 0, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 },
+  ]
+
+  function tdProps(overrides: Partial<KeymapPrimaryPaneProps> = {}): Partial<KeymapPrimaryPaneProps> {
+    return {
+      layerHoverPreview: { ...baseProps().layerHoverPreview!, keymap: TD_KEYMAP, encoderLayout: TD_ENCODERS },
+      hoverTapDance: TAP_DANCE,
+      ...overrides,
+    }
+  }
+
+  function lineValues(): string[] {
+    return screen.getAllByTestId('entry-hover-line').map((el) => el.lastElementChild?.textContent ?? '')
+  }
+
+  it('shows a Tap Dance key in full, read from the raw keycode', () => {
+    // The displayed legend says something else entirely.
+    const labels = new Map(LABELS)
+    labels.set('0,2', 'Remapped')
+    const { container } = renderPane(tdProps({ primaryKeycodes: labels, layerKeycodes: labels }))
+    fireEvent.mouseEnter(keyGroup(container, 2))
+    dwell()
+    expect(bubbleHeading()).toBe('editor.tapDance.editTitle')
+    expect(lineValues()).toEqual(['KC_A', 'KC_1', 'editor.hoverDetails.none', 'editor.hoverDetails.none', '190'])
+  })
+
+  it.each([
+    ['an unconfigured Tap Dance', 3],
+    ['a Tap Dance the keyboard does not have', 4],
+  ])('shows nothing for %s', (_label, col) => {
+    const { container } = renderPane(tdProps())
+    fireEvent.mouseEnter(keyGroup(container, col))
+    dwell()
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('shows the Tap Dance and the macro on the two encoder directions', () => {
+    const { container } = renderPane(tdProps())
+    fireEvent.mouseEnter(encoderGroup(container, 0))
+    dwell()
+    expect(bubbleHeading()).toBe('editor.tapDance.editTitle')
+    fireEvent.mouseLeave(encoderGroup(container, 0))
+    fireEvent.mouseEnter(encoderGroup(container, 1))
+    dwell()
+    expect(bubbleHeading()).toBe('M0')
+  })
+
+  it.each([
+    ['View Matrix mode', { viewMatrixMode: { ...viewMatrixMode, active: true } }],
+    ['a multi-selection', { multiSelectedKeys: new Set(['0,0']) }],
+    ['the popover or a picker selection', { blocked: true }],
+  ] as const)('shows nothing during %s', (_label, overrides) => {
+    const props = tdProps()
+    const merged = 'blocked' in overrides
+      ? { ...props, layerHoverPreview: { ...props.layerHoverPreview!, blocked: true } }
+      : { ...props, ...overrides }
+    const { container } = renderPane(merged as Partial<KeymapPrimaryPaneProps>)
+    fireEvent.mouseEnter(keyGroup(container, 2))
+    dwell()
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('shows nothing with the setting off', () => {
+    const { container } = renderPane(tdProps(), false)
+    fireEvent.mouseEnter(keyGroup(container, 2))
+    dwell()
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('moving from a macro key to a Tap Dance key shows only the Tap Dance', () => {
+    const { container } = renderPane(tdProps())
+    fireEvent.mouseEnter(keyGroup(container, 1))
+    dwell(200)
+    fireEvent.mouseLeave(keyGroup(container, 1))
+    fireEvent.mouseEnter(keyGroup(container, 2))
+    dwell()
+    expect(screen.getAllByRole('tooltip')).toHaveLength(1)
+    expect(bubbleHeading()).toBe('editor.tapDance.editTitle')
   })
 })

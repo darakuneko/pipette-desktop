@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { ComboPanelModal } from '../ComboPanelModal'
-import { MacroHoverPreviewContext } from '../../keycodes/macro-hover-context'
+import { EntryHoverPreviewContext } from '../../keycodes/entry-hover-context'
 import { SHARED_BUBBLE_OPEN_DELAY_MS } from '../../../hooks/use-shared-hover-bubble'
 import type { ComboEntry } from '../../../../shared/types/protocol'
 import type { MacroAction } from '../../../../preload/macro'
@@ -65,7 +65,7 @@ function openPickerAndHoverMacro(): void {
   act(() => { vi.advanceTimersByTime(SHARED_BUBBLE_OPEN_DELAY_MS) })
 }
 
-describe('ComboPanelModal — macro hover bubble in the picker', () => {
+describe('ComboPanelModal — entry hover bubble in the picker', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     window.vialAPI = {
@@ -76,24 +76,24 @@ describe('ComboPanelModal — macro hover bubble in the picker', () => {
   afterEach(() => { vi.useRealTimers() })
 
   it('shows the full macro above the modal when the setting is on', () => {
-    render(<MacroHoverPreviewContext.Provider value>{modal()}</MacroHoverPreviewContext.Provider>)
+    render(<EntryHoverPreviewContext.Provider value>{modal()}</EntryHoverPreviewContext.Provider>)
     openPickerAndHoverMacro()
-    const bubble = screen.getByTestId('macro-hover-bubble')
+    const bubble = screen.getByTestId('entry-hover-bubble')
     expect(bubble).toHaveTextContent('M0')
-    expect(screen.getAllByTestId('macro-hover-line').map((el) => el.textContent)).toEqual(['TKC_4', 'Txhi there'])
+    expect(screen.getAllByTestId('entry-hover-line').map((el) => el.textContent)).toEqual(['TKC_4', 'Txhi there'])
     expect(bubble.parentElement).toBe(document.body)
     expect(bubble.className.split(' ')).toContain('z-70')
   })
 
   it('shows nothing with the setting off', () => {
-    render(<MacroHoverPreviewContext.Provider value={false}>{modal()}</MacroHoverPreviewContext.Provider>)
+    render(<EntryHoverPreviewContext.Provider value={false}>{modal()}</EntryHoverPreviewContext.Provider>)
     openPickerAndHoverMacro()
-    expect(screen.queryByTestId('macro-hover-bubble')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('entry-hover-bubble')).not.toBeInTheDocument()
   })
 
   it('shows nothing without a provider', () => {
     render(modal())
     openPickerAndHoverMacro()
-    expect(screen.queryByTestId('macro-hover-bubble')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('entry-hover-bubble')).not.toBeInTheDocument()
   })
 })

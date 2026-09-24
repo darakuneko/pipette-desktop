@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // One-line text for a macro action, shared by the Macro tab tiles
-// (`TileGrids.tsx`) and the macro hover bubble (`MacroHoverBubble.tsx`) so
+// (`TileGrids.tsx`) and the entry hover bubble (`hover-entry-content.ts`) so
 // both show the same prefix and label for the same action.
 
 import { codeToLabel } from '../../../shared/keycodes/keycodes'

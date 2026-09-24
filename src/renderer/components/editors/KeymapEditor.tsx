@@ -418,7 +418,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                 flash={flash} multiSelectedKeys={multiSelectedKeys} primaryRemapLabel={primaryRemapLabel}
                 handleKeyClick={handleKeyClick} handleKeyDoubleClick={handleKeyDoubleClick} handleEncoderClick={handleEncoderClick} handleEncoderDoubleClick={handleEncoderDoubleClick}
                 handleDeselect={handleDeselect} handlePackTabChange={handlePackTabChange} keymapPackName={keymapPackName}
-                auxUndoHandlers={viewMatrixMode.active ? undefined : auxUndoHandlers} hoverMacros={deserializedMacros}
+                auxUndoHandlers={viewMatrixMode.active ? undefined : auxUndoHandlers} hoverMacros={deserializedMacros} hoverTapDance={tapDanceEntries}
                 layerHoverPreview={{ layers, currentLayer, keymap, encoderLayout, encoderCount, isRemapped, layerLabel, deviceKey: keyboardUid, blocked: !!popoverState || pickerSelectedIndices.size > 0, enabled: layerHoverPreviewEnabled }}
                 {...viewMatrixPaneProps}
               />

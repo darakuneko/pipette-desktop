@@ -17,7 +17,7 @@ vi.mock('react-i18next', () => ({
         'editorSettings.layerHoverPreview': 'Auto Layer Preview',
         'editorSettings.quickSelect': 'Instant Key Selection',
         'editorSettings.splitKeyMode': 'Separate Shift in Key Picker',
-        'editorSettings.macroHoverPreview': 'Macro Hover Preview',
+        'editorSettings.entryHoverPreview': 'Hover Details',
         'editor.keyTester.title': 'Key Tester',
         'editor.viewMatrix.label': 'View Matrix',
         'editor.viewMatrix.edit': 'Edit',
@@ -445,7 +445,7 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
     onToggleViewMatrixMode: vi.fn(),
     splitKeyMode: 'split' as const,
     onSplitKeyModeChange: vi.fn(),
-    onMacroHoverPreviewChange: vi.fn(),
+    onEntryHoverPreviewChange: vi.fn(),
   }
 
   function rowOrder(container: HTMLElement): string[] {
@@ -463,7 +463,7 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
       'overlay-matrix-row',
       'overlay-view-matrix-row',
       'overlay-split-key-mode-row',
-      'overlay-macro-hover-preview-row',
+      'overlay-entry-hover-preview-row',
       'overlay-lock-row',
     ])
     const first = screen.getByTestId('overlay-auto-advance-row').parentElement!
@@ -474,7 +474,7 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
     expect(second.className).toContain('grid-cols-2')
     expect(screen.getByTestId('overlay-view-matrix-row').parentElement?.className).not.toContain('grid-cols-2')
     const third = screen.getByTestId('overlay-split-key-mode-row').parentElement!
-    expect(screen.getByTestId('overlay-macro-hover-preview-row').parentElement).toBe(third)
+    expect(screen.getByTestId('overlay-entry-hover-preview-row').parentElement).toBe(third)
     expect(third.className).toContain('grid-cols-2')
     // Every half-width row lets its labels wrap instead of widening the panel.
     for (const row of [first, second, third]) expect(row.className).toContain('contain-inline-size')
@@ -538,23 +538,23 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
     expect(grids[1].contains(screen.getByTestId('overlay-split-key-mode-row'))).toBe(true)
   })
 
-  it('shows Macro Hover Preview on by default next to Separate Shift and flips it', () => {
-    const onMacroHoverPreviewChange = vi.fn()
-    render(<KeycodesOverlayPanel {...ALL_ROWS} onMacroHoverPreviewChange={onMacroHoverPreviewChange} />)
-    const toggle = screen.getByRole('switch', { name: 'Macro Hover Preview' })
-    expect(toggle).toBe(screen.getByTestId('overlay-macro-hover-preview-toggle'))
+  it('shows Hover Details on by default next to Separate Shift and flips it', () => {
+    const onEntryHoverPreviewChange = vi.fn()
+    render(<KeycodesOverlayPanel {...ALL_ROWS} onEntryHoverPreviewChange={onEntryHoverPreviewChange} />)
+    const toggle = screen.getByRole('switch', { name: 'Hover Details' })
+    expect(toggle).toBe(screen.getByTestId('overlay-entry-hover-preview-toggle'))
     expect(toggle.getAttribute('aria-checked')).toBe('true')
     fireEvent.click(toggle)
-    expect(onMacroHoverPreviewChange).toHaveBeenCalledWith(false)
+    expect(onEntryHoverPreviewChange).toHaveBeenCalledWith(false)
   })
 
-  it('reflects Macro Hover Preview off and turns it back on', () => {
-    const onMacroHoverPreviewChange = vi.fn()
-    render(<KeycodesOverlayPanel {...ALL_ROWS} macroHoverPreview={false} onMacroHoverPreviewChange={onMacroHoverPreviewChange} />)
-    const toggle = screen.getByTestId('overlay-macro-hover-preview-toggle')
+  it('reflects Hover Details off and turns it back on', () => {
+    const onEntryHoverPreviewChange = vi.fn()
+    render(<KeycodesOverlayPanel {...ALL_ROWS} entryHoverPreview={false} onEntryHoverPreviewChange={onEntryHoverPreviewChange} />)
+    const toggle = screen.getByTestId('overlay-entry-hover-preview-toggle')
     expect(toggle.getAttribute('aria-checked')).toBe('false')
     fireEvent.click(toggle)
-    expect(onMacroHoverPreviewChange).toHaveBeenCalledWith(true)
+    expect(onEntryHoverPreviewChange).toHaveBeenCalledWith(true)
   })
 
   it('keeps the Separate Shift test ids and toggle behavior in the half-width row', () => {
@@ -569,17 +569,17 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
     expect(onSplitKeyModeChange).toHaveBeenCalledWith('flat')
   })
 
-  it('puts Macro Hover Preview in the left half when Separate Shift is not shown', () => {
+  it('puts Hover Details in the left half when Separate Shift is not shown', () => {
     render(<KeycodesOverlayPanel {...ALL_ROWS} splitKeyMode={undefined} />)
     expect(screen.queryByTestId('overlay-split-key-mode-row')).not.toBeInTheDocument()
-    const row = screen.getByTestId('overlay-macro-hover-preview-row')
+    const row = screen.getByTestId('overlay-entry-hover-preview-row')
     expect(row.parentElement?.className).toContain('grid-cols-2')
     expect(row.parentElement?.children).toHaveLength(1)
   })
 
-  it('omits Macro Hover Preview without a change handler, leaving Separate Shift alone in its row', () => {
-    render(<KeycodesOverlayPanel {...ALL_ROWS} onMacroHoverPreviewChange={undefined} />)
-    expect(screen.queryByTestId('overlay-macro-hover-preview-row')).not.toBeInTheDocument()
+  it('omits Hover Details without a change handler, leaving Separate Shift alone in its row', () => {
+    render(<KeycodesOverlayPanel {...ALL_ROWS} onEntryHoverPreviewChange={undefined} />)
+    expect(screen.queryByTestId('overlay-entry-hover-preview-row')).not.toBeInTheDocument()
     expect(screen.getByTestId('overlay-split-key-mode-row').parentElement?.children).toHaveLength(1)
   })
 })

@@ -71,9 +71,9 @@ interface Props {
   // Layer hover preview on the keymap editor (persisted per keyboard).
   layerHoverPreview?: boolean
   onLayerHoverPreviewChange?: (enabled: boolean) => void
-  // Macro hover bubble on the keymap and Macro tab tiles (persisted per keyboard).
-  macroHoverPreview?: boolean
-  onMacroHoverPreviewChange?: (enabled: boolean) => void
+  // Hover Details: entry hover bubble on the keymap and picker tiles (persisted per keyboard).
+  entryHoverPreview?: boolean
+  onEntryHoverPreviewChange?: (enabled: boolean) => void
   splitKeyMode?: SplitKeyMode
   onSplitKeyModeChange?: (mode: SplitKeyMode) => void
   quickSelect?: boolean
@@ -117,8 +117,8 @@ export function KeycodesOverlayPanel({
   onViewMatrixWiresChange,
   layerHoverPreview = true,
   onLayerHoverPreviewChange,
-  macroHoverPreview = true,
-  onMacroHoverPreviewChange,
+  entryHoverPreview = true,
+  onEntryHoverPreviewChange,
   splitKeyMode,
   onSplitKeyModeChange,
   quickSelect,
@@ -355,7 +355,7 @@ export function KeycodesOverlayPanel({
               </div>
             )}
 
-            {(showSplitKeyMode || onMacroHoverPreviewChange) && (
+            {(showSplitKeyMode || onEntryHoverPreviewChange) && (
               <div className={HALF_ROW_CLASS}>
                 {showSplitKeyMode && (
                   <HalfToggle
@@ -364,11 +364,11 @@ export function KeycodesOverlayPanel({
                     testId="overlay-split-key-mode"
                   />
                 )}
-                {onMacroHoverPreviewChange && (
+                {onEntryHoverPreviewChange && (
                   <HalfToggle
-                    label={t('editorSettings.macroHoverPreview')} checked={macroHoverPreview}
-                    onToggle={() => onMacroHoverPreviewChange(!macroHoverPreview)}
-                    testId="overlay-macro-hover-preview"
+                    label={t('editorSettings.entryHoverPreview')} checked={entryHoverPreview}
+                    onToggle={() => onEntryHoverPreviewChange(!entryHoverPreview)}
+                    testId="overlay-entry-hover-preview"
                   />
                 )}
               </div>
