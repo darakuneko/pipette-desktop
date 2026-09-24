@@ -9,13 +9,15 @@
 // Label pack's remapped label or a layer hover preview drawn on the board
 // never changes the answer.
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useCallback, useMemo } from 'react'
 import { getMacroIndex, getTapDanceIndex, isTapDanceKeycode } from '../../../shared/keycodes/keycodes'
 import type { KleKey } from '../../../shared/kle/types'
 import type { MacroAction } from '../../../preload/macro'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import type { HoverEntryKind, HoverEntrySources } from '../keycodes/hover-entry'
 import { useEntryHover, type EntryHoverBubbleState } from '../keycodes/use-entry-hover'
+import { useLatestRef } from '../../hooks/use-latest-ref'
+import { useHideOnChange } from '../../hooks/use-hide-on-change'
 
 /** The macro or Tap Dance a raw keycode points at, or null for anything
  *  else. `getTapDanceIndex` only reads the low byte, so the Tap Dance
@@ -62,10 +64,7 @@ export function useKeymapEntryHover({
 
   // Read through a ref so the hover callbacks keep one identity — they
   // reach every memoized key and encoder widget.
-  const latestRef = useRef({ active, currentLayer, keymap, encoderLayout })
-  useLayoutEffect(() => {
-    latestRef.current = { active, currentLayer, keymap, encoderLayout }
-  }, [active, currentLayer, keymap, encoderLayout])
+  const latestRef = useLatestRef({ active, currentLayer, keymap, encoderLayout })
 
   // `mapKey` only runs while the bubble is on, so a hover with the bubble
   // off never looks up or decodes a keycode.
@@ -74,7 +73,7 @@ export function useKeymapEntryHover({
     const target = s.active ? hoverTargetOf(mapKey(s)) : null
     if (target === null) hide()
     else showEntry(target.kind, target.index, rect)
-  }, [showEntry, hide])
+  }, [latestRef, showEntry, hide])
 
   const onKeyHover = useCallback((key: KleKey, _keycode: string, rect: DOMRect) => {
     showAt((s) => s.keymap.get(`${s.currentLayer},${key.row},${key.col}`), rect)
@@ -86,9 +85,7 @@ export function useKeymapEntryHover({
 
   // A layer switch, keymap edit or keyboard change may put a different
   // keycode under the pointer, so the bubble closes until the next hover.
-  useEffect(() => {
-    hide()
-  }, [hide, currentLayer, keymap, encoderLayout, deviceKey, surfaceKey])
+  useHideOnChange(hide, [currentLayer, keymap, encoderLayout, deviceKey, surfaceKey])
 
   return { bubble, onKeyHover, onEncoderHover, hide }
 }
