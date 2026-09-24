@@ -8,7 +8,6 @@ import {
   VIEW_ONLY_OPACITY_DEFAULT,
   VIEW_ONLY_OPACITY_MAX,
   VIEW_ONLY_OPACITY_MIN,
-  clampViewOnlyOpacity,
 } from '../../../shared/types/pipette-settings'
 
 const OPACITY_STEP_PERCENT = 5
@@ -133,7 +132,7 @@ export function TypingTestPaneViewOnlyMenu({
                 max={VIEW_ONLY_OPACITY_MAX * 100}
                 step={OPACITY_STEP_PERCENT}
                 value={opacityPercent}
-                onChange={(e) => onViewOnlyOpacityChange(clampViewOnlyOpacity(Number(e.target.value) / 100))}
+                onChange={(e) => onViewOnlyOpacityChange(Number(e.target.value) / 100)}
                 className="w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               />
             </div>
