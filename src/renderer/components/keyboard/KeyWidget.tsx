@@ -32,6 +32,7 @@ import { computeUnionPath } from '../../../shared/kle/rect-union'
 import { flashAnimationDelayMs } from './key-flash'
 import type { Props } from './key-widget-types'
 import { KeyFlashOverlay } from './KeyFlashOverlay'
+import { outerPartHoverHandlers } from './outer-part-hover'
 
 function KeyWidgetInner({
   kleKey,
@@ -238,23 +239,17 @@ function KeyWidgetInner({
     if (onHover && isClickable) onHover(kleKey, keycode, group.getBoundingClientRect())
   }
 
-  const outerHoverOnly = !!hoverOuterPartOnly && masked
-  const handleInnerMouseEnter = hoverMaskParts || outerHoverOnly
+  const outerOnly = hoverOuterPartOnly && masked ? outerPartHoverHandlers(emitHover, onHoverEnd) : undefined
+  const handleInnerMouseEnter = hoverMaskParts || outerOnly
     ? () => {
         if (hoverMaskParts) setHoveredPart('inner')
-        if (outerHoverOnly) onHoverEnd?.()
+        outerOnly?.onInnerEnter()
       }
     : undefined
-  const handleInnerMouseLeave = hoverMaskParts || outerHoverOnly
+  const handleInnerMouseLeave = hoverMaskParts || outerOnly
     ? (e: React.MouseEvent<SVGRectElement>) => {
         if (hoverMaskParts) setHoveredPart('outer')
-        if (!outerHoverOnly) return
-        // Only a move onto the outer part of this same key resumes the
-        // hover; leaving the key through the inner rect gets the group's
-        // own mouseleave instead.
-        const group = e.currentTarget.closest('g')
-        const next = e.relatedTarget
-        if (group && next instanceof Node && group.contains(next)) emitHover(group)
+        outerOnly?.onInnerLeave(e)
       }
     : undefined
 

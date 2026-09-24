@@ -17,6 +17,7 @@ import {
 } from './constants'
 import { flashAnimationDelayMs } from './key-flash'
 import { KeyFlashOverlay } from './KeyFlashOverlay'
+import { outerPartHoverHandlers } from './outer-part-hover'
 
 interface Props {
   kleKey: KleKey
@@ -180,18 +181,7 @@ function EncoderWidgetInner({
   const handleInnerClick = (e: React.MouseEvent) => {
     if (onClick) { e.stopPropagation(); onClick(kleKey, kleKey.encoderDir, true) }
   }
-  const outerHoverOnly = !!hoverOuterPartOnly && !!onHover
-  const handleInnerMouseEnter = outerHoverOnly ? () => onHoverEnd?.() : undefined
-  const handleInnerMouseLeave = outerHoverOnly
-    ? (e: React.MouseEvent<SVGRectElement>) => {
-        // Only a move onto the outer part of this same direction resumes
-        // the hover; leaving through the inner rect gets the group's own
-        // mouseleave instead.
-        const group = e.currentTarget.closest('g')
-        const next = e.relatedTarget
-        if (group && next instanceof Node && group.contains(next)) emitHover(group)
-      }
-    : undefined
+  const outerOnly = hoverOuterPartOnly && onHover ? outerPartHoverHandlers(emitHover, onHoverEnd) : undefined
   const handleInnerDoubleClick = (e: React.MouseEvent<SVGRectElement>) => {
     e.stopPropagation()
     if (onDoubleClick) {
@@ -231,7 +221,7 @@ function EncoderWidgetInner({
         stroke={innerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR} strokeWidth={innerBorderActive ? 2 : 1}
         clipPath={`url(#${clipId})`}
         onClick={handleInnerClick} onDoubleClick={handleInnerDoubleClick}
-        onMouseEnter={handleInnerMouseEnter} onMouseLeave={handleInnerMouseLeave}
+        onMouseEnter={outerOnly?.onInnerEnter} onMouseLeave={outerOnly?.onInnerLeave}
         style={{ cursor: onClick ? 'pointer' : 'default' }} />
       {/* Outer label (modifier) */}
       <text x={cx} y={outerLabelY} textAnchor="middle" dominantBaseline="central"
