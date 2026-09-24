@@ -24,11 +24,8 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, opts?: Record<string, unknown>) => {
-      if (key === 'editor.keymap.layerPreview') return `Preview - ${String(opts?.label ?? '')}`
-      if (key === 'editor.keymap.layerN') return `Layer ${String(opts?.n ?? '')}`
-      return key
-    },
+    t: (key: string, opts?: Record<string, unknown>) =>
+      key === 'editor.keymap.layerPreview' ? `Preview - ${String(opts?.label ?? '')}` : key,
   }),
 }))
 
@@ -96,7 +93,7 @@ function baseProps(overrides: Partial<KeymapPrimaryPaneProps> = {}): KeymapPrima
     handlePackTabChange: vi.fn(),
     layerHoverPreview: {
       layers: 2, currentLayer: 0, keymap: KEYMAP, encoderLayout: new Map(), encoderCount: 0,
-      layerNames: ['', 'Nav'], deviceKey: 'uid', blocked: false,
+      layerLabel: (n: number) => (n === 1 ? 'Nav' : `Layer ${n}`), deviceKey: 'uid', blocked: false,
     },
     ...overrides,
   }
@@ -140,6 +137,19 @@ describe('KeymapPrimaryPane — layer hover preview', () => {
     fireEvent.click(keyGroup(container, 1))
     expect(handleKeyClick).toHaveBeenCalledTimes(1)
     expect(handleKeyClick.mock.calls[0][0]).toMatchObject({ row: 0, col: 1 })
+    expect(screen.getByTestId('layer-label').textContent).toBe('Layer 0')
+    expect(keyGroup(container, 1).textContent).toContain('KC_A')
+  })
+
+  it('double-clicking during a preview cancels it and acts on the real layer', () => {
+    const handleKeyDoubleClick = vi.fn()
+    const { container } = render(<KeymapPrimaryPane {...baseProps({ handleKeyDoubleClick })} />)
+    hoverAndDwell(container, 0)
+    expect(screen.getByTestId('layer-label').textContent).toBe('Preview - Nav')
+
+    fireEvent.doubleClick(keyGroup(container, 1))
+    expect(handleKeyDoubleClick).toHaveBeenCalledTimes(1)
+    expect(handleKeyDoubleClick.mock.calls[0][0]).toMatchObject({ row: 0, col: 1 })
     expect(screen.getByTestId('layer-label').textContent).toBe('Layer 0')
     expect(keyGroup(container, 1).textContent).toContain('KC_A')
   })

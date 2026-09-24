@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useCallback, type RefObject } from 'react'
-import { useTranslation } from 'react-i18next'
 import { KeyboardPane } from './KeyboardPane'
 import { useLayerHoverPreview, type LayerHoverPreviewInput } from './use-layer-hover-preview'
 import { KeymapPackTabs, KeymapPackApplyButton, type KeymapPackTab } from './KeymapPackTabs'
@@ -105,7 +104,7 @@ function useCancelFirst<A extends unknown[]>(cancel: () => void, handler: (...ar
 }
 
 const NO_LAYER_HOVER_PREVIEW: LayerHoverPreviewInput = {
-  layers: 0, currentLayer: 0, keymap: new Map(), encoderLayout: new Map(), encoderCount: 0, blocked: true,
+  layers: 0, currentLayer: 0, keymap: new Map(), encoderLayout: new Map(), encoderCount: 0, layerLabel: String, blocked: true,
 }
 
 /** The dual `KeyboardPane` branches (simulation-tab preview vs. the real,
@@ -124,8 +123,7 @@ export function KeymapPrimaryPane({
   handleViewMatrixKeyClick, handleKeyClick, handleKeyDoubleClick, handleEncoderClick, handleEncoderDoubleClick,
   handleDeselect, handlePackTabChange, keymapPackName, layerHoverPreview,
 }: KeymapPrimaryPaneProps): JSX.Element {
-  const { t } = useTranslation()
-  const { layers, currentLayer, keymap, encoderLayout, encoderCount, isRemapped, layerNames, deviceKey, blocked } =
+  const { layers, currentLayer, keymap, encoderLayout, encoderCount, isRemapped, layerLabel, deviceKey, blocked } =
     layerHoverPreview ?? NO_LAYER_HOVER_PREVIEW
   const onBaseTab = showPackTabs && packTab === 'base'
   const preview = useLayerHoverPreview({
@@ -137,9 +135,7 @@ export function KeymapPrimaryPane({
   })
   const { previewLayer } = preview
   const previewing = previewLayer !== null
-  const previewLabel = previewLayer === null
-    ? undefined
-    : layerNames?.[previewLayer] || t('editor.keymap.layerN', { n: previewLayer })
+  const previewLabel = previewLayer === null ? undefined : layerLabel(previewLayer)
   // Clicks always act on the real layer: drop the preview first so the
   // board shows what the click is about to edit.
   const { cancel } = preview

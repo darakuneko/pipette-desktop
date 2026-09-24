@@ -419,7 +419,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                 handleKeyClick={handleKeyClick} handleKeyDoubleClick={handleKeyDoubleClick} handleEncoderClick={handleEncoderClick} handleEncoderDoubleClick={handleEncoderDoubleClick}
                 handleDeselect={handleDeselect} handlePackTabChange={handlePackTabChange} keymapPackName={keymapPackName}
                 auxUndoHandlers={viewMatrixMode.active ? undefined : auxUndoHandlers}
-                layerHoverPreview={{ layers, currentLayer, keymap, encoderLayout, encoderCount, isRemapped, layerNames, deviceKey: keyboardUid, blocked: !!popoverState || pickerSelectedIndices.size > 0 }}
+                layerHoverPreview={{ layers, currentLayer, keymap, encoderLayout, encoderCount, isRemapped, layerLabel, deviceKey: keyboardUid, blocked: !!popoverState || pickerSelectedIndices.size > 0 }}
                 {...viewMatrixPaneProps}
               />
               {/* The relocated zoom row the toolbar comment above points to

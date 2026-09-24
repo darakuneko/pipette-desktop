@@ -60,14 +60,15 @@ export interface KeyboardPaneProps {
    *  string regardless of which pane it feeds. */
   layerLabel?: string
   layerLabelTestId: string
-  /** True only for the simulation tab's pane: the keymap shown is a
-   *  read-only preview of the selected Key Label pack's arrangement, not
-   *  the real keymap (see `readOnly`, which this is deliberately kept
-   *  separate from — `readOnly` also covers View Matrix and other
-   *  non-editable states that are NOT a pack preview and must not get
-   *  this label). Prefixes `layerLabel` with a localized "Preview - "
-   *  via `editor.keymap.layerPreview` so the footer makes the distinction
-   *  obvious without the user having to notice which tab is active. */
+  /** True while the keymap shown is not the real current layer: the
+   *  simulation tab's read-only pane (the selected Key Label pack's
+   *  arrangement), and the editable pane while a layer hover preview
+   *  draws another layer (`layerLabel` is then that layer's label). Kept
+   *  separate from `readOnly`, which also covers View Matrix and other
+   *  non-editable states that are not previews and must not get this
+   *  label. Prefixes `layerLabel` with a localized "Preview - " via
+   *  `editor.keymap.layerPreview` so the footer makes the distinction
+   *  obvious. */
   preview?: boolean
   /** Extra content rendered next to `layerLabel` in the footer row — the
    *  simulation tab's Apply button. */

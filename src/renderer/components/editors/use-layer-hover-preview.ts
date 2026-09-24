@@ -8,7 +8,7 @@
 // Only `KeyWidget` emits hover callbacks, so layer keys placed on encoders
 // never start a preview.
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { serialize } from '../../../shared/keycodes/keycodes'
 import { getLayerOpTarget } from '../../../shared/keycodes/keycodes-classify'
 import type { KleKey } from '../../../shared/kle/types'
@@ -24,14 +24,15 @@ export interface LayerHoverPreviewInput {
   encoderLayout: Map<string, number>
   encoderCount: number
   isRemapped?: (qmkId: string) => boolean
-  layerNames?: string[]
+  /** Footer label for a layer, e.g. "Layer 2" or the user's layer name. */
+  layerLabel: (layer: number) => string
   /** Changes when the connected keyboard changes. */
   deviceKey?: string
   /** True while the Key Popover is open or the picker holds paste targets. */
   blocked: boolean
 }
 
-export interface UseLayerHoverPreviewOptions extends Omit<LayerHoverPreviewInput, 'blocked' | 'layerNames'> {
+export interface UseLayerHoverPreviewOptions extends Omit<LayerHoverPreviewInput, 'blocked' | 'layerLabel'> {
   remapLabel?: (qmkId: string) => string
   /** Build raw (never remapped) maps, matching the Base tab's own data. */
   raw: boolean
@@ -95,9 +96,12 @@ export function useLayerHoverPreview({
 
   // Read through a ref so the hover callbacks stay referentially stable —
   // they reach every memoized `KeyWidget`, and a new function on each
-  // keymap edit or layer switch would re-render the whole board.
+  // keymap edit or layer switch would re-render the whole board. Hover
+  // events only arrive after commit, so a layout effect keeps it current.
   const latestRef = useRef({ layers, currentLayer, keymap, encoderLayout, deviceKey, surfaceKey, disabled })
-  latestRef.current = { layers, currentLayer, keymap, encoderLayout, deviceKey, surfaceKey, disabled }
+  useLayoutEffect(() => {
+    latestRef.current = { layers, currentLayer, keymap, encoderLayout, deviceKey, surfaceKey, disabled }
+  }, [layers, currentLayer, keymap, encoderLayout, deviceKey, surfaceKey, disabled])
 
   const onKeyHover = useCallback((key: KleKey) => {
     const s = latestRef.current
