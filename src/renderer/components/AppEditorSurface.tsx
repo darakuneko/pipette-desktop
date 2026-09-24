@@ -300,6 +300,8 @@ export function AppEditorSurface({
         onTypingTestViewOnlyWindowSizeChange={devicePrefs.setTypingTestViewOnlyWindowSize}
         typingTestViewOnlyAlwaysOnTop={devicePrefs.typingTestViewOnlyAlwaysOnTop}
         onTypingTestViewOnlyAlwaysOnTopChange={devicePrefs.setTypingTestViewOnlyAlwaysOnTop}
+        typingTestViewOnlyOpacity={devicePrefs.typingTestViewOnlyOpacity}
+        onTypingTestViewOnlyOpacityChange={devicePrefs.setTypingTestViewOnlyOpacity}
         typingTestMemory={devicePrefs.typingTestMemory}
         onTypingTestMemoryChange={devicePrefs.setTypingTestMemory}
         typingTestDisplayLines={devicePrefs.typingTestDisplayLines}

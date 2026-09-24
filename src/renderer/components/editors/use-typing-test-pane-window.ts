@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { KEY_UNIT, KEYBOARD_PADDING } from '../keyboard/constants'
 import { repositionLayoutKeys, filterVisibleKeys } from '../../../shared/kle/filter-keys'
 import type { KleKey } from '../../../shared/kle/types'
+import { VIEW_ONLY_OPACITY_DEFAULT } from '../../../shared/types/pipette-settings'
 import type { useTypingTest } from '../../typing-test/useTypingTest'
 
 const MARGIN = 20
@@ -16,10 +17,11 @@ interface UseTypingTestPaneWindowParams {
   viewOnlyWindowSize?: { width: number; height: number }
   onViewOnlyWindowSizeChange?: (size: { width: number; height: number }) => void
   viewOnlyAlwaysOnTop?: boolean
+  viewOnlyOpacity?: number
   onViewOnlyChange?: (enabled: boolean) => void
 }
 
-/** View-only window sizing/scaling + always-on-top + controls-open state. */
+/** View-only window sizing/scaling + always-on-top + opacity + controls-open state. */
 export function useTypingTestPaneWindow({
   typingTest,
   viewOnly,
@@ -28,6 +30,7 @@ export function useTypingTestPaneWindow({
   viewOnlyWindowSize,
   onViewOnlyWindowSizeChange,
   viewOnlyAlwaysOnTop,
+  viewOnlyOpacity,
   onViewOnlyChange,
 }: UseTypingTestPaneWindowParams) {
   const [viewOnlyControlsOpen, setViewOnlyControlsOpen] = useState(false)
@@ -176,6 +179,18 @@ export function useTypingTestPaneWindow({
     window.vialAPI.setWindowAlwaysOnTop(viewOnlyAlwaysOnTop ?? false).catch(() => {})
     return () => { window.vialAPI.setWindowAlwaysOnTop(false).catch(() => {}) }
   }, [viewOnly, viewOnlyAlwaysOnTop])
+
+  // Opacity is applied and restored by two separate effects: folding the
+  // restore into the apply effect's cleanup would send 1 before every new
+  // slider value and make the window flicker while dragging.
+  useEffect(() => {
+    if (!viewOnly) return
+    window.vialAPI.setWindowOpacity(viewOnlyOpacity ?? VIEW_ONLY_OPACITY_DEFAULT).catch(() => {})
+  }, [viewOnly, viewOnlyOpacity])
+  useEffect(() => {
+    if (!viewOnly) return
+    return () => { window.vialAPI.setWindowOpacity(VIEW_ONLY_OPACITY_DEFAULT).catch(() => {}) }
+  }, [viewOnly])
 
   // Compact mode is managed by App.tsx onViewOnlyChange handler
 

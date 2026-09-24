@@ -68,6 +68,8 @@ export function TypingTestPane({
   onViewOnlyWindowSizeChange,
   viewOnlyAlwaysOnTop,
   onViewOnlyAlwaysOnTopChange,
+  viewOnlyOpacity,
+  onViewOnlyOpacityChange,
   recordEnabled,
   heatmapWindowMin,
   onViewAnalytics,
@@ -125,6 +127,7 @@ export function TypingTestPane({
     viewOnlyWindowSize,
     onViewOnlyWindowSizeChange,
     viewOnlyAlwaysOnTop,
+    viewOnlyOpacity,
     onViewOnlyChange,
   })
 
@@ -339,6 +342,8 @@ export function TypingTestPane({
           alwaysOnTopSupported={alwaysOnTopSupported}
           viewOnlyAlwaysOnTop={viewOnlyAlwaysOnTop}
           onViewOnlyAlwaysOnTopChange={onViewOnlyAlwaysOnTopChange}
+          viewOnlyOpacity={viewOnlyOpacity}
+          onViewOnlyOpacityChange={onViewOnlyOpacityChange}
           recordEnabled={recordEnabled}
           layers={layers}
           layerNames={layerNames}

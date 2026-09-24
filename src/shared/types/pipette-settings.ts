@@ -156,6 +156,20 @@ export interface PooledTypingTestResult extends TypingTestResult {
 export const VIEW_MODES = ['editor', 'typingView', 'typingTest'] as const
 export type ViewMode = typeof VIEW_MODES[number]
 
+/** Typing View window opacity bounds. The floor keeps the window visible
+ *  enough to find and operate its own menu. */
+export const VIEW_ONLY_OPACITY_MIN = 0.5
+export const VIEW_ONLY_OPACITY_MAX = 1
+export const VIEW_ONLY_OPACITY_DEFAULT = 1
+
+/** Clamps a Typing View opacity into [MIN, MAX]. Anything that is not a
+ *  finite number (NaN, Infinity, non-numbers) falls back to the default.
+ *  Shared by the renderer prefs validation and the main-process IPC handler. */
+export function clampViewOnlyOpacity(raw: unknown): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return VIEW_ONLY_OPACITY_DEFAULT
+  return Math.max(VIEW_ONLY_OPACITY_MIN, Math.min(VIEW_ONLY_OPACITY_MAX, raw))
+}
+
 /** Measurement-row comparison baseline. Comparison is always within the same
  *  condition: `previous` (default) / `best` / `average` compute from
  *  same-condition results pooled across all local keyboards; `pinned` fixes the
@@ -336,6 +350,8 @@ export interface PipetteSettings {
   typingTestViewOnly?: boolean
   typingTestViewOnlyWindowSize?: { width: number; height: number }
   typingTestViewOnlyAlwaysOnTop?: boolean
+  /** Window opacity while in Typing View (0.5–1.0, default 1). */
+  typingTestViewOnlyOpacity?: number
   /** Paused fileImport typing-test snapshot (memory mode). Cleared on finish,
    * "start over", text change, or device switch. */
   typingTestMemory?: TypingTestMemory

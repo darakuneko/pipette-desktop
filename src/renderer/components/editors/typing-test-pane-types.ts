@@ -84,6 +84,9 @@ export interface TypingTestPaneProps {
   onViewOnlyWindowSizeChange?: (size: { width: number; height: number }) => void
   viewOnlyAlwaysOnTop?: boolean
   onViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
+  /** Typing View window opacity (0.5–1.0). */
+  viewOnlyOpacity?: number
+  onViewOnlyOpacityChange?: (opacity: number) => void
   /** REC toggle state — drives the heatmap overlay (enabled only in
    *  view-only + recording) and the panel's hint text. The toggle
    *  itself lives in the footer's Record button/modal, not here. */

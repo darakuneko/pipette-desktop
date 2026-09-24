@@ -72,6 +72,7 @@ export function KeymapTypingTestPane({
   typingTestViewOnly, onTypingTestViewOnlyChange,
   typingTestViewOnlyWindowSize, onTypingTestViewOnlyWindowSizeChange,
   typingTestViewOnlyAlwaysOnTop, onTypingTestViewOnlyAlwaysOnTopChange,
+  typingTestViewOnlyOpacity, onTypingTestViewOnlyOpacityChange,
   typingRecordEnabled,
   typingHeatmapWindowMin,
   onViewAnalytics,
@@ -130,6 +131,8 @@ export function KeymapTypingTestPane({
       onViewOnlyWindowSizeChange={onTypingTestViewOnlyWindowSizeChange}
       viewOnlyAlwaysOnTop={typingTestViewOnlyAlwaysOnTop}
       onViewOnlyAlwaysOnTopChange={onTypingTestViewOnlyAlwaysOnTopChange}
+      viewOnlyOpacity={typingTestViewOnlyOpacity}
+      onViewOnlyOpacityChange={onTypingTestViewOnlyOpacityChange}
       recordEnabled={typingRecordEnabled}
       heatmapWindowMin={typingHeatmapWindowMin}
       onViewAnalytics={onViewAnalytics}

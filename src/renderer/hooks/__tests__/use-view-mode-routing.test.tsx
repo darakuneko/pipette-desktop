@@ -166,6 +166,7 @@ let vialAPIStub: {
   setWindowCompactMode: ReturnType<typeof vi.fn>
   setWindowAspectRatio: ReturnType<typeof vi.fn>
   setWindowAlwaysOnTop: ReturnType<typeof vi.fn>
+  setWindowOpacity: ReturnType<typeof vi.fn>
   setWindowZoom: ReturnType<typeof vi.fn>
 }
 
@@ -174,6 +175,7 @@ beforeEach(() => {
     setWindowCompactMode: vi.fn().mockResolvedValue(undefined),
     setWindowAspectRatio: vi.fn().mockResolvedValue(undefined),
     setWindowAlwaysOnTop: vi.fn().mockResolvedValue(undefined),
+    setWindowOpacity: vi.fn().mockResolvedValue(undefined),
     setWindowZoom: vi.fn().mockResolvedValue(undefined),
   }
   window.vialAPI = vialAPIStub as unknown as typeof window.vialAPI
@@ -228,6 +230,7 @@ describe('useViewModeRouting', () => {
       expect(vialAPIStub.setWindowCompactMode).toHaveBeenCalledWith(false)
       expect(vialAPIStub.setWindowAspectRatio).toHaveBeenCalledWith(0)
       expect(vialAPIStub.setWindowAlwaysOnTop).toHaveBeenCalledWith(false)
+      expect(vialAPIStub.setWindowOpacity).toHaveBeenCalledWith(1)
       expect(mocks.setTypingTestViewOnly).toHaveBeenCalledWith(false)
 
       // Reconnect and flip typingTestMode on (deliberately leaving the

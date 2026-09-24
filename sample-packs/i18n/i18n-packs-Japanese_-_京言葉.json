@@ -1,5 +1,5 @@
 {
-  "version": "0.1.96",
+  "version": "0.1.97",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -446,6 +446,8 @@
       "recordingIndicator": "記録中どすえ",
       "resetSize": "初期サイズ",
       "fitSize": "フィット",
+      "opacity": "不透明度",
+      "opacityAria": "ウィンドウの不透明度どすえ",
       "baseLayer": "Base Layer",
       "modeLabel": "データ元",
       "pattern": "パターン",

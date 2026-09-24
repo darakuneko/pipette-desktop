@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react'
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
 import type { TypingTestResult, ViewMode, TypingTestMemory, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
+import { VIEW_ONLY_OPACITY_DEFAULT } from '../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../typing-test/types'
 import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE } from '../typing-test/types'
 import type { BasicViewType, SplitKeyMode } from '../../shared/types/app-config'
@@ -48,6 +49,7 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
   const [typingTestViewOnly, updateTypingTestViewOnly, typingTestViewOnlyRef] = useStateRef<boolean>(false)
   const [typingTestViewOnlyWindowSize, updateTypingTestViewOnlyWindowSize, typingTestViewOnlyWindowSizeRef] = useStateRef<{ width: number; height: number } | undefined>(undefined)
   const [typingTestViewOnlyAlwaysOnTop, updateTypingTestViewOnlyAlwaysOnTop, typingTestViewOnlyAlwaysOnTopRef] = useStateRef<boolean>(false)
+  const [typingTestViewOnlyOpacity, updateTypingTestViewOnlyOpacity, typingTestViewOnlyOpacityRef] = useStateRef<number>(VIEW_ONLY_OPACITY_DEFAULT)
   const [typingTestMemory, updateTypingTestMemory, typingTestMemoryRef] = useStateRef<TypingTestMemory | undefined>(undefined)
   const [typingTestDisplayLines, updateTypingTestDisplayLines, typingTestDisplayLinesRef] = useStateRef<number>(DEFAULT_DISPLAY_LINES)
   const [typingTestFontSize, updateTypingTestFontSize, typingTestFontSizeRef] = useStateRef<number>(DEFAULT_FONT_SIZE)
@@ -88,6 +90,7 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
       typingTestViewOnly: typingTestViewOnlyRef.current,
       typingTestViewOnlyWindowSize: typingTestViewOnlyWindowSizeRef.current,
       typingTestViewOnlyAlwaysOnTop: typingTestViewOnlyAlwaysOnTopRef.current,
+      typingTestViewOnlyOpacity: typingTestViewOnlyOpacityRef.current,
       // `null` clears the persisted memory; the field-level PATCH skips
       // `undefined`, so a bare `undefined` would leave a stale paused run
       // on disk after finish / restart.
@@ -135,6 +138,7 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
     updateTypingTestViewOnly(resolved.typingTestViewOnly)
     updateTypingTestViewOnlyWindowSize(resolved.typingTestViewOnlyWindowSize)
     updateTypingTestViewOnlyAlwaysOnTop(resolved.typingTestViewOnlyAlwaysOnTop)
+    updateTypingTestViewOnlyOpacity(resolved.typingTestViewOnlyOpacity)
     updateTypingTestMemory(resolved.typingTestMemory)
     updateTypingTestDisplayLines(resolved.typingTestDisplayLines)
     updateTypingTestFontSize(resolved.typingTestFontSize)
@@ -167,6 +171,7 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
     typingTestViewOnly, updateTypingTestViewOnly, typingTestViewOnlyRef,
     typingTestViewOnlyWindowSize, updateTypingTestViewOnlyWindowSize, typingTestViewOnlyWindowSizeRef,
     typingTestViewOnlyAlwaysOnTop, updateTypingTestViewOnlyAlwaysOnTop, typingTestViewOnlyAlwaysOnTopRef,
+    typingTestViewOnlyOpacity, updateTypingTestViewOnlyOpacity, typingTestViewOnlyOpacityRef,
     typingTestMemory, updateTypingTestMemory, typingTestMemoryRef,
     typingTestDisplayLines, updateTypingTestDisplayLines, typingTestDisplayLinesRef,
     typingTestFontSize, updateTypingTestFontSize, typingTestFontSizeRef,

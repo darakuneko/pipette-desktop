@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react'
 import type { TypingTestResult, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../shared/types/pipette-settings'
+import { clampViewOnlyOpacity } from '../../shared/types/pipette-settings'
 import { trimResults } from '../typing-test/result-builder'
 import type { TypingTestConfig } from '../typing-test/types'
 import { clampDisplayLines, clampFontSize, MAX_TYPING_TEST_RESULTS } from '../typing-test/types'
@@ -17,6 +18,8 @@ interface UseTypingTestPrefsArgs {
   updateTypingTestViewOnly: (enabled: boolean) => void
   updateTypingTestViewOnlyWindowSize: (size: { width: number; height: number } | undefined) => void
   updateTypingTestViewOnlyAlwaysOnTop: (enabled: boolean) => void
+  typingTestViewOnlyOpacityRef: React.RefObject<number>
+  updateTypingTestViewOnlyOpacity: (opacity: number) => void
   typingTestMemoryRef: React.RefObject<TypingTestMemory | undefined>
   updateTypingTestMemory: (memory: TypingTestMemory | undefined) => void
   typingTestDisplayLinesRef: React.RefObject<number>
@@ -48,6 +51,7 @@ export function useTypingTestPrefs(args: UseTypingTestPrefsArgs) {
     updateTypingTestViewOnly,
     updateTypingTestViewOnlyWindowSize,
     updateTypingTestViewOnlyAlwaysOnTop,
+    typingTestViewOnlyOpacityRef, updateTypingTestViewOnlyOpacity,
     typingTestMemoryRef, updateTypingTestMemory,
     typingTestDisplayLinesRef, updateTypingTestDisplayLines,
     typingTestFontSizeRef, updateTypingTestFontSize,
@@ -124,6 +128,13 @@ export function useTypingTestPrefs(args: UseTypingTestPrefsArgs) {
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateTypingTestViewOnlyAlwaysOnTop])
 
+  const setTypingTestViewOnlyOpacity = useCallback((opacity: number) => {
+    const clamped = clampViewOnlyOpacity(opacity)
+    if (typingTestViewOnlyOpacityRef.current === clamped) return
+    updateTypingTestViewOnlyOpacity(clamped)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateTypingTestViewOnlyOpacity])
+
   const setTypingTestMemory = useCallback((memory: TypingTestMemory | undefined) => {
     // Skip the full-prefs write when nothing changed — most commonly a
     // clear (undefined) issued while already cleared (finish / restart).
@@ -196,6 +207,7 @@ export function useTypingTestPrefs(args: UseTypingTestPrefsArgs) {
     setTypingTestViewOnly,
     setTypingTestViewOnlyWindowSize,
     setTypingTestViewOnlyAlwaysOnTop,
+    setTypingTestViewOnlyOpacity,
     setTypingTestMemory,
     setTypingTestDisplayLines,
     setTypingTestFontSize,

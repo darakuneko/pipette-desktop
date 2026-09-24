@@ -40,6 +40,7 @@ beforeEach(() => {
     setWindowCompactMode: () => Promise.resolve(null),
     setWindowAspectRatio: () => Promise.resolve(),
     setWindowAlwaysOnTop: () => Promise.resolve(),
+    setWindowOpacity: () => Promise.resolve(),
   } as typeof window.vialAPI
 })
 

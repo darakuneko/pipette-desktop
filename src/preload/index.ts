@@ -801,6 +801,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.WINDOW_SET_ASPECT_RATIO, ratio),
   setWindowAlwaysOnTop: (enabled: boolean): Promise<void> =>
     ipcRenderer.invoke(IpcChannels.WINDOW_SET_ALWAYS_ON_TOP, enabled),
+  setWindowOpacity: (opacity: number): Promise<void> =>
+    ipcRenderer.invoke(IpcChannels.WINDOW_SET_OPACITY, opacity),
   setWindowMinSize: (width: number, height: number): Promise<void> =>
     ipcRenderer.invoke(IpcChannels.WINDOW_SET_MIN_SIZE, width, height),
   isAlwaysOnTopSupported: (): Promise<boolean> =>

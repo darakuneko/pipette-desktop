@@ -25,6 +25,7 @@ export interface UseDevicePrefsReturn {
   typingTestViewOnly: boolean
   typingTestViewOnlyWindowSize: { width: number; height: number } | undefined
   typingTestViewOnlyAlwaysOnTop: boolean
+  typingTestViewOnlyOpacity: number
   typingTestMemory: TypingTestMemory | undefined
   typingTestDisplayLines: number
   typingTestFontSize: number
@@ -58,6 +59,7 @@ export interface UseDevicePrefsReturn {
   setTypingTestViewOnly: (enabled: boolean) => void
   setTypingTestViewOnlyWindowSize: (size: { width: number; height: number }) => void
   setTypingTestViewOnlyAlwaysOnTop: (enabled: boolean) => void
+  setTypingTestViewOnlyOpacity: (opacity: number) => void
   setTypingTestMemory: (memory: TypingTestMemory | undefined) => void
   setTypingTestDisplayLines: (lines: number) => void
   setTypingTestFontSize: (px: number) => void

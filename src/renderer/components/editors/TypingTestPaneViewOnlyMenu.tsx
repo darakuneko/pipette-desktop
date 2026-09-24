@@ -4,6 +4,14 @@ import { useTranslation } from 'react-i18next'
 import { BTN_TOGGLE_ACTIVE, BTN_TOGGLE_INACTIVE } from '../../constants/ui-tokens'
 import type { useTypingTest } from '../../typing-test/useTypingTest'
 import type { AnalyticsOrigin } from './keymap-editor-types'
+import {
+  VIEW_ONLY_OPACITY_DEFAULT,
+  VIEW_ONLY_OPACITY_MAX,
+  VIEW_ONLY_OPACITY_MIN,
+  clampViewOnlyOpacity,
+} from '../../../shared/types/pipette-settings'
+
+const OPACITY_STEP_PERCENT = 5
 
 interface TypingTestPaneViewOnlyMenuProps {
   typingTest: ReturnType<typeof useTypingTest>
@@ -15,6 +23,8 @@ interface TypingTestPaneViewOnlyMenuProps {
   alwaysOnTopSupported: boolean
   viewOnlyAlwaysOnTop?: boolean
   onViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
+  viewOnlyOpacity?: number
+  onViewOnlyOpacityChange?: (opacity: number) => void
   recordEnabled?: boolean
   layers: number
   layerNames?: string[]
@@ -26,8 +36,8 @@ interface TypingTestPaneViewOnlyMenuProps {
 /** View-only mode's fixed bottom-right menu (hint bar + panel). Renders a
  *  bare fragment: the two fixed divs must stay siblings in source order
  *  (z-40 hint under z-50 panel). This panel's own controls are window
- *  sizing, always-on-top, the base-layer select, Analyze and Exit Typing
- *  View — recording controls (record toggle, Monitor App, tray toggles,
+ *  sizing, opacity, always-on-top, the base-layer select, Analyze and Exit
+ *  Typing View — recording controls (record toggle, Monitor App, tray toggles,
  *  HeatMap window select) live in the footer's Record button/modal
  *  (TypingRecordModal, opened from StatusBar.tsx) instead. The Analyze
  *  button (View Analytics from Typing View) is here because AppStatusBar
@@ -44,6 +54,8 @@ export function TypingTestPaneViewOnlyMenu({
   alwaysOnTopSupported,
   viewOnlyAlwaysOnTop,
   onViewOnlyAlwaysOnTopChange,
+  viewOnlyOpacity = VIEW_ONLY_OPACITY_DEFAULT,
+  onViewOnlyOpacityChange,
   recordEnabled,
   layers,
   layerNames,
@@ -52,6 +64,7 @@ export function TypingTestPaneViewOnlyMenu({
   handleViewOnlyToggle,
 }: TypingTestPaneViewOnlyMenuProps) {
   const { t } = useTranslation()
+  const opacityPercent = Math.round(viewOnlyOpacity * 100)
 
   return (
     <>
@@ -72,7 +85,7 @@ export function TypingTestPaneViewOnlyMenu({
         onClick={(e) => e.stopPropagation()}
         inert={!viewOnlyControlsOpen}
       >
-        {/* Window controls — sizing + always-on-top. */}
+        {/* Window controls — sizing + opacity + always-on-top. */}
         <div className="flex flex-col gap-1.5">
           <button
             type="button"
@@ -106,6 +119,25 @@ export function TypingTestPaneViewOnlyMenu({
           >
             {t('editor.typingTest.fitSize')}
           </button>
+          {onViewOnlyOpacityChange && (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-content-muted">{t('editor.typingTest.opacity')}</span>
+                <span className="text-content-secondary">{opacityPercent}%</span>
+              </div>
+              <input
+                type="range"
+                data-testid="view-only-opacity"
+                aria-label={t('editor.typingTest.opacityAria')}
+                min={VIEW_ONLY_OPACITY_MIN * 100}
+                max={VIEW_ONLY_OPACITY_MAX * 100}
+                step={OPACITY_STEP_PERCENT}
+                value={opacityPercent}
+                onChange={(e) => onViewOnlyOpacityChange(clampViewOnlyOpacity(Number(e.target.value) / 100))}
+                className="w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              />
+            </div>
+          )}
           {alwaysOnTopSupported && onViewOnlyAlwaysOnTopChange && (
             <button
               type="button"

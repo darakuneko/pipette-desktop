@@ -569,6 +569,36 @@ describe('pipette-settings-store', () => {
       expect(result.error).toContain('Invalid prefs')
     })
 
+    it('round-trips typingTestViewOnlyOpacity, leaving the range to the renderer clamp', async () => {
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      for (const value of [0.75, 0.1]) {
+        const result = await setter(fakeEvent, 'uid-1', {
+          _rev: 1,
+          keyboardLayout: 'qwerty',
+          autoAdvance: true,
+          layerNames: [],
+          typingTestViewOnlyOpacity: value,
+        }) as { success: boolean }
+        expect(result.success).toBe(true)
+        const prefs = await getter(fakeEvent, 'uid-1') as { typingTestViewOnlyOpacity: number }
+        expect(prefs.typingTestViewOnlyOpacity).toBe(value)
+      }
+    })
+
+    it('rejects prefs with non-number typingTestViewOnlyOpacity', async () => {
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      const result = await handler(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestViewOnlyOpacity: '0.5',
+      }) as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Invalid prefs')
+    })
+
     it.each([true, false])('round-trips viewMatrixWires=%s (readData() must echo it back, not drop it)', async (value) => {
       const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await setter(fakeEvent, 'uid-1', {

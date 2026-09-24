@@ -217,6 +217,8 @@ export interface KeymapEditorProps {
   onTypingTestViewOnlyWindowSizeChange?: (size: { width: number; height: number }) => void
   typingTestViewOnlyAlwaysOnTop?: boolean
   onTypingTestViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
+  typingTestViewOnlyOpacity?: number
+  onTypingTestViewOnlyOpacityChange?: (opacity: number) => void
   typingTestMemory?: TypingTestMemory
   onTypingTestMemoryChange?: (memory: TypingTestMemory | undefined) => void
   typingTestDisplayLines?: number

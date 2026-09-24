@@ -3,7 +3,7 @@
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
 import { MIN_SCALE, MAX_SCALE } from '../components/editors/keymap-editor-types'
 import type { TypingTestResult, ViewMode, TypingTestMemory, TypingTestMemoryWord, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
-import { VIEW_MODES, isTypingTestComparisonBaselines } from '../../shared/types/pipette-settings'
+import { VIEW_MODES, clampViewOnlyOpacity, isTypingTestComparisonBaselines } from '../../shared/types/pipette-settings'
 import { isNonNegInt, isValidTypingTestResult, sanitizeTypingTestResult } from '../typing-test/typing-test-result-sanitize'
 import type { TypingTestConfig, RomajiDetailSettings, RomajiCaseStyle, WeakSpotDetailSettings } from '../typing-test/types'
 import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, clampDisplayLines, clampFontSize } from '../typing-test/types'
@@ -266,6 +266,7 @@ export interface ValidatedPrefs {
   typingTestViewOnly: boolean
   typingTestViewOnlyWindowSize?: { width: number; height: number }
   typingTestViewOnlyAlwaysOnTop: boolean
+  typingTestViewOnlyOpacity: number
   typingTestMemory?: TypingTestMemory
   typingTestDisplayLines: number
   typingTestFontSize: number
@@ -283,7 +284,7 @@ export interface ValidatedPrefs {
 }
 
 export function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestMonkeytypeConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; viewMode?: unknown; viewMatrix?: Record<string, ViewMatrixCell>; viewMatrixWires?: unknown } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestMonkeytypeConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestViewOnlyOpacity?: unknown; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; viewMode?: unknown; viewMatrix?: Record<string, ViewMatrixCell>; viewMatrixWires?: unknown } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
@@ -356,6 +357,7 @@ export function validateIpcPrefs(
     typingTestViewOnly,
     typingTestViewOnlyWindowSize: validateWindowSize(data.typingTestViewOnlyWindowSize),
     typingTestViewOnlyAlwaysOnTop: typeof data.typingTestViewOnlyAlwaysOnTop === 'boolean' ? data.typingTestViewOnlyAlwaysOnTop : false,
+    typingTestViewOnlyOpacity: clampViewOnlyOpacity(data.typingTestViewOnlyOpacity),
     typingTestMemory: validateTypingTestMemory(data.typingTestMemory),
     typingTestDisplayLines: typeof data.typingTestDisplayLines === 'number' ? clampDisplayLines(data.typingTestDisplayLines) : DEFAULT_DISPLAY_LINES,
     typingTestFontSize: typeof data.typingTestFontSize === 'number' ? clampFontSize(data.typingTestFontSize) : DEFAULT_FONT_SIZE,

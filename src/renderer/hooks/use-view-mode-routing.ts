@@ -154,6 +154,7 @@ export function useViewModeRouting({
         window.vialAPI.setWindowCompactMode(false).catch(() => {})
         window.vialAPI.setWindowAspectRatio(0).catch(() => {})
         window.vialAPI.setWindowAlwaysOnTop(false).catch(() => {})
+        window.vialAPI.setWindowOpacity(1).catch(() => {})
         setTypingTestViewOnly(false)
         setViewExitTransition(false)
       }

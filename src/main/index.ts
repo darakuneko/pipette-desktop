@@ -27,6 +27,7 @@ import { registerProcessGoneLogging, registerChildProcessGoneLogging } from './p
 import { loadWindowState, saveWindowState, setupAppConfigIpc, loadAppConfig, onAppConfigChange, hasSavedWindowPosition, MIN_WIDTH, MIN_HEIGHT } from './app-config'
 import { effectiveMinSize, clampBoundsToWorkArea } from './window-bounds'
 import { clampZoomFactor } from '../shared/types/app-config'
+import { clampViewOnlyOpacity } from '../shared/types/pipette-settings'
 import {
   applyAutoLaunch,
   setupTray,
@@ -452,6 +453,15 @@ function setupWindowIpc(): void {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (!win) return
       win.setAlwaysOnTop(enabled)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.WINDOW_SET_OPACITY,
+    (event, opacity: unknown) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) return
+      win.setOpacity(clampViewOnlyOpacity(opacity))
     },
   )
 

@@ -25,6 +25,7 @@ beforeEach(() => {
     setWindowCompactMode: () => Promise.resolve(null),
     setWindowAspectRatio: () => Promise.resolve(),
     setWindowAlwaysOnTop: () => Promise.resolve(),
+    setWindowOpacity: () => Promise.resolve(),
   } as typeof window.vialAPI
 })
 
@@ -149,5 +150,79 @@ describe('TypingTestPaneViewOnlyMenu — Analyze button', () => {
 
     expect(screen.queryByTestId('base-layer-select')).not.toBeInTheDocument()
     expect(screen.getByTestId('view-analytics')).toBeInTheDocument()
+  })
+})
+
+describe('TypingTestPaneViewOnlyMenu — opacity slider', () => {
+  it('renders directly after Fit Size and before the always-on-top toggle', async () => {
+    window.vialAPI = {
+      ...window.vialAPI,
+      isAlwaysOnTopSupported: () => Promise.resolve(true),
+    } as typeof window.vialAPI
+    const { container } = renderViewOnly({
+      onViewOnlyOpacityChange: vi.fn(),
+      onViewOnlyAlwaysOnTopChange: vi.fn(),
+    })
+    clickPaneToToggleControls(container)
+
+    const fit = screen.getByTestId('fit-window-size')
+    const slider = screen.getByTestId('view-only-opacity')
+    const alwaysOnTop = await screen.findByTestId('always-on-top-toggle')
+    expect(fit.compareDocumentPosition(slider) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(slider.compareDocumentPosition(alwaysOnTop) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // No other control sits between Fit Size and the slider.
+    const controls = Array.from(screen.getByRole('menu').querySelectorAll('button, input, select'))
+    expect(controls.indexOf(slider)).toBe(controls.indexOf(fit) + 1)
+  })
+
+  it('does not render without an onViewOnlyOpacityChange handler', () => {
+    const { container } = renderViewOnly()
+    clickPaneToToggleControls(container)
+    expect(screen.queryByTestId('view-only-opacity')).not.toBeInTheDocument()
+  })
+
+  it('shows the current value as a percentage and uses the long label for aria', () => {
+    const { container } = renderViewOnly({ viewOnlyOpacity: 0.8, onViewOnlyOpacityChange: vi.fn() })
+    clickPaneToToggleControls(container)
+
+    const slider = screen.getByTestId('view-only-opacity')
+    expect(slider).toHaveValue('80')
+    expect(slider).toHaveAttribute('min', '50')
+    expect(slider).toHaveAttribute('max', '100')
+    expect(slider).toHaveAttribute('step', '5')
+    expect(slider).toHaveAttribute('aria-label', 'editor.typingTest.opacityAria')
+    expect(screen.getByText('editor.typingTest.opacity')).toBeInTheDocument()
+    expect(screen.getByText('80%')).toBeInTheDocument()
+  })
+
+  it('defaults to 100% when no value is saved', () => {
+    const { container } = renderViewOnly({ onViewOnlyOpacityChange: vi.fn() })
+    clickPaneToToggleControls(container)
+    expect(screen.getByTestId('view-only-opacity')).toHaveValue('100')
+    expect(screen.getByText('100%')).toBeInTheDocument()
+  })
+
+  it('calls the setter with the slider value as a 0.5–1.0 fraction', () => {
+    const onViewOnlyOpacityChange = vi.fn()
+    const { container } = renderViewOnly({ onViewOnlyOpacityChange })
+    clickPaneToToggleControls(container)
+
+    fireEvent.change(screen.getByTestId('view-only-opacity'), { target: { value: '65' } })
+    expect(onViewOnlyOpacityChange).toHaveBeenLastCalledWith(0.65)
+  })
+
+  it('keeps the panel open while the slider is operated with the keyboard or mouse', () => {
+    const onViewOnlyOpacityChange = vi.fn()
+    const { container } = renderViewOnly({ onViewOnlyOpacityChange })
+    clickPaneToToggleControls(container)
+    const panel = screen.getByRole('menu')
+    const slider = screen.getByTestId('view-only-opacity')
+
+    fireEvent.keyDown(slider, { key: 'ArrowLeft' })
+    fireEvent.change(slider, { target: { value: '95' } })
+    fireEvent.click(slider)
+
+    expect(onViewOnlyOpacityChange).toHaveBeenCalledWith(0.95)
+    expect(panel).not.toHaveAttribute('inert')
   })
 })
