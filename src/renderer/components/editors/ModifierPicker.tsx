@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { MODIFIER_LABELS } from './entry-flag-names'
+import { MODIFIER_LABELS } from '../keycodes/entry-flag-names'
 
 interface Props {
   value: number

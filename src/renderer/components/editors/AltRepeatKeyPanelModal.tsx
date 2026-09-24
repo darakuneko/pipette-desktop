@@ -9,7 +9,7 @@ import { useKeycodeEntryModal, useEnabledEntryCallbacks } from '../../hooks/useK
 import { KeycodeEntryModalShell, pickHubProps } from './KeycodeEntryModalShell'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 import { ModifierPicker } from './ModifierPicker'
-import { ALT_REPEAT_KEY_OPTION_ENTRIES } from './entry-flag-names'
+import { ALT_REPEAT_KEY_OPTION_ENTRIES } from '../keycodes/entry-flag-names'
 
 interface Props {
   entries: AltRepeatKeyEntry[]

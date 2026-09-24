@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { MacroTileGrid } from '../TileGrids'
 import {
-  ENTRY_BUBBLE_CLASS, MAX_ENTRY_BUBBLE_COLUMNS, EntryHoverBubble, nextEntryBubbleColumns,
+  ENTRY_BUBBLE_CLASS, MAX_ENTRY_BUBBLE_COLUMNS, EntryHoverBubble, nextEntryBubbleColumns, splitRows,
 } from '../EntryHoverBubble'
 import { EntryHoverPreviewContext } from '../entry-hover-context'
 import { useTileContentOverride } from '../../../hooks/useTileContentOverride'
@@ -272,11 +272,49 @@ describe('EntryHoverBubble', () => {
       expect(screen.getAllByTestId('entry-hover-line')).toHaveLength(120)
     })
 
+    it('splits a tall field table into side-by-side tables the same way', () => {
+      mockHeights(2000)
+      const value = {
+        triggerKey: 4, replacementKey: 5, layers: 3, triggerMods: 1, negativeMods: 0, suppressedMods: 0, options: 0, enabled: true,
+      }
+      render(<EntryHoverBubble bubble={{ index: 1, entry: { kind: 'keyOverride', value }, rect: new DOMRect(10, 10, 20, 20) }} />)
+      const bubble = screen.getByTestId('entry-hover-bubble')
+      expect(bubble.dataset.columns).toBe('3')
+      const tables = screen.getAllByTestId('entry-hover-table')
+      expect(tables.map((t) => t.querySelectorAll('[data-testid="entry-hover-line"]').length)).toEqual([3, 3, 2])
+      // Every field is still there, in order.
+      expect(screen.getAllByTestId('entry-hover-line').map((el) => el.firstElementChild?.textContent)).toEqual([
+        'editor.keyOverride.enabled', 'editor.keyOverride.triggerKey', 'editor.keyOverride.replacementKey',
+        'editor.keyOverride.layers', 'editor.keyOverride.triggerMods', 'editor.keyOverride.negativeMods',
+        'editor.keyOverride.suppressedMods', 'editor.keyOverride.options',
+      ])
+    })
+
+    it('keeps a field table in one piece when it fits', () => {
+      mockHeights(300)
+      const value = { onTap: 4, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 }
+      render(<EntryHoverBubble bubble={{ index: 0, entry: { kind: 'tapDance', value }, rect: new DOMRect(10, 10, 20, 20) }} />)
+      expect(screen.getByTestId('entry-hover-bubble').dataset.columns).toBe('1')
+      expect(screen.getAllByTestId('entry-hover-table')).toHaveLength(1)
+    })
+
     it('stays in one column when it fits', () => {
       mockHeights(300)
       render(<EntryHoverBubble bubble={{ index: 0, entry: { kind: 'macro', value: MACROS[0] }, rect: new DOMRect(10, 10, 20, 20) }} />)
       expect(screen.getByRole('tooltip').dataset.columns).toBe('1')
     })
+  })
+})
+
+describe('splitRows', () => {
+  it('cuts rows into equal runs, the last one shorter', () => {
+    expect(splitRows([1, 2, 3, 4, 5, 6, 7, 8], 3)).toEqual([[1, 2, 3], [4, 5, 6], [7, 8]])
+    expect(splitRows([1, 2, 3], 1)).toEqual([[1, 2, 3]])
+  })
+
+  it('never makes empty runs', () => {
+    expect(splitRows([1, 2], 5)).toEqual([[1], [2]])
+    expect(splitRows([], 3)).toEqual([])
   })
 })
 

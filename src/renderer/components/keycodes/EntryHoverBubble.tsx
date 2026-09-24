@@ -8,10 +8,11 @@
 // container clips it.
 //
 // The bubble is `pointer-events-none`, so it can't scroll. Its size is
-// capped at the viewport instead, and a macro list taller than the
-// viewport flows into more columns. The other kinds have a handful of
-// fields in a two-column table. Long values wrap and keep their spaces and
-// line breaks.
+// capped at the viewport instead, and content taller than the viewport
+// flows into more columns: a macro list through CSS columns, the other
+// kinds' "field | value" table by splitting its rows into side-by-side
+// tables so the field names stay aligned. Long values wrap and keep their
+// spaces and line breaks.
 
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -47,6 +48,15 @@ export function nextEntryBubbleColumns(current: number, listHeight: number, avai
   return current + 1
 }
 
+/** `rows` cut into at most `columns` runs of equal length (the last may be
+ *  shorter), one per side-by-side table. */
+export function splitRows<T>(rows: readonly T[], columns: number): T[][] {
+  const size = Math.max(1, Math.ceil(rows.length / columns))
+  const chunks: T[][] = []
+  for (let i = 0; i < rows.length; i += size) chunks.push(rows.slice(i, i + size))
+  return chunks
+}
+
 /** A computed-style length in px; 0 when it isn't one. */
 function px(value: string): number {
   return parseFloat(value) || 0
@@ -68,7 +78,6 @@ function nextColumnsFor(el: HTMLElement, list: HTMLElement, heading: HTMLElement
 export function EntryHoverBubble({ bubble }: { bubble: EntryHoverBubbleState | null }): JSX.Element | null {
   const { t } = useTranslation()
   const content = useMemo(() => (bubble ? buildHoverContent(bubble.entry, bubble.index, t) : null), [bubble, t])
-  const splits = content?.layout === 'prefix'
   const bubbleRef = useRef<HTMLDivElement>(null)
   const headingRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
@@ -84,7 +93,7 @@ export function EntryHoverBubble({ bubble }: { bubble: EntryHoverBubbleState | n
     const list = listRef.current
     const heading = headingRef.current
     if (!bubble || !el || !list || !heading) return
-    const next = splits ? nextColumnsFor(el, list, heading, columns) : columns
+    const next = nextColumnsFor(el, list, heading, columns)
     if (next !== columns) {
       setColumnsFor({ bubble, columns: next })
       return
@@ -98,7 +107,7 @@ export function EntryHoverBubble({ bubble }: { bubble: EntryHoverBubbleState | n
       { width: window.innerWidth, height: window.innerHeight },
     )
     setPosFor((prev) => (prev && prev.bubble === bubble && prev.top === top && prev.left === left ? prev : { bubble, top, left }))
-  }, [bubble, columns, splits])
+  }, [bubble, columns])
 
   if (!bubble || !content || typeof document === 'undefined') return null
 
@@ -112,7 +121,7 @@ export function EntryHoverBubble({ bubble }: { bubble: EntryHoverBubbleState | n
       style={{ top: pos?.top ?? bubble.rect.top, left: pos?.left ?? bubble.rect.left }}
     >
       <div ref={headingRef} className="text-2xs leading-snug text-content-muted">{content.title}</div>
-      {splits ? (
+      {content.layout === 'prefix' ? (
         <div ref={listRef} className={`${COLUMN_CLASSES[columns]} gap-x-4`}>
           {content.rows.map((row, i) => (
             <div key={i} className="flex max-w-sm gap-x-1.5 break-inside-avoid" data-testid="entry-hover-line">
@@ -122,11 +131,15 @@ export function EntryHoverBubble({ bubble }: { bubble: EntryHoverBubbleState | n
           ))}
         </div>
       ) : (
-        <div ref={listRef} className="grid max-w-sm grid-cols-auto-1fr gap-x-3">
-          {content.rows.map((row, i) => (
-            <div key={i} className="contents" data-testid="entry-hover-line">
-              <span className="text-content-muted">{row.label}</span>
-              <span className={VALUE_CLASS}>{row.value}</span>
+        <div ref={listRef} className="flex items-start gap-x-4">
+          {splitRows(content.rows, columns).map((chunk, c) => (
+            <div key={c} className="grid max-w-sm grid-cols-auto-1fr gap-x-3" data-testid="entry-hover-table">
+              {chunk.map((row, i) => (
+                <div key={i} className="contents" data-testid="entry-hover-line">
+                  <span className="text-content-muted">{row.label}</span>
+                  <span className={VALUE_CLASS}>{row.value}</span>
+                </div>
+              ))}
             </div>
           ))}
         </div>

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
-import { LAYER_MASK_COUNT } from './entry-flag-names'
+import { LAYER_MASK_COUNT } from '../keycodes/entry-flag-names'
 
 interface Props {
   value: number

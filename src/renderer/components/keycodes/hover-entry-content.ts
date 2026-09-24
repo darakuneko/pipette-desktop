@@ -10,7 +10,7 @@ import type { TFunction } from 'i18next'
 import { codeToLabel } from '../../../shared/keycodes/keycodes'
 import {
   ALT_REPEAT_KEY_OPTION_ENTRIES, KEY_OVERRIDE_OPTION_ENTRIES, layerNumbers, modifierNames, optionNames,
-} from '../editors/entry-flag-names'
+} from './entry-flag-names'
 import { MACRO_PREFIX, macroActionLabel } from './macro-action-format'
 import type { HoverEntry } from './hover-entry'
 

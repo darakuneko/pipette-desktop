@@ -10,7 +10,7 @@ import { KeycodeEntryModalShell, pickHubProps } from './KeycodeEntryModalShell'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 import { LayerPicker } from './LayerPicker'
 import { ModifierPicker } from './ModifierPicker'
-import { KEY_OVERRIDE_OPTION_ENTRIES } from './entry-flag-names'
+import { KEY_OVERRIDE_OPTION_ENTRIES } from '../keycodes/entry-flag-names'
 
 interface Props {
   entries: KeyOverrideEntry[]
