@@ -1,5 +1,5 @@
 {
-  "version": "0.1.97",
+  "version": "0.1.98",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -1864,6 +1864,7 @@
     "basicViewType": "Basic タブ表示☆",
     "splitKeyMode": "Shiftキー分離っしょ",
     "quickSelect": "爆速選択☆",
+    "layerHoverPreview": "レイヤー勝手にチラ見せ☆",
     "keyEditorZoom": "エディタズーム☆"
   },
   "hub": {

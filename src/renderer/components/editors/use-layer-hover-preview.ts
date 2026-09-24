@@ -29,7 +29,8 @@ export interface LayerHoverPreviewInput {
   layerLabel: (layer: number) => string
   /** Changes when the connected keyboard changes. */
   deviceKey?: string
-  /** True while the Key Popover is open or the picker holds paste targets. */
+  /** True while the preview is turned off, the Key Popover is open or the
+   *  picker holds paste targets. */
   blocked: boolean
 }
 

@@ -78,7 +78,7 @@ export function KeymapPickerRegion(props: KeymapPickerRegionProps): JSX.Element 
     layoutButtonRef, layoutPanelOpen, setLayoutPanelOpen, layoutPanelRef, onOverlayOpen,
     hasLayoutOptions, parsedLayoutOptions, layoutValues, handleLayoutOptionChange,
     autoAdvance, onAutoAdvanceChange, viewMatrixActive, onToggleViewMatrixMode,
-    viewMatrixWires, onViewMatrixWiresChange,
+    viewMatrixWires, onViewMatrixWiresChange, layerHoverPreview, onLayerHoverPreviewChange,
     quickSelect, onQuickSelectChange, matrixMode, hasMatrixTester, handleMatrixToggle,
     unlocked, onLock, onUnlock, onTypingRecordDisarm, unlockStatusKnown, typingRecordEnabled, isDummy, toolsExtra, dataPanel, keyEditorZoom, onKeyEditorZoomChange,
     onExportLayoutPdfAll, onExportLayoutPdfCurrent,
@@ -127,6 +127,7 @@ export function KeymapPickerRegion(props: KeymapPickerRegionProps): JSX.Element 
               onLayoutOptionChange={handleLayoutOptionChange} autoAdvance={autoAdvance} onAutoAdvanceChange={onAutoAdvanceChange}
               viewMatrixActive={viewMatrixActive} onToggleViewMatrixMode={onToggleViewMatrixMode}
               viewMatrixWires={viewMatrixWires} onViewMatrixWiresChange={onViewMatrixWiresChange}
+              layerHoverPreview={layerHoverPreview !== false} onLayerHoverPreviewChange={onLayerHoverPreviewChange}
               splitKeyMode={splitKeyMode} onSplitKeyModeChange={onSplitKeyModeChange}
               quickSelect={quickSelect} onQuickSelectChange={onQuickSelectChange}
               matrixMode={matrixMode} hasMatrixTester={hasMatrixTester} onToggleMatrix={viewMatrixActive ? undefined : handleMatrixToggle}

@@ -64,6 +64,7 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
   const [keyEditorZoom, updateKeyEditorZoom, keyEditorZoomRef] = useStateRef<number | undefined>(undefined)
   const [viewMatrix, updateViewMatrix, viewMatrixRef] = useStateRef<Record<string, ViewMatrixCell> | undefined>(undefined)
   const [viewMatrixWires, updateViewMatrixWires, viewMatrixWiresRef] = useStateRef<boolean>(false)
+  const [layerHoverPreview, updateLayerHoverPreview, layerHoverPreviewRef] = useStateRef<boolean>(true)
   const [appliedUid, setAppliedUid] = useState<string | null>(null)
 
   const uidRef = useRef('')
@@ -113,6 +114,8 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
       // OFF actually persists `false` instead of being skipped by the
       // field-level PATCH's "undefined leaves the field untouched" rule.
       viewMatrixWires: viewMatrixWiresRef.current,
+      // Sent explicitly for the same reason as `viewMatrixWires`.
+      layerHoverPreview: layerHoverPreviewRef.current,
     }).catch(() => {
       // IPC failure — best-effort save
     })
@@ -153,6 +156,7 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
     updateKeyEditorZoom(resolved.keyEditorZoom)
     updateViewMatrix(resolved.viewMatrix)
     updateViewMatrixWires(resolved.viewMatrixWires)
+    updateLayerHoverPreview(resolved.layerHoverPreview)
   }, [])
 
   return {
@@ -186,6 +190,7 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
     keyEditorZoom, updateKeyEditorZoom, keyEditorZoomRef,
     viewMatrix, updateViewMatrix, viewMatrixRef,
     viewMatrixWires, updateViewMatrixWires, viewMatrixWiresRef,
+    layerHoverPreview, updateLayerHoverPreview, layerHoverPreviewRef,
     appliedUid, setAppliedUid,
     uidRef, applySeqRef,
     saveCurrentPrefs,

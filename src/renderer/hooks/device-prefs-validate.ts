@@ -281,10 +281,11 @@ export interface ValidatedPrefs {
   keyEditorZoom?: number
   viewMatrix?: Record<string, ViewMatrixCell>
   viewMatrixWires: boolean
+  layerHoverPreview: boolean
 }
 
 export function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestMonkeytypeConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestViewOnlyOpacity?: unknown; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; viewMode?: unknown; viewMatrix?: Record<string, ViewMatrixCell>; viewMatrixWires?: unknown } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestMonkeytypeConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestViewOnlyOpacity?: unknown; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; viewMode?: unknown; viewMatrix?: Record<string, ViewMatrixCell>; viewMatrixWires?: unknown; layerHoverPreview?: unknown } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
@@ -376,6 +377,7 @@ export function validateIpcPrefs(
     // the other store-validated per-keyboard fields.
     viewMatrix: data.viewMatrix,
     viewMatrixWires: typeof data.viewMatrixWires === 'boolean' ? data.viewMatrixWires : false,
+    layerHoverPreview: typeof data.layerHoverPreview === 'boolean' ? data.layerHoverPreview : true,
   }
 }
 

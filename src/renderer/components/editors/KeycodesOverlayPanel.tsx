@@ -15,6 +15,35 @@ type OverlayTab = 'layout' | 'tools' | 'data'
 const TAB_BASE = 'flex-1 py-1.5 text-xs font-medium transition-colors border-b-2'
 const FOOTER_BTN = 'rounded border border-edge px-2.5 py-1 text-xs text-content-secondary hover:text-content hover:bg-surface-dim transition-colors'
 
+const HALF_ROW_CLASS = 'grid grid-cols-2 gap-2'
+
+/** Switch card for one half of a two-column row. The label may wrap
+ *  (`min-w-0`) while the switch keeps its size (`shrink-0`). Test ids are
+ *  `${testId}-row` on the card and `${testId}-toggle` on the switch. */
+function HalfToggle({ label, checked, onToggle, testId }: {
+  label: string
+  checked: boolean
+  onToggle: () => void
+  testId: string
+}): JSX.Element {
+  return (
+    <div className={`${ROW_CLASS} min-w-0`} data-testid={`${testId}-row`}>
+      <span className="min-w-0 text-sm font-medium text-content">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        className={`${toggleTrackClass(checked)} shrink-0`}
+        onClick={onToggle}
+        data-testid={`${testId}-toggle`}
+      >
+        <span className={toggleKnobClass(checked)} />
+      </button>
+    </div>
+  )
+}
+
 function tabClass(active: boolean): string {
   if (active) return `${TAB_BASE} border-b-accent text-content`
   return `${TAB_BASE} border-b-transparent text-content-muted hover:text-content`
@@ -37,6 +66,9 @@ interface Props {
   // Edit/Done mode above (it stays in effect through the mode too).
   viewMatrixWires?: boolean
   onViewMatrixWiresChange?: (next: boolean) => void
+  // Layer hover preview on the keymap editor (persisted per keyboard).
+  layerHoverPreview?: boolean
+  onLayerHoverPreviewChange?: (enabled: boolean) => void
   splitKeyMode?: SplitKeyMode
   onSplitKeyModeChange?: (mode: SplitKeyMode) => void
   quickSelect?: boolean
@@ -78,6 +110,8 @@ export function KeycodesOverlayPanel({
   onToggleViewMatrixMode,
   viewMatrixWires,
   onViewMatrixWiresChange,
+  layerHoverPreview = true,
+  onLayerHoverPreviewChange,
   splitKeyMode,
   onSplitKeyModeChange,
   quickSelect,
@@ -122,6 +156,8 @@ export function KeycodesOverlayPanel({
     }
   }
   const hasData = dataPanel != null
+  const showQuickSelect = quickSelect != null && onQuickSelectChange != null
+  const showKeyTester = (hasMatrixTester || matrixMode) && onToggleMatrix != null
   const [activeTab, setActiveTab] = useState<OverlayTab>(hasLayoutOptions ? 'layout' : hasData ? 'data' : 'tools')
   const [showLockConfirm, setShowLockConfirm] = useState(false)
 
@@ -241,23 +277,41 @@ export function KeycodesOverlayPanel({
               </div>
             )}
 
-            {/* Auto-advance toggle */}
-            <div className={ROW_CLASS} data-testid="overlay-auto-advance-row">
-              <span className="text-sm font-medium text-content">
-                {t('editor.autoAdvance')}
-              </span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={autoAdvance}
-                aria-label={t('editor.autoAdvance')}
-                className={toggleTrackClass(autoAdvance)}
-                onClick={() => onAutoAdvanceChange?.(!autoAdvance)}
-                data-testid="overlay-auto-advance-toggle"
-              >
-                <span className={toggleKnobClass(autoAdvance)} />
-              </button>
+            {/* Two toggles per row, each in its own half-width card. A row
+                with a single toggle keeps it in the left half. */}
+            <div className={HALF_ROW_CLASS}>
+              <HalfToggle
+                label={t('editor.autoAdvance')} checked={autoAdvance}
+                onToggle={() => onAutoAdvanceChange?.(!autoAdvance)}
+                testId="overlay-auto-advance"
+              />
+              {onLayerHoverPreviewChange && (
+                <HalfToggle
+                  label={t('editorSettings.layerHoverPreview')} checked={layerHoverPreview}
+                  onToggle={() => onLayerHoverPreviewChange(!layerHoverPreview)}
+                  testId="overlay-layer-hover-preview"
+                />
+              )}
             </div>
+
+            {(showQuickSelect || showKeyTester) && (
+              <div className={HALF_ROW_CLASS}>
+                {showQuickSelect && (
+                  <HalfToggle
+                    label={t('editorSettings.quickSelect')} checked={quickSelect}
+                    onToggle={() => onQuickSelectChange(!quickSelect)}
+                    testId="overlay-quick-select"
+                  />
+                )}
+                {showKeyTester && (
+                  <HalfToggle
+                    label={t('editor.keyTester.title')} checked={matrixMode}
+                    onToggle={onToggleMatrix}
+                    testId="overlay-matrix"
+                  />
+                )}
+              </div>
+            )}
 
             {/* View Matrix row: label + Edit/Done button on the left, the
                 persisted wiring-overlay toggle on the right — independent
@@ -309,46 +363,6 @@ export function KeycodesOverlayPanel({
                   data-testid="overlay-split-key-mode-toggle"
                 >
                   <span className={toggleKnobClass(splitKeyMode === 'split')} />
-                </button>
-              </div>
-            )}
-
-            {/* Quick select toggle */}
-            {quickSelect != null && onQuickSelectChange && (
-              <div className={ROW_CLASS} data-testid="overlay-quick-select-row">
-                <span className="text-sm font-medium text-content">
-                  {t('editorSettings.quickSelect')}
-                </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={quickSelect}
-                  aria-label={t('editorSettings.quickSelect')}
-                  className={toggleTrackClass(quickSelect)}
-                  onClick={() => onQuickSelectChange(!quickSelect)}
-                  data-testid="overlay-quick-select-toggle"
-                >
-                  <span className={toggleKnobClass(quickSelect)} />
-                </button>
-              </div>
-            )}
-
-            {/* Key tester toggle */}
-            {(hasMatrixTester || matrixMode) && onToggleMatrix && (
-              <div className={ROW_CLASS} data-testid="overlay-matrix-row">
-                <span className="text-sm font-medium text-content">
-                  {t('editor.keyTester.title')}
-                </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={matrixMode}
-                  aria-label={t('editor.keyTester.title')}
-                  className={toggleTrackClass(matrixMode)}
-                  onClick={onToggleMatrix}
-                  data-testid="overlay-matrix-toggle"
-                >
-                  <span className={toggleKnobClass(matrixMode)} />
                 </button>
               </div>
             )}

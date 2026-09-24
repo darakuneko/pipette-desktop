@@ -401,6 +401,9 @@ export interface PipetteSettings {
    * key. Purely a display toggle — it never gates editing, and stays in
    * effect during View Matrix Edit mode too. Absent means off. */
   viewMatrixWires?: boolean
+  /** Hovering a layer key in the keymap editor previews the layer it
+   * targets. Absent means on; only an explicit `false` turns it off. */
+  layerHoverPreview?: boolean
   analyze?: AnalyzeSettings
   _updatedAt?: string // ISO 8601 — last update time
 }

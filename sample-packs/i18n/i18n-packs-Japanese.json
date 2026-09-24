@@ -1,5 +1,5 @@
 {
-  "version": "0.1.97",
+  "version": "0.1.98",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -1874,6 +1874,7 @@
     "basicViewType": "Basic タブ表示",
     "splitKeyMode": "キーピッカーでShiftキーを分離",
     "quickSelect": "キーの即時選択",
+    "layerHoverPreview": "レイヤーの自動プレビュー",
     "keyEditorZoom": "キーエディタ ズーム"
   },
   "hub": {

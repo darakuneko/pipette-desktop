@@ -14,6 +14,9 @@ vi.mock('react-i18next', () => ({
         'editorSettings.tabSave': 'Save',
         'editorSettings.keyEditorZoom': 'Key Editor Zoom',
         'editor.autoAdvance': 'Auto Move',
+        'editorSettings.layerHoverPreview': 'Auto Layer Preview',
+        'editorSettings.quickSelect': 'Instant Key Selection',
+        'editorSettings.splitKeyMode': 'Separate Shift in Key Picker',
         'editor.keyTester.title': 'Key Tester',
         'editor.viewMatrix.label': 'View Matrix',
         'editor.viewMatrix.edit': 'Edit',
@@ -425,5 +428,105 @@ describe('KeycodesOverlayPanel', () => {
     const checkbox = screen.getByRole('checkbox')
     fireEvent.click(checkbox)
     expect(onLayoutOptionChange).toHaveBeenCalledWith(0, 1)
+  })
+})
+
+describe('KeycodesOverlayPanel — Settings / Import layout', () => {
+  const ALL_ROWS = {
+    ...DEFAULT_PROPS,
+    onKeyEditorZoomChange: vi.fn(),
+    keyEditorZoom: 100,
+    onLayerHoverPreviewChange: vi.fn(),
+    quickSelect: false,
+    onQuickSelectChange: vi.fn(),
+    hasMatrixTester: true,
+    onToggleMatrix: vi.fn(),
+    onToggleViewMatrixMode: vi.fn(),
+    splitKeyMode: 'split' as const,
+    onSplitKeyModeChange: vi.fn(),
+  }
+
+  function rowOrder(container: HTMLElement): string[] {
+    return Array.from(container.querySelectorAll('[data-testid$="-row"]'))
+      .map((el) => el.getAttribute('data-testid') ?? '')
+  }
+
+  it('orders the rows and pairs the half-width toggles', () => {
+    const { container } = render(<KeycodesOverlayPanel {...ALL_ROWS} />)
+    expect(rowOrder(container)).toEqual([
+      'overlay-key-editor-zoom-row',
+      'overlay-auto-advance-row',
+      'overlay-layer-hover-preview-row',
+      'overlay-quick-select-row',
+      'overlay-matrix-row',
+      'overlay-view-matrix-row',
+      'overlay-split-key-mode-row',
+      'overlay-lock-row',
+    ])
+    const first = screen.getByTestId('overlay-auto-advance-row').parentElement!
+    expect(screen.getByTestId('overlay-layer-hover-preview-row').parentElement).toBe(first)
+    expect(first.className).toContain('grid-cols-2')
+    const second = screen.getByTestId('overlay-quick-select-row').parentElement!
+    expect(screen.getByTestId('overlay-matrix-row').parentElement).toBe(second)
+    expect(second.className).toContain('grid-cols-2')
+    expect(screen.getByTestId('overlay-view-matrix-row').parentElement?.className).not.toContain('grid-cols-2')
+    expect(screen.getByTestId('overlay-split-key-mode-row').parentElement?.className).not.toContain('grid-cols-2')
+  })
+
+  it('keeps each half-width label wrappable and its switch from shrinking', () => {
+    render(<KeycodesOverlayPanel {...ALL_ROWS} />)
+    const row = screen.getByTestId('overlay-layer-hover-preview-row')
+    expect(row.className).toContain('min-w-0')
+    expect(row.querySelector('span')?.className).toContain('min-w-0')
+    expect(screen.getByTestId('overlay-layer-hover-preview-toggle').className).toContain('shrink-0')
+  })
+
+  it('shows the Auto Layer Preview toggle on by default and flips it', () => {
+    const onLayerHoverPreviewChange = vi.fn()
+    render(<KeycodesOverlayPanel {...DEFAULT_PROPS} onLayerHoverPreviewChange={onLayerHoverPreviewChange} />)
+    const toggle = screen.getByRole('switch', { name: 'Auto Layer Preview' })
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+    fireEvent.click(toggle)
+    expect(onLayerHoverPreviewChange).toHaveBeenCalledWith(false)
+  })
+
+  it('reflects an off value and turns it back on', () => {
+    const onLayerHoverPreviewChange = vi.fn()
+    render(<KeycodesOverlayPanel {...DEFAULT_PROPS} layerHoverPreview={false} onLayerHoverPreviewChange={onLayerHoverPreviewChange} />)
+    const toggle = screen.getByTestId('overlay-layer-hover-preview-toggle')
+    expect(toggle.getAttribute('aria-checked')).toBe('false')
+    fireEvent.click(toggle)
+    expect(onLayerHoverPreviewChange).toHaveBeenCalledWith(true)
+  })
+
+  it('omits the Auto Layer Preview toggle without a change handler, leaving Auto Move alone in its row', () => {
+    render(<KeycodesOverlayPanel {...DEFAULT_PROPS} />)
+    expect(screen.queryByTestId('overlay-layer-hover-preview-row')).not.toBeInTheDocument()
+    expect(screen.getByTestId('overlay-auto-advance-row').parentElement?.children).toHaveLength(1)
+  })
+
+  it('keeps Instant Key Selection alone in the left half when there is no Key Tester', () => {
+    render(<KeycodesOverlayPanel {...ALL_ROWS} hasMatrixTester={false} />)
+    expect(screen.queryByTestId('overlay-matrix-row')).not.toBeInTheDocument()
+    const row = screen.getByTestId('overlay-quick-select-row')
+    expect(row.parentElement?.className).toContain('grid-cols-2')
+    expect(row.parentElement?.children).toHaveLength(1)
+  })
+
+  it('shows Key Tester while it is on even without a tester, and hides it without a toggle handler', () => {
+    const { unmount } = render(<KeycodesOverlayPanel {...ALL_ROWS} hasMatrixTester={false} matrixMode />)
+    expect(screen.getByTestId('overlay-matrix-row')).toBeInTheDocument()
+    unmount()
+    render(<KeycodesOverlayPanel {...ALL_ROWS} onToggleMatrix={undefined} />)
+    expect(screen.queryByTestId('overlay-matrix-row')).not.toBeInTheDocument()
+  })
+
+  it('renders no empty row when neither Instant Key Selection nor Key Tester applies', () => {
+    const { container } = render(
+      <KeycodesOverlayPanel {...ALL_ROWS} quickSelect={undefined} onQuickSelectChange={undefined} hasMatrixTester={false} />,
+    )
+    const grids = container.querySelectorAll('.grid-cols-2')
+    expect(grids).toHaveLength(1)
+    expect(grids[0].contains(screen.getByTestId('overlay-auto-advance-row'))).toBe(true)
   })
 })

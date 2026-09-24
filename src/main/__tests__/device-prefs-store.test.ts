@@ -628,6 +628,59 @@ describe('pipette-settings-store', () => {
       expect(result.error).toContain('Invalid prefs')
     })
 
+    it.each([true, false])('round-trips layerHoverPreview=%s', async (value) => {
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      const result = await setter(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        layerHoverPreview: value,
+      }) as { success: boolean }
+      expect(result.success).toBe(true)
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-1') as { layerHoverPreview: boolean }
+      expect(prefs.layerHoverPreview).toBe(value)
+    })
+
+    it('keeps an explicit layerHoverPreview=false through a patch that omits it', async () => {
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      await setter(fakeEvent, 'uid-1', {
+        _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: [], layerHoverPreview: false,
+      })
+      const result = await setter(fakeEvent, 'uid-1', {
+        _rev: 1, keyboardLayout: 'qwerty', autoAdvance: false, layerNames: ['Base'],
+      }) as { success: boolean }
+      expect(result.success).toBe(true)
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-1') as { layerHoverPreview?: boolean; autoAdvance: boolean }
+      expect(prefs.autoAdvance).toBe(false)
+      expect(prefs.layerHoverPreview).toBe(false)
+    })
+
+    it('leaves layerHoverPreview absent when it was never saved', async () => {
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      await setter(fakeEvent, 'uid-1', { _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: [] })
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-1') as { layerHoverPreview?: boolean }
+      expect(prefs.layerHoverPreview).toBeUndefined()
+    })
+
+    it('rejects prefs with non-boolean layerHoverPreview', async () => {
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      const result = await handler(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        layerHoverPreview: 'yes',
+      }) as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Invalid prefs')
+    })
+
     it.each([1, 7, 30, 90])('accepts typingSyncSpanDays=%i', async (span) => {
       const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await setter(fakeEvent, 'uid-1', {

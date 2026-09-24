@@ -454,8 +454,8 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --min-width-rgb-label: 100px;        /* RGBConfigurator form labels */
   --min-width-layout-label: 120px;     /* LayoutEditor form label */
   --min-width-keyboard-pane: 280px;    /* KeyboardPane */
-  --min-width-keycode-panel: 360px;    /* KeymapEditor layout overlay panel */
-  --max-width-keycode-panel: 420px;    /* KeymapEditor layout overlay panel */
+  --min-width-keycode-panel: 520px;    /* KeymapEditor layout overlay panel — fits two half-width toggle rows per line in English */
+  --max-width-keycode-panel: 560px;    /* KeymapEditor layout overlay panel */
   --max-width-modal-vw: 90vw;          /* SM/MD/LG modal viewport constraint */
   --max-width-modal-xl-vw: 95vw;       /* XL/2XL modal viewport constraint */
   --min-height-device-list: 340px;     /* DeviceSelector, KeymapEditor device list */

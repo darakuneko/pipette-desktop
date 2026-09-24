@@ -2574,3 +2574,64 @@ describe('useDevicePrefs', () => {
     })
   })
 })
+
+describe('useDevicePrefs — layerHoverPreview', () => {
+  type StoredPrefs = { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] }
+  const stored = (extra: Record<string, unknown> = {}): StoredPrefs =>
+    ({ _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: [], ...extra }) as StoredPrefs
+
+  async function applied(uid: string) {
+    setupMocks()
+    const hook = renderHookWithConfig(() => useDevicePrefs())
+    await act(async () => {})
+    await act(async () => { await hook.result.current.applyDevicePrefs(uid) })
+    return hook
+  }
+
+  it('defaults to on for a new keyboard and saves it explicitly', async () => {
+    const { result } = await applied('0xAABB')
+    expect(result.current.layerHoverPreview).toBe(true)
+    expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({ layerHoverPreview: true }))
+  })
+
+  it('defaults to on when the stored prefs have no value', async () => {
+    mockPipetteSettingsGet.mockResolvedValue(stored())
+    const { result } = await applied('0xAABB')
+    expect(result.current.layerHoverPreview).toBe(true)
+  })
+
+  it('restores an explicit false', async () => {
+    mockPipetteSettingsGet.mockResolvedValue(stored({ layerHoverPreview: false }))
+    const { result } = await applied('0xAABB')
+    expect(result.current.layerHoverPreview).toBe(false)
+  })
+
+  it('falls back to on for a non-boolean value', async () => {
+    mockPipetteSettingsGet.mockResolvedValue(stored({ layerHoverPreview: 'no' }))
+    const { result } = await applied('0xAABB')
+    expect(result.current.layerHoverPreview).toBe(true)
+  })
+
+  it('setLayerHoverPreview saves false, and later unrelated saves keep it', async () => {
+    mockPipetteSettingsGet.mockResolvedValue(stored())
+    const { result } = await applied('0xAABB')
+    act(() => { result.current.setLayerHoverPreview(false) })
+    expect(result.current.layerHoverPreview).toBe(false)
+    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({ layerHoverPreview: false }))
+
+    act(() => { result.current.setAutoAdvance(false) })
+    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({
+      autoAdvance: false, layerHoverPreview: false,
+    }))
+  })
+
+  it('does not carry one keyboard\'s value over to another', async () => {
+    mockPipetteSettingsGet
+      .mockResolvedValueOnce(stored({ layerHoverPreview: false }))
+      .mockResolvedValueOnce(stored())
+    const { result } = await applied('uid-1')
+    expect(result.current.layerHoverPreview).toBe(false)
+    await act(async () => { await result.current.applyDevicePrefs('uid-2') })
+    expect(result.current.layerHoverPreview).toBe(true)
+  })
+})

@@ -59,6 +59,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     keyEditorZoom, updateKeyEditorZoom, keyEditorZoomRef,
     viewMatrix, updateViewMatrix,
     viewMatrixWires, updateViewMatrixWires,
+    layerHoverPreview, updateLayerHoverPreview,
     appliedUid, setAppliedUid,
     uidRef, applySeqRef,
     saveCurrentPrefs,
@@ -166,6 +167,11 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateViewMatrixWires])
 
+  const setLayerHoverPreview = useCallback((enabled: boolean) => {
+    updateLayerHoverPreview(enabled)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateLayerHoverPreview])
+
   const setKeyEditorZoom = useCallback((zoom: number) => {
     const clamped = clampZoomFactor(zoom)
     if (keyEditorZoomRef.current === clamped) return
@@ -212,6 +218,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingRecordEnabled: false,
       viewMode: 'editor',
       viewMatrixWires: false,
+      layerHoverPreview: true,
     }
     applyValidated(resolved)
     setAppliedUid(uid)
@@ -261,6 +268,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     keyEditorZoom,
     viewMatrix,
     viewMatrixWires,
+    layerHoverPreview,
     appliedUid,
     setLayout,
     setAutoAdvance,
@@ -292,6 +300,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setViewMode,
     setViewMatrix,
     setViewMatrixWires,
+    setLayerHoverPreview,
     setKeyEditorZoom,
     defaultLayout,
     defaultAutoAdvance,
