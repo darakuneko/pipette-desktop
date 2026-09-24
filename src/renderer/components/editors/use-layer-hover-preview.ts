@@ -9,12 +9,14 @@
 // hovers to the entry hover bubble alone — so layer keys placed on encoders never
 // start a preview.
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useCallback, useMemo } from 'react'
 import { serialize } from '../../../shared/keycodes/keycodes'
 import { getLayerOpTarget } from '../../../shared/keycodes/keycodes-classify'
 import type { KleKey } from '../../../shared/kle/types'
 import { posKey } from '../../../shared/kle/pos-key'
 import { useSharedHoverBubble } from '../../hooks/use-shared-hover-bubble'
+import { useLatestRef } from '../../hooks/use-latest-ref'
+import { useHideOnChange } from '../../hooks/use-hide-on-change'
 import { EMPTY_REMAPPED } from './keymap-editor-types'
 import { useLayerKeycodes } from './use-layer-keycodes'
 
@@ -109,12 +111,8 @@ export function useLayerHoverPreview({
 
   // Read through a ref so the hover callbacks stay referentially stable —
   // they reach every memoized `KeyWidget`, and a new function on each
-  // keymap edit or layer switch would re-render the whole board. Hover
-  // events only arrive after commit, so a layout effect keeps it current.
-  const latestRef = useRef({ layers, currentLayer, keymap, encoderLayout, deviceKey, surfaceKey, disabled })
-  useLayoutEffect(() => {
-    latestRef.current = { layers, currentLayer, keymap, encoderLayout, deviceKey, surfaceKey, disabled }
-  }, [layers, currentLayer, keymap, encoderLayout, deviceKey, surfaceKey, disabled])
+  // keymap edit or layer switch would re-render the whole board.
+  const latestRef = useLatestRef({ layers, currentLayer, keymap, encoderLayout, deviceKey, surfaceKey, disabled })
 
   const onKeyHover = useCallback((key: KleKey) => {
     const s = latestRef.current
@@ -127,11 +125,9 @@ export function useLayerHoverPreview({
       layer, pos: posKey(key.row, key.col), currentLayer: s.currentLayer, keymap: s.keymap, encoderLayout: s.encoderLayout,
       deviceKey: s.deviceKey, surfaceKey: s.surfaceKey,
     })
-  }, [show, hide])
+  }, [latestRef, show, hide])
 
-  useEffect(() => {
-    hide()
-  }, [hide, currentLayer, keymap, encoderLayout, deviceKey, surfaceKey, disabled])
+  useHideOnChange(hide, [currentLayer, keymap, encoderLayout, deviceKey, surfaceKey, disabled])
 
   const previewLayer = target
     && !disabled

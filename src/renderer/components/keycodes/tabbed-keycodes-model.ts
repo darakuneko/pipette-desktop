@@ -100,6 +100,18 @@ export interface TooltipState {
   rect: DOMRect
 }
 
+/** Content that replaces the keycode grid of specific tabs, built by
+ *  `useTileContentOverride`, plus the picker's single entry hover bubble
+ *  shared by every tile grid in `tabs`. */
+export interface TabContentOverride {
+  /** Keyed by tab (category) id. */
+  tabs: Record<string, ReactNode>
+  /** Rendered once inside the picker, so it unmounts with the picker. */
+  bubble: ReactNode
+  /** Cancels a pending open and closes the bubble. Referentially stable. */
+  hideBubble: () => void
+}
+
 export interface TabbedKeycodesProps {
   onKeycodeSelect?: (keycode: Keycode) => void
   onKeycodeDoubleClick?: (keycode: Keycode) => void
@@ -118,7 +130,7 @@ export interface TabbedKeycodesProps {
   panelOverlay?: ReactNode // Content rendered as a right-side overlay over the keycodes grid
   showHint?: boolean // Show multi-select usage hint at the bottom
   keyboardPickerContent?: ReactNode // Keyboard layout picker shown in a "Keyboard" tab
-  tabContentOverride?: Record<string, ReactNode> // Custom content that replaces the keycode grid for specific tabs
+  tabContentOverride?: TabContentOverride
   basicViewType?: BasicViewType // View type for the basic tab
   onBasicViewTypeChange?: (v: BasicViewType) => void
   splitKeyMode?: SplitKeyMode // 'split' (default) or 'flat' for individual buttons

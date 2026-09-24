@@ -228,11 +228,15 @@ export function TabbedKeycodes({
     return { activeTabKeycodes: keycodes, keycodeIndexMap: indexMap }
   }, [categories, effectiveTab, isVisible, revision, resolvedBasicViewType, maskOnly, lmMode, useSplit])
 
-  // Clear any open tooltip whenever the rendered tab changes, whether from a
-  // user click or an automatic fallback/restore driven by effectiveTab.
+  // Clear any open tooltip and the tile tabs' entry bubble (pending or
+  // shown) whenever the rendered tab changes, whether from a user click or an
+  // automatic fallback/restore driven by effectiveTab. `hideBubble` is stable,
+  // so an edit to the entries never closes the bubble here.
+  const hideEntryBubble = tabContentOverride?.hideBubble
   useEffect(() => {
     hideTooltip()
-  }, [effectiveTab, hideTooltip])
+    hideEntryBubble?.()
+  }, [effectiveTab, hideTooltip, hideEntryBubble])
 
   const selectTab = useCallback(
     (id: string) => {
@@ -249,10 +253,6 @@ export function TabbedKeycodes({
     },
     [showTooltip],
   )
-
-  const handleKeycodeHoverEnd = useCallback(() => {
-    hideTooltip()
-  }, [hideTooltip])
 
   const activeTabKeycodeNumbers = useMemo(
     () => activeTabKeycodes.map((kc) => deserialize(kc.qmkId)),
@@ -282,7 +282,7 @@ export function TabbedKeycodes({
         onClick={handleKeycodeClick}
         onDoubleClick={guardedDoubleClick}
         onHover={handleKeycodeHover}
-        onHoverEnd={handleKeycodeHoverEnd}
+        onHoverEnd={hideTooltip}
         highlightedKeycodes={highlightedKeycodes}
         pickerSelectedIndices={isActive ? pickerSelectedIndices : undefined}
         isVisible={isVisible}
@@ -325,7 +325,7 @@ export function TabbedKeycodes({
           onKeycodeClick={handleKeycodeClick}
           onKeycodeDoubleClick={guardedDoubleClick}
           onKeycodeHover={handleKeycodeHover}
-          onKeycodeHoverEnd={handleKeycodeHoverEnd}
+          onKeycodeHoverEnd={hideTooltip}
           highlightedKeycodes={highlightedKeycodes}
           pickerSelectedIndices={isActive ? pickerSelectedIndices : undefined}
           isVisible={isVisible}
@@ -335,7 +335,7 @@ export function TabbedKeycodes({
       )
     }
 
-    const override = tabContentOverride && Object.hasOwn(tabContentOverride, category.id) ? tabContentOverride[category.id] : null
+    const override = tabContentOverride && Object.hasOwn(tabContentOverride.tabs, category.id) ? tabContentOverride.tabs[category.id] : null
     const groups = category.getGroups?.()?.filter((g) => g.keycodes.some(isVisible))
 
     // Override only — no groups to show below
@@ -493,6 +493,7 @@ export function TabbedKeycodes({
           )}
         </div>
       )}
+      {tabContentOverride?.bubble}
     </div>
   )
 }

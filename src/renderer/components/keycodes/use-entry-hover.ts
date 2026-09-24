@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// State for the entry hover bubble: one shared bubble per surface (a picker
-// tile grid, the editable keymap pane), opened after the shared 300 ms
-// dwell. The bubble reads its entry from the current `sources` on every
+// State for the entry hover bubble: one shared bubble per surface (a key
+// picker's tile tabs, the editable keymap pane), opened after the shared
+// 300 ms dwell. The bubble reads its entry from the current `sources` on every
 // render, so an edit to the hovered entry shows up right away and an entry
 // that stops being configured closes it.
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useSharedHoverBubble } from '../../hooks/use-shared-hover-bubble'
+import { useLatestRef } from '../../hooks/use-latest-ref'
 import { resolveHoverEntry, type HoverEntry, type HoverEntryKind, type HoverEntrySources } from './hover-entry'
 
 export interface EntryHoverBubbleState {
@@ -38,12 +39,8 @@ export function useEntryHover(sources: HoverEntrySources, enabled: boolean): Use
   const { target, show, hide } = useSharedHoverBubble<Target>()
 
   // Read through a ref so `showEntry` keeps one identity across edits — it
-  // reaches memoized key / encoder widgets. Hover events only arrive after
-  // commit, so a layout effect keeps it current.
-  const latestRef = useRef({ sources, enabled })
-  useLayoutEffect(() => {
-    latestRef.current = { sources, enabled }
-  }, [sources, enabled])
+  // reaches memoized key / encoder widgets.
+  const latestRef = useLatestRef({ sources, enabled })
 
   const showEntry = useCallback((kind: HoverEntryKind, index: number, rect: DOMRect) => {
     const s = latestRef.current
@@ -52,7 +49,7 @@ export function useEntryHover(sources: HoverEntrySources, enabled: boolean): Use
       return
     }
     show({ kind, index, rect })
-  }, [show, hide])
+  }, [latestRef, show, hide])
 
   // Turning the hover off drops a pending open as well as a shown bubble.
   useEffect(() => {
