@@ -1,5 +1,5 @@
 {
-  "version": "0.1.98",
+  "version": "0.1.99",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -659,6 +659,11 @@
         "missedBarMovedOnLine": "直さず次いっちゃったの: {{count}}こ",
         "missedBarNoDetail": "この記録、打鍵ごとの詳細ないみたい"
       }
+    },
+    "hoverDetails": {
+      "none": "なしっしょ",
+      "on": "オン☆",
+      "off": "オフ〜"
     }
   },
   "error": {
@@ -1865,6 +1870,7 @@
     "splitKeyMode": "Shiftキー分離っしょ",
     "quickSelect": "爆速選択☆",
     "layerHoverPreview": "レイヤー勝手にチラ見せ☆",
+    "entryHoverPreview": "お気に入り♡ホバーで中身チラ見せ☆",
     "keyEditorZoom": "エディタズーム☆"
   },
   "hub": {

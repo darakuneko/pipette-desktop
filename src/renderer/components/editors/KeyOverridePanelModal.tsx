@@ -2,7 +2,6 @@
 
 import { useTranslation } from 'react-i18next'
 import type { KeyOverrideEntry, TapDanceEntry } from '../../../shared/types/protocol'
-import { KeyOverrideOptions } from '../../../shared/types/protocol'
 import type { MacroAction } from '../../../preload/macro'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import type { KeycodeEntryModalAdapter } from '../../hooks/useKeycodeEntryModal'
@@ -11,6 +10,7 @@ import { KeycodeEntryModalShell, pickHubProps } from './KeycodeEntryModalShell'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 import { LayerPicker } from './LayerPicker'
 import { ModifierPicker } from './ModifierPicker'
+import { KEY_OVERRIDE_OPTION_ENTRIES } from '../keycodes/entry-flag-names'
 
 interface Props {
   entries: KeyOverrideEntry[]
@@ -43,9 +43,7 @@ const modifierFields: { key: ModifierFieldName; labelKey: string }[] = [
   { key: 'suppressedMods', labelKey: 'editor.keyOverride.suppressedMods' },
 ]
 
-const optionEntries = Object.entries(KeyOverrideOptions).filter(
-  (pair): pair is [string, number] => typeof pair[1] === 'number',
-)
+const optionEntries = KEY_OVERRIDE_OPTION_ENTRIES
 
 function isConfigured(entry: KeyOverrideEntry): boolean {
   return entry.triggerKey !== 0 || entry.triggerMods !== 0

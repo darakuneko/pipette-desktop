@@ -42,6 +42,7 @@ import { decodeLayoutOptions } from '../shared/kle/layout-options'
 import { resolveConnectedTappingTerm, resolveTappingTerm } from '../shared/qmk-settings-tapping-term'
 import { deserializeAllMacros } from '../preload/macro'
 import { EMPTY_UID } from '../shared/constants/protocol'
+import { EntryHoverPreviewContext } from './components/keycodes/entry-hover-context'
 
 export { type PipetteFileKeyboard, type PipetteFileEntry } from './app-types'
 
@@ -394,94 +395,99 @@ export function App() {
   // --- Connected view ---
 
   return (
-    <div className="relative flex h-screen flex-col bg-surface text-content">
-      <AppBanners device={device} keyboard={keyboard} lifecycle={lifecycle} />
+    // The keymap pane and every key picker's tile tabs — including the
+    // pickers inside the editor and app-level modals — read the entry hover
+    // toggle from here.
+    <EntryHoverPreviewContext.Provider value={devicePrefs.entryHoverPreview}>
+      <div className="relative flex h-screen flex-col bg-surface text-content">
+        <AppBanners device={device} keyboard={keyboard} lifecycle={lifecycle} />
 
-      {(keyboard.loading || deviceSyncing || phase2SyncPending || migration.migrationChecking || migration.migrating) && (
-        <ConnectingOverlay
-          deviceName={device.connectedDevice.productName || 'Unknown'}
-          deviceId={formatDeviceId(device.connectedDevice)}
-          loadingProgress={keyboard.loading ? keyboard.loadingProgress : migration.migrating ? migration.migrationProgress ?? undefined : undefined}
-          syncProgress={deviceSyncing ? sync.progress : undefined}
-          syncOnly={!keyboard.loading && !migration.migrating && !migration.migrationChecking}
-        />
-      )}
-
-      <div className="flex min-h-0 flex-1 flex-col">
-        {analyticsPageOpen ? (
-          <AnalyzePage
-            initialUid={keyboard.uid && keyboard.uid !== EMPTY_UID ? keyboard.uid : undefined}
-            onBack={handleAnalyticsBack}
-            connectedTappingTerm={connectedTappingTerm}
-            onOpenRunTimeline={openRunTimeline}
-          />
-        ) : (
-          <AppEditorSurface
-            device={device}
-            keyboard={keyboard}
-            editorUI={editorUI}
-            devicePrefs={devicePrefs}
-            appConfig={appConfig}
-            hub={hub}
-            layoutStore={layoutStore}
-            fileHandlers={fileHandlers}
-            entryOps={entryOps}
-            fileIO={fileIO}
-            sideload={sideload}
-            lifecycle={lifecycle}
-            deviceName={deviceName}
-            effectiveIsDummy={effectiveIsDummy}
-            decodedLayoutOptions={decodedLayoutOptions}
-            tappingTerm={tappingTerm}
-            viewExitTransition={viewExitTransition}
-            editorRef={keymapEditorRef}
-            requestKeymapApply={requestKeymapApply}
-            pendingKeymapApply={pendingKeymapApply}
-            handleKeymapApplyConfirm={handleKeymapApplyConfirm}
-            handleKeymapApplyCancel={handleKeymapApplyCancel}
-            keymapApplyError={keymapApplyError}
-            keymapApplyBusy={keymapApplyBusy}
-            recKeystroke={recKeystroke}
-            onTypingTestViewOnlyChange={onTypingTestViewOnlyChange}
-            handleViewAnalytics={handleViewAnalytics}
-            timelineHandoff={timelineHandoff}
-            setTypingTestRunning={setTypingTestRunning}
+        {(keyboard.loading || deviceSyncing || phase2SyncPending || migration.migrationChecking || migration.migrating) && (
+          <ConnectingOverlay
+            deviceName={device.connectedDevice.productName || 'Unknown'}
+            deviceId={formatDeviceId(device.connectedDevice)}
+            loadingProgress={keyboard.loading ? keyboard.loadingProgress : migration.migrating ? migration.migrationProgress ?? undefined : undefined}
+            syncProgress={deviceSyncing ? sync.progress : undefined}
+            syncOnly={!keyboard.loading && !migration.migrating && !migration.migrationChecking}
           />
         )}
 
-        <AppErrorBanner fileIO={fileIO} sideload={sideload} layoutStore={layoutStore} />
+        <div className="flex min-h-0 flex-1 flex-col">
+          {analyticsPageOpen ? (
+            <AnalyzePage
+              initialUid={keyboard.uid && keyboard.uid !== EMPTY_UID ? keyboard.uid : undefined}
+              onBack={handleAnalyticsBack}
+              connectedTappingTerm={connectedTappingTerm}
+              onOpenRunTimeline={openRunTimeline}
+            />
+          ) : (
+            <AppEditorSurface
+              device={device}
+              keyboard={keyboard}
+              editorUI={editorUI}
+              devicePrefs={devicePrefs}
+              appConfig={appConfig}
+              hub={hub}
+              layoutStore={layoutStore}
+              fileHandlers={fileHandlers}
+              entryOps={entryOps}
+              fileIO={fileIO}
+              sideload={sideload}
+              lifecycle={lifecycle}
+              deviceName={deviceName}
+              effectiveIsDummy={effectiveIsDummy}
+              decodedLayoutOptions={decodedLayoutOptions}
+              tappingTerm={tappingTerm}
+              viewExitTransition={viewExitTransition}
+              editorRef={keymapEditorRef}
+              requestKeymapApply={requestKeymapApply}
+              pendingKeymapApply={pendingKeymapApply}
+              handleKeymapApplyConfirm={handleKeymapApplyConfirm}
+              handleKeymapApplyCancel={handleKeymapApplyCancel}
+              keymapApplyError={keymapApplyError}
+              keymapApplyBusy={keymapApplyBusy}
+              recKeystroke={recKeystroke}
+              onTypingTestViewOnlyChange={onTypingTestViewOnlyChange}
+              handleViewAnalytics={handleViewAnalytics}
+              timelineHandoff={timelineHandoff}
+              setTypingTestRunning={setTypingTestRunning}
+            />
+          )}
+
+          <AppErrorBanner fileIO={fileIO} sideload={sideload} layoutStore={layoutStore} />
+        </div>
+
+        <AppStatusBar
+          connectedDevice={device.connectedDevice}
+          keyboard={keyboard}
+          editorUI={editorUI}
+          devicePrefs={devicePrefs}
+          sync={sync}
+          hub={hub}
+          themeCtx={themeCtx}
+          lifecycle={lifecycle}
+          analyticsPageOpen={analyticsPageOpen}
+          onStatusBarViewOnlyChange={onStatusBarViewOnlyChange}
+          onStatusBarTypingTestModeChange={onStatusBarTypingTestModeChange}
+          handleViewAnalytics={handleViewAnalytics}
+          handleTypingRecordEnabledChange={handleTypingRecordEnabledChange}
+          handleKeyboardLayoutSelectChange={handleKeyboardLayoutSelectChange}
+          keymapApplyBusy={keymapApplyBusy}
+          typingTestRunning={typingTestRunning}
+        />
+
+        <AppModals
+          device={device}
+          keyboard={keyboard}
+          editorUI={editorUI}
+          devicePrefs={devicePrefs}
+          hub={hub}
+          startupNotification={startupNotification}
+          missingKeyLabel={missingKeyLabel}
+          decodedLayoutOptions={decodedLayoutOptions}
+          deserializedMacros={deserializedMacros}
+        />
       </div>
-
-      <AppStatusBar
-        connectedDevice={device.connectedDevice}
-        keyboard={keyboard}
-        editorUI={editorUI}
-        devicePrefs={devicePrefs}
-        sync={sync}
-        hub={hub}
-        themeCtx={themeCtx}
-        lifecycle={lifecycle}
-        analyticsPageOpen={analyticsPageOpen}
-        onStatusBarViewOnlyChange={onStatusBarViewOnlyChange}
-        onStatusBarTypingTestModeChange={onStatusBarTypingTestModeChange}
-        handleViewAnalytics={handleViewAnalytics}
-        handleTypingRecordEnabledChange={handleTypingRecordEnabledChange}
-        handleKeyboardLayoutSelectChange={handleKeyboardLayoutSelectChange}
-        keymapApplyBusy={keymapApplyBusy}
-        typingTestRunning={typingTestRunning}
-      />
-
-      <AppModals
-        device={device}
-        keyboard={keyboard}
-        editorUI={editorUI}
-        devicePrefs={devicePrefs}
-        hub={hub}
-        startupNotification={startupNotification}
-        missingKeyLabel={missingKeyLabel}
-        decodedLayoutOptions={decodedLayoutOptions}
-        deserializedMacros={deserializedMacros}
-      />
-    </div>
+    </EntryHoverPreviewContext.Provider>
   )
 }

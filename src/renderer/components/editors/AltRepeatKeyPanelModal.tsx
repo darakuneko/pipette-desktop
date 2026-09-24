@@ -2,7 +2,6 @@
 
 import { useTranslation } from 'react-i18next'
 import type { AltRepeatKeyEntry, TapDanceEntry } from '../../../shared/types/protocol'
-import { AltRepeatKeyOptions } from '../../../shared/types/protocol'
 import type { MacroAction } from '../../../preload/macro'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import type { KeycodeEntryModalAdapter } from '../../hooks/useKeycodeEntryModal'
@@ -10,6 +9,7 @@ import { useKeycodeEntryModal, useEnabledEntryCallbacks } from '../../hooks/useK
 import { KeycodeEntryModalShell, pickHubProps } from './KeycodeEntryModalShell'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 import { ModifierPicker } from './ModifierPicker'
+import { ALT_REPEAT_KEY_OPTION_ENTRIES } from '../keycodes/entry-flag-names'
 
 interface Props {
   entries: AltRepeatKeyEntry[]
@@ -34,9 +34,7 @@ interface Props {
   vialProtocol: number
 }
 
-const optionEntries = Object.entries(AltRepeatKeyOptions).filter(
-  (pair): pair is [string, number] => typeof pair[1] === 'number',
-)
+const optionEntries = ALT_REPEAT_KEY_OPTION_ENTRIES
 
 function isConfigured(entry: AltRepeatKeyEntry): boolean {
   return entry.lastKey !== 0

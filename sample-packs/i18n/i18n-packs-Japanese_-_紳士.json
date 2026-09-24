@@ -1,5 +1,5 @@
 {
-  "version": "0.1.98",
+  "version": "0.1.99",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -659,6 +659,11 @@
         "missedBarMovedOnLine": "未修正のまま進まれた回数: {{count}}",
         "missedBarNoDetail": "この記録には打鍵ごとの詳細情報がございません"
       }
+    },
+    "hoverDetails": {
+      "none": "ございません",
+      "on": "有効",
+      "off": "無効"
     }
   },
   "error": {
@@ -1865,6 +1870,7 @@
     "splitKeyMode": "Shift を分離",
     "quickSelect": "即座の選択",
     "layerHoverPreview": "階層の自動内覧",
+    "entryHoverPreview": "お気に入りの詳細内覧",
     "keyEditorZoom": "エディタ表示倍率"
   },
   "hub": {

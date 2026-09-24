@@ -15,7 +15,9 @@ type OverlayTab = 'layout' | 'tools' | 'data'
 const TAB_BASE = 'flex-1 py-1.5 text-xs font-medium transition-colors border-b-2'
 const FOOTER_BTN = 'rounded border border-edge px-2.5 py-1 text-xs text-content-secondary hover:text-content hover:bg-surface-dim transition-colors'
 
-const HALF_ROW_CLASS = 'grid grid-cols-2 gap-2'
+// `contain-inline-size`: a half's label wraps inside its card instead of
+// widening the panel.
+const HALF_ROW_CLASS = 'grid grid-cols-2 gap-2 contain-inline-size'
 
 /** Switch card for one half of a two-column row. The label may wrap
  *  (`min-w-0`) while the switch keeps its size (`shrink-0`). Test ids are
@@ -69,6 +71,9 @@ interface Props {
   // Layer hover preview on the keymap editor (persisted per keyboard).
   layerHoverPreview?: boolean
   onLayerHoverPreviewChange?: (enabled: boolean) => void
+  // Fav Hover Details: entry hover bubble on the keymap and picker tiles (persisted per keyboard).
+  entryHoverPreview?: boolean
+  onEntryHoverPreviewChange?: (enabled: boolean) => void
   splitKeyMode?: SplitKeyMode
   onSplitKeyModeChange?: (mode: SplitKeyMode) => void
   quickSelect?: boolean
@@ -112,6 +117,8 @@ export function KeycodesOverlayPanel({
   onViewMatrixWiresChange,
   layerHoverPreview = true,
   onLayerHoverPreviewChange,
+  entryHoverPreview = true,
+  onEntryHoverPreviewChange,
   splitKeyMode,
   onSplitKeyModeChange,
   quickSelect,
@@ -363,6 +370,26 @@ export function KeycodesOverlayPanel({
                   data-testid="overlay-split-key-mode-toggle"
                 >
                   <span className={toggleKnobClass(splitKeyMode === 'split')} />
+                </button>
+              </div>
+            )}
+
+            {/* Entry hover bubble toggle */}
+            {onEntryHoverPreviewChange && (
+              <div className={ROW_CLASS} data-testid="overlay-entry-hover-preview-row">
+                <span className="text-sm font-medium text-content">
+                  {t('editorSettings.entryHoverPreview')}
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={entryHoverPreview}
+                  aria-label={t('editorSettings.entryHoverPreview')}
+                  className={toggleTrackClass(entryHoverPreview)}
+                  onClick={() => onEntryHoverPreviewChange(!entryHoverPreview)}
+                  data-testid="overlay-entry-hover-preview-toggle"
+                >
+                  <span className={toggleKnobClass(entryHoverPreview)} />
                 </button>
               </div>
             )}

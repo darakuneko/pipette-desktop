@@ -2,7 +2,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, fireEvent } from '@testing-library/react'
 import { EncoderWidget } from '../EncoderWidget'
 import { KEY_SELECTED_COLOR, KEY_BORDER_COLOR, KEY_BG_COLOR, KEY_TEXT_COLOR, KEY_REMAP_COLOR, KEY_INVERTED_TEXT_COLOR } from '../constants'
 import type { KleKey } from '../../../../shared/kle/types'
@@ -361,6 +361,43 @@ describe('EncoderWidget', () => {
         expect(texts[0].getAttribute('fill')).toBe(KEY_REMAP_COLOR)
         expect(texts[1].getAttribute('fill')).toBe(KEY_TEXT_COLOR)
       })
+    })
+  })
+
+  describe('hover callbacks', () => {
+    it.each([
+      ['a plain', 'KC_A', false],
+      ['a masked', 'LT0(KC_A)', true],
+    ])('reports %s encoder direction with its index, direction and rect', (_label, keycode, masked) => {
+      mockIsMask = masked
+      const onHover = vi.fn()
+      const onHoverEnd = vi.fn()
+      const { container } = render(
+        <svg>
+          <EncoderWidget kleKey={makeKey({ encoderIdx: 2, encoderDir: 1 })} keycode={keycode} onHover={onHover} onHoverEnd={onHoverEnd} />
+        </svg>,
+      )
+      const g = container.querySelector('[data-encoder-pos="2,1"]')!
+      fireEvent.mouseEnter(g)
+      expect(onHover).toHaveBeenCalledTimes(1)
+      expect(onHover.mock.calls[0][0]).toBe(2)
+      expect(onHover.mock.calls[0][1]).toBe(1)
+      expect(onHover.mock.calls[0][2]).toEqual(expect.objectContaining({ top: expect.any(Number), left: expect.any(Number) }))
+      fireEvent.mouseLeave(g)
+      expect(onHoverEnd).toHaveBeenCalledTimes(1)
+    })
+
+    it('does nothing without hover callbacks', () => {
+      const { container } = render(
+        <svg>
+          <EncoderWidget kleKey={makeKey()} keycode="KC_A" />
+        </svg>,
+      )
+      const g = container.querySelector('[data-encoder-pos="0,0"]')!
+      expect(() => {
+        fireEvent.mouseEnter(g)
+        fireEvent.mouseLeave(g)
+      }).not.toThrow()
     })
   })
 })

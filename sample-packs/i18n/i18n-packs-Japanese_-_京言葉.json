@@ -1,5 +1,5 @@
 {
-  "version": "0.1.98",
+  "version": "0.1.99",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -659,6 +659,11 @@
         "missedBarMovedOnLine": "直さんまま次へ行かはったんは: {{count}}どす",
         "missedBarNoDetail": "この記録には打鍵ごとの詳細がおへんどす"
       }
+    },
+    "hoverDetails": {
+      "none": "あらしまへん",
+      "on": "入り",
+      "off": "切り"
     }
   },
   "error": {
@@ -1865,6 +1870,7 @@
     "splitKeyMode": "キーピッカーでShiftキーを分離",
     "quickSelect": "キーの即時選択",
     "layerHoverPreview": "レイヤーの自動お披露目",
+    "entryHoverPreview": "お気に入りの中身をホバーでお披露目",
     "keyEditorZoom": "エディタズーム"
   },
   "hub": {

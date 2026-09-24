@@ -1,22 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import { MODIFIER_LABELS } from '../keycodes/entry-flag-names'
+
 interface Props {
   value: number
   onChange: (value: number) => void
   label: string
   horizontal?: boolean
 }
-
-const MODIFIER_LABELS = [
-  'LCtrl',
-  'LShift',
-  'LAlt',
-  'LGui',
-  'RCtrl',
-  'RShift',
-  'RAlt',
-  'RGui',
-] as const
 
 export function ModifierPicker({ value, onChange, label, horizontal }: Props) {
   const handleToggle = (bit: number) => {

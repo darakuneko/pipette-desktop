@@ -5,8 +5,9 @@
 // layer's contents without touching `currentLayer`, the selection or the
 // undo history. Leaving the key restores the real layer immediately.
 //
-// Only `KeyWidget` emits hover callbacks, so layer keys placed on encoders
-// never start a preview.
+// Only key hovers reach this hook — `KeymapPrimaryPane` sends encoder
+// hovers to the entry hover bubble alone — so layer keys placed on encoders never
+// start a preview.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { serialize } from '../../../shared/keycodes/keycodes'
@@ -29,12 +30,15 @@ export interface LayerHoverPreviewInput {
   layerLabel: (layer: number) => string
   /** Changes when the connected keyboard changes. */
   deviceKey?: string
-  /** True while the preview is turned off, the Key Popover is open or the
-   *  picker holds paste targets. */
+  /** True while the Key Popover is open or the picker holds paste
+   *  targets. `KeymapPrimaryPane` hides the entry hover bubble while it
+   *  is true as well. */
   blocked: boolean
+  /** The Auto Layer Preview toggle. Omitted means on. */
+  enabled?: boolean
 }
 
-export interface UseLayerHoverPreviewOptions extends Omit<LayerHoverPreviewInput, 'blocked' | 'layerLabel'> {
+export interface UseLayerHoverPreviewOptions extends Omit<LayerHoverPreviewInput, 'blocked' | 'enabled' | 'layerLabel'> {
   remapLabel?: (qmkId: string) => string
   /** Build raw (never remapped) maps, matching the Base tab's own data. */
   raw: boolean

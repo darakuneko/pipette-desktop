@@ -3,8 +3,13 @@
 import { useCallback, type RefObject } from 'react'
 import { KeyboardPane } from './KeyboardPane'
 import { useLayerHoverPreview, type LayerHoverPreviewInput } from './use-layer-hover-preview'
+import { useKeymapEntryHover } from './use-keymap-entry-hover'
+import { useEntryHoverPreviewEnabled } from '../keycodes/entry-hover-context'
+import { EntryHoverBubble } from '../keycodes/EntryHoverBubble'
 import { KeymapPackTabs, KeymapPackApplyButton, type KeymapPackTab } from './KeymapPackTabs'
 import type { KleKey } from '../../../shared/kle/types'
+import type { MacroAction } from '../../../preload/macro'
+import type { TapDanceEntry } from '../../../shared/types/protocol'
 import type { KeyFlashState } from '../keyboard/key-flash'
 import type { UseViewMatrixModeReturn } from './useViewMatrixMode'
 
@@ -90,8 +95,14 @@ export interface KeymapPrimaryPaneProps {
   handlePackTabChange: (tab: KeymapPackTab) => void
   keymapPackName?: string
   /** Inputs for the layer hover preview on the editable branch. Omitted
-   *  means no preview. */
+   *  means no hover handling at all — neither the preview nor the entry
+   *  bubble, which shares these inputs. */
   layerHoverPreview?: LayerHoverPreviewInput
+  /** Macros and Tap Dance entries for the entry hover bubble on the
+   *  editable branch. Whether the bubble is on comes from
+   *  `EntryHoverPreviewContext`. */
+  hoverMacros?: MacroAction[][]
+  hoverTapDance?: TapDanceEntry[]
 }
 
 /** `handler` with `cancel()` run first, kept referentially stable while
@@ -121,20 +132,38 @@ export function KeymapPrimaryPane({
   primaryRemappedKeys, primaryRemappedEncoders, flash, viewMatrixMode, multiSelectedKeys,
   viewMatrixLabelOverrides, viewMatrixDuplicateKeyColors, primaryRemapLabel, matrixWires, auxUndoHandlers,
   handleViewMatrixKeyClick, handleKeyClick, handleKeyDoubleClick, handleEncoderClick, handleEncoderDoubleClick,
-  handleDeselect, handlePackTabChange, keymapPackName, layerHoverPreview,
+  handleDeselect, handlePackTabChange, keymapPackName, layerHoverPreview, hoverMacros, hoverTapDance,
 }: KeymapPrimaryPaneProps): JSX.Element {
-  const { layers, currentLayer, keymap, encoderLayout, encoderCount, isRemapped, layerLabel, deviceKey, blocked } =
+  const { layers, currentLayer, keymap, encoderLayout, encoderCount, isRemapped, layerLabel, deviceKey, blocked, enabled = true } =
     layerHoverPreview ?? NO_LAYER_HOVER_PREVIEW
   const onBaseTab = showPackTabs && packTab === 'base'
+  const surfaceKey = showPackTabs ? packTab : 'none'
+  // Modes both hover surfaces stay out of; each also has its own toggle.
+  const hoverBlocked = blocked || viewMatrixMode.active || multiSelectedKeys.size > 0 || (showPackTabs && packTab === 'pack')
   const preview = useLayerHoverPreview({
     layers, currentLayer, keymap, encoderLayout, encoderCount, isRemapped, deviceKey,
     remapLabel,
     raw: onBaseTab,
-    disabled: blocked || viewMatrixMode.active || multiSelectedKeys.size > 0 || (showPackTabs && packTab === 'pack'),
-    surfaceKey: showPackTabs ? packTab : 'none',
+    disabled: hoverBlocked || !enabled,
+    surfaceKey,
     realKeycodes: primaryKeycodes,
     realRemappedKeys: primaryRemappedKeys,
   })
+  const entryHoverEnabled = useEntryHoverPreviewEnabled()
+  const entryHover = useKeymapEntryHover({
+    macros: hoverMacros, tapDance: hoverTapDance, enabled: entryHoverEnabled, disabled: hoverBlocked,
+    currentLayer, keymap, encoderLayout, deviceKey, surfaceKey,
+  })
+  const { onKeyHover: layerKeyHover, onKeyHoverEnd: layerKeyHoverEnd } = preview
+  const { onKeyHover: entryKeyHover, hide: entryHide } = entryHover
+  const onKeyHover = useCallback((key: KleKey, keycode: string, rect: DOMRect) => {
+    layerKeyHover(key)
+    entryKeyHover(key, keycode, rect)
+  }, [layerKeyHover, entryKeyHover])
+  const onKeyHoverEnd = useCallback(() => {
+    layerKeyHoverEnd()
+    entryHide()
+  }, [layerKeyHoverEnd, entryHide])
   const { previewLayer } = preview
   const previewing = previewLayer !== null
   const previewLabel = previewLayer === null ? undefined : layerLabel(previewLayer)
@@ -217,15 +246,18 @@ export function KeymapPrimaryPane({
           onKeyDoubleClick={viewMatrixMode.active ? undefined : onKeyDoubleClick}
           onEncoderClick={viewMatrixMode.active ? undefined : onEncoderClick}
           onEncoderDoubleClick={viewMatrixMode.active ? undefined : onEncoderDoubleClick}
-          onKeyHover={layerHoverPreview ? preview.onKeyHover : undefined}
-          onKeyHoverEnd={layerHoverPreview ? preview.onKeyHoverEnd : undefined}
+          onKeyHover={layerHoverPreview ? onKeyHover : undefined}
+          onKeyHoverEnd={layerHoverPreview ? onKeyHoverEnd : undefined}
           hoverOuterPartOnly={!!layerHoverPreview}
+          onEncoderHover={layerHoverPreview ? entryHover.onEncoderHover : undefined}
+          onEncoderHoverEnd={layerHoverPreview ? entryHide : undefined}
           onDeselect={viewMatrixMode.active ? viewMatrixMode.clearSelection : handleDeselect} contentRef={contentRef}
         />
       )}
       {showPackTabs && (
         <KeymapPackTabs activeTab={packTab} onTabChange={handlePackTabChange} packName={keymapPackName ?? ''} />
       )}
+      <EntryHoverBubble bubble={entryHover.bubble} />
     </div>
   )
 }

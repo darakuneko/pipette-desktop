@@ -17,6 +17,7 @@ vi.mock('react-i18next', () => ({
         'editorSettings.layerHoverPreview': 'Auto Layer Preview',
         'editorSettings.quickSelect': 'Instant Key Selection',
         'editorSettings.splitKeyMode': 'Separate Shift in Key Picker',
+        'editorSettings.entryHoverPreview': 'Fav Hover Details',
         'editor.keyTester.title': 'Key Tester',
         'editor.viewMatrix.label': 'View Matrix',
         'editor.viewMatrix.edit': 'Edit',
@@ -444,6 +445,7 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
     onToggleViewMatrixMode: vi.fn(),
     splitKeyMode: 'split' as const,
     onSplitKeyModeChange: vi.fn(),
+    onEntryHoverPreviewChange: vi.fn(),
   }
 
   function rowOrder(container: HTMLElement): string[] {
@@ -461,6 +463,7 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
       'overlay-matrix-row',
       'overlay-view-matrix-row',
       'overlay-split-key-mode-row',
+      'overlay-entry-hover-preview-row',
       'overlay-lock-row',
     ])
     const first = screen.getByTestId('overlay-auto-advance-row').parentElement!
@@ -470,7 +473,12 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
     expect(screen.getByTestId('overlay-matrix-row').parentElement).toBe(second)
     expect(second.className).toContain('grid-cols-2')
     expect(screen.getByTestId('overlay-view-matrix-row').parentElement?.className).not.toContain('grid-cols-2')
-    expect(screen.getByTestId('overlay-split-key-mode-row').parentElement?.className).not.toContain('grid-cols-2')
+    // Separate Shift and Fav Hover Details each take a full-width row.
+    for (const id of ['overlay-split-key-mode-row', 'overlay-entry-hover-preview-row']) {
+      expect(screen.getByTestId(id).parentElement?.className).not.toContain('grid-cols-2')
+    }
+    // Every half-width row lets its labels wrap instead of widening the panel.
+    for (const row of [first, second]) expect(row.className).toContain('contain-inline-size')
   })
 
   it('keeps each half-width label wrappable and its switch from shrinking', () => {
@@ -528,5 +536,46 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
     const grids = container.querySelectorAll('.grid-cols-2')
     expect(grids).toHaveLength(1)
     expect(grids[0].contains(screen.getByTestId('overlay-auto-advance-row'))).toBe(true)
+  })
+
+  it('shows Fav Hover Details on by default in its own row and flips it', () => {
+    const onEntryHoverPreviewChange = vi.fn()
+    render(<KeycodesOverlayPanel {...ALL_ROWS} onEntryHoverPreviewChange={onEntryHoverPreviewChange} />)
+    const toggle = screen.getByRole('switch', { name: 'Fav Hover Details' })
+    expect(toggle).toBe(screen.getByTestId('overlay-entry-hover-preview-toggle'))
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+    fireEvent.click(toggle)
+    expect(onEntryHoverPreviewChange).toHaveBeenCalledWith(false)
+  })
+
+  it('reflects Fav Hover Details off and turns it back on', () => {
+    const onEntryHoverPreviewChange = vi.fn()
+    render(<KeycodesOverlayPanel {...ALL_ROWS} entryHoverPreview={false} onEntryHoverPreviewChange={onEntryHoverPreviewChange} />)
+    const toggle = screen.getByTestId('overlay-entry-hover-preview-toggle')
+    expect(toggle.getAttribute('aria-checked')).toBe('false')
+    fireEvent.click(toggle)
+    expect(onEntryHoverPreviewChange).toHaveBeenCalledWith(true)
+  })
+
+  it('keeps the Separate Shift test ids and toggle behavior in its full-width row', () => {
+    const onSplitKeyModeChange = vi.fn()
+    render(<KeycodesOverlayPanel {...ALL_ROWS} onSplitKeyModeChange={onSplitKeyModeChange} />)
+    const toggle = screen.getByTestId('overlay-split-key-mode-toggle')
+    expect(screen.getByTestId('overlay-split-key-mode-row').contains(toggle)).toBe(true)
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+    fireEvent.click(toggle)
+    expect(onSplitKeyModeChange).toHaveBeenCalledWith('flat')
+  })
+
+  it('shows Fav Hover Details without Separate Shift', () => {
+    render(<KeycodesOverlayPanel {...ALL_ROWS} splitKeyMode={undefined} />)
+    expect(screen.queryByTestId('overlay-split-key-mode-row')).not.toBeInTheDocument()
+    expect(screen.getByTestId('overlay-entry-hover-preview-row')).toBeInTheDocument()
+  })
+
+  it('omits Fav Hover Details without a change handler', () => {
+    render(<KeycodesOverlayPanel {...ALL_ROWS} onEntryHoverPreviewChange={undefined} />)
+    expect(screen.queryByTestId('overlay-entry-hover-preview-row')).not.toBeInTheDocument()
+    expect(screen.getByTestId('overlay-split-key-mode-row')).toBeInTheDocument()
   })
 })
