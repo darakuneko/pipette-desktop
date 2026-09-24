@@ -612,7 +612,7 @@ describe('sync-service', () => {
 
       // The re-scheduled flush can fire inside the next advance, once the
       // manual sync has released the lock; it must not pick up the slow
-      // listFiles, whose timer nothing would advance afterwards.
+      // listFiles, whose 30 s timer the trailing 10 s advance could never reach.
       mockListFiles.mockResolvedValue([])
       await vi.advanceTimersByTimeAsync(30_000)
       await syncPromise
