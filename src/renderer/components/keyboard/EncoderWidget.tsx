@@ -47,6 +47,10 @@ interface Props {
   remapped?: boolean
   onClick?: (key: KleKey, direction: number, maskClicked: boolean) => void
   onDoubleClick?: (key: KleKey, direction: number, rect: DOMRect, maskClicked: boolean) => void
+  /** Pointer entered this direction's half; `rect` is its viewport rect.
+   *  Omitted means no hover handling at all. */
+  onHover?: (encoderIdx: number, direction: number, rect: DOMRect) => void
+  onHoverEnd?: () => void
   scale?: number
 }
 
@@ -61,6 +65,8 @@ function EncoderWidgetInner({
   remapped,
   onClick,
   onDoubleClick,
+  onHover,
+  onHoverEnd,
   scale = 1,
 }: Props) {
   const clipId = useId()
@@ -100,6 +106,10 @@ function EncoderWidgetInner({
     if (onDoubleClick) { e.stopPropagation(); onDoubleClick(kleKey, kleKey.encoderDir, e.currentTarget.getBoundingClientRect(), false) }
   }
 
+  const handleMouseEnter = onHover
+    ? (e: React.MouseEvent<SVGGElement>) => onHover(kleKey.encoderIdx, kleKey.encoderDir, e.currentTarget.getBoundingClientRect())
+    : undefined
+
   // How far into the shared `key-flash` timeline this overlay is joining —
   // same negative `animation-delay` trick as `KeyWidget` (see there for
   // the full rationale).
@@ -128,6 +138,8 @@ function EncoderWidgetInner({
         data-encoder-pos={`${kleKey.encoderIdx},${kleKey.encoderDir}`}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={onHoverEnd}
         style={{ cursor: onClick ? 'pointer' : 'default' }}
       >
         <circle cx={cx} cy={cy} r={r} fill={fillColor}
@@ -176,6 +188,8 @@ function EncoderWidgetInner({
       data-encoder-pos={`${kleKey.encoderIdx},${kleKey.encoderDir}`}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={onHoverEnd}
       style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
       <defs>

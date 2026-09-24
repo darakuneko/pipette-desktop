@@ -458,6 +458,8 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --max-width-keycode-panel: 560px;    /* KeymapEditor layout overlay panel */
   --max-width-modal-vw: 90vw;          /* SM/MD/LG modal viewport constraint */
   --max-width-modal-xl-vw: 95vw;       /* XL/2XL modal viewport constraint */
+  --max-width-tooltip-viewport: calc(100vw - 16px);  /* MacroHoverBubble — the viewport minus Tooltip's 8px VIEWPORT_MARGIN on each side */
+  --max-height-tooltip-viewport: calc(100vh - 16px); /* MacroHoverBubble */
   --min-height-device-list: 340px;     /* DeviceSelector, KeymapEditor device list */
   --max-height-device-list: 340px;     /* DeviceSelector, KeymapEditor device list */
   --min-height-word-list: 100px;       /* TypingTestPane word list */
@@ -487,7 +489,7 @@ label:has(> input[type="radio"]:not(:disabled)) {
 
   /* Z-index */
   --z-60: 60; /* AnalyzeExportModal dropdown overlay */
-  --z-70: 70; /* WordTimelineView hover tooltip, above its own z-60 modal */
+  --z-70: 70; /* WordTimelineView hover tooltip, above its own z-60 modal; MacroHoverBubble, above every modal tier */
 }
 
 @keyframes confirm-flash {

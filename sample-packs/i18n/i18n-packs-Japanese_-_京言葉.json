@@ -1,5 +1,5 @@
 {
-  "version": "0.1.98",
+  "version": "0.1.99",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -1865,6 +1865,7 @@
     "splitKeyMode": "キーピッカーでShiftキーを分離",
     "quickSelect": "キーの即時選択",
     "layerHoverPreview": "レイヤーの自動お披露目",
+    "macroHoverPreview": "マクロの中身お披露目",
     "keyEditorZoom": "エディタズーム"
   },
   "hub": {

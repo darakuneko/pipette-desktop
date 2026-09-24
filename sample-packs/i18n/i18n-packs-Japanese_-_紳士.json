@@ -1,5 +1,5 @@
 {
-  "version": "0.1.98",
+  "version": "0.1.99",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -1865,6 +1865,7 @@
     "splitKeyMode": "Shift を分離",
     "quickSelect": "即座の選択",
     "layerHoverPreview": "階層の自動内覧",
+    "macroHoverPreview": "呪文の内覧",
     "keyEditorZoom": "エディタ表示倍率"
   },
   "hub": {

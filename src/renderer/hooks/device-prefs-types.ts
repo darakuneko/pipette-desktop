@@ -45,6 +45,9 @@ export interface UseDevicePrefsReturn {
   /** Layer hover preview in the keymap editor — see
    *  `PipetteSettings.layerHoverPreview`. Defaults to true. */
   layerHoverPreview: boolean
+  /** Macro hover bubble on the keymap and Macro tab tiles — see
+   *  `PipetteSettings.macroHoverPreview`. Defaults to true. */
+  macroHoverPreview: boolean
   appliedUid: string | null
   setLayout: (id: KeyboardLayoutId) => void
   setAutoAdvance: (enabled: boolean) => void
@@ -78,6 +81,7 @@ export interface UseDevicePrefsReturn {
   setViewMatrix: (next: Record<string, ViewMatrixCell> | undefined) => void
   setViewMatrixWires: (next: boolean) => void
   setLayerHoverPreview: (enabled: boolean) => void
+  setMacroHoverPreview: (enabled: boolean) => void
   defaultLayout: KeyboardLayoutId
   defaultAutoAdvance: boolean
   defaultLayerPanelOpen: boolean

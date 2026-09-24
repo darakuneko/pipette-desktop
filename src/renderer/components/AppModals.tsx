@@ -13,6 +13,7 @@ import { KeyOverridePanelModal } from './editors/KeyOverridePanelModal'
 import { NotificationModal } from './NotificationModal'
 import { MissingKeyLabelDialog } from './key-labels/MissingKeyLabelDialog'
 import { JaRemovedBanner } from './i18n-packs/JaRemovedBanner'
+import { MacroHoverPreviewContext } from './keycodes/macro-hover-context'
 import type { decodeLayoutOptions } from '../../shared/kle/layout-options'
 import type { deserializeAllMacros } from '../../preload/macro'
 import type { useDeviceConnection } from '../hooks/useDeviceConnection'
@@ -50,7 +51,9 @@ export function AppModals({
   const api = window.vialAPI
 
   return (
-    <>
+    // The Combo / Alt Repeat Key / Key Override pickers below read the
+    // macro hover toggle from this context.
+    <MacroHoverPreviewContext.Provider value={devicePrefs.macroHoverPreview}>
       {editorUI.showUnlockDialog && !device.isDummy && (
         <UnlockDialog
           keys={keyboard.layout?.keys ?? []}
@@ -217,6 +220,6 @@ export function AppModals({
         }}
       />
       <JaRemovedBanner />
-    </>
+    </MacroHoverPreviewContext.Provider>
   )
 }

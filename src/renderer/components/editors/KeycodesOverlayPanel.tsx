@@ -69,6 +69,9 @@ interface Props {
   // Layer hover preview on the keymap editor (persisted per keyboard).
   layerHoverPreview?: boolean
   onLayerHoverPreviewChange?: (enabled: boolean) => void
+  // Macro hover bubble on the keymap and Macro tab tiles (persisted per keyboard).
+  macroHoverPreview?: boolean
+  onMacroHoverPreviewChange?: (enabled: boolean) => void
   splitKeyMode?: SplitKeyMode
   onSplitKeyModeChange?: (mode: SplitKeyMode) => void
   quickSelect?: boolean
@@ -112,6 +115,8 @@ export function KeycodesOverlayPanel({
   onViewMatrixWiresChange,
   layerHoverPreview = true,
   onLayerHoverPreviewChange,
+  macroHoverPreview = true,
+  onMacroHoverPreviewChange,
   splitKeyMode,
   onSplitKeyModeChange,
   quickSelect,
@@ -158,6 +163,7 @@ export function KeycodesOverlayPanel({
   const hasData = dataPanel != null
   const showQuickSelect = quickSelect != null && onQuickSelectChange != null
   const showKeyTester = (hasMatrixTester || matrixMode) && onToggleMatrix != null
+  const showSplitKeyMode = splitKeyMode != null && onSplitKeyModeChange != null
   const [activeTab, setActiveTab] = useState<OverlayTab>(hasLayoutOptions ? 'layout' : hasData ? 'data' : 'tools')
   const [showLockConfirm, setShowLockConfirm] = useState(false)
 
@@ -347,23 +353,24 @@ export function KeycodesOverlayPanel({
               </div>
             )}
 
-            {/* Split key toggle */}
-            {splitKeyMode != null && onSplitKeyModeChange && (
-              <div className={ROW_CLASS} data-testid="overlay-split-key-mode-row">
-                <span className="text-sm font-medium text-content">
-                  {t('editorSettings.splitKeyMode')}
-                </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={splitKeyMode === 'split'}
-                  aria-label={t('editorSettings.splitKeyMode')}
-                  className={toggleTrackClass(splitKeyMode === 'split')}
-                  onClick={() => onSplitKeyModeChange(splitKeyMode === 'split' ? 'flat' : 'split')}
-                  data-testid="overlay-split-key-mode-toggle"
-                >
-                  <span className={toggleKnobClass(splitKeyMode === 'split')} />
-                </button>
+            {/* `contain-inline-size` keeps the long Separate Shift label
+                from widening the panel; it wraps inside its half instead. */}
+            {(showSplitKeyMode || onMacroHoverPreviewChange) && (
+              <div className={`${HALF_ROW_CLASS} contain-inline-size`}>
+                {showSplitKeyMode && (
+                  <HalfToggle
+                    label={t('editorSettings.splitKeyMode')} checked={splitKeyMode === 'split'}
+                    onToggle={() => onSplitKeyModeChange(splitKeyMode === 'split' ? 'flat' : 'split')}
+                    testId="overlay-split-key-mode"
+                  />
+                )}
+                {onMacroHoverPreviewChange && (
+                  <HalfToggle
+                    label={t('editorSettings.macroHoverPreview')} checked={macroHoverPreview}
+                    onToggle={() => onMacroHoverPreviewChange(!macroHoverPreview)}
+                    testId="overlay-macro-hover-preview"
+                  />
+                )}
               </div>
             )}
 

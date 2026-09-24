@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, fireEvent } from '@testing-library/react'
 import { KeyboardWidget } from '../KeyboardWidget'
 import { KEY_UNIT, KEY_SPACING, KEY_SIZE_RATIO, KEY_SPACING_RATIO, KEYBOARD_PADDING, KEY_TEXT_COLOR, KEY_REMAP_COLOR, keyLabelFontSize } from '../constants'
 import { buildMatrixWires, rowLabelPitch, colLabelPitch } from '../matrix-wires'
@@ -216,6 +216,31 @@ describe('KeyboardWidget flash threading', () => {
       />,
     )
     expect(container.querySelector('[data-testid="flash-overlay"]')).toBeNull()
+  })
+})
+
+describe('KeyboardWidget encoder hover threading', () => {
+  const keys: KleKey[] = [
+    makeKey({ x: 0, y: 0, row: -1, col: -1, encoderIdx: 0, encoderDir: 0 }),
+    makeKey({ x: 1, y: 0, row: -1, col: -1, encoderIdx: 0, encoderDir: 1 }),
+  ]
+  const encoderKeycodes = new Map<string, [string, string]>([['0', ['KC_B', 'KC_C']]])
+
+  it('reports hover on both plain and selected encoders', () => {
+    const onEncoderHover = vi.fn()
+    const onEncoderHoverEnd = vi.fn()
+    const { container } = render(
+      <KeyboardWidget
+        keys={keys} keycodes={new Map()} encoderKeycodes={encoderKeycodes}
+        selectedEncoder={{ idx: 0, dir: 1 }}
+        onEncoderHover={onEncoderHover} onEncoderHoverEnd={onEncoderHoverEnd}
+      />,
+    )
+    fireEvent.mouseEnter(container.querySelector('[data-encoder-pos="0,0"]')!)
+    fireEvent.mouseLeave(container.querySelector('[data-encoder-pos="0,0"]')!)
+    fireEvent.mouseEnter(container.querySelector('[data-encoder-pos="0,1"]')!)
+    expect(onEncoderHover.mock.calls.map((c) => [c[0], c[1]])).toEqual([[0, 0], [0, 1]])
+    expect(onEncoderHoverEnd).toHaveBeenCalledTimes(1)
   })
 })
 

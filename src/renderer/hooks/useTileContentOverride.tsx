@@ -5,6 +5,7 @@ import type { Keycode } from '../../shared/keycodes/keycodes'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../shared/types/protocol'
 import type { MacroAction } from '../../preload/macro'
 import { TdTileGrid, MacroTileGrid, ComboTileGrid, KeyOverrideTileGrid, AltRepeatKeyTileGrid } from '../components/keycodes/TileGrids'
+import { useMacroHoverPreviewEnabled } from '../components/keycodes/macro-hover-context'
 
 interface SettingsTabOptions {
   comboEntries?: ComboEntry[]
@@ -47,6 +48,7 @@ export function useTileContentOverride({
   onDoubleClick,
   settings,
 }: UseTileContentOverrideOptions): Record<string, React.ReactNode> | undefined {
+  const macroHoverPreview = useMacroHoverPreviewEnabled()
   return useMemo(() => {
     const hasSettings = settings?.comboEntries?.length || settings?.keyOverrideEntries?.length || settings?.altRepeatKeyEntries?.length
     if (!tapDanceEntries?.length && !deserializedMacros && !hasSettings) return undefined
@@ -57,7 +59,7 @@ export function useTileContentOverride({
       overrides.tapDance = <TdTileGrid entries={tapDanceEntries} onSelect={handleSelect} onDoubleClick={onDoubleClick} />
     }
     if (deserializedMacros) {
-      overrides.macro = <MacroTileGrid macros={deserializedMacros} onSelect={handleSelect} onDoubleClick={onDoubleClick} />
+      overrides.macro = <MacroTileGrid macros={deserializedMacros} onSelect={handleSelect} onDoubleClick={onDoubleClick} hoverPreview={macroHoverPreview} />
     }
     if (settings?.comboEntries?.length && settings.onOpenCombo) {
       overrides.combo = <ComboTileGrid entries={settings.comboEntries} onOpenCombo={settings.onOpenCombo} />
@@ -69,5 +71,5 @@ export function useTileContentOverride({
       overrides.altRepeatKey = <AltRepeatKeyTileGrid entries={settings.altRepeatKeyEntries} onOpen={settings.onOpenAltRepeatKey} />
     }
     return overrides
-  }, [tapDanceEntries, deserializedMacros, onSelect, onDoubleClick, settings?.comboEntries, settings?.onOpenCombo, settings?.keyOverrideEntries, settings?.onOpenKeyOverride, settings?.altRepeatKeyEntries, settings?.onOpenAltRepeatKey])
+  }, [tapDanceEntries, deserializedMacros, onSelect, onDoubleClick, macroHoverPreview, settings?.comboEntries, settings?.onOpenCombo, settings?.keyOverrideEntries, settings?.onOpenKeyOverride, settings?.altRepeatKeyEntries, settings?.onOpenAltRepeatKey])
 }

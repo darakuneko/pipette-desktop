@@ -5,6 +5,9 @@ import { useTranslation } from 'react-i18next'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../../shared/types/protocol'
 import { codeToLabel, findKeycode, type Keycode } from '../../../shared/keycodes/keycodes'
 import type { MacroAction } from '../../../preload/macro'
+import { MACRO_PREFIX, macroActionLabel } from './macro-action-format'
+import { useMacroHover } from './use-macro-hover'
+import { MacroHoverBubble } from './MacroHoverBubble'
 
 const MAX_VISIBLE_MACRO_ACTIONS = 6
 const GRID_COLUMNS = 12
@@ -109,22 +112,6 @@ const TD_FIELDS = [
   { key: 'onTapHold', prefix: 'TH' },
 ] as const
 
-const MACRO_PREFIX: Record<MacroAction['type'], string> = {
-  tap: 'T',
-  down: 'D',
-  up: 'U',
-  text: 'Tx',
-  delay: 'W',
-}
-
-function macroActionLabel(action: MacroAction): string {
-  switch (action.type) {
-    case 'text': return action.text
-    case 'delay': return `${action.delay}ms`
-    default: return action.keycodes.map(codeToLabel).join(' ')
-  }
-}
-
 interface TdTileGridProps {
   entries: TapDanceEntry[]
   onSelect: (keycode: Keycode) => void
@@ -178,6 +165,9 @@ interface MacroTileGridProps {
   onSelect: (keycode: Keycode) => void
   /** Double-click / Enter commit. When omitted, only onSelect runs on click. */
   onDoubleClick?: (keycode: Keycode) => void
+  /** Hovering a configured tile shows every action in a shared bubble
+   *  (`MacroHoverBubble`). */
+  hoverPreview?: boolean
 }
 
 function useMacroFitLines(gridRef: React.RefObject<HTMLDivElement | null>): number {
@@ -203,10 +193,11 @@ function useMacroFitLines(gridRef: React.RefObject<HTMLDivElement | null>): numb
   return fitLines
 }
 
-export function MacroTileGrid({ macros, onSelect, onDoubleClick }: MacroTileGridProps) {
+export function MacroTileGrid({ macros, onSelect, onDoubleClick, hoverPreview = false }: MacroTileGridProps) {
   const { t } = useTranslation()
   const gridRef = useRef<HTMLDivElement>(null)
   const fitLines = useMacroFitLines(gridRef)
+  const { bubble, showMacro, hide } = useMacroHover(macros, hoverPreview)
   return (
     <div ref={gridRef} className="grid grid-cols-12 auto-rows-fr gap-1">
       {macros.map((actions, i) => {
@@ -225,6 +216,8 @@ export function MacroTileGrid({ macros, onSelect, onDoubleClick }: MacroTileGrid
             className={`${TILE_BASE} ${configured ? TILE_ENABLED : TILE_EMPTY}`}
             onClick={select}
             onDoubleClick={commit}
+            onMouseEnter={hoverPreview ? (e) => showMacro(i, e.currentTarget.getBoundingClientRect()) : undefined}
+            onMouseLeave={hoverPreview ? hide : undefined}
           >
             <span className={TILE_INDEX_LABEL}>M{i}</span>
             {configured ? (
@@ -247,6 +240,7 @@ export function MacroTileGrid({ macros, onSelect, onDoubleClick }: MacroTileGrid
           </button>
         )
       })}
+      <MacroHoverBubble bubble={bubble} />
     </div>
   )
 }

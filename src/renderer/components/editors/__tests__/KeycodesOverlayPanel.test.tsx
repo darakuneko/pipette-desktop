@@ -17,6 +17,7 @@ vi.mock('react-i18next', () => ({
         'editorSettings.layerHoverPreview': 'Auto Layer Preview',
         'editorSettings.quickSelect': 'Instant Key Selection',
         'editorSettings.splitKeyMode': 'Separate Shift in Key Picker',
+        'editorSettings.macroHoverPreview': 'Macro Hover Preview',
         'editor.keyTester.title': 'Key Tester',
         'editor.viewMatrix.label': 'View Matrix',
         'editor.viewMatrix.edit': 'Edit',
@@ -444,6 +445,7 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
     onToggleViewMatrixMode: vi.fn(),
     splitKeyMode: 'split' as const,
     onSplitKeyModeChange: vi.fn(),
+    onMacroHoverPreviewChange: vi.fn(),
   }
 
   function rowOrder(container: HTMLElement): string[] {
@@ -461,6 +463,7 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
       'overlay-matrix-row',
       'overlay-view-matrix-row',
       'overlay-split-key-mode-row',
+      'overlay-macro-hover-preview-row',
       'overlay-lock-row',
     ])
     const first = screen.getByTestId('overlay-auto-advance-row').parentElement!
@@ -470,7 +473,11 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
     expect(screen.getByTestId('overlay-matrix-row').parentElement).toBe(second)
     expect(second.className).toContain('grid-cols-2')
     expect(screen.getByTestId('overlay-view-matrix-row').parentElement?.className).not.toContain('grid-cols-2')
-    expect(screen.getByTestId('overlay-split-key-mode-row').parentElement?.className).not.toContain('grid-cols-2')
+    const third = screen.getByTestId('overlay-split-key-mode-row').parentElement!
+    expect(screen.getByTestId('overlay-macro-hover-preview-row').parentElement).toBe(third)
+    expect(third.className).toContain('grid-cols-2')
+    // The long Separate Shift label wraps instead of widening the panel.
+    expect(third.className).toContain('contain-inline-size')
   })
 
   it('keeps each half-width label wrappable and its switch from shrinking', () => {
@@ -526,7 +533,53 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
       <KeycodesOverlayPanel {...ALL_ROWS} quickSelect={undefined} onQuickSelectChange={undefined} hasMatrixTester={false} />,
     )
     const grids = container.querySelectorAll('.grid-cols-2')
-    expect(grids).toHaveLength(1)
+    expect(grids).toHaveLength(2)
     expect(grids[0].contains(screen.getByTestId('overlay-auto-advance-row'))).toBe(true)
+    expect(grids[1].contains(screen.getByTestId('overlay-split-key-mode-row'))).toBe(true)
+  })
+
+  it('shows Macro Hover Preview on by default next to Separate Shift and flips it', () => {
+    const onMacroHoverPreviewChange = vi.fn()
+    render(<KeycodesOverlayPanel {...ALL_ROWS} onMacroHoverPreviewChange={onMacroHoverPreviewChange} />)
+    const toggle = screen.getByRole('switch', { name: 'Macro Hover Preview' })
+    expect(toggle).toBe(screen.getByTestId('overlay-macro-hover-preview-toggle'))
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+    fireEvent.click(toggle)
+    expect(onMacroHoverPreviewChange).toHaveBeenCalledWith(false)
+  })
+
+  it('reflects Macro Hover Preview off and turns it back on', () => {
+    const onMacroHoverPreviewChange = vi.fn()
+    render(<KeycodesOverlayPanel {...ALL_ROWS} macroHoverPreview={false} onMacroHoverPreviewChange={onMacroHoverPreviewChange} />)
+    const toggle = screen.getByTestId('overlay-macro-hover-preview-toggle')
+    expect(toggle.getAttribute('aria-checked')).toBe('false')
+    fireEvent.click(toggle)
+    expect(onMacroHoverPreviewChange).toHaveBeenCalledWith(true)
+  })
+
+  it('keeps the Separate Shift test ids and toggle behavior in the half-width row', () => {
+    const onSplitKeyModeChange = vi.fn()
+    render(<KeycodesOverlayPanel {...ALL_ROWS} onSplitKeyModeChange={onSplitKeyModeChange} />)
+    const row = screen.getByTestId('overlay-split-key-mode-row')
+    expect(row.className).toContain('min-w-0')
+    const toggle = screen.getByTestId('overlay-split-key-mode-toggle')
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+    expect(toggle.className).toContain('shrink-0')
+    fireEvent.click(toggle)
+    expect(onSplitKeyModeChange).toHaveBeenCalledWith('flat')
+  })
+
+  it('puts Macro Hover Preview in the left half when Separate Shift is not shown', () => {
+    render(<KeycodesOverlayPanel {...ALL_ROWS} splitKeyMode={undefined} />)
+    expect(screen.queryByTestId('overlay-split-key-mode-row')).not.toBeInTheDocument()
+    const row = screen.getByTestId('overlay-macro-hover-preview-row')
+    expect(row.parentElement?.className).toContain('grid-cols-2')
+    expect(row.parentElement?.children).toHaveLength(1)
+  })
+
+  it('omits Macro Hover Preview without a change handler, leaving Separate Shift alone in its row', () => {
+    render(<KeycodesOverlayPanel {...ALL_ROWS} onMacroHoverPreviewChange={undefined} />)
+    expect(screen.queryByTestId('overlay-macro-hover-preview-row')).not.toBeInTheDocument()
+    expect(screen.getByTestId('overlay-split-key-mode-row').parentElement?.children).toHaveLength(1)
   })
 })

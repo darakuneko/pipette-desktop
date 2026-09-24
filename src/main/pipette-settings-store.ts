@@ -118,6 +118,7 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
   if ('viewMatrix' in obj && !isValidViewMatrix(obj.viewMatrix)) return false
   if ('viewMatrixWires' in obj && obj.viewMatrixWires != null && typeof obj.viewMatrixWires !== 'boolean') return false
   if ('layerHoverPreview' in obj && obj.layerHoverPreview != null && typeof obj.layerHoverPreview !== 'boolean') return false
+  if ('macroHoverPreview' in obj && obj.macroHoverPreview != null && typeof obj.macroHoverPreview !== 'boolean') return false
   if ('_rev' in obj && obj._rev !== 1) return false
   return true
 }
@@ -177,6 +178,7 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       viewMatrix: parsed.viewMatrix,
       viewMatrixWires: parsed.viewMatrixWires,
       layerHoverPreview: parsed.layerHoverPreview,
+      macroHoverPreview: parsed.macroHoverPreview,
     }
   } catch {
     return null
