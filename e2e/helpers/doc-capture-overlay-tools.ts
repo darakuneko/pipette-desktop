@@ -37,19 +37,21 @@ const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
 const DEVICE_NAME = VIRTUAL_DEVICE_DISPLAY_NAME
 
+/** Same viewport `doc-capture.ts` captures `overlay-tools.png` at. */
+const VIEWPORT = { width: 1440, height: 1024 }
+
 /**
  * Capture the current window through the main process
  * (`webContents.capturePage`) rather than Playwright's CDP screenshot path
- * — see the module doc comment for why. Captures the full window (the
- * original overlay-tools.png was a fullPage screenshot of the 1320x960
- * viewport).
+ * — see the module doc comment for why. The image is resized to the
+ * viewport's CSS size so display scaling doesn't change its dimensions.
  */
 async function capture(app: ElectronApplication, name: string): Promise<void> {
-  const dataUrl = await app.evaluate(async ({ BrowserWindow }) => {
+  const dataUrl = await app.evaluate(async ({ BrowserWindow }, size) => {
     const win = BrowserWindow.getAllWindows()[0]
     const img = await win.webContents.capturePage()
-    return img.toDataURL()
-  })
+    return img.resize({ ...size, quality: 'best' }).toDataURL()
+  }, VIEWPORT)
   const path = resolve(SCREENSHOT_DIR, `${name}.png`)
   writeFileSync(path, Buffer.from(dataUrl.replace(/^data:image\/png;base64,/, ''), 'base64'))
   console.log(`Saved: ${path}`)
@@ -63,7 +65,7 @@ async function main(): Promise<void> {
 
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
-  await page.setViewportSize({ width: 1320, height: 960 })
+  await page.setViewportSize(VIEWPORT)
   await page.waitForTimeout(3000)
 
   try {

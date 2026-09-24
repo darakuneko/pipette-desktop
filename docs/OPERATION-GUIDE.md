@@ -764,6 +764,17 @@ Click the collapse button (chevron) to minimize the layer panel to just numbers.
 
 ![Layer Panel Expanded](screenshots/layer-panel-expanded.png)
 
+**Layer preview on hover (Auto Layer Preview)**
+
+Rest the pointer on a layer key (`MO`, `LT`, `TG`, `TO`, `TT`, `OSL`, `DF`, `PDF`, `LM`) for about 0.3 seconds and the whole keyboard shows the layer that key switches to, with the label under the keymap reading **Preview - <layer name>**. The preview is display only — the current layer, the key selection and the undo history don't change.
+
+- On keys with an inner part (e.g. `LT1(KC_SPC)`), only the upper (outer) part starts the preview; moving onto the inner key hides it so the inner key can be selected. The key under the pointer keeps showing its own content during the preview
+- Moving the pointer off the key returns to the current layer immediately
+- Clicks, double-clicks and middle-clicks always act on the current layer — the preview is dismissed first
+- Layer keys assigned to encoders don't start a preview
+- There is no preview in View Matrix mode, on the Key Label simulation tab, while keys are multi-selected or picked as paste targets, or while the Key Popover is open
+- Turn it on or off with **Auto Layer Preview** in the Keycodes Overlay Panel's Settings / Import tab (§3.14). Saved and synced per keyboard; on by default
+
 ### 2.4 Key Popover
 
 Double-click a key on the keyboard layout to open the Key Popover — a quick way to search and assign keycodes without scrolling through the palette.
@@ -1147,12 +1158,15 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 
 ![Overlay Panel — Settings / Import](screenshots/overlay-tools.png)
 
+Auto Move and Auto Layer Preview share one row, and Instant Key Selection and Key Tester share the next, two toggles side by side. The other settings take a full row each.
+
 - **Key Editor Zoom**: Set the UI zoom level (50–200%) applied while in key editor mode. Defaults to the global UI zoom (§6.5) when not configured. Saved and synced per keyboard
 - **Auto Move**: Toggle automatic advancement to the next key after assigning a keycode
-- **View Matrix**: **Edit** / **Done** enters or leaves View Matrix mode to customize the Auto Move key order; the unlabelled toggle switch at the right edge of the same row (**Wires**) shows or hides the matrix wiring overlay on the keymap, independently of Edit mode (see §2.6)
+- **Auto Layer Preview**: Toggle the layer preview shown while the pointer rests on a layer key (see §2.3). Saved and synced per keyboard; on by default
 - **Instant Key Selection**: Toggle instant key selection mode (see §2.2 for behavior details)
-- **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
 - **Key Tester**: Toggle Matrix Tester mode (supported keyboards only)
+- **View Matrix**: **Edit** / **Done** enters or leaves View Matrix mode to customize the Auto Move key order; the unlabelled toggle switch at the right edge of the same row (**Wires**) shows or hides the matrix wiring overlay on the keymap, independently of Edit mode (see §2.6)
+- **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
 - **Security**: Shows lock status (Locked/Unlocked) with a button that follows it — **Unlock** while locked, **Lock** while unlocked. Unlock opens the Unlock dialog (stays disabled until the lock status has been confirmed, to avoid opening it against a stale placeholder state). Lock locks immediately if Typing Record (§4.3) is off; if Typing Record is on, it instead asks for confirmation ("Turn off Record and lock?") and, once confirmed, turns Record off before locking
 - **Import**: Restore from `.vil` files or sideload custom JSON definitions. Restoring a `.vil` file writes it to the keyboard field by field; if a write fails partway through, Pipette writes back the keyboard state it was holding just before the restore started — the state shown in the editor, not a fresh read from the device (this assumes the keyboard's shape hasn't changed — it is not a guaranteed byte-exact restore) and shows one of two messages depending on whether that write-back itself succeeded: **"Writing to the keyboard failed. The previous settings were restored."**, or, if the write-back also failed, **"Writing to the keyboard failed and the previous settings could not be restored. Reconnect the keyboard and load a saved snapshot."** This and every other error shown in the bar below the editor (failed save, failed load, failed sideload) clears itself after about 10 seconds, or immediately via its own × button. The red error boxes on the device selection screen (failed device connection, failed file load) and in the Keyboard tab's File source (§3.13) behave the same way, clearing after about 10 seconds or immediately via their own × button
 - **Reset Keyboard Data**: Reset keyboard to factory defaults
