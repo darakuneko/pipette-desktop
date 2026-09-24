@@ -775,17 +775,18 @@ Rest the pointer on a layer key (`MO`, `LT`, `TG`, `TO`, `TT`, `OSL`, `DF`, `PDF
 - There is no preview in View Matrix mode, on the Key Label simulation tab, while keys are multi-selected, while palette keycodes are selected for pasting, or while the Key Popover is open
 - Turn it on or off with **Auto Layer Preview** in the Keycodes Overlay Panel's Settings / Import tab (§3.14). Saved and synced per keyboard; on by default
 
-**Macro contents on hover (Macro Hover Preview)**
+**Entry details on hover (Hover Details)**
 
-Rest the pointer on a key whose keycode is a macro (`M0`, `M1`, …) for about 0.3 seconds and a tooltip shows the whole macro: its number, then every action on its own line with the same letters the Macro tab tiles use (`T` tap, `D` down, `U` up, `Tx` text, `W` wait) and the full keycodes or text, nothing cut off. This works while the keyboard is locked, so you can read a macro without unlocking it (editing a macro still requires unlocking).
+Rest the pointer on a key whose keycode is a macro (`M0`, `M1`, …) or a Tap Dance (`TD(0)`, `TD(1)`, …) for about 0.3 seconds and a tooltip shows that entry in full, nothing cut off. This works while the keyboard is locked, so you can read an entry without unlocking it (editing a macro still requires unlocking).
 
-- The half of an encoder (clockwise or counter-clockwise) works the same way when that direction is assigned a macro
-- The macro is found from the key's actual keycode on the current layer, so a Key Label pack that relabels the key doesn't change which macro is shown
-- A long macro is split into several columns to fit on screen; long text wraps and keeps its spaces and line breaks
-- Empty macros show no tooltip
+- **Macro**: its number, then every action on its own line with the same letters the Macro tab tiles use (`T` tap, `D` down, `U` up, `Tx` text, `W` wait) and the full keycodes or text. A long macro is split into several columns to fit on screen; long text wraps and keeps its spaces and line breaks
+- **Tap Dance**: On Tap, On Hold, On Double Tap, On Tap Hold and Tapping Term (ms); an empty action reads "None"
+- The half of an encoder (clockwise or counter-clockwise) works the same way when that direction is assigned a macro or a Tap Dance
+- The entry is found from the key's actual keycode on the current layer, so a Key Label pack that relabels the key doesn't change which entry is shown
+- Entries whose tile reads "N/C" (not configured) show no tooltip
 - Nothing is shown in the same situations as the layer preview above (View Matrix mode, the Key Label simulation tab, multi-selected keys, palette keycodes selected for pasting, the Key Popover open). It doesn't depend on Auto Layer Preview — it still works with that turned off
-- The Macro tab tiles of the key picker show the same tooltip (§3.7)
-- Turn it on or off with **Macro Hover Preview** in the Keycodes Overlay Panel's Settings / Import tab (§3.14). Saved and synced per keyboard; on by default
+- The tiles of the key picker's Tap Dance, Macro, Combo, Key Override and Alt Repeat Key tabs show the same tooltip (§3.6–§3.10)
+- Turn it on or off with **Hover Details** in the Keycodes Overlay Panel's Settings / Import tab (§3.14). Saved and synced per keyboard; on by default
 
 ### 2.4 Key Popover
 
@@ -1008,6 +1009,7 @@ The Tap Dance section displays a **tile grid preview** showing all entries at a 
 
 - Each tile shows the entry number and a summary of configured actions
 - Configured entries display their tap/hold actions; unconfigured tiles show the number only
+- Rest the pointer on a configured tile for about 0.3 seconds to see the whole entry in a tooltip — On Tap, On Hold, On Double Tap, On Tap Hold and Tapping Term (the same tooltip as on the keymap, see §2.3). It works while the keyboard is locked, and also in the Tap Dance tab of the key pickers inside the Tap Dance, Combo, Key Override, Alt Repeat Key and Macro editors. Turn it off with **Hover Details** (§3.14)
 - Click a tile to open the Tap Dance edit modal directly to that entry
 - Configure tap, hold, double-tap, and other actions for each entry
 - **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
@@ -1030,7 +1032,7 @@ The Macro section displays a **tile grid preview** showing all entries at a glan
 
 - Each tile shows the macro number and a preview of the recorded sequence
 - Configured entries display a summary of key actions; unconfigured tiles show the number only
-- A tile has room for only a few actions and cuts long labels short. Rest the pointer on a configured tile for about 0.3 seconds to see the whole macro in a tooltip — every action, in full (the same tooltip as on the keymap, see §2.3). It works while the keyboard is locked, and also in the Macro tab of the key pickers inside the Tap Dance, Combo, Key Override, Alt Repeat Key and Macro editors. Turn it off with **Macro Hover Preview** (§3.14)
+- A tile has room for only a few actions and cuts long labels short. Rest the pointer on a configured tile for about 0.3 seconds to see the whole macro in a tooltip — every action, in full (the same tooltip as on the keymap, see §2.3). It works while the keyboard is locked, and also in the Macro tab of the key pickers inside the Tap Dance, Combo, Key Override, Alt Repeat Key and Macro editors. Turn it off with **Hover Details** (§3.14)
 - Click a tile to open the Macro edit modal directly to that entry
 - Record sequences of key inputs as macros
 - **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
@@ -1067,6 +1069,7 @@ Combo keycodes for simultaneous key-press combinations.
 The Combo tab displays a **tile grid preview** showing all entries. A note reads: "These features apply to the entire keyboard, not just the current layer."
 
 - Each tile shows the combo number and a summary (e.g., "A + B → C")
+- Rest the pointer on a configured tile for about 0.3 seconds to see Keys 1–4 and the Output in a tooltip; empty keys read "None". Turn it off with **Hover Details** (§3.14)
 - Click a tile to open the Combo edit modal directly to that entry (§5.2)
 - Combo keycodes (CMB_000–CMB_031) can be assigned to keys for triggering combos
 - **Settings: Configuration** button at the bottom opens a settings modal for combo-related timeout configuration (e.g., Combo time out period)
@@ -1084,6 +1087,7 @@ Key Override keycodes for replacing key outputs when specific modifiers are held
 The Key Override tab displays a **tile grid preview** showing all entries and a settings area.
 
 - Each tile shows the override number and a summary
+- Rest the pointer on a configured tile (including a disabled one) for about 0.3 seconds to see every setting in a tooltip: Enabled (On / Off), Trigger Key, Replacement Key, Layers, Trigger / Negative / Suppressed Mods and Options, with empty ones reading "None". Turn it off with **Hover Details** (§3.14)
 - Click a tile to open the Key Override edit modal directly to that entry (§5.3)
 - **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
 
@@ -1098,6 +1102,7 @@ Alt Repeat Key keycodes for context-aware alternate repeat key bindings.
 The Alt Repeat Key tab displays a **tile grid preview** showing all entries and a settings area.
 
 - Each tile shows the entry number and a summary
+- Rest the pointer on a configured tile (including a disabled one) for about 0.3 seconds to see every setting in a tooltip: Enabled (On / Off), Last Key, Alt Key, Allowed Mods and Options, with empty ones reading "None". Turn it off with **Hover Details** (§3.14)
 - Click a tile to open the Alt Repeat Key edit modal directly to that entry (§5.4)
 - **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
 
@@ -1171,7 +1176,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 
 ![Overlay Panel — Settings / Import](screenshots/overlay-tools.png)
 
-Auto Move and Auto Layer Preview share one row, Instant Key Selection and Key Tester share the next, and Separate Shift in Key Picker and Macro Hover Preview share another, two toggles side by side. The other settings take a full row each.
+Auto Move and Auto Layer Preview share one row, Instant Key Selection and Key Tester share the next, and Separate Shift in Key Picker and Hover Details share another, two toggles side by side. The other settings take a full row each.
 
 - **Key Editor Zoom**: Set the UI zoom level (50–200%) applied while in key editor mode. Defaults to the global UI zoom (§6.5) when not configured. Saved and synced per keyboard
 - **Auto Move**: Toggle automatic advancement to the next key after assigning a keycode
@@ -1180,7 +1185,7 @@ Auto Move and Auto Layer Preview share one row, Instant Key Selection and Key Te
 - **Key Tester**: Toggle Matrix Tester mode (supported keyboards only)
 - **View Matrix**: **Edit** / **Done** enters or leaves View Matrix mode to customize the Auto Move key order; the unlabelled toggle switch at the right edge of the same row (**Wires**) shows or hides the matrix wiring overlay on the keymap, independently of Edit mode (see §2.6)
 - **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
-- **Macro Hover Preview**: Toggle the tooltip that shows a macro's full contents while the pointer rests on a macro key, a macro encoder direction or a Macro tab tile (see §2.3 and §3.7). Saved and synced per keyboard; on by default
+- **Hover Details**: Toggle the tooltip that shows an entry in full while the pointer rests on a macro or Tap Dance key / encoder direction, or on a Tap Dance, Macro, Combo, Key Override or Alt Repeat Key tile (see §2.3 and §3.6–§3.10). Saved and synced per keyboard; on by default
 - **Security**: Shows lock status (Locked/Unlocked) with a button that follows it — **Unlock** while locked, **Lock** while unlocked. Unlock opens the Unlock dialog (stays disabled until the lock status has been confirmed, to avoid opening it against a stale placeholder state). Lock locks immediately if Typing Record (§4.3) is off; if Typing Record is on, it instead asks for confirmation ("Turn off Record and lock?") and, once confirmed, turns Record off before locking
 - **Import**: Restore from `.vil` files or sideload custom JSON definitions. Restoring a `.vil` file writes it to the keyboard field by field; if a write fails partway through, Pipette writes back the keyboard state it was holding just before the restore started — the state shown in the editor, not a fresh read from the device (this assumes the keyboard's shape hasn't changed — it is not a guaranteed byte-exact restore) and shows one of two messages depending on whether that write-back itself succeeded: **"Writing to the keyboard failed. The previous settings were restored."**, or, if the write-back also failed, **"Writing to the keyboard failed and the previous settings could not be restored. Reconnect the keyboard and load a saved snapshot."** This and every other error shown in the bar below the editor (failed save, failed load, failed sideload) clears itself after about 10 seconds, or immediately via its own × button. The red error boxes on the device selection screen (failed device connection, failed file load) and in the Keyboard tab's File source (§3.13) behave the same way, clearing after about 10 seconds or immediately via their own × button
 - **Reset Keyboard Data**: Reset keyboard to factory defaults
