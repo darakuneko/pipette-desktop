@@ -1176,7 +1176,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 
 ![Overlay Panel — Settings / Import](screenshots/overlay-tools.png)
 
-Auto Move and Auto Layer Preview share one row, Instant Key Selection and Key Tester share the next, and Separate Shift in Key Picker and Fav Hover Details share another, two toggles side by side. The other settings take a full row each.
+Auto Move and Auto Layer Preview share one row, and Instant Key Selection and Key Tester share the next, two toggles side by side. The other settings take a full row each.
 
 - **Key Editor Zoom**: Set the UI zoom level (50–200%) applied while in key editor mode. Defaults to the global UI zoom (§6.5) when not configured. Saved and synced per keyboard
 - **Auto Move**: Toggle automatic advancement to the next key after assigning a keycode

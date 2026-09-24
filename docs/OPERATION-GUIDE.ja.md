@@ -1175,7 +1175,7 @@ Keyboard タブを開くと、接続中の Vial 対応キーボードの一覧�
 
 ![オーバーレイパネル — Settings / Import](screenshots/overlay-tools.png)
 
-Auto Move と Auto Layer Preview、Instant Key Selection と Key Tester、キーピッカーでShiftキーを分離 と Fav Hover Details はそれぞれ 1 行に 2 つ並びます。それ以外の設定は 1 行ずつです。
+Auto Move と Auto Layer Preview、Instant Key Selection と Key Tester はそれぞれ 1 行に 2 つ並びます。それ以外の設定は 1 行ずつです。
 
 - **Key Editor Zoom**: キーエディタ画面のみに適用される UI 表示倍率（50–200%）。未設定時はグローバル UI ズーム (§6.5) が使用されます。キーボード単位で保存・同期されます
 - **Auto Move**: キーコード割り当て後に次のキーへ自動移動する機能の切替
