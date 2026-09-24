@@ -1071,7 +1071,7 @@ Combo タブは全エントリを一覧表示する**タイルグリッドプレ
 - 各タイルには Combo 番号とサマリー（例: 「A + B → C」）が表示されます
 - 設定済みのタイルにポインターを約 0.3 秒置くと、Key 1〜4 と Output をツールチップで表示します。空のキーは「None」と表示します。**Fav Hover Details** でオフにできます (§3.14)
 - タイルをクリックして対応するエントリの Combo 編集モーダルを直接開きます (§5.2)
-- Combo キーコード (CMB_000〜CMB_031) をキーに割り当てて Combo をトリガーできます
+- タイルの下に表示される Combo キーコード (Combo On, Combo Off, Combo Toggle — `CMB_ON` / `CMB_OFF` / `CMB_TOG`) をキーに割り当てて、Combo 機能のオン / オフを切り替えられます。Combo 自体にはキーコードがなく、登録したキーを同時に押すと発火します
 - 下部の **Settings: Configuration** ボタンから Combo タイムアウト設定モーダル（例: Combo time out period）を開けます
 - このタイムアウト設定モーダルでの保存は Tap-Hold Settings モーダル（§3.6）と同じ挙動です — Reset / Revert / Save ボタンの左側に結果が表示されます
 - 下部の **Edit JSON** ボタンで全エントリを JSON として一括編集できます (§5.6)
