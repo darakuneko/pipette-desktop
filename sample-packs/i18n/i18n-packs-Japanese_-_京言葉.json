@@ -1870,7 +1870,7 @@
     "splitKeyMode": "キーピッカーでShiftキーを分離",
     "quickSelect": "キーの即時選択",
     "layerHoverPreview": "レイヤーの自動お披露目",
-    "entryHoverPreview": "ホバーで中身お披露目",
+    "entryHoverPreview": "お気に入りの中身をホバーでお披露目",
     "keyEditorZoom": "エディタズーム"
   },
   "hub": {

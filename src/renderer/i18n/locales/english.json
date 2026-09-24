@@ -1880,7 +1880,7 @@
     "splitKeyMode": "Separate Shift in Key Picker",
     "quickSelect": "Instant Key Selection",
     "layerHoverPreview": "Auto Layer Preview",
-    "entryHoverPreview": "Hover Details",
+    "entryHoverPreview": "Fav Hover Details",
     "keyEditorZoom": "Key Editor Zoom"
   },
   "hub": {

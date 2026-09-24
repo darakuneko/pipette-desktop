@@ -45,7 +45,7 @@ export interface UseDevicePrefsReturn {
   /** Layer hover preview in the keymap editor — see
    *  `PipetteSettings.layerHoverPreview`. Defaults to true. */
   layerHoverPreview: boolean
-  /** Entry hover bubble (Hover Details) on the keymap and picker tiles — see
+  /** Entry hover bubble (Fav Hover Details) on the keymap and picker tiles — see
    *  `PipetteSettings.entryHoverPreview`. Defaults to true. */
   entryHoverPreview: boolean
   appliedUid: string | null

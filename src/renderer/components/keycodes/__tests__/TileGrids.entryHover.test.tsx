@@ -185,7 +185,7 @@ function OverrideHost() {
   return <div>{override?.tapDance}{override?.combo}{override?.keyOverride}{override?.altRepeatKey}</div>
 }
 
-describe('useTileContentOverride — Hover Details setting for every tile kind', () => {
+describe('useTileContentOverride — Fav Hover Details setting for every tile kind', () => {
   beforeEach(() => { vi.useFakeTimers() })
   afterEach(() => { vi.useRealTimers() })
 

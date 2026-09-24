@@ -404,7 +404,7 @@ export interface PipetteSettings {
   /** Hovering a layer key in the keymap editor previews the layer it
    * targets. Absent means on; only an explicit `false` turns it off. */
   layerHoverPreview?: boolean
-  /** Hover Details: hovering a macro or Tap Dance key / encoder on the
+  /** Fav Hover Details: hovering a macro or Tap Dance key / encoder on the
    * keymap, or a Macro / Tap Dance / Combo / Key Override / Alt Repeat Key
    * picker tile, shows that entry in full. Absent means on; only an
    * explicit `false` turns it off. */

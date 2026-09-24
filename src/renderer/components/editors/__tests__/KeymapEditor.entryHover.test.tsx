@@ -21,7 +21,7 @@ vi.mock('react-i18next', () => ({
       if (key === 'editor.keymap.layerN' && opts) return `Layer ${opts.n ?? ''}`
       if (key === 'editor.keymap.layerPreview' && opts) return `Preview - ${String(opts.label ?? '')}`
       if (key === 'editorSettings.layerHoverPreview') return 'Auto Layer Preview'
-      if (key === 'editorSettings.entryHoverPreview') return 'Hover Details'
+      if (key === 'editorSettings.entryHoverPreview') return 'Fav Hover Details'
       return map[key] ?? key
     },
   }),

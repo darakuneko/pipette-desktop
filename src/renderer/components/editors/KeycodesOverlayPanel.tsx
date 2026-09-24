@@ -71,7 +71,7 @@ interface Props {
   // Layer hover preview on the keymap editor (persisted per keyboard).
   layerHoverPreview?: boolean
   onLayerHoverPreviewChange?: (enabled: boolean) => void
-  // Hover Details: entry hover bubble on the keymap and picker tiles (persisted per keyboard).
+  // Fav Hover Details: entry hover bubble on the keymap and picker tiles (persisted per keyboard).
   entryHoverPreview?: boolean
   onEntryHoverPreviewChange?: (enabled: boolean) => void
   splitKeyMode?: SplitKeyMode

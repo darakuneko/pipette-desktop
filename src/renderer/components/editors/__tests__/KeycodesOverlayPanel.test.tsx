@@ -17,7 +17,7 @@ vi.mock('react-i18next', () => ({
         'editorSettings.layerHoverPreview': 'Auto Layer Preview',
         'editorSettings.quickSelect': 'Instant Key Selection',
         'editorSettings.splitKeyMode': 'Separate Shift in Key Picker',
-        'editorSettings.entryHoverPreview': 'Hover Details',
+        'editorSettings.entryHoverPreview': 'Fav Hover Details',
         'editor.keyTester.title': 'Key Tester',
         'editor.viewMatrix.label': 'View Matrix',
         'editor.viewMatrix.edit': 'Edit',
@@ -538,17 +538,17 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
     expect(grids[1].contains(screen.getByTestId('overlay-split-key-mode-row'))).toBe(true)
   })
 
-  it('shows Hover Details on by default next to Separate Shift and flips it', () => {
+  it('shows Fav Hover Details on by default next to Separate Shift and flips it', () => {
     const onEntryHoverPreviewChange = vi.fn()
     render(<KeycodesOverlayPanel {...ALL_ROWS} onEntryHoverPreviewChange={onEntryHoverPreviewChange} />)
-    const toggle = screen.getByRole('switch', { name: 'Hover Details' })
+    const toggle = screen.getByRole('switch', { name: 'Fav Hover Details' })
     expect(toggle).toBe(screen.getByTestId('overlay-entry-hover-preview-toggle'))
     expect(toggle.getAttribute('aria-checked')).toBe('true')
     fireEvent.click(toggle)
     expect(onEntryHoverPreviewChange).toHaveBeenCalledWith(false)
   })
 
-  it('reflects Hover Details off and turns it back on', () => {
+  it('reflects Fav Hover Details off and turns it back on', () => {
     const onEntryHoverPreviewChange = vi.fn()
     render(<KeycodesOverlayPanel {...ALL_ROWS} entryHoverPreview={false} onEntryHoverPreviewChange={onEntryHoverPreviewChange} />)
     const toggle = screen.getByTestId('overlay-entry-hover-preview-toggle')
@@ -569,7 +569,7 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
     expect(onSplitKeyModeChange).toHaveBeenCalledWith('flat')
   })
 
-  it('puts Hover Details in the left half when Separate Shift is not shown', () => {
+  it('puts Fav Hover Details in the left half when Separate Shift is not shown', () => {
     render(<KeycodesOverlayPanel {...ALL_ROWS} splitKeyMode={undefined} />)
     expect(screen.queryByTestId('overlay-split-key-mode-row')).not.toBeInTheDocument()
     const row = screen.getByTestId('overlay-entry-hover-preview-row')
@@ -577,7 +577,7 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
     expect(row.parentElement?.children).toHaveLength(1)
   })
 
-  it('omits Hover Details without a change handler, leaving Separate Shift alone in its row', () => {
+  it('omits Fav Hover Details without a change handler, leaving Separate Shift alone in its row', () => {
     render(<KeycodesOverlayPanel {...ALL_ROWS} onEntryHoverPreviewChange={undefined} />)
     expect(screen.queryByTestId('overlay-entry-hover-preview-row')).not.toBeInTheDocument()
     expect(screen.getByTestId('overlay-split-key-mode-row').parentElement?.children).toHaveLength(1)
