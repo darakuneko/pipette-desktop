@@ -165,7 +165,6 @@ export function KeycodesOverlayPanel({
   const hasData = dataPanel != null
   const showQuickSelect = quickSelect != null && onQuickSelectChange != null
   const showKeyTester = (hasMatrixTester || matrixMode) && onToggleMatrix != null
-  const showSplitKeyMode = splitKeyMode != null && onSplitKeyModeChange != null
   const [activeTab, setActiveTab] = useState<OverlayTab>(hasLayoutOptions ? 'layout' : hasData ? 'data' : 'tools')
   const [showLockConfirm, setShowLockConfirm] = useState(false)
 
@@ -355,22 +354,43 @@ export function KeycodesOverlayPanel({
               </div>
             )}
 
-            {(showSplitKeyMode || onEntryHoverPreviewChange) && (
-              <div className={HALF_ROW_CLASS}>
-                {showSplitKeyMode && (
-                  <HalfToggle
-                    label={t('editorSettings.splitKeyMode')} checked={splitKeyMode === 'split'}
-                    onToggle={() => onSplitKeyModeChange(splitKeyMode === 'split' ? 'flat' : 'split')}
-                    testId="overlay-split-key-mode"
-                  />
-                )}
-                {onEntryHoverPreviewChange && (
-                  <HalfToggle
-                    label={t('editorSettings.entryHoverPreview')} checked={entryHoverPreview}
-                    onToggle={() => onEntryHoverPreviewChange(!entryHoverPreview)}
-                    testId="overlay-entry-hover-preview"
-                  />
-                )}
+            {/* Split key toggle */}
+            {splitKeyMode != null && onSplitKeyModeChange && (
+              <div className={ROW_CLASS} data-testid="overlay-split-key-mode-row">
+                <span className="text-sm font-medium text-content">
+                  {t('editorSettings.splitKeyMode')}
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={splitKeyMode === 'split'}
+                  aria-label={t('editorSettings.splitKeyMode')}
+                  className={toggleTrackClass(splitKeyMode === 'split')}
+                  onClick={() => onSplitKeyModeChange(splitKeyMode === 'split' ? 'flat' : 'split')}
+                  data-testid="overlay-split-key-mode-toggle"
+                >
+                  <span className={toggleKnobClass(splitKeyMode === 'split')} />
+                </button>
+              </div>
+            )}
+
+            {/* Entry hover bubble toggle */}
+            {onEntryHoverPreviewChange && (
+              <div className={ROW_CLASS} data-testid="overlay-entry-hover-preview-row">
+                <span className="text-sm font-medium text-content">
+                  {t('editorSettings.entryHoverPreview')}
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={entryHoverPreview}
+                  aria-label={t('editorSettings.entryHoverPreview')}
+                  className={toggleTrackClass(entryHoverPreview)}
+                  onClick={() => onEntryHoverPreviewChange(!entryHoverPreview)}
+                  data-testid="overlay-entry-hover-preview-toggle"
+                >
+                  <span className={toggleKnobClass(entryHoverPreview)} />
+                </button>
               </div>
             )}
 
