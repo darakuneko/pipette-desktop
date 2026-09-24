@@ -15,7 +15,9 @@ type OverlayTab = 'layout' | 'tools' | 'data'
 const TAB_BASE = 'flex-1 py-1.5 text-xs font-medium transition-colors border-b-2'
 const FOOTER_BTN = 'rounded border border-edge px-2.5 py-1 text-xs text-content-secondary hover:text-content hover:bg-surface-dim transition-colors'
 
-const HALF_ROW_CLASS = 'grid grid-cols-2 gap-2'
+// `contain-inline-size`: a half's label wraps inside its card instead of
+// widening the panel.
+const HALF_ROW_CLASS = 'grid grid-cols-2 gap-2 contain-inline-size'
 
 /** Switch card for one half of a two-column row. The label may wrap
  *  (`min-w-0`) while the switch keeps its size (`shrink-0`). Test ids are
@@ -353,10 +355,8 @@ export function KeycodesOverlayPanel({
               </div>
             )}
 
-            {/* `contain-inline-size` keeps the long Separate Shift label
-                from widening the panel; it wraps inside its half instead. */}
             {(showSplitKeyMode || onMacroHoverPreviewChange) && (
-              <div className={`${HALF_ROW_CLASS} contain-inline-size`}>
+              <div className={HALF_ROW_CLASS}>
                 {showSplitKeyMode && (
                   <HalfToggle
                     label={t('editorSettings.splitKeyMode')} checked={splitKeyMode === 'split'}

@@ -476,8 +476,8 @@ describe('KeycodesOverlayPanel — Settings / Import layout', () => {
     const third = screen.getByTestId('overlay-split-key-mode-row').parentElement!
     expect(screen.getByTestId('overlay-macro-hover-preview-row').parentElement).toBe(third)
     expect(third.className).toContain('grid-cols-2')
-    // The long Separate Shift label wraps instead of widening the panel.
-    expect(third.className).toContain('contain-inline-size')
+    // Every half-width row lets its labels wrap instead of widening the panel.
+    for (const row of [first, second, third]) expect(row.className).toContain('contain-inline-size')
   })
 
   it('keeps each half-width label wrappable and its switch from shrinking', () => {

@@ -33,7 +33,6 @@ import type { useRecKeystrokeCounter } from '../hooks/useRecKeystrokeCounter'
 import type { decodeLayoutOptions } from '../../shared/kle/layout-options'
 import type { ResolvedTappingTerm } from '../../shared/qmk-settings-tapping-term'
 import { ZOOM_FACTOR_DEFAULT } from '../../shared/types/app-config'
-import { MacroHoverPreviewContext } from './keycodes/macro-hover-context'
 
 interface Props {
   device: ReturnType<typeof useDeviceConnection>
@@ -187,171 +186,167 @@ export function AppEditorSurface({
 
   return (
     <div className={`flex min-h-0 flex-1 flex-col ${editorUI.typingTestMode && devicePrefs.typingTestViewOnly ? 'overflow-hidden p-0' : 'overflow-auto p-4'}`} data-testid="editor-content" style={viewExitTransition ? { display: 'none' } : undefined}>
-      {/* The keymap pane and every picker inside the editor (including the
-          Tap Dance and Macro modals) read the macro hover toggle from here. */}
-      <MacroHoverPreviewContext.Provider value={devicePrefs.macroHoverPreview}>
-        <KeymapEditor
-          ref={editorRef}
-          keyboardUid={keyboard.uid}
-          layout={keyboard.layout}
-          layers={keyboard.layers}
-          currentLayer={editorUI.currentLayer}
-          onLayerChange={editorUI.setCurrentLayer}
-          keymap={keyboard.keymap}
-          encoderLayout={keyboard.encoderLayout}
-          encoderCount={keyboard.encoderCount}
-          layoutOptions={decodedLayoutOptions}
-          layoutLabels={keyboard.definition?.layouts?.labels}
-          packedLayoutOptions={keyboard.layoutOptions}
-          onSetLayoutOptions={keyboard.setLayoutOptions}
-          remapLabel={devicePrefs.remapLabel}
-          isRemapped={devicePrefs.isRemapped}
-          remapKind={devicePrefs.remapKind}
-          pickerRemapLabel={devicePrefs.pickerRemapLabel}
-          onSetKey={keyboard.setKey}
-          onSetKeysBulk={keyboard.setKeysBulk}
-          onSetEncoder={keyboard.setEncoder}
-          rows={keyboard.rows}
-          cols={keyboard.cols}
-          getMatrixState={!device.isDummy && keyboard.vialProtocol >= 3 ? api.getMatrixState : undefined}
-          unlocked={keyboard.unlockStatus.unlocked}
-          onUnlock={(options) => {
-            editorUI.setShowUnlockDialog(true)
-            editorUI.setUnlockMacroWarning(!!options?.macroWarning)
-          }}
-          tapDanceEntries={keyboard.tapDanceEntries}
-          onSetTapDanceEntry={keyboard.setTapDanceEntry}
-          macroCount={keyboard.macroCount}
-          macroBufferSize={keyboard.macroBufferSize}
-          macroBuffer={keyboard.macroBuffer}
-          vialProtocol={keyboard.vialProtocol}
-          parsedMacros={keyboard.parsedMacros}
-          onSaveMacros={keyboard.setMacroBuffer}
-          tapHoldSupported={editorUI.tapHoldSupported}
-          mouseKeysSupported={editorUI.mouseKeysSupported}
-          magicSupported={editorUI.magicSupported}
-          graveEscapeSupported={editorUI.graveEscapeSupported}
-          autoShiftSupported={editorUI.autoShiftSupported}
-          oneShotKeysSupported={editorUI.oneShotKeysSupported}
-          comboSettingsSupported={editorUI.comboSettingsSupported}
-          supportedQsids={editorUI.hasAnySettings ? keyboard.supportedQsids : undefined}
-          qmkSettingsGet={editorUI.hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsGet : api.qmkSettingsGet) : undefined}
-          qmkSettingsSet={editorUI.hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsSet : api.qmkSettingsSet) : undefined}
-          qmkSettingsReset={editorUI.hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsReset : api.qmkSettingsReset) : undefined}
-          onSettingsUpdate={editorUI.hasAnySettings ? keyboard.updateQmkSettingsValue : undefined}
-          tappingTermMs={tappingTerm.termMs}
-          autoAdvance={devicePrefs.autoAdvance}
-          onAutoAdvanceChange={devicePrefs.setAutoAdvance}
-          viewMatrix={devicePrefs.viewMatrix}
-          onViewMatrixChange={devicePrefs.setViewMatrix}
-          viewMatrixWires={devicePrefs.viewMatrixWires}
-          onViewMatrixWiresChange={devicePrefs.setViewMatrixWires}
-          layerHoverPreview={devicePrefs.layerHoverPreview}
-          onLayerHoverPreviewChange={devicePrefs.setLayerHoverPreview}
-          macroHoverPreview={devicePrefs.macroHoverPreview}
-          onMacroHoverPreviewChange={devicePrefs.setMacroHoverPreview}
-          basicViewType={devicePrefs.basicViewType}
-          onBasicViewTypeChange={devicePrefs.setBasicViewType}
-          splitKeyMode={devicePrefs.splitKeyMode}
-          onSplitKeyModeChange={devicePrefs.setSplitKeyMode}
-          quickSelect={devicePrefs.quickSelect}
-          onQuickSelectChange={devicePrefs.setQuickSelect}
-          keyboardLayout={devicePrefs.layout}
-          onKeyboardLayoutChange={devicePrefs.setLayout}
-          keymapPackName={devicePrefs.activeLayoutName}
-          onRequestKeymapApply={requestKeymapApply}
-          keymapApplyOpen={pendingKeymapApply !== null}
-          keymapApplyLabelName={pendingKeymapApply?.name}
-          keymapApplyBusy={keymapApplyBusy}
-          onKeymapApplyConfirm={handleKeymapApplyConfirm}
-          onKeymapApplyCancel={handleKeymapApplyCancel}
-          keymapApplyError={keymapApplyError}
-          onLock={lifecycle.handleLock}
-          onTypingRecordDisarm={() => devicePrefs.setTypingRecordEnabled(false)}
-          unlockStatusKnown={keyboard.unlockStatusKnown}
-          onMatrixModeChange={editorUI.handleMatrixModeChange}
-          onOpenLighting={editorUI.lightingSupported ? () => editorUI.setShowLightingModal(true) : undefined}
-          comboEntries={editorUI.comboSupported ? keyboard.comboEntries : undefined}
-          onOpenCombo={editorUI.comboSupported ? (index: number) => editorUI.setComboInitialIndex(index) : undefined}
-          onSetComboEntry={editorUI.comboSupported ? keyboard.setComboEntry : undefined}
-          keyOverrideEntries={editorUI.keyOverrideSupported ? keyboard.keyOverrideEntries : undefined}
-          onOpenKeyOverride={editorUI.keyOverrideSupported ? (index: number) => editorUI.setKeyOverrideInitialIndex(index) : undefined}
-          onSetKeyOverrideEntry={editorUI.keyOverrideSupported ? keyboard.setKeyOverrideEntry : undefined}
-          altRepeatKeyEntries={editorUI.altRepeatKeySupported ? keyboard.altRepeatKeyEntries : undefined}
-          onOpenAltRepeatKey={editorUI.altRepeatKeySupported ? (index: number) => editorUI.setAltRepeatKeyInitialIndex(index) : undefined}
-          onSetAltRepeatKeyEntry={editorUI.altRepeatKeySupported ? keyboard.setAltRepeatKeyEntry : undefined}
-          layerNames={!effectiveIsDummy ? keyboard.layerNames : undefined}
-          onSetLayerName={!effectiveIsDummy ? keyboard.setLayerName : undefined}
-          toolsExtra={toolsExtra}
-          dataPanel={dataPanel}
-          onOverlayOpen={!effectiveIsDummy ? layoutStore.refreshEntries : undefined}
-          layerPanelOpen={devicePrefs.layerPanelOpen}
-          onLayerPanelOpenChange={devicePrefs.setLayerPanelOpen}
-          scale={editorUI.keymapScale}
-          onScaleChange={editorUI.adjustKeymapScale}
-          keyEditorZoom={devicePrefs.keyEditorZoom ?? (appConfig.config.zoomFactor ?? ZOOM_FACTOR_DEFAULT)}
-          onKeyEditorZoomChange={devicePrefs.setKeyEditorZoom}
-          typingTestMode={editorUI.typingTestMode}
-          onTypingTestModeChange={editorUI.handleTypingTestModeChange}
-          onSaveTypingTestResult={devicePrefs.addTypingTestResult}
-          onRenameTypingTestResult={devicePrefs.renameTypingTestResult}
-          onDeleteTypingTestResult={devicePrefs.deleteTypingTestResult}
-          typingTestHistory={devicePrefs.typingTestResults}
-          typingTestConfig={devicePrefs.typingTestConfig}
-          typingTestMonkeytypeConfig={devicePrefs.typingTestMonkeytypeConfig}
-          typingTestLanguage={devicePrefs.typingTestLanguage}
-          onTypingTestConfigChange={devicePrefs.setTypingTestConfig}
-          onTypingTestLanguageChange={devicePrefs.setTypingTestLanguage}
-          typingTestViewOnly={devicePrefs.typingTestViewOnly}
-          onTypingTestViewOnlyChange={onTypingTestViewOnlyChange}
-          typingTestViewOnlyWindowSize={devicePrefs.typingTestViewOnlyWindowSize}
-          onTypingTestViewOnlyWindowSizeChange={devicePrefs.setTypingTestViewOnlyWindowSize}
-          typingTestViewOnlyAlwaysOnTop={devicePrefs.typingTestViewOnlyAlwaysOnTop}
-          onTypingTestViewOnlyAlwaysOnTopChange={devicePrefs.setTypingTestViewOnlyAlwaysOnTop}
-          typingTestViewOnlyOpacity={devicePrefs.typingTestViewOnlyOpacity}
-          onTypingTestViewOnlyOpacityChange={devicePrefs.setTypingTestViewOnlyOpacity}
-          typingTestMemory={devicePrefs.typingTestMemory}
-          onTypingTestMemoryChange={devicePrefs.setTypingTestMemory}
-          typingTestDisplayLines={devicePrefs.typingTestDisplayLines}
-          typingTestFontSize={devicePrefs.typingTestFontSize}
-          onTypingTestDisplayLinesChange={devicePrefs.setTypingTestDisplayLines}
-          onTypingTestFontSizeChange={devicePrefs.setTypingTestFontSize}
-          typingTestHideKeymap={devicePrefs.typingTestHideKeymap}
-          typingTestHideStatsRow={devicePrefs.typingTestHideStatsRow}
-          typingTestHideControls={devicePrefs.typingTestHideControls}
-          typingTestSaveUnnamed={devicePrefs.typingTestSaveUnnamed}
-          typingTestComparisonBaselines={devicePrefs.typingTestComparisonBaselines}
-          onTypingTestHideKeymapChange={devicePrefs.setTypingTestHideKeymap}
-          onTypingTestHideStatsRowChange={devicePrefs.setTypingTestHideStatsRow}
-          onTypingTestHideControlsChange={devicePrefs.setTypingTestHideControls}
-          onTypingTestSaveUnnamedChange={devicePrefs.setTypingTestSaveUnnamed}
-          onTypingTestComparisonBaselineChange={devicePrefs.setTypingTestComparisonBaseline}
-          typingTestSettingsPanelOpen={devicePrefs.typingTestSettingsPanelOpen}
-          onTypingTestSettingsPanelOpenChange={devicePrefs.setTypingTestSettingsPanelOpen}
-          typingRecordEnabled={devicePrefs.typingRecordEnabled}
-          onRecKeystroke={recKeystroke.increment}
-          typingHeatmapWindowMin={appConfig.config.typingHeatmapWindowMin}
-          typingRecordingConsentAccepted={appConfig.config.typingRecordingConsentAccepted}
-          onViewAnalytics={handleViewAnalytics}
-          timelineHandoff={timelineHandoff}
-          onTypingTestRunningChange={setTypingTestRunning}
-          deviceName={deviceName}
-          isDummy={effectiveIsDummy}
-          onExportLayoutPdfAll={fileHandlers.handleExportLayoutPdfAll}
-          onExportLayoutPdfCurrent={fileHandlers.handleExportLayoutPdfCurrent}
-          favHubOrigin={hub.hubReady ? hub.hubOrigin : undefined}
-          favHubNeedsDisplayName={hub.hubReady && !hub.hubCanUpload}
-          favHubUploading={hub.favHubUploading}
-          favHubUploadResult={hub.favHubUploadResult}
-          onFavUploadToHub={hub.hubCanUpload ? hub.handleFavUploadToHub : undefined}
-          onFavUpdateOnHub={hub.hubCanUpload ? hub.handleFavUpdateOnHub : undefined}
-          onFavRemoveFromHub={hub.hubReady ? hub.handleFavRemoveFromHub : undefined}
-          onFavRenameOnHub={hub.hubReady ? hub.handleFavRenameOnHub : undefined}
-          devices={device.devices}
-          connectedDevice={device.connectedDevice}
-          onDeviceListActiveChange={device.setDeviceListActive}
-        />
-      </MacroHoverPreviewContext.Provider>
+      <KeymapEditor
+        ref={editorRef}
+        keyboardUid={keyboard.uid}
+        layout={keyboard.layout}
+        layers={keyboard.layers}
+        currentLayer={editorUI.currentLayer}
+        onLayerChange={editorUI.setCurrentLayer}
+        keymap={keyboard.keymap}
+        encoderLayout={keyboard.encoderLayout}
+        encoderCount={keyboard.encoderCount}
+        layoutOptions={decodedLayoutOptions}
+        layoutLabels={keyboard.definition?.layouts?.labels}
+        packedLayoutOptions={keyboard.layoutOptions}
+        onSetLayoutOptions={keyboard.setLayoutOptions}
+        remapLabel={devicePrefs.remapLabel}
+        isRemapped={devicePrefs.isRemapped}
+        remapKind={devicePrefs.remapKind}
+        pickerRemapLabel={devicePrefs.pickerRemapLabel}
+        onSetKey={keyboard.setKey}
+        onSetKeysBulk={keyboard.setKeysBulk}
+        onSetEncoder={keyboard.setEncoder}
+        rows={keyboard.rows}
+        cols={keyboard.cols}
+        getMatrixState={!device.isDummy && keyboard.vialProtocol >= 3 ? api.getMatrixState : undefined}
+        unlocked={keyboard.unlockStatus.unlocked}
+        onUnlock={(options) => {
+          editorUI.setShowUnlockDialog(true)
+          editorUI.setUnlockMacroWarning(!!options?.macroWarning)
+        }}
+        tapDanceEntries={keyboard.tapDanceEntries}
+        onSetTapDanceEntry={keyboard.setTapDanceEntry}
+        macroCount={keyboard.macroCount}
+        macroBufferSize={keyboard.macroBufferSize}
+        macroBuffer={keyboard.macroBuffer}
+        vialProtocol={keyboard.vialProtocol}
+        parsedMacros={keyboard.parsedMacros}
+        onSaveMacros={keyboard.setMacroBuffer}
+        tapHoldSupported={editorUI.tapHoldSupported}
+        mouseKeysSupported={editorUI.mouseKeysSupported}
+        magicSupported={editorUI.magicSupported}
+        graveEscapeSupported={editorUI.graveEscapeSupported}
+        autoShiftSupported={editorUI.autoShiftSupported}
+        oneShotKeysSupported={editorUI.oneShotKeysSupported}
+        comboSettingsSupported={editorUI.comboSettingsSupported}
+        supportedQsids={editorUI.hasAnySettings ? keyboard.supportedQsids : undefined}
+        qmkSettingsGet={editorUI.hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsGet : api.qmkSettingsGet) : undefined}
+        qmkSettingsSet={editorUI.hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsSet : api.qmkSettingsSet) : undefined}
+        qmkSettingsReset={editorUI.hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsReset : api.qmkSettingsReset) : undefined}
+        onSettingsUpdate={editorUI.hasAnySettings ? keyboard.updateQmkSettingsValue : undefined}
+        tappingTermMs={tappingTerm.termMs}
+        autoAdvance={devicePrefs.autoAdvance}
+        onAutoAdvanceChange={devicePrefs.setAutoAdvance}
+        viewMatrix={devicePrefs.viewMatrix}
+        onViewMatrixChange={devicePrefs.setViewMatrix}
+        viewMatrixWires={devicePrefs.viewMatrixWires}
+        onViewMatrixWiresChange={devicePrefs.setViewMatrixWires}
+        layerHoverPreview={devicePrefs.layerHoverPreview}
+        onLayerHoverPreviewChange={devicePrefs.setLayerHoverPreview}
+        macroHoverPreview={devicePrefs.macroHoverPreview}
+        onMacroHoverPreviewChange={devicePrefs.setMacroHoverPreview}
+        basicViewType={devicePrefs.basicViewType}
+        onBasicViewTypeChange={devicePrefs.setBasicViewType}
+        splitKeyMode={devicePrefs.splitKeyMode}
+        onSplitKeyModeChange={devicePrefs.setSplitKeyMode}
+        quickSelect={devicePrefs.quickSelect}
+        onQuickSelectChange={devicePrefs.setQuickSelect}
+        keyboardLayout={devicePrefs.layout}
+        onKeyboardLayoutChange={devicePrefs.setLayout}
+        keymapPackName={devicePrefs.activeLayoutName}
+        onRequestKeymapApply={requestKeymapApply}
+        keymapApplyOpen={pendingKeymapApply !== null}
+        keymapApplyLabelName={pendingKeymapApply?.name}
+        keymapApplyBusy={keymapApplyBusy}
+        onKeymapApplyConfirm={handleKeymapApplyConfirm}
+        onKeymapApplyCancel={handleKeymapApplyCancel}
+        keymapApplyError={keymapApplyError}
+        onLock={lifecycle.handleLock}
+        onTypingRecordDisarm={() => devicePrefs.setTypingRecordEnabled(false)}
+        unlockStatusKnown={keyboard.unlockStatusKnown}
+        onMatrixModeChange={editorUI.handleMatrixModeChange}
+        onOpenLighting={editorUI.lightingSupported ? () => editorUI.setShowLightingModal(true) : undefined}
+        comboEntries={editorUI.comboSupported ? keyboard.comboEntries : undefined}
+        onOpenCombo={editorUI.comboSupported ? (index: number) => editorUI.setComboInitialIndex(index) : undefined}
+        onSetComboEntry={editorUI.comboSupported ? keyboard.setComboEntry : undefined}
+        keyOverrideEntries={editorUI.keyOverrideSupported ? keyboard.keyOverrideEntries : undefined}
+        onOpenKeyOverride={editorUI.keyOverrideSupported ? (index: number) => editorUI.setKeyOverrideInitialIndex(index) : undefined}
+        onSetKeyOverrideEntry={editorUI.keyOverrideSupported ? keyboard.setKeyOverrideEntry : undefined}
+        altRepeatKeyEntries={editorUI.altRepeatKeySupported ? keyboard.altRepeatKeyEntries : undefined}
+        onOpenAltRepeatKey={editorUI.altRepeatKeySupported ? (index: number) => editorUI.setAltRepeatKeyInitialIndex(index) : undefined}
+        onSetAltRepeatKeyEntry={editorUI.altRepeatKeySupported ? keyboard.setAltRepeatKeyEntry : undefined}
+        layerNames={!effectiveIsDummy ? keyboard.layerNames : undefined}
+        onSetLayerName={!effectiveIsDummy ? keyboard.setLayerName : undefined}
+        toolsExtra={toolsExtra}
+        dataPanel={dataPanel}
+        onOverlayOpen={!effectiveIsDummy ? layoutStore.refreshEntries : undefined}
+        layerPanelOpen={devicePrefs.layerPanelOpen}
+        onLayerPanelOpenChange={devicePrefs.setLayerPanelOpen}
+        scale={editorUI.keymapScale}
+        onScaleChange={editorUI.adjustKeymapScale}
+        keyEditorZoom={devicePrefs.keyEditorZoom ?? (appConfig.config.zoomFactor ?? ZOOM_FACTOR_DEFAULT)}
+        onKeyEditorZoomChange={devicePrefs.setKeyEditorZoom}
+        typingTestMode={editorUI.typingTestMode}
+        onTypingTestModeChange={editorUI.handleTypingTestModeChange}
+        onSaveTypingTestResult={devicePrefs.addTypingTestResult}
+        onRenameTypingTestResult={devicePrefs.renameTypingTestResult}
+        onDeleteTypingTestResult={devicePrefs.deleteTypingTestResult}
+        typingTestHistory={devicePrefs.typingTestResults}
+        typingTestConfig={devicePrefs.typingTestConfig}
+        typingTestMonkeytypeConfig={devicePrefs.typingTestMonkeytypeConfig}
+        typingTestLanguage={devicePrefs.typingTestLanguage}
+        onTypingTestConfigChange={devicePrefs.setTypingTestConfig}
+        onTypingTestLanguageChange={devicePrefs.setTypingTestLanguage}
+        typingTestViewOnly={devicePrefs.typingTestViewOnly}
+        onTypingTestViewOnlyChange={onTypingTestViewOnlyChange}
+        typingTestViewOnlyWindowSize={devicePrefs.typingTestViewOnlyWindowSize}
+        onTypingTestViewOnlyWindowSizeChange={devicePrefs.setTypingTestViewOnlyWindowSize}
+        typingTestViewOnlyAlwaysOnTop={devicePrefs.typingTestViewOnlyAlwaysOnTop}
+        onTypingTestViewOnlyAlwaysOnTopChange={devicePrefs.setTypingTestViewOnlyAlwaysOnTop}
+        typingTestViewOnlyOpacity={devicePrefs.typingTestViewOnlyOpacity}
+        onTypingTestViewOnlyOpacityChange={devicePrefs.setTypingTestViewOnlyOpacity}
+        typingTestMemory={devicePrefs.typingTestMemory}
+        onTypingTestMemoryChange={devicePrefs.setTypingTestMemory}
+        typingTestDisplayLines={devicePrefs.typingTestDisplayLines}
+        typingTestFontSize={devicePrefs.typingTestFontSize}
+        onTypingTestDisplayLinesChange={devicePrefs.setTypingTestDisplayLines}
+        onTypingTestFontSizeChange={devicePrefs.setTypingTestFontSize}
+        typingTestHideKeymap={devicePrefs.typingTestHideKeymap}
+        typingTestHideStatsRow={devicePrefs.typingTestHideStatsRow}
+        typingTestHideControls={devicePrefs.typingTestHideControls}
+        typingTestSaveUnnamed={devicePrefs.typingTestSaveUnnamed}
+        typingTestComparisonBaselines={devicePrefs.typingTestComparisonBaselines}
+        onTypingTestHideKeymapChange={devicePrefs.setTypingTestHideKeymap}
+        onTypingTestHideStatsRowChange={devicePrefs.setTypingTestHideStatsRow}
+        onTypingTestHideControlsChange={devicePrefs.setTypingTestHideControls}
+        onTypingTestSaveUnnamedChange={devicePrefs.setTypingTestSaveUnnamed}
+        onTypingTestComparisonBaselineChange={devicePrefs.setTypingTestComparisonBaseline}
+        typingTestSettingsPanelOpen={devicePrefs.typingTestSettingsPanelOpen}
+        onTypingTestSettingsPanelOpenChange={devicePrefs.setTypingTestSettingsPanelOpen}
+        typingRecordEnabled={devicePrefs.typingRecordEnabled}
+        onRecKeystroke={recKeystroke.increment}
+        typingHeatmapWindowMin={appConfig.config.typingHeatmapWindowMin}
+        typingRecordingConsentAccepted={appConfig.config.typingRecordingConsentAccepted}
+        onViewAnalytics={handleViewAnalytics}
+        timelineHandoff={timelineHandoff}
+        onTypingTestRunningChange={setTypingTestRunning}
+        deviceName={deviceName}
+        isDummy={effectiveIsDummy}
+        onExportLayoutPdfAll={fileHandlers.handleExportLayoutPdfAll}
+        onExportLayoutPdfCurrent={fileHandlers.handleExportLayoutPdfCurrent}
+        favHubOrigin={hub.hubReady ? hub.hubOrigin : undefined}
+        favHubNeedsDisplayName={hub.hubReady && !hub.hubCanUpload}
+        favHubUploading={hub.favHubUploading}
+        favHubUploadResult={hub.favHubUploadResult}
+        onFavUploadToHub={hub.hubCanUpload ? hub.handleFavUploadToHub : undefined}
+        onFavUpdateOnHub={hub.hubCanUpload ? hub.handleFavUpdateOnHub : undefined}
+        onFavRemoveFromHub={hub.hubReady ? hub.handleFavRemoveFromHub : undefined}
+        onFavRenameOnHub={hub.hubReady ? hub.handleFavRenameOnHub : undefined}
+        devices={device.devices}
+        connectedDevice={device.connectedDevice}
+        onDeviceListActiveChange={device.setDeviceListActive}
+      />
     </div>
   )
 }
