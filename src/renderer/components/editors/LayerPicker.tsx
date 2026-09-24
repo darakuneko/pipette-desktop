@@ -10,7 +10,6 @@ interface Props {
   horizontal?: boolean
 }
 
-
 export function LayerPicker({ value, onChange, label, horizontal }: Props) {
   const { t } = useTranslation()
 
