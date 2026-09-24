@@ -241,12 +241,6 @@ const FAKE_TIMER_OPTS: Parameters<typeof vi.useFakeTimers>[0] = {
   toFake: ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'Date'],
 }
 
-async function flushIO(): Promise<void> {
-  for (let i = 0; i < 10; i++) {
-    await new Promise<void>((resolve) => setImmediate(resolve))
-  }
-}
-
 // Fake timers replace `Date` (see FAKE_TIMER_OPTS), so wait deadlines use
 // `performance.now`, which they leave alone. `setImmediate` is not faked
 // either, so yielding with it lets real fs I/O callbacks run between checks.
@@ -594,7 +588,7 @@ describe('sync-service', () => {
 
       notifyChange('favorites/tapDance')
       await vi.advanceTimersByTimeAsync(10_000)
-      await flushIO()
+      await waitForSyncIdle()
 
       expect(mockDownloadFile).toHaveBeenCalledWith('file-1')
       expect(mockUploadFile).not.toHaveBeenCalled()
@@ -616,12 +610,17 @@ describe('sync-service', () => {
 
       expect(mockListFiles).toHaveBeenCalledTimes(1)
 
+      // The re-scheduled flush can fire inside the next advance, once the
+      // manual sync has released the lock; it must not pick up the slow
+      // listFiles, whose timer nothing would advance afterwards.
+      mockListFiles.mockResolvedValue([])
       await vi.advanceTimersByTimeAsync(30_000)
       await syncPromise
 
-      mockListFiles.mockResolvedValue([])
+      // Fires the retry if it is still pending; the lock is free by now,
+      // so the flush starts instead of re-scheduling again.
       await vi.advanceTimersByTimeAsync(10_000)
-      await flushIO()
+      await waitForSyncIdle()
 
       expect(mockListFiles.mock.calls.length).toBeGreaterThanOrEqual(2)
     })
@@ -2269,10 +2268,13 @@ describe('sync-service', () => {
 
       // Now trigger auto-sync — should skip password check (cached)
       mockListFiles.mockResolvedValue([])
+      const listCallsBeforeFlush = mockListFiles.mock.calls.length
       notifyChange('favorites/tapDance')
       await vi.advanceTimersByTimeAsync(10_000)
-      await flushIO()
+      await waitForSyncIdle()
 
+      // The auto-sync flush ran (it lists remote files)
+      expect(mockListFiles.mock.calls.length).toBeGreaterThan(listCallsBeforeFlush)
       // No additional password-check upload (cached)
       const passwordCheckUploads = mockUploadFile.mock.calls.filter(
         (call) => call[0] === 'password-check.enc',
@@ -2446,7 +2448,7 @@ describe('sync-service', () => {
       const handler = captureBeforeQuitHandler()
       const preventDefault = vi.fn()
       handler({ preventDefault })
-      await flushIO()
+      await flushUntil(() => vi.mocked(app.quit).mock.calls.length > 0, 'the quit phases to call app.quit')
 
       expect(preventDefault).toHaveBeenCalled()
       expect(preSyncFinalizer.run).toHaveBeenCalledTimes(1)
@@ -2471,7 +2473,7 @@ describe('sync-service', () => {
 
       const handler = captureBeforeQuitHandler()
       handler({ preventDefault: vi.fn() })
-      await flushIO()
+      await flushUntil(() => vi.mocked(app.quit).mock.calls.length > 0, 'the quit phases to call app.quit')
 
       expect(preSyncFinalizer.run).toHaveBeenCalledTimes(1)
       expect(app.quit).toHaveBeenCalled()
