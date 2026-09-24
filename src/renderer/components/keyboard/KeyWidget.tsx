@@ -57,6 +57,7 @@ function KeyWidgetInner({
   onHover,
   onHoverEnd,
   hoverMaskParts,
+  hoverOuterPartOnly,
   selectedFill = true,
   scale = 1,
   effectiveTheme = 'light',
@@ -233,6 +234,30 @@ function KeyWidgetInner({
     }
   }
 
+  const emitHover = (group: SVGGElement) => {
+    if (onHover && isClickable) onHover(kleKey, keycode, group.getBoundingClientRect())
+  }
+
+  const outerHoverOnly = !!hoverOuterPartOnly && masked
+  const handleInnerMouseEnter = hoverMaskParts || outerHoverOnly
+    ? () => {
+        if (hoverMaskParts) setHoveredPart('inner')
+        if (outerHoverOnly) onHoverEnd?.()
+      }
+    : undefined
+  const handleInnerMouseLeave = hoverMaskParts || outerHoverOnly
+    ? (e: React.MouseEvent<SVGRectElement>) => {
+        if (hoverMaskParts) setHoveredPart('outer')
+        if (!outerHoverOnly) return
+        // Only a move onto the outer part of this same key resumes the
+        // hover; leaving the key through the inner rect gets the group's
+        // own mouseleave instead.
+        const group = e.currentTarget.closest('g')
+        const next = e.relatedTarget
+        if (group && next instanceof Node && group.contains(next)) emitHover(group)
+      }
+    : undefined
+
   const groupTransform = hasRotation
     ? `translate(${rotX}, ${rotY}) rotate(${kleKey.rotation}) translate(${-rotX}, ${-rotY})`
     : undefined
@@ -260,10 +285,7 @@ function KeyWidgetInner({
       onDoubleClick={handleDoubleClick}
       onMouseEnter={(e) => {
         if (hoverMaskParts && masked) setHoveredPart('outer')
-        if (onHover && isClickable) {
-          const rect = (e.currentTarget as SVGGElement).getBoundingClientRect()
-          onHover(kleKey, keycode, rect)
-        }
+        emitHover(e.currentTarget)
       }}
       onMouseLeave={() => {
         if (hoverMaskParts && masked) setHoveredPart(null)
@@ -318,8 +340,8 @@ function KeyWidgetInner({
           strokeWidth={innerBorderActive ? 2 : 1}
           onClick={handleInnerClick}
           onDoubleClick={handleInnerDoubleClick}
-          onMouseEnter={hoverMaskParts ? () => setHoveredPart('inner') : undefined}
-          onMouseLeave={hoverMaskParts ? () => setHoveredPart('outer') : undefined}
+          onMouseEnter={handleInnerMouseEnter}
+          onMouseLeave={handleInnerMouseLeave}
         />
       )}
 

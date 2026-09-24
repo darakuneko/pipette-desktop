@@ -72,6 +72,12 @@ export interface Props {
   onHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
   onHoverEnd?: () => void
   hoverMaskParts?: boolean
+  /** For a masked key, report hover only while the pointer is over the
+   *  outer (hold) part: entering the inner rect calls `onHoverEnd`, and
+   *  moving from the inner rect back to the outer part calls `onHover`
+   *  again. The thin margin around the inner rect counts as outer.
+   *  Independent of `hoverMaskParts`, which only drives the hover fill. */
+  hoverOuterPartOnly?: boolean
   selectedFill?: boolean
   scale?: number
   /** Current effective theme. Drives the invert-text decision for

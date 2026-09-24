@@ -24,12 +24,13 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   findInnerKeycode: () => undefined,
 }))
 
-// Layer 0 row 0: MO(1), KC_A, LT2(KC_B), MO(0), MO(5)
+// Layer 0 row 0: MO(1), KC_A, LT2(KC_B), MO(0), MO(5), MO(1)
 // Layer 1 row 0: KC_1 everywhere; layer 2 row 0: KC_2 everywhere.
+const LAYER0 = [1, 10, 2, 3, 4, 1]
 function makeKeymap(): Map<string, number> {
   const m = new Map<string, number>()
-  ;[1, 10, 2, 3, 4].forEach((code, col) => m.set(`0,0,${col}`, code))
-  for (let col = 0; col < 5; col++) {
+  LAYER0.forEach((code, col) => m.set(`0,0,${col}`, code))
+  for (let col = 0; col < LAYER0.length; col++) {
     m.set(`1,0,${col}`, 11)
     m.set(`2,0,${col}`, 12)
   }
@@ -37,6 +38,10 @@ function makeKeymap(): Map<string, number> {
 }
 
 const key = (col: number): KleKey => ({ row: 0, col } as KleKey)
+
+// The real layer as the pane displays it.
+const REAL_KEYCODES = new Map(LAYER0.map((code, col) => [`0,${col}`, CODES[code]]))
+const REAL_REMAPPED = new Set<string>()
 
 function baseOptions(overrides: Partial<UseLayerHoverPreviewOptions> = {}): UseLayerHoverPreviewOptions {
   return {
@@ -49,6 +54,8 @@ function baseOptions(overrides: Partial<UseLayerHoverPreviewOptions> = {}): UseL
     disabled: false,
     surfaceKey: 'none',
     deviceKey: 'uid-a',
+    realKeycodes: REAL_KEYCODES,
+    realRemappedKeys: REAL_REMAPPED,
     ...overrides,
   }
 }
@@ -74,7 +81,7 @@ describe('useLayerHoverPreview', () => {
     expect(result.current.previewLayer).toBeNull()
     act(() => { vi.advanceTimersByTime(1) })
     expect(result.current.previewLayer).toBe(1)
-    expect(result.current.keycodes.get('0,0')).toBe('KC_1')
+    expect(result.current.keycodes.get('0,1')).toBe('KC_1')
     expect(result.current.encoderKeycodes.get('0')).toEqual(['KC_3', 'KC_1'])
   })
 
@@ -253,8 +260,8 @@ describe('useLayerHoverPreview', () => {
     act(() => result.current.onKeyHover(key(0)))
     dwell()
     expect(result.current.previewLayer).toBe(1)
-    expect(result.current.keycodes.get('0,0')).toBe('KC_EXCLAIM')
-    expect(result.current.remappedKeys.has('0,0')).toBe(true)
+    expect(result.current.keycodes.get('0,1')).toBe('KC_EXCLAIM')
+    expect(result.current.remappedKeys.has('0,1')).toBe(true)
   })
 
   it('builds raw maps for the Base tab', () => {
@@ -263,7 +270,7 @@ describe('useLayerHoverPreview', () => {
     const { result } = setup({ remapLabel, isRemapped, raw: true })
     act(() => result.current.onKeyHover(key(0)))
     dwell()
-    expect(result.current.keycodes.get('0,0')).toBe('KC_1')
+    expect(result.current.keycodes.get('0,1')).toBe('KC_1')
     expect(result.current.remappedKeys.size).toBe(0)
   })
 
@@ -276,5 +283,29 @@ describe('useLayerHoverPreview', () => {
     const first = result.current.keycodes
     rerender({ ...opts })
     expect(result.current.keycodes).toBe(first)
+  })
+
+  it('keeps the hovered key on its real-layer value and remap tint', () => {
+    const realRemapped = new Set(['0,0'])
+    const isRemapped = (id: string): boolean => id === 'KC_1'
+    const { result } = setup({ isRemapped, realRemappedKeys: realRemapped })
+    act(() => result.current.onKeyHover(key(0)))
+    dwell()
+    expect(result.current.keycodes.get('0,0')).toBe('MO(1)')
+    expect(result.current.remappedKeys.has('0,0')).toBe(true)
+    expect(result.current.keycodes.get('0,5')).toBe('KC_1')
+    expect(result.current.remappedKeys.has('0,5')).toBe(true)
+  })
+
+  it('keeps the right source key when moving between two keys targeting the same layer', () => {
+    const { result } = setup()
+    act(() => result.current.onKeyHover(key(0)))
+    dwell()
+    act(() => result.current.onKeyHoverEnd())
+    act(() => result.current.onKeyHover(key(5)))
+    dwell()
+    expect(result.current.previewLayer).toBe(1)
+    expect(result.current.keycodes.get('0,5')).toBe('MO(1)')
+    expect(result.current.keycodes.get('0,0')).toBe('KC_1')
   })
 })

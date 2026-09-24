@@ -79,6 +79,8 @@ interface Props {
   onEncoderDoubleClick?: (key: KleKey, direction: number, rect: DOMRect, maskClicked: boolean) => void
   onKeyHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
   onKeyHoverEnd?: () => void
+  /** See `KeyWidget`'s `hoverOuterPartOnly`. */
+  hoverOuterPartOnly?: boolean
   /** Middle-click (mouse button 1) on a key delegated from the root `<svg>`
    *  — see the `auxclick`/`mousedown`/`mouseup` handlers below for why this
    *  is delegated rather than a per-`KeyWidget` prop. Gated the same way as
@@ -127,6 +129,7 @@ function KeyboardWidgetInner({
   onEncoderDoubleClick,
   onKeyHover,
   onKeyHoverEnd,
+  hoverOuterPartOnly,
   onKeyAuxClick,
   onEncoderAuxClick,
   readOnly = false,
@@ -307,6 +310,7 @@ function KeyboardWidgetInner({
             onDoubleClick={readOnly ? undefined : onKeyDoubleClick}
             onHover={onKeyHover}
             onHoverEnd={onKeyHoverEnd}
+            hoverOuterPartOnly={hoverOuterPartOnly}
             scale={scale}
           />
         )
@@ -364,6 +368,7 @@ function KeyboardWidgetInner({
             onDoubleClick={readOnly ? undefined : onKeyDoubleClick}
             onHover={onKeyHover}
             onHoverEnd={onKeyHoverEnd}
+            hoverOuterPartOnly={hoverOuterPartOnly}
             scale={scale}
           />
         )

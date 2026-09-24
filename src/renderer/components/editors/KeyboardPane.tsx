@@ -94,6 +94,8 @@ export interface KeyboardPaneProps {
   onEncoderAuxClick?: (pos: { idx: number; dir: number }) => void
   onKeyHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
   onKeyHoverEnd?: () => void
+  /** See `KeyWidget`'s `hoverOuterPartOnly`. */
+  hoverOuterPartOnly?: boolean
   onDeselect?: () => void
   contentRef?: React.RefObject<HTMLDivElement | null>
 }
@@ -137,6 +139,7 @@ export function KeyboardPane({
   onEncoderAuxClick,
   onKeyHover,
   onKeyHoverEnd,
+  hoverOuterPartOnly,
   onDeselect,
   contentRef,
 }: KeyboardPaneProps) {
@@ -184,6 +187,7 @@ export function KeyboardPane({
           onEncoderAuxClick={isActive ? onEncoderAuxClick : undefined}
           onKeyHover={onKeyHover}
           onKeyHoverEnd={onKeyHoverEnd}
+          hoverOuterPartOnly={hoverOuterPartOnly}
         />
       </div>
       {/* Two cells, not three: `footerExtra` (the simulation tab's Apply

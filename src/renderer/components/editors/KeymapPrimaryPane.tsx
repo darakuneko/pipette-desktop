@@ -132,6 +132,8 @@ export function KeymapPrimaryPane({
     raw: onBaseTab,
     disabled: blocked || viewMatrixMode.active || multiSelectedKeys.size > 0 || (showPackTabs && packTab === 'pack'),
     surfaceKey: showPackTabs ? packTab : 'none',
+    realKeycodes: primaryKeycodes,
+    realRemappedKeys: primaryRemappedKeys,
   })
   const { previewLayer } = preview
   const previewing = previewLayer !== null
@@ -217,6 +219,7 @@ export function KeymapPrimaryPane({
           onEncoderDoubleClick={viewMatrixMode.active ? undefined : onEncoderDoubleClick}
           onKeyHover={layerHoverPreview ? preview.onKeyHover : undefined}
           onKeyHoverEnd={layerHoverPreview ? preview.onKeyHoverEnd : undefined}
+          hoverOuterPartOnly
           onDeselect={viewMatrixMode.active ? viewMatrixMode.clearSelection : handleDeselect} contentRef={contentRef}
         />
       )}

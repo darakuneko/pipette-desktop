@@ -42,16 +42,19 @@ describe('layer hover preview — real keycode parsing', () => {
     afterEach(() => { vi.useRealTimers() })
 
     it('previews the layer an LT key targets and shows its keycodes', () => {
-      const keymap = new Map([['0,0,0', deserialize('LT2(KC_B)')], ['2,0,0', deserialize('KC_Z')]])
+      const keymap = new Map([['0,0,0', deserialize('LT2(KC_B)')], ['2,0,1', deserialize('KC_Z')]])
       const encoderLayout = new Map<string, number>()
+      const realKeycodes = new Map([['0,0', 'LT2(KC_B)']])
+      const realRemappedKeys = new Set<string>()
       const { result } = renderHook(() => useLayerHoverPreview({
         layers: 3, currentLayer: 0, keymap, encoderLayout, encoderCount: 0,
-        raw: false, disabled: false, surfaceKey: 'none',
+        raw: false, disabled: false, surfaceKey: 'none', realKeycodes, realRemappedKeys,
       }))
       act(() => result.current.onKeyHover({ row: 0, col: 0 } as KleKey))
       act(() => { vi.advanceTimersByTime(SHARED_BUBBLE_OPEN_DELAY_MS) })
       expect(result.current.previewLayer).toBe(2)
-      expect(result.current.keycodes.get('0,0')).toBe('KC_Z')
+      expect(result.current.keycodes.get('0,1')).toBe('KC_Z')
+      expect(result.current.keycodes.get('0,0')).toBe('LT2(KC_B)')
     })
   })
 })

@@ -8,10 +8,11 @@
 // Only `KeyWidget` emits hover callbacks, so layer keys placed on encoders
 // never start a preview.
 
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { serialize } from '../../../shared/keycodes/keycodes'
 import { getLayerOpTarget } from '../../../shared/keycodes/keycodes-classify'
 import type { KleKey } from '../../../shared/kle/types'
+import { posKey } from '../../../shared/kle/pos-key'
 import { useSharedHoverBubble } from '../../hooks/use-shared-hover-bubble'
 import { EMPTY_REMAPPED } from './keymap-editor-types'
 import { useLayerKeycodes } from './use-layer-keycodes'
@@ -40,6 +41,11 @@ export interface UseLayerHoverPreviewOptions extends Omit<LayerHoverPreviewInput
   disabled: boolean
   /** Identifies the visible pack tab; a change cancels the preview. */
   surfaceKey: string
+  /** The real layer's keycodes / remap tint as currently displayed. The
+   *  hovered key keeps these during a preview so its inner (tap) rect
+   *  stays clickable and moving onto it can still cancel the preview. */
+  realKeycodes: Map<string, string>
+  realRemappedKeys: Set<string>
 }
 
 export interface UseLayerHoverPreviewReturn {
@@ -61,6 +67,8 @@ export interface UseLayerHoverPreviewReturn {
  *  below has run. */
 interface PreviewTarget {
   layer: number
+  /** `posKey` of the key that started the preview. */
+  pos: string
   currentLayer: number
   keymap: Map<string, number>
   encoderLayout: Map<string, number>
@@ -90,7 +98,7 @@ export function resolveLayerHoverTarget(
 
 export function useLayerHoverPreview({
   layers, currentLayer, keymap, encoderLayout, encoderCount, isRemapped, remapLabel,
-  deviceKey, raw, disabled, surfaceKey,
+  deviceKey, raw, disabled, surfaceKey, realKeycodes, realRemappedKeys,
 }: UseLayerHoverPreviewOptions): UseLayerHoverPreviewReturn {
   const { target, show, hide } = useSharedHoverBubble<PreviewTarget>()
 
@@ -111,7 +119,7 @@ export function useLayerHoverPreview({
       return
     }
     show({
-      layer, currentLayer: s.currentLayer, keymap: s.keymap, encoderLayout: s.encoderLayout,
+      layer, pos: posKey(key.row, key.col), currentLayer: s.currentLayer, keymap: s.keymap, encoderLayout: s.encoderLayout,
       deviceKey: s.deviceKey, surfaceKey: s.surfaceKey,
     })
   }, [show, hide])
@@ -138,11 +146,33 @@ export function useLayerHoverPreview({
     typingTestEffectiveLayer: 0, enabled: previewLayer !== null,
   })
 
+  const previewPos = previewLayer !== null && target ? target.pos : null
+  const builtRemapped = raw ? EMPTY_REMAPPED : built.remappedKeys
+  // Copies, so the maps cached by the builders are never mutated.
+  const keycodes = useMemo(() => {
+    const base = built.layerKeycodes
+    if (previewPos === null || base.get(previewPos) === realKeycodes.get(previewPos)) return base
+    const next = new Map(base)
+    const real = realKeycodes.get(previewPos)
+    if (real === undefined) next.delete(previewPos)
+    else next.set(previewPos, real)
+    return next
+  }, [built.layerKeycodes, previewPos, realKeycodes])
+  const remappedKeys = useMemo(() => {
+    if (previewPos === null) return builtRemapped
+    const real = realRemappedKeys.has(previewPos)
+    if (builtRemapped.has(previewPos) === real) return builtRemapped
+    const next = new Set(builtRemapped)
+    if (real) next.add(previewPos)
+    else next.delete(previewPos)
+    return next
+  }, [builtRemapped, previewPos, realRemappedKeys])
+
   return {
     previewLayer,
-    keycodes: built.layerKeycodes,
+    keycodes,
     encoderKeycodes: built.layerEncoderKeycodes,
-    remappedKeys: raw ? EMPTY_REMAPPED : built.remappedKeys,
+    remappedKeys,
     remappedEncoders: raw ? EMPTY_REMAPPED : built.layerEncoderRemapped,
     onKeyHover,
     onKeyHoverEnd: hide,
