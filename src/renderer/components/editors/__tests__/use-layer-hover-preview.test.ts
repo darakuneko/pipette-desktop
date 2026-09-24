@@ -285,16 +285,30 @@ describe('useLayerHoverPreview', () => {
     expect(result.current.keycodes).toBe(first)
   })
 
-  it('keeps the hovered key on its real-layer value and remap tint', () => {
-    const realRemapped = new Set(['0,0'])
-    const isRemapped = (id: string): boolean => id === 'KC_1'
-    const { result } = setup({ isRemapped, realRemappedKeys: realRemapped })
+  it('keeps the hovered key on its real-layer value', () => {
+    const { result } = setup()
     act(() => result.current.onKeyHover(key(0)))
     dwell()
     expect(result.current.keycodes.get('0,0')).toBe('MO(1)')
-    expect(result.current.remappedKeys.has('0,0')).toBe(true)
     expect(result.current.keycodes.get('0,5')).toBe('KC_1')
+  })
+
+  it('drops the target layer\'s tint from the hovered key when the real key is untinted', () => {
+    // Every layer-1 key (KC_1) is tinted; the real layer shows no tint.
+    const isRemapped = (id: string): boolean => id === 'KC_1'
+    const { result } = setup({ isRemapped, realRemappedKeys: new Set() })
+    act(() => result.current.onKeyHover(key(0)))
+    dwell()
+    expect(result.current.remappedKeys.has('0,0')).toBe(false)
     expect(result.current.remappedKeys.has('0,5')).toBe(true)
+  })
+
+  it('adds the real tint to the hovered key when the target layer has none there', () => {
+    const { result } = setup({ realRemappedKeys: new Set(['0,0']) })
+    act(() => result.current.onKeyHover(key(0)))
+    dwell()
+    expect(result.current.remappedKeys.has('0,0')).toBe(true)
+    expect(result.current.remappedKeys.has('0,5')).toBe(false)
   })
 
   it('keeps the right source key when moving between two keys targeting the same layer', () => {

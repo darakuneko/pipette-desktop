@@ -219,7 +219,7 @@ export function KeymapPrimaryPane({
           onEncoderDoubleClick={viewMatrixMode.active ? undefined : onEncoderDoubleClick}
           onKeyHover={layerHoverPreview ? preview.onKeyHover : undefined}
           onKeyHoverEnd={layerHoverPreview ? preview.onKeyHoverEnd : undefined}
-          hoverOuterPartOnly
+          hoverOuterPartOnly={!!layerHoverPreview}
           onDeselect={viewMatrixMode.active ? viewMatrixMode.clearSelection : handleDeselect} contentRef={contentRef}
         />
       )}
