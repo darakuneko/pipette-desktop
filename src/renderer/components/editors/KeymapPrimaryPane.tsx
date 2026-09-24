@@ -95,6 +95,15 @@ export interface KeymapPrimaryPaneProps {
   layerHoverPreview?: LayerHoverPreviewInput
 }
 
+/** `handler` with `cancel()` run first, kept referentially stable while
+ *  both inputs are, so memoized key/encoder widgets don't re-render. */
+function useCancelFirst<A extends unknown[]>(cancel: () => void, handler: (...args: A) => void): (...args: A) => void {
+  return useCallback((...args: A) => {
+    cancel()
+    handler(...args)
+  }, [cancel, handler])
+}
+
 const NO_LAYER_HOVER_PREVIEW: LayerHoverPreviewInput = {
   layers: 0, currentLayer: 0, keymap: new Map(), encoderLayout: new Map(), encoderCount: 0, blocked: true,
 }
@@ -116,39 +125,28 @@ export function KeymapPrimaryPane({
   handleDeselect, handlePackTabChange, keymapPackName, layerHoverPreview,
 }: KeymapPrimaryPaneProps): JSX.Element {
   const { t } = useTranslation()
-  const hoverInput = layerHoverPreview ?? NO_LAYER_HOVER_PREVIEW
+  const { layers, currentLayer, keymap, encoderLayout, encoderCount, isRemapped, layerNames, deviceKey, blocked } =
+    layerHoverPreview ?? NO_LAYER_HOVER_PREVIEW
   const onBaseTab = showPackTabs && packTab === 'base'
   const preview = useLayerHoverPreview({
-    ...hoverInput,
+    layers, currentLayer, keymap, encoderLayout, encoderCount, isRemapped, deviceKey,
     remapLabel,
     raw: onBaseTab,
-    disabled: hoverInput.blocked || viewMatrixMode.active || multiSelectedKeys.size > 0 || (showPackTabs && packTab === 'pack'),
+    disabled: blocked || viewMatrixMode.active || multiSelectedKeys.size > 0 || (showPackTabs && packTab === 'pack'),
     surfaceKey: showPackTabs ? packTab : 'none',
   })
   const { previewLayer } = preview
   const previewing = previewLayer !== null
   const previewLabel = previewLayer === null
     ? undefined
-    : hoverInput.layerNames?.[previewLayer] || t('editor.keymap.layerN', { n: previewLayer })
+    : layerNames?.[previewLayer] || t('editor.keymap.layerN', { n: previewLayer })
   // Clicks always act on the real layer: drop the preview first so the
   // board shows what the click is about to edit.
   const { cancel } = preview
-  const onKeyClick = useCallback<KeymapPrimaryPaneProps['handleKeyClick']>((...args) => {
-    cancel()
-    handleKeyClick(...args)
-  }, [cancel, handleKeyClick])
-  const onKeyDoubleClick = useCallback<KeymapPrimaryPaneProps['handleKeyDoubleClick']>((...args) => {
-    cancel()
-    handleKeyDoubleClick(...args)
-  }, [cancel, handleKeyDoubleClick])
-  const onEncoderClick = useCallback<KeymapPrimaryPaneProps['handleEncoderClick']>((...args) => {
-    cancel()
-    handleEncoderClick(...args)
-  }, [cancel, handleEncoderClick])
-  const onEncoderDoubleClick = useCallback<KeymapPrimaryPaneProps['handleEncoderDoubleClick']>((...args) => {
-    cancel()
-    handleEncoderDoubleClick(...args)
-  }, [cancel, handleEncoderDoubleClick])
+  const onKeyClick = useCancelFirst(cancel, handleKeyClick)
+  const onKeyDoubleClick = useCancelFirst(cancel, handleKeyDoubleClick)
+  const onEncoderClick = useCancelFirst(cancel, handleEncoderClick)
+  const onEncoderDoubleClick = useCancelFirst(cancel, handleEncoderDoubleClick)
   // Middle-click only undoes the key/encoder the user has actually
   // selected — a stray middle click while merely hovering an unselected
   // key must never change it. `auxUndoHandlers` itself still does the
