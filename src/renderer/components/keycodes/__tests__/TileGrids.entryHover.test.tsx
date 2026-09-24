@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { TdTileGrid, ComboTileGrid, KeyOverrideTileGrid, AltRepeatKeyTileGrid } from '../TileGrids'
+import { Profiler } from 'react'
 import { EntryHoverPreviewContext } from '../entry-hover-context'
 import { useTileContentOverride } from '../../../hooks/useTileContentOverride'
 import { SHARED_BUBBLE_OPEN_DELAY_MS } from '../../../hooks/use-shared-hover-bubble'
@@ -52,12 +52,47 @@ function values(): string[] {
   return screen.getAllByTestId('entry-hover-line').map((el) => el.lastElementChild?.textContent ?? '')
 }
 
+interface PickerProps {
+  td?: TapDanceEntry[]
+  combo?: ComboEntry[]
+  ko?: KeyOverrideEntry[]
+  ark?: AltRepeatKeyEntry[]
+  onOpen?: (index: number) => void
+  hoverPreview?: boolean
+}
+
+// The tile tabs as a picker shows them: the requested grids plus the
+// picker's single shared bubble, with the hover setting from the context.
+function Picker({ hoverPreview = false, ...rest }: PickerProps) {
+  return (
+    <EntryHoverPreviewContext.Provider value={hoverPreview}>
+      <PickerBody {...rest} />
+    </EntryHoverPreviewContext.Provider>
+  )
+}
+
+function noop(): void {}
+
+function PickerBody({ td, combo, ko, ark, onOpen = noop }: Omit<PickerProps, 'hoverPreview'>) {
+  const override = useTileContentOverride({
+    tapDanceEntries: td,
+    onSelect: noop,
+    settings: {
+      comboEntries: combo, onOpenCombo: onOpen,
+      keyOverrideEntries: ko, onOpenKeyOverride: onOpen,
+      altRepeatKeyEntries: ark, onOpenAltRepeatKey: onOpen,
+    },
+  })
+  const tabs = override?.tabs
+  return <div>{tabs?.tapDance}{tabs?.combo}{tabs?.keyOverride}{tabs?.altRepeatKey}{override?.bubble}</div>
+}
+
 describe('picker tile hover bubble — Tap Dance / Combo / Key Override / Alt Repeat Key', () => {
   beforeEach(() => { vi.useFakeTimers() })
   afterEach(() => { vi.useRealTimers() })
 
   it('Tap Dance: shows every field of a configured tile, nothing for N/C', () => {
-    render(<TdTileGrid entries={TD} onSelect={vi.fn()} hoverPreview />)
+    render(<Picker td={TD} hoverPreview />)
     fireEvent.mouseEnter(screen.getByTestId('td-tile-0'))
     dwell()
     expect(bubble()?.firstElementChild?.textContent).toBe('editor.tapDance.editTitle(0)')
@@ -69,7 +104,7 @@ describe('picker tile hover bubble — Tap Dance / Combo / Key Override / Alt Re
   })
 
   it('Combo: shows all keys and the output; a tile with only key 3 is N/C', () => {
-    render(<ComboTileGrid entries={COMBO} onOpen={vi.fn()} hoverPreview />)
+    render(<Picker combo={COMBO} hoverPreview />)
     fireEvent.mouseEnter(screen.getByTestId('combo-tile-0'))
     dwell()
     expect(values()).toEqual(['code-4', 'code-5', 'code-6', 'editor.hoverDetails.none', 'code-7'])
@@ -80,7 +115,7 @@ describe('picker tile hover bubble — Tap Dance / Combo / Key Override / Alt Re
   })
 
   it('Key Override: a disabled but configured entry shows its fields and Off', () => {
-    render(<KeyOverrideTileGrid entries={KO} onOpen={vi.fn()} hoverPreview />)
+    render(<Picker ko={KO} hoverPreview />)
     fireEvent.mouseEnter(screen.getByTestId('ko-tile-0'))
     dwell()
     expect(values()).toEqual([
@@ -94,7 +129,7 @@ describe('picker tile hover bubble — Tap Dance / Combo / Key Override / Alt Re
   })
 
   it('Alt Repeat Key: shows every field; an entry with only modifiers is N/C', () => {
-    render(<AltRepeatKeyTileGrid entries={ARK} onOpen={vi.fn()} hoverPreview />)
+    render(<Picker ark={ARK} hoverPreview />)
     fireEvent.mouseEnter(screen.getByTestId('arep-tile-0'))
     dwell()
     expect(values()).toEqual(['editor.hoverDetails.on', 'code-4', 'code-5', 'editor.hoverDetails.none', 'Bidirectional'])
@@ -106,12 +141,7 @@ describe('picker tile hover bubble — Tap Dance / Combo / Key Override / Alt Re
 
   it('does nothing with the hover preview off', () => {
     render(
-      <>
-        <TdTileGrid entries={TD} onSelect={vi.fn()} />
-        <ComboTileGrid entries={COMBO} onOpen={vi.fn()} />
-        <KeyOverrideTileGrid entries={KO} onOpen={vi.fn()} />
-        <AltRepeatKeyTileGrid entries={ARK} onOpen={vi.fn()} />
-      </>,
+      <Picker td={TD} combo={COMBO} ko={KO} ark={ARK} />,
     )
     for (const id of ['td-tile-0', 'combo-tile-0', 'ko-tile-0', 'arep-tile-0']) {
       fireEvent.mouseEnter(screen.getByTestId(id))
@@ -123,10 +153,7 @@ describe('picker tile hover bubble — Tap Dance / Combo / Key Override / Alt Re
 
   it('moving from one kind to another before the dwell shows only the last one', () => {
     render(
-      <>
-        <TdTileGrid entries={TD} onSelect={vi.fn()} hoverPreview />
-        <KeyOverrideTileGrid entries={KO} onOpen={vi.fn()} hoverPreview />
-      </>,
+      <Picker td={TD} ko={KO} hoverPreview />,
     )
     fireEvent.mouseEnter(screen.getByTestId('td-tile-0'))
     dwell(200)
@@ -138,11 +165,11 @@ describe('picker tile hover bubble — Tap Dance / Combo / Key Override / Alt Re
   })
 
   it('turning it off while pending never opens, and unmount clears a pending open', () => {
-    const { rerender, unmount } = render(<ComboTileGrid entries={COMBO} onOpen={vi.fn()} hoverPreview />)
+    const { rerender, unmount } = render(<Picker combo={COMBO} hoverPreview />)
     fireEvent.mouseEnter(screen.getByTestId('combo-tile-0'))
     dwell(100)
-    rerender(<ComboTileGrid entries={COMBO} onOpen={vi.fn()} hoverPreview={false} />)
-    rerender(<ComboTileGrid entries={COMBO} onOpen={vi.fn()} hoverPreview />)
+    rerender(<Picker combo={COMBO} hoverPreview={false} />)
+    rerender(<Picker combo={COMBO} hoverPreview />)
     dwell()
     expect(bubble()).toBeNull()
     fireEvent.mouseEnter(screen.getByTestId('combo-tile-0'))
@@ -152,19 +179,19 @@ describe('picker tile hover bubble — Tap Dance / Combo / Key Override / Alt Re
   })
 
   it('follows an edit to the shown entry and closes when it is cleared', () => {
-    const { rerender } = render(<KeyOverrideTileGrid entries={KO} onOpen={vi.fn()} hoverPreview />)
+    const { rerender } = render(<Picker ko={KO} hoverPreview />)
     fireEvent.mouseEnter(screen.getByTestId('ko-tile-0'))
     dwell()
     const edited = [{ ...KO[0], enabled: true, replacementKey: 9 }, KO[1]]
-    rerender(<KeyOverrideTileGrid entries={edited} onOpen={vi.fn()} hoverPreview />)
+    rerender(<Picker ko={edited} hoverPreview />)
     expect(values().slice(0, 3)).toEqual(['editor.hoverDetails.on', 'code-4', 'code-9'])
-    rerender(<KeyOverrideTileGrid entries={[KO[1], KO[1]]} onOpen={vi.fn()} hoverPreview />)
+    rerender(<Picker ko={[KO[1], KO[1]]} hoverPreview />)
     expect(bubble()).toBeNull()
   })
 
   it('keeps tile clicks working', () => {
     const onOpen = vi.fn()
-    render(<AltRepeatKeyTileGrid entries={ARK} onOpen={onOpen} hoverPreview />)
+    render(<Picker ark={ARK} onOpen={onOpen} hoverPreview />)
     fireEvent.mouseEnter(screen.getByTestId('arep-tile-0'))
     dwell()
     fireEvent.click(screen.getByTestId('arep-tile-0'))
@@ -182,7 +209,8 @@ function OverrideHost() {
       altRepeatKeyEntries: ARK, onOpenAltRepeatKey: vi.fn(),
     },
   })
-  return <div>{override?.tapDance}{override?.combo}{override?.keyOverride}{override?.altRepeatKey}</div>
+  const tabs = override?.tabs
+  return <div>{tabs?.tapDance}{tabs?.combo}{tabs?.keyOverride}{tabs?.altRepeatKey}{override?.bubble}</div>
 }
 
 describe('useTileContentOverride — Fav Hover Details setting for every tile kind', () => {
@@ -206,5 +234,71 @@ describe('useTileContentOverride — Fav Hover Details setting for every tile ki
     fireEvent.mouseEnter(screen.getByTestId(id))
     dwell()
     expect(bubble()).toBeNull()
+  })
+})
+
+describe('one entry hover bubble per picker', () => {
+  beforeEach(() => { vi.useFakeTimers() })
+  afterEach(() => { vi.useRealTimers() })
+
+  it('moving onto a tile of another kind while a bubble is shown keeps a single bubble', () => {
+    render(<Picker td={TD} combo={COMBO} ko={KO} ark={ARK} hoverPreview />)
+    fireEvent.mouseEnter(screen.getByTestId('td-tile-0'))
+    dwell()
+    expect(bubble()?.firstElementChild?.textContent).toBe('editor.tapDance.editTitle(0)')
+    // No mouseleave on the Tap Dance tile: every grid shares one bubble,
+    // so the next kind replaces it instead of opening a second one.
+    for (const [id, title] of [
+      ['combo-tile-0', 'editor.combo.editTitle(0)'],
+      ['ko-tile-0', 'editor.keyOverride.editTitle(0)'],
+      ['arep-tile-0', 'editor.altRepeatKey.editTitle(0)'],
+    ]) {
+      fireEvent.mouseEnter(screen.getByTestId(id))
+      dwell()
+      expect(screen.getAllByTestId('entry-hover-bubble')).toHaveLength(1)
+      expect(bubble()?.firstElementChild?.textContent).toBe(title)
+    }
+  })
+
+  it('leaving a tile of one kind closes the bubble opened from another kind', () => {
+    render(<Picker td={TD} ko={KO} hoverPreview />)
+    fireEvent.mouseEnter(screen.getByTestId('ko-tile-0'))
+    dwell()
+    fireEvent.mouseLeave(screen.getByTestId('td-tile-0'))
+    expect(bubble()).toBeNull()
+  })
+
+  it('opening and closing the bubble re-renders neither the grids nor the caller', () => {
+    let hostRenders = 0
+    const gridCommits = vi.fn()
+    function Host() {
+      hostRenders++
+      const override = useTileContentOverride({
+        tapDanceEntries: TD,
+        onSelect: noop,
+        settings: { comboEntries: COMBO, onOpenCombo: noop, keyOverrideEntries: KO, onOpenKeyOverride: noop },
+      })
+      const tabs = override?.tabs
+      return (
+        <div>
+          <Profiler id="grids" onRender={gridCommits}>{tabs?.tapDance}{tabs?.combo}{tabs?.keyOverride}</Profiler>
+          {override?.bubble}
+        </div>
+      )
+    }
+    render(<EntryHoverPreviewContext.Provider value><Host /></EntryHoverPreviewContext.Provider>)
+    // The probe sees the mount commit, so a silent one below is meaningful.
+    expect(gridCommits).toHaveBeenCalled()
+    const rendersBefore = hostRenders
+    gridCommits.mockClear()
+    fireEvent.mouseEnter(screen.getByTestId('td-tile-0'))
+    dwell()
+    expect(bubble()).not.toBeNull()
+    fireEvent.mouseEnter(screen.getByTestId('ko-tile-0'))
+    dwell()
+    fireEvent.mouseLeave(screen.getByTestId('ko-tile-0'))
+    expect(bubble()).toBeNull()
+    expect(hostRenders).toBe(rendersBefore)
+    expect(gridCommits).not.toHaveBeenCalled()
   })
 })

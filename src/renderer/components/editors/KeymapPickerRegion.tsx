@@ -11,6 +11,7 @@ import { ICON_MD } from '../../constants/ui-tokens'
 import type { KeymapEditorProps } from './keymap-editor-types'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
 import type { parseLayoutLabels } from '../../../shared/layout-options'
+import type { TabContentOverride } from '../keycodes/tabbed-keycodes-model'
 
 /** `KeymapEditorProps` covers every plain pass-through field below
  *  (layers/currentLayer/onLayerChange/layerNames/onSetLayerName for
@@ -41,7 +42,7 @@ export interface KeymapPickerRegionProps extends KeymapEditorProps {
   isMaskKey: boolean
   isLMMask: boolean
   tabFooterContent: Record<string, React.ReactNode>
-  tabContentOverride: Record<string, React.ReactNode> | undefined
+  tabContentOverride: TabContentOverride | undefined
   layoutButtonRef: RefObject<HTMLButtonElement | null>
   layoutPanelOpen: boolean
   setLayoutPanelOpen: (updater: (prev: boolean) => boolean) => void

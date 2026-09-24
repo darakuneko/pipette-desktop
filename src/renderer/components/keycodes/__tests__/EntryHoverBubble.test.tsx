@@ -3,7 +3,6 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { MacroTileGrid } from '../TileGrids'
 import {
   ENTRY_BUBBLE_CLASS, MAX_ENTRY_BUBBLE_COLUMNS, EntryHoverBubble, nextEntryBubbleColumns, splitRows,
 } from '../EntryHoverBubble'
@@ -11,6 +10,7 @@ import { EntryHoverPreviewContext } from '../entry-hover-context'
 import { useTileContentOverride } from '../../../hooks/useTileContentOverride'
 import { SHARED_BUBBLE_OPEN_DELAY_MS } from '../../../hooks/use-shared-hover-bubble'
 import type { MacroAction } from '../../../../preload/macro'
+import type { Keycode } from '../../../../shared/keycodes/keycodes'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -52,12 +52,34 @@ function bubbleLines(): string[] {
   return screen.getAllByTestId('entry-hover-line').map((el) => el.textContent ?? '')
 }
 
+interface MacroPickerProps {
+  macros: MacroAction[][]
+  onSelect: (kc: Keycode) => void
+  onDoubleClick?: (kc: Keycode) => void
+  hoverPreview?: boolean
+}
+
+// The Macro tab as a picker shows it: the tile grid plus the picker's
+// single shared bubble, with the hover setting taken from the context.
+function MacroPicker({ hoverPreview = false, ...rest }: MacroPickerProps) {
+  return (
+    <EntryHoverPreviewContext.Provider value={hoverPreview}>
+      <MacroPickerBody {...rest} />
+    </EntryHoverPreviewContext.Provider>
+  )
+}
+
+function MacroPickerBody({ macros, onSelect, onDoubleClick }: Omit<MacroPickerProps, 'hoverPreview'>) {
+  const override = useTileContentOverride({ deserializedMacros: macros, onSelect, onDoubleClick })
+  return <div>{override?.tabs.macro}{override?.bubble}</div>
+}
+
 describe('MacroTileGrid hover bubble', () => {
   beforeEach(() => { vi.useFakeTimers() })
   afterEach(() => { vi.useRealTimers() })
 
   it('opens after the shared dwell and closes at once on leave', () => {
-    render(<MacroTileGrid macros={MACROS} onSelect={vi.fn()} hoverPreview />)
+    render(<MacroPicker macros={MACROS} onSelect={vi.fn()} hoverPreview />)
     fireEvent.mouseEnter(tile(2))
     dwell(SHARED_BUBBLE_OPEN_DELAY_MS - 1)
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
@@ -68,7 +90,7 @@ describe('MacroTileGrid hover bubble', () => {
   })
 
   it('shows the heading and every action in full, with the tile prefixes', () => {
-    render(<MacroTileGrid macros={MACROS} onSelect={vi.fn()} hoverPreview />)
+    render(<MacroPicker macros={MACROS} onSelect={vi.fn()} hoverPreview />)
     fireEvent.mouseEnter(tile(0))
     dwell()
     const bubble = screen.getByRole('tooltip')
@@ -85,7 +107,7 @@ describe('MacroTileGrid hover bubble', () => {
   })
 
   it('renders the bubble in document.body, outside the grid', () => {
-    const { container } = render(<MacroTileGrid macros={MACROS} onSelect={vi.fn()} hoverPreview />)
+    const { container } = render(<MacroPicker macros={MACROS} onSelect={vi.fn()} hoverPreview />)
     fireEvent.mouseEnter(tile(0))
     dwell()
     const bubble = screen.getByRole('tooltip')
@@ -94,7 +116,7 @@ describe('MacroTileGrid hover bubble', () => {
   })
 
   it('shows nothing for an empty macro, and hovering one cancels a pending open', () => {
-    render(<MacroTileGrid macros={MACROS} onSelect={vi.fn()} hoverPreview />)
+    render(<MacroPicker macros={MACROS} onSelect={vi.fn()} hoverPreview />)
     fireEvent.mouseEnter(tile(1))
     dwell()
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
@@ -108,7 +130,7 @@ describe('MacroTileGrid hover bubble', () => {
   })
 
   it('keeps a single bubble for the last tile when moving quickly between tiles', () => {
-    render(<MacroTileGrid macros={MACROS} onSelect={vi.fn()} hoverPreview />)
+    render(<MacroPicker macros={MACROS} onSelect={vi.fn()} hoverPreview />)
     fireEvent.mouseEnter(tile(0))
     dwell(200)
     fireEvent.mouseLeave(tile(0))
@@ -121,43 +143,43 @@ describe('MacroTileGrid hover bubble', () => {
   })
 
   it('does nothing when the hover preview is off', () => {
-    render(<MacroTileGrid macros={MACROS} onSelect={vi.fn()} />)
+    render(<MacroPicker macros={MACROS} onSelect={vi.fn()} />)
     fireEvent.mouseEnter(tile(0))
     dwell()
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
   })
 
   it('turning it off closes a shown bubble and drops a pending one', () => {
-    const { rerender } = render(<MacroTileGrid macros={MACROS} onSelect={vi.fn()} hoverPreview />)
+    const { rerender } = render(<MacroPicker macros={MACROS} onSelect={vi.fn()} hoverPreview />)
     fireEvent.mouseEnter(tile(0))
     dwell()
-    rerender(<MacroTileGrid macros={MACROS} onSelect={vi.fn()} hoverPreview={false} />)
+    rerender(<MacroPicker macros={MACROS} onSelect={vi.fn()} hoverPreview={false} />)
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
 
-    rerender(<MacroTileGrid macros={MACROS} onSelect={vi.fn()} hoverPreview />)
+    rerender(<MacroPicker macros={MACROS} onSelect={vi.fn()} hoverPreview />)
     fireEvent.mouseEnter(tile(2))
     dwell(100)
-    rerender(<MacroTileGrid macros={MACROS} onSelect={vi.fn()} hoverPreview={false} />)
-    rerender(<MacroTileGrid macros={MACROS} onSelect={vi.fn()} hoverPreview />)
+    rerender(<MacroPicker macros={MACROS} onSelect={vi.fn()} hoverPreview={false} />)
+    rerender(<MacroPicker macros={MACROS} onSelect={vi.fn()} hoverPreview />)
     dwell()
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
   })
 
   it('follows edits to the hovered macro and closes when it becomes empty', () => {
-    const { rerender } = render(<MacroTileGrid macros={MACROS} onSelect={vi.fn()} hoverPreview />)
+    const { rerender } = render(<MacroPicker macros={MACROS} onSelect={vi.fn()} hoverPreview />)
     fireEvent.mouseEnter(tile(2))
     dwell()
     const edited = [MACROS[0], MACROS[1], [{ type: 'delay', delay: 30 } as MacroAction]]
-    rerender(<MacroTileGrid macros={edited} onSelect={vi.fn()} hoverPreview />)
+    rerender(<MacroPicker macros={edited} onSelect={vi.fn()} hoverPreview />)
     expect(bubbleLines()).toEqual(['W30ms'])
-    rerender(<MacroTileGrid macros={[MACROS[0], MACROS[1], []]} onSelect={vi.fn()} hoverPreview />)
+    rerender(<MacroPicker macros={[MACROS[0], MACROS[1], []]} onSelect={vi.fn()} hoverPreview />)
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
   })
 
   it('keeps click and double-click selection working on hovered tiles', () => {
     const onSelect = vi.fn()
     const onDoubleClick = vi.fn()
-    render(<MacroTileGrid macros={MACROS} onSelect={onSelect} onDoubleClick={onDoubleClick} hoverPreview />)
+    render(<MacroPicker macros={MACROS} onSelect={onSelect} onDoubleClick={onDoubleClick} hoverPreview />)
     fireEvent.mouseEnter(tile(0))
     dwell()
     fireEvent.click(tile(0))
@@ -167,7 +189,7 @@ describe('MacroTileGrid hover bubble', () => {
   })
 
   it('clears a pending open on unmount', () => {
-    const { unmount } = render(<MacroTileGrid macros={MACROS} onSelect={vi.fn()} hoverPreview />)
+    const { unmount } = render(<MacroPicker macros={MACROS} onSelect={vi.fn()} hoverPreview />)
     fireEvent.mouseEnter(tile(0))
     unmount()
     dwell()
@@ -177,7 +199,7 @@ describe('MacroTileGrid hover bubble', () => {
 
 function OverrideHost({ macros }: { macros: MacroAction[][] }) {
   const override = useTileContentOverride({ deserializedMacros: macros, onSelect: vi.fn() })
-  return <div>{override?.macro}</div>
+  return <div>{override?.tabs.macro}{override?.bubble}</div>
 }
 
 describe('useTileContentOverride — macro hover setting', () => {

@@ -335,7 +335,7 @@ export function TabbedKeycodes({
       )
     }
 
-    const override = tabContentOverride && Object.hasOwn(tabContentOverride, category.id) ? tabContentOverride[category.id] : null
+    const override = tabContentOverride && Object.hasOwn(tabContentOverride.tabs, category.id) ? tabContentOverride.tabs[category.id] : null
     const groups = category.getGroups?.()?.filter((g) => g.keycodes.some(isVisible))
 
     // Override only — no groups to show below
@@ -493,6 +493,7 @@ export function TabbedKeycodes({
           )}
         </div>
       )}
+      {tabContentOverride?.bubble}
     </div>
   )
 }

@@ -35,10 +35,17 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   findInnerKeycode: () => undefined,
 }))
 
-// Shows the Macro tab override the modal hands the picker.
+// Shows the Macro tab override the modal hands the picker, the picker's
+// shared entry hover bubble and its close button.
 vi.mock('../../keycodes/TabbedKeycodes', () => ({
-  TabbedKeycodes: ({ tabContentOverride }: { tabContentOverride?: Record<string, ReactNode> }) => (
-    <div data-testid="tabbed-keycodes">{tabContentOverride?.macro}</div>
+  TabbedKeycodes: ({ tabContentOverride, onClose }: {
+    tabContentOverride?: { tabs: Record<string, ReactNode>; bubble: ReactNode }
+    onClose?: () => void
+  }) => (
+    <div data-testid="tabbed-keycodes">
+      {tabContentOverride?.tabs.macro}{tabContentOverride?.bubble}
+      <button type="button" data-testid="picker-close" onClick={onClose} />
+    </div>
   ),
 }))
 
@@ -94,6 +101,25 @@ describe('ComboPanelModal — entry hover bubble in the picker', () => {
   it('shows nothing without a provider', () => {
     render(modal())
     openPickerAndHoverMacro()
+    expect(screen.queryByTestId('entry-hover-bubble')).not.toBeInTheDocument()
+  })
+
+  it('closing the picker drops a pending open and a shown bubble, and reopening shows none until the next hover', () => {
+    render(<EntryHoverPreviewContext.Provider value>{modal()}</EntryHoverPreviewContext.Provider>)
+    openPickerAndHoverMacro()
+    expect(screen.getByTestId('entry-hover-bubble')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('picker-close'))
+    expect(screen.queryByTestId('tabbed-keycodes')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('entry-hover-bubble')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getAllByTestId('keycode-field')[0])
+    act(() => { vi.advanceTimersByTime(300) })
+    fireEvent.mouseEnter(screen.getByTestId('macro-tile-0'))
+    act(() => { vi.advanceTimersByTime(100) })
+    fireEvent.click(screen.getByTestId('picker-close'))
+    fireEvent.click(screen.getAllByTestId('keycode-field')[0])
+    act(() => { vi.advanceTimersByTime(SHARED_BUBBLE_OPEN_DELAY_MS) })
+    expect(screen.getByTestId('tabbed-keycodes')).toBeInTheDocument()
     expect(screen.queryByTestId('entry-hover-bubble')).not.toBeInTheDocument()
   })
 })

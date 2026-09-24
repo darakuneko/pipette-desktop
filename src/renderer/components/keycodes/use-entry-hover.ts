@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// State for the entry hover bubble: one shared bubble per surface (a picker
-// tile grid, the editable keymap pane), opened after the shared 300 ms
-// dwell. The bubble reads its entry from the current `sources` on every
+// State for the entry hover bubble: one shared bubble per surface (a key
+// picker's tile tabs, the editable keymap pane), opened after the shared
+// 300 ms dwell. The bubble reads its entry from the current `sources` on every
 // render, so an edit to the hovered entry shows up right away and an entry
 // that stops being configured closes it.
 

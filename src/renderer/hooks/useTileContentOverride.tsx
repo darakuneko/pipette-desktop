@@ -6,6 +6,9 @@ import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } f
 import type { MacroAction } from '../../preload/macro'
 import { TdTileGrid, MacroTileGrid, ComboTileGrid, KeyOverrideTileGrid, AltRepeatKeyTileGrid } from '../components/keycodes/TileGrids'
 import { useEntryHoverPreviewEnabled } from '../components/keycodes/entry-hover-context'
+import { TileEntryHoverBubble, useTileEntryHover } from '../components/keycodes/tile-entry-hover'
+import type { HoverEntrySources } from '../components/keycodes/hover-entry'
+import type { TabContentOverride } from '../components/keycodes/tabbed-keycodes-model'
 
 interface SettingsTabOptions {
   comboEntries?: ComboEntry[]
@@ -38,38 +41,49 @@ interface UseTileContentOverrideOptions {
   settings?: SettingsTabOptions
 }
 
-/** Builds a `tabContentOverride` record for TabbedKeycodes, rendering TD,
+/** Builds the `tabContentOverride` for TabbedKeycodes, rendering TD,
  * Macro, Combo, Key Override, and Alt Repeat Key tile grid previews when data
- * is available. */
+ * is available, plus one entry hover bubble shared by all of them. The
+ * bubble's open / closed state lives in the bubble node alone, so hovering
+ * never re-renders the caller or the grids. */
 export function useTileContentOverride({
   tapDanceEntries,
   deserializedMacros,
   onSelect,
   onDoubleClick,
   settings,
-}: UseTileContentOverrideOptions): Record<string, React.ReactNode> | undefined {
+}: UseTileContentOverrideOptions): TabContentOverride | undefined {
   const entryHoverPreview = useEntryHoverPreviewEnabled()
+  const hover = useTileEntryHover()
   return useMemo(() => {
     const hasSettings = settings?.comboEntries?.length || settings?.keyOverrideEntries?.length || settings?.altRepeatKeyEntries?.length
     if (!tapDanceEntries?.length && !deserializedMacros && !hasSettings) return undefined
 
     const handleSelect = onSelect ?? noopSelect
-    const overrides: Record<string, React.ReactNode> = {}
+    const handlers = entryHoverPreview ? hover.handlers : undefined
+    const tabs: Record<string, React.ReactNode> = {}
+    const sources: HoverEntrySources = {}
     if (tapDanceEntries?.length) {
-      overrides.tapDance = <TdTileGrid entries={tapDanceEntries} onSelect={handleSelect} onDoubleClick={onDoubleClick} hoverPreview={entryHoverPreview} />
+      tabs.tapDance = <TdTileGrid entries={tapDanceEntries} onSelect={handleSelect} onDoubleClick={onDoubleClick} hover={handlers} />
+      sources.tapDance = tapDanceEntries
     }
     if (deserializedMacros) {
-      overrides.macro = <MacroTileGrid macros={deserializedMacros} onSelect={handleSelect} onDoubleClick={onDoubleClick} hoverPreview={entryHoverPreview} />
+      tabs.macro = <MacroTileGrid macros={deserializedMacros} onSelect={handleSelect} onDoubleClick={onDoubleClick} hover={handlers} />
+      sources.macro = deserializedMacros
     }
     if (settings?.comboEntries?.length && settings.onOpenCombo) {
-      overrides.combo = <ComboTileGrid entries={settings.comboEntries} onOpen={settings.onOpenCombo} hoverPreview={entryHoverPreview} />
+      tabs.combo = <ComboTileGrid entries={settings.comboEntries} onOpen={settings.onOpenCombo} hover={handlers} />
+      sources.combo = settings.comboEntries
     }
     if (settings?.keyOverrideEntries?.length && settings.onOpenKeyOverride) {
-      overrides.keyOverride = <KeyOverrideTileGrid entries={settings.keyOverrideEntries} onOpen={settings.onOpenKeyOverride} hoverPreview={entryHoverPreview} />
+      tabs.keyOverride = <KeyOverrideTileGrid entries={settings.keyOverrideEntries} onOpen={settings.onOpenKeyOverride} hover={handlers} />
+      sources.keyOverride = settings.keyOverrideEntries
     }
     if (settings?.altRepeatKeyEntries?.length && settings.onOpenAltRepeatKey) {
-      overrides.altRepeatKey = <AltRepeatKeyTileGrid entries={settings.altRepeatKeyEntries} onOpen={settings.onOpenAltRepeatKey} hoverPreview={entryHoverPreview} />
+      tabs.altRepeatKey = <AltRepeatKeyTileGrid entries={settings.altRepeatKeyEntries} onOpen={settings.onOpenAltRepeatKey} hover={handlers} />
+      sources.altRepeatKey = settings.altRepeatKeyEntries
     }
-    return overrides
-  }, [tapDanceEntries, deserializedMacros, onSelect, onDoubleClick, entryHoverPreview, settings?.comboEntries, settings?.onOpenCombo, settings?.keyOverrideEntries, settings?.onOpenKeyOverride, settings?.altRepeatKeyEntries, settings?.onOpenAltRepeatKey])
+    const bubble = <TileEntryHoverBubble hover={hover} sources={sources} enabled={entryHoverPreview} />
+    return { tabs, bubble, hideBubble: hover.hide }
+  }, [hover, tapDanceEntries, deserializedMacros, onSelect, onDoubleClick, entryHoverPreview, settings?.comboEntries, settings?.onOpenCombo, settings?.keyOverrideEntries, settings?.onOpenKeyOverride, settings?.altRepeatKeyEntries, settings?.onOpenAltRepeatKey])
 }

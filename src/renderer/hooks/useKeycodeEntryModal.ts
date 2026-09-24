@@ -13,6 +13,7 @@ import { useMaskedKeycodeSelection } from './useMaskedKeycodeSelection'
 import { useFavoriteStore } from './useFavoriteStore'
 import type { UseFavoriteStoreReturn } from './useFavoriteStore'
 import { useTileContentOverride } from './useTileContentOverride'
+import type { TabContentOverride } from '../components/keycodes/tabbed-keycodes-model'
 
 // ---------------------------------------------------------------------------
 // Adapter — each modal provides one of these to describe its differences
@@ -109,7 +110,7 @@ export interface KeycodeEntryModalReturn<TEntry> {
 
   // Masked selection (forwarded for TabbedKeycodes)
   maskedSelection: ReturnType<typeof useMaskedKeycodeSelection>
-  tabContentOverride: Record<string, React.ReactNode> | undefined
+  tabContentOverride: TabContentOverride | undefined
 
   // Favorites
   favStore: UseFavoriteStoreReturn
