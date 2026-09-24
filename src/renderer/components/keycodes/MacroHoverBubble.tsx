@@ -43,8 +43,14 @@ export function nextMacroBubbleColumns(current: number, listHeight: number, avai
   return current + 1
 }
 
+/** A computed-style length in px; 0 when it isn't one. */
+function px(value: string): number {
+  return parseFloat(value) || 0
+}
+
 export function MacroHoverBubble({ bubble }: { bubble: MacroHoverBubbleState | null }): JSX.Element | null {
   const bubbleRef = useRef<HTMLDivElement>(null)
+  const headingRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   // Both are tied to the bubble they were measured for, so a new bubble
   // starts from one column at the anchor's own position.
@@ -56,8 +62,15 @@ export function MacroHoverBubble({ bubble }: { bubble: MacroHoverBubbleState | n
   useLayoutEffect(() => {
     const el = bubbleRef.current
     const list = listRef.current
-    if (!bubble || !el || !list) return
-    const chrome = el.offsetHeight - list.offsetHeight
+    const heading = headingRef.current
+    if (!bubble || !el || !list || !heading) return
+    // Everything but the list, summed from its parts: the bubble's own
+    // height is capped at the viewport, so subtracting the list from it
+    // would go negative exactly when the list is too tall.
+    const style = window.getComputedStyle(el)
+    const chrome = heading.offsetHeight
+      + px(style.paddingTop) + px(style.paddingBottom)
+      + px(style.borderTopWidth) + px(style.borderBottomWidth)
     const available = window.innerHeight - 2 * VIEWPORT_MARGIN - chrome
     const next = nextMacroBubbleColumns(columns, list.offsetHeight, available)
     if (next !== columns) {
@@ -86,7 +99,7 @@ export function MacroHoverBubble({ bubble }: { bubble: MacroHoverBubbleState | n
       className={MACRO_BUBBLE_CLASS}
       style={{ top: pos?.top ?? bubble.rect.top, left: pos?.left ?? bubble.rect.left }}
     >
-      <div className="text-2xs leading-snug text-content-muted">M{bubble.index}</div>
+      <div ref={headingRef} className="text-2xs leading-snug text-content-muted">M{bubble.index}</div>
       <div ref={listRef} className={`${COLUMN_CLASSES[columns]} gap-x-4`}>
         {bubble.actions.map((action, i) => (
           <div key={i} className="flex max-w-sm gap-x-1.5 break-inside-avoid" data-testid="macro-hover-line">

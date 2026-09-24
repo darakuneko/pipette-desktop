@@ -489,7 +489,7 @@ label:has(> input[type="radio"]:not(:disabled)) {
 
   /* Z-index */
   --z-60: 60; /* AnalyzeExportModal dropdown overlay */
-  --z-70: 70; /* WordTimelineView hover tooltip, above its own z-60 modal; MacroHoverBubble, above every modal tier */
+  --z-70: 70; /* MacroHoverBubble, above every modal tier */
 }
 
 @keyframes confirm-flash {
