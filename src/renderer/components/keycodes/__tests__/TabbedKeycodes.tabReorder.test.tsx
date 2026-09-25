@@ -420,9 +420,32 @@ describe('leaving the mode', () => {
     await act(async () => {
       document.body.appendChild(overlay)
       await Promise.resolve()
+      vi.advanceTimersToNextFrame()
     })
     delete (document as { elementFromPoint?: unknown }).elementFromPoint
     overlay.remove()
     expect(inMode()).toBe(false)
+  })
+
+  it('checks the cover once per frame however many mutation batches arrive', async () => {
+    render(<Host />)
+    enterByKeyboard()
+    const elementFromPoint = vi.fn(() => null)
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: elementFromPoint })
+    const nodes: HTMLElement[] = []
+    await act(async () => {
+      for (let i = 0; i < 3; i++) {
+        const node = document.createElement('div')
+        nodes.push(node)
+        document.body.appendChild(node)
+        await Promise.resolve()
+      }
+    })
+    expect(elementFromPoint).not.toHaveBeenCalled()
+    act(() => { vi.advanceTimersToNextFrame() })
+    delete (document as { elementFromPoint?: unknown }).elementFromPoint
+    for (const node of nodes) node.remove()
+    expect(elementFromPoint).toHaveBeenCalledTimes(1)
+    expect(inMode()).toBe(true)
   })
 })

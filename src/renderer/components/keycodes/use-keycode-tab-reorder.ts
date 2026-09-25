@@ -139,7 +139,16 @@ export function useKeycodeTabReorder({ enabled, visibleIds, barRef, onSelectTab,
       if (e.key === 'Escape' && dragIdRef.current) { clearDrag(); return }
       exit()
     }
-    const observer = new MutationObserver(() => { if (isCovered(bar)) exit() })
+    // Any mutation in the app can mean a modal opened, but `isCovered`
+    // forces layout, so check at most once per frame.
+    let frame: number | null = null
+    const observer = new MutationObserver(() => {
+      if (frame !== null) return
+      frame = requestAnimationFrame(() => {
+        frame = null
+        if (isCovered(bar)) exit()
+      })
+    })
     document.addEventListener('pointerdown', onPointerDown, true)
     window.addEventListener('keydown', onKeyDown, true)
     observer.observe(document.body, { childList: true, subtree: true })
@@ -147,6 +156,7 @@ export function useKeycodeTabReorder({ enabled, visibleIds, barRef, onSelectTab,
       document.removeEventListener('pointerdown', onPointerDown, true)
       window.removeEventListener('keydown', onKeyDown, true)
       observer.disconnect()
+      if (frame !== null) cancelAnimationFrame(frame)
     }
   }, [active, barRef, exit, clearDrag])
 
