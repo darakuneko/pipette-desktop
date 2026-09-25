@@ -1215,7 +1215,7 @@ The keycode palette's tabs (Basic, Layers, …, User, Keyboard) can be put in an
 
 ![Keycode palette in reorder mode](screenshots/keycode-tab-reorder.png)
 
-In reorder mode the tabs get a dashed outline, and a row below the tabs shows the hint "Drag tabs or use ←/→ to reorder · Enter to finish" with **Reset** and **Done** buttons. The tab you work with is always the selected one, with its keycodes shown below: clicking a tab selects it, and so does grabbing it to drag.
+In reorder mode the tabs get a dashed outline, and a row below the tabs shows the hint "Drag tabs or use ←/→ to reorder · Enter to finish" with **Reset** and **Done** buttons. The tab you work with is always the selected one, with its keycodes shown below: pressing a tab selects it right away, before you drag it.
 
 **Moving tabs**
 

@@ -537,4 +537,28 @@ describe('leaving the mode', () => {
     expect(setData).toHaveBeenCalledWith('application/x-pipette-keycode-tab', 'system')
     expect(setData).not.toHaveBeenCalledWith('text/plain', expect.anything())
   })
+
+  it('pressing a tab in the mode selects it before any movement, and the drag still reorders', () => {
+    const onTabChange = vi.fn()
+    const onSave = vi.fn()
+    render(<Host onTabChange={onTabChange} onSave={onSave} />)
+    enterByKeyboard()
+    fireEvent.pointerDown(tab('system'), { button: 0, clientX: 10, clientY: 10 })
+    expect(selected()).toBe('system')
+    expect(onTabChange).toHaveBeenCalledTimes(1)
+    drag('system', 'basic')
+    expect(shownOrder()).toEqual(['system', 'basic', 'layers'])
+    expect(onSave).toHaveBeenCalledTimes(1)
+    fireEvent.click(tab('system'))
+    expect(selected()).toBe('system')
+    expect(onTabChange).toHaveBeenCalledTimes(1)
+  })
+
+  it('a right-button press in the mode selects nothing', () => {
+    render(<Host />)
+    enterByKeyboard()
+    fireEvent.pointerDown(tab('system'), { button: 2 })
+    expect(selected()).toBe('basic')
+  })
 })
+

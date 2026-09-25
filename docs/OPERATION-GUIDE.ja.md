@@ -1214,7 +1214,7 @@ Auto Move と Auto Layer Preview、Instant Key Selection と Key Tester はそ�
 
 ![並び替えモードのキーコードパレット](screenshots/keycode-tab-reorder.png)
 
-並び替えモード中は各タブに点線の枠が付き、タブの下の行にヒント「Drag tabs or use ←/→ to reorder · Enter to finish」と **Reset**・**Done** ボタンが表示されます。操作しているタブが常に選択中のタブになり、その下にキーコードが表示されます。タブをクリックすると選択され、ドラッグのためにつかんだタブも選択されます。
+並び替えモード中は各タブに点線の枠が付き、タブの下の行にヒント「Drag tabs or use ←/→ to reorder · Enter to finish」と **Reset**・**Done** ボタンが表示されます。操作しているタブが常に選択中のタブになり、その下にキーコードが表示されます。タブを押した時点で選択され、そのままドラッグできます。
 
 **タブを動かす**
 

@@ -10,9 +10,9 @@
 // Only a drop on a tab or an arrow-key move commits, and only an order that
 // actually changed is saved. The display order is a projection of the saved
 // full order (`keycode-tab-order.ts`); selection and content never read it.
-// The tab the user works with — the one that opened the mode, a clicked or
-// dragged tab, a tab moved with ←/→ — becomes the selected tab; a drop
-// target never does.
+// The tab the user works with — the one that opened the mode, a pressed,
+// clicked or dragged tab, a tab moved with ←/→ — becomes the selected tab;
+// a drop target never does.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { useKeycodeTabOrder } from './keycode-tab-order-context'
@@ -216,7 +216,10 @@ export function useKeycodeTabReorder({
         else onSelectTab(id)
       },
       onPointerDown: (e: React.PointerEvent): void => {
-        if (!enabled || active || e.button !== 0) return
+        if (!enabled || e.button !== 0) return
+        // In the mode a press selects the tab right away; no preventDefault,
+        // so the drag that may follow still starts.
+        if (active) { pick(id); return }
         cancelPress()
         const timer = window.setTimeout(() => {
           pressRef.current = null
