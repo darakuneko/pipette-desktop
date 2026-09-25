@@ -3,8 +3,8 @@
 // The entry hover bubble: a title plus every field of the hovered macro,
 // Tap Dance, Combo, Key Override or Alt Repeat Key entry, in full (content
 // from `hover-entry-content.ts`). It follows the shared-bubble contract of
-// `Tooltip.tsx` (`BUBBLE_BASE`, `computeBubblePosition` with an 8px offset,
-// `role="tooltip"`) and is portaled to `document.body`, so no scroll
+// `Tooltip.tsx` (`BUBBLE_BASE`, an 8px offset, `role="tooltip"`) except for
+// its placement (below), and is portaled to `document.body`, so no scroll
 // container clips it.
 //
 // The bubble is `pointer-events-none`, so it can't scroll. Its size is
@@ -13,11 +13,20 @@
 // kinds' "field | value" table by splitting its rows into side-by-side
 // tables so the field names stay aligned. Long values wrap and keep their
 // spaces and line breaks.
+//
+// Placement keeps the hovered key or tile visible: the bubble goes right
+// above, below, right or left of it (`entry-bubble-placement.ts`). When the
+// column count sized for the viewport leaves it too tall for any of those,
+// more columns are tried against the taller of the spaces above and below
+// the anchor; when that doesn't help either, the bubble goes back to the
+// viewport-sized columns and the shared top-center placement, which may
+// cover the anchor.
 
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { BUBBLE_BASE, computeBubblePosition } from '../ui/Tooltip'
+import { placeBesideAnchor, tallestSpaceBesideAnchor } from './entry-bubble-placement'
 import { buildHoverContent } from './hover-entry-content'
 import type { EntryHoverBubbleState } from './use-entry-hover'
 
@@ -57,22 +66,92 @@ export function splitRows<T>(rows: readonly T[], columns: number): T[][] {
   return chunks
 }
 
+/** How the bubble for one hover is being laid out. `viewport`: growing the
+ *  column count until the list fits the viewport height. `beside`: a retry
+ *  with more columns so the bubble fits next to its anchor. `fallback`:
+ *  back at the `viewport` column count, to be placed top-center. `done`:
+ *  `pos` is final. The stages only move forward, so a bubble is measured a
+ *  bounded number of times. */
+export interface EntryBubbleLayout {
+  stage: 'viewport' | 'beside' | 'fallback' | 'done'
+  columns: number
+  /** Column count the `viewport` stage settled on (its current count while
+   *  it runs). */
+  viewportColumns: number
+  /** List height measured at the column count before this one, which a
+   *  `beside` attempt must beat. */
+  listHeight: number
+  pos: { top: number; left: number } | null
+}
+
+export const INITIAL_ENTRY_BUBBLE_LAYOUT: EntryBubbleLayout = {
+  stage: 'viewport', columns: 1, viewportColumns: 1, listHeight: 0, pos: null,
+}
+
+export interface EntryBubbleMeasurement {
+  anchor: DOMRect
+  /** The bubble as laid out at the current column count. */
+  bubbleRect: DOMRect
+  /** The list alone, uncapped by the bubble's `max-h`, in fractional px. */
+  listHeight: number
+  /** Heading, padding and border: everything in the bubble but the list. */
+  chrome: number
+  viewport: { width: number; height: number }
+  /** Row count of a field table (null for a macro list), whose split only
+   *  changes when the rows per table do. */
+  tableRows: number | null
+}
+
+function rowsPerTable(rows: number, columns: number): number {
+  return Math.ceil(rows / columns)
+}
+
+/** The layout after measuring the bubble at `layout`: the same object once
+ *  the position is final, otherwise the next thing to render and measure. */
+export function stepEntryBubbleLayout(layout: EntryBubbleLayout, m: EntryBubbleMeasurement): EntryBubbleLayout {
+  if (layout.stage === 'done') return layout
+  if (layout.stage === 'viewport') {
+    const next = nextEntryBubbleColumns(layout.columns, m.listHeight, m.viewport.height - 2 * VIEWPORT_MARGIN - m.chrome)
+    if (next !== layout.columns) return { ...layout, columns: next, viewportColumns: next }
+  }
+  const viewportColumns = layout.stage === 'viewport' ? layout.columns : layout.viewportColumns
+  const topCenter = (): EntryBubbleLayout => ({
+    ...layout,
+    stage: 'done',
+    viewportColumns,
+    pos: computeBubblePosition(m.anchor, m.bubbleRect, 'top', 'center', BUBBLE_OFFSET, m.viewport),
+  })
+  if (layout.stage === 'fallback') return topCenter()
+  const placed = placeBesideAnchor(m.anchor, m.bubbleRect, m.viewport, BUBBLE_OFFSET, VIEWPORT_MARGIN)
+  if (placed) return { ...layout, stage: 'done', viewportColumns, pos: { top: placed.top, left: placed.left } }
+
+  // More columns only help while they make the list shorter; a macro line
+  // never splits and a table keeps its split while its rows per table do.
+  const shrank = layout.stage === 'viewport' || m.listHeight < layout.listHeight
+  const space = tallestSpaceBesideAnchor(m.anchor, m.viewport.height, BUBBLE_OFFSET, VIEWPORT_MARGIN) - m.chrome
+  const next = nextEntryBubbleColumns(layout.columns, m.listHeight, space)
+  const resplits = m.tableRows === null || rowsPerTable(m.tableRows, next) !== rowsPerTable(m.tableRows, layout.columns)
+  if (shrank && next !== layout.columns && resplits) {
+    return { stage: 'beside', columns: next, viewportColumns, listHeight: m.listHeight, pos: null }
+  }
+  if (layout.columns === viewportColumns) return topCenter()
+  return { ...layout, stage: 'fallback', columns: viewportColumns, pos: null }
+}
+
 /** A computed-style length in px; 0 when it isn't one. */
 function px(value: string): number {
   return parseFloat(value) || 0
 }
 
-/** Column count to try next for the list as it is laid out now. */
-function nextColumnsFor(el: HTMLElement, list: HTMLElement, heading: HTMLElement, columns: number): number {
-  // Everything but the list, summed from its parts: the bubble's own
-  // height is capped at the viewport, so subtracting the list from it
-  // would go negative exactly when the list is too tall.
+/** Height of everything in the bubble but the list, summed from its parts:
+ *  the bubble's own height is capped at the viewport, so subtracting the
+ *  list from it would go negative exactly when the list is too tall.
+ *  Fractional, like the bubble rect the placement is checked against. */
+function chromeHeight(el: HTMLElement, heading: HTMLElement): number {
   const style = window.getComputedStyle(el)
-  const chrome = heading.offsetHeight
+  return heading.getBoundingClientRect().height
     + px(style.paddingTop) + px(style.paddingBottom)
     + px(style.borderTopWidth) + px(style.borderBottomWidth)
-  const available = window.innerHeight - 2 * VIEWPORT_MARGIN - chrome
-  return nextEntryBubbleColumns(columns, list.offsetHeight, available)
 }
 
 export function EntryHoverBubble({ bubble }: { bubble: EntryHoverBubbleState | null }): JSX.Element | null {
@@ -81,35 +160,40 @@ export function EntryHoverBubble({ bubble }: { bubble: EntryHoverBubbleState | n
   const bubbleRef = useRef<HTMLDivElement>(null)
   const headingRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  // Both are tied to the bubble they were measured for, so a new bubble
-  // starts from one column at the anchor's own position.
-  const [columnsFor, setColumnsFor] = useState<{ bubble: EntryHoverBubbleState; columns: number } | null>(null)
-  const [posFor, setPosFor] = useState<{ bubble: EntryHoverBubbleState; top: number; left: number } | null>(null)
-  const columns = columnsFor && columnsFor.bubble === bubble ? columnsFor.columns : 1
-  const pos = posFor && posFor.bubble === bubble ? posFor : null
+  // Tied to the bubble it was measured for, so a new bubble starts over
+  // from one column at the anchor's own position.
+  const [layoutFor, setLayoutFor] = useState<{ bubble: EntryHoverBubbleState; layout: EntryBubbleLayout } | null>(null)
+  const layout = layoutFor && layoutFor.bubble === bubble ? layoutFor.layout : INITIAL_ENTRY_BUBBLE_LAYOUT
+  const { columns, pos } = layout
+  // The anchor rect is a snapshot taken on hover, so a resize closes the
+  // bubble instead of leaving it beside a key position that may be stale.
+  const [closed, setClosed] = useState<EntryHoverBubbleState | null>(null)
 
+  useEffect(() => {
+    if (!bubble) return
+    const onResize = (): void => setClosed(bubble)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [bubble])
+
+  // Every stage runs here, before paint, so only the final position shows.
   useLayoutEffect(() => {
     const el = bubbleRef.current
     const list = listRef.current
     const heading = headingRef.current
-    if (!bubble || !el || !list || !heading) return
-    const next = nextColumnsFor(el, list, heading, columns)
-    if (next !== columns) {
-      setColumnsFor({ bubble, columns: next })
-      return
-    }
-    const { top, left } = computeBubblePosition(
-      bubble.rect,
-      el.getBoundingClientRect(),
-      'top',
-      'center',
-      BUBBLE_OFFSET,
-      { width: window.innerWidth, height: window.innerHeight },
-    )
-    setPosFor((prev) => (prev && prev.bubble === bubble && prev.top === top && prev.left === left ? prev : { bubble, top, left }))
-  }, [bubble, columns])
+    if (!bubble || !content || !el || !list || !heading) return
+    const next = stepEntryBubbleLayout(layout, {
+      anchor: bubble.rect,
+      bubbleRect: el.getBoundingClientRect(),
+      listHeight: list.getBoundingClientRect().height,
+      chrome: chromeHeight(el, heading),
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      tableRows: content.layout === 'prefix' ? null : content.rows.length,
+    })
+    if (next !== layout) setLayoutFor({ bubble, layout: next })
+  }, [bubble, content, layout])
 
-  if (!bubble || !content || typeof document === 'undefined') return null
+  if (!bubble || !content || closed === bubble || typeof document === 'undefined') return null
 
   return createPortal(
     <div
