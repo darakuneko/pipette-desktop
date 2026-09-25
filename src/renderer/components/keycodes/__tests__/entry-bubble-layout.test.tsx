@@ -20,7 +20,8 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
 }))
 
 const VIEWPORT = { width: 1000, height: 800 }
-const CHROME = 26
+// 14px heading + 6px padding top and bottom + 1px border top and bottom.
+const CHROME = 28
 
 /** A measurement of a bubble `width` x `height` whose list is `listHeight`
  *  tall, for a 40px key at (`x`, `y`). */
@@ -41,8 +42,8 @@ function layout(overrides: Partial<EntryBubbleLayout>): EntryBubbleLayout {
 
 describe('stepEntryBubbleLayout', () => {
   it('grows the columns to the viewport height first', () => {
-    // 800 - 16 margin - 26 chrome = 758 available.
-    expect(stepEntryBubbleLayout(INITIAL_ENTRY_BUBBLE_LAYOUT, measure(2000, 250, 784))).toEqual(layout({ columns: 3 }))
+    // 800 - 16 margin - 28 chrome = 756 available.
+    expect(stepEntryBubbleLayout(INITIAL_ENTRY_BUBBLE_LAYOUT, measure(2000, 250, 784))).toEqual(layout({ columns: 3, viewportColumns: 3 }))
   })
 
   it('places a bubble that fits beside the anchor at once', () => {
@@ -57,7 +58,7 @@ describe('stepEntryBubbleLayout', () => {
 
   it('retries with more columns sized to the taller space beside the anchor', () => {
     // Too tall for above / below, too wide for the sides. Above and below
-    // are both 364 (380 - 16, 800 - 420 - 16), minus 26 chrome = 338.
+    // are both 364 (380 - 16, 800 - 420 - 16), minus 28 chrome = 336.
     const next = stepEntryBubbleLayout(layout({}), measure(700, 500, 726))
     expect(next).toEqual({ stage: 'beside', columns: 3, viewportColumns: 1, listHeight: 700, pos: null })
     const placed = stepEntryBubbleLayout(next, measure(234, 984, 260))
@@ -110,28 +111,21 @@ describe('stepEntryBubbleLayout', () => {
   })
 })
 
-// jsdom has no layout. Modeled like the real bubble: the list is
-// `listAt(columns)` tall and `widthAt(columns)` wide, the heading is 14px,
-// padding and border add 12px + 2px, and the bubble is capped at the
-// viewport minus 16px each way. jsdom's viewport is 1024 x 768.
+// jsdom has no layout. Modeled like the real bubble, in fractional px: the
+// list is `listAt(columns)` tall and `widthAt(columns)` wide, the heading
+// is 14px, padding and border add the rest of `CHROME`, and the bubble is
+// capped at the viewport minus 16px each way. jsdom's viewport is 1024 x 768.
 function mockLayout(listAt: (columns: number) => number, widthAt: (columns: number) => number): () => void {
-  const bubbleOf = (el: Element): HTMLElement | null => el.closest('[data-testid="entry-hover-bubble"]')
-  const columnsOf = (bubble: HTMLElement): number => Number(bubble.dataset.columns ?? '1')
-  const heightDesc = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight')
-  Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
-    configurable: true,
-    get(this: HTMLElement) {
-      const bubble = bubbleOf(this)
-      if (!bubble) return 0
-      if (this === bubble.firstElementChild) return 14
-      return this.parentElement === bubble ? listAt(columnsOf(bubble)) : 0
-    },
-  })
   const realRect = HTMLElement.prototype.getBoundingClientRect
   HTMLElement.prototype.getBoundingClientRect = function (this: HTMLElement) {
-    if (this.dataset.testid !== 'entry-hover-bubble') return realRect.call(this)
-    const columns = columnsOf(this)
-    return new DOMRect(0, 0, Math.min(widthAt(columns), 1024 - 16), Math.min(listAt(columns) + CHROME, 768 - 16))
+    const bubble = this.closest<HTMLElement>('[data-testid="entry-hover-bubble"]')
+    if (!bubble) return realRect.call(this)
+    const columns = Number(bubble.dataset.columns ?? '1')
+    if (this === bubble) {
+      return new DOMRect(0, 0, Math.min(widthAt(columns), 1024 - 16), Math.min(listAt(columns) + CHROME, 768 - 16))
+    }
+    if (this === bubble.firstElementChild) return new DOMRect(0, 0, 0, 14)
+    return new DOMRect(0, 0, 0, this.parentElement === bubble ? listAt(columns) : 0)
   }
   const realStyle = window.getComputedStyle.bind(window)
   const styleSpy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el, pseudo) => {
@@ -140,7 +134,6 @@ function mockLayout(listAt: (columns: number) => number, widthAt: (columns: numb
     return { ...style, paddingTop: '6px', paddingBottom: '6px', borderTopWidth: '1px', borderBottomWidth: '1px' } as CSSStyleDeclaration
   })
   return () => {
-    if (heightDesc) Object.defineProperty(HTMLElement.prototype, 'offsetHeight', heightDesc)
     HTMLElement.prototype.getBoundingClientRect = realRect
     styleSpy.mockRestore()
   }
@@ -204,6 +197,42 @@ describe('EntryHoverBubble placement', () => {
     // Near the top the space below takes two columns, measured afresh.
     rerender(<EntryHoverBubble bubble={macroBubble(new DOMRect(480, 10, 40, 40))} />)
     expect(shown()).toMatchObject({ columns: '2', top: 58 })
+  })
+
+  it('goes right of a key at the left edge, sliding only vertically', () => {
+    // Too tall for above / below a key mid-height, narrow enough for a side.
+    restore = mockLayout(() => 600, () => 300)
+    render(<EntryHoverBubble bubble={macroBubble(new DOMRect(0, 360, 40, 40))} />)
+    expect(shown()).toEqual({ columns: '1', top: 380 - (600 + CHROME) / 2, left: 48 })
+  })
+
+  it('goes left of a key at the right edge', () => {
+    restore = mockLayout(() => 600, () => 300)
+    render(<EntryHoverBubble bubble={macroBubble(new DOMRect(984, 360, 40, 40))} />)
+    expect(shown()).toEqual({ columns: '1', top: 380 - (600 + CHROME) / 2, left: 984 - 8 - 300 })
+  })
+
+  it('adds one more column for a list a fraction of a pixel too tall', () => {
+    // Below is the taller space: 768 - 400 - 16 = 352, minus 28 chrome = 324.
+    // Two columns leave the list 0.4px over it, so a third is tried, which
+    // then fits above.
+    restore = mockLayout((c) => (c === 1 ? 640 : c === 2 ? 324.4 : 640 / c), (c) => 500 * c)
+    render(<EntryHoverBubble bubble={macroBubble(new DOMRect(480, 360, 40, 40))} />)
+    const { columns, top } = shown()
+    expect(columns).toBe('3')
+    expect(top).toBeCloseTo(360 - 8 - (640 / 3 + CHROME))
+  })
+
+  it('splits a field table so it fits beside its key', () => {
+    // 8 rows of 90px: one table of 720 fits the viewport but no side; three
+    // tables of 3 rows (270px) fit above.
+    restore = mockLayout((c) => Math.ceil(8 / c) * 90, (c) => 500 * c)
+    const value = {
+      triggerKey: 4, replacementKey: 5, layers: 3, triggerMods: 1, negativeMods: 0, suppressedMods: 0, options: 0, enabled: true,
+    }
+    render(<EntryHoverBubble bubble={{ index: 1, entry: { kind: 'keyOverride', value }, rect: new DOMRect(480, 360, 40, 40) }} />)
+    expect(shown()).toMatchObject({ columns: '3', top: 360 - 8 - (270 + CHROME) })
+    expect(screen.getAllByTestId('entry-hover-table')).toHaveLength(3)
   })
 
   it('closes on a window resize and opens again for the next hover', () => {

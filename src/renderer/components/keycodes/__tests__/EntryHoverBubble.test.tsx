@@ -254,22 +254,19 @@ describe('EntryHoverBubble', () => {
     // jsdom has no layout. Modeled like the real bubble: the list is
     // `listHeight` tall in one column and splits evenly across columns; the
     // heading is 14px, the bubble has 6px padding top and bottom and a 1px
-    // border (26px of chrome), and the bubble's own height is capped at the
+    // border (28px of chrome), and the bubble's own height is capped at the
     // viewport minus 16px (`max-h-tooltip-viewport`), clipping the rest.
     function mockHeights(listHeight: number): void {
-      const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight')
-      Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
-        configurable: true,
-        get(this: HTMLElement) {
-          const bubble = this.closest('[data-testid="entry-hover-bubble"]') as HTMLElement | null
-          if (!bubble) return 0
-          const columns = Number(bubble.dataset.columns ?? '1')
-          const list = listHeight / columns
-          if (this === bubble) return Math.min(list + 26, window.innerHeight - 16)
-          if (this === bubble.firstElementChild) return 14
-          return this.parentElement === bubble ? list : 0
-        },
-      })
+      const realRect = HTMLElement.prototype.getBoundingClientRect
+      HTMLElement.prototype.getBoundingClientRect = function (this: HTMLElement) {
+        const bubble = this.closest<HTMLElement>('[data-testid="entry-hover-bubble"]')
+        if (!bubble) return realRect.call(this)
+        const columns = Number(bubble.dataset.columns ?? '1')
+        const list = listHeight / columns
+        if (this === bubble) return new DOMRect(0, 0, 0, Math.min(list + 28, window.innerHeight - 16))
+        if (this === bubble.firstElementChild) return new DOMRect(0, 0, 0, 14)
+        return new DOMRect(0, 0, 0, this.parentElement === bubble ? list : 0)
+      }
       const realStyle = window.getComputedStyle.bind(window)
       const styleSpy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el, pseudo) => {
         const style = realStyle(el, pseudo)
@@ -277,7 +274,7 @@ describe('EntryHoverBubble', () => {
         return { ...style, paddingTop: '6px', paddingBottom: '6px', borderTopWidth: '1px', borderBottomWidth: '1px' } as CSSStyleDeclaration
       })
       restore = () => {
-        if (original) Object.defineProperty(HTMLElement.prototype, 'offsetHeight', original)
+        HTMLElement.prototype.getBoundingClientRect = realRect
         styleSpy.mockRestore()
       }
     }
@@ -287,7 +284,7 @@ describe('EntryHoverBubble', () => {
       const actions = Array.from({ length: 120 }, (_, i): MacroAction => ({ type: 'tap', keycodes: [i] }))
       render(<EntryHoverBubble bubble={{ index: 3, entry: { kind: 'macro', value: actions }, rect: new DOMRect(10, 10, 20, 20) }} />)
       const bubble = screen.getByRole('tooltip')
-      // jsdom's viewport is 768px tall: 768 - 16 margin - 26 chrome = 726,
+      // jsdom's viewport is 768px tall: 768 - 16 margin - 28 chrome = 724,
       // so 2000px needs 3 columns even though the capped bubble is 752px.
       expect(bubble.dataset.columns).toBe('3')
       expect(bubble.children[1].className).toContain('columns-3')

@@ -75,7 +75,8 @@ export function splitRows<T>(rows: readonly T[], columns: number): T[][] {
 export interface EntryBubbleLayout {
   stage: 'viewport' | 'beside' | 'fallback' | 'done'
   columns: number
-  /** Column count the `viewport` stage settled on. */
+  /** Column count the `viewport` stage settled on (its current count while
+   *  it runs). */
   viewportColumns: number
   /** List height measured at the column count before this one, which a
    *  `beside` attempt must beat. */
@@ -91,7 +92,7 @@ export interface EntryBubbleMeasurement {
   anchor: DOMRect
   /** The bubble as laid out at the current column count. */
   bubbleRect: DOMRect
-  /** The list alone, uncapped by the bubble's `max-h`. */
+  /** The list alone, uncapped by the bubble's `max-h`, in fractional px. */
   listHeight: number
   /** Heading, padding and border: everything in the bubble but the list. */
   chrome: number
@@ -109,20 +110,21 @@ function rowsPerTable(rows: number, columns: number): number {
  *  the position is final, otherwise the next thing to render and measure. */
 export function stepEntryBubbleLayout(layout: EntryBubbleLayout, m: EntryBubbleMeasurement): EntryBubbleLayout {
   if (layout.stage === 'done') return layout
+  if (layout.stage === 'viewport') {
+    const next = nextEntryBubbleColumns(layout.columns, m.listHeight, m.viewport.height - 2 * VIEWPORT_MARGIN - m.chrome)
+    if (next !== layout.columns) return { ...layout, columns: next, viewportColumns: next }
+  }
+  const viewportColumns = layout.stage === 'viewport' ? layout.columns : layout.viewportColumns
   const topCenter = (): EntryBubbleLayout => ({
     ...layout,
     stage: 'done',
+    viewportColumns,
     pos: computeBubblePosition(m.anchor, m.bubbleRect, 'top', 'center', BUBBLE_OFFSET, m.viewport),
   })
   if (layout.stage === 'fallback') return topCenter()
-  if (layout.stage === 'viewport') {
-    const next = nextEntryBubbleColumns(layout.columns, m.listHeight, m.viewport.height - 2 * VIEWPORT_MARGIN - m.chrome)
-    if (next !== layout.columns) return { ...layout, columns: next }
-  }
   const placed = placeBesideAnchor(m.anchor, m.bubbleRect, m.viewport, BUBBLE_OFFSET, VIEWPORT_MARGIN)
-  if (placed) return { ...layout, stage: 'done', pos: { top: placed.top, left: placed.left } }
+  if (placed) return { ...layout, stage: 'done', viewportColumns, pos: { top: placed.top, left: placed.left } }
 
-  const viewportColumns = layout.stage === 'viewport' ? layout.columns : layout.viewportColumns
   // More columns only help while they make the list shorter; a macro line
   // never splits and a table keeps its split while its rows per table do.
   const shrank = layout.stage === 'viewport' || m.listHeight < layout.listHeight
@@ -143,10 +145,11 @@ function px(value: string): number {
 
 /** Height of everything in the bubble but the list, summed from its parts:
  *  the bubble's own height is capped at the viewport, so subtracting the
- *  list from it would go negative exactly when the list is too tall. */
+ *  list from it would go negative exactly when the list is too tall.
+ *  Fractional, like the bubble rect the placement is checked against. */
 function chromeHeight(el: HTMLElement, heading: HTMLElement): number {
   const style = window.getComputedStyle(el)
-  return heading.offsetHeight
+  return heading.getBoundingClientRect().height
     + px(style.paddingTop) + px(style.paddingBottom)
     + px(style.borderTopWidth) + px(style.borderBottomWidth)
 }
@@ -182,7 +185,7 @@ export function EntryHoverBubble({ bubble }: { bubble: EntryHoverBubbleState | n
     const next = stepEntryBubbleLayout(layout, {
       anchor: bubble.rect,
       bubbleRect: el.getBoundingClientRect(),
-      listHeight: list.offsetHeight,
+      listHeight: list.getBoundingClientRect().height,
       chrome: chromeHeight(el, heading),
       viewport: { width: window.innerWidth, height: window.innerHeight },
       tableRows: content.layout === 'prefix' ? null : content.rows.length,
