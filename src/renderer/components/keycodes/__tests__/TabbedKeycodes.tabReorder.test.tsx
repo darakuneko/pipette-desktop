@@ -448,4 +448,72 @@ describe('leaving the mode', () => {
     expect(elementFromPoint).toHaveBeenCalledTimes(1)
     expect(inMode()).toBe(true)
   })
+
+  it('the click of the press that opened the mode never switches tabs, even after Enter closed the mode', () => {
+    const onTabChange = vi.fn()
+    render(<Host onTabChange={onTabChange} />)
+    fireEvent.pointerDown(tab('system'), { button: 0, clientX: 10, clientY: 10 })
+    act(() => { vi.advanceTimersByTime(LONG_PRESS_MS) })
+    expect(inMode()).toBe(true)
+    fireEvent.keyDown(tab('system'), { key: 'Enter' })
+    expect(inMode()).toBe(false)
+    fireEvent.pointerUp(tab('system'))
+    fireEvent.click(tab('system'))
+    expect(selected()).toBe('basic')
+    expect(onTabChange).not.toHaveBeenCalled()
+    // Once that press is over, clicks work again.
+    act(() => { vi.advanceTimersByTime(0) })
+    fireEvent.click(tab('system'))
+    expect(selected()).toBe('system')
+  })
+
+  it('Done hands the focus back to the last focused tab', () => {
+    render(<Host />)
+    enterByKeyboard('layers')
+    const done = screen.getByTestId('keycode-tab-reorder-done')
+    done.focus()
+    fireEvent.click(done)
+    expect(inMode()).toBe(false)
+    expect(document.activeElement).toBe(tab('layers'))
+  })
+
+  it('Done focuses the selected tab when no tab was focused', () => {
+    render(<Host />)
+    longPress('system')
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    fireEvent.click(screen.getByTestId('keycode-tab-reorder-done'))
+    expect(document.activeElement).toBe(tab('basic'))
+  })
+
+  it('Reset keeps the focus in the tab bar and announces the default order', () => {
+    render(<Host initial={['system']} />)
+    enterByKeyboard('layers')
+    const reset = screen.getByTestId('keycode-tab-reorder-reset')
+    reset.focus()
+    fireEvent.click(reset)
+    expect(document.activeElement).toBe(tab('layers'))
+    expect(screen.getByText('editor.keymap.tabReorder.resetDone')).toBeInTheDocument()
+  })
+
+  it('Enter on a non-tab button in the bar presses it; on a tab it still finishes', () => {
+    const onGear = vi.fn()
+    render(<Host tabBarRight={<button type="button" onClick={onGear}>gear</button>} />)
+    enterByKeyboard()
+    const gear = screen.getByText('gear')
+    gear.focus()
+    fireEvent.keyDown(gear, { key: 'Enter' })
+    expect(onGear).toHaveBeenCalledTimes(1)
+    expect(inMode()).toBe(true)
+    fireEvent.keyDown(tab('basic'), { key: 'Enter' })
+    expect(inMode()).toBe(false)
+  })
+
+  it('drags carry the tab id under an app-specific type, not as text', () => {
+    render(<Host />)
+    enterByKeyboard()
+    const setData = vi.fn()
+    fireEvent.dragStart(tab('system'), { dataTransfer: { setData } })
+    expect(setData).toHaveBeenCalledWith('application/x-pipette-keycode-tab', 'system')
+    expect(setData).not.toHaveBeenCalledWith('text/plain', expect.anything())
+  })
 })

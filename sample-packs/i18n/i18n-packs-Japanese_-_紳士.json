@@ -127,7 +127,8 @@
       "tabReorder": {
         "hint": "ドラッグ、または ←/→ にて並べ替えを賜ります · Enter にて完了",
         "moved": "{{name}}を{{total}}件中{{position}}番目へお移しいたしました",
-        "resetLabel": "タブの並びを初期の順へお戻しいたします"
+        "resetLabel": "タブの並びを初期の順へお戻しいたします",
+        "resetDone": "タブの並びを初期の順へお戻しいたしました"
       },
       "pickerSourceCurrent": "現在",
       "pickerSourceFile": "書物",

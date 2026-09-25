@@ -1226,7 +1226,7 @@ Each move is saved right away.
 
 **Leaving reorder mode**
 
-- Press **Enter** or **Esc**, click **Done**, or click anywhere outside the tabs and the hint row (the click still does what it normally does). Opening a dialog also leaves the mode
+- Press **Enter** or **Esc**, click **Done**, or click anywhere outside the tabs and the hint row (the click still does what it normally does). Opening a dialog also leaves the mode. When a button in the tab bar (such as **Reset**, **Done** or the panel button) has the focus, Enter presses that button instead
 - Moves already made are kept
 
 **Reset** puts the tabs back in the default order.

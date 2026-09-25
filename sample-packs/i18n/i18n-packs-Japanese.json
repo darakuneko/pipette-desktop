@@ -127,7 +127,8 @@
       "tabReorder": {
         "hint": "ドラッグまたは ←/→ で並び替え · Enter で完了",
         "moved": "{{name}} を {{total}} 個中 {{position}} 番目に移動しました",
-        "resetLabel": "タブの並びを既定に戻す"
+        "resetLabel": "タブの並びを既定に戻す",
+        "resetDone": "タブの並びを既定に戻しました"
       },
       "pickerSourceCurrent": "現在",
       "pickerSourceFile": "ファイル",

@@ -3,7 +3,7 @@
 import { useId, useMemo, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
-import { ICON_MD, SEGMENT_TOGGLE_ACTIVE, SEGMENT_TOGGLE_INACTIVE } from '../../constants/ui-tokens'
+import { ICON_MD } from '../../constants/ui-tokens'
 import { Tooltip } from '../ui/Tooltip'
 import type { KeycodeCategory } from './categories'
 import { KEYBOARD_TAB_ID } from './keycode-tab-order'
@@ -27,6 +27,8 @@ const TAB_INACTIVE = 'border-b-transparent text-content-secondary hover:text-con
 // Outline only: an outline takes no layout space, so entering the mode
 // under a held pointer never moves the tabs.
 const TAB_REORDERING = 'cursor-grab outline outline-1 outline-dashed -outline-offset-1'
+// Same look as the status bar's compact bordered buttons (`QuickSettingsSelects.tsx`).
+const MODE_BUTTON = 'flex shrink-0 items-center justify-center whitespace-nowrap rounded border border-edge px-2.5 py-1 text-xs leading-none text-content-secondary transition-colors hover:text-content focus:border-accent focus:outline-none disabled:opacity-50'
 
 /** The tab bar at the top of `TabbedKeycodes`: one tab per category, the
  *  optional "Keyboard" tab, the right-hand slot (`tabBarRight` + close) and,
@@ -58,9 +60,11 @@ export function KeycodeTabBar({
     visibleIds,
     barRef,
     onSelectTab: selectTab,
+    selectedId: effectiveTab,
     describeMove: (id, position, total) =>
       t('editor.keymap.tabReorder.moved', { name: t(labelKeys.get(id) ?? id), position, total }),
     enterMessage: t('editor.keymap.tabReorder.hint'),
+    resetMessage: t('editor.keymap.tabReorder.resetDone'),
   })
 
   function tabClassName(id: string): string {
@@ -112,9 +116,8 @@ export function KeycodeTabBar({
           <Tooltip content={t('editor.keymap.tabReorder.resetLabel')} wrapperClassName="ml-auto">
             <button
               type="button"
-              data-tab-reorder-action=""
               data-testid="keycode-tab-reorder-reset"
-              className={`${SEGMENT_TOGGLE_INACTIVE} disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={MODE_BUTTON}
               disabled={!reorder.canReset}
               onClick={reorder.reset}
             >
@@ -123,10 +126,9 @@ export function KeycodeTabBar({
           </Tooltip>
           <button
             type="button"
-            data-tab-reorder-action=""
             data-testid="keycode-tab-reorder-done"
-            className={SEGMENT_TOGGLE_ACTIVE}
-            onClick={reorder.exit}
+            className={MODE_BUTTON}
+            onClick={reorder.finish}
           >
             {t('common.done')}
           </button>

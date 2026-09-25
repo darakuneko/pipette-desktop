@@ -127,7 +127,8 @@
       "tabReorder": {
         "hint": "Drag tabs or use ←/→ to reorder · Enter to finish",
         "moved": "{{name}} moved to position {{position}} of {{total}}",
-        "resetLabel": "Restore the default tab order"
+        "resetLabel": "Restore the default tab order",
+        "resetDone": "Default tab order restored"
       },
       "pickerSourceCurrent": "Current",
       "pickerSourceFile": "File",
