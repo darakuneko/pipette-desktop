@@ -42,7 +42,7 @@ import { decodeLayoutOptions } from '../shared/kle/layout-options'
 import { resolveConnectedTappingTerm, resolveTappingTerm } from '../shared/qmk-settings-tapping-term'
 import { deserializeAllMacros } from '../preload/macro'
 import { EMPTY_UID } from '../shared/constants/protocol'
-import { EntryHoverPreviewContext } from './components/keycodes/entry-hover-context'
+import { PickerPrefsProvider } from './components/keycodes/PickerPrefsProvider'
 
 export { type PipetteFileKeyboard, type PipetteFileEntry } from './app-types'
 
@@ -395,10 +395,10 @@ export function App() {
   // --- Connected view ---
 
   return (
-    // The keymap pane and every key picker's tile tabs — including the
-    // pickers inside the editor and app-level modals — read the entry hover
-    // toggle from here.
-    <EntryHoverPreviewContext.Provider value={devicePrefs.entryHoverPreview}>
+    // The keymap pane and every key picker — including the pickers inside
+    // the editor and app-level modals — read the entry hover toggle and the
+    // tab order from here.
+    <PickerPrefsProvider devicePrefs={devicePrefs}>
       <div className="relative flex h-screen flex-col bg-surface text-content">
         <AppBanners device={device} keyboard={keyboard} lifecycle={lifecycle} />
 
@@ -488,6 +488,6 @@ export function App() {
           deserializedMacros={deserializedMacros}
         />
       </div>
-    </EntryHoverPreviewContext.Provider>
+    </PickerPrefsProvider>
   )
 }

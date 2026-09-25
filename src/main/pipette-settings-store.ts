@@ -119,6 +119,7 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
   if ('viewMatrixWires' in obj && obj.viewMatrixWires != null && typeof obj.viewMatrixWires !== 'boolean') return false
   if ('layerHoverPreview' in obj && obj.layerHoverPreview != null && typeof obj.layerHoverPreview !== 'boolean') return false
   if ('entryHoverPreview' in obj && obj.entryHoverPreview != null && typeof obj.entryHoverPreview !== 'boolean') return false
+  if ('keycodeTabOrder' in obj && obj.keycodeTabOrder != null && (!Array.isArray(obj.keycodeTabOrder) || (obj.keycodeTabOrder as unknown[]).some((id) => typeof id !== 'string'))) return false
   if ('_rev' in obj && obj._rev !== 1) return false
   return true
 }
@@ -179,6 +180,7 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       viewMatrixWires: parsed.viewMatrixWires,
       layerHoverPreview: parsed.layerHoverPreview,
       entryHoverPreview: parsed.entryHoverPreview,
+      keycodeTabOrder: parsed.keycodeTabOrder,
     }
   } catch {
     return null

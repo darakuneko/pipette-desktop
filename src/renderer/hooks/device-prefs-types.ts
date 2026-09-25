@@ -48,6 +48,9 @@ export interface UseDevicePrefsReturn {
   /** Entry hover bubble (Fav Hover Details) on the keymap and picker tiles — see
    *  `PipetteSettings.entryHoverPreview`. Defaults to true. */
   entryHoverPreview: boolean
+  /** Key picker tab order — see `PipetteSettings.keycodeTabOrder`.
+   *  `undefined` is the default order. */
+  keycodeTabOrder: string[] | undefined
   appliedUid: string | null
   setLayout: (id: KeyboardLayoutId) => void
   setAutoAdvance: (enabled: boolean) => void
@@ -82,6 +85,8 @@ export interface UseDevicePrefsReturn {
   setViewMatrixWires: (next: boolean) => void
   setLayerHoverPreview: (enabled: boolean) => void
   setEntryHoverPreview: (enabled: boolean) => void
+  /** `undefined` restores the default order and clears the saved one. */
+  setKeycodeTabOrder: (order: string[] | undefined) => void
   defaultLayout: KeyboardLayoutId
   defaultAutoAdvance: boolean
   defaultLayerPanelOpen: boolean

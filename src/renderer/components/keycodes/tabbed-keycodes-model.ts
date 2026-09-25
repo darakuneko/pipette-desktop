@@ -135,4 +135,5 @@ export interface TabbedKeycodesProps {
   onBasicViewTypeChange?: (v: BasicViewType) => void
   splitKeyMode?: SplitKeyMode // 'split' (default) or 'flat' for individual buttons
   remapLabel?: (qmkId: string) => string
+  tabReorder?: boolean // Lets the user reorder the tabs; only the keymap editor's picker sets it
 }

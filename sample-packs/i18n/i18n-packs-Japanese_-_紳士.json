@@ -1,5 +1,5 @@
 {
-  "version": "0.1.99",
+  "version": "0.1.100",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -124,6 +124,12 @@
       "pickerHint": "Ctrl+クリック: 複数選択 / Shift+クリック: 範囲選択 → 鍵をクリックで反映いたします",
       "pickerDoubleClickHint": "再び叩くか、Enterを賜れば閉じます",
       "keyboardTab": "Keyboard",
+      "tabReorder": {
+        "hint": "ドラッグ、または ←/→ にて並べ替えを賜ります · Enter にて完了",
+        "moved": "{{name}}を{{total}}件中{{position}}番目へお移しいたしました",
+        "resetLabel": "タブの並びを初期の順へお戻しいたします",
+        "resetDone": "タブの並びを初期の順へお戻しいたしました"
+      },
       "pickerSourceCurrent": "現在",
       "pickerSourceFile": "書物",
       "pickerLoadFile": ".pipetteより拝読…",

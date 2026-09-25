@@ -1,5 +1,5 @@
 {
-  "version": "0.1.99",
+  "version": "0.1.100",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -124,6 +124,12 @@
       "pickerHint": "Ctrl+クリックで複数選択、Shift+クリックで範囲選択どすえ。ほんでキーをクリックして貼り付けておくれやす",
       "pickerDoubleClickHint": "もういっぺんダブルクリックするか、Enterを押したら閉じますえ",
       "keyboardTab": "Keyboard",
+      "tabReorder": {
+        "hint": "ドラッグか←/→で並べ替えておくれやす · Enterで終いどすえ",
+        "moved": "{{name}}を{{total}}個のうち{{position}}番目に動かしましたえ",
+        "resetLabel": "タブの並びを元に戻しますえ",
+        "resetDone": "タブの並びを元に戻しましたえ"
+      },
       "pickerSourceCurrent": "いまの",
       "pickerSourceFile": "ファイル",
       "pickerLoadFile": ".pipetteから読み込みますえ…",

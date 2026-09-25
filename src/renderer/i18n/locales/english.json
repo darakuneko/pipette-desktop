@@ -1,5 +1,5 @@
 {
-  "version": "0.1.99",
+  "version": "0.1.100",
   "name": "English",
   "common": {
     "save": "Save",
@@ -124,6 +124,12 @@
       "pickerHint": "Ctrl+click: multi-select / Shift+click: range select → click a key to paste",
       "pickerDoubleClickHint": "Double-click the same key again or press Enter to close",
       "keyboardTab": "Keyboard",
+      "tabReorder": {
+        "hint": "Drag tabs or use ←/→ to reorder · Enter to finish",
+        "moved": "{{name}} moved to position {{position}} of {{total}}",
+        "resetLabel": "Restore the default tab order",
+        "resetDone": "Default tab order restored"
+      },
       "pickerSourceCurrent": "Current",
       "pickerSourceFile": "File",
       "pickerLoadFile": "Load from .pipette…",

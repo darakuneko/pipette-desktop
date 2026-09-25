@@ -108,6 +108,7 @@ export function KeymapPickerRegion(props: KeymapPickerRegionProps): JSX.Element 
         highlightedKeycodes={configuredKeycodes} maskOnly={isMaskKey} lmMode={isLMMask} showHint={!isMaskKey}
         tabFooterContent={tabFooterContent} tabContentOverride={tabContentOverride}
         basicViewType={basicViewType} onBasicViewTypeChange={onBasicViewTypeChange} splitKeyMode={splitKeyMode} remapLabel={pickerRemapLabel}
+        tabReorder
         tabBarRight={
           <Tooltip content={t('editorSettings.title')}>
             <button ref={layoutButtonRef} type="button" aria-label={t('editorSettings.title')}
