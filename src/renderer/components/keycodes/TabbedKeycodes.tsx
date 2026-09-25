@@ -40,6 +40,7 @@ export function TabbedKeycodes({
   onBasicViewTypeChange,
   splitKeyMode,
   remapLabel,
+  tabReorder = false,
 }: TabbedKeycodesProps) {
   const { t } = useTranslation()
   const { config } = useAppConfig()
@@ -375,6 +376,7 @@ export function TabbedKeycodes({
         keyboardTabAvailable={keyboardTabAvailable}
         tabBarRight={tabBarRight}
         onClose={onClose}
+        reorderable={tabReorder}
       />
 
       {/* Content area below tab bar — relative container for panel overlay */}

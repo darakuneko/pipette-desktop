@@ -409,6 +409,12 @@ export interface PipetteSettings {
    * picker tile, shows that entry in full. Absent means on; only an
    * explicit `false` turns it off. */
   entryHoverPreview?: boolean
+  /** Display order of the key picker's category tabs (category ids plus
+   * `keyboard`). Holds every id the saving client knew, including tabs
+   * this keyboard does not show and ids a newer client added, so an older
+   * client never drops them. Tabs missing from the list follow in their
+   * default order. Absent means the default order. */
+  keycodeTabOrder?: string[]
   analyze?: AnalyzeSettings
   _updatedAt?: string // ISO 8601 — last update time
 }

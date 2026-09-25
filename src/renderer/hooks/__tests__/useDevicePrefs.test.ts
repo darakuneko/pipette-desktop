@@ -2696,3 +2696,70 @@ describe('useDevicePrefs — entryHoverPreview', () => {
     expect(result.current.entryHoverPreview).toBe(true)
   })
 })
+
+describe('useDevicePrefs — keycodeTabOrder', () => {
+  type StoredPrefs = { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] }
+  const stored = (extra: Record<string, unknown> = {}): StoredPrefs =>
+    ({ _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: [], ...extra }) as StoredPrefs
+
+  async function applied(uid: string) {
+    setupMocks()
+    const hook = renderHookWithConfig(() => useDevicePrefs())
+    await act(async () => {})
+    await act(async () => { await hook.result.current.applyDevicePrefs(uid) })
+    return hook
+  }
+
+  it('is the default order (undefined) for a new keyboard and saves null', async () => {
+    const { result } = await applied('0xAABB')
+    expect(result.current.keycodeTabOrder).toBeUndefined()
+    expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({ keycodeTabOrder: null }))
+  })
+
+  it('restores a saved order, keeping unknown ids and dropping repeats and non-strings', async () => {
+    mockPipetteSettingsGet.mockResolvedValue(stored({ keycodeTabOrder: ['user', 'future', 3, 'user', 'basic'] }))
+    const { result } = await applied('0xAABB')
+    expect(result.current.keycodeTabOrder).toEqual(['user', 'future', 'basic'])
+  })
+
+  it.each([['not an array', 'user'], ['empty', []], ['no strings', [1, null]]])('falls back to the default order when %s', async (_name, value) => {
+    mockPipetteSettingsGet.mockResolvedValue(stored({ keycodeTabOrder: value }))
+    const { result } = await applied('0xAABB')
+    expect(result.current.keycodeTabOrder).toBeUndefined()
+  })
+
+  it('setKeycodeTabOrder saves the order, later unrelated saves keep it, and undefined clears it with null', async () => {
+    mockPipetteSettingsGet.mockResolvedValue(stored())
+    const { result } = await applied('0xAABB')
+    act(() => { result.current.setKeycodeTabOrder(['user', 'basic']) })
+    expect(result.current.keycodeTabOrder).toEqual(['user', 'basic'])
+    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({ keycodeTabOrder: ['user', 'basic'] }))
+
+    act(() => { result.current.setAutoAdvance(false) })
+    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({
+      autoAdvance: false, keycodeTabOrder: ['user', 'basic'],
+    }))
+
+    act(() => { result.current.setKeycodeTabOrder(undefined) })
+    expect(result.current.keycodeTabOrder).toBeUndefined()
+    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({ keycodeTabOrder: null }))
+  })
+
+  it('keeps the new order in memory when the save fails', async () => {
+    mockPipetteSettingsGet.mockResolvedValue(stored())
+    const { result } = await applied('0xAABB')
+    mockPipetteSettingsPatch.mockRejectedValueOnce(new Error('disk full'))
+    await act(async () => { result.current.setKeycodeTabOrder(['user']) })
+    expect(result.current.keycodeTabOrder).toEqual(['user'])
+  })
+
+  it('does not carry one keyboard\'s order over to another', async () => {
+    mockPipetteSettingsGet
+      .mockResolvedValueOnce(stored({ keycodeTabOrder: ['user'] }))
+      .mockResolvedValueOnce(stored())
+    const { result } = await applied('uid-1')
+    expect(result.current.keycodeTabOrder).toEqual(['user'])
+    await act(async () => { await result.current.applyDevicePrefs('uid-2') })
+    expect(result.current.keycodeTabOrder).toBeUndefined()
+  })
+})

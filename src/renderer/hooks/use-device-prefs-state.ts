@@ -66,6 +66,7 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
   const [viewMatrixWires, updateViewMatrixWires, viewMatrixWiresRef] = useStateRef<boolean>(false)
   const [layerHoverPreview, updateLayerHoverPreview, layerHoverPreviewRef] = useStateRef<boolean>(true)
   const [entryHoverPreview, updateEntryHoverPreview, entryHoverPreviewRef] = useStateRef<boolean>(true)
+  const [keycodeTabOrder, updateKeycodeTabOrder, keycodeTabOrderRef] = useStateRef<string[] | undefined>(undefined)
   const [appliedUid, setAppliedUid] = useState<string | null>(null)
 
   const uidRef = useRef('')
@@ -118,6 +119,8 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
       // Sent explicitly for the same reason as `viewMatrixWires`.
       layerHoverPreview: layerHoverPreviewRef.current,
       entryHoverPreview: entryHoverPreviewRef.current,
+      // `null` clears a reset order, same as `viewMatrix`.
+      keycodeTabOrder: keycodeTabOrderRef.current ?? null,
     }).catch(() => {
       // IPC failure — best-effort save
     })
@@ -160,6 +163,7 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
     updateViewMatrixWires(resolved.viewMatrixWires)
     updateLayerHoverPreview(resolved.layerHoverPreview)
     updateEntryHoverPreview(resolved.entryHoverPreview)
+    updateKeycodeTabOrder(resolved.keycodeTabOrder)
   }, [])
 
   return {
@@ -195,6 +199,7 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
     viewMatrixWires, updateViewMatrixWires, viewMatrixWiresRef,
     layerHoverPreview, updateLayerHoverPreview, layerHoverPreviewRef,
     entryHoverPreview, updateEntryHoverPreview, entryHoverPreviewRef,
+    keycodeTabOrder, updateKeycodeTabOrder, keycodeTabOrderRef,
     appliedUid, setAppliedUid,
     uidRef, applySeqRef,
     saveCurrentPrefs,
