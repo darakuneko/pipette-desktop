@@ -1976,19 +1976,19 @@ Composite keycodes (LT, MT, modifier+key, …) render the inner key inside an in
 
 Switching the **Keyboard Layout** dropdown in the footer never opens a dialog by itself — it always just changes the display. For a label set marked `keymapApplicable` whose map is a clean, closed QWERTY permutation (Colemak, Dvorak, Eucalyn, …), picking it also reveals two vertical index tabs attached to the right edge of the Keymap Editor:
 
-- **The pack's own name** (top) — a read-only *simulation* of that pack's legends, with the changed keys tinted the **simulated** colour (`key-label-simulated`). Nothing here is clickable: no key selection, no popover, no multi-select, no picker paste — this tab exists purely to preview what a Rewrite would produce
-- **QWERTY (Default)** (bottom) — the real keymap, unaffected by the selected pack, fully editable exactly as before
+- **Default** (top) — the real keymap, unaffected by the selected pack, fully editable exactly as before
+- **The pack's own name** (bottom) — a read-only *simulation* of that pack's legends, with the changed keys tinted the **simulated** colour (`key-label-simulated`). Nothing here is clickable: no key selection, no popover, no multi-select, no picker paste — this tab exists purely to preview what a Rewrite would produce
 
-The simulation tab is selected by default whenever the tabs appear. Switching keyboards resets the selection back to the simulation tab; switching only layers or picking a different pack does not.
+When the keymap is shown — after connecting or after switching keyboards — the **Default** tab is selected, even if the pack was already chosen for that keyboard. Picking a pack in the **Keyboard Layout** dropdown selects the simulation tab so you see the new pack right away, and clears any key selection. Switching layers doesn't change the tab.
 
-![Simulation and Default Tabs](screenshots/key-label-simulation-tabs.png)
+![Default and Simulation Tabs](screenshots/key-label-simulation-tabs.png)
 
 **The layer-indicator row reads "Preview - Layer N" while the simulation tab is active** (e.g. "Preview - Layer 0"), so it stays visually distinct from the plain "Layer N" label the Default tab and every other keymap view use. **Apply lives at the right end of that same row** — an **Apply** button that opens the Rewrite confirmation dialog:
 
 ![Apply Key Label to Keymap](screenshots/key-label-keymap-apply-modal.png)
 
 - **Apply?** — a destructive one-shot: bulk-rewrites every layer's keycodes (and encoders, where applicable) to match the label set, then clears the undo/redo history outright. It is not recorded as an Undo step — there is nothing to revert afterward, on the same undo/redo stack or any other
-- **Cancel** — closes the dialog without changing anything; the simulation/QWERTY (Default) tabs stay exactly as they were
+- **Cancel** — closes the dialog without changing anything; the Default/simulation tabs stay exactly as they were
 
 The dialog also shows a save recommendation: back up the current keymap first, before confirming. Rewrite replaces keycodes on every layer and clears the undo/redo history in the same stroke, so a previously saved backup is the only way back to the pre-Rewrite keymap (see **Limitations** below).
 

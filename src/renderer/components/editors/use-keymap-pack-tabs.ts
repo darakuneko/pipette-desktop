@@ -54,29 +54,42 @@ export interface UseKeymapPackTabsReturn {
   primaryRemappedEncoders: Set<string>
   primaryRemapLabel?: (qmkId: string) => string
   handlePackTabChange: (tab: KeymapPackTab) => void
-  /** Resets back to the simulation/pack tab — called by the host's own
-   *  uid/keymap-size clear effect (which also clears history / exits View
-   *  Matrix mode, so it stays in `KeymapEditor` rather than moving here). */
+  /** Resets back to the Default (`'base'`) tab and clears the selection —
+   *  called by the host's own uid/keymap-size clear effect (which also
+   *  clears history / exits View Matrix mode, so it stays in `KeymapEditor`
+   *  rather than moving here). */
   resetPackTab: () => void
+  /** Reports the user's own pick in the footer's Key Labels select. A
+   *  different layout marks the coming `keyboardLayout` change so it opens
+   *  the pack tab; the layout already shown opens the pack tab at once
+   *  (when the tabs are shown) and marks nothing. */
+  notifyUserLayoutChange: (layout: string) => void
 }
 
-/** Simulation/Base tab. Which of the two vertical tabs (pack-name
- * simulation vs. the real "Base" keymap) is showing when
- * `remapKind === 'simulated'` shows them at all. Defaults to the
- * simulation tab; a user switch to Base persists across ordinary
- * re-renders and stays until either `resetPackTab()` runs (called by the
- * host on a uid change or when the keymap empties) or the `keyboardLayout`
- * change effect below fires (an actual value change, not merely a
- * re-render). */
+/** Simulation/Base tab. Which of the two vertical tabs (the real "Base"
+ * keymap, labeled Default, vs. the pack-name simulation) is showing when
+ * `remapKind === 'simulated'` shows them at all. Defaults to Default; the
+ * tab choice persists across ordinary re-renders and stays until either
+ * `resetPackTab()` runs (called by the host on a uid change or when the
+ * keymap empties) or the user picks a different layout in the footer (see
+ * the `keyboardLayout` change effect below). */
 export function useKeymapPackTabs({
   keyboardLayout, remapKind, keymap, encoderLayout, encoderCount, currentLayer,
   typingTestMode, viewMatrixActive, handleDeselect,
   parsedMacros, macroBuffer, macroCount, vialProtocol, tapDanceEntries,
   remapLabel, layerKeycodes, layerEncoderKeycodes, remappedKeys, layerEncoderRemapped,
 }: UseKeymapPackTabsOptions): UseKeymapPackTabsReturn {
-  const [packTab, setPackTab] = useState<KeymapPackTab>('pack')
+  const [packTab, setPackTab] = useState<KeymapPackTab>('base')
+  const userLayoutChangeRef = useRef(false)
 
-  const resetPackTab = useCallback(() => { setPackTab('pack') }, [])
+  // Clears the selection too: a key selected on the previous keyboard (or
+  // on a keymap that has since emptied) must not survive into the fresh
+  // Default tab.
+  const resetPackTab = useCallback(() => {
+    userLayoutChangeRef.current = false
+    setPackTab('base')
+    handleDeselect()
+  }, [handleDeselect])
 
   // Switching TO the simulation tab also drops any live selection/multi-
   // select/picker-selection state — belt-and-braces on top of that pane's
@@ -90,26 +103,41 @@ export function useKeymapPackTabs({
     if (tab === 'pack') handleDeselect()
   }, [handleDeselect])
 
-  // Reset to the simulation tab whenever the selected Key Label / layout
-  // changes (the footer's Keyboard Layout select — `keyboardLayout` here is
-  // the exact same value `useDevicePrefs.layout` feeds into `remapKind`'s
-  // own derivation). Without this, a user parked on the Base tab who then
-  // picks a different pack sees no visible change: the newly selected
-  // pack's simulated keymap only ever renders on the pack tab, and
-  // `remapKind` alone can't signal the switch since it stays `'simulated'`
-  // across two different permutation packs. Same prev-value-ref idiom as
-  // the host's own uid reset effect (kept separate there — that effect also
-  // clears history/View Matrix, which a same-uid layout change must not
-  // trigger) — only acts on an actual change, not on mount or every
-  // render, so a manual tab click right after a layout change isn't
-  // immediately undone by a stray re-render.
   const prevKeyboardLayoutRef = useRef(keyboardLayout)
-  useEffect(() => {
-    if (keyboardLayout !== prevKeyboardLayoutRef.current) {
-      prevKeyboardLayoutRef.current = keyboardLayout
-      setPackTab('pack')
+  // Latest `showPackTabs` for `notifyUserLayoutChange`, which runs from an
+  // event handler outside this render.
+  const showPackTabsRef = useRef(false)
+  // Re-picking the layout already shown never changes `keyboardLayout`, so
+  // the effect below would never consume a mark for it — it is handled
+  // here instead, and no mark is left for a later unrelated change.
+  const notifyUserLayoutChange = useCallback((layout: string) => {
+    if (layout !== prevKeyboardLayoutRef.current) {
+      userLayoutChangeRef.current = true
+    } else if (showPackTabsRef.current) {
+      handlePackTabChange('pack')
     }
-  }, [keyboardLayout])
+  }, [handlePackTabChange])
+
+  // Opens the pack tab when the user picks a different Key Label layout in
+  // the footer, so the new pack's simulated keymap shows at once
+  // (`remapKind` stays `'simulated'` across two permutation packs, so it
+  // can't signal the switch). `keyboardLayout` also changes when the saved
+  // prefs are restored on connect / uid change — in the same render as the
+  // host's reset or any number of renders later — and that value looks the
+  // same as a user pick. So the footer handler marks its own pick through
+  // `notifyUserLayoutChange` (via `KeymapEditorHandle`) rather than this
+  // effect guessing from timing; unmarked changes (prefs restore, the reset
+  // to QWERTY after a successful Apply) leave the tab alone. Acts only on
+  // an actual value change, so an unrelated re-render never undoes a
+  // manual tab click. `handlePackTabChange` clears the selection, same as
+  // a manual switch to the pack tab.
+  useEffect(() => {
+    if (keyboardLayout === prevKeyboardLayoutRef.current) return
+    prevKeyboardLayoutRef.current = keyboardLayout
+    if (!userLayoutChangeRef.current) return
+    userLayoutChangeRef.current = false
+    handlePackTabChange('pack')
+  }, [keyboardLayout, handlePackTabChange])
 
   // A keymap must actually be loaded for a Rewrite to mean anything —
   // `useKeymapApplyPrompt.requestApply` already no-ops when
@@ -120,6 +148,7 @@ export function useKeymapPackTabs({
   const keymapEditable = keymap.size > 0
   const showPackTabs = remapKind === 'simulated' && keymapEditable && !typingTestMode && !viewMatrixActive
   const packTabReadOnly = showPackTabs && packTab === 'pack'
+  useEffect(() => { showPackTabsRef.current = showPackTabs }, [showPackTabs])
 
   // Raw (never remapped) keycodes for the Base tab — same underlying
   // keymap/macro data as `layerKeycodes` above, built with `remapLabel`/
@@ -152,6 +181,6 @@ export function useKeymapPackTabs({
   return {
     packTab, showPackTabs, packTabReadOnly,
     primaryKeycodes, primaryEncoderKeycodes, primaryRemappedKeys, primaryRemappedEncoders, primaryRemapLabel,
-    handlePackTabChange, resetPackTab,
+    handlePackTabChange, resetPackTab, notifyUserLayoutChange,
   }
 }

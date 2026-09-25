@@ -156,11 +156,11 @@ describe('KeymapEditor — View Matrix wiring overlay toggle', () => {
   })
 
   it('is absent on the pack simulation preview branch, which never receives matrixWires', () => {
-    // remapKind="simulated" + a pack name defaults to the read-only
-    // simulation (pack) tab, which renders the OTHER `KeyboardPane` branch
-    // in `KeymapPrimaryPane` — the one that never threads `matrixWires`
-    // through, by design (the overlay is a Base/normal-editing-only
-    // surface, see KeymapPrimaryPaneProps).
+    // remapKind="simulated" + a pack name shows the pack tabs; selecting
+    // the read-only simulation (pack) tab renders the OTHER `KeyboardPane`
+    // branch in `KeymapPrimaryPane` — the one that never threads
+    // `matrixWires` through, by design (the overlay is a
+    // Base/normal-editing-only surface, see KeymapPrimaryPaneProps).
     render(
       <KeymapEditor
         {...defaultProps({ viewMatrixWires: true })}
@@ -168,6 +168,7 @@ describe('KeymapEditor — View Matrix wiring overlay toggle', () => {
         keymapPackName="Dvorak"
       />,
     )
+    fireEvent.click(screen.getByTestId('keymap-pack-tab-simulation'))
 
     expect(screen.queryByTestId('matrix-wires')).not.toBeInTheDocument()
   })

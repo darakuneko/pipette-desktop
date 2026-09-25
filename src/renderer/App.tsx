@@ -309,6 +309,7 @@ export function App() {
   const handleApplyKeymapRewrite = useCallback(async (table: KeymapRewriteTable): Promise<KeymapApplyResult> => {
     return await (keymapEditorRef.current?.applyKeymapRewrite(table) ?? Promise.resolve({ appliedCount: 0 }))
   }, [])
+  const handleUserLayoutChange = useCallback((layout: string) => { keymapEditorRef.current?.notifyUserLayoutChange(layout) }, [])
 
   // Owned here because two separate consumers share the same pending/apply
   // state: the footer's Keyboard Layout select (QuickSettingsSelects, via
@@ -334,6 +335,7 @@ export function App() {
     keymapEditable: keyboard.keymap.size > 0,
     keyboardLayout: devicePrefs.layout,
     onKeyboardLayoutChange: devicePrefs.setLayout,
+    onUserLayoutChange: handleUserLayoutChange,
     onApplyKeymapRewrite: handleApplyKeymapRewrite,
     keymapRestoreSeq: keyboard.keymapRestoreSeq,
     activeRewriteTable: devicePrefs.activeRewriteTable,

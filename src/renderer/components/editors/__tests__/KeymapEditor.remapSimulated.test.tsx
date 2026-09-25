@@ -9,7 +9,7 @@
 // itself is covered by useDevicePrefs.test.ts's "remapKind" block.
 
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, fireEvent } from '@testing-library/react'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -121,10 +121,19 @@ describe('KeymapEditor — remap-simulated container class', () => {
     expect(surface).not.toHaveClass('remap-simulated')
   })
 
-  it('applies remap-simulated when remapKind is "simulated"', () => {
-    const { container } = render(<KeymapEditor {...defaultProps} remapKind="simulated" />)
+  // With a loaded keymap, remapKind "simulated" also shows the pack tabs,
+  // and the simulation is only on screen while the pack tab is selected.
+  it('applies remap-simulated when remapKind is "simulated" and the pack tab is selected', () => {
+    const { container, getByTestId } = render(<KeymapEditor {...defaultProps} remapKind="simulated" />)
+    fireEvent.click(getByTestId('keymap-pack-tab-simulation'))
     const surface = container.querySelector('[data-testid="keymap-surface"]')
     expect(surface).toHaveClass('remap-simulated')
+  })
+
+  it('does not apply remap-simulated on the Default tab shown first', () => {
+    const { container } = render(<KeymapEditor {...defaultProps} remapKind="simulated" />)
+    const surface = container.querySelector('[data-testid="keymap-surface"]')
+    expect(surface).not.toHaveClass('remap-simulated')
   })
 
   it('the keyboard pane renders inside the keymap-surface container (scoping precondition)', () => {
