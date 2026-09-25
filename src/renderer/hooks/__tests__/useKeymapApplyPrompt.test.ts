@@ -112,11 +112,12 @@ describe('useKeymapApplyPrompt — simulation tab Apply flow', () => {
 
   it('handleKeyboardLayoutChange reports the pick through onUserLayoutChange before changing the layout', () => {
     const calls: string[] = []
-    const onUserLayoutChange = vi.fn(() => { calls.push('user') })
+    const onUserLayoutChange = vi.fn((_layout: string) => { calls.push('user') })
     onKeyboardLayoutChange.mockImplementation(() => { calls.push('layout') })
     const { result } = setup({ keyboardLayout: 'qwerty', onUserLayoutChange })
     act(() => result.current.handleKeyboardLayoutChange('dvorak-id'))
     expect(calls).toEqual(['user', 'layout'])
+    expect(onUserLayoutChange).toHaveBeenCalledWith('dvorak-id')
     onKeyboardLayoutChange.mockReset()
   })
 

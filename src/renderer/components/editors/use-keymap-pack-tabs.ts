@@ -59,9 +59,11 @@ export interface UseKeymapPackTabsReturn {
    *  clears history / exits View Matrix mode, so it stays in `KeymapEditor`
    *  rather than moving here). */
   resetPackTab: () => void
-  /** Marks the next `keyboardLayout` change as the user's own pick in the
-   *  footer's Key Labels select, so that change opens the pack tab. */
-  notifyUserLayoutChange: () => void
+  /** Reports the user's own pick in the footer's Key Labels select. A
+   *  different layout marks the coming `keyboardLayout` change so it opens
+   *  the pack tab; the layout already shown opens the pack tab at once
+   *  (when the tabs are shown) and marks nothing. */
+  notifyUserLayoutChange: (layout: string) => void
 }
 
 /** Simulation/Base tab. Which of the two vertical tabs (the real "Base"
@@ -89,8 +91,6 @@ export function useKeymapPackTabs({
     handleDeselect()
   }, [handleDeselect])
 
-  const notifyUserLayoutChange = useCallback(() => { userLayoutChangeRef.current = true }, [])
-
   // Switching TO the simulation tab also drops any live selection/multi-
   // select/picker-selection state — belt-and-braces on top of that pane's
   // own `readOnly` (which already blocks every click/dblclick path into
@@ -102,6 +102,21 @@ export function useKeymapPackTabs({
     setPackTab(tab)
     if (tab === 'pack') handleDeselect()
   }, [handleDeselect])
+
+  const prevKeyboardLayoutRef = useRef(keyboardLayout)
+  // Latest `showPackTabs` for `notifyUserLayoutChange`, which runs from an
+  // event handler outside this render.
+  const showPackTabsRef = useRef(false)
+  // Re-picking the layout already shown never changes `keyboardLayout`, so
+  // the effect below would never consume a mark for it — it is handled
+  // here instead, and no mark is left for a later unrelated change.
+  const notifyUserLayoutChange = useCallback((layout: string) => {
+    if (layout !== prevKeyboardLayoutRef.current) {
+      userLayoutChangeRef.current = true
+    } else if (showPackTabsRef.current) {
+      handlePackTabChange('pack')
+    }
+  }, [handlePackTabChange])
 
   // Opens the pack tab when the user picks a different Key Label layout in
   // the footer, so the new pack's simulated keymap shows at once
@@ -116,7 +131,6 @@ export function useKeymapPackTabs({
   // an actual value change, so an unrelated re-render never undoes a
   // manual tab click. `handlePackTabChange` clears the selection, same as
   // a manual switch to the pack tab.
-  const prevKeyboardLayoutRef = useRef(keyboardLayout)
   useEffect(() => {
     if (keyboardLayout === prevKeyboardLayoutRef.current) return
     prevKeyboardLayoutRef.current = keyboardLayout
@@ -134,6 +148,7 @@ export function useKeymapPackTabs({
   const keymapEditable = keymap.size > 0
   const showPackTabs = remapKind === 'simulated' && keymapEditable && !typingTestMode && !viewMatrixActive
   const packTabReadOnly = showPackTabs && packTab === 'pack'
+  useEffect(() => { showPackTabsRef.current = showPackTabs }, [showPackTabs])
 
   // Raw (never remapped) keycodes for the Base tab — same underlying
   // keymap/macro data as `layerKeycodes` above, built with `remapLabel`/

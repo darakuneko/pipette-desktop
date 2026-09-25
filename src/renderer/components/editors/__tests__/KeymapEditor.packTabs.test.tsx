@@ -298,7 +298,7 @@ describe('KeymapEditor — pack tabs', () => {
       // Picking a different permutation pack from the footer's Keyboard
       // Layout select — this must switch to the pack tab so the newly
       // selected pack's simulated keymap is immediately visible.
-      act(() => ref.current?.notifyUserLayoutChange())
+      act(() => ref.current?.notifyUserLayoutChange('colemak'))
       rerender(
         <KeymapEditor ref={ref} {...defaultProps()} remapKind="simulated" keymapPackName="Colemak" keyboardLayout="colemak" />,
       )
@@ -315,9 +315,52 @@ describe('KeymapEditor — pack tabs', () => {
       const { getByTestId, rerender } = render(
         <KeymapEditor ref={ref} {...defaultProps()} keyboardLayout="qwerty" />,
       )
-      act(() => ref.current?.notifyUserLayoutChange())
+      act(() => ref.current?.notifyUserLayoutChange('dvorak'))
       rerender(<KeymapEditor ref={ref} {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" />)
       expect(getByTestId('keymap-pack-tab-simulation')).toHaveAttribute('aria-selected', 'true')
+    })
+
+    it('re-picking the layout already shown while on Default opens the pack tab and clears the selection', () => {
+      const ref = createRef<KeymapEditorHandle>()
+      const { getByTestId } = render(
+        <KeymapEditor ref={ref} {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" />,
+      )
+      selectFirstKey()
+      act(() => ref.current?.notifyUserLayoutChange('dvorak'))
+      expect(getByTestId('keymap-pack-tab-simulation')).toHaveAttribute('aria-selected', 'true')
+      expect(lastWidgetProps().readOnly).toBe(true)
+
+      fireEvent.click(getByTestId('keymap-pack-tab-base'))
+      expect(lastWidgetProps().selectedKey).toBeNull()
+    })
+
+    it('re-picking the layout already shown leaves no mark: a following unmarked layout change stays on Default', () => {
+      const ref = createRef<KeymapEditorHandle>()
+      const { getByTestId, rerender } = render(
+        <KeymapEditor ref={ref} {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" />,
+      )
+      act(() => ref.current?.notifyUserLayoutChange('dvorak'))
+      fireEvent.click(getByTestId('keymap-pack-tab-base'))
+
+      // e.g. a layout arriving through sync, not through the footer.
+      rerender(<KeymapEditor ref={ref} {...defaultProps()} remapKind="simulated" keymapPackName="Colemak" keyboardLayout="colemak" />)
+      expect(getByTestId('keymap-pack-tab-base')).toHaveAttribute('aria-selected', 'true')
+      expect(lastWidgetProps().readOnly).toBe(false)
+    })
+
+    it('re-picking QWERTY while the tabs are hidden keeps the selection and leaves no mark', () => {
+      const ref = createRef<KeymapEditorHandle>()
+      const { getByTestId, queryByTestId, rerender } = render(
+        <KeymapEditor ref={ref} {...defaultProps()} keyboardLayout="qwerty" />,
+      )
+      selectFirstKey()
+      act(() => ref.current?.notifyUserLayoutChange('qwerty'))
+      expect(queryByTestId('keymap-pack-tabs')).toBeNull()
+      expect(lastWidgetProps().selectedKey).toEqual({ row: 0, col: 0 })
+      expect(lastWidgetProps().readOnly).toBe(false)
+
+      rerender(<KeymapEditor ref={ref} {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" />)
+      expect(getByTestId('keymap-pack-tab-base')).toHaveAttribute('aria-selected', 'true')
     })
 
     it('a layout restored from prefs in the same render as the uid change stays on Default', () => {
@@ -349,7 +392,7 @@ describe('KeymapEditor — pack tabs', () => {
       const { getByTestId, rerender } = render(
         <KeymapEditor ref={ref} {...defaultProps()} keyboardLayout="qwerty" />,
       )
-      act(() => ref.current?.notifyUserLayoutChange())
+      act(() => ref.current?.notifyUserLayoutChange('dvorak'))
       rerender(<KeymapEditor ref={ref} {...defaultProps({ keyboardUid: 'uid-2' })} keyboardLayout="qwerty" />)
       rerender(
         <KeymapEditor ref={ref} {...defaultProps({ keyboardUid: 'uid-2' })} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" />,
