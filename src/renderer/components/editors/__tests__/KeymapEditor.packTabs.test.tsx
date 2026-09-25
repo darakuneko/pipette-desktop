@@ -2,11 +2,15 @@
 // @vitest-environment jsdom
 
 // Tab visibility (gated by the SINGLE `remapKind === 'simulated'`
-// predicate), default tab, UID-change reset, layout-change reset,
-// read-only enforcement on the simulation tab, full editability on Base,
-// and the Apply button / confirm modal wiring.
+// predicate), tab order, the Default (Base) tab shown first, the resets
+// back to Default (uid change, keymap emptied), the switch to the pack tab
+// on a user's footer layout pick (and not on a prefs restore), read-only
+// enforcement on the simulation tab, full editability on Base, and the
+// Apply button / confirm modal wiring.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { createRef } from 'react'
+import type { ReactNode } from 'react'
 import { render, fireEvent, act } from '@testing-library/react'
 
 vi.mock('react-i18next', () => ({
@@ -20,6 +24,8 @@ vi.mock('react-i18next', () => ({
         'editor.keymap.layerN': `Layer ${opts?.n ?? ''}`,
         'editor.keymap.layerPreview': `Preview - ${String(opts?.label ?? '')}`,
         'editor.keymap.selectKey': 'Click a key to edit',
+        'editor.viewMatrix.edit': 'Edit',
+        'editor.viewMatrix.done': 'Done',
         'keyLabels.qwertyDefaultName': 'QWERTY (Default)',
         'keyLabels.qwertyDefaultShort': 'Default',
         'keyLabels.keymapApply.tabsLabel': 'Keymap view',
@@ -46,10 +52,11 @@ vi.mock('../../keyboard/KeyboardWidget', () => ({
 }))
 
 let capturedTabbedProps: Record<string, unknown> = {}
+// Renders `panelOverlay` so the View Matrix Edit/Done buttons are reachable.
 vi.mock('../../keycodes/TabbedKeycodes', () => ({
   TabbedKeycodes: (props: Record<string, unknown>) => {
     capturedTabbedProps = props
-    return <div data-testid="tabbed-keycodes">TabbedKeycodes</div>
+    return <div data-testid="tabbed-keycodes">TabbedKeycodes{props.panelOverlay as ReactNode}</div>
   },
 }))
 
@@ -93,6 +100,7 @@ vi.mock('../TypingTestPane', () => ({
 }))
 
 import { KeymapEditor } from '../KeymapEditor'
+import type { KeymapEditorHandle } from '../keymap-editor-types'
 import type { KleKey } from '../../../../shared/kle/types'
 
 const KEY_DEFAULTS: KleKey = {
@@ -132,6 +140,12 @@ function lastWidgetProps(): Record<string, unknown> {
   return capturedWidgetProps[capturedWidgetProps.length - 1]
 }
 
+function selectFirstKey(): void {
+  const onKeyClick = lastWidgetProps().onKeyClick as (key: KleKey, maskClicked: boolean) => void
+  act(() => onKeyClick(makeKey(0, 0), false))
+  expect(lastWidgetProps().selectedKey).toEqual({ row: 0, col: 0 })
+}
+
 beforeEach(() => {
   capturedWidgetProps = []
   capturedTabbedProps = {}
@@ -165,6 +179,19 @@ describe('KeymapEditor — pack tabs', () => {
       expect(getByTestId('keymap-pack-tab-base')).toHaveTextContent('Default')
     })
 
+    it('puts Default on top and the pack name below, with Default selected', () => {
+      const { getByTestId } = render(
+        <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" />,
+      )
+      const tabs = Array.from(getByTestId('keymap-pack-tabs').querySelectorAll('[role="tab"]'))
+      expect(tabs.map((el) => el.getAttribute('data-testid'))).toEqual(['keymap-pack-tab-base', 'keymap-pack-tab-simulation'])
+      expect(tabs.map((el) => el.getAttribute('aria-selected'))).toEqual(['true', 'false'])
+
+      fireEvent.click(getByTestId('keymap-pack-tab-simulation'))
+      expect(getByTestId('keymap-pack-tab-base')).toHaveAttribute('aria-selected', 'false')
+      expect(getByTestId('keymap-pack-tab-simulation')).toHaveAttribute('aria-selected', 'true')
+    })
+
     // `requestApply` already no-ops when the keymap isn't editable
     // (`keymapEditable` false) — tab/Apply-button VISIBILITY must fold in
     // the same condition, or the UI offers a tabs+Apply surface that
@@ -182,25 +209,44 @@ describe('KeymapEditor — pack tabs', () => {
     })
   })
 
-  describe('default tab + UID reset', () => {
-    it('defaults to the simulation (pack) tab: Apply button visible, remap-simulated applied, pane read-only', () => {
-      const { container, queryByTestId } = render(
+  describe('default tab + resets', () => {
+    it('defaults to the Default (base) tab: raw labels, no simulation tint, no Apply, no preview label, pane editable', () => {
+      const { container, getByTestId, queryByTestId } = render(
+        <KeymapEditor
+          {...defaultProps()}
+          remapKind="simulated" keymapPackName="Dvorak" onRequestKeymapApply={vi.fn()}
+          remapLabel={(id) => `${id}!`} isRemapped={() => true}
+        />,
+      )
+      expect(getByTestId('keymap-pack-tab-base')).toHaveAttribute('aria-selected', 'true')
+      expect(lastWidgetProps().remapLabel).toBeUndefined()
+      expect((lastWidgetProps().remappedKeys as Set<string>).size).toBe(0)
+      expect(container.querySelector('[data-testid="keymap-surface"]')).not.toHaveClass('remap-simulated')
+      expect(queryByTestId('keymap-pack-apply-button')).toBeNull()
+      expect(getByTestId('layer-label')).not.toHaveTextContent('Preview')
+      expect(lastWidgetProps().readOnly).toBe(false)
+      expect(lastWidgetProps().onKeyClick).toBeTypeOf('function')
+    })
+
+    it('selecting the pack tab shows the simulation: Apply button visible, remap-simulated applied, pane read-only', () => {
+      const { container, getByTestId, queryByTestId } = render(
         <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" onRequestKeymapApply={vi.fn()} />,
       )
+      fireEvent.click(getByTestId('keymap-pack-tab-simulation'))
       expect(queryByTestId('keymap-pack-apply-button')).toBeTruthy()
       expect(container.querySelector('[data-testid="keymap-surface"]')).toHaveClass('remap-simulated')
       expect(lastWidgetProps().readOnly).toBe(true)
       expect(lastWidgetProps().onKeyClick).toBeUndefined()
     })
 
-    it('switching to Base and then changing keyboardUid resets back to the simulation tab', () => {
+    it('switching to the pack tab and then changing keyboardUid resets back to Default', () => {
       const onRequestKeymapApply = vi.fn()
       const { getByTestId, rerender, queryByTestId, container } = render(
         <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" onRequestKeymapApply={onRequestKeymapApply} />,
       )
-      fireEvent.click(getByTestId('keymap-pack-tab-base'))
-      expect(queryByTestId('keymap-pack-apply-button')).toBeNull()
-      expect(lastWidgetProps().readOnly).toBe(false)
+      fireEvent.click(getByTestId('keymap-pack-tab-simulation'))
+      expect(queryByTestId('keymap-pack-apply-button')).toBeTruthy()
+      expect(lastWidgetProps().readOnly).toBe(true)
 
       // A different keyboardUid (reconnect to another keyboard) — the
       // editor does NOT remount, so this must be observed via the existing
@@ -209,41 +255,125 @@ describe('KeymapEditor — pack tabs', () => {
       rerender(
         <KeymapEditor {...defaultProps({ keyboardUid: 'uid-2' })} remapKind="simulated" keymapPackName="Dvorak" onRequestKeymapApply={onRequestKeymapApply} />,
       )
-      expect(queryByTestId('keymap-pack-apply-button')).toBeTruthy()
-      expect(container.querySelector('[data-testid="keymap-surface"]')).toHaveClass('remap-simulated')
+      expect(queryByTestId('keymap-pack-apply-button')).toBeNull()
+      expect(container.querySelector('[data-testid="keymap-surface"]')).not.toHaveClass('remap-simulated')
+      expect(lastWidgetProps().readOnly).toBe(false)
+      expect(getByTestId('keymap-pack-tab-base')).toHaveAttribute('aria-selected', 'true')
+    })
+
+    it('a uid change clears a selection made on Default', () => {
+      const { rerender } = render(
+        <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" />,
+      )
+      selectFirstKey()
+      rerender(<KeymapEditor {...defaultProps({ keyboardUid: 'uid-2' })} remapKind="simulated" keymapPackName="Dvorak" />)
+      expect(lastWidgetProps().selectedKey).toBeNull()
+    })
+
+    it('pack tab → keymap emptied → keymap refilled lands on Default', () => {
+      const { getByTestId, queryByTestId, rerender } = render(
+        <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" />,
+      )
+      fireEvent.click(getByTestId('keymap-pack-tab-simulation'))
       expect(lastWidgetProps().readOnly).toBe(true)
+
+      rerender(<KeymapEditor {...defaultProps({ keymap: new Map<string, number>() })} remapKind="simulated" keymapPackName="Dvorak" />)
+      expect(queryByTestId('keymap-pack-tabs')).toBeNull()
+
+      rerender(<KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" />)
+      expect(getByTestId('keymap-pack-tab-base')).toHaveAttribute('aria-selected', 'true')
+      expect(lastWidgetProps().readOnly).toBe(false)
+      expect(lastWidgetProps().selectedKey).toBeNull()
     })
   })
 
-  describe('layout-change reset', () => {
-    it('switching to Base and then changing the selected layout (keyboardLayout) switches back to the pack tab', () => {
+  describe('layout change', () => {
+    it('a footer layout pick (notifyUserLayoutChange, then keyboardLayout changes) switches to the pack tab and clears the selection', () => {
+      const ref = createRef<KeymapEditorHandle>()
       const { getByTestId, rerender } = render(
-        <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" />,
+        <KeymapEditor ref={ref} {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" />,
       )
-      fireEvent.click(getByTestId('keymap-pack-tab-base'))
-      expect(lastWidgetProps().readOnly).toBe(false)
+      selectFirstKey()
 
       // Picking a different permutation pack from the footer's Keyboard
-      // Layout select — this must switch back to the pack tab so the
-      // newly selected pack's simulated keymap is immediately visible,
-      // instead of silently staying on the (now stale-looking) Base tab.
+      // Layout select — this must switch to the pack tab so the newly
+      // selected pack's simulated keymap is immediately visible.
+      act(() => ref.current?.notifyUserLayoutChange())
       rerender(
-        <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Colemak" keyboardLayout="colemak" />,
+        <KeymapEditor ref={ref} {...defaultProps()} remapKind="simulated" keymapPackName="Colemak" keyboardLayout="colemak" />,
       )
+      expect(getByTestId('keymap-pack-tab-simulation')).toHaveAttribute('aria-selected', 'true')
       expect(lastWidgetProps().readOnly).toBe(true)
+
+      // No selection left behind to reappear on Default.
+      fireEvent.click(getByTestId('keymap-pack-tab-base'))
+      expect(lastWidgetProps().selectedKey).toBeNull()
     })
 
-    it('a manual click to Base still works and persists across a rerender with an unchanged layout', () => {
+    it('a footer pick onto a pack from QWERTY (tabs hidden before) opens on the pack tab', () => {
+      const ref = createRef<KeymapEditorHandle>()
+      const { getByTestId, rerender } = render(
+        <KeymapEditor ref={ref} {...defaultProps()} keyboardLayout="qwerty" />,
+      )
+      act(() => ref.current?.notifyUserLayoutChange())
+      rerender(<KeymapEditor ref={ref} {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" />)
+      expect(getByTestId('keymap-pack-tab-simulation')).toHaveAttribute('aria-selected', 'true')
+    })
+
+    it('a layout restored from prefs in the same render as the uid change stays on Default', () => {
+      const { getByTestId, rerender } = render(
+        <KeymapEditor {...defaultProps()} keyboardLayout="qwerty" />,
+      )
+      rerender(
+        <KeymapEditor {...defaultProps({ keyboardUid: 'uid-2' })} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" />,
+      )
+      expect(getByTestId('keymap-pack-tab-base')).toHaveAttribute('aria-selected', 'true')
+      expect(lastWidgetProps().readOnly).toBe(false)
+    })
+
+    it('a layout restored from prefs some renders after the uid change stays on Default', () => {
+      const { getByTestId, rerender } = render(
+        <KeymapEditor {...defaultProps()} keyboardLayout="qwerty" />,
+      )
+      rerender(<KeymapEditor {...defaultProps({ keyboardUid: 'uid-2' })} keyboardLayout="qwerty" />)
+      rerender(<KeymapEditor {...defaultProps({ keyboardUid: 'uid-2' })} keyboardLayout="qwerty" currentLayer={0} />)
+      rerender(
+        <KeymapEditor {...defaultProps({ keyboardUid: 'uid-2' })} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" />,
+      )
+      expect(getByTestId('keymap-pack-tab-base')).toHaveAttribute('aria-selected', 'true')
+      expect(lastWidgetProps().readOnly).toBe(false)
+    })
+
+    it('a pending footer notice with no layout change is dropped by the uid reset, so a later restore stays on Default', () => {
+      const ref = createRef<KeymapEditorHandle>()
+      const { getByTestId, rerender } = render(
+        <KeymapEditor ref={ref} {...defaultProps()} keyboardLayout="qwerty" />,
+      )
+      act(() => ref.current?.notifyUserLayoutChange())
+      rerender(<KeymapEditor ref={ref} {...defaultProps({ keyboardUid: 'uid-2' })} keyboardLayout="qwerty" />)
+      rerender(
+        <KeymapEditor ref={ref} {...defaultProps({ keyboardUid: 'uid-2' })} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" />,
+      )
+      expect(getByTestId('keymap-pack-tab-base')).toHaveAttribute('aria-selected', 'true')
+    })
+
+    it('a manual tab choice persists across a rerender with an unchanged layout', () => {
       const { getByTestId, rerender } = render(
         <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" />,
       )
-      fireEvent.click(getByTestId('keymap-pack-tab-base'))
-      expect(lastWidgetProps().readOnly).toBe(false)
+      fireEvent.click(getByTestId('keymap-pack-tab-simulation'))
+      expect(lastWidgetProps().readOnly).toBe(true)
 
       // Same `keyboardLayout` value on rerender (e.g. an unrelated prop
-      // changed) — must NOT reset the tab back to the pack/simulation one.
+      // changed) — must NOT move the tab.
       rerender(
         <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" currentLayer={0} />,
+      )
+      expect(lastWidgetProps().readOnly).toBe(true)
+
+      fireEvent.click(getByTestId('keymap-pack-tab-base'))
+      rerender(
+        <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" keyboardLayout="dvorak" />,
       )
       expect(lastWidgetProps().readOnly).toBe(false)
     })
@@ -251,7 +381,9 @@ describe('KeymapEditor — pack tabs', () => {
 
   describe('read-only enforcement on the simulation tab', () => {
     function renderSimulated() {
-      return render(<KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" />)
+      const result = render(<KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" />)
+      fireEvent.click(result.getByTestId('keymap-pack-tab-simulation'))
+      return result
     }
 
     it('blocks key click/double-click and encoder click/double-click handlers from reaching KeyboardWidget', () => {
@@ -289,6 +421,14 @@ describe('KeymapEditor — pack tabs', () => {
       expect(capturedTabbedProps.onKeycodeSelect).toBeTypeOf('function')
       expect(capturedTabbedProps.onKeycodeMultiSelect).toBeTypeOf('function')
     })
+
+    it('a manual switch to the pack tab clears a selection made on Default', () => {
+      const { getByTestId } = render(<KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" />)
+      selectFirstKey()
+      fireEvent.click(getByTestId('keymap-pack-tab-simulation'))
+      fireEvent.click(getByTestId('keymap-pack-tab-base'))
+      expect(lastWidgetProps().selectedKey).toBeNull()
+    })
   })
 
   describe('Apply button + confirm modal', () => {
@@ -297,6 +437,8 @@ describe('KeymapEditor — pack tabs', () => {
       const { getByTestId, queryByTestId } = render(
         <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" onRequestKeymapApply={onRequestKeymapApply} />,
       )
+      expect(queryByTestId('keymap-pack-apply-button')).toBeNull()
+      fireEvent.click(getByTestId('keymap-pack-tab-simulation'))
       fireEvent.click(getByTestId('keymap-pack-apply-button'))
       expect(onRequestKeymapApply).toHaveBeenCalledTimes(1)
 
@@ -333,6 +475,7 @@ describe('KeymapEditor — pack tabs', () => {
           onRequestKeymapApply={vi.fn()} keymapApplyError="device write failed"
         />,
       )
+      fireEvent.click(getByTestId('keymap-pack-tab-simulation'))
       expect(getByTestId('keymap-apply-error')).toBeTruthy()
     })
 
@@ -350,6 +493,34 @@ describe('KeymapEditor — pack tabs', () => {
       await act(async () => {})
       expect(queryByTestId('keymap-pack-tabs')).toBeNull()
     })
+
+    it('the tabs come back after the typing test with the same tab selected', async () => {
+      const onTypingTestModeChange = vi.fn()
+      const { getByTestId, queryByTestId, rerender } = render(
+        <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" onTypingTestModeChange={onTypingTestModeChange} />,
+      )
+      fireEvent.click(getByTestId('keymap-pack-tab-simulation'))
+
+      rerender(<KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" typingTestMode onTypingTestModeChange={onTypingTestModeChange} />)
+      await act(async () => {})
+      expect(queryByTestId('keymap-pack-tabs')).toBeNull()
+
+      rerender(<KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" onTypingTestModeChange={onTypingTestModeChange} />)
+      await act(async () => {})
+      expect(getByTestId('keymap-pack-tab-simulation')).toHaveAttribute('aria-selected', 'true')
+    })
+
+    it('View Matrix mode hides the tabs, and leaving it shows them again on Default', () => {
+      const { getByTestId, queryByTestId } = render(
+        <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" />,
+      )
+      fireEvent.click(getByTestId('overlay-view-matrix-edit-button'))
+      expect(queryByTestId('keymap-pack-tabs')).toBeNull()
+
+      fireEvent.click(getByTestId('view-matrix-mode-toggle'))
+      expect(getByTestId('keymap-pack-tab-base')).toHaveAttribute('aria-selected', 'true')
+      expect(lastWidgetProps().readOnly).toBe(false)
+    })
   })
 
   describe('simulation-tab layer label gets the "Preview - " prefix', () => {
@@ -357,6 +528,7 @@ describe('KeymapEditor — pack tabs', () => {
       const { getByTestId } = render(
         <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" />,
       )
+      fireEvent.click(getByTestId('keymap-pack-tab-simulation'))
       expect(getByTestId('layer-label')).toHaveTextContent('Preview - Layer 0')
     })
 
@@ -364,6 +536,7 @@ describe('KeymapEditor — pack tabs', () => {
       const { getByTestId } = render(
         <KeymapEditor {...defaultProps()} remapKind="simulated" keymapPackName="Dvorak" />,
       )
+      fireEvent.click(getByTestId('keymap-pack-tab-simulation'))
       fireEvent.click(getByTestId('keymap-pack-tab-base'))
       expect(getByTestId('layer-label')).toHaveTextContent('Layer 0')
       expect(getByTestId('layer-label')).not.toHaveTextContent('Preview')

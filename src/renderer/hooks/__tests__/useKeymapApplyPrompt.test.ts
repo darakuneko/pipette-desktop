@@ -110,6 +110,25 @@ describe('useKeymapApplyPrompt — simulation tab Apply flow', () => {
     expect(result.current.pendingApply).toBeNull()
   })
 
+  it('handleKeyboardLayoutChange reports the pick through onUserLayoutChange before changing the layout', () => {
+    const calls: string[] = []
+    const onUserLayoutChange = vi.fn(() => { calls.push('user') })
+    onKeyboardLayoutChange.mockImplementation(() => { calls.push('layout') })
+    const { result } = setup({ keyboardLayout: 'qwerty', onUserLayoutChange })
+    act(() => result.current.handleKeyboardLayoutChange('dvorak-id'))
+    expect(calls).toEqual(['user', 'layout'])
+    onKeyboardLayoutChange.mockReset()
+  })
+
+  it('the QWERTY reset after a clean Apply does not go through onUserLayoutChange', async () => {
+    const onUserLayoutChange = vi.fn()
+    const { result } = setup({ keyboardLayout: 'dvorak-id', activeRewriteTable: DVORAK_TABLE, activeLayoutName: 'Dvorak', onUserLayoutChange })
+    act(() => { result.current.requestApply() })
+    act(() => { result.current.handleApplyConfirm() })
+    await waitFor(() => expect(onKeyboardLayoutChange).toHaveBeenCalledWith(BUILTIN_QWERTY_LAYOUT_ID))
+    expect(onUserLayoutChange).not.toHaveBeenCalled()
+  })
+
   // --- requestApply: the only entry point into the modal, resolves
   // synchronously off the already-provided `activeRewriteTable` ---
 

@@ -2,10 +2,12 @@
 //
 // Vertical index-tab strip shown to the right of the keymap surface
 // whenever a permutation Key Label pack is active (gated by
-// `remapKind === 'simulated'` in `KeymapEditor`). Top button = the pack's
-// own name (simulation, read-only); bottom button = the real keymap, fully
-// editable — same neutral/no-remap layout as the footer Keyboard Layout
-// select's built-in QWERTY option, but labeled with the SHORT form
+// `remapKind === 'simulated'` in `KeymapEditor`). Top button = the real
+// keymap, fully editable; bottom button = the pack's own name (simulation,
+// read-only). The real keymap is the tab shown when the keymap first
+// appears (see `useKeymapPackTabs`). The real-keymap tab is the same
+// neutral/no-remap layout as the footer Keyboard Layout select's built-in
+// QWERTY option, but labeled with the SHORT form
 // (`keyLabels.qwertyDefaultShort`, e.g. "Default") rather than the
 // select's full `keyLabels.qwertyDefaultName` ("QWERTY (Default)"): this
 // tab is a ~28px vertical strip (see `tabButtonClass`'s `w-7`) that the
@@ -44,7 +46,7 @@ export type KeymapPackTab = 'pack' | 'base'
 interface KeymapPackTabsProps {
   activeTab: KeymapPackTab
   onTabChange: (tab: KeymapPackTab) => void
-  /** Display name of the active Key Label pack — the top tab's label. */
+  /** Display name of the active Key Label pack — the bottom tab's label. */
   packName: string
 }
 
@@ -80,22 +82,22 @@ export function KeymapPackTabs({ activeTab, onTabChange, packName }: KeymapPackT
       <button
         type="button"
         role="tab"
-        aria-selected={activeTab === 'pack'}
-        className={tabButtonClass(activeTab === 'pack')}
-        onClick={() => onTabChange('pack')}
-        data-testid="keymap-pack-tab-simulation"
-      >
-        {packName}
-      </button>
-      <button
-        type="button"
-        role="tab"
         aria-selected={activeTab === 'base'}
         className={tabButtonClass(activeTab === 'base')}
         onClick={() => onTabChange('base')}
         data-testid="keymap-pack-tab-base"
       >
         {t('keyLabels.qwertyDefaultShort')}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeTab === 'pack'}
+        className={tabButtonClass(activeTab === 'pack')}
+        onClick={() => onTabChange('pack')}
+        data-testid="keymap-pack-tab-simulation"
+      >
+        {packName}
       </button>
     </div>
   )

@@ -211,13 +211,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     keymap, encoderLayout, onSetKey, onSetEncoder, history, triggerFlash,
   })
 
-  useImperativeHandle(ref, () => ({
-    toggleMatrix: handleMatrixToggle, toggleTypingTest: handleTypingTestToggle,
-    matrixMode, hasMatrixTester,
-    applyKeymapRewrite,
-    clearHistory: history.clear,
-  }), [handleMatrixToggle, handleTypingTestToggle, matrixMode, hasMatrixTester, applyKeymapRewrite, history.clear])
-
   // --- Layer keycode builders (current layer / typing test / picker) ---
   const {
     deserializedMacros, configuredKeycodes,
@@ -235,13 +228,20 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const {
     packTab, showPackTabs, packTabReadOnly,
     primaryKeycodes, primaryEncoderKeycodes, primaryRemappedKeys, primaryRemappedEncoders, primaryRemapLabel,
-    handlePackTabChange, resetPackTab,
+    handlePackTabChange, resetPackTab, notifyUserLayoutChange,
   } = useKeymapPackTabs({
     keyboardLayout, remapKind, keymap, encoderLayout, encoderCount, currentLayer,
     typingTestMode, viewMatrixActive: viewMatrixMode.active, handleDeselect,
     parsedMacros, macroBuffer, macroCount, vialProtocol, tapDanceEntries,
     remapLabel, layerKeycodes, layerEncoderKeycodes, remappedKeys, layerEncoderRemapped,
   })
+
+  useImperativeHandle(ref, () => ({
+    toggleMatrix: handleMatrixToggle, toggleTypingTest: handleTypingTestToggle,
+    matrixMode, hasMatrixTester,
+    applyKeymapRewrite, notifyUserLayoutChange,
+    clearHistory: history.clear,
+  }), [handleMatrixToggle, handleTypingTestToggle, matrixMode, hasMatrixTester, applyKeymapRewrite, notifyUserLayoutChange, history.clear])
 
   // Clear history and exit View Matrix mode on keyboard/context switch or
   // disconnect — kept in this component (rather than folded into

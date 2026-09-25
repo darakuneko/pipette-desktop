@@ -41,6 +41,11 @@ export interface UseKeymapApplyPromptOptions {
    *  instant it changes out from under the request that opened it. */
   keyboardLayout: string
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
+  /** Called by `handleKeyboardLayoutChange` (the select's own handler)
+   *  before `onKeyboardLayoutChange`, and by no other path that changes
+   *  the layout — lets the keymap tell a user's pick from a restored or
+   *  reset value (`KeymapEditorHandle.notifyUserLayoutChange`). */
+  onUserLayoutChange?: () => void
   /** Bulk-rewrite the live keymap via `KeymapEditorHandle.applyKeymapRewrite`. */
   onApplyKeymapRewrite?: (table: KeymapRewriteTable) => Promise<KeymapApplyResult>
   /** `KeyboardState.keymapRestoreSeq` — bumped by `applyVilFile` on every
@@ -93,6 +98,7 @@ export function useKeymapApplyPrompt({
   keymapEditable,
   keyboardLayout,
   onKeyboardLayoutChange,
+  onUserLayoutChange,
   onApplyKeymapRewrite,
   keymapRestoreSeq,
   activeRewriteTable,
@@ -199,8 +205,9 @@ export function useKeymapApplyPrompt({
     setApplyError(null)
     ++requestSeqRef.current
     setPendingApply(null)
+    onUserLayoutChange?.()
     onKeyboardLayoutChange?.(v as KeyboardLayoutId)
-  }, [onKeyboardLayoutChange])
+  }, [onKeyboardLayoutChange, onUserLayoutChange])
 
   // Entry point for the simulation tab's Apply button. Resolves
   // synchronously off `activeRewriteTable` — `useDevicePrefs` already built
