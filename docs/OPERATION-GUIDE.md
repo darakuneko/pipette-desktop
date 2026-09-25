@@ -38,6 +38,7 @@ Screenshots were taken using the software-emulated GPK60-63R keyboard, displayed
   - [3.12 User](#312-user)
   - [3.13 Keyboard (Device Picker)](#313-keyboard-device-picker)
   - [3.14 Keycodes Overlay Panel](#314-keycodes-overlay-panel)
+  - [3.15 Reordering the Tabs](#315-reordering-the-tabs)
 - [4. Toolbar](#4-toolbar)
   - [4.1 Zoom](#41-zoom)
   - [4.2 Undo / Redo (Keymap History)](#42-undo--redo-keymap-history)
@@ -1202,6 +1203,35 @@ Auto Move and Auto Layer Preview share one row, and Instant Key Selection and Ke
 **Layout Tab** (when available)
 
 Some keyboards support layout options (see §2.5). When available, a Layout tab appears as the first tab in the overlay panel, providing access to the same layout options.
+
+### 3.15 Reordering the Tabs
+
+The keycode palette's tabs (Basic, Layers, …, User, Keyboard) can be put in any order. Reordering is done in the keymap editor's palette; the order is used by every key picker, including the pickers inside the Tap Dance, Combo, Key Override, Alt Repeat Key and Macro editors.
+
+**Entering reorder mode**
+
+- Press and hold any tab for about half a second (primary mouse button). Releasing the button afterwards does not switch tabs
+- Or, with a tab focused by the keyboard, press **Shift+F10** or the context menu (**Menu**) key
+
+![Keycode palette in reorder mode](screenshots/keycode-tab-reorder.png)
+
+In reorder mode the tabs get a dashed outline, and a row below the tabs shows the hint "Drag tabs or use ←/→ to reorder · Enter to finish" with **Reset** and **Done** buttons. Clicking a tab does not switch tabs while the mode is on.
+
+**Moving tabs**
+
+- Drag a tab and drop it on another tab to take that tab's place. Dropping anywhere else, or pressing Esc during the drag, leaves the order unchanged
+- With a tab focused, **←** / **→** moves it one place to the left / right. The focus stays on the moved tab
+
+Each move is saved right away.
+
+**Leaving reorder mode**
+
+- Press **Enter** or **Esc**, click **Done**, or click anywhere outside the tabs and the hint row (the click still does what it normally does). Opening a dialog also leaves the mode
+- Moves already made are kept
+
+**Reset** puts the tabs back in the default order.
+
+The order is saved and synced per keyboard. Tabs a keyboard does not show (for example MIDI) keep their place in the order, and a tab added in a later version of Pipette appears at the end. Reset Keyboard Data (§3.14) also clears the order.
 
 ---
 
