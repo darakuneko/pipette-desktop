@@ -10,6 +10,9 @@
 // Only a drop on a tab or an arrow-key move commits, and only an order that
 // actually changed is saved. The display order is a projection of the saved
 // full order (`keycode-tab-order.ts`); selection and content never read it.
+// The tab the user works with — the one that opened the mode, a clicked or
+// dragged tab, a tab moved with ←/→ — becomes the selected tab; a drop
+// target never does.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { useKeycodeTabOrder } from './keycode-tab-order-context'
@@ -62,12 +65,6 @@ export function useKeycodeTabReorder({
 
   const pressRef = useRef<{ timer: number; x: number; y: number } | null>(null)
   const dragIdRef = useRef<string | null>(null)
-  // The long-press that opened the mode ends in a click on the same tab;
-  // that click must not switch tabs, even when the mode closed (Enter / Esc)
-  // before the button was released. Cleared once that press is released or
-  // cancelled, after the click it produces.
-  const suppressClickRef = useRef(false)
-  const releaseListenerRef = useRef<(() => void) | null>(null)
   const pendingFocusRef = useRef<string | null>(null)
   const [focusRequest, setFocusRequest] = useState(0)
   const lastFocusedTabRef = useRef<string | null>(null)
@@ -83,26 +80,6 @@ export function useKeycodeTabReorder({
     setDragId(null)
     setDropTargetId(null)
   }, [])
-
-  const stopWatchingRelease = useCallback(() => {
-    releaseListenerRef.current?.()
-    releaseListenerRef.current = null
-  }, [])
-
-  const watchRelease = useCallback(() => {
-    stopWatchingRelease()
-    const onRelease = (): void => {
-      stopWatchingRelease()
-      // The click follows pointerup in the same task.
-      window.setTimeout(() => { suppressClickRef.current = false }, 0)
-    }
-    window.addEventListener('pointerup', onRelease, true)
-    window.addEventListener('pointercancel', onRelease, true)
-    releaseListenerRef.current = () => {
-      window.removeEventListener('pointerup', onRelease, true)
-      window.removeEventListener('pointercancel', onRelease, true)
-    }
-  }, [stopWatchingRelease])
 
   /** Focuses the last focused tab (or the selected one) after the render. */
   const focusTab = useCallback((id?: string) => {
@@ -147,7 +124,7 @@ export function useKeycodeTabReorder({
     focusTab()
   }
 
-  useEffect(() => () => { cancelPress(); stopWatchingRelease() }, [cancelPress, stopWatchingRelease])
+  useEffect(() => cancelPress, [cancelPress])
   useEffect(() => { exit() }, [scopeKey, exit])
   useEffect(() => { if (!enabled) exit() }, [enabled, exit])
 
@@ -222,23 +199,28 @@ export function useKeycodeTabReorder({
     el?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
   }, [orderedIds, focusRequest, barRef])
 
+  /** Selects `id` unless it already is, so re-picking the selected tab
+   *  (the release of the long-press that opened the mode, a move of the
+   *  selected tab) does not clear the picker selection via `onTabChange`. */
+  function pick(id: string): void {
+    if (id !== selectedId) onSelectTab(id)
+  }
+
   function tabProps(id: string) {
     return {
       'data-keycode-tab': id,
       draggable: active,
       onFocus: (): void => { lastFocusedTabRef.current = id },
       onClick: (): void => {
-        if (suppressClickRef.current) { suppressClickRef.current = false; return }
-        if (!active) onSelectTab(id)
+        if (active) pick(id)
+        else onSelectTab(id)
       },
       onPointerDown: (e: React.PointerEvent): void => {
         if (!enabled || active || e.button !== 0) return
         cancelPress()
-        suppressClickRef.current = false
         const timer = window.setTimeout(() => {
           pressRef.current = null
-          suppressClickRef.current = true
-          watchRelease()
+          pick(id)
           enter()
         }, LONG_PRESS_MS)
         pressRef.current = { timer, x: e.clientX, y: e.clientY }
@@ -253,18 +235,21 @@ export function useKeycodeTabReorder({
       onKeyDown: (e: React.KeyboardEvent): void => {
         if (!enabled) return
         if (!active) {
-          if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) { e.preventDefault(); enter() }
+          if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) { e.preventDefault(); pick(id); enter() }
           return
         }
         if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
         e.preventDefault()
         const target = orderedIds.indexOf(id) + (e.key === 'ArrowLeft' ? -1 : 1)
-        if (commitMove(id, target)) focusTab(id)
+        if (!commitMove(id, target)) return
+        pick(id)
+        focusTab(id)
       },
       onDragStart: (e: React.DragEvent): void => {
         if (!active) { e.preventDefault(); return }
         dragIdRef.current = id
         setDragId(id)
+        pick(id)
         e.dataTransfer.effectAllowed = 'move'
         e.dataTransfer.setData(TAB_DRAG_MIME, id)
       },

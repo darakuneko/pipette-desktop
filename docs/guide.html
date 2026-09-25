@@ -1035,11 +1035,11 @@ header {
 <h3 id="3-15-reordering-the-tabs">3.15 Reordering the Tabs</h3>
 <p>The keycode palette's tabs (Basic, Layers, …, User, Keyboard) can be put in any order. Reordering is done in the keymap editor's palette; the order is used by every key picker, including the pickers inside the Tap Dance, Combo, Key Override, Alt Repeat Key and Macro editors.</p>
 <p><strong>Entering reorder mode</strong></p>
-<ul><li>Press and hold any tab for about half a second (primary mouse button). Releasing the button afterwards does not switch tabs</li><li>Or, with a tab focused by the keyboard, press <strong>Shift+F10</strong> or the context menu (<strong>Menu</strong>) key</li></ul>
+<ul><li>Press and hold any tab for about half a second (primary mouse button). That tab becomes the selected tab</li><li>Or, with a tab focused by the keyboard, press <strong>Shift+F10</strong> or the context menu (<strong>Menu</strong>) key. The focused tab becomes the selected tab</li></ul>
 <div class="img-wrap"><img src="screenshots/keycode-tab-reorder.png" alt="Keycode palette in reorder mode" class="doc-img" loading="lazy"></div>
-<p>In reorder mode the tabs get a dashed outline, and a row below the tabs shows the hint "Drag tabs or use ←/→ to reorder · Enter to finish" with <strong>Reset</strong> and <strong>Done</strong> buttons. Clicking a tab does not switch tabs while the mode is on.</p>
+<p>In reorder mode the tabs get a dashed outline, and a row below the tabs shows the hint "Drag tabs or use ←/→ to reorder · Enter to finish" with <strong>Reset</strong> and <strong>Done</strong> buttons. The tab you work with is always the selected one, with its keycodes shown below: clicking a tab selects it, and so does grabbing it to drag.</p>
 <p><strong>Moving tabs</strong></p>
-<ul><li>Drag a tab and drop it on another tab to take that tab's place. Dropping anywhere else, or pressing Esc during the drag, leaves the order unchanged</li><li>With a tab focused, <strong>←</strong> / <strong>→</strong> moves it one place to the left / right. The focus stays on the moved tab</li></ul>
+<ul><li>Drag a tab and drop it on another tab to take that tab's place. Dropping anywhere else, or pressing Esc during the drag, leaves the order unchanged. The tab you dropped onto does not become selected</li><li>With a tab focused, <strong>←</strong> / <strong>→</strong> moves it one place to the left / right and selects it. The focus stays on the moved tab</li></ul>
 <p>Each move is saved right away.</p>
 <p><strong>Leaving reorder mode</strong></p>
 <ul><li>Press <strong>Enter</strong> or <strong>Esc</strong>, click <strong>Done</strong>, or click anywhere outside the tabs and the hint row (the click still does what it normally does). Opening a dialog also leaves the mode. When a button in the tab bar (such as <strong>Reset</strong>, <strong>Done</strong> or the panel button) has the focus, Enter presses that button instead</li><li>Moves already made are kept</li></ul>
@@ -1977,11 +1977,11 @@ header {
 <h3 id="3-15-タブの並び替え">3.15 タブの並び替え</h3>
 <p>キーコードパレットのタブ（Basic、Layers、…、User、Keyboard）は好きな順に並べ替えられます。並び替えはキーマップエディタのパレットで行い、その順は Tap Dance・Combo・Key Override・Alt Repeat Key・Macro の各エディタ内のキーピッカーを含むすべてのキーピッカーで使われます。</p>
 <p><strong>並び替えモードに入る</strong></p>
-<ul><li>どのタブでも約 0.5 秒長押しします（マウスの主ボタン）。そのあとボタンを離してもタブは切り替わりません</li><li>または、キーボードでタブにフォーカスを置いて <strong>Shift+F10</strong> かアプリケーション（<strong>Menu</strong>）キーを押します</li></ul>
+<ul><li>どのタブでも約 0.5 秒長押しします（マウスの主ボタン）。そのタブが選択中のタブになります</li><li>または、キーボードでタブにフォーカスを置いて <strong>Shift+F10</strong> かアプリケーション（<strong>Menu</strong>）キーを押します。フォーカスのあるタブが選択中のタブになります</li></ul>
 <div class="img-wrap"><img src="screenshots/keycode-tab-reorder.png" alt="並び替えモードのキーコードパレット" class="doc-img" loading="lazy"></div>
-<p>並び替えモード中は各タブに点線の枠が付き、タブの下の行にヒント「Drag tabs or use ←/→ to reorder · Enter to finish」と <strong>Reset</strong>・<strong>Done</strong> ボタンが表示されます。モード中にタブをクリックしてもタブは切り替わりません。</p>
+<p>並び替えモード中は各タブに点線の枠が付き、タブの下の行にヒント「Drag tabs or use ←/→ to reorder · Enter to finish」と <strong>Reset</strong>・<strong>Done</strong> ボタンが表示されます。操作しているタブが常に選択中のタブになり、その下にキーコードが表示されます。タブをクリックすると選択され、ドラッグのためにつかんだタブも選択されます。</p>
 <p><strong>タブを動かす</strong></p>
-<ul><li>タブをドラッグして別のタブの上にドロップすると、そのタブの位置に入ります。タブ以外の場所でドロップするか、ドラッグ中に Esc を押すと並びは変わりません</li><li>タブにフォーカスがある状態で <strong>←</strong> / <strong>→</strong> を押すと、そのタブが左 / 右に 1 つ動きます。フォーカスは動かしたタブに残ります</li></ul>
+<ul><li>タブをドラッグして別のタブの上にドロップすると、そのタブの位置に入ります。タブ以外の場所でドロップするか、ドラッグ中に Esc を押すと並びは変わりません。ドロップ先のタブは選択されません</li><li>タブにフォーカスがある状態で <strong>←</strong> / <strong>→</strong> を押すと、そのタブが左 / 右に 1 つ動き、選択されます。フォーカスは動かしたタブに残ります</li></ul>
 <p>動かすたびにすぐ保存されます。</p>
 <p><strong>並び替えモードを抜ける</strong></p>
 <ul><li><strong>Enter</strong> か <strong>Esc</strong> を押す、<strong>Done</strong> をクリックする、またはタブとヒントの行以外の場所をクリックします（そのクリックは通常どおり働きます）。ダイアログが開いた時もモードを抜けます。タブ列のボタン（<strong>Reset</strong>・<strong>Done</strong>・パネルボタンなど）にフォーカスがある時は、Enter はそのボタンを押します</li><li>それまでに動かした並びはそのまま残ります</li></ul>

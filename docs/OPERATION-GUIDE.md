@@ -1210,17 +1210,17 @@ The keycode palette's tabs (Basic, Layers, …, User, Keyboard) can be put in an
 
 **Entering reorder mode**
 
-- Press and hold any tab for about half a second (primary mouse button). Releasing the button afterwards does not switch tabs
-- Or, with a tab focused by the keyboard, press **Shift+F10** or the context menu (**Menu**) key
+- Press and hold any tab for about half a second (primary mouse button). That tab becomes the selected tab
+- Or, with a tab focused by the keyboard, press **Shift+F10** or the context menu (**Menu**) key. The focused tab becomes the selected tab
 
 ![Keycode palette in reorder mode](screenshots/keycode-tab-reorder.png)
 
-In reorder mode the tabs get a dashed outline, and a row below the tabs shows the hint "Drag tabs or use ←/→ to reorder · Enter to finish" with **Reset** and **Done** buttons. Clicking a tab does not switch tabs while the mode is on.
+In reorder mode the tabs get a dashed outline, and a row below the tabs shows the hint "Drag tabs or use ←/→ to reorder · Enter to finish" with **Reset** and **Done** buttons. The tab you work with is always the selected one, with its keycodes shown below: clicking a tab selects it, and so does grabbing it to drag.
 
 **Moving tabs**
 
-- Drag a tab and drop it on another tab to take that tab's place. Dropping anywhere else, or pressing Esc during the drag, leaves the order unchanged
-- With a tab focused, **←** / **→** moves it one place to the left / right. The focus stays on the moved tab
+- Drag a tab and drop it on another tab to take that tab's place. Dropping anywhere else, or pressing Esc during the drag, leaves the order unchanged. The tab you dropped onto does not become selected
+- With a tab focused, **←** / **→** moves it one place to the left / right and selects it. The focus stays on the moved tab
 
 Each move is saved right away.
 

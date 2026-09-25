@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Capture for the keycode palette's tab reorder mode — `keycode-tab-reorder.png`
-// (operation guide §3.15). Long-presses a tab on the virtual device and
-// captures the palette in reorder mode, in the default tab order.
+// (operation guide §3.15). Long-presses the Macro tab on the virtual device
+// and captures the palette in reorder mode — Macro selected, its tiles
+// shown — in the default tab order.
 //
 // Usage: pnpm build && npx tsx e2e/helpers/doc-capture-keycode-tab-reorder.ts
 //
@@ -81,10 +82,10 @@ async function main(): Promise<void> {
     }
     await dismissNotificationModal(page)
 
-    const tab = page.locator('[data-testid="tabbed-keycodes-root"] [data-keycode-tab="system"]').first()
+    const tab = page.locator('[data-testid="tabbed-keycodes-root"] [data-keycode-tab="macro"]').first()
     const box = await tab.boundingBox()
     if (!box) {
-      console.log('  [skip] System tab not found')
+      console.log('  [skip] Macro tab not found')
       return
     }
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)

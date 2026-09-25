@@ -4,6 +4,7 @@ import { useId, useMemo, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { ICON_MD } from '../../constants/ui-tokens'
+import { IMPORT_BTN } from '../editors/layout-store-types'
 import { Tooltip } from '../ui/Tooltip'
 import type { KeycodeCategory } from './categories'
 import { KEYBOARD_TAB_ID } from './keycode-tab-order'
@@ -27,8 +28,10 @@ const TAB_INACTIVE = 'border-b-transparent text-content-secondary hover:text-con
 // Outline only: an outline takes no layout space, so entering the mode
 // under a held pointer never moves the tabs.
 const TAB_REORDERING = 'cursor-grab outline outline-1 outline-dashed -outline-offset-1'
-// Same look as the status bar's compact bordered buttons (`QuickSettingsSelects.tsx`).
-const MODE_BUTTON = 'flex shrink-0 items-center justify-center whitespace-nowrap rounded border border-edge px-2.5 py-1 text-xs leading-none text-content-secondary transition-colors hover:text-content focus:border-accent focus:outline-none disabled:opacity-50'
+// Same button as the overlay panel's View Matrix Edit / Done
+// (`KeycodesOverlayPanel.tsx`); the shared minimum width gives Reset and Done
+// one size whatever the label length.
+const MODE_BUTTON = `${IMPORT_BTN} min-w-16 disabled:opacity-50`
 
 /** The tab bar at the top of `TabbedKeycodes`: one tab per category, the
  *  optional "Keyboard" tab, the right-hand slot (`tabBarRight` + close) and,

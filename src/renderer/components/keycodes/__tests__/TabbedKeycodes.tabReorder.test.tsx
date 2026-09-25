@@ -130,13 +130,13 @@ describe('TabbedKeycodes tab order', () => {
 })
 
 describe('entering the mode', () => {
-  it('enters after a 500 ms long-press, and the release does not switch tabs', () => {
+  it('enters after a 500 ms long-press and selects the pressed tab; the release selects nothing else', () => {
     const onTabChange = vi.fn()
     render(<Host onTabChange={onTabChange} />)
     longPress('system')
     expect(inMode()).toBe(true)
-    expect(selected()).toBe('basic')
-    expect(onTabChange).not.toHaveBeenCalled()
+    expect(selected()).toBe('system')
+    expect(onTabChange).toHaveBeenCalledTimes(1)
   })
 
   it('a 499 ms press is a normal click', () => {
@@ -194,13 +194,39 @@ describe('entering the mode', () => {
 })
 
 describe('in the mode', () => {
-  it('clicking a tab does not switch tabs', () => {
+  it('clicking a tab selects it; clicking the selected tab changes nothing', () => {
     const onTabChange = vi.fn()
     render(<Host onTabChange={onTabChange} />)
     enterByKeyboard()
     fireEvent.click(tab('system'))
-    expect(selected()).toBe('basic')
-    expect(onTabChange).not.toHaveBeenCalled()
+    expect(selected()).toBe('system')
+    expect(inMode()).toBe(true)
+    expect(onTabChange).toHaveBeenCalledTimes(1)
+    fireEvent.click(tab('system'))
+    expect(onTabChange).toHaveBeenCalledTimes(1)
+  })
+
+  it('grabbing a tab selects it; the drop target does not become selected', () => {
+    render(<Host />)
+    enterByKeyboard()
+    drag('system', 'layers')
+    expect(selected()).toBe('system')
+    expect(shownOrder()).toEqual(['basic', 'system', 'layers'])
+  })
+
+  it('moving a focused tab that is not selected with ←/→ selects it', () => {
+    render(<Host />)
+    enterByKeyboard('basic')
+    tab('system').focus()
+    fireEvent.keyDown(tab('system'), { key: 'ArrowLeft' })
+    expect(selected()).toBe('system')
+    expect(document.activeElement).toBe(tab('system'))
+  })
+
+  it('entering from the keyboard selects the focused tab', () => {
+    render(<Host />)
+    enterByKeyboard('layers')
+    expect(selected()).toBe('layers')
   })
 
   it('←/→ moves the focused tab by one, saves each move once and keeps the focus', () => {
@@ -449,20 +475,14 @@ describe('leaving the mode', () => {
     expect(inMode()).toBe(true)
   })
 
-  it('the click of the press that opened the mode never switches tabs, even after Enter closed the mode', () => {
-    const onTabChange = vi.fn()
-    render(<Host onTabChange={onTabChange} />)
+  it('Enter before releasing the long-press leaves the pressed tab selected, not another', () => {
+    render(<Host />)
     fireEvent.pointerDown(tab('system'), { button: 0, clientX: 10, clientY: 10 })
     act(() => { vi.advanceTimersByTime(LONG_PRESS_MS) })
     expect(inMode()).toBe(true)
     fireEvent.keyDown(tab('system'), { key: 'Enter' })
     expect(inMode()).toBe(false)
     fireEvent.pointerUp(tab('system'))
-    fireEvent.click(tab('system'))
-    expect(selected()).toBe('basic')
-    expect(onTabChange).not.toHaveBeenCalled()
-    // Once that press is over, clicks work again.
-    act(() => { vi.advanceTimersByTime(0) })
     fireEvent.click(tab('system'))
     expect(selected()).toBe('system')
   })
@@ -480,9 +500,10 @@ describe('leaving the mode', () => {
   it('Done focuses the selected tab when no tab was focused', () => {
     render(<Host />)
     longPress('system')
+    fireEvent.click(tab('layers'))
     ;(document.activeElement as HTMLElement | null)?.blur()
     fireEvent.click(screen.getByTestId('keycode-tab-reorder-done'))
-    expect(document.activeElement).toBe(tab('basic'))
+    expect(document.activeElement).toBe(tab('layers'))
   })
 
   it('Reset keeps the focus in the tab bar and announces the default order', () => {
