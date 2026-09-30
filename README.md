@@ -84,6 +84,12 @@ Make the AppImage executable before launching:
 chmod +x Pipette-linux-x86_64.AppImage
 ```
 
+The AppImage uses the static AppImage runtime, so `libfuse2` does not need to be installed.
+
+#### Updating the AppImage
+
+The AppImage embeds update information, so [AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate) can update it in place, downloading only the changed parts.
+
 #### AppImage Sandbox (Ubuntu 24.04+ / Debian 13+)
 
 On distributions that restrict unprivileged user namespaces (e.g. Ubuntu 24.04+, Debian 13+ via AppArmor's `unprivileged_userns_restricted` flag), the AppImage may fail to launch with a sandbox / user namespace error.
