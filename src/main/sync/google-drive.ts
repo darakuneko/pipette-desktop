@@ -2,6 +2,7 @@
 // Google Drive API client for appDataFolder
 
 import { getAccessToken } from './google-auth'
+import { driveRequest } from './drive-retry'
 import { pLimit } from '../../shared/concurrency'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import type { SyncEnvelope } from '../../shared/types/sync'
@@ -41,7 +42,6 @@ export interface ListFilesOptions {
  *  none of those call sites need to change once a user's file count
  *  crosses Drive's single-page cap (1000, this call's own `pageSize`). */
 export async function listFiles(options?: ListFilesOptions): Promise<DriveFile[]> {
-  const headers = await authHeaders()
   const files: DriveFile[] = []
   let pageToken: string | undefined
 
@@ -58,13 +58,14 @@ export async function listFiles(options?: ListFilesOptions): Promise<DriveFile[]
     }
     if (pageToken) params.set('pageToken', pageToken)
 
-    const response = await fetch(`${DRIVE_API}/files?${params}`, { headers })
-    if (!response.ok) {
-      const body = await response.text()
-      throw new Error(`Drive list failed: ${response.status} ${body}`)
-    }
+    const { text } = await driveRequest({
+      label: 'list',
+      getHeaders: authHeaders,
+      send: (headers) => fetch(`${DRIVE_API}/files?${params}`, { headers }),
+      retryTransient: true,
+    })
 
-    const data = (await response.json()) as { files?: DriveFile[]; nextPageToken?: string }
+    const data = JSON.parse(text) as { files?: DriveFile[]; nextPageToken?: string }
     files.push(...(data.files ?? []))
     pageToken = data.nextPageToken
   } while (pageToken)
@@ -73,16 +74,16 @@ export async function listFiles(options?: ListFilesOptions): Promise<DriveFile[]
 }
 
 export async function downloadFile(fileId: string): Promise<SyncEnvelope> {
-  const headers = await authHeaders()
   const params = new URLSearchParams({ alt: 'media' })
 
-  const response = await fetch(`${DRIVE_API}/files/${fileId}?${params}`, { headers })
-  if (!response.ok) {
-    const body = await response.text()
-    throw new Error(`Drive download failed: ${response.status} ${body}`)
-  }
+  const { text } = await driveRequest({
+    label: 'download',
+    getHeaders: authHeaders,
+    send: (headers) => fetch(`${DRIVE_API}/files/${fileId}?${params}`, { headers }),
+    retryTransient: true,
+  })
 
-  return (await response.json()) as SyncEnvelope
+  return JSON.parse(text) as SyncEnvelope
 }
 
 export interface UploadedFile {
@@ -103,25 +104,23 @@ export async function uploadFile(
   envelope: SyncEnvelope,
   existingFileId?: string,
 ): Promise<UploadedFile> {
-  const headers = await authHeaders()
   const content = JSON.stringify(envelope)
 
   if (existingFileId) {
     // Update existing file. `fields` is requested explicitly — the
     // default response for a media-upload PATCH omits `modifiedTime`.
-    const response = await fetch(
-      `${UPLOAD_API}/files/${existingFileId}?uploadType=media&fields=id,modifiedTime`,
-      {
-        method: 'PATCH',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: content,
-      },
-    )
-    if (!response.ok) {
-      const body = await response.text()
-      throw new Error(`Drive update failed: ${response.status} ${body}`)
-    }
-    return (await response.json()) as UploadedFile
+    const { text } = await driveRequest({
+      label: 'update',
+      getHeaders: authHeaders,
+      send: (headers) =>
+        fetch(`${UPLOAD_API}/files/${existingFileId}?uploadType=media&fields=id,modifiedTime`, {
+          method: 'PATCH',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: content,
+        }),
+      retryTransient: true,
+    })
+    return JSON.parse(text) as UploadedFile
   }
 
   // Create new file with multipart upload
@@ -144,33 +143,36 @@ export async function uploadFile(
   ].join('\r\n')
 
   // `fields` requested explicitly — same reasoning as the update path above.
-  const response = await fetch(`${UPLOAD_API}/files?uploadType=multipart&fields=id,modifiedTime`, {
-    method: 'POST',
-    headers: {
-      ...headers,
-      'Content-Type': `multipart/related; boundary=${boundary}`,
-    },
-    body,
+  // Only rate-limit responses are retried here: after a 5xx or a network
+  // error the file may already have been created, and sending the create
+  // again would leave two files with the same name.
+  const { text } = await driveRequest({
+    label: 'upload',
+    getHeaders: authHeaders,
+    send: (headers) =>
+      fetch(`${UPLOAD_API}/files?uploadType=multipart&fields=id,modifiedTime`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': `multipart/related; boundary=${boundary}`,
+        },
+        body,
+      }),
+    retryTransient: false,
   })
 
-  if (!response.ok) {
-    const body = await response.text()
-    throw new Error(`Drive upload failed: ${response.status} ${body}`)
-  }
-
-  return (await response.json()) as UploadedFile
+  return JSON.parse(text) as UploadedFile
 }
 
 export async function deleteFile(fileId: string): Promise<void> {
-  const headers = await authHeaders()
-  const response = await fetch(`${DRIVE_API}/files/${fileId}`, {
-    method: 'DELETE',
-    headers,
+  // A 404 means the file is already gone, which is what the caller wants.
+  await driveRequest({
+    label: 'delete',
+    getHeaders: authHeaders,
+    send: (headers) => fetch(`${DRIVE_API}/files/${fileId}`, { method: 'DELETE', headers }),
+    retryTransient: true,
+    acceptStatus: (status) => status === 404,
   })
-  if (!response.ok && response.status !== 404) {
-    const body = await response.text()
-    throw new Error(`Drive delete failed: ${response.status} ${body}`)
-  }
 }
 
 export async function deleteAllFiles(): Promise<void> {

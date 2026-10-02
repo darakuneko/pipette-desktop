@@ -40,7 +40,18 @@ vi.mock('../sync/google-auth', () => ({
   getAccessToken: vi.fn(async () => 'mock-token'),
 }))
 
-import { driveFileName, listFiles, syncUnitFromFileName, uploadFile, deleteFilesByExactName } from '../sync/google-drive'
+import {
+  driveFileName,
+  listFiles,
+  syncUnitFromFileName,
+  uploadFile,
+  deleteFile,
+  downloadFile,
+  deleteFilesByExactName,
+} from '../sync/google-drive'
+import { retryTiming } from '../sync/drive-retry'
+import { getAccessToken } from '../sync/google-auth'
+import { syncRuntime } from '../sync/sync-runtime-state'
 import type { SyncEnvelope } from '../../shared/types/sync'
 
 function extractFetchUrl(call: unknown): URL {
@@ -49,8 +60,15 @@ function extractFetchUrl(call: unknown): URL {
 }
 
 describe('google-drive', () => {
+  // Backoff waits are recorded instead of slept so retry tests run instantly.
+  let sleeps: number[]
   beforeEach(() => {
     vi.clearAllMocks()
+    sleeps = []
+    vi.spyOn(retryTiming, 'sleep').mockImplementation(async (ms: number) => {
+      sleeps.push(ms)
+    })
+    vi.spyOn(retryTiming, 'random').mockReturnValue(0)
   })
 
   describe('driveFileName', () => {
@@ -352,6 +370,352 @@ describe('google-drive', () => {
 
       expect(fetchSpy).toHaveBeenCalledTimes(2)
       expect(files).toEqual([page1, page2])
+    })
+  })
+
+  describe('request retry', () => {
+    const envelope: SyncEnvelope = {
+      version: 1,
+      syncUnit: 'favorites/macro',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      salt: 's',
+      iv: 'i',
+      ciphertext: 'cipher',
+    }
+
+    function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
+      return new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json', ...headers },
+      })
+    }
+
+    function rateLimit403(reason: string): Response {
+      return json({ error: { code: 403, message: 'limit', errors: [{ reason, domain: 'usageLimits' }] } }, 403)
+    }
+
+    /** Response whose headers arrive but whose body read fails mid-stream. */
+    function brokenBody(status = 200): () => Response {
+      return () =>
+        ({
+          ok: status >= 200 && status < 300,
+          status,
+          headers: new Headers(),
+          text: async () => {
+            throw new TypeError('terminated')
+          },
+        }) as unknown as Response
+    }
+
+    /** fetch stub that replays `steps` in order; an Error step is thrown and
+     *  a function step is called to build the response. */
+    function stubSequence(steps: Array<Response | Error | (() => Response)>): ReturnType<typeof vi.fn> {
+      let i = 0
+      const fetchSpy = vi.fn(async () => {
+        const step = steps[Math.min(i, steps.length - 1)]
+        i++
+        if (step instanceof Error) throw step
+        if (typeof step === 'function') return step()
+        return step.clone()
+      })
+      vi.stubGlobal('fetch', fetchSpy)
+      return fetchSpy
+    }
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+      syncRuntime.isQuitting = false
+    })
+
+    it('retries when the response body read fails after the headers arrived', async () => {
+      const fetchSpy = stubSequence([brokenBody(), json(envelope)])
+
+      await expect(downloadFile('x')).resolves.toEqual(envelope)
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('retries when reading an error body fails', async () => {
+      const fetchSpy = stubSequence([brokenBody(503), json({ files: [] })])
+
+      await expect(listFiles()).resolves.toEqual([])
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not retry a create (POST) whose response body read fails', async () => {
+      const fetchSpy = stubSequence([brokenBody()])
+
+      await expect(uploadFile('n.enc', envelope)).rejects.toThrow('terminated')
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
+
+    it('rethrows the body-read error after exhausting retries', async () => {
+      const fetchSpy = stubSequence([brokenBody()])
+
+      await expect(listFiles()).rejects.toThrow('terminated')
+      expect(fetchSpy).toHaveBeenCalledTimes(5)
+    })
+
+    it('fails on the first error without waiting while the app is quitting', async () => {
+      syncRuntime.isQuitting = true
+      const fetchSpy = stubSequence([new Response('boom', { status: 503 })])
+
+      await expect(listFiles()).rejects.toThrow('Drive list failed: 503 boom')
+      expect(fetchSpy).toHaveBeenCalledOnce()
+      expect(sleeps).toEqual([])
+    })
+
+    it('does not retry a network error while the app is quitting', async () => {
+      syncRuntime.isQuitting = true
+      const fetchSpy = stubSequence([new TypeError('fetch failed')])
+
+      await expect(deleteFile('x')).rejects.toThrow('fetch failed')
+      expect(fetchSpy).toHaveBeenCalledOnce()
+      expect(sleeps).toEqual([])
+    })
+
+    it('does not retry a rate limit while the app is quitting', async () => {
+      syncRuntime.isQuitting = true
+      const fetchSpy = stubSequence([new Response('slow down', { status: 429 })])
+
+      await expect(uploadFile('n.enc', envelope)).rejects.toThrow('Drive upload failed: 429 slow down')
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
+
+    it('does not wait or resend when quitting begins while a request is in flight', async () => {
+      const fetchSpy = vi.fn(async () => {
+        syncRuntime.isQuitting = true
+        return new Response('boom', { status: 503 })
+      })
+      vi.stubGlobal('fetch', fetchSpy)
+
+      await expect(listFiles()).rejects.toThrow('Drive list failed: 503 boom')
+      expect(fetchSpy).toHaveBeenCalledOnce()
+      expect(sleeps).toEqual([])
+    })
+
+    it('throws the last error instead of resending when quitting begins during the wait', async () => {
+      vi.mocked(retryTiming.sleep).mockImplementation(async (ms: number) => {
+        sleeps.push(ms)
+        syncRuntime.isQuitting = true
+      })
+      const fetchSpy = stubSequence([new TypeError('fetch failed')])
+
+      await expect(downloadFile('x')).rejects.toThrow('fetch failed')
+      expect(fetchSpy).toHaveBeenCalledOnce()
+      expect(sleeps).toHaveLength(1)
+    })
+
+    it('throws the last HTTP error when quitting begins during the wait', async () => {
+      vi.mocked(retryTiming.sleep).mockImplementation(async () => {
+        syncRuntime.isQuitting = true
+      })
+      const fetchSpy = stubSequence([new Response('slow down', { status: 429 })])
+
+      await expect(deleteFile('x')).rejects.toThrow('Drive delete failed: 429 slow down')
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
+
+    it('ends the default wait early once quitting begins', async () => {
+      vi.mocked(retryTiming.sleep).mockRestore()
+      vi.useFakeTimers()
+      try {
+        let done = false
+        const wait = retryTiming.sleep(30_000).then(() => {
+          done = true
+        })
+        await vi.advanceTimersByTimeAsync(1000)
+        expect(done).toBe(false)
+        syncRuntime.isQuitting = true
+        await vi.advanceTimersByTimeAsync(300)
+        expect(done).toBe(true)
+        await wait
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('waits the full time with the default wait when not quitting', async () => {
+      vi.mocked(retryTiming.sleep).mockRestore()
+      vi.useFakeTimers()
+      try {
+        let done = false
+        void retryTiming.sleep(1000).then(() => {
+          done = true
+        })
+        await vi.advanceTimersByTimeAsync(999)
+        expect(done).toBe(false)
+        await vi.advanceTimersByTimeAsync(1)
+        expect(done).toBe(true)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('honours a Retry-After header in the HTTP-date form', async () => {
+      const now = Date.UTC(2026, 0, 1, 0, 0, 0)
+      vi.spyOn(Date, 'now').mockReturnValue(now)
+      stubSequence([
+        new Response('slow', { status: 429, headers: { 'Retry-After': new Date(now + 5000).toUTCString() } }),
+        new Response('slow', { status: 429, headers: { 'Retry-After': new Date(now - 5000).toUTCString() } }),
+        new Response('slow', { status: 429, headers: { 'Retry-After': new Date(now + 3_600_000).toUTCString() } }),
+        json({ files: [] }),
+      ])
+
+      await listFiles()
+
+      expect(sleeps).toEqual([5000, 0, 30000])
+    })
+
+    it('retries listFiles on 5xx and then succeeds', async () => {
+      const file = { id: 'a', name: 'favorites_macro.enc', modifiedTime: 't' }
+      const fetchSpy = stubSequence([new Response('boom', { status: 503 }), json({ files: [file] })])
+
+      await expect(listFiles()).resolves.toEqual([file])
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+      expect(sleeps).toEqual([1000])
+    })
+
+    it('retries downloadFile on a network error and then succeeds', async () => {
+      const fetchSpy = stubSequence([new TypeError('fetch failed'), json(envelope)])
+
+      await expect(downloadFile('file-1')).resolves.toEqual(envelope)
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('retries an update (PATCH) on 429 and then succeeds', async () => {
+      const fetchSpy = stubSequence([
+        new Response('slow down', { status: 429 }),
+        json({ id: 'x', modifiedTime: 'm' }),
+      ])
+
+      await expect(uploadFile('n.enc', envelope, 'x')).resolves.toEqual({ id: 'x', modifiedTime: 'm' })
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+      expect((fetchSpy.mock.calls[1] as unknown[])[1]).toMatchObject({ method: 'PATCH' })
+    })
+
+    it('retries deleteFile on a userRateLimitExceeded 403 and then succeeds', async () => {
+      const fetchSpy = stubSequence([rateLimit403('userRateLimitExceeded'), new Response(null, { status: 204 })])
+
+      await expect(deleteFile('x')).resolves.toBeUndefined()
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('still treats a 404 on delete as success without retrying', async () => {
+      const fetchSpy = stubSequence([new Response('gone', { status: 404 })])
+
+      await expect(deleteFile('x')).resolves.toBeUndefined()
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
+
+    it('retries a create (POST) on 429 and on a rateLimitExceeded 403', async () => {
+      const fetchSpy = stubSequence([
+        new Response('slow down', { status: 429 }),
+        rateLimit403('rateLimitExceeded'),
+        json({ id: 'new', modifiedTime: 'm' }),
+      ])
+
+      await expect(uploadFile('n.enc', envelope)).resolves.toEqual({ id: 'new', modifiedTime: 'm' })
+      expect(fetchSpy).toHaveBeenCalledTimes(3)
+    })
+
+    it('does not retry a create (POST) on 5xx', async () => {
+      const fetchSpy = stubSequence([new Response('boom', { status: 500 })])
+
+      await expect(uploadFile('n.enc', envelope)).rejects.toThrow('Drive upload failed: 500 boom')
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
+
+    it('does not retry a create (POST) on a network error', async () => {
+      const fetchSpy = stubSequence([new TypeError('fetch failed')])
+
+      await expect(uploadFile('n.enc', envelope)).rejects.toThrow('fetch failed')
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
+
+    it('does not retry a 403 that is not a rate limit', async () => {
+      const body = { error: { code: 403, errors: [{ reason: 'insufficientPermissions' }] } }
+      const fetchSpy = stubSequence([json(body, 403)])
+
+      await expect(listFiles()).rejects.toThrow(`Drive list failed: 403 ${JSON.stringify(body)}`)
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
+
+    it('does not retry a 403 whose body is not JSON', async () => {
+      const fetchSpy = stubSequence([new Response('forbidden', { status: 403 })])
+
+      await expect(downloadFile('x')).rejects.toThrow('Drive download failed: 403 forbidden')
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
+
+    it('does not retry other 4xx responses', async () => {
+      const fetchSpy = stubSequence([new Response('bad', { status: 400 })])
+
+      await expect(uploadFile('n.enc', envelope, 'x')).rejects.toThrow('Drive update failed: 400 bad')
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
+
+    it('honours a Retry-After header in seconds, capped at 30s', async () => {
+      stubSequence([
+        new Response('slow', { status: 429, headers: { 'Retry-After': '3' } }),
+        new Response('slow', { status: 429, headers: { 'Retry-After': '120' } }),
+        json({ files: [] }),
+      ])
+
+      await listFiles()
+
+      expect(sleeps).toEqual([3000, 30000])
+    })
+
+    it('backs off exponentially with jitter', async () => {
+      vi.mocked(retryTiming.random).mockReturnValue(0.5)
+      stubSequence([
+        new Response('boom', { status: 502 }),
+        new Response('boom', { status: 502 }),
+        new Response('boom', { status: 502 }),
+        new Response('boom', { status: 502 }),
+        json({ files: [] }),
+      ])
+
+      await listFiles()
+
+      expect(sleeps).toEqual([1500, 2500, 4500, 8500])
+    })
+
+    it('gives up after 5 attempts with the original error message', async () => {
+      const fetchSpy = stubSequence([new Response('still down', { status: 503 })])
+
+      await expect(deleteFile('x')).rejects.toThrow('Drive delete failed: 503 still down')
+      expect(fetchSpy).toHaveBeenCalledTimes(5)
+      expect(sleeps).toHaveLength(4)
+    })
+
+    it('rethrows the last network error after exhausting retries', async () => {
+      const fetchSpy = stubSequence([new TypeError('fetch failed')])
+
+      await expect(downloadFile('x')).rejects.toThrow('fetch failed')
+      expect(fetchSpy).toHaveBeenCalledTimes(5)
+    })
+
+    it('fetches auth headers again on every attempt', async () => {
+      vi.mocked(getAccessToken)
+        .mockResolvedValueOnce('token-1')
+        .mockResolvedValueOnce('token-2')
+      const fetchSpy = stubSequence([new Response('boom', { status: 500 }), json({ files: [] })])
+
+      await listFiles()
+
+      const auth = fetchSpy.mock.calls.map(
+        (call) => ((call as unknown[])[1] as RequestInit).headers as Record<string, string>,
+      )
+      expect(auth.map((h) => h.Authorization)).toEqual(['Bearer token-1', 'Bearer token-2'])
+    })
+
+    it('does not retry when auth headers cannot be obtained', async () => {
+      vi.mocked(getAccessToken).mockResolvedValueOnce(null)
+      const fetchSpy = stubSequence([json({ files: [] })])
+
+      await expect(listFiles()).rejects.toThrow('Not authenticated with Google Drive')
+      expect(fetchSpy).not.toHaveBeenCalled()
     })
   })
 })
