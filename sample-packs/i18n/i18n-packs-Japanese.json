@@ -1,5 +1,5 @@
 {
-  "version": "0.1.100",
+  "version": "0.1.101",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -884,7 +884,6 @@
     "changingPassword": "パスワードを変更中...",
     "settingPassword": "パスワードを設定中...",
     "samePassword": "現在と同じパスワードには変更できません",
-    "changePasswordUndecryptable": "現在のパスワードで復号できないファイルが Google Drive にあります。データ › Sync › クラウドデータ から削除してから、もう一度お試しください。",
     "autoSync": "自動同期",
     "enable": "有効",
     "disable": "停止",
@@ -905,6 +904,20 @@
       "unauthenticated": "パスワードを変更する前に Google にサインインしてください"
     },
     "changePasswordInProgress": "同期実行中のためパスワードを変更できません",
+    "passwordChange": {
+      "alreadyInProgress": "この PC でパスワード変更が進行中です。先に続けるか、旧パスワードに戻してください。",
+      "notInProgress": "進行中のパスワード変更はありません。",
+      "invalidState": "パスワード変更の進行状況を読み込めません。",
+      "keysUnavailable": "パスワード変更用に保存したパスワードを読み込めません。OS のキーチェーンが使える状態か確認してから、もう一度お試しください。",
+      "wrongStep": "パスワード変更の現在の段階では、この操作はできません。",
+      "notStarted": "パスワード変更は開始されていません。もう一度パスワードを変更してください。",
+      "locked": "別の PC で同期パスワードを変更中です。終わってからもう一度お試しください。",
+      "lost": "別の PC が同時に同期パスワードの変更を始めました。終わってからもう一度お試しください。",
+      "lockLost": "Google Drive 上のロックが削除されたため（別の PC からの可能性があります）、パスワード変更を中止しました。",
+      "interrupted": "パスワード変更が中断されました。後で続けられます。",
+      "undecryptable": "旧パスワードでも新パスワードでも復号できないファイルが Google Drive にあります。削除してから続けてください。",
+      "notConverged": "パスワード変更中に Google Drive のファイルが変更され続けました。ほかの PC の Pipette を閉じてから続けてください。"
+    },
     "import": "インポート",
     "export": "エクスポート",
     "importComplete": "インポート完了",

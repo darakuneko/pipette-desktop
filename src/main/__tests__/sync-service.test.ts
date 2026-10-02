@@ -225,7 +225,6 @@ import {
   listUndecryptableFiles,
   scanRemoteData,
   listRemoteFileNames,
-  changePassword,
   checkPasswordCheckExists,
   setPasswordAndValidate,
   setupBeforeQuitHandler,
@@ -237,6 +236,7 @@ import {
   _resetForTests,
 } from '../sync/sync-service'
 import { app } from 'electron'
+import { syncRuntime } from '../sync/sync-runtime-state'
 
 const POLL_INTERVAL_MS = 3 * 60 * 1000
 
@@ -1600,214 +1600,6 @@ describe('sync-service', () => {
     })
   })
 
-  describe('changePassword', () => {
-    const mockDecrypt = vi.mocked(mockDecryptFn)
-    const mockEncrypt = vi.mocked(mockEncryptFn)
-    const mockStorePassword = vi.mocked(mockStorePasswordFn)
-
-    it('leaves the password-change lock file out of the re-encryption', async () => {
-      mockListFiles.mockResolvedValue([
-        PASSWORD_CHECK_DRIVE_FILE,
-        { id: 'lock', name: 'password-change-lock.json', modifiedTime: '2025-01-01T00:00:00.000Z' },
-        { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
-      ])
-      mockDownloadFile
-        .mockResolvedValueOnce(makePasswordCheckEnvelope()) // validatePasswordCheck
-        .mockResolvedValueOnce({ version: 1, syncUnit: 'favorites/tapDance', ciphertext: '{"data":"test"}' })
-
-      await changePassword('new-password')
-
-      expect(mockDownloadFile).toHaveBeenCalledTimes(2)
-      expect(mockDownloadFile).not.toHaveBeenCalledWith('lock')
-      expect(mockUploadFile.mock.calls.map((call) => call[0])).toEqual(['favorites_tapDance.enc', 'password-check.enc'])
-    })
-
-    it('re-encrypts all files and uploads with new password', async () => {
-      const dataFile = {
-        id: 'f1',
-        name: 'favorites_tapDance.enc',
-        modifiedTime: '2025-01-01T00:00:00.000Z',
-      }
-      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE, dataFile])
-      mockDownloadFile
-        .mockResolvedValueOnce(makePasswordCheckEnvelope()) // validatePasswordCheck
-        .mockResolvedValueOnce({ version: 1, syncUnit: 'favorites/tapDance', ciphertext: '{"data":"test"}' })
-
-      await changePassword('new-password')
-
-      // Should upload the data file with the new password
-      expect(mockEncrypt).toHaveBeenCalledWith('{"data":"test"}', 'new-password', 'favorites/tapDance')
-      expect(mockUploadFile).toHaveBeenCalledWith(
-        'favorites_tapDance.enc',
-        expect.objectContaining({ syncUnit: 'favorites/tapDance' }),
-        'f1',
-      )
-      // Should upload password-check with new password
-      expect(mockUploadFile).toHaveBeenCalledWith(
-        'password-check.enc',
-        expect.objectContaining({ syncUnit: 'password-check' }),
-        'pc-1',
-      )
-      expect(mockStorePassword).toHaveBeenCalledWith('new-password')
-    })
-
-    it('aborts when a file cannot be decrypted (uploadFile not called)', async () => {
-      const dataFile = {
-        id: 'f1',
-        name: 'favorites_tapDance.enc',
-        modifiedTime: '2025-01-01T00:00:00.000Z',
-      }
-      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE, dataFile])
-      mockDownloadFile
-        .mockResolvedValueOnce(makePasswordCheckEnvelope()) // validatePasswordCheck
-        .mockResolvedValueOnce({ version: 1, syncUnit: 'favorites/tapDance', ciphertext: 'bad' })
-      mockDecrypt
-        .mockResolvedValueOnce('ok') // validatePasswordCheck succeeds
-        .mockRejectedValueOnce(new Error('Decryption failed')) // data file fails
-
-      await expect(changePassword('new-password')).rejects.toThrow('sync.changePasswordUndecryptable')
-      expect(mockUploadFile).not.toHaveBeenCalled()
-    })
-
-    it('throws when sync is in progress', async () => {
-      mockListFiles.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve([]), 100)),
-      )
-      const syncPromise = executeSync('download')
-
-      await expect(changePassword('new-password')).rejects.toThrow(
-        'sync.changePasswordInProgress',
-      )
-
-      await vi.advanceTimersByTimeAsync(200)
-      await syncPromise
-    })
-
-    it('throws when new password is the same as current', async () => {
-      await expect(changePassword('test-password')).rejects.toThrow('sync.samePassword')
-      expect(mockUploadFile).not.toHaveBeenCalled()
-    })
-
-    it('throws SyncCredentialError(unauthenticated) when not signed in', async () => {
-      mockGetAuthStatus.mockResolvedValueOnce({ authenticated: false })
-
-      await expect(changePassword('new-password')).rejects.toThrow('sync.changePasswordError.unauthenticated')
-    })
-
-    it('succeeds with no remote data files (password-check only)', async () => {
-      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
-      mockDownloadFile.mockResolvedValueOnce(makePasswordCheckEnvelope())
-
-      await changePassword('new-password')
-
-      // Only password-check should be uploaded (re-created in Phase 3)
-      expect(mockUploadFile).toHaveBeenCalledTimes(1)
-      expect(mockUploadFile).toHaveBeenCalledWith(
-        'password-check.enc',
-        expect.objectContaining({ syncUnit: 'password-check' }),
-        'pc-1',
-      )
-      expect(mockStorePassword).toHaveBeenCalledWith('new-password')
-    })
-
-    it('validates old password against password-check before proceeding', async () => {
-      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
-      mockDownloadFile.mockResolvedValueOnce(makePasswordCheckEnvelope())
-      mockDecrypt.mockRejectedValueOnce(new Error('wrong password'))
-
-      await expect(changePassword('new-password')).rejects.toThrow('sync.passwordMismatch')
-      // Should not upload anything since validation failed
-      expect(mockUploadFile).not.toHaveBeenCalled()
-      expect(mockStorePassword).not.toHaveBeenCalled()
-    })
-
-    it('skips password-check file during re-encryption and recreates it', async () => {
-      const dataFile = {
-        id: 'f1',
-        name: 'favorites_tapDance.enc',
-        modifiedTime: '2025-01-01T00:00:00.000Z',
-      }
-      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE, dataFile])
-      mockDownloadFile
-        .mockResolvedValueOnce(makePasswordCheckEnvelope()) // validatePasswordCheck
-        .mockResolvedValueOnce({ version: 1, syncUnit: 'favorites/tapDance', ciphertext: '{"data":"test"}' })
-
-      await changePassword('new-password')
-
-      // downloadFile called twice: once for validation, once for data file
-      expect(mockDownloadFile).toHaveBeenCalledTimes(2)
-      expect(mockDownloadFile).toHaveBeenCalledWith('pc-1')
-      expect(mockDownloadFile).toHaveBeenCalledWith('f1')
-    })
-
-    it('uploads with existing file ID (overwrite)', async () => {
-      const dataFile = {
-        id: 'existing-id-123',
-        name: 'favorites_tapDance.enc',
-        modifiedTime: '2025-01-01T00:00:00.000Z',
-      }
-      // No PASSWORD_CHECK_DRIVE_FILE — validatePasswordCheck will create one
-      mockListFiles.mockResolvedValue([dataFile])
-      mockDownloadFile.mockResolvedValue({
-        version: 1,
-        syncUnit: 'favorites/tapDance',
-        ciphertext: '{"data":"test"}',
-      })
-
-      await changePassword('new-password')
-
-      expect(mockUploadFile).toHaveBeenCalledWith(
-        'favorites_tapDance.enc',
-        expect.anything(),
-        'existing-id-123',
-      )
-    })
-
-    it('preserves syncUnit from envelope for re-encryption', async () => {
-      const dataFile = {
-        id: 'f1',
-        name: 'keyboards_uid1_settings.enc',
-        modifiedTime: '2025-01-01T00:00:00.000Z',
-      }
-      mockListFiles.mockResolvedValue([dataFile])
-      mockDownloadFile.mockResolvedValue({
-        version: 1,
-        syncUnit: 'keyboards/uid1/settings',
-        ciphertext: '{"settings":"data"}',
-      })
-
-      await changePassword('new-password')
-
-      expect(mockEncrypt).toHaveBeenCalledWith(
-        '{"settings":"data"}',
-        'new-password',
-        'keyboards/uid1/settings',
-      )
-    })
-
-    it('releases sync lock on error', async () => {
-      mockListFiles.mockRejectedValue(new Error('network error'))
-
-      await expect(changePassword('new-password')).rejects.toThrow('network error')
-      expect(isSyncInProgress()).toBe(false)
-    })
-
-    it('propagates download errors without classifying as undecryptable', async () => {
-      const dataFile = {
-        id: 'f1',
-        name: 'favorites_tapDance.enc',
-        modifiedTime: '2025-01-01T00:00:00.000Z',
-      }
-      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE, dataFile])
-      mockDownloadFile
-        .mockResolvedValueOnce(makePasswordCheckEnvelope()) // validatePasswordCheck
-        .mockRejectedValueOnce(new Error('Network timeout')) // data file download fails
-
-      await expect(changePassword('new-password')).rejects.toThrow('Network timeout')
-      expect(mockUploadFile).not.toHaveBeenCalled()
-    })
-  })
-
   describe('selective sync (SyncScope)', () => {
     describe('matchesScope', () => {
       it('matches all syncUnits with scope "all"', () => {
@@ -2266,6 +2058,7 @@ describe('sync-service', () => {
       expect(mockUploadFile).toHaveBeenCalledWith(
         'password-check.enc',
         expect.objectContaining({ syncUnit: 'password-check' }),
+        undefined,
       )
     })
 
@@ -2436,6 +2229,7 @@ describe('sync-service', () => {
       expect(mockUploadFile).toHaveBeenCalledWith(
         'password-check.enc',
         expect.objectContaining({ syncUnit: 'password-check' }),
+        undefined,
       )
     })
 
@@ -2501,6 +2295,34 @@ describe('sync-service', () => {
       expect(preSyncFinalizer.run).toHaveBeenCalledTimes(1)
       expect(extraFinalizer.run).toHaveBeenCalledTimes(1)
       expect(order).toEqual(['pre-sync', 'extra'])
+      expect(app.quit).toHaveBeenCalled()
+    })
+
+    it('waits for a running password switch to stop before quitting', async () => {
+      let finish!: () => void
+      syncRuntime.passwordChangeRun = new Promise<void>((resolve) => {
+        finish = resolve
+      })
+      const handler = captureBeforeQuitHandler()
+      const preventDefault = vi.fn()
+      handler({ preventDefault })
+
+      expect(preventDefault).toHaveBeenCalled()
+      // The switch reads this at its next chunk boundary and stops.
+      expect(syncRuntime.isQuitting).toBe(true)
+      await new Promise((resolve) => setImmediate(resolve))
+      expect(app.quit).not.toHaveBeenCalled()
+
+      finish()
+      await flushUntil(() => vi.mocked(app.quit).mock.calls.length > 0, 'the quit phases to call app.quit')
+      expect(app.quit).toHaveBeenCalled()
+    })
+
+    it('still quits when the password switch rejects', async () => {
+      syncRuntime.passwordChangeRun = Promise.reject(new Error('switch failed'))
+      const handler = captureBeforeQuitHandler()
+      handler({ preventDefault: vi.fn() })
+      await flushUntil(() => vi.mocked(app.quit).mock.calls.length > 0, 'the quit phases to call app.quit')
       expect(app.quit).toHaveBeenCalled()
     })
 

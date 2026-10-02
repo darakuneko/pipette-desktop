@@ -218,3 +218,46 @@ export interface SyncOperationResult {
 export type ImportLocalDataResult =
   | { success: true; cancelled?: true }
   | { success: false; error: string }
+
+/** A Drive file a password change could open with neither password. */
+export interface PasswordChangeFile {
+  id: string
+  name: string
+}
+
+/** Progress of a sync password change on this machine, safe to show in
+ *  the renderer (no passwords, no lock ids).
+ *  - `none`: no change in progress
+ *  - `inProgress`: `target` is where the change is heading (`'old'` while
+ *    rolling back); `lockLost` when the last run stopped because this
+ *    machine no longer held its Drive lock (resume takes a new one unless
+ *    another PC holds it); `undecryptable` lists files that stopped the
+ *    last run
+ *  - `invalid`: the local state file can't be read
+ *  - `keysUnavailable`: the state is fine but the saved passwords can't
+ *    be read (`keystoreUnavailable` can succeed on a later retry) */
+export type PasswordChangeStatus =
+  | { kind: 'none' }
+  | {
+      kind: 'inProgress'
+      target: 'new' | 'old'
+      step: 'locking' | 'reencrypting' | 'committing' | 'cleanup'
+      startedAt: number
+      lockLost?: true
+      undecryptable?: PasswordChangeFile[]
+    }
+  | { kind: 'invalid' }
+  | {
+      kind: 'keysUnavailable'
+      reason: 'keystoreUnavailable' | 'noPasswordFile' | 'decryptFailed' | 'invalidContent'
+      target: 'new' | 'old'
+      step: 'locking' | 'reencrypting' | 'committing' | 'cleanup'
+      startedAt: number
+    }
+
+export interface PasswordChangeDeleteResult extends SyncOperationResult {
+  /** Ids deleted from Drive. */
+  deleted?: string[]
+  /** Ids left alone: not a data file on Drive, or one of the passwords opens it. */
+  skipped?: string[]
+}

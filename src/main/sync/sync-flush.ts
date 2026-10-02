@@ -156,7 +156,8 @@ export function setupBeforeQuitHandler(): void {
     const syncPending = syncRuntime.pendingChanges.size > 0 || syncRuntime.debounceTimer !== null
     const preSync = preSyncFinalizers.filter((f) => f.hasWork())
     const extras = extraFinalizers.filter((f) => f.hasWork())
-    if (!syncPending && preSync.length === 0 && extras.length === 0) return
+    const passwordChangeRun = syncRuntime.passwordChangeRun
+    if (!syncPending && preSync.length === 0 && extras.length === 0 && !passwordChangeRun) return
 
     e.preventDefault()
     syncRuntime.isQuitting = true
@@ -167,6 +168,14 @@ export function setupBeforeQuitHandler(): void {
     }
 
     const runQuitPhases = async (): Promise<void> => {
+      // Phase 0: a running password switch sees `isQuitting` at its next
+      // chunk boundary, stops, and keeps its state for the next launch.
+      if (passwordChangeRun) {
+        await passwordChangeRun.catch((err: unknown) => {
+          log('error', `password change failed while quitting: ${String(err)}`)
+        })
+      }
+
       // Phase 1: pre-sync finalizers. They may call notifyChange() to
       // enqueue additional sync units; those land in pendingChanges before
       // the sync flush starts.

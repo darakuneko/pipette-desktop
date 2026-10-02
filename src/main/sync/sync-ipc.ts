@@ -31,7 +31,13 @@ import {
   listUndecryptableFiles,
   scanRemoteData,
   fetchRemoteBundle,
-  changePassword,
+  startPasswordChange,
+  resumePasswordChange,
+  revertPasswordChange,
+  abandonPasswordChange,
+  deletePasswordChangeUndecryptableFiles,
+  recoverPasswordChangeOnStartup,
+  getPasswordChangeStatus,
   checkPasswordCheckExists,
   setPasswordAndValidate,
   deleteRemoteTypingDay,
@@ -48,7 +54,7 @@ import { getMachineHash } from '../typing-analytics/machine-hash'
 import { ensureCacheIsFresh } from '../typing-analytics/cache-rebuild'
 import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
 import { deleteAllTypingForKeyboard } from '../typing-analytics/typing-analytics-service'
-import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle, SyncOperationResult, ImportLocalDataResult } from '../../shared/types/sync'
+import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle, SyncOperationResult, ImportLocalDataResult, PasswordChangeDeleteResult } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
 import type { FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
@@ -150,8 +156,32 @@ export function setupSyncIpc(): void {
     IpcChannels.SYNC_CHANGE_PASSWORD,
     (_event, newPassword: string) =>
       wrapIpc('Change password failed', async () => {
-        await changePassword(newPassword)
+        if (typeof newPassword !== 'string' || newPassword === '') throw new Error('Invalid password')
+        await startPasswordChange(newPassword)
       }),
+  )
+
+  secureHandle(IpcChannels.SYNC_PASSWORD_CHANGE_STATUS, () => getPasswordChangeStatus())
+
+  secureHandle(IpcChannels.SYNC_PASSWORD_CHANGE_RESUME, () =>
+    wrapIpc('Resume password change failed', () => resumePasswordChange()),
+  )
+
+  secureHandle(IpcChannels.SYNC_PASSWORD_CHANGE_REVERT, () =>
+    wrapIpc('Revert password change failed', () => revertPasswordChange()),
+  )
+
+  secureHandle(IpcChannels.SYNC_PASSWORD_CHANGE_ABANDON, () =>
+    wrapIpc('Abandon password change failed', () => abandonPasswordChange()),
+  )
+
+  secureHandle(IpcChannels.SYNC_PASSWORD_CHANGE_DELETE_UNDECRYPTABLE, (_event, fileIds: unknown) =>
+    wrapIpc<PasswordChangeDeleteResult>('Delete files failed', () => {
+      if (!Array.isArray(fileIds) || fileIds.length === 0 || !fileIds.every((id) => typeof id === 'string' && id !== '')) {
+        throw new Error('Invalid file IDs')
+      }
+      return deletePasswordChangeUndecryptableFiles(fileIds)
+    }),
   )
 
   secureHandle(IpcChannels.SYNC_RESET_TARGETS, (_event, targets: SyncResetTargets) =>
@@ -649,6 +679,10 @@ export function setupSyncIpc(): void {
 
   // --- Before-quit handler ---
   setupBeforeQuitHandler()
+
+  // --- Finish or clean up a password change interrupted by the last exit ---
+  // Never rejects: failures are logged and the state stays for next time.
+  void recoverPasswordChangeOnStartup()
 
   // --- React to autoSync config changes ---
   onAppConfigChange((key, value) => {

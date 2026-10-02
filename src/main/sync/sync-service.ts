@@ -10,6 +10,7 @@
 //   sync-runtime-state.ts    — shared mutable state + small accessors
 //   sync-scope.ts            — SyncScope matching / download filtering
 //   sync-password.ts         — credentials + password-check validation
+//   sync-password-change.ts  — resumable password change (+ -switch, -state, -lock)
 //   sync-merge-dispatch.ts   — per-sync-unit upload/merge/dispatch
 //   sync-scan.ts             — remote data inspection (scan/undecryptable)
 //   sync-typing-remote.ts    — typing-analytics remote day bookkeeping
@@ -48,6 +49,9 @@ export function _resetForTests(): void {
   syncRuntime.isQuitting = false
   syncRuntime.progressCallback = null
   syncRuntime.passwordCheckValidated = false
+  syncRuntime.passwordChangeUndecryptable = null
+  syncRuntime.passwordChangeLockLost = false
+  syncRuntime.passwordChangeRun = null
   clearQuitFinalizersForTests()
 }
 
@@ -76,11 +80,21 @@ export { readIndexFile, bundleSyncUnit, collectAllSyncUnits } from './sync-bundl
 export { listUndecryptableFiles, scanRemoteData, fetchRemoteBundle, listRemoteFileNames } from './sync-scan'
 
 export {
-  changePassword,
   resetPasswordCheckCache,
   checkPasswordCheckExists,
   setPasswordAndValidate,
 } from './sync-password'
+
+export type { DeleteUndecryptableResult, PasswordChangeRecovery } from './sync-password-change'
+export {
+  startPasswordChange,
+  resumePasswordChange,
+  revertPasswordChange,
+  abandonPasswordChange,
+  deletePasswordChangeUndecryptableFiles,
+  recoverPasswordChangeOnStartup,
+  getPasswordChangeStatus,
+} from './sync-password-change'
 
 export type { SyncExecuteResult } from './sync-execute'
 export { executeSync } from './sync-execute'

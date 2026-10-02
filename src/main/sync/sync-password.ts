@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Sync credentials and the password-check sentinel file: verifying the
-// stored password against the remote password-check unit, and the
-// non-destructive change-password flow.
+// stored password against the remote password-check unit. Changing the
+// password lives in sync-password-change.ts.
 
 import { encrypt, decrypt, retrievePasswordResult, storePassword, clearPassword } from './sync-crypto'
 import { getAuthStatus } from './google-auth'
@@ -10,12 +10,10 @@ import {
   downloadFile,
   uploadFile,
   driveFileName,
-  isDataFileName,
   PASSWORD_CHECK_UNIT,
   type DriveFile,
 } from './google-drive'
-import { pLimit } from '../../shared/concurrency'
-import { SYNC_CONCURRENCY, syncRuntime } from './sync-runtime-state'
+import { syncRuntime } from './sync-runtime-state'
 import type { SyncCredentialFailureReason, SyncCredentialResult } from '../../shared/types/sync'
 import { syncCredentialI18nKey } from '../../shared/types/sync'
 
@@ -44,6 +42,13 @@ export class PasswordMismatchError extends Error {
   }
 }
 
+/** Encrypts the password-check payload with `password` and uploads it,
+ *  over `existingFileId` when given, otherwise as a new file. */
+export async function writePasswordCheck(password: string, existingFileId?: string): Promise<void> {
+  const envelope = await encrypt(PASSWORD_CHECK_PAYLOAD, password, PASSWORD_CHECK_UNIT)
+  await uploadFile(driveFileName(PASSWORD_CHECK_UNIT), envelope, existingFileId)
+}
+
 export async function validatePasswordCheck(
   password: string,
   remoteFiles: DriveFile[],
@@ -59,8 +64,7 @@ export async function validatePasswordCheck(
       throw new PasswordMismatchError()
     }
   } else {
-    const envelope = await encrypt(PASSWORD_CHECK_PAYLOAD, password, PASSWORD_CHECK_UNIT)
-    await uploadFile(fileName, envelope)
+    await writePasswordCheck(password)
   }
   syncRuntime.passwordCheckValidated = true
 }
@@ -84,61 +88,5 @@ export async function setPasswordAndValidate(password: string): Promise<void> {
   } catch (err) {
     await clearPassword()
     throw err
-  }
-}
-
-// --- Non-destructive password change ---
-
-export async function changePassword(newPassword: string): Promise<void> {
-  if (syncRuntime.isSyncing) throw new Error('sync.changePasswordInProgress')
-  syncRuntime.isSyncing = true
-  try {
-    const credentials = await requireSyncCredentials()
-    if (!credentials.ok) throw new SyncCredentialError(credentials.reason)
-    const oldPassword = credentials.password
-    if (newPassword === oldPassword) throw new Error('sync.samePassword')
-    const remoteFiles = await listFiles()
-
-    // Validate old password against password-check first
-    await validatePasswordCheck(oldPassword, remoteFiles)
-
-    const passwordCheckFileName = driveFileName(PASSWORD_CHECK_UNIT)
-    const dataFiles = remoteFiles.filter((f) => isDataFileName(f.name))
-
-    // Phase 1: Download + decrypt all files (fail-fast on any error)
-    const limit = pLimit(SYNC_CONCURRENCY)
-    const decrypted = await Promise.all(
-      dataFiles.map((file) =>
-        limit(async () => {
-          const envelope = await downloadFile(file.id)
-          try {
-            const plaintext = await decrypt(envelope, oldPassword)
-            return { file, plaintext, syncUnit: envelope.syncUnit }
-          } catch {
-            throw new Error('sync.changePasswordUndecryptable')
-          }
-        }),
-      ),
-    )
-
-    // Phase 2: Re-encrypt + upload with new password (overwrite)
-    await Promise.all(
-      decrypted.map(({ file, plaintext, syncUnit }) =>
-        limit(async () => {
-          const newEnvelope = await encrypt(plaintext, newPassword, syncUnit)
-          await uploadFile(file.name, newEnvelope, file.id)
-        }),
-      ),
-    )
-
-    // Phase 3: Recreate password-check with new password
-    const existingPc = remoteFiles.find((f) => f.name === passwordCheckFileName)
-    const pcEnvelope = await encrypt(PASSWORD_CHECK_PAYLOAD, newPassword, PASSWORD_CHECK_UNIT)
-    await uploadFile(passwordCheckFileName, pcEnvelope, existingPc?.id)
-
-    await storePassword(newPassword)
-    resetPasswordCheckCache()
-  } finally {
-    syncRuntime.isSyncing = false
   }
 }

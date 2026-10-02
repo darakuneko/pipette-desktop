@@ -1,5 +1,5 @@
 {
-  "version": "0.1.100",
+  "version": "0.1.101",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -874,7 +874,6 @@
     "changingPassword": "パスワード変更ちう…",
     "settingPassword": "パスワード設定ちう☆",
     "samePassword": "前と同じじゃん！変えてよｗ",
-    "changePasswordUndecryptable": "今のパスワードで開けないファイルが Google Drive にあるよ☆ データ☆ › Sync › クラウドデータ☆ で消してからもう一回やってみて！",
     "autoSync": "自動同期っしょ",
     "enable": "おけ！",
     "disable": "停止☆",
@@ -895,6 +894,20 @@
       "unauthenticated": "Google入ってからにして☆"
     },
     "changePasswordInProgress": "同期してるから後にしてｗ",
+    "passwordChange": {
+      "alreadyInProgress": "このPCでパスワード変更まだ途中だよ☆ 先に続けるか、前のパスワードに戻してね！",
+      "notInProgress": "今パスワード変更してないよｗ",
+      "invalidState": "パスワード変更の進み具合が読めないんだけど…",
+      "keysUnavailable": "パスワード変更用にとっといたパスワードが読めない…OSのキーチェーン使えるか見てからもう一回やって！",
+      "wrongStep": "パスワード変更の今の段階じゃそれムリ～",
+      "notStarted": "パスワード変更始まってなかったよ☆ もう一回変えてみて！",
+      "locked": "別のPCで同期パスワード変えてる途中だよ！終わってからもう一回やって☆",
+      "lost": "別のPCも同時にパスワード変え始めちゃった！終わってからもう一回ね☆",
+      "lockLost": "Google Drive のロック消されちゃったから（別のPCかも）、パスワード変更ストップしたよ！",
+      "interrupted": "パスワード変更途中で止まっちゃった！あとで続きできるよ☆",
+      "undecryptable": "前のパスワードでも新しいパスワードでも開けないファイルが Google Drive にあるよ！消してから続けて☆",
+      "notConverged": "パスワード変えてる間に Google Drive のファイルがずっと変わってたよ！ほかのPCの Pipette 閉じてから続けて☆"
+    },
     "import": "インポート",
     "export": "エクスポート",
     "importComplete": "インポート完了っしょ！",

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.100",
+  "version": "0.1.101",
   "name": "English",
   "common": {
     "save": "Save",
@@ -884,7 +884,6 @@
     "changingPassword": "Changing password...",
     "settingPassword": "Setting password...",
     "samePassword": "New password must be different from the current password.",
-    "changePasswordUndecryptable": "Some files on Google Drive can't be decrypted with the current password. Delete them in Data › Sync › Cloud Data, then try again.",
     "autoSync": "Auto Sync",
     "enable": "Enable",
     "disable": "Disable",
@@ -905,6 +904,20 @@
       "unauthenticated": "Please sign in to Google before changing the password."
     },
     "changePasswordInProgress": "Cannot change password while sync is in progress.",
+    "passwordChange": {
+      "alreadyInProgress": "A password change is already in progress on this PC. Continue it or go back to the old password first.",
+      "notInProgress": "No password change is in progress.",
+      "invalidState": "The saved progress of the password change can't be read.",
+      "keysUnavailable": "The passwords saved for the password change can't be read. Make sure the OS keychain is unlocked, then try again.",
+      "wrongStep": "This can't be done at the current stage of the password change.",
+      "notStarted": "The password change didn't start. Please change the password again.",
+      "locked": "Another PC is changing the sync password. Try again after it finishes.",
+      "lost": "Another PC started changing the sync password at the same time. Try again after it finishes.",
+      "lockLost": "The password change was stopped because its lock on Google Drive was removed, possibly from another PC.",
+      "interrupted": "The password change was interrupted. You can continue it later.",
+      "undecryptable": "Some files on Google Drive can't be decrypted with either the old or the new password. Delete them, then continue.",
+      "notConverged": "Files on Google Drive kept changing during the password change. Close Pipette on your other PCs, then continue."
+    },
     "import": "Import",
     "export": "Export",
     "importComplete": "Import complete",

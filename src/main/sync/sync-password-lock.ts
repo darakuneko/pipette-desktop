@@ -207,9 +207,17 @@ export async function findOwnPasswordChangeLock(lockId: string): Promise<string 
 /** Whether this machine still holds the lock: its file is listed and is
  *  the earliest lock. Checked at batch boundaries, so if two machines both
  *  passed acquire, the later one stops once the earlier lock is visible;
- *  false also when another machine released our lock. */
+ *  false also when another machine released our lock. Our own file missing
+ *  from a listing may be listing lag, so that case re-lists with the
+ *  `relistDelaysMs` waits first; an earlier lock is final at once. */
 export async function isPasswordChangeLockHeld(fileId: string): Promise<boolean> {
-  return isWinner(await listLockFiles(), fileId)
+  let locks = await listLockFiles()
+  for (const delay of lockTiming.relistDelaysMs) {
+    if (locks.some((file) => file.id === fileId)) break
+    await lockTiming.sleep(delay)
+    locks = await listLockFiles()
+  }
+  return isWinner(locks, fileId)
 }
 
 /** Deletes the lock by file id; an already-deleted lock is not an error. */

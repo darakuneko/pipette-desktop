@@ -31,6 +31,18 @@ export const syncRuntime = {
   isSyncing: false,
   passwordCheckValidated: false,
   lastKnownRemoteState: new Map<string, string>(), // fileName -> modifiedTime
+  /** Files the last re-encryption pass could open with neither the old nor
+   *  the new password; null when that pass found none. Kept in memory
+   *  only — a resume after a restart finds them again. */
+  passwordChangeUndecryptable: null as Array<{ id: string; name: string }> | null,
+  /** Set when a password change stopped because this machine no longer
+   *  holds its Drive lock (e.g. another PC released it); cleared once the
+   *  lock is held again or the change ends. */
+  passwordChangeLockLost: false,
+  /** Settles (never rejects) when the running password-change operation
+   *  has finished; null when none is running. The before-quit handler
+   *  waits on it. */
+  passwordChangeRun: null as Promise<void> | null,
 }
 
 export function hasPendingChanges(): boolean {

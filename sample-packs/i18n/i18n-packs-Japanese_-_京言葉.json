@@ -1,5 +1,5 @@
 {
-  "version": "0.1.100",
+  "version": "0.1.101",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -874,7 +874,6 @@
     "changingPassword": "パスワードを変えてますえ…",
     "settingPassword": "パスワードを設定してますえ…",
     "samePassword": "いまと同じパスワードには変えられまへんえ",
-    "changePasswordUndecryptable": "今のパスワードで開けへんファイルが Google Drive にありますえ。データ › Sync › クラウドデータ で消してから、もういっぺん試しておくれやす。",
     "autoSync": "自動同期",
     "enable": "有効どすえ",
     "disable": "止めますえ",
@@ -895,6 +894,20 @@
       "unauthenticated": "パスワードを変える前にGoogleにつないでおくれやす"
     },
     "changePasswordInProgress": "同期中やさかいパスワードを変えられまへんえ",
+    "passwordChange": {
+      "alreadyInProgress": "このPCでパスワードの変更がまだ途中どすえ。先に続けるか、前のパスワードに戻しておくれやす。",
+      "notInProgress": "いま進んでるパスワードの変更はおへんえ。",
+      "invalidState": "パスワード変更の進み具合が読めしまへんえ。",
+      "keysUnavailable": "パスワード変更用にしまっといたパスワードが読めしまへん。OSのキーチェーンが使えるか確かめてから、もういっぺん試しておくれやす。",
+      "wrongStep": "パスワード変更のいまの段階では、それはできしまへんえ。",
+      "notStarted": "パスワードの変更は始まってしまへんどした。もういっぺん変えておくれやす。",
+      "locked": "よそのPCで同期パスワードを変えてはる最中どすえ。済んでから、もういっぺん試しておくれやす。",
+      "lost": "よそのPCも同じ頃にパスワードを変え始めはりました。済んでから、もういっぺん試しておくれやす。",
+      "lockLost": "Google Drive のロックが消されたさかい（よそのPCからかもしれまへん）、パスワードの変更を止めましたえ。",
+      "interrupted": "パスワードの変更が途中で止まりましたえ。あとで続けられますえ。",
+      "undecryptable": "前のパスワードでも新しいパスワードでも開けへんファイルが Google Drive にありますえ。消してから続けておくれやす。",
+      "notConverged": "パスワードを変えてる間に Google Drive のファイルが変わり続けましたえ。よそのPCの Pipette を閉じてから続けておくれやす。"
+    },
     "import": "インポート",
     "export": "エクスポート",
     "importComplete": "インポートしましたえ",

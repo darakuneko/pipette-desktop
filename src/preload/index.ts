@@ -54,7 +54,7 @@ import type {
 import type { HubPrivateLink } from '../shared/types/hub-private'
 import type { AppConfig } from '../shared/types/app-config'
 import type { DeviceScope } from '../shared/types/analyze-filters'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult } from '../shared/types/sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult } from '../shared/types/sync'
 import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } from '../shared/types/pipette-settings'
 import type {
   LayoutComparisonOptions,
@@ -675,6 +675,16 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SYNC_SET_PASSWORD, password),
   syncChangePassword: (newPassword: string): Promise<SyncOperationResult> =>
     ipcRenderer.invoke(IpcChannels.SYNC_CHANGE_PASSWORD, newPassword),
+  syncPasswordChangeStatus: (): Promise<PasswordChangeStatus> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_PASSWORD_CHANGE_STATUS),
+  syncPasswordChangeResume: (): Promise<SyncOperationResult> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_PASSWORD_CHANGE_RESUME),
+  syncPasswordChangeRevert: (): Promise<SyncOperationResult> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_PASSWORD_CHANGE_REVERT),
+  syncPasswordChangeAbandon: (): Promise<SyncOperationResult> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_PASSWORD_CHANGE_ABANDON),
+  syncPasswordChangeDeleteUndecryptable: (fileIds: string[]): Promise<PasswordChangeDeleteResult> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_PASSWORD_CHANGE_DELETE_UNDECRYPTABLE, fileIds),
   syncResetTargets: (targets: SyncResetTargets): Promise<SyncOperationResult> =>
     ipcRenderer.invoke(IpcChannels.SYNC_RESET_TARGETS, targets),
   syncHasPassword: (): Promise<boolean> =>

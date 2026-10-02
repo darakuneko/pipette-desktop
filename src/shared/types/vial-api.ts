@@ -36,7 +36,7 @@ import type {
 } from './theme-store'
 import type { AppConfig } from './app-config'
 import type { DeviceScope } from './analyze-filters'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult } from './sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult } from './sync'
 import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } from './pipette-settings'
 import type {
   TypingActivityCell,
@@ -327,6 +327,11 @@ export interface VialAPI {
   syncExecute(direction: 'download' | 'upload', scope?: SyncScope): Promise<SyncOperationResult>
   syncSetPassword(password: string): Promise<SyncOperationResult>
   syncChangePassword(newPassword: string): Promise<SyncOperationResult>
+  syncPasswordChangeStatus(): Promise<PasswordChangeStatus>
+  syncPasswordChangeResume(): Promise<SyncOperationResult>
+  syncPasswordChangeRevert(): Promise<SyncOperationResult>
+  syncPasswordChangeAbandon(): Promise<SyncOperationResult>
+  syncPasswordChangeDeleteUndecryptable(fileIds: string[]): Promise<PasswordChangeDeleteResult>
   syncResetTargets(targets: SyncResetTargets): Promise<SyncOperationResult>
   syncHasPassword(): Promise<boolean>
   syncValidatePassword(password: string): Promise<PasswordStrength>

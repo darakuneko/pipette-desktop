@@ -329,17 +329,29 @@ describe('sync-password-lock', () => {
       await expect(isPasswordChangeLockHeld('mine')).resolves.toBe(true)
     })
 
-    it('is false once its lock is gone', async () => {
-      mockListFiles.mockResolvedValueOnce([DATA_FILE, lockFile('other', '2026-10-02T10:00:00.000Z')])
+    it('is false once its lock stays missing after the re-lists', async () => {
+      mockListFiles.mockResolvedValue([DATA_FILE, lockFile('other', '2026-10-02T10:00:00.000Z')])
       await expect(isPasswordChangeLockHeld('mine')).resolves.toBe(false)
+      expect(sleeps).toEqual([1000, 2000, 4000])
+      expect(mockListFiles).toHaveBeenCalledTimes(4)
     })
 
-    it('is false when an earlier lock exists', async () => {
+    it('re-lists while its own lock is briefly missing from the listing', async () => {
+      mockListFiles
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([lockFile('mine', '2026-10-02T10:00:00.000Z')])
+      await expect(isPasswordChangeLockHeld('mine')).resolves.toBe(true)
+      expect(sleeps).toEqual([1000])
+    })
+
+    it('is false at once when its lock is listed but an earlier lock exists', async () => {
       mockListFiles.mockResolvedValueOnce([
         lockFile('mine', '2026-10-02T10:00:00.000Z'),
         lockFile('earlier', '2026-10-02T09:59:59.000Z'),
       ])
       await expect(isPasswordChangeLockHeld('mine')).resolves.toBe(false)
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
+      expect(sleeps).toEqual([])
     })
 
     it('ignores a non-lock file that happens to have the id', async () => {
