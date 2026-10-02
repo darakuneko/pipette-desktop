@@ -201,3 +201,29 @@ export async function setPasswordAndValidate(password: string): Promise<void> {
     throw err
   }
 }
+
+/** Replaces the stored password with `password` once it opens the chosen
+ *  password-check on Drive, for a password changed on another machine.
+ *  Nothing is stored until it opens, so a mismatch or a network error
+ *  leaves the stored password as it was (a mismatch clears the validated
+ *  cache, as in `validatePasswordCheck`). Refused (`SyncBlockedError`)
+ *  while a password change is in progress, and when Drive has no
+ *  password-check to compare against. */
+export async function replacePasswordAndValidate(password: string): Promise<void> {
+  const authStatus = await getAuthStatus()
+  if (!authStatus.authenticated) throw new SyncCredentialError('unauthenticated')
+  await assertNoLocalPasswordChange()
+  const remoteFiles = await listFiles()
+  await assertSyncAllowed(remoteFiles)
+  const check = findPasswordCheck(remoteFiles)
+  if (!check) throw new Error('sync.reenterPasswordNoRemote')
+  await openPasswordCheck(password, check)
+  forgetCreatedPasswordCheck()
+  try {
+    await storePassword(password)
+  } catch (err) {
+    // The validation belongs to `password`; the stored one is unchanged.
+    syncRuntime.validatedPasswordCheck = null
+    throw err
+  }
+}

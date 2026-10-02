@@ -135,8 +135,10 @@ export function SettingsModal({
               passwordScore={syncState.passwordScore}
               passwordFeedback={syncState.passwordFeedback}
               passwordError={syncState.passwordError}
-              changingPassword={syncState.changingPassword}
-              setChangingPassword={syncState.setChangingPassword}
+              passwordMode={syncState.passwordMode}
+              setPasswordMode={syncState.setPasswordMode}
+              startReenterPassword={syncState.startReenterPassword}
+              passwordMismatch={syncState.passwordMismatch}
               syncDisabled={syncState.syncDisabled}
               handleSignIn={syncState.handleSignIn}
               handleGoogleDisconnect={syncState.handleGoogleDisconnect}

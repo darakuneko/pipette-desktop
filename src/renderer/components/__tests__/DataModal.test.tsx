@@ -139,6 +139,7 @@ function makeSyncMock(overrides?: Partial<UseSyncReturn>): UseSyncReturn {
     setConfig: vi.fn().mockResolvedValue(undefined),
     setPassword: vi.fn().mockResolvedValue({ success: true }),
     changePassword: vi.fn().mockResolvedValue({ success: true }),
+    replacePassword: vi.fn().mockResolvedValue({ success: true }),
     resetSyncTargets: vi.fn().mockResolvedValue({ success: true }),
     validatePassword: vi.fn().mockResolvedValue({ score: 4, feedback: [] }),
     syncNow: vi.fn().mockResolvedValue({ success: true, status: 'completed' }),

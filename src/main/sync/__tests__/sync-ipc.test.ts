@@ -61,6 +61,7 @@ const mockForgetChangeStateCache = vi.fn()
 const mockAssertNoLocalPasswordChange = vi.fn(async () => {})
 const mockGetPasswordChangeLockStatus = vi.fn(async (): Promise<unknown> => null)
 const mockReleasePasswordChangeLocks = vi.fn(async (): Promise<void> => {})
+const mockReplacePasswordAndValidate = vi.fn(async (_password: string): Promise<void> => {})
 const { MockSyncBlockedError } = vi.hoisted(() => ({ MockSyncBlockedError: class MockSyncBlockedError extends Error {} }))
 vi.mock('../sync-service', () => ({
   executeAnalyticsSync: vi.fn(),
@@ -91,6 +92,7 @@ vi.mock('../sync-service', () => ({
   releasePasswordChangeLocks: () => mockReleasePasswordChangeLocks(),
   checkPasswordCheckExists: vi.fn(),
   setPasswordAndValidate: vi.fn(),
+  replacePasswordAndValidate: (password: string) => mockReplacePasswordAndValidate(password),
   deleteRemoteTypingDay: vi.fn(),
   fetchRemoteTypingDay: vi.fn(),
   hasAnyRemoteTypingData: vi.fn(),
@@ -244,6 +246,35 @@ describe('sync-ipc while a sync password change is in progress', () => {
 
     expect(result.success).toBe(true)
     expect(mockForgetChangeStateCache).toHaveBeenCalled()
+  })
+})
+
+describe('sync-ipc SYNC_REPLACE_PASSWORD', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    setupSyncIpc()
+  })
+
+  it('replaces the password and reports success', async () => {
+    const result = await getHandler(IpcChannels.SYNC_REPLACE_PASSWORD)(null, 'other-pc-password')
+
+    expect(result).toEqual({ success: true })
+    expect(mockReplacePasswordAndValidate).toHaveBeenCalledWith('other-pc-password')
+  })
+
+  it('returns a mismatch as its error key', async () => {
+    mockReplacePasswordAndValidate.mockRejectedValueOnce(new Error('sync.passwordMismatch'))
+
+    const result = await getHandler(IpcChannels.SYNC_REPLACE_PASSWORD)(null, 'wrong')
+
+    expect(result).toEqual({ success: false, error: 'sync.passwordMismatch' })
+  })
+
+  it('refuses an empty password without calling the service', async () => {
+    const result = await getHandler(IpcChannels.SYNC_REPLACE_PASSWORD)(null, '')
+
+    expect(result.success).toBe(false)
+    expect(mockReplacePasswordAndValidate).not.toHaveBeenCalled()
   })
 })
 

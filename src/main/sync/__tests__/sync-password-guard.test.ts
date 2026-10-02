@@ -133,6 +133,8 @@ const drive = vi.hoisted(() => ({
   hidden: new Set<string>(),
   /** When set, every listing waits for it first. */
   listGate: null as Promise<void> | null,
+  /** When set, every download throws it. */
+  downloadError: null as Error | null,
 }))
 
 function memFiles(): Map<string, MemFile> {
@@ -172,6 +174,7 @@ vi.mock('../google-drive', async () => {
     },
     downloadFile: async (id: string): Promise<SyncEnvelope> => {
       drive.downloads.push(id)
+      if (drive.downloadError) throw drive.downloadError
       const file = memFiles().get(id)
       if (!file) throw notFound(id)
       return JSON.parse(file.content) as SyncEnvelope
@@ -208,11 +211,14 @@ import { flushPendingChanges, setupBeforeQuitHandler } from '../sync-flush'
 import {
   PasswordMismatchError,
   setPasswordAndValidate,
+  replacePasswordAndValidate,
+  SyncCredentialError,
   ensurePasswordCheckValidated,
   validatePasswordCheck,
   passwordCheckTiming,
 } from '../sync-password'
 import { SyncBlockedError } from '../sync-password-guard'
+import { getAuthStatus } from '../google-auth'
 import {
   _resetForTests,
   executeSync,
@@ -305,6 +311,7 @@ describe('sync password-change guard', () => {
     drive.hideNew = false
     drive.hidden.clear()
     drive.listGate = null
+    drive.downloadError = null
     resetDriveLog()
     _resetForTests()
     progress = []
@@ -412,6 +419,15 @@ describe('sync password-change guard', () => {
 
       const stored = await retrievePasswordResult()
       expect(stored.ok && stored.password).toBe(OLD)
+      expectNoDataWork()
+    })
+
+    it('replacePasswordAndValidate is refused and keeps the stored password', async () => {
+      await expect(replacePasswordAndValidate(NEW)).rejects.toThrow(key)
+
+      const stored = await retrievePasswordResult()
+      expect(stored.ok && stored.password).toBe(OLD)
+      expect(drive.downloads).toEqual([])
       expectNoDataWork()
     })
   })
@@ -691,6 +707,67 @@ describe('sync password-change guard', () => {
     it('fetchRemoteTypingDay merges with a matching password-check', async () => {
       expect(await fetchRemoteTypingDay(TYPING_DAY.uid, TYPING_DAY.hash, TYPING_DAY.day)).toBe(true)
       expect(mocks.mergeDeviceDayBundle).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('replacePasswordAndValidate', () => {
+    async function storedPassword(): Promise<string | false> {
+      const stored = await retrievePasswordResult()
+      return stored.ok && stored.password
+    }
+
+    it('stores a password that opens the password-check and remembers it as validated', async () => {
+      await rewritePasswordCheck(NEW)
+
+      await replacePasswordAndValidate(NEW)
+
+      expect(await storedPassword()).toBe(NEW)
+      expect(drive.downloads).toEqual([pcId])
+      expect(syncRuntime.validatedPasswordCheck).toEqual({ id: pcId, modifiedTime: memFiles().get(pcId)!.modifiedTime })
+      expect(drive.uploads).toEqual([])
+
+      // The next flush trusts the validation: no second download.
+      resetDriveLog()
+      syncRuntime.pendingChanges.add('favorites/tapDance')
+      await flushPendingChanges()
+      expect(drive.downloads).toEqual([])
+      expect(mocks.syncOrUpload).toHaveBeenCalled()
+    })
+
+    it('keeps the stored password when the password does not open the password-check', async () => {
+      await rewritePasswordCheck(NEW)
+
+      await expect(replacePasswordAndValidate('typo')).rejects.toThrow(PasswordMismatchError)
+
+      expect(await storedPassword()).toBe(OLD)
+      expect(drive.uploads).toEqual([])
+    })
+
+    it('keeps the stored password when the download fails', async () => {
+      await rewritePasswordCheck(NEW)
+      drive.downloadError = new Error('network down')
+
+      await expect(replacePasswordAndValidate(NEW)).rejects.toThrow('network down')
+
+      expect(await storedPassword()).toBe(OLD)
+    })
+
+    it('is refused when Drive has no password-check', async () => {
+      memFiles().delete(pcId)
+
+      await expect(replacePasswordAndValidate(NEW)).rejects.toThrow('sync.reenterPasswordNoRemote')
+
+      expect(await storedPassword()).toBe(OLD)
+      expect(drive.uploads).toEqual([])
+    })
+
+    it('is refused while signed out', async () => {
+      vi.mocked(getAuthStatus).mockResolvedValueOnce({ authenticated: false })
+
+      await expect(replacePasswordAndValidate(NEW)).rejects.toThrow(SyncCredentialError)
+
+      expect(await storedPassword()).toBe(OLD)
+      expect(drive.lists).toBe(0)
     })
   })
 })

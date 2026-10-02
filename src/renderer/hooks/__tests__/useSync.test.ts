@@ -16,6 +16,7 @@ const mockVialAPI = {
   syncAuthStart: vi.fn().mockResolvedValue({ success: true }),
   syncAuthSignOut: vi.fn().mockResolvedValue({ success: true }),
   syncSetPassword: vi.fn().mockResolvedValue({ success: true }),
+  syncReplacePassword: vi.fn().mockResolvedValue({ success: true }),
   syncResetTargets: vi.fn().mockResolvedValue({ success: true }),
   syncCheckPasswordExists: vi.fn().mockResolvedValue(false),
   syncValidatePassword: vi.fn().mockResolvedValue({ score: 4, feedback: [] }),
@@ -171,6 +172,22 @@ describe('useSync', () => {
     })
 
     expect(result.current.hasPassword).toBe(true)
+  })
+
+  it('replacePassword calls the replace IPC and returns its result', async () => {
+    mockVialAPI.syncReplacePassword.mockResolvedValueOnce({ success: false, error: 'sync.passwordMismatch' })
+    const { result } = renderHookWithConfig(() => useSync())
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
+
+    await act(async () => {
+      const res = await result.current.replacePassword('other-pc-password')
+      expect(res).toEqual({ success: false, error: 'sync.passwordMismatch' })
+    })
+
+    expect(mockVialAPI.syncReplacePassword).toHaveBeenCalledWith('other-pc-password')
   })
 
   it('throws on startAuth when syncAuthStart returns failure', async () => {

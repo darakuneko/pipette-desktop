@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
-import { scoreColor, BTN_PRIMARY, BTN_SECONDARY } from './settings-modal-shared'
+import { scoreColor, BTN_PRIMARY, BTN_SECONDARY, type PasswordMode } from './settings-modal-shared'
 import type { UseSyncReturn } from '../../hooks/useSync'
 
 export interface PasswordSectionProps {
@@ -10,12 +10,15 @@ export interface PasswordSectionProps {
   passwordScore: number | null
   passwordFeedback: string[]
   passwordError: string | null
-  changingPassword: boolean
+  passwordMode: PasswordMode
+  /** The stored password no longer opens the password-check on Google Drive. */
+  passwordMismatch: boolean
   busy: boolean
   onPasswordChange: (value: string) => void
   onSetPassword: () => void
   onStartChange: () => void
   onCancelChange: () => void
+  onStartReenter: () => void
 }
 
 export function PasswordSection({
@@ -24,14 +27,18 @@ export function PasswordSection({
   passwordScore,
   passwordFeedback,
   passwordError,
-  changingPassword,
+  passwordMode,
+  passwordMismatch,
   busy,
   onPasswordChange,
   onSetPassword,
   onStartChange,
   onCancelChange,
+  onStartReenter,
 }: PasswordSectionProps) {
   const { t } = useTranslation()
+  const changingPassword = passwordMode === 'change'
+  const reenteringPassword = passwordMode === 'reenter'
 
   if (sync.checkingRemotePassword) {
     return (
@@ -42,21 +49,39 @@ export function PasswordSection({
     )
   }
 
-  if (sync.hasPassword && !changingPassword) {
+  if (sync.hasPassword && passwordMode === 'idle') {
     return (
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-accent" data-testid="sync-password-set">
-          {t('sync.passwordSet')}
-        </span>
-        <button
-          type="button"
-          className={BTN_SECONDARY}
-          onClick={onStartChange}
-          disabled={busy || !sync.authStatus.authenticated || sync.syncUnavailable}
-          data-testid="sync-password-change-btn"
-        >
-          {t('sync.changePassword')}
-        </button>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-accent" data-testid="sync-password-set">
+            {t('sync.passwordSet')}
+          </span>
+          <button
+            type="button"
+            className={BTN_SECONDARY}
+            onClick={onStartChange}
+            disabled={busy || !sync.authStatus.authenticated || sync.syncUnavailable}
+            data-testid="sync-password-change-btn"
+          >
+            {t('sync.changePassword')}
+          </button>
+        </div>
+        {passwordMismatch && (
+          <div className="space-y-2" data-testid="sync-password-mismatch">
+            <div className="rounded border border-warning/30 bg-warning/10 p-2 text-xs text-warning" data-testid="sync-password-mismatch-warning">
+              {t('sync.reenterPasswordWarning')}
+            </div>
+            <button
+              type="button"
+              className={BTN_SECONDARY}
+              onClick={onStartReenter}
+              disabled={busy || !sync.authStatus.authenticated || sync.syncUnavailable}
+              data-testid="sync-password-reenter-btn"
+            >
+              {t('sync.reenterPassword')}
+            </button>
+          </div>
+        )}
       </div>
     )
   }
@@ -79,7 +104,7 @@ export function PasswordSection({
           {t('sync.passwordChange.closeOtherPcs')}
         </div>
       )}
-      {!busy && !changingPassword && sync.hasRemotePassword === true && (
+      {!busy && (reenteringPassword || (!changingPassword && sync.hasRemotePassword === true)) && (
         <div className="rounded border border-accent/50 bg-accent/10 p-2 text-xs text-accent" data-testid="sync-existing-password-hint">
           {t('sync.existingPasswordHint')}
         </div>
@@ -93,7 +118,7 @@ export function PasswordSection({
         disabled={busy || sync.syncUnavailable}
         data-testid="sync-password-input"
       />
-      {passwordScore !== null && !busy && (
+      {passwordScore !== null && !busy && !reenteringPassword && (
         <div className="space-y-1">
           <div className="flex gap-1">
             {[0, 1, 2, 3, 4].map((i) => (
@@ -119,12 +144,12 @@ export function PasswordSection({
             type="button"
             className={BTN_PRIMARY}
             onClick={onSetPassword}
-            disabled={!password || (passwordScore !== null && passwordScore < 4) || sync.syncUnavailable}
+            disabled={!password || (!reenteringPassword && passwordScore !== null && passwordScore < 4) || sync.syncUnavailable}
             data-testid="sync-password-save"
           >
             {t('sync.setPassword')}
           </button>
-          {changingPassword && (
+          {passwordMode !== 'idle' && (
             <button
               type="button"
               className="rounded border border-edge px-4 py-2 text-sm text-content-secondary hover:bg-surface-dim"

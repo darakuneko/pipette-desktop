@@ -1,5 +1,5 @@
 {
-  "version": "0.1.104",
+  "version": "0.1.106",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -951,6 +951,9 @@
     "undecryptableCount": "{{count}} 件開けへんファイルがありますえ",
     "checkingRemotePassword": "同期状態を確認してますえ…",
     "existingPasswordHint": "同期パスワードがもう設定されてますえ。他のデバイスで使うてたパスワードを入れておくれやす。",
+    "reenterPasswordWarning": "この PC の同期パスワードが Google Drive と合いまへんなぁ。ほかの PC で使うてはるパスワードを入れておくれやす。",
+    "reenterPassword": "パスワードを入れ直しますえ",
+    "reenterPasswordNoRemote": "Google Drive に照らし合わせる同期パスワードがまだあらしまへん。このフォームを閉じて、いまのパスワードで同期しておくれやす。",
     "unavailable": "接続先かネットワークに問題がありますえ。同期できまへんなぁ。",
     "retry": "もういっぺんやりますえ",
     "pullError": {

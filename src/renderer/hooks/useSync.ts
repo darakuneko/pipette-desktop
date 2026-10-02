@@ -50,6 +50,9 @@ export interface UseSyncReturn {
   setConfig: (patch: Partial<AppConfig>) => void
   setPassword: (password: string) => Promise<SyncOperationResult>
   changePassword: (newPassword: string) => Promise<SyncOperationResult>
+  /** Replaces the stored password with one changed on another machine;
+   *  stored only when it opens the password-check on Google Drive. */
+  replacePassword: (password: string) => Promise<SyncOperationResult>
   resetSyncTargets: (targets: SyncResetTargets) => Promise<SyncOperationResult>
   validatePassword: (password: string) => Promise<PasswordStrength>
   /** Returns the real outcome (`status`/`skipReason`, not just `success` —
@@ -210,6 +213,11 @@ export function useSync(): UseSyncReturn {
     [callPasswordApi],
   )
 
+  const replacePassword = useCallback(
+    (password: string) => callPasswordApi(window.vialAPI.syncReplacePassword, password),
+    [callPasswordApi],
+  )
+
   const resetSyncTargets = useCallback(
     (targets: SyncResetTargets) => window.vialAPI.syncResetTargets(targets),
     [],
@@ -268,6 +276,7 @@ export function useSync(): UseSyncReturn {
     setConfig,
     setPassword,
     changePassword,
+    replacePassword,
     resetSyncTargets,
     validatePassword,
     syncNow,

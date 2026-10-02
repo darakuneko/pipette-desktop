@@ -92,6 +92,7 @@ export {
   resetPasswordCheckCache,
   checkPasswordCheckExists,
   setPasswordAndValidate,
+  replacePasswordAndValidate,
 } from './sync-password'
 
 export type { DeleteUndecryptableResult, PasswordChangeRecovery } from './sync-password-change'

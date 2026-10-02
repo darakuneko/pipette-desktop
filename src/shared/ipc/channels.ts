@@ -70,6 +70,7 @@ export const IpcChannels = {
   SYNC_EXECUTE: 'sync:execute',
   SYNC_SET_PASSWORD: 'sync:set-password',
   SYNC_CHANGE_PASSWORD: 'sync:change-password',
+  SYNC_REPLACE_PASSWORD: 'sync:replace-password',
   SYNC_PASSWORD_CHANGE_STATUS: 'sync:password-change-status',
   SYNC_PASSWORD_CHANGE_RESUME: 'sync:password-change-resume',
   SYNC_PASSWORD_CHANGE_REVERT: 'sync:password-change-revert',

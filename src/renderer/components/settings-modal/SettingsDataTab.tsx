@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BTN_PRIMARY, BTN_SECONDARY } from './settings-modal-shared'
+import { BTN_PRIMARY, BTN_SECONDARY, type PasswordMode } from './settings-modal-shared'
 import { SyncStatusSection } from './SyncStatusSection'
 import { DisconnectConfirmButton } from './DisconnectConfirmButton'
 import { PasswordSection } from './PasswordSection'
@@ -34,8 +34,10 @@ export interface SettingsDataTabProps {
   passwordScore: number | null
   passwordFeedback: string[]
   passwordError: string | null
-  changingPassword: boolean
-  setChangingPassword: (v: boolean) => void
+  passwordMode: PasswordMode
+  setPasswordMode: (mode: PasswordMode) => void
+  startReenterPassword: () => void
+  passwordMismatch: boolean
   syncDisabled: boolean
   handleSignIn: () => void
   handleGoogleDisconnect: () => void
@@ -68,8 +70,10 @@ export function SettingsDataTab({
   passwordScore,
   passwordFeedback,
   passwordError,
-  changingPassword,
-  setChangingPassword,
+  passwordMode,
+  setPasswordMode,
+  startReenterPassword,
+  passwordMismatch,
   syncDisabled,
   handleSignIn,
   handleGoogleDisconnect,
@@ -93,10 +97,10 @@ export function SettingsDataTab({
   // A change that stopped part-way replaces the password form with the
   // status panel; the form's error moves to the panel.
   useEffect(() => {
-    if (changeStatus.kind === 'none' || !changingPassword) return
+    if (changeStatus.kind === 'none' || passwordMode !== 'change') return
     setPasswordChangeError(passwordError)
     clearPasswordForm()
-  }, [changeStatus.kind, changingPassword, passwordError, setPasswordChangeError, clearPasswordForm])
+  }, [changeStatus.kind, passwordMode, passwordError, setPasswordChangeError, clearPasswordForm])
 
   return (
     <div className="pt-4">
@@ -179,15 +183,20 @@ export function SettingsDataTab({
               passwordScore={passwordScore}
               passwordFeedback={passwordFeedback}
               passwordError={passwordError}
-              changingPassword={changingPassword}
+              passwordMode={passwordMode}
+              passwordMismatch={passwordMismatch}
               busy={busy}
               onPasswordChange={handlePasswordChange}
               onSetPassword={handleSetPassword}
               onStartChange={() => {
                 setPasswordChangeError(null)
-                setChangingPassword(true)
+                setPasswordMode('change')
               }}
               onCancelChange={clearPasswordForm}
+              onStartReenter={() => {
+                setPasswordChangeError(null)
+                startReenterPassword()
+              }}
             />
             {/* An action that ended the change (e.g. Continue on a change
                 that never started) leaves its explanation here once the

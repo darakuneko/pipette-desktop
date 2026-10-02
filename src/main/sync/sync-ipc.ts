@@ -42,6 +42,7 @@ import {
   releasePasswordChangeLocks,
   checkPasswordCheckExists,
   setPasswordAndValidate,
+  replacePasswordAndValidate,
   deleteRemoteTypingDay,
   fetchRemoteTypingDay,
   hasAnyRemoteTypingData,
@@ -155,6 +156,17 @@ export function setupSyncIpc(): void {
     (_event, password: string) =>
       wrapIpc('Set password failed', async () => {
         await setPasswordAndValidate(password)
+      }),
+  )
+
+  // A password changed on another machine: stored only once it opens the
+  // password-check on Drive.
+  secureHandle(
+    IpcChannels.SYNC_REPLACE_PASSWORD,
+    (_event, password: string) =>
+      wrapIpc('Replace password failed', async () => {
+        if (typeof password !== 'string' || password === '') throw new Error('Invalid password')
+        await replacePasswordAndValidate(password)
       }),
   )
 

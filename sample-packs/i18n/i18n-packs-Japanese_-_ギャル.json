@@ -1,5 +1,5 @@
 {
-  "version": "0.1.104",
+  "version": "0.1.106",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -951,6 +951,9 @@
     "undecryptableCount": "{{count}} 件開けないやつあるｗ",
     "checkingRemotePassword": "同期チェックなう☆",
     "existingPasswordHint": "もう設定されてるよん！使ってたパスワード入れてね♡",
+    "reenterPasswordWarning": "このPCのパスワード、Google Driveとズレてるっぽい！他のPCで使ってるパスワード入れてね♡",
+    "reenterPassword": "パスワード入れ直す☆",
+    "reenterPasswordNoRemote": "Google Driveにまだ比べるパスワード無いよ～！フォーム閉じて今のパスワードで同期してね♡",
     "unavailable": "ネットヤバくね？同期できないじゃん",
     "retry": "もう一回！",
     "pullError": {

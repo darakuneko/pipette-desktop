@@ -8,6 +8,11 @@ import type { ThemeMode, ThemeSelection } from '../../hooks/useTheme'
 import type { KeyboardLayoutId, AutoLockMinutes } from '../../hooks/useDevicePrefs'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 
+/** Which password form is open: none, Change Password, or entering a
+ *  password changed on another machine (no strength rule; it only has to
+ *  open the password-check on Google Drive). */
+export type PasswordMode = 'idle' | 'change' | 'reenter'
+
 export function scoreColor(score: number | null): string {
   if (score === null) return 'bg-surface-dim'
   if (score < 2) return 'bg-danger'

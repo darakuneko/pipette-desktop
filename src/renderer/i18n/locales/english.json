@@ -1,5 +1,5 @@
 {
-  "version": "0.1.104",
+  "version": "0.1.106",
   "name": "English",
   "common": {
     "save": "Save",
@@ -961,6 +961,9 @@
     "undecryptableCount": "{{count}} undecryptable file(s)",
     "checkingRemotePassword": "Checking sync status...",
     "existingPasswordHint": "A sync password already exists. Enter the same password used on your other device.",
+    "reenterPasswordWarning": "This PC's sync password doesn't match Google Drive. Enter the password used on your other PCs.",
+    "reenterPassword": "Re-enter Password",
+    "reenterPasswordNoRemote": "Google Drive has no sync password to compare with yet. Close this form and run Sync with the current password.",
     "unavailable": "Unable to connect to sync server. Sync features are currently disabled.",
     "retry": "Retry",
     "pullError": {

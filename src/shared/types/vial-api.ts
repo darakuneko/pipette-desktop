@@ -327,6 +327,7 @@ export interface VialAPI {
   syncExecute(direction: 'download' | 'upload', scope?: SyncScope): Promise<SyncOperationResult>
   syncSetPassword(password: string): Promise<SyncOperationResult>
   syncChangePassword(newPassword: string): Promise<SyncOperationResult>
+  syncReplacePassword(password: string): Promise<SyncOperationResult>
   syncPasswordChangeStatus(): Promise<PasswordChangeStatus>
   syncPasswordChangeResume(): Promise<SyncOperationResult>
   syncPasswordChangeRevert(): Promise<SyncOperationResult>
