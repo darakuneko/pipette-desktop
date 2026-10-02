@@ -59,6 +59,8 @@ const mockIsSyncInProgress = vi.fn(() => false)
 const mockAssertSyncAllowed = vi.fn(async () => {})
 const mockForgetChangeStateCache = vi.fn()
 const mockAssertNoLocalPasswordChange = vi.fn(async () => {})
+const mockGetPasswordChangeLockStatus = vi.fn(async (): Promise<unknown> => null)
+const mockReleasePasswordChangeLocks = vi.fn(async (): Promise<void> => {})
 const { MockSyncBlockedError } = vi.hoisted(() => ({ MockSyncBlockedError: class MockSyncBlockedError extends Error {} }))
 vi.mock('../sync-service', () => ({
   executeAnalyticsSync: vi.fn(),
@@ -85,6 +87,8 @@ vi.mock('../sync-service', () => ({
   deletePasswordChangeUndecryptableFiles: vi.fn(),
   recoverPasswordChangeOnStartup: vi.fn(async () => 'none'),
   getPasswordChangeStatus: vi.fn(),
+  getPasswordChangeLockStatus: () => mockGetPasswordChangeLockStatus(),
+  releasePasswordChangeLocks: () => mockReleasePasswordChangeLocks(),
   checkPasswordCheckExists: vi.fn(),
   setPasswordAndValidate: vi.fn(),
   deleteRemoteTypingDay: vi.fn(),
@@ -153,6 +157,31 @@ describe('sync-ipc while a sync password change is in progress', () => {
     mockIsSyncInProgress.mockReturnValue(false)
     mockAssertSyncAllowed.mockRejectedValue(new MockSyncBlockedError(blockedKey))
     setupSyncIpc()
+  })
+
+  it('SYNC_PASSWORD_CHANGE_LOCK_STATUS is answered without the sync guard', async () => {
+    mockGetPasswordChangeLockStatus.mockResolvedValueOnce({ startedAt: '2026-10-02T09:00:00.000Z', ownMachine: false })
+
+    const result = await getHandler(IpcChannels.SYNC_PASSWORD_CHANGE_LOCK_STATUS)(null)
+
+    expect(result).toEqual({ startedAt: '2026-10-02T09:00:00.000Z', ownMachine: false })
+    expect(mockAssertSyncAllowed).not.toHaveBeenCalled()
+  })
+
+  it('SYNC_PASSWORD_CHANGE_RELEASE_LOCKS releases without the sync guard', async () => {
+    const result = await getHandler(IpcChannels.SYNC_PASSWORD_CHANGE_RELEASE_LOCKS)(null)
+
+    expect(result).toEqual({ success: true })
+    expect(mockReleasePasswordChangeLocks).toHaveBeenCalledTimes(1)
+    expect(mockAssertSyncAllowed).not.toHaveBeenCalled()
+  })
+
+  it('SYNC_PASSWORD_CHANGE_RELEASE_LOCKS returns the refusal as an error key', async () => {
+    mockReleasePasswordChangeLocks.mockRejectedValueOnce(new MockSyncBlockedError('sync.passwordChange.blockedLocal'))
+
+    const result = await getHandler(IpcChannels.SYNC_PASSWORD_CHANGE_RELEASE_LOCKS)(null)
+
+    expect(result).toEqual({ success: false, error: 'sync.passwordChange.blockedLocal' })
   })
 
   it('SYNC_RESET_TARGETS deletes nothing', async () => {

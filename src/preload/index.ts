@@ -54,7 +54,7 @@ import type {
 import type { HubPrivateLink } from '../shared/types/hub-private'
 import type { AppConfig } from '../shared/types/app-config'
 import type { DeviceScope } from '../shared/types/analyze-filters'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult } from '../shared/types/sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult, PasswordChangeLockStatus } from '../shared/types/sync'
 import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } from '../shared/types/pipette-settings'
 import type {
   LayoutComparisonOptions,
@@ -685,6 +685,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SYNC_PASSWORD_CHANGE_ABANDON),
   syncPasswordChangeDeleteUndecryptable: (fileIds: string[]): Promise<PasswordChangeDeleteResult> =>
     ipcRenderer.invoke(IpcChannels.SYNC_PASSWORD_CHANGE_DELETE_UNDECRYPTABLE, fileIds),
+  syncPasswordChangeLockStatus: (): Promise<PasswordChangeLockStatus | null> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_PASSWORD_CHANGE_LOCK_STATUS),
+  syncPasswordChangeReleaseLocks: (): Promise<SyncOperationResult> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_PASSWORD_CHANGE_RELEASE_LOCKS),
   syncResetTargets: (targets: SyncResetTargets): Promise<SyncOperationResult> =>
     ipcRenderer.invoke(IpcChannels.SYNC_RESET_TARGETS, targets),
   syncHasPassword: (): Promise<boolean> =>

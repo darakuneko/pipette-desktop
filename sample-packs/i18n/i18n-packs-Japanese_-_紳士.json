@@ -1,5 +1,5 @@
 {
-  "version": "0.1.102",
+  "version": "0.1.103",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -908,7 +908,33 @@
       "undecryptable": "旧き合言葉でも新しき合言葉でも開けぬ書物が Google Drive にございます。整理なさってからお続けくださいませ。",
       "notConverged": "合言葉の変更中、Google Drive の書物が変わり続けました。他の端末の Pipette をお閉じになってからお続けくださいませ。",
       "blockedByOtherDevice": "別の端末にて同期の合言葉を変更中ゆえ、済みますまでこの端末の同期を控えております。",
-      "blockedLocal": "この端末での合言葉の変更が済んでおりませぬゆえ、同期を控えております。先にお続けになるか、元の合言葉にお戻しになるか、お取りやめくださいませ。"
+      "blockedLocal": "この端末での合言葉の変更が済んでおりませぬゆえ、同期を控えております。先にお続けになるか、元の合言葉にお戻しになるか、お取りやめくださいませ。",
+      "closeOtherPcs": "合言葉の変更が済みますまで、他の端末の Pipette はお閉じくださいませ。",
+      "working": "合言葉の変更を執り行っております...",
+      "toNew": "新しき同期の合言葉への変更が済んでおりませぬ。この端末の同期は控えております。",
+      "toOld": "元の合言葉へのお戻しが済んでおりませぬ。この端末の同期は控えております。",
+      "stepLabel": "現在の段階: {{step}}",
+      "step": {
+        "locking": "支度中",
+        "reencrypting": "Google Drive の書物を包み直しております",
+        "committing": "変更を確定しております",
+        "cleanup": "後始末をしております"
+      },
+      "resume": "続ける",
+      "revertToOld": "元の合言葉に戻す",
+      "revertToNew": "やはり新しき合言葉に改める",
+      "abandonLabel": "合言葉の変更を取りやめる",
+      "abandon": "取りやめ",
+      "confirmAbandon": "取りやめてもよろしいか？",
+      "abandonWarning": "Google Drive の書物が新旧の合言葉の入り混じったまま残るやもしれませぬ。開けぬ書物は データ › クラウドの記録 にて抹消くださいませ。",
+      "deleteSkipped": "いずれかの合言葉で開けますゆえ、書物は抹消いたしませんでした。",
+      "releaseBusy": "この端末にて同期の最中でございます。しばしお待ちのうえ、改めてお試しくださいませ。",
+      "ownLockLeft": "この端末が Google Drive に残した合言葉変更の錠のため、すべての端末の同期を控えております。",
+      "lockStartedAt": "開始: {{time}}",
+      "releaseLockLabel": "Google Drive の合言葉変更の錠",
+      "releaseLock": "錠を外す",
+      "confirmRelease": "外してもよろしいか？",
+      "releaseWarning": "他の端末にて同期や合言葉の変更が行われていないことをお確かめくださいませ。"
     },
     "import": "入れる",
     "export": "出す",

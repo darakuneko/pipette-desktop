@@ -104,6 +104,7 @@ export {
   recoverPasswordChangeOnStartup,
   getPasswordChangeStatus,
 } from './sync-password-change'
+export { getPasswordChangeLockStatus, releasePasswordChangeLocks } from './sync-password-lock-release'
 
 export type { SyncExecuteResult } from './sync-execute'
 export { executeSync } from './sync-execute'

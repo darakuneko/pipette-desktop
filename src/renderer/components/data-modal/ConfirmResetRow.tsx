@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Shared two-step-confirm row for the Data modal's reset/delete
-// affordances: a label on the left and a single danger trigger button
-// on the right that flips to Confirm-then-Cancel (in that order —
-// mirrors KeyboardSavesContent's "Delete All" footer, the reference
-// two-step-confirm pattern in this modal) once clicked. Used by
-// Sync > Cloud Data's per-target reset rows and Local > Application's
-// "Reset application settings" row.
+// Shared two-step-confirm row for reset/delete affordances: a label on
+// the left and a single danger trigger button on the right that flips to
+// Confirm-then-Cancel (in that order — mirrors KeyboardSavesContent's
+// "Delete All" footer) once clicked. Used by Data > Cloud Data's
+// per-target reset rows, UndecryptableFilesList, Local > Application's
+// "Reset application settings" row (DataModal.tsx), and the sync password
+// change panel and lock banner in settings-modal/.
 //
 // KeyboardSavesContent / TypingAnalyticsContent keep their own inline
-// confirm rows for now — not yet ported to this component (future
-// adopters of the same pattern).
+// confirm rows.
 
 import type { ReactNode } from 'react'
 import { BTN_SECONDARY, BTN_DANGER_OUTLINE } from '../../constants/ui-tokens'

@@ -272,6 +272,17 @@ export type PasswordChangeStatus =
       startedAt: number
     }
 
+/** The password-change lock on Google Drive, as shown to the user (no
+ *  lock ids).
+ *  - `startedAt`: ISO 8601 start time by the holder's clock; null when the
+ *    lock's content can't be read
+ *  - `ownMachine`: the lock was left by this machine (its machine hash
+ *    matches), e.g. after an abandoned change failed to remove it */
+export interface PasswordChangeLockStatus {
+  startedAt: string | null
+  ownMachine: boolean
+}
+
 export interface PasswordChangeDeleteResult extends SyncOperationResult {
   /** Ids deleted from Drive. */
   deleted?: string[]

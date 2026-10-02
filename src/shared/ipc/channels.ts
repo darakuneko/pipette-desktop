@@ -75,6 +75,8 @@ export const IpcChannels = {
   SYNC_PASSWORD_CHANGE_REVERT: 'sync:password-change-revert',
   SYNC_PASSWORD_CHANGE_ABANDON: 'sync:password-change-abandon',
   SYNC_PASSWORD_CHANGE_DELETE_UNDECRYPTABLE: 'sync:password-change-delete-undecryptable',
+  SYNC_PASSWORD_CHANGE_LOCK_STATUS: 'sync:password-change-lock-status',
+  SYNC_PASSWORD_CHANGE_RELEASE_LOCKS: 'sync:password-change-release-locks',
   SYNC_HAS_PASSWORD: 'sync:has-password',
   SYNC_VALIDATE_PASSWORD: 'sync:validate-password',
   SYNC_RESET_TARGETS: 'sync:reset-targets',

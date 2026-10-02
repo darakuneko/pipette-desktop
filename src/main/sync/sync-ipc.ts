@@ -38,6 +38,8 @@ import {
   deletePasswordChangeUndecryptableFiles,
   recoverPasswordChangeOnStartup,
   getPasswordChangeStatus,
+  getPasswordChangeLockStatus,
+  releasePasswordChangeLocks,
   checkPasswordCheckExists,
   setPasswordAndValidate,
   deleteRemoteTypingDay,
@@ -186,6 +188,14 @@ export function setupSyncIpc(): void {
       }
       return deletePasswordChangeUndecryptableFiles(fileIds)
     }),
+  )
+
+  // Neither lock handler goes through the sync guard: releasing the lock
+  // is the only way out once a lock blocks every machine.
+  secureHandle(IpcChannels.SYNC_PASSWORD_CHANGE_LOCK_STATUS, () => getPasswordChangeLockStatus())
+
+  secureHandle(IpcChannels.SYNC_PASSWORD_CHANGE_RELEASE_LOCKS, () =>
+    wrapIpc('Release lock failed', () => releasePasswordChangeLocks()),
   )
 
   secureHandle(IpcChannels.SYNC_RESET_TARGETS, (_event, targets: SyncResetTargets) =>

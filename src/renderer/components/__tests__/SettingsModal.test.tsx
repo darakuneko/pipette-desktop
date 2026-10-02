@@ -78,8 +78,16 @@ const KEY_LABEL_LIST_STUB = [
   { id: 'colemak', name: 'Colemak', uploaderName: 'pipette', filename: '', savedAt: '', updatedAt: '' },
   { id: 'japanese', name: 'Japanese (QWERTY)', uploaderName: 'pipette', filename: '', savedAt: '', updatedAt: '' },
 ]
+const mockPasswordChangeStatus = vi.fn()
+const mockPasswordChangeLockStatus = vi.fn()
+const mockPasswordChangeResume = vi.fn()
+const mockPasswordChangeReleaseLocks = vi.fn()
 Object.defineProperty(window, 'vialAPI', {
   value: {
+    syncPasswordChangeStatus: mockPasswordChangeStatus,
+    syncPasswordChangeLockStatus: mockPasswordChangeLockStatus,
+    syncPasswordChangeResume: mockPasswordChangeResume,
+    syncPasswordChangeReleaseLocks: mockPasswordChangeReleaseLocks,
     openExternal: mockOpenExternal,
     notificationFetch: mockNotificationFetch,
     keyLabelStoreList: async () => ({ success: true, data: KEY_LABEL_LIST_STUB }),
@@ -169,6 +177,14 @@ describe('SettingsModal', () => {
     for (const key of Object.keys(mockAppConfigState)) {
       if (key !== 'language') delete mockAppConfigState[key]
     }
+    mockPasswordChangeStatus.mockReset()
+    mockPasswordChangeStatus.mockResolvedValue({ kind: 'none' })
+    mockPasswordChangeLockStatus.mockReset()
+    mockPasswordChangeLockStatus.mockResolvedValue(null)
+    mockPasswordChangeResume.mockReset()
+    mockPasswordChangeResume.mockResolvedValue({ success: true })
+    mockPasswordChangeReleaseLocks.mockReset()
+    mockPasswordChangeReleaseLocks.mockResolvedValue({ success: true })
   })
 
   function renderAndSwitchToTools(props?: Partial<Parameters<typeof SettingsModal>[0]>) {
@@ -1297,6 +1313,89 @@ describe('SettingsModal', () => {
 
       fireEvent.click(screen.getByTestId('sync-retry-btn'))
       expect(retryRemoteCheck).toHaveBeenCalledOnce()
+    })
+  })
+
+  describe('sync password change', () => {
+    it('warns to close Pipette on other PCs in the change form', () => {
+      renderAndSwitchToData({ sync: makeSyncMock({ ...FULLY_CONFIGURED }) })
+      fireEvent.click(screen.getByTestId('sync-password-change-btn'))
+      expect(screen.getByTestId('sync-change-password-close-others')).toHaveTextContent('sync.passwordChange.closeOtherPcs')
+    })
+
+    it('replaces the password row with the change panel while a change is unfinished', async () => {
+      mockPasswordChangeStatus.mockResolvedValue({ kind: 'inProgress', target: 'new', step: 'reencrypting', startedAt: 1 })
+      renderAndSwitchToData({ sync: makeSyncMock({ ...FULLY_CONFIGURED }) })
+
+      await waitFor(() => expect(screen.getByTestId('sync-password-change-panel')).toBeInTheDocument())
+      expect(screen.queryByTestId('sync-password-set')).not.toBeInTheDocument()
+      expect(mockPasswordChangeLockStatus).not.toHaveBeenCalled()
+    })
+
+    it('returns to the password row once Continue finishes the change', async () => {
+      mockPasswordChangeStatus.mockResolvedValueOnce({ kind: 'inProgress', target: 'new', step: 'committing', startedAt: 1 })
+      renderAndSwitchToData({ sync: makeSyncMock({ ...FULLY_CONFIGURED }) })
+      await waitFor(() => expect(screen.getByTestId('sync-password-change-resume')).toBeInTheDocument())
+
+      fireEvent.click(screen.getByTestId('sync-password-change-resume'))
+
+      await waitFor(() => expect(screen.getByTestId('sync-password-set')).toBeInTheDocument())
+      expect(mockPasswordChangeResume).toHaveBeenCalledTimes(1)
+    })
+
+    it('moves a failed change from the form to the panel', async () => {
+      const sync = makeSyncMock({
+        ...FULLY_CONFIGURED,
+        changePassword: vi.fn().mockImplementation(async () => {
+          mockPasswordChangeStatus.mockResolvedValue({ kind: 'inProgress', target: 'new', step: 'reencrypting', startedAt: 1 })
+          return { success: false, error: 'sync.passwordChange.interrupted' }
+        }),
+      })
+      renderAndSwitchToData({ sync })
+      fireEvent.click(screen.getByTestId('sync-password-change-btn'))
+      fireEvent.change(screen.getByTestId('sync-password-input'), { target: { value: 'NewStr0ng!Pass' } })
+      await waitFor(() => expect(screen.getByTestId('sync-password-save')).not.toBeDisabled())
+      fireEvent.click(screen.getByTestId('sync-password-save'))
+
+      await waitFor(() => expect(screen.getByTestId('sync-password-change-panel')).toBeInTheDocument())
+      expect(screen.getByTestId('sync-password-change-error')).toHaveTextContent('sync.passwordChange.interrupted')
+      expect(screen.queryByTestId('sync-password-input')).not.toBeInTheDocument()
+    })
+
+    it('keeps an action error visible after the change panel closes', async () => {
+      mockPasswordChangeStatus.mockResolvedValueOnce({ kind: 'inProgress', target: 'new', step: 'locking', startedAt: 1 })
+      mockPasswordChangeResume.mockResolvedValue({ success: false, error: 'sync.passwordChange.notStarted' })
+      renderAndSwitchToData({ sync: makeSyncMock({ ...FULLY_CONFIGURED }) })
+      await waitFor(() => expect(screen.getByTestId('sync-password-change-resume')).toBeInTheDocument())
+
+      fireEvent.click(screen.getByTestId('sync-password-change-resume'))
+
+      await waitFor(() => expect(screen.getByTestId('sync-password-set')).toBeInTheDocument())
+      expect(screen.getByTestId('sync-password-change-result-error')).toHaveTextContent('sync.passwordChange.notStarted')
+
+      fireEvent.click(screen.getByTestId('sync-password-change-btn'))
+      expect(screen.queryByTestId('sync-password-change-result-error')).not.toBeInTheDocument()
+    })
+
+    it("shows another PC's lock with a two-step release", async () => {
+      mockPasswordChangeLockStatus.mockResolvedValueOnce({ startedAt: '2026-10-02T09:00:00.000Z', ownMachine: false })
+      renderAndSwitchToData({ sync: makeSyncMock({ ...FULLY_CONFIGURED }) })
+
+      await waitFor(() => expect(screen.getByTestId('sync-password-change-lock')).toBeInTheDocument())
+      expect(screen.getByTestId('sync-password-set')).toBeInTheDocument()
+
+      fireEvent.click(screen.getByTestId('sync-password-change-release'))
+      expect(mockPasswordChangeReleaseLocks).not.toHaveBeenCalled()
+      fireEvent.click(screen.getByTestId('sync-password-change-release-confirm'))
+
+      await waitFor(() => expect(screen.queryByTestId('sync-password-change-lock')).not.toBeInTheDocument())
+      expect(mockPasswordChangeReleaseLocks).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not look up the lock while signed out', async () => {
+      renderAndSwitchToData()
+      await waitFor(() => expect(mockPasswordChangeStatus).toHaveBeenCalled())
+      expect(mockPasswordChangeLockStatus).not.toHaveBeenCalled()
     })
   })
 })

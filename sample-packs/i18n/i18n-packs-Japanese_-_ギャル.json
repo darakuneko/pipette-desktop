@@ -1,5 +1,5 @@
 {
-  "version": "0.1.102",
+  "version": "0.1.103",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -908,7 +908,33 @@
       "undecryptable": "前のパスワードでも新しいパスワードでも開けないファイルが Google Drive にあるよ！消してから続けて☆",
       "notConverged": "パスワード変えてる間に Google Drive のファイルがずっと変わってたよ！ほかのPCの Pipette 閉じてから続けて☆",
       "blockedByOtherDevice": "別のPCで同期パスワード変えてる途中だから、終わるまでこっちの同期はお休みだよ☆",
-      "blockedLocal": "このPCのパスワード変更がまだ終わってないから、同期止めてるよ！先に続けるか、前のパスワードに戻すか、やめちゃってね☆"
+      "blockedLocal": "このPCのパスワード変更がまだ終わってないから、同期止めてるよ！先に続けるか、前のパスワードに戻すか、やめちゃってね☆",
+      "closeOtherPcs": "パスワード変え終わるまで、ほかのPCの Pipette は閉じといてね☆",
+      "working": "パスワード変更がんばってるとこ…",
+      "toNew": "新しいパスワードへの変更まだ終わってないよ！このPCの同期はお休み中☆",
+      "toOld": "前のパスワードに戻すのまだ終わってないよ！このPCの同期はお休み中☆",
+      "stepLabel": "今ここ: {{step}}",
+      "step": {
+        "locking": "準備中☆",
+        "reencrypting": "Google Drive のファイル暗号化し直し中☆",
+        "committing": "変更キメてるとこ☆",
+        "cleanup": "お片付け中☆"
+      },
+      "resume": "続ける☆",
+      "revertToOld": "前のパスワードに戻す",
+      "revertToNew": "やっぱ新しいパスワードにする☆",
+      "abandonLabel": "パスワード変えるのやめる",
+      "abandon": "やめる",
+      "confirmAbandon": "ほんとにやめる？",
+      "abandonWarning": "Google Drive のファイル、前のと新しいパスワードがごちゃ混ぜのまま残るかも！開けないやつは データ › クラウドデータ で消してね☆",
+      "deleteSkipped": "どっちかのパスワードで開けるから、消さないでおいたよ☆",
+      "releaseBusy": "このPCで同期中だよ！ちょっと待ってからもう一回やって☆",
+      "ownLockLeft": "このPCが Google Drive に置きっぱのロックのせいで、全部のPCの同期止まってるよ！",
+      "lockStartedAt": "始めた時間: {{time}}",
+      "releaseLockLabel": "Google Drive のパスワード変更ロック",
+      "releaseLock": "ロック外す☆",
+      "confirmRelease": "外しちゃっていい？",
+      "releaseWarning": "ほかのPCで同期とかパスワード変更とか動いてないか、ちゃんと見てね！"
     },
     "import": "インポート",
     "export": "エクスポート",

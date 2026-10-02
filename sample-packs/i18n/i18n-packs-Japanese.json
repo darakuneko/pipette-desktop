@@ -1,5 +1,5 @@
 {
-  "version": "0.1.102",
+  "version": "0.1.103",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -918,7 +918,33 @@
       "undecryptable": "旧パスワードでも新パスワードでも復号できないファイルが Google Drive にあります。削除してから続けてください。",
       "notConverged": "パスワード変更中に Google Drive のファイルが変更され続けました。ほかの PC の Pipette を閉じてから続けてください。",
       "blockedByOtherDevice": "別の PC で同期パスワードを変更中のため、終わるまでこの PC の同期を止めています。",
-      "blockedLocal": "この PC の同期パスワード変更が終わっていないため、同期を止めています。先に続けるか、旧パスワードに戻すか、中止してください。"
+      "blockedLocal": "この PC の同期パスワード変更が終わっていないため、同期を止めています。先に続けるか、旧パスワードに戻すか、中止してください。",
+      "closeOtherPcs": "パスワードの変更が終わるまで、ほかの PC の Pipette は閉じておいてください。",
+      "working": "パスワード変更を処理中...",
+      "toNew": "新しい同期パスワードへの変更が終わっていません。この PC の同期は止まっています。",
+      "toOld": "旧パスワードへの戻しが終わっていません。この PC の同期は止まっています。",
+      "stepLabel": "現在の段階: {{step}}",
+      "step": {
+        "locking": "準備中",
+        "reencrypting": "Google Drive のファイルを再暗号化中",
+        "committing": "変更の確定中",
+        "cleanup": "後片付け中"
+      },
+      "resume": "続ける",
+      "revertToOld": "旧パスワードに戻す",
+      "revertToNew": "やはり新パスワードに変更する",
+      "abandonLabel": "パスワード変更を中止する",
+      "abandon": "中止",
+      "confirmAbandon": "中止しますか？",
+      "abandonWarning": "Google Drive のファイルが旧・新パスワード混在のまま残ることがあります。復号できないファイルは データ › クラウドデータ で削除してください。",
+      "deleteSkipped": "どちらかのパスワードで開けるため、ファイルは削除しませんでした。",
+      "releaseBusy": "この PC で同期が実行中です。少し待ってからもう一度お試しください。",
+      "ownLockLeft": "この PC が Google Drive に残したパスワード変更のロックのため、すべての PC の同期が止まっています。",
+      "lockStartedAt": "開始: {{time}}",
+      "releaseLockLabel": "Google Drive のパスワード変更ロック",
+      "releaseLock": "ロックを解除",
+      "confirmRelease": "解除しますか？",
+      "releaseWarning": "ほかの PC で同期やパスワード変更が動いていないことを確認してください。"
     },
     "import": "インポート",
     "export": "エクスポート",

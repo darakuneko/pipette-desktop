@@ -37,6 +37,7 @@ export function KeyboardSavesContent(props: Props) {
   const [loading, setLoading] = useState(true)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false)
+  const [deleteAllError, setDeleteAllError] = useState<string | null>(null)
   const [confirmHubRemoveId, setConfirmHubRemoveId] = useState<string | null>(null)
 
   const actions = source === 'local' ? useSnapshotActions({ uid, deviceName: name }) : null
@@ -77,15 +78,25 @@ export function KeyboardSavesContent(props: Props) {
   }, [uid, source, loadEntries])
 
   const handleDeleteAll = useCallback(async () => {
-    if (source === 'local') {
-      await window.vialAPI.resetKeyboardData(uid)
-    } else {
-      await props.sync.resetSyncTargets({ keyboards: [uid], favorites: false })
+    setDeleteAllError(null)
+    let result: { success: boolean; error?: string }
+    try {
+      result = source === 'local'
+        ? await window.vialAPI.resetKeyboardData(uid)
+        : await props.sync.resetSyncTargets({ keyboards: [uid], favorites: false })
+    } catch {
+      result = { success: false }
+    }
+    if (!result.success) {
+      // e.g. refused while a sync password change pauses syncing
+      const errorKey = result.error ?? 'statusBar.sync.error'
+      setDeleteAllError(t(errorKey, errorKey))
+      return
     }
     setConfirmDeleteAll(false)
     setEntries([])
     props.onDeleted?.()
-  }, [uid, source, props])
+  }, [uid, source, props, t])
 
   // Hub actions (local only)
   const handleUploadToHub = useCallback(async (entryId: string) => {
@@ -114,6 +125,11 @@ export function KeyboardSavesContent(props: Props) {
 
   const deleteAllFooter = (
     <div className="mt-4 border-t border-edge pt-3 shrink-0">
+      {deleteAllError && (
+        <div className="mb-2 text-xs text-danger" data-testid="kb-saves-delete-all-error">
+          {deleteAllError}
+        </div>
+      )}
       <div className="flex items-center justify-end gap-2">
         {confirmDeleteAll ? (
           <>
@@ -129,7 +145,10 @@ export function KeyboardSavesContent(props: Props) {
             <button
               type="button"
               className={BTN_SECONDARY}
-              onClick={() => setConfirmDeleteAll(false)}
+              onClick={() => {
+                setConfirmDeleteAll(false)
+                setDeleteAllError(null)
+              }}
               data-testid="kb-saves-delete-all-cancel"
             >
               {t('common.cancel')}

@@ -74,6 +74,11 @@ export function PasswordSection({
           {t('sync.changePasswordInfo')}
         </div>
       )}
+      {!busy && changingPassword && (
+        <div className="rounded border border-warning/30 bg-warning/10 p-2 text-xs text-warning" data-testid="sync-change-password-close-others">
+          {t('sync.passwordChange.closeOtherPcs')}
+        </div>
+      )}
       {!busy && !changingPassword && sync.hasRemotePassword === true && (
         <div className="rounded border border-accent/50 bg-accent/10 p-2 text-xs text-accent" data-testid="sync-existing-password-hint">
           {t('sync.existingPasswordHint')}

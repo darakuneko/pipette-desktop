@@ -224,3 +224,8 @@ export async function isPasswordChangeLockHeld(fileId: string): Promise<boolean>
 export async function releasePasswordChangeLock(fileId: string): Promise<void> {
   await deleteFile(fileId)
 }
+
+/** Every listed lock, earliest (the holder) first. */
+export async function listPasswordChangeLocks(): Promise<DriveFile[]> {
+  return (await listLockFiles()).sort(compareLockFiles)
+}

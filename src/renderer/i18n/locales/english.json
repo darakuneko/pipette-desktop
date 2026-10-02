@@ -1,5 +1,5 @@
 {
-  "version": "0.1.102",
+  "version": "0.1.103",
   "name": "English",
   "common": {
     "save": "Save",
@@ -918,7 +918,33 @@
       "undecryptable": "Some files on Google Drive can't be decrypted with either the old or the new password. Delete them, then continue.",
       "notConverged": "Files on Google Drive kept changing during the password change. Close Pipette on your other PCs, then continue.",
       "blockedByOtherDevice": "Another PC is changing the sync password, so syncing is paused on this PC until it finishes.",
-      "blockedLocal": "A sync password change on this PC hasn't finished, so syncing is paused. Continue it, go back to the old password, or abandon it first."
+      "blockedLocal": "A sync password change on this PC hasn't finished, so syncing is paused. Continue it, go back to the old password, or abandon it first.",
+      "closeOtherPcs": "Close Pipette on your other PCs until the password change finishes.",
+      "working": "Working on the password change...",
+      "toNew": "Changing to the new sync password hasn't finished. Syncing is paused on this PC.",
+      "toOld": "Going back to the old sync password hasn't finished. Syncing is paused on this PC.",
+      "stepLabel": "Current step: {{step}}",
+      "step": {
+        "locking": "Preparing",
+        "reencrypting": "Re-encrypting files on Google Drive",
+        "committing": "Finishing the change",
+        "cleanup": "Cleaning up"
+      },
+      "resume": "Continue",
+      "revertToOld": "Go Back to Old Password",
+      "revertToNew": "Switch to New Password Instead",
+      "abandonLabel": "Give up the password change",
+      "abandon": "Abandon",
+      "confirmAbandon": "Abandon?",
+      "abandonWarning": "Files on Google Drive may stay mixed between the old and new passwords. Delete the ones that can't be decrypted in Data › Cloud Data.",
+      "deleteSkipped": "The file was not deleted because one of the passwords can open it.",
+      "releaseBusy": "A sync is running on this PC. Try again in a moment.",
+      "ownLockLeft": "A password change lock left on Google Drive by this PC is pausing sync on every PC.",
+      "lockStartedAt": "Started: {{time}}",
+      "releaseLockLabel": "Password change lock on Google Drive",
+      "releaseLock": "Release Lock",
+      "confirmRelease": "Release?",
+      "releaseWarning": "Make sure no other PC is syncing or changing the password."
     },
     "import": "Import",
     "export": "Export",
