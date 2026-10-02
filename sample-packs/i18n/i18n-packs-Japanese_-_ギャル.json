@@ -1,5 +1,5 @@
 {
-  "version": "0.1.103",
+  "version": "0.1.104",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -891,7 +891,11 @@
     "continueOffline": "オフラインでいくっしょ！",
     "noSyncYet": "まだ同期してないじゃん",
     "changePasswordError": {
-      "unauthenticated": "Google入ってからにして☆"
+      "unauthenticated": "Google入ってからにして☆",
+      "noPasswordFile": "このPCに同期パスワードないよｗ 変更じゃなくて決めてよ☆",
+      "decryptFailed": "保存したパスワード読めないから変えらんないんですけどｗ",
+      "keystoreUnavailable": "OSのキーチェーン使えなくて、ここじゃパスワード変えらんないっぽい…",
+      "remoteCheckFailed": "Google Driveにつながんない…あとでもっかい変えてみて！"
     },
     "changePasswordInProgress": "同期してるから後にしてｗ",
     "passwordChange": {
@@ -926,7 +930,7 @@
       "abandonLabel": "パスワード変えるのやめる",
       "abandon": "やめる",
       "confirmAbandon": "ほんとにやめる？",
-      "abandonWarning": "Google Drive のファイル、前のと新しいパスワードがごちゃ混ぜのまま残るかも！開けないやつは データ › クラウドデータ で消してね☆",
+      "abandonWarning": "Google Drive のファイル、前のと新しいパスワードがごちゃ混ぜのまま残るかも！開けないやつは データ☆ › Sync › クラウドデータ☆ で消してね☆",
       "deleteSkipped": "どっちかのパスワードで開けるから、消さないでおいたよ☆",
       "releaseBusy": "このPCで同期中だよ！ちょっと待ってからもう一回やって☆",
       "ownLockLeft": "このPCが Google Drive に置きっぱのロックのせいで、全部のPCの同期止まってるよ！",

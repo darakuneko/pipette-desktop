@@ -1,5 +1,5 @@
 {
-  "version": "0.1.103",
+  "version": "0.1.104",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -891,7 +891,11 @@
     "continueOffline": "オフラインで続けますえ",
     "noSyncYet": "まだ同期してまへんえ",
     "changePasswordError": {
-      "unauthenticated": "パスワードを変える前にGoogleにつないでおくれやす"
+      "unauthenticated": "パスワードを変える前にGoogleにつないでおくれやす",
+      "noPasswordFile": "このPCには同期パスワードがありまへん。変えるんやのうて設定しておくれやす",
+      "decryptFailed": "保存してあるパスワードが読めへんさかい、パスワードを変えられまへんえ",
+      "keystoreUnavailable": "OSのキーチェーンが使えへんさかい、ここではパスワードを変えられまへんなぁ",
+      "remoteCheckFailed": "Google Driveにつながらへんさかい、また後で変えてみておくれやす"
     },
     "changePasswordInProgress": "同期中やさかいパスワードを変えられまへんえ",
     "passwordChange": {
@@ -926,7 +930,7 @@
       "abandonLabel": "パスワードの変更を取りやめますえ",
       "abandon": "取りやめ",
       "confirmAbandon": "取りやめてもよろしおすか？",
-      "abandonWarning": "Google Drive のファイルが前と新しいパスワードの混ざったまま残るかもしれまへん。開けへんファイルは データ › クラウドデータ で消しておくれやす。",
+      "abandonWarning": "Google Drive のファイルが前と新しいパスワードの混ざったまま残るかもしれまへん。開けへんファイルは データ › Sync › クラウドデータ で消しておくれやす。",
       "deleteSkipped": "どちらかのパスワードで開けるさかい、ファイルは消してしまへんえ。",
       "releaseBusy": "このPCで同期してる最中どすえ。ちょっと待ってから、もういっぺん試しておくれやす。",
       "ownLockLeft": "このPCが Google Drive に残したパスワード変更のロックのせいで、どのPCの同期も止まってますえ。",

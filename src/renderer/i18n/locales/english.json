@@ -1,5 +1,5 @@
 {
-  "version": "0.1.103",
+  "version": "0.1.104",
   "name": "English",
   "common": {
     "save": "Save",
@@ -901,7 +901,11 @@
     "continueOffline": "Continue offline",
     "noSyncYet": "Not synced yet",
     "changePasswordError": {
-      "unauthenticated": "Please sign in to Google before changing the password."
+      "unauthenticated": "Please sign in to Google before changing the password.",
+      "noPasswordFile": "No sync password is saved on this PC. Set one instead of changing it.",
+      "decryptFailed": "Couldn't read the saved sync password, so it can't be changed.",
+      "keystoreUnavailable": "OS keychain is not available, so the sync password can't be changed here.",
+      "remoteCheckFailed": "Couldn't reach Google Drive. Try changing the password again later."
     },
     "changePasswordInProgress": "Cannot change password while sync is in progress.",
     "passwordChange": {
@@ -936,7 +940,7 @@
       "abandonLabel": "Give up the password change",
       "abandon": "Abandon",
       "confirmAbandon": "Abandon?",
-      "abandonWarning": "Files on Google Drive may stay mixed between the old and new passwords. Delete the ones that can't be decrypted in Data › Cloud Data.",
+      "abandonWarning": "Files on Google Drive may stay mixed between the old and new passwords. Delete the ones that can't be decrypted in Data › Sync › Cloud Data.",
       "deleteSkipped": "The file was not deleted because one of the passwords can open it.",
       "releaseBusy": "A sync is running on this PC. Try again in a moment.",
       "ownLockLeft": "A password change lock left on Google Drive by this PC is pausing sync on every PC.",

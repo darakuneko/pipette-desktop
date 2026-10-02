@@ -1,5 +1,5 @@
 {
-  "version": "0.1.103",
+  "version": "0.1.104",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -901,7 +901,11 @@
     "continueOffline": "オフラインで続行",
     "noSyncYet": "未同期",
     "changePasswordError": {
-      "unauthenticated": "パスワードを変更する前に Google にサインインしてください"
+      "unauthenticated": "パスワードを変更する前に Google にサインインしてください",
+      "noPasswordFile": "このPCには同期パスワードが保存されていません。変更ではなく設定してください",
+      "decryptFailed": "保存された同期パスワードを読み取れないため、パスワードを変更できません",
+      "keystoreUnavailable": "OSキーチェーンが利用できないため、ここではパスワードを変更できません",
+      "remoteCheckFailed": "Google Drive に接続できませんでした。しばらくしてからもう一度変更してください"
     },
     "changePasswordInProgress": "同期実行中のためパスワードを変更できません",
     "passwordChange": {
@@ -936,7 +940,7 @@
       "abandonLabel": "パスワード変更を中止する",
       "abandon": "中止",
       "confirmAbandon": "中止しますか？",
-      "abandonWarning": "Google Drive のファイルが旧・新パスワード混在のまま残ることがあります。復号できないファイルは データ › クラウドデータ で削除してください。",
+      "abandonWarning": "Google Drive のファイルが旧・新パスワード混在のまま残ることがあります。復号できないファイルは データ › Sync › クラウドデータ で削除してください。",
       "deleteSkipped": "どちらかのパスワードで開けるため、ファイルは削除しませんでした。",
       "releaseBusy": "この PC で同期が実行中です。少し待ってからもう一度お試しください。",
       "ownLockLeft": "この PC が Google Drive に残したパスワード変更のロックのため、すべての PC の同期が止まっています。",
