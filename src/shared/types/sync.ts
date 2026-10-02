@@ -189,10 +189,27 @@ export type SyncCredentialResult =
  *  the sync never actually ran — see `SyncOperationResult.status`'s doc). */
 export type SyncExecuteStatus = 'completed' | 'skipped' | 'partial'
 
-/** Why a sync was skipped (`status === 'skipped'`): either another sync was
- *  already in flight (`'busy'`), or the credential-readiness check failed
- *  (same reasons `SyncCredentialFailureReason` already enumerates). */
-export type SyncSkipReason = 'busy' | SyncCredentialFailureReason
+/** Why every sync entry point is refusing to touch Google Drive:
+ *  - `blockedByOtherDevice`: Drive holds a sync password-change lock and
+ *    this machine has no password change of its own
+ *  - `blockedLocal`: this machine has an unfinished password change; it
+ *    has to be finished, reverted or abandoned first */
+export type SyncBlockReason = 'blockedByOtherDevice' | 'blockedLocal'
+
+/** i18n key for a `SyncBlockReason` (used by progress, IPC errors and skip reasons). */
+export function syncBlockI18nKey(reason: SyncBlockReason): string {
+  return `sync.passwordChange.${reason}`
+}
+
+export function isSyncBlockReason(value: unknown): value is SyncBlockReason {
+  return value === 'blockedByOtherDevice' || value === 'blockedLocal'
+}
+
+/** Why a sync was skipped (`status === 'skipped'`): another sync was
+ *  already in flight (`'busy'`), the credential-readiness check failed
+ *  (same reasons `SyncCredentialFailureReason` already enumerates), or a
+ *  sync password change is in progress (`SyncBlockReason`). */
+export type SyncSkipReason = 'busy' | SyncCredentialFailureReason | SyncBlockReason
 
 /** Serializable IPC envelope so renderer code can branch on the reason. */
 export interface SyncOperationResult {

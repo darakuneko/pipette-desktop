@@ -6,7 +6,8 @@ import { app } from 'electron'
 import { listFiles, syncUnitFromFileName, type DriveFile } from './google-drive'
 import { pLimit } from '../../shared/concurrency'
 import { SYNC_CONCURRENCY, syncRuntime, emitProgress, errorMessage, updateRemoteState, broadcastPendingStatus } from './sync-runtime-state'
-import { requireSyncCredentials, validatePasswordCheck } from './sync-password'
+import { requireSyncCredentials, validatePasswordCheck, ensurePasswordCheckValidated } from './sync-password'
+import { localSyncBlock, remoteSyncBlock, emitSyncBlocked } from './sync-password-guard'
 import { matchesScope, listLocalKeyboardUids, shouldDownloadSyncUnit } from './sync-scope'
 import { mergeWithRemote, syncOrUpload } from './sync-merge-dispatch'
 import { collectAllSyncUnits } from './sync-bundle'
@@ -16,7 +17,7 @@ import { runPackGcAfterPass } from './pack-gc'
 import { reconcileOwnHashTypingAnalytics } from './sync-typing-remote'
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import { log } from '../logger'
-import type { SyncScope, SyncExecuteStatus, SyncSkipReason } from '../../shared/types/sync'
+import type { SyncScope, SyncExecuteStatus, SyncSkipReason, SyncBlockReason } from '../../shared/types/sync'
 import { syncCredentialI18nKey } from '../../shared/types/sync'
 
 /** Real outcome of an `executeSync` call. Threaded through SYNC_EXECUTE's
@@ -38,7 +39,15 @@ export async function executeSync(
   if (syncRuntime.isSyncing) return { status: 'skipped', skipReason: 'busy' }
   syncRuntime.isSyncing = true
 
+  const skipBlocked = (reason: SyncBlockReason): SyncExecuteResult => {
+    emitSyncBlocked(direction, reason)
+    return { status: 'skipped', skipReason: reason }
+  }
+
   try {
+    const localBlock = await localSyncBlock()
+    if (localBlock) return skipBlocked(localBlock)
+
     const credentials = await requireSyncCredentials()
     if (!credentials.ok) {
       emitProgress({
@@ -54,12 +63,15 @@ export async function executeSync(
     emitProgress({ direction, status: 'syncing', message: 'Starting sync...' })
 
     const initialFiles = await listFiles()
+    const remoteBlock = remoteSyncBlock(initialFiles)
+    if (remoteBlock) return skipBlocked(remoteBlock)
 
-    // Force password re-validation on scope 'all' (changePassword, listUndecryptable)
-    // Scoped syncs (including manual sync) respect the cached validation;
-    // decryption errors during actual file processing serve as implicit validation
-    if (scope === 'all' || !syncRuntime.passwordCheckValidated) {
+    // Scope 'all' always re-validates; scoped syncs skip it while the
+    // password-check is the one last validated (same modifiedTime).
+    if (scope === 'all') {
       await validatePasswordCheck(password, initialFiles)
+    } else {
+      await ensurePasswordCheckValidated(password, initialFiles)
     }
 
     let failedUnits: string[]

@@ -33,6 +33,8 @@ import {
   readChangeState,
   writeChangeState,
   clearChangeState,
+  hasChangeState,
+  forgetChangeStateCache,
   type PasswordChangeState,
 } from '../sync-password-change-state'
 
@@ -235,6 +237,44 @@ describe('sync-password-change-state', () => {
       await blockWithDirectory(STATE_FILE)
 
       await expect(clearChangeState()).rejects.toThrow()
+    })
+  })
+
+  describe('hasChangeState', () => {
+    const statePath = (): string => join(userDataRef.dir, 'local', 'auth', STATE_FILE)
+
+    it('follows writeChangeState and clearChangeState', async () => {
+      expect(await hasChangeState()).toBe(false)
+      await writeChangeState(VALID_STATE)
+      expect(await hasChangeState()).toBe(true)
+      await clearChangeState()
+      expect(await hasChangeState()).toBe(false)
+    })
+
+    it('counts an unreadable state file as a change in progress', async () => {
+      await mkdir(join(userDataRef.dir, 'local', 'auth'), { recursive: true })
+      await writeFile(statePath(), '{broken')
+      forgetChangeStateCache()
+
+      expect(await hasChangeState()).toBe(true)
+    })
+
+    it('keeps its answer until the cache is forgotten', async () => {
+      expect(await hasChangeState()).toBe(false)
+      await mkdir(join(userDataRef.dir, 'local', 'auth'), { recursive: true })
+      await writeFile(statePath(), JSON.stringify(VALID_STATE))
+
+      expect(await hasChangeState()).toBe(false)
+      forgetChangeStateCache()
+      expect(await hasChangeState()).toBe(true)
+    })
+
+    it('does not keep a read that overlapped a write', async () => {
+      const overlapping = hasChangeState()
+      await writeChangeState(VALID_STATE)
+      await overlapping
+
+      expect(await hasChangeState()).toBe(true)
     })
   })
 })

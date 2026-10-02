@@ -1,5 +1,5 @@
 {
-  "version": "0.1.101",
+  "version": "0.1.102",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -906,7 +906,9 @@
       "lockLost": "Google Drive のロックが消されたさかい（よそのPCからかもしれまへん）、パスワードの変更を止めましたえ。",
       "interrupted": "パスワードの変更が途中で止まりましたえ。あとで続けられますえ。",
       "undecryptable": "前のパスワードでも新しいパスワードでも開けへんファイルが Google Drive にありますえ。消してから続けておくれやす。",
-      "notConverged": "パスワードを変えてる間に Google Drive のファイルが変わり続けましたえ。よそのPCの Pipette を閉じてから続けておくれやす。"
+      "notConverged": "パスワードを変えてる間に Google Drive のファイルが変わり続けましたえ。よそのPCの Pipette を閉じてから続けておくれやす。",
+      "blockedByOtherDevice": "よそのPCで同期パスワードを変えてはる最中やさかい、済むまでこのPCの同期は止めてますえ。",
+      "blockedLocal": "このPCのパスワードの変更がまだ済んでへんさかい、同期を止めてますえ。先に続けるか、前のパスワードに戻すか、取りやめておくれやす。"
     },
     "import": "インポート",
     "export": "エクスポート",

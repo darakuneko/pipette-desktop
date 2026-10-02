@@ -1,5 +1,5 @@
 {
-  "version": "0.1.101",
+  "version": "0.1.102",
   "name": "English",
   "common": {
     "save": "Save",
@@ -916,7 +916,9 @@
       "lockLost": "The password change was stopped because its lock on Google Drive was removed, possibly from another PC.",
       "interrupted": "The password change was interrupted. You can continue it later.",
       "undecryptable": "Some files on Google Drive can't be decrypted with either the old or the new password. Delete them, then continue.",
-      "notConverged": "Files on Google Drive kept changing during the password change. Close Pipette on your other PCs, then continue."
+      "notConverged": "Files on Google Drive kept changing during the password change. Close Pipette on your other PCs, then continue.",
+      "blockedByOtherDevice": "Another PC is changing the sync password, so syncing is paused on this PC until it finishes.",
+      "blockedLocal": "A sync password change on this PC hasn't finished, so syncing is paused. Continue it, go back to the old password, or abandon it first."
     },
     "import": "Import",
     "export": "Export",

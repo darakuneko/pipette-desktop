@@ -17,6 +17,7 @@ import {
   requireSyncCredentials,
   SyncCredentialError,
   PasswordMismatchError,
+  findPasswordCheck,
 } from './sync-password'
 import { acquirePasswordChangeLock, findOwnPasswordChangeLock, releasePasswordChangeLock } from './sync-password-lock'
 import {
@@ -35,16 +36,18 @@ import {
   clearLocalChange,
   fileOpensWith,
   isOwnLockHeld,
-  passwordCheckFile,
   readFileKeyState,
   runPasswordSwitch,
 } from './sync-password-switch'
 import type { PasswordChangeStatus } from '../../shared/types/sync'
 
 /** Holds `isSyncing` for the whole operation and publishes it as
- *  `passwordChangeRun`, so the before-quit handler can wait for it. */
+ *  `passwordChangeRun`, so the before-quit handler can wait for it.
+ *  Analytics syncs (sync-analytics.ts) don't take `isSyncing`, so running
+ *  ones (`analyticsSyncingUids`) are checked separately; they don't start
+ *  while `passwordChangeRun` is set. */
 async function withSyncLock<T>(fn: () => Promise<T>): Promise<T> {
-  if (syncRuntime.isSyncing) throw new Error('sync.changePasswordInProgress')
+  if (syncRuntime.isSyncing || syncRuntime.analyticsSyncingUids.size > 0) throw new Error('sync.changePasswordInProgress')
   syncRuntime.isSyncing = true
   const run = fn()
   syncRuntime.passwordChangeRun = run.then(
@@ -129,7 +132,7 @@ export async function startPasswordChange(newPassword: string): Promise<void> {
     const oldPassword = credentials.password
     if (newPassword === oldPassword) throw new Error('sync.samePassword')
     // A missing password-check is created at commit.
-    const check = passwordCheckFile(await listFiles())
+    const check = findPasswordCheck(await listFiles())
     if (check && !(await fileOpensWith(check, oldPassword))) throw new PasswordMismatchError()
 
     // State before keys: keys without a state file are removed at startup,
@@ -284,7 +287,7 @@ export async function recoverPasswordChangeOnStartup(): Promise<PasswordChangeRe
       log('warn', 'sync password change: state file is unreadable; Drive files are left as they are')
       return 'invalid'
     }
-    if (syncRuntime.isSyncing) return 'busy'
+    if (syncRuntime.isSyncing || syncRuntime.analyticsSyncingUids.size > 0) return 'busy'
     const state = read.state
     return await withSyncLock(async (): Promise<PasswordChangeRecovery> => {
       if (state.step === 'locking') {

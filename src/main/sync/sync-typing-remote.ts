@@ -16,7 +16,8 @@ import {
   syncUnitFromFileName,
   type DriveFile,
 } from './google-drive'
-import { requireSyncCredentials } from './sync-password'
+import { requireSyncCredentials, ensurePasswordCheckValidated } from './sync-password'
+import { localSyncBlock, remoteSyncBlock } from './sync-password-guard'
 import { mergeDeviceDayBundle } from './sync-merge-dispatch'
 import {
   parseTypingAnalyticsDeviceDaySyncUnit,
@@ -171,12 +172,14 @@ export async function reconcileOwnHashTypingAnalytics(
  * owned by a non-own device. Used to decide whether the Sync > Typing
  * nav subtree is worth showing at all — a single listing is much
  * cheaper than expanding every keyboard. Returns `false` when the
- * user is unauthenticated. */
+ * user is unauthenticated or a sync password change is in progress. */
 export async function hasAnyRemoteTypingData(): Promise<boolean> {
   const credentials = await requireSyncCredentials()
   if (!credentials.ok) return false
   const ownHash = await getMachineHash()
+  if (await localSyncBlock()) return false
   const remoteFiles = await listFiles()
+  if (remoteSyncBlock(remoteFiles)) return false
   for (const file of remoteFiles) {
     const unit = syncUnitFromFileName(file.name)
     if (!unit) continue
@@ -191,14 +194,17 @@ export async function hasAnyRemoteTypingData(): Promise<boolean> {
  * holds any per-day file for under `uid`. Used by the Sync > Typing
  * subtree to discover remote devices before the user has ever opened
  * one — the cache-only `listRemoteHashesForUid` misses hashes that
- * haven't been merged locally yet. Sorted for stable UI order. */
+ * haven't been merged locally yet. Sorted for stable UI order. Empty
+ * while a sync password change is in progress. */
 export async function listRemoteTypingHashesForUidFromCloud(
   uid: string,
 ): Promise<string[]> {
   const credentials = await requireSyncCredentials()
   if (!credentials.ok) return []
   const ownHash = await getMachineHash()
+  if (await localSyncBlock()) return []
   const remoteFiles = await listFiles()
+  if (remoteSyncBlock(remoteFiles)) return []
   const hashes = new Set<string>()
   for (const file of remoteFiles) {
     const unit = syncUnitFromFileName(file.name)
@@ -215,14 +221,17 @@ export async function listRemoteTypingHashesForUidFromCloud(
  * callers can feed the list straight into a Sync > Typing > Device
  * tree without post-processing. An unauthenticated / network-failed
  * call returns an empty array — UIs surface the network error via
- * scanRemoteData or the sync progress channel separately. */
+ * scanRemoteData or the sync progress channel separately. So does a call
+ * while a sync password change is in progress. */
 export async function listRemoteTypingDaysFor(
   uid: string,
   machineHash: string,
 ): Promise<UtcDay[]> {
   const credentials = await requireSyncCredentials()
   if (!credentials.ok) return []
+  if (await localSyncBlock()) return []
   const remoteFiles = await listFiles()
+  if (remoteSyncBlock(remoteFiles)) return []
   const perUid = collectRemoteOwnHashDays(remoteFiles, machineHash)
   const days = perUid.get(uid)
   if (!days) return []
@@ -237,7 +246,9 @@ export async function listRemoteTypingDaysFor(
  * local copy (rule 3). Own-hash cache rows are accepted as stale until
  * the next rebuild — they live in the machine that owns the day.
  * Returns `true` when a cloud delete actually ran, `false` when the
- * user is unauthenticated or the cloud file was already missing. */
+ * user is unauthenticated or the cloud file was already missing. A sync
+ * password change in progress returns `false` before anything, local or
+ * remote, is removed. */
 export async function deleteRemoteTypingDay(
   uid: string,
   machineHash: string,
@@ -245,7 +256,10 @@ export async function deleteRemoteTypingDay(
 ): Promise<boolean> {
   const credentials = await requireSyncCredentials()
   if (!credentials.ok) return false
+  // Both checks run before the local copy is removed, so a refused delete changes nothing.
+  if (await localSyncBlock()) return false
   const remoteFiles = await listFiles()
+  if (remoteSyncBlock(remoteFiles)) return false
   const targetName = driveFileName(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, utcDay))
   const remoteFile = remoteFiles.find((f) => f.name === targetName)
   const userData = app.getPath('userData')
@@ -273,7 +287,9 @@ export async function deleteRemoteTypingDay(
 
 /** Lazily fetch a single remote (uid, machineHash, day) into the
  * local cache. Returns `true` when the day was downloaded and merged,
- * `false` when the cloud copy was missing or a credential check failed.
+ * `false` when the cloud copy was missing, a credential check failed or a
+ * sync password change is in progress. Throws `PasswordMismatchError`
+ * when the password-check does not open with the stored password.
  * Designed for the Sync > Typing > Device lazy-expand flow so the UI
  * can pull in only the days the user actually opens. */
 export async function fetchRemoteTypingDay(
@@ -284,10 +300,13 @@ export async function fetchRemoteTypingDay(
   const credentials = await requireSyncCredentials()
   if (!credentials.ok) return false
   const { password } = credentials
+  if (await localSyncBlock()) return false
   const remoteFiles = await listFiles()
+  if (remoteSyncBlock(remoteFiles)) return false
   const targetName = driveFileName(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, utcDay))
   const file = remoteFiles.find((f) => f.name === targetName)
   if (!file) return false
+  await ensurePasswordCheckValidated(password, remoteFiles)
   const envelope = await downloadFile(file.id)
   const plaintext = await decrypt(envelope, password)
   const remoteBundle = JSON.parse(plaintext) as SyncBundle

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.101",
+  "version": "0.1.102",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -906,7 +906,9 @@
       "lockLost": "Google Drive のロック消されちゃったから（別のPCかも）、パスワード変更ストップしたよ！",
       "interrupted": "パスワード変更途中で止まっちゃった！あとで続きできるよ☆",
       "undecryptable": "前のパスワードでも新しいパスワードでも開けないファイルが Google Drive にあるよ！消してから続けて☆",
-      "notConverged": "パスワード変えてる間に Google Drive のファイルがずっと変わってたよ！ほかのPCの Pipette 閉じてから続けて☆"
+      "notConverged": "パスワード変えてる間に Google Drive のファイルがずっと変わってたよ！ほかのPCの Pipette 閉じてから続けて☆",
+      "blockedByOtherDevice": "別のPCで同期パスワード変えてる途中だから、終わるまでこっちの同期はお休みだよ☆",
+      "blockedLocal": "このPCのパスワード変更がまだ終わってないから、同期止めてるよ！先に続けるか、前のパスワードに戻すか、やめちゃってね☆"
     },
     "import": "インポート",
     "export": "エクスポート",

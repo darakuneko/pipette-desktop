@@ -19,6 +19,7 @@
 
 import { useCallback, useState } from 'react'
 import type { TFunction } from 'i18next'
+import { isSyncBlockReason, syncBlockI18nKey } from '../../../shared/types/sync'
 
 export interface UsePackCloudPullResult {
   pulling: boolean
@@ -42,7 +43,8 @@ export function usePackCloudPull(
     try {
       const result = await window.vialAPI.syncExecute('download', 'packs')
       if (result.status === 'skipped') {
-        setActionError(t(`sync.pullError.${result.skipReason ?? 'busy'}`))
+        const reason = result.skipReason ?? 'busy'
+        setActionError(t(isSyncBlockReason(reason) ? syncBlockI18nKey(reason) : `sync.pullError.${reason}`))
       } else if (result.status === 'partial') {
         setActionError(t('sync.pullError.partial'))
       } else if (!result.success) {

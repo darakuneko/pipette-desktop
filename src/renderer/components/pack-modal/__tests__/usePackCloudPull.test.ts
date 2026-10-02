@@ -57,6 +57,17 @@ describe('usePackCloudPull', () => {
     expect(setActionError).toHaveBeenLastCalledWith('sync.pullError.unauthenticated')
   })
 
+  it.each(['blockedByOtherDevice', 'blockedLocal'])('surfaces the password-change message when the pull is skipped as %s', async (reason) => {
+    syncExecute.mockResolvedValue({ success: true, status: 'skipped', skipReason: reason })
+    const { result } = renderHook(() => usePackCloudPull(setActionError, t, 'i18n.errorGeneric'))
+
+    await act(async () => {
+      await result.current.pull()
+    })
+
+    expect(setActionError).toHaveBeenLastCalledWith(`sync.passwordChange.${reason}`)
+  })
+
   it('surfaces a localized error when the pull is partial', async () => {
     syncExecute.mockResolvedValue({ success: true, status: 'partial', error: '1 sync unit(s) failed' })
     const { result } = renderHook(() => usePackCloudPull(setActionError, t, 'i18n.errorGeneric'))

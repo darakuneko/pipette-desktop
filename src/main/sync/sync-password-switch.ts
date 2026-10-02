@@ -13,6 +13,7 @@ import {
   listFiles,
   downloadRawFile,
   uploadFile,
+  deleteFile,
   driveFileName,
   isDataFileName,
   PASSWORD_CHECK_UNIT,
@@ -28,7 +29,13 @@ import {
   type PasswordChangeKeys,
   type PasswordChangeState,
 } from './sync-password-change-state'
-import { PasswordMismatchError, resetPasswordCheckCache, writePasswordCheck } from './sync-password'
+import {
+  PasswordMismatchError,
+  findPasswordCheck,
+  listedPasswordChecks,
+  resetPasswordCheckCache,
+  writePasswordCheck,
+} from './sync-password'
 import type { SyncEnvelope } from '../../shared/types/sync'
 
 /** `chunkSize`: files per batch; the lock is re-checked before each batch.
@@ -151,11 +158,6 @@ async function convertFile(
  *  write changes it, so the file is checked again. */
 type ConfirmedOnTarget = Map<string, string>
 
-export function passwordCheckFile(files: DriveFile[]): DriveFile | undefined {
-  const name = driveFileName(PASSWORD_CHECK_UNIT)
-  return files.find((file) => file.name === name)
-}
-
 /** One pass over every data file. Transfer failures abort the pass after
  *  the started workers settle; the lock is re-checked before each chunk
  *  after the first. */
@@ -207,7 +209,7 @@ async function reencryptAll(state: PasswordChangeState, keys: PasswordChangeKeys
       // means another machine changed the password, so nothing is written.
       // Data files most likely share the password-check's key, so the first
       // pass tries that key first; later passes mostly see target-key files.
-      const check = passwordCheckFile(listed)
+      const check = findPasswordCheck(listed)
       const checkState = check ? await readFileKeyState(check, keys, state.target) : null
       if (checkState?.kind === 'neither') throw new PasswordMismatchError()
       otherFirst = checkState?.kind === 'other'
@@ -232,8 +234,13 @@ async function reencryptAll(state: PasswordChangeState, keys: PasswordChangeKeys
  *  different keys. */
 async function commit(state: PasswordChangeState, keys: PasswordChangeKeys): Promise<void> {
   const password = keyFor(keys, state.target)
-  const existing = passwordCheckFile(await listFiles({ nameContains: driveFileName(PASSWORD_CHECK_UNIT) }))
-  await writePasswordCheck(password, existing?.id)
+  const checks = listedPasswordChecks(await listFiles({ nameContains: driveFileName(PASSWORD_CHECK_UNIT) }))
+  const written = await writePasswordCheck(password, findPasswordCheck(checks)?.id)
+  // Extra password-checks (from two machines creating one at once) would
+  // still open with the other key; only the one just written is kept.
+  for (const extra of checks) {
+    if (extra.id !== written.id) await deleteFile(extra.id)
+  }
   await storePassword(password)
   resetPasswordCheckCache()
 }

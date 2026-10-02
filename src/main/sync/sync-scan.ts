@@ -15,6 +15,7 @@ import {
 import { pLimit } from '../../shared/concurrency'
 import { SYNC_CONCURRENCY } from './sync-runtime-state'
 import { requireSyncCredentials, validatePasswordCheck } from './sync-password'
+import { assertNoLocalPasswordChange, assertSyncAllowed, localSyncBlock, remoteSyncBlock } from './sync-password-guard'
 import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
 import { TYPING_TEST_TEXT_SYNC_UNIT } from '../typing-test-text-store'
 import { I18N_INDEX_SYNC_UNIT } from '../../shared/types/i18n-store'
@@ -22,12 +23,17 @@ import { THEME_INDEX_SYNC_UNIT } from '../../shared/types/theme-store'
 import { readKeyboardMetaIndex, getActiveKeyboardMetaMap } from './keyboard-meta'
 import type { SyncBundle, UndecryptableFile, SyncDataScanResult } from '../../shared/types/sync'
 
+/** Null without credentials. Throws `SyncBlockedError` while a sync
+ *  password change is in progress, like `PasswordMismatchError` when the
+ *  password-check does not open. */
 async function fetchValidatedDataFiles(): Promise<{ password: string; dataFiles: DriveFile[] } | null> {
   const credentials = await requireSyncCredentials()
   if (!credentials.ok) return null
   const { password } = credentials
+  await assertNoLocalPasswordChange()
   const remoteFiles = await listFiles()
 
+  await assertSyncAllowed(remoteFiles)
   await validatePasswordCheck(password, remoteFiles)
 
   const dataFiles = remoteFiles.filter((f) => isDataFileName(f.name))
@@ -171,11 +177,14 @@ export async function fetchRemoteBundle(syncUnit: string): Promise<SyncBundle | 
 
 /** Snapshot of the user's appData Drive listing as a name-only set,
  * for callers that need many existence checks (e.g. import). Returns
- * `null` when the user is unauthenticated so the caller can fall back
- * to a local-only check rather than rejecting outright. */
+ * `null` when the user is unauthenticated or a sync password change is
+ * in progress, so the caller can fall back to a local-only check rather
+ * than rejecting outright. */
 export async function listRemoteFileNames(): Promise<Set<string> | null> {
   const credentials = await requireSyncCredentials()
   if (!credentials.ok) return null
+  if (await localSyncBlock()) return null
   const remoteFiles = await listFiles()
+  if (remoteSyncBlock(remoteFiles)) return null
   return new Set(remoteFiles.map((f) => f.name).filter(isDataFileName))
 }

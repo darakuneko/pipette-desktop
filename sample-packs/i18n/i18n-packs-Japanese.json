@@ -1,5 +1,5 @@
 {
-  "version": "0.1.101",
+  "version": "0.1.102",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -916,7 +916,9 @@
       "lockLost": "Google Drive 上のロックが削除されたため（別の PC からの可能性があります）、パスワード変更を中止しました。",
       "interrupted": "パスワード変更が中断されました。後で続けられます。",
       "undecryptable": "旧パスワードでも新パスワードでも復号できないファイルが Google Drive にあります。削除してから続けてください。",
-      "notConverged": "パスワード変更中に Google Drive のファイルが変更され続けました。ほかの PC の Pipette を閉じてから続けてください。"
+      "notConverged": "パスワード変更中に Google Drive のファイルが変更され続けました。ほかの PC の Pipette を閉じてから続けてください。",
+      "blockedByOtherDevice": "別の PC で同期パスワードを変更中のため、終わるまでこの PC の同期を止めています。",
+      "blockedLocal": "この PC の同期パスワード変更が終わっていないため、同期を止めています。先に続けるか、旧パスワードに戻すか、中止してください。"
     },
     "import": "インポート",
     "export": "エクスポート",

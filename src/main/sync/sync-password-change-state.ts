@@ -184,12 +184,46 @@ export async function readChangeState(): Promise<ChangeStateReadResult> {
 export async function writeChangeState(state: PasswordChangeState): Promise<void> {
   const valid = parseChangeState(state)
   if (!valid) throw new Error('Invalid sync password change state')
-  await mkdir(getAuthDir(), { recursive: true })
-  await writeFileAtomic(statePath(), JSON.stringify(valid))
+  try {
+    await mkdir(getAuthDir(), { recursive: true })
+    await writeFileAtomic(statePath(), JSON.stringify(valid))
+  } finally {
+    forgetChangeStateCache()
+  }
 }
 
 /** Remove the state file; a missing file is not an error, any other failure is rethrown. */
 export async function clearChangeState(): Promise<void> {
-  // `force` ignores only a missing path; other errors (e.g. EISDIR, EACCES) still throw.
-  await rm(statePath(), { force: true })
+  try {
+    // `force` ignores only a missing path; other errors (e.g. EISDIR, EACCES) still throw.
+    await rm(statePath(), { force: true })
+  } finally {
+    forgetChangeStateCache()
+  }
+}
+
+// `hasChangeState` is asked before every sync pass, so its answer is kept
+// in memory. Keyed by the file path because `userData` is what locates it.
+// `generation` drops the result of a read that overlapped a write or clear.
+let changeStateCache: { path: string; present: boolean } | null = null
+let changeStateGeneration = 0
+
+/** Whether this machine has a password-change state file, readable or not
+ *  (`readChangeState` is `ok` or `invalid`). Cached until the next
+ *  `writeChangeState` / `clearChangeState` / `forgetChangeStateCache`. */
+export async function hasChangeState(): Promise<boolean> {
+  const path = statePath()
+  if (changeStateCache?.path === path) return changeStateCache.present
+  const generation = changeStateGeneration
+  const present = (await readChangeState()).kind !== 'none'
+  if (generation === changeStateGeneration) changeStateCache = { path, present }
+  return present
+}
+
+/** Drops the cached `hasChangeState` answer. Anything that removes or
+ *  writes the state file without the functions above (e.g. deleting the
+ *  whole `local/auth` directory) calls this. */
+export function forgetChangeStateCache(): void {
+  changeStateCache = null
+  changeStateGeneration++
 }

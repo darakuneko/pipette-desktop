@@ -85,7 +85,7 @@ export function CloudDataContent({ sync, scanResult, scanning, onRescan }: Cloud
       const targets: SyncResetTargets = { keyboards: false, favorites: false, [key]: true }
       const result = await sync.resetSyncTargets(targets)
       if (!result.success) {
-        setError(result.error ?? t('statusBar.sync.error'))
+        setError(result.error ? t(result.error, result.error) : t('statusBar.sync.error'))
         return
       }
       setConfirming(null)
@@ -103,7 +103,7 @@ export function CloudDataContent({ sync, scanResult, scanning, onRescan }: Cloud
     try {
       const result = await sync.deleteFiles([fileId])
       if (!result.success) {
-        setError(result.error ?? t('statusBar.sync.error'))
+        setError(result.error ? t(result.error, result.error) : t('statusBar.sync.error'))
         return
       }
       setConfirming(null)

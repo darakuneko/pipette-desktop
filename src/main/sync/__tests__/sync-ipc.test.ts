@@ -56,6 +56,10 @@ vi.mock('../google-drive', () => ({
 
 const mockCancelPendingChanges = vi.fn()
 const mockIsSyncInProgress = vi.fn(() => false)
+const mockAssertSyncAllowed = vi.fn(async () => {})
+const mockForgetChangeStateCache = vi.fn()
+const mockAssertNoLocalPasswordChange = vi.fn(async () => {})
+const { MockSyncBlockedError } = vi.hoisted(() => ({ MockSyncBlockedError: class MockSyncBlockedError extends Error {} }))
 vi.mock('../sync-service', () => ({
   executeAnalyticsSync: vi.fn(),
   executeSync: vi.fn(),
@@ -90,6 +94,10 @@ vi.mock('../sync-service', () => ({
   listRemoteTypingHashesForUidFromCloud: vi.fn(),
   listRemoteFileNames: vi.fn(),
   SyncCredentialError: class SyncCredentialError extends Error {},
+  SyncBlockedError: MockSyncBlockedError,
+  assertSyncAllowed: () => mockAssertSyncAllowed(),
+  forgetChangeStateCache: () => mockForgetChangeStateCache(),
+  assertNoLocalPasswordChange: () => mockAssertNoLocalPasswordChange(),
 }))
 
 vi.mock('../../typing-analytics/import-export', () => ({
@@ -99,7 +107,7 @@ vi.mock('../../typing-analytics/import-export', () => ({
 vi.mock('../../typing-analytics/machine-hash', () => ({ getMachineHash: vi.fn() }))
 vi.mock('../../typing-analytics/cache-rebuild', () => ({ ensureCacheIsFresh: vi.fn() }))
 vi.mock('../../typing-analytics/db/typing-analytics-db', () => ({ getTypingAnalyticsDB: vi.fn() }))
-vi.mock('../../typing-analytics/typing-analytics-service', () => ({ deleteAllTypingForKeyboard: vi.fn() }))
+vi.mock('../../typing-analytics/typing-analytics-service', () => ({ deleteAllTypingForKeyboard: vi.fn(async () => {}) }))
 
 vi.mock('../../ipc-guard', async () => {
   const { ipcMain } = await import('electron')
@@ -131,10 +139,90 @@ function getResetTargetsHandler(): ResetTargetsHandler {
   return match[1] as ResetTargetsHandler
 }
 
+function getHandler(channel: string): (...args: unknown[]) => Promise<{ success: boolean; error?: string }> {
+  const match = vi.mocked(ipcMain.handle).mock.calls.find(([c]) => c === channel)
+  if (!match) throw new Error(`${channel} handler not registered`)
+  return match[1] as (...args: unknown[]) => Promise<{ success: boolean; error?: string }>
+}
+
+describe('sync-ipc while a sync password change is in progress', () => {
+  const blockedKey = 'sync.passwordChange.blockedByOtherDevice'
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockIsSyncInProgress.mockReturnValue(false)
+    mockAssertSyncAllowed.mockRejectedValue(new MockSyncBlockedError(blockedKey))
+    setupSyncIpc()
+  })
+
+  it('SYNC_RESET_TARGETS deletes nothing', async () => {
+    const result = await getHandler(IpcChannels.SYNC_RESET_TARGETS)(null, { keyboards: true, favorites: true, keyLabels: true })
+
+    expect(result).toEqual({ success: false, error: blockedKey })
+    expect(mockDeleteFilesByPrefix).not.toHaveBeenCalled()
+    expect(mockDeleteFilesByExactName).not.toHaveBeenCalled()
+    expect(mockCancelPendingChanges).not.toHaveBeenCalled()
+  })
+
+  it('SYNC_DELETE_FILES deletes nothing', async () => {
+    const result = await getHandler(IpcChannels.SYNC_DELETE_FILES)(null, ['id-1'])
+
+    expect(result).toEqual({ success: false, error: blockedKey })
+    expect(mockDeleteFile).not.toHaveBeenCalled()
+  })
+
+  it('RESET_KEYBOARD_DATA is refused before anything is removed', async () => {
+    const result = await getHandler(IpcChannels.RESET_KEYBOARD_DATA)(null, 'uid1')
+
+    expect(result).toEqual({ success: false, error: blockedKey })
+    expect(mockDeleteFilesByPrefix).not.toHaveBeenCalled()
+    expect(mockCancelPendingChanges).not.toHaveBeenCalled()
+  })
+
+  it('RESET_KEYBOARD_DATA resets locally but skips the remote delete when Drive cannot be checked', async () => {
+    mockAssertSyncAllowed.mockRejectedValue(new Error('Not authenticated with Google Drive'))
+
+    const result = await getHandler(IpcChannels.RESET_KEYBOARD_DATA)(null, 'uid1')
+
+    expect(result.success).toBe(true)
+    expect(mockCancelPendingChanges).toHaveBeenCalledWith('keyboards/uid1/')
+    expect(mockDeleteFilesByPrefix).not.toHaveBeenCalled()
+  })
+
+  it('RESET_LOCAL_TARGETS refuses to remove app settings while a local password change exists', async () => {
+    mockAssertNoLocalPasswordChange.mockRejectedValueOnce(new MockSyncBlockedError('sync.passwordChange.blockedLocal'))
+    const { rm } = await import('node:fs/promises')
+
+    const result = await getHandler(IpcChannels.RESET_LOCAL_TARGETS)(null, { keyboards: true, favorites: false, appSettings: true })
+
+    expect(result).toEqual({ success: false, error: 'sync.passwordChange.blockedLocal' })
+    expect(rm).not.toHaveBeenCalled()
+    expect(mockCancelPendingChanges).not.toHaveBeenCalled()
+  })
+
+  it('RESET_LOCAL_TARGETS without app settings does not check for a password change', async () => {
+    mockAssertNoLocalPasswordChange.mockRejectedValueOnce(new MockSyncBlockedError('sync.passwordChange.blockedLocal'))
+
+    const result = await getHandler(IpcChannels.RESET_LOCAL_TARGETS)(null, { keyboards: true, favorites: false, appSettings: false })
+
+    expect(result.success).toBe(true)
+    mockAssertNoLocalPasswordChange.mockReset()
+    mockAssertNoLocalPasswordChange.mockResolvedValue(undefined)
+  })
+
+  it('RESET_LOCAL_TARGETS forgets the cached password-change state when it removes local/auth', async () => {
+    const result = await getHandler(IpcChannels.RESET_LOCAL_TARGETS)(null, { keyboards: false, favorites: false, appSettings: true })
+
+    expect(result.success).toBe(true)
+    expect(mockForgetChangeStateCache).toHaveBeenCalled()
+  })
+})
+
 describe('sync-ipc SYNC_RESET_TARGETS — keyLabels / typingTestTexts', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsSyncInProgress.mockReturnValue(false)
+    mockAssertSyncAllowed.mockResolvedValue(undefined)
     setupSyncIpc()
   })
 

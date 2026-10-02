@@ -11,6 +11,7 @@
 //   sync-scope.ts            — SyncScope matching / download filtering
 //   sync-password.ts         — credentials + password-check validation
 //   sync-password-change.ts  — resumable password change (+ -switch, -state, -lock)
+//   sync-password-guard.ts   — blocks every sync while a password change is in progress
 //   sync-merge-dispatch.ts   — per-sync-unit upload/merge/dispatch
 //   sync-scan.ts             — remote data inspection (scan/undecryptable)
 //   sync-typing-remote.ts    — typing-analytics remote day bookkeeping
@@ -33,6 +34,7 @@
 import { syncRuntime } from './sync-runtime-state'
 import { stopPolling, clearInFlightPollForTests } from './sync-polling'
 import { clearQuitFinalizersForTests } from './sync-flush'
+import { forgetChangeStateCache } from './sync-password-change-state'
 
 // --- Test helpers -------------------------------------------------------
 
@@ -48,11 +50,15 @@ export function _resetForTests(): void {
   syncRuntime.isSyncing = false
   syncRuntime.isQuitting = false
   syncRuntime.progressCallback = null
-  syncRuntime.passwordCheckValidated = false
+  syncRuntime.validatedPasswordCheck = null
+  syncRuntime.passwordCheckCreated = null
+  syncRuntime.passwordCheckCreating = null
   syncRuntime.passwordChangeUndecryptable = null
   syncRuntime.passwordChangeLockLost = false
   syncRuntime.passwordChangeRun = null
+  syncRuntime.analyticsSyncingUids.clear()
   clearQuitFinalizersForTests()
+  forgetChangeStateCache()
 }
 
 // --- Public re-exports ---------------------------------------------------
@@ -78,6 +84,9 @@ export { isAnalyticsSyncUnit, isRunLogSyncUnit } from './sync-bundle'
 export { readIndexFile, bundleSyncUnit, collectAllSyncUnits } from './sync-bundle'
 
 export { listUndecryptableFiles, scanRemoteData, fetchRemoteBundle, listRemoteFileNames } from './sync-scan'
+
+export { SyncBlockedError, assertSyncAllowed, assertNoLocalPasswordChange } from './sync-password-guard'
+export { forgetChangeStateCache } from './sync-password-change-state'
 
 export {
   resetPasswordCheckCache,
