@@ -874,7 +874,7 @@
     "changingPassword": "合言葉を書き換えております...",
     "settingPassword": "合言葉を定めております...",
     "samePassword": "以前と同じ合言葉では意味がございません",
-    "changePasswordUndecryptable": "開けぬ書物がございます。先にそれらを整理してくださいませ。",
+    "changePasswordUndecryptable": "現在の合言葉では開けぬ書物が Google Drive にございます。データ › Sync › クラウドの記録 にて整理なさってから、改めてお試しくださいませ。",
     "autoSync": "自動で揃える",
     "enable": "有効",
     "disable": "停止",

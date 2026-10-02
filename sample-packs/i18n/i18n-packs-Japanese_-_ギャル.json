@@ -874,7 +874,7 @@
     "changingPassword": "パスワード変更ちう…",
     "settingPassword": "パスワード設定ちう☆",
     "samePassword": "前と同じじゃん！変えてよｗ",
-    "changePasswordUndecryptable": "開けないファイルあるから先に消してきて☆",
+    "changePasswordUndecryptable": "今のパスワードで開けないファイルが Google Drive にあるよ☆ データ☆ › Sync › クラウドデータ☆ で消してからもう一回やってみて！",
     "autoSync": "自動同期っしょ",
     "enable": "おけ！",
     "disable": "停止☆",

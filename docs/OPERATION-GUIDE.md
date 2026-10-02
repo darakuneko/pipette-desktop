@@ -1825,7 +1825,7 @@ Operational errors (shown as the message directly, no reason code):
 |---------|---------|
 | "Cannot change password while sync is in progress." | A sync is already running — wait for it to finish |
 | "New password must be different from the current password." | The new password matches the existing one |
-| "Some files cannot be decrypted. Please scan and delete undecryptable files first." | Drive has files the current password cannot decrypt — delete them first via the Data panel's **Sync › Cloud Data** (§1.3) |
+| "Some files on Google Drive can't be decrypted with the current password. Delete them in Data › Sync › Cloud Data, then try again." | Drive has files the current password cannot decrypt — delete them first via the Data panel's **Sync › Cloud Data** (§1.3) |
 | "Sync password does not match. Please check your encryption password." | The current password fails to decrypt the remote password check — reconfirm the password you are providing |
 
 #### Sync Controls

@@ -884,7 +884,7 @@
     "changingPassword": "パスワードを変更中...",
     "settingPassword": "パスワードを設定中...",
     "samePassword": "現在と同じパスワードには変更できません",
-    "changePasswordUndecryptable": "復号できないファイルがあります。先に復号できないファイルをスキャンして削除してください。",
+    "changePasswordUndecryptable": "現在のパスワードで復号できないファイルが Google Drive にあります。データ › Sync › クラウドデータ から削除してから、もう一度お試しください。",
     "autoSync": "自動同期",
     "enable": "有効",
     "disable": "停止",

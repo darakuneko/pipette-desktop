@@ -884,7 +884,7 @@
     "changingPassword": "Changing password...",
     "settingPassword": "Setting password...",
     "samePassword": "New password must be different from the current password.",
-    "changePasswordUndecryptable": "Some files cannot be decrypted. Please scan and delete undecryptable files first.",
+    "changePasswordUndecryptable": "Some files on Google Drive can't be decrypted with the current password. Delete them in Data › Sync › Cloud Data, then try again.",
     "autoSync": "Auto Sync",
     "enable": "Enable",
     "disable": "Disable",
