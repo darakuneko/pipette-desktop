@@ -5,7 +5,15 @@
 
 import { encrypt, decrypt, retrievePasswordResult, storePassword, clearPassword } from './sync-crypto'
 import { getAuthStatus } from './google-auth'
-import { listFiles, downloadFile, uploadFile, driveFileName, type DriveFile } from './google-drive'
+import {
+  listFiles,
+  downloadFile,
+  uploadFile,
+  driveFileName,
+  isDataFileName,
+  PASSWORD_CHECK_UNIT,
+  type DriveFile,
+} from './google-drive'
 import { pLimit } from '../../shared/concurrency'
 import { SYNC_CONCURRENCY, syncRuntime } from './sync-runtime-state'
 import type { SyncCredentialFailureReason, SyncCredentialResult } from '../../shared/types/sync'
@@ -19,7 +27,6 @@ export class SyncCredentialError extends Error {
   }
 }
 
-export const PASSWORD_CHECK_UNIT = 'password-check'
 export const PASSWORD_CHECK_PAYLOAD = JSON.stringify({ type: 'password-check', version: 1 })
 
 export async function requireSyncCredentials(): Promise<SyncCredentialResult> {
@@ -96,7 +103,7 @@ export async function changePassword(newPassword: string): Promise<void> {
     await validatePasswordCheck(oldPassword, remoteFiles)
 
     const passwordCheckFileName = driveFileName(PASSWORD_CHECK_UNIT)
-    const dataFiles = remoteFiles.filter((f) => f.name !== passwordCheckFileName)
+    const dataFiles = remoteFiles.filter((f) => isDataFileName(f.name))
 
     // Phase 1: Download + decrypt all files (fail-fast on any error)
     const limit = pLimit(SYNC_CONCURRENCY)

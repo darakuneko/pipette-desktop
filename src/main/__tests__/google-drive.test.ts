@@ -48,6 +48,11 @@ import {
   deleteFile,
   downloadFile,
   deleteFilesByExactName,
+  deleteFilesByPrefix,
+  isDataFileName,
+  isPasswordChangeLockFile,
+  createRawFile,
+  downloadRawFile,
 } from '../sync/google-drive'
 import { retryTiming } from '../sync/drive-retry'
 import { getAccessToken } from '../sync/google-auth'
@@ -57,6 +62,21 @@ import type { SyncEnvelope } from '../../shared/types/sync'
 function extractFetchUrl(call: unknown): URL {
   const args = call as readonly [string | URL, RequestInit?]
   return new URL(typeof args[0] === 'string' ? args[0] : args[0].toString())
+}
+
+/** fetch stub that replays `steps` in order; an Error step is thrown and
+ *  a function step is called to build the response. */
+function stubSequence(steps: Array<Response | Error | (() => Response)>): ReturnType<typeof vi.fn> {
+  let i = 0
+  const fetchSpy = vi.fn(async () => {
+    const step = steps[Math.min(i, steps.length - 1)]
+    i++
+    if (step instanceof Error) throw step
+    if (typeof step === 'function') return step()
+    return step.clone()
+  })
+  vi.stubGlobal('fetch', fetchSpy)
+  return fetchSpy
 }
 
 describe('google-drive', () => {
@@ -337,6 +357,51 @@ describe('google-drive', () => {
     })
   })
 
+  // The remote reset (SYNC_RESET_TARGETS in sync-ipc.ts) deletes by these
+  // prefixes and exact names; none of them may reach the password-change
+  // lock, which only its holder (or an explicit unlock) removes.
+  describe('remote reset deletes', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('never deletes the password-change lock file', async () => {
+      const deletedIds: string[] = []
+      vi.stubGlobal('fetch', vi.fn(async (url: string | URL, init?: RequestInit) => {
+        if (init?.method === 'DELETE') {
+          deletedIds.push(extractFetchUrl([url]).pathname.split('/').pop() ?? '')
+          return new Response(null, { status: 204 })
+        }
+        return new Response(JSON.stringify({
+          files: [
+            { id: 'lock', name: 'password-change-lock.json', modifiedTime: 'm' },
+            { id: 'kb', name: 'keyboards_0x1_settings.enc', modifiedTime: 'm' },
+          ],
+        }), { status: 200 })
+      }))
+
+      for (const prefix of ['keyboards_', 'keyboards_0x1_', 'favorites_', 'i18n_', 'themes_']) {
+        await deleteFilesByPrefix(prefix)
+      }
+      await deleteFilesByExactName('key-labels.enc')
+      await deleteFilesByExactName('typing-test-texts.enc')
+
+      expect(deletedIds).not.toContain('lock')
+      expect(deletedIds).toContain('kb')
+    })
+  })
+
+  describe('isDataFileName', () => {
+    it('excludes the password-check and password-change lock files', () => {
+      expect(isDataFileName('favorites_macro.enc')).toBe(true)
+      expect(isDataFileName('password-check.enc')).toBe(false)
+      expect(isDataFileName('password-change-lock.json')).toBe(false)
+      expect(isDataFileName('password-change-lock.json.enc')).toBe(true)
+      expect(isPasswordChangeLockFile('password-change-lock.json')).toBe(true)
+      expect(isPasswordChangeLockFile('x_password-change-lock.json')).toBe(false)
+    })
+  })
+
   // A Drive listing spanning more than one page must be followed to
   // completion via `nextPageToken` — a single-page cap means a large
   // appDataFolder (many keyboards/devices/per-day analytics files)
@@ -405,21 +470,6 @@ describe('google-drive', () => {
             throw new TypeError('terminated')
           },
         }) as unknown as Response
-    }
-
-    /** fetch stub that replays `steps` in order; an Error step is thrown and
-     *  a function step is called to build the response. */
-    function stubSequence(steps: Array<Response | Error | (() => Response)>): ReturnType<typeof vi.fn> {
-      let i = 0
-      const fetchSpy = vi.fn(async () => {
-        const step = steps[Math.min(i, steps.length - 1)]
-        i++
-        if (step instanceof Error) throw step
-        if (typeof step === 'function') return step()
-        return step.clone()
-      })
-      vi.stubGlobal('fetch', fetchSpy)
-      return fetchSpy
     }
 
     afterEach(() => {
@@ -716,6 +766,75 @@ describe('google-drive', () => {
 
       await expect(listFiles()).rejects.toThrow('Not authenticated with Google Drive')
       expect(fetchSpy).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('raw (non-envelope) files', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('requests createdTime in the listing and returns it', async () => {
+      const file = { id: 'l1', name: 'password-change-lock.json', modifiedTime: 'm', createdTime: '2026-10-02T00:00:00.000Z' }
+      const fetchSpy = stubSequence([new Response(JSON.stringify({ files: [file] }), { status: 200 })])
+
+      const files = await listFiles()
+
+      const url = extractFetchUrl(fetchSpy.mock.calls[0])
+      expect(url.searchParams.get('fields')).toBe('nextPageToken, files(id, name, modifiedTime, createdTime)')
+      expect(files).toEqual([file])
+    })
+
+    it('creates a raw file in appDataFolder with a multipart POST and returns its id', async () => {
+      const fetchSpy = stubSequence([new Response(JSON.stringify({ id: 'new-lock' }), { status: 200 })])
+
+      const result = await createRawFile('password-change-lock.json', '{"a":1}')
+
+      expect(result).toEqual({ id: 'new-lock' })
+      const call = fetchSpy.mock.calls[0] as unknown as [string, RequestInit]
+      const url = extractFetchUrl(call)
+      expect(url.pathname).toBe('/upload/drive/v3/files')
+      expect(url.searchParams.get('uploadType')).toBe('multipart')
+      expect(url.searchParams.get('fields')).toBe('id')
+      expect(call[1].method).toBe('POST')
+      const body = call[1].body as string
+      expect(body).toContain(JSON.stringify({ name: 'password-change-lock.json', parents: ['appDataFolder'] }))
+      expect(body).toContain('{"a":1}')
+    })
+
+    it('does not retry a raw create on 5xx or a network error', async () => {
+      const fetch5xx = stubSequence([new Response('boom', { status: 503 })])
+      await expect(createRawFile('x.json', '{}')).rejects.toThrow('Drive upload failed: 503 boom')
+      expect(fetch5xx).toHaveBeenCalledOnce()
+
+      const fetchNet = stubSequence([new TypeError('fetch failed')])
+      await expect(createRawFile('x.json', '{}')).rejects.toThrow('fetch failed')
+      expect(fetchNet).toHaveBeenCalledOnce()
+    })
+
+    it('retries a raw create on 429', async () => {
+      const fetchSpy = stubSequence([
+        new Response('slow down', { status: 429 }),
+        new Response(JSON.stringify({ id: 'new-lock' }), { status: 200 }),
+      ])
+
+      await expect(createRawFile('x.json', '{}')).resolves.toEqual({ id: 'new-lock' })
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('downloads a raw file as text without parsing it', async () => {
+      const fetchSpy = stubSequence([new Response('not json', { status: 200 })])
+
+      await expect(downloadRawFile('lock-1')).resolves.toBe('not json')
+      const url = extractFetchUrl(fetchSpy.mock.calls[0])
+      expect(url.pathname).toBe('/drive/v3/files/lock-1')
+      expect(url.searchParams.get('alt')).toBe('media')
+    })
+
+    it('throws on a failed raw download in the existing message style', async () => {
+      stubSequence([new Response('nope', { status: 400 })])
+
+      await expect(downloadRawFile('lock-1')).rejects.toThrow('Drive download failed: 400 nope')
     })
   })
 })

@@ -9,11 +9,12 @@ import {
   downloadFile,
   driveFileName,
   syncUnitFromFileName,
+  isDataFileName,
   type DriveFile,
 } from './google-drive'
 import { pLimit } from '../../shared/concurrency'
 import { SYNC_CONCURRENCY } from './sync-runtime-state'
-import { requireSyncCredentials, PASSWORD_CHECK_UNIT, validatePasswordCheck } from './sync-password'
+import { requireSyncCredentials, validatePasswordCheck } from './sync-password'
 import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
 import { TYPING_TEST_TEXT_SYNC_UNIT } from '../typing-test-text-store'
 import { I18N_INDEX_SYNC_UNIT } from '../../shared/types/i18n-store'
@@ -29,8 +30,7 @@ async function fetchValidatedDataFiles(): Promise<{ password: string; dataFiles:
 
   await validatePasswordCheck(password, remoteFiles)
 
-  const passwordCheckFileName = driveFileName(PASSWORD_CHECK_UNIT)
-  const dataFiles = remoteFiles.filter((f) => f.name !== passwordCheckFileName)
+  const dataFiles = remoteFiles.filter((f) => isDataFileName(f.name))
   return { password, dataFiles }
 }
 
@@ -177,5 +177,5 @@ export async function listRemoteFileNames(): Promise<Set<string> | null> {
   const credentials = await requireSyncCredentials()
   if (!credentials.ok) return null
   const remoteFiles = await listFiles()
-  return new Set(remoteFiles.map((f) => f.name))
+  return new Set(remoteFiles.map((f) => f.name).filter(isDataFileName))
 }

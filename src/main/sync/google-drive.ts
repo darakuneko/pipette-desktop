@@ -15,6 +15,9 @@ export interface DriveFile {
   id: string
   name: string
   modifiedTime: string
+  /** RFC 3339 time Drive assigned when the file was created. Optional
+   *  because a listing that does not request the field omits it. */
+  createdTime?: string
 }
 
 async function authHeaders(): Promise<Record<string, string>> {
@@ -48,7 +51,7 @@ export async function listFiles(options?: ListFilesOptions): Promise<DriveFile[]
   do {
     const params = new URLSearchParams({
       spaces: 'appDataFolder',
-      fields: 'nextPageToken, files(id, name, modifiedTime)',
+      fields: 'nextPageToken, files(id, name, modifiedTime, createdTime)',
       pageSize: '1000',
     })
     const filter = options?.nameContains
@@ -73,7 +76,8 @@ export async function listFiles(options?: ListFilesOptions): Promise<DriveFile[]
   return files
 }
 
-export async function downloadFile(fileId: string): Promise<SyncEnvelope> {
+/** Downloads a file's content as text, without parsing it. */
+export async function downloadRawFile(fileId: string): Promise<string> {
   const params = new URLSearchParams({ alt: 'media' })
 
   const { text } = await driveRequest({
@@ -83,7 +87,11 @@ export async function downloadFile(fileId: string): Promise<SyncEnvelope> {
     retryTransient: true,
   })
 
-  return JSON.parse(text) as SyncEnvelope
+  return text
+}
+
+export async function downloadFile(fileId: string): Promise<SyncEnvelope> {
+  return JSON.parse(await downloadRawFile(fileId)) as SyncEnvelope
 }
 
 export interface UploadedFile {
@@ -123,7 +131,22 @@ export async function uploadFile(
     return JSON.parse(text) as UploadedFile
   }
 
-  // Create new file with multipart upload
+  // `fields` requested explicitly — same reasoning as the update path above.
+  const text = await createAppDataFile(name, content, 'id,modifiedTime')
+  return JSON.parse(text) as UploadedFile
+}
+
+/** Creates a new appDataFolder file whose content is `content` as is (no
+ *  sync envelope) and returns the id Drive assigned. */
+export async function createRawFile(name: string, content: string): Promise<{ id: string }> {
+  const text = await createAppDataFile(name, content, 'id')
+  const { id } = JSON.parse(text) as { id: string }
+  return { id }
+}
+
+/** Multipart create in appDataFolder; resolves with the response body
+ *  restricted to `fields`. */
+async function createAppDataFile(name: string, content: string, fields: string): Promise<string> {
   const metadata = {
     name,
     parents: ['appDataFolder'],
@@ -142,7 +165,6 @@ export async function uploadFile(
     `--${boundary}--`,
   ].join('\r\n')
 
-  // `fields` requested explicitly — same reasoning as the update path above.
   // Only rate-limit responses are retried here: after a 5xx or a network
   // error the file may already have been created, and sending the create
   // again would leave two files with the same name.
@@ -150,7 +172,7 @@ export async function uploadFile(
     label: 'upload',
     getHeaders: authHeaders,
     send: (headers) =>
-      fetch(`${UPLOAD_API}/files?uploadType=multipart&fields=id,modifiedTime`, {
+      fetch(`${UPLOAD_API}/files?uploadType=multipart&fields=${fields}`, {
         method: 'POST',
         headers: {
           ...headers,
@@ -161,7 +183,7 @@ export async function uploadFile(
     retryTransient: false,
   })
 
-  return JSON.parse(text) as UploadedFile
+  return text
 }
 
 export async function deleteFile(fileId: string): Promise<void> {
@@ -196,6 +218,25 @@ export function driveFileName(syncUnit: string): string {
  * filename scheme ever changes. */
 export function driveFilenamePrefix(syncUnitPrefix: string): string {
   return syncUnitPrefix.replaceAll('/', '_')
+}
+
+/** Sync unit of the encrypted password-check sentinel file. Its envelope
+ *  carries this as `syncUnit`, but it is a credential check, not data. */
+export const PASSWORD_CHECK_UNIT = 'password-check'
+
+/** Unencrypted lock a machine holds while it re-encrypts every remote file
+ *  under a new sync password (sync-password-lock.ts). */
+export const PASSWORD_CHANGE_LOCK_FILE = 'password-change-lock.json'
+
+export function isPasswordChangeLockFile(name: string): boolean {
+  return name === PASSWORD_CHANGE_LOCK_FILE
+}
+
+/** Whether a listed file holds encrypted user data, i.e. is neither the
+ *  password-check sentinel nor the password-change lock. Listings keep both
+ *  so sync entry points can see them; data handling filters with this. */
+export function isDataFileName(name: string): boolean {
+  return name !== driveFileName(PASSWORD_CHECK_UNIT) && !isPasswordChangeLockFile(name)
 }
 
 /** Filenames with no uid/packId segment — a plain Map lookup resolves
@@ -250,8 +291,8 @@ export function syncUnitFromFileName(fileName: string): string | null {
   if (themePackMatch) return `themes/packs/${themePackMatch[1]}`
 
   // "password-check.enc" is intentionally never mapped to a sync unit —
-  // it's a standalone credential-validation file (see sync-password.ts's
-  // PASSWORD_CHECK_UNIT), not a data sync unit, and must stay invisible
+  // it's a standalone credential-validation file (PASSWORD_CHECK_UNIT
+  // above), not a data sync unit, and must stay invisible
   // to scanRemoteData / polling / fresh-machine discovery.
 
   return null

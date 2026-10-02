@@ -62,6 +62,8 @@ vi.mock('../sync/google-drive', async () => {
     deleteFile: (...args: unknown[]) => mockDeleteFile(...(args as Parameters<typeof mockDeleteFile>)),
     driveFileName: actual.driveFileName,
     syncUnitFromFileName: actual.syncUnitFromFileName,
+    isDataFileName: actual.isDataFileName,
+    PASSWORD_CHECK_UNIT: actual.PASSWORD_CHECK_UNIT,
   }
 })
 
@@ -222,6 +224,7 @@ import {
   resetPasswordCheckCache,
   listUndecryptableFiles,
   scanRemoteData,
+  listRemoteFileNames,
   changePassword,
   checkPasswordCheckExists,
   setPasswordAndValidate,
@@ -1568,12 +1571,56 @@ describe('sync-service', () => {
       expect(result.typingTestTexts).toBe(true)
       expect(result.keyLabels).toBe(false)
     })
+    it('never downloads the password-change lock file as data', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'lock', name: 'password-change-lock.json', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'f1', name: 'favorites_macro.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile.mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+      mockDecrypt.mockRejectedValueOnce(new Error('bad'))
+
+      const result = await scanRemoteData()
+
+      expect(mockDownloadFile).toHaveBeenCalledTimes(1)
+      expect(mockDownloadFile).toHaveBeenCalledWith('f1')
+      expect(result.undecryptable.map((f) => f.fileId)).toEqual(['f1'])
+    })
+  })
+
+  describe('listRemoteFileNames', () => {
+    it('leaves the password-change lock file out of the name set', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'lock', name: 'password-change-lock.json', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'f1', name: 'favorites_macro.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+
+      const names = await listRemoteFileNames()
+
+      expect(names).toEqual(new Set(['favorites_macro.enc']))
+    })
   })
 
   describe('changePassword', () => {
     const mockDecrypt = vi.mocked(mockDecryptFn)
     const mockEncrypt = vi.mocked(mockEncryptFn)
     const mockStorePassword = vi.mocked(mockStorePasswordFn)
+
+    it('leaves the password-change lock file out of the re-encryption', async () => {
+      mockListFiles.mockResolvedValue([
+        PASSWORD_CHECK_DRIVE_FILE,
+        { id: 'lock', name: 'password-change-lock.json', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile
+        .mockResolvedValueOnce(makePasswordCheckEnvelope()) // validatePasswordCheck
+        .mockResolvedValueOnce({ version: 1, syncUnit: 'favorites/tapDance', ciphertext: '{"data":"test"}' })
+
+      await changePassword('new-password')
+
+      expect(mockDownloadFile).toHaveBeenCalledTimes(2)
+      expect(mockDownloadFile).not.toHaveBeenCalledWith('lock')
+      expect(mockUploadFile.mock.calls.map((call) => call[0])).toEqual(['favorites_tapDance.enc', 'password-check.enc'])
+    })
 
     it('re-encrypts all files and uploads with new password', async () => {
       const dataFile = {
