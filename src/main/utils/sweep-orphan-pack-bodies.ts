@@ -2,9 +2,12 @@
 //
 // Shared orphan-file sweep body for the i18n/theme pack stores: deletes
 // any `.json` file in `packsDir` that has no matching entry in
-// `knownFileNames`, plus any stray `*.json.tmp` leftover — the
-// temp-file half of `writeFileAtomic`'s temp-file-then-rename that never
-// got renamed (a crash between the write and the rename). A `.tmp` file
+// `knownFileNames`, plus any stray temp-file leftover — the temp-file
+// half of `writeFileAtomic`'s temp-file-then-rename that never got
+// renamed (a crash between the write and the rename). `writeFileAtomic`
+// names it `<name>.json.<pid>.<hex>.tmp`; the plain `<name>.json.tmp`
+// form is matched too, since earlier releases can have left one on disk.
+// A `.tmp` file
 // is always an orphan by construction: nothing ever reads it back, and
 // `knownFileNames` (built from real `.json` entries) can never contain
 // its name, so it's swept unconditionally rather than checked against
@@ -17,6 +20,8 @@
 import { readdir, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 
+const TEMP_FILE_PATTERN = /\.json(?:\.\d+\.[0-9a-f]+)?\.tmp$/
+
 /** Best-effort: a missing `packsDir` or a per-file unlink failure is
  *  swallowed, returning however many files were actually removed. */
 export async function sweepOrphanFiles(packsDir: string, knownFileNames: ReadonlySet<string>): Promise<number> {
@@ -24,7 +29,7 @@ export async function sweepOrphanFiles(packsDir: string, knownFileNames: Readonl
   try {
     const entries = await readdir(packsDir)
     for (const file of entries) {
-      const isOrphanCandidate = file.endsWith('.json.tmp') ||
+      const isOrphanCandidate = TEMP_FILE_PATTERN.test(file) ||
         (file.endsWith('.json') && !knownFileNames.has(file))
       if (!isOrphanCandidate) continue
       try {

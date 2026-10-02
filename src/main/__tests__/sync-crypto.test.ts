@@ -45,6 +45,12 @@ vi.mock('node:fs/promises', () => {
       if (!store.has(path)) throw new Error('ENOENT')
       store.delete(path)
     }),
+    rename: vi.fn(async (from: string, to: string) => {
+      const data = store.get(from)
+      if (!data) throw new Error('ENOENT')
+      store.set(to, data)
+      store.delete(from)
+    }),
     mkdir: vi.fn(async () => {}),
     // Expose store for test reset
     _testStore: store,
@@ -203,6 +209,18 @@ describe('sync-crypto', () => {
       await storePassword('my-secure-password')
       const result = await retrievePasswordResult()
       expect(result).toEqual({ ok: true, password: 'my-secure-password' })
+    })
+
+    it('storePassword writes a temp file and renames it into place', async () => {
+      const fs = await import('node:fs/promises')
+      await storePassword('atomic-password')
+
+      const target = '/mock/userData/local/auth/sync-password.enc'
+      const tmpPath = vi.mocked(fs.writeFile).mock.calls[0][0]
+      expect(tmpPath).toMatch(/^\/mock\/userData\/local\/auth\/sync-password\.enc\.\d+\.[0-9a-f]+\.tmp$/)
+      expect(vi.mocked(fs.rename)).toHaveBeenCalledWith(tmpPath, target)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect([...(fs as any)._testStore.keys()]).toEqual([target])
     })
 
     it('hasStoredPassword returns false when no password stored', async () => {

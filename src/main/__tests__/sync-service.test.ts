@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
-import { access, mkdtemp, readFile, rm, stat, utimes, writeFile, mkdir } from 'node:fs/promises'
+import { access, mkdtemp, readdir, readFile, rm, stat, utimes, writeFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import type { DriveFile } from '../sync/google-drive'
 
@@ -3099,11 +3099,10 @@ describe('sync-service', () => {
         await readFile(join(mockUserDataPath, 'sync', dir, 'packs', `${packId}.json`), 'utf-8'),
       ) as { version: string }
       expect(written.version).toBe('2.0.0')
-      // applySyncedPackBody writes via temp-file-then-rename — the `.tmp`
-      // must never linger after a successful write.
-      await expect(
-        access(join(mockUserDataPath, 'sync', dir, 'packs', `${packId}.json.tmp`)),
-      ).rejects.toThrow()
+      // applySyncedPackBody writes via temp-file-then-rename — no `.tmp`
+      // sibling may linger after a successful write.
+      const packFiles = await readdir(join(mockUserDataPath, 'sync', dir, 'packs'))
+      expect(packFiles.filter((f) => f.endsWith('.tmp'))).toEqual([])
     })
 
     it('local i18n-pack file newer than remote drive modifiedTime: local kept, remote re-uploaded', async () => {

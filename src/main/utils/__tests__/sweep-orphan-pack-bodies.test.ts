@@ -85,4 +85,14 @@ describe('sweepOrphanFiles', () => {
     expect(remaining).toContain('kept.json')
     expect(remaining).not.toContain('kept.json.tmp')
   })
+
+  it('removes a stray per-write temp file (`<name>.json.<pid>.<hex>.tmp`)', async () => {
+    await writeFile(join(dir, 'kept.json'), '{}', 'utf-8')
+    await writeFile(join(dir, 'kept.json.4242.0a1b2c3d.tmp'), '{}', 'utf-8')
+
+    const removed = await sweepOrphanFiles(dir, new Set(['kept.json']))
+
+    expect(removed).toBe(1)
+    expect(await readdir(dir)).toEqual(['kept.json'])
+  })
 })

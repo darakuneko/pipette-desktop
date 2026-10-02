@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Encryption (PBKDF2 + AES-256-GCM) and password management via safeStorage
 
-import { safeStorage, app } from 'electron'
+import { safeStorage } from 'electron'
 import { randomBytes, pbkdf2, createCipheriv, createDecipheriv } from 'node:crypto'
-import { writeFile, readFile, unlink, mkdir } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { ZxcvbnFactory } from '@zxcvbn-ts/core'
 import * as zxcvbnCommonPackage from '@zxcvbn-ts/language-common'
 import * as zxcvbnEnPackage from '@zxcvbn-ts/language-en'
 import type { SyncCredentialResult, SyncEnvelope } from '../../shared/types/sync'
+import { clearSecretFile, getAuthDir, retrieveSecretFile, storeSecretFile } from './sync-secret-file'
 import type { PasswordStrength } from '../../shared/types/sync'
 
 const pbkdf2Async = promisify(pbkdf2)
@@ -35,7 +36,7 @@ const zxcvbnInstance = new ZxcvbnFactory({
 })
 
 function getPasswordPath(): string {
-  return join(app.getPath('userData'), 'local', 'auth', PASSWORD_FILE)
+  return join(getAuthDir(), PASSWORD_FILE)
 }
 
 async function deriveKey(password: string, salt: Buffer): Promise<Buffer> {
@@ -97,39 +98,11 @@ export async function decrypt(envelope: SyncEnvelope, password: string): Promise
 }
 
 export async function storePassword(password: string): Promise<void> {
-  if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error('OS keychain encryption is not available')
-  }
-  const encrypted = safeStorage.encryptString(password)
-  const dir = join(app.getPath('userData'), 'local', 'auth')
-  await mkdir(dir, { recursive: true })
-  await writeFile(getPasswordPath(), encrypted)
+  await storeSecretFile(getPasswordPath(), password)
 }
 
-/**
- * Surface why we couldn't return a password instead of collapsing every failure
- * into `null`. We probe the file first so the happy path skips the OS keychain
- * availability check; the probe only runs when we actually have to disambiguate
- * a decrypt failure from a missing keystore.
- */
 export async function retrievePasswordResult(): Promise<SyncCredentialResult> {
-  let encrypted: Buffer
-  try {
-    encrypted = await readFile(getPasswordPath())
-  } catch {
-    if (!safeStorage.isEncryptionAvailable()) {
-      return { ok: false, reason: 'keystoreUnavailable' }
-    }
-    return { ok: false, reason: 'noPasswordFile' }
-  }
-  try {
-    return { ok: true, password: safeStorage.decryptString(encrypted) }
-  } catch {
-    if (!safeStorage.isEncryptionAvailable()) {
-      return { ok: false, reason: 'keystoreUnavailable' }
-    }
-    return { ok: false, reason: 'decryptFailed' }
-  }
+  return retrieveSecretFile(getPasswordPath())
 }
 
 export async function hasStoredPassword(): Promise<boolean> {
@@ -143,11 +116,8 @@ export async function hasStoredPassword(): Promise<boolean> {
 }
 
 export async function clearPassword(): Promise<void> {
-  try {
-    await unlink(getPasswordPath())
-  } catch {
-    // Already deleted — ignore
-  }
+  // Every unlink failure is ignored here, not only a missing file.
+  await clearSecretFile(getPasswordPath()).catch(() => {})
 }
 
 export function checkPasswordStrength(password: string): PasswordStrength {
