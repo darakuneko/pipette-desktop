@@ -182,7 +182,7 @@ The left sidebar provides a **tree navigation** with the following structure:
   - **Favorites**: Tap Dance, Macro, Combo, Key Override, Alt Repeat Key — each type shows its saved entries with rename, delete, export, and Hub actions
   - **Application**: Import/export local data, or reset application settings. Cancelling the Import file picker changes nothing — local data is untouched and whatever result was already shown stays displayed. A failed import rolls back everything it already wrote, leaving local data unchanged, and shows the underlying error text under **Import failed** (if the rollback itself also fails, that failure is folded into the same message)
 - **Sync** (when Cloud Sync is configured): Lists keyboards that exist only in Google Drive (not yet downloaded on this device). Each entry is labeled with the keyboard's real name, resolved from the synced name index rather than from the raw UID. Click a remote-only keyboard to download it on demand — a spinner is shown while fetching, and a failure message appears inline if the download cannot complete. Once downloaded, the keyboard moves into the **Local › Keyboards** branch
-  - **Cloud Data**: Reset targets that aren't tied to one keyboard — Favorites, Language Packs, Theme Packs, Key Labels, and imported Typing Test Texts. Only the targets actually present on Google Drive are listed. Each row has its own **Reset** button with a two-step confirmation (click Reset, then confirm or cancel); resetting removes that target's data from Google Drive only — local copies on this device are untouched, and a local copy that still exists re-uploads on the next sync (the same behavior Favorites already has). This is also where **Undecryptable Files** are listed and cleaned up: files that cannot be decrypted with the current password (e.g. encrypted with a forgotten previous password) appear as their own rows with a filename and a **Delete** button (two-step confirmation, one file at a time)
+  - **Cloud Data**: Reset targets that aren't tied to one keyboard — Favorites, Language Packs, Theme Packs, Key Labels, and imported Typing Test Texts. Only the targets actually present on Google Drive are listed. Each row has its own **Reset** button with a two-step confirmation (click Reset, then confirm or cancel); resetting removes that target's data from Google Drive only — local copies on this device are untouched, and a local copy that still exists re-uploads on the next sync (the same behavior Favorites already has). This is also where **Undecryptable Files** are listed and cleaned up: files that cannot be decrypted with the current password (e.g. encrypted with a forgotten previous password) appear as their own rows with a filename and a **Delete** button (two-step confirmation, one file at a time). Scanning, resetting and deleting here are refused while this PC has an unfinished sync password change or a password-change lock is on Google Drive (§6.1)
 
 ![Data — Sync](screenshots/data-sidebar-sync.png)
 
@@ -1803,30 +1803,88 @@ The Data tab contains the following sections: Google Account, Data Sync, and Pip
 
 - Set a password to encrypt all synced data (required). A strength indicator helps you choose a strong password
 - If a password already exists on the server (set from another device), a hint is shown asking you to enter the same password
-- **Change Password**: Click **Change Password** to re-encrypt all synced files with a new password. No data is deleted — existing files are decrypted and re-encrypted in place
+- **Change Password**: Click **Change Password** to re-encrypt every synced file on Google Drive with a new password. No data is deleted — each existing file is decrypted and re-encrypted in place. The form shows **"Close Pipette on your other PCs until the password change finishes."** — keep Pipette closed on your other PCs until the change is done. Google Drive requests are retried automatically when Drive reports a rate limit, and most requests are also retried after a server or network error. Creating a new file on Google Drive (such as the lock) is retried only on rate limits, so a server or network error at that point stops the change. If that happens while taking the lock, the change does not start: Pipette undoes the lock attempt, and you run **Change Password** again. If undoing it also fails (for example while still offline), the change stays at the **Preparing** step and the panel below shows it. **Continue** and the next start clear it once the lock can be removed (otherwise it stays for the next attempt); **Abandon** clears it even when the lock can't be removed (a lock left behind then shows in the lock banner described below). Later in the change, continue it as described below
+
+**How a password change runs**
+
+1. Pipette saves the progress of the change (a plain file without secrets) and both passwords (encrypted with the OS keychain) on this PC, then puts a password-change lock file on Google Drive. While the lock exists, sync pauses on every PC (see **While a password change is in progress** below)
+2. Every synced file is re-encrypted with the new password. Files are checked again in up to three passes, so a file another PC wrote back with the old password during the change is picked up
+3. The password check on Google Drive and the password saved on this PC are switched to the new password, the lock is removed, and the saved progress and passwords are deleted
+
+**If a password change is interrupted**
+
+A change can stop part-way — Pipette was closed, the network dropped, or Google Drive returned an error. The change stays unfinished on this PC, and in the **Sync Encryption Password** section the usual password row is replaced by a panel that shows:
+
+- The direction: **"Changing to the new sync password hasn't finished. Syncing is paused on this PC."** or, while going back, **"Going back to the old sync password hasn't finished. Syncing is paused on this PC."**
+- The step: **"Current step: …"** — **Preparing**, **Re-encrypting files on Google Drive**, **Finishing the change**, or **Cleaning up**
+- **Continue**: Runs the change again from where it stopped, in the same direction. Files already re-encrypted are skipped
+- **Go Back to Old Password**: Shown only while files are being re-encrypted (**Re-encrypting files on Google Drive**). Re-encrypts the files back to the old password instead. While going back, the same button reads **Switch to New Password Instead**. From **Finishing the change** on, this button is not offered: finish the change with **Continue**, then change the password again to return to the old one
+- **Give up the password change** → **Abandon**: Two-step confirmation (**Abandon** → **Abandon?** / **Cancel**) with the warning **"Files on Google Drive may stay mixed between the old and new passwords. Delete the ones that can't be decrypted in Data › Sync › Cloud Data."** Abandoning removes this PC's lock (when it can) and forgets the change without touching the files on Google Drive. Files that do not open with the password this PC keeps then appear under **Undecryptable Files** in the Data panel's **Sync › Cloud Data** (§1.3), where they can be deleted. Abandon also works when the saved passwords or the saved progress can't be read
+- **Files neither password opens**: When some files on Google Drive open with neither the old nor the new password, the panel shows **"Some files on Google Drive can't be decrypted with either the old or the new password. Delete them, then continue."** and lists them, each with a **Delete** button (two-step confirmation: **Delete** → **Delete?** / **Cancel**). Each file is checked again just before it is deleted; a file one of the passwords can open is kept, with **"The file was not deleted because one of the passwords can open it."** After deleting them, press **Continue**
+- **Lock lost**: If the change's lock on Google Drive was removed (for example with **Release Lock** on another PC), the panel adds **"The password change was stopped because its lock on Google Drive was removed, possibly from another PC."** **Continue** then takes a new lock and carries on — unless another PC now holds a lock, in which case it stops with **"Another PC is changing the sync password. Try again after it finishes."** and the change stays unfinished
+
+On the next start, Pipette picks up an unfinished change by itself:
+
+- Stopped while **Preparing**: the change never started — its lock is removed and the change is forgotten. Set the new password again with **Change Password**
+- Stopped while **Re-encrypting files on Google Drive**: the panel waits for you to choose **Continue**, **Go Back to Old Password** or **Abandon** (with the lock-lost note when its lock is gone)
+- Stopped at **Finishing the change** or **Cleaning up**: the change is finished automatically (at **Finishing the change**, only when the saved passwords can be read; otherwise the panel stays with the keychain message)
+
+**While a password change is in progress**
+
+Sync is paused — automatic sync, **Sync**, Cloud Data scans and resets, and **Set Password** are all refused — on a PC that has an unfinished change of its own, and on every PC while a password-change lock is on Google Drive. Other PCs pause because of the lock only: once it is removed (for example with **Release Lock**), they sync again even if a change is still unfinished on some PC. **Sync Status** shows why:
+
+- **"Another PC is changing the sync password, so syncing is paused on this PC until it finishes."** — another PC holds the lock on Google Drive
+- **"A sync password change on this PC hasn't finished, so syncing is paused. Continue it, go back to the old password, or abandon it first."** — this PC has an unfinished change
+
+When the change finishes, the other PCs still have the old password saved, so their sync fails with **"Sync password does not match. Please check your encryption password."** Fix this on each of those PCs with **Re-enter Password** (below).
+
+**Re-entering the password after a change on another PC**
+
+**Re-enter Password** is for a PC whose saved password no longer matches Google Drive because the password was changed on another PC. It is separate from **Change Password**, which is for choosing a different password.
+
+- **When it appears**: after a sync, or a **Change Password** attempt, on this PC reports **"Sync password does not match. Please check your encryption password."** — and no unfinished password change is shown. The **Password is set** row then shows the warning **"This PC's sync password doesn't match Google Drive. Enter the password used on your other PCs."** and a **Re-enter Password** button. (A mismatch from **Change Password** shows as that form's error; the warning appears in the row once the form is closed with **Cancel**.)
+- **Entering the password**: **Re-enter Password** opens the password form. Enter the password already used on your other PCs. There is no strength rule here — the password only has to match the one in use. **Cancel** closes the form
+- **Saving**: **Set Password** first checks the password against the password check on Google Drive and saves it only if it opens. On any failure — a wrong password ("Sync password does not match…" again), a network error, a paused sync during a password change — the saved password is kept as it was. If Google Drive has no password check to compare with yet, the form shows **"Google Drive has no sync password to compare with yet. Close this form and run Sync with the current password."**
+- **After success**: the form closes, the warning clears, and a sync starts automatically (favorites and the connected keyboard, the same as **Sync**). A later mismatch shows the warning again
+
+**Password change lock**
+
+If a password-change lock is on Google Drive and this PC has no change of its own, a banner appears above **Sync Status**:
+
+- The message **"Another PC is changing the sync password, so syncing is paused on this PC until it finishes."** — or, when the lock was left by this PC (for example after the change was abandoned while the lock could not be removed), **"A password change lock left on Google Drive by this PC is pausing sync on every PC."**
+- **"Started: …"** with the time the change started, when it can be read from the lock
+- **Password change lock on Google Drive** → **Release Lock**: Two-step confirmation (**Release Lock** → **Release?** / **Cancel**) with the warning **"Make sure no other PC is syncing or changing the password."** Releasing deletes every password-change lock on Google Drive. Use it only when the PC that took the lock will not come back to finish (for example it broke or Pipette was uninstalled there); a PC still in the middle of the change stops with the lock-lost note and must take a new lock with **Continue**. Release is refused while a sync is running on this PC (**"A sync is running on this PC. Try again in a moment."**) or while this PC has an unfinished change of its own
 
 **Change Password error conditions**
 
 When a password change cannot proceed, Pipette shows a localized message instead of the raw error. The common cases are listed below; other underlying errors (network, Drive) may appear as their own messages.
 
-Credential failures (the 5 reasons come from the same typed `SyncCredentialFailureReason` set used for readiness — only 3 of them surface in **Sync Status** below):
+Credential failures:
 
 | Reason | Message | Trigger |
 |--------|---------|---------|
 | `unauthenticated` | "Please sign in to Google before changing the password." | Not signed in with Google |
-| `noPasswordFile` | "No saved password to change. Set a password first." | No local sync password has ever been set |
-| `decryptFailed` | "Couldn't read the existing password (OS keychain rejected it)." | The OS keychain entry is unreadable (keychain reset, profile move, etc.) |
-| `keystoreUnavailable` | "OS keychain is not available; password cannot be changed here." | `safeStorage.isEncryptionAvailable()` returns false (typical on headless Linux without a keyring) |
-| `remoteCheckFailed` | "Couldn't reach Google Drive to verify the current password." | Network or Drive outage — retry later |
+| `noPasswordFile` | "No sync password is saved on this PC. Set one instead of changing it." | No sync password is saved on this PC |
+| `decryptFailed` | "Couldn't read the saved sync password, so it can't be changed." | The OS keychain cannot decrypt the saved password (keychain reset, profile move, etc.) |
+| `keystoreUnavailable` | "OS keychain is not available, so the sync password can't be changed here." | OS keychain encryption is not available (typical on Linux without a keyring) |
 
 Operational errors (shown as the message directly, no reason code):
 
 | Message | Trigger |
 |---------|---------|
-| "Cannot change password while sync is in progress." | A sync is already running — wait for it to finish |
+| "Cannot change password while sync is in progress." | A sync is already running — wait for it to finish. Also shown by **Continue**, **Go Back to Old Password**, **Abandon** and **Delete** in the interrupted-change panel |
 | "New password must be different from the current password." | The new password matches the existing one |
-| "Some files on Google Drive can't be decrypted with the current password. Delete them in Data › Sync › Cloud Data, then try again." | Drive has files the current password cannot decrypt — delete them first via the Data panel's **Sync › Cloud Data** (§1.3) |
-| "Sync password does not match. Please check your encryption password." | The current password fails to decrypt the remote password check — reconfirm the password you are providing |
+| "Sync password does not match. Please check your encryption password." | The saved password fails to decrypt the password check on Google Drive — for example, another PC already changed the password. Use **Re-enter Password** to enter the password used on the other PCs |
+| "Another PC is changing the sync password. Try again after it finishes." | Another PC holds the password-change lock. Also shown by **Continue** when another PC took a lock after this PC's lock was lost |
+| "Another PC started changing the sync password at the same time. Try again after it finishes." | Two PCs tried to take the lock at the same time and the other one won |
+| "The password change was interrupted. You can continue it later." | Pipette was quitting while files were being re-encrypted — continue from the panel on the next start |
+| "The password change was stopped because its lock on Google Drive was removed, possibly from another PC." | The change's lock disappeared from Google Drive while it was running (e.g. released from another PC) |
+| "Some files on Google Drive can't be decrypted with either the old or the new password. Delete them, then continue." | Files open with neither password — delete them from the panel, then **Continue** |
+| "Files on Google Drive kept changing during the password change. Close Pipette on your other PCs, then continue." | Files kept being written back with the other password through every re-check pass |
+| "The passwords saved for the password change can't be read. Make sure the OS keychain is unlocked, then try again." | The OS keychain cannot decrypt the saved passwords (common on Linux right after login). Shown in the panel too; **Abandon** still works |
+| "The saved progress of the password change can't be read." | The saved progress file is unreadable — shown in the panel, where only **Abandon** is offered |
+| "The password change didn't start. Please change the password again." | **Continue** on a change that stopped while **Preparing** — its lock is removed and the change is forgotten |
+| "This can't be done at the current stage of the password change." | **Go Back to Old Password** or **Delete** after the change has moved past re-encrypting files |
 
 #### Sync Controls
 

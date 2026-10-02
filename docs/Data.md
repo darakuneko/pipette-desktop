@@ -201,6 +201,8 @@ Rotating log files for debugging. No keyboard data or personal information is lo
 
 OAuth tokens and sync password are encrypted using the OS keychain (Electron `safeStorage`). These are never stored in plain text.
 
+While a sync password change is in progress, the old and new sync passwords are also kept on this machine (encrypted the same way, in `local/auth/sync-password-change-keys.enc`) together with a non-secret progress file (`local/auth/sync-password-change.json`: direction, step, and the identity of its Google Drive lock). Both are deleted when the change finishes, is reverted, or is abandoned. They are never synced.
+
 ---
 
 ## Keyboard-Side Data
@@ -256,9 +258,9 @@ App settings (theme, language, window state, etc.) are **not** synced.
 | **Can Pipette's developers read my synced data?** | **No.** Encryption happens on your device with your password. Without your sync password, the encrypted data is unreadable. |
 | **What happens if I sign out?** | Local data is preserved. Cloud data remains in Google Drive appDataFolder but is no longer synced. You can sign back in to resume syncing. |
 | **How do I delete all cloud data?** | Use the Data modal (☰ menu) — **Sync › Keyboards** → select a keyboard → **Delete All** removes that keyboard's cloud copy; **Sync › Cloud Data** resets Favorites, Language Packs, Theme Packs, Key Labels, and imported Typing Test Texts, each with its own two-step-confirm **Reset** row. Resetting a Cloud Data target only removes its Google Drive copy — a surviving local store re-uploads it on the next sync (the same behavior Favorites already has), so pair a Cloud Data reset with the matching local deletion if you want the data gone for good. The keyboard name index (`meta_keyboard-names.enc`) and password check (`password-check.enc`) are retained; deletions are propagated to other signed-in devices via tombstone entries in the name index (garbage-collected after 30 days). |
-| **What is stored on Google?** | Encrypted files named by sync unit (e.g., `keyboards_{uid}_snapshots.enc`, `favorites_tapDance.enc`, `meta_keyboard-names.enc`, `password-check.enc`). File names contain keyboard UIDs but no personal information. |
+| **What is stored on Google?** | Encrypted files named by sync unit (e.g., `keyboards_{uid}_snapshots.enc`, `favorites_tapDance.enc`, `meta_keyboard-names.enc`, `password-check.enc`). File names contain keyboard UIDs but no personal information. While a sync password change is in progress, an unencrypted lock file `password-change-lock.json` also exists; it holds only a random lock id, an anonymized machine hash, and the start time, and is deleted when the change finishes. |
 | **How does authentication work?** | Standard Google OAuth 2.0 with PKCE (Proof Key for Code Exchange) via a local loopback redirect. No passwords are sent to any third-party server. |
-| **What happens if I change my password?** | All synced files are re-encrypted with the new password. No data is deleted — files are decrypted and re-encrypted in place. |
+| **What happens if I change my password?** | All synced files are re-encrypted with the new password. No data is deleted — files are decrypted and re-encrypted in place. While the change runs, a lock on Google Drive pauses sync on every machine; an interrupted change can be continued, reverted, or abandoned later. Afterwards the other machines report that the sync password does not match; enter the new password there with **Re-enter Password** (it is checked against Google Drive before it is saved, and the old one is kept if it fails). See `OPERATION-GUIDE.md` §6.1. |
 | **What are undecryptable files?** | Files that cannot be decrypted with your current sync password or are otherwise unreadable (e.g., leftover from a previous password). |
 
 ### Google OAuth Scopes
@@ -346,6 +348,8 @@ Pipette can export keymap data in several formats. These are local file download
 | Export/Import Local Data | Included | Included | Included | - | - | - |
 
 > **Note**: Reset Local Data allows you to select individual targets — keyboard data, favorites, and app settings can each be reset independently.
+>
+> **Note**: While a password-change lock is on Google Drive or this machine has an unfinished sync password change, Reset Sync Data is refused with an error, and so is Reset Keyboard Data. If the lock can't be checked (for example while offline), Reset Keyboard Data still resets the local data and skips the Google Drive delete. While a password change is actually running on this machine (a sync is in progress), Reset Local Data is refused whatever is selected; otherwise it is refused only when App Settings is selected and this machine has an unfinished change, because App Settings include the change's saved state.
 >
 > **Note**: Reset Sync Data's targets are not tied to one keyboard: keyboard data, Favorites, Language Packs, Theme Packs, Key Labels, and imported Typing Test Texts can each be reset independently, deleting only that target's copy on Google Drive (local copies on this device are untouched). Per-keyboard remote deletion lives in the Data modal's **Sync › Keyboards** list; the remaining global targets live in **Sync › Cloud Data** — both surface only the targets that actually exist on the remote and require a two-step confirmation before deleting.
 >
