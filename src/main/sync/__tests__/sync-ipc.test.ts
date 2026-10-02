@@ -62,7 +62,17 @@ const mockAssertNoLocalPasswordChange = vi.fn(async () => {})
 const mockGetPasswordChangeLockStatus = vi.fn(async (): Promise<unknown> => null)
 const mockReleasePasswordChangeLocks = vi.fn(async (): Promise<void> => {})
 const mockReplacePasswordAndValidate = vi.fn(async (_password: string): Promise<void> => {})
-const { MockSyncBlockedError } = vi.hoisted(() => ({ MockSyncBlockedError: class MockSyncBlockedError extends Error {} }))
+const { MockSyncBlockedError } = vi.hoisted(() => ({
+  MockSyncBlockedError: class MockSyncBlockedError extends Error {
+    readonly reason: string | undefined
+    constructor(message: string, reason?: string) {
+      super(message)
+      this.reason = reason
+    }
+  },
+}))
+const mockResetPasswordCheckCache = vi.fn()
+const mockForgetCreatedSyncFormatMarker = vi.fn()
 vi.mock('../sync-service', () => ({
   executeAnalyticsSync: vi.fn(),
   executeSync: vi.fn(),
@@ -77,7 +87,8 @@ vi.mock('../sync-service', () => ({
   collectAllSyncUnits: vi.fn(async () => []),
   bundleSyncUnit: vi.fn(),
   readIndexFile: vi.fn(),
-  resetPasswordCheckCache: vi.fn(),
+  resetPasswordCheckCache: () => mockResetPasswordCheckCache(),
+  forgetCreatedSyncFormatMarker: () => mockForgetCreatedSyncFormatMarker(),
   listUndecryptableFiles: vi.fn(),
   scanRemoteData: vi.fn(),
   fetchRemoteBundle: vi.fn(),
@@ -218,6 +229,37 @@ describe('sync-ipc while a sync password change is in progress', () => {
     expect(result.success).toBe(true)
     expect(mockCancelPendingChanges).toHaveBeenCalledWith('keyboards/uid1/')
     expect(mockDeleteFilesByPrefix).not.toHaveBeenCalled()
+  })
+
+  it('RESET_KEYBOARD_DATA resets locally but skips the remote delete when Drive needs a newer app', async () => {
+    mockAssertSyncAllowed.mockRejectedValue(new MockSyncBlockedError('sync.updateRequired', 'updateRequired'))
+
+    const result = await getHandler(IpcChannels.RESET_KEYBOARD_DATA)(null, 'uid1')
+
+    expect(result.success).toBe(true)
+    expect(mockCancelPendingChanges).toHaveBeenCalledWith('keyboards/uid1/')
+    expect(mockDeleteFilesByPrefix).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['SYNC_RESET_TARGETS', IpcChannels.SYNC_RESET_TARGETS, { keyboards: true, favorites: true }],
+    ['SYNC_DELETE_FILES', IpcChannels.SYNC_DELETE_FILES, ['id-1']],
+  ])('%s stays refused when Drive needs a newer app', async (_name, channel, arg) => {
+    mockAssertSyncAllowed.mockRejectedValue(new MockSyncBlockedError('sync.updateRequired', 'updateRequired'))
+
+    const result = await getHandler(channel)(null, arg)
+
+    expect(result).toEqual({ success: false, error: 'sync.updateRequired' })
+    expect(mockDeleteFilesByPrefix).not.toHaveBeenCalled()
+    expect(mockDeleteFile).not.toHaveBeenCalled()
+  })
+
+  it('SYNC_AUTH_SIGN_OUT forgets the created sync-format marker with the password-check cache', async () => {
+    const result = await getHandler(IpcChannels.SYNC_AUTH_SIGN_OUT)(null)
+
+    expect(result).toEqual({ success: true })
+    expect(mockResetPasswordCheckCache).toHaveBeenCalledTimes(1)
+    expect(mockForgetCreatedSyncFormatMarker).toHaveBeenCalledTimes(1)
   })
 
   it('RESET_LOCAL_TARGETS refuses to remove app settings while a local password change exists', async () => {

@@ -359,13 +359,14 @@ describe('google-drive', () => {
 
   // The remote reset (SYNC_RESET_TARGETS in sync-ipc.ts) deletes by these
   // prefixes and exact names; none of them may reach the password-change
-  // lock, which only its holder (or an explicit unlock) removes.
+  // lock, which only its holder (or an explicit unlock) removes, nor a
+  // sync-format marker, which only a newer app's cleanup removes.
   describe('remote reset deletes', () => {
     afterEach(() => {
       vi.unstubAllGlobals()
     })
 
-    it('never deletes the password-change lock file', async () => {
+    it('never deletes the password-change lock file or a sync-format marker', async () => {
       const deletedIds: string[] = []
       vi.stubGlobal('fetch', vi.fn(async (url: string | URL, init?: RequestInit) => {
         if (init?.method === 'DELETE') {
@@ -375,6 +376,7 @@ describe('google-drive', () => {
         return new Response(JSON.stringify({
           files: [
             { id: 'lock', name: 'password-change-lock.json', modifiedTime: 'm' },
+            { id: 'format', name: 'sync-format-v1.json', modifiedTime: 'm' },
             { id: 'kb', name: 'keyboards_0x1_settings.enc', modifiedTime: 'm' },
           ],
         }), { status: 200 })
@@ -387,16 +389,19 @@ describe('google-drive', () => {
       await deleteFilesByExactName('typing-test-texts.enc')
 
       expect(deletedIds).not.toContain('lock')
+      expect(deletedIds).not.toContain('format')
       expect(deletedIds).toContain('kb')
     })
   })
 
   describe('isDataFileName', () => {
-    it('excludes the password-check and password-change lock files', () => {
+    it('excludes the password-check, the password-change lock and the sync-format markers', () => {
       expect(isDataFileName('favorites_macro.enc')).toBe(true)
       expect(isDataFileName('password-check.enc')).toBe(false)
       expect(isDataFileName('password-change-lock.json')).toBe(false)
       expect(isDataFileName('password-change-lock.json.enc')).toBe(true)
+      expect(isDataFileName('sync-format-v1.json')).toBe(false)
+      expect(isDataFileName('sync-format-v2.json')).toBe(false)
       expect(isPasswordChangeLockFile('password-change-lock.json')).toBe(true)
       expect(isPasswordChangeLockFile('x_password-change-lock.json')).toBe(false)
     })

@@ -193,22 +193,25 @@ export type SyncExecuteStatus = 'completed' | 'skipped' | 'partial'
  *  - `blockedByOtherDevice`: Drive holds a sync password-change lock and
  *    this machine has no password change of its own
  *  - `blockedLocal`: this machine has an unfinished password change; it
- *    has to be finished, reverted or abandoned first */
-export type SyncBlockReason = 'blockedByOtherDevice' | 'blockedLocal'
+ *    has to be finished, reverted or abandoned first
+ *  - `updateRequired`: Drive holds a sync-format marker newer than this
+ *    app's `SYNC_FORMAT_VERSION`; only an app update lifts it */
+export type SyncBlockReason = 'blockedByOtherDevice' | 'blockedLocal' | 'updateRequired'
 
 /** i18n key for a `SyncBlockReason` (used by progress, IPC errors and skip reasons). */
 export function syncBlockI18nKey(reason: SyncBlockReason): string {
-  return `sync.passwordChange.${reason}`
+  return reason === 'updateRequired' ? 'sync.updateRequired' : `sync.passwordChange.${reason}`
 }
 
 export function isSyncBlockReason(value: unknown): value is SyncBlockReason {
-  return value === 'blockedByOtherDevice' || value === 'blockedLocal'
+  return value === 'blockedByOtherDevice' || value === 'blockedLocal' || value === 'updateRequired'
 }
 
 /** Why a sync was skipped (`status === 'skipped'`): another sync was
  *  already in flight (`'busy'`), the credential-readiness check failed
  *  (same reasons `SyncCredentialFailureReason` already enumerates), or a
- *  sync password change is in progress (`SyncBlockReason`). */
+ *  sync password change is in progress or Drive needs a newer app
+ *  (`SyncBlockReason`). */
 export type SyncSkipReason = 'busy' | SyncCredentialFailureReason | SyncBlockReason
 
 /** Serializable IPC envelope so renderer code can branch on the reason. */

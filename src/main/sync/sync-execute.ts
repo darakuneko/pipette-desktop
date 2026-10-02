@@ -8,6 +8,7 @@ import { pLimit } from '../../shared/concurrency'
 import { SYNC_CONCURRENCY, syncRuntime, emitProgress, errorMessage, updateRemoteState, broadcastPendingStatus } from './sync-runtime-state'
 import { requireSyncCredentials, validatePasswordCheck, ensurePasswordCheckValidated } from './sync-password'
 import { localSyncBlock, remoteSyncBlock, emitSyncBlocked } from './sync-password-guard'
+import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
 import { matchesScope, listLocalKeyboardUids, shouldDownloadSyncUnit } from './sync-scope'
 import { mergeWithRemote, syncOrUpload } from './sync-merge-dispatch'
 import { collectAllSyncUnits } from './sync-bundle'
@@ -62,9 +63,11 @@ export async function executeSync(
 
     emitProgress({ direction, status: 'syncing', message: 'Starting sync...' })
 
+    const formatGeneration = syncFormatGeneration()
     const initialFiles = await listFiles()
     const remoteBlock = remoteSyncBlock(initialFiles)
     if (remoteBlock) return skipBlocked(remoteBlock)
+    await ensureSyncFormatMarker(initialFiles, formatGeneration)
 
     // Scope 'all' always re-validates; scoped syncs skip it while the
     // password-check is the one last validated (same modifiedTime).

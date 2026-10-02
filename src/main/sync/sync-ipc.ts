@@ -28,6 +28,7 @@ import {
   collectAllSyncUnits,
   bundleSyncUnit,
   resetPasswordCheckCache,
+  forgetCreatedSyncFormatMarker,
   listUndecryptableFiles,
   scanRemoteData,
   fetchRemoteBundle,
@@ -146,6 +147,7 @@ export function setupSyncIpc(): void {
       stopPolling()
       clearHubTokenCache()
       resetPasswordCheckCache()
+      forgetCreatedSyncFormatMarker()
       await signOut()
     }),
   )
@@ -388,11 +390,13 @@ export function setupSyncIpc(): void {
       }
       // Refused while a sync password change is in progress. When Drive
       // can't be checked (offline, signed out) the local reset still runs
-      // but the remote delete is skipped: a lock may be there unseen.
+      // but the remote delete is skipped: a lock may be there unseen. Drive
+      // needing a newer app also only skips the remote delete: this
+      // machine's local data is still its own to remove.
       const remoteDeleteAllowed = await assertSyncAllowed().then(
         () => true,
         (err: unknown) => {
-          if (err instanceof SyncBlockedError) throw err
+          if (err instanceof SyncBlockedError && err.reason !== 'updateRequired') throw err
           return false
         },
       )

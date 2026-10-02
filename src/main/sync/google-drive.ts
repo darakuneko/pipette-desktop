@@ -232,11 +232,34 @@ export function isPasswordChangeLockFile(name: string): boolean {
   return name === PASSWORD_CHANGE_LOCK_FILE
 }
 
-/** Whether a listed file holds encrypted user data, i.e. is neither the
- *  password-check sentinel nor the password-change lock. Listings keep both
- *  so sync entry points can see them; data handling filters with this. */
+/** Name prefix of the unencrypted sync-format markers (sync-format.ts);
+ *  also the `nameContains` filter that lists only them. */
+export const SYNC_FORMAT_FILE_PREFIX = 'sync-format-v'
+
+const SYNC_FORMAT_FILE_PATTERN = /^sync-format-v(\d+)\.json$/
+
+export function syncFormatFileName(version: number): string {
+  return `${SYNC_FORMAT_FILE_PREFIX}${version}.json`
+}
+
+/** The `n` of a `sync-format-v{n}.json` marker name; null for any other name. */
+export function parseSyncFormatFileName(name: string): number | null {
+  const match = SYNC_FORMAT_FILE_PATTERN.exec(name)
+  if (!match) return null
+  const version = Number(match[1])
+  return Number.isSafeInteger(version) ? version : null
+}
+
+/** Whether a listed file holds encrypted user data, i.e. is none of the
+ *  password-check sentinel, the password-change lock and the sync-format
+ *  markers. Listings keep them so sync entry points can see them; data
+ *  handling filters with this. */
 export function isDataFileName(name: string): boolean {
-  return name !== driveFileName(PASSWORD_CHECK_UNIT) && !isPasswordChangeLockFile(name)
+  return (
+    name !== driveFileName(PASSWORD_CHECK_UNIT) &&
+    !isPasswordChangeLockFile(name) &&
+    parseSyncFormatFileName(name) === null
+  )
 }
 
 /** Filenames with no uid/packId segment — a plain Map lookup resolves

@@ -46,6 +46,7 @@ const mockUploadFile = vi.fn(
     ({ id: 'file-id', modifiedTime: '2026-01-01T00:00:00.000Z' }),
 )
 const mockDeleteFile = vi.fn(async (_fileId: string): Promise<void> => {})
+const mockCreateRawFile = vi.fn(async (..._args: unknown[]): Promise<{ id: string }> => ({ id: 'format-marker' }))
 
 vi.mock('../sync/google-drive', async () => {
   // `driveFileName`/`syncUnitFromFileName` are imported via `importActual`
@@ -66,6 +67,10 @@ vi.mock('../sync/google-drive', async () => {
     isPasswordChangeLockFile: actual.isPasswordChangeLockFile,
     PASSWORD_CHECK_UNIT: actual.PASSWORD_CHECK_UNIT,
     PASSWORD_CHANGE_LOCK_FILE: actual.PASSWORD_CHANGE_LOCK_FILE,
+    SYNC_FORMAT_FILE_PREFIX: actual.SYNC_FORMAT_FILE_PREFIX,
+    syncFormatFileName: actual.syncFormatFileName,
+    parseSyncFormatFileName: actual.parseSyncFormatFileName,
+    createRawFile: (...args: unknown[]) => mockCreateRawFile(...args),
   }
 })
 

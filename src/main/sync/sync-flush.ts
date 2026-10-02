@@ -20,6 +20,7 @@ import {
 } from './sync-runtime-state'
 import { requireSyncCredentials, ensurePasswordCheckValidated, PasswordMismatchError } from './sync-password'
 import { localSyncBlock, remoteSyncBlock, emitSyncBlocked } from './sync-password-guard'
+import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
 import type { SyncBlockReason } from '../../shared/types/sync'
 import { syncOrUpload } from './sync-merge-dispatch'
 import { stopPolling } from './sync-polling'
@@ -78,6 +79,7 @@ export async function flushPendingChanges(): Promise<void> {
 
     emitProgress({ direction: 'upload', status: 'syncing', message: 'Auto-sync starting...' })
 
+    const formatGeneration = syncFormatGeneration()
     const remoteFiles = await listFiles()
     const remoteBlock = remoteSyncBlock(remoteFiles)
     if (remoteBlock) {
@@ -85,6 +87,15 @@ export async function flushPendingChanges(): Promise<void> {
       return
     }
     updateRemoteState(remoteFiles)
+
+    // Before the pending set is taken, so a failed create keeps every
+    // pending change for the next flush.
+    try {
+      await ensureSyncFormatMarker(remoteFiles, formatGeneration)
+    } catch (err) {
+      emitProgress({ direction: 'upload', status: 'error', message: errorMessage(err, 'Sync failed') })
+      return
+    }
 
     try {
       await ensurePasswordCheckValidated(password, remoteFiles)
@@ -130,8 +141,9 @@ export async function flushPendingChanges(): Promise<void> {
   }
 }
 
-/** Reports a flush stopped by a password change and tries again after a
- *  polling interval (not while quitting); the pending changes stay. */
+/** Reports a flush stopped by the sync guard (a password change, or Drive
+ *  needing a newer app) and tries again after a polling interval (not
+ *  while quitting); the pending changes stay. */
 function reportBlockedFlush(reason: SyncBlockReason): void {
   emitSyncBlocked('upload', reason)
   if (syncRuntime.isQuitting) return

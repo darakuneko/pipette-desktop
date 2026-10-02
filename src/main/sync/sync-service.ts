@@ -53,6 +53,9 @@ export function _resetForTests(): void {
   syncRuntime.validatedPasswordCheck = null
   syncRuntime.passwordCheckCreated = null
   syncRuntime.passwordCheckCreating = null
+  syncRuntime.syncFormatMarkerCreatedAt = null
+  syncRuntime.syncFormatMarkerSeenAt = null
+  syncRuntime.syncFormatMarkerCreating = null
   syncRuntime.passwordChangeUndecryptable = null
   syncRuntime.passwordChangeLockLost = false
   syncRuntime.passwordChangeRun = null
@@ -86,6 +89,7 @@ export { readIndexFile, bundleSyncUnit, collectAllSyncUnits } from './sync-bundl
 export { listUndecryptableFiles, scanRemoteData, fetchRemoteBundle, listRemoteFileNames } from './sync-scan'
 
 export { SyncBlockedError, assertSyncAllowed, assertNoLocalPasswordChange } from './sync-password-guard'
+export { forgetCreatedSyncFormatMarker } from './sync-format'
 export { forgetChangeStateCache } from './sync-password-change-state'
 
 export {

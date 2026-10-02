@@ -22,6 +22,8 @@ import {
 import { runConcurrently } from '../../shared/concurrency'
 import { SYNC_CONCURRENCY, syncRuntime } from './sync-runtime-state'
 import { isPasswordChangeLockHeld, releasePasswordChangeLock } from './sync-password-lock'
+import { assertSyncFormatSupported } from './sync-password-guard'
+import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
 import {
   clearChangeKeys,
   clearChangeState,
@@ -203,8 +205,13 @@ async function reencryptAll(state: PasswordChangeState, keys: PasswordChangeKeys
     // Checked on every pass, also one that ends up skipping every file.
     if (syncRuntime.isQuitting) throw new PasswordChangeError('sync.passwordChange.interrupted')
     await ensureLockHeld(state)
+    const formatGeneration = syncFormatGeneration()
     const listed = await listFiles()
+    await assertSyncFormatSupported(listed)
     if (pass === 0) {
+      // The re-encrypted files are data in our format, so our marker goes
+      // first, as in every other pass that writes data.
+      await ensureSyncFormatMarker(listed, formatGeneration)
       // Mid-change the password-check may be on either key; a third key
       // means another machine changed the password, so nothing is written.
       // Data files most likely share the password-check's key, so the first

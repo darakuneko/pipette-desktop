@@ -44,6 +44,19 @@ export const syncRuntime = {
   /** The password-check creation in flight, shared so passes that see it
    *  missing at the same time create it once. */
   passwordCheckCreating: null as Promise<UploadedFile> | null,
+  /** When (`syncFormatTiming.now()` ms) this process created its own
+   *  sync-format marker, until a listing shows it or
+   *  `syncFormatTiming.createdMemoryMs` passes (sync-format.ts). */
+  syncFormatMarkerCreatedAt: null as number | null,
+  /** When a listing last showed our own sync-format marker. */
+  syncFormatMarkerSeenAt: null as number | null,
+  /** The marker creation in flight, shared so passes that see it missing
+   *  at the same time create it once. */
+  syncFormatMarkerCreating: null as Promise<void> | null,
+  /** Bumped by `forgetCreatedSyncFormatMarker` (sign-out). A create or
+   *  listing that started under an older generation belongs to the previous
+   *  account, so its completion records nothing. */
+  syncFormatMarkerGeneration: 0,
   lastKnownRemoteState: new Map<string, string>(), // fileName -> modifiedTime
   /** Files the last re-encryption pass could open with neither the old nor
    *  the new password; null when that pass found none. Kept in memory

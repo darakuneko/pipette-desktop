@@ -16,6 +16,7 @@ import {
 } from './google-drive'
 import { syncRuntime } from './sync-runtime-state'
 import { assertNoLocalPasswordChange, assertSyncAllowed } from './sync-password-guard'
+import { ensureSyncFormatMarkerKnown } from './sync-format'
 import type { SyncCredentialFailureReason, SyncCredentialResult } from '../../shared/types/sync'
 import { syncCredentialI18nKey } from '../../shared/types/sync'
 
@@ -109,16 +110,22 @@ async function openPasswordCheck(password: string, file: UploadedFile): Promise<
   syncRuntime.validatedPasswordCheck = { id: file.id, modifiedTime: file.modifiedTime }
 }
 
-/** Creates the password-check with `password`. When a creation is already
- *  in flight, waits for it and opens what it created instead: that pass may
- *  have used another password. */
+/** Creates the password-check with `password`, after our sync-format
+ *  marker (`ensureSyncFormatMarkerKnown`: callers' listings may be
+ *  name-filtered); when the marker cannot be created, neither is the
+ *  password-check. When a creation is already in flight, waits for it and
+ *  opens what it created instead: that pass may have used another password. */
 async function createPasswordCheckOnce(password: string): Promise<void> {
   const inFlight = syncRuntime.passwordCheckCreating
   if (inFlight) {
     await openPasswordCheck(password, await inFlight)
     return
   }
-  const run = writePasswordCheck(password).then((created) => {
+  const create = async (): Promise<UploadedFile> => {
+    await ensureSyncFormatMarkerKnown()
+    return writePasswordCheck(password)
+  }
+  const run = create().then((created) => {
     syncRuntime.passwordCheckCreated = { file: created, at: passwordCheckTiming.now() }
     return created
   })
@@ -186,8 +193,8 @@ export async function checkPasswordCheckExists(): Promise<boolean> {
   return findPasswordCheck(remoteFiles) !== undefined
 }
 
-/** Refused (`SyncBlockedError`) while a password change is in progress,
- *  before the password is stored. */
+/** Refused (`SyncBlockedError`) while a password change is in progress or
+ *  Drive needs a newer app, before the password is stored. */
 export async function setPasswordAndValidate(password: string): Promise<void> {
   await assertNoLocalPasswordChange()
   const remoteFiles = await listFiles()

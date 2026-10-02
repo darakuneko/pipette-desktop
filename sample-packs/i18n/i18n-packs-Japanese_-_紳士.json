@@ -1,5 +1,5 @@
 {
-  "version": "0.1.106",
+  "version": "0.1.107",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -954,6 +954,7 @@
     "reenterPasswordWarning": "この端末の合言葉が Google Drive のものと一致いたしません。他の端末でお使いの合言葉をお教えくださいませ。",
     "reenterPassword": "合言葉を入力し直す",
     "reenterPasswordNoRemote": "Google Drive には照合すべき合言葉がまだございません。こちらを閉じ、現在の合言葉で同期なさってくださいませ。",
+    "updateRequired": "この Google Drive の同期データは、より新しい版の Pipette にて作られております。同期をお続けになるには、アップデートをお願い申し上げます。",
     "unavailable": "繋がりが芳しくありません。同期は叶わぬようです。",
     "retry": "再試行",
     "pullError": {

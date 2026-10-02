@@ -12,6 +12,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import type { DriveFile, ListFilesOptions, UploadedFile } from '../google-drive'
 import type { SyncEnvelope, SyncProgress } from '../../../shared/types/sync'
+import { syncBlockI18nKey } from '../../../shared/types/sync'
 
 const userDataRef = vi.hoisted(() => ({ dir: '' }))
 const appEvents = vi.hoisted(() => ({ handlers: new Map<string, (e: { preventDefault: () => void }) => void>() }))
@@ -260,6 +261,10 @@ async function seedDrive(): Promise<void> {
   await seedEncrypted(TYPING_DAY_FILE, 'keyboards/uid1/devices/hashother/days/2026-10-01', '{"type":"typing-analytics-device"}', OLD)
 }
 
+function seedNewerSyncFormat(): void {
+  addFile('sync-format-v2.json', JSON.stringify({ type: 'sync-format', version: 2 }))
+}
+
 function seedForeignLock(): void {
   addFile(
     PASSWORD_CHANGE_LOCK_FILE,
@@ -337,10 +342,11 @@ describe('sync password-change guard', () => {
     { name: 'a lock from another PC', reason: 'blockedByOtherDevice', seed: async () => seedForeignLock() },
     { name: 'a local change state', reason: 'blockedLocal', seed: seedLocalChange },
     { name: 'an unreadable local change state', reason: 'blockedLocal', seed: seedInvalidLocalChange },
+    { name: 'a newer sync-format marker', reason: 'updateRequired', seed: async () => seedNewerSyncFormat() },
   ] as const
 
   describe.each(blockers)('with $name', ({ reason, seed }) => {
-    const key = `sync.passwordChange.${reason}`
+    const key = syncBlockI18nKey(reason)
 
     beforeEach(async () => {
       await seed()

@@ -19,6 +19,7 @@ import {
   PasswordMismatchError,
   findPasswordCheck,
 } from './sync-password'
+import { assertSyncFormatSupported } from './sync-password-guard'
 import { acquirePasswordChangeLock, findOwnPasswordChangeLock, releasePasswordChangeLock } from './sync-password-lock'
 import {
   clearChangeKeys,
@@ -123,7 +124,16 @@ async function holdLockForRun(state: PasswordChangeState): Promise<PasswordChang
 /** Starts changing the sync password to `newPassword`: saves the progress
  *  and both passwords locally, takes the Drive lock, then runs the switch.
  *  A failure after the lock is taken leaves the change at `reencrypting`
- *  for `resumePasswordChange` / `revertPasswordChange`. */
+ *  for `resumePasswordChange` / `revertPasswordChange`.
+ *
+ *  Re-encrypting data in a sync format this app does not know could break
+ *  it, so every operation that writes data (start, resume, revert, the
+ *  automatic finish at startup, deleting undecryptable files) is refused
+ *  with `SyncBlockedError('updateRequired')` while Drive holds a newer
+ *  sync-format marker, before it takes a lock or writes anything. Abandon
+ *  and the `locking` / `cleanup` steps only remove our own lock and local
+ *  files, so they stay allowed: the way out of a change is never blocked,
+ *  and a lock left behind would also stop the newer machines. */
 export async function startPasswordChange(newPassword: string): Promise<void> {
   await withSyncLock(async () => {
     if ((await readChangeState()).kind !== 'none') throw new PasswordChangeError('sync.passwordChange.alreadyInProgress')
@@ -131,8 +141,10 @@ export async function startPasswordChange(newPassword: string): Promise<void> {
     if (!credentials.ok) throw new SyncCredentialError(credentials.reason)
     const oldPassword = credentials.password
     if (newPassword === oldPassword) throw new Error('sync.samePassword')
+    const listing = await listFiles()
+    await assertSyncFormatSupported(listing)
     // A missing password-check is created at commit.
-    const check = findPasswordCheck(await listFiles())
+    const check = findPasswordCheck(listing)
     if (check && !(await fileOpensWith(check, oldPassword))) throw new PasswordMismatchError()
 
     // State before keys: keys without a state file are removed at startup,
@@ -186,6 +198,7 @@ export async function resumePasswordChange(): Promise<void> {
       await cleanupChange(state)
       return
     }
+    await assertSyncFormatSupported()
     const keys = await loadKeys()
     await runPasswordSwitch(await holdLockForRun(state), keys)
   })
@@ -198,6 +211,7 @@ export async function revertPasswordChange(): Promise<void> {
   await withSyncLock(async () => {
     const state = await loadState()
     if (state.step !== 'reencrypting') throw new PasswordChangeError('sync.passwordChange.wrongStep')
+    await assertSyncFormatSupported()
     const keys = await loadKeys()
     const held = await holdLockForRun(state)
     const reverted: PasswordChangeState = { ...held, target: held.target === 'new' ? 'old' : 'new' }
@@ -239,6 +253,7 @@ export async function deletePasswordChangeUndecryptableFiles(fileIds: string[]):
   return withSyncLock(async () => {
     const state = await loadState()
     if (state.step !== 'reencrypting') throw new PasswordChangeError('sync.passwordChange.wrongStep')
+    await assertSyncFormatSupported()
     const keys = await loadKeys()
     await holdLockForRun(state)
 
@@ -304,6 +319,7 @@ export async function recoverPasswordChangeOnStartup(): Promise<PasswordChangeRe
         await cleanupChange(state)
         return 'completed'
       }
+      await assertSyncFormatSupported()
       const keys = await retrieveChangeKeys()
       if (!keys.ok) {
         log('warn', `sync password change: cannot read the change keys (${keys.reason})`)
