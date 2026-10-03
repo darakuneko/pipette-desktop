@@ -37,6 +37,10 @@ const XDOC_LINK_PATTERNS = [
 
 // ─── Markdown → HTML ─────────────────────────────────────────────────────────
 
+// Set when any converted doc contains a ```mermaid block; the Mermaid CSS and
+// loader are only emitted then, so a guide without diagrams loads no scripts.
+let hasMermaid = false;
+
 function convertMd(md, docId, context = null) {
   // Recursive calls (e.g. blockquotes) share the parent's placeholder arrays so
   // that \x00IC / \x00CB tokens are restored once, at the root level only.
@@ -50,8 +54,11 @@ function convertMd(md, docId, context = null) {
   // 1. Extract fenced code blocks (protect from further processing)
   md = md.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, body) => {
     const i = codeBlocks.length;
-    codeBlocks.push(
-      `<pre class="code-block"><code>${esc(body.trimEnd())}</code></pre>`
+    const isMermaid = lang === 'mermaid';
+    if (isMermaid) hasMermaid = true;
+    codeBlocks.push(isMermaid
+      ? `<pre class="mermaid">${esc(body.trimEnd())}</pre>`
+      : `<pre class="code-block"><code>${esc(body.trimEnd())}</code></pre>`
     );
     return `\x00CB${i}\x00`;
   });
@@ -626,7 +633,11 @@ header {
 
 // ─── JavaScript ───────────────────────────────────────────────────────────────
 
-const JS = `
+// With diagrams, switchDoc renders the newly shown ones and scrollToHash waits
+// for rendering to settle, because diagrams change the height of everything
+// above the target heading; the wait is dropped if the user navigates again or
+// the target article is no longer shown. Without diagrams both hooks expand to ''.
+const pageJs = withMermaid => `
 const contentEl = document.querySelector('.content');
 const tabs      = [...document.querySelectorAll('.tab')];
 const docEls    = [...document.querySelectorAll('.doc')];
@@ -637,18 +648,29 @@ function switchDoc(id, hash) {
   tabs.forEach(t => t.classList.toggle('active', t.dataset.doc === tabId));
   docEls.forEach(d => d.classList.toggle('active', d.id === 'doc-' + id));
   tocPanels.forEach(p => p.classList.toggle('active', p.id === 'toc-' + id));
-
+${withMermaid ? '  navToken++;\n  renderDiagrams();\n' : ''}
   history.replaceState(null, '', '#' + tabId);
 
   if (hash) {
-    setTimeout(() => scrollToHash(id, hash), 60);
-  } else {
+${withMermaid ? `    const nav = navToken;
+    setTimeout(() => { if (nav === navToken) scrollToHash(id, hash); }, 60);
+` : `    setTimeout(() => scrollToHash(id, hash), 60);
+`}  } else {
     contentEl.scrollTop = 0;
   }
 }
 
 function scrollToHash(docId, hash) {
-  // Use getElementById to avoid CSS selector restriction on numeric-starting IDs (e.g. #1-3-data)
+${withMermaid ? `  const nav = ++navToken;
+  renderDiagrams().then(() => {
+    if (nav === navToken && document.getElementById('doc-' + docId)?.classList.contains('active')) {
+      scrollToHashNow(docId, hash);
+    }
+  });
+}
+
+function scrollToHashNow(docId, hash) {
+` : ''}  // Use getElementById to avoid CSS selector restriction on numeric-starting IDs (e.g. #1-3-data)
   const id = hash.startsWith('#') ? hash.slice(1) : hash;
   const target = document.getElementById(id);
   if (!target) return;
@@ -728,6 +750,84 @@ docEls.forEach(docEl => {
 });
 `;
 
+// ─── Mermaid (emitted only when a doc has a diagram) ──────────────────────────
+
+const MERMAID_SRC = 'https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js';
+
+// Until Mermaid replaces it with an SVG (or if the CDN is unreachable), the
+// <pre class="mermaid"> shows the diagram source as preformatted text.
+const MERMAID_CSS = `
+/* ── Diagrams ── */
+.doc .mermaid {
+  margin: 14px 0;
+  overflow-x: auto;
+  color: var(--text2);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.doc .mermaid svg { display: block; margin: 0 auto; }
+`;
+
+// Diagrams are rendered lazily, only in the visible article, so a diagram in an
+// article that is never opened is never rendered, and Mermaid itself is only
+// downloaded once an opened article has a diagram. This block is placed before
+// the page JS so that its let/const bindings are initialised before the page
+// JS's startup switchDoc call reaches renderDiagrams.
+// The theme reuses the page's own :root colours.
+const MERMAID_JS = `
+let mermaidLoad = null;
+
+function loadMermaid() {
+  mermaidLoad ??= new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = ${JSON.stringify(MERMAID_SRC)};
+    s.onload = () => {
+      const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: 'base',
+        flowchart: { useMaxWidth: false },
+        themeVariables: {
+          fontFamily: getComputedStyle(document.body).fontFamily,
+          fontSize: '14px',
+          primaryColor: css('--accent-bg'),
+          primaryBorderColor: css('--accent'),
+          primaryTextColor: css('--text'),
+          secondaryColor: css('--code-bg'),
+          tertiaryColor: css('--bg'),
+          lineColor: css('--text2'),
+        },
+      });
+      resolve();
+    };
+    s.onerror = () => reject(new Error('Failed to load ' + s.src));
+    document.head.appendChild(s);
+  });
+  return mermaidLoad;
+}
+
+const pendingDiagrams = () => [...document.querySelectorAll('.doc.active .mermaid:not([data-processed])')];
+
+let diagramsSettled = Promise.resolve();
+
+// Bumped by every switchDoc and scrollToHash; a deferred scroll only runs if no
+// newer navigation happened while diagrams were rendering.
+let navToken = 0;
+
+function renderDiagrams() {
+  diagramsSettled = diagramsSettled
+    .then(() => {
+      if (!pendingDiagrams().length) return;
+      // Re-query after loading: the visible article may have changed meanwhile.
+      return loadMermaid().then(() => mermaid.run({ nodes: pendingDiagrams(), suppressErrors: true }));
+    })
+    .catch(err => console.error(err));
+  return diagramsSettled;
+}
+
+renderDiagrams();
+`;
+
 // ─── Document definitions ─────────────────────────────────────────────────────
 
 const DOCS = [
@@ -783,7 +883,7 @@ const output = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pipette — Documentation</title>
-<style>${CSS}${extraCss}</style>
+<style>${CSS}${extraCss}${hasMermaid ? MERMAID_CSS : ''}</style>
 </head>
 <body>
 
@@ -803,7 +903,7 @@ const output = `<!DOCTYPE html>
   </main>
 </div>
 
-<script>const DOC_TO_TAB=${JSON.stringify(DOC_TO_TAB)};${JS}</script>
+<script>const DOC_TO_TAB=${JSON.stringify(DOC_TO_TAB)};${hasMermaid ? MERMAID_JS : ''}${pageJs(hasMermaid)}</script>
 </body>
 </html>
 `;
