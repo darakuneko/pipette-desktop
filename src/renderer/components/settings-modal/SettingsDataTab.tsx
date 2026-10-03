@@ -10,6 +10,7 @@ import { HubDisplayNameField } from './HubDisplayNameField'
 import { PasswordChangeStatusPanel } from './PasswordChangeStatusPanel'
 import { PasswordChangeLockBanner } from './PasswordChangeLockBanner'
 import { usePasswordChangeStatus } from './use-password-change-status'
+import { useSyncFormatUpdateRequired } from '../../hooks/use-sync-format-status'
 import { ROW_CLASS } from '../editors/modal-controls'
 import type { UseSyncReturn } from '../../hooks/useSync'
 
@@ -85,6 +86,9 @@ export function SettingsDataTab({
   handleAutoSyncToggle,
 }: SettingsDataTabProps) {
   const { t } = useTranslation()
+  // The app-wide update banner and the sync status already explain a
+  // sync stopped for a newer format, and the lock can't be released then.
+  const syncFormatUpdateRequired = useSyncFormatUpdateRequired()
   const passwordChange = usePasswordChangeStatus({
     authenticated: sync.authStatus.authenticated,
     formBusy: busy,
@@ -254,7 +258,7 @@ export function SettingsDataTab({
       </div>
 
       {/* Sync Status */}
-      {changeStatus.kind === 'none' && passwordChange.lockStatus && (
+      {changeStatus.kind === 'none' && passwordChange.lockStatus && !syncFormatUpdateRequired && (
         <PasswordChangeLockBanner
           lockStatus={passwordChange.lockStatus}
           running={passwordChange.running}

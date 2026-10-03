@@ -203,6 +203,15 @@ export function syncBlockI18nKey(reason: SyncBlockReason): string {
   return reason === 'updateRequired' ? 'sync.updateRequired' : `sync.passwordChange.${reason}`
 }
 
+/** Drive's sync-format markers compared with this app's
+ *  `SYNC_FORMAT_VERSION` (sync-format.ts). */
+export interface SyncFormatStatus {
+  /** Largest marker version on Drive; null when Drive has none. */
+  required: number | null
+  supported: number
+  updateRequired: boolean
+}
+
 export function isSyncBlockReason(value: unknown): value is SyncBlockReason {
   return value === 'blockedByOtherDevice' || value === 'blockedLocal' || value === 'updateRequired'
 }

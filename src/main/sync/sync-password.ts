@@ -16,7 +16,7 @@ import {
 } from './google-drive'
 import { syncRuntime } from './sync-runtime-state'
 import { assertNoLocalPasswordChange, assertSyncAllowed } from './sync-password-guard'
-import { ensureSyncFormatMarkerKnown } from './sync-format'
+import { ensureSyncFormatMarkerKnown, syncFormatGeneration } from './sync-format'
 import type { SyncCredentialFailureReason, SyncCredentialResult } from '../../shared/types/sync'
 import { syncCredentialI18nKey } from '../../shared/types/sync'
 
@@ -197,8 +197,9 @@ export async function checkPasswordCheckExists(): Promise<boolean> {
  *  Drive needs a newer app, before the password is stored. */
 export async function setPasswordAndValidate(password: string): Promise<void> {
   await assertNoLocalPasswordChange()
+  const formatGeneration = syncFormatGeneration()
   const remoteFiles = await listFiles()
-  await assertSyncAllowed(remoteFiles)
+  await assertSyncAllowed(remoteFiles, formatGeneration)
   await storePassword(password)
   resetPasswordCheckCache()
   try {
@@ -220,8 +221,9 @@ export async function replacePasswordAndValidate(password: string): Promise<void
   const authStatus = await getAuthStatus()
   if (!authStatus.authenticated) throw new SyncCredentialError('unauthenticated')
   await assertNoLocalPasswordChange()
+  const formatGeneration = syncFormatGeneration()
   const remoteFiles = await listFiles()
-  await assertSyncAllowed(remoteFiles)
+  await assertSyncAllowed(remoteFiles, formatGeneration)
   const check = findPasswordCheck(remoteFiles)
   if (!check) throw new Error('sync.reenterPasswordNoRemote')
   await openPasswordCheck(password, check)

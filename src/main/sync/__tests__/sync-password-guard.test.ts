@@ -238,6 +238,8 @@ import {
   fetchRemoteBundle,
   listRemoteFileNames,
   startPasswordChange,
+  getCachedSyncFormatStatus,
+  clearSyncFormatStatus,
 } from '../sync-service'
 import { POLL_INTERVAL_MS } from '../sync-runtime-state'
 
@@ -448,6 +450,51 @@ describe('sync password-change guard', () => {
     await flushing
 
     expect(vi.getTimerCount()).toBe(1)
+  })
+
+  describe('sync-format status', () => {
+    const newer = { required: 2, supported: 1, updateRequired: true }
+
+    it('an entry point stopped by a newer marker records it', async () => {
+      seedNewerSyncFormat()
+
+      await executeSync('download', 'all')
+
+      expect(getCachedSyncFormatStatus()).toEqual(newer)
+    })
+
+    it('a password change stopped by a newer marker records it', async () => {
+      seedNewerSyncFormat()
+
+      await expect(startPasswordChange(NEW)).rejects.toThrow(syncBlockI18nKey('updateRequired'))
+
+      expect(getCachedSyncFormatStatus()).toEqual(newer)
+    })
+
+    it.each([
+      ['executeSync', () => executeSync('download', 'all')],
+      ['executeAnalyticsSync', () => executeAnalyticsSync('uid1')],
+      ['listRemoteFileNames', () => listRemoteFileNames()],
+      ['startPasswordChange', () => startPasswordChange(NEW).catch(() => {})],
+    ] as const)('%s blocked on a listing requested before sign-out records nothing', async (_name, run) => {
+      seedNewerSyncFormat()
+      let open!: () => void
+      drive.listGate = new Promise((resolve) => { open = resolve })
+      const pass = run()
+      await vi.waitFor(() => expect(drive.lists).toBeGreaterThan(0))
+
+      clearSyncFormatStatus()
+      open()
+      await pass
+
+      expect(getCachedSyncFormatStatus()).toBeNull()
+    })
+
+    it('a pass that is not stopped records nothing', async () => {
+      await executeSync('download', 'all')
+
+      expect(getCachedSyncFormatStatus()).toBeNull()
+    })
   })
 
   describe('password change vs analytics sync', () => {

@@ -27,7 +27,7 @@ vi.mock('../../hooks/useAppConfig', () => ({
   useAppConfig: () => ({ config: { oneShotNotice: null }, loading: false, set: () => {} }),
 }))
 
-function makeProps(overrides: { fileLoadError?: string | null; deviceError?: string | null; onClearFileLoadError?: () => void; onClearDeviceError?: () => void } = {}) {
+function makeProps(overrides: { fileLoadError?: string | null; deviceError?: string | null; onClearFileLoadError?: () => void; onClearDeviceError?: () => void; syncUpdateVisible?: boolean } = {}) {
   const device = {
     devices: [],
     connecting: false,
@@ -65,7 +65,9 @@ function makeProps(overrides: { fileLoadError?: string | null; deviceError?: str
   const hub = {} as unknown as ReturnType<typeof useHubState>
   const startupNotification = { visible: false, notifications: [], dismiss: vi.fn() } as unknown as ReturnType<typeof useStartupNotification>
 
-  return { deviceSyncing: false, device, sync, lifecycle, themeCtx, devicePrefs, appConfig, hub, startupNotification }
+  const syncUpdate = { visible: overrides.syncUpdateVisible ?? false, dismiss: vi.fn() }
+
+  return { deviceSyncing: false, device, sync, lifecycle, themeCtx, devicePrefs, appConfig, hub, startupNotification, syncUpdate }
 }
 
 describe('AppDisconnectedView', () => {
@@ -88,5 +90,15 @@ describe('AppDisconnectedView', () => {
     fireEvent.click(screen.getByTestId('device-error').querySelector('button')!)
     expect(onClearDeviceError).toHaveBeenCalledOnce()
     expect(onClearFileLoadError).not.toHaveBeenCalled()
+  })
+
+  it('shows the sync update banner when Drive needs a newer app', () => {
+    render(<AppDisconnectedView {...makeProps({ syncUpdateVisible: true })} />)
+    expect(screen.getByTestId('sync-update-banner')).toBeInTheDocument()
+  })
+
+  it('hides the sync update banner otherwise', () => {
+    render(<AppDisconnectedView {...makeProps()} />)
+    expect(screen.queryByTestId('sync-update-banner')).toBeNull()
   })
 })

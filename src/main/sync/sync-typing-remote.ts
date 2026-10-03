@@ -18,6 +18,7 @@ import {
 } from './google-drive'
 import { requireSyncCredentials, ensurePasswordCheckValidated } from './sync-password'
 import { localSyncBlock, remoteSyncBlock } from './sync-password-guard'
+import { syncFormatGeneration } from './sync-format'
 import { mergeDeviceDayBundle } from './sync-merge-dispatch'
 import {
   parseTypingAnalyticsDeviceDaySyncUnit,
@@ -178,8 +179,9 @@ export async function hasAnyRemoteTypingData(): Promise<boolean> {
   if (!credentials.ok) return false
   const ownHash = await getMachineHash()
   if (await localSyncBlock()) return false
+  const formatGeneration = syncFormatGeneration()
   const remoteFiles = await listFiles()
-  if (remoteSyncBlock(remoteFiles)) return false
+  if (remoteSyncBlock(remoteFiles, formatGeneration)) return false
   for (const file of remoteFiles) {
     const unit = syncUnitFromFileName(file.name)
     if (!unit) continue
@@ -203,8 +205,9 @@ export async function listRemoteTypingHashesForUidFromCloud(
   if (!credentials.ok) return []
   const ownHash = await getMachineHash()
   if (await localSyncBlock()) return []
+  const formatGeneration = syncFormatGeneration()
   const remoteFiles = await listFiles()
-  if (remoteSyncBlock(remoteFiles)) return []
+  if (remoteSyncBlock(remoteFiles, formatGeneration)) return []
   const hashes = new Set<string>()
   for (const file of remoteFiles) {
     const unit = syncUnitFromFileName(file.name)
@@ -230,8 +233,9 @@ export async function listRemoteTypingDaysFor(
   const credentials = await requireSyncCredentials()
   if (!credentials.ok) return []
   if (await localSyncBlock()) return []
+  const formatGeneration = syncFormatGeneration()
   const remoteFiles = await listFiles()
-  if (remoteSyncBlock(remoteFiles)) return []
+  if (remoteSyncBlock(remoteFiles, formatGeneration)) return []
   const perUid = collectRemoteOwnHashDays(remoteFiles, machineHash)
   const days = perUid.get(uid)
   if (!days) return []
@@ -258,8 +262,9 @@ export async function deleteRemoteTypingDay(
   if (!credentials.ok) return false
   // Both checks run before the local copy is removed, so a refused delete changes nothing.
   if (await localSyncBlock()) return false
+  const formatGeneration = syncFormatGeneration()
   const remoteFiles = await listFiles()
-  if (remoteSyncBlock(remoteFiles)) return false
+  if (remoteSyncBlock(remoteFiles, formatGeneration)) return false
   const targetName = driveFileName(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, utcDay))
   const remoteFile = remoteFiles.find((f) => f.name === targetName)
   const userData = app.getPath('userData')
@@ -301,8 +306,9 @@ export async function fetchRemoteTypingDay(
   if (!credentials.ok) return false
   const { password } = credentials
   if (await localSyncBlock()) return false
+  const formatGeneration = syncFormatGeneration()
   const remoteFiles = await listFiles()
-  if (remoteSyncBlock(remoteFiles)) return false
+  if (remoteSyncBlock(remoteFiles, formatGeneration)) return false
   const targetName = driveFileName(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, utcDay))
   const file = remoteFiles.find((f) => f.name === targetName)
   if (!file) return false

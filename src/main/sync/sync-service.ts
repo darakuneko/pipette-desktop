@@ -35,6 +35,7 @@ import { syncRuntime } from './sync-runtime-state'
 import { stopPolling, clearInFlightPollForTests } from './sync-polling'
 import { clearQuitFinalizersForTests } from './sync-flush'
 import { forgetChangeStateCache } from './sync-password-change-state'
+import { clearSyncFormatStatus } from './sync-format-status'
 
 // --- Test helpers -------------------------------------------------------
 
@@ -62,6 +63,7 @@ export function _resetForTests(): void {
   syncRuntime.analyticsSyncingUids.clear()
   clearQuitFinalizersForTests()
   forgetChangeStateCache()
+  clearSyncFormatStatus()
 }
 
 // --- Public re-exports ---------------------------------------------------
@@ -90,6 +92,12 @@ export { listUndecryptableFiles, scanRemoteData, fetchRemoteBundle, listRemoteFi
 
 export { SyncBlockedError, assertSyncAllowed, assertNoLocalPasswordChange } from './sync-password-guard'
 export { forgetCreatedSyncFormatMarker } from './sync-format'
+export {
+  getCachedSyncFormatStatus,
+  refreshSyncFormatStatus,
+  clearSyncFormatStatus,
+  setSyncFormatStatusListener,
+} from './sync-format-status'
 export { forgetChangeStateCache } from './sync-password-change-state'
 
 export {

@@ -28,6 +28,7 @@ import {
 import { syncRuntime } from './sync-runtime-state'
 import { SYNC_FORMAT_VERSION } from '../../shared/constants/sync-format'
 import { log } from '../logger'
+import type { SyncFormatStatus } from '../../shared/types/sync'
 
 /** `createdMemoryMs`: how long a marker this process created that no
  *  listing shows yet still counts as present (Drive's listing lag), so it
@@ -149,13 +150,6 @@ export async function ensureSyncFormatMarkerKnown(): Promise<void> {
   if (isRecent(syncRuntime.syncFormatMarkerSeenAt) || recentlyCreatedOwnMarker()) return
   const generation = syncFormatGeneration()
   await ensureSyncFormatMarker(await listSyncFormatFiles(), generation)
-}
-
-export interface SyncFormatStatus {
-  /** Largest marker version on Drive; null when Drive has none. */
-  required: number | null
-  supported: number
-  updateRequired: boolean
 }
 
 /** The markers on Drive compared with this app's sync format. Lists only

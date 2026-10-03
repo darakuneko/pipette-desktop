@@ -36,7 +36,7 @@ import type {
 } from './theme-store'
 import type { AppConfig } from './app-config'
 import type { DeviceScope } from './analyze-filters'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult, PasswordChangeLockStatus } from './sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult, PasswordChangeLockStatus, SyncFormatStatus } from './sync'
 import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } from './pipette-settings'
 import type {
   TypingActivityCell,
@@ -346,6 +346,11 @@ export interface VialAPI {
   syncDeleteFiles(fileIds: string[]): Promise<{ success: boolean; error?: string }>
   syncCheckPasswordExists(): Promise<boolean>
   syncAnalyticsNow(uid: string): Promise<boolean>
+  /** Drive's sync-format status as last checked; null when unknown or
+   *  signed out. Never rejects. */
+  syncFormatStatus(): Promise<SyncFormatStatus | null>
+  /** Every later change of `syncFormatStatus`'s value; null once forgotten (sign-out, sign-in). */
+  syncOnFormatStatusChanged(callback: (status: SyncFormatStatus | null) => void): () => void
   syncOnPendingChange(callback: (pending: boolean) => void): () => void
 
   // Language Store

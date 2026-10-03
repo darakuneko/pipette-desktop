@@ -16,6 +16,7 @@ import { pLimit } from '../../shared/concurrency'
 import { SYNC_CONCURRENCY } from './sync-runtime-state'
 import { requireSyncCredentials, validatePasswordCheck } from './sync-password'
 import { assertNoLocalPasswordChange, assertSyncAllowed, localSyncBlock, remoteSyncBlock } from './sync-password-guard'
+import { syncFormatGeneration } from './sync-format'
 import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
 import { TYPING_TEST_TEXT_SYNC_UNIT } from '../typing-test-text-store'
 import { I18N_INDEX_SYNC_UNIT } from '../../shared/types/i18n-store'
@@ -31,9 +32,10 @@ async function fetchValidatedDataFiles(): Promise<{ password: string; dataFiles:
   if (!credentials.ok) return null
   const { password } = credentials
   await assertNoLocalPasswordChange()
+  const formatGeneration = syncFormatGeneration()
   const remoteFiles = await listFiles()
 
-  await assertSyncAllowed(remoteFiles)
+  await assertSyncAllowed(remoteFiles, formatGeneration)
   await validatePasswordCheck(password, remoteFiles)
 
   const dataFiles = remoteFiles.filter((f) => isDataFileName(f.name))
@@ -184,7 +186,8 @@ export async function listRemoteFileNames(): Promise<Set<string> | null> {
   const credentials = await requireSyncCredentials()
   if (!credentials.ok) return null
   if (await localSyncBlock()) return null
+  const formatGeneration = syncFormatGeneration()
   const remoteFiles = await listFiles()
-  if (remoteSyncBlock(remoteFiles)) return null
+  if (remoteSyncBlock(remoteFiles, formatGeneration)) return null
   return new Set(remoteFiles.map((f) => f.name).filter(isDataFileName))
 }

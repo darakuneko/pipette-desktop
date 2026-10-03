@@ -207,7 +207,7 @@ async function reencryptAll(state: PasswordChangeState, keys: PasswordChangeKeys
     await ensureLockHeld(state)
     const formatGeneration = syncFormatGeneration()
     const listed = await listFiles()
-    await assertSyncFormatSupported(listed)
+    await assertSyncFormatSupported(listed, formatGeneration)
     if (pass === 0) {
       // The re-encrypted files are data in our format, so our marker goes
       // first, as in every other pass that writes data.

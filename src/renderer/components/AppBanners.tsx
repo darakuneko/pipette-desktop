@@ -1,26 +1,32 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Connected-view warning banners (dummy/pipette-file mode, unsaved
-// changes, example UID, protocol version, connection warning).
+// Connected-view warning banners (sync update required, dummy/pipette-file
+// mode, unsaved changes, example UID, protocol version, connection warning).
 
 import { useTranslation } from 'react-i18next'
 import type { useDeviceConnection } from '../hooks/useDeviceConnection'
 import type { useKeyboard } from '../hooks/useKeyboard'
 import type { useDeviceLifecycle } from '../hooks/useDeviceLifecycle'
 import { EMPTY_UID } from '../../shared/constants/protocol'
+import { SyncUpdateBanner } from './SyncUpdateBanner'
+import type { SyncUpdateBannerState } from '../hooks/use-sync-format-status'
 
 interface Props {
   device: ReturnType<typeof useDeviceConnection>
   keyboard: ReturnType<typeof useKeyboard>
   lifecycle: ReturnType<typeof useDeviceLifecycle>
+  syncUpdate: SyncUpdateBannerState
 }
 
-export function AppBanners({ device, keyboard, lifecycle }: Props) {
+export function AppBanners({ device, keyboard, lifecycle, syncUpdate }: Props) {
   const { t } = useTranslation()
 
-  if (keyboard.loading) return null
+  const syncUpdateBanner = <SyncUpdateBanner state={syncUpdate} />
+  if (keyboard.loading) return syncUpdateBanner
 
   return (
     <>
+      {syncUpdateBanner}
+
       {device.isDummy && (
         <div className="flex items-center justify-between border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">
           <span>{device.isPipetteFile ? t('error.pipetteFileMode') : t('error.dummyMode')}</span>

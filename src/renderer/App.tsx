@@ -10,6 +10,7 @@ import { useSideloadJson } from './hooks/useSideloadJson'
 import { useTheme } from './hooks/useTheme'
 import { useDevicePrefs } from './hooks/useDevicePrefs'
 import { useSync } from './hooks/useSync'
+import { useSyncFormatStatus } from './hooks/use-sync-format-status'
 import { useStartupNotification } from './hooks/useStartupNotification'
 import { useDeviceAutoSync } from './hooks/useDeviceAutoSync'
 import { useEditorUIState } from './hooks/useEditorUIState'
@@ -53,6 +54,7 @@ export function App() {
   const device = useDeviceConnection()
   const keyboard = useKeyboard()
   const sync = useSync()
+  const syncUpdate = useSyncFormatStatus()
   const startupNotification = useStartupNotification()
 
   const effectiveIsDummy = device.isDummy && !device.isPipetteFile
@@ -390,6 +392,7 @@ export function App() {
         appConfig={appConfig}
         hub={hub}
         startupNotification={startupNotification}
+        syncUpdate={syncUpdate}
       />
     )
   }
@@ -402,7 +405,7 @@ export function App() {
     // tab order from here.
     <PickerPrefsProvider devicePrefs={devicePrefs}>
       <div className="relative flex h-screen flex-col bg-surface text-content">
-        <AppBanners device={device} keyboard={keyboard} lifecycle={lifecycle} />
+        <AppBanners device={device} keyboard={keyboard} lifecycle={lifecycle} syncUpdate={syncUpdate} />
 
         {(keyboard.loading || deviceSyncing || phase2SyncPending || migration.migrationChecking || migration.migrating) && (
           <ConnectingOverlay

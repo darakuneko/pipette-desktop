@@ -90,6 +90,8 @@ export const IpcChannels = {
   SYNC_DELETE_FILES: 'sync:delete-files',
   SYNC_CHECK_PASSWORD_EXISTS: 'sync:check-password-exists',
   SYNC_ANALYTICS_NOW: 'sync:analytics-now',
+  SYNC_FORMAT_STATUS: 'sync:format-status',
+  SYNC_FORMAT_STATUS_CHANGED: 'sync:format-status-changed',
 
   // Pipette Settings Store (renderer → main → renderer)
   PIPETTE_SETTINGS_GET: 'pipette-settings:get',

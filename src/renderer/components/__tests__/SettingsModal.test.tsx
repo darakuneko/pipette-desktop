@@ -82,8 +82,11 @@ const mockPasswordChangeStatus = vi.fn()
 const mockPasswordChangeLockStatus = vi.fn()
 const mockPasswordChangeResume = vi.fn()
 const mockPasswordChangeReleaseLocks = vi.fn()
+const mockSyncFormatStatus = vi.fn().mockResolvedValue(null)
 Object.defineProperty(window, 'vialAPI', {
   value: {
+    syncFormatStatus: mockSyncFormatStatus,
+    syncOnFormatStatusChanged: () => () => {},
     syncPasswordChangeStatus: mockPasswordChangeStatus,
     syncPasswordChangeLockStatus: mockPasswordChangeLockStatus,
     syncPasswordChangeResume: mockPasswordChangeResume,
@@ -1391,6 +1394,17 @@ describe('SettingsModal', () => {
 
       await waitFor(() => expect(screen.queryByTestId('sync-password-change-lock')).not.toBeInTheDocument())
       expect(mockPasswordChangeReleaseLocks).toHaveBeenCalledTimes(1)
+    })
+
+    it('hides the lock while Drive needs a newer sync format', async () => {
+      mockSyncFormatStatus.mockResolvedValueOnce({ required: 2, supported: 1, updateRequired: true })
+      mockPasswordChangeLockStatus.mockResolvedValueOnce({ startedAt: '2026-10-02T09:00:00.000Z', ownMachine: false })
+      renderAndSwitchToData({ sync: makeSyncMock({ ...FULLY_CONFIGURED }) })
+
+      await waitFor(() => expect(mockPasswordChangeLockStatus).toHaveBeenCalled())
+      await waitFor(() => expect(mockSyncFormatStatus).toHaveBeenCalled())
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(screen.queryByTestId('sync-password-change-lock')).not.toBeInTheDocument()
     })
 
     it('does not look up the lock while signed out', async () => {

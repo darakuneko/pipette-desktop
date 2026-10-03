@@ -8,6 +8,8 @@ import { SettingsModal } from './SettingsModal'
 import { DataModal } from './DataModal'
 import { NotificationModal } from './NotificationModal'
 import { JaRemovedBanner } from './i18n-packs/JaRemovedBanner'
+import { SyncUpdateBanner } from './SyncUpdateBanner'
+import type { SyncUpdateBannerState } from '../hooks/use-sync-format-status'
 import type { useDeviceConnection } from '../hooks/useDeviceConnection'
 import type { UseSyncReturn } from '../hooks/useSync'
 import type { useDeviceLifecycle } from '../hooks/useDeviceLifecycle'
@@ -27,6 +29,7 @@ interface Props {
   appConfig: ReturnType<typeof useAppConfig>
   hub: ReturnType<typeof useHubState>
   startupNotification: ReturnType<typeof useStartupNotification>
+  syncUpdate: SyncUpdateBannerState
 }
 
 export function AppDisconnectedView({
@@ -39,9 +42,16 @@ export function AppDisconnectedView({
   appConfig,
   hub,
   startupNotification,
+  syncUpdate,
 }: Props) {
   return (
     <>
+      {/* Overlays the top edge: the device picker fills the whole window. */}
+      {syncUpdate.visible && (
+        <div className="fixed inset-x-0 top-0 z-40">
+          <SyncUpdateBanner state={syncUpdate} />
+        </div>
+      )}
       {deviceSyncing && (
         <div className="fixed inset-0 z-50">
           <ConnectingOverlay deviceName="" deviceId="" syncProgress={sync.progress} syncOnly />

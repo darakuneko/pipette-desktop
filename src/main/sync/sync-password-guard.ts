@@ -14,10 +14,12 @@
 //   a lock this machine failed to release and no longer tracks).
 // - Sync format: a `sync-format-v{n}.json` marker with `n` above
 //   SYNC_FORMAT_VERSION in the Drive listing blocks (`updateRequired`,
-//   sync-format.ts).
+//   sync-format.ts). Every such block is also recorded in the status the
+//   renderer's update banner reads (sync-format-status.ts).
 
 import { listFiles, isPasswordChangeLockFile, PASSWORD_CHANGE_LOCK_FILE, type DriveFile } from './google-drive'
-import { isSyncFormatUpdateRequired, listSyncFormatFiles } from './sync-format'
+import { isSyncFormatUpdateRequired, listSyncFormatFiles, requiredSyncFormat, syncFormatGeneration } from './sync-format'
+import { noteSyncFormatUpdateRequired } from './sync-format-status'
 import { hasChangeState } from './sync-password-change-state'
 import { emitProgress } from './sync-runtime-state'
 import { syncBlockI18nKey, type SyncBlockReason, type SyncDirection } from '../../shared/types/sync'
@@ -43,12 +45,27 @@ export async function assertNoLocalPasswordChange(): Promise<void> {
   if (reason) throw new SyncBlockedError(reason)
 }
 
+/** A listing the caller already has, with `syncFormatGeneration()` taken
+ *  before it was requested; empty when the guard lists Drive itself. A
+ *  listing requested before a sign-out then leaves the update banner's
+ *  status alone. */
+type PrefetchedListing = [] | [listing: DriveFile[], generation: number]
+
+/** Whether `listing` holds a sync-format marker newer than this app's;
+ *  when it does, the update banner's status is set as well. */
+function blocksOnSyncFormat(listing: DriveFile[], generation: number): boolean {
+  if (!isSyncFormatUpdateRequired(listing)) return false
+  noteSyncFormatUpdateRequired(requiredSyncFormat(listing), generation)
+  return true
+}
+
 /** `updateRequired` when `listing` contains a sync-format marker newer
  *  than this app's, otherwise `blockedByOtherDevice` when it contains a
  *  password-change lock. The format comes first: finishing a password
- *  change would not let this app sync. */
-export function remoteSyncBlock(listing: DriveFile[]): SyncBlockReason | null {
-  if (isSyncFormatUpdateRequired(listing)) return 'updateRequired'
+ *  change would not let this app sync. `generation`: as in
+ *  `PrefetchedListing`. */
+export function remoteSyncBlock(listing: DriveFile[], generation: number): SyncBlockReason | null {
+  if (blocksOnSyncFormat(listing, generation)) return 'updateRequired'
   return listing.some((file) => isPasswordChangeLockFile(file.name)) ? 'blockedByOtherDevice' : null
 }
 
@@ -63,27 +80,35 @@ export async function listGuardFiles(): Promise<DriveFile[]> {
   return [...locks, ...markers]
 }
 
-/** The local check, then the remote check against `listing` (an
- *  unfiltered appData listing the caller already has) or, without one,
+/** The local check, then the remote check against a prefetched listing
+ *  (an unfiltered appData listing the caller already has) or, without one,
  *  `listGuardFiles`. Null when syncing may go ahead. */
-export async function getSyncBlock(listing?: DriveFile[]): Promise<SyncBlockReason | null> {
+export async function getSyncBlock(...prefetched: PrefetchedListing): Promise<SyncBlockReason | null> {
   const local = await localSyncBlock()
   if (local) return local
-  return remoteSyncBlock(listing ?? (await listGuardFiles()))
+  const [listing, generation] = prefetched
+  if (listing !== undefined && generation !== undefined) return remoteSyncBlock(listing, generation)
+  const listedIn = syncFormatGeneration()
+  return remoteSyncBlock(await listGuardFiles(), listedIn)
 }
 
 /** `getSyncBlock` that throws `SyncBlockedError` instead of returning a reason. */
-export async function assertSyncAllowed(listing?: DriveFile[]): Promise<void> {
-  const reason = await getSyncBlock(listing)
+export async function assertSyncAllowed(...prefetched: PrefetchedListing): Promise<void> {
+  const reason = await getSyncBlock(...prefetched)
   if (reason) throw new SyncBlockedError(reason)
 }
 
-/** Throws `SyncBlockedError('updateRequired')` when `listing` (any listing
- *  that includes the markers; without one, a markers-only listing) holds
- *  a sync-format marker newer than this app's. For the password-change
+/** Throws `SyncBlockedError('updateRequired')` when the prefetched listing
+ *  (any listing that includes the markers; without one, a markers-only
+ *  listing) holds a sync-format marker newer than this app's. For the password-change
  *  operations, which do not run the full guard. */
-export async function assertSyncFormatSupported(listing?: DriveFile[]): Promise<void> {
-  if (isSyncFormatUpdateRequired(listing ?? (await listSyncFormatFiles()))) {
+export async function assertSyncFormatSupported(...prefetched: PrefetchedListing): Promise<void> {
+  let [listing, generation] = prefetched
+  if (listing === undefined || generation === undefined) {
+    generation = syncFormatGeneration()
+    listing = await listSyncFormatFiles()
+  }
+  if (blocksOnSyncFormat(listing, generation)) {
     throw new SyncBlockedError('updateRequired')
   }
 }

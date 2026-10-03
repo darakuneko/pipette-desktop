@@ -65,7 +65,7 @@ export async function executeSync(
 
     const formatGeneration = syncFormatGeneration()
     const initialFiles = await listFiles()
-    const remoteBlock = remoteSyncBlock(initialFiles)
+    const remoteBlock = remoteSyncBlock(initialFiles, formatGeneration)
     if (remoteBlock) return skipBlocked(remoteBlock)
     await ensureSyncFormatMarker(initialFiles, formatGeneration)
 

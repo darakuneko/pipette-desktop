@@ -1,5 +1,5 @@
 {
-  "version": "0.1.107",
+  "version": "0.1.108",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -955,6 +955,10 @@
     "reenterPassword": "パスワード入れ直す☆",
     "reenterPasswordNoRemote": "Google Driveにまだ比べるパスワード無いよ～！フォーム閉じて今のパスワードで同期してね♡",
     "updateRequired": "このGoogle Driveの同期データ、新しいPipetteで作られてるっぽい！同期続けたいならアプデしてね☆",
+    "updateBanner": {
+      "message": "Cloud Sync、新しいPipetteじゃないとダメっぽい！同期続けたいならアプリをアプデしてね☆",
+      "openDownloadPage": "ダウンロードページ開く☆"
+    },
     "unavailable": "ネットヤバくね？同期できないじゃん",
     "retry": "もう一回！",
     "pullError": {

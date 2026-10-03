@@ -1,5 +1,5 @@
 {
-  "version": "0.1.107",
+  "version": "0.1.108",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -955,6 +955,10 @@
     "reenterPassword": "合言葉を入力し直す",
     "reenterPasswordNoRemote": "Google Drive には照合すべき合言葉がまだございません。こちらを閉じ、現在の合言葉で同期なさってくださいませ。",
     "updateRequired": "この Google Drive の同期データは、より新しい版の Pipette にて作られております。同期をお続けになるには、アップデートをお願い申し上げます。",
+    "updateBanner": {
+      "message": "Cloud Sync には、より新しい版の Pipette が必要でございます。同期をお続けになるには、アプリのアップデートをお願い申し上げます。",
+      "openDownloadPage": "ダウンロードページを開く"
+    },
     "unavailable": "繋がりが芳しくありません。同期は叶わぬようです。",
     "retry": "再試行",
     "pullError": {

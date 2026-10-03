@@ -81,7 +81,7 @@ export async function flushPendingChanges(): Promise<void> {
 
     const formatGeneration = syncFormatGeneration()
     const remoteFiles = await listFiles()
-    const remoteBlock = remoteSyncBlock(remoteFiles)
+    const remoteBlock = remoteSyncBlock(remoteFiles, formatGeneration)
     if (remoteBlock) {
       reportBlockedFlush(remoteBlock)
       return

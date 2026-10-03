@@ -39,7 +39,7 @@ async function pollForRemoteChanges(): Promise<void> {
 
     const formatGeneration = syncFormatGeneration()
     const remoteFiles = await listFiles()
-    const remoteBlock = remoteSyncBlock(remoteFiles)
+    const remoteBlock = remoteSyncBlock(remoteFiles, formatGeneration)
     if (remoteBlock) {
       reportBlockedPoll(remoteBlock)
       return

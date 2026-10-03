@@ -54,7 +54,7 @@ import type {
 import type { HubPrivateLink } from '../shared/types/hub-private'
 import type { AppConfig } from '../shared/types/app-config'
 import type { DeviceScope } from '../shared/types/analyze-filters'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult, PasswordChangeLockStatus } from '../shared/types/sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult, PasswordChangeLockStatus, SyncFormatStatus } from '../shared/types/sync'
 import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } from '../shared/types/pipette-settings'
 import type {
   LayoutComparisonOptions,
@@ -718,6 +718,15 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SYNC_CHECK_PASSWORD_EXISTS),
   syncAnalyticsNow: (uid: string): Promise<boolean> =>
     ipcRenderer.invoke(IpcChannels.SYNC_ANALYTICS_NOW, uid),
+  syncFormatStatus: (): Promise<SyncFormatStatus | null> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_FORMAT_STATUS),
+  syncOnFormatStatusChanged: (callback: (status: SyncFormatStatus | null) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, status: SyncFormatStatus | null): void => {
+      callback(status)
+    }
+    ipcRenderer.on(IpcChannels.SYNC_FORMAT_STATUS_CHANGED, handler)
+    return () => ipcRenderer.removeListener(IpcChannels.SYNC_FORMAT_STATUS_CHANGED, handler)
+  },
   syncOnPendingChange: (callback: (pending: boolean) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, pending: boolean): void => {
       callback(pending)

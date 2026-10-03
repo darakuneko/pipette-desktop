@@ -109,6 +109,14 @@ describe('sync-password-lock-release', () => {
       expect(mockDeleteFile).not.toHaveBeenCalled()
     })
 
+    it('refuses while Drive needs a newer sync format, before deleting anything', async () => {
+      const marker: DriveFile = { id: 'fmt', name: 'sync-format-v2.json', modifiedTime: EARLY.modifiedTime, createdTime: EARLY.createdTime }
+      mockListFiles.mockResolvedValue([EARLY, marker])
+      await expect(releasePasswordChangeLocks()).rejects.toThrow('sync.updateRequired')
+      expect(mockDeleteFile).not.toHaveBeenCalled()
+      expect(syncRuntime.isSyncing).toBe(false)
+    })
+
     it('refuses while a sync runs on this machine', async () => {
       syncRuntime.isSyncing = true
       mockListFiles.mockResolvedValue([EARLY])

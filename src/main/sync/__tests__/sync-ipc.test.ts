@@ -34,9 +34,11 @@ vi.mock('../sync-crypto', () => ({
   checkPasswordStrength: vi.fn(),
 }))
 
+const mockStartOAuthFlow = vi.fn(async (): Promise<void> => {})
+const mockGetAuthStatus = vi.fn(async (): Promise<unknown> => ({ authenticated: false }))
 vi.mock('../google-auth', () => ({
-  startOAuthFlow: vi.fn(),
-  getAuthStatus: vi.fn(),
+  startOAuthFlow: () => mockStartOAuthFlow(),
+  getAuthStatus: () => mockGetAuthStatus(),
   signOut: vi.fn(),
 }))
 
@@ -73,6 +75,14 @@ const { MockSyncBlockedError } = vi.hoisted(() => ({
 }))
 const mockResetPasswordCheckCache = vi.fn()
 const mockForgetCreatedSyncFormatMarker = vi.fn()
+const mockGetCachedSyncFormatStatus = vi.fn((): unknown => null)
+const mockRefreshSyncFormatStatus = vi.fn(async (): Promise<unknown> => null)
+const mockClearSyncFormatStatus = vi.fn()
+const mockSetSyncFormatStatusListener = vi.fn()
+const mockBroadcastToAllWindows = vi.fn()
+vi.mock('../../utils/broadcast', () => ({
+  broadcastToAllWindows: (...args: unknown[]) => mockBroadcastToAllWindows(...args),
+}))
 vi.mock('../sync-service', () => ({
   executeAnalyticsSync: vi.fn(),
   executeSync: vi.fn(),
@@ -89,6 +99,10 @@ vi.mock('../sync-service', () => ({
   readIndexFile: vi.fn(),
   resetPasswordCheckCache: () => mockResetPasswordCheckCache(),
   forgetCreatedSyncFormatMarker: () => mockForgetCreatedSyncFormatMarker(),
+  getCachedSyncFormatStatus: () => mockGetCachedSyncFormatStatus(),
+  refreshSyncFormatStatus: () => mockRefreshSyncFormatStatus(),
+  clearSyncFormatStatus: () => mockClearSyncFormatStatus(),
+  setSyncFormatStatusListener: (listener: unknown) => mockSetSyncFormatStatusListener(listener),
   listUndecryptableFiles: vi.fn(),
   scanRemoteData: vi.fn(),
   fetchRemoteBundle: vi.fn(),
@@ -260,6 +274,7 @@ describe('sync-ipc while a sync password change is in progress', () => {
     expect(result).toEqual({ success: true })
     expect(mockResetPasswordCheckCache).toHaveBeenCalledTimes(1)
     expect(mockForgetCreatedSyncFormatMarker).toHaveBeenCalledTimes(1)
+    expect(mockClearSyncFormatStatus).toHaveBeenCalledTimes(1)
   })
 
   it('RESET_LOCAL_TARGETS refuses to remove app settings while a local password change exists', async () => {
@@ -420,5 +435,96 @@ describe('sync-ipc SYNC_RESET_TARGETS — keyLabels / typingTestTexts', () => {
     expect(result.success).toBe(false)
     expect(mockDeleteFilesByExactName).toHaveBeenCalledWith(`${KEY_LABEL_SYNC_UNIT}.enc`)
     expect(mockDeleteFilesByExactName).toHaveBeenCalledWith(`${TYPING_TEST_TEXT_SYNC_UNIT}.enc`)
+  })
+})
+
+describe('sync-ipc sync-format status', () => {
+  const newer = { required: 2, supported: 1, updateRequired: true }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockGetCachedSyncFormatStatus.mockReturnValue(null)
+    mockRefreshSyncFormatStatus.mockResolvedValue(newer)
+    mockGetAuthStatus.mockResolvedValue({ authenticated: false })
+    mockStartOAuthFlow.mockResolvedValue(undefined)
+  })
+
+  it('checks Drive at startup when signed in', async () => {
+    mockGetAuthStatus.mockResolvedValue({ authenticated: true })
+
+    setupSyncIpc()
+
+    await vi.waitFor(() => expect(mockRefreshSyncFormatStatus).toHaveBeenCalledTimes(1))
+  })
+
+  it('does not check Drive at startup when signed out', async () => {
+    setupSyncIpc()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(mockRefreshSyncFormatStatus).not.toHaveBeenCalled()
+  })
+
+  describe('after setup', () => {
+    beforeEach(async () => {
+      setupSyncIpc()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      mockRefreshSyncFormatStatus.mockClear()
+    })
+
+    it('SYNC_FORMAT_STATUS returns the cached status without listing Drive', async () => {
+      mockGetCachedSyncFormatStatus.mockReturnValue(newer)
+
+      expect(await getHandler(IpcChannels.SYNC_FORMAT_STATUS)(null)).toEqual(newer)
+      expect(mockRefreshSyncFormatStatus).not.toHaveBeenCalled()
+    })
+
+    it('SYNC_FORMAT_STATUS checks Drive when nothing is cached and the user is signed in', async () => {
+      mockGetAuthStatus.mockResolvedValue({ authenticated: true })
+
+      expect(await getHandler(IpcChannels.SYNC_FORMAT_STATUS)(null)).toEqual(newer)
+      expect(mockRefreshSyncFormatStatus).toHaveBeenCalledTimes(1)
+    })
+
+    it('SYNC_FORMAT_STATUS is null when nothing is cached and the user is signed out', async () => {
+      expect(await getHandler(IpcChannels.SYNC_FORMAT_STATUS)(null)).toBeNull()
+      expect(mockRefreshSyncFormatStatus).not.toHaveBeenCalled()
+    })
+
+    it('SYNC_FORMAT_STATUS is null instead of throwing when the auth check fails', async () => {
+      mockGetAuthStatus.mockRejectedValue(new Error('keystore'))
+
+      expect(await getHandler(IpcChannels.SYNC_FORMAT_STATUS)(null)).toBeNull()
+    })
+
+    it('a successful sign-in forgets the previous status and checks Drive again', async () => {
+      const result = await getHandler(IpcChannels.SYNC_AUTH_START)(null)
+
+      expect(result).toEqual({ success: true })
+      expect(mockClearSyncFormatStatus).toHaveBeenCalledTimes(1)
+      expect(mockRefreshSyncFormatStatus).toHaveBeenCalledTimes(1)
+      expect(mockClearSyncFormatStatus.mock.invocationCallOrder[0])
+        .toBeLessThan(mockRefreshSyncFormatStatus.mock.invocationCallOrder[0])
+    })
+
+    it('sends every status change to the renderer', () => {
+      setupSyncIpc()
+      const listener = mockSetSyncFormatStatusListener.mock.calls.at(-1)?.[0] as (status: unknown) => void
+
+      listener(newer)
+      listener(null)
+
+      expect(mockBroadcastToAllWindows).toHaveBeenCalledWith(IpcChannels.SYNC_FORMAT_STATUS_CHANGED, newer)
+      expect(mockBroadcastToAllWindows).toHaveBeenCalledWith(IpcChannels.SYNC_FORMAT_STATUS_CHANGED, null)
+    })
+
+    it('a failed sign-in leaves the status alone', async () => {
+      mockStartOAuthFlow.mockRejectedValueOnce(new Error('denied'))
+
+      const result = await getHandler(IpcChannels.SYNC_AUTH_START)(null)
+
+      expect(result).toEqual({ success: false, error: 'denied' })
+      expect(mockClearSyncFormatStatus).not.toHaveBeenCalled()
+      expect(mockRefreshSyncFormatStatus).not.toHaveBeenCalled()
+    })
   })
 })

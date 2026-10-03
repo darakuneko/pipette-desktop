@@ -42,7 +42,7 @@ export async function executeAnalyticsSync(uid: string): Promise<boolean> {
     if (await localSyncBlock()) return false
     const formatGeneration = syncFormatGeneration()
     const guardFiles = await listGuardFiles()
-    if (remoteSyncBlock(guardFiles)) return false
+    if (remoteSyncBlock(guardFiles, formatGeneration)) return false
     await ensureSyncFormatMarker(guardFiles, formatGeneration)
     await ensurePasswordCheckValidated(password, await listPasswordCheckFiles())
 

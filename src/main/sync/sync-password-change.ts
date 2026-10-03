@@ -20,6 +20,7 @@ import {
   findPasswordCheck,
 } from './sync-password'
 import { assertSyncFormatSupported } from './sync-password-guard'
+import { syncFormatGeneration } from './sync-format'
 import { acquirePasswordChangeLock, findOwnPasswordChangeLock, releasePasswordChangeLock } from './sync-password-lock'
 import {
   clearChangeKeys,
@@ -141,8 +142,9 @@ export async function startPasswordChange(newPassword: string): Promise<void> {
     if (!credentials.ok) throw new SyncCredentialError(credentials.reason)
     const oldPassword = credentials.password
     if (newPassword === oldPassword) throw new Error('sync.samePassword')
+    const formatGeneration = syncFormatGeneration()
     const listing = await listFiles()
-    await assertSyncFormatSupported(listing)
+    await assertSyncFormatSupported(listing, formatGeneration)
     // A missing password-check is created at commit.
     const check = findPasswordCheck(listing)
     if (check && !(await fileOpensWith(check, oldPassword))) throw new PasswordMismatchError()

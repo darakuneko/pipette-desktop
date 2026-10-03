@@ -1,5 +1,5 @@
 {
-  "version": "0.1.107",
+  "version": "0.1.108",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -955,6 +955,10 @@
     "reenterPassword": "パスワードを入れ直しますえ",
     "reenterPasswordNoRemote": "Google Drive に照らし合わせる同期パスワードがまだあらしまへん。このフォームを閉じて、いまのパスワードで同期しておくれやす。",
     "updateRequired": "この Google Drive の同期データは新しい版の Pipette で作らはったもんどす。同期を続けはるんやったら、アップデートしておくれやす。",
+    "updateBanner": {
+      "message": "Cloud Sync には新しい版の Pipette が要りますえ。同期を続けはるんやったら、アプリをアップデートしておくれやす。",
+      "openDownloadPage": "ダウンロードページを開きますえ"
+    },
     "unavailable": "接続先かネットワークに問題がありますえ。同期できまへんなぁ。",
     "retry": "もういっぺんやりますえ",
     "pullError": {

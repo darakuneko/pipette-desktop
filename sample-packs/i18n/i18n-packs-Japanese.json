@@ -1,5 +1,5 @@
 {
-  "version": "0.1.107",
+  "version": "0.1.108",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -965,6 +965,10 @@
     "reenterPassword": "パスワードを入力し直す",
     "reenterPasswordNoRemote": "Google Drive に照合できる同期パスワードがまだありません。このフォームを閉じて、今のパスワードで同期してください。",
     "updateRequired": "この Google Drive の同期データは新しいバージョンの Pipette で作られています。同期を続けるにはアップデートしてください。",
+    "updateBanner": {
+      "message": "Cloud Sync には新しいバージョンの Pipette が必要です。同期を続けるにはアプリをアップデートしてください。",
+      "openDownloadPage": "ダウンロードページを開く"
+    },
     "unavailable": "接続先またはネットワークに問題があります。同期機能は使用できません。",
     "retry": "再試行",
     "pullError": {

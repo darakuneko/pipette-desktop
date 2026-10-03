@@ -29,6 +29,10 @@ import {
   bundleSyncUnit,
   resetPasswordCheckCache,
   forgetCreatedSyncFormatMarker,
+  getCachedSyncFormatStatus,
+  refreshSyncFormatStatus,
+  clearSyncFormatStatus,
+  setSyncFormatStatusListener,
   listUndecryptableFiles,
   scanRemoteData,
   fetchRemoteBundle,
@@ -62,7 +66,7 @@ import { getMachineHash } from '../typing-analytics/machine-hash'
 import { ensureCacheIsFresh } from '../typing-analytics/cache-rebuild'
 import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
 import { deleteAllTypingForKeyboard } from '../typing-analytics/typing-analytics-service'
-import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle, SyncOperationResult, ImportLocalDataResult, PasswordChangeDeleteResult } from '../../shared/types/sync'
+import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle, SyncOperationResult, ImportLocalDataResult, PasswordChangeDeleteResult, SyncFormatStatus } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
 import type { FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
@@ -134,10 +138,27 @@ function validateSyncScope(raw: unknown): SyncScope | undefined {
   return undefined
 }
 
+/** Checks Drive's sync-format markers when signed in. Never throws: null
+ *  when signed out, when the auth check fails, or when Drive can't be
+ *  listed and nothing was known before. */
+async function refreshSyncFormatStatusIfSignedIn(): Promise<SyncFormatStatus | null> {
+  try {
+    if (!(await getAuthStatus()).authenticated) return null
+  } catch {
+    return null
+  }
+  return refreshSyncFormatStatus()
+}
+
 export function setupSyncIpc(): void {
   // --- Auth ---
   secureHandle(IpcChannels.SYNC_AUTH_START, () =>
-    wrapIpc('Auth failed', () => startOAuthFlow()),
+    wrapIpc('Auth failed', async () => {
+      await startOAuthFlow()
+      // The account may have changed, so its Drive is checked afresh.
+      clearSyncFormatStatus()
+      void refreshSyncFormatStatus()
+    }),
   )
 
   secureHandle(IpcChannels.SYNC_AUTH_STATUS, () => getAuthStatus())
@@ -148,6 +169,7 @@ export function setupSyncIpc(): void {
       clearHubTokenCache()
       resetPasswordCheckCache()
       forgetCreatedSyncFormatMarker()
+      clearSyncFormatStatus()
       await signOut()
     }),
   )
@@ -595,6 +617,15 @@ export function setupSyncIpc(): void {
   // --- Password check existence ---
   secureHandle(IpcChannels.SYNC_CHECK_PASSWORD_EXISTS, () => checkPasswordCheckExists())
 
+  // --- Sync-format status for the update banner ---
+  // Fetched once by the renderer; every later change is pushed.
+  secureHandle(IpcChannels.SYNC_FORMAT_STATUS, async (): Promise<SyncFormatStatus | null> =>
+    getCachedSyncFormatStatus() ?? refreshSyncFormatStatusIfSignedIn(),
+  )
+  setSyncFormatStatusListener((status) => {
+    broadcastToAllWindows(IpcChannels.SYNC_FORMAT_STATUS_CHANGED, status)
+  })
+
   // --- Pending status (renderer polls on mount) ---
   secureHandle(IpcChannels.SYNC_PENDING_STATUS, () => hasPendingChanges())
 
@@ -729,6 +760,9 @@ export function setupSyncIpc(): void {
   // --- Finish or clean up a password change interrupted by the last exit ---
   // Never rejects: failures are logged and the state stays for next time.
   void recoverPasswordChangeOnStartup()
+
+  // --- Startup sync-format check (never rejects) ---
+  void refreshSyncFormatStatusIfSignedIn()
 
   // --- React to autoSync config changes ---
   onAppConfigChange((key, value) => {
