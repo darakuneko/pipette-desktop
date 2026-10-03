@@ -182,7 +182,7 @@ The left sidebar provides a **tree navigation** with the following structure:
   - **Favorites**: Tap Dance, Macro, Combo, Key Override, Alt Repeat Key — each type shows its saved entries with rename, delete, export, and Hub actions
   - **Application**: Import/export local data, or reset application settings. Cancelling the Import file picker changes nothing — local data is untouched and whatever result was already shown stays displayed. A failed import rolls back everything it already wrote, leaving local data unchanged, and shows the underlying error text under **Import failed** (if the rollback itself also fails, that failure is folded into the same message)
 - **Sync** (when Cloud Sync is configured): Lists keyboards that exist only in Google Drive (not yet downloaded on this device). Each entry is labeled with the keyboard's real name, resolved from the synced name index rather than from the raw UID. Click a remote-only keyboard to download it on demand — a spinner is shown while fetching, and a failure message appears inline if the download cannot complete. Once downloaded, the keyboard moves into the **Local › Keyboards** branch
-  - **Cloud Data**: Reset targets that aren't tied to one keyboard — Favorites, Language Packs, Theme Packs, Key Labels, and imported Typing Test Texts. Only the targets actually present on Google Drive are listed. Each row has its own **Reset** button with a two-step confirmation (click Reset, then confirm or cancel); resetting removes that target's data from Google Drive only — local copies on this device are untouched, and a local copy that still exists re-uploads on the next sync (the same behavior Favorites already has). This is also where **Undecryptable Files** are listed and cleaned up: files that cannot be decrypted with the current password (e.g. encrypted with a forgotten previous password) appear as their own rows with a filename and a **Delete** button (two-step confirmation, one file at a time). Scanning, resetting and deleting here are refused while this PC has an unfinished sync password change or a password-change lock is on Google Drive (§6.1)
+  - **Cloud Data**: Reset targets that aren't tied to one keyboard — Favorites, Language Packs, Theme Packs, Key Labels, and imported Typing Test Texts. Only the targets actually present on Google Drive are listed. Each row has its own **Reset** button with a two-step confirmation (click Reset, then confirm or cancel); resetting removes that target's data from Google Drive only — local copies on this device are untouched, and a local copy that still exists re-uploads on the next sync (the same behavior Favorites already has). This is also where **Undecryptable Files** are listed and cleaned up: files that cannot be decrypted with the current password (e.g. encrypted with a forgotten previous password) appear as their own rows with a filename and a **Delete** button (two-step confirmation, one file at a time). Scanning, resetting and deleting here are refused while this PC has an unfinished sync password change, while a password-change lock is on Google Drive, or while Google Drive needs a newer Pipette (§6.1)
 
 ![Data — Sync](screenshots/data-sidebar-sync.png)
 
@@ -1853,7 +1853,7 @@ If a password-change lock is on Google Drive and this PC has no change of its ow
 
 - The message **"Another PC is changing the sync password, so syncing is paused on this PC until it finishes."** — or, when the lock was left by this PC (for example after the change was abandoned while the lock could not be removed), **"A password change lock left on Google Drive by this PC is pausing sync on every PC."**
 - **"Started: …"** with the time the change started, when it can be read from the lock
-- **Password change lock on Google Drive** → **Release Lock**: Two-step confirmation (**Release Lock** → **Release?** / **Cancel**) with the warning **"Make sure no other PC is syncing or changing the password."** Releasing deletes every password-change lock on Google Drive. Use it only when the PC that took the lock will not come back to finish (for example it broke or Pipette was uninstalled there); a PC still in the middle of the change stops with the lock-lost note and must take a new lock with **Continue**. Release is refused while a sync is running on this PC (**"A sync is running on this PC. Try again in a moment."**) or while this PC has an unfinished change of its own
+- **Password change lock on Google Drive** → **Release Lock**: Two-step confirmation (**Release Lock** → **Release?** / **Cancel**) with the warning **"Make sure no other PC is syncing or changing the password."** Releasing deletes every password-change lock on Google Drive. Use it only when the PC that took the lock will not come back to finish (for example it broke or Pipette was uninstalled there); a PC still in the middle of the change stops with the lock-lost note and must take a new lock with **Continue**. Release is refused while a sync is running on this PC (**"A sync is running on this PC. Try again in a moment."**) or while this PC has an unfinished change of its own, and while Google Drive needs a newer Pipette (§6.1 **When Sync Needs a Newer Pipette**)
 
 **Change Password error conditions**
 
@@ -1885,6 +1885,7 @@ Operational errors (shown as the message directly, no reason code):
 | "The saved progress of the password change can't be read." | The saved progress file is unreadable — shown in the panel, where only **Abandon** is offered |
 | "The password change didn't start. Please change the password again." | **Continue** on a change that stopped while **Preparing** — its lock is removed and the change is forgotten |
 | "This can't be done at the current stage of the password change." | **Go Back to Old Password** or **Delete** after the change has moved past re-encrypting files |
+| "Sync data on this Google Drive was made by a newer version of Pipette. Update Pipette to keep syncing." | Google Drive needs a newer Pipette than the one on this PC (see **When Sync Needs a Newer Pipette** below). Also shown by **Continue** (at **Re-encrypting files on Google Drive** or **Finishing the change**), **Go Back to Old Password**, **Delete** and **Release Lock**; **Abandon** still works |
 
 #### Sync Controls
 
@@ -1905,6 +1906,17 @@ If sync cannot run because the client is not ready, a specific readiness reason 
 | `unauthenticated` | "Connect your Google account to enable sync" |
 | `noPasswordFile` | "Set a sync password to enable sync" |
 | `remoteCheckFailed` | "Couldn't reach Google Drive; sync is paused" |
+
+#### When Sync Needs a Newer Pipette
+
+Before syncing, each Pipette puts a small marker on Google Drive that names the sync format it uses. When the sync data on Google Drive was made by a newer version of Pipette than the one on this PC, this PC stops syncing instead of risking damage to that data. Update Pipette on this PC to sync again.
+
+- **What stops**: everything that reads or writes the synced data on Google Drive — automatic sync, **Sync**, **Set Password** and **Re-enter Password**, Cloud Data scans, downloads, resets and deletes, **Pull from Google Drive** in the Language Packs and Theme Packs modals, and the password change actions that write data: **Change Password**, **Go Back to Old Password**, **Delete**, **Continue** at **Re-encrypting files on Google Drive** or **Finishing the change**, and the automatic finish at startup of a change stopped at **Finishing the change**. At **Preparing** and **Cleaning up**, **Continue** and the startup handling still run, since they only remove the lock and this PC's saved files. **Abandon** still works, so an unfinished password change can always be dropped. **Release Lock** is refused: a lock is left for an updated PC to release. **Reset Keyboard Data** still resets this PC's data but skips the Google Drive delete
+- **What keeps working**: keyboard editing and every other feature that does not use Cloud Sync
+- **Sync Status** shows **"Sync data on this Google Drive was made by a newer version of Pipette. Update Pipette to keep syncing."**
+- **Banner**: a banner at the top of the screen (on the device selection screen too) shows **"Cloud Sync needs a newer version of Pipette. Update the app to keep syncing."** **Open Download Page** opens the Pipette releases page on GitHub. Close the banner with its **×** button; it stays closed until Pipette is restarted
+- While the banner applies, the password change lock banner in the Data tab is hidden
+- **When it is checked**: at startup when signed in to Google, after signing in with **Connect**, and whenever a sync stops for this reason. Signing out clears it
 
 #### Sync Unavailable Alert
 
