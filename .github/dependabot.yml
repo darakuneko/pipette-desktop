@@ -1,0 +1,18 @@
+# GitHub Actions only. npm dependencies are not managed here: they are
+# updated through pnpm and its minimumReleaseAge cooldown.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    # Wait a few days before taking a new release, in the same spirit as
+    # pnpm's minimumReleaseAge.
+    cooldown:
+      default-days: 3
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "chore(build)"
