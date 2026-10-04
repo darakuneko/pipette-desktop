@@ -1887,6 +1887,102 @@ Operational errors (shown as the message directly, no reason code):
 | "This can't be done at the current stage of the password change." | **Go Back to Old Password** or **Delete** after the change has moved past re-encrypting files |
 | "Sync data on this Google Drive was made by a newer version of Pipette. Update Pipette to keep syncing." | Google Drive needs a newer Pipette than the one on this PC (see **When Sync Needs a Newer Pipette** below). Also shown by **Continue** (at **Re-encrypting files on Google Drive** or **Finishing the change**), **Go Back to Old Password**, **Delete** and **Release Lock**; **Abandon** still works |
 
+#### Password Troubleshooting
+
+Start from what you see in the **Data** tab and follow the branch to an action. The messages in the charts are shortened with "…"; the sections above give each one in full.
+
+**When sync doesn't work**
+
+```mermaid
+flowchart LR
+  start["Cloud Sync isn't working, or a password message is shown"] --> what{"What does the Data tab show?"}
+  what -->|"Set a sync password to enable sync"| first{"Do your other PCs already sync?"}
+  first -->|Yes| samepw["Enter the password they use, then Set Password"]
+  first -->|"No, this is the first PC"| newpw["Choose a new password, then Set Password"]
+  what -->|"Sync password does not match…"| known{"Do you know the password your other PCs use?"}
+  known -->|Yes| reenter["Re-enter Password, enter it, then Set Password"]
+  known -->|No| forgot["Forgot the password: see the Q&A below"]
+  what -->|"Another PC is changing the sync password…"| running{"Is a change still running on another PC?"}
+  running -->|Yes| waitother["Wait until it finishes"]
+  running -->|"No, that PC won't finish it"| release["Release Lock"]
+  what -->|"A password change lock left on Google Drive by this PC…"| release
+  what -->|"A sync password change on this PC hasn't finished…"| panel["Use the panel: see the next chart"]
+  what -->|"Cannot change password while sync is in progress."| waitsync["Wait for the sync to finish, then try again"]
+  what -->|"Sync data on this Google Drive was made by a newer version…"| update["Update Pipette"]
+  what -->|"A message about the OS keychain or the saved sync password"| keychain["Unlock the OS keychain, then try again"]
+```
+
+- **Release Lock** shows the warning **"Make sure no other PC is syncing or changing the password."** Use it only when you are sure the PC that took the lock won't finish the change (see **Password change lock** above)
+- **"Sync password does not match. Please check your encryption password."** usually means another PC changed the password. **Re-enter Password** is described under **Re-entering the password after a change on another PC** above
+- For a newer Pipette, see [When Sync Needs a Newer Pipette](#when-sync-needs-a-newer-pipette). For the keychain, see the Q&A below
+
+**When a password change on this PC stopped**
+
+```mermaid
+flowchart LR
+  start["The password change panel is shown on this PC"] --> what{"What does the panel show?"}
+  what -->|"The saved progress of the password change can't be read."| abandon["Abandon"]
+  what -->|"The passwords saved for the password change can't be read…"| keystep{"Current step?"}
+  keystep -->|"Preparing or Cleaning up"| nokeys["Continue (it needs no saved passwords)"]
+  keystep -->|"Another step"| unlock{"Can you unlock the OS keychain?"}
+  unlock -->|Yes| unlocked["Unlock it, then Continue"]
+  unlock -->|No| abandon
+  what -->|"Some files on Google Drive can't be decrypted…"| delete["Delete each listed file, then Continue"]
+  what -->|"Files on Google Drive kept changing…"| closeothers["Close Pipette on your other PCs, then Continue"]
+  what -->|"…its lock on Google Drive was removed…"| relock["Continue (it takes a new lock)"]
+  relock -->|"Another PC is changing the sync password…"| waitother["Wait for that PC to finish"]
+  what -->|"Current step: Preparing"| preparing["Continue (it cancels the change), then Change Password again"]
+  what -->|"Current step: Re-encrypting files on Google Drive"| dir{"Which way is it going?"}
+  dir -->|"Changing to the new sync password hasn't finished…"| keepnew{"End on the new password?"}
+  keepnew -->|Yes| contnew["Continue"]
+  keepnew -->|No| goback["Go Back to Old Password"]
+  dir -->|"Going back to the old sync password hasn't finished…"| keepold{"End on the old password?"}
+  keepold -->|Yes| contold["Continue"]
+  keepold -->|No| switchnew["Switch to New Password Instead"]
+  what -->|"Current step: Finishing the change or Cleaning up"| finish["Continue"]
+```
+
+- **Abandon** (under **Give up the password change**) works in every case, even when the saved passwords or the saved progress can't be read. It leaves the files on Google Drive as they are, so some may stay on the old password — see **If a password change is interrupted** above. It removes this PC's lock only when it can: if removing the lock fails, the lock stays on Google Drive and pauses sync on every PC until it is released (**Release Lock**). At **Preparing** and **Cleaning up**, **Continue** needs no saved passwords and keeps the change until the lock is removed, so prefer it there
+- **Continue** keeps going in the direction the panel shows. While changing to the new password, the other button is **Go Back to Old Password**; while going back, it is **Switch to New Password Instead**. Both are offered only at **Re-encrypting files on Google Drive**. From **Finishing the change** on, finish with **Continue**, then change the password again
+- **Continue** at **Preparing** does not resume: the change never started, so it is removed with **"The password change didn't start. Please change the password again."**
+
+**Q&A**
+
+**Q: I forgot the sync password.**
+
+A: **Change Password** asks only for the new password; it uses the password saved on the PC, not one you type.
+
+- If any PC still syncs with its saved password, run **Change Password** on that PC and choose a new password. Then use **Re-enter Password** with the new password on each of the other PCs
+- If no PC can sync, the password can't be recovered inside Pipette: **Re-enter Password** only saves a password that opens the password check on Google Drive, and **Change Password** needs a saved password that opens it. The way out is to delete Pipette's synced data on Google Drive and start again with a new password. This is done outside Pipette, deletes **all** of Pipette's synced data on Google Drive, and can't be undone. Data saved on each PC is not touched by it. Do it in this order:
+  1. Close Pipette on every PC. While Google Drive has no password check, a running Pipette that syncs creates a new one with the password it has saved. If a PC other than the one you set the new password on does that, the new password won't match it
+  2. In Google Drive on the web, open **Settings** (gear icon) › **Settings** › **Manage apps**, find Pipette, open its **Options** menu and choose **Delete hidden app data**
+  3. Open Pipette on ONE PC and set the new password there. If it shows **Password is set**, use **Change Password**. It works whether or not this PC's own sync has already created a new password check: such a check uses this PC's saved password, which is the one **Change Password** starts from. Otherwise enter the new password and click **Set Password**
+  4. Only after that, open Pipette on the other PCs. On each one, click **Sync** in the **Data** tab of **Settings**: it fails with **"Sync password does not match. Please check your encryption password."** and **Re-enter Password** appears. Use it with the new password. A PC without a saved password just enters the new password and clicks **Set Password**
+
+**Q: I changed the password on one PC. What do I do on the others?**
+
+A: Their saved password no longer matches, but the periodic background check doesn't report that, so their sync can stop without a message. On each of them, click **Sync** in the **Data** tab of **Settings**. It fails with **"Sync password does not match. Please check your encryption password."** and **Re-enter Password** appears; use it and enter the new password. See **Re-entering the password after a change on another PC** above.
+
+**Q: Can I use Pipette on my other PCs while the password is being changed?**
+
+A: Close it, as the form says: **"Close Pipette on your other PCs until the password change finishes."** On a PC that stays open, sync pauses while the lock is on Google Drive. A file it writes back with the old password is picked up by the re-check passes; when that keeps happening, the change stops with **"Files on Google Drive kept changing during the password change. Close Pipette on your other PCs, then continue."**
+
+**Q: The PC crashed, or Pipette was closed, in the middle of a change.**
+
+A: Start Pipette on that PC again. It tries to pick up the change by itself: it tries to remove a change stopped at **Preparing** (then run **Change Password** again), leaves one stopped at **Re-encrypting files on Google Drive** in the panel, and tries to finish one stopped at **Finishing the change** or **Cleaning up**. These attempts can fail — for example, a change at **Finishing the change** stays when the saved passwords can't be read, and a network error leaves the change as it was. If the panel still shows the change, follow the second chart above. See **If a password change is interrupted** above. While the change's lock is on Google Drive, sync stays paused on the other PCs.
+
+**Q: A lock is left on Google Drive and sync stays paused.**
+
+A: If the PC that started the change can still finish it, finish it there with **Continue** or **Abandon**. If it won't come back (for example it broke or Pipette was uninstalled there), use **Release Lock** on another PC. When the banner says **"A password change lock left on Google Drive by this PC is pausing sync on every PC."**, the lock is this PC's own and **Release Lock** on this PC removes it.
+
+**Q: On Linux I get errors about the OS keychain.**
+
+A: Pipette keeps the sync password — and, during a change, both passwords — encrypted with the OS keychain. On Linux that needs a keyring service (for example GNOME Keyring or KWallet) that is running and unlocked.
+
+- **"OS keychain is not available, so the sync password can't be changed here."** or **"OS keychain is not available; sync is disabled here"**: no keychain is available. Set up a keyring, then try again
+- **"Couldn't read the saved sync password"** or **"Couldn't read the saved sync password, so it can't be changed."**: the keychain could not decrypt the saved password — it is locked, or it was reset or the profile moved. Unlock it and try again
+- **"The passwords saved for the password change can't be read. Make sure the OS keychain is unlocked, then try again."**: common right after login. Unlock the keychain, then **Continue**. **Abandon** still works without the keychain
+
 #### Sync Controls
 
 - **Auto Sync**: Toggle automatic sync on or off. When enabled, changes sync automatically with a 10-second debounce and periodic 3-minute polling

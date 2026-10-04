@@ -566,6 +566,16 @@ header {
     font-weight: 600;
     border: 1px solid;
   }
+
+/* ── Diagrams ── */
+.doc .mermaid {
+  margin: 14px 0;
+  overflow-x: auto;
+  color: var(--text2);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.doc .mermaid svg { display: block; margin: 0 auto; }
 </style>
 </head>
 <body>
@@ -1291,6 +1301,65 @@ header {
 <div class="table-wrap"><table><thead><tr><th style="text-align:left">Reason</th><th style="text-align:left">Message</th><th style="text-align:left">Trigger</th></tr></thead><tbody><tr><td style="text-align:left"><code class="ic">unauthenticated</code></td><td style="text-align:left">"Please sign in to Google before changing the password."</td><td style="text-align:left">Not signed in with Google</td></tr><tr><td style="text-align:left"><code class="ic">noPasswordFile</code></td><td style="text-align:left">"No sync password is saved on this PC. Set one instead of changing it."</td><td style="text-align:left">No sync password is saved on this PC</td></tr><tr><td style="text-align:left"><code class="ic">decryptFailed</code></td><td style="text-align:left">"Couldn't read the saved sync password, so it can't be changed."</td><td style="text-align:left">The OS keychain cannot decrypt the saved password (keychain reset, profile move, etc.)</td></tr><tr><td style="text-align:left"><code class="ic">keystoreUnavailable</code></td><td style="text-align:left">"OS keychain is not available, so the sync password can't be changed here."</td><td style="text-align:left">OS keychain encryption is not available (typical on Linux without a keyring)</td></tr></tbody></table></div>
 <p>Operational errors (shown as the message directly, no reason code):</p>
 <div class="table-wrap"><table><thead><tr><th style="text-align:left">Message</th><th style="text-align:left">Trigger</th></tr></thead><tbody><tr><td style="text-align:left">"Cannot change password while sync is in progress."</td><td style="text-align:left">A sync is already running — wait for it to finish. Also shown by <strong>Continue</strong>, <strong>Go Back to Old Password</strong>, <strong>Abandon</strong> and <strong>Delete</strong> in the interrupted-change panel</td></tr><tr><td style="text-align:left">"New password must be different from the current password."</td><td style="text-align:left">The new password matches the existing one</td></tr><tr><td style="text-align:left">"Sync password does not match. Please check your encryption password."</td><td style="text-align:left">The saved password fails to decrypt the password check on Google Drive — for example, another PC already changed the password. Use <strong>Re-enter Password</strong> to enter the password used on the other PCs</td></tr><tr><td style="text-align:left">"Another PC is changing the sync password. Try again after it finishes."</td><td style="text-align:left">Another PC holds the password-change lock. Also shown by <strong>Continue</strong> when another PC took a lock after this PC's lock was lost</td></tr><tr><td style="text-align:left">"Another PC started changing the sync password at the same time. Try again after it finishes."</td><td style="text-align:left">Two PCs tried to take the lock at the same time and the other one won</td></tr><tr><td style="text-align:left">"The password change was interrupted. You can continue it later."</td><td style="text-align:left">Pipette was quitting while files were being re-encrypted — continue from the panel on the next start</td></tr><tr><td style="text-align:left">"The password change was stopped because its lock on Google Drive was removed, possibly from another PC."</td><td style="text-align:left">The change's lock disappeared from Google Drive while it was running (e.g. released from another PC)</td></tr><tr><td style="text-align:left">"Some files on Google Drive can't be decrypted with either the old or the new password. Delete them, then continue."</td><td style="text-align:left">Files open with neither password — delete them from the panel, then <strong>Continue</strong></td></tr><tr><td style="text-align:left">"Files on Google Drive kept changing during the password change. Close Pipette on your other PCs, then continue."</td><td style="text-align:left">Files kept being written back with the other password through every re-check pass</td></tr><tr><td style="text-align:left">"The passwords saved for the password change can't be read. Make sure the OS keychain is unlocked, then try again."</td><td style="text-align:left">The OS keychain cannot decrypt the saved passwords (common on Linux right after login). Shown in the panel too; <strong>Abandon</strong> still works</td></tr><tr><td style="text-align:left">"The saved progress of the password change can't be read."</td><td style="text-align:left">The saved progress file is unreadable — shown in the panel, where only <strong>Abandon</strong> is offered</td></tr><tr><td style="text-align:left">"The password change didn't start. Please change the password again."</td><td style="text-align:left"><strong>Continue</strong> on a change that stopped while <strong>Preparing</strong> — its lock is removed and the change is forgotten</td></tr><tr><td style="text-align:left">"This can't be done at the current stage of the password change."</td><td style="text-align:left"><strong>Go Back to Old Password</strong> or <strong>Delete</strong> after the change has moved past re-encrypting files</td></tr><tr><td style="text-align:left">"Sync data on this Google Drive was made by a newer version of Pipette. Update Pipette to keep syncing."</td><td style="text-align:left">Google Drive needs a newer Pipette than the one on this PC (see <strong>When Sync Needs a Newer Pipette</strong> below). Also shown by <strong>Continue</strong> (at <strong>Re-encrypting files on Google Drive</strong> or <strong>Finishing the change</strong>), <strong>Go Back to Old Password</strong>, <strong>Delete</strong> and <strong>Release Lock</strong>; <strong>Abandon</strong> still works</td></tr></tbody></table></div>
+<h4 id="password-troubleshooting">Password Troubleshooting</h4>
+<p>Start from what you see in the <strong>Data</strong> tab and follow the branch to an action. The messages in the charts are shortened with "…"; the sections above give each one in full.</p>
+<p><strong>When sync doesn't work</strong></p>
+<pre class="mermaid">flowchart LR
+  start[&quot;Cloud Sync isn't working, or a password message is shown&quot;] --&gt; what{&quot;What does the Data tab show?&quot;}
+  what --&gt;|&quot;Set a sync password to enable sync&quot;| first{&quot;Do your other PCs already sync?&quot;}
+  first --&gt;|Yes| samepw[&quot;Enter the password they use, then Set Password&quot;]
+  first --&gt;|&quot;No, this is the first PC&quot;| newpw[&quot;Choose a new password, then Set Password&quot;]
+  what --&gt;|&quot;Sync password does not match…&quot;| known{&quot;Do you know the password your other PCs use?&quot;}
+  known --&gt;|Yes| reenter[&quot;Re-enter Password, enter it, then Set Password&quot;]
+  known --&gt;|No| forgot[&quot;Forgot the password: see the Q&amp;A below&quot;]
+  what --&gt;|&quot;Another PC is changing the sync password…&quot;| running{&quot;Is a change still running on another PC?&quot;}
+  running --&gt;|Yes| waitother[&quot;Wait until it finishes&quot;]
+  running --&gt;|&quot;No, that PC won't finish it&quot;| release[&quot;Release Lock&quot;]
+  what --&gt;|&quot;A password change lock left on Google Drive by this PC…&quot;| release
+  what --&gt;|&quot;A sync password change on this PC hasn't finished…&quot;| panel[&quot;Use the panel: see the next chart&quot;]
+  what --&gt;|&quot;Cannot change password while sync is in progress.&quot;| waitsync[&quot;Wait for the sync to finish, then try again&quot;]
+  what --&gt;|&quot;Sync data on this Google Drive was made by a newer version…&quot;| update[&quot;Update Pipette&quot;]
+  what --&gt;|&quot;A message about the OS keychain or the saved sync password&quot;| keychain[&quot;Unlock the OS keychain, then try again&quot;]</pre>
+<ul><li><strong>Release Lock</strong> shows the warning <strong>"Make sure no other PC is syncing or changing the password."</strong> Use it only when you are sure the PC that took the lock won't finish the change (see <strong>Password change lock</strong> above)</li><li><strong>"Sync password does not match. Please check your encryption password."</strong> usually means another PC changed the password. <strong>Re-enter Password</strong> is described under <strong>Re-entering the password after a change on another PC</strong> above</li><li>For a newer Pipette, see <a href="#" class="ilink" data-doc="en" data-hash="#when-sync-needs-a-newer-pipette">When Sync Needs a Newer Pipette</a>. For the keychain, see the Q&A below</li></ul>
+<p><strong>When a password change on this PC stopped</strong></p>
+<pre class="mermaid">flowchart LR
+  start[&quot;The password change panel is shown on this PC&quot;] --&gt; what{&quot;What does the panel show?&quot;}
+  what --&gt;|&quot;The saved progress of the password change can't be read.&quot;| abandon[&quot;Abandon&quot;]
+  what --&gt;|&quot;The passwords saved for the password change can't be read…&quot;| keystep{&quot;Current step?&quot;}
+  keystep --&gt;|&quot;Preparing or Cleaning up&quot;| nokeys[&quot;Continue (it needs no saved passwords)&quot;]
+  keystep --&gt;|&quot;Another step&quot;| unlock{&quot;Can you unlock the OS keychain?&quot;}
+  unlock --&gt;|Yes| unlocked[&quot;Unlock it, then Continue&quot;]
+  unlock --&gt;|No| abandon
+  what --&gt;|&quot;Some files on Google Drive can't be decrypted…&quot;| delete[&quot;Delete each listed file, then Continue&quot;]
+  what --&gt;|&quot;Files on Google Drive kept changing…&quot;| closeothers[&quot;Close Pipette on your other PCs, then Continue&quot;]
+  what --&gt;|&quot;…its lock on Google Drive was removed…&quot;| relock[&quot;Continue (it takes a new lock)&quot;]
+  relock --&gt;|&quot;Another PC is changing the sync password…&quot;| waitother[&quot;Wait for that PC to finish&quot;]
+  what --&gt;|&quot;Current step: Preparing&quot;| preparing[&quot;Continue (it cancels the change), then Change Password again&quot;]
+  what --&gt;|&quot;Current step: Re-encrypting files on Google Drive&quot;| dir{&quot;Which way is it going?&quot;}
+  dir --&gt;|&quot;Changing to the new sync password hasn't finished…&quot;| keepnew{&quot;End on the new password?&quot;}
+  keepnew --&gt;|Yes| contnew[&quot;Continue&quot;]
+  keepnew --&gt;|No| goback[&quot;Go Back to Old Password&quot;]
+  dir --&gt;|&quot;Going back to the old sync password hasn't finished…&quot;| keepold{&quot;End on the old password?&quot;}
+  keepold --&gt;|Yes| contold[&quot;Continue&quot;]
+  keepold --&gt;|No| switchnew[&quot;Switch to New Password Instead&quot;]
+  what --&gt;|&quot;Current step: Finishing the change or Cleaning up&quot;| finish[&quot;Continue&quot;]</pre>
+<ul><li><strong>Abandon</strong> (under <strong>Give up the password change</strong>) works in every case, even when the saved passwords or the saved progress can't be read. It leaves the files on Google Drive as they are, so some may stay on the old password — see <strong>If a password change is interrupted</strong> above. It removes this PC's lock only when it can: if removing the lock fails, the lock stays on Google Drive and pauses sync on every PC until it is released (<strong>Release Lock</strong>). At <strong>Preparing</strong> and <strong>Cleaning up</strong>, <strong>Continue</strong> needs no saved passwords and keeps the change until the lock is removed, so prefer it there</li><li><strong>Continue</strong> keeps going in the direction the panel shows. While changing to the new password, the other button is <strong>Go Back to Old Password</strong>; while going back, it is <strong>Switch to New Password Instead</strong>. Both are offered only at <strong>Re-encrypting files on Google Drive</strong>. From <strong>Finishing the change</strong> on, finish with <strong>Continue</strong>, then change the password again</li><li><strong>Continue</strong> at <strong>Preparing</strong> does not resume: the change never started, so it is removed with <strong>"The password change didn't start. Please change the password again."</strong></li></ul>
+<p><strong>Q&A</strong></p>
+<p><strong>Q: I forgot the sync password.</strong></p>
+<p>A: <strong>Change Password</strong> asks only for the new password; it uses the password saved on the PC, not one you type.</p>
+<ul><li>If any PC still syncs with its saved password, run <strong>Change Password</strong> on that PC and choose a new password. Then use <strong>Re-enter Password</strong> with the new password on each of the other PCs</li><li>If no PC can sync, the password can't be recovered inside Pipette: <strong>Re-enter Password</strong> only saves a password that opens the password check on Google Drive, and <strong>Change Password</strong> needs a saved password that opens it. The way out is to delete Pipette's synced data on Google Drive and start again with a new password. This is done outside Pipette, deletes <strong>all</strong> of Pipette's synced data on Google Drive, and can't be undone. Data saved on each PC is not touched by it. Do it in this order:</li></ul>
+<p>  1. Close Pipette on every PC. While Google Drive has no password check, a running Pipette that syncs creates a new one with the password it has saved. If a PC other than the one you set the new password on does that, the new password won't match it   2. In Google Drive on the web, open <strong>Settings</strong> (gear icon) › <strong>Settings</strong> › <strong>Manage apps</strong>, find Pipette, open its <strong>Options</strong> menu and choose <strong>Delete hidden app data</strong>   3. Open Pipette on ONE PC and set the new password there. If it shows <strong>Password is set</strong>, use <strong>Change Password</strong>. It works whether or not this PC's own sync has already created a new password check: such a check uses this PC's saved password, which is the one <strong>Change Password</strong> starts from. Otherwise enter the new password and click <strong>Set Password</strong>   4. Only after that, open Pipette on the other PCs. On each one, click <strong>Sync</strong> in the <strong>Data</strong> tab of <strong>Settings</strong>: it fails with <strong>"Sync password does not match. Please check your encryption password."</strong> and <strong>Re-enter Password</strong> appears. Use it with the new password. A PC without a saved password just enters the new password and clicks <strong>Set Password</strong></p>
+<p><strong>Q: I changed the password on one PC. What do I do on the others?</strong></p>
+<p>A: Their saved password no longer matches, but the periodic background check doesn't report that, so their sync can stop without a message. On each of them, click <strong>Sync</strong> in the <strong>Data</strong> tab of <strong>Settings</strong>. It fails with <strong>"Sync password does not match. Please check your encryption password."</strong> and <strong>Re-enter Password</strong> appears; use it and enter the new password. See <strong>Re-entering the password after a change on another PC</strong> above.</p>
+<p><strong>Q: Can I use Pipette on my other PCs while the password is being changed?</strong></p>
+<p>A: Close it, as the form says: <strong>"Close Pipette on your other PCs until the password change finishes."</strong> On a PC that stays open, sync pauses while the lock is on Google Drive. A file it writes back with the old password is picked up by the re-check passes; when that keeps happening, the change stops with <strong>"Files on Google Drive kept changing during the password change. Close Pipette on your other PCs, then continue."</strong></p>
+<p><strong>Q: The PC crashed, or Pipette was closed, in the middle of a change.</strong></p>
+<p>A: Start Pipette on that PC again. It tries to pick up the change by itself: it tries to remove a change stopped at <strong>Preparing</strong> (then run <strong>Change Password</strong> again), leaves one stopped at <strong>Re-encrypting files on Google Drive</strong> in the panel, and tries to finish one stopped at <strong>Finishing the change</strong> or <strong>Cleaning up</strong>. These attempts can fail — for example, a change at <strong>Finishing the change</strong> stays when the saved passwords can't be read, and a network error leaves the change as it was. If the panel still shows the change, follow the second chart above. See <strong>If a password change is interrupted</strong> above. While the change's lock is on Google Drive, sync stays paused on the other PCs.</p>
+<p><strong>Q: A lock is left on Google Drive and sync stays paused.</strong></p>
+<p>A: If the PC that started the change can still finish it, finish it there with <strong>Continue</strong> or <strong>Abandon</strong>. If it won't come back (for example it broke or Pipette was uninstalled there), use <strong>Release Lock</strong> on another PC. When the banner says <strong>"A password change lock left on Google Drive by this PC is pausing sync on every PC."</strong>, the lock is this PC's own and <strong>Release Lock</strong> on this PC removes it.</p>
+<p><strong>Q: On Linux I get errors about the OS keychain.</strong></p>
+<p>A: Pipette keeps the sync password — and, during a change, both passwords — encrypted with the OS keychain. On Linux that needs a keyring service (for example GNOME Keyring or KWallet) that is running and unlocked.</p>
+<ul><li><strong>"OS keychain is not available, so the sync password can't be changed here."</strong> or <strong>"OS keychain is not available; sync is disabled here"</strong>: no keychain is available. Set up a keyring, then try again</li><li><strong>"Couldn't read the saved sync password"</strong> or <strong>"Couldn't read the saved sync password, so it can't be changed."</strong>: the keychain could not decrypt the saved password — it is locked, or it was reset or the profile moved. Unlock it and try again</li><li><strong>"The passwords saved for the password change can't be read. Make sure the OS keychain is unlocked, then try again."</strong>: common right after login. Unlock the keychain, then <strong>Continue</strong>. <strong>Abandon</strong> still works without the keychain</li></ul>
 <h4 id="sync-controls">Sync Controls</h4>
 <ul><li><strong>Auto Sync</strong>: Toggle automatic sync on or off. When enabled, changes sync automatically with a 10-second debounce and periodic 3-minute polling</li><li><strong>Sync</strong>: Manually sync favorites and connected keyboard data. Only favorites and the currently connected keyboard are synced (not all keyboards)</li></ul>
 <h4 id="sync-status">Sync Status</h4>
@@ -2253,6 +2322,65 @@ header {
 <div class="table-wrap"><table><thead><tr><th style="text-align:left">理由</th><th style="text-align:left">表示メッセージ</th><th style="text-align:left">発生条件</th></tr></thead><tbody><tr><td style="text-align:left"><code class="ic">unauthenticated</code></td><td style="text-align:left">「パスワードを変更する前に Google にサインインしてください」</td><td style="text-align:left">Google にサインインしていない</td></tr><tr><td style="text-align:left"><code class="ic">noPasswordFile</code></td><td style="text-align:left">「このPCには同期パスワードが保存されていません。変更ではなく設定してください」</td><td style="text-align:left">この PC に同期パスワードが保存されていない</td></tr><tr><td style="text-align:left"><code class="ic">decryptFailed</code></td><td style="text-align:left">「保存された同期パスワードを読み取れないため、パスワードを変更できません」</td><td style="text-align:left">OS キーチェーンが保存済みのパスワードを復号できない（キーチェーンのリセット・プロファイル移動など）</td></tr><tr><td style="text-align:left"><code class="ic">keystoreUnavailable</code></td><td style="text-align:left">「OSキーチェーンが利用できないため、ここではパスワードを変更できません」</td><td style="text-align:left">OS キーチェーンの暗号化が使えない（キーリングの無い Linux など）</td></tr></tbody></table></div>
 <p><strong>操作上のエラー</strong>（理由コードは介さずメッセージが直接表示される）:</p>
 <div class="table-wrap"><table><thead><tr><th style="text-align:left">表示メッセージ</th><th style="text-align:left">発生条件</th></tr></thead><tbody><tr><td style="text-align:left">「同期実行中のためパスワードを変更できません」</td><td style="text-align:left">同期が実行中 — 完了を待つ。中断パネルの <strong>Continue</strong>・<strong>Go Back to Old Password</strong>・<strong>Abandon</strong>・<strong>Delete</strong> でも表示される</td></tr><tr><td style="text-align:left">「現在と同じパスワードには変更できません」</td><td style="text-align:left">新しいパスワードが現在のパスワードと同じ</td></tr><tr><td style="text-align:left">「同期パスワードが一致しません。暗号化パスワードを確認してください。」</td><td style="text-align:left">保存済みのパスワードで Google Drive 上のパスワードチェックが復号できない — 例: 別の PC が既にパスワードを変更した。<strong>Re-enter Password</strong> でほかの PC のパスワードを入力する</td></tr><tr><td style="text-align:left">「別の PC で同期パスワードを変更中です。終わってからもう一度お試しください。」</td><td style="text-align:left">別の PC がパスワード変更のロックを持っている。この PC のロックが消えた後に別の PC がロックを取った状態で <strong>Continue</strong> した場合も表示される</td></tr><tr><td style="text-align:left">「別の PC が同時に同期パスワードの変更を始めました。終わってからもう一度お試しください。」</td><td style="text-align:left">2 台の PC が同時にロックを取ろうとし、相手が先に取った</td></tr><tr><td style="text-align:left">「パスワード変更が中断されました。後で続けられます。」</td><td style="text-align:left">ファイルの再暗号化中に Pipette が終了しようとした — 次回起動時にパネルから続ける</td></tr><tr><td style="text-align:left">「Google Drive 上のロックが削除されたため（別の PC からの可能性があります）、パスワード変更を中止しました。」</td><td style="text-align:left">実行中に変更のロックが Google Drive から消えた（例: 別の PC で解除された）</td></tr><tr><td style="text-align:left">「旧パスワードでも新パスワードでも復号できないファイルが Google Drive にあります。削除してから続けてください。」</td><td style="text-align:left">どちらのパスワードでも開けないファイルがある — パネルから削除して <strong>Continue</strong></td></tr><tr><td style="text-align:left">「パスワード変更中に Google Drive のファイルが変更され続けました。ほかの PC の Pipette を閉じてから続けてください。」</td><td style="text-align:left">確認し直しのたびに、ファイルが別のパスワードで書き戻され続けた</td></tr><tr><td style="text-align:left">「パスワード変更用に保存したパスワードを読み込めません。OS のキーチェーンが使える状態か確認してから、もう一度お試しください。」</td><td style="text-align:left">OS キーチェーンが保存したパスワードを復号できない（Linux のログイン直後によくある）。パネルにも表示され、<strong>Abandon</strong> は使える</td></tr><tr><td style="text-align:left">「パスワード変更の進行状況を読み込めません。」</td><td style="text-align:left">保存した進行状況ファイルが読めない — パネルに表示され、<strong>Abandon</strong> だけが使える</td></tr><tr><td style="text-align:left">「パスワード変更は開始されていません。もう一度パスワードを変更してください。」</td><td style="text-align:left">「準備中」で止まった変更に <strong>Continue</strong> した — ロックを削除して変更を破棄する</td></tr><tr><td style="text-align:left">「パスワード変更の現在の段階では、この操作はできません。」</td><td style="text-align:left">ファイルの再暗号化より先に進んだ変更に <strong>Go Back to Old Password</strong> や <strong>Delete</strong> をした</td></tr><tr><td style="text-align:left">「この Google Drive の同期データは新しいバージョンの Pipette で作られています。同期を続けるにはアップデートしてください。」</td><td style="text-align:left">Google Drive がこの PC の Pipette より新しいバージョンを必要としている（下記 <strong>新しい Pipette が必要なとき</strong> を参照）。<strong>Continue</strong>（「Google Drive のファイルを再暗号化中」または「変更の確定中」のとき）、<strong>Go Back to Old Password</strong>、<strong>Delete</strong>、<strong>Release Lock</strong> でも表示されます。<strong>Abandon</strong> は実行できます</td></tr></tbody></table></div>
+<h4 id="パスワードのトラブルシュート">パスワードのトラブルシュート</h4>
+<p>データタブに表示されている内容から始めて、分岐をたどると対処に辿り着きます。図の中のメッセージは「…」で省略しています。全文は上の各項目にあります。</p>
+<p><strong>同期できないとき</strong></p>
+<pre class="mermaid">flowchart LR
+  start[&quot;Cloud Sync が動かない、またはパスワードのメッセージが出ている&quot;] --&gt; what{&quot;データタブに何が表示されている?&quot;}
+  what --&gt;|&quot;同期を有効にするには同期パスワードを設定してください&quot;| first{&quot;ほかの PC は既に同期している?&quot;}
+  first --&gt;|はい| samepw[&quot;そのパスワードを入力して Set Password&quot;]
+  first --&gt;|&quot;いいえ、最初の PC&quot;| newpw[&quot;新しいパスワードを決めて Set Password&quot;]
+  what --&gt;|&quot;同期パスワードが一致しません。…&quot;| known{&quot;ほかの PC のパスワードが分かる?&quot;}
+  known --&gt;|はい| reenter[&quot;Re-enter Password で入力して Set Password&quot;]
+  known --&gt;|いいえ| forgot[&quot;パスワードを忘れた: 下の Q&amp;A へ&quot;]
+  what --&gt;|&quot;別の PC で同期パスワードを変更中のため、…&quot;| running{&quot;別の PC で変更がまだ動いている?&quot;}
+  running --&gt;|はい| waitother[&quot;終わるまで待つ&quot;]
+  running --&gt;|&quot;いいえ、その PC は終えられない&quot;| release[&quot;Release Lock&quot;]
+  what --&gt;|&quot;この PC が Google Drive に残したパスワード変更のロックのため、…&quot;| release
+  what --&gt;|&quot;この PC の同期パスワード変更が終わっていないため、…&quot;| panel[&quot;パネルで対処: 次の図へ&quot;]
+  what --&gt;|&quot;同期実行中のためパスワードを変更できません&quot;| waitsync[&quot;同期が終わるのを待ってから、もう一度&quot;]
+  what --&gt;|&quot;この Google Drive の同期データは新しいバージョンの Pipette で作られています。…&quot;| update[&quot;Pipette をアップデート&quot;]
+  what --&gt;|&quot;OS キーチェーンや保存したパスワードについてのメッセージ&quot;| keychain[&quot;OS のキーチェーンのロックを解除して、もう一度&quot;]</pre>
+<ul><li><strong>Release Lock</strong> には <strong>「ほかの PC で同期やパスワード変更が動いていないことを確認してください。」</strong> という警告が出ます。ロックを取った PC が変更を終えないと確かな場合だけ使ってください（上の <strong>パスワード変更のロック</strong> を参照）</li><li><strong>「同期パスワードが一致しません。暗号化パスワードを確認してください。」</strong> は、たいてい別の PC でパスワードが変更されたことを表します。<strong>Re-enter Password</strong> は上の <strong>別の PC で変更されたパスワードを入力し直す</strong> で説明しています</li><li>新しい Pipette が必要な場合は <a href="#" class="ilink" data-doc="ja" data-hash="#新しい-pipette-が必要なとき">新しい Pipette が必要なとき</a> を参照してください。キーチェーンは下の Q&A を参照してください</li></ul>
+<p><strong>この PC のパスワード変更が止まったとき</strong></p>
+<pre class="mermaid">flowchart LR
+  start[&quot;この PC にパスワード変更のパネルが出ている&quot;] --&gt; what{&quot;パネルに何が表示されている?&quot;}
+  what --&gt;|&quot;パスワード変更の進行状況を読み込めません。&quot;| abandon[&quot;Abandon&quot;]
+  what --&gt;|&quot;パスワード変更用に保存したパスワードを読み込めません。…&quot;| keystep{&quot;現在の段階は?&quot;}
+  keystep --&gt;|&quot;準備中 または 後片付け中&quot;| nokeys[&quot;Continue（保存したパスワードは不要）&quot;]
+  keystep --&gt;|&quot;それ以外&quot;| unlock{&quot;OS のキーチェーンのロックを解除できる?&quot;}
+  unlock --&gt;|はい| unlocked[&quot;ロックを解除して Continue&quot;]
+  unlock --&gt;|いいえ| abandon
+  what --&gt;|&quot;旧パスワードでも新パスワードでも復号できないファイルが Google Drive にあります。…&quot;| delete[&quot;一覧のファイルを Delete してから Continue&quot;]
+  what --&gt;|&quot;パスワード変更中に Google Drive のファイルが変更され続けました。…&quot;| closeothers[&quot;ほかの PC の Pipette を閉じてから Continue&quot;]
+  what --&gt;|&quot;Google Drive 上のロックが削除されたため…&quot;| relock[&quot;Continue（新しいロックを取る）&quot;]
+  relock --&gt;|&quot;別の PC で同期パスワードを変更中です。…&quot;| waitother[&quot;その PC の変更が終わるまで待つ&quot;]
+  what --&gt;|&quot;現在の段階: 準備中&quot;| preparing[&quot;Continue（変更は取り消される）、その後もう一度 Change Password&quot;]
+  what --&gt;|&quot;現在の段階: Google Drive のファイルを再暗号化中&quot;| dir{&quot;どちらへ向かっている?&quot;}
+  dir --&gt;|&quot;新しい同期パスワードへの変更が終わっていません。…&quot;| keepnew{&quot;新しいパスワードで終える?&quot;}
+  keepnew --&gt;|はい| contnew[&quot;Continue&quot;]
+  keepnew --&gt;|いいえ| goback[&quot;Go Back to Old Password&quot;]
+  dir --&gt;|&quot;旧パスワードへの戻しが終わっていません。…&quot;| keepold{&quot;旧パスワードで終える?&quot;}
+  keepold --&gt;|はい| contold[&quot;Continue&quot;]
+  keepold --&gt;|いいえ| switchnew[&quot;Switch to New Password Instead&quot;]
+  what --&gt;|&quot;現在の段階: 変更の確定中 または 後片付け中&quot;| finish[&quot;Continue&quot;]</pre>
+<ul><li><strong>Abandon</strong>（<strong>Give up the password change</strong> の行）は、保存したパスワードや進行状況が読めない場合も含めて、どの場合でも使えます。Google Drive のファイルはそのまま残るので、一部が旧パスワードのまま残ることがあります — 上の <strong>パスワード変更が中断した場合</strong> を参照してください。この PC のロックは削除できた場合だけ削除します: 削除に失敗すると、ロックは Google Drive に残り、解除（<strong>Release Lock</strong>）されるまですべての PC の同期を止めます。「準備中」と「後片付け中」では、<strong>Continue</strong> は保存したパスワードを使わず、ロックを削除できるまで変更を残すので、こちらを使ってください</li><li><strong>Continue</strong> はパネルに表示されている方向へ進めます。新しいパスワードへの変更中はもう一方のボタンが <strong>Go Back to Old Password</strong>、旧パスワードへ戻している最中は <strong>Switch to New Password Instead</strong> です。どちらも「Google Drive のファイルを再暗号化中」のときだけ表示されます。「変更の確定中」以降は <strong>Continue</strong> で変更を終えてから、もう一度パスワードを変更してください</li><li>「準備中」での <strong>Continue</strong> は変更を続けません: 変更は始まっていないので、<strong>「パスワード変更は開始されていません。もう一度パスワードを変更してください。」</strong> と表示して変更を破棄します</li></ul>
+<p><strong>Q&A</strong></p>
+<p><strong>Q: 同期パスワードを忘れました。</strong></p>
+<p>A: <strong>Change Password</strong> で入力するのは新しいパスワードだけです。今のパスワードは入力せず、その PC に保存されているパスワードを使います。</p>
+<ul><li>保存済みのパスワードで同期できている PC が 1 台でもあれば、その PC で <strong>Change Password</strong> を実行して新しいパスワードを決めてください。その後、ほかの各 PC で <strong>Re-enter Password</strong> から新しいパスワードを入力します</li><li>同期できる PC が 1 台も無い場合、Pipette の中ではパスワードを復旧できません: <strong>Re-enter Password</strong> は Google Drive 上のパスワードチェックを開けるパスワードしか保存せず、<strong>Change Password</strong> はそれを開ける保存済みのパスワードが必要だからです。残る方法は、Google Drive 上の Pipette の同期データを消して、新しいパスワードでやり直すことです。これは Pipette の外での操作で、Google Drive 上の Pipette の同期データを <strong>すべて</strong> 削除し、元に戻せません。各 PC に保存されているデータには影響しません。次の順番で行ってください:</li></ul>
+<p>  1. すべての PC で Pipette を閉じます。Google Drive にパスワードチェックが無い間に Pipette が動いていて同期すると、その PC に保存されているパスワードで新しいパスワードチェックを作ります。新しいパスワードを設定する PC 以外でそれが起きると、新しいパスワードがそれと一致しなくなります   2. ブラウザで Google ドライブを開き、設定（歯車アイコン）からアプリを管理する画面を開いて Pipette を探し、そのオプションのメニューから非表示のアプリデータを削除します（Google ドライブの英語表示では <strong>Settings</strong> › <strong>Settings</strong> › <strong>Manage apps</strong> › <strong>Options</strong> › <strong>Delete hidden app data</strong>）   3. 1 台だけで Pipette を開き、新しいパスワードを設定します。<strong>Password is set</strong> と表示されている場合は <strong>Change Password</strong> を使います。この PC 自身の同期が既に新しいパスワードチェックを作っていても使えます: そのチェックはこの PC に保存されているパスワードで作られ、<strong>Change Password</strong> はそのパスワードから変更を始めるからです。表示されていない場合は、新しいパスワードを入力して <strong>Set Password</strong> をクリックします   4. その後で初めて、ほかの PC で Pipette を開きます。それぞれの PC で <strong>設定</strong> モーダルの <strong>データ</strong> タブにある <strong>Sync</strong> をクリックすると、<strong>「同期パスワードが一致しません。暗号化パスワードを確認してください。」</strong> で失敗し、<strong>Re-enter Password</strong> が表示されます。そこから新しいパスワードを入力します。パスワードが保存されていない PC は、新しいパスワードを入力して <strong>Set Password</strong> をクリックするだけです</p>
+<p><strong>Q: 1 台でパスワードを変えました。ほかの PC では何をすればよいですか?</strong></p>
+<p>A: ほかの PC の保存済みのパスワードはもう一致しませんが、バックグラウンドの定期的な確認はそれを報告しないため、メッセージが出ないまま同期が止まることがあります。それぞれの PC で <strong>設定</strong> モーダルの <strong>データ</strong> タブにある <strong>Sync</strong> をクリックしてください。<strong>「同期パスワードが一致しません。暗号化パスワードを確認してください。」</strong> で失敗し、<strong>Re-enter Password</strong> が表示されるので、新しいパスワードを入力します。上の <strong>別の PC で変更されたパスワードを入力し直す</strong> を参照してください。</p>
+<p><strong>Q: パスワードの変更中に、ほかの PC で Pipette を使ってもよいですか?</strong></p>
+<p>A: フォームの表示 <strong>「パスワードの変更が終わるまで、ほかの PC の Pipette は閉じておいてください。」</strong> のとおり閉じておいてください。開いたままの PC では、Google Drive にロックがある間は同期が止まります。その PC が旧パスワードでファイルを書き戻しても確認し直しで拾われますが、それが続くと変更は <strong>「パスワード変更中に Google Drive のファイルが変更され続けました。ほかの PC の Pipette を閉じてから続けてください。」</strong> で止まります。</p>
+<p><strong>Q: 変更の途中で PC が落ちた、または Pipette を閉じてしまいました。</strong></p>
+<p>A: その PC でもう一度 Pipette を起動してください。Pipette は変更を自動で引き継ごうとします: 「準備中」で止まった変更は破棄を試み（その後もう一度 <strong>Change Password</strong> を実行します）、「Google Drive のファイルを再暗号化中」で止まった変更はパネルに残し、「変更の確定中」または「後片付け中」で止まった変更は完了を試みます。これは失敗することがあります — 例えば「変更の確定中」の変更は保存したパスワードが読めないと残り、ネットワークエラーでは変更がそのまま残ります。パネルに変更がまだ表示されている場合は、上の 2 つ目の図に従ってください。上の <strong>パスワード変更が中断した場合</strong> を参照してください。変更のロックが Google Drive にある間は、ほかの PC の同期は止まったままです。</p>
+<p><strong>Q: Google Drive にロックが残ったままで、同期が止まっています。</strong></p>
+<p>A: 変更を始めた PC でまだ変更を終えられるなら、その PC で <strong>Continue</strong> か <strong>Abandon</strong> で終わらせてください。戻ってこない場合（故障した、Pipette をアンインストールした等）は、別の PC で <strong>Release Lock</strong> を使います。バナーが <strong>「この PC が Google Drive に残したパスワード変更のロックのため、すべての PC の同期が止まっています。」</strong> のときは、そのロックはこの PC 自身のもので、この PC の <strong>Release Lock</strong> で削除できます。</p>
+<p><strong>Q: Linux で OS キーチェーンのエラーが出ます。</strong></p>
+<p>A: Pipette は同期パスワード（変更中は新旧両方のパスワード）を OS のキーチェーンで暗号化して保存します。Linux では、キーリングのサービス（GNOME Keyring や KWallet など）が動いていて、ロックが解除されている必要があります。</p>
+<ul><li><strong>「OSキーチェーンが利用できないため、ここではパスワードを変更できません」</strong> または <strong>「OSキーチェーンが利用できないため、ここでは同期が無効です」</strong>: キーチェーンが使えません。キーリングを用意してから、もう一度お試しください</li><li><strong>「保存された同期パスワードを読み取れませんでした」</strong> または <strong>「保存された同期パスワードを読み取れないため、パスワードを変更できません」</strong>: キーチェーンが保存済みのパスワードを復号できませんでした — ロックされている、またはリセットされた・プロファイルを移動した場合です。ロックを解除して、もう一度お試しください</li><li><strong>「パスワード変更用に保存したパスワードを読み込めません。OS のキーチェーンが使える状態か確認してから、もう一度お試しください。」</strong>: ログイン直後によく起きます。キーチェーンのロックを解除してから <strong>Continue</strong> を押してください。<strong>Abandon</strong> はキーチェーンが無くても使えます</li></ul>
 <h4 id="同期コントロール">同期コントロール</h4>
 <ul><li><strong>Auto Sync</strong>: 自動同期のオン/オフを切り替え。有効時は変更が 10 秒のデバウンスで自動同期され、3 分間隔のポーリングも行われます</li><li><strong>Sync</strong>: お気に入りと接続中のキーボードデータを手動で同期します。全キーボードではなく、お気に入りと現在接続中のキーボードのみが同期対象です</li></ul>
 <h4 id="同期ステータス">同期ステータス</h4>
@@ -3230,6 +3358,58 @@ function copyTemplate() {
 </div>
 
 <script>const DOC_TO_TAB={"en":"en","ja":"en","data":"data","theme":"theme"};
+let mermaidLoad = null;
+
+function loadMermaid() {
+  mermaidLoad ??= new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = "https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js";
+    s.onload = () => {
+      const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: 'base',
+        flowchart: { useMaxWidth: false },
+        themeVariables: {
+          fontFamily: getComputedStyle(document.body).fontFamily,
+          fontSize: '14px',
+          primaryColor: css('--accent-bg'),
+          primaryBorderColor: css('--accent'),
+          primaryTextColor: css('--text'),
+          secondaryColor: css('--code-bg'),
+          tertiaryColor: css('--bg'),
+          lineColor: css('--text2'),
+        },
+      });
+      resolve();
+    };
+    s.onerror = () => reject(new Error('Failed to load ' + s.src));
+    document.head.appendChild(s);
+  });
+  return mermaidLoad;
+}
+
+const pendingDiagrams = () => [...document.querySelectorAll('.doc.active .mermaid:not([data-processed])')];
+
+let diagramsSettled = Promise.resolve();
+
+// Bumped by every switchDoc and scrollToHash; a deferred scroll only runs if no
+// newer navigation happened while diagrams were rendering.
+let navToken = 0;
+
+function renderDiagrams() {
+  diagramsSettled = diagramsSettled
+    .then(() => {
+      if (!pendingDiagrams().length) return;
+      // Re-query after loading: the visible article may have changed meanwhile.
+      return loadMermaid().then(() => mermaid.run({ nodes: pendingDiagrams(), suppressErrors: true }));
+    })
+    .catch(err => console.error(err));
+  return diagramsSettled;
+}
+
+renderDiagrams();
+
 const contentEl = document.querySelector('.content');
 const tabs      = [...document.querySelectorAll('.tab')];
 const docEls    = [...document.querySelectorAll('.doc')];
@@ -3240,17 +3420,29 @@ function switchDoc(id, hash) {
   tabs.forEach(t => t.classList.toggle('active', t.dataset.doc === tabId));
   docEls.forEach(d => d.classList.toggle('active', d.id === 'doc-' + id));
   tocPanels.forEach(p => p.classList.toggle('active', p.id === 'toc-' + id));
+  navToken++;
+  renderDiagrams();
 
   history.replaceState(null, '', '#' + tabId);
 
   if (hash) {
-    setTimeout(() => scrollToHash(id, hash), 60);
+    const nav = navToken;
+    setTimeout(() => { if (nav === navToken) scrollToHash(id, hash); }, 60);
   } else {
     contentEl.scrollTop = 0;
   }
 }
 
 function scrollToHash(docId, hash) {
+  const nav = ++navToken;
+  renderDiagrams().then(() => {
+    if (nav === navToken && document.getElementById('doc-' + docId)?.classList.contains('active')) {
+      scrollToHashNow(docId, hash);
+    }
+  });
+}
+
+function scrollToHashNow(docId, hash) {
   // Use getElementById to avoid CSS selector restriction on numeric-starting IDs (e.g. #1-3-data)
   const id = hash.startsWith('#') ? hash.slice(1) : hash;
   const target = document.getElementById(id);
