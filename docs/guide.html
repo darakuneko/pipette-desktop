@@ -3363,7 +3363,7 @@ let mermaidLoad = null;
 function loadMermaid() {
   mermaidLoad ??= new Promise((resolve, reject) => {
     const s = document.createElement('script');
-    s.src = "https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js";
+    s.src = "lib/mermaid.min.js";
     s.onload = () => {
       const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
       mermaid.initialize({

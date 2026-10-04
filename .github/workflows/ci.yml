@@ -47,5 +47,5 @@ jobs:
         run: xvfb-run -a npx playwright test --grep @virtual
 
       - run: pnpm run doc:guide
-      - name: Verify docs/guide.html is up to date
-        run: git diff --exit-code docs/guide.html || (echo "docs/guide.html is stale — run 'pnpm run doc:guide' and commit the result." && exit 1)
+      - name: Verify generated docs are up to date
+        run: bash scripts/check-docs-fresh.sh

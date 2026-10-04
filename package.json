@@ -75,6 +75,7 @@
     "electron-vite": "^5.0.0",
     "eslint": "^10.8.0",
     "jsdom": "^30.0.1",
+    "mermaid": "11.17.2",
     "prettier": "^3.9.6",
     "sql.js": "^1.14.1",
     "tailwindcss": "^4.3.3",

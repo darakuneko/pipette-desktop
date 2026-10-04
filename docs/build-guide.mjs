@@ -6,7 +6,8 @@
  *
  * Usage: node docs/build-guide.mjs
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -752,9 +753,11 @@ docEls.forEach(docEl => {
 
 // ─── Mermaid (emitted only when a doc has a diagram) ──────────────────────────
 
-const MERMAID_SRC = 'https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js';
+// docs/lib/ is copied from the mermaid devDependency by this script. It is not
+// named vendor/ because GitHub Pages' Jekyll excludes vendor/ by default.
+const MERMAID_SRC = 'lib/mermaid.min.js';
 
-// Until Mermaid replaces it with an SVG (or if the CDN is unreachable), the
+// Until Mermaid replaces it with an SVG (or if the script fails to load), the
 // <pre class="mermaid"> shows the diagram source as preformatted text.
 const MERMAID_CSS = `
 /* ── Diagrams ── */
@@ -770,7 +773,7 @@ const MERMAID_CSS = `
 
 // Diagrams are rendered lazily, only in the visible article, so a diagram in an
 // article that is never opened is never rendered, and Mermaid itself is only
-// downloaded once an opened article has a diagram. This block is placed before
+// loaded once an opened article has a diagram. This block is placed before
 // the page JS so that its let/const bindings are initialised before the page
 // JS's startup switchDoc call reaches renderDiagrams.
 // The theme reuses the page's own :root colours.
@@ -910,4 +913,21 @@ const output = `<!DOCTYPE html>
 
 const outPath = join(__dir, 'guide.html');
 writeFileSync(outPath, output);
+
+// Byte-for-byte copies, so a rebuild leaves docs/lib/ unchanged.
+// The notices for libraries bundled into mermaid.min.js are its trailing
+// "Bundled license information" comments.
+const libDir = join(__dir, 'lib');
+
+if (hasMermaid) {
+  const mermaidDir = dirname(createRequire(import.meta.url).resolve('mermaid/package.json'));
+  mkdirSync(libDir, { recursive: true });
+  copyFileSync(join(mermaidDir, 'dist/mermaid.min.js'), join(libDir, 'mermaid.min.js'));
+  copyFileSync(join(mermaidDir, 'LICENSE'), join(libDir, 'mermaid.LICENSE'));
+} else if (existsSync(libDir)) {
+  for (const name of readdirSync(libDir)) {
+    if (name.startsWith('mermaid.')) rmSync(join(libDir, name));
+  }
+}
+
 console.log(`\n✓  docs/guide.html  (${Math.round(output.length / 1024)} KB)`);

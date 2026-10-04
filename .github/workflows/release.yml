@@ -45,6 +45,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm run doc:guide
+      - name: Verify generated docs are up to date
+        run: bash scripts/check-docs-fresh.sh
 
   build:
     needs: test
