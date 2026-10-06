@@ -530,6 +530,10 @@ export function getRawcodesProtocol(): number {
   return rawcodesProtocol
 }
 
+// v5 firmware decodes the TO layer from 4 bits (keycode & 0xF), so TO(16)
+// and above are unrepresentable there and alias TO(0..15). v6 encodes 5 bits.
+const V5_TO_LAYER_LIMIT = 16
+
 export function recreateKeycodes(): void {
   keycodeRevision++
   KEYCODES.length = 0
@@ -556,8 +560,16 @@ export function recreateKeycodes(): void {
   KEYCODES_MAP.clear()
   RAWCODES_MAP.clear()
   LABEL_MAP = null
+  // The layer arrays may have been built under v6 (e.g. a v5 serialization
+  // scope while a 32-layer v6 keyboard is connected); keep the v5 aliases
+  // TO(16..31) from overwriting TO(0..15) in the reverse map.
+  const v5AliasedTo =
+    getProtocolValue() !== 6 && KEYCODES_LAYERS_TO.length > V5_TO_LAYER_LIMIT
+      ? new Set(KEYCODES_LAYERS_TO.slice(V5_TO_LAYER_LIMIT))
+      : null
   for (const keycode of KEYCODES) {
     KEYCODES_MAP.set(keycode.qmkId.replace('(kc)', ''), keycode)
+    if (v5AliasedTo?.has(keycode)) continue
     RAWCODES_MAP.set(deserialize(keycode.qmkId), keycode)
   }
   // Add MOD_* entries to KEYCODES_MAP for LM inner display (not to RAWCODES_MAP
@@ -659,7 +671,11 @@ export function recreateKeyboardKeycodes(keyboard: KeyboardKeycodeContext): void
     ['TO', 'Turns on layer and turns off all other layers, except the default layer', to],
   ]
   for (const [label, description, target, feature] of layerKeycodeTypes) {
-    for (let layer = 0; layer < layers; layer++) {
+    const count =
+      label === 'TO' && getProtocolValue() !== 6
+        ? Math.min(layers, V5_TO_LAYER_LIMIT)
+        : layers
+    for (let layer = 0; layer < count; layer++) {
       const lbl = `${label}(${layer})`
       target.push(
         new Keycode({

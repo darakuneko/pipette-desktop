@@ -13,6 +13,7 @@ import {
   KEYCODES_LIGHTING,
   KEYCODES_SYSTEM,
   KEYCODES_USER,
+  getProtocolValue,
 } from './keycodes'
 
 type AnyFn1 = (kc: number) => number
@@ -89,7 +90,13 @@ function buildAnyKeycodeFunctions(): Map<string, AnyFn1 | AnyFn2> {
     ((layer: number, kc: number) =>
       r('QK_LAYER_TAP') | ((layer & 0x0f) << 8) | (kc & 0xff)) as AnyFn2,
   )
-  fns.set('TO', (layer: number) => r('QK_TO') | (r('ON_PRESS') << 0x4) | (layer & 0xff))
+  // v6 firmware: TO(layer) = QK_TO | (layer & 0x1F).
+  // v5 firmware: TO(layer) = QK_TO | (ON_PRESS << 4) | (layer & 0xFF).
+  fns.set('TO', (layer: number) =>
+    getProtocolValue() === 6
+      ? r('QK_TO') | (layer & 0x1f)
+      : r('QK_TO') | (r('ON_PRESS') << 0x4) | (layer & 0xff),
+  )
   fns.set('MO', (layer: number) => r('QK_MOMENTARY') | (layer & 0xff))
   fns.set('DF', (layer: number) => r('QK_DEF_LAYER') | (layer & 0xff))
   fns.set('TG', (layer: number) => r('QK_TOGGLE_LAYER') | (layer & 0xff))
