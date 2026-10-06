@@ -1,5 +1,5 @@
 {
-  "version": "0.1.108",
+  "version": "0.1.109",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -782,7 +782,8 @@
     "instructions": "光ってるキーを長押ししてアンロック！☆",
     "hint": "やめるなら抜き差ししちゃえｗ",
     "progress": "進捗: {{current}} / {{total}} っしょ",
-    "cancel": "やめとく〜"
+    "cancel": "やめとく〜",
+    "missingKeys": "このアンロックキー、レイアウトに無いんだけど！: {{positions}}。解除できないかもｗ ファームの設定見るか、作った人に聞いてみて〜☆"
   },
   "fileIO": {
     "loadLayout": ".vilっしょ",

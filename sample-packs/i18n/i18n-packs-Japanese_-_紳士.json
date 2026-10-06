@@ -1,5 +1,5 @@
 {
-  "version": "0.1.108",
+  "version": "0.1.109",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -782,7 +782,8 @@
     "instructions": "光り輝く鍵を長押しして、封印をお解きください",
     "hint": "おやめになるなら、紐を抜き差ししてくださいませ",
     "progress": "進捗: {{current}} / {{total}}",
-    "cancel": "お取りやめ"
+    "cancel": "お取りやめ",
+    "missingKeys": "これらの解錠の鍵は、この機材の配列に見当たりませぬ: {{positions}}。封印を解けぬ恐れがございます。機材のファームウェア設定をお確かめになるか、作り手にお尋ねくださいませ"
   },
   "fileIO": {
     "loadLayout": ".vil 拝読",

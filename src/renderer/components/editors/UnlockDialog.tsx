@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { KleKey } from '../../../shared/kle/types'
-import { posKey } from '../../../shared/kle/pos-key'
 import { KeyboardWidget } from '../keyboard'
 import { useEscapeSwallow } from '../../hooks/useEscapeClose'
+import { computeUnlockKeyView } from './unlock-dialog-keys'
 
 const UNLOCK_POLL_INTERVAL = 200 // ms
 const MAX_CONSECUTIVE_ERRORS = 5 // treat as disconnect after this many consecutive poll errors
@@ -38,11 +38,12 @@ export function UnlockDialog({
   const startedRef = useRef(false)
   const consecutiveErrorsRef = useRef(0)
 
-  // Highlight unlock keys in the keyboard widget
-  const highlightedKeys = new Set<string>()
-  for (const [row, col] of unlockKeys) {
-    highlightedKeys.add(posKey(row, col))
-  }
+  // Memoized because the poll re-renders this dialog every 200 ms and
+  // KeyboardWidget (KeyboardWidget.tsx) is memo()'d on these props.
+  const { highlightedKeys, missing, displayOptions } = useMemo(
+    () => computeUnlockKeyView(keys, unlockKeys, layoutOptions),
+    [keys, unlockKeys, layoutOptions],
+  )
 
   // Store callbacks in refs so the interval handler always sees the
   // latest versions without re-triggering the useEffect.
@@ -139,7 +140,7 @@ export function UnlockDialog({
             keys={keys}
             keycodes={EMPTY_KEYCODES}
             highlightedKeys={highlightedKeys}
-            layoutOptions={layoutOptions}
+            layoutOptions={displayOptions}
             readOnly
             scale={0.5}
           />
@@ -157,6 +158,14 @@ export function UnlockDialog({
         </div>
 
         <p className="text-xs text-content-muted">{t('unlock.hint')}</p>
+
+        {missing.length > 0 && (
+          <p role="status" className="mt-4 text-xs text-warning" data-testid="unlock-missing-keys">
+            {t('unlock.missingKeys', {
+              positions: missing.map(([row, col]) => `(${row}, ${col})`).join(', '),
+            })}
+          </p>
+        )}
 
         {macroWarning && (
           <p className="mt-4 text-xs text-content-muted" data-testid="macro-unlock-warning">

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.108",
+  "version": "0.1.109",
   "name": "English",
   "common": {
     "save": "Save",
@@ -782,7 +782,8 @@
     "instructions": "Press and hold the highlighted keys to unlock.",
     "hint": "To cancel, unplug and replug the keyboard.",
     "progress": "Progress: {{current}} / {{total}}",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "missingKeys": "These unlock keys are not in this keyboard's layout: {{positions}}. Unlocking may not be possible. Check the keyboard's firmware settings or ask its maker."
   },
   "fileIO": {
     "loadLayout": ".vil",
