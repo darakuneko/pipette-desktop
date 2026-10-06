@@ -1,5 +1,5 @@
 {
-  "version": "0.1.109",
+  "version": "0.1.110",
   "name": "English",
   "common": {
     "save": "Save",
@@ -189,7 +189,8 @@
       "asciiOnly": "Only ASCII characters (A-Z, 0-9, symbols) are supported",
       "unlockClickAgain": "After unlocking, click the macro key again to open the editor.",
       "unlockWarning": "Do not store passwords or sensitive information in macros, as they may be replayed or shared.",
-      "invalidMacroEntry": "Invalid macro at index {{index}}"
+      "invalidMacroEntry": "Invalid macro at index {{index}}",
+      "textLayoutNote": "Text is typed with the firmware's keyboard layout (usually US). If your OS layout differs, some characters may come out different."
     },
     "lighting": {
       "title": "Lighting",

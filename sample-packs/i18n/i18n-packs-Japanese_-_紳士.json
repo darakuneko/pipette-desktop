@@ -1,5 +1,5 @@
 {
-  "version": "0.1.109",
+  "version": "0.1.110",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -189,7 +189,8 @@
       "asciiOnly": "西欧の文字のみお受けいたします",
       "unlockClickAgain": "封印を解いた後、再び鍵を叩いて筆記帳をお開きください",
       "unlockWarning": "合言葉などの機密を呪文に含めてはなりませぬ。漏洩の恐れがございます。",
-      "invalidMacroEntry": "第 {{index}} 番の呪文に乱れがございます"
+      "invalidMacroEntry": "第 {{index}} 番の呪文に乱れがございます",
+      "textLayoutNote": "言葉は機材のファームウェアが持つ配列（多くは US）にて綴られます。OSの配列が異なる折には、一部の文字が異なって現れることがございます。"
     },
     "lighting": {
       "title": "灯火 (Lighting)",
