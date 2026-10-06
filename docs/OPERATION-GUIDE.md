@@ -1051,6 +1051,8 @@ Opening a macro action brings up the Macro Modal with two display modes that sha
 
 Empty keycode actions are tolerated while editing; they are normalized out silently when the macro is saved or exported to a favorite.
 
+When the macro contains a **Text** action, a note below the header reads: "Text is typed with the firmware's keyboard layout (usually US). If your OS layout differs, some characters may come out different." It stays visible while a row is being edited.
+
 #### Recording Lock
 
 While the built-in recorder is capturing keystrokes, the Macro Modal enters a strict disabled state to prevent accidental edits:

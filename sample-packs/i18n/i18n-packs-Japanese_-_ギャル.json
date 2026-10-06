@@ -1,5 +1,5 @@
 {
-  "version": "0.1.109",
+  "version": "0.1.110",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -189,7 +189,8 @@
       "asciiOnly": "英数字・記号しか無理っしょ☆",
       "unlockClickAgain": "アンロックしたらもう一回クリックして開いてね♡",
       "unlockWarning": "パスワードとか大事なのは入れちゃダメっしょ！漏れるワンチャンあるから☆",
-      "invalidMacroEntry": "インデックス{{index}}のマクロ、バグってるっぽい？"
+      "invalidMacroEntry": "インデックス{{index}}のマクロ、バグってるっぽい？",
+      "textLayoutNote": "テキストはファームの配列（だいたいUS）で打たれるっしょ！OSの配列が違うと、一部の文字がズレて出ちゃうかも☆"
     },
     "lighting": {
       "title": "Lighting☆",

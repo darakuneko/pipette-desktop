@@ -986,6 +986,7 @@ header {
 <div class="img-wrap"><img src="screenshots/macro-list-mode.png" alt="Macro Modal — List Mode" class="doc-img" loading="lazy"></div>
 <div class="img-wrap"><img src="screenshots/macro-edit-mode.png" alt="Macro Modal — Edit Mode" class="doc-img" loading="lazy"></div>
 <p>Empty keycode actions are tolerated while editing; they are normalized out silently when the macro is saved or exported to a favorite.</p>
+<p>When the macro contains a <strong>Text</strong> action, a note below the header reads: "Text is typed with the firmware's keyboard layout (usually US). If your OS layout differs, some characters may come out different." It stays visible while a row is being edited.</p>
 <h4 id="recording-lock">Recording Lock</h4>
 <p>While the built-in recorder is capturing keystrokes, the Macro Modal enters a strict disabled state to prevent accidental edits:</p>
 <ul><li>The Add Action select, Text Editor toggle, Clear, Revert, and bottom <strong>Save</strong> buttons are all disabled</li><li>Every existing MacroActionItem and its KeycodeField is disabled (native <code class="ic">disabled</code> attribute — Tab / hover / click are all suppressed)</li><li>The inline favorites panel is made invisible with its width preserved, so the layout does not jump</li><li>The modal's top-right Close button and backdrop click are inert — the modal cannot be dismissed until recording stops</li><li>The list-mode footer's Clear / Revert / Save buttons remain visible but disabled during recording. In per-action edit mode the list-level Clear / Revert are hidden, but the edit-mode Save (and Revert, for existing edits) are kept visible and disabled so you can see the affordance</li></ul>
@@ -2007,6 +2008,7 @@ header {
 <div class="img-wrap"><img src="screenshots/macro-list-mode.png" alt="Macro モーダル — リストモード" class="doc-img" loading="lazy"></div>
 <div class="img-wrap"><img src="screenshots/macro-edit-mode.png" alt="Macro モーダル — 編集モード" class="doc-img" loading="lazy"></div>
 <p>編集中に空のキーコードアクションは許容されますが、保存・お気に入りエクスポート時に<strong>自動的に正規化</strong>され取り除かれます。</p>
+<p>マクロに <strong>Text</strong> アクションがあると、ヘッダーの下に「テキストはファームウェアのキーボード配列（通常は US）で入力されます。OS の配列が異なる場合、一部の文字が違って出力されることがあります。」という注意書きが表示されます。行の編集中も表示されたままです。</p>
 <h4 id="記録中のロック">記録中のロック</h4>
 <p>組み込みレコーダーがキーストロークを記録中は、誤編集を防ぐために Macro モーダルが強制的に無効化状態になります:</p>
 <ul><li>Add Action セレクト、Text Editor トグル、Clear、Revert、下部の <strong>Save</strong> ボタンがすべて disabled</li><li>既存の MacroActionItem と KeycodeField は native <code class="ic">disabled</code> 属性で無効化され、Tab / hover / クリックが全て抑制されます</li><li>インラインお気に入りパネルは幅を保ったまま非表示になり、レイアウトが跳ねません</li><li>モーダル右上の Close ボタンと背景クリックは無効です。記録を止めるまでモーダルは閉じられません</li><li>リストモード用フッターの Clear / Revert / Save は記録中も表示されますが disabled になります。編集モード中はリストモード用の Clear / Revert は非表示ですが、編集モード用の Save（および既存編集時の Revert）は disabled 状態でそのまま表示されます</li></ul>

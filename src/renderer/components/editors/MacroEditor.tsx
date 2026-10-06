@@ -73,6 +73,7 @@ export function MacroEditor({
   macrosRef.current = macros
 
   const currentActions = macros[activeMacro] ?? []
+  const hasTextAction = currentActions.some((a) => a.type === 'text')
 
   const favStore = useFavoriteStore({
     favoriteType: 'macro',
@@ -339,6 +340,13 @@ export function MacroEditor({
               {t('editor.macro.textEditor')}
             </button>
           </div>
+
+        {/* Outside the header so it stays visible while a row is edited. */}
+        {hasTextAction && (
+          <p className={`shrink-0 px-6 pb-2 text-xs text-content-muted ${isEditing ? 'pt-2' : ''}`} data-testid="macro-text-layout-note">
+            {t('editor.macro.textLayoutNote')}
+          </p>
+        )}
 
         {/* Action list: shrink-0 in edit mode, scrollable in list mode */}
         <div className={`px-6 pb-3 ${isEditing ? 'shrink-0 pt-6' : 'flex-1 overflow-y-auto'}`}>

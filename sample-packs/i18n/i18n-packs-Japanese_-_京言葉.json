@@ -1,5 +1,5 @@
 {
-  "version": "0.1.109",
+  "version": "0.1.110",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -189,7 +189,8 @@
       "asciiOnly": "英数字・記号だけどすえ",
       "unlockClickAgain": "アンロックしはったら、もういっぺんクリックして開いておくれやす",
       "unlockWarning": "パスワードや大事なもんはマクロに入れんといておくれやす。漏れるかもしれまへんえ。",
-      "invalidMacroEntry": "インデックス{{index}}のマクロがちゃいますえ"
+      "invalidMacroEntry": "インデックス{{index}}のマクロがちゃいますえ",
+      "textLayoutNote": "テキストはファームウェアの配列（たいていはUS）で打たれますえ。OSの配列がちゃうと、別の文字が出ることがありますよって、気ぃつけておくれやす。"
     },
     "lighting": {
       "title": "Lighting",

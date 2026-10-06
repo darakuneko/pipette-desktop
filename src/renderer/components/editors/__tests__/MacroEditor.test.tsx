@@ -127,4 +127,35 @@ describe('MacroEditor', () => {
     render(<MacroEditor {...defaultProps} isDummy={true} />)
     expect(screen.queryByTestId('macro-favorites-panel')).not.toBeInTheDocument()
   })
+
+  describe('text layout note', () => {
+    const macrosWithText = [
+      [{ type: 'text' as const, text: 'abc' }, { type: 'delay' as const, delay: 100 }],
+      [{ type: 'delay' as const, delay: 100 }],
+      [],
+      [],
+    ]
+
+    it('shows the note when the current macro has a Text action', () => {
+      render(<MacroEditor {...defaultProps} parsedMacros={macrosWithText} initialMacro={0} />)
+      expect(screen.getByTestId('macro-text-layout-note').textContent).toBe('editor.macro.textLayoutNote')
+    })
+
+    it.each([
+      ['has no Text action', 1],
+      ['is empty', 2],
+    ])('does not show the note when the current macro %s', (_label, index) => {
+      render(<MacroEditor {...defaultProps} parsedMacros={macrosWithText} initialMacro={index} />)
+      expect(screen.queryByTestId('macro-text-layout-note')).not.toBeInTheDocument()
+    })
+
+    it('follows the active macro when it switches', () => {
+      const { rerender } = render(
+        <MacroEditor {...defaultProps} parsedMacros={macrosWithText} initialMacro={0} />,
+      )
+      expect(screen.getByTestId('macro-text-layout-note')).toBeInTheDocument()
+      rerender(<MacroEditor {...defaultProps} parsedMacros={macrosWithText} initialMacro={1} />)
+      expect(screen.queryByTestId('macro-text-layout-note')).not.toBeInTheDocument()
+    })
+  })
 })
