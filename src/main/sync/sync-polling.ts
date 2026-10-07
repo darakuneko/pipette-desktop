@@ -7,6 +7,7 @@ import { MalformedSyncBundleError } from './merge'
 import { isAnalyticsSyncUnit, isRunLogSyncUnit } from './sync-bundle'
 import { runPackGcAfterPass } from './pack-gc'
 import { log } from '../logger'
+import { loadAppConfig } from '../app-config'
 import { SYNC_CONCURRENCY, POLL_INTERVAL_MS, syncRuntime, recordRemoteState, emitProgress, tryClaimSyncLock } from './sync-runtime-state'
 import { requireSyncCredentials, ensurePasswordCheckValidated } from './sync-password'
 import { localSyncBlock, remoteSyncBlock, emitSyncBlocked } from './sync-password-guard'
@@ -16,9 +17,12 @@ import { listLocalKeyboardUids, shouldDownloadSyncUnit } from './sync-scope'
 import { mergeWithRemote } from './sync-merge-dispatch'
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
-// The pass the interval started and that has not settled yet. The tick guard
-// in startPolling only skips a call that would return at
-// pollForRemoteChanges's lock check anyway.
+// The delayed first pass's timer, kept until that pass starts so
+// stopPolling can cancel it while it waits for the lock.
+let firstPassTimer: ReturnType<typeof setTimeout> | null = null
+// The poll pass that has not settled yet. The guard in startTrackedPass
+// only skips a call that would return at pollForRemoteChanges's lock check
+// anyway.
 let inFlightPoll: Promise<void> | null = null
 
 async function pollForRemoteChanges(): Promise<void> {
@@ -122,20 +126,63 @@ function reportBlockedPoll(reason: SyncBlockReason): void {
   emitSyncBlocked('download', reason)
 }
 
-export function startPolling(): void {
+/** Delay of the first pass when polling starts at launch: leaves time for
+ *  the OS keychain and the Google token to become available, and for a
+ *  connect-time download to take the lock first. */
+const STARTUP_POLL_DELAY_MS = 15_000
+
+/** Starts a pass unless the tracked one is still running: that pass holds
+ *  `syncRuntime.isSyncing`, so a second call would return at its lock check
+ *  without doing anything. pollForRemoteChanges catches its own errors, so
+ *  the tracked promise never rejects. */
+function startTrackedPass(): void {
+  if (inFlightPoll) return
+  const pass = pollForRemoteChanges().finally(() => {
+    // Only clear our own entry — a reset may have dropped it already.
+    if (inFlightPoll === pass) inFlightPoll = null
+  })
+  inFlightPoll = pass
+}
+
+/** Runs the delayed first pass. Unlike an interval tick, it waits out a pass
+ *  holding the lock (e.g. a connect-time download) instead of skipping, so
+ *  the launch pass is not lost; it is dropped when polling stops meanwhile.
+ *  The holder it waits for is never a poll pass: the delay is shorter than
+ *  the first interval tick, so startTrackedPass is not blocked by inFlightPoll. */
+async function runFirstPass(timer: ReturnType<typeof setTimeout>): Promise<void> {
+  while (syncRuntime.inFlightPass) {
+    await syncRuntime.inFlightPass
+    if (firstPassTimer !== timer) return
+  }
+  firstPassTimer = null
+  startTrackedPass()
+}
+
+/** Idempotent: while polling runs, a later call changes nothing, including
+ *  `firstPassDelayMs`. With `firstPassDelayMs`, one extra pass runs that
+ *  long after the start; the interval keeps its own schedule. */
+export function startPolling(options?: { firstPassDelayMs?: number }): void {
   if (pollTimer) return
-  pollTimer = setInterval(() => {
-    // A tick while the tracked pass is still running is skipped: that pass
-    // holds `syncRuntime.isSyncing`, so a second call would return at its
-    // lock check without doing anything. pollForRemoteChanges catches its
-    // own errors, so the tracked promise never rejects.
-    if (inFlightPoll) return
-    const pass = pollForRemoteChanges().finally(() => {
-      // Only clear our own entry — a reset may have dropped it already.
-      if (inFlightPoll === pass) inFlightPoll = null
-    })
-    inFlightPoll = pass
-  }, POLL_INTERVAL_MS)
+  pollTimer = setInterval(startTrackedPass, POLL_INTERVAL_MS)
+  if (options?.firstPassDelayMs !== undefined) {
+    const timer = setTimeout(() => {
+      void runFirstPass(timer)
+    }, options.firstPassDelayMs)
+    firstPassTimer = timer
+  }
+}
+
+/** Starts polling when auto sync is on: after a download, sign-in or a
+ *  stored password (re-arms it after sign-out). */
+export function startPollingIfAutoSync(): void {
+  if (loadAppConfig().autoSync) startPolling()
+}
+
+/** Starts polling at launch when auto sync is on, with a delayed first pass,
+ *  so other machines' changes arrive even with no keyboard connected. A pass
+ *  without credentials returns silently. */
+export function startPollingAtLaunch(): void {
+  if (loadAppConfig().autoSync) startPolling({ firstPassDelayMs: STARTUP_POLL_DELAY_MS })
 }
 
 export function stopPolling(): void {
@@ -143,16 +190,20 @@ export function stopPolling(): void {
     clearInterval(pollTimer)
     pollTimer = null
   }
+  if (firstPassTimer) {
+    clearTimeout(firstPassTimer)
+    firstPassTimer = null
+  }
 }
 
-/** The poll pass the interval started and that has not settled yet.
+/** The poll pass (interval tick or delayed first pass) that has not settled yet.
  * executeSync waits on it instead of skipping as busy; tests await the exact
  * pass. */
 export function inFlightPollPass(): Promise<void> | null {
   return inFlightPoll
 }
 
-/** Test-only: resolves when the poll pass the interval started has
+/** Test-only: resolves when the running poll pass has
  * settled (immediately when none is running). */
 export function waitForPollPassForTests(): Promise<void> {
   return inFlightPollPass() ?? Promise.resolve()

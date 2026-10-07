@@ -129,7 +129,13 @@ export {
   fetchRemoteTypingDay,
 } from './sync-typing-remote'
 
-export { startPolling, stopPolling, waitForPollPassForTests } from './sync-polling'
+export {
+  startPolling,
+  stopPolling,
+  startPollingIfAutoSync,
+  startPollingAtLaunch,
+  waitForPollPassForTests,
+} from './sync-polling'
 
 export { executeAnalyticsSync } from './sync-analytics'
 
