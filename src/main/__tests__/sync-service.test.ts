@@ -103,7 +103,7 @@ vi.mock('../sync/sync-crypto', () => ({
 
 let mockAutoSync = false
 vi.mock('../app-config', () => ({
-  loadAppConfig: vi.fn(async () => ({ autoSync: mockAutoSync })),
+  loadAppConfig: vi.fn(() => ({ autoSync: mockAutoSync })),
   saveAppConfig: vi.fn(async () => {}),
   getAppConfigStore: vi.fn(() => ({ get: () => false })),
 }))
@@ -242,6 +242,8 @@ import {
   setProgressCallback,
   startPolling,
   stopPolling,
+  startPollingIfAutoSync,
+  startPollingAtLaunch,
   hasPendingChanges,
   cancelPendingChanges,
   isSyncInProgress,
@@ -1292,6 +1294,181 @@ describe('sync-service', () => {
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
 
       expect(mockListFiles).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('polling with a delayed first pass', () => {
+    const FIRST_PASS_DELAY_MS = 15_000
+
+    it('runs one pass after the delay and then keeps the interval', async () => {
+      mockListFiles.mockResolvedValue([])
+
+      startPolling({ firstPassDelayMs: FIRST_PASS_DELAY_MS })
+      await vi.advanceTimersByTimeAsync(FIRST_PASS_DELAY_MS - 1)
+      expect(mockListFiles).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(1)
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS - FIRST_PASS_DELAY_MS)
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(2)
+    })
+
+    it('stopPolling during the delay cancels the first pass', async () => {
+      mockListFiles.mockResolvedValue([])
+
+      startPolling({ firstPassDelayMs: FIRST_PASS_DELAY_MS })
+      stopPolling()
+      expect(vi.getTimerCount()).toBe(0)
+
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      expect(mockListFiles).not.toHaveBeenCalled()
+    })
+
+    it('_resetForTests during the delay cancels the first pass', async () => {
+      mockListFiles.mockResolvedValue([])
+
+      startPolling({ firstPassDelayMs: FIRST_PASS_DELAY_MS })
+      _resetForTests()
+      expect(vi.getTimerCount()).toBe(0)
+
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      expect(mockListFiles).not.toHaveBeenCalled()
+    })
+
+    it('a second start arms no second first pass or interval', async () => {
+      mockListFiles.mockResolvedValue([])
+
+      startPolling({ firstPassDelayMs: FIRST_PASS_DELAY_MS })
+      startPolling({ firstPassDelayMs: FIRST_PASS_DELAY_MS })
+      startPolling()
+      expect(vi.getTimerCount()).toBe(2)
+
+      await vi.advanceTimersByTimeAsync(FIRST_PASS_DELAY_MS)
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
+    })
+
+    it('a start without a delay arms no first pass even when one is asked for later', async () => {
+      mockListFiles.mockResolvedValue([])
+
+      startPolling()
+      startPolling({ firstPassDelayMs: FIRST_PASS_DELAY_MS })
+      expect(vi.getTimerCount()).toBe(1)
+
+      await vi.advanceTimersByTimeAsync(FIRST_PASS_DELAY_MS)
+      expect(mockListFiles).not.toHaveBeenCalled()
+    })
+
+    it('waits for a running download and then runs its pass', async () => {
+      let releaseList: (files: DriveFile[]) => void = () => {}
+      const listGate = new Promise<DriveFile[]>((resolve) => { releaseList = resolve })
+      mockListFiles.mockImplementationOnce(() => listGate)
+      mockListFiles.mockResolvedValue([])
+
+      const download = executeSync('download')
+      try {
+        await flushUntil(() => mockListFiles.mock.calls.length === 1, 'the download to reach listFiles')
+
+        startPolling({ firstPassDelayMs: FIRST_PASS_DELAY_MS })
+        await vi.advanceTimersByTimeAsync(FIRST_PASS_DELAY_MS)
+        expect(mockListFiles).toHaveBeenCalledTimes(1)
+      } finally {
+        releaseList([])
+      }
+      await download
+
+      await flushUntil(() => mockListFiles.mock.calls.length === 2, 'the first poll pass to list Drive')
+      await waitForSyncIdle()
+    })
+
+    it('a download started during the first pass waits for it instead of skipping', async () => {
+      let releaseList: (files: DriveFile[]) => void = () => {}
+      const listGate = new Promise<DriveFile[]>((resolve) => { releaseList = resolve })
+      mockListFiles.mockImplementationOnce(() => listGate)
+      mockListFiles.mockResolvedValue([])
+
+      startPolling({ firstPassDelayMs: FIRST_PASS_DELAY_MS })
+      await vi.advanceTimersByTimeAsync(FIRST_PASS_DELAY_MS)
+      const pass = waitForPollPassForTests()
+      let download: Promise<Awaited<ReturnType<typeof executeSync>>>
+      try {
+        await flushUntil(() => mockListFiles.mock.calls.length === 1, 'the first pass to reach listFiles')
+        download = executeSync('download')
+      } finally {
+        releaseList([])
+      }
+      await pass
+
+      const result = await download
+      expect(result.skipReason).toBeUndefined()
+      expect(mockListFiles).toHaveBeenCalledTimes(2)
+    })
+
+    it('returns silently when credentials are not ready', async () => {
+      mockGetAuthStatus.mockResolvedValueOnce({ authenticated: false })
+      const progress: SyncProgress[] = []
+      setProgressCallback((p) => progress.push(p))
+
+      startPolling({ firstPassDelayMs: FIRST_PASS_DELAY_MS })
+      await vi.advanceTimersByTimeAsync(FIRST_PASS_DELAY_MS)
+      await waitForPollPassForTests()
+
+      expect(mockGetAuthStatus).toHaveBeenCalledTimes(1)
+      expect(mockListFiles).not.toHaveBeenCalled()
+      expect(progress).toEqual([])
+    })
+
+    it('startPollingAtLaunch arms the interval and a delayed first pass when auto sync is on', async () => {
+      mockAutoSync = true
+      mockListFiles.mockResolvedValue([])
+
+      startPollingAtLaunch()
+      expect(vi.getTimerCount()).toBe(2)
+
+      await vi.advanceTimersByTimeAsync(FIRST_PASS_DELAY_MS)
+      await waitForPollPassForTests()
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
+    })
+
+    it('startPollingAtLaunch does nothing when auto sync is off', () => {
+      startPollingAtLaunch()
+      expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('startPollingIfAutoSync arms only the interval when auto sync is on', async () => {
+      mockAutoSync = true
+      mockListFiles.mockResolvedValue([])
+
+      startPollingIfAutoSync()
+      expect(vi.getTimerCount()).toBe(1)
+
+      await vi.advanceTimersByTimeAsync(FIRST_PASS_DELAY_MS)
+      expect(mockListFiles).not.toHaveBeenCalled()
+    })
+
+    it('startPollingIfAutoSync does nothing when auto sync is off', () => {
+      startPollingIfAutoSync()
+      expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('stopPolling while the first pass waits for the lock cancels it', async () => {
+      mockListFiles.mockResolvedValue([])
+      const release = claimSyncLock()
+      try {
+        startPolling({ firstPassDelayMs: FIRST_PASS_DELAY_MS })
+        await vi.advanceTimersByTimeAsync(FIRST_PASS_DELAY_MS)
+        stopPolling()
+      } finally {
+        release()
+      }
+
+      await flushUntil(() => true)
+      await vi.advanceTimersByTimeAsync(0)
+      expect(mockListFiles).not.toHaveBeenCalled()
+      expect(isSyncInProgress()).toBe(false)
     })
   })
 

@@ -67,6 +67,8 @@ const mockReplacePasswordAndValidate = vi.fn(async (_password: string): Promise<
 const mockSetPasswordAndValidate = vi.fn(async (_password: string): Promise<void> => {})
 const mockScheduleFlushIfPending = vi.fn()
 const mockStartPolling = vi.fn()
+const mockStartPollingIfAutoSync = vi.fn()
+const mockStartPollingAtLaunch = vi.fn()
 const mockStopPolling = vi.fn()
 const { MockSyncBlockedError } = vi.hoisted(() => ({
   MockSyncBlockedError: class MockSyncBlockedError extends Error {
@@ -89,7 +91,7 @@ vi.mock('../../utils/broadcast', () => ({
 }))
 vi.mock('../sync-service', () => ({
   executeAnalyticsSync: vi.fn(),
-  executeSync: vi.fn(),
+  executeSync: vi.fn(async () => ({ status: 'success' })),
   hasPendingChanges: vi.fn(),
   cancelPendingChanges: (...args: unknown[]) => mockCancelPendingChanges(...args),
   isSyncInProgress: () => mockIsSyncInProgress(),
@@ -98,6 +100,8 @@ vi.mock('../sync-service', () => ({
   setProgressCallback: vi.fn(),
   setupBeforeQuitHandler: vi.fn(),
   startPolling: () => mockStartPolling(),
+  startPollingIfAutoSync: () => mockStartPollingIfAutoSync(),
+  startPollingAtLaunch: () => mockStartPollingAtLaunch(),
   stopPolling: () => mockStopPolling(),
   collectAllSyncUnits: vi.fn(async () => []),
   bundleSyncUnit: vi.fn(),
@@ -614,5 +618,71 @@ describe('sync-ipc sync-format status', () => {
       expect(mockClearSyncFormatStatus).not.toHaveBeenCalled()
       expect(mockRefreshSyncFormatStatus).not.toHaveBeenCalled()
     })
+  })
+})
+
+describe('sync-ipc starting the poll', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockStartOAuthFlow.mockResolvedValue(undefined)
+    mockSetPasswordAndValidate.mockResolvedValue(undefined)
+    mockReplacePasswordAndValidate.mockResolvedValue(undefined)
+  })
+
+  it('asks for launch polling at setup', () => {
+    setupSyncIpc()
+
+    expect(mockStartPollingAtLaunch).toHaveBeenCalledTimes(1)
+    expect(mockStartPollingIfAutoSync).not.toHaveBeenCalled()
+    expect(mockStartPolling).not.toHaveBeenCalled()
+  })
+
+  describe.each([
+    { name: 'SYNC_AUTH_START', channel: IpcChannels.SYNC_AUTH_START, args: [] as unknown[], fail: () => mockStartOAuthFlow.mockRejectedValueOnce(new Error('denied')) },
+    { name: 'SYNC_SET_PASSWORD', channel: IpcChannels.SYNC_SET_PASSWORD, args: ['my-password'] as unknown[], fail: () => mockSetPasswordAndValidate.mockRejectedValueOnce(new Error('sync.passwordMismatch')) },
+    { name: 'SYNC_REPLACE_PASSWORD', channel: IpcChannels.SYNC_REPLACE_PASSWORD, args: ['other-pc-password'] as unknown[], fail: () => mockReplacePasswordAndValidate.mockRejectedValueOnce(new Error('sync.passwordMismatch')) },
+  ])('$name', ({ channel, args, fail }) => {
+    it('asks to start polling on success', async () => {
+      setupSyncIpc()
+
+      const result = await getHandler(channel)(null, ...args)
+
+      expect(result.success).toBe(true)
+      expect(mockStartPollingIfAutoSync).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not start polling on failure', async () => {
+      setupSyncIpc()
+      fail()
+
+      const result = await getHandler(channel)(null, ...args)
+
+      expect(result.success).toBe(false)
+      expect(mockStartPollingIfAutoSync).not.toHaveBeenCalled()
+      expect(mockStartPolling).not.toHaveBeenCalled()
+    })
+  })
+
+  it('signing out stops the poll and signing in again asks to start it', async () => {
+    setupSyncIpc()
+
+    await getHandler(IpcChannels.SYNC_AUTH_SIGN_OUT)(null)
+    expect(mockStopPolling).toHaveBeenCalledTimes(1)
+    expect(mockStartPollingIfAutoSync).not.toHaveBeenCalled()
+
+    await getHandler(IpcChannels.SYNC_AUTH_START)(null)
+    expect(mockStartPollingIfAutoSync).toHaveBeenCalledTimes(1)
+    expect(mockStopPolling.mock.invocationCallOrder[0])
+      .toBeLessThan(mockStartPollingIfAutoSync.mock.invocationCallOrder[0])
+  })
+
+  it('SYNC_EXECUTE asks to start polling after a download only', async () => {
+    setupSyncIpc()
+
+    await getHandler(IpcChannels.SYNC_EXECUTE)(null, 'upload')
+    expect(mockStartPollingIfAutoSync).not.toHaveBeenCalled()
+
+    await getHandler(IpcChannels.SYNC_EXECUTE)(null, 'download')
+    expect(mockStartPollingIfAutoSync).toHaveBeenCalledTimes(1)
   })
 })

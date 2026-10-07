@@ -5,7 +5,7 @@ import { BrowserWindow, app, dialog } from 'electron'
 import { rm, readFile, readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { IpcChannels } from '../../shared/ipc/channels'
-import { loadAppConfig, getAppConfigStore, onAppConfigChange } from '../app-config'
+import { getAppConfigStore, onAppConfigChange } from '../app-config'
 import {
   hasStoredPassword,
   checkPasswordStrength,
@@ -26,6 +26,8 @@ import {
   setupBeforeQuitHandler,
   startPolling,
   stopPolling,
+  startPollingIfAutoSync,
+  startPollingAtLaunch,
   collectAllSyncUnits,
   bundleSyncUnit,
   resetPasswordCheckCache,
@@ -161,6 +163,7 @@ export function setupSyncIpc(): void {
       void refreshSyncFormatStatus()
       // Changes kept while signed out go to the signed-in account.
       scheduleFlushIfPending()
+      startPollingIfAutoSync()
     }),
   )
 
@@ -184,6 +187,7 @@ export function setupSyncIpc(): void {
       wrapIpc('Set password failed', async () => {
         await setPasswordAndValidate(password)
         scheduleFlushIfPending()
+        startPollingIfAutoSync()
       }),
   )
 
@@ -196,6 +200,7 @@ export function setupSyncIpc(): void {
         if (typeof password !== 'string' || password === '') throw new Error('Invalid password')
         await replacePasswordAndValidate(password)
         scheduleFlushIfPending()
+        startPollingIfAutoSync()
       }),
   )
 
@@ -341,12 +346,7 @@ export function setupSyncIpc(): void {
       const validatedScope = validateSyncScope(scope) ?? 'all'
       try {
         const outcome = await executeSync(direction, validatedScope)
-        if (direction === 'download') {
-          const config = loadAppConfig()
-          if (config.autoSync) {
-            startPolling()
-          }
-        }
+        if (direction === 'download') startPollingIfAutoSync()
         return {
           success: true,
           status: outcome.status,
@@ -768,6 +768,9 @@ export function setupSyncIpc(): void {
 
   // --- Startup sync-format check (never rejects) ---
   void refreshSyncFormatStatusIfSignedIn()
+
+  // --- Startup polling (auto sync only, even with no keyboard connected) ---
+  startPollingAtLaunch()
 
   // --- React to autoSync config changes ---
   onAppConfigChange((key, value) => {
