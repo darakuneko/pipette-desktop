@@ -119,8 +119,10 @@ export function errorMessage(err: unknown, fallback: string): string {
 
 // --- Remote state tracking ---
 
-export function updateRemoteState(files: DriveFile[]): void {
-  syncRuntime.lastKnownRemoteState.clear()
+/** Marks each file's revision as handled by this machine. Entries for other
+ *  files are left alone, so a file nobody handled still looks changed to the
+ *  next poll. */
+export function recordRemoteState(files: Array<Pick<DriveFile, 'name' | 'modifiedTime'>>): void {
   for (const file of files) {
     syncRuntime.lastKnownRemoteState.set(file.name, file.modifiedTime)
   }

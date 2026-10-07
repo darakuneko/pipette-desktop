@@ -36,6 +36,7 @@ import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import { emptySyncState, loadSyncState, saveSyncState } from '../typing-analytics/sync-state'
 import { log } from '../logger'
+import { recordRemoteState } from './sync-runtime-state'
 import type { SyncBundle, SyncEnvelope } from '../../shared/types/sync'
 
 async function uploadSyncUnit(
@@ -64,6 +65,7 @@ async function uploadSyncUnit(
   const existing = files.find((f) => f.name === targetName)
 
   const uploaded = await uploadFile(targetName, envelope, existing?.id)
+  recordRemoteState([{ name: targetName, modifiedTime: uploaded.modifiedTime }])
 
   // Post-upload bookkeeping: record a successful cloud upload for
   // per-day units so the reconcile logic can later distinguish
@@ -326,6 +328,11 @@ async function mergeSyncUnit(
 // analytics sync, upload-time merge-before-upload) — an i18n/theme
 // pack-body unit can skip the download+decrypt entirely here when local
 // is already known to be newer (see `packBodyLocalWins`'s doc).
+//
+// Every success path records exactly the revision it handled (the merged
+// remote file, or the one uploadSyncUnit just wrote), so callers never record
+// on their own. A throw records nothing and the unit stays visible to the
+// next poll.
 export async function mergeWithRemote(
   remoteFile: DriveFile,
   syncUnit: string,
@@ -342,6 +349,8 @@ export async function mergeWithRemote(
   const needsUpload = await mergeSyncUnit(syncUnit, envelope, password, remoteFile.modifiedTime)
   if (needsUpload) {
     await uploadSyncUnit(syncUnit, password, remoteFiles)
+  } else {
+    recordRemoteState([remoteFile])
   }
 }
 

@@ -379,10 +379,10 @@ describe('sync-format markers', () => {
       expect(drive.events).toContain('data:favorites/tapDance')
     })
 
-    it('polling creates the marker, also on the first poll that only records state', async () => {
+    it('polling creates the marker before the first poll reads any data', async () => {
       await runPoll()
 
-      expect(drive.events).toEqual([`create:${OWN}`])
+      expect(drive.events).toEqual([`create:${OWN}`, 'data:favorites/tapDance'])
     })
 
     it('the analytics sync creates the marker first from its narrow listings', async () => {

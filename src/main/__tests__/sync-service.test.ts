@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
 import { access, mkdtemp, readdir, readFile, rm, stat, utimes, writeFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import type { DriveFile } from '../sync/google-drive'
+import { driveFileName, type DriveFile } from '../sync/google-drive'
 
 // --- Mock electron ---
 let mockUserDataPath = ''
@@ -367,6 +367,11 @@ function makePasswordCheckEnvelope(): Record<string, unknown> {
   }
 }
 
+function routeDownloads(byId: Record<string, () => unknown>): void {
+  mockDownloadFile.mockImplementation(async (id: string) =>
+    (byId[id]?.() ?? makePasswordCheckEnvelope()) as Record<string, unknown>)
+}
+
 async function setupLocalFavorite(
   savedAt: string,
   dataFile?: { name: string; content: string },
@@ -641,21 +646,30 @@ describe('sync-service', () => {
   })
 
   describe('polling', () => {
-    it('only records state on first poll without downloading data files', async () => {
+    it('downloads locally relevant units on the first poll and skips lazy and analytics units', async () => {
+      await mkdir(join(mockUserDataPath, 'sync', 'keyboards', '0x1234'), { recursive: true })
       mockListFiles.mockResolvedValue([
         PASSWORD_CHECK_DRIVE_FILE,
         makeDriveFile('2026-01-01T00:00:00.000Z'),
+        makeSettingsDriveFile('0x1234', '2026-01-01T00:00:00.000Z'),
+        makeSettingsDriveFile('0xRemoteOnly', '2026-01-01T00:00:00.000Z'),
+        { id: 'day-1', name: driveFileName('keyboards/0x1234/devices/hash/days/2026-01-01'), modifiedTime: '2026-01-01T00:00:00.000Z' },
       ])
-      mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+      routeDownloads({
+        'file-1': () => makeRemoteEnvelope('2026-01-01T00:00:00.000Z'),
+        'settings-0x1234': () => makeSettingsEnvelope('0x1234', '2026-01-01T00:00:00.000Z'),
+      })
 
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await waitForPollPassForTests()
       expect(mockListFiles).toHaveBeenCalledTimes(1)
 
-      // Password-check downloaded for validation, but data file NOT downloaded
-      expect(mockDownloadFile).toHaveBeenCalledTimes(1)
-      expect(mockDownloadFile).toHaveBeenCalledWith('pc-1')
+      const downloaded = mockDownloadFile.mock.calls.map((call) => call[0])
+      expect(downloaded).toContain('file-1')
+      expect(downloaded).toContain('settings-0x1234')
+      expect(downloaded).not.toContain('settings-0xRemoteOnly')
+      expect(downloaded).not.toContain('day-1')
 
       stopPolling()
     })
@@ -667,12 +681,12 @@ describe('sync-service', () => {
       mockDownloadFile.mockResolvedValue(makeRemoteEnvelope('2026-01-02T00:00:00.000Z'))
 
       startPolling()
-      // First poll: records state, no data download
+      // First poll: merges the listed file once
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await waitForPollPassForTests()
       expect(mockListFiles).toHaveBeenCalledTimes(1)
 
-      // Second poll: detects modifiedTime change, downloads
+      // Second poll: detects modifiedTime change, downloads again
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await waitForPollPassForTests()
 
@@ -732,9 +746,9 @@ describe('sync-service', () => {
     // google-drive.test.ts's round-trip coverage.
 
     it('skips when no remote changes detected', async () => {
-      // The listed password-check is validated by the first poll only.
+      // The first poll merges the listed file and validates the password-check.
       mockListFiles.mockResolvedValue([makeDriveFile('2025-01-01T00:00:00.000Z'), PASSWORD_CHECK_DRIVE_FILE])
-      mockDownloadFile.mockResolvedValue({ ciphertext: 'ok' })
+      routeDownloads({ 'file-1': () => makeRemoteEnvelope('2025-01-01T00:00:00.000Z') })
 
       startPolling()
       // The listFiles counts prove each poll actually ran, so the negative
@@ -956,7 +970,8 @@ describe('sync-service', () => {
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await waitForPollPassForTests()
       expect(mockListFiles).toHaveBeenCalledTimes(1)
-      expect(mockRunPackGcAfterPass).not.toHaveBeenCalled() // first poll: seed-only, no merge
+      expect(mockRunPackGcAfterPass).toHaveBeenCalledTimes(1) // first poll: merges the pack
+      mockRunPackGcAfterPass.mockClear()
 
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await waitForPollPassForTests()
@@ -1009,6 +1024,10 @@ describe('sync-service', () => {
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await waitForPollPassForTests()
       expect(mockListFiles).toHaveBeenCalledTimes(1)
+      // First poll already failed the pack; the next poll retries it.
+      expect(mockRunPackGcAfterPass).toHaveBeenCalledTimes(1)
+      expect(mockRunPackGcAfterPass.mock.calls[0][1]).toEqual(['themes/packs/pack-a'])
+      mockRunPackGcAfterPass.mockClear()
 
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await waitForPollPassForTests()
@@ -1184,7 +1203,7 @@ describe('sync-service', () => {
       expect(hasPendingChanges()).toBe(true)
     })
 
-    it('calls listFiles only twice during upload sync (no N+1)', async () => {
+    it('calls listFiles once during upload sync (no N+1)', async () => {
       // Set up multiple local favorites to simulate N sync units
       await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'data.json', content: '{}' })
       await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'macro.json', content: '{}' }, { id: '2', favoriteType: 'macro' })
@@ -1195,11 +1214,9 @@ describe('sync-service', () => {
 
       await executeSync('upload')
 
-      // listFiles should be called exactly twice:
-      // 1. Initial fetch in executeSync (password check + passed to executeUploadSync)
-      // 2. Final refresh after the loop
-      // NOT N+1 times (once per sync unit)
-      expect(mockListFiles).toHaveBeenCalledTimes(2)
+      // One fetch in executeSync (password check + passed to executeUploadSync),
+      // not once per sync unit.
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
       // Verify uploads actually happened (2 sync units, password-check downloaded not uploaded)
       expect(mockUploadFile).toHaveBeenCalledTimes(2)
     })
@@ -1751,6 +1768,16 @@ describe('sync-service', () => {
     })
 
     describe('executeSync with scope', () => {
+      // One poll pass; the listing count proves it ran.
+      async function pollOnce(): Promise<void> {
+        startPolling()
+        const before = mockListFiles.mock.calls.length
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+        await waitForPollPassForTests()
+        expect(mockListFiles).toHaveBeenCalledTimes(before + 1)
+        stopPolling()
+      }
+
       // Fresh-machine discovery.
       it.each([
         {
@@ -1896,13 +1923,12 @@ describe('sync-service', () => {
         ).rejects.toBeDefined()
       })
 
-      it('updates remote state for all files even with scoped download', async () => {
-        // Local copy of 0x1234 exists, so polling should still pick up changes for it
+      it('scoped download records only the units it merged, so polling still picks up the rest', async () => {
         await mkdir(join(mockUserDataPath, 'sync', 'keyboards', '0x1234'), { recursive: true })
 
         const allFiles = [
           { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
-          { id: 'f2', name: 'keyboards_0x1234_settings.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          { id: 'f2', name: 'keyboards_0x1234_snapshots.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
           PASSWORD_CHECK_DRIVE_FILE,
         ]
         mockListFiles.mockResolvedValue(allFiles)
@@ -1912,34 +1938,120 @@ describe('sync-service', () => {
 
         await executeSync('download', 'favorites')
 
-        // First poll with the UNCHANGED file list: the scoped sync must
-        // have recorded f2's remote state, so nothing should download.
-        // Without this step, a missing f2 state entry (the bug this test
-        // guards against) would be indistinguishable from a detected
-        // change on the next poll — both trigger a download.
+        // Same listing on the next poll: f2 was out of scope, so it was never
+        // merged and must be downloaded now; f1 was merged and must not be.
         mockDownloadFile.mockClear()
-        startPolling()
-        const listCallsAfterSync = mockListFiles.mock.calls.length
-        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-        await waitForPollPassForTests()
-        expect(mockListFiles).toHaveBeenCalledTimes(listCallsAfterSync + 1)
-        expect(mockDownloadFile).not.toHaveBeenCalledWith('f2')
-
-        // Second poll after the keyboard file's modifiedTime changes:
-        // now the download must happen for the locally-tracked keyboard.
-        const updatedFiles = [
-          { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
-          { id: 'f2', name: 'keyboards_0x1234_settings.enc', modifiedTime: '2025-01-02T00:00:00.000Z' },
-          PASSWORD_CHECK_DRIVE_FILE,
-        ]
-        mockListFiles.mockResolvedValue(updatedFiles)
-        mockDownloadFile.mockResolvedValue(makeSettingsEnvelope('0x1234', '2025-01-02T00:00:00.000Z'))
-
-        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-        await waitForPollPassForTests()
-
-        expect(mockListFiles).toHaveBeenCalledTimes(listCallsAfterSync + 2)
+        mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+        await pollOnce()
         expect(mockDownloadFile).toHaveBeenCalledWith('f2')
+        expect(mockDownloadFile).not.toHaveBeenCalledWith('f1')
+      })
+
+      it('a failed unit in a scoped download is retried by the next poll', async () => {
+        mockListFiles.mockResolvedValue([
+          { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          PASSWORD_CHECK_DRIVE_FILE,
+        ])
+        mockDownloadFile
+          .mockResolvedValueOnce(makePasswordCheckEnvelope())
+          .mockRejectedValueOnce(new Error('download failed'))
+
+        const result = await executeSync('download', 'favorites')
+        expect(result.status).toBe('partial')
+
+        mockDownloadFile.mockClear()
+        mockDownloadFile.mockResolvedValue(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+        await pollOnce()
+        expect(mockDownloadFile).toHaveBeenCalledWith('f1')
+      })
+
+      it('flush records only the units it uploaded, so polling still picks up other files', async () => {
+        mockAutoSync = true
+        await mkdir(join(mockUserDataPath, 'sync', 'keyboards', '0x1234'), { recursive: true })
+        await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'data.json', content: '{"data":1}' })
+
+        mockListFiles.mockResolvedValue([
+          makeDriveFile('2025-01-01T00:00:00.000Z'),
+          makeSettingsDriveFile('0x1234', '2025-01-01T00:00:00.000Z'),
+          PASSWORD_CHECK_DRIVE_FILE,
+        ])
+        routeDownloads({
+          'file-1': () => makeRemoteEnvelope('2025-01-01T00:00:00.000Z'),
+          'settings-0x1234': () => makeSettingsEnvelope('0x1234', '2025-01-01T00:00:00.000Z'),
+        })
+
+        // The upload result is the revision the flush records for file-1.
+        mockUploadFile.mockResolvedValue({ id: 'file-1', modifiedTime: '2025-01-01T00:00:00.000Z' })
+
+        notifyChange('favorites/tapDance')
+        await vi.advanceTimersByTimeAsync(10_000)
+        await waitForSyncIdle()
+
+        mockDownloadFile.mockClear()
+        await pollOnce()
+        expect(mockDownloadFile).toHaveBeenCalledWith('settings-0x1234')
+        expect(mockDownloadFile).not.toHaveBeenCalledWith('file-1')
+      })
+
+      describe('revision recorded by an upload', () => {
+        const UPLOADED_AT = '2026-02-01T00:00:00.000Z'
+
+        // Only the listing taken before the upload shows the old revision;
+        // every listing after it (including any the upload pass itself might
+        // take) shows `revisionAfterUpload`.
+        async function uploadFavoriteOverOlderRemote(revisionAfterUpload: string): Promise<void> {
+          await setupLocalFavorite('2026-01-01T00:00:00.000Z', { name: 'new.json', content: '{"data":1}' })
+          mockListFiles
+            .mockResolvedValueOnce([makeDriveFile('2020-01-01T00:00:00.000Z'), PASSWORD_CHECK_DRIVE_FILE])
+            .mockResolvedValue([makeDriveFile(revisionAfterUpload), PASSWORD_CHECK_DRIVE_FILE])
+          routeDownloads({ 'file-1': () => makeRemoteEnvelope('2020-01-01T00:00:00.000Z') })
+          mockUploadFile.mockResolvedValueOnce({ id: 'file-1', modifiedTime: UPLOADED_AT })
+
+          await executeSync('upload')
+          expect(mockUploadFile).toHaveBeenCalled()
+          mockDownloadFile.mockClear()
+        }
+
+        it('an upload is not re-downloaded by the next poll', async () => {
+          await uploadFavoriteOverOlderRemote(UPLOADED_AT)
+
+          await pollOnce()
+          expect(mockDownloadFile).not.toHaveBeenCalledWith('file-1')
+        })
+
+        it('a revision newer than the upload result is downloaded by the next poll', async () => {
+          // Another machine wrote right after this upload, before any later
+          // listing: only the upload result's own revision may count as known.
+          await uploadFavoriteOverOlderRemote('2026-03-01T00:00:00.000Z')
+
+          await pollOnce()
+          expect(mockDownloadFile).toHaveBeenCalledWith('file-1')
+        })
+      })
+
+      it('a scoped executeSync waits for an in-flight poll instead of skipping as busy', async () => {
+        await mkdir(join(mockUserDataPath, 'sync', 'keyboards', '0x1234'), { recursive: true })
+
+        let releasePollListing: (files: DriveFile[]) => void = () => {}
+        const pollListing = new Promise<DriveFile[]>((resolve) => { releasePollListing = resolve })
+        const syncListing = [PASSWORD_CHECK_DRIVE_FILE, makeSettingsDriveFile('0x1234', '2025-01-01T00:00:00.000Z')]
+        mockListFiles.mockResolvedValue(syncListing)
+        mockListFiles.mockImplementationOnce(() => pollListing)
+        routeDownloads({ 'settings-0x1234': () => makeSettingsEnvelope('0x1234', '2025-01-01T00:00:00.000Z') })
+
+        startPolling()
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+        await flushUntil(() => mockListFiles.mock.calls.length === 1, 'the poll to list files')
+        expect(isSyncInProgress()).toBe(true)
+
+        const resultPromise = executeSync('download', { keyboard: '0x1234' })
+        // The poll's own listing has no keyboard unit, so only the waiting
+        // executeSync can download it.
+        releasePollListing([PASSWORD_CHECK_DRIVE_FILE])
+        const result = await resultPromise
+
+        expect(result).toEqual({ status: 'completed' })
+        expect(mockDownloadFile).toHaveBeenCalledWith('settings-0x1234')
 
         stopPolling()
       })
