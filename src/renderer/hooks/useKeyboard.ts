@@ -75,7 +75,7 @@ export function useKeyboard() {
   const {
     setKey, setKeysBulk, setEncoder, setLayoutOptions, setMacroBuffer,
     setTapDanceEntry, setComboEntry, setKeyOverrideEntry, setAltRepeatKeyEntry,
-    setLayerName, setSaveLayerNamesCallback,
+    setLayerName, setSaveLayerNamesCallback, replaceLayerNamesFromSync,
   } = useKeyboardSetters(setState, stateRef, bumpActivity, saveLayerNamesRef, bootGuardRef, waitForUnlock)
   const {
     setBacklightBrightness, setBacklightEffect,
@@ -129,5 +129,6 @@ export function useKeyboard() {
     updateQmkSettingsValue,
     setLayerName,
     setSaveLayerNamesCallback,
+    replaceLayerNamesFromSync,
   }
 }

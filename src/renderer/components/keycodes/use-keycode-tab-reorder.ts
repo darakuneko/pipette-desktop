@@ -53,7 +53,7 @@ function isCovered(bar: HTMLElement | null): boolean {
 export function useKeycodeTabReorder({
   enabled, visibleIds, barRef, onSelectTab, selectedId, describeMove, enterMessage, resetMessage,
 }: Args) {
-  const { order, setOrder, scopeKey } = useKeycodeTabOrder()
+  const { order, setOrder, scopeKey, holdOrderReload } = useKeycodeTabOrder()
   const full = useMemo(() => resolveFullOrder(order), [order])
   const orderedIds = useMemo(() => projectVisible(visibleIds, full), [visibleIds, full])
 
@@ -123,6 +123,10 @@ export function useKeycodeTabReorder({
     // Reset disables itself; keep the focus in the tab bar.
     focusTab()
   }
+
+  // While the mode is open a synced order waits, so the tabs do not move
+  // under the user; it is applied when the mode closes.
+  useEffect(() => (active ? holdOrderReload() : undefined), [active, holdOrderReload])
 
   useEffect(() => cancelPress, [cancelPress])
   useEffect(() => { exit() }, [scopeKey, exit])

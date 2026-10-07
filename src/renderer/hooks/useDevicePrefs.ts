@@ -10,10 +10,11 @@ import { useDevicePrefsState } from './use-device-prefs-state'
 import { useDevicePrefsDefaults } from './use-device-prefs-defaults'
 import { useTypingTestPrefs } from './use-typing-test-prefs'
 import { useDevicePrefsRemap } from './use-device-prefs-remap'
+import { useDevicePrefsReload } from './use-device-prefs-reload'
 import type { UseDevicePrefsReturn } from './device-prefs-types'
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
 import type { BasicViewType, SplitKeyMode } from '../../shared/types/app-config'
-import type { ViewMode, ViewMatrixCell } from '../../shared/types/pipette-settings'
+import type { PipetteSettings, ViewMode, ViewMatrixCell } from '../../shared/types/pipette-settings'
 import { VIEW_ONLY_OPACITY_DEFAULT } from '../../shared/types/pipette-settings'
 
 export type { KeyboardLayoutId, AutoLockMinutes, BasicViewType, SplitKeyMode } from './device-prefs-types'
@@ -63,7 +64,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     entryHoverPreview, updateEntryHoverPreview,
     keycodeTabOrder, updateKeycodeTabOrder,
     appliedUid, setAppliedUid,
-    uidRef, applySeqRef,
+    uidRef, applySeqRef, patchTrackerRef,
     savePrefs,
     applyValidated,
   } = useDevicePrefsState({
@@ -193,6 +194,15 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     savePrefs({ keyEditorZoom: clamped })
   }, [savePrefs, updateKeyEditorZoom])
 
+  const validatePrefs = useCallback(
+    (raw: PipetteSettings | null) => validateIpcPrefs(raw, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode, defaultQuickSelect),
+    [defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode, defaultQuickSelect],
+  )
+
+  const { holdSyncReload } = useDevicePrefsReload({
+    uidRef, applySeqRef, appliedUid, patchTrackerRef, validate: validatePrefs, applyValidated,
+  })
+
   const applyDevicePrefs = useCallback(async (uid: string) => {
     uidRef.current = uid
     setAppliedUid(null)
@@ -202,7 +212,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     try {
       const raw = await window.vialAPI.pipetteSettingsGet(uid)
       if (applySeqRef.current !== seq) return
-      prefs = validateIpcPrefs(raw, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode, defaultQuickSelect)
+      prefs = validatePrefs(raw)
     } catch {
       // IPC failure — fall through to defaults
     }
@@ -243,7 +253,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       // (see the handler in pipette-settings-store.ts for why).
       void window.vialAPI.pipetteSettingsEnsureDir(uid).catch(() => {})
     }
-  }, [applyValidated, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode, defaultQuickSelect])
+  }, [applyValidated, validatePrefs, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode, defaultQuickSelect])
 
   const {
     remapLabel,
@@ -338,6 +348,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     autoLockTime,
     setAutoLockTime,
     applyDevicePrefs,
+    holdSyncReload,
     remapLabel,
     isRemapped,
     remapKind,

@@ -265,6 +265,12 @@ export function useKeyboardSetters(
     saveLayerNamesRef.current = cb
   }, [saveLayerNamesRef])
 
+  // `setLayerName` builds the new list from `stateRef`, so
+  // `replaceLayerNamesFromSync` writes `stateRef` as well as the state: a
+  // rename right after a reload, before the next render, starts from the
+  // reloaded names instead of saving the old ones back. The other direction
+  // is covered by the reload itself (`use-device-prefs-reload.ts`), which
+  // drops a read that a rename's save overlapped.
   const setLayerName = useCallback((layer: number, name: string) => {
     const names = [...stateRef.current.layerNames]
     while (names.length <= layer) names.push('')
@@ -273,6 +279,17 @@ export function useKeyboardSetters(
     setState((s) => ({ ...s, layerNames: names }))
     bumpActivity()
   }, [setState, stateRef, bumpActivity, saveLayerNamesRef])
+
+  /** Shows layer names a sync merge wrote for `uid`, padded to the layer
+   *  count like the connect-time read. Not saved: they come from the file. */
+  const replaceLayerNamesFromSync = useCallback((uid: string, stored: string[]) => {
+    const current = stateRef.current
+    if (current.uid !== uid) return
+    const names = Array.from({ length: current.layers }, (_, i) => stored[i] ?? '')
+    if (names.length === current.layerNames.length && names.every((n, i) => n === current.layerNames[i])) return
+    stateRef.current = { ...current, layerNames: names }
+    setState((s) => (s.uid === uid ? { ...s, layerNames: names } : s))
+  }, [setState, stateRef])
 
   return {
     setKey,
@@ -286,5 +303,6 @@ export function useKeyboardSetters(
     setAltRepeatKeyEntry,
     setLayerName,
     setSaveLayerNamesCallback,
+    replaceLayerNamesFromSync,
   }
 }

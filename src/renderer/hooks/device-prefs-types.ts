@@ -6,6 +6,7 @@ import type { RemapKind } from '../components/keyboard/constants'
 import type { TypingTestResult, ViewMode, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../typing-test/types'
 import type { AutoLockMinutes, BasicViewType, SplitKeyMode } from '../../shared/types/app-config'
+import type { SyncReloadHold } from './use-device-prefs-reload'
 
 export type { KeyboardLayoutId, AutoLockMinutes, BasicViewType, SplitKeyMode }
 
@@ -102,6 +103,9 @@ export interface UseDevicePrefsReturn {
   autoLockTime: AutoLockMinutes
   setAutoLockTime: (m: AutoLockMinutes) => void
   applyDevicePrefs: (uid: string) => Promise<void>
+  /** Holds back part of the sync reload (`use-device-prefs-reload.ts`)
+   *  while a mode that edits those fields is open; returns the release. */
+  holdSyncReload: (hold: SyncReloadHold) => () => void
   /** Display label for a qmkId: the active Key Label pack's own label
    *  (via `compositeLabels` -> `map`), falling back to the qmkId itself
    *  when neither has an entry. This is what feeds the keymap surface
