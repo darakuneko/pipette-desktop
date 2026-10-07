@@ -30,15 +30,11 @@ export function matchesScope(syncUnit: string | null, scope: SyncScope): boolean
   if (syncUnit === KEY_LABEL_SYNC_UNIT) return true // key-labels follow every scope (global, all-keyboard)
   if (syncUnit === TYPING_TEST_TEXT_SYNC_UNIT) return true // imported typing-test texts follow every scope (global, all-keyboard)
   // i18n/themes only match 'all' or 'packs' (both short-circuited above) —
-  // excluded from favorites/keyboard-scoped syncs. NOT reliably discovered
-  // by the 3-minute poll alone despite it using 'all': polling only merges
-  // a CHANGED modifiedTime since its own last snapshot, so a pack already
-  // on Drive before this machine's first poll is invisible to it forever.
-  // What actually closes the gap is the 'packs' scope above: an
-  // automatic pull on first device connection (AppConfig.packsPulledOnce)
-  // and the Language/Theme Packs modal's "Pull from Cloud" button both
-  // use it to fetch i18n/theme packs directly, without depending on
-  // poll-detected diffs.
+  // excluded from favorites/keyboard-scoped syncs. The 3-minute poll uses
+  // 'all', so its first pass of a launch downloads packs already on Drive.
+  // The 'packs' scope (an automatic pull on first device connection via
+  // AppConfig.packsPulledOnce, and the Language/Theme Packs modal's "Pull
+  // from Cloud" button) fetches them without waiting for a poll.
   if (syncUnit.startsWith(I18N_SYNC_UNIT_PREFIX) || syncUnit.startsWith(THEME_SYNC_UNIT_PREFIX)) return false
   if (scope === 'favorites') return syncUnit.startsWith('favorites/')
   if (typeof scope === 'object' && 'favorites' in scope) {

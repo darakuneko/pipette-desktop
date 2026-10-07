@@ -15,7 +15,6 @@ import {
   syncRuntime,
   emitProgress,
   errorMessage,
-  updateRemoteState,
   broadcastPendingStatus,
 } from './sync-runtime-state'
 import { requireSyncCredentials, ensurePasswordCheckValidated, PasswordMismatchError } from './sync-password'
@@ -86,8 +85,6 @@ export async function flushPendingChanges(): Promise<void> {
       reportBlockedFlush(remoteBlock)
       return
     }
-    updateRemoteState(remoteFiles)
-
     // Before the pending set is taken, so a failed create keeps every
     // pending change for the next flush.
     try {
@@ -126,10 +123,6 @@ export async function flushPendingChanges(): Promise<void> {
     )
 
     broadcastPendingStatus()
-
-    // Refresh remote state after uploads to prevent polling re-downloads
-    const updatedFiles = await listFiles()
-    updateRemoteState(updatedFiles)
 
     if (syncRuntime.pendingChanges.size === 0) {
       emitProgress({ direction: 'upload', status: 'success', message: 'Sync complete' })

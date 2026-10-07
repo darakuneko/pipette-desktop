@@ -5,7 +5,7 @@
 import { app } from 'electron'
 import { listFiles, syncUnitFromFileName, type DriveFile } from './google-drive'
 import { pLimit } from '../../shared/concurrency'
-import { SYNC_CONCURRENCY, syncRuntime, emitProgress, errorMessage, updateRemoteState, broadcastPendingStatus } from './sync-runtime-state'
+import { SYNC_CONCURRENCY, syncRuntime, emitProgress, errorMessage, broadcastPendingStatus } from './sync-runtime-state'
 import { requireSyncCredentials, validatePasswordCheck, ensurePasswordCheckValidated } from './sync-password'
 import { localSyncBlock, remoteSyncBlock, emitSyncBlocked } from './sync-password-guard'
 import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
@@ -16,6 +16,7 @@ import { backfillKeyboardMeta } from './keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import { runPackGcAfterPass } from './pack-gc'
 import { reconcileOwnHashTypingAnalytics } from './sync-typing-remote'
+import { inFlightPollPass } from './sync-polling'
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import { log } from '../logger'
 import type { SyncScope, SyncExecuteStatus, SyncSkipReason, SyncBlockReason } from '../../shared/types/sync'
@@ -37,7 +38,13 @@ export async function executeSync(
   direction: 'download' | 'upload',
   scope: SyncScope = 'all',
 ): Promise<SyncExecuteResult> {
-  if (syncRuntime.isSyncing) return { status: 'skipped', skipReason: 'busy' }
+  if (syncRuntime.isSyncing) {
+    // A background poll always settles on its own, so waiting for it keeps a
+    // connect-time download from being dropped. Any other holder (another
+    // executeSync, a flush) skips, which is how parallel callers dedupe.
+    await inFlightPollPass()
+    if (syncRuntime.isSyncing) return { status: 'skipped', skipReason: 'busy' }
+  }
   syncRuntime.isSyncing = true
 
   const skipBlocked = (reason: SyncBlockReason): SyncExecuteResult => {
@@ -129,8 +136,6 @@ async function executeDownloadSync(
   scope: SyncScope = 'all',
 ): Promise<string[]> {
   const remoteFiles = prefetchedFiles ?? await listFiles()
-  updateRemoteState(remoteFiles) // Always record full remote state for polling
-
   const localKeyboardUids = await listLocalKeyboardUids()
   // {file, syncUnit} pairs resolved once here rather than re-parsing the
   // filename again inside the download loop below.
@@ -209,7 +214,6 @@ async function executeUploadSync(
     syncUnits = syncUnits.filter((unit) => matchesScope(unit, scope))
   }
   const remoteFiles = mutatedDuringReconcile ? await listFiles() : remoteFilesInitial
-  updateRemoteState(remoteFiles)
   const total = syncUnits.length
   let completed = 0
   const failedUnits: string[] = []
@@ -241,10 +245,6 @@ async function executeUploadSync(
       }),
     ),
   )
-
-  // Refresh remote state once after all uploads to prevent polling re-downloads
-  const updatedFiles = await listFiles()
-  updateRemoteState(updatedFiles)
 
   return failedUnits
 }

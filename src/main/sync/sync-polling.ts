@@ -7,7 +7,7 @@ import { MalformedSyncBundleError } from './merge'
 import { isAnalyticsSyncUnit, isRunLogSyncUnit } from './sync-bundle'
 import { runPackGcAfterPass } from './pack-gc'
 import { log } from '../logger'
-import { SYNC_CONCURRENCY, POLL_INTERVAL_MS, syncRuntime, updateRemoteState, emitProgress } from './sync-runtime-state'
+import { SYNC_CONCURRENCY, POLL_INTERVAL_MS, syncRuntime, recordRemoteState, emitProgress } from './sync-runtime-state'
 import { requireSyncCredentials, ensurePasswordCheckValidated } from './sync-password'
 import { localSyncBlock, remoteSyncBlock, emitSyncBlocked } from './sync-password-guard'
 import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
@@ -16,10 +16,9 @@ import { listLocalKeyboardUids, shouldDownloadSyncUnit } from './sync-scope'
 import { mergeWithRemote } from './sync-merge-dispatch'
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
-// The pass the interval started and that has not settled yet, kept so
-// tests can await the exact pass. Production behavior does not depend on
-// it: the tick guard in startPolling only skips a call that would return
-// at pollForRemoteChanges's lock check anyway.
+// The pass the interval started and that has not settled yet. The tick guard
+// in startPolling only skips a call that would return at
+// pollForRemoteChanges's lock check anyway.
 let inFlightPoll: Promise<void> | null = null
 
 async function pollForRemoteChanges(): Promise<void> {
@@ -49,13 +48,8 @@ async function pollForRemoteChanges(): Promise<void> {
 
     await ensurePasswordCheckValidated(password, remoteFiles)
 
-    // First poll: just validate password and record remote state
-    // Avoids downloading all files on startup
-    if (syncRuntime.lastKnownRemoteState.size === 0) {
-      updateRemoteState(remoteFiles)
-      return
-    }
-
+    // The first poll of a launch has no recorded state, so every listed file
+    // counts as changed: each locally relevant unit is downloaded once.
     const localKeyboardUids = await listLocalKeyboardUids()
     // {file, syncUnit} pairs resolved once here rather than re-parsing
     // the filename again inside the merge loop below.
@@ -73,7 +67,11 @@ async function pollForRemoteChanges(): Promise<void> {
       return [{ file, syncUnit }]
     })
 
-    updateRemoteState(remoteFiles)
+    // Record the files evaluated and left alone on purpose (unchanged, lazily
+    // skipped, analytics/run-log units, names with no sync unit). A changed
+    // file is recorded by mergeWithRemote only when its merge succeeds.
+    const changedNames = new Set(changedFiles.map(({ file }) => file.name))
+    recordRemoteState(remoteFiles.filter((file) => !changedNames.has(file.name)))
 
     const limit = pLimit(SYNC_CONCURRENCY)
     const failedUnits: string[] = []
@@ -91,25 +89,15 @@ async function pollForRemoteChanges(): Promise<void> {
           } catch (err) {
             failedUnits.push(syncUnit)
             if (err instanceof MalformedSyncBundleError) {
-              // Contained per-unit, same as any other poll failure — but
-              // deliberately do NOT forget the modifiedTime below: this
-              // poll already recorded it into lastKnownRemoteState above
-              // (before this loop ran), so leaving it in place makes the
-              // NEXT poll see this exact revision as unchanged and skip
-              // retrying it forever. A later fix (a new modifiedTime) is
-              // a different key and is retried normally. Manual syncs
-              // (executeDownloadSync/executeUploadSync) have no such
-              // memory and may retry a malformed unit on every attempt —
-              // deliberate, since those are visible, user-initiated
-              // actions, not a silent background loop. Unit name only —
-              // never bundle content — per the project's
-              // no-payload-in-logs rule for attacker-reachable remote data.
+              // A malformed bundle's exact revision is recorded so the next
+              // poll does not retry it every 3 minutes; a new revision has a
+              // different modifiedTime and is retried. Manual syncs have no
+              // such memory and may retry it. Unit name only, never bundle
+              // content: the project's no-payload-in-logs rule for
+              // attacker-reachable remote data.
+              recordRemoteState([remoteFile])
               log('warn', `sync: ${err.message}`)
-              return
             }
-            // Forget the modifiedTime so the next poll re-detects this file as changed
-            // and gets another chance to merge it.
-            syncRuntime.lastKnownRemoteState.delete(remoteFile.name)
           }
         }),
       ),
@@ -157,10 +145,17 @@ export function stopPolling(): void {
   }
 }
 
+/** The poll pass the interval started and that has not settled yet.
+ * executeSync waits on it instead of skipping as busy; tests await the exact
+ * pass. */
+export function inFlightPollPass(): Promise<void> | null {
+  return inFlightPoll
+}
+
 /** Test-only: resolves when the poll pass the interval started has
  * settled (immediately when none is running). */
 export function waitForPollPassForTests(): Promise<void> {
-  return inFlightPoll ?? Promise.resolve()
+  return inFlightPollPass() ?? Promise.resolve()
 }
 
 /** Test-only reset for the tracked pass — called by the sync-service
