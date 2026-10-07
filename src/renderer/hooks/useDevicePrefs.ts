@@ -64,7 +64,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     keycodeTabOrder, updateKeycodeTabOrder,
     appliedUid, setAppliedUid,
     uidRef, applySeqRef,
-    saveCurrentPrefs,
+    savePrefs,
     applyValidated,
   } = useDevicePrefsState({
     defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode, defaultQuickSelect,
@@ -72,44 +72,45 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
 
   const setLayout = useCallback((id: KeyboardLayoutId) => {
     updateLayout(id)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateLayout])
+    savePrefs({ keyboardLayout: id })
+  }, [savePrefs, updateLayout])
 
   const setAutoAdvance = useCallback((enabled: boolean) => {
     updateAutoAdvance(enabled)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateAutoAdvance])
+    savePrefs({ autoAdvance: enabled })
+  }, [savePrefs, updateAutoAdvance])
 
   const setLayerPanelOpen = useCallback((open: boolean) => {
     updateLayerPanelOpen(open)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateLayerPanelOpen])
+    savePrefs({ layerPanelOpen: open })
+  }, [savePrefs, updateLayerPanelOpen])
 
   const setBasicViewType = useCallback((type: BasicViewType) => {
     updateBasicViewType(type)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateBasicViewType])
+    savePrefs({ basicViewType: type })
+  }, [savePrefs, updateBasicViewType])
 
   const setSplitKeyMode = useCallback((mode: SplitKeyMode) => {
     updateSplitKeyMode(mode)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateSplitKeyMode])
+    savePrefs({ splitKeyMode: mode })
+  }, [savePrefs, updateSplitKeyMode])
 
   const setQuickSelect = useCallback((enabled: boolean) => {
     updateQuickSelect(enabled)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateQuickSelect])
+    savePrefs({ quickSelect: enabled })
+  }, [savePrefs, updateQuickSelect])
 
   const setKeymapScale = useCallback((scale: number) => {
     const clamped = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale))
-    updateKeymapScale(Math.round(clamped * 10) / 10)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateKeymapScale])
+    const rounded = Math.round(clamped * 10) / 10
+    updateKeymapScale(rounded)
+    savePrefs({ keymapScale: rounded })
+  }, [savePrefs, updateKeymapScale])
 
   const setLayerNames = useCallback((names: string[]) => {
     updateLayerNames(names)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateLayerNames])
+    savePrefs({ layerNames: names })
+  }, [savePrefs, updateLayerNames])
 
   const {
     addTypingTestResult,
@@ -149,47 +150,48 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     typingTestComparisonBaselinesRef, updateTypingTestComparisonBaselines,
     typingTestSettingsPanelOpenRef, updateTypingTestSettingsPanelOpen,
     typingRecordEnabledRef, updateTypingRecordEnabled,
-    saveCurrentPrefs,
+    savePrefs,
   })
 
   const setViewMode = useCallback((mode: ViewMode) => {
     if (viewModeRef.current === mode) return
     updateViewMode(mode)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateViewMode])
+    savePrefs({ viewMode: mode })
+  }, [savePrefs, updateViewMode])
 
   /** `undefined` resets to physical matrix order — clears every override. */
   const setViewMatrix = useCallback((next: Record<string, ViewMatrixCell> | undefined) => {
     updateViewMatrix(next)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateViewMatrix])
+    savePrefs({ viewMatrix: next ?? null })
+  }, [savePrefs, updateViewMatrix])
 
   const setViewMatrixWires = useCallback((next: boolean) => {
     updateViewMatrixWires(next)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateViewMatrixWires])
+    // Always sent explicitly so turning the toggle off persists `false`.
+    savePrefs({ viewMatrixWires: next })
+  }, [savePrefs, updateViewMatrixWires])
 
   const setLayerHoverPreview = useCallback((enabled: boolean) => {
     updateLayerHoverPreview(enabled)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateLayerHoverPreview])
+    savePrefs({ layerHoverPreview: enabled })
+  }, [savePrefs, updateLayerHoverPreview])
 
   const setEntryHoverPreview = useCallback((enabled: boolean) => {
     updateEntryHoverPreview(enabled)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateEntryHoverPreview])
+    savePrefs({ entryHoverPreview: enabled })
+  }, [savePrefs, updateEntryHoverPreview])
 
   const setKeycodeTabOrder = useCallback((order: string[] | undefined) => {
     updateKeycodeTabOrder(order)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateKeycodeTabOrder])
+    savePrefs({ keycodeTabOrder: order ?? null })
+  }, [savePrefs, updateKeycodeTabOrder])
 
   const setKeyEditorZoom = useCallback((zoom: number) => {
     const clamped = clampZoomFactor(zoom)
     if (keyEditorZoomRef.current === clamped) return
     updateKeyEditorZoom(clamped)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateKeyEditorZoom])
+    savePrefs({ keyEditorZoom: clamped })
+  }, [savePrefs, updateKeyEditorZoom])
 
   const applyDevicePrefs = useCallback(async (uid: string) => {
     uidRef.current = uid

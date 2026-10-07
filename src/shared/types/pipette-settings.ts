@@ -422,8 +422,8 @@ export interface PipetteSettings {
 /** Field-level patch for {@link PipetteSettings}. Each key is optional; a
  * value applies as-is, `undefined` leaves the persisted value untouched
  * (so a writer never erases a field it doesn't own), and `null` explicitly
- * clears the field (removes the key). The full-prefs writer uses `null` to
- * clear owned fields like `typingTestMemory`; sub-field writers just omit
+ * clears the field (removes the key). Setters that clear a field send `null`
+ * (e.g. `typingTestMemory`); sub-field writers just omit
  * what they don't own. */
 export type PipetteSettingsPatch = {
   [K in keyof PipetteSettings]?: PipetteSettings[K] | null
