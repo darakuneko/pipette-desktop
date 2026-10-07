@@ -36,21 +36,36 @@ import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import { emptySyncState, loadSyncState, saveSyncState } from '../typing-analytics/sync-state'
 import { log } from '../logger'
+import { withWriteLock } from '../per-uid-write-lock'
 import { recordRemoteState } from './sync-runtime-state'
 import type { SyncBundle, SyncEnvelope } from '../../shared/types/sync'
 
+// The Analyze-panel analytics sync and the debounced flush run on different
+// mutexes and can upload the same unit at once. Serializing bundle→upload per
+// unit makes the later one bundle the current local file after the earlier
+// upload finished, so it cannot overwrite Drive with older content. The
+// `upload:` prefix keeps the key apart from the stores' per-uid keys.
 async function uploadSyncUnit(
+  syncUnit: string,
+  password: string,
+  remoteFiles?: DriveFile[],
+): Promise<void> {
+  return withWriteLock(`upload:${syncUnit}`, () => uploadSyncUnitLocked(syncUnit, password, remoteFiles))
+}
+
+async function uploadSyncUnitLocked(
   syncUnit: string,
   password: string,
   remoteFiles?: DriveFile[],
 ): Promise<void> {
   // i18n/theme pack bodies: snapshot the local file's mtime BEFORE
   // bundling — bundling/encrypting/uploading all happen without holding
-  // the store's write lock, so a user save (savePack/renamePack) can
-  // land in that window. This snapshot is the CAS baseline
-  // pinPackBodyMtimeAfterUpload needs below to detect that race — see
-  // its doc for why a blind post-upload pin would otherwise stamp a
-  // fresher local edit with this upload's stale Drive time.
+  // the pack store's own write lock (only the per-unit upload lock is held
+  // here), so a user save (savePack/renamePack) can land in that window.
+  // This snapshot is the CAS baseline pinPackBodyMtimeAfterUpload needs
+  // below to detect that race — see its doc for why a blind post-upload
+  // pin would otherwise stamp a fresher local edit with this upload's
+  // stale Drive time.
   const packBodyRef = parsePackBodySyncUnit(syncUnit)
   const packBodyMtimeSnapshot = packBodyRef ? await statPackBodyLocalMtime(packBodyRef) : null
 
@@ -106,8 +121,9 @@ async function recordDayUploaded(dayRef: {
 /** Write a downloaded per-day JSONL under the owning device's `{hash}/`
  * directory and apply every row in the file. Each day is a distinct
  * file so a partial download of one day does not affect other days for
- * the same remote hash. No-op when the unit's machineHash matches our
- * own. */
+ * the same remote hash. No-op when the unit's machineHash matches our own:
+ * mergeWithRemote never routes own-hash days here (it uploads them in
+ * place), so this guards direct callers such as fetchRemoteTypingDay. */
 export async function mergeDeviceDayBundle(
   remoteBundle: SyncBundle,
   dayRef: { uid: string; machineHash: string; utcDay: UtcDay },
@@ -169,10 +185,10 @@ async function mergeSyncUnit(
     throw new MalformedSyncBundleError(syncUnit)
   }
 
-  // Typing-analytics JSONL: each file is owned by one device. Skip our
-  // own hash so a stale remote never clobbers freshly-flushed local
-  // rows. For a remote device's file we overwrite the local copy and
-  // replay only the newly-appended rows into the cache.
+  // Typing-analytics JSONL: each file is owned by one device. Own-hash days
+  // are handled earlier in mergeWithRemote (uploaded in place); a remote
+  // device's file overwrites the local copy and replays its rows into the
+  // cache.
   const dayRef = parseTypingAnalyticsDeviceDaySyncUnit(syncUnit)
   if (dayRef) {
     await mergeDeviceDayBundle(remoteBundle, dayRef, userData, await getMachineHash())
@@ -339,6 +355,17 @@ export async function mergeWithRemote(
   password: string,
   remoteFiles?: DriveFile[],
 ): Promise<void> {
+  // Own-device analytics days are append-only logs this machine owns, so
+  // nothing on Drive can be newer: re-upload in place without a download.
+  const ownDayRef = parseTypingAnalyticsDeviceDaySyncUnit(syncUnit)
+  if (ownDayRef && ownDayRef.machineHash === await getMachineHash()) {
+    // The uid comes from a Drive filename, so it is validated before
+    // bundleSyncUnit joins it into a local path (same rule as mergeSyncUnit).
+    if (!isSafePathSegment(ownDayRef.uid)) throw new MalformedSyncBundleError(syncUnit)
+    await uploadSyncUnit(syncUnit, password, remoteFiles)
+    return
+  }
+
   const packBodyRef = parsePackBodySyncUnit(syncUnit)
   if (packBodyRef && await packBodyLocalWins(packBodyRef, remoteFile.modifiedTime)) {
     await uploadSyncUnit(syncUnit, password, remoteFiles)
