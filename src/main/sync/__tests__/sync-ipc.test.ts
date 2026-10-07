@@ -64,6 +64,10 @@ const mockAssertNoLocalPasswordChange = vi.fn(async () => {})
 const mockGetPasswordChangeLockStatus = vi.fn(async (): Promise<unknown> => null)
 const mockReleasePasswordChangeLocks = vi.fn(async (): Promise<void> => {})
 const mockReplacePasswordAndValidate = vi.fn(async (_password: string): Promise<void> => {})
+const mockSetPasswordAndValidate = vi.fn(async (_password: string): Promise<void> => {})
+const mockScheduleFlushIfPending = vi.fn()
+const mockStartPolling = vi.fn()
+const mockStopPolling = vi.fn()
 const { MockSyncBlockedError } = vi.hoisted(() => ({
   MockSyncBlockedError: class MockSyncBlockedError extends Error {
     readonly reason: string | undefined
@@ -90,10 +94,11 @@ vi.mock('../sync-service', () => ({
   cancelPendingChanges: (...args: unknown[]) => mockCancelPendingChanges(...args),
   isSyncInProgress: () => mockIsSyncInProgress(),
   notifyChange: vi.fn(),
+  scheduleFlushIfPending: (...args: unknown[]) => mockScheduleFlushIfPending(...args),
   setProgressCallback: vi.fn(),
   setupBeforeQuitHandler: vi.fn(),
-  startPolling: vi.fn(),
-  stopPolling: vi.fn(),
+  startPolling: () => mockStartPolling(),
+  stopPolling: () => mockStopPolling(),
   collectAllSyncUnits: vi.fn(async () => []),
   bundleSyncUnit: vi.fn(),
   readIndexFile: vi.fn(),
@@ -116,7 +121,7 @@ vi.mock('../sync-service', () => ({
   getPasswordChangeLockStatus: () => mockGetPasswordChangeLockStatus(),
   releasePasswordChangeLocks: () => mockReleasePasswordChangeLocks(),
   checkPasswordCheckExists: vi.fn(),
-  setPasswordAndValidate: vi.fn(),
+  setPasswordAndValidate: (password: string) => mockSetPasswordAndValidate(password),
   replacePasswordAndValidate: (password: string) => mockReplacePasswordAndValidate(password),
   deleteRemoteTypingDay: vi.fn(),
   fetchRemoteTypingDay: vi.fn(),
@@ -157,6 +162,7 @@ vi.mock('../keyboard-meta', () => ({
 
 import { setupSyncIpc } from '../sync-ipc'
 import { ipcMain } from 'electron'
+import { onAppConfigChange } from '../../app-config'
 import { IpcChannels } from '../../../shared/ipc/channels'
 import { KEY_LABEL_SYNC_UNIT } from '../../key-label-store'
 import { TYPING_TEST_TEXT_SYNC_UNIT } from '../../typing-test-text-store'
@@ -332,6 +338,88 @@ describe('sync-ipc SYNC_REPLACE_PASSWORD', () => {
 
     expect(result.success).toBe(false)
     expect(mockReplacePasswordAndValidate).not.toHaveBeenCalled()
+  })
+})
+
+describe('sync-ipc pending changes kept by a flush', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockStartOAuthFlow.mockResolvedValue(undefined)
+    setupSyncIpc()
+  })
+
+  function configListener(): (key: string, value: unknown) => void {
+    const listener = vi.mocked(onAppConfigChange).mock.calls.at(-1)?.[0]
+    if (!listener) throw new Error('onAppConfigChange listener not registered')
+    return listener as (key: string, value: unknown) => void
+  }
+
+  it('turning auto sync on starts polling and schedules a flush of pending changes', () => {
+    configListener()('autoSync', true)
+
+    expect(mockStartPolling).toHaveBeenCalledTimes(1)
+    expect(mockScheduleFlushIfPending).toHaveBeenCalledTimes(1)
+  })
+
+  it('turning auto sync off schedules no flush', () => {
+    configListener()('autoSync', false)
+
+    expect(mockStopPolling).toHaveBeenCalledTimes(1)
+    expect(mockScheduleFlushIfPending).not.toHaveBeenCalled()
+  })
+
+  it('SYNC_SET_PASSWORD schedules a flush once the password is stored', async () => {
+    const result = await getHandler(IpcChannels.SYNC_SET_PASSWORD)(null, 'my-password')
+
+    expect(result).toEqual({ success: true })
+    expect(mockScheduleFlushIfPending).toHaveBeenCalledTimes(1)
+    expect(mockSetPasswordAndValidate.mock.invocationCallOrder[0])
+      .toBeLessThan(mockScheduleFlushIfPending.mock.invocationCallOrder[0])
+  })
+
+  it('SYNC_SET_PASSWORD schedules no flush when the password is refused', async () => {
+    mockSetPasswordAndValidate.mockRejectedValueOnce(new Error('sync.passwordMismatch'))
+
+    const result = await getHandler(IpcChannels.SYNC_SET_PASSWORD)(null, 'wrong')
+
+    expect(result.success).toBe(false)
+    expect(mockScheduleFlushIfPending).not.toHaveBeenCalled()
+  })
+
+  it('SYNC_REPLACE_PASSWORD schedules a flush once the password is stored', async () => {
+    await getHandler(IpcChannels.SYNC_REPLACE_PASSWORD)(null, 'other-pc-password')
+
+    expect(mockScheduleFlushIfPending).toHaveBeenCalledTimes(1)
+  })
+
+  it('SYNC_REPLACE_PASSWORD schedules no flush when the password is refused', async () => {
+    mockReplacePasswordAndValidate.mockRejectedValueOnce(new Error('sync.passwordMismatch'))
+
+    await getHandler(IpcChannels.SYNC_REPLACE_PASSWORD)(null, 'wrong')
+
+    expect(mockScheduleFlushIfPending).not.toHaveBeenCalled()
+  })
+
+  it('SYNC_AUTH_START schedules a flush after signing in', async () => {
+    const result = await getHandler(IpcChannels.SYNC_AUTH_START)(null)
+
+    expect(result).toEqual({ success: true })
+    expect(mockScheduleFlushIfPending).toHaveBeenCalledTimes(1)
+  })
+
+  it('SYNC_AUTH_START schedules no flush when signing in fails', async () => {
+    mockStartOAuthFlow.mockRejectedValueOnce(new Error('denied'))
+
+    await getHandler(IpcChannels.SYNC_AUTH_START)(null)
+
+    expect(mockScheduleFlushIfPending).not.toHaveBeenCalled()
+  })
+
+  it('SYNC_AUTH_SIGN_OUT keeps the pending changes', async () => {
+    const result = await getHandler(IpcChannels.SYNC_AUTH_SIGN_OUT)(null)
+
+    expect(result).toEqual({ success: true })
+    expect(mockCancelPendingChanges).not.toHaveBeenCalled()
   })
 })
 

@@ -31,7 +31,7 @@
 // from `_resetForTests` below — the same convention
 // typing-analytics-service.ts's facade split uses.
 
-import { syncRuntime } from './sync-runtime-state'
+import { syncRuntime, clearFlushTimer } from './sync-runtime-state'
 import { stopPolling, clearInFlightPollForTests } from './sync-polling'
 import { clearQuitFinalizersForTests } from './sync-flush'
 import { forgetChangeStateCache } from './sync-password-change-state'
@@ -40,15 +40,14 @@ import { clearSyncFormatStatus } from './sync-format-status'
 // --- Test helpers -------------------------------------------------------
 
 export function _resetForTests(): void {
-  if (syncRuntime.debounceTimer) {
-    clearTimeout(syncRuntime.debounceTimer)
-    syncRuntime.debounceTimer = null
-  }
+  clearFlushTimer()
   stopPolling()
   clearInFlightPollForTests()
   syncRuntime.pendingChanges.clear()
+  syncRuntime.pendingGeneration.clear()
   syncRuntime.lastKnownRemoteState.clear()
   syncRuntime.isSyncing = false
+  syncRuntime.inFlightPass = null
   syncRuntime.isQuitting = false
   syncRuntime.progressCallback = null
   syncRuntime.validatedPasswordCheck = null
@@ -136,6 +135,7 @@ export { executeAnalyticsSync } from './sync-analytics'
 
 export {
   notifyChange,
+  scheduleFlushIfPending,
   registerPreSyncQuitFinalizer,
   registerBeforeQuitFinalizer,
   setupBeforeQuitHandler,

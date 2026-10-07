@@ -7,7 +7,7 @@ import { MalformedSyncBundleError } from './merge'
 import { isAnalyticsSyncUnit, isRunLogSyncUnit } from './sync-bundle'
 import { runPackGcAfterPass } from './pack-gc'
 import { log } from '../logger'
-import { SYNC_CONCURRENCY, POLL_INTERVAL_MS, syncRuntime, recordRemoteState, emitProgress } from './sync-runtime-state'
+import { SYNC_CONCURRENCY, POLL_INTERVAL_MS, syncRuntime, recordRemoteState, emitProgress, tryClaimSyncLock } from './sync-runtime-state'
 import { requireSyncCredentials, ensurePasswordCheckValidated } from './sync-password'
 import { localSyncBlock, remoteSyncBlock, emitSyncBlocked } from './sync-password-guard'
 import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
@@ -22,8 +22,8 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 let inFlightPoll: Promise<void> | null = null
 
 async function pollForRemoteChanges(): Promise<void> {
-  if (syncRuntime.isSyncing) return
-  syncRuntime.isSyncing = true
+  const releaseLock = tryClaimSyncLock()
+  if (!releaseLock) return
 
   try {
     const localBlock = await localSyncBlock()
@@ -111,7 +111,7 @@ async function pollForRemoteChanges(): Promise<void> {
   } catch {
     // Polling failed — will retry next interval
   } finally {
-    syncRuntime.isSyncing = false
+    releaseLock()
   }
 }
 
