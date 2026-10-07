@@ -32,6 +32,7 @@ import {
 import { parseRow, type JsonlRow } from './jsonl/jsonl-row'
 import { utcDayBoundaryMs, utcDayFromMs, type UtcDay } from './jsonl/utc-day'
 import { pLimit } from '../../shared/concurrency'
+import { writeFileAtomic } from '../utils/write-file-atomic'
 
 /** Filename shape that pairs with the cloud sync-unit encoding. The
  * encrypted cloud files end in `.enc`; the export files use `.jsonl`
@@ -188,7 +189,7 @@ export async function importTypingDataFiles(
       continue
     }
     await mkdir(dirname(targetPath), { recursive: true })
-    await writeFile(targetPath, body, 'utf-8')
+    await writeFileAtomic(targetPath, body)
     result.imported += 1
   }
   return result

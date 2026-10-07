@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
-import { access, mkdtemp, readdir, readFile, rm, stat, utimes, writeFile, mkdir } from 'node:fs/promises'
+import { access, appendFile, mkdtemp, readdir, readFile, rm, stat, utimes, writeFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { driveFileName, type DriveFile } from '../sync/google-drive'
 
@@ -63,6 +63,7 @@ vi.mock('../sync/google-drive', async () => {
     deleteFile: (...args: unknown[]) => mockDeleteFile(...(args as Parameters<typeof mockDeleteFile>)),
     driveFileName: actual.driveFileName,
     syncUnitFromFileName: actual.syncUnitFromFileName,
+    driveFilenamePrefix: actual.driveFilenamePrefix,
     isDataFileName: actual.isDataFileName,
     isPasswordChangeLockFile: actual.isPasswordChangeLockFile,
     PASSWORD_CHECK_UNIT: actual.PASSWORD_CHECK_UNIT,
@@ -239,9 +240,11 @@ import {
   registerBeforeQuitFinalizer,
   deleteRemoteTypingDay,
   fetchRemoteTypingDay,
+  executeAnalyticsSync,
   waitForPollPassForTests,
   _resetForTests,
 } from '../sync/sync-service'
+import { syncOrUpload } from '../sync/sync-merge-dispatch'
 import { app } from 'electron'
 import { syncRuntime } from '../sync/sync-runtime-state'
 
@@ -2524,6 +2527,25 @@ describe('sync-service', () => {
       } catch { return false }
     }
 
+    function seedOwnDayOnDrive(day: string, uploaded: string[] = [day]): void {
+      mockSyncState = {
+        _rev: 3,
+        my_device_id: OWN_HASH,
+        uploaded: { [pointerKey(OWN_HASH)]: uploaded },
+        reconciled_at: { [pointerKey(OWN_HASH)]: 5_000 },
+        last_synced_at: 5_000,
+      }
+      mockListFiles.mockResolvedValue([cloudDriveFile(OWN_HASH, day), PASSWORD_CHECK_DRIVE_FILE])
+    }
+
+    function expectOwnDayUploaded(day: string): void {
+      expect(mockUploadFile).toHaveBeenCalledWith(
+        cloudFileName(OWN_HASH, day),
+        expect.anything(),
+        `drive-${OWN_HASH}-${day}`,
+      )
+    }
+
     // --- Reconcile rule 2: uploaded has, local missing → cloud delete ---
     it('reconcile rule 2: drops cloud file when uploaded lists a day but local file is gone', async () => {
       mockSyncState = {
@@ -2742,8 +2764,97 @@ describe('sync-service', () => {
         cloudDriveFile(OWN_HASH, '2026-04-18'),
         PASSWORD_CHECK_DRIVE_FILE,
       ])
+      mockUploadFile.mockClear()
       await executeSync('upload')
+      expect(mockUploadFile).toHaveBeenCalledTimes(1)
+      expectOwnDayUploaded('2026-04-18')
+      expect(mockDownloadFile).not.toHaveBeenCalledWith(`drive-${OWN_HASH}-2026-04-18`)
       expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual(['2026-04-18'])
+    })
+
+    it('own day on Drive: a debounced flush re-uploads it in place', async () => {
+      const day = '2026-04-18'
+      const unit = `keyboards/${UID}/devices/${OWN_HASH}/days/${day}`
+      mockAutoSync = true
+      seedOwnDayOnDrive(day)
+      await writeDayFile(day)
+      mockListLocalKeyboardUids.mockReturnValue([UID])
+
+      notifyChange(unit)
+      await vi.advanceTimersByTimeAsync(10_000)
+      await waitForSyncIdle()
+
+      expectOwnDayUploaded(day)
+    })
+
+    it('own day on Drive: executeAnalyticsSync uploads it exactly once', async () => {
+      const day = '2026-04-18'
+      seedOwnDayOnDrive(day)
+      await writeDayFile(day)
+      mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+
+      expect(await executeAnalyticsSync(UID)).toBe(true)
+
+      const calls = mockUploadFile.mock.calls.filter((c) => c[0] === cloudFileName(OWN_HASH, day))
+      expect(calls).toHaveLength(1)
+      expect(calls[0][2]).toBe(`drive-${OWN_HASH}-${day}`)
+      expect(mockDownloadFile).not.toHaveBeenCalledWith(`drive-${OWN_HASH}-${day}`)
+    })
+
+    it('own day on Drive with no local file: download sync neither uploads nor downloads it', async () => {
+      const day = '2026-04-18'
+      seedOwnDayOnDrive(day, [])
+      await mkdir(join(mockUserDataPath, 'sync', 'keyboards', UID), { recursive: true })
+
+      const result = await executeSync('download', { keyboard: UID })
+
+      expect(result.status).toBe('completed')
+      expect(mockUploadFile).not.toHaveBeenCalled()
+      expect(mockDownloadFile).not.toHaveBeenCalledWith(`drive-${OWN_HASH}-${day}`)
+    })
+
+    it('own day with a hostile uid segment is rejected before any path is joined', async () => {
+      const day = '2026-04-18'
+      // `..` is a single segment, so the day-unit parser accepts it as a uid.
+      const unit = `keyboards/../devices/${OWN_HASH}/days/${day}`
+      const remoteFiles = [{ id: 'hostile', name: `keyboards_.._devices_${OWN_HASH}_days_${day}.enc`, modifiedTime: '2026-01-01T00:00:00.000Z' }]
+
+      await expect(syncOrUpload(unit, 'test-password', remoteFiles)).rejects.toThrow('malformed sync bundle index')
+      expect(mockUploadFile).not.toHaveBeenCalled()
+      expect(mockDownloadFile).not.toHaveBeenCalled()
+    })
+
+    it('concurrent uploads of the same unit run one after the other', async () => {
+      const day = '2026-04-18'
+      const unit = `keyboards/${UID}/devices/${OWN_HASH}/days/${day}`
+      const lineA = '{"id":"line-a"}\n'
+      const lineB = '{"id":"line-b"}\n'
+      await writeDayFile(day, OWN_HASH, lineA)
+      const remoteFiles = [cloudDriveFile(OWN_HASH, day)]
+      const mockEncrypt = vi.mocked(mockEncryptFn)
+      mockEncrypt.mockClear()
+      let release: () => void = () => {}
+      const gate = new Promise<void>((resolve) => { release = resolve })
+      mockUploadFile.mockImplementationOnce(async () => {
+        await gate
+        return { id: 'file-id', modifiedTime: '2026-01-01T00:00:00.000Z' }
+      })
+
+      const first = syncOrUpload(unit, 'test-password', remoteFiles)
+      await flushUntil(() => mockUploadFile.mock.calls.length === 1, 'the first upload to start')
+      const second = syncOrUpload(unit, 'test-password', remoteFiles)
+      // Without serialization the second upload would bundle during these ticks, before line B exists.
+      for (let i = 0; i < 50; i++) await new Promise<void>((resolve) => realSetImmediate(resolve))
+      await appendFile(ownDayPath(day), lineB, 'utf-8')
+      release()
+      await Promise.all([first, second])
+
+      expect(mockUploadFile).toHaveBeenCalledTimes(2)
+      expect(mockEncrypt).toHaveBeenCalledTimes(2)
+      const dayContent = (call: number): string =>
+        (JSON.parse(mockEncrypt.mock.calls[call][0] as string) as { files: Record<string, string> }).files['data.jsonl']
+      expect(dayContent(0)).not.toContain('line-b')
+      expect(dayContent(1)).toContain('line-b')
     })
 
     // --- fetchRemoteTypingDay branches ---
