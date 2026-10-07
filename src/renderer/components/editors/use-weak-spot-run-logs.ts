@@ -17,6 +17,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 import type { RunKeystrokeLog } from '../../../shared/types/typing-run-log'
+import { useSyncUnitApplied } from '../../hooks/use-sync-unit-applied'
 
 const EMPTY_LOGS: ReadonlyMap<string, RunKeystrokeLog> = new Map()
 
@@ -44,7 +45,14 @@ const EMPTY_LOGS: ReadonlyMap<string, RunKeystrokeLog> = new Map()
  *  the same session (no remount in between) enters the index instead of
  *  being permanently invisible to this hook until the next mount. This
  *  never re-fetches an already-cached runId's LOG, only the cheaper
- *  id-list index itself. */
+ *  id-list index itself.
+ *
+ *  A sync merge of this keyboard's run logs (`keyboards/{uid}/runs`) is the
+ *  exception: it re-reads the index and every available log, cached or
+ *  not (including null misses), and the next committed batch replaces the
+ *  whole cache. Until then the previous logs stay visible, minus any the
+ *  new index no longer lists. A failed index read counts as an empty index,
+ *  so it hides the cached logs. */
 export function useWeakSpotRunLogs(
   uid: string | undefined,
   results: readonly TypingTestResult[],
@@ -55,6 +63,22 @@ export function useWeakSpotRunLogs(
   // settles, purely to retrigger the final useMemo (the refs above are
   // invisible to React's dependency comparison).
   const [version, setVersion] = useState(0)
+  // Bumped by a sync merge: re-reads the index, and a log read started
+  // under an older generation is dropped instead of cached.
+  const [syncGeneration, setSyncGeneration] = useState(0)
+  const syncGenerationRef = useRef(0)
+  // Set by a sync merge until a batch commits: fetch every available log
+  // and replace the cache with the result.
+  const refetchAllRef = useRef(false)
+
+  useSyncUnitApplied(
+    (unit) => uid !== undefined && unit === `keyboards/${uid}/runs`,
+    () => {
+      syncGenerationRef.current += 1
+      refetchAllRef.current = true
+      setSyncGeneration(syncGenerationRef.current)
+    },
+  )
 
   const candidateRunIds = useMemo(() => {
     const ids = new Set<string>()
@@ -94,14 +118,29 @@ export function useWeakSpotRunLogs(
         setVersion((v) => v + 1)
       })
     return () => { cancelled = true }
-  }, [uid, results.length])
+  }, [uid, results.length, syncGeneration])
 
   useEffect(() => {
     if (!uid) return
     const available = availableRunIdsRef.current
     if (!available) return // index not loaded yet — the effect above will retrigger this one via `version`
-    const missing = Array.from(candidateRunIds).filter((runId) => available.has(runId) && !cacheRef.current.has(runId))
-    if (missing.length === 0) return
+    const refetchAll = refetchAllRef.current
+    // After a sync merge the first commit replaces the cache, so the old
+    // logs stay visible until then.
+    const commit = (entries: readonly { runId: string; log: RunKeystrokeLog | null }[]): void => {
+      if (refetchAll) {
+        refetchAllRef.current = false
+        cacheRef.current.clear()
+      }
+      for (const { runId, log } of entries) cacheRef.current.set(runId, log)
+      setVersion((v) => v + 1)
+    }
+    const missing = Array.from(candidateRunIds).filter((runId) => available.has(runId) && (refetchAll || !cacheRef.current.has(runId)))
+    if (missing.length === 0) {
+      if (refetchAll) commit([])
+      return
+    }
+    const generation = syncGenerationRef.current
     let cancelled = false
     Promise.allSettled(
       missing.map((runId) =>
@@ -110,11 +149,8 @@ export function useWeakSpotRunLogs(
           .catch(() => ({ runId, log: null as RunKeystrokeLog | null })),
       ),
     ).then((settled) => {
-      if (cancelled) return
-      for (const outcome of settled) {
-        if (outcome.status === 'fulfilled') cacheRef.current.set(outcome.value.runId, outcome.value.log)
-      }
-      setVersion((v) => v + 1)
+      if (cancelled || generation !== syncGenerationRef.current) return
+      commit(settled.flatMap((outcome) => (outcome.status === 'fulfilled' ? [outcome.value] : [])))
     })
     return () => { cancelled = true }
     // `version` deliberately participates: it's what retriggers this
@@ -123,10 +159,12 @@ export function useWeakSpotRunLogs(
 
   return useMemo(() => {
     if (cacheRef.current.size === 0) return EMPTY_LOGS
+    // Null while the index re-reads; a loaded index hides evicted logs.
+    const available = availableRunIdsRef.current
     const map = new Map<string, RunKeystrokeLog>()
     for (const runId of candidateRunIds) {
       const log = cacheRef.current.get(runId)
-      if (log) map.set(runId, log)
+      if (log && (!available || available.has(runId))) map.set(runId, log)
     }
     return map
     // `version` deliberately participates in this dependency list (not
