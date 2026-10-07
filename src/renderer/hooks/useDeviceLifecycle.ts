@@ -8,6 +8,8 @@ import type { DeviceInfo, VilFile, KeyboardDefinition } from '../../shared/types
 import type { SyncScope, SyncOperationResult } from '../../shared/types/sync'
 import type { PipetteFileKeyboard, PipetteFileEntry } from '../app-types'
 import type { ReloadResult } from './keyboard-types'
+import { useLatestRequest } from './use-latest-request'
+import { affectsStoredKeyboards, useSyncUnitApplied } from './use-sync-unit-applied'
 
 interface Options {
   // Device connection
@@ -225,7 +227,14 @@ export function useDeviceLifecycle(options: Options) {
     }
   }, [autoSync, authenticated, hasPassword, syncNow, deviceSyncing])
 
+  // Set once the saved-file browser has asked for entries; until then a sync
+  // merge has nothing on screen to refresh.
+  const pipetteFileEntriesLoadedRef = useRef(false)
+  const beginFileEntriesRequest = useLatestRequest()
+
   const refreshPipetteFileEntries = useCallback(async () => {
+    pipetteFileEntriesLoadedRef.current = true
+    const isCurrent = beginFileEntriesRequest()
     try {
       const keyboards = await window.vialAPI.listStoredKeyboards()
       const kbList: PipetteFileKeyboard[] = []
@@ -251,12 +260,17 @@ export function useDeviceLifecycle(options: Options) {
         }
       }
       entries.sort((a, b) => b.savedAt.localeCompare(a.savedAt))
+      if (!isCurrent()) return
       setPipetteFileKeyboards(kbList)
       setPipetteFileEntries(entries)
     } catch {
       // Non-critical
     }
-  }, [])
+  }, [beginFileEntriesRequest])
+
+  useSyncUnitApplied(affectsStoredKeyboards, () => {
+    if (pipetteFileEntriesLoadedRef.current) void refreshPipetteFileEntries()
+  })
 
   const handleLoadDummy = useCallback(async () => {
     setFileLoadError(null)

@@ -23,6 +23,8 @@ import type { HubEntryResult } from '../components/editors/layout-store-types'
 import { localizeHubError } from '../utils/hub-error-i18n'
 import { linkFromResult } from '../utils/hub-private-link'
 import { useUploadConfirm } from './useUploadConfirm'
+import { useLatestRequest } from './use-latest-request'
+import { useSyncUnitApplied } from './use-sync-unit-applied'
 
 /** Serialized snapshot payload. `version` lets us evolve the shape
  * later without losing already-saved entries — readers should bail out
@@ -94,20 +96,33 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
     }, HUB_RESULT_FLASH_MS)
   }, [])
 
+  const beginListRequest = useLatestRequest(uid)
+  // The uid the shown entries belong to.
+  const entriesUidRef = useRef<string | null>(null)
+
   const refreshEntries = useCallback(async () => {
-    // Clear first so a uid switch doesn't briefly show the prior
-    // keyboard's list. The IPC then repopulates if the new uid has any.
-    setEntries([])
+    // Clear on a uid switch so the prior keyboard's list never shows under
+    // the new one; a re-read of the same uid keeps the rows mounted.
+    if (entriesUidRef.current !== uid) {
+      entriesUidRef.current = uid
+      setEntries([])
+    }
     if (!uid) return
+    const isCurrent = beginListRequest()
     try {
       const result = await window.vialAPI.analyzeFilterStoreList(uid)
-      if (result.success && result.entries) {
+      if (isCurrent() && result.success && result.entries) {
         setEntries(result.entries)
       }
     } catch {
       // Silently ignore list errors — UI shows the empty state instead
     }
-  }, [uid])
+  }, [uid, beginListRequest])
+
+  useSyncUnitApplied(
+    (unit) => uid !== null && unit === `keyboards/${uid}/analyze_filters`,
+    () => { void refreshEntries() },
+  )
 
   const saveSnapshot = useCallback(async (
     label: string,

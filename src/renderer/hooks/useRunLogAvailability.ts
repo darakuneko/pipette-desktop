@@ -4,6 +4,7 @@
 // at all (a run with no log gets no affordance, not a disabled one).
 
 import { useEffect, useState } from 'react'
+import { useSyncUnitApplied } from './use-sync-unit-applied'
 
 /** Shared empty-Set singleton — `HistoryToggle` before its first open,
  *  and any caller (e.g. a standalone test render of `TypingTestHistory`)
@@ -32,12 +33,16 @@ export interface UseRunLogAvailabilityReturn {
  * (`openSeq` only changes on an open, never a close) — so closing and
  * reopening shows the last-known set immediately, then refreshes once the
  * new fetch resolves, rather than flashing back to empty in between.
- * There is still no CustomEvent-based cross-instance sync to wire here,
- * unlike e.g. Key Labels, which can be edited by another live instance of
- * the same store while both are mounted — this hook's own re-fetch-per-
- * open is what keeps it current instead. */
+ * A sync merge of this keyboard's run logs (`keyboards/{uid}/runs`) also
+ * re-fetches, through `refreshSeq`. */
 export function useRunLogAvailability(uid: string | null, openSeq: number): UseRunLogAvailabilityReturn {
   const [availableRunIds, setAvailableRunIds] = useState<ReadonlySet<string>>(EMPTY_RUN_ID_SET)
+  const [refreshSeq, setRefreshSeq] = useState(0)
+
+  useSyncUnitApplied(
+    (unit) => uid !== null && unit === `keyboards/${uid}/runs`,
+    () => setRefreshSeq((n) => n + 1),
+  )
 
   useEffect(() => {
     if (!uid) {
@@ -52,7 +57,7 @@ export function useRunLogAvailability(uid: string | null, openSeq: number): UseR
       })
       .catch(() => { if (!cancelled) setAvailableRunIds(EMPTY_RUN_ID_SET) })
     return () => { cancelled = true }
-  }, [uid, openSeq])
+  }, [uid, openSeq, refreshSeq])
 
   return { availableRunIds }
 }

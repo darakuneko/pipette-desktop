@@ -49,6 +49,7 @@ vi.mock('../../hooks/useKeyLabels', () => ({
     loading: false,
     error: null,
     refresh: async () => {},
+    holdChangeRefresh: () => {},
     importFromFile: async () => ({ success: true }),
     exportEntry: async () => ({ success: true }),
     reorder: async () => ({ success: true }),

@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { FavoriteType, SavedFavoriteMeta } from '../../shared/types/favorite-store'
 import { isFavoriteDataFile } from '../../shared/favorite-data'
+import { useFavoriteEntries } from './use-favorite-entries'
 
 export interface UseFavoriteStoreOptions {
   favoriteType: FavoriteType
@@ -48,7 +49,7 @@ export interface UseFavoriteStoreReturn {
 
 export function useFavoriteStore({ favoriteType, serialize, apply, enabled = true, vialProtocol }: UseFavoriteStoreOptions): UseFavoriteStoreReturn {
   const { t } = useTranslation()
-  const [entries, setEntries] = useState<SavedFavoriteMeta[]>([])
+  const { entries, refreshEntries } = useFavoriteEntries(favoriteType, enabled)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -57,16 +58,6 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
   const [importResult, setImportResult] = useState<FavoriteImportResultState | null>(null)
   const [showModal, setShowModal] = useState(false)
 
-  const refreshEntries = useCallback(async () => {
-    try {
-      const result = await window.vialAPI.favoriteStoreList(favoriteType)
-      if (result.success && result.entries) {
-        setEntries(result.entries)
-      }
-    } catch {
-      // Silently ignore list errors
-    }
-  }, [favoriteType])
 
   const openModal = useCallback(async () => {
     await refreshEntries()

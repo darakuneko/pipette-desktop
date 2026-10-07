@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useFavoriteManage } from '../../hooks/useFavoriteManage'
 import { useInlineRename } from '../../hooks/useInlineRename'
+import { useDropVanishedEdits } from '../../hooks/use-drop-vanished-edits'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, formatDate } from '../editors/store-modal-shared'
 import { FavoriteHubActions } from '../editors/FavoriteHubActions'
 import type { FavHubEntryResult } from '../editors/FavoriteHubActions'
@@ -44,6 +45,11 @@ export function FavoriteTabContent({
   const hasInitialized = useRef(false)
   const rename = useInlineRename<string>()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const entryIds = useMemo(() => manage.entries.map((e) => e.id), [manage.entries])
+  useDropVanishedEdits(entryIds, [
+    { id: rename.editingId, clear: rename.cancelRename },
+    { id: confirmDeleteId, clear: () => setConfirmDeleteId(null) },
+  ])
 
   useEffect(() => {
     if (hasInitialized.current) return

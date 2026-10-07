@@ -92,6 +92,7 @@ export const IpcChannels = {
   SYNC_ANALYTICS_NOW: 'sync:analytics-now',
   SYNC_FORMAT_STATUS: 'sync:format-status',
   SYNC_FORMAT_STATUS_CHANGED: 'sync:format-status-changed',
+  SYNC_UNIT_APPLIED: 'sync:unit-applied',
 
   // Pipette Settings Store (renderer → main → renderer)
   PIPETTE_SETTINGS_GET: 'pipette-settings:get',

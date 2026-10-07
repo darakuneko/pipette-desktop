@@ -5,7 +5,8 @@
 // `KeymapEditor` rendering live in `useKeyLabelLookup` (added in T8) so
 // frequently-rendered keys do not pay for the modal-side state.
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ensureSyncUnitAppliedBridge } from './use-sync-unit-applied'
 import type {
   KeyLabelMeta,
   KeyLabelStoreResult,
@@ -36,6 +37,9 @@ export interface UseKeyLabelsReturn {
   loading: boolean
   error: string | null
   refresh: () => Promise<void>
+  /** While held, change-event refreshes wait; one queued refresh runs on
+   *  release. Used to keep rows still during a drag reorder. */
+  holdChangeRefresh: (held: boolean) => void
 
   importFromFile: () => Promise<KeyLabelStoreResult<KeyLabelImportBatchResult>>
   exportEntry: (id: string) => Promise<KeyLabelStoreResult<{ filePath: string }>>
@@ -61,14 +65,32 @@ export function useKeyLabels(): UseKeyLabelsReturn {
   // fetched" as not-ready, rather than racing the effect.
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Only the newest request may apply its response.
+  const requestGenRef = useRef(0)
+  const loudGenRef = useRef(0)
+  const heldRef = useRef(false)
+  const queuedRef = useRef(false)
 
-  const refresh = useCallback(async () => {
-    setLoading(true)
-    setError(null)
+  // `silent` keeps `loading` and `error` untouched, so a background re-read
+  // does not blank the list or reset consumers that gate on `loading`.
+  const load = useCallback(async (silent: boolean) => {
+    const gen = ++requestGenRef.current
+    if (!silent) {
+      loudGenRef.current = gen
+      setLoading(true)
+      setError(null)
+    }
     try {
       const result = await window.vialAPI.keyLabelStoreList()
+      if (gen !== requestGenRef.current) return
+      // A background read that lands mid-drag could remove the dragged row;
+      // drop it and read again on release. Explicit refreshes still apply.
+      if (silent && heldRef.current) {
+        queuedRef.current = true
+        return
+      }
       if (!result.success || !result.data) {
-        setError(result.error ?? 'Failed to load key labels')
+        if (!silent) setError(result.error ?? 'Failed to load key labels')
         return
       }
       // Preserve the index.json order from the store (the user's drag
@@ -76,27 +98,42 @@ export function useKeyLabels(): UseKeyLabelsReturn {
       // Sorting client-side would fight `KEY_LABEL_STORE_REORDER`.
       setMetas(result.data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      if (!silent && gen === requestGenRef.current) setError(err instanceof Error ? err.message : String(err))
     } finally {
-      setLoading(false)
+      if (!silent && gen === loudGenRef.current) setLoading(false)
     }
   }, [])
+
+  const refresh = useCallback(() => load(false), [load])
+
+  const holdChangeRefresh = useCallback((held: boolean): void => {
+    heldRef.current = held
+    if (!held && queuedRef.current) {
+      queuedRef.current = false
+      void load(true)
+    }
+  }, [load])
 
   useEffect(() => {
     void refresh()
   }, [refresh])
 
-  // Listen for changes from other hook instances so the dropdown in
-  // SettingsToolsTab and the modal stay in lockstep without a manual
-  // page reload.
+  // Listen for changes from other hook instances (and sync merges, via the
+  // sync-unit bridge) so the dropdown in SettingsToolsTab and the modal stay
+  // in lockstep without a manual page reload.
   useEffect(() => {
     if (typeof window === 'undefined') return
+    ensureSyncUnitAppliedBridge()
     const handler = (): void => {
-      void refresh()
+      if (heldRef.current) {
+        queuedRef.current = true
+        return
+      }
+      void load(true)
     }
     window.addEventListener(REFRESH_EVENT, handler)
     return () => window.removeEventListener(REFRESH_EVENT, handler)
-  }, [refresh])
+  }, [load])
 
   const importFromFile = useCallback(async (): Promise<KeyLabelStoreResult<KeyLabelImportBatchResult>> => {
     const result = await window.vialAPI.keyLabelStoreImport()
@@ -209,6 +246,7 @@ export function useKeyLabels(): UseKeyLabelsReturn {
     loading,
     error,
     refresh,
+    holdChangeRefresh,
     importFromFile,
     exportEntry,
     reorder,

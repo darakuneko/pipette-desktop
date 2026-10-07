@@ -82,10 +82,14 @@ export function DataModal({
       setLocalHubPostIds(new Set())
       return
     }
+    // Re-runs whenever the keyboard list is re-read (including after a sync
+    // merge of any keyboard's snapshots), so a newer run supersedes this one.
+    let cancelled = false
     async function load() {
       const results = await Promise.allSettled(
         nav.storedKeyboards.map((kb) => window.vialAPI.snapshotStoreList(kb.uid)),
       )
+      if (cancelled) return
       const ids = new Set<string>()
       for (const r of results) {
         if (r.status === 'fulfilled' && r.value.success && r.value.entries) {
@@ -97,6 +101,7 @@ export function DataModal({
       setLocalHubPostIds(ids)
     }
     void load()
+    return () => { cancelled = true }
   }, [nav.storedKeyboards])
 
   // Filter hub posts: exclude posts that exist locally (matched by hubPostId)

@@ -147,3 +147,24 @@ describe('AnalyzeFilterStorePanel entry label rename trigger', () => {
     expect(screen.getByTestId('analyze-filter-store-rename-input-entry-1')).toBeInTheDocument()
   })
 })
+
+describe('AnalyzeFilterStorePanel when a sync merge removes the overwrite target', () => {
+  it('drops the pending overwrite so the next submit saves instead of overwriting', () => {
+    const { props, rerender } = renderPanel()
+    const input = screen.getByTestId('analyze-filter-store-save-input') as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'Daily' } })
+    fireEvent.submit(input.closest('form')!)
+    expect(screen.getByTestId('analyze-filter-store-overwrite-confirm')).toBeInTheDocument()
+
+    rerender(
+      <I18nextProvider i18n={i18n}>
+        <AnalyzeFilterStorePanel {...props} entries={[ENTRIES[1]]} />
+      </I18nextProvider>,
+    )
+
+    expect(screen.queryByTestId('analyze-filter-store-overwrite-confirm')).toBeNull()
+    fireEvent.submit(input.closest('form')!)
+    expect(props.onOverwriteSave).not.toHaveBeenCalled()
+    expect(props.onSave).toHaveBeenCalledWith('Daily')
+  })
+})

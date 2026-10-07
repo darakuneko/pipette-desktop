@@ -6,12 +6,13 @@
 // lockstep. Also clears the word-generator file-import-text cache on change
 // so freshly imported / renamed text plays back correctly.
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   TypingTestTextMeta,
   TypingTestTextStoreResult,
 } from '../../shared/types/typing-test-text-store'
 import { clearFileImportTextCache } from '../typing-test/word-generator'
+import { ensureSyncUnitAppliedBridge } from './use-sync-unit-applied'
 
 const REFRESH_EVENT = 'pipette:typing-test-texts-changed'
 
@@ -37,36 +38,50 @@ export function useTypingTestTexts(): UseTypingTestTextsReturn {
   const [metas, setMetas] = useState<TypingTestTextMeta[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Only the newest request may apply its response.
+  const requestGenRef = useRef(0)
+  const loudGenRef = useRef(0)
 
-  const refresh = useCallback(async () => {
-    setLoading(true)
-    setError(null)
+  // `silent` keeps `loading` and `error` untouched (background re-read).
+  const load = useCallback(async (silent: boolean) => {
+    const gen = ++requestGenRef.current
+    if (!silent) {
+      loudGenRef.current = gen
+      setLoading(true)
+      setError(null)
+    }
     try {
       const result = await window.vialAPI.typingTestTextStoreList()
+      if (gen !== requestGenRef.current) return
       if (!result.success || !result.data) {
-        setError(result.error ?? 'Failed to load texts')
+        if (!silent) setError(result.error ?? 'Failed to load texts')
         return
       }
       setMetas(result.data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      if (!silent && gen === requestGenRef.current) setError(err instanceof Error ? err.message : String(err))
     } finally {
-      setLoading(false)
+      if (!silent && gen === loudGenRef.current) setLoading(false)
     }
   }, [])
+
+  const refresh = useCallback(() => load(false), [load])
 
   useEffect(() => {
     void refresh()
   }, [refresh])
 
+  // Other hook instances and sync merges (via the sync-unit bridge) fire
+  // REFRESH_EVENT.
   useEffect(() => {
     if (typeof window === 'undefined') return
+    ensureSyncUnitAppliedBridge()
     const handler = (): void => {
-      void refresh()
+      void load(true)
     }
     window.addEventListener(REFRESH_EVENT, handler)
     return () => window.removeEventListener(REFRESH_EVENT, handler)
-  }, [refresh])
+  }, [load])
 
   const importFromFile = useCallback(async (): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> => {
     const result = await window.vialAPI.typingTestTextStoreImport()

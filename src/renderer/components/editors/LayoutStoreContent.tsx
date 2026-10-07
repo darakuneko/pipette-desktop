@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useInlineRename } from '../../hooks/useInlineRename'
+import { useDropVanishedEdits } from '../../hooks/use-drop-vanished-edits'
 import { SectionHeader } from './store-modal-shared'
 import { ROW_CLASS } from './modal-controls'
 import { FORMAT_BTN, EXPORT_BTN, IMPORT_BTN } from './layout-store-types'
@@ -90,6 +91,14 @@ export function LayoutStoreContent({
   const [confirmLoadId, setConfirmLoadId] = useState<string | null>(null)
   const [confirmHubRemoveId, setConfirmHubRemoveId] = useState<string | null>(null)
   const [confirmOverwriteId, setConfirmOverwriteId] = useState<string | null>(null)
+  const entryIds = useMemo(() => entries.map((e) => e.id), [entries])
+  useDropVanishedEdits(entryIds, [
+    { id: rename.editingId, clear: rename.cancelRename },
+    { id: confirmDeleteId, clear: () => setConfirmDeleteId(null) },
+    { id: confirmLoadId, clear: () => setConfirmLoadId(null) },
+    { id: confirmHubRemoveId, clear: () => setConfirmHubRemoveId(null) },
+    { id: confirmOverwriteId, clear: () => setConfirmOverwriteId(null) },
+  ])
 
   // Delete and Load confirms are mutually exclusive within a row: opening one
   // clears the other so a row never shows two confirm prompts at once.

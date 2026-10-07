@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import type { DataNavPath } from './data-modal-types'
 import type { StoredKeyboardInfo, SyncDataScanResult } from '../../../shared/types/sync'
 import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
+import { useLatestRequest } from '../../hooks/use-latest-request'
+import { affectsStoredKeyboards, useSyncUnitApplied } from '../../hooks/use-sync-unit-applied'
 
 export interface UseDataNavTreeOptions {
   showHubTab: boolean
@@ -71,11 +73,22 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
   const [downloadingUid, setDownloadingUid] = useState<string | null>(null)
   const [downloadErrorByUid, setDownloadErrorByUid] = useState<Record<string, string>>({})
 
+  // Every read of the stored-keyboard list goes through here, so a slow
+  // read never overwrites the result of one that started after it.
+  const beginKeyboardsRequest = useLatestRequest()
+  const readStoredKeyboards = useCallback(async (): Promise<{ keyboards: StoredKeyboardInfo[]; applied: boolean }> => {
+    const isCurrent = beginKeyboardsRequest()
+    const keyboards = await window.vialAPI.listStoredKeyboards()
+    const applied = isCurrent()
+    if (applied) setStoredKeyboards(keyboards)
+    return { keyboards, applied }
+  }, [beginKeyboardsRequest])
+
   useEffect(() => {
     if (fetchedRef.current) return
     fetchedRef.current = true
-    window.vialAPI.listStoredKeyboards().then(setStoredKeyboards).catch(() => {})
-  }, [])
+    readStoredKeyboards().catch(() => {})
+  }, [readStoredKeyboards])
 
   useEffect(() => {
     if (typingFetchedRef.current) return
@@ -123,9 +136,26 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
   }, [activePath])
 
   const refreshStoredKeyboards = useCallback(async () => {
-    const keyboards = await window.vialAPI.listStoredKeyboards()
-    setStoredKeyboards(keyboards)
-  }, [])
+    await readStoredKeyboards()
+  }, [readStoredKeyboards])
+
+  // A sync merge renamed a keyboard or rewrote its snapshots: re-read the
+  // list and carry a new name into the open keyboard page, leaving the
+  // tree's expansion and the selected page as they are.
+  const reloadStoredKeyboardsAfterSync = useCallback(async () => {
+    try {
+      const { keyboards, applied } = await readStoredKeyboards()
+      if (!applied) return
+      setActivePath((prev) => {
+        if (prev?.page !== 'keyboard') return prev
+        const name = keyboards.find((kb) => kb.uid === prev.uid)?.name
+        return name && name !== prev.name ? { ...prev, name } : prev
+      })
+    } catch {
+      // keep the list on screen
+    }
+  }, [readStoredKeyboards])
+  useSyncUnitApplied(affectsStoredKeyboards, () => { void reloadStoredKeyboardsAfterSync() })
 
   const refreshTypingKeyboards = useCallback(async () => {
     // The remote-typing probe is fire-and-forget alongside the local
@@ -161,8 +191,7 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
       })
       try {
         await window.vialAPI.syncExecute('download', { keyboard: uid })
-        const refreshed = await window.vialAPI.listStoredKeyboards()
-        setStoredKeyboards(refreshed)
+        const { keyboards: refreshed } = await readStoredKeyboards()
         const downloaded = refreshed.find((kb) => kb.uid === uid)
         if (downloaded) {
           setActivePath({ section: 'local', page: 'keyboard', uid, name: downloaded.name || name })
@@ -175,7 +204,7 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
         setDownloadingUid(null)
       }
     },
-    [storedKeyboards, downloadingUid],
+    [storedKeyboards, downloadingUid, readStoredKeyboards],
   )
 
   const toggleExpand = useCallback((nodeId: string) => {

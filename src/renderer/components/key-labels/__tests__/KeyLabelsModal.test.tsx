@@ -53,6 +53,7 @@ const hubUpdate = vi.fn()
 const hubSync = vi.fn()
 const hubTimestamps = vi.fn()
 const hubDelete = vi.fn()
+const holdChangeRefresh = vi.fn()
 
 let metas: Array<{ id: string; name: string; uploaderName?: string; hubPostId?: string; hubUpdatedAt?: string; filename: string; savedAt: string; updatedAt: string }> = []
 
@@ -62,6 +63,7 @@ vi.mock('../../../hooks/useKeyLabels', () => ({
     loading: false,
     error: null,
     refresh,
+    holdChangeRefresh,
     importFromFile,
     exportEntry,
     reorder,
@@ -920,5 +922,43 @@ describe('KeyLabelsModal', () => {
       rerender(<KeyLabelsModal open onClose={onClose} currentDisplayName="me" hubCanWrite />)
       expect(screen.queryByTestId('key-labels-result-mine')).toBeNull()
     })
+  })
+})
+
+describe('KeyLabelsModal sync refresh protection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    metas = []
+    reorder.mockResolvedValue({ success: true })
+    hubTimestamps.mockResolvedValue({ success: true, data: { items: [] } })
+  })
+
+  it('holds change refreshes for the duration of a drag', async () => {
+    metas = [meta({ id: 'a', name: 'A', uploaderName: 'me' }), meta({ id: 'b', name: 'B', uploaderName: 'me' })]
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    expect(holdChangeRefresh).not.toHaveBeenCalledWith(true)
+
+    fireEvent.dragStart(screen.getByTestId('key-labels-row-a'), { dataTransfer: { effectAllowed: '', setData: vi.fn() } })
+    expect(holdChangeRefresh).toHaveBeenLastCalledWith(true)
+
+    fireEvent.dragOver(screen.getByTestId('key-labels-row-b'))
+    fireEvent.dragEnd(screen.getByTestId('key-labels-row-a'))
+    await waitFor(() => expect(holdChangeRefresh).toHaveBeenLastCalledWith(false))
+    expect(reorder).toHaveBeenCalledWith(['b', 'a'])
+  })
+
+  it('drops a rename draft whose row was removed by sync', () => {
+    metas = [meta({ id: 'r2', name: 'Old Name', uploaderName: 'me' })]
+    const { rerender } = render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    fireEvent.click(screen.getByTestId('key-labels-name-r2'))
+    fireEvent.change(screen.getByTestId('key-labels-rename-input-r2'), { target: { value: 'Draft' } })
+
+    metas = []
+    rerender(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    metas = [meta({ id: 'r2', name: 'Old Name', uploaderName: 'me' })]
+    rerender(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+
+    expect(screen.queryByTestId('key-labels-rename-input-r2')).toBeNull()
+    expect(renameFn).not.toHaveBeenCalled()
   })
 })

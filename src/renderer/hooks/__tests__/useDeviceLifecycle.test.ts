@@ -2,11 +2,12 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import { useDeviceLifecycle } from '../useDeviceLifecycle'
 import type { DeviceInfo, KeyboardDefinition, VilFile } from '../../../shared/types/protocol'
 import type { SyncScope, SyncOperationResult } from '../../../shared/types/sync'
 import type { ReloadResult } from '../keyboard-types'
+import { dispatchSyncUnitApplied } from '../use-sync-unit-applied'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -348,5 +349,34 @@ describe('useDeviceLifecycle.handleConnect — packs first-sync auto-fire', () =
 
     expect(syncNow).not.toHaveBeenCalled()
     expect(mocks.markPacksPulledOnce).not.toHaveBeenCalled()
+  })
+})
+
+describe('useDeviceLifecycle saved-file browser sync refresh', () => {
+  function withStore(keyboards: Array<{ uid: string; name: string }>, entries: Record<string, Array<{ id: string; label: string }>>) {
+    const w = window as unknown as { vialAPI: Record<string, unknown> }
+    w.vialAPI.listStoredKeyboards = vi.fn().mockResolvedValue(keyboards)
+    w.vialAPI.snapshotStoreList = vi.fn(async (uid: string) => ({
+      success: true,
+      entries: (entries[uid] ?? []).map((e) => ({ ...e, filename: `${e.id}.pipette`, savedAt: '2026-01-01T00:00:00.000Z', vilVersion: 2 })),
+    }))
+    return w.vialAPI.listStoredKeyboards as Mock
+  }
+
+  it('re-reads after a keyboard-name or snapshots merge once the browser has loaded', async () => {
+    const { options } = makeOptions()
+    const list = withStore([{ uid: 'u1', name: 'KB' }], { u1: [{ id: 'e1', label: 'one' }] })
+    const { result } = renderHook(() => useDeviceLifecycle(options))
+
+    await act(async () => { dispatchSyncUnitApplied('meta/keyboard-names') })
+    expect(list).not.toHaveBeenCalled()
+
+    await act(async () => { await result.current.refreshPipetteFileEntries() })
+    expect(result.current.pipetteFileEntries).toHaveLength(1)
+
+    withStore([{ uid: 'u1', name: 'Renamed' }], { u1: [{ id: 'e1', label: 'one' }, { id: 'e2', label: 'two' }] })
+    await act(async () => { dispatchSyncUnitApplied('keyboards/u1/snapshots') })
+    await waitFor(() => expect(result.current.pipetteFileEntries).toHaveLength(2))
+    expect(result.current.pipetteFileKeyboards).toEqual([{ uid: 'u1', name: 'Renamed', entryCount: 2 }])
   })
 })

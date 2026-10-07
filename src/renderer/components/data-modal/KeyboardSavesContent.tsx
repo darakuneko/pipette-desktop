@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Unified keyboard saves view — works for both local and sync (remote) data
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LayoutStoreEntry } from '../editors/LayoutStoreEntry'
 import { useSnapshotActions } from './useSnapshotActions'
 import type { SnapshotMeta, SnapshotIndex } from '../../../shared/types/snapshot-store'
 import type { UseSyncReturn } from '../../hooks/useSync'
 import { BTN_DANGER_OUTLINE, BTN_SECONDARY } from '../../constants/ui-tokens'
+import { useLatestRequest } from '../../hooks/use-latest-request'
+import { useSyncUnitApplied } from '../../hooks/use-sync-unit-applied'
+import { useDropVanishedEdits } from '../../hooks/use-drop-vanished-edits'
 
 interface BaseProps {
   uid: string
@@ -42,17 +45,21 @@ export function KeyboardSavesContent(props: Props) {
 
   const actions = source === 'local' ? useSnapshotActions({ uid, deviceName: name }) : null
 
-  const loadEntries = useCallback(async () => {
-    setLoading(true)
+  const beginListRequest = useLatestRequest(`${source}:${uid}`)
+
+  // `silent` re-reads without swapping the list for the loading state.
+  const loadEntries = useCallback(async (silent = false) => {
+    const isCurrent = beginListRequest()
+    if (!silent) setLoading(true)
     try {
       if (source === 'local') {
         const result = await window.vialAPI.snapshotStoreList(uid)
-        if (result.success && result.entries) {
+        if (isCurrent() && result.success && result.entries) {
           setEntries(result.entries)
         }
       } else {
         const bundle = await window.vialAPI.syncFetchRemoteBundle(`keyboards/${uid}/snapshots`)
-        if (bundle && typeof bundle === 'object' && 'index' in bundle) {
+        if (isCurrent() && bundle && typeof bundle === 'object' && 'index' in bundle) {
           const index = (bundle as { index: SnapshotIndex }).index
           if (index.entries) {
             setEntries(index.entries.filter((e) => !e.deletedAt))
@@ -60,15 +67,27 @@ export function KeyboardSavesContent(props: Props) {
         }
       }
     } catch {
-      setEntries([])
+      if (isCurrent() && !silent) setEntries([])
     } finally {
-      setLoading(false)
+      // A silent read that superseded a loud one ends the loading state too.
+      if (isCurrent()) setLoading(false)
     }
-  }, [uid, source])
+  }, [uid, source, beginListRequest])
 
   useEffect(() => {
     void loadEntries()
   }, [loadEntries])
+
+  useSyncUnitApplied(
+    (unit) => source === 'local' && unit === `keyboards/${uid}/snapshots`,
+    () => { void loadEntries(true) },
+  )
+
+  const entryIds = useMemo(() => entries.map((e) => e.id), [entries])
+  useDropVanishedEdits(entryIds, [
+    { id: confirmDeleteId, clear: () => setConfirmDeleteId(null) },
+    { id: confirmHubRemoveId, clear: () => setConfirmHubRemoveId(null) },
+  ])
 
   const handleDelete = useCallback(async (entryId: string) => {
     if (source !== 'local') return
