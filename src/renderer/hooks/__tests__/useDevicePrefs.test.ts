@@ -10,8 +10,12 @@ import { setupAppConfigMock, renderHookWithConfig, vialAPIMock } from './test-he
 const mockPipetteSettingsGet = vi.fn<(uid: string) => Promise<{ _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] } | null>>()
 const mockPipetteSettingsPatch = vi.fn<(uid: string, prefs: { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[]; viewMatrix?: Record<string, { row: number; col: number }> | null }) => Promise<{ success: boolean }>>()
 
+const mockPipetteSettingsEnsureDir = vi.fn<(uid: string) => Promise<{ success: boolean }>>()
+
 beforeEach(() => {
   vi.clearAllMocks()
+  mockPipetteSettingsEnsureDir.mockReset()
+  mockPipetteSettingsEnsureDir.mockResolvedValue({ success: true })
   mockPipetteSettingsGet.mockReset()
   mockPipetteSettingsPatch.mockReset()
   mockPipetteSettingsGet.mockResolvedValue(null)
@@ -25,6 +29,7 @@ function setupMocks(configOverrides: Parameters<typeof setupAppConfigMock>[0] = 
       ...vialAPIMock(),
       pipetteSettingsGet: mockPipetteSettingsGet,
       pipetteSettingsPatch: mockPipetteSettingsPatch,
+      pipetteSettingsEnsureDir: mockPipetteSettingsEnsureDir,
     },
     writable: true,
     configurable: true,
@@ -80,7 +85,7 @@ describe('useDevicePrefs', () => {
   })
 
   describe('applyDevicePrefs', () => {
-    it('applies defaults for new device and saves via IPC', async () => {
+    it('applies in-memory defaults for a new device without writing settings', async () => {
       setupMocks({ defaultKeyboardLayout: 'dvorak', defaultAutoAdvance: false })
 
       const { result } = renderHookWithConfig(() => useDevicePrefs())
@@ -94,15 +99,8 @@ describe('useDevicePrefs', () => {
       expect(result.current.layerNames).toEqual([])
 
       expect(mockPipetteSettingsGet).toHaveBeenCalledWith('0xAABB')
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        _rev: 1,
-        keyboardLayout: 'dvorak',
-        autoAdvance: false,
-        layerPanelOpen: true,
-        basicViewType: 'ansi',
-        layerNames: [],
-        typingTestResults: [],
-      }))
+      expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
+      expect(mockPipetteSettingsEnsureDir).toHaveBeenCalledWith('0xAABB')
     })
 
     it('restores existing per-device prefs from IPC', async () => {
@@ -124,6 +122,7 @@ describe('useDevicePrefs', () => {
       expect(result.current.autoAdvance).toBe(false)
       expect(result.current.layerNames).toEqual(['Base', 'Fn'])
       expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
+      expect(mockPipetteSettingsEnsureDir).not.toHaveBeenCalled()
     })
 
     it('does not overwrite existing per-device prefs with defaults', async () => {
@@ -2588,10 +2587,10 @@ describe('useDevicePrefs — layerHoverPreview', () => {
     return hook
   }
 
-  it('defaults to on for a new keyboard and saves it explicitly', async () => {
+  it('defaults to on for a new keyboard without writing it', async () => {
     const { result } = await applied('0xAABB')
     expect(result.current.layerHoverPreview).toBe(true)
-    expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({ layerHoverPreview: true }))
+    expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
   })
 
   it('defaults to on when the stored prefs have no value', async () => {
@@ -2649,10 +2648,10 @@ describe('useDevicePrefs — entryHoverPreview', () => {
     return hook
   }
 
-  it('defaults to on for a new keyboard and saves it explicitly', async () => {
+  it('defaults to on for a new keyboard without writing it', async () => {
     const { result } = await applied('0xAABB')
     expect(result.current.entryHoverPreview).toBe(true)
-    expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({ entryHoverPreview: true }))
+    expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
   })
 
   it('defaults to on when the stored prefs have no value', async () => {
@@ -2710,10 +2709,10 @@ describe('useDevicePrefs — keycodeTabOrder', () => {
     return hook
   }
 
-  it('is the default order (undefined) for a new keyboard and saves null', async () => {
+  it('is the default order (undefined) for a new keyboard without writing it', async () => {
     const { result } = await applied('0xAABB')
     expect(result.current.keycodeTabOrder).toBeUndefined()
-    expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({ keycodeTabOrder: null }))
+    expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
   })
 
   it('restores a saved order, keeping unknown ids and dropping repeats and non-strings', async () => {

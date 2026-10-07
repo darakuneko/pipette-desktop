@@ -130,8 +130,12 @@ function validatePrefs(prefs: unknown): asserts prefs is PipetteSettings {
   }
 }
 
+function getKeyboardDir(uid: string): string {
+  return join(app.getPath('userData'), 'sync', 'keyboards', uid)
+}
+
 function getDataPath(uid: string): string {
-  return join(app.getPath('userData'), 'sync', 'keyboards', uid, 'pipette_settings.json')
+  return join(getKeyboardDir(uid), 'pipette_settings.json')
 }
 
 export async function readPipetteSettings(uid: string): Promise<PipetteSettings | null> {
@@ -188,8 +192,7 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
 }
 
 async function writeData(uid: string, prefs: PipetteSettings): Promise<void> {
-  const dir = join(app.getPath('userData'), 'sync', 'keyboards', uid)
-  await mkdir(dir, { recursive: true })
+  await mkdir(getKeyboardDir(uid), { recursive: true })
 
   const data: PipetteSettings = {
     ...prefs,
@@ -251,6 +254,21 @@ export function setupPipetteSettingsStore(): void {
         return await readData(uid)
       } catch {
         return null
+      }
+    },
+  )
+
+  // The keyboard directory marks a keyboard as locally known (lazy download,
+  // stored-keyboard list); this creates it without writing a settings file.
+  secureHandle(
+    IpcChannels.PIPETTE_SETTINGS_ENSURE_DIR,
+    async (_event, uid: string): Promise<{ success: boolean; error?: string }> => {
+      try {
+        validateUid(uid)
+        await mkdir(getKeyboardDir(uid), { recursive: true })
+        return { success: true }
+      } catch (err) {
+        return { success: false, error: String(err) }
       }
     },
   )

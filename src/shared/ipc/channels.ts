@@ -96,6 +96,7 @@ export const IpcChannels = {
   // Pipette Settings Store (renderer → main → renderer)
   PIPETTE_SETTINGS_GET: 'pipette-settings:get',
   PIPETTE_SETTINGS_PATCH: 'pipette-settings:patch',
+  PIPETTE_SETTINGS_ENSURE_DIR: 'pipette-settings:ensure-dir',
   // Typing-test results pooled across every locally-stored keyboard, for the
   // Measurement-row comparison baseline (keyboard-agnostic).
   PIPETTE_SETTINGS_LIST_ALL_TYPING_RESULTS: 'pipette-settings:list-all-typing-results',

@@ -94,6 +94,8 @@ Settings tied to a specific keyboard, identified by its unique ID.
 | Analyze filters | Per-tab filter state (device scope, app scope, view modes, ranking limits, snapshot selection) for the Analyze dashboard |
 | Analyze compare filters | Same shape as Analyze filters, bound to the secondary pane in the Analyze split-view |
 
+The settings file for a keyboard is created the first time you change one of these settings; until then the defaults are used in memory only, so a keyboard you merely connect never overwrites settings saved for it on another device.
+
 ### Typing Analytics
 
 Per-keyboard typing history that feeds the Analyze page (see OPERATION-GUIDE §1.4). Two sources feed the same stream: typing tests run in the editor are always recorded (each keystroke tagged with the test material and run id), while ambient typing is recorded only while you are in Typing View with the REC toggle set to Start — the REC toggle gates the Typing View stream only, not typing tests.

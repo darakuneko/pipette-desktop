@@ -421,6 +421,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.PIPETTE_SETTINGS_GET, uid),
   pipetteSettingsPatch: (uid: string, partial: PipetteSettingsPatch): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.PIPETTE_SETTINGS_PATCH, uid, partial),
+  pipetteSettingsEnsureDir: (uid: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.PIPETTE_SETTINGS_ENSURE_DIR, uid),
   pipetteSettingsListAllTypingResults: (): Promise<PooledTypingTestResult[]> =>
     ipcRenderer.invoke(IpcChannels.PIPETTE_SETTINGS_LIST_ALL_TYPING_RESULTS),
 

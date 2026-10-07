@@ -62,6 +62,7 @@ if (typeof window !== 'undefined') {
     keyLabelHubUpdate: noopOk,
     keyLabelHubDelete: noopOk,
     typingAnalyticsListAppsForRange: async () => [],
+    pipetteSettingsEnsureDir: async () => ({ success: true }),
     // Comparison baseline pool — TypingTestPane fetches this on mount.
     pipetteSettingsListAllTypingResults: async () => [],
     // Connect-time keyboard naming — fire-and-forget in useDeviceLifecycle.

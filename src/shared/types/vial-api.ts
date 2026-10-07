@@ -221,6 +221,8 @@ export interface VialAPI {
   /** Field-level merge persist: only the defined keys of `partial` are
    * written, so concurrent writers never clobber each other's fields. */
   pipetteSettingsPatch(uid: string, partial: PipetteSettingsPatch): Promise<{ success: boolean; error?: string }>
+  /** Creates the keyboard's local sync directory without writing a settings file. */
+  pipetteSettingsEnsureDir(uid: string): Promise<{ success: boolean; error?: string }>
   /** Every locally-stored keyboard's saved typing-test results, pooled flat
    * (each tagged with its keyboard name) for the keyboard-agnostic
    * Measurement-row comparison baseline. */

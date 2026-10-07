@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 
 // --- Mock electron ---
@@ -64,6 +64,24 @@ describe('pipette-settings-store', () => {
       const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
       const result = await handler(fakeEvent, 'test-uid')
       expect(result).toBeNull()
+    })
+  })
+
+  describe('ensure-dir', () => {
+    it('creates the keyboard directory without a settings file', async () => {
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_ENSURE_DIR)
+      const result = await handler(fakeEvent, 'uid-e')
+      expect(result).toEqual({ success: true })
+      const dir = join(mockUserDataPath, 'sync', 'keyboards', 'uid-e')
+      expect(await readdir(dir)).toEqual([])
+      expect(mockNotifyChange).not.toHaveBeenCalled()
+    })
+
+    it('rejects an unsafe uid and creates nothing', async () => {
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_ENSURE_DIR)
+      const result = await handler(fakeEvent, '..') as { success: boolean }
+      expect(result.success).toBe(false)
+      await expect(readdir(join(mockUserDataPath, 'sync'))).rejects.toBeDefined()
     })
   })
 

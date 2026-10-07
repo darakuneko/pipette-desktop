@@ -237,9 +237,11 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setAppliedUid(uid)
 
     if (!prefs) {
-      saveCurrentPrefs()
+      // Defaults stay in memory; only the keyboard's directory is created
+      // (see the handler in pipette-settings-store.ts for why).
+      void window.vialAPI.pipetteSettingsEnsureDir(uid).catch(() => {})
     }
-  }, [saveCurrentPrefs, applyValidated, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode, defaultQuickSelect])
+  }, [applyValidated, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode, defaultQuickSelect])
 
   const {
     remapLabel,
