@@ -22,16 +22,27 @@ export interface FileImportTextData {
   romajiCapable: boolean
 }
 
-const fileImportTextCache = new Map<string, FileImportTextData>()
+interface CachedText {
+  data: FileImportTextData
+  /** The store meta's `updatedAt` when fetched. An overwrite import keeps
+   *  the id and changes this, so it is what tells a stale entry apart. */
+  updatedAt: string
+}
+
+const fileImportTextCache = new Map<string, CachedText>()
+// Bumped by every revalidation; a fetch that started under an older value
+// returns its data but does not cache it (it may predate the sync).
+let cacheGeneration = 0
 
 export function getFileImportTextDataSync(textId: string): FileImportTextData | undefined {
-  return fileImportTextCache.get(textId)
+  return fileImportTextCache.get(textId)?.data
 }
 
 export async function getFileImportTextData(textId: string): Promise<FileImportTextData | undefined> {
   const cached = fileImportTextCache.get(textId)
-  if (cached) return cached
+  if (cached) return cached.data
 
+  const generation = cacheGeneration
   const result = await window.vialAPI.typingTestTextStoreGet(textId)
   if (!result.success || !result.data) return undefined
 
@@ -41,16 +52,38 @@ export async function getFileImportTextData(textId: string): Promise<FileImportT
   const { words, lineBreaks, indents } = parseFileImportText(text)
   const romajiCapable = result.data.meta.romajiCapable === true
   const data: FileImportTextData = { name, words, lineBreaks, indents, romajiCapable }
-  fileImportTextCache.set(textId, data)
+  if (generation === cacheGeneration) {
+    fileImportTextCache.set(textId, { data, updatedAt: result.data.meta.updatedAt })
+  }
   return data
 }
 
 /** Drop cached entries so the next read re-fetches from the store. Called
- *  by useTypingTestTexts after rename / delete / import / sync changes. */
+ *  by useTypingTestTexts after rename / delete / import. */
 export function clearFileImportTextCache(textId?: string): void {
   if (textId) {
     fileImportTextCache.delete(textId)
   } else {
     fileImportTextCache.clear()
+  }
+}
+
+/** After a sync merge of the texts store: drop the entries whose text was
+ *  deleted or rewritten (`updatedAt` differs), keep the rest. A failed list
+ *  read drops everything. A run already started keeps its words — the run
+ *  state holds its own copy and never reads this cache again. */
+export async function revalidateFileImportTextCache(): Promise<void> {
+  const generation = ++cacheGeneration
+  let current: Map<string, string> | null = null
+  try {
+    const result = await window.vialAPI.typingTestTextStoreList()
+    if (result.success && result.data) current = new Map(result.data.map((m) => [m.id, m.updatedAt]))
+  } catch {
+    current = null
+  }
+  // A newer revalidation owns the cache from here.
+  if (generation !== cacheGeneration) return
+  for (const [id, entry] of fileImportTextCache) {
+    if (current?.get(id) !== entry.updatedAt) fileImportTextCache.delete(id)
   }
 }

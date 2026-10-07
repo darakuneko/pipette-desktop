@@ -6,10 +6,13 @@
 
 import { useEffect } from 'react'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
+import { revalidateFileImportTextCache } from '../typing-test/word-generator/file-import-text'
 import { useLatestRef } from './use-latest-ref'
 import type { VialAPI } from '../../shared/types/vial-api'
 
 export const SYNC_UNIT_APPLIED_EVENT = 'pipette:sync-unit-applied'
+
+const TYPING_TEST_TEXTS_UNIT = 'typing-test-texts'
 
 // Unit names match KEY_LABEL_SYNC_UNIT (main/key-label-store.ts) and
 // TYPING_TEST_TEXT_SYNC_UNIT (main/typing-test-text-store.ts). Those lists
@@ -17,7 +20,7 @@ export const SYNC_UNIT_APPLIED_EVENT = 'pipette:sync-unit-applied'
 // useTypingTestTexts.ts, useKeyLabelLookup.ts), so the bridge re-dispatches them.
 const STORE_CHANGE_EVENTS: Readonly<Record<string, string>> = {
   'key-labels': 'pipette:key-labels-changed',
-  'typing-test-texts': 'pipette:typing-test-texts-changed',
+  [TYPING_TEST_TEXTS_UNIT]: 'pipette:typing-test-texts-changed',
 }
 
 const KEYBOARD_SNAPSHOTS_UNIT = /^keyboards\/[^/]+\/snapshots$/
@@ -47,6 +50,7 @@ export function ensureSyncUnitAppliedBridge(): void {
   unsubscribeBridge?.()
   subscribedTo = subscribe
   unsubscribeBridge = subscribe((syncUnit) => {
+    if (syncUnit === TYPING_TEST_TEXTS_UNIT) void revalidateFileImportTextCache()
     dispatchSyncUnitApplied(syncUnit)
     const storeEvent = STORE_CHANGE_EVENTS[syncUnit]
     if (storeEvent) window.dispatchEvent(new Event(storeEvent))
