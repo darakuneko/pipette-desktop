@@ -354,6 +354,8 @@ export interface VialAPI {
   /** Every later change of `syncFormatStatus`'s value; null once forgotten (sign-out, sign-in). */
   syncOnFormatStatusChanged(callback: (status: SyncFormatStatus | null) => void): () => void
   syncOnPendingChange(callback: (pending: boolean) => void): () => void
+  /** A sync merge rewrote this unit's local files (e.g. `favorites/macro`, `keyboards/{uid}/snapshots`). */
+  syncOnUnitApplied(callback: (syncUnit: string) => void): () => void
 
   // Language Store
   langList(provider?: string): Promise<LanguageListEntry[]>

@@ -39,6 +39,7 @@ import { emptySyncState, loadSyncState, saveSyncState } from '../typing-analytic
 import { log } from '../logger'
 import { withWriteLock } from '../per-uid-write-lock'
 import { recordRemoteState } from './sync-runtime-state'
+import { notifySyncUnitApplied } from './sync-unit-applied'
 import type { SyncBundle, SyncEnvelope } from '../../shared/types/sync'
 
 // The Analyze-panel analytics sync and the debounced flush run on different
@@ -232,6 +233,7 @@ async function mergeSyncUnit(
 
       if (remoteTime > localTime) {
         await writeFileAtomic(filePath, remoteContent)
+        notifySyncUnitApplied(syncUnit)
         return false
       }
       return localTime > remoteTime
@@ -270,6 +272,7 @@ async function mergeIndexBasedLocked(
   basePath: string,
 ): Promise<boolean> {
   const localIndex = await readIndexFile(basePath)
+  const rawLocalEntries: unknown = localIndex?.entries
   // Both sides' index shape is a union of each possible sync unit's own
   // index type, which a generic function call can't unify against — every
   // constituent reached on this branch is an EntryMeta[] at runtime.
@@ -283,7 +286,7 @@ async function mergeIndexBasedLocked(
   // MalformedSyncBundleError (untrusted, attacker-reachable data — see
   // its doc for why silently coercing there would be the wrong call).
   const localEntries = gcTombstones(
-    Array.isArray(localIndex?.entries) ? (localIndex.entries as EntryMeta[]) : [],
+    Array.isArray(rawLocalEntries) ? (rawLocalEntries as EntryMeta[]) : [],
   )
   // A remote bundle is attacker-reachable data (anyone who can write to
   // this sync unit's Drive file) — validate `.entries` is actually an
@@ -315,6 +318,7 @@ async function mergeIndexBasedLocked(
   // snapshots, analyze-filter, key-label, typing-test-text, run logs)
   // funnels through, so the guard has to live here rather than per-unit.
   let unsafeRemoteFilenames = 0
+  let copiedRemoteFiles = 0
   for (const filename of result.remoteFilesToCopy) {
     if (!isSafePathSegment(filename)) {
       unsafeRemoteFilenames++
@@ -322,6 +326,7 @@ async function mergeIndexBasedLocked(
     }
     if (filename in remoteBundle.files) {
       await writeFileAtomic(join(basePath, filename), remoteBundle.files[filename])
+      copiedRemoteFiles++
     }
   }
   if (unsafeRemoteFilenames > 0) {
@@ -357,6 +362,13 @@ async function mergeIndexBasedLocked(
     } catch {
       // best-effort
     }
+  }
+
+  // A remote tombstone win copies no file, so the entry comparison (order,
+  // tombstones and metadata included) is what detects it.
+  const entriesChanged = JSON.stringify(result.entries) !== JSON.stringify(rawLocalEntries)
+  if (!localIndex || entriesChanged || copiedRemoteFiles > 0 || result.evicted.length > 0) {
+    notifySyncUnitApplied(syncUnit)
   }
 
   return result.remoteNeedsUpdate

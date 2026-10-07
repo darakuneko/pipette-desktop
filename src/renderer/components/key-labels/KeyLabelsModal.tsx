@@ -15,6 +15,7 @@ import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { useKeyLabels } from '../../hooks/useKeyLabels'
 import { useKeyLabelLookup } from '../../hooks/useKeyLabelLookup'
+import { useDropVanishedEdits } from '../../hooks/use-drop-vanished-edits'
 import type { HubKeyLabelItem } from '../../../shared/types/hub-key-label'
 import type { KeyLabelMeta } from '../../../shared/types/key-label-store'
 import { BUILTIN_QWERTY_LAYOUT_ID } from '../../data/keyboard-layouts'
@@ -139,6 +140,16 @@ export function KeyLabelsModal({
     () => applyDragOrder(rawInstalledRows, drag.dragOrder, (r) => r.localId),
     [rawInstalledRows, drag.dragOrder],
   )
+  // Rows stay put under the pointer; a refresh that arrives mid-drag runs after it.
+  const dragging = drag.dragOrder !== null
+  const { holdChangeRefresh } = labels
+  useEffect(() => { holdChangeRefresh(dragging) }, [dragging, holdChangeRefresh])
+  const metaIds = useMemo(() => labels.metas.map((m) => m.id), [labels.metas])
+  useDropVanishedEdits(metaIds, [
+    { id: rename.editingId, clear: rename.cancelRename },
+    { id: confirmDeleteId, clear: () => setConfirmDeleteId(null) },
+    { id: confirmRemoveId, clear: () => setConfirmRemoveId(null) },
+  ])
 
   // Name sort scope includes QWERTY — unlike Language/Theme Packs'
   // synthesized built-in rows, QWERTY is a real store entry that

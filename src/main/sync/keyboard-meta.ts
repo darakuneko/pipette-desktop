@@ -9,7 +9,9 @@ import { decrypt } from './sync-crypto'
 import { downloadFile, driveFileName } from './google-drive'
 import type { DriveFile } from './google-drive'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
+import { notifySyncUnitApplied } from './sync-unit-applied'
 import {
+  KEYBOARD_META_SYNC_UNIT,
   createEmptyKeyboardMetaIndex,
   type KeyboardMetaEntry,
   type KeyboardMetaIndex,
@@ -335,6 +337,7 @@ export async function backfillKeyboardMeta(
   }
 
   const resolved = await batchUpsertKeyboardMeta(toUpsert)
+  if (resolved > 0) notifySyncUnitApplied(KEYBOARD_META_SYNC_UNIT)
   return { resolved, failed }
 }
 
@@ -383,7 +386,12 @@ export async function applyRemoteKeyboardMetaIndex(
   return withMetaWriteLock(async () => {
     const local = await readKeyboardMetaIndex()
     const { merged, remoteNeedsUpdate } = mergeKeyboardMetaIndex(local, remote)
-    await writeKeyboardMetaIndex(merged)
+    // `merged` is already GC'd, so a tombstone-expiry-only change still
+    // differs from `local` and gets written.
+    if (JSON.stringify(merged.entries) !== JSON.stringify(local.entries)) {
+      await writeKeyboardMetaIndex(merged)
+      notifySyncUnitApplied(KEYBOARD_META_SYNC_UNIT)
+    }
     return { remoteNeedsUpdate }
   })
 }

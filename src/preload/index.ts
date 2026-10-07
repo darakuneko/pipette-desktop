@@ -729,6 +729,13 @@ const vialAPI = {
     ipcRenderer.on(IpcChannels.SYNC_FORMAT_STATUS_CHANGED, handler)
     return () => ipcRenderer.removeListener(IpcChannels.SYNC_FORMAT_STATUS_CHANGED, handler)
   },
+  syncOnUnitApplied: (callback: (syncUnit: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: { syncUnit: string }): void => {
+      callback(payload.syncUnit)
+    }
+    ipcRenderer.on(IpcChannels.SYNC_UNIT_APPLIED, handler)
+    return () => ipcRenderer.removeListener(IpcChannels.SYNC_UNIT_APPLIED, handler)
+  },
   syncOnPendingChange: (callback: (pending: boolean) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, pending: boolean): void => {
       callback(pending)

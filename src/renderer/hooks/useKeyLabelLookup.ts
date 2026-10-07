@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LAYOUT_BY_ID } from '../data/keyboard-layouts'
 import { buildKeymapRewriteTable } from '../../shared/keymap/keymap-apply'
 import type { KeyLabelEntryFile } from '../../shared/types/key-label-store'
+import { ensureSyncUnitAppliedBridge } from './use-sync-unit-applied'
 
 // Same event name `useKeyLabels` dispatches whenever the store
 // changes — listened to here so the lookup cache gets dropped on
@@ -58,6 +59,7 @@ export function useKeyLabelLookup(): UseKeyLabelLookupReturn {
   // `ensure(id)` call will re-fetch the fresh content via IPC.
   useEffect(() => {
     if (typeof window === 'undefined') return
+    ensureSyncUnitAppliedBridge()
     const handler = (): void => {
       cacheRef.current.clear()
       missingRef.current.clear()

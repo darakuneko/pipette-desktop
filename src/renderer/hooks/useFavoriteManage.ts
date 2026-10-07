@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 import type { FavoriteType, SavedFavoriteMeta } from '../../shared/types/favorite-store'
 import { FALLBACK_VIAL_PROTOCOL } from '../../shared/favorite-data'
 import type { FavoriteImportResultState } from './useFavoriteStore'
+import { useFavoriteEntries } from './use-favorite-entries'
 
 export interface UseFavoriteManageReturn {
   entries: SavedFavoriteMeta[]
@@ -19,21 +20,11 @@ export interface UseFavoriteManageReturn {
 }
 
 export function useFavoriteManage(favoriteType: FavoriteType): UseFavoriteManageReturn {
-  const [entries, setEntries] = useState<SavedFavoriteMeta[]>([])
+  const { entries, refreshEntries } = useFavoriteEntries(favoriteType)
   const [exporting, setExporting] = useState(false)
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<FavoriteImportResultState | null>(null)
 
-  const refreshEntries = useCallback(async () => {
-    try {
-      const result = await window.vialAPI.favoriteStoreList(favoriteType)
-      if (result.success && result.entries) {
-        setEntries(result.entries)
-      }
-    } catch {
-      // Silently ignore list errors
-    }
-  }, [favoriteType])
 
   const renameEntry = useCallback(async (entryId: string, newLabel: string): Promise<boolean> => {
     try {

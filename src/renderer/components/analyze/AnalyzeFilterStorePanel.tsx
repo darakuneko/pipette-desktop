@@ -7,9 +7,10 @@
 // and the .vil/.c keymap-format buttons; threading those as optional
 // props would dwarf the genuinely shared parts.
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useInlineRename } from '../../hooks/useInlineRename'
+import { useDropVanishedEdits } from '../../hooks/use-drop-vanished-edits'
 import {
   ACTION_BTN,
   CONFIRM_DELETE_BTN,
@@ -98,6 +99,13 @@ export function AnalyzeFilterStorePanel({
   // one). The id is cleared on input change so a retypeit re-runs the
   // duplicate detection from scratch.
   const [confirmOverwriteId, setConfirmOverwriteId] = useState<string | null>(null)
+  const entryIds = useMemo(() => entries.map((e) => e.id), [entries])
+  useDropVanishedEdits(entryIds, [
+    { id: rename.editingId, clear: rename.cancelRename },
+    { id: confirmDeleteId, clear: () => setConfirmDeleteId(null) },
+    { id: confirmHubRemoveId, clear: () => setConfirmHubRemoveId(null) },
+    { id: confirmOverwriteId, clear: () => setConfirmOverwriteId(null) },
+  ])
   const [showSaved, setShowSaved] = useState(false)
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 

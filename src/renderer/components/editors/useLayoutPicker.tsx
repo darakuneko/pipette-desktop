@@ -8,6 +8,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSharedHoverBubble } from '../../hooks/use-shared-hover-bubble'
+import { affectsStoredKeyboards, useSyncUnitApplied } from '../../hooks/use-sync-unit-applied'
 import { useTranslation } from 'react-i18next'
 import { serialize, findKeycode } from '../../../shared/keycodes/keycodes'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
@@ -134,17 +135,34 @@ export function useLayoutPicker({
   }, [pickerScale, pickerFileData?.uid])
 
   // --- Layout picker: stored keyboards browsing ---
+  // Bumped when a sync merge renamed keyboards or rewrote the browsed
+  // keyboard's snapshots; the loaded layout and picker state stay as they are.
+  const [storedKeyboardsSeq, setStoredKeyboardsSeq] = useState(0)
+  const [storedEntriesSeq, setStoredEntriesSeq] = useState(0)
+  useSyncUnitApplied(
+    affectsStoredKeyboards,
+    () => setStoredKeyboardsSeq((n) => n + 1),
+  )
+  useSyncUnitApplied(
+    (unit) => selectedFileUid !== null && unit === `keyboards/${selectedFileUid}/snapshots`,
+    () => setStoredEntriesSeq((n) => n + 1),
+  )
+
   useEffect(() => {
     if (pickerSource !== 'file') return
-    window.vialAPI.listStoredKeyboards().then(setStoredKeyboards).catch(() => {})
-  }, [pickerSource])
+    let cancelled = false
+    window.vialAPI.listStoredKeyboards().then((list) => { if (!cancelled) setStoredKeyboards(list) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [pickerSource, storedKeyboardsSeq])
 
   useEffect(() => {
     if (!selectedFileUid) { setStoredEntries([]); return }
+    let cancelled = false
     window.vialAPI.snapshotStoreList(selectedFileUid).then((r) => {
-      if (r.success && r.entries) setStoredEntries(r.entries.filter((e) => !e.deletedAt && e.vilVersion !== 1))
+      if (!cancelled && r.success && r.entries) setStoredEntries(r.entries.filter((e) => !e.deletedAt && e.vilVersion !== 1))
     }).catch(() => {})
-  }, [selectedFileUid])
+    return () => { cancelled = true }
+  }, [selectedFileUid, storedEntriesSeq])
 
   // --- Layout picker file loading ---
   const loadPickerFromJson = useCallback((jsonStr: string) => {

@@ -1989,6 +1989,7 @@ A: Pipette keeps the sync password — and, during a change, both passwords — 
 
 - **Auto Sync**: Toggle automatic sync on or off. When enabled, changes sync automatically with a 10-second debounce and periodic 3-minute polling. Polling starts when the app launches, even with no keyboard connected, and first checks about 15 seconds after launch. Changes made while it is off are kept and sent when you turn it back on; a failed upload is retried 3 minutes later. Quitting waits for a running sync to finish (up to 30 seconds)
 - **Sync**: Manually sync favorites and connected keyboard data. Only favorites and the currently connected keyboard are synced (not all keyboards)
+- Changes brought in from another device appear in lists that are already open (saved keymaps, favorites, Analyze conditions, Key Labels, Typing Test texts, the Data modal) without reopening them
 
 #### Sync Status
 

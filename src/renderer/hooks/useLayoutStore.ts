@@ -6,6 +6,8 @@ import type { KeyboardDefinition, VilFile } from '../../shared/types/protocol'
 import type { SnapshotMeta } from '../../shared/types/snapshot-store'
 import { isVilFile, isVilFileV1, migrateVilFileToV2 } from '../../shared/vil-file'
 import { applyVilErrorKey, type ApplyVilResult } from './keyboard-types'
+import { useLatestRequest } from './use-latest-request'
+import { useSyncUnitApplied } from './use-sync-unit-applied'
 
 export interface UseLayoutStoreOptions {
   deviceUid: string
@@ -29,16 +31,24 @@ export function useLayoutStore({
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  const beginListRequest = useLatestRequest(deviceUid)
+
   const refreshEntries = useCallback(async () => {
+    const isCurrent = beginListRequest()
     try {
       const result = await window.vialAPI.snapshotStoreList(deviceUid)
-      if (result.success && result.entries) {
+      if (isCurrent() && result.success && result.entries) {
         setEntries(result.entries)
       }
     } catch {
       // Silently ignore list errors
     }
-  }, [deviceUid])
+  }, [deviceUid, beginListRequest])
+
+  useSyncUnitApplied(
+    (unit) => unit === `keyboards/${deviceUid}/snapshots`,
+    () => { void refreshEntries() },
+  )
 
   const saveLayout = useCallback(async (label: string): Promise<string | null> => {
     setError(null)

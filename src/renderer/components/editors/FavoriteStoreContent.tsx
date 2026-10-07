@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useInlineRename } from '../../hooks/useInlineRename'
+import { useDropVanishedEdits } from '../../hooks/use-drop-vanished-edits'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, SectionHeader, formatDate } from './store-modal-shared'
 import { BTN_PRIMARY } from '../../constants/ui-tokens'
 import { FavoriteHubActions } from './FavoriteHubActions'
@@ -86,6 +87,11 @@ export function FavoriteStoreContent({
   const [saveLabel, setSaveLabel] = useState('')
   const rename = useInlineRename<string>()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const entryIds = useMemo(() => entries.map((e) => e.id), [entries])
+  useDropVanishedEdits(entryIds, [
+    { id: rename.editingId, clear: rename.cancelRename },
+    { id: confirmDeleteId, clear: () => setConfirmDeleteId(null) },
+  ])
   const [showExported, setShowExported] = useState(false)
   const [showImported, setShowImported] = useState(false)
   const exportedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
