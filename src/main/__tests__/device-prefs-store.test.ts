@@ -31,6 +31,14 @@ vi.mock('../ipc-guard', async () => {
   return { secureHandle: ipcMain.handle }
 })
 
+let mockAppConfig: { defaultKeyboardLayout: string; defaultAutoAdvance: boolean } = {
+  defaultKeyboardLayout: 'qwerty',
+  defaultAutoAdvance: true,
+}
+vi.mock('../app-config', () => ({
+  loadAppConfig: () => mockAppConfig,
+}))
+
 // --- Import after mocking ---
 
 import { ipcMain } from 'electron'
@@ -51,6 +59,7 @@ const fakeEvent = {} as Electron.IpcMainInvokeEvent
 describe('pipette-settings-store', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
+    mockAppConfig = { defaultKeyboardLayout: 'qwerty', defaultAutoAdvance: true }
     mockUserDataPath = await mkdtemp(join(tmpdir(), 'pipette-settings-store-test-'))
     setupPipetteSettingsStore()
   })
@@ -86,6 +95,43 @@ describe('pipette-settings-store', () => {
   })
 
   describe('patch (field-level merge)', () => {
+    it('starts a new file from the app-wide layout / auto-advance defaults', async () => {
+      mockAppConfig = { defaultKeyboardLayout: 'dvorak', defaultAutoAdvance: false }
+      const patch = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      await patch(fakeEvent, 'uid-new', { layerNames: ['L0'] })
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-new') as { keyboardLayout: string; autoAdvance: boolean; layerNames: string[] }
+      expect(prefs.keyboardLayout).toBe('dvorak')
+      expect(prefs.autoAdvance).toBe(false)
+      expect(prefs.layerNames).toEqual(['L0'])
+    })
+
+    it('falls back to qwerty when the app-wide layout is empty', async () => {
+      mockAppConfig = { defaultKeyboardLayout: '', defaultAutoAdvance: false }
+      const patch = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      await patch(fakeEvent, 'uid-empty', { layerNames: ['L0'] })
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-empty') as { keyboardLayout: string; autoAdvance: boolean }
+      expect(prefs.keyboardLayout).toBe('qwerty')
+      expect(prefs.autoAdvance).toBe(false)
+    })
+
+    it('does not apply app-wide defaults over an existing file', async () => {
+      const patch = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      await patch(fakeEvent, 'uid-keep', {
+        _rev: 1, keyboardLayout: 'colemak', autoAdvance: true, layerNames: [],
+      })
+      mockAppConfig = { defaultKeyboardLayout: 'dvorak', defaultAutoAdvance: false }
+      await patch(fakeEvent, 'uid-keep', { layerNames: ['L0'] })
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-keep') as { keyboardLayout: string; autoAdvance: boolean }
+      expect(prefs.keyboardLayout).toBe('colemak')
+      expect(prefs.autoAdvance).toBe(true)
+    })
+
     it('merges only the given fields and preserves the rest', async () => {
       const patch = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       await patch(fakeEvent, 'uid-p', {
@@ -120,6 +166,19 @@ describe('pipette-settings-store', () => {
       expect(prefs.autoAdvance).toBe(true) // updated
     })
 
+    it('leaves fields absent from the patch unchanged', async () => {
+      const patch = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      await patch(fakeEvent, 'uid-f', {
+        _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: ['x'],
+      })
+      await patch(fakeEvent, 'uid-f', { _rev: 1, autoAdvance: false })
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-f') as { layerNames: string[]; autoAdvance: boolean }
+      expect(prefs.layerNames).toEqual(['x'])
+      expect(prefs.autoAdvance).toBe(false)
+    })
+
     it('clears a top-level field when patched with null', async () => {
       const patch = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const memory = {
@@ -130,7 +189,7 @@ describe('pipette-settings-store', () => {
       await patch(fakeEvent, 'uid-n', {
         _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: [], typingTestMemory: memory,
       })
-      // the full-prefs writer sends `null` to clear the paused run on finish
+      // the memory setter sends `null` to clear the paused run on finish
       await patch(fakeEvent, 'uid-n', { typingTestMemory: null })
 
       const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
@@ -822,7 +881,7 @@ describe('pipette-settings-store', () => {
       // Simulates a settings file written by an older build that still had
       // the field — the store no longer validates or projects it, so it
       // silently drops out of the object returned to the renderer, and out
-      // of what gets written back on the next full-prefs PATCH.
+      // of what gets written back on the next PATCH.
       const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await setter(fakeEvent, 'uid-1', {
         _rev: 1,

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useCallback } from 'react'
-import type { TypingTestResult, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../shared/types/pipette-settings'
+import type { PipetteSettingsPatch, TypingTestResult, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../shared/types/pipette-settings'
 import { clampViewOnlyOpacity } from '../../shared/types/pipette-settings'
 import { trimResults } from '../typing-test/result-builder'
 import type { TypingTestConfig } from '../typing-test/types'
@@ -40,7 +40,7 @@ interface UseTypingTestPrefsArgs {
   updateTypingTestSettingsPanelOpen: (open: boolean) => void
   typingRecordEnabledRef: React.RefObject<boolean>
   updateTypingRecordEnabled: (enabled: boolean) => void
-  saveCurrentPrefs: () => void
+  savePrefs: (partial: PipetteSettingsPatch) => void
 }
 
 export function useTypingTestPrefs(args: UseTypingTestPrefsArgs) {
@@ -62,14 +62,14 @@ export function useTypingTestPrefs(args: UseTypingTestPrefsArgs) {
     typingTestComparisonBaselinesRef, updateTypingTestComparisonBaselines,
     typingTestSettingsPanelOpenRef, updateTypingTestSettingsPanelOpen,
     typingRecordEnabledRef, updateTypingRecordEnabled,
-    saveCurrentPrefs,
+    savePrefs,
   } = args
 
   const addTypingTestResult = useCallback((result: TypingTestResult) => {
     const updated = trimResults([result, ...typingTestResultsRef.current], MAX_TYPING_TEST_RESULTS)
     updateTypingTestResults(updated)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestResults])
+    savePrefs({ typingTestResults: updated })
+  }, [savePrefs, updateTypingTestResults])
 
   /** Label a saved result (keyed by its ISO date) for run comparison. An
    *  empty name clears the label. No-op when nothing changed. */
@@ -83,16 +83,16 @@ export function useTypingTestPrefs(args: UseTypingTestPrefsArgs) {
     })
     if (!changed) return
     updateTypingTestResults(updated)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestResults])
+    savePrefs({ typingTestResults: updated })
+  }, [savePrefs, updateTypingTestResults])
 
   /** Remove a single saved result (keyed by its ISO date). */
   const deleteTypingTestResult = useCallback((date: string) => {
     const updated = typingTestResultsRef.current.filter((r) => r.date !== date)
     if (updated.length === typingTestResultsRef.current.length) return
     updateTypingTestResults(updated)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestResults])
+    savePrefs({ typingTestResults: updated })
+  }, [savePrefs, updateTypingTestResults])
 
   const setTypingTestConfig = useCallback((cfg: TypingTestConfig) => {
     const prev = typingTestConfigRef.current
@@ -102,101 +102,108 @@ export function useTypingTestPrefs(args: UseTypingTestPrefsArgs) {
     // entering such a mode, capture the outgoing normal config too — covers old
     // prefs where typingTestMonkeytypeConfig was never saved. tatoeba must NOT
     // be cached here, else selecting a MonkeyType language would restore it.
-    if (isMonkeytypeMode(cfg.mode)) updateTypingTestMonkeytypeConfig(cfg)
-    else if (prev && isMonkeytypeMode(prev.mode)) updateTypingTestMonkeytypeConfig(prev)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestConfig, updateTypingTestMonkeytypeConfig])
+    const patch: PipetteSettingsPatch = { typingTestConfig: cfg as Record<string, unknown> }
+    if (isMonkeytypeMode(cfg.mode)) {
+      updateTypingTestMonkeytypeConfig(cfg)
+      patch.typingTestMonkeytypeConfig = cfg as Record<string, unknown>
+    } else if (prev && isMonkeytypeMode(prev.mode)) {
+      updateTypingTestMonkeytypeConfig(prev)
+      patch.typingTestMonkeytypeConfig = prev as Record<string, unknown>
+    }
+    savePrefs(patch)
+  }, [savePrefs, updateTypingTestConfig, updateTypingTestMonkeytypeConfig])
 
   const setTypingTestLanguage = useCallback((lang: string) => {
     updateTypingTestLanguage(lang)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestLanguage])
+    savePrefs({ typingTestLanguage: lang })
+  }, [savePrefs, updateTypingTestLanguage])
 
   const setTypingTestViewOnly = useCallback((enabled: boolean) => {
     updateTypingTestViewOnly(enabled)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestViewOnly])
+    savePrefs({ typingTestViewOnly: enabled })
+  }, [savePrefs, updateTypingTestViewOnly])
 
   const setTypingTestViewOnlyWindowSize = useCallback((size: { width: number; height: number }) => {
     updateTypingTestViewOnlyWindowSize(size)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestViewOnlyWindowSize])
+    savePrefs({ typingTestViewOnlyWindowSize: size })
+  }, [savePrefs, updateTypingTestViewOnlyWindowSize])
 
 
   const setTypingTestViewOnlyAlwaysOnTop = useCallback((enabled: boolean) => {
     updateTypingTestViewOnlyAlwaysOnTop(enabled)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestViewOnlyAlwaysOnTop])
+    savePrefs({ typingTestViewOnlyAlwaysOnTop: enabled })
+  }, [savePrefs, updateTypingTestViewOnlyAlwaysOnTop])
 
   const setTypingTestViewOnlyOpacity = useCallback((opacity: number) => {
     const clamped = clampViewOnlyOpacity(opacity)
     if (typingTestViewOnlyOpacityRef.current === clamped) return
     updateTypingTestViewOnlyOpacity(clamped)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestViewOnlyOpacity])
+    savePrefs({ typingTestViewOnlyOpacity: clamped })
+  }, [savePrefs, updateTypingTestViewOnlyOpacity])
 
   const setTypingTestMemory = useCallback((memory: TypingTestMemory | undefined) => {
-    // Skip the full-prefs write when nothing changed — most commonly a
+    // Skip the write when nothing changed — most commonly a
     // clear (undefined) issued while already cleared (finish / restart).
     if (typingTestMemoryRef.current === memory) return
     updateTypingTestMemory(memory)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestMemory])
+    savePrefs({ typingTestMemory: memory ?? null })
+  }, [savePrefs, updateTypingTestMemory])
 
   const setTypingTestDisplayLines = useCallback((lines: number) => {
     const clamped = clampDisplayLines(lines)
     if (typingTestDisplayLinesRef.current === clamped) return
     updateTypingTestDisplayLines(clamped)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestDisplayLines])
+    savePrefs({ typingTestDisplayLines: clamped })
+  }, [savePrefs, updateTypingTestDisplayLines])
 
   const setTypingTestFontSize = useCallback((px: number) => {
     const clamped = clampFontSize(px)
     if (typingTestFontSizeRef.current === clamped) return
     updateTypingTestFontSize(clamped)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestFontSize])
+    savePrefs({ typingTestFontSize: clamped })
+  }, [savePrefs, updateTypingTestFontSize])
 
   const setTypingTestHideKeymap = useCallback((hidden: boolean) => {
     if (typingTestHideKeymapRef.current === hidden) return
     updateTypingTestHideKeymap(hidden)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestHideKeymap])
+    savePrefs({ typingTestHideKeymap: hidden })
+  }, [savePrefs, updateTypingTestHideKeymap])
 
   const setTypingTestHideStatsRow = useCallback((hidden: boolean) => {
     if (typingTestHideStatsRowRef.current === hidden) return
     updateTypingTestHideStatsRow(hidden)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestHideStatsRow])
+    savePrefs({ typingTestHideStatsRow: hidden })
+  }, [savePrefs, updateTypingTestHideStatsRow])
 
   const setTypingTestHideControls = useCallback((hidden: boolean) => {
     if (typingTestHideControlsRef.current === hidden) return
     updateTypingTestHideControls(hidden)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestHideControls])
+    savePrefs({ typingTestHideControls: hidden })
+  }, [savePrefs, updateTypingTestHideControls])
 
   const setTypingTestSaveUnnamed = useCallback((enabled: boolean) => {
     if (typingTestSaveUnnamedRef.current === enabled) return
     updateTypingTestSaveUnnamed(enabled)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestSaveUnnamed])
+    savePrefs({ typingTestSaveUnnamed: enabled })
+  }, [savePrefs, updateTypingTestSaveUnnamed])
 
   const setTypingTestComparisonBaseline = useCallback((conditionKey: string, baseline: TypingTestComparisonBaseline) => {
-    updateTypingTestComparisonBaselines({ ...typingTestComparisonBaselinesRef.current, [conditionKey]: baseline })
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestComparisonBaselines, typingTestComparisonBaselinesRef])
+    const updated = { ...typingTestComparisonBaselinesRef.current, [conditionKey]: baseline }
+    updateTypingTestComparisonBaselines(updated)
+    savePrefs({ typingTestComparisonBaselines: updated })
+  }, [savePrefs, updateTypingTestComparisonBaselines, typingTestComparisonBaselinesRef])
 
   const setTypingTestSettingsPanelOpen = useCallback((open: boolean) => {
     if (typingTestSettingsPanelOpenRef.current === open) return
     updateTypingTestSettingsPanelOpen(open)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestSettingsPanelOpen])
+    savePrefs({ typingTestSettingsPanelOpen: open })
+  }, [savePrefs, updateTypingTestSettingsPanelOpen])
 
   const setTypingRecordEnabled = useCallback((enabled: boolean) => {
     if (typingRecordEnabledRef.current === enabled) return
     updateTypingRecordEnabled(enabled)
-    saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingRecordEnabled])
+    savePrefs({ typingRecordEnabled: enabled })
+  }, [savePrefs, updateTypingRecordEnabled])
 
   return {
     addTypingTestResult,

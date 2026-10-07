@@ -17,7 +17,7 @@ interface MockPipetteAPI {
 
 const getSpy = vi.fn<MockPipetteAPI['pipetteSettingsGet']>()
 // useAnalyzeFilters persists via the field-level PATCH ({ analyze }) so a
-// concurrent full-prefs write can't clobber sibling fields.
+// concurrent write of another field can't clobber sibling fields.
 const patchSpy = vi.fn<MockPipetteAPI['pipetteSettingsPatch']>()
 
 Object.defineProperty(window, 'vialAPI', {

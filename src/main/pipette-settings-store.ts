@@ -7,6 +7,7 @@ import { mkdir, readFile, writeFile, readdir } from 'node:fs/promises'
 import { IpcChannels } from '../shared/ipc/channels'
 import { notifyChange } from './sync/sync-service'
 import { secureHandle } from './ipc-guard'
+import { loadAppConfig } from './app-config'
 import { withWriteLock } from './per-uid-write-lock'
 import { isSafePathSegment } from './utils/safe-filename'
 import { isRecord } from '../shared/vil-file'
@@ -222,10 +223,24 @@ function mergeAnalyze(base: unknown, partial: Record<string, unknown>): Record<s
 /** Shallow-merge only the defined keys of `partial` onto `base` so a writer
  * that omits (or leaves undefined) a field never erases the persisted value
  * another writer owns. `undefined` skips a field; `null` clears it (removes
- * the key, used by the full-prefs writer for owned fields like
- * `typingTestMemory`). `analyze` is merged one level deeper (see
+ * the key — used by setters that clear a field such as `typingTestMemory`
+ * or `viewMatrix`). `analyze` is merged one level deeper (see
  * {@link mergeAnalyze}) because three independent writers own disjoint
  * sub-fields of it. */
+// A new file starts from the app-wide defaults the renderer shows for a keyboard
+// without saved settings, so the first field-level save does not pin the shared
+// constant's layout / auto-advance.
+function newSettingsBase(): PipetteSettings {
+  const config = loadAppConfig()
+  return {
+    ...DEFAULT_PIPETTE_SETTINGS,
+    keyboardLayout: typeof config.defaultKeyboardLayout === 'string' && config.defaultKeyboardLayout.length > 0
+      ? config.defaultKeyboardLayout
+      : DEFAULT_PIPETTE_SETTINGS.keyboardLayout,
+    autoAdvance: config.defaultAutoAdvance,
+  }
+}
+
 function mergeDefined(base: PipetteSettings, partial: PipetteSettingsPatch): PipetteSettings {
   const merged: Record<string, unknown> = { ...base }
   for (const [k, v] of Object.entries(partial)) {
@@ -305,8 +320,8 @@ export function setupPipetteSettingsStore(): void {
   )
 
   // Field-level merge: each renderer writer PATCHes only the fields it owns,
-  // so concurrent writers (full prefs / analyze filters / goal / keymap
-  // scale) never clobber each other. The read-merge-write runs inside the
+  // so concurrent writers (per-field setters / analyze filters / goal /
+  // keymap scale) never clobber each other. The read-merge-write runs inside the
   // per-uid queue so it's atomic against other writes.
   secureHandle(
     IpcChannels.PIPETTE_SETTINGS_PATCH,
@@ -322,7 +337,7 @@ export function setupPipetteSettingsStore(): void {
         }
         await withWriteLock(uid, async () => {
           const existing = await readData(uid)
-          const merged = mergeDefined(existing ?? DEFAULT_PIPETTE_SETTINGS, partial)
+          const merged = mergeDefined(existing ?? newSettingsBase(), partial)
           validatePrefs(merged)
           await writeData(uid, merged)
         })

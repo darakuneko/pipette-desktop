@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
-import type { TypingTestResult, ViewMode, TypingTestMemory, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
+import type { PipetteSettingsPatch, TypingTestResult, ViewMode, TypingTestMemory, TypingTestComparisonBaselines, ViewMatrixCell } from '../../shared/types/pipette-settings'
 import { VIEW_ONLY_OPACITY_DEFAULT } from '../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../typing-test/types'
 import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE } from '../typing-test/types'
@@ -11,8 +11,8 @@ import type { ValidatedPrefs } from './device-prefs-validate'
 
 /**
  * Pairs a state value with a ref that always holds the latest value.
- * The ref is needed so that saveCurrentPrefs can read current values
- * inside a stable (never-recreated) callback.
+ * The ref lets setters that compare against or derive from the current
+ * value read it inside a stable callback.
  */
 function useStateRef<T>(initial: T): [T, (v: T) => void, React.RefObject<T>] {
   const [value, setValue] = useState<T>(initial)
@@ -34,21 +34,21 @@ export interface DevicePrefsInitialDefaults {
 }
 
 export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
-  const [layout, updateLayout, layoutRef] = useStateRef<KeyboardLayoutId>(defaults.defaultLayout)
-  const [autoAdvance, updateAutoAdvance, autoAdvanceRef] = useStateRef<boolean>(defaults.defaultAutoAdvance)
-  const [layerPanelOpen, updateLayerPanelOpen, layerPanelOpenRef] = useStateRef<boolean>(defaults.defaultLayerPanelOpen)
-  const [basicViewType, updateBasicViewType, basicViewTypeRef] = useStateRef<BasicViewType>(defaults.defaultBasicViewType)
-  const [splitKeyMode, updateSplitKeyMode, splitKeyModeRef] = useStateRef<SplitKeyMode>(defaults.defaultSplitKeyMode)
-  const [quickSelect, updateQuickSelect, quickSelectRef] = useStateRef<boolean>(defaults.defaultQuickSelect)
-  const [keymapScale, updateKeymapScale, keymapScaleRef] = useStateRef<number>(1)
-  const [layerNames, updateLayerNames, layerNamesRef] = useStateRef<string[]>([])
+  const [layout, updateLayout] = useStateRef<KeyboardLayoutId>(defaults.defaultLayout)
+  const [autoAdvance, updateAutoAdvance] = useStateRef<boolean>(defaults.defaultAutoAdvance)
+  const [layerPanelOpen, updateLayerPanelOpen] = useStateRef<boolean>(defaults.defaultLayerPanelOpen)
+  const [basicViewType, updateBasicViewType] = useStateRef<BasicViewType>(defaults.defaultBasicViewType)
+  const [splitKeyMode, updateSplitKeyMode] = useStateRef<SplitKeyMode>(defaults.defaultSplitKeyMode)
+  const [quickSelect, updateQuickSelect] = useStateRef<boolean>(defaults.defaultQuickSelect)
+  const [keymapScale, updateKeymapScale] = useStateRef<number>(1)
+  const [layerNames, updateLayerNames] = useStateRef<string[]>([])
   const [typingTestResults, updateTypingTestResults, typingTestResultsRef] = useStateRef<TypingTestResult[]>([])
   const [typingTestConfig, updateTypingTestConfig, typingTestConfigRef] = useStateRef<TypingTestConfig | undefined>(undefined)
-  const [typingTestMonkeytypeConfig, updateTypingTestMonkeytypeConfig, typingTestMonkeytypeConfigRef] = useStateRef<TypingTestConfig | undefined>(undefined)
-  const [typingTestLanguage, updateTypingTestLanguage, typingTestLanguageRef] = useStateRef<string | undefined>(undefined)
-  const [typingTestViewOnly, updateTypingTestViewOnly, typingTestViewOnlyRef] = useStateRef<boolean>(false)
-  const [typingTestViewOnlyWindowSize, updateTypingTestViewOnlyWindowSize, typingTestViewOnlyWindowSizeRef] = useStateRef<{ width: number; height: number } | undefined>(undefined)
-  const [typingTestViewOnlyAlwaysOnTop, updateTypingTestViewOnlyAlwaysOnTop, typingTestViewOnlyAlwaysOnTopRef] = useStateRef<boolean>(false)
+  const [typingTestMonkeytypeConfig, updateTypingTestMonkeytypeConfig] = useStateRef<TypingTestConfig | undefined>(undefined)
+  const [typingTestLanguage, updateTypingTestLanguage] = useStateRef<string | undefined>(undefined)
+  const [typingTestViewOnly, updateTypingTestViewOnly] = useStateRef<boolean>(false)
+  const [typingTestViewOnlyWindowSize, updateTypingTestViewOnlyWindowSize] = useStateRef<{ width: number; height: number } | undefined>(undefined)
+  const [typingTestViewOnlyAlwaysOnTop, updateTypingTestViewOnlyAlwaysOnTop] = useStateRef<boolean>(false)
   const [typingTestViewOnlyOpacity, updateTypingTestViewOnlyOpacity, typingTestViewOnlyOpacityRef] = useStateRef<number>(VIEW_ONLY_OPACITY_DEFAULT)
   const [typingTestMemory, updateTypingTestMemory, typingTestMemoryRef] = useStateRef<TypingTestMemory | undefined>(undefined)
   const [typingTestDisplayLines, updateTypingTestDisplayLines, typingTestDisplayLinesRef] = useStateRef<number>(DEFAULT_DISPLAY_LINES)
@@ -62,66 +62,24 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
   const [typingRecordEnabled, updateTypingRecordEnabled, typingRecordEnabledRef] = useStateRef<boolean>(false)
   const [viewMode, updateViewMode, viewModeRef] = useStateRef<ViewMode>('editor')
   const [keyEditorZoom, updateKeyEditorZoom, keyEditorZoomRef] = useStateRef<number | undefined>(undefined)
-  const [viewMatrix, updateViewMatrix, viewMatrixRef] = useStateRef<Record<string, ViewMatrixCell> | undefined>(undefined)
-  const [viewMatrixWires, updateViewMatrixWires, viewMatrixWiresRef] = useStateRef<boolean>(false)
-  const [layerHoverPreview, updateLayerHoverPreview, layerHoverPreviewRef] = useStateRef<boolean>(true)
-  const [entryHoverPreview, updateEntryHoverPreview, entryHoverPreviewRef] = useStateRef<boolean>(true)
-  const [keycodeTabOrder, updateKeycodeTabOrder, keycodeTabOrderRef] = useStateRef<string[] | undefined>(undefined)
+  const [viewMatrix, updateViewMatrix] = useStateRef<Record<string, ViewMatrixCell> | undefined>(undefined)
+  const [viewMatrixWires, updateViewMatrixWires] = useStateRef<boolean>(false)
+  const [layerHoverPreview, updateLayerHoverPreview] = useStateRef<boolean>(true)
+  const [entryHoverPreview, updateEntryHoverPreview] = useStateRef<boolean>(true)
+  const [keycodeTabOrder, updateKeycodeTabOrder] = useStateRef<string[] | undefined>(undefined)
   const [appliedUid, setAppliedUid] = useState<string | null>(null)
 
   const uidRef = useRef('')
   const applySeqRef = useRef(0)
 
-  const saveCurrentPrefs = useCallback(() => {
+  /** Persists only the fields a setter changed. A field-level PATCH leaves
+   *  every other field in the file untouched, so a value written by a sync
+   *  merge is never overwritten with this renderer's stale copy. Clearable
+   *  fields send `null`: the main-side merge skips `undefined`. */
+  const savePrefs = useCallback((partial: PipetteSettingsPatch) => {
     const uid = uidRef.current
     if (!uid) return
-    window.vialAPI.pipetteSettingsPatch(uid, {
-      _rev: 1,
-      keyboardLayout: layoutRef.current,
-      autoAdvance: autoAdvanceRef.current,
-      layerPanelOpen: layerPanelOpenRef.current,
-      basicViewType: basicViewTypeRef.current,
-      splitKeyMode: splitKeyModeRef.current,
-      quickSelect: quickSelectRef.current,
-      keymapScale: keymapScaleRef.current,
-      keyEditorZoom: keyEditorZoomRef.current,
-      layerNames: layerNamesRef.current,
-      typingTestResults: typingTestResultsRef.current,
-      typingTestConfig: typingTestConfigRef.current as Record<string, unknown> | undefined,
-      typingTestMonkeytypeConfig: typingTestMonkeytypeConfigRef.current as Record<string, unknown> | undefined,
-      typingTestLanguage: typingTestLanguageRef.current,
-      typingTestViewOnly: typingTestViewOnlyRef.current,
-      typingTestViewOnlyWindowSize: typingTestViewOnlyWindowSizeRef.current,
-      typingTestViewOnlyAlwaysOnTop: typingTestViewOnlyAlwaysOnTopRef.current,
-      typingTestViewOnlyOpacity: typingTestViewOnlyOpacityRef.current,
-      // `null` clears the persisted memory; the field-level PATCH skips
-      // `undefined`, so a bare `undefined` would leave a stale paused run
-      // on disk after finish / restart.
-      typingTestMemory: typingTestMemoryRef.current ?? null,
-      typingTestDisplayLines: typingTestDisplayLinesRef.current,
-      typingTestFontSize: typingTestFontSizeRef.current,
-      typingTestHideKeymap: typingTestHideKeymapRef.current,
-      typingTestHideStatsRow: typingTestHideStatsRowRef.current,
-      typingTestHideControls: typingTestHideControlsRef.current,
-      typingTestSaveUnnamed: typingTestSaveUnnamedRef.current,
-      typingTestComparisonBaselines: typingTestComparisonBaselinesRef.current,
-      typingTestSettingsPanelOpen: typingTestSettingsPanelOpenRef.current,
-      typingRecordEnabled: typingRecordEnabledRef.current,
-      viewMode: viewModeRef.current,
-      // `null` clears the persisted overrides when the ref holds `undefined`
-      // (reset), mirroring `typingTestMemory` above — a bare `undefined`
-      // would leave a stale map on disk instead of clearing it.
-      viewMatrix: viewMatrixRef.current ?? null,
-      // Always sent explicitly (never `undefined`) so turning the toggle
-      // OFF actually persists `false` instead of being skipped by the
-      // field-level PATCH's "undefined leaves the field untouched" rule.
-      viewMatrixWires: viewMatrixWiresRef.current,
-      // Sent explicitly for the same reason as `viewMatrixWires`.
-      layerHoverPreview: layerHoverPreviewRef.current,
-      entryHoverPreview: entryHoverPreviewRef.current,
-      // `null` clears a reset order, same as `viewMatrix`.
-      keycodeTabOrder: keycodeTabOrderRef.current ?? null,
-    }).catch(() => {
+    window.vialAPI.pipetteSettingsPatch(uid, { _rev: 1, ...partial }).catch(() => {
       // IPC failure — best-effort save
     })
   }, [])
@@ -167,21 +125,21 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
   }, [])
 
   return {
-    layout, updateLayout, layoutRef,
-    autoAdvance, updateAutoAdvance, autoAdvanceRef,
-    layerPanelOpen, updateLayerPanelOpen, layerPanelOpenRef,
-    basicViewType, updateBasicViewType, basicViewTypeRef,
-    splitKeyMode, updateSplitKeyMode, splitKeyModeRef,
-    quickSelect, updateQuickSelect, quickSelectRef,
-    keymapScale, updateKeymapScale, keymapScaleRef,
-    layerNames, updateLayerNames, layerNamesRef,
+    layout, updateLayout,
+    autoAdvance, updateAutoAdvance,
+    layerPanelOpen, updateLayerPanelOpen,
+    basicViewType, updateBasicViewType,
+    splitKeyMode, updateSplitKeyMode,
+    quickSelect, updateQuickSelect,
+    keymapScale, updateKeymapScale,
+    layerNames, updateLayerNames,
     typingTestResults, updateTypingTestResults, typingTestResultsRef,
     typingTestConfig, updateTypingTestConfig, typingTestConfigRef,
-    typingTestMonkeytypeConfig, updateTypingTestMonkeytypeConfig, typingTestMonkeytypeConfigRef,
-    typingTestLanguage, updateTypingTestLanguage, typingTestLanguageRef,
-    typingTestViewOnly, updateTypingTestViewOnly, typingTestViewOnlyRef,
-    typingTestViewOnlyWindowSize, updateTypingTestViewOnlyWindowSize, typingTestViewOnlyWindowSizeRef,
-    typingTestViewOnlyAlwaysOnTop, updateTypingTestViewOnlyAlwaysOnTop, typingTestViewOnlyAlwaysOnTopRef,
+    typingTestMonkeytypeConfig, updateTypingTestMonkeytypeConfig,
+    typingTestLanguage, updateTypingTestLanguage,
+    typingTestViewOnly, updateTypingTestViewOnly,
+    typingTestViewOnlyWindowSize, updateTypingTestViewOnlyWindowSize,
+    typingTestViewOnlyAlwaysOnTop, updateTypingTestViewOnlyAlwaysOnTop,
     typingTestViewOnlyOpacity, updateTypingTestViewOnlyOpacity, typingTestViewOnlyOpacityRef,
     typingTestMemory, updateTypingTestMemory, typingTestMemoryRef,
     typingTestDisplayLines, updateTypingTestDisplayLines, typingTestDisplayLinesRef,
@@ -195,14 +153,14 @@ export function useDevicePrefsState(defaults: DevicePrefsInitialDefaults) {
     typingRecordEnabled, updateTypingRecordEnabled, typingRecordEnabledRef,
     viewMode, updateViewMode, viewModeRef,
     keyEditorZoom, updateKeyEditorZoom, keyEditorZoomRef,
-    viewMatrix, updateViewMatrix, viewMatrixRef,
-    viewMatrixWires, updateViewMatrixWires, viewMatrixWiresRef,
-    layerHoverPreview, updateLayerHoverPreview, layerHoverPreviewRef,
-    entryHoverPreview, updateEntryHoverPreview, entryHoverPreviewRef,
-    keycodeTabOrder, updateKeycodeTabOrder, keycodeTabOrderRef,
+    viewMatrix, updateViewMatrix,
+    viewMatrixWires, updateViewMatrixWires,
+    layerHoverPreview, updateLayerHoverPreview,
+    entryHoverPreview, updateEntryHoverPreview,
+    keycodeTabOrder, updateKeycodeTabOrder,
     appliedUid, setAppliedUid,
     uidRef, applySeqRef,
-    saveCurrentPrefs,
+    savePrefs,
     applyValidated,
   }
 }

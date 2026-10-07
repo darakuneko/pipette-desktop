@@ -4,11 +4,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from '@testing-library/react'
 import { useDevicePrefs } from '../useDevicePrefs'
+import type { PipetteSettingsPatch, TypingTestResult, TypingTestMemory } from '../../../shared/types/pipette-settings'
+import type { TypingTestConfig } from '../../typing-test/types'
 import { setupAppConfigMock, renderHookWithConfig, vialAPIMock } from './test-helpers'
 
 // Mock vialAPI for IPC calls
 const mockPipetteSettingsGet = vi.fn<(uid: string) => Promise<{ _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] } | null>>()
-const mockPipetteSettingsPatch = vi.fn<(uid: string, prefs: { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[]; viewMatrix?: Record<string, { row: number; col: number }> | null }) => Promise<{ success: boolean }>>()
+const mockPipetteSettingsPatch = vi.fn<(uid: string, prefs: PipetteSettingsPatch) => Promise<{ success: boolean }>>()
 
 const mockPipetteSettingsEnsureDir = vi.fn<(uid: string) => Promise<{ success: boolean }>>()
 
@@ -202,7 +204,7 @@ describe('useDevicePrefs', () => {
       }))
     })
 
-    it('setLayout does not overwrite layerNames', async () => {
+    it('setLayout leaves layerNames out of the patch', async () => {
       setupMocks()
       mockPipetteSettingsGet.mockResolvedValue({
         _rev: 1,
@@ -221,7 +223,8 @@ describe('useDevicePrefs', () => {
       })
 
       const call = mockPipetteSettingsPatch.mock.calls[0]
-      expect(call[1].layerNames).toEqual(['Base', 'Fn'])
+      expect(call[1]).not.toHaveProperty('layerNames')
+      expect(result.current.layerNames).toEqual(['Base', 'Fn'])
     })
   })
 
@@ -1820,7 +1823,7 @@ describe('useDevicePrefs', () => {
       expect(result.current.appliedUid).toBe('0xAABB')
     })
 
-    it('setTypingTestViewOnly preserves stored viewMode (disconnect scenario)', async () => {
+    it('setTypingTestViewOnly leaves viewMode out of the patch (disconnect scenario)', async () => {
       setupMocks()
       mockPipetteSettingsGet.mockResolvedValue({
         _rev: 1,
@@ -1844,10 +1847,7 @@ describe('useDevicePrefs', () => {
       })
 
       expect(result.current.viewMode).toBe('typingView')
-      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
-        typingTestViewOnly: false,
-        viewMode: 'typingView',
-      }))
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', { _rev: 1, typingTestViewOnly: false })
     })
   })
 
@@ -2611,7 +2611,7 @@ describe('useDevicePrefs — layerHoverPreview', () => {
     expect(result.current.layerHoverPreview).toBe(true)
   })
 
-  it('setLayerHoverPreview saves false, and later unrelated saves keep it', async () => {
+  it('setLayerHoverPreview saves false, and later unrelated saves leave it out of the patch', async () => {
     mockPipetteSettingsGet.mockResolvedValue(stored())
     const { result } = await applied('0xAABB')
     act(() => { result.current.setLayerHoverPreview(false) })
@@ -2619,9 +2619,8 @@ describe('useDevicePrefs — layerHoverPreview', () => {
     expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({ layerHoverPreview: false }))
 
     act(() => { result.current.setAutoAdvance(false) })
-    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({
-      autoAdvance: false, layerHoverPreview: false,
-    }))
+    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', { _rev: 1, autoAdvance: false })
+    expect(result.current.layerHoverPreview).toBe(false)
   })
 
   it('does not carry one keyboard\'s value over to another', async () => {
@@ -2672,7 +2671,7 @@ describe('useDevicePrefs — entryHoverPreview', () => {
     expect(result.current.entryHoverPreview).toBe(true)
   })
 
-  it('setEntryHoverPreview saves false, and later unrelated saves keep it', async () => {
+  it('setEntryHoverPreview saves false, and later unrelated saves leave it out of the patch', async () => {
     mockPipetteSettingsGet.mockResolvedValue(stored())
     const { result } = await applied('0xAABB')
     act(() => { result.current.setEntryHoverPreview(false) })
@@ -2680,9 +2679,8 @@ describe('useDevicePrefs — entryHoverPreview', () => {
     expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({ entryHoverPreview: false }))
 
     act(() => { result.current.setAutoAdvance(false) })
-    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({
-      autoAdvance: false, entryHoverPreview: false,
-    }))
+    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', { _rev: 1, autoAdvance: false })
+    expect(result.current.entryHoverPreview).toBe(false)
   })
 
   it('does not carry one keyboard\'s value over to another', async () => {
@@ -2727,7 +2725,7 @@ describe('useDevicePrefs — keycodeTabOrder', () => {
     expect(result.current.keycodeTabOrder).toBeUndefined()
   })
 
-  it('setKeycodeTabOrder saves the order, later unrelated saves keep it, and undefined clears it with null', async () => {
+  it('setKeycodeTabOrder saves the order, later unrelated saves leave it out of the patch, and undefined clears it with null', async () => {
     mockPipetteSettingsGet.mockResolvedValue(stored())
     const { result } = await applied('0xAABB')
     act(() => { result.current.setKeycodeTabOrder(['user', 'basic']) })
@@ -2735,9 +2733,8 @@ describe('useDevicePrefs — keycodeTabOrder', () => {
     expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({ keycodeTabOrder: ['user', 'basic'] }))
 
     act(() => { result.current.setAutoAdvance(false) })
-    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', expect.objectContaining({
-      autoAdvance: false, keycodeTabOrder: ['user', 'basic'],
-    }))
+    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith('0xAABB', { _rev: 1, autoAdvance: false })
+    expect(result.current.keycodeTabOrder).toEqual(['user', 'basic'])
 
     act(() => { result.current.setKeycodeTabOrder(undefined) })
     expect(result.current.keycodeTabOrder).toBeUndefined()
@@ -2760,5 +2757,115 @@ describe('useDevicePrefs — keycodeTabOrder', () => {
     expect(result.current.keycodeTabOrder).toEqual(['user'])
     await act(async () => { await result.current.applyDevicePrefs('uid-2') })
     expect(result.current.keycodeTabOrder).toBeUndefined()
+  })
+})
+
+describe('useDevicePrefs — per-field patches', () => {
+  const UID = '0xAABB'
+  const RESULT: TypingTestResult = {
+    date: '2026-01-01T00:00:00.000Z', wpm: 50, accuracy: 95, wordCount: 30,
+    correctChars: 100, incorrectChars: 5, durationSeconds: 30,
+  }
+  const NEW_RESULT: TypingTestResult = { ...RESULT, date: '2026-01-02T00:00:00.000Z', wpm: 60 }
+  const MEMORY: TypingTestMemory = {
+    textId: 't1', currentWordIndex: 1, currentInput: 'a', wordResults: [],
+    correctChars: 1, incorrectChars: 0, elapsedMs: 10, wpmHistory: [], savedAt: '2026-01-01T00:00:00.000Z',
+  }
+  const WORDS_CFG = { mode: 'words', wordCount: 60, punctuation: true, numbers: false } as TypingTestConfig
+  const TATOEBA_CFG = { mode: 'tatoeba', language: 'english', pattern: 'lines', lineCount: 5, duration: 30 } as TypingTestConfig
+  const MATRIX = { '0,0': { row: 1, col: 2 } }
+
+  type Hook = ReturnType<typeof useDevicePrefs>
+  // Rows for clamped inputs (keymapScale, typingTestFontSize, keyEditorZoom)
+  // expect the clamped value, not the raw input.
+  const rows: { name: string; call: (r: Hook) => void; expected: PipetteSettingsPatch }[] = [
+    { name: 'setLayout', call: (r) => r.setLayout('dvorak'), expected: { keyboardLayout: 'dvorak' } },
+    { name: 'setAutoAdvance', call: (r) => r.setAutoAdvance(false), expected: { autoAdvance: false } },
+    { name: 'setLayerPanelOpen', call: (r) => r.setLayerPanelOpen(false), expected: { layerPanelOpen: false } },
+    { name: 'setBasicViewType', call: (r) => r.setBasicViewType('iso'), expected: { basicViewType: 'iso' } },
+    { name: 'setSplitKeyMode', call: (r) => r.setSplitKeyMode('flat'), expected: { splitKeyMode: 'flat' } },
+    { name: 'setQuickSelect', call: (r) => r.setQuickSelect(false), expected: { quickSelect: false } },
+    { name: 'setKeymapScale', call: (r) => r.setKeymapScale(1.54), expected: { keymapScale: 1.5 } },
+    { name: 'setLayerNames', call: (r) => r.setLayerNames(['a', 'b']), expected: { layerNames: ['a', 'b'] } },
+    { name: 'addTypingTestResult', call: (r) => r.addTypingTestResult(NEW_RESULT), expected: { typingTestResults: [NEW_RESULT, RESULT] } },
+    { name: 'renameTypingTestResult', call: (r) => r.renameTypingTestResult(RESULT.date, 'n'), expected: { typingTestResults: [{ ...RESULT, name: 'n' }] } },
+    { name: 'deleteTypingTestResult', call: (r) => r.deleteTypingTestResult(RESULT.date), expected: { typingTestResults: [] } },
+    { name: 'setTypingTestConfig', call: (r) => r.setTypingTestConfig(WORDS_CFG), expected: { typingTestConfig: WORDS_CFG, typingTestMonkeytypeConfig: WORDS_CFG } },
+    { name: 'setTypingTestLanguage', call: (r) => r.setTypingTestLanguage('english_1k'), expected: { typingTestLanguage: 'english_1k' } },
+    { name: 'setTypingTestViewOnly', call: (r) => r.setTypingTestViewOnly(true), expected: { typingTestViewOnly: true } },
+    { name: 'setTypingTestViewOnlyWindowSize', call: (r) => r.setTypingTestViewOnlyWindowSize({ width: 300, height: 200 }), expected: { typingTestViewOnlyWindowSize: { width: 300, height: 200 } } },
+    { name: 'setTypingTestViewOnlyAlwaysOnTop', call: (r) => r.setTypingTestViewOnlyAlwaysOnTop(true), expected: { typingTestViewOnlyAlwaysOnTop: true } },
+    { name: 'setTypingTestViewOnlyOpacity', call: (r) => r.setTypingTestViewOnlyOpacity(0.7), expected: { typingTestViewOnlyOpacity: 0.7 } },
+    { name: 'setTypingTestMemory', call: (r) => r.setTypingTestMemory(MEMORY), expected: { typingTestMemory: MEMORY } },
+    { name: 'setTypingTestDisplayLines', call: (r) => r.setTypingTestDisplayLines(6), expected: { typingTestDisplayLines: 6 } },
+    { name: 'setTypingTestFontSize', call: (r) => r.setTypingTestFontSize(31), expected: { typingTestFontSize: 32 } },
+    { name: 'setTypingTestHideKeymap', call: (r) => r.setTypingTestHideKeymap(true), expected: { typingTestHideKeymap: true } },
+    { name: 'setTypingTestHideStatsRow', call: (r) => r.setTypingTestHideStatsRow(true), expected: { typingTestHideStatsRow: true } },
+    { name: 'setTypingTestHideControls', call: (r) => r.setTypingTestHideControls(true), expected: { typingTestHideControls: true } },
+    { name: 'setTypingTestSaveUnnamed', call: (r) => r.setTypingTestSaveUnnamed(false), expected: { typingTestSaveUnnamed: false } },
+    { name: 'setTypingTestComparisonBaseline', call: (r) => r.setTypingTestComparisonBaseline('k', { kind: 'previous' }), expected: { typingTestComparisonBaselines: { k: { kind: 'previous' } } } },
+    { name: 'setTypingTestSettingsPanelOpen', call: (r) => r.setTypingTestSettingsPanelOpen(false), expected: { typingTestSettingsPanelOpen: false } },
+    { name: 'setTypingRecordEnabled', call: (r) => r.setTypingRecordEnabled(true), expected: { typingRecordEnabled: true } },
+    { name: 'setViewMode', call: (r) => r.setViewMode('typingTest'), expected: { viewMode: 'typingTest' } },
+    { name: 'setViewMatrix', call: (r) => r.setViewMatrix(MATRIX), expected: { viewMatrix: MATRIX } },
+    { name: 'setViewMatrixWires', call: (r) => r.setViewMatrixWires(false), expected: { viewMatrixWires: false } },
+    { name: 'setLayerHoverPreview', call: (r) => r.setLayerHoverPreview(false), expected: { layerHoverPreview: false } },
+    { name: 'setEntryHoverPreview', call: (r) => r.setEntryHoverPreview(false), expected: { entryHoverPreview: false } },
+    { name: 'setKeycodeTabOrder', call: (r) => r.setKeycodeTabOrder(['user', 'basic']), expected: { keycodeTabOrder: ['user', 'basic'] } },
+    { name: 'setKeyEditorZoom', call: (r) => r.setKeyEditorZoom(500), expected: { keyEditorZoom: 200 } },
+  ]
+
+  async function applied() {
+    setupMocks()
+    mockPipetteSettingsGet.mockResolvedValue({
+      _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: [], typingTestResults: [RESULT],
+    } as never)
+    const hook = renderHookWithConfig(() => useDevicePrefs())
+    await act(async () => {})
+    await act(async () => { await hook.result.current.applyDevicePrefs(UID) })
+    mockPipetteSettingsPatch.mockClear()
+    return hook
+  }
+
+  it('covers every setter', () => {
+    // Bump the count when a setter is added.
+    expect(rows).toHaveLength(34)
+  })
+
+  it.each(rows)('$name patches only the field it changed', async ({ call, expected }) => {
+    const { result } = await applied()
+    act(() => { call(result.current) })
+    expect(mockPipetteSettingsPatch).toHaveBeenCalledTimes(1)
+    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith(UID, { _rev: 1, ...expected })
+  })
+
+  it('sends null when typingTestMemory is cleared', async () => {
+    const { result } = await applied()
+    act(() => { result.current.setTypingTestMemory(MEMORY) })
+    act(() => { result.current.setTypingTestMemory(undefined) })
+    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith(UID, { _rev: 1, typingTestMemory: null })
+  })
+
+  it('setTypingTestConfig leaving a monkeytype mode also sends the previous monkeytype config', async () => {
+    const { result } = await applied()
+    act(() => { result.current.setTypingTestConfig(WORDS_CFG) })
+    act(() => { result.current.setTypingTestConfig(TATOEBA_CFG) })
+    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith(UID, {
+      _rev: 1, typingTestConfig: TATOEBA_CFG, typingTestMonkeytypeConfig: WORDS_CFG,
+    })
+  })
+
+  it('setTypingTestConfig to a non-monkeytype mode without a previous config sends only the config', async () => {
+    const { result } = await applied()
+    act(() => { result.current.setTypingTestConfig(TATOEBA_CFG) })
+    expect(mockPipetteSettingsPatch).toHaveBeenLastCalledWith(UID, { _rev: 1, typingTestConfig: TATOEBA_CFG })
+  })
+
+  it('does not patch before a keyboard is applied', async () => {
+    setupMocks()
+    const { result } = renderHookWithConfig(() => useDevicePrefs())
+    await act(async () => {})
+    act(() => { result.current.setAutoAdvance(false) })
+    expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
   })
 })
