@@ -33,6 +33,7 @@ import type { useRecKeystrokeCounter } from '../hooks/useRecKeystrokeCounter'
 import type { decodeLayoutOptions } from '../../shared/kle/layout-options'
 import type { ResolvedTappingTerm } from '../../shared/qmk-settings-tapping-term'
 import { ZOOM_FACTOR_DEFAULT } from '../../shared/types/app-config'
+import { useDevicePrefsReloadLinks } from '../hooks/use-device-prefs-reload'
 
 interface Props {
   device: ReturnType<typeof useDeviceConnection>
@@ -99,6 +100,14 @@ export function AppEditorSurface({
 }: Props) {
   const { t } = useTranslation()
   const api = window.vialAPI
+
+  useDevicePrefsReloadLinks({
+    devicePrefs,
+    keyboardUid: keyboard.uid,
+    liveKeyboard: !device.isDummy,
+    replaceLayerNamesFromSync: keyboard.replaceLayerNamesFromSync,
+    typingTestMode: editorUI.typingTestMode,
+  })
 
   const handleLoadEntry = useCallback(async (entryId: string) => {
     const entry = layoutStore.entries.find((e) => e.id === entryId)

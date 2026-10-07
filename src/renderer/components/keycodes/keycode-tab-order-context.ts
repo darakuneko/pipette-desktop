@@ -17,12 +17,16 @@ export interface KeycodeTabOrderValue {
   /** Changes when the connected keyboard changes; an open reorder mode
    *  closes on a change. */
   scopeKey: string | null
+  /** Holds back a synced order from another device while the reorder mode
+   *  is open; returns the release. */
+  holdOrderReload: () => () => void
 }
 
 export const KeycodeTabOrderContext = createContext<KeycodeTabOrderValue>({
   order: undefined,
   setOrder: () => {},
   scopeKey: null,
+  holdOrderReload: () => () => {},
 })
 
 export function useKeycodeTabOrder(): KeycodeTabOrderValue {

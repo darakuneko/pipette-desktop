@@ -43,15 +43,19 @@ interface HostProps extends PickerProps {
   initial?: string[]
   onSave?: (order: string[] | undefined) => void
   scopeKey?: string
+  holdOrderReload?: () => () => void
 }
 
-function Host({ initial, onSave, scopeKey = 'uid-1', ...props }: HostProps) {
+const noHold = (): (() => void) => () => {}
+
+function Host({ initial, onSave, scopeKey = 'uid-1', holdOrderReload = noHold, ...props }: HostProps) {
   const [order, setOrderState] = useState(initial)
   const value = useMemo(() => ({
     order,
     setOrder: (next: string[] | undefined) => { onSave?.(next); setOrderState(next) },
     scopeKey,
-  }), [order, onSave, scopeKey])
+    holdOrderReload,
+  }), [order, onSave, scopeKey, holdOrderReload])
   return (
     <KeycodeTabOrderContext.Provider value={value}>
       <TabbedKeycodes tabReorder {...props} />
@@ -109,7 +113,7 @@ describe('TabbedKeycodes tab order', () => {
 
   it('pickers without tabReorder show the saved order but never enter the mode', () => {
     render(
-      <KeycodeTabOrderContext.Provider value={{ order: ['system'], setOrder: vi.fn(), scopeKey: 'u' }}>
+      <KeycodeTabOrderContext.Provider value={{ order: ['system'], setOrder: vi.fn(), scopeKey: 'u', holdOrderReload: noHold }}>
         <TabbedKeycodes />
       </KeycodeTabOrderContext.Provider>,
     )
@@ -306,7 +310,7 @@ describe('in the mode', () => {
     const onSave = vi.fn()
     function ExternalHost() {
       const [order, setOrder] = useState<string[] | undefined>(undefined)
-      const value = useMemo(() => ({ order, setOrder: (next: string[] | undefined) => { onSave(next); setOrder(next) }, scopeKey: 'u' }), [order])
+      const value = useMemo(() => ({ order, setOrder: (next: string[] | undefined) => { onSave(next); setOrder(next) }, scopeKey: 'u', holdOrderReload: noHold }), [order])
       return (
         <KeycodeTabOrderContext.Provider value={value}>
           <button type="button" onClick={() => setOrder(['layers'])}>replace</button>
@@ -560,5 +564,20 @@ describe('leaving the mode', () => {
     fireEvent.pointerDown(tab('system'), { button: 2 })
     expect(selected()).toBe('basic')
   })
-})
 
+  it('holds back a synced order while the mode is open', () => {
+    const release = vi.fn()
+    const holdOrderReload = vi.fn(() => release)
+    render(<Host holdOrderReload={holdOrderReload} />)
+    expect(holdOrderReload).not.toHaveBeenCalled()
+
+    enterByKeyboard()
+    expect(inMode()).toBe(true)
+    expect(holdOrderReload).toHaveBeenCalledTimes(1)
+    expect(release).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByTestId('keycode-tab-reorder-done'))
+    expect(inMode()).toBe(false)
+    expect(release).toHaveBeenCalledTimes(1)
+  })
+})
