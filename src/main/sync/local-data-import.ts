@@ -78,6 +78,8 @@ async function readIndexStrict(path: string): Promise<{ raw: string; parsed: Rec
   }
 }
 
+/** Lock keys for the units an import touches. They follow the scheme of
+ * `lockKeyFor` in sync-merge-dispatch.ts, so the two must agree. */
 function collectLockKeys(data: Record<string, unknown>): string[] {
   const keys: string[] = []
   if (isRecord(data.snapshots)) {

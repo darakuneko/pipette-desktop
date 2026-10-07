@@ -215,6 +215,22 @@ vi.mock('../sync/pack-gc', () => ({
   runPackGcAfterPass: (...args: unknown[]) => mockRunPackGcAfterPass(...args),
 }))
 
+// Pass-through wrappers so a test can stall a merge right after its read of
+// the local index / settings file (inside the merge's read-modify-write).
+vi.mock('../sync/sync-bundle', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../sync/sync-bundle')>()
+  return {
+    ...actual,
+    readIndexFile: vi.fn(actual.readIndexFile),
+    readSettingsFile: vi.fn(actual.readSettingsFile),
+  }
+})
+
+vi.mock('../utils/write-file-atomic', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../utils/write-file-atomic')>()
+  return { ...actual, writeFileAtomic: vi.fn(actual.writeFileAtomic) }
+})
+
 import { decrypt as mockDecryptFn, encrypt as mockEncryptFn, storePassword as mockStorePasswordFn, clearPassword as mockClearPasswordFn, retrievePasswordResult as mockRetrievePasswordResultFn } from '../sync/sync-crypto'
 import type { SyncProgress } from '../../shared/types/sync'
 import {
@@ -244,7 +260,11 @@ import {
   waitForPollPassForTests,
   _resetForTests,
 } from '../sync/sync-service'
-import { syncOrUpload } from '../sync/sync-merge-dispatch'
+import { syncOrUpload, mergeWithRemote } from '../sync/sync-merge-dispatch'
+import { readIndexFile, readSettingsFile } from '../sync/sync-bundle'
+import { writeFileAtomic } from '../utils/write-file-atomic'
+import { withWriteLock } from '../per-uid-write-lock'
+import { saveRecord as saveKeyLabel } from '../key-label-store'
 import { app } from 'electron'
 import { syncRuntime } from '../sync/sync-runtime-state'
 
@@ -259,6 +279,7 @@ const FAKE_TIMER_OPTS: Parameters<typeof vi.useFakeTimers>[0] = {
 // either, so yielding with it lets real fs I/O callbacks run between checks.
 const realNow = performance.now.bind(performance)
 const realSetImmediate = setImmediate
+const realSetTimeout = setTimeout
 // Kept below vitest's default 5 s test timeout so flushUntil's own
 // "timed out waiting for …" error fires before vitest aborts the test.
 const WAIT_TIMEOUT_MS = 3_000
@@ -3628,6 +3649,242 @@ describe('sync-service', () => {
 
       await expect(access(join(mockUserDataPath, 'sync', 'evil.json'))).rejects.toThrow()
       await expect(access(join(mockUserDataPath, 'evil.json'))).rejects.toThrow()
+    })
+  })
+  describe('merge under the stores\' write lock', () => {
+    const UID = '0x1234'
+    const PW = 'test-password'
+
+    interface TestEntry { id: string; label: string; name: string; filename: string; savedAt: string; updatedAt?: string }
+
+    function entry(id: string, savedAt = '2026-01-01T00:00:00.000Z'): TestEntry {
+      return { id, label: id, name: id, filename: `${id}.json`, savedAt, updatedAt: savedAt }
+    }
+
+    function indexEnvelope(syncUnit: string, entries: TestEntry[], extra: Record<string, unknown> = {}): Record<string, unknown> {
+      const files: Record<string, string> = {}
+      for (const e of entries) files[e.filename] = `{"data":"${e.id}"}`
+      const index = { ...extra, entries }
+      files['index.json'] = JSON.stringify(index)
+      return {
+        version: 1,
+        syncUnit,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        salt: 's',
+        iv: 'i',
+        ciphertext: JSON.stringify({ type: 'index', key: syncUnit, index, files }),
+      }
+    }
+
+    async function seedIndex(dir: string, entries: TestEntry[], extra: Record<string, unknown> = {}): Promise<void> {
+      await mkdir(dir, { recursive: true })
+      await writeFile(join(dir, 'index.json'), JSON.stringify({ ...extra, entries }), 'utf-8')
+      for (const e of entries) await writeFile(join(dir, e.filename), `{"data":"${e.id}"}`, 'utf-8')
+    }
+
+    async function readIndex(dir: string): Promise<{ entries: TestEntry[] }> {
+      return JSON.parse(await readFile(join(dir, 'index.json'), 'utf-8')) as { entries: TestEntry[] }
+    }
+
+    async function readIds(dir: string): Promise<string[]> {
+      return (await readIndex(dir)).entries.map((e) => e.id)
+    }
+
+    // Stalls the next call of `fn` right after the real read, until released.
+    function stallAfterRead<A extends unknown[], R>(
+      mocked: (...args: A) => Promise<R>,
+      real: (...args: A) => Promise<R>,
+    ): { reached: () => boolean; release: () => void } {
+      let reached = false
+      let release!: () => void
+      const gate = new Promise<void>((resolve) => { release = resolve })
+      vi.mocked(mocked).mockImplementation(async (...args: A) => {
+        const result = await real(...args)
+        reached = true
+        await gate
+        return result
+      })
+      return { reached: () => reached, release }
+    }
+
+    let realReadIndexFile: typeof readIndexFile
+    let realReadSettingsFile: typeof readSettingsFile
+
+    beforeEach(async () => {
+      const actual = await vi.importActual<typeof import('../sync/sync-bundle')>('../sync/sync-bundle')
+      realReadIndexFile = actual.readIndexFile
+      realReadSettingsFile = actual.readSettingsFile
+      vi.mocked(readIndexFile).mockImplementation(realReadIndexFile)
+      vi.mocked(readSettingsFile).mockImplementation(realReadSettingsFile)
+    })
+
+    afterEach(() => {
+      vi.mocked(readIndexFile).mockImplementation(realReadIndexFile)
+      vi.mocked(readSettingsFile).mockImplementation(realReadSettingsFile)
+    })
+
+    // Issues a concurrent writer while the merge is stalled holding its lock,
+    // then gives the writer a bounded real-time window to enter its locked
+    // section. With the lock it stays queued (enteredEarly === false). Without
+    // it, the writer is awaited to completion before the gate opens, so the
+    // merge's stale write provably lands last and the assertions fail.
+    async function raceWriterAgainstStalledMerge(
+      stall: { release: () => void },
+      merge: Promise<unknown>,
+      startWriter: (markEntered: () => void) => Promise<unknown>,
+    ): Promise<boolean> {
+      let markEntered!: () => void
+      const entered = new Promise<void>((resolve) => { markEntered = resolve })
+      const writer = startWriter(markEntered)
+      const enteredEarly = await Promise.race([
+        entered.then(() => true),
+        new Promise<boolean>((resolve) => { realSetTimeout(resolve, 100, false) }),
+      ])
+      if (enteredEarly) await writer
+      stall.release()
+      await Promise.all([merge, writer])
+      return enteredEarly
+    }
+
+    async function runIndexRace(opts: {
+      syncUnit: string
+      driveFile: DriveFile
+      remote: TestEntry[]
+      extra?: Record<string, unknown>
+      writer: (markEntered: () => void) => Promise<unknown>
+    }): Promise<boolean> {
+      mockDownloadFile.mockImplementation(async () =>
+        indexEnvelope(opts.syncUnit, opts.remote, opts.extra))
+      const stall = stallAfterRead(readIndexFile, realReadIndexFile)
+      const merge = mergeWithRemote(opts.driveFile, opts.syncUnit, PW, [opts.driveFile])
+      await flushUntil(stall.reached, 'the merge to read the local index')
+      return raceWriterAgainstStalledMerge(stall, merge, opts.writer)
+    }
+
+    it('snapshots: a store save during a merge is not overwritten', async () => {
+      const dir = join(mockUserDataPath, 'sync', 'keyboards', UID, 'snapshots')
+      await seedIndex(dir, [entry('local-1')], { uid: UID })
+      const driveFile = { id: 'snap-1', name: driveFileName(`keyboards/${UID}/snapshots`), modifiedTime: '2026-02-01T00:00:00.000Z' }
+
+      const enteredEarly = await runIndexRace({
+        syncUnit: `keyboards/${UID}/snapshots`,
+        driveFile,
+        remote: [entry('remote-1')],
+        extra: { uid: UID },
+        writer: (markEntered) => withWriteLock(UID, async () => {
+          markEntered()
+          const raw = await readIndex(dir)
+          raw.entries.push(entry('local-new'))
+          await writeFile(join(dir, 'index.json'), JSON.stringify(raw), 'utf-8')
+        }),
+      })
+
+      expect(enteredEarly).toBe(false)
+      const ids = await readIds(dir)
+      expect(ids).toContain('remote-1')
+      expect(ids).toContain('local-1')
+      expect(ids).toContain('local-new')
+    })
+
+    it('favorites: a store save during a merge is not overwritten', async () => {
+      const dir = join(mockUserDataPath, 'sync', 'favorites', 'tapDance')
+      await seedIndex(dir, [entry('local-1')], { type: 'tapDance' })
+      const driveFile = makeDriveFile('2026-02-01T00:00:00.000Z')
+
+      const enteredEarly = await runIndexRace({
+        syncUnit: 'favorites/tapDance',
+        driveFile,
+        remote: [entry('remote-1')],
+        extra: { type: 'tapDance' },
+        writer: (markEntered) => withWriteLock('favorites/tapDance', async () => {
+          markEntered()
+          const raw = await readIndex(dir)
+          raw.entries.push(entry('local-new'))
+          await writeFile(join(dir, 'index.json'), JSON.stringify(raw), 'utf-8')
+        }),
+      })
+
+      expect(enteredEarly).toBe(false)
+      const ids = await readIds(dir)
+      expect(ids).toEqual(expect.arrayContaining(['remote-1', 'local-1', 'local-new']))
+    })
+
+    it('key-labels: the store\'s own save serializes with a merge', async () => {
+      const dir = join(mockUserDataPath, 'sync', 'key-labels')
+      await seedIndex(dir, [entry('local-1')])
+      const driveFile = { id: 'kl-1', name: driveFileName('key-labels'), modifiedTime: '2026-02-01T00:00:00.000Z' }
+
+      const enteredEarly = await runIndexRace({
+        syncUnit: 'key-labels',
+        driveFile,
+        remote: [entry('remote-1')],
+        writer: (markEntered) => saveKeyLabel({ name: 'LocalNew', map: {} }).finally(markEntered),
+      })
+
+      expect(enteredEarly).toBe(false)
+      const index = await readIndex(dir)
+      const names = index.entries.map((e) => e.name)
+      expect(names).toEqual(expect.arrayContaining(['remote-1', 'local-1', 'LocalNew']))
+    })
+
+    it('settings: a store write during a merge is not overwritten', async () => {
+      const dir = join(mockUserDataPath, 'sync', 'keyboards', UID)
+      await mkdir(dir, { recursive: true })
+      const filePath = join(dir, 'pipette_settings.json')
+      await writeFile(filePath, JSON.stringify({ theme: 'light', _updatedAt: '2025-01-01T00:00:00.000Z' }), 'utf-8')
+      mockDownloadFile.mockImplementation(async () => makeSettingsEnvelope(UID, '2026-01-01T00:00:00.000Z'))
+      const driveFile = makeSettingsDriveFile(UID, '2026-02-01T00:00:00.000Z')
+
+      const stall = stallAfterRead(readSettingsFile, realReadSettingsFile)
+      const merge = mergeWithRemote(driveFile, `keyboards/${UID}/settings`, PW, [driveFile])
+      await flushUntil(stall.reached, 'the merge to read the local settings')
+      const enteredEarly = await raceWriterAgainstStalledMerge(stall, merge, (markEntered) =>
+        withWriteLock(UID, async () => {
+          markEntered()
+          await writeFile(filePath, JSON.stringify({ theme: 'light', marker: true, _updatedAt: '2026-06-01T00:00:00.000Z' }), 'utf-8')
+        }))
+
+      expect(enteredEarly).toBe(false)
+      const final = JSON.parse(await readFile(filePath, 'utf-8')) as { marker?: boolean }
+      expect(final.marker).toBe(true)
+    })
+
+    it('does not deadlock when the unit lock is held externally', async () => {
+      const dir = join(mockUserDataPath, 'sync', 'keyboards', UID, 'snapshots')
+      await seedIndex(dir, [entry('local-1')], { uid: UID })
+      mockDownloadFile.mockImplementation(async () =>
+        indexEnvelope(`keyboards/${UID}/snapshots`, [entry('remote-1')], { uid: UID }))
+      const driveFile = { id: 'snap-1', name: driveFileName(`keyboards/${UID}/snapshots`), modifiedTime: '2026-02-01T00:00:00.000Z' }
+
+      let release!: () => void
+      const hold = withWriteLock(UID, () => new Promise<void>((resolve) => { release = resolve }))
+      const merge = mergeWithRemote(driveFile, `keyboards/${UID}/snapshots`, PW, [driveFile])
+      await flushUntil(() => true)
+      release()
+      await Promise.all([hold, merge])
+
+      // local-only entry => merge asked for an upload, which ran after the lock was released
+      expect(mockUploadFile).toHaveBeenCalled()
+      expect(await readIds(dir)).toEqual(expect.arrayContaining(['remote-1', 'local-1']))
+    })
+
+    it('writes the settings file and the merged index atomically', async () => {
+      const dir = join(mockUserDataPath, 'sync', 'keyboards', UID)
+      await mkdir(dir, { recursive: true })
+      mockDownloadFile.mockImplementation(async () => makeSettingsEnvelope(UID, '2026-01-01T00:00:00.000Z'))
+      const settingsFile = makeSettingsDriveFile(UID, '2026-02-01T00:00:00.000Z')
+      await mergeWithRemote(settingsFile, `keyboards/${UID}/settings`, PW, [settingsFile])
+
+      const snapDir = join(dir, 'snapshots')
+      mockDownloadFile.mockImplementation(async () =>
+        indexEnvelope(`keyboards/${UID}/snapshots`, [entry('remote-1')], { uid: UID }))
+      const snapFile = { id: 'snap-1', name: driveFileName(`keyboards/${UID}/snapshots`), modifiedTime: '2026-02-01T00:00:00.000Z' }
+      await mergeWithRemote(snapFile, `keyboards/${UID}/snapshots`, PW, [snapFile])
+
+      const written = vi.mocked(writeFileAtomic).mock.calls.map((c) => String(c[0]))
+      expect(written).toContain(join(dir, 'pipette_settings.json'))
+      expect(written).toContain(join(snapDir, 'index.json'))
+      expect(written).toContain(join(snapDir, 'remote-1.json'))
     })
   })
 })

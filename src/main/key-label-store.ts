@@ -6,6 +6,7 @@ import { basename, join } from 'node:path'
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { notifyChange } from './sync/sync-service'
+import { withWriteLock } from './per-uid-write-lock'
 import { safeFilename, isSafePathSegment, tsForFilename } from './utils/safe-filename'
 import type {
   KeyLabelMeta,
@@ -136,7 +137,7 @@ function normalizeFile(parsed: unknown): KeyLabelEntryFile | null {
  * to the qmkId-derived label when the map is empty, matching the
  * historical built-in behaviour.
  */
-async function ensureQwertyEntry(): Promise<void> {
+async function ensureQwertyEntryUnlocked(): Promise<void> {
   const index = await readIndex()
   const existing = index.entries.find((e) => e.id === QWERTY_ENTRY_ID)
   if (existing) {
@@ -168,6 +169,13 @@ async function ensureQwertyEntry(): Promise<void> {
   index.entries.unshift(meta)
   await writeIndex(index)
   notifyChange(KEY_LABEL_SYNC_UNIT)
+}
+
+async function ensureQwertyEntry(): Promise<void> {
+  // List calls are reads; they only wait on writers when the entry really has to be created.
+  const existing = (await readIndex()).entries.find((e) => e.id === QWERTY_ENTRY_ID)
+  if (existing?.uploaderName) return
+  return withWriteLock(KEY_LABEL_SYNC_UNIT, () => ensureQwertyEntryUnlocked())
 }
 
 async function listInternal(includeDeleted: boolean): Promise<KeyLabelMeta[]> {
@@ -219,7 +227,7 @@ async function writeRecord(meta: KeyLabelMeta, data: KeyLabelEntryFile): Promise
   await writeFile(getEntryPath(meta.filename), JSON.stringify(data, null, 2), 'utf-8')
 }
 
-export async function saveRecord(input: SaveRecordInput): Promise<KeyLabelStoreResult<KeyLabelMeta>> {
+async function saveRecordUnlocked(input: SaveRecordInput): Promise<KeyLabelStoreResult<KeyLabelMeta>> {
   const validated = validateName(input.name)
   if (!validated.success || validated.data === undefined) {
     return fail(validated.errorCode ?? 'INVALID_NAME', validated.error ?? 'Invalid name')
@@ -288,7 +296,11 @@ export async function saveRecord(input: SaveRecordInput): Promise<KeyLabelStoreR
   }
 }
 
-export async function renameRecord(id: string, newName: string): Promise<KeyLabelStoreResult<KeyLabelMeta>> {
+export function saveRecord(input: SaveRecordInput): Promise<KeyLabelStoreResult<KeyLabelMeta>> {
+  return withWriteLock(KEY_LABEL_SYNC_UNIT, () => saveRecordUnlocked(input))
+}
+
+async function renameRecordUnlocked(id: string, newName: string): Promise<KeyLabelStoreResult<KeyLabelMeta>> {
   const validated = validateName(newName)
   if (!validated.success || validated.data === undefined) {
     return fail(validated.errorCode ?? 'INVALID_NAME', validated.error ?? 'Invalid name')
@@ -322,7 +334,11 @@ export async function renameRecord(id: string, newName: string): Promise<KeyLabe
   }
 }
 
-export async function deleteRecord(id: string): Promise<KeyLabelStoreResult<void>> {
+export function renameRecord(id: string, newName: string): Promise<KeyLabelStoreResult<KeyLabelMeta>> {
+  return withWriteLock(KEY_LABEL_SYNC_UNIT, () => renameRecordUnlocked(id, newName))
+}
+
+async function deleteRecordUnlocked(id: string): Promise<KeyLabelStoreResult<void>> {
   if (id === QWERTY_ENTRY_ID) {
     return fail('INVALID_NAME', 'QWERTY cannot be deleted')
   }
@@ -343,7 +359,11 @@ export async function deleteRecord(id: string): Promise<KeyLabelStoreResult<void
   }
 }
 
-export async function setHubPostId(
+export function deleteRecord(id: string): Promise<KeyLabelStoreResult<void>> {
+  return withWriteLock(KEY_LABEL_SYNC_UNIT, () => deleteRecordUnlocked(id))
+}
+
+async function setHubPostIdUnlocked(
   id: string,
   hubPostId: string | null,
   uploaderName?: string | null,
@@ -391,6 +411,15 @@ export async function setHubPostId(
   } catch (err) {
     return fail('IO_ERROR', String(err))
   }
+}
+
+export function setHubPostId(
+  id: string,
+  hubPostId: string | null,
+  uploaderName?: string | null,
+  hubUpdatedAt?: string | null,
+): Promise<KeyLabelStoreResult<KeyLabelMeta>> {
+  return withWriteLock(KEY_LABEL_SYNC_UNIT, () => setHubPostIdUnlocked(id, hubPostId, uploaderName, hubUpdatedAt))
 }
 
 /**
@@ -483,7 +512,7 @@ export async function importFromDialog(
  * sorted prefix. Each affected meta has its `updatedAt` bumped so
  * remote machines see the rearrangement at the next sync.
  */
-export async function reorderActive(
+async function reorderActiveUnlocked(
   orderedIds: string[],
 ): Promise<KeyLabelStoreResult<void>> {
   try {
@@ -516,6 +545,12 @@ export async function reorderActive(
   } catch (err) {
     return fail('IO_ERROR', String(err))
   }
+}
+
+export function reorderActive(
+  orderedIds: string[],
+): Promise<KeyLabelStoreResult<void>> {
+  return withWriteLock(KEY_LABEL_SYNC_UNIT, () => reorderActiveUnlocked(orderedIds))
 }
 
 /** Returns true if an active entry with the given name (case-insensitive) exists. */
