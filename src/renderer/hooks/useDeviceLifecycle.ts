@@ -150,10 +150,10 @@ export function useDeviceLifecycle(options: Options) {
           // "not Vial compatible" bailout below).
           saveLastDevice(dev)
           // Pull the cloud copies of keyboards/{uid}/* (and favorites) BEFORE
-          // applying local prefs. Otherwise applyDevicePrefs sees a missing
-          // local file, writes defaults with a fresh _updatedAt, and the
-          // file-level LWW merge later overwrites the good remote copy with
-          // empty defaults (layer names lost on PC switch).
+          // applying local prefs, so prefs reflect the cloud copy when it
+          // lands in time. A missing local file never writes defaults, so a
+          // busy or failed download only means in-memory defaults are shown
+          // until prefs are applied again.
           // Covers favorites too because syncNow has a global `isSyncing`
           // mutex — running the two scopes here as one call avoids a race
           // with useDeviceAutoSync's parallel `syncNow` no-oping silently.

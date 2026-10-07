@@ -1909,6 +1909,24 @@ describe('sync-service', () => {
         expect(downloadedIds).toContain('f2')
       })
 
+      it('downloads the settings file for a keyboard whose local directory exists without any settings file', async () => {
+        const kbDir = join(mockUserDataPath, 'sync', 'keyboards', '0x1234')
+        await mkdir(kbDir, { recursive: true })
+
+        mockListFiles.mockResolvedValue([
+          makeSettingsDriveFile('0x1234', '2025-01-01T00:00:00.000Z'),
+          PASSWORD_CHECK_DRIVE_FILE,
+        ])
+        routeDownloads({
+          'settings-0x1234': () => makeSettingsEnvelope('0x1234', '2025-01-01T00:00:00.000Z'),
+        })
+
+        await executeSync('download')
+
+        expect(mockDownloadFile).toHaveBeenCalledWith('settings-0x1234')
+        await expect(access(join(kbDir, 'pipette_settings.json'))).resolves.toBeUndefined()
+      })
+
       it('does not materialize remote-only keyboards locally when scope is omitted (lazy download)', async () => {
         mockListFiles.mockResolvedValue([
           { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
