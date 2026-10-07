@@ -12,7 +12,7 @@ import { randomUUID } from 'node:crypto'
 import { log } from '../logger'
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import { listFiles, deleteFile, isDataFileName } from './google-drive'
-import { syncRuntime } from './sync-runtime-state'
+import { syncRuntime, claimSyncLock } from './sync-runtime-state'
 import {
   requireSyncCredentials,
   SyncCredentialError,
@@ -50,7 +50,7 @@ import type { PasswordChangeStatus } from '../../shared/types/sync'
  *  while `passwordChangeRun` is set. */
 async function withSyncLock<T>(fn: () => Promise<T>): Promise<T> {
   if (syncRuntime.isSyncing || syncRuntime.analyticsSyncingUids.size > 0) throw new Error('sync.changePasswordInProgress')
-  syncRuntime.isSyncing = true
+  const releaseLock = claimSyncLock()
   const run = fn()
   syncRuntime.passwordChangeRun = run.then(
     () => undefined,
@@ -59,7 +59,7 @@ async function withSyncLock<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await run
   } finally {
-    syncRuntime.isSyncing = false
+    releaseLock()
     syncRuntime.passwordChangeRun = null
   }
 }

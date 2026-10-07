@@ -266,7 +266,8 @@ import { writeFileAtomic } from '../utils/write-file-atomic'
 import { withWriteLock } from '../per-uid-write-lock'
 import { saveRecord as saveKeyLabel } from '../key-label-store'
 import { app } from 'electron'
-import { syncRuntime } from '../sync/sync-runtime-state'
+import { syncRuntime, claimSyncLock, DEBOUNCE_MS } from '../sync/sync-runtime-state'
+import { flushPendingChanges, scheduleFlushIfPending, QUIT_SYNC_DEADLINE_MS } from '../sync/sync-flush'
 
 const POLL_INTERVAL_MS = 3 * 60 * 1000
 
@@ -419,6 +420,17 @@ async function setupLocalFavorite(
   if (dataFile) {
     await writeFile(join(favDir, dataFile.name), dataFile.content, 'utf-8')
   }
+}
+
+function captureBeforeQuitHandler(): (e: { preventDefault: () => void }) => void {
+  setupBeforeQuitHandler()
+  const mockOn = vi.mocked(app.on)
+  // `app.on` is overloaded per Electron event name, so TS narrows the mock's
+  // inferred call-tuple type to whichever overload it picked first. Cast to
+  // string for the comparison since at runtime this is always a plain event name.
+  const match = mockOn.mock.calls.find(([event]) => (event as string) === 'before-quit')
+  if (!match) throw new Error('before-quit handler not registered')
+  return match[1] as (e: { preventDefault: () => void }) => void
 }
 
 describe('sync-service', () => {
@@ -639,33 +651,485 @@ describe('sync-service', () => {
   })
 
   describe('flush sync lock', () => {
-    it('re-schedules flush when sync is in progress', async () => {
+    it('waits for the running sync to end, then flushes without another timer', async () => {
       mockAutoSync = true
-
-      mockListFiles.mockImplementation(
+      mockListFiles.mockImplementationOnce(
         () => new Promise((resolve) => setTimeout(() => resolve([]), 30_000)),
       )
+      mockListFiles.mockResolvedValue([])
 
       const syncPromise = executeSync('download')
+      await flushUntil(() => mockListFiles.mock.calls.length > 0, 'the listing')
 
       notifyChange('favorites/tapDance')
+      // The debounced flush fires while the manual sync holds the lock.
       await vi.advanceTimersByTimeAsync(10_000)
-
       expect(mockListFiles).toHaveBeenCalledTimes(1)
 
-      // The re-scheduled flush can fire inside the next advance, once the
-      // manual sync has released the lock; it must not pick up the slow
-      // listFiles, whose 30 s timer the trailing 10 s advance could never reach.
-      mockListFiles.mockResolvedValue([])
-      await vi.advanceTimersByTimeAsync(30_000)
+      await vi.advanceTimersByTimeAsync(20_000)
       await syncPromise
 
-      // Fires the retry if it is still pending; the lock is free by now,
-      // so the flush starts instead of re-scheduling again.
-      await vi.advanceTimersByTimeAsync(10_000)
+      // The waiting flush starts as soon as the lock is free.
+      await flushUntil(() => mockListFiles.mock.calls.length >= 2, 'the waiting flush to list')
       await waitForSyncIdle()
+      expect(mockListFiles).toHaveBeenCalledTimes(2)
+      expect(hasPendingChanges()).toBe(false)
+    })
+  })
 
-      expect(mockListFiles.mock.calls.length).toBeGreaterThanOrEqual(2)
+  describe('flush lifecycle', () => {
+    const FAV_FILE = 'favorites_tapDance.enc'
+    const OK_UPLOAD = { id: 'file-id', modifiedTime: '2026-01-01T00:00:00.000Z' }
+    const gateReleases: Array<() => void> = []
+
+    const favUploads = (): number => mockUploadFile.mock.calls.filter((call) => call[0] === FAV_FILE).length
+    const quitCalled = (): boolean => vi.mocked(app.quit).mock.calls.length > 0
+
+    /** A promise that settles on `release`; afterEach releases it too. */
+    function makeGate(): { promise: Promise<void>; release: () => void } {
+      let release!: () => void
+      const promise = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      gateReleases.push(release)
+      return { promise, release }
+    }
+
+    /** Holds every upload of `fileName` until `release` is called. */
+    function gateUploadsOf(fileName: string): { release: () => void } {
+      const gate = makeGate()
+      mockUploadFile.mockImplementation(async (name: string) => {
+        if (name === fileName) await gate.promise
+        return OK_UPLOAD
+      })
+      return { release: gate.release }
+    }
+
+    async function turns(count = 5): Promise<void> {
+      for (let i = 0; i < count; i++) {
+        await new Promise<void>((resolve) => realSetImmediate(resolve))
+      }
+    }
+
+    beforeEach(async () => {
+      mockAutoSync = true
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+      mockUploadFile.mockResolvedValue(OK_UPLOAD)
+      await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'data.json', content: '{"data":1}' })
+    })
+
+    afterEach(() => {
+      for (const release of gateReleases.splice(0)) release()
+      mockUploadFile.mockImplementation(async () => OK_UPLOAD)
+      mockListFiles.mockImplementation(async () => [])
+      mockDownloadFile.mockImplementation(async () => ({}))
+    })
+
+    describe('pending units changed during a pass', () => {
+      it('keeps a unit changed during its upload pending, and uploads it again after the debounce', async () => {
+        const gate = gateUploadsOf(FAV_FILE)
+        notifyChange('favorites/tapDance')
+        const flush = flushPendingChanges()
+        await flushUntil(() => favUploads() === 1, 'the upload to start')
+
+        notifyChange('favorites/tapDance')
+        notifyChange('favorites/macro')
+        gate.release()
+        await flush
+
+        expect(syncRuntime.pendingChanges.has('favorites/tapDance')).toBe(true)
+        expect(syncRuntime.pendingChanges.has('favorites/macro')).toBe(true)
+        expect(vi.getTimerCount()).toBe(1)
+
+        await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+        await flushUntil(() => !hasPendingChanges(), 'the retry flush')
+        await waitForSyncIdle()
+        expect(favUploads()).toBe(2)
+      })
+
+      it('removes a unit uploaded without a later change', async () => {
+        notifyChange('favorites/tapDance')
+        await flushPendingChanges()
+
+        expect(favUploads()).toBe(1)
+        expect(hasPendingChanges()).toBe(false)
+        expect(vi.getTimerCount()).toBe(0)
+      })
+
+      it('scoped upload keeps a unit changed during its upload pending', async () => {
+        const gate = gateUploadsOf(FAV_FILE)
+        notifyChange('favorites/tapDance')
+        const sync = executeSync('upload', 'favorites')
+        await flushUntil(() => favUploads() === 1, 'the upload to start')
+
+        notifyChange('favorites/tapDance')
+        gate.release()
+        await sync
+
+        expect(syncRuntime.pendingChanges.has('favorites/tapDance')).toBe(true)
+      })
+
+      it('manual upload keeps a failed unit pending with one retry timer, and settles the uploaded ones', async () => {
+        await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'macro.json', content: '{"data":2}' }, { favoriteType: 'macro' })
+        mockUploadFile.mockImplementation(async (name: string) => {
+          if (name === FAV_FILE) throw new Error('offline')
+          return OK_UPLOAD
+        })
+        notifyChange('favorites/macro')
+
+        const result = await executeSync('upload')
+
+        expect(result.status).toBe('partial')
+        expect(mockUploadFile.mock.calls.some((call) => call[0] === 'favorites_macro.enc')).toBe(true)
+        expect([...syncRuntime.pendingChanges]).toEqual(['favorites/tapDance'])
+        expect(vi.getTimerCount()).toBe(1)
+
+        mockUploadFile.mockImplementation(async () => OK_UPLOAD)
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+        await flushUntil(() => !hasPendingChanges(), 'the retry flush')
+        await waitForSyncIdle()
+        expect(favUploads()).toBe(2)
+      })
+
+      it('scoped upload removes a pending unit it uploaded', async () => {
+        notifyChange('favorites/tapDance')
+        await executeSync('upload', 'favorites')
+
+        expect(favUploads()).toBe(1)
+        expect(hasPendingChanges()).toBe(false)
+      })
+    })
+
+    describe('flush while another pass holds the lock', () => {
+      it('a second flush waits for the first and does not upload twice', async () => {
+        const gate = gateUploadsOf(FAV_FILE)
+        notifyChange('favorites/tapDance')
+        const first = flushPendingChanges()
+        await flushUntil(() => favUploads() === 1, 'the upload to start')
+
+        notifyChange('favorites/tapDance')
+        const second = flushPendingChanges()
+        await turns()
+        expect(favUploads()).toBe(1)
+
+        gate.release()
+        await first
+        await second
+
+        expect(favUploads()).toBe(2)
+        expect(hasPendingChanges()).toBe(false)
+        expect(vi.getTimerCount()).toBe(0)
+      })
+
+      it('two flushes waiting on the same pass do not both take the lock', async () => {
+        await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'macro.json', content: '{"data":2}' }, { favoriteType: 'macro' })
+        const holderGate = makeGate()
+        const waiterGate = makeGate()
+        let tapDanceUploads = 0
+        mockUploadFile.mockImplementation(async (name: string) => {
+          if (name === FAV_FILE && ++tapDanceUploads === 1) await holderGate.promise
+          if (name === 'favorites_macro.enc') await waiterGate.promise
+          return OK_UPLOAD
+        })
+        notifyChange('favorites/tapDance')
+        const holder = flushPendingChanges()
+        await flushUntil(() => favUploads() === 1, 'the holder upload to start')
+        const listsBeforeWaiters = mockListFiles.mock.calls.length
+
+        notifyChange('favorites/tapDance')
+        notifyChange('favorites/macro')
+        const first = flushPendingChanges()
+        const second = flushPendingChanges()
+        holderGate.release()
+        await holder
+        await flushUntil(
+          () => mockUploadFile.mock.calls.some((call) => call[0] === 'favorites_macro.enc'),
+          'the waiter upload to start',
+        )
+        await second
+
+        // Only one waiter took the lock; the other did not list while it runs.
+        expect(isSyncInProgress()).toBe(true)
+        expect(mockListFiles.mock.calls.length).toBe(listsBeforeWaiters + 1)
+
+        waiterGate.release()
+        await first
+        await waitForSyncIdle()
+        expect(favUploads()).toBe(2)
+        expect(mockUploadFile.mock.calls.filter((call) => call[0] === 'favorites_macro.enc')).toHaveLength(1)
+        expect(hasPendingChanges()).toBe(false)
+      })
+    })
+
+    describe('before-quit', () => {
+      it('waits for a running flush upload before quitting', async () => {
+        const gate = gateUploadsOf(FAV_FILE)
+        notifyChange('favorites/tapDance')
+        const flush = flushPendingChanges()
+        await flushUntil(() => favUploads() === 1, 'the upload to start')
+
+        const preventDefault = vi.fn()
+        captureBeforeQuitHandler()({ preventDefault })
+        expect(preventDefault).toHaveBeenCalled()
+        await turns()
+        expect(app.quit).not.toHaveBeenCalled()
+
+        gate.release()
+        await flush
+        await flushUntil(quitCalled, 'the quit phases to call app.quit')
+        expect(hasPendingChanges()).toBe(false)
+        // The deadline timer is cleared once the phases finish.
+        expect(vi.getTimerCount()).toBe(0)
+      })
+
+      it('waits for a running poll, then flushes the pending unit before quitting', async () => {
+        const listGate = makeGate()
+        mockListFiles.mockImplementationOnce(async () => {
+          await listGate.promise
+          return [PASSWORD_CHECK_DRIVE_FILE]
+        })
+        startPolling()
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+        await flushUntil(() => mockListFiles.mock.calls.length === 1, 'the poll to list')
+
+        notifyChange('favorites/tapDance')
+        captureBeforeQuitHandler()({ preventDefault: vi.fn() })
+        await turns()
+        expect(app.quit).not.toHaveBeenCalled()
+
+        listGate.release()
+        await flushUntil(quitCalled, 'the quit phases to call app.quit')
+        expect(favUploads()).toBe(1)
+        const uploadOrder = mockUploadFile.mock.invocationCallOrder.at(-1) ?? Infinity
+        expect(uploadOrder).toBeLessThan(vi.mocked(app.quit).mock.invocationCallOrder[0])
+      })
+
+      it('quits after the deadline when the upload never settles', async () => {
+        const gate = gateUploadsOf(FAV_FILE)
+        notifyChange('favorites/tapDance')
+        const flush = flushPendingChanges()
+        await flushUntil(() => favUploads() === 1, 'the upload to start')
+
+        captureBeforeQuitHandler()({ preventDefault: vi.fn() })
+        await turns()
+        expect(app.quit).not.toHaveBeenCalled()
+
+        await vi.advanceTimersByTimeAsync(QUIT_SYNC_DEADLINE_MS)
+        await flushUntil(quitCalled, 'the deadline to call app.quit')
+        expect(mockLog).toHaveBeenCalledWith('warn', 'before-quit: sync did not finish within the deadline')
+
+        gate.release()
+        await flush
+        await waitForSyncIdle()
+      })
+    })
+
+    describe('retry after failed units', () => {
+      it('arms exactly one timer and retries after the polling interval', async () => {
+        mockUploadFile.mockImplementation(async (name: string) => {
+          if (name === FAV_FILE) throw new Error('offline')
+          return OK_UPLOAD
+        })
+        notifyChange('favorites/tapDance')
+        await flushPendingChanges()
+        expect(hasPendingChanges()).toBe(true)
+        expect(vi.getTimerCount()).toBe(1)
+
+        await flushPendingChanges()
+        expect(vi.getTimerCount()).toBe(1)
+        expect(favUploads()).toBe(2)
+
+        mockUploadFile.mockImplementation(async () => OK_UPLOAD)
+        await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+        expect(favUploads()).toBe(2)
+
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS - DEBOUNCE_MS)
+        await flushUntil(() => !hasPendingChanges(), 'the retry flush')
+        await waitForSyncIdle()
+        expect(favUploads()).toBe(3)
+      })
+    })
+
+    describe('flush timer', () => {
+      it('a partial manual upload keeps an armed debounce timer that fires sooner', async () => {
+        await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'macro.json', content: '{"data":2}' }, { favoriteType: 'macro' })
+        mockUploadFile.mockImplementation(async (name: string) => {
+          if (name === FAV_FILE) throw new Error('offline')
+          return OK_UPLOAD
+        })
+        notifyChange('favorites/macro')
+
+        expect((await executeSync('upload')).status).toBe('partial')
+        expect(vi.getTimerCount()).toBe(1)
+
+        mockUploadFile.mockImplementation(async () => OK_UPLOAD)
+        await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+        await flushUntil(() => !hasPendingChanges(), 'the debounced flush')
+        await waitForSyncIdle()
+        expect(favUploads()).toBe(2)
+      })
+
+      it('a sooner schedule shortens an armed polling-interval retry', async () => {
+        mockUploadFile.mockImplementation(async (name: string) => {
+          if (name === FAV_FILE) throw new Error('offline')
+          return OK_UPLOAD
+        })
+        notifyChange('favorites/tapDance')
+        await flushPendingChanges()
+        expect(vi.getTimerCount()).toBe(1)
+
+        mockUploadFile.mockImplementation(async () => OK_UPLOAD)
+        scheduleFlushIfPending(DEBOUNCE_MS)
+        expect(vi.getTimerCount()).toBe(1)
+
+        await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+        await flushUntil(() => !hasPendingChanges(), 'the shortened retry')
+        await waitForSyncIdle()
+        expect(favUploads()).toBe(2)
+      })
+    })
+
+    describe('auto sync off', () => {
+      it('keeps pending without a timer, and flushes once scheduled after auto sync turns on', async () => {
+        mockAutoSync = false
+        notifyChange('favorites/tapDance')
+        await flushPendingChanges()
+        expect(hasPendingChanges()).toBe(true)
+        expect(vi.getTimerCount()).toBe(0)
+
+        mockAutoSync = true
+        scheduleFlushIfPending()
+        expect(vi.getTimerCount()).toBe(1)
+        await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+        await flushUntil(() => !hasPendingChanges(), 'the scheduled flush')
+        await waitForSyncIdle()
+        expect(favUploads()).toBe(1)
+      })
+
+      it('scheduleFlushIfPending arms no timer when nothing is pending', () => {
+        scheduleFlushIfPending()
+        expect(vi.getTimerCount()).toBe(0)
+      })
+    })
+
+    describe('credentials not ready', () => {
+      const mockRetrievePasswordResult = vi.mocked(mockRetrievePasswordResultFn)
+
+      it.each(['keystoreUnavailable', 'decryptFailed'] as const)(
+        '%s keeps pending and retries after the polling interval',
+        async (reason) => {
+          mockRetrievePasswordResult.mockResolvedValueOnce({ ok: false, reason })
+          notifyChange('favorites/tapDance')
+          await flushPendingChanges()
+          expect(hasPendingChanges()).toBe(true)
+          expect(favUploads()).toBe(0)
+          expect(vi.getTimerCount()).toBe(1)
+
+          await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+          await flushUntil(() => !hasPendingChanges(), 'the retry flush')
+          await waitForSyncIdle()
+          expect(favUploads()).toBe(1)
+        },
+      )
+
+      it('noPasswordFile keeps pending without a timer', async () => {
+        mockRetrievePasswordResult.mockResolvedValueOnce({ ok: false, reason: 'noPasswordFile' })
+        notifyChange('favorites/tapDance')
+        await flushPendingChanges()
+        expect(hasPendingChanges()).toBe(true)
+        expect(vi.getTimerCount()).toBe(0)
+      })
+
+      it('signed out keeps pending without a timer', async () => {
+        mockGetAuthStatus.mockResolvedValueOnce({ authenticated: false })
+        notifyChange('favorites/tapDance')
+        await flushPendingChanges()
+        expect(hasPendingChanges()).toBe(true)
+        expect(vi.getTimerCount()).toBe(0)
+      })
+
+      it('does not arm a retry while quitting', async () => {
+        mockRetrievePasswordResult.mockResolvedValueOnce({ ok: false, reason: 'keystoreUnavailable' })
+        notifyChange('favorites/tapDance')
+        syncRuntime.isQuitting = true
+        await flushPendingChanges()
+        expect(hasPendingChanges()).toBe(true)
+        expect(vi.getTimerCount()).toBe(0)
+      })
+    })
+
+    describe('pre-step failures', () => {
+      const failures: Array<[string, () => void]> = [
+        ['the listing throws', () => { mockListFiles.mockRejectedValueOnce(new Error('offline')) }],
+        ['the format marker cannot be created', () => { mockCreateRawFile.mockRejectedValueOnce(new Error('offline')) }],
+        ['the password check cannot be read', () => { mockDownloadFile.mockRejectedValueOnce(new Error('offline')) }],
+      ]
+
+      it.each(failures)('%s: keeps pending and retries after the polling interval', async (_name, fail) => {
+        fail()
+        notifyChange('favorites/tapDance')
+        await expect(flushPendingChanges()).resolves.toBeUndefined()
+        expect(hasPendingChanges()).toBe(true)
+        expect(favUploads()).toBe(0)
+        expect(vi.getTimerCount()).toBe(1)
+
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+        await flushUntil(() => !hasPendingChanges(), 'the retry flush')
+        await waitForSyncIdle()
+        expect(favUploads()).toBe(1)
+      })
+
+      it('a password mismatch keeps pending without a timer', async () => {
+        vi.mocked(mockDecryptFn).mockRejectedValueOnce(new Error('Decryption failed'))
+        const progressEvents: SyncProgress[] = []
+        setProgressCallback((p) => progressEvents.push({ ...p }))
+        notifyChange('favorites/tapDance')
+
+        await flushPendingChanges()
+
+        expect(progressEvents.some((p) => p.status === 'error' && p.message === 'sync.passwordMismatch')).toBe(true)
+        expect(hasPendingChanges()).toBe(true)
+        expect(favUploads()).toBe(0)
+        expect(vi.getTimerCount()).toBe(0)
+      })
+
+      it.each(failures)('%s while quitting: keeps pending without a timer', async (_name, fail) => {
+        fail()
+        notifyChange('favorites/tapDance')
+        syncRuntime.isQuitting = true
+        await expect(flushPendingChanges()).resolves.toBeUndefined()
+        expect(hasPendingChanges()).toBe(true)
+        expect(vi.getTimerCount()).toBe(0)
+      })
+    })
+
+    describe('sync lock ownership', () => {
+      it('a stale release does not clear a newer pass', () => {
+        const releaseOld = claimSyncLock()
+        syncRuntime.isSyncing = false
+        syncRuntime.inFlightPass = null
+        const releaseNew = claimSyncLock()
+        const newPass = syncRuntime.inFlightPass
+
+        releaseOld()
+        expect(syncRuntime.inFlightPass).toBe(newPass)
+        expect(syncRuntime.isSyncing).toBe(true)
+
+        releaseNew()
+        expect(syncRuntime.inFlightPass).toBeNull()
+        expect(syncRuntime.isSyncing).toBe(false)
+      })
+
+      it('_resetForTests clears the in-flight pass and the pending generations', () => {
+        notifyChange('favorites/tapDance')
+        syncRuntime.inFlightPass = Promise.resolve()
+
+        _resetForTests()
+
+        expect(syncRuntime.inFlightPass).toBeNull()
+        expect(syncRuntime.pendingGeneration.size).toBe(0)
+      })
     })
   })
 
@@ -2439,17 +2903,6 @@ describe('sync-service', () => {
   })
 
   describe('setupBeforeQuitHandler phased ordering', () => {
-    function captureBeforeQuitHandler(): (e: { preventDefault: () => void }) => void {
-      setupBeforeQuitHandler()
-      const mockOn = vi.mocked(app.on)
-      // `app.on` is overloaded per Electron event name, so TS narrows the mock's
-      // inferred call-tuple type to whichever overload it picked first. Cast to
-      // string for the comparison since at runtime this is always a plain event name.
-      const match = mockOn.mock.calls.find(([event]) => (event as string) === 'before-quit')
-      if (!match) throw new Error('before-quit handler not registered')
-      return match[1] as (e: { preventDefault: () => void }) => void
-    }
-
     it('runs pre-sync finalizers before the sync flush, then extra finalizers', async () => {
       const order: string[] = []
       const preSyncFinalizer = {

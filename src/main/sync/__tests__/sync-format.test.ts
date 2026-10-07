@@ -209,8 +209,10 @@ vi.mock('../google-drive', async () => {
 
 import { encrypt, storePassword, retrievePasswordResult, clearPassword } from '../sync-crypto'
 import { isDataFileName, parseSyncFormatFileName, syncFormatFileName } from '../google-drive'
-import { syncRuntime, POLL_INTERVAL_MS } from '../sync-runtime-state'
+import { syncRuntime, POLL_INTERVAL_MS, markPending } from '../sync-runtime-state'
 import { flushPendingChanges } from '../sync-flush'
+import { backfillKeyboardMeta } from '../keyboard-meta'
+import { KEYBOARD_META_SYNC_UNIT } from '../../../shared/types/keyboard-meta'
 import { setPasswordAndValidate } from '../sync-password'
 import { assertSyncAllowed } from '../sync-password-guard'
 import { lockTiming } from '../sync-password-lock'
@@ -372,7 +374,7 @@ describe('sync-format markers', () => {
     })
 
     it('the auto-sync flush creates the marker first', async () => {
-      syncRuntime.pendingChanges.add('favorites/tapDance')
+      markPending('favorites/tapDance')
       await flushPendingChanges()
 
       expectMarkerFirst()
@@ -420,6 +422,18 @@ describe('sync-format markers', () => {
     })
   })
 
+  describe('keyboard meta backfill', () => {
+    it('a download that backfills keyboard meta schedules a flush of it', async () => {
+      vi.mocked(backfillKeyboardMeta).mockResolvedValueOnce({ resolved: 1, failed: [] })
+      vi.useFakeTimers()
+
+      expect((await executeSync('download', 'all')).status).toBe('completed')
+
+      expect(syncRuntime.pendingChanges.has(KEYBOARD_META_SYNC_UNIT)).toBe(true)
+      expect(vi.getTimerCount()).toBe(1)
+    })
+  })
+
   describe('a failed marker create', () => {
     beforeEach(() => {
       drive.createError = new Error('Drive upload failed: 503')
@@ -434,7 +448,7 @@ describe('sync-format markers', () => {
     })
 
     it('stops the flush with an error and keeps the pending changes', async () => {
-      syncRuntime.pendingChanges.add('favorites/tapDance')
+      markPending('favorites/tapDance')
 
       await flushPendingChanges()
 
@@ -477,7 +491,7 @@ describe('sync-format markers', () => {
 
     it('a marker this process created is not created again while listings miss it', async () => {
       await executeSync('upload', 'all')
-      syncRuntime.pendingChanges.add('favorites/tapDance')
+      markPending('favorites/tapDance')
       await flushPendingChanges()
       expect(await executeAnalyticsSync('uid1')).toBe(true)
       await executeSync('download', 'favorites')

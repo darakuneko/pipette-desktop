@@ -5,7 +5,19 @@
 import { app } from 'electron'
 import { listFiles, syncUnitFromFileName, type DriveFile } from './google-drive'
 import { pLimit } from '../../shared/concurrency'
-import { SYNC_CONCURRENCY, syncRuntime, emitProgress, errorMessage, broadcastPendingStatus } from './sync-runtime-state'
+import {
+  SYNC_CONCURRENCY,
+  POLL_INTERVAL_MS,
+  syncRuntime,
+  emitProgress,
+  errorMessage,
+  broadcastPendingStatus,
+  tryClaimSyncLock,
+  snapshotPendingGenerations,
+  settlePending,
+  markPending,
+} from './sync-runtime-state'
+import { scheduleFlushIfPending } from './sync-flush'
 import { requireSyncCredentials, validatePasswordCheck, ensurePasswordCheckValidated } from './sync-password'
 import { localSyncBlock, remoteSyncBlock, emitSyncBlocked } from './sync-password-guard'
 import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
@@ -38,14 +50,15 @@ export async function executeSync(
   direction: 'download' | 'upload',
   scope: SyncScope = 'all',
 ): Promise<SyncExecuteResult> {
-  if (syncRuntime.isSyncing) {
+  let releaseLock = tryClaimSyncLock()
+  if (!releaseLock) {
     // A background poll always settles on its own, so waiting for it keeps a
     // connect-time download from being dropped. Any other holder (another
     // executeSync, a flush) skips, which is how parallel callers dedupe.
     await inFlightPollPass()
-    if (syncRuntime.isSyncing) return { status: 'skipped', skipReason: 'busy' }
+    releaseLock = tryClaimSyncLock()
+    if (!releaseLock) return { status: 'skipped', skipReason: 'busy' }
   }
-  syncRuntime.isSyncing = true
 
   const skipBlocked = (reason: SyncBlockReason): SyncExecuteResult => {
     emitSyncBlocked(direction, reason)
@@ -90,20 +103,24 @@ export async function executeSync(
       if (scope === 'all') {
         const { resolved } = await backfillKeyboardMeta(password, initialFiles)
         if (resolved > 0) {
-          syncRuntime.pendingChanges.add(KEYBOARD_META_SYNC_UNIT)
+          markPending(KEYBOARD_META_SYNC_UNIT)
           broadcastPendingStatus()
+          scheduleFlushIfPending()
         }
       }
     } else {
-      failedUnits = await executeUploadSync(password, initialFiles, scope)
-      // Clear pending changes matching the scope, then re-add failed units
-      for (const unit of syncRuntime.pendingChanges) {
-        if (matchesScope(unit, scope)) syncRuntime.pendingChanges.delete(unit)
-      }
+      // A pending unit this pass uploads stops being pending unless it
+      // changed again during the pass. A failed unit becomes (or stays)
+      // pending, and the auto flush retries it after a polling interval.
+      const generations = snapshotPendingGenerations()
+      const upload = await executeUploadSync(password, initialFiles, scope)
+      failedUnits = upload.failedUnits
+      for (const unit of upload.succeededUnits) settlePending(unit, generations.get(unit) ?? 0)
       for (const unit of failedUnits) {
-        syncRuntime.pendingChanges.add(unit)
+        if (!syncRuntime.pendingChanges.has(unit)) markPending(unit)
       }
       broadcastPendingStatus()
+      if (failedUnits.length > 0) scheduleFlushIfPending(POLL_INTERVAL_MS)
     }
 
     if (failedUnits.length === 0) {
@@ -126,7 +143,7 @@ export async function executeSync(
     })
     throw err
   } finally {
-    syncRuntime.isSyncing = false
+    releaseLock()
   }
 }
 
@@ -191,7 +208,7 @@ async function executeUploadSync(
   password: string,
   prefetchedFiles?: DriveFile[],
   scope: SyncScope = 'all',
-): Promise<string[]> {
+): Promise<{ failedUnits: string[]; succeededUnits: string[] }> {
   const remoteFilesInitial = prefetchedFiles ?? await listFiles()
   // Run own-hash typing-analytics reconcile before collecting units so
   // deleted cloud days don't get re-uploaded and vice-versa. The
@@ -217,6 +234,7 @@ async function executeUploadSync(
   const total = syncUnits.length
   let completed = 0
   const failedUnits: string[] = []
+  const succeededUnits: string[] = []
   const limit = pLimit(SYNC_CONCURRENCY)
 
   await Promise.allSettled(
@@ -233,6 +251,7 @@ async function executeUploadSync(
 
         try {
           await syncOrUpload(syncUnit, password, remoteFiles)
+          succeededUnits.push(syncUnit)
         } catch (err) {
           failedUnits.push(syncUnit)
           emitProgress({
@@ -246,5 +265,5 @@ async function executeUploadSync(
     ),
   )
 
-  return failedUnits
+  return { failedUnits, succeededUnits }
 }

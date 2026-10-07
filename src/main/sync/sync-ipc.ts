@@ -21,6 +21,7 @@ import {
   cancelPendingChanges,
   isSyncInProgress,
   notifyChange,
+  scheduleFlushIfPending,
   setProgressCallback,
   setupBeforeQuitHandler,
   startPolling,
@@ -158,6 +159,8 @@ export function setupSyncIpc(): void {
       // The account may have changed, so its Drive is checked afresh.
       clearSyncFormatStatus()
       void refreshSyncFormatStatus()
+      // Changes kept while signed out go to the signed-in account.
+      scheduleFlushIfPending()
     }),
   )
 
@@ -180,6 +183,7 @@ export function setupSyncIpc(): void {
     (_event, password: string) =>
       wrapIpc('Set password failed', async () => {
         await setPasswordAndValidate(password)
+        scheduleFlushIfPending()
       }),
   )
 
@@ -191,6 +195,7 @@ export function setupSyncIpc(): void {
       wrapIpc('Replace password failed', async () => {
         if (typeof password !== 'string' || password === '') throw new Error('Invalid password')
         await replacePasswordAndValidate(password)
+        scheduleFlushIfPending()
       }),
   )
 
@@ -769,6 +774,8 @@ export function setupSyncIpc(): void {
     if (key === 'autoSync') {
       if (value) {
         startPolling()
+        // A flush with auto sync off keeps its pending changes.
+        scheduleFlushIfPending()
       } else {
         stopPolling()
       }

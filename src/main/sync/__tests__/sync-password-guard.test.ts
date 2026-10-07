@@ -205,7 +205,7 @@ vi.mock('../google-drive', async () => {
 import { encrypt, decrypt, storePassword, retrievePasswordResult } from '../sync-crypto'
 import { PASSWORD_CHANGE_LOCK_FILE } from '../google-drive'
 import { writeChangeState, forgetChangeStateCache } from '../sync-password-change-state'
-import { syncRuntime } from '../sync-runtime-state'
+import { syncRuntime, markPending } from '../sync-runtime-state'
 import { lockTiming } from '../sync-password-lock'
 import { passwordChangeTuning } from '../sync-password-switch'
 import { flushPendingChanges, setupBeforeQuitHandler } from '../sync-flush'
@@ -376,7 +376,7 @@ describe('sync password-change guard', () => {
     })
 
     it('flushPendingChanges keeps the pending changes and reports the reason', async () => {
-      syncRuntime.pendingChanges.add('favorites/tapDance')
+      markPending('favorites/tapDance')
 
       await flushPendingChanges()
 
@@ -443,7 +443,7 @@ describe('sync password-change guard', () => {
   it('a change notified during a blocked flush leaves a single retry timer', async () => {
     await seedLocalChange()
     vi.useFakeTimers()
-    syncRuntime.pendingChanges.add('favorites/tapDance')
+    markPending('favorites/tapDance')
 
     const flushing = flushPendingChanges()
     notifyChange('favorites/macro')
@@ -527,7 +527,7 @@ describe('sync password-change guard', () => {
     it('does not flush pending changes while a local change exists, and still quits', async () => {
       await seedLocalChange()
       setupBeforeQuitHandler()
-      syncRuntime.pendingChanges.add('favorites/tapDance')
+      markPending('favorites/tapDance')
       const preventDefault = vi.fn()
 
       appEvents.handlers.get('before-quit')!({ preventDefault })
@@ -540,7 +540,7 @@ describe('sync password-change guard', () => {
 
     it('flushes when no change is in progress', async () => {
       setupBeforeQuitHandler()
-      syncRuntime.pendingChanges.add('favorites/tapDance')
+      markPending('favorites/tapDance')
 
       appEvents.handlers.get('before-quit')!({ preventDefault: vi.fn() })
       await vi.waitFor(() => expect(mockQuit).toHaveBeenCalled())
@@ -664,7 +664,7 @@ describe('sync password-change guard', () => {
       await setPasswordAndValidate(OLD)
       expect(creates()).toBe(1)
 
-      syncRuntime.pendingChanges.add('favorites/tapDance')
+      markPending('favorites/tapDance')
       await flushPendingChanges()
       expect((await executeSync('upload', 'favorites')).status).toBe('completed')
       expect(await executeAnalyticsSync('uid1')).toBe(true)
@@ -678,26 +678,26 @@ describe('sync password-change guard', () => {
       // Once listed, the created file is the validated one: no download.
       drive.hidden.clear()
       resetDriveLog()
-      syncRuntime.pendingChanges.add('favorites/tapDance')
+      markPending('favorites/tapDance')
       await flushPendingChanges()
       expect(drive.uploads.filter((name) => name === PC_NAME)).toEqual([])
       expect([...syncRuntime.pendingChanges]).toEqual([])
     })
 
     it('flush validates once, skips the check while its modifiedTime is unchanged, and stops on a rewritten one', async () => {
-      syncRuntime.pendingChanges.add('favorites/tapDance')
+      markPending('favorites/tapDance')
       await flushPendingChanges()
       expect(mocks.syncOrUpload).toHaveBeenCalledTimes(1)
       expect(drive.downloads).toEqual([pcId])
 
       resetDriveLog()
-      syncRuntime.pendingChanges.add('favorites/tapDance')
+      markPending('favorites/tapDance')
       await flushPendingChanges()
       expect(mocks.syncOrUpload).toHaveBeenCalledTimes(2)
       expect(drive.downloads).toEqual([])
 
       await rewritePasswordCheck(NEW)
-      syncRuntime.pendingChanges.add('favorites/tapDance')
+      markPending('favorites/tapDance')
       await flushPendingChanges()
 
       expect(drive.downloads).toEqual([pcId])
@@ -781,7 +781,7 @@ describe('sync password-change guard', () => {
 
       // The next flush trusts the validation: no second download.
       resetDriveLog()
-      syncRuntime.pendingChanges.add('favorites/tapDance')
+      markPending('favorites/tapDance')
       await flushPendingChanges()
       expect(drive.downloads).toEqual([])
       expect(mocks.syncOrUpload).toHaveBeenCalled()

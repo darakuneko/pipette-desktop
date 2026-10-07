@@ -19,10 +19,20 @@ vi.mock('../sync-password-change-state', () => ({
   hasChangeState: () => mockHasChangeState(),
 }))
 
-vi.mock('../sync-runtime-state', () => ({
-  syncRuntime: { isSyncing: false, analyticsSyncingUids: new Set<string>() },
-  emitProgress: vi.fn(),
-}))
+vi.mock('../sync-runtime-state', () => {
+  const syncRuntime = { isSyncing: false, analyticsSyncingUids: new Set<string>() }
+  return {
+    syncRuntime,
+    emitProgress: vi.fn(),
+    // Holds only `isSyncing` on this file's stand-in state.
+    claimSyncLock: () => {
+      syncRuntime.isSyncing = true
+      return () => {
+        syncRuntime.isSyncing = false
+      }
+    },
+  }
+})
 
 vi.mock('../../typing-analytics/machine-hash', () => ({
   getMachineHash: vi.fn(async () => 'hash-own'),

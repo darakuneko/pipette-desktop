@@ -12,7 +12,7 @@
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import { listPasswordChangeLocks, readPasswordChangeLockInfo, releasePasswordChangeLock } from './sync-password-lock'
 import { assertNoLocalPasswordChange, assertSyncFormatSupported } from './sync-password-guard'
-import { syncRuntime } from './sync-runtime-state'
+import { syncRuntime, claimSyncLock } from './sync-runtime-state'
 import type { PasswordChangeLockStatus } from '../../shared/types/sync'
 
 /** The earliest lock on Drive (the one that blocks syncing), or null when
@@ -35,13 +35,13 @@ export async function releasePasswordChangeLocks(): Promise<void> {
   if (syncRuntime.isSyncing || syncRuntime.analyticsSyncingUids.size > 0) {
     throw new Error('sync.passwordChange.releaseBusy')
   }
-  syncRuntime.isSyncing = true
+  const releaseLock = claimSyncLock()
   try {
     await assertSyncFormatSupported()
     for (const lock of await listPasswordChangeLocks()) {
       await releasePasswordChangeLock(lock.id)
     }
   } finally {
-    syncRuntime.isSyncing = false
+    releaseLock()
   }
 }
