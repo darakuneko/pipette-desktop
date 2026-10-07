@@ -407,4 +407,36 @@ describe('typing-test-text-store', () => {
       expect((await listMetas())[0].romajiCapable).toBe(false)
     })
   })
+  describe('concurrency', () => {
+    it('two saves issued together both land in the index', async () => {
+      const [a, b] = await Promise.all([
+        saveRecord({ name: 'Alpha', text: 'one two' }),
+        saveRecord({ name: 'Beta', text: 'three four' }),
+      ])
+      expect(a.success).toBe(true)
+      expect(b.success).toBe(true)
+
+      const names = (await listMetas()).map((m) => m.name)
+      expect(names).toContain('Alpha')
+      expect(names).toContain('Beta')
+    })
+
+    it('importFromDialog completes through the locked saveRecord and a confirmed overwrite too', async () => {
+      const filePath = join(mockUserDataPath, 'dup.txt')
+      await writeFile(filePath, 'first text', 'utf-8')
+      showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [filePath] })
+
+      const imported = await importFromDialog(fakeWin)
+      expect(imported.success).toBe(true)
+
+      await writeFile(filePath, 'second text', 'utf-8')
+      const collided = await importFromDialog(fakeWin)
+      expect(collided.errorCode).toBe('DUPLICATE_NAME')
+
+      const confirmed = await confirmImportOverwrite()
+      expect(confirmed.success).toBe(true)
+      expect(confirmed.data?.id).toBe(imported.data?.id)
+      expect(await listMetas()).toHaveLength(1)
+    })
+  })
 })

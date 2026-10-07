@@ -700,4 +700,34 @@ describe('key-label-store', () => {
       expect(qwerty!.deletedAt).toBeUndefined()
     })
   })
+  describe('concurrency', () => {
+    it('two saves issued together both land in the index', async () => {
+      const [a, b] = await Promise.all([
+        saveRecord({ name: 'Alpha', map: { KC_Q: 'A' } }),
+        saveRecord({ name: 'Beta', map: { KC_Q: 'B' } }),
+      ])
+      expect(a.success).toBe(true)
+      expect(b.success).toBe(true)
+
+      const names = (await listMetas()).map((m) => m.name)
+      expect(names).toContain('Alpha')
+      expect(names).toContain('Beta')
+    })
+
+    it('a save racing a rename and a reorder keeps every entry', async () => {
+      const first = await saveRecord({ name: 'One', map: {} })
+      const [renamed, second, reordered] = await Promise.all([
+        renameRecord(first.data!.id, 'Uno'),
+        saveRecord({ name: 'Two', map: {} }),
+        reorderActive([first.data!.id]),
+      ])
+      expect(renamed.success).toBe(true)
+      expect(second.success).toBe(true)
+      expect(reordered.success).toBe(true)
+
+      const names = (await listMetas()).map((m) => m.name)
+      expect(names).toContain('Uno')
+      expect(names).toContain('Two')
+    })
+  })
 })

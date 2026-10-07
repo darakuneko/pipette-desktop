@@ -5,7 +5,7 @@
 
 import { app } from 'electron'
 import { join } from 'node:path'
-import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises'
+import { writeFile, mkdir, unlink } from 'node:fs/promises'
 import { encrypt, decrypt } from './sync-crypto'
 import { listFiles, uploadFile, downloadFile, driveFileName, type DriveFile } from './google-drive'
 import { mergeEntries, gcTombstones, safeTimestamp, MalformedSyncBundleError, type EntryMeta } from './merge'
@@ -17,7 +17,8 @@ import {
   pinPackBodyMtimeAfterUpload,
   statPackBodyLocalMtime,
 } from './pack-bundle-merge'
-import { readIndexFile, bundleSyncUnit, isRunLogSyncUnit } from './sync-bundle'
+import { readIndexFile, readSettingsFile, bundleSyncUnit, isRunLogSyncUnit } from './sync-bundle'
+import { writeFileAtomic } from '../utils/write-file-atomic'
 import { isSafePathSegment } from '../utils/safe-filename'
 import { MAX_RUN_LOGS_PER_KEYBOARD } from '../../shared/types/typing-run-log'
 import { applyRemoteKeyboardMetaIndex } from './keyboard-meta'
@@ -150,6 +151,18 @@ export async function mergeDeviceDayBundle(
   await saveSyncState(userData, state)
 }
 
+/** Key of the store lock that guards a sync unit's local files: the keyboard
+ * uid for per-keyboard units, `favorites/{type}` for favorites, otherwise the
+ * unit name itself (key-labels, typing-test-texts). The stores do their
+ * read-modify-write under the same key, so a local save and a merge never
+ * interleave. `collectLockKeys` in local-data-import.ts uses the same key
+ * scheme, so the two must agree. */
+function lockKeyFor(syncUnit: string, parts: string[]): string {
+  if (parts[0] === 'keyboards' && parts.length === 3) return parts[1]
+  if (parts[0] === 'favorites' && parts.length === 2) return `favorites/${parts[1]}`
+  return syncUnit
+}
+
 // Merges remote bundle into local state, returns whether remote needs update
 async function mergeSyncUnit(
   syncUnit: string,
@@ -204,21 +217,25 @@ async function mergeSyncUnit(
     const remoteContent = remoteBundle.files['pipette_settings.json']
     if (!remoteContent) return false
 
-    let localTime = 0
-    try {
-      const raw = await readFile(filePath, 'utf-8')
-      const local = JSON.parse(raw) as { _updatedAt?: string }
-      localTime = safeTimestamp(local._updatedAt)
-    } catch { /* no local settings */ }
+    return withWriteLock(lockKeyFor(syncUnit, parts), async () => {
+      let localTime = 0
+      try {
+        const raw = await readSettingsFile(dir)
+        if (raw !== null) {
+          const local = JSON.parse(raw) as { _updatedAt?: string }
+          localTime = safeTimestamp(local._updatedAt)
+        }
+      } catch { /* unreadable local settings */ }
 
-    const remoteSettings = JSON.parse(remoteContent) as { _updatedAt?: string }
-    const remoteTime = safeTimestamp(remoteSettings._updatedAt)
+      const remoteSettings = JSON.parse(remoteContent) as { _updatedAt?: string }
+      const remoteTime = safeTimestamp(remoteSettings._updatedAt)
 
-    if (remoteTime > localTime) {
-      await writeFile(filePath, remoteContent, 'utf-8')
-      return false
-    }
-    return localTime > remoteTime
+      if (remoteTime > localTime) {
+        await writeFileAtomic(filePath, remoteContent)
+        return false
+      }
+      return localTime > remoteTime
+    })
   }
 
   // Handle "i18n/index" / "themes/index" — the language/theme pack
@@ -244,6 +261,14 @@ async function mergeSyncUnit(
   const basePath = join(userData, 'sync', ...parts)
   await mkdir(basePath, { recursive: true })
 
+  return withWriteLock(lockKeyFor(syncUnit, parts), () => mergeIndexBasedLocked(syncUnit, remoteBundle, basePath))
+}
+
+async function mergeIndexBasedLocked(
+  syncUnit: string,
+  remoteBundle: SyncBundle,
+  basePath: string,
+): Promise<boolean> {
   const localIndex = await readIndexFile(basePath)
   // Both sides' index shape is a union of each possible sync unit's own
   // index type, which a generic function call can't unify against — every
@@ -296,7 +321,7 @@ async function mergeSyncUnit(
       continue
     }
     if (filename in remoteBundle.files) {
-      await writeFile(join(basePath, filename), remoteBundle.files[filename], 'utf-8')
+      await writeFileAtomic(join(basePath, filename), remoteBundle.files[filename])
     }
   }
   if (unsafeRemoteFilenames > 0) {
@@ -315,10 +340,9 @@ async function mergeSyncUnit(
     mergedIndex = { ...mergedIndex, entries: result.entries }
   }
 
-  await writeFile(
+  await writeFileAtomic(
     join(basePath, 'index.json'),
     JSON.stringify(mergedIndex, null, 2),
-    'utf-8',
   )
 
   // Unlink files for entries retention evicted during the merge above —

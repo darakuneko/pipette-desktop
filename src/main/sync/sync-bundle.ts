@@ -40,6 +40,15 @@ export async function readIndexFile(dir: string): Promise<FavoriteIndex | Snapsh
   }
 }
 
+/** Raw text of a keyboard's `pipette_settings.json`, or null when missing. */
+export async function readSettingsFile(dir: string): Promise<string | null> {
+  try {
+    return await readFile(join(dir, 'pipette_settings.json'), 'utf-8')
+  } catch {
+    return null
+  }
+}
+
 export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | null> {
   if (syncUnit === KEYBOARD_META_SYNC_UNIT) {
     const index = await readKeyboardMetaIndex()

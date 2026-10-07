@@ -7,6 +7,7 @@ import { join, basename } from 'node:path'
 import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { notifyChange } from './sync/sync-service'
+import { withWriteLock } from './per-uid-write-lock'
 import { isSafePathSegment, tsForFilename } from './utils/safe-filename'
 import { isKanaOnlyText } from '../shared/kana-purity'
 import type {
@@ -193,7 +194,7 @@ async function writeRecord(meta: TypingTestTextMeta, data: TypingTestTextEntryFi
   await writeFile(getEntryPath(meta.filename), JSON.stringify(data, null, 2), 'utf-8')
 }
 
-export async function saveRecord(input: SaveTextInput): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> {
+async function saveRecordUnlocked(input: SaveTextInput): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> {
   const validated = validateName(input.name)
   if (!validated.success || validated.data === undefined) {
     return fail(validated.errorCode ?? 'INVALID_NAME', validated.error ?? 'Invalid name')
@@ -255,7 +256,11 @@ export async function saveRecord(input: SaveTextInput): Promise<TypingTestTextSt
   }
 }
 
-export async function renameRecord(id: string, newName: string): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> {
+export function saveRecord(input: SaveTextInput): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> {
+  return withWriteLock(TYPING_TEST_TEXT_SYNC_UNIT, () => saveRecordUnlocked(input))
+}
+
+async function renameRecordUnlocked(id: string, newName: string): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> {
   const validated = validateName(newName)
   if (!validated.success || validated.data === undefined) {
     return fail(validated.errorCode ?? 'INVALID_NAME', validated.error ?? 'Invalid name')
@@ -293,7 +298,11 @@ export async function renameRecord(id: string, newName: string): Promise<TypingT
   }
 }
 
-export async function deleteRecord(id: string): Promise<TypingTestTextStoreResult<void>> {
+export function renameRecord(id: string, newName: string): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> {
+  return withWriteLock(TYPING_TEST_TEXT_SYNC_UNIT, () => renameRecordUnlocked(id, newName))
+}
+
+async function deleteRecordUnlocked(id: string): Promise<TypingTestTextStoreResult<void>> {
   try {
     const index = await readIndex()
     const meta = index.entries.find((e) => e.id === id)
@@ -309,6 +318,10 @@ export async function deleteRecord(id: string): Promise<TypingTestTextStoreResul
   } catch (err) {
     return fail('IO_ERROR', String(err))
   }
+}
+
+export function deleteRecord(id: string): Promise<TypingTestTextStoreResult<void>> {
+  return withWriteLock(TYPING_TEST_TEXT_SYNC_UNIT, () => deleteRecordUnlocked(id))
 }
 
 /** Returns true if an active entry with the given name (case-insensitive) exists. */
