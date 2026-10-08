@@ -11,6 +11,8 @@ import { deleteFilesByPrefix, deleteFilesByExactName, deleteFilesById, driveFile
 import {
   withResetLock,
   cancelPendingChanges,
+  copyPendingState,
+  restoreCancelledPending,
   notifyChange,
   stopPolling,
   listLocalKeyboardUids,
@@ -215,9 +217,27 @@ export function setupSyncResetIpc(): void {
           ...(targets.i18nPacks ? [I18N_SYNC_UNIT_PREFIX] : []),
           ...(targets.themePacks ? [THEME_SYNC_UNIT_PREFIX] : []),
         ]
+        const pendingBeforeCancel = targets.appSettings ? copyPendingState() : null
         cancelPendingChanges(cancelled, { writeAlways: true })
-        // Clearing appSettings resets autoSync config, so stop polling to match
-        if (targets.appSettings) stopPolling()
+        if (pendingBeforeCancel) {
+          // Removing local/auth signs out, so it is done as a sign-out: the
+          // account's unsent changes are held for its next sign-in, and the
+          // cached tokens and account caches are dropped with the token
+          // file. It can fail (the hold is written first), so it runs before
+          // anything is removed. On a failure the reset ends with nothing
+          // removed, the sign-in and settings kept, polling still running,
+          // and the units the cancel removed put back pending, keeping any
+          // marked since (written now, or by the next pending write if this
+          // write fails too).
+          try {
+            await signOutKeepingPendingLocked()
+          } catch (err) {
+            restoreCancelledPending(pendingBeforeCancel)
+            throw err
+          }
+          // Clearing appSettings resets autoSync config, so stop polling to match
+          stopPolling()
+        }
         if (targets.keyboards) {
           await deleteTypingForAllKeyboards()
           // The cleanup's flush marks the keyboards' analytics units pending.
@@ -239,10 +259,6 @@ export function setupSyncResetIpc(): void {
         }
         if (targets.appSettings) {
           getAppConfigStore().clear()
-          // Removing local/auth signs out, so it is done as a sign-out: the
-          // account's unsent changes are held for its next sign-in and the
-          // cached tokens are dropped with the token file.
-          await signOutKeepingPendingLocked()
           await rm(join(userData, 'local', 'auth'), { recursive: true, force: true })
           forgetChangeStateCache()
           await rm(join(userData, 'local', 'downloads', 'languages'), { recursive: true, force: true })

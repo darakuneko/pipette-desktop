@@ -382,7 +382,7 @@ function LocalApplicationContent({
             </button>
           </div>
         </div>
-        <AppSettingsReset troubleshoot={troubleshoot} t={t} />
+        <AppSettingsReset troubleshoot={troubleshoot} />
       </section>
     </div>
   )
@@ -391,35 +391,57 @@ function LocalApplicationContent({
 /** Simple application settings reset with confirm */
 function AppSettingsReset({
   troubleshoot,
-  t,
 }: {
   troubleshoot: ReturnType<typeof useTroubleshooting>
-  t: (key: string, opts?: Record<string, unknown>) => string
 }) {
+  const { t } = useTranslation()
   const [confirming, setConfirming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleReset(): Promise<void> {
-    await window.vialAPI.resetLocalTargets({ keyboards: false, favorites: false, appSettings: true })
+    setError(null)
+    try {
+      const result = await window.vialAPI.resetLocalTargets({ keyboards: false, favorites: false, appSettings: true })
+      if (!result.success) {
+        // e.g. the sign-out could not be written, which stops the reset
+        // before anything is removed
+        setError(result.error ? t(result.error, result.error) : t('statusBar.sync.error'))
+        return
+      }
+    } catch {
+      setError(t('statusBar.sync.error'))
+      return
+    }
     setConfirming(false)
   }
 
   return (
-    <ConfirmResetRow
-      rowClassName="flex items-center justify-between"
-      rowTestid="app-settings-reset"
-      labelClassName="text-sm text-content-secondary"
-      label={t('dataModal.resetAppSettings')}
-      triggerLabel={t('common.reset')}
-      confirmLabel={t('common.confirmReset')}
-      cancelLabel={t('common.cancel')}
-      confirming={confirming}
-      busy={troubleshoot.busy}
-      onTrigger={() => setConfirming(true)}
-      onConfirm={() => void handleReset()}
-      onCancel={() => setConfirming(false)}
-      triggerTestid="app-reset-btn"
-      confirmTestid="app-reset-confirm"
-      cancelTestid="app-reset-cancel"
-    />
+    <>
+      {error && (
+        <div className="mb-2 text-xs text-danger" data-testid="app-settings-reset-error">
+          {error}
+        </div>
+      )}
+      <ConfirmResetRow
+        rowClassName="flex items-center justify-between"
+        rowTestid="app-settings-reset"
+        labelClassName="text-sm text-content-secondary"
+        label={t('dataModal.resetAppSettings')}
+        triggerLabel={t('common.reset')}
+        confirmLabel={t('common.confirmReset')}
+        cancelLabel={t('common.cancel')}
+        confirming={confirming}
+        busy={troubleshoot.busy}
+        onTrigger={() => setConfirming(true)}
+        onConfirm={() => void handleReset()}
+        onCancel={() => {
+          setConfirming(false)
+          setError(null)
+        }}
+        triggerTestid="app-reset-btn"
+        confirmTestid="app-reset-confirm"
+        cancelTestid="app-reset-cancel"
+      />
+    </>
   )
 }

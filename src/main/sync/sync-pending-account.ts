@@ -15,8 +15,11 @@
 // started under one account is sent with another account's tokens. A
 // sign-out waits the same way but goes ahead after the wait: requests sent
 // after the tokens are gone fail instead of reaching another account.
+// Both forget what this process remembers about the previous account
+// (`forgetAccountCaches`) once the stored sign-in has changed.
 
 import { getAccountSub, signOut } from './google-auth'
+import { forgetAccountCaches } from './sync-account-caches'
 import {
   syncRuntime,
   markPending,
@@ -31,6 +34,16 @@ import {
 export const ACCOUNT_SWITCH_WAIT_MS = 30_000
 
 export const ACCOUNT_SWITCH_BUSY_MESSAGE = 'Cannot switch accounts while sync is in progress. Try again in a moment.'
+
+/** A sign-in or sign-out refused because sync work is running; `reason`
+ *  reaches the renderer through the IPC result (sync-ipc-wrap.ts), which
+ *  shows its own message for it. */
+export class AccountSwitchBusyError extends Error {
+  readonly reason = 'syncBusy' as const
+  constructor() {
+    super(ACCOUNT_SWITCH_BUSY_MESSAGE)
+  }
+}
 
 /** Moves the active units to the held set of `owner`. */
 function holdActiveFor(owner: string): void {
@@ -112,18 +125,18 @@ async function claimOwnerlessForSignedInAccount(): Promise<void> {
 /** Runs `switchTokens` with `accountSwitching` set, after waiting (up to
  *  `ACCOUNT_SWITCH_WAIT_MS`) for the sync lock and for the lock-free
  *  writers to finish, holding the lock when it was free in time. When the
- *  wait runs out, `ifBusy: 'refuse'` throws `ACCOUNT_SWITCH_BUSY_MESSAGE`
+ *  wait runs out, `ifBusy: 'refuse'` throws `AccountSwitchBusyError`
  *  without running `switchTokens`; `'proceed'` runs it anyway. Only one
  *  switch runs at a time; another is refused at once. */
 async function duringAccountSwitch(ifBusy: 'refuse' | 'proceed', switchTokens: () => Promise<void>): Promise<void> {
-  if (syncRuntime.accountSwitching) throw new Error(ACCOUNT_SWITCH_BUSY_MESSAGE)
+  if (syncRuntime.accountSwitching) throw new AccountSwitchBusyError()
   syncRuntime.accountSwitching = true
   let release: (() => void) | null = null
   try {
     const deadline = Date.now() + ACCOUNT_SWITCH_WAIT_MS
     release = await claimSyncLockBy(deadline)
     const idle = release !== null && await waitForLockFreeWritersBy(deadline)
-    if (!idle && ifBusy === 'refuse') throw new Error(ACCOUNT_SWITCH_BUSY_MESSAGE)
+    if (!idle && ifBusy === 'refuse') throw new AccountSwitchBusyError()
     await switchTokens()
   } finally {
     release?.()
@@ -134,9 +147,10 @@ async function duringAccountSwitch(ifBusy: 'refuse' | 'proceed', switchTokens: (
 /** The token switch of a new sign-in (google-auth.ts `TokenSwitch`): once
  *  running sync work has finished (see the module comment), gives
  *  ownerless units to the account still signed in, hands the pending units
- *  to `newAccountSub`'s account, and then stores the new tokens. Each
- *  ownership change is written first; if it cannot be, the sign-in fails
- *  and the old tokens stay. */
+ *  to `newAccountSub`'s account, stores the new tokens, and forgets the
+ *  previous account's caches before the lock is released. Each ownership
+ *  change is written first; if it cannot be, the sign-in fails and the old
+ *  tokens (and caches) stay. */
 export async function switchAccountKeepingPending(
   storeTokens: () => Promise<void>,
   newAccountSub: string | null,
@@ -149,6 +163,7 @@ export async function switchAccountKeepingPending(
     await storeTokens()
     // Those ids are files of the previous account's Drive.
     syncRuntime.createdFileIds.clear()
+    forgetAccountCaches()
   })
 }
 
@@ -168,9 +183,10 @@ export function markPendingFor(owner: string | null, syncUnit: string): void {
 
 /** Signs out of Google (google-auth.ts `signOut`: the token file and the
  *  cached tokens), first holding the account's pending units for its next
- *  sign-in; changes made from here on belong to whoever signs in next. If
- *  that cannot be written, it throws and the tokens stay. The caller holds
- *  the sync lock (a reset removing the stored sign-in). */
+ *  sign-in, then forgets the account's caches; changes made from here on
+ *  belong to whoever signs in next. If the hold cannot be written, it
+ *  throws and the tokens and caches stay. The caller holds the sync lock
+ *  (a reset removing the stored sign-in). */
 export async function signOutKeepingPendingLocked(): Promise<void> {
   await claimOwnerlessForSignedInAccount()
   changeOwnershipDurably(() => {
@@ -182,6 +198,7 @@ export async function signOutKeepingPendingLocked(): Promise<void> {
   })
   await signOut()
   syncRuntime.createdFileIds.clear()
+  forgetAccountCaches()
 }
 
 /** `signOutKeepingPendingLocked` once running sync work has finished, or

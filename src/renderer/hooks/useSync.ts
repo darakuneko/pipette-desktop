@@ -27,6 +27,16 @@ const SYNC_STATUS_MAP: Record<SyncStatus, SyncStatusType> & Record<SyncTerminalS
   partial: 'partial',
 }
 
+/** Thrown by `startAuth` when signing in fails; `reason` is set when the
+ *  main process said why, so the caller can show its own message. */
+export class SyncAuthStartError extends Error {
+  readonly reason: SyncOperationResult['reason']
+  constructor(message: string, reason?: SyncOperationResult['reason']) {
+    super(message)
+    this.reason = reason
+  }
+}
+
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 2000
 
@@ -176,7 +186,7 @@ export function useSync(): UseSyncReturn {
     if (result.success) {
       await refreshStatus()
     } else {
-      throw new Error(result.error ?? 'Auth failed')
+      throw new SyncAuthStartError(result.error ?? 'Auth failed', result.reason)
     }
   }, [refreshStatus])
 

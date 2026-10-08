@@ -11,7 +11,6 @@ import {
   checkPasswordStrength,
 } from './sync-crypto'
 import { startOAuthFlow, getAuthStatus } from './google-auth'
-import { clearHubTokenCache } from '../hub/hub-ipc'
 import { broadcastToAllWindows } from '../utils/broadcast'
 import {
   executeAnalyticsSync,
@@ -27,11 +26,8 @@ import {
   startPollingAtLaunch,
   collectAllSyncUnits,
   bundleSyncUnit,
-  resetPasswordCheckCache,
-  forgetCreatedSyncFormatMarker,
   getCachedSyncFormatStatus,
   refreshSyncFormatStatus,
-  clearSyncFormatStatus,
   setSyncFormatStatusListener,
   listUndecryptableFiles,
   scanRemoteData,
@@ -126,12 +122,12 @@ export function setupSyncIpc(): void {
   // --- Auth ---
   secureHandle(IpcChannels.SYNC_AUTH_START, () =>
     wrapIpc('Auth failed', async () => {
-      // The new tokens are stored holding the sync lock. Changes kept while
-      // signed out, and those this account left unsent, go to it; another
-      // account's changes are held.
+      // The new tokens are stored holding the sync lock, and the previous
+      // account's caches (Hub JWT, password-check, sync-format status) are
+      // forgotten. Changes kept while signed out, and those this account
+      // left unsent, go to it; another account's changes are held.
       await startOAuthFlow(switchAccountKeepingPending)
       // The account may have changed, so its Drive is checked afresh.
-      clearSyncFormatStatus()
       void refreshSyncFormatStatus()
       scheduleFlushIfPending()
       startPollingIfAutoSync()
@@ -142,13 +138,11 @@ export function setupSyncIpc(): void {
 
   secureHandle(IpcChannels.SYNC_AUTH_SIGN_OUT, () =>
     wrapIpc('Sign out failed', async () => {
-      stopPolling()
-      clearHubTokenCache()
-      resetPasswordCheckCache()
-      forgetCreatedSyncFormatMarker()
-      clearSyncFormatStatus()
-      // This account's unsent changes are held for its next sign-in.
+      // This account's unsent changes are held for its next sign-in; its
+      // caches are forgotten once the tokens are gone. A failed sign-out
+      // keeps the account signed in, so polling keeps running.
       await signOutKeepingPending()
+      stopPolling()
     }),
   )
 

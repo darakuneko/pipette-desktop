@@ -23,9 +23,10 @@ vi.mock('node:fs/promises', () => ({
   mkdir: vi.fn(async () => {}),
 }))
 
+const mockClearAppConfig = vi.fn()
 vi.mock('../../app-config', () => ({
   loadAppConfig: vi.fn(() => ({ autoSync: false })),
-  getAppConfigStore: vi.fn(() => ({ clear: vi.fn() })),
+  getAppConfigStore: vi.fn(() => ({ clear: mockClearAppConfig })),
   onAppConfigChange: vi.fn(),
 }))
 
@@ -39,10 +40,6 @@ const mockGetAuthStatus = vi.fn(async (): Promise<unknown> => ({ authenticated: 
 vi.mock('../google-auth', () => ({
   startOAuthFlow: (switchTokens?: unknown) => mockStartOAuthFlow(switchTokens),
   getAuthStatus: () => mockGetAuthStatus(),
-}))
-
-vi.mock('../../hub/hub-ipc', () => ({
-  clearHubTokenCache: vi.fn(),
 }))
 
 const mockDeleteFilesByPrefix = vi.fn(async (..._args: unknown[]) => ({ attempted: 0, failed: 0 }))
@@ -74,7 +71,7 @@ const mockAdoptPendingForSignedInAccount = vi.fn(async (): Promise<string | null
 const mockSignOutKeepingPending = vi.fn(async (): Promise<void> => {})
 const mockSignOutKeepingPendingLocked = vi.fn(async (): Promise<void> => {})
 const mockSwitchAccountKeepingPending = vi.fn(async (storeTokens: () => Promise<void>, _newAccountSub: string | null): Promise<void> => storeTokens())
-const { MockSyncBlockedError } = vi.hoisted(() => ({
+const { MockSyncBlockedError, MockAccountSwitchBusyError } = vi.hoisted(() => ({
   MockSyncBlockedError: class MockSyncBlockedError extends Error {
     readonly reason: string | undefined
     constructor(message: string, reason?: string) {
@@ -82,12 +79,15 @@ const { MockSyncBlockedError } = vi.hoisted(() => ({
       this.reason = reason
     }
   },
+  MockAccountSwitchBusyError: class MockAccountSwitchBusyError extends Error {
+    readonly reason = 'syncBusy' as const
+    constructor() {
+      super('Cannot switch accounts while sync is in progress. Try again in a moment.')
+    }
+  },
 }))
-const mockResetPasswordCheckCache = vi.fn()
-const mockForgetCreatedSyncFormatMarker = vi.fn()
 const mockGetCachedSyncFormatStatus = vi.fn((): unknown => null)
 const mockRefreshSyncFormatStatus = vi.fn(async (): Promise<unknown> => null)
-const mockClearSyncFormatStatus = vi.fn()
 const mockSetSyncFormatStatusListener = vi.fn()
 const mockBroadcastToAllWindows = vi.fn()
 vi.mock('../../utils/broadcast', () => ({
@@ -97,6 +97,8 @@ vi.mock('../../utils/broadcast', () => ({
 // below can hold the lock and register analytics writers themselves.
 vi.mock('../sync-service', async () => ({
   withResetLock: (await vi.importActual<typeof import('../sync-reset-lock')>('../sync-reset-lock')).withResetLock,
+  copyPendingState: (await vi.importActual<typeof import('../sync-runtime-state')>('../sync-runtime-state')).copyPendingState,
+  restoreCancelledPending: (await vi.importActual<typeof import('../sync-runtime-state')>('../sync-runtime-state')).restoreCancelledPending,
   executeAnalyticsSync: vi.fn(),
   executeSync: vi.fn(async () => ({ status: 'success' })),
   hasPendingChanges: vi.fn(),
@@ -113,11 +115,8 @@ vi.mock('../sync-service', async () => ({
   collectAllSyncUnits: vi.fn(async () => []),
   bundleSyncUnit: vi.fn(),
   readIndexFile: vi.fn(),
-  resetPasswordCheckCache: () => mockResetPasswordCheckCache(),
-  forgetCreatedSyncFormatMarker: () => mockForgetCreatedSyncFormatMarker(),
   getCachedSyncFormatStatus: () => mockGetCachedSyncFormatStatus(),
   refreshSyncFormatStatus: () => mockRefreshSyncFormatStatus(),
-  clearSyncFormatStatus: () => mockClearSyncFormatStatus(),
   setSyncFormatStatusListener: (listener: unknown) => mockSetSyncFormatStatusListener(listener),
   listUndecryptableFiles: vi.fn(),
   scanRemoteData: vi.fn(),
@@ -147,6 +146,7 @@ vi.mock('../sync-service', async () => ({
   listRemoteFileNames: vi.fn(),
   SyncCredentialError: class SyncCredentialError extends Error {},
   SyncBlockedError: MockSyncBlockedError,
+  AccountSwitchBusyError: MockAccountSwitchBusyError,
   assertSyncAllowed: () => mockAssertSyncAllowed(),
   forgetChangeStateCache: () => mockForgetChangeStateCache(),
   assertNoLocalPasswordChange: () => mockAssertNoLocalPasswordChange(),
@@ -295,13 +295,20 @@ describe('sync-ipc while a sync password change is in progress', () => {
     expect(mockDeleteFilesById).not.toHaveBeenCalled()
   })
 
-  it('SYNC_AUTH_SIGN_OUT forgets the created sync-format marker with the password-check cache', async () => {
-    const result = await getHandler(IpcChannels.SYNC_AUTH_SIGN_OUT)(null)
+  it('SYNC_AUTH_START returns the busy refusal with its reason', async () => {
+    mockSwitchAccountKeepingPending.mockRejectedValueOnce(new MockAccountSwitchBusyError())
+    mockStartOAuthFlow.mockImplementationOnce(async (switchTokens) => {
+      await (switchTokens as (store: () => Promise<void>, sub: string | null) => Promise<void>)(async () => {}, 'account-b')
+    })
 
-    expect(result).toEqual({ success: true })
-    expect(mockResetPasswordCheckCache).toHaveBeenCalledTimes(1)
-    expect(mockForgetCreatedSyncFormatMarker).toHaveBeenCalledTimes(1)
-    expect(mockClearSyncFormatStatus).toHaveBeenCalledTimes(1)
+    const result = await getHandler(IpcChannels.SYNC_AUTH_START)(null)
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Cannot switch accounts while sync is in progress. Try again in a moment.',
+      reason: 'syncBusy',
+    })
+    expect(mockStartPollingIfAutoSync).not.toHaveBeenCalled()
   })
 
   it('RESET_LOCAL_TARGETS refuses to remove app settings while a local password change exists', async () => {
@@ -335,6 +342,93 @@ describe('sync-ipc while a sync password change is in progress', () => {
     expect(mockSignOutKeepingPendingLocked.mock.invocationCallOrder[0])
       .toBeLessThan(vi.mocked(rm).mock.invocationCallOrder[authRemoval])
     expect(mockSignOutKeepingPending).not.toHaveBeenCalled()
+  })
+
+  it('RESET_LOCAL_TARGETS signs out right after the cancel, and stops polling only then, before removing or clearing anything', async () => {
+    const { rm } = await import('node:fs/promises')
+
+    const result = await getHandler(IpcChannels.RESET_LOCAL_TARGETS)(null, { keyboards: true, favorites: true, appSettings: true })
+
+    expect(result.success).toBe(true)
+    const signOut = mockSignOutKeepingPendingLocked.mock.invocationCallOrder[0]
+    expect(mockCancelPendingChanges.mock.invocationCallOrder[0]).toBeLessThan(signOut)
+    expect(signOut).toBeLessThan(mockStopPolling.mock.invocationCallOrder[0])
+    expect(signOut).toBeLessThan(Math.min(...vi.mocked(rm).mock.invocationCallOrder))
+    expect(signOut).toBeLessThan(mockClearAppConfig.mock.invocationCallOrder[0])
+    expect(signOut).toBeLessThan(mockDeleteAllTypingForKeyboard.mock.invocationCallOrder[0] ?? Infinity)
+  })
+
+  it('RESET_LOCAL_TARGETS removes nothing and keeps polling when the sign-out fails', async () => {
+    const { rm } = await import('node:fs/promises')
+    mockSignOutKeepingPendingLocked.mockRejectedValueOnce(new Error('EACCES: sync-pending.json'))
+
+    const result = await getHandler(IpcChannels.RESET_LOCAL_TARGETS)(null, { keyboards: true, favorites: true, appSettings: true })
+
+    expect(result).toEqual({ success: false, error: 'EACCES: sync-pending.json' })
+    expect(rm).not.toHaveBeenCalled()
+    expect(mockClearAppConfig).not.toHaveBeenCalled()
+    expect(mockStopPolling).not.toHaveBeenCalled()
+    expect(mockDeleteAllTypingForKeyboard).not.toHaveBeenCalled()
+    expect(mockForgetChangeStateCache).not.toHaveBeenCalled()
+    expect(mockCancelPendingChanges).toHaveBeenCalledTimes(1)
+  })
+
+  it('RESET_LOCAL_TARGETS puts back the pending units its cancel removed when the sign-out fails', async () => {
+    const actual = await vi.importActual<typeof import('../sync-runtime-state')>('../sync-runtime-state')
+    resetSyncRuntimeForTests()
+    syncRuntime.pendingOwner = 'account-a'
+    actual.markPending('favorites/tapDance')
+    actual.markPending('keyboards/uid1/settings')
+    actual.markPending('i18n/index')
+    syncRuntime.heldPending.set('account-b', new Set(['favorites/macro', 'keyboards/uid2/settings', 'themes/index']))
+    const pendingState = (): unknown => ({
+      owner: syncRuntime.pendingOwner,
+      generations: [...syncRuntime.pendingGeneration].sort(),
+      active: [...syncRuntime.pendingChanges].sort(),
+      held: [...syncRuntime.heldPending].map(([sub, units]) => [sub, [...units].sort()]),
+    })
+    const before = pendingState()
+    mockCancelPendingChanges.mockImplementationOnce((prefixes?: readonly string[], options?: { writeAlways?: boolean }) =>
+      actual.cancelPendingChanges(prefixes, options))
+    let activeAtSignOut: string[] = []
+    mockSignOutKeepingPendingLocked.mockImplementationOnce(async () => {
+      activeAtSignOut = [...syncRuntime.pendingChanges]
+      throw new Error('EACCES: sync-pending.json')
+    })
+
+    const result = await getHandler(IpcChannels.RESET_LOCAL_TARGETS)(null, { keyboards: true, favorites: true, appSettings: true })
+
+    expect(result).toEqual({ success: false, error: 'EACCES: sync-pending.json' })
+    expect(activeAtSignOut).toEqual(['i18n/index'])
+    expect(pendingState()).toEqual(before)
+    resetSyncRuntimeForTests()
+  })
+
+  it('RESET_LOCAL_TARGETS keeps a unit saved during the failing sign-out when it puts the cancelled units back', async () => {
+    const actual = await vi.importActual<typeof import('../sync-runtime-state')>('../sync-runtime-state')
+    resetSyncRuntimeForTests()
+    syncRuntime.pendingOwner = 'account-a'
+    actual.markPending('favorites/tapDance')
+    actual.markPending('favorites/macro')
+    const tapDanceGeneration = actual.pendingGenerationOf('favorites/tapDance')
+    mockCancelPendingChanges.mockImplementationOnce((prefixes?: readonly string[], options?: { writeAlways?: boolean }) =>
+      actual.cancelPendingChanges(prefixes, options))
+    let savedGeneration = 0
+    mockSignOutKeepingPendingLocked.mockImplementationOnce(async () => {
+      // A local save while the sign-out awaits.
+      actual.markPending('favorites/macro')
+      actual.markPending('favorites/combo')
+      savedGeneration = actual.pendingGenerationOf('favorites/macro')
+      throw new Error('EACCES: sync-pending.json')
+    })
+
+    const result = await getHandler(IpcChannels.RESET_LOCAL_TARGETS)(null, { keyboards: false, favorites: true, appSettings: true })
+
+    expect(result.success).toBe(false)
+    expect([...syncRuntime.pendingChanges].sort()).toEqual(['favorites/combo', 'favorites/macro', 'favorites/tapDance'])
+    expect(actual.pendingGenerationOf('favorites/macro')).toBe(savedGeneration)
+    expect(actual.pendingGenerationOf('favorites/tapDance')).toBe(tapDanceGeneration)
+    resetSyncRuntimeForTests()
   })
 
   it('RESET_LOCAL_TARGETS without app settings stays signed in', async () => {
@@ -470,13 +564,22 @@ describe('sync-ipc pending changes kept by a flush', () => {
     expect(mockCancelPendingChanges).not.toHaveBeenCalled()
   })
 
-  it('SYNC_AUTH_SIGN_OUT stops polling, then signs out holding the pending changes', async () => {
+  it('SYNC_AUTH_SIGN_OUT signs out holding the pending changes, then stops polling', async () => {
     const result = await getHandler(IpcChannels.SYNC_AUTH_SIGN_OUT)(null)
 
     expect(result).toEqual({ success: true })
     expect(mockSignOutKeepingPending).toHaveBeenCalledTimes(1)
-    expect(mockStopPolling.mock.invocationCallOrder[0])
-      .toBeLessThan(mockSignOutKeepingPending.mock.invocationCallOrder[0])
+    expect(mockSignOutKeepingPending.mock.invocationCallOrder[0])
+      .toBeLessThan(mockStopPolling.mock.invocationCallOrder[0])
+  })
+
+  it('SYNC_AUTH_SIGN_OUT keeps polling when the sign-out fails', async () => {
+    mockSignOutKeepingPending.mockRejectedValueOnce(new Error('EACCES: sync-pending.json'))
+
+    const result = await getHandler(IpcChannels.SYNC_AUTH_SIGN_OUT)(null)
+
+    expect(result).toEqual({ success: false, error: 'EACCES: sync-pending.json' })
+    expect(mockStopPolling).not.toHaveBeenCalled()
   })
 
   it('SYNC_AUTH_START stores the new tokens through the pending account switch, then schedules a flush', async () => {
@@ -694,14 +797,11 @@ describe('sync-ipc sync-format status', () => {
       expect(await getHandler(IpcChannels.SYNC_FORMAT_STATUS)(null)).toBeNull()
     })
 
-    it('a successful sign-in forgets the previous status and checks Drive again', async () => {
+    it('a successful sign-in checks Drive again', async () => {
       const result = await getHandler(IpcChannels.SYNC_AUTH_START)(null)
 
       expect(result).toEqual({ success: true })
-      expect(mockClearSyncFormatStatus).toHaveBeenCalledTimes(1)
       expect(mockRefreshSyncFormatStatus).toHaveBeenCalledTimes(1)
-      expect(mockClearSyncFormatStatus.mock.invocationCallOrder[0])
-        .toBeLessThan(mockRefreshSyncFormatStatus.mock.invocationCallOrder[0])
     })
 
     it('sends every status change to the renderer', () => {
@@ -721,7 +821,6 @@ describe('sync-ipc sync-format status', () => {
       const result = await getHandler(IpcChannels.SYNC_AUTH_START)(null)
 
       expect(result).toEqual({ success: false, error: 'denied' })
-      expect(mockClearSyncFormatStatus).not.toHaveBeenCalled()
       expect(mockRefreshSyncFormatStatus).not.toHaveBeenCalled()
     })
   })
