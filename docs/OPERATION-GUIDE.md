@@ -2054,7 +2054,7 @@ The Tools tab in the Settings modal includes a **Defaults** section for setting 
 
 The Tools tab also exposes a **Key Labels Manage** row (next to the Language Packs row). Click **Edit** to open the Key Labels modal, which manages every label set the app uses to render keycaps in the editor, the Analyze view, and the Layout Comparison.
 
-QWERTY is built-in; every other label set (Dvorak, Colemak, French, Brazilian, …) is downloaded from Pipette Hub or imported from a local `.json` file. Installed entries sync across devices via Cloud Sync, so the same drag order and selection appear on every machine signed into the same account.
+QWERTY is built-in; every other label set (Dvorak, Colemak, French, Brazilian, …) is downloaded from Pipette Hub or imported from a local `.json` file. Installed entries sync across devices via Cloud Sync, so the same label sets and selection appear on every machine signed into the same account. The drag order is kept per device: reordering on one machine does not change the order on another.
 
 **Delete removes the Hub post too, for entries you uploaded.** If the entry you delete is linked to a Hub post you own, Delete also takes that post down from Hub — the local copy and the shared upload disappear together, in one action. If the Hub side fails (for example, no network), the local entry is **not** deleted either — an error is shown under the row (it clears itself after about 10 seconds) and the entry stays put so you can try Delete again. A **downloaded** entry (someone else's upload) deletes locally only, even though it still shows Author/Sync — there's no Hub post of yours to remove, so Delete never makes a Hub call for it. Use **Remove** (in the Hub actions row) instead if you only want to detach your own local copy from Hub while keeping both the local entry and the Hub post — Remove never touches the local copy.
 
@@ -2062,7 +2062,7 @@ QWERTY is built-in; every other label set (Dvorak, Colemak, French, Brazilian, �
 
 ![Key Labels — Installed](screenshots/key-labels-installed.png)
 
-Lists every label set already on this device. Each row shows the label name, the uploader name (when the entry came from Hub), the Hub-side last-update time (`YYYY-MM-DD HH:mm`, mirrors what the Hub website displays), an `.json` export shortcut, and a Delete button. Drag the grip handle on the left to reorder rows — the order is propagated to the Settings dropdown and to every Key Labels picker in the editor. A **Name** button at the left of the toolbar (opposite Import) sorts the list alphabetically instead — click once for ascending, click again for descending; each click applies the new order immediately, the same way a manual drag would, so drag, dropdowns, and sync all stay consistent.
+Lists every label set already on this device. Each row shows the label name, the uploader name (when the entry came from Hub), the Hub-side last-update time (`YYYY-MM-DD HH:mm`, mirrors what the Hub website displays), an `.json` export shortcut, and a Delete button. Drag the grip handle on the left to reorder rows — the order is propagated to the Settings dropdown and to every Key Labels picker in the editor. A **Name** button at the left of the toolbar (opposite Import) sorts the list alphabetically instead — click once for ascending, click again for descending; each click applies the new order immediately, the same way a manual drag would, so drag and dropdowns always stay consistent.
 
 The Name button has three states: ascending (▲) and descending (▼) each show a triangle for as long as that sort still matches the list's order, and a plain "Name" with no triangle once the order no longer matches either sort — which happens the moment you drag a row by hand. There is no button click that returns to a triangled state; only another click (re-applying asc/desc from scratch) or reopening the modal does.
 
@@ -2208,7 +2208,7 @@ Each row shows:
 
 A **pulsing green dot** next to the Sync button indicates that the Hub-side post is newer than the local copy (freshness check runs once per 5 minutes when the modal is open).
 
-Drag the grip handle to reorder the list, including built-in English — the order syncs across devices and is reflected anywhere the pack list is used. A **Name** button at the left of the toolbar (opposite Import) sorts every row alphabetically instead, English included — click once for ascending, click again for descending.
+Drag the grip handle to reorder the list, including built-in English — the order is reflected anywhere the pack list is used on this device (it is kept per device and does not sync). A **Name** button at the left of the toolbar (opposite Import) sorts every row alphabetically instead, English included — click once for ascending, click again for descending.
 
 The Name button's three states (ascending/descending triangle, or a plain "Name" once you drag a row by hand) and what happens on a **single**-file import or Hub download — the new pack is inserted at its correct alphabetical position while a triangle is showing, an overwrite of an existing pack keeps its position, and a brief "Imported {name}" / "Updated {name}" message appears next to the Name button with the row scrolled into view — work exactly as described for Key Labels (§6.2); downloading from Hub follows the same placement rule.
 
@@ -2275,7 +2275,7 @@ Each row shows:
 
 A **pulsing green dot** next to the Sync button indicates that the Hub-side post is newer than the local copy (freshness check runs once per 5 minutes when the modal is open).
 
-Drag the grip handle on the left of each row to reorder theme packs — the order syncs across devices. A **Name** button at the left of the toolbar (opposite Import) sorts the list alphabetically instead — click once for ascending, click again for descending.
+Drag the grip handle on the left of each row to reorder theme packs — the order is kept per device and does not sync. A **Name** button at the left of the toolbar (opposite Import) sorts the list alphabetically instead — click once for ascending, click again for descending.
 
 The Name button's three states (ascending/descending triangle, or a plain "Name" once you drag a row by hand) and what happens on a **single**-file import or Hub download — the new pack is inserted at its correct alphabetical position while a triangle is showing, an overwrite of an existing pack keeps its position, and a brief "Imported {name}" / "Updated {name}" message appears next to the Name button with the row scrolled into view — work exactly as described for Key Labels (§6.2); downloading from Hub follows the same placement rule.
 

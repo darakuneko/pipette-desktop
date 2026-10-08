@@ -130,12 +130,13 @@ function normalizeFile(parsed: unknown): KeyLabelEntryFile | null {
 }
 
 /**
- * Make sure the index has a QWERTY entry. The store now drives the
- * full row list on the modal (including the built-in QWERTY) so that
- * a user-defined order can be persisted *and* synced like any other
- * label. The entry carries an empty `map` — the renderer falls back
- * to the qmkId-derived label when the map is empty, matching the
- * historical built-in behaviour.
+ * Make sure the index has a QWERTY entry. The store drives the full
+ * row list on the modal (including the built-in QWERTY) so that a
+ * user-defined order can be persisted like any other label. The order
+ * is per device: a sync merge keeps this device's order
+ * (`preserveLocalOrder`, `merge.ts`). The entry carries an empty
+ * `map` — the renderer falls back to the qmkId-derived label when the
+ * map is empty, matching the historical built-in behaviour.
  */
 async function ensureQwertyEntryUnlocked(): Promise<void> {
   const index = await readIndex()
@@ -509,8 +510,13 @@ export async function importFromDialog(
 /**
  * Apply a manual order to the active entries. Tombstones and any ids
  * not listed in `orderedIds` keep their relative position behind the
- * sorted prefix. Each affected meta has its `updatedAt` bumped so
- * remote machines see the rearrangement at the next sync.
+ * sorted prefix.
+ *
+ * The order is per device — a sync merge keeps the local order
+ * (`preserveLocalOrder`, `merge.ts`) — so a reorder neither bumps
+ * `updatedAt` nor queues a sync. A bumped `updatedAt` would let a drag
+ * win the per-entry LWW against another device's concurrent delete or
+ * edit, and with no newer timestamp a sync would have nothing to upload.
  */
 async function reorderActiveUnlocked(
   orderedIds: string[],
@@ -522,11 +528,9 @@ async function reorderActiveUnlocked(
 
     const seen = new Set<string>()
     const reordered: KeyLabelMeta[] = []
-    const now = nowIso()
     for (const id of orderedIds) {
       const meta = byId.get(id)
       if (!meta || meta.deletedAt || seen.has(id)) continue
-      meta.updatedAt = now
       reordered.push(meta)
       seen.add(id)
     }
@@ -540,7 +544,6 @@ async function reorderActiveUnlocked(
     }
 
     await writeIndex({ entries: reordered })
-    notifyChange(KEY_LABEL_SYNC_UNIT)
     return ok()
   } catch (err) {
     return fail('IO_ERROR', String(err))

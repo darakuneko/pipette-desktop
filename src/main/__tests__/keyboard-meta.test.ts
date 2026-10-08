@@ -72,6 +72,12 @@ describe('extractDeviceNameFromFilename', () => {
     expect(extractDeviceNameFromFilename('Jeneko Box 42R_2026-03-15T14-35-29.037Z.pipette')).toBe('Jeneko Box 42R')
   })
 
+  it('reads the device name from a filename that ends in the entry id', () => {
+    expect(
+      extractDeviceNameFromFilename('Jeneko Box 42R_2026-03-15T14-35-29.037Z_0b9f6f1e-3c1a-4e0e-9d7a-2f1d5f6b8a90.pipette'),
+    ).toBe('Jeneko Box 42R')
+  })
+
   it('returns null when the filename does not match the expected pattern', () => {
     expect(extractDeviceNameFromFilename('not-a-snapshot.json')).toBeNull()
     expect(extractDeviceNameFromFilename('')).toBeNull()
