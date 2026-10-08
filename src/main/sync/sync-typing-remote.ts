@@ -295,8 +295,8 @@ export async function deleteRemoteTypingDay(
 /** Lazily fetch a single remote (uid, machineHash, day) into the
  * local cache. Returns `true` when the day was downloaded and merged,
  * `false` when the cloud copy was missing, a credential check failed, a
- * reset of this keyboard is running or a sync password change is in
- * progress. Throws
+ * reset of this keyboard is running, a sign-in or sign-out is switching
+ * tokens, or a sync password change is in progress. Throws
  * `PasswordMismatchError` when the password-check does not open with the
  * stored password.
  * Designed for the Sync > Typing > Device lazy-expand flow so the UI
@@ -309,7 +309,9 @@ export async function fetchRemoteTypingDay(
   machineHash: string,
   utcDay: UtcDay,
 ): Promise<boolean> {
-  if (resetHoldsKeyboard(uid)) return false
+  // A token switch (sync-pending-account.ts) waits for the counted
+  // fetches and keeps new ones from starting.
+  if (resetHoldsKeyboard(uid) || syncRuntime.accountSwitching) return false
   const fetches = syncRuntime.remoteTypingDayFetches
   fetches.set(uid, (fetches.get(uid) ?? 0) + 1)
   try {

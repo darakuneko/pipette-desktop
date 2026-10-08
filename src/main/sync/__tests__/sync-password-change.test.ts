@@ -59,6 +59,7 @@ const mockGetAuthStatus = vi.fn(async () => ({ authenticated: true }))
 vi.mock('../google-auth', () => ({
   getAuthStatus: () => mockGetAuthStatus(),
   getAccessToken: vi.fn(async () => 'token'),
+  getAccountSub: vi.fn(async () => null),
 }))
 
 vi.mock('../../typing-analytics/machine-hash', () => ({

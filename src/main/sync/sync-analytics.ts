@@ -28,10 +28,16 @@ import { isAnalyticsSyncUnit, collectAnalyticsSyncUnitsForUid } from './sync-bun
 export async function executeAnalyticsSync(uid: string): Promise<boolean> {
   // A running password-change operation (sync-password-change.ts) holds
   // `passwordChangeRun`, and a running reset of this keyboard shows in
-  // `resetHoldsKeyboard` (sync-reset-lock.ts); each in turn refuses to start
-  // while this uid is in `analyticsSyncingUids`. Every check is synchronous,
-  // so they never overlap.
-  if (syncRuntime.analyticsSyncingUids.has(uid) || syncRuntime.passwordChangeRun || resetHoldsKeyboard(uid)) return false
+  // `resetHoldsKeyboard` (sync-reset-lock.ts), and a token switch shows in
+  // `accountSwitching` (sync-pending-account.ts); each in turn waits or
+  // refuses while this uid is in `analyticsSyncingUids`. Every check is
+  // synchronous, so they never overlap.
+  if (
+    syncRuntime.analyticsSyncingUids.has(uid)
+    || syncRuntime.passwordChangeRun
+    || resetHoldsKeyboard(uid)
+    || syncRuntime.accountSwitching
+  ) return false
   syncRuntime.analyticsSyncingUids.add(uid)
   try {
     const credentials = await requireSyncCredentials()

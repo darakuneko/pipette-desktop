@@ -82,6 +82,7 @@ vi.mock('../sync/google-auth', () => ({
   getAccessToken: vi.fn(async () => 'mock-token'),
   startOAuthFlow: vi.fn(async () => {}),
   signOut: vi.fn(async () => {}),
+  getAccountSub: vi.fn(async () => null),
 }))
 
 vi.mock('../sync/sync-crypto', () => ({
@@ -272,6 +273,8 @@ import { saveRecord as saveKeyLabel } from '../key-label-store'
 import { app } from 'electron'
 import { syncRuntime, claimSyncLock, DEBOUNCE_MS } from '../sync/sync-runtime-state'
 import { flushPendingChanges, scheduleFlushIfPending, QUIT_SYNC_DEADLINE_MS } from '../sync/sync-flush'
+import { PENDING_WRITE_DELAY_MS, restorePendingFromDisk } from '../sync/sync-pending-store'
+import { getAccountSub } from '../sync/google-auth'
 
 const POLL_INTERVAL_MS = 3 * 60 * 1000
 
@@ -487,7 +490,7 @@ describe('sync-service', () => {
       notifyChange('keyboards/uid1/snapshots')
       notifyChange('favorites/tapDance')
 
-      cancelPendingChanges('keyboards/uid1/')
+      cancelPendingChanges(['keyboards/uid1/'])
       expect(hasPendingChanges()).toBe(true) // favorites/tapDance remains
     })
 
@@ -495,7 +498,7 @@ describe('sync-service', () => {
       notifyChange('keyboards/uid1/settings')
       notifyChange('keyboards/uid2/settings')
 
-      cancelPendingChanges('keyboards/uid1/')
+      cancelPendingChanges(['keyboards/uid1/'])
       expect(hasPendingChanges()).toBe(true) // uid2 remains
     })
 
@@ -503,7 +506,7 @@ describe('sync-service', () => {
       notifyChange('keyboards/uid1/settings')
       notifyChange('keyboards/uid10/settings')
 
-      cancelPendingChanges('keyboards/uid1/')
+      cancelPendingChanges(['keyboards/uid1/'])
       expect(hasPendingChanges()).toBe(true) // uid10 remains
     })
   })
@@ -1105,6 +1108,108 @@ describe('sync-service', () => {
         await expect(flushPendingChanges()).resolves.toBeUndefined()
         expect(hasPendingChanges()).toBe(true)
         expect(vi.getTimerCount()).toBe(0)
+      })
+    })
+
+    describe('pending changes kept on disk', () => {
+      const pendingFile = (): string => join(mockUserDataPath, 'local', 'sync-pending.json')
+      const unitsOnDisk = async (): Promise<string[]> =>
+        (JSON.parse(await readFile(pendingFile(), 'utf-8')) as { units: string[] }).units
+
+      beforeEach(() => {
+        restorePendingFromDisk()
+      })
+
+      it('uploads a change left by the last run and writes it out of the file once sent', async () => {
+        notifyChange('favorites/tapDance')
+        await vi.advanceTimersByTimeAsync(PENDING_WRITE_DELAY_MS)
+        expect(await unitsOnDisk()).toEqual(['favorites/tapDance'])
+
+        // A restart: memory is gone, the file stays.
+        _resetForTests()
+        restorePendingFromDisk()
+        expect(hasPendingChanges()).toBe(true)
+
+        await flushPendingChanges()
+        expect(favUploads()).toBe(1)
+        expect(hasPendingChanges()).toBe(false)
+        await vi.advanceTimersByTimeAsync(PENDING_WRITE_DELAY_MS)
+        expect(await unitsOnDisk()).toEqual([])
+      })
+
+      it('holds units changed under another account instead of uploading them', async () => {
+        syncRuntime.pendingOwner = 'account-a'
+        notifyChange('favorites/tapDance')
+        vi.mocked(getAccountSub).mockResolvedValueOnce('account-b')
+
+        await flushPendingChanges()
+
+        expect(favUploads()).toBe(0)
+        expect(hasPendingChanges()).toBe(false)
+        expect([...(syncRuntime.heldPending.get('account-a') ?? [])]).toEqual(['favorites/tapDance'])
+        expect(JSON.parse(await readFile(pendingFile(), 'utf-8'))).toEqual({
+          version: 1,
+          owner: 'account-b',
+          units: [],
+          held: { 'account-a': ['favorites/tapDance'] },
+        })
+      })
+
+      it('uploads the units held for the signed-in account with its next change', async () => {
+        syncRuntime.pendingOwner = 'account-b'
+        syncRuntime.heldPending.set('account-a', new Set(['favorites/tapDance']))
+        notifyChange('favorites/macro')
+        vi.mocked(getAccountSub).mockResolvedValueOnce('account-a')
+
+        await flushPendingChanges()
+
+        expect(favUploads()).toBe(1)
+        expect(syncRuntime.heldPending.get('account-b')).toEqual(new Set(['favorites/macro']))
+        expect(syncRuntime.pendingChanges.has('favorites/tapDance')).toBe(false)
+      })
+
+      it('before-quit with nothing left to do writes the last settle at once', async () => {
+        notifyChange('favorites/tapDance')
+        await vi.advanceTimersByTimeAsync(PENDING_WRITE_DELAY_MS)
+        await flushPendingChanges()
+        expect(await unitsOnDisk()).toEqual(['favorites/tapDance'])
+
+        const preventDefault = vi.fn()
+        captureBeforeQuitHandler()({ preventDefault })
+
+        expect(preventDefault).not.toHaveBeenCalled()
+        expect(await unitsOnDisk()).toEqual([])
+      })
+
+      it('writes what is still pending before quitting after the deadline', async () => {
+        const gate = gateUploadsOf(FAV_FILE)
+        notifyChange('favorites/tapDance')
+        const flush = flushPendingChanges()
+        await flushUntil(() => favUploads() === 1, 'the upload to start')
+        // The scheduled write has run; only the quit can bring the file back.
+        await vi.advanceTimersByTimeAsync(PENDING_WRITE_DELAY_MS)
+        await rm(pendingFile(), { force: true })
+
+        captureBeforeQuitHandler()({ preventDefault: vi.fn() })
+        await vi.advanceTimersByTimeAsync(QUIT_SYNC_DEADLINE_MS)
+        await flushUntil(quitCalled, 'the deadline to call app.quit')
+
+        expect(await unitsOnDisk()).toEqual(['favorites/tapDance'])
+
+        gate.release()
+        await flush
+        await waitForSyncIdle()
+      })
+
+      it('keeps a change kept by a flush with auto sync off for the next launch', async () => {
+        mockAutoSync = false
+        notifyChange('favorites/tapDance')
+        await flushPendingChanges()
+
+        captureBeforeQuitHandler()({ preventDefault: vi.fn() })
+        await flushUntil(quitCalled, 'the quit phases to call app.quit')
+
+        expect(await unitsOnDisk()).toEqual(['favorites/tapDance'])
       })
     })
 
@@ -3275,6 +3380,18 @@ describe('sync-service', () => {
 
       await expect(setPasswordAndValidate('wrong-password')).rejects.toThrow()
       expect(mockClearPassword).toHaveBeenCalled()
+    })
+  })
+
+  describe('while a sign-in or sign-out switches tokens', () => {
+    it('an analytics sync and a remote day fetch do not start', async () => {
+      syncRuntime.accountSwitching = true
+
+      expect(await executeAnalyticsSync('uid1')).toBe(false)
+      expect(await fetchRemoteTypingDay('uid1', 'hash1', '2026-10-01')).toBe(false)
+      expect(syncRuntime.analyticsSyncingUids.size).toBe(0)
+      expect(syncRuntime.remoteTypingDayFetches.size).toBe(0)
+      expect(mockListFiles).not.toHaveBeenCalled()
     })
   })
 

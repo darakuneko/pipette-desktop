@@ -58,6 +58,7 @@ vi.mock('../../logger', () => ({ log: vi.fn() }))
 vi.mock('../google-auth', () => ({
   getAuthStatus: vi.fn(async () => ({ authenticated: true })),
   getAccessToken: vi.fn(async () => 'token'),
+  getAccountSub: vi.fn(async () => null),
 }))
 
 vi.mock('../../typing-analytics/machine-hash', () => ({
