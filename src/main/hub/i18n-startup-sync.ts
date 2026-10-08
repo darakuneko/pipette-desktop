@@ -11,7 +11,9 @@
 //      `hubUpdatedAt` (or where `hubUpdatedAt` is unset), download the
 //      fresh pack body, validate it, and persist via `savePack`. Pack
 //      id, hubPostId, enabled state, and rename history are preserved
-//      because we pass the existing local id back into `savePack`.
+//      because we pass the existing local id back into `savePack`, as an
+//      unattended save: it is skipped when the pack was deleted or
+//      unlinked meanwhile, and keeps the pack's current name.
 //   4. Errors are logged and counted but never thrown — startup must
 //      not be blocked by network glitches or a single bad pack.
 //
@@ -153,6 +155,7 @@ export async function syncHubI18nPacksOnStartup(): Promise<I18nStartupSyncResult
         pack: exportData.pack,
         hubPostId,
         hubUpdatedAt: remote,
+        unattended: true,
         // `enabled` is intentionally omitted so `savePack` inherits the
         // current local value — the user's enable/disable choice must
         // outrank a Hub re-download.

@@ -10,7 +10,7 @@ import * as protocol from './protocol'
 import { IpcChannels } from '../shared/ipc/channels'
 import type { DeviceInfo, KeyboardDefinition, ProbeResult } from '../shared/types/protocol'
 import type { TrayStatus } from '../shared/types/vial-api'
-import type { SnapshotMeta } from '../shared/types/snapshot-store'
+import type { SnapshotMeta, SnapshotUpdateOptions } from '../shared/types/snapshot-store'
 import type { AnalyzeFilterSnapshotMeta } from '../shared/types/analyze-filter-store'
 import type { RunKeystrokeLog, RunLogMeta } from '../shared/types/typing-run-log'
 import type { SavedFavoriteMeta, FavoriteImportResult } from '../shared/types/favorite-store'
@@ -229,8 +229,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_SAVE, uid, json, deviceName, label, vilVersion),
   snapshotStoreLoad: (uid: string, entryId: string): Promise<{ success: boolean; data?: string; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_LOAD, uid, entryId),
-  snapshotStoreUpdate: (uid: string, entryId: string, json: string, vilVersion?: number): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_UPDATE, uid, entryId, json, vilVersion),
+  snapshotStoreUpdate: (uid: string, entryId: string, json: string, vilVersion?: number, options?: SnapshotUpdateOptions): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_UPDATE, uid, entryId, json, vilVersion, options),
   snapshotStoreRename: (uid: string, entryId: string, newLabel: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_RENAME, uid, entryId, newLabel),
   snapshotStoreDelete: (uid: string, entryId: string): Promise<{ success: boolean; error?: string }> =>
@@ -341,6 +341,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_RENAME, id, newName),
   i18nPackSetEnabled: (id: string, enabled: boolean): Promise<I18nPackStoreResult<I18nPackMeta>> =>
     ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_SET_ENABLED, id, enabled),
+  i18nPackRefreshCoverage: (id: string, values: { matchedBaseVersion: string; coverage: { totalKeys: number; coveredKeys: number }; measuredBodyClock: string }): Promise<I18nPackStoreResult<I18nPackMeta>> =>
+    ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_REFRESH_COVERAGE, id, values),
   i18nPackDelete: (id: string): Promise<I18nPackStoreResult<void>> =>
     ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_DELETE, id),
   i18nPackSetHubPostId: (id: string, hubPostId: string | null, uploaderName?: string, hubUpdatedAt?: string): Promise<I18nPackStoreResult<I18nPackMeta>> =>

@@ -23,14 +23,16 @@ import {
   getPacksDir,
   getStoreDir,
   notifyPackChange,
-  nowIso,
   ok,
   readIndex,
   resolveOptionalField,
   withIndexWriteLock,
   writeIndex,
+  type I18nPackEntry,
   type I18nPackStoreResult,
 } from './i18n-pack-store-internal'
+import { EPOCH_ISO, clockMs, markDeleted, touchClock } from './sync/entry-clocks'
+import { builtinEntry, overwriteEntry } from './sync/entry-write'
 
 /**
  * Make sure the index has a built-in English entry. Mirrors
@@ -68,17 +70,16 @@ async function ensureBuiltinEnglishEntry(): Promise<void> {
       return
     }
 
-    const now = nowIso()
-    const meta: I18nPackMeta = {
+    // Epoch clocks: every device creates the identical entry.
+    const meta = builtinEntry('i18nPacks', {
       id: BUILTIN_ENGLISH_PACK_ID,
       filename: `${PACKS_DIRNAME}/${BUILTIN_ENGLISH_PACK_ID}.json`,
       name: 'English',
       version: '0.0.0',
       enabled: true,
       uploaderName: 'pipette',
-      savedAt: now,
-      updatedAt: now,
-    }
+      savedAt: EPOCH_ISO,
+    })
     await writeBuiltinEnglishBodyIfMissing()
 
     // Pin English to the head on first creation (migration for existing
@@ -126,7 +127,10 @@ export async function getPack(id: string): Promise<I18nPackStoreResult<I18nPackR
     const meta = index.metas.find((m) => m.id === id)
     if (!meta || meta.deletedAt) return fail('NOT_FOUND', 'Language pack not found')
     const raw = await readFile(getPackPath(id), 'utf-8')
-    const pack: unknown = JSON.parse(raw)
+    const parsed: unknown = JSON.parse(raw)
+    // A rename changes only the meta (`renamePack`), so the meta's name is
+    // the pack's name; export and Hub upload read it from here.
+    const pack = parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) ? { ...parsed, name: meta.name } : parsed
     return ok({ meta, pack })
   } catch (err) {
     return fail('IO_ERROR', String(err))
@@ -157,6 +161,13 @@ export interface SavePackInput {
   /** Coverage snapshot for the row's status line. */
   coverage?: { totalKeys: number; coveredKeys: number } | null
   dangerousKeyCount?: number | null
+  /** The Hub startup auto-update (`i18n-startup-sync.ts`), which runs
+   *  without the user asking. The save happens only when `id` is a live
+   *  pack still linked to `hubPostId`, keeps the pack's current name, and
+   *  never brings a deleted pack back. Every other caller is a user action
+   *  (import, Hub download), which brings a deleted id back and keeps a
+   *  live one alive over a delete made on another device. */
+  unattended?: boolean
 }
 
 interface PackHeader {
@@ -194,6 +205,12 @@ export async function savePack(input: SavePackInput): Promise<I18nPackStoreResul
   return withIndexWriteLock(async () => {
     try {
       const index = await readIndex()
+      if (input.unattended) {
+        const target = index.metas.find((m) => m.id === input.id)
+        if (!target || target.deletedAt || !input.hubPostId || target.hubPostId !== input.hubPostId) {
+          return fail('NOT_FOUND', 'Language pack is no longer linked to this Hub post')
+        }
+      }
       // Auto-overwrite path: if the caller did not specify an id but
       // an active entry already shares this name (case-insensitive),
       // adopt that entry's id so the import replaces the existing pack
@@ -209,7 +226,11 @@ export async function savePack(input: SavePackInput): Promise<I18nPackStoreResul
           resolvedId = existingByName.id
         }
       }
-      if (findActiveByName(index.metas, header.name, resolvedId)) {
+      // A live pack saved over keeps its (possibly renamed) name; only a
+      // new or revived one takes the name in the pack JSON.
+      const keptName = index.metas.find((m) => m.id === resolvedId && !m.deletedAt)?.name
+      const name = keptName ?? header.name
+      if (findActiveByName(index.metas, name, resolvedId)) {
         return fail('DUPLICATE_NAME', 'A language pack with the same name already exists')
       }
 
@@ -219,8 +240,11 @@ export async function savePack(input: SavePackInput): Promise<I18nPackStoreResul
       await mkdir(getPacksDir(), { recursive: true })
       await writeFile(getPackPath(id), JSON.stringify(input.pack, null, 2), 'utf-8')
 
-      const now = nowIso()
+      const now = new Date()
       const existing = index.metas.find((m) => m.id === id)
+      // A deleted pack is disabled (`deletePack`); bringing it back enables
+      // it unless the caller says otherwise.
+      const live = existing && !existing.deletedAt ? existing : undefined
       // hubUpdatedAt: empty/whitespace string is treated the same as null
       // (explicit clear) so a stray '' from a Hub response never persists.
       const hubUpdatedAtInput = typeof input.hubUpdatedAt === 'string'
@@ -236,22 +260,26 @@ export async function savePack(input: SavePackInput): Promise<I18nPackStoreResul
       const nextMatchedBaseVersion = resolveOptionalField(input.matchedBaseVersion, existing?.matchedBaseVersion)
       const nextCoverage = resolveOptionalField(input.coverage, existing?.coverage)
       const nextDangerousKeyCount = resolveOptionalField(input.dangerousKeyCount, existing?.dangerousKeyCount)
-      const meta: I18nPackMeta = {
+      const fields: Omit<I18nPackMeta, 'updatedAt'> = {
         id,
         filename: `${PACKS_DIRNAME}/${id}.json`,
-        name: header.name,
+        name,
         version: header.version,
-        enabled: input.enabled ?? existing?.enabled ?? true,
+        enabled: input.enabled ?? live?.enabled ?? true,
         hubPostId: nextHubPostId,
         ...(nextHubUpdatedAt ? { hubUpdatedAt: nextHubUpdatedAt } : {}),
         ...(nextUploaderName ? { uploaderName: nextUploaderName } : {}),
-        savedAt: existing?.savedAt ?? now,
-        updatedAt: now,
+        savedAt: existing?.savedAt ?? now.toISOString(),
         ...(input.appVersionAtImport ? { appVersionAtImport: input.appVersionAtImport } : {}),
         ...(nextMatchedBaseVersion ? { matchedBaseVersion: nextMatchedBaseVersion } : {}),
         ...(nextCoverage ? { coverage: nextCoverage } : {}),
         ...(typeof nextDangerousKeyCount === 'number' ? { dangerousKeyCount: nextDangerousKeyCount } : {}),
       }
+      let meta = overwriteEntry('i18nPacks', existing, fields, now, { body: true, explicit: !input.unattended })
+      // A user save also moves the enabled clock: `deletePack` disables the
+      // pack at its delete time, and a save that keeps the pack alive over
+      // that delete must not come back disabled.
+      if (!input.unattended && live) meta = touchClock(meta, 'enabled', now)
 
       const existingIndex = index.metas.findIndex((m) => m.id === id)
       if (existingIndex >= 0) {
@@ -278,24 +306,18 @@ export async function renamePack(id: string, newName: string): Promise<I18nPackS
   return withIndexWriteLock(async () => {
     try {
       const index = await readIndex()
-      const meta = index.metas.find((m) => m.id === id && !m.deletedAt)
-      if (!meta) return fail('NOT_FOUND', 'Language pack not found')
+      const at = index.metas.findIndex((m) => m.id === id && !m.deletedAt)
+      if (at < 0) return fail('NOT_FOUND', 'Language pack not found')
       if (findActiveByName(index.metas, trimmed, id)) {
         return fail('DUPLICATE_NAME', 'A language pack with the same name already exists')
       }
 
-      // Rewrite the pack body so the on-disk JSON's `name` mirrors meta.
-      const path = getPackPath(id)
-      const raw = await readFile(path, 'utf-8')
-      const pack = JSON.parse(raw) as Record<string, unknown>
-      pack.name = trimmed
-      await writeFile(path, JSON.stringify(pack, null, 2), 'utf-8')
-
-      meta.name = trimmed
-      meta.updatedAt = nowIso()
+      // The meta only: the body file and its sync unit stay as they are,
+      // and `getPack` shows the meta's name.
+      const meta = touchClock({ ...index.metas[at], name: trimmed }, 'name', new Date())
+      index.metas[at] = meta
       await writeIndex(index)
 
-      notifyPackChange(id)
       notifyChange(I18N_INDEX_SYNC_UNIT)
       return ok(meta)
     } catch (err) {
@@ -308,15 +330,41 @@ export async function setEnabled(id: string, enabled: boolean): Promise<I18nPack
   return withIndexWriteLock(async () => {
     try {
       const index = await readIndex()
-      const meta = index.metas.find((m) => m.id === id && !m.deletedAt)
-      if (!meta) return fail('NOT_FOUND', 'Language pack not found')
-      if (meta.enabled === enabled) return ok(meta)
-      meta.enabled = enabled
-      meta.updatedAt = nowIso()
+      const at = index.metas.findIndex((m) => m.id === id && !m.deletedAt)
+      if (at < 0) return fail('NOT_FOUND', 'Language pack not found')
+      if (index.metas[at].enabled === enabled) return ok(index.metas[at])
+      const meta = touchClock({ ...index.metas[at], enabled }, 'enabled', new Date())
+      index.metas[at] = meta
       await writeIndex(index)
 
       notifyChange(I18N_INDEX_SYNC_UNIT)
       return ok(meta)
+    } catch (err) {
+      return fail('IO_ERROR', String(err))
+    }
+  })
+}
+
+/** Stores a recomputed coverage on a live pack's meta (the background
+ *  recheck after the English baseline changed, `use-language-pack-coverage.ts`).
+ *  The values are derived from the stored body, so no clock moves and
+ *  nothing is queued for sync: every device computes the same values from
+ *  the same body. `measuredBodyClock` is the body clock of the meta the
+ *  body was read with; when the body changed since, nothing is written
+ *  (the next check measures the new body). */
+export async function refreshCoverage(
+  id: string,
+  values: { matchedBaseVersion: string; coverage: { totalKeys: number; coveredKeys: number }; measuredBodyClock: string },
+): Promise<I18nPackStoreResult<I18nPackMeta>> {
+  return withIndexWriteLock(async () => {
+    try {
+      const index = await readIndex()
+      const at = index.metas.findIndex((m) => m.id === id && !m.deletedAt)
+      if (at < 0) return fail('NOT_FOUND', 'Language pack not found')
+      if (clockMs(index.metas[at].clocks.body) !== clockMs(values.measuredBodyClock)) return fail('NOT_FOUND', 'Language pack body changed')
+      index.metas[at] = { ...index.metas[at], matchedBaseVersion: values.matchedBaseVersion, coverage: values.coverage }
+      await writeIndex(index)
+      return ok(index.metas[at])
     } catch (err) {
       return fail('IO_ERROR', String(err))
     }
@@ -330,13 +378,11 @@ export async function deletePack(id: string): Promise<I18nPackStoreResult<void>>
   return withIndexWriteLock(async () => {
     try {
       const index = await readIndex()
-      const meta = index.metas.find((m) => m.id === id)
-      if (!meta) return fail('NOT_FOUND', 'Language pack not found')
+      const at = index.metas.findIndex((m) => m.id === id)
+      if (at < 0) return fail('NOT_FOUND', 'Language pack not found')
 
-      const now = nowIso()
-      meta.deletedAt = now
-      meta.updatedAt = now
-      meta.enabled = false
+      const now = new Date()
+      index.metas[at] = markDeleted(touchClock({ ...index.metas[at], enabled: false }, 'enabled', now), now)
       await writeIndex(index)
 
       notifyPackChange(id)
@@ -366,8 +412,9 @@ export async function setHubPostId(
   return withIndexWriteLock(async () => {
     try {
       const index = await readIndex()
-      const meta = index.metas.find((m) => m.id === id)
-      if (!meta) return fail('NOT_FOUND', 'Language pack not found')
+      const at = index.metas.findIndex((m) => m.id === id)
+      if (at < 0) return fail('NOT_FOUND', 'Language pack not found')
+      const meta = { ...index.metas[at] }
       const normalized = hubPostId?.trim() || null
       if (normalized === null) {
         delete meta.hubPostId
@@ -394,10 +441,11 @@ export async function setHubPostId(
           delete meta.hubUpdatedAt
         }
       }
-      meta.updatedAt = nowIso()
+      const touched = touchClock(meta, 'hub', new Date())
+      index.metas[at] = touched
       await writeIndex(index)
       notifyChange(I18N_INDEX_SYNC_UNIT)
-      return ok(meta)
+      return ok(touched)
     } catch (err) {
       return fail('IO_ERROR', String(err))
     }
@@ -425,11 +473,11 @@ export async function reorderActive(orderedIds: string[]): Promise<I18nPackStore
   return withIndexWriteLock(async () => {
     try {
       const index = await readIndex()
-      const byId = new Map<string, I18nPackMeta>()
+      const byId = new Map<string, I18nPackEntry>()
       for (const meta of index.metas) byId.set(meta.id, meta)
 
       const seen = new Set<string>()
-      const reordered: I18nPackMeta[] = []
+      const reordered: I18nPackEntry[] = []
       for (const id of orderedIds) {
         const meta = byId.get(id)
         if (!meta || meta.deletedAt || seen.has(id)) continue

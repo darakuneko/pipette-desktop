@@ -59,8 +59,8 @@ interface MergeOptionsBase<S extends EntryStore> {
    *  filename (snapshots, analyze filters). Called only when both sides'
    *  body clocks and fields are equal. */
   bodyHash?: (side: MergeSide, entry: ClockedEntry<StoreMetaMap[S]>) => string | undefined
-  /** Keep the newest N alive run logs (see `applyRunLogRetentionV2`). */
-  runLogRetentionMax?: S extends 'runLogs' ? number : never
+  /** Keep the newest N alive run logs (see `applyRunLogRetention`). */
+  runLogRetentionMax?: number
   /** Current time in ms for tombstone GC and retention. Defaults to now. */
   now?: number
 }
@@ -70,7 +70,7 @@ interface MergeOptionsBase<S extends EntryStore> {
  *  local store for `local`, the remote bundle for `remote`). For the remote
  *  side here and in `bodyHash`, `entry.filename` is the name in the remote
  *  bundle, which may lack the id. */
-export type EntryMergeV2Options<S extends EntryStore> = MergeOptionsBase<S> & (
+export type EntryMergeOptions<S extends EntryStore> = MergeOptionsBase<S> & (
   | { bodyPolicy?: 'clock'; hasBody: (side: MergeSide, entry: ClockedEntry<StoreMetaMap[S]>) => boolean }
   | { bodyPolicy: 'localIfPresent'; hasBody?: undefined }
 )
@@ -102,7 +102,7 @@ export interface EntryMergeOutcome<T extends BaseEntryMeta> {
  *  local index, then unlink local body files outside `referencedFilenames`.
  *  The bundle to upload is built from the local index and files as usual,
  *  leaving out alive entries whose file is missing (`bodyMissing`). */
-export interface EntryMergeV2Result<T extends BaseEntryMeta> {
+export interface EntryMergeResult<T extends BaseEntryMeta> {
   /** The index to write locally. An id only a body-less remote entry has is
    *  not in it. */
   entries: ClockedEntry<T>[]
@@ -140,7 +140,7 @@ function keepAfterGc(entry: ClockedEntry, now: number): boolean {
 
 /** Drops dead entries whose `deletedAt` is older than the TTL. Alive
  *  entries are always kept. */
-export function gcTombstonesV2<T extends BaseEntryMeta>(entries: readonly ClockedEntry<T>[], now = Date.now()): ClockedEntry<T>[] {
+export function gcTombstones<T extends BaseEntryMeta>(entries: readonly ClockedEntry<T>[], now = Date.now()): ClockedEntry<T>[] {
   return entries.filter((e) => keepAfterGc(e, now))
 }
 
@@ -271,12 +271,12 @@ function ordered<T extends BaseEntryMeta>(entries: Iterable<ClockedEntry<T>>, pr
   return [...alive, ...dead]
 }
 
-export function mergeEntriesV2<S extends EntryStore>(
+export function mergeEntries<S extends EntryStore>(
   store: S,
   local: readonly StoreMetaMap[S][],
   remote: readonly StoreMetaMap[S][],
-  options: EntryMergeV2Options<S>,
-): EntryMergeV2Result<StoreMetaMap[S]> {
+  options: EntryMergeOptions<S>,
+): EntryMergeResult<StoreMetaMap[S]> {
   type T = StoreMetaMap[S]
   const def = STORE_GROUPS[store]
   const now = options.now ?? Date.now()
@@ -336,7 +336,7 @@ export function mergeEntriesV2<S extends EntryStore>(
   let entries = ordered([...byId.values()].map((o) => o.entry), options.preserveLocalOrder === true)
   let evicted: ClockedEntry<T>[] = []
   if (options.runLogRetentionMax !== undefined) {
-    const kept = applyRunLogRetentionV2(entries as unknown as ClockedEntry<RunLogMeta>[], options.runLogRetentionMax, now)
+    const kept = applyRunLogRetention(entries as unknown as ClockedEntry<RunLogMeta>[], options.runLogRetentionMax, now)
     entries = kept.entries as unknown as ClockedEntry<T>[]
     evicted = kept.evicted as unknown as ClockedEntry<T>[]
     for (const e of entries) {
@@ -371,7 +371,7 @@ export function mergeEntriesV2<S extends EntryStore>(
 /** Keeps the newest `max` alive run logs, ranked by immutable `startedAt`
  *  (id breaks an exact tie) so devices that each went over the cap keep
  *  the same set, and turns the rest into v2 tombstones (`markDeleted`). */
-export function applyRunLogRetentionV2(
+export function applyRunLogRetention(
   entries: readonly ClockedEntry<RunLogMeta>[],
   max: number,
   now = Date.now(),

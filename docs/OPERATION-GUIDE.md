@@ -2189,7 +2189,7 @@ On Pipette Hub, the flag round-trips as `keymap_applicable` in the upload / down
 
 The Tools tab shows a **Language Packs** row displaying the currently active UI language. Click **Edit** to open the Language Packs modal.
 
-English is built-in; every other language is imported from a local `.json` file or downloaded from Pipette Hub. Installed packs sync across devices via Cloud Sync. Hub-linked packs are automatically checked for updates at app startup and refreshed silently when newer versions are available.
+English is built-in; every other language is imported from a local `.json` file or downloaded from Pipette Hub. Installed packs sync across devices via Cloud Sync. Hub-linked packs are automatically checked for updates at app startup and refreshed silently when newer versions are available. The refresh keeps a name you gave the pack, and does not bring back a pack deleted on another device.
 
 **Installed tab**
 

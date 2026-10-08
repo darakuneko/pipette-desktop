@@ -29,6 +29,7 @@ import { localSyncBlock, remoteSyncBlock, emitSyncBlocked } from './sync-passwor
 import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
 import type { SyncBlockReason, SyncCredentialFailureReason } from '../../shared/types/sync'
 import { syncOrUpload } from './sync-merge-dispatch'
+import { settlePackIndexUnitsFirst } from './pack-bundle-merge'
 import { stopPolling } from './sync-polling'
 import { adoptPendingForSignedInAccount } from './sync-pending-account'
 
@@ -139,17 +140,16 @@ export async function flushPendingChanges(): Promise<void> {
     const generations = snapshotPendingGenerations()
     let anyFailed = false
     const limit = pLimit(SYNC_CONCURRENCY)
-    await Promise.allSettled(
-      [...generations].map(([syncUnit, generation]) =>
-        limit(async () => {
-          try {
-            await syncOrUpload(syncUnit, password, remoteFiles)
-            settlePending(syncUnit, generation)
-          } catch {
-            anyFailed = true
-          }
-        }),
-      ),
+    // Pack rosters before pack bodies (`settlePackIndexUnitsFirst`).
+    await settlePackIndexUnitsFirst([...generations], ([syncUnit]) => syncUnit, ([syncUnit, generation]) =>
+      limit(async () => {
+        try {
+          await syncOrUpload(syncUnit, password, remoteFiles)
+          settlePending(syncUnit, generation)
+        } catch {
+          anyFailed = true
+        }
+      }),
     )
 
     broadcastPendingStatus()

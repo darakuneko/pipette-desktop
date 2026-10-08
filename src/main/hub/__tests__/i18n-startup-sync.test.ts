@@ -109,6 +109,8 @@ describe('syncHubI18nPacksOnStartup', () => {
       pack: exportData.pack,
       hubPostId: 'hub-1',
       hubUpdatedAt: '2026-05-10T03:00:00.000Z',
+      // Unattended: never revives a deleted pack, keeps the local name.
+      unattended: true,
     }))
     // `enabled` must NOT be passed so the user's local choice is preserved.
     expect(mockedSavePack.mock.calls[0][0].enabled).toBeUndefined()

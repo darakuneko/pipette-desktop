@@ -28,6 +28,14 @@ export interface SyncBundle {
   key: string // FavoriteType, UID, 'keyboard-names' for meta, `${uid}|${machineHash}` for device, 'key-labels', 'typing-test-texts', 'i18n-index', or packId for i18n-pack
   index: FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | RunLogIndex | KeyboardMetaIndex | KeyLabelIndex | TypingTestTextIndex | I18nPackIndex | ThemePackIndex
   files: Record<string, string> // filename -> content (empty for meta / i18n-index)
+  /** i18n / theme pack body bundles only: the clock and body fields of the
+   *  local meta the body was read with. Absent in bundles of v1 apps. */
+  body?: PackBodyClock
+}
+
+export interface PackBodyClock {
+  clock: string
+  fields: Record<string, unknown>
 }
 
 export type SyncDirection = 'upload' | 'download'

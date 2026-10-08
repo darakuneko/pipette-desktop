@@ -8,19 +8,29 @@
 //
 // Uses two sync unit families: `themes/index` for the index and
 // `themes/packs/{packId}` for each pack body. notifyChange is split
-// accordingly so a single pack edit does not bump every other pack's
-// remote LWW timestamp.
+// accordingly so a single pack edit does not re-send every other pack's
+// body.
 
 import { app, dialog, BrowserWindow } from 'electron'
 import { join } from 'node:path'
-import { mkdir, readdir, readFile, rm, stat, unlink, utimes, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rm, unlink, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { notifyChange } from './sync/sync-service'
-import { gcTombstones, mergeEntries, MalformedSyncBundleError } from './sync/merge'
 import { log } from './logger'
 import { safeFilename, isSafePackId } from './utils/safe-filename'
 import { sweepOrphanFiles } from './utils/sweep-orphan-pack-bodies'
 import { writeFileAtomic } from './utils/write-file-atomic'
+import {
+  type ApplyPackBodyOutcome,
+  type PackIndexMergeResult,
+  type PackSyncStore,
+  applySyncedPackBody as applyPackBody,
+  bundlePackBody,
+  bundlePackIndex,
+  mergeSyncedPackIndex,
+  readPackMetas,
+} from './sync/pack-sync'
+import type { SyncBundle } from '../shared/types/sync'
 import { validateThemePack } from '../shared/theme/validate'
 import {
   THEME_INDEX_SYNC_UNIT,
@@ -33,6 +43,14 @@ import {
   type ThemePackStoreResult as SharedResult,
   type ThemePackEntryFile,
 } from '../shared/types/theme-store'
+import { type ClockedEntry, markDeleted, touchClock } from './sync/entry-clocks'
+import { overwriteEntry } from './sync/entry-write'
+
+type ThemePackEntry = ClockedEntry<ThemePackMeta>
+
+interface ClockedThemePackIndex {
+  metas: ThemePackEntry[]
+}
 
 export type { ThemePackRecord }
 
@@ -54,14 +72,6 @@ function getIndexPath(): string {
   return join(getStoreDir(), INDEX_FILENAME)
 }
 
-/** True when `m` is at least shaped enough to read `.id` off of safely —
- *  a non-null object with a string `id` field. Guards `mergeSyncedIndex`'s
- *  per-entry filter against a remote `metas` array containing `null` or
- *  other non-object garbage (attacker-reachable data). */
-function isPackMetaCandidate(m: unknown): m is ThemePackMeta {
-  return typeof m === 'object' && m !== null && typeof (m as { id?: unknown }).id === 'string'
-}
-
 function getPackPath(packId: string): string {
   if (!isSafePackId(packId)) throw new Error(`Invalid packId: ${packId}`)
   return join(getPacksDir(), `${packId}.json`)
@@ -69,10 +79,6 @@ function getPackPath(packId: string): string {
 
 function packSyncUnit(packId: string): `themes/packs/${string}` {
   return `themes/packs/${packId}`
-}
-
-function nowIso(): string {
-  return new Date().toISOString()
 }
 
 // --- Write serialization ------------------------------------------------------
@@ -93,163 +99,44 @@ async function withIndexWriteLock<T>(fn: () => Promise<T>): Promise<T> {
   return next
 }
 
-// --- Sync entry points (pack-bundle-merge.ts) --------------------------------
+// --- Sync entry points (pack-bundle-merge.ts, sync-bundle.ts) ----------------
 //
-// See i18n-pack-store.ts's equivalent section doc for the full
-// rationale (isSafePackId at the least-trusted boundary, atomic write,
-// lock-scoped serialization) — mirrored here for themes.
+// This store's adapter for the shared pack sync (`sync/pack-sync.ts`); see
+// i18n-pack-store-sync.ts for the i18n equivalent.
 
-/** Entry-level LWW merge + persist for a synced remote index. See
- *  i18n-pack-store.ts's `mergeSyncedIndex` for the full rationale
- *  (replaces whole-file "remote newer wholesale-replaces local", closes
- *  the outside-lock TOCTOU, filters/rederives unsafe metas before they
- *  can reach `collectAllSyncUnits`/`bundleSyncUnit`'s generic tail) —
- *  identical here for themes, just without a built-in-entry special
- *  case (themes has none).
- *
- *  `remoteMetas` is typed `unknown[]` (not `ThemePackMeta[]`) since it's
- *  attacker-reachable remote data — `isPackMetaCandidate` drops any
- *  non-object entry (e.g. `null`) the same way as a rejected id, via the
- *  same unit-name-only warn path, rather than crashing on `m.id`. A
- *  non-array `metas` field is a stronger malformation, rejected one
- *  layer up by `mergePackIndexBundle` (pack-bundle-merge.ts) before this
- *  function is ever called.
- *
- *  Returns `applied: false` (never throws) only on an I/O failure
- *  persisting the merged index. */
-export async function mergeSyncedIndex(
-  remoteMetas: readonly unknown[],
-): Promise<{ applied: boolean; remoteNeedsUpdate: boolean }> {
-  return withIndexWriteLock(async () => {
-    try {
-      const localIndex = await readIndex()
-      const rejectedCount = remoteMetas.filter((m) => !isPackMetaCandidate(m) || !isSafePackId(m.id)).length
-      if (rejectedCount > 0) {
-        log('warn', `sync: dropped ${rejectedCount} unsafe remote meta id(s) for ${THEME_INDEX_SYNC_UNIT}`)
-      }
-      const safeRemoteMetas = remoteMetas
-        .filter((m): m is ThemePackMeta => isPackMetaCandidate(m) && isSafePackId(m.id))
-        .map((m) => ({ ...m, filename: `${PACKS_DIRNAME}/${m.id}.json` }))
-      const localMetas = gcTombstones(localIndex.metas)
-      const remoteMetasGced = gcTombstones(safeRemoteMetas)
-      const result = mergeEntries(localMetas, remoteMetasGced, { preserveLocalOrder: true })
-      await mkdir(getStoreDir(), { recursive: true })
-      await writeFileAtomic(getIndexPath(), JSON.stringify({ metas: result.entries }, null, 2))
-      return { applied: true, remoteNeedsUpdate: result.remoteNeedsUpdate }
-    } catch {
-      return { applied: false, remoteNeedsUpdate: false }
-    }
-  })
+const themePackSync: PackSyncStore<'themePacks'> = {
+  store: 'themePacks',
+  bodySyncUnit: packSyncUnit,
+  withLock: withIndexWriteLock,
+  readIndex,
+  writeIndex,
+  indexPath: getIndexPath,
+  packPath: getPackPath,
 }
 
-/** Local mtime (ms) of a pack body file, or `null` when `packId` is
- *  unsafe or the file doesn't exist yet. */
-export async function statLocalPackMtime(packId: string): Promise<number | null> {
-  if (!isSafePackId(packId)) return null
-  try {
-    const stats = await stat(getPackPath(packId))
-    return stats.mtime.getTime()
-  } catch {
-    return null
-  }
+/** See `mergeSyncedPackIndex` (pack-sync.ts). */
+export function mergeSyncedIndex(remoteMetas: readonly unknown[]): Promise<PackIndexMergeResult> {
+  return mergeSyncedPackIndex(themePackSync, remoteMetas)
 }
 
-/** Outcome of `applySyncedPackBody` — see i18n-pack-store.ts's
- *  `ApplyPackBodyOutcome` for the full contract each state carries. */
-export type ApplyPackBodyOutcome = 'applied' | 'local-wins' | 'io-error'
+/** See `bundlePackIndex` (pack-sync.ts). */
+export function bundleSyncedIndex(): Promise<SyncBundle | null> {
+  return bundlePackIndex(themePackSync, 'theme-index')
+}
 
-/** Apply an already-LWW-won remote pack body, pinning its mtime to the
- *  remote's own `modifiedTime` so the next LWW comparison sees the two
- *  sides as equal instead of re-uploading the just-downloaded copy
- *  forever. Throws `MalformedSyncBundleError` for an unsafe `packId`
- *  (so the sync poll stops retrying a permanently-rejected revision
- *  instead of treating it like a transient failure) and re-checks local
- *  mtime under the lock immediately before writing (CAS) so a
- *  concurrent local save can't be clobbered by a stale remote-wins
- *  decision made outside the lock. See i18n-pack-store.ts's equivalent
- *  for the full rationale — identical here for themes, including the
- *  mtime pin being a SEPARATE try/catch from the body write: a utimes
- *  failure after a successful write is logged as a unit-name-only warn
- *  and still reported `'applied'` (a redundant future re-upload beats
- *  failing the unit and re-entering the clock-skew loop). Returns
- *  `'io-error'` (never throws for this case) on any other I/O
- *  failure. */
-export async function applySyncedPackBody(
+/** See `bundlePackBody` (pack-sync.ts). */
+export function bundleSyncedPackBody(packId: string): Promise<SyncBundle | null> {
+  return bundlePackBody(themePackSync, packId, 'theme-pack')
+}
+
+/** See `applySyncedPackBody` (pack-sync.ts). */
+export function applySyncedPackBody(
   packId: string,
-  rawJson: string,
+  bundle: SyncBundle,
   remoteModifiedTime: string,
+  rosterMerged: boolean,
 ): Promise<ApplyPackBodyOutcome> {
-  if (!isSafePackId(packId)) {
-    throw new MalformedSyncBundleError(packSyncUnit(packId))
-  }
-  return withIndexWriteLock(async () => {
-    try {
-      const path = getPackPath(packId)
-      const modMs = new Date(remoteModifiedTime).getTime()
-      if (!Number.isNaN(modMs)) {
-        try {
-          const currentStat = await stat(path)
-          if (currentStat.mtime.getTime() >= modMs) return 'local-wins'
-        } catch {
-          // no local file yet — nothing to race against, proceed
-        }
-      }
-      await mkdir(getPacksDir(), { recursive: true })
-      await writeFileAtomic(path, rawJson)
-      if (!Number.isNaN(modMs)) {
-        try {
-          const pinned = new Date(modMs)
-          await utimes(path, pinned, pinned)
-        } catch {
-          log('warn', `sync: failed to pin mtime for ${packSyncUnit(packId)} after apply`)
-        }
-      }
-      return 'applied'
-    } catch {
-      return 'io-error'
-    }
-  })
-}
-
-/** Pin a pack body file's mtime to the Drive `modifiedTime` a
- *  just-completed local-wins upload was assigned. See
- *  i18n-pack-store.ts's equivalent for the full clock-skew rationale,
- *  including the `expectedLocalMtimeMs` compare-and-swap guard: the
- *  caller snapshots the local mtime before bundling/uploading (outside
- *  this store's lock), and this function only pins if the file's
- *  current mtime still matches that snapshot when the lock is finally
- *  acquired — otherwise a concurrent local save's fresh content would
- *  get stamped with this stale upload's Drive time, and the new edit
- *  would never get re-uploaded (the next LWW compares as a tie). `null`
- *  means the caller had no snapshot to compare, so this skips rather
- *  than guessing. Best-effort beyond the CAS check: swallows any I/O
- *  error (stat or utimes) with a unit-name-only warn. */
-export async function pinPackBodyMtime(
-  packId: string,
-  modifiedTime: string,
-  expectedLocalMtimeMs: number | null,
-): Promise<void> {
-  if (!isSafePackId(packId)) return
-  await withIndexWriteLock(async () => {
-    const modMs = new Date(modifiedTime).getTime()
-    if (Number.isNaN(modMs)) return
-    if (expectedLocalMtimeMs === null) {
-      log('debug', `sync: skipped mtime pin for ${packSyncUnit(packId)} — no local snapshot to compare`)
-      return
-    }
-    try {
-      const path = getPackPath(packId)
-      const currentStat = await stat(path)
-      if (currentStat.mtime.getTime() !== expectedLocalMtimeMs) {
-        log('debug', `sync: skipped mtime pin for ${packSyncUnit(packId)} — local file changed since upload snapshot`)
-        return
-      }
-      const pinned = new Date(modMs)
-      await utimes(path, pinned, pinned)
-    } catch {
-      log('warn', `sync: failed to pin mtime for ${packSyncUnit(packId)} after upload`)
-    }
-  })
+  return applyPackBody(themePackSync, packId, bundle, remoteModifiedTime, rosterMerged)
 }
 
 // --- Result type -------------------------------------------------------------
@@ -267,14 +154,13 @@ function fail<T>(errorCode: ThemePackStoreErrorCode, error: string): ThemePackSt
 
 // --- Index I/O ---------------------------------------------------------------
 
-// Exported so `mergePackIndexBundle` (pack-bundle-merge.ts) can read the
-// current local index for its LWW comparison — see the i18n-pack-store
-// equivalent's doc.
-export async function readIndex(): Promise<ThemePackIndex> {
+// The index with every meta read as a v2 entry (`normalizeEntries`); a
+// missing or unparseable index reads as `{ metas: [] }`.
+export async function readIndex(): Promise<ClockedThemePackIndex> {
   try {
     const raw = await readFile(getIndexPath(), 'utf-8')
     const parsed = JSON.parse(raw) as ThemePackIndex
-    if (Array.isArray(parsed?.metas)) return parsed
+    if (Array.isArray(parsed?.metas)) return { ...parsed, metas: await readPackMetas('themePacks', parsed.metas, getPackPath) }
   } catch {
     // missing / corrupt — return empty
   }
@@ -408,7 +294,9 @@ export async function getPack(id: string): Promise<ThemePackStoreResult<ThemePac
     const meta = index.metas.find((m) => m.id === id)
     if (!meta || meta.deletedAt) return fail('NOT_FOUND', 'Theme pack not found')
     const raw = await readFile(getPackPath(id), 'utf-8')
-    const pack = JSON.parse(raw) as ThemePackEntryFile
+    // A rename changes only the meta (`renamePack`), so the meta's name is
+    // the pack's name; export and Hub upload read it from here.
+    const pack = { ...(JSON.parse(raw) as ThemePackEntryFile), name: meta.name }
     return ok({ meta, pack })
   } catch (err) {
     return fail('IO_ERROR', String(err))
@@ -427,7 +315,7 @@ export async function savePack(input: {
   if (!validation.ok || !validation.header) {
     return fail('INVALID_FILE', validation.errors.join('; '))
   }
-  const { name, version } = validation.header
+  const { name: headerName, version } = validation.header
 
   return withIndexWriteLock(async () => {
     try {
@@ -438,9 +326,12 @@ export async function savePack(input: {
       // instead of failing with DUPLICATE_NAME. Mirrors KeyLabels.
       let resolvedId = input.id
       if (!resolvedId) {
-        const existingByName = findActiveByName(index.metas, name)
+        const existingByName = findActiveByName(index.metas, headerName)
         if (existingByName) resolvedId = existingByName.id
       }
+      // A live pack saved over keeps its (possibly renamed) name; only a
+      // new or revived one takes the name in the pack JSON.
+      const name = index.metas.find((m) => m.id === resolvedId && !m.deletedAt)?.name ?? headerName
       if (findActiveByName(index.metas, name, resolvedId)) {
         return fail('DUPLICATE_NAME', 'A theme pack with the same name already exists')
       }
@@ -451,7 +342,7 @@ export async function savePack(input: {
       await mkdir(getPacksDir(), { recursive: true })
       await writeFile(getPackPath(id), JSON.stringify(input.raw, null, 2), 'utf-8')
 
-      const now = nowIso()
+      const now = new Date()
       const existing = index.metas.find((m) => m.id === id)
       // hubUpdatedAt: empty/whitespace string is treated the same as null
       // (explicit clear) so a stray '' from a Hub response never persists.
@@ -464,7 +355,9 @@ export async function savePack(input: {
       const nextHubPostId = resolveOptionalField(input.hubPostId, existing?.hubPostId)
       const nextHubUpdatedAt = resolveOptionalField(hubUpdatedAtInput, existing?.hubUpdatedAt)
       const nextUploaderName = resolveOptionalField(uploaderNameInput, existing?.uploaderName)
-      const meta: ThemePackMeta = {
+      // Every caller is a user action (an import or Hub download), so an
+      // id saved over is brought back or kept alive (`overwriteEntry`).
+      const meta = overwriteEntry('themePacks', existing, {
         id,
         filename: `${PACKS_DIRNAME}/${id}.json`,
         name,
@@ -472,9 +365,8 @@ export async function savePack(input: {
         ...(nextHubPostId ? { hubPostId: nextHubPostId } : {}),
         ...(nextHubUpdatedAt ? { hubUpdatedAt: nextHubUpdatedAt } : {}),
         ...(nextUploaderName ? { uploaderName: nextUploaderName } : {}),
-        savedAt: existing?.savedAt ?? now,
-        updatedAt: now,
-      }
+        savedAt: existing?.savedAt ?? now.toISOString(),
+      }, now, { body: true, explicit: true })
 
       const existingIndex = index.metas.findIndex((m) => m.id === id)
       if (existingIndex >= 0) {
@@ -501,24 +393,18 @@ export async function renamePack(id: string, newName: string): Promise<ThemePack
   return withIndexWriteLock(async () => {
     try {
       const index = await readIndex()
-      const meta = index.metas.find((m) => m.id === id && !m.deletedAt)
-      if (!meta) return fail('NOT_FOUND', 'Theme pack not found')
+      const at = index.metas.findIndex((m) => m.id === id && !m.deletedAt)
+      if (at < 0) return fail('NOT_FOUND', 'Theme pack not found')
       if (findActiveByName(index.metas, trimmed, id)) {
         return fail('DUPLICATE_NAME', 'A theme pack with the same name already exists')
       }
 
-      // Rewrite the pack body so the on-disk JSON's `name` mirrors meta.
-      const path = getPackPath(id)
-      const raw = await readFile(path, 'utf-8')
-      const pack = JSON.parse(raw) as Record<string, unknown>
-      pack.name = trimmed
-      await writeFile(path, JSON.stringify(pack, null, 2), 'utf-8')
-
-      meta.name = trimmed
-      meta.updatedAt = nowIso()
+      // The meta only: the body file and its sync unit stay as they are,
+      // and `getPack` shows the meta's name.
+      const meta = touchClock({ ...index.metas[at], name: trimmed }, 'name', new Date())
+      index.metas[at] = meta
       await writeIndex(index)
 
-      notifyChange(packSyncUnit(id))
       notifyChange(THEME_INDEX_SYNC_UNIT)
       return ok(meta)
     } catch (err) {
@@ -531,12 +417,10 @@ export async function deletePack(id: string): Promise<ThemePackStoreResult<void>
   return withIndexWriteLock(async () => {
     try {
       const index = await readIndex()
-      const meta = index.metas.find((m) => m.id === id)
-      if (!meta) return fail('NOT_FOUND', 'Theme pack not found')
+      const at = index.metas.findIndex((m) => m.id === id)
+      if (at < 0) return fail('NOT_FOUND', 'Theme pack not found')
 
-      const now = nowIso()
-      meta.deletedAt = now
-      meta.updatedAt = now
+      index.metas[at] = markDeleted(index.metas[at], new Date())
       await writeIndex(index)
 
       notifyChange(packSyncUnit(id))
@@ -560,8 +444,9 @@ export async function setHubPostId(
   return withIndexWriteLock(async () => {
     try {
       const index = await readIndex()
-      const meta = index.metas.find((m) => m.id === id)
-      if (!meta) return fail('NOT_FOUND', 'Theme pack not found')
+      const at = index.metas.findIndex((m) => m.id === id)
+      if (at < 0) return fail('NOT_FOUND', 'Theme pack not found')
+      const meta = { ...index.metas[at] }
       const normalized = hubPostId?.trim() || null
       if (normalized === null) {
         delete meta.hubPostId
@@ -588,10 +473,11 @@ export async function setHubPostId(
           delete meta.hubUpdatedAt
         }
       }
-      meta.updatedAt = nowIso()
+      const touched = touchClock(meta, 'hub', new Date())
+      index.metas[at] = touched
       await writeIndex(index)
       notifyChange(THEME_INDEX_SYNC_UNIT)
-      return ok(meta)
+      return ok(touched)
     } catch (err) {
       return fail('IO_ERROR', String(err))
     }
@@ -623,11 +509,11 @@ export async function reorderActive(orderedIds: string[]): Promise<ThemePackStor
   return withIndexWriteLock(async () => {
     try {
       const index = await readIndex()
-      const byId = new Map<string, ThemePackMeta>()
+      const byId = new Map<string, ThemePackEntry>()
       for (const meta of index.metas) byId.set(meta.id, meta)
 
       const seen = new Set<string>()
-      const reordered: ThemePackMeta[] = []
+      const reordered: ThemePackEntry[] = []
       for (const id of orderedIds) {
         const meta = byId.get(id)
         if (!meta || meta.deletedAt || seen.has(id)) continue

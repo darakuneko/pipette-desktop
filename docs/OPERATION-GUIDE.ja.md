@@ -2191,7 +2191,7 @@ Pipette Hub 上では、このフラグは `map` / `composite_labels` と並ん�
 
 Tools タブに **Language Packs** 行があり、現在のアクティブな UI 言語が表示されます。**Edit** をクリックすると Language Packs モーダルが開きます。
 
-English は built-in です。それ以外の言語はローカル `.json` ファイルの import か Pipette Hub からのダウンロードで追加します。インストール済みパックは Cloud Sync を経由して全デバイスで共有されます。Hub に紐づくパックはアプリ起動時に自動で更新チェックが行われ、新しいバージョンがあれば自動で取得されます。
+English は built-in です。それ以外の言語はローカル `.json` ファイルの import か Pipette Hub からのダウンロードで追加します。インストール済みパックは Cloud Sync を経由して全デバイスで共有されます。Hub に紐づくパックはアプリ起動時に自動で更新チェックが行われ、新しいバージョンがあれば自動で取得されます。自動取得はパックに付けた名前を保ち、他のデバイスで削除したパックを元に戻しません。
 
 **Installed タブ**
 

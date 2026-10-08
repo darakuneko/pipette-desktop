@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
-import { access, appendFile, mkdtemp, readdir, readFile, rm, stat, utimes, writeFile, mkdir } from 'node:fs/promises'
+import { access, appendFile, mkdtemp, readdir, readFile, rm, writeFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { driveFileName, type DriveFile } from '../sync/google-drive'
 
@@ -228,9 +228,13 @@ vi.mock('../sync/sync-bundle', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../sync/sync-bundle')>()
   return {
     ...actual,
-    readIndexFile: vi.fn(actual.readIndexFile),
     readSettingsFile: vi.fn(actual.readSettingsFile),
   }
+})
+
+vi.mock('../sync/body-filename-migration', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../sync/body-filename-migration')>()
+  return { ...actual, readIndexDirMigrated: vi.fn(actual.readIndexDirMigrated) }
 })
 
 vi.mock('../utils/write-file-atomic', async (importOriginal) => {
@@ -272,7 +276,8 @@ import {
   type ResetKeyboards,
 } from '../sync/sync-service'
 import { syncOrUpload, mergeWithRemote } from '../sync/sync-merge-dispatch'
-import { readIndexFile, readSettingsFile } from '../sync/sync-bundle'
+import { readSettingsFile } from '../sync/sync-bundle'
+import { readIndexDirMigrated } from '../sync/body-filename-migration'
 import { writeFileAtomic } from '../utils/write-file-atomic'
 import { withWriteLock } from '../per-uid-write-lock'
 import { saveRecord as saveKeyLabel } from '../key-label-store'
@@ -337,7 +342,7 @@ async function waitForSyncIdle(): Promise<void> {
 
 function makeRemoteEnvelope(
   updatedAt: string,
-  entries?: Array<{ id: string; label: string; filename: string; savedAt: string; updatedAt?: string }>,
+  entries?: Array<{ id: string; label: string; filename: string; savedAt: string; updatedAt?: string; clocks?: Record<string, string> }>,
 ): Record<string, unknown> {
   const entryList = entries ?? []
   const files: Record<string, string> = {}
@@ -414,18 +419,19 @@ function routeDownloads(byId: Record<string, () => unknown>): void {
 async function setupLocalFavorite(
   savedAt: string,
   dataFile?: { name: string; content: string },
-  opts?: { id?: string; updatedAt?: string; favoriteType?: string },
+  opts?: { id?: string; updatedAt?: string; favoriteType?: string; clocks?: Record<string, string> },
 ): Promise<void> {
   const type = opts?.favoriteType ?? 'tapDance'
   const favDir = join(mockUserDataPath, 'sync', 'favorites', type)
   await mkdir(favDir, { recursive: true })
-  const entry: Record<string, string> = {
+  const entry: Record<string, unknown> = {
     id: opts?.id ?? '1',
     label: 'entry',
     filename: dataFile?.name ?? 'data.json',
     savedAt,
   }
   if (opts?.updatedAt) entry.updatedAt = opts.updatedAt
+  if (opts?.clocks) entry.clocks = opts.clocks
   await writeFile(
     join(favDir, 'index.json'),
     JSON.stringify({ type, entries: [entry] }),
@@ -647,13 +653,17 @@ describe('sync-service', () => {
 
     it('does not upload when remote and local have same entries', async () => {
       mockAutoSync = true
+      // Already-converged v2 entries: v1 entries on Drive are rewritten once
+      // with their clocks and id-carrying filenames.
+      const T = '2025-01-01T00:00:00.000Z'
+      const clocks = { created: T, body: T, name: T, hub: T }
       const sharedEntry = {
-        id: '1', label: 'entry', filename: 'data.json', savedAt: '2025-01-01T00:00:00.000Z',
+        id: '1', label: 'entry', filename: 'data_1.json', savedAt: T, updatedAt: T, clocks,
       }
       mockListFiles.mockResolvedValue([makeDriveFile('2025-01-01T00:00:00.000Z'), PASSWORD_CHECK_DRIVE_FILE])
       mockDownloadFile.mockResolvedValue(makeRemoteEnvelope('2025-01-01T00:00:00.000Z', [sharedEntry]))
 
-      await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'data.json', content: '{"data":1}' })
+      await setupLocalFavorite(T, { name: 'data_1.json', content: '{"data":1}' }, { updatedAt: T, clocks })
 
       notifyChange('favorites/tapDance')
       await vi.advanceTimersByTimeAsync(10_000)
@@ -1502,6 +1512,11 @@ describe('sync-service', () => {
     // their filenames, polling picks up changes for them exactly like
     // any other scope-'all' unit.
     it('detects a changed themes/packs file on a subsequent poll and downloads it', async () => {
+      const T = '2026-01-01T00:00:00.000Z'
+      await mkdir(join(mockUserDataPath, 'sync', 'themes'), { recursive: true })
+      await writeFile(join(mockUserDataPath, 'sync', 'themes', 'index.json'), JSON.stringify({
+        metas: [{ id: 'pack-a', filename: 'packs/pack-a.json', name: 'Pack A', version: '1.0.0', savedAt: T, updatedAt: T, clocks: { created: T, body: '1970-01-01T00:00:00.000Z', name: T, hub: T } }],
+      }), 'utf-8')
       const themePackFile = (modifiedTime: string): DriveFile =>
         ({ id: 'theme-pack-1', name: 'themes_packs_pack-a.enc', modifiedTime })
       mockListFiles
@@ -2041,11 +2056,13 @@ describe('sync-service', () => {
     })
 
     it('does not upload when merge shows no local-only changes', async () => {
-      // Both local and remote have the same entry
+      // Both local and remote have the same (converged v2) entry
+      const T = '2025-01-01T00:00:00.000Z'
+      const clocks = { created: T, body: T, name: T, hub: T }
       const sharedEntry = {
-        id: 'shared', label: 'same', filename: 'shared.json', savedAt: '2025-01-01T00:00:00.000Z',
+        id: 'shared', label: 'entry', filename: 'shared_shared.json', savedAt: T, updatedAt: T, clocks,
       }
-      await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'shared.json', content: '{}' }, { id: 'shared' })
+      await setupLocalFavorite(T, { name: 'shared_shared.json', content: '{}' }, { id: 'shared', updatedAt: T, clocks })
 
       mockListFiles.mockResolvedValue([makeDriveFile('2025-01-01T00:00:00.000Z'), PASSWORD_CHECK_DRIVE_FILE])
       mockDownloadFile.mockResolvedValue(makeRemoteEnvelope('2025-01-01T00:00:00.000Z', [sharedEntry]))
@@ -4231,6 +4248,16 @@ describe('sync-service', () => {
       }
     }
 
+    /** Writes a local roster holding a live meta for `id` (body clock 0
+     *  unless given), so a body unit has a meta to apply to. */
+    async function seedPackMeta(dir: string, id: string, bodyClock = '1970-01-01T00:00:00.000Z'): Promise<void> {
+      const T = '2026-01-01T00:00:00.000Z'
+      await mkdir(join(mockUserDataPath, 'sync', dir), { recursive: true })
+      await writeFile(join(mockUserDataPath, 'sync', dir, 'index.json'), JSON.stringify({
+        metas: [{ id, filename: `packs/${id}.json`, name: id, version: '1.0.0', enabled: true, savedAt: T, updatedAt: T, clocks: { created: T, body: bodyClock, name: T, hub: T, enabled: T } }],
+      }), 'utf-8')
+    }
+
     it('regression baseline: merging a remote i18n-index bundle no longer crashes the sync unit', async () => {
       // Pre-fix, this scenario threw inside gcTombstones(undefined) and
       // surfaced as a 'partial' sync with 'i18n/index' in failedUnits.
@@ -4408,7 +4435,8 @@ describe('sync-service', () => {
         packId: 'theme-a',
         body: { name: 'Theme A', version: '2.0.0', colorScheme: 'dark', colors: {} },
       },
-    ])('$label-pack: remote newer than local mtime writes the pack body locally', async ({ syncUnit, fileName, fileId, bundleType, dir, packId, body }) => {
+    ])('$label-pack: a remote body (v1 bundle, Drive modifiedTime as its clock) newer than the local one is written locally', async ({ syncUnit, fileName, fileId, bundleType, dir, packId, body }) => {
+      await seedPackMeta(dir, packId)
       mockListFiles.mockResolvedValue([
         { id: fileId, name: fileName, modifiedTime: '2026-06-01T00:00:00.000Z' },
         PASSWORD_CHECK_DRIVE_FILE,
@@ -4433,29 +4461,26 @@ describe('sync-service', () => {
       expect(packFiles.filter((f) => f.endsWith('.tmp'))).toEqual([])
     })
 
-    it('local i18n-pack file newer than remote drive modifiedTime: local kept, remote re-uploaded', async () => {
+    it('a local i18n-pack body with a newer body clock than the remote one is kept and re-uploaded', async () => {
+      await seedPackMeta('i18n', 'pack-a', '2026-06-01T00:00:00.000Z')
       await mkdir(join(mockUserDataPath, 'sync', 'i18n', 'packs'), { recursive: true })
       await writeFile(
         join(mockUserDataPath, 'sync', 'i18n', 'packs', 'pack-a.json'),
         JSON.stringify({ name: 'Pack A', version: '3.0.0' }),
         'utf-8',
       )
-      // Local file mtime is "now" (just written) — the remote drive
-      // file's modifiedTime is set far in the past, so local must win.
-      // No mockDownloadFile queued for this pack: packBodyLocalWins
-      // short-circuits mergeWithRemote BEFORE downloadFile is ever
-      // called — if the production code regressed and called it
-      // anyway, the mock would throw/return undefined and this test
-      // would fail loudly instead of silently leaking a queued
-      // implementation into the next test.
       mockListFiles.mockResolvedValue([
         { id: 'pack1', name: 'i18n_packs_pack-a.enc', modifiedTime: '2000-01-01T00:00:00.000Z' },
       ])
+      mockDownloadFile.mockResolvedValueOnce(makeBundleEnvelope('i18n/packs/pack-a', '2000-01-01T00:00:00.000Z', {
+        type: 'i18n-pack',
+        key: 'pack-a',
+        files: { 'pack-a.json': JSON.stringify({ name: 'Pack A', version: '1.0.0' }) },
+      }))
       mockUploadFile.mockResolvedValue({ id: 'pack-file-id', modifiedTime: '2026-01-01T00:00:00.000Z' })
 
       await executeSync('download')
 
-      expect(mockDownloadFile.mock.calls.some((c) => c[0] === 'pack1')).toBe(false)
       expect(mockUploadFile.mock.calls.some((c) => c[0] === 'i18n_packs_pack-a.enc')).toBe(true)
       const written = JSON.parse(
         await readFile(join(mockUserDataPath, 'sync', 'i18n', 'packs', 'pack-a.json'), 'utf-8'),
@@ -4463,71 +4488,8 @@ describe('sync-service', () => {
       expect(written.version).toBe('3.0.0')
     })
 
-    it('S3: a local-wins pack-body upload pins local mtime to the Drive response modifiedTime (closes a clock-skew re-upload loop)', async () => {
-      // Without this pin, the local pack file keeps its own wall-clock
-      // write time. If the local clock runs ahead of Drive's own clock
-      // (or the two just don't line up exactly), that time permanently
-      // looks "newer than the remote copy" — every subsequent sync pass
-      // would re-upload this unchanged body, and every peer would
-      // re-download it, forever. Pinning to the upload response's own
-      // modifiedTime closes that gap the same way a remote-win already
-      // does for the download direction (see the idempotence test
-      // below).
-      await mkdir(join(mockUserDataPath, 'sync', 'i18n', 'packs'), { recursive: true })
-      const packPath = join(mockUserDataPath, 'sync', 'i18n', 'packs', 'pack-a.json')
-      await writeFile(packPath, JSON.stringify({ name: 'Pack A', version: '3.0.0' }), 'utf-8')
-
-      mockListFiles.mockResolvedValue([
-        { id: 'pack1', name: 'i18n_packs_pack-a.enc', modifiedTime: '2000-01-01T00:00:00.000Z' },
-      ])
-      const driveAssignedModifiedTime = '2026-07-15T12:00:00.000Z'
-      mockUploadFile.mockResolvedValue({ id: 'pack-file-id', modifiedTime: driveAssignedModifiedTime })
-
-      await executeSync('download')
-
-      expect(mockUploadFile.mock.calls.some((c) => c[0] === 'i18n_packs_pack-a.enc')).toBe(true)
-      const statAfterUpload = await stat(packPath)
-      expect(statAfterUpload.mtime.toISOString()).toBe(driveAssignedModifiedTime)
-    })
-
-    it('S3-race: a concurrent local save landing between the upload snapshot and the post-upload pin is not clobbered (CAS-guarded)', async () => {
-      // uploadSyncUnit snapshots the local body's mtime BEFORE bundling —
-      // bundling/encrypting/uploading all happen without holding the
-      // store's write lock, so a fresh local save can land in that
-      // window. A blind pin would stamp the NEW content with the OLD
-      // upload's stale Drive time, making the next LWW comparison see a
-      // tie and the new edit never get uploaded. Simulate that race
-      // inside the uploadFile mock itself: by the time it "returns" from
-      // Drive, a concurrent save has already landed locally.
-      await mkdir(join(mockUserDataPath, 'sync', 'i18n', 'packs'), { recursive: true })
-      const packPath = join(mockUserDataPath, 'sync', 'i18n', 'packs', 'pack-a.json')
-      await writeFile(packPath, JSON.stringify({ name: 'Pack A', version: '3.0.0' }), 'utf-8')
-
-      mockListFiles.mockResolvedValue([
-        { id: 'pack1', name: 'i18n_packs_pack-a.enc', modifiedTime: '2000-01-01T00:00:00.000Z' },
-      ])
-      const staleDriveModifiedTime = '2026-07-15T12:00:00.000Z'
-      const raceMtime = new Date('2030-01-01T00:00:00.000Z')
-      mockUploadFile.mockImplementation(async (name: string) => {
-        if (name === 'i18n_packs_pack-a.enc') {
-          await writeFile(packPath, JSON.stringify({ name: 'Pack A', version: '4.0.0' }), 'utf-8')
-          await utimes(packPath, raceMtime, raceMtime)
-        }
-        return { id: 'pack-file-id', modifiedTime: staleDriveModifiedTime }
-      })
-
-      await executeSync('download')
-
-      // The raced edit's content and mtime must both survive untouched —
-      // the pin must have been skipped rather than overwriting either.
-      const written = JSON.parse(await readFile(packPath, 'utf-8')) as { version: string }
-      expect(written.version).toBe('4.0.0')
-      const finalStat = await stat(packPath)
-      expect(finalStat.mtime.getTime()).toBe(raceMtime.getTime())
-      expect(finalStat.mtime.toISOString()).not.toBe(staleDriveModifiedTime)
-    })
-
-    it('idempotence: a remote-won pack body is not re-uploaded on the very next sync (mtime pinned to remote modifiedTime)', async () => {
+    it('idempotence: a remote-won pack body is not re-uploaded on the very next sync (its clock is stored on the meta)', async () => {
+      await seedPackMeta('i18n', 'pack-a')
       const remoteModifiedTime = '2026-06-01T00:00:00.000Z'
       const remoteFile = { id: 'pack1', name: 'i18n_packs_pack-a.enc', modifiedTime: remoteModifiedTime }
       const packEnvelope = makeBundleEnvelope('i18n/packs/pack-a', remoteModifiedTime, {
@@ -4547,12 +4509,8 @@ describe('sync-service', () => {
       expect(mockUploadFile.mock.calls.some((c) => c[0] === 'i18n_packs_pack-a.enc')).toBe(false)
 
       // Second, independent sync pass against the exact same unchanged
-      // remote revision. Without the mtime pin in applySyncedPackBody,
-      // the file just written would carry a local mtime of "now" (>
-      // remoteModifiedTime), so this recompute would see "local newer"
-      // and immediately re-upload the identical content it just
-      // downloaded — an endless full-body ping-pong between any two
-      // devices that both hold this pack.
+      // remote revision: the meta now holds the remote body clock and
+      // fields, so the bodies compare equal.
       await executeSync('download')
       expect(mockUploadFile.mock.calls.some((c) => c[0] === 'i18n_packs_pack-a.enc')).toBe(false)
     })
@@ -4872,19 +4830,19 @@ describe('sync-service', () => {
       return { reached: () => reached, release }
     }
 
-    let realReadIndexFile: typeof readIndexFile
+    let realReadIndexFile: typeof readIndexDirMigrated
     let realReadSettingsFile: typeof readSettingsFile
 
     beforeEach(async () => {
       const actual = await vi.importActual<typeof import('../sync/sync-bundle')>('../sync/sync-bundle')
-      realReadIndexFile = actual.readIndexFile
+      realReadIndexFile = (await vi.importActual<typeof import('../sync/body-filename-migration')>('../sync/body-filename-migration')).readIndexDirMigrated
       realReadSettingsFile = actual.readSettingsFile
-      vi.mocked(readIndexFile).mockImplementation(realReadIndexFile)
+      vi.mocked(readIndexDirMigrated).mockImplementation(realReadIndexFile)
       vi.mocked(readSettingsFile).mockImplementation(realReadSettingsFile)
     })
 
     afterEach(() => {
-      vi.mocked(readIndexFile).mockImplementation(realReadIndexFile)
+      vi.mocked(readIndexDirMigrated).mockImplementation(realReadIndexFile)
       vi.mocked(readSettingsFile).mockImplementation(realReadSettingsFile)
     })
 
@@ -4920,7 +4878,7 @@ describe('sync-service', () => {
     }): Promise<boolean> {
       mockDownloadFile.mockImplementation(async () =>
         indexEnvelope(opts.syncUnit, opts.remote, opts.extra))
-      const stall = stallAfterRead(readIndexFile, realReadIndexFile)
+      const stall = stallAfterRead(readIndexDirMigrated, realReadIndexFile)
       const merge = mergeWithRemote(opts.driveFile, opts.syncUnit, PW, [opts.driveFile])
       await flushUntil(stall.reached, 'the merge to read the local index')
       return raceWriterAgainstStalledMerge(stall, merge, opts.writer)
@@ -5049,7 +5007,8 @@ describe('sync-service', () => {
       const written = vi.mocked(writeFileAtomic).mock.calls.map((c) => String(c[0]))
       expect(written).toContain(join(dir, 'pipette_settings.json'))
       expect(written).toContain(join(snapDir, 'index.json'))
-      expect(written).toContain(join(snapDir, 'remote-1.json'))
+      // Saved under the id-carrying name (`idBodyFilename`).
+      expect(written).toContain(join(snapDir, 'remote-1_remote-1.json'))
     })
   })
 })

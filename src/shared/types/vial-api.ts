@@ -13,7 +13,7 @@ import type {
   DynamicEntryCounts,
   UnlockStatus,
 } from './protocol'
-import type { SnapshotMeta } from './snapshot-store'
+import type { SnapshotMeta, SnapshotUpdateOptions } from './snapshot-store'
 import type { AnalyzeFilterSnapshotMeta } from './analyze-filter-store'
 import type { RunKeystrokeLog, RunLogMeta } from './typing-run-log'
 import type { FavoriteType, SavedFavoriteMeta, FavoriteImportResult } from './favorite-store'
@@ -158,7 +158,7 @@ export interface VialAPI {
   snapshotStoreList(uid: string): Promise<{ success: boolean; entries?: SnapshotMeta[]; error?: string }>
   snapshotStoreSave(uid: string, json: string, deviceName: string, label: string, vilVersion?: number): Promise<{ success: boolean; entry?: SnapshotMeta; error?: string }>
   snapshotStoreLoad(uid: string, entryId: string): Promise<{ success: boolean; data?: string; error?: string }>
-  snapshotStoreUpdate(uid: string, entryId: string, json: string, vilVersion?: number): Promise<{ success: boolean; error?: string }>
+  snapshotStoreUpdate(uid: string, entryId: string, json: string, vilVersion?: number, options?: SnapshotUpdateOptions): Promise<{ success: boolean; error?: string }>
   snapshotStoreRename(uid: string, entryId: string, newLabel: string): Promise<{ success: boolean; error?: string }>
   snapshotStoreDelete(uid: string, entryId: string): Promise<{ success: boolean; error?: string }>
 
@@ -418,6 +418,9 @@ export interface VialAPI {
   i18nPackGet(id: string): Promise<I18nPackStoreResult<I18nPackRecord>>
   i18nPackRename(id: string, newName: string): Promise<I18nPackStoreResult<I18nPackMeta>>
   i18nPackSetEnabled(id: string, enabled: boolean): Promise<I18nPackStoreResult<I18nPackMeta>>
+  /** Stores a recomputed coverage on the meta without moving any clock,
+   *  only while the meta's body clock is still `measuredBodyClock`. */
+  i18nPackRefreshCoverage(id: string, values: { matchedBaseVersion: string; coverage: { totalKeys: number; coveredKeys: number }; measuredBodyClock: string }): Promise<I18nPackStoreResult<I18nPackMeta>>
   i18nPackDelete(id: string): Promise<I18nPackStoreResult<void>>
   i18nPackSetHubPostId(id: string, hubPostId: string | null, uploaderName?: string, hubUpdatedAt?: string): Promise<I18nPackStoreResult<I18nPackMeta>>
   i18nPackHasName(name: string, excludeId?: string): Promise<I18nPackStoreResult<boolean>>

@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest'
 import { canonicalJson, type ClockedEntry, type EntryClocks } from '../entry-clocks'
 import { EPOCH_ISO } from '../entry-clocks'
-import { applyRunLogRetentionV2, compareBodies, gcTombstonesV2, isDeadEntry, mergeEntriesV2 } from '../entry-merge'
+import { applyRunLogRetention, compareBodies, gcTombstones, isDeadEntry, mergeEntries } from '../entry-merge'
 import { TOMBSTONE_TTL_MS } from '../merge'
 import type { SavedFavoriteMeta } from '../../../shared/types/favorite-store'
 import type { SnapshotMeta } from '../../../shared/types/snapshot-store'
@@ -38,11 +38,11 @@ const ALL = (): boolean => true
 const byIdSorted = <T extends { id: string }>(entries: readonly T[]): string =>
   canonicalJson(entries.slice().sort((a, b) => (a.id < b.id ? -1 : 1)))
 
-describe('mergeEntriesV2 — group matrix', () => {
+describe('mergeEntries — group matrix', () => {
   it('a rename on one side and a body save on the other both survive', () => {
     const local = [snap('a', { name: T(5) }, { label: 'renamed' })]
     const remote = [snap('a', { body: T(6) }, { vilVersion: 3 })]
-    const r = mergeEntriesV2('snapshots', local, remote, { now: NOW, hasBody: ALL })
+    const r = mergeEntries('snapshots', local, remote, { now: NOW, hasBody: ALL })
     expect(r.entries[0]).toMatchObject({ label: 'renamed', vilVersion: 3, clocks: { name: T(5), body: T(6) }, updatedAt: T(6) })
     expect(r.byId.get('a')?.bodyFromRemote).toBe(true)
     expect(r.remoteFilesToCopy).toEqual([{ from: 's_a.pipette', to: 's_a.pipette' }])
@@ -53,19 +53,19 @@ describe('mergeEntriesV2 — group matrix', () => {
   it('hub and name merge independently', () => {
     const local = [fav('a', { hub: T(5) }, { hubPostId: 'post' })]
     const remote = [fav('a', { name: T(6) }, { label: 'new' })]
-    expect(mergeEntriesV2('favorites', local, remote, { now: NOW, hasBody: ALL }).entries[0]).toMatchObject({ label: 'new', hubPostId: 'post' })
+    expect(mergeEntries('favorites', local, remote, { now: NOW, hasBody: ALL }).entries[0]).toMatchObject({ label: 'new', hubPostId: 'post' })
   })
 
   it('a later hub unlink removes the field', () => {
     const local = [fav('a', { hub: T(2) }, { hubPostId: 'post' })]
     const remote = [fav('a', { hub: T(3) })]
-    expect(mergeEntriesV2('favorites', local, remote, { now: NOW, hasBody: ALL }).entries[0]).not.toHaveProperty('hubPostId')
+    expect(mergeEntries('favorites', local, remote, { now: NOW, hasBody: ALL }).entries[0]).not.toHaveProperty('hubPostId')
   })
 
   it('a delete beats a later rename', () => {
     const local = [fav('a', { name: T(6) }, { label: 'renamed' })]
     const remote = [fav('a', {}, { deletedAt: T(5) })]
-    const e = mergeEntriesV2('favorites', local, remote, { now: NOW, hasBody: ALL }).entries[0]
+    const e = mergeEntries('favorites', local, remote, { now: NOW, hasBody: ALL }).entries[0]
     expect(e).toMatchObject({ deletedAt: T(5), label: 'renamed', clocks: { created: T(1) } })
     expect(isDeadEntry(e)).toBe(true)
   })
@@ -73,7 +73,7 @@ describe('mergeEntriesV2 — group matrix', () => {
   it('a delete beats a later body save and copies nothing', () => {
     const local = [snap('a', {}, { deletedAt: T(5) })]
     const remote = [snap('a', { body: T(6) }, { vilVersion: 3 })]
-    const r = mergeEntriesV2('snapshots', local, remote, { now: NOW, hasBody: ALL })
+    const r = mergeEntries('snapshots', local, remote, { now: NOW, hasBody: ALL })
     expect(r.entries[0].deletedAt).toBe(T(5))
     expect(r.remoteFilesToCopy).toEqual([])
   })
@@ -81,37 +81,37 @@ describe('mergeEntriesV2 — group matrix', () => {
   it('a re-create after a delete brings the entry back without deletedAt', () => {
     const local = [fav('a', {}, { deletedAt: T(5) })]
     const remote = [fav('a', { created: T(6), body: T(6) }, { filename: 'g_a.json' })]
-    const r = mergeEntriesV2('favorites', local, remote, { now: NOW, hasBody: ALL })
+    const r = mergeEntries('favorites', local, remote, { now: NOW, hasBody: ALL })
     expect(r.entries[0]).not.toHaveProperty('deletedAt')
     expect(r.entries[0].filename).toBe('g_a.json')
     expect(r.remoteFilesToCopy).toEqual([{ from: 'g_a.json', to: 'g_a.json' }])
   })
 
   it('created equal to deletedAt is deleted', () => {
-    const r = mergeEntriesV2('favorites', [fav('a', { created: T(5) })], [fav('a', {}, { deletedAt: T(5) })], { now: NOW, hasBody: ALL })
+    const r = mergeEntries('favorites', [fav('a', { created: T(5) })], [fav('a', {}, { deletedAt: T(5) })], { now: NOW, hasBody: ALL })
     expect(r.entries[0].deletedAt).toBe(T(5))
   })
 
   it('a clock tie is decided by the values, the same way on both sides', () => {
     const a = [fav('x', { name: T(5) }, { label: 'apple' })]
     const b = [fav('x', { name: T(5) }, { label: 'banana' })]
-    expect(mergeEntriesV2('favorites', a, b, { now: NOW, hasBody: ALL }).entries[0].label).toBe('banana')
-    expect(mergeEntriesV2('favorites', b, a, { now: NOW, hasBody: ALL }).entries[0].label).toBe('banana')
-    expect(mergeEntriesV2('favorites', b, a, { now: NOW, hasBody: ALL }).remoteNeedsUpdate).toBe(true)
+    expect(mergeEntries('favorites', a, b, { now: NOW, hasBody: ALL }).entries[0].label).toBe('banana')
+    expect(mergeEntries('favorites', b, a, { now: NOW, hasBody: ALL }).entries[0].label).toBe('banana')
+    expect(mergeEntries('favorites', b, a, { now: NOW, hasBody: ALL }).remoteNeedsUpdate).toBe(true)
   })
 
   it('equal clocks and fields are decided by the body hash', () => {
     const local = [snap('a', {})]
     const remote = [snap('a', {})]
     const hashes = { local: 'aaa', remote: 'bbb' }
-    const r = mergeEntriesV2('snapshots', local, remote, { now: NOW, hasBody: ALL, bodyHash: (side) => hashes[side] })
+    const r = mergeEntries('snapshots', local, remote, { now: NOW, hasBody: ALL, bodyHash: (side) => hashes[side] })
     expect(r.byId.get('a')?.bodyFromRemote).toBe(true)
-    const swapped = mergeEntriesV2('snapshots', local, remote, { now: NOW, hasBody: ALL, bodyHash: (side) => (side === 'local' ? 'bbb' : 'aaa') })
+    const swapped = mergeEntries('snapshots', local, remote, { now: NOW, hasBody: ALL, bodyHash: (side) => (side === 'local' ? 'bbb' : 'aaa') })
     expect(swapped.byId.get('a')?.bodyFromRemote).toBe(false)
   })
 
   it('a local body that wins only by its hash still asks for an upload', () => {
-    const r = mergeEntriesV2('snapshots', [snap('a', {})], [snap('a', {})], { now: NOW, hasBody: ALL, bodyHash: (side) => (side === 'local' ? 'bbb' : 'aaa') })
+    const r = mergeEntries('snapshots', [snap('a', {})], [snap('a', {})], { now: NOW, hasBody: ALL, bodyHash: (side) => (side === 'local' ? 'bbb' : 'aaa') })
     expect(r.byId.get('a')?.bodyFromRemote).toBe(false)
     expect(r.remoteNeedsUpdate).toBe(true)
   })
@@ -119,10 +119,10 @@ describe('mergeEntriesV2 — group matrix', () => {
   it('calls bodyHash only on an exact clock and fields tie', () => {
     const calls: string[] = []
     const bodyHash = (side: string) => { calls.push(side); return side }
-    mergeEntriesV2('snapshots', [snap('a', { body: T(2) })], [snap('a', {})], { now: NOW, hasBody: ALL, bodyHash })
-    mergeEntriesV2('snapshots', [snap('a', {}, { vilVersion: 1 })], [snap('a', {})], { now: NOW, hasBody: ALL, bodyHash })
+    mergeEntries('snapshots', [snap('a', { body: T(2) })], [snap('a', {})], { now: NOW, hasBody: ALL, bodyHash })
+    mergeEntries('snapshots', [snap('a', {}, { vilVersion: 1 })], [snap('a', {})], { now: NOW, hasBody: ALL, bodyHash })
     expect(calls).toEqual([])
-    mergeEntriesV2('snapshots', [snap('a', {})], [snap('a', {})], { now: NOW, hasBody: ALL, bodyHash })
+    mergeEntries('snapshots', [snap('a', {})], [snap('a', {})], { now: NOW, hasBody: ALL, bodyHash })
     expect(calls.sort()).toEqual(['local', 'remote'])
   })
 
@@ -136,58 +136,58 @@ describe('mergeEntriesV2 — group matrix', () => {
   })
 
   it('a full tie keeps the local body and needs no copy or upload', () => {
-    const r = mergeEntriesV2('snapshots', [snap('a', {})], [snap('a', {})], { now: NOW, hasBody: ALL })
+    const r = mergeEntries('snapshots', [snap('a', {})], [snap('a', {})], { now: NOW, hasBody: ALL })
     expect(r.byId.get('a')?.bodyFromRemote).toBe(false)
     expect(r.remoteNeedsUpdate).toBe(false)
     expect(r.localNeedsWrite).toBe(false)
   })
 
   it('one-sided entries: local-only needs an upload, remote-only is copied', () => {
-    const r = mergeEntriesV2('favorites', [fav('a', {})], [fav('b', {})], { now: NOW, hasBody: ALL })
+    const r = mergeEntries('favorites', [fav('a', {})], [fav('b', {})], { now: NOW, hasBody: ALL })
     expect(r.remoteNeedsUpdate).toBe(true)
     expect(r.remoteFilesToCopy).toEqual([{ from: 'f_b.json', to: 'f_b.json' }])
   })
 
   it('normalizes v1 inputs and writes them back with clocks', () => {
     const v1: SavedFavoriteMeta = { id: 'a', label: 'L', savedAt: T(1), filename: 'f_a.json', updatedAt: T(2) }
-    const r = mergeEntriesV2('favorites', [v1], [v1], { now: NOW, hasBody: ALL })
+    const r = mergeEntries('favorites', [v1], [v1], { now: NOW, hasBody: ALL })
     expect(r.entries[0].clocks).toEqual({ created: T(1), body: T(1), name: T(2), hub: T(2) })
     expect(r.localNeedsWrite).toBe(true)
     expect(r.remoteNeedsUpdate).toBe(true)
   })
 })
 
-describe('mergeEntriesV2 — GC, ordering, referenced files', () => {
+describe('mergeEntries — GC, ordering, referenced files', () => {
   const old = T(0)
   const NOW_LATE = BASE + TOMBSTONE_TTL_MS + 10_000
 
   it('drops dead tombstones past the TTL but never alive entries', () => {
     const dead = fav('d', {}, { deletedAt: T(1) })
     const aliveWithOldDelete = fav('a', { created: T(2) }, { deletedAt: old })
-    const r = mergeEntriesV2('favorites', [dead, aliveWithOldDelete], [], { now: NOW_LATE, hasBody: ALL })
+    const r = mergeEntries('favorites', [dead, aliveWithOldDelete], [], { now: NOW_LATE, hasBody: ALL })
     expect(r.entries.map((e) => e.id)).toEqual(['a'])
     expect(r.entries[0]).not.toHaveProperty('deletedAt')
-    expect(gcTombstonesV2([dead], NOW).map((e) => e.id)).toEqual(['d'])
+    expect(gcTombstones([dead], NOW).map((e) => e.id)).toEqual(['d'])
   })
 
   it('sorts alive by updatedAt and puts tombstones last; preserveLocalOrder keeps local order', () => {
     const local = [fav('old', {}), fav('dead', {}, { deletedAt: T(9) }), fav('new', { name: T(5) })]
     const remote = [fav('remoteOnly', { name: T(3) })]
-    expect(mergeEntriesV2('favorites', local, remote, { now: NOW, hasBody: ALL }).entries.map((e) => e.id)).toEqual(['new', 'remoteOnly', 'old', 'dead'])
-    expect(mergeEntriesV2('favorites', local, remote, { now: NOW, hasBody: ALL, preserveLocalOrder: true }).entries.map((e) => e.id))
+    expect(mergeEntries('favorites', local, remote, { now: NOW, hasBody: ALL }).entries.map((e) => e.id)).toEqual(['new', 'remoteOnly', 'old', 'dead'])
+    expect(mergeEntries('favorites', local, remote, { now: NOW, hasBody: ALL, preserveLocalOrder: true }).entries.map((e) => e.id))
       .toEqual(['old', 'new', 'remoteOnly', 'dead'])
   })
 
   it('referenced filenames include tombstones', () => {
-    const r = mergeEntriesV2('favorites', [fav('a', {}), fav('b', {}, { deletedAt: T(5) })], [], { now: NOW, hasBody: ALL })
+    const r = mergeEntries('favorites', [fav('a', {}), fav('b', {}, { deletedAt: T(5) })], [], { now: NOW, hasBody: ALL })
     expect([...r.referencedFilenames].sort()).toEqual(['f_a.json', 'f_b.json'])
   })
 })
 
-describe('mergeEntriesV2 — id-carrying filenames', () => {
+describe('mergeEntries — id-carrying filenames', () => {
   it('saves a legacy remote filename under the id-carrying name', () => {
     const remote = [snap('a', {}, { filename: 'kb_2025.pipette' })]
-    const r = mergeEntriesV2('snapshots', [], remote, { now: NOW, hasBody: ALL })
+    const r = mergeEntries('snapshots', [], remote, { now: NOW, hasBody: ALL })
     expect(r.entries[0].filename).toBe('kb_2025_a.pipette')
     expect(r.remoteFilesToCopy).toEqual([{ from: 'kb_2025.pipette', to: 'kb_2025_a.pipette' }])
     expect(r.remoteNeedsUpdate).toBe(true)
@@ -196,7 +196,7 @@ describe('mergeEntriesV2 — id-carrying filenames', () => {
   it('a migrated local entry and the legacy remote copy of it are the same body', () => {
     const local = [snap('a', {}, { filename: 'kb_2025_a.pipette' })]
     const remote = [snap('a', {}, { filename: 'kb_2025.pipette' })]
-    const r = mergeEntriesV2('snapshots', local, remote, { now: NOW, hasBody: ALL })
+    const r = mergeEntries('snapshots', local, remote, { now: NOW, hasBody: ALL })
     expect(r.remoteFilesToCopy).toEqual([])
     expect(r.localNeedsWrite).toBe(false)
     expect(r.remoteNeedsUpdate).toBe(true)
@@ -204,24 +204,24 @@ describe('mergeEntriesV2 — id-carrying filenames', () => {
 
   it('two remote ids on one legacy filename end on two files', () => {
     const remote = [fav('a', {}, { filename: 'x.json' }), fav('b', {}, { filename: 'x.json' })]
-    const r = mergeEntriesV2('favorites', [], remote, { now: NOW, hasBody: ALL })
+    const r = mergeEntries('favorites', [], remote, { now: NOW, hasBody: ALL })
     expect(r.entries.map((e) => e.filename).sort()).toEqual(['x_a.json', 'x_b.json'])
     expect(r.remoteFilesToCopy).toEqual([{ from: 'x.json', to: 'x_a.json' }, { from: 'x.json', to: 'x_b.json' }])
   })
 
   it('a remote filename naming another id still gets this id', () => {
-    const r = mergeEntriesV2('favorites', [fav('b', {})], [fav('a', {}, { filename: 'f_b.json' })], { now: NOW, hasBody: ALL })
+    const r = mergeEntries('favorites', [fav('b', {})], [fav('a', {}, { filename: 'f_b.json' })], { now: NOW, hasBody: ALL })
     expect(r.byId.get('a')?.entry.filename).toBe('f_b_a.json')
   })
 })
 
-describe('mergeEntriesV2 — missing bodies', () => {
+describe('mergeEntries — missing bodies', () => {
   const missing = (names: string[]) => (_side: string, e: { filename: string }) => !names.includes(e.filename)
 
   it('a remote body the bundle lacks never wins', () => {
     const local = [snap('a', {})]
     const remote = [snap('a', { body: T(6) }, { vilVersion: 3 })]
-    const r = mergeEntriesV2('snapshots', local, remote, { now: NOW, hasBody: (side) => side === 'local' })
+    const r = mergeEntries('snapshots', local, remote, { now: NOW, hasBody: (side) => side === 'local' })
     expect(r.byId.get('a')).toMatchObject({ bodyFromRemote: false, entry: { vilVersion: 2 } })
     expect(r.remoteNeedsUpdate).toBe(true)
   })
@@ -229,7 +229,7 @@ describe('mergeEntriesV2 — missing bodies', () => {
   it('a local entry without its file takes the remote body even when its own is newer', () => {
     const local = [snap('a', { body: T(6) }, { vilVersion: 3 })]
     const remote = [snap('a', {})]
-    const r = mergeEntriesV2('snapshots', local, remote, { now: NOW, hasBody: (side) => side === 'remote' })
+    const r = mergeEntries('snapshots', local, remote, { now: NOW, hasBody: (side) => side === 'remote' })
     expect(r.byId.get('a')).toMatchObject({ bodyFromRemote: true, entry: { vilVersion: 2, clocks: { body: T(1) } } })
     expect(r.remoteNeedsUpdate).toBe(false)
   })
@@ -237,36 +237,36 @@ describe('mergeEntriesV2 — missing bodies', () => {
   it('Drive lacking the file of an equal entry asks for an upload, and stops once it has it', () => {
     const local = [fav('a', {})]
     const remote = [fav('a', {})]
-    expect(mergeEntriesV2('favorites', local, remote, { now: NOW, hasBody: (side) => side === 'local' }).remoteNeedsUpdate).toBe(true)
-    expect(mergeEntriesV2('favorites', local, remote, { now: NOW, hasBody: ALL }).remoteNeedsUpdate).toBe(false)
-    expect(mergeEntriesV2('favorites', local, remote, { now: NOW, hasBody: (side) => side === 'remote' }).remoteNeedsUpdate).toBe(false)
+    expect(mergeEntries('favorites', local, remote, { now: NOW, hasBody: (side) => side === 'local' }).remoteNeedsUpdate).toBe(true)
+    expect(mergeEntries('favorites', local, remote, { now: NOW, hasBody: ALL }).remoteNeedsUpdate).toBe(false)
+    expect(mergeEntries('favorites', local, remote, { now: NOW, hasBody: (side) => side === 'remote' }).remoteNeedsUpdate).toBe(false)
   })
 
   it('hasBody is required under the clock policy', () => {
     // @ts-expect-error hasBody is missing
-    mergeEntriesV2('favorites', [], [], { now: NOW })
+    mergeEntries('favorites', [], [], { now: NOW })
     // @ts-expect-error hasBody is missing
-    mergeEntriesV2('favorites', [], [], { now: NOW, bodyPolicy: 'clock' })
-    expect(mergeEntriesV2('i18nPacks', [], [], { now: NOW, bodyPolicy: 'localIfPresent' }).entries).toEqual([])
+    mergeEntries('favorites', [], [], { now: NOW, bodyPolicy: 'clock' })
+    expect(mergeEntries('i18nPacks', [], [], { now: NOW, bodyPolicy: 'localIfPresent' }).entries).toEqual([])
   })
 
   it('when neither side has the file the local entry stays as it is and nothing is sent', () => {
     const local = [snap('a', {}, { label: 'mine' })]
     const remote = [snap('a', { body: T(6), name: T(6) }, { label: 'theirs' })]
-    const r = mergeEntriesV2('snapshots', local, remote, { now: NOW, hasBody: () => false })
+    const r = mergeEntries('snapshots', local, remote, { now: NOW, hasBody: () => false })
     expect(r.byId.get('a')).toMatchObject({ bodyMissing: true, entry: { label: 'mine' } })
     expect(r.localNeedsWrite).toBe(false)
     expect(r.remoteNeedsUpdate).toBe(false)
   })
 
   it('a remote-only entry without its file is neither written nor counted', () => {
-    const r = mergeEntriesV2('favorites', [], [fav('a', {})], { now: NOW, hasBody: () => false })
+    const r = mergeEntries('favorites', [], [fav('a', {})], { now: NOW, hasBody: () => false })
     expect(r.entries).toEqual([])
     expect(r.remoteNeedsUpdate).toBe(false)
   })
 
   it('a local-only entry without its file is kept but not sent', () => {
-    const r = mergeEntriesV2('favorites', [fav('a', {})], [], { now: NOW, hasBody: () => false })
+    const r = mergeEntries('favorites', [fav('a', {})], [], { now: NOW, hasBody: () => false })
     expect(r.entries.map((e) => e.id)).toEqual(['a'])
     expect(r.remoteNeedsUpdate).toBe(false)
   })
@@ -274,25 +274,25 @@ describe('mergeEntriesV2 — missing bodies', () => {
   it('a revival whose local tombstone has no file adopts the remote body', () => {
     const local = [fav('a', { body: T(7) }, { deletedAt: T(8), filename: 'old_a.json' })]
     const remote = [fav('a', { created: T(9), body: T(2) }, { filename: 'new_a.json' })]
-    const r = mergeEntriesV2('favorites', local, remote, { now: NOW, hasBody: missing(['old_a.json']) })
+    const r = mergeEntries('favorites', local, remote, { now: NOW, hasBody: missing(['old_a.json']) })
     expect(r.entries[0]).not.toHaveProperty('deletedAt')
     expect(r.byId.get('a')).toMatchObject({ bodyFromRemote: true, entry: { filename: 'new_a.json' } })
   })
 
   it('tombstones merge without looking at files', () => {
-    const r = mergeEntriesV2('favorites', [fav('a', { body: T(3) }, { deletedAt: T(5) })], [fav('a', {}, { deletedAt: T(4) })], { now: NOW, hasBody: () => false })
+    const r = mergeEntries('favorites', [fav('a', { body: T(3) }, { deletedAt: T(5) })], [fav('a', {}, { deletedAt: T(4) })], { now: NOW, hasBody: () => false })
     expect(r.entries[0]).toMatchObject({ deletedAt: T(5), clocks: { body: T(3) } })
     expect(r.byId.get('a')?.bodyMissing).toBe(false)
   })
 
   it('passes the remote bundle name to hasBody', () => {
     const seen: string[] = []
-    mergeEntriesV2('favorites', [], [fav('a', {}, { filename: 'x.json' })], { now: NOW, hasBody: (_s, e) => { seen.push(e.filename); return true } })
+    mergeEntries('favorites', [], [fav('a', {}, { filename: 'x.json' })], { now: NOW, hasBody: (_s, e) => { seen.push(e.filename); return true } })
     expect(seen).toEqual(['x.json'])
   })
 })
 
-describe("mergeEntriesV2 — bodyPolicy 'localIfPresent' (pack indexes)", () => {
+describe("mergeEntries — bodyPolicy 'localIfPresent' (pack indexes)", () => {
   const pack = (body: string, version: string, over: Partial<I18nPackMeta> = {}, clocks: Partial<EntryClocks> = {}): ClockedEntry<I18nPackMeta> => withUpdated({
     id: 'p', filename: 'packs/p.json', name: 'N', version, enabled: true, savedAt: T(0), ...over,
     clocks: { created: T(1), body, name: T(1), hub: T(1), enabled: T(1), ...clocks },
@@ -300,20 +300,20 @@ describe("mergeEntriesV2 — bodyPolicy 'localIfPresent' (pack indexes)", () => 
   const opts = { now: NOW, bodyPolicy: 'localIfPresent' as const }
 
   it('a live local entry keeps its body fields whatever the clocks, and the body is not compared', () => {
-    const r = mergeEntriesV2('i18nPacks', [pack(T(1), '1')], [pack(T(5), '2')], opts)
+    const r = mergeEntries('i18nPacks', [pack(T(1), '1')], [pack(T(5), '2')], opts)
     expect(r.entries[0]).toMatchObject({ version: '1', clocks: { body: T(1) } })
     expect(r.byId.get('p')).toMatchObject({ bodyFromRemote: false, bodyFetchNeeded: false })
     expect(r.remoteNeedsUpdate).toBe(false)
-    expect(mergeEntriesV2('i18nPacks', [pack(T(1), '1')], [pack(T(5), '2')], { now: NOW, hasBody: ALL }).entries[0].version).toBe('2')
+    expect(mergeEntries('i18nPacks', [pack(T(1), '1')], [pack(T(5), '2')], { now: NOW, hasBody: ALL }).entries[0].version).toBe('2')
   })
 
   it('still reports meta differences', () => {
     const local = [pack(T(5), '2', { name: 'renamed' }, { name: T(6) })]
-    expect(mergeEntriesV2('i18nPacks', local, [pack(T(1), '1')], opts).remoteNeedsUpdate).toBe(true)
+    expect(mergeEntries('i18nPacks', local, [pack(T(1), '1')], opts).remoteNeedsUpdate).toBe(true)
   })
 
   it('a remote-only entry shows the remote body fields with body clock 0 and asks for the body unit', () => {
-    const r = mergeEntriesV2('i18nPacks', [], [pack(T(5), '2')], opts)
+    const r = mergeEntries('i18nPacks', [], [pack(T(5), '2')], opts)
     expect(r.entries[0]).toMatchObject({ version: '2', clocks: { body: EPOCH_ISO } })
     expect(r.byId.get('p')).toMatchObject({ bodyFromRemote: false, bodyFetchNeeded: true })
     expect(r.remoteFilesToCopy).toEqual([])
@@ -323,26 +323,26 @@ describe("mergeEntriesV2 — bodyPolicy 'localIfPresent' (pack indexes)", () => 
   it('a revival takes the remote body fields the same way', () => {
     const local = [pack(T(3), '1', { deletedAt: T(4), enabled: false })]
     const remote = [pack(T(5), '2', {}, { created: T(5), enabled: T(5) })]
-    const r = mergeEntriesV2('i18nPacks', local, remote, opts)
+    const r = mergeEntries('i18nPacks', local, remote, opts)
     expect(r.entries[0]).not.toHaveProperty('deletedAt')
     expect(r.entries[0]).toMatchObject({ version: '2', enabled: true, clocks: { body: EPOCH_ISO } })
     expect(r.byId.get('p')?.bodyFetchNeeded).toBe(true)
   })
 
   it('a local tombstone that stays deleted keeps its own body', () => {
-    const r = mergeEntriesV2('i18nPacks', [pack(T(3), '1', { deletedAt: T(4) })], [pack(T(5), '2')], opts)
+    const r = mergeEntries('i18nPacks', [pack(T(3), '1', { deletedAt: T(4) })], [pack(T(5), '2')], opts)
     expect(r.entries[0]).toMatchObject({ version: '1', deletedAt: T(4) })
     expect(r.byId.get('p')?.bodyFetchNeeded).toBe(false)
   })
 })
 
-describe('applyRunLogRetentionV2', () => {
+describe('applyRunLogRetention', () => {
   const run = (id: string, startedAt: string, created = T(1)): ClockedEntry<RunLogMeta> => withUpdated({
     id, startedAt, filename: `r_${id}.jsonl`, savedAt: T(0), clocks: { created, body: T(1) },
   })
 
   it('tombstones the oldest by startedAt as dead v2 entries', () => {
-    const r = applyRunLogRetentionV2([run('a', T(1)), run('b', T(3)), run('c', T(2))], 2, NOW)
+    const r = applyRunLogRetention([run('a', T(1)), run('b', T(3)), run('c', T(2))], 2, NOW)
     expect(r.evicted.map((e) => e.id)).toEqual(['a'])
     expect(r.evicted[0].deletedAt).toBe(new Date(NOW).toISOString())
     expect(isDeadEntry(r.evicted[0])).toBe(true)
@@ -350,20 +350,20 @@ describe('applyRunLogRetentionV2', () => {
 
   it('never puts deletedAt before created', () => {
     const future = new Date(NOW + 60_000).toISOString()
-    const r = applyRunLogRetentionV2([run('a', T(1), future), run('b', T(3))], 1, NOW)
+    const r = applyRunLogRetention([run('a', T(1), future), run('b', T(3))], 1, NOW)
     expect(r.evicted[0].deletedAt).toBe(future)
     expect(isDeadEntry(r.evicted[0])).toBe(true)
   })
 
   it('runs as part of the merge and asks for an upload', () => {
-    const r = mergeEntriesV2('runLogs', [run('a', T(1)), run('b', T(3))], [run('a', T(1)), run('b', T(3))], { now: NOW, hasBody: ALL, runLogRetentionMax: 1 })
+    const r = mergeEntries('runLogs', [run('a', T(1)), run('b', T(3))], [run('a', T(1)), run('b', T(3))], { now: NOW, hasBody: ALL, runLogRetentionMax: 1 })
     expect(r.evicted.map((e) => e.id)).toEqual(['a'])
     expect(r.byId.get('a')?.entry.deletedAt).toBeDefined()
     expect(r.remoteNeedsUpdate).toBe(true)
   })
 })
 
-describe('mergeEntriesV2 — properties', () => {
+describe('mergeEntries — properties', () => {
   function rng(seed: number): () => number {
     let st = seed >>> 0
     return () => {
@@ -396,7 +396,7 @@ describe('mergeEntriesV2 — properties', () => {
   }
 
   const hasBody = (_side: string, e: { filename: string }) => !e.filename.startsWith('gone_')
-  const run = (a: readonly SnapshotMeta[], b: readonly SnapshotMeta[]) => mergeEntriesV2('snapshots', a, b, { now: NOW, hasBody })
+  const run = (a: readonly SnapshotMeta[], b: readonly SnapshotMeta[]) => mergeEntries('snapshots', a, b, { now: NOW, hasBody })
   const merge = (a: readonly SnapshotMeta[], b: readonly SnapshotMeta[]) => run(a, b).entries
   /** The merged entries minus ids no side has a body for (those keep the
    *  local entry, so they depend on which side is local). */
@@ -469,7 +469,7 @@ describe('mergeEntriesV2 — properties', () => {
       let driveFiles = new Set<string>()
       let now = NOW
       const step = (d: (typeof devices)[number]) => {
-        const r = mergeEntriesV2('snapshots', d.entries, drive, {
+        const r = mergeEntries('snapshots', d.entries, drive, {
           now: now++,
           hasBody: (s, e) => (s === 'local' ? d.files : driveFiles).has(e.filename),
         })

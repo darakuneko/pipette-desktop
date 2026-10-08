@@ -261,6 +261,7 @@ export const IpcChannels = {
   I18N_PACK_STORE_GET: 'i18n-pack-store:get',
   I18N_PACK_STORE_RENAME: 'i18n-pack-store:rename',
   I18N_PACK_STORE_SET_ENABLED: 'i18n-pack-store:set-enabled',
+  I18N_PACK_STORE_REFRESH_COVERAGE: 'i18n-pack-store:refresh-coverage',
   I18N_PACK_STORE_DELETE: 'i18n-pack-store:delete',
   I18N_PACK_STORE_SET_HUB_POST_ID: 'i18n-pack-store:set-hub-post-id',
   I18N_PACK_STORE_HAS_NAME: 'i18n-pack-store:has-name',

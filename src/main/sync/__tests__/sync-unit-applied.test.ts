@@ -202,8 +202,8 @@ describe('index-based unit', () => {
 
     expect(appliedUnits()).toEqual([{ syncUnit: unit }])
     const sent = broadcasts.find((b) => b.channel === IpcChannels.SYNC_UNIT_APPLIED)
-    expect(sent?.fileAtSend).toContain('"b.json"')
-    expect(await readFile(join(mockUserDataPath, 'sync', 'favorites', 'tapDance', 'b.json'), 'utf-8')).toBe('{"b":1}')
+    expect(sent?.fileAtSend).toContain('"b_b.json"')
+    expect(await readFile(join(mockUserDataPath, 'sync', 'favorites', 'tapDance', 'b_b.json'), 'utf-8')).toBe('{"b":1}')
   })
 
   it('emits when there was no local index yet', async () => {

@@ -15,6 +15,7 @@ import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
 import type { SyncBlockReason } from '../../shared/types/sync'
 import { listLocalKeyboardUids, shouldDownloadSyncUnit } from './sync-scope'
 import { mergeWithRemote } from './sync-merge-dispatch'
+import { settlePackIndexUnitsFirst } from './pack-bundle-merge'
 import { canonicalFiles } from './drive-canonical'
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -84,32 +85,32 @@ async function pollForRemoteChanges(): Promise<void> {
 
     const limit = pLimit(SYNC_CONCURRENCY)
     const failedUnits: string[] = []
-    await Promise.allSettled(
-      changedFiles.map(({ file: remoteFile, syncUnit }) =>
-        limit(async () => {
-          try {
-            await mergeWithRemote(remoteFile, syncUnit, password, remoteFiles)
-            emitProgress({
-              direction: 'download',
-              status: 'success',
-              syncUnit,
-              message: 'Sync complete',
-            })
-          } catch (err) {
-            failedUnits.push(syncUnit)
-            if (err instanceof MalformedSyncBundleError) {
-              // A malformed bundle's exact revision is recorded so the next
-              // poll does not retry it every 3 minutes; a new revision has a
-              // different modifiedTime and is retried. Manual syncs have no
-              // such memory and may retry it. Unit name only, never bundle
-              // content: the project's no-payload-in-logs rule for
-              // attacker-reachable remote data.
-              recordRemoteState([remoteFile])
-              log('warn', `sync: ${err.message}`)
-            }
+    // Pack rosters before pack bodies (`settlePackIndexUnitsFirst`). A body
+    // whose revision a roster merge forgets is picked up by the next poll.
+    await settlePackIndexUnitsFirst(changedFiles, (f) => f.syncUnit, ({ file: remoteFile, syncUnit }) =>
+      limit(async () => {
+        try {
+          await mergeWithRemote(remoteFile, syncUnit, password, remoteFiles)
+          emitProgress({
+            direction: 'download',
+            status: 'success',
+            syncUnit,
+            message: 'Sync complete',
+          })
+        } catch (err) {
+          failedUnits.push(syncUnit)
+          if (err instanceof MalformedSyncBundleError) {
+            // A malformed bundle's exact revision is recorded so the next
+            // poll does not retry it every 3 minutes; a new revision has a
+            // different modifiedTime and is retried. Manual syncs have no
+            // such memory and may retry it. Unit name only, never bundle
+            // content: the project's no-payload-in-logs rule for
+            // attacker-reachable remote data.
+            recordRemoteState([remoteFile])
+            log('warn', `sync: ${err.message}`)
           }
-        }),
-      ),
+        }
+      }),
     )
 
     // Pass-level GC — see pack-gc.ts's doc for why this must never be

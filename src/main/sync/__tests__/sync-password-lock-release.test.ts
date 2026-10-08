@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { SYNC_FORMAT_VERSION } from '../../../shared/constants/sync-format'
 import type { DriveFile } from '../google-drive'
 
 const mockListFiles = vi.fn(async (..._args: unknown[]): Promise<DriveFile[]> => [])
@@ -120,7 +121,7 @@ describe('sync-password-lock-release', () => {
     })
 
     it('refuses while Drive needs a newer sync format, before deleting anything', async () => {
-      const marker: DriveFile = { id: 'fmt', name: 'sync-format-v2.json', modifiedTime: EARLY.modifiedTime, createdTime: EARLY.createdTime }
+      const marker: DriveFile = { id: 'fmt', name: `sync-format-v${SYNC_FORMAT_VERSION + 1}.json`, modifiedTime: EARLY.modifiedTime, createdTime: EARLY.createdTime }
       mockListFiles.mockResolvedValue([EARLY, marker])
       await expect(releasePasswordChangeLocks()).rejects.toThrow('sync.updateRequired')
       expect(mockDeleteFile).not.toHaveBeenCalled()

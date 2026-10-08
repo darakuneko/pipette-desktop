@@ -74,14 +74,14 @@ describe('run-log sync unit', () => {
   it('bundleSyncUnit tags a runs unit as type "run-log"', async () => {
     const runsDir = join(mockUserDataPath, 'sync', 'keyboards', 'uid-a', 'runs')
     await mkdir(runsDir, { recursive: true })
-    const meta = { id: 'run-1', startedAt: '2026-01-01T00:00:00.000Z', filename: 'run-1.json', savedAt: '2026-01-01T00:00:00.000Z' }
+    const meta = { id: 'run-1', startedAt: '2026-01-01T00:00:00.000Z', filename: 'ts_run-1.json', savedAt: '2026-01-01T00:00:00.000Z' }
     await writeFile(join(runsDir, 'index.json'), JSON.stringify({ uid: 'uid-a', entries: [meta] }), 'utf-8')
-    await writeFile(join(runsDir, 'run-1.json'), JSON.stringify({ runId: 'run-1' }), 'utf-8')
+    await writeFile(join(runsDir, 'ts_run-1.json'), JSON.stringify({ runId: 'run-1' }), 'utf-8')
 
     const bundle = await bundleSyncUnit('keyboards/uid-a/runs')
     expect(bundle).not.toBeNull()
     expect(bundle!.type).toBe('run-log')
     expect(bundle!.key).toBe('uid-a')
-    expect(bundle!.files['run-1.json']).toBeDefined()
+    expect(bundle!.files['ts_run-1.json']).toBeDefined()
   })
 })

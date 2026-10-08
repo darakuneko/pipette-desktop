@@ -24,9 +24,12 @@ export interface FileImportTextData {
 
 interface CachedText {
   data: FileImportTextData
-  /** The store meta's `updatedAt` when fetched. An overwrite import keeps
-   *  the id and changes this, so it is what tells a stale entry apart. */
-  updatedAt: string
+  /** The store meta's body filename and name when fetched. Every save of
+   *  new text writes a new filename (a rename or a Hub link change does
+   *  not), and a rename changes only the name, so the pair tells a stale
+   *  entry apart. */
+  filename: string
+  name: string
 }
 
 const fileImportTextCache = new Map<string, CachedText>()
@@ -53,7 +56,7 @@ export async function getFileImportTextData(textId: string): Promise<FileImportT
   const romajiCapable = result.data.meta.romajiCapable === true
   const data: FileImportTextData = { name, words, lineBreaks, indents, romajiCapable }
   if (generation === cacheGeneration) {
-    fileImportTextCache.set(textId, { data, updatedAt: result.data.meta.updatedAt })
+    fileImportTextCache.set(textId, { data, filename: result.data.meta.filename, name: result.data.meta.name })
   }
   return data
 }
@@ -69,21 +72,22 @@ export function clearFileImportTextCache(textId?: string): void {
 }
 
 /** After a sync merge of the texts store: drop the entries whose text was
- *  deleted or rewritten (`updatedAt` differs), keep the rest. A failed list
+ *  deleted, rewritten or renamed (filename or name differs), keep the rest. A failed list
  *  read drops everything. A run already started keeps its words — the run
  *  state holds its own copy and never reads this cache again. */
 export async function revalidateFileImportTextCache(): Promise<void> {
   const generation = ++cacheGeneration
-  let current: Map<string, string> | null = null
+  let current: Map<string, { filename: string; name: string }> | null = null
   try {
     const result = await window.vialAPI.typingTestTextStoreList()
-    if (result.success && result.data) current = new Map(result.data.map((m) => [m.id, m.updatedAt]))
+    if (result.success && result.data) current = new Map(result.data.map((m) => [m.id, { filename: m.filename, name: m.name }]))
   } catch {
     current = null
   }
   // A newer revalidation owns the cache from here.
   if (generation !== cacheGeneration) return
   for (const [id, entry] of fileImportTextCache) {
-    if (current?.get(id) !== entry.updatedAt) fileImportTextCache.delete(id)
+    const now = current?.get(id)
+    if (now?.filename !== entry.filename || now.name !== entry.name) fileImportTextCache.delete(id)
   }
 }

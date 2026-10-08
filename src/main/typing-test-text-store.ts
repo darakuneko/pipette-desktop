@@ -18,6 +18,10 @@ import type {
   TypingTestTextStoreResult,
   TypingTestTextStoreErrorCode,
 } from '../shared/types/typing-test-text-store'
+import { type ClockedEntry, idBodyFilename, markDeleted, touchClock } from './sync/entry-clocks'
+import { normalizeEntries, overwriteEntry } from './sync/entry-write'
+import { readIndexMigrated } from './sync/body-filename-migration'
+import { writeFileAtomic } from './utils/write-file-atomic'
 import {
   TYPING_TEST_TEXT_MAX_FILE_BYTES,
   normalizeFileImportText,
@@ -26,21 +30,28 @@ import {
 export const TYPING_TEST_TEXT_SYNC_UNIT = 'typing-test-texts'
 const MAX_NAME_LENGTH = 100
 
+type TextEntry = ClockedEntry<TypingTestTextMeta>
+
+interface ClockedTextIndex {
+  entries: TextEntry[]
+}
+
 // `romajiCapable` is computed from content, not persisted (see the field's
 // doc comment in shared/types/typing-test-text-store.ts). Scanning every
 // entry's file on each list call would mean an extra disk read per text, so
-// results are cached in-process keyed by id + the record's `updatedAt`
-// (already bumped on every content-changing write). A stale cache entry —
-// wrong id, or same id with a newer `updatedAt` — is simply recomputed.
-const romajiCapableCache = new Map<string, { updatedAt: string; capable: boolean }>()
+// results are cached in-process keyed by id + the record's body filename:
+// every content-changing save writes a new filename, and nothing else
+// (a rename, a Hub link) changes the text. A stale cache entry — wrong id,
+// or same id with another filename — is simply recomputed.
+const romajiCapableCache = new Map<string, { filename: string; capable: boolean }>()
 
 function getCachedRomajiCapable(meta: TypingTestTextMeta): boolean | undefined {
   const cached = romajiCapableCache.get(meta.id)
-  return cached && cached.updatedAt === meta.updatedAt ? cached.capable : undefined
+  return cached && cached.filename === meta.filename ? cached.capable : undefined
 }
 
 function setCachedRomajiCapable(meta: TypingTestTextMeta, capable: boolean): void {
-  romajiCapableCache.set(meta.id, { updatedAt: meta.updatedAt, capable })
+  romajiCapableCache.set(meta.id, { filename: meta.filename, capable })
 }
 
 // An import that collided with an existing name, parsed but not yet saved.
@@ -69,11 +80,7 @@ function ok<T>(data?: T): TypingTestTextStoreResult<T> {
   return { success: true, data }
 }
 
-function nowIso(): string {
-  return new Date().toISOString()
-}
-
-async function readIndex(): Promise<TypingTestTextIndex> {
+async function readIndex(): Promise<ClockedTextIndex> {
   try {
     const raw = await readFile(getIndexPath(), 'utf-8')
     const parsed = JSON.parse(raw) as TypingTestTextIndex
@@ -81,7 +88,7 @@ async function readIndex(): Promise<TypingTestTextIndex> {
       // Unknown/optional fields pass through untouched; `source` is the one
       // field validated here since malformed values (e.g. a non-string
       // workId) would otherwise reach catalog-matching logic unchecked.
-      return { entries: parsed.entries.map((e) => ({ ...e, source: sanitizeSource(e.source) })) }
+      return { entries: normalizeEntries('typingTestTexts', parsed.entries).map((e) => ({ ...e, source: sanitizeSource(e.source) })) }
     }
   } catch {
     // missing / corrupt — return empty
@@ -89,9 +96,15 @@ async function readIndex(): Promise<TypingTestTextIndex> {
   return { entries: [] }
 }
 
-async function writeIndex(index: TypingTestTextIndex): Promise<void> {
+async function writeIndex(index: ClockedTextIndex): Promise<void> {
   await mkdir(getStoreDir(), { recursive: true })
-  await writeFile(getIndexPath(), JSON.stringify(index, null, 2), 'utf-8')
+  await writeFileAtomic(getIndexPath(), JSON.stringify(index, null, 2))
+}
+
+/** `readIndex` for a caller holding the store lock: also moves body files
+ *  to id-carrying names (`migrateBodyFilenames`). */
+function readIndexLocked(): Promise<ClockedTextIndex> {
+  return readIndexMigrated('typingTestTexts', getStoreDir(), readIndex, writeIndex)
 }
 
 function findActiveByName(entries: TypingTestTextMeta[], name: string, excludeId?: string): TypingTestTextMeta | undefined {
@@ -165,8 +178,11 @@ export async function getRecord(id: string): Promise<TypingTestTextStoreResult<T
     const meta = index.entries.find((e) => e.id === id)
     if (!meta || meta.deletedAt) return fail('NOT_FOUND', 'Text not found')
     const raw = await readFile(getEntryPath(meta.filename), 'utf-8')
-    const parsed = normalizeFile(JSON.parse(raw))
-    if (!parsed) return fail('INVALID_FILE', 'Stored file is malformed')
+    const fromFile = normalizeFile(JSON.parse(raw))
+    if (!fromFile) return fail('INVALID_FILE', 'Stored file is malformed')
+    // A rename changes only the meta (`renameRecord`), so the meta's name
+    // is the text's name.
+    const parsed = { ...fromFile, name: meta.name }
     // Content is already in hand here, so scan directly instead of going
     // through withRomajiCapable (which would re-read the file on a cache miss).
     const cached = getCachedRomajiCapable(meta)
@@ -187,6 +203,12 @@ export interface SaveTextInput {
   /** Set when saving a catalog import (e.g. Aozora Bunko). Renderer-facing
    *  file imports never pass this — only main-process catalog importers do. */
   source?: TypingTestTextMeta['source']
+  /** Keep the name the entry `id` has when the save runs (under the store
+   *  lock) instead of `name`: for an overwrite that is not a rename (the
+   *  confirmed overwrite of a same-named import), so a rename made while
+   *  the prompt was open stays. `name` is used when the entry is new or
+   *  deleted. */
+  keepCurrentName?: boolean
 }
 
 async function writeRecord(meta: TypingTestTextMeta, data: TypingTestTextEntryFile): Promise<void> {
@@ -199,23 +221,27 @@ async function saveRecordUnlocked(input: SaveTextInput): Promise<TypingTestTextS
   if (!validated.success || validated.data === undefined) {
     return fail(validated.errorCode ?? 'INVALID_NAME', validated.error ?? 'Invalid name')
   }
-  const name = validated.data
-
   const { text, wordCount, lineCount } = normalizeFileImportText(typeof input.text === 'string' ? input.text : '')
   if (wordCount === 0) return fail('EMPTY_TEXT', 'Text has no typeable words')
 
   try {
-    const index = await readIndex()
+    const index = await readIndexLocked()
+    const current = input.keepCurrentName ? index.entries.find((e) => e.id === input.id && !e.deletedAt) : undefined
+    const name = current?.name ?? validated.data
     if (findActiveByName(index.entries, name, input.id)) {
       return fail('DUPLICATE_NAME', 'A text with the same name already exists')
     }
 
     const now = new Date()
     const id = input.id ?? randomUUID()
-    const filename = `${id}_${tsForFilename(now)}.json`
+    const filename = idBodyFilename('typingTestTexts', id, `${tsForFilename(now)}.json`)
     const data: TypingTestTextEntryFile = { name, text }
 
-    const meta: TypingTestTextMeta = {
+    const previous = index.entries.find((e) => e.id === id)
+    // Every caller is a user action (a file or catalog import, or the
+    // confirmed overwrite of a same-named text), so an id saved over is
+    // brought back or kept alive (`overwriteEntry`).
+    const meta = overwriteEntry<TypingTestTextMeta>('typingTestTexts', previous, {
       id,
       name,
       wordCount,
@@ -224,7 +250,7 @@ async function saveRecordUnlocked(input: SaveTextInput): Promise<TypingTestTextS
       savedAt: now.toISOString(),
       updatedAt: now.toISOString(),
       source: input.source,
-    }
+    }, now, { body: true, explicit: true })
 
     await writeRecord(meta, data)
     // Prime the romajiCapable cache from the text already in hand, so the
@@ -234,13 +260,12 @@ async function saveRecordUnlocked(input: SaveTextInput): Promise<TypingTestTextS
 
     // Overwrite path: drop the previous JSON so the entry keeps a single
     // file on disk. Best-effort — a missing file should not abort.
-    const previous = index.entries.find((e) => e.id === id)
     if (previous && previous.filename !== filename) {
       try { await unlink(getEntryPath(previous.filename)) } catch { /* swallow */ }
     }
 
     const existingIndex = index.entries.findIndex((e) => e.id === id)
-    let nextEntries: TypingTestTextMeta[]
+    let nextEntries: TextEntry[]
     if (existingIndex >= 0) {
       nextEntries = index.entries.slice()
       nextEntries[existingIndex] = meta
@@ -268,28 +293,19 @@ async function renameRecordUnlocked(id: string, newName: string): Promise<Typing
   const name = validated.data
 
   try {
-    const index = await readIndex()
-    const meta = index.entries.find((e) => e.id === id && !e.deletedAt)
-    if (!meta) return fail('NOT_FOUND', 'Text not found')
+    const index = await readIndexLocked()
+    const at = index.entries.findIndex((e) => e.id === id && !e.deletedAt)
+    if (at < 0) return fail('NOT_FOUND', 'Text not found')
+    const current = index.entries[at]
     if (findActiveByName(index.entries, name, id)) {
       return fail('DUPLICATE_NAME', 'A text with the same name already exists')
     }
 
-    const filePath = getEntryPath(meta.filename)
-    const raw = await readFile(filePath, 'utf-8')
-    const parsed = normalizeFile(JSON.parse(raw))
-    if (!parsed) return fail('INVALID_FILE', 'Stored file is malformed')
-
-    parsed.name = name
-    await writeFile(filePath, JSON.stringify(parsed, null, 2), 'utf-8')
-
-    meta.name = name
-    meta.updatedAt = nowIso()
+    // The meta only: the body file keeps the name it was saved with, and
+    // `getRecord` shows the meta's.
+    const meta = touchClock({ ...current, name }, 'name', new Date())
+    index.entries[at] = meta
     await writeIndex(index)
-    // Content (parsed.text) is unchanged by a rename — carry the scan
-    // forward under the new updatedAt instead of forcing a re-read on the
-    // next list/get call.
-    setCachedRomajiCapable(meta, isKanaOnlyText(parsed.text))
 
     notifyChange(TYPING_TEST_TEXT_SYNC_UNIT)
     return ok(meta)
@@ -304,13 +320,11 @@ export function renameRecord(id: string, newName: string): Promise<TypingTestTex
 
 async function deleteRecordUnlocked(id: string): Promise<TypingTestTextStoreResult<void>> {
   try {
-    const index = await readIndex()
-    const meta = index.entries.find((e) => e.id === id)
-    if (!meta) return fail('NOT_FOUND', 'Text not found')
+    const index = await readIndexLocked()
+    const at = index.entries.findIndex((e) => e.id === id)
+    if (at < 0) return fail('NOT_FOUND', 'Text not found')
 
-    const now = nowIso()
-    meta.deletedAt = now
-    meta.updatedAt = now
+    index.entries[at] = markDeleted(index.entries[at], new Date())
     await writeIndex(index)
 
     notifyChange(TYPING_TEST_TEXT_SYNC_UNIT)
@@ -393,5 +407,5 @@ export async function confirmImportOverwrite(): Promise<TypingTestTextStoreResul
   if (!pendingImport) return fail('NOT_FOUND', 'No pending import to confirm')
   const { name, text, existingId } = pendingImport
   pendingImport = null
-  return saveRecord({ id: existingId, name, text })
+  return saveRecord({ id: existingId, name, text, keepCurrentName: true })
 }

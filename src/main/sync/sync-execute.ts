@@ -23,6 +23,7 @@ import { localSyncBlock, remoteSyncBlock, emitSyncBlocked } from './sync-passwor
 import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
 import { matchesScope, listLocalKeyboardUids, shouldDownloadSyncUnit } from './sync-scope'
 import { mergeWithRemote, syncOrUpload } from './sync-merge-dispatch'
+import { settlePackIndexUnitsFirst } from './pack-bundle-merge'
 import { canonicalFiles } from './drive-canonical'
 import { collectAllSyncUnits } from './sync-bundle'
 import { backfillKeyboardMeta } from './keyboard-meta'
@@ -171,32 +172,31 @@ async function executeDownloadSync(
   const failedUnits: string[] = []
   const limit = pLimit(SYNC_CONCURRENCY)
 
-  await Promise.allSettled(
-    filesToDownload.map(({ file: remoteFile, syncUnit }) =>
-      limit(async () => {
-        completed++
+  // Pack rosters before pack bodies (`settlePackIndexUnitsFirst`).
+  await settlePackIndexUnitsFirst(filesToDownload, (f) => f.syncUnit, ({ file: remoteFile, syncUnit }) =>
+    limit(async () => {
+      completed++
 
+      emitProgress({
+        direction: 'download',
+        status: 'syncing',
+        syncUnit,
+        current: completed,
+        total,
+      })
+
+      try {
+        await mergeWithRemote(remoteFile, syncUnit, password, remoteFiles)
+      } catch (err) {
+        failedUnits.push(syncUnit)
         emitProgress({
           direction: 'download',
-          status: 'syncing',
+          status: 'error',
           syncUnit,
-          current: completed,
-          total,
+          message: errorMessage(err, 'Download failed'),
         })
-
-        try {
-          await mergeWithRemote(remoteFile, syncUnit, password, remoteFiles)
-        } catch (err) {
-          failedUnits.push(syncUnit)
-          emitProgress({
-            direction: 'download',
-            status: 'error',
-            syncUnit,
-            message: errorMessage(err, 'Download failed'),
-          })
-        }
-      }),
-    ),
+      }
+    }),
   )
 
   // Pass-level GC — see pack-gc.ts's doc for why this must never be
@@ -241,32 +241,31 @@ async function executeUploadSync(
   const succeededUnits: string[] = []
   const limit = pLimit(SYNC_CONCURRENCY)
 
-  await Promise.allSettled(
-    syncUnits.map((syncUnit) =>
-      limit(async () => {
-        completed++
+  // Pack rosters before pack bodies (`settlePackIndexUnitsFirst`).
+  await settlePackIndexUnitsFirst(syncUnits, (u) => u, (syncUnit) =>
+    limit(async () => {
+      completed++
+      emitProgress({
+        direction: 'upload',
+        status: 'syncing',
+        syncUnit,
+        current: completed,
+        total,
+      })
+
+      try {
+        await syncOrUpload(syncUnit, password, remoteFiles)
+        succeededUnits.push(syncUnit)
+      } catch (err) {
+        failedUnits.push(syncUnit)
         emitProgress({
           direction: 'upload',
-          status: 'syncing',
+          status: 'error',
           syncUnit,
-          current: completed,
-          total,
+          message: errorMessage(err, 'Upload failed'),
         })
-
-        try {
-          await syncOrUpload(syncUnit, password, remoteFiles)
-          succeededUnits.push(syncUnit)
-        } catch (err) {
-          failedUnits.push(syncUnit)
-          emitProgress({
-            direction: 'upload',
-            status: 'error',
-            syncUnit,
-            message: errorMessage(err, 'Upload failed'),
-          })
-        }
-      }),
-    ),
+      }
+    }),
   )
 
   return { failedUnits, succeededUnits }

@@ -22,6 +22,8 @@ import {
   type I18nPackStoreErrorCode as SharedErrorCode,
   type I18nPackStoreResult as SharedResult,
 } from '../shared/types/i18n-store'
+import type { ClockedEntry } from './sync/entry-clocks'
+import { readPackMetas } from './sync/pack-sync'
 
 const STORE_DIRNAME = 'i18n'
 export const PACKS_DIRNAME = 'packs'
@@ -41,13 +43,9 @@ export function getIndexPath(): string {
   return join(getStoreDir(), INDEX_FILENAME)
 }
 
-/** True when `m` is at least shaped enough to read `.id` off of safely —
- *  a non-null object with a string `id` field. Guards `mergeSyncedIndex`'s
- *  per-entry filter against a remote `metas` array containing `null` or
- *  other non-object garbage (attacker-reachable data). */
-export function isPackMetaCandidate(m: unknown): m is I18nPackMeta {
-  return typeof m === 'object' && m !== null && typeof (m as { id?: unknown }).id === 'string'
-}
+/** Ids whose body never syncs: the built-in English placeholder every
+ *  device creates itself (`ensureBuiltinEnglishEntry`, i18n-pack-store-crud.ts). */
+export const LOCAL_ONLY_PACK_IDS: ReadonlySet<string> = new Set([BUILTIN_ENGLISH_PACK_ID])
 
 export function getPackPath(packId: string): string {
   if (!isSafePackId(packId)) throw new Error(`Invalid packId: ${packId}`)
@@ -69,10 +67,6 @@ export function packSyncUnit(packId: string): `i18n/packs/${string}` {
 export function notifyPackChange(id: string): void {
   if (id === BUILTIN_ENGLISH_PACK_ID) return
   notifyChange(packSyncUnit(id))
-}
-
-export function nowIso(): string {
-  return new Date().toISOString()
 }
 
 // --- Write serialization ------------------------------------------------------
@@ -108,16 +102,19 @@ export function fail<T>(errorCode: I18nPackStoreErrorCode, error: string): I18nP
 
 // --- Index I/O ---------------------------------------------------------------
 
-// Exported (in addition to internal use throughout the split) so
-// `mergePackIndexBundle` (pack-bundle-merge.ts) can read the current
-// local index for its LWW comparison without pack-bundle-merge.ts
-// knowing this store's on-disk path — same parse-failure-tolerant
-// fallback (`{ metas: [] }`) callers relied on before.
-export async function readIndex(): Promise<I18nPackIndex> {
+export type I18nPackEntry = ClockedEntry<I18nPackMeta>
+
+export interface ClockedI18nPackIndex {
+  metas: I18nPackEntry[]
+}
+
+// The index with every meta read as a v2 entry (`normalizeEntries`); a
+// missing or unparseable index reads as `{ metas: [] }`.
+export async function readIndex(): Promise<ClockedI18nPackIndex> {
   try {
     const raw = await readFile(getIndexPath(), 'utf-8')
     const parsed = JSON.parse(raw) as I18nPackIndex
-    if (Array.isArray(parsed?.metas)) return parsed
+    if (Array.isArray(parsed?.metas)) return { ...parsed, metas: await readPackMetas('i18nPacks', parsed.metas, getPackPath, LOCAL_ONLY_PACK_IDS) }
   } catch {
     // missing / corrupt — return empty
   }

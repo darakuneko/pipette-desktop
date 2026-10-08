@@ -99,6 +99,11 @@ export const syncRuntime = {
    *  replaced by the next upload of that name (it creates the file again).
    *  Cleared when the signed-in account changes or signs out. */
   createdFileIds: new Map<string, string>(),
+  /** Pack index units (`i18n/index`, `themes/index`) merged with or
+   *  uploaded to Drive by this process (`markPackRosterSynced`,
+   *  pack-bundle-merge.ts). A pack body whose id the local roster still
+   *  lacks after that is an orphan rather than a body arriving early. */
+  syncedPackRosters: new Set<string>(),
   /** Files the last re-encryption pass could open with neither the old nor
    *  the new password; null when that pass found none. Kept in memory
    *  only — a resume after a restart finds them again. */
@@ -139,6 +144,7 @@ export function resetSyncRuntimeForTests(): void {
   syncRuntime.heldPending.clear()
   syncRuntime.lastKnownRemoteState.clear()
   syncRuntime.createdFileIds.clear()
+  syncRuntime.syncedPackRosters.clear()
   syncRuntime.isSyncing = false
   syncRuntime.inFlightPass = null
   syncRuntime.inFlightPassWaitable = false
@@ -426,6 +432,12 @@ export function recordRemoteState(files: Array<Pick<DriveFile, 'id' | 'name' | '
   for (const { id, name, modifiedTime } of files) {
     syncRuntime.lastKnownRemoteState.set(name, { id, modifiedTime })
   }
+}
+
+/** Drops the revision recorded for `name`, so the next pass downloads that
+ *  file again even when Drive has not changed it. */
+export function forgetRemoteState(name: string): void {
+  syncRuntime.lastKnownRemoteState.delete(name)
 }
 
 /** Whether `file` is the revision last recorded for its name: the same file
