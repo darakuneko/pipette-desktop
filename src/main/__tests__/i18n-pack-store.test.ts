@@ -127,7 +127,10 @@ describe('i18n-pack-store reorderActive', () => {
     expect(names.indexOf('Listed')).toBeLessThan(names.indexOf('Unlisted'))
   })
 
-  it('bumps updatedAt on all reordered metas', async () => {
+  // The order is per device (`mergeSyncedIndex` keeps the local order), so
+  // a reorder must not give the metas a newer LWW timestamp: that would let
+  // a drag win against another device's concurrent delete or edit.
+  it('keeps updatedAt on reordered metas and persists the order', async () => {
     const a = await savePack({ pack: makePack({ name: 'TimestampA' }) })
     const b = await savePack({ pack: makePack({ name: 'TimestampB' }) })
     const origA = a.data!.updatedAt
@@ -144,18 +147,44 @@ describe('i18n-pack-store reorderActive', () => {
     const metas = await listMetas()
     const metaA = metas.find((m) => m.id === a.data!.id)!
     const metaB = metas.find((m) => m.id === b.data!.id)!
-    expect(metaA.updatedAt).not.toBe(origA)
-    expect(metaB.updatedAt).not.toBe(origB)
+    expect(metaA.updatedAt).toBe(origA)
+    expect(metaB.updatedAt).toBe(origB)
+
+    const onDisk = JSON.parse(await readFile(__testing.getIndexPath(), 'utf-8')) as { metas: { id: string }[] }
+    const ids = onDisk.metas.map((m) => m.id)
+    expect(ids.indexOf(b.data!.id)).toBeLessThan(ids.indexOf(a.data!.id))
   })
 
-  it('only bumps I18N_INDEX_SYNC_UNIT — pack bodies are untouched', async () => {
-    await savePack({ pack: makePack({ name: 'Notify' }) })
+  it('a reorder does not override a remote delete made after the last save', async () => {
+    const a = await savePack({ pack: makePack({ name: 'Deleted Elsewhere' }) })
+    const b = await savePack({ pack: makePack({ name: 'Other' }) })
+    const savedAt = Date.parse(a.data!.updatedAt)
+    const remoteDeletedAt = new Date(savedAt + 1000).toISOString()
+
+    try {
+      vi.useFakeTimers()
+      vi.setSystemTime(savedAt + 2000)
+      await reorderActive([b.data!.id, a.data!.id])
+    } finally {
+      vi.useRealTimers()
+    }
+
+    const result = await mergeSyncedIndex([
+      { ...a.data!, updatedAt: remoteDeletedAt, deletedAt: remoteDeletedAt },
+    ])
+
+    expect(result.applied).toBe(true)
+    const merged = (await listAllMetas()).find((m) => m.id === a.data!.id)
+    expect(merged?.deletedAt).toBe(remoteDeletedAt)
+  })
+
+  it('does not queue a sync — the order is not synced', async () => {
+    const a = await savePack({ pack: makePack({ name: 'Notify' }) })
     vi.mocked(notifyChange).mockClear()
 
-    await reorderActive([])
+    await reorderActive([a.data!.id])
 
-    expect(notifyChange).toHaveBeenCalledWith(I18N_INDEX_SYNC_UNIT)
-    expect(notifyChange).toHaveBeenCalledTimes(1)
+    expect(notifyChange).not.toHaveBeenCalled()
   })
 })
 

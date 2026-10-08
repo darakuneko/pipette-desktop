@@ -34,6 +34,7 @@ vi.mock('../ipc-guard', async () => {
 
 import { ipcMain } from 'electron'
 import { setupSnapshotStore } from '../snapshot-store'
+import { extractDeviceNameFromFilename } from '../sync/keyboard-meta'
 import { IpcChannels } from '../../shared/ipc/channels'
 
 type IpcHandler = (...args: unknown[]) => Promise<unknown>
@@ -92,12 +93,34 @@ describe('snapshot-store', () => {
       expect(result.entry).toBeTruthy()
       expect(result.entry.label).toBe('My Label')
       expect(result.entry.filename).toMatch(/^TestKB_.*\.pipette$/)
+      expect(result.entry.filename.endsWith(`_${result.entry.id}.pipette`)).toBe(true)
+      expect(extractDeviceNameFromFilename(result.entry.filename)).toBe('TestKB')
       expect(result.entry.savedAt).toBeTruthy()
 
       // Verify file was written
       const filePath = join(mockUserDataPath, 'sync', 'keyboards', 'uid-1', 'snapshots', result.entry.filename)
       const content = await readFile(filePath, 'utf-8')
       expect(content).toBe(json)
+    })
+
+    it('gives two snapshots saved in the same millisecond their own files', async () => {
+      const handler = getHandler(IpcChannels.SNAPSHOT_STORE_SAVE)
+      type Saved = { entry: { id: string; filename: string } }
+      let first: Saved
+      let second: Saved
+      try {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(Date.parse('2026-10-08T12:00:00.000Z'))
+        first = await handler(fakeEvent, 'uid-1', '{"a":1}', 'KB', 'First') as Saved
+        second = await handler(fakeEvent, 'uid-1', '{"a":2}', 'KB', 'Second') as Saved
+      } finally {
+        vi.useRealTimers()
+      }
+
+      expect(first.entry.filename).not.toBe(second.entry.filename)
+      const dir = join(mockUserDataPath, 'sync', 'keyboards', 'uid-1', 'snapshots')
+      expect(await readFile(join(dir, first.entry.filename), 'utf-8')).toBe('{"a":1}')
+      expect(await readFile(join(dir, second.entry.filename), 'utf-8')).toBe('{"a":2}')
     })
 
     it('saves multiple snapshots in order', async () => {

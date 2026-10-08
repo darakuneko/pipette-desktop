@@ -612,14 +612,12 @@ export async function hasActiveName(name: string, excludeId?: string): Promise<T
  * `key-label-store.ts`'s `reorderActive`: tombstones and any ids not
  * listed in `orderedIds` keep their relative position behind the
  * sorted prefix, so a stale renderer view never silently drops an
- * entry. Only the index changes — pack bodies are untouched — so only
- * `THEME_INDEX_SYNC_UNIT` is bumped, matching `setHubPostId`.
+ * entry. Only the index changes — pack bodies are untouched.
  *
- * Like `key-labels`, `themes/index` now has entry-level LWW merge wired
- * into `sync-service.ts` (`mergeSyncedIndex`, with `preserveLocalOrder`
- * so drag/Name-sort order survives the merge) — a remote index
- * downloaded during sync merges against this reordered one instead of
- * one side replacing the other wholesale.
+ * The order is per device (`mergeSyncedIndex` merges with
+ * `preserveLocalOrder`), so a reorder neither bumps `updatedAt` nor
+ * queues a sync — see `reorderActiveUnlocked` in `key-label-store.ts`
+ * for why.
  */
 export async function reorderActive(orderedIds: string[]): Promise<ThemePackStoreResult<void>> {
   return withIndexWriteLock(async () => {
@@ -630,11 +628,9 @@ export async function reorderActive(orderedIds: string[]): Promise<ThemePackStor
 
       const seen = new Set<string>()
       const reordered: ThemePackMeta[] = []
-      const now = nowIso()
       for (const id of orderedIds) {
         const meta = byId.get(id)
         if (!meta || meta.deletedAt || seen.has(id)) continue
-        meta.updatedAt = now
         reordered.push(meta)
         seen.add(id)
       }
@@ -645,7 +641,6 @@ export async function reorderActive(orderedIds: string[]): Promise<ThemePackStor
       }
 
       await writeIndex({ metas: reordered })
-      notifyChange(THEME_INDEX_SYNC_UNIT)
       return ok()
     } catch (err) {
       return fail('IO_ERROR', String(err))

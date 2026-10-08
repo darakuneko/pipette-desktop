@@ -426,7 +426,10 @@ describe('key-label-store', () => {
       expect(names.indexOf('Listed')).toBeLessThan(names.indexOf('Unlisted'))
     })
 
-    it('bumps updatedAt on all reordered metas', async () => {
+    // The order is per device (sync merges keep the local order), so a
+    // reorder must not give the entries a newer LWW timestamp: that would
+    // let a drag win against another device's concurrent delete or edit.
+    it('keeps updatedAt on reordered metas and persists the order', async () => {
       const a = await saveRecord({ name: 'TimestampA', uploaderName: 'me', map: {} })
       const b = await saveRecord({ name: 'TimestampB', uploaderName: 'me', map: {} })
       const origA = a.data!.updatedAt
@@ -434,8 +437,6 @@ describe('key-label-store', () => {
 
       // A Date.now spy never affects `new Date().toISOString()`, which is what the
       // store actually calls, so freeze the clock and jump it forward instead.
-      // Freezing also removes the same-millisecond flake window when the real
-      // wall clock happens not to tick between saveRecord and reorderActive.
       try {
         vi.useFakeTimers()
         vi.setSystemTime(Date.parse(origB) + 1000)
@@ -447,17 +448,23 @@ describe('key-label-store', () => {
       const metas = await listMetas()
       const metaA = metas.find((m) => m.id === a.data!.id)!
       const metaB = metas.find((m) => m.id === b.data!.id)!
-      expect(metaA.updatedAt).not.toBe(origA)
-      expect(metaB.updatedAt).not.toBe(origB)
+      expect(metaA.updatedAt).toBe(origA)
+      expect(metaB.updatedAt).toBe(origB)
+
+      const onDisk = JSON.parse(
+        await readFile(join(mockUserDataPath, 'sync', 'key-labels', 'index.json'), 'utf-8'),
+      ) as { entries: { id: string }[] }
+      const ids = onDisk.entries.map((e) => e.id)
+      expect(ids.indexOf(b.data!.id)).toBeLessThan(ids.indexOf(a.data!.id))
     })
 
-    it('calls notifyChange after reorder', async () => {
-      await saveRecord({ name: 'Notify', uploaderName: 'me', map: {} })
+    it('does not queue a sync after reorder', async () => {
+      const a = await saveRecord({ name: 'Notify', uploaderName: 'me', map: {} })
       vi.mocked(notifyChange).mockClear()
 
-      await reorderActive([])
+      await reorderActive([a.data!.id])
 
-      expect(notifyChange).toHaveBeenCalledWith(KEY_LABEL_SYNC_UNIT)
+      expect(notifyChange).not.toHaveBeenCalled()
     })
   })
 

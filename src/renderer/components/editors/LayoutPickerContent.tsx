@@ -9,6 +9,7 @@ import type { KleKey } from '../../../shared/kle/types'
 import type { DeviceInfo } from '../../../shared/types/protocol'
 import type { StoredKeyboardInfo } from '../../../shared/types/sync'
 import type { SnapshotMeta } from '../../../shared/types/snapshot-store'
+import { snapshotFilenameForDisplay } from '../../../shared/snapshot-filename'
 import { KeyboardPane } from './KeyboardPane'
 import { DismissibleError } from '../ui/DismissibleError'
 import { BUBBLE_BASE, computeBubblePosition, Tooltip } from '../ui/Tooltip'
@@ -159,7 +160,7 @@ export function LayoutPickerContent({
                 <button key={entry.id} type="button"
                   className="flex flex-col rounded-lg border border-edge px-3 py-2 text-left text-sm transition-colors hover:bg-surface-dim"
                   onClick={() => handleLoadSnapshotEntry(selectedFileUid!, entry.id)}>
-                  <span className="font-medium text-content">{entry.label || entry.filename}</span>
+                  <span className="font-medium text-content">{entry.label || snapshotFilenameForDisplay(entry.filename, entry.id)}</span>
                   <span className="text-xs text-content-muted">{new Date(entry.savedAt).toLocaleString()}</span>
                 </button>
               )) : (

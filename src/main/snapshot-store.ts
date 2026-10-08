@@ -13,6 +13,7 @@ import { KEYBOARD_META_SYNC_UNIT } from '../shared/types/keyboard-meta'
 import { secureHandle } from './ipc-guard'
 import { isSafePathSegment, tsForFilename } from './utils/safe-filename'
 import { writeFileAtomic } from './utils/write-file-atomic'
+import { buildSnapshotFilename } from '../shared/snapshot-filename'
 import type { SnapshotMeta, SnapshotIndex } from '../shared/types/snapshot-store'
 import type { HubPrivateLink } from '../shared/types/hub-private'
 
@@ -122,16 +123,15 @@ export function setupSnapshotStore(): void {
           await mkdir(dir, { recursive: true })
 
           const now = new Date()
-          const timestamp = tsForFilename(now)
-          const safeName = sanitizeFilename(deviceName)
-          const filename = `${safeName}_${timestamp}.pipette`
+          const id = randomUUID()
+          const filename = buildSnapshotFilename(sanitizeFilename(deviceName), tsForFilename(now), id)
           const filePath = getSafeFilePath(uid, filename)
 
           await writeFile(filePath, json, 'utf-8')
 
           const nowIso = now.toISOString()
           const entry: SnapshotMeta = {
-            id: randomUUID(),
+            id,
             label,
             filename,
             savedAt: nowIso,
