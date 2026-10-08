@@ -17,7 +17,7 @@ import type { ThemePackMeta } from '../../shared/types/theme-store'
 // instead of the file-level whole-index LWW.
 export type EntryMeta = SavedFavoriteMeta | SnapshotMeta | AnalyzeFilterSnapshotMeta | KeyLabelMeta | TypingTestTextMeta | RunLogMeta | I18nPackMeta | ThemePackMeta
 
-const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
+export const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 
 /** Thrown when a downloaded bundle's index doesn't have the `entries`
  * array shape `mergeEntries`/`gcTombstones` require (favorites /
