@@ -6,9 +6,10 @@
 // skips the History fetch, no `query` skips the run-rows fetch).
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import type { PipetteSettings } from '../../../shared/types/pipette-settings'
 import { useRunLabels, formatRunDateLabel, type RunLabelsQuery, type RunRow } from '../useRunLabels'
+import { dispatchSyncUnitApplied } from '../use-sync-unit-applied'
 
 const getSpy = vi.fn<(uid: string) => Promise<PipetteSettings | null>>()
 const runsSpy = vi.fn<(
@@ -103,5 +104,22 @@ describe('useRunLabels', () => {
     // Tier 3 still works off the run rows; tier 1/2 degrade to tier 4.
     expect(result.current.labelFor('run-historyless')).toBe(formatRunDateLabel(ROW_FIRST_MS))
     expect(result.current.labelFor('run-named')).toBe('run-named')
+  })
+
+  it('re-reads History labels when a sync merge rewrote this keyboard\'s settings', async () => {
+    const { result } = renderHook(() => useRunLabels('uid-a'))
+    await waitFor(() => expect(result.current.labelFor('run-named')).toBe('My best run'))
+
+    act(() => { dispatchSyncUnitApplied('keyboards/uid-b/settings') })
+    act(() => { dispatchSyncUnitApplied('keyboards/uid-a/runs') })
+    expect(getSpy).toHaveBeenCalledTimes(1)
+
+    getSpy.mockResolvedValueOnce({
+      ...SETTINGS,
+      typingTestResults: [{ ...SETTINGS.typingTestResults![0], name: 'Renamed run' }],
+    })
+    act(() => { dispatchSyncUnitApplied('keyboards/uid-a/settings') })
+    await waitFor(() => expect(result.current.labelFor('run-named')).toBe('Renamed run'))
+    expect(getSpy).toHaveBeenLastCalledWith('uid-a')
   })
 })

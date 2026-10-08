@@ -38,6 +38,7 @@ import {
 import { KeystrokeCountTooltip } from './analyze-tooltip'
 import { FILTER_SELECT } from './analyze-filter-styles'
 import { CHART_TICK_FONT_SIZE } from '../../utils/chart-palette'
+import { keepIfSame, useKeyboardSettingsReader } from '../../hooks/use-keyboard-settings-reader'
 
 interface AxisTickProps {
   x?: number
@@ -149,22 +150,12 @@ export function LayerUsageChart({ uid, range, deviceScopes, appScopes, typingTes
 
   // Settings tracks `uid` only — layer names don't change per range /
   // deviceScope / viewMode, so merging this with the rows fetch would
-  // re-hit the settings store on every filter tweak.
-  useEffect(() => {
-    let cancelled = false
-    void window.vialAPI
-      .pipetteSettingsGet(uid)
-      .then((prefs) => {
-        if (cancelled) return
-        setLayerNames(Array.isArray(prefs?.layerNames) ? prefs.layerNames : [])
-      })
-      .catch(() => {
-        if (!cancelled) setLayerNames([])
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [uid])
+  // re-hit the settings store on every filter tweak. A sync merge of this
+  // keyboard's settings re-reads them.
+  useKeyboardSettingsReader(uid, (prefs) => {
+    const next = Array.isArray(prefs?.layerNames) ? prefs.layerNames : []
+    setLayerNames((prev) => keepIfSame(prev, next))
+  })
 
   // Activations is the only mode that excludes the base layer; any
   // other mode should behave as if no exclusion is active so the
