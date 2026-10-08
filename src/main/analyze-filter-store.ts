@@ -16,6 +16,7 @@ import { notifyChange } from './sync/sync-service'
 import { withWriteLock } from './per-uid-write-lock'
 import { secureHandle } from './ipc-guard'
 import { isSafePathSegment, tsForFilename } from './utils/safe-filename'
+import { writeFileAtomic } from './utils/write-file-atomic'
 import {
   ANALYZE_FILTER_STORE_ERROR_MAX_ENTRIES,
   ANALYZE_FILTER_STORE_MAX_ENTRIES_PER_KEYBOARD,
@@ -23,6 +24,16 @@ import {
   type AnalyzeFilterSnapshotMeta,
 } from '../shared/types/analyze-filter-store'
 import type { HubPrivateLink } from '../shared/types/hub-private'
+import { type ClockedEntry, type MetaGroup, idBodyFilename } from './sync/entry-clocks'
+import { applyEntryMutation, createEntry, normalizeEntries, overwriteEntry } from './sync/entry-write'
+import { readIndexMigrated } from './sync/body-filename-migration'
+
+type AnalyzeFilterEntry = ClockedEntry<AnalyzeFilterSnapshotMeta>
+
+interface ClockedAnalyzeFilterIndex {
+  uid: string
+  entries: AnalyzeFilterEntry[]
+}
 
 const MAX_ENTRIES_PER_KEYBOARD = ANALYZE_FILTER_STORE_MAX_ENTRIES_PER_KEYBOARD
 
@@ -43,12 +54,12 @@ function getSafeFilePath(uid: string, filename: string): string {
   return join(getStoreDir(uid), filename)
 }
 
-async function readIndex(uid: string): Promise<AnalyzeFilterSnapshotIndex> {
+async function readIndex(uid: string): Promise<ClockedAnalyzeFilterIndex> {
   try {
     const raw = await readFile(getIndexPath(uid), 'utf-8')
     const parsed = JSON.parse(raw) as AnalyzeFilterSnapshotIndex
     if (parsed.uid === uid && Array.isArray(parsed.entries)) {
-      return parsed
+      return { ...parsed, entries: normalizeEntries('analyzeFilters', parsed.entries) }
     }
   } catch {
     // Missing or corrupt — start fresh
@@ -56,26 +67,31 @@ async function readIndex(uid: string): Promise<AnalyzeFilterSnapshotIndex> {
   return { uid, entries: [] }
 }
 
-async function writeIndex(uid: string, index: AnalyzeFilterSnapshotIndex): Promise<void> {
+async function writeIndex(uid: string, index: ClockedAnalyzeFilterIndex): Promise<void> {
   const dir = getStoreDir(uid)
   await mkdir(dir, { recursive: true })
-  await writeFile(getIndexPath(uid), JSON.stringify(index, null, 2), 'utf-8')
+  await writeFileAtomic(getIndexPath(uid), JSON.stringify(index, null, 2))
 }
 
+/** `readIndex` for a caller holding the uid lock: also moves body files
+ *  to id-carrying names (`migrateBodyFilenames`). */
+function readIndexLocked(uid: string): Promise<ClockedAnalyzeFilterIndex> {
+  return readIndexMigrated('analyzeFilters', getStoreDir(uid), () => readIndex(uid), (index) => writeIndex(uid, index))
+}
+
+/** `group` is the clock the mutation moves; `'delete'` tombstones the
+ *  entry instead. */
 async function updateEntry(
   uid: string,
   entryId: string,
-  mutate: (entry: AnalyzeFilterSnapshotMeta) => void,
+  group: MetaGroup | 'delete',
+  mutate: (entry: AnalyzeFilterEntry) => void = () => {},
 ): Promise<{ success: boolean; error?: string }> {
   return withWriteLock(uid, async () => {
     try {
       validateUid(uid)
-      const index = await readIndex(uid)
-      const entry = index.entries.find((e) => e.id === entryId)
-      if (!entry) return { success: false, error: 'Entry not found' }
-
-      mutate(entry)
-      entry.updatedAt = new Date().toISOString()
+      const index = await readIndexLocked(uid)
+      if (!applyEntryMutation(index.entries, entryId, group, new Date(), mutate)) return { success: false, error: 'Entry not found' }
       await writeIndex(uid, index)
       notifyChange(`keyboards/${uid}/analyze_filters`)
       return { success: true }
@@ -115,7 +131,7 @@ export function setupAnalyzeFilterStore(): void {
       try {
         validateUid(uid)
         return await withWriteLock(uid, async () => {
-          const index = await readIndex(uid)
+          const index = await readIndexLocked(uid)
           const activeCount = index.entries.filter((e) => !e.deletedAt).length
           if (activeCount >= MAX_ENTRIES_PER_KEYBOARD) {
             return { success: false, error: ANALYZE_FILTER_STORE_ERROR_MAX_ENTRIES }
@@ -125,21 +141,19 @@ export function setupAnalyzeFilterStore(): void {
           await mkdir(dir, { recursive: true })
 
           const now = new Date()
-          const timestamp = tsForFilename(now)
-          const filename = `${timestamp}_${randomUUID()}.json`
+          const id = randomUUID()
+          const filename = idBodyFilename('analyzeFilters', id, `${tsForFilename(now)}.json`)
           const filePath = getSafeFilePath(uid, filename)
 
           await writeFile(filePath, json, 'utf-8')
 
-          const nowIso = now.toISOString()
-          const entry: AnalyzeFilterSnapshotMeta = {
-            id: randomUUID(),
+          const entry = createEntry('analyzeFilters', {
+            id,
             label,
             ...(summary ? { summary } : {}),
             filename,
-            savedAt: nowIso,
-            updatedAt: nowIso,
-          }
+            savedAt: now.toISOString(),
+          }, now)
 
           index.entries.unshift(entry)
           await writeIndex(uid, index)
@@ -187,15 +201,15 @@ export function setupAnalyzeFilterStore(): void {
       try {
         validateUid(uid)
         return await withWriteLock(uid, async () => {
-          const index = await readIndex(uid)
-          const entry = index.entries.find((e) => e.id === entryId)
-          if (!entry) return { success: false, error: 'Entry not found' }
-          if (entry.deletedAt) return { success: false, error: 'Entry has been deleted' }
-
+          const index = await readIndexLocked(uid)
+          const at = index.entries.findIndex((e) => e.id === entryId)
+          if (at < 0) return { success: false, error: 'Entry not found' }
+          const entry = index.entries[at]
+          // A user save: brings a deleted entry back (`overwriteEntry`).
           const filePath = getSafeFilePath(uid, entry.filename)
           await writeFile(filePath, json, 'utf-8')
 
-          entry.updatedAt = new Date().toISOString()
+          index.entries[at] = overwriteEntry('analyzeFilters', entry, entry, new Date(), { body: true, explicit: true })
           await writeIndex(uid, index)
 
           notifyChange(`keyboards/${uid}/analyze_filters`)
@@ -210,13 +224,13 @@ export function setupAnalyzeFilterStore(): void {
   secureHandle(
     IpcChannels.ANALYZE_FILTER_STORE_RENAME,
     async (_event, uid: string, entryId: string, newLabel: string) =>
-      updateEntry(uid, entryId, (entry) => { entry.label = newLabel }),
+      updateEntry(uid, entryId, 'name', (entry) => { entry.label = newLabel }),
   )
 
   secureHandle(
     IpcChannels.ANALYZE_FILTER_STORE_DELETE,
     async (_event, uid: string, entryId: string) =>
-      updateEntry(uid, entryId, (entry) => { entry.deletedAt = new Date().toISOString() }),
+      updateEntry(uid, entryId, 'delete'),
   )
 
   // --- Set Hub Post ID ---
@@ -266,7 +280,7 @@ export async function setAnalyzeFilterHubPostId(
   entryId: string,
   hubPostId: string | null,
 ): Promise<{ success: boolean; error?: string }> {
-  return updateEntry(uid, entryId, (entry) => {
+  return updateEntry(uid, entryId, 'hub', (entry) => {
     const normalized = hubPostId?.trim() || null
     if (normalized === null) {
       delete entry.hubPostId
@@ -285,7 +299,7 @@ export async function setAnalyzeFilterHubPrivate(
   entryId: string,
   link: HubPrivateLink | null,
 ): Promise<{ success: boolean; error?: string }> {
-  return updateEntry(uid, entryId, (entry) => {
+  return updateEntry(uid, entryId, 'hub', (entry) => {
     if (link === null) {
       delete entry.hubPrivate
     } else {

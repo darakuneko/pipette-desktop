@@ -108,14 +108,14 @@ describe('importLocalData', () => {
       version: 1,
       snapshots: {
         uid1: snapshotExport(
-          [{ id: 'e1', label: 'L1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
-          { 'e1.pipette': '{"vil":true}' },
+          [{ id: 'e1', label: 'L1', filename: 's_e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
+          { 's_e1.pipette': '{"vil":true}' },
         ),
       },
       favorites: {
         macro: favoritesExport(
-          [{ id: 'f1', label: 'F1', filename: 'f1.json', savedAt: '2020-01-01T00:00:00.000Z' }],
-          { 'f1.json': '{"data":1}' },
+          [{ id: 'f1', label: 'F1', filename: 'm_f1.json', savedAt: '2020-01-01T00:00:00.000Z' }],
+          { 'm_f1.json': '{"data":1}' },
         ),
       },
       settings: {
@@ -133,13 +133,13 @@ describe('importLocalData', () => {
     const snapIndex = await readJson(join(snapDir, 'index.json')) as { uid: string; entries: { id: string }[] }
     expect(snapIndex.uid).toBe('uid1')
     expect(snapIndex.entries).toHaveLength(1)
-    expect(await readFile(join(snapDir, 'e1.pipette'), 'utf-8')).toBe('{"vil":true}')
+    expect(await readFile(join(snapDir, 's_e1.pipette'), 'utf-8')).toBe('{"vil":true}')
 
     const favDir = join(mockUserDataPath, 'sync', 'favorites', 'macro')
     const favIndex = await readJson(join(favDir, 'index.json')) as { type: string; entries: { id: string }[] }
     expect(favIndex.type).toBe('macro')
     expect(favIndex.entries).toHaveLength(1)
-    expect(await readFile(join(favDir, 'f1.json'), 'utf-8')).toBe('{"data":1}')
+    expect(await readFile(join(favDir, 'm_f1.json'), 'utf-8')).toBe('{"data":1}')
 
     const settingsPath = join(mockUserDataPath, 'sync', 'keyboards', 'uid1', 'pipette_settings.json')
     expect(await readJson(settingsPath)).toEqual({ _updatedAt: '2020-01-01T00:00:00.000Z', foo: 1 })
@@ -147,19 +147,19 @@ describe('importLocalData', () => {
 
   it('A2: a failed 2nd payload write unlinks the 1st payload and leaves the index untouched', async () => {
     const snapDir = join(mockUserDataPath, 'sync', 'keyboards', 'uid1', 'snapshots')
-    const originalIndex = { uid: 'uid1', entries: [{ id: 'e0', label: 'Existing', filename: 'e0.pipette', savedAt: '2019-01-01T00:00:00.000Z' }] }
+    const originalIndex = { uid: 'uid1', entries: [{ id: 'e0', label: 'Existing', filename: 's_e0.pipette', savedAt: '2019-01-01T00:00:00.000Z' }] }
     await writeJson(join(snapDir, 'index.json'), originalIndex)
-    await actualFs.writeFile(join(snapDir, 'e0.pipette'), 'ORIGINAL', 'utf-8')
+    await actualFs.writeFile(join(snapDir, 's_e0.pipette'), 'ORIGINAL', 'utf-8')
 
     const exportObj = {
       version: 1,
       snapshots: {
         uid1: snapshotExport(
           [
-            { id: 'e1', label: 'New1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' },
-            { id: 'e2', label: 'New2', filename: 'e2.pipette', savedAt: '2020-01-02T00:00:00.000Z' },
+            { id: 'e1', label: 'New1', filename: 's_e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' },
+            { id: 'e2', label: 'New2', filename: 's_e2.pipette', savedAt: '2020-01-02T00:00:00.000Z' },
           ],
-          { 'e1.pipette': 'PAYLOAD1', 'e2.pipette': 'PAYLOAD2' },
+          { 's_e1.pipette': 'PAYLOAD1', 's_e2.pipette': 'PAYLOAD2' },
         ),
       },
     }
@@ -168,10 +168,10 @@ describe('importLocalData', () => {
 
     await expect(importLocalData(exportObj, mockUserDataPath)).rejects.toThrow('disk full')
 
-    expect(await exists(join(snapDir, 'e1.pipette'))).toBe(false)
-    expect(await exists(join(snapDir, 'e2.pipette'))).toBe(false)
+    expect(await exists(join(snapDir, 's_e1.pipette'))).toBe(false)
+    expect(await exists(join(snapDir, 's_e2.pipette'))).toBe(false)
     expect(await readJson(join(snapDir, 'index.json'))).toEqual(originalIndex)
-    expect(await readFile(join(snapDir, 'e0.pipette'), 'utf-8')).toBe('ORIGINAL')
+    expect(await readFile(join(snapDir, 's_e0.pipette'), 'utf-8')).toBe('ORIGINAL')
   })
 
   it('A3: a failed settings write rolls back the snapshots written earlier in the same import', async () => {
@@ -188,8 +188,8 @@ describe('importLocalData', () => {
       version: 1,
       snapshots: {
         uid1: snapshotExport(
-          [{ id: 'e1', label: 'New1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
-          { 'e1.pipette': 'PAYLOAD1' },
+          [{ id: 'e1', label: 'New1', filename: 's_e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
+          { 's_e1.pipette': 'PAYLOAD1' },
         ),
       },
       settings: {
@@ -202,7 +202,7 @@ describe('importLocalData', () => {
 
     await expect(importLocalData(exportObj, mockUserDataPath)).rejects.toThrow('write failed')
 
-    expect(await exists(join(snapDir, 'e1.pipette'))).toBe(false)
+    expect(await exists(join(snapDir, 's_e1.pipette'))).toBe(false)
     expect(await readJson(join(snapDir, 'index.json'))).toEqual(originalIndex)
     expect(await readJson(settingsPath)).toEqual(originalSettings)
   })
@@ -216,8 +216,8 @@ describe('importLocalData', () => {
       version: 1,
       snapshots: {
         uid1: snapshotExport(
-          [{ id: 'e1', label: 'New1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
-          { 'e1.pipette': 'PAYLOAD1' },
+          [{ id: 'e1', label: 'New1', filename: 's_e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
+          { 's_e1.pipette': 'PAYLOAD1' },
         ),
       },
     }
@@ -225,7 +225,7 @@ describe('importLocalData', () => {
     await expect(importLocalData(exportObj, mockUserDataPath)).rejects.toThrow(/Corrupted index/)
 
     expect(await readFile(join(snapDir, 'index.json'), 'utf-8')).toBe('{not valid json')
-    expect(await exists(join(snapDir, 'e1.pipette'))).toBe(false)
+    expect(await exists(join(snapDir, 's_e1.pipette'))).toBe(false)
   })
 
   it('F3: a non-ENOENT index read failure is reported distinctly from a parse failure', async () => {
@@ -237,8 +237,8 @@ describe('importLocalData', () => {
       version: 1,
       snapshots: {
         uid1: snapshotExport(
-          [{ id: 'e1', label: 'New1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
-          { 'e1.pipette': 'PAYLOAD1' },
+          [{ id: 'e1', label: 'New1', filename: 's_e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
+          { 's_e1.pipette': 'PAYLOAD1' },
         ),
       },
     }
@@ -248,21 +248,21 @@ describe('importLocalData', () => {
     await expect(importLocalData(exportObj, mockUserDataPath)).rejects.toThrow(
       /Cannot read index: .*permission denied/,
     )
-    expect(await exists(join(snapDir, 'e1.pipette'))).toBe(false)
+    expect(await exists(join(snapDir, 's_e1.pipette'))).toBe(false)
   })
 
   it('A5: an existing active entry with the same id is skipped (local wins)', async () => {
     const snapDir = join(mockUserDataPath, 'sync', 'keyboards', 'uid1', 'snapshots')
-    const originalIndex = { uid: 'uid1', entries: [{ id: 'e1', label: 'Local', filename: 'e1.pipette', savedAt: '2019-01-01T00:00:00.000Z' }] }
+    const originalIndex = { uid: 'uid1', entries: [{ id: 'e1', label: 'Local', filename: 's_e1.pipette', savedAt: '2019-01-01T00:00:00.000Z' }] }
     await writeJson(join(snapDir, 'index.json'), originalIndex)
-    await actualFs.writeFile(join(snapDir, 'e1.pipette'), 'ORIGINAL', 'utf-8')
+    await actualFs.writeFile(join(snapDir, 's_e1.pipette'), 'ORIGINAL', 'utf-8')
 
     const exportObj = {
       version: 1,
       snapshots: {
         uid1: snapshotExport(
-          [{ id: 'e1', label: 'Remote', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
-          { 'e1.pipette': 'REMOTE_PAYLOAD' },
+          [{ id: 'e1', label: 'Remote', filename: 's_e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' }],
+          { 's_e1.pipette': 'REMOTE_PAYLOAD' },
         ),
       },
     }
@@ -271,7 +271,7 @@ describe('importLocalData', () => {
 
     expect(result.changedUnits).toEqual([])
     expect(await readJson(join(snapDir, 'index.json'))).toEqual(originalIndex)
-    expect(await readFile(join(snapDir, 'e1.pipette'), 'utf-8')).toBe('ORIGINAL')
+    expect(await readFile(join(snapDir, 's_e1.pipette'), 'utf-8')).toBe('ORIGINAL')
   })
 
   it('A6: a failed rollback combines the original and rollback errors into the thrown message', async () => {
@@ -282,10 +282,10 @@ describe('importLocalData', () => {
       snapshots: {
         uid1: snapshotExport(
           [
-            { id: 'e1', label: 'New1', filename: 'e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' },
-            { id: 'e2', label: 'New2', filename: 'e2.pipette', savedAt: '2020-01-02T00:00:00.000Z' },
+            { id: 'e1', label: 'New1', filename: 's_e1.pipette', savedAt: '2020-01-01T00:00:00.000Z' },
+            { id: 'e2', label: 'New2', filename: 's_e2.pipette', savedAt: '2020-01-02T00:00:00.000Z' },
           ],
-          { 'e1.pipette': 'PAYLOAD1', 'e2.pipette': 'PAYLOAD2' },
+          { 's_e1.pipette': 'PAYLOAD1', 's_e2.pipette': 'PAYLOAD2' },
         ),
       },
     }
@@ -307,7 +307,7 @@ describe('importLocalData', () => {
 
     // The write that failed rollback is left behind — the caller is told
     // rather than silently losing track of it.
-    expect(await exists(join(snapDir, 'e1.pipette'))).toBe(true)
+    expect(await exists(join(snapDir, 's_e1.pipette'))).toBe(true)
   })
 
   it('A7: an older-_updatedAt settings payload is not written', async () => {
@@ -387,9 +387,9 @@ describe('importLocalData', () => {
         uid1: snapshotExport(
           [
             { id: 'e1', label: 'Bad', filename: undefined, savedAt: '2020-01-01T00:00:00.000Z' } as unknown as { id: string; label: string; filename: string; savedAt: string },
-            { id: 'e2', label: 'Good', filename: 'e2.pipette', savedAt: '2020-01-02T00:00:00.000Z' },
+            { id: 'e2', label: 'Good', filename: 's_e2.pipette', savedAt: '2020-01-02T00:00:00.000Z' },
           ],
-          { 'e2.pipette': 'PAYLOAD2' },
+          { 's_e2.pipette': 'PAYLOAD2' },
         ),
       },
     }
@@ -400,6 +400,79 @@ describe('importLocalData', () => {
     const snapDir = join(mockUserDataPath, 'sync', 'keyboards', 'uid1', 'snapshots')
     const index = await readJson(join(snapDir, 'index.json')) as { entries: { id: string }[] }
     expect(index.entries.map((e) => e.id)).toEqual(['e2'])
+  })
+
+  describe('v2 clocks and id-carrying filenames', () => {
+    const snapDir = (): string => join(mockUserDataPath, 'sync', 'keyboards', 'uid1', 'snapshots')
+    type Stored = { id: string; filename: string; label: string; deletedAt?: string; clocks: Record<string, string> }
+
+    it('revives a local tombstone past its deletedAt, even one from a clock running ahead', async () => {
+      const deletedAt = new Date(Date.now() + 60_000).toISOString()
+      await writeJson(join(snapDir(), 'index.json'), {
+        uid: 'uid1',
+        entries: [{ id: 'e1', label: 'Gone', filename: 's_e1.pipette', savedAt: '2019-01-01T00:00:00.000Z', deletedAt }],
+      })
+
+      await importLocalData({
+        version: 1,
+        snapshots: { uid1: snapshotExport([{ id: 'e1', label: 'Back', filename: 's_e1.pipette', savedAt: '2019-01-01T00:00:00.000Z' }], { 's_e1.pipette': 'BACKUP' }) },
+      }, mockUserDataPath)
+
+      const [e] = (await readJson(join(snapDir(), 'index.json')) as { entries: Stored[] }).entries
+      expect(e.deletedAt).toBeUndefined()
+      expect(e.label).toBe('Back')
+      expect(new Date(e.clocks.created).getTime()).toBeGreaterThan(new Date(deletedAt).getTime())
+      expect(await readFile(join(snapDir(), 's_e1.pipette'), 'utf-8')).toBe('BACKUP')
+    })
+
+    it('gives an entry the store lacks a new created, so an older delete elsewhere does not remove it', async () => {
+      const before = Date.now()
+      await importLocalData({
+        version: 1,
+        snapshots: { uid1: snapshotExport([{ id: 'e1', label: 'Back', filename: 's_e1.pipette', savedAt: '2019-01-01T00:00:00.000Z' }], { 's_e1.pipette': 'BACKUP' }) },
+      }, mockUserDataPath)
+      const [e] = (await readJson(join(snapDir(), 'index.json')) as { entries: Stored[] }).entries
+      expect(new Date(e.clocks.created).getTime()).toBeGreaterThanOrEqual(before)
+      // The other clocks stay the backup's.
+      expect(e.clocks.name).toBe('2019-01-01T00:00:00.000Z')
+    })
+
+    it('never replaces a live local entry with a backup tombstone', async () => {
+      const local = { uid: 'uid1', entries: [{ id: 'e1', label: 'Live', filename: 's_e1.pipette', savedAt: '2019-01-01T00:00:00.000Z' }] }
+      await writeJson(join(snapDir(), 'index.json'), local)
+
+      const result = await importLocalData({
+        version: 1,
+        snapshots: { uid1: snapshotExport([{ id: 'e1', label: 'Dead', filename: 's_e1.pipette', savedAt: '2019-01-01T00:00:00.000Z', deletedAt: '2030-01-01T00:00:00.000Z' } as never], {}) },
+      }, mockUserDataPath)
+
+      expect(result.changedUnits).toEqual([])
+      expect(await readJson(join(snapDir(), 'index.json'))).toEqual(local)
+    })
+
+    it('saves backup bodies and migrates local bodies under id-carrying names', async () => {
+      const favDir = join(mockUserDataPath, 'sync', 'favorites', 'macro')
+      await writeJson(join(favDir, 'index.json'), {
+        type: 'macro',
+        entries: [
+          { id: 'l1', label: 'A', filename: 'shared.json', savedAt: '2019-01-01T00:00:00.000Z' },
+          { id: 'l2', label: 'B', filename: 'shared.json', savedAt: '2019-01-01T00:00:00.000Z' },
+        ],
+      })
+      await actualFs.writeFile(join(favDir, 'shared.json'), 'LOCAL', 'utf-8')
+
+      await importLocalData({
+        version: 1,
+        favorites: { macro: favoritesExport([{ id: 'b1', label: 'C', filename: 'macro_ts.json', savedAt: '2019-01-01T00:00:00.000Z' }], { 'macro_ts.json': 'BACKUP' }) },
+      }, mockUserDataPath)
+
+      const entries = (await readJson(join(favDir, 'index.json')) as { entries: Stored[] }).entries
+      expect(entries.map((e) => e.filename)).toEqual(['shared_l1.json', 'shared_l2.json', 'macro_ts_b1.json'])
+      expect(await readFile(join(favDir, 'shared_l1.json'), 'utf-8')).toBe('LOCAL')
+      expect(await readFile(join(favDir, 'shared_l2.json'), 'utf-8')).toBe('LOCAL')
+      expect(await readFile(join(favDir, 'macro_ts_b1.json'), 'utf-8')).toBe('BACKUP')
+      expect(await exists(join(favDir, 'shared.json'))).toBe(false)
+    })
   })
 
   describe('A8: concurrent snapshot-store save for the same uid', () => {

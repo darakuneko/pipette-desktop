@@ -272,10 +272,12 @@ export function registerHubKeyLabelHandlers(): void {
         )
         // Preserve the local id, name (drag/rename), and hubPostId; only
         // refresh the payload (map / compositeLabels / keymapApplicable),
-        // uploaderName, and hubUpdatedAt.
+        // uploaderName, and hubUpdatedAt. The name is the one the label has
+        // when the save runs, so a rename made during the download stays.
         return await saveRecord({
           id: localId,
           name: record.data.meta.name,
+          keepCurrentName: true,
           hubPostId,
           ...hubBodyToSaveRecordFields(body, uploaderName, hubUpdatedAt),
         })

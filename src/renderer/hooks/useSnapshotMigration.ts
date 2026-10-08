@@ -130,9 +130,12 @@ export function useSnapshotMigration(options: Options): MigrationResult {
               featureFlags,
             })
             backfillQmkSettings(upgraded)
-            await window.vialAPI.snapshotStoreUpdate(
+            const updated = await window.vialAPI.snapshotStoreUpdate(
               uid, entry.id, JSON.stringify(upgraded, null, 2), upgraded.version,
+              { migrateFrom: loadResult.data },
             )
+            // Not written: the entry changed or went away since it was loaded.
+            if (!updated.success) continue
             migratedCount++
 
             if (entry.hubPostId) {

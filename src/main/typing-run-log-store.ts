@@ -6,12 +6,12 @@
 //
 //  - Retention is a deterministic TRIM (newest MAX_RUN_LOGS_PER_KEYBOARD
 //    kept, overflow tombstoned), not a reject-at-cap like
-//    analyze-filter-store / snapshot-store. The trim itself lives in
-//    `sync/merge.ts` (`applyRunLogRetention`), shared with
-//    `sync-merge-dispatch.ts`'s post-merge step for this sync unit — see that
-//    function's doc comment for why ranking by immutable `startedAt`
-//    (not local `savedAt`/LWW `updatedAt`) is what lets every device
-//    converge on the same kept set after a sync merge.
+//    analyze-filter-store / snapshot-store. The trim itself is
+//    `applyRunLogRetention` (`sync/entry-merge.ts`), shared with the
+//    sync merge of this unit (`mergeEntries`'s `runLogRetentionMax`) —
+//    ranking by immutable `startedAt` (not local `savedAt` / `updatedAt`)
+//    is what lets every device converge on the same kept set after a sync
+//    merge.
 //  - This is the highest input-content-recovery-risk data in the app
 //    (see `../shared/types/typing-run-log.ts`), so `saveRunLog` re-checks
 //    the recording-consent flag itself (main-side defense in depth,
@@ -23,11 +23,15 @@
 
 import { app } from 'electron'
 import { join } from 'node:path'
-import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { getAppConfigStore } from './app-config'
 import { notifyChange } from './sync/sync-service'
 import { withWriteLock } from './per-uid-write-lock'
-import { applyRunLogRetention } from './sync/merge'
+import { type ClockedEntry, idBodyFilename } from './sync/entry-clocks'
+import { applyRunLogRetention } from './sync/entry-merge'
+import { normalizeEntries, overwriteEntry } from './sync/entry-write'
+import { readIndexMigrated, unlinkUnreferencedBodyFiles } from './sync/body-filename-migration'
+import { writeFileAtomic } from './utils/write-file-atomic'
 import { isSafePathSegment, tsForFilename } from './utils/safe-filename'
 import { isValidRowColKeycode } from './typing-analytics/typing-analytics-service'
 import {
@@ -67,19 +71,26 @@ function getSafeFilePath(uid: string, filename: string): string {
   return join(getStoreDir(uid), filename)
 }
 
-async function readIndex(uid: string): Promise<RunLogIndex> {
+type RunLogEntry = ClockedEntry<RunLogMeta>
+
+interface ClockedRunLogIndex {
+  uid: string
+  entries: RunLogEntry[]
+}
+
+async function readIndex(uid: string): Promise<ClockedRunLogIndex> {
   try {
     const raw = await readFile(getIndexPath(uid), 'utf-8')
     const parsed = JSON.parse(raw) as RunLogIndex
-    if (parsed.uid === uid && Array.isArray(parsed.entries)) return parsed
+    if (parsed.uid === uid && Array.isArray(parsed.entries)) return { ...parsed, entries: normalizeEntries('runLogs', parsed.entries) }
   } catch {
     // Missing or corrupt — start fresh
   }
   return { uid, entries: [] }
 }
 
-async function writeIndex(uid: string, index: RunLogIndex): Promise<void> {
-  await writeFile(getIndexPath(uid), JSON.stringify(index, null, 2), 'utf-8')
+async function writeIndex(uid: string, index: ClockedRunLogIndex): Promise<void> {
+  await writeFileAtomic(getIndexPath(uid), JSON.stringify(index, null, 2))
 }
 
 /** Best-effort unlink of the entries `applyRunLogRetention` just evicted
@@ -94,37 +105,6 @@ async function unlinkEvictedRunLogs(dir: string, entries: readonly RunLogMeta[])
     if (!isSafePathSegment(meta.filename)) continue
     try {
       await unlink(join(dir, meta.filename))
-    } catch {
-      // best-effort
-    }
-  }
-}
-
-/** Best-effort reconciliation: unlink any `*.json` payload file in the
- *  runs dir that appears in NEITHER `index.entries` nor its tombstones —
- *  a tombstoned entry still carries its own `filename` (`applyRunLogRetention`
- *  spreads the original entry when converting it), so this only ever
- *  catches a file the index has no memory of at all, e.g. one left behind
- *  by an index write that failed or was corrupted after its payload was
- *  already written. Cheap: `MAX_RUN_LOGS_PER_KEYBOARD` retention already
- *  bounds this directory to a small number of files, so a full `readdir`
- *  on every save is not a scaling concern. Never throws — a listing or
- *  unlink failure here is not fatal to the save that just succeeded. */
-async function reconcileOrphanRunLogFiles(dir: string, index: RunLogIndex): Promise<void> {
-  const known = new Set(index.entries.map((e) => e.filename))
-  let files: string[]
-  try {
-    files = await readdir(dir)
-  } catch {
-    return
-  }
-  for (const file of files) {
-    if (file === 'index.json') continue
-    if (!file.endsWith('.json')) continue
-    if (known.has(file)) continue
-    if (!isSafePathSegment(file)) continue
-    try {
-      await unlink(join(dir, file))
     } catch {
       // best-effort
     }
@@ -285,34 +265,41 @@ export async function saveRunLog(uid: string, raw: unknown): Promise<{ success: 
       await mkdir(dir, { recursive: true })
 
       const now = new Date()
-      const filename = `${tsForFilename(now)}_${log.runId}.json`
+      const filename = idBodyFilename('runLogs', log.runId, `${tsForFilename(now)}.json`)
       await writeFile(getSafeFilePath(uid, filename), validated.serialized, 'utf-8')
 
-      const index = await readIndex(uid)
-      const nowIso = now.toISOString()
-      const meta: RunLogMeta = { id: log.runId, startedAt: log.startedAt, filename, savedAt: nowIso, updatedAt: nowIso }
+      const index = await readIndexMigrated('runLogs', dir, () => readIndex(uid), (i) => writeIndex(uid, i))
+      // A run saved again by id is the recorder's own write, so it brings
+      // a tombstoned id back like any other save of an absent id.
+      const existingDup = index.entries.find((e) => e.id === log.runId)
+      const meta = overwriteEntry<RunLogMeta>(
+        'runLogs',
+        existingDup,
+        { id: log.runId, startedAt: log.startedAt, filename, savedAt: now.toISOString() },
+        now,
+        { body: true, explicit: true },
+      )
       // Replace-by-id defensively (a run only finishes once per the
       // renderer's own save latch, but never trust that from here). The
       // replaced entry's own payload file (a different filename — the
       // timestamp prefix differs) must be unlinked too, or it leaks on
       // disk forever: it's gone from the index either way, so retention
       // will never see or evict it.
-      const existingDup = index.entries.find((e) => e.id === meta.id)
       const withoutDup = index.entries.filter((e) => e.id !== meta.id)
-      const { entries, evicted } = applyRunLogRetention([meta, ...withoutDup], MAX_RUN_LOGS_PER_KEYBOARD)
+      const { entries, evicted } = applyRunLogRetention([meta, ...withoutDup], MAX_RUN_LOGS_PER_KEYBOARD, now.getTime())
       index.entries = entries
       await writeIndex(uid, index)
       await unlinkEvictedRunLogs(dir, evicted)
       if (existingDup && existingDup.filename !== meta.filename) {
         await unlinkEvictedRunLogs(dir, [existingDup])
       }
-      // Corrupt-index reconciliation (defense in depth, not this save's
-      // own concern): a payload file the index has no memory of at all —
-      // e.g. left behind by a previous save whose index write failed
-      // after its payload was already on disk — would otherwise never be
-      // evicted by retention (which only ever sees indexed entries),
-      // silently defeating the disk bound this data class relies on.
-      await reconcileOrphanRunLogFiles(dir, index)
+      // A payload file the index has no memory of at all (tombstones
+      // still name theirs) — e.g. left behind by a save whose index write
+      // failed after its payload was already on disk — would otherwise
+      // never be evicted by retention, which only sees indexed entries,
+      // defeating the disk bound this data class relies on. Same rule as
+      // the sync merge's sweep (`unlinkUnreferencedBodyFiles`).
+      await unlinkUnreferencedBodyFiles('runLogs', dir, new Set(index.entries.map((e) => e.filename)))
 
       notifyChange(`keyboards/${uid}/runs`)
       return { success: true, entry: meta }

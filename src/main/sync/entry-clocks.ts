@@ -12,6 +12,7 @@ import type { TypingTestTextMeta } from '../../shared/types/typing-test-text-sto
 import type { RunLogMeta } from '../../shared/types/typing-run-log'
 import type { I18nPackMeta } from '../../shared/types/i18n-store'
 import type { ThemePackMeta } from '../../shared/types/theme-store'
+import { createHash } from 'node:crypto'
 import { safeTimestamp } from './merge'
 
 /** Clocks of one entry, one per field group (ISO 8601). `created` is set
@@ -80,6 +81,12 @@ export interface StoreGroupDef {
   v1BodyClock: V1BodyClockRule
   /** Where the entry id sits in the body filename (see `idBodyFilename`). */
   filenameId: FilenameIdRule
+  /** Extension of the store's body files. */
+  bodyExt: '.json' | '.pipette'
+  /** The store saves over one filename in place, so equal body clocks and
+   *  fields can still hide different bytes: the merge breaks that tie by
+   *  the body's hash (`bodyHash`). */
+  hashBody?: true
 }
 
 /** - `suffix`: `{stem}_{id}{ext}` (snapshots `{device}_{ts}_{id}.pipette`,
@@ -97,16 +104,35 @@ const HUB_CACHE = ['hubPostId', 'hubUpdatedAt', 'uploaderName'] as const
  *  in the created group where it is the first save time (every other
  *  store). */
 export const STORE_GROUPS: Readonly<Record<EntryStore, StoreGroupDef>> = {
-  favorites: { body: ['filename'], createdFields: ['savedAt'], name: ['label'], hub: HUB_LINK, v1BodyClock: 'savedAt', filenameId: 'suffix' },
-  snapshots: { body: ['filename', 'vilVersion'], createdFields: ['savedAt'], name: ['label'], hub: HUB_LINK, v1BodyClock: 'updatedAtOrSavedAt', filenameId: 'suffix' },
-  analyzeFilters: { body: ['filename', 'summary'], createdFields: ['savedAt'], name: ['label'], hub: HUB_LINK, v1BodyClock: 'updatedAtOrSavedAt', filenameId: 'suffix' },
-  keyLabels: { body: ['filename', 'savedAt'], createdFields: [], name: ['name'], hub: HUB_CACHE, v1BodyClock: 'savedAt', filenameId: 'prefix' },
+  favorites: { body: ['filename'], createdFields: ['savedAt'], name: ['label'], hub: HUB_LINK, v1BodyClock: 'savedAt', filenameId: 'suffix', bodyExt: '.json' },
+  snapshots: {
+    body: ['filename', 'vilVersion'],
+    createdFields: ['savedAt'],
+    name: ['label'],
+    hub: HUB_LINK,
+    v1BodyClock: 'updatedAtOrSavedAt',
+    filenameId: 'suffix',
+    bodyExt: '.pipette',
+    hashBody: true,
+  },
+  analyzeFilters: {
+    body: ['filename', 'summary'],
+    createdFields: ['savedAt'],
+    name: ['label'],
+    hub: HUB_LINK,
+    v1BodyClock: 'updatedAtOrSavedAt',
+    filenameId: 'suffix',
+    bodyExt: '.json',
+    hashBody: true,
+  },
+  keyLabels: { body: ['filename', 'savedAt'], createdFields: [], name: ['name'], hub: HUB_CACHE, v1BodyClock: 'savedAt', filenameId: 'prefix', bodyExt: '.json' },
   typingTestTexts: {
     body: ['filename', 'savedAt', 'wordCount', 'lineCount', 'source'],
     createdFields: [],
     name: ['name'],
     v1BodyClock: 'savedAt',
     filenameId: 'prefix',
+    bodyExt: '.json',
   },
   i18nPacks: {
     body: ['filename', 'version', 'coverage', 'matchedBaseVersion', 'dangerousKeyCount', 'appVersionAtImport'],
@@ -116,9 +142,10 @@ export const STORE_GROUPS: Readonly<Record<EntryStore, StoreGroupDef>> = {
     enabled: ['enabled'],
     v1BodyClock: 'epoch',
     filenameId: 'fixed',
+    bodyExt: '.json',
   },
-  themePacks: { body: ['filename', 'version'], createdFields: ['savedAt'], name: ['name'], hub: HUB_CACHE, v1BodyClock: 'epoch', filenameId: 'fixed' },
-  runLogs: { body: ['filename', 'startedAt', 'savedAt'], createdFields: [], v1BodyClock: 'savedAt', filenameId: 'suffix' },
+  themePacks: { body: ['filename', 'version'], createdFields: ['savedAt'], name: ['name'], hub: HUB_CACHE, v1BodyClock: 'epoch', filenameId: 'fixed', bodyExt: '.json' },
+  runLogs: { body: ['filename', 'startedAt', 'savedAt'], createdFields: [], v1BodyClock: 'savedAt', filenameId: 'suffix', bodyExt: '.json' },
 }
 
 function splitExtension(filename: string): [string, string] {
@@ -206,7 +233,7 @@ export function clockMs(value: unknown): number {
 }
 
 /** The canonical ISO form of a clock, or undefined when it is not valid. */
-function validClock(value: unknown): string | undefined {
+export function validClock(value: unknown): string | undefined {
   const ms = clockMs(value)
   return ms > 0 ? new Date(ms).toISOString() : undefined
 }
@@ -265,6 +292,21 @@ export function touchClock<T extends BaseEntryMeta>(entry: ClockedEntry<T>, grou
   if (out.deletedAt !== undefined && clockMs(clocks.created) > clockMs(out.deletedAt)) delete out.deletedAt
   out.updatedAt = derivedUpdatedAt(clocks, out.deletedAt)
   return out
+}
+
+/** Sets `group`'s clock to `iso` as it is (no "never move back" rule, see
+ *  `touchClock`) and rewrites `updatedAt`. For clocks a write fixes
+ *  instead of taking from now: the epoch of built-ins, a migrated or
+ *  received body clock. */
+export function setClock<T extends BaseEntryMeta>(entry: ClockedEntry<T>, group: EntryGroup, iso: string): ClockedEntry<T> {
+  const clocks: EntryClocks = { ...entry.clocks, [group]: iso }
+  return { ...entry, clocks, updatedAt: derivedUpdatedAt(clocks, entry.deletedAt) }
+}
+
+/** SHA-256 of a body's text, the tie-break of equal body clocks and
+ *  fields. */
+export function bodyHash(text: string): string {
+  return createHash('sha256').update(text).digest('hex')
 }
 
 /** Tombstones `entry` at `now`, never before its `created` clock, so the

@@ -17,7 +17,11 @@
 //
 // Merge rules: snapshots/favorites keep the local entry unless it's
 // absent or tombstoned (in which case the imported entry replaces it);
-// settings use last-write-wins on `_updatedAt`.
+// settings use last-write-wins on `_updatedAt`. Entries on both sides are
+// read as v2 entries (`normalizeEntry`), and body files are saved under
+// id-carrying names (`idBodyFilename`), local ones included: the local
+// store's legacy names are migrated first (`readIndexDirMigrated`, under
+// the same lock, outside the rollback — it only copies and renames).
 
 import { join, dirname } from 'node:path'
 import { mkdir, readFile, unlink } from 'node:fs/promises'
@@ -26,9 +30,9 @@ import { withWriteLocks } from '../per-uid-write-lock'
 import { isEnoent } from '../utils/is-enoent'
 import { isRecord } from '../../shared/vil-file'
 import { isSafeKey, isSafePath } from '../utils/safe-filename'
-import type { SavedFavoriteMeta } from '../../shared/types/favorite-store'
-import type { SnapshotMeta } from '../../shared/types/snapshot-store'
-import type { EntryMeta } from './merge'
+import { type ClockedEntry, type StoreMetaMap, idBodyFilename, normalizeEntry, touchClock } from './entry-clocks'
+import { normalizeEntries, overwriteEntry } from './entry-write'
+import { readIndexDirMigrated } from './body-filename-migration'
 
 /** True when `value` has the `{ index: { entries: [...] }, files: {...} }`
  *  shape every index-based bundle (snapshots, favorites) needs before its
@@ -79,7 +83,7 @@ async function readIndexStrict(path: string): Promise<{ raw: string; parsed: Rec
 }
 
 /** Lock keys for the units an import touches. They follow the scheme of
- * `lockKeyFor` in sync-merge-dispatch.ts, so the two must agree. */
+ * `storeLockKey` in sync-bundle.ts, so the two must agree. */
 function collectLockKeys(data: Record<string, unknown>): string[] {
   const keys: string[] = []
   if (isRecord(data.snapshots)) {
@@ -94,20 +98,27 @@ function collectLockKeys(data: Record<string, unknown>): string[] {
   return keys
 }
 
+type ImportStore = 'snapshots' | 'favorites'
+
 /** Plans the writes for one index-based bundle (snapshots or favorites):
  *  local wins unless the entry is absent or tombstoned, in which case
  *  the imported entry (and its payload file, if the bundle carries one)
- *  replaces it. `seed` supplies the non-`entries` fields a brand-new
+ *  replaces it. An imported entry that replaces a local tombstone is
+ *  brought back (`overwriteEntry`: `created` and every other clock move
+ *  to `now`); one the local store lacks gets `created` = now and keeps its
+ *  other clocks. `seed` supplies the non-`entries` fields a brand-new
  *  index needs (`{ uid }` for snapshots, `{ type }` for favorites) —
  *  irrelevant when a local index already exists, since its own fields
  *  are kept as-is. `rawBundle` is untrusted (JSON-parsed import file
  *  content), validated against `isImportBundleShape` before any of its
  *  entries are read. Returns the planned writes for this bundle (empty
  *  when nothing changed). */
-async function planIndexBundle<T extends EntryMeta>(
+async function planIndexBundle(
+  store: ImportStore,
   basePath: string,
   rawBundle: unknown,
   seed: Record<string, unknown>,
+  now: Date,
 ): Promise<PlannedWrite[]> {
   if (!isImportBundleShape(rawBundle)) {
     throw new Error('Invalid export file format')
@@ -115,9 +126,11 @@ async function planIndexBundle<T extends EntryMeta>(
   const bundle = rawBundle
 
   const indexPath = join(basePath, 'index.json')
+  // Local body filenames carry their id before the plan reads (and backs
+  // up) the index.
+  await readIndexDirMigrated(store, basePath)
   const localIndex = await readIndexStrict(indexPath)
-  const rawEntries = localIndex?.parsed.entries
-  const localEntries: T[] = Array.isArray(rawEntries) ? (rawEntries as T[]) : []
+  const localEntries: ClockedEntry[] = normalizeEntries(store, localIndex?.parsed.entries)
   const localMap = new Map(localEntries.map((e) => [e.id, e]))
   const writes: PlannedWrite[] = []
   let changed = false
@@ -128,10 +141,23 @@ async function planIndexBundle<T extends EntryMeta>(
     // structural checks above, one bad entry in an otherwise valid
     // export shouldn't block every other entry from importing.
     if (typeof rawEntry.id !== 'string' || !isSafePath(rawEntry.filename)) continue
-    const entry = rawEntry as unknown as T
+    const imported: ClockedEntry = normalizeEntry(store, rawEntry as unknown as StoreMetaMap[ImportStore])
+    const bundleFilename = imported.filename
+    imported.filename = idBodyFilename(store, imported.id, bundleFilename)
+    if (!isSafePath(imported.filename)) continue
 
-    const existing = localMap.get(entry.id)
+    const existing = localMap.get(imported.id)
+    // Never replace a live local entry, and never revive with a tombstone.
     if (existing && !existing.deletedAt) continue
+    // A restore is the user's explicit save: it brings back a local
+    // tombstone, and an entry restored where the store lacks it also gets a
+    // new `created`, so a delete made on another device before the restore
+    // does not remove it again on the next sync.
+    const entry = imported.deletedAt !== undefined
+      ? imported
+      : existing
+        ? overwriteEntry(store, existing, imported, now, { body: true, explicit: true })
+        : touchClock(imported, 'created', now)
 
     if (existing) {
       const idx = localEntries.indexOf(existing)
@@ -140,8 +166,8 @@ async function planIndexBundle<T extends EntryMeta>(
       localEntries.push(entry)
     }
 
-    if (entry.filename in bundle.files) {
-      const payload = bundle.files[entry.filename]
+    if (bundleFilename in bundle.files) {
+      const payload = bundle.files[bundleFilename]
       if (typeof payload !== 'string') {
         throw new Error('Invalid export file format')
       }
@@ -242,12 +268,13 @@ async function planSettingsBundle(
 async function buildPlan(data: Record<string, unknown>, userData: string): Promise<ImportPlan> {
   const writes: PlannedWrite[] = []
   const changedUnits: string[] = []
+  const now = new Date()
 
   if (isRecord(data.snapshots)) {
     for (const [uid, bundle] of Object.entries(data.snapshots)) {
       if (!isSafeKey(uid)) continue
       const basePath = join(userData, 'sync', 'keyboards', uid, 'snapshots')
-      const bundleWrites = await planIndexBundle<SnapshotMeta>(basePath, bundle, { uid })
+      const bundleWrites = await planIndexBundle('snapshots', basePath, bundle, { uid }, now)
       if (bundleWrites.length > 0) {
         writes.push(...bundleWrites)
         changedUnits.push(`keyboards/${uid}/snapshots`)
@@ -270,7 +297,7 @@ async function buildPlan(data: Record<string, unknown>, userData: string): Promi
     for (const [type, bundle] of Object.entries(data.favorites)) {
       if (!isSafeKey(type)) continue
       const basePath = join(userData, 'sync', 'favorites', type)
-      const bundleWrites = await planIndexBundle<SavedFavoriteMeta>(basePath, bundle, { type })
+      const bundleWrites = await planIndexBundle('favorites', basePath, bundle, { type }, now)
       if (bundleWrites.length > 0) {
         writes.push(...bundleWrites)
         changedUnits.push(`favorites/${type}`)

@@ -7,6 +7,7 @@
 // in a temp dir; merging and bundling are spies.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { SYNC_FORMAT_VERSION } from '../../../shared/constants/sync-format'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -265,7 +266,8 @@ async function seedDrive(): Promise<void> {
 }
 
 function seedNewerSyncFormat(): void {
-  addFile('sync-format-v2.json', JSON.stringify({ type: 'sync-format', version: 2 }))
+  const newer = SYNC_FORMAT_VERSION + 1
+  addFile(`sync-format-v${newer}.json`, JSON.stringify({ type: 'sync-format', version: newer }))
 }
 
 function seedForeignLock(): void {
@@ -454,7 +456,7 @@ describe('sync password-change guard', () => {
   })
 
   describe('sync-format status', () => {
-    const newer = { required: 2, supported: 1, updateRequired: true }
+    const newer = { required: SYNC_FORMAT_VERSION + 1, supported: SYNC_FORMAT_VERSION, updateRequired: true }
 
     it('an entry point stopped by a newer marker records it', async () => {
       seedNewerSyncFormat()

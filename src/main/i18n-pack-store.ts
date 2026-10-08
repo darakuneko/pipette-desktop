@@ -9,8 +9,8 @@
 // Unlike `key-labels` (one sync unit covering both index + files), i18n
 // uses two sync unit families: `i18n/index` for the index and
 // `i18n/packs/{packId}` for each pack body. notifyChange is split
-// accordingly so a single pack edit does not bump every other pack's
-// remote LWW timestamp.
+// accordingly so a single pack edit does not re-send every other pack's
+// body.
 //
 // This file is the facade: it owns no logic of its own and re-exports
 // the full public surface from the sibling modules in this directory:
@@ -31,8 +31,7 @@ export type { I18nPackRecord } from '../shared/types/i18n-store'
 export type { I18nPackStoreErrorCode, I18nPackStoreResult } from './i18n-pack-store-internal'
 export { readIndex, __testing } from './i18n-pack-store-internal'
 
-export type { ApplyPackBodyOutcome } from './i18n-pack-store-sync'
-export { mergeSyncedIndex, statLocalPackMtime, applySyncedPackBody, pinPackBodyMtime } from './i18n-pack-store-sync'
+export { mergeSyncedIndex, bundleSyncedIndex, bundleSyncedPackBody, applySyncedPackBody } from './i18n-pack-store-sync'
 
 export { runGcUnderLock } from './i18n-pack-store-gc'
 
@@ -44,6 +43,7 @@ export {
   savePack,
   renamePack,
   setEnabled,
+  refreshCoverage,
   deletePack,
   setHubPostId,
   hasActiveName,

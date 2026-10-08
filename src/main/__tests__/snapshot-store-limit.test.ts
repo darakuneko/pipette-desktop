@@ -58,7 +58,7 @@ describe('snapshot-store 30-entry limit', () => {
       entries.push({
         id: `entry-${i}`,
         label: `Label ${i}`,
-        filename: `keyboard_2025-01-01T00-00-0${i}.000Z.pipette`,
+        filename: `keyboard_2025-01-01T00-00-0${i}.000Z_entry-${i}.pipette`,
         savedAt: '2025-01-01T00:00:00.000Z',
       })
     }
@@ -66,7 +66,7 @@ describe('snapshot-store 30-entry limit', () => {
       entries.push({
         id: `deleted-${i}`,
         label: `Deleted ${i}`,
-        filename: `keyboard_2025-01-01T00-00-0${i}.000Z.pipette`,
+        filename: `keyboard_2025-01-01T00-00-0${i}.000Z_deleted-${i}.pipette`,
         savedAt: '2025-01-01T00:00:00.000Z',
         deletedAt: '2025-01-02T00:00:00.000Z',
       })

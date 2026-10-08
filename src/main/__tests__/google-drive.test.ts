@@ -232,14 +232,11 @@ describe('google-drive', () => {
     })
   })
 
-  // The local-wins pack-body upload path (sync-service.ts's
-  // uploadSyncUnit + pack-bundle-merge.ts's pinPackBodyMtimeAfterUpload)
-  // pins the local file's mtime to whatever `modifiedTime` Drive just
-  // assigned this revision — closing a clock-skew loop where a
-  // locally-ahead wall clock would otherwise look newer than Drive's
-  // own stamped time forever. That only works if `uploadFile` actually
-  // requests and returns `modifiedTime` — Drive's default response
-  // fields for an upload omit it.
+  // The uploader records the `modifiedTime` Drive just assigned this
+  // revision as the one this machine last handled (`recordRemoteState`).
+  // That only works if `uploadFile` actually requests and returns
+  // `modifiedTime` — Drive's default response fields for an upload
+  // omit it.
   describe('uploadFile', () => {
     const envelope: SyncEnvelope = {
       version: 1,

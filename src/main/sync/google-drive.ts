@@ -97,13 +97,9 @@ export async function downloadFile(fileId: string): Promise<SyncEnvelope> {
 export interface UploadedFile {
   id: string
   /** Drive's own `modifiedTime` for the revision this call just wrote.
-   *  Callers that decide a local-wins upload (i18n/theme pack bodies —
-   *  see `pinPackBodyMtimeAfterUpload` in pack-bundle-merge.ts) pin the
-   *  local file's mtime to this value instead of leaving it at "now",
-   *  closing a clock-skew gap: a locally-ahead wall clock would
-   *  otherwise permanently look newer than Drive's own stamped time,
-   *  forcing a redundant re-upload (and re-download on every peer) on
-   *  every subsequent sync pass. */
+   *  The uploader records it as the revision this machine last handled
+   *  (`recordRemoteState`, sync-runtime-state.ts), so the next poll does
+   *  not take its own upload for a remote change. */
   modifiedTime: string
 }
 

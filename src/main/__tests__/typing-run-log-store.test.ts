@@ -333,6 +333,44 @@ describe('typing-run-log-store', () => {
       // The current save's own payload must be untouched.
       await expect(access(join(runsDir, result.entry!.filename))).resolves.toBeUndefined()
     })
+
+    it('writes v2 clocks and an id-carrying filename; a re-save moves created and body', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      try {
+        vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
+        const first = await saveRunLog('kb-1', makeLog({ runId: 'run-c' }))
+        expect(first.entry!.filename).toBe('2026-01-01T00-00-00.000Z_run-c.json')
+        expect(first.entry).toMatchObject({
+          clocks: { created: '2026-01-01T00:00:00.000Z', body: '2026-01-01T00:00:00.000Z' },
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        })
+
+        vi.setSystemTime(new Date('2026-01-02T00:00:00.000Z'))
+        const second = await saveRunLog('kb-1', makeLog({ runId: 'run-c' }))
+        expect(second.entry).toMatchObject({
+          clocks: { created: '2026-01-02T00:00:00.000Z', body: '2026-01-02T00:00:00.000Z' },
+        })
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('moves a legacy payload filename to an id-carrying one on the next save', async () => {
+      const runsDir = join(mockUserDataPath, 'sync', 'keyboards', 'kb-1', 'runs')
+      await mkdir(runsDir, { recursive: true })
+      await writeFile(join(runsDir, 'legacy.json'), '{"runId":"old"}', 'utf-8')
+      await writeFile(join(runsDir, 'index.json'), JSON.stringify({
+        uid: 'kb-1',
+        entries: [{ id: 'old', startedAt: '2025-01-01T00:00:00.000Z', filename: 'legacy.json', savedAt: '2025-01-01T00:00:00.000Z' }],
+      }), 'utf-8')
+
+      await saveRunLog('kb-1', makeLog({ runId: 'run-1' }))
+
+      const listed = await listRunLogs('kb-1')
+      expect(listed.entries?.find((e) => e.id === 'old')?.filename).toBe('legacy_old.json')
+      await expect(access(join(runsDir, 'legacy.json'))).rejects.toThrow()
+      expect(await readFile(join(runsDir, 'legacy_old.json'), 'utf-8')).toBe('{"runId":"old"}')
+    })
   })
 
   describe('lineBreaks', () => {
@@ -450,6 +488,9 @@ describe('typing-run-log-store', () => {
       const index = JSON.parse(await readFile(indexPath, 'utf-8')) as { entries: RunLogMeta[] }
       const evictedMeta = index.entries.find((e) => e.id === 'run-0')
       expect(evictedMeta?.deletedAt).toBeDefined()
+      // A v2 tombstone: deleted no earlier than created, clocks kept.
+      const evicted = evictedMeta as RunLogMeta & { clocks: { created: string } }
+      expect(new Date(evicted.deletedAt!).getTime()).toBeGreaterThanOrEqual(new Date(evicted.clocks.created).getTime())
 
       // The evicted entry's file must have been unlinked from disk.
       await expect(access(join(mockUserDataPath, 'sync', 'keyboards', 'kb-1', 'runs', evictedMeta!.filename)))

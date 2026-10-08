@@ -19,10 +19,22 @@ import type {
   KeyLabelImportRejection,
   KeyLabelImportSuccess,
 } from '../shared/types/key-label-store'
+import { type ClockedEntry, EPOCH_ISO, idBodyFilename, markDeleted, setClock, touchClock } from './sync/entry-clocks'
+import { builtinEntry, normalizeEntries, overwriteEntry } from './sync/entry-write'
+import { readIndexMigrated } from './sync/body-filename-migration'
+import { writeFileAtomic } from './utils/write-file-atomic'
+
+type KeyLabelEntry = ClockedEntry<KeyLabelMeta>
+
+interface ClockedKeyLabelIndex {
+  entries: KeyLabelEntry[]
+}
 
 export const KEY_LABEL_SYNC_UNIT = 'key-labels'
 /** Stable id for the built-in QWERTY entry so renames / reorders survive sync. */
 const QWERTY_ENTRY_ID = 'qwerty'
+/** The same on every device, like every other field of the created entry. */
+const QWERTY_FILENAME = idBodyFilename('keyLabels', QWERTY_ENTRY_ID, 'builtin.json')
 const MAX_NAME_LENGTH = 100
 
 function getStoreDir(): string {
@@ -46,24 +58,26 @@ function ok<T>(data?: T): KeyLabelStoreResult<T> {
   return { success: true, data }
 }
 
-function nowIso(): string {
-  return new Date().toISOString()
-}
-
-async function readIndex(): Promise<KeyLabelIndex> {
+async function readIndex(): Promise<ClockedKeyLabelIndex> {
   try {
     const raw = await readFile(getIndexPath(), 'utf-8')
     const parsed = JSON.parse(raw) as KeyLabelIndex
-    if (Array.isArray(parsed?.entries)) return parsed
+    if (Array.isArray(parsed?.entries)) return { ...parsed, entries: normalizeEntries('keyLabels', parsed.entries) }
   } catch {
     // missing / corrupt — return empty
   }
   return { entries: [] }
 }
 
-async function writeIndex(index: KeyLabelIndex): Promise<void> {
+async function writeIndex(index: ClockedKeyLabelIndex): Promise<void> {
   await mkdir(getStoreDir(), { recursive: true })
-  await writeFile(getIndexPath(), JSON.stringify(index, null, 2), 'utf-8')
+  await writeFileAtomic(getIndexPath(), JSON.stringify(index, null, 2))
+}
+
+/** `readIndex` for a caller holding the store lock: also moves body files
+ *  to id-carrying names (`migrateBodyFilenames`). */
+function readIndexLocked(): Promise<ClockedKeyLabelIndex> {
+  return readIndexMigrated('keyLabels', getStoreDir(), readIndex, writeIndex)
 }
 
 function findActiveByName(entries: KeyLabelMeta[], name: string, excludeId?: string): KeyLabelMeta | undefined {
@@ -139,31 +153,31 @@ function normalizeFile(parsed: unknown): KeyLabelEntryFile | null {
  * map is empty, matching the historical built-in behaviour.
  */
 async function ensureQwertyEntryUnlocked(): Promise<void> {
-  const index = await readIndex()
-  const existing = index.entries.find((e) => e.id === QWERTY_ENTRY_ID)
-  if (existing) {
+  const index = await readIndexLocked()
+  const at = index.entries.findIndex((e) => e.id === QWERTY_ENTRY_ID)
+  if (at >= 0) {
+    const existing = index.entries[at]
     // Backfill uploaderName for stores created before the field was set
     // so the Author column reads "pipette" without requiring a manual
     // re-import. No file rewrite needed — the meta is the source of
-    // truth for the column.
+    // truth for the column. The hub clock is the epoch, like a freshly
+    // created QWERTY entry's, so every device backfills the same value
+    // at the same clock.
     if (!existing.uploaderName) {
-      existing.uploaderName = 'pipette'
+      index.entries[at] = setClock({ ...existing, uploaderName: 'pipette' }, 'hub', EPOCH_ISO)
       await writeIndex(index)
       notifyChange(KEY_LABEL_SYNC_UNIT)
     }
     return
   }
-  const now = new Date()
-  const filename = `${QWERTY_ENTRY_ID}_${tsForFilename(now)}.json`
   const data: KeyLabelEntryFile = { name: 'QWERTY', map: {} }
-  const meta: KeyLabelMeta = {
+  const meta = builtinEntry('keyLabels', {
     id: QWERTY_ENTRY_ID,
     name: 'QWERTY',
     uploaderName: 'pipette',
-    filename,
-    savedAt: now.toISOString(),
-    updatedAt: now.toISOString(),
-  }
+    filename: QWERTY_FILENAME,
+    savedAt: EPOCH_ISO,
+  })
   await writeRecord(meta, data)
   // Pin QWERTY to the head on first creation so behaviour matches the
   // pre-migration UX. The user can drag it elsewhere afterwards.
@@ -179,17 +193,17 @@ async function ensureQwertyEntry(): Promise<void> {
   return withWriteLock(KEY_LABEL_SYNC_UNIT, () => ensureQwertyEntryUnlocked())
 }
 
-async function listInternal(includeDeleted: boolean): Promise<KeyLabelMeta[]> {
+async function listInternal(includeDeleted: boolean): Promise<KeyLabelEntry[]> {
   await ensureQwertyEntry()
   const { entries } = await readIndex()
   return includeDeleted ? entries : entries.filter((e) => !e.deletedAt)
 }
 
-export async function listMetas(): Promise<KeyLabelMeta[]> {
+export async function listMetas(): Promise<KeyLabelEntry[]> {
   return listInternal(false)
 }
 
-export async function listAllMetas(): Promise<KeyLabelMeta[]> {
+export async function listAllMetas(): Promise<KeyLabelEntry[]> {
   return listInternal(true)
 }
 
@@ -201,7 +215,9 @@ export async function getRecord(id: string): Promise<KeyLabelStoreResult<KeyLabe
     const raw = await readFile(getEntryPath(meta.filename), 'utf-8')
     const parsed = normalizeFile(JSON.parse(raw))
     if (!parsed) return fail('INVALID_FILE', 'Stored file is malformed')
-    return ok({ meta, data: parsed })
+    // A rename changes only the meta (`renameRecord`), so the meta's name
+    // is the label's name; export and Hub upload read it from here.
+    return ok({ meta, data: { ...parsed, name: meta.name } })
   } catch (err) {
     return fail('IO_ERROR', String(err))
   }
@@ -221,6 +237,11 @@ export interface SaveRecordInput {
   hubPostId?: string | null
   /** Hub-side `updated_at` cached for the Updated column. Optional. */
   hubUpdatedAt?: string
+  /** Keep the name the entry `id` has when the save runs (under the
+   *  store lock) instead of `name`: for a refresh that is not a rename
+   *  (the Hub Sync), so a rename made while it waited on the network
+   *  stays. `name` is used when the entry is new or deleted. */
+  keepCurrentName?: boolean
 }
 
 async function writeRecord(meta: KeyLabelMeta, data: KeyLabelEntryFile): Promise<void> {
@@ -233,21 +254,22 @@ async function saveRecordUnlocked(input: SaveRecordInput): Promise<KeyLabelStore
   if (!validated.success || validated.data === undefined) {
     return fail(validated.errorCode ?? 'INVALID_NAME', validated.error ?? 'Invalid name')
   }
-  const name = validated.data
   if (!isLabelMap(input.map)) return fail('INVALID_FILE', 'map must be an object of strings')
   if (input.compositeLabels && !isLabelMap(input.compositeLabels)) {
     return fail('INVALID_FILE', 'compositeLabels must be an object of strings')
   }
 
   try {
-    const index = await readIndex()
+    const index = await readIndexLocked()
+    const current = input.keepCurrentName ? index.entries.find((e) => e.id === input.id && !e.deletedAt) : undefined
+    const name = current?.name ?? validated.data
     if (findActiveByName(index.entries, name, input.id)) {
       return fail('DUPLICATE_NAME', 'A label with the same name already exists')
     }
 
     const now = new Date()
     const id = input.id ?? randomUUID()
-    const filename = `${id}_${tsForFilename(now)}.json`
+    const filename = idBodyFilename('keyLabels', id, `${tsForFilename(now)}.json`)
     const data: KeyLabelEntryFile = {
       name,
       map: input.map,
@@ -255,23 +277,24 @@ async function saveRecordUnlocked(input: SaveRecordInput): Promise<KeyLabelStore
       ...(input.keymapApplicable ? { keymapApplicable: true } : {}),
     }
 
-    const meta: KeyLabelMeta = {
+    const previous = index.entries.find((e) => e.id === id)
+    // Every caller is a user action (Hub download / sync, import), so an
+    // id saved over is brought back or kept alive (`overwriteEntry`).
+    const meta = overwriteEntry('keyLabels', previous, {
       id,
       name,
       filename,
       savedAt: now.toISOString(),
-      updatedAt: now.toISOString(),
       ...(input.uploaderName ? { uploaderName: input.uploaderName } : {}),
       ...(input.hubPostId ? { hubPostId: input.hubPostId } : {}),
       ...(input.hubUpdatedAt ? { hubUpdatedAt: input.hubUpdatedAt } : {}),
-    }
+    }, now, { body: true, explicit: true })
 
     await writeRecord(meta, data)
 
     // Overwrite path: remove the previous JSON file so the entry's
     // disk footprint stays at one file. Best-effort — a missing or
     // already-renamed file should not abort the save.
-    const previous = index.entries.find((e) => e.id === id)
     if (previous && previous.filename !== filename) {
       try { await unlink(getEntryPath(previous.filename)) } catch { /* swallow */ }
     }
@@ -281,7 +304,7 @@ async function saveRecordUnlocked(input: SaveRecordInput): Promise<KeyLabelStore
     // at the end so freshly-downloaded labels grow the modal list
     // downward (matches MacroEditor's append-on-add behaviour).
     const existingIndex = index.entries.findIndex((e) => e.id === id)
-    let nextEntries: KeyLabelMeta[]
+    let nextEntries: KeyLabelEntry[]
     if (existingIndex >= 0) {
       nextEntries = index.entries.slice()
       nextEntries[existingIndex] = meta
@@ -309,23 +332,18 @@ async function renameRecordUnlocked(id: string, newName: string): Promise<KeyLab
   const name = validated.data
 
   try {
-    const index = await readIndex()
-    const meta = index.entries.find((e) => e.id === id && !e.deletedAt)
-    if (!meta) return fail('NOT_FOUND', 'Key label not found')
+    const index = await readIndexLocked()
+    const at = index.entries.findIndex((e) => e.id === id && !e.deletedAt)
+    if (at < 0) return fail('NOT_FOUND', 'Key label not found')
+    const current = index.entries[at]
     if (findActiveByName(index.entries, name, id)) {
       return fail('DUPLICATE_NAME', 'A label with the same name already exists')
     }
 
-    const filePath = getEntryPath(meta.filename)
-    const raw = await readFile(filePath, 'utf-8')
-    const parsed = normalizeFile(JSON.parse(raw))
-    if (!parsed) return fail('INVALID_FILE', 'Stored file is malformed')
-
-    parsed.name = name
-    await writeFile(filePath, JSON.stringify(parsed, null, 2), 'utf-8')
-
-    meta.name = name
-    meta.updatedAt = nowIso()
+    // The meta only: the body file keeps the name it was saved with, and
+    // `getRecord` shows the meta's.
+    const meta = touchClock({ ...current, name }, 'name', new Date())
+    index.entries[at] = meta
     await writeIndex(index)
 
     notifyChange(KEY_LABEL_SYNC_UNIT)
@@ -344,13 +362,11 @@ async function deleteRecordUnlocked(id: string): Promise<KeyLabelStoreResult<voi
     return fail('INVALID_NAME', 'QWERTY cannot be deleted')
   }
   try {
-    const index = await readIndex()
-    const meta = index.entries.find((e) => e.id === id)
-    if (!meta) return fail('NOT_FOUND', 'Key label not found')
+    const index = await readIndexLocked()
+    const at = index.entries.findIndex((e) => e.id === id)
+    if (at < 0) return fail('NOT_FOUND', 'Key label not found')
 
-    const now = nowIso()
-    meta.deletedAt = now
-    meta.updatedAt = now
+    index.entries[at] = markDeleted(index.entries[at], new Date())
     await writeIndex(index)
 
     notifyChange(KEY_LABEL_SYNC_UNIT)
@@ -371,9 +387,10 @@ async function setHubPostIdUnlocked(
   hubUpdatedAt?: string | null,
 ): Promise<KeyLabelStoreResult<KeyLabelMeta>> {
   try {
-    const index = await readIndex()
-    const meta = index.entries.find((e) => e.id === id)
-    if (!meta) return fail('NOT_FOUND', 'Key label not found')
+    const index = await readIndexLocked()
+    const at = index.entries.findIndex((e) => e.id === id)
+    if (at < 0) return fail('NOT_FOUND', 'Key label not found')
+    const meta = { ...index.entries[at] }
 
     const normalized = hubPostId?.trim() || null
     if (normalized === null) {
@@ -404,11 +421,12 @@ async function setHubPostIdUnlocked(
         delete meta.hubUpdatedAt
       }
     }
-    meta.updatedAt = nowIso()
+    const touched = touchClock(meta, 'hub', new Date())
+    index.entries[at] = touched
     await writeIndex(index)
 
     notifyChange(KEY_LABEL_SYNC_UNIT)
-    return ok(meta)
+    return ok(touched)
   } catch (err) {
     return fail('IO_ERROR', String(err))
   }
@@ -522,12 +540,12 @@ async function reorderActiveUnlocked(
   orderedIds: string[],
 ): Promise<KeyLabelStoreResult<void>> {
   try {
-    const index = await readIndex()
-    const byId = new Map<string, KeyLabelMeta>()
+    const index = await readIndexLocked()
+    const byId = new Map<string, KeyLabelEntry>()
     for (const meta of index.entries) byId.set(meta.id, meta)
 
     const seen = new Set<string>()
-    const reordered: KeyLabelMeta[] = []
+    const reordered: KeyLabelEntry[] = []
     for (const id of orderedIds) {
       const meta = byId.get(id)
       if (!meta || meta.deletedAt || seen.has(id)) continue

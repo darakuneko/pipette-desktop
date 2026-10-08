@@ -9,4 +9,4 @@
  * would misread or overwrite the new data). It is separate from the app
  * version: most releases keep the same value.
  */
-export const SYNC_FORMAT_VERSION = 1
+export const SYNC_FORMAT_VERSION = 2

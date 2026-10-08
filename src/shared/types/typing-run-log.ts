@@ -162,12 +162,11 @@ export interface RunKeystrokeLog {
 }
 
 /** Index entry — deliberately `id` (not `runId`) to mirror every other
- *  index-based store's `EntryMeta` shape (`AnalyzeFilterSnapshotMeta`,
+ *  index-based store's meta shape (`AnalyzeFilterSnapshotMeta`,
  *  `KeyLabelMeta`, ...) so this store's index merges through the generic
- *  `mergeEntries`/`gcTombstones` helpers in `sync/merge.ts`;
- *  `mergeEntries` keys strictly on `.id` (run logs additionally pass
- *  `runLogRetentionMax`). `id` holds the same value as the matching
- *  `RunKeystrokeLog.runId`. */
+ *  `mergeEntries` in `sync/entry-merge.ts`, which keys strictly on `.id`
+ *  (run logs additionally pass `runLogRetentionMax`). `id` holds the same
+ *  value as the matching `RunKeystrokeLog.runId`. */
 export interface RunLogMeta {
   id: string
   /** ISO 8601, immutable for the entry's lifetime — the ranking key
@@ -197,7 +196,7 @@ export const MAX_RUN_LOG_EVENTS = 10_000
 export const MAX_RUN_LOG_BYTES = 1_000_000
 
 /** Retention: newest N runs kept per keyboard (see `applyRunLogRetention`
- *  in sync/merge.ts). Ranked by immutable `startedAt` (runId as
+ *  in sync/entry-merge.ts). Ranked by immutable `startedAt` (runId as
  *  tiebreaker) so every device converges on the same 50 after a merge,
  *  rather than LWW resurrecting an evicted entry. */
 export const MAX_RUN_LOGS_PER_KEYBOARD = 50

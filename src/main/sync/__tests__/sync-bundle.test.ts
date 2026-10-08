@@ -87,13 +87,25 @@ describe('collectAllSyncUnits — built-in English exclusion', () => {
     expect(bundle).toBeNull()
   })
 
-  it('bundleSyncUnit still bundles a real pack body normally', async () => {
+  it('bundleSyncUnit still bundles a real pack body normally, with its meta\'s body clock', async () => {
     const packsDir = join(mockUserDataPath, 'sync', 'i18n', 'packs')
     await mkdir(packsDir, { recursive: true })
     await writeFile(join(packsDir, 'p1.json'), JSON.stringify({ name: 'Japanese', version: '0.1.0' }), 'utf-8')
+    const T = '2026-01-01T00:00:00.000Z'
+    await writeFile(join(mockUserDataPath, 'sync', 'i18n', 'index.json'), JSON.stringify({
+      metas: [{ id: 'p1', filename: 'packs/p1.json', name: 'Japanese', version: '0.1.0', enabled: true, savedAt: T, updatedAt: T, clocks: { created: T, body: T, name: T, enabled: T } }],
+    }), 'utf-8')
 
     const bundle = await bundleSyncUnit('i18n/packs/p1')
     expect(bundle).not.toBeNull()
     expect(bundle!.files['p1.json']).toBeDefined()
+    expect(bundle!.body).toEqual({ clock: T, fields: { version: '0.1.0' } })
+  })
+
+  it('bundleSyncUnit sends no body for an id without a live meta', async () => {
+    const packsDir = join(mockUserDataPath, 'sync', 'i18n', 'packs')
+    await mkdir(packsDir, { recursive: true })
+    await writeFile(join(packsDir, 'p1.json'), JSON.stringify({ name: 'Japanese', version: '0.1.0' }), 'utf-8')
+    expect(await bundleSyncUnit('i18n/packs/p1')).toBeNull()
   })
 })

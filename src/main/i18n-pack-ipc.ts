@@ -16,6 +16,7 @@ import {
   savePack,
   renamePack,
   setEnabled,
+  refreshCoverage,
   deletePack,
   setHubPostId,
   hasActiveName,
@@ -101,6 +102,25 @@ export function setupI18nPackStore(): void {
         return { success: false, errorCode: 'INVALID_FILE', error: 'enabled must be boolean' }
       }
       return setEnabled(id, enabled)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.I18N_PACK_STORE_REFRESH_COVERAGE,
+    async (_event, id: unknown, values: unknown): Promise<I18nPackStoreResult<I18nPackMeta>> => {
+      if (typeof id !== 'string') {
+        return { success: false, errorCode: 'NOT_FOUND', error: 'Invalid id' }
+      }
+      const v = (values && typeof values === 'object') ? values as Record<string, unknown> : {}
+      const c = (v.coverage && typeof v.coverage === 'object') ? v.coverage as Record<string, unknown> : {}
+      if (typeof v.matchedBaseVersion !== 'string' || typeof c.totalKeys !== 'number' || typeof c.coveredKeys !== 'number' || typeof v.measuredBodyClock !== 'string') {
+        return { success: false, errorCode: 'INVALID_FILE', error: 'Invalid coverage' }
+      }
+      return refreshCoverage(id, {
+        matchedBaseVersion: v.matchedBaseVersion,
+        coverage: { totalKeys: c.totalKeys, coveredKeys: c.coveredKeys },
+        measuredBodyClock: v.measuredBodyClock,
+      })
     },
   )
 

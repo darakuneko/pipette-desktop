@@ -2,15 +2,24 @@
 //
 // Background recheck for installed language packs whose stored
 // `matchedBaseVersion` predates the current English baseline
-// (`BASE_REVISION` bump). This effect only reads `store.metas` and
-// re-applies coverage-complete packs, so it does not touch any other
-// modal state.
+// (`BASE_REVISION` bump). This effect only reads `store.metas` and stores
+// the new coverage of coverage-complete packs on their metas
+// (`i18nPackRefreshCoverage`: no clock moves — the values come from the
+// stored body), so it does not touch any other modal state.
 
 import { useEffect } from 'react'
 import { computeCoverage } from '../../../shared/i18n/coverage'
 import { BASE_REVISION, ENGLISH_PACK_BODY } from '../../i18n/coverage-cache'
 import { BUILTIN_ENGLISH_PACK_ID } from '../../../shared/types/i18n-store'
 import type { UseI18nPackStoreReturn } from '../../hooks/useI18nPackStore'
+
+/** The body clock the main store keeps on each meta (sync format v2); the
+ *  store writes the coverage only while the body is still the one read. */
+function bodyClockOf(meta: object): string | undefined {
+  const clocks = (meta as { clocks?: unknown }).clocks
+  const body = clocks !== null && typeof clocks === 'object' ? (clocks as { body?: unknown }).body : undefined
+  return typeof body === 'string' ? body : undefined
+}
 
 export interface UseLanguagePackCoverageOptions {
   open: boolean
@@ -35,12 +44,14 @@ export function useLanguagePackCoverage({ open, store }: UseLanguagePackCoverage
         try {
           const get = await window.vialAPI.i18nPackGet(meta.id)
           if (cancelled || !get.success || !get.data) continue
+          const measuredBodyClock = bodyClockOf(get.data.meta)
+          if (measuredBodyClock === undefined) continue
           const cov = computeCoverage(get.data.pack, ENGLISH_PACK_BODY)
           if (cancelled || cov.coverageRatio !== 1) continue
-          await store.applyImport(get.data.pack, {
-            id: meta.id,
+          await window.vialAPI.i18nPackRefreshCoverage(meta.id, {
             matchedBaseVersion: BASE_REVISION,
             coverage: { totalKeys: cov.totalKeys, coveredKeys: cov.coveredKeys },
+            measuredBodyClock,
           })
         } catch {
           continue

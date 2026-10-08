@@ -18,11 +18,11 @@ const mockGet = vi.fn()
 const mockList = vi.fn()
 const originalVialAPI = window.vialAPI
 
-interface Stored { name: string; text: string; updatedAt: string }
+interface Stored { name: string; text: string; filename: string }
 let store: Record<string, Stored> = {}
 
-function meta(id: string, s: Stored): { id: string; name: string; updatedAt: string } {
-  return { id, name: s.name, updatedAt: s.updatedAt }
+function meta(id: string, s: Stored): { id: string; name: string; filename: string } {
+  return { id, name: s.name, filename: s.filename }
 }
 
 async function flush(rounds = 10): Promise<void> {
@@ -43,9 +43,9 @@ beforeEach(() => {
   vi.clearAllMocks()
   emit = null
   store = {
-    a: { name: 'A', text: 'a1 a2', updatedAt: '2026-01-01T00:00:00.000Z' },
-    b: { name: 'B', text: 'b1 b2', updatedAt: '2026-01-01T00:00:00.000Z' },
-    c: { name: 'C', text: 'c1 c2', updatedAt: '2026-01-01T00:00:00.000Z' },
+    a: { name: 'A', text: 'a1 a2', filename: '2026-01-01T00:00:00.000Z' },
+    b: { name: 'B', text: 'b1 b2', filename: '2026-01-01T00:00:00.000Z' },
+    c: { name: 'C', text: 'c1 c2', filename: '2026-01-01T00:00:00.000Z' },
   }
   mockGet.mockImplementation((id: string) => {
     const s = store[id]
@@ -77,7 +77,7 @@ describe('file-import text cache on a typing-test-texts sync', () => {
     await cache.getFileImportTextData('c')
 
     // Another PC overwrote `a` in place and deleted `b`.
-    store.a = { name: 'A', text: 'new1 new2', updatedAt: '2026-02-01T00:00:00.000Z' }
+    store.a = { name: 'A', text: 'new1 new2', filename: '2026-02-01T00:00:00.000Z' }
     delete store.b
     emit?.('typing-test-texts')
     await flush()
@@ -88,10 +88,20 @@ describe('file-import text cache on a typing-test-texts sync', () => {
     expect((await cache.getFileImportTextData('a'))?.words).toEqual(['new1', 'new2'])
   })
 
+  it('drops an entry renamed elsewhere (same body file) so the new name shows', async () => {
+    const { cache } = await load()
+    await cache.getFileImportTextData('c')
+    store.c = { ...store.c, name: 'C renamed' }
+    emit?.('typing-test-texts')
+    await flush()
+    expect(cache.getFileImportTextDataSync('c')).toBeUndefined()
+    expect((await cache.getFileImportTextData('c'))?.name).toBe('C renamed')
+  })
+
   it('ignores other units', async () => {
     const { cache } = await load()
     await cache.getFileImportTextData('a')
-    store.a = { name: 'A', text: 'new1', updatedAt: '2026-02-01T00:00:00.000Z' }
+    store.a = { name: 'A', text: 'new1', filename: '2026-02-01T00:00:00.000Z' }
     emit?.('key-labels')
     await flush()
     expect(mockList).not.toHaveBeenCalled()
@@ -104,11 +114,11 @@ describe('file-import text cache on a typing-test-texts sync', () => {
     mockGet.mockImplementationOnce(() => new Promise((r) => { resolveOld = r }))
     const pending = cache.getFileImportTextData('a')
 
-    store.a = { name: 'A', text: 'new1', updatedAt: '2026-02-01T00:00:00.000Z' }
+    store.a = { name: 'A', text: 'new1', filename: '2026-02-01T00:00:00.000Z' }
     emit?.('typing-test-texts')
     resolveOld({
       success: true,
-      data: { meta: { id: 'a', updatedAt: '2026-01-01T00:00:00.000Z' }, data: { name: 'A', text: 'a1 a2' } },
+      data: { meta: { id: 'a', filename: '2026-01-01T00:00:00.000Z' }, data: { name: 'A', text: 'a1 a2' } },
     })
     expect((await pending)?.words).toEqual(['a1', 'a2'])
     await flush()
@@ -122,7 +132,7 @@ describe('file-import text cache on a typing-test-texts sync', () => {
     const state = runState.createInitialState({ mode: 'fileImport', textId: 'a' }, 'english', 'running')
     expect(state.words).toEqual(['a1', 'a2'])
 
-    store.a = { name: 'A', text: 'new1 new2', updatedAt: '2026-02-01T00:00:00.000Z' }
+    store.a = { name: 'A', text: 'new1 new2', filename: '2026-02-01T00:00:00.000Z' }
     emit?.('typing-test-texts')
     await flush()
     await cache.getFileImportTextData('a')

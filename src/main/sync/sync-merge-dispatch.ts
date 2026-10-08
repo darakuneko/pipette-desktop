@@ -5,19 +5,21 @@
 
 import { app } from 'electron'
 import { join } from 'node:path'
-import { writeFile, mkdir, unlink } from 'node:fs/promises'
+import { writeFile, mkdir, readdir, unlink } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import { encrypt, decrypt } from './sync-crypto'
 import { listFiles, uploadFile, downloadFile, driveFileName, type DriveFile } from './google-drive'
-import { mergeEntries, gcTombstones, safeTimestamp, MalformedSyncBundleError, type EntryMeta } from './merge'
+import { safeTimestamp, MalformedSyncBundleError } from './merge'
+import { type BaseEntryMeta, type EntryStore, type StoreMetaMap, STORE_GROUPS, bodyHash, idBodyFilename } from './entry-clocks'
+import { type MergeSide, mergeEntries } from './entry-merge'
+import { readIndexDirMigrated, unlinkUnreferencedBodyFiles } from './body-filename-migration'
 import {
   mergePackIndexBundle,
   mergePackBodyBundle,
   parsePackBodySyncUnit,
-  packBodyLocalWins,
-  pinPackBodyMtimeAfterUpload,
-  statPackBodyLocalMtime,
+  markPackRosterSynced,
 } from './pack-bundle-merge'
-import { readIndexFile, readSettingsFile, bundleSyncUnit, isRunLogSyncUnit } from './sync-bundle'
+import { readSettingsFile, bundleSyncUnit, entryStoreForSyncUnit, storeLockKey } from './sync-bundle'
 import { writeFileAtomic } from '../utils/write-file-atomic'
 import { isSafePathSegment } from '../utils/safe-filename'
 import { MAX_RUN_LOGS_PER_KEYBOARD } from '../../shared/types/typing-run-log'
@@ -61,17 +63,6 @@ async function uploadSyncUnitLocked(
   password: string,
   remoteFiles?: DriveFile[],
 ): Promise<void> {
-  // i18n/theme pack bodies: snapshot the local file's mtime BEFORE
-  // bundling — bundling/encrypting/uploading all happen without holding
-  // the pack store's own write lock (only the per-unit upload lock is held
-  // here), so a user save (savePack/renamePack) can land in that window.
-  // This snapshot is the CAS baseline pinPackBodyMtimeAfterUpload needs
-  // below to detect that race — see its doc for why a blind post-upload
-  // pin would otherwise stamp a fresher local edit with this upload's
-  // stale Drive time.
-  const packBodyRef = parsePackBodySyncUnit(syncUnit)
-  const packBodyMtimeSnapshot = packBodyRef ? await statPackBodyLocalMtime(packBodyRef) : null
-
   const bundle = await bundleSyncUnit(syncUnit)
   if (!bundle) return
 
@@ -101,14 +92,6 @@ async function uploadSyncUnitLocked(
   // "never uploaded" from "uploaded then remotely deleted".
   const dayRef = parseTypingAnalyticsDeviceDaySyncUnit(syncUnit)
   if (dayRef) await recordDayUploaded(dayRef)
-
-  // i18n/theme pack bodies: a local-wins upload just gave Drive a fresh
-  // `modifiedTime` — pin the local file's mtime to it (rather than
-  // leaving it at "now") so a locally-ahead wall clock can't make this
-  // file look newer than Drive's own stamped time forever. See
-  // pinPackBodyMtimeAfterUpload's doc for the full clock-skew rationale
-  // and why the snapshot above is passed through as a CAS guard.
-  if (packBodyRef) await pinPackBodyMtimeAfterUpload(packBodyRef, uploaded.modifiedTime, packBodyMtimeSnapshot)
 }
 
 /** Add `{uid}|{hash}` → utcDay to sync-state.uploaded after a
@@ -162,18 +145,6 @@ export async function mergeDeviceDayBundle(
   const state = (await loadSyncState(userData)) ?? emptySyncState(ownHash)
   state.last_synced_at = Date.now()
   await saveSyncState(userData, state)
-}
-
-/** Key of the store lock that guards a sync unit's local files: the keyboard
- * uid for per-keyboard units, `favorites/{type}` for favorites, otherwise the
- * unit name itself (key-labels, typing-test-texts). The stores do their
- * read-modify-write under the same key, so a local save and a merge never
- * interleave. `collectLockKeys` in local-data-import.ts uses the same key
- * scheme, so the two must agree. */
-function lockKeyFor(syncUnit: string, parts: string[]): string {
-  if (parts[0] === 'keyboards' && parts.length === 3) return parts[1]
-  if (parts[0] === 'favorites' && parts.length === 2) return `favorites/${parts[1]}`
-  return syncUnit
 }
 
 // Merges remote bundle into local state, returns whether remote needs update
@@ -230,7 +201,7 @@ async function mergeSyncUnit(
     const remoteContent = remoteBundle.files['pipette_settings.json']
     if (!remoteContent) return false
 
-    return withWriteLock(lockKeyFor(syncUnit, parts), async () => {
+    return withWriteLock(storeLockKey(syncUnit), async () => {
       let localTime = 0
       try {
         const raw = await readSettingsFile(dir)
@@ -253,17 +224,13 @@ async function mergeSyncUnit(
   }
 
   // Handle "i18n/index" / "themes/index" — the language/theme pack
-  // roster, entry-level LWW (same mergeEntries/gcTombstones machinery
-  // as favorites/key-labels/etc. below, applied to the pack meta shape
-  // instead of a whole-file "newer roster wins wholesale" comparison —
-  // see mergePackIndexBundle's doc).
+  // roster, merged per entry (see mergePackIndexBundle's doc).
   if (syncUnit === I18N_INDEX_SYNC_UNIT || syncUnit === THEME_INDEX_SYNC_UNIT) {
     return mergePackIndexBundle(syncUnit, remoteBundle)
   }
 
   // Handle "i18n/packs/{packId}" / "themes/packs/{packId}" — a single
-  // pack body, file-level LWW using the Drive file's own modifiedTime
-  // (the bundle carries no timestamp of its own — see
+  // pack body, compared on the body clock it carries (see
   // mergePackBodyBundle's doc).
   const packBodyRef = parsePackBodySyncUnit(syncUnit)
   if (packBodyRef) {
@@ -275,7 +242,7 @@ async function mergeSyncUnit(
   const basePath = join(userData, 'sync', ...parts)
   await mkdir(basePath, { recursive: true })
 
-  return withWriteLock(lockKeyFor(syncUnit, parts), () => mergeIndexBasedLocked(syncUnit, remoteBundle, basePath))
+  return withWriteLock(storeLockKey(syncUnit), () => mergeIndexBasedLocked(syncUnit, remoteBundle, basePath))
 }
 
 async function mergeIndexBasedLocked(
@@ -283,115 +250,126 @@ async function mergeIndexBasedLocked(
   remoteBundle: SyncBundle,
   basePath: string,
 ): Promise<boolean> {
-  const localIndex = await readIndexFile(basePath)
-  const rawLocalEntries: unknown = localIndex?.entries
-  // Both sides' index shape is a union of each possible sync unit's own
-  // index type, which a generic function call can't unify against — every
-  // constituent reached on this branch is an EntryMeta[] at runtime.
-  // i18n/theme/keyboard-meta bundles are intercepted by the dedicated
-  // branches above and never reach here.
-  //
-  // Deliberate coerce-vs-throw asymmetry below: a non-array `.entries` on
-  // the LOCAL side is coerced to `[]` (trusted data — a missing/corrupt
-  // local index is just an empty starting point, not a reason to fail
-  // the merge), while the same shape on the REMOTE side throws
-  // MalformedSyncBundleError (untrusted, attacker-reachable data — see
-  // its doc for why silently coercing there would be the wrong call).
-  const localEntries = gcTombstones(
-    Array.isArray(rawLocalEntries) ? (rawLocalEntries as EntryMeta[]) : [],
-  )
+  const store = entryStoreForSyncUnit(syncUnit)
+  if (!store) throw new MalformedSyncBundleError(syncUnit)
+  return mergeStoreIndexLocked(store, syncUnit, remoteBundle, basePath)
+}
+
+async function mergeStoreIndexLocked<S extends EntryStore>(
+  store: S,
+  syncUnit: string,
+  remoteBundle: SyncBundle,
+  basePath: string,
+): Promise<boolean> {
   // A remote bundle is attacker-reachable data (anyone who can write to
-  // this sync unit's Drive file) — validate `.entries` is actually an
-  // array before handing it to gcTombstones/mergeEntries instead of
-  // letting a malformed shape throw an opaque TypeError deep inside
-  // them. See MalformedSyncBundleError's doc for how callers contain
-  // this per-unit.
+  // this sync unit's Drive file): a non-array `.entries` or `.files` throws
+  // MalformedSyncBundleError (see its doc for how callers contain it per
+  // unit), and entries that are not objects with string `id` / `filename`
+  // are dropped.
   const remoteIndexEntries = (remoteBundle.index as { entries?: unknown } | undefined)?.entries
-  if (!Array.isArray(remoteIndexEntries)) {
+  const remoteFiles: unknown = remoteBundle.files
+  if (!Array.isArray(remoteIndexEntries) || remoteFiles === null || typeof remoteFiles !== 'object') {
     throw new MalformedSyncBundleError(syncUnit)
   }
-  const remoteEntries = gcTombstones(remoteIndexEntries as EntryMeta[])
+  const remoteBodies = remoteFiles as Record<string, unknown>
+  const remoteEntries = remoteIndexEntries.filter(isEntryShaped) as StoreMetaMap[S][]
 
-  // Merge entries (both sides GC'd to prevent expired-tombstone upload loops).
-  // Run-log retention is a deterministic trim (not reject-at-cap like
-  // analyze-filter/snapshot), applied as part of this same merge via
-  // `runLogRetentionMax` — see applyRunLogRetention's doc comment for why
-  // ranking by immutable `startedAt` lets two devices that independently
-  // exceeded the cap converge on the same kept set.
-  const preserveLocalOrder = syncUnit === KEY_LABEL_SYNC_UNIT
-  const runLogRetentionMax = isRunLogSyncUnit(syncUnit) ? MAX_RUN_LOGS_PER_KEYBOARD : undefined
-  const result = mergeEntries(localEntries, remoteEntries, { preserveLocalOrder, runLogRetentionMax })
+  // Local body filenames carry their id before the merge compares them. An
+  // index that exists but cannot be read is left alone, and so are the
+  // body files it may still name: the unit fails and is tried again.
+  const local = await readIndexDirMigrated(store, basePath)
+  if (local.state === 'corrupt') throw new Error(`sync: local index of ${syncUnit} is unreadable`)
+  const localEntries = local.state === 'ok' ? local.entries.filter((e) => typeof e.filename === 'string') : []
 
-  // Copy files from remote bundle for entries that remote won. Every
-  // remote entry's filename must pass isSafePathSegment before it's
-  // joined into a local path — a remote bundle is attacker-reachable
-  // data (anyone who can write to this sync unit's Drive file), and this
-  // is the generic write site every index-based sync unit (favorites,
-  // snapshots, analyze-filter, key-label, typing-test-text, run logs)
-  // funnels through, so the guard has to live here rather than per-unit.
-  let unsafeRemoteFilenames = 0
-  let copiedRemoteFiles = 0
-  for (const filename of result.remoteFilesToCopy) {
-    if (!isSafePathSegment(filename)) {
-      unsafeRemoteFilenames++
+  let localNames: Set<string>
+  try {
+    localNames = new Set(await readdir(basePath))
+  } catch {
+    localNames = new Set()
+  }
+  const remoteBody = (filename: string): string | undefined => {
+    const body = Object.hasOwn(remoteBodies, filename) ? remoteBodies[filename] : undefined
+    return typeof body === 'string' ? body : undefined
+  }
+  // A remote body counts only when both its bundle key and the id-carrying
+  // local name it would be saved under are safe path segments.
+  const hasBody = (side: MergeSide, entry: BaseEntryMeta): boolean => side === 'local'
+    ? isSafePathSegment(entry.filename) && localNames.has(entry.filename)
+    : isSafePathSegment(entry.filename) && isSafePathSegment(idBodyFilename(store, entry.id, entry.filename)) && remoteBody(entry.filename) !== undefined
+  // Read only on an exact (clock, fields) tie, which is rare.
+  const hashOf = STORE_GROUPS[store].hashBody
+    ? (side: MergeSide, entry: BaseEntryMeta): string | undefined => {
+      if (side === 'remote') {
+        const body = remoteBody(entry.filename)
+        return body === undefined ? undefined : bodyHash(body)
+      }
+      try {
+        return bodyHash(readFileSync(join(basePath, entry.filename), 'utf-8'))
+      } catch {
+        return undefined
+      }
+    }
+    : undefined
+
+  const result = mergeEntries(store, localEntries, remoteEntries, {
+    hasBody,
+    bodyHash: hashOf,
+    // Order is per device for key labels (`reorderActive`, key-label-store.ts).
+    preserveLocalOrder: syncUnit === KEY_LABEL_SYNC_UNIT,
+    runLogRetentionMax: store === 'runLogs' ? MAX_RUN_LOGS_PER_KEYBOARD : undefined,
+  })
+
+  // Apply: remote bodies under their id-carrying names, then the index,
+  // then the body files nothing names any more.
+  let copied = 0
+  for (const { from, to } of result.remoteFilesToCopy) {
+    const body = remoteBody(from)
+    if (!isSafePathSegment(from) || !isSafePathSegment(to) || body === undefined) {
+      // `hasBody` already refused these, so the merge never picks them.
+      log('warn', `sync: skipped an unsafe remote body filename for ${syncUnit}`)
       continue
     }
-    if (filename in remoteBundle.files) {
-      await writeFileAtomic(join(basePath, filename), remoteBundle.files[filename])
-      copiedRemoteFiles++
-    }
-  }
-  if (unsafeRemoteFilenames > 0) {
-    log('warn', `sync: skipped ${unsafeRemoteFilenames} unsafe remote filename(s) for ${syncUnit}`)
+    await writeFileAtomic(join(basePath, to), body)
+    copied++
   }
 
-  // Write merged index
-  let mergedIndex = localIndex
-    ? { ...localIndex, entries: result.entries }
-    : remoteBundle.index
-
-  // For the remote-only-so-far branch (no local index yet) the retention
-  // trim above must still land in what gets written — narrow override
-  // kept to exactly this sync unit.
-  if (isRunLogSyncUnit(syncUnit)) {
-    mergedIndex = { ...mergedIndex, entries: result.entries }
+  const indexWritten = local.state === 'missing' || result.localNeedsWrite
+  if (indexWritten) {
+    const base: object = local.state === 'ok' ? local.index : (remoteBundle.index as object)
+    await writeFileAtomic(join(basePath, 'index.json'), JSON.stringify({ ...base, entries: result.entries }, null, 2))
   }
 
-  await writeFileAtomic(
-    join(basePath, 'index.json'),
-    JSON.stringify(mergedIndex, null, 2),
-  )
-
-  // Unlink files for entries retention evicted during the merge above —
-  // best-effort, a file already gone is not an error. Always empty for
-  // every sync unit except run logs (runLogRetentionMax above). Inlined
-  // here (rather than shared with typing-run-log-store.ts's own local-save
-  // eviction) since this module already owns basePath/fs for this branch.
+  // Run logs evicted by retention keep a tombstone that names their file,
+  // so the sweep below would keep it: unlink them here.
+  let removed = 0
   for (const meta of result.evicted) {
     if (!isSafePathSegment(meta.filename)) continue
     try {
       await unlink(join(basePath, meta.filename))
+      removed++
     } catch {
       // best-effort
     }
   }
+  // With no local index, body files already in the directory are not known
+  // to be orphans (a lost index could have named them): leave them for a
+  // later merge, which sweeps against an index that exists.
+  if (local.state === 'ok') removed += await unlinkUnreferencedBodyFiles(store, basePath, result.referencedFilenames)
 
-  // A remote tombstone win copies no file, so the entry comparison (order,
-  // tombstones and metadata included) is what detects it.
-  const entriesChanged = JSON.stringify(result.entries) !== JSON.stringify(rawLocalEntries)
-  if (!localIndex || entriesChanged || copiedRemoteFiles > 0 || result.evicted.length > 0) {
-    notifySyncUnitApplied(syncUnit)
-  }
-
+  if (indexWritten || copied > 0 || removed > 0) notifySyncUnitApplied(syncUnit)
   return result.remoteNeedsUpdate
+}
+
+function isEntryShaped(value: unknown): value is BaseEntryMeta {
+  if (value === null || typeof value !== 'object') return false
+  const e = value as Record<string, unknown>
+  return typeof e.id === 'string' && typeof e.filename === 'string'
 }
 
 // Merges with remote, uploads if local has changes remote doesn't have.
 // Takes the full DriveFile (not just its id) because it's the single
 // choke point every merge path funnels through (download sync, polling,
-// analytics sync, upload-time merge-before-upload) — an i18n/theme
-// pack-body unit can skip the download+decrypt entirely here when local
-// is already known to be newer (see `packBodyLocalWins`'s doc).
+// analytics sync, upload-time merge-before-upload).
 //
 // Every success path records exactly the revision it handled (the merged
 // remote file, or the one uploadSyncUnit just wrote), so callers never record
@@ -419,12 +397,6 @@ export async function mergeWithRemote(
     return
   }
 
-  const packBodyRef = parsePackBodySyncUnit(syncUnit)
-  if (packBodyRef && await packBodyLocalWins(packBodyRef, remoteFile.modifiedTime)) {
-    await uploadSyncUnit(syncUnit, password, remoteFiles)
-    return
-  }
-
   const envelope = await downloadFile(remoteFile.id)
   const needsUpload = await mergeSyncUnit(syncUnit, envelope, password, remoteFile.modifiedTime)
   if (needsUpload) {
@@ -432,6 +404,7 @@ export async function mergeWithRemote(
   } else {
     recordRemoteState([remoteFile])
   }
+  markPackRosterSynced(syncUnit)
 }
 
 export async function syncOrUpload(
@@ -445,5 +418,6 @@ export async function syncOrUpload(
     await mergeWithRemote(remoteFile, syncUnit, password, remoteFiles)
   } else {
     await uploadSyncUnit(syncUnit, password, remoteFiles)
+    markPackRosterSynced(syncUnit)
   }
 }
