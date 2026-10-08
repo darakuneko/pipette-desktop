@@ -284,6 +284,27 @@ describe('google-drive', () => {
       expect(url.searchParams.get('fields')).toBe('id,modifiedTime')
       expect(result).toEqual({ id: 'existing-id', modifiedTime: '2026-06-02T00:00:00.000Z' })
     })
+
+    it('creates the file when the id to update is gone and createIfMissing is set', async () => {
+      const fetchSpy = stubSequence([
+        new Response('not found', { status: 404 }),
+        new Response(JSON.stringify({ id: 'new-id', modifiedTime: 'm' }), { status: 200 }),
+      ])
+
+      const result = await uploadFile('n.enc', envelope, 'gone-id', { createIfMissing: true })
+
+      expect(result).toEqual({ id: 'new-id', modifiedTime: 'm' })
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+      expect((fetchSpy.mock.calls[0] as unknown[])[1]).toMatchObject({ method: 'PATCH' })
+      expect((fetchSpy.mock.calls[1] as unknown[])[1]).toMatchObject({ method: 'POST' })
+    })
+
+    it('fails on a 404 update without createIfMissing', async () => {
+      const fetchSpy = stubSequence([new Response('not found', { status: 404 })])
+
+      await expect(uploadFile('n.enc', envelope, 'gone-id')).rejects.toThrow('Drive update failed: 404 not found')
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
   })
 
   // A: key-labels / typing-test-texts have no subtree — deleteFilesByExactName

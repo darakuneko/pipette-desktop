@@ -38,7 +38,8 @@ import { getMachineHash } from '../typing-analytics/machine-hash'
 import { emptySyncState, loadSyncState, saveSyncState } from '../typing-analytics/sync-state'
 import { log } from '../logger'
 import { withWriteLock } from '../per-uid-write-lock'
-import { recordRemoteState } from './sync-runtime-state'
+import { recordRemoteState, syncRuntime } from './sync-runtime-state'
+import { pickCanonicalFile } from './drive-canonical'
 import { notifySyncUnitApplied } from './sync-unit-applied'
 import type { SyncBundle, SyncEnvelope } from '../../shared/types/sync'
 
@@ -79,10 +80,21 @@ async function uploadSyncUnitLocked(
 
   const files = remoteFiles ?? await listFiles()
   const targetName = driveFileName(syncUnit)
-  const existing = files.find((f) => f.name === targetName)
-
-  const uploaded = await uploadFile(targetName, envelope, existing?.id)
-  recordRemoteState([{ name: targetName, modifiedTime: uploaded.modifiedTime }])
+  const listedId = pickCanonicalFile(files, targetName)?.id
+  // A listing taken before an earlier upload of this run created the file
+  // does not show it (e.g. the Analyze-panel sync and a flush both start
+  // without today's analytics file): update that file rather than creating
+  // a second one with the same name. No extra listing is requested — a pass
+  // that uploads many units would multiply the `files.list` calls.
+  const createdId = listedId ? undefined : syncRuntime.createdFileIds.get(targetName)
+  // A remembered id may have been deleted since (a reset, another machine),
+  // so a missing file is created again; a listed id that is gone fails
+  // like any other upload error.
+  const uploaded = createdId
+    ? await uploadFile(targetName, envelope, createdId, { createIfMissing: true })
+    : await uploadFile(targetName, envelope, listedId)
+  if (uploaded.id !== listedId) syncRuntime.createdFileIds.set(targetName, uploaded.id)
+  recordRemoteState([{ id: uploaded.id, name: targetName, modifiedTime: uploaded.modifiedTime }])
 
   // Post-upload bookkeeping: record a successful cloud upload for
   // per-day units so the reconcile logic can later distinguish
@@ -385,6 +397,11 @@ async function mergeIndexBasedLocked(
 // remote file, or the one uploadSyncUnit just wrote), so callers never record
 // on their own. A throw records nothing and the unit stays visible to the
 // next poll.
+//
+// `remoteFile` must be the copy `pickCanonicalFile` (drive-canonical.ts)
+// chooses from `remoteFiles` when Drive lists several with its name: an
+// upload after the merge writes that same copy, so the merged and the
+// recorded revision belong to one file.
 export async function mergeWithRemote(
   remoteFile: DriveFile,
   syncUnit: string,
@@ -422,8 +439,7 @@ export async function syncOrUpload(
   password: string,
   remoteFiles: DriveFile[],
 ): Promise<void> {
-  const targetName = driveFileName(syncUnit)
-  const remoteFile = remoteFiles.find((f) => f.name === targetName)
+  const remoteFile = pickCanonicalFile(remoteFiles, driveFileName(syncUnit))
 
   if (remoteFile) {
     await mergeWithRemote(remoteFile, syncUnit, password, remoteFiles)

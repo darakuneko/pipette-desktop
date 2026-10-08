@@ -459,7 +459,7 @@ describe('sync-format markers', () => {
     })
 
     it('stops polling and the analytics sync before any data', async () => {
-      syncRuntime.lastKnownRemoteState.set('unrelated.enc', 'x')
+      syncRuntime.lastKnownRemoteState.set('unrelated.enc', { id: 'x', modifiedTime: 'x' })
       expect(await executeAnalyticsSync('uid1')).toBe(false)
       await runPoll()
 

@@ -87,7 +87,18 @@ export const syncRuntime = {
    *  listing that started under an older generation belongs to the previous
    *  account, so its completion records nothing. */
   syncFormatMarkerGeneration: 0,
-  lastKnownRemoteState: new Map<string, string>(), // fileName -> modifiedTime
+  /** Drive file name → the revision (file id + `modifiedTime`) this machine
+   *  last handled. The id is part of it because Drive can list several files
+   *  with one name: when a different copy becomes the chosen one
+   *  (drive-canonical.ts), even with the same `modifiedTime`, it is a change. */
+  lastKnownRemoteState: new Map<string, RemoteRevision>(),
+  /** Drive file name → id of each data file an upload of this run created
+   *  (`uploadSyncUnitLocked`, sync-merge-dispatch.ts). A pass whose listing
+   *  was taken before that create updates this id instead of creating a
+   *  second file with the same name. An id that no longer exists is
+   *  replaced by the next upload of that name (it creates the file again).
+   *  Cleared when the signed-in account changes or signs out. */
+  createdFileIds: new Map<string, string>(),
   /** Files the last re-encryption pass could open with neither the old nor
    *  the new password; null when that pass found none. Kept in memory
    *  only — a resume after a restart finds them again. */
@@ -127,6 +138,7 @@ export function resetSyncRuntimeForTests(): void {
   syncRuntime.pendingOwner = null
   syncRuntime.heldPending.clear()
   syncRuntime.lastKnownRemoteState.clear()
+  syncRuntime.createdFileIds.clear()
   syncRuntime.isSyncing = false
   syncRuntime.inFlightPass = null
   syncRuntime.inFlightPassWaitable = false
@@ -404,11 +416,21 @@ export function errorMessage(err: unknown, fallback: string): string {
 
 // --- Remote state tracking ---
 
+/** One revision of a Drive file: which file and when it was written. */
+export type RemoteRevision = Pick<DriveFile, 'id' | 'modifiedTime'>
+
 /** Marks each file's revision as handled by this machine. Entries for other
  *  files are left alone, so a file nobody handled still looks changed to the
  *  next poll. */
-export function recordRemoteState(files: Array<Pick<DriveFile, 'name' | 'modifiedTime'>>): void {
-  for (const file of files) {
-    syncRuntime.lastKnownRemoteState.set(file.name, file.modifiedTime)
+export function recordRemoteState(files: Array<Pick<DriveFile, 'id' | 'name' | 'modifiedTime'>>): void {
+  for (const { id, name, modifiedTime } of files) {
+    syncRuntime.lastKnownRemoteState.set(name, { id, modifiedTime })
   }
+}
+
+/** Whether `file` is the revision last recorded for its name: the same file
+ *  id and the same `modifiedTime`. */
+export function isKnownRemoteRevision(file: Pick<DriveFile, 'id' | 'name' | 'modifiedTime'>): boolean {
+  const known = syncRuntime.lastKnownRemoteState.get(file.name)
+  return known !== undefined && known.id === file.id && known.modifiedTime === file.modifiedTime
 }

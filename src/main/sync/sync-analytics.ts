@@ -11,6 +11,7 @@ import { requireSyncCredentials, ensurePasswordCheckValidated, listPasswordCheck
 import { localSyncBlock, remoteSyncBlock, listGuardFiles } from './sync-password-guard'
 import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
 import { mergeWithRemote, syncOrUpload } from './sync-merge-dispatch'
+import { canonicalFiles } from './drive-canonical'
 import { isAnalyticsSyncUnit, collectAnalyticsSyncUnitsForUid } from './sync-bundle'
 
 /** Pull + push typing-analytics bundles for one keyboard, triggered
@@ -66,8 +67,9 @@ export async function executeAnalyticsSync(uid: string): Promise<boolean> {
     // divergence internally, so the push pass can skip them.
     const mergedUnits = new Set<string>()
 
+    // One copy per name, so a unit with duplicate files is merged once.
     await Promise.allSettled(
-      remoteFiles.map((file) =>
+      canonicalFiles(remoteFiles).map((file) =>
         limit(async () => {
           const unit = syncUnitFromFileName(file.name)
           if (!unit || !isAnalyticsSyncUnit(unit)) return

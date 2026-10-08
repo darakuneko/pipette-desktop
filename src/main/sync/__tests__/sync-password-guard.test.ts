@@ -389,7 +389,7 @@ describe('sync password-change guard', () => {
 
     it('polling merges nothing', async () => {
       vi.useFakeTimers()
-      syncRuntime.lastKnownRemoteState.set('unrelated.enc', 'x')
+      syncRuntime.lastKnownRemoteState.set('unrelated.enc', { id: 'x', modifiedTime: 'x' })
 
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
@@ -720,7 +720,7 @@ describe('sync password-change guard', () => {
 
     it('polling stops merging after the password-check is rewritten', async () => {
       vi.useFakeTimers()
-      syncRuntime.lastKnownRemoteState.set('unrelated.enc', 'x')
+      syncRuntime.lastKnownRemoteState.set('unrelated.enc', { id: 'x', modifiedTime: 'x' })
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await waitForPollPassForTests()

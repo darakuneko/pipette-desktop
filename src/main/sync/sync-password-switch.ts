@@ -14,6 +14,7 @@ import {
   downloadRawFile,
   uploadFile,
   deleteFile,
+  deleteFilesById,
   driveFileName,
   isDataFileName,
   PASSWORD_CHECK_UNIT,
@@ -21,6 +22,7 @@ import {
 } from './google-drive'
 import { runConcurrently } from '../../shared/concurrency'
 import { SYNC_CONCURRENCY, syncRuntime } from './sync-runtime-state'
+import { canonicalFiles } from './drive-canonical'
 import { isPasswordChangeLockHeld, releasePasswordChangeLock } from './sync-password-lock'
 import { assertSyncFormatSupported } from './sync-password-guard'
 import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
@@ -160,9 +162,28 @@ async function convertFile(
  *  write changes it, so the file is checked again. */
 type ConfirmedOnTarget = Map<string, string>
 
-/** One pass over every data file. Transfer failures abort the pass after
- *  the started workers settle; the lock is re-checked before each chunk
- *  after the first. */
+/** Deletes every listed data file that is not the chosen copy of its name
+ *  (drive-canonical.ts). Sync reads only the chosen copy, and re-encrypting
+ *  the others would move the newest `modifiedTime` — and with it the choice —
+ *  to whichever finished last. A failed delete fails the pass like a failed
+ *  upload: the change keeps its state and a resume deletes the copy again (a
+ *  copy already gone counts as deleted). Returns whether anything was
+ *  deleted. */
+async function deleteUnchosenCopies(listed: DriveFile[]): Promise<boolean> {
+  const chosen = new Set(canonicalFiles(listed).map((f) => f.id))
+  const extraIds = listed.filter((f) => !chosen.has(f.id)).map((f) => f.id)
+  if (extraIds.length === 0) return false
+  const result = await deleteFilesById(extraIds)
+  if (result.failed > 0) {
+    throw new Error(`Failed to delete ${result.failed} of ${result.attempted} duplicate files: ${result.firstError}`)
+  }
+  return true
+}
+
+/** One pass over every data file: duplicate copies are deleted first, then
+ *  the chosen copy of each name is re-encrypted. Transfer failures abort the
+ *  pass after the started workers settle; the lock is re-checked after the
+ *  deletes and before each batch after the first. */
 async function runPass(
   state: PasswordChangeState,
   keys: PasswordChangeKeys,
@@ -172,10 +193,12 @@ async function runPass(
 ): Promise<{ converted: number; undecryptable: DriveFile[] }> {
   let converted = 0
   const undecryptable: DriveFile[] = []
-  const files = listed.filter((f) => confirmed.get(f.id) !== f.modifiedTime)
+  // The caller checked the lock right before this pass; after deletes it is
+  // checked again, even when nothing is left to convert.
+  if (await deleteUnchosenCopies(listed)) await ensureLockHeld(state)
+  const files = canonicalFiles(listed).filter((f) => confirmed.get(f.id) !== f.modifiedTime)
   for (let start = 0; start < files.length; start += passwordChangeTuning.chunkSize) {
     if (syncRuntime.isQuitting) throw new PasswordChangeError('sync.passwordChange.interrupted')
-    // The caller checked the lock right before the first chunk.
     if (start > 0) await ensureLockHeld(state)
     const chunk = files.slice(start, start + passwordChangeTuning.chunkSize)
     const result = await runConcurrently(chunk, SYNC_CONCURRENCY, (file) => convertFile(file, keys, state.target, otherFirst), {
