@@ -1991,6 +1991,7 @@ A: Pipette keeps the sync password — and, during a change, both passwords — 
 - **Sync**: Manually sync favorites and connected keyboard data. Only favorites and the currently connected keyboard are synced (not all keyboards)
 - Changes brought in from another device appear in lists that are already open (saved keymaps, favorites, Analyze conditions, Key Labels, Typing Test texts, the Data modal) without reopening them
 - The connected keyboard's settings changed on another device (layer names, display options, typing test options, and so on) also apply to the open window once they are merged, except the current view (editor, Typing View or Typing Test), a paused typing test, the Typing View window size, and the **Record** toggle. Changes to the typing test's mode, length and language wait until you leave the typing test, and a key picker tab order waits until you finish reordering
+- The Analyze view does the same for the keyboard it shows, even when it is not the connected one: conditions, finger assignments, goal settings, layer names and typing test results update in place, and a goal you are still editing is kept
 
 #### Sync Status
 

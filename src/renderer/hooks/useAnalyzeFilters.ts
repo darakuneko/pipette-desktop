@@ -28,6 +28,7 @@ import {
 import type { AnalysisTabKey } from '../components/analyze/analyze-types'
 import { toLocalMonth } from '../components/analyze/analyze-streak-goal'
 import { DEFAULT_LEARNING_MIN_SAMPLE } from '../components/analyze/analyze-ergonomics-curve'
+import { keepIfSame, useKeyboardSettingsReader } from './use-keyboard-settings-reader'
 
 const DEBOUNCE_MS = 300
 
@@ -305,6 +306,9 @@ export interface UseAnalyzeFiltersReturn {
  * - `window.vialAPI.pipetteSettingsGet` returning `null` (no prior
  *   file) is treated as defaults — the first subsequent edit writes
  *   a fresh `PipetteSettings` with the minimum required fields.
+ * - sync merge of the uid's settings: re-read without touching `ready`.
+ *   An edit counts as a write from the moment it is scheduled, so a merge
+ *   that lands during the debounce or the save is read after the save.
  */
 export type AnalyzePaneKey = 'A' | 'B'
 
@@ -328,7 +332,6 @@ export function useAnalyzeFilters(
   const [ready, setReady] = useState<boolean>(uid === null)
 
   const uidRef = useRef<string | null>(uid)
-  const applySeqRef = useRef(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingUidRef = useRef<string | null>(null)
   const pendingFiltersRef = useRef<AnalyzeFiltersState | null>(null)
@@ -336,6 +339,30 @@ export function useAnalyzeFilters(
   // `applyBatchForUid`'s doc comment on `UseAnalyzeFiltersReturn`.
   const pendingUidApplyRef = useRef<{ uid: string; patch: AnalyzeFiltersBatchPatch } | null>(null)
   const field = fieldForPane(paneKey)
+  // Settles the tracked write that covers a scheduled edit until its PATCH settles.
+  const settleSaveRef = useRef<(() => void) | null>(null)
+  // The uid's first read has not landed yet; it applies `loadPatchRef` on top.
+  const awaitingLoadRef = useRef(false)
+  const loadPatchRef = useRef<AnalyzeFiltersBatchPatch | null>(null)
+
+  // Reads the uid's filters on a switch, and again silently after a sync
+  // merge of its settings.
+  const { trackWrite } = useKeyboardSettingsReader(uid, (prefs) => {
+    // No keyboard: drop a staged load so its patch never saves to the keyboard just left.
+    if (uid === null) { awaitingLoadRef.current = false; loadPatchRef.current = null; return }
+    const loaded = restoreFilters(prefs?.analyze?.[field])
+    if (!awaitingLoadRef.current) {
+      if (prefs) setFilters((prev) => keepIfSame(prev, loaded))
+      return
+    }
+    awaitingLoadRef.current = false
+    const patch = loadPatchRef.current
+    loadPatchRef.current = null
+    const merged: AnalyzeFiltersState = patch ? { ...loaded, ...patch } : loaded
+    setFilters(merged)
+    if (patch) scheduleSave(merged)
+    setReady(true)
+  })
 
   const flushPending = useCallback(() => {
     const pendingUid = pendingUidRef.current
@@ -344,22 +371,21 @@ export function useAnalyzeFilters(
       clearTimeout(timerRef.current)
       timerRef.current = null
     }
+    const settle = settleSaveRef.current
     pendingUidRef.current = null
     pendingFiltersRef.current = null
-    if (!pendingUid || !pendingFilters) return
-    void (async () => {
-      try {
-        // PATCH only this pane's analyze sub-field. The main-side merge is
-        // one level deep on `analyze`, so the sibling pane's filters and
-        // every other field (typingTestResults etc.) are preserved without
-        // a read-modify-write here (which would otherwise race).
-        await window.vialAPI.pipetteSettingsPatch(pendingUid, {
-          analyze: { [field]: serializeFilters(pendingFilters) },
-        })
-      } catch {
-        // best-effort save — a failed write just drops the change
-      }
-    })()
+    settleSaveRef.current = null
+    if (!pendingUid || !pendingFilters) {
+      settle?.()
+      return
+    }
+    // PATCH only this pane's analyze sub-field. The main-side merge is
+    // one level deep on `analyze`, so the sibling pane's filters and
+    // every other field (typingTestResults etc.) are preserved without
+    // a read-modify-write here (which would otherwise race).
+    void new Promise((resolve) => {
+      resolve(window.vialAPI.pipetteSettingsPatch(pendingUid, { analyze: { [field]: serializeFilters(pendingFilters) } }))
+    }).catch(() => { /* best-effort save — a failed write just drops the change */ }).finally(() => settle?.())
   }, [field])
 
   const scheduleSave = useCallback((next: AnalyzeFiltersState) => {
@@ -367,22 +393,24 @@ export function useAnalyzeFilters(
     if (!currentUid) return
     pendingUidRef.current = currentUid
     pendingFiltersRef.current = next
+    if (!settleSaveRef.current) void trackWrite(new Promise<void>((resolve) => { settleSaveRef.current = resolve }))
     if (timerRef.current !== null) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
       flushPending()
     }, DEBOUNCE_MS)
-  }, [flushPending])
+  }, [flushPending, trackWrite])
 
-  // Load on uid change (and flush the previous uid's pending write).
+  // Load on uid change (and flush the previous uid's pending write); the
+  // read itself runs in `useKeyboardSettingsReader`.
   useEffect(() => {
     const prevUid = uidRef.current
-    if (prevUid && prevUid !== uid) {
-      flushPending()
-    }
+    if (prevUid && prevUid !== uid) flushPending()
     uidRef.current = uid
+    const pendingApply = pendingUidApplyRef.current
+    pendingUidApplyRef.current = null
 
     if (uid === null) {
-      pendingUidApplyRef.current = null
+      awaitingLoadRef.current = false
       setFilters(DEFAULT_ANALYZE_FILTERS)
       setReady(true)
       return
@@ -399,41 +427,13 @@ export function useAnalyzeFilters(
     // that targets a *different* uid — it's stale (the caller never
     // followed through with a matching `onSelectUid`) and must not leak
     // onto whichever keyboard happens to load next.
-    const pendingApply = pendingUidApplyRef.current
-    pendingUidApplyRef.current = null
-    const pendingPatch = pendingApply && pendingApply.uid === uid ? pendingApply.patch : null
-
-    const applyLoaded = (loaded: AnalyzeFiltersState): void => {
-      if (pendingPatch) {
-        const merged: AnalyzeFiltersState = { ...loaded, ...pendingPatch }
-        setFilters(merged)
-        scheduleSave(merged)
-      } else {
-        setFilters(loaded)
-      }
-      setReady(true)
-    }
-
-    const seq = ++applySeqRef.current
+    loadPatchRef.current = pendingApply && pendingApply.uid === uid ? pendingApply.patch : null
+    awaitingLoadRef.current = true
     setReady(false)
-    void window.vialAPI
-      .pipetteSettingsGet(uid)
-      .then((prefs) => {
-        if (applySeqRef.current !== seq) return
-        applyLoaded(restoreFilters(prefs?.analyze?.[field]))
-      })
-      .catch(() => {
-        if (applySeqRef.current !== seq) return
-        applyLoaded(DEFAULT_ANALYZE_FILTERS)
-      })
-  }, [uid, flushPending, field, scheduleSave])
+  }, [uid, flushPending])
 
   // Flush once more on unmount for the final in-flight edit.
-  useEffect(() => {
-    return () => {
-      flushPending()
-    }
-  }, [flushPending])
+  useEffect(() => () => flushPending(), [flushPending])
 
   const update = useCallback((updater: (prev: AnalyzeFiltersState) => AnalyzeFiltersState) => {
     setFilters((prev) => {

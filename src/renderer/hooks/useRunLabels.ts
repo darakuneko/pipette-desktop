@@ -23,9 +23,14 @@ import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import { scopeToSelectValue, type DeviceScope } from '../../shared/types/analyze-filters'
 import type { RangeMs } from '../components/analyze/analyze-types'
 import { formatDateTime } from '../components/editors/store-modal-shared'
+import { keepIfSame, useKeyboardSettingsReader } from './use-keyboard-settings-reader'
 
 const EMPTY_LABELS: ReadonlyMap<string, string> = new Map()
 const EMPTY_RUNS: RunRow[] = []
+
+function labelMapKey(labels: ReadonlyMap<string, string>): string {
+  return JSON.stringify([...labels])
+}
 
 export interface RunRow {
   runId: string
@@ -79,21 +84,12 @@ export function useRunLabels(
   const [runs, setRuns] = useState<RunRow[]>(EMPTY_RUNS)
 
   // History labels — only depend on the keyboard, so range scrubbing
-  // never re-reads settings.
-  useEffect(() => {
-    if (!uid) {
-      setLabels(EMPTY_LABELS)
-      return
-    }
-    let cancelled = false
-    void window.vialAPI
-      .pipetteSettingsGet(uid)
-      .then((prefs) => {
-        if (!cancelled) setLabels(buildRunLabelMap(prefs?.typingTestResults))
-      })
-      .catch(() => { if (!cancelled) setLabels(EMPTY_LABELS) })
-    return () => { cancelled = true }
-  }, [uid])
+  // never re-reads settings. A sync merge of this keyboard's settings
+  // re-reads them.
+  useKeyboardSettingsReader(uid, (prefs) => {
+    const next = prefs ? buildRunLabelMap(prefs.typingTestResults) : EMPTY_LABELS
+    setLabels((prev) => keepIfSame(prev, next, labelMapKey))
+  })
 
   // Primitive projections of `query` so the effect keys on values, not
   // on the (per-render fresh) object identity.

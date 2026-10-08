@@ -8,6 +8,7 @@ import type { TypingTestConfig } from '../typing-test/types'
 import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE } from '../typing-test/types'
 import type { BasicViewType, SplitKeyMode } from '../../shared/types/app-config'
 import type { ValidatedPrefs } from './device-prefs-validate'
+import { isSameValue } from '../utils/same-value'
 
 /**
  * Pairs a state value with a ref that always holds the latest value.
@@ -39,13 +40,6 @@ export interface PatchTracker {
 export interface ApplyValidatedOptions {
   skip?: ReadonlySet<keyof ValidatedPrefs>
   onlyChanged?: boolean
-}
-
-/** Structural equality for the JSON-shaped prefs values. */
-function isSameValue(a: unknown, b: unknown): boolean {
-  if (Object.is(a, b)) return true
-  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false
-  return JSON.stringify(a) === JSON.stringify(b)
 }
 
 export interface DevicePrefsInitialDefaults {

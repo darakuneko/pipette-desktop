@@ -10,10 +10,10 @@
 //      achievement counter (warning is shown the moment the value
 //      differs from the saved one).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { GoalHistoryEntry, PipetteSettings } from '../../../shared/types/pipette-settings'
-import { DEFAULT_GOAL_DAYS, DEFAULT_GOAL_KEYSTROKES, DEFAULT_PIPETTE_SETTINGS } from '../../../shared/types/pipette-settings'
+import { DEFAULT_GOAL_DAYS, DEFAULT_GOAL_KEYSTROKES } from '../../../shared/types/pipette-settings'
 import type { TypingDailySummary } from '../../../shared/types/typing-analytics'
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
 import {
@@ -27,6 +27,17 @@ import {
 } from './analyze-streak-goal'
 import { GoalAchievementsModal } from './GoalAchievementsModal'
 import { AnalyzeStatGrid } from './stat-card'
+import { keepIfSame, useKeyboardSettingsReader } from '../../hooks/use-keyboard-settings-reader'
+
+/** The part of `analyze` this card shows and writes. */
+type GoalSlice = Pick<NonNullable<PipetteSettings['analyze']>, 'goalDays' | 'goalKeystrokes' | 'goalHistory'>
+
+const EMPTY_HISTORY: GoalHistoryEntry[] = []
+
+function goalSlice(prefs: PipetteSettings | null): GoalSlice {
+  const analyze = prefs?.analyze
+  return { goalDays: analyze?.goalDays, goalKeystrokes: analyze?.goalKeystrokes, goalHistory: analyze?.goalHistory }
+}
 
 interface Props {
   uid: string
@@ -41,21 +52,19 @@ interface Props {
 
 export function StreakGoalCard({ uid, daily, today }: Props) {
   const { t } = useTranslation()
-  const [settings, setSettings] = useState<PipetteSettings | null>(null)
+  const [goal, setGoal] = useState<GoalSlice>(() => goalSlice(null))
   const [historyOpen, setHistoryOpen] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-    window.vialAPI
-      .pipetteSettingsGet(uid)
-      .then((prefs) => { if (!cancelled) setSettings(prefs) })
-      .catch(() => { if (!cancelled) setSettings(null) })
-    return () => { cancelled = true }
-  }, [uid])
+  // Re-read when a sync merge rewrote this keyboard's settings; the goal
+  // editor keeps a draft the user has changed.
+  const { trackWrite } = useKeyboardSettingsReader(uid, (prefs) => {
+    const next = goalSlice(prefs)
+    setGoal((prev) => keepIfSame(prev, next))
+  })
 
-  const goalKeystrokes = settings?.analyze?.goalKeystrokes ?? DEFAULT_GOAL_KEYSTROKES
-  const goalDays = settings?.analyze?.goalDays ?? DEFAULT_GOAL_DAYS
-  const goalHistory = settings?.analyze?.goalHistory ?? []
+  const goalKeystrokes = goal.goalKeystrokes ?? DEFAULT_GOAL_KEYSTROKES
+  const goalDays = goal.goalDays ?? DEFAULT_GOAL_DAYS
+  const goalHistory = goal.goalHistory ?? EMPTY_HISTORY
   const currentGoal: GoalPair = useMemo(
     () => ({ days: goalDays, keystrokes: goalKeystrokes }),
     [goalDays, goalKeystrokes],
@@ -84,17 +93,15 @@ export function StreakGoalCard({ uid, daily, today }: Props) {
     goalDays: progress.goalDays,
   })
 
-  const persistGoal = useCallback(async (next: GoalPair) => {
-    // Keyboards without a prior settings file return null from
-    // `pipetteSettingsGet`. Bootstrap a minimum valid PipetteSettings
-    // so the first goal edit can create the file instead of silently
-    // dropping the write.
+  const saveGoal = useCallback(async (next: GoalPair) => {
+    // Read the file again so the retired goal is the saved one, not the one
+    // shown. A keyboard without a settings file returns null; the goal shown
+    // (the defaults) is the previous goal then.
     const fetched = await window.vialAPI.pipetteSettingsGet(uid)
-    const current: PipetteSettings = fetched ?? settings ?? DEFAULT_PIPETTE_SETTINGS
-    const prevAnalyze = current.analyze ?? {}
-    const prevHistory: GoalHistoryEntry[] = prevAnalyze.goalHistory ?? []
-    const prevKeystrokes = prevAnalyze.goalKeystrokes ?? DEFAULT_GOAL_KEYSTROKES
-    const prevDays = prevAnalyze.goalDays ?? DEFAULT_GOAL_DAYS
+    const prevGoal = fetched ? goalSlice(fetched) : goal
+    const prevHistory: GoalHistoryEntry[] = prevGoal.goalHistory ?? []
+    const prevKeystrokes = prevGoal.goalKeystrokes ?? DEFAULT_GOAL_KEYSTROKES
+    const prevDays = prevGoal.goalDays ?? DEFAULT_GOAL_DAYS
     if (prevKeystrokes === next.keystrokes && prevDays === next.days) return
 
     const nowIso = new Date().toISOString()
@@ -115,13 +122,15 @@ export function StreakGoalCard({ uid, daily, today }: Props) {
     // can't clobber typingTestResults etc.). The same sub-fields seed the
     // optimistic local state so the two never drift.
     const goalPatch = { goalDays: next.days, goalKeystrokes: next.keystrokes, goalHistory: nextHistory }
-    setSettings({ ...current, analyze: { ...prevAnalyze, ...goalPatch } })
+    setGoal(goalPatch)
     try {
       await window.vialAPI.pipetteSettingsPatch(uid, { analyze: goalPatch })
     } catch {
-      setSettings(current)
+      setGoal(prevGoal)
     }
-  }, [settings, uid])
+  }, [goal, uid])
+
+  const persistGoal = useCallback((next: GoalPair) => trackWrite(saveGoal(next)), [saveGoal, trackWrite])
 
   const items: AnalyzeSummaryItem[] = [
     {
@@ -139,6 +148,7 @@ export function StreakGoalCard({ uid, daily, today }: Props) {
       labelKey: 'analyze.streakGoal.goalLabel',
       value: (
         <InlineGoalSettings
+          key={uid}
           goalDays={goalDays}
           goalKeystrokes={goalKeystrokes}
           onSave={persistGoal}
@@ -176,6 +186,31 @@ export function StreakGoalCard({ uid, daily, today }: Props) {
   )
 }
 
+const asNumber = (value: number): number => value
+const parseInteger = (text: string): number => Number.parseInt(text, 10)
+
+/** A draft of a saved number, held as `D` (`format` / `parse` convert).
+ *  When `saved` changes (a commit, a rollback, a sync merge), a draft that
+ *  still shows the previous or the new saved value follows it; a draft the
+ *  user changed — including text typed but not yet staged — stays. */
+function useFollowingDraft<D>(
+  saved: number,
+  format: (value: number) => D,
+  parse: (draft: D) => number,
+): [D, Dispatch<SetStateAction<D>>] {
+  const [draft, setDraft] = useState(() => format(saved))
+  const savedRef = useRef(saved)
+  useEffect(() => {
+    const prev = savedRef.current
+    savedRef.current = saved
+    setDraft((d) => {
+      const shown = parse(d)
+      return shown === prev || shown === saved ? format(saved) : d
+    })
+  }, [saved, format, parse])
+  return [draft, setDraft]
+}
+
 interface InlineGoalSettingsProps {
   goalDays: number
   goalKeystrokes: number
@@ -191,11 +226,8 @@ interface InlineGoalSettingsProps {
 // committing.
 function InlineGoalSettings({ goalDays, goalKeystrokes, onSave }: InlineGoalSettingsProps) {
   const { t } = useTranslation()
-  const [daysDraft, setDaysDraft] = useState<number>(goalDays)
-  const [keystrokesDraft, setKeystrokesDraft] = useState<number>(goalKeystrokes)
-
-  useEffect(() => { setDaysDraft(goalDays) }, [goalDays])
-  useEffect(() => { setKeystrokesDraft(goalKeystrokes) }, [goalKeystrokes])
+  const [daysDraft, setDaysDraft] = useFollowingDraft(goalDays, asNumber, asNumber)
+  const [keystrokesDraft, setKeystrokesDraft] = useFollowingDraft(goalKeystrokes, asNumber, asNumber)
 
   const pendingDays = daysDraft !== goalDays
   const pendingKeystrokes = keystrokesDraft !== goalKeystrokes
@@ -286,14 +318,13 @@ function InlineNumberField({
   testid,
 }: InlineNumberFieldProps) {
   const { t } = useTranslation()
-  const [draft, setDraft] = useState(String(value))
+  // Text typed but not yet staged stays when `value` changes underneath it.
+  const [draft, setDraft] = useFollowingDraft(value, String, parseInteger)
   const inputRef = useRef<HTMLInputElement>(null)
   // Suppresses the blur-driven stageChange right after an Esc cancel —
   // without it, the blur would read the stale `draft` closure and
   // clobber the reverted parent state.
   const cancellingRef = useRef(false)
-
-  useEffect(() => { setDraft(String(value)) }, [value])
 
   const parseDraft = (): number | null => {
     const parsed = Number.parseInt(draft, 10)

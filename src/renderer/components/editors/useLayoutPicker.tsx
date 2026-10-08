@@ -8,6 +8,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSharedHoverBubble } from '../../hooks/use-shared-hover-bubble'
+import { useKeyboardSettingsReader } from '../../hooks/use-keyboard-settings-reader'
 import { affectsStoredKeyboards, useSyncUnitApplied } from '../../hooks/use-sync-unit-applied'
 import { useTranslation } from 'react-i18next'
 import { serialize, findKeycode } from '../../../shared/keycodes/keycodes'
@@ -125,14 +126,32 @@ export function useLayoutPicker({
     onDeviceListActiveChange?.(pickerSource === 'device' && deviceBrowsing)
   }, [pickerSource, deviceBrowsing, onDeviceListActiveChange])
 
-  // Save picker zoom back to target keyboard's settings
-  useEffect(() => {
-    const uid = pickerFileData?.uid
-    if (pickerScale == null || !uid) return
+  // A sync merge of the loaded keyboard's settings re-reads its zoom. Read
+  // paths (file load, probe, this reload) set the state directly; only the
+  // user's zoom (`changePickerScale`) saves.
+  //
+  // Every zoom change bumps `scaleSeqRef` (a user zoom or reset, a sync
+  // reload, the start of a load or probe). A load or probe applies the zoom
+  // it read only if nothing bumped it since it started, so a slow read never
+  // replaces a newer zoom. `scaleUidRef` is the uid whose zoom is shown.
+  const scaleSeqRef = useRef(0)
+  const scaleUidRef = useRef<string | undefined>(undefined)
+  const pickerFileUid = pickerFileData?.uid
+  const { trackWrite: trackScaleWrite } = useKeyboardSettingsReader(pickerFileUid ?? null, (prefs) => {
+    if (prefs?.keymapScale == null) return
+    scaleSeqRef.current++
+    setPickerScale(prefs.keymapScale)
+  }, { initialRead: false })
+
+  const changePickerScale = useCallback((next: number | undefined) => {
+    scaleSeqRef.current++
+    setPickerScale(next)
+    if (next == null) scaleUidRef.current = undefined
+    if (next == null || !pickerFileUid) return
     // PATCH only keymapScale so this can't clobber other fields on the
     // target keyboard's settings.
-    window.vialAPI.pipetteSettingsPatch(uid, { keymapScale: pickerScale }).catch(() => {})
-  }, [pickerScale, pickerFileData?.uid])
+    trackScaleWrite(window.vialAPI.pipetteSettingsPatch(pickerFileUid, { keymapScale: next })).catch(() => {})
+  }, [pickerFileUid, trackScaleWrite])
 
   // --- Layout picker: stored keyboards browsing ---
   // Bumped when a sync merge renamed keyboards or rewrote the browsed
@@ -190,9 +209,11 @@ export function useLayoutPicker({
           ? decodeLayoutOptions(parsed.layoutOptions ?? 0, parsed.definition.layouts.labels) : new Map(),
         name: parsed.definition.name ?? 'File', layerNames: parsed.layerNames, uid: fileUid,
       })
+      const seq = ++scaleSeqRef.current
+      scaleUidRef.current = fileUid
       if (fileUid) {
         window.vialAPI.pipetteSettingsGet(fileUid).then((prefs) => {
-          if (prefs?.keymapScale != null) setPickerScale(prefs.keymapScale)
+          if (scaleSeqRef.current === seq && prefs?.keymapScale != null) setPickerScale(prefs.keymapScale)
         }).catch(() => {})
       } else {
         setPickerScale(undefined)
@@ -229,6 +250,7 @@ export function useLayoutPicker({
   // --- Device probe handler ---
   const handleProbeDevice = useCallback(async (vendorId: number, productId: number, serialNumber: string) => {
     setProbeStatus('probing')
+    const seq = ++scaleSeqRef.current
     try {
       const result = await window.vialAPI.probeDevice(vendorId, productId, serialNumber)
       const fileLayout = parseKle(result.definition.layouts.keymap)
@@ -247,7 +269,10 @@ export function useLayoutPicker({
           if (prefs?.keymapScale != null) probeKeymapScale = prefs.keymapScale
         } catch { /* best-effort */ }
       }
-      setPickerScale(probeKeymapScale)
+      // A zoom change during the probe matters only when it was for the
+      // keyboard being probed (the one already shown).
+      if (scaleSeqRef.current === seq || scaleUidRef.current !== result.uid) setPickerScale(probeKeymapScale)
+      scaleUidRef.current = result.uid
       setPickerFileData({
         layout: fileLayout, keymap: fileKeymap, layers: result.layers, encoderKeycodes,
         layoutOptions: result.definition.layouts?.labels
@@ -270,14 +295,14 @@ export function useLayoutPicker({
     if (isConnectedDevice(d)) {
       // Connected device → use existing keymap/layout (clear pickerFileData)
       setPickerFileData(null)
-      setPickerScale(undefined)
+      changePickerScale(undefined)
       setPickerLayer(0)
       setDeviceBrowsing(false)
     } else {
       setDeviceBrowsing(false)
       handleProbeDevice(d.vendorId, d.productId, d.serialNumber)
     }
-  }, [isConnectedDevice, handleProbeDevice])
+  }, [isConnectedDevice, handleProbeDevice, changePickerScale])
 
   // --- Layout picker keycodes ---
   const { keycodes: pickerKeycodes, remapped: pickerRemapped } = useMemo(
@@ -388,7 +413,7 @@ export function useLayoutPicker({
       pickerLayer={pickerLayer} pickerFileData={pickerFileData} handlePickerKeyClick={handlePickerKeyClick}
       handlePickerHover={handlePickerHover} handlePickerHoverEnd={handlePickerHoverEnd} pickerTooltip={pickerTooltip}
       setPickerSource={setPickerSource} setPickerLayer={setPickerLayer} setPickerFileData={setPickerFileData}
-      setPickerScale={setPickerScale} setDeviceBrowsing={setDeviceBrowsing} setProbeStatus={setProbeStatus}
+      setPickerScale={changePickerScale} setDeviceBrowsing={setDeviceBrowsing} setProbeStatus={setProbeStatus}
       pickerBrowseMode={pickerBrowseMode} onScaleChange={onScaleChange} clearPickerSelection={clearPickerSelection}
     />
   )
