@@ -10,7 +10,7 @@ import {
   hasStoredPassword,
   checkPasswordStrength,
 } from './sync-crypto'
-import { startOAuthFlow, getAuthStatus, signOut } from './google-auth'
+import { startOAuthFlow, getAuthStatus } from './google-auth'
 import { clearHubTokenCache } from '../hub/hub-ipc'
 import { broadcastToAllWindows } from '../utils/broadcast'
 import {
@@ -54,6 +54,10 @@ import {
   listRemoteTypingDaysFor,
   listRemoteTypingHashesForUidFromCloud,
   listRemoteFileNames,
+  restorePendingFromDisk,
+  adoptPendingForSignedInAccount,
+  switchAccountKeepingPending,
+  signOutKeepingPending,
   SyncCredentialError,
 } from './sync-service'
 import { importLocalData } from './local-data-import'
@@ -109,14 +113,26 @@ async function refreshSyncFormatStatusIfSignedIn(): Promise<SyncFormatStatus | n
 }
 
 export function setupSyncIpc(): void {
+  // --- Pending changes left by the last run ---
+  // Restored before any handler below can queue a change; sent by the
+  // usual flush. Ownerless units go to the stored sign-in once its tokens
+  // are read (never rejects).
+  restorePendingFromDisk()
+  void adoptPendingForSignedInAccount().catch((err: unknown) => {
+    console.warn('[sync-ipc] could not check the owner of the pending changes', err)
+  })
+  scheduleFlushIfPending()
+
   // --- Auth ---
   secureHandle(IpcChannels.SYNC_AUTH_START, () =>
     wrapIpc('Auth failed', async () => {
-      await startOAuthFlow()
+      // The new tokens are stored holding the sync lock. Changes kept while
+      // signed out, and those this account left unsent, go to it; another
+      // account's changes are held.
+      await startOAuthFlow(switchAccountKeepingPending)
       // The account may have changed, so its Drive is checked afresh.
       clearSyncFormatStatus()
       void refreshSyncFormatStatus()
-      // Changes kept while signed out go to the signed-in account.
       scheduleFlushIfPending()
       startPollingIfAutoSync()
     }),
@@ -131,7 +147,8 @@ export function setupSyncIpc(): void {
       resetPasswordCheckCache()
       forgetCreatedSyncFormatMarker()
       clearSyncFormatStatus()
-      await signOut()
+      // This account's unsent changes are held for its next sign-in.
+      await signOutKeepingPending()
     }),
   )
 

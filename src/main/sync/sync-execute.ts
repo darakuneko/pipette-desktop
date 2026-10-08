@@ -15,9 +15,9 @@ import {
   tryClaimSyncLock,
   snapshotPendingGenerations,
   settlePending,
-  markPending,
 } from './sync-runtime-state'
 import { scheduleFlushIfPending } from './sync-flush'
+import { adoptPendingForSignedInAccount, markPendingFor } from './sync-pending-account'
 import { requireSyncCredentials, validatePasswordCheck, ensurePasswordCheckValidated } from './sync-password'
 import { localSyncBlock, remoteSyncBlock, emitSyncBlocked } from './sync-password-guard'
 import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
@@ -81,6 +81,9 @@ export async function executeSync(
       return { status: 'skipped', skipReason: credentials.reason }
     }
     const password = credentials.password
+    // Units changed under another account are held for it; units this pass
+    // marks pending belong to the account it runs as.
+    const passOwner = await adoptPendingForSignedInAccount()
 
     emitProgress({ direction, status: 'syncing', message: 'Starting sync...' })
 
@@ -104,7 +107,7 @@ export async function executeSync(
       if (scope === 'all') {
         const { resolved } = await backfillKeyboardMeta(password, initialFiles)
         if (resolved > 0) {
-          markPending(KEYBOARD_META_SYNC_UNIT)
+          markPendingFor(passOwner, KEYBOARD_META_SYNC_UNIT)
           broadcastPendingStatus()
           scheduleFlushIfPending()
         }
@@ -117,9 +120,7 @@ export async function executeSync(
       const upload = await executeUploadSync(password, initialFiles, scope)
       failedUnits = upload.failedUnits
       for (const unit of upload.succeededUnits) settlePending(unit, generations.get(unit) ?? 0)
-      for (const unit of failedUnits) {
-        if (!syncRuntime.pendingChanges.has(unit)) markPending(unit)
-      }
+      for (const unit of failedUnits) markPendingFor(passOwner, unit)
       broadcastPendingStatus()
       if (failedUnits.length > 0) scheduleFlushIfPending(POLL_INTERVAL_MS)
     }

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// writeFileAtomic's rename-failure cleanup — the `.tmp` file must not
+// writeFileAtomic's (and writeFileAtomicSync's) rename-failure cleanup — the `.tmp` file must not
 // survive a failed rename, and the original error must still
 // propagate to the caller.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
-import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 
 let realRename: typeof import('node:fs/promises').rename
@@ -18,7 +18,7 @@ vi.mock('node:fs/promises', async () => {
 })
 
 import { rename, writeFile } from 'node:fs/promises'
-import { writeFileAtomic } from '../write-file-atomic'
+import { writeFileAtomic, writeFileAtomicSync } from '../write-file-atomic'
 
 describe('writeFileAtomic', () => {
   let dir = ''
@@ -107,5 +107,39 @@ describe('writeFileAtomic', () => {
 
     const entries = await readdir(dir)
     expect(entries).toEqual([])
+  })
+})
+
+describe('writeFileAtomicSync', () => {
+  let dir = ''
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'write-file-atomic-sync-test-'))
+  })
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('writes the file and leaves no temp file', async () => {
+    const target = join(dir, 'out.json')
+    writeFileAtomicSync(target, '{"a":1}')
+    writeFileAtomicSync(target, '{"a":2}')
+
+    expect(await readFile(target, 'utf-8')).toBe('{"a":2}')
+    expect(await readdir(dir)).toEqual(['out.json'])
+  })
+
+  it('removes the temp file, keeps the previous content and rethrows when the rename fails', async () => {
+    const target = join(dir, 'out.json')
+    writeFileAtomicSync(target, 'old')
+    // A non-empty directory in the target's place makes the rename fail.
+    const blocked = join(dir, 'blocked')
+    await mkdir(join(blocked, 'child'), { recursive: true })
+
+    expect(() => writeFileAtomicSync(blocked, 'new')).toThrow()
+
+    expect((await readdir(dir)).sort()).toEqual(['blocked', 'out.json'])
+    expect(await readFile(target, 'utf-8')).toBe('old')
   })
 })

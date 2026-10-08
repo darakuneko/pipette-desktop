@@ -20,6 +20,8 @@
 //   sync-analytics.ts        — Analyze-panel-triggered analytics sync
 //   sync-flush.ts            — debounced auto-sync + before-quit handler
 //   sync-reset-lock.ts       — sync lock for the reset / delete handlers
+//   sync-pending-store.ts    — pending units kept on disk across launches
+//   sync-pending-account.ts  — pending units kept apart per Google account
 //
 // New sync logic belongs in the sibling module whose responsibility it
 // extends — not here. External consumers (sync-ipc.ts, main/index.ts,
@@ -37,6 +39,7 @@ import { stopPolling, clearInFlightPollForTests } from './sync-polling'
 import { clearQuitFinalizersForTests } from './sync-flush'
 import { forgetChangeStateCache } from './sync-password-change-state'
 import { clearSyncFormatStatus } from './sync-format-status'
+import { resetPendingStoreForTests } from './sync-pending-store'
 
 // --- Test helpers -------------------------------------------------------
 
@@ -44,6 +47,7 @@ export function _resetForTests(): void {
   stopPolling()
   clearInFlightPollForTests()
   resetSyncRuntimeForTests()
+  resetPendingStoreForTests()
   clearQuitFinalizersForTests()
   forgetChangeStateCache()
   clearSyncFormatStatus()
@@ -122,6 +126,14 @@ export {
 } from './sync-polling'
 
 export { executeAnalyticsSync } from './sync-analytics'
+
+export { restorePendingFromDisk } from './sync-pending-store'
+export {
+  adoptPendingForSignedInAccount,
+  switchAccountKeepingPending,
+  signOutKeepingPending,
+  signOutKeepingPendingLocked,
+} from './sync-pending-account'
 
 export type { ResetKeyboards } from './sync-reset-lock'
 export { withResetLock } from './sync-reset-lock'

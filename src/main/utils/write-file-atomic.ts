@@ -19,17 +19,39 @@
 // the rename, the temp file stays behind; only the pack directories are
 // swept, so elsewhere (including `local/auth/`) it is left in place.
 // Does not create the parent directory — callers mkdir before calling this.
+// `writeFileAtomicSync` does the same with synchronous fs calls, for state
+// that must be on disk before the caller's next step.
 
 import { randomBytes } from 'node:crypto'
+import { renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { rename, unlink, writeFile } from 'node:fs/promises'
 
+function tmpPathFor(path: string): string {
+  return `${path}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`
+}
+
 export async function writeFileAtomic(path: string, content: string | Uint8Array): Promise<void> {
-  const tmpPath = `${path}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`
+  const tmpPath = tmpPathFor(path)
   try {
     await writeFile(tmpPath, content)
     await rename(tmpPath, path)
   } catch (err) {
     await unlink(tmpPath).catch(() => {})
+    throw err
+  }
+}
+
+export function writeFileAtomicSync(path: string, content: string | Uint8Array): void {
+  const tmpPath = tmpPathFor(path)
+  try {
+    writeFileSync(tmpPath, content)
+    renameSync(tmpPath, path)
+  } catch (err) {
+    try {
+      unlinkSync(tmpPath)
+    } catch {
+      // Best effort, as above.
+    }
     throw err
   }
 }

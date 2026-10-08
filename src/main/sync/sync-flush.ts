@@ -22,6 +22,7 @@ import {
   settlePending,
   tryClaimSyncLock,
   clearFlushTimer,
+  persistPendingNow,
 } from './sync-runtime-state'
 import { requireSyncCredentials, ensurePasswordCheckValidated, PasswordMismatchError } from './sync-password'
 import { localSyncBlock, remoteSyncBlock, emitSyncBlocked } from './sync-password-guard'
@@ -29,6 +30,7 @@ import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
 import type { SyncBlockReason, SyncCredentialFailureReason } from '../../shared/types/sync'
 import { syncOrUpload } from './sync-merge-dispatch'
 import { stopPolling } from './sync-polling'
+import { adoptPendingForSignedInAccount } from './sync-pending-account'
 
 // --- Debounced upload ---
 
@@ -95,6 +97,9 @@ export async function flushPendingChanges(): Promise<void> {
       return
     }
     const password = credentials.password
+    // Units changed under another account are held for it, not uploaded.
+    await adoptPendingForSignedInAccount()
+    if (syncRuntime.pendingChanges.size === 0) return
 
     emitProgress({ direction: 'upload', status: 'syncing', message: 'Auto-sync starting...' })
 
@@ -251,7 +256,11 @@ export function setupBeforeQuitHandler(): void {
     const preSync = preSyncFinalizers.filter((f) => f.hasWork())
     const extras = extraFinalizers.filter((f) => f.hasWork())
     const passwordChangeRun = syncRuntime.passwordChangeRun
-    if (!syncPending && preSync.length === 0 && extras.length === 0 && !passwordChangeRun) return
+    if (!syncPending && preSync.length === 0 && extras.length === 0 && !passwordChangeRun) {
+      // The last settle may not be on disk yet.
+      persistPendingNow()
+      return
+    }
 
     e.preventDefault()
     syncRuntime.isQuitting = true
@@ -320,6 +329,9 @@ export function setupBeforeQuitHandler(): void {
       })
       .finally(() => {
         if (deadlineTimer) clearTimeout(deadlineTimer)
+        // What is still pending (the deadline passed, or a flush kept it)
+        // is sent after the next launch.
+        persistPendingNow()
         app.quit()
       })
   })

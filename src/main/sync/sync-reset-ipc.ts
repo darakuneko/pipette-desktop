@@ -18,6 +18,7 @@ import {
   assertSyncAllowed,
   assertNoLocalPasswordChange,
   forgetChangeStateCache,
+  signOutKeepingPendingLocked,
 } from './sync-service'
 import { wrapIpc } from './sync-ipc-wrap'
 import { deleteAllTypingForKeyboard, listTypingKeyboards } from '../typing-analytics/typing-analytics-service'
@@ -87,15 +88,24 @@ export function setupSyncResetIpc(): void {
         // requested target still gets attempted even if an earlier one
         // partially failed (a rejected delete does not stop the batch).
         const failedTargets: string[] = []
+        // One cancel for every target, before anything is deleted. It always
+        // writes, so a disk failure stops the reset here.
+        cancelPendingChanges([
+          ...(targets.keyboards === true ? ['keyboards/'] : []),
+          ...(Array.isArray(targets.keyboards) ? targets.keyboards.map((uid) => `keyboards/${uid}/`) : []),
+          ...(targets.favorites ? ['favorites/'] : []),
+          ...(targets.i18nPacks ? [I18N_SYNC_UNIT_PREFIX] : []),
+          ...(targets.themePacks ? [THEME_SYNC_UNIT_PREFIX] : []),
+          ...(targets.keyLabels ? [KEY_LABEL_SYNC_UNIT] : []),
+          ...(targets.typingTestTexts ? [TYPING_TEST_TEXT_SYNC_UNIT] : []),
+        ], { writeAlways: true })
         if (targets.keyboards === true) {
-          cancelPendingChanges('keyboards/')
           const result = await deleteFilesByPrefix('keyboards_')
           if (result.failed > 0) failedTargets.push('keyboards')
           const tombstoned = await tombstoneAllKeyboardMeta()
           if (tombstoned > 0) metaChanged = true
         } else if (Array.isArray(targets.keyboards)) {
           for (const uid of targets.keyboards) {
-              cancelPendingChanges(`keyboards/${uid}/`)
             const result = await deleteFilesByPrefix(`keyboards_${uid}_`)
             if (result.failed > 0) failedTargets.push(`keyboards/${uid}`)
             const tombstoneResult = await tombstoneKeyboardMeta(uid)
@@ -103,27 +113,22 @@ export function setupSyncResetIpc(): void {
           }
         }
         if (targets.favorites) {
-          cancelPendingChanges('favorites/')
           const result = await deleteFilesByPrefix('favorites_')
           if (result.failed > 0) failedTargets.push('favorites')
         }
         if (targets.i18nPacks) {
-          cancelPendingChanges(I18N_SYNC_UNIT_PREFIX)
           const result = await deleteFilesByPrefix('i18n_')
           if (result.failed > 0) failedTargets.push('i18nPacks')
         }
         if (targets.themePacks) {
-          cancelPendingChanges(THEME_SYNC_UNIT_PREFIX)
           const result = await deleteFilesByPrefix('themes_')
           if (result.failed > 0) failedTargets.push('themePacks')
         }
         if (targets.keyLabels) {
-          cancelPendingChanges(KEY_LABEL_SYNC_UNIT)
           const result = await deleteFilesByExactName(driveFileName(KEY_LABEL_SYNC_UNIT))
           if (result.failed > 0) failedTargets.push('keyLabels')
         }
         if (targets.typingTestTexts) {
-          cancelPendingChanges(TYPING_TEST_TEXT_SYNC_UNIT)
           const result = await deleteFilesByExactName(driveFileName(TYPING_TEST_TEXT_SYNC_UNIT))
           if (result.failed > 0) failedTargets.push('typingTestTexts')
         }
@@ -154,13 +159,18 @@ export function setupSyncResetIpc(): void {
             return false
           },
         )
+        // The cancel always writes and is where a failed pending write stops
+        // the reset, so it comes before anything is removed; it runs again after the
+        // analytics cleanup, whose flush marks this keyboard's units pending.
+        const keyboardUnits = [`keyboards/${uid}/`]
+        cancelPendingChanges(keyboardUnits, { writeAlways: true })
         // Flush + unlink this keyboard's analytics JSONL and tombstone its
-        // SQLite-cache rows first, otherwise the Analyze view keeps showing the
+        // SQLite-cache rows, otherwise the Analyze view keeps showing the
         // keyboard from the stale cache after the directory is removed.
         await deleteAllTypingForKeyboard(uid).catch((err) => {
           console.warn('[sync-reset-ipc] reset keyboard: analytics cache cleanup failed', err)
         })
-        cancelPendingChanges(`keyboards/${uid}/`)
+        cancelPendingChanges(keyboardUnits)
         const userData = app.getPath('userData')
         await rm(join(userData, 'sync', 'keyboards', uid), { recursive: true, force: true })
         // Best-effort remote deletion
@@ -192,26 +202,26 @@ export function setupSyncResetIpc(): void {
         // App settings include local/auth, which holds a password change's
         // state; removing it mid-change would orphan the Drive lock.
         if (targets.appSettings) await assertNoLocalPasswordChange()
-        if (targets.keyboards) await deleteTypingForAllKeyboards()
         const userData = app.getPath('userData')
         const allSelected = targets.keyboards && targets.favorites && targets.appSettings && targets.i18nPacks && targets.themePacks
-        if (allSelected) {
-          cancelPendingChanges()
-          stopPolling()
-        } else {
-          if (targets.keyboards) cancelPendingChanges('keyboards/')
-          if (targets.favorites) {
-            cancelPendingChanges('favorites/')
-            // Imported typing-test texts and key-display labels are both
-            // global, all-keyboard user content — reset them alongside
-            // favorites (the global-content reset bucket).
-            cancelPendingChanges(TYPING_TEST_TEXT_SYNC_UNIT)
-            cancelPendingChanges(KEY_LABEL_SYNC_UNIT)
-          }
-          if (targets.i18nPacks) cancelPendingChanges(I18N_SYNC_UNIT_PREFIX)
-          if (targets.themePacks) cancelPendingChanges(THEME_SYNC_UNIT_PREFIX)
-          // Clearing appSettings resets autoSync config, so stop polling to match
-          if (targets.appSettings) stopPolling()
+        // One cancel for every target (all units when everything is
+        // selected), before anything is removed. It always writes, so a
+        // failed pending write stops the reset here. Imported typing-test texts and
+        // key-display labels are both global, all-keyboard user content —
+        // reset them alongside favorites (the global-content reset bucket).
+        const cancelled = allSelected ? undefined : [
+          ...(targets.keyboards ? ['keyboards/'] : []),
+          ...(targets.favorites ? ['favorites/', TYPING_TEST_TEXT_SYNC_UNIT, KEY_LABEL_SYNC_UNIT] : []),
+          ...(targets.i18nPacks ? [I18N_SYNC_UNIT_PREFIX] : []),
+          ...(targets.themePacks ? [THEME_SYNC_UNIT_PREFIX] : []),
+        ]
+        cancelPendingChanges(cancelled, { writeAlways: true })
+        // Clearing appSettings resets autoSync config, so stop polling to match
+        if (targets.appSettings) stopPolling()
+        if (targets.keyboards) {
+          await deleteTypingForAllKeyboards()
+          // The cleanup's flush marks the keyboards' analytics units pending.
+          cancelPendingChanges(cancelled)
         }
         if (targets.keyboards) {
           await rm(join(userData, 'sync', 'keyboards'), { recursive: true, force: true })
@@ -229,6 +239,10 @@ export function setupSyncResetIpc(): void {
         }
         if (targets.appSettings) {
           getAppConfigStore().clear()
+          // Removing local/auth signs out, so it is done as a sign-out: the
+          // account's unsent changes are held for its next sign-in and the
+          // cached tokens are dropped with the token file.
+          await signOutKeepingPendingLocked()
           await rm(join(userData, 'local', 'auth'), { recursive: true, force: true })
           forgetChangeStateCache()
           await rm(join(userData, 'local', 'downloads', 'languages'), { recursive: true, force: true })

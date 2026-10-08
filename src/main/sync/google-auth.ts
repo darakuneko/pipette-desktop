@@ -71,37 +71,84 @@ export function generateAuthUrl(port: number): {
   }
 }
 
-async function storeTokens(tokens: StoredTokens): Promise<void> {
-  if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error('OS keychain encryption is not available')
-  }
+/** Bumped by every sign-in and sign-out. A refresh or a read that started
+ *  under an older session stores nothing, so it cannot bring back an
+ *  account that was signed out of or replaced meanwhile. */
+let sessionGeneration = 0
 
-  const json = JSON.stringify(tokens)
-  const encrypted = safeStorage.encryptString(json)
-  const dir = join(app.getPath('userData'), 'local', 'auth')
-  await mkdir(dir, { recursive: true })
-  await writeFile(getTokenPath(), encrypted)
-  cachedTokens = tokens
+/** Token file reads, writes and removals, run one at a time in call
+ *  order. */
+let tokenFileQueue: Promise<unknown> = Promise.resolve()
+
+function queueTokenFileWork<T>(work: () => Promise<T>): Promise<T> {
+  const run = tokenFileQueue.then(work)
+  tokenFileQueue = run.catch(() => {})
+  return run
+}
+
+/** Stores `tokens` unless the session changed since `generation` was
+ *  taken (then throws). */
+function storeTokens(tokens: StoredTokens, generation: number): Promise<void> {
+  return queueTokenFileWork(async () => {
+    if (generation !== sessionGeneration) throw new Error('The sign-in changed; the tokens were not stored')
+    if (!safeStorage.isEncryptionAvailable()) {
+      throw new Error('OS keychain encryption is not available')
+    }
+
+    const json = JSON.stringify(tokens)
+    const encrypted = safeStorage.encryptString(json)
+    const dir = join(app.getPath('userData'), 'local', 'auth')
+    await mkdir(dir, { recursive: true })
+    await writeFile(getTokenPath(), encrypted)
+    // A sign-out during the write removes the file next (it is queued after
+    // this), so these tokens must not stay cached either.
+    if (generation !== sessionGeneration) throw new Error('The sign-in changed; the tokens were not stored')
+    cachedTokens = tokens
+  })
 }
 
 async function loadTokens(): Promise<StoredTokens | null> {
   if (cachedTokens) return cachedTokens
 
-  try {
-    const encrypted = await readFile(getTokenPath())
-    const json = safeStorage.decryptString(encrypted as Buffer)
-    const tokens = JSON.parse(json) as StoredTokens
-    cachedTokens = tokens
-    return tokens
-  } catch {
-    return null
-  }
+  const generation = sessionGeneration
+  // Queued after any pending write or removal, so a read never sees a file
+  // a sign-out is about to remove.
+  return queueTokenFileWork(async () => {
+    try {
+      const encrypted = await readFile(getTokenPath())
+      const json = safeStorage.decryptString(encrypted as Buffer)
+      const tokens = JSON.parse(json) as StoredTokens
+      // A sign-in or sign-out during the read decides what is signed in.
+      if (generation !== sessionGeneration) return cachedTokens
+      cachedTokens = tokens
+      return tokens
+    } catch {
+      return null
+    }
+  })
+}
+
+/** Runs `storeTokens`, which replaces the signed-in account's tokens with
+ *  those of `newAccountSub`'s account (null when its id_token has no
+ *  `sub`). A caller passes one to run its own steps around the switch
+ *  (e.g. hold the sync lock so no sync request uses the new tokens for
+ *  work started under the old ones), or to refuse it by throwing without
+ *  calling `storeTokens`. */
+export type TokenSwitch = (storeTokens: () => Promise<void>, newAccountSub: string | null) => Promise<void>
+
+const switchDirectly: TokenSwitch = (store) => store()
+
+/** How long the token exchange of a sign-in may take. Exported so tests can
+ *  shorten it. */
+export const tokenExchangeTiming = {
+  timeoutMs: 60_000,
 }
 
 export async function exchangeCodeForTokens(
   code: string,
   codeVerifier: string,
   port: number,
+  switchTokens: TokenSwitch = switchDirectly,
 ): Promise<void> {
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
@@ -112,10 +159,13 @@ export async function exchangeCodeForTokens(
     code_verifier: codeVerifier,
   })
 
+  // Bounds the request and its body, so the sign-in always settles once
+  // the code has arrived.
   const response = await fetch(GOOGLE_TOKEN_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
+    signal: AbortSignal.timeout(tokenExchangeTiming.timeoutMs),
   })
 
   if (!response.ok) {
@@ -131,15 +181,17 @@ export async function exchangeCodeForTokens(
     id_token?: string
   }
 
-  await storeTokens({
+  const tokens: StoredTokens = {
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
     expiresAt: Date.now() + data.expires_in * 1000,
     idToken: data.id_token ?? null,
-  })
+  }
+  await switchTokens(() => storeTokens(tokens, ++sessionGeneration), accountSubOf(tokens.idToken))
 }
 
 async function refreshAccessToken(refreshToken: string): Promise<string> {
+  const generation = sessionGeneration
   const body = new URLSearchParams({
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
@@ -166,12 +218,13 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   }
 
   const existing = await loadTokens()
+  // Throws when a sign-in or sign-out happened during the refresh.
   await storeTokens({
     accessToken: data.access_token,
     refreshToken, // Refresh token doesn't change on refresh
     expiresAt: Date.now() + data.expires_in * 1000,
     idToken: data.id_token ?? existing?.idToken ?? null,
-  })
+  }, generation)
 
   return data.access_token
 }
@@ -199,6 +252,22 @@ function parseJwtPayload(jwt: string): Record<string, unknown> | null {
   } catch {
     return null
   }
+}
+
+/** The `sub` claim of `idToken`; null when it has none. */
+function accountSubOf(idToken: string | null | undefined): string | null {
+  if (!idToken) return null
+  const sub = parseJwtPayload(idToken)?.sub
+  return typeof sub === 'string' && sub !== '' ? sub : null
+}
+
+/** The opaque id (id_token `sub`, the same for one Google account) of the
+ *  account Drive sync is signed in to; null when signed out or when the
+ *  tokens carry no id_token. A refresh keeps the stored id_token when it
+ *  returns none. Reads the stored tokens only: the Hub test account is not
+ *  a Drive sign-in. */
+export async function getAccountSub(): Promise<string | null> {
+  return accountSubOf((await loadTokens())?.idToken)
 }
 
 function isJwtExpired(jwt: string): boolean {
@@ -254,18 +323,24 @@ export async function getAuthStatus(): Promise<SyncAuthStatus> {
 }
 
 export async function signOut(): Promise<void> {
+  sessionGeneration++
   cachedTokens = null
-  try {
-    await unlink(getTokenPath())
-  } catch {
-    // Already deleted — ignore
-  }
+  await queueTokenFileWork(async () => {
+    try {
+      await unlink(getTokenPath())
+    } catch {
+      // Already deleted — ignore
+    }
+  })
 }
 
-export async function startOAuthFlow(): Promise<void> {
+/** Signs in through the browser. The new tokens are stored through
+ *  `switchTokens` once Google has issued them. */
+export async function startOAuthFlow(switchTokens: TokenSwitch = switchDirectly): Promise<void> {
   return new Promise((resolve, reject) => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null
     let finished = false
+    let codeReceived = false
 
     function teardown(): void {
       if (finished) return
@@ -291,17 +366,24 @@ export async function startOAuthFlow(): Promise<void> {
         return
       }
 
-      if (!code || returnedState !== expectedState) {
+      if (!code || returnedState !== expectedState || codeReceived) {
         res.writeHead(400, { 'Content-Type': 'text/html' })
         res.end('<html><body><h1>Invalid request</h1></body></html>')
         return
+      }
+      // The timeout covers the browser step only; the exchange and the
+      // token switch (bounded by the caller) run past it.
+      codeReceived = true
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+        timeoutId = null
       }
 
       res.writeHead(200, { 'Content-Type': 'text/html' })
       res.end('<html><body><h1>Authorization successful</h1><p>You can close this window.</p></body></html>')
 
       const port = (server.address() as { port: number }).port
-      exchangeCodeForTokens(code, codeVerifier, port)
+      exchangeCodeForTokens(code, codeVerifier, port, switchTokens)
         .then(() => {
           teardown()
           resolve()
