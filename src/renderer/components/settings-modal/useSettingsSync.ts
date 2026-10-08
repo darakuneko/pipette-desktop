@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { UseSyncReturn } from '../../hooks/useSync'
+import { SyncAuthStartError, type UseSyncReturn } from '../../hooks/useSync'
 import type { AppNotification } from '../../../shared/types/notification'
 import type { ModalTabId } from '../editors/modal-tabs'
 import type { PasswordMode } from './settings-modal-shared'
@@ -93,8 +93,12 @@ export function useSettingsSync({
     try {
       await sync.startAuth()
     } catch (err) {
-      const detail = err instanceof Error ? err.message : ''
-      setAuthError(detail || t('sync.authFailed'))
+      if (err instanceof SyncAuthStartError && err.reason === 'syncBusy') {
+        setAuthError(t('sync.signInBusy'))
+      } else {
+        const detail = err instanceof Error ? err.message : ''
+        setAuthError(detail || t('sync.authFailed'))
+      }
     } finally {
       authInFlight.current = false
       setAuthenticating(false)
@@ -183,7 +187,8 @@ export function useSettingsSync({
         resync = passwordMode === 'reenter'
       } else {
         if (passwordMode === 'change' && result.error === PASSWORD_MISMATCH_KEY) setChangeMismatch(true)
-        const errorKey = result.reason
+        // 'syncBusy' only comes from a sign-in or sign-out.
+        const errorKey = result.reason && result.reason !== 'syncBusy'
           ? syncCredentialI18nKey('changePasswordError', result.reason)
           : (result.error ?? 'sync.passwordSetFailed')
         setPasswordError(t(errorKey, errorKey))

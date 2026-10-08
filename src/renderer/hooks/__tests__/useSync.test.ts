@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { waitFor, act } from '@testing-library/react'
-import { useSync } from '../useSync'
+import { useSync, SyncAuthStartError } from '../useSync'
 import { setupAppConfigMock, renderHookWithConfig, vialAPIMock } from './test-helpers'
 import { DEFAULT_APP_CONFIG } from '../../../shared/types/app-config'
 
@@ -206,6 +206,25 @@ describe('useSync', () => {
 
     // refreshStatus should NOT be called again (no second round of fetches)
     expect(mockVialAPI.syncAuthStatus).toHaveBeenCalledTimes(1)
+  })
+
+  it('carries the reason when syncAuthStart refuses the sign-in', async () => {
+    mockVialAPI.syncAuthStart.mockResolvedValueOnce({ success: false, error: 'Cannot switch accounts while sync is in progress.', reason: 'syncBusy' })
+    const { result } = renderHookWithConfig(() => useSync())
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
+
+    let thrown: unknown
+    await act(async () => {
+      await result.current.startAuth().catch((err: unknown) => {
+        thrown = err
+      })
+    })
+
+    expect(thrown).toBeInstanceOf(SyncAuthStartError)
+    expect((thrown as SyncAuthStartError).reason).toBe('syncBusy')
   })
 
   it('sets lastSyncResult on success progress event', async () => {

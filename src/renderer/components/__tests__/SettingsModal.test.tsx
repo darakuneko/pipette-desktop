@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SettingsModal } from '../SettingsModal'
-import type { UseSyncReturn } from '../../hooks/useSync'
+import { SyncAuthStartError, type UseSyncReturn } from '../../hooks/useSync'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT } from '../../../shared/types/hub'
 import type { NotificationFetchResult } from '../../../shared/types/notification'
 import { DEFAULT_APP_CONFIG } from '../../../shared/types/sync'
@@ -455,6 +455,20 @@ describe('SettingsModal', () => {
       expect(screen.getByTestId('sync-auth-error')).toHaveTextContent('OAuth error')
     })
     expect(screen.getByTestId('sync-sign-in')).not.toBeDisabled()
+  })
+
+  it('shows the translated busy message when sign-in is refused while sync runs', async () => {
+    renderAndSwitchToData({
+      sync: makeSyncMock({
+        startAuth: vi.fn().mockRejectedValue(new SyncAuthStartError('Cannot switch accounts while sync is in progress.', 'syncBusy')),
+      }),
+    })
+
+    fireEvent.click(screen.getByTestId('sync-sign-in'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('sync-auth-error')).toHaveTextContent('sync.signInBusy')
+    })
   })
 
   it('hides password controls and shows busy banner while setting password', async () => {

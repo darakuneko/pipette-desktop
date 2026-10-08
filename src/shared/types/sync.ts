@@ -178,6 +178,11 @@ export type SyncCredentialFailureReason =
   | 'keystoreUnavailable'     // safeStorage.isEncryptionAvailable() === false
   | 'remoteCheckFailed'       // can't reach the remote password-check (network / drive)
 
+/** Why a sign-in or sign-out was refused (`syncBusy`: sync work kept
+ *  running past the wait, so the tokens were not switched). Kept apart from
+ *  `SyncCredentialFailureReason`, which describes the stored credentials. */
+export type SyncAuthFailureReason = 'syncBusy'
+
 export type SyncCredentialI18nNamespace = 'readiness' | 'changePasswordError'
 
 /** Single source of truth: reason → i18n key (used by progress, status, password UI). */
@@ -235,7 +240,7 @@ export type SyncSkipReason = 'busy' | SyncCredentialFailureReason | SyncBlockRea
 export interface SyncOperationResult {
   success: boolean
   error?: string
-  reason?: SyncCredentialFailureReason
+  reason?: SyncCredentialFailureReason | SyncAuthFailureReason
   /** Populated only by SYNC_EXECUTE. `success` stays `true` whenever the IPC
    *  call itself didn't throw — including when the sync silently did
    *  nothing (busy race, missing credentials) — so callers that need to know

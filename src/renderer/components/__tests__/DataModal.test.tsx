@@ -767,6 +767,36 @@ describe('DataModal', () => {
       })
       expect(screen.queryByTestId('local-data-import-error')).not.toBeInTheDocument()
     })
+
+    it('keeps the reset confirmation open and shows the error when resetting application settings fails', async () => {
+      mockResetLocalTargets.mockResolvedValueOnce({ success: false, error: 'EACCES: sync-pending.json' })
+      renderAndSwitchToApplication()
+
+      fireEvent.click(screen.getByTestId('app-reset-btn'))
+      fireEvent.click(screen.getByTestId('app-reset-confirm'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('app-settings-reset-error')).toHaveTextContent('EACCES: sync-pending.json')
+      })
+      expect(mockResetLocalTargets).toHaveBeenCalledWith({ keyboards: false, favorites: false, appSettings: true })
+      expect(screen.getByTestId('app-reset-confirm')).toBeInTheDocument()
+
+      fireEvent.click(screen.getByTestId('app-reset-cancel'))
+      expect(screen.queryByTestId('app-settings-reset-error')).not.toBeInTheDocument()
+    })
+
+    it('closes the reset confirmation without an error when resetting application settings succeeds', async () => {
+      mockResetLocalTargets.mockResolvedValueOnce({ success: true })
+      renderAndSwitchToApplication()
+
+      fireEvent.click(screen.getByTestId('app-reset-btn'))
+      fireEvent.click(screen.getByTestId('app-reset-confirm'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('app-reset-btn')).toBeInTheDocument()
+      })
+      expect(screen.queryByTestId('app-settings-reset-error')).not.toBeInTheDocument()
+    })
   })
 
   describe('sync tree', () => {

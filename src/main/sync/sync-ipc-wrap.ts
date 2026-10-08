@@ -2,14 +2,10 @@
 // Success / failure envelope shared by the sync IPC handlers (sync-ipc.ts,
 // sync-reset-ipc.ts).
 
-import { SyncCredentialError } from './sync-service'
-import type { SyncCredentialFailureReason } from '../../shared/types/sync'
+import { AccountSwitchBusyError, SyncCredentialError } from './sync-service'
+import type { SyncOperationResult } from '../../shared/types/sync'
 
-export interface IpcResult {
-  success: boolean
-  error?: string
-  reason?: SyncCredentialFailureReason
-}
+export type IpcResult = Pick<SyncOperationResult, 'success' | 'error' | 'reason'>
 
 // `T` lets a handler pass a payload back through the same success/failure
 // wrapping every other handler uses, instead of bypassing wrapIpc entirely
@@ -24,7 +20,7 @@ export async function wrapIpc<T extends object = object>(fallbackMessage: string
     const payload = await fn()
     return { success: true, ...(payload ?? {}) } as IpcResult & T
   } catch (err) {
-    if (err instanceof SyncCredentialError) {
+    if (err instanceof SyncCredentialError || err instanceof AccountSwitchBusyError) {
       return { success: false, error: err.message, reason: err.reason } as IpcResult & T
     }
     return { success: false, error: err instanceof Error ? err.message : fallbackMessage } as IpcResult & T

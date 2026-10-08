@@ -1,5 +1,5 @@
 {
-  "version": "0.1.110",
+  "version": "0.1.111",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -865,6 +865,7 @@
     "signIn": "接続っしょ",
     "authenticating": "認証待ちなう...",
     "authFailed": "認証失敗ｗもう一回っしょ☆",
+    "signInBusy": "同期中だからサインインむりｗちょい待ってからもう一回っしょ☆",
     "encryptionPassword": "暗号化パスワード☆",
     "passwordSet": "パスワード設定おけ！",
     "passwordPlaceholder": "パスワード入れてねん♡",

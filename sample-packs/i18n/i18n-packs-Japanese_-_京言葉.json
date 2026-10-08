@@ -1,5 +1,5 @@
 {
-  "version": "0.1.110",
+  "version": "0.1.111",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -865,6 +865,7 @@
     "signIn": "つなぎますえ",
     "authenticating": "認証を待ってますえ...",
     "authFailed": "認証があきまへんでしたえ。もういっぺんやっておくれやす。",
+    "signInBusy": "同期の最中はサインインできしまへんえ。ちょっと間ぁおいてから、もういっぺんやっておくれやす。",
     "encryptionPassword": "同期暗号化パスワード",
     "passwordSet": "パスワード設定済みどすえ",
     "passwordPlaceholder": "暗号化パスワードを入れておくれやす",

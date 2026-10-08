@@ -62,6 +62,8 @@ export { SyncCredentialError } from './sync-password'
 export {
   hasPendingChanges,
   cancelPendingChanges,
+  copyPendingState,
+  restoreCancelledPending,
   isSyncInProgress,
   setProgressCallback,
 } from './sync-runtime-state'
@@ -129,6 +131,7 @@ export { executeAnalyticsSync } from './sync-analytics'
 
 export { restorePendingFromDisk } from './sync-pending-store'
 export {
+  AccountSwitchBusyError,
   adoptPendingForSignedInAccount,
   switchAccountKeepingPending,
   signOutKeepingPending,

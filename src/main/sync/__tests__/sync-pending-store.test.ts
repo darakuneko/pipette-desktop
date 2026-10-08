@@ -26,6 +26,11 @@ vi.mock('../google-auth', () => ({
   signOut: () => mockSignOut(),
 }))
 
+const mockForgetAccountCaches = vi.fn()
+vi.mock('../sync-account-caches', () => ({
+  forgetAccountCaches: () => mockForgetAccountCaches(),
+}))
+
 import {
   syncRuntime,
   markPending,
@@ -33,6 +38,8 @@ import {
   pendingGenerationOf,
   snapshotPendingGenerations,
   cancelPendingChanges,
+  copyPendingState,
+  restoreCancelledPending,
   claimSyncLock,
   claimSyncLockBy,
   resetSyncRuntimeForTests,
@@ -41,6 +48,7 @@ import { PENDING_WRITE_DELAY_MS, restorePendingFromDisk, resetPendingStoreForTes
 import {
   ACCOUNT_SWITCH_BUSY_MESSAGE,
   ACCOUNT_SWITCH_WAIT_MS,
+  AccountSwitchBusyError,
   adoptPendingForSignedInAccount,
   markPendingFor,
   signOutKeepingPending,
@@ -242,6 +250,47 @@ describe('writing the pending state', () => {
     launch()
 
     expect(active()).toEqual(['favorites/tapDance'])
+  })
+})
+
+describe('putting the pending state back', () => {
+  it('puts back the cancelled active units with their generations and the held units, and writes them', () => {
+    const original = { version: 1, owner: 'account-a', units: ['favorites/tapDance', 'keyboards/uid1/settings'], held: { 'account-b': ['favorites/macro', 'keyboards/uid1/snapshots'] } }
+    addKeyboardDir('uid1')
+    writeFile(original)
+    launch()
+    const generations = snapshotPendingGenerations()
+    const copy = copyPendingState()
+
+    cancelPendingChanges(['favorites/'], { writeAlways: true })
+    expect(readFile()).toEqual({ version: 1, owner: 'account-a', units: ['keyboards/uid1/settings'], held: { 'account-b': ['keyboards/uid1/snapshots'] } })
+
+    restoreCancelledPending(copy)
+
+    expect(active()).toEqual(['favorites/tapDance', 'keyboards/uid1/settings'])
+    expect(snapshotPendingGenerations()).toEqual(generations)
+    expect(held('account-b')).toEqual(['favorites/macro', 'keyboards/uid1/snapshots'])
+    expect(syncRuntime.pendingOwner).toBe('account-a')
+    const file = readFile()
+    expect({ ...file, units: [...file.units].sort(), held: { 'account-b': [...file.held['account-b']].sort() } }).toEqual(original)
+  })
+
+  it('keeps units marked after the copy, with their newer generation', () => {
+    writeFile({ version: 1, owner: 'account-a', units: ['favorites/tapDance', 'favorites/macro'], held: {} })
+    launch()
+    const copy = copyPendingState()
+
+    cancelPendingChanges(['favorites/'], { writeAlways: true })
+    markPending('favorites/macro')
+    markPending('favorites/combo')
+    const newer = pendingGenerationOf('favorites/macro')
+
+    restoreCancelledPending(copy)
+
+    expect(active()).toEqual(['favorites/combo', 'favorites/macro', 'favorites/tapDance'])
+    expect(pendingGenerationOf('favorites/macro')).toBe(newer)
+    expect(pendingGenerationOf('favorites/tapDance')).toBe(copy.generations.get('favorites/tapDance'))
+    expect([...readFile().units].sort()).toEqual(['favorites/combo', 'favorites/macro', 'favorites/tapDance'])
   })
 })
 
@@ -482,6 +531,21 @@ describe('the account the pending units belong to', () => {
       expect(readFile().owner).toBe('account-b')
     })
 
+    it('forgets the previous account\'s caches after storing the tokens, before releasing the lock', async () => {
+      startWith({ owner: 'account-a', units: [], held: {} })
+      let lockedWhileForgetting = false
+      mockForgetAccountCaches.mockImplementationOnce(() => {
+        lockedWhileForgetting = syncRuntime.isSyncing
+      })
+      const storeTokens = vi.fn(async () => {})
+
+      await switchAccountKeepingPending(storeTokens, 'account-b')
+
+      expect(mockForgetAccountCaches).toHaveBeenCalledTimes(1)
+      expect(storeTokens.mock.invocationCallOrder[0]).toBeLessThan(mockForgetAccountCaches.mock.invocationCallOrder[0])
+      expect(lockedWhileForgetting).toBe(true)
+    })
+
     it('waits for an analytics sync and a remote day fetch to finish', async () => {
       startWith({ owner: null, units: [], held: {} })
       syncRuntime.analyticsSyncingUids.add('uid1')
@@ -516,8 +580,11 @@ describe('the account the pending units belong to', () => {
       const rejected = expect(switching).rejects.toThrow(ACCOUNT_SWITCH_BUSY_MESSAGE)
       await vi.advanceTimersByTimeAsync(ACCOUNT_SWITCH_WAIT_MS)
       await rejected
+      await expect(switching).rejects.toMatchObject({ reason: 'syncBusy' })
+      await expect(switching).rejects.toBeInstanceOf(AccountSwitchBusyError)
 
       expect(storeTokens).not.toHaveBeenCalled()
+      expect(mockForgetAccountCaches).not.toHaveBeenCalled()
       expect(syncRuntime.accountSwitching).toBe(false)
       expect(active()).toEqual(['favorites/tapDance'])
       expect(syncRuntime.pendingOwner).toBe('account-a')
@@ -529,7 +596,7 @@ describe('the account the pending units belong to', () => {
       const first = switchAccountKeepingPending(async () => {}, 'account-b')
       const second = vi.fn(async () => {})
 
-      await expect(switchAccountKeepingPending(second, 'account-c')).rejects.toThrow(ACCOUNT_SWITCH_BUSY_MESSAGE)
+      await expect(switchAccountKeepingPending(second, 'account-c')).rejects.toBeInstanceOf(AccountSwitchBusyError)
 
       releasePass()
       await first
@@ -556,6 +623,7 @@ describe('the account the pending units belong to', () => {
       await expect(switchAccountKeepingPending(storeTokens, 'account-b')).rejects.toThrow()
 
       expect(storeTokens).not.toHaveBeenCalled()
+      expect(mockForgetAccountCaches).not.toHaveBeenCalled()
       expect(syncRuntime.pendingOwner).toBe('account-a')
       expect(active()).toEqual(['favorites/tapDance'])
       expect(pendingGenerationOf('favorites/tapDance')).toBe(generation)
@@ -583,6 +651,7 @@ describe('the account the pending units belong to', () => {
         throw new Error('keychain')
       }, 'account-b')).rejects.toThrow('keychain')
 
+      expect(mockForgetAccountCaches).not.toHaveBeenCalled()
       expect(syncRuntime.isSyncing).toBe(false)
       expect(syncRuntime.accountSwitching).toBe(false)
     })
@@ -624,6 +693,8 @@ describe('the account the pending units belong to', () => {
 
       expect(heldBeforeSignOut).toBe(true)
       expect(mockSignOut).toHaveBeenCalledTimes(1)
+      expect(mockForgetAccountCaches).toHaveBeenCalledTimes(1)
+      expect(mockSignOut.mock.invocationCallOrder[0]).toBeLessThan(mockForgetAccountCaches.mock.invocationCallOrder[0])
       expect(active()).toEqual([])
       expect(readFile()).toEqual({ version: 1, owner: null, units: [], held: { 'account-a': ['favorites/tapDance'] } })
     })
@@ -669,6 +740,7 @@ describe('the account the pending units belong to', () => {
       await expect(signOutKeepingPending()).rejects.toThrow()
 
       expect(mockSignOut).not.toHaveBeenCalled()
+      expect(mockForgetAccountCaches).not.toHaveBeenCalled()
       expect(syncRuntime.pendingOwner).toBe('account-a')
       expect(active()).toEqual(['favorites/tapDance'])
     })
@@ -679,6 +751,7 @@ describe('the account the pending units belong to', () => {
       mockGetAccountSub.mockResolvedValueOnce('account-a')
 
       await signOutKeepingPendingLocked()
+      expect(mockForgetAccountCaches).toHaveBeenCalledTimes(1)
       mockGetAccountSub.mockResolvedValueOnce('account-b')
       await adoptPendingForSignedInAccount()
 

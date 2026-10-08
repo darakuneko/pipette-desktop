@@ -235,6 +235,39 @@ export function writePendingStateOrThrow(): void {
   pendingPersistence?.writeNow(pendingSnapshot())
 }
 
+/** A copy of the pending units, for `restoreCancelledPending`. */
+export interface PendingStateCopy {
+  generations: Map<string, number>
+  held: Map<string, Set<string>>
+}
+
+export function copyPendingState(): PendingStateCopy {
+  return {
+    generations: new Map(syncRuntime.pendingGeneration),
+    held: new Map([...syncRuntime.heldPending].map(([sub, units]) => [sub, new Set(units)])),
+  }
+}
+
+/** Puts back the units of `copy` that are gone now (what a cancel removed)
+ *  and writes the result: an active unit with its copied generation, unless
+ *  it was marked again meanwhile (its newer generation stays), and a held
+ *  unit into its account's held set. Nothing added since the copy is
+ *  removed, and the owner is left alone (a cancel does not change it). A
+ *  failed write is logged and left to the next write. */
+export function restoreCancelledPending(copy: PendingStateCopy): void {
+  for (const [unit, generation] of copy.generations) {
+    if (syncRuntime.pendingChanges.has(unit)) continue
+    syncRuntime.pendingChanges.add(unit)
+    syncRuntime.pendingGeneration.set(unit, generation)
+  }
+  for (const [sub, units] of copy.held) {
+    const held = syncRuntime.heldPending.get(sub) ?? new Set<string>()
+    for (const unit of units) held.add(unit)
+    if (held.size > 0) syncRuntime.heldPending.set(sub, held)
+  }
+  commitPendingState()
+}
+
 /** Finishes a change to the pending owner or the held units. */
 export function commitPendingState(): void {
   persistPendingNow()

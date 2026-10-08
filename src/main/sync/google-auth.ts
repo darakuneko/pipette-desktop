@@ -138,8 +138,8 @@ export type TokenSwitch = (storeTokens: () => Promise<void>, newAccountSub: stri
 
 const switchDirectly: TokenSwitch = (store) => store()
 
-/** How long the token exchange of a sign-in may take. Exported so tests can
- *  shorten it. */
+/** How long a token request (the exchange of a sign-in, or a refresh) may
+ *  take. Exported so tests can shorten it. */
 export const tokenExchangeTiming = {
   timeoutMs: 60_000,
 }
@@ -199,10 +199,13 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
     client_secret: CLIENT_SECRET,
   })
 
+  // Bounds the request and its body; a timeout fails the refresh like any
+  // other error.
   const response = await fetch(GOOGLE_TOKEN_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
+    signal: AbortSignal.timeout(tokenExchangeTiming.timeoutMs),
   })
 
   if (!response.ok) {

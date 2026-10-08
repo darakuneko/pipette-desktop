@@ -495,6 +495,30 @@ describe('google-auth', () => {
       await expect(exchangeCodeForTokens('code', 'verifier', 8080)).rejects.toThrow('aborted')
       expect((await getAuthStatus()).authenticated).toBe(false)
     })
+
+    it('fails a stalled refresh once the timeout passes, so no access token is returned', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: 'initial-token',
+          refresh_token: 'refresh-token',
+          expires_in: -1,
+          token_type: 'Bearer',
+        }),
+      })
+      await exchangeCodeForTokens('auth-code', 'code-verifier', 8080)
+      tokenExchangeTiming.timeoutMs = 20
+      let refreshSignal: AbortSignal | undefined
+      // Never answers unless aborted.
+      mockFetch.mockImplementationOnce((_url: string, init: { signal?: AbortSignal }) => new Promise((_resolve, reject) => {
+        refreshSignal = init.signal
+        init.signal?.addEventListener('abort', () => reject(new Error('aborted')))
+      }))
+
+      expect(await getAccessToken()).toBeNull()
+      expect(refreshSignal?.aborted).toBe(true)
+      expect((await getAuthStatus()).authenticated).toBe(true)
+    })
   })
 
   describe('the token switch of a sign-in', () => {
