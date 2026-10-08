@@ -340,7 +340,7 @@ export async function savePack(input: {
       if (!isSafePackId(id)) return fail('INVALID_FILE', 'Generated pack id is unsafe')
 
       await mkdir(getPacksDir(), { recursive: true })
-      await writeFile(getPackPath(id), JSON.stringify(input.raw, null, 2), 'utf-8')
+      await writeFileAtomic(getPackPath(id), JSON.stringify(input.raw, null, 2))
 
       const now = new Date()
       const existing = index.metas.find((m) => m.id === id)

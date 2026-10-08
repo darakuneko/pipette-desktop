@@ -71,6 +71,18 @@ describe('writeFileAtomic', () => {
     }
   })
 
+  it('writes a target whose name leaves no room for the temp suffix, through a shorter temp name', async () => {
+    const target = join(dir, `${'日'.repeat(80)}.pipette`)
+    expect(Buffer.byteLength(`${'日'.repeat(80)}.pipette`)).toBe(248)
+    await writeFileAtomic(target, 'long')
+
+    expect(await readFile(target, 'utf-8')).toBe('long')
+    const tmpPath = vi.mocked(writeFile).mock.calls[0][0] as string
+    expect(tmpPath.startsWith(join(dir, '日'))).toBe(true)
+    expect(Buffer.byteLength(tmpPath.slice(dir.length + 1))).toBeLessThanOrEqual(255)
+    expect(await readdir(dir)).toEqual([`${'日'.repeat(80)}.pipette`])
+  })
+
   it('concurrent writes to the same path all succeed and leave no temp file', async () => {
     const target = join(dir, 'out.json')
     const contents = Array.from({ length: 8 }, (_, i) => `content-${i}`)

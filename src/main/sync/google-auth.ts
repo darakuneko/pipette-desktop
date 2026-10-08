@@ -4,10 +4,11 @@
 import { shell, safeStorage, app } from 'electron'
 import { createHash, randomBytes } from 'node:crypto'
 import { createServer, type Server } from 'node:http'
-import { writeFile, readFile, unlink, mkdir } from 'node:fs/promises'
+import { readFile, unlink, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { SyncAuthStatus } from '../../shared/types/sync'
 import { getHubTestAccount } from '../hub/hub-base'
+import { writeFileAtomic } from '../utils/write-file-atomic'
 
 const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
@@ -99,7 +100,7 @@ function storeTokens(tokens: StoredTokens, generation: number): Promise<void> {
     const encrypted = safeStorage.encryptString(json)
     const dir = join(app.getPath('userData'), 'local', 'auth')
     await mkdir(dir, { recursive: true })
-    await writeFile(getTokenPath(), encrypted)
+    await writeFileAtomic(getTokenPath(), encrypted)
     // A sign-out during the write removes the file next (it is queued after
     // this), so these tokens must not stay cached either.
     if (generation !== sessionGeneration) throw new Error('The sign-in changed; the tokens were not stored')

@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto'
 import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { notifyChange } from './sync/sync-service'
 import { safeFilename, isSafePackId } from './utils/safe-filename'
+import { writeFileAtomic } from './utils/write-file-atomic'
 import {
   BUILTIN_ENGLISH_PACK_ID,
   I18N_INDEX_SYNC_UNIT,
@@ -103,7 +104,7 @@ async function writeBuiltinEnglishBodyIfMissing(): Promise<void> {
     // missing — fall through and (re)create it
   }
   await mkdir(getPacksDir(), { recursive: true })
-  await writeFile(getPackPath(BUILTIN_ENGLISH_PACK_ID), JSON.stringify({ name: 'English', version: '0.0.0' }, null, 2), 'utf-8')
+  await writeFileAtomic(getPackPath(BUILTIN_ENGLISH_PACK_ID), JSON.stringify({ name: 'English', version: '0.0.0' }, null, 2))
 }
 
 // --- Public API --------------------------------------------------------------
@@ -238,7 +239,7 @@ export async function savePack(input: SavePackInput): Promise<I18nPackStoreResul
       if (!isSafePackId(id)) return fail('INVALID_FILE', 'Generated pack id is unsafe')
 
       await mkdir(getPacksDir(), { recursive: true })
-      await writeFile(getPackPath(id), JSON.stringify(input.pack, null, 2), 'utf-8')
+      await writeFileAtomic(getPackPath(id), JSON.stringify(input.pack, null, 2))
 
       const now = new Date()
       const existing = index.metas.find((m) => m.id === id)

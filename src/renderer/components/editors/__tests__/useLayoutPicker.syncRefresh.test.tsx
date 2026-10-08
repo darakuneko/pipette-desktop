@@ -29,6 +29,10 @@ const CONNECTED_DEVICE: DeviceInfo = {
   vendorId: 1, productId: 2, serialNumber: 'abc', productName: 'Test KB', type: 'vial',
 }
 
+const PROBED_DEVICE: DeviceInfo = {
+  vendorId: 3, productId: 4, serialNumber: 'def', productName: 'Probed KB', type: 'vial',
+}
+
 function Host(props: Partial<UseLayoutPickerOptions>) {
   const { layoutPickerContent } = useLayoutPicker({
     layout: { keys: [KEY] },
@@ -57,6 +61,7 @@ const listStoredKeyboards = vi.fn()
 const snapshotLoad = vi.fn()
 const settingsGet = vi.fn()
 const settingsPatch = vi.fn()
+const probeDevice = vi.fn()
 
 beforeEach(() => {
   snapshotList.mockReset()
@@ -64,6 +69,7 @@ beforeEach(() => {
   snapshotLoad.mockReset()
   settingsGet.mockReset().mockResolvedValue(null)
   settingsPatch.mockReset().mockResolvedValue({ success: true })
+  probeDevice.mockReset()
   Object.defineProperty(window, 'vialAPI', {
     value: {
       ...window.vialAPI,
@@ -72,6 +78,7 @@ beforeEach(() => {
       snapshotStoreLoad: snapshotLoad,
       pipetteSettingsGet: settingsGet,
       pipetteSettingsPatch: settingsPatch,
+      probeDevice,
     },
     writable: true,
     configurable: true,
@@ -214,5 +221,64 @@ describe('useLayoutPicker sync refresh', () => {
     await waitFor(() => expect(settingsPatch).toHaveBeenCalledWith('other', { keymapScale: 1.1 }))
     await act(async () => { resolveLoad({ keymapScale: 1.2 }) })
     expect(screen.getByTestId('scale-display')).toHaveTextContent('110')
+  })
+
+  describe('a probe that fails while a file load reads its zoom', () => {
+    function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void; reject: (e: unknown) => void } {
+      let resolve!: (v: T) => void
+      let reject!: (e: unknown) => void
+      const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej })
+      return { promise, resolve, reject }
+    }
+
+    // The entry's load lands after the user went back to the device list,
+    // so the probe starts while the load's settings read is pending.
+    async function loadThenProbe(): Promise<{
+      settings: ReturnType<typeof deferred<{ keymapScale: number }>>
+      probe: ReturnType<typeof deferred<never>>
+    }> {
+      listStoredKeyboards.mockResolvedValue([{ uid: 'other', name: 'Other KB' }])
+      snapshotList.mockResolvedValue({ success: true, entries: [snap('e1')] })
+      const load = deferred<{ success: boolean; data: string }>()
+      snapshotLoad.mockReturnValueOnce(load.promise)
+      const settings = deferred<{ keymapScale: number }>()
+      settingsGet.mockReturnValueOnce(settings.promise)
+      const probe = deferred<never>()
+      probeDevice.mockReturnValueOnce(probe.promise)
+      render(<Host devices={[CONNECTED_DEVICE, PROBED_DEVICE]} />)
+      fireEvent.click(screen.getByText('editor.keymap.pickerSourceFile'))
+      fireEvent.click(await screen.findByText('Other KB'))
+      fireEvent.click(await screen.findByText('label-e1'))
+      fireEvent.click(screen.getByText('editor.keymap.pickerSourceDevice'))
+      await act(async () => { load.resolve({ success: true, data: JSON.stringify(OTHER_FILE) }) })
+      expect(settingsGet).toHaveBeenCalledWith('other')
+      fireEvent.click(screen.getByText('Probed KB'))
+      expect(probeDevice).toHaveBeenCalledTimes(1)
+      return { settings, probe }
+    }
+
+    it('applies the file\'s zoom when its read lands after the probe failed', async () => {
+      const { settings, probe } = await loadThenProbe()
+      await act(async () => { probe.reject(new Error('probe failed')) })
+      await act(async () => { settings.resolve({ keymapScale: 1.2 }) })
+      expect(screen.getByTestId('scale-display')).toHaveTextContent('120')
+    })
+
+    it('applies the file\'s zoom when its read landed during the probe', async () => {
+      const { settings, probe } = await loadThenProbe()
+      await act(async () => { settings.resolve({ keymapScale: 1.2 }) })
+      expect(screen.getByTestId('scale-display')).toHaveTextContent('100')
+      await act(async () => { probe.reject(new Error('probe failed')) })
+      expect(screen.getByTestId('scale-display')).toHaveTextContent('120')
+    })
+
+    it('keeps a user zoom made during the probe', async () => {
+      const { settings, probe } = await loadThenProbe()
+      await act(async () => { settings.resolve({ keymapScale: 1.2 }) })
+      fireEvent.click(screen.getByLabelText('editor.keymap.zoomIn'))
+      expect(screen.getByTestId('scale-display')).toHaveTextContent('110')
+      await act(async () => { probe.reject(new Error('probe failed')) })
+      expect(screen.getByTestId('scale-display')).toHaveTextContent('110')
+    })
   })
 })

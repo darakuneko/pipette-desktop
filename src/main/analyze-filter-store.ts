@@ -9,7 +9,7 @@
 
 import { app } from 'electron'
 import { join } from 'node:path'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { IpcChannels } from '../shared/ipc/channels'
 import { notifyChange } from './sync/sync-service'
@@ -145,7 +145,7 @@ export function setupAnalyzeFilterStore(): void {
           const filename = idBodyFilename('analyzeFilters', id, `${tsForFilename(now)}.json`)
           const filePath = getSafeFilePath(uid, filename)
 
-          await writeFile(filePath, json, 'utf-8')
+          await writeFileAtomic(filePath, json)
 
           const entry = createEntry('analyzeFilters', {
             id,
@@ -207,7 +207,7 @@ export function setupAnalyzeFilterStore(): void {
           const entry = index.entries[at]
           // A user save: brings a deleted entry back (`overwriteEntry`).
           const filePath = getSafeFilePath(uid, entry.filename)
-          await writeFile(filePath, json, 'utf-8')
+          await writeFileAtomic(filePath, json)
 
           index.entries[at] = overwriteEntry('analyzeFilters', entry, entry, new Date(), { body: true, explicit: true })
           await writeIndex(uid, index)

@@ -4,7 +4,7 @@
 
 import { app, dialog, BrowserWindow } from 'electron'
 import { join, basename } from 'node:path'
-import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, stat, unlink } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { notifyChange } from './sync/sync-service'
 import { withWriteLock } from './per-uid-write-lock'
@@ -213,7 +213,7 @@ export interface SaveTextInput {
 
 async function writeRecord(meta: TypingTestTextMeta, data: TypingTestTextEntryFile): Promise<void> {
   await mkdir(getStoreDir(), { recursive: true })
-  await writeFile(getEntryPath(meta.filename), JSON.stringify(data, null, 2), 'utf-8')
+  await writeFileAtomic(getEntryPath(meta.filename), JSON.stringify(data, null, 2))
 }
 
 async function saveRecordUnlocked(input: SaveTextInput): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> {

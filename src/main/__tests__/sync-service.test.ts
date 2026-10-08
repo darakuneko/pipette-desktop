@@ -300,9 +300,13 @@ const FAKE_TIMER_OPTS: Parameters<typeof vi.useFakeTimers>[0] = {
 const realNow = performance.now.bind(performance)
 const realSetImmediate = setImmediate
 const realSetTimeout = setTimeout
-// Kept below vitest's default 5 s test timeout so flushUntil's own
-// "timed out waiting for …" error fires before vitest aborts the test.
-const WAIT_TIMEOUT_MS = 3_000
+// Generous because a pass under a full parallel `pnpm test` run can need
+// seconds of real fs I/O. Kept well below TEST_TIMEOUT_MS / HOOK_TIMEOUT_MS
+// so flushUntil's own "timed out waiting for …" error fires before vitest
+// aborts the test or the afterEach that waits for the sync lock.
+const WAIT_TIMEOUT_MS = 8_000
+const TEST_TIMEOUT_MS = 30_000
+const HOOK_TIMEOUT_MS = 15_000
 
 /**
  * Yields to the real event loop until `predicate` is true, then lets a
@@ -453,7 +457,7 @@ function captureBeforeQuitHandler(): (e: { preventDefault: () => void }) => void
   return match[1] as (e: { preventDefault: () => void }) => void
 }
 
-describe('sync-service', () => {
+describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     vi.useFakeTimers(FAKE_TIMER_OPTS)
@@ -479,7 +483,7 @@ describe('sync-service', () => {
       vi.useRealTimers()
       await rm(mockUserDataPath, { recursive: true, force: true })
     }
-  })
+  }, HOOK_TIMEOUT_MS)
 
   describe('notifyChange', () => {
     it('accumulates changes and debounces', () => {

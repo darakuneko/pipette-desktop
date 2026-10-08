@@ -3,7 +3,7 @@
 
 import { app } from 'electron'
 import { join } from 'node:path'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { IpcChannels } from '../shared/ipc/channels'
 import { notifyChange } from './sync/sync-service'
@@ -142,7 +142,7 @@ export function setupSnapshotStore(): void {
           const filename = buildSnapshotFilename(sanitizeFilename(deviceName), tsForFilename(now), id)
           const filePath = getSafeFilePath(uid, filename)
 
-          await writeFile(filePath, json, 'utf-8')
+          await writeFileAtomic(filePath, json)
 
           const entry = createEntry('snapshots', { id, label, filename, savedAt: now.toISOString(), vilVersion }, now)
 
@@ -208,7 +208,7 @@ export function setupSnapshotStore(): void {
             index.entries[at] = migrated.entry
           } else {
             // A user save: brings a deleted entry back (`overwriteEntry`).
-            await writeFile(getSafeFilePath(uid, entry.filename), json, 'utf-8')
+            await writeFileAtomic(getSafeFilePath(uid, entry.filename), json)
             index.entries[at] = overwriteEntry('snapshots', entry, next, new Date(), { body: true, explicit: true })
           }
           await writeIndex(uid, index)
@@ -271,7 +271,7 @@ async function migrateSnapshotBody(
   if (entry.deletedAt) return { success: false, error: 'Entry has been deleted' }
   const filePath = getSafeFilePath(uid, entry.filename)
   if ((await readFile(filePath, 'utf-8')) !== migrateFrom) return { success: false, error: 'Entry changed since it was read' }
-  await writeFile(filePath, json, 'utf-8')
+  await writeFileAtomic(filePath, json)
   return { success: true, entry: setClock(next, 'body', new Date(clockMs(entry.clocks.body) + 1).toISOString()) }
 }
 

@@ -5,8 +5,9 @@
 // recent one, so the on-disk footprint stays proportional to the
 // user's actual keymap edits rather than to record sessions.
 
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
+import { writeFileAtomic } from '../utils/write-file-atomic'
 import type {
   TypingKeymapSnapshot,
   TypingKeymapSnapshotSummary,
@@ -86,7 +87,7 @@ export async function saveKeymapSnapshotIfChanged(
     }
   }
   await mkdir(dir, { recursive: true })
-  await writeFile(join(dir, `${snapshot.savedAt}.json`), JSON.stringify(snapshot), 'utf-8')
+  await writeFileAtomic(join(dir, `${snapshot.savedAt}.json`), JSON.stringify(snapshot))
   return { saved: true, savedAt: snapshot.savedAt }
 }
 

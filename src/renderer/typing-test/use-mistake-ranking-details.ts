@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import type { RunKeystrokeLog } from '../../shared/types/typing-run-log'
 import { buildMissedDetails, type MissedCharDetail } from './missed-details'
+import { useSyncUnitApplied } from '../hooks/use-sync-unit-applied'
 
 /** Sums `source` into `target` in place — `typedCounts` per typed char,
  *  `movedOnCount` as a running total. */
@@ -54,9 +55,8 @@ export function mergeMissedDetails(perRunDetails: readonly Map<string, MissedCha
  *
  *  CACHED PER MOUNT: fetched logs are kept in a `useRef` Map (runId ->
  *  log-or-null), which — being a ref — survives every re-render without
- *  itself triggering one, and is never cleared while this hook stays
- *  mounted. Each effect run only fetches runIds NOT already in the cache
- *  (a tab switch, or new results being merged in, adds runIds
+ *  itself triggering one. Each effect run only fetches runIds NOT already
+ *  in the cache (a tab switch, or new results being merged in, adds runIds
  *  incrementally rather than re-fetching everything already known).
  *
  *  BATCH, not progressive: cached logs merge immediately; on a
@@ -79,7 +79,14 @@ export function mergeMissedDetails(perRunDetails: readonly Map<string, MissedCha
  *  rest of the batch. Every successfully-fetched log is also
  *  independently subject to `buildMissedDetails`'s own
  *  `charCorrelationUnavailable` bailout (an empty per-run map, not an
- *  error). */
+ *  error).
+ *
+ *  A sync merge of this keyboard's run logs (`keyboards/{uid}/runs`)
+ *  re-reads every log in `runIds`, cached or not, and the next committed
+ *  batch replaces the whole cache; a batch started before the merge is
+ *  dropped. Until that commit the previous details stay visible. Logs the
+ *  merge removed drop out through `availableRunIds`, which the caller
+ *  re-reads on the same notification (`useRunLogAvailability`). */
 export function useAggregatedMissedDetails(
   uid: string | undefined,
   results: readonly TypingTestResult[],
@@ -90,6 +97,26 @@ export function useAggregatedMissedDetails(
   // to retrigger the merge below (cacheRef.current is a ref, invisible to
   // React's dependency comparison).
   const [fetchVersion, setFetchVersion] = useState(0)
+  // Bumped by a sync merge: re-runs the fetch, and a batch started under an
+  // older generation is dropped instead of cached. The ref moves in the
+  // handler itself: a batch can settle after a second notification but
+  // before React runs the effect cleanup, and must not commit then. The
+  // handler leaves `fetchVersion` alone so the merge below keeps the
+  // previous details.
+  const [syncGeneration, setSyncGeneration] = useState(0)
+  const syncGenerationRef = useRef(0)
+  // Set by a sync merge until a batch commits: fetch every log in `runIds`
+  // and replace the cache with the result.
+  const refetchAllRef = useRef(false)
+
+  useSyncUnitApplied(
+    (unit) => uid !== undefined && unit === `keyboards/${uid}/runs`,
+    () => {
+      syncGenerationRef.current += 1
+      refetchAllRef.current = true
+      setSyncGeneration(syncGenerationRef.current)
+    },
+  )
 
   const runIds = useMemo(() => {
     const ids = new Set<string>()
@@ -102,8 +129,21 @@ export function useAggregatedMissedDetails(
 
   useEffect(() => {
     if (!uid) return
-    const missing = Array.from(runIds).filter((runId) => !cacheRef.current.has(runId))
-    if (missing.length === 0) return
+    const refetchAll = refetchAllRef.current
+    const commit = (entries: readonly { runId: string; log: RunKeystrokeLog | null }[]): void => {
+      if (refetchAll) {
+        refetchAllRef.current = false
+        cacheRef.current.clear()
+      }
+      for (const { runId, log } of entries) cacheRef.current.set(runId, log)
+      setFetchVersion((v) => v + 1)
+    }
+    const missing = Array.from(runIds).filter((runId) => refetchAll || !cacheRef.current.has(runId))
+    if (missing.length === 0) {
+      if (refetchAll) commit([])
+      return
+    }
+    const generation = syncGenerationRef.current
     let cancelled = false
     Promise.allSettled(
       missing.map((runId) =>
@@ -112,16 +152,13 @@ export function useAggregatedMissedDetails(
           .catch(() => ({ runId, log: null as RunKeystrokeLog | null })),
       ),
     ).then((settled) => {
-      if (cancelled) return
-      for (const outcome of settled) {
-        // Only a bug in the .catch() above (which never throws) could
-        // reach 'rejected' here — defensive, not a real code path.
-        if (outcome.status === 'fulfilled') cacheRef.current.set(outcome.value.runId, outcome.value.log)
-      }
-      setFetchVersion((v) => v + 1)
+      if (cancelled || generation !== syncGenerationRef.current) return
+      // Only a bug in the .catch() above (which never throws) could reach
+      // 'rejected' here — defensive, not a real code path.
+      commit(settled.flatMap((outcome) => (outcome.status === 'fulfilled' ? [outcome.value] : [])))
     })
     return () => { cancelled = true }
-  }, [uid, runIds])
+  }, [uid, runIds, syncGeneration])
 
   return useMemo(() => {
     const perRunDetails: Map<string, MissedCharDetail>[] = []

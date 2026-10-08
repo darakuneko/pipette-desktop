@@ -134,8 +134,12 @@ export function useLayoutPicker({
   // reload, the start of a load or probe). A load or probe applies the zoom
   // it read only if nothing bumped it since it started, so a slow read never
   // replaces a newer zoom. `scaleUidRef` is the uid whose zoom is shown.
+  // A probe that fails gives its bump back (see `handleProbeDevice`).
   const scaleSeqRef = useRef(0)
   const scaleUidRef = useRef<string | undefined>(undefined)
+  // The zoom the latest file load read, with the counter value the load
+  // started at, so a probe that fails after the read can still apply it.
+  const loadScaleRef = useRef<{ seq: number; scale: number } | null>(null)
   const pickerFileUid = pickerFileData?.uid
   const { trackWrite: trackScaleWrite } = useKeyboardSettingsReader(pickerFileUid ?? null, (prefs) => {
     if (prefs?.keymapScale == null) return
@@ -213,7 +217,9 @@ export function useLayoutPicker({
       scaleUidRef.current = fileUid
       if (fileUid) {
         window.vialAPI.pipetteSettingsGet(fileUid).then((prefs) => {
-          if (scaleSeqRef.current === seq && prefs?.keymapScale != null) setPickerScale(prefs.keymapScale)
+          if (prefs?.keymapScale == null) return
+          loadScaleRef.current = { seq, scale: prefs.keymapScale }
+          if (scaleSeqRef.current === seq) setPickerScale(prefs.keymapScale)
         }).catch(() => {})
       } else {
         setPickerScale(undefined)
@@ -282,6 +288,15 @@ export function useLayoutPicker({
       setPickerLayer(0)
       setProbeStatus('idle')
     } catch {
+      // A failed probe shows nothing new, so unless another zoom change came
+      // after it, its bump is undone: a file load started just before it
+      // then applies its zoom when its read lands, or here if the read
+      // landed during the probe.
+      if (scaleSeqRef.current === seq) {
+        scaleSeqRef.current = seq - 1
+        const held = loadScaleRef.current
+        if (held?.seq === seq - 1) setPickerScale(held.scale)
+      }
       setProbeStatus('error')
     }
   }, [remapLabel])
