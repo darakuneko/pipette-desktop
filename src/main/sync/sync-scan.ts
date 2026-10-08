@@ -14,6 +14,7 @@ import {
 } from './google-drive'
 import { pLimit } from '../../shared/concurrency'
 import { SYNC_CONCURRENCY } from './sync-runtime-state'
+import { pickCanonicalFile } from './drive-canonical'
 import { requireSyncCredentials, validatePasswordCheck } from './sync-password'
 import { assertNoLocalPasswordChange, assertSyncAllowed, localSyncBlock, remoteSyncBlock } from './sync-password-guard'
 import { syncFormatGeneration } from './sync-format'
@@ -165,8 +166,7 @@ export async function fetchRemoteBundle(syncUnit: string): Promise<SyncBundle | 
   const result = await fetchValidatedDataFiles()
   if (!result) return null
   const { password, dataFiles } = result
-  const targetName = driveFileName(syncUnit)
-  const file = dataFiles.find((f) => f.name === targetName)
+  const file = pickCanonicalFile(dataFiles, driveFileName(syncUnit))
   if (!file) return null
   try {
     const envelope = await downloadFile(file.id)

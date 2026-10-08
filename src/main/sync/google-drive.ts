@@ -107,17 +107,28 @@ export interface UploadedFile {
   modifiedTime: string
 }
 
+export interface UploadFileOptions {
+  /** When the update of `existingFileId` gets 404 (the file is gone), create
+   *  the file instead of failing. For an id remembered from an earlier
+   *  create rather than taken from a listing. */
+  createIfMissing?: boolean
+}
+
+/** Updates `existingFileId`, or creates `name` when no id is given (or, with
+ *  `createIfMissing`, when that id no longer exists). The returned id is
+ *  the file actually written. */
 export async function uploadFile(
   name: string,
   envelope: SyncEnvelope,
   existingFileId?: string,
+  options?: UploadFileOptions,
 ): Promise<UploadedFile> {
   const content = JSON.stringify(envelope)
 
   if (existingFileId) {
     // Update existing file. `fields` is requested explicitly — the
     // default response for a media-upload PATCH omits `modifiedTime`.
-    const { text } = await driveRequest({
+    const { status, text } = await driveRequest({
       label: 'update',
       getHeaders: authHeaders,
       send: (headers) =>
@@ -127,8 +138,9 @@ export async function uploadFile(
           body: content,
         }),
       retryTransient: true,
+      acceptStatus: options?.createIfMissing ? (code) => code === 404 : undefined,
     })
-    return JSON.parse(text) as UploadedFile
+    if (status !== 404) return JSON.parse(text) as UploadedFile
   }
 
   // `fields` requested explicitly — same reasoning as the update path above.

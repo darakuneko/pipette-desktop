@@ -8,13 +8,14 @@ import { isAnalyticsSyncUnit, isRunLogSyncUnit } from './sync-bundle'
 import { runPackGcAfterPass } from './pack-gc'
 import { log } from '../logger'
 import { loadAppConfig } from '../app-config'
-import { SYNC_CONCURRENCY, POLL_INTERVAL_MS, syncRuntime, recordRemoteState, emitProgress, tryClaimSyncLock } from './sync-runtime-state'
+import { SYNC_CONCURRENCY, POLL_INTERVAL_MS, syncRuntime, recordRemoteState, isKnownRemoteRevision, emitProgress, tryClaimSyncLock } from './sync-runtime-state'
 import { requireSyncCredentials, ensurePasswordCheckValidated } from './sync-password'
 import { localSyncBlock, remoteSyncBlock, emitSyncBlocked } from './sync-password-guard'
 import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
 import type { SyncBlockReason } from '../../shared/types/sync'
 import { listLocalKeyboardUids, shouldDownloadSyncUnit } from './sync-scope'
 import { mergeWithRemote } from './sync-merge-dispatch'
+import { canonicalFiles } from './drive-canonical'
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
 // The delayed first pass's timer, kept until that pass starts so
@@ -55,10 +56,14 @@ async function pollForRemoteChanges(): Promise<void> {
     // The first poll of a launch has no recorded state, so every listed file
     // counts as changed: each locally relevant unit is downloaded once.
     const localKeyboardUids = await listLocalKeyboardUids()
+    // One copy per name: the remote state is keyed by name, so evaluating or
+    // recording a second copy of a name would overwrite the chosen copy's
+    // revision and make it look changed on every pass.
+    const listedFiles = canonicalFiles(remoteFiles)
     // {file, syncUnit} pairs resolved once here rather than re-parsing
     // the filename again inside the merge loop below.
-    const changedFiles = remoteFiles.flatMap((file) => {
-      if (syncRuntime.lastKnownRemoteState.get(file.name) === file.modifiedTime) return []
+    const changedFiles = listedFiles.flatMap((file) => {
+      if (isKnownRemoteRevision(file)) return []
       const syncUnit = syncUnitFromFileName(file.name)
       if (!syncUnit) return []
       // analytics: handled by executeAnalyticsSync (Analyze panel mount).
@@ -75,7 +80,7 @@ async function pollForRemoteChanges(): Promise<void> {
     // skipped, analytics/run-log units, names with no sync unit). A changed
     // file is recorded by mergeWithRemote only when its merge succeeds.
     const changedNames = new Set(changedFiles.map(({ file }) => file.name))
-    recordRemoteState(remoteFiles.filter((file) => !changedNames.has(file.name)))
+    recordRemoteState(listedFiles.filter((file) => !changedNames.has(file.name)))
 
     const limit = pLimit(SYNC_CONCURRENCY)
     const failedUnits: string[] = []

@@ -61,6 +61,12 @@ vi.mock('../sync/google-drive', async () => {
     downloadFile: (...args: unknown[]) => mockDownloadFile(...(args as Parameters<typeof mockDownloadFile>)),
     uploadFile: (...args: unknown[]) => mockUploadFile(...(args as Parameters<typeof mockUploadFile>)),
     deleteFile: (...args: unknown[]) => mockDeleteFile(...(args as Parameters<typeof mockDeleteFile>)),
+    // Same contract as the real one, deleting through mockDeleteFile.
+    deleteFilesById: async (ids: readonly string[]) => {
+      const results = await Promise.allSettled(ids.map((id) => mockDeleteFile(id)))
+      const reasons = results.flatMap((r) => (r.status === 'rejected' ? [String(r.reason)] : []))
+      return { attempted: ids.length, failed: reasons.length, firstError: reasons[0] }
+    },
     driveFileName: actual.driveFileName,
     syncUnitFromFileName: actual.syncUnitFromFileName,
     driveFilenamePrefix: actual.driveFilenamePrefix,
@@ -275,6 +281,7 @@ import { syncRuntime, claimSyncLock, DEBOUNCE_MS } from '../sync/sync-runtime-st
 import { flushPendingChanges, scheduleFlushIfPending, QUIT_SYNC_DEADLINE_MS } from '../sync/sync-flush'
 import { PENDING_WRITE_DELAY_MS, restorePendingFromDisk } from '../sync/sync-pending-store'
 import { getAccountSub } from '../sync/google-auth'
+import { signOutKeepingPendingLocked, switchAccountKeepingPending } from '../sync/sync-pending-account'
 
 const POLL_INTERVAL_MS = 3 * 60 * 1000
 
@@ -3840,6 +3847,218 @@ describe('sync-service', () => {
         (JSON.parse(mockEncrypt.mock.calls[call][0] as string) as { files: Record<string, string> }).files['data.jsonl']
       expect(dayContent(0)).not.toContain('line-b')
       expect(dayContent(1)).toContain('line-b')
+    })
+
+    // Drive does not keep names unique, so a unit can have several files.
+    describe('duplicate files with one name', () => {
+      const DAY = '2026-04-18'
+      const ownUnit = `keyboards/${UID}/devices/${OWN_HASH}/days/${DAY}`
+      const OLD_TIME = '2026-04-18T00:00:00.000Z'
+      const NEW_TIME = '2026-04-19T00:00:00.000Z'
+      // Listed oldest first, so taking the first match would pick the stale copy.
+      const favCopies = (): DriveFile[] => [
+        { id: 'fav-old', name: 'favorites_tapDance.enc', modifiedTime: OLD_TIME },
+        { id: 'fav-new', name: 'favorites_tapDance.enc', modifiedTime: NEW_TIME },
+      ]
+      const dayCopies = (hash: string): DriveFile[] => [
+        { id: `day-old-${hash}`, name: cloudFileName(hash, DAY), modifiedTime: OLD_TIME },
+        { id: `day-new-${hash}`, name: cloudFileName(hash, DAY), modifiedTime: NEW_TIME },
+      ]
+      const downloadedIds = (prefix: string): string[] =>
+        mockDownloadFile.mock.calls.map((call) => call[0]).filter((id) => id.startsWith(prefix))
+      const uploadsOf = (name: string): unknown[][] =>
+        mockUploadFile.mock.calls.filter((call) => call[0] === name)
+
+      function remoteDayEnvelope(hash: string): Record<string, unknown> {
+        return {
+          version: 1,
+          syncUnit: `keyboards/${UID}/devices/${hash}/days/${DAY}`,
+          updatedAt: NEW_TIME,
+          salt: 's',
+          iv: 'i',
+          ciphertext: JSON.stringify({
+            type: 'typing-analytics-device',
+            key: `${UID}|${hash}|${DAY}`,
+            index: { uid: UID, entries: [] },
+            files: { 'data.jsonl': '{"id":"r"}\n' },
+          }),
+        }
+      }
+
+      it('an Analyze sync and a flush that both list no file for today create it once', async () => {
+        mockAutoSync = true
+        mockSyncState = {
+          _rev: 3,
+          my_device_id: OWN_HASH,
+          uploaded: {},
+          reconciled_at: { [pointerKey(OWN_HASH)]: 5_000 },
+          last_synced_at: 5_000,
+        }
+        await writeDayFile(DAY)
+        mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+        mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+        let release: () => void = () => {}
+        const gate = new Promise<void>((resolve) => { release = resolve })
+        mockUploadFile.mockImplementation(async (name: string, _envelope?: unknown, existingFileId?: string) => {
+          if (name === cloudFileName(OWN_HASH, DAY) && !existingFileId) {
+            await gate
+            return { id: 'created-day', modifiedTime: OLD_TIME }
+          }
+          return { id: existingFileId ?? 'file-id', modifiedTime: NEW_TIME }
+        })
+
+        const analytics = executeAnalyticsSync(UID)
+        await flushUntil(() => uploadsOf(cloudFileName(OWN_HASH, DAY)).length === 1, 'the analytics create to start')
+        notifyChange(ownUnit)
+        const flush = flushPendingChanges()
+        // The flush waits on the unit's upload lock while the create is held.
+        for (let i = 0; i < 50; i++) await new Promise<void>((resolve) => realSetImmediate(resolve))
+        release()
+        expect(await analytics).toBe(true)
+        await flush
+
+        const uploads = uploadsOf(cloudFileName(OWN_HASH, DAY))
+        expect(uploads).toHaveLength(2)
+        expect(uploads[0][2]).toBeUndefined()
+        expect(uploads[1].slice(2)).toEqual(['created-day', { createIfMissing: true }])
+        expect(hasPendingChanges()).toBe(false)
+      })
+
+      it('creates the file again when a remembered id is gone and remembers the new id', async () => {
+        await writeDayFile(DAY)
+        const name = cloudFileName(OWN_HASH, DAY)
+        syncRuntime.createdFileIds.set(name, 'stale-id')
+        mockUploadFile.mockResolvedValueOnce({ id: 'recreated-id', modifiedTime: NEW_TIME })
+
+        await syncOrUpload(ownUnit, 'test-password', [PASSWORD_CHECK_DRIVE_FILE])
+
+        expect(mockUploadFile).toHaveBeenCalledWith(name, expect.anything(), 'stale-id', { createIfMissing: true })
+        expect(syncRuntime.createdFileIds.get(name)).toBe('recreated-id')
+      })
+
+      it('a listed copy is updated in place without the create fallback', async () => {
+        await writeDayFile(DAY)
+        const name = cloudFileName(OWN_HASH, DAY)
+        syncRuntime.createdFileIds.set(name, 'remembered-id')
+
+        await syncOrUpload(ownUnit, 'test-password', dayCopies(OWN_HASH))
+
+        expect(mockUploadFile).toHaveBeenCalledTimes(1)
+        expect(mockUploadFile.mock.calls[0].slice(2)).toEqual([`day-new-${OWN_HASH}`])
+      })
+
+      it('forgets the created files on sign-out and when another account signs in', async () => {
+        syncRuntime.createdFileIds.set('a.enc', 'id-a')
+        await signOutKeepingPendingLocked()
+        expect(syncRuntime.createdFileIds.size).toBe(0)
+
+        syncRuntime.createdFileIds.set('b.enc', 'id-b')
+        await expect(switchAccountKeepingPending(async () => { throw new Error('store failed') }, 'account-b'))
+          .rejects.toThrow('store failed')
+        // The old account's tokens stay, so its files are still its own.
+        expect(syncRuntime.createdFileIds.get('b.enc')).toBe('id-b')
+
+        await switchAccountKeepingPending(async () => {}, 'account-b')
+        expect(syncRuntime.createdFileIds.size).toBe(0)
+      })
+
+      it('download sync merges a duplicated unit once, from the newest copy', async () => {
+        mockListFiles.mockResolvedValue([...favCopies(), PASSWORD_CHECK_DRIVE_FILE])
+        routeDownloads({ 'fav-new': () => makeRemoteEnvelope(NEW_TIME) })
+
+        const result = await executeSync('download', 'all')
+
+        expect(result.status).toBe('completed')
+        expect(downloadedIds('fav-')).toEqual(['fav-new'])
+        for (const call of mockUploadFile.mock.calls) expect(call[2]).not.toBe('fav-old')
+      })
+
+      it('Analyze sync merges a duplicated remote day once, from the newest copy', async () => {
+        mockListFiles.mockResolvedValue([...dayCopies(REMOTE_HASH), PASSWORD_CHECK_DRIVE_FILE])
+        routeDownloads({ [`day-new-${REMOTE_HASH}`]: () => remoteDayEnvelope(REMOTE_HASH) })
+
+        expect(await executeAnalyticsSync(UID)).toBe(true)
+
+        expect(downloadedIds('day-')).toEqual([`day-new-${REMOTE_HASH}`])
+      })
+
+      it('polling merges a duplicated unit once and does not see it as changed on the next pass', async () => {
+        mockListFiles.mockResolvedValue([...favCopies(), PASSWORD_CHECK_DRIVE_FILE])
+        routeDownloads({ 'fav-new': () => makeRemoteEnvelope(NEW_TIME) })
+
+        startPolling()
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+        await waitForPollPassForTests()
+        expect(downloadedIds('fav-')).toEqual(['fav-new'])
+        expect(syncRuntime.lastKnownRemoteState.get('favorites_tapDance.enc')).toEqual({ id: 'fav-new', modifiedTime: NEW_TIME })
+
+        mockDownloadFile.mockClear()
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+        await waitForPollPassForTests()
+        expect(mockListFiles).toHaveBeenCalledTimes(2)
+        expect(downloadedIds('fav-')).toEqual([])
+
+        stopPolling()
+      })
+
+      it('polling merges again when a different copy becomes the chosen one with the same modifiedTime', async () => {
+        const later: DriveFile = { id: 'fav-b', name: 'favorites_tapDance.enc', modifiedTime: NEW_TIME }
+        // Same time, smaller id: chosen once it is listed.
+        const earlier: DriveFile = { id: 'fav-a', name: 'favorites_tapDance.enc', modifiedTime: NEW_TIME }
+        mockListFiles
+          .mockResolvedValueOnce([later, PASSWORD_CHECK_DRIVE_FILE])
+          .mockResolvedValue([later, earlier, PASSWORD_CHECK_DRIVE_FILE])
+        mockDownloadFile.mockImplementation(async (id: string) =>
+          id.startsWith('fav-') ? makeRemoteEnvelope(NEW_TIME) : makePasswordCheckEnvelope())
+
+        startPolling()
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+        await waitForPollPassForTests()
+        expect(downloadedIds('fav-')).toEqual(['fav-b'])
+
+        mockDownloadFile.mockClear()
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+        await waitForPollPassForTests()
+        expect(downloadedIds('fav-')).toEqual(['fav-a'])
+        expect(syncRuntime.lastKnownRemoteState.get('favorites_tapDance.enc')).toEqual({ id: 'fav-a', modifiedTime: NEW_TIME })
+
+        stopPolling()
+      })
+
+      it('deleteRemoteTypingDay deletes every copy of the day', async () => {
+        mockListFiles.mockResolvedValue([...dayCopies(REMOTE_HASH), PASSWORD_CHECK_DRIVE_FILE])
+
+        expect(await deleteRemoteTypingDay(UID, REMOTE_HASH, DAY)).toBe(true)
+
+        expect(mockDeleteFile.mock.calls.map((call) => call[0]).sort())
+          .toEqual([`day-new-${REMOTE_HASH}`, `day-old-${REMOTE_HASH}`])
+      })
+
+      it('deleteRemoteTypingDay still tries every copy and then fails when one delete fails', async () => {
+        mockListFiles.mockResolvedValue([...dayCopies(REMOTE_HASH), PASSWORD_CHECK_DRIVE_FILE])
+        mockDeleteFile.mockRejectedValueOnce(new Error('boom'))
+
+        await expect(deleteRemoteTypingDay(UID, REMOTE_HASH, DAY)).rejects.toThrow('Failed to delete 1 of 2 files')
+
+        expect(mockDeleteFile).toHaveBeenCalledTimes(2)
+      })
+
+      it('reconcile deletes every copy of a day removed locally', async () => {
+        mockSyncState = {
+          _rev: 3,
+          my_device_id: OWN_HASH,
+          uploaded: { [pointerKey(OWN_HASH)]: [DAY] },
+          reconciled_at: { [pointerKey(OWN_HASH)]: 1_000 },
+          last_synced_at: 1_000,
+        }
+        mockListFiles.mockResolvedValue([...dayCopies(OWN_HASH), PASSWORD_CHECK_DRIVE_FILE])
+
+        await executeSync('upload')
+
+        expect(mockDeleteFile.mock.calls.map((call) => call[0]).sort())
+          .toEqual([`day-new-${OWN_HASH}`, `day-old-${OWN_HASH}`])
+        expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual([])
+      })
     })
 
     // --- fetchRemoteTypingDay branches ---

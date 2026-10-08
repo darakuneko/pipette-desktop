@@ -15,6 +15,7 @@ import {
   type UploadedFile,
 } from './google-drive'
 import { syncRuntime } from './sync-runtime-state'
+import { filesNamed, pickCanonicalFile } from './drive-canonical'
 import { assertNoLocalPasswordChange, assertSyncAllowed } from './sync-password-guard'
 import { ensureSyncFormatMarkerKnown, syncFormatGeneration } from './sync-format'
 import type { SyncCredentialFailureReason, SyncCredentialResult } from '../../shared/types/sync'
@@ -63,24 +64,15 @@ export const passwordCheckTiming = {
 
 /** Every password-check file in `remoteFiles`. More than one can exist
  *  (two machines creating it at once); see `findPasswordCheck`. */
-export function listedPasswordChecks(remoteFiles: DriveFile[]): DriveFile[] {
-  const fileName = driveFileName(PASSWORD_CHECK_UNIT)
-  return remoteFiles.filter((f) => f.name === fileName)
+export function listedPasswordChecks(remoteFiles: DriveFile[]): readonly DriveFile[] {
+  return filesNamed(remoteFiles, driveFileName(PASSWORD_CHECK_UNIT))
 }
 
 /** The password-check every machine uses when several are listed: the
- *  newest `modifiedTime`, ties broken by the smallest file id. */
-export function findPasswordCheck(remoteFiles: DriveFile[]): DriveFile | undefined {
-  let best: DriveFile | undefined
-  for (const file of listedPasswordChecks(remoteFiles)) {
-    if (!best) {
-      best = file
-      continue
-    }
-    const diff = Date.parse(file.modifiedTime) - Date.parse(best.modifiedTime)
-    if (diff > 0 || (diff === 0 && file.id < best.id)) best = file
-  }
-  return best
+ *  copy `pickCanonicalFile` (drive-canonical.ts) chooses — the newest
+ *  `modifiedTime`, ties broken by the smallest file id. */
+export function findPasswordCheck(remoteFiles: readonly DriveFile[]): DriveFile | undefined {
+  return pickCanonicalFile(remoteFiles, driveFileName(PASSWORD_CHECK_UNIT))
 }
 
 function forgetCreatedPasswordCheck(): void {

@@ -147,6 +147,8 @@ export async function switchAccountKeepingPending(
     // If storing fails, the old tokens stay and the next pass hands the
     // pending units back to their account.
     await storeTokens()
+    // Those ids are files of the previous account's Drive.
+    syncRuntime.createdFileIds.clear()
   })
 }
 
@@ -179,6 +181,7 @@ export async function signOutKeepingPendingLocked(): Promise<void> {
     return true
   })
   await signOut()
+  syncRuntime.createdFileIds.clear()
 }
 
 /** `signOutKeepingPendingLocked` once running sync work has finished, or

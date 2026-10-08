@@ -157,6 +157,18 @@ vi.mock('../google-drive', async () => {
       drive.beforeDelete?.(id)
       memFiles().delete(id)
     },
+    deleteFilesById: async (ids: readonly string[]) => {
+      const reasons: string[] = []
+      for (const id of ids) {
+        try {
+          drive.beforeDelete?.(id)
+          memFiles().delete(id)
+        } catch (err) {
+          reasons.push(String(err))
+        }
+      }
+      return { attempted: ids.length, failed: reasons.length, firstError: reasons[0] }
+    },
   }
 })
 
@@ -649,6 +661,93 @@ describe('sync-password-change', () => {
       for (const d of DATA) {
         expect(decryptCalls.filter(([unit]) => unit === d.unit)).toEqual([[d.unit, NEW]])
       }
+    })
+  })
+
+  // Sync reads only the chosen copy of a name (drive-canonical.ts), so the
+  // change deletes the other copies instead of re-encrypting them.
+  describe('files sharing one name', () => {
+    const STALE = '{"stale":1}'
+    const copiesOf = (name: string): string[] =>
+      [...memFiles().values()].filter((f) => f.name === name).map((f) => f.id)
+
+    /** The password-check plus two copies of DATA[0]: an older one and the
+     *  newer, chosen one (seeded later, so its modifiedTime is newer). */
+    async function seedCopies(): Promise<{ pcId: string; staleId: string; keptId: string }> {
+      const pcId = await seedEncrypted(PC_NAME, 'password-check', PC_PAYLOAD, OLD)
+      const staleId = await seedEncrypted(DATA[0].name, DATA[0].unit, STALE, OLD)
+      const keptId = await seedEncrypted(DATA[0].name, DATA[0].unit, DATA[0].plain, OLD)
+      return { pcId, staleId, keptId }
+    }
+
+    it('deletes the other copies and re-encrypts only the chosen one', async () => {
+      const { staleId, keptId } = await seedCopies()
+
+      await startPasswordChange(NEW)
+
+      expect(copiesOf(DATA[0].name)).toEqual([keptId])
+      expect(await openWith(keptId, NEW)).toBe(DATA[0].plain)
+      expect(drive.downloads).not.toContain(staleId)
+      expect(await storedPassword()).toBe(NEW)
+      await expectNoLocalChange()
+    })
+
+    it('resumes after a pass interrupted once the copies were deleted', async () => {
+      const { pcId, keptId } = await seedCopies()
+      failFirstUploadOf(DATA[0].name)
+
+      await expect(startPasswordChange(NEW)).rejects.toThrow('Drive update failed: 503')
+      expect(copiesOf(DATA[0].name)).toEqual([keptId])
+      expect(await openWith(keptId, OLD)).toBe(DATA[0].plain)
+
+      await resumePasswordChange()
+
+      expect(copiesOf(DATA[0].name)).toEqual([keptId])
+      expect(await openWith(keptId, NEW)).toBe(DATA[0].plain)
+      expect(await openWith(pcId, NEW)).toBe(PC_PAYLOAD)
+      await expectNoLocalChange()
+    })
+
+    it('stops without committing when the lock is lost during the deletes and nothing is left to convert', async () => {
+      await seedEncrypted(PC_NAME, 'password-check', PC_PAYLOAD, OLD)
+      const staleId = await seedEncrypted(DATA[0].name, DATA[0].unit, STALE, OLD)
+      // The chosen copy is already on the new key, so no conversion follows the delete.
+      const keptId = await seedEncrypted(DATA[0].name, DATA[0].unit, DATA[0].plain, NEW)
+      drive.beforeDelete = (id) => {
+        if (id !== staleId) return
+        // A peer releases our lock while the duplicate is deleted.
+        for (const lock of lockFiles()) memFiles().delete(lock.id)
+      }
+
+      await expect(startPasswordChange(NEW)).rejects.toThrow('sync.passwordChange.lockLost')
+
+      expect(copiesOf(DATA[0].name)).toEqual([keptId])
+      expect(await storedPassword()).toBe(OLD)
+      const read = await readChangeState()
+      expect(read.kind === 'ok' && read.state.step).toBe('reencrypting')
+    })
+
+    it('stops before re-encrypting when a copy cannot be deleted, and resume deletes it', async () => {
+      const { staleId, keptId } = await seedCopies()
+      let failed = false
+      drive.beforeDelete = (id) => {
+        if (id === staleId && !failed) {
+          failed = true
+          throw new Error('Drive delete failed: 503')
+        }
+      }
+
+      await expect(startPasswordChange(NEW)).rejects.toThrow('Failed to delete 1 of 1 duplicate files')
+      expect(copiesOf(DATA[0].name).sort()).toEqual([keptId, staleId].sort())
+      expect(await openWith(keptId, OLD)).toBe(DATA[0].plain)
+      const read = await readChangeState()
+      expect(read.kind === 'ok' && read.state).toMatchObject({ target: 'new', step: 'reencrypting' })
+
+      await resumePasswordChange()
+
+      expect(copiesOf(DATA[0].name)).toEqual([keptId])
+      expect(await openWith(keptId, NEW)).toBe(DATA[0].plain)
+      await expectNoLocalChange()
     })
   })
 

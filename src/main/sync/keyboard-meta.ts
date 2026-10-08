@@ -8,6 +8,7 @@ import { pLimit } from '../../shared/concurrency'
 import { decrypt } from './sync-crypto'
 import { downloadFile, driveFileName } from './google-drive'
 import type { DriveFile } from './google-drive'
+import { pickCanonicalFile } from './drive-canonical'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
 import { notifySyncUnitApplied } from './sync-unit-applied'
 import {
@@ -283,7 +284,7 @@ async function resolveDeviceNameFromRemoteSnapshots(
   password: string,
   driveFiles: DriveFile[],
 ): Promise<string | null> {
-  const target = driveFiles.find((file) => file.name === driveFileName(`keyboards/${uid}/snapshots`))
+  const target = pickCanonicalFile(driveFiles, driveFileName(`keyboards/${uid}/snapshots`))
   if (!target) return null
   try {
     const envelope = await downloadFile(target.id)

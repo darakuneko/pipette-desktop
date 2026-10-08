@@ -23,6 +23,7 @@ import { localSyncBlock, remoteSyncBlock, emitSyncBlocked } from './sync-passwor
 import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
 import { matchesScope, listLocalKeyboardUids, shouldDownloadSyncUnit } from './sync-scope'
 import { mergeWithRemote, syncOrUpload } from './sync-merge-dispatch'
+import { canonicalFiles } from './drive-canonical'
 import { collectAllSyncUnits } from './sync-bundle'
 import { backfillKeyboardMeta } from './keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
@@ -157,8 +158,9 @@ async function executeDownloadSync(
   const remoteFiles = prefetchedFiles ?? await listFiles()
   const localKeyboardUids = await listLocalKeyboardUids()
   // {file, syncUnit} pairs resolved once here rather than re-parsing the
-  // filename again inside the download loop below.
-  const filesToDownload = remoteFiles.flatMap((file) => {
+  // filename again inside the download loop below. One copy per name, so a
+  // unit with duplicate files on Drive is merged once.
+  const filesToDownload = canonicalFiles(remoteFiles).flatMap((file) => {
     const syncUnit = syncUnitFromFileName(file.name)
     if (!syncUnit || !shouldDownloadSyncUnit(syncUnit, scope, localKeyboardUids)) return []
     return [{ file, syncUnit }]
