@@ -39,6 +39,13 @@ vi.mock('node:fs/promises', () => {
       store.delete(path)
     }),
     mkdir: vi.fn(async () => {}),
+    // The token file is written temp-file-then-rename (`writeFileAtomic`).
+    rename: vi.fn(async (from: string, to: string) => {
+      const data = store.get(from)
+      if (!data) throw new Error('ENOENT')
+      store.delete(from)
+      store.set(to, data)
+    }),
     _testStore: store,
   }
 })

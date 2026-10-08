@@ -10,7 +10,10 @@
 // the target's directory, so concurrent writes to the same path never
 // share, overwrite or delete each other's temp file; the last rename wins.
 // `sweep-orphan-pack-bodies.ts` matches this name format for pack bodies
-// (`*.json.<pid>.<hex>.tmp`) — keep the two in step.
+// (`*.json.<pid>.<hex>.tmp`) — keep the two in step. When the target's
+// name is so long that the temp name would pass the 255-byte name limit
+// (`MAX_NAME_BYTES`), the temp name starts with the target's name cut
+// short instead; pack names are short enough never to be cut.
 //
 // On a failure — writing the temp file itself (e.g. ENOSPC, which can
 // still leave a partial file on disk before rejecting) or renaming it
@@ -25,9 +28,18 @@
 import { randomBytes } from 'node:crypto'
 import { renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { rename, unlink, writeFile } from 'node:fs/promises'
+import { basename } from 'node:path'
+import { truncateUtf8, utf8ByteLength } from '../../shared/utils/utf8-truncate'
+
+/** Name limit of the common file systems, in UTF-8 bytes (`utf8-truncate.ts`). */
+const MAX_NAME_BYTES = 255
 
 function tmpPathFor(path: string): string {
-  return `${path}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`
+  const suffix = `.${process.pid}.${randomBytes(6).toString('hex')}.tmp`
+  const name = basename(path)
+  const room = MAX_NAME_BYTES - utf8ByteLength(suffix)
+  if (utf8ByteLength(name) <= room) return `${path}${suffix}`
+  return `${path.slice(0, path.length - name.length)}${truncateUtf8(name, room)}${suffix}`
 }
 
 export async function writeFileAtomic(path: string, content: string | Uint8Array): Promise<void> {

@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { buildSnapshotFilename, capSnapshotDeviceName } from '../../shared/snapshot-filename'
 
 let mockUserDataPath = ''
 
@@ -76,6 +77,12 @@ describe('extractDeviceNameFromFilename', () => {
     expect(
       extractDeviceNameFromFilename('Jeneko Box 42R_2026-03-15T14-35-29.037Z_0b9f6f1e-3c1a-4e0e-9d7a-2f1d5f6b8a90.pipette'),
     ).toBe('Jeneko Box 42R')
+  })
+
+  it('reads the cut device name from a filename built with a capped name', () => {
+    const long = 'Very Long Keyboard '.repeat(20)
+    const filename = buildSnapshotFilename(long, '2026-03-15T14-35-29.037Z', '0b9f6f1e-3c1a-4e0e-9d7a-2f1d5f6b8a90')
+    expect(extractDeviceNameFromFilename(filename)).toBe(capSnapshotDeviceName(long))
   })
 
   it('returns null when the filename does not match the expected pattern', () => {

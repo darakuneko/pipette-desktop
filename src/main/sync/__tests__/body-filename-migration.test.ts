@@ -82,3 +82,20 @@ describe('migrateBodyFilenames', () => {
     expect(entries[0].filename).toBe('../evil.json')
   })
 })
+
+describe('migrateBodyFilenames with a long legacy name', () => {
+  it('moves a 240-byte legacy snapshot name to an id-carrying name the file system accepts', async () => {
+    const id = '0b9f6f1e-3c1a-4e0e-9d7a-2f1d5f6b8a90'
+    const ts = '2026-03-15T14-35-29.037Z'
+    const legacy = `${'K'.repeat(240 - ts.length - '_.pipette'.length)}_${ts}.pipette`
+    expect(Buffer.byteLength(legacy)).toBe(240)
+    await writeFile(join(dir, legacy), 'BODY')
+    const entries = [entry(id, legacy)]
+
+    expect(await migrateBodyFilenames('snapshots', dir, entries, async () => {})).toBe(true)
+    const moved = entries[0].filename
+    expect(moved.endsWith(`_${ts}_${id}.pipette`)).toBe(true)
+    expect(await readFile(join(dir, moved), 'utf-8')).toBe('BODY')
+    expect(await readdir(dir)).toEqual([moved])
+  })
+})

@@ -134,7 +134,7 @@ export function setupFavoriteStore(): void {
           const filename = idBodyFilename('favorites', id, `${type}_${tsForFilename(now)}.json`)
           const filePath = getSafeFilePath(type, filename)
 
-          await writeFile(filePath, json, 'utf-8')
+          await writeFileAtomic(filePath, json)
 
           const entry = createEntry('favorites', { id, label, filename, savedAt: now.toISOString() }, now)
 
@@ -481,7 +481,7 @@ export function setupFavoriteStore(): void {
               const filename = idBodyFilename('favorites', id, `${favType}_${tsForFilename(now)}.json`)
               const filePath = getSafeFilePath(favType, filename)
 
-              await writeFile(filePath, JSON.stringify({ type: favType, data: normalizedData }), 'utf-8')
+              await writeFileAtomic(filePath, JSON.stringify({ type: favType, data: normalizedData }))
 
               // `savedAt` keeps the exported value (the duplicate check
               // above matches on it); every clock, `created` included, is

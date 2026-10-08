@@ -246,7 +246,7 @@ export interface SaveRecordInput {
 
 async function writeRecord(meta: KeyLabelMeta, data: KeyLabelEntryFile): Promise<void> {
   await mkdir(getStoreDir(), { recursive: true })
-  await writeFile(getEntryPath(meta.filename), JSON.stringify(data, null, 2), 'utf-8')
+  await writeFileAtomic(getEntryPath(meta.filename), JSON.stringify(data, null, 2))
 }
 
 async function saveRecordUnlocked(input: SaveRecordInput): Promise<KeyLabelStoreResult<KeyLabelMeta>> {

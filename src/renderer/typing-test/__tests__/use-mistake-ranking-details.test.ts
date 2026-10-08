@@ -2,8 +2,9 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { mergeMissedDetails, useAggregatedMissedDetails } from '../use-mistake-ranking-details'
+import { dispatchSyncUnitApplied } from '../../hooks/use-sync-unit-applied'
 import type { MissedCharDetail } from '../missed-details'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 import type { RunKeystrokeLog } from '../../../shared/types/typing-run-log'
@@ -141,5 +142,94 @@ describe('useAggregatedMissedDetails', () => {
     rerender({ r: [...results] })
     expect(result.current).toBeDefined()
     expect(getLog).toHaveBeenCalledTimes(1)
+  })
+
+  describe('a sync merge of the keyboard\'s run logs', () => {
+    function missLog(typedChar: string): RunKeystrokeLog {
+      return makeLog({
+        runId: 'run-1',
+        words: [{
+          index: 0, display: 'hi', typed: `${typedChar}i`, correct: false,
+          keystrokes: [{ pressMs: 0, keycode: 0, row: 0, col: 0, correct: false, expectedChar: 'h', typedChar, mistakeKey: 'h' }],
+        }],
+      })
+    }
+    const results = [makeResult({ runId: 'run-1' })]
+    const available = new Set(['run-1'])
+
+    function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void } {
+      let resolve!: (v: T) => void
+      const promise = new Promise<T>((r) => { resolve = r })
+      return { promise, resolve }
+    }
+
+    it('re-reads a cached log, keeping the previous details until the new batch commits', async () => {
+      const second = deferred<{ success: boolean; data: RunKeystrokeLog }>()
+      const getLog = vi.fn()
+        .mockResolvedValueOnce({ success: true, data: missLog('x') })
+        .mockReturnValueOnce(second.promise)
+      window.vialAPI = { ...window.vialAPI, typingRunLogGet: getLog } as typeof window.vialAPI
+
+      const { result } = renderHook(() => useAggregatedMissedDetails('kb-1', results, available))
+      await waitFor(() => expect(result.current.get('h')?.typedCounts).toEqual({ x: 1 }))
+
+      act(() => dispatchSyncUnitApplied('keyboards/kb-1/runs'))
+      await waitFor(() => expect(getLog).toHaveBeenCalledTimes(2))
+      expect(result.current.get('h')?.typedCounts).toEqual({ x: 1 })
+
+      await act(async () => second.resolve({ success: true, data: missLog('z') }))
+      await waitFor(() => expect(result.current.get('h')?.typedCounts).toEqual({ z: 1 }))
+    })
+
+    it('a second merge during a full re-read ends with the second read', async () => {
+      const second = deferred<{ success: boolean; data: RunKeystrokeLog }>()
+      const getLog = vi.fn()
+        .mockResolvedValueOnce({ success: true, data: missLog('x') })
+        .mockReturnValueOnce(second.promise)
+        .mockResolvedValueOnce({ success: true, data: missLog('w') })
+      window.vialAPI = { ...window.vialAPI, typingRunLogGet: getLog } as typeof window.vialAPI
+
+      const { result } = renderHook(() => useAggregatedMissedDetails('kb-1', results, available))
+      await waitFor(() => expect(result.current.get('h')?.typedCounts).toEqual({ x: 1 }))
+      act(() => dispatchSyncUnitApplied('keyboards/kb-1/runs'))
+      await waitFor(() => expect(getLog).toHaveBeenCalledTimes(2))
+
+      // The first re-read settles after the second notification but before
+      // React re-runs the effect.
+      await act(async () => {
+        dispatchSyncUnitApplied('keyboards/kb-1/runs')
+        second.resolve({ success: true, data: missLog('z') })
+        for (let i = 0; i < 10; i++) await Promise.resolve()
+      })
+      await waitFor(() => expect(getLog).toHaveBeenCalledTimes(3))
+      await waitFor(() => expect(result.current.get('h')?.typedCounts).toEqual({ w: 1 }))
+    })
+
+    it('ignores another keyboard\'s runs unit', async () => {
+      const getLog = vi.fn().mockResolvedValue({ success: true, data: missLog('x') })
+      window.vialAPI = { ...window.vialAPI, typingRunLogGet: getLog } as typeof window.vialAPI
+
+      const { result } = renderHook(() => useAggregatedMissedDetails('kb-1', results, available))
+      await waitFor(() => expect(result.current.size).toBe(1))
+      act(() => dispatchSyncUnitApplied('keyboards/kb-2/runs'))
+      await act(async () => { await Promise.resolve() })
+      expect(getLog).toHaveBeenCalledTimes(1)
+    })
+
+    it('drops a read started before the merge', async () => {
+      const first = deferred<{ success: boolean; data: RunKeystrokeLog }>()
+      const getLog = vi.fn()
+        .mockReturnValueOnce(first.promise)
+        .mockResolvedValueOnce({ success: true, data: missLog('z') })
+      window.vialAPI = { ...window.vialAPI, typingRunLogGet: getLog } as typeof window.vialAPI
+
+      const { result } = renderHook(() => useAggregatedMissedDetails('kb-1', results, available))
+      await waitFor(() => expect(getLog).toHaveBeenCalledTimes(1))
+      act(() => dispatchSyncUnitApplied('keyboards/kb-1/runs'))
+      await waitFor(() => expect(result.current.get('h')?.typedCounts).toEqual({ z: 1 }))
+
+      await act(async () => first.resolve({ success: true, data: missLog('x') }))
+      expect(result.current.get('h')?.typedCounts).toEqual({ z: 1 })
+    })
   })
 })

@@ -6,6 +6,7 @@ import {
   bodyFilenameHasId,
   idBodyFilename,
   idFilenameSegment,
+  MAX_BODY_FILENAME_BYTES,
   RESERVED_FIELDS,
   STORE_GROUPS,
   bodyFieldsOf,
@@ -21,6 +22,7 @@ import {
   type EntryStore,
   type StoreMetaMap,
 } from '../entry-clocks'
+import { utf8ByteLength } from '../../../shared/utils/utf8-truncate'
 
 const T = (s: number): string => new Date(Date.UTC(2026, 0, 1) + s * 1000).toISOString()
 
@@ -281,5 +283,49 @@ describe('clock writers', () => {
   it('markDeleted never puts deletedAt before created', () => {
     const ahead = { ...base, clocks: { ...base.clocks, created: T(50) } }
     expect(markDeleted(ahead, new Date(T(9))).deletedAt).toBe(T(50))
+  })
+})
+
+describe('idBodyFilename keeps a suffix-rule name within MAX_BODY_FILENAME_BYTES', () => {
+  const ID = '0b9f6f1e-3c1a-4e0e-9d7a-2f1d5f6b8a90'
+  const TS = '2026-03-15T14-35-29.037Z'
+  const ID_PART = `_${ID}.pipette`
+
+  it('cuts the device name of a 240-byte legacy snapshot name and keeps its timestamp, id and extension', () => {
+    const legacy = `${'A'.repeat(240 - TS.length - '_.pipette'.length)}_${TS}.pipette`
+    expect(utf8ByteLength(legacy)).toBe(240)
+    const named = idBodyFilename('snapshots', ID, legacy)
+    expect(utf8ByteLength(named)).toBeLessThanOrEqual(MAX_BODY_FILENAME_BYTES)
+    expect(named.endsWith(`_${TS}${ID_PART}`)).toBe(true)
+    expect(named.startsWith('AAAA')).toBe(true)
+    expect(bodyFilenameHasId('snapshots', ID, named)).toBe(true)
+    expect(idBodyFilename('snapshots', ID, named)).toBe(named)
+  })
+
+  it('never splits a multi-byte character or surrogate pair, and drops the separators the cut leaves', () => {
+    for (const unit of ['日本語', '😀', 'é_']) {
+      const legacy = `${unit.repeat(80)}_${TS}.pipette`
+      const named = idBodyFilename('snapshots', ID, legacy)
+      expect(utf8ByteLength(named)).toBeLessThanOrEqual(MAX_BODY_FILENAME_BYTES)
+      const head = named.slice(0, -(`_${TS}${ID_PART}`).length)
+      expect(head.length).toBeGreaterThan(0)
+      expect(unit.repeat(80).startsWith(head)).toBe(true)
+      expect(head).not.toMatch(/[_.\s]$/)
+      expect(named).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/)
+    }
+  })
+
+  it('gives every device the same name for the same legacy name', () => {
+    const legacy = `${'キーボード'.repeat(20)}_${TS}.pipette`
+    expect(idBodyFilename('snapshots', ID, legacy)).toBe(idBodyFilename('snapshots', ID, legacy))
+  })
+
+  it('cuts the stem from its end when it has no `_` to keep the tail of', () => {
+    const named = idBodyFilename('favorites', 'a', `${'b'.repeat(300)}.json`)
+    expect(named).toBe(`${'b'.repeat(MAX_BODY_FILENAME_BYTES - '_a.json'.length)}_a.json`)
+  })
+
+  it('leaves a name within the limit as it was', () => {
+    expect(idBodyFilename('snapshots', ID, `KB_${TS}.pipette`)).toBe(`KB_${TS}${ID_PART}`)
   })
 })

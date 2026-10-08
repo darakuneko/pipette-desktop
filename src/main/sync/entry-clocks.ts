@@ -14,6 +14,7 @@ import type { I18nPackMeta } from '../../shared/types/i18n-store'
 import type { ThemePackMeta } from '../../shared/types/theme-store'
 import { createHash } from 'node:crypto'
 import { safeTimestamp } from './merge'
+import { truncateUtf8, truncateUtf8NamePart, utf8ByteLength } from '../../shared/utils/utf8-truncate'
 
 /** Clocks of one entry, one per field group (ISO 8601). `created` is set
  *  when an id is created or written again after being deleted / missing;
@@ -186,9 +187,41 @@ export function bodyFilenameHasId(store: EntryStore, id: string, filename: strin
   }
 }
 
+/** UTF-8 bytes a body filename built by the `suffix` rule may take: a
+ *  margin under the 255-byte name limit of common file systems
+ *  (`writeFileAtomic` shortens its own temp names when they would not fit).
+ *
+ *  Part of the naming contract every device shares: this value, the rule in
+ *  `fitStem` (cut before the stem's last `_`, then drop trailing `_` / `.` /
+ *  whitespace) and the `_{id}{ext}` layout decide which new name a legacy
+ *  name moves to. Devices running different rules would move the same
+ *  legacy entry to different files, so do not change any of them. */
+export const MAX_BODY_FILENAME_BYTES = 200
+
+/** `stem` cut so it fits in `maxBytes` (part of the naming contract, see
+ *  `MAX_BODY_FILENAME_BYTES`). The cut comes off the end of the
+ *  part before the stem's last `_`, so the part after it (the timestamp of
+ *  a legacy snapshot name `{device}_{ts}`, which `extractDeviceNameFromFilename`
+ *  in `keyboard-meta.ts` reads) stays whole; the `_` / `.` / spaces the cut
+ *  leaves are dropped. When that part cannot hold anything, the stem is
+ *  cut from its end. */
+function fitStem(stem: string, maxBytes: number): string {
+  if (utf8ByteLength(stem) <= maxBytes) return stem
+  const sep = stem.lastIndexOf('_')
+  if (sep > 0) {
+    const tail = stem.slice(sep)
+    const head = truncateUtf8NamePart(stem.slice(0, sep), maxBytes - utf8ByteLength(tail))
+    if (head) return `${head}${tail}`
+  }
+  return truncateUtf8(stem, Math.max(0, maxBytes))
+}
+
 /** `filename` in the id-carrying form of `store`; a name that already
  *  carries the id is returned as it is. Deterministic, so every device
- *  maps a legacy name to the same new one. Pack filenames are fixed per id
+ *  maps a legacy name to the same new one. The `suffix` rule keeps the new
+ *  name within `MAX_BODY_FILENAME_BYTES` by cutting the stem (`fitStem`);
+ *  the `_{id}` part and the extension are kept byte for byte, so the cut
+ *  name still carries the id. Pack filenames are fixed per id
  *  (`isSafePackId` restricts those ids). */
 export function idBodyFilename(store: EntryStore, id: string, filename: string): string {
   if (bodyFilenameHasId(store, id, filename)) return filename
@@ -196,7 +229,8 @@ export function idBodyFilename(store: EntryStore, id: string, filename: string):
   switch (STORE_GROUPS[store].filenameId) {
     case 'suffix': {
       const [stem, ext] = splitExtension(filename)
-      return `${stem}_${seg}${ext}`
+      const idPart = `_${seg}${ext}`
+      return `${fitStem(stem, MAX_BODY_FILENAME_BYTES - utf8ByteLength(idPart))}${idPart}`
     }
     case 'prefix': return `${seg}_${filename}`
     case 'fixed': return `packs/${id}.json`

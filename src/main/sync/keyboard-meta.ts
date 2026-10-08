@@ -3,7 +3,7 @@
 
 import { app } from 'electron'
 import { join } from 'node:path'
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, mkdir } from 'node:fs/promises'
 import { pLimit } from '../../shared/concurrency'
 import { decrypt } from './sync-crypto'
 import { downloadFile, driveFileName } from './google-drive'
@@ -11,6 +11,7 @@ import type { DriveFile } from './google-drive'
 import { pickCanonicalFile } from './drive-canonical'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
 import { notifySyncUnitApplied } from './sync-unit-applied'
+import { writeFileAtomic } from '../utils/write-file-atomic'
 import {
   KEYBOARD_META_SYNC_UNIT,
   createEmptyKeyboardMetaIndex,
@@ -48,7 +49,7 @@ export async function readKeyboardMetaIndex(): Promise<KeyboardMetaIndex> {
 async function writeKeyboardMetaIndex(index: KeyboardMetaIndex): Promise<void> {
   const filePath = metaFilePath()
   await mkdir(join(app.getPath('userData'), 'sync', META_DIR), { recursive: true })
-  await writeFile(filePath, JSON.stringify(index, null, 2), 'utf-8')
+  await writeFileAtomic(filePath, JSON.stringify(index, null, 2))
 }
 
 // Serialize writes so concurrent upsert/tombstone calls can't clobber each other.

@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { dirname, join } from 'node:path'
-import { mkdir, readFile, readdir, rename, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rename, unlink } from 'node:fs/promises'
 import { IpcChannels } from '../shared/ipc/channels'
 import type { LanguageListEntry, LanguageDownloadStatus, TypingTestDataset } from '../shared/types/language-store'
 import {
@@ -11,6 +11,7 @@ import { fetchTypingDataset, fetchTypingDatasetVersion, isManifestEntry, isValid
 import { fetchVerifiedBytes } from './download-util'
 import { log } from './logger'
 import { secureHandle } from './ipc-guard'
+import { writeFileAtomic } from './utils/write-file-atomic'
 
 // Downloaded language files are namespaced per provider so that two providers
 // exposing the same language name (e.g. both monkeytype and tatoeba ship an
@@ -264,7 +265,7 @@ export function setupLanguageStore(): void {
           return { success: false, error: 'Invalid language data' }
         }
         await mkdir(getLanguagesDir(p), { recursive: true })
-        await writeFile(getLanguagePath(p, name), text, 'utf-8')
+        await writeFileAtomic(getLanguagePath(p, name), text)
         log('info', `Downloaded language: ${p}/${name}`)
         return { success: true }
       } catch (err) {
@@ -367,7 +368,7 @@ export async function syncTypingDataset(
   const next = { ...overrides, [provider]: fresh }
   const path = getOverridePath()
   await mkdir(dirname(path), { recursive: true })
-  await writeFile(path, JSON.stringify(next), 'utf-8')
+  await writeFileAtomic(path, JSON.stringify(next))
   overridesCache = next
 
   // The new version's files live at a different URL and may differ in size,

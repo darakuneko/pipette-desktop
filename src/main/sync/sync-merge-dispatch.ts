@@ -5,7 +5,7 @@
 
 import { app } from 'electron'
 import { join } from 'node:path'
-import { writeFile, mkdir, readdir, unlink } from 'node:fs/promises'
+import { mkdir, readdir, unlink } from 'node:fs/promises'
 import { readFileSync } from 'node:fs'
 import { encrypt, decrypt } from './sync-crypto'
 import { listFiles, uploadFile, downloadFile, driveFileName, type DriveFile } from './google-drive'
@@ -133,7 +133,7 @@ export async function mergeDeviceDayBundle(
 
   const localPath = deviceDayJsonlPath(userData, dayRef.uid, dayRef.machineHash, dayRef.utcDay)
   await mkdir(deviceDayDir(userData, dayRef.uid, dayRef.machineHash), { recursive: true })
-  await writeFile(localPath, data, 'utf-8')
+  await writeFileAtomic(localPath, data)
 
   // Per-day bundles are replayed in full. The LWW merge is idempotent,
   // so re-applying every row in the file is cheap, correct, and avoids

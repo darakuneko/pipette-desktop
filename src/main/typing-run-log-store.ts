@@ -23,7 +23,7 @@
 
 import { app } from 'electron'
 import { join } from 'node:path'
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, unlink } from 'node:fs/promises'
 import { getAppConfigStore } from './app-config'
 import { notifyChange } from './sync/sync-service'
 import { withWriteLock } from './per-uid-write-lock'
@@ -266,7 +266,7 @@ export async function saveRunLog(uid: string, raw: unknown): Promise<{ success: 
 
       const now = new Date()
       const filename = idBodyFilename('runLogs', log.runId, `${tsForFilename(now)}.json`)
-      await writeFile(getSafeFilePath(uid, filename), validated.serialized, 'utf-8')
+      await writeFileAtomic(getSafeFilePath(uid, filename), validated.serialized)
 
       const index = await readIndexMigrated('runLogs', dir, () => readIndex(uid), (i) => writeIndex(uid, i))
       // A run saved again by id is the recorder's own write, so it brings
