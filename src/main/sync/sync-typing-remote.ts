@@ -20,6 +20,8 @@ import { requireSyncCredentials, ensurePasswordCheckValidated } from './sync-pas
 import { localSyncBlock, remoteSyncBlock } from './sync-password-guard'
 import { syncFormatGeneration } from './sync-format'
 import { mergeDeviceDayBundle } from './sync-merge-dispatch'
+import { syncRuntime } from './sync-runtime-state'
+import { resetHoldsKeyboard } from './sync-reset-lock'
 import {
   parseTypingAnalyticsDeviceDaySyncUnit,
   typingAnalyticsDeviceDaySyncUnit,
@@ -292,12 +294,34 @@ export async function deleteRemoteTypingDay(
 
 /** Lazily fetch a single remote (uid, machineHash, day) into the
  * local cache. Returns `true` when the day was downloaded and merged,
- * `false` when the cloud copy was missing, a credential check failed or a
- * sync password change is in progress. Throws `PasswordMismatchError`
- * when the password-check does not open with the stored password.
+ * `false` when the cloud copy was missing, a credential check failed, a
+ * reset of this keyboard is running or a sync password change is in
+ * progress. Throws
+ * `PasswordMismatchError` when the password-check does not open with the
+ * stored password.
  * Designed for the Sync > Typing > Device lazy-expand flow so the UI
- * can pull in only the days the user actually opens. */
+ * can pull in only the days the user actually opens.
+ * Doesn't take the sync lock: it is counted in `remoteTypingDayFetches`
+ * before its first await, and a reset that removes this keyboard's data
+ * refuses to start while it is counted (sync-reset-lock.ts). */
 export async function fetchRemoteTypingDay(
+  uid: string,
+  machineHash: string,
+  utcDay: UtcDay,
+): Promise<boolean> {
+  if (resetHoldsKeyboard(uid)) return false
+  const fetches = syncRuntime.remoteTypingDayFetches
+  fetches.set(uid, (fetches.get(uid) ?? 0) + 1)
+  try {
+    return await fetchAndMergeRemoteTypingDay(uid, machineHash, utcDay)
+  } finally {
+    const remaining = (fetches.get(uid) ?? 1) - 1
+    if (remaining > 0) fetches.set(uid, remaining)
+    else fetches.delete(uid)
+  }
+}
+
+async function fetchAndMergeRemoteTypingDay(
   uid: string,
   machineHash: string,
   utcDay: UtcDay,

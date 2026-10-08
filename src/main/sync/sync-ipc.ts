@@ -2,24 +2,21 @@
 // IPC handler registration for sync operations
 
 import { BrowserWindow, app, dialog } from 'electron'
-import { rm, readFile, readdir, writeFile } from 'node:fs/promises'
+import { readFile, readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { IpcChannels } from '../../shared/ipc/channels'
-import { getAppConfigStore, onAppConfigChange } from '../app-config'
+import { onAppConfigChange } from '../app-config'
 import {
   hasStoredPassword,
   checkPasswordStrength,
 } from './sync-crypto'
 import { startOAuthFlow, getAuthStatus, signOut } from './google-auth'
 import { clearHubTokenCache } from '../hub/hub-ipc'
-import { deleteFilesByPrefix, deleteFilesByExactName, deleteFile, driveFileName } from './google-drive'
 import { broadcastToAllWindows } from '../utils/broadcast'
 import {
   executeAnalyticsSync,
   executeSync,
   hasPendingChanges,
-  cancelPendingChanges,
-  isSyncInProgress,
   notifyChange,
   scheduleFlushIfPending,
   setProgressCallback,
@@ -58,73 +55,31 @@ import {
   listRemoteTypingHashesForUidFromCloud,
   listRemoteFileNames,
   SyncCredentialError,
-  SyncBlockedError,
-  assertSyncAllowed,
-  forgetChangeStateCache,
-  assertNoLocalPasswordChange,
 } from './sync-service'
 import { importLocalData } from './local-data-import'
 import { exportTypingDataForKeyboard, importTypingDataFiles, type ImportResult } from '../typing-analytics/import-export'
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import { ensureCacheIsFresh } from '../typing-analytics/cache-rebuild'
 import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
-import { deleteAllTypingForKeyboard } from '../typing-analytics/typing-analytics-service'
-import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle, SyncOperationResult, ImportLocalDataResult, PasswordChangeDeleteResult, SyncFormatStatus } from '../../shared/types/sync'
+import type { SyncProgress, PasswordStrength, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncBundle, SyncOperationResult, ImportLocalDataResult, PasswordChangeDeleteResult, SyncFormatStatus } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
+import { wrapIpc } from './sync-ipc-wrap'
+import { setupSyncResetIpc } from './sync-reset-ipc'
 import type { FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
 import {
   extractDeviceNameFromFilename,
   getActiveKeyboardMetaMap,
   readKeyboardMetaIndex,
-  tombstoneAllKeyboardMeta,
-  tombstoneKeyboardMeta,
   upsertKeyboardMeta,
   nameKeyboardOnConnect,
 } from './keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
-import { I18N_SYNC_UNIT_PREFIX } from '../../shared/types/i18n-store'
-import { THEME_SYNC_UNIT_PREFIX } from '../../shared/types/theme-store'
-import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
-import { TYPING_TEST_TEXT_SYNC_UNIT } from '../typing-test-text-store'
 import { isSafeKey } from '../utils/safe-filename'
-
-interface IpcResult {
-  success: boolean
-  error?: string
-  reason?: SyncCredentialFailureReason
-}
-
-// `T` lets a handler pass a payload back through the same success/failure
-// wrapping every other handler uses, instead of bypassing wrapIpc entirely
-// just to add one extra field (IMPORT_LOCAL_DATA uses this to return
-// `cancelled`). Most callers don't need it and leave T at its default —
-// `fn` returning `void` merges nothing extra in. `Omit<T, keyof IpcResult>`
-// keeps a handler's payload from clobbering the envelope: `fn` can't
-// declare its own `success`/`error`/`reason` field, so the spread below can
-// never overwrite the ones this wrapper sets.
-async function wrapIpc<T extends object = object>(fallbackMessage: string, fn: () => Promise<Omit<T, keyof IpcResult> | void>): Promise<IpcResult & T> {
-  try {
-    const payload = await fn()
-    return { success: true, ...(payload ?? {}) } as IpcResult & T
-  } catch (err) {
-    if (err instanceof SyncCredentialError) {
-      return { success: false, error: err.message, reason: err.reason } as IpcResult & T
-    }
-    return { success: false, error: err instanceof Error ? err.message : fallbackMessage } as IpcResult & T
-  }
-}
 
 function getDialogWindow(): BrowserWindow | undefined {
   return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
 }
-
-/** `SyncResetTargets`' optional boolean fields — every one of them
- *  follows the identical "boolean or absent" validation and the same
- *  "counts toward at least one target selected" rule, so both the
- *  per-field type checks and the no-targets guard below loop over this
- *  instead of hand-repeating four near-identical `if` blocks. */
-const OPTIONAL_SYNC_RESET_TARGETS = ['i18nPacks', 'themePacks', 'keyLabels', 'typingTestTexts'] as const
 
 function validateSyncScope(raw: unknown): SyncScope | undefined {
   if (raw == null) return undefined
@@ -244,79 +199,7 @@ export function setupSyncIpc(): void {
     wrapIpc('Release lock failed', () => releasePasswordChangeLocks()),
   )
 
-  secureHandle(IpcChannels.SYNC_RESET_TARGETS, (_event, targets: SyncResetTargets) =>
-    wrapIpc('Reset sync targets failed', async () => {
-      if (typeof targets !== 'object' || targets === null) throw new Error('Invalid targets')
-      const hasKeyboards = targets.keyboards === true || (Array.isArray(targets.keyboards) && targets.keyboards.length > 0)
-      if (typeof targets.keyboards !== 'boolean' && !Array.isArray(targets.keyboards)) {
-        throw new Error('Invalid targets: keyboards must be boolean or string[]')
-      }
-      if (typeof targets.favorites !== 'boolean') {
-        throw new Error('Invalid targets: favorites must be boolean')
-      }
-      for (const key of OPTIONAL_SYNC_RESET_TARGETS) {
-        if (targets[key] !== undefined && typeof targets[key] !== 'boolean') {
-          throw new Error(`Invalid targets: ${key} must be boolean`)
-        }
-      }
-      if (!hasKeyboards && !targets.favorites && !OPTIONAL_SYNC_RESET_TARGETS.some((key) => targets[key])) {
-        throw new Error('No targets selected')
-      }
-      if (isSyncInProgress()) throw new Error('Cannot reset while sync is in progress')
-      await assertSyncAllowed()
-      let metaChanged = false
-      // Unit-name-only labels for any target whose Drive delete batch had
-      // a rejection — collected rather than thrown immediately so every
-      // requested target still gets attempted even if an earlier one
-      // partially failed (a rejected delete does not stop the batch).
-      const failedTargets: string[] = []
-      if (targets.keyboards === true) {
-        cancelPendingChanges('keyboards/')
-        const result = await deleteFilesByPrefix('keyboards_')
-        if (result.failed > 0) failedTargets.push('keyboards')
-        const tombstoned = await tombstoneAllKeyboardMeta()
-        if (tombstoned > 0) metaChanged = true
-      } else if (Array.isArray(targets.keyboards)) {
-        for (const uid of targets.keyboards) {
-          if (typeof uid !== 'string' || !isSafeKey(uid)) throw new Error('Invalid keyboard UID')
-          cancelPendingChanges(`keyboards/${uid}/`)
-          const result = await deleteFilesByPrefix(`keyboards_${uid}_`)
-          if (result.failed > 0) failedTargets.push(`keyboards/${uid}`)
-          const tombstoneResult = await tombstoneKeyboardMeta(uid)
-          if (tombstoneResult === 'tombstoned') metaChanged = true
-        }
-      }
-      if (targets.favorites) {
-        cancelPendingChanges('favorites/')
-        const result = await deleteFilesByPrefix('favorites_')
-        if (result.failed > 0) failedTargets.push('favorites')
-      }
-      if (targets.i18nPacks) {
-        cancelPendingChanges(I18N_SYNC_UNIT_PREFIX)
-        const result = await deleteFilesByPrefix('i18n_')
-        if (result.failed > 0) failedTargets.push('i18nPacks')
-      }
-      if (targets.themePacks) {
-        cancelPendingChanges(THEME_SYNC_UNIT_PREFIX)
-        const result = await deleteFilesByPrefix('themes_')
-        if (result.failed > 0) failedTargets.push('themePacks')
-      }
-      if (targets.keyLabels) {
-        cancelPendingChanges(KEY_LABEL_SYNC_UNIT)
-        const result = await deleteFilesByExactName(driveFileName(KEY_LABEL_SYNC_UNIT))
-        if (result.failed > 0) failedTargets.push('keyLabels')
-      }
-      if (targets.typingTestTexts) {
-        cancelPendingChanges(TYPING_TEST_TEXT_SYNC_UNIT)
-        const result = await deleteFilesByExactName(driveFileName(TYPING_TEST_TEXT_SYNC_UNIT))
-        if (result.failed > 0) failedTargets.push('typingTestTexts')
-      }
-      if (metaChanged) notifyChange(KEYBOARD_META_SYNC_UNIT)
-      if (failedTargets.length > 0) {
-        throw new Error(`Failed to delete remote data for: ${failedTargets.join(', ')}`)
-      }
-    }),
-  )
+  setupSyncResetIpc()
 
   secureHandle(IpcChannels.SYNC_HAS_PASSWORD, () => hasStoredPassword())
 
@@ -407,106 +290,6 @@ export function setupSyncIpc(): void {
     if (metaBackfilled) notifyChange(KEYBOARD_META_SYNC_UNIT)
     return results
   })
-
-  // --- Reset keyboard data (per-device) ---
-  secureHandle(IpcChannels.RESET_KEYBOARD_DATA, (_event, uid: string) =>
-    wrapIpc('Reset keyboard data failed', async () => {
-      if (isSyncInProgress()) throw new Error('Cannot reset while sync is in progress')
-      if (!isSafeKey(uid)) {
-        throw new Error('Invalid uid')
-      }
-      // Refused while a sync password change is in progress. When Drive
-      // can't be checked (offline, signed out) the local reset still runs
-      // but the remote delete is skipped: a lock may be there unseen. Drive
-      // needing a newer app also only skips the remote delete: this
-      // machine's local data is still its own to remove.
-      const remoteDeleteAllowed = await assertSyncAllowed().then(
-        () => true,
-        (err: unknown) => {
-          if (err instanceof SyncBlockedError && err.reason !== 'updateRequired') throw err
-          return false
-        },
-      )
-      // Flush + unlink this keyboard's analytics JSONL and tombstone its
-      // SQLite-cache rows first, otherwise the Analyze view keeps showing the
-      // keyboard from the stale cache after the directory is removed.
-      await deleteAllTypingForKeyboard(uid).catch((err) => {
-        console.warn('[sync-ipc] reset keyboard: analytics cache cleanup failed', err)
-      })
-      cancelPendingChanges(`keyboards/${uid}/`)
-      const userData = app.getPath('userData')
-      await rm(join(userData, 'sync', 'keyboards', uid), { recursive: true, force: true })
-      // Best-effort remote deletion
-      if (remoteDeleteAllowed) await deleteFilesByPrefix(`keyboards_${uid}_`).catch(() => {})
-      // Tombstone meta entry so other devices see the removal
-      const tombstoneResult = await tombstoneKeyboardMeta(uid)
-      if (tombstoneResult === 'tombstoned') {
-        notifyChange(KEYBOARD_META_SYNC_UNIT)
-      }
-    }),
-  )
-
-  // --- Reset local targets ---
-  secureHandle(IpcChannels.RESET_LOCAL_TARGETS, (_event, targets: LocalResetTargets) =>
-    wrapIpc('Reset local targets failed', async () => {
-      if (typeof targets !== 'object' || targets === null) throw new Error('Invalid targets')
-      if (typeof targets.keyboards !== 'boolean' || typeof targets.favorites !== 'boolean' || typeof targets.appSettings !== 'boolean') {
-        throw new Error('Invalid targets: expected boolean fields')
-      }
-      if (targets.i18nPacks !== undefined && typeof targets.i18nPacks !== 'boolean') {
-        throw new Error('Invalid targets: i18nPacks must be boolean')
-      }
-      if (targets.themePacks !== undefined && typeof targets.themePacks !== 'boolean') {
-        throw new Error('Invalid targets: themePacks must be boolean')
-      }
-      if (!targets.keyboards && !targets.favorites && !targets.appSettings && !targets.i18nPacks && !targets.themePacks) throw new Error('No targets selected')
-      if (isSyncInProgress()) throw new Error('Cannot reset while sync is in progress')
-      // App settings include local/auth, which holds a password change's
-      // state; removing it mid-change would orphan the Drive lock.
-      if (targets.appSettings) await assertNoLocalPasswordChange()
-      const userData = app.getPath('userData')
-      const allSelected = targets.keyboards && targets.favorites && targets.appSettings && targets.i18nPacks && targets.themePacks
-      if (allSelected) {
-        cancelPendingChanges()
-        stopPolling()
-      } else {
-        if (targets.keyboards) cancelPendingChanges('keyboards/')
-        if (targets.favorites) {
-          cancelPendingChanges('favorites/')
-          // Imported typing-test texts and key-display labels are both
-          // global, all-keyboard user content — reset them alongside
-          // favorites (the global-content reset bucket).
-          cancelPendingChanges(TYPING_TEST_TEXT_SYNC_UNIT)
-          cancelPendingChanges(KEY_LABEL_SYNC_UNIT)
-        }
-        if (targets.i18nPacks) cancelPendingChanges(I18N_SYNC_UNIT_PREFIX)
-        if (targets.themePacks) cancelPendingChanges(THEME_SYNC_UNIT_PREFIX)
-        // Clearing appSettings resets autoSync config, so stop polling to match
-        if (targets.appSettings) stopPolling()
-      }
-      if (targets.keyboards) {
-        await rm(join(userData, 'sync', 'keyboards'), { recursive: true, force: true })
-      }
-      if (targets.favorites) {
-        await rm(join(userData, 'sync', 'favorites'), { recursive: true, force: true })
-        await rm(join(userData, 'sync', 'typing-test-texts'), { recursive: true, force: true })
-        await rm(join(userData, 'sync', 'key-labels'), { recursive: true, force: true })
-      }
-      if (targets.i18nPacks) {
-        await rm(join(userData, 'sync', 'i18n'), { recursive: true, force: true })
-      }
-      if (targets.themePacks) {
-        await rm(join(userData, 'sync', 'themes'), { recursive: true, force: true })
-      }
-      if (targets.appSettings) {
-        getAppConfigStore().clear()
-        await rm(join(userData, 'local', 'auth'), { recursive: true, force: true })
-        forgetChangeStateCache()
-        await rm(join(userData, 'local', 'downloads', 'languages'), { recursive: true, force: true })
-        await rm(join(userData, 'local', 'logs'), { recursive: true, force: true })
-      }
-    }),
-  )
 
   // --- Export local data ---
   secureHandle(IpcChannels.EXPORT_LOCAL_DATA, () =>
@@ -606,18 +389,6 @@ export function setupSyncIpc(): void {
     if (typeof syncUnit !== 'string' || !syncUnit) return Promise.resolve(null)
     return fetchRemoteBundle(syncUnit)
   })
-
-  secureHandle(IpcChannels.SYNC_DELETE_FILES, (_event, fileIds: string[]) =>
-    wrapIpc('Delete files failed', async () => {
-      if (!Array.isArray(fileIds) || fileIds.length === 0) throw new Error('No files specified')
-      if (isSyncInProgress()) throw new Error('Cannot delete while sync is in progress')
-      await assertSyncAllowed()
-      for (const id of fileIds) {
-        if (typeof id !== 'string') throw new Error('Invalid file ID')
-        await deleteFile(id)
-      }
-    }),
-  )
 
   // --- Password check existence ---
   secureHandle(IpcChannels.SYNC_CHECK_PASSWORD_EXISTS, () => checkPasswordCheckExists())

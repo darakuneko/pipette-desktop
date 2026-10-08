@@ -350,14 +350,17 @@ describe('google-drive', () => {
         }), { status: 200, headers: { 'Content-Type': 'application/json' } })
       })
       vi.stubGlobal('fetch', fetchSpy)
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
       const result = await deleteFilesByExactName('key-labels.enc')
 
-      expect(result).toEqual({ attempted: 2, failed: 1 })
+      expect(result).toEqual({ attempted: 2, failed: 1, firstError: expect.stringContaining('network error') })
+      expect(warn).toHaveBeenCalledWith(expect.stringMatching(/delete of b failed: .*network error/))
+      warn.mockRestore()
     })
   })
 
-  // The remote reset (SYNC_RESET_TARGETS in sync-ipc.ts) deletes by these
+  // The remote reset (SYNC_RESET_TARGETS in sync-reset-ipc.ts) deletes by these
   // prefixes and exact names; none of them may reach the password-change
   // lock, which only its holder (or an explicit unlock) removes, nor a
   // sync-format marker, which only a newer app's cleanup removes.

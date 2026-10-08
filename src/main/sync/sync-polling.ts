@@ -26,7 +26,7 @@ let firstPassTimer: ReturnType<typeof setTimeout> | null = null
 let inFlightPoll: Promise<void> | null = null
 
 async function pollForRemoteChanges(): Promise<void> {
-  const releaseLock = tryClaimSyncLock()
+  const releaseLock = tryClaimSyncLock({ waitable: true })
   if (!releaseLock) return
 
   try {
@@ -196,17 +196,10 @@ export function stopPolling(): void {
   }
 }
 
-/** The poll pass (interval tick or delayed first pass) that has not settled yet.
- * executeSync waits on it instead of skipping as busy; tests await the exact
- * pass. */
-export function inFlightPollPass(): Promise<void> | null {
-  return inFlightPoll
-}
-
-/** Test-only: resolves when the running poll pass has
- * settled (immediately when none is running). */
+/** Test-only: resolves when the running poll pass (interval tick or delayed
+ * first pass) has settled (immediately when none is running). */
 export function waitForPollPassForTests(): Promise<void> {
-  return inFlightPollPass() ?? Promise.resolve()
+  return inFlightPoll ?? Promise.resolve()
 }
 
 /** Test-only reset for the tracked pass — called by the sync-service

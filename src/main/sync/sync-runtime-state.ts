@@ -40,10 +40,19 @@ export const syncRuntime = {
   isQuitting: false,
   isSyncing: false,
   /** Settles (never rejects) when the work holding `isSyncing` (a flush,
-   *  executeSync, a poll, a password change or a lock release) ends; null
-   *  when nothing holds it. Set and cleared together with `isSyncing` by
-   *  `claimSyncLock`. */
+   *  executeSync, a poll, a password change, a lock release or a reset)
+   *  ends; null when nothing holds it. Set and cleared together with
+   *  `isSyncing` by `claimSyncLock`. */
   inFlightPass: null as Promise<void> | null,
+  /** Whether the holder of `inFlightPass` claimed it as waitable: work that
+   *  always settles on its own (a poll, a reset), so `executeSync` waits for
+   *  it instead of skipping. Set and cleared together with `inFlightPass`. */
+  inFlightPassWaitable: false,
+  /** Keyboards whose data the running reset removes (sync-reset-lock.ts):
+   *  every keyboard, the listed uids, or null when no reset is running or it
+   *  removes no keyboard data. Analytics syncs and remote day fetches of
+   *  these keyboards don't start while it is set. */
+  resetKeyboards: null as 'all' | ReadonlySet<string> | null,
   /** Drive id and `modifiedTime` of the password-check this machine last
    *  opened with its stored password; null when none has been validated
    *  since the cache was reset. A listing whose chosen password-check
@@ -91,6 +100,36 @@ export const syncRuntime = {
    *  can proceed in parallel since their cloud file namespaces
    *  (`keyboards/{uid}/devices/*`) are disjoint. */
   analyticsSyncingUids: new Set<string>(),
+  /** Remote day fetches running per keyboard (`fetchRemoteTypingDay`,
+   *  sync-typing-remote.ts); a uid is removed when its count reaches 0. A
+   *  reset that removes a listed keyboard's data refuses to start. */
+  remoteTypingDayFetches: new Map<string, number>(),
+}
+
+/** Puts every `syncRuntime` field back to its initial value. Test-only —
+ *  called by the sync-service facade's `_resetForTests`. */
+export function resetSyncRuntimeForTests(): void {
+  clearFlushTimer()
+  syncRuntime.pendingChanges.clear()
+  syncRuntime.pendingGeneration.clear()
+  syncRuntime.lastKnownRemoteState.clear()
+  syncRuntime.isSyncing = false
+  syncRuntime.inFlightPass = null
+  syncRuntime.inFlightPassWaitable = false
+  syncRuntime.resetKeyboards = null
+  syncRuntime.isQuitting = false
+  syncRuntime.progressCallback = null
+  syncRuntime.validatedPasswordCheck = null
+  syncRuntime.passwordCheckCreated = null
+  syncRuntime.passwordCheckCreating = null
+  syncRuntime.syncFormatMarkerCreatedAt = null
+  syncRuntime.syncFormatMarkerSeenAt = null
+  syncRuntime.syncFormatMarkerCreating = null
+  syncRuntime.passwordChangeUndecryptable = null
+  syncRuntime.passwordChangeLockLost = false
+  syncRuntime.passwordChangeRun = null
+  syncRuntime.analyticsSyncingUids.clear()
+  syncRuntime.remoteTypingDayFetches.clear()
 }
 
 export function hasPendingChanges(): boolean {
@@ -135,30 +174,38 @@ export function clearFlushTimer(): void {
   syncRuntime.debounceDueAt = null
 }
 
+export interface SyncLockOptions {
+  /** The holder always settles on its own, so `executeSync` waits for it
+   *  (`inFlightPassWaitable`). */
+  waitable?: boolean
+}
+
 /** Takes the sync lock unless it is held (null then). The check and the
  *  claim happen in one synchronous step, so two callers resuming from the
  *  same await cannot both take it. */
-export function tryClaimSyncLock(): (() => void) | null {
-  return syncRuntime.isSyncing ? null : claimSyncLock()
+export function tryClaimSyncLock(options?: SyncLockOptions): (() => void) | null {
+  return syncRuntime.isSyncing ? null : claimSyncLock(options)
 }
 
 /** Takes the sync lock and publishes this pass on `inFlightPass` in the
  *  same step. The returned release frees both only while this pass is still
- *  the published one (a reset may have replaced it), and settles the pass
- *  for anyone waiting on it.
+ *  the published one (a test reset may have replaced it), and settles the
+ *  pass for anyone waiting on it.
  *  Callers check `isSyncing` in the same synchronous step, or use
  *  `tryClaimSyncLock`. */
-export function claimSyncLock(): () => void {
+export function claimSyncLock(options: SyncLockOptions = {}): () => void {
   let settle!: () => void
   const pass = new Promise<void>((resolve) => {
     settle = resolve
   })
   syncRuntime.isSyncing = true
   syncRuntime.inFlightPass = pass
+  syncRuntime.inFlightPassWaitable = options.waitable === true
   return () => {
     if (syncRuntime.inFlightPass === pass) {
       syncRuntime.isSyncing = false
       syncRuntime.inFlightPass = null
+      syncRuntime.inFlightPassWaitable = false
     }
     settle()
   }

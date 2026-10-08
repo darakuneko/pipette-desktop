@@ -321,15 +321,17 @@ export function syncUnitFromFileName(fileName: string): string | null {
   return null
 }
 
-/** Outcome of a matched-files delete batch: `attempted` is how many files
- *  matched the predicate (0 is a legitimate "nothing to delete", not a
- *  failure); `failed` is how many of those rejected. Callers (the
- *  SYNC_RESET_TARGETS IPC handler) surface `failed > 0` as a reset
- *  failure instead of silently discarding it the way a bare
- *  `Promise.allSettled` would. */
+/** Outcome of a delete batch: `attempted` is how many files it tried to
+ *  delete (0 is a legitimate "nothing to delete", not a failure); `failed`
+ *  is how many of those rejected. Callers (the SYNC_RESET_TARGETS and
+ *  SYNC_DELETE_FILES IPC handlers) surface `failed > 0` as a failure
+ *  instead of silently discarding it the way a bare `Promise.allSettled`
+ *  would. */
 export interface DeleteMatchingFilesResult {
   attempted: number
   failed: number
+  /** Message of the first rejected delete; absent when none failed. */
+  firstError?: string
 }
 
 /** Shared body for `deleteFilesByPrefix`/`deleteFilesByExactName`: list,
@@ -343,13 +345,22 @@ async function deleteMatchingFiles(
   listOptions?: ListFilesOptions,
 ): Promise<DeleteMatchingFilesResult> {
   const files = await listFiles(listOptions)
-  const matched = files.filter(predicate)
+  return deleteFilesById(files.filter(predicate).map((file) => file.id))
+}
+
+/** Deletes every file in `fileIds` with bounded concurrency. A rejected
+ *  delete does not stop the others; each rejection is logged. */
+export async function deleteFilesById(fileIds: readonly string[]): Promise<DeleteMatchingFilesResult> {
   const limit = pLimit(DELETE_CONCURRENCY)
-  const results = await Promise.allSettled(
-    matched.map((file) => limit(() => deleteFile(file.id))),
-  )
-  const failed = results.filter((r) => r.status === 'rejected').length
-  return { attempted: matched.length, failed }
+  const results = await Promise.allSettled(fileIds.map((id) => limit(() => deleteFile(id))))
+  const reasons: string[] = []
+  results.forEach((result, i) => {
+    if (result.status === 'fulfilled') return
+    const reason = result.reason instanceof Error ? result.reason.message : String(result.reason)
+    console.warn(`[google-drive] delete of ${fileIds[i]} failed: ${reason}`)
+    reasons.push(reason)
+  })
+  return { attempted: fileIds.length, failed: reasons.length, firstError: reasons[0] }
 }
 
 export async function deleteFilesByPrefix(prefix: string): Promise<DeleteMatchingFilesResult> {
