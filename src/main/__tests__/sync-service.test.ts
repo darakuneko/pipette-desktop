@@ -260,7 +260,9 @@ import {
   fetchRemoteTypingDay,
   executeAnalyticsSync,
   waitForPollPassForTests,
+  withResetLock,
   _resetForTests,
+  type ResetKeyboards,
 } from '../sync/sync-service'
 import { syncOrUpload, mergeWithRemote } from '../sync/sync-merge-dispatch'
 import { readIndexFile, readSettingsFile } from '../sync/sync-bundle'
@@ -1132,6 +1134,203 @@ describe('sync-service', () => {
         expect(syncRuntime.inFlightPass).toBeNull()
         expect(syncRuntime.pendingGeneration.size).toBe(0)
       })
+    })
+  })
+
+  describe('reset holding the sync lock', () => {
+    const gateReleases: Array<() => void> = []
+
+    /** Starts a reset whose body waits for `release`; afterEach releases it too. */
+    function holdReset(keyboards: ResetKeyboards = null): { done: Promise<void>; release: () => void } {
+      let release!: () => void
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      gateReleases.push(release)
+      return { done: withResetLock(keyboards, () => gate, 'busy'), release }
+    }
+
+    async function turns(count = 5): Promise<void> {
+      for (let i = 0; i < count; i++) {
+        await new Promise<void>((resolve) => realSetImmediate(resolve))
+      }
+    }
+
+    beforeEach(() => {
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+    })
+
+    afterEach(() => {
+      for (const release of gateReleases.splice(0)) release()
+      mockListFiles.mockImplementation(async () => [])
+      mockDownloadFile.mockImplementation(async () => ({}))
+    })
+
+    it('holds the lock as a waitable holder and records its keyboards until the reset ends', async () => {
+      const reset = holdReset(['uid-a'])
+      expect(isSyncInProgress()).toBe(true)
+      expect(syncRuntime.inFlightPassWaitable).toBe(true)
+      expect(syncRuntime.resetKeyboards).toEqual(new Set(['uid-a']))
+
+      reset.release()
+      await reset.done
+
+      expect(isSyncInProgress()).toBe(false)
+      expect(syncRuntime.inFlightPass).toBeNull()
+      expect(syncRuntime.inFlightPassWaitable).toBe(false)
+      expect(syncRuntime.resetKeyboards).toBeNull()
+    })
+
+    it('records no keyboards for a reset without keyboard data', () => {
+      holdReset(null)
+      expect(syncRuntime.resetKeyboards).toBeNull()
+      expect(isSyncInProgress()).toBe(true)
+    })
+
+    it('releases the lock when the reset throws', async () => {
+      await expect(withResetLock('all', async () => {
+        throw new Error('rm failed')
+      })).rejects.toThrow('rm failed')
+
+      expect(isSyncInProgress()).toBe(false)
+      expect(syncRuntime.resetKeyboards).toBeNull()
+    })
+
+    it('refuses with the default message while another pass holds the lock', async () => {
+      const release = claimSyncLock()
+      const body = vi.fn(async () => {})
+
+      await expect(withResetLock(null, body)).rejects.toThrow('Cannot reset while sync is in progress')
+
+      expect(body).not.toHaveBeenCalled()
+      release()
+    })
+
+    it('refuses a reset of a keyboard with an analytics sync running', async () => {
+      syncRuntime.analyticsSyncingUids.add('uid-a')
+      const body = vi.fn(async () => {})
+
+      await expect(withResetLock(['uid-a'], body)).rejects.toThrow()
+      await expect(withResetLock('all', body)).rejects.toThrow()
+      expect(body).not.toHaveBeenCalled()
+      expect(isSyncInProgress()).toBe(false)
+
+      await withResetLock(['uid-b'], body)
+      await withResetLock(null, body)
+      expect(body).toHaveBeenCalledTimes(2)
+    })
+
+    it('refuses a reset of a keyboard with a remote day fetch running', async () => {
+      const listGate = new Promise<DriveFile[]>((resolve) => {
+        gateReleases.push(() => resolve([PASSWORD_CHECK_DRIVE_FILE]))
+      })
+      mockListFiles.mockImplementationOnce(() => listGate)
+      const fetch = fetchRemoteTypingDay('uid-a', 'remote-hash', '2026-04-18')
+      await flushUntil(() => mockListFiles.mock.calls.length === 1, 'the fetch to list')
+      expect(syncRuntime.remoteTypingDayFetches.get('uid-a')).toBe(1)
+      const body = vi.fn(async () => {})
+
+      await expect(withResetLock(['uid-a'], body)).rejects.toThrow()
+      await expect(withResetLock('all', body)).rejects.toThrow()
+      await withResetLock(['uid-b'], body)
+      await withResetLock(null, body)
+      expect(body).toHaveBeenCalledTimes(2)
+
+      for (const release of gateReleases.splice(0)) release()
+      expect(await fetch).toBe(false)
+      expect(syncRuntime.remoteTypingDayFetches.size).toBe(0)
+    })
+
+    it('a remote day fetch that throws is no longer counted', async () => {
+      mockListFiles.mockRejectedValueOnce(new Error('network error'))
+
+      await expect(fetchRemoteTypingDay('uid-a', 'remote-hash', '2026-04-18')).rejects.toThrow('network error')
+
+      expect(syncRuntime.remoteTypingDayFetches.size).toBe(0)
+    })
+
+    it('an analytics sync and a remote day fetch of a keyboard being reset do not start', async () => {
+      holdReset(['uid-a'])
+
+      expect(await executeAnalyticsSync('uid-a')).toBe(false)
+      expect(await fetchRemoteTypingDay('uid-a', 'remote-hash', '2026-04-18')).toBe(false)
+
+      expect(mockListFiles).not.toHaveBeenCalled()
+      expect(syncRuntime.analyticsSyncingUids.size).toBe(0)
+      expect(syncRuntime.remoteTypingDayFetches.size).toBe(0)
+    })
+
+    it('an analytics sync and a remote day fetch of another keyboard still run', async () => {
+      holdReset(['uid-a'])
+
+      await executeAnalyticsSync('uid-b')
+      expect(mockListFiles).toHaveBeenCalled()
+      mockListFiles.mockClear()
+      await fetchRemoteTypingDay('uid-b', 'remote-hash', '2026-04-18')
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
+    })
+
+    it('a reset of every keyboard stops an analytics sync of any keyboard', async () => {
+      holdReset('all')
+
+      expect(await executeAnalyticsSync('uid-b')).toBe(false)
+      expect(mockListFiles).not.toHaveBeenCalled()
+    })
+
+    it('a poll pass skips during a reset', async () => {
+      holdReset()
+
+      startPolling()
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await waitForPollPassForTests()
+
+      expect(mockListFiles).not.toHaveBeenCalled()
+      stopPolling()
+    })
+
+    it('a flush waits for the reset, then runs', async () => {
+      mockAutoSync = true
+      await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'data.json', content: '{"data":1}' })
+      const reset = holdReset()
+      notifyChange('favorites/tapDance')
+
+      const flush = flushPendingChanges()
+      await turns()
+      expect(mockListFiles).not.toHaveBeenCalled()
+
+      reset.release()
+      await reset.done
+      await flush
+
+      expect(mockListFiles).toHaveBeenCalled()
+      expect(hasPendingChanges()).toBe(false)
+    })
+
+    it('executeSync waits for the reset instead of returning busy', async () => {
+      const reset = holdReset()
+
+      const sync = executeSync('download')
+      await turns()
+      expect(mockListFiles).not.toHaveBeenCalled()
+
+      reset.release()
+      await reset.done
+
+      expect(await sync).toEqual({ status: 'completed' })
+      expect(mockListFiles).toHaveBeenCalled()
+    })
+
+    it('before-quit waits for a running reset', async () => {
+      const reset = holdReset()
+
+      captureBeforeQuitHandler()({ preventDefault: vi.fn() })
+      await turns()
+      expect(app.quit).not.toHaveBeenCalled()
+
+      reset.release()
+      await reset.done
+      await flushUntil(() => vi.mocked(app.quit).mock.calls.length > 0, 'the quit phases to call app.quit')
     })
   })
 

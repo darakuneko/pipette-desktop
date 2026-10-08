@@ -19,6 +19,7 @@
 //   sync-polling.ts          — 3-minute background polling
 //   sync-analytics.ts        — Analyze-panel-triggered analytics sync
 //   sync-flush.ts            — debounced auto-sync + before-quit handler
+//   sync-reset-lock.ts       — sync lock for the reset / delete handlers
 //
 // New sync logic belongs in the sibling module whose responsibility it
 // extends — not here. External consumers (sync-ipc.ts, main/index.ts,
@@ -31,7 +32,7 @@
 // from `_resetForTests` below — the same convention
 // typing-analytics-service.ts's facade split uses.
 
-import { syncRuntime, clearFlushTimer } from './sync-runtime-state'
+import { resetSyncRuntimeForTests } from './sync-runtime-state'
 import { stopPolling, clearInFlightPollForTests } from './sync-polling'
 import { clearQuitFinalizersForTests } from './sync-flush'
 import { forgetChangeStateCache } from './sync-password-change-state'
@@ -40,26 +41,9 @@ import { clearSyncFormatStatus } from './sync-format-status'
 // --- Test helpers -------------------------------------------------------
 
 export function _resetForTests(): void {
-  clearFlushTimer()
   stopPolling()
   clearInFlightPollForTests()
-  syncRuntime.pendingChanges.clear()
-  syncRuntime.pendingGeneration.clear()
-  syncRuntime.lastKnownRemoteState.clear()
-  syncRuntime.isSyncing = false
-  syncRuntime.inFlightPass = null
-  syncRuntime.isQuitting = false
-  syncRuntime.progressCallback = null
-  syncRuntime.validatedPasswordCheck = null
-  syncRuntime.passwordCheckCreated = null
-  syncRuntime.passwordCheckCreating = null
-  syncRuntime.syncFormatMarkerCreatedAt = null
-  syncRuntime.syncFormatMarkerSeenAt = null
-  syncRuntime.syncFormatMarkerCreating = null
-  syncRuntime.passwordChangeUndecryptable = null
-  syncRuntime.passwordChangeLockLost = false
-  syncRuntime.passwordChangeRun = null
-  syncRuntime.analyticsSyncingUids.clear()
+  resetSyncRuntimeForTests()
   clearQuitFinalizersForTests()
   forgetChangeStateCache()
   clearSyncFormatStatus()
@@ -78,7 +62,7 @@ export {
   setProgressCallback,
 } from './sync-runtime-state'
 
-export { matchesScope, shouldDownloadSyncUnit } from './sync-scope'
+export { matchesScope, shouldDownloadSyncUnit, listLocalKeyboardUids } from './sync-scope'
 
 // Re-export the analytics/run-log sync-unit detectors so existing
 // callers (sync-ipc, tests) keep importing them from sync-service.
@@ -138,6 +122,9 @@ export {
 } from './sync-polling'
 
 export { executeAnalyticsSync } from './sync-analytics'
+
+export type { ResetKeyboards } from './sync-reset-lock'
+export { withResetLock } from './sync-reset-lock'
 
 export {
   notifyChange,

@@ -48,16 +48,16 @@ vi.mock('../../hub/hub-ipc', () => ({
 
 const mockDeleteFilesByPrefix = vi.fn(async (..._args: unknown[]) => ({ attempted: 0, failed: 0 }))
 const mockDeleteFilesByExactName = vi.fn(async (..._args: unknown[]) => ({ attempted: 0, failed: 0 }))
-const mockDeleteFile = vi.fn(async (..._args: unknown[]) => {})
+const mockDeleteFilesById = vi.fn(async (ids: readonly string[]): Promise<{ attempted: number; failed: number; firstError?: string }> => ({ attempted: ids.length, failed: 0 }))
 vi.mock('../google-drive', () => ({
   deleteFilesByPrefix: (...args: unknown[]) => mockDeleteFilesByPrefix(...args),
   deleteFilesByExactName: (...args: unknown[]) => mockDeleteFilesByExactName(...args),
-  deleteFile: (...args: unknown[]) => mockDeleteFile(...args),
+  deleteFilesById: (ids: readonly string[]) => mockDeleteFilesById(ids),
   driveFileName: (syncUnit: string) => `${syncUnit.replaceAll('/', '_')}.enc`,
 }))
 
 const mockCancelPendingChanges = vi.fn()
-const mockIsSyncInProgress = vi.fn(() => false)
+const mockListLocalKeyboardUids = vi.fn(async () => new Set<string>())
 const mockAssertSyncAllowed = vi.fn(async () => {})
 const mockForgetChangeStateCache = vi.fn()
 const mockAssertNoLocalPasswordChange = vi.fn(async () => {})
@@ -89,12 +89,15 @@ const mockBroadcastToAllWindows = vi.fn()
 vi.mock('../../utils/broadcast', () => ({
   broadcastToAllWindows: (...args: unknown[]) => mockBroadcastToAllWindows(...args),
 }))
-vi.mock('../sync-service', () => ({
+// The reset lock runs for real on the real sync-runtime-state, so the tests
+// below can hold the lock and register analytics writers themselves.
+vi.mock('../sync-service', async () => ({
+  withResetLock: (await vi.importActual<typeof import('../sync-reset-lock')>('../sync-reset-lock')).withResetLock,
   executeAnalyticsSync: vi.fn(),
   executeSync: vi.fn(async () => ({ status: 'success' })),
   hasPendingChanges: vi.fn(),
   cancelPendingChanges: (...args: unknown[]) => mockCancelPendingChanges(...args),
-  isSyncInProgress: () => mockIsSyncInProgress(),
+  listLocalKeyboardUids: () => mockListLocalKeyboardUids(),
   notifyChange: vi.fn(),
   scheduleFlushIfPending: (...args: unknown[]) => mockScheduleFlushIfPending(...args),
   setProgressCallback: vi.fn(),
@@ -147,7 +150,12 @@ vi.mock('../../typing-analytics/import-export', () => ({
 vi.mock('../../typing-analytics/machine-hash', () => ({ getMachineHash: vi.fn() }))
 vi.mock('../../typing-analytics/cache-rebuild', () => ({ ensureCacheIsFresh: vi.fn() }))
 vi.mock('../../typing-analytics/db/typing-analytics-db', () => ({ getTypingAnalyticsDB: vi.fn() }))
-vi.mock('../../typing-analytics/typing-analytics-service', () => ({ deleteAllTypingForKeyboard: vi.fn(async () => {}) }))
+const mockDeleteAllTypingForKeyboard = vi.fn(async (_uid: string): Promise<void> => {})
+const mockListTypingKeyboards = vi.fn((): Array<{ uid: string }> => [])
+vi.mock('../../typing-analytics/typing-analytics-service', () => ({
+  deleteAllTypingForKeyboard: (uid: string) => mockDeleteAllTypingForKeyboard(uid),
+  listTypingKeyboards: () => mockListTypingKeyboards(),
+}))
 
 vi.mock('../../ipc-guard', async () => {
   const { ipcMain } = await import('electron')
@@ -165,6 +173,7 @@ vi.mock('../keyboard-meta', () => ({
 }))
 
 import { setupSyncIpc } from '../sync-ipc'
+import { syncRuntime, claimSyncLock, tryClaimSyncLock, resetSyncRuntimeForTests } from '../sync-runtime-state'
 import { ipcMain } from 'electron'
 import { onAppConfigChange } from '../../app-config'
 import { IpcChannels } from '../../../shared/ipc/channels'
@@ -191,7 +200,6 @@ describe('sync-ipc while a sync password change is in progress', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockIsSyncInProgress.mockReturnValue(false)
     mockAssertSyncAllowed.mockRejectedValue(new MockSyncBlockedError(blockedKey))
     setupSyncIpc()
   })
@@ -234,7 +242,7 @@ describe('sync-ipc while a sync password change is in progress', () => {
     const result = await getHandler(IpcChannels.SYNC_DELETE_FILES)(null, ['id-1'])
 
     expect(result).toEqual({ success: false, error: blockedKey })
-    expect(mockDeleteFile).not.toHaveBeenCalled()
+    expect(mockDeleteFilesById).not.toHaveBeenCalled()
   })
 
   it('RESET_KEYBOARD_DATA is refused before anything is removed', async () => {
@@ -275,7 +283,7 @@ describe('sync-ipc while a sync password change is in progress', () => {
 
     expect(result).toEqual({ success: false, error: 'sync.updateRequired' })
     expect(mockDeleteFilesByPrefix).not.toHaveBeenCalled()
-    expect(mockDeleteFile).not.toHaveBeenCalled()
+    expect(mockDeleteFilesById).not.toHaveBeenCalled()
   })
 
   it('SYNC_AUTH_SIGN_OUT forgets the created sync-format marker with the password-check cache', async () => {
@@ -430,7 +438,6 @@ describe('sync-ipc pending changes kept by a flush', () => {
 describe('sync-ipc SYNC_RESET_TARGETS — keyLabels / typingTestTexts', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockIsSyncInProgress.mockReturnValue(false)
     mockAssertSyncAllowed.mockResolvedValue(undefined)
     setupSyncIpc()
   })
@@ -484,12 +491,13 @@ describe('sync-ipc SYNC_RESET_TARGETS — keyLabels / typingTestTexts', () => {
   })
 
   it('rejects while a sync is already in progress', async () => {
-    mockIsSyncInProgress.mockReturnValue(true)
+    const releaseLock = claimSyncLock()
     const handler = getResetTargetsHandler()
 
     const result = await handler(null, { keyboards: false, favorites: false, keyLabels: true })
+    releaseLock()
 
-    expect(result.success).toBe(false)
+    expect(result).toEqual({ success: false, error: 'Cannot reset while sync is in progress' })
     expect(mockDeleteFilesByExactName).not.toHaveBeenCalled()
   })
 
@@ -684,5 +692,201 @@ describe('sync-ipc starting the poll', () => {
 
     await getHandler(IpcChannels.SYNC_EXECUTE)(null, 'download')
     expect(mockStartPollingIfAutoSync).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('sync-ipc resets hold the sync lock', () => {
+  type Gate = { promise: Promise<void>; release: () => void }
+  function makeGate(): Gate {
+    let release!: () => void
+    const promise = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    return { promise, release }
+  }
+
+  const busy = 'Cannot reset while sync is in progress'
+  // Each handler with an argument that reaches its first await, and the mock
+  // that await waits on.
+  const handlers: Array<[string, string, unknown, string, (gate: Gate) => void]> = [
+    ['SYNC_RESET_TARGETS', IpcChannels.SYNC_RESET_TARGETS, { keyboards: true, favorites: false }, busy,
+      (gate) => mockAssertSyncAllowed.mockImplementationOnce(() => gate.promise)],
+    ['RESET_KEYBOARD_DATA', IpcChannels.RESET_KEYBOARD_DATA, 'uid1', busy,
+      (gate) => mockAssertSyncAllowed.mockImplementationOnce(() => gate.promise)],
+    ['RESET_LOCAL_TARGETS', IpcChannels.RESET_LOCAL_TARGETS, { keyboards: true, favorites: false, appSettings: false }, busy,
+      (gate) => mockListLocalKeyboardUids.mockImplementationOnce(async () => {
+        await gate.promise
+        return new Set<string>()
+      })],
+    ['SYNC_DELETE_FILES', IpcChannels.SYNC_DELETE_FILES, ['id-1'], 'Cannot delete while sync is in progress',
+      (gate) => mockAssertSyncAllowed.mockImplementationOnce(() => gate.promise)],
+  ]
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAssertSyncAllowed.mockResolvedValue(undefined)
+    resetSyncRuntimeForTests()
+    setupSyncIpc()
+  })
+
+  it.each(handlers)('%s holds the lock across its awaits and releases it at the end', async (_name, channel, arg, _busy, holdAt) => {
+    const gate = makeGate()
+    holdAt(gate)
+
+    const result = getHandler(channel)(null, arg)
+    expect(tryClaimSyncLock()).toBeNull()
+    expect(syncRuntime.inFlightPassWaitable).toBe(true)
+
+    gate.release()
+    expect((await result).success).toBe(true)
+    expect(syncRuntime.isSyncing).toBe(false)
+    expect(syncRuntime.resetKeyboards).toBeNull()
+  })
+
+  it.each(handlers)('%s is refused with its error while a sync holds the lock', async (_name, channel, arg, busyMessage) => {
+    const { rm } = await import('node:fs/promises')
+    const releaseLock = claimSyncLock()
+
+    const result = await getHandler(channel)(null, arg)
+    releaseLock()
+
+    expect(result).toEqual({ success: false, error: busyMessage })
+    expect(mockAssertSyncAllowed).not.toHaveBeenCalled()
+    expect(mockCancelPendingChanges).not.toHaveBeenCalled()
+    expect(rm).not.toHaveBeenCalled()
+    expect(mockDeleteFilesById).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['SYNC_RESET_TARGETS', IpcChannels.SYNC_RESET_TARGETS, { keyboards: true, favorites: false }],
+    ['RESET_KEYBOARD_DATA', IpcChannels.RESET_KEYBOARD_DATA, 'uid1'],
+    ['SYNC_DELETE_FILES', IpcChannels.SYNC_DELETE_FILES, ['id-1']],
+  ])('%s releases the lock when it throws', async (_name, channel, arg) => {
+    mockAssertSyncAllowed.mockRejectedValueOnce(new MockSyncBlockedError('sync.passwordChange.blockedLocal'))
+
+    const result = await getHandler(channel)(null, arg)
+
+    expect(result.success).toBe(false)
+    expect(syncRuntime.isSyncing).toBe(false)
+    expect(syncRuntime.resetKeyboards).toBeNull()
+  })
+
+  it('RESET_LOCAL_TARGETS releases the lock when a remove throws', async () => {
+    const { rm } = await import('node:fs/promises')
+    vi.mocked(rm).mockRejectedValueOnce(new Error('EBUSY'))
+
+    const result = await getHandler(IpcChannels.RESET_LOCAL_TARGETS)(null, { keyboards: false, favorites: true, appSettings: false })
+
+    expect(result).toEqual({ success: false, error: 'EBUSY' })
+    expect(syncRuntime.isSyncing).toBe(false)
+  })
+
+  it('SYNC_RESET_TARGETS refuses an invalid uid before taking the lock or deleting anything', async () => {
+    const result = await getHandler(IpcChannels.SYNC_RESET_TARGETS)(null, { keyboards: ['uid1', '../x'], favorites: false })
+
+    expect(result).toEqual({ success: false, error: 'Invalid keyboard UID' })
+    expect(mockAssertSyncAllowed).not.toHaveBeenCalled()
+    expect(mockDeleteFilesByPrefix).not.toHaveBeenCalled()
+  })
+
+  it('SYNC_DELETE_FILES refuses a non-string id before taking the lock or deleting anything', async () => {
+    const result = await getHandler(IpcChannels.SYNC_DELETE_FILES)(null, ['id-1', 2])
+
+    expect(result).toEqual({ success: false, error: 'Invalid file ID' })
+    expect(mockAssertSyncAllowed).not.toHaveBeenCalled()
+    expect(mockDeleteFilesById).not.toHaveBeenCalled()
+  })
+
+  it('SYNC_DELETE_FILES deletes every id in one batch and reports failed deletes', async () => {
+    mockDeleteFilesById.mockResolvedValueOnce({ attempted: 3, failed: 1, firstError: 'Drive API error 403' })
+
+    const result = await getHandler(IpcChannels.SYNC_DELETE_FILES)(null, ['id-1', 'id-2', 'id-3'])
+
+    expect(mockDeleteFilesById).toHaveBeenCalledWith(['id-1', 'id-2', 'id-3'])
+    expect(result).toEqual({ success: false, error: 'Failed to delete 1 of 3 files: Drive API error 403' })
+  })
+
+  describe('while an analytics sync of uid1 runs', () => {
+    beforeEach(() => {
+      syncRuntime.analyticsSyncingUids.add('uid1')
+    })
+
+    it.each([
+      ['RESET_KEYBOARD_DATA of uid1', IpcChannels.RESET_KEYBOARD_DATA, 'uid1'],
+      ['SYNC_RESET_TARGETS of uid1', IpcChannels.SYNC_RESET_TARGETS, { keyboards: ['uid1'], favorites: false }],
+      ['SYNC_RESET_TARGETS of every keyboard', IpcChannels.SYNC_RESET_TARGETS, { keyboards: true, favorites: false }],
+      ['RESET_LOCAL_TARGETS of keyboards', IpcChannels.RESET_LOCAL_TARGETS, { keyboards: true, favorites: false, appSettings: false }],
+    ])('%s is refused', async (_name, channel, arg) => {
+      const result = await getHandler(channel)(null, arg)
+
+      expect(result).toEqual({ success: false, error: busy })
+      expect(mockCancelPendingChanges).not.toHaveBeenCalled()
+      expect(syncRuntime.isSyncing).toBe(false)
+    })
+
+    it.each([
+      ['RESET_KEYBOARD_DATA of uid2', IpcChannels.RESET_KEYBOARD_DATA, 'uid2'],
+      ['SYNC_RESET_TARGETS of favorites', IpcChannels.SYNC_RESET_TARGETS, { keyboards: false, favorites: true }],
+      ['RESET_LOCAL_TARGETS of favorites', IpcChannels.RESET_LOCAL_TARGETS, { keyboards: false, favorites: true, appSettings: false }],
+    ])('%s runs', async (_name, channel, arg) => {
+      expect((await getHandler(channel)(null, arg)).success).toBe(true)
+    })
+  })
+
+  describe('while a remote day fetch of uid1 runs', () => {
+    beforeEach(() => {
+      syncRuntime.remoteTypingDayFetches.set('uid1', 1)
+    })
+
+    it.each([
+      ['RESET_KEYBOARD_DATA of uid1', IpcChannels.RESET_KEYBOARD_DATA, 'uid1'],
+      ['RESET_LOCAL_TARGETS of keyboards', IpcChannels.RESET_LOCAL_TARGETS, { keyboards: true, favorites: false, appSettings: false }],
+    ])('%s is refused', async (_name, channel, arg) => {
+      expect(await getHandler(channel)(null, arg)).toEqual({ success: false, error: busy })
+    })
+
+    it.each([
+      ['RESET_KEYBOARD_DATA of uid2', IpcChannels.RESET_KEYBOARD_DATA, 'uid2'],
+      ['RESET_LOCAL_TARGETS of favorites', IpcChannels.RESET_LOCAL_TARGETS, { keyboards: false, favorites: true, appSettings: false }],
+    ])('%s runs', async (_name, channel, arg) => {
+      expect((await getHandler(channel)(null, arg)).success).toBe(true)
+    })
+  })
+
+  it('RESET_LOCAL_TARGETS clears the typing analytics of every local and cached keyboard before it cancels and removes them', async () => {
+    const { rm } = await import('node:fs/promises')
+    mockListLocalKeyboardUids.mockResolvedValueOnce(new Set(['uid1', 'uid2']))
+    mockListTypingKeyboards.mockReturnValueOnce([{ uid: 'uid2' }, { uid: 'uid3' }])
+
+    const result = await getHandler(IpcChannels.RESET_LOCAL_TARGETS)(null, { keyboards: true, favorites: false, appSettings: false })
+
+    expect(result.success).toBe(true)
+    expect(mockDeleteAllTypingForKeyboard.mock.calls.map(([uid]) => uid)).toEqual(['uid1', 'uid2', 'uid3'])
+    const lastCleanup = mockDeleteAllTypingForKeyboard.mock.invocationCallOrder.at(-1) ?? Infinity
+    expect(lastCleanup).toBeLessThan(mockCancelPendingChanges.mock.invocationCallOrder[0])
+    expect(lastCleanup).toBeLessThan(vi.mocked(rm).mock.invocationCallOrder[0])
+  })
+
+  it('RESET_LOCAL_TARGETS without keyboards leaves the typing analytics alone', async () => {
+    await getHandler(IpcChannels.RESET_LOCAL_TARGETS)(null, { keyboards: false, favorites: true, appSettings: false })
+
+    expect(mockDeleteAllTypingForKeyboard).not.toHaveBeenCalled()
+  })
+
+  it('RESET_LOCAL_TARGETS still removes the keyboards when a typing-analytics cleanup fails', async () => {
+    const { rm } = await import('node:fs/promises')
+    mockListLocalKeyboardUids.mockResolvedValueOnce(new Set(['uid1', 'uid2']))
+    mockDeleteAllTypingForKeyboard.mockRejectedValueOnce(new Error('disk full'))
+    mockListTypingKeyboards.mockImplementationOnce(() => {
+      throw new Error('db closed')
+    })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const result = await getHandler(IpcChannels.RESET_LOCAL_TARGETS)(null, { keyboards: true, favorites: false, appSettings: false })
+    warn.mockRestore()
+
+    expect(result.success).toBe(true)
+    expect(mockDeleteAllTypingForKeyboard).toHaveBeenCalledTimes(2)
+    expect(rm).toHaveBeenCalledWith(expect.stringContaining('keyboards'), { recursive: true, force: true })
   })
 })

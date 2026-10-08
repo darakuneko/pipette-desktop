@@ -28,7 +28,6 @@ import { backfillKeyboardMeta } from './keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import { runPackGcAfterPass } from './pack-gc'
 import { reconcileOwnHashTypingAnalytics } from './sync-typing-remote'
-import { inFlightPollPass } from './sync-polling'
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import { log } from '../logger'
 import type { SyncScope, SyncExecuteStatus, SyncSkipReason, SyncBlockReason } from '../../shared/types/sync'
@@ -51,13 +50,15 @@ export async function executeSync(
   scope: SyncScope = 'all',
 ): Promise<SyncExecuteResult> {
   let releaseLock = tryClaimSyncLock()
-  if (!releaseLock) {
-    // A background poll always settles on its own, so waiting for it keeps a
-    // connect-time download from being dropped. Any other holder (another
-    // executeSync, a flush) skips, which is how parallel callers dedupe.
-    await inFlightPollPass()
+  while (!releaseLock) {
+    // A waitable holder (a background poll, a reset) always settles on its
+    // own, so waiting for it keeps a connect-time download from being
+    // dropped. Any other holder (another executeSync, a flush) skips, which
+    // is how parallel callers dedupe.
+    const pass = syncRuntime.inFlightPassWaitable ? syncRuntime.inFlightPass : null
+    if (!pass) return { status: 'skipped', skipReason: 'busy' }
+    await pass
     releaseLock = tryClaimSyncLock()
-    if (!releaseLock) return { status: 'skipped', skipReason: 'busy' }
   }
 
   const skipBlocked = (reason: SyncBlockReason): SyncExecuteResult => {

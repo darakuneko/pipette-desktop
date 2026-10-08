@@ -6,6 +6,7 @@
 import { listFiles, driveFilenamePrefix, syncUnitFromFileName } from './google-drive'
 import { pLimit } from '../../shared/concurrency'
 import { SYNC_CONCURRENCY, syncRuntime } from './sync-runtime-state'
+import { resetHoldsKeyboard } from './sync-reset-lock'
 import { requireSyncCredentials, ensurePasswordCheckValidated, listPasswordCheckFiles } from './sync-password'
 import { localSyncBlock, remoteSyncBlock, listGuardFiles } from './sync-password-guard'
 import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
@@ -20,16 +21,17 @@ import { isAnalyticsSyncUnit, collectAnalyticsSyncUnitsForUid } from './sync-bun
  *
  * Returns true on a fully-successful pass so the caller can stamp a
  * rate-limit timestamp; returns false on skip (this uid is already
- * syncing, credentials are missing, a sync password change is in
- * progress, Drive needs a newer sync format, the sync-format marker
+ * syncing, a reset of it is running, credentials are missing, a sync password
+ * change is in progress, Drive needs a newer sync format, the sync-format marker
  * cannot be created, or the password-check does not open) or on any per-unit
  * failure so the caller can retry on the next Analyze mount. */
 export async function executeAnalyticsSync(uid: string): Promise<boolean> {
   // A running password-change operation (sync-password-change.ts) holds
-  // `passwordChangeRun`; it in turn refuses to start while any uid is in
-  // `analyticsSyncingUids`. Both checks are synchronous, so the two never
-  // overlap.
-  if (syncRuntime.analyticsSyncingUids.has(uid) || syncRuntime.passwordChangeRun) return false
+  // `passwordChangeRun`, and a running reset of this keyboard shows in
+  // `resetHoldsKeyboard` (sync-reset-lock.ts); each in turn refuses to start
+  // while this uid is in `analyticsSyncingUids`. Every check is synchronous,
+  // so they never overlap.
+  if (syncRuntime.analyticsSyncingUids.has(uid) || syncRuntime.passwordChangeRun || resetHoldsKeyboard(uid)) return false
   syncRuntime.analyticsSyncingUids.add(uid)
   try {
     const credentials = await requireSyncCredentials()
