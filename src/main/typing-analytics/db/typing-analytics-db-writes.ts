@@ -131,14 +131,12 @@ export abstract class TypingAnalyticsDbWrites extends TypingAnalyticsDbBase {
     tx()
   }
 
-  /** Tombstone every live row for a uid whose timestamp falls inside
-   * [startMs, endMs). Bumps updated_at on the touched rows so LWW
-   * merge on other devices picks up the deletion. Returns per-table
-   * change counts for UX / logging. */
-  /** Same as {@link tombstoneRowsForUidInRange} but restricted to a
-   * single machine_hash. Used by the Sync-delete UX to retract a
-   * specific remote device's contribution without touching rows
-   * another device recorded on the same date. */
+  /** Tombstone every live row of one machine_hash for a uid whose
+   * timestamp falls inside [startMs, endMs) (sessions: overlapping it).
+   * Used by the Sync-delete UX to retract a specific remote device's
+   * contribution without touching rows another device recorded on the
+   * same date. Bumps updated_at on the touched rows and returns per-table
+   * change counts. */
   tombstoneRowsForUidHashInRange(
     uid: string,
     machineHash: string,
@@ -159,25 +157,6 @@ export abstract class TypingAnalyticsDbWrites extends TypingAnalyticsDbBase {
     return result
   }
 
-  tombstoneRowsForUidInRange(
-    uid: string,
-    startMs: number,
-    endMs: number,
-    updatedAt: number,
-  ): TypingTombstoneResult {
-    const result = emptyTombstoneResult()
-    const tx = this.db.transaction(() => {
-      result.charMinutes = this.stmts.sync.tombstoneCharMinutesInRangeStmt.run({ uid, startMs, endMs, updatedAt }).changes
-      result.matrixMinutes = this.stmts.sync.tombstoneMatrixMinutesInRangeStmt.run({ uid, startMs, endMs, updatedAt }).changes
-      result.minuteStats = this.stmts.sync.tombstoneMinuteStatsInRangeStmt.run({ uid, startMs, endMs, updatedAt }).changes
-      result.bigramMinutes = this.stmts.ngram[2].tombstoneInRange.run({ uid, startMs, endMs, updatedAt }).changes
-      result.trigramMinutes = this.stmts.ngram[3].tombstoneInRange.run({ uid, startMs, endMs, updatedAt }).changes
-      result.sessions = this.stmts.sync.tombstoneSessionsInRangeStmt.run({ uid, startMs, endMs, updatedAt }).changes
-    })
-    tx()
-    return result
-  }
-
   /** Tombstone every live row for a uid across all time. Scope rows
    * themselves are left intact so the next recording session reuses
    * them without a fresh fingerprint build. */
@@ -190,6 +169,22 @@ export abstract class TypingAnalyticsDbWrites extends TypingAnalyticsDbBase {
       result.bigramMinutes = this.stmts.ngram[2].tombstoneAll.run({ uid, updatedAt }).changes
       result.trigramMinutes = this.stmts.ngram[3].tombstoneAll.run({ uid, updatedAt }).changes
       result.sessions = this.stmts.sync.tombstoneAllSessionsStmt.run({ uid, updatedAt }).changes
+    })
+    tx()
+    return result
+  }
+
+  /** Same as {@link tombstoneAllRowsForUid} but restricted to a single
+   * machine_hash, so the other devices' rows of the keyboard stay live. */
+  tombstoneAllRowsForUidHash(uid: string, machineHash: string, updatedAt: number): TypingTombstoneResult {
+    const result = emptyTombstoneResult()
+    const tx = this.db.transaction(() => {
+      result.charMinutes = this.stmts.sync.tombstoneAllCharMinutesForHashStmt.run({ uid, machineHash, updatedAt }).changes
+      result.matrixMinutes = this.stmts.sync.tombstoneAllMatrixMinutesForHashStmt.run({ uid, machineHash, updatedAt }).changes
+      result.minuteStats = this.stmts.sync.tombstoneAllMinuteStatsForHashStmt.run({ uid, machineHash, updatedAt }).changes
+      result.bigramMinutes = this.stmts.ngram[2].tombstoneAllForHash.run({ uid, machineHash, updatedAt }).changes
+      result.trigramMinutes = this.stmts.ngram[3].tombstoneAllForHash.run({ uid, machineHash, updatedAt }).changes
+      result.sessions = this.stmts.sync.tombstoneAllSessionsForHashStmt.run({ uid, machineHash, updatedAt }).changes
     })
     tx()
     return result

@@ -1059,24 +1059,18 @@ describe('TypingAnalyticsDB', () => {
       expect(db.listTypingTestRunsForUidInRange('0xAABB', MACHINE_HASH, 0, 300_000, ['words (english)']).map((r) => r.runId)).toEqual(['run-new'])
     })
 
-    it('tombstoneRowsForUidInRange flips is_deleted on matching rows and bumps updated_at', () => {
-      const result = db.tombstoneRowsForUidInRange('0xAABB', 0, 90_000, 5_000)
-      expect(result.charMinutes).toBe(2) // aabb-local + aabb-remote at minute 60_000
-      expect(result.minuteStats).toBe(2)
-      expect(result.matrixMinutes).toBe(1) // only aabb-local had a matrix row
-      expect(result.sessions).toBe(1)
-
+    it('tombstoneRowsForUidHashInRange bumps updated_at and leaves out-of-range rows live', () => {
+      db.tombstoneRowsForUidHashInRange('0xAABB', MACHINE_HASH, 0, 90_000, 5_000)
       const conn = db.getConnection()
-      const rows = conn.prepare('SELECT is_deleted, updated_at FROM typing_char_minute WHERE char = ?').all('a') as Array<{ is_deleted: number; updated_at: number }>
-      expect(rows.every((r) => r.is_deleted === 1)).toBe(true)
-      expect(rows.every((r) => r.updated_at === 5_000)).toBe(true)
+      const row = conn.prepare('SELECT is_deleted, updated_at FROM typing_char_minute WHERE scope_id = ?').get('scope-aabb-local') as { is_deleted: number; updated_at: number }
+      expect(row).toEqual({ is_deleted: 1, updated_at: 5_000 })
 
       // ccdd data at minute 120_000 is untouched because it's outside the range.
       const ccdd = conn.prepare('SELECT is_deleted FROM typing_char_minute WHERE char = ?').get('b') as { is_deleted: number }
       expect(ccdd.is_deleted).toBe(0)
     })
 
-    it('tombstoneRowsForUidInRange also tombstones bigram/trigram rows in range and leaves out-of-range ones live', () => {
+    it('tombstoneRowsForUidHashInRange also tombstones bigram/trigram rows in range and leaves out-of-range ones live', () => {
       db.mergeBigramMinute({
         scopeId: 'scope-aabb-local', minuteTs: 60_000,
         bigrams: { '4_11': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
@@ -1089,23 +1083,20 @@ describe('TypingAnalyticsDB', () => {
       })
       // Outside the [0, 90_000) tombstone window — must stay live.
       db.mergeBigramMinute({
-        scopeId: 'scope-ccdd-local', minuteTs: 120_000,
+        scopeId: 'scope-aabb-local', minuteTs: 120_000,
         bigrams: { '4_11': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
         updatedAt: 1_000, isDeleted: false,
       })
 
-      const result = db.tombstoneRowsForUidInRange('0xAABB', 0, 90_000, 5_000)
+      const result = db.tombstoneRowsForUidHashInRange('0xAABB', MACHINE_HASH, 0, 90_000, 5_000)
       expect(result.bigramMinutes).toBe(1)
       expect(result.trigramMinutes).toBe(1)
 
       const conn = db.getConnection()
-      const bigram = conn.prepare('SELECT is_deleted FROM typing_bigram_minute WHERE scope_id = ?').get('scope-aabb-local') as { is_deleted: number }
-      expect(bigram.is_deleted).toBe(1)
+      const bigrams = conn.prepare('SELECT minute_ts, is_deleted FROM typing_bigram_minute WHERE scope_id = ? ORDER BY minute_ts').all('scope-aabb-local')
+      expect(bigrams).toEqual([{ minute_ts: 60_000, is_deleted: 1 }, { minute_ts: 120_000, is_deleted: 0 }])
       const trigram = conn.prepare('SELECT is_deleted FROM typing_trigram_minute WHERE scope_id = ?').get('scope-aabb-local') as { is_deleted: number }
       expect(trigram.is_deleted).toBe(1)
-      // ccdd's uid ('0xCCDD') isn't touched by a tombstone scoped to '0xAABB'.
-      const untouched = conn.prepare('SELECT is_deleted FROM typing_bigram_minute WHERE scope_id = ?').get('scope-ccdd-local') as { is_deleted: number }
-      expect(untouched.is_deleted).toBe(0)
     })
 
     it('tombstoneRowsForUidHashInRange restricts the tombstone to a single machine_hash', () => {
@@ -1121,10 +1112,10 @@ describe('TypingAnalyticsDB', () => {
       expect(remoteRow.is_deleted).toBe(0)
     })
 
-    it('tombstoneRowsForUidInRange does not touch already-deleted rows', () => {
-      db.tombstoneRowsForUidInRange('0xAABB', 0, 90_000, 5_000)
+    it('tombstoneRowsForUidHashInRange does not touch already-deleted rows', () => {
+      db.tombstoneRowsForUidHashInRange('0xAABB', MACHINE_HASH, 0, 90_000, 5_000)
       // Second tombstone with a newer updated_at should not re-bump the already-deleted rows.
-      const result = db.tombstoneRowsForUidInRange('0xAABB', 0, 90_000, 9_000)
+      const result = db.tombstoneRowsForUidHashInRange('0xAABB', MACHINE_HASH, 0, 90_000, 9_000)
       expect(result.charMinutes).toBe(0)
       const row = db.getConnection().prepare('SELECT updated_at FROM typing_char_minute WHERE char = ? AND scope_id = ?').get('a', 'scope-aabb-local') as { updated_at: number }
       expect(row.updated_at).toBe(5_000)
@@ -1157,12 +1148,28 @@ describe('TypingAnalyticsDB', () => {
       expect(result.trigramMinutes).toBe(1)
     })
 
+    it('tombstoneAllRowsForUidHash keeps the other machines\' rows of the uid live', () => {
+      db.mergeBigramMinute({
+        scopeId: 'scope-aabb-remote', minuteTs: 60_000,
+        bigrams: { '4_11': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 1_000, isDeleted: false,
+      })
+      const result = db.tombstoneAllRowsForUidHash('0xAABB', MACHINE_HASH, 6_000)
+      // 1 char row + 1 matrix row + 1 stats row + 1 session, all of scope-aabb-local.
+      expect(result).toEqual({ charMinutes: 1, matrixMinutes: 1, minuteStats: 1, bigramMinutes: 0, trigramMinutes: 0, sessions: 1 })
+      const conn = db.getConnection()
+      const live = conn.prepare('SELECT scope_id FROM typing_minute_stats WHERE is_deleted = 0 ORDER BY scope_id').all()
+      expect(live).toEqual([{ scope_id: 'scope-aabb-remote' }, { scope_id: 'scope-ccdd-local' }])
+      const bigram = conn.prepare('SELECT is_deleted FROM typing_bigram_minute WHERE scope_id = ?').get('scope-aabb-remote') as { is_deleted: number }
+      expect(bigram.is_deleted).toBe(0)
+    })
+
     it('listDailySummariesForUid ignores tombstoned rows', () => {
       db.tombstoneAllRowsForUid('0xAABB', 6_000)
       expect(db.listDailySummariesForUid('0xAABB')).toEqual([])
     })
 
-    it('tombstoneRowsForUidInRange catches sessions that span into the window', () => {
+    it('tombstoneRowsForUidHashInRange catches sessions that span into the window', () => {
       // A session that started before the delete window and ends inside it
       // (e.g. crosses midnight) must still be tombstoned — day-level delete
       // should remove everything that contributed minutes to that day.
@@ -1170,7 +1177,7 @@ describe('TypingAnalyticsDB', () => {
         { id: 'session-midnight', scopeId: 'scope-aabb-local', startMs: 10_000, endMs: 70_000 },
         1_000,
       )
-      const result = db.tombstoneRowsForUidInRange('0xAABB', 60_000, 120_000, 8_000)
+      const result = db.tombstoneRowsForUidHashInRange('0xAABB', MACHINE_HASH, 60_000, 120_000, 8_000)
       expect(result.sessions).toBeGreaterThanOrEqual(1)
       const row = db.getConnection().prepare('SELECT is_deleted FROM typing_sessions WHERE id = ?').get('session-midnight') as { is_deleted: number }
       expect(row.is_deleted).toBe(1)

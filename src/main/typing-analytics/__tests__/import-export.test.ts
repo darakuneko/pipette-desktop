@@ -11,6 +11,7 @@ import {
   parseExportFileName,
 } from '../import-export'
 import { deviceDayJsonlPath, deviceDayDir } from '../jsonl/paths'
+import { readRows } from '../jsonl/jsonl-reader'
 
 const UID = '0xAABB'
 const HASH = 'hash-self'
@@ -196,6 +197,71 @@ describe('importTypingDataFiles', () => {
     expect(out.rejections).toEqual([])
     const written = readFileSync(deviceDayJsonlPath(userData, UID, HASH, '2026-04-19'), 'utf-8')
     expect(written).toBe(newBody)
+  })
+
+  it('keeps the delete marks of the existing local file after the imported rows', async () => {
+    const day = '2026-04-19'
+    const live = charMinuteRow(day)
+    const mark = JSON.stringify({ ...JSON.parse(live), is_deleted: true, updated_at: dayStartMs(day) + 5 })
+    // The local file ends with a truncated line, which is not carried over.
+    seedDay(userData, HASH, day, `${live}${mark}\n${minuteStatsRow(day)}{"id":"trunc`)
+    const path = writeImport(exportFileNameFor(UID, HASH, day), live.trimEnd())
+
+    const out = await importTypingDataFiles(userData, [path], { cloudHasFile: null, now: FIXED_NOW })
+
+    expect(out.imported).toBe(1)
+    const written = readFileSync(deviceDayJsonlPath(userData, UID, HASH, day), 'utf-8')
+    expect(written).toBe(`${live}${mark}\n`)
+  })
+
+  it('keeps one copy of each mark when a post-delete export is imported twice', async () => {
+    const day = '2026-04-19'
+    const live = charMinuteRow(day)
+    const mark = JSON.stringify({ ...JSON.parse(live), is_deleted: true, updated_at: dayStartMs(day) + 5 }) + '\n'
+    seedDay(userData, HASH, day, `${live}${mark}`)
+    const path = writeImport(exportFileNameFor(UID, HASH, day), `${live}${mark}`)
+
+    await importTypingDataFiles(userData, [path], { cloudHasFile: null, now: FIXED_NOW })
+    await importTypingDataFiles(userData, [path], { cloudHasFile: null, now: FIXED_NOW })
+
+    expect(readFileSync(deviceDayJsonlPath(userData, UID, HASH, day), 'utf-8')).toBe(`${live}${mark}`)
+  })
+
+  it('ends the written file with a newline when the body ends with a mark it already holds', async () => {
+    const day = '2026-04-19'
+    const live = charMinuteRow(day)
+    const mark = JSON.stringify({ ...JSON.parse(live), is_deleted: true, updated_at: dayStartMs(day) + 5 })
+    seedDay(userData, HASH, day, `${live}${mark}\n`)
+    const path = writeImport(exportFileNameFor(UID, HASH, day), `${live}${mark}`)
+
+    await importTypingDataFiles(userData, [path], { cloudHasFile: null, now: FIXED_NOW })
+
+    const { rows } = await readRows(deviceDayJsonlPath(userData, UID, HASH, day))
+    expect(rows.map((r) => r.is_deleted === true)).toEqual([false, true])
+  })
+
+  it('writes the imported body as it is when the local file has no delete marks', async () => {
+    const day = '2026-04-19'
+    seedDay(userData, 'hash-other', day, minuteStatsRow(day))
+    const body = charMinuteRow(day)
+    const path = writeImport(exportFileNameFor(UID, 'hash-other', day), body)
+
+    await importTypingDataFiles(userData, [path], { cloudHasFile: null, now: FIXED_NOW })
+
+    expect(readFileSync(deviceDayJsonlPath(userData, UID, 'hash-other', day), 'utf-8')).toBe(body)
+  })
+
+  it('runs each read and write through runExclusive when given', async () => {
+    const day = '2026-04-19'
+    seedDay(userData, HASH, day, charMinuteRow(day))
+    const path = writeImport(exportFileNameFor(UID, HASH, day), minuteStatsRow(day))
+    const runExclusive = vi.fn(async (task: () => Promise<void>) => { await task() })
+
+    const out = await importTypingDataFiles(userData, [path], { cloudHasFile: null, now: FIXED_NOW, runExclusive })
+
+    expect(out.imported).toBe(1)
+    expect(runExclusive).toHaveBeenCalledTimes(1)
+    expect(readFileSync(deviceDayJsonlPath(userData, UID, HASH, day), 'utf-8')).toBe(minuteStatsRow(day))
   })
 
   it('accepts a session whose endMs spills into the next UTC day', async () => {

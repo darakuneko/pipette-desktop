@@ -62,6 +62,7 @@ import { exportTypingDataForKeyboard, importTypingDataFiles, type ImportResult }
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import { ensureCacheIsFresh } from '../typing-analytics/cache-rebuild'
 import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
+import { runOnFlushChain } from '../typing-analytics/typing-analytics-service'
 import type { SyncProgress, PasswordStrength, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncBundle, SyncOperationResult, ImportLocalDataResult, PasswordChangeDeleteResult, SyncFormatStatus } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
 import { wrapIpc } from './sync-ipc-wrap'
@@ -123,6 +124,9 @@ async function importTypingFiles(filePaths: string[]): Promise<ImportResult> {
       // Cloud encrypts each sync unit as `<name>.enc`; the export
       // form drops `.enc`, so flip it back here for the lookup.
       : async (name) => remoteNames.has(name.replace(/\.jsonl$/, '.enc')),
+    // The flush chain is the only writer of this device's own files, so
+    // the replace waits for appends in flight and no append lands in it.
+    runExclusive: runOnFlushChain,
   })
   if (importResult.imported > 0) {
     try {

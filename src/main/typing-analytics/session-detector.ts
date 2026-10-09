@@ -73,11 +73,13 @@ export class SessionDetector {
     return finalized
   }
 
-  /** Close any sessions belonging to a specific keyboard. */
-  closeForUid(uid: string): FinalizedSession[] {
+  /** Close any sessions belonging to a specific keyboard, limited to the
+   * ones whose start `closes` accepts when it is given. */
+  closeForUid(uid: string, closes?: (startMs: number) => boolean): FinalizedSession[] {
     const finalized: FinalizedSession[] = []
     for (const [key, session] of this.sessions) {
       if (session.uid !== uid) continue
+      if (closes && !closes(session.startMs)) continue
       finalized.push(this.toFinalized(session))
       this.sessions.delete(key)
     }

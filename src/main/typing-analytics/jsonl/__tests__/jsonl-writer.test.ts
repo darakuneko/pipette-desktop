@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, existsSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { charMinuteRowId, type JsonlRow } from '../jsonl-row'
 import { appendRowsToFile } from '../jsonl-writer'
+import { readRows } from '../jsonl-reader'
 
 function sampleRow(char: string, count: number, updatedAt: number): JsonlRow {
   return {
@@ -50,5 +51,14 @@ describe('appendRowsToFile', () => {
     expect(JSON.parse(lines[0]).payload.char).toBe('a')
     expect(JSON.parse(lines[1]).payload.char).toBe('b')
     expect(JSON.parse(lines[2]).payload.char).toBe('c')
+  })
+
+  it('starts a new line when the file ends with a truncated line', async () => {
+    const path = join(tmpDir, 'device.jsonl')
+    writeFileSync(path, JSON.stringify(sampleRow('a', 1, 1_000)) + '\n{"id":"char|trunc', 'utf8')
+    await appendRowsToFile(path, [sampleRow('b', 2, 2_000)])
+    await appendRowsToFile(path, [sampleRow('c', 3, 3_000)])
+    const { rows } = await readRows(path)
+    expect(rows.map((r) => (r.kind === 'char-minute' ? r.payload.char : ''))).toEqual(['a', 'b', 'c'])
   })
 })

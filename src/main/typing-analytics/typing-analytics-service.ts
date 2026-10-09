@@ -129,6 +129,7 @@ export {
   flushTypingAnalyticsBeforeQuit,
   flushTypingAnalyticsNowForTests,
   isValidRowColKeycode,
+  runOnFlushChain,
 } from './typing-analytics-pipeline'
 
 export {

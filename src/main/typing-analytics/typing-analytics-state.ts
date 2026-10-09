@@ -28,8 +28,9 @@ type SyncNotifier = (syncUnit: string) => void
 /** Every module-scoped mutable binding the typing-analytics service needs,
  * shared across `typing-analytics-pipeline.ts`, `typing-analytics-queries.ts`,
  * `typing-analytics-retention.ts`, and the facade. `lastFlushUpdatedAt` has a
- * single writer — `doFlushPass` in `typing-analytics-pipeline.ts` — see that
- * function for the monotonicity invariant this field encodes. */
+ * single writer — `claimOwnRowUpdatedAt` in `typing-analytics-pipeline.ts`
+ * (called by the flush pass and the day delete) — see doFlushPass there for
+ * the monotonicity invariant this field encodes. */
 export const taState = {
   initialization: null as Promise<void> | null,
   ipcRegistered: false,

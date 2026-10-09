@@ -551,7 +551,7 @@ describe('typing-analytics-service', () => {
         // the assertion below sees only the delete-time notifies.
         notifier.mockClear()
 
-        const result = await deleteAllTypingForKeyboard(sampleKeyboard.uid)
+        const result = await deleteAllTypingForKeyboard(sampleKeyboard.uid, Date.now(), 'all')
         expect(result.charMinutes).toBeGreaterThan(0)
         expect(listTypingKeyboards().map((k) => k.uid)).not.toContain(sampleKeyboard.uid)
         const machineHash = await getMachineHash()
@@ -1220,7 +1220,7 @@ describe('typing-analytics-service', () => {
     }
 
     it('deleteAllTypingForKeyboard: a keystroke in the same minute is written without the deleted counts', async () => {
-      await typeThenDelete(() => deleteAllTypingForKeyboard(sampleKeyboard.uid))
+      await typeThenDelete(() => deleteAllTypingForKeyboard(sampleKeyboard.uid, Date.now(), 'all'))
 
       expect(liveStats(sampleKeyboard.uid)).toEqual([{ keystrokes: 1 }])
       expect(await dayStatsKeystrokes(sampleKeyboard.uid)).toEqual([1])
@@ -1236,7 +1236,7 @@ describe('typing-analytics-service', () => {
     })
 
     it('a session started after the delete is written', async () => {
-      const handler = await typeThenDelete(() => deleteAllTypingForKeyboard(sampleKeyboard.uid))
+      const handler = await typeThenDelete(() => deleteAllTypingForKeyboard(sampleKeyboard.uid, Date.now(), 'all'))
       await ingest(handler, { kind: 'char', key: 'c', ts: minuteTs + 2_000, keyboard: sampleKeyboard })
       await getHandler(IpcChannels.TYPING_ANALYTICS_FLUSH)(fakeEvent, sampleKeyboard.uid)
 
@@ -1256,7 +1256,7 @@ describe('typing-analytics-service', () => {
       await ingest(handler, { kind: 'char', key: 'c', ts: minuteTs + MINUTE_MS + 1_000, keyboard: sampleKeyboard })
       await ingest(handler, { kind: 'char', key: 'c', ts: minuteTs + MINUTE_MS + 2_000, keyboard: sampleKeyboard })
 
-      await deleteAllTypingForKeyboard(sampleKeyboard.uid, cutoffMs)
+      await deleteAllTypingForKeyboard(sampleKeyboard.uid, cutoffMs, 'all')
       await flushTypingAnalyticsNowForTests()
 
       expect(liveStats(sampleKeyboard.uid)).toEqual([])
@@ -1273,7 +1273,7 @@ describe('typing-analytics-service', () => {
       await ingest(handler, { kind: 'char', key: 'a', ts: minuteTs, keyboard: sampleKeyboard })
       await ingest(handler, { kind: 'char', key: 'a', ts: minuteTs + 100, keyboard: sampleKeyboard })
 
-      await deleteAllTypingForKeyboard(sampleKeyboard.uid)
+      await deleteAllTypingForKeyboard(sampleKeyboard.uid, Date.now(), 'all')
       await flushTypingAnalyticsNowForTests()
 
       const sessions = getTypingAnalyticsDB().getConnection().prepare(
@@ -1287,7 +1287,7 @@ describe('typing-analytics-service', () => {
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
       await ingest(handler, { kind: 'char', key: 'a', ts: minuteTs, keyboard: otherKeyboard })
       await ingest(handler, { kind: 'char', key: 'a', ts: minuteTs + 100, keyboard: otherKeyboard })
-      await typeThenDelete(() => deleteAllTypingForKeyboard(sampleKeyboard.uid))
+      await typeThenDelete(() => deleteAllTypingForKeyboard(sampleKeyboard.uid, Date.now(), 'all'))
       await ingest(handler, { kind: 'char', key: 'b', ts: minuteTs + 1_500, keyboard: otherKeyboard })
       await flushTypingAnalyticsNowForTests()
 

@@ -67,7 +67,7 @@ async function deleteTypingForAllKeyboards(): Promise<void> {
     console.warn('[sync-reset-ipc] reset local targets: analytics cache listing failed', err)
   }
   for (const uid of uids) {
-    await deleteAllTypingForKeyboard(uid).catch((err) => {
+    await deleteAllTypingForKeyboard(uid, Date.now(), 'all').catch((err) => {
       console.warn('[sync-reset-ipc] reset local targets: analytics cache cleanup failed', err)
     })
   }
@@ -183,7 +183,7 @@ export function setupSyncResetIpc(): void {
         // Flush + unlink this keyboard's analytics JSONL and tombstone its
         // SQLite-cache rows, otherwise the Analyze view keeps showing the
         // keyboard from the stale cache after the directory is removed.
-        await deleteAllTypingForKeyboard(uid).catch((err) => {
+        await deleteAllTypingForKeyboard(uid, Date.now(), 'all').catch((err) => {
           console.warn('[sync-reset-ipc] reset keyboard: analytics cache cleanup failed', err)
         })
         cancelPendingChanges(keyboardUnits)
@@ -301,7 +301,7 @@ export function setupSyncResetIpc(): void {
     wrapIpc('Delete typing data failed', async () => {
       const cutoffMs = Date.now()
       if (typeof uid !== 'string' || !isSafeKey(uid)) throw new Error('Invalid uid')
-      await withResetLockWhenFree([uid], () => deleteAllTypingForKeyboard(uid, cutoffMs), DELETE_BUSY_MESSAGE)
+      await withResetLockWhenFree([uid], () => deleteAllTypingForKeyboard(uid, cutoffMs, 'own'), DELETE_BUSY_MESSAGE)
     }),
   )
 

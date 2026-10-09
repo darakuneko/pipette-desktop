@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingDailySummary } from '../../../shared/types/typing-analytics'
 import { BTN_DANGER_OUTLINE, BTN_SECONDARY } from '../../constants/ui-tokens'
+import { localDayStartMs, localTimeZoneLabel } from './typing-time-zone-label'
 
 interface Props {
   uid: string
@@ -120,6 +121,12 @@ export function TypingAnalyticsContent({ uid, onDeleted, mode = 'local', machine
 
   const totalKeystrokes = useMemo(
     () => summaries.reduce((sum, s) => sum + s.keystrokes, 0),
+    [summaries],
+  )
+  // The rows are local days; the offset is the one at the start of the
+  // newest listed day (the list is sorted newest first).
+  const zoneLabel = useMemo(
+    () => localTimeZoneLabel((summaries.length > 0 ? localDayStartMs(summaries[0].date) : null) ?? Date.now()),
     [summaries],
   )
 
@@ -417,7 +424,7 @@ export function TypingAnalyticsContent({ uid, onDeleted, mode = 'local', machine
                   data-testid="typing-select-all"
                 />
               </th>
-              <th className="py-1.5 px-2 text-left font-medium">{t('dataModal.typing.colDate')}</th>
+              <th className="py-1.5 px-2 text-left font-medium">{t('dataModal.typing.colDateZone', { zone: zoneLabel })}</th>
               <th className="py-1.5 px-2 text-right font-medium">{t('dataModal.typing.colKeystrokes')}</th>
               <th className="py-1.5 px-2 text-right font-medium">{t('dataModal.typing.colActiveMs')}</th>
             </tr>
