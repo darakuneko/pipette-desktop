@@ -14,7 +14,7 @@ import {
   withResetLock,
   withResetLockWhenFree,
   DELETE_BUSY_MESSAGE,
-  deleteRemoteTypingDays,
+  deleteDeviceTypingData,
   cancelPendingChanges,
   copyPendingState,
   restoreCancelledPending,
@@ -305,14 +305,15 @@ export function setupSyncResetIpc(): void {
     }),
   )
 
-  // Every day under one lock, so a poll cannot run between two of them.
-  secureHandle(IpcChannels.TYPING_ANALYTICS_DELETE_REMOTE_DAYS, (_event, uid: unknown, machineHash: unknown, utcDays: unknown) =>
+  // Another device's data: `dates` are local calendar days, or 'all'.
+  secureHandle(IpcChannels.TYPING_ANALYTICS_DELETE_DEVICE_DATA, (_event, uid: unknown, machineHash: unknown, dates: unknown) =>
     wrapIpc('Delete typing data failed', async () => {
+      const cutoffMs = Date.now()
       if (typeof uid !== 'string' || !isSafeKey(uid)) throw new Error('Invalid uid')
       if (typeof machineHash !== 'string' || !isSafeKey(machineHash)) throw new Error('Invalid device')
-      const days = validDays(utcDays)
-      if (days.length === 0) return
-      await withResetLockWhenFree([uid], () => deleteRemoteTypingDays(uid, machineHash, days), DELETE_BUSY_MESSAGE)
+      const target = dates === 'all' ? 'all' : validDays(dates)
+      if (target !== 'all' && target.length === 0) return
+      await withResetLockWhenFree([uid], () => deleteDeviceTypingData(uid, machineHash, target, cutoffMs), DELETE_BUSY_MESSAGE)
     }),
   )
 

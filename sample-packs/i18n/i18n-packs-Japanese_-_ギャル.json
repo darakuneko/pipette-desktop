@@ -1,5 +1,5 @@
 {
-  "version": "0.1.113",
+  "version": "0.1.114",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -1906,6 +1906,8 @@
       "deleteAll": "これの全データ消すっしょ！",
       "confirmDeleteSelected": "選んだ {{count}} 日分消しちゃう？他のは残るけど、前のExportを再インポしても消えたままだよ☆",
       "confirmDeleteAll": "全部消しちゃう？他のは残るけど再インポは無理っしょ☆",
+      "confirmDeleteSelectedDevice": "このデバイスの {{count}} 日分、ここでソッコー隠しちゃう？記録したPCが次に同期したら消えるよ。今より後に打った分は残るから安心してね☆",
+      "confirmDeleteAllDevice": "このデバイスの全部の日、ここでソッコー隠しちゃう？記録したPCが次に同期したら消えるよ。今より後に打った分は残るから安心してね☆",
       "exportLabel": "Export…☆",
       "importLabel": "Import…っしょ",
       "importStatus": {

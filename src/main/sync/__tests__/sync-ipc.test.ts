@@ -86,7 +86,7 @@ const { MockSyncBlockedError, MockAccountSwitchBusyError } = vi.hoisted(() => ({
     }
   },
 }))
-const mockDeleteRemoteTypingDays = vi.fn(async (..._args: unknown[]): Promise<boolean> => true)
+const mockDeleteDeviceTypingData = vi.fn(async (..._args: unknown[]): Promise<void> => {})
 const mockGetCachedSyncFormatStatus = vi.fn((): unknown => null)
 const mockRefreshSyncFormatStatus = vi.fn(async (): Promise<unknown> => null)
 const mockSetSyncFormatStatusListener = vi.fn()
@@ -142,7 +142,7 @@ vi.mock('../sync-service', async () => ({
   checkPasswordCheckExists: vi.fn(),
   setPasswordAndValidate: (password: string) => mockSetPasswordAndValidate(password),
   replacePasswordAndValidate: (password: string) => mockReplacePasswordAndValidate(password),
-  deleteRemoteTypingDays: (...args: unknown[]) => mockDeleteRemoteTypingDays(...args),
+  deleteDeviceTypingData: (...args: unknown[]) => mockDeleteDeviceTypingData(...args),
   fetchRemoteTypingDay: vi.fn(),
   hasAnyRemoteTypingData: vi.fn(),
   listRemoteTypingDaysFor: vi.fn(),
@@ -1141,7 +1141,8 @@ describe('sync-ipc typing-data deletes and import wait for the sync lock', () =>
   const deletes: Array<[string, string, unknown[], ReturnType<typeof vi.fn>]> = [
     ['TYPING_ANALYTICS_DELETE_ITEMS', IpcChannels.TYPING_ANALYTICS_DELETE_ITEMS, ['uid1', ['2026-10-01']], mockDeleteTypingDailySummaries],
     ['TYPING_ANALYTICS_DELETE_ALL', IpcChannels.TYPING_ANALYTICS_DELETE_ALL, ['uid1'], mockDeleteAllTypingForKeyboard],
-    ['TYPING_ANALYTICS_DELETE_REMOTE_DAYS', IpcChannels.TYPING_ANALYTICS_DELETE_REMOTE_DAYS, ['uid1', 'hash1', ['2026-10-01', '2026-10-02']], mockDeleteRemoteTypingDays],
+    ['TYPING_ANALYTICS_DELETE_DEVICE_DATA', IpcChannels.TYPING_ANALYTICS_DELETE_DEVICE_DATA, ['uid1', 'hash1', ['2026-10-01', '2026-10-02']], mockDeleteDeviceTypingData],
+    ['TYPING_ANALYTICS_DELETE_DEVICE_DATA (all)', IpcChannels.TYPING_ANALYTICS_DELETE_DEVICE_DATA, ['uid1', 'hash1', 'all'], mockDeleteDeviceTypingData],
   ]
 
   beforeEach(() => {
@@ -1184,6 +1185,19 @@ describe('sync-ipc typing-data deletes and import wait for the sync lock', () =>
     }
   })
 
+  it('TYPING_ANALYTICS_DELETE_DEVICE_DATA passes the time the call came in as the cutoff', async () => {
+    const before = Date.now()
+    expect(await getHandler(IpcChannels.TYPING_ANALYTICS_DELETE_DEVICE_DATA)(null, 'uid1', 'hash1', 'all')).toEqual({ success: true })
+    const cutoff = mockDeleteDeviceTypingData.mock.calls[0][3] as number
+    expect(cutoff).toBeGreaterThanOrEqual(before)
+    expect(cutoff).toBeLessThanOrEqual(Date.now())
+  })
+
+  it('TYPING_ANALYTICS_DELETE_DEVICE_DATA does nothing for no dates', async () => {
+    expect(await getHandler(IpcChannels.TYPING_ANALYTICS_DELETE_DEVICE_DATA)(null, 'uid1', 'hash1', [])).toEqual({ success: true })
+    expect(mockDeleteDeviceTypingData).not.toHaveBeenCalled()
+  })
+
   it('TYPING_ANALYTICS_DELETE_ALL removes only this device\'s rows', async () => {
     expect(await getHandler(IpcChannels.TYPING_ANALYTICS_DELETE_ALL)(null, 'uid1')).toEqual({ success: true })
     expect(mockDeleteAllTypingForKeyboard).toHaveBeenCalledWith('uid1', expect.any(Number), 'own')
@@ -1200,7 +1214,9 @@ describe('sync-ipc typing-data deletes and import wait for the sync lock', () =>
   it.each([
     ['an invalid uid', IpcChannels.TYPING_ANALYTICS_DELETE_ALL, ['../x'], 'Invalid uid'],
     ['an invalid date', IpcChannels.TYPING_ANALYTICS_DELETE_ITEMS, ['uid1', ['2026-10-01', 'x']], 'Invalid dates'],
-    ['an invalid device', IpcChannels.TYPING_ANALYTICS_DELETE_REMOTE_DAYS, ['uid1', '../h', ['2026-10-01']], 'Invalid device'],
+    ['an invalid device', IpcChannels.TYPING_ANALYTICS_DELETE_DEVICE_DATA, ['uid1', '../h', ['2026-10-01']], 'Invalid device'],
+    ['an invalid device date', IpcChannels.TYPING_ANALYTICS_DELETE_DEVICE_DATA, ['uid1', 'hash1', ['2026-02-30']], 'Invalid dates'],
+    ['a device target that is neither dates nor all', IpcChannels.TYPING_ANALYTICS_DELETE_DEVICE_DATA, ['uid1', 'hash1', 'everything'], 'Invalid dates'],
   ])('refuses %s before taking the lock', async (_name, channel, args, error) => {
     const release = claimSyncLock()
 
@@ -1208,7 +1224,7 @@ describe('sync-ipc typing-data deletes and import wait for the sync lock', () =>
     release()
     expect(mockDeleteAllTypingForKeyboard).not.toHaveBeenCalled()
     expect(mockDeleteTypingDailySummaries).not.toHaveBeenCalled()
-    expect(mockDeleteRemoteTypingDays).not.toHaveBeenCalled()
+    expect(mockDeleteDeviceTypingData).not.toHaveBeenCalled()
   })
 
   it('TYPING_ANALYTICS_IMPORT shows the file dialog without the lock and imports holding it for every keyboard', async () => {

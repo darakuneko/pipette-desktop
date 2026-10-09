@@ -23,6 +23,7 @@ import type {
   WithDeletedFlag,
 } from './typing-analytics-db-types'
 import { TypingAnalyticsDbBase } from './typing-analytics-db-base'
+import type { DeleteRange } from '../deleted-ranges'
 
 export abstract class TypingAnalyticsDbWrites extends TypingAnalyticsDbBase {
   upsertScope(row: TypingScopeRow): void {
@@ -131,27 +132,30 @@ export abstract class TypingAnalyticsDbWrites extends TypingAnalyticsDbBase {
     tx()
   }
 
-  /** Tombstone every live row of one machine_hash for a uid whose
-   * timestamp falls inside [startMs, endMs) (sessions: overlapping it).
-   * Used by the Sync-delete UX to retract a specific remote device's
-   * contribution without touching rows another device recorded on the
-   * same date. Bumps updated_at on the touched rows and returns per-table
-   * change counts. */
-  tombstoneRowsForUidHashInRange(
+  /** Tombstone every live row of one machine_hash for a uid that one of
+   * `entries` deletes: its time (minute start; session start) is inside
+   * `[startMs, endMs)` and at or before `cutoffMs`. Hides another device's
+   * deleted ranges (deleted-ranges.ts) without touching rows another device
+   * recorded at the same time. Bumps updated_at on the touched rows and
+   * returns per-table change counts, summed over the entries. One
+   * transaction; nested inside a caller's transaction it joins that one. */
+  tombstoneRowsForUidHashInRanges(
     uid: string,
     machineHash: string,
-    startMs: number,
-    endMs: number,
+    entries: readonly DeleteRange[],
     updatedAt: number,
   ): TypingTombstoneResult {
     const result = emptyTombstoneResult()
     const tx = this.db.transaction(() => {
-      result.charMinutes = this.stmts.sync.tombstoneCharMinutesForHashInRangeStmt.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
-      result.matrixMinutes = this.stmts.sync.tombstoneMatrixMinutesForHashInRangeStmt.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
-      result.minuteStats = this.stmts.sync.tombstoneMinuteStatsForHashInRangeStmt.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
-      result.bigramMinutes = this.stmts.ngram[2].tombstoneForHashInRange.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
-      result.trigramMinutes = this.stmts.ngram[3].tombstoneForHashInRange.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
-      result.sessions = this.stmts.sync.tombstoneSessionsForHashInRangeStmt.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
+      for (const { startMs, endMs, cutoffMs } of entries) {
+        const params = { uid, machineHash, startMs, endMs, cutoffMs, updatedAt }
+        result.charMinutes += this.stmts.sync.tombstoneCharMinutesForHashInRangeStmt.run(params).changes
+        result.matrixMinutes += this.stmts.sync.tombstoneMatrixMinutesForHashInRangeStmt.run(params).changes
+        result.minuteStats += this.stmts.sync.tombstoneMinuteStatsForHashInRangeStmt.run(params).changes
+        result.bigramMinutes += this.stmts.ngram[2].tombstoneForHashInRange.run(params).changes
+        result.trigramMinutes += this.stmts.ngram[3].tombstoneForHashInRange.run(params).changes
+        result.sessions += this.stmts.sync.tombstoneSessionsForHashInRangeStmt.run(params).changes
+      }
     })
     tx()
     return result

@@ -21,8 +21,9 @@ export interface TypingSyncState {
   _rev: typeof SYNC_STATE_REV
   my_device_id: string
   /** key = `{uid}|{ownHash}`, value = UTC days this device has uploaded
-   * to cloud. Used to distinguish "new day, needs upload" from "day was
-   * Sync-deleted remotely, clean local". Only populated for own hashes
+   * to cloud. Used to tell a day removed locally (delete the cloud copy)
+   * from a cloud copy removed elsewhere (upload it again; see
+   * reconcileOwnHashTypingAnalytics, sync-typing-remote.ts). Only populated for own hashes
    * (other devices' uploads are tracked by their own sync-state). */
   uploaded: Record<string, UtcDay[]>
   /** key = `{uid}|{ownHash}`, value = epoch-ms of the last successful

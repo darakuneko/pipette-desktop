@@ -114,6 +114,8 @@ Per-keyboard typing history that feeds the Analyze page (see OPERATION-GUIDE §1
 | Storage | Path (under user data directory) | Scope |
 |---------|-----------------------------------|-------|
 | Per-device typing log (master) | `sync/keyboards/{uid}/devices/{machineHash}/{YYYY-MM-DD}.jsonl` | **Synced** across your signed-in devices |
+| Deleted ranges of a device | `sync/keyboards/{uid}/devices/{machineHash}/deleted-ranges.json` | **Synced** — the time ranges deleted from that device's data under Data › Sync › Typing; the device that recorded the data removes them from its own log when it syncs |
+| Applied deleted ranges | `sync/keyboards/{uid}/devices/{machineHash}/deleted-ranges-applied.json` (this device's own directory) | Local only — which deleted ranges this device has already removed from its own log |
 | Keymap snapshots (master) | `typing-analytics/keymaps/{uid}/{machineHash}/*.json` | Local only (per machine) |
 | Query cache (SQLite) | `local/typing-analytics.db` | Local only — rebuilt from the JSONL master when missing or stale |
 

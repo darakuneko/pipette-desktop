@@ -23,14 +23,19 @@ import { TYPING_TEST_TEXT_SYNC_UNIT } from '../typing-test-text-store'
 import { BUILTIN_ENGLISH_PACK_ID, I18N_INDEX_SYNC_UNIT, type I18nPackIndex } from '../../shared/types/i18n-store'
 import { THEME_INDEX_SYNC_UNIT, type ThemePackIndex } from '../../shared/types/theme-store'
 import {
+  DELETED_RANGES_FILENAME,
   deviceDayJsonlPath,
+  listDeletedRangesHashes,
   listDeviceDays,
 } from '../typing-analytics/jsonl/paths'
+import { bundleDeletedRanges } from '../typing-analytics/deleted-ranges-store'
 import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import {
   parseTypingAnalyticsDeviceDaySyncUnit,
+  parseTypingDeletedRangesSyncUnit,
   typingAnalyticsDeviceDaySyncUnit,
+  typingDeletedRangesSyncUnit,
 } from '../typing-analytics/sync'
 import { log } from '../logger'
 import { bundleSyncedIndex as bundleSyncedI18nIndex, bundleSyncedPackBody as bundleSyncedI18nPackBody } from '../i18n-pack-store'
@@ -63,7 +68,8 @@ export function entryStoreForSyncUnit(syncUnit: string): EntryStore | null {
 
 /** Key of the store lock that guards a sync unit's local files: the keyboard
  * uid for per-keyboard units, `favorites/{type}` for favorites, otherwise the
- * unit name itself (key-labels, typing-test-texts). The stores do their
+ * unit name itself (key-labels, typing-test-texts, a device's deleted ranges —
+ * deleted-ranges-store.ts locks on that name). The stores do their
  * read-modify-write under the same key, so a local save, a merge and a
  * bundle never interleave. `collectLockKeys` in local-data-import.ts uses
  * the same key scheme, so the two must agree. */
@@ -171,6 +177,24 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
     }
   }
 
+  // Handle "keyboards/{uid}/devices/{hash}/deleted-ranges" — the time
+  // ranges other devices deleted from that device's typing data, read under
+  // the file's lock (`bundleDeletedRanges`). The segments come from a unit
+  // name that may derive from a Drive filename, so they are checked before
+  // they become a path.
+  const rangesRef = parseTypingDeletedRangesSyncUnit(syncUnit)
+  if (rangesRef) {
+    if (!isSafePathSegment(rangesRef.uid) || !isSafePathSegment(rangesRef.machineHash)) return null
+    const content = await bundleDeletedRanges(userData, rangesRef.uid, rangesRef.machineHash)
+    if (content === null) return null
+    return {
+      type: 'typing-deleted-ranges',
+      key: `${rangesRef.uid}|${rangesRef.machineHash}`,
+      index: { uid: rangesRef.uid, entries: [] } as SnapshotIndex,
+      files: { [DELETED_RANGES_FILENAME]: content },
+    }
+  }
+
   // Handle "keyboards/{uid}/settings" — single-file bundle (no index)
   if (parts.length === 3 && parts[0] === 'keyboards' && parts[2] === 'settings') {
     const uid = parts[1]
@@ -236,6 +260,15 @@ export function isAnalyticsSyncUnit(syncUnit: string): boolean {
   return parseTypingAnalyticsDeviceDaySyncUnit(syncUnit) !== null
 }
 
+/** Per-device deleted-ranges units
+ * (`keyboards/{uid}/devices/{hash}/deleted-ranges`). Not analytics units:
+ * one small file per device, so they ride every trigger, connect-time
+ * initial sync and 3-minute polling included, and the Analyze panel sync
+ * takes them too. */
+export function isTypingDeletedRangesSyncUnit(syncUnit: string): boolean {
+  return parseTypingDeletedRangesSyncUnit(syncUnit) !== null
+}
+
 /** Per-run raw keystroke log units (`keyboards/{uid}/runs`). Excluded
  * from connect-time initial sync and 3-minute polling for the same
  * reason as `isAnalyticsSyncUnit`. Unlike typing-analytics units, this
@@ -245,10 +278,17 @@ export function isRunLogSyncUnit(syncUnit: string): boolean {
   return /^keyboards\/[^/]+\/runs$/.test(syncUnit)
 }
 
-/** Own-hash typing-analytics units for one keyboard. Narrower than
- * `collectAllSyncUnits` + filter — no favorites/snapshots/settings
- * scan, no remote-unaware reconcile. Used by the Analyze panel mount
- * sync. */
+/** The deleted-ranges unit of every hash of `uid` that has a local file.
+ * Every hash, not only this device's: any device may add ranges to another
+ * device's file, and the owner learns of them through Drive. */
+async function collectDeletedRangesUnits(userData: string, uid: string): Promise<string[]> {
+  return (await listDeletedRangesHashes(userData, uid)).map((hash) => typingDeletedRangesSyncUnit(uid, hash))
+}
+
+/** Own-hash typing-analytics day units and every hash's deleted-ranges
+ * unit for one keyboard. Narrower than `collectAllSyncUnits` + filter — no
+ * favorites/snapshots/settings scan, no remote-unaware reconcile. Used by
+ * the Analyze panel mount sync. */
 export async function collectAnalyticsSyncUnitsForUid(uid: string): Promise<string[]> {
   const userData = app.getPath('userData')
   const units: string[] = []
@@ -260,6 +300,7 @@ export async function collectAnalyticsSyncUnitsForUid(uid: string): Promise<stri
   } catch (err) {
     log('warn', `typing-analytics per-uid scan failed for ${uid}: ${String(err)}`)
   }
+  units.push(...await collectDeletedRangesUnits(userData, uid))
   return units
 }
 
@@ -344,6 +385,8 @@ export async function collectAllSyncUnits(): Promise<string[]> {
         await access(join(keyboardsDir, uid, 'runs', 'index.json'))
         units.push(`keyboards/${uid}/runs`)
       } catch { /* no run logs */ }
+      // per-device deleted ranges (one file per hash, every hash)
+      units.push(...await collectDeletedRangesUnits(userData, uid))
     }
   } catch { /* dir doesn't exist */ }
 

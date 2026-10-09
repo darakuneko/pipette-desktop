@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Delete part of this device's own typing data (the Data modal's Local tab
-// deleting local calendar days). A local day overlaps one or two UTC day
+// Delete part of this device's own typing data: the Data modal's Local tab
+// deleting local calendar days, and the ranges another device deleted from
+// this device's data (deleted-ranges-apply.ts). A local day overlaps one or two UTC day
 // files, so whole files cannot be removed. Instead the rows inside the
 // deleted ranges are appended again to the same file with `is_deleted: true`
 // and a newer `updated_at`: the files stay append-only, the LWW merge makes
@@ -13,12 +14,13 @@ import { getTypingAnalyticsDB } from './db/typing-analytics-db'
 import { getMachineHash } from './machine-hash'
 import type { JsonlBigramMinuteEntry, JsonlRow } from './jsonl/jsonl-row'
 import { readRows } from './jsonl/jsonl-reader'
-import { deviceDayJsonlPath } from './jsonl/paths'
-import { utcDayBoundaryMs, utcDayFromMs, type UtcDay } from './jsonl/utc-day'
+import { deviceDayJsonlPath, listDeviceDays } from './jsonl/paths'
+import { utcDayBoundaryMs, type UtcDay } from './jsonl/utc-day'
+import { applyRowsToCache } from './jsonl/apply-to-cache'
+import type { DeleteRange } from './deleted-ranges'
 import {
   claimOwnRowUpdatedAt,
   closeSessionsForUid,
-  deletedByCutoff,
   dropBufferedTyping,
   notifyOwnDaysChanged,
   persistOwnJsonlDay,
@@ -40,21 +42,20 @@ function rowTimeMs(row: TimedRow): number {
   return row.kind === 'session' ? row.payload.startMs : row.payload.minuteTs
 }
 
-/** Every UTC day from the one holding `startMs` to the one holding
- * `endMs - 1`, i.e. every day file a row of `[startMs, endMs)` can be in. */
-export function utcDaysOverlapping(ranges: readonly TimeRange[]): UtcDay[] {
-  const days = new Set<UtcDay>()
-  for (const range of ranges) {
-    const last = utcDayFromMs(range.endMs - 1)
-    let dayStart = utcDayBoundaryMs(utcDayFromMs(range.startMs)).startMs
-    for (;;) {
-      const day = utcDayFromMs(dayStart)
-      days.add(day)
-      if (day >= last) break
-      dayStart = utcDayBoundaryMs(day).endMs
-    }
-  }
-  return [...days].sort()
+/** True for a time (a minute start, or a session start) one of `ranges`
+ * removes. */
+function deletedByRanges(ranges: readonly DeleteRange[]): (ms: number) => boolean {
+  return (ms) => ranges.some((r) => ms >= r.startMs && ms < r.endMs && ms <= r.cutoffMs)
+}
+
+/** The days of `days` whose UTC day file can hold a row one of `ranges`
+ * removes. Only existing files are walked, so a range that starts at 0 does
+ * not visit every day since 1970. */
+export function daysOverlapping(days: readonly UtcDay[], ranges: readonly DeleteRange[]): UtcDay[] {
+  return days.filter((day) => {
+    const { startMs, endMs } = utcDayBoundaryMs(day)
+    return ranges.some((r) => r.startMs < endMs && Math.min(r.endMs, r.cutoffMs + 1) > startMs)
+  })
 }
 
 /** The cache row a JSONL row lands on, from its payload: the cache's
@@ -157,46 +158,71 @@ function countMarks(result: TypingTombstoneResult, rows: readonly JsonlRow[]): v
   }
 }
 
-/** Delete `uid`'s own typing in `ranges` (`[startMs, endMs)`), limited to
- * times at or before `cutoffMs` (the moment the user asked for the delete;
- * see discardBufferedTyping, typing-analytics-pipeline.ts). One task on the
- * flush chain, so no flush writes in between: it closes the active
+/** Delete `uid`'s own typing in `ranges` (see DeleteRange, deleted-ranges.ts). Must run inside
+ * a flush-chain task, so no flush writes in between: it closes the active
  * sessions that started in the ranges, drops the buffered data of the
  * ranges, then appends the delete marks to each overlapping day file and
  * applies them to the cache. Each day that got marks is announced to sync
- * so the file is uploaded again. Returns the number of marked rows. */
-export async function deleteOwnTypingInRanges(
+ * so the file is uploaded again. In-range rows whose kept copy is already a
+ * mark (written by an earlier run whose cache step failed) are replayed
+ * into the cache again, so a retry repairs the cache. Returns the number of
+ * marked rows. */
+export async function markOwnTypingInRangesOnChain(
+  uid: string,
+  ranges: readonly DeleteRange[],
+): Promise<TypingTombstoneResult> {
+  const marks = deletedByRanges(ranges)
+  const result = emptyTombstoneResult()
+  closeSessionsForUid(uid, marks)
+  dropBufferedTyping(uid, marks)
+  // Fail before anything is written when the cache cannot be opened.
+  const db = getTypingAnalyticsDB()
+  const machineHash = await getMachineHash()
+  const userDataDir = app.getPath('userData')
+  const days = daysOverlapping(await listDeviceDays(userDataDir, uid, machineHash), ranges)
+  const byDay: Array<{ day: UtcDay; rows: JsonlRow[] }> = []
+  let newestUpdatedAt = 0
+  for (const day of days) {
+    // A listed day that cannot be read fails the task, so a caller that
+    // records what it applied does not record this day as done.
+    const { rows } = await readRows(deviceDayJsonlPath(userDataDir, uid, machineHash, day), { mustExist: true })
+    const inRange = rows.filter((row) => row.kind === 'scope' || marks(rowTimeMs(row)))
+    if (inRange.some((row) => row.kind !== 'scope' && row.is_deleted === true)) applyRowsToCache(db, inRange)
+    const found = collectRowsToMark(rows, marks)
+    if (found.rows.length === 0) continue
+    byDay.push({ day, rows: found.rows })
+    newestUpdatedAt = Math.max(newestUpdatedAt, found.newestUpdatedAt)
+  }
+  if (byDay.length === 0) return result
+  const updatedAt = claimOwnRowUpdatedAt(newestUpdatedAt)
+  for (const { day, rows } of byDay) {
+    const marked = rows.map((row) => ({ ...row, is_deleted: true, updated_at: updatedAt }))
+    await persistOwnJsonlDay(uid, day, marked, machineHash, userDataDir)
+    countMarks(result, marked)
+    notifyOwnDaysChanged(uid, machineHash, [day])
+  }
+  return result
+}
+
+/** `markOwnTypingInRangesOnChain` as its own task on the flush chain. */
+async function markOwnTypingInRanges(
+  uid: string,
+  ranges: readonly DeleteRange[],
+): Promise<TypingTombstoneResult> {
+  let result = emptyTombstoneResult()
+  await runOnFlushChain(async () => {
+    result = await markOwnTypingInRangesOnChain(uid, ranges)
+  })
+  return result
+}
+
+/** `markOwnTypingInRanges` with one cutoff for every range: `cutoffMs` is
+ * the moment the user asked for the delete (see discardBufferedTyping,
+ * typing-analytics-pipeline.ts). */
+export function deleteOwnTypingInRanges(
   uid: string,
   ranges: readonly TimeRange[],
   cutoffMs: number,
 ): Promise<TypingTombstoneResult> {
-  const marks = deletedByCutoff(cutoffMs, ranges)
-  const days = utcDaysOverlapping(ranges)
-  const result = emptyTombstoneResult()
-  await runOnFlushChain(async () => {
-    closeSessionsForUid(uid, marks)
-    dropBufferedTyping(uid, marks)
-    // Fail before anything is written when the cache cannot be opened.
-    getTypingAnalyticsDB()
-    const machineHash = await getMachineHash()
-    const userDataDir = app.getPath('userData')
-    const byDay: Array<{ day: UtcDay; rows: JsonlRow[] }> = []
-    let newestUpdatedAt = 0
-    for (const day of days) {
-      const { rows } = await readRows(deviceDayJsonlPath(userDataDir, uid, machineHash, day))
-      const found = collectRowsToMark(rows, marks)
-      if (found.rows.length === 0) continue
-      byDay.push({ day, rows: found.rows })
-      newestUpdatedAt = Math.max(newestUpdatedAt, found.newestUpdatedAt)
-    }
-    if (byDay.length === 0) return
-    const updatedAt = claimOwnRowUpdatedAt(newestUpdatedAt)
-    for (const { day, rows } of byDay) {
-      const marked = rows.map((row) => ({ ...row, is_deleted: true, updated_at: updatedAt }))
-      await persistOwnJsonlDay(uid, day, marked, machineHash, userDataDir)
-      countMarks(result, marked)
-      notifyOwnDaysChanged(uid, machineHash, [day])
-    }
-  })
-  return result
+  return markOwnTypingInRanges(uid, ranges.map((range) => ({ startMs: range.startMs, endMs: range.endMs, cutoffMs })))
 }

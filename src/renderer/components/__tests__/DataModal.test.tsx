@@ -71,7 +71,7 @@ const mockTypingAnalyticsHasRemote = vi.fn().mockResolvedValue(false)
 const mockTypingAnalyticsListRemoteCloudHashes = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsListRemoteCloudDays = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsFetchRemoteDay = vi.fn().mockResolvedValue(true)
-const mockTypingAnalyticsDeleteRemoteDays = vi.fn().mockResolvedValue({ success: true })
+const mockTypingAnalyticsDeleteDeviceData = vi.fn().mockResolvedValue({ success: true })
 const mockTypingAnalyticsExport = vi.fn().mockResolvedValue({ written: 0, cancelled: true })
 const mockTypingAnalyticsImport = vi.fn().mockResolvedValue({ success: true, result: { imported: 0, rejections: [] }, cancelled: true })
 const mockTypingAnalyticsDeleteItems = vi.fn().mockResolvedValue({ success: true })
@@ -109,7 +109,7 @@ Object.defineProperty(window, 'vialAPI', {
     typingAnalyticsListRemoteCloudHashes: mockTypingAnalyticsListRemoteCloudHashes,
     typingAnalyticsListRemoteCloudDays: mockTypingAnalyticsListRemoteCloudDays,
     typingAnalyticsFetchRemoteDay: mockTypingAnalyticsFetchRemoteDay,
-    typingAnalyticsDeleteRemoteDays: mockTypingAnalyticsDeleteRemoteDays,
+    typingAnalyticsDeleteDeviceData: mockTypingAnalyticsDeleteDeviceData,
     typingAnalyticsExport: mockTypingAnalyticsExport,
     typingAnalyticsImport: mockTypingAnalyticsImport,
     typingAnalyticsDeleteItems: mockTypingAnalyticsDeleteItems,
@@ -184,7 +184,7 @@ describe('DataModal', () => {
     mockTypingAnalyticsListRemoteCloudHashes.mockResolvedValue([])
     mockTypingAnalyticsListRemoteCloudDays.mockResolvedValue([])
     mockTypingAnalyticsFetchRemoteDay.mockResolvedValue(true)
-    mockTypingAnalyticsDeleteRemoteDays.mockResolvedValue({ success: true })
+    mockTypingAnalyticsDeleteDeviceData.mockResolvedValue({ success: true })
     mockTypingAnalyticsExport.mockResolvedValue({ written: 0, cancelled: true })
     mockTypingAnalyticsImport.mockResolvedValue({ success: true, result: { imported: 0, rejections: [] }, cancelled: true })
     mockTypingAnalyticsDeleteItems.mockResolvedValue({ success: true })

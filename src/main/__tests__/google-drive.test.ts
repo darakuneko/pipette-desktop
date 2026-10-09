@@ -129,6 +129,14 @@ describe('google-drive', () => {
         .toBe('keyboards/0x1234/devices/hash-abc/days/2026-04-19')
     })
 
+    it('round-trips the per-device deleted-ranges sync unit', () => {
+      expect(driveFileName('keyboards/0x1234/devices/hash-abc/deleted-ranges'))
+        .toBe('keyboards_0x1234_devices_hash-abc_deleted-ranges.enc')
+      expect(syncUnitFromFileName('keyboards_0x1234_devices_hash-abc_deleted-ranges.enc'))
+        .toBe('keyboards/0x1234/devices/hash-abc/deleted-ranges')
+      expect(syncUnitFromFileName('keyboards_0x1234_devices__deleted-ranges.enc')).toBeNull()
+    })
+
     it('returns null for the legacy flat device JSONL filename shape', () => {
       // The flat `{hash}.enc` form (no `_days_` segment) must not
       // round-trip into a sync unit.

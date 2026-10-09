@@ -118,7 +118,7 @@ vi.mock('../pack-gc', () => ({ runPackGcAfterPass: vi.fn(async () => {}) }))
 vi.mock('../../key-label-store', () => ({ KEY_LABEL_SYNC_UNIT: 'key-labels' }))
 vi.mock('../../typing-test-text-store', () => ({ TYPING_TEST_TEXT_SYNC_UNIT: 'typing-test-texts' }))
 vi.mock('../../typing-analytics/db/typing-analytics-db', () => ({
-  getTypingAnalyticsDB: () => ({ tombstoneRowsForUidHashInRange: vi.fn() }),
+  getTypingAnalyticsDB: () => ({ tombstoneRowsForUidHashInRanges: vi.fn() }),
 }))
 vi.mock('../../typing-analytics/sync-state', () => ({
   loadSyncState: vi.fn(async () => null),

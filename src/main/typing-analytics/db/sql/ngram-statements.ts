@@ -138,7 +138,7 @@ export function prepareNgramStatements(
       UPDATE ${table}
          SET is_deleted = 1, updated_at = @updatedAt
        WHERE ${TOMBSTONE_HASH_RANGE_WHERE}
-         AND minute_ts >= @startMs AND minute_ts < @endMs
+         AND minute_ts >= @startMs AND minute_ts < @endMs AND minute_ts <= @cutoffMs
     `),
 
     tombstoneAll: db.prepare(`
