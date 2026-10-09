@@ -162,6 +162,9 @@ vi.mock('../../typing-analytics/import-export', () => ({
   importTypingDataFiles: (...args: unknown[]) => mockImportTypingDataFiles(...args),
 }))
 vi.mock('../../typing-analytics/machine-hash', () => ({ getMachineHash: vi.fn() }))
+vi.mock('../../typing-analytics/deleted-ranges-apply', () => ({
+  prepareOwnDeletedRangesReapply: vi.fn(),
+}))
 vi.mock('../../typing-analytics/cache-rebuild', () => ({ ensureCacheIsFresh: vi.fn() }))
 vi.mock('../../typing-analytics/db/typing-analytics-db', () => ({ getTypingAnalyticsDB: vi.fn() }))
 const mockDeleteAllTypingForKeyboard = vi.fn(async (_uid: string, _cutoffMs: number, _scope: 'own' | 'all'): Promise<void> => {})
@@ -196,6 +199,7 @@ import { onAppConfigChange } from '../../app-config'
 import { IpcChannels } from '../../../shared/ipc/channels'
 import { KEY_LABEL_SYNC_UNIT } from '../../key-label-store'
 import { TYPING_TEST_TEXT_SYNC_UNIT } from '../../typing-test-text-store'
+import { prepareOwnDeletedRangesReapply } from '../../typing-analytics/deleted-ranges-apply'
 
 type ResetTargetsHandler = (_event: unknown, targets: unknown) => Promise<{ success: boolean; error?: string }>
 
@@ -1244,6 +1248,14 @@ describe('sync-ipc typing-data deletes and import wait for the sync lock', () =>
     expect(mockImportTypingDataFiles).toHaveBeenCalledTimes(1)
     expect(mockImportTypingDataFiles.mock.calls[0][2]).toMatchObject({ runExclusive: expect.any(Function) })
     expect(syncRuntime.isSyncing).toBe(false)
+  })
+
+  it('TYPING_ANALYTICS_IMPORT has each replaced file marked again with this device\'s deleted ranges', async () => {
+    vi.mocked(dialog.showOpenDialog).mockResolvedValueOnce({ canceled: false, filePaths: ['/tmp/day.jsonl'] })
+
+    await getHandler(IpcChannels.TYPING_ANALYTICS_IMPORT)(null)
+
+    expect(mockImportTypingDataFiles.mock.calls[0][2]).toMatchObject({ prepareReplace: prepareOwnDeletedRangesReapply })
   })
 
   it('TYPING_ANALYTICS_IMPORT returns the import busy key when the lock is still held after the wait', async () => {

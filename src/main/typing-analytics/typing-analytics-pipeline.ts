@@ -16,7 +16,7 @@ import { getCurrentAppName } from './app-monitor'
 import { buildFingerprint } from './fingerprint'
 import type { FinalizedSession } from './session-detector'
 import { getTypingAnalyticsDB } from './db/typing-analytics-db'
-import { typingAnalyticsDeviceDaySyncUnit } from './sync'
+import { typingAnalyticsDeviceDaySyncUnit, typingDeletedRangesSyncUnit } from './sync'
 import { getMachineHash } from './machine-hash'
 import { applyRowsToCache } from './jsonl/apply-to-cache'
 import type { JsonlRow } from './jsonl/jsonl-row'
@@ -366,21 +366,32 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
   taState.dirty = !taState.minuteBuffer.isEmpty()
 }
 
-/** Tell the sync layer that this device's day files of `uid` changed, one
- * sync unit per `(uid, hash, day)` so cloud storage tracks days as
- * independent units. The notifier is captured once so a reset between
- * days cannot null it mid-loop; a failing notify is logged and the other
- * days are still announced. */
-export function notifyOwnDaysChanged(uid: string, machineHash: string, days: readonly UtcDay[]): void {
+/** Hands `units` to the sync layer. The notifier is captured once so a
+ * reset between units cannot null it mid-loop; a failing notify is logged
+ * and the other units are still announced. */
+function notifySyncUnits(units: readonly string[]): void {
   const notifier = taState.syncNotifier
   if (!notifier) return
-  for (const day of days) {
+  for (const unit of units) {
     try {
-      notifier(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, day))
+      notifier(unit)
     } catch (err) {
-      log('warn', `typing-analytics sync notify failed for ${uid} ${day}: ${String(err)}`)
+      log('warn', `typing-analytics sync notify failed for ${unit}: ${String(err)}`)
     }
   }
+}
+
+/** Tell the sync layer that this device's day files of `uid` changed, one
+ * sync unit per `(uid, hash, day)` so cloud storage tracks days as
+ * independent units. */
+export function notifyOwnDaysChanged(uid: string, machineHash: string, days: readonly UtcDay[]): void {
+  notifySyncUnits(days.map((day) => typingAnalyticsDeviceDaySyncUnit(uid, machineHash, day)))
+}
+
+/** Tell the sync layer that the deleted-ranges file of `(uid, machineHash)`
+ * changed. */
+export function notifyDeletedRangesChanged(uid: string, machineHash: string): void {
+  notifySyncUnits([typingDeletedRangesSyncUnit(uid, machineHash)])
 }
 
 /**

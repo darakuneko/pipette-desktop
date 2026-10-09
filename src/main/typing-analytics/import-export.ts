@@ -24,7 +24,9 @@
 // surface why nothing happened. An accepted file replaces the local one,
 // except that the local file's delete marks (`is_deleted` rows) are kept
 // after the imported rows: the LWW merge then keeps deleted data deleted
-// unless the import holds a newer copy of that row.
+// unless the import holds a newer copy of that row. The caller can also
+// mark the replaced file's rows again (`prepareReplace`), which is how the
+// deleted ranges of this device's own data are kept deleted.
 
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
@@ -108,6 +110,7 @@ export type ImportRejectReason =
   | 'empty-or-invalid-content'
   | 'rows-outside-day-window'
   | 'read-error'
+  | 'deleted-ranges-unreadable'
 
 export interface ImportRejection {
   fileName: string
@@ -135,6 +138,11 @@ export interface ImportOptions {
    * with other writers of that file (this device's flush chain appends to
    * its own files). Defaults to running the task directly. */
   runExclusive?: (task: () => Promise<void>) => Promise<void>
+  /** Runs inside the same `runExclusive` task, before a target file is
+   * replaced, and returns a step to run right after the replace. When it
+   * throws, the file is left as it is and rejected as
+   * `deleted-ranges-unreadable`. */
+  prepareReplace?: (ref: ExportFileRef) => Promise<() => Promise<void>>
 }
 
 /** Validate + overwrite a batch of files. Each path is processed
@@ -195,12 +203,22 @@ export async function importTypingDataFiles(
       result.rejections.push({ fileName: ref.fileName, reason: 'rows-outside-day-window' })
       continue
     }
+    let replaced = false
     const replace = async (): Promise<void> => {
+      let afterReplace: (() => Promise<void>) | undefined
+      try {
+        afterReplace = await options.prepareReplace?.(ref)
+      } catch {
+        return
+      }
       await mkdir(dirname(targetPath), { recursive: true })
       await writeFileAtomic(targetPath, withLocalDeleteMarks(body, await readDeleteMarkLines(targetPath)))
+      replaced = true
+      await afterReplace?.()
     }
     await (options.runExclusive ? options.runExclusive(replace) : replace())
-    result.imported += 1
+    if (replaced) result.imported += 1
+    else result.rejections.push({ fileName: ref.fileName, reason: 'deleted-ranges-unreadable' })
   }
   return result
 }
