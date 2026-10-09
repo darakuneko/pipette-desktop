@@ -9,9 +9,11 @@
 // re-exports the full public surface from the sibling modules in this
 // directory. New IPC channels belong in `typing-analytics-ipc-analyze.ts`
 // or `typing-analytics-ipc-range.ts` depending on which family they extend
-// — not here. External consumers (main/index.ts, hub/hub-analytics.ts,
-// sync/sync-ipc.ts, typing-run-log-store.ts, and this module's test mocks)
-// must keep importing this facade path, never a submodule directly.
+// — not here. The Data modal's delete handlers hold the sync lock, so they
+// are registered on the sync side (sync/sync-reset-ipc.ts). External
+// consumers (main/index.ts, hub/hub-analytics.ts, sync/sync-ipc.ts,
+// sync/sync-reset-ipc.ts, typing-run-log-store.ts, and this module's test
+// mocks) must keep importing this facade path, never a submodule directly.
 
 import { app } from 'electron'
 import { IpcChannels } from '../../shared/ipc/channels'
@@ -19,10 +21,8 @@ import { secureHandle } from '../ipc-guard'
 import type {
   TypingDailySummary,
   TypingKeyboardSummary,
-  TypingTombstoneResult,
 } from './db/typing-analytics-db'
 import { getTypingAnalyticsDB } from './db/typing-analytics-db'
-import { emptyTombstoneResult } from '../../shared/types/typing-analytics'
 import { normalizeAppScopes } from '../../shared/types/analyze-filters'
 import { ensureCacheIsFresh } from './cache-rebuild'
 import { getMachineHash } from './machine-hash'
@@ -34,7 +34,6 @@ import {
   isValidEvent,
 } from './typing-analytics-pipeline'
 import { listTypingDailySummaries, listTypingKeyboards } from './typing-analytics-queries'
-import { deleteAllTypingForKeyboard, deleteTypingDailySummaries } from './typing-analytics-retention'
 import { registerAnalyzeIpc } from './typing-analytics-ipc-analyze'
 import { registerRangeIpc } from './typing-analytics-ipc-range'
 
@@ -107,27 +106,6 @@ export function setupTypingAnalyticsIpc(): void {
     async (_event, uid: unknown, appScopes: unknown, typingTestScopes: unknown, runIdScopes: unknown): Promise<TypingDailySummary[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       return listTypingDailySummaries(uid, normalizeAppScopes(appScopes), normalizeAppScopes(typingTestScopes), normalizeAppScopes(runIdScopes))
-    },
-  )
-
-  secureHandle(
-    IpcChannels.TYPING_ANALYTICS_DELETE_ITEMS,
-    async (_event, uid: unknown, dates: unknown): Promise<TypingTombstoneResult> => {
-      const empty = emptyTombstoneResult()
-      if (typeof uid !== 'string' || uid.length === 0) return empty
-      if (!Array.isArray(dates)) return empty
-      const validDates = dates.filter((d): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d))
-      if (validDates.length === 0) return empty
-      return deleteTypingDailySummaries(uid, validDates)
-    },
-  )
-
-  secureHandle(
-    IpcChannels.TYPING_ANALYTICS_DELETE_ALL,
-    async (_event, uid: unknown): Promise<TypingTombstoneResult> => {
-      const empty = emptyTombstoneResult()
-      if (typeof uid !== 'string' || uid.length === 0) return empty
-      return deleteAllTypingForKeyboard(uid)
     },
   )
 

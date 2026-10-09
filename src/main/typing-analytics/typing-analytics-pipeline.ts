@@ -385,10 +385,40 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
  * pending work even after a snapshot has cleared the live state.
  */
 export function flushNow(options: { final: boolean }): Promise<void> {
+  return runOnFlushChain(() => doFlushPass(options))
+}
+
+/**
+ * Drop what `uid` has buffered up to `cutoffMs` (the moment the user asked
+ * for the delete), limited to `ranges` (`[startMs, endMs)`) when given:
+ * the minute entries starting at or before `cutoffMs` (so the clicked
+ * minute goes whole) and the finalized sessions not yet written that
+ * started by then. Runs on the flush chain, after every flush queued
+ * before it. That data is being deleted, so it is dropped rather than
+ * flushed; minutes after the cutoff stay buffered and are written by later
+ * flushes. The resolved scope stays cached: a session started after the
+ * delete still needs it to be written.
+ */
+export function discardBufferedTyping(
+  uid: string,
+  cutoffMs: number,
+  ranges?: readonly { startMs: number; endMs: number }[],
+): Promise<void> {
+  const drops = (ms: number): boolean =>
+    ms <= cutoffMs && (!ranges || ranges.some((r) => ms >= r.startMs && ms < r.endMs))
+  return runOnFlushChain(() => {
+    taState.minuteBuffer.discardForUid(uid, drops)
+    const kept = taState.pendingSessions.filter((session) => session.uid !== uid || !drops(session.startMs))
+    taState.pendingSessions.splice(0, taState.pendingSessions.length, ...kept)
+  })
+}
+
+/** Runs `task` behind everything already on the flush chain. */
+function runOnFlushChain(task: () => Promise<void> | void): Promise<void> {
   taState.inFlightFlushCount++
   const next = taState.flushChain
     .catch(() => undefined)
-    .then(() => doFlushPass(options))
+    .then(task)
     .finally(() => {
       taState.inFlightFlushCount--
       if (taState.dirty || taState.pendingSessions.length > 0) {

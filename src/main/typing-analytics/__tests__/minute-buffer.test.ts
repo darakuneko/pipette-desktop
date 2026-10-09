@@ -1175,4 +1175,49 @@ describe('MinuteBuffer', () => {
       expect(RETENTION_MS).toBeGreaterThan(DRAIN_CLOSE_GRACE_MS)
     })
   })
+
+  describe('discardForUid', () => {
+    it('drops every entry of the uid whatever its state and keeps other uids', () => {
+      const fpA = fingerprint({ uid: '0xAAAA' })
+      const fpB = fingerprint({ uid: '0xBBBB' })
+      addEv(charEvent('a', 1_000), fpA)
+      buffer.drainAll() // retained
+      addEv(charEvent('b', 1_100), fpA) // reopened
+      addEv(charEvent('c', MINUTE_MS + 1_000), fpA) // open
+      addEv(charEvent('x', 1_200), fpB)
+
+      buffer.discardForUid('0xAAAA', () => true)
+
+      const snaps = buffer.drainAll()
+      expect(snaps.map((snap) => snap.scopeId)).toEqual([canonicalScopeKey(fpB)])
+      // A later event of the discarded uid starts a new entry with only its own count.
+      addEv(charEvent('d', 1_300), fpA)
+      expect(buffer.drainAll().map((snap) => snap.keystrokes)).toEqual([1])
+    })
+
+    it('drops only the minutes the predicate accepts', () => {
+      const fp = fingerprint()
+      addEv(charEvent('a', 1_000), fp)
+      addEv(charEvent('b', MINUTE_MS + 1_000), fp)
+
+      buffer.discardForUid('0xAABB', (minuteTs) => minuteTs === MINUTE_MS)
+
+      expect(buffer.drainAll().map((snap) => snap.minuteTs)).toEqual([0])
+    })
+
+    it('restarts the n-gram chain of the uid and leaves another uid\'s chain alone', () => {
+      const fpA = fingerprint({ uid: '0xAAAA' })
+      const fpB = fingerprint({ uid: '0xBBBB' })
+      addEv(matrixEvent(0, 0, 0, 4, 1_000), fpA)
+      buffer.discardForUid('0xAAAA', () => true)
+      addEv(matrixEvent(0, 1, 0, 11, 1_100), fpA)
+      expect(buffer.drainAll()[0].bigrams.size).toBe(0)
+
+      addEv(matrixEvent(0, 0, 0, 4, 2_000), fpB)
+      buffer.discardForUid('0xAAAA', () => true)
+      addEv(matrixEvent(0, 1, 0, 11, 2_100), fpB)
+      const snapB = buffer.drainAll().find((snap) => snap.scopeId === canonicalScopeKey(fpB))
+      expect([...(snapB?.bigrams.entries() ?? [])]).toEqual([['4_11', [100]]])
+    })
+  })
 })

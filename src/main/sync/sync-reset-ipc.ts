@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // IPC handlers that reset or delete synced data. Each one holds the sync lock
-// for its whole run (withResetLock, sync-reset-lock.ts).
+// for its whole run (withResetLock / withResetLockWhenFree,
+// sync-reset-lock.ts). The typing-analytics deletes are registered here
+// rather than in typing-analytics/, which does not import the sync layer.
 
 import { app } from 'electron'
 import { rm } from 'node:fs/promises'
@@ -10,6 +12,9 @@ import { getAppConfigStore } from '../app-config'
 import { deleteFilesByPrefix, deleteFilesByExactName, deleteFilesById, driveFileName } from './google-drive'
 import {
   withResetLock,
+  withResetLockWhenFree,
+  DELETE_BUSY_MESSAGE,
+  deleteRemoteTypingDays,
   cancelPendingChanges,
   copyPendingState,
   restoreCancelledPending,
@@ -23,7 +28,7 @@ import {
   signOutKeepingPendingLocked,
 } from './sync-service'
 import { wrapIpc } from './sync-ipc-wrap'
-import { deleteAllTypingForKeyboard, listTypingKeyboards } from '../typing-analytics/typing-analytics-service'
+import { deleteAllTypingForKeyboard, deleteTypingDailySummaries, listTypingKeyboards } from '../typing-analytics/typing-analytics-service'
 import { tombstoneAllKeyboardMeta, tombstoneKeyboardMeta } from './keyboard-meta'
 import { secureHandle } from '../ipc-guard'
 import type { SyncResetTargets, LocalResetTargets } from '../../shared/types/sync'
@@ -33,6 +38,7 @@ import { THEME_SYNC_UNIT_PREFIX } from '../../shared/types/theme-store'
 import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
 import { TYPING_TEST_TEXT_SYNC_UNIT } from '../typing-test-text-store'
 import { isSafeKey } from '../utils/safe-filename'
+import { isUtcDay } from '../typing-analytics/jsonl/utc-day'
 
 /** `SyncResetTargets`' optional boolean fields — every one of them
  *  follows the identical "boolean or absent" validation and the same
@@ -40,6 +46,14 @@ import { isSafeKey } from '../utils/safe-filename'
  *  per-field type checks and the no-targets guard below loop over this
  *  instead of hand-repeating four near-identical `if` blocks. */
 const OPTIONAL_SYNC_RESET_TARGETS = ['i18nPacks', 'themePacks', 'keyLabels', 'typingTestTexts'] as const
+
+/** The `YYYY-MM-DD` days of `value`; throws when it is not a list of them. */
+function validDays(value: unknown): string[] {
+  if (!Array.isArray(value) || !value.every((day) => typeof day === 'string' && isUtcDay(day))) {
+    throw new Error('Invalid dates')
+  }
+  return value
+}
 
 /** Runs Reset Keyboard Data's typing-analytics cleanup (flush, unlink this
  *  machine's JSONL, tombstone the SQLite-cache rows) for every keyboard
@@ -268,6 +282,40 @@ export function setupSyncResetIpc(): void {
     }),
   )
 
+  // --- Typing analytics deletes (Data modal > Typing) ---
+  // They wait for a running poll or flush instead of failing at once: the
+  // user clicked delete, and those passes end within seconds. The local
+  // deletes take the click time as their cutoff, so what is typed in later
+  // minutes during the wait is kept.
+  secureHandle(IpcChannels.TYPING_ANALYTICS_DELETE_ITEMS, (_event, uid: unknown, dates: unknown) =>
+    wrapIpc('Delete typing data failed', async () => {
+      const cutoffMs = Date.now()
+      if (typeof uid !== 'string' || !isSafeKey(uid)) throw new Error('Invalid uid')
+      const days = validDays(dates)
+      if (days.length === 0) return
+      await withResetLockWhenFree([uid], () => deleteTypingDailySummaries(uid, days, cutoffMs), DELETE_BUSY_MESSAGE)
+    }),
+  )
+
+  secureHandle(IpcChannels.TYPING_ANALYTICS_DELETE_ALL, (_event, uid: unknown) =>
+    wrapIpc('Delete typing data failed', async () => {
+      const cutoffMs = Date.now()
+      if (typeof uid !== 'string' || !isSafeKey(uid)) throw new Error('Invalid uid')
+      await withResetLockWhenFree([uid], () => deleteAllTypingForKeyboard(uid, cutoffMs), DELETE_BUSY_MESSAGE)
+    }),
+  )
+
+  // Every day under one lock, so a poll cannot run between two of them.
+  secureHandle(IpcChannels.TYPING_ANALYTICS_DELETE_REMOTE_DAYS, (_event, uid: unknown, machineHash: unknown, utcDays: unknown) =>
+    wrapIpc('Delete typing data failed', async () => {
+      if (typeof uid !== 'string' || !isSafeKey(uid)) throw new Error('Invalid uid')
+      if (typeof machineHash !== 'string' || !isSafeKey(machineHash)) throw new Error('Invalid device')
+      const days = validDays(utcDays)
+      if (days.length === 0) return
+      await withResetLockWhenFree([uid], () => deleteRemoteTypingDays(uid, machineHash, days), DELETE_BUSY_MESSAGE)
+    }),
+  )
+
   secureHandle(IpcChannels.SYNC_DELETE_FILES, (_event, fileIds: string[]) =>
     wrapIpc('Delete files failed', async () => {
       if (!Array.isArray(fileIds) || fileIds.length === 0) throw new Error('No files specified')
@@ -276,7 +324,7 @@ export function setupSyncResetIpc(): void {
         await assertSyncAllowed()
         const result = await deleteFilesById(fileIds)
         if (result.failed > 0) throw new Error(`Failed to delete ${result.failed} of ${result.attempted} files: ${result.firstError}`)
-      }, 'Cannot delete while sync is in progress')
+      }, DELETE_BUSY_MESSAGE)
     }),
   )
 }

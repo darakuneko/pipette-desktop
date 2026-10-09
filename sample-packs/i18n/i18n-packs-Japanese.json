@@ -1,5 +1,5 @@
 {
-  "version": "0.1.111",
+  "version": "0.1.112",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -876,6 +876,9 @@
     "authenticating": "認証を待機中...",
     "authFailed": "認証に失敗しました。もう一度お試しください。",
     "signInBusy": "同期の処理中はサインインできません。しばらくしてからもう一度お試しください。",
+    "resetBusy": "同期の処理中はリセットできません。しばらくしてからもう一度お試しください。",
+    "deleteBusy": "同期の処理中は削除できません。しばらくしてからもう一度お試しください。",
+    "importBusy": "同期の処理中はインポートできません。しばらくしてからもう一度お試しください。",
     "encryptionPassword": "同期暗号化パスワード",
     "passwordSet": "パスワード設定済み",
     "passwordPlaceholder": "暗号化パスワードを入力",

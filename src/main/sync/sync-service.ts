@@ -115,7 +115,7 @@ export {
   hasAnyRemoteTypingData,
   listRemoteTypingHashesForUidFromCloud,
   listRemoteTypingDaysFor,
-  deleteRemoteTypingDay,
+  deleteRemoteTypingDays,
   fetchRemoteTypingDay,
 } from './sync-typing-remote'
 
@@ -139,7 +139,7 @@ export {
 } from './sync-pending-account'
 
 export type { ResetKeyboards } from './sync-reset-lock'
-export { withResetLock } from './sync-reset-lock'
+export { withResetLock, withResetLockWhenFree, DELETE_BUSY_MESSAGE, IMPORT_BUSY_MESSAGE } from './sync-reset-lock'
 
 export {
   notifyChange,

@@ -56,7 +56,7 @@ import type {
   TypingDurationCell,
   TypingSessionRow,
   TypingBksMinuteRow,
-  TypingTombstoneResult,
+  TypingAnalyticsImportResult,
   PeakRecords,
   TypingBigramAggregateOptions,
   TypingBigramAggregateResult,
@@ -268,8 +268,8 @@ export interface VialAPI {
   ): Promise<{ name: string; keystrokes: number; activeMs: number }[]>
   typingAnalyticsListKeyboards(): Promise<TypingKeyboardSummary[]>
   typingAnalyticsListItems(uid: string, appScopes?: string[], typingTestScopes?: string[], runIdScopes?: string[]): Promise<TypingDailySummary[]>
-  typingAnalyticsDeleteItems(uid: string, dates: string[]): Promise<TypingTombstoneResult>
-  typingAnalyticsDeleteAll(uid: string): Promise<TypingTombstoneResult>
+  typingAnalyticsDeleteItems(uid: string, dates: string[]): Promise<{ success: boolean; error?: string }>
+  typingAnalyticsDeleteAll(uid: string): Promise<{ success: boolean; error?: string }>
   typingAnalyticsGetMatrixHeatmap(uid: string, layer: number, sinceMs: number): Promise<TypingHeatmapByCell>
   typingAnalyticsListItemsLocal(uid: string, appScopes?: string[], typingTestScopes?: string[], runIdScopes?: string[]): Promise<TypingDailySummary[]>
   typingAnalyticsListDeviceInfos(uid: string): Promise<TypingAnalyticsDeviceInfoBundle | null>
@@ -314,9 +314,9 @@ export interface VialAPI {
   typingAnalyticsListRemoteCloudHashes(uid: string): Promise<string[]>
   typingAnalyticsListRemoteCloudDays(uid: string, machineHash: string): Promise<string[]>
   typingAnalyticsFetchRemoteDay(uid: string, machineHash: string, utcDay: string): Promise<boolean>
-  typingAnalyticsDeleteRemoteDay(uid: string, machineHash: string, utcDay: string): Promise<boolean>
+  typingAnalyticsDeleteRemoteDays(uid: string, machineHash: string, utcDays: string[]): Promise<{ success: boolean; error?: string }>
   typingAnalyticsExport(uid: string, dates: string[]): Promise<{ written: number; cancelled: boolean }>
-  typingAnalyticsImport(): Promise<{ result: { imported: number; rejections: { fileName: string; reason: string }[] }; cancelled: boolean }>
+  typingAnalyticsImport(): Promise<TypingAnalyticsImportResult>
 
   // App Config
   appConfigGetAll(): Promise<AppConfig>

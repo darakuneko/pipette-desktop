@@ -267,7 +267,7 @@ import {
   setupBeforeQuitHandler,
   registerPreSyncQuitFinalizer,
   registerBeforeQuitFinalizer,
-  deleteRemoteTypingDay,
+  deleteRemoteTypingDays,
   fetchRemoteTypingDay,
   executeAnalyticsSync,
   waitForPollPassForTests,
@@ -283,6 +283,7 @@ import { withWriteLock } from '../per-uid-write-lock'
 import { saveRecord as saveKeyLabel } from '../key-label-store'
 import { app } from 'electron'
 import { syncRuntime, claimSyncLock, DEBOUNCE_MS } from '../sync/sync-runtime-state'
+import { RESET_LOCK_WAIT_MS, withResetLockWhenFree } from '../sync/sync-reset-lock'
 import { flushPendingChanges, scheduleFlushIfPending, QUIT_SYNC_DEADLINE_MS } from '../sync/sync-flush'
 import { PENDING_WRITE_DELAY_MS, restorePendingFromDisk } from '../sync/sync-pending-store'
 import { getAccountSub } from '../sync/google-auth'
@@ -1327,7 +1328,7 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
       const release = claimSyncLock()
       const body = vi.fn(async () => {})
 
-      await expect(withResetLock(null, body)).rejects.toThrow('Cannot reset while sync is in progress')
+      await expect(withResetLock(null, body)).rejects.toThrow('sync.resetBusy')
 
       expect(body).not.toHaveBeenCalled()
       release()
@@ -1457,6 +1458,115 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
       reset.release()
       await reset.done
       await flushUntil(() => vi.mocked(app.quit).mock.calls.length > 0, 'the quit phases to call app.quit')
+    })
+  })
+
+  describe('withResetLockWhenFree (typing-data deletes and import)', () => {
+    async function turns(count = 5): Promise<void> {
+      for (let i = 0; i < count; i++) {
+        await new Promise<void>((resolve) => realSetImmediate(resolve))
+      }
+    }
+
+    beforeEach(() => {
+      mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+    })
+
+    afterEach(() => {
+      mockListFiles.mockImplementation(async () => [])
+      mockDownloadFile.mockImplementation(async () => ({}))
+    })
+
+    it('waits for a poll holding the lock, then runs holding it', async () => {
+      let releaseListing!: () => void
+      mockListFiles.mockImplementationOnce(() => new Promise<DriveFile[]>((resolve) => {
+        releaseListing = () => resolve([PASSWORD_CHECK_DRIVE_FILE])
+      }))
+      mockAutoSync = true
+      startPolling()
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockListFiles.mock.calls.length === 1, 'the poll to list')
+      expect(isSyncInProgress()).toBe(true)
+      const body = vi.fn(async () => {
+        expect(isSyncInProgress()).toBe(true)
+        expect(syncRuntime.resetKeyboards).toEqual(new Set(['uid-a']))
+      })
+
+      const done = withResetLockWhenFree(['uid-a'], body, 'busy')
+      await turns()
+      expect(body).not.toHaveBeenCalled()
+
+      releaseListing()
+      await waitForPollPassForTests()
+      await done
+      stopPolling()
+
+      expect(body).toHaveBeenCalledTimes(1)
+      expect(isSyncInProgress()).toBe(false)
+      expect(syncRuntime.resetKeyboards).toBeNull()
+    })
+
+    it('throws its busy message when the lock is still held after the wait', async () => {
+      const release = claimSyncLock()
+      const body = vi.fn(async () => {})
+
+      const done = withResetLockWhenFree(['uid-a'], body, 'sync.deleteBusy')
+      const refused = expect(done).rejects.toThrow('sync.deleteBusy')
+      await vi.advanceTimersByTimeAsync(RESET_LOCK_WAIT_MS)
+      await refused
+
+      expect(body).not.toHaveBeenCalled()
+      expect(syncRuntime.resetKeyboards).toBeNull()
+      release()
+    })
+
+    it('waits for a remote day fetch of its keyboard, keeping new analytics work of that keyboard from starting', async () => {
+      syncRuntime.remoteTypingDayFetches.set('uid-a', 1)
+      const body = vi.fn(async () => {})
+
+      const done = withResetLockWhenFree(['uid-a'], body, 'busy')
+      await turns()
+      expect(body).not.toHaveBeenCalled()
+      expect(await executeAnalyticsSync('uid-a')).toBe(false)
+      expect(await fetchRemoteTypingDay('uid-a', 'remote-hash', '2026-04-18')).toBe(false)
+      expect(mockListFiles).not.toHaveBeenCalled()
+
+      syncRuntime.remoteTypingDayFetches.delete('uid-a')
+      await vi.advanceTimersByTimeAsync(100)
+      await done
+
+      expect(body).toHaveBeenCalledTimes(1)
+      expect(isSyncInProgress()).toBe(false)
+    })
+
+    it('throws its busy message and releases the lock when an analytics sync of its keyboard outlasts the wait', async () => {
+      syncRuntime.analyticsSyncingUids.add('uid-a')
+      const body = vi.fn(async () => {})
+
+      const done = withResetLockWhenFree(['uid-a'], body, 'busy')
+      const refused = expect(done).rejects.toThrow('busy')
+      await vi.advanceTimersByTimeAsync(RESET_LOCK_WAIT_MS)
+      await refused
+
+      expect(body).not.toHaveBeenCalled()
+      expect(isSyncInProgress()).toBe(false)
+      expect(syncRuntime.resetKeyboards).toBeNull()
+    })
+
+    it('does not wait for an analytics sync of another keyboard', async () => {
+      syncRuntime.analyticsSyncingUids.add('uid-b')
+      const body = vi.fn(async () => 'done')
+
+      expect(await withResetLockWhenFree(['uid-a'], body, 'busy')).toBe('done')
+    })
+
+    it('releases the lock when the body throws', async () => {
+      await expect(withResetLockWhenFree(['uid-a'], async () => {
+        throw new Error('unlink failed')
+      }, 'busy')).rejects.toThrow('unlink failed')
+
+      expect(isSyncInProgress()).toBe(false)
+      expect(syncRuntime.resetKeyboards).toBeNull()
     })
   })
 
@@ -3670,8 +3780,8 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
       expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual(['2026-04-18'])
     })
 
-    // --- deleteRemoteTypingDay E2E ---
-    it('deleteRemoteTypingDay: removes cloud + local + cache tombstone in one call', async () => {
+    // --- deleteRemoteTypingDays E2E ---
+    it('deleteRemoteTypingDays: removes cloud + local + cache tombstone in one call', async () => {
       const day = '2026-04-18'
       const localPath = ownDayPath(day, REMOTE_HASH)
       await writeDayFile(day, REMOTE_HASH, '{"id":"remote"}\n')
@@ -3680,9 +3790,8 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
         PASSWORD_CHECK_DRIVE_FILE,
       ])
 
-      const ok = await deleteRemoteTypingDay(UID, REMOTE_HASH, day)
+      await deleteRemoteTypingDays(UID, REMOTE_HASH, [day])
 
-      expect(ok).toBe(true)
       expect(mockDeleteFile).toHaveBeenCalledWith(`drive-${REMOTE_HASH}-${day}`)
       expect(await fileExists(localPath)).toBe(false)
       const tombstoneCall = mockTombstoneRowsForUidHashInRange.mock.calls.at(-1)
@@ -3690,15 +3799,40 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
       expect(tombstoneCall?.[1]).toBe(REMOTE_HASH)
     })
 
-    it('deleteRemoteTypingDay: tombstones cache even when the cloud file is already gone', async () => {
+    it('deleteRemoteTypingDays: tombstones cache even when the cloud file is already gone', async () => {
       const day = '2026-04-18'
       mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
 
-      const ok = await deleteRemoteTypingDay(UID, REMOTE_HASH, day)
+      await deleteRemoteTypingDays(UID, REMOTE_HASH, [day])
 
-      expect(ok).toBe(false)
       expect(mockDeleteFile).not.toHaveBeenCalled()
       expect(mockTombstoneRowsForUidHashInRange).toHaveBeenCalled()
+    })
+
+    it('deleteRemoteTypingDays: refuses while signed out, before anything is removed', async () => {
+      const day = '2026-04-18'
+      await writeDayFile(day, REMOTE_HASH)
+      mockGetAuthStatus.mockResolvedValueOnce({ authenticated: false })
+
+      await expect(deleteRemoteTypingDays(UID, REMOTE_HASH, [day])).rejects.toThrow('sync.readiness.unauthenticated')
+
+      expect(await fileExists(ownDayPath(day, REMOTE_HASH))).toBe(true)
+      expect(mockDeleteFile).not.toHaveBeenCalled()
+      expect(mockTombstoneRowsForUidHashInRange).not.toHaveBeenCalled()
+    })
+
+    it('deleteRemoteTypingDays: deletes several days from one listing and tries every day before reporting a failure', async () => {
+      const days = ['2026-04-17', '2026-04-18']
+      for (const day of days) await writeDayFile(day, REMOTE_HASH)
+      mockListFiles.mockResolvedValue([...days.map((day) => cloudDriveFile(REMOTE_HASH, day)), PASSWORD_CHECK_DRIVE_FILE])
+      mockListFiles.mockClear()
+      mockDeleteFile.mockRejectedValueOnce(new Error('boom'))
+
+      await expect(deleteRemoteTypingDays(UID, REMOTE_HASH, days)).rejects.toThrow('Failed to delete 1 of 2 files')
+
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
+      expect(mockDeleteFile.mock.calls.map((call) => call[0])).toEqual(days.map((day) => `drive-${REMOTE_HASH}-${day}`))
+      for (const day of days) expect(await fileExists(ownDayPath(day, REMOTE_HASH))).toBe(false)
     })
 
     // --- mergeDeviceDayBundle full replay idempotency (via download flow) ---
@@ -4046,20 +4180,20 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
         stopPolling()
       })
 
-      it('deleteRemoteTypingDay deletes every copy of the day', async () => {
+      it('deleteRemoteTypingDays deletes every copy of the day', async () => {
         mockListFiles.mockResolvedValue([...dayCopies(REMOTE_HASH), PASSWORD_CHECK_DRIVE_FILE])
 
-        expect(await deleteRemoteTypingDay(UID, REMOTE_HASH, DAY)).toBe(true)
+        await deleteRemoteTypingDays(UID, REMOTE_HASH, [DAY])
 
         expect(mockDeleteFile.mock.calls.map((call) => call[0]).sort())
           .toEqual([`day-new-${REMOTE_HASH}`, `day-old-${REMOTE_HASH}`])
       })
 
-      it('deleteRemoteTypingDay still tries every copy and then fails when one delete fails', async () => {
+      it('deleteRemoteTypingDays still tries every copy and then fails when one delete fails', async () => {
         mockListFiles.mockResolvedValue([...dayCopies(REMOTE_HASH), PASSWORD_CHECK_DRIVE_FILE])
         mockDeleteFile.mockRejectedValueOnce(new Error('boom'))
 
-        await expect(deleteRemoteTypingDay(UID, REMOTE_HASH, DAY)).rejects.toThrow('Failed to delete 1 of 2 files')
+        await expect(deleteRemoteTypingDays(UID, REMOTE_HASH, [DAY])).rejects.toThrow('Failed to delete 1 of 2 files')
 
         expect(mockDeleteFile).toHaveBeenCalledTimes(2)
       })

@@ -26,8 +26,7 @@ import {
   commitPendingState,
   writePendingStateOrThrow,
   afterPendingChange,
-  claimSyncLockBy,
-  waitForLockFreeWritersBy,
+  claimSyncLockWhenIdleBy,
 } from './sync-runtime-state'
 
 /** How long a sign-in or sign-out waits for running sync work. */
@@ -133,9 +132,9 @@ async function duringAccountSwitch(ifBusy: 'refuse' | 'proceed', switchTokens: (
   syncRuntime.accountSwitching = true
   let release: (() => void) | null = null
   try {
-    const deadline = Date.now() + ACCOUNT_SWITCH_WAIT_MS
-    release = await claimSyncLockBy(deadline)
-    const idle = release !== null && await waitForLockFreeWritersBy(deadline)
+    const claim = await claimSyncLockWhenIdleBy(Date.now() + ACCOUNT_SWITCH_WAIT_MS)
+    release = claim.release
+    const idle = claim.idle
     if (!idle && ifBusy === 'refuse') throw new AccountSwitchBusyError()
     await switchTokens()
   } finally {

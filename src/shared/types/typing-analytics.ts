@@ -375,6 +375,16 @@ export interface TypingTombstoneResult {
   sessions: number
 }
 
+/** TYPING_ANALYTICS_IMPORT's IPC result. `result` and `cancelled` are set
+ * when `success` is true; `cancelled` means the user closed the file
+ * picker. On failure `error` is the message or an i18n key. */
+export interface TypingAnalyticsImportResult {
+  success: boolean
+  error?: string
+  result?: { imported: number; rejections: { fileName: string; reason: string }[] }
+  cancelled?: boolean
+}
+
 /** All-zero {@link TypingTombstoneResult}, for call sites that need to
  * return early (invalid input, empty range) before any table is touched. */
 export function emptyTombstoneResult(): TypingTombstoneResult {

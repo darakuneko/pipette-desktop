@@ -44,7 +44,6 @@ import {
   checkPasswordCheckExists,
   setPasswordAndValidate,
   replacePasswordAndValidate,
-  deleteRemoteTypingDay,
   fetchRemoteTypingDay,
   hasAnyRemoteTypingData,
   listRemoteTypingDaysFor,
@@ -55,6 +54,8 @@ import {
   switchAccountKeepingPending,
   signOutKeepingPending,
   SyncCredentialError,
+  withResetLockWhenFree,
+  IMPORT_BUSY_MESSAGE,
 } from './sync-service'
 import { importLocalData } from './local-data-import'
 import { exportTypingDataForKeyboard, importTypingDataFiles, type ImportResult } from '../typing-analytics/import-export'
@@ -106,6 +107,32 @@ async function refreshSyncFormatStatusIfSignedIn(): Promise<SyncFormatStatus | n
     return null
   }
   return refreshSyncFormatStatus()
+}
+
+/** Writes the picked typing-data files (import-export.ts) and rebuilds the
+ *  analytics cache when any were imported. */
+async function importTypingFiles(filePaths: string[]): Promise<ImportResult> {
+  const userData = app.getPath('userData')
+  // Pull the Drive listing once for the whole batch — without this
+  // each rejected-but-cloud-known import would round-trip the full
+  // appData listing again.
+  const remoteNames = await listRemoteFileNames()
+  const importResult = await importTypingDataFiles(userData, filePaths, {
+    cloudHasFile: remoteNames === null
+      ? null
+      // Cloud encrypts each sync unit as `<name>.enc`; the export
+      // form drops `.enc`, so flip it back here for the lookup.
+      : async (name) => remoteNames.has(name.replace(/\.jsonl$/, '.enc')),
+  })
+  if (importResult.imported > 0) {
+    try {
+      const ownHash = await getMachineHash()
+      await ensureCacheIsFresh(getTypingAnalyticsDB(), userData, ownHash, { force: true })
+    } catch (err) {
+      console.warn('[sync-ipc] typing-analytics import: cache rebuild failed; will retry on next launch', err)
+    }
+  }
+  return importResult
 }
 
 export function setupSyncIpc(): void {
@@ -458,16 +485,6 @@ export function setupSyncIpc(): void {
     },
   )
 
-  secureHandle(
-    IpcChannels.TYPING_ANALYTICS_DELETE_REMOTE_DAY,
-    async (_event, uid: unknown, machineHash: unknown, utcDay: unknown): Promise<boolean> => {
-      if (typeof uid !== 'string' || uid.length === 0) return false
-      if (typeof machineHash !== 'string' || machineHash.length === 0) return false
-      if (typeof utcDay !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(utcDay)) return false
-      return deleteRemoteTypingDay(uid, machineHash, utcDay)
-    },
-  )
-
   // --- Typing analytics export / import ---
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_EXPORT,
@@ -495,9 +512,14 @@ export function setupSyncIpc(): void {
     },
   )
 
+  // The file dialog runs without the lock, so syncing goes on while the
+  // user picks. The writes and the cache rebuild hold it for every
+  // keyboard: the rebuild re-reads every keyboard's day files and rewrites
+  // sync_state.json, which analytics syncs and remote day fetches also
+  // write. It waits for a running poll or flush instead of failing at once.
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_IMPORT,
-    async (): Promise<{ result: ImportResult; cancelled: boolean }> => {
+    async () => wrapIpc<{ result: ImportResult; cancelled: boolean }>('Import typing data failed', async () => {
       const dialogResult = await dialog.showOpenDialog(getDialogWindow()!, {
         title: 'Import typing data',
         filters: [{ name: 'Typing data', extensions: ['jsonl'] }],
@@ -507,28 +529,9 @@ export function setupSyncIpc(): void {
       if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
         return { result: empty, cancelled: true }
       }
-      const userData = app.getPath('userData')
-      // Pull the Drive listing once for the whole batch — without this
-      // each rejected-but-cloud-known import would round-trip the full
-      // appData listing again.
-      const remoteNames = await listRemoteFileNames()
-      const importResult = await importTypingDataFiles(userData, dialogResult.filePaths, {
-        cloudHasFile: remoteNames === null
-          ? null
-          // Cloud encrypts each sync unit as `<name>.enc`; the export
-          // form drops `.enc`, so flip it back here for the lookup.
-          : async (name) => remoteNames.has(name.replace(/\.jsonl$/, '.enc')),
-      })
-      if (importResult.imported > 0) {
-        try {
-          const ownHash = await getMachineHash()
-          await ensureCacheIsFresh(getTypingAnalyticsDB(), userData, ownHash, { force: true })
-        } catch (err) {
-          console.warn('[sync-ipc] typing-analytics import: cache rebuild failed; will retry on next launch', err)
-        }
-      }
-      return { result: importResult, cancelled: false }
-    },
+      const result = await withResetLockWhenFree('all', () => importTypingFiles(dialogResult.filePaths), IMPORT_BUSY_MESSAGE)
+      return { result, cancelled: false }
+    }),
   )
 
   // --- Change notification (from stores) ---

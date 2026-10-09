@@ -1188,6 +1188,114 @@ describe('typing-analytics-service', () => {
     })
   })
 
+  describe('buffered minutes after a delete', () => {
+    const otherKeyboard = { ...sampleKeyboard, uid: '0xCCDD' }
+    const minuteTs = Date.UTC(2026, 3, 14, 10, 0, 0)
+
+    function liveStats(uid: string): Array<{ keystrokes: number }> {
+      return getTypingAnalyticsDB().getConnection().prepare(
+        `SELECT s.keystrokes FROM typing_minute_stats s JOIN typing_scopes sc ON sc.id = s.scope_id
+         WHERE sc.keyboard_uid = ? AND s.minute_ts = ? AND s.is_deleted = 0`,
+      ).all(uid, minuteTs) as Array<{ keystrokes: number }>
+    }
+
+    async function dayStatsKeystrokes(uid: string): Promise<number[]> {
+      const path = deviceDayJsonlPath(mockUserDataPath, uid, await getMachineHash(), '2026-04-14')
+      if (!existsSync(path)) return []
+      const { rows } = await readRows(path)
+      return rows.flatMap((r) => (r.kind === 'minute-stats' ? [r.payload.keystrokes] : []))
+    }
+
+    async function typeThenDelete(remove: () => Promise<unknown>): Promise<IpcHandler> {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      for (let i = 0; i < 3; i++) {
+        await ingest(handler, { kind: 'char', key: 'a', ts: minuteTs + i * 100, keyboard: sampleKeyboard })
+      }
+      await remove()
+      // Same minute, after the delete.
+      await ingest(handler, { kind: 'char', key: 'b', ts: minuteTs + 1_000, keyboard: sampleKeyboard })
+      await flushTypingAnalyticsNowForTests()
+      return handler
+    }
+
+    it('deleteAllTypingForKeyboard: a keystroke in the same minute is written without the deleted counts', async () => {
+      await typeThenDelete(() => deleteAllTypingForKeyboard(sampleKeyboard.uid))
+
+      expect(liveStats(sampleKeyboard.uid)).toEqual([{ keystrokes: 1 }])
+      expect(await dayStatsKeystrokes(sampleKeyboard.uid)).toEqual([1])
+    })
+
+    it('deleteTypingDailySummaries of today: a keystroke in the same minute is written without the deleted counts', async () => {
+      const d = new Date(minuteTs)
+      const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      await typeThenDelete(() => deleteTypingDailySummaries(sampleKeyboard.uid, [date]))
+
+      expect(liveStats(sampleKeyboard.uid)).toEqual([{ keystrokes: 1 }])
+      expect(await dayStatsKeystrokes(sampleKeyboard.uid)).toEqual([1])
+    })
+
+    it('a session started after the delete is written', async () => {
+      const handler = await typeThenDelete(() => deleteAllTypingForKeyboard(sampleKeyboard.uid))
+      await ingest(handler, { kind: 'char', key: 'c', ts: minuteTs + 2_000, keyboard: sampleKeyboard })
+      await getHandler(IpcChannels.TYPING_ANALYTICS_FLUSH)(fakeEvent, sampleKeyboard.uid)
+
+      const sessions = getTypingAnalyticsDB().getConnection().prepare(
+        'SELECT start_ms, end_ms FROM typing_sessions WHERE is_deleted = 0',
+      ).all() as Array<{ start_ms: number; end_ms: number }>
+      expect(sessions).toEqual([{ start_ms: minuteTs + 1_000, end_ms: minuteTs + 2_000 }])
+    })
+
+    it('keeps what was typed in a later minute than the cutoff and drops the clicked minute whole', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      await ingest(handler, { kind: 'char', key: 'a', ts: minuteTs, keyboard: sampleKeyboard })
+      const cutoffMs = minuteTs + 100
+      // Typed while the delete waited for the sync lock: same minute, then the next one.
+      await ingest(handler, { kind: 'char', key: 'b', ts: minuteTs + 5_000, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'c', ts: minuteTs + MINUTE_MS + 1_000, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'c', ts: minuteTs + MINUTE_MS + 2_000, keyboard: sampleKeyboard })
+
+      await deleteAllTypingForKeyboard(sampleKeyboard.uid, cutoffMs)
+      await flushTypingAnalyticsNowForTests()
+
+      expect(liveStats(sampleKeyboard.uid)).toEqual([])
+      const later = getTypingAnalyticsDB().getConnection().prepare(
+        'SELECT keystrokes FROM typing_minute_stats WHERE minute_ts = ? AND is_deleted = 0',
+      ).all(minuteTs + MINUTE_MS)
+      expect(later).toEqual([{ keystrokes: 2 }])
+      expect(await dayStatsKeystrokes(sampleKeyboard.uid)).toEqual([2])
+    })
+
+    it('drops a finished session not yet written that started by the cutoff', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      await ingest(handler, { kind: 'char', key: 'a', ts: minuteTs, keyboard: sampleKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: minuteTs + 100, keyboard: sampleKeyboard })
+
+      await deleteAllTypingForKeyboard(sampleKeyboard.uid)
+      await flushTypingAnalyticsNowForTests()
+
+      const sessions = getTypingAnalyticsDB().getConnection().prepare(
+        'SELECT start_ms FROM typing_sessions WHERE is_deleted = 0',
+      ).all()
+      expect(sessions).toEqual([])
+    })
+
+    it('leaves another keyboard\'s buffered minute alone', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      await ingest(handler, { kind: 'char', key: 'a', ts: minuteTs, keyboard: otherKeyboard })
+      await ingest(handler, { kind: 'char', key: 'a', ts: minuteTs + 100, keyboard: otherKeyboard })
+      await typeThenDelete(() => deleteAllTypingForKeyboard(sampleKeyboard.uid))
+      await ingest(handler, { kind: 'char', key: 'b', ts: minuteTs + 1_500, keyboard: otherKeyboard })
+      await flushTypingAnalyticsNowForTests()
+
+      expect(liveStats(otherKeyboard.uid)).toEqual([{ keystrokes: 3 }])
+      expect(liveStats(sampleKeyboard.uid)).toEqual([{ keystrokes: 1 }])
+    })
+  })
+
   describe('per-day JSONL output', () => {
     async function readDayRows(uid: string, machineHash: string, utcDay: string): Promise<JsonlRow[]> {
       const path = deviceDayJsonlPath(mockUserDataPath, uid, machineHash, utcDay)

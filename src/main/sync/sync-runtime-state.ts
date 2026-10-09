@@ -385,16 +385,39 @@ export async function claimSyncLockBy(deadline: number): Promise<(() => void) | 
 /** How often `waitForLockFreeWritersBy` checks again. */
 const WRITER_CHECK_INTERVAL_MS = 100
 
-/** Waits until no analytics sync and no remote day fetch runs (the Drive
- *  writers that don't take the sync lock); false when some still run at
- *  `deadline` (`Date.now()` ms). */
-export async function waitForLockFreeWritersBy(deadline: number): Promise<boolean> {
-  while (syncRuntime.analyticsSyncingUids.size > 0 || syncRuntime.remoteTypingDayFetches.size > 0) {
+/** True while an analytics sync or a remote day fetch runs (the Drive
+ *  writers that don't take the sync lock). */
+function anyLockFreeWriterRunning(): boolean {
+  return syncRuntime.analyticsSyncingUids.size > 0 || syncRuntime.remoteTypingDayFetches.size > 0
+}
+
+/** Waits until `running` (by default: any lock-free writer) is false;
+ *  false when it is still true at `deadline` (`Date.now()` ms). */
+export async function waitForLockFreeWritersBy(
+  deadline: number,
+  running: () => boolean = anyLockFreeWriterRunning,
+): Promise<boolean> {
+  while (running()) {
     const remaining = deadline - Date.now()
     if (remaining <= 0) return false
     await new Promise((resolve) => setTimeout(resolve, Math.min(WRITER_CHECK_INTERVAL_MS, remaining)))
   }
   return true
+}
+
+/** Takes the sync lock by `deadline` (`claimSyncLockBy`), calls
+ *  `onClaimed` in the same step as the claim, then waits within the same
+ *  deadline for `running` (by default: any lock-free writer) to turn
+ *  false. `release` is null when the lock was still held at the deadline;
+ *  `idle` is whether the writers finished in time. The caller releases. */
+export async function claimSyncLockWhenIdleBy(
+  deadline: number,
+  options: { running?: () => boolean; onClaimed?: () => void } = {},
+): Promise<{ release: (() => void) | null; idle: boolean }> {
+  const release = await claimSyncLockBy(deadline)
+  if (!release) return { release: null, idle: false }
+  options.onClaimed?.()
+  return { release, idle: await waitForLockFreeWritersBy(deadline, options.running) }
 }
 
 /** Drops the pending units starting with any of `prefixes` (every unit
