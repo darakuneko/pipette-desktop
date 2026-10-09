@@ -11,20 +11,8 @@ import { applyRowsToCache, type ApplyRowsResult } from './jsonl/apply-to-cache'
 import type { JsonlRow } from './jsonl/jsonl-row'
 import type { TypingAnalyticsDB } from './db/typing-analytics-db'
 import { readDeletedRangesSync } from './deleted-ranges-store'
-import type { DeleteRange } from './deleted-ranges'
-import { utcDayBoundaryMs, type UtcDay } from './jsonl/utc-day'
-
-/** The parts of `entries` inside `utcDay`: a day file only holds rows whose
- * time (minute start, session start) is in its UTC day, so the replay never
- * revives a row outside it. */
-function clipToDay(entries: readonly DeleteRange[], utcDay: UtcDay): DeleteRange[] {
-  const day = utcDayBoundaryMs(utcDay)
-  return entries.flatMap((entry) => {
-    const startMs = Math.max(entry.startMs, day.startMs)
-    const endMs = Math.min(entry.endMs, day.endMs)
-    return startMs < endMs ? [{ startMs, endMs, cutoffMs: entry.cutoffMs }] : []
-  })
-}
+import { clipToUtcDay } from './deleted-ranges'
+import type { UtcDay } from './jsonl/utc-day'
 
 export function replayDayRowsHidingDeletedRanges(
   db: TypingAnalyticsDB,
@@ -33,7 +21,7 @@ export function replayDayRowsHidingDeletedRanges(
   userDataDir: string,
   ownHash: string,
 ): ApplyRowsResult {
-  const entries = ref.machineHash === ownHash ? [] : clipToDay(readDeletedRangesSync(userDataDir, ref.uid, ref.machineHash), ref.utcDay)
+  const entries = ref.machineHash === ownHash ? [] : clipToUtcDay(readDeletedRangesSync(userDataDir, ref.uid, ref.machineHash), ref.utcDay)
   if (entries.length === 0) return applyRowsToCache(db, rows)
   return db.getConnection().transaction(() => {
     const applied = applyRowsToCache(db, rows)

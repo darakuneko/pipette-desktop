@@ -60,6 +60,7 @@ import {
 import { importLocalData } from './local-data-import'
 import { exportTypingDataForKeyboard, importTypingDataFiles, type ImportResult } from '../typing-analytics/import-export'
 import { getMachineHash } from '../typing-analytics/machine-hash'
+import { prepareOwnDeletedRangesReapply } from '../typing-analytics/deleted-ranges-apply'
 import { ensureCacheIsFresh } from '../typing-analytics/cache-rebuild'
 import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
 import { runOnFlushChain } from '../typing-analytics/typing-analytics-service'
@@ -127,6 +128,9 @@ async function importTypingFiles(filePaths: string[]): Promise<ImportResult> {
     // The flush chain is the only writer of this device's own files, so
     // the replace waits for appends in flight and no append lands in it.
     runExclusive: runOnFlushChain,
+    // Typing inside this device's deleted ranges stays deleted, whichever
+    // delete wrote the range and whether or not it was applied before.
+    prepareReplace: prepareOwnDeletedRangesReapply,
   })
   if (importResult.imported > 0) {
     try {

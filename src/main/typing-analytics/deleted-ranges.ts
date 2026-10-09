@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The deleted-ranges file of one (keyboard uid, machineHash): time ranges
-// that another device deleted from that device's typing data. Each entry
-// removes the rows whose time (minute start, session start) is inside
-// `[startMs, endMs)` and at or before `cutoffMs`, the moment the delete was
-// asked for, so typing recorded after the delete stays. Entries never change
-// once written; devices combine their copies by taking the union of the ids.
+// deleted from that device's typing data, written by another device (the
+// Sync tab's delete) or by the owner itself (the Local tab's Delete All).
+// Each entry removes the rows whose time (minute start, session start) is
+// inside `[startMs, endMs)` and at or before `cutoffMs`, the moment the
+// delete was asked for, so typing recorded after the delete stays. Entries
+// never change once written; devices combine their copies by taking the
+// union of the ids.
 //
 // File shape: `{ version: 1, entries: [{ id, startMs, endMs, cutoffMs }] }`.
 
 import { localDayRangeMs } from '../../shared/local-day-range'
+import { utcDayBoundaryMs, type UtcDay } from './jsonl/utc-day'
 
 const DELETED_RANGES_FILE_VERSION = 1
 
@@ -118,4 +121,16 @@ export function deletedRangesForLocalDays(
  * before `cutoffMs`. */
 export function deletedRangeForAll(cutoffMs: number, id: string): DeletedRangeEntry {
   return { id, startMs: 0, endMs: cutoffMs + 1, cutoffMs }
+}
+
+/** The parts of `entries` inside `utcDay`: a day file only holds rows whose
+ * time (minute start, session start) is in its UTC day, so applying the
+ * result to that file touches nothing outside it. */
+export function clipToUtcDay(entries: readonly DeleteRange[], utcDay: UtcDay): DeleteRange[] {
+  const day = utcDayBoundaryMs(utcDay)
+  return entries.flatMap((entry) => {
+    const startMs = Math.max(entry.startMs, day.startMs)
+    const endMs = Math.min(entry.endMs, day.endMs)
+    return startMs < endMs ? [{ startMs, endMs, cutoffMs: entry.cutoffMs }] : []
+  })
 }

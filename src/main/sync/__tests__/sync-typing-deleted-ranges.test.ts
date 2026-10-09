@@ -109,7 +109,8 @@ import { TypingAnalyticsDB } from '../../typing-analytics/db/typing-analytics-db
 import { applyRowsToCache } from '../../typing-analytics/jsonl/apply-to-cache'
 import { minuteStatsRowId, scopeRowId, type JsonlRow } from '../../typing-analytics/jsonl/jsonl-row'
 import { deletedRangesPath, deviceDayJsonlPath } from '../../typing-analytics/jsonl/paths'
-import { serializeDeletedRanges, unionDeletedRanges, type DeletedRangeEntry } from '../../typing-analytics/deleted-ranges'
+import { deletedRangeForAll, serializeDeletedRanges, unionDeletedRanges, type DeletedRangeEntry } from '../../typing-analytics/deleted-ranges'
+import { rebuildCacheFromMasterFiles, truncateCache } from '../../typing-analytics/cache-rebuild'
 import { readDeletedRanges, updateDeletedRanges } from '../../typing-analytics/deleted-ranges-store'
 import { typingDeletedRangesSyncUnit } from '../../typing-analytics/sync'
 import { runOnFlushChain } from '../../typing-analytics/typing-analytics-pipeline'
@@ -430,6 +431,38 @@ describe('mergeDeviceDayBundle', () => {
     const fresh = 'fresh-hash'
     await mergeDeviceDayBundle(dayBundle(fresh), { uid: UID, machineHash: fresh, utcDay: DAY }, mockUserDataPath, OWN)
     expect(liveStats(fresh)).toBe(1)
+  })
+})
+
+describe('a Delete All range written by the owner of the data', () => {
+  const LATER = MIN + 60_000
+
+  function liveStatMinutes(hash: string): number[] {
+    return (currentDb!.getConnection().prepare(
+      'SELECT minute_ts AS m FROM typing_minute_stats WHERE scope_id = ? AND is_deleted = 0 ORDER BY minute_ts',
+    ).all(scopeId(hash)) as Array<{ m: number }>).map((r) => r.m)
+  }
+
+  it('hides that device\'s rows up to the cutoff once merged, through a rebuild, and keeps later minutes', async () => {
+    const stats = rowsFor(REMOTE)[1] as Extract<JsonlRow, { kind: 'minute-stats' }>
+    const later: JsonlRow = {
+      ...stats,
+      id: minuteStatsRowId(scopeId(REMOTE), LATER, ''),
+      payload: { ...stats.payload, minuteTs: LATER },
+    }
+    const dayPath = deviceDayJsonlPath(mockUserDataPath, UID, REMOTE, DAY)
+    await mkdir(dirname(dayPath), { recursive: true })
+    await writeFile(dayPath, [...rowsFor(REMOTE), later].map((r) => JSON.stringify(r)).join('\n') + '\n', 'utf-8')
+    applyRowsToCache(currentDb!, [later])
+    // The click minute counts as deleted: its start is before the cutoff.
+    putDrive(driveFileName(unit()), rangesBundle(REMOTE, [deletedRangeForAll(MIN + 10_000, 'all')]))
+
+    await mergeWithRemote(driveFile(), unit(), PW, [])
+    expect(liveStatMinutes(REMOTE)).toEqual([LATER])
+
+    truncateCache(currentDb!)
+    await rebuildCacheFromMasterFiles(currentDb!, mockUserDataPath, OWN)
+    expect(liveStatMinutes(REMOTE)).toEqual([LATER])
   })
 })
 

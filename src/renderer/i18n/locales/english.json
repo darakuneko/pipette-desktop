@@ -1,5 +1,5 @@
 {
-  "version": "0.1.114",
+  "version": "0.1.115",
   "name": "English",
   "common": {
     "save": "Save",
@@ -1915,7 +1915,7 @@
       "deleteSelected": "Delete selected ({{count}})",
       "deleteAll": "Delete all for this keyboard",
       "confirmDeleteSelected": "Delete {{count}} day(s) of this device's records? Synced copies will drop too, days recorded by other devices remain. Deleted data stays deleted even if an earlier export is imported again.",
-      "confirmDeleteAll": "Delete every day this device recorded for this keyboard? The copies on Google Drive go too, but other PCs that already downloaded them keep them; days recorded by other devices remain. Once deleted, those dates can no longer be re-imported — export first if you need a backup.",
+      "confirmDeleteAll": "Delete every day this device recorded for this keyboard? The copies on Google Drive go too, and other PCs drop them at their next sync; days recorded by other devices remain. Deleted data stays deleted even if an earlier export is imported again.",
       "confirmDeleteSelectedDevice": "Hide {{count}} day(s) of this device's records here now? They are removed on the PC that recorded them the next time it syncs; what it types after this moment stays.",
       "confirmDeleteAllDevice": "Hide every day this device recorded for this keyboard here now? They are removed on the PC that recorded them the next time it syncs; what it types after this moment stays.",
       "exportLabel": "Export…",
@@ -1932,7 +1932,8 @@
           "no-matching-target": "no local or cloud copy of this day to overwrite",
           "empty-or-invalid-content": "file is empty or contains invalid lines",
           "rows-outside-day-window": "row timestamps fall outside the day the filename claims",
-          "read-error": "could not read the file"
+          "read-error": "could not read the file",
+          "deleted-ranges-unreadable": "could not read this device's deleted ranges, so the day was left as it is"
         }
       },
       "noRemoteDevices": "No other devices have typed on this keyboard"
