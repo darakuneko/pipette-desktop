@@ -291,7 +291,16 @@ import { writeFileAtomic } from '../utils/write-file-atomic'
 import { withWriteLock } from '../per-uid-write-lock'
 import { saveRecord as saveKeyLabel } from '../key-label-store'
 import { app } from 'electron'
-import { syncRuntime, claimSyncLock, DEBOUNCE_MS } from '../sync/sync-runtime-state'
+import {
+  syncRuntime,
+  claimSyncLock,
+  DEBOUNCE_MS,
+  lockFreeWriterBlocked,
+  lockFreeWriterRunning,
+  resetHoldsKeyboard,
+} from '../sync/sync-runtime-state'
+import { startPasswordChange } from '../sync/sync-password-change'
+import { readChangeState } from '../sync/sync-password-change-state'
 import { RESET_LOCK_WAIT_MS, withResetLockWhenFree } from '../sync/sync-reset-lock'
 import { flushPendingChanges, scheduleFlushIfPending, QUIT_SYNC_DEADLINE_MS } from '../sync/sync-flush'
 import { PENDING_WRITE_DELAY_MS, restorePendingFromDisk } from '../sync/sync-pending-store'
@@ -3527,6 +3536,112 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
 
       await expect(setPasswordAndValidate('wrong-password')).rejects.toThrow()
       expect(mockClearPassword).toHaveBeenCalled()
+    })
+  })
+
+  describe('lock-free writer predicates', () => {
+    it('lockFreeWriterRunning matches the listed keyboards, any keyboard for all, none for null', () => {
+      expect(lockFreeWriterRunning('all')).toBe(false)
+      syncRuntime.analyticsSyncingUids.add('uid-a')
+      syncRuntime.remoteTypingDayFetches.set('uid-b', 1)
+
+      expect(lockFreeWriterRunning('all')).toBe(true)
+      expect(lockFreeWriterRunning(['uid-a'])).toBe(true)
+      expect(lockFreeWriterRunning(['uid-c', 'uid-b'])).toBe(true)
+      expect(lockFreeWriterRunning(['uid-c'])).toBe(false)
+      expect(lockFreeWriterRunning([])).toBe(false)
+      expect(lockFreeWriterRunning(null)).toBe(false)
+    })
+
+    it('resetHoldsKeyboard matches every keyboard or the listed ones', () => {
+      expect(resetHoldsKeyboard('uid-a')).toBe(false)
+      syncRuntime.resetKeyboards = new Set(['uid-a'])
+      expect(resetHoldsKeyboard('uid-a')).toBe(true)
+      expect(resetHoldsKeyboard('uid-b')).toBe(false)
+      syncRuntime.resetKeyboards = 'all'
+      expect(resetHoldsKeyboard('uid-b')).toBe(true)
+    })
+
+    it('lockFreeWriterBlocked is set by a password change, a reset of the keyboard or a token switch', () => {
+      expect(lockFreeWriterBlocked('uid-a')).toBe(false)
+
+      syncRuntime.passwordChangeRun = Promise.resolve()
+      expect(lockFreeWriterBlocked('uid-a')).toBe(true)
+      syncRuntime.passwordChangeRun = null
+
+      syncRuntime.resetKeyboards = new Set(['uid-b'])
+      expect(lockFreeWriterBlocked('uid-a')).toBe(false)
+      expect(lockFreeWriterBlocked('uid-b')).toBe(true)
+      syncRuntime.resetKeyboards = null
+
+      syncRuntime.accountSwitching = true
+      expect(lockFreeWriterBlocked('uid-a')).toBe(true)
+    })
+  })
+
+  describe('lock-free writers and a password change', () => {
+    const gateReleases: Array<() => void> = []
+
+    afterEach(() => {
+      for (const release of gateReleases.splice(0)) release()
+      mockListFiles.mockImplementation(async () => [])
+    })
+
+    /** Makes the next listing wait until the returned function settles it
+     *  with `settle`. */
+    function gateNextListing(): (settle: () => Promise<DriveFile[]>) => void {
+      let open!: (settle: () => Promise<DriveFile[]>) => void
+      const gate = new Promise<() => Promise<DriveFile[]>>((resolve) => {
+        open = resolve
+      })
+      gateReleases.push(() => open(async () => []))
+      mockListFiles.mockImplementationOnce(async () => (await gate)())
+      return open
+    }
+
+    it('a remote day fetch does not start while a password change runs', async () => {
+      syncRuntime.passwordChangeRun = Promise.resolve()
+
+      expect(await fetchRemoteTypingDay('uid-a', 'remote-hash', '2026-04-18')).toBe(false)
+
+      expect(mockListFiles).not.toHaveBeenCalled()
+      expect(syncRuntime.remoteTypingDayFetches.size).toBe(0)
+    })
+
+    it('a password change is refused while a remote day fetch is waiting on Drive', async () => {
+      const open = gateNextListing()
+      const fetch = fetchRemoteTypingDay('uid-a', 'remote-hash', '2026-04-18')
+      await flushUntil(() => mockListFiles.mock.calls.length === 1, 'the fetch to list')
+
+      await expect(startPasswordChange('new-password')).rejects.toThrow('sync.changePasswordInProgress')
+      expect(isSyncInProgress()).toBe(false)
+      expect(syncRuntime.passwordChangeRun).toBeNull()
+
+      open(async () => [])
+      expect(await fetch).toBe(false)
+      expect(syncRuntime.remoteTypingDayFetches.size).toBe(0)
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
+      expect(await readChangeState()).toEqual({ kind: 'none' })
+    })
+
+    it('a remote day fetch started while a password change is waiting on Drive does not start', async () => {
+      const open = gateNextListing()
+      const change = startPasswordChange('new-password')
+      const refused = expect(change).rejects.toThrow('network error')
+      await flushUntil(() => mockListFiles.mock.calls.length === 1, 'the password change to list')
+      expect(syncRuntime.passwordChangeRun).not.toBeNull()
+
+      expect(await fetchRemoteTypingDay('uid-a', 'remote-hash', '2026-04-18')).toBe(false)
+      expect(syncRuntime.remoteTypingDayFetches.size).toBe(0)
+      expect(mockListFiles).toHaveBeenCalledTimes(1)
+
+      open(async () => {
+        throw new Error('network error')
+      })
+      await refused
+      expect(syncRuntime.passwordChangeRun).toBeNull()
+      expect(isSyncInProgress()).toBe(false)
+      expect(await readChangeState()).toEqual({ kind: 'none' })
     })
   })
 

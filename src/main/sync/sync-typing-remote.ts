@@ -21,9 +21,8 @@ import { requireSyncCredentials, ensurePasswordCheckValidated } from './sync-pas
 import { localSyncBlock, remoteSyncBlock } from './sync-password-guard'
 import { syncFormatGeneration } from './sync-format'
 import { mergeDeviceDayBundle, mergeWithRemote } from './sync-merge-dispatch'
-import { isKnownRemoteRevision, syncRuntime } from './sync-runtime-state'
+import { isKnownRemoteRevision, lockFreeWriterBlocked, syncRuntime } from './sync-runtime-state'
 import { canonicalFiles, filesNamed, pickCanonicalFile } from './drive-canonical'
-import { resetHoldsKeyboard } from './sync-reset-lock'
 import {
   parseTypingAnalyticsDeviceDaySyncUnit,
   typingAnalyticsDeviceDaySyncUnit,
@@ -252,16 +251,17 @@ export async function listRemoteTypingDaysFor(
  * Designed for the Sync > Typing > Device lazy-expand flow so the UI
  * can pull in only the days the user actually opens.
  * Doesn't take the sync lock: it is counted in `remoteTypingDayFetches`
- * before its first await, and a reset that removes this keyboard's data
- * refuses to start while it is counted (sync-reset-lock.ts). */
+ * before its first await; a password change refuses to start, and a reset
+ * that removes this keyboard's data waits or refuses, while it is counted. */
 export async function fetchRemoteTypingDay(
   uid: string,
   machineHash: string,
   utcDay: UtcDay,
 ): Promise<boolean> {
-  // A token switch (sync-pending-account.ts) waits for the counted
-  // fetches and keeps new ones from starting.
-  if (resetHoldsKeyboard(uid) || syncRuntime.accountSwitching) return false
+  // A password change, a reset of this keyboard and a token switch each
+  // wait or refuse while this fetch is counted (`lockFreeWriterRunning`).
+  // The check and the count below are synchronous, so they never overlap.
+  if (lockFreeWriterBlocked(uid)) return false
   const fetches = syncRuntime.remoteTypingDayFetches
   fetches.set(uid, (fetches.get(uid) ?? 0) + 1)
   try {

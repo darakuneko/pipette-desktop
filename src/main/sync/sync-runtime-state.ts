@@ -114,7 +114,8 @@ export const syncRuntime = {
   passwordChangeLockLost: false,
   /** Settles (never rejects) when the running password-change operation
    *  has finished; null when none is running. The before-quit handler
-   *  waits on it. */
+   *  waits on it; analytics syncs and remote day fetches don't start while
+   *  it is set (`lockFreeWriterBlocked`). */
   passwordChangeRun: null as Promise<void> | null,
   /** Keyboards with an analytics sync running (sync-analytics.ts). A
    *  per-uid mutex rather than `isSyncing`: switching keyboards while the
@@ -124,7 +125,8 @@ export const syncRuntime = {
   analyticsSyncingUids: new Set<string>(),
   /** Remote day fetches running per keyboard (`fetchRemoteTypingDay`,
    *  sync-typing-remote.ts); a uid is removed when its count reaches 0. A
-   *  reset that removes a listed keyboard's data refuses to start. */
+   *  reset that removes a listed keyboard's data and a password change
+   *  don't start while it is counted (`lockFreeWriterRunning`). */
   remoteTypingDayFetches: new Map<string, number>(),
   /** True while a sign-in stores new tokens or a sign-out removes them
    *  (sync-pending-account.ts). Analytics syncs and remote day fetches
@@ -385,17 +387,54 @@ export async function claimSyncLockBy(deadline: number): Promise<(() => void) | 
 /** How often `waitForLockFreeWritersBy` checks again. */
 const WRITER_CHECK_INTERVAL_MS = 100
 
-/** True while an analytics sync or a remote day fetch runs (the Drive
- *  writers that don't take the sync lock). */
-function anyLockFreeWriterRunning(): boolean {
-  return syncRuntime.analyticsSyncingUids.size > 0 || syncRuntime.remoteTypingDayFetches.size > 0
+/** Keyboards whose data a reset removes (sync-reset-lock.ts), or that a
+ *  lock-free writer check covers: every keyboard, the listed uids, or none. */
+export type ResetKeyboards = 'all' | readonly string[] | null
+
+/** True while a Drive writer that doesn't take the sync lock (an analytics
+ *  sync or a remote day fetch) runs for one of `keyboards`: any keyboard
+ *  for `'all'`, none for null.
+ *  Work that refuses to overlap those writers (`withResetLock`, a password
+ *  change, a password-change lock release) checks it in the same
+ *  synchronous step as it takes the sync lock. Work that waits for them
+ *  (`withResetLockWhenFree`, a token switch in sync-pending-account.ts)
+ *  first sets the state `lockFreeWriterBlocked` checks, so no new writer
+ *  starts, then waits for it to turn false (`waitForLockFreeWritersBy`). */
+export function lockFreeWriterRunning(keyboards: ResetKeyboards): boolean {
+  const { analyticsSyncingUids, remoteTypingDayFetches } = syncRuntime
+  if (keyboards === null) return false
+  if (keyboards === 'all') return analyticsSyncingUids.size > 0 || remoteTypingDayFetches.size > 0
+  return keyboards.some((uid) => analyticsSyncingUids.has(uid) || remoteTypingDayFetches.has(uid))
+}
+
+/** True while the sync lock is held or any lock-free writer runs: the work
+ *  a password change and a password-change lock release refuse to start
+ *  alongside. */
+export function syncWorkRunning(): boolean {
+  return syncRuntime.isSyncing || lockFreeWriterRunning('all')
+}
+
+/** True while the running reset removes `uid`'s data (sync-reset-lock.ts). */
+export function resetHoldsKeyboard(uid: string): boolean {
+  const held = syncRuntime.resetKeyboards
+  return held === 'all' || (held !== null && held.has(uid))
+}
+
+/** True while a lock-free writer of `uid` must not start: a password change
+ *  runs (`passwordChangeRun`), a reset removes `uid`'s data, or a sign-in or
+ *  sign-out switches tokens. The writers (sync-analytics.ts,
+ *  sync-typing-remote.ts) check it and register themselves in the same
+ *  synchronous step, before their first await, so they never overlap the
+ *  work that checks `lockFreeWriterRunning`. */
+export function lockFreeWriterBlocked(uid: string): boolean {
+  return syncRuntime.passwordChangeRun !== null || resetHoldsKeyboard(uid) || syncRuntime.accountSwitching
 }
 
 /** Waits until `running` (by default: any lock-free writer) is false;
  *  false when it is still true at `deadline` (`Date.now()` ms). */
 export async function waitForLockFreeWritersBy(
   deadline: number,
-  running: () => boolean = anyLockFreeWriterRunning,
+  running: () => boolean = () => lockFreeWriterRunning('all'),
 ): Promise<boolean> {
   while (running()) {
     const remaining = deadline - Date.now()

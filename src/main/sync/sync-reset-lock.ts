@@ -3,7 +3,13 @@
 // typing-data import (sync-ipc.ts), so no sync pass writes the files they
 // are removing or replacing.
 
-import { claimSyncLockWhenIdleBy, syncRuntime, tryClaimSyncLock } from './sync-runtime-state'
+import {
+  claimSyncLockWhenIdleBy,
+  lockFreeWriterRunning,
+  syncRuntime,
+  tryClaimSyncLock,
+  type ResetKeyboards,
+} from './sync-runtime-state'
 
 /** Busy messages; each is an i18n key (the renderer shows `t(error, error)`). */
 export const RESET_BUSY_MESSAGE = 'sync.resetBusy'
@@ -13,27 +19,6 @@ export const IMPORT_BUSY_MESSAGE = 'sync.importBusy'
 /** How long `withResetLockWhenFree` waits for running sync work. */
 export const RESET_LOCK_WAIT_MS = 30_000
 
-/** Keyboards whose data a reset removes: every keyboard, the listed uids,
- *  or none (a reset of favorites, packs or app settings only). */
-export type ResetKeyboards = 'all' | readonly string[] | null
-
-/** True while a writer that doesn't take the sync lock (an analytics sync or
- *  a remote day fetch) runs for one of `keyboards` (any keyboard for
- *  `'all'`). */
-function keyboardWriterRunning(keyboards: ResetKeyboards): boolean {
-  const { analyticsSyncingUids, remoteTypingDayFetches } = syncRuntime
-  if (keyboards === null) return false
-  if (keyboards === 'all') return analyticsSyncingUids.size > 0 || remoteTypingDayFetches.size > 0
-  return keyboards.some((uid) => analyticsSyncingUids.has(uid) || remoteTypingDayFetches.has(uid))
-}
-
-/** True while the running reset removes `uid`'s data. Analytics syncs and
- *  remote day fetches check it before their first await. */
-export function resetHoldsKeyboard(uid: string): boolean {
-  const held = syncRuntime.resetKeyboards
-  return held === 'all' || (held !== null && held.has(uid))
-}
-
 function heldKeyboards(keyboards: ResetKeyboards): typeof syncRuntime.resetKeyboards {
   return keyboards === 'all' ? 'all' : keyboards?.length ? new Set(keyboards) : null
 }
@@ -42,8 +27,9 @@ function heldKeyboards(keyboards: ResetKeyboards): typeof syncRuntime.resetKeybo
  *  `resetKeyboards` set to `keyboards`. Throws `busyMessage` instead when
  *  the lock is held or an analytics sync / remote day fetch of one of
  *  `keyboards` runs. The checks and the claim happen before the first
- *  await, as do those writers' `resetHoldsKeyboard` checks
- *  (sync-analytics.ts, sync-typing-remote.ts), so the two never overlap.
+ *  await, as do those writers' `lockFreeWriterBlocked` checks (defined in
+ *  sync-runtime-state.ts, checked in sync-analytics.ts and
+ *  sync-typing-remote.ts), so the two never overlap.
  *  Polls skip and flushes wait while the lock is held; executeSync waits for
  *  the reset to end (sync-execute.ts). */
 export async function withResetLock<T>(
@@ -51,7 +37,7 @@ export async function withResetLock<T>(
   fn: () => Promise<T>,
   busyMessage = RESET_BUSY_MESSAGE,
 ): Promise<T> {
-  if (keyboardWriterRunning(keyboards)) throw new Error(busyMessage)
+  if (lockFreeWriterRunning(keyboards)) throw new Error(busyMessage)
   const releaseLock = tryClaimSyncLock({ waitable: true })
   if (!releaseLock) throw new Error(busyMessage)
   syncRuntime.resetKeyboards = heldKeyboards(keyboards)
@@ -70,7 +56,7 @@ export async function withResetLockWhenFree<T>(
   busyMessage: string,
 ): Promise<T> {
   const { release, idle } = await claimSyncLockWhenIdleBy(Date.now() + RESET_LOCK_WAIT_MS, {
-    running: () => keyboardWriterRunning(keyboards),
+    running: () => lockFreeWriterRunning(keyboards),
     onClaimed: () => {
       syncRuntime.resetKeyboards = heldKeyboards(keyboards)
     },

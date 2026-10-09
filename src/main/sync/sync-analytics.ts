@@ -5,8 +5,7 @@
 
 import { listFiles, driveFilenamePrefix, syncUnitFromFileName } from './google-drive'
 import { pLimit } from '../../shared/concurrency'
-import { SYNC_CONCURRENCY, syncRuntime } from './sync-runtime-state'
-import { resetHoldsKeyboard } from './sync-reset-lock'
+import { SYNC_CONCURRENCY, lockFreeWriterBlocked, syncRuntime } from './sync-runtime-state'
 import { requireSyncCredentials, ensurePasswordCheckValidated, listPasswordCheckFiles } from './sync-password'
 import { localSyncBlock, remoteSyncBlock, listGuardFiles } from './sync-password-guard'
 import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
@@ -30,18 +29,11 @@ import { queueOwnDeletedRangesApply } from './typing-deleted-ranges-merge'
  * cannot be created, or the password-check does not open) or on any per-unit
  * failure so the caller can retry on the next Analyze mount. */
 export async function executeAnalyticsSync(uid: string): Promise<boolean> {
-  // A running password-change operation (sync-password-change.ts) holds
-  // `passwordChangeRun`, and a running reset of this keyboard shows in
-  // `resetHoldsKeyboard` (sync-reset-lock.ts), and a token switch shows in
-  // `accountSwitching` (sync-pending-account.ts); each in turn waits or
-  // refuses while this uid is in `analyticsSyncingUids`. Every check is
-  // synchronous, so they never overlap.
-  if (
-    syncRuntime.analyticsSyncingUids.has(uid)
-    || syncRuntime.passwordChangeRun
-    || resetHoldsKeyboard(uid)
-    || syncRuntime.accountSwitching
-  ) return false
+  // A password change, a reset of this keyboard and a token switch each
+  // wait or refuse while this uid is in `analyticsSyncingUids`
+  // (`lockFreeWriterRunning`). The check and the add below are synchronous,
+  // so they never overlap.
+  if (syncRuntime.analyticsSyncingUids.has(uid) || lockFreeWriterBlocked(uid)) return false
   syncRuntime.analyticsSyncingUids.add(uid)
   try {
     const credentials = await requireSyncCredentials()

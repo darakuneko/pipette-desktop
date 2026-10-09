@@ -37,7 +37,7 @@ import { listTypingDailySummaries, listTypingKeyboards } from './typing-analytic
 import { registerAnalyzeIpc } from './typing-analytics-ipc-analyze'
 import { registerRangeIpc } from './typing-analytics-ipc-range'
 import { applyOwnDeletedRangesForAllKeyboards } from './deleted-ranges-apply'
-import { resetHoldsKeyboard } from '../sync/sync-reset-lock'
+import { resetHoldsKeyboard } from '../sync/sync-runtime-state'
 import { log } from '../logger'
 
 async function initialize(): Promise<void> {

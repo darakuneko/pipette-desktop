@@ -12,7 +12,7 @@
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import { listPasswordChangeLocks, readPasswordChangeLockInfo, releasePasswordChangeLock } from './sync-password-lock'
 import { assertNoLocalPasswordChange, assertSyncFormatSupported } from './sync-password-guard'
-import { syncRuntime, claimSyncLock } from './sync-runtime-state'
+import { claimSyncLock, syncWorkRunning } from './sync-runtime-state'
 import type { PasswordChangeLockStatus } from '../../shared/types/sync'
 
 /** The earliest lock on Drive (the one that blocks syncing), or null when
@@ -27,12 +27,12 @@ export async function getPasswordChangeLockStatus(): Promise<PasswordChangeLockS
 
 /** Deletes every password-change lock on Drive. Refused while this machine
  *  has a password change of its own (its lock is still needed to finish or
- *  revert it), while Drive needs a newer sync format, and while a sync or
- *  password change runs here; holds `isSyncing` so no password change
- *  starts meanwhile. */
+ *  revert it), while Drive needs a newer sync format, and while a sync, a
+ *  password change, an analytics sync or a remote day fetch runs here;
+ *  holds `isSyncing` so no password change starts meanwhile. */
 export async function releasePasswordChangeLocks(): Promise<void> {
   await assertNoLocalPasswordChange()
-  if (syncRuntime.isSyncing || syncRuntime.analyticsSyncingUids.size > 0) {
+  if (syncWorkRunning()) {
     throw new Error('sync.passwordChange.releaseBusy')
   }
   const releaseLock = claimSyncLock()
