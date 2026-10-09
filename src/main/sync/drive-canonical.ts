@@ -6,6 +6,7 @@
 // land on one file instead of alternating between them.
 
 import type { DriveFile } from './google-drive'
+import { parseTrashFile, type TrashInfo } from './drive-trash'
 
 interface DriveIndex {
   /** The chosen copy per name, names in first-listed order. */
@@ -27,13 +28,16 @@ function modifiedMs(file: DriveFile): number {
   return Number.isNaN(ms) ? -Infinity : ms
 }
 
-/** Whether `a` is chosen over `b`: the newer `modifiedTime`, ties broken by
- *  the smaller file id. */
+/** The newest-wins rule every choice between copies follows: the larger
+ *  time, ties broken by the smaller file id. */
+export function isNewerCopy(aMs: number, aId: string, bMs: number, bId: string): boolean {
+  if (aMs !== bMs) return aMs > bMs
+  return aId < bId
+}
+
+/** Whether `a` is chosen over `b` (`isNewerCopy` on `modifiedTime`). */
 function better(a: DriveFile, b: DriveFile): boolean {
-  const am = modifiedMs(a)
-  const bm = modifiedMs(b)
-  if (am !== bm) return am > bm
-  return a.id < b.id
+  return isNewerCopy(modifiedMs(a), a.id, modifiedMs(b), b.id)
 }
 
 function driveIndex(files: readonly DriveFile[]): DriveIndex {
@@ -68,4 +72,50 @@ export function canonicalFiles(files: readonly DriveFile[]): DriveFile[] {
  *  that must not leave a duplicate behind. */
 export function filesNamed(files: readonly DriveFile[], name: string): readonly DriveFile[] {
   return driveIndex(files).copies.get(name) ?? []
+}
+
+/** Names with two or more copies, in first-listed order. */
+export function duplicatedNames(files: readonly DriveFile[]): string[] {
+  return [...driveIndex(files).copies].filter(([, copies]) => copies.length > 1).map(([name]) => name)
+}
+
+export interface TrashCopy {
+  file: DriveFile
+  trash: TrashInfo
+}
+
+/** Original name → its trash files (drive-trash.ts), names in first-listed
+ *  order. Built on first use per listing, like `indexes`, and kept apart
+ *  from it so a plain lookup never parses trash names. */
+const trashIndexes = new WeakMap<readonly DriveFile[], Map<string, TrashCopy[]>>()
+
+function trashIndex(files: readonly DriveFile[]): Map<string, TrashCopy[]> {
+  const cached = trashIndexes.get(files)
+  if (cached) return cached
+  const index = new Map<string, TrashCopy[]>()
+  for (const file of files) {
+    const trash = parseTrashFile(file)
+    if (!trash) continue
+    const copies = index.get(trash.originalName)
+    if (copies) copies.push({ file, trash })
+    else index.set(trash.originalName, [{ file, trash }])
+  }
+  trashIndexes.set(files, index)
+  return index
+}
+
+/** The trash files of `name` in `files` (empty when there is none). */
+export function trashCopiesOf(files: readonly DriveFile[], name: string): readonly TrashCopy[] {
+  return trashIndex(files).get(name) ?? []
+}
+
+/** Names with at least one trash file, in first-listed order. */
+export function namesWithTrash(files: readonly DriveFile[]): string[] {
+  return [...trashIndex(files).keys()]
+}
+
+/** Every copy of `name` and every trash file of it, for deletes meant to
+ *  remove the name for good. */
+export function filesNamedWithTrash(files: readonly DriveFile[], name: string): DriveFile[] {
+  return [...filesNamed(files, name), ...trashCopiesOf(files, name).map((copy) => copy.file)]
 }

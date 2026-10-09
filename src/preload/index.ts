@@ -54,7 +54,7 @@ import type {
 import type { HubPrivateLink } from '../shared/types/hub-private'
 import type { AppConfig } from '../shared/types/app-config'
 import type { DeviceScope } from '../shared/types/analyze-filters'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult, PasswordChangeLockStatus, SyncFormatStatus } from '../shared/types/sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult, PasswordChangeLockStatus, SyncFormatStatus, SyncTrashListResult, SyncTrashDeleteResult } from '../shared/types/sync'
 import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } from '../shared/types/pipette-settings'
 import type {
   LayoutComparisonOptions,
@@ -718,6 +718,12 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SYNC_FETCH_REMOTE_BUNDLE, syncUnit),
   syncDeleteFiles: (fileIds: string[]): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SYNC_DELETE_FILES, fileIds),
+  syncListTrash: (): Promise<SyncTrashListResult> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_LIST_TRASH),
+  syncRestoreTrash: (fileId: string): Promise<SyncOperationResult> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_RESTORE_TRASH, fileId),
+  syncDeleteTrash: (fileIds: string[]): Promise<SyncTrashDeleteResult> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_DELETE_TRASH, fileIds),
   syncCheckPasswordExists: (): Promise<boolean> =>
     ipcRenderer.invoke(IpcChannels.SYNC_CHECK_PASSWORD_EXISTS),
   syncAnalyticsNow: (uid: string): Promise<boolean> =>

@@ -16,6 +16,8 @@ import type {
   SyncScope,
   SyncOperationResult,
   SyncCredentialFailureReason,
+  SyncTrashListResult,
+  SyncTrashDeleteResult,
 } from '../../shared/types/sync'
 
 /** Maps a SyncProgress status or LastSyncResult status to the UI SyncStatusType. */
@@ -73,6 +75,9 @@ export interface UseSyncReturn {
   syncNow: (direction: 'download' | 'upload', scope?: SyncScope) => Promise<SyncOperationResult>
   refreshStatus: () => Promise<void>
   deleteFiles: (fileIds: string[]) => Promise<{ success: boolean; error?: string }>
+  listTrash: () => Promise<SyncTrashListResult>
+  restoreTrash: (fileId: string) => Promise<SyncOperationResult>
+  deleteTrash: (fileIds: string[]) => Promise<SyncTrashDeleteResult>
 }
 
 export function useSync(): UseSyncReturn {
@@ -248,6 +253,12 @@ export function useSync(): UseSyncReturn {
     [],
   )
 
+  const listTrash = useCallback(() => window.vialAPI.syncListTrash(), [])
+
+  const restoreTrash = useCallback((fileId: string) => window.vialAPI.syncRestoreTrash(fileId), [])
+
+  const deleteTrash = useCallback((fileIds: string[]) => window.vialAPI.syncDeleteTrash(fileIds), [])
+
   const syncStatus = useMemo((): SyncStatusType => {
     if (progress?.status && progress.status !== 'idle') {
       return SYNC_STATUS_MAP[progress.status]
@@ -292,5 +303,8 @@ export function useSync(): UseSyncReturn {
     syncNow,
     refreshStatus,
     deleteFiles,
+    listTrash,
+    restoreTrash,
+    deleteTrash,
   }
 }

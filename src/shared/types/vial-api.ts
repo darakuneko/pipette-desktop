@@ -36,7 +36,7 @@ import type {
 } from './theme-store'
 import type { AppConfig } from './app-config'
 import type { DeviceScope } from './analyze-filters'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult, PasswordChangeLockStatus, SyncFormatStatus } from './sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult, PasswordChangeLockStatus, SyncFormatStatus, SyncTrashListResult, SyncTrashDeleteResult } from './sync'
 import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } from './pipette-settings'
 import type {
   TypingActivityCell,
@@ -349,6 +349,9 @@ export interface VialAPI {
   syncScanRemote(): Promise<SyncDataScanResult>
   syncFetchRemoteBundle(syncUnit: string): Promise<unknown>
   syncDeleteFiles(fileIds: string[]): Promise<{ success: boolean; error?: string }>
+  syncListTrash(): Promise<SyncTrashListResult>
+  syncRestoreTrash(fileId: string): Promise<SyncOperationResult>
+  syncDeleteTrash(fileIds: string[]): Promise<SyncTrashDeleteResult>
   syncCheckPasswordExists(): Promise<boolean>
   syncAnalyticsNow(uid: string): Promise<boolean>
   /** Drive's sync-format status as last checked; null when unknown or

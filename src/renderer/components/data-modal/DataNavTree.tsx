@@ -401,6 +401,15 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping,
           onClick={() => onNavigate({ section: 'sync', page: 'cloud-data' })}
           testId="nav-sync-cloud-data"
         />
+        {/* Trash — always rendered like Cloud Data; its pane lists Drive
+            only when opened (TrashContent.tsx). */}
+        <Leaf
+          label={t('dataModal.trash')}
+          depth={1}
+          active={isActivePath(activePath, { section: 'sync', page: 'sync-trash' })}
+          onClick={() => onNavigate({ section: 'sync', page: 'sync-trash' })}
+          testId="nav-sync-trash"
+        />
       </Branch>
 
       {/* ── Hub ── */}

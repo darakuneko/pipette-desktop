@@ -205,6 +205,26 @@ export async function deleteFile(fileId: string): Promise<void> {
   })
 }
 
+/** Renames `fileId` to `name` (a metadata-only PATCH; the content is not
+ *  touched). Resolves with the renamed file, or null when it no longer
+ *  exists. Safe to retry: renaming to the same name again changes nothing. */
+export async function renameFile(fileId: string, name: string): Promise<DriveFile | null> {
+  const { status, text } = await driveRequest({
+    label: 'rename',
+    getHeaders: authHeaders,
+    send: (headers) =>
+      fetch(`${DRIVE_API}/files/${fileId}?fields=id,name,modifiedTime`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      }),
+    retryTransient: true,
+    acceptStatus: (code) => code === 404,
+  })
+  if (status === 404) return null
+  return JSON.parse(text) as DriveFile
+}
+
 export async function deleteAllFiles(): Promise<void> {
   const files = await listFiles()
   const limit = pLimit(DELETE_CONCURRENCY)
@@ -347,20 +367,6 @@ export interface DeleteMatchingFilesResult {
   firstError?: string
 }
 
-/** Shared body for `deleteFilesByPrefix`/`deleteFilesByExactName`: list,
- * filter by `predicate`, then delete every match with bounded
- * concurrency. Both callers still list-then-filter separately per
- * target rather than sharing one listing across a whole reset — resets
- * are a rare path, so that batching isn't worth the added complexity
- * here. */
-async function deleteMatchingFiles(
-  predicate: (file: DriveFile) => boolean,
-  listOptions?: ListFilesOptions,
-): Promise<DeleteMatchingFilesResult> {
-  const files = await listFiles(listOptions)
-  return deleteFilesById(files.filter(predicate).map((file) => file.id))
-}
-
 /** Deletes every file in `fileIds` with bounded concurrency. A rejected
  *  delete does not stop the others; each rejection is logged. */
 export async function deleteFilesById(fileIds: readonly string[]): Promise<DeleteMatchingFilesResult> {
@@ -376,24 +382,11 @@ export async function deleteFilesById(fileIds: readonly string[]): Promise<Delet
   return { attempted: fileIds.length, failed: reasons.length, firstError: reasons[0] }
 }
 
+/** Deletes every remote file whose name starts with `prefix`; a trash
+ *  file (drive-trash.ts) starts with its original name, so it goes too.
+ *  Each reset target lists separately rather than sharing one listing
+ *  across a whole reset — resets are a rare path. */
 export async function deleteFilesByPrefix(prefix: string): Promise<DeleteMatchingFilesResult> {
-  return deleteMatchingFiles((file) => file.name.startsWith(prefix))
-}
-
-/** Delete every remote file whose name matches `name` EXACTLY — unlike
- * `deleteFilesByPrefix`, this is for sync units with no subtree to
- * speak of (`key-labels.enc`, `typing-test-texts.enc`): a bare
- * `driveFileName(unit)` string has no trailing separator a prefix
- * match could safely anchor on, and a prefix match against it would
- * also catch any unrelated file that merely starts with the same
- * characters. Deletes ALL matching entries rather than looking up a
- * single id and deleting just that one — Drive keys files by id, not
- * name, so more than one file can legitimately share this exact name
- * (e.g. a stale duplicate left behind by a past upload race); a
- * find-first approach would silently leave such a duplicate behind.
- * Narrows the listing server-side via `nameContains` (the exact match
- * itself still happens client-side as a backstop, since `nameContains`
- * is a substring filter, not an equality one). */
-export async function deleteFilesByExactName(name: string): Promise<DeleteMatchingFilesResult> {
-  return deleteMatchingFiles((file) => file.name === name, { nameContains: name })
+  const files = await listFiles()
+  return deleteFilesById(files.filter((file) => file.name.startsWith(prefix)).map((file) => file.id))
 }

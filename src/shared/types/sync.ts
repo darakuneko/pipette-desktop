@@ -130,6 +130,34 @@ export interface UndecryptableFile {
   syncUnit: string | null
 }
 
+/** A Drive trash file: a copy of `originalName` that sync stopped reading.
+ *  Times are epoch ms. `updatedAt` is the copy's last modification before
+ *  it was moved to trash; from `expiresAt` on, it is deleted while a
+ *  current copy of the name exists. */
+export interface SyncTrashFile {
+  fileId: string
+  originalName: string
+  syncUnit: string | null
+  updatedAt: number
+  expiresAt: number
+  /** False for this machine's own typing days, which are never renamed back
+   *  (the next sync uploads the local day again, and a deleted day must
+   *  stay deleted); such a file can only be deleted. */
+  restorable: boolean
+}
+
+export interface SyncTrashListResult extends Pick<SyncOperationResult, 'success' | 'error' | 'reason'> {
+  /** Set when `success`. */
+  files?: SyncTrashFile[]
+}
+
+export interface SyncTrashDeleteResult extends Pick<SyncOperationResult, 'success' | 'error' | 'reason'> {
+  /** Set when `success`: the ids deleted, and the ids skipped because
+   *  they were no longer trash files. */
+  deleted?: string[]
+  skipped?: string[]
+}
+
 export interface SyncDataScanResult {
   keyboards: string[]
   /** uid -> deviceName from synced meta (when available) */

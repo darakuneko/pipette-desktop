@@ -79,7 +79,11 @@ async function uploadSyncUnitLocked(
   // without today's analytics file): update that file rather than creating
   // a second one with the same name. No extra listing is requested — a pass
   // that uploads many units would multiply the `files.list` calls.
-  const createdId = listedId ? undefined : syncRuntime.createdFileIds.get(targetName)
+  const rememberedId = listedId ? undefined : syncRuntime.createdFileIds.get(targetName)
+  // A remembered id the listing shows under another name was renamed to
+  // trash by another machine (drive-trash.ts); writing to it would put the
+  // content where sync never reads it.
+  const createdId = rememberedId && !files.some((f) => f.id === rememberedId) ? rememberedId : undefined
   // A remembered id may have been deleted since (a reset, another machine),
   // so a missing file is created again; a listed id that is gone fails
   // like any other upload error.

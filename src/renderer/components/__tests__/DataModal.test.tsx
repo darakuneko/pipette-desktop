@@ -145,6 +145,9 @@ function makeSyncMock(overrides?: Partial<UseSyncReturn>): UseSyncReturn {
     syncNow: vi.fn().mockResolvedValue({ success: true, status: 'completed' }),
     refreshStatus: vi.fn().mockResolvedValue(undefined),
     deleteFiles: vi.fn().mockResolvedValue({ success: true }),
+    listTrash: vi.fn().mockResolvedValue({ success: true, files: [] }),
+    restoreTrash: vi.fn().mockResolvedValue({ success: true }),
+    deleteTrash: vi.fn().mockResolvedValue({ success: true, deleted: [], skipped: [] }),
     ...overrides,
   }
 }
@@ -803,6 +806,22 @@ describe('DataModal', () => {
     it('renders sync branch in sidebar', () => {
       render(<DataModal {...makeProps()} />)
       expect(screen.getByTestId('nav-sync')).toBeInTheDocument()
+    })
+
+    it('puts Trash last under Sync and lists it only when opened', async () => {
+      const listTrash = vi.fn().mockResolvedValue({ success: true, files: [] })
+      render(<DataModal {...makeProps({ sync: makeSyncMock({ listTrash }) })} />)
+      fireEvent.click(screen.getByTestId('nav-sync'))
+
+      const leaves = screen.getAllByTestId(/^nav-sync-(cloud-data|trash)$/)
+      expect(leaves.map((leaf) => leaf.dataset.testid)).toEqual(['nav-sync-cloud-data', 'nav-sync-trash'])
+      expect(listTrash).not.toHaveBeenCalled()
+
+      fireEvent.click(screen.getByTestId('nav-sync-trash'))
+
+      await waitFor(() => expect(screen.getByTestId('trash-empty')).toBeInTheDocument())
+      expect(listTrash).toHaveBeenCalledTimes(1)
+      expect(screen.getByTestId('data-nav-breadcrumb')).toHaveTextContent('dataModal.sync›dataModal.trash')
     })
   })
 

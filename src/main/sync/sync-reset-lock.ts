@@ -15,6 +15,7 @@ import {
 export const RESET_BUSY_MESSAGE = 'sync.resetBusy'
 export const DELETE_BUSY_MESSAGE = 'sync.deleteBusy'
 export const IMPORT_BUSY_MESSAGE = 'sync.importBusy'
+export const TRASH_BUSY_MESSAGE = 'sync.trashBusy'
 
 /** How long `withResetLockWhenFree` waits for running sync work. */
 export const RESET_LOCK_WAIT_MS = 30_000

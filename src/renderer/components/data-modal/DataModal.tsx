@@ -13,6 +13,7 @@ import { FavoriteTabContent } from './FavoriteTabContent'
 import { KeyboardSavesContent } from './KeyboardSavesContent'
 import { TypingAnalyticsContent } from './TypingAnalyticsContent'
 import { CloudDataContent } from './CloudDataContent'
+import { TrashContent } from './TrashContent'
 import { ConfirmResetRow } from './ConfirmResetRow'
 import { useDataNavTree } from './useDataNavTree'
 import type { FavoriteType } from '../../../shared/types/favorite-store'
@@ -238,6 +239,10 @@ export function DataModal({
           onRescan={nav.handleSyncScan}
         />
       )
+    }
+
+    if (path.page === 'sync-trash') {
+      return <TrashContent sync={sync} />
     }
 
     if (path.page === 'hub-keyboard') {

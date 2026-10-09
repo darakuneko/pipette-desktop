@@ -22,7 +22,7 @@ import { localSyncBlock, remoteSyncBlock } from './sync-password-guard'
 import { syncFormatGeneration } from './sync-format'
 import { mergeDeviceDayBundle, mergeWithRemote } from './sync-merge-dispatch'
 import { isKnownRemoteRevision, lockFreeWriterBlocked, syncRuntime } from './sync-runtime-state'
-import { canonicalFiles, filesNamed, pickCanonicalFile } from './drive-canonical'
+import { canonicalFiles, filesNamedWithTrash, namesWithTrash, pickCanonicalFile } from './drive-canonical'
 import {
   parseTypingAnalyticsDeviceDaySyncUnit,
   typingAnalyticsDeviceDaySyncUnit,
@@ -41,27 +41,37 @@ import {
 import { log } from '../logger'
 import type { SyncBundle } from '../../shared/types/sync'
 
+/** A typing day file on Drive: `live` is the copy sync reads, absent when
+ * only trash files of the day's name are left (drive-trash.ts). */
+interface RemoteDay {
+  name: string
+  live?: DriveFile
+}
+
 /** Scan the remote file list for per-day typing-analytics units owned
  * by `ownHash`, grouped by keyboard uid. Units with a malformed
  * filename are skipped. A day with several files of its name maps to the
- * copy `pickCanonicalFile` (drive-canonical.ts) chooses. */
+ * copy `pickCanonicalFile` (drive-canonical.ts) chooses; a day with only
+ * trash files is listed without `live`. */
 export function collectRemoteOwnHashDays(
   remoteFiles: DriveFile[],
   ownHash: string,
-): Map<string, Map<UtcDay, DriveFile>> {
-  const perUid = new Map<string, Map<UtcDay, DriveFile>>()
-  for (const file of canonicalFiles(remoteFiles)) {
-    const unit = syncUnitFromFileName(file.name)
-    if (!unit) continue
+): Map<string, Map<UtcDay, RemoteDay>> {
+  const perUid = new Map<string, Map<UtcDay, RemoteDay>>()
+  const add = (name: string, live: DriveFile | undefined): void => {
+    const unit = syncUnitFromFileName(name)
+    if (!unit) return
     const ref = parseTypingAnalyticsDeviceDaySyncUnit(unit)
-    if (!ref || ref.machineHash !== ownHash) continue
+    if (!ref || ref.machineHash !== ownHash) return
     let byDay = perUid.get(ref.uid)
     if (!byDay) {
-      byDay = new Map<UtcDay, DriveFile>()
+      byDay = new Map<UtcDay, RemoteDay>()
       perUid.set(ref.uid, byDay)
     }
-    byDay.set(ref.utcDay, file)
+    if (live || !byDay.has(ref.utcDay)) byDay.set(ref.utcDay, { name, live })
   }
+  for (const file of canonicalFiles(remoteFiles)) add(file.name, file)
+  for (const name of namesWithTrash(remoteFiles)) add(name, undefined)
   return perUid
 }
 
@@ -83,8 +93,10 @@ export function collectRemoteOwnHashDays(
  * pass after a cache rebuild or fresh install, then `reconciled_at`
  * is timestamped so the expensive listing is skipped afterwards.
  *
- * A cloud delete removes every file with that day's name, so no duplicate
- * copy is left behind to be picked up again. */
+ * A cloud delete removes every file with that day's name and every trash
+ * file of it, so nothing is left behind to be picked up or renamed back.
+ * Rules 2 and orphan also see a day that has only trash files; rule 3 needs
+ * a live copy, so a day with only trash is uploaded again. */
 export async function reconcileOwnHashTypingAnalytics(
   remoteFiles: DriveFile[],
   userData: string,
@@ -92,10 +104,10 @@ export async function reconcileOwnHashTypingAnalytics(
 ): Promise<{ state: TypingSyncState; mutated: boolean }> {
   const state = (await loadSyncState(userData)) ?? emptySyncState(ownHash)
   const remotePerUid = collectRemoteOwnHashDays(remoteFiles, ownHash)
-  // Deletes every copy of `file`'s name; a failed delete is logged (by
-  // deleteFilesById and here) and the pass goes on.
-  const deleteAllCopies = async (file: DriveFile, failure: string): Promise<void> => {
-    const result = await deleteFilesById(filesNamed(remoteFiles, file.name).map((copy) => copy.id))
+  // Deletes every copy and trash file of `day`'s name; a failed delete is
+  // logged (by deleteFilesById and here) and the pass goes on.
+  const deleteAllCopies = async (day: RemoteDay, failure: string): Promise<void> => {
+    const result = await deleteFilesById(filesNamedWithTrash(remoteFiles, day.name).map((copy) => copy.id))
     if (result.failed > 0) log('warn', `${failure}: ${result.firstError}`)
   }
 
@@ -120,14 +132,14 @@ export async function reconcileOwnHashTypingAnalytics(
     const pointerKey = readPointerKey(uid, ownHash)
     const localDays = new Set<UtcDay>(await listDeviceDays(userData, uid, ownHash))
     const uploadedDays = new Set<UtcDay>(state.uploaded[pointerKey] ?? [])
-    const cloudDays = remotePerUid.get(uid) ?? new Map<UtcDay, DriveFile>()
+    const cloudDays = remotePerUid.get(uid) ?? new Map<UtcDay, RemoteDay>()
 
     // Rule 2: uploaded but not local — delete from cloud.
     for (const day of Array.from(uploadedDays)) {
       if (localDays.has(day)) continue
-      const cloudFile = cloudDays.get(day)
-      if (cloudFile) {
-        await deleteAllCopies(cloudFile, `typing-analytics cloud delete failed for ${uid} ${day}`)
+      const cloudDay = cloudDays.get(day)
+      if (cloudDay) {
+        await deleteAllCopies(cloudDay, `typing-analytics cloud delete failed for ${uid} ${day}`)
         cloudDays.delete(day)
       }
       uploadedDays.delete(day)
@@ -137,7 +149,7 @@ export async function reconcileOwnHashTypingAnalytics(
     // Rule 3: uploaded but not cloud — forget the upload; the local file
     // stays and the upload pass sends it again.
     for (const day of Array.from(uploadedDays)) {
-      if (cloudDays.has(day)) continue
+      if (cloudDays.get(day)?.live) continue
       uploadedDays.delete(day)
       mutated = true
     }
@@ -147,9 +159,9 @@ export async function reconcileOwnHashTypingAnalytics(
     // flat bundles converted to per-day, or data from a removed
     // install). Deleting them avoids surprising re-download prompts.
     if (isReconcilePending(state, uid, ownHash)) {
-      for (const [day, cloudFile] of Array.from(cloudDays.entries())) {
+      for (const [day, cloudDay] of Array.from(cloudDays.entries())) {
         if (localDays.has(day) || uploadedDays.has(day)) continue
-        await deleteAllCopies(cloudFile, `typing-analytics orphan delete failed for ${uid} ${day}`)
+        await deleteAllCopies(cloudDay, `typing-analytics orphan delete failed for ${uid} ${day}`)
         cloudDays.delete(day)
       }
       state.reconciled_at[pointerKey] = Date.now()
@@ -238,7 +250,7 @@ export async function listRemoteTypingDaysFor(
   const perUid = collectRemoteOwnHashDays(remoteFiles, machineHash)
   const days = perUid.get(uid)
   if (!days) return []
-  return Array.from(days.keys()).sort()
+  return Array.from(days).filter(([, day]) => day.live).map(([utcDay]) => utcDay).sort()
 }
 
 /** Lazily fetch a single remote (uid, machineHash, day) into the
