@@ -71,11 +71,11 @@ const mockTypingAnalyticsHasRemote = vi.fn().mockResolvedValue(false)
 const mockTypingAnalyticsListRemoteCloudHashes = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsListRemoteCloudDays = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsFetchRemoteDay = vi.fn().mockResolvedValue(true)
-const mockTypingAnalyticsDeleteRemoteDay = vi.fn().mockResolvedValue(true)
+const mockTypingAnalyticsDeleteRemoteDays = vi.fn().mockResolvedValue({ success: true })
 const mockTypingAnalyticsExport = vi.fn().mockResolvedValue({ written: 0, cancelled: true })
-const mockTypingAnalyticsImport = vi.fn().mockResolvedValue({ result: { imported: 0, rejections: [] }, cancelled: true })
-const mockTypingAnalyticsDeleteItems = vi.fn().mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
-const mockTypingAnalyticsDeleteAll = vi.fn().mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
+const mockTypingAnalyticsImport = vi.fn().mockResolvedValue({ success: true, result: { imported: 0, rejections: [] }, cancelled: true })
+const mockTypingAnalyticsDeleteItems = vi.fn().mockResolvedValue({ success: true })
+const mockTypingAnalyticsDeleteAll = vi.fn().mockResolvedValue({ success: true })
 const mockSyncScanRemote = vi.fn().mockResolvedValue(fullScanResult())
 
 Object.defineProperty(window, 'vialAPI', {
@@ -109,7 +109,7 @@ Object.defineProperty(window, 'vialAPI', {
     typingAnalyticsListRemoteCloudHashes: mockTypingAnalyticsListRemoteCloudHashes,
     typingAnalyticsListRemoteCloudDays: mockTypingAnalyticsListRemoteCloudDays,
     typingAnalyticsFetchRemoteDay: mockTypingAnalyticsFetchRemoteDay,
-    typingAnalyticsDeleteRemoteDay: mockTypingAnalyticsDeleteRemoteDay,
+    typingAnalyticsDeleteRemoteDays: mockTypingAnalyticsDeleteRemoteDays,
     typingAnalyticsExport: mockTypingAnalyticsExport,
     typingAnalyticsImport: mockTypingAnalyticsImport,
     typingAnalyticsDeleteItems: mockTypingAnalyticsDeleteItems,
@@ -184,11 +184,11 @@ describe('DataModal', () => {
     mockTypingAnalyticsListRemoteCloudHashes.mockResolvedValue([])
     mockTypingAnalyticsListRemoteCloudDays.mockResolvedValue([])
     mockTypingAnalyticsFetchRemoteDay.mockResolvedValue(true)
-    mockTypingAnalyticsDeleteRemoteDay.mockResolvedValue(true)
+    mockTypingAnalyticsDeleteRemoteDays.mockResolvedValue({ success: true })
     mockTypingAnalyticsExport.mockResolvedValue({ written: 0, cancelled: true })
-    mockTypingAnalyticsImport.mockResolvedValue({ result: { imported: 0, rejections: [] }, cancelled: true })
-    mockTypingAnalyticsDeleteItems.mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
-    mockTypingAnalyticsDeleteAll.mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
+    mockTypingAnalyticsImport.mockResolvedValue({ success: true, result: { imported: 0, rejections: [] }, cancelled: true })
+    mockTypingAnalyticsDeleteItems.mockResolvedValue({ success: true })
+    mockTypingAnalyticsDeleteAll.mockResolvedValue({ success: true })
     mockSyncScanRemote.mockResolvedValue(fullScanResult())
     resetDataNavCache()
   })

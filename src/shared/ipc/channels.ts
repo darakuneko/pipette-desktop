@@ -155,7 +155,7 @@ export const IpcChannels = {
   TYPING_ANALYTICS_LIST_REMOTE_CLOUD_HASHES: 'typing-analytics:list-remote-cloud-hashes',
   TYPING_ANALYTICS_LIST_REMOTE_CLOUD_DAYS: 'typing-analytics:list-remote-cloud-days',
   TYPING_ANALYTICS_FETCH_REMOTE_DAY: 'typing-analytics:fetch-remote-day',
-  TYPING_ANALYTICS_DELETE_REMOTE_DAY: 'typing-analytics:delete-remote-day',
+  TYPING_ANALYTICS_DELETE_REMOTE_DAYS: 'typing-analytics:delete-remote-days',
   TYPING_ANALYTICS_EXPORT: 'typing-analytics:export',
   TYPING_ANALYTICS_IMPORT: 'typing-analytics:import',
   /** Distinct app_name list (with keystroke totals) for the analyze

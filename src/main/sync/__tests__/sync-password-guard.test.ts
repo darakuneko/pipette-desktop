@@ -233,7 +233,7 @@ import {
   hasAnyRemoteTypingData,
   listRemoteTypingHashesForUidFromCloud,
   listRemoteTypingDaysFor,
-  deleteRemoteTypingDay,
+  deleteRemoteTypingDays,
   fetchRemoteTypingDay,
   listUndecryptableFiles,
   scanRemoteData,
@@ -406,11 +406,11 @@ describe('sync password-change guard', () => {
       expectNoDataWork()
     })
 
-    it('the Sync > Typing cloud reads and the remote day delete do nothing', async () => {
+    it('the Sync > Typing cloud reads do nothing and the remote day delete is refused', async () => {
       expect(await hasAnyRemoteTypingData()).toBe(false)
       expect(await listRemoteTypingHashesForUidFromCloud('uid1')).toEqual([])
       expect(await listRemoteTypingDaysFor('uid1', 'hashother')).toEqual([])
-      expect(await deleteRemoteTypingDay('uid1', 'hashother', '2026-10-01')).toBe(false)
+      await expect(deleteRemoteTypingDays('uid1', 'hashother', ['2026-10-01'])).rejects.toThrow(key)
       expect(await fetchRemoteTypingDay('uid1', 'hashother', '2026-10-01')).toBe(false)
       expect(drive.downloads).toEqual([])
       expectNoDataWork()

@@ -17,7 +17,7 @@ import { getMachineHash } from './machine-hash'
 import { deviceDayJsonlPath, listDeviceDays } from './jsonl/paths'
 import { utcDayFromMs, type UtcDay } from './jsonl/utc-day'
 import { taState } from './typing-analytics-state'
-import { closeSessionsForUid, flushNow } from './typing-analytics-pipeline'
+import { closeSessionsForUid, discardBufferedTyping } from './typing-analytics-pipeline'
 
 /** Convert a 'YYYY-MM-DD' local-calendar date into a [startMs, endMs)
  * window that matches the strftime('%Y-%m-%d', ..., 'localtime') buckets
@@ -41,12 +41,13 @@ function localDayRangeMs(date: string): { startMs: number; endMs: number } | nul
  * still holds the day, so the next sync pass drops the cloud copy via
  * reconcile rule 2. `is_deleted` on cache rows is retained so the
  * upcoming list query can hide the affected minutes before the next
- * rebuild runs. */
+ * rebuild runs. `cutoffMs` is when the user asked for the delete (see
+ * discardBufferedTyping, typing-analytics-pipeline.ts). */
 export async function deleteTypingDailySummaries(
   uid: string,
   dates: string[],
+  cutoffMs = Date.now(),
 ): Promise<TypingTombstoneResult> {
-  await flushNow({ final: true })
   const ranges: Array<{ startMs: number; endMs: number }> = []
   for (const date of dates) {
     const range = localDayRangeMs(date)
@@ -55,6 +56,10 @@ export async function deleteTypingDailySummaries(
   if (ranges.length === 0) {
     return emptyTombstoneResult()
   }
+  // Buffered data of the deleted days is dropped instead of flushed. A kept
+  // entry of today would be reopened by the next keystroke in its minute,
+  // and its next finalize would write the pre-delete counts back.
+  await discardBufferedTyping(uid, cutoffMs, ranges)
   const machineHash = await getMachineHash()
   const userDataDir = app.getPath('userData')
   // Map each local-calendar range to the UTC days it overlaps. A local
@@ -91,13 +96,21 @@ export async function deleteTypingDailySummaries(
 /** Delete every per-day JSONL file owned by this device for the given
  * keyboard uid and tombstone all of that uid's cache rows. Other
  * devices' files are untouched — they clear themselves on their own
- * Delete All action. */
-export async function deleteAllTypingForKeyboard(uid: string): Promise<TypingTombstoneResult> {
-  // Finalize this keyboard's active session first so flushNow persists it and
-  // the cache tombstone below covers it; otherwise closeAll() on quit would
-  // re-persist the open session and resurrect the deleted keyboard in Analyze.
+ * Delete All action. `cutoffMs` is when the user asked for the delete;
+ * what was typed in later minutes stays buffered and is written
+ * afterwards (see discardBufferedTyping, typing-analytics-pipeline.ts).
+ * Rows of those later minutes already on disk are still removed with the
+ * day file: only a final flush (TYPING_ANALYTICS_FLUSH) while the caller
+ * waited for the sync lock writes them, since a later minute cannot close
+ * within that wait. */
+export async function deleteAllTypingForKeyboard(uid: string, cutoffMs = Date.now()): Promise<TypingTombstoneResult> {
+  // Finalize this keyboard's active session so the discard below drops it
+  // (when it started by the cutoff); otherwise closeAll() on quit would
+  // persist the open session and resurrect the deleted keyboard in Analyze.
   closeSessionsForUid(uid)
-  await flushNow({ final: true })
+  // Buffered data is dropped instead of flushed, for the same reason as in
+  // deleteTypingDailySummaries.
+  await discardBufferedTyping(uid, cutoffMs)
   const machineHash = await getMachineHash()
   const userDataDir = app.getPath('userData')
   // Snapshot the days *before* unlinking so the post-tombstone notify

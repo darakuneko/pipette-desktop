@@ -86,6 +86,7 @@ const { MockSyncBlockedError, MockAccountSwitchBusyError } = vi.hoisted(() => ({
     }
   },
 }))
+const mockDeleteRemoteTypingDays = vi.fn(async (..._args: unknown[]): Promise<boolean> => true)
 const mockGetCachedSyncFormatStatus = vi.fn((): unknown => null)
 const mockRefreshSyncFormatStatus = vi.fn(async (): Promise<unknown> => null)
 const mockSetSyncFormatStatusListener = vi.fn()
@@ -97,6 +98,9 @@ vi.mock('../../utils/broadcast', () => ({
 // below can hold the lock and register analytics writers themselves.
 vi.mock('../sync-service', async () => ({
   withResetLock: (await vi.importActual<typeof import('../sync-reset-lock')>('../sync-reset-lock')).withResetLock,
+  withResetLockWhenFree: (await vi.importActual<typeof import('../sync-reset-lock')>('../sync-reset-lock')).withResetLockWhenFree,
+  DELETE_BUSY_MESSAGE: 'sync.deleteBusy',
+  IMPORT_BUSY_MESSAGE: 'sync.importBusy',
   copyPendingState: (await vi.importActual<typeof import('../sync-runtime-state')>('../sync-runtime-state')).copyPendingState,
   restoreCancelledPending: (await vi.importActual<typeof import('../sync-runtime-state')>('../sync-runtime-state')).restoreCancelledPending,
   executeAnalyticsSync: vi.fn(),
@@ -138,7 +142,7 @@ vi.mock('../sync-service', async () => ({
   checkPasswordCheckExists: vi.fn(),
   setPasswordAndValidate: (password: string) => mockSetPasswordAndValidate(password),
   replacePasswordAndValidate: (password: string) => mockReplacePasswordAndValidate(password),
-  deleteRemoteTypingDay: vi.fn(),
+  deleteRemoteTypingDays: (...args: unknown[]) => mockDeleteRemoteTypingDays(...args),
   fetchRemoteTypingDay: vi.fn(),
   hasAnyRemoteTypingData: vi.fn(),
   listRemoteTypingDaysFor: vi.fn(),
@@ -152,17 +156,20 @@ vi.mock('../sync-service', async () => ({
   assertNoLocalPasswordChange: () => mockAssertNoLocalPasswordChange(),
 }))
 
+const mockImportTypingDataFiles = vi.fn(async (..._args: unknown[]): Promise<unknown> => ({ imported: 0, rejections: [] }))
 vi.mock('../../typing-analytics/import-export', () => ({
   exportTypingDataForKeyboard: vi.fn(),
-  importTypingDataFiles: vi.fn(),
+  importTypingDataFiles: (...args: unknown[]) => mockImportTypingDataFiles(...args),
 }))
 vi.mock('../../typing-analytics/machine-hash', () => ({ getMachineHash: vi.fn() }))
 vi.mock('../../typing-analytics/cache-rebuild', () => ({ ensureCacheIsFresh: vi.fn() }))
 vi.mock('../../typing-analytics/db/typing-analytics-db', () => ({ getTypingAnalyticsDB: vi.fn() }))
-const mockDeleteAllTypingForKeyboard = vi.fn(async (_uid: string): Promise<void> => {})
+const mockDeleteAllTypingForKeyboard = vi.fn(async (_uid: string, _cutoffMs?: number): Promise<void> => {})
+const mockDeleteTypingDailySummaries = vi.fn(async (_uid: string, _dates: string[], _cutoffMs?: number): Promise<void> => {})
 const mockListTypingKeyboards = vi.fn((): Array<{ uid: string }> => [])
 vi.mock('../../typing-analytics/typing-analytics-service', () => ({
-  deleteAllTypingForKeyboard: (uid: string) => mockDeleteAllTypingForKeyboard(uid),
+  deleteAllTypingForKeyboard: (...args: [string, number?]) => mockDeleteAllTypingForKeyboard(...args),
+  deleteTypingDailySummaries: (...args: [string, string[], number?]) => mockDeleteTypingDailySummaries(...args),
   listTypingKeyboards: () => mockListTypingKeyboards(),
 }))
 
@@ -183,7 +190,7 @@ vi.mock('../keyboard-meta', () => ({
 
 import { setupSyncIpc } from '../sync-ipc'
 import { syncRuntime, claimSyncLock, tryClaimSyncLock, resetSyncRuntimeForTests } from '../sync-runtime-state'
-import { ipcMain } from 'electron'
+import { dialog, ipcMain } from 'electron'
 import { onAppConfigChange } from '../../app-config'
 import { IpcChannels } from '../../../shared/ipc/channels'
 import { KEY_LABEL_SYNC_UNIT } from '../../key-label-store'
@@ -698,7 +705,7 @@ describe('sync-ipc SYNC_RESET_TARGETS — keyLabels / typingTestTexts', () => {
     const result = await handler(null, { keyboards: false, favorites: false, keyLabels: true })
     releaseLock()
 
-    expect(result).toEqual({ success: false, error: 'Cannot reset while sync is in progress' })
+    expect(result).toEqual({ success: false, error: 'sync.resetBusy' })
     expect(mockDeleteFilesByExactName).not.toHaveBeenCalled()
   })
 
@@ -902,7 +909,7 @@ describe('sync-ipc resets hold the sync lock', () => {
     return { promise, release }
   }
 
-  const busy = 'Cannot reset while sync is in progress'
+  const busy = 'sync.resetBusy'
   // Each handler with an argument that reaches its first await, and the mock
   // that await waits on.
   const handlers: Array<[string, string, unknown, string, (gate: Gate) => void]> = [
@@ -915,7 +922,7 @@ describe('sync-ipc resets hold the sync lock', () => {
         await gate.promise
         return new Set<string>()
       })],
-    ['SYNC_DELETE_FILES', IpcChannels.SYNC_DELETE_FILES, ['id-1'], 'Cannot delete while sync is in progress',
+    ['SYNC_DELETE_FILES', IpcChannels.SYNC_DELETE_FILES, ['id-1'], 'sync.deleteBusy',
       (gate) => mockAssertSyncAllowed.mockImplementationOnce(() => gate.promise)],
   ]
 
@@ -1118,5 +1125,146 @@ describe('sync-ipc resets hold the sync lock', () => {
     expect(result.success).toBe(true)
     expect(mockDeleteAllTypingForKeyboard).toHaveBeenCalledTimes(2)
     expect(rm).toHaveBeenCalledWith(expect.stringContaining('keyboards'), { recursive: true, force: true })
+  })
+})
+
+describe('sync-ipc typing-data deletes and import wait for the sync lock', () => {
+  async function turns(count = 5): Promise<void> {
+    for (let i = 0; i < count; i++) {
+      await new Promise<void>((resolve) => setImmediate(resolve))
+    }
+  }
+
+  // Each delete handler, its arguments, and the delete it runs.
+  const deletes: Array<[string, string, unknown[], ReturnType<typeof vi.fn>]> = [
+    ['TYPING_ANALYTICS_DELETE_ITEMS', IpcChannels.TYPING_ANALYTICS_DELETE_ITEMS, ['uid1', ['2026-10-01']], mockDeleteTypingDailySummaries],
+    ['TYPING_ANALYTICS_DELETE_ALL', IpcChannels.TYPING_ANALYTICS_DELETE_ALL, ['uid1'], mockDeleteAllTypingForKeyboard],
+    ['TYPING_ANALYTICS_DELETE_REMOTE_DAYS', IpcChannels.TYPING_ANALYTICS_DELETE_REMOTE_DAYS, ['uid1', 'hash1', ['2026-10-01', '2026-10-02']], mockDeleteRemoteTypingDays],
+  ]
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    resetSyncRuntimeForTests()
+    setupSyncIpc()
+  })
+
+  it.each(deletes)('%s waits for a pass holding the lock, then deletes holding it for its keyboard', async (_name, channel, args, remove) => {
+    remove.mockImplementationOnce(async () => {
+      expect(syncRuntime.isSyncing).toBe(true)
+      expect(syncRuntime.resetKeyboards).toEqual(new Set(['uid1']))
+    })
+    const releasePoll = claimSyncLock({ waitable: true })
+
+    const result = getHandler(channel)(null, ...args)
+    await turns()
+    expect(remove).not.toHaveBeenCalled()
+    releasePoll()
+
+    expect(await result).toEqual({ success: true })
+    expect(remove).toHaveBeenCalledTimes(1)
+    expect(remove.mock.calls[0].slice(0, args.length)).toEqual(args)
+    expect(syncRuntime.isSyncing).toBe(false)
+    expect(syncRuntime.resetKeyboards).toBeNull()
+  })
+
+  it.each(deletes)('%s returns the delete busy key when the lock is still held after the wait', async (_name, channel, args, remove) => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    try {
+      const release = claimSyncLock()
+      const result = getHandler(channel)(null, ...args)
+      await vi.advanceTimersByTimeAsync(30_000)
+
+      expect(await result).toEqual({ success: false, error: 'sync.deleteBusy' })
+      expect(remove).not.toHaveBeenCalled()
+      release()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it.each(deletes)('%s releases the lock when the delete throws', async (_name, channel, args, remove) => {
+    remove.mockRejectedValueOnce(new Error('EBUSY'))
+
+    expect(await getHandler(channel)(null, ...args)).toEqual({ success: false, error: 'EBUSY' })
+    expect(syncRuntime.isSyncing).toBe(false)
+    expect(syncRuntime.resetKeyboards).toBeNull()
+  })
+
+  it.each([
+    ['an invalid uid', IpcChannels.TYPING_ANALYTICS_DELETE_ALL, ['../x'], 'Invalid uid'],
+    ['an invalid date', IpcChannels.TYPING_ANALYTICS_DELETE_ITEMS, ['uid1', ['2026-10-01', 'x']], 'Invalid dates'],
+    ['an invalid device', IpcChannels.TYPING_ANALYTICS_DELETE_REMOTE_DAYS, ['uid1', '../h', ['2026-10-01']], 'Invalid device'],
+  ])('refuses %s before taking the lock', async (_name, channel, args, error) => {
+    const release = claimSyncLock()
+
+    expect(await getHandler(channel)(null, ...args)).toEqual({ success: false, error })
+    release()
+    expect(mockDeleteAllTypingForKeyboard).not.toHaveBeenCalled()
+    expect(mockDeleteTypingDailySummaries).not.toHaveBeenCalled()
+    expect(mockDeleteRemoteTypingDays).not.toHaveBeenCalled()
+  })
+
+  it('TYPING_ANALYTICS_IMPORT shows the file dialog without the lock and imports holding it for every keyboard', async () => {
+    vi.mocked(dialog.showOpenDialog).mockImplementationOnce(async () => {
+      expect(syncRuntime.isSyncing).toBe(false)
+      return { canceled: false, filePaths: ['/tmp/day.jsonl'] }
+    })
+    mockImportTypingDataFiles.mockImplementationOnce(async () => {
+      expect(syncRuntime.isSyncing).toBe(true)
+      expect(syncRuntime.resetKeyboards).toBe('all')
+      return { imported: 0, rejections: [] }
+    })
+
+    const result = await getHandler(IpcChannels.TYPING_ANALYTICS_IMPORT)(null)
+
+    expect(result).toEqual({ success: true, result: { imported: 0, rejections: [] }, cancelled: false })
+    expect(mockImportTypingDataFiles).toHaveBeenCalledTimes(1)
+    expect(syncRuntime.isSyncing).toBe(false)
+  })
+
+  it('TYPING_ANALYTICS_IMPORT returns the import busy key when the lock is still held after the wait', async () => {
+    vi.mocked(dialog.showOpenDialog).mockResolvedValueOnce({ canceled: false, filePaths: ['/tmp/day.jsonl'] })
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    try {
+      const release = claimSyncLock()
+      const result = getHandler(IpcChannels.TYPING_ANALYTICS_IMPORT)(null)
+      await vi.advanceTimersByTimeAsync(30_000)
+
+      expect(await result).toEqual({ success: false, error: 'sync.importBusy' })
+      expect(mockImportTypingDataFiles).not.toHaveBeenCalled()
+      release()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('TYPING_ANALYTICS_IMPORT reports a cancelled dialog without taking the lock', async () => {
+    vi.mocked(dialog.showOpenDialog).mockResolvedValueOnce({ canceled: true, filePaths: [] })
+    const release = claimSyncLock()
+
+    const result = await getHandler(IpcChannels.TYPING_ANALYTICS_IMPORT)(null)
+    release()
+
+    expect(result).toEqual({ success: true, result: { imported: 0, rejections: [] }, cancelled: true })
+    expect(mockImportTypingDataFiles).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['TYPING_ANALYTICS_DELETE_ITEMS', IpcChannels.TYPING_ANALYTICS_DELETE_ITEMS, ['uid1', ['2026-10-01']], mockDeleteTypingDailySummaries],
+    ['TYPING_ANALYTICS_DELETE_ALL', IpcChannels.TYPING_ANALYTICS_DELETE_ALL, ['uid1'], mockDeleteAllTypingForKeyboard],
+  ])('%s passes the time the handler was called as the cutoff, not the time it got the lock', async (_name, channel, args, remove) => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    try {
+      vi.setSystemTime(1_000_000)
+      const releasePoll = claimSyncLock({ waitable: true })
+      const result = getHandler(channel)(null, ...args)
+      await vi.advanceTimersByTimeAsync(5_000)
+      releasePoll()
+
+      expect(await result).toEqual({ success: true })
+      expect(remove.mock.calls[0][args.length]).toBe(1_000_000)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

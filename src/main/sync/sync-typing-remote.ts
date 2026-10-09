@@ -2,7 +2,7 @@
 // Remote typing-analytics day-file bookkeeping: reconciling own-hash
 // cloud state against local + `uploaded` state before an upload pass,
 // and the Sync > Typing lazy-expand UI's on-demand cloud reads (list
-// remote hashes/days, delete a remote day, fetch a single remote day).
+// remote hashes/days, delete remote days, fetch a single remote day).
 
 import { app } from 'electron'
 import { join } from 'node:path'
@@ -16,8 +16,8 @@ import {
   syncUnitFromFileName,
   type DriveFile,
 } from './google-drive'
-import { requireSyncCredentials, ensurePasswordCheckValidated } from './sync-password'
-import { localSyncBlock, remoteSyncBlock } from './sync-password-guard'
+import { requireSyncCredentials, ensurePasswordCheckValidated, SyncCredentialError } from './sync-password'
+import { localSyncBlock, remoteSyncBlock, SyncBlockedError } from './sync-password-guard'
 import { syncFormatGeneration } from './sync-format'
 import { mergeDeviceDayBundle } from './sync-merge-dispatch'
 import { syncRuntime } from './sync-runtime-state'
@@ -247,56 +247,62 @@ export async function listRemoteTypingDaysFor(
   return Array.from(days.keys()).sort()
 }
 
-/** Delete the cloud copy of a specific (uid, machineHash, day) and
- * its local mirror if we previously downloaded it. Used by the Sync >
- * Typing > Device > Delete-day UX: another device's record is gone
- * from cloud, and when that device next syncs the reconcile pass will
- * see its `uploaded` entry without a cloud file and drop its own
- * local copy (rule 3). Own-hash cache rows are accepted as stale until
- * the next rebuild — they live in the machine that owns the day.
- * Returns `true` when a cloud delete actually ran, `false` when the
- * user is unauthenticated or the cloud file was already missing. Every file
- * with the day's name is deleted, so a duplicate copy does not bring the
- * day back. A sync password change in progress returns `false` before
- * anything, local or remote, is removed. */
-export async function deleteRemoteTypingDay(
+/** Delete the cloud copies of the given days of a remote device
+ * `(uid, machineHash)` and their local mirrors if we previously
+ * downloaded them. Used by the Sync > Typing > Device delete UX:
+ * another device's records are gone from cloud, and when that device
+ * next syncs the reconcile pass will see its `uploaded` entry without a
+ * cloud file and drop its own local copy (rule 3). Own-hash cache rows
+ * are accepted as stale until the next rebuild — they live in the
+ * machine that owns the day.
+ * One Drive listing and one batch delete serve every day; every file
+ * with a day's name is deleted, so a duplicate copy does not bring the
+ * day back. Throws before anything, local or remote, is removed when
+ * the credentials are not ready (`SyncCredentialError`) or syncing is
+ * blocked (`SyncBlockedError`: a sync password change, or Drive needing
+ * a newer app); both messages are i18n keys. Throws after the other
+ * deletes when a cloud delete fails.
+ * Takes no lock itself: the IPC handler holds the sync lock around it
+ * (sync-reset-ipc.ts). */
+export async function deleteRemoteTypingDays(
   uid: string,
   machineHash: string,
-  utcDay: UtcDay,
-): Promise<boolean> {
+  utcDays: readonly UtcDay[],
+): Promise<void> {
   const credentials = await requireSyncCredentials()
-  if (!credentials.ok) return false
-  // Both checks run before the local copy is removed, so a refused delete changes nothing.
-  if (await localSyncBlock()) return false
+  if (!credentials.ok) throw new SyncCredentialError(credentials.reason, 'readiness')
+  const localBlock = await localSyncBlock()
+  if (localBlock) throw new SyncBlockedError(localBlock)
   const formatGeneration = syncFormatGeneration()
   const remoteFiles = await listFiles()
-  if (remoteSyncBlock(remoteFiles, formatGeneration)) return false
-  const targetName = driveFileName(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, utcDay))
-  const copies = filesNamed(remoteFiles, targetName)
+  const remoteBlock = remoteSyncBlock(remoteFiles, formatGeneration)
+  if (remoteBlock) throw new SyncBlockedError(remoteBlock)
   const userData = app.getPath('userData')
-  try {
-    await unlink(deviceDayJsonlPath(userData, uid, machineHash, utcDay))
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-      log('warn', `typing-analytics local delete failed for ${uid} ${machineHash} ${utcDay}: ${String(err)}`)
+  const copyIds: string[] = []
+  for (const utcDay of utcDays) {
+    try {
+      await unlink(deviceDayJsonlPath(userData, uid, machineHash, utcDay))
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+        log('warn', `typing-analytics local delete failed for ${uid} ${machineHash} ${utcDay}: ${String(err)}`)
+      }
     }
+    // Tombstone the remote hash's cache rows for this day so the Data
+    // modal list refreshes immediately after the delete. Scoped to the
+    // single hash + day so a same-day local contribution stays visible.
+    try {
+      const { startMs, endMs } = utcDayBoundaryMs(utcDay)
+      getTypingAnalyticsDB().tombstoneRowsForUidHashInRange(uid, machineHash, startMs, endMs, Date.now())
+    } catch (err) {
+      log('warn', `typing-analytics cache tombstone failed for ${uid} ${machineHash} ${utcDay}: ${String(err)}`)
+    }
+    const name = driveFileName(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, utcDay))
+    for (const copy of filesNamed(remoteFiles, name)) copyIds.push(copy.id)
   }
-  // Tombstone the remote hash's cache rows for this day so the Data
-  // modal list refreshes immediately after the delete. Scoped to the
-  // single hash + day so a same-day local contribution stays visible.
-  try {
-    const { startMs, endMs } = utcDayBoundaryMs(utcDay)
-    const updatedAt = Date.now()
-    getTypingAnalyticsDB().tombstoneRowsForUidHashInRange(uid, machineHash, startMs, endMs, updatedAt)
-  } catch (err) {
-    log('warn', `typing-analytics cache tombstone failed for ${uid} ${machineHash} ${utcDay}: ${String(err)}`)
-  }
-  if (copies.length === 0) return false
-  const result = await deleteFilesById(copies.map((copy) => copy.id))
+  const result = await deleteFilesById(copyIds)
   if (result.failed > 0) {
     throw new Error(`Failed to delete ${result.failed} of ${result.attempted} files: ${result.firstError}`)
   }
-  return true
 }
 
 /** Lazily fetch a single remote (uid, machineHash, day) into the

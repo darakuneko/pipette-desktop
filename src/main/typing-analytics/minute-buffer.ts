@@ -293,6 +293,9 @@ export class MinuteBuffer {
   // deliberately not part of this key — minute boundaries reset through
   // the existing drain/resetBigramChain path.
   private chainKey: string | null = null
+  // Keyboard uid of `chainKey`'s scope, so `discardForUid` can tell
+  // whether the chain belongs to the keyboard it discards.
+  private chainUid: string | null = null
 
   /** True once `minuteTs`'s `windowMs`-past-its-own-end window has fully
    * elapsed as of `nowMs`. The single definition backing both the
@@ -504,6 +507,7 @@ export class MinuteBuffer {
       this.k2Keycode = currKeycode
       this.k2Ts = ts
       this.chainKey = chainKey
+      this.chainUid = entry.fingerprint.keyboard.uid
       return
     }
     const iki = ts - this.k2Ts
@@ -677,6 +681,18 @@ export class MinuteBuffer {
     this.k2Ts = null
     this.prevIki = null
     this.chainKey = null
+    this.chainUid = null
+  }
+
+  /** Drops `uid`'s entries whose minute start `drops` accepts, whatever
+   * their state, and restarts the n-gram chain when it belongs to `uid`.
+   * Used when that keyboard's data is deleted: a kept entry would bring
+   * its pre-delete counts back with its next cumulative finalize. */
+  discardForUid(uid: string, drops: (minuteTs: number) => boolean): void {
+    for (const [key, entry] of this.buffers) {
+      if (entry.fingerprint.keyboard.uid === uid && drops(entry.minuteTs)) this.buffers.delete(key)
+    }
+    if (this.chainUid === uid) this.resetBigramChain()
   }
 
   /** True only when every entry is 'retained' (see {@link Entry.state}) —
