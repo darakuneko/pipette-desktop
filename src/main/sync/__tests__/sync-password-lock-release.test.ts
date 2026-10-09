@@ -21,10 +21,17 @@ vi.mock('../sync-password-change-state', () => ({
 }))
 
 vi.mock('../sync-runtime-state', () => {
-  const syncRuntime = { isSyncing: false, analyticsSyncingUids: new Set<string>() }
+  const syncRuntime = {
+    isSyncing: false,
+    analyticsSyncingUids: new Set<string>(),
+    remoteTypingDayFetches: new Map<string, number>(),
+  }
   return {
     syncRuntime,
     emitProgress: vi.fn(),
+    // `syncWorkRunning` on this file's stand-in state.
+    syncWorkRunning: () =>
+      syncRuntime.isSyncing || syncRuntime.analyticsSyncingUids.size > 0 || syncRuntime.remoteTypingDayFetches.size > 0,
     // Holds only `isSyncing` on this file's stand-in state.
     claimSyncLock: () => {
       syncRuntime.isSyncing = true
@@ -65,6 +72,7 @@ describe('sync-password-lock-release', () => {
     mockHasChangeState.mockResolvedValue(false)
     syncRuntime.isSyncing = false
     syncRuntime.analyticsSyncingUids.clear()
+    syncRuntime.remoteTypingDayFetches.clear()
   })
 
   describe('getPasswordChangeLockStatus', () => {
@@ -139,6 +147,15 @@ describe('sync-password-lock-release', () => {
     it('refuses while an analytics sync runs on this machine', async () => {
       syncRuntime.analyticsSyncingUids.add('uid1')
       await expect(releasePasswordChangeLocks()).rejects.toThrow('sync.passwordChange.releaseBusy')
+    })
+
+    it('refuses while a remote day fetch runs on this machine, before listing or deleting anything', async () => {
+      syncRuntime.remoteTypingDayFetches.set('uid1', 1)
+      mockListFiles.mockResolvedValue([EARLY])
+      await expect(releasePasswordChangeLocks()).rejects.toThrow('sync.passwordChange.releaseBusy')
+      expect(mockListFiles).not.toHaveBeenCalled()
+      expect(mockDeleteFile).not.toHaveBeenCalled()
+      expect(syncRuntime.isSyncing).toBe(false)
     })
 
     it('holds isSyncing while deleting and clears it after a failure', async () => {

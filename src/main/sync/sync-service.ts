@@ -138,7 +138,7 @@ export {
   signOutKeepingPendingLocked,
 } from './sync-pending-account'
 
-export type { ResetKeyboards } from './sync-reset-lock'
+export type { ResetKeyboards } from './sync-runtime-state'
 export { withResetLock, withResetLockWhenFree, DELETE_BUSY_MESSAGE, IMPORT_BUSY_MESSAGE } from './sync-reset-lock'
 
 export {

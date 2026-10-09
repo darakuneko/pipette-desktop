@@ -340,6 +340,22 @@ describe('sync-password-change', () => {
       expect(syncRuntime.isSyncing).toBe(true)
     })
 
+    it('rejects while a remote day fetch runs, before writing anything', async () => {
+      const { dataIds } = await seedDrive()
+      syncRuntime.remoteTypingDayFetches.set('uid1', 1)
+      try {
+        await expect(startPasswordChange(NEW)).rejects.toThrow('sync.changePasswordInProgress')
+      } finally {
+        syncRuntime.remoteTypingDayFetches.clear()
+      }
+      expect(syncRuntime.isSyncing).toBe(false)
+      expect(syncRuntime.passwordChangeRun).toBeNull()
+      expect(drive.uploads).toEqual([])
+      expect(lockFiles()).toEqual([])
+      await expectNoLocalChange()
+      await expectAllOn(dataIds, OLD)
+    })
+
     it('rejects when a change is already in progress locally', async () => {
       await writeChangeState({ version: 1, target: 'new', step: 'reencrypting', lockId: 'l', lockFileId: 'x', startedAt: 1 })
       await expect(startPasswordChange(NEW)).rejects.toThrow('sync.passwordChange.alreadyInProgress')
@@ -925,6 +941,21 @@ describe('sync-password-change', () => {
       await storeChangeKeys({ oldPassword: OLD, newPassword: NEW })
       await writeChangeState({ version: 1, lockId: 'own-lock', startedAt: 1, ...state })
     }
+
+    it('reports busy while a remote day fetch runs, leaving the change as it is', async () => {
+      await seedDrive(NEW)
+      const lockFileId = addFile(PASSWORD_CHANGE_LOCK_FILE, lockText('own-lock', 'hash-own'))
+      await seedLocal({ target: 'new', step: 'cleanup', lockFileId })
+      syncRuntime.remoteTypingDayFetches.set('uid1', 1)
+      try {
+        expect(await recoverPasswordChangeOnStartup()).toBe('busy')
+      } finally {
+        syncRuntime.remoteTypingDayFetches.clear()
+      }
+      expect(syncRuntime.isSyncing).toBe(false)
+      expect(lockFiles().map((f) => f.id)).toEqual([lockFileId])
+      expect((await readChangeState()).kind).toBe('ok')
+    })
 
     it('does nothing without a state file', async () => {
       expect(await recoverPasswordChangeOnStartup()).toBe('none')

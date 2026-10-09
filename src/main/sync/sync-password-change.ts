@@ -12,7 +12,7 @@ import { randomUUID } from 'node:crypto'
 import { log } from '../logger'
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import { listFiles, deleteFile, isDataFileName } from './google-drive'
-import { syncRuntime, claimSyncLock } from './sync-runtime-state'
+import { syncRuntime, claimSyncLock, syncWorkRunning } from './sync-runtime-state'
 import {
   requireSyncCredentials,
   SyncCredentialError,
@@ -45,11 +45,12 @@ import type { PasswordChangeStatus } from '../../shared/types/sync'
 
 /** Holds `isSyncing` for the whole operation and publishes it as
  *  `passwordChangeRun`, so the before-quit handler can wait for it.
- *  Analytics syncs (sync-analytics.ts) don't take `isSyncing`, so running
- *  ones (`analyticsSyncingUids`) are checked separately; they don't start
- *  while `passwordChangeRun` is set. */
+ *  Analytics syncs and remote day fetches don't take `isSyncing`, so running
+ *  ones are checked with it (`syncWorkRunning`); they don't start
+ *  while `passwordChangeRun` is set (`lockFreeWriterBlocked`). The checks,
+ *  the claim and setting `passwordChangeRun` happen before the first await. */
 async function withSyncLock<T>(fn: () => Promise<T>): Promise<T> {
-  if (syncRuntime.isSyncing || syncRuntime.analyticsSyncingUids.size > 0) throw new Error('sync.changePasswordInProgress')
+  if (syncWorkRunning()) throw new Error('sync.changePasswordInProgress')
   const releaseLock = claimSyncLock()
   const run = fn()
   syncRuntime.passwordChangeRun = run.then(
@@ -304,7 +305,7 @@ export async function recoverPasswordChangeOnStartup(): Promise<PasswordChangeRe
       log('warn', 'sync password change: state file is unreadable; Drive files are left as they are')
       return 'invalid'
     }
-    if (syncRuntime.isSyncing || syncRuntime.analyticsSyncingUids.size > 0) return 'busy'
+    if (syncWorkRunning()) return 'busy'
     const state = read.state
     return await withSyncLock(async (): Promise<PasswordChangeRecovery> => {
       if (state.step === 'locking') {

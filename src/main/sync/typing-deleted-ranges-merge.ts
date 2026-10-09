@@ -17,7 +17,7 @@ import {
 import { DELETED_RANGES_FILENAME } from '../typing-analytics/jsonl/paths'
 import { updateDeletedRanges } from '../typing-analytics/deleted-ranges-store'
 import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
-import { resetHoldsKeyboard } from './sync-reset-lock'
+import { resetHoldsKeyboard } from './sync-runtime-state'
 import { log } from '../logger'
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import { applyOwnDeletedRanges, applyOwnDeletedRangesForAllKeyboards } from '../typing-analytics/deleted-ranges-apply'
