@@ -172,8 +172,10 @@ export async function ingestEvent(event: TypingAnalyticsEvent): Promise<void> {
   scheduleFlush()
 }
 
-export function closeSessionsForUid(uid: string): void {
-  const finalized = taState.sessionDetector.closeForUid(uid)
+/** Close the active sessions of `uid` (only those whose start `closes`
+ * accepts, when given) and queue them for the next flush. */
+export function closeSessionsForUid(uid: string, closes?: (startMs: number) => boolean): void {
+  const finalized = taState.sessionDetector.closeForUid(uid, closes)
   if (finalized.length === 0) return
   taState.pendingSessions.push(...finalized)
   taState.dirty = true
@@ -188,9 +190,10 @@ function scheduleFlush(): void {
 }
 
 /** Append rows to a per-day JSONL master file and replay them into the
- * local cache. The caller batches `saveSyncState` afterwards so a
- * multi-uid flush hits disk once. */
-async function persistOwnJsonlDay(
+ * local cache. The flush pass batches `saveSyncState` afterwards so a
+ * multi-uid flush hits disk once. Only tasks on the flush chain call it,
+ * which keeps this device the single, ordered writer of its own files. */
+export async function persistOwnJsonlDay(
   uid: string,
   utcDay: UtcDay,
   rows: readonly JsonlRow[],
@@ -296,8 +299,7 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
    * without it, a re-send after the clock jumps backward would lose the
    * strict `>` LWW race against its own earlier, partial write. Do not
    * "fix" an apparently future-dated row by removing this bump. */
-  const updatedAt = Math.max(Date.now(), taState.lastFlushUpdatedAt + 1)
-  taState.lastFlushUpdatedAt = updatedAt
+  const updatedAt = claimOwnRowUpdatedAt()
   const rowsByUidDay = groupRowsByUidDay(scopesToUpsert, snapshots, validSessions, updatedAt)
   if (rowsByUidDay.size === 0) {
     taState.dirty = !taState.minuteBuffer.isEmpty()
@@ -356,25 +358,29 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
     return
   }
 
-  // Notify the sync layer that new rows are ready for upload. One
-  // notify per (uid, hash, day) so cloud storage tracks days as
-  // independent units. Capture the notifier into a local so a reset
-  // between iterations cannot null it mid-loop.
-  const notifier = taState.syncNotifier
-  if (notifier) {
-    for (const uid of touchedUids) {
-      const days = touchedByUid.get(uid) ?? []
-      for (const day of days) {
-        try {
-          notifier(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, day))
-        } catch (notifyErr) {
-          log('warn', `typing-analytics sync notify failed for ${uid} ${day}: ${String(notifyErr)}`)
-        }
-      }
-    }
+  // Notify the sync layer that new rows are ready for upload.
+  for (const uid of touchedUids) {
+    notifyOwnDaysChanged(uid, machineHash, touchedByUid.get(uid) ?? [])
   }
 
   taState.dirty = !taState.minuteBuffer.isEmpty()
+}
+
+/** Tell the sync layer that this device's day files of `uid` changed, one
+ * sync unit per `(uid, hash, day)` so cloud storage tracks days as
+ * independent units. The notifier is captured once so a reset between
+ * days cannot null it mid-loop; a failing notify is logged and the other
+ * days are still announced. */
+export function notifyOwnDaysChanged(uid: string, machineHash: string, days: readonly UtcDay[]): void {
+  const notifier = taState.syncNotifier
+  if (!notifier) return
+  for (const day of days) {
+    try {
+      notifier(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, day))
+    } catch (err) {
+      log('warn', `typing-analytics sync notify failed for ${uid} ${day}: ${String(err)}`)
+    }
+  }
 }
 
 /**
@@ -388,33 +394,55 @@ export function flushNow(options: { final: boolean }): Promise<void> {
   return runOnFlushChain(() => doFlushPass(options))
 }
 
+/** The `updated_at` for the next batch of rows this device appends to its
+ * own JSONL files: strictly above every earlier batch (see the comment in
+ * doFlushPass) and above `aboveMs`. A delete passes the newest
+ * `updated_at` of the rows it marks deleted, so the marks win the LWW
+ * merge, and every later flush stays above the marks. */
+export function claimOwnRowUpdatedAt(aboveMs = 0): number {
+  const updatedAt = Math.max(Date.now(), taState.lastFlushUpdatedAt + 1, aboveMs + 1)
+  taState.lastFlushUpdatedAt = updatedAt
+  return updatedAt
+}
+
+/** Drop what `uid` has buffered whose time `drops` accepts: minute entries
+ * by their minute start, finalized sessions not yet written by their
+ * start. Synchronous, so callers run it inside a flush-chain task. */
+export function dropBufferedTyping(uid: string, drops: (ms: number) => boolean): void {
+  taState.minuteBuffer.discardForUid(uid, drops)
+  const kept = taState.pendingSessions.filter((session) => session.uid !== uid || !drops(session.startMs))
+  taState.pendingSessions.splice(0, taState.pendingSessions.length, ...kept)
+}
+
 /**
  * Drop what `uid` has buffered up to `cutoffMs` (the moment the user asked
- * for the delete), limited to `ranges` (`[startMs, endMs)`) when given:
- * the minute entries starting at or before `cutoffMs` (so the clicked
- * minute goes whole) and the finalized sessions not yet written that
- * started by then. Runs on the flush chain, after every flush queued
+ * for the delete): the minute entries starting at or before `cutoffMs` (so
+ * the clicked minute goes whole) and the finalized sessions not yet written
+ * that started by then. Runs on the flush chain, after every flush queued
  * before it. That data is being deleted, so it is dropped rather than
  * flushed; minutes after the cutoff stay buffered and are written by later
  * flushes. The resolved scope stays cached: a session started after the
- * delete still needs it to be written.
+ * delete still needs it to be written. The day delete
+ * (typing-analytics-day-delete.ts) applies the same rule limited to the
+ * deleted ranges.
  */
-export function discardBufferedTyping(
-  uid: string,
+export function discardBufferedTyping(uid: string, cutoffMs: number): Promise<void> {
+  const drops = deletedByCutoff(cutoffMs)
+  return runOnFlushChain(() => dropBufferedTyping(uid, drops))
+}
+
+/** True for a time (a minute start, or a session start) that a delete with
+ * this cutoff and these ranges removes: at or before `cutoffMs` and, when
+ * `ranges` is given, inside one of them. */
+export function deletedByCutoff(
   cutoffMs: number,
   ranges?: readonly { startMs: number; endMs: number }[],
-): Promise<void> {
-  const drops = (ms: number): boolean =>
-    ms <= cutoffMs && (!ranges || ranges.some((r) => ms >= r.startMs && ms < r.endMs))
-  return runOnFlushChain(() => {
-    taState.minuteBuffer.discardForUid(uid, drops)
-    const kept = taState.pendingSessions.filter((session) => session.uid !== uid || !drops(session.startMs))
-    taState.pendingSessions.splice(0, taState.pendingSessions.length, ...kept)
-  })
+): (ms: number) => boolean {
+  return (ms) => ms <= cutoffMs && (!ranges || ranges.some((r) => ms >= r.startMs && ms < r.endMs))
 }
 
 /** Runs `task` behind everything already on the flush chain. */
-function runOnFlushChain(task: () => Promise<void> | void): Promise<void> {
+export function runOnFlushChain(task: () => Promise<void> | void): Promise<void> {
   taState.inFlightFlushCount++
   const next = taState.flushChain
     .catch(() => undefined)

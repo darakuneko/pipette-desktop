@@ -164,13 +164,14 @@ vi.mock('../../typing-analytics/import-export', () => ({
 vi.mock('../../typing-analytics/machine-hash', () => ({ getMachineHash: vi.fn() }))
 vi.mock('../../typing-analytics/cache-rebuild', () => ({ ensureCacheIsFresh: vi.fn() }))
 vi.mock('../../typing-analytics/db/typing-analytics-db', () => ({ getTypingAnalyticsDB: vi.fn() }))
-const mockDeleteAllTypingForKeyboard = vi.fn(async (_uid: string, _cutoffMs?: number): Promise<void> => {})
+const mockDeleteAllTypingForKeyboard = vi.fn(async (_uid: string, _cutoffMs: number, _scope: 'own' | 'all'): Promise<void> => {})
 const mockDeleteTypingDailySummaries = vi.fn(async (_uid: string, _dates: string[], _cutoffMs?: number): Promise<void> => {})
 const mockListTypingKeyboards = vi.fn((): Array<{ uid: string }> => [])
 vi.mock('../../typing-analytics/typing-analytics-service', () => ({
-  deleteAllTypingForKeyboard: (...args: [string, number?]) => mockDeleteAllTypingForKeyboard(...args),
+  deleteAllTypingForKeyboard: (...args: [string, number, 'own' | 'all']) => mockDeleteAllTypingForKeyboard(...args),
   deleteTypingDailySummaries: (...args: [string, string[], number?]) => mockDeleteTypingDailySummaries(...args),
   listTypingKeyboards: () => mockListTypingKeyboards(),
+  runOnFlushChain: async (task: () => Promise<void>) => { await task() },
 }))
 
 vi.mock('../../ipc-guard', async () => {
@@ -276,6 +277,7 @@ describe('sync-ipc while a sync password change is in progress', () => {
 
     expect(result.success).toBe(true)
     expect(mockCancelPendingChanges).toHaveBeenCalledWith(['keyboards/uid1/'], { writeAlways: true })
+    expect(mockDeleteAllTypingForKeyboard).toHaveBeenCalledWith('uid1', expect.any(Number), 'all')
     expect(mockDeleteFilesByPrefix).not.toHaveBeenCalled()
   })
 
@@ -1065,7 +1067,7 @@ describe('sync-ipc resets hold the sync lock', () => {
     const result = await getHandler(IpcChannels.RESET_LOCAL_TARGETS)(null, { keyboards: true, favorites: false, appSettings: false })
 
     expect(result.success).toBe(true)
-    expect(mockDeleteAllTypingForKeyboard.mock.calls.map(([uid]) => uid)).toEqual(['uid1', 'uid2', 'uid3'])
+    expect(mockDeleteAllTypingForKeyboard.mock.calls.map(([uid, , scope]) => [uid, scope])).toEqual([['uid1', 'all'], ['uid2', 'all'], ['uid3', 'all']])
     const firstCleanup = mockDeleteAllTypingForKeyboard.mock.invocationCallOrder[0]
     const lastCleanup = mockDeleteAllTypingForKeyboard.mock.invocationCallOrder.at(-1) ?? Infinity
     const [firstCancel, secondCancel] = mockCancelPendingChanges.mock.invocationCallOrder
@@ -1182,6 +1184,11 @@ describe('sync-ipc typing-data deletes and import wait for the sync lock', () =>
     }
   })
 
+  it('TYPING_ANALYTICS_DELETE_ALL removes only this device\'s rows', async () => {
+    expect(await getHandler(IpcChannels.TYPING_ANALYTICS_DELETE_ALL)(null, 'uid1')).toEqual({ success: true })
+    expect(mockDeleteAllTypingForKeyboard).toHaveBeenCalledWith('uid1', expect.any(Number), 'own')
+  })
+
   it.each(deletes)('%s releases the lock when the delete throws', async (_name, channel, args, remove) => {
     remove.mockRejectedValueOnce(new Error('EBUSY'))
 
@@ -1219,6 +1226,7 @@ describe('sync-ipc typing-data deletes and import wait for the sync lock', () =>
 
     expect(result).toEqual({ success: true, result: { imported: 0, rejections: [] }, cancelled: false })
     expect(mockImportTypingDataFiles).toHaveBeenCalledTimes(1)
+    expect(mockImportTypingDataFiles.mock.calls[0][2]).toMatchObject({ runExclusive: expect.any(Function) })
     expect(syncRuntime.isSyncing).toBe(false)
   })
 

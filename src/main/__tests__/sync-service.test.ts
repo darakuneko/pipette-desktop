@@ -3821,6 +3821,20 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
       expect(mockTombstoneRowsForUidHashInRange).not.toHaveBeenCalled()
     })
 
+    it('deleteRemoteTypingDays: refuses this device\'s own hash, before anything is removed', async () => {
+      const day = '2026-04-18'
+      await writeDayFile(day, OWN_HASH)
+      mockListFiles.mockResolvedValue([cloudDriveFile(OWN_HASH, day), PASSWORD_CHECK_DRIVE_FILE])
+      mockListFiles.mockClear()
+
+      await expect(deleteRemoteTypingDays(UID, OWN_HASH, [day])).rejects.toThrow('sync.ownDeviceDeleteFromLocal')
+
+      expect(await fileExists(ownDayPath(day, OWN_HASH))).toBe(true)
+      expect(mockListFiles).not.toHaveBeenCalled()
+      expect(mockDeleteFile).not.toHaveBeenCalled()
+      expect(mockTombstoneRowsForUidHashInRange).not.toHaveBeenCalled()
+    })
+
     it('deleteRemoteTypingDays: deletes several days from one listing and tries every day before reporting a failure', async () => {
       const days = ['2026-04-17', '2026-04-18']
       for (const day of days) await writeDayFile(day, REMOTE_HASH)

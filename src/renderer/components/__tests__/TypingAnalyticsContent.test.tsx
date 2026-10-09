@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TypingAnalyticsContent } from '../data-modal/TypingAnalyticsContent'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, opts?: { zone?: string }) => (opts?.zone ? `${key} ${opts.zone}` : key),
   }),
 }))
 
@@ -53,6 +53,21 @@ describe('TypingAnalyticsContent deletes', () => {
     mockDeleteAll.mockResolvedValue({ success: true })
     mockDeleteRemoteDays.mockResolvedValue({ success: true })
     mockImport.mockResolvedValue({ success: true, result: { imported: 0, rejections: [] }, cancelled: true })
+  })
+
+  describe('time zone label', () => {
+    const originalTz = process.env.TZ
+    afterEach(() => {
+      if (originalTz === undefined) delete process.env.TZ
+      else process.env.TZ = originalTz
+    })
+
+    it('names the local time zone of the day rows in the date header', async () => {
+      process.env.TZ = 'Asia/Tokyo'
+      render(<TypingAnalyticsContent uid="uid1" />)
+
+      expect(await screen.findByText('dataModal.typing.colDateZone Asia/Tokyo GMT+9')).toBeInTheDocument()
+    })
   })
 
   it('shows the busy message and keeps the confirmation when the delete is refused', async () => {

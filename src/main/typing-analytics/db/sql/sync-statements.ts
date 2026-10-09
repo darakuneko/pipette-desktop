@@ -21,10 +21,6 @@ export interface SyncStatements {
   selectLiveMatrixMinutesForScopeStmt: Statement
   selectLiveMinuteStatsForScopeStmt: Statement
   selectLiveSessionsForScopeStmt: Statement
-  tombstoneCharMinutesInRangeStmt: Statement
-  tombstoneMatrixMinutesInRangeStmt: Statement
-  tombstoneMinuteStatsInRangeStmt: Statement
-  tombstoneSessionsInRangeStmt: Statement
   tombstoneCharMinutesForHashInRangeStmt: Statement
   tombstoneMatrixMinutesForHashInRangeStmt: Statement
   tombstoneMinuteStatsForHashInRangeStmt: Statement
@@ -33,6 +29,10 @@ export interface SyncStatements {
   tombstoneAllMatrixMinutesStmt: Statement
   tombstoneAllMinuteStatsStmt: Statement
   tombstoneAllSessionsStmt: Statement
+  tombstoneAllCharMinutesForHashStmt: Statement
+  tombstoneAllMatrixMinutesForHashStmt: Statement
+  tombstoneAllMinuteStatsForHashStmt: Statement
+  tombstoneAllSessionsForHashStmt: Statement
 }
 
 export function prepareSyncStatements(db: DatabaseType): SyncStatements {
@@ -226,38 +226,10 @@ export function prepareSyncStatements(db: DatabaseType): SyncStatements {
          AND is_deleted = 0
     `),
 
-    // Tombstone range deletes. Only flips live rows (is_deleted = 0) so
+    // Tombstone writes. Only flips live rows (is_deleted = 0) so
     // existing tombstones keep their original updated_at for GC purposes.
     // Bigram/trigram range/all-tombstone statements live in
     // this.stmts.ngram[gram] — see ngram-statements.ts.
-    tombstoneCharMinutesInRangeStmt: db.prepare(`
-      UPDATE typing_char_minute
-         SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${TOMBSTONE_RANGE_WHERE}
-         AND minute_ts >= @startMs AND minute_ts < @endMs
-    `),
-    tombstoneMatrixMinutesInRangeStmt: db.prepare(`
-      UPDATE typing_matrix_minute
-         SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${TOMBSTONE_RANGE_WHERE}
-         AND minute_ts >= @startMs AND minute_ts < @endMs
-    `),
-    tombstoneMinuteStatsInRangeStmt: db.prepare(`
-      UPDATE typing_minute_stats
-         SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${TOMBSTONE_RANGE_WHERE}
-         AND minute_ts >= @startMs AND minute_ts < @endMs
-    `),
-    // Sessions use overlap semantics instead of start_ms-containment so a
-    // session that spans midnight (start before the window, end inside)
-    // still gets tombstoned when the user deletes that day. Matches the
-    // per-minute rows that contribute to the same day bucket.
-    tombstoneSessionsInRangeStmt: db.prepare(`
-      UPDATE typing_sessions
-         SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${TOMBSTONE_RANGE_WHERE}
-         AND end_ms > @startMs AND start_ms < @endMs
-    `),
 
     // Hash-scoped range variants — Sync-delete of another device's day
     // removes only that device's rows while keeping same-day contributions
@@ -306,6 +278,29 @@ export function prepareSyncStatements(db: DatabaseType): SyncStatements {
       UPDATE typing_sessions
          SET is_deleted = 1, updated_at = @updatedAt
        WHERE ${TOMBSTONE_RANGE_WHERE}
+    `),
+
+    // Every row of one machine_hash — the Local tab's Delete All removes
+    // this device's rows and keeps the other devices' rows of the keyboard.
+    tombstoneAllCharMinutesForHashStmt: db.prepare(`
+      UPDATE typing_char_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${TOMBSTONE_HASH_RANGE_WHERE}
+    `),
+    tombstoneAllMatrixMinutesForHashStmt: db.prepare(`
+      UPDATE typing_matrix_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${TOMBSTONE_HASH_RANGE_WHERE}
+    `),
+    tombstoneAllMinuteStatsForHashStmt: db.prepare(`
+      UPDATE typing_minute_stats
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${TOMBSTONE_HASH_RANGE_WHERE}
+    `),
+    tombstoneAllSessionsForHashStmt: db.prepare(`
+      UPDATE typing_sessions
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${TOMBSTONE_HASH_RANGE_WHERE}
     `),
   }
 }

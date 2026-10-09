@@ -262,6 +262,9 @@ export async function listRemoteTypingDaysFor(
  * blocked (`SyncBlockedError`: a sync password change, or Drive needing
  * a newer app); both messages are i18n keys. Throws after the other
  * deletes when a cloud delete fails.
+ * Refuses this device's own hash: its days are deleted from the Local tab,
+ * which marks rows of local calendar days instead of removing UTC day
+ * files (typing-analytics-day-delete.ts).
  * Takes no lock itself: the IPC handler holds the sync lock around it
  * (sync-reset-ipc.ts). */
 export async function deleteRemoteTypingDays(
@@ -269,6 +272,7 @@ export async function deleteRemoteTypingDays(
   machineHash: string,
   utcDays: readonly UtcDay[],
 ): Promise<void> {
+  if (machineHash === await getMachineHash()) throw new Error('sync.ownDeviceDeleteFromLocal')
   const credentials = await requireSyncCredentials()
   if (!credentials.ok) throw new SyncCredentialError(credentials.reason, 'readiness')
   const localBlock = await localSyncBlock()

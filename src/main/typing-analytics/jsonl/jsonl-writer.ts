@@ -4,16 +4,18 @@
 // device only ever writes its own {machineHash}.jsonl and never touches
 // other devices' files, so plain appendFile (no lock) is safe.
 
-import { appendFile, mkdir } from 'node:fs/promises'
+import { mkdir, open } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import type { JsonlRow } from './jsonl-row'
 import { serializeRow } from './jsonl-row'
 
 /** Append `rows` to the JSONL file at `path`, creating parent directories
  * as needed. Every row is serialized with a trailing newline so a
- * partial write cannot fake-complete a later line. A zero-length input
- * is a no-op (avoids the empty-fsync on idle flushes and also keeps the
- * file from being created before the first real row lands). */
+ * partial write cannot fake-complete a later line, and when the file ends
+ * with a crash-truncated line (no trailing newline) a newline is written
+ * first so the first new row does not join the fragment. A zero-length
+ * input is a no-op (avoids the empty-fsync on idle flushes and also keeps
+ * the file from being created before the first real row lands). */
 export async function appendRowsToFile(
   path: string,
   rows: readonly JsonlRow[],
@@ -21,5 +23,17 @@ export async function appendRowsToFile(
   if (rows.length === 0) return
   await mkdir(dirname(path), { recursive: true })
   const payload = rows.map(serializeRow).join('')
-  await appendFile(path, payload, 'utf8')
+  const handle = await open(path, 'a+')
+  try {
+    const { size } = await handle.stat()
+    let prefix = ''
+    if (size > 0) {
+      const last = Buffer.alloc(1)
+      await handle.read(last, 0, 1, size - 1)
+      if (last[0] !== 0x0a) prefix = '\n'
+    }
+    await handle.appendFile(prefix + payload, 'utf8')
+  } finally {
+    await handle.close()
+  }
 }
