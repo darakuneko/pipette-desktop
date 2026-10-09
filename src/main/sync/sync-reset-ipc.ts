@@ -9,11 +9,14 @@ import { rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { getAppConfigStore } from '../app-config'
-import { deleteFilesByPrefix, deleteFilesByExactName, deleteFilesById, driveFileName } from './google-drive'
+import { deleteFilesByPrefix, deleteFilesById, driveFileName, listFiles, type DeleteMatchingFilesResult } from './google-drive'
+import { filesNamedWithTrash } from './drive-canonical'
+import { deleteTrashFiles, listTrashFiles, restoreTrashFile, trashFileKeyboards } from './sync-trash-manual'
 import {
   withResetLock,
   withResetLockWhenFree,
   DELETE_BUSY_MESSAGE,
+  TRASH_BUSY_MESSAGE,
   deleteDeviceTypingData,
   cancelPendingChanges,
   copyPendingState,
@@ -31,7 +34,7 @@ import { wrapIpc } from './sync-ipc-wrap'
 import { deleteAllTypingForKeyboard, deleteTypingDailySummaries, listTypingKeyboards } from '../typing-analytics/typing-analytics-service'
 import { tombstoneAllKeyboardMeta, tombstoneKeyboardMeta } from './keyboard-meta'
 import { secureHandle } from '../ipc-guard'
-import type { SyncResetTargets, LocalResetTargets } from '../../shared/types/sync'
+import type { SyncResetTargets, LocalResetTargets, SyncTrashFile } from '../../shared/types/sync'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import { I18N_SYNC_UNIT_PREFIX } from '../../shared/types/i18n-store'
 import { THEME_SYNC_UNIT_PREFIX } from '../../shared/types/theme-store'
@@ -71,6 +74,25 @@ async function deleteTypingForAllKeyboards(): Promise<void> {
       console.warn('[sync-reset-ipc] reset local targets: analytics cache cleanup failed', err)
     })
   }
+}
+
+/** Deletes every remote file named exactly `name`, and every trash file of
+ *  it (drive-trash.ts) — the reset of a unit with no subtree
+ *  (`key-labels.enc`, `typing-test-texts.enc`), where a prefix match would
+ *  also catch unrelated files starting with the same characters. Every
+ *  copy goes, since Drive can hold several files with one name, and the
+ *  trash too, or the poll would rename it back to the emptied name. The
+ *  listing is narrowed with `nameContains`; the exact match is done here. */
+async function deleteFilesByExactName(name: string): Promise<DeleteMatchingFilesResult> {
+  const files = await listFiles({ nameContains: name })
+  return deleteFilesById(filesNamedWithTrash(files, name).map((file) => file.id))
+}
+
+/** The reset-lock target for acting on `fileIds`: their keyboards, or null
+ *  when none of them holds keyboard data. */
+async function trashLockTarget(fileIds: readonly string[]): Promise<string[] | null> {
+  const uids = await trashFileKeyboards(fileIds)
+  return uids.length > 0 ? uids : null
 }
 
 export function setupSyncResetIpc(): void {
@@ -326,6 +348,26 @@ export function setupSyncResetIpc(): void {
         const result = await deleteFilesById(fileIds)
         if (result.failed > 0) throw new Error(`Failed to delete ${result.failed} of ${result.attempted} files: ${result.firstError}`)
       }, DELETE_BUSY_MESSAGE)
+    }),
+  )
+
+  // --- Trash (Data > Sync > Trash) ---
+  secureHandle(IpcChannels.SYNC_LIST_TRASH, () =>
+    wrapIpc<{ files: SyncTrashFile[] }>('List trash failed', async () => ({ files: await listTrashFiles() })),
+  )
+
+  secureHandle(IpcChannels.SYNC_RESTORE_TRASH, (_event, fileId: unknown) =>
+    wrapIpc('Restore failed', async () => {
+      if (typeof fileId !== 'string' || !fileId) throw new Error('Invalid file ID')
+      await withResetLock(await trashLockTarget([fileId]), () => restoreTrashFile(fileId), TRASH_BUSY_MESSAGE)
+    }),
+  )
+
+  secureHandle(IpcChannels.SYNC_DELETE_TRASH, (_event, fileIds: unknown) =>
+    wrapIpc<{ deleted: string[]; skipped: string[] }>('Delete files failed', async () => {
+      if (!Array.isArray(fileIds) || fileIds.length === 0) throw new Error('No files specified')
+      if (!fileIds.every((id) => typeof id === 'string')) throw new Error('Invalid file ID')
+      return withResetLock(await trashLockTarget(fileIds), () => deleteTrashFiles(fileIds), TRASH_BUSY_MESSAGE)
     }),
   )
 }

@@ -46,6 +46,7 @@ const mockUploadFile = vi.fn(
     ({ id: 'file-id', modifiedTime: '2026-01-01T00:00:00.000Z' }),
 )
 const mockDeleteFile = vi.fn(async (_fileId: string): Promise<void> => {})
+const mockRenameFile = vi.fn(async (_fileId: string, _name: string): Promise<DriveFile | null> => null)
 const mockCreateRawFile = vi.fn(async (..._args: unknown[]): Promise<{ id: string }> => ({ id: 'format-marker' }))
 
 vi.mock('../sync/google-drive', async () => {
@@ -61,6 +62,7 @@ vi.mock('../sync/google-drive', async () => {
     downloadFile: (...args: unknown[]) => mockDownloadFile(...(args as Parameters<typeof mockDownloadFile>)),
     uploadFile: (...args: unknown[]) => mockUploadFile(...(args as Parameters<typeof mockUploadFile>)),
     deleteFile: (...args: unknown[]) => mockDeleteFile(...(args as Parameters<typeof mockDeleteFile>)),
+    renameFile: (...args: unknown[]) => mockRenameFile(...(args as Parameters<typeof mockRenameFile>)),
     // Same contract as the real one, deleting through mockDeleteFile.
     deleteFilesById: async (ids: readonly string[]) => {
       const results = await Promise.allSettled(ids.map((id) => mockDeleteFile(id)))
@@ -1589,6 +1591,79 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
   })
 
   describe('polling', () => {
+    describe('duplicate copies', () => {
+      const DAY_MS = 24 * 60 * 60 * 1000
+      const NAME = 'favorites_tapDance.enc'
+      let remote: DriveFile[]
+
+      beforeEach(() => {
+        remote = [
+          PASSWORD_CHECK_DRIVE_FILE,
+          { id: 'keep', name: NAME, modifiedTime: '2026-01-02T00:00:00.000Z' },
+          { id: 'extra', name: NAME, modifiedTime: '2026-01-01T00:00:00.000Z' },
+        ]
+        mockListFiles.mockImplementation(async () => remote.map((f) => ({ ...f })))
+        mockRenameFile.mockImplementation(async (id: string, name: string) => {
+          const file = remote.find((f) => f.id === id)
+          if (!file) return null
+          file.name = name
+          return { ...file }
+        })
+        mockDeleteFile.mockImplementation(async (id: string) => {
+          remote = remote.filter((f) => f.id !== id)
+        })
+        routeDownloads({ keep: () => makeRemoteEnvelope('2026-01-02T00:00:00.000Z') })
+      })
+
+      afterEach(() => {
+        mockListFiles.mockImplementation(async () => [])
+        mockRenameFile.mockImplementation(async () => null)
+        mockDeleteFile.mockImplementation(async () => {})
+      })
+
+      async function pollOnce(): Promise<void> {
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+        await waitForPollPassForTests()
+      }
+
+      it('moves the extra copy to trash after merging the chosen one, and deletes it 30 days later', async () => {
+        startPolling()
+        await pollOnce()
+
+        const renamedAt = Date.now()
+        expect(mockDownloadFile.mock.calls.map(([id]) => id)).not.toContain('extra')
+        expect(mockRenameFile).toHaveBeenCalledWith('extra', `${NAME}.trash.${renamedAt}.${Date.parse('2026-01-01T00:00:00.000Z')}.extra`)
+        expect(mockDeleteFile).not.toHaveBeenCalled()
+
+        // Still within the 30 days: kept.
+        await pollOnce()
+        expect(mockDeleteFile).not.toHaveBeenCalled()
+
+        vi.setSystemTime(renamedAt + 30 * DAY_MS)
+        await pollOnce()
+
+        expect(mockDeleteFile).toHaveBeenCalledWith('extra')
+        expect(remote.map((f) => f.id)).toEqual(['pc-1', 'keep'])
+        expect(mockRenameFile).toHaveBeenCalledTimes(1)
+      })
+
+      it('renames the trash back when no copy of the name is left', async () => {
+        remote = [
+          PASSWORD_CHECK_DRIVE_FILE,
+          { id: 'extra', name: `${NAME}.trash.1.2.extra`, modifiedTime: '2026-01-01T00:00:00.000Z' },
+        ]
+
+        startPolling()
+        await pollOnce()
+
+        expect(mockRenameFile).toHaveBeenCalledWith('extra', NAME)
+        expect(mockDeleteFile).not.toHaveBeenCalled()
+        routeDownloads({ extra: () => makeRemoteEnvelope('2026-01-01T00:00:00.000Z') })
+        await pollOnce()
+        expect(mockDownloadFile.mock.calls.map(([id]) => id)).toContain('extra')
+      })
+    })
+
     it('downloads locally relevant units on the first poll and skips lazy and analytics units', async () => {
       await mkdir(join(mockUserDataPath, 'sync', 'keyboards', '0x1234'), { recursive: true })
       mockListFiles.mockResolvedValue([
@@ -2504,6 +2579,20 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
         fileName: 'favorites_macro.enc',
         syncUnit: 'favorites/macro',
       })
+    })
+
+    it('does not check trash files', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'f1', name: 'favorites_macro.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 't1', name: 'favorites_macro.enc.trash.1.2.t1', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDecrypt.mockRejectedValue(new Error('Decryption failed'))
+
+      const result = await listUndecryptableFiles()
+
+      expect(result.map((f) => f.fileId)).toEqual(['f1'])
+      expect(mockDownloadFile.mock.calls.map(([id]) => id)).not.toContain('t1')
+      mockDecrypt.mockImplementation(async (envelope: { ciphertext: string }) => envelope.ciphertext)
     })
 
     it('returns empty array when not authenticated', async () => {
@@ -3864,6 +3953,76 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
       expect(typeof mockSyncState?.reconciled_at[pointerKey(OWN_HASH)]).toBe('number')
     })
 
+    // --- Reconcile and trash files of a day ---
+    function trashDriveFile(hash: string, day: string, id = `trash-${hash}-${day}`): { id: string; name: string; modifiedTime: string } {
+      return { id, name: `${cloudFileName(hash, day)}.trash.1000.2000.${id}`, modifiedTime: '2026-04-19T00:00:00.000Z' }
+    }
+
+    it('reconcile rule 2 deletes the trash files of a day removed locally, also when no live copy is left', async () => {
+      mockSyncState = {
+        _rev: 3,
+        my_device_id: OWN_HASH,
+        uploaded: { [pointerKey(OWN_HASH)]: ['2026-04-17', '2026-04-18'] },
+        reconciled_at: { [pointerKey(OWN_HASH)]: 1_000 },
+        last_synced_at: 1_000,
+      }
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(OWN_HASH, '2026-04-17'),
+        trashDriveFile(OWN_HASH, '2026-04-17'),
+        trashDriveFile(OWN_HASH, '2026-04-18'),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+
+      await executeSync('upload')
+
+      expect(mockDeleteFile.mock.calls.map((call) => call[0]).sort()).toEqual([
+        `drive-${OWN_HASH}-2026-04-17`,
+        `trash-${OWN_HASH}-2026-04-17`,
+        `trash-${OWN_HASH}-2026-04-18`,
+      ])
+      expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual([])
+    })
+
+    it('reconcile rule 3 uploads a day again when only trash files of it are left', async () => {
+      mockSyncState = {
+        _rev: 3,
+        my_device_id: OWN_HASH,
+        uploaded: { [pointerKey(OWN_HASH)]: ['2026-04-17'] },
+        reconciled_at: { [pointerKey(OWN_HASH)]: 1_000 },
+        last_synced_at: 1_000,
+      }
+      await writeDayFile('2026-04-17')
+      mockListLocalKeyboardUids.mockReturnValue([UID])
+      mockListFiles.mockResolvedValue([trashDriveFile(OWN_HASH, '2026-04-17'), PASSWORD_CHECK_DRIVE_FILE])
+
+      await executeSync('upload')
+
+      expect(mockDeleteFile).not.toHaveBeenCalled()
+      expect(mockUploadFile).toHaveBeenCalledWith(cloudFileName(OWN_HASH, '2026-04-17'), expect.anything(), undefined)
+    })
+
+    it('reconcile orphan finds a keyboard and day that only have trash files, and deletes them', async () => {
+      const OTHER_UID = '0xBEEF'
+      mockSyncState = {
+        _rev: 3,
+        my_device_id: OWN_HASH,
+        uploaded: {},
+        reconciled_at: {},
+        last_synced_at: 0,
+      }
+      const trash = {
+        id: 'trash-beef',
+        name: `keyboards_${OTHER_UID}_devices_${OWN_HASH}_days_2026-04-16.enc.trash.1000.2000.trash-beef`,
+        modifiedTime: '2026-04-19T00:00:00.000Z',
+      }
+      mockListFiles.mockResolvedValue([trash, PASSWORD_CHECK_DRIVE_FILE])
+
+      await executeSync('upload')
+
+      expect(mockDeleteFile).toHaveBeenCalledWith('trash-beef')
+      expect(typeof mockSyncState?.reconciled_at[`${OTHER_UID}|${OWN_HASH}`]).toBe('number')
+    })
+
     // --- Reconcile skip: reconciled_at set ---
     it('reconcile skip: leaves cloud orphans alone once reconciled_at is a timestamp', async () => {
       mockSyncState = {
@@ -4300,6 +4459,19 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
 
         expect(mockUploadFile).toHaveBeenCalledWith(name, expect.anything(), 'stale-id', { createIfMissing: true })
         expect(syncRuntime.createdFileIds.get(name)).toBe('recreated-id')
+      })
+
+      it('creates a new file instead of writing to a remembered id another machine renamed to trash', async () => {
+        await writeDayFile(DAY)
+        const name = cloudFileName(OWN_HASH, DAY)
+        syncRuntime.createdFileIds.set(name, 'trashed-id')
+        const trashed = { id: 'trashed-id', name: `${name}.trash.1.2.trashed-id`, modifiedTime: OLD_TIME }
+        mockUploadFile.mockResolvedValueOnce({ id: 'new-id', modifiedTime: NEW_TIME })
+
+        await syncOrUpload(ownUnit, 'test-password', [PASSWORD_CHECK_DRIVE_FILE, trashed])
+
+        expect(mockUploadFile.mock.calls[0].slice(2)).toEqual([undefined])
+        expect(syncRuntime.createdFileIds.get(name)).toBe('new-id')
       })
 
       it('a listed copy is updated in place without the create fallback', async () => {

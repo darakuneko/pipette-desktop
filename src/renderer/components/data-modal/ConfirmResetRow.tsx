@@ -5,8 +5,9 @@
 // Confirm-then-Cancel (in that order — mirrors KeyboardSavesContent's
 // "Delete All" footer) once clicked. Used by Data > Cloud Data's
 // per-target reset rows, UndecryptableFilesList, Local > Application's
-// "Reset application settings" row (DataModal.tsx), and the sync password
-// change panel and lock banner in settings-modal/.
+// "Reset application settings" row (DataModal.tsx), Data > Sync > Trash
+// (TrashContent.tsx), and the sync password change panel and lock banner
+// in settings-modal/.
 //
 // KeyboardSavesContent / TypingAnalyticsContent keep their own inline
 // confirm rows.
@@ -25,6 +26,9 @@ export interface ConfirmResetRowProps {
   /** Shown next to Confirm/Cancel while `confirming` — omit for a row
    *  with no separate warning copy (e.g. AppSettingsReset). */
   warning?: ReactNode
+  /** Rendered before the trigger while not `confirming` (e.g. Trash's
+   *  Restore button); hidden during the confirm step like the trigger. */
+  extraAction?: ReactNode
   confirming: boolean
   busy: boolean
   onTrigger: () => void
@@ -44,6 +48,7 @@ export function ConfirmResetRow({
   confirmLabel,
   cancelLabel,
   warning,
+  extraAction,
   confirming,
   busy,
   onTrigger,
@@ -53,6 +58,17 @@ export function ConfirmResetRow({
   confirmTestid,
   cancelTestid,
 }: ConfirmResetRowProps) {
+  const renderTrigger = (): ReactNode => (
+    <button
+      type="button"
+      className={BTN_DANGER_OUTLINE}
+      onClick={onTrigger}
+      disabled={busy}
+      data-testid={triggerTestid}
+    >
+      {triggerLabel}
+    </button>
+  )
   return (
     <div className={rowClassName} data-testid={rowTestid}>
       <span className={labelClassName}>{label}</span>
@@ -78,16 +94,13 @@ export function ConfirmResetRow({
             {cancelLabel}
           </button>
         </div>
+      ) : extraAction ? (
+        <div className="flex items-center gap-2">
+          {extraAction}
+          {renderTrigger()}
+        </div>
       ) : (
-        <button
-          type="button"
-          className={BTN_DANGER_OUTLINE}
-          onClick={onTrigger}
-          disabled={busy}
-          data-testid={triggerTestid}
-        >
-          {triggerLabel}
-        </button>
+        renderTrigger()
       )}
     </div>
   )

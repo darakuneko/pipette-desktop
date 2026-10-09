@@ -137,6 +137,9 @@ function makeSyncMock(overrides?: Partial<UseSyncReturn>): UseSyncReturn {
     syncNow: vi.fn().mockResolvedValue({ success: true, status: 'completed' }),
     refreshStatus: vi.fn().mockResolvedValue(undefined),
     deleteFiles: vi.fn().mockResolvedValue({ success: true }),
+    listTrash: vi.fn().mockResolvedValue({ success: true, files: [] }),
+    restoreTrash: vi.fn().mockResolvedValue({ success: true }),
+    deleteTrash: vi.fn().mockResolvedValue({ success: true, deleted: [], skipped: [] }),
     ...overrides,
   }
 }

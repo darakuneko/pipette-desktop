@@ -43,13 +43,30 @@ vi.mock('../google-auth', () => ({
 }))
 
 const mockDeleteFilesByPrefix = vi.fn(async (..._args: unknown[]) => ({ attempted: 0, failed: 0 }))
-const mockDeleteFilesByExactName = vi.fn(async (..._args: unknown[]) => ({ attempted: 0, failed: 0 }))
+const mockListFiles = vi.fn(async (_options?: { nameContains?: string }): Promise<Array<{ id: string; name: string; modifiedTime: string }>> => [])
 const mockDeleteFilesById = vi.fn(async (ids: readonly string[]): Promise<{ attempted: number; failed: number; firstError?: string }> => ({ attempted: ids.length, failed: 0 }))
-vi.mock('../google-drive', () => ({
-  deleteFilesByPrefix: (...args: unknown[]) => mockDeleteFilesByPrefix(...args),
-  deleteFilesByExactName: (...args: unknown[]) => mockDeleteFilesByExactName(...args),
-  deleteFilesById: (ids: readonly string[]) => mockDeleteFilesById(ids),
-  driveFileName: (syncUnit: string) => `${syncUnit.replaceAll('/', '_')}.enc`,
+vi.mock('../google-drive', async () => {
+  // The real name parsers, which the trash index (drive-canonical.ts) uses.
+  const actual = await vi.importActual<typeof import('../google-drive')>('../google-drive')
+  return {
+    deleteFilesByPrefix: (...args: unknown[]) => mockDeleteFilesByPrefix(...args),
+    deleteFilesById: (ids: readonly string[]) => mockDeleteFilesById(ids),
+    listFiles: (options?: { nameContains?: string }) => mockListFiles(options),
+    driveFileName: actual.driveFileName,
+    syncUnitFromFileName: actual.syncUnitFromFileName,
+    isDataFileName: actual.isDataFileName,
+  }
+})
+
+const mockListTrashFiles = vi.fn(async (): Promise<unknown[]> => [])
+const mockTrashFileKeyboards = vi.fn(async (_ids: readonly string[]): Promise<string[]> => [])
+const mockRestoreTrashFile = vi.fn(async (_fileId: string): Promise<void> => {})
+const mockDeleteTrashFiles = vi.fn(async (ids: readonly string[]): Promise<unknown> => ({ deleted: [...ids], skipped: [] }))
+vi.mock('../sync-trash-manual', () => ({
+  listTrashFiles: () => mockListTrashFiles(),
+  trashFileKeyboards: (ids: readonly string[]) => mockTrashFileKeyboards(ids),
+  restoreTrashFile: (fileId: string) => mockRestoreTrashFile(fileId),
+  deleteTrashFiles: (ids: readonly string[]) => mockDeleteTrashFiles(ids),
 }))
 
 const mockCancelPendingChanges = vi.fn()
@@ -101,6 +118,7 @@ vi.mock('../sync-service', async () => ({
   withResetLockWhenFree: (await vi.importActual<typeof import('../sync-reset-lock')>('../sync-reset-lock')).withResetLockWhenFree,
   DELETE_BUSY_MESSAGE: 'sync.deleteBusy',
   IMPORT_BUSY_MESSAGE: 'sync.importBusy',
+  TRASH_BUSY_MESSAGE: 'sync.trashBusy',
   copyPendingState: (await vi.importActual<typeof import('../sync-runtime-state')>('../sync-runtime-state')).copyPendingState,
   restoreCancelledPending: (await vi.importActual<typeof import('../sync-runtime-state')>('../sync-runtime-state')).restoreCancelledPending,
   executeAnalyticsSync: vi.fn(),
@@ -255,7 +273,7 @@ describe('sync-ipc while a sync password change is in progress', () => {
 
     expect(result).toEqual({ success: false, error: blockedKey })
     expect(mockDeleteFilesByPrefix).not.toHaveBeenCalled()
-    expect(mockDeleteFilesByExactName).not.toHaveBeenCalled()
+    expect(mockListFiles).not.toHaveBeenCalled()
     expect(mockCancelPendingChanges).not.toHaveBeenCalled()
   })
 
@@ -644,8 +662,24 @@ describe('sync-ipc SYNC_RESET_TARGETS — keyLabels / typingTestTexts', () => {
     const result = await handler(null, { keyboards: false, favorites: false, keyLabels: true })
 
     expect(result.success).toBe(true)
-    expect(mockDeleteFilesByExactName).toHaveBeenCalledWith(`${KEY_LABEL_SYNC_UNIT}.enc`)
+    expect(mockListFiles).toHaveBeenCalledWith({ nameContains: `${KEY_LABEL_SYNC_UNIT}.enc` })
     expect(mockCancelPendingChanges).toHaveBeenCalledWith([KEY_LABEL_SYNC_UNIT], { writeAlways: true })
+  })
+
+  it('deletes every copy of the exact name and its trash files, and nothing else', async () => {
+    mockListFiles.mockResolvedValueOnce([
+      { id: 'a', name: 'key-labels.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      { id: 'b', name: 'key-labels.enc', modifiedTime: '2025-01-02T00:00:00.000Z' },
+      { id: 't', name: 'key-labels.enc.trash.100.50.t', modifiedTime: 'm' },
+      // The id in the name is another file's: not a trash file.
+      { id: 'forged', name: 'key-labels.enc.trash.100.50.t', modifiedTime: 'm' },
+      { id: 'longer', name: 'key-labels.enc.bak', modifiedTime: 'm' },
+    ])
+
+    const result = await getResetTargetsHandler()(null, { keyboards: false, favorites: false, keyLabels: true })
+
+    expect(result.success).toBe(true)
+    expect([...mockDeleteFilesById.mock.calls[0][0]].sort()).toEqual(['a', 'b', 't'])
   })
 
   it('deletes the exact typing-test-texts remote file and cancels its pending changes', async () => {
@@ -654,7 +688,7 @@ describe('sync-ipc SYNC_RESET_TARGETS — keyLabels / typingTestTexts', () => {
     const result = await handler(null, { keyboards: false, favorites: false, typingTestTexts: true })
 
     expect(result.success).toBe(true)
-    expect(mockDeleteFilesByExactName).toHaveBeenCalledWith(`${TYPING_TEST_TEXT_SYNC_UNIT}.enc`)
+    expect(mockListFiles).toHaveBeenCalledWith({ nameContains: `${TYPING_TEST_TEXT_SYNC_UNIT}.enc` })
     expect(mockCancelPendingChanges).toHaveBeenCalledWith([TYPING_TEST_TEXT_SYNC_UNIT], { writeAlways: true })
   })
 
@@ -683,7 +717,7 @@ describe('sync-ipc SYNC_RESET_TARGETS — keyLabels / typingTestTexts', () => {
 
     expect(result.success).toBe(false)
     expect(result.error).toMatch(/keyLabels must be boolean/)
-    expect(mockDeleteFilesByExactName).not.toHaveBeenCalled()
+    expect(mockListFiles).not.toHaveBeenCalled()
   })
 
   it('rejects a non-boolean typingTestTexts target', async () => {
@@ -712,7 +746,7 @@ describe('sync-ipc SYNC_RESET_TARGETS — keyLabels / typingTestTexts', () => {
     releaseLock()
 
     expect(result).toEqual({ success: false, error: 'sync.resetBusy' })
-    expect(mockDeleteFilesByExactName).not.toHaveBeenCalled()
+    expect(mockListFiles).not.toHaveBeenCalled()
   })
 
   it('handles both keyLabels and typingTestTexts selected together', async () => {
@@ -721,15 +755,15 @@ describe('sync-ipc SYNC_RESET_TARGETS — keyLabels / typingTestTexts', () => {
     const result = await handler(null, { keyboards: false, favorites: false, keyLabels: true, typingTestTexts: true })
 
     expect(result.success).toBe(true)
-    expect(mockDeleteFilesByExactName).toHaveBeenCalledWith(`${KEY_LABEL_SYNC_UNIT}.enc`)
-    expect(mockDeleteFilesByExactName).toHaveBeenCalledWith(`${TYPING_TEST_TEXT_SYNC_UNIT}.enc`)
+    expect(mockListFiles).toHaveBeenCalledWith({ nameContains: `${KEY_LABEL_SYNC_UNIT}.enc` })
+    expect(mockListFiles).toHaveBeenCalledWith({ nameContains: `${TYPING_TEST_TEXT_SYNC_UNIT}.enc` })
   })
 
   // A rejected Drive delete must surface as a reset failure with a
   // unit-name-only message — not be silently discarded by the
   // underlying Promise.allSettled inside deleteMatchingFiles.
   it('reports failure with a unit-name-only message when a delete batch had a rejection', async () => {
-    mockDeleteFilesByExactName.mockResolvedValueOnce({ attempted: 1, failed: 1 })
+    mockDeleteFilesById.mockResolvedValueOnce({ attempted: 1, failed: 1 })
     const handler = getResetTargetsHandler()
 
     const result = await handler(null, { keyboards: false, favorites: false, keyLabels: true })
@@ -741,14 +775,14 @@ describe('sync-ipc SYNC_RESET_TARGETS — keyLabels / typingTestTexts', () => {
   })
 
   it('still attempts every requested target even when an earlier one failed', async () => {
-    mockDeleteFilesByExactName.mockResolvedValueOnce({ attempted: 1, failed: 1 })
+    mockDeleteFilesById.mockResolvedValueOnce({ attempted: 1, failed: 1 })
     const handler = getResetTargetsHandler()
 
     const result = await handler(null, { keyboards: false, favorites: false, keyLabels: true, typingTestTexts: true })
 
     expect(result.success).toBe(false)
-    expect(mockDeleteFilesByExactName).toHaveBeenCalledWith(`${KEY_LABEL_SYNC_UNIT}.enc`)
-    expect(mockDeleteFilesByExactName).toHaveBeenCalledWith(`${TYPING_TEST_TEXT_SYNC_UNIT}.enc`)
+    expect(mockListFiles).toHaveBeenCalledWith({ nameContains: `${KEY_LABEL_SYNC_UNIT}.enc` })
+    expect(mockListFiles).toHaveBeenCalledWith({ nameContains: `${TYPING_TEST_TEXT_SYNC_UNIT}.enc` })
   })
 })
 
@@ -930,6 +964,13 @@ describe('sync-ipc resets hold the sync lock', () => {
       })],
     ['SYNC_DELETE_FILES', IpcChannels.SYNC_DELETE_FILES, ['id-1'], 'sync.deleteBusy',
       (gate) => mockAssertSyncAllowed.mockImplementationOnce(() => gate.promise)],
+    ['SYNC_RESTORE_TRASH', IpcChannels.SYNC_RESTORE_TRASH, 'trash-1', 'sync.trashBusy',
+      (gate) => mockRestoreTrashFile.mockImplementationOnce(() => gate.promise)],
+    ['SYNC_DELETE_TRASH', IpcChannels.SYNC_DELETE_TRASH, ['trash-1'], 'sync.trashBusy',
+      (gate) => mockDeleteTrashFiles.mockImplementationOnce(async (ids) => {
+        await gate.promise
+        return { deleted: [...ids], skipped: [] }
+      })],
   ]
 
   beforeEach(() => {
@@ -944,6 +985,8 @@ describe('sync-ipc resets hold the sync lock', () => {
     holdAt(gate)
 
     const result = getHandler(channel)(null, arg)
+    // The trash handlers look up their files' keyboards before taking the lock.
+    await vi.waitFor(() => expect(syncRuntime.isSyncing).toBe(true))
     expect(tryClaimSyncLock()).toBeNull()
     expect(syncRuntime.inFlightPassWaitable).toBe(true)
 
@@ -979,6 +1022,71 @@ describe('sync-ipc resets hold the sync lock', () => {
     expect(result.success).toBe(false)
     expect(syncRuntime.isSyncing).toBe(false)
     expect(syncRuntime.resetKeyboards).toBeNull()
+  })
+
+  it('the trash actions are refused while a sync holds the lock, without touching Drive', async () => {
+    const releaseLock = claimSyncLock()
+
+    const restore = await getHandler(IpcChannels.SYNC_RESTORE_TRASH)(null, 'trash-1')
+    const remove = await getHandler(IpcChannels.SYNC_DELETE_TRASH)(null, ['trash-1'])
+    releaseLock()
+
+    expect(restore).toEqual({ success: false, error: 'sync.trashBusy' })
+    expect(remove).toEqual({ success: false, error: 'sync.trashBusy' })
+    expect(mockRestoreTrashFile).not.toHaveBeenCalled()
+    expect(mockDeleteTrashFiles).not.toHaveBeenCalled()
+  })
+
+  it('the trash actions lock the keyboards their files belong to', async () => {
+    mockTrashFileKeyboards.mockResolvedValue(['uid1'])
+    syncRuntime.analyticsSyncingUids.add('uid1')
+
+    const restore = await getHandler(IpcChannels.SYNC_RESTORE_TRASH)(null, 'trash-1')
+    const remove = await getHandler(IpcChannels.SYNC_DELETE_TRASH)(null, ['trash-1'])
+
+    expect(restore).toEqual({ success: false, error: 'sync.trashBusy' })
+    expect(remove).toEqual({ success: false, error: 'sync.trashBusy' })
+    expect(mockRestoreTrashFile).not.toHaveBeenCalled()
+    expect(mockDeleteTrashFiles).not.toHaveBeenCalled()
+    expect(mockTrashFileKeyboards).toHaveBeenCalledWith(['trash-1'])
+
+    let held: unknown = null
+    mockRestoreTrashFile.mockImplementationOnce(async () => {
+      held = syncRuntime.resetKeyboards
+    })
+    syncRuntime.analyticsSyncingUids.clear()
+    expect((await getHandler(IpcChannels.SYNC_RESTORE_TRASH)(null, 'trash-1')).success).toBe(true)
+    expect(held).toEqual(new Set(['uid1']))
+    mockTrashFileKeyboards.mockResolvedValue([])
+  })
+
+  it('the trash actions on global units are not held up by a keyboard\'s analytics sync', async () => {
+    syncRuntime.analyticsSyncingUids.add('uid1')
+
+    expect((await getHandler(IpcChannels.SYNC_RESTORE_TRASH)(null, 'trash-1')).success).toBe(true)
+    expect((await getHandler(IpcChannels.SYNC_DELETE_TRASH)(null, ['trash-1'])).success).toBe(true)
+    syncRuntime.analyticsSyncingUids.clear()
+  })
+
+  it('the trash actions release the lock and return the refusal when they throw', async () => {
+    mockRestoreTrashFile.mockRejectedValueOnce(new MockSyncBlockedError('sync.updateRequired', 'updateRequired'))
+    mockDeleteTrashFiles.mockRejectedValueOnce(new Error('sync.trash.notFound'))
+
+    expect(await getHandler(IpcChannels.SYNC_RESTORE_TRASH)(null, 'trash-1')).toEqual({ success: false, error: 'sync.updateRequired' })
+    expect(await getHandler(IpcChannels.SYNC_DELETE_TRASH)(null, ['trash-1'])).toEqual({ success: false, error: 'sync.trash.notFound' })
+    expect(syncRuntime.isSyncing).toBe(false)
+  })
+
+  it('the trash handlers pass results through and validate their arguments', async () => {
+    mockListTrashFiles.mockResolvedValueOnce([{ fileId: 't' }])
+    mockDeleteTrashFiles.mockResolvedValueOnce({ deleted: [], skipped: ['t'] })
+
+    expect(await getHandler(IpcChannels.SYNC_LIST_TRASH)(null)).toEqual({ success: true, files: [{ fileId: 't' }] })
+    expect(await getHandler(IpcChannels.SYNC_DELETE_TRASH)(null, ['t'])).toEqual({ success: true, deleted: [], skipped: ['t'] })
+    expect(await getHandler(IpcChannels.SYNC_RESTORE_TRASH)(null, 42)).toEqual({ success: false, error: 'Invalid file ID' })
+    expect(await getHandler(IpcChannels.SYNC_DELETE_TRASH)(null, [])).toEqual({ success: false, error: 'No files specified' })
+    expect(await getHandler(IpcChannels.SYNC_DELETE_TRASH)(null, [1])).toEqual({ success: false, error: 'Invalid file ID' })
+    expect(mockRestoreTrashFile).not.toHaveBeenCalled()
   })
 
   it('RESET_LOCAL_TARGETS releases the lock when a remove throws', async () => {

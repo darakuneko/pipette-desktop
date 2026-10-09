@@ -47,12 +47,12 @@ import {
   uploadFile,
   deleteFile,
   downloadFile,
-  deleteFilesByExactName,
   deleteFilesByPrefix,
   isDataFileName,
   isPasswordChangeLockFile,
   createRawFile,
   downloadRawFile,
+  renameFile,
 } from '../sync/google-drive'
 import { retryTiming } from '../sync/drive-retry'
 import { getAccessToken } from '../sync/google-auth'
@@ -312,82 +312,44 @@ describe('google-drive', () => {
     })
   })
 
-  // A: key-labels / typing-test-texts have no subtree — deleteFilesByExactName
-  // is the reset path for both. Unlike a find-first-id approach, it must
-  // delete EVERY file sharing this exact name (Drive keys by id, not
-  // name — a stale duplicate from a past upload race could otherwise
-  // survive a reset untouched).
-  describe('deleteFilesByExactName', () => {
+  describe('renameFile', () => {
     afterEach(() => {
       vi.unstubAllGlobals()
     })
 
-    it('deletes every remote file with this exact name, not just the first match', async () => {
-      const deletedIds: string[] = []
-      const fetchSpy = vi.fn(async (url: string | URL, init?: RequestInit) => {
-        if (init?.method === 'DELETE') {
-          const u = new URL(typeof url === 'string' ? url : url.toString())
-          const id = u.pathname.split('/').pop()
-          deletedIds.push(id ?? '')
-          return new Response(null, { status: 204 })
-        }
-        return new Response(JSON.stringify({
-          files: [
-            { id: 'a', name: 'key-labels.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
-            { id: 'b', name: 'key-labels.enc', modifiedTime: '2025-01-02T00:00:00.000Z' },
-            { id: 'c', name: 'typing-test-texts.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
-          ],
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-      })
-      vi.stubGlobal('fetch', fetchSpy)
+    it('sends a metadata-only PATCH with the new name and returns the renamed file', async () => {
+      const renamed = { id: 'f1', name: 'b.enc', modifiedTime: '2026-06-01T00:00:00.000Z' }
+      const fetchSpy = stubSequence([new Response(JSON.stringify(renamed), { status: 200 })])
 
-      const result = await deleteFilesByExactName('key-labels.enc')
+      await expect(renameFile('f1', 'b.enc')).resolves.toEqual(renamed)
 
-      expect(deletedIds.sort()).toEqual(['a', 'b'])
-      expect(result).toEqual({ attempted: 2, failed: 0 })
+      const [, init] = fetchSpy.mock.calls[0] as unknown as [string, RequestInit]
+      const url = extractFetchUrl(fetchSpy.mock.calls[0])
+      expect(url.hostname).toBe('www.googleapis.com')
+      expect(url.pathname).toBe('/drive/v3/files/f1')
+      expect(url.searchParams.get('fields')).toBe('id,name,modifiedTime')
+      expect(init).toMatchObject({ method: 'PATCH', body: JSON.stringify({ name: 'b.enc' }) })
     })
 
-    it('deletes nothing when no remote file matches the exact name', async () => {
-      const fetchSpy = vi.fn(async (_url: string | URL, init?: RequestInit) => {
-        if (init?.method === 'DELETE') throw new Error('should not delete anything')
-        return new Response(JSON.stringify({
-          files: [{ id: 'c', name: 'typing-test-texts.enc', modifiedTime: '2025-01-01T00:00:00.000Z' }],
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-      })
-      vi.stubGlobal('fetch', fetchSpy)
+    it('returns null when the file is gone', async () => {
+      stubSequence([new Response('not found', { status: 404 })])
 
-      await expect(deleteFilesByExactName('key-labels.enc')).resolves.toEqual({ attempted: 0, failed: 0 })
+      await expect(renameFile('gone', 'b.enc')).resolves.toBeNull()
     })
 
-    // A rejected delete must be surfaced (`failed > 0`) rather than
-    // silently discarded by the underlying Promise.allSettled.
-    it('reports a failed count when a delete rejects', async () => {
-      const fetchSpy = vi.fn(async (url: string | URL, init?: RequestInit) => {
-        if (init?.method === 'DELETE') {
-          const u = new URL(typeof url === 'string' ? url : url.toString())
-          if (u.pathname.endsWith('/b')) throw new Error('network error')
-          return new Response(null, { status: 204 })
-        }
-        return new Response(JSON.stringify({
-          files: [
-            { id: 'a', name: 'key-labels.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
-            { id: 'b', name: 'key-labels.enc', modifiedTime: '2025-01-02T00:00:00.000Z' },
-          ],
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-      })
-      vi.stubGlobal('fetch', fetchSpy)
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    it('retries a transient failure', async () => {
+      const fetchSpy = stubSequence([
+        new Response('unavailable', { status: 503 }),
+        new Response(JSON.stringify({ id: 'f1', name: 'b.enc', modifiedTime: 'm' }), { status: 200 }),
+      ])
 
-      const result = await deleteFilesByExactName('key-labels.enc')
-
-      expect(result).toEqual({ attempted: 2, failed: 1, firstError: expect.stringContaining('network error') })
-      expect(warn).toHaveBeenCalledWith(expect.stringMatching(/delete of b failed: .*network error/))
-      warn.mockRestore()
+      await expect(renameFile('f1', 'b.enc')).resolves.toMatchObject({ id: 'f1' })
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
     })
   })
 
   // The remote reset (SYNC_RESET_TARGETS in sync-reset-ipc.ts) deletes by these
-  // prefixes and exact names; none of them may reach the password-change
+  // prefixes; none of them may reach the password-change
   // lock, which only its holder (or an explicit unlock) removes, nor a
   // sync-format marker, which only a newer app's cleanup removes.
   describe('remote reset deletes', () => {
@@ -407,6 +369,8 @@ describe('google-drive', () => {
             { id: 'lock', name: 'password-change-lock.json', modifiedTime: 'm' },
             { id: 'format', name: 'sync-format-v1.json', modifiedTime: 'm' },
             { id: 'kb', name: 'keyboards_0x1_settings.enc', modifiedTime: 'm' },
+            { id: 'kbtrash', name: 'keyboards_0x1_settings.enc.trash.1.2.kbtrash', modifiedTime: 'm' },
+            { id: 'favtrash', name: 'favorites_macro.enc.trash.1.2.favtrash', modifiedTime: 'm' },
           ],
         }), { status: 200 })
       }))
@@ -414,12 +378,12 @@ describe('google-drive', () => {
       for (const prefix of ['keyboards_', 'keyboards_0x1_', 'favorites_', 'i18n_', 'themes_']) {
         await deleteFilesByPrefix(prefix)
       }
-      await deleteFilesByExactName('key-labels.enc')
-      await deleteFilesByExactName('typing-test-texts.enc')
 
       expect(deletedIds).not.toContain('lock')
       expect(deletedIds).not.toContain('format')
       expect(deletedIds).toContain('kb')
+      // Trash files go with the data they were copies of.
+      expect(deletedIds).toEqual(expect.arrayContaining(['kbtrash', 'favtrash']))
     })
   })
 

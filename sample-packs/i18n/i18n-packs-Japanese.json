@@ -1,5 +1,5 @@
 {
-  "version": "0.1.115",
+  "version": "0.1.116",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -878,6 +878,7 @@
     "signInBusy": "同期の処理中はサインインできません。しばらくしてからもう一度お試しください。",
     "resetBusy": "同期の処理中はリセットできません。しばらくしてからもう一度お試しください。",
     "deleteBusy": "同期の処理中は削除できません。しばらくしてからもう一度お試しください。",
+    "trashBusy": "同期の処理中はゴミ箱を変更できません。しばらくしてからもう一度お試しください。",
     "importBusy": "同期の処理中はインポートできません。しばらくしてからもう一度お試しください。",
     "ownDeviceDeleteFromLocal": "このデバイスのデータは Local タブから削除してください。",
     "encryptionPassword": "同期暗号化パスワード",
@@ -966,6 +967,15 @@
     "downloading": "ダウンロード中...",
     "noRemoteData": "リモートデータはありません",
     "undecryptableCount": "{{count}} 件の復号できないファイル",
+    "trash": {
+      "description": "同じデータの別のコピーが選ばれたため、同期が使わなくなったコピーです。復元すると、そのコピーと現在のコピーを入れ替えます（現在のコピーはゴミ箱へ移ります）。",
+      "empty": "ゴミ箱は空です",
+      "restore": "復元",
+      "notRestorable": "この PC 自身の打鍵データは復元できません（この PC から再アップロードされます）",
+      "updated": "更新 {{date}}",
+      "autoDelete": "現在のコピーがある間、{{date}} 以降に削除",
+      "notFound": "このファイルはもうゴミ箱にありません"
+    },
     "checkingRemotePassword": "同期状態を確認中...",
     "existingPasswordHint": "同期パスワードが既に設定されています。他のデバイスで使用したパスワードを入力してください。",
     "reenterPasswordWarning": "この PC の同期パスワードが Google Drive と合っていません。ほかの PC で使っているパスワードを入力してください。",
@@ -1902,6 +1912,7 @@
     "syncNoOrphans": "同期データは全てローカルにあります",
     "resetAppSettings": "アプリケーション設定をリセット",
     "cloudData": "クラウドデータ",
+    "trash": "ゴミ箱",
     "typing": {
       "title": "タイピング",
       "noKeyboards": "タイピングデータがありません",

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.115",
+  "version": "0.1.116",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -868,6 +868,7 @@
     "signInBusy": "同期の最中はサインインいたしかねます。少々お待ちのうえ、もう一度お試しを。",
     "resetBusy": "同期の最中はリセットいたしかねます。少々お待ちのうえ、もう一度お試しを。",
     "deleteBusy": "同期の最中は削除いたしかねます。少々お待ちのうえ、もう一度お試しを。",
+    "trashBusy": "同期の最中は屑籠に手を触れかねます。少々お待ちのうえ、もう一度お試しを。",
     "importBusy": "同期の最中はインポートいたしかねます。少々お待ちのうえ、もう一度お試しを。",
     "ownDeviceDeleteFromLocal": "この機材の記録は Local タブより抹消くださいませ。",
     "encryptionPassword": "内緒の合言葉",
@@ -956,6 +957,15 @@
     "downloading": "お取り寄せ中...",
     "noRemoteData": "あちらに記録はございません",
     "undecryptableCount": "{{count}} 件の開けぬ書物",
+    "trash": {
+      "description": "同じ記録の別の写しが選ばれたため、同期が用いなくなった写しでございます。復元なされば、その写しと現在の写しを入れ替えます（現在の写しは屑籠へ）。",
+      "empty": "屑籠は空でございます",
+      "restore": "復元",
+      "notRestorable": "この PC 自身の打鍵の記録は復元いたしかねます。この PC より改めて届けられます",
+      "updated": "更新 {{date}}",
+      "autoDelete": "現在の写しがある限り、{{date}} 以降に抹消いたします",
+      "notFound": "この書物はもはや屑籠にはございません"
+    },
     "checkingRemotePassword": "あちらの様子を伺っております...",
     "existingPasswordHint": "合言葉が既にございます。他で使ったものを教えていただけますか？",
     "reenterPasswordWarning": "この端末の合言葉が Google Drive のものと一致いたしません。他の端末でお使いの合言葉をお教えくださいませ。",
@@ -1892,6 +1902,7 @@
     "syncNoOrphans": "全てのデータが手元にございます",
     "resetAppSettings": "設定を初期化",
     "cloudData": "クラウドの記録",
+    "trash": "屑籠",
     "typing": {
       "title": "タイピング",
       "noKeyboards": "記録がございません",

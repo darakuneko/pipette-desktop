@@ -1,5 +1,5 @@
 {
-  "version": "0.1.115",
+  "version": "0.1.116",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -868,6 +868,7 @@
     "signInBusy": "同期中だからサインインむりｗちょい待ってからもう一回っしょ☆",
     "resetBusy": "同期中だからリセットむりｗちょい待ってからもう一回っしょ☆",
     "deleteBusy": "同期中だから削除むりｗちょい待ってからもう一回っしょ☆",
+    "trashBusy": "同期中だからゴミ箱いじれないｗちょい待ってからもう一回っしょ☆",
     "importBusy": "同期中だからインポートむりｗちょい待ってからもう一回っしょ☆",
     "ownDeviceDeleteFromLocal": "このデバイスのデータはLocalタブから消してね☆",
     "encryptionPassword": "暗号化パスワード☆",
@@ -956,6 +957,15 @@
     "downloading": "ダウンロードなう☆",
     "noRemoteData": "リモートにデータないじゃん",
     "undecryptableCount": "{{count}} 件開けないやつあるｗ",
+    "trash": {
+      "description": "おんなじデータの別コピーが選ばれたから、同期が使わなくなったコピーたちだよ☆ 復元したら今のコピーと入れ替えね（今のはゴミ箱行き）",
+      "empty": "ゴミ箱すっからかん☆",
+      "restore": "復活☆",
+      "notRestorable": "この PC の打鍵データは復活むりｗこの PC からまた上がるから安心☆",
+      "updated": "更新 {{date}}",
+      "autoDelete": "今のコピーがあるなら {{date}} 過ぎたらポイ☆",
+      "notFound": "これもうゴミ箱にいないっぽいｗ"
+    },
     "checkingRemotePassword": "同期チェックなう☆",
     "existingPasswordHint": "もう設定されてるよん！使ってたパスワード入れてね♡",
     "reenterPasswordWarning": "このPCのパスワード、Google Driveとズレてるっぽい！他のPCで使ってるパスワード入れてね♡",
@@ -1892,6 +1902,7 @@
     "syncNoOrphans": "全部ここにあるっぽみ☆",
     "resetAppSettings": "アプリ設定リセット☆",
     "cloudData": "クラウドデータ☆",
+    "trash": "ゴミ箱☆",
     "typing": {
       "title": "タイピング☆",
       "noKeyboards": "タイピングデータないじゃん",
