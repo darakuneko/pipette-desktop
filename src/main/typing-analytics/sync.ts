@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Sync-unit identifiers for the typing-analytics JSONL masters.
 //
-// Shape: keyboards/{uid}/devices/{machineHash}/days/{YYYY-MM-DD}
-//   (one unit per (uid, hash, day), bundles a single per-day file)
+// Shapes:
+//   keyboards/{uid}/devices/{machineHash}/days/{YYYY-MM-DD}
+//     (one unit per (uid, hash, day), bundles a single per-day file)
+//   keyboards/{uid}/devices/{machineHash}/deleted-ranges
+//     (one unit per (uid, hash): the time ranges other devices deleted
+//     from that device's typing data)
 //
 // Per-day units (not per-device) keep sync granular: a remote device's
 // typing history is fetched and merged one day-file at a time instead
@@ -33,4 +37,27 @@ export function parseTypingAnalyticsDeviceDaySyncUnit(
   if (parts[1].length === 0 || parts[3].length === 0) return null
   if (!isUtcDay(parts[5])) return null
   return { uid: parts[1], machineHash: parts[3], utcDay: parts[5] }
+}
+
+/** Last segment of the deleted-ranges unit name. */
+const TYPING_DELETED_RANGES_SEGMENT = 'deleted-ranges'
+
+/** Sync-unit path for the deleted-ranges file of one `(uid, machineHash)`. */
+export function typingDeletedRangesSyncUnit(
+  uid: string,
+  machineHash: string,
+): `keyboards/${string}/devices/${string}/deleted-ranges` {
+  return `keyboards/${uid}/devices/${machineHash}/${TYPING_DELETED_RANGES_SEGMENT}`
+}
+
+/** Returns `{uid, machineHash}` when `syncUnit` is a deleted-ranges unit,
+ * otherwise null. */
+export function parseTypingDeletedRangesSyncUnit(
+  syncUnit: string,
+): { uid: string; machineHash: string } | null {
+  const parts = syncUnit.split('/')
+  if (parts.length !== 5) return null
+  if (parts[0] !== 'keyboards' || parts[2] !== 'devices' || parts[4] !== TYPING_DELETED_RANGES_SEGMENT) return null
+  if (parts[1].length === 0 || parts[3].length === 0) return null
+  return { uid: parts[1], machineHash: parts[3] }
 }

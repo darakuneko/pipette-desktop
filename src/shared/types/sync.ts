@@ -24,8 +24,8 @@ export interface SyncEnvelope {
 }
 
 export interface SyncBundle {
-  type: 'favorite' | 'layout' | 'analyze-filter' | 'run-log' | 'settings' | 'keyboard-meta' | 'typing-analytics-device' | 'key-label' | 'typing-test-text' | 'i18n-index' | 'i18n-pack' | 'theme-index' | 'theme-pack'
-  key: string // FavoriteType, UID, 'keyboard-names' for meta, `${uid}|${machineHash}` for device, 'key-labels', 'typing-test-texts', 'i18n-index', or packId for i18n-pack
+  type: 'favorite' | 'layout' | 'analyze-filter' | 'run-log' | 'settings' | 'keyboard-meta' | 'typing-analytics-device' | 'typing-deleted-ranges' | 'key-label' | 'typing-test-text' | 'i18n-index' | 'i18n-pack' | 'theme-index' | 'theme-pack'
+  key: string // FavoriteType, UID, 'keyboard-names' for meta, `${uid}|${machineHash}|${utcDay}` for a device day, `${uid}|${machineHash}` for deleted ranges, 'key-labels', 'typing-test-texts', 'i18n-index', or packId for i18n-pack
   index: FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | RunLogIndex | KeyboardMetaIndex | KeyLabelIndex | TypingTestTextIndex | I18nPackIndex | ThemePackIndex
   files: Record<string, string> // filename -> content (empty for meta / i18n-index)
   /** i18n / theme pack body bundles only: the clock and body fields of the

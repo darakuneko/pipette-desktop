@@ -12,13 +12,16 @@ import { localSyncBlock, remoteSyncBlock, listGuardFiles } from './sync-password
 import { ensureSyncFormatMarker, syncFormatGeneration } from './sync-format'
 import { mergeWithRemote, syncOrUpload } from './sync-merge-dispatch'
 import { canonicalFiles } from './drive-canonical'
-import { isAnalyticsSyncUnit, collectAnalyticsSyncUnitsForUid } from './sync-bundle'
+import { isAnalyticsSyncUnit, isTypingDeletedRangesSyncUnit, collectAnalyticsSyncUnitsForUid } from './sync-bundle'
+import { queueOwnDeletedRangesApply } from './typing-deleted-ranges-merge'
 
 /** Pull + push typing-analytics bundles for one keyboard, triggered
  * from the Analyze panel mount. Runs on its own per-uid mutex so
- * polling / manual sync stay untouched — the cloud file namespace is
- * disjoint (only `keyboards/{uid}/devices/*` is written) so there is
- * no conflict with the global `isSyncing` path.
+ * polling / manual sync stay untouched — only `keyboards/{uid}/devices/*`
+ * is written, which the global `isSyncing` path leaves alone except for the
+ * deleted-ranges units; those both paths sync, and `mergeWithRemote` /
+ * `syncOrUpload` (sync-merge-dispatch.ts) run one sync of such a unit at a
+ * time.
  *
  * Returns true on a fully-successful pass so the caller can stamp a
  * rate-limit timestamp; returns false on skip (this uid is already
@@ -56,9 +59,9 @@ export async function executeAnalyticsSync(uid: string): Promise<boolean> {
     await ensurePasswordCheckValidated(password, await listPasswordCheckFiles())
 
     // Drive-side prefix filter: scope the listing to this keyboard's
-    // analytics files. The in-memory `isAnalyticsSyncUnit` + `startsWith`
-    // checks below remain as a safety net in case Drive ever returns a
-    // looser substring match.
+    // analytics day and deleted-ranges files. The in-memory unit-kind and
+    // `startsWith` checks below remain as a safety net in case Drive ever
+    // returns a looser substring match.
     const prefix = `keyboards/${uid}/devices/`
     const remoteFiles = await listFiles({ nameContains: driveFilenamePrefix(prefix) })
     let anyFailure = false
@@ -72,7 +75,7 @@ export async function executeAnalyticsSync(uid: string): Promise<boolean> {
       canonicalFiles(remoteFiles).map((file) =>
         limit(async () => {
           const unit = syncUnitFromFileName(file.name)
-          if (!unit || !isAnalyticsSyncUnit(unit)) return
+          if (!unit || !(isAnalyticsSyncUnit(unit) || isTypingDeletedRangesSyncUnit(unit))) return
           if (!unit.startsWith(prefix)) return
           try {
             await mergeWithRemote(file, unit, password, remoteFiles)
@@ -99,6 +102,7 @@ export async function executeAnalyticsSync(uid: string): Promise<boolean> {
         ),
     )
 
+    queueOwnDeletedRangesApply()
     return !anyFailure
   } catch {
     return false

@@ -314,7 +314,10 @@ export interface VialAPI {
   typingAnalyticsListRemoteCloudHashes(uid: string): Promise<string[]>
   typingAnalyticsListRemoteCloudDays(uid: string, machineHash: string): Promise<string[]>
   typingAnalyticsFetchRemoteDay(uid: string, machineHash: string, utcDay: string): Promise<boolean>
-  typingAnalyticsDeleteRemoteDays(uid: string, machineHash: string, utcDays: string[]): Promise<{ success: boolean; error?: string }>
+  /** Deletes another device's typing on local calendar `dates`, or all of
+   * it, up to the moment of the call (see deleteDeviceTypingData,
+   * typing-device-delete.ts). */
+  typingAnalyticsDeleteDeviceData(uid: string, machineHash: string, dates: string[] | 'all'): Promise<{ success: boolean; error?: string }>
   typingAnalyticsExport(uid: string, dates: string[]): Promise<{ written: number; cancelled: boolean }>
   typingAnalyticsImport(): Promise<TypingAnalyticsImportResult>
 

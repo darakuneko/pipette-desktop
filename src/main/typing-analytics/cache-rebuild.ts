@@ -5,9 +5,9 @@
 // user rows, re-reads every master file, and re-applies every row via
 // the LWW merge path.
 
-import { applyRowsToCache } from './jsonl/apply-to-cache'
+import { replayDayRowsHidingDeletedRanges } from './deleted-ranges-cache'
 import { readRows } from './jsonl/jsonl-reader'
-import { listAllDeviceDayJsonlFiles } from './jsonl/paths'
+import { listAllDeviceDayJsonlFiles, type DeviceDayJsonlRef } from './jsonl/paths'
 import { DATA_TABLE_NAMES } from './db/schema'
 import type { TypingAnalyticsDB } from './db/typing-analytics-db'
 import {
@@ -43,10 +43,12 @@ export function truncateCache(db: TypingAnalyticsDB): void {
  * `db`, and return the number of rows touched per table. Per-day files
  * (`{uid}/devices/{hash}/{YYYY-MM-DD}.jsonl`) are scanned in ascending
  * date order; the cache merge is LWW so file order does not affect row
- * content. */
+ * content. The files of a hash other than `ownHash` are replayed with
+ * that hash's deleted ranges hidden (deleted-ranges-cache.ts). */
 export async function rebuildCacheFromMasterFiles(
   db: TypingAnalyticsDB,
   userDataDir: string,
+  ownHash: string,
 ): Promise<CacheRebuildResult> {
   truncateCache(db)
   const result: CacheRebuildResult = {
@@ -60,10 +62,10 @@ export async function rebuildCacheFromMasterFiles(
     jsonlFilesRead: 0,
   }
 
-  const applyFile = async (ref: { path: string }): Promise<void> => {
+  const applyFile = async (ref: DeviceDayJsonlRef): Promise<void> => {
     const { rows } = await readRows(ref.path)
     if (rows.length === 0) return
-    const applied = applyRowsToCache(db, rows)
+    const applied = replayDayRowsHidingDeletedRanges(db, rows, ref, userDataDir, ownHash)
     result.scopes += applied.scopes
     result.charMinutes += applied.charMinutes
     result.matrixMinutes += applied.matrixMinutes
@@ -113,7 +115,7 @@ export async function ensureCacheIsFresh(
     return { rebuilt: false, state: existing }
   }
 
-  await rebuildCacheFromMasterFiles(db, userDataDir)
+  await rebuildCacheFromMasterFiles(db, userDataDir, myDeviceId)
   const state: TypingSyncState = {
     ...emptySyncState(myDeviceId),
     last_synced_at: Date.now(),

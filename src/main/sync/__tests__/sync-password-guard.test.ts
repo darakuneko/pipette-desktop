@@ -101,7 +101,7 @@ vi.mock('../../key-label-store', () => ({ KEY_LABEL_SYNC_UNIT: 'key-labels' }))
 vi.mock('../../typing-test-text-store', () => ({ TYPING_TEST_TEXT_SYNC_UNIT: 'typing-test-texts' }))
 
 vi.mock('../../typing-analytics/db/typing-analytics-db', () => ({
-  getTypingAnalyticsDB: () => ({ tombstoneRowsForUidHashInRange: vi.fn() }),
+  getTypingAnalyticsDB: () => ({ tombstoneRowsForUidHashInRanges: vi.fn() }),
 }))
 
 vi.mock('../../typing-analytics/sync-state', () => ({
@@ -233,7 +233,6 @@ import {
   hasAnyRemoteTypingData,
   listRemoteTypingHashesForUidFromCloud,
   listRemoteTypingDaysFor,
-  deleteRemoteTypingDays,
   fetchRemoteTypingDay,
   listUndecryptableFiles,
   scanRemoteData,
@@ -406,11 +405,10 @@ describe('sync password-change guard', () => {
       expectNoDataWork()
     })
 
-    it('the Sync > Typing cloud reads do nothing and the remote day delete is refused', async () => {
+    it('the Sync > Typing cloud reads do nothing', async () => {
       expect(await hasAnyRemoteTypingData()).toBe(false)
       expect(await listRemoteTypingHashesForUidFromCloud('uid1')).toEqual([])
       expect(await listRemoteTypingDaysFor('uid1', 'hashother')).toEqual([])
-      await expect(deleteRemoteTypingDays('uid1', 'hashother', ['2026-10-01'])).rejects.toThrow(key)
       expect(await fetchRemoteTypingDay('uid1', 'hashother', '2026-10-01')).toBe(false)
       expect(drive.downloads).toEqual([])
       expectNoDataWork()

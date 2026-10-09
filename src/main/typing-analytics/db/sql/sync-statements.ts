@@ -231,32 +231,34 @@ export function prepareSyncStatements(db: DatabaseType): SyncStatements {
     // Bigram/trigram range/all-tombstone statements live in
     // this.stmts.ngram[gram] — see ngram-statements.ts.
 
-    // Hash-scoped range variants — Sync-delete of another device's day
-    // removes only that device's rows while keeping same-day contributions
-    // from other hashes intact.
+    // Hash-scoped deleted-range variants: one entry of another device's
+    // deleted-ranges file (deleted-ranges.ts) removes only that device's
+    // rows whose time is inside [startMs, endMs) and at or before cutoffMs,
+    // keeping same-day contributions from other hashes intact. A session's
+    // time is its start, the same time that picks its day file.
     tombstoneCharMinutesForHashInRangeStmt: db.prepare(`
       UPDATE typing_char_minute
          SET is_deleted = 1, updated_at = @updatedAt
        WHERE ${TOMBSTONE_HASH_RANGE_WHERE}
-         AND minute_ts >= @startMs AND minute_ts < @endMs
+         AND minute_ts >= @startMs AND minute_ts < @endMs AND minute_ts <= @cutoffMs
     `),
     tombstoneMatrixMinutesForHashInRangeStmt: db.prepare(`
       UPDATE typing_matrix_minute
          SET is_deleted = 1, updated_at = @updatedAt
        WHERE ${TOMBSTONE_HASH_RANGE_WHERE}
-         AND minute_ts >= @startMs AND minute_ts < @endMs
+         AND minute_ts >= @startMs AND minute_ts < @endMs AND minute_ts <= @cutoffMs
     `),
     tombstoneMinuteStatsForHashInRangeStmt: db.prepare(`
       UPDATE typing_minute_stats
          SET is_deleted = 1, updated_at = @updatedAt
        WHERE ${TOMBSTONE_HASH_RANGE_WHERE}
-         AND minute_ts >= @startMs AND minute_ts < @endMs
+         AND minute_ts >= @startMs AND minute_ts < @endMs AND minute_ts <= @cutoffMs
     `),
     tombstoneSessionsForHashInRangeStmt: db.prepare(`
       UPDATE typing_sessions
          SET is_deleted = 1, updated_at = @updatedAt
        WHERE ${TOMBSTONE_HASH_RANGE_WHERE}
-         AND end_ms > @startMs AND start_ms < @endMs
+         AND start_ms >= @startMs AND start_ms < @endMs AND start_ms <= @cutoffMs
     `),
 
     tombstoneAllCharMinutesStmt: db.prepare(`

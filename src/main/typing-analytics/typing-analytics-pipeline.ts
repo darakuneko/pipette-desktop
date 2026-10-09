@@ -427,18 +427,7 @@ export function dropBufferedTyping(uid: string, drops: (ms: number) => boolean):
  * deleted ranges.
  */
 export function discardBufferedTyping(uid: string, cutoffMs: number): Promise<void> {
-  const drops = deletedByCutoff(cutoffMs)
-  return runOnFlushChain(() => dropBufferedTyping(uid, drops))
-}
-
-/** True for a time (a minute start, or a session start) that a delete with
- * this cutoff and these ranges removes: at or before `cutoffMs` and, when
- * `ranges` is given, inside one of them. */
-export function deletedByCutoff(
-  cutoffMs: number,
-  ranges?: readonly { startMs: number; endMs: number }[],
-): (ms: number) => boolean {
-  return (ms) => ms <= cutoffMs && (!ranges || ranges.some((r) => ms >= r.startMs && ms < r.endMs))
+  return runOnFlushChain(() => dropBufferedTyping(uid, (ms) => ms <= cutoffMs))
 }
 
 /** Runs `task` behind everything already on the flush chain. */

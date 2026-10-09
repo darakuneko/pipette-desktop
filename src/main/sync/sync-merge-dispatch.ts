@@ -19,7 +19,8 @@ import {
   parsePackBodySyncUnit,
   markPackRosterSynced,
 } from './pack-bundle-merge'
-import { readSettingsFile, bundleSyncUnit, entryStoreForSyncUnit, storeLockKey } from './sync-bundle'
+import { readSettingsFile, bundleSyncUnit, entryStoreForSyncUnit, isTypingDeletedRangesSyncUnit, storeLockKey } from './sync-bundle'
+import { mergeTypingDeletedRangesBundle } from './typing-deleted-ranges-merge'
 import { writeFileAtomic } from '../utils/write-file-atomic'
 import { isSafePathSegment } from '../utils/safe-filename'
 import { MAX_RUN_LOGS_PER_KEYBOARD } from '../../shared/types/typing-run-log'
@@ -30,8 +31,9 @@ import { I18N_INDEX_SYNC_UNIT } from '../../shared/types/i18n-store'
 import { THEME_INDEX_SYNC_UNIT } from '../../shared/types/theme-store'
 import {
   parseTypingAnalyticsDeviceDaySyncUnit,
+  parseTypingDeletedRangesSyncUnit,
 } from '../typing-analytics/sync'
-import { applyRowsToCache } from '../typing-analytics/jsonl/apply-to-cache'
+import { replayDayRowsHidingDeletedRanges } from '../typing-analytics/deleted-ranges-cache'
 import { readRows } from '../typing-analytics/jsonl/jsonl-reader'
 import { deviceDayDir, deviceDayJsonlPath, readPointerKey } from '../typing-analytics/jsonl/paths'
 import type { UtcDay } from '../typing-analytics/jsonl/utc-day'
@@ -116,7 +118,9 @@ async function recordDayUploaded(dayRef: {
 }
 
 /** Write a downloaded per-day JSONL under the owning device's `{hash}/`
- * directory and apply every row in the file. Each day is a distinct
+ * directory and apply every row in the file, with that device's deleted
+ * ranges kept hidden in the same transaction
+ * (deleted-ranges-cache.ts). Each day is a distinct
  * file so a partial download of one day does not affect other days for
  * the same remote hash. No-op when the unit's machineHash matches our own:
  * mergeWithRemote never routes own-hash days here (it uploads them in
@@ -140,7 +144,7 @@ export async function mergeDeviceDayBundle(
   // any per-hash `afterId` bookkeeping at the merge layer.
   const { rows } = await readRows(localPath)
   if (rows.length > 0) {
-    applyRowsToCache(getTypingAnalyticsDB(), rows)
+    replayDayRowsHidingDeletedRanges(getTypingAnalyticsDB(), rows, dayRef, userData, ownHash)
   }
   const state = (await loadSyncState(userData)) ?? emptySyncState(ownHash)
   state.last_synced_at = Date.now()
@@ -190,6 +194,12 @@ async function mergeSyncUnit(
   if (dayRef) {
     await mergeDeviceDayBundle(remoteBundle, dayRef, userData, await getMachineHash())
     return false
+  }
+
+  // A device's deleted ranges: union of the entries by id.
+  const rangesRef = parseTypingDeletedRangesSyncUnit(syncUnit)
+  if (rangesRef) {
+    return mergeTypingDeletedRangesBundle(syncUnit, remoteBundle, rangesRef, userData, await getMachineHash())
   }
 
   // Handle settings sync unit (single-file LWW)
@@ -386,6 +396,27 @@ export async function mergeWithRemote(
   password: string,
   remoteFiles?: DriveFile[],
 ): Promise<void> {
+  return withUnitSyncLock(syncUnit, () => mergeWithRemoteUnlocked(remoteFile, syncUnit, password, remoteFiles))
+}
+
+// A deleted-ranges unit is synced whole under one lock per unit, from the
+// download to the recorded revision. Without it, a sync that bundled the
+// file before its upload could overwrite Drive after another sync of the
+// same unit merged newer entries from Drive into the file and found nothing
+// to upload, leaving Drive without those entries while this device holds
+// them. The `sync:` key is apart from the store lock (the unit name) and the
+// `upload:` lock, and neither of those is held while this one is taken.
+// Other units keep running without it.
+function withUnitSyncLock<T>(syncUnit: string, task: () => Promise<T>): Promise<T> {
+  return isTypingDeletedRangesSyncUnit(syncUnit) ? withWriteLock(`sync:${syncUnit}`, task) : task()
+}
+
+async function mergeWithRemoteUnlocked(
+  remoteFile: DriveFile,
+  syncUnit: string,
+  password: string,
+  remoteFiles?: DriveFile[],
+): Promise<void> {
   // Own-device analytics days are append-only logs this machine owns, so
   // nothing on Drive can be newer: re-upload in place without a download.
   const ownDayRef = parseTypingAnalyticsDeviceDaySyncUnit(syncUnit)
@@ -412,10 +443,18 @@ export async function syncOrUpload(
   password: string,
   remoteFiles: DriveFile[],
 ): Promise<void> {
+  return withUnitSyncLock(syncUnit, () => syncOrUploadUnlocked(syncUnit, password, remoteFiles))
+}
+
+async function syncOrUploadUnlocked(
+  syncUnit: string,
+  password: string,
+  remoteFiles: DriveFile[],
+): Promise<void> {
   const remoteFile = pickCanonicalFile(remoteFiles, driveFileName(syncUnit))
 
   if (remoteFile) {
-    await mergeWithRemote(remoteFile, syncUnit, password, remoteFiles)
+    await mergeWithRemoteUnlocked(remoteFile, syncUnit, password, remoteFiles)
   } else {
     await uploadSyncUnit(syncUnit, password, remoteFiles)
     markPackRosterSynced(syncUnit)

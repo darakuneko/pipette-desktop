@@ -1,5 +1,5 @@
 {
-  "version": "0.1.113",
+  "version": "0.1.114",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -1915,7 +1915,9 @@
       "deleteSelected": "選択した日を削除 ({{count}})",
       "deleteAll": "このキーボードの全データを削除",
       "confirmDeleteSelected": "このデバイスで記録された {{count}} 日分を削除しますか？ 同期先からも消えますが、他のデバイスで記録された分は残ります。削除したデータは、以前の Export を再 import しても削除されたままです。",
-      "confirmDeleteAll": "このデバイスで記録したこのキーボードの全ての日を削除しますか？ 同期先からも消えますが、他のデバイスで記録された分は残ります。削除した日付のデータは再 import できなくなります — 必要なら先に Export してください。",
+      "confirmDeleteAll": "このデバイスで記録したこのキーボードの全ての日を削除しますか？ Google Drive 上のコピーも消えますが、既にダウンロードした他の PC には残ります。他のデバイスで記録された分は残ります。削除した日付のデータは再 import できなくなります — 必要なら先に Export してください。",
+      "confirmDeleteSelectedDevice": "このデバイスで記録された {{count}} 日分を、ここですぐ非表示にしますか？ 記録した PC では、次にその PC が同期した時に削除されます。この時点より後にその PC で打った分は残ります。",
+      "confirmDeleteAllDevice": "このデバイスがこのキーボードで記録した全ての日を、ここですぐ非表示にしますか？ 記録した PC では、次にその PC が同期した時に削除されます。この時点より後にその PC で打った分は残ります。",
       "exportLabel": "Export…",
       "importLabel": "Import…",
       "importStatus": {

@@ -38,7 +38,7 @@ export const TOMBSTONE_RANGE_WHERE = `
     AND is_deleted = 0
 `
 
-// Hash-scoped variant — Sync-delete of another device's day removes only
+// Hash-scoped variant — a deleted range of another device removes only
 // that device's rows while keeping same-day contributions from other
 // hashes intact, and the Local tab's Delete All removes only this
 // device's rows.

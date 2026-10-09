@@ -29,6 +29,7 @@ import { collectAllSyncUnits } from './sync-bundle'
 import { backfillKeyboardMeta } from './keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import { runPackGcAfterPass } from './pack-gc'
+import { queueOwnDeletedRangesApply } from './typing-deleted-ranges-merge'
 import { reconcileOwnHashTypingAnalytics } from './sync-typing-remote'
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import { log } from '../logger'
@@ -126,6 +127,8 @@ export async function executeSync(
       broadcastPendingStatus()
       if (failedUnits.length > 0) scheduleFlushIfPending(POLL_INTERVAL_MS)
     }
+
+    queueOwnDeletedRangesApply()
 
     if (failedUnits.length === 0) {
       emitProgress({ direction, status: 'success', message: 'Sync complete' })

@@ -115,7 +115,8 @@ vi.mock('../app-config', () => ({
   getAppConfigStore: vi.fn(() => ({ get: () => false })),
 }))
 
-vi.mock('../typing-analytics/sync', () => ({
+vi.mock('../typing-analytics/sync', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../typing-analytics/sync')>(),
   typingAnalyticsDeviceDaySyncUnit: (uid: string, machineHash: string, day: string) =>
     `keyboards/${uid}/devices/${machineHash}/days/${day}`,
   parseTypingAnalyticsDeviceDaySyncUnit: (syncUnit: string) => {
@@ -158,15 +159,16 @@ vi.mock('../typing-analytics/jsonl/jsonl-reader', () => ({
 }))
 
 const mockListLocalKeyboardUids = vi.fn(() => [] as string[])
-const mockTombstoneRowsForUidHashInRange = vi.fn(
-  (_uid: string, _machineHash: string, _startMs: number, _endMs: number, _updatedAt: number) => ({
+const mockTombstoneRowsForUidHashInRanges = vi.fn(
+  (_uid: string, _machineHash: string, _entries: readonly unknown[], _updatedAt: number) => ({
     charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0,
   }),
 )
 vi.mock('../typing-analytics/db/typing-analytics-db', () => ({
   getTypingAnalyticsDB: vi.fn(() => ({
     listLocalKeyboardUids: mockListLocalKeyboardUids,
-    tombstoneRowsForUidHashInRange: mockTombstoneRowsForUidHashInRange,
+    tombstoneRowsForUidHashInRanges: mockTombstoneRowsForUidHashInRanges,
+    getConnection: () => ({ transaction: <T>(fn: () => T) => fn }),
   })),
 }))
 
@@ -200,6 +202,14 @@ vi.mock('../typing-analytics/sync-state', () => ({
     const v = state.reconciled_at[`${uid}|${hash}`]
     return v === undefined || v === null
   },
+}))
+
+// The apply itself runs on the typing-analytics flush chain and has its own
+// tests (deleted-ranges-apply.test.ts); here only its scheduling matters.
+const mockApplyOwnDeletedRangesForAllKeyboards = vi.fn(async (..._args: unknown[]): Promise<void> => {})
+vi.mock('../typing-analytics/deleted-ranges-apply', () => ({
+  applyOwnDeletedRanges: vi.fn(async () => {}),
+  applyOwnDeletedRangesForAllKeyboards: (...args: unknown[]) => mockApplyOwnDeletedRangesForAllKeyboards(...args),
 }))
 
 vi.stubGlobal('fetch', vi.fn())
@@ -267,7 +277,6 @@ import {
   setupBeforeQuitHandler,
   registerPreSyncQuitFinalizer,
   registerBeforeQuitFinalizer,
-  deleteRemoteTypingDays,
   fetchRemoteTypingDay,
   executeAnalyticsSync,
   waitForPollPassForTests,
@@ -466,7 +475,7 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
     mockAutoSync = false
     mockSyncState = null
     mockListLocalKeyboardUids.mockReturnValue([])
-    mockTombstoneRowsForUidHashInRange.mockReturnValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
+    mockTombstoneRowsForUidHashInRanges.mockReturnValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
     _resetForTests()
   })
 
@@ -3692,8 +3701,8 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
       expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual(['2026-04-18'])
     })
 
-    // --- Reconcile rule 3: uploaded has, cloud missing → local unlink ---
-    it('reconcile rule 3: unlinks local file when uploaded has the day but cloud does not', async () => {
+    // --- Reconcile rule 3: uploaded has, cloud missing → upload again ---
+    it('reconcile rule 3: keeps the local file and uploads it again when uploaded has the day but cloud does not', async () => {
       mockSyncState = {
         _rev: 3,
         my_device_id: OWN_HASH,
@@ -3703,7 +3712,8 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
       }
       await writeDayFile('2026-04-17')
       await writeDayFile('2026-04-18')
-      // Cloud lost day 17 (Sync-deleted from another device).
+      mockListLocalKeyboardUids.mockReturnValue([UID])
+      // Cloud lost day 17 (removed by something other than this device).
       mockListFiles.mockResolvedValue([
         cloudDriveFile(OWN_HASH, '2026-04-18'),
         PASSWORD_CHECK_DRIVE_FILE,
@@ -3711,9 +3721,10 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
 
       await executeSync('upload')
 
-      expect(await fileExists(ownDayPath('2026-04-17'))).toBe(false)
+      expect(await fileExists(ownDayPath('2026-04-17'))).toBe(true)
       expect(await fileExists(ownDayPath('2026-04-18'))).toBe(true)
-      expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual(['2026-04-18'])
+      expect(mockUploadFile).toHaveBeenCalledWith(cloudFileName(OWN_HASH, '2026-04-17'), expect.anything(), undefined)
+      expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual(['2026-04-17', '2026-04-18'])
     })
 
     // --- Reconcile orphan cleanup: first run ---
@@ -3778,75 +3789,6 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
         undefined,
       )
       expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual(['2026-04-18'])
-    })
-
-    // --- deleteRemoteTypingDays E2E ---
-    it('deleteRemoteTypingDays: removes cloud + local + cache tombstone in one call', async () => {
-      const day = '2026-04-18'
-      const localPath = ownDayPath(day, REMOTE_HASH)
-      await writeDayFile(day, REMOTE_HASH, '{"id":"remote"}\n')
-      mockListFiles.mockResolvedValue([
-        cloudDriveFile(REMOTE_HASH, day),
-        PASSWORD_CHECK_DRIVE_FILE,
-      ])
-
-      await deleteRemoteTypingDays(UID, REMOTE_HASH, [day])
-
-      expect(mockDeleteFile).toHaveBeenCalledWith(`drive-${REMOTE_HASH}-${day}`)
-      expect(await fileExists(localPath)).toBe(false)
-      const tombstoneCall = mockTombstoneRowsForUidHashInRange.mock.calls.at(-1)
-      expect(tombstoneCall?.[0]).toBe(UID)
-      expect(tombstoneCall?.[1]).toBe(REMOTE_HASH)
-    })
-
-    it('deleteRemoteTypingDays: tombstones cache even when the cloud file is already gone', async () => {
-      const day = '2026-04-18'
-      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
-
-      await deleteRemoteTypingDays(UID, REMOTE_HASH, [day])
-
-      expect(mockDeleteFile).not.toHaveBeenCalled()
-      expect(mockTombstoneRowsForUidHashInRange).toHaveBeenCalled()
-    })
-
-    it('deleteRemoteTypingDays: refuses while signed out, before anything is removed', async () => {
-      const day = '2026-04-18'
-      await writeDayFile(day, REMOTE_HASH)
-      mockGetAuthStatus.mockResolvedValueOnce({ authenticated: false })
-
-      await expect(deleteRemoteTypingDays(UID, REMOTE_HASH, [day])).rejects.toThrow('sync.readiness.unauthenticated')
-
-      expect(await fileExists(ownDayPath(day, REMOTE_HASH))).toBe(true)
-      expect(mockDeleteFile).not.toHaveBeenCalled()
-      expect(mockTombstoneRowsForUidHashInRange).not.toHaveBeenCalled()
-    })
-
-    it('deleteRemoteTypingDays: refuses this device\'s own hash, before anything is removed', async () => {
-      const day = '2026-04-18'
-      await writeDayFile(day, OWN_HASH)
-      mockListFiles.mockResolvedValue([cloudDriveFile(OWN_HASH, day), PASSWORD_CHECK_DRIVE_FILE])
-      mockListFiles.mockClear()
-
-      await expect(deleteRemoteTypingDays(UID, OWN_HASH, [day])).rejects.toThrow('sync.ownDeviceDeleteFromLocal')
-
-      expect(await fileExists(ownDayPath(day, OWN_HASH))).toBe(true)
-      expect(mockListFiles).not.toHaveBeenCalled()
-      expect(mockDeleteFile).not.toHaveBeenCalled()
-      expect(mockTombstoneRowsForUidHashInRange).not.toHaveBeenCalled()
-    })
-
-    it('deleteRemoteTypingDays: deletes several days from one listing and tries every day before reporting a failure', async () => {
-      const days = ['2026-04-17', '2026-04-18']
-      for (const day of days) await writeDayFile(day, REMOTE_HASH)
-      mockListFiles.mockResolvedValue([...days.map((day) => cloudDriveFile(REMOTE_HASH, day)), PASSWORD_CHECK_DRIVE_FILE])
-      mockListFiles.mockClear()
-      mockDeleteFile.mockRejectedValueOnce(new Error('boom'))
-
-      await expect(deleteRemoteTypingDays(UID, REMOTE_HASH, days)).rejects.toThrow('Failed to delete 1 of 2 files')
-
-      expect(mockListFiles).toHaveBeenCalledTimes(1)
-      expect(mockDeleteFile.mock.calls.map((call) => call[0])).toEqual(days.map((day) => `drive-${REMOTE_HASH}-${day}`))
-      for (const day of days) expect(await fileExists(ownDayPath(day, REMOTE_HASH))).toBe(false)
     })
 
     // --- mergeDeviceDayBundle full replay idempotency (via download flow) ---
@@ -3960,6 +3902,146 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
       expect(calls).toHaveLength(1)
       expect(calls[0][2]).toBe(`drive-${OWN_HASH}-${day}`)
       expect(mockDownloadFile).not.toHaveBeenCalledWith(`drive-${OWN_HASH}-${day}`)
+    })
+
+    it('executeAnalyticsSync merges another device\'s deleted ranges and uploads a local ranges file', async () => {
+      const rangesName = `keyboards_${UID}_devices_${REMOTE_HASH}_deleted-ranges.enc`
+      const entry = { id: 'r1', startMs: 0, endMs: 60_000, cutoffMs: 60_000 }
+      const bundle = {
+        type: 'typing-deleted-ranges',
+        key: `${UID}|${REMOTE_HASH}`,
+        index: { uid: UID, entries: [] },
+        files: { 'deleted-ranges.json': JSON.stringify({ version: 1, entries: [entry] }) },
+      }
+      mockListFiles.mockResolvedValue([
+        { id: 'drive-ranges', name: rangesName, modifiedTime: '2026-04-19T00:00:00.000Z' },
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+      mockDownloadFile.mockImplementation(async (id: string) => id === 'drive-ranges'
+        ? { version: 1, syncUnit: 'x', updatedAt: '', salt: 's', iv: 'i', ciphertext: JSON.stringify(bundle) }
+        : makePasswordCheckEnvelope())
+      const ownRangesPath = join(mockUserDataPath, 'sync', 'keyboards', UID, 'devices', 'third-hash', 'deleted-ranges.json')
+      await mkdir(join(ownRangesPath, '..'), { recursive: true })
+      await writeFile(ownRangesPath, JSON.stringify({ version: 1, entries: [{ ...entry, id: 'r2' }] }), 'utf-8')
+
+      expect(await executeAnalyticsSync(UID)).toBe(true)
+
+      const merged = JSON.parse(await readFile(
+        join(mockUserDataPath, 'sync', 'keyboards', UID, 'devices', REMOTE_HASH, 'deleted-ranges.json'), 'utf-8',
+      )) as { entries: Array<{ id: string }> }
+      expect(merged.entries.map((e) => e.id)).toEqual(['r1'])
+      expect(mockTombstoneRowsForUidHashInRanges).toHaveBeenCalledWith(UID, REMOTE_HASH, [entry], expect.any(Number))
+      expect(mockUploadFile.mock.calls.map((c) => c[0])).toEqual([`keyboards_${UID}_devices_third-hash_deleted-ranges.enc`])
+    })
+
+    it('every sync pass retries this device\'s own deleted ranges from the local files', async () => {
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+      const calls = async (): Promise<number> => {
+        await vi.advanceTimersByTimeAsync(0)
+        return mockApplyOwnDeletedRangesForAllKeyboards.mock.calls.length
+      }
+
+      await executeSync('download', { favorites: true, keyboard: UID })
+      expect(await calls()).toBe(1)
+      await executeSync('upload')
+      expect(await calls()).toBe(2)
+      expect(await executeAnalyticsSync(UID)).toBe(true)
+      expect(await calls()).toBe(3)
+      startPolling()
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await waitForPollPassForTests()
+      stopPolling()
+      expect(await calls()).toBeGreaterThanOrEqual(4)
+      expect(mockApplyOwnDeletedRangesForAllKeyboards.mock.calls[0].slice(0, 2)).toEqual([mockUserDataPath, OWN_HASH])
+    })
+
+    it('fetchRemoteTypingDay merges the device\'s deleted ranges before its day', async () => {
+      const day = '2026-04-18'
+      const rangesName = `keyboards_${UID}_devices_${REMOTE_HASH}_deleted-ranges.enc`
+      const entry = { id: 'r1', startMs: 0, endMs: 60_000, cutoffMs: 60_000 }
+      const rangesBundle = {
+        type: 'typing-deleted-ranges', key: `${UID}|${REMOTE_HASH}`, index: { uid: UID, entries: [] },
+        files: { 'deleted-ranges.json': JSON.stringify({ version: 1, entries: [entry] }) },
+      }
+      const dayBundle = {
+        type: 'typing-analytics-device', key: `${UID}|${REMOTE_HASH}|${day}`, index: { uid: UID, entries: [] },
+        files: { 'data.jsonl': '{"id":"x"}\n' },
+      }
+      const envelope = (bundle: unknown): Record<string, unknown> =>
+        ({ version: 1, syncUnit: 'x', updatedAt: '', salt: 's', iv: 'i', ciphertext: JSON.stringify(bundle) })
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(REMOTE_HASH, day),
+        { id: 'drive-ranges', name: rangesName, modifiedTime: '2026-04-19T00:00:00.000Z' },
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+      mockDownloadFile.mockImplementation(async (id: string) => {
+        if (id === 'drive-ranges') return envelope(rangesBundle)
+        if (id === `drive-${REMOTE_HASH}-${day}`) return envelope(dayBundle)
+        return makePasswordCheckEnvelope()
+      })
+
+      expect(await fetchRemoteTypingDay(UID, REMOTE_HASH, day)).toBe(true)
+
+      const order = mockDownloadFile.mock.calls.map((c) => c[0]).filter((id) => id !== 'pc-1')
+      expect(order).toEqual(['drive-ranges', `drive-${REMOTE_HASH}-${day}`])
+      const local = JSON.parse(await readFile(
+        join(mockUserDataPath, 'sync', 'keyboards', UID, 'devices', REMOTE_HASH, 'deleted-ranges.json'), 'utf-8',
+      )) as { entries: Array<{ id: string }> }
+      expect(local.entries.map((e) => e.id)).toEqual(['r1'])
+
+      // A second day of the same device does not download the ranges again.
+      mockDownloadFile.mockClear()
+      expect(await fetchRemoteTypingDay(UID, REMOTE_HASH, day)).toBe(true)
+      expect(mockDownloadFile.mock.calls.map((c) => c[0])).not.toContain('drive-ranges')
+    })
+
+    it('fetchRemoteTypingDay merges the ranges even when their revision is known but no local file exists', async () => {
+      const day = '2026-04-18'
+      const rangesName = `keyboards_${UID}_devices_${REMOTE_HASH}_deleted-ranges.enc`
+      const rangesFile = { id: 'drive-ranges', name: rangesName, modifiedTime: '2026-04-19T00:00:00.000Z' }
+      const envelope = (bundle: unknown): Record<string, unknown> =>
+        ({ version: 1, syncUnit: 'x', updatedAt: '', salt: 's', iv: 'i', ciphertext: JSON.stringify(bundle) })
+      mockListFiles.mockResolvedValue([cloudDriveFile(REMOTE_HASH, day), rangesFile, PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockImplementation(async (id: string) => {
+        if (id === 'drive-ranges') {
+          return envelope({
+            type: 'typing-deleted-ranges', key: `${UID}|${REMOTE_HASH}`, index: { uid: UID, entries: [] },
+            files: { 'deleted-ranges.json': JSON.stringify({ version: 1, entries: [{ id: 'r1', startMs: 0, endMs: 60_000, cutoffMs: 60_000 }] }) },
+          })
+        }
+        if (id === `drive-${REMOTE_HASH}-${day}`) {
+          return envelope({
+            type: 'typing-analytics-device', key: `${UID}|${REMOTE_HASH}|${day}`, index: { uid: UID, entries: [] },
+            files: { 'data.jsonl': '{"id":"x"}\n' },
+          })
+        }
+        return makePasswordCheckEnvelope()
+      })
+      // A poll records the revision of a keyboard that is not local without merging it.
+      syncRuntime.lastKnownRemoteState.set(rangesName, { id: rangesFile.id, modifiedTime: rangesFile.modifiedTime })
+
+      expect(await fetchRemoteTypingDay(UID, REMOTE_HASH, day)).toBe(true)
+
+      expect(mockDownloadFile.mock.calls.map((c) => c[0])).toContain('drive-ranges')
+      expect(await fileExists(join(mockUserDataPath, 'sync', 'keyboards', UID, 'devices', REMOTE_HASH, 'deleted-ranges.json'))).toBe(true)
+    })
+
+    it('fetchRemoteTypingDay does not fetch the day when the ranges merge fails', async () => {
+      const day = '2026-04-18'
+      const rangesName = `keyboards_${UID}_devices_${REMOTE_HASH}_deleted-ranges.enc`
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(REMOTE_HASH, day),
+        { id: 'drive-ranges', name: rangesName, modifiedTime: '2026-04-19T00:00:00.000Z' },
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+      mockDownloadFile.mockImplementation(async (id: string) => {
+        if (id === 'drive-ranges') throw new Error('network')
+        return makePasswordCheckEnvelope()
+      })
+
+      await expect(fetchRemoteTypingDay(UID, REMOTE_HASH, day)).rejects.toThrow('network')
+      expect(mockDownloadFile.mock.calls.map((c) => c[0])).not.toContain(`drive-${REMOTE_HASH}-${day}`)
     })
 
     it('own day on Drive with no local file: download sync neither uploads nor downloads it', async () => {
@@ -4192,24 +4274,6 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
         expect(syncRuntime.lastKnownRemoteState.get('favorites_tapDance.enc')).toEqual({ id: 'fav-a', modifiedTime: NEW_TIME })
 
         stopPolling()
-      })
-
-      it('deleteRemoteTypingDays deletes every copy of the day', async () => {
-        mockListFiles.mockResolvedValue([...dayCopies(REMOTE_HASH), PASSWORD_CHECK_DRIVE_FILE])
-
-        await deleteRemoteTypingDays(UID, REMOTE_HASH, [DAY])
-
-        expect(mockDeleteFile.mock.calls.map((call) => call[0]).sort())
-          .toEqual([`day-new-${REMOTE_HASH}`, `day-old-${REMOTE_HASH}`])
-      })
-
-      it('deleteRemoteTypingDays still tries every copy and then fails when one delete fails', async () => {
-        mockListFiles.mockResolvedValue([...dayCopies(REMOTE_HASH), PASSWORD_CHECK_DRIVE_FILE])
-        mockDeleteFile.mockRejectedValueOnce(new Error('boom'))
-
-        await expect(deleteRemoteTypingDays(UID, REMOTE_HASH, [DAY])).rejects.toThrow('Failed to delete 1 of 2 files')
-
-        expect(mockDeleteFile).toHaveBeenCalledTimes(2)
       })
 
       it('reconcile deletes every copy of a day removed locally', async () => {

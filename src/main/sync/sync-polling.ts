@@ -17,6 +17,7 @@ import { listLocalKeyboardUids, shouldDownloadSyncUnit } from './sync-scope'
 import { mergeWithRemote } from './sync-merge-dispatch'
 import { settlePackIndexUnitsFirst } from './pack-bundle-merge'
 import { canonicalFiles } from './drive-canonical'
+import { queueOwnDeletedRangesApply } from './typing-deleted-ranges-merge'
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
 // The delayed first pass's timer, kept until that pass starts so
@@ -118,6 +119,7 @@ async function pollForRemoteChanges(): Promise<void> {
     // for why `failedUnits` is passed separately (skips that store's
     // sweep only, not the whole GC call).
     await runPackGcAfterPass(changedFiles.map((f) => f.syncUnit), failedUnits)
+    queueOwnDeletedRangesApply()
   } catch {
     // Polling failed — will retry next interval
   } finally {

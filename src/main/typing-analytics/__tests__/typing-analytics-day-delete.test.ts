@@ -57,7 +57,7 @@ import {
   deleteTypingDailySummaries,
   deleteAllTypingForKeyboard,
 } from '../typing-analytics-service'
-import { collectRowsToMark, utcDaysOverlapping } from '../typing-analytics-day-delete'
+import { collectRowsToMark, daysOverlapping } from '../typing-analytics-day-delete'
 import { deviceDayJsonlPath } from '../jsonl/paths'
 import { readRows } from '../jsonl/jsonl-reader'
 import { parseRow, type JsonlRow } from '../jsonl/jsonl-row'
@@ -194,7 +194,7 @@ describe('deleting local days of this device', () => {
       await deleteTypingDailySummaries(keyboard.uid, ['2026-04-14'])
       const summaries = listTypingDailySummaries(keyboard.uid)
 
-      await rebuildCacheFromMasterFiles(getTypingAnalyticsDB(), mockUserDataPath)
+      await rebuildCacheFromMasterFiles(getTypingAnalyticsDB(), mockUserDataPath, await getMachineHash())
 
       expect(listTypingDailySummaries(keyboard.uid)).toEqual(summaries)
       expect(liveCacheMinutes()).toEqual([before, after])
@@ -403,9 +403,15 @@ describe('collectRowsToMark with n-gram copies', () => {
   })
 })
 
-describe('utcDaysOverlapping', () => {
-  it('lists every UTC day a range touches, end exclusive', () => {
-    expect(utcDaysOverlapping([{ startMs: Date.UTC(2026, 3, 13, 15), endMs: Date.UTC(2026, 3, 14, 15) }])).toEqual(['2026-04-13', '2026-04-14'])
-    expect(utcDaysOverlapping([{ startMs: Date.UTC(2026, 3, 14), endMs: Date.UTC(2026, 3, 15) }])).toEqual(['2026-04-14'])
+describe('daysOverlapping', () => {
+  const days = ['2026-04-12', '2026-04-13', '2026-04-14', '2026-04-15']
+  it('keeps the day files a range touches, end exclusive', () => {
+    expect(daysOverlapping(days, [{ startMs: Date.UTC(2026, 3, 13, 15), endMs: Date.UTC(2026, 3, 14, 15), cutoffMs: Infinity }])).toEqual(['2026-04-13', '2026-04-14'])
+    expect(daysOverlapping(days, [{ startMs: Date.UTC(2026, 3, 14), endMs: Date.UTC(2026, 3, 15), cutoffMs: Infinity }])).toEqual(['2026-04-14'])
+  })
+
+  it('stops at the cutoff, so a delete-all range only reaches the existing days up to it', () => {
+    expect(daysOverlapping(days, [{ startMs: 0, endMs: Date.UTC(2026, 3, 13, 12) + 1, cutoffMs: Date.UTC(2026, 3, 13, 12) }])).toEqual(['2026-04-12', '2026-04-13'])
+    expect(daysOverlapping(days, [{ startMs: Date.UTC(2026, 3, 12), endMs: Date.UTC(2026, 3, 20), cutoffMs: Date.UTC(2026, 3, 12) - 1 }])).toEqual([])
   })
 })

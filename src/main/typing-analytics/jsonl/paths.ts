@@ -5,7 +5,7 @@
 // `app.getPath('userData')`, tests pass a tmpdir.
 
 import type { Dirent } from 'node:fs'
-import { readdir } from 'node:fs/promises'
+import { access, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { isUtcDay, type UtcDay } from './utc-day'
 
@@ -72,6 +72,50 @@ export function deviceDayJsonlPath(
   utcDay: UtcDay,
 ): string {
   return join(deviceDayDir(userDataDir, uid, machineHash), `${utcDay}${JSONL_EXT}`)
+}
+
+/** Base name of the deleted-ranges file inside a device directory, and its
+ * key in the unit's sync bundle. Not a `.jsonl` name, so the day listings
+ * below never pick it up. */
+export const DELETED_RANGES_FILENAME = 'deleted-ranges.json'
+
+/** Deleted-ranges file of one (keyboard uid, machineHash)
+ * (deleted-ranges.ts). */
+export function deletedRangesPath(
+  userDataDir: string,
+  uid: string,
+  machineHash: string,
+): string {
+  return join(deviceDayDir(userDataDir, uid, machineHash), DELETED_RANGES_FILENAME)
+}
+
+/** Ids of the deleted ranges this device has applied to its own day files
+ * of `uid` (deleted-ranges-apply.ts). Local only, never a sync unit; sits in
+ * this device's own directory, so a reset of the keyboard removes it with
+ * the day files. */
+export function deletedRangesAppliedPath(
+  userDataDir: string,
+  uid: string,
+  machineHash: string,
+): string {
+  return join(deviceDayDir(userDataDir, uid, machineHash), 'deleted-ranges-applied.json')
+}
+
+/** Machine hashes under `{uid}/devices/` that have a deleted-ranges file,
+ * sorted. Missing directory ⇒ empty list. */
+export async function listDeletedRangesHashes(
+  userDataDir: string,
+  uid: string,
+): Promise<string[]> {
+  const hashes: string[] = []
+  for (const hashEntry of await safeReaddir(devicesDir(userDataDir, uid))) {
+    if (!hashEntry.isDirectory()) continue
+    try {
+      await access(deletedRangesPath(userDataDir, uid, hashEntry.name))
+      hashes.push(hashEntry.name)
+    } catch { /* no deleted-ranges file */ }
+  }
+  return hashes.sort()
 }
 
 export interface DeviceDayJsonlRef {

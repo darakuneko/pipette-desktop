@@ -635,8 +635,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_REMOTE_CLOUD_DAYS, uid, machineHash),
   typingAnalyticsFetchRemoteDay: (uid: string, machineHash: string, utcDay: string): Promise<boolean> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_FETCH_REMOTE_DAY, uid, machineHash, utcDay),
-  typingAnalyticsDeleteRemoteDays: (uid: string, machineHash: string, utcDays: string[]): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_DELETE_REMOTE_DAYS, uid, machineHash, utcDays),
+  typingAnalyticsDeleteDeviceData: (uid: string, machineHash: string, dates: string[] | 'all'): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_DELETE_DEVICE_DATA, uid, machineHash, dates),
   typingAnalyticsExport: (uid: string, dates: string[]): Promise<{ written: number; cancelled: boolean }> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_EXPORT, uid, dates),
   typingAnalyticsImport: (): Promise<TypingAnalyticsImportResult> =>

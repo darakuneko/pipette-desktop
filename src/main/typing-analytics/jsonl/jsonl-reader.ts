@@ -16,6 +16,10 @@ export interface ReadOptions {
   /** When set, only rows appearing *after* the row with this id are
    * returned. `null` or absent means "read from the beginning". */
   afterId?: string | null
+  /** When true, a file that cannot be opened throws instead of reading
+   * as empty: for a caller that listed the file and must not mistake an
+   * unreadable file for one with no rows. */
+  mustExist?: boolean
 }
 
 export interface ReadResult {
@@ -29,11 +33,12 @@ export interface ReadResult {
   partialLineSkipped: boolean
 }
 
-async function endsWithNewline(path: string): Promise<boolean | null> {
+async function endsWithNewline(path: string, mustExist: boolean): Promise<boolean | null> {
   let handle
   try {
     handle = await open(path, 'r')
-  } catch {
+  } catch (err) {
+    if (mustExist) throw err
     return null
   }
   try {
@@ -49,7 +54,7 @@ async function endsWithNewline(path: string): Promise<boolean | null> {
 
 /** Read every row after `afterId` from the JSONL file at `path`. Returns
  * an empty result when the file does not exist (a cold boot before any
- * writer has flushed). Unknown / malformed lines are silently dropped by
+ * writer has flushed), unless `mustExist` is set. Unknown / malformed lines are silently dropped by
  * `parseRow` so forward-compat row kinds from newer builds don't poison
  * the whole file.
  *
@@ -61,7 +66,7 @@ export async function readRows(
   options: ReadOptions = {},
 ): Promise<ReadResult> {
   const afterId = options.afterId ?? null
-  const terminated = await endsWithNewline(path)
+  const terminated = await endsWithNewline(path, options.mustExist === true)
   if (terminated === null) {
     return { rows: [], lastId: afterId, partialLineSkipped: false }
   }

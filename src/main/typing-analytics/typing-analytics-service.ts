@@ -36,6 +36,9 @@ import {
 import { listTypingDailySummaries, listTypingKeyboards } from './typing-analytics-queries'
 import { registerAnalyzeIpc } from './typing-analytics-ipc-analyze'
 import { registerRangeIpc } from './typing-analytics-ipc-range'
+import { applyOwnDeletedRangesForAllKeyboards } from './deleted-ranges-apply'
+import { resetHoldsKeyboard } from '../sync/sync-reset-lock'
+import { log } from '../logger'
 
 async function initialize(): Promise<void> {
   // getMachineHash transitively warms getInstallationId (and caches its
@@ -51,6 +54,11 @@ async function initialize(): Promise<void> {
     force: db.cacheNeedsRebuild,
   })
   taState.syncState = state
+  // Ranges other devices deleted from this device's data while it was off.
+  // Not awaited, so a long apply does not hold back the end of startup.
+  void applyOwnDeletedRangesForAllKeyboards(userDataDir, machineHash, resetHoldsKeyboard).catch((err: unknown) => {
+    log('warn', `typing-analytics: deleted ranges not applied at startup: ${String(err)}`)
+  })
 }
 
 /**

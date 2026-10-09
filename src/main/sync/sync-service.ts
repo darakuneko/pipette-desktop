@@ -115,9 +115,9 @@ export {
   hasAnyRemoteTypingData,
   listRemoteTypingHashesForUidFromCloud,
   listRemoteTypingDaysFor,
-  deleteRemoteTypingDays,
   fetchRemoteTypingDay,
 } from './sync-typing-remote'
+export { deleteDeviceTypingData } from './typing-device-delete'
 
 export {
   startPolling,

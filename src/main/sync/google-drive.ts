@@ -294,6 +294,11 @@ export function syncUnitFromFileName(fileName: string): string | null {
   const dayMatch = fileName.match(/^keyboards_(.+?)_devices_(.+?)_days_(\d{4}-\d{2}-\d{2})\.enc$/)
   if (dayMatch) return `keyboards/${dayMatch[1]}/devices/${dayMatch[2]}/days/${dayMatch[3]}`
 
+  // "keyboards_0x1234_devices_{hash}_deleted-ranges.enc"
+  //   → "keyboards/0x1234/devices/{hash}/deleted-ranges"
+  const rangesMatch = fileName.match(/^keyboards_(.+?)_devices_(.+?)_deleted-ranges\.enc$/)
+  if (rangesMatch) return `keyboards/${rangesMatch[1]}/devices/${rangesMatch[2]}/deleted-ranges`
+
   // "keyboards_0x1234_settings.enc" → "keyboards/0x1234/settings"
   // "keyboards_0x1234_snapshots.enc" → "keyboards/0x1234/snapshots"
   // "keyboards_0x1234_runs.enc" → "keyboards/0x1234/runs" (per-run raw

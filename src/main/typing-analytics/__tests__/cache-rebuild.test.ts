@@ -180,7 +180,7 @@ describe('rebuildCacheFromMasterFiles', () => {
       trigram(MY_HASH),
     ])
 
-    const result = await rebuildCacheFromMasterFiles(db, tmpDir)
+    const result = await rebuildCacheFromMasterFiles(db, tmpDir, MY_HASH)
     expect(result.bigramMinutes).toBe(1)
     expect(result.trigramMinutes).toBe(1)
 
@@ -201,7 +201,7 @@ describe('rebuildCacheFromMasterFiles', () => {
       char(REMOTE_HASH, 'b', 2),
     ])
 
-    const result = await rebuildCacheFromMasterFiles(db, tmpDir)
+    const result = await rebuildCacheFromMasterFiles(db, tmpDir, MY_HASH)
     expect(result.scopes).toBe(2)
     expect(result.charMinutes).toBe(2)
     expect(result.minuteStats).toBe(2)
@@ -217,8 +217,8 @@ describe('rebuildCacheFromMasterFiles', () => {
       scope(MY_HASH),
       char(MY_HASH, 'a', 4),
     ])
-    await rebuildCacheFromMasterFiles(db, tmpDir)
-    await rebuildCacheFromMasterFiles(db, tmpDir)
+    await rebuildCacheFromMasterFiles(db, tmpDir, MY_HASH)
+    await rebuildCacheFromMasterFiles(db, tmpDir, MY_HASH)
 
     const conn = db.getConnection()
     const row = conn.prepare('SELECT count FROM typing_char_minute').get() as { count: number }
@@ -226,7 +226,7 @@ describe('rebuildCacheFromMasterFiles', () => {
   })
 
   it('handles a sync tree that does not yet exist', async () => {
-    const result = await rebuildCacheFromMasterFiles(db, tmpDir)
+    const result = await rebuildCacheFromMasterFiles(db, tmpDir, MY_HASH)
     expect(result.jsonlFilesRead).toBe(0)
   })
 
@@ -238,7 +238,7 @@ describe('rebuildCacheFromMasterFiles', () => {
     const { dirname } = await import('node:path')
     await mkdir(dirname(path), { recursive: true })
     await writeFile(path, '')
-    const result = await rebuildCacheFromMasterFiles(db, tmpDir)
+    const result = await rebuildCacheFromMasterFiles(db, tmpDir, MY_HASH)
     // Empty file contributes no rows; the rebuild treats it as a no-op
     // rather than an error.
     expect(result.jsonlFilesRead).toBe(0)
@@ -254,7 +254,7 @@ describe('rebuildCacheFromMasterFiles', () => {
       char(MY_HASH, 'c', 4, 2_000),
     ])
 
-    const result = await rebuildCacheFromMasterFiles(db, tmpDir)
+    const result = await rebuildCacheFromMasterFiles(db, tmpDir, MY_HASH)
     expect(result.jsonlFilesRead).toBe(2)
 
     const conn = db.getConnection()
