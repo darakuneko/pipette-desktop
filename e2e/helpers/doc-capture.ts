@@ -3,24 +3,22 @@
 // Screenshot capture script for Pipette operation guide documentation.
 // Usage: pnpm build && pnpm doc:screenshots
 import type { ElectronApplication, Page, Locator } from '@playwright/test'
-import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync, readdirSync, renameSync, rmdirSync, statSync, copyFileSync, constants as fsConstants } from 'node:fs'
+import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync, readdirSync, renameSync, rmdirSync, rmSync, statSync, copyFileSync, constants as fsConstants } from 'node:fs'
 import { resolve, join } from 'node:path'
 import {
-  backupVirtualDeviceSettings,
   clickThroughUnlock,
   closeKeycodesOverlay,
   connectToDevice,
   dismissNotificationModal,
   escapeRegex,
   isAvailable,
+  killAndWaitForExit,
   launchCaptureApp,
   nullifyLastDeviceConfig,
   openOverlayTab,
   overlayTabNotFoundMessage,
   resetToEditorMode,
-  resetVirtualDeviceKeyboardLayout,
   restoreLastDeviceConfig,
-  restoreVirtualDeviceSettings,
   selectKeyboardViaFilterModal,
   selectSnapshotViaFilterModal,
   VIRTUAL_DEVICE_DISPLAY_NAME,
@@ -50,21 +48,6 @@ async function expandBranchIfCollapsed(branch: Locator, settleMs = 300): Promise
   if ((await branch.getAttribute('aria-expanded')) === 'true') return
   await branch.click()
   await branch.page().waitForTimeout(settleMs)
-}
-
-// Restore the Editor view after a prior run left the device in Typing Test mode.
-// useDevicePrefs persists `viewMode` per keyboard; since `~/.config/Electron`
-// is not isolated between capture runs, this guard avoids landing in a state
-// where TabbedKeycodes is not rendered (KeymapEditor hides it under
-// `typingTestMode`). Uses the locale-stable `data-active` attribute instead of
-// the i18n-dependent aria-label text.
-async function ensureEditorMode(page: Page): Promise<void> {
-  const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
-  if (!(await isAvailable(typingTestBtn))) return
-  if ((await typingTestBtn.getAttribute('data-active')) !== 'true') return
-  console.log('  [reset] Exiting Typing Test mode from prior run')
-  await typingTestBtn.click()
-  await page.waitForTimeout(500)
 }
 
 // Uses fixed filenames that match OPERATION-GUIDE.md references.
@@ -136,12 +119,10 @@ async function connectDevice(app: ElectronApplication, page: Page): Promise<bool
   }
   console.log(`Connected to ${DEVICE_NAME}`)
 
-  // Per-keyboard view-mode auto-restore may reopen Typing View or Typing
-  // Test left behind by a prior helper run (doc-capture-typing-test.ts ends
-  // in Typing View). The virtual device resets to *locked* on every launch,
-  // so that persisted viewMode can also surface the Unlock dialog before the
-  // auto-restore can complete — clear it first, then reset back to the
-  // keymap editor so every phase starts from the same state.
+  // The run starts from a fresh virtual-device dir (see
+  // isolateUnseededKeyboardDirs), so no persisted view mode is restored on
+  // connect. Clearing a possible Unlock dialog and resetting to the keymap
+  // editor is a defensive guard so every phase starts from the same state.
   await waitForUnlockDialog(app, page)
   await resetToEditorMode(page)
   return true
@@ -303,41 +284,64 @@ function restoreDummyKeyLabel(backup: KeyLabelSeedBackup): void {
   }
 }
 
-// --- Foreign keyboard-dir isolation (File tab reproducibility) ---
+// --- Unseeded keyboard-dir isolation (File tab reproducibility) ---
 
-interface ForeignKeyboardIsolation {
+interface KeyboardDirIsolation {
   backupBase: string
+  /** The virtual device's keyboard dir; whatever the run leaves there is
+   *  deleted on restore. */
+  virtualDeviceDir: string
   moves: Array<{ from: string; to: string }>
 }
 
-// Any sync/keyboards/{uid} directory this capture session does not own is
-// leftover local user data (e.g. saves from a real keyboard once plugged into
-// the workstation). The File tab lists every keyboard with saved files that
-// is not currently connected, so such dirs would leak machine-specific
-// entries into file-tab.png. Move them aside for the session; moved back in
-// the cleanup path (also on failure — it runs in main()'s finally).
-function isolateForeignKeyboardDirs(userDataPath: string): ForeignKeyboardIsolation {
+// Any sync/keyboards/{uid} directory this capture session does not seed is
+// moved aside for the session, and moved back in the cleanup path (also on
+// failure — it runs in main()'s finally). If a move fails part-way, the dirs
+// already moved are moved back before the error is rethrown. This covers:
+// - leftover local user data (e.g. saves from a real keyboard once plugged
+//   into the workstation). The File tab lists every keyboard with saved
+//   files that is not currently connected, so such dirs would leak
+//   machine-specific entries into file-tab.png.
+// - the virtual device's dir. Every connect to the virtual device creates
+//   it (with settings, typing data, run logs), and other helpers and e2e
+//   tests that share this userData leave it behind. Moving it aside makes
+//   the run start from a fresh virtual device, so no stale Keyboard Layout
+//   or view mode is restored on connect, and the Data sidebar shows only
+//   the seeded keyboards.
+function isolateUnseededKeyboardDirs(userDataPath: string): KeyboardDirIsolation {
   const kbBase = join(userDataPath, 'sync', 'keyboards')
   const backupBase = join(userDataPath, `doc-capture-kb-backup-${process.pid}`)
-  const isolation: ForeignKeyboardIsolation = { backupBase, moves: [] }
+  const virtualDeviceDir = join(kbBase, VIRTUAL_DEVICE_UID)
+  const isolation: KeyboardDirIsolation = { backupBase, virtualDeviceDir, moves: [] }
   if (!existsSync(kbBase)) return isolation
 
   const allowed = new Set<string>([
     ...DUMMY_SNAPSHOTS.map((kb) => kb.uid),
     DUMMY_TA_UID,
-    VIRTUAL_DEVICE_UID,
   ])
-  for (const name of readdirSync(kbBase)) {
-    if (allowed.has(name)) continue
-    const from = join(kbBase, name)
-    if (!statSync(from).isDirectory()) continue
-    mkdirSync(backupBase, { recursive: true })
-    const to = join(backupBase, name)
-    renameSync(from, to)
-    isolation.moves.push({ from, to })
+  try {
+    for (const name of readdirSync(kbBase)) {
+      if (allowed.has(name)) continue
+      const from = join(kbBase, name)
+      if (!statSync(from).isDirectory()) continue
+      mkdirSync(backupBase, { recursive: true })
+      const to = join(backupBase, name)
+      renameSync(from, to)
+      isolation.moves.push({ from, to })
+    }
+  } catch (err) {
+    for (const { from, to } of isolation.moves) {
+      try {
+        renameSync(to, from)
+      } catch (rollbackErr) {
+        console.error(`  [isolate] failed to move ${to} back to ${from} — it is still in the backup dir:`, rollbackErr)
+      }
+    }
+    try { rmdirSync(backupBase) } catch { /* absent or non-empty (failed rollback) — keep it */ }
+    throw err
   }
   if (isolation.moves.length > 0) {
-    console.log(`Isolated ${isolation.moves.length} foreign keyboard dir(s): ${isolation.moves.map((m) => m.from.split('/').pop()).join(', ')}`)
+    console.log(`Isolated ${isolation.moves.length} unseeded keyboard dir(s) into ${backupBase}: ${isolation.moves.map((m) => m.from.split('/').pop()).join(', ')}`)
   }
   return isolation
 }
@@ -435,8 +439,28 @@ function mergeDirInto(src: string, dest: string): void {
   }
 }
 
-function restoreForeignKeyboardDirs(isolation: ForeignKeyboardIsolation): void {
+// The virtual device's dir is replaced, not merged: everything in it was
+// written by this run against a fresh virtual device, so the original is
+// moved back as it was. It is deleted even when no original existed, so the
+// run leaves no virtual-device dir behind. Other dirs are merged (see
+// mergeDirInto), since cloud sync may download newer data for them mid-run.
+// Call after the app has exited so no debounced save can recreate the dir.
+// With `appExited` false the app may still be writing there, so the virtual
+// device's dir is left as is and its original stays in the backup dir.
+function restoreUnseededKeyboardDirs(isolation: KeyboardDirIsolation, appExited: boolean): void {
+  if (appExited) {
+    try {
+      rmSync(isolation.virtualDeviceDir, { recursive: true, force: true })
+    } catch (err) {
+      console.error(`  [restore] failed to delete ${isolation.virtualDeviceDir} created during this run:`, err)
+    }
+  } else {
+    console.error(
+      `  [restore][warn] the app could not be confirmed to have exited — left ${isolation.virtualDeviceDir} as is; the original (if any) is preserved in ${isolation.backupBase}, reconcile manually`,
+    )
+  }
   for (const { from, to } of isolation.moves) {
+    if (!appExited && from === isolation.virtualDeviceDir) continue
     try {
       mergeDirInto(to, from)
     } catch (err) {
@@ -1816,6 +1840,33 @@ async function captureMacroEditModal(page: Page): Promise<void> {
 
 // --- Main ---
 
+// Close the capture app and wait until its process has exited, killing it
+// if `app.close()` fails. Returns false when the exit cannot be confirmed.
+// The process handle is taken before closing: `app.process()` throws once
+// `app.close()` has disposed of the Playwright connection.
+async function closeCaptureApp(app: ElectronApplication): Promise<boolean> {
+  let child: ReturnType<ElectronApplication['process']>
+  try {
+    child = app.process()
+  } catch (err) {
+    console.error('  [cleanup] failed to get the app process:', err)
+    await app.close().catch((closeErr: unknown) => console.error('  [cleanup] app.close failed:', closeErr))
+    return false
+  }
+  try {
+    await app.close()
+  } catch (err) {
+    console.error('  [cleanup] app.close failed, killing the app process:', err)
+  }
+  try {
+    await killAndWaitForExit(child)
+    return true
+  } catch (err) {
+    console.error('  [cleanup] failed to kill the app process:', err)
+    return false
+  }
+}
+
 async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
@@ -1858,27 +1909,13 @@ async function main(): Promise<void> {
   const favBase = join(userDataPath, 'sync', 'favorites')
   const keyLabelsBase = join(userDataPath, 'sync', 'key-labels')
 
-  // Move aside keyboard dirs this session does not own. From this point on
-  // the try/finally below owns putting them back: every seed/capture step —
-  // including the seeding itself — runs inside the try, and each cleanup
-  // step in the finally is guarded independently so no single failure can
-  // strand user data in the backup dir.
+  // The try/finally below owns putting every change back: the keyboard-dir
+  // isolation and every seed/capture step run inside the try, and each
+  // cleanup step in the finally is guarded independently so no single
+  // failure can strand user data in the backup dir.
   const kbBase = join(userDataPath, 'sync', 'keyboards')
-  const foreignKbIsolation = isolateForeignKeyboardDirs(userDataPath)
 
-  // The virtual device's uid is allowlisted above (never isolated), so this
-  // is independent of foreignKbIsolation. Phase 5 (captureSidebarTools)
-  // toggles Typing Test on the virtual device and persists `viewMode` into
-  // its pipette_settings.json; e2e/virtual-device.test.ts shares the same
-  // default userData and would otherwise auto-restore that leaked mode on
-  // its next connect. Snapshot it now and restore in the finally below.
-  const virtualDeviceSettingsBackup = backupVirtualDeviceSettings(userDataPath)
-  // Reset a stale Keyboard Layout selection left over from a manual
-  // `pnpm dev` session against the virtual device (see the doc comment on
-  // `resetVirtualDeviceKeyboardLayout`) — must run after the backup above so
-  // the original content still restores in the `finally` block below.
-  resetVirtualDeviceKeyboardLayout(userDataPath)
-
+  let kbIsolation: KeyboardDirIsolation | null = null
   let favBackups: Map<string, string | null> | null = null
   let snapBackups: Map<string, string | null> | null = null
   let taBackup: Awaited<ReturnType<typeof seedDummyTypingAnalytics>> | null = null
@@ -1887,6 +1924,7 @@ async function main(): Promise<void> {
   let app: ElectronApplication | null = null
 
   try {
+    kbIsolation = isolateUnseededKeyboardDirs(userDataPath)
     favBackups = seedDummyFavorites(favBase)
     snapBackups = seedDummySnapshots(kbBase)
     taBackup = await seedDummyTypingAnalytics(userDataPath, Date.now())
@@ -1922,7 +1960,6 @@ async function main(): Promise<void> {
       console.log('Failed to connect. Only device selection screenshots captured.')
       return
     }
-    await ensureEditorMode(page)             // exit Typing Test if persisted from prior run
 
     await captureKeymapEditor(page)          // 03
     await captureLayerNavigation(page)       // 04-06
@@ -1953,12 +1990,12 @@ async function main(): Promise<void> {
         console.error(`  [cleanup] ${label} failed:`, err)
       }
     }
-    if (app) await app.close().catch((err: unknown) => console.error('  [cleanup] app.close failed:', err))
-    // User data first: foreign dirs are disjoint from every seeded path, and
-    // the cache/sync_state deletion inside restoreTypingAnalytics only forces
-    // a rebuild on next boot — order relative to it is safe.
-    cleanup('restore foreign keyboard dirs', () => restoreForeignKeyboardDirs(foreignKbIsolation))
-    cleanup('restore virtual device settings', () => restoreVirtualDeviceSettings(virtualDeviceSettingsBackup))
+    const appExited = app ? await closeCaptureApp(app) : true
+    // User data first: unseeded dirs are disjoint from every seeded path,
+    // and the cache/sync_state deletion inside restoreTypingAnalytics only
+    // forces a rebuild from the restored files on next boot — order relative
+    // to it is safe.
+    cleanup('restore unseeded keyboard dirs', () => { if (kbIsolation) restoreUnseededKeyboardDirs(kbIsolation, appExited) })
     cleanup('restore lastDevice config', () => restoreLastDeviceConfig(lastDeviceBackup))
     cleanup('restore favorites', () => { if (favBackups) restoreFavorites(favBackups, favBase) })
     cleanup('restore snapshots', () => { if (snapBackups) restoreSnapshots(snapBackups) })
