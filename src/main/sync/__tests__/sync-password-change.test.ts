@@ -366,6 +366,22 @@ describe('sync-password-change', () => {
       await expectAllOn(dataIds, OLD)
     })
 
+    it('rejects while a sign-in or sign-out switches accounts, before writing anything', async () => {
+      const { dataIds } = await seedDrive()
+      syncRuntime.accountSwitching = true
+      try {
+        await expect(startPasswordChange(NEW)).rejects.toThrow('sync.changePasswordInProgress')
+      } finally {
+        syncRuntime.accountSwitching = false
+      }
+      expect(syncRuntime.isSyncing).toBe(false)
+      expect(syncRuntime.passwordChangeRun).toBeNull()
+      expect(drive.uploads).toEqual([])
+      expect(lockFiles()).toEqual([])
+      await expectNoLocalChange()
+      await expectAllOn(dataIds, OLD)
+    })
+
     it('rejects when a change is already in progress locally', async () => {
       await writeChangeState({ version: 1, target: 'new', step: 'reencrypting', lockId: 'l', lockFileId: 'x', startedAt: 1 })
       await expect(startPasswordChange(NEW)).rejects.toThrow('sync.passwordChange.alreadyInProgress')
@@ -979,6 +995,21 @@ describe('sync-password-change', () => {
         expect(await recoverPasswordChangeOnStartup()).toBe('busy')
       } finally {
         syncRuntime.remoteTypingDayFetches.clear()
+      }
+      expect(syncRuntime.isSyncing).toBe(false)
+      expect(lockFiles().map((f) => f.id)).toEqual([lockFileId])
+      expect((await readChangeState()).kind).toBe('ok')
+    })
+
+    it('reports busy while a sign-in or sign-out switches accounts, leaving the change as it is', async () => {
+      await seedDrive(NEW)
+      const lockFileId = addFile(PASSWORD_CHANGE_LOCK_FILE, lockText('own-lock', 'hash-own'))
+      await seedLocal({ target: 'new', step: 'cleanup', lockFileId })
+      syncRuntime.accountSwitching = true
+      try {
+        expect(await recoverPasswordChangeOnStartup()).toBe('busy')
+      } finally {
+        syncRuntime.accountSwitching = false
       }
       expect(syncRuntime.isSyncing).toBe(false)
       expect(lockFiles().map((f) => f.id)).toEqual([lockFileId])

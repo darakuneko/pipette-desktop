@@ -17,6 +17,12 @@ export const POLL_INTERVAL_MS = 3 * 60 * 1000 // 3 minutes
 
 export type ProgressCallback = (progress: SyncProgress) => void
 
+/** A password-check that opened, and the SHA-256 hex digest of the password
+ *  it opened with (never the password itself). */
+export interface ValidatedPasswordCheck extends UploadedFile {
+  passwordFingerprint: string
+}
+
 /** Every module-scoped mutable binding the sync service needs, shared
  * across sync-execute.ts, sync-polling.ts, sync-flush.ts, sync-password.ts,
  * and the sync-service.ts facade. Only modules under src/main/sync/ may
@@ -60,11 +66,13 @@ export const syncRuntime = {
    *  these keyboards don't start while it is set. */
   resetKeyboards: null as 'all' | ReadonlySet<string> | null,
   /** Drive id and `modifiedTime` of the password-check this machine last
-   *  opened with its stored password; null when none has been validated
-   *  since the cache was reset. A listing whose chosen password-check
-   *  differs in either (e.g. another PC changed the password) is validated
-   *  again. */
-  validatedPasswordCheck: null as UploadedFile | null,
+   *  opened, with the fingerprint of the password that opened it
+   *  (`passwordFingerprint`, sync-password.ts); null when none has been
+   *  validated since the cache was reset. A listing whose chosen
+   *  password-check differs in id or `modifiedTime` (e.g. another PC changed
+   *  the password), or a pass holding another password (e.g. one read
+   *  before a re-enter stored a new one), validates again. */
+  validatedPasswordCheck: null as ValidatedPasswordCheck | null,
   /** The password-check this process created and when
    *  (`passwordCheckTiming.now()` ms), until a listing shows a
    *  password-check or `passwordCheckTiming.createdMemoryMs` passes. Drive

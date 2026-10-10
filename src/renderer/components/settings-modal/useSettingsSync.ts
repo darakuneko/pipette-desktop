@@ -45,6 +45,7 @@ export function useSettingsSync({
   const [busy, setBusy] = useState(false)
   const [authenticating, setAuthenticating] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
+  const [signOutError, setSignOutError] = useState<string | null>(null)
   const [confirmingGoogleDisconnect, setConfirmingGoogleDisconnect] = useState(false)
   const [confirmingHubDisconnect, setConfirmingHubDisconnect] = useState(false)
   const [recentNotifications, setRecentNotifications] = useState<AppNotification[]>([])
@@ -82,7 +83,10 @@ export function useSettingsSync({
     return () => { cancelled = true }
   }, [activeTab])
 
-  useEffect(() => { setConfirmingGoogleDisconnect(false) }, [sync.authStatus.authenticated])
+  useEffect(() => {
+    setConfirmingGoogleDisconnect(false)
+    setSignOutError(null)
+  }, [sync.authStatus.authenticated])
   useEffect(() => { setConfirmingHubDisconnect(false) }, [hubEnabled])
 
   const handleSignIn = useCallback(async () => {
@@ -105,11 +109,23 @@ export function useSettingsSync({
     }
   }, [sync, t])
 
-  const handleGoogleDisconnect = useCallback(() => {
-    void sync.signOut()
-    onHubEnabledChange(false)
+  // Hub stays connected when the sign-out is refused (e.g. during a
+  // password change): the account is still signed in.
+  const handleGoogleDisconnect = useCallback(async () => {
     setConfirmingGoogleDisconnect(false)
-  }, [sync, onHubEnabledChange])
+    setSignOutError(null)
+    const result = await sync.signOut()
+    if (result.success) {
+      onHubEnabledChange(false)
+    } else if (result.reason === 'syncBusy') {
+      // Another sign-in or sign-out is switching tokens; the main process
+      // message for it is not an i18n key.
+      setSignOutError(t('sync.signOutBusy'))
+    } else {
+      const error = result.error ?? 'sync.authFailed'
+      setSignOutError(t(error, error))
+    }
+  }, [sync, onHubEnabledChange, t])
 
   const handleHubDisconnect = useCallback(() => {
     onHubEnabledChange(false)
@@ -228,6 +244,7 @@ export function useSettingsSync({
     busy,
     authenticating,
     authError,
+    signOutError,
     confirmingGoogleDisconnect,
     setConfirmingGoogleDisconnect,
     confirmingHubDisconnect,

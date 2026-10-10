@@ -26,6 +26,7 @@ export interface SettingsDataTabProps {
   onResolveAuthConflict?: (name: string) => Promise<{ success: boolean; error?: string }>
   authenticating: boolean
   authError: string | null
+  signOutError: string | null
   busy: boolean
   confirmingGoogleDisconnect: boolean
   setConfirmingGoogleDisconnect: (v: boolean) => void
@@ -62,6 +63,7 @@ export function SettingsDataTab({
   onResolveAuthConflict,
   authenticating,
   authError,
+  signOutError,
   busy,
   confirmingGoogleDisconnect,
   setConfirmingGoogleDisconnect,
@@ -114,23 +116,30 @@ export function SettingsDataTab({
           {t('sync.googleAccount')}
         </h3>
         {sync.authStatus.authenticated ? (
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-accent" data-testid="sync-auth-status">
-              {t('sync.connected')}
-            </span>
-            <DisconnectConfirmButton
-              confirming={confirmingGoogleDisconnect}
-              onRequestConfirm={() => setConfirmingGoogleDisconnect(true)}
-              onCancelConfirm={() => setConfirmingGoogleDisconnect(false)}
-              onConfirm={handleGoogleDisconnect}
-              disconnectLabelKey="sync.signOut"
-              confirmLabelKey="sync.confirmDisconnect"
-              disconnectTestId="sync-sign-out"
-              confirmTestId="sync-sign-out-confirm"
-              cancelTestId="sync-sign-out-cancel"
-              warningKey={hubEnabled ? 'sync.disconnectHubWarning' : undefined}
-              warningTestId="sync-disconnect-hub-warning"
-            />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-accent" data-testid="sync-auth-status">
+                {t('sync.connected')}
+              </span>
+              <DisconnectConfirmButton
+                confirming={confirmingGoogleDisconnect}
+                onRequestConfirm={() => setConfirmingGoogleDisconnect(true)}
+                onCancelConfirm={() => setConfirmingGoogleDisconnect(false)}
+                onConfirm={handleGoogleDisconnect}
+                disconnectLabelKey="sync.signOut"
+                confirmLabelKey="sync.confirmDisconnect"
+                disconnectTestId="sync-sign-out"
+                confirmTestId="sync-sign-out-confirm"
+                cancelTestId="sync-sign-out-cancel"
+                warningKey={hubEnabled ? 'sync.disconnectHubWarning' : undefined}
+                warningTestId="sync-disconnect-hub-warning"
+              />
+            </div>
+            {signOutError && (
+              <div className="text-xs text-danger" data-testid="sync-sign-out-error">
+                {signOutError}
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-2">

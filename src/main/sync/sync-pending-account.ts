@@ -14,7 +14,9 @@
 // sign-in fails and the old tokens stay. So no Drive request of work
 // started under one account is sent with another account's tokens. A
 // sign-out waits the same way but goes ahead after the wait: requests sent
-// after the tokens are gone fail instead of reaching another account.
+// after the tokens are gone fail instead of reaching another account. The
+// exception is a password change, which a sign-out refuses instead of
+// cutting short.
 // Both forget what this process remembers about the previous account
 // (`forgetAccountCaches`) once the stored sign-in has changed.
 
@@ -200,8 +202,21 @@ export async function signOutKeepingPendingLocked(): Promise<void> {
   forgetAccountCaches()
 }
 
+/** Refusal of a sign-out while a password change runs (an i18n key). */
+const SIGN_OUT_PASSWORD_CHANGING = 'sync.signOutPasswordChanging'
+
 /** `signOutKeepingPendingLocked` once running sync work has finished, or
- *  after `ACCOUNT_SWITCH_WAIT_MS` anyway (see the module comment). */
+ *  after `ACCOUNT_SWITCH_WAIT_MS` anyway (see the module comment). Refused
+ *  with `SIGN_OUT_PASSWORD_CHANGING` while a password change runs
+ *  (`passwordChangeRun`), checked before the first await: removing the
+ *  tokens would stop the change halfway. */
 export async function signOutKeepingPending(): Promise<void> {
-  await duringAccountSwitch('proceed', signOutKeepingPendingLocked)
+  if (syncRuntime.passwordChangeRun) throw new Error(SIGN_OUT_PASSWORD_CHANGING)
+  await duringAccountSwitch('proceed', async () => {
+    // Defensive only: no password change can start while `accountSwitching`
+    // is set (`withSyncLock`, sync-password-change.ts, refuses it), so this
+    // holds only if that guard is ever bypassed.
+    if (syncRuntime.passwordChangeRun) throw new Error(SIGN_OUT_PASSWORD_CHANGING)
+    await signOutKeepingPendingLocked()
+  })
 }

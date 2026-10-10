@@ -127,7 +127,7 @@ function makeSyncMock(overrides?: Partial<UseSyncReturn>): UseSyncReturn {
     syncReadinessReason: null,
     retryRemoteCheck: vi.fn(),
     startAuth: vi.fn().mockResolvedValue(undefined),
-    signOut: vi.fn().mockResolvedValue(undefined),
+    signOut: vi.fn().mockResolvedValue({ success: true }),
     setConfig: vi.fn().mockResolvedValue(undefined),
     setPassword: vi.fn().mockResolvedValue({ success: true }),
     changePassword: vi.fn().mockResolvedValue({ success: true }),
@@ -240,7 +240,7 @@ describe('SettingsModal', () => {
     expect(sync.signOut).not.toHaveBeenCalled()
   })
 
-  it('calls signOut and disables hub when confirmation is accepted', () => {
+  it('calls signOut and disables hub when confirmation is accepted', async () => {
     const sync = makeSyncMock({ authStatus: { authenticated: true } })
     const onHubEnabledChange = vi.fn()
     renderAndSwitchToData({ sync, hubEnabled: true, onHubEnabledChange })
@@ -248,7 +248,36 @@ describe('SettingsModal', () => {
     fireEvent.click(screen.getByTestId('sync-sign-out'))
     fireEvent.click(screen.getByTestId('sync-sign-out-confirm'))
     expect(sync.signOut).toHaveBeenCalledOnce()
-    expect(onHubEnabledChange).toHaveBeenCalledWith(false)
+    await waitFor(() => expect(onHubEnabledChange).toHaveBeenCalledWith(false))
+    expect(screen.queryByTestId('sync-sign-out-error')).not.toBeInTheDocument()
+  })
+
+  it('keeps hub and shows the error when signOut is refused', async () => {
+    const sync = makeSyncMock({ authStatus: { authenticated: true } })
+    ;(sync.signOut as Mock).mockResolvedValueOnce({ success: false, error: 'sync.signOutPasswordChanging' })
+    const onHubEnabledChange = vi.fn()
+    renderAndSwitchToData({ sync, hubEnabled: true, onHubEnabledChange })
+
+    fireEvent.click(screen.getByTestId('sync-sign-out'))
+    fireEvent.click(screen.getByTestId('sync-sign-out-confirm'))
+
+    expect(await screen.findByTestId('sync-sign-out-error')).toHaveTextContent('sync.signOutPasswordChanging')
+    expect(onHubEnabledChange).not.toHaveBeenCalled()
+    expect(screen.getByTestId('sync-sign-out')).toBeInTheDocument()
+  })
+
+  it.each([
+    [{ success: false, error: 'Cannot switch accounts while sync is in progress. Try again in a moment.', reason: 'syncBusy' }, 'sync.signOutBusy'],
+    [{ success: false }, 'sync.authFailed'],
+  ])('shows an i18n message for a refused signOut (%j)', async (refusal, expected) => {
+    const sync = makeSyncMock({ authStatus: { authenticated: true } })
+    ;(sync.signOut as Mock).mockResolvedValueOnce(refusal)
+    renderAndSwitchToData({ sync, hubEnabled: true })
+
+    fireEvent.click(screen.getByTestId('sync-sign-out'))
+    fireEvent.click(screen.getByTestId('sync-sign-out-confirm'))
+
+    expect(await screen.findByTestId('sync-sign-out-error')).toHaveTextContent(expected)
   })
 
   it('shows hub warning when hub is enabled and confirming disconnect', () => {
