@@ -1,5 +1,5 @@
 {
-  "version": "0.1.118",
+  "version": "0.1.119",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -955,6 +955,7 @@
     "importComplete": "インポートしましたえ",
     "importFailed": "インポートがあきまへんでしたえ",
     "passwordMismatch": "同期パスワードが合いまへんなぁ。暗号化パスワードを確認しておくれやす。",
+    "passwordAlreadySet": "同期パスワードはもう保存されてますえ。「パスワードを入れ直しますえ」か「パスワード変更しますえ」を使うておくれやす。",
     "scanning": "スキャンしてますえ…",
     "downloading": "ダウンロードしてますえ…",
     "noRemoteData": "リモートにデータがおへんなぁ",

@@ -3579,6 +3579,37 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
     const mockDecrypt = vi.mocked(mockDecryptFn)
     const mockEncrypt = vi.mocked(mockEncryptFn)
     const mockStorePassword = vi.mocked(mockStorePasswordFn)
+    const mockRetrievePasswordResult = vi.mocked(mockRetrievePasswordResultFn)
+
+    beforeEach(() => {
+      mockRetrievePasswordResult.mockResolvedValue({ ok: false, reason: 'noPasswordFile' })
+    })
+
+    afterEach(() => {
+      mockRetrievePasswordResult.mockResolvedValue({ ok: true, password: 'test-password' })
+    })
+
+    it('refuses when a readable password is already stored, before touching Drive', async () => {
+      const mockClearPassword = vi.mocked(mockClearPasswordFn)
+      mockRetrievePasswordResult.mockResolvedValue({ ok: true, password: 'saved-password' })
+
+      await expect(setPasswordAndValidate('my-password')).rejects.toThrow('sync.passwordAlreadySet')
+
+      expect(mockListFiles).not.toHaveBeenCalled()
+      expect(mockStorePassword).not.toHaveBeenCalled()
+      expect(mockClearPassword).not.toHaveBeenCalled()
+    })
+
+    it('overwrites a stored password file that cannot be decrypted', async () => {
+      mockRetrievePasswordResult.mockResolvedValue({ ok: false, reason: 'decryptFailed' })
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+
+      await setPasswordAndValidate('my-password')
+
+      expect(mockStorePassword).toHaveBeenCalledWith('my-password')
+      expect(mockDownloadFile).toHaveBeenCalledWith('pc-1')
+    })
 
     it('stores password and validates against remote password-check', async () => {
       mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.118",
+  "version": "0.1.119",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -955,6 +955,7 @@
     "importComplete": "完了いたしました",
     "importFailed": "失敗いたしました",
     "passwordMismatch": "合言葉が違います。今一度ご確認くださいませ。",
+    "passwordAlreadySet": "合言葉はすでにお預かりしております。「合言葉を入力し直す」または「合言葉の変更」をお使いくださいませ。",
     "scanning": "見渡しております...",
     "downloading": "お取り寄せ中...",
     "noRemoteData": "あちらに記録はございません",

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.118",
+  "version": "0.1.119",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -955,6 +955,7 @@
     "importComplete": "インポート完了っしょ！",
     "importFailed": "インポート失敗…サゲ。。",
     "passwordMismatch": "パスワード違くね？確認してよｗ",
+    "passwordAlreadySet": "パスワードもう保存されてるよ～！「パスワード入れ直す☆」か「パスワード変える☆」使ってね♡",
     "scanning": "スキャンちう…",
     "downloading": "ダウンロードなう☆",
     "noRemoteData": "リモートにデータないじゃん",

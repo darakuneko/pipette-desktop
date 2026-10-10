@@ -211,9 +211,16 @@ export async function checkPasswordCheckExists(): Promise<boolean> {
 }
 
 /** Refused (`SyncBlockedError`) while a password change is in progress or
- *  Drive needs a newer app, before the password is stored. */
+ *  Drive needs a newer app, before the password is stored. Refused
+ *  (`sync.passwordAlreadySet`) when a readable password is already stored. */
 export async function setPasswordAndValidate(password: string): Promise<void> {
   await assertNoLocalPasswordChange()
+  // A failed validation below clears the stored password, so overwriting a
+  // readable one here could erase the correct password; re-enter and change
+  // are the paths that replace it. A stored file the OS keychain can no
+  // longer decrypt is not refused: setting a new password is how it is
+  // replaced.
+  if ((await retrievePasswordResult()).ok) throw new Error('sync.passwordAlreadySet')
   const formatGeneration = syncFormatGeneration()
   const remoteFiles = await listFiles()
   await assertSyncAllowed(remoteFiles, formatGeneration)

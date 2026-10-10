@@ -1,5 +1,5 @@
 {
-  "version": "0.1.118",
+  "version": "0.1.119",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -965,6 +965,7 @@
     "importComplete": "インポート完了",
     "importFailed": "インポートに失敗しました",
     "passwordMismatch": "同期パスワードが一致しません。暗号化パスワードを確認してください。",
+    "passwordAlreadySet": "同期パスワードはすでに保存されています。「パスワードを入力し直す」か「パスワード変更」を使ってください。",
     "scanning": "スキャン中...",
     "downloading": "ダウンロード中...",
     "noRemoteData": "リモートデータはありません",
