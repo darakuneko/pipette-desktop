@@ -24,7 +24,7 @@ import {
   storePassword,
   retrievePasswordResult,
   clearPassword,
-  hasStoredPassword,
+  storedPasswordStatus,
   checkPasswordStrength,
 } from '../sync/sync-crypto'
 import type { SyncEnvelope } from '../../shared/types/sync'
@@ -223,22 +223,33 @@ describe('sync-crypto', () => {
       expect([...(fs as any)._testStore.keys()]).toEqual([target])
     })
 
-    it('hasStoredPassword returns false when no password stored', async () => {
-      const has = await hasStoredPassword()
-      expect(has).toBe(false)
+    it('storedPasswordStatus is noPasswordFile when no password stored', async () => {
+      expect(await storedPasswordStatus()).toBe('noPasswordFile')
     })
 
-    it('hasStoredPassword returns true after storing', async () => {
+    it('storedPasswordStatus is readable after storing', async () => {
       await storePassword('password')
-      const has = await hasStoredPassword()
-      expect(has).toBe(true)
+      expect(await storedPasswordStatus()).toBe('readable')
     })
 
     it('clearPassword removes stored password', async () => {
       await storePassword('password')
       await clearPassword()
-      const has = await hasStoredPassword()
-      expect(has).toBe(false)
+      expect(await storedPasswordStatus()).toBe('noPasswordFile')
+    })
+
+    it('storedPasswordStatus is decryptFailed when the OS keychain refuses the file', async () => {
+      const fs = await import('node:fs/promises')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(fs as any)._testStore.set('/mock/userData/local/auth/sync-password.enc', Buffer.from('not-decryptable'))
+
+      expect(await storedPasswordStatus()).toBe('decryptFailed')
+    })
+
+    it('storedPasswordStatus never returns the password', async () => {
+      await storePassword('secret-password')
+      const status = await storedPasswordStatus()
+      expect(JSON.stringify(status)).not.toContain('secret-password')
     })
 
     it('storePassword throws when safeStorage unavailable', async () => {
@@ -248,13 +259,22 @@ describe('sync-crypto', () => {
       await expect(storePassword('password')).rejects.toThrow('not available')
     })
 
-    it('hasStoredPassword returns false when safeStorage unavailable', async () => {
-      await storePassword('password')
+    it('storedPasswordStatus is keystoreUnavailable when safeStorage is unavailable and no file exists', async () => {
       const { safeStorage } = await import('electron')
       vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValueOnce(false)
 
-      const has = await hasStoredPassword()
-      expect(has).toBe(false)
+      expect(await storedPasswordStatus()).toBe('keystoreUnavailable')
+    })
+
+    it('storedPasswordStatus is keystoreUnavailable when safeStorage is unavailable and a file exists', async () => {
+      await storePassword('password')
+      const { safeStorage } = await import('electron')
+      vi.mocked(safeStorage.decryptString).mockImplementationOnce(() => {
+        throw new Error('keychain unavailable')
+      })
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValueOnce(false)
+
+      expect(await storedPasswordStatus()).toBe('keystoreUnavailable')
     })
   })
 

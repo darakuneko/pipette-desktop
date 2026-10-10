@@ -36,7 +36,7 @@ import type {
 } from './theme-store'
 import type { AppConfig } from './app-config'
 import type { DeviceScope } from './analyze-filters'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult, PasswordChangeLockStatus, SyncFormatStatus, SyncTrashListResult, SyncTrashDeleteResult } from './sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult, PasswordChangeLockStatus, SyncFormatStatus, SyncTrashListResult, SyncTrashDeleteResult, StoredPasswordStatus } from './sync'
 import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } from './pipette-settings'
 import type {
   TypingActivityCell,
@@ -341,7 +341,7 @@ export interface VialAPI {
   syncPasswordChangeLockStatus(): Promise<PasswordChangeLockStatus | null>
   syncPasswordChangeReleaseLocks(): Promise<SyncOperationResult>
   syncResetTargets(targets: SyncResetTargets): Promise<SyncOperationResult>
-  syncHasPassword(): Promise<boolean>
+  syncPasswordStatus(): Promise<StoredPasswordStatus>
   syncValidatePassword(password: string): Promise<PasswordStrength>
   syncOnProgress(callback: (progress: SyncProgress) => void): () => void
   syncHasPendingChanges(): Promise<boolean>

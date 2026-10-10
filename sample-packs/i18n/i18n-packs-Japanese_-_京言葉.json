@@ -1,5 +1,5 @@
 {
-  "version": "0.1.119",
+  "version": "0.1.120",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -974,6 +974,8 @@
     "reenterPasswordWarning": "この PC の同期パスワードが Google Drive と合いまへんなぁ。ほかの PC で使うてはるパスワードを入れておくれやす。",
     "reenterPassword": "パスワードを入れ直しますえ",
     "reenterPasswordNoRemote": "Google Drive に照らし合わせる同期パスワードがまだあらしまへん。このフォームを閉じて、いまのパスワードで同期しておくれやす。",
+    "storedPasswordUnreadable": "この PC に保存してある同期パスワードが読めまへんえ（OS のキーチェーンに断られましたんや）。キーチェーンに鍵がかかってたり、拒否しはったんやったら、開けるか許してから「もういっぺんやりますえ」を押しておくれやす。そうやなかったら、下で同期パスワードを設定し直しておくれやす。",
+    "keystoreUnavailableNotice": "OS のキーチェーンが開けへんかったんやったら、鍵を開けるか設定して（Linux やったらキーリング）、Pipette を立ち上げ直しておくれやす。",
     "updateRequired": "この Google Drive の同期データは新しい版の Pipette で作らはったもんどす。同期を続けはるんやったら、アップデートしておくれやす。",
     "updateBanner": {
       "message": "Cloud Sync には新しい版の Pipette が要りますえ。同期を続けはるんやったら、アプリをアップデートしておくれやす。",

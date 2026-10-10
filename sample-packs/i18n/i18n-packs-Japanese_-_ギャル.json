@@ -1,5 +1,5 @@
 {
-  "version": "0.1.119",
+  "version": "0.1.120",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -974,6 +974,8 @@
     "reenterPasswordWarning": "このPCのパスワード、Google Driveとズレてるっぽい！他のPCで使ってるパスワード入れてね♡",
     "reenterPassword": "パスワード入れ直す☆",
     "reenterPasswordNoRemote": "Google Driveにまだ比べるパスワード無いよ～！フォーム閉じて今のパスワードで同期してね♡",
+    "storedPasswordUnreadable": "このPCに保存したパスワード、キーチェーンに断られて読めないんですけどｗ キーチェーンがロック中とか拒否っちゃったなら、解除して「もう一回！」押してね♡ それ以外なら下でパスワード設定し直してね！",
+    "keystoreUnavailableNotice": "OSのキーチェーン開けなかったなら、解除するか設定して（Linuxならキーリング）、Pipette再起動してね♡",
     "updateRequired": "このGoogle Driveの同期データ、新しいPipetteで作られてるっぽい！同期続けたいならアプデしてね☆",
     "updateBanner": {
       "message": "Cloud Sync、新しいPipetteじゃないとダメっぽい！同期続けたいならアプリをアプデしてね☆",

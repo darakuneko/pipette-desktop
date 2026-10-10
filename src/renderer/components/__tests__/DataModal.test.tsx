@@ -123,6 +123,8 @@ function makeSyncMock(overrides?: Partial<UseSyncReturn>): UseSyncReturn {
   return {
     config: { ...DEFAULT_APP_CONFIG },
     authStatus: { authenticated: false },
+    // Follows `hasPassword` unless a test sets it, as useSync derives one from the other.
+    passwordStatus: overrides?.hasPassword ? 'readable' : 'noPasswordFile',
     hasPassword: false,
     hasPendingChanges: false,
     progress: null,
@@ -144,6 +146,7 @@ function makeSyncMock(overrides?: Partial<UseSyncReturn>): UseSyncReturn {
     validatePassword: vi.fn().mockResolvedValue({ score: 4, feedback: [] }),
     syncNow: vi.fn().mockResolvedValue({ success: true, status: 'completed' }),
     refreshStatus: vi.fn().mockResolvedValue(undefined),
+    refreshPasswordStatus: vi.fn().mockResolvedValue(undefined),
     deleteFiles: vi.fn().mockResolvedValue({ success: true }),
     listTrash: vi.fn().mockResolvedValue({ success: true, files: [] }),
     restoreTrash: vi.fn().mockResolvedValue({ success: true }),

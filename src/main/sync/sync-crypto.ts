@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Encryption (PBKDF2 + AES-256-GCM) and password management via safeStorage
 
-import { safeStorage } from 'electron'
 import { randomBytes, pbkdf2, createCipheriv, createDecipheriv } from 'node:crypto'
-import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { ZxcvbnFactory } from '@zxcvbn-ts/core'
 import * as zxcvbnCommonPackage from '@zxcvbn-ts/language-common'
 import * as zxcvbnEnPackage from '@zxcvbn-ts/language-en'
-import type { SyncCredentialResult, SyncEnvelope } from '../../shared/types/sync'
-import { clearSecretFile, getAuthDir, retrieveSecretFile, storeSecretFile } from './sync-secret-file'
+import type { StoredPasswordStatus, SyncEnvelope } from '../../shared/types/sync'
+import { clearSecretFile, getAuthDir, retrieveSecretFile, storeSecretFile, type SecretFileResult } from './sync-secret-file'
 import type { PasswordStrength } from '../../shared/types/sync'
 
 const pbkdf2Async = promisify(pbkdf2)
@@ -101,18 +99,14 @@ export async function storePassword(password: string): Promise<void> {
   await storeSecretFile(getPasswordPath(), password)
 }
 
-export async function retrievePasswordResult(): Promise<SyncCredentialResult> {
+export async function retrievePasswordResult(): Promise<SecretFileResult> {
   return retrieveSecretFile(getPasswordPath())
 }
 
-export async function hasStoredPassword(): Promise<boolean> {
-  if (!safeStorage.isEncryptionAvailable()) return false
-  try {
-    await readFile(getPasswordPath())
-    return true
-  } catch {
-    return false
-  }
+/** Whether the stored password can be read, never the password itself. */
+export async function storedPasswordStatus(): Promise<StoredPasswordStatus> {
+  const result = await retrievePasswordResult()
+  return result.ok ? 'readable' : result.reason
 }
 
 export async function clearPassword(): Promise<void> {

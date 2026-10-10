@@ -97,7 +97,6 @@ vi.mock('../sync/sync-crypto', () => ({
   retrievePasswordResult: vi.fn(async () => ({ ok: true, password: 'test-password' })),
   storePassword: vi.fn(async () => {}),
   clearPassword: vi.fn(async () => {}),
-  hasStoredPassword: vi.fn(async () => true),
   checkPasswordStrength: vi.fn(() => ({ score: 4, feedback: [] })),
   encrypt: vi.fn(async (plaintext: string, _password: string, syncUnit: string) => ({
     version: 1,
@@ -276,6 +275,7 @@ import {
   listRemoteFileNames,
   checkPasswordCheckExists,
   setPasswordAndValidate,
+  replacePasswordAndValidate,
   setupBeforeQuitHandler,
   registerPreSyncQuitFinalizer,
   registerBeforeQuitFinalizer,
@@ -3600,6 +3600,20 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
       expect(mockClearPassword).not.toHaveBeenCalled()
     })
 
+    it('refuses with keystoreUnavailable before touching Drive or the stored password', async () => {
+      const mockClearPassword = vi.mocked(mockClearPasswordFn)
+      mockRetrievePasswordResult.mockResolvedValue({ ok: false, reason: 'keystoreUnavailable' })
+
+      await expect(setPasswordAndValidate('my-password')).rejects.toMatchObject({
+        reason: 'keystoreUnavailable',
+        message: 'sync.changePasswordError.keystoreUnavailable',
+      })
+
+      expect(mockListFiles).not.toHaveBeenCalled()
+      expect(mockStorePassword).not.toHaveBeenCalled()
+      expect(mockClearPassword).not.toHaveBeenCalled()
+    })
+
     it('overwrites a stored password file that cannot be decrypted', async () => {
       mockRetrievePasswordResult.mockResolvedValue({ ok: false, reason: 'decryptFailed' })
       mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
@@ -3656,6 +3670,29 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
 
       await expect(setPasswordAndValidate('wrong-password')).rejects.toThrow()
       expect(mockClearPassword).toHaveBeenCalled()
+    })
+  })
+
+  describe('replacePasswordAndValidate', () => {
+    const mockStorePassword = vi.mocked(mockStorePasswordFn)
+    const mockClearPassword = vi.mocked(mockClearPasswordFn)
+    const mockRetrievePasswordResult = vi.mocked(mockRetrievePasswordResultFn)
+
+    afterEach(() => {
+      mockRetrievePasswordResult.mockResolvedValue({ ok: true, password: 'test-password' })
+    })
+
+    it('refuses with keystoreUnavailable before touching Drive or the stored password', async () => {
+      mockRetrievePasswordResult.mockResolvedValue({ ok: false, reason: 'keystoreUnavailable' })
+
+      await expect(replacePasswordAndValidate('my-password')).rejects.toMatchObject({
+        reason: 'keystoreUnavailable',
+        message: 'sync.changePasswordError.keystoreUnavailable',
+      })
+
+      expect(mockListFiles).not.toHaveBeenCalled()
+      expect(mockStorePassword).not.toHaveBeenCalled()
+      expect(mockClearPassword).not.toHaveBeenCalled()
     })
   })
 
@@ -4615,7 +4652,7 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
     // --- fetchRemoteTypingDay branches ---
     describe('fetchRemoteTypingDay branches', () => {
       it('returns false when the user is not authenticated', async () => {
-        vi.mocked(mockRetrievePasswordResultFn).mockResolvedValueOnce({ ok: false, reason: 'unauthenticated' })
+        mockGetAuthStatus.mockResolvedValueOnce({ authenticated: false })
         const ok = await fetchRemoteTypingDay(UID, REMOTE_HASH, '2026-04-18')
         expect(ok).toBe(false)
         expect(mockListFiles).not.toHaveBeenCalled()

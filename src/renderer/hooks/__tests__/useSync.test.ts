@@ -11,7 +11,7 @@ const RETRY_DELAY_MS = 2000
 
 const mockVialAPI = {
   syncAuthStatus: vi.fn().mockResolvedValue({ authenticated: false }),
-  syncHasPassword: vi.fn().mockResolvedValue(false),
+  syncPasswordStatus: vi.fn().mockResolvedValue('noPasswordFile'),
   syncHasPendingChanges: vi.fn().mockResolvedValue(false),
   syncAuthStart: vi.fn().mockResolvedValue({ success: true }),
   syncAuthSignOut: vi.fn().mockResolvedValue({ success: true }),
@@ -51,7 +51,7 @@ describe('useSync', () => {
     })
 
     expect(mockVialAPI.syncAuthStatus).toHaveBeenCalledOnce()
-    expect(mockVialAPI.syncHasPassword).toHaveBeenCalledOnce()
+    expect(mockVialAPI.syncPasswordStatus).toHaveBeenCalledOnce()
     expect(mockVialAPI.syncHasPendingChanges).toHaveBeenCalledOnce()
     expect(result.current.config).toEqual(DEFAULT_APP_CONFIG)
     expect(result.current.authStatus).toEqual({ authenticated: false })
@@ -201,6 +201,125 @@ describe('useSync', () => {
     })
 
     expect(result.current.hasPassword).toBe(true)
+  })
+
+  describe('stored password status', () => {
+    async function mountWith(status: string, authenticated = true) {
+      mockVialAPI.syncAuthStatus.mockResolvedValueOnce({ authenticated })
+      mockVialAPI.syncPasswordStatus.mockResolvedValueOnce(status)
+      const hook = renderHookWithConfig(() => useSync())
+      await waitFor(() => {
+        expect(hook.result.current.loading).toBe(false)
+      })
+      return hook
+    }
+
+    it.each([
+      { status: 'readable', hasPassword: true, reason: null },
+      { status: 'noPasswordFile', hasPassword: false, reason: 'noPasswordFile' },
+      { status: 'decryptFailed', hasPassword: false, reason: 'decryptFailed' },
+      { status: 'keystoreUnavailable', hasPassword: false, reason: 'keystoreUnavailable' },
+    ])('maps $status to hasPassword $hasPassword and readiness $reason', async ({ status, hasPassword, reason }) => {
+      const { result } = await mountWith(status)
+
+      expect(result.current.passwordStatus).toBe(status)
+      expect(result.current.hasPassword).toBe(hasPassword)
+      expect(result.current.syncReadinessReason).toBe(reason)
+    })
+
+    it('reports unauthenticated before an unreadable password', async () => {
+      const { result } = await mountWith('decryptFailed', false)
+
+      expect(result.current.syncReadinessReason).toBe('unauthenticated')
+    })
+
+    it('refreshPasswordStatus reads only the password status again', async () => {
+      const { result } = await mountWith('decryptFailed')
+      mockVialAPI.syncPasswordStatus.mockResolvedValueOnce('readable')
+
+      await act(async () => {
+        await result.current.refreshPasswordStatus()
+      })
+
+      expect(result.current.passwordStatus).toBe('readable')
+      expect(mockVialAPI.syncPasswordStatus).toHaveBeenCalledTimes(2)
+      expect(mockVialAPI.syncAuthStatus).toHaveBeenCalledTimes(1)
+      expect(mockVialAPI.syncHasPendingChanges).toHaveBeenCalledTimes(1)
+    })
+
+    it('sets the status to readable when a password save succeeds', async () => {
+      const { result } = await mountWith('decryptFailed')
+
+      await act(async () => {
+        await result.current.setPassword('strongpass123!')
+      })
+
+      expect(result.current.passwordStatus).toBe('readable')
+      expect(mockVialAPI.syncPasswordStatus).toHaveBeenCalledTimes(1)
+    })
+
+    it('fetches the status again when a password save fails', async () => {
+      const { result } = await mountWith('noPasswordFile')
+      mockVialAPI.syncSetPassword.mockResolvedValueOnce({
+        success: false,
+        error: 'sync.changePasswordError.keystoreUnavailable',
+        reason: 'keystoreUnavailable',
+      })
+      mockVialAPI.syncPasswordStatus.mockResolvedValueOnce('keystoreUnavailable')
+
+      await act(async () => {
+        await result.current.setPassword('strongpass123!')
+      })
+
+      expect(mockVialAPI.syncPasswordStatus).toHaveBeenCalledTimes(2)
+      expect(result.current.passwordStatus).toBe('keystoreUnavailable')
+    })
+
+    describe('sync progress', () => {
+      let progressCallback: (p: unknown) => void
+
+      beforeEach(() => {
+        progressCallback = () => {}
+        mockVialAPI.syncOnProgress.mockImplementation((cb: (p: unknown) => void) => {
+          progressCallback = cb
+          return () => {}
+        })
+      })
+
+      it('fetches the status again when a sync succeeds while the password is unreadable', async () => {
+        const { result } = await mountWith('decryptFailed')
+        mockVialAPI.syncPasswordStatus.mockResolvedValueOnce('readable')
+
+        act(() => {
+          progressCallback({ direction: 'download', status: 'success', message: 'Sync complete' })
+        })
+
+        await waitFor(() => {
+          expect(result.current.passwordStatus).toBe('readable')
+        })
+        expect(mockVialAPI.syncPasswordStatus).toHaveBeenCalledTimes(2)
+      })
+
+      it.each(['syncing', 'error', 'partial'])('does not fetch the status on a %s progress', async (status) => {
+        await mountWith('decryptFailed')
+
+        act(() => {
+          progressCallback({ direction: 'download', status })
+        })
+
+        expect(mockVialAPI.syncPasswordStatus).toHaveBeenCalledTimes(1)
+      })
+
+      it('does not fetch the status on success while the password is readable', async () => {
+        await mountWith('readable')
+
+        act(() => {
+          progressCallback({ direction: 'download', status: 'success', syncUnit: 'favorites/tapDance' })
+        })
+
+        expect(mockVialAPI.syncPasswordStatus).toHaveBeenCalledTimes(1)
+      })
+    })
   })
 
   it('replacePassword calls the replace IPC and returns its result', async () => {
@@ -559,7 +678,7 @@ describe('useSync', () => {
         })
       }
       mockVialAPI.syncAuthStatus.mockResolvedValueOnce({ authenticated: true })
-      mockVialAPI.syncHasPassword.mockResolvedValueOnce(true)
+      mockVialAPI.syncPasswordStatus.mockResolvedValueOnce('readable')
       if (overrides.pending !== undefined) {
         mockVialAPI.syncHasPendingChanges.mockResolvedValueOnce(overrides.pending)
       }

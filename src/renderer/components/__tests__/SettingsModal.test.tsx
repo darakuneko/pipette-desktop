@@ -115,6 +115,8 @@ function makeSyncMock(overrides?: Partial<UseSyncReturn>): UseSyncReturn {
   return {
     config: { ...DEFAULT_APP_CONFIG },
     authStatus: { authenticated: false },
+    // Follows `hasPassword` unless a test sets it, as useSync derives one from the other.
+    passwordStatus: overrides?.hasPassword ? 'readable' : 'noPasswordFile',
     hasPassword: false,
     hasPendingChanges: false,
     progress: null,
@@ -136,6 +138,7 @@ function makeSyncMock(overrides?: Partial<UseSyncReturn>): UseSyncReturn {
     validatePassword: vi.fn().mockResolvedValue({ score: 4, feedback: [] }),
     syncNow: vi.fn().mockResolvedValue({ success: true, status: 'completed' }),
     refreshStatus: vi.fn().mockResolvedValue(undefined),
+    refreshPasswordStatus: vi.fn().mockResolvedValue(undefined),
     deleteFiles: vi.fn().mockResolvedValue({ success: true }),
     listTrash: vi.fn().mockResolvedValue({ success: true, files: [] }),
     restoreTrash: vi.fn().mockResolvedValue({ success: true }),
@@ -318,6 +321,44 @@ describe('SettingsModal', () => {
 
     expect(screen.getByTestId('sync-password-input')).toBeInTheDocument()
     expect(screen.queryByTestId('sync-password-set')).not.toBeInTheDocument()
+  })
+
+  it('shows the Set form under an unreadable-password warning with Retry when the stored password cannot be decrypted', () => {
+    const sync = makeSyncMock({ authStatus: { authenticated: true }, passwordStatus: 'decryptFailed', hasRemotePassword: true })
+    renderAndSwitchToData({ sync })
+
+    expect(screen.getByTestId('sync-stored-password-unreadable-warning')).toHaveTextContent('sync.storedPasswordUnreadable')
+    expect(screen.getByTestId('sync-existing-password-hint')).toBeInTheDocument()
+    expect(screen.getByTestId('sync-password-input')).toBeInTheDocument()
+    expect(screen.getByTestId('sync-password-save')).toBeInTheDocument()
+    expect(screen.queryByTestId('sync-password-set')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('sync-password-status-retry-btn'))
+    expect(sync.refreshPasswordStatus).toHaveBeenCalledTimes(1)
+    expect(sync.refreshStatus).not.toHaveBeenCalled()
+  })
+
+  it('hides Set, Change, Re-enter and Retry and shows the keychain notice when the OS keychain is unavailable', () => {
+    const sync = makeSyncMock({ authStatus: { authenticated: true }, passwordStatus: 'keystoreUnavailable', hasRemotePassword: true })
+    renderAndSwitchToData({ sync })
+
+    expect(screen.getByTestId('sync-keystore-unavailable')).toHaveTextContent('sync.keystoreUnavailableNotice')
+    expect(screen.queryByTestId('sync-password-input')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('sync-password-save')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('sync-password-change-btn')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('sync-password-reenter-btn')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('sync-password-status-retry-btn')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    { name: 'readable', overrides: { hasPassword: true } },
+    { name: 'noPasswordFile', overrides: {} },
+  ])('shows no password status notice or Retry when the status is $name', ({ overrides }) => {
+    renderAndSwitchToData({ sync: makeSyncMock({ authStatus: { authenticated: true }, ...overrides }) })
+
+    expect(screen.queryByTestId('sync-stored-password-unreadable')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('sync-keystore-unavailable')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('sync-password-status-retry-btn')).not.toBeInTheDocument()
   })
 
   it('disables sync buttons when not fully configured', () => {
