@@ -137,12 +137,41 @@ describe('useSync', () => {
       expect(result.current.loading).toBe(false)
     })
 
+    let signOutResult: unknown
     await act(async () => {
-      await result.current.signOut()
+      signOutResult = await result.current.signOut()
     })
 
     expect(mockVialAPI.syncAuthSignOut).toHaveBeenCalledOnce()
     expect(mockVialAPI.syncAuthStatus).toHaveBeenCalledTimes(2)
+    expect(signOutResult).toEqual({ success: true })
+  })
+
+  it('returns a refused signOut and keeps the last sync result', async () => {
+    let progressCallback: (p: unknown) => void = () => {}
+    mockVialAPI.syncOnProgress.mockImplementation((cb: (p: unknown) => void) => {
+      progressCallback = cb
+      return () => {}
+    })
+
+    const { result } = renderHookWithConfig(() => useSync())
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
+
+    act(() => {
+      progressCallback({ direction: 'upload', status: 'success', message: 'Sync complete' })
+    })
+    mockVialAPI.syncAuthSignOut.mockResolvedValueOnce({ success: false, error: 'sync.signOutPasswordChanging' })
+
+    let signOutResult: unknown
+    await act(async () => {
+      signOutResult = await result.current.signOut()
+    })
+
+    expect(signOutResult).toEqual({ success: false, error: 'sync.signOutPasswordChanging' })
+    expect(result.current.lastSyncResult).not.toBeNull()
   })
 
   it('setConfig updates config via appConfig', async () => {

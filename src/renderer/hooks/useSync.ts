@@ -58,7 +58,8 @@ export interface UseSyncReturn {
   syncReadinessReason: SyncCredentialFailureReason | null
   retryRemoteCheck: () => void
   startAuth: () => Promise<void>
-  signOut: () => Promise<void>
+  /** The IPC result; a refused sign-out leaves the account signed in. */
+  signOut: () => Promise<SyncOperationResult>
   setConfig: (patch: Partial<AppConfig>) => void
   setPassword: (password: string) => Promise<SyncOperationResult>
   changePassword: (newPassword: string) => Promise<SyncOperationResult>
@@ -196,9 +197,10 @@ export function useSync(): UseSyncReturn {
   }, [refreshStatus])
 
   const signOut = useCallback(async () => {
-    await window.vialAPI.syncAuthSignOut()
-    setLastSyncResult(null)
+    const result = await window.vialAPI.syncAuthSignOut()
+    if (result.success) setLastSyncResult(null)
     await refreshStatus()
+    return result
   }, [refreshStatus])
 
   const setConfig = useCallback((patch: Partial<AppConfig>) => {

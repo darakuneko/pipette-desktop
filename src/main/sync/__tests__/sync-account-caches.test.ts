@@ -30,7 +30,7 @@ describe('forgetAccountCaches', () => {
   it('forgets the Hub JWT, the password-check and the sync-format status with the created marker', () => {
     hubAuthState.cachedHubJwt = { token: 'hub-jwt', expiresAt: Date.now() + 60_000 }
     const hubGeneration = hubAuthState.cacheGeneration
-    syncRuntime.validatedPasswordCheck = { id: 'check-id', modifiedTime: '2026-10-01T00:00:00.000Z' }
+    syncRuntime.validatedPasswordCheck = { id: 'check-id', modifiedTime: '2026-10-01T00:00:00.000Z', passwordFingerprint: 'fp' }
     syncRuntime.passwordCheckCreated = { file: { id: 'check-id', modifiedTime: '2026-10-01T00:00:00.000Z' }, at: Date.now() }
     syncRuntime.syncFormatMarkerCreatedAt = Date.now()
     noteSyncFormatUpdateRequired(3, syncFormatGeneration())

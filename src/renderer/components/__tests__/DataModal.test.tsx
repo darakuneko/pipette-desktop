@@ -135,7 +135,7 @@ function makeSyncMock(overrides?: Partial<UseSyncReturn>): UseSyncReturn {
     syncReadinessReason: null,
     retryRemoteCheck: vi.fn(),
     startAuth: vi.fn().mockResolvedValue(undefined),
-    signOut: vi.fn().mockResolvedValue(undefined),
+    signOut: vi.fn().mockResolvedValue({ success: true }),
     setConfig: vi.fn().mockResolvedValue(undefined),
     setPassword: vi.fn().mockResolvedValue({ success: true }),
     changePassword: vi.fn().mockResolvedValue({ success: true }),

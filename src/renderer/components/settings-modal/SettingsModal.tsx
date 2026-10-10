@@ -126,6 +126,7 @@ export function SettingsModal({
               onResolveAuthConflict={onResolveAuthConflict}
               authenticating={syncState.authenticating}
               authError={syncState.authError}
+              signOutError={syncState.signOutError}
               busy={syncState.busy}
               confirmingGoogleDisconnect={syncState.confirmingGoogleDisconnect}
               setConfirmingGoogleDisconnect={syncState.setConfirmingGoogleDisconnect}

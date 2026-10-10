@@ -43,14 +43,24 @@ import {
 } from './sync-password-switch'
 import type { PasswordChangeStatus } from '../../shared/types/sync'
 
+/** True while a password change must not start: sync work runs
+ *  (`syncWorkRunning`) or a sign-in or sign-out switches tokens. */
+function passwordChangeRefused(): boolean {
+  return syncWorkRunning() || syncRuntime.accountSwitching
+}
+
 /** Holds `isSyncing` for the whole operation and publishes it as
  *  `passwordChangeRun`, so the before-quit handler can wait for it.
  *  Analytics syncs and remote day fetches don't take `isSyncing`, so running
  *  ones are checked with it (`syncWorkRunning`); they don't start
- *  while `passwordChangeRun` is set (`lockFreeWriterBlocked`). The checks,
- *  the claim and setting `passwordChangeRun` happen before the first await. */
+ *  while `passwordChangeRun` is set (`lockFreeWriterBlocked`). Also refused
+ *  while a sign-in or sign-out switches tokens (`accountSwitching`): a
+ *  sign-out whose wait ran out goes ahead without the lock
+ *  (sync-pending-account.ts), and its tokens must not disappear under a
+ *  running change. The checks, the claim and setting `passwordChangeRun`
+ *  happen before the first await. */
 async function withSyncLock<T>(fn: () => Promise<T>): Promise<T> {
-  if (syncWorkRunning()) throw new Error('sync.changePasswordInProgress')
+  if (passwordChangeRefused()) throw new Error('sync.changePasswordInProgress')
   const releaseLock = claimSyncLock()
   const run = fn()
   syncRuntime.passwordChangeRun = run.then(
@@ -305,7 +315,7 @@ export async function recoverPasswordChangeOnStartup(): Promise<PasswordChangeRe
       log('warn', 'sync password change: state file is unreadable; Drive files are left as they are')
       return 'invalid'
     }
-    if (syncWorkRunning()) return 'busy'
+    if (passwordChangeRefused()) return 'busy'
     const state = read.state
     return await withSyncLock(async (): Promise<PasswordChangeRecovery> => {
       if (state.step === 'locking') {

@@ -732,6 +732,39 @@ describe('the account the pending units belong to', () => {
       expect(syncRuntime.accountSwitching).toBe(false)
     })
 
+    it('is refused at once while a password change runs, keeping the tokens and the units', async () => {
+      markPending('favorites/tapDance')
+      syncRuntime.passwordChangeRun = new Promise<void>(() => {})
+
+      const signingOut = signOutKeepingPending()
+      expect(syncRuntime.accountSwitching).toBe(false)
+      await expect(signingOut).rejects.toThrow('sync.signOutPasswordChanging')
+
+      expect(mockSignOut).not.toHaveBeenCalled()
+      expect(mockForgetAccountCaches).not.toHaveBeenCalled()
+      expect(active()).toEqual(['favorites/tapDance'])
+    })
+
+    it('is refused after the wait runs out when a password change is running by then', async () => {
+      markPending('favorites/tapDance')
+      claimSyncLock()
+
+      const signingOut = signOutKeepingPending()
+      const outcome = signingOut.then(
+        () => 'signed out',
+        (err: unknown) => (err instanceof Error ? err.message : String(err)),
+      )
+      await vi.advanceTimersByTimeAsync(ACCOUNT_SWITCH_WAIT_MS - 1)
+      expect(mockSignOut).not.toHaveBeenCalled()
+      syncRuntime.passwordChangeRun = new Promise<void>(() => {})
+      await vi.advanceTimersByTimeAsync(1)
+
+      expect(await outcome).toBe('sync.signOutPasswordChanging')
+      expect(mockSignOut).not.toHaveBeenCalled()
+      expect(active()).toEqual(['favorites/tapDance'])
+      expect(syncRuntime.accountSwitching).toBe(false)
+    })
+
     it('keeps the tokens and reports an error when the hold cannot be written', async () => {
       markPending('favorites/tapDance')
       rmSync(pendingPath(), { force: true })

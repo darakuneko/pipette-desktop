@@ -219,6 +219,7 @@ import {
   ensurePasswordCheckValidated,
   validatePasswordCheck,
   passwordCheckTiming,
+  resetPasswordCheckCache,
 } from '../sync-password'
 import { SyncBlockedError } from '../sync-password-guard'
 import { getAuthStatus } from '../google-auth'
@@ -758,6 +759,51 @@ describe('sync password-change guard', () => {
       expect(mocks.mergeDeviceDayBundle).not.toHaveBeenCalled()
     })
 
+    it('skips the download for the same password and validates again for another one', async () => {
+      await ensurePasswordCheckValidated(OLD, [...memFiles().values()])
+      expect(drive.downloads).toEqual([pcId])
+
+      resetDriveLog()
+      await ensurePasswordCheckValidated(OLD, [...memFiles().values()])
+      expect(drive.downloads).toEqual([])
+
+      await expect(ensurePasswordCheckValidated('other', [...memFiles().values()])).rejects.toThrow(PasswordMismatchError)
+      expect(drive.downloads).toEqual([pcId])
+      expect(syncRuntime.validatedPasswordCheck).toBeNull()
+    })
+
+    it('validates again once the cache is cleared', async () => {
+      await ensurePasswordCheckValidated(OLD, [...memFiles().values()])
+      resetPasswordCheckCache()
+      resetDriveLog()
+
+      await ensurePasswordCheckValidated(OLD, [...memFiles().values()])
+
+      expect(drive.downloads).toEqual([pcId])
+    })
+
+    it('a flush that read the old password before a re-enter does not upload with it', async () => {
+      await rewritePasswordCheck(NEW)
+      markPending('favorites/tapDance')
+      let openGate = (): void => {}
+      drive.listGate = new Promise<void>((resolve) => {
+        openGate = resolve
+      })
+      const flush = flushPendingChanges()
+      await vi.waitFor(() => expect(drive.lists).toBe(1))
+
+      // The re-enter lists past the gate the flush is waiting on.
+      drive.listGate = null
+      await replacePasswordAndValidate(NEW)
+      openGate()
+      await flush
+
+      expect(mocks.syncOrUpload).not.toHaveBeenCalled()
+      expect(drive.uploads).toEqual([])
+      expect(progress.at(-1)).toMatchObject({ status: 'error', message: 'sync.passwordMismatch' })
+      expect([...syncRuntime.pendingChanges]).toEqual(['favorites/tapDance'])
+    })
+
     it('fetchRemoteTypingDay merges with a matching password-check', async () => {
       expect(await fetchRemoteTypingDay(TYPING_DAY.uid, TYPING_DAY.hash, TYPING_DAY.day)).toBe(true)
       expect(mocks.mergeDeviceDayBundle).toHaveBeenCalledTimes(1)
@@ -777,7 +823,8 @@ describe('sync password-change guard', () => {
 
       expect(await storedPassword()).toBe(NEW)
       expect(drive.downloads).toEqual([pcId])
-      expect(syncRuntime.validatedPasswordCheck).toEqual({ id: pcId, modifiedTime: memFiles().get(pcId)!.modifiedTime })
+      expect(syncRuntime.validatedPasswordCheck).toMatchObject({ id: pcId, modifiedTime: memFiles().get(pcId)!.modifiedTime })
+      expect(JSON.stringify(syncRuntime.validatedPasswordCheck)).not.toContain(NEW)
       expect(drive.uploads).toEqual([])
 
       // The next flush trusts the validation: no second download.

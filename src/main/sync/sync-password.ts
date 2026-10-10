@@ -3,6 +3,7 @@
 // stored password against the remote password-check unit. Changing the
 // password lives in sync-password-change.ts.
 
+import { createHash } from 'node:crypto'
 import { encrypt, decrypt, retrievePasswordResult, storePassword, clearPassword } from './sync-crypto'
 import { getAuthStatus } from './google-auth'
 import {
@@ -75,6 +76,20 @@ export function findPasswordCheck(remoteFiles: readonly DriveFile[]): DriveFile 
   return pickCanonicalFile(remoteFiles, driveFileName(PASSWORD_CHECK_UNIT))
 }
 
+/** SHA-256 hex digest of `password`, kept with the validated
+ *  password-check so a pass holding another password validates again. */
+function passwordFingerprint(password: string): string {
+  return createHash('sha256').update(password, 'utf8').digest('hex')
+}
+
+function rememberValidated(file: UploadedFile, password: string): void {
+  syncRuntime.validatedPasswordCheck = {
+    id: file.id,
+    modifiedTime: file.modifiedTime,
+    passwordFingerprint: passwordFingerprint(password),
+  }
+}
+
 function forgetCreatedPasswordCheck(): void {
   syncRuntime.passwordCheckCreated = null
 }
@@ -99,7 +114,7 @@ async function openPasswordCheck(password: string, file: UploadedFile): Promise<
     syncRuntime.validatedPasswordCheck = null
     throw new PasswordMismatchError()
   }
-  syncRuntime.validatedPasswordCheck = { id: file.id, modifiedTime: file.modifiedTime }
+  rememberValidated(file, password)
 }
 
 /** Creates the password-check with `password`, after our sync-format
@@ -127,7 +142,7 @@ async function createPasswordCheckOnce(password: string): Promise<void> {
   }
   run.then(settle, settle)
   const created = await run
-  syncRuntime.validatedPasswordCheck = { id: created.id, modifiedTime: created.modifiedTime }
+  rememberValidated(created, password)
 }
 
 /** Opens the chosen password-check (`findPasswordCheck`) with `password`
@@ -154,15 +169,25 @@ export async function validatePasswordCheck(
 }
 
 /** `validatePasswordCheck` unless the chosen password-check is the one
- *  last validated (same Drive id and `modifiedTime`). `remoteFiles` must be
- *  a listing that would include the password-check when it exists. */
+ *  last validated (same Drive id and `modifiedTime`) and `password` is the
+ *  one it opened with. A pass that read the stored password before a
+ *  re-enter replaced it therefore validates again, and fails with
+ *  `PasswordMismatchError` instead of writing with the old password.
+ *  `remoteFiles` must be a listing that would include the password-check
+ *  when it exists. */
 export async function ensurePasswordCheckValidated(
   password: string,
   remoteFiles: DriveFile[],
 ): Promise<void> {
   const existing = findPasswordCheck(remoteFiles)
   const validated = syncRuntime.validatedPasswordCheck
-  if (existing && validated && existing.id === validated.id && existing.modifiedTime === validated.modifiedTime) {
+  if (
+    existing &&
+    validated &&
+    existing.id === validated.id &&
+    existing.modifiedTime === validated.modifiedTime &&
+    validated.passwordFingerprint === passwordFingerprint(password)
+  ) {
     forgetCreatedPasswordCheck()
     return
   }

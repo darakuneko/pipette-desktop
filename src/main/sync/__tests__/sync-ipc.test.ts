@@ -613,6 +613,15 @@ describe('sync-ipc pending changes kept by a flush', () => {
     expect(mockStopPolling).not.toHaveBeenCalled()
   })
 
+  it('SYNC_AUTH_SIGN_OUT returns the refusal during a password change and keeps polling', async () => {
+    mockSignOutKeepingPending.mockRejectedValueOnce(new Error('sync.signOutPasswordChanging'))
+
+    const result = await getHandler(IpcChannels.SYNC_AUTH_SIGN_OUT)(null)
+
+    expect(result).toEqual({ success: false, error: 'sync.signOutPasswordChanging' })
+    expect(mockStopPolling).not.toHaveBeenCalled()
+  })
+
   it('SYNC_AUTH_START stores the new tokens through the pending account switch, then schedules a flush', async () => {
     const result = await getHandler(IpcChannels.SYNC_AUTH_START)(null)
 

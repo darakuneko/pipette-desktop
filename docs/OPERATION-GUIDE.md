@@ -1801,7 +1801,7 @@ The Data tab contains the following sections: Google Account, Data Sync, and Pip
 #### Google Account
 
 - Click **Connect** to sign in with your Google account
-- Click **Disconnect** to sign out. If Pipette Hub is also connected, a warning confirms that Hub will be disconnected as well
+- Click **Disconnect** to sign out. If Pipette Hub is also connected, a warning confirms that Hub will be disconnected as well. While the sync password is being changed, Disconnect is refused and a message below it asks you to try again after the change finishes (Hub stays connected)
 
 #### Sync Encryption Password
 
