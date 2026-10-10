@@ -339,6 +339,10 @@ const HOOK_TIMEOUT_MS = 15_000
  * fake timers, so how many turns a pass needs depends on the machine.
  * The bound is wall-clock time instead, and running out of it throws so a
  * slow pass fails here rather than as a misleading assertion later.
+ *
+ * If an earlier step already called the mock, `mockClear()` it first or wait
+ * on a flag set inside the gated implementation; otherwise the earlier calls
+ * already satisfy the predicate.
  */
 async function flushUntil(
   predicate: () => boolean,
@@ -2032,19 +2036,24 @@ describe('sync-service', { timeout: TEST_TIMEOUT_MS }, () => {
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await waitForPollPassForTests()
       expect(mockListFiles).toHaveBeenCalledTimes(1)
+      expect(mockRunPackGcAfterPass).toHaveBeenCalledTimes(1)
+      mockRunPackGcAfterPass.mockClear()
 
       // The gate exists before the pass reaches GC, so releasing it in
       // `finally` unblocks the pass whenever an assertion fails.
       let releaseGc: () => void = () => {}
       const gcGate = new Promise<void>((resolve) => { releaseGc = resolve })
-      mockRunPackGcAfterPass.mockImplementationOnce(() => gcGate)
+      let gcEntered = false
+      mockRunPackGcAfterPass.mockImplementationOnce(() => {
+        gcEntered = true
+        return gcGate
+      })
 
-      // Second poll: nothing changed, so the pass goes straight to the GC
-      // step and waits there.
+      // Second poll: the pass reaches the GC step and waits at the gate.
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       const tracked = waitForPollPassForTests()
       try {
-        await flushUntil(() => mockRunPackGcAfterPass.mock.calls.length === 1, 'the GC step to start')
+        await flushUntil(() => gcEntered, 'the GC step to start')
 
         // Third tick while the second pass is still running: no new pass,
         // and the tracked promise is not replaced.
