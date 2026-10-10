@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { onAppConfigChange } from '../app-config'
 import {
-  hasStoredPassword,
+  storedPasswordStatus,
   checkPasswordStrength,
 } from './sync-crypto'
 import { startOAuthFlow, getAuthStatus } from './google-auth'
@@ -247,7 +247,7 @@ export function setupSyncIpc(): void {
 
   setupSyncResetIpc()
 
-  secureHandle(IpcChannels.SYNC_HAS_PASSWORD, () => hasStoredPassword())
+  secureHandle(IpcChannels.SYNC_PASSWORD_STATUS, () => storedPasswordStatus())
 
   secureHandle(
     IpcChannels.SYNC_VALIDATE_PASSWORD,

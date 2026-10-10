@@ -54,7 +54,7 @@ import type {
 import type { HubPrivateLink } from '../shared/types/hub-private'
 import type { AppConfig } from '../shared/types/app-config'
 import type { DeviceScope } from '../shared/types/analyze-filters'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult, PasswordChangeLockStatus, SyncFormatStatus, SyncTrashListResult, SyncTrashDeleteResult } from '../shared/types/sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult, ImportLocalDataResult, PasswordChangeStatus, PasswordChangeDeleteResult, PasswordChangeLockStatus, SyncFormatStatus, SyncTrashListResult, SyncTrashDeleteResult, StoredPasswordStatus } from '../shared/types/sync'
 import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } from '../shared/types/pipette-settings'
 import type {
   LayoutComparisonOptions,
@@ -697,8 +697,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SYNC_PASSWORD_CHANGE_RELEASE_LOCKS),
   syncResetTargets: (targets: SyncResetTargets): Promise<SyncOperationResult> =>
     ipcRenderer.invoke(IpcChannels.SYNC_RESET_TARGETS, targets),
-  syncHasPassword: (): Promise<boolean> =>
-    ipcRenderer.invoke(IpcChannels.SYNC_HAS_PASSWORD),
+  syncPasswordStatus: (): Promise<StoredPasswordStatus> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_PASSWORD_STATUS),
   syncValidatePassword: (password: string): Promise<PasswordStrength> =>
     ipcRenderer.invoke(IpcChannels.SYNC_VALIDATE_PASSWORD, password),
   syncOnProgress: (callback: (progress: SyncProgress) => void): (() => void) => {

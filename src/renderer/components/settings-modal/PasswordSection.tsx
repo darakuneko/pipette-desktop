@@ -40,6 +40,17 @@ export function PasswordSection({
   const changingPassword = passwordMode === 'change'
   const reenteringPassword = passwordMode === 'reenter'
 
+  // Nothing can be stored without the OS keychain, so no password form is
+  // offered. No Retry either: a keychain that could not be opened stays
+  // unavailable until Pipette restarts.
+  if (sync.passwordStatus === 'keystoreUnavailable') {
+    return (
+      <div className="rounded border border-warning/30 bg-warning/10 p-2 text-xs text-warning" data-testid="sync-keystore-unavailable">
+        {t('sync.keystoreUnavailableNotice')}
+      </div>
+    )
+  }
+
   if (sync.checkingRemotePassword) {
     return (
       <div className="flex items-center gap-2 rounded border border-accent/50 bg-accent/10 p-2 text-xs text-accent" data-testid="sync-checking-remote" role="status">
@@ -88,6 +99,24 @@ export function PasswordSection({
 
   return (
     <div className="space-y-2">
+      {!busy && sync.passwordStatus === 'decryptFailed' && (
+        <div className="space-y-2" data-testid="sync-stored-password-unreadable">
+          <div className="rounded border border-warning/30 bg-warning/10 p-2 text-xs text-warning" data-testid="sync-stored-password-unreadable-warning">
+            {t('sync.storedPasswordUnreadable')}
+          </div>
+          {/* The OS keychain may have been unlocked, or a denied access
+              allowed, since the status was read. */}
+          <button
+            type="button"
+            className={BTN_SECONDARY}
+            onClick={() => void sync.refreshPasswordStatus()}
+            disabled={busy}
+            data-testid="sync-password-status-retry-btn"
+          >
+            {t('sync.retry')}
+          </button>
+        </div>
+      )}
       {busy && (
         <div className="flex items-center gap-2 rounded border border-accent/50 bg-accent/10 p-2 text-xs text-accent" data-testid="sync-password-busy" role="status">
           <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" aria-hidden="true" />

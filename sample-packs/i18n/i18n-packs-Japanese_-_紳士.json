@@ -1,5 +1,5 @@
 {
-  "version": "0.1.119",
+  "version": "0.1.120",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -974,6 +974,8 @@
     "reenterPasswordWarning": "この端末の合言葉が Google Drive のものと一致いたしません。他の端末でお使いの合言葉をお教えくださいませ。",
     "reenterPassword": "合言葉を入力し直す",
     "reenterPasswordNoRemote": "Google Drive には照合すべき合言葉がまだございません。こちらを閉じ、現在の合言葉で同期なさってくださいませ。",
+    "storedPasswordUnreadable": "この端末に保管した合言葉を読み取れませんでした（OSの錠前に拒まれました）。錠前が閉じている、あるいはアクセスをお断りになった場合は、お開けいただくかお許しいただいたうえで「再試行」をお押しくださいませ。それ以外の場合は、下にて合言葉を改めてお定めくださいませ。",
+    "keystoreUnavailableNotice": "OSの錠前が開かなかった場合は、お開けいただくか整えていただいたうえで（Linux ではキーリング）、Pipette を再起動なさってくださいませ。",
     "updateRequired": "この Google Drive の同期データは、より新しい版の Pipette にて作られております。同期をお続けになるには、アップデートをお願い申し上げます。",
     "updateBanner": {
       "message": "Cloud Sync には、より新しい版の Pipette が必要でございます。同期をお続けになるには、アプリのアップデートをお願い申し上げます。",

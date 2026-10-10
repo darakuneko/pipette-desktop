@@ -1,5 +1,5 @@
 {
-  "version": "0.1.119",
+  "version": "0.1.120",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -984,6 +984,8 @@
     "reenterPasswordWarning": "この PC の同期パスワードが Google Drive と合っていません。ほかの PC で使っているパスワードを入力してください。",
     "reenterPassword": "パスワードを入力し直す",
     "reenterPasswordNoRemote": "Google Drive に照合できる同期パスワードがまだありません。このフォームを閉じて、今のパスワードで同期してください。",
+    "storedPasswordUnreadable": "この PC に保存した同期パスワードを読み取れません（OS のキーチェーンが拒否しました）。キーチェーンがロック中か、アクセスを拒否した場合は、解錠・許可してから「再試行」を押してください。それ以外の場合は、下で同期パスワードをもう一度設定してください。",
+    "keystoreUnavailableNotice": "OS のキーチェーンを開けなかった場合は、ロックを解除するか設定して（Linux ではキーリング）、Pipette を再起動してください。",
     "updateRequired": "この Google Drive の同期データは新しいバージョンの Pipette で作られています。同期を続けるにはアップデートしてください。",
     "updateBanner": {
       "message": "Cloud Sync には新しいバージョンの Pipette が必要です。同期を続けるにはアプリをアップデートしてください。",

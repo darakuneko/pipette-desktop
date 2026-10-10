@@ -210,17 +210,27 @@ export async function checkPasswordCheckExists(): Promise<boolean> {
   return findPasswordCheck(remoteFiles) !== undefined
 }
 
+/** Throws `SyncCredentialError('keystoreUnavailable')` when the OS keychain
+ *  cannot store a password, so a save is refused before it touches Drive. */
+function assertKeystoreAvailable(stored: SyncCredentialResult): void {
+  if (!stored.ok && stored.reason === 'keystoreUnavailable') throw new SyncCredentialError('keystoreUnavailable')
+}
+
 /** Refused (`SyncBlockedError`) while a password change is in progress or
  *  Drive needs a newer app, before the password is stored. Refused
- *  (`sync.passwordAlreadySet`) when a readable password is already stored. */
+ *  (`sync.passwordAlreadySet`) when a readable password is already stored,
+ *  and (`keystoreUnavailable`) when the OS keychain is unavailable, both
+ *  before any Drive call. */
 export async function setPasswordAndValidate(password: string): Promise<void> {
   await assertNoLocalPasswordChange()
+  const stored = await retrievePasswordResult()
+  assertKeystoreAvailable(stored)
   // A failed validation below clears the stored password, so overwriting a
   // readable one here could erase the correct password; re-enter and change
   // are the paths that replace it. A stored file the OS keychain can no
   // longer decrypt is not refused: setting a new password is how it is
   // replaced.
-  if ((await retrievePasswordResult()).ok) throw new Error('sync.passwordAlreadySet')
+  if (stored.ok) throw new Error('sync.passwordAlreadySet')
   const formatGeneration = syncFormatGeneration()
   const remoteFiles = await listFiles()
   await assertSyncAllowed(remoteFiles, formatGeneration)
@@ -240,11 +250,13 @@ export async function setPasswordAndValidate(password: string): Promise<void> {
  *  leaves the stored password as it was (a mismatch clears the validated
  *  cache, as in `validatePasswordCheck`). Refused (`SyncBlockedError`)
  *  while a password change is in progress, and when Drive has no
- *  password-check to compare against. */
+ *  password-check to compare against. Refused (`keystoreUnavailable`)
+ *  before any Drive call when the OS keychain is unavailable. */
 export async function replacePasswordAndValidate(password: string): Promise<void> {
   const authStatus = await getAuthStatus()
   if (!authStatus.authenticated) throw new SyncCredentialError('unauthenticated')
   await assertNoLocalPasswordChange()
+  assertKeystoreAvailable(await retrievePasswordResult())
   const formatGeneration = syncFormatGeneration()
   const remoteFiles = await listFiles()
   await assertSyncAllowed(remoteFiles, formatGeneration)

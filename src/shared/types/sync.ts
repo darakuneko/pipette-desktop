@@ -206,6 +206,13 @@ export type SyncCredentialFailureReason =
   | 'keystoreUnavailable'     // safeStorage.isEncryptionAvailable() === false
   | 'remoteCheckFailed'       // can't reach the remote password-check (network / drive)
 
+/** What the stored sync password file is, without the password: `readable`
+ *  when it decrypts, otherwise the local reason `retrievePasswordResult`
+ *  (sync-crypto.ts) gives. */
+export type StoredPasswordStatus =
+  | 'readable'
+  | Extract<SyncCredentialFailureReason, 'noPasswordFile' | 'decryptFailed' | 'keystoreUnavailable'>
+
 /** Why a sign-in or sign-out was refused (`syncBusy`: sync work kept
  *  running past the wait, so the tokens were not switched). Kept apart from
  *  `SyncCredentialFailureReason`, which describes the stored credentials. */

@@ -30,8 +30,9 @@ vi.mock('../../app-config', () => ({
   onAppConfigChange: vi.fn(),
 }))
 
+const mockStoredPasswordStatus = vi.fn(async (): Promise<unknown> => 'noPasswordFile')
 vi.mock('../sync-crypto', () => ({
-  hasStoredPassword: vi.fn(),
+  storedPasswordStatus: () => mockStoredPasswordStatus(),
   checkPasswordStrength: vi.fn(),
 }))
 
@@ -88,7 +89,14 @@ const mockAdoptPendingForSignedInAccount = vi.fn(async (): Promise<string | null
 const mockSignOutKeepingPending = vi.fn(async (): Promise<void> => {})
 const mockSignOutKeepingPendingLocked = vi.fn(async (): Promise<void> => {})
 const mockSwitchAccountKeepingPending = vi.fn(async (storeTokens: () => Promise<void>, _newAccountSub: string | null): Promise<void> => storeTokens())
-const { MockSyncBlockedError, MockAccountSwitchBusyError } = vi.hoisted(() => ({
+const { MockSyncBlockedError, MockAccountSwitchBusyError, MockSyncCredentialError } = vi.hoisted(() => ({
+  MockSyncCredentialError: class MockSyncCredentialError extends Error {
+    readonly reason: string
+    constructor(reason: string) {
+      super(`sync.changePasswordError.${reason}`)
+      this.reason = reason
+    }
+  },
   MockSyncBlockedError: class MockSyncBlockedError extends Error {
     readonly reason: string | undefined
     constructor(message: string, reason?: string) {
@@ -166,7 +174,7 @@ vi.mock('../sync-service', async () => ({
   listRemoteTypingDaysFor: vi.fn(),
   listRemoteTypingHashesForUidFromCloud: vi.fn(),
   listRemoteFileNames: vi.fn(),
-  SyncCredentialError: class SyncCredentialError extends Error {},
+  SyncCredentialError: MockSyncCredentialError,
   SyncBlockedError: MockSyncBlockedError,
   AccountSwitchBusyError: MockAccountSwitchBusyError,
   assertSyncAllowed: () => mockAssertSyncAllowed(),
@@ -509,6 +517,39 @@ describe('sync-ipc SYNC_REPLACE_PASSWORD', () => {
 
     expect(result.success).toBe(false)
     expect(mockReplacePasswordAndValidate).not.toHaveBeenCalled()
+  })
+})
+
+describe('sync-ipc stored password status and the OS keychain', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    setupSyncIpc()
+  })
+
+  it.each(['readable', 'noPasswordFile', 'decryptFailed', 'keystoreUnavailable'])(
+    'SYNC_PASSWORD_STATUS returns %s',
+    async (status) => {
+      mockStoredPasswordStatus.mockResolvedValueOnce(status)
+
+      const result = await getHandler(IpcChannels.SYNC_PASSWORD_STATUS)(null)
+
+      expect(result).toBe(status)
+    },
+  )
+
+  it.each([
+    { name: 'SYNC_SET_PASSWORD', channel: IpcChannels.SYNC_SET_PASSWORD, refuse: () => mockSetPasswordAndValidate.mockRejectedValueOnce(new MockSyncCredentialError('keystoreUnavailable')) },
+    { name: 'SYNC_REPLACE_PASSWORD', channel: IpcChannels.SYNC_REPLACE_PASSWORD, refuse: () => mockReplacePasswordAndValidate.mockRejectedValueOnce(new MockSyncCredentialError('keystoreUnavailable')) },
+  ])('$name returns keystoreUnavailable as its reason', async ({ channel, refuse }) => {
+    refuse()
+
+    const result = await getHandler(channel)(null, 'my-password')
+
+    expect(result).toEqual({
+      success: false,
+      error: 'sync.changePasswordError.keystoreUnavailable',
+      reason: 'keystoreUnavailable',
+    })
   })
 })
 

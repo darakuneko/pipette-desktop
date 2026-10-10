@@ -1807,6 +1807,8 @@ The Data tab contains the following sections: Google Account, Data Sync, and Pip
 
 - Set a password to encrypt all synced data (required). A strength indicator helps you choose a strong password
 - If a password already exists on the server (set from another device), a hint is shown asking you to enter the same password
+- **Saved password can't be read**: when this PC has a saved password that the OS keychain refuses to decrypt (the keychain is locked, access was denied, or the keychain was reset), the section shows **"This PC's saved sync password can't be read (the OS keychain refused it). If the keychain is locked or access was denied, unlock or allow it and press Retry. Otherwise, set the sync password again below."** above the password form, with a **Retry** button. **Retry** checks the saved password again — use it after unlocking or allowing the keychain. If it still can't be read, enter the password your other PCs use (or a new one on the first PC) and click **Set Password**. Until then, automatic sync, **Sync**, and the Data panel's automatic loading and scanning stay off, and **Sync Status** shows **"Couldn't read the saved sync password"**
+- **OS keychain not available**: when this PC has no usable OS keychain, the password form and the **Change Password** and **Re-enter Password** buttons are hidden. The section shows **"If the OS keychain couldn't be opened, unlock or set it up (a keyring on Linux) and restart Pipette."**, and **Sync Status** shows **"OS keychain is not available; sync is disabled here"**. A keychain that couldn't be opened stays unavailable until Pipette restarts (on Linux, the keyring is checked when Pipette starts), so there is no **Retry** here: restart Pipette after unlocking or setting it up
 - **Change Password**: Click **Change Password** to re-encrypt every synced file on Google Drive with a new password. No data is deleted — each existing file is decrypted and re-encrypted in place. The form shows **"Close Pipette on your other PCs until the password change finishes."** — keep Pipette closed on your other PCs until the change is done. Google Drive requests are retried automatically when Drive reports a rate limit, and most requests are also retried after a server or network error. Creating a new file on Google Drive (such as the lock) is retried only on rate limits, so a server or network error at that point stops the change. If that happens while taking the lock, the change does not start: Pipette undoes the lock attempt, and you run **Change Password** again. If undoing it also fails (for example while still offline), the change stays at the **Preparing** step and the panel below shows it. **Continue** and the next start clear it once the lock can be removed (otherwise it stays for the next attempt); **Abandon** clears it even when the lock can't be removed (a lock left behind then shows in the lock banner described below). Later in the change, continue it as described below
 
 **How a password change runs**
@@ -1913,7 +1915,10 @@ flowchart LR
   what -->|"A sync password change on this PC hasn't finished…"| panel["Use the panel: see the next chart"]
   what -->|"Cannot change password while sync is in progress."| waitsync["Wait for the sync to finish, then try again"]
   what -->|"Sync data on this Google Drive was made by a newer version…"| update["Update Pipette"]
-  what -->|"A message about the OS keychain or the saved sync password"| keychain["Unlock the OS keychain, then try again"]
+  what -->|"This PC's saved sync password can't be read…"| unreadable{"Does Retry work after unlocking or allowing the OS keychain?"}
+  unreadable -->|Yes| unlocked["Done: the password is read again"]
+  unreadable -->|No| setagain["Enter the password your other PCs use, then Set Password"]
+  what -->|"If the OS keychain couldn't be opened…"| keychain["Unlock or set up the OS keychain, then restart Pipette"]
 ```
 
 - **Release Lock** shows the warning **"Make sure no other PC is syncing or changing the password."** Use it only when you are sure the PC that took the lock won't finish the change (see **Password change lock** above)
@@ -1983,8 +1988,8 @@ A: If the PC that started the change can still finish it, finish it there with *
 
 A: Pipette keeps the sync password — and, during a change, both passwords — encrypted with the OS keychain. On Linux that needs a keyring service (for example GNOME Keyring or KWallet) that is running and unlocked.
 
-- **"OS keychain is not available, so the sync password can't be changed here."** or **"OS keychain is not available; sync is disabled here"**: no keychain is available. Set up a keyring, then try again
-- **"Couldn't read the saved sync password"** or **"Couldn't read the saved sync password, so it can't be changed."**: the keychain could not decrypt the saved password — it is locked, or it was reset or the profile moved. Unlock it and try again
+- **"If the OS keychain couldn't be opened, unlock or set it up (a keyring on Linux) and restart Pipette."**, **"OS keychain is not available, so the sync password can't be changed here."** or **"OS keychain is not available; sync is disabled here"**: no keychain is available. Unlock or set up a keyring, then restart Pipette — the keyring is checked when Pipette starts, so it isn't picked up until the restart
+- **"This PC's saved sync password can't be read (the OS keychain refused it). If the keychain is locked or access was denied, unlock or allow it and press Retry. Otherwise, set the sync password again below."**, **"Couldn't read the saved sync password"** or **"Couldn't read the saved sync password, so it can't be changed."**: the keychain could not decrypt the saved password — it is locked, access was denied, or it was reset or the profile moved. Unlock or allow it, then click **Retry** in the **Sync Encryption Password** section. If it still can't be read, enter the password your other PCs use and click **Set Password**; if that password doesn't match Google Drive, the unreadable saved password is removed and the form stays open
 - **"The passwords saved for the password change can't be read. Make sure the OS keychain is unlocked, then try again."**: common right after login. Unlock the keychain, then **Continue**. **Abandon** still works without the keychain
 
 #### Sync Controls
