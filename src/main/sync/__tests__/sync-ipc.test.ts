@@ -559,6 +559,15 @@ describe('sync-ipc pending changes kept by a flush', () => {
     expect(mockScheduleFlushIfPending).not.toHaveBeenCalled()
   })
 
+  it('SYNC_SET_PASSWORD returns the already-set key and schedules no flush when a password is stored', async () => {
+    mockSetPasswordAndValidate.mockRejectedValueOnce(new Error('sync.passwordAlreadySet'))
+
+    const result = await getHandler(IpcChannels.SYNC_SET_PASSWORD)(null, 'my-password')
+
+    expect(result).toEqual({ success: false, error: 'sync.passwordAlreadySet' })
+    expect(mockScheduleFlushIfPending).not.toHaveBeenCalled()
+  })
+
   it('SYNC_REPLACE_PASSWORD schedules a flush once the password is stored', async () => {
     await getHandler(IpcChannels.SYNC_REPLACE_PASSWORD)(null, 'other-pc-password')
 

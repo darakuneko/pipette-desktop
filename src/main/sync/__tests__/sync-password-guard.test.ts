@@ -204,7 +204,7 @@ vi.mock('../google-drive', async () => {
   }
 })
 
-import { encrypt, decrypt, storePassword, retrievePasswordResult } from '../sync-crypto'
+import { encrypt, decrypt, storePassword, retrievePasswordResult, clearPassword } from '../sync-crypto'
 import { PASSWORD_CHANGE_LOCK_FILE } from '../google-drive'
 import { writeChangeState, forgetChangeStateCache } from '../sync-password-change-state'
 import { syncRuntime, markPending } from '../sync-runtime-state'
@@ -425,10 +425,13 @@ describe('sync password-change guard', () => {
     })
 
     it('setPasswordAndValidate is refused before the password is stored', async () => {
+      // Emptied so the refusal under test comes from the blocker, not from
+      // the already-set check, which runs before the Drive guards.
+      await clearPassword()
+
       await expect(setPasswordAndValidate(NEW)).rejects.toThrow(key)
 
-      const stored = await retrievePasswordResult()
-      expect(stored.ok && stored.password).toBe(OLD)
+      expect((await retrievePasswordResult()).ok).toBe(false)
       expectNoDataWork()
     })
 
@@ -662,6 +665,7 @@ describe('sync password-change guard', () => {
       memFiles().delete(pcId)
       drive.hideNew = true
       const creates = (): number => drive.uploads.filter((name) => name === PC_NAME).length
+      await clearPassword()
 
       await setPasswordAndValidate(OLD)
       expect(creates()).toBe(1)
