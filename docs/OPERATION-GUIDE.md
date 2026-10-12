@@ -1496,7 +1496,7 @@ Personal bests, History, and the Accuracy Trend group Tatoeba runs by language +
 
 ![Typing Test — Data Source Modal (Aozora Bunko)](screenshots/typing-test-mode-aozora.png)
 
-Browse and import public-domain Japanese literary works from the [Aozora Bunko](https://www.aozora.gr.jp/) catalog (roughly 10,500 works, downloaded directly from Aozora Bunko).
+Browse and import public-domain Japanese literary works from the [Aozora Bunko](https://www.aozora.gr.jp/) catalog (roughly 10,500 works; the catalog is derived from Aozora Bunko's official index and provided via Pipette Hub, and work texts are downloaded directly from Aozora Bunko).
 
 - The search box filters by title or author
 - Below it, a two-tier gojūon (five-vowel kana) row filter narrows results by the first kana of the author's reading (ア / カ / サ / …); click a row to also reveal its column kana for a finer filter (e.g. the カ row → キ column). Click an active button again to clear it

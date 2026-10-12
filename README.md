@@ -293,8 +293,9 @@ Typing Test sentence packs are curated from the [Tatoeba Project](https://tatoeb
 Most language packs are licensed under [CC BY 2.0 FR](https://creativecommons.org/licenses/by/2.0/fr/); some packs are dedicated to the public domain under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
 Thank you to the Tatoeba community for building an open corpus of example sentences.
 
-The Aozora Bunko catalog lets you type public-domain Japanese literature. Catalog metadata and work texts are
-sourced and downloaded directly from [Aozora Bunko](https://www.aozora.gr.jp/), with Aozora's ruby and editorial annotation markup cleaned during import.
+The Aozora Bunko catalog lets you type public-domain Japanese literature. Catalog metadata (titles, authors)
+is derived from the official index of [Aozora Bunko](https://www.aozora.gr.jp/) and provided via Pipette Hub; work texts
+are downloaded directly from Aozora Bunko, with Aozora's ruby and editorial annotation markup cleaned during import.
 Thank you to the Aozora Bunko volunteers for decades of careful digitization.
 
 ## License
