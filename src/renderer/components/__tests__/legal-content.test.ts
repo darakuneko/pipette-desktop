@@ -29,7 +29,8 @@ describe('LEGAL_SECTIONS', () => {
     const text = section!.paragraphs.join(' ')
     expect(text).toContain('Aozora Bunko')
     expect(text).toContain('aozora.gr.jp')
-    expect(text).toContain('github.com/aozorabunko/aozorabunko')
+    expect(text).toContain('downloaded directly from Aozora Bunko')
+    expect(text).not.toContain('github.com/aozorabunko')
     expect(text).toMatch(/public domain/i)
   })
 

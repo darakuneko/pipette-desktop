@@ -1496,13 +1496,13 @@ Personal bests, History, and the Accuracy Trend group Tatoeba runs by language +
 
 ![Typing Test — Data Source Modal (Aozora Bunko)](screenshots/typing-test-mode-aozora.png)
 
-Browse and import public-domain Japanese literary works from the [Aozora Bunko](https://www.aozora.gr.jp/) catalog (roughly 10,500 works, sourced via the aozorabunko GitHub mirror).
+Browse and import public-domain Japanese literary works from the [Aozora Bunko](https://www.aozora.gr.jp/) catalog (roughly 10,500 works, downloaded directly from Aozora Bunko).
 
 - The search box filters by title or author
 - Below it, a two-tier gojūon (five-vowel kana) row filter narrows results by the first kana of the author's reading (ア / カ / サ / …); click a row to also reveal its column kana for a finer filter (e.g. the カ row → キ column). Click an active button again to clear it
 - Results are split into **Downloaded** and **Available** sections; the **Available** section renders 50 works at a time, revealing the next 50 automatically as you scroll (the catalog list is loaded once when the tab opens — scrolling does not hit the network)
 - Each row shows the title, author, and an estimated character count (`~N chars` — an estimate, not an exact figure)
-- Clicking the download icon on an Available row downloads the work's archive from the GitHub mirror, decodes it, and automatically strips Aozora-specific markup (ruby annotations, editorial notes, header/footer boilerplate) before saving it as a typing text — no manual cleanup needed. The newly imported work is selected immediately. A failed import shows an inline error under that row
+- Clicking the download icon on an Available row downloads the work's archive directly from Aozora Bunko, decodes it, and automatically strips Aozora-specific markup (ruby annotations, editorial notes, header/footer boilerplate) before saving it as a typing text — no manual cleanup needed. The newly imported work is selected immediately. A failed import shows an inline error under that row
 - A downloaded work is stored through the same normalization and 5,000-word cap as File Import texts (see below). Words are counted by whitespace, so in Japanese prose — which contains no spaces — each paragraph counts as one word, and the cap effectively allows around 5,000 paragraphs
 - A downloaded work plays back exactly like an imported File Import text, including the per-line Enter-to-advance behavior, but it is only listed and deleted from this **Aozora Bunko** tab — it does not appear in the **File Import** tab
 - Click the trash icon on a Downloaded row to remove it; it returns to Available and can be re-imported later

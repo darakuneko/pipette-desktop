@@ -294,8 +294,7 @@ Most language packs are licensed under [CC BY 2.0 FR](https://creativecommons.or
 Thank you to the Tatoeba community for building an open corpus of example sentences.
 
 The Aozora Bunko catalog lets you type public-domain Japanese literature. Catalog metadata and work texts are
-sourced from [Aozora Bunko](https://www.aozora.gr.jp/) via the [aozorabunko GitHub mirror](https://github.com/aozorabunko/aozorabunko),
-with Aozora's ruby and editorial annotation markup cleaned during import.
+sourced and downloaded directly from [Aozora Bunko](https://www.aozora.gr.jp/), with Aozora's ruby and editorial annotation markup cleaned during import.
 Thank you to the Aozora Bunko volunteers for decades of careful digitization.
 
 ## License
