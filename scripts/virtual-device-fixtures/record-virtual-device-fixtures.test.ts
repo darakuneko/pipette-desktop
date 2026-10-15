@@ -156,9 +156,9 @@ async function raw(...bytes: number[]): Promise<Uint8Array> {
 
 function decompressLzma(bytes: Uint8Array): Promise<string> {
   return new Promise((done, fail) => {
-    lzmaModule.decompress(Array.from(bytes), (result: string | number[] | null, error?: unknown) => {
-      if (error || typeof result !== 'string') fail(error ?? new Error('LZMA decompression failed'))
-      else done(result)
+    lzmaModule.decompress(Array.from(bytes), (result: string | null) => {
+      if (typeof result === 'string') done(result)
+      else fail(new Error('LZMA decompression failed'))
     })
   })
 }
