@@ -54,6 +54,13 @@ process.once('exit', () => {
   rmSync(session.userDataDir, { recursive: true, force: true })
 })
 
+/** The log of the app of the running session (pipette-logger writes
+ *  `<userData>/logs/pipette-0.log`). */
+export function appLogPath(): string {
+  if (!session) throw new Error('no session is running')
+  return join(session.userDataDir, 'logs', 'pipette-0.log')
+}
+
 /** Starts tauri-driver for one session with a fresh userData directory, and
  *  resolves once it accepts connections. */
 export async function startDriver(): Promise<DriverSession> {
