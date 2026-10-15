@@ -3,22 +3,13 @@
 use crate::backend::RawDeviceInfo;
 use crate::constants::BOOTLOADER_SERIAL_MAGIC;
 
-/// Same values as `DeviceType` in `src/shared/types/protocol.ts`.
+/// The kinds of `DeviceType` in `src/shared/types/protocol.ts`; the
+/// serialized names are `DeviceTypeDto` in src-tauri/src/hid_commands.rs.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DeviceType {
     Vial,
     Via,
     Bootloader,
-}
-
-impl DeviceType {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Vial => "vial",
-            Self::Via => "via",
-            Self::Bootloader => "bootloader",
-        }
-    }
 }
 
 /// Same shape as `DeviceInfo` in `src/shared/types/protocol.ts`.

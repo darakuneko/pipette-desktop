@@ -1,0 +1,48 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// The type contract between the Rust backend and the renderer: each type in
+// ../generated is written by the ts-rs export tests of src-tauri
+// (`cargo test`) from a type that crosses the IPC boundary, and must be
+// mutually assignable with the TypeScript type it stands for. The TypeScript
+// types stay the source of truth. Checked by `pnpm typecheck` only; there is
+// nothing to run.
+//
+// Conventions on the Rust side:
+// - Field names: `#[serde(rename_all = "camelCase")]` on the struct; ts-rs
+//   reads the serde attributes, so the declaration follows.
+// - `foo?: T` in TypeScript: `Option<T>` with
+//   `#[serde(skip_serializing_if = "Option::is_none")]` and `#[ts(optional)]`.
+//   A bare `Option<T>` serializes `None` as null and is declared `foo: T | null`,
+//   which fails here against `foo?: T`. IPC is JSON, so `undefined` never
+//   arrives as a value.
+// - 64-bit integers are declared `bigint` (the ts-rs default), which fails
+//   here against `number`: JSON carries them as doubles, so pick a type that
+//   fits or override it deliberately.
+// - Overrides with `#[ts(type = ...)]` or `#[ts(as = ...)]` hand-write the
+//   declaration, so this check does not cover that field. Each one is
+//   listed here; there are none.
+
+import type { DecompressDefinition } from '../../preload/protocol-members'
+import type { VirtualDeviceControllerState } from '../../main/virtual-device/index'
+import type { DeviceInfo, DeviceType } from '../../shared/types/protocol'
+import type { CompressedDefinition } from '../generated/CompressedDefinition'
+import type { DecompressedDefinition } from '../generated/DecompressedDefinition'
+import type { DeviceInfo as GeneratedDeviceInfo } from '../generated/DeviceInfo'
+import type { DeviceType as GeneratedDeviceType } from '../generated/DeviceType'
+import type { VirtualDeviceControllerState as GeneratedControllerState } from '../generated/VirtualDeviceControllerState'
+
+/** `true` when each type is assignable to the other. The tuples stop the
+ *  conditional from distributing over unions. */
+type MutuallyAssignable<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false
+
+type Assert<T extends true> = T
+
+export type ContractChecks = [
+  // src-tauri/src/hid_commands.rs
+  Assert<MutuallyAssignable<GeneratedDeviceType, DeviceType>>,
+  Assert<MutuallyAssignable<GeneratedDeviceInfo, DeviceInfo>>,
+  // src-tauri/src/definition.rs
+  Assert<MutuallyAssignable<CompressedDefinition, Parameters<DecompressDefinition>[0]>>,
+  Assert<MutuallyAssignable<DecompressedDefinition, Awaited<ReturnType<DecompressDefinition>>>>,
+  // src-tauri/src/dev_commands/tools.rs
+  Assert<MutuallyAssignable<GeneratedControllerState, VirtualDeviceControllerState>>,
+]
