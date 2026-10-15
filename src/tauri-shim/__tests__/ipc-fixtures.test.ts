@@ -14,6 +14,8 @@ import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'
 import { APP_COMMANDS } from '../generated/app-command-names'
+import type { FavoriteImportEntry } from '../../shared/favorite-transfer'
+import type { FavoriteType } from '../../shared/types/favorite-store'
 import type { HubPrivateLink } from '../../shared/types/hub-private'
 import type { SnapshotUpdateOptions } from '../../shared/types/snapshot-store'
 
@@ -35,6 +37,7 @@ const entries: Entry[] = readdirSync(FIXTURE_DIR)
 interface Shim {
   appConfig: typeof import('../api/app-config')
   device: typeof import('../api/device')
+  favorites: typeof import('../api/favorites')
   files: typeof import('../api/files')
   keyboardData: typeof import('../api/keyboard-data')
   settings: typeof import('../api/settings')
@@ -51,6 +54,7 @@ async function load(): Promise<Shim> {
   return {
     appConfig: await import('../api/app-config'),
     device: await import('../api/device'),
+    favorites: await import('../api/favorites'),
     files: await import('../api/files'),
     keyboardData: await import('../api/keyboard-data'),
     settings: await import('../api/settings'),
@@ -129,6 +133,39 @@ const CALLERS: Record<string, Caller> = {
   keyboardMetaNameIfMissing: {
     run: ({ keyboardData }, [uid, name]) => keyboardData.keyboardDataApi.keyboardMetaNameIfMissing(uid as string, name as string),
     void: true,
+  },
+  favoriteStoreList: { run: ({ favorites }, [type]) => favorites.favoritesApi.favoriteStoreList(type as string) },
+  favoriteStoreSave: {
+    run: ({ favorites }, [type, json, label]) =>
+      favorites.favoritesApi.favoriteStoreSave(type as string, json as string, label as string),
+  },
+  favoriteStoreLoad: {
+    run: ({ favorites }, [type, entryId]) => favorites.favoritesApi.favoriteStoreLoad(type as string, entryId as string),
+  },
+  favoriteStoreRename: {
+    run: ({ favorites }, [type, entryId, label]) =>
+      favorites.favoritesApi.favoriteStoreRename(type as string, entryId as string, label as string),
+  },
+  favoriteStoreDelete: {
+    run: ({ favorites }, [type, entryId]) => favorites.favoritesApi.favoriteStoreDelete(type as string, entryId as string),
+  },
+  favoriteStoreSetHubPostId: {
+    run: ({ favorites }, [type, entryId, postId]) =>
+      favorites.favoritesApi.favoriteStoreSetHubPostId(type as FavoriteType, entryId as string, postId as string | null),
+  },
+  favoriteStoreSetHubPrivate: {
+    run: ({ favorites }, [type, entryId, link]) =>
+      favorites.favoritesApi.favoriteStoreSetHubPrivate(type as FavoriteType, entryId as string, link as HubPrivateLink | null),
+  },
+  'favorites.readForExport': {
+    run: ({ favorites }, [type, entryId]) => favorites.readForExport(type as FavoriteType, entryId as string),
+  },
+  'favorites.saveExport': {
+    run: ({ favorites }, [name, content]) => favorites.saveExport(name as string, content as string),
+  },
+  'favorites.openImport': { run: ({ favorites }) => favorites.openImport() },
+  'favorites.importBatch': {
+    run: ({ favorites }, [type, entries]) => favorites.importBatch(type as FavoriteType, entries as FavoriteImportEntry[]),
   },
   snapshotStoreList: { run: ({ snapshots }, [uid]) => snapshots.snapshotsApi.snapshotStoreList(uid as string) },
   snapshotStoreSave: {

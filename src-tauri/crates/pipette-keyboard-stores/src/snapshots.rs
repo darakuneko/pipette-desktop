@@ -17,7 +17,7 @@
 //!
 //! Every operation answers like its handler: failures are values
 //! ([`SnapshotError`], whose text is the handler's `String(err)`), turned
-//! into the `{success, …}` response by [`snapshot_response_json`].
+//! into the `{success, …}` response by [`crate::response_json`].
 
 use std::fs;
 use std::io;
@@ -93,25 +93,6 @@ fn meta_error_text(err: &StoreError) -> String {
         StoreError::NullEntry(_) => format!("TypeError: {err}"),
         StoreError::Io(_) | StoreError::TooDeep(_) => format!("Error: {err}"),
     }
-}
-
-/// The handler's response as JSON text: `{"success":true}` with `field`
-/// when there is one, or `{"success":false,"error":…}`.
-pub fn snapshot_response_json(result: Result<Option<(&str, Value)>, SnapshotError>) -> String {
-    let mut response = Object::new();
-    match result {
-        Ok(field) => {
-            response.insert("success", true.into());
-            if let Some((key, value)) = field {
-                response.insert(key, value);
-            }
-        }
-        Err(err) => {
-            response.insert("success", false.into());
-            response.insert("error", err.to_string().into());
-        }
-    }
-    pipette_js_json::stringify(&Value::Object(response))
 }
 
 /// The index file: its top-level object, whose `entries` holds the place

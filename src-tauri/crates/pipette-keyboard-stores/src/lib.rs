@@ -2,6 +2,8 @@
 //! The per-keyboard stores under the userData directory, writing the same
 //! files as the Electron build:
 //!
+//! - the favorites of each type (`sync/favorites/{type}`, the sync unit of
+//!   the same name) of src/main/favorite-store.ts;
 //! - the keyboard names (`sync/meta/keyboard-names.json`, the sync unit
 //!   `meta/keyboard-names`) of src/main/sync/keyboard-meta.ts: the name a
 //!   keyboard gets when it connects, and the name a snapshot save or the
@@ -20,7 +22,9 @@
 //! by all stores, and the [`ChangeNotifier`] each change of a sync unit is
 //! reported to.
 
+mod favorites;
 mod keyboard_meta;
+mod response;
 mod settings;
 mod snapshot_filename;
 mod snapshots;
@@ -31,10 +35,16 @@ use std::sync::Arc;
 
 use pipette_entry_store::{Clock, IdGen, RandomUuid, WriteLocks};
 
+pub use favorites::{
+    FavoriteError, FavoriteImport, FavoriteType, ImportCounts, delete_favorite, import_favorites,
+    list_favorites, load_favorite, read_favorites_for_export, rename_favorite, save_favorite,
+    set_favorite_hub_post_id, set_favorite_hub_private,
+};
 pub use keyboard_meta::{
     KEYBOARD_META_SYNC_UNIT, MetaOutcome, active_keyboard_names, extract_device_name_from_filename,
     keyboard_meta_name_if_missing, name_keyboard_on_connect, upsert_keyboard_meta,
 };
+pub use response::{done, field, response_json};
 pub use settings::{
     KeyboardSettingsFile, SETTINGS_ETAG_ABSENT, SettingsError, SettingsFile, SettingsWrite,
     ensure_pipette_settings_dir, keyboard_settings_files_json, read_all_pipette_settings,
@@ -45,8 +55,8 @@ pub use snapshot_filename::{
 };
 pub use snapshots::{
     MAX_SNAPSHOTS_PER_KEYBOARD, SnapshotError, delete_snapshot, list_snapshots, load_snapshot,
-    rename_snapshot, save_snapshot, set_snapshot_hub_post_id, set_snapshot_hub_private,
-    snapshot_response_json, snapshots_sync_unit, update_snapshot,
+    rename_snapshot, save_snapshot, set_snapshot_hub_post_id, set_snapshot_hub_private, snapshots_sync_unit,
+    update_snapshot,
 };
 pub use stored_keyboards::{StoredKeyboard, list_stored_keyboards, stored_keyboards_json};
 

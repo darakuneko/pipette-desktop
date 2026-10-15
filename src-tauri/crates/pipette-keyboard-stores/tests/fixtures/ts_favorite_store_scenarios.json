@@ -1,0 +1,2340 @@
+[
+  {
+    "name": "save, list, load, rename, hub links and delete",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {},
+    "steps": [
+      {
+        "op": "save",
+        "type": "tapDance",
+        "json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "label": "First"
+      },
+      {
+        "op": "save",
+        "type": "tapDance",
+        "json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":5,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "label": "名前 😀"
+      },
+      {
+        "op": "save",
+        "type": "macro",
+        "json": "{\"type\":\"macro\",\"data\":[[\"text\",\"hello\"],[\"tap\",\"KC_A\"]]}",
+        "label": "Macro"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:01:00.000Z"
+      },
+      {
+        "op": "list",
+        "type": "tapDance"
+      },
+      {
+        "op": "list",
+        "type": "macro"
+      },
+      {
+        "op": "list",
+        "type": "combo"
+      },
+      {
+        "op": "load",
+        "type": "tapDance",
+        "id": "00000000-0000-4000-8000-000000000001"
+      },
+      {
+        "op": "rename",
+        "type": "tapDance",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "label": "Renamed"
+      },
+      {
+        "op": "hubPostId",
+        "type": "tapDance",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "hubPostId": " post-1 "
+      },
+      {
+        "op": "hubPrivate",
+        "type": "tapDance",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "link": {
+          "id": "p1",
+          "url": "/files/p1?token=t",
+          "expiresAt": null
+        }
+      },
+      {
+        "op": "hubPostId",
+        "type": "tapDance",
+        "id": "00000000-0000-4000-8000-000000000002",
+        "hubPostId": "　"
+      },
+      {
+        "op": "hubPostId",
+        "type": "tapDance",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "hubPostId": "post-2"
+      },
+      {
+        "op": "hubPostId",
+        "type": "tapDance",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "hubPostId": null
+      },
+      {
+        "op": "hubPrivate",
+        "type": "tapDance",
+        "id": "00000000-0000-4000-8000-000000000001",
+        "link": null
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:02:00.000Z"
+      },
+      {
+        "op": "delete",
+        "type": "tapDance",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:03:00.000Z"
+      },
+      {
+        "op": "delete",
+        "type": "tapDance",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "list",
+        "type": "tapDance"
+      },
+      {
+        "op": "load",
+        "type": "tapDance",
+        "id": "00000000-0000-4000-8000-000000000002"
+      },
+      {
+        "op": "load",
+        "type": "tapDance",
+        "id": "missing"
+      },
+      {
+        "op": "rename",
+        "type": "tapDance",
+        "id": "missing",
+        "label": "x"
+      },
+      {
+        "op": "delete",
+        "type": "tapDance",
+        "id": "missing"
+      },
+      {
+        "op": "hubPostId",
+        "type": "tapDance",
+        "id": "missing",
+        "hubPostId": "p"
+      },
+      {
+        "op": "load",
+        "type": "tapDance",
+        "id": "00000000-0000-4000-8000-000000000003"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"First\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"label\":\"名前 😀\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000002.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000003\",\"label\":\"Macro\",\"filename\":\"macro_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000003.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      null,
+      "{\"success\":true,\"entries\":[{\"id\":\"00000000-0000-4000-8000-000000000002\",\"label\":\"名前 😀\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000002.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"First\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}",
+      "{\"success\":true,\"entries\":[{\"id\":\"00000000-0000-4000-8000-000000000003\",\"label\":\"Macro\",\"filename\":\"macro_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000003.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}",
+      "{\"success\":true,\"entries\":[]}",
+      "{\"success\":true,\"data\":\"{\\\"type\\\":\\\"tapDance\\\",\\\"data\\\":{\\\"onTap\\\":4,\\\"onHold\\\":31744,\\\"onDoubleTap\\\":0,\\\"onTapHold\\\":23552,\\\"tappingTerm\\\":200}}\"}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      null,
+      "{\"success\":true}",
+      null,
+      "{\"success\":true}",
+      "{\"success\":true,\"entries\":[{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"Renamed\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.002Z\"},\"updatedAt\":\"2026-10-16T12:01:00.002Z\"}]}",
+      "{\"success\":false,\"error\":\"Entry has been deleted\"}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":false,\"error\":\"Entry not found\"}"
+    ],
+    "transfers": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "notified": [
+      "favorites/tapDance",
+      "favorites/tapDance",
+      "favorites/macro",
+      "favorites/tapDance",
+      "favorites/tapDance",
+      "favorites/tapDance",
+      "favorites/tapDance",
+      "favorites/tapDance",
+      "favorites/tapDance",
+      "favorites/tapDance",
+      "favorites/tapDance",
+      "favorites/tapDance"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/favorites/": null,
+      "sync/favorites/macro/": null,
+      "sync/favorites/macro/index.json": "{\n  \"type\": \"macro\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000003\",\n      \"label\": \"Macro\",\n      \"filename\": \"macro_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000003.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/macro/macro_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000003.json": "{\"type\":\"macro\",\"data\":[[\"text\",\"hello\"],[\"tap\",\"KC_A\"]]}",
+      "sync/favorites/tapDance/": null,
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000002\",\n      \"label\": \"名前 😀\",\n      \"filename\": \"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000002.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:01:00.002Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:03:00.000Z\",\n      \"hubPrivate\": {\n        \"id\": \"p1\",\n        \"url\": \"/files/p1?token=t\",\n        \"expiresAt\": null\n      },\n      \"deletedAt\": \"2026-10-16T12:03:00.000Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"Renamed\",\n      \"filename\": \"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:01:00.000Z\",\n        \"hub\": \"2026-10-16T12:01:00.002Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:01:00.002Z\"\n    }\n  ]\n}",
+      "sync/favorites/tapDance/tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+      "sync/favorites/tapDance/tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000002.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":5,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+    }
+  },
+  {
+    "name": "types that are not favorite types",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {},
+    "steps": [
+      {
+        "op": "list",
+        "type": ""
+      },
+      {
+        "op": "save",
+        "type": "",
+        "json": "{}",
+        "label": "L"
+      },
+      {
+        "op": "load",
+        "type": "",
+        "id": "x"
+      },
+      {
+        "op": "rename",
+        "type": "",
+        "id": "x",
+        "label": "y"
+      },
+      {
+        "op": "delete",
+        "type": "",
+        "id": "x"
+      },
+      {
+        "op": "hubPostId",
+        "type": "",
+        "id": "x",
+        "hubPostId": "p"
+      },
+      {
+        "op": "hubPrivate",
+        "type": "",
+        "id": "x",
+        "link": null
+      },
+      {
+        "op": "export",
+        "type": "",
+        "vialProtocol": 6,
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "exportCurrent",
+        "type": "",
+        "vialProtocol": 6,
+        "dataJson": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "importToCurrent",
+        "type": "",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "list",
+        "type": "tapdance"
+      },
+      {
+        "op": "save",
+        "type": "tapdance",
+        "json": "{}",
+        "label": "L"
+      },
+      {
+        "op": "load",
+        "type": "tapdance",
+        "id": "x"
+      },
+      {
+        "op": "rename",
+        "type": "tapdance",
+        "id": "x",
+        "label": "y"
+      },
+      {
+        "op": "delete",
+        "type": "tapdance",
+        "id": "x"
+      },
+      {
+        "op": "hubPostId",
+        "type": "tapdance",
+        "id": "x",
+        "hubPostId": "p"
+      },
+      {
+        "op": "hubPrivate",
+        "type": "tapdance",
+        "id": "x",
+        "link": null
+      },
+      {
+        "op": "export",
+        "type": "tapdance",
+        "vialProtocol": 6,
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "exportCurrent",
+        "type": "tapdance",
+        "vialProtocol": 6,
+        "dataJson": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "importToCurrent",
+        "type": "tapdance",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "list",
+        "type": "../x"
+      },
+      {
+        "op": "save",
+        "type": "../x",
+        "json": "{}",
+        "label": "L"
+      },
+      {
+        "op": "load",
+        "type": "../x",
+        "id": "x"
+      },
+      {
+        "op": "rename",
+        "type": "../x",
+        "id": "x",
+        "label": "y"
+      },
+      {
+        "op": "delete",
+        "type": "../x",
+        "id": "x"
+      },
+      {
+        "op": "hubPostId",
+        "type": "../x",
+        "id": "x",
+        "hubPostId": "p"
+      },
+      {
+        "op": "hubPrivate",
+        "type": "../x",
+        "id": "x",
+        "link": null
+      },
+      {
+        "op": "export",
+        "type": "../x",
+        "vialProtocol": 6,
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "exportCurrent",
+        "type": "../x",
+        "vialProtocol": 6,
+        "dataJson": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "importToCurrent",
+        "type": "../x",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "list",
+        "type": "constructor"
+      },
+      {
+        "op": "save",
+        "type": "constructor",
+        "json": "{}",
+        "label": "L"
+      },
+      {
+        "op": "load",
+        "type": "constructor",
+        "id": "x"
+      },
+      {
+        "op": "rename",
+        "type": "constructor",
+        "id": "x",
+        "label": "y"
+      },
+      {
+        "op": "delete",
+        "type": "constructor",
+        "id": "x"
+      },
+      {
+        "op": "hubPostId",
+        "type": "constructor",
+        "id": "x",
+        "hubPostId": "p"
+      },
+      {
+        "op": "hubPrivate",
+        "type": "constructor",
+        "id": "x",
+        "link": null
+      },
+      {
+        "op": "export",
+        "type": "constructor",
+        "vialProtocol": 6,
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "exportCurrent",
+        "type": "constructor",
+        "vialProtocol": 6,
+        "dataJson": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "importToCurrent",
+        "type": "constructor",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "list",
+        "type": 5
+      },
+      {
+        "op": "save",
+        "type": 5,
+        "json": "{}",
+        "label": "L"
+      },
+      {
+        "op": "load",
+        "type": 5,
+        "id": "x"
+      },
+      {
+        "op": "rename",
+        "type": 5,
+        "id": "x",
+        "label": "y"
+      },
+      {
+        "op": "delete",
+        "type": 5,
+        "id": "x"
+      },
+      {
+        "op": "hubPostId",
+        "type": 5,
+        "id": "x",
+        "hubPostId": "p"
+      },
+      {
+        "op": "hubPrivate",
+        "type": 5,
+        "id": "x",
+        "link": null
+      },
+      {
+        "op": "export",
+        "type": 5,
+        "vialProtocol": 6,
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "exportCurrent",
+        "type": 5,
+        "vialProtocol": 6,
+        "dataJson": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "importToCurrent",
+        "type": 5,
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "list",
+        "type": null
+      },
+      {
+        "op": "save",
+        "type": null,
+        "json": "{}",
+        "label": "L"
+      },
+      {
+        "op": "load",
+        "type": null,
+        "id": "x"
+      },
+      {
+        "op": "rename",
+        "type": null,
+        "id": "x",
+        "label": "y"
+      },
+      {
+        "op": "delete",
+        "type": null,
+        "id": "x"
+      },
+      {
+        "op": "hubPostId",
+        "type": null,
+        "id": "x",
+        "hubPostId": "p"
+      },
+      {
+        "op": "hubPrivate",
+        "type": null,
+        "id": "x",
+        "link": null
+      },
+      {
+        "op": "export",
+        "type": null,
+        "vialProtocol": 6,
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "exportCurrent",
+        "type": null,
+        "vialProtocol": 6,
+        "dataJson": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "importToCurrent",
+        "type": null,
+        "dialog": "exports/x.json"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid favorite type\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}",
+      "{\"success\":false,\"error\":\"Invalid scope\"}"
+    ],
+    "transfers": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "notified": [],
+    "after": {}
+  },
+  {
+    "name": "a v1 index with legacy names, future clocks and unknown fields",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/favorites/combo/index.json": "{\n  \"before\": [1, 2.50, 1e21],\n  \"type\": \"combo\",\n  \"entries\": [\n    {\"id\":\"a\",\"label\":\"Label a\",\"filename\":\"combo_2026-10-16T11-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"updatedAt\":\"2026-10-16T11:30:00.000Z\",\"extra\":{\"keep\":true}},\n    {\"id\":\"b\",\"label\":\"Label b\",\"filename\":\"combo_2026-10-16T11-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\"},\n    {\"note\":\"first\",\"id\":\"future\",\"label\":\"Future\",\"filename\":\"combo_2030-01-01T00-00-00.000Z_future.json\",\"savedAt\":\"2030-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2030-01-01T00:00:00.000Z\",\"body\":\"2030-01-01T00:00:00.000Z\",\"name\":\"2030-01-02T00:00:00.000Z\",\"hub\":\"nonsense\"},\"updatedAt\":\"2031-01-01T00:00:00.000Z\"},\n    {\"id\":\"gone\",\"label\":\"Label gone\",\"filename\":\"combo_2026-10-16T10-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"deletedAt\":\"2026-10-16T11:50:00.000Z\"},\n    \"a string entry\",\n    null,\n    42,\n    {\"label\":\"no id\"},\n    {\"id\":7,\"label\":\"numeric id\"}\n  ],\n  \"after\": \"kept\"\n}\n",
+      "sync/favorites/combo/combo_2026-10-16T11-00-00.000Z.json": "{\"type\":\"combo\",\"data\":{\"key1\":4,\"key2\":5,\"key3\":0,\"key4\":0,\"output\":516}}",
+      "sync/favorites/combo/combo_2030-01-01T00-00-00.000Z_future.json": "{\"type\":\"combo\",\"data\":{\"key1\":4,\"key2\":6,\"key3\":0,\"key4\":0,\"output\":516}}",
+      "sync/favorites/combo/combo_2026-10-16T10-00-00.000Z.json": "{\"type\":\"combo\",\"data\":{\"key1\":4,\"key2\":5,\"key3\":0,\"key4\":0,\"output\":516}}",
+      "exports/": null
+    },
+    "steps": [
+      {
+        "op": "list",
+        "type": "combo"
+      },
+      {
+        "op": "load",
+        "type": "combo",
+        "id": "a"
+      },
+      {
+        "op": "load",
+        "type": "combo",
+        "id": "gone"
+      },
+      {
+        "op": "export",
+        "type": "combo",
+        "vialProtocol": 6,
+        "dialog": "exports/legacy.json"
+      },
+      {
+        "op": "rename",
+        "type": "combo",
+        "id": "future",
+        "label": "Renamed future"
+      },
+      {
+        "op": "list",
+        "type": "combo"
+      },
+      {
+        "op": "load",
+        "type": "combo",
+        "id": "a"
+      },
+      {
+        "op": "load",
+        "type": "combo",
+        "id": "b"
+      },
+      {
+        "op": "rename",
+        "type": "combo",
+        "id": "gone",
+        "label": "Renamed gone"
+      },
+      {
+        "op": "delete",
+        "type": "combo",
+        "id": "a"
+      },
+      {
+        "op": "list",
+        "type": "combo"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[{\"id\":\"a\",\"label\":\"Label a\",\"filename\":\"combo_2026-10-16T11-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"updatedAt\":\"2026-10-16T11:30:00.000Z\",\"extra\":{\"keep\":true},\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:30:00.000Z\",\"hub\":\"2026-10-16T11:30:00.000Z\"}},{\"id\":\"b\",\"label\":\"Label b\",\"filename\":\"combo_2026-10-16T11-00-00.000Z.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"note\":\"first\",\"id\":\"future\",\"label\":\"Future\",\"filename\":\"combo_2030-01-01T00-00-00.000Z_future.json\",\"savedAt\":\"2030-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2030-01-01T00:00:00.000Z\",\"body\":\"2030-01-01T00:00:00.000Z\",\"name\":\"2031-01-01T00:00:00.000Z\",\"hub\":\"2031-01-01T00:00:00.000Z\"},\"updatedAt\":\"2031-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":\"{\\\"type\\\":\\\"combo\\\",\\\"data\\\":{\\\"key1\\\":4,\\\"key2\\\":5,\\\"key3\\\":0,\\\"key4\\\":0,\\\"output\\\":516}}\"}",
+      "{\"success\":false,\"error\":\"Entry has been deleted\"}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true,\"entries\":[{\"id\":\"a\",\"label\":\"Label a\",\"filename\":\"combo_2026-10-16T11-00-00.000Z_a.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"updatedAt\":\"2026-10-16T11:30:00.000Z\",\"extra\":{\"keep\":true},\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:30:00.000Z\",\"hub\":\"2026-10-16T11:30:00.000Z\"}},{\"id\":\"b\",\"label\":\"Label b\",\"filename\":\"combo_2026-10-16T11-00-00.000Z_b.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"note\":\"first\",\"id\":\"future\",\"label\":\"Renamed future\",\"filename\":\"combo_2030-01-01T00-00-00.000Z_future.json\",\"savedAt\":\"2030-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2030-01-01T00:00:00.000Z\",\"body\":\"2030-01-01T00:00:00.000Z\",\"name\":\"2031-01-01T00:00:00.001Z\",\"hub\":\"2031-01-01T00:00:00.000Z\"},\"updatedAt\":\"2031-01-01T00:00:00.001Z\"}]}",
+      "{\"success\":true,\"data\":\"{\\\"type\\\":\\\"combo\\\",\\\"data\\\":{\\\"key1\\\":4,\\\"key2\\\":5,\\\"key3\\\":0,\\\"key4\\\":0,\\\"output\\\":516}}\"}",
+      "{\"success\":true,\"data\":\"{\\\"type\\\":\\\"combo\\\",\\\"data\\\":{\\\"key1\\\":4,\\\"key2\\\":5,\\\"key3\\\":0,\\\"key4\\\":0,\\\"output\\\":516}}\"}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true,\"entries\":[{\"id\":\"b\",\"label\":\"Label b\",\"filename\":\"combo_2026-10-16T11-00-00.000Z_b.json\",\"savedAt\":\"2026-10-16T11:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T11:00:00.000Z\",\"body\":\"2026-10-16T11:00:00.000Z\",\"name\":\"2026-10-16T11:00:00.000Z\",\"hub\":\"2026-10-16T11:00:00.000Z\"},\"updatedAt\":\"2026-10-16T11:00:00.000Z\"},{\"note\":\"first\",\"id\":\"future\",\"label\":\"Renamed future\",\"filename\":\"combo_2030-01-01T00-00-00.000Z_future.json\",\"savedAt\":\"2030-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2030-01-01T00:00:00.000Z\",\"body\":\"2030-01-01T00:00:00.000Z\",\"name\":\"2031-01-01T00:00:00.001Z\",\"hub\":\"2031-01-01T00:00:00.000Z\"},\"updatedAt\":\"2031-01-01T00:00:00.001Z\"}]}"
+    ],
+    "transfers": [
+      null,
+      null,
+      null,
+      {
+        "bodies": [
+          {
+            "label": "Label a",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"combo\",\"data\":{\"key1\":4,\"key2\":5,\"key3\":0,\"key4\":0,\"output\":516}}"
+          },
+          {
+            "label": "Label b",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"combo\",\"data\":{\"key1\":4,\"key2\":5,\"key3\":0,\"key4\":0,\"output\":516}}"
+          },
+          {
+            "label": "Future",
+            "savedAt": "2030-01-01T00:00:00.000Z",
+            "body": "{\"type\":\"combo\",\"data\":{\"key1\":4,\"key2\":6,\"key3\":0,\"key4\":0,\"output\":516}}"
+          }
+        ],
+        "built": {
+          "defaultFilename": "pipette-fav-combo-2026-10-16-120000.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:00:00.000Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"combo\": [\n      {\n        \"label\": \"Label a\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"key1\": \"KC_A\",\n          \"key2\": \"KC_B\",\n          \"key3\": \"KC_NO\",\n          \"key4\": \"KC_NO\",\n          \"output\": \"LSFT(KC_A)\"\n        }\n      },\n      {\n        \"label\": \"Label b\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"key1\": \"KC_A\",\n          \"key2\": \"KC_B\",\n          \"key3\": \"KC_NO\",\n          \"key4\": \"KC_NO\",\n          \"output\": \"LSFT(KC_A)\"\n        }\n      },\n      {\n        \"label\": \"Future\",\n        \"savedAt\": \"2030-01-01T00:00:00.000Z\",\n        \"data\": {\n          \"key1\": \"KC_A\",\n          \"key2\": \"KC_C\",\n          \"key3\": \"KC_NO\",\n          \"key4\": \"KC_NO\",\n          \"output\": \"LSFT(KC_A)\"\n        }\n      }\n    ]\n  }\n}"
+        },
+        "defaultPath": "pipette-fav-combo-2026-10-16-120000.json"
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "notified": [
+      "favorites/combo",
+      "favorites/combo",
+      "favorites/combo"
+    ],
+    "after": {
+      "exports/": null,
+      "exports/legacy.json": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:00:00.000Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"combo\": [\n      {\n        \"label\": \"Label a\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"key1\": \"KC_A\",\n          \"key2\": \"KC_B\",\n          \"key3\": \"KC_NO\",\n          \"key4\": \"KC_NO\",\n          \"output\": \"LSFT(KC_A)\"\n        }\n      },\n      {\n        \"label\": \"Label b\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"key1\": \"KC_A\",\n          \"key2\": \"KC_B\",\n          \"key3\": \"KC_NO\",\n          \"key4\": \"KC_NO\",\n          \"output\": \"LSFT(KC_A)\"\n        }\n      },\n      {\n        \"label\": \"Future\",\n        \"savedAt\": \"2030-01-01T00:00:00.000Z\",\n        \"data\": {\n          \"key1\": \"KC_A\",\n          \"key2\": \"KC_C\",\n          \"key3\": \"KC_NO\",\n          \"key4\": \"KC_NO\",\n          \"output\": \"LSFT(KC_A)\"\n        }\n      }\n    ]\n  }\n}",
+      "sync/": null,
+      "sync/favorites/": null,
+      "sync/favorites/combo/": null,
+      "sync/favorites/combo/combo_2026-10-16T10-00-00.000Z_gone.json": "{\"type\":\"combo\",\"data\":{\"key1\":4,\"key2\":5,\"key3\":0,\"key4\":0,\"output\":516}}",
+      "sync/favorites/combo/combo_2026-10-16T11-00-00.000Z_a.json": "{\"type\":\"combo\",\"data\":{\"key1\":4,\"key2\":5,\"key3\":0,\"key4\":0,\"output\":516}}",
+      "sync/favorites/combo/combo_2026-10-16T11-00-00.000Z_b.json": "{\"type\":\"combo\",\"data\":{\"key1\":4,\"key2\":5,\"key3\":0,\"key4\":0,\"output\":516}}",
+      "sync/favorites/combo/combo_2030-01-01T00-00-00.000Z_future.json": "{\"type\":\"combo\",\"data\":{\"key1\":4,\"key2\":6,\"key3\":0,\"key4\":0,\"output\":516}}",
+      "sync/favorites/combo/index.json": "{\n  \"before\": [\n    1,\n    2.5,\n    1e+21\n  ],\n  \"type\": \"combo\",\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"label\": \"Label a\",\n      \"filename\": \"combo_2026-10-16T11-00-00.000Z_a.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"extra\": {\n        \"keep\": true\n      },\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:30:00.000Z\",\n        \"hub\": \"2026-10-16T11:30:00.000Z\"\n      },\n      \"deletedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"b\",\n      \"label\": \"Label b\",\n      \"filename\": \"combo_2026-10-16T11-00-00.000Z_b.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T11:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"note\": \"first\",\n      \"id\": \"future\",\n      \"label\": \"Renamed future\",\n      \"filename\": \"combo_2030-01-01T00-00-00.000Z_future.json\",\n      \"savedAt\": \"2030-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2030-01-01T00:00:00.000Z\",\n        \"body\": \"2030-01-01T00:00:00.000Z\",\n        \"name\": \"2031-01-01T00:00:00.001Z\",\n        \"hub\": \"2031-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2031-01-01T00:00:00.001Z\"\n    },\n    {\n      \"id\": \"gone\",\n      \"label\": \"Renamed gone\",\n      \"filename\": \"combo_2026-10-16T10-00-00.000Z_gone.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T11:50:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T11:00:00.000Z\",\n        \"body\": \"2026-10-16T11:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T11:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ],\n  \"after\": \"kept\"\n}"
+    }
+  },
+  {
+    "name": "an index that is not JSON is replaced by the next save",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/favorites/tapDance/index.json": "not json!!!"
+    },
+    "steps": [
+      {
+        "op": "list",
+        "type": "tapDance"
+      },
+      {
+        "op": "load",
+        "type": "tapDance",
+        "id": "x"
+      },
+      {
+        "op": "save",
+        "type": "tapDance",
+        "json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "label": "L"
+      },
+      {
+        "op": "list",
+        "type": "tapDance"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[]}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}",
+      "{\"success\":true,\"entries\":[{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}"
+    ],
+    "transfers": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "notified": [
+      "favorites/tapDance"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/favorites/": null,
+      "sync/favorites/tapDance/": null,
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"L\",\n      \"filename\": \"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/tapDance/tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+    }
+  },
+  {
+    "name": "an index of another type is replaced by the next save",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"macro\",\n  \"entries\": [\n    {\n      \"id\": \"other\",\n      \"label\": \"Label other\",\n      \"filename\": \"macro_2026-01-01T00-00-00.000Z_other.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/tapDance/macro_2026-01-01T00-00-00.000Z_other.json": "{\"type\":\"macro\",\"data\":[[\"text\",\"hello\"],[\"tap\",\"KC_A\"]]}"
+    },
+    "steps": [
+      {
+        "op": "list",
+        "type": "tapDance"
+      },
+      {
+        "op": "load",
+        "type": "tapDance",
+        "id": "other"
+      },
+      {
+        "op": "rename",
+        "type": "tapDance",
+        "id": "other",
+        "label": "x"
+      },
+      {
+        "op": "save",
+        "type": "tapDance",
+        "json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "label": "L"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[]}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}"
+    ],
+    "transfers": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "notified": [
+      "favorites/tapDance"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/favorites/": null,
+      "sync/favorites/tapDance/": null,
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"L\",\n      \"filename\": \"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/tapDance/macro_2026-01-01T00-00-00.000Z_other.json": "{\"type\":\"macro\",\"data\":[[\"text\",\"hello\"],[\"tap\",\"KC_A\"]]}",
+      "sync/favorites/tapDance/tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+    }
+  },
+  {
+    "name": "an index that is an array",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/favorites/tapDance/index.json": "[{\"type\":\"tapDance\",\"entries\":[]}]"
+    },
+    "steps": [
+      {
+        "op": "list",
+        "type": "tapDance"
+      },
+      {
+        "op": "save",
+        "type": "tapDance",
+        "json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "label": "L"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[]}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}"
+    ],
+    "transfers": [
+      null,
+      null
+    ],
+    "notified": [
+      "favorites/tapDance"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/favorites/": null,
+      "sync/favorites/tapDance/": null,
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"L\",\n      \"filename\": \"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/tapDance/tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+    }
+  },
+  {
+    "name": "an index that is null",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/favorites/tapDance/index.json": "null"
+    },
+    "steps": [
+      {
+        "op": "list",
+        "type": "tapDance"
+      },
+      {
+        "op": "save",
+        "type": "tapDance",
+        "json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "label": "L"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[]}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}"
+    ],
+    "transfers": [
+      null,
+      null
+    ],
+    "notified": [
+      "favorites/tapDance"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/favorites/": null,
+      "sync/favorites/tapDance/": null,
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"L\",\n      \"filename\": \"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/tapDance/tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+    }
+  },
+  {
+    "name": "an index without an entries list",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/favorites/tapDance/index.json": "{\"type\":\"tapDance\",\"entries\":{\"0\":{\"id\":\"x\"}}}"
+    },
+    "steps": [
+      {
+        "op": "list",
+        "type": "tapDance"
+      },
+      {
+        "op": "save",
+        "type": "tapDance",
+        "json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "label": "L"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[]}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}"
+    ],
+    "transfers": [
+      null,
+      null
+    ],
+    "notified": [
+      "favorites/tapDance"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/favorites/": null,
+      "sync/favorites/tapDance/": null,
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"L\",\n      \"filename\": \"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/tapDance/tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+    }
+  },
+  {
+    "name": "an index with a byte order mark",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/favorites/tapDance/index.json": "﻿{\"type\":\"tapDance\",\"entries\":[]}"
+    },
+    "steps": [
+      {
+        "op": "list",
+        "type": "tapDance"
+      },
+      {
+        "op": "save",
+        "type": "tapDance",
+        "json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "label": "L"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[]}",
+      "{\"success\":true,\"entry\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"L\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-10-16T12:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}}"
+    ],
+    "transfers": [
+      null,
+      null
+    ],
+    "notified": [
+      "favorites/tapDance"
+    ],
+    "after": {
+      "sync/": null,
+      "sync/favorites/": null,
+      "sync/favorites/tapDance/": null,
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"L\",\n      \"filename\": \"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/tapDance/tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+    }
+  },
+  {
+    "name": "invalid UTF-8 in the index and a body",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/favorites/tapDance/index.json": {
+        "hex": "7b2274797065223a2274617044616e6365222c22656e7472696573223a5b7b226964223a2278222c226c6162656c223a2242616420ffe697222c2266696c656e616d65223a22785f782e6a736f6e222c2273617665644174223a22323032362d30312d30315430303a30303a30302e3030305a227d5d7d"
+      },
+      "sync/favorites/tapDance/x_x.json": {
+        "hex": "7b2274797065223a2274617044616e6365222c226e6f7465223a22c3222c2264617461223a7b226f6e546170223a342c226f6e486f6c64223a33313734342c226f6e446f75626c65546170223a302c226f6e546170486f6c64223a32333535322c2274617070696e675465726d223a3230307d7d"
+      },
+      "exports/": null
+    },
+    "steps": [
+      {
+        "op": "list",
+        "type": "tapDance"
+      },
+      {
+        "op": "load",
+        "type": "tapDance",
+        "id": "x"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "dialog": "exports/bad.json"
+      },
+      {
+        "op": "rename",
+        "type": "tapDance",
+        "id": "x",
+        "label": "Good"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"entries\":[{\"id\":\"x\",\"label\":\"Bad ��\",\"filename\":\"x_x.json\",\"savedAt\":\"2026-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:00.000Z\",\"body\":\"2026-01-01T00:00:00.000Z\",\"name\":\"2026-01-01T00:00:00.000Z\",\"hub\":\"2026-01-01T00:00:00.000Z\"},\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"data\":\"{\\\"type\\\":\\\"tapDance\\\",\\\"note\\\":\\\"�\\\",\\\"data\\\":{\\\"onTap\\\":4,\\\"onHold\\\":31744,\\\"onDoubleTap\\\":0,\\\"onTapHold\\\":23552,\\\"tappingTerm\\\":200}}\"}",
+      "{\"success\":true}",
+      "{\"success\":true}"
+    ],
+    "transfers": [
+      null,
+      null,
+      {
+        "bodies": [
+          {
+            "label": "Bad ��",
+            "savedAt": "2026-01-01T00:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"note\":\"�\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+          }
+        ],
+        "built": {
+          "defaultFilename": "pipette-fav-td-2026-10-16-120000.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:00:00.000Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"td\": [\n      {\n        \"label\": \"Bad ��\",\n        \"savedAt\": \"2026-01-01T00:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_A\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200\n        }\n      }\n    ]\n  }\n}"
+        },
+        "defaultPath": "pipette-fav-td-2026-10-16-120000.json"
+      },
+      null
+    ],
+    "notified": [
+      "favorites/tapDance"
+    ],
+    "after": {
+      "exports/": null,
+      "exports/bad.json": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:00:00.000Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"td\": [\n      {\n        \"label\": \"Bad ��\",\n        \"savedAt\": \"2026-01-01T00:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_A\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200\n        }\n      }\n    ]\n  }\n}",
+      "sync/": null,
+      "sync/favorites/": null,
+      "sync/favorites/tapDance/": null,
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"x\",\n      \"label\": \"Good\",\n      \"filename\": \"x_x_x0078.json\",\n      \"savedAt\": \"2026-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:00.000Z\",\n        \"body\": \"2026-01-01T00:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/tapDance/x_x_x0078.json": {
+        "hex": "7b2274797065223a2274617044616e6365222c226e6f7465223a22c3222c2264617461223a7b226f6e546170223a342c226f6e486f6c64223a33313734342c226f6e446f75626c65546170223a302c226f6e546170486f6c64223a32333535322c2274617070696e675465726d223a3230307d7d"
+      }
+    }
+  },
+  {
+    "name": "body filenames that are not safe",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"up\",\n      \"label\": \"up\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"filename\": \"../escape.json\"\n    },\n    {\n      \"id\": \"none\",\n      \"label\": \"none\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"null\",\n      \"label\": \"null\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"filename\": null\n    },\n    {\n      \"id\": \"empty\",\n      \"label\": \"empty\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"filename\": \"\"\n    },\n    {\n      \"id\": \"dot\",\n      \"label\": \"dot\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"filename\": \"..\"\n    }\n  ]\n}",
+      "sync/favorites/escape.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+      "exports/": null
+    },
+    "steps": [
+      {
+        "op": "load",
+        "type": "tapDance",
+        "id": "up"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "entryId": "up",
+        "dialog": "exports/one.json"
+      },
+      {
+        "op": "load",
+        "type": "tapDance",
+        "id": "none"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "entryId": "none",
+        "dialog": "exports/one.json"
+      },
+      {
+        "op": "load",
+        "type": "tapDance",
+        "id": "null"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "entryId": "null",
+        "dialog": "exports/one.json"
+      },
+      {
+        "op": "load",
+        "type": "tapDance",
+        "id": "empty"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "entryId": "empty",
+        "dialog": "exports/one.json"
+      },
+      {
+        "op": "load",
+        "type": "tapDance",
+        "id": "dot"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "entryId": "dot",
+        "dialog": "exports/one.json"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "dialog": "exports/all.json"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"error\":\"Entry unreadable\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"error\":\"Entry unreadable\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"error\":\"Entry unreadable\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"error\":\"Entry unreadable\"}",
+      "{\"success\":false,\"error\":\"Error: Invalid filename\"}",
+      "{\"success\":false,\"error\":\"Entry unreadable\"}",
+      "{\"success\":true}"
+    ],
+    "transfers": [
+      null,
+      {
+        "bodies": [],
+        "built": {
+          "error": "Entry unreadable"
+        }
+      },
+      null,
+      {
+        "bodies": [],
+        "built": {
+          "error": "Entry unreadable"
+        }
+      },
+      null,
+      {
+        "bodies": [],
+        "built": {
+          "error": "Entry unreadable"
+        }
+      },
+      null,
+      {
+        "bodies": [],
+        "built": {
+          "error": "Entry unreadable"
+        }
+      },
+      null,
+      {
+        "bodies": [],
+        "built": {
+          "error": "Entry unreadable"
+        }
+      },
+      {
+        "bodies": [],
+        "built": {
+          "defaultFilename": "pipette-fav-td-2026-10-16-120000.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:00:00.000Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {}\n}"
+        },
+        "defaultPath": "pipette-fav-td-2026-10-16-120000.json"
+      }
+    ],
+    "notified": [],
+    "after": {
+      "exports/": null,
+      "exports/all.json": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:00:00.000Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {}\n}",
+      "sync/": null,
+      "sync/favorites/": null,
+      "sync/favorites/escape.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+      "sync/favorites/tapDance/": null,
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"up\",\n      \"label\": \"up\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"filename\": \"../escape.json\"\n    },\n    {\n      \"id\": \"none\",\n      \"label\": \"none\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"null\",\n      \"label\": \"null\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"filename\": null\n    },\n    {\n      \"id\": \"empty\",\n      \"label\": \"empty\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"filename\": \"\"\n    },\n    {\n      \"id\": \"dot\",\n      \"label\": \"dot\",\n      \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n      \"filename\": \"..\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "exports of stored favorites",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"label\": \"With data\",\n      \"filename\": \"tapDance_a.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"extra\": 1\n    },\n    {\n      \"id\": \"no-data\",\n      \"label\": \"Label no-data\",\n      \"filename\": \"tapDance_no-data.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"not-json\",\n      \"label\": \"Label not-json\",\n      \"filename\": \"tapDance_not-json.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"missing\",\n      \"label\": \"Label missing\",\n      \"filename\": \"tapDance_missing.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"dead\",\n      \"label\": \"Label dead\",\n      \"filename\": \"tapDance_dead.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T11:59:00.000Z\"\n    },\n    {\n      \"id\": \"odd\",\n      \"label\": 42,\n      \"filename\": \"tapDance_odd.json\"\n    },\n    {\n      \"id\": \"a\",\n      \"label\": \"Same id\",\n      \"filename\": \"tapDance_a2.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/tapDance/tapDance_a.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+      "sync/favorites/tapDance/tapDance_a2.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":\"KC_B\",\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200,\"extra\":[1e+21,0]}}",
+      "sync/favorites/tapDance/tapDance_no-data.json": "{\"type\":\"tapDance\",\"data\":null}",
+      "sync/favorites/tapDance/tapDance_not-json.json": "{",
+      "sync/favorites/tapDance/tapDance_dead.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+      "sync/favorites/tapDance/tapDance_odd.json": "\"just a string\"",
+      "sync/favorites/keyOverride/index.json": "{\n  \"type\": \"keyOverride\",\n  \"entries\": [\n    {\n      \"id\": \"ko\",\n      \"label\": \"Label ko\",\n      \"filename\": \"keyOverride_ko.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/keyOverride/keyOverride_ko.json": "{\"type\":\"keyOverride\",\"data\":{\"triggerKey\":31744,\"replacementKey\":16388,\"layers\":3,\"triggerMods\":1,\"negativeMods\":0,\"suppressedMods\":0,\"options\":7,\"enabled\":true}}",
+      "sync/favorites/altRepeatKey/index.json": "{\n  \"type\": \"altRepeatKey\",\n  \"entries\": [\n    {\n      \"id\": \"ark\",\n      \"label\": \"Label ark\",\n      \"filename\": \"altRepeatKey_ark.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/altRepeatKey/altRepeatKey_ark.json": "{\"type\":\"altRepeatKey\",\"data\":{\"lastKey\":4,\"altKey\":31744,\"allowedMods\":0,\"options\":1,\"enabled\":false}}",
+      "sync/favorites/macro/index.json": "{\n  \"type\": \"macro\",\n  \"entries\": [\n    {\n      \"id\": \"m\",\n      \"label\": \"Label m\",\n      \"filename\": \"macro_m.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/macro/macro_m.json": "{\"type\":\"macro\",\"data\":[[\"text\",\"hello\"],[\"tap\",\"KC_A\"]]}",
+      "exports/": null
+    },
+    "steps": [
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "dialog": "exports/all.json"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:01:01.234Z"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 5,
+        "dialog": "exports/all-v5.json"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "entryId": "a",
+        "dialog": "exports/a.json"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "entryId": "no-data",
+        "dialog": "exports/no-data.json"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "entryId": "not-json",
+        "dialog": "exports/not-json.json"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "entryId": "missing",
+        "dialog": "exports/missing.json"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "entryId": "dead",
+        "dialog": "exports/dead.json"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "entryId": "nowhere",
+        "dialog": "exports/nowhere.json"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "entryId": "odd",
+        "dialog": "exports/odd.json"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "entryId": 5,
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": "6",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": null,
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "dialog": null
+      },
+      {
+        "op": "export",
+        "type": "keyOverride",
+        "vialProtocol": 5,
+        "dialog": "exports/ko.json"
+      },
+      {
+        "op": "export",
+        "type": "altRepeatKey",
+        "vialProtocol": 9,
+        "dialog": "exports/ark.json"
+      },
+      {
+        "op": "export",
+        "type": "macro",
+        "vialProtocol": 6,
+        "dialog": "exports/macro.json"
+      },
+      {
+        "op": "export",
+        "type": "combo",
+        "vialProtocol": 6,
+        "dialog": "exports/empty.json"
+      },
+      {
+        "op": "export",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "dialog": "missing-dir/x.json"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true}",
+      null,
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":false,\"error\":\"Entry unreadable\"}",
+      "{\"success\":false,\"error\":\"Entry unreadable\"}",
+      "{\"success\":false,\"error\":\"Entry unreadable\"}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":false,\"error\":\"Entry not found\"}",
+      "{\"success\":false,\"error\":\"Entry unreadable\"}",
+      "{\"success\":false,\"error\":\"Invalid entryId\"}",
+      "{\"success\":false,\"error\":\"Invalid vialProtocol\"}",
+      "{\"success\":false,\"error\":\"Invalid vialProtocol\"}",
+      "{\"success\":false,\"error\":\"cancelled\"}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":false,\"error\":\"<os error>\"}"
+    ],
+    "transfers": [
+      {
+        "bodies": [
+          {
+            "label": "With data",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+          },
+          {
+            "label": "Label no-data",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"data\":null}"
+          },
+          {
+            "label": "Label not-json",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{"
+          },
+          {
+            "label": 42,
+            "body": "\"just a string\""
+          },
+          {
+            "label": "Same id",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":\"KC_B\",\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200,\"extra\":[1e+21,0]}}"
+          }
+        ],
+        "built": {
+          "defaultFilename": "pipette-fav-td-2026-10-16-120000.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:00:00.000Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"td\": [\n      {\n        \"label\": \"With data\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_A\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200\n        }\n      },\n      {\n        \"label\": \"Same id\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_B\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200,\n          \"extra\": [\n            1e+21,\n            0\n          ]\n        }\n      }\n    ]\n  }\n}"
+        },
+        "defaultPath": "pipette-fav-td-2026-10-16-120000.json"
+      },
+      null,
+      {
+        "bodies": [
+          {
+            "label": "With data",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+          },
+          {
+            "label": "Label no-data",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"data\":null}"
+          },
+          {
+            "label": "Label not-json",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{"
+          },
+          {
+            "label": 42,
+            "body": "\"just a string\""
+          },
+          {
+            "label": "Same id",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":\"KC_B\",\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200,\"extra\":[1e+21,0]}}"
+          }
+        ],
+        "built": {
+          "defaultFilename": "pipette-fav-td-2026-10-16-120101.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:01:01.234Z\",\n  \"vial_protocol\": 5,\n  \"categories\": {\n    \"td\": [\n      {\n        \"label\": \"With data\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_A\",\n          \"onHold\": \"RAG_T(KC_NO)\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"QK_BOOT\",\n          \"tappingTerm\": 200\n        }\n      },\n      {\n        \"label\": \"Same id\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_B\",\n          \"onHold\": \"RAG_T(KC_NO)\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"QK_BOOT\",\n          \"tappingTerm\": 200,\n          \"extra\": [\n            1e+21,\n            0\n          ]\n        }\n      }\n    ]\n  }\n}"
+        },
+        "defaultPath": "pipette-fav-td-2026-10-16-120101.json"
+      },
+      {
+        "bodies": [
+          {
+            "label": "With data",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+          },
+          {
+            "label": "Same id",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":\"KC_B\",\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200,\"extra\":[1e+21,0]}}"
+          }
+        ],
+        "built": {
+          "defaultFilename": "pipette-fav-td-2026-10-16-120101.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:01:01.234Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"td\": [\n      {\n        \"label\": \"With data\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_A\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200\n        }\n      },\n      {\n        \"label\": \"Same id\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_B\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200,\n          \"extra\": [\n            1e+21,\n            0\n          ]\n        }\n      }\n    ]\n  }\n}"
+        },
+        "defaultPath": "pipette-fav-td-2026-10-16-120101.json"
+      },
+      {
+        "bodies": [
+          {
+            "label": "Label no-data",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"data\":null}"
+          }
+        ],
+        "built": {
+          "error": "Entry unreadable"
+        }
+      },
+      {
+        "bodies": [
+          {
+            "label": "Label not-json",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{"
+          }
+        ],
+        "built": {
+          "error": "Entry unreadable"
+        }
+      },
+      {
+        "bodies": [],
+        "built": {
+          "error": "Entry unreadable"
+        }
+      },
+      null,
+      null,
+      {
+        "bodies": [
+          {
+            "label": 42,
+            "body": "\"just a string\""
+          }
+        ],
+        "built": {
+          "error": "Entry unreadable"
+        }
+      },
+      null,
+      null,
+      null,
+      {
+        "bodies": [
+          {
+            "label": "With data",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+          },
+          {
+            "label": "Label no-data",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"data\":null}"
+          },
+          {
+            "label": "Label not-json",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{"
+          },
+          {
+            "label": 42,
+            "body": "\"just a string\""
+          },
+          {
+            "label": "Same id",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":\"KC_B\",\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200,\"extra\":[1e+21,0]}}"
+          }
+        ],
+        "built": {
+          "defaultFilename": "pipette-fav-td-2026-10-16-120101.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:01:01.234Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"td\": [\n      {\n        \"label\": \"With data\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_A\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200\n        }\n      },\n      {\n        \"label\": \"Same id\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_B\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200,\n          \"extra\": [\n            1e+21,\n            0\n          ]\n        }\n      }\n    ]\n  }\n}"
+        },
+        "defaultPath": "pipette-fav-td-2026-10-16-120101.json"
+      },
+      {
+        "bodies": [
+          {
+            "label": "Label ko",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"keyOverride\",\"data\":{\"triggerKey\":31744,\"replacementKey\":16388,\"layers\":3,\"triggerMods\":1,\"negativeMods\":0,\"suppressedMods\":0,\"options\":7,\"enabled\":true}}"
+          }
+        ],
+        "built": {
+          "defaultFilename": "pipette-fav-ko-2026-10-16-120101.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:01:01.234Z\",\n  \"vial_protocol\": 5,\n  \"categories\": {\n    \"ko\": [\n      {\n        \"label\": \"Label ko\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"triggerKey\": \"RAG_T(KC_NO)\",\n          \"replacementKey\": \"LT0(KC_A)\",\n          \"layers\": 3,\n          \"triggerMods\": 1,\n          \"negativeMods\": 0,\n          \"suppressedMods\": 0,\n          \"options\": 7,\n          \"enabled\": true\n        }\n      }\n    ]\n  }\n}"
+        },
+        "defaultPath": "pipette-fav-ko-2026-10-16-120101.json"
+      },
+      {
+        "bodies": [
+          {
+            "label": "Label ark",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"altRepeatKey\",\"data\":{\"lastKey\":4,\"altKey\":31744,\"allowedMods\":0,\"options\":1,\"enabled\":false}}"
+          }
+        ],
+        "built": {
+          "defaultFilename": "pipette-fav-ark-2026-10-16-120101.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:01:01.234Z\",\n  \"vial_protocol\": 9,\n  \"categories\": {\n    \"ark\": [\n      {\n        \"label\": \"Label ark\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"lastKey\": \"KC_A\",\n          \"altKey\": \"RAG_T(KC_NO)\",\n          \"allowedMods\": 0,\n          \"options\": 1,\n          \"enabled\": false\n        }\n      }\n    ]\n  }\n}"
+        },
+        "defaultPath": "pipette-fav-ark-2026-10-16-120101.json"
+      },
+      {
+        "bodies": [
+          {
+            "label": "Label m",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"macro\",\"data\":[[\"text\",\"hello\"],[\"tap\",\"KC_A\"]]}"
+          }
+        ],
+        "built": {
+          "defaultFilename": "pipette-fav-macro-2026-10-16-120101.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:01:01.234Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"macro\": [\n      {\n        \"label\": \"Label m\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": [\n          [\n            \"text\",\n            \"hello\"\n          ],\n          [\n            \"tap\",\n            \"KC_A\"\n          ]\n        ]\n      }\n    ]\n  }\n}"
+        },
+        "defaultPath": "pipette-fav-macro-2026-10-16-120101.json"
+      },
+      {
+        "bodies": [],
+        "built": {
+          "defaultFilename": "pipette-fav-combo-2026-10-16-120101.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:01:01.234Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {}\n}"
+        },
+        "defaultPath": "pipette-fav-combo-2026-10-16-120101.json"
+      },
+      {
+        "bodies": [
+          {
+            "label": "With data",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+          },
+          {
+            "label": "Label no-data",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"data\":null}"
+          },
+          {
+            "label": "Label not-json",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{"
+          },
+          {
+            "label": 42,
+            "body": "\"just a string\""
+          },
+          {
+            "label": "Same id",
+            "savedAt": "2026-10-16T11:00:00.000Z",
+            "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":\"KC_B\",\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200,\"extra\":[1e+21,0]}}"
+          }
+        ],
+        "built": {
+          "defaultFilename": "pipette-fav-td-2026-10-16-120101.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:01:01.234Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"td\": [\n      {\n        \"label\": \"With data\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_A\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200\n        }\n      },\n      {\n        \"label\": \"Same id\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_B\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200,\n          \"extra\": [\n            1e+21,\n            0\n          ]\n        }\n      }\n    ]\n  }\n}"
+        },
+        "defaultPath": "pipette-fav-td-2026-10-16-120101.json"
+      }
+    ],
+    "notified": [],
+    "after": {
+      "exports/": null,
+      "exports/a.json": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:01:01.234Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"td\": [\n      {\n        \"label\": \"With data\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_A\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200\n        }\n      },\n      {\n        \"label\": \"Same id\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_B\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200,\n          \"extra\": [\n            1e+21,\n            0\n          ]\n        }\n      }\n    ]\n  }\n}",
+      "exports/all-v5.json": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:01:01.234Z\",\n  \"vial_protocol\": 5,\n  \"categories\": {\n    \"td\": [\n      {\n        \"label\": \"With data\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_A\",\n          \"onHold\": \"RAG_T(KC_NO)\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"QK_BOOT\",\n          \"tappingTerm\": 200\n        }\n      },\n      {\n        \"label\": \"Same id\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_B\",\n          \"onHold\": \"RAG_T(KC_NO)\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"QK_BOOT\",\n          \"tappingTerm\": 200,\n          \"extra\": [\n            1e+21,\n            0\n          ]\n        }\n      }\n    ]\n  }\n}",
+      "exports/all.json": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:00:00.000Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"td\": [\n      {\n        \"label\": \"With data\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_A\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200\n        }\n      },\n      {\n        \"label\": \"Same id\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_B\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200,\n          \"extra\": [\n            1e+21,\n            0\n          ]\n        }\n      }\n    ]\n  }\n}",
+      "exports/ark.json": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:01:01.234Z\",\n  \"vial_protocol\": 9,\n  \"categories\": {\n    \"ark\": [\n      {\n        \"label\": \"Label ark\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"lastKey\": \"KC_A\",\n          \"altKey\": \"RAG_T(KC_NO)\",\n          \"allowedMods\": 0,\n          \"options\": 1,\n          \"enabled\": false\n        }\n      }\n    ]\n  }\n}",
+      "exports/empty.json": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:01:01.234Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {}\n}",
+      "exports/ko.json": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:01:01.234Z\",\n  \"vial_protocol\": 5,\n  \"categories\": {\n    \"ko\": [\n      {\n        \"label\": \"Label ko\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": {\n          \"triggerKey\": \"RAG_T(KC_NO)\",\n          \"replacementKey\": \"LT0(KC_A)\",\n          \"layers\": 3,\n          \"triggerMods\": 1,\n          \"negativeMods\": 0,\n          \"suppressedMods\": 0,\n          \"options\": 7,\n          \"enabled\": true\n        }\n      }\n    ]\n  }\n}",
+      "exports/macro.json": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:01:01.234Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"macro\": [\n      {\n        \"label\": \"Label m\",\n        \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n        \"data\": [\n          [\n            \"text\",\n            \"hello\"\n          ],\n          [\n            \"tap\",\n            \"KC_A\"\n          ]\n        ]\n      }\n    ]\n  }\n}",
+      "sync/": null,
+      "sync/favorites/": null,
+      "sync/favorites/altRepeatKey/": null,
+      "sync/favorites/altRepeatKey/altRepeatKey_ark.json": "{\"type\":\"altRepeatKey\",\"data\":{\"lastKey\":4,\"altKey\":31744,\"allowedMods\":0,\"options\":1,\"enabled\":false}}",
+      "sync/favorites/altRepeatKey/index.json": "{\n  \"type\": \"altRepeatKey\",\n  \"entries\": [\n    {\n      \"id\": \"ark\",\n      \"label\": \"Label ark\",\n      \"filename\": \"altRepeatKey_ark.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/keyOverride/": null,
+      "sync/favorites/keyOverride/index.json": "{\n  \"type\": \"keyOverride\",\n  \"entries\": [\n    {\n      \"id\": \"ko\",\n      \"label\": \"Label ko\",\n      \"filename\": \"keyOverride_ko.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/keyOverride/keyOverride_ko.json": "{\"type\":\"keyOverride\",\"data\":{\"triggerKey\":31744,\"replacementKey\":16388,\"layers\":3,\"triggerMods\":1,\"negativeMods\":0,\"suppressedMods\":0,\"options\":7,\"enabled\":true}}",
+      "sync/favorites/macro/": null,
+      "sync/favorites/macro/index.json": "{\n  \"type\": \"macro\",\n  \"entries\": [\n    {\n      \"id\": \"m\",\n      \"label\": \"Label m\",\n      \"filename\": \"macro_m.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/macro/macro_m.json": "{\"type\":\"macro\",\"data\":[[\"text\",\"hello\"],[\"tap\",\"KC_A\"]]}",
+      "sync/favorites/tapDance/": null,
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"label\": \"With data\",\n      \"filename\": \"tapDance_a.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"extra\": 1\n    },\n    {\n      \"id\": \"no-data\",\n      \"label\": \"Label no-data\",\n      \"filename\": \"tapDance_no-data.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"not-json\",\n      \"label\": \"Label not-json\",\n      \"filename\": \"tapDance_not-json.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"missing\",\n      \"label\": \"Label missing\",\n      \"filename\": \"tapDance_missing.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    },\n    {\n      \"id\": \"dead\",\n      \"label\": \"Label dead\",\n      \"filename\": \"tapDance_dead.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T11:59:00.000Z\"\n    },\n    {\n      \"id\": \"odd\",\n      \"label\": 42,\n      \"filename\": \"tapDance_odd.json\"\n    },\n    {\n      \"id\": \"a\",\n      \"label\": \"Same id\",\n      \"filename\": \"tapDance_a2.json\",\n      \"savedAt\": \"2026-10-16T11:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/tapDance/tapDance_a.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+      "sync/favorites/tapDance/tapDance_a2.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":\"KC_B\",\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200,\"extra\":[1e+21,0]}}",
+      "sync/favorites/tapDance/tapDance_dead.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+      "sync/favorites/tapDance/tapDance_no-data.json": "{\"type\":\"tapDance\",\"data\":null}",
+      "sync/favorites/tapDance/tapDance_not-json.json": "{",
+      "sync/favorites/tapDance/tapDance_odd.json": "\"just a string\""
+    }
+  },
+  {
+    "name": "exports of the current value",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "exports/": null
+    },
+    "steps": [
+      {
+        "op": "exportCurrent",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "dataJson": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "dialog": "exports/td.json"
+      },
+      {
+        "op": "exportCurrent",
+        "type": "keyOverride",
+        "vialProtocol": 5,
+        "dataJson": "{\"type\":\"keyOverride\",\"data\":{\"triggerKey\":31744,\"replacementKey\":16388,\"layers\":3,\"triggerMods\":1,\"negativeMods\":0,\"suppressedMods\":0,\"options\":7,\"enabled\":true}}",
+        "dialog": "exports/ko5.json"
+      },
+      {
+        "op": "exportCurrent",
+        "type": "macro",
+        "vialProtocol": 6,
+        "dataJson": "{\"type\":\"macro\",\"data\":[[\"text\",\"hello\"],[\"tap\",\"KC_A\"]]}",
+        "dialog": "exports/macro.json"
+      },
+      {
+        "op": "exportCurrent",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "dataJson": "{\"type\":\"tapDance\"}",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "exportCurrent",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "dataJson": "{\"type\":\"tapDance\",\"data\":null}",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "exportCurrent",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "dataJson": "not json",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "exportCurrent",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "dataJson": 5,
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "exportCurrent",
+        "type": "tapDance",
+        "vialProtocol": "x",
+        "dataJson": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "dialog": "exports/x.json"
+      },
+      {
+        "op": "exportCurrent",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "dataJson": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+        "dialog": null
+      },
+      {
+        "op": "exportCurrent",
+        "type": "tapDance",
+        "vialProtocol": 6,
+        "dataJson": "\"text\"",
+        "dialog": "exports/text.json"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":true}",
+      "{\"success\":false,\"error\":\"Missing data field\"}",
+      "{\"success\":false,\"error\":\"Missing data field\"}",
+      "{\"success\":false,\"error\":\"SyntaxError: Unexpected token 'o', \\\"not json\\\" is not valid JSON\"}",
+      "{\"success\":false,\"error\":\"Invalid data\"}",
+      "{\"success\":false,\"error\":\"Invalid vialProtocol\"}",
+      "{\"success\":false,\"error\":\"cancelled\"}",
+      "{\"success\":false,\"error\":\"Missing data field\"}"
+    ],
+    "transfers": [
+      {
+        "built": {
+          "defaultFilename": "pipette-fav-td-current-2026-10-16-120000.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:00:00.000Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"td\": [\n      {\n        \"label\": \"Current\",\n        \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_A\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200\n        }\n      }\n    ]\n  }\n}"
+        },
+        "defaultPath": "pipette-fav-td-current-2026-10-16-120000.json"
+      },
+      {
+        "built": {
+          "defaultFilename": "pipette-fav-ko-current-2026-10-16-120000.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:00:00.000Z\",\n  \"vial_protocol\": 5,\n  \"categories\": {\n    \"ko\": [\n      {\n        \"label\": \"Current\",\n        \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n        \"data\": {\n          \"triggerKey\": \"RAG_T(KC_NO)\",\n          \"replacementKey\": \"LT0(KC_A)\",\n          \"layers\": 3,\n          \"triggerMods\": 1,\n          \"negativeMods\": 0,\n          \"suppressedMods\": 0,\n          \"options\": 7,\n          \"enabled\": true\n        }\n      }\n    ]\n  }\n}"
+        },
+        "defaultPath": "pipette-fav-ko-current-2026-10-16-120000.json"
+      },
+      {
+        "built": {
+          "defaultFilename": "pipette-fav-macro-current-2026-10-16-120000.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:00:00.000Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"macro\": [\n      {\n        \"label\": \"Current\",\n        \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n        \"data\": [\n          [\n            \"text\",\n            \"hello\"\n          ],\n          [\n            \"tap\",\n            \"KC_A\"\n          ]\n        ]\n      }\n    ]\n  }\n}"
+        },
+        "defaultPath": "pipette-fav-macro-current-2026-10-16-120000.json"
+      },
+      {
+        "built": {
+          "error": "Missing data field"
+        }
+      },
+      {
+        "built": {
+          "error": "Missing data field"
+        }
+      },
+      null,
+      null,
+      null,
+      {
+        "built": {
+          "defaultFilename": "pipette-fav-td-current-2026-10-16-120000.json",
+          "content": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:00:00.000Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"td\": [\n      {\n        \"label\": \"Current\",\n        \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_A\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200\n        }\n      }\n    ]\n  }\n}"
+        },
+        "defaultPath": "pipette-fav-td-current-2026-10-16-120000.json"
+      },
+      {
+        "built": {
+          "error": "Missing data field"
+        }
+      }
+    ],
+    "notified": [],
+    "after": {
+      "exports/": null,
+      "exports/ko5.json": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:00:00.000Z\",\n  \"vial_protocol\": 5,\n  \"categories\": {\n    \"ko\": [\n      {\n        \"label\": \"Current\",\n        \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n        \"data\": {\n          \"triggerKey\": \"RAG_T(KC_NO)\",\n          \"replacementKey\": \"LT0(KC_A)\",\n          \"layers\": 3,\n          \"triggerMods\": 1,\n          \"negativeMods\": 0,\n          \"suppressedMods\": 0,\n          \"options\": 7,\n          \"enabled\": true\n        }\n      }\n    ]\n  }\n}",
+      "exports/macro.json": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:00:00.000Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"macro\": [\n      {\n        \"label\": \"Current\",\n        \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n        \"data\": [\n          [\n            \"text\",\n            \"hello\"\n          ],\n          [\n            \"tap\",\n            \"KC_A\"\n          ]\n        ]\n      }\n    ]\n  }\n}",
+      "exports/td.json": "{\n  \"app\": \"pipette\",\n  \"version\": 3,\n  \"scope\": \"fav\",\n  \"exportedAt\": \"2026-10-16T12:00:00.000Z\",\n  \"vial_protocol\": 6,\n  \"categories\": {\n    \"td\": [\n      {\n        \"label\": \"Current\",\n        \"savedAt\": \"2026-10-16T12:00:00.000Z\",\n        \"data\": {\n          \"onTap\": \"KC_A\",\n          \"onHold\": \"QK_BOOT\",\n          \"onDoubleTap\": \"KC_NO\",\n          \"onTapHold\": \"0x5c00\",\n          \"tappingTerm\": 200\n        }\n      }\n    ]\n  }\n}"
+    }
+  },
+  {
+    "name": "imports into the current value",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "imports/v3.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":5,\"categories\":{\"td\":[{\"label\":\"a\",\"savedAt\":\"s\",\"data\":{\"onTap\":\"KC_A\",\"onHold\":\"RAG_T(KC_NO)\",\"onDoubleTap\":7,\"onTapHold\":\"MY_KEY\",\"tappingTerm\":200}},{\"label\":\"b\",\"savedAt\":\"s\",\"data\":{}}]}}",
+      "imports/v2.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":2,\"categories\":{\"ko\":[{\"label\":\"k\",\"savedAt\":\"s\",\"data\":{\"triggerKey\":\"QK_BOOT\",\"replacementKey\":16388,\"layers\":3,\"triggerMods\":1,\"negativeMods\":0,\"suppressedMods\":0,\"options\":7,\"enabled\":true}}],\"macro\":[{\"label\":\"m\",\"savedAt\":\"s\",\"data\":\"anything\"}]}}",
+      "imports/empty.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":6,\"categories\":{\"td\":[]}}",
+      "imports/v1.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":1,\"categories\":{\"td\":[]}}",
+      "imports/bad.json": "{\"app\":\"pipette\"",
+      "imports/array.json": "[]"
+    },
+    "steps": [
+      {
+        "op": "importToCurrent",
+        "type": "tapDance",
+        "dialog": "imports/v3.json"
+      },
+      {
+        "op": "importToCurrent",
+        "type": "keyOverride",
+        "dialog": "imports/v2.json"
+      },
+      {
+        "op": "importToCurrent",
+        "type": "macro",
+        "dialog": "imports/v2.json"
+      },
+      {
+        "op": "importToCurrent",
+        "type": "combo",
+        "dialog": "imports/v2.json"
+      },
+      {
+        "op": "importToCurrent",
+        "type": "tapDance",
+        "dialog": "imports/empty.json"
+      },
+      {
+        "op": "importToCurrent",
+        "type": "tapDance",
+        "dialog": "imports/v1.json"
+      },
+      {
+        "op": "importToCurrent",
+        "type": "tapDance",
+        "dialog": "imports/bad.json"
+      },
+      {
+        "op": "importToCurrent",
+        "type": "tapDance",
+        "dialog": "imports/array.json"
+      },
+      {
+        "op": "importToCurrent",
+        "type": "tapDance",
+        "dialog": "imports/none.json"
+      },
+      {
+        "op": "importToCurrent",
+        "type": "tapDance",
+        "dialog": null
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":7,\"onTapHold\":0,\"tappingTerm\":200}}",
+      "{\"success\":true,\"data\":{\"triggerKey\":31744,\"replacementKey\":16388,\"layers\":3,\"triggerMods\":1,\"negativeMods\":0,\"suppressedMods\":0,\"options\":7,\"enabled\":true}}",
+      "{\"success\":true,\"data\":\"anything\"}",
+      "{\"success\":false,\"error\":\"No matching data found for this type\"}",
+      "{\"success\":false,\"error\":\"No matching data found for this type\"}",
+      "{\"success\":false,\"error\":\"Invalid export file format\"}",
+      "{\"success\":false,\"error\":\"SyntaxError: Expected ',' or '}' after property value in JSON at position 16 (line 1 column 17)\"}",
+      "{\"success\":false,\"error\":\"Invalid export file format\"}",
+      "{\"success\":false,\"error\":\"<os error>\"}",
+      "{\"success\":false,\"error\":\"cancelled\"}"
+    ],
+    "transfers": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "notified": [],
+    "after": {
+      "imports/": null,
+      "imports/array.json": "[]",
+      "imports/bad.json": "{\"app\":\"pipette\"",
+      "imports/empty.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":6,\"categories\":{\"td\":[]}}",
+      "imports/v1.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":1,\"categories\":{\"td\":[]}}",
+      "imports/v2.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":2,\"categories\":{\"ko\":[{\"label\":\"k\",\"savedAt\":\"s\",\"data\":{\"triggerKey\":\"QK_BOOT\",\"replacementKey\":16388,\"layers\":3,\"triggerMods\":1,\"negativeMods\":0,\"suppressedMods\":0,\"options\":7,\"enabled\":true}}],\"macro\":[{\"label\":\"m\",\"savedAt\":\"s\",\"data\":\"anything\"}]}}",
+      "imports/v3.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":5,\"categories\":{\"td\":[{\"label\":\"a\",\"savedAt\":\"s\",\"data\":{\"onTap\":\"KC_A\",\"onHold\":\"RAG_T(KC_NO)\",\"onDoubleTap\":7,\"onTapHold\":\"MY_KEY\",\"tappingTerm\":200}},{\"label\":\"b\",\"savedAt\":\"s\",\"data\":{}}]}}"
+    }
+  },
+  {
+    "name": "imports with duplicates, invalid data and legacy names",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"live\",\n      \"label\": \"Dup\",\n      \"filename\": \"tapDance_2026-01-01T00-00-00.000Z.json\",\n      \"savedAt\": \"2026-01-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"dead\",\n      \"label\": \"Dead\",\n      \"filename\": \"tapDance_dead.json\",\n      \"savedAt\": \"2026-01-02T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T11:59:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/tapDance/tapDance_2026-01-01T00-00-00.000Z.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+      "imports/mixed.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":5,\"categories\":{\"combo\":[{\"label\":\"bad combo\",\"savedAt\":\"s\",\"data\":{\"key1\":\"KC_A\"}}],\"td\":[{\"label\":\"Dup\",\"savedAt\":\"2026-01-01T00:00:00.000Z\",\"data\":{\"onTap\":\"KC_A\",\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}},{\"label\":\"Dead\",\"savedAt\":\"2026-01-02T00:00:00.000Z\",\"data\":{\"onTap\":\"KC_B\",\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}},{\"label\":\"New\",\"savedAt\":\"2026-01-03T00:00:00.000Z\",\"data\":{\"onTap\":\"KC_C\",\"onHold\":\"QK_BOOT\",\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}},{\"label\":\"New\",\"savedAt\":\"2026-01-03T00:00:00.000Z\",\"data\":{\"onTap\":\"KC_D\",\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}},{\"label\":\"Bad\",\"savedAt\":\"s\",\"data\":{\"onTap\":\"KC_A\"}},{\"label\":\"\\ud800 lone\",\"savedAt\":\"2026-01-04T00:00:00.000Z\",\"extra\":true,\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}],\"macro\":[{\"label\":\"Macro\",\"savedAt\":\"2026-01-05T00:00:00.000Z\",\"data\":[[\"text\",\"hello\"],[\"tap\",\"KC_A\"]]},{\"label\":\"Not a macro\",\"savedAt\":\"s\",\"data\":[[1]]}],\"ark\":[],\"ko\":[{\"label\":\"KO v5\",\"savedAt\":\"2026-01-06T00:00:00.000Z\",\"data\":{\"triggerKey\":\"RAG_T(KC_NO)\",\"replacementKey\":\"KC_ESCAPE\",\"layers\":3,\"triggerMods\":1,\"negativeMods\":0,\"suppressedMods\":0,\"options\":7,\"enabled\":true}}]}}",
+      "imports/v2.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":2,\"categories\":{\"ark\":[{\"label\":\"ARK\",\"savedAt\":\"s\",\"data\":{\"lastKey\":\"KC_A\",\"altKey\":\"KC_B\",\"allowedMods\":0,\"options\":1,\"enabled\":false}}]}}",
+      "imports/v1.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":1,\"categories\":{\"td\":[]}}",
+      "imports/unknown.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":6,\"categories\":{\"zz\":[]}}",
+      "imports/bad-entry.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":6,\"categories\":{\"td\":[{\"label\":\"x\",\"savedAt\":5,\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}]}}",
+      "imports/not-json.json": "nope",
+      "imports/protocol.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":\"6\",\"categories\":{\"td\":[]}}"
+    },
+    "steps": [
+      {
+        "op": "import",
+        "dialog": "imports/mixed.json"
+      },
+      {
+        "op": "at",
+        "time": "2026-10-16T12:01:00.000Z"
+      },
+      {
+        "op": "import",
+        "dialog": "imports/mixed.json"
+      },
+      {
+        "op": "import",
+        "dialog": "imports/v2.json"
+      },
+      {
+        "op": "import",
+        "dialog": "imports/v1.json"
+      },
+      {
+        "op": "import",
+        "dialog": "imports/unknown.json"
+      },
+      {
+        "op": "import",
+        "dialog": "imports/bad-entry.json"
+      },
+      {
+        "op": "import",
+        "dialog": "imports/not-json.json"
+      },
+      {
+        "op": "import",
+        "dialog": "imports/protocol.json"
+      },
+      {
+        "op": "import",
+        "dialog": "imports/none.json"
+      },
+      {
+        "op": "import",
+        "dialog": null
+      },
+      {
+        "op": "list",
+        "type": "tapDance"
+      },
+      {
+        "op": "list",
+        "type": "macro"
+      },
+      {
+        "op": "list",
+        "type": "keyOverride"
+      },
+      {
+        "op": "list",
+        "type": "altRepeatKey"
+      },
+      {
+        "op": "list",
+        "type": "combo"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"imported\":5,\"skipped\":5}",
+      null,
+      "{\"success\":true,\"imported\":0,\"skipped\":10}",
+      "{\"success\":true,\"imported\":1,\"skipped\":0}",
+      "{\"success\":false,\"imported\":0,\"skipped\":0,\"error\":\"Invalid export file format\"}",
+      "{\"success\":false,\"imported\":0,\"skipped\":0,\"error\":\"Invalid export file format\"}",
+      "{\"success\":false,\"imported\":0,\"skipped\":0,\"error\":\"Invalid export file format\"}",
+      "{\"success\":false,\"imported\":0,\"skipped\":0,\"error\":\"SyntaxError: Unexpected token 'o', \\\"nope\\\" is not valid JSON\"}",
+      "{\"success\":false,\"imported\":0,\"skipped\":0,\"error\":\"Invalid export file format\"}",
+      "{\"success\":false,\"imported\":0,\"skipped\":0,\"error\":\"<os error>\"}",
+      "{\"success\":false,\"imported\":0,\"skipped\":0,\"error\":\"cancelled\"}",
+      "{\"success\":true,\"entries\":[{\"id\":\"00000000-0000-4000-8000-000000000003\",\"label\":\"\\ud800 lone\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000003.json\",\"savedAt\":\"2026-01-04T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000002\",\"label\":\"New\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000002.json\",\"savedAt\":\"2026-01-03T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"Dead\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"2026-01-02T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"},{\"id\":\"live\",\"label\":\"Dup\",\"filename\":\"tapDance_2026-01-01T00-00-00.000Z_live.json\",\"savedAt\":\"2026-01-01T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:00.000Z\",\"body\":\"2026-01-01T00:00:00.000Z\",\"name\":\"2026-01-01T00:00:00.000Z\",\"hub\":\"2026-01-01T00:00:00.000Z\"},\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}]}",
+      "{\"success\":true,\"entries\":[{\"id\":\"00000000-0000-4000-8000-000000000004\",\"label\":\"Macro\",\"filename\":\"macro_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000004.json\",\"savedAt\":\"2026-01-05T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}",
+      "{\"success\":true,\"entries\":[{\"id\":\"00000000-0000-4000-8000-000000000005\",\"label\":\"KO v5\",\"filename\":\"keyOverride_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000005.json\",\"savedAt\":\"2026-01-06T00:00:00.000Z\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}",
+      "{\"success\":true,\"entries\":[{\"id\":\"00000000-0000-4000-8000-000000000006\",\"label\":\"ARK\",\"filename\":\"altRepeatKey_2026-10-16T12-01-00.000Z_00000000-0000-4000-8000-000000000006.json\",\"savedAt\":\"s\",\"clocks\":{\"created\":\"2026-10-16T12:01:00.000Z\",\"body\":\"2026-10-16T12:01:00.000Z\",\"name\":\"2026-10-16T12:01:00.000Z\",\"hub\":\"2026-10-16T12:01:00.000Z\"},\"updatedAt\":\"2026-10-16T12:01:00.000Z\"}]}",
+      "{\"success\":true,\"entries\":[]}"
+    ],
+    "transfers": [
+      {
+        "plan": {
+          "batches": [
+            {
+              "type": "combo",
+              "entries": []
+            },
+            {
+              "type": "tapDance",
+              "entries": [
+                {
+                  "label": "Dup",
+                  "savedAt": "2026-01-01T00:00:00.000Z",
+                  "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+                },
+                {
+                  "label": "Dead",
+                  "savedAt": "2026-01-02T00:00:00.000Z",
+                  "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":5,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+                },
+                {
+                  "label": "New",
+                  "savedAt": "2026-01-03T00:00:00.000Z",
+                  "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":6,\"onHold\":23552,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+                },
+                {
+                  "label": "New",
+                  "savedAt": "2026-01-03T00:00:00.000Z",
+                  "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":7,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+                },
+                {
+                  "label": "\ud800 lone",
+                  "savedAt": "2026-01-04T00:00:00.000Z",
+                  "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+                }
+              ]
+            },
+            {
+              "type": "macro",
+              "entries": [
+                {
+                  "label": "Macro",
+                  "savedAt": "2026-01-05T00:00:00.000Z",
+                  "body": "{\"type\":\"macro\",\"data\":[[\"text\",\"hello\"],[\"tap\",\"KC_A\"]]}"
+                }
+              ]
+            },
+            {
+              "type": "altRepeatKey",
+              "entries": []
+            },
+            {
+              "type": "keyOverride",
+              "entries": [
+                {
+                  "label": "KO v5",
+                  "savedAt": "2026-01-06T00:00:00.000Z",
+                  "body": "{\"type\":\"keyOverride\",\"data\":{\"triggerKey\":31744,\"replacementKey\":41,\"layers\":3,\"triggerMods\":1,\"negativeMods\":0,\"suppressedMods\":0,\"options\":7,\"enabled\":true}}"
+                }
+              ]
+            }
+          ],
+          "skipped": 3
+        }
+      },
+      null,
+      {
+        "plan": {
+          "batches": [
+            {
+              "type": "combo",
+              "entries": []
+            },
+            {
+              "type": "tapDance",
+              "entries": [
+                {
+                  "label": "Dup",
+                  "savedAt": "2026-01-01T00:00:00.000Z",
+                  "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+                },
+                {
+                  "label": "Dead",
+                  "savedAt": "2026-01-02T00:00:00.000Z",
+                  "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":5,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+                },
+                {
+                  "label": "New",
+                  "savedAt": "2026-01-03T00:00:00.000Z",
+                  "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":6,\"onHold\":23552,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+                },
+                {
+                  "label": "New",
+                  "savedAt": "2026-01-03T00:00:00.000Z",
+                  "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":7,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+                },
+                {
+                  "label": "\ud800 lone",
+                  "savedAt": "2026-01-04T00:00:00.000Z",
+                  "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+                }
+              ]
+            },
+            {
+              "type": "macro",
+              "entries": [
+                {
+                  "label": "Macro",
+                  "savedAt": "2026-01-05T00:00:00.000Z",
+                  "body": "{\"type\":\"macro\",\"data\":[[\"text\",\"hello\"],[\"tap\",\"KC_A\"]]}"
+                }
+              ]
+            },
+            {
+              "type": "altRepeatKey",
+              "entries": []
+            },
+            {
+              "type": "keyOverride",
+              "entries": [
+                {
+                  "label": "KO v5",
+                  "savedAt": "2026-01-06T00:00:00.000Z",
+                  "body": "{\"type\":\"keyOverride\",\"data\":{\"triggerKey\":31744,\"replacementKey\":41,\"layers\":3,\"triggerMods\":1,\"negativeMods\":0,\"suppressedMods\":0,\"options\":7,\"enabled\":true}}"
+                }
+              ]
+            }
+          ],
+          "skipped": 3
+        }
+      },
+      {
+        "plan": {
+          "batches": [
+            {
+              "type": "altRepeatKey",
+              "entries": [
+                {
+                  "label": "ARK",
+                  "savedAt": "s",
+                  "body": "{\"type\":\"altRepeatKey\",\"data\":{\"lastKey\":4,\"altKey\":5,\"allowedMods\":0,\"options\":1,\"enabled\":false}}"
+                }
+              ]
+            }
+          ],
+          "skipped": 0
+        }
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "notified": [
+      "favorites/tapDance",
+      "favorites/macro",
+      "favorites/keyOverride",
+      "favorites/altRepeatKey"
+    ],
+    "after": {
+      "imports/": null,
+      "imports/bad-entry.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":6,\"categories\":{\"td\":[{\"label\":\"x\",\"savedAt\":5,\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}]}}",
+      "imports/mixed.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":5,\"categories\":{\"combo\":[{\"label\":\"bad combo\",\"savedAt\":\"s\",\"data\":{\"key1\":\"KC_A\"}}],\"td\":[{\"label\":\"Dup\",\"savedAt\":\"2026-01-01T00:00:00.000Z\",\"data\":{\"onTap\":\"KC_A\",\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}},{\"label\":\"Dead\",\"savedAt\":\"2026-01-02T00:00:00.000Z\",\"data\":{\"onTap\":\"KC_B\",\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}},{\"label\":\"New\",\"savedAt\":\"2026-01-03T00:00:00.000Z\",\"data\":{\"onTap\":\"KC_C\",\"onHold\":\"QK_BOOT\",\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}},{\"label\":\"New\",\"savedAt\":\"2026-01-03T00:00:00.000Z\",\"data\":{\"onTap\":\"KC_D\",\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}},{\"label\":\"Bad\",\"savedAt\":\"s\",\"data\":{\"onTap\":\"KC_A\"}},{\"label\":\"\\ud800 lone\",\"savedAt\":\"2026-01-04T00:00:00.000Z\",\"extra\":true,\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}],\"macro\":[{\"label\":\"Macro\",\"savedAt\":\"2026-01-05T00:00:00.000Z\",\"data\":[[\"text\",\"hello\"],[\"tap\",\"KC_A\"]]},{\"label\":\"Not a macro\",\"savedAt\":\"s\",\"data\":[[1]]}],\"ark\":[],\"ko\":[{\"label\":\"KO v5\",\"savedAt\":\"2026-01-06T00:00:00.000Z\",\"data\":{\"triggerKey\":\"RAG_T(KC_NO)\",\"replacementKey\":\"KC_ESCAPE\",\"layers\":3,\"triggerMods\":1,\"negativeMods\":0,\"suppressedMods\":0,\"options\":7,\"enabled\":true}}]}}",
+      "imports/not-json.json": "nope",
+      "imports/protocol.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":\"6\",\"categories\":{\"td\":[]}}",
+      "imports/unknown.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":6,\"categories\":{\"zz\":[]}}",
+      "imports/v1.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":1,\"categories\":{\"td\":[]}}",
+      "imports/v2.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":2,\"categories\":{\"ark\":[{\"label\":\"ARK\",\"savedAt\":\"s\",\"data\":{\"lastKey\":\"KC_A\",\"altKey\":\"KC_B\",\"allowedMods\":0,\"options\":1,\"enabled\":false}}]}}",
+      "sync/": null,
+      "sync/favorites/": null,
+      "sync/favorites/altRepeatKey/": null,
+      "sync/favorites/altRepeatKey/altRepeatKey_2026-10-16T12-01-00.000Z_00000000-0000-4000-8000-000000000006.json": "{\"type\":\"altRepeatKey\",\"data\":{\"lastKey\":4,\"altKey\":5,\"allowedMods\":0,\"options\":1,\"enabled\":false}}",
+      "sync/favorites/altRepeatKey/index.json": "{\n  \"type\": \"altRepeatKey\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000006\",\n      \"label\": \"ARK\",\n      \"filename\": \"altRepeatKey_2026-10-16T12-01-00.000Z_00000000-0000-4000-8000-000000000006.json\",\n      \"savedAt\": \"s\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:01:00.000Z\",\n        \"body\": \"2026-10-16T12:01:00.000Z\",\n        \"name\": \"2026-10-16T12:01:00.000Z\",\n        \"hub\": \"2026-10-16T12:01:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:01:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/combo/": null,
+      "sync/favorites/keyOverride/": null,
+      "sync/favorites/keyOverride/index.json": "{\n  \"type\": \"keyOverride\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000005\",\n      \"label\": \"KO v5\",\n      \"filename\": \"keyOverride_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000005.json\",\n      \"savedAt\": \"2026-01-06T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/keyOverride/keyOverride_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000005.json": "{\"type\":\"keyOverride\",\"data\":{\"triggerKey\":31744,\"replacementKey\":41,\"layers\":3,\"triggerMods\":1,\"negativeMods\":0,\"suppressedMods\":0,\"options\":7,\"enabled\":true}}",
+      "sync/favorites/macro/": null,
+      "sync/favorites/macro/index.json": "{\n  \"type\": \"macro\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000004\",\n      \"label\": \"Macro\",\n      \"filename\": \"macro_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000004.json\",\n      \"savedAt\": \"2026-01-05T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/macro/macro_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000004.json": "{\"type\":\"macro\",\"data\":[[\"text\",\"hello\"],[\"tap\",\"KC_A\"]]}",
+      "sync/favorites/tapDance/": null,
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000003\",\n      \"label\": \"\\ud800 lone\",\n      \"filename\": \"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000003.json\",\n      \"savedAt\": \"2026-01-04T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000002\",\n      \"label\": \"New\",\n      \"filename\": \"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000002.json\",\n      \"savedAt\": \"2026-01-03T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"Dead\",\n      \"filename\": \"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"2026-01-02T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    },\n    {\n      \"id\": \"live\",\n      \"label\": \"Dup\",\n      \"filename\": \"tapDance_2026-01-01T00-00-00.000Z_live.json\",\n      \"savedAt\": \"2026-01-01T00:00:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:00.000Z\",\n        \"body\": \"2026-01-01T00:00:00.000Z\",\n        \"name\": \"2026-01-01T00:00:00.000Z\",\n        \"hub\": \"2026-01-01T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:00.000Z\"\n    },\n    {\n      \"id\": \"dead\",\n      \"label\": \"Dead\",\n      \"filename\": \"tapDance_dead.json\",\n      \"savedAt\": \"2026-01-02T00:00:00.000Z\",\n      \"deletedAt\": \"2026-10-16T11:59:00.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-02T00:00:00.000Z\",\n        \"body\": \"2026-01-02T00:00:00.000Z\",\n        \"name\": \"2026-01-02T00:00:00.000Z\",\n        \"hub\": \"2026-01-02T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T11:59:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/tapDance/tapDance_2026-01-01T00-00-00.000Z_live.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+      "sync/favorites/tapDance/tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":5,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+      "sync/favorites/tapDance/tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000002.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":6,\"onHold\":23552,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}",
+      "sync/favorites/tapDance/tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000003.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+    }
+  },
+  {
+    "name": "an import over a store whose index is not JSON",
+    "time": "2026-10-16T12:00:00.000Z",
+    "tree": {
+      "sync/favorites/tapDance/index.json": "oops",
+      "imports/one.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":6,\"categories\":{\"td\":[{\"label\":\"One\",\"savedAt\":\"s\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}]}}"
+    },
+    "steps": [
+      {
+        "op": "import",
+        "dialog": "imports/one.json"
+      },
+      {
+        "op": "list",
+        "type": "tapDance"
+      }
+    ],
+    "outcomes": [
+      "{\"success\":true,\"imported\":1,\"skipped\":0}",
+      "{\"success\":true,\"entries\":[{\"id\":\"00000000-0000-4000-8000-000000000001\",\"label\":\"One\",\"filename\":\"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\"savedAt\":\"s\",\"clocks\":{\"created\":\"2026-10-16T12:00:00.000Z\",\"body\":\"2026-10-16T12:00:00.000Z\",\"name\":\"2026-10-16T12:00:00.000Z\",\"hub\":\"2026-10-16T12:00:00.000Z\"},\"updatedAt\":\"2026-10-16T12:00:00.000Z\"}]}"
+    ],
+    "transfers": [
+      {
+        "plan": {
+          "batches": [
+            {
+              "type": "tapDance",
+              "entries": [
+                {
+                  "label": "One",
+                  "savedAt": "s",
+                  "body": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+                }
+              ]
+            }
+          ],
+          "skipped": 0
+        }
+      },
+      null
+    ],
+    "notified": [
+      "favorites/tapDance"
+    ],
+    "after": {
+      "imports/": null,
+      "imports/one.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":6,\"categories\":{\"td\":[{\"label\":\"One\",\"savedAt\":\"s\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}]}}",
+      "sync/": null,
+      "sync/favorites/": null,
+      "sync/favorites/tapDance/": null,
+      "sync/favorites/tapDance/index.json": "{\n  \"type\": \"tapDance\",\n  \"entries\": [\n    {\n      \"id\": \"00000000-0000-4000-8000-000000000001\",\n      \"label\": \"One\",\n      \"filename\": \"tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json\",\n      \"savedAt\": \"s\",\n      \"clocks\": {\n        \"created\": \"2026-10-16T12:00:00.000Z\",\n        \"body\": \"2026-10-16T12:00:00.000Z\",\n        \"name\": \"2026-10-16T12:00:00.000Z\",\n        \"hub\": \"2026-10-16T12:00:00.000Z\"\n      },\n      \"updatedAt\": \"2026-10-16T12:00:00.000Z\"\n    }\n  ]\n}",
+      "sync/favorites/tapDance/tapDance_2026-10-16T12-00-00.000Z_00000000-0000-4000-8000-000000000001.json": "{\"type\":\"tapDance\",\"data\":{\"onTap\":4,\"onHold\":31744,\"onDoubleTap\":0,\"onTapHold\":23552,\"tappingTerm\":200}}"
+    }
+  }
+]

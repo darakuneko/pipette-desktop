@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# The commands of src/store_commands/favorites.rs: the favorites of each
+# type, their export and their import.
+
+[[set]]
+identifier = "favorites"
+description = "Lists, saves, loads, renames and deletes the favorites of each type, links them to Hub posts, and exports and imports them through file dialogs."
+permissions = [
+  "allow-favorite-store-list",
+  "allow-favorite-store-save",
+  "allow-favorite-store-load",
+  "allow-favorite-store-rename",
+  "allow-favorite-store-delete",
+  "allow-favorite-store-set-hub-post-id",
+  "allow-favorite-store-set-hub-private",
+  "allow-favorite-store-read-for-export",
+  "allow-favorite-store-save-export",
+  "allow-favorite-store-open-import",
+  "allow-favorite-store-import-batch",
+]

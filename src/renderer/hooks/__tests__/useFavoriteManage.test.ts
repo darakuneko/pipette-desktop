@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { useFavoriteManage } from '../useFavoriteManage'
+import { favoriteBackends } from './favorite-backends'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -11,26 +13,33 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+vi.mock('../../../tauri-shim/workers/favorite-transfer-client', () => ({ transfer: vi.fn() }))
+
 const mockFavoriteStoreList = vi.fn().mockResolvedValue({ success: true, entries: [] })
 const mockFavoriteStoreRename = vi.fn().mockResolvedValue({ success: true })
 const mockFavoriteStoreDelete = vi.fn().mockResolvedValue({ success: true })
 const mockFavoriteStoreExport = vi.fn().mockResolvedValue({ success: true })
 const mockFavoriteStoreImport = vi.fn().mockResolvedValue({ success: true, imported: 2, skipped: 0 })
 
-Object.defineProperty(window, 'vialAPI', {
-  value: {
-    favoriteStoreList: mockFavoriteStoreList,
-    favoriteStoreRename: mockFavoriteStoreRename,
-    favoriteStoreDelete: mockFavoriteStoreDelete,
-    favoriteStoreExport: mockFavoriteStoreExport,
-    favoriteStoreImport: mockFavoriteStoreImport,
-  },
-  writable: true,
+const originalVialAPI = window.vialAPI
+
+const backends = favoriteBackends({
+  favoriteStoreList: mockFavoriteStoreList,
+  favoriteStoreRename: mockFavoriteStoreRename,
+  favoriteStoreDelete: mockFavoriteStoreDelete,
+  favoriteStoreExport: mockFavoriteStoreExport,
+  favoriteStoreImport: mockFavoriteStoreImport,
 })
 
-describe('useFavoriteManage', () => {
+afterEach(() => {
+  clearMocks()
+  window.vialAPI = originalVialAPI
+})
+
+describe.each(backends)('useFavoriteManage ($name)', (backend) => {
   beforeEach(() => {
     vi.clearAllMocks()
+    backend.install()
   })
 
   it('starts with empty entries', () => {

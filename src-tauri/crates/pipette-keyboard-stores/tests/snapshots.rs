@@ -17,7 +17,7 @@ use pipette_js_json::{Object, Value};
 use pipette_keyboard_stores::{
     KEYBOARD_META_SYNC_UNIT, SnapshotError, delete_snapshot, extract_device_name_from_filename,
     list_snapshots, load_snapshot, rename_snapshot, save_snapshot, set_snapshot_hub_post_id,
-    set_snapshot_hub_private, snapshot_response_json, update_snapshot,
+    set_snapshot_hub_private, update_snapshot,
 };
 
 const UID: &str = "uid-1";
@@ -402,14 +402,4 @@ fn concurrent_saves_of_one_keyboard_never_lose_an_entry() {
         worker.join().unwrap();
     }
     assert_eq!(list_snapshots(&h.ctx, UID).unwrap().len(), 8);
-}
-
-#[test]
-fn responses_carry_the_result_or_the_error() {
-    assert_eq!(snapshot_response_json(Ok(None)), r#"{"success":true}"#);
-    assert_eq!(snapshot_response_json(Ok(Some(("data", "x".into())))), r#"{"success":true,"data":"x"}"#);
-    assert_eq!(
-        snapshot_response_json(Err(SnapshotError::MaxEntries)),
-        r#"{"success":false,"error":"max entries reached"}"#
-    );
 }

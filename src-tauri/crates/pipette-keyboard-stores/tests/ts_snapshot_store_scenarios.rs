@@ -17,8 +17,8 @@ use std::path::Path;
 use common::{Harness, build, ms, recorded, tree_of};
 use pipette_js_json::{Object, Value};
 use pipette_keyboard_stores::{
-    SnapshotError, delete_snapshot, list_snapshots, load_snapshot, rename_snapshot, save_snapshot,
-    set_snapshot_hub_post_id, set_snapshot_hub_private, snapshot_response_json, update_snapshot,
+    SnapshotError, delete_snapshot, field, list_snapshots, load_snapshot, rename_snapshot, response_json,
+    save_snapshot, set_snapshot_hub_post_id, set_snapshot_hub_private, update_snapshot,
 };
 
 fn text(step: &Object, key: &str) -> String {
@@ -37,18 +37,18 @@ fn number(step: &Object, key: &str) -> Option<f64> {
 fn run_step(h: &Harness, step: &Object) -> Option<String> {
     let uid = || text(step, "uid");
     let id = || text(step, "id");
-    let done = |result: Result<(), SnapshotError>| snapshot_response_json(result.map(|()| None));
+    let done = |result: Result<(), SnapshotError>| response_json(pipette_keyboard_stores::done(result));
     Some(match text(step, "op").as_str() {
         "at" => {
             h.clock.set(ms(&text(step, "time")));
             return None;
         }
         "list" => {
-            snapshot_response_json(list_snapshots(&h.ctx, &uid()).map(|entries| {
-                Some(("entries", Value::Array(entries.into_iter().map(Value::from).collect())))
+            response_json(list_snapshots(&h.ctx, &uid()).map(|entries| {
+                field("entries", Value::Array(entries.into_iter().map(Value::from).collect()))
             }))
         }
-        "save" => snapshot_response_json(
+        "save" => response_json(
             save_snapshot(
                 &h.ctx,
                 &uid(),
@@ -57,11 +57,9 @@ fn run_step(h: &Harness, step: &Object) -> Option<String> {
                 &text(step, "label"),
                 number(step, "vilVersion"),
             )
-            .map(|entry| Some(("entry", entry.into()))),
+            .map(|entry| field("entry", entry)),
         ),
-        "load" => snapshot_response_json(
-            load_snapshot(&h.ctx, &uid(), &id()).map(|data| Some(("data", data.into()))),
-        ),
+        "load" => response_json(load_snapshot(&h.ctx, &uid(), &id()).map(|data| field("data", data))),
         "update" => {
             let migrate_from = step.get("migrateFrom").map(|_| text(step, "migrateFrom"));
             done(update_snapshot(
