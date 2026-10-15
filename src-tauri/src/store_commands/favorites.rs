@@ -23,17 +23,28 @@ use pipette_js_json::{Object, Value};
 use pipette_keyboard_stores::{
     FavoriteError, FavoriteImport, FavoriteType, StoreContext, favorite_response_json,
 };
+use serde::{Deserialize, Deserializer};
 use tauri::State;
 use tauri::ipc::Response;
 
 use crate::command_error::CommandError;
 use crate::dialog::{DialogKind, DialogRequest, Dialogs, FileFilter};
-use crate::file_commands::{FileOpenResult, FileSaveResult, open_with_dialog, write_with_dialog};
+use crate::file_commands::{
+    FileOpenResult, FileSaveResult, open_with_dialog_command, write_with_dialog_command,
+};
 
-/// The type the renderer names, if it names one: like the handler, a value
-/// that is not a type's name (or not a string) is an invalid type.
-fn parse_type(value: Option<&serde_json::Value>) -> Result<FavoriteType, FavoriteError> {
-    value.and_then(serde_json::Value::as_str).map_or(Err(FavoriteError::InvalidType), FavoriteType::parse)
+/// The favorite type argument, read as the handler reads it: a missing
+/// value, or one that is not a type's name, is an invalid type, which the
+/// command answers rather than failing.
+pub struct TypeArg(Result<FavoriteType, FavoriteError>);
+
+impl<'de> Deserialize<'de> for TypeArg {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        // Through Option, so a missing argument reads as none.
+        let value = Option::<serde_json::Value>::deserialize(deserializer)?;
+        let name = value.as_ref().and_then(serde_json::Value::as_str);
+        Ok(TypeArg(name.map_or(Err(FavoriteError::InvalidType), FavoriteType::parse)))
+    }
 }
 
 /// Runs `io` on a blocking-task thread (the store waits for its write lock
@@ -54,9 +65,9 @@ fn field(key: &str, value: impl Into<Value>) -> Object {
 #[tauri::command]
 pub async fn favorite_store_list(
     stores: State<'_, StoreContext>,
-    favorite_type: Option<serde_json::Value>,
+    favorite_type: TypeArg,
 ) -> Result<Response, CommandError> {
-    let ty = parse_type(favorite_type.as_ref());
+    let TypeArg(ty) = favorite_type;
     answer(&stores, move |stores| {
         let entries = pipette_keyboard_stores::list_favorites(stores, ty?)?;
         Ok(field("entries", Value::Array(entries.into_iter().map(Value::from).collect())))
@@ -67,11 +78,11 @@ pub async fn favorite_store_list(
 #[tauri::command]
 pub async fn favorite_store_save(
     stores: State<'_, StoreContext>,
-    favorite_type: Option<serde_json::Value>,
+    favorite_type: TypeArg,
     json: String,
     label: String,
 ) -> Result<Response, CommandError> {
-    let ty = parse_type(favorite_type.as_ref());
+    let TypeArg(ty) = favorite_type;
     answer(&stores, move |stores| {
         let entry = pipette_keyboard_stores::save_favorite(stores, ty?, &json, &label)?;
         Ok(field("entry", entry))
@@ -82,10 +93,10 @@ pub async fn favorite_store_save(
 #[tauri::command]
 pub async fn favorite_store_load(
     stores: State<'_, StoreContext>,
-    favorite_type: Option<serde_json::Value>,
+    favorite_type: TypeArg,
     entry_id: String,
 ) -> Result<Response, CommandError> {
-    let ty = parse_type(favorite_type.as_ref());
+    let TypeArg(ty) = favorite_type;
     answer(&stores, move |stores| {
         Ok(field("data", pipette_keyboard_stores::load_favorite(stores, ty?, &entry_id)?))
     })
@@ -95,11 +106,11 @@ pub async fn favorite_store_load(
 #[tauri::command]
 pub async fn favorite_store_rename(
     stores: State<'_, StoreContext>,
-    favorite_type: Option<serde_json::Value>,
+    favorite_type: TypeArg,
     entry_id: String,
     new_label: String,
 ) -> Result<Response, CommandError> {
-    let ty = parse_type(favorite_type.as_ref());
+    let TypeArg(ty) = favorite_type;
     answer(&stores, move |stores| {
         pipette_keyboard_stores::rename_favorite(stores, ty?, &entry_id, &new_label)?;
         Ok(Object::new())
@@ -110,10 +121,10 @@ pub async fn favorite_store_rename(
 #[tauri::command]
 pub async fn favorite_store_delete(
     stores: State<'_, StoreContext>,
-    favorite_type: Option<serde_json::Value>,
+    favorite_type: TypeArg,
     entry_id: String,
 ) -> Result<Response, CommandError> {
-    let ty = parse_type(favorite_type.as_ref());
+    let TypeArg(ty) = favorite_type;
     answer(&stores, move |stores| {
         pipette_keyboard_stores::delete_favorite(stores, ty?, &entry_id)?;
         Ok(Object::new())
@@ -124,11 +135,11 @@ pub async fn favorite_store_delete(
 #[tauri::command]
 pub async fn favorite_store_set_hub_post_id(
     stores: State<'_, StoreContext>,
-    favorite_type: Option<serde_json::Value>,
+    favorite_type: TypeArg,
     entry_id: String,
     hub_post_id: Option<String>,
 ) -> Result<Response, CommandError> {
-    let ty = parse_type(favorite_type.as_ref());
+    let TypeArg(ty) = favorite_type;
     answer(&stores, move |stores| {
         pipette_keyboard_stores::set_favorite_hub_post_id(stores, ty?, &entry_id, hub_post_id.as_deref())?;
         Ok(Object::new())
@@ -141,11 +152,11 @@ pub async fn favorite_store_set_hub_post_id(
 #[tauri::command]
 pub async fn favorite_store_set_hub_private(
     stores: State<'_, StoreContext>,
-    favorite_type: Option<serde_json::Value>,
+    favorite_type: TypeArg,
     entry_id: String,
     link: Option<String>,
 ) -> Result<Response, CommandError> {
-    let ty = parse_type(favorite_type.as_ref());
+    let TypeArg(ty) = favorite_type;
     let link = link.as_deref().map(pipette_js_json::parse).transpose()?.filter(|link| *link != Value::Null);
     answer(&stores, move |stores| {
         pipette_keyboard_stores::set_favorite_hub_private(stores, ty?, &entry_id, link)?;
@@ -159,10 +170,10 @@ pub async fn favorite_store_set_hub_private(
 #[tauri::command]
 pub async fn favorite_store_read_for_export(
     stores: State<'_, StoreContext>,
-    favorite_type: Option<serde_json::Value>,
+    favorite_type: TypeArg,
     entry_id: Option<String>,
 ) -> Result<Response, CommandError> {
-    let ty = parse_type(favorite_type.as_ref());
+    let TypeArg(ty) = favorite_type;
     answer(&stores, move |stores| {
         let bodies = pipette_keyboard_stores::read_favorites_for_export(stores, ty?, entry_id.as_deref())?;
         Ok(field("entries", Value::Array(bodies)))
@@ -188,9 +199,7 @@ pub async fn favorite_store_save_export(
         title: "Export Favorites".to_owned(),
         filters: json_filters(),
     };
-    let dialogs = dialogs.inner().clone();
-    Ok(tauri::async_runtime::spawn_blocking(move || write_with_dialog(&dialogs, request, content.as_bytes()))
-        .await?)
+    write_with_dialog_command(dialogs, request, content.into_bytes()).await
 }
 
 /// Asks for an export file and answers its text.
@@ -201,8 +210,7 @@ pub async fn favorite_store_open_import(dialogs: State<'_, Dialogs>) -> Result<F
         title: "Import Favorites".to_owned(),
         filters: json_filters(),
     };
-    let dialogs = dialogs.inner().clone();
-    Ok(tauri::async_runtime::spawn_blocking(move || open_with_dialog(&dialogs, request)).await?)
+    open_with_dialog_command(dialogs, request).await
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -235,10 +243,10 @@ fn import_entries(entries: &str) -> Result<Vec<FavoriteImport>, CommandError> {
 #[tauri::command]
 pub async fn favorite_store_import_batch(
     stores: State<'_, StoreContext>,
-    favorite_type: Option<serde_json::Value>,
+    favorite_type: TypeArg,
     entries: String,
 ) -> Result<Response, CommandError> {
-    let ty = parse_type(favorite_type.as_ref());
+    let TypeArg(ty) = favorite_type;
     let favorites = import_entries(&entries)?;
     answer(&stores, move |stores| {
         let counts = pipette_keyboard_stores::import_favorites(stores, ty?, &favorites)?;

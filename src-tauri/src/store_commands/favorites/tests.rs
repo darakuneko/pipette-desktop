@@ -56,8 +56,12 @@ fn text(response: Result<Response, CommandError>) -> String {
     }
 }
 
-fn ty(name: &str) -> Option<serde_json::Value> {
-    Some(serde_json::Value::from(name))
+fn arg(value: serde_json::Value) -> TypeArg {
+    serde_json::from_value(value).unwrap()
+}
+
+fn ty(name: &str) -> TypeArg {
+    arg(serde_json::Value::from(name))
 }
 
 fn json_filters_named() -> Vec<FileFilter> {
@@ -79,8 +83,8 @@ fn a_type_that_is_not_a_favorite_type_answers_the_handler_error() {
     let user_data = TempDir::new().unwrap();
     let t = test_app(user_data.path(), None);
     let invalid = r#"{"success":false,"error":"Error: Invalid favorite type"}"#;
-    for value in [None, Some(serde_json::json!(5)), ty("qmkSettings"), ty("../x")] {
-        assert_eq!(text(block_on(favorite_store_list(t.stores(), value))), invalid);
+    for value in [serde_json::Value::Null, serde_json::json!(5), "qmkSettings".into(), "../x".into()] {
+        assert_eq!(text(block_on(favorite_store_list(t.stores(), arg(value)))), invalid);
     }
     assert_eq!(
         text(block_on(favorite_store_list(t.stores(), ty("macro")))),

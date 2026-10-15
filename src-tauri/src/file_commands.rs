@@ -164,11 +164,7 @@ fn save_with_dialog(
 
 /// Shows the save dialog `request` and writes `contents` where the user
 /// chose.
-pub(crate) fn write_with_dialog(
-    dialogs: &Dialogs,
-    request: DialogRequest,
-    contents: &[u8],
-) -> FileSaveResult {
+fn write_with_dialog(dialogs: &Dialogs, request: DialogRequest, contents: &[u8]) -> FileSaveResult {
     let Some(path) = dialogs.show(request) else { return FileSaveResult::failed(CANCELLED) };
     match std::fs::write(&path, contents) {
         Ok(()) => FileSaveResult { success: true, file_path: Some(path_text(&path)), error: None },
@@ -177,7 +173,7 @@ pub(crate) fn write_with_dialog(
 }
 
 /// Asks for a file and reads it as text.
-pub(crate) fn open_with_dialog(dialogs: &Dialogs, request: DialogRequest) -> FileOpenResult {
+fn open_with_dialog(dialogs: &Dialogs, request: DialogRequest) -> FileOpenResult {
     let Some(path) = dialogs.show(request) else { return FileOpenResult::failed(CANCELLED) };
     match std::fs::read(&path) {
         Ok(bytes) => FileOpenResult {
@@ -320,6 +316,25 @@ async fn blocking<T: Send + 'static>(
 ) -> Result<T, CommandError> {
     let dialogs = dialogs.inner().clone();
     Ok(tauri::async_runtime::spawn_blocking(move || run(&dialogs)).await?)
+}
+
+/// [`write_with_dialog`] on a blocking-task thread, for a command that
+/// builds its own save dialog.
+pub(crate) async fn write_with_dialog_command(
+    dialogs: State<'_, Dialogs>,
+    request: DialogRequest,
+    contents: Vec<u8>,
+) -> Result<FileSaveResult, CommandError> {
+    blocking(dialogs, move |dialogs| write_with_dialog(dialogs, request, &contents)).await
+}
+
+/// [`open_with_dialog`] on a blocking-task thread, for a command that
+/// builds its own open dialog.
+pub(crate) async fn open_with_dialog_command(
+    dialogs: State<'_, Dialogs>,
+    request: DialogRequest,
+) -> Result<FileOpenResult, CommandError> {
+    blocking(dialogs, move |dialogs| open_with_dialog(dialogs, request)).await
 }
 
 /// [`save_with_dialog`] on a blocking-task thread.
