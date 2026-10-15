@@ -13,16 +13,19 @@ import { join } from 'node:path'
 import { browser, expect } from '@wdio/globals'
 import { connectVirtualKeyboard, respondToFileDialog } from '../helpers/app'
 
-/** Calls the vialAPI member `member` of the page with `args`. */
-function vialApi<T>(member: string, ...args: unknown[]): Promise<T> {
-  return browser.execute(
-    (name: string, memberArgs: unknown[]) => {
+/** Calls the vialAPI member `member` of the page with `args`. The answer
+ *  crosses as JSON text: WebDriver takes an answer with an `error` field
+ *  for an error of its own. */
+async function vialApi<T>(member: string, ...args: unknown[]): Promise<T> {
+  const text = await browser.execute(
+    async (name: string, memberArgs: unknown[]) => {
       const api = (window as unknown as { vialAPI: Record<string, (...a: unknown[]) => Promise<unknown>> }).vialAPI
-      return api[name](...memberArgs)
+      return JSON.stringify(await api[name](...memberArgs))
     },
     member,
     args,
-  ) as Promise<T>
+  )
+  return JSON.parse(text) as T
 }
 
 interface Listed {
