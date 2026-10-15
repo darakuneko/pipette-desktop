@@ -13,6 +13,9 @@ use serde::{Serialize, Serializer};
 pub struct CommandError(String);
 
 impl CommandError {
+    /// The app commands fail only with the errors converted below; the
+    /// development tools write their own messages.
+    #[cfg(any(test, feature = "dev-tools"))]
     pub fn new(message: impl Into<String>) -> Self {
         Self(message.into())
     }
