@@ -14,16 +14,11 @@ import { RUST_ENVELOPES_DIR } from './paths'
 
 const pinned = vi.hoisted(() => ({ randomQueue: [] as Buffer[] }))
 
-// Same pinning as the generator: queued buffers first, then real randomness.
+// Queued salts and IVs first, and each derived key computed once
+// (pinned-crypto.ts).
 vi.mock('node:crypto', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('node:crypto')>()
-  const randomBytes = (size: number): Buffer => {
-    const next = pinned.randomQueue.shift()
-    if (next === undefined) return actual.randomBytes(size)
-    if (next.length !== size) throw new Error(`queued ${next.length} random bytes, ${size} requested`)
-    return next
-  }
-  return { ...actual, default: { ...actual, randomBytes }, randomBytes }
+  const { pinnedCrypto } = await import('./pinned-crypto')
+  return pinnedCrypto(await importOriginal<typeof import('node:crypto')>(), pinned.randomQueue)
 })
 
 import { encrypt, decrypt } from '../../src/main/sync/sync-crypto'

@@ -1,8 +1,5 @@
-import { statSync } from 'node:fs'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import pkg from './package.json'
+import { rendererViteConfig } from './vite.renderer.shared'
 
 export default defineConfig({
   main: {
@@ -26,17 +23,5 @@ export default defineConfig({
       }
     }
   },
-  renderer: {
-    define: {
-      __APP_VERSION__: JSON.stringify(pkg.version),
-      __BUILD_TIME__: JSON.stringify(statSync('src/renderer/i18n/locales/english.json').mtime.toISOString()),
-    },
-    plugins: [react(), tailwindcss()],
-    build: {
-      target: 'esnext'
-    },
-    esbuild: {
-      target: 'esnext'
-    }
-  }
+  renderer: rendererViteConfig()
 })

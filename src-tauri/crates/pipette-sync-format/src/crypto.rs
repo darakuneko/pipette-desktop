@@ -74,20 +74,20 @@ fn build_aad(version: u32, sync_unit: &str) -> Vec<u8> {
     format!("{version}:{sync_unit}").into_bytes()
 }
 
-fn cipher_for(password: &str, salt: &[u8]) -> Result<Aes256Gcm, CryptoError> {
-    Aes256Gcm::new_from_slice(&derive_key(password, salt)).map_err(|_| CryptoError::Encryption)
+fn cipher_for(key: &[u8; KEY_LENGTH]) -> Aes256Gcm {
+    Aes256Gcm::new(key.into())
 }
 
 fn seal(
     plaintext: &str,
-    password: &str,
+    key: &[u8; KEY_LENGTH],
     sync_unit: &str,
     salt: &[u8; SALT_LENGTH],
     iv: &[u8; IV_LENGTH],
     updated_at: String,
 ) -> Result<Envelope, CryptoError> {
     let aad = build_aad(ENVELOPE_VERSION, sync_unit);
-    let ciphertext = cipher_for(password, salt)?
+    let ciphertext = cipher_for(key)
         .encrypt(Nonce::from_slice(iv), Payload { msg: plaintext.as_bytes(), aad: &aad })
         .map_err(|_| CryptoError::Encryption)?;
     Ok(Envelope {
@@ -107,27 +107,19 @@ pub fn encrypt(plaintext: &str, password: &str, sync_unit: &str) -> Result<Envel
     let mut iv = [0u8; IV_LENGTH];
     OsRng.try_fill_bytes(&mut salt).map_err(|_| CryptoError::Random)?;
     OsRng.try_fill_bytes(&mut iv).map_err(|_| CryptoError::Random)?;
-    seal(plaintext, password, sync_unit, &salt, &iv, iso_8601_millis(SystemTime::now()))
+    let key = derive_key(password, &salt);
+    seal(plaintext, &key, sync_unit, &salt, &iv, iso_8601_millis(SystemTime::now()))
 }
 
-/// [`encrypt`] with a caller-chosen salt, IV and `updatedAt`, so tests can
-/// compare envelopes byte for byte. Reusing an IV with the same key breaks
-/// AES-GCM, so this is never used for real data.
-#[cfg(feature = "test-util")]
-pub fn encrypt_with(
-    plaintext: &str,
-    password: &str,
-    sync_unit: &str,
-    salt: &[u8; SALT_LENGTH],
-    iv: &[u8; IV_LENGTH],
-    updated_at: &str,
-) -> Result<Envelope, CryptoError> {
-    seal(plaintext, password, sync_unit, salt, iv, updated_at.to_owned())
+/// The binary fields of an envelope, checked in the order the TypeScript
+/// `decrypt` checks them, before any key is derived.
+struct Sealed {
+    salt: Vec<u8>,
+    iv: Vec<u8>,
+    ciphertext: Vec<u8>,
 }
 
-/// Decrypts `envelope` with `password`. Invalid UTF-8 in the plaintext is
-/// replaced with U+FFFD, as Node's `toString('utf-8')` does.
-pub fn decrypt(envelope: &Envelope, password: &str) -> Result<String, CryptoError> {
+fn unpack(envelope: &Envelope) -> Result<Sealed, CryptoError> {
     let salt = BASE64.decode(&envelope.salt).map_err(|_| CryptoError::InvalidBase64("salt"))?;
     let iv = BASE64.decode(&envelope.iv).map_err(|_| CryptoError::InvalidBase64("iv"))?;
     let ciphertext =
@@ -138,9 +130,51 @@ pub fn decrypt(envelope: &Envelope, password: &str) -> Result<String, CryptoErro
     if iv.len() != IV_LENGTH {
         return Err(CryptoError::UnsupportedIvLength(iv.len()));
     }
+    Ok(Sealed { salt, iv, ciphertext })
+}
+
+fn open(envelope: &Envelope, sealed: &Sealed, key: &[u8; KEY_LENGTH]) -> Result<String, CryptoError> {
     let aad = build_aad(envelope.version, &envelope.sync_unit);
-    let plaintext = cipher_for(password, &salt)?
-        .decrypt(Nonce::from_slice(&iv), Payload { msg: &ciphertext, aad: &aad })
+    let plaintext = cipher_for(key)
+        .decrypt(Nonce::from_slice(&sealed.iv), Payload { msg: &sealed.ciphertext, aad: &aad })
         .map_err(|_| CryptoError::Authentication)?;
     Ok(String::from_utf8_lossy(&plaintext).into_owned())
+}
+
+/// Decrypts `envelope` with `password`. Invalid UTF-8 in the plaintext is
+/// replaced with U+FFFD, as Node's `toString('utf-8')` does.
+pub fn decrypt(envelope: &Envelope, password: &str) -> Result<String, CryptoError> {
+    let sealed = unpack(envelope)?;
+    open(envelope, &sealed, &derive_key(password, &sealed.salt))
+}
+
+/// The key [`encrypt`] and [`decrypt`] derive from `password` and `salt`.
+/// With [`encrypt_with_key`] and [`decrypt_with_key`], a test derives it once
+/// per password and salt instead of once per call.
+#[cfg(feature = "test-util")]
+pub fn key_for(password: &str, salt: &[u8]) -> [u8; KEY_LENGTH] {
+    derive_key(password, salt)
+}
+
+/// [`encrypt`] with a caller-chosen salt, IV and `updatedAt`, and the key
+/// [`key_for`] derived from the password and that salt, so tests can compare
+/// envelopes byte for byte. Reusing an IV with the same key breaks AES-GCM,
+/// so this is never used for real data.
+#[cfg(feature = "test-util")]
+pub fn encrypt_with_key(
+    plaintext: &str,
+    key: &[u8; KEY_LENGTH],
+    sync_unit: &str,
+    salt: &[u8; SALT_LENGTH],
+    iv: &[u8; IV_LENGTH],
+    updated_at: &str,
+) -> Result<Envelope, CryptoError> {
+    seal(plaintext, key, sync_unit, salt, iv, updated_at.to_owned())
+}
+
+/// [`decrypt`] with the key [`key_for`] derived from the password and the
+/// envelope's salt. Same checks and errors as [`decrypt`].
+#[cfg(feature = "test-util")]
+pub fn decrypt_with_key(envelope: &Envelope, key: &[u8; KEY_LENGTH]) -> Result<String, CryptoError> {
+    open(envelope, &unpack(envelope)?, key)
 }

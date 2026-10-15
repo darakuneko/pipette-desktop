@@ -11,7 +11,7 @@
 
 mod common;
 
-use pipette_sync_format::crypto::encrypt_with;
+use pipette_sync_format::crypto::{encrypt_with_key, key_for};
 use pipette_sync_format::password_check::{PASSWORD_CHECK_PAYLOAD, encrypt_password_check};
 use pipette_sync_format::{Envelope, encrypt};
 use serde_json::{Value, json};
@@ -87,10 +87,9 @@ fn pinned_salt_iv_and_clock() {
     let iv: [u8; 12] = std::array::from_fn(|i| u8::try_from(0xF0 - i).unwrap());
     let updated_at = "2026-10-15T09:08:07.006Z";
     let plaintext = r#"{"type":"settings","files":{"pipette_settings.json":"{}"}}"#;
+    let key = key_for("pinned password", &salt);
     let envelope =
-        encrypt_with(plaintext, "pinned password", "keyboards/0x1234/settings", &salt, &iv, updated_at)
-            .unwrap();
-    let hex = |bytes: &[u8]| bytes.iter().map(|b| format!("{b:02x}")).collect::<String>();
-    let pinned = json!({ "saltHex": hex(&salt), "ivHex": hex(&iv), "updatedAt": updated_at });
+        encrypt_with_key(plaintext, &key, "keyboards/0x1234/settings", &salt, &iv, updated_at).unwrap();
+    let pinned = json!({ "saltHex": hex::encode(salt), "ivHex": hex::encode(iv), "updatedAt": updated_at });
     write_case("pinned-salt-iv-and-clock", "pinned password", plaintext, &envelope, pinned);
 }

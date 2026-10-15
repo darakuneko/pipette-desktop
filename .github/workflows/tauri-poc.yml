@@ -1,0 +1,73 @@
+name: Tauri PoC
+
+# Builds the Tauri shell on the PoC branches only. The release branch and its
+# workflows (ci.yml, release.yml) are untouched by this file.
+on:
+  push:
+    branches:
+      - "feat/tauri-poc*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tauri-poc-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+      # linuxdeploy is itself an AppImage; the runner has no FUSE.
+      APPIMAGE_EXTRACT_AND_RUN: 1
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install WebKitGTK and the native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf libusb-1.0-0-dev libudev-dev
+
+      - name: Install the Rust toolchain
+        run: |
+          rustup toolchain install 1.94.0 --profile minimal --component clippy
+          rustup default 1.94.0
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri -> target
+
+      # The install scripts only serve the Electron build (the Electron binary
+      # download and the native module rebuild); the Tauri build needs none.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Clippy
+        working-directory: src-tauri
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test
+        working-directory: src-tauri
+        run: cargo test --workspace
+
+      - name: Build the AppImage and the .deb
+        run: pnpm tauri:build
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pipette-tauri-linux
+          path: |
+            src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/deb/*.deb
+          if-no-files-found: error
+          retention-days: 7

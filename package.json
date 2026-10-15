@@ -34,7 +34,9 @@
     "generate:analytics-db-fixtures": "ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run --config scripts/analytics-db-fixtures/vitest.config.ts",
     "verify:sync-format-rust-vectors": "vitest run --config scripts/sync-format-fixtures/vitest.config.ts verify-rust-vectors",
     "doc:screenshots": "npx tsx e2e/helpers/doc-capture.ts",
-    "doc:guide": "node docs/build-guide.mjs"
+    "doc:guide": "node docs/build-guide.mjs",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build --bundles appimage,deb"
   },
   "dependencies": {
     "@paymoapp/active-window": "^2.1.4",
@@ -54,6 +56,7 @@
     "@playwright/mcp": "0.0.78",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.3.3",
+    "@tauri-apps/cli": "2.12.1",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@types/better-sqlite3": "^9.6.0",
@@ -84,6 +87,7 @@
     "sql.js": "^1.14.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
+    "vite": "^7.3.1",
     "vitest": "^4.1.10"
   },
   "build": {

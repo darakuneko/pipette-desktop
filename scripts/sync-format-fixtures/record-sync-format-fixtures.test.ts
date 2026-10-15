@@ -17,8 +17,7 @@
 // Run: pnpm run generate:sync-format-fixtures
 
 import { describe, it, expect, vi, afterAll } from 'vitest'
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { writeJsonFixture } from '../fixture-files'
 import { NODE_MACHINE_ID_PATH, TS_RANDOM_ENVELOPES_PATH, TS_VECTORS_PATH } from './paths'
 
 const pinned = vi.hoisted(() => ({
@@ -27,17 +26,11 @@ const pinned = vi.hoisted(() => ({
   installationId: '',
 }))
 
-// `randomBytes` hands out the queued buffers first, so `encrypt` uses the
-// salt and IV a vector names; with the queue empty it is the real one.
+// Queued salts and IVs first, and each derived key computed once
+// (pinned-crypto.ts).
 vi.mock('node:crypto', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('node:crypto')>()
-  const randomBytes = (size: number): Buffer => {
-    const next = pinned.randomQueue.shift()
-    if (next === undefined) return actual.randomBytes(size)
-    if (next.length !== size) throw new Error(`queued ${next.length} random bytes, ${size} requested`)
-    return next
-  }
-  return { ...actual, default: { ...actual, randomBytes }, randomBytes }
+  const { pinnedCrypto } = await import('./pinned-crypto')
+  return pinnedCrypto(await importOriginal<typeof import('node:crypto')>(), pinned.randomQueue)
 })
 
 vi.mock('node-machine-id', () => ({
@@ -225,9 +218,8 @@ describe('sync format vectors', () => {
   const randomEnvelopes: unknown[] = []
 
   afterAll(() => {
-    mkdirSync(dirname(TS_VECTORS_PATH), { recursive: true })
-    writeFileSync(TS_VECTORS_PATH, JSON.stringify(vectors, null, 2) + '\n')
-    writeFileSync(TS_RANDOM_ENVELOPES_PATH, JSON.stringify(randomEnvelopes, null, 2) + '\n')
+    writeJsonFixture(TS_VECTORS_PATH, vectors)
+    writeJsonFixture(TS_RANDOM_ENVELOPES_PATH, randomEnvelopes)
   })
 
   it('records the constants', () => {
@@ -308,7 +300,6 @@ describe('sync format vectors', () => {
   it("records this machine's machineId(true)", async () => {
     const actual = await vi.importActual<typeof import('node-machine-id')>('node-machine-id')
     const machineId = await actual.default.machineId(true)
-    mkdirSync(dirname(NODE_MACHINE_ID_PATH), { recursive: true })
-    writeFileSync(NODE_MACHINE_ID_PATH, JSON.stringify({ machineId }) + '\n')
+    writeJsonFixture(NODE_MACHINE_ID_PATH, { machineId })
   })
 })

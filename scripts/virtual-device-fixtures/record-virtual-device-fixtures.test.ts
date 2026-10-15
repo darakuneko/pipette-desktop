@@ -25,10 +25,10 @@
 // Run: pnpm run generate:virtual-device-fixtures
 
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
-import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as lzmaModule from 'lzma'
+import { writeFixture } from '../fixture-files'
 
 const rec = vi.hoisted(() => ({
   events: [] as Record<string, unknown>[],
@@ -644,9 +644,7 @@ function buildTranscriptJson(): string {
 }
 
 function writeOut(relPath: string, content: string | Uint8Array): void {
-  const path = resolve(cratesDir, relPath)
-  mkdirSync(dirname(path), { recursive: true })
-  writeFileSync(path, content)
+  writeFixture(resolve(cratesDir, relPath), content)
 }
 
 beforeAll(() => {
