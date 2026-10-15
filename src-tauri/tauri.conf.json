@@ -26,6 +26,9 @@
       }
     ],
     "security": {
+      "headers": {
+        "X-Content-Type-Options": "nosniff"
+      },
       "csp": {
         "default-src": "'self'",
         "img-src": "'self' data:",

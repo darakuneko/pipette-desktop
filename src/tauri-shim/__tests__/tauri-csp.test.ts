@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The Tauri window's CSP (src-tauri/tauri.conf.json) must stay the Electron
-// policy from src/main/csp.ts plus only the sources Tauri's IPC needs, so a
-// change to either side cannot loosen or drift from the other unnoticed.
+// policy from src/main/csp.ts plus only the sources Tauri's IPC needs, and
+// its response headers the Electron ones, so a change to either side cannot
+// loosen or drift from the other unnoticed.
 
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { buildCsp } from '../../main/csp'
+import { buildCsp, securityHeaders } from '../../main/csp'
 
 /** Tauri's IPC: the custom protocol and its http fallback on Linux/Windows. */
 const TAURI_ADDITIONS: Record<string, string[]> = {
@@ -40,13 +41,30 @@ function expectedPolicy(isDev: boolean): Policy {
   return sortedPolicy(policy)
 }
 
+/**
+ * Electron headers Tauri cannot send, each with the directive of the CSP
+ * that does the same job. Tauri accepts only a fixed list of header names.
+ */
+const REPLACED_HEADERS: Record<string, [directive: string, sources: string[]]> = {
+  'X-Frame-Options': ['frame-ancestors', ["'none'"]],
+}
+
+interface TauriSecurity {
+  csp: Record<string, string>
+  devCsp: Record<string, string>
+  headers: Record<string, string>
+}
+
+const security = (
+  JSON.parse(readFileSync(resolve(__dirname, '../../../src-tauri/tauri.conf.json'), 'utf8')) as {
+    app: { security: TauriSecurity }
+  }
+).app.security
+
 function tauriPolicy(key: 'csp' | 'devCsp'): Policy {
-  const conf = JSON.parse(
-    readFileSync(resolve(__dirname, '../../../src-tauri/tauri.conf.json'), 'utf8'),
-  ) as { app: { security: Record<'csp' | 'devCsp', Record<string, string>> } }
   return sortedPolicy(
     Object.fromEntries(
-      Object.entries(conf.app.security[key]).map(([name, value]) => [name, value.split(/\s+/)]),
+      Object.entries(security[key]).map(([name, value]) => [name, value.split(/\s+/)]),
     ),
   )
 }
@@ -59,4 +77,29 @@ describe('Tauri CSP', () => {
   it('matches the Electron dev policy plus the Tauri IPC sources', () => {
     expect(tauriPolicy('devCsp')).toEqual(expectedPolicy(true))
   })
+
+  it('allows neither inline code nor eval in production', () => {
+    const sources = Object.values(tauriPolicy('csp')).flat()
+    expect(sources).not.toContain("'unsafe-inline'")
+    expect(sources).not.toContain("'unsafe-eval'")
+  })
+})
+
+describe('Tauri security headers', () => {
+  it('sends the Electron headers it can, and no others', () => {
+    const expected = Object.fromEntries(
+      Object.entries(securityHeaders)
+        .filter(([name]) => !(name in REPLACED_HEADERS))
+        .map(([name, values]) => [name, values.join(', ')]),
+    )
+    expect(security.headers).toEqual(expected)
+  })
+
+  it.each(Object.entries(REPLACED_HEADERS))(
+    'covers %s with a CSP directive in both policies',
+    (_header, [directive, sources]) => {
+      expect(tauriPolicy('csp')[directive]).toEqual(sources)
+      expect(tauriPolicy('devCsp')[directive]).toEqual(sources)
+    },
+  )
 })
