@@ -35,9 +35,43 @@ export interface FavoriteExportBody {
 /** An export file to save, or why there is none. */
 export type FavoriteExportBuild = { defaultFilename: string; content: string } | { error: string }
 
+/** The export entry of a stored `scope` favorite, with its keycodes as
+ *  names at `vialProtocol`, or null when its body has no `data`. Throws
+ *  when `body` is not JSON. */
+export function favoriteExportEntry(
+  scope: FavoriteType,
+  vialProtocol: number,
+  label: unknown,
+  savedAt: unknown,
+  body: string,
+): FavoriteExportEntry | null {
+  const parsed = JSON.parse(body) as Record<string, unknown>
+  if (parsed.data == null) return null
+  return {
+    label: label as string,
+    savedAt: savedAt as string,
+    data: withSerializeProtocol(vialProtocol, () => serializeFavData(scope, parsed.data, serializeKeycode)),
+  }
+}
+
+/** The categories of an export of `scope` favorites: none when there are
+ *  no entries. */
+export function favoriteExportCategories(
+  scope: FavoriteType,
+  entries: FavoriteExportEntry[],
+): Record<string, FavoriteExportEntry[]> {
+  return entries.length > 0 ? { [FAV_TYPE_TO_EXPORT_KEY[scope]]: entries } : {}
+}
+
+/** The default name of an export file made at `now`; `current` for the
+ *  export of the editor's value. */
+export function favoriteExportFilename(scope: FavoriteType, now: Date, current = false): string {
+  return `pipette-fav-${FAV_TYPE_TO_EXPORT_KEY[scope]}${current ? '-current' : ''}-${tsForExportFilename(now)}.json`
+}
+
 /** The text of an export file: two-space indented JSON. */
-function exportText(vialProtocol: number, categories: Record<string, FavoriteExportEntry[]>, now: Date): string {
-  return JSON.stringify(buildFavExportFile(vialProtocol, categories, now.toISOString()), null, 2)
+export function favoriteExportText(file: FavoriteExportFile): string {
+  return JSON.stringify(file, null, 2)
 }
 
 /**
@@ -56,47 +90,55 @@ export function buildFavoriteExport(
   const exportEntries: FavoriteExportEntry[] = []
   for (const { label, savedAt, body } of bodies) {
     try {
-      const parsed = JSON.parse(body) as Record<string, unknown>
-      if (parsed.data == null) continue
-      exportEntries.push({
-        label: label as string,
-        savedAt: savedAt as string,
-        data: withSerializeProtocol(vialProtocol, () => serializeFavData(scope, parsed.data, serializeKeycode)),
-      })
+      const exported = favoriteExportEntry(scope, vialProtocol, label, savedAt, body)
+      if (exported) exportEntries.push(exported)
     } catch {
       // Skip unreadable entries
     }
   }
   if (single && exportEntries.length === 0) return { error: 'Entry unreadable' }
-
-  const exportKey = FAV_TYPE_TO_EXPORT_KEY[scope]
-  const categories: Record<string, FavoriteExportEntry[]> = exportEntries.length > 0 ? { [exportKey]: exportEntries } : {}
-  return {
-    defaultFilename: `pipette-fav-${exportKey}-${tsForExportFilename(now)}.json`,
-    content: exportText(vialProtocol, categories, now),
-  }
+  const file = buildFavExportFile(vialProtocol, favoriteExportCategories(scope, exportEntries), now.toISOString())
+  return { defaultFilename: favoriteExportFilename(scope, now), content: favoriteExportText(file) }
 }
 
-/**
- * The export file of the editor's current value: `dataJson` is
- * `{ type, data }` as the renderer serializes it, exported as one entry
- * labelled `Current`. Throws when `dataJson` is not JSON.
- */
+/** The data of the editor's current value with its keycodes as names at
+ *  `vialProtocol`: `dataJson` is `{ type, data }` as the renderer
+ *  serializes it. Throws when `dataJson` is not JSON. */
+export function currentFavoriteExportData(
+  scope: FavoriteType,
+  vialProtocol: number,
+  dataJson: string,
+): { data: unknown } | { error: string } {
+  const parsed = JSON.parse(dataJson) as Record<string, unknown>
+  if (parsed.data == null) return { error: 'Missing data field' }
+  return { data: withSerializeProtocol(vialProtocol, () => serializeFavData(scope, parsed.data, serializeKeycode)) }
+}
+
+/** The export file of the editor's converted value, as one entry labelled
+ *  `Current` saved at `now`. */
+export function currentFavoriteExportFile(
+  scope: FavoriteType,
+  vialProtocol: number,
+  data: unknown,
+  now: Date,
+): FavoriteExportFile {
+  const categories = { [FAV_TYPE_TO_EXPORT_KEY[scope]]: [{ label: 'Current', savedAt: now.toISOString(), data }] }
+  return buildFavExportFile(vialProtocol, categories, now.toISOString())
+}
+
+/** The export file of the editor's current value. Throws when `dataJson`
+ *  is not JSON. */
 export function buildCurrentFavoriteExport(
   scope: FavoriteType,
   vialProtocol: number,
   dataJson: string,
   now: Date,
 ): FavoriteExportBuild {
-  const parsed = JSON.parse(dataJson) as Record<string, unknown>
-  if (parsed.data == null) return { error: 'Missing data field' }
-
-  const exportKey = FAV_TYPE_TO_EXPORT_KEY[scope]
-  const data = withSerializeProtocol(vialProtocol, () => serializeFavData(scope, parsed.data, serializeKeycode))
-  const categories = { [exportKey]: [{ label: 'Current', savedAt: now.toISOString(), data }] }
+  const current = currentFavoriteExportData(scope, vialProtocol, dataJson)
+  if ('error' in current) return current
   return {
-    defaultFilename: `pipette-fav-${exportKey}-current-${tsForExportFilename(now)}.json`,
-    content: exportText(vialProtocol, categories, now),
+    defaultFilename: favoriteExportFilename(scope, now, true),
+    content: favoriteExportText(currentFavoriteExportFile(scope, vialProtocol, current.data, now)),
   }
 }
 
@@ -115,12 +157,17 @@ export function favoriteDataForCurrent(scope: FavoriteType, file: FavoriteExport
   return { data: withDeserializeProtocol(file.vial_protocol, () => deserializeFavData(scope, entries[0].data, deserializeKeycode)) }
 }
 
-/** The body file text of an imported `type` favorite whose exported data
- *  is `data`, or null when the data is not a valid favorite of that type. */
-export function favoriteImportBody(type: FavoriteType, vialProtocol: number | undefined, data: unknown): string | null {
+/** The data of an imported `type` favorite whose exported data is `data`,
+ *  with its keycodes as numbers, or null when it is not a valid favorite
+ *  of that type. */
+export function favoriteImportData(type: FavoriteType, vialProtocol: number | undefined, data: unknown): { data: unknown } | null {
   const normalized = withDeserializeProtocol(vialProtocol, () => deserializeFavData(type, data, deserializeKeycode))
-  if (!isFavoriteDataFile({ type, data: normalized }, type)) return null
-  return JSON.stringify({ type, data: normalized })
+  return isFavoriteDataFile({ type, data: normalized }, type) ? { data: normalized } : null
+}
+
+/** The body file text of an imported `type` favorite. */
+export function favoriteImportBody(type: FavoriteType, data: unknown): string {
+  return JSON.stringify({ type, data })
 }
 
 /** A favorite to import into a store: the exported label and save time,
@@ -164,9 +211,9 @@ export function planFavoriteImport(file: FavoriteExportFile): FavoriteImportPlan
     if (!isValidFavoriteType(type)) return { batches, skipped, failure: 'Invalid favorite type' }
     const valid: FavoriteImportEntry[] = []
     for (const entry of entries) {
-      const body = favoriteImportBody(type, file.vial_protocol, entry.data)
-      if (body === null) { skipped++; continue }
-      valid.push({ label: entry.label, savedAt: entry.savedAt, body })
+      const imported = favoriteImportData(type, file.vial_protocol, entry.data)
+      if (!imported) { skipped++; continue }
+      valid.push({ label: entry.label, savedAt: entry.savedAt, body: favoriteImportBody(type, imported.data) })
     }
     batches.push({ type, entries: valid })
   }

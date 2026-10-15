@@ -10,10 +10,13 @@
 // The Tauri build splits the export and the import between the backend,
 // which reads and writes the store, and a worker, which converts the
 // keycodes (src/shared/favorite-transfer.ts). For those steps the fixture
-// also records what crosses that split, as the main process computes it:
+// also records what crosses that split:
 // - export: the stored favorites the handler read (`bodies`, what the
-//   backend's read must answer) and the file it built (`built`);
-// - export of the current value: the file built;
+//   backend's read must answer) and the file the shared helpers build of
+//   them (`built`; the crate writes it and compares it with the file the
+//   handler wrote);
+// - export of the current value: the file built of the value the handler
+//   converted;
 // - import: the plan of the file (`plan`, the batches the backend writes).
 // The crate replays the store side and compares the bytes; the shim's tests
 // (src/tauri-shim/__tests__/favorite-transfer-worker.test.ts) run the
@@ -38,7 +41,8 @@ const { handlers, notified, paths, ids, dialogs, transfers } = vi.hoisted(() => 
   ids: { next: 1 },
   /** The path the next dialog answers, under userData; null cancels it. */
   dialogs: { answer: null as string | null, defaultPath: undefined as string | undefined },
-  transfers: [] as Record<string, unknown>[],
+  /** What the handler of the current step handed the shared helpers. */
+  transfers: { bodies: [] as { label: unknown; savedAt: unknown; body: string }[], current: null as [unknown, unknown, unknown] | null },
 }))
 
 vi.mock('electron', () => {
@@ -73,21 +77,27 @@ vi.mock('../../src/shared/favorite-transfer', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/shared/favorite-transfer')>()
   return {
     ...actual,
-    buildFavoriteExport: (...args: Parameters<typeof actual.buildFavoriteExport>) => {
-      const built = actual.buildFavoriteExport(...args)
-      transfers.push({ bodies: args[2], built })
-      return built
+    favoriteExportEntry: (...args: Parameters<typeof actual.favoriteExportEntry>) => {
+      const [, , label, savedAt, body] = args
+      transfers.bodies.push({ label, savedAt, body })
+      return actual.favoriteExportEntry(...args)
     },
-    buildCurrentFavoriteExport: (...args: Parameters<typeof actual.buildCurrentFavoriteExport>) => {
-      const built = actual.buildCurrentFavoriteExport(...args)
-      transfers.push({ built })
-      return built
+    currentFavoriteExportData: (...args: Parameters<typeof actual.currentFavoriteExportData>) => {
+      const converted = actual.currentFavoriteExportData(...args)
+      transfers.current = args
+      return converted
     },
   }
 })
 
 import { setupFavoriteStore } from '../../src/main/favorite-store'
-import { planFavoriteImport, readFavoriteExportFile } from '../../src/shared/favorite-transfer'
+import {
+  buildCurrentFavoriteExport,
+  buildFavoriteExport,
+  planFavoriteImport,
+  readFavoriteExportFile,
+} from '../../src/shared/favorite-transfer'
+import type { FavoriteType } from '../../src/shared/types/favorite-store'
 import { IpcChannels } from '../../src/shared/ipc/channels'
 
 const OUT = resolve(REPO_ROOT, 'src-tauri/crates/pipette-keyboard-stores/tests/fixtures/ts_favorite_store_scenarios.json')
@@ -513,13 +523,27 @@ function outcome(response: unknown): string | null {
   return JSON.stringify(response) ?? null
 }
 
-/** What the export or import of `step` handed across the split, if any. */
-function transfer(step: Step, dir: string): Record<string, unknown> | null {
-  if (step.op === 'export' || step.op === 'exportCurrent') {
-    const recorded = transfers.splice(0)
-    expect(recorded.length).toBeLessThanOrEqual(1)
-    const found = recorded[0] ?? null
-    return found && dialogs.defaultPath !== undefined ? { ...found, defaultPath: dialogs.defaultPath } : found
+/** Errors an export answers before it reads the stored favorites. */
+const BEFORE_READ = ['Invalid scope', 'Invalid vialProtocol', 'Invalid entryId', 'Entry not found']
+
+/** What the export or import of `step` handed across the split, if any;
+ *  `response` is the handler's. */
+function transfer(step: Step, dir: string, response: unknown): Record<string, unknown> | null {
+  const { bodies, current } = transfers
+  transfers.bodies = []
+  transfers.current = null
+  const shown = dialogs.defaultPath !== undefined ? { defaultPath: dialogs.defaultPath } : {}
+  if (step.op === 'export') {
+    if (BEFORE_READ.includes((response as { error?: string }).error ?? '')) return null
+    const single = 'entryId' in step
+    const built = buildFavoriteExport(step.type as FavoriteType, step.vialProtocol as number, bodies, single, new Date())
+    return { bodies, built, ...shown }
+  }
+  if (step.op === 'exportCurrent') {
+    if (!current) return null
+    const [type, vialProtocol, dataJson] = current
+    const built = buildCurrentFavoriteExport(type as FavoriteType, vialProtocol as number, dataJson as string, new Date())
+    return { built, ...shown }
   }
   if (step.op === 'import' && step.dialog !== null) {
     try {
@@ -542,7 +566,8 @@ interface Played {
 async function play(scenario: Scenario, dir: string): Promise<Played> {
   paths.userData = dir
   notified.length = 0
-  transfers.length = 0
+  transfers.bodies = []
+  transfers.current = null
   ids.next = 1
   build(dir, scenario.tree)
   vi.useFakeTimers({ toFake: ['Date'] })
@@ -560,9 +585,10 @@ async function play(scenario: Scenario, dir: string): Promise<Played> {
       dialogs.answer = 'dialog' in step ? step.dialog : null
       dialogs.defaultPath = undefined
       // The plan reads the import file as it is before the step.
-      const plan = step.op === 'import' ? transfer(step, dir) : null
-      outcomes.push(outcome(await run(step)))
-      crossed.push(step.op === 'import' ? plan : transfer(step, dir))
+      const plan = step.op === 'import' ? transfer(step, dir, null) : null
+      const response = await run(step)
+      outcomes.push(outcome(response))
+      crossed.push(step.op === 'import' ? plan : transfer(step, dir, response))
     }
     return { outcomes, transfers: crossed, notified: [...notified], after: record(dir) }
   } finally {
