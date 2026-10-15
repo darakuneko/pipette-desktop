@@ -20,12 +20,25 @@ export const POLL_INTERVAL_MS = 1000
 export const POLL_TIMEOUT_MS = 5000
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Poll timeout')), ms),
-    ),
-  ])
+  let timerId: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timerId = setTimeout(() => reject(new Error('Poll timeout')), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timerId))
+}
+
+// Compares every DeviceInfo field, in order, so an unchanged poll result can
+// keep the current state object and skip a re-render of every consumer.
+function sameDeviceList(a: DeviceInfo[], b: DeviceInfo[]): boolean {
+  return a.length === b.length && a.every((d, i) => {
+    const o = b[i]
+    return d.vendorId === o.vendorId && d.productId === o.productId &&
+      d.productName === o.productName && d.serialNumber === o.serialNumber && d.type === o.type
+  })
+}
+
+function withDevices(s: DeviceConnectionState, devices: DeviceInfo[]): DeviceConnectionState {
+  return sameDeviceList(s.devices, devices) ? s : { ...s, devices }
 }
 
 export function useDeviceConnection() {
@@ -70,7 +83,7 @@ export function useDeviceConnection() {
     try {
       const devices = await window.vialAPI.listDevices()
       if (mountedRef.current) {
-        setState((s) => ({ ...s, devices }))
+        setState((s) => withDevices(s, devices))
       }
     } catch {
       if (mountedRef.current) {
@@ -213,7 +226,7 @@ export function useDeviceConnection() {
             POLL_TIMEOUT_MS,
           )
           if (mountedRef.current) {
-            setState((s) => ({ ...s, devices }))
+            setState((s) => withDevices(s, devices))
           }
         } catch {
           // Ignore polling errors (including timeouts) to avoid flooding the UI

@@ -26,6 +26,7 @@ export function TabbedKeycodes({
   pickerMultiSelectEnabled = false,
   onBackgroundClick,
   onTabChange,
+  onKeyboardTabVisibleChange,
   onClose,
   highlightedKeycodes,
   maskOnly = false,
@@ -153,6 +154,13 @@ export function TabbedKeycodes({
     if (available) return activeTab
     return categories[0]?.id ?? activeTab
   }, [activeTab, categories, keyboardTabAvailable])
+
+  // Every tab's content stays mounted (hidden ones are `invisible`), so the
+  // keyboard tab's owner learns whether it is on screen only from here.
+  useEffect(() => {
+    onKeyboardTabVisibleChange?.(effectiveTab === 'keyboard')
+    return () => { onKeyboardTabVisibleChange?.(false) }
+  }, [effectiveTab, onKeyboardTabVisibleChange])
 
   const { activeTabKeycodes, keycodeIndexMap } = useMemo(() => {
     const cat = categories.find((c) => c.id === effectiveTab)

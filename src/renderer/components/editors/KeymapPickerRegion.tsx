@@ -25,6 +25,7 @@ export interface KeymapPickerRegionProps extends KeymapEditorProps {
   layerPanelCollapsed: boolean
   toggleLayerPanel: () => void
   layoutPickerContent: React.ReactNode
+  onKeyboardTabVisibleChange: (visible: boolean) => void
   packTabReadOnly: boolean
   gatedHandleKeycodeSelect: (kc: Keycode) => void
   handlePickerMultiSelect: (
@@ -72,7 +73,7 @@ export interface KeymapPickerRegionProps extends KeymapEditorProps {
 export function KeymapPickerRegion(props: KeymapPickerRegionProps): JSX.Element {
   const {
     layers, currentLayer, onLayerChange, layerNames, onSetLayerName, layerPanelCollapsed, toggleLayerPanel,
-    layoutPickerContent, packTabReadOnly, gatedHandleKeycodeSelect, handlePickerMultiSelect,
+    layoutPickerContent, onKeyboardTabVisibleChange, packTabReadOnly, gatedHandleKeycodeSelect, handlePickerMultiSelect,
     pickerSelectedIndices, selectedKey, selectedEncoder, handleDeselect, clearPickerSelection,
     configuredKeycodes, isMaskKey, isLMMask, tabFooterContent, tabContentOverride,
     basicViewType, onBasicViewTypeChange, splitKeyMode, onSplitKeyModeChange, pickerRemapLabel,
@@ -95,6 +96,7 @@ export function KeymapPickerRegion(props: KeymapPickerRegionProps): JSX.Element 
       )}
       <TabbedKeycodes
         keyboardPickerContent={layoutPickerContent}
+        onKeyboardTabVisibleChange={onKeyboardTabVisibleChange}
         // Simulation tab is completely read-only: no picker click can
         // paste into the shared selection state, and no picker
         // multi-select can accumulate a selection that would still be

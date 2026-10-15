@@ -285,3 +285,50 @@ describe('TabbedKeycodes hover tooltip (canonicalized shared bubble)', () => {
     expect(screen.queryByRole('tooltip')).toBeNull()
   })
 })
+
+describe('TabbedKeycodes — onKeyboardTabVisibleChange', () => {
+  const kb = <div>Keyboard Content</div>
+
+  it('reports hidden initially (basic tab)', () => {
+    const onVisible = vi.fn()
+    render(<TabbedKeycodes keyboardPickerContent={kb} onKeyboardTabVisibleChange={onVisible} />)
+    expect(onVisible).toHaveBeenLastCalledWith(false)
+    expect(onVisible).not.toHaveBeenCalledWith(true)
+  })
+
+  it('reports visible when the keyboard tab is clicked, and hidden when another tab is picked', () => {
+    const onVisible = vi.fn()
+    render(<TabbedKeycodes keyboardPickerContent={kb} onKeyboardTabVisibleChange={onVisible} />)
+    fireEvent.click(screen.getByText('editor.keymap.keyboardTab'))
+    expect(onVisible).toHaveBeenLastCalledWith(true)
+    fireEvent.click(screen.getByText('Basic'))
+    expect(onVisible).toHaveBeenLastCalledWith(false)
+  })
+
+  it('reports hidden when maskOnly removes the keyboard tab', () => {
+    const onVisible = vi.fn()
+    const { rerender } = render(<TabbedKeycodes keyboardPickerContent={kb} onKeyboardTabVisibleChange={onVisible} />)
+    fireEvent.click(screen.getByText('editor.keymap.keyboardTab'))
+    expect(onVisible).toHaveBeenLastCalledWith(true)
+
+    rerender(<TabbedKeycodes keyboardPickerContent={kb} onKeyboardTabVisibleChange={onVisible} maskOnly />)
+    expect(onVisible).toHaveBeenLastCalledWith(false)
+  })
+
+  it('reports hidden on unmount', () => {
+    const onVisible = vi.fn()
+    const { unmount } = render(<TabbedKeycodes keyboardPickerContent={kb} onKeyboardTabVisibleChange={onVisible} />)
+    fireEvent.click(screen.getByText('editor.keymap.keyboardTab'))
+    expect(onVisible).toHaveBeenLastCalledWith(true)
+
+    unmount()
+    expect(onVisible).toHaveBeenLastCalledWith(false)
+  })
+
+  it('works without the callback (pickers other than the keymap editor)', () => {
+    const { unmount } = render(<TabbedKeycodes keyboardPickerContent={kb} />)
+    fireEvent.click(screen.getByText('editor.keymap.keyboardTab'))
+    expect(screen.getByText('editor.keymap.keyboardTab').className).toContain('text-accent')
+    unmount()
+  })
+})
