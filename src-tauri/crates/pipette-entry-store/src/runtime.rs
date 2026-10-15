@@ -3,8 +3,6 @@
 //! the golden fixtures recorded with the Electron build's fake timers and
 //! UUID sequences) can fix them.
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 /// The current time in milliseconds since the epoch (`Date.now()`).
 pub trait Clock: Send + Sync {
     fn now_ms(&self) -> i64;
@@ -21,10 +19,7 @@ pub struct SystemClock;
 
 impl Clock for SystemClock {
     fn now_ms(&self) -> i64 {
-        match SystemTime::now().duration_since(UNIX_EPOCH) {
-            Ok(after) => i64::try_from(after.as_millis()).unwrap_or(i64::MAX),
-            Err(before) => i64::try_from(before.duration().as_millis()).map_or(i64::MIN, |ms| -ms),
-        }
+        pipette_time::now_ms()
     }
 }
 

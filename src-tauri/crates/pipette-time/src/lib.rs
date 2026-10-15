@@ -3,6 +3,17 @@
 //! timestamps the Electron build writes and reads (log lines, sync
 //! envelopes, the clocks of the entry stores).
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
+/// `Date.now()`: milliseconds since the Unix epoch by the system clock,
+/// negative before the epoch, saturating at the ends of `i64`.
+pub fn now_ms() -> i64 {
+    match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(after) => i64::try_from(after.as_millis()).unwrap_or(i64::MAX),
+        Err(before) => i64::try_from(before.duration().as_millis()).map_or(i64::MIN, |ms| -ms),
+    }
+}
+
 /// The largest distance from the epoch a JavaScript `Date` can hold, in
 /// milliseconds (100,000,000 days).
 pub const MAX_TIME_MS: i64 = 8_640_000_000_000_000;
@@ -186,6 +197,11 @@ fn civil_from_days(days: i64) -> (i64, i64, i64) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn now_is_after_2026() {
+        assert!(now_ms() > 1_767_225_600_000);
+    }
 
     #[test]
     fn around_the_epoch() {
