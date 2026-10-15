@@ -4,6 +4,7 @@
 
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { cargoTargetTmpDir } from '../fixture-files'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const crateDir = resolve(here, '../../src-tauri/crates/pipette-sync-format')
@@ -14,20 +15,11 @@ export const TS_VECTORS_PATH = resolve(crateDir, 'tests/fixtures/ts_vectors.json
 /** Committed envelopes from the real random `encrypt`; different on every run. */
 export const TS_RANDOM_ENVELOPES_PATH = resolve(crateDir, 'tests/fixtures/ts_random_envelopes.json')
 
-/** Cargo's target directory as `cargo test` run from src-tauri resolves it:
- *  `CARGO_TARGET_DIR` when set (a relative value is taken from the current
- *  directory, as Cargo does), otherwise the workspace's `target`. */
-const cargoTargetDir = process.env.CARGO_TARGET_DIR
-  ? resolve(process.cwd(), process.env.CARGO_TARGET_DIR)
-  : resolve(here, '../../src-tauri/target')
-
-/** Cargo's CARGO_TARGET_TMPDIR for the crate's integration tests. Holds
- *  files that are specific to this machine or to a test run, never committed. */
-const cargoTmpDir = resolve(cargoTargetDir, 'tmp')
+const cargoTmpDir = cargoTargetTmpDir('pipette-sync-format')
 
 /** This machine's `machineId(true)`, read by the Rust test that compares it. */
-export const NODE_MACHINE_ID_PATH = resolve(cargoTmpDir, 'pipette-sync-format/node_machine_id.json')
+export const NODE_MACHINE_ID_PATH = resolve(cargoTmpDir, 'node_machine_id.json')
 
 /** Envelopes the Rust tests write for the TypeScript verifier, one JSON
  *  file per case. */
-export const RUST_ENVELOPES_DIR = resolve(cargoTmpDir, 'pipette-sync-format/rust_envelopes')
+export const RUST_ENVELOPES_DIR = resolve(cargoTmpDir, 'rust_envelopes')

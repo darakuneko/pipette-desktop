@@ -19,9 +19,19 @@ pub fn fixtures_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
 }
 
-/// Never committed: the benchmark input and the TypeScript timings.
+/// Never committed: the benchmark input and the TypeScript timings, in
+/// `<target>/tmp/pipette-typing-analytics-db`. The generator writes them to
+/// the directory `BENCH_DIR` names (scripts/analytics-db-fixtures/paths.ts,
+/// via `cargoTargetTmpDir` in scripts/fixture-files.ts) and both resolve
+/// `<target>` the same way: `CARGO_TARGET_DIR` taken from the current
+/// directory when set, otherwise the workspace's `target`. Read at run time
+/// because the example that uses it gets no `CARGO_TARGET_TMPDIR`.
 pub fn bench_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/tmp/pipette-typing-analytics-db")
+    let target = match std::env::var_os("CARGO_TARGET_DIR") {
+        Some(dir) => std::env::current_dir().unwrap().join(dir),
+        None => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target"),
+    };
+    target.join("tmp/pipette-typing-analytics-db")
 }
 
 pub fn read_json(path: PathBuf) -> Value {

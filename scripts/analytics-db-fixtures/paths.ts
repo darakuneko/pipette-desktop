@@ -4,6 +4,7 @@
 
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { cargoTargetTmpDir } from '../fixture-files'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const crateDir = resolve(here, '../../src-tauri/crates/pipette-typing-analytics-db')
@@ -11,6 +12,7 @@ const crateDir = resolve(here, '../../src-tauri/crates/pipette-typing-analytics-
 /** Committed: the day JSONL and what the TypeScript DB layer made of it. */
 export const COMMITTED_FIXTURES_DIR = resolve(crateDir, 'tests/fixtures')
 
-/** Cargo's CARGO_TARGET_TMPDIR for the crate. Holds the large benchmark
- *  input and this machine's timings, never committed. */
-export const BENCH_DIR = resolve(here, '../../src-tauri/target/tmp/pipette-typing-analytics-db')
+/** The large benchmark input and this machine's timings, never committed.
+ *  `bench_dir` in the crate's tests/common/mod.rs resolves the same
+ *  directory; the two must change together. */
+export const BENCH_DIR = cargoTargetTmpDir('pipette-typing-analytics-db')

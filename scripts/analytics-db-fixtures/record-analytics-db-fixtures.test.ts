@@ -9,14 +9,14 @@
 // - tests/fixtures/expected.json — the SQL text the Rust crate must use
 //   verbatim, and for each scenario the per-step apply counts, every table
 //   in canonical form (canonical.ts) and the Analyze minute-stats query.
-// - src-tauri/target/tmp/.../heavy.jsonl, heavy-expected.json and
-//   ts-timings.json — the 21 seeded days in one file for the benchmark,
-//   never committed.
+// - <CARGO_TARGET_TMPDIR>/pipette-typing-analytics-db/heavy.jsonl,
+//   heavy-expected.json and ts-timings.json — the 21 seeded days in one
+//   file for the benchmark, never committed.
 //
 // Run: pnpm run generate:analytics-db-fixtures
 
 import { describe, it, expect, vi } from 'vitest'
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { performance } from 'node:perf_hooks'
@@ -34,6 +34,7 @@ import { deletedRangesPath } from '../../src/main/typing-analytics/jsonl/paths'
 import { replayDayRowsHidingDeletedRanges } from '../../src/main/typing-analytics/deleted-ranges-cache'
 import { readDeletedRangesSync } from '../../src/main/typing-analytics/deleted-ranges-store'
 import { clipToUtcDay, serializeDeletedRanges, type DeleteRange } from '../../src/main/typing-analytics/deleted-ranges'
+import { writeFixture, writeJsonFixture } from '../fixture-files'
 import { dumpTable, numberCell, type TableDump } from './canonical'
 import { buildEdgeLines, buildOrphanFile } from './edge-rows'
 import { BENCH_DIR, COMMITTED_FIXTURES_DIR } from './paths'
@@ -73,9 +74,7 @@ interface QueryCase {
  * session, one 17:00 range whose cutoff keeps the later minutes, and one
  * range on another day that clipping drops. */
 function writeRangesFile(userData: string, dayStartMs: number): void {
-  const path = deletedRangesPath(userData, DUMMY_TA_UID, SEED_MACHINE_HASH)
-  mkdirSync(join(path, '..'), { recursive: true })
-  writeFileSync(path, serializeDeletedRanges([
+  writeFixture(deletedRangesPath(userData, DUMMY_TA_UID, SEED_MACHINE_HASH), serializeDeletedRanges([
     { id: 'r-13', startMs: dayStartMs + 13 * HOUR_MS, endMs: dayStartMs + 13 * HOUR_MS + 3 * 60_000, cutoffMs: SEEDED_NOW },
     { id: 'r-17', startMs: dayStartMs + 17 * HOUR_MS, endMs: dayStartMs + 18 * HOUR_MS, cutoffMs: dayStartMs + 17 * HOUR_MS + 2 * 60_000 },
     { id: 'r-other-day', startMs: dayStartMs - 5 * HOUR_MS, endMs: dayStartMs - HOUR_MS, cutoffMs: SEEDED_NOW },
@@ -120,8 +119,7 @@ describe('typing-analytics DB fixtures', () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     const userData = mkdtempSync(join(tmpdir(), 'pipette-ta-fixtures-'))
     try {
-      mkdirSync(join(userData, 'local', 'typing-analytics'), { recursive: true })
-      writeFileSync(join(userData, 'local', 'typing-analytics', 'sync_state.json'), JSON.stringify({ my_device_id: SEED_MACHINE_HASH }))
+      writeFixture(join(userData, 'local', 'typing-analytics', 'sync_state.json'), JSON.stringify({ my_device_id: SEED_MACHINE_HASH }))
       const seed = await seedDummyTypingAnalytics(userData, SEEDED_NOW)
       const seededPaths = [...seed.currentWindowJsonlPaths].sort()
       const dayPath = seededPaths[SEEDED_DAY_INDEX]
@@ -131,9 +129,8 @@ describe('typing-analytics DB fixtures', () => {
       const firstRow = JSON.parse(dayText.split('\n')[0]) as { updated_at: number; payload: { id: string } }
       const ctx = { uid: DUMMY_TA_UID, scopeId: firstRow.payload.id, dayStartMs, seededAt: firstRow.updated_at }
 
-      mkdirSync(COMMITTED_FIXTURES_DIR, { recursive: true })
-      writeFileSync(join(COMMITTED_FIXTURES_DIR, 'day.jsonl'), dayText + buildEdgeLines(ctx))
-      writeFileSync(join(COMMITTED_FIXTURES_DIR, 'orphan.jsonl'), buildOrphanFile(ctx))
+      writeFixture(join(COMMITTED_FIXTURES_DIR, 'day.jsonl'), dayText + buildEdgeLines(ctx))
+      writeFixture(join(COMMITTED_FIXTURES_DIR, 'orphan.jsonl'), buildOrphanFile(ctx))
       writeRangesFile(userData, dayStartMs)
       const hide: HideStep = {
         uid: DUMMY_TA_UID,
@@ -166,11 +163,7 @@ describe('typing-analytics DB fixtures', () => {
         })
         db.close()
       }
-      writeFileSync(join(COMMITTED_FIXTURES_DIR, 'expected.json'), JSON.stringify({
-        sqliteVersion,
-        sql: collectSql(),
-        scenarios: out,
-      }, null, 2) + '\n')
+      writeJsonFixture(join(COMMITTED_FIXTURES_DIR, 'expected.json'), { sqliteVersion, sql: collectSql(), scenarios: out })
 
       await recordBench(userData, seededPaths, dayStartMs, queries)
     } finally {
@@ -219,9 +212,7 @@ function median(values: number[]): number {
  * file-backed DB each (the first run is a warm-up and not counted). Records
  * the expected tables (digest only) and the TypeScript timings. */
 async function recordBench(userData: string, seededPaths: string[], dayStartMs: number, queries: QueryCase[]): Promise<void> {
-  mkdirSync(BENCH_DIR, { recursive: true })
-  const heavyPath = join(BENCH_DIR, 'heavy.jsonl')
-  writeFileSync(heavyPath, seededPaths.map((p) => readFileSync(p, 'utf8')).join(''))
+  writeFixture(join(BENCH_DIR, 'heavy.jsonl'), seededPaths.map((p) => readFileSync(p, 'utf8')).join(''))
   const timings: Record<string, { applyMs: number[]; queryMs: number[] }> = {}
   let pragmas: Record<string, unknown> = {}
   for (const input of ['day.jsonl', 'heavy.jsonl']) {
@@ -246,10 +237,10 @@ async function recordBench(userData: string, seededPaths: string[], dayStartMs: 
         queryMs.push(t2 - t1)
       }
       if (input === 'heavy.jsonl' && run === BENCH_RUNS) {
-        writeFileSync(join(BENCH_DIR, 'heavy-expected.json'), JSON.stringify({
+        writeJsonFixture(join(BENCH_DIR, 'heavy-expected.json'), {
           tables: dumpAll(db, false),
           queries: queries.map((q) => ({ ...q, rows: runQuery(db, q) })),
-        }, null, 2) + '\n')
+        })
       }
       db.close()
       rmSync(dbPath, { force: true })
@@ -265,6 +256,6 @@ async function recordBench(userData: string, seededPaths: string[], dayStartMs: 
     applyMs: v.applyMs,
     queryMs: v.queryMs,
   }]))
-  writeFileSync(join(BENCH_DIR, 'ts-timings.json'), JSON.stringify({ dayStartMs, runtime: process.versions, pragmas, timings: summary }, null, 2) + '\n')
+  writeJsonFixture(join(BENCH_DIR, 'ts-timings.json'), { dayStartMs, runtime: process.versions, pragmas, timings: summary })
   console.log('TypeScript timings', JSON.stringify(summary))
 }

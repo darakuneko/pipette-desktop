@@ -10,28 +10,11 @@
 //
 // Run: pnpm run generate:analytics-db-fixtures
 
-import { fileURLToPath } from 'node:url'
-import { dirname, resolve } from 'node:path'
-import { defineConfig } from 'vitest/config'
+import { fixtureConfig } from '../fixture-vitest-config'
 
-const here = dirname(fileURLToPath(import.meta.url))
-const repoRoot = resolve(here, '../..')
-
-export default defineConfig({
-  root: repoRoot,
-  resolve: {
-    alias: {
-      // Same stub the root config uses: the real `electron` package throws
-      // at import time outside an Electron runtime.
-      electron: resolve(repoRoot, 'src/main/__tests__/electron-stub.ts'),
-    },
-  },
-  test: {
-    include: ['scripts/analytics-db-fixtures/**/*.test.ts'],
-    retry: 0,
-    testTimeout: 600_000,
-    // The seed lays sessions on local wall-clock hours; UTC keeps the
-    // generated JSONL the same on every machine.
-    env: { TZ: 'UTC' },
-  },
+export default fixtureConfig('analytics-db-fixtures', {
+  testTimeout: 600_000,
+  // The seed lays sessions on local wall-clock hours; UTC keeps the
+  // generated JSONL the same on every machine.
+  env: { TZ: 'UTC' },
 })
