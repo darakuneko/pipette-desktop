@@ -141,23 +141,49 @@ export async function closeKeyPopover(): Promise<void> {
   await $('[data-testid="key-popover"]').waitForDisplayed({ reverse: true })
 }
 
+/** Whether the keycodes overlay is open and has stopped sliding. A click
+ *  outside it (on a key, on the key popover) closes it, and it slides in
+ *  over 200 ms when opened: a click on one of its controls while it slides
+ *  can land beside the control. */
+async function overlaySettledOpen(): Promise<boolean> {
+  return browser.execute(() => {
+    const toggle = document.querySelector('button[aria-controls="keycodes-overlay-panel"]')
+    const panel = document.getElementById('keycodes-overlay-panel')
+    return toggle?.getAttribute('aria-expanded') === 'true' && panel !== null && panel.getAnimations().length === 0
+  })
+}
+
 /** Opens the `tab` tab of the keycodes overlay (`tools`, or `data` for the
- *  Import / Save tab). With one tab the panel draws no tab bar, and that tab
- *  is already showing. */
+ *  Import / Save tab) and waits until the overlay has stopped sliding. With
+ *  one tab the panel draws no tab bar, and that tab is already showing. */
 export async function openOverlayTab(tab: 'tools' | 'data'): Promise<void> {
   const toggle = $('button[aria-controls="keycodes-overlay-panel"]')
   if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
-  await $('[data-testid="keycodes-overlay-panel"]').waitForDisplayed()
+  await browser.waitUntil(overlaySettledOpen, { timeoutMsg: 'the keycodes overlay did not open' })
   const button = $(`[data-testid="overlay-tab-${tab}"]`)
-  if ((await button.isExisting()) && (await button.getAttribute('aria-selected')) !== 'true') await button.click()
+  if ((await button.isExisting()) && (await button.getAttribute('aria-selected')) !== 'true') {
+    await button.click()
+    await browser.waitUntil(async () => (await button.getAttribute('aria-selected')) === 'true', {
+      timeoutMsg: `the ${tab} tab of the keycodes overlay was not selected`,
+    })
+  }
 }
 
 export const openToolsOverlay = (): Promise<void> => openOverlayTab('tools')
 
-/** Answers the next file dialog of the app with `path`, or cancels it for
- *  null (`dev_dialog_respond` of the development tools). */
-export const respondToFileDialog = (path: string | null): Promise<void> =>
-  invokeCommand('dev_dialog_respond', { path })
+/** Queues `path` as the answer of the next file dialog (`dev_dialog_respond`
+ *  of the development tools), clicks `selector`, and waits until a file
+ *  dialog has taken the answer, so a click that opened no dialog fails here
+ *  rather than as a missing result later. */
+export async function clickIntoFileDialog(selector: string, path: string): Promise<void> {
+  const queued = () => invokeCommand<number>('dev_dialog_queued')
+  if ((await queued()) !== 0) throw new Error('a file dialog answer from an earlier step is still queued')
+  await invokeCommand('dev_dialog_respond', { path })
+  await $(selector).click()
+  await browser.waitUntil(async () => (await queued()) === 0, {
+    timeoutMsg: `clicking ${selector} opened no file dialog`,
+  })
+}
 
 /** Quits the app and starts it again in a new WebDriver session, with the
  *  same userData directory. Linux only, as {@link quitApp}. */

@@ -1,7 +1,7 @@
 {
   "$schema": "../../gen/schemas/desktop-schema.json",
   "identifier": "dev-dialog",
-  "description": "Builds with the dev-tools feature only: answers the next file dialogs from a queue, so the e2e tests can save and open files without the native dialog.",
+  "description": "Builds with the dev-tools feature only: answers the next file dialogs from a queue, and tells how many answers are still queued, so the e2e tests can save and open files without the native dialog.",
   "windows": ["main"],
-  "permissions": ["allow-dev-dialog-respond"]
+  "permissions": ["allow-dev-dialog-respond", "allow-dev-dialog-queued"]
 }

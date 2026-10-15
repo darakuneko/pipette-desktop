@@ -10,6 +10,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { $, browser, expect } from '@wdio/globals'
 import {
+  clickIntoFileDialog,
   closeKeyPopover,
   connectVirtualKeyboard,
   EDITOR_SELECTOR,
@@ -19,7 +20,6 @@ import {
   openKeycodeHexInput,
   openOverlayTab,
   openToolsOverlay,
-  respondToFileDialog,
   restartApp,
   UNLOCK_DIALOG_HEADING,
   virtualDevice,
@@ -114,8 +114,7 @@ describe('Tauri build smoke', () => {
 
       await setKeycode(0, 0, KC_Z)
       await openOverlayTab('data')
-      await respondToFileDialog(path)
-      await $('[data-testid="layout-store-current-export-vil"]').click()
+      await clickIntoFileDialog('[data-testid="layout-store-current-export-vil"]', path)
       await $('[data-testid="layout-store-exported"]').waitForDisplayed()
       // vial-gui's format, with QMK keycode names.
       const vil = JSON.parse(readFileSync(path, 'utf8')) as { layout: unknown[][][] }
@@ -123,8 +122,7 @@ describe('Tauri build smoke', () => {
 
       await setKeycode(0, 0, KC_X)
       await openToolsOverlay()
-      await respondToFileDialog(path)
-      await $('[data-testid="overlay-import-vil"]').click()
+      await clickIntoFileDialog('[data-testid="overlay-import-vil"]', path)
       // The import status sits in the Import / Save tab, drawn but hidden.
       await browser.waitUntil(
         async () => {
