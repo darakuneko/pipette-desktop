@@ -9,16 +9,27 @@ use std::fmt::Write;
 
 use crate::value::{JsString, Object, Value};
 
+/// The longest gap `JSON.stringify` uses, in UTF-16 code units.
+const MAX_GAP_UNITS: usize = 10;
+
 /// `JSON.stringify(value)`.
 pub fn stringify(value: &Value) -> String {
     stringify_with_gap(value, "")
 }
 
 /// `JSON.stringify(value, undefined, gap)` for a string `gap`, which is cut
-/// to its first 10 characters as there. An empty gap writes everything on
-/// one line.
+/// to its first 10 UTF-16 code units as there. A surrogate pair the cut
+/// would split is left out whole: a Rust string cannot hold the lone half
+/// JavaScript keeps. An empty gap writes everything on one line.
 pub fn stringify_with_gap(value: &Value, gap: &str) -> String {
-    let gap: String = gap.chars().take(10).collect();
+    let mut units = 0;
+    let gap: String = gap
+        .chars()
+        .take_while(|c| {
+            units += c.len_utf16();
+            units <= MAX_GAP_UNITS
+        })
+        .collect();
     let mut writer = Writer { out: String::new(), gap: &gap, indent: String::new() };
     writer.value(value);
     writer.out
@@ -169,5 +180,14 @@ mod tests {
     fn cuts_the_gap_to_ten_characters() {
         let value = parse("[1]").unwrap();
         assert_eq!(stringify_with_gap(&value, &" ".repeat(12)), format!("[\n{}1\n]", " ".repeat(10)));
+    }
+
+    #[test]
+    fn cuts_the_gap_to_ten_utf16_code_units() {
+        let value = parse("[1]").unwrap();
+        let gap = "😀".repeat(5);
+        assert_eq!(stringify_with_gap(&value, &"😀".repeat(6)), format!("[\n{gap}1\n]"));
+        let gap = format!("a{}", "😀".repeat(4));
+        assert_eq!(stringify_with_gap(&value, &format!("a{}", "😀".repeat(5))), format!("[\n{gap}1\n]"));
     }
 }
