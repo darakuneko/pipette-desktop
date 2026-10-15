@@ -33,4 +33,6 @@ pub const APP_COMMANDS: &[&str] = &[
     "window_hide",
     "window_started_hidden",
     "window_is_visible",
+    // src/store_commands/sync_pending.rs
+    "sync_has_pending_changes",
 ];

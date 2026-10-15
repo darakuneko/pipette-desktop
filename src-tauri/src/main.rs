@@ -17,6 +17,7 @@ mod capability_files;
 mod command_error;
 mod definition;
 mod dev_commands;
+mod events;
 mod hid_commands;
 #[cfg(test)]
 mod ipc_contract;
@@ -25,6 +26,7 @@ mod main_window;
 mod navigation;
 mod shell;
 mod shutdown;
+mod store_commands;
 mod window_bounds;
 mod window_commands;
 mod window_state;
@@ -63,6 +65,7 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         window_commands::window_hide,
         window_commands::window_started_hidden,
         window_commands::window_is_visible,
+        store_commands::sync_pending::sync_has_pending_changes,
     ]
 }
 
@@ -111,6 +114,7 @@ fn main() {
         .manage(config)
         .manage(ExternalOpener::system())
         .setup(|app| {
+            store_commands::sync_pending::manage(app.handle(), &app.state::<UserDataDir>().0);
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);

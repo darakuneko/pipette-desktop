@@ -138,17 +138,20 @@ pub(crate) fn probe_keyboard_service() -> HidService {
 }
 
 /// A fresh app with the app commands, the state they use, `opener` as the
-/// browser and `user_data` as its userData directory, and the access control
+/// browser and `user_data` as its userData directory (the pending sync
+/// units restored from it, with no delayed writes), and the access control
 /// the app's build generates.
 fn mock_app(opener: ExternalOpener, user_data: &Path) -> App<MockRuntime> {
     let config: crate::app_config::AppConfig = Arc::new(AppConfigStore::open(user_data));
-    mock_builder()
+    let app = mock_builder()
         .manage(Hid(Arc::new(probe_keyboard_service())))
         .manage(config)
         .manage(opener)
         .invoke_handler(crate::app_commands())
         .build(tauri::generate_context!(test = true))
-        .unwrap()
+        .unwrap();
+    crate::store_commands::sync_pending::manage_without_delayed_writes(app.handle(), user_data);
+    app
 }
 
 /// The main window of `app`, built as the app builds it. The mock runtime

@@ -30,6 +30,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use pipette_hid::HidService;
+use pipette_sync_pending::PendingStore;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::{PageLoadEvent, PageLoadPayload};
@@ -39,6 +40,7 @@ use crate::UserDataDir;
 use crate::app_config::AppConfig;
 use crate::hid_commands::Hid;
 use crate::main_window::{self, MAIN_WINDOW};
+use crate::store_commands::sync_pending::flush_phase;
 use crate::shutdown::{
     ExitDecision, MARKER_TIMEOUT, QUIT_DEADLINE, QuitGuard, QuitPhase, record_interruption, run_quit_sequence,
 };
@@ -49,12 +51,15 @@ use crate::shutdown::{
 #[cfg(debug_assertions)]
 const DEV_QUIT_DELAY_MS_ENV: &str = "PIPETTE_DEV_QUIT_DELAY_MS";
 
+/// The flushPending phase, which writes the pending sync units.
+const FLUSH_PENDING_PHASE: usize = 3;
+
 /// The phase `PIPETTE_DEV_QUIT_DELAY_MS` delays: flushPending.
-const DEV_DELAYED_PHASE: usize = 3;
+const DEV_DELAYED_PHASE: usize = FLUSH_PENDING_PHASE;
 
 /// The phases of the before-quit handler in src/main/sync/sync-flush.ts, in
-/// its order. Each one is a stub that waits for its configured time until
-/// the subsystem behind it is ported.
+/// its order. Each one other than flushPending is a stub that waits for its
+/// configured time until the subsystem behind it is ported.
 const QUIT_PHASES: [&str; 5] =
     ["passwordChange", "preSyncFinalizers", "inFlightSync", "flushPending", "extraFinalizers"];
 
@@ -257,8 +262,11 @@ fn user_data_dir(app: &AppHandle<Wry>) -> PathBuf {
 fn start_quit_sequence(app: AppHandle<Wry>, lifecycle: Arc<Lifecycle>) {
     let data_dir = user_data_dir(&app);
     let durations = phase_durations();
+    let pending = app.state::<PendingStore>().inner().clone();
     tauri::async_runtime::spawn(async move {
-        let phases = stub_phases(durations);
+        let mut phases = stub_phases(durations);
+        phases[FLUSH_PENDING_PHASE] =
+            flush_phase(pending, QUIT_PHASES[FLUSH_PENDING_PHASE], durations[FLUSH_PENDING_PHASE]);
         let outcome = run_quit_sequence(phases, QUIT_DEADLINE, &data_dir, &lifecycle.quit).await;
         log::info!("[quit] sequence ended: {outcome:?}");
         lifecycle.quit.finish();

@@ -2599,6 +2599,7 @@ dependencies = [
  "pipette-hid",
  "pipette-js-json",
  "pipette-logger",
+ "pipette-sync-pending",
  "serde",
  "serde_json",
  "sha2",

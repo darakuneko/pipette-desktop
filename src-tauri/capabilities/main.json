@@ -9,6 +9,7 @@
     "app-config",
     "shell",
     "window",
+    "sync-pending",
     "core:event:allow-listen",
     "core:event:allow-unlisten"
   ]
