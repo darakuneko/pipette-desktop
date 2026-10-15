@@ -1,0 +1,68 @@
+[
+  {
+    "member": "snapshotStoreList",
+    "args": ["0xA1B2"],
+    "command": "snapshot_store_list",
+    "invokeArgs": { "uid": "0xA1B2" },
+    "response": { "success": true, "entries": [] }
+  },
+  {
+    "member": "snapshotStoreSave",
+    "args": ["../x", "{}", "GPK60-63R", "My layout", 2],
+    "command": "snapshot_store_save",
+    "invokeArgs": { "uid": "../x", "json": "{}", "deviceName": "GPK60-63R", "label": "My layout", "vilVersion": 2 },
+    "response": { "success": false, "error": "Error: Invalid uid" }
+  },
+  {
+    "member": "snapshotStoreLoad",
+    "args": ["0xA1B2", "entry-1"],
+    "command": "snapshot_store_load",
+    "invokeArgs": { "uid": "0xA1B2", "entryId": "entry-1" },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "snapshotStoreUpdate",
+    "args": ["0xA1B2", "entry-1", "{}", 2, { "migrateFrom": "{\"version\":1}" }],
+    "command": "snapshot_store_update",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "entryId": "entry-1",
+      "json": "{}",
+      "vilVersion": 2,
+      "options": { "migrateFrom": "{\"version\":1}" }
+    },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "snapshotStoreRename",
+    "args": ["0xA1B2", "entry-1", "New name"],
+    "command": "snapshot_store_rename",
+    "invokeArgs": { "uid": "0xA1B2", "entryId": "entry-1", "newLabel": "New name" },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "snapshotStoreDelete",
+    "args": ["0xA1B2", "entry-1"],
+    "command": "snapshot_store_delete",
+    "invokeArgs": { "uid": "0xA1B2", "entryId": "entry-1" },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "snapshotStoreSetHubPostId",
+    "args": ["0xA1B2", "entry-1", "post-1"],
+    "command": "snapshot_store_set_hub_post_id",
+    "invokeArgs": { "uid": "0xA1B2", "entryId": "entry-1", "hubPostId": "post-1" },
+    "response": { "success": false, "error": "Entry not found" }
+  },
+  {
+    "member": "snapshotStoreSetHubPrivate",
+    "args": ["0xA1B2", "entry-1", { "id": "p1", "url": "/files/p1?token=t", "expiresAt": null }],
+    "command": "snapshot_store_set_hub_private",
+    "invokeArgs": {
+      "uid": "0xA1B2",
+      "entryId": "entry-1",
+      "link": "{\"id\":\"p1\",\"url\":\"/files/p1?token=t\",\"expiresAt\":null}"
+    },
+    "response": { "success": false, "error": "Entry not found" }
+  }
+]

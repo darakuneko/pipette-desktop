@@ -10,7 +10,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use pipette_entry_store::{FixedClock, WriteLocks};
+use pipette_entry_store::{FixedClock, SequenceIds, WriteLocks};
 use pipette_js_json::Value;
 use pipette_keyboard_stores::StoreContext;
 use tempfile::TempDir;
@@ -22,6 +22,11 @@ pub fn ms(iso: &str) -> i64 {
     pipette_time::parse_date_time_string(iso).unwrap()
 }
 
+/// The `n`th id a [`Harness`] hands out, shaped like a random UUID.
+pub fn id(n: usize) -> String {
+    format!("00000000-0000-4000-8000-{n:012}")
+}
+
 pub struct Harness {
     pub dir: TempDir,
     pub clock: Arc<FixedClock>,
@@ -30,7 +35,12 @@ pub struct Harness {
 }
 
 impl Harness {
+    /// New entries get the ids [`id`] 1, 2, ….
     pub fn new() -> Self {
+        Self::with_ids((1..=500).map(id))
+    }
+
+    pub fn with_ids(ids: impl IntoIterator<Item = String>) -> Self {
         let dir = TempDir::new().unwrap();
         let clock = Arc::new(FixedClock::new(ms(T0)));
         let notified = Arc::new(Mutex::new(Vec::new()));
@@ -40,7 +50,8 @@ impl Harness {
             clock.clone(),
             Arc::new(WriteLocks::new()),
             Arc::new(move |unit: &str| record.lock().unwrap().push(unit.to_owned())),
-        );
+        )
+        .with_ids(Arc::new(SequenceIds::new(ids)));
         Self { dir, clock, notified, ctx }
     }
 

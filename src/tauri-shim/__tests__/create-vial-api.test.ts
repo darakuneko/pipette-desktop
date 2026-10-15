@@ -69,7 +69,6 @@ describe('implemented', () => {
   it('answers the store calls of connecting a keyboard as a fresh install', async () => {
     const api = createVialApi(implemented)
     await expect(api.pipetteSettingsGet('uid')).resolves.toBeNull()
-    await expect(api.snapshotStoreList('uid')).resolves.toEqual({ success: true, entries: [] })
     await expect(api.typingRunLogList('uid')).resolves.toEqual({ success: true, entries: [] })
     await expect(api.keyLabelStoreList()).resolves.toEqual({ success: true, data: [] })
     await expect(api.themePackList()).resolves.toEqual({ success: true, data: [] })
@@ -80,6 +79,13 @@ describe('implemented', () => {
     const api = createVialApi(implemented)
     await expect(api.appConfigGetAll()).resolves.toEqual(DEFAULT_APP_CONFIG)
     expect(invoke).toHaveBeenCalledWith('app_config_get_all', undefined)
+  })
+
+  it('asks the backend for the snapshots of a keyboard', async () => {
+    invoke.mockResolvedValueOnce({ success: true, entries: [] })
+    const api = createVialApi(implemented)
+    await expect(api.snapshotStoreList('uid')).resolves.toEqual({ success: true, entries: [] })
+    expect(invoke).toHaveBeenCalledWith('snapshot_store_list', { uid: 'uid' })
   })
 
   it('asks the backend for devices', async () => {

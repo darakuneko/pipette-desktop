@@ -3,6 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'
 import { useLayoutStore, type UseLayoutStoreOptions } from '../useLayoutStore'
 import type { ApplyVilResult } from '../keyboard-types'
 import {
@@ -10,6 +11,7 @@ import {
   VALID_VIL_JSON,
 } from './fixtures/valid-vil'
 import type { SnapshotMeta } from '../../../shared/types/snapshot-store'
+import { snapshotsApi } from '../../../tauri-shim/api/snapshots'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -32,19 +34,50 @@ const MOCK_ENTRY: SnapshotMeta = {
 
 const originalVialAPI = window.vialAPI
 
+function installVialAPI(members: object): void {
+  window.vialAPI = { ...(window.vialAPI ?? {}), ...members } as unknown as typeof window.vialAPI
+}
+
+// Both vialAPI implementations answer from the same spies: a preload-like
+// mock, and the Tauri shim's snapshot members over a mocked Tauri IPC, whose
+// commands hand their arguments to the spies in the members' order.
+const backends = [
+  {
+    name: 'preload-like mock',
+    install: () =>
+      installVialAPI({
+        snapshotStoreList: mockSnapshotStoreList,
+        snapshotStoreSave: mockSnapshotStoreSave,
+        snapshotStoreLoad: mockSnapshotStoreLoad,
+        snapshotStoreRename: mockSnapshotStoreRename,
+        snapshotStoreDelete: mockSnapshotStoreDelete,
+      }),
+  },
+  {
+    name: 'Tauri shim over mockIPC',
+    install: () => {
+      mockIPC((cmd, payload) => {
+        const a = payload as Record<string, unknown>
+        switch (cmd) {
+          case 'snapshot_store_list': return mockSnapshotStoreList(a.uid)
+          case 'snapshot_store_save': return mockSnapshotStoreSave(a.uid, a.json, a.deviceName, a.label, a.vilVersion)
+          case 'snapshot_store_load': return mockSnapshotStoreLoad(a.uid, a.entryId)
+          case 'snapshot_store_rename': return mockSnapshotStoreRename(a.uid, a.entryId, a.newLabel)
+          case 'snapshot_store_delete': return mockSnapshotStoreDelete(a.uid, a.entryId)
+          default: throw new Error(`unexpected command ${cmd}`)
+        }
+      })
+      installVialAPI({ ...snapshotsApi })
+    },
+  },
+]
+
 beforeEach(() => {
   vi.clearAllMocks()
-  window.vialAPI = {
-    ...(window.vialAPI ?? {}),
-    snapshotStoreList: mockSnapshotStoreList,
-    snapshotStoreSave: mockSnapshotStoreSave,
-    snapshotStoreLoad: mockSnapshotStoreLoad,
-    snapshotStoreRename: mockSnapshotStoreRename,
-    snapshotStoreDelete: mockSnapshotStoreDelete,
-  } as unknown as typeof window.vialAPI
 })
 
 afterEach(() => {
+  clearMocks()
   vi.restoreAllMocks()
   window.vialAPI = originalVialAPI
 })
@@ -60,288 +93,294 @@ function createHookOptions(overrides?: Partial<UseLayoutStoreOptions>) {
   }
 }
 
-describe('useLayoutStore – refreshEntries', () => {
-  it('fetches entries from vialAPI', async () => {
-    mockSnapshotStoreList.mockResolvedValueOnce({
-      success: true,
-      entries: [MOCK_ENTRY],
-    })
-    const opts = createHookOptions()
-    const { result } = renderHook(() => useLayoutStore(opts))
-
-    await act(async () => {
-      await result.current.refreshEntries()
-    })
-
-    expect(mockSnapshotStoreList).toHaveBeenCalledWith(VALID_VIL.uid)
-    expect(result.current.entries).toEqual([MOCK_ENTRY])
+describe.each(backends)('useLayoutStore ($name)', (backend) => {
+  beforeEach(() => {
+    backend.install()
   })
 
-  it('does not crash on list failure', async () => {
-    mockSnapshotStoreList.mockRejectedValueOnce(new Error('fail'))
-    const opts = createHookOptions()
-    const { result } = renderHook(() => useLayoutStore(opts))
+  describe('useLayoutStore – refreshEntries', () => {
+    it('fetches entries from vialAPI', async () => {
+      mockSnapshotStoreList.mockResolvedValueOnce({
+        success: true,
+        entries: [MOCK_ENTRY],
+      })
+      const opts = createHookOptions()
+      const { result } = renderHook(() => useLayoutStore(opts))
 
-    await act(async () => {
-      await result.current.refreshEntries()
+      await act(async () => {
+        await result.current.refreshEntries()
+      })
+
+      expect(mockSnapshotStoreList).toHaveBeenCalledWith(VALID_VIL.uid)
+      expect(result.current.entries).toEqual([MOCK_ENTRY])
     })
 
-    expect(result.current.entries).toEqual([])
-  })
-})
+    it('does not crash on list failure', async () => {
+      mockSnapshotStoreList.mockRejectedValueOnce(new Error('fail'))
+      const opts = createHookOptions()
+      const { result } = renderHook(() => useLayoutStore(opts))
 
-describe('useLayoutStore – saveLayout', () => {
-  it('serializes and saves via vialAPI', async () => {
-    mockSnapshotStoreSave.mockResolvedValueOnce({ success: true, entry: MOCK_ENTRY })
-    mockSnapshotStoreList.mockResolvedValueOnce({ success: true, entries: [MOCK_ENTRY] })
-    const opts = createHookOptions()
-    const { result } = renderHook(() => useLayoutStore(opts))
+      await act(async () => {
+        await result.current.refreshEntries()
+      })
 
-    let ok: string | null | undefined
-    await act(async () => {
-      ok = await result.current.saveLayout('My Label')
+      expect(result.current.entries).toEqual([])
     })
-
-    expect(ok).toBe('entry-1')
-    expect(opts.serialize).toHaveBeenCalledOnce()
-    expect(mockSnapshotStoreSave).toHaveBeenCalledWith(
-      VALID_VIL.uid,
-      JSON.stringify(VALID_VIL, null, 2),
-      'Test Keyboard',
-      'My Label',
-      VALID_VIL.version,
-    )
   })
 
-  it('returns false and sets error on failure', async () => {
-    mockSnapshotStoreSave.mockResolvedValueOnce({ success: false, error: 'disk full' })
-    const opts = createHookOptions()
-    const { result } = renderHook(() => useLayoutStore(opts))
+  describe('useLayoutStore – saveLayout', () => {
+    it('serializes and saves via vialAPI', async () => {
+      mockSnapshotStoreSave.mockResolvedValueOnce({ success: true, entry: MOCK_ENTRY })
+      mockSnapshotStoreList.mockResolvedValueOnce({ success: true, entries: [MOCK_ENTRY] })
+      const opts = createHookOptions()
+      const { result } = renderHook(() => useLayoutStore(opts))
 
-    let ok: string | null | undefined
-    await act(async () => {
-      ok = await result.current.saveLayout('test')
+      let ok: string | null | undefined
+      await act(async () => {
+        ok = await result.current.saveLayout('My Label')
+      })
+
+      expect(ok).toBe('entry-1')
+      expect(opts.serialize).toHaveBeenCalledOnce()
+      expect(mockSnapshotStoreSave).toHaveBeenCalledWith(
+        VALID_VIL.uid,
+        JSON.stringify(VALID_VIL, null, 2),
+        'Test Keyboard',
+        'My Label',
+        VALID_VIL.version,
+      )
     })
 
-    expect(ok).toBeNull()
-    expect(result.current.error).toBe('layoutStore.saveFailed')
+    it('returns false and sets error on failure', async () => {
+      mockSnapshotStoreSave.mockResolvedValueOnce({ success: false, error: 'disk full' })
+      const opts = createHookOptions()
+      const { result } = renderHook(() => useLayoutStore(opts))
+
+      let ok: string | null | undefined
+      await act(async () => {
+        ok = await result.current.saveLayout('test')
+      })
+
+      expect(ok).toBeNull()
+      expect(result.current.error).toBe('layoutStore.saveFailed')
+    })
+
+    it('manages saving flag', async () => {
+      let resolveIpc!: (v: unknown) => void
+      mockSnapshotStoreSave.mockReturnValueOnce(
+        new Promise((r) => { resolveIpc = r }),
+      )
+      const opts = createHookOptions()
+      const { result } = renderHook(() => useLayoutStore(opts))
+
+      expect(result.current.saving).toBe(false)
+
+      let promise: Promise<string | null>
+      act(() => {
+        promise = result.current.saveLayout('test')
+      })
+      expect(result.current.saving).toBe(true)
+
+      await act(async () => {
+        resolveIpc({ success: true, entry: MOCK_ENTRY })
+        await promise!
+      })
+      expect(result.current.saving).toBe(false)
+    })
   })
 
-  it('manages saving flag', async () => {
-    let resolveIpc!: (v: unknown) => void
-    mockSnapshotStoreSave.mockReturnValueOnce(
-      new Promise((r) => { resolveIpc = r }),
-    )
-    const opts = createHookOptions()
-    const { result } = renderHook(() => useLayoutStore(opts))
+  describe('useLayoutStore – loadLayout', () => {
+    it('loads and applies a valid VilFile', async () => {
+      mockSnapshotStoreLoad.mockResolvedValueOnce({
+        success: true,
+        data: VALID_VIL_JSON,
+      })
+      const opts = createHookOptions()
+      const { result } = renderHook(() => useLayoutStore(opts))
 
-    expect(result.current.saving).toBe(false)
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.loadLayout('entry-1')
+      })
 
-    let promise: Promise<string | null>
-    act(() => {
-      promise = result.current.saveLayout('test')
-    })
-    expect(result.current.saving).toBe(true)
-
-    await act(async () => {
-      resolveIpc({ success: true, entry: MOCK_ENTRY })
-      await promise!
-    })
-    expect(result.current.saving).toBe(false)
-  })
-})
-
-describe('useLayoutStore – loadLayout', () => {
-  it('loads and applies a valid VilFile', async () => {
-    mockSnapshotStoreLoad.mockResolvedValueOnce({
-      success: true,
-      data: VALID_VIL_JSON,
-    })
-    const opts = createHookOptions()
-    const { result } = renderHook(() => useLayoutStore(opts))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.loadLayout('entry-1')
+      expect(ok).toBe(true)
+      expect(opts.applyVilFile).toHaveBeenCalledOnce()
+      expect(opts.applyVilFile).toHaveBeenCalledWith(VALID_VIL)
     })
 
-    expect(ok).toBe(true)
-    expect(opts.applyVilFile).toHaveBeenCalledOnce()
-    expect(opts.applyVilFile).toHaveBeenCalledWith(VALID_VIL)
-  })
+    it('returns false when IPC fails', async () => {
+      mockSnapshotStoreLoad.mockResolvedValueOnce({
+        success: false,
+        error: 'not found',
+      })
+      const opts = createHookOptions()
+      const { result } = renderHook(() => useLayoutStore(opts))
 
-  it('returns false when IPC fails', async () => {
-    mockSnapshotStoreLoad.mockResolvedValueOnce({
-      success: false,
-      error: 'not found',
-    })
-    const opts = createHookOptions()
-    const { result } = renderHook(() => useLayoutStore(opts))
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.loadLayout('bad-id')
+      })
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.loadLayout('bad-id')
-    })
-
-    expect(ok).toBe(false)
-    expect(result.current.error).toBe('layoutStore.loadFailed')
-  })
-
-  it('returns false when data is invalid VilFile', async () => {
-    mockSnapshotStoreLoad.mockResolvedValueOnce({
-      success: true,
-      data: '{"foo":"bar"}',
-    })
-    const opts = createHookOptions()
-    const { result } = renderHook(() => useLayoutStore(opts))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.loadLayout('entry-1')
+      expect(ok).toBe(false)
+      expect(result.current.error).toBe('layoutStore.loadFailed')
     })
 
-    expect(ok).toBe(false)
-    expect(result.current.error).toBe('layoutStore.loadFailed')
-    expect(opts.applyVilFile).not.toHaveBeenCalled()
-  })
+    it('returns false when data is invalid VilFile', async () => {
+      mockSnapshotStoreLoad.mockResolvedValueOnce({
+        success: true,
+        data: '{"foo":"bar"}',
+      })
+      const opts = createHookOptions()
+      const { result } = renderHook(() => useLayoutStore(opts))
 
-  // applyVilFile resolving { ok: false, ... } (a failed-and-possibly-rolled-
-  // back HID apply) is distinct from the parse/format-error path above,
-  // which always maps to the generic layoutStore.loadFailed.
-  it('sets error.applyRolledBack when applyVilFile resolves rolledBack: true', async () => {
-    mockSnapshotStoreLoad.mockResolvedValueOnce({ success: true, data: VALID_VIL_JSON })
-    const opts = createHookOptions({
-      applyVilFile: vi.fn(async (): Promise<ApplyVilResult> => ({ ok: false, rolledBack: true })),
-    })
-    const { result } = renderHook(() => useLayoutStore(opts))
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.loadLayout('entry-1')
+      })
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.loadLayout('entry-1')
+      expect(ok).toBe(false)
+      expect(result.current.error).toBe('layoutStore.loadFailed')
+      expect(opts.applyVilFile).not.toHaveBeenCalled()
     })
 
-    expect(ok).toBe(false)
-    expect(result.current.error).toBe('error.applyRolledBack')
-  })
+    // applyVilFile resolving { ok: false, ... } (a failed-and-possibly-rolled-
+    // back HID apply) is distinct from the parse/format-error path above,
+    // which always maps to the generic layoutStore.loadFailed.
+    it('sets error.applyRolledBack when applyVilFile resolves rolledBack: true', async () => {
+      mockSnapshotStoreLoad.mockResolvedValueOnce({ success: true, data: VALID_VIL_JSON })
+      const opts = createHookOptions({
+        applyVilFile: vi.fn(async (): Promise<ApplyVilResult> => ({ ok: false, rolledBack: true })),
+      })
+      const { result } = renderHook(() => useLayoutStore(opts))
 
-  it('sets error.applyNotRolledBack when applyVilFile resolves rolledBack: false', async () => {
-    mockSnapshotStoreLoad.mockResolvedValueOnce({ success: true, data: VALID_VIL_JSON })
-    const opts = createHookOptions({
-      applyVilFile: vi.fn(async (): Promise<ApplyVilResult> => ({ ok: false, rolledBack: false })),
-    })
-    const { result } = renderHook(() => useLayoutStore(opts))
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.loadLayout('entry-1')
+      })
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.loadLayout('entry-1')
-    })
-
-    expect(ok).toBe(false)
-    expect(result.current.error).toBe('error.applyNotRolledBack')
-  })
-
-  it('manages loading flag', async () => {
-    let resolveIpc!: (v: unknown) => void
-    mockSnapshotStoreLoad.mockReturnValueOnce(
-      new Promise((r) => { resolveIpc = r }),
-    )
-    const opts = createHookOptions()
-    const { result } = renderHook(() => useLayoutStore(opts))
-
-    expect(result.current.loading).toBe(false)
-
-    let promise: Promise<boolean>
-    act(() => {
-      promise = result.current.loadLayout('entry-1')
-    })
-    expect(result.current.loading).toBe(true)
-
-    await act(async () => {
-      resolveIpc({ success: true, data: VALID_VIL_JSON })
-      await promise!
-    })
-    expect(result.current.loading).toBe(false)
-  })
-})
-
-describe('useLayoutStore – renameEntry', () => {
-  it('renames and refreshes', async () => {
-    mockSnapshotStoreRename.mockResolvedValueOnce({ success: true })
-    mockSnapshotStoreList.mockResolvedValueOnce({
-      success: true,
-      entries: [{ ...MOCK_ENTRY, label: 'Renamed' }],
-    })
-    const opts = createHookOptions()
-    const { result } = renderHook(() => useLayoutStore(opts))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.renameEntry('entry-1', 'Renamed')
+      expect(ok).toBe(false)
+      expect(result.current.error).toBe('error.applyRolledBack')
     })
 
-    expect(ok).toBe(true)
-    expect(mockSnapshotStoreRename).toHaveBeenCalledWith(VALID_VIL.uid, 'entry-1', 'Renamed')
+    it('sets error.applyNotRolledBack when applyVilFile resolves rolledBack: false', async () => {
+      mockSnapshotStoreLoad.mockResolvedValueOnce({ success: true, data: VALID_VIL_JSON })
+      const opts = createHookOptions({
+        applyVilFile: vi.fn(async (): Promise<ApplyVilResult> => ({ ok: false, rolledBack: false })),
+      })
+      const { result } = renderHook(() => useLayoutStore(opts))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.loadLayout('entry-1')
+      })
+
+      expect(ok).toBe(false)
+      expect(result.current.error).toBe('error.applyNotRolledBack')
+    })
+
+    it('manages loading flag', async () => {
+      let resolveIpc!: (v: unknown) => void
+      mockSnapshotStoreLoad.mockReturnValueOnce(
+        new Promise((r) => { resolveIpc = r }),
+      )
+      const opts = createHookOptions()
+      const { result } = renderHook(() => useLayoutStore(opts))
+
+      expect(result.current.loading).toBe(false)
+
+      let promise: Promise<boolean>
+      act(() => {
+        promise = result.current.loadLayout('entry-1')
+      })
+      expect(result.current.loading).toBe(true)
+
+      await act(async () => {
+        resolveIpc({ success: true, data: VALID_VIL_JSON })
+        await promise!
+      })
+      expect(result.current.loading).toBe(false)
+    })
   })
 
-  it('returns false on failure', async () => {
-    mockSnapshotStoreRename.mockResolvedValueOnce({ success: false })
-    const opts = createHookOptions()
-    const { result } = renderHook(() => useLayoutStore(opts))
+  describe('useLayoutStore – renameEntry', () => {
+    it('renames and refreshes', async () => {
+      mockSnapshotStoreRename.mockResolvedValueOnce({ success: true })
+      mockSnapshotStoreList.mockResolvedValueOnce({
+        success: true,
+        entries: [{ ...MOCK_ENTRY, label: 'Renamed' }],
+      })
+      const opts = createHookOptions()
+      const { result } = renderHook(() => useLayoutStore(opts))
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.renameEntry('entry-1', 'New')
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.renameEntry('entry-1', 'Renamed')
+      })
+
+      expect(ok).toBe(true)
+      expect(mockSnapshotStoreRename).toHaveBeenCalledWith(VALID_VIL.uid, 'entry-1', 'Renamed')
     })
 
-    expect(ok).toBe(false)
+    it('returns false on failure', async () => {
+      mockSnapshotStoreRename.mockResolvedValueOnce({ success: false })
+      const opts = createHookOptions()
+      const { result } = renderHook(() => useLayoutStore(opts))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.renameEntry('entry-1', 'New')
+      })
+
+      expect(ok).toBe(false)
+    })
   })
-})
 
-describe('useLayoutStore – deleteEntry', () => {
-  it('deletes and refreshes', async () => {
-    mockSnapshotStoreDelete.mockResolvedValueOnce({ success: true })
-    mockSnapshotStoreList.mockResolvedValueOnce({ success: true, entries: [] })
-    const opts = createHookOptions()
-    const { result } = renderHook(() => useLayoutStore(opts))
+  describe('useLayoutStore – deleteEntry', () => {
+    it('deletes and refreshes', async () => {
+      mockSnapshotStoreDelete.mockResolvedValueOnce({ success: true })
+      mockSnapshotStoreList.mockResolvedValueOnce({ success: true, entries: [] })
+      const opts = createHookOptions()
+      const { result } = renderHook(() => useLayoutStore(opts))
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.deleteEntry('entry-1')
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.deleteEntry('entry-1')
+      })
+
+      expect(ok).toBe(true)
+      expect(mockSnapshotStoreDelete).toHaveBeenCalledWith(VALID_VIL.uid, 'entry-1')
     })
 
-    expect(ok).toBe(true)
-    expect(mockSnapshotStoreDelete).toHaveBeenCalledWith(VALID_VIL.uid, 'entry-1')
+    it('returns false on failure', async () => {
+      mockSnapshotStoreDelete.mockRejectedValueOnce(new Error('fail'))
+      const opts = createHookOptions()
+      const { result } = renderHook(() => useLayoutStore(opts))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.deleteEntry('entry-1')
+      })
+
+      expect(ok).toBe(false)
+    })
   })
 
-  it('returns false on failure', async () => {
-    mockSnapshotStoreDelete.mockRejectedValueOnce(new Error('fail'))
-    const opts = createHookOptions()
-    const { result } = renderHook(() => useLayoutStore(opts))
+  describe('useLayoutStore – clearError', () => {
+    it('clears a set error', async () => {
+      mockSnapshotStoreSave.mockResolvedValueOnce({ success: false, error: 'disk full' })
+      const opts = createHookOptions()
+      const { result } = renderHook(() => useLayoutStore(opts))
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.deleteEntry('entry-1')
+      await act(async () => {
+        await result.current.saveLayout('test')
+      })
+      expect(result.current.error).toBe('layoutStore.saveFailed')
+
+      act(() => {
+        result.current.clearError()
+      })
+
+      expect(result.current.error).toBeNull()
     })
-
-    expect(ok).toBe(false)
-  })
-})
-
-describe('useLayoutStore – clearError', () => {
-  it('clears a set error', async () => {
-    mockSnapshotStoreSave.mockResolvedValueOnce({ success: false, error: 'disk full' })
-    const opts = createHookOptions()
-    const { result } = renderHook(() => useLayoutStore(opts))
-
-    await act(async () => {
-      await result.current.saveLayout('test')
-    })
-    expect(result.current.error).toBe('layoutStore.saveFailed')
-
-    act(() => {
-      result.current.clearError()
-    })
-
-    expect(result.current.error).toBeNull()
   })
 })

@@ -12,6 +12,7 @@
     "sync-pending",
     "files",
     "keyboard-data",
+    "snapshots",
     "core:event:allow-listen",
     "core:event:allow-unlisten"
   ]

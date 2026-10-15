@@ -47,4 +47,13 @@ pub const APP_COMMANDS: &[&str] = &[
     // src/store_commands/keyboard_data.rs
     "list_stored_keyboards",
     "keyboard_meta_name_if_missing",
+    // src/store_commands/snapshots.rs
+    "snapshot_store_list",
+    "snapshot_store_save",
+    "snapshot_store_load",
+    "snapshot_store_update",
+    "snapshot_store_rename",
+    "snapshot_store_delete",
+    "snapshot_store_set_hub_post_id",
+    "snapshot_store_set_hub_private",
 ];
