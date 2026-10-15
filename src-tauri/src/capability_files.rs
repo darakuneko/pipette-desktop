@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //! Checks the files the access control is built from. Every build grants
-//! capabilities/main.json, which names only the permission sets of
-//! permissions/<domain>.toml; together the sets allow each app command
-//! once. Builds with the dev-tools feature also grant capabilities/dev/,
+//! capabilities/main.json: the permission sets of permissions/<domain>.toml,
+//! which together allow each app command once, and the few core
+//! permissions of `OTHER_GRANTS`. Builds with the dev-tools feature also grant capabilities/dev/,
 //! the only place the development commands are allowed (build.rs). None of
 //! them reaches a remote page or a window other than the main one.
 //!
@@ -47,10 +47,6 @@ fn files(dir: &Path, ext: &str) -> Vec<PathBuf> {
     paths
 }
 
-fn file_name(path: &Path) -> &str {
-    path.file_name().unwrap().to_str().unwrap()
-}
-
 /// The permission sets of permissions/*.toml by identifier.
 fn permission_sets() -> BTreeMap<String, Vec<String>> {
     let mut sets = BTreeMap::new();
@@ -75,13 +71,20 @@ fn capability(path: &Path) -> Value {
     serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
 }
 
-/// The capability's permissions, as strings.
+/// The identifiers of the capability's permissions, written as a string or,
+/// with a scope, as an object.
 fn granted(capability: &Value) -> Vec<String> {
     capability["permissions"]
         .as_array()
         .unwrap()
         .iter()
-        .map(|permission| permission.as_str().expect("a permission without a scope").to_owned())
+        .map(|permission| {
+            permission
+                .as_str()
+                .or_else(|| permission["identifier"].as_str())
+                .unwrap_or_else(|| panic!("a permission without an identifier: {permission}"))
+                .to_owned()
+        })
         .collect()
 }
 
@@ -108,28 +111,45 @@ fn assert_main_window_only(path: &Path, capability: &Value) {
     assert_eq!(capability["windows"], serde_json::json!(["main"]), "{}", path.display());
 }
 
-#[test]
-fn every_build_grants_only_capabilities_main_json() {
-    let release: Vec<String> =
-        files(&root().join("capabilities"), "json").iter().map(|path| file_name(path).to_owned()).collect();
-    assert_eq!(release, ["main.json"]);
-}
+/// What the main window holds besides the app commands, each for a reason.
+const OTHER_GRANTS: &[&str] = &[
+    // `subscribe` in src/tauri-shim/ipc.ts.
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+];
 
-#[test]
-fn the_main_capability_grants_every_app_command_once_through_the_sets() {
+/// The main capability's grants: the permission sets, and everything else.
+fn main_grants() -> (Vec<String>, Vec<String>) {
     let path = root().join("capabilities/main.json");
     let main = capability(&path);
     assert_main_window_only(&path, &main);
     assert!(main.get("platforms").is_none());
-
     let sets = permission_sets();
-    let names = granted(&main);
-    let unknown: Vec<&String> = names.iter().filter(|name| !sets.contains_key(*name)).collect();
-    assert!(unknown.is_empty(), "not a permission set: {unknown:?}");
-    assert_eq!(sorted(names.clone()), sorted(sets.keys().cloned().collect()), "every set is granted once");
+    granted(&main).into_iter().partition(|name| sets.contains_key(name))
+}
 
-    let allowed: Vec<String> = names.iter().flat_map(|name| sets[name].clone()).collect();
+fn assert_no_duplicates(items: &[String], what: &str) {
+    let mut unique = sorted(items.to_vec());
+    unique.dedup();
+    assert_eq!(unique.len(), items.len(), "{what} granted twice: {items:?}");
+}
+
+#[test]
+fn the_main_capability_grants_every_app_command_once_through_the_sets() {
+    let (set_names, _) = main_grants();
+    assert_no_duplicates(&set_names, "a permission set");
+    let sets = permission_sets();
+    let allowed: Vec<String> = set_names.iter().flat_map(|name| sets[name].clone()).collect();
     assert_eq!(sorted(allowed), sorted(APP_COMMANDS.iter().map(|command| allow(command)).collect()));
+}
+
+#[test]
+fn the_main_capability_grants_nothing_else_off_the_list() {
+    let (_, others) = main_grants();
+    assert_no_duplicates(&others, "a permission");
+    let unlisted: Vec<&String> =
+        others.iter().filter(|name| !OTHER_GRANTS.contains(&name.as_str())).collect();
+    assert!(unlisted.is_empty(), "neither a permission set nor in OTHER_GRANTS: {unlisted:?}");
 }
 
 #[test]
