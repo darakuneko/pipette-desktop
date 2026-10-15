@@ -6,12 +6,14 @@
 // without opening it has no backend command.
 
 import type { VialAPI } from '../shared/types/vial-api'
+import { appConfigApi } from './api/app-config'
 import { deviceApi } from './api/device'
 import { fakes } from './fakes'
 
 /** The members backed by backend commands, by domain. */
 export const real = {
   ...deviceApi,
+  ...appConfigApi,
 } satisfies Partial<VialAPI>
 
 export const implemented: Partial<VialAPI> = { ...real, ...fakes }

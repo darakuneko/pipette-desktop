@@ -5,15 +5,18 @@
 //! (src/tauri-shim/__tests__/ipc-fixtures.test.ts) replay them against the
 //! shim. Here each entry runs through the app's own command handler
 //! (`app_commands` in main.rs) on Tauri's mock runtime, with the virtual
-//! keyboard as the only HID device: the command must be registered, take
-//! `invokeArgs` as its arguments, and respond with `response`.
+//! keyboard as the only HID device and a new app config in a temp
+//! directory: the command must be registered, take `invokeArgs` as its
+//! arguments, and respond with `response`.
 //!
 //! The command names are also exported for the shim (`CommandName` in
 //! src/tauri-shim/ipc.ts).
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
+use pipette_app_config::AppConfigStore;
 use pipette_hid::{HidService, VirtualDeviceMode};
 use serde_json::{Value, json};
 use tauri::WebviewWindow;
@@ -65,10 +68,22 @@ fn entries() -> Vec<Entry> {
         .collect()
 }
 
-/// A fresh app with the app commands and the state they use, and its window.
-fn app_window() -> WebviewWindow<MockRuntime> {
+/// An empty userData directory of its own for each app.
+fn new_user_data_dir() -> PathBuf {
+    static NEXT: AtomicUsize = AtomicUsize::new(0);
+    let n = NEXT.fetch_add(1, Ordering::Relaxed);
+    let dir = std::env::temp_dir().join(format!("pipette-ipc-contract-{}-{n}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    dir
+}
+
+/// A fresh app with the app commands and the state they use, with
+/// `user_data` as its userData directory, and its window.
+fn app_window(user_data: &Path) -> WebviewWindow<MockRuntime> {
+    let config: crate::app_config::AppConfig = Arc::new(AppConfigStore::open(user_data));
     let app = mock_builder()
         .manage(Hid(Arc::new(HidService::new(VirtualDeviceMode::Only))))
+        .manage(config)
         .invoke_handler(crate::app_commands())
         .build(mock_context(noop_assets()))
         .unwrap();
@@ -96,16 +111,22 @@ fn mismatch(entry: &Entry) -> Option<String> {
     if !APP_COMMANDS.contains(&entry.command.as_str()) {
         return Some("not in APP_COMMANDS".into());
     }
-    let window = app_window();
+    let user_data = new_user_data_dir();
+    let why = run_entry(entry, &app_window(&user_data));
+    let _ = std::fs::remove_dir_all(user_data);
+    why
+}
+
+fn run_entry(entry: &Entry, window: &WebviewWindow<MockRuntime>) -> Option<String> {
     if NEED_OPEN_DEVICE.contains(&entry.command.as_str()) {
         let (vendor_id, product_id) = VIRTUAL_KEYBOARD;
         let opened =
-            invoke(&window, "open_device", &json!({ "vendorId": vendor_id, "productId": product_id }));
+            invoke(window, "open_device", &json!({ "vendorId": vendor_id, "productId": product_id }));
         if opened != Ok(json!(true)) {
             return Some(format!("opening the virtual keyboard: {opened:?}"));
         }
     }
-    match invoke(&window, &entry.command, &entry.invoke_args) {
+    match invoke(window, &entry.command, &entry.invoke_args) {
         Ok(response) if response == entry.response => None,
         Ok(response) => Some(format!("responded {response}, the fixture records {}", entry.response)),
         Err(err) => Some(format!("failed: {err}")),

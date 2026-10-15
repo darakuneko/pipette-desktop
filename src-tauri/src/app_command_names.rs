@@ -19,4 +19,7 @@ pub const APP_COMMANDS: &[&str] = &[
     "is_device_open",
     // src/definition.rs
     "decompress_definition",
+    // src/app_config.rs
+    "app_config_get_all",
+    "app_config_set",
 ];

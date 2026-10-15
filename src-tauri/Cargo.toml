@@ -25,6 +25,8 @@ tokio = { version = "=1.53.3", features = ["rt", "time", "signal"] }
 pipette-hid = { path = "crates/pipette-hid" }
 pipette-fs = { path = "crates/pipette-fs" }
 pipette-logger = { path = "crates/pipette-logger" }
+pipette-app-config = { path = "crates/pipette-app-config" }
+pipette-js-json = { path = "crates/pipette-js-json" }
 log = "=0.4.34"
 serde = { workspace = true }
 # The pending marker of the quit sequence (src/shutdown.rs).

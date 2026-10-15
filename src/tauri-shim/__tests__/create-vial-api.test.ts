@@ -61,7 +61,6 @@ describe('createVialApi', () => {
 describe('implemented', () => {
   it('answers the startup calls with the values of a fresh install', async () => {
     const api = createVialApi(implemented)
-    await expect(api.appConfigGetAll()).resolves.toEqual(DEFAULT_APP_CONFIG)
     await expect(api.syncAuthStatus()).resolves.toEqual({ authenticated: false })
     await expect(api.syncFormatStatus()).resolves.toBeNull()
     await expect(api.i18nPackList()).resolves.toEqual({ success: true, data: [] })
@@ -75,6 +74,13 @@ describe('implemented', () => {
     await expect(api.typingRunLogList('uid')).resolves.toEqual({ success: true, entries: [] })
     await expect(api.keyLabelStoreList()).resolves.toEqual({ success: true, data: [] })
     await expect(api.themePackList()).resolves.toEqual({ success: true, data: [] })
+  })
+
+  it('asks the backend for the app config', async () => {
+    invoke.mockResolvedValueOnce(DEFAULT_APP_CONFIG)
+    const api = createVialApi(implemented)
+    await expect(api.appConfigGetAll()).resolves.toEqual(DEFAULT_APP_CONFIG)
+    expect(invoke).toHaveBeenCalledWith('app_config_get_all', undefined)
   })
 
   it('asks the backend for devices', async () => {

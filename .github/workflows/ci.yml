@@ -52,6 +52,8 @@ jobs:
           pnpm generate:virtual-device-fixtures
           pnpm generate:definition-fixtures
           pnpm generate:fs-logger-fixtures
+          pnpm generate:js-json-fixtures
+          pnpm generate:app-config-fixtures
           pnpm generate:sync-format-fixtures
           pnpm generate:analytics-db-fixtures
 

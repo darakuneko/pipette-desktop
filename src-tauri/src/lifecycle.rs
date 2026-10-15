@@ -30,19 +30,10 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{App, AppHandle, Manager, RunEvent, Window, WindowEvent, Wry};
 
 use crate::UserDataDir;
+use crate::app_config::AppConfig;
 use crate::shutdown::{
     ExitDecision, MARKER_TIMEOUT, QUIT_DEADLINE, QuitGuard, QuitPhase, record_interruption, run_quit_sequence,
 };
-
-/// Whether the app keeps running in the tray when the window is closed.
-/// The Electron build reads this from `AppConfig.trayResident`, whose
-/// default (`DEFAULT_APP_CONFIG` in src/main/app-config.ts) is off; this
-/// build has no app config yet, so the default applies.
-const TRAY_RESIDENT_DEFAULT: bool = false;
-
-/// Builds with debug assertions: `1` turns tray residency on.
-#[cfg(debug_assertions)]
-const DEV_TRAY_RESIDENT_ENV: &str = "PIPETTE_DEV_TRAY_RESIDENT";
 
 /// Builds with debug assertions: how many milliseconds the stub of the
 /// [`DEV_DELAYED_PHASE`] phase takes, to run the quit sequence into its
@@ -68,48 +59,79 @@ pub struct Lifecycle {
     tray_active: AtomicBool,
 }
 
+/// The tray icon's id.
+const TRAY_ID: &str = "main";
 /// The tray item ids.
 const TRAY_SHOW: &str = "show";
 const TRAY_QUIT: &str = "quit";
 
-/// Creates the tray when tray residency is on and starts listening for the
+/// Creates the tray when the config's `trayResident` is on (`Boolean()` of
+/// it, as the Electron build reads it) and starts listening for the
 /// termination signals. Called from the app's setup hook.
 pub fn setup(app: &mut App<Wry>) {
-    let lifecycle = Arc::new(Lifecycle::default());
-    app.manage(Arc::clone(&lifecycle));
-    if tray_resident() {
-        match build_tray(app) {
-            Ok(()) => lifecycle.tray_active.store(true, Ordering::Release),
-            Err(err) => log::error!("failed to create the tray icon: {err}"),
-        }
+    app.manage(Arc::new(Lifecycle::default()));
+    let tray_resident = app.state::<AppConfig>().get("trayResident").unwrap_or_else(|err| {
+        log::error!("failed to read trayResident: {err}");
+        None
+    });
+    if pipette_app_config::truthy(tray_resident.as_ref()) {
+        add_tray(app.handle());
     }
     #[cfg(unix)]
     listen_for_termination(app.handle().clone());
 }
 
-fn tray_resident() -> bool {
-    #[cfg(debug_assertions)]
-    if let Some(value) = std::env::var_os(DEV_TRAY_RESIDENT_ENV) {
-        return value == "1";
+/// Adds the tray (`on`) or removes it, on the main thread, as `setupTray` /
+/// `destroyTray` of src/main/app-behavior.ts do when the renderer changes
+/// `trayResident`; nothing happens when the tray already is that way.
+pub fn set_tray_resident(app: &AppHandle<Wry>, on: bool) {
+    let handle = app.clone();
+    let result = app.run_on_main_thread(move || {
+        if on {
+            add_tray(&handle);
+        } else {
+            remove_tray(&handle);
+        }
+    });
+    if let Err(err) = result {
+        log::error!("failed to update the tray icon: {err}");
     }
-    TRAY_RESIDENT_DEFAULT
+}
+
+fn add_tray(app: &AppHandle<Wry>) {
+    let lifecycle = app.state::<Arc<Lifecycle>>();
+    if lifecycle.tray_active.load(Ordering::Acquire) {
+        return;
+    }
+    match build_tray(app) {
+        Ok(()) => lifecycle.tray_active.store(true, Ordering::Release),
+        Err(err) => log::error!("failed to create the tray icon: {err}"),
+    }
+}
+
+fn remove_tray(app: &AppHandle<Wry>) {
+    let lifecycle = app.state::<Arc<Lifecycle>>();
+    lifecycle.tray_active.store(false, Ordering::Release);
+    // The icon goes away with the last handle to it, this one.
+    drop(app.remove_tray_by_id(TRAY_ID));
 }
 
 /// The tray menu: Show, a separator, Quit. The labels are the fixed English
 /// ones of the Electron tray (src/main/app-behavior.ts), which cannot be
 /// localized either: the translations live in the renderer.
-fn build_tray(app: &App<Wry>) -> tauri::Result<()> {
+fn build_tray(app: &AppHandle<Wry>) -> tauri::Result<()> {
     let show = MenuItem::with_id(app, TRAY_SHOW, "Show", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, TRAY_QUIT, "Quit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show, &separator, &quit])?;
-    let mut tray = TrayIconBuilder::new().menu(&menu).tooltip("Pipette").on_menu_event(|app, event| {
-        match event.id().as_ref() {
-            TRAY_SHOW => show_main_window(app),
-            TRAY_QUIT => app.exit(0),
-            _ => {}
-        }
-    });
+    let mut tray =
+        TrayIconBuilder::with_id(TRAY_ID).menu(&menu).tooltip("Pipette").on_menu_event(|app, event| {
+            match event.id().as_ref() {
+                TRAY_SHOW => show_main_window(app),
+                TRAY_QUIT => app.exit(0),
+                _ => {}
+            }
+        });
     // A left click shows the window too, as in the Electron tray. Linux
     // (AppIndicator) reports no clicks; the menu is the only way there.
     tray = tray.on_tray_icon_event(|tray, event| {

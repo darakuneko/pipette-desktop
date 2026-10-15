@@ -1,19 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Fixed answers for the VialAPI members the renderer awaits during startup
 // and while connecting a keyboard and opening its editor, for areas the
-// backend does not implement yet: the values of a fresh install (default
-// app config, sync signed out, no packs, no saved keyboard data, window
-// visible). Writes succeed without storing anything. Each group names the
-// backend area whose commands take its place; coverage.test.ts lists them.
+// backend does not implement yet: the values of a fresh install (sync
+// signed out, no packs, no saved keyboard data, window visible). Writes
+// succeed without storing anything. Each group names the backend area
+// whose commands take its place; coverage.test.ts lists them.
 
 import type { VialAPI } from '../shared/types/vial-api'
-import { DEFAULT_APP_CONFIG } from '../shared/types/app-config'
 
 export const fakes = {
-  // App config store.
-  appConfigGetAll: () => Promise.resolve({ ...DEFAULT_APP_CONFIG }),
-  appConfigSet: () => Promise.resolve(),
-
   // Tray.
   trayStatusUpdate: () => Promise.resolve(),
 
