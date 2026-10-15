@@ -1,0 +1,35 @@
+[
+  {
+    "member": "device.probeOpen",
+    "args": [4660, 22136, "vial:f64c2b3c:probe"],
+    "command": "hid_probe_open",
+    "invokeArgs": {
+      "vendorId": 4660,
+      "productId": 22136,
+      "serialNumber": "vial:f64c2b3c:probe"
+    },
+    "response": 1
+  },
+  {
+    "member": "device.probeSendReceive",
+    "args": [1, [254, 0]],
+    "command": "hid_probe_send_receive",
+    "invokeArgs": {
+      "id": 1,
+      "data": [254, 0]
+    },
+    "response": [
+      254, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0
+    ]
+  },
+  {
+    "member": "device.probeClose",
+    "args": [1],
+    "command": "hid_probe_close",
+    "invokeArgs": {
+      "id": 1
+    },
+    "response": null
+  }
+]

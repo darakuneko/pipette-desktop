@@ -15,6 +15,7 @@ mod error;
 mod fifo;
 mod hidapi_backend;
 mod packet_log;
+mod probe;
 mod service;
 mod timing;
 mod virtual_backend;

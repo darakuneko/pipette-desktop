@@ -80,6 +80,14 @@ const CALLERS: Record<string, Caller> = {
   'device.decompressDefinition': {
     run: ({ device }, [data]) => device.decompressDefinition(data as number[]),
   },
+  'device.probeOpen': {
+    run: ({ device }, [vendorId, productId, serialNumber]) =>
+      device.probeOpen(vendorId as number, productId as number, serialNumber as string),
+  },
+  'device.probeSendReceive': {
+    run: ({ device }, [id, data]) => device.probeSendReceive(id as number, data as number[]),
+  },
+  'device.probeClose': { run: ({ device }, [id]) => device.probeClose(id as number), void: true },
 }
 
 afterEach(() => {

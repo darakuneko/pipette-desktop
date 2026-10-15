@@ -4,25 +4,30 @@
 //! it invokes, the arguments it passes and the response; the shim's tests
 //! (src/tauri-shim/__tests__/ipc-fixtures.test.ts) replay them against the
 //! shim. Here each entry runs through the app's own command handler
-//! (`app_commands` in main.rs) on Tauri's mock runtime, with the virtual
-//! keyboard as the only HID device and a new app config in a temp
-//! directory: the command must be registered, take `invokeArgs` as its
-//! arguments, and respond with `response`.
+//! (`app_commands` in main.rs) on Tauri's mock runtime, with a new app
+//! config in a temp directory: the command must be registered, take
+//! `invokeArgs` as its arguments, and respond with `response`.
+//!
+//! The HID service lists only the virtual keyboard. The virtual keyboard
+//! cannot be probed, so behind it sits one scripted hardware keyboard
+//! ([`PROBE_KEYBOARD`]) for the probe commands: it answers each report with
+//! the report itself, and the first probe handle of a fresh app has id 1.
 //!
 //! The command names are also exported for the shim (`CommandName` in
 //! src/tauri-shim/ipc.ts).
 
+use std::ffi::CString;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, PoisonError};
 
 use pipette_app_config::AppConfigStore;
-use pipette_hid::{HidService, VirtualDeviceMode};
+use pipette_hid::{HidBackend, HidError, HidHandle, HidService, RawDeviceInfo, Timing, VirtualDeviceMode};
 use serde_json::{Value, json};
 use tauri::WebviewWindow;
 use tauri::ipc::{CallbackFn, InvokeBody};
 use tauri::test::{INVOKE_KEY, MockRuntime, get_ipc_response, mock_builder, mock_context, noop_assets};
 use tauri::webview::InvokeRequest;
+use tempfile::TempDir;
 
 use crate::hid_commands::Hid;
 
@@ -47,6 +52,53 @@ const VIRTUAL_KEYBOARD: (u16, u16) = (0x7a79, 0xf063);
 /// keyboard is opened.
 const NEED_OPEN_DEVICE: &[&str] = &["send_receive", "send"];
 
+/// The vendor ID, product ID and serial number of the scripted hardware
+/// keyboard.
+pub(crate) const PROBE_KEYBOARD: (u16, u16, &str) = (0x1234, 0x5678, "vial:f64c2b3c:probe");
+
+/// Commands that need an open probe handle; their entries run after the
+/// scripted keyboard is opened for a probe, as handle 1.
+const NEED_PROBE: &[&str] = &["hid_probe_send_receive", "hid_probe_close"];
+
+/// The scripted hardware keyboard: always enumerated, never fails to open.
+struct ProbeKeyboard;
+
+impl HidBackend for ProbeKeyboard {
+    fn enumerate(&self) -> Result<Vec<RawDeviceInfo>, HidError> {
+        let (vendor_id, product_id, serial) = PROBE_KEYBOARD;
+        Ok(vec![RawDeviceInfo {
+            path: CString::from(c"/dev/hidraw-probe"),
+            vendor_id,
+            product_id,
+            serial_number: Some(serial.into()),
+            product: Some("Probe Keyboard".into()),
+        }])
+    }
+
+    fn open_path(&self, _path: &CString) -> Result<Arc<dyn HidHandle>, HidError> {
+        Ok(Arc::new(EchoHandle::default()))
+    }
+}
+
+/// Answers each packet with its report (the packet without the report ID).
+#[derive(Default)]
+struct EchoHandle {
+    last: Mutex<Vec<u8>>,
+}
+
+impl HidHandle for EchoHandle {
+    fn write(&self, data: &[u8]) -> Result<usize, HidError> {
+        *self.last.lock().unwrap_or_else(PoisonError::into_inner) = data[1..].to_vec();
+        Ok(data.len())
+    }
+
+    fn read_timeout(&self, buf: &mut [u8], _timeout_ms: i32) -> Result<usize, HidError> {
+        let report = std::mem::take(&mut *self.last.lock().unwrap_or_else(PoisonError::into_inner));
+        buf[..report.len()].copy_from_slice(&report);
+        Ok(report.len())
+    }
+}
+
 fn fixture_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ipc")
 }
@@ -68,13 +120,10 @@ fn entries() -> Vec<Entry> {
         .collect()
 }
 
-/// An empty userData directory of its own for each app.
-fn new_user_data_dir() -> PathBuf {
-    static NEXT: AtomicUsize = AtomicUsize::new(0);
-    let n = NEXT.fetch_add(1, Ordering::Relaxed);
-    let dir = std::env::temp_dir().join(format!("pipette-ipc-contract-{}-{n}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    dir
+/// A HID service that lists only the virtual keyboard, with
+/// [`PROBE_KEYBOARD`] as its hardware.
+pub(crate) fn probe_keyboard_service() -> HidService {
+    HidService::with_backend(Box::new(ProbeKeyboard), VirtualDeviceMode::Only, Timing::new(|| 0, |_| {}))
 }
 
 /// A fresh app with the app commands and the state they use, with
@@ -82,7 +131,7 @@ fn new_user_data_dir() -> PathBuf {
 fn app_window(user_data: &Path) -> WebviewWindow<MockRuntime> {
     let config: crate::app_config::AppConfig = Arc::new(AppConfigStore::open(user_data));
     let app = mock_builder()
-        .manage(Hid(Arc::new(HidService::new(VirtualDeviceMode::Only))))
+        .manage(Hid(Arc::new(probe_keyboard_service())))
         .manage(config)
         .invoke_handler(crate::app_commands())
         .build(mock_context(noop_assets()))
@@ -111,10 +160,8 @@ fn mismatch(entry: &Entry) -> Option<String> {
     if !APP_COMMANDS.contains(&entry.command.as_str()) {
         return Some("not in APP_COMMANDS".into());
     }
-    let user_data = new_user_data_dir();
-    let why = run_entry(entry, &app_window(&user_data));
-    let _ = std::fs::remove_dir_all(user_data);
-    why
+    let user_data = TempDir::new().unwrap();
+    run_entry(entry, &app_window(user_data.path()))
 }
 
 fn run_entry(entry: &Entry, window: &WebviewWindow<MockRuntime>) -> Option<String> {
@@ -124,6 +171,17 @@ fn run_entry(entry: &Entry, window: &WebviewWindow<MockRuntime>) -> Option<Strin
             invoke(window, "open_device", &json!({ "vendorId": vendor_id, "productId": product_id }));
         if opened != Ok(json!(true)) {
             return Some(format!("opening the virtual keyboard: {opened:?}"));
+        }
+    }
+    if NEED_PROBE.contains(&entry.command.as_str()) {
+        let (vendor_id, product_id, serial_number) = PROBE_KEYBOARD;
+        let opened = invoke(
+            window,
+            "hid_probe_open",
+            &json!({ "vendorId": vendor_id, "productId": product_id, "serialNumber": serial_number }),
+        );
+        if opened != Ok(json!(1)) {
+            return Some(format!("opening the probe handle: {opened:?}"));
         }
     }
     match invoke(window, &entry.command, &entry.invoke_args) {

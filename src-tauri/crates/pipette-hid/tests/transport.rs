@@ -294,3 +294,15 @@ fn real_backend_enumerates_without_error() {
     let devices = service.list_devices().unwrap();
     println!("{} Vial interface(s): {devices:?}", devices.len());
 }
+
+#[test]
+fn a_read_error_is_not_retried_even_when_it_is_a_timeout_error() {
+    let f = fixture(VirtualDeviceMode::Off);
+    open_real(&f);
+    f.backend.handle.read_timeout_errors.store(1, Ordering::SeqCst);
+    *f.backend.handle.default_read.lock().unwrap() = vec![0xaa; MSG_LEN];
+    assert!(matches!(f.service.send_receive(&[0x01]), Err(HidError::ReadTimeout)));
+    assert_eq!(f.backend.handle.read_calls.load(Ordering::SeqCst), 1);
+    assert_eq!(f.backend.handle.writes.lock().unwrap().len(), 1);
+    assert_eq!(f.sleeps.load(Ordering::SeqCst), 0);
+}

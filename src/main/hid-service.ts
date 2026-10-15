@@ -5,7 +5,6 @@
 import HID from 'node-hid'
 import {
   MSG_LEN,
-  BUFFER_FETCH_CHUNK,
   HID_USAGE_PAGE,
   HID_USAGE,
   HID_REPORT_ID,
@@ -16,20 +15,11 @@ import {
   HID_OPEN_RETRY_DELAY_MS,
   VIAL_SERIAL_MAGIC,
   BOOTLOADER_SERIAL_MAGIC,
-  CMD_VIA_GET_KEYBOARD_VALUE,
-  CMD_VIA_GET_LAYER_COUNT,
-  CMD_VIA_KEYMAP_GET_BUFFER,
-  CMD_VIA_VIAL_PREFIX,
-  VIA_LAYOUT_OPTIONS,
-  CMD_VIAL_GET_KEYBOARD_ID,
-  CMD_VIAL_GET_SIZE,
-  CMD_VIAL_GET_DEFINITION,
-  CMD_VIAL_GET_ENCODER,
 } from '../shared/constants/protocol'
 import { log, logHidPacket } from './logger'
-import type { DeviceInfo, DeviceType, KeyboardDefinition, ProbeResult } from '../shared/types/protocol'
+import type { DeviceInfo, DeviceType, ProbeResult } from '../shared/types/protocol'
 import { decompressLzma, decompressXz, hasXzMagic } from './lzma'
-import { parseDefinitionLayout } from '../shared/kle/definition-layout'
+import { runProbeSequence } from '../shared/hid/probe-sequence'
 import {
   isVirtualDeviceEnabled,
   isVirtualDeviceExclusive,
@@ -369,7 +359,8 @@ export async function isDeviceOpen(): Promise<boolean> {
 
 /**
  * Probe a secondary keyboard device to read its keymap without affecting the primary connection.
- * Opens a temporary HID handle, reads protocol data, then closes.
+ * Opens a temporary HID handle, runs the shared probe sequence over it
+ * (single read per request, no retries, no packet log), then closes it.
  */
 export async function probeDevice(vendorId: number, productId: number, serialNumber?: string): Promise<ProbeResult> {
   const devices = await HID.devicesAsync()
@@ -390,148 +381,21 @@ export async function probeDevice(vendorId: number, productId: number, serialNum
   const tempDevice = await HID.HIDAsync.open(deviceInfo.path)
 
   try {
-    // Local send/receive helper for the temp device
-    async function probeSendReceive(data: number[]): Promise<number[]> {
-      const padded = padToMsgLen(data)
-      await tempDevice.write([HID_REPORT_ID, ...padded])
-      const response = await tempDevice.read(HID_TIMEOUT_MS)
-      if (!response || response.length === 0) {
-        throw new Error('HID read timeout during probe')
-      }
-      return normalizeResponse(response, MSG_LEN)
-    }
-
-    // --- Protocol byte helpers (inlined because preload/protocol.ts variants use Uint8Array, not number[]) ---
-    function readBE16(buf: number[], offset: number): number {
-      return (buf[offset] << 8) | buf[offset + 1]
-    }
-    function readLE32(buf: number[], offset: number): number {
-      return buf[offset] | (buf[offset + 1] << 8) | (buf[offset + 2] << 16) | ((buf[offset + 3] << 24) >>> 0)
-    }
-    function readLE64Hex(buf: number[], offset: number): string {
-      let hex = '0x'
-      for (let i = 7; i >= 0; i--) {
-        hex += buf[offset + i].toString(16).padStart(2, '0')
-      }
-      return hex
-    }
-    function readBE32(buf: number[], offset: number): number {
-      return ((buf[offset] << 24) >>> 0) | (buf[offset + 1] << 16) | (buf[offset + 2] << 8) | buf[offset + 3]
-    }
-    function writeBE16(arr: number[], offset: number, value: number): void {
-      arr[offset] = (value >> 8) & 0xff
-      arr[offset + 1] = value & 0xff
-    }
-    function writeLE32(arr: number[], offset: number, value: number): void {
-      arr[offset] = value & 0xff
-      arr[offset + 1] = (value >> 8) & 0xff
-      arr[offset + 2] = (value >> 16) & 0xff
-      arr[offset + 3] = (value >> 24) & 0xff
-    }
-    function cmd(...bytes: number[]): number[] {
-      return bytes
-    }
-
-    // 1. Get keyboard ID
-    const idResp = await probeSendReceive(cmd(CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_KEYBOARD_ID))
-    const vialProtocol = readLE32(idResp, 0)
-    const uid = readLE64Hex(idResp, 4)
-
-    // 2. Get definition
-    const sizeResp = await probeSendReceive(cmd(CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_SIZE))
-    const defSize = readLE32(sizeResp, 0)
-
-    const blocks = Math.ceil(defSize / MSG_LEN)
-    const compressedBuf = new Uint8Array(defSize)
-    for (let block = 0; block < blocks; block++) {
-      const pkt = new Array<number>(MSG_LEN).fill(0)
-      pkt[0] = CMD_VIA_VIAL_PREFIX
-      pkt[1] = CMD_VIAL_GET_DEFINITION
-      writeLE32(pkt, 2, block)
-      const resp = await probeSendReceive(pkt)
-      const copyLen = Math.min(MSG_LEN, defSize - block * MSG_LEN)
-      for (let i = 0; i < copyLen; i++) {
-        compressedBuf[block * MSG_LEN + i] = resp[i]
-      }
-    }
-
-    // 3. LZMA/XZ decompress
-    const compressed = Buffer.from(compressedBuf)
-    let jsonStr: string | null
-    if (hasXzMagic(compressed)) {
-      jsonStr = await decompressXz(compressed)
-    } else {
-      jsonStr = await decompressLzma(Array.from(compressed))
-    }
-    if (!jsonStr) {
-      throw new Error('Failed to decompress keyboard definition')
-    }
-    const definition = JSON.parse(jsonStr) as KeyboardDefinition
-    const name = definition.name ?? 'Unknown'
-    const rows = definition.matrix.rows
-    const cols = definition.matrix.cols
-
-    // 4. Get layer count
-    const layerResp = await probeSendReceive(cmd(CMD_VIA_GET_LAYER_COUNT))
-    const layers = layerResp[1]
-
-    // 5. Get keymap buffer (chunk read)
-    const keymapSize = layers * rows * cols * 2 // 2 bytes per keycode (BE16)
-    const keymapBuf: number[] = []
-    for (let offset = 0; offset < keymapSize; offset += BUFFER_FETCH_CHUNK) {
-      const chunkSize = Math.min(BUFFER_FETCH_CHUNK, keymapSize - offset)
-      const pkt = new Array<number>(MSG_LEN).fill(0)
-      pkt[0] = CMD_VIA_KEYMAP_GET_BUFFER
-      writeBE16(pkt, 1, offset)
-      pkt[3] = chunkSize
-      const resp = await probeSendReceive(pkt)
-      for (let i = 0; i < chunkSize; i++) {
-        keymapBuf.push(resp[4 + i])
-      }
-    }
-
-    // Convert buffer to keymap record
-    const keymap: Record<string, number> = {}
-    let bufIdx = 0
-    for (let layer = 0; layer < layers; layer++) {
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          const keycode = (keymapBuf[bufIdx] << 8) | keymapBuf[bufIdx + 1]
-          keymap[`${layer},${row},${col}`] = keycode
-          bufIdx += 2
+    return await runProbeSequence(
+      async (data) => {
+        const padded = padToMsgLen(data)
+        await tempDevice.write([HID_REPORT_ID, ...padded])
+        const response = await tempDevice.read(HID_TIMEOUT_MS)
+        if (!response || response.length === 0) {
+          throw new Error('HID read timeout during probe')
         }
-      }
-    }
-
-    // 6. Get layout options
-    const layoutResp = await probeSendReceive(cmd(CMD_VIA_GET_KEYBOARD_VALUE, VIA_LAYOUT_OPTIONS))
-    const layoutOptions = readBE32(layoutResp, 2)
-
-    // 7. Get encoders — derive indices via the canonical KLE layout parser
-    const encoderLayout: Record<string, number> = {}
-    const { encoderIdx } = parseDefinitionLayout(definition)
-    const encoderCount = encoderIdx.size
-    for (const idx of encoderIdx) {
-      for (let layer = 0; layer < layers; layer++) {
-        const resp = await probeSendReceive(cmd(CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_ENCODER, layer, idx))
-        encoderLayout[`${layer},${idx},0`] = readBE16(resp, 0)
-        encoderLayout[`${layer},${idx},1`] = readBE16(resp, 2)
-      }
-    }
-
-    return {
-      uid,
-      name,
-      vialProtocol,
-      definition,
-      layers,
-      rows,
-      cols,
-      keymap,
-      encoderLayout,
-      encoderCount,
-      layoutOptions,
-    }
+        return normalizeResponse(response, MSG_LEN)
+      },
+      async (compressed) => {
+        const buf = Buffer.from(compressed)
+        return hasXzMagic(buf) ? decompressXz(buf) : decompressLzma(compressed)
+      },
+    )
   } finally {
     try {
       tempDevice.close()
