@@ -13,13 +13,14 @@ import {
   EDITOR_SELECTOR,
   editorKey,
   HEX_INPUT_SELECTOR,
+  invokeCommand,
   openKeycodeHexInput,
   openToolsOverlay,
   UNLOCK_DIALOG_HEADING,
   virtualDevice,
   waitForGone,
 } from '../helpers/app'
-import { appLogPath } from '../helpers/driver'
+import { appLogPath, launchAppAgain } from '../helpers/driver'
 
 const UNLOCK_TIMEOUT_MS = 15_000
 const KC_Z = '001D'
@@ -28,6 +29,7 @@ const KC_X = '001B'
 const UNLOCK_KEYS: [number, number][] = [[0, 0], [0, 1]]
 /** A key the matrix tester shows pressed. */
 const MATRIX_KEY = { row: 2, col: 3 }
+const SECOND_LAUNCH_TIMEOUT_MS = 30_000
 
 describe('Tauri build smoke', () => {
   it('lists the virtual keyboard and opens its keymap editor, still locked', async () => {
@@ -88,13 +90,20 @@ describe('Tauri build smoke', () => {
   })
 })
 
+/** The app's log, empty before its first line. */
+function readAppLog(): string {
+  const path = appLogPath()
+  return existsSync(path) ? readFileSync(path, 'utf8') : ''
+}
+
 /** Waits until the app's log has a line containing `text`. */
 async function waitForLogLine(text: string): Promise<void> {
-  const path = appLogPath()
-  await browser.waitUntil(() => existsSync(path) && readFileSync(path, 'utf8').includes(text), {
+  await browser.waitUntil(() => readAppLog().includes(text), {
     timeoutMsg: `the app log has no line with "${text}"`,
   })
 }
+
+const isWindowVisible = () => invokeCommand<boolean>('window_is_visible')
 
 describe('Tauri build window guard', () => {
   it('keeps the window on the app when a page navigates away or opens a window', async () => {
@@ -129,9 +138,35 @@ describe('Tauri build window guard', () => {
   })
 })
 
-// Checks of the app lifecycle, pending until the backend has what they need:
-// the app config store (theme) and the single-instance guard.
+// Checks of the app lifecycle. The theme one is pending until the backend
+// keeps the theme.
 describe('Tauri build lifecycle', () => {
   it('keeps the theme set in the settings across a restart')
-  it('brings the first window forward when a second instance starts, and the second exits with 0')
+
+  it('brings the first window forward when a second instance starts, and the second exits with 0', async () => {
+    // The window hides only while the tray icon is there to show it again;
+    // the tray comes up on the main thread after the setting changes.
+    await invokeCommand('app_config_set', { key: 'trayResident', value: 'true' })
+    try {
+      await browser.waitUntil(
+        async () => {
+          await invokeCommand('window_hide')
+          return !(await isWindowVisible())
+        },
+        { timeoutMsg: 'the window did not hide into the tray' },
+      )
+
+      const second = await launchAppAgain(SECOND_LAUNCH_TIMEOUT_MS)
+      if (second.code !== 0) {
+        throw new Error(`the second launch ended with code ${second.code} (signal ${second.signal}):\n${second.output}`)
+      }
+      await browser.waitUntil(isWindowVisible, { timeoutMsg: 'the second launch did not show the window' })
+      await waitForLogLine('the app was launched again: Revealed')
+      // The second launch exits before it starts the log, which belongs to
+      // the running app.
+      expect(readAppLog().split('Pipette starting').length - 1).toBe(1)
+    } finally {
+      await invokeCommand('app_config_set', { key: 'trayResident', value: 'false' })
+    }
+  })
 })

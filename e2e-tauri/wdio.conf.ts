@@ -5,7 +5,10 @@
 // the debug build (`pnpm tauri:build:debug`, which has the dev-tools commands
 // the tests drive the virtual keyboard with) with a userData directory of its
 // own. On Linux it needs WebKitWebDriver on PATH and a display (CI runs it
-// under xvfb-run and dbus-run-session).
+// under xvfb-run and dbus-run-session). The app is a single instance per
+// D-Bus session bus: while a Tauri build of Pipette runs on the desktop's
+// bus, run the tests under dbus-run-session, or every launch hands over to
+// that app and exits.
 
 import { existsSync } from 'node:fs'
 import type { Options } from '@wdio/types'
