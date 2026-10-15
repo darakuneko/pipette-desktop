@@ -13,7 +13,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clearMocks, mockIPC } from '@tauri-apps/api/mocks'
-import { COMMANDS } from '../commands'
+import { APP_COMMANDS } from '../generated/app-command-names'
 
 interface Entry {
   member: string
@@ -77,9 +77,9 @@ afterEach(() => {
 })
 
 describe('invoke fixtures', () => {
-  it('cover every command the shim invokes', () => {
+  it('cover every app command', () => {
     const commands = new Set(entries.map((entry) => entry.command))
-    for (const command of Object.values(COMMANDS)) {
+    for (const command of APP_COMMANDS) {
       expect(commands.has(command), command).toBe(true)
     }
   })
@@ -93,7 +93,7 @@ describe('invoke fixtures', () => {
       mockIPC((cmd, payload) => {
         calls.push([cmd, payload])
         if (cmd === entry.command) return entry.response
-        if (cmd === COMMANDS.openDevice) return true
+        if (cmd === 'open_device') return true
         throw new Error(`unexpected command ${cmd}`)
       })
       const shim = await load()

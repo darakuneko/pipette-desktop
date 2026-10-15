@@ -9,14 +9,13 @@
 import * as protocol from '../../preload/protocol'
 import { createProtocolMembers, type DecompressDefinition } from '../../preload/protocol-members'
 import type { VialAPI } from '../../shared/types/vial-api'
-import { COMMANDS } from '../commands'
 import type { CompressedDefinition } from '../generated/CompressedDefinition'
 import type { DecompressedDefinition } from '../generated/DecompressedDefinition'
 import { call } from '../ipc'
 import { closeHidDevice, isDeviceOpen, listDevices, openHidDevice } from '../hid-transport'
 
 export const decompressDefinition: DecompressDefinition = (compressed) =>
-  call<DecompressedDefinition>(COMMANDS.decompressDefinition, {
+  call<DecompressedDefinition>('decompress_definition', {
     data: compressed satisfies CompressedDefinition,
   })
 

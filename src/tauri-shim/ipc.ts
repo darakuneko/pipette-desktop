@@ -4,7 +4,10 @@
 
 import { invoke, type InvokeArgs } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import type { CommandName } from './commands'
+import type { APP_COMMANDS } from './generated/app-command-names'
+
+/** A backend app command, as src-tauri/src/app_command_names.rs lists them. */
+export type CommandName = (typeof APP_COMMANDS)[number]
 
 /**
  * Invokes `command`. A command fails with its error message, a string (the

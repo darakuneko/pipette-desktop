@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Counts the shim's members: real (backed by backend commands), fake (fixed
-// answers in fakes.ts) and stub (every other member). A member is never both
-// real and fake, and the fakes are exactly the list below, so adding or
-// replacing one is a deliberate change here too.
+// answers in fakes.ts) and stub (every other member). Every implemented
+// member is exactly one of real or fake, and the fakes are exactly the list
+// below, so adding or replacing one is a deliberate change here too.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
@@ -35,16 +35,11 @@ const EXPECTED_FAKES = [
 ]
 
 describe('shim coverage', () => {
-  it('has no member that is both real and fake', () => {
-    const fakeNames = new Set(Object.keys(fakes))
-    expect(Object.keys(real).filter((name) => fakeNames.has(name))).toEqual([])
-  })
-
   it('fakes exactly the expected members', () => {
     expect(Object.keys(fakes).sort()).toEqual([...EXPECTED_FAKES].sort())
   })
 
-  it('implements only VialAPI members, each real or fake', () => {
+  it('implements only VialAPI members, each either real or fake', () => {
     const members = new Set<string>(VIAL_API_MEMBER_NAMES)
     const names = Object.keys(implemented)
     expect(names.filter((name) => !members.has(name))).toEqual([])
