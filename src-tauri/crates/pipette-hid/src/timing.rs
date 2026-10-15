@@ -4,7 +4,7 @@
 //! both through the `test-util` constructors.
 
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 type Clock = Arc<dyn Fn() -> u64 + Send + Sync>;
 type Sleeper = Arc<dyn Fn(Duration) + Send + Sync>;
@@ -18,9 +18,8 @@ pub struct Timing {
 impl Timing {
     pub(crate) fn system() -> Self {
         Self {
-            now_ms: Arc::new(|| {
-                SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
-            }),
+            // A clock before the epoch reads as 0.
+            now_ms: Arc::new(|| u64::try_from(pipette_time::now_ms()).unwrap_or(0)),
             sleep: Arc::new(std::thread::sleep),
         }
     }

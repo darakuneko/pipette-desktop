@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 [package]
 name = "pipette-time"
-description = "JavaScript's Date.prototype.toISOString for milliseconds since the Unix epoch"
+description = "JavaScript's Date.prototype.toISOString and Date.parse (the ECMAScript date time string format) for milliseconds since the Unix epoch"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -12,7 +12,6 @@ mod backend;
 mod constants;
 mod device_info;
 mod error;
-mod fifo;
 mod hidapi_backend;
 mod packet_log;
 mod probe;

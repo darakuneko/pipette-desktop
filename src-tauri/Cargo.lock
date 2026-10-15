@@ -2628,6 +2628,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipette-entry-store"
+version = "0.0.0"
+dependencies = [
+ "pipette-entry-store",
+ "pipette-fifo",
+ "pipette-fs",
+ "pipette-js-json",
+ "pipette-time",
+ "regex",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.21",
+ "uuid",
+]
+
+[[package]]
+name = "pipette-fifo"
+version = "0.0.0"
+
+[[package]]
 name = "pipette-fs"
 version = "0.0.0"
 dependencies = [
@@ -2647,9 +2667,11 @@ dependencies = [
  "hex",
  "hidapi",
  "log",
+ "pipette-fifo",
  "pipette-hid",
  "pipette-logger",
  "pipette-protocol",
+ "pipette-time",
  "pipette-virtual-device",
  "serde",
  "serde_json",

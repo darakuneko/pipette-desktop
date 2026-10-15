@@ -21,7 +21,6 @@ mod rotating_file;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use log::{Level, LevelFilter, Log, Metadata, Record};
 
@@ -50,13 +49,6 @@ fn keeps(target: &str, level: Level) -> bool {
     level <= max
 }
 
-fn now_epoch_ms() -> i64 {
-    match SystemTime::now().duration_since(UNIX_EPOCH) {
-        Ok(since) => i64::try_from(since.as_millis()).unwrap_or(i64::MAX),
-        Err(before) => -i64::try_from(before.duration().as_millis()).unwrap_or(i64::MAX),
-    }
-}
-
 impl Log for FileLogger {
     fn enabled(&self, metadata: &Metadata<'_>) -> bool {
         keeps(metadata.target(), metadata.level())
@@ -66,7 +58,7 @@ impl Log for FileLogger {
         if !self.enabled(record.metadata()) {
             return;
         }
-        let line = format_line(now_epoch_ms(), record.level(), &record.args().to_string());
+        let line = format_line(pipette_time::now_ms(), record.level(), &record.args().to_string());
         let _ = std::io::stderr().write_all(line.as_bytes());
         let Some(file) = &self.file else {
             return;

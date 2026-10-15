@@ -14,7 +14,11 @@ rust-version.workspace = true
 test-util = []
 
 [dependencies]
+# Requests are sent in the order they were issued.
+pipette-fifo = { path = "../pipette-fifo" }
 pipette-protocol = { path = "../pipette-protocol" }
+# The wall clock of src/timing.rs.
+pipette-time = { path = "../pipette-time" }
 pipette-virtual-device = { workspace = true }
 hidapi = { workspace = true }
 thiserror = { workspace = true }

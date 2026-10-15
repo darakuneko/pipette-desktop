@@ -14,12 +14,12 @@ use crate::constants::{
 };
 use crate::device_info::DeviceInfo;
 use crate::error::HidError;
-use crate::fifo::FifoLock;
 use crate::hidapi_backend::HidapiBackend;
 use crate::packet_log::{Direction, log_packet, packet_logging_from_env};
 use crate::probe::ProbeSlot;
 use crate::timing::Timing;
 use crate::virtual_backend::{DeviceBackends, VirtualBackend};
+use pipette_fifo::FifoLock;
 
 const READ_BUFFER_LEN: usize = 256;
 
