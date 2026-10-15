@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+[package]
+name = "pipette-sync-pending"
+description = "The pending sync units kept in local/sync-pending.json: the startup restore, the generations and the delayed writes"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# The unit rule shared with the stores (`is_safe_path_segment`).
+pipette-entry-store = { path = "../pipette-entry-store" }
+pipette-fs = { path = "../pipette-fs" }
+pipette-js-json = { path = "../pipette-js-json" }
+# The pending units in the order they were first marked, as a JS Set keeps them.
+indexmap = "=2.14.2"
+log = "=0.4.34"
+
+[dev-dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

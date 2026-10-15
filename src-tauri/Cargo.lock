@@ -2722,6 +2722,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipette-sync-pending"
+version = "0.0.0"
+dependencies = [
+ "indexmap 2.14.2",
+ "log",
+ "pipette-entry-store",
+ "pipette-fs",
+ "pipette-js-json",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "pipette-time"
 version = "0.0.0"
 
