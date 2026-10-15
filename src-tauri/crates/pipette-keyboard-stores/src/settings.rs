@@ -67,8 +67,14 @@ fn keyboard_dir(ctx: &StoreContext, uid: &str) -> Result<PathBuf, SettingsError>
 }
 
 /// The file at `path` as text, as `readFile(…, 'utf-8')` reads it (each
-/// invalid sequence as U+FFFD), with its etag: the SHA-256 of its bytes in
-/// lowercase hex, or [`SETTINGS_ETAG_ABSENT`] when it cannot be read.
+/// invalid sequence as U+FFFD); `None` when it cannot be read.
+fn read_text(path: &Path) -> Option<String> {
+    fs::read(path).ok().map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
+}
+
+/// The file at `path` as [`read_text`] reads it, with its etag: the
+/// SHA-256 of its bytes in lowercase hex, or [`SETTINGS_ETAG_ABSENT`] when
+/// it cannot be read.
 fn read_file(path: &Path) -> SettingsFile {
     match fs::read(path) {
         Ok(bytes) => SettingsFile {
@@ -138,7 +144,7 @@ pub fn read_all_pipette_settings(ctx: &StoreContext) -> Result<Vec<KeyboardSetti
     let mut files = Vec::new();
     for uid in keyboard_dirs(&keyboards_dir, is_safe_path_segment) {
         let dir = keyboards_dir.join(&uid);
-        let Some(content) = read_file(&dir.join(SETTINGS_FILE)).content else { continue };
+        let Some(content) = read_text(&dir.join(SETTINGS_FILE)) else { continue };
         let uid_value = Value::from(uid.as_str());
         let name = match names.get(&uid) {
             Some(name) if *name != uid_value => name.clone(),
