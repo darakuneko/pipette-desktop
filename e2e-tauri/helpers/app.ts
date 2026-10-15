@@ -5,11 +5,14 @@
 
 import { $, $$, browser } from '@wdio/globals'
 import type { VirtualDeviceControllerState } from '../../src/tauri-shim/generated/VirtualDeviceControllerState'
+import { quitApp } from './driver'
 
 export const VIRTUAL_DEVICE_NAME = 'Virtual Keyboard'
 export const EDITOR_SELECTOR = '[data-testid="editor-content"]'
 export const UNLOCK_DIALOG_HEADING = 'h2=Unlock Keyboard'
 const CONNECT_TIMEOUT_MS = 20_000
+// Longer than the deadline of the app's own quit sequence (30 s).
+const QUIT_TIMEOUT_MS = 40_000
 
 type ChainablePromiseElement = ReturnType<typeof $>
 
@@ -61,6 +64,12 @@ async function findDeviceButton(name: string): Promise<WebdriverIO.Element> {
   return found
 }
 
+/** Whether `err` is WebKitWebDriver's report of an element that left the
+ *  page between being found and being used. */
+function isStaleElement(err: unknown): boolean {
+  return err instanceof Error && /stale element/i.test(err.message)
+}
+
 /** Waits until no element matching `selector` is displayed. Each poll
  *  queries the selector afresh: an element that is removed between being
  *  found and being checked (WebKitWebDriver then reports a stale element)
@@ -74,7 +83,7 @@ export async function waitForGone(selector: string, timeoutMsg: string): Promise
         }
         return true
       } catch (err) {
-        if (err instanceof Error && /stale element/i.test(err.message)) return false
+        if (isStaleElement(err)) return false
         throw err
       }
     },
@@ -114,7 +123,21 @@ export async function openKeycodeHexInput(row: number, col: number): Promise<voi
 }
 
 export async function closeKeyPopover(): Promise<void> {
-  await $('[data-testid="popover-close"]').click()
+  // A keycode applied from the popover re-renders it, which can replace the
+  // close button while it is being found or clicked; each try finds it
+  // afresh.
+  await browser.waitUntil(
+    async () => {
+      try {
+        await $('[data-testid="popover-close"]').click()
+        return true
+      } catch (err) {
+        if (isStaleElement(err)) return false
+        throw err
+      }
+    },
+    { timeoutMsg: 'the close button of the key popover could not be clicked' },
+  )
   await $('[data-testid="key-popover"]').waitForDisplayed({ reverse: true })
 }
 
@@ -126,4 +149,11 @@ export async function openToolsOverlay(): Promise<void> {
   await $('[data-testid="keycodes-overlay-panel"]').waitForDisplayed()
   const tab = $('[data-testid="overlay-tab-tools"]')
   if ((await tab.isExisting()) && (await tab.getAttribute('aria-selected')) !== 'true') await tab.click()
+}
+
+/** Quits the app and starts it again in a new WebDriver session, with the
+ *  same userData directory. Linux only, as {@link quitApp}. */
+export async function restartApp(): Promise<void> {
+  await quitApp(QUIT_TIMEOUT_MS)
+  await browser.reloadSession()
 }

@@ -7,7 +7,7 @@
 // directory.
 
 import { spawn, type ChildProcess } from 'node:child_process'
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -59,6 +59,69 @@ process.once('exit', () => {
 export function appLogPath(): string {
   if (!session) throw new Error('no session is running')
   return join(session.userDataDir, 'logs', 'pipette-0.log')
+}
+
+/** The app's config of the running session (`<userData>/config.json`),
+ *  parsed; empty before the app first writes it. */
+export function readAppConfig(): Record<string, unknown> {
+  if (!session) throw new Error('no session is running')
+  const path = join(session.userDataDir, 'config.json')
+  return existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>) : {}
+}
+
+const QUIT_POLL_MS = 100
+
+/** The pids of the processes of the app binary that run with the running
+ *  session's userData directory: the app WebKitWebDriver started, and a
+ *  launch of {@link launchAppAgain} while it runs. Linux only: it reads
+ *  /proc. */
+function sessionAppPids(userDataDir: string): number[] {
+  const binary = realpathSync(APP_BINARY)
+  const marker = `PIPETTE_USER_DATA_DIR=${userDataDir}`
+  const pids: number[] = []
+  for (const entry of readdirSync('/proc')) {
+    if (!/^\d+$/.test(entry)) continue
+    try {
+      if (readlinkSync(`/proc/${entry}/exe`) !== binary) continue
+      if (!readFileSync(`/proc/${entry}/environ`, 'utf8').split('\0').includes(marker)) continue
+    } catch {
+      // Gone since the listing, or another user's process.
+      continue
+    }
+    if (isRunning(Number(entry))) pids.push(Number(entry))
+  }
+  return pids
+}
+
+/** Whether `pid` is a process that has not exited: an exited child stays a
+ *  zombie until WebKitWebDriver reaps it. */
+function isRunning(pid: number): boolean {
+  try {
+    // The state follows the command name, which is in parentheses.
+    const stat = readFileSync(`/proc/${pid}/stat`, 'utf8')
+    return stat.slice(stat.lastIndexOf(')') + 2, stat.lastIndexOf(')') + 3) !== 'Z'
+  } catch {
+    return false
+  }
+}
+
+/** Quits the app of the running session the way a quit from the desktop
+ *  does: SIGTERM, which runs the app's quit sequence, and resolves once the
+ *  app has exited. Ending the WebDriver session instead kills the app
+ *  without it, so nothing the app saves on quit (the window's bounds) would
+ *  be saved. Linux only. */
+export async function quitApp(timeoutMs: number): Promise<void> {
+  if (!session) throw new Error('no session is running')
+  if (process.platform !== 'linux') throw new Error('quitApp finds the app through /proc, which is Linux only')
+  const pids = sessionAppPids(session.userDataDir)
+  if (pids.length !== 1) throw new Error(`expected one app process of the session, found ${pids.length}`)
+  const [pid] = pids
+  process.kill(pid, 'SIGTERM')
+  const deadline = Date.now() + timeoutMs
+  while (isRunning(pid)) {
+    if (Date.now() > deadline) throw new Error(`the app (pid ${pid}) did not exit within ${timeoutMs} ms of SIGTERM`)
+    await new Promise((r) => setTimeout(r, QUIT_POLL_MS))
+  }
 }
 
 /** The environment the app of a session runs with: the virtual keyboard

@@ -94,8 +94,11 @@ jobs:
       - name: Install tauri-driver
         run: cargo install tauri-driver --version 2.1.0 --locked
 
+      # The screen is larger than xvfb-run's default of 1280x1024, which is
+      # the window's minimum size: the window-state test moves and resizes
+      # the window inside it.
       - name: e2e (Tauri)
-        run: xvfb-run --auto-servernum dbus-run-session -- pnpm test:e2e:tauri
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1200x24" dbus-run-session -- pnpm test:e2e:tauri
 
   # Kept off the job above so the release build does not lengthen it.
   tauri-lint:
