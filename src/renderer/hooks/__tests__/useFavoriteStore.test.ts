@@ -3,14 +3,18 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { clearMocks } from '@tauri-apps/api/mocks'
 import { useFavoriteStore } from '../useFavoriteStore'
 import type { SavedFavoriteMeta } from '../../../shared/types/favorite-store'
+import { favoriteBackends } from './favorite-backends'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),
 }))
+
+vi.mock('../../../tauri-shim/workers/favorite-transfer-client', () => ({ transfer: vi.fn() }))
 
 const mockFavoriteStoreList = vi.fn()
 const mockFavoriteStoreSave = vi.fn()
@@ -20,6 +24,7 @@ const mockFavoriteStoreDelete = vi.fn()
 const mockFavoriteStoreExport = vi.fn()
 const mockFavoriteStoreExportCurrent = vi.fn()
 const mockFavoriteStoreImport = vi.fn()
+const mockFavoriteStoreImportToCurrent = vi.fn()
 
 const MOCK_ENTRY: SavedFavoriteMeta = {
   id: 'fav-1',
@@ -38,708 +43,704 @@ function hookOpts(overrides: Record<string, unknown> = {}) {
   return { favoriteType: 'tapDance' as const, serialize: mockSerialize, apply: mockApply, vialProtocol: 6, ...overrides }
 }
 
-beforeEach(() => {
-  vi.clearAllMocks()
-  window.vialAPI = {
-    ...(window.vialAPI ?? {}),
-    favoriteStoreList: mockFavoriteStoreList,
-    favoriteStoreSave: mockFavoriteStoreSave,
-    favoriteStoreLoad: mockFavoriteStoreLoad,
-    favoriteStoreRename: mockFavoriteStoreRename,
-    favoriteStoreDelete: mockFavoriteStoreDelete,
-    favoriteStoreExport: mockFavoriteStoreExport,
-    favoriteStoreExportCurrent: mockFavoriteStoreExportCurrent,
-    favoriteStoreImport: mockFavoriteStoreImport,
-  } as unknown as typeof window.vialAPI
+const backends = favoriteBackends({
+  favoriteStoreList: mockFavoriteStoreList,
+  favoriteStoreSave: mockFavoriteStoreSave,
+  favoriteStoreLoad: mockFavoriteStoreLoad,
+  favoriteStoreRename: mockFavoriteStoreRename,
+  favoriteStoreDelete: mockFavoriteStoreDelete,
+  favoriteStoreExport: mockFavoriteStoreExport,
+  favoriteStoreExportCurrent: mockFavoriteStoreExportCurrent,
+  favoriteStoreImport: mockFavoriteStoreImport,
+  favoriteStoreImportToCurrent: mockFavoriteStoreImportToCurrent,
 })
 
 afterEach(() => {
   vi.restoreAllMocks()
+  clearMocks()
   window.vialAPI = originalVialAPI
 })
 
-describe('useFavoriteStore – modal state', () => {
-  it('starts with showModal false', () => {
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-    expect(result.current.showModal).toBe(false)
+describe.each(backends)('useFavoriteStore ($name)', (backend) => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    backend.install()
   })
 
-  it('openModal refreshes entries and sets showModal true', async () => {
-    mockFavoriteStoreList.mockResolvedValueOnce({
-      success: true,
-      entries: [MOCK_ENTRY],
-    })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    await act(async () => {
-      await result.current.openModal()
+  describe('useFavoriteStore – modal state', () => {
+    it('starts with showModal false', () => {
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+      expect(result.current.showModal).toBe(false)
     })
 
-    expect(mockFavoriteStoreList).toHaveBeenCalledWith('tapDance')
-    expect(result.current.showModal).toBe(true)
-    expect(result.current.entries).toEqual([MOCK_ENTRY])
+    it('openModal refreshes entries and sets showModal true', async () => {
+      mockFavoriteStoreList.mockResolvedValueOnce({
+        success: true,
+        entries: [MOCK_ENTRY],
+      })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      await act(async () => {
+        await result.current.openModal()
+      })
+
+      expect(mockFavoriteStoreList).toHaveBeenCalledWith('tapDance')
+      expect(result.current.showModal).toBe(true)
+      expect(result.current.entries).toEqual([MOCK_ENTRY])
+    })
+
+    it('closeModal sets showModal false', async () => {
+      mockFavoriteStoreList.mockResolvedValueOnce({ success: true, entries: [] })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      await act(async () => {
+        await result.current.openModal()
+      })
+      expect(result.current.showModal).toBe(true)
+
+      act(() => {
+        result.current.closeModal()
+      })
+      expect(result.current.showModal).toBe(false)
+    })
   })
 
-  it('closeModal sets showModal false', async () => {
-    mockFavoriteStoreList.mockResolvedValueOnce({ success: true, entries: [] })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+  describe('useFavoriteStore – refreshEntries', () => {
+    it('fetches entries from vialAPI', async () => {
+      mockFavoriteStoreList.mockResolvedValueOnce({
+        success: true,
+        entries: [MOCK_ENTRY],
+      })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
 
-    await act(async () => {
-      await result.current.openModal()
-    })
-    expect(result.current.showModal).toBe(true)
+      await act(async () => {
+        await result.current.refreshEntries()
+      })
 
-    act(() => {
-      result.current.closeModal()
-    })
-    expect(result.current.showModal).toBe(false)
-  })
-})
-
-describe('useFavoriteStore – refreshEntries', () => {
-  it('fetches entries from vialAPI', async () => {
-    mockFavoriteStoreList.mockResolvedValueOnce({
-      success: true,
-      entries: [MOCK_ENTRY],
-    })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    await act(async () => {
-      await result.current.refreshEntries()
+      expect(mockFavoriteStoreList).toHaveBeenCalledWith('tapDance')
+      expect(result.current.entries).toEqual([MOCK_ENTRY])
     })
 
-    expect(mockFavoriteStoreList).toHaveBeenCalledWith('tapDance')
-    expect(result.current.entries).toEqual([MOCK_ENTRY])
+    it('does not crash on list failure', async () => {
+      mockFavoriteStoreList.mockRejectedValueOnce(new Error('fail'))
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      await act(async () => {
+        await result.current.refreshEntries()
+      })
+
+      expect(result.current.entries).toEqual([])
+    })
   })
 
-  it('does not crash on list failure', async () => {
-    mockFavoriteStoreList.mockRejectedValueOnce(new Error('fail'))
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+  describe('useFavoriteStore – saveFavorite', () => {
+    it('calls serialize and saves via vialAPI', async () => {
+      mockFavoriteStoreSave.mockResolvedValueOnce({ success: true, entry: MOCK_ENTRY })
+      mockFavoriteStoreList.mockResolvedValueOnce({ success: true, entries: [MOCK_ENTRY] })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
 
-    await act(async () => {
-      await result.current.refreshEntries()
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.saveFavorite('My Label')
+      })
+
+      expect(ok).toBe(true)
+      expect(mockSerialize).toHaveBeenCalled()
+      expect(mockFavoriteStoreSave).toHaveBeenCalledWith(
+        'tapDance',
+        JSON.stringify({ type: 'tapDance', data: MOCK_TAP_DANCE_DATA }),
+        'My Label',
+      )
     })
 
-    expect(result.current.entries).toEqual([])
-  })
-})
+    it('returns false and sets error on failure', async () => {
+      mockFavoriteStoreSave.mockResolvedValueOnce({ success: false, error: 'disk full' })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
 
-describe('useFavoriteStore – saveFavorite', () => {
-  it('calls serialize and saves via vialAPI', async () => {
-    mockFavoriteStoreSave.mockResolvedValueOnce({ success: true, entry: MOCK_ENTRY })
-    mockFavoriteStoreList.mockResolvedValueOnce({ success: true, entries: [MOCK_ENTRY] })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.saveFavorite('test')
+      })
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.saveFavorite('My Label')
+      expect(ok).toBe(false)
+      expect(result.current.error).toBe('favoriteStore.saveFailed')
     })
 
-    expect(ok).toBe(true)
-    expect(mockSerialize).toHaveBeenCalled()
-    expect(mockFavoriteStoreSave).toHaveBeenCalledWith(
-      'tapDance',
-      JSON.stringify({ type: 'tapDance', data: MOCK_TAP_DANCE_DATA }),
-      'My Label',
-    )
-  })
+    it('manages saving flag', async () => {
+      let resolveIpc!: (v: unknown) => void
+      mockFavoriteStoreSave.mockReturnValueOnce(
+        new Promise((r) => { resolveIpc = r }),
+      )
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
 
-  it('returns false and sets error on failure', async () => {
-    mockFavoriteStoreSave.mockResolvedValueOnce({ success: false, error: 'disk full' })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+      expect(result.current.saving).toBe(false)
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.saveFavorite('test')
+      let promise: Promise<boolean>
+      act(() => {
+        promise = result.current.saveFavorite('test')
+      })
+      expect(result.current.saving).toBe(true)
+
+      await act(async () => {
+        resolveIpc({ success: true, entry: MOCK_ENTRY })
+        await promise!
+      })
+      expect(result.current.saving).toBe(false)
     })
 
-    expect(ok).toBe(false)
-    expect(result.current.error).toBe('favoriteStore.saveFailed')
-  })
+    it('returns false without IPC call when enabled is false', async () => {
+      const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
 
-  it('manages saving flag', async () => {
-    let resolveIpc!: (v: unknown) => void
-    mockFavoriteStoreSave.mockReturnValueOnce(
-      new Promise((r) => { resolveIpc = r }),
-    )
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.saveFavorite('test')
+      })
 
-    expect(result.current.saving).toBe(false)
-
-    let promise: Promise<boolean>
-    act(() => {
-      promise = result.current.saveFavorite('test')
-    })
-    expect(result.current.saving).toBe(true)
-
-    await act(async () => {
-      resolveIpc({ success: true, entry: MOCK_ENTRY })
-      await promise!
-    })
-    expect(result.current.saving).toBe(false)
-  })
-
-  it('returns false without IPC call when enabled is false', async () => {
-    const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.saveFavorite('test')
+      expect(ok).toBe(false)
+      expect(mockSerialize).not.toHaveBeenCalled()
+      expect(mockFavoriteStoreSave).not.toHaveBeenCalled()
     })
 
-    expect(ok).toBe(false)
-    expect(mockSerialize).not.toHaveBeenCalled()
-    expect(mockFavoriteStoreSave).not.toHaveBeenCalled()
-  })
+    it('returns false when serialize throws', async () => {
+      const throwingSerialize = vi.fn(() => { throw new Error('serialize error') })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts({ serialize: throwingSerialize })))
 
-  it('returns false when serialize throws', async () => {
-    const throwingSerialize = vi.fn(() => { throw new Error('serialize error') })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts({ serialize: throwingSerialize })))
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.saveFavorite('test')
+      })
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.saveFavorite('test')
+      expect(ok).toBe(false)
+      expect(result.current.error).toBe('favoriteStore.saveFailed')
     })
-
-    expect(ok).toBe(false)
-    expect(result.current.error).toBe('favoriteStore.saveFailed')
-  })
-})
-
-describe('useFavoriteStore – loadFavorite', () => {
-  it('parses JSON, validates, and calls apply', async () => {
-    mockFavoriteStoreLoad.mockResolvedValueOnce({
-      success: true,
-      data: JSON.stringify({ type: 'tapDance', data: MOCK_TAP_DANCE_DATA }),
-    })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.loadFavorite('fav-1')
-    })
-
-    expect(ok).toBe(true)
-    expect(mockApply).toHaveBeenCalledWith(MOCK_TAP_DANCE_DATA)
   })
 
-  it('returns false and sets error when IPC fails', async () => {
-    mockFavoriteStoreLoad.mockResolvedValueOnce({
-      success: false,
-      error: 'not found',
-    })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+  describe('useFavoriteStore – loadFavorite', () => {
+    it('parses JSON, validates, and calls apply', async () => {
+      mockFavoriteStoreLoad.mockResolvedValueOnce({
+        success: true,
+        data: JSON.stringify({ type: 'tapDance', data: MOCK_TAP_DANCE_DATA }),
+      })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.loadFavorite('bad-id')
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.loadFavorite('fav-1')
+      })
+
+      expect(ok).toBe(true)
+      expect(mockApply).toHaveBeenCalledWith(MOCK_TAP_DANCE_DATA)
     })
 
-    expect(ok).toBe(false)
-    expect(result.current.error).toBe('favoriteStore.loadFailed')
-    expect(mockApply).not.toHaveBeenCalled()
+    it('returns false and sets error when IPC fails', async () => {
+      mockFavoriteStoreLoad.mockResolvedValueOnce({
+        success: false,
+        error: 'not found',
+      })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.loadFavorite('bad-id')
+      })
+
+      expect(ok).toBe(false)
+      expect(result.current.error).toBe('favoriteStore.loadFailed')
+      expect(mockApply).not.toHaveBeenCalled()
+    })
+
+    it('returns false when type validation fails', async () => {
+      mockFavoriteStoreLoad.mockResolvedValueOnce({
+        success: true,
+        data: '{"type":"macro","data":[]}',
+      })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.loadFavorite('fav-1')
+      })
+
+      expect(ok).toBe(false)
+      expect(result.current.error).toBe('favoriteStore.loadFailed')
+      expect(mockApply).not.toHaveBeenCalled()
+    })
+
+    it('closes modal on successful load', async () => {
+      mockFavoriteStoreList.mockResolvedValueOnce({ success: true, entries: [] })
+      mockFavoriteStoreLoad.mockResolvedValueOnce({
+        success: true,
+        data: JSON.stringify({ type: 'tapDance', data: MOCK_TAP_DANCE_DATA }),
+      })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      await act(async () => {
+        await result.current.openModal()
+      })
+      expect(result.current.showModal).toBe(true)
+
+      await act(async () => {
+        await result.current.loadFavorite('fav-1')
+      })
+      expect(result.current.showModal).toBe(false)
+    })
+
+    it('returns false when JSON is invalid', async () => {
+      mockFavoriteStoreLoad.mockResolvedValueOnce({
+        success: true,
+        data: 'not valid json{{{',
+      })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.loadFavorite('fav-1')
+      })
+
+      expect(ok).toBe(false)
+      expect(result.current.error).toBe('favoriteStore.loadFailed')
+      expect(mockApply).not.toHaveBeenCalled()
+    })
+
+    it('returns false and keeps modal open when apply throws', async () => {
+      const throwingApply = vi.fn(() => { throw new Error('apply error') })
+      mockFavoriteStoreList.mockResolvedValueOnce({ success: true, entries: [] })
+      mockFavoriteStoreLoad.mockResolvedValueOnce({
+        success: true,
+        data: JSON.stringify({ type: 'tapDance', data: MOCK_TAP_DANCE_DATA }),
+      })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts({ apply: throwingApply })))
+
+      await act(async () => {
+        await result.current.openModal()
+      })
+      expect(result.current.showModal).toBe(true)
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.loadFavorite('fav-1')
+      })
+
+      expect(ok).toBe(false)
+      expect(result.current.error).toBe('favoriteStore.loadFailed')
+      expect(result.current.showModal).toBe(true)
+    })
+
+    it('manages loading flag', async () => {
+      let resolveIpc!: (v: unknown) => void
+      mockFavoriteStoreLoad.mockReturnValueOnce(
+        new Promise((r) => { resolveIpc = r }),
+      )
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      expect(result.current.loading).toBe(false)
+
+      let promise: Promise<boolean>
+      act(() => {
+        promise = result.current.loadFavorite('fav-1')
+      })
+      expect(result.current.loading).toBe(true)
+
+      await act(async () => {
+        resolveIpc({ success: true, data: JSON.stringify({ type: 'tapDance', data: MOCK_TAP_DANCE_DATA }) })
+        await promise!
+      })
+      expect(result.current.loading).toBe(false)
+    })
+
+    it('returns false without IPC call when enabled is false', async () => {
+      const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.loadFavorite('fav-1')
+      })
+
+      expect(ok).toBe(false)
+      expect(mockFavoriteStoreLoad).not.toHaveBeenCalled()
+      expect(mockApply).not.toHaveBeenCalled()
+    })
   })
 
-  it('returns false when type validation fails', async () => {
-    mockFavoriteStoreLoad.mockResolvedValueOnce({
-      success: true,
-      data: '{"type":"macro","data":[]}',
-    })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+  describe('useFavoriteStore – renameEntry', () => {
+    it('renames and refreshes', async () => {
+      mockFavoriteStoreRename.mockResolvedValueOnce({ success: true })
+      mockFavoriteStoreList.mockResolvedValueOnce({
+        success: true,
+        entries: [{ ...MOCK_ENTRY, label: 'Renamed' }],
+      })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.loadFavorite('fav-1')
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.renameEntry('fav-1', 'Renamed')
+      })
+
+      expect(ok).toBe(true)
+      expect(mockFavoriteStoreRename).toHaveBeenCalledWith('tapDance', 'fav-1', 'Renamed')
     })
 
-    expect(ok).toBe(false)
-    expect(result.current.error).toBe('favoriteStore.loadFailed')
-    expect(mockApply).not.toHaveBeenCalled()
+    it('returns false on failure', async () => {
+      mockFavoriteStoreRename.mockResolvedValueOnce({ success: false })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.renameEntry('fav-1', 'New')
+      })
+
+      expect(ok).toBe(false)
+    })
+
+    it('returns false without IPC call when enabled is false', async () => {
+      const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.renameEntry('fav-1', 'New')
+      })
+
+      expect(ok).toBe(false)
+      expect(mockFavoriteStoreRename).not.toHaveBeenCalled()
+    })
   })
 
-  it('closes modal on successful load', async () => {
-    mockFavoriteStoreList.mockResolvedValueOnce({ success: true, entries: [] })
-    mockFavoriteStoreLoad.mockResolvedValueOnce({
-      success: true,
-      data: JSON.stringify({ type: 'tapDance', data: MOCK_TAP_DANCE_DATA }),
-    })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+  describe('useFavoriteStore – deleteEntry', () => {
+    it('deletes and refreshes', async () => {
+      mockFavoriteStoreDelete.mockResolvedValueOnce({ success: true })
+      mockFavoriteStoreList.mockResolvedValueOnce({ success: true, entries: [] })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
 
-    await act(async () => {
-      await result.current.openModal()
-    })
-    expect(result.current.showModal).toBe(true)
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.deleteEntry('fav-1')
+      })
 
-    await act(async () => {
-      await result.current.loadFavorite('fav-1')
+      expect(ok).toBe(true)
+      expect(mockFavoriteStoreDelete).toHaveBeenCalledWith('tapDance', 'fav-1')
     })
-    expect(result.current.showModal).toBe(false)
+
+    it('returns false on failure', async () => {
+      mockFavoriteStoreDelete.mockRejectedValueOnce(new Error('fail'))
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.deleteEntry('fav-1')
+      })
+
+      expect(ok).toBe(false)
+    })
+
+    it('returns false without IPC call when enabled is false', async () => {
+      const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.deleteEntry('fav-1')
+      })
+
+      expect(ok).toBe(false)
+      expect(mockFavoriteStoreDelete).not.toHaveBeenCalled()
+    })
   })
 
-  it('returns false when JSON is invalid', async () => {
-    mockFavoriteStoreLoad.mockResolvedValueOnce({
-      success: true,
-      data: 'not valid json{{{',
-    })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+  describe('useFavoriteStore – exportFavorites', () => {
+    it('calls favoriteStoreExport with the current favoriteType', async () => {
+      mockFavoriteStoreExport.mockResolvedValueOnce({ success: true })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.loadFavorite('fav-1')
+      await act(async () => {
+        await result.current.exportFavorites()
+      })
+
+      expect(mockFavoriteStoreExport).toHaveBeenCalledWith('tapDance', 6)
     })
 
-    expect(ok).toBe(false)
-    expect(result.current.error).toBe('favoriteStore.loadFailed')
-    expect(mockApply).not.toHaveBeenCalled()
+    it('returns true on success', async () => {
+      mockFavoriteStoreExport.mockResolvedValueOnce({ success: true })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.exportFavorites()
+      })
+
+      expect(ok).toBe(true)
+    })
+
+    it('returns false and sets error on failure', async () => {
+      mockFavoriteStoreExport.mockResolvedValueOnce({ success: false, error: 'write error' })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.exportFavorites()
+      })
+
+      expect(ok).toBe(false)
+      expect(result.current.error).toBe('favoriteStore.exportFailed')
+    })
+
+    it('does not set error on cancel', async () => {
+      mockFavoriteStoreExport.mockResolvedValueOnce({ success: false, error: 'cancelled' })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.exportFavorites()
+      })
+
+      expect(ok).toBe(false)
+      expect(result.current.error).toBeNull()
+    })
+
+    it('manages exporting flag', async () => {
+      let resolveIpc!: (v: unknown) => void
+      mockFavoriteStoreExport.mockReturnValueOnce(
+        new Promise((r) => { resolveIpc = r }),
+      )
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      expect(result.current.exporting).toBe(false)
+
+      let promise: Promise<boolean>
+      act(() => {
+        promise = result.current.exportFavorites()
+      })
+      expect(result.current.exporting).toBe(true)
+
+      await act(async () => {
+        resolveIpc({ success: true })
+        await promise!
+      })
+      expect(result.current.exporting).toBe(false)
+    })
+
+    it('returns false without IPC call when enabled is false', async () => {
+      const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.exportFavorites()
+      })
+
+      expect(ok).toBe(false)
+      expect(mockFavoriteStoreExport).not.toHaveBeenCalled()
+    })
   })
 
-  it('returns false and keeps modal open when apply throws', async () => {
-    const throwingApply = vi.fn(() => { throw new Error('apply error') })
-    mockFavoriteStoreList.mockResolvedValueOnce({ success: true, entries: [] })
-    mockFavoriteStoreLoad.mockResolvedValueOnce({
-      success: true,
-      data: JSON.stringify({ type: 'tapDance', data: MOCK_TAP_DANCE_DATA }),
-    })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts({ apply: throwingApply })))
+  describe('useFavoriteStore – exportCurrent', () => {
+    it('calls serialize and favoriteStoreExportCurrent with favoriteType, vialProtocol, and serialized json', async () => {
+      mockFavoriteStoreExportCurrent.mockResolvedValueOnce({ success: true })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
 
-    await act(async () => {
-      await result.current.openModal()
-    })
-    expect(result.current.showModal).toBe(true)
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.exportCurrent()
+      })
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.loadFavorite('fav-1')
+      expect(ok).toBe(true)
+      expect(mockSerialize).toHaveBeenCalled()
+      expect(mockFavoriteStoreExportCurrent).toHaveBeenCalledWith(
+        'tapDance',
+        6,
+        JSON.stringify({ type: 'tapDance', data: MOCK_TAP_DANCE_DATA }),
+      )
     })
 
-    expect(ok).toBe(false)
-    expect(result.current.error).toBe('favoriteStore.loadFailed')
-    expect(result.current.showModal).toBe(true)
+    it('returns false without IPC call when enabled is false', async () => {
+      const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.exportCurrent()
+      })
+
+      expect(ok).toBe(false)
+      expect(mockSerialize).not.toHaveBeenCalled()
+      expect(mockFavoriteStoreExportCurrent).not.toHaveBeenCalled()
+    })
   })
 
-  it('manages loading flag', async () => {
-    let resolveIpc!: (v: unknown) => void
-    mockFavoriteStoreLoad.mockReturnValueOnce(
-      new Promise((r) => { resolveIpc = r }),
-    )
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+  describe('useFavoriteStore – importFavorites', () => {
+    it('calls favoriteStoreImport and refreshes entries on success', async () => {
+      mockFavoriteStoreImport.mockResolvedValueOnce({ success: true, imported: 3, skipped: 1 })
+      mockFavoriteStoreList.mockResolvedValueOnce({ success: true, entries: [MOCK_ENTRY] })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
 
-    expect(result.current.loading).toBe(false)
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.importFavorites()
+      })
 
-    let promise: Promise<boolean>
-    act(() => {
-      promise = result.current.loadFavorite('fav-1')
+      expect(ok).toBe(true)
+      expect(mockFavoriteStoreImport).toHaveBeenCalled()
+      expect(mockFavoriteStoreList).toHaveBeenCalledWith('tapDance')
     })
-    expect(result.current.loading).toBe(true)
 
-    await act(async () => {
-      resolveIpc({ success: true, data: JSON.stringify({ type: 'tapDance', data: MOCK_TAP_DANCE_DATA }) })
-      await promise!
+    it('sets importResult with imported/skipped counts', async () => {
+      mockFavoriteStoreImport.mockResolvedValueOnce({ success: true, imported: 5, skipped: 2 })
+      mockFavoriteStoreList.mockResolvedValueOnce({ success: true, entries: [] })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      await act(async () => {
+        await result.current.importFavorites()
+      })
+
+      expect(result.current.importResult).toEqual({ imported: 5, skipped: 2 })
     })
-    expect(result.current.loading).toBe(false)
+
+    it('returns false and sets error on failure', async () => {
+      mockFavoriteStoreImport.mockResolvedValueOnce({ success: false, error: 'invalid file' })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.importFavorites()
+      })
+
+      expect(ok).toBe(false)
+      expect(result.current.error).toBe('favoriteStore.importFailed')
+    })
+
+    it('does not set error on cancel', async () => {
+      mockFavoriteStoreImport.mockResolvedValueOnce({ success: false, error: 'cancelled' })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.importFavorites()
+      })
+
+      expect(ok).toBe(false)
+      expect(result.current.error).toBeNull()
+    })
+
+    it('manages importing flag', async () => {
+      let resolveIpc!: (v: unknown) => void
+      mockFavoriteStoreImport.mockReturnValueOnce(
+        new Promise((r) => { resolveIpc = r }),
+      )
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+
+      expect(result.current.importing).toBe(false)
+
+      let promise: Promise<boolean>
+      act(() => {
+        promise = result.current.importFavorites()
+      })
+      expect(result.current.importing).toBe(true)
+
+      await act(async () => {
+        resolveIpc({ success: true, imported: 1, skipped: 0 })
+        await promise!
+      })
+      expect(result.current.importing).toBe(false)
+    })
+
+    it('returns false without IPC call when enabled is false', async () => {
+      const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
+
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.importFavorites()
+      })
+
+      expect(ok).toBe(false)
+      expect(mockFavoriteStoreImport).not.toHaveBeenCalled()
+    })
   })
 
-  it('returns false without IPC call when enabled is false', async () => {
-    const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
+  describe('useFavoriteStore – importCurrent', () => {
+    it('calls favoriteStoreImportToCurrent and applies the result on success', async () => {
+      mockFavoriteStoreImportToCurrent.mockResolvedValueOnce({ success: true, data: MOCK_TAP_DANCE_DATA })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.loadFavorite('fav-1')
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.importCurrent()
+      })
+
+      expect(ok).toBe(true)
+      expect(mockFavoriteStoreImportToCurrent).toHaveBeenCalledWith('tapDance')
+      expect(mockApply).toHaveBeenCalledWith(MOCK_TAP_DANCE_DATA)
     })
 
-    expect(ok).toBe(false)
-    expect(mockFavoriteStoreLoad).not.toHaveBeenCalled()
-    expect(mockApply).not.toHaveBeenCalled()
-  })
-})
+    it('returns false without IPC call when enabled is false', async () => {
+      const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
 
-describe('useFavoriteStore – renameEntry', () => {
-  it('renames and refreshes', async () => {
-    mockFavoriteStoreRename.mockResolvedValueOnce({ success: true })
-    mockFavoriteStoreList.mockResolvedValueOnce({
-      success: true,
-      entries: [{ ...MOCK_ENTRY, label: 'Renamed' }],
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.importCurrent()
+      })
+
+      expect(ok).toBe(false)
+      expect(mockFavoriteStoreImportToCurrent).not.toHaveBeenCalled()
+      expect(mockApply).not.toHaveBeenCalled()
     })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.renameEntry('fav-1', 'Renamed')
-    })
-
-    expect(ok).toBe(true)
-    expect(mockFavoriteStoreRename).toHaveBeenCalledWith('tapDance', 'fav-1', 'Renamed')
   })
 
-  it('returns false on failure', async () => {
-    mockFavoriteStoreRename.mockResolvedValueOnce({ success: false })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+  describe('useFavoriteStore – exportEntry', () => {
+    it('calls favoriteStoreExport with favoriteType and entryId', async () => {
+      mockFavoriteStoreExport.mockResolvedValueOnce({ success: true })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.renameEntry('fav-1', 'New')
+      await act(async () => {
+        await result.current.exportEntry('entry-123')
+      })
+
+      expect(mockFavoriteStoreExport).toHaveBeenCalledWith('tapDance', 6, 'entry-123')
     })
 
-    expect(ok).toBe(false)
-  })
+    it('returns true on success', async () => {
+      mockFavoriteStoreExport.mockResolvedValueOnce({ success: true })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
 
-  it('returns false without IPC call when enabled is false', async () => {
-    const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.exportEntry('entry-123')
+      })
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.renameEntry('fav-1', 'New')
+      expect(ok).toBe(true)
     })
 
-    expect(ok).toBe(false)
-    expect(mockFavoriteStoreRename).not.toHaveBeenCalled()
-  })
-})
+    it('returns false and sets error on failure', async () => {
+      mockFavoriteStoreExport.mockResolvedValueOnce({ success: false, error: 'write error' })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
 
-describe('useFavoriteStore – deleteEntry', () => {
-  it('deletes and refreshes', async () => {
-    mockFavoriteStoreDelete.mockResolvedValueOnce({ success: true })
-    mockFavoriteStoreList.mockResolvedValueOnce({ success: true, entries: [] })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.exportEntry('entry-123')
+      })
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.deleteEntry('fav-1')
+      expect(ok).toBe(false)
+      expect(result.current.error).toBe('favoriteStore.exportFailed')
     })
 
-    expect(ok).toBe(true)
-    expect(mockFavoriteStoreDelete).toHaveBeenCalledWith('tapDance', 'fav-1')
-  })
+    it('does not set error when cancelled', async () => {
+      mockFavoriteStoreExport.mockResolvedValueOnce({ success: false, error: 'cancelled' })
+      const { result } = renderHook(() => useFavoriteStore(hookOpts()))
 
-  it('returns false on failure', async () => {
-    mockFavoriteStoreDelete.mockRejectedValueOnce(new Error('fail'))
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.exportEntry('entry-123')
+      })
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.deleteEntry('fav-1')
+      expect(ok).toBe(false)
+      expect(result.current.error).toBeNull()
     })
 
-    expect(ok).toBe(false)
-  })
+    it('returns false without IPC call when enabled is false', async () => {
+      const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
 
-  it('returns false without IPC call when enabled is false', async () => {
-    const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
+      let ok: boolean | undefined
+      await act(async () => {
+        ok = await result.current.exportEntry('entry-123')
+      })
 
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.deleteEntry('fav-1')
+      expect(ok).toBe(false)
+      expect(mockFavoriteStoreExport).not.toHaveBeenCalled()
     })
-
-    expect(ok).toBe(false)
-    expect(mockFavoriteStoreDelete).not.toHaveBeenCalled()
-  })
-})
-
-describe('useFavoriteStore – exportFavorites', () => {
-  it('calls favoriteStoreExport with the current favoriteType', async () => {
-    mockFavoriteStoreExport.mockResolvedValueOnce({ success: true })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    await act(async () => {
-      await result.current.exportFavorites()
-    })
-
-    expect(mockFavoriteStoreExport).toHaveBeenCalledWith('tapDance', 6)
-  })
-
-  it('returns true on success', async () => {
-    mockFavoriteStoreExport.mockResolvedValueOnce({ success: true })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.exportFavorites()
-    })
-
-    expect(ok).toBe(true)
-  })
-
-  it('returns false and sets error on failure', async () => {
-    mockFavoriteStoreExport.mockResolvedValueOnce({ success: false, error: 'write error' })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.exportFavorites()
-    })
-
-    expect(ok).toBe(false)
-    expect(result.current.error).toBe('favoriteStore.exportFailed')
-  })
-
-  it('does not set error on cancel', async () => {
-    mockFavoriteStoreExport.mockResolvedValueOnce({ success: false, error: 'cancelled' })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.exportFavorites()
-    })
-
-    expect(ok).toBe(false)
-    expect(result.current.error).toBeNull()
-  })
-
-  it('manages exporting flag', async () => {
-    let resolveIpc!: (v: unknown) => void
-    mockFavoriteStoreExport.mockReturnValueOnce(
-      new Promise((r) => { resolveIpc = r }),
-    )
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    expect(result.current.exporting).toBe(false)
-
-    let promise: Promise<boolean>
-    act(() => {
-      promise = result.current.exportFavorites()
-    })
-    expect(result.current.exporting).toBe(true)
-
-    await act(async () => {
-      resolveIpc({ success: true })
-      await promise!
-    })
-    expect(result.current.exporting).toBe(false)
-  })
-
-  it('returns false without IPC call when enabled is false', async () => {
-    const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.exportFavorites()
-    })
-
-    expect(ok).toBe(false)
-    expect(mockFavoriteStoreExport).not.toHaveBeenCalled()
-  })
-})
-
-describe('useFavoriteStore – exportCurrent', () => {
-  it('calls serialize and favoriteStoreExportCurrent with favoriteType, vialProtocol, and serialized json', async () => {
-    mockFavoriteStoreExportCurrent.mockResolvedValueOnce({ success: true })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.exportCurrent()
-    })
-
-    expect(ok).toBe(true)
-    expect(mockSerialize).toHaveBeenCalled()
-    expect(mockFavoriteStoreExportCurrent).toHaveBeenCalledWith(
-      'tapDance',
-      6,
-      JSON.stringify({ type: 'tapDance', data: MOCK_TAP_DANCE_DATA }),
-    )
-  })
-
-  it('returns false without IPC call when enabled is false', async () => {
-    const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.exportCurrent()
-    })
-
-    expect(ok).toBe(false)
-    expect(mockSerialize).not.toHaveBeenCalled()
-    expect(mockFavoriteStoreExportCurrent).not.toHaveBeenCalled()
-  })
-})
-
-describe('useFavoriteStore – importFavorites', () => {
-  it('calls favoriteStoreImport and refreshes entries on success', async () => {
-    mockFavoriteStoreImport.mockResolvedValueOnce({ success: true, imported: 3, skipped: 1 })
-    mockFavoriteStoreList.mockResolvedValueOnce({ success: true, entries: [MOCK_ENTRY] })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.importFavorites()
-    })
-
-    expect(ok).toBe(true)
-    expect(mockFavoriteStoreImport).toHaveBeenCalled()
-    expect(mockFavoriteStoreList).toHaveBeenCalledWith('tapDance')
-  })
-
-  it('sets importResult with imported/skipped counts', async () => {
-    mockFavoriteStoreImport.mockResolvedValueOnce({ success: true, imported: 5, skipped: 2 })
-    mockFavoriteStoreList.mockResolvedValueOnce({ success: true, entries: [] })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    await act(async () => {
-      await result.current.importFavorites()
-    })
-
-    expect(result.current.importResult).toEqual({ imported: 5, skipped: 2 })
-  })
-
-  it('returns false and sets error on failure', async () => {
-    mockFavoriteStoreImport.mockResolvedValueOnce({ success: false, error: 'invalid file' })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.importFavorites()
-    })
-
-    expect(ok).toBe(false)
-    expect(result.current.error).toBe('favoriteStore.importFailed')
-  })
-
-  it('does not set error on cancel', async () => {
-    mockFavoriteStoreImport.mockResolvedValueOnce({ success: false, error: 'cancelled' })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.importFavorites()
-    })
-
-    expect(ok).toBe(false)
-    expect(result.current.error).toBeNull()
-  })
-
-  it('manages importing flag', async () => {
-    let resolveIpc!: (v: unknown) => void
-    mockFavoriteStoreImport.mockReturnValueOnce(
-      new Promise((r) => { resolveIpc = r }),
-    )
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    expect(result.current.importing).toBe(false)
-
-    let promise: Promise<boolean>
-    act(() => {
-      promise = result.current.importFavorites()
-    })
-    expect(result.current.importing).toBe(true)
-
-    await act(async () => {
-      resolveIpc({ success: true, imported: 1, skipped: 0 })
-      await promise!
-    })
-    expect(result.current.importing).toBe(false)
-  })
-
-  it('returns false without IPC call when enabled is false', async () => {
-    const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.importFavorites()
-    })
-
-    expect(ok).toBe(false)
-    expect(mockFavoriteStoreImport).not.toHaveBeenCalled()
-  })
-})
-
-describe('useFavoriteStore – importCurrent', () => {
-  it('calls favoriteStoreImportToCurrent and applies the result on success', async () => {
-    const mockFavoriteStoreImportToCurrent = vi.fn().mockResolvedValueOnce({ success: true, data: MOCK_TAP_DANCE_DATA })
-    window.vialAPI = {
-      ...window.vialAPI,
-      favoriteStoreImportToCurrent: mockFavoriteStoreImportToCurrent,
-    } as unknown as typeof window.vialAPI
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.importCurrent()
-    })
-
-    expect(ok).toBe(true)
-    expect(mockFavoriteStoreImportToCurrent).toHaveBeenCalledWith('tapDance')
-    expect(mockApply).toHaveBeenCalledWith(MOCK_TAP_DANCE_DATA)
-  })
-
-  it('returns false without IPC call when enabled is false', async () => {
-    const mockFavoriteStoreImportToCurrent = vi.fn()
-    window.vialAPI = {
-      ...window.vialAPI,
-      favoriteStoreImportToCurrent: mockFavoriteStoreImportToCurrent,
-    } as unknown as typeof window.vialAPI
-    const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.importCurrent()
-    })
-
-    expect(ok).toBe(false)
-    expect(mockFavoriteStoreImportToCurrent).not.toHaveBeenCalled()
-    expect(mockApply).not.toHaveBeenCalled()
-  })
-})
-
-describe('useFavoriteStore – exportEntry', () => {
-  it('calls favoriteStoreExport with favoriteType and entryId', async () => {
-    mockFavoriteStoreExport.mockResolvedValueOnce({ success: true })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    await act(async () => {
-      await result.current.exportEntry('entry-123')
-    })
-
-    expect(mockFavoriteStoreExport).toHaveBeenCalledWith('tapDance', 6, 'entry-123')
-  })
-
-  it('returns true on success', async () => {
-    mockFavoriteStoreExport.mockResolvedValueOnce({ success: true })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.exportEntry('entry-123')
-    })
-
-    expect(ok).toBe(true)
-  })
-
-  it('returns false and sets error on failure', async () => {
-    mockFavoriteStoreExport.mockResolvedValueOnce({ success: false, error: 'write error' })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.exportEntry('entry-123')
-    })
-
-    expect(ok).toBe(false)
-    expect(result.current.error).toBe('favoriteStore.exportFailed')
-  })
-
-  it('does not set error when cancelled', async () => {
-    mockFavoriteStoreExport.mockResolvedValueOnce({ success: false, error: 'cancelled' })
-    const { result } = renderHook(() => useFavoriteStore(hookOpts()))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.exportEntry('entry-123')
-    })
-
-    expect(ok).toBe(false)
-    expect(result.current.error).toBeNull()
-  })
-
-  it('returns false without IPC call when enabled is false', async () => {
-    const { result } = renderHook(() => useFavoriteStore(hookOpts({ enabled: false })))
-
-    let ok: boolean | undefined
-    await act(async () => {
-      ok = await result.current.exportEntry('entry-123')
-    })
-
-    expect(ok).toBe(false)
-    expect(mockFavoriteStoreExport).not.toHaveBeenCalled()
   })
 })
