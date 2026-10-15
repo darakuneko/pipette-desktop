@@ -1,0 +1,16 @@
+[
+  {
+    "member": "listStoredKeyboards",
+    "args": [],
+    "command": "list_stored_keyboards",
+    "invokeArgs": {},
+    "response": []
+  },
+  {
+    "member": "keyboardMetaNameIfMissing",
+    "args": ["0xA1B2", "GPK60-63R"],
+    "command": "keyboard_meta_name_if_missing",
+    "invokeArgs": { "uid": "0xA1B2", "name": "GPK60-63R" },
+    "response": null
+  }
+]
