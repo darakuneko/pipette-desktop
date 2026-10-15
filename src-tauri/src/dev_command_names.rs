@@ -16,6 +16,7 @@ pub const DEV_COMMANDS: &[&str] = &[
     "virtual_device_reset",
     "dev_log",
     "dev_dialog_respond",
+    "dev_dialog_queued",
 ];
 
 /// The development commands that exist on Linux only.

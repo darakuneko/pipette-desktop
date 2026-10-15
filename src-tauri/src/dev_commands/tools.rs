@@ -126,6 +126,10 @@ impl DialogQueue {
         self.0.lock().unwrap_or_else(PoisonError::into_inner).push_back(answer);
     }
 
+    fn len(&self) -> usize {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner).len()
+    }
+
     fn pop(&self) -> Option<Option<PathBuf>> {
         self.0.lock().unwrap_or_else(PoisonError::into_inner).pop_front()
     }
@@ -163,6 +167,13 @@ pub fn manage_queued_dialogs(app: &AppHandle<Wry>, system: SystemDialogs) {
 #[tauri::command]
 pub fn dev_dialog_respond(queue: State<'_, Arc<DialogQueue>>, path: Option<PathBuf>) {
     queue.push(path);
+}
+
+/// How many queued answers no file dialog has taken yet: a step that should
+/// open a dialog has done so once this is back to 0.
+#[tauri::command]
+pub fn dev_dialog_queued(queue: State<'_, Arc<DialogQueue>>) -> usize {
+    queue.len()
 }
 
 /// `<PIPETTE_DEV_SHOT_DIR>/<name>.png`. The name is limited to lowercase
@@ -261,6 +272,7 @@ fn dev_commands() -> impl Fn(Invoke<Wry>) -> bool + Send + Sync + 'static {
         virtual_device_reset,
         dev_log,
         dev_dialog_respond,
+        dev_dialog_queued,
         #[cfg(target_os = "linux")]
         dev_screenshot,
     ]
@@ -359,8 +371,10 @@ mod tests {
         queue.push(Some(PathBuf::from("/tmp/a.vil")));
         queue.push(None);
 
+        assert_eq!(queue.len(), 2);
         assert_eq!(dialogs.show(request("first")), Some(PathBuf::from("/tmp/a.vil")));
         assert_eq!(dialogs.show(request("second")), None);
+        assert_eq!(queue.len(), 0);
         assert_eq!(dialogs.show(request("third")), Some(PathBuf::from("/from/the/fallback")));
         assert_eq!(*fallback_titles.lock().unwrap(), ["third"]);
     }
