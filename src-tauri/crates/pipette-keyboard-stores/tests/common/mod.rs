@@ -1,0 +1,166 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+//! A store context on a temporary userData directory with a settable clock
+//! and the notified units recorded, and userData trees (path → node) to
+//! build and compare.
+
+#![allow(dead_code, clippy::unwrap_used, clippy::panic)]
+
+use std::collections::BTreeMap;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+
+use pipette_entry_store::{FixedClock, WriteLocks};
+use pipette_js_json::Value;
+use pipette_keyboard_stores::StoreContext;
+use tempfile::TempDir;
+
+pub const T0: &str = "2026-10-16T12:00:00.000Z";
+pub const DAY_MS: i64 = 24 * 60 * 60 * 1000;
+
+pub fn ms(iso: &str) -> i64 {
+    pipette_time::parse_date_time_string(iso).unwrap()
+}
+
+pub struct Harness {
+    pub dir: TempDir,
+    pub clock: Arc<FixedClock>,
+    pub notified: Arc<Mutex<Vec<String>>>,
+    pub ctx: StoreContext,
+}
+
+impl Harness {
+    pub fn new() -> Self {
+        let dir = TempDir::new().unwrap();
+        let clock = Arc::new(FixedClock::new(ms(T0)));
+        let notified = Arc::new(Mutex::new(Vec::new()));
+        let record = Arc::clone(&notified);
+        let ctx = StoreContext::new(
+            dir.path(),
+            clock.clone(),
+            Arc::new(WriteLocks::new()),
+            Arc::new(move |unit: &str| record.lock().unwrap().push(unit.to_owned())),
+        );
+        Self { dir, clock, notified, ctx }
+    }
+
+    pub fn user_data(&self) -> &Path {
+        self.dir.path()
+    }
+
+    pub fn meta_path(&self) -> PathBuf {
+        self.user_data().join("sync/meta/keyboard-names.json")
+    }
+
+    pub fn write(&self, path: &str, content: &str) {
+        let target = self.user_data().join(path);
+        fs::create_dir_all(target.parent().unwrap()).unwrap();
+        fs::write(target, content).unwrap();
+    }
+
+    pub fn read_meta(&self) -> String {
+        fs::read_to_string(self.meta_path()).unwrap()
+    }
+
+    /// The entries of the names file, as `[uid, deviceName, deletedAt?]`.
+    pub fn meta_entries(&self) -> Vec<Value> {
+        let parsed = pipette_js_json::parse(&self.read_meta()).unwrap();
+        let Some(Value::Array(entries)) = parsed.as_object().unwrap().get("entries").cloned() else {
+            panic!()
+        };
+        entries
+    }
+
+    pub fn notified(&self) -> Vec<String> {
+        self.notified.lock().unwrap().clone()
+    }
+}
+
+/// What is at a path: a file's bytes, a symlink's target, or a directory
+/// (the path ends in `/`).
+#[derive(Debug, PartialEq)]
+pub enum Node {
+    File(Vec<u8>),
+    Symlink(String),
+    Dir,
+}
+
+fn text(value: &Value) -> String {
+    value.as_str().unwrap().to_owned()
+}
+
+fn hex_bytes(hex: &str) -> Vec<u8> {
+    (0..hex.len()).step_by(2).map(|i| u8::from_str_radix(&hex[i..i + 2], 16).unwrap()).collect()
+}
+
+/// A recorded tree, in its order.
+pub fn tree_of(value: &Value) -> Vec<(String, Node)> {
+    value
+        .as_object()
+        .unwrap()
+        .iter()
+        .map(|(path, node)| {
+            let node = match node {
+                Value::Null => Node::Dir,
+                Value::String(content) => Node::File(content.as_str().unwrap().as_bytes().to_vec()),
+                Value::Object(object) => match (object.get("hex"), object.get("symlink")) {
+                    (Some(hex), None) => Node::File(hex_bytes(&text(hex))),
+                    (None, Some(target)) => Node::Symlink(text(target)),
+                    _ => panic!("unknown node {object:?}"),
+                },
+                other => panic!("unknown node {other:?}"),
+            };
+            (path.as_str().unwrap().to_owned(), node)
+        })
+        .collect()
+}
+
+/// Builds `tree` under `dir`, in its order.
+pub fn build(dir: &Path, tree: &[(String, Node)]) {
+    for (path, node) in tree {
+        let target = dir.join(path);
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+        match node {
+            Node::Dir => fs::create_dir_all(&target).unwrap(),
+            Node::File(bytes) => fs::write(&target, bytes).unwrap(),
+            Node::Symlink(link) => symlink(link, &target),
+        }
+    }
+}
+
+#[cfg(unix)]
+fn symlink(link: &str, target: &Path) {
+    std::os::unix::fs::symlink(link, target).unwrap();
+}
+
+#[cfg(not(unix))]
+fn symlink(_: &str, _: &Path) {
+    panic!("the symlink scenarios need Unix");
+}
+
+/// Everything under `dir`.
+pub fn recorded(dir: &Path) -> BTreeMap<String, Node> {
+    let mut tree = BTreeMap::new();
+    record(dir, "", &mut tree);
+    tree
+}
+
+fn record(dir: &Path, prefix: &str, tree: &mut BTreeMap<String, Node>) {
+    for item in fs::read_dir(dir).unwrap() {
+        let item = item.unwrap();
+        let name = item.file_name().into_string().unwrap();
+        let path = item.path();
+        let kind = fs::symlink_metadata(&path).unwrap().file_type();
+        if kind.is_symlink() {
+            let link = fs::read_link(&path).unwrap().into_os_string().into_string().unwrap();
+            tree.insert(format!("{prefix}{name}"), Node::Symlink(link));
+        } else if kind.is_dir() {
+            tree.insert(format!("{prefix}{name}/"), Node::Dir);
+            record(&path, &format!("{prefix}{name}/"), tree);
+        } else {
+            tree.insert(format!("{prefix}{name}"), Node::File(fs::read(&path).unwrap()));
+        }
+    }
+}

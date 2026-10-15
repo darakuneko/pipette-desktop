@@ -2692,6 +2692,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipette-keyboard-stores"
+version = "0.0.0"
+dependencies = [
+ "pipette-entry-store",
+ "pipette-fs",
+ "pipette-js-json",
+ "pipette-time",
+ "tempfile",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "pipette-logger"
 version = "0.0.0"
 dependencies = [
