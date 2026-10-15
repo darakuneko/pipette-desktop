@@ -3,9 +3,10 @@ import tsparser from '@typescript-eslint/parser'
 
 export default [
   {
-    // The fixture generators under scripts/ get the same TypeScript rules as src/.
-    // Their globs must match the include list in tsconfig.scripts.json.
-    files: ['src/**/*.{ts,tsx}', 'scripts/*-fixtures/**/*.ts', 'scripts/fixture-*.ts'],
+    // The fixture generators under scripts/ and the Tauri e2e tests get the
+    // same TypeScript rules as src/. The generator globs must match the
+    // include list in tsconfig.scripts.json.
+    files: ['src/**/*.{ts,tsx}', 'scripts/*-fixtures/**/*.ts', 'scripts/fixture-*.ts', 'e2e-tauri/**/*.ts'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {

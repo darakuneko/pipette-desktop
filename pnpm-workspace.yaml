@@ -23,12 +23,16 @@ minimumReleaseAgeExclude:
 # esbuild's binary install all need their scripts; core-js's postinstall
 # is just a sponsorship console message (no build); electron-winstaller's
 # copies a bundled 7z binary for the Windows NSIS/Squirrel packaging step
-# electron-builder needs.
+# electron-builder needs. edgedriver's and geckodriver's download browser
+# drivers WebdriverIO can fetch on its own; the Tauri e2e (e2e-tauri/) talks
+# to tauri-driver and uses neither.
 allowBuilds:
   '@paymoapp/active-window': true
   better-sqlite3: true
   core-js: false
+  edgedriver: false
   electron: true
   electron-winstaller: true
   esbuild: true
+  geckodriver: false
   node-hid: true
