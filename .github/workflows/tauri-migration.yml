@@ -67,9 +67,31 @@ jobs:
           git diff --exit-code HEAD -- src/tauri-shim/generated
 
       # Builds the renderer for Tauri too, so it also checks the frontend
-      # build and its wiring in tauri.conf.json.
+      # build and its wiring in tauri.conf.json. The e2e tests below drive
+      # this binary.
       - name: Debug build
-        run: pnpm tauri build --debug --no-bundle --features dev-tools
+        run: pnpm tauri:build:debug
+
+      # The WebDriver of WebKitGTK is webkit2gtk-driver up to Ubuntu 24.04 and
+      # webkitgtk-webdriver from 26.04 on. xvfb gives the app a display and
+      # dbus-run-session a session bus of its own, as a desktop session has
+      # (the tray icon registers on it).
+      - name: Install the e2e dependencies
+        run: |
+          if apt-cache show webkitgtk-webdriver > /dev/null 2>&1; then
+            driver=webkitgtk-webdriver
+          else
+            driver=webkit2gtk-driver
+          fi
+          sudo apt-get install -y "$driver" xvfb dbus
+
+      # rust-cache keeps ~/.cargo/bin, so a cached tauri-driver of this
+      # version makes the install a no-op.
+      - name: Install tauri-driver
+        run: cargo install tauri-driver --version 2.1.0 --locked
+
+      - name: e2e (Tauri)
+        run: xvfb-run --auto-servernum dbus-run-session -- pnpm test:e2e:tauri
 
   # Kept off the job above so the release build does not lengthen it.
   tauri-lint:
