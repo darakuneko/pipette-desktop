@@ -1,0 +1,490 @@
+[
+  {
+    "name": "two ids share a legacy file",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"type\":\"macro\",\"entries\":[{\"id\":\"id1\",\"label\":\"L\",\"filename\":\"macro_ts_ab12.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"id2\",\"label\":\"L\",\"filename\":\"macro_ts_ab12.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "macro_ts_ab12.json": "BODY"
+    },
+    "result": {
+      "state": "ok",
+      "index": "{\"type\":\"macro\",\"entries\":[{\"id\":\"id1\",\"label\":\"L\",\"filename\":\"macro_ts_ab12.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"id2\",\"label\":\"L\",\"filename\":\"macro_ts_ab12.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "entries": "[{\"id\":\"id1\",\"label\":\"L\",\"filename\":\"macro_ts_ab12_id1.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"id2\",\"label\":\"L\",\"filename\":\"macro_ts_ab12_id2.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"}]"
+    },
+    "after": {
+      "index.json": "{\n  \"type\": \"macro\",\n  \"entries\": [\n    {\n      \"id\": \"id1\",\n      \"label\": \"L\",\n      \"filename\": \"macro_ts_ab12_id1.json\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\",\n        \"hub\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    },\n    {\n      \"id\": \"id2\",\n      \"label\": \"L\",\n      \"filename\": \"macro_ts_ab12_id2.json\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\",\n        \"hub\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    }\n  ]\n}",
+      "macro_ts_ab12_id1.json": "BODY",
+      "macro_ts_ab12_id2.json": "BODY"
+    }
+  },
+  {
+    "name": "an entry keeps its own prefix name, another gets a copy",
+    "store": "keyLabels",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"entries\":[{\"id\":\"abc\",\"name\":\"N\",\"filename\":\"abc_x.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"other\",\"name\":\"N\",\"filename\":\"abc_x.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "abc_x.json": "SHARED"
+    },
+    "result": {
+      "state": "ok",
+      "index": "{\"entries\":[{\"id\":\"abc\",\"name\":\"N\",\"filename\":\"abc_x.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"other\",\"name\":\"N\",\"filename\":\"abc_x.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "entries": "[{\"id\":\"abc\",\"name\":\"N\",\"filename\":\"abc_x.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"other\",\"name\":\"N\",\"filename\":\"other_abc_x.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"}]"
+    },
+    "after": {
+      "abc_x.json": "SHARED",
+      "index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"abc\",\n      \"name\": \"N\",\n      \"filename\": \"abc_x.json\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\",\n        \"hub\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    },\n    {\n      \"id\": \"other\",\n      \"name\": \"N\",\n      \"filename\": \"other_abc_x.json\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\",\n        \"hub\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    }\n  ]\n}",
+      "other_abc_x.json": "SHARED"
+    }
+  },
+  {
+    "name": "a tombstone whose body is gone",
+    "store": "analyzeFilters",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"uid\":\"u\",\"entries\":[{\"id\":\"t\",\"label\":\"L\",\"filename\":\"gone.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"deletedAt\":\"2026-01-01T00:00:02.000Z\"}]}"
+    },
+    "result": {
+      "state": "ok",
+      "index": "{\"uid\":\"u\",\"entries\":[{\"id\":\"t\",\"label\":\"L\",\"filename\":\"gone.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"deletedAt\":\"2026-01-01T00:00:02.000Z\"}]}",
+      "entries": "[{\"id\":\"t\",\"label\":\"L\",\"filename\":\"gone_t.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"deletedAt\":\"2026-01-01T00:00:02.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:02.000Z\"}]"
+    },
+    "after": {
+      "index.json": "{\n  \"uid\": \"u\",\n  \"entries\": [\n    {\n      \"id\": \"t\",\n      \"label\": \"L\",\n      \"filename\": \"gone_t.json\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"deletedAt\": \"2026-01-01T00:00:02.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\",\n        \"hub\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:02.000Z\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "every name already carries its id: nothing is written",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"type\":\"macro\",\"entries\":[{\"id\":\"id1\",\"filename\":\"a_ts_id1.json\",\"savedAt\":\"x\"}],\"extra\":1}\n",
+      "a_ts_id1.json": "BODY"
+    },
+    "result": {
+      "state": "ok",
+      "index": "{\"type\":\"macro\",\"entries\":[{\"id\":\"id1\",\"filename\":\"a_ts_id1.json\",\"savedAt\":\"x\"}],\"extra\":1}",
+      "entries": "[{\"id\":\"id1\",\"filename\":\"a_ts_id1.json\",\"savedAt\":\"x\",\"clocks\":{\"created\":\"1970-01-01T00:00:00.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\"},\"updatedAt\":\"1970-01-01T00:00:00.000Z\"}]"
+    },
+    "after": {
+      "a_ts_id1.json": "BODY",
+      "index.json": "{\"type\":\"macro\",\"entries\":[{\"id\":\"id1\",\"filename\":\"a_ts_id1.json\",\"savedAt\":\"x\"}],\"extra\":1}\n"
+    }
+  },
+  {
+    "name": "a v1 index with future clocks, unknown fields and index keys",
+    "store": "snapshots",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"9\":0,\"uid\":\"u\",\"zz\":true,\"entries\":[{\"3\":\"three\",\"id\":\"s1\",\"label\":\"L\",\"filename\":\"KB_2026-03-15T14-35-29.037Z.pipette\",\"savedAt\":\"9999-12-31T23:59:59.999Z\",\"updatedAt\":\"+275760-09-13T00:00:00.000Z\",\"vilVersion\":2,\"unknown\":{\"b\":1,\"a\":[]}},{\"id\":\"s2\",\"label\":\"L\",\"filename\":\"KB2_2026-03-15T14-35-29.037Z.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"+275760-09-13T00:00:00.001Z\",\"name\":\"+275760-09-13T00:00:00.000Z\",\"hub\":\"garbage\"},\"updatedAt\":\"2026-01-01T00:00:05.000Z\",\"deletedAt\":\"+275760-09-13T00:00:00.000Z\"}]}",
+      "KB_2026-03-15T14-35-29.037Z.pipette": "ONE",
+      "KB2_2026-03-15T14-35-29.037Z.pipette": "TWO"
+    },
+    "result": {
+      "state": "ok",
+      "index": "{\"9\":0,\"uid\":\"u\",\"zz\":true,\"entries\":[{\"3\":\"three\",\"id\":\"s1\",\"label\":\"L\",\"filename\":\"KB_2026-03-15T14-35-29.037Z.pipette\",\"savedAt\":\"9999-12-31T23:59:59.999Z\",\"updatedAt\":\"+275760-09-13T00:00:00.000Z\",\"vilVersion\":2,\"unknown\":{\"b\":1,\"a\":[]}},{\"id\":\"s2\",\"label\":\"L\",\"filename\":\"KB2_2026-03-15T14-35-29.037Z.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"+275760-09-13T00:00:00.001Z\",\"name\":\"+275760-09-13T00:00:00.000Z\",\"hub\":\"garbage\"},\"updatedAt\":\"2026-01-01T00:00:05.000Z\",\"deletedAt\":\"+275760-09-13T00:00:00.000Z\"}]}",
+      "entries": "[{\"3\":\"three\",\"id\":\"s1\",\"label\":\"L\",\"filename\":\"KB_2026-03-15T14-35-29.037Z_s1.pipette\",\"savedAt\":\"9999-12-31T23:59:59.999Z\",\"updatedAt\":\"+275760-09-13T00:00:00.000Z\",\"vilVersion\":2,\"unknown\":{\"b\":1,\"a\":[]},\"clocks\":{\"created\":\"9999-12-31T23:59:59.999Z\",\"body\":\"+275760-09-13T00:00:00.000Z\",\"name\":\"+275760-09-13T00:00:00.000Z\",\"hub\":\"+275760-09-13T00:00:00.000Z\"}},{\"id\":\"s2\",\"label\":\"L\",\"filename\":\"KB2_2026-03-15T14-35-29.037Z_s2.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"+275760-09-13T00:00:00.000Z\"},\"updatedAt\":\"+275760-09-13T00:00:00.000Z\",\"deletedAt\":\"+275760-09-13T00:00:00.000Z\"}]"
+    },
+    "after": {
+      "KB2_2026-03-15T14-35-29.037Z_s2.pipette": "TWO",
+      "KB_2026-03-15T14-35-29.037Z_s1.pipette": "ONE",
+      "index.json": "{\n  \"9\": 0,\n  \"uid\": \"u\",\n  \"zz\": true,\n  \"entries\": [\n    {\n      \"3\": \"three\",\n      \"id\": \"s1\",\n      \"label\": \"L\",\n      \"filename\": \"KB_2026-03-15T14-35-29.037Z_s1.pipette\",\n      \"savedAt\": \"9999-12-31T23:59:59.999Z\",\n      \"updatedAt\": \"+275760-09-13T00:00:00.000Z\",\n      \"vilVersion\": 2,\n      \"unknown\": {\n        \"b\": 1,\n        \"a\": []\n      },\n      \"clocks\": {\n        \"created\": \"9999-12-31T23:59:59.999Z\",\n        \"body\": \"+275760-09-13T00:00:00.000Z\",\n        \"name\": \"+275760-09-13T00:00:00.000Z\",\n        \"hub\": \"+275760-09-13T00:00:00.000Z\"\n      }\n    },\n    {\n      \"id\": \"s2\",\n      \"label\": \"L\",\n      \"filename\": \"KB2_2026-03-15T14-35-29.037Z_s2.pipette\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"1970-01-01T00:00:00.000Z\",\n        \"name\": \"+275760-09-13T00:00:00.000Z\"\n      },\n      \"updatedAt\": \"+275760-09-13T00:00:00.000Z\",\n      \"deletedAt\": \"+275760-09-13T00:00:00.000Z\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "no index",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {},
+    "result": {
+      "state": "missing"
+    },
+    "after": {}
+  },
+  {
+    "name": "not JSON",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"entries\":["
+    },
+    "result": {
+      "state": "corrupt"
+    },
+    "after": {
+      "index.json": "{\"entries\":["
+    }
+  },
+  {
+    "name": "empty file",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": ""
+    },
+    "result": {
+      "state": "corrupt"
+    },
+    "after": {
+      "index.json": ""
+    }
+  },
+  {
+    "name": "a byte order mark",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "﻿{\"entries\":[]}"
+    },
+    "result": {
+      "state": "corrupt"
+    },
+    "after": {
+      "index.json": "﻿{\"entries\":[]}"
+    }
+  },
+  {
+    "name": "an array",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "[]"
+    },
+    "result": {
+      "state": "corrupt"
+    },
+    "after": {
+      "index.json": "[]"
+    }
+  },
+  {
+    "name": "no entries",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"type\":\"macro\"}"
+    },
+    "result": {
+      "state": "corrupt"
+    },
+    "after": {
+      "index.json": "{\"type\":\"macro\"}"
+    }
+  },
+  {
+    "name": "entries is not an array",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"entries\":{\"0\":{}}}"
+    },
+    "result": {
+      "state": "corrupt"
+    },
+    "after": {
+      "index.json": "{\"entries\":{\"0\":{}}}"
+    }
+  },
+  {
+    "name": "index.json is a directory",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json/": null
+    },
+    "result": {
+      "state": "corrupt"
+    },
+    "after": {
+      "index.json/": null
+    }
+  },
+  {
+    "name": "invalid UTF-8 in the index",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": {
+        "hex": "7b22656e7472696573223a5b7b226964223a2269222c2266696c656e616d65223a2278ff2e6a736f6e222c226c6162656c223a22e69761c0afeda080222c2273617665644174223a22323032362d30312d30315430303a30303a30312e3030305a227d5d7d"
+      },
+      "x�.json": "BODY"
+    },
+    "result": {
+      "state": "ok",
+      "index": "{\"entries\":[{\"id\":\"i\",\"filename\":\"x�.json\",\"label\":\"�a�����\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "entries": "[{\"id\":\"i\",\"filename\":\"x�_i.json\",\"label\":\"�a�����\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"}]"
+    },
+    "after": {
+      "index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"i\",\n      \"filename\": \"x�_i.json\",\n      \"label\": \"�a�����\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\",\n        \"hub\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    }\n  ]\n}",
+      "x�_i.json": "BODY"
+    }
+  },
+  {
+    "name": "long, multi-byte and control-character legacy names",
+    "store": "snapshots",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"uid\":\"u\",\"entries\":[{\"id\":\"0b9f6f1e-3c1a-4e0e-9d7a-2f1d5f6b8a90\",\"label\":\"L\",\"filename\":\"KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK_2026-03-15T14-35-29.037Z.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"e2\",\"label\":\"L\",\"filename\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀_2026-03-15T14-35-29.037Z.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"e3\",\"label\":\"L\",\"filename\":\"日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語_2026-03-15T14-35-29.037Z.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"e4\",\"label\":\"L\",\"filename\":\"ctl\\u0001\\u001f name_2026-03-15T14-35-29.037Z.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"e5\",\"label\":\"L\",\"filename\":\"é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é__2026-03-15T14-35-29.037Z.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK_2026-03-15T14-35-29.037Z.pipette": "LONG",
+      "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀_2026-03-15T14-35-29.037Z.pipette": "EMOJI",
+      "日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語_2026-03-15T14-35-29.037Z.pipette": "CJK",
+      "ctl\u0001\u001f name_2026-03-15T14-35-29.037Z.pipette": "CTL"
+    },
+    "result": {
+      "state": "ok",
+      "index": "{\"uid\":\"u\",\"entries\":[{\"id\":\"0b9f6f1e-3c1a-4e0e-9d7a-2f1d5f6b8a90\",\"label\":\"L\",\"filename\":\"KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK_2026-03-15T14-35-29.037Z.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"e2\",\"label\":\"L\",\"filename\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀_2026-03-15T14-35-29.037Z.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"e3\",\"label\":\"L\",\"filename\":\"日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語_2026-03-15T14-35-29.037Z.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"e4\",\"label\":\"L\",\"filename\":\"ctl\\u0001\\u001f name_2026-03-15T14-35-29.037Z.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"e5\",\"label\":\"L\",\"filename\":\"é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é__2026-03-15T14-35-29.037Z.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "entries": "[{\"id\":\"0b9f6f1e-3c1a-4e0e-9d7a-2f1d5f6b8a90\",\"label\":\"L\",\"filename\":\"KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK_2026-03-15T14-35-29.037Z_0b9f6f1e-3c1a-4e0e-9d7a-2f1d5f6b8a90.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"e2\",\"label\":\"L\",\"filename\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀_2026-03-15T14-35-29.037Z_e2.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"e3\",\"label\":\"L\",\"filename\":\"日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語_2026-03-15T14-35-29.037Z_e3.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"e4\",\"label\":\"L\",\"filename\":\"ctl\\u0001\\u001f name_2026-03-15T14-35-29.037Z_e4.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"e5\",\"label\":\"L\",\"filename\":\"é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_2026-03-15T14-35-29.037Z_e5.pipette\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"}]"
+    },
+    "after": {
+      "KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK_2026-03-15T14-35-29.037Z_0b9f6f1e-3c1a-4e0e-9d7a-2f1d5f6b8a90.pipette": "LONG",
+      "ctl\u0001\u001f name_2026-03-15T14-35-29.037Z_e4.pipette": "CTL",
+      "index.json": "{\n  \"uid\": \"u\",\n  \"entries\": [\n    {\n      \"id\": \"0b9f6f1e-3c1a-4e0e-9d7a-2f1d5f6b8a90\",\n      \"label\": \"L\",\n      \"filename\": \"KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK_2026-03-15T14-35-29.037Z_0b9f6f1e-3c1a-4e0e-9d7a-2f1d5f6b8a90.pipette\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\",\n        \"hub\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    },\n    {\n      \"id\": \"e2\",\n      \"label\": \"L\",\n      \"filename\": \"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀_2026-03-15T14-35-29.037Z_e2.pipette\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\",\n        \"hub\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    },\n    {\n      \"id\": \"e3\",\n      \"label\": \"L\",\n      \"filename\": \"日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語_2026-03-15T14-35-29.037Z_e3.pipette\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\",\n        \"hub\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    },\n    {\n      \"id\": \"e4\",\n      \"label\": \"L\",\n      \"filename\": \"ctl\\u0001\\u001f name_2026-03-15T14-35-29.037Z_e4.pipette\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\",\n        \"hub\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    },\n    {\n      \"id\": \"e5\",\n      \"label\": \"L\",\n      \"filename\": \"é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_é_2026-03-15T14-35-29.037Z_e5.pipette\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\",\n        \"hub\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    }\n  ]\n}",
+      "日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語日本語_2026-03-15T14-35-29.037Z_e3.pipette": "CJK",
+      "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀_2026-03-15T14-35-29.037Z_e2.pipette": "EMOJI"
+    }
+  },
+  {
+    "name": "lone surrogates in an id and a filename",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"type\":\"macro\",\"entries\":[{\"id\":\"\\ud800\",\"label\":\"L\",\"filename\":\"m\\ud800.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"ok\",\"label\":\"L\",\"filename\":\"n\\ud800_x.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "m�.json": "LONE",
+      "n�_x.json": "NAME"
+    },
+    "result": {
+      "state": "ok",
+      "index": "{\"type\":\"macro\",\"entries\":[{\"id\":\"\\ud800\",\"label\":\"L\",\"filename\":\"m\\ud800.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"ok\",\"label\":\"L\",\"filename\":\"n\\ud800_x.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "entries": "[{\"id\":\"\\ud800\",\"label\":\"L\",\"filename\":\"m\\ud800_xd800.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"ok\",\"label\":\"L\",\"filename\":\"n\\ud800_x_ok.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"}]"
+    },
+    "after": {
+      "index.json": "{\n  \"type\": \"macro\",\n  \"entries\": [\n    {\n      \"id\": \"\\ud800\",\n      \"label\": \"L\",\n      \"filename\": \"m\\ud800_xd800.json\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\",\n        \"hub\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    },\n    {\n      \"id\": \"ok\",\n      \"label\": \"L\",\n      \"filename\": \"n\\ud800_x_ok.json\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\",\n        \"hub\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    }\n  ]\n}",
+      "m�_xd800.json": "LONE",
+      "n�_x_ok.json": "NAME"
+    }
+  },
+  {
+    "name": "unsafe names are left alone",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"entries\":[{\"id\":\"a\",\"label\":\"L\",\"filename\":\"../evil.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"b\",\"label\":\"L\",\"filename\":\"a\\\\b.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"c\",\"label\":\"L\",\"filename\":\"..\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"d\",\"label\":\"L\",\"filename\":\"\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}"
+    },
+    "result": {
+      "state": "ok",
+      "index": "{\"entries\":[{\"id\":\"a\",\"label\":\"L\",\"filename\":\"../evil.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"b\",\"label\":\"L\",\"filename\":\"a\\\\b.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"c\",\"label\":\"L\",\"filename\":\"..\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"d\",\"label\":\"L\",\"filename\":\"\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "entries": "[{\"id\":\"a\",\"label\":\"L\",\"filename\":\"../evil.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"b\",\"label\":\"L\",\"filename\":\"a\\\\b.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"c\",\"label\":\"L\",\"filename\":\"..\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"d\",\"label\":\"L\",\"filename\":\"\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"}]"
+    },
+    "after": {
+      "index.json": "{\"entries\":[{\"id\":\"a\",\"label\":\"L\",\"filename\":\"../evil.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"b\",\"label\":\"L\",\"filename\":\"a\\\\b.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"c\",\"label\":\"L\",\"filename\":\"..\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"d\",\"label\":\"L\",\"filename\":\"\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}"
+    }
+  },
+  {
+    "name": "entries without a string id are dropped from the written index",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"entries\":[{\"id\":\"a\",\"label\":\"L\",\"filename\":\"old.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":5,\"filename\":\"x.json\"},null,\"str\",{\"filename\":\"y.json\"}]}",
+      "old.json": "OLD"
+    },
+    "result": {
+      "state": "ok",
+      "index": "{\"entries\":[{\"id\":\"a\",\"label\":\"L\",\"filename\":\"old.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":5,\"filename\":\"x.json\"},null,\"str\",{\"filename\":\"y.json\"}]}",
+      "entries": "[{\"id\":\"a\",\"label\":\"L\",\"filename\":\"old_a.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"}]"
+    },
+    "after": {
+      "index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"label\": \"L\",\n      \"filename\": \"old_a.json\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\",\n        \"hub\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    }\n  ]\n}",
+      "old_a.json": "OLD"
+    }
+  },
+  {
+    "name": "a copy over an existing file",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"entries\":[{\"id\":\"a\",\"label\":\"L\",\"filename\":\"m.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "m.json": "NEW",
+      "m_a.json": "STALE"
+    },
+    "result": {
+      "state": "ok",
+      "index": "{\"entries\":[{\"id\":\"a\",\"label\":\"L\",\"filename\":\"m.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "entries": "[{\"id\":\"a\",\"label\":\"L\",\"filename\":\"m_a.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"}]"
+    },
+    "after": {
+      "index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"a\",\n      \"label\": \"L\",\n      \"filename\": \"m_a.json\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\",\n        \"hub\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    }\n  ]\n}",
+      "m_a.json": "NEW"
+    }
+  },
+  {
+    "name": "a NUL in a filename fails",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"entries\":[{\"id\":\"a\",\"label\":\"L\",\"filename\":\"n\\u0000ul.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}"
+    },
+    "result": {
+      "error": true
+    },
+    "after": {
+      "index.json": "{\"entries\":[{\"id\":\"a\",\"label\":\"L\",\"filename\":\"n\\u0000ul.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}"
+    }
+  },
+  {
+    "name": "a legacy name that is a directory fails before the index is written",
+    "store": "favorites",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"entries\":[{\"id\":\"a\",\"label\":\"L\",\"filename\":\"d.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"b\",\"label\":\"L\",\"filename\":\"f.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "d.json/": null,
+      "f.json": "F"
+    },
+    "result": {
+      "error": true
+    },
+    "after": {
+      "d.json/": null,
+      "f.json": "F",
+      "index.json": "{\"entries\":[{\"id\":\"a\",\"label\":\"L\",\"filename\":\"d.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"b\",\"label\":\"L\",\"filename\":\"f.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}"
+    }
+  },
+  {
+    "name": "pack names are fixed and never moved",
+    "store": "i18nPacks",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"entries\":[{\"id\":\"p1\",\"filename\":\"other.json\",\"name\":\"N\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "other.json": "{}"
+    },
+    "result": {
+      "state": "ok",
+      "index": "{\"entries\":[{\"id\":\"p1\",\"filename\":\"other.json\",\"name\":\"N\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "entries": "[{\"id\":\"p1\",\"filename\":\"other.json\",\"name\":\"N\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"1970-01-01T00:00:00.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\",\"enabled\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"}]"
+    },
+    "after": {
+      "index.json": "{\"entries\":[{\"id\":\"p1\",\"filename\":\"other.json\",\"name\":\"N\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "other.json": "{}"
+    }
+  },
+  {
+    "name": "prefix and suffix stores",
+    "store": "typingTestTexts",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"entries\":[{\"id\":\"x1\",\"name\":\"N\",\"filename\":\"text.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "text.json": "T"
+    },
+    "result": {
+      "state": "ok",
+      "index": "{\"entries\":[{\"id\":\"x1\",\"name\":\"N\",\"filename\":\"text.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]}",
+      "entries": "[{\"id\":\"x1\",\"name\":\"N\",\"filename\":\"x00780031_text.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"}]"
+    },
+    "after": {
+      "index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"x1\",\n      \"name\": \"N\",\n      \"filename\": \"x00780031_text.json\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\",\n        \"name\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    }\n  ]\n}",
+      "x00780031_text.json": "T"
+    }
+  },
+  {
+    "name": "run logs",
+    "store": "runLogs",
+    "op": "readIndexDir",
+    "tree": {
+      "index.json": "{\"entries\":[{\"id\":\"r1\",\"startedAt\":\"2026-01-01T00:00:00.000Z\",\"filename\":\"2026_r.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"r1\",\"startedAt\":\"2026-01-01T00:00:00.000Z\",\"filename\":\"2026_r.json\",\"savedAt\":\"2026-01-01T00:00:02.000Z\"}]}",
+      "2026_r.json": "R"
+    },
+    "result": {
+      "state": "ok",
+      "index": "{\"entries\":[{\"id\":\"r1\",\"startedAt\":\"2026-01-01T00:00:00.000Z\",\"filename\":\"2026_r.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"r1\",\"startedAt\":\"2026-01-01T00:00:00.000Z\",\"filename\":\"2026_r.json\",\"savedAt\":\"2026-01-01T00:00:02.000Z\"}]}",
+      "entries": "[{\"id\":\"r1\",\"startedAt\":\"2026-01-01T00:00:00.000Z\",\"filename\":\"2026_r_r1.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"r1\",\"startedAt\":\"2026-01-01T00:00:00.000Z\",\"filename\":\"2026_r_r1.json\",\"savedAt\":\"2026-01-01T00:00:02.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:02.000Z\",\"body\":\"2026-01-01T00:00:02.000Z\"},\"updatedAt\":\"2026-01-01T00:00:02.000Z\"}]"
+    },
+    "after": {
+      "2026_r_r1.json": "R",
+      "index.json": "{\n  \"entries\": [\n    {\n      \"id\": \"r1\",\n      \"startedAt\": \"2026-01-01T00:00:00.000Z\",\n      \"filename\": \"2026_r_r1.json\",\n      \"savedAt\": \"2026-01-01T00:00:01.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:01.000Z\",\n        \"body\": \"2026-01-01T00:00:01.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:01.000Z\"\n    },\n    {\n      \"id\": \"r1\",\n      \"startedAt\": \"2026-01-01T00:00:00.000Z\",\n      \"filename\": \"2026_r_r1.json\",\n      \"savedAt\": \"2026-01-01T00:00:02.000Z\",\n      \"clocks\": {\n        \"created\": \"2026-01-01T00:00:02.000Z\",\n        \"body\": \"2026-01-01T00:00:02.000Z\"\n      },\n      \"updatedAt\": \"2026-01-01T00:00:02.000Z\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "name": "migrate with a persist step that succeeds",
+    "store": "favorites",
+    "op": "migrate",
+    "persist": "ok",
+    "entries": "[{\"id\":\"id1\",\"label\":\"L\",\"filename\":\"old.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"id2\",\"label\":\"L\",\"filename\":\"old.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"id3\",\"label\":\"L\",\"filename\":\"keep_id3.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]",
+    "tree": {
+      "old.json": "OLD",
+      "keep_id3.json": "KEEP"
+    },
+    "result": {
+      "changed": true,
+      "entries": "[{\"id\":\"id1\",\"label\":\"L\",\"filename\":\"old_id1.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"id2\",\"label\":\"L\",\"filename\":\"old_id2.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"id3\",\"label\":\"L\",\"filename\":\"keep_id3.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"}]"
+    },
+    "after": {
+      "keep_id3.json": "KEEP",
+      "old_id1.json": "OLD",
+      "old_id2.json": "OLD",
+      "persisted.json": "[{\"id\":\"id1\",\"label\":\"L\",\"filename\":\"old_id1.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"id2\",\"label\":\"L\",\"filename\":\"old_id2.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"},{\"id\":\"id3\",\"label\":\"L\",\"filename\":\"keep_id3.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\",\"clocks\":{\"created\":\"2026-01-01T00:00:01.000Z\",\"body\":\"2026-01-01T00:00:01.000Z\",\"name\":\"2026-01-01T00:00:01.000Z\",\"hub\":\"2026-01-01T00:00:01.000Z\"},\"updatedAt\":\"2026-01-01T00:00:01.000Z\"}]"
+    }
+  },
+  {
+    "name": "migrate with a persist step that fails",
+    "store": "favorites",
+    "op": "migrate",
+    "persist": "fail",
+    "entries": "[{\"id\":\"id1\",\"label\":\"L\",\"filename\":\"old.json\",\"savedAt\":\"2026-01-01T00:00:01.000Z\"}]",
+    "tree": {
+      "old.json": "OLD"
+    },
+    "result": {
+      "error": true
+    },
+    "after": {
+      "old.json": "OLD",
+      "old_id1.json": "OLD"
+    }
+  },
+  {
+    "name": "unreferenced body files",
+    "store": "favorites",
+    "op": "unlink",
+    "referenced": [
+      "keep_a.json",
+      "r\ud800_x.json"
+    ],
+    "tree": {
+      "index.json": "{}",
+      "keep_a.json": "",
+      "drop_b.json": "",
+      "note.txt": "",
+      "plain.json": "",
+      "x_y.json.1.abc.tmp": "",
+      "dir_c.json/": null,
+      "r�_x.json": "",
+      "s�_y.json": ""
+    },
+    "result": {
+      "removed": 3
+    },
+    "after": {
+      "dir_c.json/": null,
+      "index.json": "{}",
+      "keep_a.json": "",
+      "note.txt": "",
+      "plain.json": "",
+      "x_y.json.1.abc.tmp": ""
+    }
+  },
+  {
+    "name": "unreferenced body files of a snapshot store",
+    "store": "snapshots",
+    "op": "unlink",
+    "referenced": [],
+    "tree": {
+      "a_b.pipette": "",
+      "a_b.json": ""
+    },
+    "result": {
+      "removed": 1
+    },
+    "after": {
+      "a_b.json": ""
+    }
+  }
+]
