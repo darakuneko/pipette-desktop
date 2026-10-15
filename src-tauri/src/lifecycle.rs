@@ -8,10 +8,11 @@
 //! - closing the last window when the tray is not active raises
 //!   `RunEvent::ExitRequested` without one.
 //!
-//! The first request is stopped and starts the sequence, requests while it
-//! runs are stopped too, and the exit the sequence requests when it ends
-//! goes through. The Electron before-quit handler lets a second quit through
-//! while its phases run; here only the deadline ends the wait early.
+//! The first request is stopped and starts the sequence. A request while it
+//! runs (the tray's Quit again, the window closed, a second signal) ends the
+//! app at once: it writes the pending marker naming the running phase,
+//! waiting at most `MARKER_TIMEOUT` (src/shutdown.rs), and lets the exit
+//! through. The exit the sequence requests when it ends goes through.
 //!
 //! SIGKILL cannot be caught, and on Linux this build has no menu, so no
 //! keyboard shortcut quits it.
@@ -24,7 +25,9 @@ use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{App, AppHandle, Manager, RunEvent, Window, WindowEvent, Wry};
 
-use crate::shutdown::{ExitDecision, QUIT_DEADLINE, QuitGuard, QuitPhase, run_quit_sequence};
+use crate::shutdown::{
+    ExitDecision, QUIT_DEADLINE, QuitGuard, QuitPhase, record_interruption, run_quit_sequence,
+};
 
 /// Whether the app keeps running in the tray when the window is closed.
 /// The Electron build reads this from `AppConfig.trayResident`, whose
@@ -156,9 +159,20 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
                     eprintln!("[quit] exit requested (code {code:?}); starting the quit sequence");
                     start_quit_sequence(app.clone(), lifecycle);
                 }
-                ExitDecision::Wait => {
-                    api.prevent_exit();
-                    eprintln!("[quit] exit requested (code {code:?}) while quitting; waiting");
+                ExitDecision::ExitNow => {
+                    let phase = lifecycle.quit.running_phase();
+                    eprintln!(
+                        "[quit] exit requested (code {code:?}) while quitting during {}; exiting now",
+                        phase.unwrap_or("(between phases)")
+                    );
+                    // Blocks the event loop for at most MARKER_TIMEOUT; the
+                    // exit goes through when this returns.
+                    let data_dir = app_data_dir(app);
+                    tauri::async_runtime::block_on(record_interruption(
+                        phase,
+                        QUIT_DEADLINE,
+                        data_dir.as_deref(),
+                    ));
                 }
                 ExitDecision::Exit => eprintln!("[quit] exiting (code {code:?})"),
             }
@@ -168,18 +182,23 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
     }
 }
 
-fn start_quit_sequence(app: AppHandle<Wry>, lifecycle: Arc<Lifecycle>) {
-    let data_dir = match app.path().app_data_dir() {
+/// The directory of the pending marker, `None` (logged) when there is none.
+fn app_data_dir(app: &AppHandle<Wry>) -> Option<std::path::PathBuf> {
+    match app.path().app_data_dir() {
         Ok(dir) => Some(dir),
         Err(err) => {
             eprintln!("[quit] no app data directory for the pending marker: {err}");
             None
         }
-    };
+    }
+}
+
+fn start_quit_sequence(app: AppHandle<Wry>, lifecycle: Arc<Lifecycle>) {
+    let data_dir = app_data_dir(&app);
     let durations = phase_durations();
     tauri::async_runtime::spawn(async move {
         let phases = stub_phases(durations);
-        let outcome = run_quit_sequence(phases, QUIT_DEADLINE, data_dir.as_deref()).await;
+        let outcome = run_quit_sequence(phases, QUIT_DEADLINE, data_dir.as_deref(), &lifecycle.quit).await;
         eprintln!("[quit] sequence ended: {outcome:?}");
         lifecycle.quit.finish();
         app.exit(0);
@@ -221,8 +240,8 @@ fn dev_quit_delay() -> Option<Duration> {
 }
 
 /// Turns SIGTERM and SIGINT into an exit request, so they run the quit
-/// sequence instead of killing the process. A signal while quitting is
-/// stopped like any other exit request; the deadline bounds the wait.
+/// sequence instead of killing the process. A signal while quitting is an
+/// exit request like any other and ends the app at once.
 ///
 /// The handlers are installed here, before setup returns, and only the loop
 /// that reads them is spawned: a signal that arrives before that task first
@@ -266,7 +285,7 @@ mod tests {
             .start_paused(true)
             .build()
             .unwrap()
-            .block_on(run_quit_sequence(stub_phases(durations), QUIT_DEADLINE, None));
+            .block_on(run_quit_sequence(stub_phases(durations), QUIT_DEADLINE, None, &QuitGuard::default()));
         assert_eq!(outcome, crate::shutdown::QuitOutcome::Completed { elapsed: Duration::from_millis(1500) });
     }
 
