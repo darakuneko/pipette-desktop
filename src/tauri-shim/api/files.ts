@@ -46,7 +46,10 @@ export const filesApi = {
       deviceName: wellFormed(deviceName),
     }),
   exportPdf: (base64Data, deviceName) =>
-    call<FileSaveResult>('file_export_pdf', { base64Data, deviceName: wellFormed(deviceName) }),
+    call<FileSaveResult>('file_export_pdf', {
+      base64Data: wellFormed(base64Data),
+      deviceName: wellFormed(deviceName),
+    }),
   exportCsv: (content, defaultName) =>
     call<FileSaveResult>('file_export_csv', { content: wellFormed(content), defaultName: wellFormed(defaultName) }),
   exportCsvBundle: (files) => call<CsvBundleResult>('file_export_csv_bundle', { files: wellFormedEntries(files) }),
