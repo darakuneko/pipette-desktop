@@ -12,6 +12,9 @@ const crateDir = resolve(here, '../../src-tauri/crates/pipette-typing-analytics-
 /** Committed: the day JSONL and what the TypeScript DB layer made of it. */
 export const COMMITTED_FIXTURES_DIR = resolve(crateDir, 'tests/fixtures')
 
+/** Committed: the SQL text the crate includes (src/sql.rs). */
+export const GENERATED_SQL_PATH = resolve(crateDir, 'data/sql.rs')
+
 /** The large benchmark input and this machine's timings, never committed.
  *  `bench_dir` in the crate's tests/common/mod.rs resolves the same
  *  directory; the two must change together. */

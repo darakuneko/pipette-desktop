@@ -6,9 +6,10 @@
 // - tests/fixtures/day.jsonl — one seeded day (e2e/helpers/analyze-seed.ts,
 //   clock and machine hash pinned) plus the lines of edge-rows.ts.
 // - tests/fixtures/orphan.jsonl — a file whose foreign key fails.
-// - tests/fixtures/expected.json — the SQL text the Rust crate must use
-//   verbatim, and for each scenario the per-step apply counts, every table
-//   in canonical form (canonical.ts) and the Analyze minute-stats query.
+// - tests/fixtures/expected.json — for each scenario the per-step apply
+//   counts, every table in canonical form (canonical.ts) and the Analyze
+//   minute-stats query.
+// - data/sql.rs — the SQL text the Rust crate runs (sql-source.ts).
 // - <CARGO_TARGET_TMPDIR>/pipette-typing-analytics-db/heavy.jsonl,
 //   heavy-expected.json and ts-timings.json — the 21 seeded days in one
 //   file for the benchmark, never committed.
@@ -23,11 +24,7 @@ import { performance } from 'node:perf_hooks'
 import type { Database as DatabaseType } from 'better-sqlite3'
 import { DUMMY_TA_UID, seedDummyTypingAnalytics } from '../../e2e/helpers/analyze-seed'
 import { TypingAnalyticsDB } from '../../src/main/typing-analytics/db/typing-analytics-db'
-import { CREATE_META_SQL, CREATE_SCHEMA_SQL, DATA_TABLE_NAMES } from '../../src/main/typing-analytics/db/schema'
-import { prepareMergeStatements } from '../../src/main/typing-analytics/db/sql/merge-statements'
-import { BIGRAM_OVERLAP_EXTRA_COLUMNS, prepareNgramStatements } from '../../src/main/typing-analytics/db/sql/ngram-statements'
-import { prepareSyncStatements } from '../../src/main/typing-analytics/db/sql/sync-statements'
-import { prepareRangeStatements } from '../../src/main/typing-analytics/db/sql/range-query-statements'
+import { DATA_TABLE_NAMES } from '../../src/main/typing-analytics/db/schema'
 import { applyRowsToCache, type ApplyRowsResult } from '../../src/main/typing-analytics/jsonl/apply-to-cache'
 import { readRows } from '../../src/main/typing-analytics/jsonl/jsonl-reader'
 import { deletedRangesPath } from '../../src/main/typing-analytics/jsonl/paths'
@@ -37,7 +34,8 @@ import { clipToUtcDay, serializeDeletedRanges, type DeleteRange } from '../../sr
 import { writeFixture, writeJsonFixture } from '../fixture-files'
 import { dumpTable, numberCell, type TableDump } from './canonical'
 import { buildEdgeLines, buildOrphanFile } from './edge-rows'
-import { BENCH_DIR, COMMITTED_FIXTURES_DIR } from './paths'
+import { BENCH_DIR, COMMITTED_FIXTURES_DIR, GENERATED_SQL_PATH } from './paths'
+import { buildSqlSource } from './sql-source'
 
 const SEEDED_NOW = Date.UTC(2026, 9, 1, 23, 0, 0)
 const SEED_MACHINE_HASH = 'a'.repeat(64)
@@ -163,7 +161,8 @@ describe('typing-analytics DB fixtures', () => {
         })
         db.close()
       }
-      writeJsonFixture(join(COMMITTED_FIXTURES_DIR, 'expected.json'), { sqliteVersion, sql: collectSql(), scenarios: out })
+      writeJsonFixture(join(COMMITTED_FIXTURES_DIR, 'expected.json'), { sqliteVersion, scenarios: out })
+      writeFixture(GENERATED_SQL_PATH, buildSqlSource())
 
       await recordBench(userData, seededPaths, dayStartMs, queries)
     } finally {
@@ -172,36 +171,6 @@ describe('typing-analytics DB fixtures', () => {
     }
   })
 })
-
-/** The SQL text of every statement the Rust crate ports. A fake connection
- * whose `prepare` returns its argument hands back the exact strings. */
-function collectSql(): Record<string, string> {
-  const fake = { prepare: (sql: string): string => sql } as unknown as DatabaseType
-  const text = (stmts: object): Record<string, string> => stmts as unknown as Record<string, string>
-  const merge = text(prepareMergeStatements(fake))
-  const bigram = text(prepareNgramStatements(fake, 'typing_bigram_minute', 'bigram_id', BIGRAM_OVERLAP_EXTRA_COLUMNS))
-  const trigram = text(prepareNgramStatements(fake, 'typing_trigram_minute', 'trigram_id', []))
-  const sync = text(prepareSyncStatements(fake))
-  const range = text(prepareRangeStatements(fake))
-  return {
-    createMeta: CREATE_META_SQL,
-    createSchema: CREATE_SCHEMA_SQL,
-    mergeScope: merge.mergeScopeStmt,
-    mergeCharMinute: merge.mergeCharMinuteStmt,
-    mergeMatrixMinute: merge.mergeMatrixMinuteStmt,
-    mergeMinuteStats: merge.mergeMinuteStatsStmt,
-    mergeSession: merge.mergeSessionStmt,
-    mergeBigramMinute: bigram.merge,
-    mergeTrigramMinute: trigram.merge,
-    tombstoneCharMinutesForHashInRange: sync.tombstoneCharMinutesForHashInRangeStmt,
-    tombstoneMatrixMinutesForHashInRange: sync.tombstoneMatrixMinutesForHashInRangeStmt,
-    tombstoneMinuteStatsForHashInRange: sync.tombstoneMinuteStatsForHashInRangeStmt,
-    tombstoneBigramMinutesForHashInRange: bigram.tombstoneForHashInRange,
-    tombstoneTrigramMinutesForHashInRange: trigram.tombstoneForHashInRange,
-    tombstoneSessionsForHashInRange: sync.tombstoneSessionsForHashInRangeStmt,
-    selectMinuteStatsInRangeForUid: range.selectMinuteStatsInRangeForUidStmt,
-  }
-}
 
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b)

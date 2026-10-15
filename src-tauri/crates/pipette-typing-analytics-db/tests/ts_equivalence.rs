@@ -11,7 +11,7 @@
 mod common;
 
 use common::{assert_tables, fixtures_dir, query_row_cells, read_json, strings};
-use pipette_typing_analytics_db::{ApplyRowsResult, DeleteRange, ScopeFilters, TypingAnalyticsDb, sql};
+use pipette_typing_analytics_db::{ApplyRowsResult, DeleteRange, ScopeFilters, TypingAnalyticsDb};
 use serde_json::Value;
 
 fn expected() -> Value {
@@ -105,16 +105,6 @@ fn reapply_then_rollback() {
 #[test]
 fn day_hiding_ranges() {
     check_scenario("day-hiding-ranges");
-}
-
-/// Every SQL constant is the exact string the TypeScript code prepares.
-#[test]
-fn sql_text_matches_typescript() {
-    let want = expected();
-    for (name, text) in sql::ALL {
-        assert_eq!(*text, want["sql"][*name].as_str().unwrap(), "{name}");
-    }
-    assert_eq!(sql::ALL.len(), want["sql"].as_object().unwrap().len());
 }
 
 /// The bundled SQLite next to the one better-sqlite3 ships, for the record;

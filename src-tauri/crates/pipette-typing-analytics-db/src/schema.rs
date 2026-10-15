@@ -8,16 +8,9 @@
 use rusqlite::{Connection, OptionalExtension, named_params, params};
 
 use crate::Error;
-use crate::sql::{CREATE_META, CREATE_SCHEMA};
+use crate::sql::{CREATE_META, CREATE_SCHEMA, GET_META, SET_META};
 
 pub const SCHEMA_VERSION: i64 = 8;
-
-// meta-statements.ts
-const GET_META: &str = "SELECT value FROM typing_analytics_meta WHERE key = ?";
-const SET_META: &str = r#"
-      INSERT INTO typing_analytics_meta (key, value) VALUES (@key, @value)
-      ON CONFLICT(key) DO UPDATE SET value = excluded.value
-    "#;
 
 /// User-data tables, child before parent (`DATA_TABLE_NAMES`, schema.ts).
 pub const DATA_TABLE_NAMES: [&str; 7] = [
