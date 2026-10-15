@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// HID transport for the Tauri build: the same exports as
+// HID transport for the Tauri build: the HidTransport members of
 // src/preload/hid-transport.ts, answered by the Rust HID commands
 // (src-tauri/src/hid_commands.rs). vite.tauri.config.ts resolves the
 // Electron transport to this module, so src/preload/protocol.ts runs in the
 // WebView unchanged.
 
 import { invoke } from '@tauri-apps/api/core'
-import type { DeviceInfo, ProbeResult } from '../shared/types/protocol'
+import type { ImplementsHidTransport } from '../shared/types/hid-transport'
+import type { DeviceInfo } from '../shared/types/protocol'
+import type * as ThisModule from './hid-transport'
 
 // Skips the round trip to the backend while no device is open, as the
 // Electron transport does.
@@ -67,11 +69,6 @@ export async function isDeviceOpen(): Promise<boolean> {
   return open
 }
 
-/** Probing a device without opening it has no backend command yet. */
-export async function probeDevice(
-  _vendorId: number,
-  _productId: number,
-  _serialNumber?: string,
-): Promise<ProbeResult> {
-  throw new Error('probeDevice is not implemented')
-}
+/** Fails to compile when the exports of this module stop providing
+ *  HidTransport. */
+export type TauriHidTransport = ImplementsHidTransport<typeof ThisModule>

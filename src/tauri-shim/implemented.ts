@@ -3,7 +3,9 @@
 // implementation; members not listed here fall back to the stubs built in
 // create-vial-api.ts.
 //
-// The device and protocol members talk to the backend (./device-api). The
+// The device and protocol members talk to the backend (./device-api), all
+// but probeDevice: probing a device without opening it has no backend
+// command yet, so it is a stub like every other member not listed. The
 // other entries are the calls the renderer awaits during startup and while
 // connecting a keyboard and opening its editor, answered with the values of
 // a fresh install: default app config, sync signed out, no packs, no saved

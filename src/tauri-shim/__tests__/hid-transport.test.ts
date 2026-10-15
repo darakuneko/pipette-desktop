@@ -3,7 +3,7 @@
 // (src-tauri/src/hid_commands.rs) and keeps reports in call order.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type * as ElectronTransport from '../../preload/hid-transport'
+import type { HidTransport } from '../../shared/types/hid-transport'
 
 const invoke = vi.hoisted(() => vi.fn())
 vi.mock('@tauri-apps/api/core', () => ({ invoke }))
@@ -31,11 +31,10 @@ beforeEach(() => {
 })
 
 describe('Tauri hid-transport', () => {
-  it('has the exports of the Electron transport', async () => {
-    const transport = await load()
-    const asElectron: typeof ElectronTransport = transport
-    expect(Object.keys(asElectron).sort()).toEqual(
-      ['closeHidDevice', 'isDeviceOpen', 'listDevices', 'openHidDevice', 'probeDevice', 'send', 'sendReceive'],
+  it('exports exactly the HidTransport members', async () => {
+    const transport: HidTransport = await load()
+    expect(Object.keys(transport).sort()).toEqual(
+      ['closeHidDevice', 'isDeviceOpen', 'listDevices', 'openHidDevice', 'send', 'sendReceive'],
     )
   })
 
@@ -118,11 +117,5 @@ describe('Tauri hid-transport', () => {
     const next = transport.sendReceive(new Uint8Array([2]))
     await expect(failed).rejects.toThrow(new Error('HID read timeout'))
     await expect(next).resolves.toEqual(new Uint8Array([5]))
-  })
-
-  it('rejects probeDevice, which has no backend command', async () => {
-    const transport = await load()
-    await expect(transport.probeDevice(1, 2)).rejects.toThrow('probeDevice is not implemented')
-    expect(invoke).not.toHaveBeenCalled()
   })
 })

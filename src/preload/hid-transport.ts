@@ -9,6 +9,8 @@
 import { ipcRenderer } from 'electron'
 import { IpcChannels } from '../shared/ipc/channels'
 import type { DeviceInfo, ProbeResult } from '../shared/types/protocol'
+import type { ImplementsHidTransport } from '../shared/types/hid-transport'
+import type * as ThisModule from './hid-transport'
 
 // Cache device-open state to skip IPC round-trip when device is known closed
 let deviceOpen = false
@@ -70,3 +72,7 @@ export async function isDeviceOpen(): Promise<boolean> {
 export async function probeDevice(vendorId: number, productId: number, serialNumber?: string): Promise<ProbeResult> {
   return ipcRenderer.invoke(IpcChannels.HID_PROBE_DEVICE, vendorId, productId, serialNumber)
 }
+
+/** Fails to compile when the exports of this module stop providing
+ *  HidTransport; probeDevice is the Electron build's addition. */
+export type ElectronHidTransport = ImplementsHidTransport<typeof ThisModule>

@@ -18,15 +18,30 @@ const TAURI_HID_TRANSPORT = resolve(__dirname, 'src/tauri-shim/hid-transport.ts'
 const shared = rendererViteConfig()
 
 /** src/preload/protocol.ts runs in the WebView as is; its import of the
- *  Electron transport (ipcRenderer) is served by the Tauri one, which has the
- *  same exports. */
+ *  Electron transport (ipcRenderer) is served by the Tauri one. Both export
+ *  the HidTransport members (src/shared/types/hid-transport.ts). A
+ *  production build that never resolved the Electron transport fails: the
+ *  swap would no longer be doing anything, so the protocol must have
+ *  stopped importing the transport the way this plugin expects. */
 function tauriHidTransport(): Plugin {
+  let isBuild = false
+  let swapped = false
   return {
     name: 'pipette-tauri-hid-transport',
     enforce: 'pre',
+    configResolved(config) {
+      isBuild = config.command === 'build'
+    },
     async resolveId(source, importer, options) {
       const resolved = await this.resolve(source, importer, { ...options, skipSelf: true })
-      return resolved?.id === ELECTRON_HID_TRANSPORT ? TAURI_HID_TRANSPORT : null
+      if (resolved?.id !== ELECTRON_HID_TRANSPORT) return null
+      swapped = true
+      return TAURI_HID_TRANSPORT
+    },
+    buildEnd(error) {
+      if (isBuild && !error && !swapped) {
+        this.error(`the build never imported ${ELECTRON_HID_TRANSPORT}, so the Tauri HID transport was not swapped in`)
+      }
     },
   }
 }

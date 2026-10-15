@@ -83,4 +83,12 @@ describe('implemented', () => {
     await expect(api.listDevices()).resolves.toEqual([])
     expect(invoke).toHaveBeenCalledWith('list_devices', undefined)
   })
+
+  it('leaves probeDevice to the stub without calling the backend', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    invoke.mockClear()
+    expect(implemented.probeDevice).toBeUndefined()
+    await expect(createVialApi(implemented).probeDevice(1, 2)).resolves.toBeUndefined()
+    expect(invoke).not.toHaveBeenCalled()
+  })
 })
