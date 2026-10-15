@@ -8,10 +8,22 @@ license.workspace = true
 publish.workspace = true
 rust-version.workspace = true
 
+[features]
+# Constructors that take a custom hardware backend and timing (clock, retry
+# delay). Tests only; the application uses HidService::new.
+test-util = []
+
 [dependencies]
+pipette-protocol = { path = "../pipette-protocol" }
 pipette-virtual-device = { workspace = true }
 hidapi = { workspace = true }
 thiserror = { workspace = true }
+
+[dev-dependencies]
+pipette-hid = { path = ".", features = ["test-util"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+hex = "0.4"
 
 [lints]
 workspace = true

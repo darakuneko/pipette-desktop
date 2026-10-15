@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+[package]
+name = "pipette-protocol"
+description = "Vial wire and transport constants shared by the Rust crates, generated from the TypeScript sources"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true

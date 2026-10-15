@@ -46,6 +46,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aedcfb3409746eddb02b9e19ebda1c3394f759a152e48ee875a0844d1b955484"
 
 [[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
 name = "hidapi"
 version = "2.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -90,16 +96,27 @@ checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 name = "pipette-hid"
 version = "0.4.27"
 dependencies = [
+ "hex",
  "hidapi",
+ "pipette-hid",
+ "pipette-protocol",
  "pipette-virtual-device",
+ "serde",
+ "serde_json",
  "thiserror",
 ]
+
+[[package]]
+name = "pipette-protocol"
+version = "0.4.27"
 
 [[package]]
 name = "pipette-virtual-device"
 version = "0.4.27"
 dependencies = [
+ "hex",
  "lzma-rs",
+ "pipette-protocol",
  "serde",
  "serde_json",
 ]

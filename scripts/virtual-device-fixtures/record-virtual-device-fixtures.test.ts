@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Fixture generator for the Rust port of the virtual keyboard
-// (src-tauri/crates/pipette-virtual-device). Writes three files:
+// (src-tauri/crates/pipette-virtual-device) and the protocol constants the
+// Rust crates share (src-tauri/crates/pipette-protocol). Writes four files:
 //
-// - data/default_dataset.rs  — the default keymap, sample macros and sample
-//   dynamic entries as resolved by the TypeScript keycode tables, plus the
-//   few named keycodes the Rust side and its tests need. The Rust crate has
-//   no keycode table of its own.
-// - data/definition.lzma     — the LZMA-alone compressed keyboard definition
-//   exactly as the TypeScript device serves it.
-// - tests/fixtures/transcript.json — a golden transcript: every report the
-//   real preload protocol parsers (src/preload/protocol.ts) send to the
-//   TypeScript virtual device, with the response and the injected clock, plus
-//   the controller operations (open/close/reset/key presses) in between.
+// - pipette-protocol/data/constants.rs — the wire and transport constants of
+//   src/shared/constants/protocol.ts that the Rust side uses, so the two
+//   cannot drift apart.
+// - pipette-virtual-device/data/default_dataset.rs — the virtual keyboard's
+//   identity, the default keymap, sample macros and sample dynamic entries
+//   as resolved by the TypeScript keycode tables, plus the few named
+//   keycodes the Rust side and its tests need. The Rust crate has no keycode
+//   table of its own.
+// - pipette-virtual-device/data/definition.lzma — the LZMA-alone compressed
+//   keyboard definition exactly as the TypeScript device serves it.
+// - pipette-virtual-device/tests/fixtures/transcript.json — a golden
+//   transcript: every report the real preload protocol parsers
+//   (src/preload/protocol.ts) send to the TypeScript virtual device, with the
+//   response and the injected clock, plus the controller operations
+//   (open/close/reset/key presses) in between.
 //
 // The clock is fixed and only advanced explicitly, so every run produces
 // byte-identical output.
@@ -29,10 +35,6 @@ const rec = vi.hoisted(() => ({
   clock: 0,
 }))
 
-function toHex(bytes: ArrayLike<number>): string {
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
-}
-
 // Every report the protocol layer sends goes through here: the clock is
 // pinned for the duration of the call so the device's Date.now() is
 // deterministic, and the request/response pair is recorded.
@@ -42,7 +44,12 @@ vi.mock('../../src/preload/hid-transport', () => ({
     vi.setSystemTime(rec.clock)
     const request = Array.from(data)
     const response = handleVirtualReport(request)
-    rec.events.push({ op: 'report', now: rec.clock, request: toHex(request), response: toHex(response) })
+    rec.events.push({
+      op: 'report',
+      now: rec.clock,
+      request: Buffer.from(request).toString('hex'),
+      response: Buffer.from(response).toString('hex'),
+    })
     return Uint8Array.from(response)
   },
   send: async (): Promise<void> => {
@@ -50,7 +57,7 @@ vi.mock('../../src/preload/hid-transport', () => ({
   },
 }))
 
-import { MSG_LEN, BUFFER_FETCH_CHUNK } from '../../src/shared/constants/protocol'
+import * as protocolConstants from '../../src/shared/constants/protocol'
 import { sendReceive } from '../../src/preload/hid-transport'
 import * as protocol from '../../src/preload/protocol'
 import {
@@ -59,6 +66,11 @@ import {
   getVirtualDeviceController,
 } from '../../src/main/virtual-device'
 import {
+  VIRTUAL_DEVICE_VID,
+  VIRTUAL_DEVICE_PID,
+  VIRTUAL_DEVICE_NAME,
+  VIRTUAL_DEVICE_SERIAL,
+  VIRTUAL_DEVICE_UID_BYTES,
   LAYERS,
   ROWS,
   COLS,
@@ -77,8 +89,10 @@ import { SUPPORTED_QSIDS } from '../../src/main/virtual-device/qmk-settings'
 import { setProtocolValue } from '../../src/shared/keycodes/keycodes'
 import { resolve as resolveKeycode } from '../../src/shared/keycodes/keycodes-utils'
 
+const { MSG_LEN, BUFFER_FETCH_CHUNK } = protocolConstants
+
 const here = dirname(fileURLToPath(import.meta.url))
-const crateDir = resolve(here, '../../src-tauri/crates/pipette-virtual-device')
+const cratesDir = resolve(here, '../../src-tauri/crates')
 
 /** Arbitrary fixed epoch (ms) the transcript clock starts from. */
 const CLOCK_START = 1_700_000_000_000
@@ -100,6 +114,70 @@ const EXPORTED_KEYCODES = [
   'KC_LCTRL',
   'MOD_LSFT',
 ] as const
+
+type RustType = 'u8' | 'u16' | 'u32' | 'i32' | 'u64' | 'usize' | '&str'
+
+/**
+ * Constants of src/shared/constants/protocol.ts exported to Rust, with the
+ * Rust type each one is used as and an optional doc line.
+ */
+const EXPORTED_PROTOCOL_CONSTANTS: [keyof typeof protocolConstants, RustType, string?][] = [
+  ['MSG_LEN', 'usize', 'Every HID report (request and response) is exactly this many bytes.'],
+  ['BUFFER_FETCH_CHUNK', 'usize', 'Largest payload of one keymap/macro buffer chunk (MSG_LEN minus the 4-byte header).'],
+  ['HID_USAGE_PAGE', 'u16', 'Vial raw-HID interface usage page.'],
+  ['HID_USAGE', 'u16', 'Vial raw-HID interface usage.'],
+  ['HID_REPORT_ID', 'u8', 'Vial devices use unnumbered reports; writes carry report ID 0 up front.'],
+  ['BOOTLOADER_SERIAL_MAGIC', '&str'],
+  ['HID_TIMEOUT_MS', 'i32'],
+  ['HID_RETRY_COUNT', 'u32', 'Attempts per send/receive. Only an empty read (timeout) is retried.'],
+  ['HID_RETRY_DELAY_MS', 'u64'],
+  ['HID_OPEN_RETRY_COUNT', 'u32'],
+  ['HID_OPEN_RETRY_DELAY_MS', 'u64'],
+  ['CMD_VIA_GET_PROTOCOL_VERSION', 'u8'],
+  ['CMD_VIA_GET_KEYBOARD_VALUE', 'u8'],
+  ['CMD_VIA_SET_KEYBOARD_VALUE', 'u8'],
+  ['CMD_VIA_GET_KEYCODE', 'u8'],
+  ['CMD_VIA_SET_KEYCODE', 'u8'],
+  ['CMD_VIA_LIGHTING_SET_VALUE', 'u8'],
+  ['CMD_VIA_LIGHTING_GET_VALUE', 'u8'],
+  ['CMD_VIA_LIGHTING_SAVE', 'u8'],
+  ['CMD_VIA_MACRO_GET_COUNT', 'u8'],
+  ['CMD_VIA_MACRO_GET_BUFFER_SIZE', 'u8'],
+  ['CMD_VIA_MACRO_GET_BUFFER', 'u8'],
+  ['CMD_VIA_MACRO_SET_BUFFER', 'u8'],
+  ['CMD_VIA_GET_LAYER_COUNT', 'u8'],
+  ['CMD_VIA_KEYMAP_GET_BUFFER', 'u8'],
+  ['CMD_VIA_VIAL_PREFIX', 'u8'],
+  ['VIA_LAYOUT_OPTIONS', 'u8'],
+  ['VIA_SWITCH_MATRIX_STATE', 'u8'],
+  ['VIALRGB_GET_INFO', 'u8'],
+  ['VIALRGB_GET_MODE', 'u8'],
+  ['VIALRGB_GET_SUPPORTED', 'u8'],
+  ['VIALRGB_SET_MODE', 'u8'],
+  ['CMD_VIAL_GET_KEYBOARD_ID', 'u8'],
+  ['CMD_VIAL_GET_SIZE', 'u8'],
+  ['CMD_VIAL_GET_DEFINITION', 'u8'],
+  ['CMD_VIAL_GET_ENCODER', 'u8'],
+  ['CMD_VIAL_SET_ENCODER', 'u8'],
+  ['CMD_VIAL_GET_UNLOCK_STATUS', 'u8'],
+  ['CMD_VIAL_UNLOCK_START', 'u8'],
+  ['CMD_VIAL_UNLOCK_POLL', 'u8'],
+  ['CMD_VIAL_LOCK', 'u8'],
+  ['CMD_VIAL_QMK_SETTINGS_QUERY', 'u8'],
+  ['CMD_VIAL_QMK_SETTINGS_GET', 'u8'],
+  ['CMD_VIAL_QMK_SETTINGS_SET', 'u8'],
+  ['CMD_VIAL_QMK_SETTINGS_RESET', 'u8'],
+  ['CMD_VIAL_DYNAMIC_ENTRY_OP', 'u8'],
+  ['DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES', 'u8'],
+  ['DYNAMIC_VIAL_TAP_DANCE_GET', 'u8'],
+  ['DYNAMIC_VIAL_TAP_DANCE_SET', 'u8'],
+  ['DYNAMIC_VIAL_COMBO_GET', 'u8'],
+  ['DYNAMIC_VIAL_COMBO_SET', 'u8'],
+  ['DYNAMIC_VIAL_KEY_OVERRIDE_GET', 'u8'],
+  ['DYNAMIC_VIAL_KEY_OVERRIDE_SET', 'u8'],
+  ['DYNAMIC_VIAL_ALT_REPEAT_KEY_GET', 'u8'],
+  ['DYNAMIC_VIAL_ALT_REPEAT_KEY_SET', 'u8'],
+]
 
 // --- Controller wrapper: every operation is recorded before it runs. ---
 
@@ -154,6 +232,8 @@ async function raw(...bytes: number[]): Promise<Uint8Array> {
   return sendReceive(pkt)
 }
 
+// Not decompressLzma from src/main/lzma.ts: that module pulls in electron
+// (ipcMain, app) through its IPC and logger imports at load time.
 function decompressLzma(bytes: Uint8Array): Promise<string> {
   return new Promise((done, fail) => {
     lzmaModule.decompress(Array.from(bytes), (result: string | null) => {
@@ -450,6 +530,34 @@ function rustArray(values: number[], fmt: (v: number) => string, perLine: number
   return lines.join('\n')
 }
 
+const GENERATED_HEADER = `// SPDX-License-Identifier: GPL-2.0-or-later
+// Generated by scripts/virtual-device-fixtures/record-virtual-device-fixtures.test.ts
+// (pnpm run generate:virtual-device-fixtures). Do not edit by hand.`
+
+function rustLiteral(value: unknown, type: RustType): string {
+  if (type === '&str') {
+    if (typeof value !== 'string') throw new Error(`expected a string, got ${String(value)}`)
+    return JSON.stringify(value)
+  }
+  if (typeof value !== 'number' || !Number.isInteger(value)) throw new Error(`expected an integer, got ${String(value)}`)
+  if (type === 'u8') return hex8(value)
+  if (type === 'u16') return hex16(value)
+  return String(value)
+}
+
+function buildProtocolConstantsSource(): string {
+  const items = EXPORTED_PROTOCOL_CONSTANTS.map(([name, type, doc]) => {
+    const line = `pub const ${name}: ${type} = ${rustLiteral(protocolConstants[name], type)};`
+    return doc ? `/// ${doc}\n${line}` : line
+  })
+  return `${GENERATED_HEADER}
+//
+// Values of src/shared/constants/protocol.ts. Included by src/lib.rs.
+
+${items.join('\n')}
+`
+}
+
 function buildDatasetSource(): string {
   setProtocolValue(6)
   const keymap = Array.from(buildDefaultKeymap())
@@ -465,12 +573,18 @@ function buildDatasetSource(): string {
   setProtocolValue(6)
   const keycodes = EXPORTED_KEYCODES.map((name) => `    pub const ${name}: u16 = ${hex16(resolveKeycode(name))};`)
 
-  return `// SPDX-License-Identifier: GPL-2.0-or-later
-// Generated by scripts/virtual-device-fixtures/record-virtual-device-fixtures.test.ts
-// (pnpm run generate:virtual-device-fixtures). Do not edit by hand.
+  return `${GENERATED_HEADER}
 //
-// Default dataset of the virtual keyboard, resolved by the TypeScript keycode
-// tables at Vial protocol 6. Included by src/dataset.rs.
+// Identity and default dataset of the virtual keyboard, resolved by the
+// TypeScript keycode tables at Vial protocol 6. Included by src/dataset.rs.
+
+pub const VIRTUAL_DEVICE_VID: u16 = ${hex16(VIRTUAL_DEVICE_VID)};
+pub const VIRTUAL_DEVICE_PID: u16 = ${hex16(VIRTUAL_DEVICE_PID)};
+pub const VIRTUAL_DEVICE_NAME: &str = ${JSON.stringify(VIRTUAL_DEVICE_NAME)};
+pub const VIRTUAL_DEVICE_SERIAL: &str = ${JSON.stringify(VIRTUAL_DEVICE_SERIAL)};
+/// "VIRTGPK\\0" — a UID that never collides with the physical keyboard, so
+/// per-keyboard settings, snapshots and analytics stay separate.
+pub const VIRTUAL_DEVICE_UID_BYTES: [u8; ${VIRTUAL_DEVICE_UID_BYTES.length}] = [${Array.from(VIRTUAL_DEVICE_UID_BYTES, hex8).join(', ')}];
 
 /// Flat keymap, layer-major then row-major then column (${LAYERS} x ${ROWS} x ${COLS}).
 pub const DEFAULT_KEYMAP: [u16; ${keymap.length}] = [
@@ -530,7 +644,7 @@ function buildTranscriptJson(): string {
 }
 
 function writeOut(relPath: string, content: string | Uint8Array): void {
-  const path = resolve(crateDir, relPath)
+  const path = resolve(cratesDir, relPath)
   mkdirSync(dirname(path), { recursive: true })
   writeFileSync(path, content)
 }
@@ -560,8 +674,9 @@ describe('virtual device fixtures', () => {
     const reports = rec.events.filter((e) => e.op === 'report').length
     expect(reports).toBeGreaterThan(100)
 
-    writeOut('data/default_dataset.rs', buildDatasetSource())
-    writeOut('data/definition.lzma', await getCompressedDefinition())
-    writeOut('tests/fixtures/transcript.json', buildTranscriptJson())
+    writeOut('pipette-protocol/data/constants.rs', buildProtocolConstantsSource())
+    writeOut('pipette-virtual-device/data/default_dataset.rs', buildDatasetSource())
+    writeOut('pipette-virtual-device/data/definition.lzma', await getCompressedDefinition())
+    writeOut('pipette-virtual-device/tests/fixtures/transcript.json', buildTranscriptJson())
   })
 })

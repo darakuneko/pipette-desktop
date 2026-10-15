@@ -9,11 +9,13 @@ publish.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+pipette-protocol = { path = "../pipette-protocol" }
 
 [dev-dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
 lzma-rs = { workspace = true }
+hex = "0.4"
 
 [lints]
 workspace = true

@@ -4,8 +4,16 @@
 //! protocol version, UID, definition block index, dynamic entries and QMK
 //! settings are little-endian — that mix is the firmware's contract.
 
+/// `N` bytes of `buf` from `offset`. Panics when the range is out of bounds,
+/// like the slice indexing it wraps.
+fn bytes_at<const N: usize>(buf: &[u8], offset: usize) -> [u8; N] {
+    let mut out = [0u8; N];
+    out.copy_from_slice(&buf[offset..offset + N]);
+    out
+}
+
 pub fn read_be16(buf: &[u8], offset: usize) -> u16 {
-    u16::from_be_bytes([buf[offset], buf[offset + 1]])
+    u16::from_be_bytes(bytes_at(buf, offset))
 }
 
 pub fn write_be16(buf: &mut [u8], offset: usize, value: u16) {
@@ -13,7 +21,7 @@ pub fn write_be16(buf: &mut [u8], offset: usize, value: u16) {
 }
 
 pub fn read_be32(buf: &[u8], offset: usize) -> u32 {
-    u32::from_be_bytes([buf[offset], buf[offset + 1], buf[offset + 2], buf[offset + 3]])
+    u32::from_be_bytes(bytes_at(buf, offset))
 }
 
 pub fn write_be32(buf: &mut [u8], offset: usize, value: u32) {
@@ -21,7 +29,7 @@ pub fn write_be32(buf: &mut [u8], offset: usize, value: u32) {
 }
 
 pub fn read_le16(buf: &[u8], offset: usize) -> u16 {
-    u16::from_le_bytes([buf[offset], buf[offset + 1]])
+    u16::from_le_bytes(bytes_at(buf, offset))
 }
 
 pub fn write_le16(buf: &mut [u8], offset: usize, value: u16) {
@@ -29,7 +37,7 @@ pub fn write_le16(buf: &mut [u8], offset: usize, value: u16) {
 }
 
 pub fn read_le32(buf: &[u8], offset: usize) -> u32 {
-    u32::from_le_bytes([buf[offset], buf[offset + 1], buf[offset + 2], buf[offset + 3]])
+    u32::from_le_bytes(bytes_at(buf, offset))
 }
 
 pub fn write_le32(buf: &mut [u8], offset: usize, value: u32) {
