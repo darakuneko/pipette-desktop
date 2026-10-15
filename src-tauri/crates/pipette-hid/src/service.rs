@@ -193,9 +193,9 @@ impl HidService {
     }
 
     /// Length check, then `io` on the open device's handle with the framed
-    /// packet, inside the I/O queue, logging the report as sent. The handle is pinned for the whole
-    /// exchange, retries included: open and close replace it outside the
-    /// queue.
+    /// packet, inside the I/O queue, logging the report as sent. The handle
+    /// is pinned for the whole exchange, retries included: open and close
+    /// replace it outside the queue.
     fn exchange<R>(
         &self,
         data: &[u8],

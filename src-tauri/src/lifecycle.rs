@@ -173,11 +173,7 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
                     // Blocks the event loop for at most MARKER_TIMEOUT; the
                     // exit goes through when this returns.
                     let data_dir = user_data_dir(app);
-                    tauri::async_runtime::block_on(record_interruption(
-                        phase,
-                        QUIT_DEADLINE,
-                        Some(&data_dir),
-                    ));
+                    tauri::async_runtime::block_on(record_interruption(phase, QUIT_DEADLINE, &data_dir));
                 }
                 ExitDecision::Exit => {
                     log::info!("[quit] exiting (code {code:?})");
@@ -203,7 +199,7 @@ fn start_quit_sequence(app: AppHandle<Wry>, lifecycle: Arc<Lifecycle>) {
     let durations = phase_durations();
     tauri::async_runtime::spawn(async move {
         let phases = stub_phases(durations);
-        let outcome = run_quit_sequence(phases, QUIT_DEADLINE, Some(&data_dir), &lifecycle.quit).await;
+        let outcome = run_quit_sequence(phases, QUIT_DEADLINE, &data_dir, &lifecycle.quit).await;
         log::info!("[quit] sequence ended: {outcome:?}");
         lifecycle.quit.finish();
         app.exit(0);
@@ -285,13 +281,17 @@ mod tests {
     #[test]
     fn the_stub_phases_wait_one_after_another() {
         let durations = [100, 200, 300, 400, 500].map(Duration::from_millis);
+        // A completed sequence only removes the marker, so the directory
+        // need not exist.
+        let dir = std::env::temp_dir().join(format!("pipette-lifecycle-{}", std::process::id()));
         let outcome = tokio::runtime::Builder::new_current_thread()
             .enable_time()
             .start_paused(true)
             .build()
             .unwrap()
-            .block_on(run_quit_sequence(stub_phases(durations), QUIT_DEADLINE, None, &QuitGuard::default()));
+            .block_on(run_quit_sequence(stub_phases(durations), QUIT_DEADLINE, &dir, &QuitGuard::default()));
         assert_eq!(outcome, crate::shutdown::QuitOutcome::Completed { elapsed: Duration::from_millis(1500) });
+        assert!(!dir.exists());
     }
 
     #[test]

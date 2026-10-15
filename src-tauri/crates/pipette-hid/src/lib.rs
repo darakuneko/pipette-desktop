@@ -24,7 +24,6 @@ pub use constants::*;
 pub use device_info::{DeviceInfo, DeviceType, classify_device};
 pub use error::HidError;
 pub use hidapi_backend::{HidapiBackend, is_vial_interface};
-pub use packet_log::{DEBUG_HID_ENV, Direction, packet_log_message, packet_logging_from_env};
 pub use pipette_protocol::{MSG_LEN, Report};
 pub use pipette_virtual_device::{ControllerState, VirtualDeviceController, VirtualDeviceMode};
 pub use service::HidService;
