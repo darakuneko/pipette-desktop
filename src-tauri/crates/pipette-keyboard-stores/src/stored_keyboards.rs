@@ -37,7 +37,7 @@ pub fn list_stored_keyboards(ctx: &StoreContext) -> Result<Vec<StoredKeyboard>, 
     let keyboards_dir = ctx.sync_dir().join("keyboards");
     let mut recorded = false;
     let mut list = Vec::new();
-    for uid in keyboard_uids(&keyboards_dir) {
+    for uid in keyboard_dirs(&keyboards_dir, is_safe_key) {
         let uid_value = Value::from(uid.as_str());
         let mut name = names.get(&uid).cloned().unwrap_or_else(|| uid_value.clone());
         if name == uid_value
@@ -71,15 +71,15 @@ pub fn stored_keyboards_json(list: &[StoredKeyboard]) -> String {
     pipette_js_json::stringify(&Value::Array(items))
 }
 
-/// The names of the directories (not symlinks) in `dir` that are safe keys,
-/// sorted by their bytes; none when `dir` cannot be read.
-fn keyboard_uids(dir: &Path) -> Vec<String> {
+/// The names of the directories (not symlinks) in `dir` that `accept`
+/// takes, sorted by their bytes; none when `dir` cannot be read.
+pub(crate) fn keyboard_dirs(dir: &Path, accept: fn(&str) -> bool) -> Vec<String> {
     let Ok(entries) = std::fs::read_dir(dir) else { return Vec::new() };
     let mut uids: Vec<String> = entries
         .flatten()
         .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_dir()))
         .filter_map(|entry| entry.file_name().into_string().ok())
-        .filter(|uid| is_safe_key(uid))
+        .filter(|uid| accept(uid))
         .collect();
     uids.sort_unstable();
     uids
@@ -88,7 +88,7 @@ fn keyboard_uids(dir: &Path) -> Vec<String> {
 /// The device name in the filename of the first entry of
 /// `snapshots/index.json` that is not deleted; `None` wherever the handler
 /// reads none or throws.
-fn snapshot_device_name(keyboard_dir: &Path) -> Option<JsString> {
+pub(crate) fn snapshot_device_name(keyboard_dir: &Path) -> Option<JsString> {
     let bytes = std::fs::read(keyboard_dir.join("snapshots").join("index.json")).ok()?;
     let index = pipette_js_json::parse(&String::from_utf8_lossy(&bytes)).ok()?;
     let Some(Value::Array(entries)) = index.as_object()?.get("entries") else { return None };

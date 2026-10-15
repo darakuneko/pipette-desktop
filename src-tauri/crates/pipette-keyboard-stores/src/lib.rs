@@ -9,7 +9,11 @@
 //! - the list of stored keyboards (`sync/keyboards/{uid}`) of the
 //!   `LIST_STORED_KEYBOARDS` handler in src/main/sync/sync-ipc.ts;
 //! - the snapshots of a keyboard (`sync/keyboards/{uid}/snapshots`, the
-//!   sync unit of the same name) of src/main/snapshot-store.ts.
+//!   sync unit of the same name) of src/main/snapshot-store.ts;
+//! - the pipette settings of a keyboard
+//!   (`sync/keyboards/{uid}/pipette_settings.json`, the sync unit
+//!   `keyboards/{uid}/settings`) of src/main/pipette-settings-store.ts,
+//!   stored as text whose content rules stay with the caller.
 //!
 //! Every store works through a [`StoreContext`]: the userData directory,
 //! the clock, the ids of new entries, the process-wide write locks shared
@@ -17,6 +21,7 @@
 //! reported to.
 
 mod keyboard_meta;
+mod settings;
 mod snapshot_filename;
 mod snapshots;
 mod stored_keyboards;
@@ -29,6 +34,11 @@ use pipette_entry_store::{Clock, IdGen, RandomUuid, WriteLocks};
 pub use keyboard_meta::{
     KEYBOARD_META_SYNC_UNIT, MetaOutcome, active_keyboard_names, extract_device_name_from_filename,
     keyboard_meta_name_if_missing, name_keyboard_on_connect, upsert_keyboard_meta,
+};
+pub use settings::{
+    KeyboardSettingsFile, SETTINGS_ETAG_ABSENT, SettingsError, SettingsFile, SettingsWrite,
+    ensure_pipette_settings_dir, keyboard_settings_files_json, read_all_pipette_settings,
+    read_pipette_settings, settings_sync_unit, write_pipette_settings,
 };
 pub use snapshot_filename::{
     MAX_SNAPSHOT_DEVICE_NAME_BYTES, build_snapshot_filename, cap_snapshot_device_name,
