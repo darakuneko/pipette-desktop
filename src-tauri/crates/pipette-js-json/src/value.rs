@@ -121,10 +121,6 @@ impl JsString {
         }
     }
 
-    pub fn has_lone_surrogate(&self) -> bool {
-        matches!(self.0, Repr::Units(_))
-    }
-
     pub fn is_empty(&self) -> bool {
         match &self.0 {
             Repr::Text(text) => text.is_empty(),
@@ -240,14 +236,6 @@ impl Object {
         self.get(key).is_some()
     }
 
-    /// Deletes `key`; the other keys keep their order.
-    pub fn remove(&mut self, key: &str) -> Option<Value> {
-        match array_index(key) {
-            Some(index) => self.indexed.remove(&index).map(|(_, value)| value),
-            None => self.named.shift_remove(key),
-        }
-    }
-
     pub fn len(&self) -> usize {
         self.indexed.len() + self.named.len()
     }
@@ -304,18 +292,8 @@ mod tests {
     }
 
     #[test]
-    fn remove_keeps_the_order_of_the_rest() {
-        let mut object: Object = ["a", "b", "c", "1"].into_iter().map(|key| (key, Value::Null)).collect();
-        assert_eq!(object.remove("b"), Some(Value::Null));
-        assert_eq!(object.remove("1"), Some(Value::Null));
-        assert_eq!(object.remove("zz"), None);
-        assert_eq!(keys(&object), ["a", "c"]);
-    }
-
-    #[test]
     fn a_lone_surrogate_string_is_kept_as_units() {
         let lone = JsString::from_utf16(vec![0x61, 0xd800]);
-        assert!(lone.has_lone_surrogate());
         assert_eq!(lone.as_str(), None);
         assert_eq!(lone.to_string_lossy(), "a\u{fffd}");
         let pair = JsString::from_utf16(vec![0xd83d, 0xde00]);
