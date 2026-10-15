@@ -23,7 +23,7 @@ import {
   mergeDefined,
   newSettingsBase,
   parsePipetteSettings,
-  serializePipetteSettings,
+  settingsToSave,
   validatePrefs,
 } from '../../shared/pipette-settings-normalize'
 import { isSafePathSegment } from '../../shared/utils/safe-filename'
@@ -72,7 +72,7 @@ async function patchSettings(uid: string, partial: PipetteSettingsPatch): Promis
       const base = existing ?? newSettingsBase(await call<AppConfig>('app_config_get_all'))
       const merged = mergeDefined(base, partial)
       validatePrefs(merged)
-      if ((await writeSettingsFile(uid, serializePipetteSettings(merged), etag)) === 'written') {
+      if ((await writeSettingsFile(uid, JSON.stringify(settingsToSave(merged)), etag)) === 'written') {
         return { success: true }
       }
     }

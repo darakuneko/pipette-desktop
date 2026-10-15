@@ -235,14 +235,14 @@ export function newSettingsBase(
   }
 }
 
-/** The text a write stores for `prefs`: `_rev: 1`, `layerNames` (`[]` when
- *  missing) and `_updatedAt` (now) over the settings, as compact JSON. */
-export function serializePipetteSettings(prefs: PipetteSettings): string {
-  const data: PipetteSettings = {
+/** What a write stores for `prefs`: the settings with `_rev: 1`,
+ *  `layerNames` (`[]` when missing) and `_updatedAt` (now) set. The file
+ *  holds it as `JSON.stringify` writes it. */
+export function settingsToSave(prefs: PipetteSettings): PipetteSettings {
+  return {
     ...prefs,
     _rev: 1,
     layerNames: prefs.layerNames ?? [],
     _updatedAt: new Date().toISOString(),
   }
-  return JSON.stringify(data)
 }

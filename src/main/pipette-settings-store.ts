@@ -17,8 +17,8 @@ import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } fr
 import {
   mergeDefined,
   newSettingsBase,
-  parsePipetteSettings,
-  serializePipetteSettings,
+  normalizePipetteSettings,
+  settingsToSave,
   validatePrefs,
 } from '../shared/pipette-settings-normalize'
 
@@ -41,7 +41,8 @@ export async function readPipetteSettings(uid: string): Promise<PipetteSettings 
 
 async function readData(uid: string): Promise<PipetteSettings | null> {
   try {
-    return parsePipetteSettings(await readFile(getDataPath(uid), 'utf-8'))
+    const raw = await readFile(getDataPath(uid), 'utf-8')
+    return normalizePipetteSettings(JSON.parse(raw))
   } catch {
     return null
   }
@@ -49,7 +50,9 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
 
 async function writeData(uid: string, prefs: PipetteSettings): Promise<void> {
   await mkdir(getKeyboardDir(uid), { recursive: true })
-  await writeFileAtomic(getDataPath(uid), serializePipetteSettings(prefs))
+
+  const data = settingsToSave(prefs)
+  await writeFileAtomic(getDataPath(uid), JSON.stringify(data))
 
   notifyChange(`keyboards/${uid}/settings`)
 }
