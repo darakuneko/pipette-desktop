@@ -378,6 +378,18 @@ fn base64_decodes_as_node_buffer_does() {
         ("YW\u{100}Jj", b"abc"),
         ("Y\u{e9}WJj", b"abc"),
         ("\u{1f600}YWJj", b""),
+        // A trailing group of 1 character gives nothing.
+        ("YWJjZGVmZ", b"abcdef"),
+        // Nothing past the first `=` counts.
+        ("YWJj=ZGVm", b"abc"),
+        // Junk between the characters is skipped.
+        ("Y.W*J#j", b"abc"),
+        // The URL-safe alphabet.
+        ("_-_-", &[255, 239, 254]),
+        ("-w", &[251]),
+        // U+0159 and U+0157 read as `Y` and `W`, U+012B as `+`.
+        ("\u{159}\u{157}Jj", b"abc"),
+        ("YW\u{12b}j", &[97, 111, 163]),
     ] {
         assert_eq!(decode_base64_as_node(input), expected, "{input:?}");
     }
