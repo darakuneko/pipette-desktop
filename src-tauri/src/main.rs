@@ -18,7 +18,9 @@ mod capability_files;
 mod command_error;
 mod definition;
 mod dev_commands;
+mod dialog;
 mod events;
+mod file_commands;
 mod hid_commands;
 #[cfg(test)]
 mod ipc_contract;
@@ -67,6 +69,14 @@ fn app_commands<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'sta
         window_commands::window_started_hidden,
         window_commands::window_is_visible,
         store_commands::sync_pending::sync_has_pending_changes,
+        file_commands::file_save_layout,
+        file_commands::file_load_layout,
+        file_commands::file_export_keymap_c,
+        file_commands::file_export_pdf,
+        file_commands::file_export_csv,
+        file_commands::file_export_csv_bundle,
+        file_commands::file_export_json,
+        file_commands::file_sideload_json,
     ]
 }
 
@@ -111,6 +121,7 @@ fn main() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| lifecycle::on_second_launch(app)))
         .setup(|app| {
             store_commands::sync_pending::manage(app.handle(), &app.state::<UserDataDir>().0);
+            dev_commands::manage_dialogs(app.handle());
             main_window::open_main_window(app.handle(), &app.state::<app_config::AppConfig>())?;
             app_config::listen_for_changes(app.handle());
             lifecycle::setup(app);
