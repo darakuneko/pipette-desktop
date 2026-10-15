@@ -130,11 +130,11 @@ fn write_png(
     snapshot: Result<cairo::Surface, webkit2gtk::Error>,
     path: &std::path::Path,
 ) -> Result<(), CommandError> {
-    let surface = snapshot.map_err(|err| CommandError::new(err.to_string()))?;
+    let surface = snapshot?;
     let image = cairo::ImageSurface::try_from(surface)
         .map_err(|_| CommandError::new("snapshot is not an image surface"))?;
-    let mut file = std::fs::File::create(path).map_err(|err| CommandError::new(err.to_string()))?;
-    image.write_to_png(&mut file).map_err(|err| CommandError::new(err.to_string()))
+    let mut file = std::fs::File::create(path)?;
+    Ok(image.write_to_png(&mut file)?)
 }
 
 /// Saves the visible part of the page as rendered by WebKit. Capturing the

@@ -6,15 +6,14 @@
 
 use std::fmt;
 
-use pipette_hid::HidError;
 use serde::{Serialize, Serializer};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct CommandError(String);
 
 impl CommandError {
-    /// The app commands fail only with the errors converted below; the
-    /// development tools write their own messages.
+    /// The app commands fail only with errors converted by `From`; the
+    /// development tools also write their own messages.
     #[cfg(any(test, feature = "dev-tools"))]
     pub fn new(message: impl Into<String>) -> Self {
         Self(message.into())
@@ -33,21 +32,18 @@ impl Serialize for CommandError {
     }
 }
 
-impl From<HidError> for CommandError {
-    fn from(err: HidError) -> Self {
-        Self(err.to_string())
-    }
-}
-
-/// A blocking task that panicked or was cancelled.
-impl From<tauri::Error> for CommandError {
-    fn from(err: tauri::Error) -> Self {
+/// Any error keeps its message. `CommandError` itself is not an
+/// `std::error::Error`, which keeps this from overlapping `From<T> for T`.
+impl<E: std::error::Error> From<E> for CommandError {
+    fn from(err: E) -> Self {
         Self(err.to_string())
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use pipette_hid::HidError;
+
     use super::*;
 
     #[test]
