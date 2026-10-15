@@ -2,7 +2,10 @@
 // Counts the shim's members: real (backed by backend commands), fake (fixed
 // answers in fakes.ts) and stub (every other member). Every implemented
 // member is exactly one of real or fake, and the fakes are exactly the list
-// below, so adding or replacing one is a deliberate change here too.
+// below, so adding or replacing one is a deliberate change here too. The
+// keyboard members (HID probe, file dialogs, snapshot, favorite and
+// pipette settings stores, stored keyboards, pending sync units) are all
+// real.
 
 import { describe, expect, it, vi } from 'vitest'
 import { fakes } from '../fakes'
@@ -23,7 +26,59 @@ const EXPECTED_FAKES = [
   'typingRunLogList',
 ]
 
+/** The members the keyboard editor needs from the backend, all real. */
+const KEYBOARD_MEMBERS = [
+  'probeDevice',
+  'saveLayout',
+  'loadLayout',
+  'exportKeymapC',
+  'exportPdf',
+  'exportCsv',
+  'exportCsvBundle',
+  'exportJson',
+  'sideloadJson',
+  'snapshotStoreList',
+  'snapshotStoreSave',
+  'snapshotStoreLoad',
+  'snapshotStoreUpdate',
+  'snapshotStoreRename',
+  'snapshotStoreDelete',
+  'snapshotStoreSetHubPostId',
+  'snapshotStoreSetHubPrivate',
+  'favoriteStoreList',
+  'favoriteStoreSave',
+  'favoriteStoreLoad',
+  'favoriteStoreRename',
+  'favoriteStoreDelete',
+  'favoriteStoreExport',
+  'favoriteStoreExportCurrent',
+  'favoriteStoreImport',
+  'favoriteStoreImportToCurrent',
+  'favoriteStoreSetHubPostId',
+  'favoriteStoreSetHubPrivate',
+  'pipetteSettingsGet',
+  'pipetteSettingsPatch',
+  'pipetteSettingsEnsureDir',
+  'pipetteSettingsListAllTypingResults',
+  'listStoredKeyboards',
+  'keyboardMetaNameIfMissing',
+  'syncHasPendingChanges',
+  'syncOnPendingChange',
+]
+
 describe('shim coverage', () => {
+  it('backs every keyboard member with backend commands', () => {
+    expect(new Set(KEYBOARD_MEMBERS).size).toBe(36)
+    expect(KEYBOARD_MEMBERS.filter((name) => !(name in real))).toEqual([])
+    expect(KEYBOARD_MEMBERS.filter((name) => name in fakes)).toEqual([])
+  })
+
+  // Applied sync units come from the sync service, which the backend does
+  // not run yet; the renderer only subscribes.
+  it('leaves syncOnUnitApplied to the stub', () => {
+    expect('syncOnUnitApplied' in implemented).toBe(false)
+  })
+
   it('fakes exactly the expected members', () => {
     expect(Object.keys(fakes).sort()).toEqual([...EXPECTED_FAKES].sort())
   })
