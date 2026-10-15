@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Renderer build for the Tauri shell. Mirrors the renderer section of
-// electron.vite.config.ts (same define values and plugins) and adds the
-// vialAPI shim as a module script that runs before the renderer entry.
+// Renderer build for the Tauri shell. Takes the renderer settings shared with
+// the Electron build and adds the vialAPI shim as a module script that runs
+// before the renderer entry.
 
-import { statSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import pkg from './package.json'
+import { rendererViteConfig } from './vite.renderer.shared'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const RENDERER_ROOT = resolve(__dirname, 'src/renderer')
@@ -34,25 +31,21 @@ function injectVialApiShim(): Plugin {
   }
 }
 
+const shared = rendererViteConfig()
+
 export default defineConfig({
+  ...shared,
   root: RENDERER_ROOT,
   base: './',
   clearScreen: false,
-  define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
-    __BUILD_TIME__: JSON.stringify(statSync('src/renderer/i18n/locales/english.json').mtime.toISOString()),
-  },
-  plugins: [injectVialApiShim(), react(), tailwindcss()],
+  plugins: [injectVialApiShim(), ...shared.plugins],
   server: {
     port: DEV_PORT,
     strictPort: true,
   },
   build: {
-    target: 'esnext',
+    ...shared.build,
     outDir: resolve(__dirname, 'out/renderer-tauri'),
     emptyOutDir: true,
-  },
-  esbuild: {
-    target: 'esnext',
   },
 })
