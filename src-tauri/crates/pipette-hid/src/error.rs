@@ -17,7 +17,8 @@ pub enum HidError {
     /// The probe handle with this id is not the open one.
     #[error("No probe device is open")]
     ProbeNotOpen,
-    /// A probe read timed out. Probes never retry.
+    /// [`HidError::ReadTimeout`] on the probe handle, in the words of the
+    /// Electron main process's probe. Probes never retry.
     #[error("HID read timeout during probe")]
     ProbeReadTimeout,
     #[error("HID data exceeds maximum length of {max}")]

@@ -268,3 +268,33 @@ fn hardware_is_probed_even_when_the_device_list_shows_only_the_virtual_keyboard(
     f.service.probe_open(0x1234, 0x5678, None).unwrap();
     assert_eq!(opened_paths(&f), ["/dev/hidraw1"]);
 }
+
+#[test]
+fn opening_the_main_connection_closes_a_probe_on_the_same_interface() {
+    let f = fixture(VirtualDeviceMode::Off);
+    f.backend.devices.lock().unwrap().push(raw_device("/dev/hidraw1"));
+    let handle = f.backend.handle_for("/dev/hidraw1");
+    let id = f.service.probe_open(0x1234, 0x5678, None).unwrap();
+
+    assert!(f.service.open_device(0x1234, 0x5678).unwrap());
+
+    assert_eq!(handle.close_calls.load(Ordering::SeqCst), 1);
+    assert!(matches!(f.service.probe_send_receive(id, &[0x01]), Err(HidError::ProbeNotOpen)));
+    handle.default_read.lock().unwrap().push(0x01);
+    assert!(f.service.send_receive(&[0x01]).is_ok());
+}
+
+#[test]
+fn opening_the_main_connection_keeps_a_probe_on_another_interface() {
+    let f = fixture(VirtualDeviceMode::Off);
+    *f.backend.devices.lock().unwrap() =
+        vec![device_with_serial("/dev/hidraw0", Some("a")), device_with_serial("/dev/hidraw1", Some("b"))];
+    let probe_handle = f.backend.handle_for("/dev/hidraw1");
+    probe_handle.default_read.lock().unwrap().push(0x01);
+    let id = f.service.probe_open(0x1234, 0x5678, Some("b")).unwrap();
+
+    assert!(f.service.open_device(0x1234, 0x5678).unwrap());
+
+    assert_eq!(probe_handle.close_calls.load(Ordering::SeqCst), 0);
+    assert!(f.service.probe_send_receive(id, &[0x01]).is_ok());
+}

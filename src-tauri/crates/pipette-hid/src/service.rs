@@ -67,6 +67,20 @@ fn log_open_failure(vendor_id: u16, product_id: u16, err: &HidError) {
     log::error!("Failed to open HID device 0x{vendor_id:04x}:0x{product_id:04x}: {err}");
 }
 
+/// Writes `packet` and reads the response once, waiting HID_TIMEOUT_MS. An
+/// empty read is [`HidError::ReadTimeout`]. Every exchange, the main
+/// connection's and the probe's, goes through here.
+fn write_and_read_once(handle: &dyn HidHandle, packet: &Packet) -> Result<Report, HidError> {
+    handle.write(packet)?;
+    // Larger than any report, so the length read is the report's own length
+    // and normalize_response sees what the device sent.
+    let mut buf = [0u8; READ_BUFFER_LEN];
+    match handle.read_timeout(&mut buf, HID_TIMEOUT_MS)? {
+        0 => Err(HidError::ReadTimeout),
+        read => Ok(normalize_response(&buf[..read])),
+    }
+}
+
 /// Report ID 0 followed by the zero-padded 32-byte report.
 fn packet(data: &[u8]) -> Packet {
     let mut packet = [0u8; MSG_LEN + 1];
@@ -143,7 +157,11 @@ impl HidService {
         loop {
             match self.backend.open_path(&path) {
                 Ok(handle) => {
-                    *lock(&self.open_device) = Some(OpenDevice { handle, path });
+                    let mut open_device = lock(&self.open_device);
+                    // A probe that opened this interface while it was not yet
+                    // the main connection would share the device with it.
+                    self.probe.close_path(&path);
+                    *open_device = Some(OpenDevice { handle, path });
                     return Ok(true);
                 }
                 Err(err) => {
@@ -170,19 +188,16 @@ impl HidService {
     /// error fails at once.
     pub fn send_receive(&self, data: &[u8]) -> Result<Report, HidError> {
         self.exchange(data, |handle, packet| {
-            // Larger than any report, so the length read is the report's own
-            // length and normalize_response sees what the device sent.
-            let mut buf = [0u8; READ_BUFFER_LEN];
             for attempt in 0..HID_RETRY_COUNT {
-                handle.write(packet)?;
-                let read = handle.read_timeout(&mut buf, HID_TIMEOUT_MS)?;
-                if read > 0 {
-                    let report = normalize_response(&buf[..read]);
-                    log_packet(self.log_packets, Direction::Rx, &report);
-                    return Ok(report);
-                }
-                if attempt + 1 < HID_RETRY_COUNT {
-                    (self.timing.sleep)(Duration::from_millis(HID_RETRY_DELAY_MS));
+                match write_and_read_once(handle, packet) {
+                    Ok(report) => {
+                        log_packet(self.log_packets, Direction::Rx, &report);
+                        return Ok(report);
+                    }
+                    Err(HidError::ReadTimeout) if attempt + 1 < HID_RETRY_COUNT => {
+                        (self.timing.sleep)(Duration::from_millis(HID_RETRY_DELAY_MS));
+                    }
+                    Err(err) => return Err(err),
                 }
             }
             Err(HidError::ReadTimeout)
@@ -216,6 +231,11 @@ impl HidService {
     /// even when the device list shows only the virtual keyboard: the
     /// Electron main process probes over node-hid's own enumeration. One
     /// attempt, nothing logged.
+    ///
+    /// The main connection's state stays locked from reading its path until
+    /// the probe handle is in place; together with [`HidService::open_device`]
+    /// closing a probe on the interface it opens, the probe and the main
+    /// connection never hold the same interface.
     pub fn probe_open(
         &self,
         vendor_id: u16,
@@ -224,7 +244,8 @@ impl HidService {
     ) -> Result<u32, HidError> {
         self.probe.close(None);
         let serial_number = serial_number.filter(|s| !s.is_empty());
-        let main_path = lock(&self.open_device).as_ref().map(|d| d.path.clone());
+        let open_device = lock(&self.open_device);
+        let main_path = open_device.as_ref().map(|d| &d.path);
         let hardware = self.backend.hardware();
         let target = hardware
             .enumerate()?
@@ -232,30 +253,28 @@ impl HidService {
             .find(|d| {
                 d.vendor_id == vendor_id
                     && d.product_id == product_id
-                    && main_path.as_ref() != Some(&d.path)
+                    && main_path != Some(&d.path)
                     && serial_number.is_none_or(|s| d.serial_number.as_deref().unwrap_or_default() == s)
             })
             .ok_or(HidError::ProbeTargetNotFound)?;
         let handle = hardware.open_path(&target.path)?;
-        Ok(self.probe.replace(handle))
+        Ok(self.probe.replace(handle, target.path))
     }
 
     /// Sends one report (zero-padded to 32 bytes) over the probe handle `id`
-    /// and reads the response once, waiting HID_TIMEOUT_MS. No retries and
-    /// no packet logs; probe requests do not queue behind the main
-    /// connection's.
+    /// and reads the response once, waiting HID_TIMEOUT_MS; an empty read is
+    /// [`HidError::ProbeReadTimeout`], the Electron main process's message.
+    /// No retries and no packet logs; probe requests do not queue behind the
+    /// main connection's.
     pub fn probe_send_receive(&self, id: u32, data: &[u8]) -> Result<Report, HidError> {
         if data.len() > MSG_LEN {
             return Err(HidError::DataTooLong { max: MSG_LEN });
         }
         let handle = self.probe.handle(id).ok_or(HidError::ProbeNotOpen)?;
-        handle.write(&packet(data))?;
-        let mut buf = [0u8; READ_BUFFER_LEN];
-        let read = handle.read_timeout(&mut buf, HID_TIMEOUT_MS)?;
-        if read == 0 {
-            return Err(HidError::ProbeReadTimeout);
-        }
-        Ok(normalize_response(&buf[..read]))
+        write_and_read_once(handle.as_ref(), &packet(data)).map_err(|err| match err {
+            HidError::ReadTimeout => HidError::ProbeReadTimeout,
+            err => err,
+        })
     }
 
     /// Closes the probe handle `id`; nothing when it is no longer the open one.
