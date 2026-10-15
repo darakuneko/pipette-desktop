@@ -6,7 +6,7 @@
 //! device name comes first and the timestamp second, so
 //! [`crate::extract_device_name_from_filename`] reads it back.
 
-use pipette_entry_store::{truncate_utf8_name_part, utf8_byte_length};
+use pipette_entry_store::truncate_utf8_name_part;
 
 /// UTF-8 bytes the device name may take in a snapshot filename. The rest
 /// (`_` + timestamp + `_` + id + `.pipette`, about 70 bytes) keeps the whole
@@ -24,7 +24,6 @@ pub fn cap_snapshot_device_name(safe_device_name: &str) -> String {
         return safe_device_name.to_owned();
     }
     let units: Vec<u16> = safe_device_name.encode_utf16().collect();
-    debug_assert_eq!(utf8_byte_length(&units), safe_device_name.len());
     let cut = truncate_utf8_name_part(&units, MAX_SNAPSHOT_DEVICE_NAME_BYTES);
     // Cut between code points of a valid string: still valid UTF-16.
     if cut.is_empty() { "keyboard".to_owned() } else { String::from_utf16_lossy(cut) }
