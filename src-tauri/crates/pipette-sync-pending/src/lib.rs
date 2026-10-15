@@ -61,9 +61,8 @@ struct Shared {
     scheduler: Arc<dyn Scheduler>,
     listener: StatusListener,
     state: Mutex<State>,
-    /// Taken for each write, before `state`. Holds whether this process has
-    /// created the file's directory.
-    write: Mutex<bool>,
+    /// Taken for each write, before `state`.
+    write: Mutex<()>,
 }
 
 #[derive(Default)]
@@ -112,7 +111,7 @@ impl PendingStore {
                 scheduler,
                 listener,
                 state: Mutex::new(state),
-                write: Mutex::new(false),
+                write: Mutex::new(()),
             }),
         };
         if persist {
@@ -179,9 +178,9 @@ impl PendingStore {
         if !self.shared.persist {
             return None;
         }
-        let mut dir_ready = lock(&self.shared.write);
+        let _writing = lock(&self.shared.write);
         let content = self.take_content(ticket)?;
-        let result = write_file(&self.shared.path, content.as_bytes(), &mut dir_ready);
+        let result = write_file(&self.shared.path, content.as_bytes());
         lock(&self.shared.state).dirty = result.is_err();
         Some(result)
     }
@@ -220,18 +219,13 @@ impl State {
     }
 }
 
-/// Writes `content` to `path` atomically, creating the directory the first
-/// time and again when it has been removed since (e.g. by a reset of local
-/// data).
-fn write_file(path: &Path, content: &[u8], dir_ready: &mut bool) -> std::io::Result<()> {
-    let dir = path.parent().unwrap_or(Path::new("."));
-    if !*dir_ready {
-        std::fs::create_dir_all(dir)?;
-        *dir_ready = true;
-    }
+/// Writes `content` to `path` atomically, creating the directory when it
+/// does not exist (the first write, or after a reset of local data removed
+/// it).
+fn write_file(path: &Path, content: &[u8]) -> std::io::Result<()> {
     match pipette_fs::write_file_atomic(path, content) {
         Err(err) if err.kind() == ErrorKind::NotFound => {
-            std::fs::create_dir_all(dir)?;
+            std::fs::create_dir_all(path.parent().unwrap_or(Path::new(".")))?;
             pipette_fs::write_file_atomic(path, content)
         }
         result => result,
