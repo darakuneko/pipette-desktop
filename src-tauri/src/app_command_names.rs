@@ -35,6 +35,15 @@ pub const APP_COMMANDS: &[&str] = &[
     "window_is_visible",
     // src/store_commands/sync_pending.rs
     "sync_has_pending_changes",
+    // src/file_commands.rs
+    "file_save_layout",
+    "file_load_layout",
+    "file_export_keymap_c",
+    "file_export_pdf",
+    "file_export_csv",
+    "file_export_csv_bundle",
+    "file_export_json",
+    "file_sideload_json",
     // src/store_commands/keyboard_data.rs
     "list_stored_keyboards",
     "keyboard_meta_name_if_missing",

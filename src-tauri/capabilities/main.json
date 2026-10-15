@@ -10,6 +10,7 @@
     "shell",
     "window",
     "sync-pending",
+    "files",
     "keyboard-data",
     "snapshots",
     "core:event:allow-listen",

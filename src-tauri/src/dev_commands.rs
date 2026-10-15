@@ -5,7 +5,9 @@
 
 use tauri::ipc::Invoke;
 use tauri::webview::PageLoadPayload;
-use tauri::{Builder, Webview, Wry};
+use tauri::{AppHandle, Builder, Webview, Wry};
+
+use crate::dialog::SystemDialogs;
 
 #[cfg(feature = "dev-tools")]
 mod tools;
@@ -24,4 +26,14 @@ where
     #[cfg(not(feature = "dev-tools"))]
     let builder = builder.invoke_handler(app).on_page_load(on_page_load);
     builder
+}
+
+/// Manages the file dialogs of the file commands: the system's, with the
+/// dev-tools feature behind the queue of `dev_dialog_respond`.
+pub fn manage_dialogs(app: &AppHandle<Wry>) {
+    let system = SystemDialogs::new(app.clone());
+    #[cfg(feature = "dev-tools")]
+    tools::manage_queued_dialogs(app, system);
+    #[cfg(not(feature = "dev-tools"))]
+    tauri::Manager::manage(app, crate::dialog::Dialogs::new(system));
 }

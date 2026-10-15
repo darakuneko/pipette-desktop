@@ -29,7 +29,8 @@ pipette-app-config = { path = "crates/pipette-app-config" }
 pipette-js-json = { path = "crates/pipette-js-json" }
 pipette-sync-pending = { path = "crates/pipette-sync-pending" }
 # The stores of src/store_commands/: the clock and write locks they share,
-# and the stores themselves.
+# and the stores themselves; sanitize_filename of the file commands
+# (src/file_commands.rs).
 pipette-entry-store = { path = "crates/pipette-entry-store" }
 pipette-keyboard-stores = { path = "crates/pipette-keyboard-stores" }
 log = "=0.4.34"
@@ -53,6 +54,12 @@ ts-rs = "=12.0.1"
 # Opens links in the browser (src/shell.rs). Only its Rust functions are
 # used: the plugin is not registered, so the page gets none of its commands.
 tauri-plugin-opener = "=2.7.2"
+# Native file dialogs (src/dialog.rs): the library tauri-plugin-dialog shows
+# its dialogs with, used directly because the plugin also replaces
+# window.alert and window.confirm in every page with asynchronous versions.
+# "gtk3" shows the GTK file chooser on Linux, under X11 and Wayland alike;
+# "common-controls-v6" is the plugin's choice for Windows.
+rfd = { version = "=0.16.0", default-features = false, features = ["gtk3", "common-controls-v6"] }
 # One instance of the app at a time (src/main.rs). On Linux the running app
 # owns the D-Bus name `<identifier>.SingleInstance` on the session bus, so a
 # dev and a bundled build (same identifier) exclude each other. Without a
