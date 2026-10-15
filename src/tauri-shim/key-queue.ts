@@ -4,9 +4,10 @@
 // them in any order, while the Electron main process starts its handlers in
 // the order the calls arrive; each write here is invoked only once the one
 // before it with the same key has finished (failed writes included). The
-// keys are the write-lock keys of the stores (src/main/per-uid-write-lock.ts
-// and the keyboard names' own queue in src/main/sync/keyboard-meta.ts), which
-// the backend locks under the same names.
+// store keys are the write-lock keys of the stores
+// (src/main/per-uid-write-lock.ts and the keyboard names' own queue in
+// src/main/sync/keyboard-meta.ts), which the backend locks under the same
+// names; the app config sets have a key of their own (api/app-config.ts).
 
 const tails = new Map<string, Promise<unknown>>()
 

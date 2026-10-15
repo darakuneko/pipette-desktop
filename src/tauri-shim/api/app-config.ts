@@ -13,20 +13,18 @@
 import type { AppConfig } from '../../shared/types/app-config'
 import type { VialAPI } from '../../shared/types/vial-api'
 import { call } from '../ipc'
+import { enqueue } from '../key-queue'
 
-// The end of the last appConfigSet. Each set is sent only after the one
-// before it has finished: the backend runs commands concurrently, and the
-// Electron build applies the renderer's sets in the order they were made,
-// so the last one wins. A failed set does not hold up the ones after it.
-let lastSet: Promise<unknown> = Promise.resolve()
+// Each set is sent only after the one before it has finished: the backend
+// runs commands concurrently, and the Electron build applies the renderer's
+// sets in the order they were made, so the last one wins. A failed set
+// rejects its own call and does not hold up the ones after it.
+const SET_QUEUE_KEY = 'app-config'
 
 export const appConfigApi = {
   appConfigGetAll: () => call<AppConfig>('app_config_get_all'),
-  appConfigSet: (key, value) => {
-    const set = lastSet.then(async () => {
+  appConfigSet: (key, value) =>
+    enqueue(SET_QUEUE_KEY, async () => {
       await call<void>('app_config_set', { key, value: JSON.stringify(value) })
-    })
-    lastSet = set.catch(() => undefined)
-    return set
-  },
+    }),
 } satisfies Partial<VialAPI>
