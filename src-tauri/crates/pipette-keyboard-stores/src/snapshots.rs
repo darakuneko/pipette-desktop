@@ -308,12 +308,15 @@ pub fn update_snapshot(
         if let Some(version) = vil_version {
             next.set("vilVersion", version);
         }
+        // Checked where the handler checks it: after the deleted check of a
+        // migration.
+        let path = body_path(&dir, entry);
         let updated = match migrate_from {
             Some(from) => {
                 if entry.is_deleted() {
                     return Err(SnapshotError::Deleted);
                 }
-                let path = body_path(&dir, entry)?;
+                let path = path?;
                 if read_body(&path)? != from {
                     return Err(SnapshotError::Changed);
                 }
@@ -327,7 +330,7 @@ pub fn update_snapshot(
                 next
             }
             None => {
-                pipette_fs::write_file_atomic(&body_path(&dir, entry)?, json.as_bytes())?;
+                pipette_fs::write_file_atomic(&path?, json.as_bytes())?;
                 let options = OverwriteOptions { body: true, explicit: true };
                 overwrite_entry(STORE, Some(entry), next.into_object(), ctx.now_ms(), options)?
             }
