@@ -163,15 +163,24 @@ pub async fn dev_screenshot(window: tauri::WebviewWindow, name: String) -> Resul
         .map_err(|_| CommandError::new("the snapshot was cancelled"))?
 }
 
-/// Adds the development tools to `builder`: the script hook, and an invoke
-/// handler that routes the development commands to their handler and
-/// everything else to `app`, the handler of the app commands.
+/// Defines the global that tells the shim (src/tauri-shim/context-menu.ts)
+/// it runs in a build with these tools, which keeps the webview's own
+/// context menu and its Inspect Element.
+const DEV_TOOLS_MARK_SCRIPT: &str =
+    "Object.defineProperty(window, '__PIPETTE_DEV_TOOLS__', { value: true });";
+
+/// Adds the development tools to `builder`: the script hook, the mark of
+/// `DEV_TOOLS_MARK_SCRIPT`, and an invoke handler that routes the
+/// development commands to their handler and everything else to `app`, the
+/// handler of the app commands.
 pub fn install<F>(builder: Builder<Wry>, app: F) -> Builder<Wry>
 where
     F: Fn(Invoke<Wry>) -> bool + Send + Sync + 'static,
 {
     let dev = dev_commands();
-    builder.on_page_load(run_dev_script).invoke_handler(move |invoke: Invoke<Wry>| {
+    let mark =
+        tauri::plugin::Builder::<Wry>::new("pipette-dev-tools").js_init_script(DEV_TOOLS_MARK_SCRIPT).build();
+    builder.plugin(mark).on_page_load(run_dev_script).invoke_handler(move |invoke: Invoke<Wry>| {
         if is_dev_command(invoke.message.command()) { dev(invoke) } else { app(invoke) }
     })
 }

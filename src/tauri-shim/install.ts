@@ -4,9 +4,9 @@
 // (src/renderer/tauri-main.ts), so it runs before any renderer module reads
 // window.vialAPI.
 
-import { suppressContextMenuOutsideEditables } from './context-menu'
+import { installContextMenuPolicy } from './context-menu'
 import { createVialApi } from './create-vial-api'
 import { implemented } from './implemented'
 
 window.vialAPI = createVialApi(implemented)
-suppressContextMenuOutsideEditables(document)
+installContextMenuPolicy(window)
