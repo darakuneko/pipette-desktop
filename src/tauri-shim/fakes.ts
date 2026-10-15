@@ -30,11 +30,10 @@ export const fakes = {
   // Key label store.
   keyLabelStoreList: () => Promise.resolve({ success: true, data: [] }),
 
-  // Keyboard settings and metadata stores.
+  // Keyboard settings store.
   pipetteSettingsGet: () => Promise.resolve(null),
   pipetteSettingsEnsureDir: () => Promise.resolve({ success: true }),
   pipetteSettingsPatch: () => Promise.resolve({ success: true }),
-  keyboardMetaNameIfMissing: () => Promise.resolve(),
 
   // Snapshot store.
   snapshotStoreList: () => Promise.resolve({ success: true, entries: [] }),

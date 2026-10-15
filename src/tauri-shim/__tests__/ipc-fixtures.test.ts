@@ -33,6 +33,7 @@ const entries: Entry[] = readdirSync(FIXTURE_DIR)
 interface Shim {
   appConfig: typeof import('../api/app-config')
   device: typeof import('../api/device')
+  keyboardData: typeof import('../api/keyboard-data')
   shell: typeof import('../api/shell')
   syncPending: typeof import('../api/sync-pending')
   window: typeof import('../api/window')
@@ -45,6 +46,7 @@ async function load(): Promise<Shim> {
   return {
     appConfig: await import('../api/app-config'),
     device: await import('../api/device'),
+    keyboardData: await import('../api/keyboard-data'),
     shell: await import('../api/shell'),
     syncPending: await import('../api/sync-pending'),
     window: await import('../api/window'),
@@ -101,6 +103,11 @@ const CALLERS: Record<string, Caller> = {
   windowStartedHidden: { run: ({ window }) => window.windowApi.windowStartedHidden() },
   windowIsVisible: { run: ({ window }) => window.windowApi.windowIsVisible() },
   syncHasPendingChanges: { run: ({ syncPending }) => syncPending.syncPendingApi.syncHasPendingChanges() },
+  listStoredKeyboards: { run: ({ keyboardData }) => keyboardData.keyboardDataApi.listStoredKeyboards() },
+  keyboardMetaNameIfMissing: {
+    run: ({ keyboardData }, [uid, name]) => keyboardData.keyboardDataApi.keyboardMetaNameIfMissing(uid as string, name as string),
+    void: true,
+  },
 }
 
 afterEach(() => {
