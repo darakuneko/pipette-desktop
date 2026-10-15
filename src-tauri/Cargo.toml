@@ -17,9 +17,15 @@ rust-version = "1.90"
 tauri-build = { version = "=2.7.1", features = [] }
 
 [dependencies]
-tauri = { version = "=2.12.1", features = [] }
+# "tray-icon": the tray of src/lifecycle.rs.
+tauri = { version = "=2.12.1", features = ["tray-icon"] }
+# The quit sequence (src/shutdown.rs) times its phases on the Tokio runtime
+# Tauri already runs, and src/lifecycle.rs listens for SIGTERM / SIGINT.
+tokio = { version = "=1.53.3", features = ["time", "signal"] }
 pipette-hid = { path = "crates/pipette-hid" }
 serde = { workspace = true }
+# The pending marker of the quit sequence (src/shutdown.rs).
+serde_json = { workspace = true }
 # Keyboard definition decompression (src/definition.rs): LZMA-alone with
 # lzma-rs; XZ with xz4rust, whose decoder streams its output so the size
 # limit applies while decoding (lzma-rs buffers a whole XZ block first).
@@ -35,9 +41,10 @@ webkit2gtk = "=2.0.2"
 cairo-rs = { version = "0.18", features = ["png"] }
 
 [dev-dependencies]
-serde_json = { workspace = true }
 sha2 = { version = "=0.10.9", default-features = false }
 hex = "=0.4.3"
+# Paused time for the quit sequence tests.
+tokio = { version = "=1.53.3", features = ["rt", "test-util"] }
 
 [lints]
 workspace = true
