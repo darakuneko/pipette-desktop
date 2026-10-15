@@ -34,6 +34,44 @@ export async function invokeCommand<T = void>(command: string, args: Record<stri
   ) as Promise<T>
 }
 
+/** Calls the vialAPI member `member` of the page with `args`. The answer
+ *  crosses as JSON text: WebDriver takes an answer with an `error` field
+ *  for an error of its own. */
+export async function vialApi<T>(member: string, ...args: unknown[]): Promise<T> {
+  const text = await browser.execute(
+    async (name: string, memberArgs: unknown[]) => {
+      const api = (window as unknown as { vialAPI: Record<string, (...a: unknown[]) => Promise<unknown>> }).vialAPI
+      return JSON.stringify(await api[name](...memberArgs))
+    },
+    member,
+    args,
+  )
+  return JSON.parse(text) as T
+}
+
+/** Starts recording the page's errors (console.error calls, uncaught
+ *  errors and unhandled rejections) until the page loads again. */
+export async function recordPageErrors(): Promise<void> {
+  await browser.execute(() => {
+    const page = window as unknown as { __e2eErrors?: string[] }
+    if (page.__e2eErrors) return
+    const errors: string[] = []
+    page.__e2eErrors = errors
+    const consoleError = console.error.bind(console)
+    console.error = (...args: unknown[]) => {
+      errors.push(args.map(String).join(' '))
+      consoleError(...args)
+    }
+    window.addEventListener('error', (event) => errors.push(`uncaught: ${event.message}`))
+    window.addEventListener('unhandledrejection', (event) => errors.push(`unhandled rejection: ${String(event.reason)}`))
+  })
+}
+
+/** The errors recorded since {@link recordPageErrors} on this page load. */
+export async function recordedPageErrors(): Promise<string[]> {
+  return browser.execute(() => (window as unknown as { __e2eErrors?: string[] }).__e2eErrors ?? [])
+}
+
 export const virtualDevice = {
   setUnlockCounterMax: (n: number) => invokeCommand('virtual_device_set_unlock_counter_max', { n }),
   holdKeys: (pairs: [number, number][]) => invokeCommand('virtual_device_hold_keys', { pairs }),
