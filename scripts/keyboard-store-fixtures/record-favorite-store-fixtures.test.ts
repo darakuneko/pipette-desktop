@@ -364,7 +364,7 @@ const SCENARIOS: Scenario[] = [
     name: 'imports into the current value',
     time: T0,
     tree: {
-      'imports/v3.json': exportFile({ td: [{ label: 'a', savedAt: 's', data: { onTap: 'KC_A', onHold: 'RAG_T(KC_NO)', onDoubleTap: 7, onTapHold: 'NOT_A_KEY', tappingTerm: 200 } }, { label: 'b', savedAt: 's', data: {} }] }, { version: 3, vial_protocol: 5 }),
+      'imports/v3.json': exportFile({ td: [{ label: 'a', savedAt: 's', data: { onTap: 'KC_A', onHold: 'RAG_T(KC_NO)', onDoubleTap: 7, onTapHold: 'MY_KEY', tappingTerm: 200 } }, { label: 'b', savedAt: 's', data: {} }] }, { version: 3, vial_protocol: 5 }),
       'imports/v2.json': exportFile({ ko: [{ label: 'k', savedAt: 's', data: { ...KO, triggerKey: 'QK_BOOT' } }], macro: [{ label: 'm', savedAt: 's', data: 'anything' }] }, { version: 2 }),
       'imports/empty.json': exportFile({ td: [] }),
       'imports/v1.json': exportFile({ td: [] }, { version: 1 }),

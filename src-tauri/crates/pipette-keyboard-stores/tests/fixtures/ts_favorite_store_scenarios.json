@@ -1894,7 +1894,7 @@
     "name": "imports into the current value",
     "time": "2026-10-16T12:00:00.000Z",
     "tree": {
-      "imports/v3.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":5,\"categories\":{\"td\":[{\"label\":\"a\",\"savedAt\":\"s\",\"data\":{\"onTap\":\"KC_A\",\"onHold\":\"RAG_T(KC_NO)\",\"onDoubleTap\":7,\"onTapHold\":\"NOT_A_KEY\",\"tappingTerm\":200}},{\"label\":\"b\",\"savedAt\":\"s\",\"data\":{}}]}}",
+      "imports/v3.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":5,\"categories\":{\"td\":[{\"label\":\"a\",\"savedAt\":\"s\",\"data\":{\"onTap\":\"KC_A\",\"onHold\":\"RAG_T(KC_NO)\",\"onDoubleTap\":7,\"onTapHold\":\"MY_KEY\",\"tappingTerm\":200}},{\"label\":\"b\",\"savedAt\":\"s\",\"data\":{}}]}}",
       "imports/v2.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":2,\"categories\":{\"ko\":[{\"label\":\"k\",\"savedAt\":\"s\",\"data\":{\"triggerKey\":\"QK_BOOT\",\"replacementKey\":16388,\"layers\":3,\"triggerMods\":1,\"negativeMods\":0,\"suppressedMods\":0,\"options\":7,\"enabled\":true}}],\"macro\":[{\"label\":\"m\",\"savedAt\":\"s\",\"data\":\"anything\"}]}}",
       "imports/empty.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":6,\"categories\":{\"td\":[]}}",
       "imports/v1.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":1,\"categories\":{\"td\":[]}}",
@@ -1985,7 +1985,7 @@
       "imports/empty.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":6,\"categories\":{\"td\":[]}}",
       "imports/v1.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":1,\"categories\":{\"td\":[]}}",
       "imports/v2.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":2,\"categories\":{\"ko\":[{\"label\":\"k\",\"savedAt\":\"s\",\"data\":{\"triggerKey\":\"QK_BOOT\",\"replacementKey\":16388,\"layers\":3,\"triggerMods\":1,\"negativeMods\":0,\"suppressedMods\":0,\"options\":7,\"enabled\":true}}],\"macro\":[{\"label\":\"m\",\"savedAt\":\"s\",\"data\":\"anything\"}]}}",
-      "imports/v3.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":5,\"categories\":{\"td\":[{\"label\":\"a\",\"savedAt\":\"s\",\"data\":{\"onTap\":\"KC_A\",\"onHold\":\"RAG_T(KC_NO)\",\"onDoubleTap\":7,\"onTapHold\":\"NOT_A_KEY\",\"tappingTerm\":200}},{\"label\":\"b\",\"savedAt\":\"s\",\"data\":{}}]}}"
+      "imports/v3.json": "{\"app\":\"pipette\",\"scope\":\"fav\",\"exportedAt\":\"2026-10-16T11:59:00.000Z\",\"version\":3,\"vial_protocol\":5,\"categories\":{\"td\":[{\"label\":\"a\",\"savedAt\":\"s\",\"data\":{\"onTap\":\"KC_A\",\"onHold\":\"RAG_T(KC_NO)\",\"onDoubleTap\":7,\"onTapHold\":\"MY_KEY\",\"tappingTerm\":200}},{\"label\":\"b\",\"savedAt\":\"s\",\"data\":{}}]}}"
     }
   },
   {
