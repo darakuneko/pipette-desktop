@@ -12,7 +12,10 @@
 //! runs (the tray's Quit again, the window closed, a second signal) ends the
 //! app at once: it writes the pending marker naming the running phase,
 //! waiting at most `MARKER_TIMEOUT` (src/shutdown.rs), and lets the exit
-//! through. The exit the sequence requests when it ends goes through.
+//! through; the sequence then leaves the marker alone. A request after the
+//! sequence has started its own marker update waits for that update instead,
+//! at most `MARKER_TIMEOUT`, and writes nothing. The exit the sequence
+//! requests when it ends goes through.
 //!
 //! SIGKILL cannot be caught, and on Linux this build has no menu, so no
 //! keyboard shortcut quits it.
@@ -26,7 +29,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{App, AppHandle, Manager, RunEvent, Window, WindowEvent, Wry};
 
 use crate::shutdown::{
-    ExitDecision, QUIT_DEADLINE, QuitGuard, QuitPhase, record_interruption, run_quit_sequence,
+    ExitDecision, MARKER_TIMEOUT, QUIT_DEADLINE, QuitGuard, QuitPhase, record_interruption, run_quit_sequence,
 };
 
 /// Whether the app keeps running in the tray when the window is closed.
@@ -174,7 +177,13 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: RunEvent) {
                         data_dir.as_deref(),
                     ));
                 }
-                ExitDecision::Exit => eprintln!("[quit] exiting (code {code:?})"),
+                ExitDecision::Exit => {
+                    eprintln!("[quit] exiting (code {code:?})");
+                    // While the sequence updates the marker, waits for that
+                    // update (at most MARKER_TIMEOUT) so the exit does not cut
+                    // it short; otherwise returns at once.
+                    lifecycle.quit.wait_until_finished(MARKER_TIMEOUT);
+                }
             }
         }
         RunEvent::Exit => eprintln!("[quit] event loop ended"),
