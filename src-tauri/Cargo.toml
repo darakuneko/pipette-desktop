@@ -35,10 +35,16 @@ lzma-rs = { workspace = true }
 xz4rust = { version = "=0.2.3", default-features = false, features = ["std", "no_unsafe", "crc64"] }
 
 # The WebKitGTK view behind the Linux window, for the window screenshots of
-# the development tools (src/dev_commands.rs). Same versions as wry uses.
+# the development tools (src/dev_commands/tools.rs). Same versions as wry uses.
 [target.'cfg(target_os = "linux")'.dependencies]
-webkit2gtk = "=2.0.2"
-cairo-rs = { version = "0.18", features = ["png"] }
+webkit2gtk = { version = "=2.0.2", optional = true }
+cairo-rs = { version = "0.18", features = ["png"], optional = true }
+
+[features]
+# The development tools of src/dev_commands/tools.rs. build.rs rejects the
+# feature in the release profile, so a bundled binary never has these commands
+# or links WebKitGTK's bindings or cairo.
+dev-tools = ["dep:webkit2gtk", "dep:cairo-rs"]
 
 [dev-dependencies]
 sha2 = { version = "=0.10.9", default-features = false }
@@ -54,7 +60,7 @@ resolver = "3"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.4.27"
+version = "0.0.0"
 edition = "2024"
 license = "GPL-2.0-or-later"
 publish = false

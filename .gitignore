@@ -1,6 +1,7 @@
 node_modules/
 dist/
 out/
+out-tauri/
 .vite/
 *.tsbuildinfo
 test-results/

@@ -1,0 +1,27 @@
+name: Set up Rust for src-tauri
+description: >-
+  Installs the WebKitGTK and native build dependencies of the Tauri app, the
+  toolchain of src-tauri/rust-toolchain.toml, and the Cargo cache of
+  src-tauri. Expects the repository to be checked out already.
+
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/install-linux-deps
+      with:
+        extra-packages: libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf
+
+    # Installs the toolchain of src-tauri/rust-toolchain.toml and makes it the
+    # default, so the rustc version rust-cache reads from the repository root
+    # is the one that builds.
+    - name: Install the Rust toolchain
+      shell: bash
+      working-directory: src-tauri
+      run: |
+        rustup toolchain install
+        rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
+
+    # The cache key includes the job, so each job keeps its own build cache.
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      with:
+        workspaces: src-tauri -> target

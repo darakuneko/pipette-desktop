@@ -2305,7 +2305,7 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "pipette-app"
-version = "0.4.27"
+version = "0.0.0"
 dependencies = [
  "cairo-rs",
  "hex",
@@ -2323,7 +2323,7 @@ dependencies = [
 
 [[package]]
 name = "pipette-hid"
-version = "0.4.27"
+version = "0.0.0"
 dependencies = [
  "hex",
  "hidapi",
@@ -2337,11 +2337,11 @@ dependencies = [
 
 [[package]]
 name = "pipette-protocol"
-version = "0.4.27"
+version = "0.0.0"
 
 [[package]]
 name = "pipette-sync-format"
-version = "0.4.27"
+version = "0.0.0"
 dependencies = [
  "aes-gcm",
  "base64 0.22.1",
@@ -2357,7 +2357,7 @@ dependencies = [
 
 [[package]]
 name = "pipette-typing-analytics-db"
-version = "0.4.27"
+version = "0.0.0"
 dependencies = [
  "rusqlite",
  "serde",
@@ -2368,7 +2368,7 @@ dependencies = [
 
 [[package]]
 name = "pipette-virtual-device"
-version = "0.4.27"
+version = "0.0.0"
 dependencies = [
  "hex",
  "lzma-rs",

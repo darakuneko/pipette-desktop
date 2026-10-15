@@ -1,0 +1,81 @@
+name: Tauri migration
+
+# Checks the Tauri migration branch and the work branches cut from it. The
+# Electron check is the check job of ci.yml, which on its own runs only on
+# pull requests to main, so the Electron build stays green on these branches
+# too; here it also checks the fixtures under src-tauri against their
+# generators.
+on:
+  push:
+    branches:
+      - feat/tauri-migration
+      - "feat/tauri-*"
+  pull_request:
+    branches:
+      - feat/tauri-migration
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tauri-migration-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  electron-check:
+    uses: ./.github/workflows/ci.yml
+    with:
+      check-fixtures: true
+
+  tauri:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - uses: ./.github/actions/setup-rust
+
+      # The install scripts only serve the Electron build (the Electron binary
+      # download and the native module rebuild); the Tauri build needs none.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Clippy (debug, with the development tools)
+        working-directory: src-tauri
+        run: cargo clippy --workspace --all-targets --features pipette-app/dev-tools -- -D warnings
+
+      - name: Test
+        working-directory: src-tauri
+        run: cargo test --workspace --features pipette-app/dev-tools
+
+      # Builds the renderer for Tauri too, so it also checks the frontend
+      # build and its wiring in tauri.conf.json.
+      - name: Debug build
+        run: pnpm tauri build --debug --no-bundle --features dev-tools
+
+  # Kept off the job above so the release build does not lengthen it.
+  tauri-lint:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    defaults:
+      run:
+        shell: bash
+        working-directory: src-tauri
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-rust
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      # Without the development tools: build.rs rejects them in the release
+      # profile.
+      - name: Clippy (release)
+        run: cargo clippy --workspace --all-targets --release -- -D warnings
