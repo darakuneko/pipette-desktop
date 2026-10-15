@@ -113,8 +113,8 @@ pub fn snapshot_response_json(result: Result<Option<(&str, Value)>, SnapshotErro
     pipette_js_json::stringify(&Value::Object(response))
 }
 
-/// The index file: its top-level object (written back with `entries` in
-/// its place) and the entries as v2 entries.
+/// The index file: its top-level object, whose `entries` holds the place
+/// of [`Self::entries`] (the entries as v2 entries) for a write.
 struct SnapshotIndex {
     root: Object,
     entries: Vec<Entry>,
@@ -151,7 +151,7 @@ fn read_index(dir: &Path, uid: &str) -> Result<SnapshotIndex, SnapshotError> {
     let path = dir.join("index.json");
     let Ok(bytes) = fs::read(&path) else { return Ok(empty()) };
     // readFile(…, 'utf-8') reads each invalid sequence as U+FFFD.
-    let root = match pipette_js_json::parse(&String::from_utf8_lossy(&bytes)) {
+    let mut root = match pipette_js_json::parse(&String::from_utf8_lossy(&bytes)) {
         Ok(Value::Object(root)) => root,
         Ok(_) => return Ok(empty()),
         Err(err) if err.is_nesting_too_deep() => return Err(SnapshotError::TooDeep(path)),
@@ -162,6 +162,8 @@ fn read_index(dir: &Path, uid: &str) -> Result<SnapshotIndex, SnapshotError> {
         return Ok(empty());
     }
     let entries = normalize_entries(STORE, root.get("entries"));
+    // Holds the place of the entries, which a write puts back.
+    root.insert("entries", Value::Array(Vec::new()));
     Ok(SnapshotIndex { root, entries })
 }
 
