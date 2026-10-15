@@ -161,6 +161,9 @@ pub fn active_keyboard_names(entries: &[Value]) -> Result<HashMap<String, Value>
 pub(crate) fn read_active_names(ctx: &StoreContext) -> Result<HashMap<String, Value>, StoreError> {
     match read_index(&meta_file_path(ctx)) {
         Ok(index) => active_keyboard_names(&index.entries),
+        // A file too deep to parse lists no names on purpose: the keyboards
+        // show their snapshot names, and the writes that would record those
+        // fail on the same file, so it is never overwritten.
         Err(_) => Ok(HashMap::new()),
     }
 }
