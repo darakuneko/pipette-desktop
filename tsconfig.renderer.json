@@ -20,5 +20,5 @@
     // of depending on that implicit behavior again.
     "types": ["node"]
   },
-  "include": ["src/renderer/**/*", "src/shared/**/*", "src/tauri-shim/**/*"]
+  "include": ["src/renderer/**/*", "src/shared/**/*", "src/tauri-shim/**/*", "src/preload/lzma.d.ts"]
 }

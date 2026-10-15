@@ -3,19 +3,22 @@
 // implementation; members not listed here fall back to the stubs built in
 // create-vial-api.ts.
 //
-// The entries below are the calls the renderer awaits during startup,
-// answered with the values of a fresh install: default app config, no
-// devices, sync signed out, no language packs, window visible.
+// The device and protocol members talk to the backend (./device-api). The
+// other entries are the calls the renderer awaits during startup and while
+// connecting a keyboard and opening its editor, answered with the values of
+// a fresh install: default app config, sync signed out, no packs, no saved
+// keyboard data, window visible. Writes succeed without storing anything.
 
 import type { VialAPI } from '../shared/types/vial-api'
 import { DEFAULT_APP_CONFIG } from '../shared/types/app-config'
+import { deviceApi } from './device-api'
 
 export const implemented: Partial<VialAPI> = {
+  ...deviceApi,
+
   appConfigGetAll: () => Promise.resolve({ ...DEFAULT_APP_CONFIG }),
   appConfigSet: () => Promise.resolve(),
   trayStatusUpdate: () => Promise.resolve(),
-
-  listDevices: () => Promise.resolve([]),
 
   syncAuthStatus: () => Promise.resolve({ authenticated: false }),
   syncPasswordStatus: () => Promise.resolve('noPasswordFile'),
@@ -29,4 +32,15 @@ export const implemented: Partial<VialAPI> = {
 
   windowStartedHidden: () => Promise.resolve(false),
   windowIsVisible: () => Promise.resolve(true),
+  setWindowZoom: () => Promise.resolve(),
+
+  themePackList: () => Promise.resolve({ success: true, data: [] }),
+  keyLabelStoreList: () => Promise.resolve({ success: true, data: [] }),
+
+  pipetteSettingsGet: () => Promise.resolve(null),
+  pipetteSettingsEnsureDir: () => Promise.resolve({ success: true }),
+  pipetteSettingsPatch: () => Promise.resolve({ success: true }),
+  keyboardMetaNameIfMissing: () => Promise.resolve(),
+  snapshotStoreList: () => Promise.resolve({ success: true, entries: [] }),
+  typingRunLogList: () => Promise.resolve({ success: true, entries: [] }),
 }

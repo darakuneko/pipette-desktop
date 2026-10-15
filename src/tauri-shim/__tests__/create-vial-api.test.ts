@@ -6,6 +6,9 @@ import { implemented } from '../implemented'
 import { VIAL_API_MEMBER_NAMES } from '../vial-api-members'
 import { DEFAULT_APP_CONFIG } from '../../shared/types/app-config'
 
+const invoke = vi.hoisted(() => vi.fn())
+vi.mock('@tauri-apps/api/core', () => ({ invoke }))
+
 describe('createVialApi', () => {
   it('has every VialAPI member as an own property', () => {
     const api = createVialApi({})
@@ -59,10 +62,25 @@ describe('implemented', () => {
   it('answers the startup calls with the values of a fresh install', async () => {
     const api = createVialApi(implemented)
     await expect(api.appConfigGetAll()).resolves.toEqual(DEFAULT_APP_CONFIG)
-    await expect(api.listDevices()).resolves.toEqual([])
     await expect(api.syncAuthStatus()).resolves.toEqual({ authenticated: false })
     await expect(api.syncFormatStatus()).resolves.toBeNull()
     await expect(api.i18nPackList()).resolves.toEqual({ success: true, data: [] })
     await expect(api.windowIsVisible()).resolves.toBe(true)
+  })
+
+  it('answers the store calls of connecting a keyboard as a fresh install', async () => {
+    const api = createVialApi(implemented)
+    await expect(api.pipetteSettingsGet('uid')).resolves.toBeNull()
+    await expect(api.snapshotStoreList('uid')).resolves.toEqual({ success: true, entries: [] })
+    await expect(api.typingRunLogList('uid')).resolves.toEqual({ success: true, entries: [] })
+    await expect(api.keyLabelStoreList()).resolves.toEqual({ success: true, data: [] })
+    await expect(api.themePackList()).resolves.toEqual({ success: true, data: [] })
+  })
+
+  it('asks the backend for devices', async () => {
+    invoke.mockResolvedValueOnce([])
+    const api = createVialApi(implemented)
+    await expect(api.listDevices()).resolves.toEqual([])
+    expect(invoke).toHaveBeenCalledWith('list_devices', undefined)
   })
 })
