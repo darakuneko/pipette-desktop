@@ -140,9 +140,11 @@ jobs:
       - run: pnpm generate:sync-format-fixtures
       - run: pnpm generate:analytics-db-fixtures
 
+      # ts_random_envelopes.json is recorded with real random salts and IVs,
+      # so it differs on every run.
       - name: Verify the fixtures under src-tauri match their generators
         run: |
-          git diff --exit-code -- src-tauri
+          git diff --exit-code -- src-tauri ':(exclude)src-tauri/crates/pipette-sync-format/tests/fixtures/ts_random_envelopes.json'
           untracked="$(git ls-files --others --exclude-standard -- src-tauri)"
           if [ -n "$untracked" ]; then
             echo "Untracked files under src-tauri:"
