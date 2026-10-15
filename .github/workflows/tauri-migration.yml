@@ -79,7 +79,9 @@ jobs:
       # (the tray icon registers on it).
       - name: Install the e2e dependencies
         run: |
-          if apt-cache show webkitgtk-webdriver > /dev/null 2>&1; then
+          # apt-cache show also succeeds for a name that is only referred to,
+          # so the check is for an installable candidate.
+          if LC_ALL=C apt-cache policy webkitgtk-webdriver | grep -q 'Candidate: [0-9]'; then
             driver=webkitgtk-webdriver
           else
             driver=webkit2gtk-driver
