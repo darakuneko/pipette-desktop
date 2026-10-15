@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
-  "description": "Permissions of the main window: the raw HID commands the vialAPI shim calls.",
+  "description": "Permissions of the main window: the raw HID commands and the definition decompression the vialAPI shim calls.",
   "windows": ["main"],
   "permissions": [
     "allow-list-devices",
@@ -9,6 +9,7 @@
     "allow-close-device",
     "allow-send-receive",
     "allow-send",
-    "allow-is-device-open"
+    "allow-is-device-open",
+    "allow-decompress-definition"
   ]
 }

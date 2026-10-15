@@ -20,6 +20,13 @@ tauri-build = { version = "=2.7.1", features = [] }
 tauri = { version = "=2.12.1", features = [] }
 pipette-hid = { path = "crates/pipette-hid" }
 serde = { workspace = true }
+# Keyboard definition decompression (src/definition.rs): LZMA-alone with
+# lzma-rs; XZ with xz4rust, whose decoder streams its output so the size
+# limit applies while decoding (lzma-rs buffers a whole XZ block first).
+# Without the "sha256" feature a SHA-256 checked stream fails, as it does
+# with the xz-decompress package of the Electron main process.
+lzma-rs = { workspace = true }
+xz4rust = { version = "=0.2.3", default-features = false, features = ["std", "no_unsafe", "crc64"] }
 
 # The WebKitGTK view behind the Linux window, for the window screenshots of
 # the development tools (src/dev_commands.rs). Same versions as wry uses.
@@ -29,6 +36,8 @@ cairo-rs = { version = "0.18", features = ["png"] }
 
 [dev-dependencies]
 serde_json = { workspace = true }
+sha2 = { version = "=0.10.9", default-features = false }
+hex = "=0.4.3"
 
 [lints]
 workspace = true
@@ -50,7 +59,7 @@ hidapi = { version = "2.6", default-features = false, features = ["linux-static-
 thiserror = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-lzma-rs = "0.3"
+lzma-rs = "=0.3.0"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

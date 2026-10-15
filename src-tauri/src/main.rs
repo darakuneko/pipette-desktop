@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Tauri entry point: one window that loads the renderer build, and the HID
-// commands its vialAPI shim calls.
+// and definition commands its vialAPI shim calls.
 
 // Release builds on Windows must not open a console next to the window.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod definition;
 #[cfg(debug_assertions)]
 mod dev_commands;
 mod hid_commands;
@@ -27,6 +28,7 @@ fn main() {
         hid_commands::send_receive,
         hid_commands::send,
         hid_commands::is_device_open,
+        definition::decompress_definition,
         #[cfg(debug_assertions)]
         dev_commands::virtual_device_press_key,
         #[cfg(debug_assertions)]

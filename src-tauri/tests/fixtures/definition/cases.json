@@ -1,0 +1,143 @@
+[
+  {
+    "name": "lzma-alone-definition",
+    "input": "lzma-alone-definition.bin",
+    "expected": {
+      "utf8Length": 1165,
+      "sha256": "c5f6bfce98d23dfd4dca50a5ba948e87d665ec1cb8cec881dfee7a075dba4f59"
+    }
+  },
+  {
+    "name": "lzma-alone-non-ascii",
+    "input": "lzma-alone-non-ascii.bin",
+    "expected": {
+      "utf8Length": 49,
+      "sha256": "e8f0958e3df81e58e248f015a0ac2c1e49774adce1914701a3eec272e244e132"
+    }
+  },
+  {
+    "name": "lzma-alone-invalid-utf8",
+    "input": "lzma-alone-invalid-utf8.bin",
+    "expected": {
+      "utf8Length": 17,
+      "sha256": "9ef007cedd3d2837e5d501d98f00c1facc37512778b64ffd57bbd01f95da1d80"
+    }
+  },
+  {
+    "name": "lzma-alone-at-output-limit",
+    "input": "lzma-alone-at-output-limit.bin",
+    "expected": {
+      "utf8Length": 10485760,
+      "sha256": "b5eec3f68ef64d15e82dad91ff908582c5f081e61a62e22427af9bec2cd35f8d"
+    }
+  },
+  {
+    "name": "lzma-alone-over-output-limit",
+    "input": "lzma-alone-over-output-limit.bin",
+    "expected": null
+  },
+  {
+    "name": "lzma-alone-replacement-over-output-limit",
+    "input": "lzma-alone-replacement-over-output-limit.bin",
+    "expected": null
+  },
+  {
+    "name": "lzma-alone-truncated",
+    "input": "lzma-alone-truncated.bin",
+    "expected": {
+      "utf8Length": 1431,
+      "sha256": "2c525b3e813ae66aac86ffe623184b865b469ec1b87b938b82a9a0c156c502eb"
+    }
+  },
+  {
+    "name": "lzma-alone-corrupt",
+    "input": "lzma-alone-corrupt.bin",
+    "expected": null
+  },
+  {
+    "name": "xz-definition",
+    "input": "xz-definition.bin",
+    "expected": {
+      "utf8Length": 1165,
+      "sha256": "c5f6bfce98d23dfd4dca50a5ba948e87d665ec1cb8cec881dfee7a075dba4f59"
+    }
+  },
+  {
+    "name": "xz-definition-preset-9-extreme",
+    "input": "xz-definition-preset-9-extreme.bin",
+    "expected": {
+      "utf8Length": 1165,
+      "sha256": "c5f6bfce98d23dfd4dca50a5ba948e87d665ec1cb8cec881dfee7a075dba4f59"
+    }
+  },
+  {
+    "name": "xz-check-crc32",
+    "input": "xz-check-crc32.bin",
+    "expected": {
+      "utf8Length": 1165,
+      "sha256": "c5f6bfce98d23dfd4dca50a5ba948e87d665ec1cb8cec881dfee7a075dba4f59"
+    }
+  },
+  {
+    "name": "xz-check-sha256",
+    "input": "xz-check-sha256.bin",
+    "expected": null
+  },
+  {
+    "name": "xz-check-none",
+    "input": "xz-check-none.bin",
+    "expected": {
+      "utf8Length": 1165,
+      "sha256": "c5f6bfce98d23dfd4dca50a5ba948e87d665ec1cb8cec881dfee7a075dba4f59"
+    }
+  },
+  {
+    "name": "xz-non-ascii",
+    "input": "xz-non-ascii.bin",
+    "expected": {
+      "utf8Length": 49,
+      "sha256": "e8f0958e3df81e58e248f015a0ac2c1e49774adce1914701a3eec272e244e132"
+    }
+  },
+  {
+    "name": "xz-invalid-utf8",
+    "input": "xz-invalid-utf8.bin",
+    "expected": {
+      "utf8Length": 17,
+      "sha256": "9ef007cedd3d2837e5d501d98f00c1facc37512778b64ffd57bbd01f95da1d80"
+    }
+  },
+  {
+    "name": "xz-at-output-limit",
+    "input": "xz-at-output-limit.bin",
+    "expected": {
+      "utf8Length": 10485760,
+      "sha256": "b5eec3f68ef64d15e82dad91ff908582c5f081e61a62e22427af9bec2cd35f8d"
+    }
+  },
+  {
+    "name": "xz-over-output-limit",
+    "input": "xz-over-output-limit.bin",
+    "expected": null
+  },
+  {
+    "name": "xz-truncated",
+    "input": "xz-truncated.bin",
+    "expected": null
+  },
+  {
+    "name": "xz-corrupt",
+    "input": "xz-corrupt.bin",
+    "expected": null
+  },
+  {
+    "name": "xz-magic-only",
+    "input": "xz-magic-only.bin",
+    "expected": null
+  },
+  {
+    "name": "garbage",
+    "input": "garbage.bin",
+    "expected": null
+  }
+]

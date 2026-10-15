@@ -15,6 +15,8 @@ const COMMANDS: &[&str] = &[
     "send_receive",
     "send",
     "is_device_open",
+    // src/definition.rs
+    "decompress_definition",
     // src/dev_commands.rs
     "virtual_device_press_key",
     "virtual_device_release_key",
