@@ -290,6 +290,21 @@ mod restoring_the_pending_state_at_startup {
     }
 
     #[test]
+    fn leaves_a_file_nested_too_deep_to_read_as_it_is() {
+        let h = Harness::new();
+        let deep = format!("{}{}", "[".repeat(1001), "]".repeat(1001));
+        let content =
+            format!(r#"{{"version":1,"owner":null,"units":["favorites/macro"],"held":{{}},"x":{deep}}}"#);
+        h.write_file(&content);
+
+        let store = h.launch();
+        store.notify_change("favorites/combo");
+        h.scheduler.advance();
+
+        assert_eq!(h.read_file(), content);
+    }
+
+    #[test]
     fn reads_an_owner_that_is_not_a_string_or_is_empty_as_none() {
         for owner in ["42", "\"\"", "null", "{}"] {
             let h = Harness::new();

@@ -20,6 +20,17 @@ pub struct ParseError {
     pub position: usize,
 }
 
+/// The reason of a text nested deeper than [`MAX_DEPTH`].
+const NESTING_TOO_DEEP: &str = "Nesting too deep";
+
+impl ParseError {
+    /// Whether parsing stopped at nesting deeper than [`MAX_DEPTH`], which
+    /// `JSON.parse` reads on.
+    pub fn is_nesting_too_deep(&self) -> bool {
+        self.reason == NESTING_TOO_DEEP
+    }
+}
+
 /// Parses `text` as `JSON.parse(text)` does.
 pub fn parse(text: &str) -> Result<Value, ParseError> {
     let mut parser = Parser { bytes: text.as_bytes(), pos: 0 };
@@ -76,7 +87,7 @@ impl Parser<'_> {
     }
 
     fn check_depth(&self, depth: usize) -> Result<(), ParseError> {
-        if depth > MAX_DEPTH { Err(self.error("Nesting too deep")) } else { Ok(()) }
+        if depth > MAX_DEPTH { Err(self.error(NESTING_TOO_DEEP)) } else { Ok(()) }
     }
 
     fn array(&mut self, depth: usize) -> Result<Value, ParseError> {
@@ -359,5 +370,7 @@ mod tests {
         assert!(parse(&ok).is_ok());
         let deep = format!("{}{}", "[".repeat(MAX_DEPTH + 1), "]".repeat(MAX_DEPTH + 1));
         assert_eq!(parse(&deep).unwrap_err().reason, "Nesting too deep");
+        assert!(parse(&deep).unwrap_err().is_nesting_too_deep());
+        assert!(!parse("[").unwrap_err().is_nesting_too_deep());
     }
 }

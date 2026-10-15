@@ -60,6 +60,12 @@ pub(crate) fn read(path: &Path, keyboards_dir: &Path) -> Option<PendingFile> {
     let text = String::from_utf8_lossy(&bytes);
     let parsed = match pipette_js_json::parse(&text) {
         Ok(parsed) => parsed,
+        // JSON.parse reads any depth, so the units of such a file are kept
+        // by leaving it as it is.
+        Err(err) if err.is_nesting_too_deep() => {
+            log::warn!("[sync-pending] cannot read the pending file; changes are kept in memory only: {err}");
+            return None;
+        }
         Err(err) => {
             log::warn!("[sync-pending] ignoring a malformed pending file: {err}");
             return Some(PendingFile::default());
