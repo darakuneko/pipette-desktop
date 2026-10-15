@@ -55,6 +55,7 @@ jobs:
           pnpm generate:js-json-fixtures
           pnpm generate:app-config-fixtures
           pnpm generate:entry-store-fixtures
+          pnpm generate:sync-pending-fixtures
           pnpm generate:hid-fixtures
           pnpm generate:sync-format-fixtures
           pnpm generate:analytics-db-fixtures

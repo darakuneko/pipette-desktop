@@ -1,0 +1,439 @@
+[
+  {
+    "name": "a new file",
+    "tree": {
+      "sync/keyboards/uid1/": null
+    },
+    "steps": [
+      {
+        "op": "notify",
+        "unit": "favorites/macro"
+      },
+      {
+        "op": "notify",
+        "unit": "keyboards/uid1/settings"
+      },
+      {
+        "op": "notify",
+        "unit": "favorites/macro"
+      },
+      {
+        "op": "notify",
+        "unit": "meta/keyboard-names"
+      },
+      {
+        "op": "advance"
+      }
+    ],
+    "restored": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}",
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/uid1/": null
+    },
+    "hasPending": true,
+    "generations": [
+      [
+        "favorites/macro",
+        3
+      ],
+      [
+        "keyboards/uid1/settings",
+        2
+      ],
+      [
+        "meta/keyboard-names",
+        4
+      ]
+    ],
+    "after": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\",\"keyboards/uid1/settings\",\"meta/keyboard-names\"],\"held\":{}}",
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/uid1/": null
+    }
+  },
+  {
+    "name": "an existing owner and held units",
+    "tree": {
+      "sync/keyboards/uid1/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"keyboards/uid1/snapshots\",\"favorites/macro\"],\"held\":{\"account-b\":[\"favorites/combo\",\"keyboards/uid1/settings\"]}}"
+    },
+    "steps": [
+      {
+        "op": "notify",
+        "unit": "favorites/combo"
+      },
+      {
+        "op": "notify",
+        "unit": "favorites/macro"
+      },
+      {
+        "op": "advance"
+      }
+    ],
+    "restored": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"keyboards/uid1/snapshots\",\"favorites/macro\"],\"held\":{\"account-b\":[\"favorites/combo\",\"keyboards/uid1/settings\"]}}",
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/uid1/": null
+    },
+    "hasPending": true,
+    "generations": [
+      [
+        "keyboards/uid1/snapshots",
+        1
+      ],
+      [
+        "favorites/macro",
+        4
+      ],
+      [
+        "favorites/combo",
+        3
+      ]
+    ],
+    "after": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":\"account-a\",\"units\":[\"keyboards/uid1/snapshots\",\"favorites/macro\",\"favorites/combo\"],\"held\":{\"account-b\":[\"favorites/combo\",\"keyboards/uid1/settings\"]}}",
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/uid1/": null
+    }
+  },
+  {
+    "name": "dropped units",
+    "tree": {
+      "sync/keyboards/uid1/": null,
+      "sync/keyboards/file-uid": "not a directory",
+      "local/sync-pending.json": "{\"version\":1,\"owner\":\"\\ud800acct\",\"units\":[\"keyboards/uid1/settings\",\"keyboards/gone/settings\",\"keyboards/file-uid/settings\",\"keyboards\",\"favorites/../x\",\"favorites//macro\",\"\",7,null,\"a\\\\b\",\".\",\"favorites/.\",\"favorites/macro\",\"favorites/macro\",\"favorites/\\udc00\",\"日本語/ユニット\"],\"held\":{\"zeta\":[\"favorites/a\"],\"10\":[\"favorites/b\"],\"2\":[\"favorites/c\"],\"\":[\"favorites/d\"],\"__proto__\":[\"favorites/e\"],\"empty\":[],\"gone\":[\"keyboards/gone/x\"],\"str\":\"favorites/f\",\"4294967295\":[\"favorites/g\"],\"01\":[\"favorites/h\"]},\"extra\":true}"
+    },
+    "steps": [
+      {
+        "op": "notify",
+        "unit": "favorites/new"
+      },
+      {
+        "op": "advance"
+      }
+    ],
+    "restored": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":\"\\ud800acct\",\"units\":[\"keyboards/uid1/settings\",\"keyboards/file-uid/settings\",\"keyboards\",\"favorites/macro\",\"favorites/\\udc00\",\"日本語/ユニット\"],\"held\":{\"2\":[\"favorites/c\"],\"10\":[\"favorites/b\"],\"zeta\":[\"favorites/a\"],\"4294967295\":[\"favorites/g\"],\"01\":[\"favorites/h\"]}}",
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/file-uid": "not a directory",
+      "sync/keyboards/uid1/": null
+    },
+    "hasPending": true,
+    "generations": [
+      [
+        "keyboards/uid1/settings",
+        1
+      ],
+      [
+        "keyboards/file-uid/settings",
+        2
+      ],
+      [
+        "keyboards",
+        3
+      ],
+      [
+        "favorites/macro",
+        4
+      ],
+      [
+        "favorites/\udc00",
+        5
+      ],
+      [
+        "日本語/ユニット",
+        6
+      ],
+      [
+        "favorites/new",
+        7
+      ]
+    ],
+    "after": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":\"\\ud800acct\",\"units\":[\"keyboards/uid1/settings\",\"keyboards/file-uid/settings\",\"keyboards\",\"favorites/macro\",\"favorites/\\udc00\",\"日本語/ユニット\",\"favorites/new\"],\"held\":{\"2\":[\"favorites/c\"],\"10\":[\"favorites/b\"],\"zeta\":[\"favorites/a\"],\"4294967295\":[\"favorites/g\"],\"01\":[\"favorites/h\"]}}",
+      "sync/": null,
+      "sync/keyboards/": null,
+      "sync/keyboards/file-uid": "not a directory",
+      "sync/keyboards/uid1/": null
+    }
+  },
+  {
+    "name": "invalid UTF-8 in a unit",
+    "tree": {
+      "local/sync-pending.json": {
+        "hex": "7b2276657273696f6e223a312c226f776e6572223a6e756c6c2c22756e697473223a5b226661766f72697465732f78ffe697225d2c2268656c64223a7b7d7d"
+      }
+    },
+    "steps": [],
+    "restored": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/x��\"],\"held\":{}}"
+    },
+    "hasPending": true,
+    "generations": [
+      [
+        "favorites/x��",
+        1
+      ]
+    ],
+    "after": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/x��\"],\"held\":{}}"
+    }
+  },
+  {
+    "name": "a file that cannot be read",
+    "tree": {
+      "local/": null,
+      "local/sync-pending.json": {
+        "symlink": "sync-pending.json"
+      }
+    },
+    "steps": [
+      {
+        "op": "notify",
+        "unit": "favorites/macro"
+      },
+      {
+        "op": "advance"
+      },
+      {
+        "op": "persistNow"
+      }
+    ],
+    "restored": {
+      "local/": null,
+      "local/sync-pending.json": {
+        "symlink": "sync-pending.json"
+      }
+    },
+    "hasPending": true,
+    "generations": [
+      [
+        "favorites/macro",
+        1
+      ]
+    ],
+    "after": {
+      "local/": null,
+      "local/sync-pending.json": {
+        "symlink": "sync-pending.json"
+      }
+    }
+  },
+  {
+    "name": "invalid JSON",
+    "tree": {
+      "local/sync-pending.json": "{\"version\":1,"
+    },
+    "steps": [
+      {
+        "op": "notify",
+        "unit": "favorites/macro"
+      },
+      {
+        "op": "advance"
+      }
+    ],
+    "restored": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}"
+    },
+    "hasPending": true,
+    "generations": [
+      [
+        "favorites/macro",
+        1
+      ]
+    ],
+    "after": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\"],\"held\":{}}"
+    }
+  },
+  {
+    "name": "another version",
+    "tree": {
+      "local/sync-pending.json": "{\"version\":2,\"owner\":\"a\",\"units\":[\"favorites/macro\"],\"held\":{}}"
+    },
+    "steps": [],
+    "restored": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}"
+    },
+    "hasPending": false,
+    "generations": [],
+    "after": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}"
+    }
+  },
+  {
+    "name": "units that are not a list",
+    "tree": {
+      "local/sync-pending.json": "{\"version\":1,\"owner\":\"a\",\"units\":\"favorites/macro\",\"held\":{}}"
+    },
+    "steps": [],
+    "restored": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}"
+    },
+    "hasPending": false,
+    "generations": [],
+    "after": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}"
+    }
+  },
+  {
+    "name": "an array",
+    "tree": {
+      "local/sync-pending.json": "[1,2]"
+    },
+    "steps": [],
+    "restored": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}"
+    },
+    "hasPending": false,
+    "generations": [],
+    "after": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}"
+    }
+  },
+  {
+    "name": "a byte order mark",
+    "tree": {
+      "local/sync-pending.json": "﻿{\"version\":1,\"owner\":\"a\",\"units\":[\"favorites/macro\"],\"held\":{}}"
+    },
+    "steps": [],
+    "restored": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}"
+    },
+    "hasPending": false,
+    "generations": [],
+    "after": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}"
+    }
+  },
+  {
+    "name": "an empty file",
+    "tree": {
+      "local/sync-pending.json": ""
+    },
+    "steps": [],
+    "restored": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}"
+    },
+    "hasPending": false,
+    "generations": [],
+    "after": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}"
+    }
+  },
+  {
+    "name": "an owner and held that are not what they should be",
+    "tree": {
+      "local/sync-pending.json": "{\"version\":1.0,\"owner\":\"\",\"units\":[\"favorites/macro\"],\"held\":[\"favorites/x\"]}"
+    },
+    "steps": [],
+    "restored": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\"],\"held\":{}}"
+    },
+    "hasPending": true,
+    "generations": [
+      [
+        "favorites/macro",
+        1
+      ]
+    ],
+    "after": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\"],\"held\":{}}"
+    }
+  },
+  {
+    "name": "the write at quit takes the place of the delayed one",
+    "tree": {},
+    "steps": [
+      {
+        "op": "notify",
+        "unit": "favorites/macro"
+      },
+      {
+        "op": "persistNow"
+      },
+      {
+        "op": "notify",
+        "unit": "favorites/combo"
+      },
+      {
+        "op": "persistNow"
+      },
+      {
+        "op": "advance"
+      }
+    ],
+    "restored": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}"
+    },
+    "hasPending": true,
+    "generations": [
+      [
+        "favorites/macro",
+        1
+      ],
+      [
+        "favorites/combo",
+        2
+      ]
+    ],
+    "after": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\",\"favorites/combo\"],\"held\":{}}"
+    }
+  },
+  {
+    "name": "the directory is removed after the restore",
+    "tree": {},
+    "steps": [
+      {
+        "op": "notify",
+        "unit": "favorites/macro"
+      }
+    ],
+    "restored": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[],\"held\":{}}"
+    },
+    "hasPending": true,
+    "generations": [
+      [
+        "favorites/macro",
+        1
+      ]
+    ],
+    "after": {
+      "local/": null,
+      "local/sync-pending.json": "{\"version\":1,\"owner\":null,\"units\":[\"favorites/macro\"],\"held\":{}}"
+    }
+  }
+]
