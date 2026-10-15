@@ -1,15 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
-  "description": "Permissions of the main window: the raw HID commands and the definition decompression the vialAPI shim calls.",
+  "description": "Permissions of the main window's own pages: one permission set per domain (permissions/<domain>.toml), together every app command.",
   "windows": ["main"],
-  "permissions": [
-    "allow-list-devices",
-    "allow-open-device",
-    "allow-close-device",
-    "allow-send-receive",
-    "allow-send",
-    "allow-is-device-open",
-    "allow-decompress-definition"
-  ]
+  "permissions": ["hid", "definition", "shell"]
 }

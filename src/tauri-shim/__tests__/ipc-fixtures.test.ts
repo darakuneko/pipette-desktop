@@ -32,13 +32,18 @@ const entries: Entry[] = readdirSync(FIXTURE_DIR)
 
 interface Shim {
   device: typeof import('../api/device')
+  shell: typeof import('../api/shell')
   transport: typeof import('../hid-transport')
 }
 
 /** Fresh modules for each entry: the transport keeps the open flag. */
 async function load(): Promise<Shim> {
   vi.resetModules()
-  return { device: await import('../api/device'), transport: await import('../hid-transport') }
+  return {
+    device: await import('../api/device'),
+    shell: await import('../api/shell'),
+    transport: await import('../hid-transport'),
+  }
 }
 
 interface Caller {
@@ -70,6 +75,7 @@ const CALLERS: Record<string, Caller> = {
   'device.decompressDefinition': {
     run: ({ device }, [data]) => device.decompressDefinition(data as number[]),
   },
+  openExternal: { run: ({ shell }, [url]) => shell.shellApi.openExternal(url as string), void: true },
 }
 
 afterEach(() => {

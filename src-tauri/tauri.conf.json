@@ -15,6 +15,7 @@
     "windows": [
       {
         "label": "main",
+        "create": false,
         "url": "tauri.html",
         "title": "Pipette",
         "width": 1440,

@@ -19,4 +19,6 @@ pub const APP_COMMANDS: &[&str] = &[
     "is_device_open",
     // src/definition.rs
     "decompress_definition",
+    // src/shell.rs
+    "open_external",
 ];

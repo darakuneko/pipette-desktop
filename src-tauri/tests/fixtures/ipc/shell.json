@@ -1,0 +1,11 @@
+[
+  {
+    "member": "openExternal",
+    "args": ["https://example.com/"],
+    "command": "open_external",
+    "invokeArgs": {
+      "url": "https://example.com/"
+    },
+    "response": null
+  }
+]
