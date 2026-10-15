@@ -16,10 +16,9 @@ use std::pin::Pin;
 use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
+use pipette_fs::write_file_atomic;
 use serde::Serialize;
 use tokio::time::Instant;
-
-use crate::fs_atomic::write_file_atomic;
 
 /// How long the quit sequence may run before the app exits anyway. Same
 /// value as `QUIT_SYNC_DEADLINE_MS` in src/main/sync/sync-flush.ts: a
@@ -199,9 +198,9 @@ async fn run_phases(phases: Vec<QuitPhase>, deadline: Duration, guard: &QuitGuar
             current = Some(phase.name);
             guard.set_running_phase(current);
             let phase_started = Instant::now();
-            eprintln!("[quit] +{}ms phase {} started", started.elapsed().as_millis(), phase.name);
+            log::info!("[quit] +{}ms phase {} started", started.elapsed().as_millis(), phase.name);
             phase.run.await;
-            eprintln!(
+            log::info!(
                 "[quit] +{}ms phase {} finished in {}ms",
                 started.elapsed().as_millis(),
                 phase.name,
@@ -215,7 +214,7 @@ async fn run_phases(phases: Vec<QuitPhase>, deadline: Duration, guard: &QuitGuar
     match result {
         Ok(()) => QuitOutcome::Completed { elapsed: started.elapsed() },
         Err(_) => {
-            eprintln!(
+            log::warn!(
                 "[quit] +{}ms deadline of {}ms reached during {}",
                 started.elapsed().as_millis(),
                 deadline.as_millis(),
@@ -263,7 +262,7 @@ async fn run_quit_sequence_with(
 ) -> QuitOutcome {
     let outcome = run_phases(phases, deadline, guard).await;
     if !guard.claim_marker() {
-        eprintln!("[quit] the marker belongs to the exit request that interrupted the sequence");
+        log::info!("[quit] the marker belongs to the exit request that interrupted the sequence");
         return outcome;
     }
     if let Some(data_dir) = data_dir {
@@ -320,9 +319,9 @@ async fn update_marker_bounded(
     // cancelled, and the process exit ends it.
     match tokio::time::timeout(marker_timeout, task).await {
         Ok(Ok(Ok(()))) => {}
-        Ok(Ok(Err(err))) => eprintln!("[quit] failed to update {}: {err}", marker.display()),
-        Ok(Err(err)) => eprintln!("[quit] the update of {} did not finish: {err}", marker.display()),
-        Err(_) => eprintln!(
+        Ok(Ok(Err(err))) => log::error!("[quit] failed to update {}: {err}", marker.display()),
+        Ok(Err(err)) => log::error!("[quit] the update of {} did not finish: {err}", marker.display()),
+        Err(_) => log::error!(
             "[quit] gave up on updating {} after {}ms",
             marker.display(),
             marker_timeout.as_millis()

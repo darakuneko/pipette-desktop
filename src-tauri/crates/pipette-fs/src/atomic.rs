@@ -5,22 +5,22 @@
 //! The temp file is `<path>.<pid>.<12 hex digits>.tmp` in the target's
 //! directory, the name src/main/utils/write-file-atomic.ts uses, so the
 //! orphan sweep of src/main/utils/sweep-orphan-pack-bodies.ts recognises
-//! temp files left by either build. Keep the two formats in step. A target
-//! name long enough to push the temp name past 255 bytes is cut short in
-//! the temp name, as there.
+//! temp files left by either build. Keep the two formats in step;
+//! tests/ts_temp_names.rs checks them against names the TypeScript writer
+//! built. A target name long enough to push the temp name past 255 bytes is
+//! cut short in the temp name, as there.
 //!
 //! The temp file is synced before the rename. On a failure it is removed
 //! on a best-effort basis and the original error is returned. The parent
 //! directory is not created.
 
 use std::collections::hash_map::RandomState;
-use std::ffi::OsString;
 use std::hash::{BuildHasher, Hasher};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
 /// Name limit of the common file systems, in bytes.
-const MAX_NAME_BYTES: usize = 255;
+pub const MAX_NAME_BYTES: usize = 255;
 
 /// Writes `content` to `path` through a synced temp file and a rename.
 pub fn write_file_atomic(path: &Path, content: &[u8]) -> std::io::Result<()> {
@@ -39,14 +39,21 @@ fn write_synced(path: &Path, content: &[u8]) -> std::io::Result<()> {
 }
 
 fn temp_path_for(path: &Path) -> PathBuf {
-    // 48 random bits, the 6 random bytes of the TypeScript writer. The keys
-    // of a new `RandomState` are random per process and per instance.
-    let random = RandomState::new().build_hasher().finish() & 0xffff_ffff_ffff;
-    let suffix = format!(".{}.{random:012x}.tmp", std::process::id());
+    // The keys of a new `RandomState` are random per process and per instance.
+    let random = RandomState::new().build_hasher().finish();
     let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-    let mut temp_name = OsString::from(truncate_utf8(&name, MAX_NAME_BYTES - suffix.len()));
-    temp_name.push(suffix);
-    path.with_file_name(temp_name)
+    path.with_file_name(temp_file_name(&name, std::process::id(), random))
+}
+
+/// The temp file name for a target named `name`:
+/// `<name>.<pid>.<12 hex digits>.tmp`, the hex digits being the low 48 bits
+/// of `random` (the 6 random bytes of the TypeScript writer), with `name`
+/// cut short when the whole would pass [`MAX_NAME_BYTES`].
+pub fn temp_file_name(name: &str, pid: u32, random: u64) -> String {
+    let suffix = format!(".{pid}.{:012x}.tmp", random & 0xffff_ffff_ffff);
+    let mut temp_name = truncate_utf8(name, MAX_NAME_BYTES - suffix.len()).to_owned();
+    temp_name.push_str(&suffix);
+    temp_name
 }
 
 /// The longest prefix of `s` that fits in `max` bytes without splitting a

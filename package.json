@@ -32,6 +32,7 @@
     "generate:virtual-device-fixtures": "vitest run --config scripts/virtual-device-fixtures/vitest.config.ts",
     "generate:sync-format-fixtures": "vitest run --config scripts/sync-format-fixtures/vitest.config.ts record-sync-format-fixtures",
     "generate:definition-fixtures": "vitest run --config scripts/definition-fixtures/vitest.config.ts",
+    "generate:fs-logger-fixtures": "vitest run --config scripts/fs-logger-fixtures/vitest.config.ts",
     "generate:analytics-db-fixtures": "ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run --config scripts/analytics-db-fixtures/vitest.config.ts",
     "verify:sync-format-rust-vectors": "vitest run --config scripts/sync-format-fixtures/vitest.config.ts verify-rust-vectors",
     "doc:screenshots": "npx tsx e2e/helpers/doc-capture.ts",

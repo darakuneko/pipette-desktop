@@ -23,6 +23,9 @@ tauri = { version = "=2.12.1", features = ["tray-icon"] }
 # Tauri already runs, and src/lifecycle.rs listens for SIGTERM / SIGINT.
 tokio = { version = "=1.53.3", features = ["rt", "time", "signal"] }
 pipette-hid = { path = "crates/pipette-hid" }
+pipette-fs = { path = "crates/pipette-fs" }
+pipette-logger = { path = "crates/pipette-logger" }
+log = "=0.4.34"
 serde = { workspace = true }
 # The pending marker of the quit sequence (src/shutdown.rs).
 serde_json = { workspace = true }
