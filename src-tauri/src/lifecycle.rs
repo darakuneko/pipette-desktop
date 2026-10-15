@@ -34,7 +34,7 @@ use pipette_hid::HidService;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::{PageLoadEvent, PageLoadPayload};
-use tauri::{App, AppHandle, Manager, RunEvent, Runtime, Webview, Window, WindowEvent, Wry};
+use tauri::{App, AppHandle, Manager, RunEvent, Runtime, State, Webview, Window, WindowEvent, Wry};
 
 use crate::UserDataDir;
 use crate::app_config::AppConfig;
@@ -66,6 +66,17 @@ pub struct Lifecycle {
     /// Set once the tray icon exists. Closing hides the window only then:
     /// a hidden window with no tray icon to restore it would be unreachable.
     tray_active: AtomicBool,
+}
+
+impl Lifecycle {
+    fn is_tray_active(&self) -> bool {
+        self.tray_active.load(Ordering::Acquire)
+    }
+}
+
+/// The shared lifecycle state; `None` before setup has run.
+fn lifecycle_state<R: Runtime, M: Manager<R>>(manager: &M) -> Option<State<'_, Arc<Lifecycle>>> {
+    manager.try_state::<Arc<Lifecycle>>()
 }
 
 /// The tray icon's id.
@@ -111,7 +122,7 @@ pub fn set_tray_resident(app: &AppHandle<Wry>, on: bool) {
 
 fn add_tray(app: &AppHandle<Wry>) {
     let lifecycle = app.state::<Arc<Lifecycle>>();
-    if lifecycle.tray_active.load(Ordering::Acquire) {
+    if lifecycle.is_tray_active() {
         return;
     }
     match build_tray(app) {
@@ -191,7 +202,7 @@ fn respond_to_second_launch<R: Runtime>(
     app: &AppHandle<R>,
     reveal: impl FnOnce(&AppHandle<R>),
 ) -> SecondLaunch {
-    let Some(lifecycle) = app.try_state::<Arc<Lifecycle>>() else {
+    let Some(lifecycle) = lifecycle_state(app) else {
         return SecondLaunch::IgnoredWhileStarting;
     };
     if lifecycle.quit.is_quitting() {
@@ -203,7 +214,7 @@ fn respond_to_second_launch<R: Runtime>(
 
 /// Whether the tray icon exists, so a hidden window can be shown again.
 pub fn is_tray_active<R: Runtime>(app: &AppHandle<R>) -> bool {
-    app.try_state::<Arc<Lifecycle>>().is_some_and(|lifecycle| lifecycle.tray_active.load(Ordering::Acquire))
+    lifecycle_state(app).is_some_and(|lifecycle| lifecycle.is_tray_active())
 }
 
 /// Saves the window state when the window is asked to close, then hides
@@ -214,8 +225,9 @@ pub fn on_window_event(window: &Window<Wry>, event: &WindowEvent) {
     match event {
         WindowEvent::CloseRequested { api, .. } => {
             main_window::save_window_state(window, &window.state::<AppConfig>());
-            let lifecycle = window.state::<Arc<Lifecycle>>();
-            if lifecycle.tray_active.load(Ordering::Acquire) && !lifecycle.quit.is_quitting() {
+            let hide = lifecycle_state(window)
+                .is_some_and(|lifecycle| lifecycle.is_tray_active() && !lifecycle.quit.is_quitting());
+            if hide {
                 api.prevent_close();
                 main_window::conceal(window);
             }
